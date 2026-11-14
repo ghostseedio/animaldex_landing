@@ -11,6 +11,7 @@
 
 import {awakeAt, feedingRhythm, needAt, scheduleGeneration, slotOffset, slotPlanAt, SLOT_SECONDS, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type SlotPlan, type Trip} from "@/ark-scene/behaviour-schedule";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
+import {forayIsHunt} from "@/ark-scene/hunt-word";
 import {hash32} from "@/lib/ark-clock";
 import {arkActivityKey, arkFed, arkFedRates, type ArkActivityKey, type ArkFed, type ArkFedSlot, type ArkStatusGoal, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
 
@@ -52,8 +53,10 @@ export type ScheduleStatus = {activity: ArkActivityKey; since: number; goal: Ark
  * hunts (its profile stalks: its stored diet is meat or fish) is hunting; any other is out feeding its own way: a
  * grazer grazing, a browser browsing, a nectar feeder at flowers, the rest looking for food. Existing keys only.
  */
-export function forayActivity(profile: Pick<ArkBehaviourProfile, "weights" | "diet" | "move">): ArkActivityKey {
-    if ((profile.weights.stalk ?? 0) > 0) return "hunting";
+export function forayActivity(profile: Pick<ArkBehaviourProfile, "weights" | "diet" | "move">, style?: string | null): ArkActivityKey {
+    // (One rule with the foray's drawing, `hunting.ts` huntStyle: a profile that stalks hunts, and so does any style
+    // but the foragers': a frog or a spider waiting in ambush for insects is hunting. `style` absent: the profile alone.)
+    if ((profile.weights.stalk ?? 0) > 0 || forayIsHunt(style)) return "hunting";
     if (profile.diet === "nectar") return "flowers";
     if (profile.move === "fly") return "food";
     return profile.diet === "grazer" ? "grazing" : profile.diet === "browser" ? "browsing" : "food";
@@ -63,12 +66,12 @@ export function forayActivity(profile: Pick<ArkBehaviourProfile, "weights" | "di
  * Its status now. `trip`: the trip it is on (the scene's), for whether it is still on its way to its goal; `hunting`:
  * walking its forays under encounter hunting now (`hunting.ts`, from the server's next hunt).
  */
-export function scheduleStatus(subject: ScheduleSubject, epoch: number, context: {trip?: Trip | null; hunting?: boolean} = {}): ScheduleStatus {
+export function scheduleStatus(subject: ScheduleSubject, epoch: number, context: {trip?: Trip | null; hunting?: boolean; /** How it hunts on its foray (`hunting.ts` huntStyle). */ style?: string | null} = {}): ScheduleStatus {
     const plan = planOf(subject, epoch);
     const trip = context.trip && context.trip.slot === plan.slot ? context.trip : null;
     const travelling = Boolean(trip && epoch < trip.arrive && trip.length > 0.5);
     const settled = keyOf(subject, plan);
-    const activity = context.hunting ? forayActivity(subject.profile) : keyOf(subject, plan, {travelling});
+    const activity = context.hunting ? forayActivity(subject.profile, context.style) : keyOf(subject, plan, {travelling});
     // Back through its last slots: the run it is in now (since when), then the runs before it, newest first.
     let since = plan.start;
     let runKey = settled;
@@ -277,13 +280,13 @@ export function slotStartIn(id: string, from: number, to: number): number | null
  * in that order among equals. `starts`: encounter hunting's forays that begin in the window (the server's next hunts),
  * said before anything else.
  */
-export function pickMoment(window: number, subjects: readonly MomentSubject[], starts: ReadonlyArray<{subject: MomentSubject; at: number}> = []): ScheduleMoment | null {
+export function pickMoment(window: number, subjects: readonly MomentSubject[], starts: ReadonlyArray<{subject: MomentSubject; at: number; /** How it hunts (`hunting.ts` huntStyle). */ style?: string | null}> = []): ScheduleMoment | null {
     const from = window * MOMENT_WINDOW_SECONDS;
     const to = from + MOMENT_WINDOW_SECONDS;
     if (starts.length) {
         const first = [...starts].sort((a, b) => draw("ark-hunt", window, a.subject.id) - draw("ark-hunt", window, b.subject.id) || a.subject.id.localeCompare(b.subject.id))[0];
         // (A forager's foray is said as its feeding, an everyday line: `forayActivity`.)
-        const activity = forayActivity(first.subject.profile);
+        const activity = forayActivity(first.subject.profile, first.style);
         return {id: `now:hunt:${first.subject.id}:${window}`, kind: activity === "hunting" ? "hunting" : "doing", activity, animalId: first.subject.id, at: first.at, count: 1};
     }
     const candidates: Array<{subject: MomentSubject; start: number; order: number}> = [];

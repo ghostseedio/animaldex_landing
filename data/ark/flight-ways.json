@@ -1,0 +1,2792 @@
+{
+ "about": "Why each fly-first animal has its way of life in the air (scripts/ark-flight-ways.mts).",
+ "tally": {
+  "tree": 9,
+  "soar": 28,
+  "commute": 95,
+  "shore": 32,
+  "stork": 15,
+  "perch": 83,
+  "wader": 42,
+  "bug": 69,
+  "ground": 78,
+  "swift": 4,
+  "vulture": 14,
+  "patrol": 39,
+  "flit": 58,
+  "flower": 90,
+  "aerial": 14,
+  "hover": 8,
+  "dragon": 14
+ },
+ "species": {
+  "acorn-woodpecker": {
+   "way": "tree",
+   "rule": "family Picidae"
+  },
+  "african-fish-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "african-grey-hornbill": {
+   "way": "commute",
+   "rule": "family Bucerotidae"
+  },
+  "african-grey-parrot": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "african-harrier-hawk": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "african-jacana": {
+   "way": "shore",
+   "rule": "family Jacanidae"
+  },
+  "african-openbill": {
+   "way": "stork",
+   "rule": "family Ciconiidae"
+  },
+  "african-pygmy-kingfisher": {
+   "way": "perch",
+   "rule": "family Alcedinidae"
+  },
+  "african-sacred-ibis": {
+   "way": "wader",
+   "rule": "family Threskiornithidae"
+  },
+  "alderfly": {
+   "way": "bug",
+   "rule": "Megaloptera/Sialidae: flies now and then"
+  },
+  "alpine-chough": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "alpine-swift": {
+   "way": "swift",
+   "rule": "family Apodidae"
+  },
+  "american-avocet": {
+   "way": "shore",
+   "rule": "family Recurvirostridae"
+  },
+  "american-dipper": {
+   "way": "ground",
+   "rule": "family Cinclidae"
+  },
+  "american-kestrel": {
+   "way": "perch",
+   "rule": "family Falconidae"
+  },
+  "american-robin": {
+   "way": "ground",
+   "rule": "family Turdidae"
+  },
+  "american-white-pelican": {
+   "way": "stork",
+   "rule": "family Pelecanidae"
+  },
+  "american-woodcock": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "andean-cock-of-the-rock": {
+   "way": "commute",
+   "rule": "family Cotingidae"
+  },
+  "andean-condor": {
+   "way": "vulture",
+   "rule": "family Cathartidae"
+  },
+  "andean-lapwing": {
+   "way": "shore",
+   "rule": "family Charadriidae"
+  },
+  "andean-sparrow": {
+   "way": "ground",
+   "rule": "family Passerellidae"
+  },
+  "angoumois-grain-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Gelechiidae): flies now and then"
+  },
+  "anhinga": {
+   "way": "perch",
+   "rule": "family Anhingidae"
+  },
+  "antarctic-petrel": {
+   "way": "patrol",
+   "rule": "family Procellariidae"
+  },
+  "arctic-tern": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "artichoke-plume-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Pterophoridae): flies now and then"
+  },
+  "asian-fairy-bluebird": {
+   "way": "flit",
+   "rule": "family Irenidae"
+  },
+  "asian-glossy-starling": {
+   "way": "ground",
+   "rule": "family Sturnidae"
+  },
+  "asian-honey-bee": {
+   "way": "flower",
+   "rule": "Hymenoptera/Apidae"
+  },
+  "asian-hornet": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "asian-woolly-necked-stork": {
+   "way": "stork",
+   "rule": "family Ciconiidae"
+  },
+  "atlantic-puffin": {
+   "way": "patrol",
+   "rule": "family Alcidae"
+  },
+  "atlantic-yellow-nosed-albatross": {
+   "way": "patrol",
+   "rule": "family Diomedeidae"
+  },
+  "atlas-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Saturniidae): flies now and then"
+  },
+  "australasian-pipit": {
+   "way": "ground",
+   "rule": "family Motacillidae"
+  },
+  "australian-magpie": {
+   "way": "perch",
+   "rule": "family Cracticidae"
+  },
+  "australian-pelican": {
+   "way": "stork",
+   "rule": "family Pelecanidae"
+  },
+  "australian-stingless-bee": {
+   "way": "flower",
+   "rule": "Hymenoptera/Apidae"
+  },
+  "autumn-leaf": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "azure-winged-magpie": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "bald-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "bald-faced-hornet": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "bali-myna": {
+   "way": "ground",
+   "rule": "family Sturnidae"
+  },
+  "banana-stalk-fly": {
+   "way": "bug",
+   "rule": "Diptera/Neriidae: flies now and then"
+  },
+  "band-eyed-drone-fly": {
+   "way": "flower",
+   "rule": "Diptera/Syrphidae"
+  },
+  "bank-swallow": {
+   "way": "aerial",
+   "rule": "family Hirundinidae"
+  },
+  "bar-tailed-godwit": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "bare-necked-umbrellabird": {
+   "way": "commute",
+   "rule": "family Cotingidae"
+  },
+  "bare-throated-bellbird": {
+   "way": "commute",
+   "rule": "family Cotingidae"
+  },
+  "barn-owl": {
+   "way": "perch",
+   "rule": "family Tytonidae"
+  },
+  "barn-swallow": {
+   "way": "aerial",
+   "rule": "family Hirundinidae"
+  },
+  "barred-eagle-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "bateleur": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "baya-weaver": {
+   "way": "ground",
+   "rule": "family Ploceidae"
+  },
+  "bearded-reedling": {
+   "way": "flit",
+   "rule": "family Panuridae"
+  },
+  "bearded-vulture": {
+   "way": "vulture",
+   "rule": "family Accipitridae, a vulture by name"
+  },
+  "bee-hummingbird": {
+   "way": "hover",
+   "rule": "family Trochilidae: hovers at flowers"
+  },
+  "belted-kingfisher": {
+   "way": "perch",
+   "rule": "family Alcedinidae"
+  },
+  "black-and-yellow-mud-dauber": {
+   "way": "bug",
+   "rule": "Hymenoptera/Sphecidae: flies now and then"
+  },
+  "black-billed-magpie": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "black-browed-albatross": {
+   "way": "patrol",
+   "rule": "family Diomedeidae"
+  },
+  "black-capped-bulbul": {
+   "way": "flit",
+   "rule": "family Pycnonotidae"
+  },
+  "black-crested-coquette": {
+   "way": "hover",
+   "rule": "family Trochilidae: hovers at flowers"
+  },
+  "black-crowned-night-heron": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "black-faced-ibis": {
+   "way": "wader",
+   "rule": "family Threskiornithidae"
+  },
+  "black-footed-albatross": {
+   "way": "patrol",
+   "rule": "family Diomedeidae"
+  },
+  "black-headed-gull": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "black-headed-ibis": {
+   "way": "wader",
+   "rule": "family Threskiornithidae"
+  },
+  "black-horse-fly": {
+   "way": "bug",
+   "rule": "Diptera/Tabanidae: flies now and then"
+  },
+  "black-legged-kittiwake": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "black-naped-oriole": {
+   "way": "commute",
+   "rule": "family Oriolidae"
+  },
+  "black-naped-tern": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "black-necked-crane": {
+   "way": "wader",
+   "rule": "family Gruidae"
+  },
+  "black-necked-stilt": {
+   "way": "shore",
+   "rule": "family Recurvirostridae"
+  },
+  "black-rumped-flameback": {
+   "way": "tree",
+   "rule": "family Picidae"
+  },
+  "black-shouldered-kite": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "black-sicklebill": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "black-skimmer": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "black-swallowtail": {
+   "way": "flower",
+   "rule": "Lepidoptera (Papilionidae)"
+  },
+  "black-vulture": {
+   "way": "vulture",
+   "rule": "family Cathartidae"
+  },
+  "black-winged-stilt": {
+   "way": "shore",
+   "rule": "family Recurvirostridae"
+  },
+  "blakistons-fish-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "blossom-headed-parakeet": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "blue-and-yellow-macaw": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "blue-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "blue-crane": {
+   "way": "wader",
+   "rule": "family Gruidae"
+  },
+  "blue-crowned-hanging-parrot": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "blue-crowned-motmot": {
+   "way": "perch",
+   "rule": "family Momotidae"
+  },
+  "blue-footed-booby": {
+   "way": "patrol",
+   "rule": "family Sulidae"
+  },
+  "blue-fronted-amazon": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "blue-headed-macaw": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "blue-morpho": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "blue-mud-dauber": {
+   "way": "bug",
+   "rule": "Hymenoptera/Sphecidae: flies now and then"
+  },
+  "blue-naped-parrot": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "blue-rumped-parrot": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "blue-tit": {
+   "way": "flit",
+   "rule": "family Paridae"
+  },
+  "blue-winged-macaw": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "bluebottle-fly": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "boat-billed-heron": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "boobook-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "bornean-bristlehead": {
+   "way": "ground",
+   "rule": "family Pityriaseidae"
+  },
+  "brahminy-kite": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "brilliant-blue": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "brimstone-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Pieridae)"
+  },
+  "broad-bodied-chaser": {
+   "way": "dragon",
+   "rule": "Odonata/Libellulidae"
+  },
+  "brolga": {
+   "way": "wader",
+   "rule": "family Gruidae"
+  },
+  "bronze-winged-jacana": {
+   "way": "shore",
+   "rule": "family Jacanidae"
+  },
+  "brown-pelican": {
+   "way": "stork",
+   "rule": "family Pelecanidae"
+  },
+  "brown-shrike": {
+   "way": "perch",
+   "rule": "family Laniidae"
+  },
+  "brown-sicklebill": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "brown-throated-sunbird": {
+   "way": "flit",
+   "rule": "family Nectariniidae"
+  },
+  "brown-wood-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "buff-necked-ibis": {
+   "way": "wader",
+   "rule": "family Threskiornithidae"
+  },
+  "buff-tip-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Notodontidae): flies now and then"
+  },
+  "buffy-fish-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "burrowing-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "burrowing-parakeet": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "cabbage-cluster-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Crambidae): flies now and then"
+  },
+  "cactus-wren": {
+   "way": "flit",
+   "rule": "family Troglodytidae"
+  },
+  "caddisfly": {
+   "way": "bug",
+   "rule": "Trichoptera/Limnephilidae: flies now and then"
+  },
+  "california-condor": {
+   "way": "vulture",
+   "rule": "family Cathartidae"
+  },
+  "california-scrub-jay": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "capuchinbird": {
+   "way": "commute",
+   "rule": "family Cotingidae"
+  },
+  "carmine-bee-eater": {
+   "way": "perch",
+   "rule": "family Meropidae"
+  },
+  "carolina-wren": {
+   "way": "flit",
+   "rule": "family Troglodytidae"
+  },
+  "carrion-crow": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "cattle-egret": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "cecropia-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Saturniidae): flies now and then"
+  },
+  "cedar-waxwing": {
+   "way": "flit",
+   "rule": "family Bombycillidae"
+  },
+  "cettis-warbler": {
+   "way": "flit",
+   "rule": "family Cettiidae"
+  },
+  "chickweed-geometer-moth": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "chihuahuan-raven": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "chilean-swallow": {
+   "way": "aerial",
+   "rule": "family Hirundinidae"
+  },
+  "chinese-hwamei": {
+   "way": "flit",
+   "rule": "family Leiothrichidae"
+  },
+  "chinese-pond-heron": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "cicada-killer-wasp": {
+   "way": "bug",
+   "rule": "Hymenoptera/Crabronidae: flies now and then"
+  },
+  "cinereous-vulture": {
+   "way": "vulture",
+   "rule": "family Accipitridae, a vulture by name"
+  },
+  "clarks-nutcracker": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "cliff-swallow": {
+   "way": "aerial",
+   "rule": "family Hirundinidae"
+  },
+  "clothes-house-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Tineidae): flies now and then"
+  },
+  "coal-tit": {
+   "way": "flit",
+   "rule": "family Paridae"
+  },
+  "cockatiel": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "cocoa-tussock-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "coffee-hawk-moth": {
+   "way": "flower",
+   "rule": "Lepidoptera/Sphingidae"
+  },
+  "collared-falconet": {
+   "way": "perch",
+   "rule": "family Falconidae"
+  },
+  "collared-pratincole": {
+   "way": "aerial",
+   "rule": "family Glareolidae"
+  },
+  "comet-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Saturniidae): flies now and then"
+  },
+  "common-blackbird": {
+   "way": "ground",
+   "rule": "family Turdidae"
+  },
+  "common-bluetail": {
+   "way": "dragon",
+   "rule": "Odonata/Coenagrionidae"
+  },
+  "common-buzzard": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "common-carpet-moth": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "common-chiffchaff": {
+   "way": "flit",
+   "rule": "family Phylloscopidae"
+  },
+  "common-cuckoo": {
+   "way": "perch",
+   "rule": "family Cuculidae"
+  },
+  "common-darter": {
+   "way": "dragon",
+   "rule": "Odonata/Libellulidae"
+  },
+  "common-evening-brown": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "common-flameback": {
+   "way": "tree",
+   "rule": "family Picidae"
+  },
+  "common-flangetail": {
+   "way": "dragon",
+   "rule": "Odonata/Gomphidae"
+  },
+  "common-flesh-fly": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "common-fruit-piercing-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "common-giant-owl-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "common-grass-blue": {
+   "way": "flower",
+   "rule": "Lepidoptera (Lycaenidae)"
+  },
+  "common-green-darner": {
+   "way": "dragon",
+   "rule": "Odonata/Aeshnidae"
+  },
+  "common-green-lacewing": {
+   "way": "bug",
+   "rule": "Neuroptera/Chrysopidae: flies now and then"
+  },
+  "common-green-magpie": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "common-hill-myna": {
+   "way": "ground",
+   "rule": "family Sturnidae"
+  },
+  "common-hoverfly": {
+   "way": "flower",
+   "rule": "Diptera/Syrphidae"
+  },
+  "common-kestrel": {
+   "way": "perch",
+   "rule": "family Falconidae"
+  },
+  "common-kingfisher": {
+   "way": "perch",
+   "rule": "family Alcedinidae"
+  },
+  "common-marble": {
+   "way": "bug",
+   "rule": "Lepidoptera (Tortricidae): flies now and then"
+  },
+  "common-murre": {
+   "way": "patrol",
+   "rule": "family Alcidae"
+  },
+  "common-myna": {
+   "way": "ground",
+   "rule": "family Sturnidae"
+  },
+  "common-nighthawk": {
+   "way": "aerial",
+   "rule": "family Caprimulgidae"
+  },
+  "common-poorwill": {
+   "way": "aerial",
+   "rule": "family Caprimulgidae"
+  },
+  "common-potoo": {
+   "way": "perch",
+   "rule": "family Nyctibiidae"
+  },
+  "common-raven": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "common-rose": {
+   "way": "flower",
+   "rule": "Lepidoptera (Papilionidae)"
+  },
+  "common-sandpiper": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "common-scorpionfly": {
+   "way": "bug",
+   "rule": "Mecoptera/Panorpidae: flies now and then"
+  },
+  "common-swift": {
+   "way": "swift",
+   "rule": "family Apodidae"
+  },
+  "common-tailorbird": {
+   "way": "flit",
+   "rule": "family Cisticolidae"
+  },
+  "common-vampire-bat": {
+   "way": "aerial",
+   "rule": "a bat that hawks insects (hunt aerial_hawk)"
+  },
+  "common-wanderer": {
+   "way": "flower",
+   "rule": "Lepidoptera (Pieridae)"
+  },
+  "coopers-hawk": {
+   "way": "perch",
+   "rule": "family Accipitridae, a hawk that dashes from cover (by name)"
+  },
+  "cotton-bud-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Tortricidae): flies now and then"
+  },
+  "crane-fly": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "crested-auklet": {
+   "way": "patrol",
+   "rule": "family Alcidae"
+  },
+  "crested-berrypecker": {
+   "way": "flit",
+   "rule": "family Paramythiidae"
+  },
+  "crested-caracara": {
+   "way": "perch",
+   "rule": "family Falconidae"
+  },
+  "crested-coua": {
+   "way": "perch",
+   "rule": "family Cuculidae"
+  },
+  "crested-oropendola": {
+   "way": "ground",
+   "rule": "family Icteridae"
+  },
+  "crested-serpent-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "crimson-fronted-barbet": {
+   "way": "commute",
+   "rule": "family Megalaimidae"
+  },
+  "crimson-sunbird": {
+   "way": "flit",
+   "rule": "family Nectariniidae"
+  },
+  "crowned-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "cuban-tody": {
+   "way": "perch",
+   "rule": "family Todidae"
+  },
+  "curl-crested-aracari": {
+   "way": "commute",
+   "rule": "family Ramphastidae"
+  },
+  "cyclodes-moth": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "damselfly": {
+   "way": "dragon",
+   "rule": "Odonata/Coenagrionidae"
+  },
+  "dark-eyed-junco": {
+   "way": "ground",
+   "rule": "family Passerellidae"
+  },
+  "dark-sword-grass": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "deaths-head-hawkmoth": {
+   "way": "flower",
+   "rule": "Lepidoptera/Sphingidae"
+  },
+  "demoiselle-crane": {
+   "way": "wader",
+   "rule": "family Gruidae"
+  },
+  "dingy-bushbrown": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "domestic-canary": {
+   "way": "ground",
+   "rule": "family Fringillidae"
+  },
+  "double-crested-cormorant": {
+   "way": "perch",
+   "rule": "family Phalacrocoracidae"
+  },
+  "downy-woodpecker": {
+   "way": "tree",
+   "rule": "family Picidae"
+  },
+  "drain-fly": {
+   "way": "bug",
+   "rule": "Diptera/Psychodidae: flies now and then"
+  },
+  "dusky-lory": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "eastern-dobsonfly": {
+   "way": "bug",
+   "rule": "Megaloptera/Corydalidae: flies now and then"
+  },
+  "eastern-phoebe": {
+   "way": "perch",
+   "rule": "family Tyrannidae"
+  },
+  "eastern-screech-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "eastern-tiger-swallowtail": {
+   "way": "flower",
+   "rule": "Lepidoptera (Papilionidae)"
+  },
+  "eastern-yellowjacket": {
+   "way": "bug",
+   "rule": "Hymenoptera/Vespidae: flies now and then"
+  },
+  "eclectus-parrot": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "edible-nest-swiftlet": {
+   "way": "swift",
+   "rule": "family Apodidae"
+  },
+  "egyptian-fruit-bat": {
+   "way": "commute",
+   "rule": "a bat that eats fruit: flies out to its feeding trees and back"
+  },
+  "egyptian-plover": {
+   "way": "shore",
+   "rule": "family Pluvianidae"
+  },
+  "elf-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "emerald-cockroach-wasp": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "emerald-moth": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "emerald-toucanet": {
+   "way": "commute",
+   "rule": "family Ramphastidae"
+  },
+  "eupterote-fabia-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Eupterotidae): flies now and then"
+  },
+  "eupterote-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Eupterotidae): flies now and then"
+  },
+  "eurasian-bittern": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "eurasian-blackcap": {
+   "way": "flit",
+   "rule": "family Sylviidae"
+  },
+  "eurasian-bullfinch": {
+   "way": "ground",
+   "rule": "family Fringillidae"
+  },
+  "eurasian-eagle-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "eurasian-jay": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "eurasian-magpie": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "eurasian-oystercatcher": {
+   "way": "shore",
+   "rule": "family Haematopodidae"
+  },
+  "eurasian-reed-warbler": {
+   "way": "flit",
+   "rule": "family Acrocephalidae"
+  },
+  "eurasian-sparrowhawk": {
+   "way": "perch",
+   "rule": "family Accipitridae, a hawk that dashes from cover (by name)"
+  },
+  "eurasian-spoonbill": {
+   "way": "wader",
+   "rule": "family Threskiornithidae"
+  },
+  "eurasian-tree-sparrow": {
+   "way": "ground",
+   "rule": "family Passeridae"
+  },
+  "eurasian-woodcock": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "european-bee-eater": {
+   "way": "perch",
+   "rule": "family Meropidae"
+  },
+  "european-crane-fly": {
+   "way": "bug",
+   "rule": "Diptera/Tipulidae: flies now and then"
+  },
+  "european-goldfinch": {
+   "way": "ground",
+   "rule": "family Fringillidae"
+  },
+  "european-greenfinch": {
+   "way": "ground",
+   "rule": "family Fringillidae"
+  },
+  "european-hornet": {
+   "way": "bug",
+   "rule": "Hymenoptera/Vespidae: flies now and then"
+  },
+  "european-nightjar": {
+   "way": "aerial",
+   "rule": "family Caprimulgidae"
+  },
+  "european-robin": {
+   "way": "perch",
+   "rule": "family Muscicapidae"
+  },
+  "european-roller": {
+   "way": "perch",
+   "rule": "family Coraciidae"
+  },
+  "european-serin": {
+   "way": "ground",
+   "rule": "family Fringillidae"
+  },
+  "european-starling": {
+   "way": "ground",
+   "rule": "family Sturnidae"
+  },
+  "european-stonechat": {
+   "way": "perch",
+   "rule": "family Muscicapidae"
+  },
+  "european-storm-petrel": {
+   "way": "patrol",
+   "rule": "family Hydrobatidae"
+  },
+  "evergreen-bagworm-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Psychidae): flies now and then"
+  },
+  "fieldfare": {
+   "way": "ground",
+   "rule": "family Turdidae"
+  },
+  "finch-billed-myna": {
+   "way": "ground",
+   "rule": "family Sturnidae"
+  },
+  "fire-maned-bowerbird": {
+   "way": "commute",
+   "rule": "family Ptilonorhynchidae"
+  },
+  "fire-tufted-barbet": {
+   "way": "commute",
+   "rule": "family Megalaimidae"
+  },
+  "fischers-lovebird": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "flame-bowerbird": {
+   "way": "commute",
+   "rule": "family Ptilonorhynchidae"
+  },
+  "florida-scrub-jay": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "flower-wasp": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "fork-tailed-drongo": {
+   "way": "perch",
+   "rule": "family Dicruridae"
+  },
+  "fox-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Lasiocampidae): flies now and then"
+  },
+  "fruit-fly": {
+   "way": "bug",
+   "rule": "Diptera/Drosophilidae: flies now and then"
+  },
+  "galapagos-hawk": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "garden-warbler": {
+   "way": "flit",
+   "rule": "family Sylviidae"
+  },
+  "geometer-moth": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "german-yellowjacket": {
+   "way": "bug",
+   "rule": "Hymenoptera/Vespidae: flies now and then"
+  },
+  "giant-burrowing-mayfly": {
+   "way": "bug",
+   "rule": "Ephemeroptera/Ephemeridae: flies now and then"
+  },
+  "giant-honey-bee": {
+   "way": "flower",
+   "rule": "Hymenoptera/Apidae"
+  },
+  "giant-ibis": {
+   "way": "wader",
+   "rule": "family Threskiornithidae"
+  },
+  "giant-redeye": {
+   "way": "flower",
+   "rule": "Lepidoptera (Hesperiidae)"
+  },
+  "giant-scoliid-wasp": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "giant-stonefly": {
+   "way": "bug",
+   "rule": "Plecoptera/Pteronarcyidae: flies now and then"
+  },
+  "glasswing-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "glossy-ibis": {
+   "way": "wader",
+   "rule": "family Threskiornithidae"
+  },
+  "goffins-cockatoo": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "gold-tail-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "golden-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "golden-fronted-bowerbird": {
+   "way": "commute",
+   "rule": "family Ptilonorhynchidae"
+  },
+  "gouldian-finch": {
+   "way": "ground",
+   "rule": "family Estrildidae"
+  },
+  "grass-veneer-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Crambidae): flies now and then"
+  },
+  "great-blue-heron": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "great-blue-turaco": {
+   "way": "commute",
+   "rule": "family Musophagidae"
+  },
+  "great-cormorant": {
+   "way": "perch",
+   "rule": "family Phalacrocoracidae"
+  },
+  "great-crow": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "great-eggfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "great-egret": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "great-frigatebird": {
+   "way": "vulture",
+   "rule": "family Fregatidae"
+  },
+  "great-gray-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "great-hornbill": {
+   "way": "commute",
+   "rule": "family Bucerotidae"
+  },
+  "great-horned-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "great-kiskadee": {
+   "way": "perch",
+   "rule": "family Tyrannidae"
+  },
+  "great-mormon": {
+   "way": "flower",
+   "rule": "Lepidoptera (Papilionidae)"
+  },
+  "great-potoo": {
+   "way": "perch",
+   "rule": "family Nyctibiidae"
+  },
+  "great-skua": {
+   "way": "patrol",
+   "rule": "family Stercorariidae"
+  },
+  "great-spangled-fritillary": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "great-tailed-grackle": {
+   "way": "ground",
+   "rule": "family Icteridae"
+  },
+  "great-tit": {
+   "way": "flit",
+   "rule": "family Paridae"
+  },
+  "great-white-pelican": {
+   "way": "stork",
+   "rule": "family Pelecanidae"
+  },
+  "greater-adjutant": {
+   "way": "stork",
+   "rule": "family Ciconiidae"
+  },
+  "greater-antillean-grackle": {
+   "way": "ground",
+   "rule": "family Icteridae"
+  },
+  "greater-bee-fly": {
+   "way": "flower",
+   "rule": "Diptera/Bombyliidae"
+  },
+  "greater-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "greater-bulldog-bat": {
+   "way": "aerial",
+   "rule": "a bat that hawks insects (hunt aerial_hawk)"
+  },
+  "greater-flamingo": {
+   "way": "wader",
+   "rule": "family Phoenicopteridae"
+  },
+  "greater-honeyguide": {
+   "way": "perch",
+   "rule": "family Indicatoridae"
+  },
+  "greater-painted-snipe": {
+   "way": "shore",
+   "rule": "family Rostratulidae"
+  },
+  "greater-roadrunner": {
+   "way": "perch",
+   "rule": "family Cuculidae"
+  },
+  "green-blotched-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "green-cheeked-conure": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "green-jay": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "green-orchid-bee": {
+   "way": "flower",
+   "rule": "Hymenoptera/Apidae"
+  },
+  "green-winged-macaw": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "greenbottle-blow-fly": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "grey-crowned-babbler": {
+   "way": "ground",
+   "rule": "family Pomatostomidae"
+  },
+  "grey-crowned-crane": {
+   "way": "wader",
+   "rule": "family Gruidae"
+  },
+  "grey-heron": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "grey-wagtail": {
+   "way": "ground",
+   "rule": "family Motacillidae"
+  },
+  "guianan-cock-of-the-rock": {
+   "way": "commute",
+   "rule": "family Cotingidae"
+  },
+  "guira-cuckoo": {
+   "way": "perch",
+   "rule": "family Cuculidae"
+  },
+  "hackberry-emperor": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "hammerkop": {
+   "way": "wader",
+   "rule": "family Scopidae"
+  },
+  "harnessed-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "harpy-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "harriss-hawk": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "hawaiian-crow": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "hecale-longwing": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "helmeted-hornbill": {
+   "way": "commute",
+   "rule": "family Bucerotidae"
+  },
+  "herring-gull": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "hoatzin": {
+   "way": "commute",
+   "rule": "family Opisthocomidae"
+  },
+  "honduran-white-bat": {
+   "way": "commute",
+   "rule": "a bat that eats fruit: flies out to its feeding trees and back"
+  },
+  "hooded-vulture": {
+   "way": "vulture",
+   "rule": "family Accipitridae, a vulture by name"
+  },
+  "horned-puffin": {
+   "way": "patrol",
+   "rule": "family Alcidae"
+  },
+  "horned-sungem": {
+   "way": "hover",
+   "rule": "family Trochilidae: hovers at flowers"
+  },
+  "horse-fly": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "house-crow": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "house-finch": {
+   "way": "ground",
+   "rule": "family Fringillidae"
+  },
+  "house-fly": {
+   "way": "bug",
+   "rule": "Diptera/Muscidae: flies now and then"
+  },
+  "house-sparrow": {
+   "way": "ground",
+   "rule": "family Passeridae"
+  },
+  "house-wren": {
+   "way": "flit",
+   "rule": "family Troglodytidae"
+  },
+  "household-casebearer-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Tineidae): flies now and then"
+  },
+  "hummingbird-clearwing": {
+   "way": "flower",
+   "rule": "Lepidoptera/Sphingidae"
+  },
+  "hummingbird-hawk-moth": {
+   "way": "flower",
+   "rule": "Lepidoptera/Sphingidae"
+  },
+  "hyacinth-macaw": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "ibisbill": {
+   "way": "shore",
+   "rule": "family Ibidorhynchidae"
+  },
+  "imperial-fruit-sucking-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "inca-tern": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "indian-pied-myna": {
+   "way": "ground",
+   "rule": "family Sturnidae"
+  },
+  "io-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Saturniidae): flies now and then"
+  },
+  "iris-lorikeet": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "isabella-tiger-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "jabiru": {
+   "way": "stork",
+   "rule": "family Ciconiidae"
+  },
+  "jackdaw": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "japanese-bush-warbler": {
+   "way": "flit",
+   "rule": "family Cettiidae"
+  },
+  "javan-munia": {
+   "way": "ground",
+   "rule": "family Estrildidae"
+  },
+  "javan-myna": {
+   "way": "ground",
+   "rule": "family Sturnidae"
+  },
+  "javan-pond-heron": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "javanese-mud-dauber": {
+   "way": "bug",
+   "rule": "Hymenoptera/Sphecidae: flies now and then"
+  },
+  "kea": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "keel-billed-toucan": {
+   "way": "commute",
+   "rule": "family Ramphastidae"
+  },
+  "kikiki-huna-fairyfly": {
+   "way": "bug",
+   "rule": "Hymenoptera/Mymaridae: flies now and then"
+  },
+  "killdeer": {
+   "way": "shore",
+   "rule": "family Charadriidae"
+  },
+  "king-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "king-of-saxony-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "king-vulture": {
+   "way": "vulture",
+   "rule": "family Cathartidae"
+  },
+  "knobbed-hornbill": {
+   "way": "commute",
+   "rule": "family Bucerotidae"
+  },
+  "kuhls-pipistrelle-bat": {
+   "way": "aerial",
+   "rule": "a bat that hawks insects (hunt aerial_hawk)"
+  },
+  "lappet-faced-vulture": {
+   "way": "vulture",
+   "rule": "family Accipitridae, a vulture by name"
+  },
+  "large-billed-crow": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "large-flying-fox": {
+   "way": "commute",
+   "rule": "a bat that eats fruit: flies out to its feeding trees and back"
+  },
+  "lasioglossum-albescens": {
+   "way": "flower",
+   "rule": "Hymenoptera/Halictidae"
+  },
+  "laughing-kookaburra": {
+   "way": "perch",
+   "rule": "family Alcedinidae"
+  },
+  "laysan-albatross": {
+   "way": "patrol",
+   "rule": "family Diomedeidae"
+  },
+  "least-bittern": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "leopard-lacewing": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "lesser-adjutant-stork": {
+   "way": "stork",
+   "rule": "family Ciconiidae"
+  },
+  "lesser-banded-hornet": {
+   "way": "bug",
+   "rule": "Hymenoptera/Vespidae: flies now and then"
+  },
+  "lesser-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "lilac-breasted-roller": {
+   "way": "perch",
+   "rule": "family Coraciidae"
+  },
+  "limpkin": {
+   "way": "wader",
+   "rule": "family Aramidae"
+  },
+  "little-auk": {
+   "way": "patrol",
+   "rule": "family Alcidae"
+  },
+  "little-black-cormorant": {
+   "way": "perch",
+   "rule": "family Phalacrocoracidae"
+  },
+  "little-blue-heron": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "little-egret": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "little-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "little-wood-satyr": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "loggerhead-shrike": {
+   "way": "perch",
+   "rule": "family Laniidae"
+  },
+  "long-eared-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "long-tailed-manakin": {
+   "way": "flit",
+   "rule": "family Pipridae"
+  },
+  "long-tailed-widowbird": {
+   "way": "ground",
+   "rule": "family Ploceidae"
+  },
+  "long-wattled-umbrellabird": {
+   "way": "commute",
+   "rule": "family Cotingidae"
+  },
+  "luna-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Saturniidae): flies now and then"
+  },
+  "lycaenid-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Lycaenidae)"
+  },
+  "magnificent-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "magnificent-frigatebird": {
+   "way": "vulture",
+   "rule": "family Fregatidae"
+  },
+  "magnificent-riflebird": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "malachite-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "malachite-kingfisher": {
+   "way": "perch",
+   "rule": "family Alcedinidae"
+  },
+  "manx-shearwater": {
+   "way": "patrol",
+   "rule": "family Procellariidae"
+  },
+  "map-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "marabou-stork": {
+   "way": "stork",
+   "rule": "family Ciconiidae"
+  },
+  "marbled-godwit": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "marmalade-hoverfly": {
+   "way": "flower",
+   "rule": "Diptera/Syrphidae"
+  },
+  "marsh-tit": {
+   "way": "flit",
+   "rule": "family Paridae"
+  },
+  "martial-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "marvellous-spatuletail": {
+   "way": "hover",
+   "rule": "family Trochilidae: hovers at flowers"
+  },
+  "masked-lapwing": {
+   "way": "shore",
+   "rule": "family Charadriidae"
+  },
+  "masked-lovebird": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "masked-owl": {
+   "way": "perch",
+   "rule": "family Tytonidae"
+  },
+  "masked-water-tyrant": {
+   "way": "perch",
+   "rule": "family Tyrannidae"
+  },
+  "medium-ground-finch": {
+   "way": "flit",
+   "rule": "family Thraupidae"
+  },
+  "mexican-paper-wasp": {
+   "way": "bug",
+   "rule": "Hymenoptera/Eumenidae: flies now and then"
+  },
+  "military-macaw": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "mint-moth": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "mississippi-kite": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "mistle-thrush": {
+   "way": "ground",
+   "rule": "family Turdidae"
+  },
+  "mitred-parakeet": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "monarch-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "montezuma-oropendola": {
+   "way": "ground",
+   "rule": "family Icteridae"
+  },
+  "mourning-cloak": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "nacunda-nighthawk": {
+   "way": "aerial",
+   "rule": "family Caprimulgidae"
+  },
+  "narrow-bordered-bee-hawkmoth": {
+   "way": "flower",
+   "rule": "Lepidoptera/Sphingidae"
+  },
+  "neotropic-cormorant": {
+   "way": "perch",
+   "rule": "family Phalacrocoracidae"
+  },
+  "new-caledonian-crow": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "new-zealand-bellbird": {
+   "way": "flit",
+   "rule": "family Meliphagidae"
+  },
+  "northern-bald-ibis": {
+   "way": "wader",
+   "rule": "family Threskiornithidae"
+  },
+  "northern-cardinal": {
+   "way": "flit",
+   "rule": "family Cardinalidae"
+  },
+  "northern-fulmar": {
+   "way": "patrol",
+   "rule": "family Procellariidae"
+  },
+  "northern-gannet": {
+   "way": "patrol",
+   "rule": "family Sulidae"
+  },
+  "northern-hawk-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "northern-jacana": {
+   "way": "shore",
+   "rule": "family Jacanidae"
+  },
+  "northern-lapwing": {
+   "way": "shore",
+   "rule": "family Charadriidae"
+  },
+  "northern-mockingbird": {
+   "way": "ground",
+   "rule": "family Mimidae"
+  },
+  "nutmeg-mannikin": {
+   "way": "ground",
+   "rule": "family Estrildidae"
+  },
+  "ocellated-antbird": {
+   "way": "flit",
+   "rule": "family Thamnophilidae"
+  },
+  "oilbird": {
+   "way": "commute",
+   "rule": "family Steatornithidae"
+  },
+  "oleander-hawk-moth": {
+   "way": "flower",
+   "rule": "Lepidoptera/Sphingidae"
+  },
+  "olive-backed-sunbird": {
+   "way": "flit",
+   "rule": "family Nectariniidae"
+  },
+  "orange-headed-thrush": {
+   "way": "ground",
+   "rule": "family Turdidae"
+  },
+  "orange-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Dalceridae): flies now and then"
+  },
+  "orange-oakleaf-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "orange-sulphur": {
+   "way": "flower",
+   "rule": "Lepidoptera (Pieridae)"
+  },
+  "oriental-dwarf-kingfisher": {
+   "way": "perch",
+   "rule": "family Alcedinidae"
+  },
+  "oriental-honey-buzzard": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "oriental-latrine-fly": {
+   "way": "bug",
+   "rule": "Diptera/Calliphoridae: flies now and then"
+  },
+  "oriental-pied-hornbill": {
+   "way": "commute",
+   "rule": "family Bucerotidae"
+  },
+  "oriental-white-eye": {
+   "way": "flit",
+   "rule": "family Zosteropidae"
+  },
+  "osprey": {
+   "way": "soar",
+   "rule": "family Pandionidae"
+  },
+  "ovenbird": {
+   "way": "flit",
+   "rule": "family Parulidae"
+  },
+  "owl-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "owlet-moth": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "pacific-parrotlet": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "paddyfield-warbler": {
+   "way": "flit",
+   "rule": "family Acrocephalidae"
+  },
+  "painted-bunting": {
+   "way": "flit",
+   "rule": "family Cardinalidae"
+  },
+  "painted-stork": {
+   "way": "stork",
+   "rule": "family Ciconiidae"
+  },
+  "pale-beauty-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Geometridae): flies now and then"
+  },
+  "pale-billed-flowerpecker": {
+   "way": "flit",
+   "rule": "family Dicaeidae"
+  },
+  "palm-cockatoo": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "panda-ant": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "paper-wasp": {
+   "way": "bug",
+   "rule": "Hymenoptera/Vespidae: flies now and then"
+  },
+  "paradise-riflebird": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "paradise-tanager": {
+   "way": "flit",
+   "rule": "family Thraupidae"
+  },
+  "pea-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Tortricidae): flies now and then"
+  },
+  "peach-faced-lovebird": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "peacock-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "peacock-fly": {
+   "way": "bug",
+   "rule": "Diptera/Ulidiidae: flies now and then"
+  },
+  "peregrine-falcon": {
+   "way": "perch",
+   "rule": "family Falconidae"
+  },
+  "pesquets-parrot": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "philippine-bulbul": {
+   "way": "flit",
+   "rule": "family Pycnonotidae"
+  },
+  "philippine-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "picasso-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "pied-avocet": {
+   "way": "shore",
+   "rule": "family Recurvirostridae"
+  },
+  "pied-butcherbird": {
+   "way": "perch",
+   "rule": "family Cracticidae"
+  },
+  "pied-crow": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "pied-cuckoo": {
+   "way": "perch",
+   "rule": "family Cuculidae"
+  },
+  "pied-fantail": {
+   "way": "flit",
+   "rule": "family Rhipiduridae"
+  },
+  "pied-kingfisher": {
+   "way": "perch",
+   "rule": "family Alcedinidae"
+  },
+  "pied-paddy-skimmer": {
+   "way": "dragon",
+   "rule": "Odonata/Libellulidae"
+  },
+  "pileated-woodpecker": {
+   "way": "tree",
+   "rule": "family Picidae"
+  },
+  "pin-tailed-whydah": {
+   "way": "ground",
+   "rule": "family Viduidae"
+  },
+  "pink-spotted-hawkmoth": {
+   "way": "flower",
+   "rule": "Lepidoptera/Sphingidae"
+  },
+  "pinyon-jay": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "piping-plover": {
+   "way": "shore",
+   "rule": "family Charadriidae"
+  },
+  "pit-trapping-antlion": {
+   "way": "bug",
+   "rule": "Neuroptera/Myrmeleontidae: flies now and then"
+  },
+  "plate-billed-mountain-toucan": {
+   "way": "commute",
+   "rule": "family Ramphastidae"
+  },
+  "plumbeous-ibis": {
+   "way": "wader",
+   "rule": "family Threskiornithidae"
+  },
+  "plume-moth": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "polyphemus-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Saturniidae): flies now and then"
+  },
+  "postman-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "privet-hawk-moth": {
+   "way": "flower",
+   "rule": "Lepidoptera/Sphingidae"
+  },
+  "purple-crowned-fairywren": {
+   "way": "flit",
+   "rule": "family Maluridae"
+  },
+  "purple-finch": {
+   "way": "ground",
+   "rule": "family Fringillidae"
+  },
+  "racket-tailed-roller": {
+   "way": "perch",
+   "rule": "family Coraciidae"
+  },
+  "raggiana-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "rail-babbler": {
+   "way": "flit",
+   "rule": "family Eupetidae"
+  },
+  "rainbow-bee-eater": {
+   "way": "perch",
+   "rule": "family Meropidae"
+  },
+  "rainbow-lorikeet": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "razorbill": {
+   "way": "patrol",
+   "rule": "family Alcidae"
+  },
+  "red-admiral": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "red-backed-fairywren": {
+   "way": "flit",
+   "rule": "family Maluridae"
+  },
+  "red-bearded-bee-eater": {
+   "way": "perch",
+   "rule": "family Meropidae"
+  },
+  "red-bellied-woodpecker": {
+   "way": "tree",
+   "rule": "family Picidae"
+  },
+  "red-billed-oxpecker": {
+   "way": "ground",
+   "rule": "family Buphagidae"
+  },
+  "red-billed-tropicbird": {
+   "way": "patrol",
+   "rule": "family Phaethontidae"
+  },
+  "red-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "red-breasted-nuthatch": {
+   "way": "tree",
+   "rule": "family Sittidae"
+  },
+  "red-breasted-parakeet": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "red-capped-manakin": {
+   "way": "flit",
+   "rule": "family Pipridae"
+  },
+  "red-crossbill": {
+   "way": "ground",
+   "rule": "family Fringillidae"
+  },
+  "red-crowned-crane": {
+   "way": "wader",
+   "rule": "family Gruidae"
+  },
+  "red-crowned-parrot": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "red-fan-parrot": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "red-footed-cannibalfly": {
+   "way": "dragon",
+   "rule": "Diptera/Asilidae"
+  },
+  "red-kite": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "red-legged-honeycreeper": {
+   "way": "flit",
+   "rule": "family Thraupidae"
+  },
+  "red-lory": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "red-necked-phalarope": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "red-paper-wasp": {
+   "way": "bug",
+   "rule": "Hymenoptera/Eumenidae: flies now and then"
+  },
+  "red-spotted-purple": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "red-tailed-hawk": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "red-tailed-tropicbird": {
+   "way": "patrol",
+   "rule": "family Phaethontidae"
+  },
+  "red-veined-darter": {
+   "way": "dragon",
+   "rule": "Odonata/Libellulidae"
+  },
+  "red-vented-bulbul": {
+   "way": "flit",
+   "rule": "family Pycnonotidae"
+  },
+  "red-winged-blackbird": {
+   "way": "ground",
+   "rule": "family Icteridae"
+  },
+  "redwing": {
+   "way": "ground",
+   "rule": "family Turdidae"
+  },
+  "regent-bowerbird": {
+   "way": "commute",
+   "rule": "family Ptilonorhynchidae"
+  },
+  "resplendent-quetzal": {
+   "way": "perch",
+   "rule": "family Trogonidae"
+  },
+  "rhinoceros-hornbill": {
+   "way": "commute",
+   "rule": "family Bucerotidae"
+  },
+  "ribbon-tailed-astrapia": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "rifleman": {
+   "way": "flit",
+   "rule": "family Acanthisittidae"
+  },
+  "ring-billed-gull": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "rivolis-hummingbird": {
+   "way": "hover",
+   "rule": "family Trochilidae: hovers at flowers"
+  },
+  "roadside-hawk": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "rook": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "rose-ringed-parakeet": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "roseate-spoonbill": {
+   "way": "wader",
+   "rule": "family Threskiornithidae"
+  },
+  "roseate-tern": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "rosy-maple-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Saturniidae): flies now and then"
+  },
+  "royal-flycatcher": {
+   "way": "perch",
+   "rule": "family Tyrannidae"
+  },
+  "ruby-pyrausta-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Crambidae): flies now and then"
+  },
+  "ruby-throated-hummingbird": {
+   "way": "hover",
+   "rule": "family Trochilidae: hovers at flowers"
+  },
+  "ruddy-daggerwing": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "ruddy-darter": {
+   "way": "dragon",
+   "rule": "Odonata/Libellulidae"
+  },
+  "ruff": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "rufous-bellied-thrush": {
+   "way": "ground",
+   "rule": "family Turdidae"
+  },
+  "rufous-hornero": {
+   "way": "tree",
+   "rule": "family Furnariidae"
+  },
+  "rufous-potoo": {
+   "way": "perch",
+   "rule": "family Nyctibiidae"
+  },
+  "rufous-tailed-jacamar": {
+   "way": "perch",
+   "rule": "family Galbulidae"
+  },
+  "sacred-kingfisher": {
+   "way": "perch",
+   "rule": "family Alcedinidae"
+  },
+  "saddle-billed-stork": {
+   "way": "stork",
+   "rule": "family Ciconiidae"
+  },
+  "salmon-crested-cockatoo": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "sanderling": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "sandhill-crane": {
+   "way": "wader",
+   "rule": "family Gruidae"
+  },
+  "sarus-crane": {
+   "way": "wader",
+   "rule": "family Gruidae"
+  },
+  "satin-bowerbird": {
+   "way": "commute",
+   "rule": "family Ptilonorhynchidae"
+  },
+  "satin-flycatcher": {
+   "way": "perch",
+   "rule": "family Monarchidae"
+  },
+  "scarlet-ibis": {
+   "way": "wader",
+   "rule": "family Threskiornithidae"
+  },
+  "scarlet-macaw": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "scarlet-rumped-cacique": {
+   "way": "ground",
+   "rule": "family Icteridae"
+  },
+  "scarlet-skimmer": {
+   "way": "dragon",
+   "rule": "Odonata/Libellulidae"
+  },
+  "scarlet-tiger-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "sedge-warbler": {
+   "way": "flit",
+   "rule": "family Acrocephalidae"
+  },
+  "sedge-wren": {
+   "way": "flit",
+   "rule": "family Troglodytidae"
+  },
+  "seychelles-magpie-robin": {
+   "way": "perch",
+   "rule": "family Muscicapidae"
+  },
+  "shoebill": {
+   "way": "wader",
+   "rule": "family Balaenicipitidae"
+  },
+  "short-billed-dowitcher": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "short-eared-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "siberian-crane": {
+   "way": "wader",
+   "rule": "family Gruidae"
+  },
+  "silver-gull": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "slender-skimmer": {
+   "way": "dragon",
+   "rule": "Odonata/Libellulidae"
+  },
+  "small-branded-swift": {
+   "way": "flower",
+   "rule": "Lepidoptera (Hesperiidae)"
+  },
+  "small-cabbage-white": {
+   "way": "flower",
+   "rule": "Lepidoptera (Pieridae)"
+  },
+  "snakefly": {
+   "way": "bug",
+   "rule": "Raphidioptera/Raphidiidae: flies now and then"
+  },
+  "snout-moth": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "snow-bunting": {
+   "way": "ground",
+   "rule": "family Calcariidae"
+  },
+  "snow-petrel": {
+   "way": "patrol",
+   "rule": "family Procellariidae"
+  },
+  "snowy-egret": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "snowy-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "snowy-plover": {
+   "way": "shore",
+   "rule": "family Charadriidae"
+  },
+  "snowy-sheathbill": {
+   "way": "shore",
+   "rule": "family Chionidae"
+  },
+  "sociable-weaver": {
+   "way": "ground",
+   "rule": "family Passeridae"
+  },
+  "song-sparrow": {
+   "way": "ground",
+   "rule": "family Passerellidae"
+  },
+  "song-thrush": {
+   "way": "ground",
+   "rule": "family Turdidae"
+  },
+  "sooty-headed-bulbul": {
+   "way": "flit",
+   "rule": "family Pycnonotidae"
+  },
+  "sooty-shearwater": {
+   "way": "patrol",
+   "rule": "family Procellariidae"
+  },
+  "southern-lapwing": {
+   "way": "shore",
+   "rule": "family Charadriidae"
+  },
+  "spectacled-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "splendid-fairywren": {
+   "way": "flit",
+   "rule": "family Maluridae"
+  },
+  "spoon-billed-sandpiper": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "spotted-nutcracker": {
+   "way": "ground",
+   "rule": "family Corvidae"
+  },
+  "spotted-wood-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "sri-lanka-frogmouth": {
+   "way": "perch",
+   "rule": "family Podargidae"
+  },
+  "st-marks-fly": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "stalk-eyed-fly": {
+   "way": "bug",
+   "rule": "Diptera/Diopsidae: flies now and then"
+  },
+  "standardwing-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "stellers-sea-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "steppe-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "straw-headed-bulbul": {
+   "way": "flit",
+   "rule": "family Pycnonotidae"
+  },
+  "striated-caracara": {
+   "way": "perch",
+   "rule": "family Falconidae"
+  },
+  "striped-albatross": {
+   "way": "flower",
+   "rule": "Lepidoptera (Pieridae)"
+  },
+  "sulphur-crested-cockatoo": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "sun-conure": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "sunbittern": {
+   "way": "wader",
+   "rule": "family Eurypygidae"
+  },
+  "sunda-scops-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "sunset-moth": {
+   "way": "flower",
+   "rule": "Lepidoptera (Uraniidae)"
+  },
+  "superb-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "superb-fairywren": {
+   "way": "flit",
+   "rule": "family Maluridae"
+  },
+  "superb-lyrebird": {
+   "way": "ground",
+   "rule": "family Menuridae"
+  },
+  "superb-starling": {
+   "way": "ground",
+   "rule": "family Sturnidae"
+  },
+  "swallow-tailed-kite": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "swamp-harrier": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "sword-billed-hummingbird": {
+   "way": "hover",
+   "rule": "family Trochilidae: hovers at flowers"
+  },
+  "tarantula-hawk-wasp": {
+   "way": "bug",
+   "rule": "Hymenoptera/Pompilidae: flies now and then"
+  },
+  "tawny-frogmouth": {
+   "way": "perch",
+   "rule": "family Podargidae"
+  },
+  "tawny-owl": {
+   "way": "perch",
+   "rule": "family Strigidae"
+  },
+  "tent-making-bat": {
+   "way": "aerial",
+   "rule": "a bat that hawks insects (hunt aerial_hawk)"
+  },
+  "thick-billed-murre": {
+   "way": "patrol",
+   "rule": "family Alcidae"
+  },
+  "tiger-moth": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "timneh-parrot": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "toco-toucan": {
+   "way": "commute",
+   "rule": "family Ramphastidae"
+  },
+  "tricolored-heron": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "tropical-carpenter-bee": {
+   "way": "flower",
+   "rule": "Hymenoptera/Apidae"
+  },
+  "trumpeter-hornbill": {
+   "way": "commute",
+   "rule": "family Bucerotidae"
+  },
+  "tufted-puffin": {
+   "way": "patrol",
+   "rule": "family Alcidae"
+  },
+  "tui": {
+   "way": "flit",
+   "rule": "family Meliphagidae"
+  },
+  "turkey-vulture": {
+   "way": "vulture",
+   "rule": "family Cathartidae"
+  },
+  "turquoise-browed-motmot": {
+   "way": "perch",
+   "rule": "family Momotidae"
+  },
+  "twelve-wired-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "two-tailed-pasha": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "ultramarine-lorikeet": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "umbrella-cockatoo": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "underwing-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "vapourer-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "variegated-meadowhawk": {
+   "way": "dragon",
+   "rule": "Odonata/Libellulidae"
+  },
+  "verdin": {
+   "way": "flit",
+   "rule": "family Remizidae"
+  },
+  "victorias-riflebird": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "violet-carpenter-bee": {
+   "way": "flower",
+   "rule": "Hymenoptera/Apidae"
+  },
+  "vogelkop-bowerbird": {
+   "way": "commute",
+   "rule": "family Ptilonorhynchidae"
+  },
+  "vulture-bee": {
+   "way": "flower",
+   "rule": "Hymenoptera/Apidae"
+  },
+  "wahness-parotia": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "wallcreeper": {
+   "way": "tree",
+   "rule": "family Tichodromidae"
+  },
+  "wandering-albatross": {
+   "way": "patrol",
+   "rule": "family Diomedeidae"
+  },
+  "wandering-glider": {
+   "way": "dragon",
+   "rule": "Odonata/Libellulidae"
+  },
+  "wasp-mantidfly": {
+   "way": "bug",
+   "rule": "Neuroptera/Mantispidae: flies now and then"
+  },
+  "wattled-crane": {
+   "way": "wader",
+   "rule": "family Gruidae"
+  },
+  "wedge-tailed-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "welcome-swallow": {
+   "way": "aerial",
+   "rule": "family Hirundinidae"
+  },
+  "western-honey-bee": {
+   "way": "flower",
+   "rule": "Hymenoptera/Apidae"
+  },
+  "western-meadowlark": {
+   "way": "ground",
+   "rule": "family Icteridae"
+  },
+  "western-yellow-wagtail": {
+   "way": "ground",
+   "rule": "family Motacillidae"
+  },
+  "whinchat": {
+   "way": "perch",
+   "rule": "family Muscicapidae"
+  },
+  "white-backed-vulture": {
+   "way": "vulture",
+   "rule": "family Accipitridae, a vulture by name"
+  },
+  "white-bellbird": {
+   "way": "commute",
+   "rule": "family Cotingidae"
+  },
+  "white-bellied-sea-eagle": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  },
+  "white-browed-fantail": {
+   "way": "flit",
+   "rule": "family Rhipiduridae"
+  },
+  "white-crested-laughingthrush": {
+   "way": "flit",
+   "rule": "family Leiothrichidae"
+  },
+  "white-headed-vulture": {
+   "way": "vulture",
+   "rule": "family Accipitridae, a vulture by name"
+  },
+  "white-peacock-butterfly": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "white-rumped-shama": {
+   "way": "perch",
+   "rule": "family Muscicapidae"
+  },
+  "white-rumped-vulture": {
+   "way": "vulture",
+   "rule": "family Accipitridae, a vulture by name"
+  },
+  "white-stork": {
+   "way": "stork",
+   "rule": "family Ciconiidae"
+  },
+  "white-tailed-tropicbird": {
+   "way": "patrol",
+   "rule": "family Phaethontidae"
+  },
+  "white-throated-dipper": {
+   "way": "ground",
+   "rule": "family Cinclidae"
+  },
+  "white-throated-kingfisher": {
+   "way": "perch",
+   "rule": "family Alcedinidae"
+  },
+  "white-throated-needletail": {
+   "way": "swift",
+   "rule": "family Apodidae"
+  },
+  "white-underwing-moth": {
+   "way": "bug",
+   "rule": "Lepidoptera (Erebidae): flies now and then"
+  },
+  "whooping-crane": {
+   "way": "wader",
+   "rule": "family Gruidae"
+  },
+  "willow-tit": {
+   "way": "flit",
+   "rule": "family Paridae"
+  },
+  "willow-warbler": {
+   "way": "flit",
+   "rule": "family Phylloscopidae"
+  },
+  "wilsons-bird-of-paradise": {
+   "way": "commute",
+   "rule": "family Paradisaeidae"
+  },
+  "wilsons-phalarope": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "wilsons-snipe": {
+   "way": "shore",
+   "rule": "family Scolopacidae"
+  },
+  "wilsons-storm-petrel": {
+   "way": "patrol",
+   "rule": "family Hydrobatidae"
+  },
+  "wire-tailed-manakin": {
+   "way": "flit",
+   "rule": "family Pipridae"
+  },
+  "wood-stork": {
+   "way": "stork",
+   "rule": "family Ciconiidae"
+  },
+  "woodpecker-finch": {
+   "way": "flit",
+   "rule": "family Thraupidae"
+  },
+  "wreathed-hornbill": {
+   "way": "commute",
+   "rule": "family Bucerotidae"
+  },
+  "wrybill": {
+   "way": "shore",
+   "rule": "family Charadriidae"
+  },
+  "xantuss-hummingbird": {
+   "way": "hover",
+   "rule": "family Trochilidae: hovers at flowers"
+  },
+  "xantuss-murrelet": {
+   "way": "patrol",
+   "rule": "family Alcidae"
+  },
+  "xeme": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "yam-hawk-moth": {
+   "way": "flower",
+   "rule": "Lepidoptera/Sphingidae"
+  },
+  "yellow-billed-shrike": {
+   "way": "perch",
+   "rule": "family Laniidae"
+  },
+  "yellow-billed-stork": {
+   "way": "stork",
+   "rule": "family Ciconiidae"
+  },
+  "yellow-crowned-amazon-parrot": {
+   "way": "commute",
+   "rule": "family Psittacidae"
+  },
+  "yellow-crowned-night-heron": {
+   "way": "wader",
+   "rule": "family Ardeidae"
+  },
+  "yellow-dung-fly": {
+   "way": "bug",
+   "rule": "Diptera/Scathophagidae: flies now and then"
+  },
+  "yellow-legged-gull": {
+   "way": "patrol",
+   "rule": "family Laridae"
+  },
+  "yellow-legged-nomad-bee": {
+   "way": "flower",
+   "rule": "Hymenoptera/Apidae"
+  },
+  "yellow-vented-bulbul": {
+   "way": "flit",
+   "rule": "family Pycnonotidae"
+  },
+  "yellowjacket-hornet": {
+   "way": "flower",
+   "rule": "visits flowers (its stored diet)"
+  },
+  "zebra-finch": {
+   "way": "ground",
+   "rule": "family Estrildidae"
+  },
+  "zebra-longwing": {
+   "way": "flower",
+   "rule": "Lepidoptera (Nymphalidae)"
+  },
+  "zebra-swallowtail": {
+   "way": "flower",
+   "rule": "Lepidoptera (Papilionidae)"
+  },
+  "zone-tailed-hawk": {
+   "way": "soar",
+   "rule": "family Accipitridae"
+  }
+ }
+}

@@ -29,11 +29,11 @@
  * Its home here is the module's (the server's) spot for its slot; `spaceHomes` keeps a resting predator's home a safe
  * distance from its prey as before, and applies only while it is not hunting.
  */
-import {ARK_DAY_MS, STEPS_PER_ARK_DAY, awakeAt, decodeAtlas, forayAt, hashString, homeOf, mediumAt, stepIndex, type Atlas, type Home, type Sheet} from "@/ark-scene/positions/positions";
+import {ARK_DAY_MS, STEPS_PER_ARK_DAY, awakeAt, decodeAtlas, forayAt, forayRadius, hashString, homeOf, mediumAt, stepIndex, type Atlas, type Home, type Sheet} from "@/ark-scene/positions/positions";
 import {behaviourProfile, bodyLengthsPerSecond} from "@/ark-scene/behaviour-profile";
 import type {ArkBeat, ArkDoing, TripPose} from "@/ark-scene/behaviour-schedule";
 import {intelProfile, type ArkHunt} from "@/ark-scene/intelligence-profile";
-import {hipShare} from "@/ark-scene/locomotion/flee";
+import {hipShare, sprintPace} from "@/ark-scene/locomotion/flee";
 import {flightPaces, flightSpec} from "@/ark-scene/locomotion/flight";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {swimPaces} from "@/ark-scene/locomotion/swim";
@@ -116,8 +116,12 @@ export function huntStyle(slug: string, sheet: Sheet): HuntStyle {
     if (sheet.move !== "swim" && mammal && (has("pack") || (has("pursuit") && social && profile.diet === "meat"))) return "course";
     if (has("stalk") || (mammal && has("ambush")) || has("pursuit")) return "stalk";
     if (has("ambush") || has("perch_wait") || has("filter")) return "wait";
-    return "forage";
+    // (One rule with the card, `animal-status.ts` forayActivity: a flesh-eater with no stored hunt style, a badger, a
+    // seal on land, whose profile stalks, prowls; the rest forage, and their cards say their own feeding.)
+    return (profile.weights.stalk ?? 0) > 0 ? "stalk" : "forage";
 }
+
+export {forayIsHunt} from "@/ark-scene/hunt-word";
 
 /** The world a hunter moves in beyond the ground's height (the scene's; absent in a test: the sea at 0, no perches). */
 export type HuntWorld = {
@@ -135,8 +139,17 @@ export const HUNT_STEP_SECONDS = ARK_DAY_MS / 1000 / STEPS_PER_ARK_DAY;
  * collisions' easing apart.
  */
 export const HUNT_STATION_AGREE = 3.2;
-/** Its waiting places: a grid this wide about its home (its half diagonal is `HUNT_STATION_AGREE`'s 3.1 m). */
-const STATION_GRID = 4.4;
+/**
+ * One that waits, and a walker too slow for its foray, keeps this near the server's waypoint (m) and no nearer: every
+ * metre of it is a metre less to cover each step. Inside `ENCOUNTER_AGREE` with 0.8 m to spare (a body that the
+ * collisions ease further than that from its place starts its chase at the waypoint, as any other out of agreement).
+ */
+export const HUNT_WAIT_AGREE = 4.2;
+/**
+ * One that waits, and one too slow for its foray, moves on only for this share of a step when its own pace would
+ * take longer: then it hurries, up to its sprint (and past it only where the server's waypoint leaves no choice).
+ */
+const HURRY_SHARE = 0.3;
 /** Into a hunt and out of one: over at most this many steps, at its own pace. */
 export const LEAD_STEPS = 3;
 const TAU = Math.PI * 2;
@@ -173,8 +186,14 @@ export type HuntBody = {
     wade: number;
     walk: number;
     trot: number;
+    sprint: number;
     swim: number;
     fly: number;
+    /**
+     * It keeps as near its home as the agreement allows (`station`): one that waits or lurks, and a walker whose own
+     * pace cannot cover its foray's legs (half a step at its walk is under a typical leg: a tortoise, a chameleon).
+     */
+    pulls: boolean;
     /** A flyer flies a leg longer than this (m), and walks or hops a shorter one. */
     hop: number;
     alt: number;
@@ -232,6 +251,7 @@ export function huntBody(animal: Pick<ArkAnimal, "id" | "model_slug">, sheet: Sh
     const swim = swimStyle ? swimPaces(len, swimStyle).cruise : Math.max(walk, 0.6 * len);
     const insect = spec?.kind === "insect";
     const seed = hashString(animal.id + "#hunt");
+    const slow = !sheet.flies && !(sheet.aquatic && !sheet.amphibious) && walk * HUNT_STEP_SECONDS * 0.5 < forayRadius(sheet) * 0.4;
     const axis = TAU * unit(seed, 1);
     return {
         style,
@@ -244,7 +264,9 @@ export function huntBody(animal: Pick<ArkAnimal, "id" | "model_slug">, sheet: Sh
         walk,
         // A trot: where the gait engine leaves the walk (Froude 0.8 at its hip), never under its walk nor a slow one's run.
         trot: Math.max(walk * 1.25, Math.min(Math.sqrt(0.8 * 9.81 * hip), walk * 3)),
+        sprint: Math.max(sprintPace({plan: intelProfile(slug).plan, slug, length: len, speedStat: profile.speed}), walk),
         swim,
+        pulls: style === "wait" || style === "lurk" || (slow && !ON_THE_MOVE.has(style)),
         // Searching flight is slower than its cruise: a soarer circles near its least sink, a quarterer flies slowly.
         fly: cruise * (style === "soar" ? 0.6 : style === "quarter" ? 0.55 : style === "hawk" ? (insect ? 0.5 : 0.8) : 0.7),
         hop: Math.max(3, 6 * len),
@@ -444,11 +466,17 @@ export class HuntingLayer {
         const way = forayAt(this.state!.atlas, home, id, k);
         out.x = way.x;
         out.z = way.z;
-        if (body.style === "wait" || body.style === "lurk") {
-            // Its waiting places: a grid about its home, so it stays put while the waypoints stay in one cell.
-            const x = home.x + Math.round((way.x - home.x) / STATION_GRID) * STATION_GRID;
-            const z = home.z + Math.round((way.z - home.z) / STATION_GRID) * STATION_GRID;
-            if (Math.hypot(x - way.x, z - way.z) <= HUNT_STATION_AGREE && allowed(home.sheet, mediumAt(this.state!.atlas, home.island, x, z))) {
+        if (body.pulls) {
+            // Its waiting place for this waypoint: the waypoint drawn in towards its home by the agreement's distance.
+            // The waypoints go round its home, so it keeps to a far smaller round inside theirs (its home itself while
+            // they are within the agreement of it), and moves less than half as far as they do.
+            const dx = way.x - home.x;
+            const dz = way.z - home.z;
+            const far = Math.hypot(dx, dz);
+            const keep = far > 1e-6 ? Math.max(far - HUNT_WAIT_AGREE * 0.99, 0) / far : 0;
+            const x = home.x + dx * keep;
+            const z = home.z + dz * keep;
+            if (allowed(home.sheet, mediumAt(this.state!.atlas, home.island, x, z))) {
                 out.x = x;
                 out.z = z;
             }
@@ -590,7 +618,11 @@ export class HuntingLayer {
         plan.flown = body.flyer && plan.d > 0.05 && (plan.d > body.hop || !Number.isNaN(plan.ay) || !Number.isNaN(plan.by) || plan.overA || plan.overB || (body.style === "perch" && plan.d > 1));
         // (One that waits moves on briskly, between its walk and its trot: a crocodile's high walk, not its crawl.)
         const pace = plan.flown ? body.fly : plan.wet ? body.swim * (body.swimmer ? traits.pace * 0.8 : 0.6) : body.style === "wait" ? (body.walk + body.trot) / 2 : body.walk * traits.pace;
-        const go = plan.d > 0.05 ? Math.min(Math.max(plan.d / Math.max(pace, 1e-4), plan.flown ? 1.2 : 0.4), traits.most * HUNT_STEP_SECONDS) / HUNT_STEP_SECONDS : 0;
+        // (One that keeps near its home hurries when its own pace would have it on the move for more than `HURRY_SHARE`
+        // of the step: up to its sprint, or in the water twice its cruise.)
+        const own = plan.d / Math.max(pace, 1e-4);
+        const hurried = body.pulls && !plan.flown ? Math.max(Math.min(own, HURRY_SHARE * HUNT_STEP_SECONDS), plan.d / (plan.wet ? Math.max(body.swim * 2, pace) : Math.max(body.sprint, pace))) : own;
+        const go = plan.d > 0.05 ? Math.min(Math.max(hurried, plan.flown ? 1.2 : 0.4), traits.most * HUNT_STEP_SECONDS) / HUNT_STEP_SECONDS : 0;
         plan.speed = go > 0 ? plan.d / (go * HUNT_STEP_SECONDS) : 0;
         // (A bout is two and a half body lengths at least: shorter, it would be a shuffle.)
         const bouts = go > 0 ? (plan.flown ? 1 : Math.max(1, Math.min(1 + Math.floor(unit(body.seed, k * 7 + 2) * traits.bouts), Math.floor(plan.d / (2.5 * body.len))))) : 0;

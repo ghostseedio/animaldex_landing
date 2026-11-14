@@ -369,7 +369,10 @@ test("dens on dry land: no land animal's den, as its schedule takes it, in the s
             if (all.inSurf(den.x, den.z)) wrong.push(`${a.model_slug} ${a.id.slice(-6)}: its ${denKindOf(a.model_slug)} at ${den.x.toFixed(1)},${den.z.toFixed(1)} (${den.point ?? "ground"})`);
         }
     }
-    assert.ok(dens > 1000, `${dens} dens`);
+    // (How many dens the test looked at, so it cannot pass by looking at none. Over 1,000 until the behaviours pass,
+    // 2026-11-14: the crocodilians, the hippopotamus and the fully aquatic amphibians now roost in the water (24 species,
+    // lane B6), so they are no longer den-dwellers here: 965.)
+    assert.ok(dens > 900, `${dens} dens`);
     assert.deepEqual(wrong.slice(0, 10), [], `${wrong.length} dens in the sea's tide or surf`);
 });
 

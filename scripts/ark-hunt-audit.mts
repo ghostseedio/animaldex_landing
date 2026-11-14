@@ -315,6 +315,24 @@ if (parts.has("forays")) {
         const beats = Object.entries(r.beats).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} ${((100 * v) / r.samples).toFixed(0)}%`).join(" ");
         console.log(`${r.slug.padEnd(32)} ${r.kind.padEnd(7)} ${r.hunt.padEnd(12).slice(0, 12)} ${r.style.padEnd(8)} ${String(r.n).padStart(2)} ${f(r.length).padStart(5)} ${f(r.R, 0).padStart(3)} ${((100 * r.moving) / r.samples).toFixed(0).padStart(5)}%  ${f(med).padStart(6)}/${f(quantile(r.speeds, 0.95)).padEnd(6)}  ${f(med / r.paces.walk, 2).padStart(5)} ${f(med / r.paces.sprint, 2).padStart(6)} ${f(r.paces.cruise ? med / r.paces.cruise : r.paces.swim && r.kind === "swimmer" ? med / r.paces.swim : NaN, 2).padStart(6)}  ${f(((r.turn * 180) / Math.PI) / minutes, 0).padStart(8)} ${f((r.turnMax * 180) / Math.PI, 0).padStart(8)}  ${f(median(r.stillRuns), 1).padStart(6)}/${f(Math.max(0, ...r.stillRuns), 0).padEnd(4)}  ${high.padEnd(34)} ${f(Math.max(0, ...r.off), 2).padStart(6)}   hunting; ${top}; ${beats}`);
     }
+    // What the card says on a foray (`animal-status.ts` forayActivity, one rule with the style), by style.
+    {
+        const {forayActivity} = await import("../src/ark-scene/animal-status.ts");
+        const words = new Map<string, number>();
+        const seen = new Set<string>();
+        const named: string[] = [];
+        for (const s of predators) {
+            const slug = s.animal.model_slug;
+            if (seen.has(slug)) continue;
+            seen.add(slug);
+            const style = styleOf?.(s.animal) ?? null;
+            const word = forayActivity(s.profile, style);
+            words.set(`${style}: ${word}`, (words.get(`${style}: ${word}`) ?? 0) + 1);
+            if (/^(eurasian-wolf|great-blue-heron|great-egret|greylag-goose|brown-throated-sunbird|crimson-sunbird|hermanns-tortoise|red-footed-tortoise|american-bullfrog|great-cormorant|american-badger)$/.test(slug)) named.push(`${slug}: ${style}, "${word}"`);
+        }
+        console.log(`\nthe card on a foray, species by style and word: ${Array.from(words.entries()).sort().map(([k, v]) => `${k} ${v}`).join("; ")}`);
+        console.log(`  ${named.join("; ")}`);
+    }
     const by = (kind: string) => list.filter((r) => r.kind === kind);
     const summary = (kind: string) => {
         const group = by(kind);

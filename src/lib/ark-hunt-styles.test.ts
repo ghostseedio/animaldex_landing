@@ -8,7 +8,7 @@ import {readFileSync} from "node:fs";
 import {join} from "node:path";
 import test from "node:test";
 import {ENCOUNTER_AGREE} from "@/ark-scene/acts";
-import {HUNT_STATION_AGREE, HUNT_STEP_SECONDS, HuntingLayer, LEAD_STEPS, huntBody, huntProgress, huntStyle, huntsTogether, type HuntPose, type HuntStyle} from "@/ark-scene/hunting";
+import {HUNT_STATION_AGREE, HUNT_STEP_SECONDS, HUNT_WAIT_AGREE, HuntingLayer, LEAD_STEPS, huntBody, huntProgress, huntStyle, huntsTogether, type HuntPose, type HuntStyle} from "@/ark-scene/hunting";
 import {ARK_DAY_MS, decodeAtlas, forayAt, homeOf, sheetOf, type Home} from "@/ark-scene/positions/positions";
 import type {ArkAnimal} from "@/ark-scene/types";
 
@@ -79,7 +79,7 @@ test("hunt styles: each kind searches its own way, by rule", () => {
 });
 
 test("the encounter's agreement: at every step's moment it is at the server's waypoint (one that waits or perches, within HUNT_STATION_AGREE)", () => {
-    assert.ok(HUNT_STATION_AGREE < ENCOUNTER_AGREE - 1.5, "room for the collisions' easing inside the chase's 5 m");
+    assert.ok(HUNT_STATION_AGREE < ENCOUNTER_AGREE - 1.5 && HUNT_WAIT_AGREE <= ENCOUNTER_AGREE - 0.8, "room for the collisions' easing inside the chase's 5 m");
     let n = 0;
     for (const slug of Object.keys(STYLES)) {
         const {animal, home} = animalOf(slug, n++);
@@ -94,8 +94,11 @@ test("the encounter's agreement: at every step's moment it is at the server's wa
             }
         }
         // (One that waits holds its waiting place; a bird that comes down between flights does so where it can stand.)
-        const near = style === "wait" || style === "lurk" || ((style === "perch" || style === "wade" || style === "glean") && home.sheet.flies);
-        assert.ok(worst <= (near ? HUNT_STATION_AGREE + 1e-6 : 0.02), `${slug} (${style}): ${worst.toFixed(3)} m off its waypoint`);
+        // (One that waits, or is too slow for its foray, keeps within HUNT_WAIT_AGREE on its home's side of the waypoint.)
+        const pulls = huntBody(animal, home.sheet, home.sheet.len).pulls;
+        const near = (style === "perch" || style === "wade" || style === "glean") && home.sheet.flies;
+        assert.equal(pulls, style === "wait" || style === "lurk", `${slug}: none of these others is too slow for its foray`);
+        assert.ok(worst <= (pulls ? HUNT_WAIT_AGREE + 1e-6 : near ? HUNT_STATION_AGREE + 1e-6 : 0.02), `${slug} (${style}): ${worst.toFixed(3)} m off its waypoint`);
     }
 });
 
@@ -137,7 +140,10 @@ test("on foot: a stalker and a forager go at their own walk in bouts and stop be
         const w = walk(slug, 60, 0.25);
         console.log(`# ${slug}: waits, moving ${(100 * w.share).toFixed(0)}% of the time, ${w.top.toFixed(2)} m/s at most (walk ${w.body.walk.toFixed(2)}, trot ${w.body.trot.toFixed(2)})`);
         assert.ok(w.share < 0.4, `${slug}: waits (moving ${(100 * w.share).toFixed(0)}%)`);
-        assert.ok(w.top < Math.max(w.body.trot, w.body.swim * 0.6) * 1.3, `${slug}: no rush between its waiting places (${w.top.toFixed(2)} m/s, its trot ${w.body.trot.toFixed(2)})`);
+        // (It moves on at its own pace, and hurries only when that would take over three tenths of the step: never past
+        // its sprint on land, twice its cruise in the water, while the waypoint can be reached at that.)
+        assert.ok(w.top < Math.max(w.body.sprint, w.body.swim * 2) * 1.3, `${slug}: no faster than its sprint between its waiting places (${w.top.toFixed(2)} m/s, its sprint ${w.body.sprint.toFixed(2)})`);
+        console.log(`# ${slug}: sprint ${w.body.sprint.toFixed(2)}, swim ${w.body.swim.toFixed(2)}, median while moving ${w.median.toFixed(2)}`);
     }
     for (const slug of ["eurasian-wolf", "spotted-hyena"]) {
         const w = walk(slug, 60, 0.25);

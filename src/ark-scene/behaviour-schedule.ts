@@ -44,12 +44,13 @@ import {hashString} from "@/ark-scene/world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import type {ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
-import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
+import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, aloftSlots, flightWay, FLIGHT_ACCEL_MAX, FLIGHT_WAYS, G, hawkAt, planAirLeg, planSoarLeg, soarAt, soarSpecOf, stationBout, takeoffClass, THERMAL_HOURS, trackAt, type AirPaces, type AirPlan, type AirStage, type FlightWayRule, type SoarAt} from "@/ark-scene/locomotion/flight";
 import {breathRhythm, patrolRule, shoreSide, waterLife} from "@/ark-scene/water-life";
 import {speciesDepth} from "@/ark-scene/sea-depth";
-import {patrolLength, patrolRoute} from "@/ark-scene/water-patrol";
+import {patrolLength, patrolRoute, turnRadiusOf} from "@/ark-scene/water-patrol";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {swimPaces} from "@/ark-scene/locomotion/swim";
+import {TEMPLATES} from "@/ark-scene/recipe-templates";
 import {coatOf, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, recipeRoostTags, sexLook, sitterIntent, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
@@ -1280,7 +1281,7 @@ function groupCentre(world: ScheduleWorld, animal: ScheduleAnimal, slot: number,
 // MARK: The slot
 
 /** A slot's goal: what for, where (null: wherever the last slot left it), how it travels, and its time there. */
-type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean; /** Its heading once there (a prey animal faces the predator it watches); else seeded. */ face?: number; recipe?: string; /** A flight round and back down where it took off (`roundRoute`). */ round?: boolean};
+type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean; /** Its heading once there (a prey animal faces the predator it watches); else seeded. */ face?: number; recipe?: string; /** A flight round and back down where it took off (`roundRoute`). */ round?: boolean; /** A soar's slot that ends up in the air (lane B5: `stationed`); its `to` is where its soar is then. */ aloft?: boolean};
 
 const STAY_DOINGS: ReadonlySet<ArkDoing> = new Set<ArkDoing>(["rest", "groom", "idle", "sleep", "watch"]);
 /** Settled where it is: a flock does not take off after a leader that is doing one of these. */
@@ -1682,6 +1683,10 @@ function keepToSide(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     // (Asleep it is at its roost, as every animal: a crocodile's, a hippo's and an axolotl's is in the water, a seal's
     // on its shore, by their profiles. Its side is for its waking hours.)
     if (planned.doing === "sleep" || planned.doing === "to_roost") return planned;
+    // (Nor a watch, by day or by night, which is its group's and stands where the group is; nor anything in a slot it
+    // is asleep by its own hours, whatever that slot's doing is called: a capybara's night watch at its roost was
+    // made a rest out in the water. Merged tree, with sleep hours by kind.)
+    if (planned.doing === "watch" || !awakeAt(profile, activity, hoursAt(slotStart(animal, slot)))) return planned;
     // (A sea otter, which swims first, lives on the water.)
     const sideAt = (start: number) => (life === "otter" && profile.move === "swim" ? "water" : shoreSide(life, animal.id, hoursAt(start), start));
     const start = slotStart(animal, slot);
@@ -1811,7 +1816,8 @@ function tooFarOnFoot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
 }
 
 function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
-    return remember(memoOf(world, hoursAt, animal).raw, slot, () => workRawIntent(world, profile, animal, activity, slot, hoursAt));
+    // (Lane B5: a flyer keeps to its station and flies off it as its way of life has it: `stationed`.)
+    return remember(memoOf(world, hoursAt, animal).raw, slot, () => stationed(world, profile, animal, activity, slot, hoursAt, workRawIntent(world, profile, animal, activity, slot, hoursAt)));
 }
 
 function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
@@ -2234,6 +2240,14 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
         const landed = world.nav.nearest(fx, fz, "walk", 0.5, 4) ?? {x: fx, z: fz};
         finish = groundSpot(world, landed.x, landed.z);
     }
+    // (Lane B5: its leader down at its station, it comes down at its own place by it, a twig of the same tree, its own
+    // side of the patch: not on the ground under its leader's perch, nor hanging in the air beside it.)
+    const rule = wayRule(group.profile);
+    if (rule && !at.aloft) {
+        const bout = boutAt(rule, group.leader, trips[trips.length - 1].slot);
+        const lead = stationOf(world, group.profile, group.leader, rule, bout);
+        if (Math.hypot(at.x - lead.x, at.z - lead.z) < Math.max(3, animal.length * 16)) finish = stationOf(world, group.profile, animal, rule, bout);
+    }
     return {trips, dx, dy, dz, finish};
 }
 
@@ -2367,8 +2381,14 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     const end = start + SLOT_SECONDS;
     const from = knownFrom ?? finishOf(world, profile, animal, activity, slot - 1, hoursAt);
     const random = rng(hashString(`${animal.id}#route#${slot}`));
-    const cruise = profile.altitude ? CRUISE[profile.altitude] : 0;
+    // (Lane B5: its way of life's height where it sets one: a sandpiper low along the shore, a swallow low over the grass.)
+    const cruise = profile.altitude ? wayHeight(profile) ?? CRUISE[profile.altitude] : 0;
     const base = {slot, doing: now.doing, start, end, from, cruise, shadow: null as Trip["shadow"], recipe: now.recipe ?? null, owner: {animal, profile, slug: profile.slug, activity, hoursAt} as TripOwner};
+    // (Lane B5: a soar's slots, up into it, round its thermals and down out of it, are flown as its track has them.)
+    if (now.aloft || (wayRule(profile)?.aloft && intent(world, profile, animal, activity, slot - 1, hoursAt).aloft)) {
+        const soared = soarTrip(world, profile, animal, activity, slot, hoursAt, now, from, base);
+        if (soared) return soared;
+    }
 
     // A flock member with its leader in the air: catch up, then fly at its side (its own place in the flock, new each slot).
     if (now.follow && animal.group) {
@@ -2384,7 +2404,8 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             for (const trip of shadow.trips) {
                 let at = trip.start;
                 for (const leg of trip.legs) {
-                    if (leg.mode === "air" && at + leg.seconds > start) {
+                    // (Lane B5: its leader's first flight that goes somewhere: a hop to the next twig is its leader's own.)
+                    if (leg.mode === "air" && at + leg.seconds > start && (!wayRule(profile) || leg.length > Math.max(6, animal.length * 20))) {
                         off = at;
                         break;
                     }
@@ -2479,22 +2500,31 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         // (Swimming at its own swimming pace, `swimSpeedOf`, lane MA3 water 2: at its walk clip's, a coot's 0.15 m/s,
         // anything over 3 m was flown, a teal hopping 6 m across its stream.)
         const own = swimming ? swimSpeedOf(profile, animal.length) : pace;
-        const walkMost = firstFlyer ? Math.max(1, animal.length * HOP_LENGTHS) : Math.max(3, animal.length * HOP_LENGTHS, Math.min(WALK_SHARE * flightLoss(paces, wetFrom ? paces.runWater : paces.runGround, wetTo ? paces.skiWater : 0), own * WALK_INSTEAD));
+        // (Lane B5: one that keeps a station, down on the ground or in the shallows, a sandpiper, a heron, a sparrow
+        // feeding, walks its patch, AFOOT_MOST m at most, and flies a longer way.)
+        const afoot = profile.move === "fly" && wayRule(profile) !== null && !raised(world, from) && !raised(world, to);
+        // (Never less than MA1's own: a crane or an ibis still walks a way its flight would crawl over.)
+        // (And as long as its walk takes most of a slot, not MA1's 45 s: it has nowhere else to be.)
+        const walkSeconds = afoot ? SLOT_SECONDS - 12 : WALK_INSTEAD;
+        const worthIt = firstFlyer ? Math.max(1, animal.length * HOP_LENGTHS) : Math.max(3, animal.length * HOP_LENGTHS, Math.min(WALK_SHARE * flightLoss(paces, wetFrom ? paces.runWater : paces.runGround, wetTo ? paces.skiWater : 0), own * walkSeconds));
+        const walkMost = afoot ? Math.max(worthIt, Math.min(walkReach(profile, animal), AFOOT_MOST)) : worthIt;
         // A bird walks a few steps; further than that it flies. One that walks or swims first (a pigeon, a peafowl, a coot
         // on the bank) walks wherever its feet take it in the slot, and flies only further, and only as often as it flies
         // (lane MA3: the audit's peafowl took off 34 times an hour). A ground way becomes a flight only when both MA1's
         // rule (worth the flight) and MA3's (beyond its walk reach, a flight allowed this slot) hold.
-        const ma3Flies = flatWay > (profile.move === "fly" ? Math.max(3, animal.length * 6) : walkReach(profile, animal)) && airAllowed(profile, animal, slot);
+        const ma3Flies = flatWay > (profile.move === "fly" && !afoot ? Math.max(3, animal.length * 6) : afoot ? walkMost : walkReach(profile, animal)) && airAllowed(profile, animal, slot);
         const meant = mode;
         mode = flatWay > walkMost && (mode !== "ground" || ma3Flies) ? "air" : swimming ? "water" : "ground";
         // (A short way is walked only where its feet get there by about that way, in its time; else it flies it, if it
         // meant to or may fly this slot (MA3's `airAllowed`): a fish eagle's 9 m and 14 m across an inlet were 197 m and
         // 177 m walks round it, past a mallard's water.)
-        if (mode === "ground" && flatWay > 3 && (meant === "air" || airAllowed(profile, animal, slot))) {
+        // (Lane B5: not one wading its own shallows, whose way through the water is not on the walk grid: a pelican and
+        // a kite standing in the shallows hop-flew every few metres of it.)
+        if (mode === "ground" && flatWay > 3 && (meant === "air" || airAllowed(profile, animal, slot)) && !(afoot && wadesThere && (wetFrom || wetTo))) {
             const onFoot = world.nav.path(from, to, "walk", 0.5, 900, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug), onSurface(to.point));
             const end = onFoot[onFoot.length - 1];
             const way = pathLength(onFoot);
-            if (!end || Math.hypot(end.x - to.x, end.z - to.z) > 0.5 || way > Math.max(flatWay * 1.6, 3) || way > own * WALK_INSTEAD) mode = "air";
+            if (!end || Math.hypot(end.x - to.x, end.z - to.z) > 0.5 || way > Math.max(flatWay * 1.6, 3) || way > own * walkSeconds) mode = "air";
         }
     }
 
@@ -2629,7 +2659,10 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             const fromWater = wet(world, from) && !raised(world, from);
             const run = fromWater ? paces.runWater : raised(world, from) ? 0 : paces.runGround;
             const ski = wet(world, to) && !raised(world, to) ? paces.skiWater : 0;
-            if (now.round && !insect) {
+            const flits = flitLegs(world, profile, animal, paces, from, to, flat, cruise, bodyR, random, Boolean(now.recipe || now.round));
+            if (flits) {
+                legs.push(...flits);
+            } else if (now.round && !insect) {
                 legs.push(airLeg(world, paces, from, to, roundRoute(from, to, paces, random), cruise, "fly", {run, ski}, bodyR));
             } else if (now.doing === "soar") {
                 // A long, gentle sweep high over its range towards where it is going, bowed out to one side (a raptor
@@ -2850,6 +2883,7 @@ function waterPatrol(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
         body: L,
         turn: hashString(`${animal.id}#round`) % 2 ? 1 : -1,
         coarse: !never,
+        turnRadius: turnRadiusOf(L, pace),
         random,
         wet: (x, z) => world.nav.swimmable(x, z, need)
     });
@@ -2878,6 +2912,580 @@ export function airShare(profile: ArkBehaviourProfile): number {
 function airAllowed(profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number): boolean {
     const share = airShare(profile);
     return share >= 1 || rng(hashString(`${animal.id}#air#${slot}`))() < share;
+}
+
+// MARK: Stations and soars (behaviours pass, lane B5 air; docs/ark/behaviour-pass-2026-11/air.md)
+
+/**
+ * A flyer's way of life on the schedule (lane B5; `locomotion/flight.ts` FLIGHT_WAYS, from `flight-ways.json`). Before,
+ * every bird that flies first chose a new goal every slot and flew to it: a buzzard, a kingfisher, a heron and a parrot
+ * all took off 30 to 60 times an awake hour, 2 to 4 s and 10 to 25 m at a time. Now it keeps to a station (a perch with
+ * a view, a patch of ground, the shallows) for a bout of slots, and of what the schedule picks for a slot it flies off
+ * for only its way's share; the rest it does where it is: sits and looks about, walks its patch, flits to the next twig.
+ * A flock keeps one station (its leader's bout, each member its own place by it) and moves on together.
+ */
+function wayRule(profile: ArkBehaviourProfile): FlightWayRule | null {
+    if (profile.move !== "fly") return null;
+    const way = flightWay(profile.slug);
+    const rule = way ? FLIGHT_WAYS[way] : null;
+    return rule && rule.bout > 0 ? rule : null;
+}
+/** Its way of life's cruising height (m), where it sets one. */
+function wayHeight(profile: ArkBehaviourProfile): number | null {
+    if (profile.move !== "fly") return null;
+    const way = flightWay(profile.slug);
+    return way ? FLIGHT_WAYS[way].height ?? null : null;
+}
+/** (Lane B5 air's seeded share; the needs lane's `unit` above has its own modulus, and each keeps its own.) */
+const airUnit = (text: string) => (hashString(text) % 1_000_003) / 1_000_003;
+
+type Bout = {index: number; first: number; slots: number; key: ScheduleAnimal; keySlot: number; seed: number};
+/** The bout a slot of its own is in: its group's leader's then (by the leader's slots), or its own. */
+function boutAt(rule: FlightWayRule, animal: ScheduleAnimal, slot: number): Bout {
+    const key = animal.group?.leader ?? animal;
+    const keySlot = key === animal ? slot : slotOf(key, slotStart(animal, slot) + SLOT_SECONDS / 2);
+    const seed = airUnit(`${key.id}#bout`);
+    return {...stationBout(rule, seed, keySlot), key, keySlot, seed};
+}
+
+/** A flyer whose station is the ground or the shallows walks a way up to this long (m), and flies a longer one. */
+const AFOOT_MOST = 15;
+/** A soar rides this high over its home's ground at the least (m), and this far over whatever is under it (ground, rocks, crowns). */
+const SOAR_FLOOR = 18;
+const SOAR_CLEAR = 8;
+/** The island's wind, which its thermals drift with (m/s): one wind, so a soar never jumps. */
+const SOAR_WIND = {x: 0.28, z: 0.21};
+/** A soar's height changes no faster than this to keep over what is under it (m/s), looked for this far ahead and behind (s). */
+const SOAR_VERTICAL = 3;
+const SOAR_WINDOW = 30;
+
+/**
+ * A flyer's time on the wing over a run of slots (lane B5): where it is at a world time (`at`: a soar's thermals, an
+ * aerial feeder's sweeps; pure, the same for every viewer), the height its lift is counted from (`floor`: a soar's,
+ * over its home's ground; none for a hawker, which keeps its lift over whatever is under it), how far it keeps over
+ * what is under it, its pace (m/s), and what it shows as.
+ */
+type Soar = {at: (time: number) => SoarAt; floor: number; clear: number | null; pace: number; doing: ArkDoing; beat: ArkBeat};
+/**
+ * The time on the wing a slot is in, or null (lane B5): a bout starts, for its way's share of them, with so many slots
+ * of it (`aloftSlots`): up from its station in the first, on its track in the next ones, down to its new station in the
+ * last. A thermal soarer's only in the warm hours (THERMAL_HOURS); an aerial feeder's whenever it is awake. A flock is
+ * up together (its leader's bout; a soar's kettle, a feeding party of swallows: `soarAt`'s and `hawkAt`'s members).
+ */
+function soaring(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, rule: FlightWayRule, slot: number, hoursAt: HoursAt): Soar | null {
+    const aloft = rule.aloft;
+    if (!aloft) return null;
+    const bout = boutAt(rule, animal, slot);
+    const n = aloftSlots(rule, bout.seed, bout);
+    if (!n || bout.keySlot - bout.first >= n) return null;
+    const t0 = slotStart(bout.key, bout.first);
+    const h0 = hoursAt(t0);
+    const h1 = hoursAt(t0 + n * SLOT_SECONDS);
+    if (!awakeAt(profile, activity, h0) || !awakeAt(profile, activity, h1)) return null;
+    if (aloft.kind === "thermal" && (h0 < THERMAL_HOURS[0] || h1 > THERMAL_HOURS[1] || h1 < h0)) return null;
+    const key = bout.key;
+    const paces = airPaces(profile, animal.length);
+    const seed = airUnit(`${key.id}#soar`);
+    const member = animal.group ? animal.group.rank : 0;
+    const home = {x: key.home.x, z: key.home.z};
+    if (aloft.kind === "hawk") {
+        // (Low over what is under it: a swallow a metre or two to five over the grass and the water, a swift higher.)
+        const low = Math.max((wayHeight(profile) ?? 4) * 0.4, animal.length * 4);
+        const spec = {cruise: paces.cruise, reach: Math.min(homeRadius(profile, key), rangeCap(profile, key)), low, high: low * 3};
+        const patch = openPatch(world, profile, key);
+        return {at: (time) => hawkAt(seed, patch, spec, time, member), floor: -1e6, clear: null, pace: paces.cruise * 0.8, doing: "fly", beat: "fly"};
+    }
+    const spec = soarSpecOf(paces, aloft.span, rangeCap(profile, key), SOAR_WIND);
+    return {at: (time) => soarAt(seed, home, spec, time, member), floor: topAt(world, key.home.x, key.home.z) + SOAR_FLOOR, clear: SOAR_CLEAR, pace: spec.circle, doing: "soar", beat: "glide"};
+}
+/**
+ * Where an aerial feeder's sweeps are centred (lane B5): its home, or the most open of eight spots a sweep's length
+ * round it (the least of woods' crowns over the ground under its sweeps there), within its range: a swallow feeds over
+ * the grass and the water, not in the trees. Over a wood all round it keeps over the crowns (`soarHeights`). Pure;
+ * remembered until the schedules are forgotten.
+ */
+const patches = new WeakMap<ScheduleAnimal, {generation: number; x: number; z: number}>();
+function openPatch(world: ScheduleWorld, profile: ArkBehaviourProfile, key: ScheduleAnimal): {x: number; z: number} {
+    const known = patches.get(key);
+    if (known && known.generation === generation) return known;
+    const crowns = world.sampler.canopyTop;
+    let best = {x: key.home.x, z: key.home.z};
+    if (crowns) {
+        const sweep = Math.min(Math.max(airPaces(profile, key.length).cruise * 3.2, 6), 30);
+        const out = Math.min(sweep * 1.5, rangeCap(profile, key));
+        const wooded = (x: number, z: number) => {
+            let sum = 0;
+            for (let k = 0; k < 9; k++) {
+                const px = x + (k ? Math.sin((k * Math.PI) / 4) * sweep * 0.7 : 0);
+                const pz = z + (k ? Math.cos((k * Math.PI) / 4) * sweep * 0.7 : 0);
+                // (Off the island's edge is not a place to feed over either, for a bird of the land.)
+                sum += world.sampler.heightAt(px, pz) < surfaceY(world, px, pz) - 0.5 && !swims(profile) ? 10 : Math.max(crowns(px, pz) - topAt(world, px, pz), 0);
+            }
+            return sum;
+        };
+        let least = wooded(best.x, best.z);
+        for (let k = 0; k < 8 && least > 0; k++) {
+            const x = key.home.x + Math.sin((k * Math.PI) / 4) * out;
+            const z = key.home.z + Math.cos((k * Math.PI) / 4) * out;
+            const w = wooded(x, z);
+            if (w < least - 1e-6) {
+                least = w;
+                best = {x, z};
+            }
+        }
+    }
+    const patch = {generation, x: best.x, z: best.z};
+    patches.set(key, patch);
+    return patch;
+}
+/** What a soar keeps over at a point: the ground or the water, the drawn rocks' tops, the woods' crowns. */
+function soarFloorAt(world: ScheduleWorld, x: number, z: number): number {
+    const sampler = world.sampler;
+    return Math.max(topAt(world, x, z), sampler.flightFloor ? sampler.flightFloor(x, z) : -Infinity, sampler.canopyTop ? sampler.canopyTop(x, z) : -Infinity);
+}
+/**
+ * Its heights (the scene's y) at each second from a world time on, `seconds` of them and one: its track's own (a soar's
+ * floor and its lift in its thermal; a hawker's lift over what is under it), never under its clearance over what is
+ * under it, eased so it rises to a ridge or a wood ahead and comes down after one at SOAR_VERTICAL at most. Pure in the
+ * time (it looks SOAR_WINDOW s either way), so two slots agree where they meet.
+ */
+function soarHeights(world: ScheduleWorld, soar: Soar, from: number, seconds: number): Float32Array {
+    const all = new Float32Array(seconds + 1 + 2 * SOAR_WINDOW);
+    for (let i = 0; i < all.length; i++) {
+        const at = soar.at(from - SOAR_WINDOW + i);
+        // (What is under it there and through the half second either side, every sixth of a second, about 2 m of its
+        // way: the crowns are known on a 2 m grid, and a tall crown's tip between two seconds' places is under it too.)
+        let under = soarFloorAt(world, at.x, at.z);
+        for (let k = -3; k <= 3; k++) {
+            if (!k) continue;
+            const near = soar.at(from - SOAR_WINDOW + i + k / 6);
+            under = Math.max(under, soarFloorAt(world, near.x, near.z));
+        }
+        all[i] = Math.max(soar.floor + at.lift, under + (soar.clear ?? at.lift));
+    }
+    for (let i = 1; i < all.length; i++) all[i] = Math.max(all[i], all[i - 1] - SOAR_VERTICAL);
+    for (let i = all.length - 2; i >= 0; i--) all[i] = Math.max(all[i], all[i + 1] - SOAR_VERTICAL);
+    return all.subarray(SOAR_WINDOW, SOAR_WINDOW + seconds + 1);
+}
+
+/** Its station for a bout (remembered until the schedules are forgotten). */
+const stations = new WeakMap<ScheduleAnimal, {generation: number; spots: Map<number, Spot>}>();
+function stationOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, rule: FlightWayRule, bout: Bout): Spot {
+    let own = stations.get(animal);
+    if (!own || own.generation !== generation) stations.set(animal, (own = {generation, spots: new Map()}));
+    let spot = own.spots.get(bout.index);
+    if (!spot) {
+        spot = workStation(world, profile, animal, rule, bout);
+        if (own.spots.size > 6) own.spots.clear();
+        own.spots.set(bout.index, spot);
+    }
+    return spot;
+}
+/**
+ * A perch for a station: one of the perches within reach that suit its body, taken from a thinned list (no two within
+ * STATION_APART m, ten of its lengths or `worth` m of each other, in a fixed order), so two bouts' stations are either the same
+ * perch (it stays put) or a real move apart, never a shuffle of a metre along a branch by air. `high`: one of the
+ * highest third (a soarer's perch with a view).
+ */
+const STATION_APART = 4;
+export function stationPerch(world: ScheduleWorld, centre: {x: number; z: number}, length: number, tags: AttachTag[], radius: number, roll: number, high: boolean, worth = 0): AttachPoint | null {
+    const apart = Math.max(STATION_APART, length * 10, worth);
+    for (const tag of tags) {
+        const near = world.sampler.attachPoints(tag, {x: centre.x, z: centre.z, r: radius}).filter((p) => perchSuits(p, length));
+        if (!near.length) continue;
+        const sorted = [...near].sort((a, b) => (high ? b.y - a.y : 0) || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+        const kept: AttachPoint[] = [];
+        for (const p of sorted) {
+            if (kept.length >= 24) break;
+            if (kept.every((q) => Math.hypot(p.x - q.x, p.z - q.z) >= apart)) kept.push(p);
+        }
+        const pool = high ? kept.slice(0, Math.max(1, Math.ceil(kept.length / 3))) : kept;
+        return pool[Math.min(Math.floor(roll * pool.length), pool.length - 1)];
+    }
+    return null;
+}
+function workStation(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, rule: FlightWayRule, bout: Bout): Spot {
+    const random = rng(hashString(`${animal.id}#station#${bout.index}`));
+    const group = animal.group;
+    if (group && bout.key !== animal) {
+        // A flock's member: its own place by its leader's station (a twig of the same tree, its own side of the patch).
+        const lead = stationOf(world, group.profile, bout.key, rule, boutAt(rule, bout.key, bout.keySlot));
+        const spread = Math.max(groupSpread(animal.length, group.size), 2);
+        if (raised(world, lead)) {
+            const perch = placeNear(world, lead, animal.length, perchTags(profile), Math.max(spread, 4), random());
+            if (perch) return spotOf(perch);
+        }
+        if (wet(world, lead)) return shallowsNear(world, animal, lead, Math.max(spread, 4), bout.index) ?? lead;
+        const side = memberSide(lead, animal, group.rank, spread);
+        const land = world.nav.nearest(side.x, side.z, "walk", 0.5, 6, maxSlopeOf(animal));
+        return land ? groundSpot(world, land.x, land.z) : groundSpot(world, lead.x, lead.z);
+    }
+    const centre = animal.home;
+    const radius = homeRadius(profile, animal);
+    const kind = rule.station === "mixed" ? (random() < 0.5 ? "ground" : "perch") : rule.station;
+    if (kind === "perch") {
+        // (Its stations a flight worth its take-off and landing apart where its range has the room: a hornbill, an
+        // albatross or a crane changed perch by a 10 to 20 m flight at a quarter of its cruise.)
+        const perch = stationPerch(world, centre, animal.length, perchTags(profile), radius, random(), rule.aloft?.kind === "thermal", Math.min(flightWorth(profile, animal), radius * 0.8));
+        if (perch) return spotOf(perch);
+    }
+    if (kind === "shallows") {
+        const shallows = shallowsNear(world, animal, centre, Math.min(Math.max(radius * 1.6, 8), 40), bout.index);
+        if (shallows) return shallows;
+    }
+    return rangeSpot(world, {...profile, move: "walk", seabed: false}, animal, centre, radius, random);
+}
+
+/**
+ * A slot's goal as its way of life has it (lane B5): the schedule's own pick (`raw`), kept when it sleeps, goes to
+ * roost, watches a predator it saw, follows its flock's leader in the air, or flies off on one of its forays; else done
+ * at its station. A soar's slots are its soar's. Pure in (id, slot, the hour), as the pick is.
+ */
+function stationed(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt, raw: Intent): Intent {
+    const rule = wayRule(profile);
+    if (!rule) return raw;
+    if (raw.doing === "sleep" || raw.doing === "to_roost" || raw.doing === "breathe" || raw.doing === "play") return raw;
+    if (raw.doing === "watch" && raw.face !== undefined) return raw;
+    const start = slotStart(animal, slot);
+    // (Asleep by the hour, whatever it does: a flock's night watch stands at its roost, and the next slot sleeps there.)
+    if (!awakeAt(profile, activity, hoursAt(start))) return raw;
+    const local = rng(hashString(`${animal.id}#station#${slot}`));
+    const soar = soaring(world, profile, animal, activity, rule, slot, hoursAt);
+    if (soar && soaring(world, profile, animal, activity, rule, slot + 1, hoursAt)) {
+        // Up in its soar at the slot's end: where its track is then, heading as it heads.
+        const at = soar.at(start + SLOT_SECONDS);
+        return {doing: soar.doing, to: {x: at.x, y: soarHeights(world, soar, start + SLOT_SECONDS, 0)[0], z: at.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "air", stay: [], face: at.yaw, aloft: true};
+    }
+    const station = stationOf(world, profile, animal, rule, boutAt(rule, animal, slot));
+    const up = raised(world, station);
+    // Its soar's last slot: down to its station.
+    if (soar) return {doing: soar.doing === "soar" ? "soar" : "fly", to: station, mode: "air", stay: stayBeats(up ? "perch" : "rest", local, null)};
+    if (animal.group && FLOCKING.has(profile.social)) {
+        // A flock's member flies with its leader when its leader moves on to its next station or flies off on a foray,
+        // in its leader's slot now or the one that starts during its own (it waits and goes up with it: `tripFor`);
+        // while its leader keeps to its station (a flit to the next twig, a few steps), it keeps to its own place by it.
+        // (Before, it followed any flight its leader was on at its own slot's start: a hop to the next twig as much as a
+        // move, and a move only when its leader happened to leave late, about two times in five.)
+        const group = animal.group;
+        const reach = Math.max(6, animal.length * 20);
+        const leadSlot = slotOf(group.leader, start + 1);
+        let goes = false;
+        for (const k of [leadSlot, leadSlot + 1]) {
+            // (Its leader's own trip, which its shadow needs anyway: a flight of it that goes somewhere, out or back,
+            // and is on, or sets off, during this slot: else it would leave its place to wait by its leader for a flight
+            // that comes after its slot. Not a soar: a kettle's members ride their own circles.)
+            const trip = tripAt(world, group.profile, group.leader, slotStart(group.leader, k) + 1, hoursAt, group.activity);
+            if (trip.shadow) continue;
+            let at = trip.start;
+            for (const leg of trip.legs) {
+                if (leg.mode === "air" && !leg.plan?.soar && leg.length > reach && at < start + SLOT_SECONDS - 3 && at + leg.seconds > start) goes = true;
+                at += leg.seconds;
+            }
+        }
+        if (goes && rng(hashString(`${animal.id}#follows#${slot}`))() < FLOCK_FOLLOWS) return {doing: "fly", to: null, mode: "air", stay: [], follow: true};
+    }
+    // A recipe that runs from a perch (a flycatcher's sallies) runs from its station's.
+    if (raw.recipe && raw.to && up && TEMPLATES[raw.recipe]?.goal === "perch") return {...raw, to: station};
+    // Its other recipes (a plunge from a perch by the water, a wade and a spear, a bathe): off for one at its way's share.
+    if (raw.recipe && raw.to && rng(hashString(`${animal.id}#recipe-goes#${slot}`))() < rule.recipes) return raw;
+    // A foray: off for what the schedule picked, at its way's share (a commuter's higher at the day's two ends).
+    const hours = hoursAt(start);
+    const ends = Math.min(Math.exp(-(((hours - 6.5) / 1.5) ** 2)) + Math.exp(-(((hours - 18) / 1.5) ** 2)), 1);
+    const share = rule.foray + ((rule.forayEnds ?? rule.foray) - rule.foray) * ends;
+    if (raw.to && !raw.recipe && local() < share) return raw;
+    // (One whose station is in the shallows, back from a recipe at the water's edge, stands a slot where that left it,
+    // and wades back the next: its way back through the water is the walk grid's, by the bank, and setting off on it
+    // straight out of its recipe turned it on the move.)
+    if (!up && wet(world, station)) {
+        const before = workRawIntent(world, profile, animal, activity, slot - 1, hoursAt);
+        if (before.recipe && before.to && rng(hashString(`${animal.id}#recipe-goes#${slot - 1}`))() < rule.recipes && awakeAt(profile, activity, hoursAt(start - SLOT_SECONDS))) {
+            const rests: ArkDoing = STAY_DOINGS.has(raw.doing) ? raw.doing : "watch";
+            return {doing: rests, to: null, mode: "stay", stay: stayBeats(rests, local, null)};
+        }
+    }
+    // At its station: on its perch, or a twig of it; about its patch of ground; in its shallows.
+    let to = station;
+    // (Its bout's first slot is its move to its new station: by air when that is further than its feet take it, so its
+    // flock sees a flight to follow; else on foot or as its trip works out.)
+    const bout = boutAt(rule, animal, slot);
+    const moves = bout.keySlot === bout.first;
+    if (moves) {
+        const last = stationOf(world, profile, animal, rule, boutAt(rule, animal, slot - 1));
+        if (Math.hypot(last.x - station.x, last.z - station.z) > Math.min(walkReach(profile, animal), AFOOT_MOST) || raised(world, last) || up) {
+            const sits: ArkDoing = STAY_DOINGS.has(raw.doing) ? raw.doing : raw.doing === "perch" || raw.doing === "fly" ? (up ? "perch" : "rest") : "watch";
+            return {doing: sits, to: station, mode: "air", stay: stayBeats(sits, local, null)};
+        }
+    }
+    const feeding = raw.doing === "forage" || raw.doing === "graze" || raw.doing === "browse";
+    // (Resting, preening or on watch it keeps one place for the bout; feeding or restless it moves about its station.)
+    const still = STAY_DOINGS.has(raw.doing);
+    if (up) {
+        // (A bird under a kilo, which springs off at more than half a g: a macaw or a hornbill clambers, it does not
+        // hop-fly a few metres at a quarter of its cruise.)
+        if (!still && rule.flit > 0 && local() < rule.flit && airPaces(profile, animal.length).accel > FLIGHT_ACCEL_MAX) {
+            const twig = placeNear(world, station, animal.length, perchTags(profile), Math.max(3, animal.length * 25), 0.25 + 0.75 * local());
+            if (twig) to = spotOf(twig);
+        }
+    } else if (wet(world, station)) {
+        // (In the shallows it stands where it is: its wading is its recipe's, `wade_spear`, which steps it slowly on. A
+        // few metres' wade of its own went by the walk grid's way round the water's edge and turned it on the move.)
+    } else if (rule.station !== "perch") {
+        // (A patch four of its lengths across its radius, 1 to 6 m: every way in it is a walk, never a flight.)
+        const pick = feeding ? local : rng(hashString(`${animal.id}#lies#${bout.index}`));
+        const r = Math.min(Math.max(animal.length * 4, 1), 6);
+        const a = pick() * Math.PI * 2;
+        const d = r * Math.sqrt(pick());
+        const land = world.nav.nearest(station.x + Math.cos(a) * d, station.z + Math.sin(a) * d, "walk", 0.5, 4, maxSlopeOf(animal));
+        if (land) to = groundSpot(world, land.x, land.z);
+    }
+    const toUp = raised(world, to);
+    // (What it does there: its own rest or watch; feeding, as it feeds there (from a perch or standing in the water it
+    // watches for it, on the ground it pecks about); anything it would have flown for, it sits out.)
+    // (Its own states kept apart, so a flock at its station is not all one thing: a flight it does not take it spends
+    // looking about, a wander or a drink preening; a perch on the ground is a rest. The behaviour audit's "a whole
+    // group does the same" was 16.4% with everything else a perch or a rest, 16.1% with those all a watch.)
+    const doing: ArkDoing = still || feeding || raw.doing === "bask" || raw.doing === "hide" ? raw.doing : raw.doing === "perch" ? (toUp ? "perch" : "rest") : raw.doing === "fly" || raw.doing === "soar" ? "watch" : "groom";
+    const beats: ArkDoing = feeding ? (toUp || wet(world, to) ? "watch" : raw.doing) : doing;
+    return {doing, to, mode: toUp || up ? "air" : "ground", stay: stayBeats(beats, local, null)};
+}
+
+/**
+ * A flitting bird's way to a twig nearby (lane B5): not one hop a slot but two or three, twig to twig about where it
+ * is going, with a look round or a peck on each (a tit or a warbler moves every few seconds; one hop every 80 s read
+ * as a bird that sat). Only for a way of life that flits every slot, from a perch to a perch within FLIT_REACH; each
+ * hop straight (a hop does not bow). Null: its own flight as before.
+ */
+const FLIT_REACH = 8;
+function flitLegs(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, paces: AirPaces, from: Spot, to: Spot, flat: number, cruise: number, bodyR: number, random: () => number, plain: boolean): Leg[] | null {
+    const rule = wayRule(profile);
+    if (plain || !rule || rule.flit < 1 || flat > FLIT_REACH || flat < 0.3 || !raised(world, from) || !raised(world, to)) return null;
+    const stops: Spot[] = [];
+    const hops = 1 + Math.floor(random() * 3);
+    for (let k = 1; k < hops; k++) {
+        const twig = placeNear(world, to, animal.length, perchTags(profile), Math.max(3, animal.length * 25), random());
+        if (!twig) break;
+        const spot = spotOf(twig);
+        const before = stops[stops.length - 1] ?? from;
+        if (Math.hypot(spot.x - before.x, spot.z - before.z) < 0.3 || Math.hypot(spot.x - to.x, spot.z - to.z) < 0.3 || !perchFits(world, profile, animal, spot)) continue;
+        stops.push(spot);
+    }
+    if (!stops.length) return null;
+    const legs: Leg[] = [];
+    let at = from;
+    const all = [...stops, to];
+    for (let k = 0; k < all.length; k++) {
+        const next = all[k];
+        legs.push(airLeg(world, paces, at, next, [at, next], cruise, "fly", {run: 0, ski: 0}, bodyR));
+        if (k < all.length - 1) {
+            // (On the twig it looks about the way it came, then turns, as a small bird does, to the way it goes next.)
+            const after = all[k + 1];
+            const seconds = 4 + random() * 9;
+            legs.push({mode: "pause", from: next, to: next, path: null, length: 0, seconds: seconds * 0.6, beat: random() < 0.5 ? "scan" : "peck", yaw: Math.atan2(next.x - at.x, next.z - at.z)});
+            legs.push({mode: "pause", from: next, to: next, path: null, length: 0, seconds: seconds * 0.4, beat: "pause", yaw: Math.atan2(after.x - next.x, after.z - next.z)});
+        }
+        at = next;
+    }
+    return legs;
+}
+
+/** Heights eased along a route: never rising faster than `up` nor falling faster than `down` (slopes) between samples `step` m apart. */
+function easedHeights(values: Float32Array, step: number, up: number, down: number): Float32Array {
+    for (let i = 1; i < values.length; i++) values[i] = Math.max(values[i], values[i - 1] - down * step);
+    for (let i = values.length - 2; i >= 0; i--) values[i] = Math.max(values[i], values[i + 1] - up * step);
+    return values;
+}
+
+/**
+ * A soar's slot as a trip (lane B5): all of it up in its soar (its track by time, `trackAt`); up into it from its
+ * station (a wait and a turn where it sits, then out to where its track will be and on along it, climbing at its
+ * climb's angle at most); or down out of it (on along its heading, round, and in to where it lands, over the crowns
+ * until its last stretch). Null when there is nowhere to come down to (then the schedule's own trip).
+ */
+function soarTrip(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt, now: Intent, from: Spot, base: Pick<Trip, "slot" | "doing" | "start" | "end" | "from" | "cruise" | "shadow" | "recipe" | "owner">): Trip | null {
+    const {start, end} = base;
+    const rule = wayRule(profile);
+    const paces = airPaces(profile, animal.length);
+    const fromAloft = Boolean(intent(world, profile, animal, activity, slot - 1, hoursAt).aloft);
+    const soar = now.aloft && rule ? soaring(world, profile, animal, activity, rule, slot, hoursAt) : null;
+    if (!now.to || (now.aloft && !soar)) return null;
+    const to = now.to;
+    const settled = settle(world, profile, animal, slot, {...now, to}, activity, hoursAt) ?? {beats: [], finish: to};
+    const random = rng(hashString(`${animal.id}#soar#${slot}`));
+    if (soar && fromAloft) {
+        const n = SLOT_SECONDS;
+        const heights = soarHeights(world, soar, start, n);
+        const track = new Float32Array((n + 1) * 3);
+        for (let i = 0; i <= n; i++) {
+            const at = soar.at(start + i);
+            track[i * 3] = at.x;
+            track[i * 3 + 1] = heights[i];
+            track[i * 3 + 2] = at.z;
+        }
+        // (Exactly where its slots meet.)
+        track.set([from.x, from.y, from.z], 0);
+        track.set([to.x, to.y, to.z], n * 3);
+        let length = 0;
+        for (let i = 1; i <= n; i++) length += Math.hypot(track[i * 3] - track[i * 3 - 3], track[i * 3 + 2] - track[i * 3 - 1]);
+        const leg: Leg = {mode: "air", from, to, path: null, length, seconds: n, beat: soar.beat, plan: {seconds: n, knots: [0, 1, 1, 1], liftoff: 0, touchdown: 1, rise: 1e-4, fall: 1e-4, height: 0, peak: length / n, soar: {from: true, to: true, track}}};
+        return {...base, mode: "air", arrive: end, to, finish: settled.finish, path: null, legs: [leg], stay: [], length, running: false};
+    }
+    if (soar) {
+        // Up into it: a wait where it sits, then out to where its track will be and on along it to the slot's end.
+        const v = soar.pace;
+        const legs: Leg[] = [];
+        let wait = 2 + random() * 20;
+        let join = start + wait + 6;
+        for (let k = 0; k < 3; k++) {
+            const at = soar.at(join);
+            join = Math.min(Math.max(start + wait + Math.hypot(at.x - from.x, at.z - from.z) / v + v / paces.accel / 2, start + wait + 2), end - 10);
+        }
+        // (It meets its track where its track heads away from it, within the next quarter minute: it flies out along a
+        // tangent of its circle and onto it, never straight at it and round a corner.)
+        let aligned = Infinity;
+        for (let t = join, k = 0; k <= 16 && t <= end - 10; t += 1, k++) {
+            const at = soar.at(t);
+            const off = Math.abs(Math.atan2(Math.sin(Math.atan2(at.x - from.x, at.z - from.z) - at.yaw), Math.cos(Math.atan2(at.x - from.x, at.z - from.z) - at.yaw)));
+            if (off < aligned - 1e-9) {
+                aligned = off;
+                join = t;
+            }
+        }
+        const first = soar.at(join);
+        const out = Math.hypot(first.x - from.x, first.z - from.z);
+        // (It sits until it is time to leave for there at its pace.)
+        wait = Math.max(wait, join - start - out / v - v / paces.accel / 2);
+        const route: NavPoint[] = [{x: from.x, z: from.z}];
+        const times: number[] = [start + wait];
+        // (Its way out in steps about as long as its track's, so the curve through them is even.)
+        const steps = Math.max(Math.round(out / (v * 2)), 1);
+        for (let k = 1; k < steps; k++) {
+            route.push({x: from.x + ((first.x - from.x) * k) / steps, z: from.z + ((first.z - from.z) * k) / steps});
+            times.push(start + wait + ((join - start - wait) * k) / steps);
+        }
+        for (let t = join; t < end - 1; t += 2) {
+            const at = soar.at(t);
+            route.push({x: at.x, z: at.z});
+            times.push(t);
+        }
+        route.push({x: to.x, z: to.z});
+        times.push(end);
+        const heading = Math.atan2(route[1].x - from.x, route[1].z - from.z);
+        if (from.yaw !== undefined) {
+            const turn = Math.abs(Math.atan2(Math.sin(heading - from.yaw), Math.cos(heading - from.yaw)));
+            if (turn > 1) {
+                legs.push({mode: "pause", from, to: from, path: null, length: 0, seconds: turn / TURN_RATE, beat: "pause", yaw: heading, turn: true});
+                wait = Math.max(wait - turn / TURN_RATE, 0.5);
+            }
+        }
+        legs.push({mode: "pause", from, to: from, path: null, length: 0, seconds: wait, beat: "pause", yaw: heading});
+        const flat = Math.max(routeLength(route), 0.01);
+        // Its heights along its route: up from where it sits to its track's over its way out, then its track's own.
+        const perSecond = soarHeights(world, soar, start, SLOT_SECONDS);
+        const heightAtTime = (t: number) => {
+            const f = Math.min(Math.max(t - start, 0), SLOT_SECONDS);
+            const i = Math.min(Math.floor(f), SLOT_SECONDS - 1);
+            return perSecond[i] + (perSecond[i + 1] - perSecond[i]) * (f - i);
+        };
+        const K = 64;
+        const alt = new Float32Array(K + 1);
+        const along: number[] = [0];
+        for (let i = 1; i < route.length; i++) along.push(along[i - 1] + Math.hypot(route[i].x - route[i - 1].x, route[i].z - route[i - 1].z));
+        const total = along[along.length - 1] || 1;
+        const joined = heightAtTime(join);
+        let seg = 1;
+        for (let i = 0; i <= K; i++) {
+            const d = (i / K) * total;
+            while (seg < along.length - 1 && along[seg] < d) seg++;
+            const k = (d - along[seg - 1]) / Math.max(along[seg] - along[seg - 1], 1e-6);
+            const t = times[seg - 1] + (times[seg] - times[seg - 1]) * Math.min(Math.max(k, 0), 1);
+            if (t < join) {
+                const q = Math.min(d / Math.max(out, 1e-6), 1);
+                alt[i] = from.y + (joined - from.y) * q * q * (3 - 2 * q);
+            } else alt[i] = heightAtTime(t);
+            // (Never steeper than it climbs; and over the ground, the rocks and the crowns on its way out.)
+            alt[i] = Math.min(alt[i], from.y + d * Math.tan(paces.climb));
+            // (All the way: where its track is over a wood before it has climbed to it at its angle, it climbs steeper.)
+            if (i > 0 && i < K) {
+                const over = alongRouteBy(route, i / K);
+                alt[i] = Math.max(alt[i], soarFloorAt(world, over.x, over.z) + (t < join ? 2 : SOAR_CLEAR));
+            }
+        }
+        alt[0] = from.y;
+        alt[K] = to.y;
+        easedHeights(alt, flat / K, Math.tan(0.7), Math.tan(0.7));
+        alt[0] = from.y;
+        alt[K] = to.y;
+        const seconds = end - start - legs.reduce((sum, leg) => sum + leg.seconds, 0);
+        const plan = planSoarLeg(paces, flat, {pace: v, from: false, to: true, climb: out});
+        legs.push({mode: "air", from, to, path: route, length: flat, seconds, beat: soar.beat, plan: {...plan, seconds, soar: {from: false, to: true, alt}}});
+        return {...base, mode: "air", arrive: end, to, finish: settled.finish, path: null, legs, stay: [], length: flat, running: false};
+    }
+    if (!fromAloft) return null;
+    // Down out of it: on along its heading, round, and in to where it lands.
+    const flat = Math.hypot(to.x - from.x, to.z - from.z);
+    const heading = from.yaw ?? Math.atan2(to.x - from.x, to.z - from.z);
+    const drop = Math.max(from.y - to.y, 0);
+    const need = drop / Math.tan(Math.min(Math.max(paces.descent, 0.3), 0.6));
+    // Its way down is a turn and a straight (lane B5): from its heading it turns at its bank's radius, towards the
+    // side its landing is on, until it heads for it, then flies straight in; a turn or more extra where it needs the
+    // way to come down over (a spiral down from a thermal over its own perch). Points every third of a radian round the
+    // turn and as far apart along the straight: a curve through even points neither cuts a corner at over a radian a
+    // second nor hooks back at its end (both seen with a lead-out and a corner).
+    const R = Math.max((paces.cruise * paces.cruise) / (G * Math.tan((30 * Math.PI) / 180)), 10);
+    const hx = Math.sin(heading);
+    const hz = Math.cos(heading);
+    const away = Math.atan2(to.x - from.x, to.z - from.z);
+    const swing = Math.atan2(Math.sin(away - heading), Math.cos(away - heading));
+    let side = swing >= 0 ? 1 : -1;
+    // (Its turn's middle on that side, by its radius; the other side when its landing is inside that circle.)
+    let ox = from.x + side * R * hz;
+    let oz = from.z - side * R * hx;
+    if (Math.hypot(to.x - ox, to.z - oz) < R * 1.1) {
+        side = -side;
+        ox = from.x + side * R * hz;
+        oz = from.z - side * R * hx;
+    }
+    const d = Math.max(Math.hypot(to.x - ox, to.z - oz), R * 1.001);
+    const bearing = Math.atan2(to.x - ox, to.z - oz);
+    // (The heading it leaves its turn on: the tangent of its circle through where it lands.)
+    const out = bearing + side * Math.asin(Math.min(R / d, 1));
+    let turn = ((((out - heading) * side) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+    const straight = Math.sqrt(Math.max(d * d - R * R, 0));
+    while (R * turn + straight < need && turn < Math.PI * 8) turn += Math.PI * 2;
+    const route: NavPoint[] = [];
+    const arcs = Math.max(Math.ceil(turn / 0.35), 1);
+    for (let k = 0; k <= arcs; k++) {
+        const psi = heading + side * turn * (k / arcs);
+        // (On its circle heading psi it is at the middle less its radius along its heading's right-hand normal, times its side.)
+        route.push({x: ox - side * R * Math.cos(psi), z: oz + side * R * Math.sin(psi)});
+    }
+    route[0] = {x: from.x, z: from.z};
+    const off = route[route.length - 1];
+    const runs = Math.max(Math.round(Math.hypot(to.x - off.x, to.z - off.z) / Math.max(R * 0.35, 4)), 1);
+    for (let k = 1; k <= runs; k++) route.push(k === runs ? {x: to.x, z: to.z} : {x: off.x + ((to.x - off.x) * k) / runs, z: off.z + ((to.z - off.z) * k) / runs});
+    const length = Math.max(routeLength(route), 0.01);
+    const ski = wet(world, to) && !raised(world, to) ? paces.skiWater : 0;
+    const plan = planSoarLeg(paces, length, {pace: paces.cruise, from: true, to: false, descend: Math.min(length * 0.5, Math.max(animal.length * 8, 15)), ski});
+    // Its heights: a line down from where it is to where it lands, over the crowns and the rocks until its last stretch.
+    const K = 48;
+    const alt = new Float32Array(K + 1);
+    for (let i = 0; i <= K; i++) {
+        const at = alongRouteBy(route, i / K);
+        const line = from.y + (to.y - from.y) * (i / K);
+        alt[i] = i / K < 0.85 ? Math.max(line, Math.min(soarFloorAt(world, at.x, at.z) + 3, from.y)) : line;
+    }
+    alt[0] = from.y;
+    alt[K] = to.y;
+    easedHeights(alt, length / K, Math.tan(0.6), Math.tan(0.7));
+    alt[0] = from.y;
+    alt[K] = to.y;
+    const seconds = Math.min(plan.seconds, SLOT_SECONDS - 6);
+    const leg: Leg = {mode: "air", from, to, path: route, length, seconds, beat: now.doing === "soar" ? "glide" : "fly", plan: {...plan, seconds, soar: {from: true, to: false, alt}}};
+    const left = SLOT_SECONDS - seconds;
+    const room = Math.max(left - 3, 0);
+    const lastAt = settled.beats.length ? settled.beats[settled.beats.length - 1].at : 0;
+    const squeeze = lastAt > room && lastAt > 0 ? room / lastAt : 1;
+    return {...base, mode: "air", arrive: start + seconds, to, finish: settled.finish, path: null, legs: [leg], stay: settled.beats.map((b) => ({...b, at: b.at * squeeze})), length, running: false};
 }
 
 /** What a wading bird does standing in the shallows, and how often a slot of it is spent there (lane MA3). */
@@ -2985,6 +3593,32 @@ const FLOWN_OVER: ReadonlySet<string> = new Set(["fence", "building", "post", "h
 
 /** A flock member taking off with its leader eases into its place by it over this long (s). */
 const JOIN_SECONDS = 5;
+/** How often a flock's member goes with its leader's move or foray (the rest of the time it makes its own way, or stays). */
+const FLOCK_FOLLOWS = 0.9;
+/** A flock member comes down to its own landing place over this long (s), down as its leader is. */
+const LAND_TOGETHER = 4;
+/**
+ * When a flock's leader comes down from its last flight of a member's slot (lane B5), or null: its leader's last trip
+ * by air over the slot that goes somewhere (more than a hop to the next twig) and ends on something, after which its
+ * leader does not fly on. Remembered per slot.
+ */
+const FLOCK_DOWN = new WeakMap<NonNullable<Trip["shadow"]>, number | null>();
+function flockDown(world: ScheduleWorld, shadow: NonNullable<Trip["shadow"]>): number | null {
+    const known = FLOCK_DOWN.get(shadow);
+    if (known !== undefined) return known;
+    let down: number | null = null;
+    for (const trip of shadow.trips) {
+        if (trip.mode !== "air" || trip.shadow || trip.arrive >= trip.end - 0.5) {
+            // (Up at its slot's end, a soar or its own leader's flight: not down.)
+            if (trip.mode === "air" && trip.arrive >= trip.end - 0.5) down = null;
+            continue;
+        }
+        if (Math.hypot(trip.to.x - trip.from.x, trip.to.z - trip.from.z) > Math.max(6, (trip.owner?.animal.length ?? 0.3) * 20)) down = trip.arrive;
+    }
+    void world;
+    FLOCK_DOWN.set(shadow, down);
+    return down;
+}
 /** A flight for its own sake: about this long at its cruise (s), and never further than FLY_AWAY_MOST (m). */
 const FLY_AWAY_SECONDS = 15;
 const FLY_AWAY_MOST = 220;
@@ -3297,11 +3931,13 @@ function shadowPoint(world: ScheduleWorld, at: TripPose, shadow: NonNullable<Tri
     // (Slowly and a little: a quick in-and-out round a resting leader read as swimming in circles.)
     const breathe = 1 + ease * 0.08 * Math.sin(epochSeconds * 0.11 + phase);
     const inWater = at.y < surfaceY(world, at.x, at.z) - 0.01;
-    const y = at.aloft || inWater ? at.y + shadow.dy * (1 + ease * 0.15 * Math.sin(epochSeconds * 0.15 + phase)) : at.y;
     const x = at.x + shadow.dx * breathe;
     const z = at.z + shadow.dz * breathe;
     const floor = world.sampler.heightAt(x, z);
     const top = surfaceY(world, x, z);
+    // (Lane B5: its leader down, it is down too, on what is under its own place: beside a leader up on a perch it hung
+    // in the air at its leader's height, 43% of the time a parrot spent beside its leader.)
+    const y = at.aloft || inWater ? at.y + shadow.dy * (1 + ease * 0.15 * Math.sin(epochSeconds * 0.15 + phase)) : Math.max(floor, top);
     const ground = at.aloft ? -Infinity : inWater ? floor + 0.2 : Math.max(floor, top);
     const ceiling = inWater ? top - 0.1 : Infinity;
     return {x, y: Math.min(Math.max(y, ground), ceiling), z, yaw: at.yaw + ease * 0.08 * Math.sin(epochSeconds * 0.15 + phase)};
@@ -3355,6 +3991,11 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
         case "air": {
             const route = leg.path ?? [from, to];
             const plan = leg.plan;
+            if (plan?.soar?.track) {
+                // (Lane B5: a soar's own track, by time: round its thermal, along its glide.)
+                const at = trackAt(plan.soar.track, u);
+                return {x: at.x, y: at.y, z: at.z, yaw: at.yaw, moving, aloft: true, ...up, beat: leg.beat === "glide" ? "glide" : "fly", air: {stage: "cruise", speed: at.rate / Math.max(leg.seconds, 1e-6), from: from.y, to: to.y}};
+            }
             if (!plan) {
                 const at = alongRoute(route, u);
                 const base = from.y + (to.y - from.y) * u;
@@ -3375,14 +4016,17 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
             if (stage === "run" || stage === "ski") return {x: at.x, y: topAt(world, at.x, at.z), z: at.z, yaw: at.yaw, moving, aloft: false, ...up, beat: "fly", air};
             // Its line from where it lifts off to where it touches down, a hump over it to its height (smoothsteps at its
             // climb's and its glide-in's angles), and over the ground and the rocks' tops where they stand higher.
-            const base = from.y + (to.y - from.y) * Math.min(Math.max((share - plan.liftoff) / Math.max(plan.touchdown - plan.liftoff, 1e-6), 0), 1);
+            // (Lane B5: a soar's leg up into it has its own heights along its route, eased over what is under it already.)
+            const heights = plan.soar?.alt;
+            const base = heights ? overAt(heights, share) : from.y + (to.y - from.y) * Math.min(Math.max((share - plan.liftoff) / Math.max(plan.touchdown - plan.liftoff, 1e-6), 0), 1);
             // (v2: over the drawn rocks' tops too, `flightFloor`: the bigger island's mountain is rock-strewn. Its line rises
             // over the floor along its route as eased once for the leg, the woods it flies over in it: `overFloor`.)
             const ground = world.sampler.flightFloor ? Math.max(topAt(world, at.x, at.z), world.sampler.flightFloor(at.x, at.z)) : topAt(world, at.x, at.z);
             const lift = airLift(plan, share);
-            const y = Math.max(base + plan.height * lift + overAt(overFloor(world, leg), share), Math.min(ground, base) + 0.05 * lift);
+            const y = Math.max(base + plan.height * lift + (heights ? 0 : overAt(overFloor(world, leg), share)), Math.min(ground, base) + 0.05 * lift);
             // (Joining its leader it is up as soon as it is off the ground: its hump comes back to its line in the air.)
-            const aloft = moving && (plan.joins ? y > ground + 0.05 : lift > 0.05);
+            // (A soar's leg is up wherever it is off what is under it: it starts or ends in the air.)
+            const aloft = moving && (plan.joins || plan.soar ? y > ground + 0.05 : lift > 0.05);
             return {x: at.x, y, z: at.z, yaw: at.yaw, moving, aloft, ...up, beat: lift > 0.9 && leg.beat === "glide" ? "glide" : "fly", air};
         }
         case "surface": {
@@ -3421,6 +4065,16 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
             const air = at.air ? {...at.air, to: to.y} : undefined;
             if (u >= 1) return {x: to.x, y: to.y, z: to.z, yaw: walkYaw ?? at.yaw, moving: false, aloft: at.aloft, ...up, beat: at.beat};
             const p = shadowPoint(world, at, shadow, epochSeconds, Math.min(u / 0.08, 1));
+            // (Lane B5: a flock comes down together. Over the last LAND_TOGETHER s of its leader's flight, the last of the
+            // slot's, a member eases from its place by its leader to where it lands itself, and is down when its leader
+            // is: before, it hung in the air beside its leader's perch until the slot's last seconds.)
+            const down = flockDown(world, shadow);
+            if (down !== null && epochSeconds >= down - LAND_TOGETHER) {
+                const k0 = Math.min(Math.max((epochSeconds - (down - LAND_TOGETHER)) / LAND_TOGETHER, 0), 1);
+                if (k0 >= 1) return {x: to.x, y: to.y, z: to.z, yaw: to.yaw ?? at.yaw, moving: false, aloft: false, ...up, beat: at.aloft ? "rest" : at.beat};
+                const k = k0 * k0 * (3 - 2 * k0);
+                return {x: p.x + (to.x - p.x) * k, y: p.y + (to.y - p.y) * k, z: p.z + (to.z - p.z) * k, yaw: p.yaw, moving: true, aloft: true, ...up, beat: "fly", ...(air ? {air: {...air, stage: "descend" as AirStage}} : {})};
+            }
             if (leg.lead0) {
                 // (Taking off with its leader: from where it stood by it into its place, over its first JOIN_SECONDS.)
                 const k0 = Math.min(Math.max((u * leg.seconds) / JOIN_SECONDS, 0), 1);

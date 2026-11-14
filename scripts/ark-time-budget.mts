@@ -19,7 +19,8 @@
  * The audit's CI numbers (MA4) are printed as a last `metrics` line and, under the motion summary
  * (`scripts/ark-motion-ci.mts` sets `ARK_MOTION_METRICS_DIR`), recorded with `recordMotionMetric` under `--record <lane>`
  * (`tests/ark-motion/metrics.json`, check `ma4-time-budget`, runs it on the validator's animals):
- *   air_speed_ratio_median / _p10 / species_under_035: each flying bird's and bat's median air-leg speed over L2's cruise
+ *   air_speed_ratio_median / _p10 / species_under_035: each flying bird's and bat's median air-leg speed (flights over 6 m
+ *     and twenty of its lengths: not a flit or a hop about its station, lane B5) over L2's cruise
  *     (`flightPaces`), the median and tenth percentile over species, and how many species fly under 0.35 of it (the
  *     audit's 0.20 / 91 of 98 species; insects keep their old pace, decision 282 row 7, and are left out);
  *   ground_birds_air_share_worst / ground_birds_takeoffs_worst: over birds that walk or swim first and can fly (a coot,
@@ -193,7 +194,10 @@ for (const s of subjects) {
         const own = s.sched;
         if (!own.trip || epoch < own.trip.start || epoch >= own.trip.end) {
             own.trip = sched.tripAt(world, own.profile, own.animal, epoch, hoursAt, s.animal.activity, own.trip);
-            for (const leg of own.trip.legs) if (leg.mode === "air" && leg.seconds > 0) b.airSpeeds.push(leg.length / leg.seconds);
+            // (Behaviours pass, lane B5: flights that go somewhere, over 6 m and twenty of its lengths. A flit to the next
+            // twig or a hop about its station is a spring and a landing with no cruise between: a tit's 2 m at 3 m/s is
+            // what its acceleration gives, not a slow flight. They are most of a small bird's air legs now.)
+            for (const leg of own.trip.legs) if (leg.mode === "air" && leg.seconds > 0 && leg.length > Math.max(6, s.length * 20)) b.airSpeeds.push(leg.length / leg.seconds);
         }
         const at = sched.poseOnTrip(world, own.trip, epoch);
         const ground = heightAt(at.x, at.z);

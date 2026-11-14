@@ -25,6 +25,12 @@ export type AuditSubject = {
      * time in the air is mostly turning over a feeding patch. Absent where the tree has no intelligence profiles.
      */
     hawker?: boolean;
+    /**
+     * It soars on thermals (its way of life in the air, `locomotion/flight.ts` flightWay: buzzards, eagles, kites,
+     * vultures, storks, pelicans): its time in the air in the warm hours is mostly wide rising circles that drift
+     * (behaviours pass, lane B5). Counted apart, as the hawkers are. Absent where the tree has no ways.
+     */
+    soarer?: boolean;
 };
 
 /** One animal at one moment, as the scene would draw it. */

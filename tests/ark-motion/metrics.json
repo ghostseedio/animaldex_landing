@@ -423,16 +423,16 @@
         },
         {
           "id": "tb_species_under_035",
-          "label": "Flying species under 0.35 of their cruise (the audit's target 0; 20 on MA1's fixed code: big raptors, hornbills and crows in crowded ranges). Lane B3 needs, 2026-11-14: 17 on main c99ff83b -> 32, limit 20 -> 34: with each kind's own day a big bird rests most of it and makes far fewer flights for their own sake (the long ones, at cruise), so the median of its air legs is now its 10 to 40 m ways to a feeding spot, flown at half a g well under its cruise; main flew the same legs, among more commutes. On the real snapshot 0 -> 0 (median 0.90 -> 0.87). The short flights' speed is the air lane's",
+          "label": "Flying species under 0.35 of their cruise, over flights of more than 6 m and twenty body lengths (the audit's target 0; 18 on main over every air leg: big raptors, hornbills and crows in crowded ranges. Lane B5: a stationed bird walks a way its flight would crawl over, a heavy one's stations are a worthwhile flight apart, and a flit or a hop about a station is not counted: 1 now, the wandering albatross at 0.34)",
           "path": "species_under_035",
-          "max": 34,
+          "max": 5,
           "before": 91
         },
         {
           "id": "tb_ground_birds_air_share_worst",
-          "label": "Birds that walk or swim first: worst share of the day aloft (target 0.02; 0.083 is the wood pigeon's murmuration recipe, decision 283)",
+          "label": "Birds that walk or swim first: worst share of the day aloft (target 0.02; it was 0.083, the wood pigeon's murmuration recipe, decision 283: lane B5 keeps the murmuration to birds that fly first, 0.024 now)",
           "path": "ground_birds_air_share_worst",
-          "max": 0.084,
+          "max": 0.03,
           "before": 0.11
         },
         {
@@ -813,6 +813,177 @@
           "path": "grounded_bird_wing_size_under_the_legged_driver",
           "max": 0.02,
           "before": 1
+        }
+      ]
+    },
+    {
+      "name": "b5-flight-ways",
+      "lane": "B5 air: ways of life, soars, hawking sweeps, the unrigged flyer (behaviours pass)",
+      "requires": [
+        "src/lib/ark-flight-ways.test.ts",
+        "src/lib/ark-motion-metrics.ts"
+      ],
+      "tests": [
+        "src/lib/ark-flight-ways.test.ts"
+      ],
+      "metricTests": "B5",
+      "output": "$ARK_MOTION_METRICS_DIR/b5.jsonl",
+      "metrics": [
+        {
+          "id": "b5_soar_radius_buzzard",
+          "label": "A common buzzard's thermal circle, radius (m; the old failure circled at 6 to 12 m)",
+          "path": "soar_radius_buzzard",
+          "min": 12,
+          "before": "6-12"
+        },
+        {
+          "id": "b5_soarers_longest_flight_s",
+          "label": "The fixture's soarers: longest flight in four warm hours (s; live main's longest on the real snapshot: 63)",
+          "path": "soarers_longest_flight_s",
+          "min": 480,
+          "before": 63
+        },
+        {
+          "id": "b5_soarers_warm_air_share",
+          "label": "The fixture's soarers: share of the warm hours in the air",
+          "path": "soarers_warm_air_share",
+          "min": 0.12,
+          "before": 0.1
+        },
+        {
+          "id": "b5_soarers_flights_per_hour",
+          "label": "The fixture's soarers: flights an awake hour in the warm hours (live main, real snapshot: 36)",
+          "path": "soarers_flights_per_hour",
+          "max": 9,
+          "before": 36
+        },
+        {
+          "id": "b5_soarers_cool_longest_flight_s",
+          "label": "The fixture's soarers: longest flight at 07:30, before the air warms (s)",
+          "path": "soarers_cool_longest_flight_s",
+          "max": 120
+        },
+        {
+          "id": "b5_perch_flights_per_hour",
+          "label": "The fixture's sit-and-wait birds: flights an awake hour (the barn owl 19 on main)",
+          "path": "perch_flights_per_hour",
+          "max": 14,
+          "before": 19.2
+        },
+        {
+          "id": "b5_wader_flights_per_hour",
+          "label": "The fixture's waders: flights an awake hour (the grey heron 34 on main)",
+          "path": "wader_flights_per_hour",
+          "max": 8,
+          "before": 33.7
+        },
+        {
+          "id": "b5_hawk_turn_balance",
+          "label": "An aerial feeder's sweeps: turning one way over the other (1: as much each way; a circle: 0)",
+          "path": "hawk_turn_balance",
+          "min": 0.7,
+          "before": 0
+        },
+        {
+          "id": "b5_unrigged_level_flight_pitch_rad",
+          "label": "A flyer drawn without a rig: pitch in level flight (rad; it was 0.95 nose down)",
+          "path": "unrigged_level_flight_pitch_rad",
+          "max": 0.05,
+          "before": 0.95
+        },
+        {
+          "id": "b5_unrigged_pitch_most_rad",
+          "label": "A flyer drawn without a rig: the most it is pitched in any stage of a flight (rad)",
+          "path": "unrigged_pitch_most_rad",
+          "max": 0.3,
+          "before": 0.95
+        }
+      ]
+    },
+    {
+      "name": "b5-flight-budget",
+      "lane": "B5 air: the flight budget (validator Ark, v2 island, one-second steps)",
+      "requires": [
+        "scripts/ark-flight-budget.mts",
+        "src/lib/ark-motion-metrics.ts"
+      ],
+      "command": "npx tsx --tsconfig scripts/tsconfig.scripts.json scripts/ark-flight-budget.mts --validator --windows 8 --window 600 --quiet --record b5-fb > \"$ARK_MOTION_METRICS_DIR/b5-flight-budget.log\"",
+      "output": "$ARK_MOTION_METRICS_DIR/b5-fb.jsonl",
+      "metrics": [
+        {
+          "id": "fb_perch_flights_per_hour",
+          "label": "Sit-and-wait birds: flights an awake hour, median over 83 species (kingfishers, flycatchers, falcons, owls)",
+          "path": "perch_flights_per_hour",
+          "max": 9,
+          "before": 31.2
+        },
+        {
+          "id": "fb_wader_flights_per_hour",
+          "label": "Waders: flights an awake hour, median over 42 species (herons, ibises, cranes)",
+          "path": "wader_flights_per_hour",
+          "max": 3,
+          "before": 29.1
+        },
+        {
+          "id": "fb_shore_flights_per_hour",
+          "label": "Shorebirds: flights an awake hour, median over 31 species",
+          "path": "shore_flights_per_hour",
+          "max": 8,
+          "before": 32.4
+        },
+        {
+          "id": "fb_commute_flights_per_hour",
+          "label": "Parrots and other commuters: flights an awake hour, median over 95 species",
+          "path": "commute_flights_per_hour",
+          "max": 20,
+          "before": 33.0
+        },
+        {
+          "id": "fb_soar_flights_per_hour",
+          "label": "Soarers: flights an awake hour, median over 28 species (buzzards, eagles, kites)",
+          "path": "soar_flights_per_hour",
+          "max": 4,
+          "before": 14.7
+        },
+        {
+          "id": "fb_vulture_air_share",
+          "label": "Vultures and condors: share of the awake time in the air, median over 13 species (on the wing most of the warm hours)",
+          "path": "vulture_air_share",
+          "min": 0.25,
+          "before": 0.091
+        },
+        {
+          "id": "fb_aerial_air_share",
+          "label": "Swallows, martins, nightjars and hawking bats: share of the awake time in the air, median over 14 species",
+          "path": "aerial_air_share",
+          "min": 0.5,
+          "before": 0.088
+        },
+        {
+          "id": "fb_swift_air_share",
+          "label": "Swifts: share of the awake time in the air, median over 4 species",
+          "path": "swift_air_share",
+          "min": 0.75,
+          "before": 0.239
+        },
+        {
+          "id": "fb_flock_up_with_leader",
+          "label": "A flock's member up with its leader on a flight that goes somewhere, median over flocking species",
+          "path": "flock_up_with_leader",
+          "min": 0.6
+        },
+        {
+          "id": "fb_flock_hanging_share",
+          "label": "A flock's follower off the ground with nothing under it beside its leader, worst species' share of its awake time",
+          "path": "flock_hanging_share",
+          "max": 0.04
+        },
+        {
+          "id": "fb_flying_species",
+          "label": "Species that fly at all in the 80 sampled minutes, of 664 (main 579: the rest now sit through the sample)",
+          "path": "flying_species",
+          "min": 500,
+          "before": 579
         }
       ]
     }
