@@ -27,12 +27,12 @@ const heightAt = (x: number, z: number) => world.sampler.heightAt(x, z);
 type Hunt = {trip: Trip; episode: Episode; track: QuarryTrack};
 
 /** The hunts (catches with a quarry) of a species at a home over a day. */
-function hunts(slug: string, length: number, zone: ScheduleAnimal["zone"], home: {x: number; z: number}, activity: string | null, max = 30): Hunt[] {
+function hunts(slug: string, length: number, zone: ScheduleAnimal["zone"], home: {x: number; z: number}, activity: string | null, max = 30, days = 1): Hunt[] {
     forgetRecipes();
     const animal: ScheduleAnimal = {id: `chase-${slug}`, zone, home: {x: home.x, y: Math.max(heightAt(home.x, home.z), 0), z: home.z}, length, sea: false};
     const profile = behaviourProfile(slug);
     const out: Hunt[] = [];
-    for (let start = DAY; start < DAY + 24 * 3600 && out.length < max; start += SLOT_SECONDS) {
+    for (let start = DAY; start < DAY + days * 24 * 3600 && out.length < max; start += SLOT_SECONDS) {
         const trip = tripAt(world, profile, animal, start, hoursAt, activity as never);
         const episode = trip.recipe ? tripEpisode(world, trip) : null;
         if (!episode) continue;
@@ -51,9 +51,13 @@ const CAST: Array<[string, number, ScheduleAnimal["zone"], {x: number; z: number
 
 test("visual hunts: a cat's grasshopper, a heron's fish, an osprey's fish, a seal's fish, a swallow's moth; each caught at the mouth or got away", () => {
     for (const [slug, length, zone, home, activity, recipe] of CAST) {
-        const list = hunts(slug, length, zone, home, activity);
+        const day = hunts(slug, length, zone, home, activity);
+        assert.ok(day.filter((h) => h.episode.recipe === recipe).length >= 3, `${slug}: ${day.filter((h) => h.episode.recipe === recipe).length} ${recipe} hunts in a day`);
+        // (Behaviours pass 2026-11: enough hunts to judge "some caught, some missed". With feeding in bouts an osprey
+        // dives a few times a day, and three dives at its 60% are all caught one day in five: a fortnight of them.)
+        const list = day.filter((h) => h.episode.recipe === recipe).length >= 12 ? day : hunts(slug, length, zone, home, activity, 40, 14);
         const mine = list.filter((h) => h.episode.recipe === recipe);
-        assert.ok(mine.length >= 3, `${slug}: ${mine.length} ${recipe} hunts`);
+        console.log(`# ${slug}: ${day.filter((h) => h.episode.recipe === recipe).length} ${recipe} hunts in a day; judged on ${mine.length}`);
         let caught = 0;
         let missed = 0;
         for (const {trip, track} of mine) {
@@ -92,6 +96,7 @@ test("visual hunts: a cat's grasshopper, a heron's fish, an osprey's fish, a sea
             }
         }
         assert.ok(caught >= 1 && missed >= 1, `${slug}: some caught (${caught}), some missed (${missed})`);
+        console.log(`# ${slug}: caught ${caught}, missed ${missed}`);
     }
 });
 
