@@ -236,6 +236,27 @@ test("model library: the far level first, whichever file arrives first; the size
     });
 });
 
+test("model library: a near level never waits for a far one that is no longer on its way", async () => {
+    const files: Record<string, Answer[]> = {"manifest.json": [ok({models: {a: "v", cat: "v"}})], "a/v.far.glb": [late(120, ok(glb(1)))], "a/v.ark.json": [ok(ARK_JSON)], "cat/v.far.glb": [ok(glb(1))], "cat/v.near.glb": [ok(glb(1))], "cat/v.ark.json": [ok(ARK_JSON)]};
+    await withBucket(files, async (library, asked) => {
+        await library.ready();
+        // One file at a time, and another species' is loading: the cat's two levels wait in the queue.
+        library.request("a", "far");
+        library.request("cat", "near");
+        // The camera has left: the runtime drops the queued far level (never a queued near one).
+        assert.equal(library.prune((_slug, level) => level === "near"), 1);
+        await settled(library);
+        assert.ok(asked.includes("cat/v.near.glb") && !asked.includes("cat/v.far.glb"));
+        assert.equal(library.get("cat"), undefined, "its near level alone is not kept: no model without its far level and body plan");
+        assert.equal(library.busy, false);
+        // Wanted again: both, the far one first.
+        library.request("cat", "near");
+        await settled(library);
+        const model = library.get("cat");
+        assert.ok(model?.far && model.near && model.behaviour?.plan === "mammal");
+    }, 1);
+});
+
 test("model library: the species the reader chose loads ahead of the queue, past the gate", async () => {
     const files: Record<string, Answer[]> = {"manifest.json": [ok({models: {a: "v", b: "v", c: "v", cat: "v"}})]};
     for (const slug of ["a", "b", "c", "cat"]) {

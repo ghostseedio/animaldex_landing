@@ -312,9 +312,20 @@ export class ModelLibrary {
             if (keep(item.slug, item.level)) continue;
             this.queue.splice(i, 1);
             this.requested.get(item.slug)?.delete(item.level);
+            // (A near level waiting for this far one goes with it: asked for again, far first, when it is wanted.)
+            if (item.level === "far") this.unpark(item.slug);
             dropped++;
         }
         return dropped;
+    }
+
+    /** Let go of a near level waiting for its far one (the far one is no longer on its way). */
+    private unpark(slug: string) {
+        const waiting = this.parked.get(slug);
+        if (!waiting) return;
+        this.parked.delete(slug);
+        disposeLevel(waiting.level);
+        this.requested.get(slug)?.delete("near");
     }
 
     /** Runtime: how many files load at once (more on a desktop's connection, fewer on a phone's). */
@@ -437,6 +448,7 @@ export class ModelLibrary {
             const count = (this.retries.get(key)?.count ?? 0) + 1;
             this.retries.set(key, {count, until: performance.now() + retrySeconds(count) * 1000});
             this.requested.get(slug)?.delete(level);
+            if (level === "far") this.unpark(slug);
             return;
         }
         this.lost.add(key);
@@ -622,7 +634,12 @@ export class ModelLibrary {
                 // side by side, and the far one is two files) waits for it; before, the species then had no body plan for
                 // the whole visit (no plan's motion, its size measured along the wrong axis).
                 if (this.models.get(slug)?.far || this.lost.has(`${slug}\u0000far`)) this.hand(apply, slug);
-                else {
+                else if (!this.requested.get(slug)?.has("far")) {
+                    // (Its far level is no longer on its way, dropped from the queue while this loaded: not kept waiting
+                    // for it, unseen and outside the budget; asked for again, far first, when it is wanted.)
+                    disposeLevel(near);
+                    this.requested.get(slug)?.delete("near");
+                } else {
                     const older = this.parked.get(slug);
                     if (older) disposeLevel(older.level);
                     this.parked.set(slug, {level: near, apply: () => this.hand(apply, slug)});
