@@ -1231,6 +1231,29 @@ export function groupSpread(length: number, size: number): number {
     return 2.5 + 1.6 * Math.max(length, 0.3) * Math.sqrt(Math.max(size, 1));
 }
 
+/** The shortest air leg that is a flight a flock follows (s): under it, a hop of a few metres (lane B3 needs). */
+const REAL_FLIGHT_SECONDS = 3;
+
+/**
+ * When its leader's next real flight sets off (a world time), for a member whose slot starts at `start`: an air leg of
+ * `REAL_FLIGHT_SECONDS` and up in its leader's trips over the member's slot that is still under way at `start` or sets
+ * off at least 3 s before the slot ends. Null: none (its leader's flight is over, or only hops).
+ */
+function leaderFlightIn(world: ScheduleWorld, group: ScheduleGroup, start: number, hoursAt: HoursAt): number | null {
+    const end = start + SLOT_SECONDS;
+    let trip = tripAt(world, group.profile, group.leader, start, hoursAt, group.activity);
+    for (let n = 0; n < 2; n++) {
+        let at = trip.start;
+        for (const leg of trip.legs) {
+            if (leg.mode === "air" && leg.seconds >= REAL_FLIGHT_SECONDS && at + leg.seconds > start && at < end - 3) return at;
+            at += leg.seconds;
+        }
+        if (trip.end >= end) break;
+        trip = tripAt(world, group.profile, group.leader, trip.end, hoursAt, group.activity, trip);
+    }
+    return null;
+}
+
 /** Where its group's leader is at a moment (pure: the leader's own schedule). */
 function leaderAt(world: ScheduleWorld, group: ScheduleGroup, epoch: number, hoursAt: HoursAt): TripPose {
     return basePoseOnTrip(world, tripAt(world, group.profile, group.leader, epoch, hoursAt, group.activity), epoch);
@@ -1888,7 +1911,12 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         // (Nor on its leader's hop of a few metres, a second or two in the air: the member was eased to its place by
         // its leader along the ground in that time, sideways to the way it faced (the backwards test's house sparrow).
         // It goes about its own choice by its group instead.)
-        const hop = lead.mode === "air" && !tripAt(world, group.profile, group.leader, start + 1, hoursAt, group.activity).legs.some((leg) => leg.mode === "air" && leg.seconds >= 3);
+        // (Behaviours pass, the merged tree: a real flight of its leader's that is still to come, or still under way, in
+        // this member's own slot, `leaderFlightIn`. Any real flight in the leader's trip at the member's start counted,
+        // one already over too (their slots start at different moments): the member then waited through its slot for
+        // its leader's next air leg, a 0.8 s hop of 3 m, "took off with it" from 26 m behind, and was eased those 26 m
+        // along the ground in 5 s, sideways to the way it faced: the backwards test's house sparrow again.)
+        const hop = lead.mode === "air" && leaderFlightIn(world, group, start, hoursAt) === null;
         if ((lead.mode === "air" || (aquatic(profile) && lead.mode === "water")) && lead.to && !(lead.mode === "air" && (SETTLED.has(lead.doing) || hop))) {
             // (Lane B3 needs: a school's fish feeds through its own feeding bouts and cruises between them, each a
             // little off its leader's rhythm; drawn slot by slot, 45 in 100, it changed every slot or two.)
@@ -2359,6 +2387,9 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                 if (off !== null) break;
             }
         }
+        // (The merged tree: only its leader's real flight, as the follow rule reads it, `leaderFlightIn`: never a hop of a
+        // second before it, which it "took off with" from wherever it stood.)
+        if (off !== null) off = leaderFlightIn(world, animal.group, start, hoursAt);
         if (off !== null && off >= start && off < end - 3) {
             const wait = off - start;
             const lead = leaderAt(off);
