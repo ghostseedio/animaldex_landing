@@ -19,6 +19,7 @@
 
 import {BufferAttribute, BufferGeometry, Color, Float32BufferAttribute, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, Vector3, type Camera, type Material} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
+import {readNowOrLater} from "@/ark-scene/model-files";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {windMaterial} from "@/ark-scene/asset-trees";
 import {ASSETS, ASSET_BASE} from "@/ark-scene/tree-pick";
@@ -115,6 +116,8 @@ export class TownAssets {
 
     private loader: GLTFLoader | null = null;
     private base = "";
+    /** Disposed: nothing is read again. */
+    private gone = false;
 
     private async load(base: string) {
         this.base = base;
@@ -176,7 +179,8 @@ export class TownAssets {
         const key = `${id}:${level}`;
         if (!info || !this.loader || this.asked.has(key)) return;
         this.asked.add(key);
-        await Promise.all(info.lods.filter((lod) => lod.level === level).map((lod) => this.loader!.loadAsync(`${this.base}/${lod.file}`).then((gltf) => {
+        // (A file that only failed to arrive is read again in the background, and the levels sorted again when it is in.)
+        await Promise.all(info.lods.filter((lod) => lod.level === level).map((lod) => readNowOrLater(`town ${lod.file}`, () => this.loader!.loadAsync(`${this.base}/${lod.file}`), (gltf, late) => {
             let geometry: BufferGeometry | null = null;
             gltf.scene.traverse((object) => {
                 if (!geometry && (object as Mesh).isMesh) geometry = (object as Mesh).geometry as BufferGeometry;
@@ -192,7 +196,8 @@ export class TownAssets {
             }
             g.index?.onUpload(releaseArray);
             this.makeMeshes(entry, lod.level as Level, g, lod.doubleSided, id);
-        }).catch(() => {})));
+            if (late) this.lastAt.set(Infinity, 0, 0);
+        }, () => !this.gone)));
     }
 
     private makeMeshes(entry: Entry, level: Level, geometry: BufferGeometry, doubleSided: boolean, id: string) {
@@ -350,6 +355,7 @@ export class TownAssets {
     }
 
     dispose() {
+        this.gone = true;
         const geometries = new Set<BufferGeometry>();
         this.byAsset.forEach((entry) => {
             for (const level of LEVELS) {

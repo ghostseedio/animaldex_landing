@@ -18,6 +18,7 @@
 
 import {Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type BufferGeometry, type Mesh} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
+import {readNowOrLater} from "@/ark-scene/model-files";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS, NEAR_FADE_MAX} from "@/ark-scene/near-fade";
@@ -229,7 +230,9 @@ export class AssetTrees {
         this.byAsset.forEach((entry, id) => {
             const info = ASSETS[id];
             for (const lod of info.lods) {
-                jobs.push(loader.loadAsync(`${base}/${lod.file}`).then((gltf) => {
+                // (A file that only failed to arrive is read again in the background: the kind was missing at this
+                // level's distances for the whole visit.)
+                jobs.push(readNowOrLater(`tree ${lod.file}`, () => loader.loadAsync(`${base}/${lod.file}`), (gltf, late) => {
                     let geometry: BufferGeometry | null = null;
                     gltf.scene.traverse((object) => {
                         if (!geometry && (object as Mesh).isMesh) geometry = (object as Mesh).geometry as BufferGeometry;
@@ -256,7 +259,8 @@ export class AssetTrees {
                         entry.near = near;
                         this.group.add(near);
                     }
-                }).catch(() => {}));
+                    if (late) this.lastAt.set(Infinity, 0, 0);
+                }));
             }
         });
         await Promise.all(jobs);

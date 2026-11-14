@@ -35,6 +35,13 @@
   #ark-loader.world .poster { opacity: 0; }
   #ark-loader .card { position: absolute; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom) + var(--ark-inset-bottom, 0px)); transform: translateX(-50%); box-sizing: border-box; width: min(20rem, calc(100% - 112px)); min-width: min(15rem, calc(100% - 24px)); padding: 10px 14px 12px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.14); background: rgba(14, 20, 14, 0.72); -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); box-shadow: 0 10px 30px -12px rgba(0, 0, 0, 0.55); opacity: 0; transition: opacity 300ms ease-out; }
   #ark-loader.said .card { opacity: 1; }
+  /* While the loading card is up the HUD's log at the foot waits (its LIVE chip was half under the card on a phone);
+     it fades in as the card goes. Either reading direction, any width. */
+  body:has(#ark-loader.said:not(.done)) [data-ark-live="log"] { opacity: 0 !important; }
+  body:has(#ark-loader.said:not(.done)) [data-ark-live="log"] * { pointer-events: none !important; }
+  /* (And it comes in once the card has faded, not through it.) */
+  body:has(#ark-loader.said.done) [data-ark-live="log"] { animation: arkLogIn 750ms ease-out backwards; }
+  @keyframes arkLogIn { 0%, 62% { opacity: 0; } 100% { opacity: 1; } }
   #ark-loader.done .card { opacity: 0; transition-duration: 450ms; }
   #ark-loader .stage { display: flex; align-items: center; gap: 8px; margin: 0; min-height: 20px; }
   #ark-loader .stage .dot { flex: none; width: 6px; height: 6px; border-radius: 3px; background: #c8fa63; animation: arkLoaderPulse 2s ease-in-out infinite; }
@@ -110,7 +117,19 @@
   var wordsRead = null;
   function words() {
     if (wordsRead) return wordsRead;
-    wordsRead = fetch("/api/ark/words?lang=" + encodeURIComponent(lang)).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+    // (Asked again after 1 s and 3 s when the read fails to arrive, before English stands in for the visit.)
+    var wordsUrl = "/api/ark/words?lang=" + encodeURIComponent(lang);
+    function readWords(left) {
+      return fetch(wordsUrl).then(function (r) {
+        if (r.ok) return r.json();
+        if (r.status >= 500 && left) throw new Error("words " + r.status);
+        return null;
+      }).catch(function () {
+        if (!left) return null;
+        return new Promise(function (resolve) { setTimeout(resolve, left === 2 ? 1000 : 3000); }).then(function () { return readWords(left - 1); });
+      });
+    }
+    wordsRead = readWords(2);
     wordsRead.then(function (body) {
       var ark = body && body.ark;
       var w = ark && ark.loader ? {data: ark.loader.data, world: ark.loader.world, animals: ark.loader.animals, newest: ark.loader.newest, loading: ark.loading, chip: ark.hud && ark.hud.chip, speciesOne: ark.speciesOne, speciesOther: ark.speciesOther} : null;
@@ -254,14 +273,27 @@
  */
 (function () {
   var started = false;
-  function load() {
-    if (started) return;
-    started = true;
+  // (The code that failed to arrive, a phone changing networks as the page opened, is asked for again after 1, 3, 8,
+  // 20, then every 30 s: before, the loading screen stayed up for good.)
+  var waits = [1, 3, 8, 20];
+  var failures = 0;
+  function insert() {
     var script = document.createElement("script");
     script.src = "./ark-scene.js";
     script.async = true;
     script.onload = function () { if (window.AnimalDexArkStart) window.AnimalDexArkStart(); };
+    script.onerror = function () {
+      script.remove();
+      var wait = waits[failures] || 30;
+      failures++;
+      setTimeout(insert, wait * 1000);
+    };
     document.body.appendChild(script);
+  }
+  function load() {
+    if (started) return;
+    started = true;
+    insert();
   }
   requestAnimationFrame(function () { requestAnimationFrame(load); });
   setTimeout(function () { if (document.hidden) load(); }, 250);
@@ -339,6 +371,9 @@ window.AnimalDexArkStart = function () {
   var models = params.get("models") || "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
   var talking = params.get("talking") || models.replace(/\/ark\/?$/, "");
   var icons = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
+  // The species the server says have no icon art (the read's `noIcon`): the scene draws the generic figure for them
+  // without asking the bucket for a file it does not hold (143 requests answered 400, each an error in a web view's log).
+  var iconless = {};
   var scene = null;
   // Encounter hunting's latest read (null: the pool, or not read yet).
   var hunting = null;
@@ -493,7 +528,7 @@ window.AnimalDexArkStart = function () {
       snapshot: snapshot,
       modelBase: models,
       talkingBase: talking,
-      iconUrl: function (slug) { return icons + encodeURIComponent(slug) + ".webp"; },
+      iconUrl: function (slug) { return iconless[slug] ? "" : icons + encodeURIComponent(slug) + ".webp"; },
       mineOnly: params.get("mine") === "1",
       reducedMotion: motion.matches,
       lite: lite,
@@ -614,6 +649,8 @@ window.AnimalDexArkStart = function () {
 
   // The last read's validator (`ETag`), when the server gave one.
   var lastTag = null;
+  // How many times the first read has failed to arrive (it is made again soon: `read`).
+  var firstFailures = 0;
   function read() {
     if (feeding) return Promise.resolve();
     lastRead = Date.now();
@@ -633,9 +670,19 @@ window.AnimalDexArkStart = function () {
         lastTag = tag;
         return r.json();
       });
-    return Promise.all([snapshotBody, wordsRead, routing])
+    return Promise.all([snapshotBody.catch(function () { return null; }), wordsRead, routing])
       .then(function (both) {
         var body = both[0];
+        // (Nothing shown yet and the read failed to arrive: again after 1, 3, 8, 20 s, not at the next 45 s read, with
+        // the loading screen still up. After that the usual read goes on asking.)
+        if (!body && !shown && firstFailures < 4) {
+          setTimeout(read, [1, 3, 8, 20][firstFailures++] * 1000);
+          return;
+        }
+        if (body && body.noIcon && body.noIcon.length !== undefined) {
+          iconless = {};
+          for (var n = 0; n < body.noIcon.length; n++) iconless[body.noIcon[n]] = true;
+        }
         if (body !== same) {
           if (body && both[2]) body = Ark.mergeArkIslandsRouting(body, both[2]).merged;
           var raw = body && body.snapshot ? body.snapshot : body;

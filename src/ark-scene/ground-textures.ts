@@ -11,6 +11,7 @@
  */
 
 import {DataArrayTexture, LinearFilter, LinearMipmapLinearFilter, NoColorSpace, RepeatWrapping, SRGBColorSpace, UnsignedByteType} from "three";
+import {fetchOk, readUntilIn} from "@/ark-scene/model-files";
 
 export const GROUND_LAYERS = ["grass", "forest_floor", "soil", "sand", "wet_sand", "rock", "mud", "snow", "tilled"] as const;
 
@@ -28,8 +29,7 @@ export const ARK_GROUND_TEXTURES = {
 const loading = new Map<string, Promise<void>>();
 
 async function readStrip(url: string, layers: number): Promise<{data: Uint8Array; size: number}> {
-    const response = await fetch(url);
-    if (!response.ok) throw new Error(`${url}: ${response.status}`);
+    const response = await fetchOk(url);
     const bitmap = await createImageBitmap(await response.blob());
     const size = bitmap.width;
     const canvas = typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(size, size * layers) : Object.assign(document.createElement("canvas"), {width: size, height: size * layers});
@@ -60,7 +60,8 @@ export function loadGroundTextures(base: string): Promise<void> {
     let promise = loading.get(root);
     if (!promise) {
         const layers = GROUND_LAYERS.length;
-        promise = Promise.all([readStrip(`${root}/ground-albedo-512.webp`, layers), readStrip(`${root}/ground-normal-512.webp`, layers)])
+        // (Each strip read until it is in: a dropped request left the procedural ground for the whole visit.)
+        promise = Promise.all([readUntilIn("ground textures", () => readStrip(`${root}/ground-albedo-512.webp`, layers)), readUntilIn("ground normals", () => readStrip(`${root}/ground-normal-512.webp`, layers))])
             .then(([albedo, normal]) => {
                 ARK_GROUND_TEXTURES.albedo.value = arrayTexture(albedo.data, albedo.size, layers, true);
                 ARK_GROUND_TEXTURES.normal.value = arrayTexture(normal.data, normal.size, layers, false);
