@@ -102,6 +102,8 @@ void main() {
     vec2 side = vec2(-dir.y, dir.x) * 2.0 * pixelWidth / resolution * here.w;
     here.xy += side * position.x;
     gl_Position = here;
+    // (Never cut by the near plane, which stands metres out from a whole view: the rain is round the camera.)
+    gl_Position.z = max(gl_Position.z, -gl_Position.w * 0.999);
     float d = length(local);
     // Faint right at the lens and toward the box's edge, so the box never shows.
     vAlpha = shown * smoothstep(0.6, 2.2, d) * (1.0 - smoothstep(box.x * 0.32, box.x * 0.5, length(local.xz))) * (1.0 - smoothstep(box.y * 0.3, box.y * 0.5, abs(local.y)));
@@ -355,9 +357,26 @@ export class WeatherFx {
         if (fog && !input.underwater) {
             // Steep at first: even a shower greys the middle distance.
             const thick = Math.sqrt(haze);
-            fog.near = this.fogNear + (8 - this.fogNear) * thick;
-            fog.far = this.fogFar + (170 - this.fogFar) * thick;
-            this.fogColour.copy(horizon).lerp(this.grey, 0.45 * haze);
+            // The weather closes the fog in (to 8 and 170 m at its thickest), but never past what still shows the ground
+            // looked at as a shape in the haze: half to three quarters of the way to the fog's colour there, by how
+            // thick it is. The distances were set for a world seen from 260 m; from the two islands' whole views (560
+            // to 900 m) heavy rain hid the far island and a storm or a fog left a blank grey picture, about 40 minutes
+            // a day. (Read back through the fog itself: the edge haze, `streaming/haze.ts`, moves what is set here.)
+            const reach = camera.position.distanceTo(target);
+            const most = 0.5 + 0.25 * haze;
+            if (this.closeFog(fog, thick, reach) > most) {
+                let clear = 0;
+                let closed = thick;
+                for (let i = 0; i < 7; i++) {
+                    const mid = (clear + closed) / 2;
+                    if (this.closeFog(fog, mid, reach) > most) closed = mid;
+                    else clear = mid;
+                }
+                this.closeFog(fog, clear, reach);
+            }
+            // (The weather's grey by the hour's light: at night a day-bright grey fog stood lighter than the land.)
+            this.fogColour.copy(this.grey).multiplyScalar(Math.min(Math.max(ARK_DAYLIGHT.value, 0.2), 1));
+            this.fogColour.lerpColors(horizon, this.fogColour, 0.45 * haze);
             fog.color.copy(this.fogColour);
         }
         // Lightning: the whole picture flashes (no flash with reduced motion).
@@ -369,6 +388,13 @@ export class WeatherFx {
         this.now.haze = haze;
         this.now.flash = flash;
         this.now.drops = showRain ? Math.round((this.rain.geometry as InstancedBufferGeometry).instanceCount * (0.12 + 0.88 * rain)) : 0;
+    }
+
+    /** The fog closed in by `t` (0 the clear weather's, 1 the thickest: 8 to 170 m); returns how veiled a point `reach` m off then is, 0–1. */
+    private closeFog(fog: Fog, t: number, reach: number): number {
+        fog.near = this.fogNear + (8 - this.fogNear) * t;
+        fog.far = this.fogFar + (170 - this.fogFar) * t;
+        return (reach - fog.near) / Math.max(fog.far - fog.near, 1);
     }
 
     dispose() {

@@ -131,11 +131,14 @@ export function daylightAt(hours: number): ArkDaylight {
             }
         }
     }
-    // Below the horizon the shadows come from the moon, opposite the sun and well up.
+    // Below the horizon the shadows come from the moon, opposite the sun and well up. Where one hands over to the other
+    // (the sun 2° under) the light that casts shadows fades to nothing and comes back from the other side: at any
+    // strength the swap turned every shadow and every lit side round in one frame (it was a third of full). The sun's
+    // strength is as it was from 1° up, the moon's from 5° under.
     const moonUp = smooth((-elevation - 2) / 8);
     const light = elevation > -2
-        ? {elevation: Math.max(elevation, 5), azimuth, color: key.sun, intensity: key.sunIntensity * (0.35 + 0.65 * smooth((elevation + 2) / 6))}
-        : {elevation: 38, azimuth: azimuth + 180, color: key.sun, intensity: key.sunIntensity * (0.35 + 0.65 * moonUp)};
+        ? {elevation: Math.max(elevation, 5), azimuth, color: key.sun, intensity: key.sunIntensity * (0.35 * smooth((elevation + 2) / 3) + 0.65 * smooth((elevation + 2) / 6))}
+        : {elevation: 38, azimuth: azimuth + 180, color: key.sun, intensity: key.sunIntensity * (0.35 * smooth((-elevation - 2) / 3) + 0.65 * moonUp)};
     const night = smooth((-elevation - 1) / 11);
     const phase: ArkDaylightPhase = elevation < -6 ? "night" : elevation < 10 ? (morning ? "dawn" : "dusk") : "day";
     return {

@@ -51,8 +51,11 @@ export function materialTextures(material: Material, into: Set<Texture>) {
 
 export type SceneMemory = {geometryBytes: number; textureBytes: number; geometries: number; textures: number; instances: number};
 
-/** Everything reachable from the scene (and the scene's environment and background). */
-export function sceneMemory(root: Object3D): SceneMemory {
+/**
+ * Everything reachable from the scene (and the scene's environment and background). `skip`: geometries and textures
+ * left out of the bytes (the animal models' own, which the model budget counts: what is left is the scenery).
+ */
+export function sceneMemory(root: Object3D, skip?: {geometries: ReadonlySet<object>; textures: ReadonlySet<object>}): SceneMemory {
     const geometries = new Set<BufferGeometry>();
     const materials = new Set<Material>();
     const textures = new Set<Texture>();
@@ -73,11 +76,47 @@ export function sceneMemory(root: Object3D): SceneMemory {
     materials.forEach((material) => materialTextures(material, textures));
     let gBytes = matrixBytes;
     geometries.forEach((geometry) => {
-        gBytes += geometryBytes(geometry);
+        if (!skip?.geometries.has(geometry)) gBytes += geometryBytes(geometry);
     });
     let tBytes = 0;
     textures.forEach((texture) => {
-        tBytes += textureBytes(texture);
+        if (!skip?.textures.has(texture)) tBytes += textureBytes(texture);
     });
     return {geometryBytes: gBytes, textureBytes: tBytes, geometries: geometries.size, textures: textures.size, instances};
+}
+
+/**
+ * The JS heap's floor: the least it has been over the last `windowSeconds`, which is about what is still held after a
+ * collection. The heap as read at any one moment is mostly garbage waiting to be collected (the scene makes 20 to
+ * 130 MB of it a second, and a collection comes every few seconds: on the desktop's high tier the reading swung
+ * between 420 and 840 MB with ~430 MB held; on the low phone profile between 330 and 530 MB with ~260 MB held), so
+ * a budget judged on one reading says "over" at random. The memory check reads this instead (graphics and performance
+ * pass, 2026-11). Pure: the clock and the readings are passed in.
+ */
+export class HeapFloor {
+    private readonly at: Float64Array;
+    private readonly mb: Float64Array;
+    private next = 0;
+    private count = 0;
+
+    constructor(private readonly windowSeconds = 30, capacity = 256) {
+        this.at = new Float64Array(capacity);
+        this.mb = new Float64Array(capacity);
+    }
+
+    /** One reading (MB) at `now` (s). */
+    sample(now: number, heapMB: number) {
+        if (!(heapMB > 0)) return;
+        this.at[this.next] = now;
+        this.mb[this.next] = heapMB;
+        this.next = (this.next + 1) % this.at.length;
+        this.count = Math.min(this.count + 1, this.at.length);
+    }
+
+    /** The least reading of the last `windowSeconds` (MB), or null with none. */
+    floor(now: number): number | null {
+        let least = Infinity;
+        for (let i = 0; i < this.count; i++) if (now - this.at[i] <= this.windowSeconds && this.mb[i] < least) least = this.mb[i];
+        return Number.isFinite(least) ? least : null;
+    }
 }

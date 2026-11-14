@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {BufferAttribute, BufferGeometry, DataTexture} from "three";
-import {ARK_BUDGETS, arkCaps, fittedSize, GRASS_BUILD, overBudget, type LevelUse} from "@/ark-scene/runtime/budgets";
+import {ARK_BUDGETS, arkCaps, FAR_SKIN_IDLE_FRAMES, fittedSize, GRASS_BUILD, idleFarSkins, overBudget, type LevelUse} from "@/ark-scene/runtime/budgets";
 import {FrameBudget, LoadPlanner} from "@/ark-scene/runtime/load";
 import {geometryBytes, textureBytes} from "@/ark-scene/runtime/memory";
 
@@ -59,7 +59,7 @@ test("runtime budgets: tiers shrink, skins are fitted, the grass is built for th
 test("runtime budgets: over the ceiling, the near levels drawn near least recently go first; never far, never recent", () => {
     const mb = 2 ** 20;
     const level = (slug: string, which: "near" | "far", bytes: number, lastNear: number, texture = true): LevelUse => ({slug, level: which, bytes, texture, lastNear});
-    const budget = {...ARK_BUDGETS.low, textureMB: 10, geometryMB: 100};
+    const budget = {...ARK_BUDGETS.low, textureMB: 10, geometryMB: 100, nearFloorMB: 0};
     const levels = [
         level("fox", "near", 4 * mb, 99),
         level("fox", "far", 1 * mb, 0),
@@ -75,6 +75,25 @@ test("runtime budgets: over the ceiling, the near levels drawn near least recent
     assert.deepEqual(overBudget(levels, {...budget, textureMB: 64}, 100), []);
 });
 
+test("runtime budgets: the far skins alone over the ceiling never empty the near levels (their floor)", () => {
+    const mb = 2 ** 20;
+    const level = (slug: string, which: "near" | "far", bytes: number, lastNear: number, texture = true): LevelUse => ({slug, level: which, bytes, texture, lastNear});
+    // 40 species' far skins hold 14 MB against a ceiling of 10: no near level can bring the total under.
+    const far = Array.from({length: 40}, (_, i) => level(`kind-${i}`, "far", 0.35 * mb, 0));
+    const near = [level("fox", "near", 2 * mb, 90), level("deer", "near", 2 * mb, 50), level("seal", "near", 2 * mb, 10), level("crab", "near", 2 * mb, 5)];
+    const budget = {...ARK_BUDGETS.low, textureMB: 10, geometryMB: 100, nearFloorMB: 0};
+    // No floor (as it was): every near level not drawn in the last 3 s goes, again and again.
+    assert.deepEqual(overBudget([...far, ...near], budget, 100).map((d) => d.slug), ["crab", "seal", "deer", "fox"]);
+    // A floor of 5 MB: the two drawn longest ago go (8 MB of near skins down to 4 would be under it: one stays over).
+    assert.deepEqual(overBudget([...far, ...near], {...budget, nearFloorMB: 5}, 100).map((d) => d.slug), ["crab"]);
+    // At the floor: none, however far over the far levels are.
+    assert.deepEqual(overBudget([...far, ...near], {...budget, nearFloorMB: 8}, 100), []);
+    // The meshes' own ceiling still lets near levels go, floor or no floor.
+    const heavy = near.map((l) => level(l.slug, "near", 30 * mb, l.lastNear, false));
+    assert.deepEqual(overBudget([...far, ...near, ...heavy], {...budget, nearFloorMB: 8}, 100).map((d) => d.slug), ["crab"]);
+    for (const tier of ["high", "medium", "low"] as const) assert.ok(ARK_BUDGETS[tier].nearFloorMB > 0 && ARK_BUDGETS[tier].nearFloorMB <= ARK_BUDGETS[tier].textureMB / 2, tier);
+});
+
 test("runtime memory: geometry and texture bytes as the GPU holds them", () => {
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(300), 3));
@@ -86,4 +105,27 @@ test("runtime memory: geometry and texture bytes as the GPU holds them", () => {
     texture.generateMipmaps = true;
     texture.minFilter = 1008;
     assert.equal(textureBytes(texture), Math.round(256 * 256 * 4 * 4 / 3));
+});
+
+test("runtime budgets: over the ceiling, far skins not drawn for a while give up their GPU copy, longest undrawn first, never one drawn lately", () => {
+    const mb = 2 ** 20;
+    const budget = {...ARK_BUDGETS.medium, textureMB: 10};
+    const skin = (slug: string, idleFrames: number) => ({slug, bytes: 0.35 * mb, idleFrames});
+    // 40 kinds' far skins: 14 MB against a ceiling of 10. Ten in view now, ten drawn a few seconds ago, twenty long gone.
+    const skins = [
+        ...Array.from({length: 10}, (_, i) => skin(`view-${i}`, 0)),
+        ...Array.from({length: 10}, (_, i) => skin(`recent-${i}`, 100)),
+        ...Array.from({length: 20}, (_, i) => skin(`gone-${String(i).padStart(2, "0")}`, FAR_SKIN_IDLE_FRAMES + i * 100))
+    ];
+    const total = skins.reduce((sum, s) => sum + s.bytes, 0);
+    assert.deepEqual(idleFarSkins(skins, 9 * mb, budget), [], "under the ceiling: none");
+    const out = idleFarSkins(skins, total, budget);
+    // Down to 0.7 of the ceiling (7 MB): 7 MB to let go, all twenty long gone; the longest gone first.
+    assert.equal(out.length, 20);
+    assert.deepEqual(out.slice(0, 3), ["gone-19", "gone-18", "gone-17"]);
+    assert.ok(out.every((slug) => slug.startsWith("gone-")));
+    // Everything in view or seen lately: nothing to let go, however far over (the near levels' floor covers that).
+    assert.deepEqual(idleFarSkins(skins.slice(0, 20), total, budget), []);
+    // A kind never seen at all (loaded up front, off the view): gone longest of all.
+    assert.equal(idleFarSkins([...skins, skin("never", Infinity)], total, budget)[0], "never");
 });

@@ -14,7 +14,7 @@ import {
     rigSetVersion,
     type RigManifest
 } from "@/ark-scene/rig-clips";
-import {rigChoices, rigLookChain, type RigSet} from "@/ark-scene/rig-player";
+import {birdGroundBaked, RIG_CAPS, RIG_CAPS_FIRST, RIG_CAPS_LITE, RIG_FILE_BYTES, rigChoices, rigLookChain, rigOverKeep, rigRoom, type RigSet} from "@/ark-scene/rig-player";
 
 // The contract: AnimalDex docs/ark/rig-v2-manifest.md (branch ark-rigging).
 
@@ -359,4 +359,41 @@ test("rig direction reads the drawn yaw: an animal turned round by the reactive 
     assert.equal(stepReverses(false, 0, -1, shared), true);
     // Backing off still facing the threat (the drawn body faces +z, moving -z): in reverse.
     assert.equal(stepReverses(false, 0, -1, shared + 0.1), true);
+});
+
+// The rig library's caps count what is held, not every download of the session (animal rendering lane, 2026-11-14).
+test("rig caps: room under what is held, a little more for the one looked at", () => {
+    const caps = {species: 14, bytes: 2_500_000};
+    assert.equal(rigRoom(caps, {species: 0, bytes: 0}), true);
+    assert.equal(rigRoom(caps, {species: 13, bytes: 2_400_000}), true);
+    assert.equal(rigRoom(caps, {species: 14, bytes: 1_000_000}), false);
+    assert.equal(rigRoom(caps, {species: 5, bytes: 2_500_000}), false);
+    // The animal looked at goes a little past full caps, and no further.
+    assert.equal(rigRoom(caps, {species: 14, bytes: 2_600_000}, true), true);
+    assert.equal(rigRoom(caps, {species: 14 + RIG_CAPS_FIRST.species, bytes: 0}, true), false);
+    assert.equal(rigRoom(caps, {species: 0, bytes: 2_500_000 + RIG_CAPS_FIRST.bytes}, true), false);
+});
+
+test("rig caps: letting go leaves room for the species rigged at once", () => {
+    // The low tier: 14 species held at most, 4 rigged at once: never more than 10 kept, nor past 1.5 MB.
+    assert.equal(rigOverKeep(RIG_CAPS_LITE, {species: 11, bytes: 1_000_000}, 24, 4), true);
+    assert.equal(rigOverKeep(RIG_CAPS_LITE, {species: 10, bytes: 1_400_000}, 24, 4), false);
+    assert.equal(rigOverKeep(RIG_CAPS_LITE, {species: 6, bytes: 1_600_000}, 24, 4), true);
+    // The other tiers: the keep count as before (24), with room for 12 more species.
+    assert.equal(rigOverKeep(RIG_CAPS, {species: 24, bytes: 5_000_000}, 24, 12), false);
+    assert.equal(rigOverKeep(RIG_CAPS, {species: 25, bytes: 5_000_000}, 24, 12), true);
+    assert.equal(rigOverKeep(RIG_CAPS, {species: 20, bytes: 6_100_000}, 24, 12), true);
+    // What is kept always leaves a later request room.
+    for (const [c, room] of [[RIG_CAPS, 12], [RIG_CAPS_LITE, 4]] as const) {
+        const kept = {species: Math.min(24, c.species - room), bytes: c.bytes - room * RIG_FILE_BYTES};
+        assert.equal(rigOverKeep(c, kept, 24, room), false);
+        assert.equal(rigRoom(c, kept), true);
+    }
+});
+
+test("a re-rigged bird on the ground plays its baked clip alone; in the air, and every other rig, the layer", () => {
+    assert.equal(birdGroundBaked({code: "v7+v6"}, {flying: false}), true);
+    assert.equal(birdGroundBaked({code: "v7+v6"}, {flying: true}), false);
+    assert.equal(birdGroundBaked({code: "v5+v6"}, {flying: false}), false);
+    assert.equal(birdGroundBaked({code: null}, {flying: false}), false);
 });

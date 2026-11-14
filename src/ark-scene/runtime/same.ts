@@ -69,3 +69,82 @@ export function sameArkRead(laid: ArkRead, read: ArkRead, dayTolerance = ARK_REA
     for (const key in read) if (Object.prototype.hasOwnProperty.call(read, key) && key !== "as_of" && key !== "ark_day") count--;
     return count === 0;
 }
+
+/**
+ * A host's pushed read lays out as the one it pushed before (graphics and performance pass, 2026-11). The apps' panel
+ * is handed the whole Ark by its host (`ark:snapshot`) each time the host reads it, every 45 s, changed or not (the
+ * iOS and Android apps released before the hosts learned to skip it will go on doing so): the page decoded all of
+ * it into new objects and handed it to the list and the scene, to find there that nothing had changed (one task of
+ * 53 to 99 ms on the phone profile at each push).
+ *
+ * The wire's shape, before decoding (the day is inside `voyage`): the same rule as `sameArkRead`, nothing decoded.
+ * Walking 2 MB of it in one go is itself 27 to 59 ms on that profile, so the walk is cut into slices of `sliceMs`
+ * with the page's frames in between (`pause`): an unchanged push costs no frame anything. The answer comes a few
+ * frames later; a push that did change is decoded then.
+ */
+export type SlicedOptions = {sliceMs?: number; now?: () => number; pause?: () => Promise<void>; dayTolerance?: number};
+
+export async function sameArkPush(before: unknown, next: unknown, options: SlicedOptions = {}): Promise<boolean> {
+    if (before === next) return true;
+    const row = (value: unknown) => (value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : null);
+    const a = row(before);
+    const b = row(next);
+    const voyageA = row(a?.voyage);
+    const voyageB = row(b?.voyage);
+    if (!a || !b || !voyageA || !voyageB) return false;
+    // The read's own time and day first (`sameArkRead`'s rule, on those two alone), then everything else in slices.
+    const time = (whole: Record<string, unknown>, voyage: Record<string, unknown>): ArkRead => ({ark_day: typeof voyage.ark_day === "number" ? voyage.ark_day : null, as_of: typeof whole.as_of === "string" ? whole.as_of : null});
+    if (!sameArkRead(time(a, voyageA), time(b, voyageB), options.dayTolerance)) return false;
+    const rest = (whole: Record<string, unknown>, voyage: Record<string, unknown>) => {
+        const {ark_day: day, ...voyageRest} = voyage;
+        const {as_of: at, ...wholeRest} = whole;
+        void day;
+        void at;
+        return {...wholeRest, voyage: voyageRest};
+    };
+    return sameJsonSliced(rest(a, voyageA), rest(b, voyageB), options);
+}
+
+/** `sameJson`, a slice at a time: `sliceMs` of walking (3 by default), then the page's own work (`pause`), and so on. */
+export async function sameJsonSliced(a: unknown, b: unknown, options: SlicedOptions = {}): Promise<boolean> {
+    const sliceMs = options.sliceMs ?? 3;
+    const now = options.now ?? (() => performance.now());
+    const pause = options.pause ?? (() => new Promise<void>((resolve) => setTimeout(resolve, 0)));
+    const stack: unknown[] = [a, b];
+    let sliceFrom = now();
+    let steps = 0;
+    while (stack.length) {
+        const y = stack.pop();
+        const x = stack.pop();
+        if (++steps % 64 === 0 && now() - sliceFrom >= sliceMs) {
+            await pause();
+            sliceFrom = now();
+        }
+        if (x === y) continue;
+        if (typeof x !== "object" || typeof y !== "object" || x === null || y === null) {
+            if (typeof x === "number" && typeof y === "number" && Number.isNaN(x) && Number.isNaN(y)) continue;
+            return false;
+        }
+        const arrayX = Array.isArray(x);
+        if (arrayX !== Array.isArray(y)) return false;
+        if (arrayX) {
+            const p = x as unknown[];
+            const q = y as unknown[];
+            if (p.length !== q.length) return false;
+            for (let i = 0; i < p.length; i++) stack.push(p[i], q[i]);
+            continue;
+        }
+        const p = x as Record<string, unknown>;
+        const q = y as Record<string, unknown>;
+        let count = 0;
+        for (const key in p) {
+            if (!Object.prototype.hasOwnProperty.call(p, key)) continue;
+            count++;
+            if (!Object.prototype.hasOwnProperty.call(q, key)) return false;
+            stack.push(p[key], q[key]);
+        }
+        for (const key in q) if (Object.prototype.hasOwnProperty.call(q, key)) count--;
+        if (count !== 0) return false;
+    }
+    return true;
+}

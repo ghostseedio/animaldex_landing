@@ -212,6 +212,8 @@ export type ArkSceneStats = {
     /** The behaviour schedule: animals on it, its main-thread time per frame (ms, mean), and the time its places and walk grid took to build (ms, once). */
     scheduled?: number;
     behaviourMs?: number;
+    /** Animal-frames in which an animal due a new trip was held at its last pose for a frame with room (the trip budget). */
+    tripsHeld?: number;
     behaviourBuildMs?: number;
     /** In how many slices between frames the behaviour world was built, and its longest slice (ms). */
     behaviourBuildSlices?: number;
@@ -233,7 +235,7 @@ export type ArkSceneStats = {
      * view, the edge haze (0…1), chunks drawn in full / as the map / not, the ground's tiles by level, animals skipped
      * past the distance this frame and drawn as map markers.
      */
-    streaming?: {renderDistance: number; mapDistance?: number; renderScale: number; map: boolean; haze: number; chunks: {in: number; map: number; out: number; content: number}; changes: number; tiles: {full: number; map: number; hidden: number}; animalsSkipped: number; mapMarkers: number; /** Several islands (decision 141): the one the camera is over, each island's chunks, the base fog's reach. */ active?: string | null; islands?: Record<string, {in: number; map: number; out: number}>; fog?: {near: number; far: number}};
+    streaming?: {renderDistance: number; mapDistance?: number; renderScale: number; map: boolean; haze: number; chunks: {in: number; map: number; out: number; content: number}; changes: number; tiles: {full: number; map: number; hidden: number}; animalsSkipped: number; mapMarkers: number; /** Several islands (decision 141): the one the camera is over, each island's chunks, the base fog's reach. */ active?: string | null; islands?: Record<string, {in: number; map: number; out: number}>; fog?: {near: number; far: number}; /** The memory reading the render distance follows (MB): the JS heap where the browser says it, the scene's GPU estimate. */ memory?: {heapMB: number | null; gpuMB: number} | null};
 };
 
 /** A herd (A14): a species with so many aboard that it is drawn as representatives and a count. */
@@ -293,6 +295,12 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
     wildIslandRegionLabels?: Partial<Record<ArkRegion, string>>;
     /** Called once the first frame is drawn. */
     onReady?: () => void;
+    /**
+     * The WebGL context was lost and has come back, empty (an app long in the background, the GPU's process restarted).
+     * The scene cannot go on from that (`src/lib/ark-context-restore.ts`): the page starts it again
+     * (`arkReloadForRestoredContext`). Without this the scene draws on as three restores it: dark, parts missing.
+     */
+    onContextRestored?: () => void;
     /** Honour prefers-reduced-motion: no idle motion, no camera flights. */
     reducedMotion?: boolean;
     /**

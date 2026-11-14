@@ -51,6 +51,13 @@
  *                             island view, every town chunk drawn in full
  *   --view town-close         and once the town has joined (+10 s), a close-up of one of its animals (`--select <id>`,
  *                             the host's `ark:select` with closeUp), followed
+ * Interaction scenarios (the graphics and performance pass, scripts/ark-runtime-scenarios.mjs), the embed or the hero only:
+ *   --scenario zoom|arrive|pan|select|hide|resize|weather|long
+ *                             a reader using the world, after the town has joined and `--settle <s>` (default 25) more:
+ *                             each action leaves a mark, and each phase's frames are reported with what the page asked of
+ *                             the GPU meanwhile (programs linked and the wait on them, texture and buffer uploads, render
+ *                             targets made); `--animals <n>` (default 12) species to visit; `long` runs `--seconds`;
+ *                             `--shots` saves the picture at each stop (not for timing: a screenshot is a hitch)
  * Every page: each drawn frame's main-thread time and interval (requestAnimationFrame wrapped before the page's own
  * script), the heap's growth between frames (allocation per second), and the bytes received before the first frame.
  */
@@ -63,6 +70,7 @@ import {fileURLToPath} from "node:url";
 import {build} from "esbuild";
 import {gzipSync} from "node:zlib";
 import {createHash} from "node:crypto";
+import {analysePhases, GL_KEYS, groupPhases, pickAnimals, SCENARIOS, scenarioInit, scenarioTable, scenarioTools} from "./ark-runtime-scenarios.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const arg = (name, fallback) => {
@@ -120,6 +128,10 @@ const perfOn = flag("perf");
 const gcPoints = flag("gc-points");
 const gcSteadyMs = Number(arg("gc-steady", "80")) * 1000;
 const view = arg("view", "default");
+const scenario = arg("scenario", "");
+if (scenario && !SCENARIOS[scenario]) throw new Error(`--scenario ${scenario}: one of ${Object.keys(SCENARIOS).join(", ")}`);
+if (scenario && pageKind === "measure") throw new Error("--scenario needs --page embed or --page hero");
+const settleMs = Number(arg("settle", "25")) * 1000;
 const selectId = arg("select", "");
 if (view === "town-close" && !selectId) throw new Error("--view town-close needs --select <animal id>");
 
@@ -160,7 +172,7 @@ writeFileSync(path.join(site, "measure.html"), `<!doctype html>
 // `--page embed|hero`: the apps' bundle and workers into public/ark/ (gitignored), as the site's build makes them.
 if (pageKind !== "measure") {
     const {execFileSync} = await import("node:child_process");
-    execFileSync(process.execPath, [path.join(root, "scripts/build-ark-bundle.mjs"), ...(buildEnv === "production" ? [] : ["--dev"]), ...(flag("profile") ? ["--names"] : [])], {stdio: "inherit"});
+    execFileSync(process.execPath, [path.join(root, "scripts/build-ark-bundle.mjs"), ...(buildEnv === "production" ? [] : ["--dev"]), ...(flag("profile") || flag("names") ? ["--names"] : [])], {stdio: "inherit"});
     // The home page's hero (home-ark-hero.tsx): the embed in a frame the hero's size (the viewport less the 4rem header).
     writeFileSync(path.join(site, "hero.html"), `<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
@@ -168,6 +180,7 @@ if (pageKind !== "measure") {
 <title>Ark hero</title>
 <style>html,body{margin:0;background:#0b1d2e}header{height:64px}section{position:relative;height:calc(100svh - 64px);max-height:60rem;min-height:34rem}iframe{position:absolute;inset:0;width:100%;height:100%;border:0}</style>
 </head><body><header></header><section><iframe id="hero" title="Ark"></iframe></section>
+<div style="height:200vh"></div>
 <script>document.getElementById("hero").src = "/ark/embed.html" + location.search;</script></body></html>
 `);
 }
@@ -322,6 +335,7 @@ for (const deviceName of devices) {
     for (let run = 0; run < runs; run++) {
         // A fresh context each run: nothing cached (as a first visit).
         const context = await browser.newContext({viewport: device.viewport, deviceScaleFactor: device.deviceScaleFactor, isMobile: device.isMobile, hasTouch: device.hasTouch, userAgent: device.userAgent});
+        if (scenario) await context.addInitScript(scenarioInit);
         await context.addInitScript(() => {
             const tasks = [];
             window.__arkLongTasks = tasks;
@@ -337,8 +351,8 @@ for (const deviceName of devices) {
             try {
                 new PerformanceObserver((list) => {
                     for (const entry of list.getEntries()) {
-                        const scripts = (entry.scripts ?? []).map((script) => ({ms: Math.round(script.duration), what: `${script.invoker ?? ""} ${script.sourceFunctionName ?? ""}`.trim()})).sort((a, b) => b.ms - a.ms).slice(0, 3);
-                        frames.push({start: Math.round(entry.startTime), ms: Math.round(entry.duration), blocking: Math.round(entry.blockingDuration ?? 0), scripts});
+                        const scripts = (entry.scripts ?? []).map((script) => ({ms: Math.round(script.duration), what: `${script.invokerType ?? ""} ${script.invoker ?? ""} ${script.sourceFunctionName ?? ""}`.trim().slice(0, 120)})).sort((a, b) => b.ms - a.ms).slice(0, 3);
+                        if (frames.length < 4000) frames.push({start: Math.round(entry.startTime), ms: Math.round(entry.duration), blocking: Math.round(entry.blockingDuration ?? 0), scripts});
                     }
                 }).observe({type: "long-animation-frame", buffered: true});
             } catch {
@@ -355,9 +369,13 @@ for (const deviceName of devices) {
         // the heap at its end; the host messages an app would get (`ark:ready`, `ark:tier`) through `AndroidArk`; and,
         // with `interact=1` in the URL, a pointer move on the world every 200 ms (the runtime's input: the full rate).
         await context.addInitScript(() => {
-            const MAX = 40000;
-            const rec = {n: 0, t: new Float64Array(MAX), cpu: new Float64Array(MAX), heap: new Float64Array(MAX), ready: 0, tier: null, progress: 0};
+            const MAX = window.__arkGl ? 120000 : 40000;
+            const rec = {n: 0, t: new Float64Array(MAX), cpu: new Float64Array(MAX), heap: new Float64Array(MAX), ready: 0, tier: null, progress: 0, gl: null};
             window.__arkRec = rec;
+            // (`--scenario`: the GL counters' running totals at each frame's end.)
+            const glNow = window.__arkGl ?? null;
+            const glKeys = glNow ? Object.keys(glNow) : [];
+            if (glNow) rec.gl = Object.fromEntries(glKeys.map((key) => [key, new Float64Array(MAX)]));
             const native = window.requestAnimationFrame.bind(window);
             let frameTs = -1;
             window.requestAnimationFrame = (callback) => native((ts) => {
@@ -377,6 +395,7 @@ for (const deviceName of devices) {
                     if (rec.n && rec.n <= MAX) {
                         rec.cpu[rec.n - 1] += d;
                         rec.heap[rec.n - 1] = performance.memory?.usedJSHeapSize ?? 0;
+                        if (glNow) for (let k = 0; k < glKeys.length; k++) rec.gl[glKeys[k]][rec.n - 1] = glNow[glKeys[k]];
                     }
                 }
             });
@@ -385,7 +404,10 @@ for (const deviceName of devices) {
                     const message = JSON.parse(text);
                     if (message.type === "ark:ready" && !rec.ready) rec.ready = performance.now();
                     if (message.type === "ark:progress" && !rec.progress) rec.progress = performance.now();
-                    if (message.type === "ark:tier") rec.tier = message.tier;
+                    if (message.type === "ark:tier") {
+                        rec.tier = message.tier;
+                        (rec.tiers ??= []).push({t: Math.round(performance.now()), tier: message.tier, lite: message.lite});
+                    }
                 } catch {
                     // Not ours.
                 }
@@ -437,7 +459,8 @@ for (const deviceName of devices) {
             // (the embed reads `__arkQuality` as the measurement page does: set before its script runs).
             if (quality !== "auto") await context.addInitScript((q) => { window.__arkQuality = q; }, quality);
             // `--view town`: the archipelago opens on the town (its `openOn`), as for a reader whose animals live there.
-            if (view === "town" || view === "town-close") {
+            if (scenario && (view === "town" || view === "town-close")) await context.addInitScript(() => { window.__arkOpenOn = "town"; });
+            else if (view === "town" || view === "town-close") {
                 await context.addInitScript(() => {
                     let ark;
                     Object.defineProperty(window, "AnimalDexArk", {configurable: true, get: () => ark, set: (value) => {
@@ -449,6 +472,21 @@ for (const deviceName of devices) {
             }
             const query = `snapshot=${encodeURIComponent(populationFile ? "/population-file.json" : "/ark-missing.json")}${pageKind === "hero" ? "&refresh=600&idle=900" : ""}${modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : ""}${lane}`;
             await page.goto(`${base}/${pageKind === "hero" ? "hero.html" : "ark/embed.html"}?${query}`, {waitUntil: "commit", timeout: 120_000});
+        }
+        // The Mac running this is busy with other work: its CPU pressure is not the device's (the browser's Compute
+        // Pressure reading would cap the rate and ask for the low tier). The host's word wins, as an app's would:
+        // calm power unless `--power saver|serious|critical|browser`.
+        if (pageKind !== "measure" && arg("power", "") !== "browser") {
+            const power = arg("power", "");
+            const message = {type: "ark:power", saver: power === "saver", thermal: power === "serious" || power === "critical" ? power : "nominal", battery: 1, charging: true};
+            const told = async () => {
+                for (let i = 0; i < 400; i++) {
+                    const frames = page.frames().filter((f) => pageKind !== "hero" || f.url().includes("/ark/embed.html"));
+                    for (const f of frames) if (await f.evaluate((m) => (window.AnimalDexArkHost ? (window.AnimalDexArkHost.send(m), true) : false), message).catch(() => false)) return;
+                    await page.waitForTimeout(50);
+                }
+            };
+            await told();
         }
         /** The frame the scene runs in (the hero's iframe). */
         const sceneFrame = async () => (pageKind === "hero" ? page.frames().find((f) => f.url().includes("/ark/embed.html")) ?? page.mainFrame() : page.mainFrame());
@@ -496,6 +534,8 @@ for (const deviceName of devices) {
             if (report) perfReports.push({...report, at: Date.now() - navigated});
         };
         let measured;
+        let scenarioExtra = null;
+        const scenarioTimeline = [];
         if (pageKind === "measure") {
             const until = Date.now() + (seconds + 120) * 1000;
             while (!(await page.evaluate(() => window.__arkMeasure?.done)) && Date.now() < until) {
@@ -506,10 +546,53 @@ for (const deviceName of devices) {
             measured = await page.evaluate(() => window.__arkMeasure);
         } else {
             const readyAt = await frame.evaluate(() => window.__arkRec.ready);
-            const end = navigated + readyAt + seconds * 1000;
-            while (Date.now() < end) {
-                await page.waitForTimeout(5000);
-                await pollPerf();
+            if (scenario) {
+                // The world as a reader meets it a little after opening it: the town joined, the first view's models in.
+                const snapshotBody = populationFile ? JSON.parse(readFileSync(populationFile, "utf8")) : null;
+                const animals = pickAnimals(snapshotBody?.snapshot ?? snapshotBody, Number(arg("animals", "12")));
+                // Once a second: the scene's counts (programs, textures, geometries alive), the heap, the tier and scale.
+                const poller = setInterval(() => {
+                    void frame.evaluate(() => {
+                        const r = window.__arkPerfReport?.() ?? null;
+                        const live = window.__arkLive ?? null;
+                        let scene = null;
+                        try {
+                            const st = window.__arkHandle?.stats?.();
+                            const rt = window.__arkHandle?.runtime?.();
+                            if (st) scene = {renderScale: st.streaming?.renderScale ?? null, renderDistance: st.streaming?.renderDistance ?? null, memory: st.streaming?.memory ?? null, chunks: st.streaming?.chunks ?? null, models: st.modelsLoaded, near: st.near, far: st.far, placeholders: st.placeholders, rigs: st.rigsLoaded, rigMB: Math.round((st.rigBytes ?? 0) / 2 ** 20), closeUps: st.closeUpSkins, fur: st.furShells, modelTexMB: rt?.modelTextureMB ?? null, modelGeoMB: rt?.modelGeometryMB ?? null, evicted: rt?.evicted ?? null, farSkins: rt?.farSkins ?? null, pending: rt?.pending ?? null, shaders: rt?.shaders ?? null, power: rt?.powerTier ?? null, hold: rt?.shaderHold ?? null, display: rt?.display ?? null, tripsHeld: st.tripsHeld ?? null};
+                        } catch {
+                            // No handle (a build without the mount hook).
+                        }
+                        return {scene, at: Math.round(performance.now()), heapMB: Math.round((performance.memory?.usedJSHeapSize ?? 0) / 2 ** 20), fps: r?.fps ?? null, cpu: r?.cpu.mean ?? null, gpu: r?.gpu ?? null, tier: r?.tier ?? null, dpr: r?.dpr ?? null, scale: r?.scale ?? null, mode: r?.mode ?? null, drawn: r?.drawn ?? null, rigged: r?.rigged ?? null, sections: r?.sections ?? null, live: live ? {...live} : null};
+                    }).then((sample) => scenarioTimeline.push(sample)).catch(() => undefined);
+                }, 1000);
+                await frame.waitForFunction(() => performance.getEntriesByName("ark:town:joined").length > 0, null, {timeout: 240_000, polling: 500}).catch(() => log("the town did not join in 240 s"));
+                await page.waitForTimeout(settleMs);
+                const tools = scenarioTools({page, frame, cdp, device, offset: pageKind === "hero" ? {x: 0, y: 64} : {x: 0, y: 0}, log});
+                const gcAt = [];
+                const startedScenario = Date.now();
+                log(deviceName, `run ${run}: scenario ${scenario} from ${Math.round((Date.now() - navigated) / 1000)} s, ${animals.length} animals`);
+                try {
+                    const shot = flag("shots") ? async (name) => {
+                        await page.screenshot({path: path.join(out, `${deviceName}-${run}-${name}.png`)}).catch(() => undefined);
+                    } : null;
+                    scenarioExtra = await SCENARIOS[scenario](tools, {page, frame, cdp, device, animals, seconds, shot, gc: gcPoints || scenario === "long" ? async (name) => {
+                        await cdp.send("HeapProfiler.enable").catch(() => undefined);
+                        const reading = await forcedGc(page, cdp, navigated);
+                        const memory = await frame.evaluate(() => window.__arkPerfReport?.()?.gpu ?? null).catch(() => null);
+                        gcAt.push({name, ...reading, gpu: memory});
+                        log(deviceName, `  ${name}: heap ${reading.beforeGcMB} -> ${reading.afterGcMB} MB after GC${memory ? `, programs ${memory.programs}, textures ${memory.textures}, geometries ${memory.geometries}` : ""}`);
+                    } : null});
+                } finally {
+                    clearInterval(poller);
+                }
+                scenarioExtra = {...(scenarioExtra ?? {}), animals, gcAt, seconds: Math.round((Date.now() - startedScenario) / 1000)};
+            } else {
+                const end = navigated + readyAt + seconds * 1000;
+                while (Date.now() < end) {
+                    await page.waitForTimeout(5000);
+                    await pollPerf();
+                }
             }
             const stats = await frame.evaluate(() => window.__arkPerfReport?.() ?? null).catch(() => null);
             measured = {result: {firstFrameMs: readyAt, firstFrameFromNavigation: readyAt, mountMs: null, inViewMs: null, world: null, stats: {tier: await frame.evaluate(() => window.__arkRec.tier), modelsLoaded: null, drawCalls: stats?.gpu.calls ?? null, triangles: stats?.gpu.triangles ?? null}, memory: null, heapMB: stats?.heapMB ?? null}};
@@ -518,8 +601,33 @@ for (const deviceName of devices) {
         // first frame (past the opening and the first models) to the end.
         const rec = await frame.evaluate(() => {
             const r = window.__arkRec;
-            return {n: r.n, t: Array.from(r.t.subarray(0, r.n)), cpu: Array.from(r.cpu.subarray(0, r.n)), heap: Array.from(r.heap.subarray(0, r.n))};
+            return {n: r.n, t: Array.from(r.t.subarray(0, r.n)), cpu: Array.from(r.cpu.subarray(0, r.n)), heap: Array.from(r.heap.subarray(0, r.n)), gl: r.gl ? Object.fromEntries(Object.entries(r.gl).map(([key, values]) => [key, Array.from(values.subarray(0, r.n))])) : null};
         });
+        // `--scenario`: each phase's frames, grouped; the profiler's slow frames (which section a hitch was in).
+        let scenarioReport = null;
+        if (scenario && rec.gl) {
+            const marks = await frame.evaluate(() => window.__arkMarks ?? []);
+            const slow = await frame.evaluate(() => window.__arkPerfSlow?.() ?? []).catch(() => []);
+            const phases = analysePhases(rec, marks, GL_KEYS);
+            // (The slow frames of each phase, the costliest three, by section.)
+            for (const [m, phase] of phases.entries()) {
+                const mine = slow.filter((f) => f.at >= marks[m].t && f.at < marks[m + 1].t).sort((a, b) => b.ms - a.ms);
+                phase.slow = mine.slice(0, 3);
+                // (Every one over 60 ms, for the by-section totals.)
+                phase.slowAll = mine.filter((f) => f.ms >= 60).slice(0, 80);
+            }
+            const groups = groupPhases(phases);
+            // The programs linked from the scenario's start, with the state that made each variant and the wait on it.
+            const from = marks[0]?.t ?? 0;
+            const programs = (await frame.evaluate(() => (window.__arkPrograms ?? []).map((p) => ({t: Math.round(p.t), type: p.type, name: p.name, waitMs: Math.round(p.waitMs * 10) / 10, defs: p.defs}))).catch(() => [])).filter((p) => p.t >= from);
+            const tiers = await frame.evaluate(() => window.__arkRec.tiers ?? []).catch(() => []);
+            // The long animation frames inside the scenario (work outside the scene's own frame shows only here).
+            const loaf = (await page.evaluate(() => window.__arkLongFrames ?? []).catch(() => [])).concat(pageKind === "hero" ? await frame.evaluate(() => window.__arkLongFrames ?? []).catch(() => []) : []).filter((f) => f.start >= from).sort((a, b) => b.ms - a.ms).slice(0, 60);
+            const bigTextures = (await frame.evaluate(() => window.__arkBigTex ?? []).catch(() => [])).filter((u) => u.t >= from);
+            scenarioReport = {name: scenario, groups, phases, slowFrames: slow.length, programs, tiers, loaf, bigTextures, extra: scenarioExtra, timeline: scenarioTimeline};
+            writeFileSync(path.join(out, `scenario-${scenario}-${deviceName}-${run}.md`), `Scenario ${scenario}, ${deviceName} (${pageKind}, ${throttle > 0 ? throttle : device.cpuThrottle}x CPU, ${buildEnv} build), run ${run}.\n\n${scenarioTable(groups)}\n`);
+            console.log(scenarioTable(groups));
+        }
         const firstFrameAt = measured.result?.firstFrameFromNavigation ?? 0;
         // The page's first paint and first contentful paint, and when it first told its host it was showing (`ark:progress`).
         const paints = await frame.evaluate(() => Object.fromEntries(performance.getEntriesByType("paint").map((e) => [e.name, Math.round(e.startTime)]))).catch(() => ({}));
@@ -605,6 +713,7 @@ for (const deviceName of devices) {
             interact,
             steady,
             perf: perfAvg,
+            scenario: scenarioReport,
             bytesBeforeFirstFrame,
             bytesByKind,
             wireBeforeFirstFrame: wireBeforeFirst,

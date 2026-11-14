@@ -5,7 +5,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {ArkFramePacer, PACE_LOCK_MS, SCALE_FLOOR, SLOW_CPU_MS, tierForCpu} from "@/ark-scene/runtime/pace";
-import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
+import {sameArkPush, sameArkRead, sameJson, sameJsonSliced} from "@/ark-scene/runtime/same";
 import {ColliderSet} from "@/ark-scene/collide/colliders";
 import {CollideLayer} from "@/ark-scene/collide/layer";
 import type {ResolveBody, ResolvePose} from "@/ark-scene/collide/resolve";
@@ -79,6 +79,33 @@ test("pacing: a GPU too slow for 60 even at the floor holds a steady 30; its tri
     assert.ok(decisions.every((d) => d.scale >= SCALE_FLOOR && !d.dropTier));
 });
 
+test("pacing: a scale found too high again and again is tried again more and more rarely (no soften and sharpen every 90 s for good)", () => {
+    // (A GPU that holds 60 at 0.8 of the resolution and not at 0.9: 21.5 ms a frame at full resolution.)
+    const pacer = new ArkFramePacer("medium", 0);
+    const {decisions} = simulate(pacer, 0, 1200, 6, 21.5);
+    assert.equal(pacer.interval, 0);
+    // Each try at 0.9 is a step up and a step back down: when each began.
+    const ups = decisions.filter((d, i) => i > 0 && d.scale > decisions[i - 1].scale).map((d) => Math.round(d.t));
+    const gaps = ups.slice(1).map((t, i) => t - ups[i]);
+    assert.ok(ups.length >= 2 && ups.length <= 4, `${ups.length} tries in 20 minutes: ${JSON.stringify(ups)}`);
+    assert.ok(gaps.every((gap, i) => i === 0 || gap > gaps[i - 1] * 1.5), JSON.stringify(gaps));
+    assert.ok(decisions.every((d) => d.scale >= 0.8 - 1e-9 && !d.dropTier), JSON.stringify(decisions));
+});
+
+test("pacing: a try at 60 the GPU cannot hold at any resolution is one step down and one back, not a climb of tenths", () => {
+    const pacer = new ArkFramePacer("medium", 0);
+    const {decisions} = simulate(pacer, 0, 600, 6, 40);
+    // After the first minute (the first descent and the settling at 30), every change of resolution belongs to a try:
+    // down to the floor as it begins, back to where the steady 30 was as it fails.
+    const later = decisions.filter((d) => d.t > 60);
+    const scales = later.map((d, i) => (i === 0 ? null : d.scale - later[i - 1].scale)).filter((v): v is number => v !== null && Math.abs(v) > 1e-9);
+    const small = scales.filter((v) => Math.abs(v) < 0.15).length;
+    // (The steady 30's own ceiling, 0.9 against 1, is tried again now and then: a tenth up, a tenth down.)
+    assert.ok(small <= 6, `${small} single-tenth steps after the first minute: ${JSON.stringify(later.map((d) => [Math.round(d.t), d.scale, d.interval > 0 ? 30 : 60]))}`);
+    assert.ok(later.filter((d) => d.interval === 0).length <= 4, "tries at 60 after the first minute");
+    assert.ok(decisions.every((d) => d.scale >= SCALE_FLOOR - 1e-9 && !d.dropTier));
+});
+
 test("pacing: sporadic late frames with short work (a collection, another task) lock the rate but never cost resolution", () => {
     const pacer = new ArkFramePacer("medium", 0);
     let t = 0;
@@ -121,6 +148,61 @@ test("pacing: locked at 30 by the script's own work, once settled, a phone trade
     assert.equal(after.decisions.filter((d) => d.dropTier).length, 1, JSON.stringify(after.decisions));
 });
 
+test("pacing: time away (the panel covered, the page hidden) is not time locked: no tier lost on coming back", () => {
+    // A phone the script holds at 30 on the medium tier (20 ms a frame), settled. Covered after 8 s for a minute.
+    const away = (resumed: boolean) => {
+        const pacer = new ArkFramePacer("medium", 0);
+        const before = simulate(pacer, 0, 8, 20, 6);
+        assert.ok(pacer.interval > 0 && before.decisions.every((d) => !d.dropTier));
+        if (resumed) pacer.resume(68);
+        // (The first three seconds back.)
+        return simulate(pacer, 68, 3, 20, 6).decisions.some((d) => d.dropTier);
+    };
+    assert.equal(away(false), true, "as it was: the minute away counted as a minute locked");
+    assert.equal(away(true), false);
+    // It still trades the tier for the display's rate once it has really been locked that long.
+    const pacer = new ArkFramePacer("medium", 0);
+    simulate(pacer, 0, 8, 20, 6);
+    pacer.resume(68);
+    assert.ok(simulate(pacer, 68, 30, 20, 6).decisions.some((d) => d.dropTier));
+});
+
+test("pacing: the low tier on a dense screen earns resolution above its own only with frames to spare, once settled", () => {
+    // Top 1 (every other tier, a 1× screen, battery saver): never above 1, whatever the frames.
+    const plain = new ArkFramePacer("low", 0, false);
+    simulate(plain, 0, 120, 8, 4);
+    assert.equal(plain.resolution, 1);
+    // A phone with frames to spare: nothing during the start, then 1.25 and 1.5, two changes in all.
+    const spare = new ArkFramePacer("low", 0, false);
+    spare.setTop(1.5, 0);
+    assert.equal(simulate(spare, 0, 30, 8, 4, false).decisions.length, 0);
+    const earned = simulate(spare, 30, 120, 8, 4).decisions.map((d) => d.scale);
+    assert.deepEqual(earned, [1.25, 1.5]);
+    assert.equal(spare.interval, 0);
+    // A GPU that holds 60 at 1 and not at 1.25: one try, taken back within seconds, not tried again for minutes.
+    const tight = new ArkFramePacer("low", 0, false);
+    tight.setTop(1.5, 0);
+    const tried = simulate(tight, 0, 300, 8, 13);
+    assert.deepEqual(tried.decisions.map((d) => d.scale), [1.25, 1]);
+    assert.ok(tried.decisions[1].t - tried.decisions[0].t < 4, JSON.stringify(tried.decisions));
+    assert.equal(tight.interval, 0);
+    // A slow main thread locked at 30 with an idle GPU: the sharper picture at the same 30, and its tries at 60 (the
+    // script's to fail) cost no resolution.
+    const slow = new ArkFramePacer("low", 0, true);
+    slow.setTop(1.5, 0);
+    const steady = simulate(slow, 0, 300, 24, 4);
+    assert.equal(slow.resolution, 1.5);
+    assert.deepEqual(Array.from(new Set(steady.decisions.map((d) => d.scale))), [1, 1.25, 1.5]);
+    // Locked at 30 by the script and the GPU full at 1.5: the bonus is given back though the work is long.
+    const full = new ArkFramePacer("low", 0, true);
+    full.setTop(1.5, 0);
+    simulate(full, 0, 200, 24, 20);
+    assert.equal(full.resolution, 1.25);
+    // The top lowered (battery saver, another tier): down to it at once.
+    slow.setTop(1, 301);
+    assert.equal(slow.resolution, 1);
+});
+
 test("the start tier: a slow main thread starts a touch device on the low tier, never raises one", () => {
     assert.equal(tierForCpu("medium", SLOW_CPU_MS + 1), "low");
     assert.equal(tierForCpu("medium", SLOW_CPU_MS - 1), "medium");
@@ -144,6 +226,35 @@ test("a read of the Ark that changes nothing laid out: the same but for its time
     assert.ok(!sameArkRead(laid, {...later, ark_day: 90.2}));
     // The day stood still while its time moved on by more than the tolerance: a new read too (the props carry it forward).
     assert.ok(!sameArkRead(laid, {...later, ark_day: 90.1, as_of: "2026-11-13T10:10:00Z"}));
+});
+
+test("a host's push of the whole Ark again (the wire's shape, its day inside the voyage): the same but for its time is dropped undecoded, found out in slices", async () => {
+    const DAY = (86_400_000 * 14) / 365;
+    const animals = Array.from({length: 400}, (_, i) => ({id: `a${i}`, zone: "forest", thrive: {hunger: i / 400}, bringers: [{label: `b${i}`, named: true}]}));
+    const copy = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+    const pushed = {as_of: "2026-11-13T10:00:00Z", voyage: {slug: "first", name: "First", ark_day: 90.1}, counts: {animals: 400}, animals};
+    const again = {as_of: "2026-11-13T10:00:45Z", voyage: {slug: "first", name: "First", ark_day: 90.1 + 45_000 / DAY}, counts: {animals: 400}, animals: copy(animals)};
+    // A clock that moves a millisecond each time it is read: the walk is cut into many slices, each followed by a pause.
+    let clock = 0;
+    let pauses = 0;
+    const sliced = {now: () => ++clock, pause: async () => void pauses++};
+    assert.equal(await sameArkPush(pushed, again, sliced), true);
+    assert.ok(pauses >= 5, `${pauses} pauses`);
+    assert.equal(await sameArkPush(pushed, pushed), true);
+    // An animal changed (the last and the first walked), one arrived, the voyage renamed: a new Ark.
+    const changed = (at: number) => ({...again, animals: again.animals.map((animal, i) => (i === at ? {...animal, thrive: {hunger: 2}} : animal))});
+    assert.equal(await sameArkPush(pushed, changed(0), sliced), false);
+    assert.equal(await sameArkPush(pushed, changed(399), sliced), false);
+    assert.equal(await sameArkPush(pushed, {...again, animals: [...again.animals, {id: "y", zone: "town", thrive: {hunger: 0.1}, bringers: []}]}, sliced), false);
+    assert.equal(await sameArkPush(pushed, {...again, voyage: {...again.voyage, name: "Second"}}, sliced), false);
+    // The day past the tolerance (four reads or so on): laid out again, as a read of the page's own is.
+    assert.equal(await sameArkPush(pushed, {...again, as_of: "2026-11-13T10:03:45Z", voyage: {...again.voyage, ark_day: 90.1 + 225_000 / DAY}}, sliced), false);
+    // Not the wire's shape: never the same.
+    assert.equal(await sameArkPush(pushed, null), false);
+    assert.equal(await sameArkPush({animals}, {animals: copy(animals)}), false);
+    // The sliced walk answers as the whole one does.
+    const pairs: Array<[unknown, unknown]> = [[{a: [1, {b: null}], c: "x"}, {c: "x", a: [1, {b: null}]}], [{a: [1, 2]}, {a: [1, 2, 3]}], [{a: 1}, {a: 1, b: undefined}], [{a: 1}, {a: "1"}], [undefined, undefined], [null, {}], [[NaN], [NaN]]];
+    for (const [x, y] of pairs) assert.equal(await sameJsonSliced(x, y, sliced), sameJson(x, y), JSON.stringify([x, y]));
 });
 
 test("the collisions' memo: the same answers as working each out afresh, moment after moment", () => {

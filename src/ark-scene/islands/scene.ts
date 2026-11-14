@@ -24,6 +24,7 @@ import type {TownIsland} from "@/ark-scene/islands/town/render/index";
 import type {WaterSpec} from "@/ark-scene/sea-depth";
 import type {PetHomes} from "@/ark-scene/islands/town/render/pet-homes";
 import {splitTwoSided} from "@/ark-scene/runtime/two-sided";
+import type {CameraObstacle} from "@/ark-scene/runtime/camera";
 
 export type ArkIslandScene = {
     id: "town";
@@ -95,6 +96,15 @@ export type ArkIslandScene = {
     sampler: () => ArkWorldSampler;
     /** Its colliders in the world frame (`islands/town/colliders.ts`, through L5's `collide/` per island). */
     colliders: () => ColliderSet;
+    /**
+     * Its buildings as the camera's obstacles (world frame; `runtime/camera.ts`): a box per building of the plan, from
+     * a metre under its ground to its ridge. The camera's eye is kept out of a building it is not looking into (before,
+     * a view of a garden or the square from across a house stood inside the house: its walls gone, its floor cut by
+     * the near plane). It leaves toward what it looks at (`sight`), to the near side of the wall between them. A
+     * building the view's target is inside is not an obstacle (a pet at its window); the zoo's houses are not in the
+     * plan's list at all.
+     */
+    cameraObstacles: () => CameraObstacle[];
     /** On the behaviour schedule (not one kept still at a window, behind the glass or in a tank or pool). */
     scheduled: (id: string) => boolean;
     /**
@@ -197,7 +207,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const {townHouseholds} = await import("@/ark-scene/islands/town/areas");
     const {modelBase} = await import("@/ark-scene/grounding/base");
     const {sampleTownGround} = await import("@/ark-scene/islands/town/ground");
-    const {CANAL_LEVEL} = await import("@/ark-scene/islands/town/plan");
+    const {CANAL_LEVEL, townPlan} = await import("@/ark-scene/islands/town/plan");
     const origin = options.origin ?? townWorldOrigin();
     const def = ARK_ISLANDS.town;
     const has = (animal: Pick<ArkAnimal, "island" | "area">) => animal.island === "town" || (!animal.island && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo"));
@@ -339,6 +349,12 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         seaDepth,
         drawnMask,
         contains: (x, z) => Math.abs(x - origin.x) <= half && Math.abs(z - origin.z) <= half,
+        // (The town's boxes turn the other way round from the camera's: `geom.ts` toLocal against `camera.ts` penetration.)
+        cameraObstacles: () =>
+            townPlan().buildings.filter((building) => building.top > 1.2).map((building) => {
+                const ground = town.heightAt(building.at.x, building.at.z);
+                return {kind: "box" as const, x: origin.x + building.at.x, z: origin.z + building.at.z, y0: ground - 1, y1: ground + building.top, hx: building.at.w / 2, hz: building.at.d / 2, rotation: -building.at.rot, sight: true};
+            }),
         heightAt: (x, z) => town.heightAt(x - origin.x, z - origin.z),
         drawnHeight: (x, z, near) => townDrawnHeight(x - origin.x, z - origin.z, undefined, near),
         drawnGround: (x, z) => townDrawnGround(x - origin.x, z - origin.z),

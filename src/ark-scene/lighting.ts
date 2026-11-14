@@ -6,14 +6,18 @@
  * fill. The haze colour follows the sky's horizon, so the far sea melts into
  * it. At night a dome of deep blue with stars is laid over the sky.
  *
- * At 17:00 it is the v1 Ark's golden hour exactly. The sky's light is built
- * again only when the sun has moved a few degrees (a few times an hour).
+ * At 17:00 it is the v1 Ark's golden hour exactly. The sky's light is a picture
+ * of the sky, made again only when the sun has moved a degree or a few; between
+ * pictures its strength follows the sun (`sky-light.ts`), so the light never
+ * steps: through dusk and dawn the sky dims by a third every three degrees.
  */
 
 import {
     BackSide,
     Color,
+    DataUtils,
     DirectionalLight,
+    HalfFloatType,
     HemisphereLight,
     MathUtils,
     Mesh,
@@ -33,8 +37,37 @@ import {RGBELoader} from "three/examples/jsm/loaders/RGBELoader.js";
 const HDRI_SUN_BEARING = 0.59;
 import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_RIM, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_SUN, ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
 import {daylightAt, type ArkDaylight} from "@/lib/ark-daylight";
+import {equirectSkyLight, generatedSkyLight, type Rgb} from "@/ark-scene/sky-light";
 
 const SKY_SETTINGS = {turbidity: 3.2, rayleigh: 1.8, mieCoefficient: 0.003, mieDirectionalG: 0.82};
+/**
+ * Where the photographed sky takes over from the generated one, by the sun's height (degrees): under `from` the
+ * generated sky alone, over `to` the photographed one alone, and between them one picture of both, the photographed
+ * sky laid over the generated one more and more (a real cross-fade of the light, not a swap).
+ */
+const HANDOVER = {from: 9, to: 15};
+/**
+ * The photographed sky's own strength on the scene's sky light. (1.15 on three's own conversion of the picture, which
+ * reads the picture's sun at a quarter of the resolution and came out a ninth brighter than the picture is; the same
+ * light from the dome's picture of it, which the cross-fade needs, is 1.29: measured on four views, within 1/255.)
+ */
+const DAY_SKY_GAIN = 1.29;
+/** A sky that arrives late (the photographed sky's file, after the first frames) comes in over this long (s). */
+const ARRIVAL_SECONDS = 2.5;
+
+const UP = new Vector3(0, 1, 0);
+
+/** The photographed sky as a dome in the picture the sky's light is made from (an equirectangular map, as it lies: the scene turns the picture so its sun is ours). */
+const DAY_DOME_FRAGMENT = `
+uniform sampler2D map;
+uniform float gain;
+uniform float weight;
+varying vec3 vDirection;
+void main() {
+    vec3 d = normalize(vDirection);
+    vec2 uv = vec2(atan(d.z, d.x) * 0.15915494309189535 + 0.5, asin(clamp(d.y, -1.0, 1.0)) * 0.3183098861837907 + 0.5);
+    gl_FragColor = vec4(texture2D(map, uv).rgb * gain, weight);
+}`;
 
 /** The night: a deep blue dome, lighter at the horizon, with stars that twinkle a little. Faded in with `night`. */
 const NIGHT_VERTEX = `
@@ -121,8 +154,24 @@ export class ArkLighting {
     private readonly skyScene = new Scene();
     private readonly skyCopy = new Sky();
     private readonly nightCopy: Mesh;
-    /** The elevation (rounded) the sky's light was last built for. */
-    private builtFor: number | null = null;
+    /** What the sky's light was last made for (the sun's height in steps, and how much of the photographed sky is in it). */
+    private builtFor: string | null = null;
+    /** The light of the sky in that picture (`sky-light.ts`), per unit of strength. */
+    private builtLight = 0;
+    /** The photographed sky's light at its own strength (`DAY_SKY_GAIN`), the same measure (0 until it is loaded). */
+    private dayLight = 0;
+    /** The sky light's strength for this hour, before a late sky's ease. */
+    private skyStrength = 0.75;
+    /** A sky arrived late, in a world already drawn: when (s), and when its share was last drawn into the picture. */
+    private arrival: {at: number; applied: number} | null = null;
+    /** A frame has been drawn (`step` runs once a frame). */
+    private drawn = false;
+    private readonly nightHorizon = new Color();
+    private readonly nightZenith = new Color();
+    /** The photographed sky's own picture, kept for the cross-fade (256 × 128, a quarter of a megabyte), and its dome. */
+    private dayPicture: Texture | null = null;
+    private readonly dayDome: Mesh;
+    private readonly dayDomeMaterial: ShaderMaterial;
     private current: ArkDaylight;
     /** The photographed sky's light (batch 1), used while the sun is well up; the generated sky's at dusk, dawn and night. */
     private dayEnvironment: Texture | null = null;
@@ -174,7 +223,22 @@ export class ArkLighting {
         this.skyCopy.material.uniforms.mieCoefficient.value = SKY_SETTINGS.mieCoefficient;
         this.skyCopy.material.uniforms.mieDirectionalG.value = SKY_SETTINGS.mieDirectionalG;
         this.nightCopy = new Mesh(this.nightDome.geometry, this.nightMaterial);
-        this.skyScene.add(this.skyCopy, this.nightCopy);
+        this.dayDomeMaterial = new ShaderMaterial({
+            vertexShader: NIGHT_VERTEX,
+            fragmentShader: DAY_DOME_FRAGMENT,
+            uniforms: {map: {value: null}, gain: {value: DAY_SKY_GAIN}, weight: {value: 0}},
+            side: BackSide,
+            transparent: true,
+            depthWrite: false,
+            depthTest: false,
+            fog: false,
+            toneMapped: false
+        });
+        this.dayDome = new Mesh(this.nightDome.geometry, this.dayDomeMaterial);
+        this.dayDome.frustumCulled = false;
+        this.dayDome.renderOrder = 10;
+        this.dayDome.visible = false;
+        this.skyScene.add(this.skyCopy, this.nightCopy, this.dayDome);
         this.pmrem = new PMREMGenerator(renderer);
 
         this.sun = new DirectionalLight(new Color("#ffd9a8"), 2.6);
@@ -195,11 +259,53 @@ export class ArkLighting {
     /** Load the photographed day sky (once); it takes over the image-based light while the sun is up. */
     loadDaySky(url: string) {
         new RGBELoader().load(url, (texture) => {
-            this.dayEnvironment = this.pmrem.fromEquirectangular(texture).texture;
-            texture.dispose();
+            // How much light it gives (`sky-light.ts`), and its picture kept for the cross-fade with the generated sky.
+            const {data, width, height} = texture.image as unknown as {data: Uint16Array | Float32Array; width: number; height: number};
+            const half = texture.type === HalfFloatType;
+            this.dayLight = equirectSkyLight((index) => (half ? DataUtils.fromHalfFloat(data[index]) : data[index]), width, height, data.length / (width * height)) * DAY_SKY_GAIN;
+            this.dayPicture = texture;
+            this.dayDomeMaterial.uniforms.map.value = texture;
+            // Its light for the day: the dome alone, unturned (the scene turns it with the sun), made the way the
+            // cross-fade's pictures are, so the two meet exactly where one hands over to the other.
+            this.skyCopy.visible = false;
+            this.nightCopy.visible = false;
+            this.dayDome.visible = true;
+            this.dayDome.rotation.set(0, 0, 0);
+            this.dayDome.updateMatrixWorld();
+            this.dayDomeMaterial.uniforms.weight.value = 1;
+            this.dayDomeMaterial.uniforms.gain.value = 1;
+            this.dayEnvironment = this.pmrem.fromScene(this.skyScene, 0, 0.1, 6000).texture;
+            this.dayDomeMaterial.uniforms.gain.value = DAY_SKY_GAIN;
+            this.dayDome.visible = false;
+            // In a world already drawn (a slow link) it joins the sky's light over a few seconds, laid over the generated
+            // sky by a growing share as in the hand-over; before the first frame, at once.
+            this.arrival = this.drawn ? {at: performance.now() / 1000, applied: -1} : null;
             this.builtFor = null;
             this.apply(this.current, null);
         }, undefined, () => {});
+    }
+
+    /** How much of the photographed sky is in yet, 0–1 (1 unless it arrived late and is still coming in). */
+    private arrived(): number {
+        if (!this.arrival) return 1;
+        const t = (performance.now() / 1000 - this.arrival.at) / ARRIVAL_SECONDS;
+        // (A clock set back or far on, as the visual tests' frozen clocks are: in.)
+        return t < 0 || t >= 1 ? 1 : MathUtils.smoothstep(t, 0, 1);
+    }
+
+    /** Every frame: a late sky brought in, a picture every eighth of a second (nothing otherwise). */
+    step(now: number) {
+        this.drawn = true;
+        if (!this.arrival) return;
+        const t = now - this.arrival.at;
+        if (t < 0 || t >= ARRIVAL_SECONDS) {
+            this.arrival = null;
+            this.builtFor = null;
+            this.apply(this.current, null);
+        } else if (now - this.arrival.applied > 0.125) {
+            this.arrival.applied = now;
+            this.apply(this.current, null);
+        }
     }
 
     get daylight(): ArkDaylight {
@@ -226,7 +332,8 @@ export class ArkLighting {
         this.direction.setFromSphericalCoords(1, MathUtils.degToRad(90 - day.light.elevation), MathUtils.degToRad(day.light.azimuth));
         // The water glints toward the light that is up: the sun, or the moon.
         ARK_SUN.value.copy(this.direction);
-        ARK_GLINT.value.set(day.light.color).multiplyScalar(day.elevation > -2 ? 1 : 0.6);
+        // (The glint fades out and in with the light where the sun hands over to the moon, 2° under the horizon.)
+        ARK_GLINT.value.set(day.light.color).multiplyScalar((day.elevation > -2 ? 1 : 0.6) * MathUtils.smoothstep(Math.abs(day.elevation + 2), 0, 3));
         ARK_SKY_HORIZON.value.set(day.horizon);
         ARK_SKY_ZENITH.value.set(day.zenith);
         ARK_DAYLIGHT.value = day.daylight;
@@ -254,29 +361,50 @@ export class ArkLighting {
         this.fill.intensity = day.fill.intensity;
         this.horizon.set(day.fog);
         if (fog) fog.color.copy(this.horizon);
-        this.scene.environmentIntensity = day.environment;
 
-        // The photographed sky by day: the image-based light from real clouds and sky, turned so its sun is ours.
-        // Where it hands over to the generated sky (the sun 12° up) the sky light dips softly either side, so the
-        // swap never pops (batch 3: smooth day, dusk, night and dawn).
-        const handover = 0.4 + 0.6 * MathUtils.smoothstep(Math.abs(day.elevation - 12), 0, 5);
-        if (this.dayEnvironment && day.elevation > 12) {
+        // The sky's light. By day the photographed sky: real clouds and sky, turned so its sun is ours. At dusk, dawn and
+        // night the generated sky, a picture of it made again each degree the sun moves while it is low (its colours turn
+        // fast there), every three degrees otherwise. Between pictures the strength follows the sky's own light
+        // (`sky-light.ts`): a picture kept for three degrees was a step of a fifth to a third of the scene's brightness
+        // every twelve minutes through dusk and dawn. Where one sky hands over to the other (the sun 9° to 15° up) the
+        // picture is of both, the photographed sky laid over the generated one by its share: swapped in one frame they
+        // were a jump of a quarter of the picture's brightness (the photographed sky lights the ground twice as much).
+        this.nightHorizon.set(day.horizon);
+        this.nightZenith.set(day.zenith);
+        const generated = generatedSkyLight(day.elevation, day.night, this.nightHorizon.toArray() as Rgb, this.nightZenith.toArray() as Rgb, SKY_SETTINGS);
+        const arrived = this.arrived();
+        const share = this.dayPicture ? MathUtils.smoothstep(day.elevation, HANDOVER.from, HANDOVER.to) * arrived : 0;
+        const turn = Math.PI / 2 - MathUtils.degToRad(day.azimuth) - HDRI_SUN_BEARING;
+        if (this.dayEnvironment && share >= 1) {
             this.builtFor = null;
+            this.builtLight = this.dayLight / DAY_SKY_GAIN;
             this.scene.environment = this.dayEnvironment;
-            this.scene.environmentRotation.set(0, Math.PI / 2 - MathUtils.degToRad(day.azimuth) - HDRI_SUN_BEARING, 0);
-            this.scene.environmentIntensity = day.environment * 1.15 * handover;
-            return;
+            this.scene.environmentRotation.set(0, turn, 0);
+            this.skyStrength = day.environment * DAY_SKY_GAIN;
+        } else {
+            // (With the photographed sky in the picture, the picture is turned as the day's own is: the dome unturned, so
+            // its sun falls on the same texels in every picture and the light it gives never wavers from one to the next,
+            // and the generated sky made turned back by as much.)
+            this.scene.environmentRotation.set(0, share > 0 ? turn : 0, 0);
+            const light = generated + (this.dayLight - generated) * share;
+            const low = day.elevation > -16 && day.elevation < HANDOVER.from;
+            // (In the cross-fade a picture every eighth of a degree, about half a minute: each is a small step of its own,
+            // the two skies' light falling differently on the ground and on walls.)
+            const key = share > 0 ? `both ${Math.round(day.elevation * 8)} ${Math.round(arrived * 20)}` : low ? `low ${Math.round(day.elevation)}` : `${Math.round(day.elevation / 3)}`;
+            if (this.builtFor !== key || this.builtLight <= 0 || this.scene.environment === this.dayEnvironment) {
+                this.builtFor = key;
+                this.builtLight = light;
+                this.dayDome.visible = share > 0;
+                this.dayDomeMaterial.uniforms.weight.value = share;
+                if (share > 0) this.skyCopy.material.uniforms.sunPosition.value.copy(sunDirection).applyAxisAngle(UP, -turn);
+                const next = this.pmrem.fromScene(this.skyScene, 0, 0.1, 6000).texture;
+                this.scene.environment = next;
+                if (this.environment !== this.dayEnvironment) this.environment.dispose();
+                this.environment = next;
+            }
+            this.skyStrength = day.environment * MathUtils.clamp(light / this.builtLight, 0.4, 2.5);
         }
-        this.scene.environmentRotation.set(0, 0, 0);
-        this.scene.environmentIntensity = day.environment * handover;
-        const key = Math.round(day.elevation / 3);
-        if (this.builtFor !== key) {
-            this.builtFor = key;
-            const next = this.pmrem.fromScene(this.skyScene, 0, 0.1, 6000).texture;
-            this.scene.environment = next;
-            if (this.environment !== this.dayEnvironment) this.environment.dispose();
-            this.environment = next;
-        }
+        this.scene.environmentIntensity = this.skyStrength;
     }
 
     /** Soft shadows from a map this many texels wide; 0 for none. */
@@ -322,6 +450,9 @@ export class ArkLighting {
         this.nightDome.geometry.dispose();
         this.nightMaterial.dispose();
         this.pmrem.dispose();
+        this.dayPicture?.dispose();
+        this.dayDomeMaterial.dispose();
+        if (this.dayEnvironment && this.dayEnvironment !== this.environment) this.dayEnvironment.dispose();
         this.sun.shadow.map?.dispose();
     }
 }

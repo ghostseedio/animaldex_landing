@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {Vector3} from "three";
 import {worldDecor} from "@/ark-scene/decor";
-import {CameraObstacles, collideCamera, dampingFor, ease, FollowSmoother, inside, obstaclesOf, penetration, type CameraObstacle} from "@/ark-scene/runtime/camera";
+import {CameraObstacles, collideCamera, dampingFor, ease, FollowSmoother, inside, obstaclesOf, penetration, sightExit, type CameraObstacle} from "@/ark-scene/runtime/camera";
 import {heightAt} from "@/ark-scene/world";
 
 const options = {dt: 1 / 60, diving: false, clearance: 1.2, closeUp: false};
@@ -64,6 +64,51 @@ test("runtime camera: out of a trunk at once, sideways; out of a crown gently; i
     const atBox = new Vector3(-10.3, 1.5, 0.2);
     collideCamera(obstacles, atBox, {x: 30, y: 0, z: 30}, options);
     assert.equal(inside(box, atBox, 0.3), false);
+});
+
+test("runtime camera: out of a town building toward what it looks at, to the near side of the wall", () => {
+    // A house 10 x 8 m, turned, its ridge 7 m up; the view's target in the garden in front of it (local +z).
+    const house: CameraObstacle = {kind: "box", x: 600, z: -250, y0: 1.6, y1: 9.6, hx: 5, hz: 4, rotation: 0.4, sight: true};
+    const obstacles = new CameraObstacles([]);
+    obstacles.add(house);
+    assert.equal(obstacles.count, 1);
+    const cos = Math.cos(0.4);
+    const sin = Math.sin(0.4);
+    const world = (lx: number, lz: number) => ({x: 600 + lx * cos + lz * sin, z: -250 - lx * sin + lz * cos});
+    const garden = world(1, 12);
+    const target = {x: garden.x, y: 2.6, z: garden.z};
+    const within = world(0.5, -1);
+    const eye = new Vector3(within.x, 6, within.z);
+    assert.ok(inside(house, eye, 0.35), "the eye starts inside the house");
+    const exit = sightExit(house as Extract<CameraObstacle, {kind: "box"}>, eye, target, 0.35);
+    assert.ok(exit, "the line to the target leaves the house");
+    const first = eye.clone();
+    collideCamera(obstacles, eye, target, {...options, dt: 1 / 60, ground: () => 0});
+    assert.ok(eye.distanceTo(first) > 0 && inside(house, eye, 0.35), "it glides: part of the way in a frame");
+    for (let i = 0; i < 90; i++) collideCamera(obstacles, eye, target, {...options, dt: 1 / 60, ground: () => 0});
+    assert.equal(inside(house, eye, 0.3), false, "outside after a second and a half");
+    // On the garden's side of the house (local z beyond its front wall), and on the line it looked along.
+    const dx = eye.x - 600;
+    const dz = eye.z + 250;
+    assert.ok(dx * sin + dz * cos > 4, `in front of the front wall (${(dx * sin + dz * cos).toFixed(2)})`);
+    const along = new Vector3(target.x - first.x, target.y - first.y, target.z - first.z).normalize();
+    const off = new Vector3(eye.x - first.x, eye.y - first.y, eye.z - first.z);
+    assert.ok(off.clone().sub(along.clone().multiplyScalar(off.dot(along))).length() < 0.05, "along its line of sight");
+    // Looking at something inside the house (a pet at its window): the house does not push.
+    const indoors = world(0, 3.5);
+    const looking = new Vector3(within.x, 6, within.z);
+    collideCamera(obstacles, looking, {x: indoors.x, y: 3, z: indoors.z}, {...options, dt: 1 / 60, ground: () => 0});
+    assert.ok(Math.abs(looking.x - within.x) < 1e-9 && Math.abs(looking.z - within.z) < 1e-9);
+    // The target right at the wall: the near side would be closer than the eye may come, so out by the nearest face.
+    const atWall = world(0.5, 4.6);
+    const tight = new Vector3(within.x, 3, within.z);
+    collideCamera(obstacles, tight, {x: atWall.x, y: 2.6, z: atWall.z}, {...options, dt: 1 / 60, ground: () => 0});
+    assert.equal(inside(house, tight, 0.3), false, "out at once");
+    // Outside the house: nothing.
+    const outside = world(0, 9);
+    const free = new Vector3(outside.x, 5, outside.z);
+    collideCamera(obstacles, free, target, {...options, dt: 1 / 60, ground: () => 0});
+    assert.ok(Math.abs(free.x - outside.x) < 1e-9 && Math.abs(free.z - outside.z) < 1e-9);
 });
 
 test("runtime camera: the eye keeps over ground rising just round it, easing up rather than jumping", () => {

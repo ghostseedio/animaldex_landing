@@ -24,8 +24,11 @@
  * RGBA half-float texture (a row per frame, three texels per bone).
  *
  * A missing, failed or late rig is never an error: the animal stays
- * procedural. Downloads are capped per session (species and bytes), and
- * rigs not drawn for a while are let go.
+ * procedural. The rigs held at once are capped (species and bytes), and
+ * rigs not drawn for a while are let go, which makes room again. (The caps
+ * counted every download of the session until 2026-11-14: after 14 species
+ * on the low tier, 48 elsewhere, no rig loaded again until the page was
+ * reloaded, and every animal looked at after that stayed stiff.)
  */
 
 import {
@@ -59,6 +62,7 @@ import {
     type RigSetIndex
 } from "@/ark-scene/rig-clips";
 import {gripBones} from "@/ark-scene/map/grip";
+import {finalStatus, ModelFileError, retrySeconds, worthAskingAgain} from "@/ark-scene/model-files";
 import {buildLocoRig, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
 import {LocoLayer, newLocoAnimal, type ClipRows, type LocoAnimal} from "@/ark-scene/locomotion/layer";
 import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
@@ -212,9 +216,33 @@ export function rigChoices(sets: readonly (RigSet | null)[]): Map<string, RigSet
 
 export type RigCaps = {species: number; bytes: number};
 
-/** Default session caps: rig files downloaded, and their bytes. */
+/** The caps on the rigs held at once (loaded or loading): how many species, and their files' bytes. */
 export const RIG_CAPS: RigCaps = {species: 48, bytes: 9_000_000};
 export const RIG_CAPS_LITE: RigCaps = {species: 14, bytes: 2_500_000};
+/** A rig asked for first (the animal looked at or followed, the viewer's own) may go this far past the caps. */
+export const RIG_CAPS_FIRST: RigCaps = {species: 4, bytes: 1_000_000};
+
+/**
+ * Whether one more rig may be asked for: under the caps on what is held now (`held`: species loaded or loading, and
+ * the loaded files' bytes); one asked for `first` may go `RIG_CAPS_FIRST` past them, so the animal a reader is
+ * looking at is never the one left stiff by a full library.
+ */
+export function rigRoom(caps: RigCaps, held: RigCaps, first = false): boolean {
+    const over = first ? RIG_CAPS_FIRST : {species: 0, bytes: 0};
+    return held.species < caps.species + over.species && held.bytes < caps.bytes + over.bytes;
+}
+
+/** A rig file's usual size (bytes; the v3 set's files are 150 to 280 KB): the room one more species needs. */
+export const RIG_FILE_BYTES = 250_000;
+
+/**
+ * Whether the library holds more than it should keep of the rigs not drawn for a while (`RigLibrary.evict`): more
+ * than `keep` loaded, or so much that the caps have no room left for `room` more species (their count, and about
+ * their files' bytes). Without the second part a library under its `keep` but at its caps would never load again.
+ */
+export function rigOverKeep(caps: RigCaps, loaded: RigCaps, keep: number, room: number): boolean {
+    return loaded.species > Math.max(Math.min(keep, caps.species - room), 0) || loaded.bytes > Math.max(caps.bytes - room * RIG_FILE_BYTES, 0);
+}
 
 type RigExtras = {bufferView: number; bones: string[]; rows: number; rig?: unknown};
 
@@ -240,9 +268,14 @@ export class RigLibrary {
     private readonly failed = new Set<string>();
     private readonly queue: string[] = [];
     private readonly queued = new Set<string>();
+    /** Rigs that failed to arrive: how many times in a row, and when they may be asked for again (`performance.now()`). */
+    private readonly retries = new Map<string, {count: number; until: number}>();
     private active = 0;
+    /** Every byte downloaded this session (the debug overlay's figure). */
     private downloaded = 0;
-    private loadedSpecies = 0;
+    /** Held now, for the caps: the species loaded or loading, and the loaded files' bytes. */
+    private heldSpecies = 0;
+    private heldBytes = 0;
     private disposed = false;
     private readonly abort = new AbortController();
     caps: RigCaps;
@@ -337,29 +370,71 @@ export class RigLibrary {
         return this.active > 0 || this.queue.length > 0;
     }
 
-    /** Ask for a species' rig (once; within the session's caps). */
-    request(slug: string) {
+    /** What is held now against the caps: species loaded or loading, and the loaded files' bytes. */
+    get held(): RigCaps {
+        return {species: this.heldSpecies, bytes: this.heldBytes};
+    }
+
+    /**
+     * Ask for a species' rig (once; within the caps on what is held). `first`: the animal looked at or followed, or
+     * the viewer's own, which may go a little past the caps (`rigRoom`) and is loaded first. A rig that only failed to
+     * arrive is asked for again after a wait that grows (`retries`).
+     */
+    request(slug: string, first = false) {
         if (this.disposed || this.models.has(slug) || this.queued.has(slug) || this.failed.has(slug)) return;
         if (!this.available(slug)) return;
-        if (this.loadedSpecies >= this.caps.species || this.downloaded >= this.caps.bytes) return;
+        const failed = this.retries.get(slug);
+        if (failed && performance.now() < failed.until) return;
+        if (!rigRoom(this.caps, this.held, first) && !(first && this.makeRoom() && rigRoom(this.caps, this.held, true))) return;
         this.queued.add(slug);
-        this.queue.push(slug);
+        this.heldSpecies++;
+        // (One asked for first is loaded first.)
+        if (first) this.queue.unshift(slug);
+        else this.queue.push(slug);
         this.pump();
     }
 
-    /** Let go of rigs not drawn since `before` (seconds), keeping at most `keep`. */
-    evict(before: number, keep: number) {
-        if (this.models.size <= keep) return;
+    /**
+     * Let go of rigs not drawn since `before` (seconds), oldest first, down to `keep` and until the caps have room
+     * for `room` more species (`rigOverKeep`).
+     */
+    evict(before: number, keep: number, room = 0) {
+        const over = () => rigOverKeep(this.caps, {species: this.models.size, bytes: this.heldBytes}, keep, room);
+        if (!over()) return;
         const old = Array.from(this.models.values()).filter((model) => model.usedAt < before).sort((a, b) => a.usedAt - b.usedAt);
         for (const model of old) {
-            if (this.models.size <= keep) break;
-            this.models.delete(model.slug);
-            this.queued.delete(model.slug);
-            model.geometry.dispose();
-            model.texture.dispose();
-            model.loco?.dispose();
-            this.onEvict(model.slug);
+            if (!over()) break;
+            this.drop(model);
         }
+    }
+
+    /** Let go of one rig: its place under the caps is free again. */
+    private drop(model: RigModel) {
+        this.models.delete(model.slug);
+        this.queued.delete(model.slug);
+        this.heldSpecies = Math.max(this.heldSpecies - 1, 0);
+        this.heldBytes = Math.max(this.heldBytes - model.bytes, 0);
+        model.geometry.dispose();
+        model.texture.dispose();
+        model.loco?.dispose();
+        this.onEvict(model.slug);
+    }
+
+    /**
+     * Room for a rig asked for first when even its allowance is spent (a reader going animal to animal faster than
+     * rigs are let go): the rig drawn longest ago goes, never one drawn in the latest frame.
+     */
+    private makeRoom(): boolean {
+        let newest = -Infinity;
+        let oldest: RigModel | null = null;
+        this.models.forEach((model) => {
+            newest = Math.max(newest, model.usedAt);
+            if (!oldest || model.usedAt < oldest.usedAt) oldest = model;
+        });
+        const pick = oldest as RigModel | null;
+        if (!pick || pick.usedAt >= newest) return false;
+        this.drop(pick);
+        return true;
     }
 
     onEvict: (slug: string) => void = () => undefined;
@@ -368,17 +443,25 @@ export class RigLibrary {
         if (!this.choices || this.disposed) return;
         while (this.active < this.concurrency && this.queue.length) {
             const slug = this.queue.shift()!;
-            if (this.downloaded >= this.caps.bytes) {
-                this.queued.delete(slug);
-                continue;
-            }
             this.active++;
-            this.loadedSpecies++;
             this.load(slug)
+                .then(() => {
+                    this.retries.delete(slug);
+                })
                 .catch((error) => {
                     if (this.disposed) return;
-                    this.failed.add(slug);
+                    // (A file that failed, or failed to arrive, holds nothing.)
+                    this.heldSpecies = Math.max(this.heldSpecies - 1, 0);
                     console.warn(`[ark] rig ${slug}`, error instanceof Error ? error.message : error);
+                    if (!worthAskingAgain(error)) {
+                        this.failed.add(slug);
+                        return;
+                    }
+                    // It only failed to arrive (the network, the bucket busy): asked for again when the scene next wants
+                    // it, after a wait that grows. Before, one dropped request left the species without its rig for the visit.
+                    const count = (this.retries.get(slug)?.count ?? 0) + 1;
+                    this.retries.set(slug, {count, until: performance.now() + retrySeconds(count) * 1000});
+                    this.queued.delete(slug);
                 })
                 .finally(() => {
                     this.active--;
@@ -390,7 +473,7 @@ export class RigLibrary {
     /** From the first set that lists it; a file that fails falls back to the next set's (v2 → v1). */
     private async load(slug: string) {
         const sets = this.choices?.get(slug) ?? [];
-        if (!sets.length) throw new Error("not listed");
+        if (!sets.length) throw new ModelFileError("not listed", true);
         let last: unknown = null;
         for (const set of sets) {
             if (this.disposed) return;
@@ -398,21 +481,33 @@ export class RigLibrary {
                 await this.loadFrom(set, slug);
                 return;
             } catch (error) {
+                // (Only failed to arrive: this set's file again later, not the older set's in its place.)
+                if (worthAskingAgain(error)) throw error;
                 last = error;
             }
         }
-        throw last instanceof Error ? last : new Error(String(last));
+        throw last instanceof Error ? last : new ModelFileError(String(last), true);
     }
 
     private async loadFrom(set: RigSet, slug: string) {
         const version = set.index[slug];
-        if (!version) throw new Error("not listed");
+        if (!version) throw new ModelFileError("not listed", true);
         const url = `${set.base}/${encodeURIComponent(slug)}/${encodeURIComponent(version)}.rig.glb`;
+        // (A file that is not there, or is not a rig, is final: the next set's, then none. One that only failed to
+        // arrive is asked for again: `model-files.ts`.)
         const response = await fetch(url, {signal: this.abort.signal});
-        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.ok) throw new ModelFileError(`HTTP ${response.status}`, finalStatus(response.status));
         const buffer = await response.arrayBuffer();
         this.downloaded += buffer.byteLength;
         if (this.disposed) return;
+        try {
+            await this.parse(set, slug, buffer);
+        } catch (error) {
+            throw new ModelFileError(error instanceof Error ? error.message : String(error), true);
+        }
+    }
+
+    private async parse(set: RigSet, slug: string, buffer: ArrayBuffer) {
         const gltf = await this.loader.parseAsync(buffer, "");
         const extras = (gltf.parser.json as {extras?: {ark_rig?: RigExtras}}).extras?.ark_rig;
         if (!extras || !Number.isInteger(extras.bufferView) || !Array.isArray(extras.bones) || !extras.bones.length) throw new Error("no bones");
@@ -506,6 +601,7 @@ export class RigLibrary {
             wings: rigWingChain(extras.bones, restPivot),
             usedAt: 0
         });
+        this.heldBytes += buffer.byteLength;
         this.onLoad(slug);
     }
 
@@ -1103,6 +1199,19 @@ export function beatClip(beat: string | null | undefined, doing: string | null |
 
 export const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
+/**
+ * Animal rendering lane (2026-11-14): a re-rigged bird (rig code v7, the v3 set's folding wings) on the ground plays
+ * its baked clip alone. Through the locomotion layer its wings hung open to the ground, a flamingo in a red skirt, a
+ * bulbul a flat tent, in idle and walk alike; the baked clips hold them folded (`evidence/animal-render/wings/`:
+ * the same bird with `__arkLoco` on and off). In the air the layer still poses it (its flight drivers). To take out
+ * once the layer's ground pose keeps a v7 rig's wings as its clip has them (development:
+ * `globalThis.__arkBirdGroundLoco = true` puts the layer back, to compare).
+ */
+export function birdGroundBaked(model: Pick<RigModel, "code">, state: Pick<RigState, "flying">): boolean {
+    if ((globalThis as {__arkBirdGroundLoco?: boolean}).__arkBirdGroundLoco === true) return false;
+    return Boolean(model.code?.startsWith("v7")) && !state.flying;
+}
+
 /** Whether the locomotion layer poses rigs (development: `globalThis.__arkLoco = false` turns it off for a before/after). */
 export function locoOn(): boolean {
     return (globalThis as {__arkLoco?: boolean}).__arkLoco !== false;
@@ -1135,6 +1244,7 @@ export type RigLiveInput = {
  */
 export function rigLivePose(model: RigModel, state: RigState, input: RigLiveInput, row: number): {code: number; gait: GaitState | null} | null {
     if (!model.loco || !locoOn() || state.weight <= 0) return null;
+    if (birdGroundBaked(model, state)) return null;
     const now = model.clips[state.now.name];
     const from = state.from ? model.clips[state.from.name] : undefined;
     const a: ClipRows | null = now ? clipRows(now, state.now.phase) : null;

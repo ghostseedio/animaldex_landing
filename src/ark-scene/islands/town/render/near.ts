@@ -13,6 +13,7 @@
 import {Color, DynamicDrawUsage, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type BufferGeometry, type Camera} from "three";
 import {hashText, inBox, polylineNearest, rng} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround} from "@/ark-scene/islands/town/ground";
+import {TOWN_NEAR_LIVE} from "@/ark-scene/islands/town/chunks";
 import {TOWN_HALF, TOWN_LEVEL, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {Geo, tone} from "@/ark-scene/islands/town/render/kit";
 import {PAVEMENT_LIFT, ROAD_LIFT} from "@/ark-scene/islands/town/render/streets";
@@ -230,6 +231,7 @@ export function buildTownNear(plan: TownPlan, trees: ReadonlyArray<{x: number; z
     let lastKey = "";
     const eye = new Vector3();
     const look = new Vector3();
+    const missing: Array<{cx: number; cz: number; d: number}> = [];
 
     const write = () => {
         const counts = new Map<Kind, number>();
@@ -298,20 +300,36 @@ export function buildTownNear(plan: TownPlan, trees: ReadonlyArray<{x: number; z
             }
             return;
         }
-        // Build what is missing near the point (a few cells a frame; all at once after a jump, as a still's), then write
-        // when the set changes.
+        // Build what is missing near the point (a few cells a frame; all at once after a jump in a recording or a still;
+        // in a live view a few a frame then too, `TOWN_NEAR_LIVE`), then write when the set changes.
         const jumped = !centre || Math.hypot(centre.x - gx, centre.z - gz) > 20;
         let built = 0;
-        const limit = jumped ? Infinity : PER_FRAME;
+        const limit = jumped && !TOWN_NEAR_LIVE.value ? Infinity : PER_FRAME;
         const cx0 = Math.floor((gx - RADIUS) / CELL);
         const cx1 = Math.floor((gx + RADIUS) / CELL);
         const cz0 = Math.floor((gz - RADIUS) / CELL);
         const cz1 = Math.floor((gz + RADIUS) / CELL);
-        for (let cx = cx0; cx <= cx1 && built < limit; cx++) {
-            for (let cz = cz0; cz <= cz1 && built < limit; cz++) {
-                const k = cellKey(cx, cz);
-                if (cache.has(k)) continue;
-                cache.set(k, build(cx, cz));
+        if (limit === Infinity) {
+            for (let cx = cx0; cx <= cx1; cx++) {
+                for (let cz = cz0; cz <= cz1; cz++) {
+                    const k = cellKey(cx, cz);
+                    if (cache.has(k)) continue;
+                    cache.set(k, build(cx, cz));
+                    built++;
+                }
+            }
+        } else {
+            // (A few a frame: the cells nearest where the camera looks first, so the detail grows out from there.)
+            missing.length = 0;
+            for (let cx = cx0; cx <= cx1; cx++) {
+                for (let cz = cz0; cz <= cz1; cz++) {
+                    if (!cache.has(cellKey(cx, cz))) missing.push({cx, cz, d: ((cx + 0.5) * CELL - gx) ** 2 + ((cz + 0.5) * CELL - gz) ** 2});
+                }
+            }
+            if (missing.length > limit) missing.sort((a, b) => a.d - b.d);
+            for (const cell of missing) {
+                if (built >= limit) break;
+                cache.set(cellKey(cell.cx, cell.cz), build(cell.cx, cell.cz));
                 built++;
             }
         }
