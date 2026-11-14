@@ -2120,7 +2120,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const signature = arkStatusSignature(selectedStatus);
         if (signature === toldStatus) return;
         toldStatus = signature;
-        (selectionBars ??= new ArkSelectionBars(labelLayer, reducedMotion)).set(selectedStatus.bars);
+        // (Its species' name over them, as its card has it: never a nickname, never its founder's.)
+        (selectionBars ??= new ArkSelectionBars(labelLayer, reducedMotion)).set(selectedStatus.bars, entry.animal.name);
         options.onStatus?.(entry.animal.id, selectedStatus);
     };
     const barsPoint = new Vector3();
