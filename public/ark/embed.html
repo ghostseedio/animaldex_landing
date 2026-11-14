@@ -474,9 +474,14 @@ window.AnimalDexArkStart = function () {
   }
   // After the first frame: the opening view's models as they come (the runtime's numbers), until they are in. The
   // screen stops waiting after 30 s (the scene's own quiet bar at the foot carries on).
+  // While the host's selection waits for its flight (the apps choose the chat's animal at ark:ready; the camera stays
+  // on the whole island until that animal can be seen: `flightHeld`), the card stays in this last stage, its bar half
+  // the view's models and half the chosen animal's own steps (`arkAnimalsHeld`), and goes when the flight starts or a
+  // touch calls it off. The stage told to the host stays "animals" until then: never back from "done".
   function loadAnimals() {
     var most = 0;
     var quiet = 0;
+    var waiting = false;
     var since = Date.now();
     var timer = setInterval(function () {
       var live = scene || mounting;
@@ -484,15 +489,20 @@ window.AnimalDexArkStart = function () {
       if (stats) {
         most = Math.max(most, stats.pending);
         quiet = stats.pending === 0 ? quiet + 1 : 0;
-        var done = Boolean(stats.viewComplete) || (most > 0 && quiet >= 3);
-        load = Ark.arkLoadAnimals(load, Ark.arkAnimalsShare(stats.pending, most), done);
+        var held = live.flightHeld ? live.flightHeld() : null;
+        var viewDone = Boolean(stats.viewComplete) || (most > 0 && quiet >= 3);
+        var now = Ark.arkAnimalsHeld ? Ark.arkAnimalsHeld(Ark.arkAnimalsShare(stats.pending, most), viewDone, held) : {share: Ark.arkAnimalsShare(stats.pending, most), done: viewDone};
+        var done = now.done;
+        waiting = Boolean(held);
+        load = Ark.arkLoadAnimals(load, now.share, done);
         if (done) {
           clearInterval(timer);
           Ark.markArkLoad("animals");
         }
         loadShow();
       }
-      if (Date.now() - since > 30000) {
+      // (Not while a flight is held: the scene's own limits end that wait.)
+      if (Date.now() - since > 30000 && !waiting) {
         clearInterval(timer);
         loader.done();
       }
