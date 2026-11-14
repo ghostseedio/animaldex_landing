@@ -6575,6 +6575,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** The tier check: frames over two seconds once the models are in; a tier lower if they run long. */
     let measureFrom = 0;
+    let measureArmed = false;
     /** When the first frame was drawn (s), and whether the start is over (the pacing may drop a tier only then). */
     let readyAt = 0;
     let settledYet = false;
@@ -6778,6 +6779,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // (Back from a pause, the panel covered or the page hidden: the pacing starts its measuring over.)
                 pacer.resume(startedAt / 1000);
             } else if (interval < 2000) {
+                // (A desktop: the tier check waits for the start to be over, as the phones' pacing does, then draws at the
+                // full rate for the few seconds it measures. Judged 1.5 s after the first frame, with the behaviour
+                // world's build slices and the first models' hand-over in every frame, a desktop that holds 60 on the
+                // high tier lost it every time: high → medium 3.5 s after the first frame, measured.)
+                if (!measureArmed && !options.recording && paceSettled(startedAt / 1000)) {
+                    measureArmed = true;
+                    measureFrom = performance.now() + 1500;
+                    runtime.busyFor(4);
+                }
                 if (!forced && tier !== "low" && measureFrom && startedAt > measureFrom && runtime.uncapped()) {
                     measured.push(interval);
                     if (startedAt - measureFrom > 2000) {
@@ -6802,7 +6812,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!ready) {
             ready = true;
             readyAt = startedAt / 1000;
-            measureFrom = performance.now() + 1500;
+            // (A recording is judged from its first frames, as it was; a live desktop once the start is over.)
+            if (options.recording) {
+                measureArmed = true;
+                measureFrom = performance.now() + 1500;
+            }
             // (The low tier starts at a steady 30 on a touch device.)
             if (pacer) runtime.setPaceCap(pacer.interval);
             options.onReady?.();
