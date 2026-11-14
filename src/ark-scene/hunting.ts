@@ -351,17 +351,23 @@ export class HuntingLayer {
         if (nowMs !== undefined && Number.isFinite(nowMs)) {
             const k = stepIndex((nowMs - start) / ARK_DAY_MS);
             const day = (k + 1) / STEPS_PER_ARK_DAY;
-            for (const [id, held] of this.released) if (held.until < k - LEAD_STEPS) this.released.delete(id);
-            for (const [id, at] of this.joined) if (at < k - LEAD_STEPS) this.joined.delete(id);
+            this.released.forEach((held, id) => {
+                if (held.until < k - LEAD_STEPS) this.released.delete(id);
+            });
+            this.joined.forEach((at, id) => {
+                if (at < k - LEAD_STEPS) this.joined.delete(id);
+            });
             if (before) {
                 // (Was due by the last read and is not by this one: it has eaten, or is gone from the list.)
-                for (const [id, from] of before.from) {
+                before.from.forEach((from, id) => {
                     const now = hunting.predators.get(id);
                     if (from <= day && (now === undefined || now > day) && !this.released.has(id)) this.released.set(id, {from, until: k + 1});
-                }
+                });
             } else {
                 // (Its first hunting step a whole lead away, so that even from far off it sets out from its schedule's place.)
-                for (const [id, from] of hunting.predators) if (from <= day) this.joined.set(id, k + LEAD_STEPS);
+                hunting.predators.forEach((from, id) => {
+                    if (from <= day) this.joined.set(id, k + LEAD_STEPS);
+                });
             }
         }
         this.state = {startedAtMs: start, from: hunting.predators, atlas};
