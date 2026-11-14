@@ -1945,7 +1945,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const animal = entry.animal;
         const subject = scheduled(entry) && !entry.act ? subjectOf(entry) : null;
         const huntingNow = Boolean(subject && hunting.active && hunting.hunting(animal, epoch));
-        const plan = subject ? scheduleStatus(subject, epoch, {trip: entry.sched?.trip ?? null, hunting: huntingNow}) : null;
+        const plan = subject ? scheduleStatus(subject, epoch, {trip: entry.sched?.trip ?? null, hunting: huntingNow, style: huntingNow ? hunting.styleOf(animal) : null}) : null;
         // Off the schedule (reduced motion, a micro or underground animal, a replay's act): its one state, said plainly.
         const activity = plan ? plan.activity : arkActivityKey({doing: null, asleep: entry.state.asleep, airborne: entry.state.airborne, breathing: entry.state.breathing});
         const notes = records.get(animal.id) ?? [];
@@ -2039,7 +2039,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const forays = hunting.active ? subjects.filter((s) => {
                 const animal = findEntry(s.id)?.animal;
                 return animal ? hunting.hunting(animal, start + MOMENT_WINDOW_SECONDS) && !hunting.hunting(animal, start) : false;
-            }).map((subject) => ({subject, at: start})) : [];
+            }).map((subject) => ({subject, at: start, style: hunting.styleOf(findEntry(subject.id)!.animal)})) : [];
             const moment = pickMoment(w, subjects, forays);
             const entry = moment ? findEntry(moment.animalId) : null;
             if (!moment || !entry) continue;
