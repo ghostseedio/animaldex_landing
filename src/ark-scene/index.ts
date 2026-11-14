@@ -899,13 +899,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const memory = sceneMemory(scene);
                 sceneGpuMB = (memory.geometryBytes + memory.textureBytes) / 2 ** 20;
             }
-            const heap = (performance as Performance & {memory?: {usedJSHeapSize?: number}}).memory?.usedJSHeapSize;
-            return {heapMB: typeof heap === "number" ? heap / 2 ** 20 : null, gpuMB: sceneGpuMB};
+            // (The heap's floor over the last half minute, not this moment's reading; the scenery's GPU bytes, without the
+            // animal models', which keep to their own ceiling: `runtime.memoryReading`.)
+            const reading = runtime.memoryReading();
+            return {heapMB: reading.heapFloorMB, gpuMB: Math.max(sceneGpuMB - reading.modelGpuMB, 0)};
         },
+        // (At the frame's end, where the pacing's own tier changes are made: the new tier's shaders are then compiled
+        // beside the frames by the runtime's warm-up. Applied here, in the middle of a frame, the same frame's draw
+        // compiled every one of them and waited: 0.65 s on a desktop.)
         onDrop: () => {
-            if (!forced && tier !== "low") applyTier(lowerTier(tier));
+            memoryDropAsked = true;
         }
     });
+    let memoryDropAsked = false;
     let streamSkipped = 0;
     let streamMarkers = 0;
     /** The props and other modules' objects, by chunk (`streaming/cull.ts`): the cottage and pond, the burrows and pit, and the modules once built. */
@@ -6527,6 +6533,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     }
                 }
             }
+        }
+        if (memoryDropAsked) {
+            memoryDropAsked = false;
+            if (!forced && tier !== "low") applyTier(lowerTier(tier));
         }
         lastDrawn = startedAt;
         if (!ready) {
