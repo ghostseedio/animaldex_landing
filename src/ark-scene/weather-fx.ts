@@ -102,6 +102,8 @@ void main() {
     vec2 side = vec2(-dir.y, dir.x) * 2.0 * pixelWidth / resolution * here.w;
     here.xy += side * position.x;
     gl_Position = here;
+    // (Never cut by the near plane, which stands metres out from a whole view: the rain is round the camera.)
+    gl_Position.z = max(gl_Position.z, -gl_Position.w * 0.999);
     float d = length(local);
     // Faint right at the lens and toward the box's edge, so the box never shows.
     vAlpha = shown * smoothstep(0.6, 2.2, d) * (1.0 - smoothstep(box.x * 0.32, box.x * 0.5, length(local.xz))) * (1.0 - smoothstep(box.y * 0.3, box.y * 0.5, abs(local.y)));

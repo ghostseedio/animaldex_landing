@@ -4991,6 +4991,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
         let distance = camera.position.distanceTo(target);
         let near = Math.min(Math.max(distance * 0.08, 0.01), 0.4);
+        // From far, the near plane goes out with the view (a fiftieth of its distance past 20 m, 12 m at most). Held at
+        // 0.4 m, the depth buffer's step was 3 cm at the town from its own whole view and 7 to 12 cm from the wild
+        // island's: its window panes stand 3.5 cm off their walls, so they and the walls flickered through each other
+        // as the view drifted (the lit windows blinking on and off at night), and touching walls did the same.
+        if (distance > 20) near = Math.min(distance * 0.02, 12);
         // Close up to an animal under about 5 cm (an ant, a gecko's hatchling, a spider): the scenery around it is huge at
         // its scale. The camera keeps above the ground it is on, and the near plane comes out to just short of the animal,
         // so a grass blade or a leaf the camera is in is cut away instead of filling the view.
