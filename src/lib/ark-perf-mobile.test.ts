@@ -203,6 +203,30 @@ test("pacing: the low tier on a dense screen earns resolution above its own only
     assert.equal(slow.resolution, 1);
 });
 
+test("pacing: a tier on trial must hold the display's rate: a GPU that misses it at every resolution goes down the tier, once", () => {
+    // A device that said what it is: left on the medium tier at a steady 30 (the GPU holds that).
+    const declared = new ArkFramePacer("medium", 0);
+    assert.equal(simulate(declared, 0, 120, 7, 40).decisions.filter((d) => d.dropTier).length, 0);
+    assert.equal(declared.interval, PACE_LOCK_MS);
+    // The same device with the tier on trial: resolution given up first, then the rate, then, 15 s on, the tier.
+    const trial = new ArkFramePacer("medium", 0);
+    trial.trial = true;
+    const {decisions} = simulate(trial, 0, 120, 7, 40);
+    const drops = decisions.filter((d) => d.dropTier);
+    assert.equal(drops.length, 1);
+    assert.ok(drops[0].t > 15 && drops[0].t < 45, JSON.stringify(drops));
+    assert.ok(decisions.findIndex((d) => d.scale === SCALE_FLOOR) < decisions.findIndex((d) => d.dropTier));
+    // On trial and holding the display's rate, or giving up only resolution for it: no drop.
+    const holds = new ArkFramePacer("medium", 0);
+    holds.trial = true;
+    assert.equal(simulate(holds, 0, 120, 7, 21).decisions.filter((d) => d.dropTier).length, 0);
+    assert.equal(holds.interval, 0);
+    // Never during the start.
+    const starting = new ArkFramePacer("medium", 0);
+    starting.trial = true;
+    assert.equal(simulate(starting, 0, 60, 7, 40, false).decisions.filter((d) => d.dropTier).length, 0);
+});
+
 test("the start tier: a slow main thread starts a touch device on the low tier, never raises one", () => {
     assert.equal(tierForCpu("medium", SLOW_CPU_MS + 1), "low");
     assert.equal(tierForCpu("medium", SLOW_CPU_MS - 1), "medium");

@@ -29,6 +29,8 @@
  *    1.5, never past the screen's own density); a step that makes the frames late is taken back by rule 1 and stays
  *    out of reach for 6 minutes, twice as long each time (to 15). It starts at 1, as before: a phone with nothing to
  *    spare never leaves it.
+ * 5. **A tier on trial** (`trial`, `runtime/trial.ts`) must hold the display's rate: a GPU that misses it at every
+ *    resolution goes down the tier after 15 s at the steady 30, instead of staying there.
  *
  * Pure: the clock is passed in. The scene applies what `step` returns.
  */
@@ -112,6 +114,13 @@ export class ArkFramePacer {
     private floorMissed = false;
     /** Started locked (the low tier on a slow main thread): no try at the display's rate before the start is over. */
     private slowStart = false;
+    /**
+     * The tier is a guess being proven (`runtime/trial.ts`: a device that hides what it is, started a tier up from
+     * where it was before): it must hold the display's rate there. A GPU that misses it at every resolution is not
+     * left at a steady 30 on that tier, as a device that said what it is would be: after `LOCKED_DROP_AFTER_S` locked
+     * it goes down the tier, where it drew before.
+     */
+    trial = false;
 
     /** `startLocked`: the low tier on a slow main thread (`tierForCpu`) starts at a steady 30. */
     constructor(private tier: PaceTier, now: number, startLocked = tier === "low") {
@@ -309,7 +318,7 @@ export class ArkFramePacer {
         // the one last found too high at that rate.
         // Locked a while because the script is the bottleneck (not the GPU: that gave up resolution first): a phone trades the
         // tier's finish (shadows, the miniature's soft edges, grass) for the display's rate, once the start is over.
-        if (this.locked && settled && this.tier !== "low" && this.droppedFor !== this.tier && work > (1000 / 60) * 0.6 && this.lockedSince !== null && now - this.lockedSince >= LOCKED_DROP_AFTER_S) {
+        if (this.locked && settled && this.tier !== "low" && this.droppedFor !== this.tier && (work > (1000 / 60) * 0.6 || (this.trial && this.floorMissed)) && this.lockedSince !== null && now - this.lockedSince >= LOCKED_DROP_AFTER_S) {
             this.droppedFor = this.tier;
             return {interval: this.interval, scale: this.scale, dropTier: true, changed: true};
         }

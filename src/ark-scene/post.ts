@@ -83,6 +83,11 @@ export function tierTrialFailed(why: TrialWhy) {
     trial?.failed(why, Date.now());
 }
 
+/** The tier this page started on is on trial now (the pacing is stricter with it: `runtime/pace.ts` rule 5). */
+export function tierTrialOn(): boolean {
+    return Boolean(trial?.on);
+}
+
 /** For the frame profiler's overlay: the medium tier on trial, held, or why the low tier instead; null where the tier is the device's own answer. */
 export function tierTrialState(): "trial" | "held" | TrialWhy | null {
     return trial ? trial.state : null;
