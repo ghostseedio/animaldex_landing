@@ -5547,21 +5547,57 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         applyInset();
     };
 
-    const resize = () => {
+    /**
+     * The view's size (graphics and performance pass, 2026-11). Its shape follows the element at once: the camera's
+     * aspect, the labels' and markers' scale (`sizeView`). The drawing buffer and the finish's render targets (some
+     * thirty framebuffers on the high tier) are made again only when the size has stood still for `RESIZE_SETTLE_MS`,
+     * and at most every `RESIZE_MOST_MS` while it keeps changing: a window being dragged (or a phone's address bar
+     * sliding away) changes the size every frame, and each of those frames re-made every one of them. Meanwhile the
+     * picture is drawn with the new shape into the buffer it has and the browser fits it to the element. A tier or a
+     * resolution change (`resize`), the mount and a recording size them at once.
+     */
+    const RESIZE_SETTLE_MS = 120;
+    const RESIZE_MOST_MS = 400;
+    let buffersAt = -Infinity;
+    let buffersTimer: ReturnType<typeof setTimeout> | null = null;
+    let buffersFor = "";
+    const sizeView = () => {
         const rect = el.getBoundingClientRect();
         width = Math.max(1, Math.round(rect.width));
         height = Math.max(1, Math.round(rect.height));
-        renderer.setSize(width, height, false);
         camera.aspect = width / height;
         applyInset();
         tokens.setViewport(FOV, height, width < 640);
         dots.setViewport(FOV, height);
+    };
+    const sizeBuffers = () => {
+        if (buffersTimer !== null) clearTimeout(buffersTimer);
+        buffersTimer = null;
+        buffersAt = performance.now();
+        const key = `${width}x${height}@${drawRatio()}/${tier}`;
+        if (key === buffersFor) return;
+        buffersFor = key;
+        renderer.setSize(width, height, false);
         post.setSize(width, height, drawRatio());
         motes.setPixelRatio(drawRatio());
         dust.setPixelRatio(drawRatio());
         liveliness.setPixelRatio(drawRatio());
     };
-    const resizeObserver = new ResizeObserver(resize);
+    const resize = () => {
+        sizeView();
+        sizeBuffers();
+    };
+    const resizeObserver = new ResizeObserver(() => {
+        sizeView();
+        if (options.recording || disposed) {
+            sizeBuffers();
+            return;
+        }
+        if (buffersTimer !== null) clearTimeout(buffersTimer);
+        // (Still changing: once it stands still; a long drag, a few times a second.)
+        const due = Math.max(Math.min(RESIZE_SETTLE_MS, buffersAt + RESIZE_MOST_MS - performance.now()), 0);
+        buffersTimer = setTimeout(sizeBuffers, due);
+    });
     resizeObserver.observe(el);
     resize();
     // Out of sight (scrolled away, another tab, the app's panel closed): the sound sleeps.
@@ -7017,6 +7053,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             runtime.dispose();
             perf.dispose();
             resizeObserver.disconnect();
+            if (buffersTimer !== null) clearTimeout(buffersTimer);
             visibility.disconnect();
             canvas.removeEventListener("pointerdown", onPointerDown);
             canvas.removeEventListener("pointerup", onPointerUp);
