@@ -1837,37 +1837,76 @@ function pairBuild(world: ScheduleWorld, kit: ScheduleKit, owner: TripOwner, oth
     return episode ? {episode, clipped: clips.n > 0} : null;
 }
 
+/** A pair's window in a period, if the pair meets in it at all (its season, one in four out of it): its start. Pure. */
+function pairWindowStart(species: SpeciesRecipes, l: PairLink, period: number): number | null {
+    const factor = seasonFactor(species, TEMPLATES[l.template].season, period * PAIR_PERIOD);
+    // Out of a stored season, a quarter as often: one period in four.
+    if (!factor || (factor < 1 && hashString(`${l.key}#on#${period}`) % 4 !== 0)) return null;
+    return period * PAIR_PERIOD + (hashString(`${l.key}#${period}`) % (PAIR_PERIOD - PAIR_MAX));
+}
+
+/** One side's episode of a pair's meeting in a period (null: they don't meet then). Remembered; pure in the pair. */
+function pairMeeting(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, l: PairLink, period: number, start: number): Episode | null {
+    const memoKey = `${l.key}#${period}#${l.role}`;
+    let episode = pairEpisodes.get(memoKey);
+    if (episode === undefined) {
+        // Both sides' episodes, built the same way on either side (pure in the pair): when either one's way to the
+        // meeting is cut short by blocked ground (a boulder, a trunk, a fence), they would fight metres apart, so the
+        // meeting is off for this window on both sides (L7 on the merged scenery: stags 5.2 m apart). They meet in
+        // another window, where the way is clear.
+        const partner: TripOwner = {animal: l.other, profile: l.otherProfile, slug: l.otherSlug, activity: l.otherActivity, hoursAt: owner.hoursAt};
+        const mine = pairBuild(world, kit, owner, l.other, l.otherProfile, l.otherActivity, l.role, l.key, l.template, start, period);
+        const theirs = mine ? pairBuild(world, kit, partner, owner.animal, owner.profile, owner.activity, l.role === "a" ? "b" : "a", l.key, l.template, start, period) : null;
+        episode = mine && theirs && !mine.clipped && !theirs.clipped ? {...mine.episode, other: l.other.id, role: l.role} : null;
+        pairEpisodes.set(memoKey, episode);
+        if (pairEpisodes.size > 400) pairEpisodes.delete(pairEpisodes.keys().next().value as string);
+    }
+    return episode;
+}
+
 function pairEpisode(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): Episode | null {
     const list = links.get(owner.animal);
     if (!list) return null;
+    const species = speciesRecipes(owner.slug);
     for (const l of list) {
         if (l.template === "mixed_follow") continue;
-        const template = TEMPLATES[l.template];
-        const species = speciesRecipes(owner.slug);
-        const factor = seasonFactor(species, template.season, epoch);
-        if (!factor) continue;
-        // Out of a stored season, a quarter as often: one period in four.
         const period = Math.floor(epoch / PAIR_PERIOD);
-        if (factor < 1 && hashString(`${l.key}#on#${period}`) % 4 !== 0) continue;
-        const start = period * PAIR_PERIOD + (hashString(`${l.key}#${period}`) % (PAIR_PERIOD - PAIR_MAX));
-        if (epoch < start || epoch >= start + PAIR_MAX) continue;
-        const memoKey = `${l.key}#${period}#${l.role}`;
-        let episode = pairEpisodes.get(memoKey);
-        if (episode === undefined) {
-            // Both sides' episodes, built the same way on either side (pure in the pair): when either one's way to the
-            // meeting is cut short by blocked ground (a boulder, a trunk, a fence), they would fight metres apart, so the
-            // meeting is off for this window on both sides (L7 on the merged scenery: stags 5.2 m apart). They meet in
-            // another window, where the way is clear.
-            const partner: TripOwner = {animal: l.other, profile: l.otherProfile, slug: l.otherSlug, activity: l.otherActivity, hoursAt: owner.hoursAt};
-            const mine = pairBuild(world, kit, owner, l.other, l.otherProfile, l.otherActivity, l.role, l.key, l.template, start, period);
-            const theirs = mine ? pairBuild(world, kit, partner, owner.animal, owner.profile, owner.activity, l.role === "a" ? "b" : "a", l.key, l.template, start, period) : null;
-            episode = mine && theirs && !mine.clipped && !theirs.clipped ? {...mine.episode, other: l.other.id, role: l.role} : null;
-            pairEpisodes.set(memoKey, episode);
-            if (pairEpisodes.size > 400) pairEpisodes.delete(pairEpisodes.keys().next().value as string);
-        }
+        const start = pairWindowStart(species, l, period);
+        if (start === null || epoch < start || epoch >= start + PAIR_MAX) continue;
+        const episode = pairMeeting(world, owner, kit, l, period, start);
         if (episode && epoch < episode.t1) return episode;
     }
     return null;
+}
+
+/** A recipe episode as the card and the logs name it: its recipe, when it runs, and (a pair's) its partner and side. */
+export type DrawnRecipe = {recipe: string; t0: number; t1: number; other?: string | null; role?: "a" | "b" | null};
+
+/**
+ * The pair meetings it has between two world times (their starts): what its pose plays then (`pairEpisode`), built the
+ * same way, so a log or a card that says "courting" or "sparring with a rival" says only a meeting the scene draws (both
+ * sides met; their way was clear). `sleeping`: whether it is asleep at a time (the schedule's): a sleeper's pose plays no
+ * meeting. Pure; the same for every viewer.
+ */
+export function pairMeetings(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, from: number, to: number, asleep: (epoch: number) => boolean): DrawnRecipe[] {
+    const out: DrawnRecipe[] = [];
+    if (!enabled) return out;
+    const list = links.get(owner.animal);
+    if (!list) return out;
+    const species = speciesRecipes(owner.slug);
+    for (const l of list) {
+        if (l.template === "mixed_follow") continue;
+        for (let period = Math.floor((from - PAIR_MAX) / PAIR_PERIOD); period * PAIR_PERIOD < to; period++) {
+            const start = pairWindowStart(species, l, period);
+            if (start === null || start < from || start >= to) continue;
+            const episode = pairMeeting(world, owner, kit, l, period, start);
+            if (!episode || asleep(episode.t0)) continue;
+            // (A pair before it in the list takes the window it shares: only the first is played.)
+            if (out.some((o) => o.t0 < episode.t1 && episode.t0 < o.t1)) continue;
+            out.push({recipe: episode.recipe, t0: episode.t0, t1: episode.t1, other: l.other.id, role: l.role});
+        }
+    }
+    return out.sort((a, b) => a.t0 - b.t0);
 }
 
 // MARK: Flocks: murmurations at dusk, V-formations in the air
@@ -2048,6 +2087,27 @@ export function episodePose(world: ScheduleWorld, trip: Trip, base: TripPose, ep
     // Ambient flock-mates round it (a swarm at its spot, its roost-mates streaming out at dusk), whatever it is doing.
     const flock = emergenceFlock(world, owner, kit, epoch) ?? (speciesRecipes(owner.slug).has.size ? swarmFlock(owner.animal.id, owner.slug, owner.animal.home, epoch, owner.hoursAt(epoch)) : null);
     return flock ? {...pose, flock} : pose;
+}
+
+/**
+ * The recipe episode its pose plays at a world time (`overlaid`, in the same order): its flock's murmuration, a pair's
+ * meeting, an episode of its stay (a recipe it went there for, or one on the spot: a call, a preen, a stretch). Null
+ * when its pose is its schedule's own. The tap card says this while it plays (truth rule: only what is drawn).
+ */
+export function drawnRecipe(world: ScheduleWorld, trip: Trip, epoch: number, kit: ScheduleKit): DrawnRecipe | null {
+    if (!enabled) return null;
+    const owner = (trip as Trip & {owner?: TripOwner | null}).owner;
+    if (!owner) return null;
+    const murmuration = murmurationOf(world, owner, kit, epoch);
+    if (murmuration) return {recipe: "murmuration", t0: murmuration.t0, t1: murmuration.t1};
+    if (trip.doing === "sleep") return null;
+    const pair = pairEpisode(world, owner, kit, epoch);
+    if (pair) return {recipe: pair.recipe, t0: pair.t0, t1: pair.t1, other: pair.other ?? null, role: pair.role ?? null};
+    if (trip.shadow || epoch < trip.arrive) return null;
+    const base = kit.basePose(world, trip, epoch);
+    if (mixedPose(world, owner, kit, base, epoch)) return null;
+    const stay = stayEpisode(world, trip, owner, kit);
+    return stay && epoch >= stay.t0 && epoch < stay.t1 ? {recipe: stay.recipe, t0: stay.t0, t1: stay.t1} : null;
 }
 
 function overlaid(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: TripPose, epoch: number, kit: ScheduleKit): RecipePose {

@@ -9,10 +9,10 @@
  * (the local reactive layer near the camera is not read). Visual only: nothing here decides anything on the Ark.
  */
 
-import {awakeAt, scheduleGeneration, slotOffset, slotPlanAt, SLOT_SECONDS, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type SlotPlan, type Trip} from "@/ark-scene/behaviour-schedule";
+import {awakeAt, drawnRecipeAt, flightSpan, pairMeetingsAt, scheduleGeneration, slotOffset, slotPlanAt, stayIsFeeding, SLOT_SECONDS, tripAt, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type SlotPlan, type Trip} from "@/ark-scene/behaviour-schedule";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {hash32} from "@/lib/ark-clock";
-import {arkActivityKey, arkFed, arkFedRates, type ArkActivityKey, type ArkFed, type ArkFedSlot, type ArkStatusGoal, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
+import {arkActivityKey, arkFed, arkFedRates, arkRecipeActivity, type ArkActivityKey, type ArkFed, type ArkFedSlot, type ArkStatusGoal, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
 
 /** One animal on the schedule, as the status reads it. */
 export type ScheduleSubject = {
@@ -46,44 +46,105 @@ const WAKE_SLOTS = Math.ceil(86_400 / SLOT_SECONDS) + 1;
 
 export type ScheduleStatus = {activity: ArkActivityKey; since: number; goal: ArkStatusGoal | null; log: ArkStatusLogEntry[]};
 
+/** From a world time on, the card says this (its timeline, lane ark-activities 2026-11-14: what the scene draws then). */
+type Segment = {at: number; key: ArkActivityKey};
+
+/** Its trip in a slot: the scene's, when it is that slot's, else the schedule's own (pure, remembered with the trips). */
+function tripIn(subject: ScheduleSubject, plan: SlotPlan, given: Trip | null): Trip {
+    if (given && given.slot === plan.slot) return given;
+    const at = plan.start + 0.5;
+    return tripAt(subject.world, subject.profile, subject.animalAt(at), at, subject.hoursAt, subject.activity);
+}
+
 /**
- * Its status now. `trip`: the trip it is on (the scene's), for whether it is still on its way to its goal; `hunting`:
- * walking its forays under encounter hunting now (`hunting.ts`, from the server's next hunt).
+ * What the card says through one slot, in order. Its slot's goal, but a flight slot is said as the scene draws it
+ * (owner, 2026-11-14: "sometimes it says [animal] is flying but I click the log and it's not actually flying"): a
+ * flight is a few seconds to tens of seconds of an 80 s slot, after a wait where it was, and then it is down, so it is
+ * resting where it waits, flying only while its trip has it in the air (`flightSpan`), then looking for food or resting
+ * where it came down, as its stay there does.
+ */
+function slotSegments(subject: ScheduleSubject, plan: SlotPlan, given: Trip | null): Segment[] {
+    const key = keyOf(subject, plan);
+    if (key !== "flying") return [{at: plan.start, key}];
+    const trip = tripIn(subject, plan, given);
+    const span = flightSpan(trip);
+    const down: ArkActivityKey = stayIsFeeding(trip) ? "food" : "resting";
+    if (!span) return [{at: plan.start, key: down}];
+    const out: Segment[] = [];
+    if (span.from > plan.start + 0.5) out.push({at: plan.start, key: "resting"});
+    out.push({at: Math.max(span.from, plan.start), key: "flying"});
+    if (span.to < plan.end - 0.5) out.push({at: span.to, key: down});
+    return out;
+}
+
+/** An episode laid over the timeline (a pair's meeting, its stay's recipe): its key from its start, then what was in force. */
+function layEpisode(timeline: Segment[], t0: number, t1: number, key: ArkActivityKey): Segment[] {
+    let after: ArkActivityKey | null = null;
+    for (const seg of timeline) if (seg.at <= t1) after = seg.key;
+    const kept = timeline.filter((seg) => seg.at < t0 || seg.at >= t1);
+    kept.push({at: t0, key});
+    if (after && !kept.some((seg) => seg.at === t1)) kept.push({at: t1, key: after});
+    return kept.sort((a, b) => a.at - b.at);
+}
+
+/** The flyers' keys that say it is settled where it is: in the air on such a slot (on its way to its perch), it is flying. */
+const SETTLED: ReadonlySet<ArkActivityKey> = new Set<ArkActivityKey>(["resting", "grooming", "watching", "wandering", "about", "basking", "calling", "climbing", "hiding"]);
+
+/**
+ * Its status now. `trip`: the trip it is on (the scene's), for whether it is still on its way to its goal and what its
+ * pose plays now; `hunting`: walking its forays under encounter hunting now (`hunting.ts`, from the server's next hunt).
+ *
+ * Truth rule (lane ark-activities, 2026-11-14): the card says what the scene draws then. Its slots are said as their
+ * goals, but a flight only while it is in the air (`slotSegments`); a pair's meeting (courting, sparring with a rival,
+ * grooming each other) while the pair meets (`pairMeetingsAt`: both sides built, the way clear), and the episode its
+ * pose plays now (a call, a preen, a bathe, its nest: `drawnRecipeAt`). Its log is the same timeline, newest first.
  */
 export function scheduleStatus(subject: ScheduleSubject, epoch: number, context: {trip?: Trip | null; hunting?: boolean} = {}): ScheduleStatus {
     const plan = planOf(subject, epoch);
     const trip = context.trip && context.trip.slot === plan.slot ? context.trip : null;
     const travelling = Boolean(trip && epoch < trip.arrive && trip.length > 0.5);
-    const settled = keyOf(subject, plan);
-    const activity = context.hunting ? "hunting" : keyOf(subject, plan, {travelling});
-    // Back through its last slots: the run it is in now (since when), then the runs before it, newest first.
-    let since = plan.start;
-    let runKey = settled;
-    let runStart = plan.start;
-    let current = true;
-    const log: ArkStatusLogEntry[] = [];
-    for (let k = 1; k <= LOOK_BACK && log.length < PAST_RUNS; k++) {
-        const earlier = planOf(subject, plan.start - k * SLOT_SECONDS + 0.5);
-        const key = keyOf(subject, earlier);
-        if (key === runKey) {
-            runStart = earlier.start;
-            if (current) since = runStart;
-            continue;
-        }
-        if (!current) log.push(scheduleEntry(subject.id, runKey, runStart));
-        current = false;
-        runKey = key;
-        runStart = earlier.start;
+    // Its last slots and this one, as the card says them.
+    let timeline: Segment[] = [];
+    for (let k = LOOK_BACK; k >= 1; k--) timeline.push(...slotSegments(subject, planOf(subject, plan.start - k * SLOT_SECONDS + 0.5), null));
+    timeline.push(...slotSegments(subject, plan, trip));
+    // The pair meetings it has had since, and the one it is in.
+    const from = plan.start - LOOK_BACK * SLOT_SECONDS;
+    for (const meeting of pairMeetingsAt(subject.world, subject.profile, subject.animalAt(epoch), from, epoch, subject.hoursAt, subject.activity)) {
+        const key = arkRecipeActivity(meeting.recipe);
+        if (key) timeline = layEpisode(timeline, meeting.t0, meeting.t1, key);
     }
-    if (!current && log.length < PAST_RUNS) log.push(scheduleEntry(subject.id, runKey, runStart));
-    return {activity, since, goal: context.hunting ? null : goalOf(subject, plan, settled, activity, trip, travelling), log};
+    // What its pose plays now on its trip (the scene's): its stay's episode, a meeting, a murmuration; and a flyer on its
+    // way through the air on a slot said as settled.
+    if (trip && !context.hunting) {
+        const drawn = plan.doing === "sleep" ? null : drawnRecipeAt(subject.world, trip, epoch);
+        const key = drawn ? arkRecipeActivity(drawn.recipe) : null;
+        if (drawn && key) timeline = layEpisode(timeline, drawn.t0, drawn.t1, key);
+        else if (!drawn && SETTLED.has(keyOf(subject, plan)) && subject.profile.move === "fly") {
+            const span = flightSpan(trip);
+            if (span && epoch >= span.from && epoch < span.to) timeline = layEpisode(timeline, span.from, span.to, "flying");
+        }
+    }
+    // Runs: consecutive segments that say the same.
+    const runs: Segment[] = [];
+    for (const seg of timeline) if (!runs.length || runs[runs.length - 1].key !== seg.key) runs.push(seg);
+    let index = -1;
+    for (let i = 0; i < runs.length; i++) if (runs[i].at <= epoch) index = i;
+    const current = index >= 0 ? runs[index] : {at: plan.start, key: keyOf(subject, plan)};
+    const settled = keyOf(subject, plan);
+    // (Its slot's own goal said from the slot's start: on its way to water it is heading to water.)
+    const slotsOwn = current.key === settled && current.at <= plan.start;
+    const activity: ArkActivityKey = context.hunting ? "hunting" : slotsOwn ? keyOf(subject, plan, {travelling}) : current.key;
+    const log: ArkStatusLogEntry[] = [];
+    for (let i = index - 1; i >= 0 && log.length < PAST_RUNS; i--) log.push(scheduleEntry(subject.id, runs[i].key, runs[i].at));
+    const later = runs.slice(index + 1);
+    return {activity, since: current.at, goal: context.hunting ? null : goalOf(subject, plan, settled, activity, trip, travelling && slotsOwn, later), log};
 }
 
 function scheduleEntry(id: string, activity: ArkActivityKey, start: number): ArkStatusLogEntry {
     return {id: `slot:${id}:${Math.round(start)}`, source: "schedule", at: start * 1000, day: null, kind: "activity", activity};
 }
 
-function goalOf(subject: ScheduleSubject, plan: SlotPlan, settled: ArkActivityKey, now: ArkActivityKey, trip: Trip | null, travelling: boolean): ArkStatusGoal | null {
+function goalOf(subject: ScheduleSubject, plan: SlotPlan, settled: ArkActivityKey, now: ArkActivityKey, trip: Trip | null, travelling: boolean, later: readonly Segment[]): ArkStatusGoal | null {
     if (plan.doing === "sleep") {
         // Asleep: it wakes at the first slot that starts in its waking hours (the schedule's own rule).
         for (let k = 1; k <= WAKE_SLOTS; k++) {
@@ -94,10 +155,11 @@ function goalOf(subject: ScheduleSubject, plan: SlotPlan, settled: ArkActivityKe
     }
     // On its way: what it is going there for.
     if (travelling && trip && settled !== now) return {kind: "next", activity: settled, at: trip.arrive};
+    // Later in this slot (a flight's take-off or landing, the end of a meeting), then its next slots.
+    for (const seg of later) if (seg.key !== now && seg.at < plan.end) return {kind: "next", activity: seg.key, at: seg.at};
     for (let k = 1; k <= LOOK_AHEAD; k++) {
-        const later = planOf(subject, plan.start + k * SLOT_SECONDS + 0.5);
-        const key = keyOf(subject, later);
-        if (key !== now) return {kind: "next", activity: key, at: later.start};
+        const next = planOf(subject, plan.start + k * SLOT_SECONDS + 0.5);
+        for (const seg of slotSegments(subject, next, null)) if (seg.key !== now) return {kind: "next", activity: seg.key, at: seg.at};
     }
     return null;
 }
@@ -201,13 +263,15 @@ export function momentOf(subject: MomentSubject, plan: SlotPlan, before: SlotPla
             case "sparring":
                 return "contest";
             case "playing":
-                return subject.young ? "playing" : null;
+                // (A young one's own line; an adult of a playful kind's, "A Bonobo is playing".)
+                return subject.young ? "playing" : "doing";
             case "drinking":
                 return subject.leads >= 3 ? "toWater" : "doing";
             case "home":
                 return subject.leads >= 3 ? "home" : "doing";
             case "flying":
-                return subject.leads >= 3 ? "flock" : "doing";
+                // (A flight is said at its take-off, `flightMoments`: at its slot's start it is still waiting where it was.)
+                return null;
             case "breathing":
                 return subject.surfaces ? "breathing" : null;
             default:
@@ -224,6 +288,31 @@ export function momentKind(subject: MomentSubject, plan: SlotPlan, before: SlotP
 }
 
 export type ScheduleMoment = {id: string; kind: ScheduleMomentKind; activity: ArkActivityKey; animalId: string; /** When it starts (epoch seconds). */ at: number; /** A group's size. */ count: number};
+
+/** A flight said in the live log lasts at least this long (s): a hop of a few seconds is over before its line is read. */
+export const FLIGHT_MOMENT_SECONDS = 8;
+
+/** Its moments that start inside a window but not at a slot's start: a flight's take-off, a pair's meeting (its first side's). */
+function midSlotMoments(subject: MomentSubject, from: number, to: number): Array<{kind: ScheduleMomentKind; activity: ArkActivityKey; at: number}> {
+    const out: Array<{kind: ScheduleMomentKind; activity: ArkActivityKey; at: number}> = [];
+    if (subject.profile.move === "fly" || subject.profile.moves.includes("fly")) {
+        const plans = [planOf(subject, from)];
+        const last = planOf(subject, to - 0.001);
+        if (last.slot !== plans[0].slot) plans.push(last);
+        for (const plan of plans) {
+            if (keyOf(subject, plan) !== "flying") continue;
+            const span = flightSpan(tripIn(subject, plan, null));
+            if (span && span.from >= from && span.from < to && span.to - span.from >= FLIGHT_MOMENT_SECONDS) out.push({kind: subject.leads >= 3 ? "flock" : "doing", activity: "flying", at: span.from});
+        }
+    }
+    for (const meeting of pairMeetingsAt(subject.world, subject.profile, subject.animalAt(from), from, to, subject.hoursAt, subject.activity)) {
+        if (meeting.role !== "a") continue;
+        const key = arkRecipeActivity(meeting.recipe);
+        const kind: ScheduleMomentKind | null = key === "courting" ? "courting" : key === "sparring" ? "contest" : key === "grooming" ? "doing" : null;
+        if (key && kind) out.push({kind, activity: key, at: meeting.t0});
+    }
+    return out;
+}
 
 /** Candidates looked at per window at most (a bounded, fixed amount of work: the same for every viewer). */
 const MOMENT_CAP = 120;
@@ -252,19 +341,26 @@ export function pickMoment(window: number, subjects: readonly MomentSubject[], s
         const first = [...starts].sort((a, b) => draw("ark-hunt", window, a.subject.id) - draw("ark-hunt", window, b.subject.id) || a.subject.id.localeCompare(b.subject.id))[0];
         return {id: `now:hunt:${first.subject.id}:${window}`, kind: "hunting", activity: "hunting", animalId: first.subject.id, at: first.at, count: 1};
     }
-    const candidates: Array<{subject: MomentSubject; start: number; order: number}> = [];
+    const candidates: Array<{subject: MomentSubject; start: number | null; order: number}> = [];
     for (const subject of subjects) {
         const start = slotStartIn(subject.id, from, to);
-        if (start !== null) candidates.push({subject, start, order: draw("ark-moment", window, subject.id)});
+        const order = draw("ark-moment", window, subject.id);
+        if (start !== null) candidates.push({subject, start, order});
+        // (And its flights' take-offs and its pairs' meetings that start in the window.)
+        candidates.push({subject, start: null, order});
     }
-    candidates.sort((a, b) => a.order - b.order || a.subject.id.localeCompare(b.subject.id));
+    candidates.sort((a, b) => a.order - b.order || a.subject.id.localeCompare(b.subject.id) || (a.start === null ? 1 : 0) - (b.start === null ? 1 : 0));
     let best: ScheduleMoment | null = null;
     let bestTier = Infinity;
-    for (const {subject, start} of candidates.slice(0, MOMENT_CAP)) {
-        const moment = momentOf(subject, planOf(subject, start + 0.5), planOf(subject, start - 0.5));
-        if (!moment || MOMENT_TIER[moment.kind] >= bestTier || draw("ark-accept", window, subject.id) >= MOMENT_WEIGHTS[moment.kind]) continue;
-        bestTier = MOMENT_TIER[moment.kind];
-        best = {id: `now:${subject.id}:${Math.round(start)}`, kind: moment.kind, activity: moment.activity, animalId: subject.id, at: start, count: moment.kind === "toWater" || moment.kind === "home" || moment.kind === "flock" || moment.kind === "group" ? subject.leads : 1};
+    let looked = 0;
+    for (const {subject, start} of candidates) {
+        const moments = start !== null ? [momentOf(subject, planOf(subject, start + 0.5), planOf(subject, start - 0.5))].filter((m) => m !== null).map((m) => ({...m!, at: start})) : midSlotMoments(subject, from, to);
+        if (start !== null && ++looked > MOMENT_CAP) break;
+        for (const moment of moments) {
+            if (MOMENT_TIER[moment.kind] >= bestTier || draw("ark-accept", window, subject.id) >= MOMENT_WEIGHTS[moment.kind]) continue;
+            bestTier = MOMENT_TIER[moment.kind];
+            best = {id: `now:${subject.id}:${Math.round(moment.at)}`, kind: moment.kind, activity: moment.activity, animalId: subject.id, at: moment.at, count: moment.kind === "toWater" || moment.kind === "home" || moment.kind === "flock" || moment.kind === "group" ? subject.leads : 1};
+        }
         if (bestTier === 0) break;
     }
     return best;

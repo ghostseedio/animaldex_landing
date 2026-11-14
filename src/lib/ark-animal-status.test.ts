@@ -5,8 +5,8 @@ import test from "node:test";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import fixtureEvents from "@/ark-scene/fixtures/events.json";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
-import {forgetSchedules, groupSpread, rangeReach, slotPlanAt, spaceHomes, tripAt, wireThreats, SLOT_SECONDS, type ArkDoing, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
-import {EATING, MOMENT_WINDOW_SECONDS, momentKind, pickMoment, planOf, scheduleFed, scheduleStatus, slotStartIn, type MomentSubject} from "@/ark-scene/animal-status";
+import {drawnRecipeAt, flightSpan, forgetSchedules, groupSpread, pairMeetingsAt, rangeReach, slotPlanAt, spaceHomes, stayIsFeeding, tripAt, wireThreats, SLOT_SECONDS, type ArkDoing, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
+import {EATING, FLIGHT_MOMENT_SECONDS, MOMENT_WINDOW_SECONDS, momentKind, pickMoment, planOf, scheduleFed, scheduleStatus, slotStartIn, type MomentSubject} from "@/ark-scene/animal-status";
 import {eats} from "@/ark-scene/food-links";
 import {placeAnimals} from "@/ark-scene/placement";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
@@ -31,6 +31,7 @@ import {
     arkFedRates,
     arkFeeder,
     arkOriginEntry,
+    arkRecipeActivity,
     arkRecordNotesFromEvents,
     arkRecordNoteFromLife,
     arkStatusBars,
@@ -140,6 +141,13 @@ const items = wire();
 const DAY = Math.floor(Date.UTC(2026, 10, 12) / 1000);
 const MOMENTS = [DAY + 6.5 * 3600, DAY + 12 * 3600 + 17, DAY + 19.25 * 3600, DAY + 23 * 3600 + 41];
 
+/** What a slot's lines may say (truth rule, lane ark-activities): its goal; a flight slot waiting, flying, then down. */
+function slotSays(i: Item, at: number): Set<string> {
+    const plan = slotPlanAt(world, i.subject.profile, i.animal, at, hoursAt, i.a.activity);
+    const key = arkActivityKey({doing: plan.doing, recipe: plan.recipe, wary: plan.wary, flyer: i.subject.profile.move === "fly", still: plan.still});
+    return new Set(key === "flying" ? ["flying", "resting", "food"] : [key]);
+}
+
 test("the status is a pure function of the clock and the animal: the same on two runs, and it says what its trip is", () => {
     const run = () => items.flatMap((i) => MOMENTS.map((t) => scheduleStatus(i.subject, t, {trip: tripAt(world, i.subject.profile, i.animal, t, hoursAt, i.a.activity)})));
     forgetSchedules();
@@ -154,13 +162,24 @@ test("the status is a pure function of the clock and the animal: the same on two
             const status = scheduleStatus(i.subject, t, {trip});
             const still = planOf(i.subject, t).still;
             const settled = arkActivityKey({doing: trip.doing, recipe: trip.recipe, flyer: i.subject.profile.move === "fly", still});
-            assert.ok(status.activity === settled || status.activity === "wary" || (status.activity === "toWater" && trip.doing === "drink") || (status.activity === "prowling" && settled === "waiting"), `${i.a.model_slug} at ${t}: ${status.activity} vs its trip's ${trip.doing}/${trip.recipe}`);
+            // (Truth rule: what its pose plays now, a pair's meeting or its stay's episode, says more than its goal; a flight
+            // slot is "flying" only while its trip has it in the air, else resting where it waits or what it does where it
+            // came down; a flyer in the air on a settled slot is flying.)
+            const drawn = arkRecipeActivity(drawnRecipeAt(world, trip, t)?.recipe);
+            const span = flightSpan(trip);
+            const aloft = Boolean(span && t >= span.from && t < span.to);
+            const expected = drawn ?? (settled === "flying" ? (aloft ? "flying" : span && t >= span.to ? (stayIsFeeding(trip) ? "food" : "resting") : "resting") : null);
+            if (expected) assert.equal(status.activity, expected, `${i.a.model_slug} at ${t}: drawn ${drawn}, flight ${JSON.stringify(span)}`);
+            else assert.ok(status.activity === settled || status.activity === "wary" || (status.activity === "toWater" && trip.doing === "drink") || (status.activity === "prowling" && settled === "waiting") || (status.activity === "flying" && aloft), `${i.a.model_slug} at ${t}: ${status.activity} vs its trip's ${trip.doing}/${trip.recipe}`);
             assert.ok(status.since <= t && status.since > t - 11 * SLOT_SECONDS);
             for (const entry of status.log) {
                 assert.equal(entry.source, "schedule");
                 assert.ok(entry.at / 1000 < status.since + 0.001, "older than what it is doing now");
-                const plan = slotPlanAt(world, i.subject.profile, i.animal, entry.at / 1000 + 0.5, hoursAt, i.a.activity);
-                assert.equal(arkActivityKey({doing: plan.doing, recipe: plan.recipe, wary: plan.wary, flyer: i.subject.profile.move === "fly", still: plan.still}), entry.activity, "each line is what its slot was for");
+                // Each line is what its slot was for (a flight slot as it flew), or a pair's meeting it had then.
+                const at = entry.at / 1000;
+                const met = pairMeetingsAt(world, i.subject.profile, i.animal, at - 0.01, at + 0.01, hoursAt, i.a.activity).some((m) => arkRecipeActivity(m.recipe) === entry.activity);
+                const after = pairMeetingsAt(world, i.subject.profile, i.animal, at - 200, at, hoursAt, i.a.activity).some((m) => Math.abs(m.t1 - at) < 0.01);
+                assert.ok(met || slotSays(i, at + 0.01).has(entry.activity!) || (after && slotSays(i, at - 0.01).has(entry.activity!)), `${i.a.model_slug}: ${entry.activity} at ${at}`);
             }
             if (status.goal?.kind === "wakes") assert.equal(trip.doing, "sleep");
             if (status.goal) assert.ok(status.goal.at > t - SLOT_SECONDS);
@@ -214,10 +233,19 @@ test("the live log's moments: the same on two runs, at most one a window, and ea
         if (!moment) return;
         const subject = subjects.find((s) => s.id === moment.animalId)!;
         const from = windows[k] * MOMENT_WINDOW_SECONDS;
-        // Its slot starts in the window, and that slot's plan is the moment (not made up).
+        const plan = planOf(subject, moment.at + 0.5);
+        assert.ok(moment.at >= from && moment.at < from + MOMENT_WINDOW_SECONDS, "it starts in its window");
+        if (moment.activity === "flying") {
+            // A flight is said at its take-off, and only one long enough to be seen (truth rule, lane ark-activities).
+            const span = flightSpan(tripAt(world, subject.profile, subject.animalAt(moment.at), moment.at + 0.5, hoursAt, subject.activity));
+            assert.ok(span && Math.abs(span.from - moment.at) < 1e-6 && span.to - span.from >= FLIGHT_MOMENT_SECONDS, `${moment.animalId}: a flight said at its take-off`);
+            return;
+        }
+        const meeting = pairMeetingsAt(world, subject.profile, subject.animalAt(moment.at), moment.at - 0.01, moment.at + 0.01, hoursAt, subject.activity).find((m) => m.role === "a" && arkRecipeActivity(m.recipe) === moment.activity);
+        if (meeting) return;
+        // Else its slot starts in the window, and that slot's plan is the moment (not made up).
         assert.equal(slotStartIn(subject.id, from, from + MOMENT_WINDOW_SECONDS), moment.at);
         assert.equal(momentKind(subject, planOf(subject, moment.at + 0.5), planOf(subject, moment.at - 0.5)), moment.kind);
-        const plan = planOf(subject, moment.at + 0.5);
         assert.equal(arkActivityKey({doing: plan.doing, recipe: plan.recipe, wary: plan.wary, flyer: subject.profile.move === "fly", still: plan.still}), moment.activity, "its activity is its slot's");
         assert.ok(moment.kind !== "hunting" || plan.doing !== "stalk", "a stalk is never said as a hunt");
     });

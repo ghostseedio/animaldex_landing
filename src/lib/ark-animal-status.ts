@@ -122,6 +122,11 @@ const RECIPE_ACTIVITY: Record<string, ArkActivityKey> = {
     mixed_follow: "wandering"
 };
 
+/** What a recipe episode is, as the card says it (null: one that says no more than its doing). */
+export function arkRecipeActivity(recipe: string | null | undefined): ArkActivityKey | null {
+    return recipe ? RECIPE_ACTIVITY[recipe] ?? null : null;
+}
+
 /** The schedule's doings (`behaviour-schedule.ts` ArkDoing). */
 const DOING_ACTIVITY: Record<string, ArkActivityKey> = {
     sleep: "sleeping",
