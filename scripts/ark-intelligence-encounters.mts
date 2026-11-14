@@ -99,7 +99,7 @@ function predatorFor(prey: Row): Row | null {
     return pool.slice().sort((a, b) => unit(`${prey.slug}|${a.slug}`) - unit(`${prey.slug}|${b.slug}`))[0];
 }
 
-type Run = {prey: string; plan: string; predator: string; kind: "pass" | "still"; d: number; nearest: number; reactedS: number | null; reactedAtM: number | null; looked: boolean; fled: boolean; defended: boolean; called: boolean; lookFrames: number; reactFrames: number};
+type Run = {prey: string; plan: string; predator: string; kind: "pass" | "still"; d: number; nearest: number; reactedS: number | null; reactedAtM: number | null; looked: boolean; fled: boolean; defended: boolean; called: boolean; lookFrames: number; reactFrames: number; frames: number; staringFrames: number; fleeFrames: number; fleeMetres: number; calls: number};
 
 let queries: ReactiveWorldQueries | null = null;
 function world(now: number, camera: {x: number; y: number; z: number}, terrain = false): ReactiveWorld {
@@ -146,6 +146,12 @@ function encounter(prey: Row, predator: Row, kind: "pass" | "still", d: number):
     let called = false;
     let lookFrames = 0;
     let reactFrames = 0;
+    let frames = 0;
+    let staringFrames = 0;
+    let fleeFrames = 0;
+    let fleeMetres = 0;
+    let calls = 0;
+    let last: {dx: number; dz: number} | null = null;
     // Two calm seconds first, the predator not yet in range.
     const settle = 2;
     for (let k = 0; k < (seconds + settle) * FPS; k++) {
@@ -167,6 +173,19 @@ function encounter(prey: Row, predator: Row, kind: "pass" | "still", d: number):
             start ??= t;
         }
         if (start === null || !o) continue;
+        if (inRange) {
+            frames++;
+            if (REACTIONS.has(o.action) && o.action !== "recover") staringFrames++;
+            if (o.action === "flee" && last) {
+                const step = Math.hypot(o.dx - last.dx, o.dz - last.dz);
+                if (step * FPS > 0.05) {
+                    fleeFrames++;
+                    fleeMetres += step;
+                }
+            }
+        }
+        if (o.called) calls++;
+        last = {dx: o.dx, dz: o.dz};
         const looking = o.looking === hunter.id;
         const reacting = REACTIONS.has(o.action) || looking;
         if (reacting && reactedS === null) {
@@ -182,7 +201,7 @@ function encounter(prey: Row, predator: Row, kind: "pass" | "still", d: number):
             if (looking) lookFrames++;
         }
     }
-    return {prey: prey.slug, plan: prey.plan, predator: predator.slug, kind, d, nearest: Math.round(nearest * 10) / 10, reactedS, reactedAtM, looked, fled, defended, called, lookFrames, reactFrames};
+    return {prey: prey.slug, plan: prey.plan, predator: predator.slug, kind, d, nearest: Math.round(nearest * 10) / 10, reactedS, reactedAtM, looked, fled, defended, called, lookFrames, reactFrames, frames, staringFrames, fleeFrames, fleeMetres, calls};
 }
 
 type Heads = {slug: string; plan: string; turnedShare: number; changesPerMin: number; yawRange: number; camera: boolean; cameraShare: number};
@@ -325,6 +344,18 @@ const summary = {
     byPlan: Object.fromEntries(plans.map((p) => [p, summarise(encounters.filter((r) => r.plan === p))])),
     byDistance: Object.fromEntries([2, 4, 6, 9, 13, 18, 24].map((d) => [`pass ${d} m`, summarise(encounters.filter((r) => r.kind === "pass" && r.d === d))])),
     lookAtThreatShare: pct(encounters.reduce((s, r) => s + r.lookFrames, 0), encounters.reduce((s, r) => s + r.reactFrames, 0)),
+    behaviours: (() => {
+        const far = encounters.filter((r) => r.kind === "still" && r.d >= 10 && r.reactedS !== null);
+        const flights = encounters.filter((r) => r.fleeFrames >= 3).map((r) => Math.round((r.fleeMetres / r.fleeFrames) * FPS * 100) / 100);
+        const callers = encounters.filter((r) => r.calls > 0);
+        return {
+            stillFarNoticed: far.length,
+            stillFarStoppedPct: pct(far.reduce((s, r) => s + r.staringFrames, 0), far.reduce((s, r) => s + r.frames, 0)),
+            flights: flights.length,
+            medianFleeSpeed: median(flights),
+            meanCallsPerCaller: callers.length ? Math.round((10 * callers.reduce((s, r) => s + r.calls, 0)) / callers.length) / 10 : null
+        };
+    })(),
     heads: {
         species: headRows.length,
         withHead: headed.length,
