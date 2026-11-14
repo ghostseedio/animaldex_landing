@@ -903,8 +903,16 @@ const WATER_VERTEX = `
 #include <common>
 #include <fog_pars_vertex>
 varying vec3 vWorld;
+#ifdef ARK_TIDAL
+// The v2 river's tidal reach (\`water-level.ts\` tidalFreshLevel): its last stretch eased onto the sea's level.
+attribute float arkTidal;
+uniform float tideLevel;
+#endif
 void main() {
     vec4 world = modelMatrix * vec4(position, 1.0);
+    #ifdef ARK_TIDAL
+    world.y += (tideLevel - world.y) * arkTidal;
+    #endif
     vWorld = world.xyz;
     vec4 mvPosition = viewMatrix * world;
     gl_Position = projectionMatrix * mvPosition;
@@ -1157,6 +1165,10 @@ export function buildLandscape(grid: ChunkGrid = chunkGridFor(TERRAIN_HALF, SEGM
         freshWater.mesh.geometry = freshWaterGeometry(arrays as GroundArrays & {freshLevels: Float32Array});
         freshWater.mesh.frustumCulled = false;
         freshWater.material.uniforms.lake.value = WILD_LAKE_COLOUR.clone();
+        // The river meets the sea at the sea's level, whatever the tide (its geometry's `arkTidal`).
+        freshWater.material.defines = {...freshWater.material.defines, ARK_TIDAL: ""};
+        freshWater.material.uniforms.tideLevel = ARK_ENV.seaLevel;
+        freshWater.material.needsUpdate = true;
     }
     ground.add(freshWater.mesh);
     return {

@@ -10,6 +10,7 @@
 import {BufferAttribute, BufferGeometry, Color} from "three";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {fbm, smoothstep} from "@/ark-scene/world";
+import {tidalReach} from "@/ark-scene/water-level";
 import type {GroundArrays} from "@/ark-scene/terrain";
 import {sampleWildGround, type WildGroundSample} from "@/ark-scene/islands/wild/ground";
 import {LAKE, lakeEdge} from "@/ark-scene/islands/wild/fields";
@@ -40,6 +41,10 @@ export function freshWaterGeometry(ground: GroundArrays & {freshLevels: Float32A
     }
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
+    // The river's tidal reach (`water-level.ts`): how much each vertex follows the sea's level (0 everywhere above it).
+    const tidal = new Float32Array(positions.length / 3);
+    for (let i = 0; i < tidal.length; i++) tidal[i] = tidalReach(positions[i * 3 + 1]);
+    geometry.setAttribute("arkTidal", new BufferAttribute(tidal, 1));
     // Normals (lane ark-lake-ghost): the water's own shader never reads them, but the high tier's ambient occlusion
     // (`post.ts` GTAO) draws every mesh with one normal material, and with none the lake read as a surface facing
     // nowhere: the whole lake shaded to ink, with a bright figure where anything with normals stood in it.
