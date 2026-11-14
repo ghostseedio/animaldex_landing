@@ -39,6 +39,7 @@ export const ARK_PERF_SECTIONS = [
     "recipes",
     "plants",
     "render",
+    "status",
     "labels",
     "runtime"
 ] as const;
@@ -48,7 +49,7 @@ const WINDOW = 120;
 const FRAMES = 240;
 /** A frame whose own main-thread time is over this is kept, with its sections (two 60 Hz frames). */
 const SLOW_FRAME_MS = 33;
-const SLOW_KEPT = 96;
+const SLOW_KEPT = 2000;
 
 /** One slow frame: when it began (ms from the navigation), its main-thread time and where that went. */
 export type ArkPerfSlowFrame = {at: number; ms: number; sections: Partial<Record<ArkPerfSection, number>>};

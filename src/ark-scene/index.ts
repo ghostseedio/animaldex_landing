@@ -6485,8 +6485,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         placeLabels();
         placeVisitorLabel();
         placeBadges();
+        perf.lap("labels");
         // Decision 240: the selected animal's status (about once a second) and its bars over it (every frame).
         tellStatus(startedAt);
+        perf.lap("status");
         placeSelectionBars();
         perf.lap("labels");
         runtime.drawnFrame(startedAt, inset);

@@ -5,6 +5,7 @@
  *
  *   zoom     in to an animal (the host's `ark:select`, close up) and back out, species after species on both islands,
  *            then the same animals again (first-time against second-time cost)
+ *   arrive   the same zooms, timing when the chosen animal's own near model, then its rig, is drawn
  *   pan      orbit the island view, zoom to mid height, pan there, cross to the town and back
  *   select   animals selected in quick succession (the card and the bars follow)
  *   hide     the app's panel covered and shown again (`ark:visible`), then the page hidden and shown: what still runs
@@ -380,6 +381,52 @@ export const SCENARIOS = {
             }
         }
         await t.mark("end");
+    },
+    /**
+     * How long after a reader picks an animal its own model is there: the near level drawn, then rigged (the scene's
+     * counts, read ten times a second; both are 0 at the island view the stop before).
+     */
+    async arrive(t, {animals, frame, passes = 2}) {
+        const arrivals = [];
+        for (let pass = 1; pass <= passes; pass++) {
+            for (const [i, animal] of animals.entries()) {
+                await t.mark(`in${pass}:${i}:${animal.slug}:${animal.island}`);
+                const started = Date.now();
+                await t.send({type: "ark:select", id: animal.id, closeUp: true});
+                const row = {pass, slug: animal.slug, island: animal.island, nearMs: null, rigMs: null, quietMs: null};
+                while (Date.now() - started < 12_000) {
+                    await t.sleep(100);
+                    const now = await frame.evaluate(() => {
+                        const st = window.__arkHandle?.stats?.();
+                        const rt = window.__arkHandle?.runtime?.();
+                        return st ? {near: st.near, rigged: st.rigged, pending: rt?.pending ?? 0} : null;
+                    }).catch(() => null);
+                    if (!now) continue;
+                    const at = Date.now() - started;
+                    if (row.nearMs === null && now.near > 0) row.nearMs = at;
+                    if (row.rigMs === null && now.rigged > 0) row.rigMs = at;
+                    if (row.quietMs === null && now.near > 0 && now.pending === 0) row.quietMs = at;
+                    if (row.rigMs !== null && row.quietMs !== null) break;
+                }
+                arrivals.push(row);
+                await t.sleep(Math.max(6000 - (Date.now() - started), 500));
+                await t.mark(`out${pass}:${i}:${animal.slug}:${animal.island}`);
+                await t.send({type: "ark:select", id: null});
+                await t.send({type: "ark:reset"});
+                await t.sleep(3500);
+            }
+        }
+        await t.mark("end");
+        const med = (list) => {
+            const sorted = list.filter((v) => v !== null).sort((a, b) => a - b);
+            return sorted.length ? sorted[Math.floor(sorted.length / 2)] : null;
+        };
+        const summary = {};
+        for (let pass = 1; pass <= passes; pass++) {
+            const rows = arrivals.filter((r) => r.pass === pass);
+            summary[`pass${pass}`] = {animals: rows.length, nearMs: med(rows.map((r) => r.nearMs)), rigMs: med(rows.map((r) => r.rigMs)), quietMs: med(rows.map((r) => r.quietMs)), noNear: rows.filter((r) => r.nearMs === null).length, noRig: rows.filter((r) => r.rigMs === null).length, nearWorst: Math.max(...rows.map((r) => r.nearMs ?? 0)), rigWorst: Math.max(...rows.map((r) => r.rigMs ?? 0))};
+        }
+        return {arrivals, summary};
     },
     async pan(t, {animals}) {
         const town = animals.find((a) => a.island === "town");

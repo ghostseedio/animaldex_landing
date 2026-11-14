@@ -52,7 +52,7 @@
  *   --view town-close         and once the town has joined (+10 s), a close-up of one of its animals (`--select <id>`,
  *                             the host's `ark:select` with closeUp), followed
  * Interaction scenarios (the graphics and performance pass, scripts/ark-runtime-scenarios.mjs), the embed or the hero only:
- *   --scenario zoom|pan|select|hide|resize|weather|long
+ *   --scenario zoom|arrive|pan|select|hide|resize|weather|long
  *                             a reader using the world, after the town has joined and `--settle <s>` (default 25) more:
  *                             each action leaves a mark, and each phase's frames are reported with what the page asked of
  *                             the GPU meanwhile (programs linked and the wait on them, texture and buffer uploads, render
@@ -559,7 +559,7 @@ for (const deviceName of devices) {
                         try {
                             const st = window.__arkHandle?.stats?.();
                             const rt = window.__arkHandle?.runtime?.();
-                            if (st) scene = {renderScale: st.streaming?.renderScale ?? null, renderDistance: st.streaming?.renderDistance ?? null, memory: st.streaming?.memory ?? null, chunks: st.streaming?.chunks ?? null, models: st.modelsLoaded, near: st.near, far: st.far, placeholders: st.placeholders, rigs: st.rigsLoaded, rigMB: Math.round((st.rigBytes ?? 0) / 2 ** 20), closeUps: st.closeUpSkins, fur: st.furShells, modelTexMB: rt?.modelTextureMB ?? null, evicted: rt?.evicted ?? null, pending: rt?.pending ?? null, shaders: rt?.shaders ?? null, power: rt?.powerTier ?? null, hold: rt?.shaderHold ?? null, display: rt?.display ?? null};
+                            if (st) scene = {renderScale: st.streaming?.renderScale ?? null, renderDistance: st.streaming?.renderDistance ?? null, memory: st.streaming?.memory ?? null, chunks: st.streaming?.chunks ?? null, models: st.modelsLoaded, near: st.near, far: st.far, placeholders: st.placeholders, rigs: st.rigsLoaded, rigMB: Math.round((st.rigBytes ?? 0) / 2 ** 20), closeUps: st.closeUpSkins, fur: st.furShells, modelTexMB: rt?.modelTextureMB ?? null, evicted: rt?.evicted ?? null, pending: rt?.pending ?? null, shaders: rt?.shaders ?? null, power: rt?.powerTier ?? null, hold: rt?.shaderHold ?? null, display: rt?.display ?? null, tripsHeld: st.tripsHeld ?? null};
                         } catch {
                             // No handle (a build without the mount hook).
                         }
