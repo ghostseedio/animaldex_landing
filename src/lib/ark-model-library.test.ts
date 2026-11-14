@@ -285,6 +285,7 @@ test("model library: the species the reader chose loads ahead of the queue, past
         const glbs = asked.filter((name) => name.endsWith(".glb"));
         const last = Math.max(glbs.indexOf("cat/v.far.glb"), glbs.indexOf("cat/v.near.glb"));
         assert.ok(last < glbs.indexOf("b/v.far.glb") && last < glbs.indexOf("c/v.far.glb"), `the chosen one's files before the rest of the queue, beside the one already loading: ${glbs.join(", ")}`);
+        assert.ok(library.get("b")?.far && library.get("c")?.far, "and the rest of the queue after them");
     }, 1);
 });
 

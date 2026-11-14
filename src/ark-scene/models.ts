@@ -144,6 +144,8 @@ export class ModelLibrary {
     private readonly requested = new Map<string, Set<Wanted>>();
     private readonly queue: Array<{slug: string; level: Wanted}> = [];
     private active = 0;
+    /** How many of the files loading now are the chosen species' (`urgent`). */
+    private urgentActive = 0;
     private disposed = false;
     private readonly abort = new AbortController();
     /** Levels that failed to arrive: how many times in a row, and when they may be asked for again (`performance.now()`). */
@@ -404,6 +406,9 @@ export class ModelLibrary {
                 if (pick < 0) pick = this.queue.findIndex((item) => item.slug === urgent);
             }
             if (pick < 0 ? this.active >= this.concurrency : this.active >= this.concurrency + 2) break;
+            // (While the chosen one's files are on their way nothing else is started: on a slow link they have it to
+            // themselves once the files already loading are in, instead of a tenth of it each.)
+            if (pick < 0 && this.urgentActive > 0) break;
             if (pick < 0) {
                 pick = 0;
                 if (this.priority) {
@@ -420,6 +425,8 @@ export class ModelLibrary {
             const next = this.queue.splice(pick, 1)[0];
             if (!this.has(next.slug)) continue;
             this.active++;
+            const chosen = next.slug === this.urgent;
+            if (chosen) this.urgentActive++;
             this.load(next.slug, next.level)
                 .then(() => {
                     this.retries.delete(`${next.slug}\u0000${next.level}`);
@@ -429,6 +436,7 @@ export class ModelLibrary {
                 })
                 .finally(() => {
                     this.active--;
+                    if (chosen) this.urgentActive--;
                     this.pump();
                 });
         }
