@@ -1410,6 +1410,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** Each schedule's first step after it is wired works out its last slots (where it walks from): a few a frame. */
     const WARM_MS = 6;
     let warmFrameMs = 0;
+    /** How long an animal due a new trip may be held at its last pose for a frame with room (s): close by, and further off. */
+    const TRIP_HOLD_NEAR_SECONDS = 0.5;
+    const TRIP_HOLD_SECONDS = 1.5;
+    /** Animal-frames held so (the scene's stats). */
+    let tripsHeld = 0;
     let scheduledCount = 0;
     const scheduleHours: HoursAt = (epoch) => pinnedHours ?? islandHours(epoch * 1000, ISLAND_OFFSET_HOURS);
     const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
@@ -4188,12 +4193,24 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             // Its schedule first (where it is and what it is doing now), then its one state from that. A first step waits
             // for a frame with room for it (held where it was drawn; unseen if it never was).
-            if (scheduled(entry) && !entry.sched!.warm && warmFrameMs > WARM_MS && !options.recording) {
-                if (!entry.sched!.pose) {
+            // (Graphics and performance pass, 2026-11: so does a new trip. An animal's trip lasts one 80 s slot and the
+            // next is worked out in the frame that first needs it, a path search: when the camera arrives among animals
+            // whose slots have turned over since they were last drawn close, or a few slots end in the same frame, they
+            // were all worked out in it (frames of 0.3 to 0.8 s on the phone profiles, a third of the main thread in the
+            // second after arriving). Now one such frame's worth at most (`WARM_MS`), the rest held at the pose they
+            // were last drawn at, for half a second at most close by and a second and a half further off, then worked
+            // out whatever the frame: the same trips and poses, a few frames later. Never the animal being watched.)
+            const sched = scheduled(entry) ? entry.sched! : null;
+            const tripDue = sched !== null && sched.warm === true && sched.pose !== null && (!sched.trip || epochNow >= sched.trip.end || epochNow < sched.trip.start);
+            if (sched && !sched.warm && warmFrameMs > WARM_MS && !options.recording) {
+                if (!sched.pose) {
                     entry.middle = null;
                     continue;
                 }
-            } else if (scheduled(entry)) {
+            } else if (sched && tripDue && warmFrameMs > WARM_MS && !options.recording && entry.animal.id !== selectedId && entry.animal.id !== followId && epochNow >= sched.at && epochNow - sched.at < (entry.level === "near" ? TRIP_HOLD_NEAR_SECONDS : TRIP_HOLD_SECONDS)) {
+                // (Held: drawn where it was this frame.)
+                tripsHeld++;
+            } else if (sched) {
                 const started = performance.now();
                 collideCallMs = 0;
                 stepSchedule(entry, epochNow, dt);
@@ -4201,10 +4218,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 perf.carve("schedule", spent - collideCallMs);
                 perf.carve("collide", collideCallMs);
                 behaviourFrameMs += spent;
-                if (!entry.sched!.warm) {
-                    warmFrameMs += spent;
-                    entry.sched!.warm = true;
-                }
+                if (!sched.warm || tripDue) warmFrameMs += spent;
+                sched.warm = true;
                 scheduledCount++;
             }
             // Its one state (its schedule, or the hour and its species, an act it is in) sets what it does: asleep eases in,
@@ -6979,6 +6994,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             rigged: counts.rigged,
             scheduled: scheduledCount,
             behaviourMs: Math.round(mean(behaviourTimes) * 1000) / 1000,
+            tripsHeld,
             behaviourBuildMs: Math.round(behaviourBuildMs),
             behaviourBuildSlices,
             behaviourSpacingMs: Math.round(spacingMs),

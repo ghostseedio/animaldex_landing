@@ -212,6 +212,8 @@ export type ArkSceneStats = {
     /** The behaviour schedule: animals on it, its main-thread time per frame (ms, mean), and the time its places and walk grid took to build (ms, once). */
     scheduled?: number;
     behaviourMs?: number;
+    /** Animal-frames in which an animal due a new trip was held at its last pose for a frame with room (the trip budget). */
+    tripsHeld?: number;
     behaviourBuildMs?: number;
     /** In how many slices between frames the behaviour world was built, and its longest slice (ms). */
     behaviourBuildSlices?: number;
