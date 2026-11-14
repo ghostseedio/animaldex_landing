@@ -795,6 +795,27 @@ test("a herd tolerates lions lying up in sight and grazes on, warily; it watches
     assert.ok(late.some((f) => herd.some((z) => f.out.get(z.id)!.looking === "lion")), "some of their looks go to the lion");
     const calls = resting.reduce((n, f) => n + herd.filter((z) => f.out.get(z.id)!.called).length, 0);
     assert.ok(calls <= herd.length, `no calling over and over at a lion lying up (${calls})`);
+    // One on its own does the same: between its looks it feeds (it does not look round the whole time, nor stare).
+    // Eight roe deer, each alone with a lynx lying up 12 m off, browsing: how much each looks up is its own (a bold one
+    // feeds nearly all the time, a shy one hardly at all), so the eight are read together.
+    {
+        let fed = 0;
+        let up = 0;
+        let eyed = 0;
+        const n = 8;
+        for (let k = 0; k < n; k++) {
+            const alone = animal(`alone${k}`, "roe-deer", 0, 0, {shared: {doing: "browse", yaw: Math.PI / 2}});
+            const lynx = animal("lynx", "eurasian-lynx", 12, 0, {shared: {doing: "rest"}});
+            const frames = run(new ReactiveLayer({tier: "high"}), [alone, lynx], 100).slice(30 * 30);
+            const s = shares(frames, alone.id);
+            assert.ok((s.response.tolerate ?? 0) > 0.9, `${alone.id} tolerates a lynx lying up 12 m off (${JSON.stringify(s.response)})`);
+            fed += (s.action.feed ?? 0) / n;
+            up += (s.action.scan ?? 0) / n;
+            eyed += frames.filter((f) => f.out.get(alone.id)!.looking === "lynx").length / frames.length / n;
+        }
+        assert.ok(fed > 0.3 && up > 0.2, `feeding ${(fed * 100).toFixed(0)}%, head up ${(up * 100).toFixed(0)}% (before the fix: feeding 4%; a browser never fed at all)`);
+        assert.ok(eyed > 0.08 && eyed < 0.6, `their eyes on the lynx ${(eyed * 100).toFixed(0)}% of the time`);
+    }
     // The lion gets up and walks at them.
     const coming = run(layer, [...herd, lion], 16, {start: 1060, move: (list, t) => {
         const l = list.find((i) => i.id === "lion")!;

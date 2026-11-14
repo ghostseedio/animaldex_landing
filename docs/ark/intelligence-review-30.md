@@ -2,6 +2,8 @@
 
 Lane `ark-intelligence-web` (landing). Everything here is visual only: the server decides every meal, birth and death. Nothing here deploys.
 
+**Since then (the behaviours pass, 2026-11-14, lane B2):** what prey do about a predator was reworked (who is a threat by body mass, the response by what the predator is doing, the flight as a dash at the locomotion lane's pace with no `gait` cap, styles by rule, vigilance in groups). Where this review's reaction numbers and rules differ, `docs/ark/flee-envelope.md` and `docs/ark/behaviour-pass-2026-11/prey.md` are the ones that hold.
+
 This document covers:
 
 - **The 30-species review.** 30 species across every body plan, each intelligence profile read field by field against its stored text. Claude Code did the reading itself, with no API calls.

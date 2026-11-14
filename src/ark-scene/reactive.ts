@@ -573,7 +573,8 @@ const SENTINEL_SIGHT = 1.6;
 const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
 /** The bodies among which a smaller hunter gives way to a bigger one (`rival`). */
 const RIVAL_PLANS = new Set(["quadruped", "lizard"]);
-const FEEDING = new Set(["forage", "graze", "visit_flowers", "drink"]);
+// (`browse` was missing until the behaviours pass: a browsing deer or giraffe near the camera never fed, it looked round all the time.)
+const FEEDING = new Set(["forage", "graze", "browse", "visit_flowers", "drink"]);
 /** Busy with its head down or its mind elsewhere: it notices a predator later than one looking round (`attention`). */
 const HEAD_DOWN = new Set<ReactiveAction>(["feed", "drink", "doze", "groom", "play", "use_tool", "cache_bury", "cache_return", "follow_mixed"]);
 /** Roosts an animal goes to ground at (`styleOf`). */
@@ -1294,9 +1295,11 @@ export class ReactiveLayer {
             lookLabel = calm.label;
             faceYaw = calm.face;
             // Wary (a predator it tolerates in sight, or a scare just over): about half its looks round go to the
-            // predator, or to where it was.
+            // predator, or to where it was; nearly all of them while the shared layer has it watching that predator
+            // (`doing: "watch"`: that is what its slot is for).
             const wary = agent.wary;
-            if (wary && !look && (action === "scan" || action === "sentinel") && unit(me.id, "wary-look", agent.scanIndex) < 0.5) {
+            // (Its own rhythm, a look of 2 to 4 s at a time: the scan's own count stands still while it looks at something.)
+            if (wary && !look && (action === "scan" || action === "sentinel") && unit(me.id, "wary-look", Math.floor((world.now + 5 * unit(me.id, "wary-phase")) / (2 + 2 * unit(me.id, "wary-beat")))) < (me.shared.doing === "watch" ? 0.9 : 0.5)) {
                 look = {x: wary.x, y: me.shared.y + me.length * 0.5, z: wary.z};
                 lookLabel = wary.id ?? "spot";
             }
@@ -1720,7 +1723,11 @@ export class ReactiveLayer {
         }
         const edged = kin.length >= 2 && p.manyEyes ? 0.7 + 0.7 * edge : 1;
         // (A predator in sight that it tolerates, or a scare just over, keeps it looking up: `wary`.)
-        const vigilance = ((0.55 + 0.4 * (1 - n.safety) + (agent.memory.predators.length ? 0.3 : 0) + (agent.wary ? 0.15 : 0)) / Math.sqrt(p.manyEyes ? groupSize : 1)) * edged * (sentinelGroup ? 0.5 : 1) * (1 - person.boldness * 0.2);
+        // (While it tolerates a predator in sight its extra looks come in bouts, below: the remembered-predator and
+        // wary terms here, renewed every moment the predator is seen, had a lone animal looking round 96% of the time
+        // and feeding 4%: this score against feeding's is a fine balance, and 0.15 more tips it nearly every time.)
+        const tolerating = Boolean(agent.wary && agent.wary.id !== null);
+        const vigilance = ((0.55 + 0.4 * (1 - n.safety) + (tolerating ? 0 : (agent.memory.predators.length ? 0.3 : 0) + (agent.wary ? 0.15 : 0))) / Math.sqrt(p.manyEyes ? groupSize : 1)) * edged * (sentinelGroup ? 0.5 : 1) * (1 - person.boldness * 0.2);
         // On watch in the shared layer (a predator in sight at its slot's start, or its turn to keep watch): it looks round.
         add("scan", vigilance + (doing === "watch" ? 0.9 : 0));
         // In a group it still lifts its head in bouts of its own (seeded, a few seconds each): about one moment in six
@@ -1729,8 +1736,11 @@ export class ReactiveLayer {
         // a herd of five had a head up 4% of the time: the score above over the square root of the group lost to
         // feeding nearly always.) Individual vigilance falls with group size while the group's rises: Roberts 1996,
         // Anim. Behav. 51.
-        if (kin.length && p.manyEyes) {
-            const share = Math.min((0.3 / Math.pow(groupSize, 0.4)) * edged * (agent.wary ? 1.8 : 1) * (sentinelGroup ? 0.5 : 1) * (1 - person.boldness * 0.2), 0.6);
+        // Alone (or of a kind that keeps no common watch) it has such bouts only while it is wary: a quarter of the time,
+        // on top of its own looking round, so beside a predator it tolerates its head is up about half the time.
+        const grouped = kin.length > 0 && p.manyEyes;
+        if (grouped || agent.wary) {
+            const share = grouped ? Math.min((0.3 / Math.pow(groupSize, 0.4)) * edged * (agent.wary ? 1.8 : 1) * (sentinelGroup ? 0.5 : 1) * (1 - person.boldness * 0.2), 0.6) : 0.25;
             if (unit(me.id, "vigil", Math.floor((world.now + 9 * unit(me.id, "vigil-phase")) / 4)) < share) add("scan", 3);
         }
         if (sentinelGroup && this.isSentinel(me, kin, world)) add("sentinel", 2);
@@ -1813,8 +1823,8 @@ export class ReactiveLayer {
         switch (action) {
             case "feed":
             case "drink":
-                // Head down to the food or the water, a little to one side now and then.
-                res.look = ahead(me.length * 0.9, 0);
+                // Head down to the food or the water, a little to one side now and then; up at the leaves while it browses.
+                res.look = ahead(me.length * 0.9, me.shared.doing === "browse" ? me.headHeight ?? me.length * 0.6 : 0);
                 res.label = "spot";
                 agent.memory.spots[action === "drink" ? "water" : "food"] = {x: me.shared.x, z: me.shared.z};
                 break;
