@@ -135,6 +135,16 @@ export function plantClipFeet(rig: LocoRig, input: LocoInput, world: Matrix4[], 
 
 // MARK: The layer
 
+const wingA = new Matrix4();
+const wingB = new Matrix4();
+const wingS = new Matrix4();
+/** One bone's mesh-space pose in a baked row (rest pose to the frame, 3×4 per bone): skin · rest, as `rowToWorld`. */
+function bakedWorldOf(rig: LocoRig, row: ArrayLike<number>, bone: number, out: Matrix4): Matrix4 {
+    const o = bone * 12;
+    wingS.set(row[o], row[o + 1], row[o + 2], row[o + 3], row[o + 4], row[o + 5], row[o + 6], row[o + 7], row[o + 8], row[o + 9], row[o + 10], row[o + 11], 0, 0, 0, 1);
+    return out.multiplyMatrices(wingS, rig.bones[bone].restWorld);
+}
+
 /** An animal's locomotion state on its rig (kept on its rig state while it stays rigged). */
 export type LocoAnimal = {
     driver: string | null;
@@ -157,6 +167,8 @@ export class LocoLayer {
     private readonly rowA: Float32Array;
     private readonly rowB: Float32Array;
     private readonly poles: Vector3[];
+    /** Its wing bones (both sides, each with everything it carries), every parent before its children. */
+    private readonly wingBones: number[];
     /** Time spent posing this frame and in total (ms), for the performance report. */
     ms = 0;
     calls = 0;
@@ -171,7 +183,13 @@ export class LocoLayer {
         this.rowA = new Float32Array(n * 12);
         this.rowB = new Float32Array(n * 12);
         this.poles = rig.legs.map((leg) => new Vector3(...restPole(rig, leg)));
-        void this.order;
+        const winged = new Set<number>();
+        for (const root of [rig.wings.left[0], rig.wings.right[0]]) {
+            if (root === undefined || root < 0) continue;
+            winged.add(root);
+            for (const below of rig.below[root]) winged.add(below);
+        }
+        this.wingBones = this.order.filter((i) => winged.has(i) && rig.bones[i].parent >= 0);
     }
 
     /**
@@ -199,9 +217,15 @@ export class LocoLayer {
                 animal.states.set(driver.name, held);
             }
             held.at = input.clock;
-            if ((driver.base?.(rig, input) ?? "clip") === "rest") rig.bones.forEach((bone, i) => this.world[i].copy(bone.restWorld));
+            const fromRest = (driver.base?.(rig, input) ?? "clip") === "rest";
+            if (fromRest) rig.bones.forEach((bone, i) => this.world[i].copy(bone.restWorld));
             else rowToWorld(rig, this.baked, 0, this.world);
             gait = driver.pose(rig, input, this.world, held.state);
+            // (Behaviours pass, lane B4.) A driver that poses from the rest pose (the legged gaits) knows nothing of the
+            // wings: it left them as the rig rests. A v7 bird rests with its wings part open (its clips fold them), so
+            // on the ground a flamingo's and a bulbul's wings hung to the grass like a tent (the graphics pass,
+            // 2026-11-14). The wings keep the clip's own fold, carried on the body as the driver posed it.
+            if (fromRest && a && this.wingBones.length) this.carryWings();
             skinRow(rig, this.world, this.rowA, 0);
         }
         if (animal.share < 1) {
@@ -219,6 +243,20 @@ export class LocoLayer {
         this.ms += performance.now() - started;
         this.calls++;
         return gait;
+    }
+
+    /**
+     * The clip's wings on the driver's body: each wing bone (and what it carries) as the baked frame holds it against
+     * its parent, on that parent as posed now. `this.baked` is the clip's frame, `this.world` the driver's pose.
+     */
+    private carryWings(): void {
+        const rig = this.rig;
+        for (const i of this.wingBones) {
+            const p = rig.bones[i].parent;
+            // local = bakedWorld[p]⁻¹ · bakedWorld[i]; world[i] = world[p] · local.
+            wingA.copy(bakedWorldOf(rig, this.baked, p, wingB)).invert().multiply(bakedWorldOf(rig, this.baked, i, wingB));
+            this.world[i].multiplyMatrices(this.world[p], wingA);
+        }
     }
 
     dispose() {
