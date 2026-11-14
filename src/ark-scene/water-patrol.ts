@@ -176,8 +176,10 @@ export function patrolLength(points: PatrolPoint[]): number {
  * than the straight way), or null when its water gives it no room for one (its goal is then swum to as before).
  */
 export function patrolRoute(input: PatrolInput): PatrolPoint[] | null {
-    // (Where its round runs into the shore, a smaller one, twice at most.)
-    return roundOf(input, input.radius) ?? roundOf(input, input.radius * 0.6) ?? roundOf(input, input.radius * 0.35);
+    // (Where its round runs into the shore, a smaller one, twice at most, never under three of its lengths across its
+    // radius: a 1.6 m seal turned a full circle in under 20 s on a 2 m round.)
+    const smaller = (share: number) => (input.radius * share >= input.body * 3 ? roundOf(input, input.radius * share) : null);
+    return roundOf(input, input.radius) ?? smaller(0.6) ?? smaller(0.35);
 }
 
 function roundOf(input: PatrolInput, within: number): PatrolPoint[] | null {
@@ -185,7 +187,7 @@ function roundOf(input: PatrolInput, within: number): PatrolPoint[] | null {
     const direct = dist(from, to);
     if (input.length < Math.max(direct * 1.15, input.body * 2, 0.5)) return null;
     // (Half a lap of its range or so in a slot: a short way keeps to a smaller round.)
-    const radius = Math.max(Math.min(within, input.length / 2.5), input.body * 1.5, 0.4);
+    const radius = Math.max(Math.min(within, input.length / 2.5), input.body * 3, 0.4);
     // (Its set-off and its coming in run straight for a few lengths, a twenty-fifth of the way at least.)
     const lead = Math.min(Math.max(input.body * 2, 0.5, input.length * 0.04), Math.max(radius * 0.5, 0.3), input.length * 0.12);
     const points: PatrolPoint[] = [from];

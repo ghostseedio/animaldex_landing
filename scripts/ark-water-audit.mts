@@ -9,7 +9,7 @@
  *     wading, ashore, in the air; and the same asleep;
  *   - its speed while it swims, in body lengths a second, against its kind's cruise and burst (`locomotion/swim.ts`);
  *   - its path: metres an hour, how far it ranges from home, how straight each 10 minutes was (net over path);
- *   - schools: nearest-neighbour distance in body lengths, how aligned the headings are (0 every way, 1 all one way),
+ *   - schools (awake): nearest-neighbour distance in body lengths, how aligned the headings are (0 every way, 1 all one way),
  *     how often the members move together, how far the school travels;
  *   - air breathers: breaths an hour, the usual gap between two, the share of the time at the surface;
  *   - shore crossings a day (into and out of the water), and at how many places;
@@ -218,7 +218,7 @@ const hoursAt = (epoch: number) => islandHours(epoch * 1000, 0);
 const topAt = (x: number, z: number) => Math.max(waterSurfaceAt(x, z), waterLevelAt(x, z, 0));
 const started = Date.now();
 
-type Sample = {x: number; y: number; z: number; yaw: number; moving: boolean; where: Where; water: boolean};
+type Sample = {x: number; y: number; z: number; yaw: number; moving: boolean; where: Where; water: boolean; asleep: boolean};
 type GroupStat = {slug: string; size: number; nnd: number[]; aligned: number[]; alignedMoving: number[]; together: number; moments: number; movingMoments: number; centroid: number; spread: number[]};
 const groupStats = new Map<Subject, GroupStat>();
 const membersOf = new Map<Subject, Subject[]>();
@@ -319,7 +319,7 @@ for (const from of WINDOWS) {
                     b.crossSpots.add(`${Math.round(at.x / 3)},${Math.round(at.z / 3)}`);
                 }
             }
-            const sample: Sample = {x: at.x, y: at.y, z: at.z, yaw: at.yaw, moving, where, water: inWater};
+            const sample: Sample = {x: at.x, y: at.y, z: at.z, yaw: at.yaw, moving, where, water: inWater, asleep};
             st.path += moved;
             st.windowStart ??= sample;
             st.prev = sample;
@@ -330,7 +330,8 @@ for (const from of WINDOWS) {
         for (const [lead, members] of membersOf) {
             if (members.length < 2) continue;
             const inWater = members.map((m) => now.get(m)!).filter((p) => p && p.water);
-            if (inWater.length < 2) continue;
+            // (Awake: asleep each is at its own roost.)
+            if (inWater.length < 2 || inWater.some((p) => p.asleep)) continue;
             const g = groupStats.get(lead) ?? {slug: lead.animal.model_slug, size: members.length, nnd: [], aligned: [], alignedMoving: [], together: 0, moments: 0, movingMoments: 0, centroid: 0, spread: []};
             groupStats.set(lead, g);
             const L = Math.max(lead.length, 0.01);

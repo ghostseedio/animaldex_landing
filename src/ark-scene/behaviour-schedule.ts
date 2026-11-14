@@ -42,6 +42,11 @@ import {hashString} from "@/ark-scene/world";
 import type {ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
+import {breathRhythm, patrolRule, shoreSide, waterLife} from "@/ark-scene/water-life";
+import {speciesDepth} from "@/ark-scene/sea-depth";
+import {patrolLength, patrolRoute} from "@/ark-scene/water-patrol";
+import {locoStyle} from "@/ark-scene/locomotion/styles";
+import {swimPaces} from "@/ark-scene/locomotion/swim";
 import {coatOf, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, recipeRoostTags, sexLook, sitterIntent, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
@@ -162,6 +167,8 @@ export type Trip = {
     /** A recipe this slot's goal was chosen for (`behaviour-recipes.ts`), and who the trip is (for its episodes). */
     recipe?: string | null;
     owner?: TripOwner | null;
+    /** (Lane B6.) It ends the slot in the water (its goal is wet, not a rock over it): an air breather's rhythm runs there (`breath-trip.ts`). */
+    wet?: boolean;
 };
 
 /** Its group, when it keeps to one: its leader (its schedule animal, profile and activity), its rank (1…), the group's size. */
@@ -412,6 +419,12 @@ export class ScheduleWorldBuild {
 export {swimPaceLength, swimSpeedOf};
 
 const FLOCKING = new Set(["flock", "school", "swarm"]);
+/**
+ * (Lane B6 water.) A pod: whales, dolphins and porpoises that keep company (their profile's "group", "herd" or "pack")
+ * travel together as a school does, each by its leader, not each on its own round about the group's middle (six
+ * spinner dolphins were 8 lengths apart, their headings every way).
+ */
+const pod = (profile: ArkBehaviourProfile) => profile.social !== "solitary" && profile.social !== "pair" && waterLife(profile.slug, profile) === "cetacean";
 
 /**
  * Where a flyer lands to perch: its own kinds first (a seabird's rocks, ledges and posts, never a branch). One with no
@@ -1165,7 +1178,7 @@ const LOOK_BACK = 6;
 /** Its intent before the walk check: planned, and kept in the water if it lives there. */
 function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
     return remember(memoOf(world, hoursAt, animal).placed, slot, () => {
-        const planned = keepInWater(world, profile, animal, plannedIntent(world, profile, animal, activity, slot, hoursAt));
+        const planned = keepToSide(world, profile, animal, activity, keepInWater(world, profile, animal, plannedIntent(world, profile, animal, activity, slot, hoursAt)), slot, hoursAt);
         // (Collisions: a ground goal its body fits at; a perch up on a rock or a tree its body fits on.)
         if (!planned.to || planned.follow || aquatic(profile)) return planned;
         // (Its roost is made clear once, by `roostOf`, the same for everyone who asks: not moved again here.)
@@ -1325,6 +1338,16 @@ function onItsGround(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
 /** In the water and under its surface: where a water-only animal may be sent. */
 const underSurface = (world: ScheduleWorld, spot: Spot) => wet(world, spot) && spot.y < surfaceY(world, spot.x, spot.z) + 0.02;
 
+/** A crawler whose species' own depth band is the bed (`sea-depth.ts`: a pond snail, a mussel) or whose water kind is: it lives in the water. */
+function bedBound(profile: ArkBehaviourProfile, animal: ScheduleAnimal): boolean {
+    if (profile.move !== "crawl" && profile.move !== "slither") return false;
+    if (profile.moves.includes("walk") || profile.moves.includes("fly") || profile.moves.includes("climb")) return false;
+    // (Or its way in the water is the bed's, `waterKindOf`: the generic bivalve, a leech, a betta filed as a crawler.)
+    if (profile.water === "bed") return true;
+    const depth = speciesDepth(profile.slug, animal.zone);
+    return Boolean(depth) && depth!.source !== "default" && (depth!.band === "pond_bed" || depth!.band === "seabed");
+}
+
 /**
  * A water-only animal (a fish, a seabed walker: `aquatic`, not `amphibious`) is never sent onto land, nor onto a rock
  * above the surface (release integration, 2026-11-11: a reef fish slept on a shore rock, a pacu in a tree, from their
@@ -1333,11 +1356,99 @@ const underSurface = (world: ScheduleWorld, spot: Spot) => wet(world, spot) && s
  */
 function keepInWater(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, planned: Intent): Intent {
     const to = planned.to;
-    if (!to || !aquatic(profile) || amphibious(profile) || underSurface(world, to)) return planned;
+    // (Lane B6: and one whose own depth band is the bed and that only crawls or sits, a pond snail, a mussel, a leech:
+    // its profile has no bed flag in fresh water, and the Danube river snail spent its waking day on the bank.)
+    const lives = (aquatic(profile) && !amphibious(profile)) || bedBound(profile, animal);
+    if (!to || !lives || underSurface(world, to)) return planned;
     const random = rng(hashString(`${animal.id}#water#${Math.round(to.x * 2)}#${Math.round(to.z * 2)}`));
     const near = waterSpot(world, profile, animal, to.x, to.z, random);
     const spot = underSurface(world, near) ? near : waterSpot(world, profile, animal, animal.home.x, animal.home.z, random);
     return {...planned, to: spot, mode: planned.mode === "stay" ? "stay" : "water"};
+}
+
+/**
+ * (Lane B6 water.) An animal of the shore keeps to one side of the water's edge for hours at a time (`water-life.ts`
+ * shoreSide: a seal hauled out or at sea, a crocodile on the bank through the morning and in the water the rest of the
+ * day, a hippo in the water by day and ashore by night, a beaver, an otter; a whirligig and a sea otter always on the
+ * water). Before, each 80 s slot chose afresh, and a harbour seal crossed its shore about every ten minutes.
+ *
+ * A goal on its side is kept. A goal on the other side, or none (it stays where the last slot left it, which may be the
+ * other side), becomes its own resting place on its side for as long as the side lasts: in the water its spot off its
+ * home (seeded by its id: afloat or hanging there), on land its roost if that is dry, else the water's edge nearest
+ * its home. Asleep it is at its roost as ever (a crocodile's, a hippo's and an axolotl's roost is the water, by
+ * their profiles). So where it is never depends on more than this slot, like every other goal. A watch on a predator it has
+ * seen and a follower keep their own; a recipe whose place is on its side is kept (a bask on the bank in a bout
+ * ashore), one on the other side waits for its bout.
+ */
+function keepToSide(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, planned: Intent, slot: number, hoursAt: HoursAt): Intent {
+    if (planned.follow || planned.face !== undefined || !swims(profile) || flies(profile)) return planned;
+    const life = waterLife(profile.slug, profile);
+    if (!life) return planned;
+    // (Asleep it is at its roost, as every animal: a crocodile's, a hippo's and an axolotl's is in the water, a seal's
+    // on its shore, by their profiles. Its side is for its waking hours.)
+    if (planned.doing === "sleep" || planned.doing === "to_roost") return planned;
+    // (A sea otter, which swims first, lives on the water.)
+    const sideAt = (start: number) => (life === "otter" && profile.move === "swim" ? "water" : shoreSide(life, animal.id, hoursAt(start), start));
+    const start = slotStart(animal, slot);
+    let side = sideAt(start);
+    if (!side) return planned;
+    // (Ashore in good time for its sleep, where its roost is ashore: in its last four waking slots its side is the
+    // land's. From its spot out in the water the way home was sometimes one it would not take, and a capybara slept
+    // afloat away from its roost.)
+    if (side === "water" && !awakeAt(profile, activity, hoursAt(start + 4 * SLOT_SECONDS)) && !wet(world, roostOf(world, profile, animal))) side = "land";
+    const to = planned.to;
+    const beats = () => stayBeats("rest", rng(hashString(`${animal.id}#side#${slot}`)), null);
+    if (side === "water") {
+        if (to && wet(world, to) && !raised(world, to)) return planned;
+        const random = rng(hashString(`${animal.id}#side#water`));
+        const near = world.nav.nearest(animal.home.x, animal.home.z, "swim", Math.max(animal.length * 0.3, 0.3), 30);
+        if (!near) return planned;
+        const spot = waterSpot(world, profile, animal, near.x + (random() - 0.5) * 2, near.z + (random() - 0.5) * 2, random);
+        if (!wet(world, spot)) return planned;
+        // (What it meant to do on the move, a forage, a wander, a hunt, it does in the water: a swim about its water,
+        // its own each slot. What it meant to do lying still, it does afloat at its spot.)
+        const active = (planned.doing === "forage" || planned.doing === "swim" || planned.doing === "dive" || planned.doing === "wander" || planned.doing === "stalk" || planned.doing === "graze" || planned.doing === "browse" || planned.doing === "play");
+        if (active) {
+            const roam = rng(hashString(`${animal.id}#side#swim#${slot}`));
+            const reach = Math.max(homeRadius(profile, animal), 3);
+            const out = waterSpot(world, profile, animal, spot.x + (roam() - 0.5) * 2 * reach, spot.z + (roam() - 0.5) * 2 * reach, roam);
+            if (wet(world, out)) return {doing: planned.doing === "forage" || planned.doing === "dive" ? planned.doing : "swim", to: out, mode: "water", stay: stayBeats("rest", roam, null)};
+        }
+        return {doing: "rest", to: spot, mode: "water", stay: beats()};
+    }
+    // On land. The ones that lie up ashore (a seal, a crocodile, a terrapin, an otter, a beaver) have one place for it;
+    // the others (a hippo, a capybara, a deer, a frog) live their own day ashore.
+    const liesUp = life === "seal" || life === "croc" || life === "terrapin" || life === "otter" || life === "beaver";
+    // (A crocodile or a terrapin out of the water is on its bank, whatever it meant to do ashore: never off inland to a
+    // rock or its profile's crevice.)
+    const banked = life === "croc" || life === "terrapin";
+    // (One that lies up at its roost, a seal, an otter, a beaver, keeps what it meant to do ashore only by its roost:
+    // not off across its range, over the river and back.)
+    const lair = liesUp && !banked ? roostOf(world, profile, animal) : null;
+    const byLair = !lair || wet(world, lair) || (to !== null && Math.hypot(to.x - lair.x, to.z - lair.z) <= Math.max(6, animal.length * 4));
+    if (to && !wet(world, to) && !banked && byLair) return planned;
+    if (!to && !liesUp) {
+        // (Staying where it is: fine unless its last slots may have left it in the water.)
+        let was = false;
+        for (let back = 1; back <= 5 && !was; back++) was = sideAt(start - back * SLOT_SECONDS) === "water";
+        if (!was) return planned;
+    }
+    if (!liesUp) {
+        const land = world.nav.nearest(animal.home.x, animal.home.z, "walk", 0.5, 20, maxSlopeOf(animal));
+        return land ? {doing: "wander", to: groundSpot(world, land.x, land.z), mode: "ground", stay: beats()} : planned;
+    }
+    let spot: Spot | null = !lair || wet(world, lair) ? null : lair;
+    if (!spot) {
+        const edges = world.sampler.attachPoints("water_edge", {x: animal.home.x, z: animal.home.z, r: 30});
+        // (One of the three nearest dry edge points, its own for good, seeded by its id: two crocodiles of one pool do not
+        // lie on one point.)
+        const dry = [...edges].filter((e) => !wet(world, e)).sort((m, n) => Math.hypot(m.x - animal.home.x, m.z - animal.home.z) - Math.hypot(n.x - animal.home.x, n.z - animal.home.z) || m.id.localeCompare(n.id));
+        const best = dry[hashString(`${animal.id}#bank`) % Math.max(Math.min(dry.length, 3), 1)];
+        spot = best ? spotOf(best) : null;
+    }
+    if (!spot) return planned;
+    const doing: ArkDoing = banked || planned.doing === "bask" ? "bask" : "rest";
+    return {doing, to: spot, mode: "ground", stay: beats()};
 }
 
 function plannedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
@@ -1402,7 +1513,9 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     // A group's watch: one member at a time (in turn, seeded by the group) keeps watch while the others do their own things,
     // by day and (for herds and troops) through the night.
     const size = group ? group.size : 0;
-    const watchTurn = size >= 3 ? (slot + hashString(group!.leader.id)) % size === group!.rank : false;
+    // (Lane B6: not in a school or a pod that never stops swimming: its watch was a slot hanging still, a mackerel in
+    // twelve at any moment, a dolphin in six.)
+    const watchTurn = size >= 3 && !(aquatic(profile) && (patrolRule(waterLife(profile.slug, profile))?.share[0] ?? 0) >= 1) ? (slot + hashString(group!.leader.id)) % size === group!.rank : false;
     if (!awake) {
         const roost = roostOf(world, profile, animal);
         // The night watch (sleep lane): always one of the members (never the leader's turn with nobody up), standing about
@@ -1415,7 +1528,9 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         return {doing: wasAwake ? "to_roost" : "sleep", to: roost, mode: wasAwake ? travel : "stay", stay: []};
     }
     // Air-breathers come up to breathe every few slots, then go back down.
-    if (profile.breathes && profile.move === "swim" && (slot + hashString(animal.id)) % 3 === 0) {
+    // (Lane B6: a whale, a dolphin, a seal, a sea turtle or a manatee breathes on its own rhythm wherever it swims,
+    // `breath-trip.ts`; the breathe trip stays the penguins' and the other divers'.)
+    if (profile.breathes && profile.move === "swim" && (slot + hashString(animal.id)) % 3 === 0 && !breathRhythm(waterLife(profile.slug, profile), animal.length, 0)) {
         // (About a breath's swim away at its own pace, any way round: at true size a 14 m humpback reached a breath ±4 m
         // away in a second and floated through it. Motion pass §3.)
         // (2026-11-12, motion pass: a breath's swim and its set-off, about 16 s, so the 15 s breath is taken on the move,
@@ -1476,7 +1591,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     }
     // A flocking species' member flies with its leader when its leader is in the air (most of the time, not always).
     // A school keeps together nearly always (a loose cluster round its leader).
-    if (group && FLOCKING.has(profile.social) && (flyer || aquatic(profile)) && random() < (aquatic(profile) ? 0.9 : 0.75)) {
+    if (group && (FLOCKING.has(profile.social) || pod(profile)) && (flyer || aquatic(profile)) && random() < (aquatic(profile) ? 0.9 : 0.75)) {
         const lead = leaderIntentAt(world, group, start + 1, hoursAt);
         // Its place is by its leader; what it does there is its own (a school's fish feed or cruise, a flock's birds fly),
         // so a school is one shape but not one state (problem 7).
@@ -1624,6 +1739,10 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
                 stay: stayBeats(doing, random, null)
             };
         default: {
+            // (Lane B6: one that never stops swimming, a tuna, a pilchard, a dolphin, has no rest on the spot: it swims on.)
+            if (aquatic(profile) && (patrolRule(waterLife(profile.slug, profile))?.share[0] ?? 0) >= 1) {
+                return {doing: "swim", to: rangeSpot(world, profile, groupAnimal, own, radius * (group ? 0.3 : 1), random), mode: "water", stay: []};
+            }
             const stayDoing: ArkDoing = STAY_DOINGS.has(doing) ? doing : "rest";
             // A group member that rests keeps near its group (it walks to it first if it has drifted away).
             if (group) return {doing: stayDoing, to: rangeSpot(world, profile, groupAnimal, centre, radius * 0.6, random), mode: aquatic(profile) ? "water" : "ground", stay: stayBeats(stayDoing, random, null)};
@@ -1701,7 +1820,9 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
     let dx = 0;
     let dz = 0;
     const dy = (random() - 0.5) * Math.max(animal.length, 0.3) * (aquatic(group.profile) ? 2.4 : 1.6);
-    const spread = Math.max(animal.length, 0.3) * (1 + 0.35 * Math.sqrt(group.rank));
+    // (Lane B6: a school or a pod in the water keeps closer, 0.6 of a flock's spacing: twelve pilchards were 5.5 lengths from their
+    // nearest neighbour, where a school's fish are about one.)
+    const spread = Math.max(animal.length, 0.3) * (1 + 0.35 * Math.sqrt(group.rank)) * (aquatic(group.profile) ? 0.6 : 1);
     // (On the ground, a place by its leader it can stand at the slot's end: else it slid to the nearest open cell over
     // the slot's last seconds, sideways or backwards, the default view's sparrow. A few seeded tries, then that.)
     // (On its own bearing from its leader, as a herd member's own side (`memberSide`), each slot a little off it, wider
@@ -2148,6 +2269,14 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         default:
             break;
     }
+    // (Lane B6 water: a swimmer whose way of life is to keep swimming goes there by a patrol through its range that
+    // takes its time, most or all of the slot, at its kind's cruise: `waterPatrol`.)
+    const patrol = waterPatrol(world, profile, animal, activity, slot, hoursAt, now, from, to, legs);
+    if (patrol) {
+        legs.length = 0;
+        legs.push(patrol);
+        mode = "water";
+    }
     // (No further than it goes in a second and a bit, nor than a few of its lengths: a slow walker faces the way it is
     // going until it is at a corner, not round it while it still walks the other way.)
     const lookAhead = Math.min(Math.max(Math.min(animal.length * 2.5, speed * 1.2), 0.15), 1.5);
@@ -2159,12 +2288,13 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         const ahead = alongPath(first.path, Math.min(lookAhead / Math.max(pathLength(first.path), 0.01), 1));
         if (Math.hypot(ahead.x - from.x, ahead.z - from.z) > 0.2) {
             const turn = Math.abs(Math.atan2(Math.sin(Math.atan2(ahead.x - from.x, ahead.z - from.z) - from.yaw), Math.cos(Math.atan2(ahead.x - from.x, ahead.z - from.z) - from.yaw)));
-            if (turn > 1) legs.unshift({mode: "pause", from, to: from, path: null, length: 0, seconds: turn / TURN_RATE, beat: "pause", yaw: Math.atan2(ahead.x - from.x, ahead.z - from.z), turn: true});
+            // (A patrol sets off the way it faces, `waterPatrol`: its turn is its path's.)
+            if (turn > 1 && !patrol) legs.unshift({mode: "pause", from, to: from, path: null, length: 0, seconds: turn / TURN_RATE, beat: "pause", yaw: Math.atan2(ahead.x - from.x, ahead.z - from.z), turn: true});
         }
     }
     // How far along its way it looks to face: a sparrow a few of its lengths, not 1.5 m (a path that doubled back
     // within that had it walking backwards to the corner, the default view's sparrow), a big walker 1.5 m.
-    for (const leg of legs) if (leg.mode === "ground" || leg.mode === "water") leg.look = lookAhead;
+    for (const leg of legs) if ((leg.mode === "ground" || leg.mode === "water") && leg !== patrol) leg.look = lookAhead;
     // Fitted into the slot: a long way is a run; never more than four fifths of the slot on the way.
     let travel = legs.reduce((sum, leg) => sum + leg.seconds, 0);
     // A long way is a run, at its run's own pace at most (one with no run clip walks it: slowed, never sped up).
@@ -2180,7 +2310,8 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     // Too long for four fifths of the slot: quicker, but on foot never past its clip's pace cap (PACE_CAP: faster, its
     // feet slide; a clawed frog with no run walked at 1.37 of its walk); past that the way takes more of the slot
     // (its stay beats are fitted into what is left), and only a way longer than all but 6 s of it goes faster still.
-    if (travel > SLOT_SECONDS * 0.8) {
+    // (A patrol's time is its own: all of the slot for one that never stops.)
+    if (travel > SLOT_SECONDS * 0.8 && !patrol) {
         let k = (SLOT_SECONDS * 0.8) / travel;
         const onFoot = legs.some((leg) => leg.mode === "ground");
         // (To 1.2 of its pace at most, a margin under the cap: the walk's own pace already varies 0.85-1.2.)
@@ -2223,6 +2354,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     return {
         ...base,
         mode: legs.length ? (mode === "stay" ? "ground" : mode) : "stay",
+        wet: wet(world, to) && !raised(world, to),
         arrive: start + travel,
         to,
         finish: stay.finish,
@@ -2232,6 +2364,71 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         length: legs.reduce((sum, leg) => sum + leg.length, 0),
         running
     };
+}
+
+/**
+ * (Lane B6 water.) A swimmer's patrol for a slot, as one water leg, or null (it swims straight to its goal as before).
+ *
+ * For a way of life that keeps swimming (`water-life.ts` patrolRule: a tuna, a pilchard, a shark, a dolphin all slot
+ * long; most other fish, a sea turtle, a seal at sea for most of a slot; a reef fish and a ray
+ * for a short while about a small patch; a jellyfish drifting), in the water at both ends: from where it is to its
+ * goal by a round through its range (`water-patrol.ts`), as long as its pace covers in its time. Its pace is its
+ * kind's cruise for its size (`locomotion/swim.ts` swimPaces, L2's) times its way of life's share, never the old
+ * dash (1.4 of its free pace): a 2 m tuna went 5 m/s for three seconds and then hung for a minute.
+ *
+ * Before: a few seconds' swim, then the rest of the slot at the spot on a land animal's beats (peck, step, scan): a
+ * pilchard swam a third of its waking day, a perch 3%, and every fish slept on the spot.
+ *
+ * Not a recipe's trip, a follower's (it keeps by its leader, who patrols), a watch on a predator, a breathe trip, nor
+ * a way that crosses the shore.
+ */
+function waterPatrol(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt, now: Intent, from: Spot, to: Spot, legs: Leg[]): Leg | null {
+    if (now.follow || now.recipe || now.face !== undefined || now.doing === "breathe" || now.doing === "watch") return null;
+    const life = waterLife(profile.slug, profile);
+    const rule = patrolRule(life);
+    if (!rule || !underSurface(world, from) || !underSurface(world, to)) return null;
+    // (Only a plain swim, or a stay: nothing over land, no slide in or climb out.)
+    if (legs.some((leg) => leg.mode !== "water")) return null;
+    const asleep = now.doing === "sleep" || now.doing === "to_roost";
+    const never = rule.share[0] >= 1;
+    // (Asleep it is at its roost, as every animal: a never-stop swimmer's slow round asleep was built and withdrawn, its
+    // coming-in heading is not exact enough for a round that closes on itself slot after slot. docs: water.md, Left.)
+    if (asleep) return null;
+    if (!legs.length && !never) return null;
+    const random = rng(hashString(`${animal.id}#patrol#${slot}`));
+    const share = rule.share[0] + (rule.share[1] - rule.share[0]) * random();
+    const seconds = never ? SLOT_SECONDS : SLOT_SECONDS * share;
+    const L = Math.max(animal.length, 0.02);
+    const style = locoStyle(profile.slug).swim;
+    // (One with no swimming style of its own, a seal, a sea turtle, a squid: a swimmer's cruise for its size. Its free
+    // pace is held to its walk clip's cadence, and a sea lion swam at 0.1 m/s. A drifter keeps its own slow pace.)
+    const cruise = style ? swimPaces(L, style).cruise : life === "drifter" ? swimSpeedOf(profile, L) * 0.7 : swimPaces(L, "subcarangiform").cruise;
+    const pace = cruise * rule.pace * (0.9 + 0.2 * random());
+    // (A way under four of its lengths is no round: it swims straight there.)
+    if (pace * seconds < L * 4) return null;
+    const centre = groupCentre(world, animal, slot, hoursAt) ?? animal.home;
+    const radius = Math.min(homeRadius(profile, animal) * rule.reach * (animal.group ? 0.5 : 1), rangeCap(profile, animal));
+    const need = Math.min(Math.max(L * 0.5, 0.3), 2);
+    const settled = settle(world, profile, animal, slot, {...now, to}, activity, hoursAt);
+    const path = patrolRoute({
+        from,
+        to,
+        fromYaw: from.yaw ?? null,
+        toYaw: never ? settled?.finish.yaw ?? null : null,
+        centre,
+        radius,
+        // (A round comes out a little longer than asked more often than shorter, `patrolRoute`: asked for 0.85 of it.)
+        length: pace * seconds * 0.85,
+        body: L,
+        turn: hashString(`${animal.id}#round`) % 2 ? 1 : -1,
+        coarse: !never,
+        random,
+        wet: (x, z) => world.nav.swimmable(x, z, need)
+    });
+    if (!path) return null;
+    const length = patrolLength(path) + Math.abs(to.y - from.y);
+    // (It faces a little way along its round: what it swims in a second or so, a length and a half at most.)
+    return {mode: "water", from, to, path, length, seconds, beat: "swim", look: Math.min(Math.max(Math.min(L * 1.5, (length / seconds) * 1.2), 0.15), 1.5)};
 }
 
 /**

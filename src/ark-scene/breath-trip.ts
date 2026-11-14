@@ -14,12 +14,23 @@
  * wherever it is, often holding still or turning at its spot. Asleep it
  * keeps the cycle (twice as slow, straight up and down where it sleeps).
  *
+ * Lane B6 water (2026-11-14): a whale, a dolphin, a seal, a sea turtle and a
+ * manatee breathe on their own rhythm instead (`water-life.ts` breathRhythm),
+ * wherever their trip has them in the water: a dolphin rolls up every half
+ * minute as it swims, a great whale blows a few times and dives for minutes,
+ * a seal at sea dives for minutes and bottles a while. One breath in every
+ * third 80 s slot was a penguin's rhythm for all of them (a breath every four
+ * minutes: a dolphin's is every half minute). A pod's members come up with
+ * their leader, each within a few seconds of it.
+ *
  * Pure in the trip and the world clock, so every viewer sees the same breath.
  * The scene's band fit draws it (`fitInWater`'s breath) and the behaviour
  * state says "breathing" from the same number (`behaviour-state.ts`).
  */
 
 import type {Trip} from "@/ark-scene/behaviour-schedule";
+import {depthSeed} from "@/ark-scene/sea-depth";
+import {breathRhythm, rhythmBreath, waterLife, type BreathRhythm} from "@/ark-scene/water-life";
 
 /** Seconds: up from its band to the surface, at the surface, and back down (smoothed at both ends). */
 export const TRIP_BREATH_RISE = 5;
@@ -50,8 +61,49 @@ export function tripBreathStart(trip: Trip): number | null {
 
 const smooth = (u: number) => u * u * (3 - 2 * u);
 
+/** Whether its trip has it in the water at a world time: on a swim, or after it, where its goal is in the water; a follower as its leader. */
+export function tripInWater(trip: Trip, epochSeconds: number): boolean {
+    if (trip.shadow) {
+        const lead = trip.shadow.trips.find((t) => epochSeconds >= t.start && epochSeconds < t.end);
+        return lead ? tripInWater(lead, epochSeconds) : false;
+    }
+    if (epochSeconds >= trip.arrive) return Boolean(trip.wet);
+    let t = trip.start;
+    for (const leg of trip.legs) {
+        t += leg.seconds;
+        if (epochSeconds < t) return leg.mode === "water" || (leg.mode === "pause" && Boolean(trip.wet) && trip.legs.every((l) => l.mode === "water" || l.mode === "pause"));
+    }
+    return Boolean(trip.wet);
+}
+
+const rhythms = new WeakMap<object, {rhythm: BreathRhythm; seed: number} | null>();
+
+/** Its own breath rhythm (`water-life.ts`: a whale, a dolphin, a seal, a sea turtle, a manatee), with its seed; null for any other diver. */
+export function tripRhythm(trip: Trip): {rhythm: BreathRhythm; seed: number} | null {
+    const owner = trip.owner;
+    if (!owner) return null;
+    const known = rhythms.get(owner.animal);
+    if (known !== undefined) return known;
+    const seed = depthSeed(owner.animal.id);
+    const rhythm = breathRhythm(waterLife(owner.slug, owner.profile), owner.animal.length, seed);
+    const found = rhythm ? {rhythm, seed} : null;
+    rhythms.set(owner.animal, found);
+    return found;
+}
+
 /** How far up into its breath it is now (0 down in its band, 1 at the surface), on its trip at `epochSeconds`. */
 export function tripBreath(trip: Trip, epochSeconds: number): number {
+    // (Lane B6: its own rhythm, wherever it is in the water. A pod's member comes up with its leader, up to 3 s after it.)
+    const own = tripRhythm(trip);
+    if (own) {
+        if (!tripInWater(trip, epochSeconds)) return 0;
+        // (Not in a recipe's episode at its place, a seal's chase after fish: the episode has its pose, and its own way
+        // up and down. On its way there it breathes as ever.)
+        if (trip.recipe && epochSeconds >= trip.arrive) return 0;
+        const lead = trip.shadow?.trips.find((t) => epochSeconds >= t.start && epochSeconds < t.end);
+        const leader = lead ? tripRhythm(lead) : null;
+        return leader ? rhythmBreath(leader.rhythm, leader.seed, epochSeconds - own.seed * 3) : rhythmBreath(own.rhythm, own.seed, epochSeconds);
+    }
     // A school's or pod's member swimming at its leader's side breathes with its leader.
     if (trip.shadow) {
         const lead = trip.shadow.trips.find((t) => epochSeconds >= t.start && epochSeconds < t.end);

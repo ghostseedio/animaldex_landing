@@ -26,7 +26,7 @@ test("water life: each kind's way of life in the water, from its family or its p
     assert.deepEqual(wrong, []);
 });
 
-test("water life: the never-stop swimmers swim all slot and asleep; an ambusher and the animals of the shore have no patrol", () => {
+test("water life: the never-stop swimmers swim all slot (and have a slower pace for sleep); an ambusher and the animals of the shore have no patrol", () => {
     for (const slug of ["european-pilchard", "bluefin-tuna", "great-white-shark", "orca"]) {
         const rule = patrolRule(life(slug));
         assert.ok(rule && rule.share[0] === 1 && rule.asleep! > 0 && rule.asleep! < rule.pace, `${slug}: all slot, slower asleep`);

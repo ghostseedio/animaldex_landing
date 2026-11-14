@@ -5,7 +5,8 @@
  * slot hanging there on a land animal's beats, so a pilchard swam a third of its day and a tuna slept on the spot.
  *
  * - `cruiser`: never stops (tunas, mackerel, herrings, jacks, billfish, open-water sharks, mantas): it swims its
- *   whole slot along a patrol through its range, and asleep keeps swimming, slower.
+ *   whole slot along a patrol through its range (asleep it still hangs at its roost: its slow round asleep was
+ *   withdrawn, water.md "Left"; the rule's `asleep` pace is kept for it).
  * - `cetacean`: whales and dolphins: the same, at a traveller's pace, up for air on its own rhythm (`breathRhythm`).
  * - `rover`: most other fish, sea turtles, manatees, squid: patrols for most of a slot, then hangs a while.
  * - `reef`: a fish of the reef or of cover: short swims about a small patch, hovering between.
@@ -68,7 +69,7 @@ export type PatrolRule = {
     share: [number, number];
     /** Its pace as a share of its kind's cruise (`locomotion/swim.ts` swimPaces). */
     pace: number;
-    /** Asleep it keeps swimming at this share of its cruise (absent: it sleeps where it sleeps). */
+    /** Asleep it would keep swimming at this share of its cruise (absent: it sleeps where it sleeps). Not read yet: water.md "Left". */
     asleep?: number;
     /** Its patrol's width against its everyday range (`behaviour-schedule.ts` homeRadius). */
     reach: number;
