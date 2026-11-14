@@ -71,6 +71,8 @@ float arkCloudShade(vec3 world) {
  */
 export const MARKER_LIGHT_GLSL = `
 vec3 arkMarkerLight(float daylight) {
-    return mix(vec3(0.28, 0.325, 0.42), vec3(1.0), smoothstep(0.34, 1.0, daylight));
+    // (From the blue hour's level up: the land is at its darkest between sunset and moonlight, daylight 0.34 to 0.46,
+    // and the markers hold their night level through it.)
+    return mix(vec3(0.28, 0.325, 0.42), vec3(1.0), smoothstep(0.46, 1.0, daylight));
 }
 `;
