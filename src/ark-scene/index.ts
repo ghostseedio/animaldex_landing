@@ -5412,7 +5412,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // The least distance its whole body is in the picture from: its height in the view's height, its length (seen
         // three-quarters on) in the view's width. A giraffe's close-up on an upright phone showed its legs and belly.
         const tangent = 2 * Math.tan((FOV * Math.PI) / 360);
-        const whole = Math.max(entry.drawnHeight / (0.7 * tangent), (entry.length * 0.8) / (0.85 * tangent * Math.max(width / Math.max(height, 1), 0.3)));
+        // (Its height as the view's middle sees it: the view looks at a point between its feet and its middle, so what
+        // must fit is twice the longer way from there, up to its head or down to its feet.)
+        const lookY = flight ? flight.to.y : controls.target.y;
+        const tall = 2 * Math.max(at.y + entry.drawnHeight / 2 - lookY, lookY - (at.y - entry.drawnHeight / 2), entry.drawnHeight / 2);
+        const whole = Math.max(tall / (0.66 * tangent), (entry.length * 0.8) / (0.85 * tangent * Math.max(width / Math.max(height, 1), 0.3)));
         const nearest = Math.max(controls.minDistance, entry.length * 1.6 + 0.4, whole);
         // Landed: the flight to it has ended (what moves the view after that is the animal, until someone touches it).
         if (flight && flight === clearedFlight) clearFlying = true;
@@ -5455,7 +5459,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // as it stands; that flight is then looked at like any other. A few times a selection at most.
         if (!flight && !clearSearch && pointers === 0 && clearLandedAt > 0 && (lastTouch <= clearLandedAt + 0.05 || followId === entry.animal.id) && clearRecentres < 8) {
             const viewDistance = camera.position.distanceTo(controls.target);
-            if (controls.target.distanceTo(at) > Math.max(entry.length * 0.6, viewDistance * 0.14)) {
+            // (Sideways from the view's middle, or out of its height: the view rests at an animal's feet, not its middle.)
+            const aside = Math.hypot(controls.target.x - at.x, controls.target.z - at.z);
+            const above = Math.abs(controls.target.y - at.y) - entry.drawnHeight / 2;
+            if (aside > Math.max(entry.length * 0.6, viewDistance * 0.14) || above > viewDistance * 0.14) {
                 if (!clearDriftSince) clearDriftSince = now;
                 else if (now - clearDriftSince > 0.5) {
                     clearDriftSince = 0;
