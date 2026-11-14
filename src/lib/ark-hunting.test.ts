@@ -10,7 +10,7 @@ import fixtureEvents from "@/ark-scene/fixtures/events.json";
 import {decodeArkEvents, decodeArkMealEncounter, planArkReplay} from "@/lib/ark-life";
 import {decodeArkHunting, decodeArkHuntingResponse} from "@/lib/ark-hunting";
 import {ENCOUNTER_AGREE} from "@/ark-scene/acts";
-import {HUNT_STATION_AGREE, HuntingLayer, type HuntPose} from "@/ark-scene/hunting";
+import {HUNT_WAIT_AGREE, HuntingLayer, type HuntPose} from "@/ark-scene/hunting";
 import {ARK_DAY_MS, decodeAtlas, forayAt, homeOf, sheetOf, stepIndex} from "@/ark-scene/positions/positions";
 import type {ArkAnimal} from "@/ark-scene/types";
 
@@ -88,9 +88,10 @@ test("forays: a due predator is at the module's waypoint at every step, walks be
     for (const k of [7700, 7701, 7750, 8000]) {
         const at = layer.pose(animal, epochAt(k / 96), 1, ground, sched)!;
         const w = forayAt(atlas, home, animal.id, k);
-        // (At the waypoint, or one that waits at its waiting place for it: `HUNT_STATION_AGREE`, inside the chase's 5 m.)
-        assert.ok(Math.hypot(at.x - w.x, at.z - w.z) <= HUNT_STATION_AGREE + 1e-6, `at step ${k} it is where the server has it`);
-        assert.ok(HUNT_STATION_AGREE < ENCOUNTER_AGREE);
+        // (At the waypoint, or one that waits, or is too slow for its foray, at its waiting place for it: within
+        // `HUNT_WAIT_AGREE` on its home's side, inside the chase's 5 m.)
+        assert.ok(Math.hypot(at.x - w.x, at.z - w.z) <= HUNT_WAIT_AGREE + 1e-6, `at step ${k} it is where the server has it`);
+        assert.ok(HUNT_WAIT_AGREE < ENCOUNTER_AGREE);
         // Half a step on: on its way to the next waypoint, never further from both than they are from each other.
         const mid = layer.pose(animal, epochAt((k + 0.5) / 96), 1, ground, sched)!;
         const w1 = forayAt(atlas, home, animal.id, k + 1);
@@ -108,7 +109,7 @@ test("forays: a due predator is at the module's waypoint at every step, walks be
     assert.ok(start === null || Math.hypot(start.x, start.z) < 0.01, "it sets off from where its schedule has it");
     const end = layer.pose(animal, epochAt((k0 + 1) / 96 - 1e-9), 1, ground, sched)!;
     const first = forayAt(atlas, home, animal.id, k0 + 1);
-    assert.ok(Math.hypot(end.x - first.x, end.z - first.z) <= HUNT_STATION_AGREE + 0.01, "it arrives at its first waypoint");
+    assert.ok(Math.hypot(end.x - first.x, end.z - first.z) <= HUNT_WAIT_AGREE + 0.01, "it arrives at its first waypoint");
     const begun = layer.pose(animal, epochAt((k0 + 1) / 96 + 1e-9), 1, ground, sched)!;
     assert.ok(Math.hypot(end.x - begun.x, end.z - begun.z) < 0.01, "and the hunt begins where it arrived");
     // Islands mode: the same animal on the town island has no home in the (wild island's) atlas: never a foray.

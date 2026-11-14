@@ -29,6 +29,8 @@ import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, swimSpeedOf, 
 import type {ArkBeat, HoursAt, ScheduleAnimal, ScheduleWorld, Spot, Trip, TripMode, TripPose} from "@/ark-scene/behaviour-schedule";
 import type {AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import {hashString} from "@/ark-scene/world";
+import {intelProfile} from "@/ark-scene/intelligence-profile";
+import {accelTime, fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
 import {buildQuarry, quarryAt, type QuarryLook, type QuarryNow, type QuarryTrack} from "@/ark-scene/recipe-hunt";
 
 // MARK: Species data
@@ -592,20 +594,38 @@ function pace(profile: ArkBehaviourProfile, length: number): number {
 }
 
 /**
+ * A recipe's run, flight or clash (behaviours pass 2026-11, B1; asked by the land lane): L1's own paces, not the
+ * profile's covering-ground gait, which since the land lane is a trot (a zebra's recipe run was 2.5 m/s, a lion's dash
+ * 3.1). A hunt's fast leg (the rush at its prey) is its sprint (`sprintPace`); a run and a flight are its held flee
+ * (`fleePace`, about two thirds of it); a clash's charge four fifths of that. Never under its walk. Over a leg of
+ * `distance` it gets up to that pace from standing in L1's own time (`accelTime`), so a cat's one-metre rush is a
+ * third of a second at 3 m/s, not a tenth at 10; with no distance given (a reach's estimate) seven tenths of the pace.
+ */
+export function recipeDash(block: "run" | "flee" | "clash", profile: ArkBehaviourProfile, length: number, fast = false, distance?: number): number {
+    const body = {plan: intelProfile(profile.slug).plan, slug: profile.slug, length: Math.max(length, 0.01), speedStat: profile.speed};
+    const walk = pace(profile, length);
+    const top = Math.max(block === "clash" ? fleePace(body) * 0.8 : fast ? sprintPace(body) : fleePace(body), walk);
+    if (distance === undefined || !(distance > 0)) return Math.max(top * 0.7, walk);
+    // From standing: up to its pace at a steady pull over `accelTime`, then on at it.
+    const pull = accelTime(body.length);
+    const reach = (top * pull) / 2;
+    const seconds = distance < reach ? Math.sqrt((2 * distance * pull) / top) : pull + (distance - reach) / top;
+    return Math.max(distance / seconds, walk);
+}
+
+/**
  * A travel block's speed (m/s) for this animal, never faster than its clips carry it (behaviour's corrected clip
  * paces, so its feet never slide): walking at its walk's pace (`walk`, from `bodyLengthsPerSecond`), running at its
  * run's (`runFactor`: one with no run clip walks it), in the water at its schedule's own swimming pace (its free pace
  * times 1.4: a harbour seal chasing fish swam at a fixed 0.3 m/s, 2.1 times its clip's).
  */
-function speedOf(block: BlockDef, walk: number, height: number, profile: ArkBehaviourProfile, length: number, fast = false): number {
-    const runs = Math.min(runFactor(profile), 2.3);
+function speedOf(block: BlockDef, walk: number, height: number, profile: ArkBehaviourProfile, length: number, fast = false, distance?: number): number {
     const swim = fast ? swimBurst(profile, length) : swimCruise(profile, length);
     switch (block.id) {
         case "run":
         case "flee":
-            return walk * runs * (fast ? RUN_SPRINT : 1);
         case "clash":
-            return walk * Math.min(runs, 2.1);
+            return recipeDash(block.id, profile, length, fast, distance);
         case "stalk":
             return walk * 0.35;
         case "wade":
@@ -925,15 +945,27 @@ function walkableAt(world: ScheduleWorld, x: number, z: number): boolean {
     return world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.2) && !(colliders?.blocked?.(x, z, LEG_RADIUS) ?? false);
 }
 
-/** Whether a leg's way, sampled every quarter metre or so, stays where `ok` says (and, on the ground, crosses no collider). */
+/**
+ * Whether a leg's way stays where `ok` says (and, on the ground, crosses no collider). In the air and the water it is
+ * sampled every quarter metre or so. On the ground every `GROUND_SAMPLE` (4 cm: behaviours pass 2026-11, B1): a cat's
+ * one-metre rush clipped the corner of a walk-grid cell that is not walkable for 16 cm between two quarter-metre
+ * samples, and the same at any stalk's end.
+ */
+const GROUND_SAMPLE = 0.04;
 function wayClear(from: P, c: {x: number; z: number} | null, c2: {x: number; z: number} | null, to: P, ok: (x: number, z: number) => boolean, ground = false): boolean {
-    const n = Math.min(Math.max(Math.ceil(Math.hypot(to.x - from.x, to.z - from.z) / 0.25), 3), 60);
+    const flat = Math.hypot(to.x - from.x, to.z - from.z);
+    // (A curved way is longer than its chord: half as many again; a long ground leg at most a thousand samples.)
+    const n = ground ? Math.min(Math.max(Math.ceil((flat * (c || c2 ? 1.5 : 1)) / GROUND_SAMPLE), 3), 1000) : Math.min(Math.max(Math.ceil(flat / 0.25), 3), 60);
     let last = {x: from.x, z: from.z};
     for (let j = 1; j <= n; j++) {
         const at = j === n ? {x: to.x, z: to.z} : legAt(from, c, c2, to, j / n);
         if (j < n && !ok(at.x, at.z)) return false;
-        if (ground && colliders && !colliders.segmentClear(last.x, last.z, at.x, at.z, LEG_RADIUS)) return false;
-        last = at;
+        // (The colliders by segments of a quarter metre or so, as before: they are swept, not sampled.)
+        if (ground && colliders && (j === n || j % 6 === 0)) {
+            if (!colliders.segmentClear(last.x, last.z, at.x, at.z, LEG_RADIUS)) return false;
+            last = at;
+        }
+        if (!ground) last = at;
     }
     return true;
 }
@@ -1237,7 +1269,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
                         ? 0.5 + 0.25 * timing()
                         : // A pair's travel times come from the pair's geometry (the same for both sides) at the slower one's pace;
                           // rivals walk up to each other slowly and stiffly (half their walk).
-                          (ctx.pair ? Math.hypot(target.x - pos.x, target.z - pos.z) : distance) / (speedOf(block, walk, height, owner.profile, length, step.fast) * (ctx.pair && !step.role && block.id === "walk" ? 0.5 : 1));
+                          (ctx.pair ? Math.hypot(target.x - pos.x, target.z - pos.z) : distance) / (speedOf(block, walk, height, owner.profile, length, step.fast, ctx.pair ? Math.hypot(target.x - pos.x, target.z - pos.z) : distance) * (ctx.pair && !step.role && block.id === "walk" ? 0.5 : 1));
             const flat = Math.hypot(target.x - pos.x, target.z - pos.z);
             const face: P | null = step.face === "other" && ctx.pair ? ctx.pair.other : step.face === "water" ? waterFace(world, pos, length, yaw) : null;
             // Its heading (behaviour's no-spin rule): a leg curves on from the way it was going and it faces along the
@@ -1277,7 +1309,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
             const turning = block.motion === "travel" && !ctx.pair && flat > 0.03 ? (Math.abs(legTurn(pos, curve?.c ?? null, curve?.c2 ?? null, target, 1, yawIn)) * 1.2) / rate : 0;
             // (On its own it goes the curve's length at its pace, however long that takes: a leg is never sped up past its
             // clip. A pair keeps the template's bounds, the same on both sides.)
-            const curved = ctx.pair || !TIMED_BY_LENGTH.has(block.id) || flat <= 0.03 ? travelSeconds : legLength(pos, curve?.c ?? null, curve?.c2 ?? null, target) / speedOf(block, walk, height, owner.profile, length, step.fast);
+            const curved = ctx.pair || !TIMED_BY_LENGTH.has(block.id) || flat <= 0.03 ? travelSeconds : legLength(pos, curve?.c ?? null, curve?.c2 ?? null, target) / speedOf(block, walk, height, owner.profile, length, step.fast, legLength(pos, curve?.c ?? null, curve?.c2 ?? null, target));
             const bounded = step.s ? (ctx.pair ? Math.min(Math.max(curved, step.s[0]), step.s[1]) : Math.max(curved, step.s[0])) : curved;
             const seconds = block.motion === "travel" ? Math.max(bounded, 0.2, turning) : Math.max(draw, 0.3);
             // It stops while it still has time to get back at its own pace (a pair keeps the shared reserve: both sides stop together).

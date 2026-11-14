@@ -70,7 +70,7 @@ how it moves, its diet, its company, its water kind and its flight style; the fo
 
 | Style | Who (rule) | What is drawn |
 |---|---|---|
-| `wait` | an ambusher that is no mammal, a sessile or clinging animal: crocodiles, snakes, frogs, lizards, spiders, mantises | still most of the step, looking round now and then; moves on in one brisk go; holds its place while the waypoints stay within 3.2 m of it (a grid of waiting places about its home) |
+| `wait` | an ambusher that is no mammal, a sessile or clinging animal: crocodiles, snakes, frogs, lizards, spiders, mantises | still most of the step, looking round now and then; moves on in one brisk go; its waiting place is the waypoint drawn in towards its home by 4.2 m (`HUNT_WAIT_AGREE`), so it keeps to a small round inside the waypoints' and stays at its home while they are within 4.2 m of it |
 | `stalk` | a stalker, a mammal that ambushes, other pursuers: lion, tiger, marten, otter | a prowl at half its walk's pace, in one to three bouts, stopping to look |
 | `forage` | everything else on foot, and fish with no hunt style: boar, monkeys, meerkats, geese, tortoises, tetras | ambles at 0.65 of its walk, in bouts, nose down between them |
 | `course` | a pack hunter, a social flesh-eating pursuer: wolf, hyena | a stop to look at each waypoint, then on at a trot along a long figure of eight through the waypoints |
@@ -173,8 +173,9 @@ waypoint, else the waypoint itself. So the hunter must be within 5 m of `forayAt
 
 - A hunter on the move, and one that stalks, forages or cruises, is **at** the waypoint at each step's moment: its
   loops and bouts all start and end there.
-- One that waits or lurks is at its waiting place: at most 3.11 m off (half the diagonal of the 4.4 m grid; the cell's
-  centre is used only when it is within `HUNT_STATION_AGREE`, 3.2 m, and on ground or water it can be on).
+- One that waits or lurks, and a walker too slow for its foray, is at its waiting place: the waypoint drawn in towards
+  its home by at most `HUNT_WAIT_AGREE`, 4.2 m (0.8 m inside the chase's 5 m), used only where it is on ground or water
+  it can be on.
 - A perch hunter sits on a perch found within 3.2 m; a bird that comes down over water it cannot stand in takes the
   nearest standable place within 3.2 m, else holds in the air over the waypoint.
 
@@ -270,3 +271,74 @@ snapshot (`--part recipes --per-species 1`). 20 species hunt ambient prey; 788 h
 4. **Food links by size.** A white-throated kingfisher eats an agouti twice its length; buzzards and hawks eat
    pheasants, egrets and ducks longer than themselves. The scene cuts away from 344 more pairs than before.
 5. **The tick's lag** decides whether a kill can be shown as it happens.
+
+## On the merged tree (2026-11-14): the record
+
+Everything above was measured on this lane's own branch. The five lanes merged on `ark-behaviour-pass` (85d693d5) change
+two things under it: the land lane's true walking paces (a lion walks 1.07 m/s, a chameleon 0.04, a tortoise 0.04 to
+0.06) and the needs lane's feeding in bouts. Branch `ark-beh-fix-hunt` holds the fixes below; the numbers here are the
+audit tool on that branch (the real snapshot, 277 predators of 193 species on the schedule) and are the final ones.
+
+| Forays | Lane's branch | Merged tree, fixed |
+|---|---|---|
+| Walkers' share of time moving, median (max) | 40% (85%) | 29% (85%, the coursers) |
+| Walkers' speed while moving ÷ own walk, median (p10, p90) | 0.79 (0.70, 2.44) | 0.79 (0.61, 3.3) |
+| Worst distance from the server's waypoint at a step | 3.20 m | 4.16 m (the limit 5 m) |
+| Walker hand-overs: top speed ÷ own walk, median / p90 | 1.18 / 2.4 | 1.18 / 2.3 |
+| Walker hand-overs over the animal's sprint | 35 | 13 |
+| Largest jump at a hand-over | 0.40 m | 0.14 m |
+
+Flyers, swimmers and the meal chases are as above (flight at 0.85 of cruise, 9 heights; swimmers 0.63 of cruise; 449
+stoops, 243 on foot, 599 cut-aways).
+
+1. **A slow hunter that waits walked most of the time.** With true paces a veiled chameleon (walk 0.04 m/s) needed
+   most of each step to reach its next waiting place and moved 55% of the time. No pace of its own covers the server's
+   foray: its waypoint moves metres every 34.5 s. Fixed in two parts. Its waiting place is now the waypoint drawn in
+   towards its home by 4.2 m (it was a 4.4 m grid, at most 3.1 m off), which more than halves the way it must go and
+   leaves it at home while the waypoints are near; the same for a walker too slow for its foray (half a step at its walk
+   under a typical leg: the tortoises). And it moves on at its own pace unless that would take over three tenths of the
+   step; only then does it hurry, up to its sprint. Measured: chameleon 55% → 20% of the time moving, a saltwater
+   crocodile 25% → 13%, a Komodo dragon 24% → 10%, a Hermann's tortoise 20%. What is left is honest and not natural:
+   when the chameleon moves it goes at a median 0.24 m/s, six times its walk, and a tortoise at two and a half to four
+   times its walk. Only the server can mend that (notes 1 and 2 below).
+2. **A cat's rush clipped a corner of ground it cannot walk.** `behaviour-recipes.ts` `wayClear` sampled a ground leg
+   every quarter metre; a one-metre rush crossed 16 cm of a non-walkable walk-grid cell between two samples. It now
+   samples the ground every 4 cm (the colliders are swept by segments as before).
+3. **"osprey: some caught (3), some missed (0)"** was the test's sample, not the catch rate. With feeding in bouts an
+   osprey dives two or three times a day (2 in the audit's day, 3 in the test's; 10 before the merge), and three dives
+   at 60% are all caught one day in five. Over a fortnight: 36 dives, 22 caught (61%). The test now judges on a
+   fortnight when a day has under 12 hunts; its assertion is unchanged.
+4. **Recipe runs were a trot.** Since the land lane a recipe's `run`, `flee` and `clash` took the profile's
+   covering-ground gait. They now take L1's paces (`recipeDash`): the rush at prey its sprint, a run and a flight its
+   held flee, a clash's charge four fifths of that, each from standing in L1's own acceleration time.
+
+   | Recipe speed (m/s) | Before the land lane | Merged | Fixed |
+   |---|---|---|---|
+   | Plains zebra, a flight over 20 m | 6.3 | 2.51 | 9.18 |
+   | European hare, a run over 20 m | | 2.55 | 8.79 |
+   | Domestic cat, the rush over 1 m | | 1.57 | 3.02 |
+   | Red deer, a clash's charge over 4 m | | 2.07 | 4.85 |
+   | Lion, a fast dash over 6 m | 6.1 | 3.11 | 7.92 |
+
+   (The first column is the land lane's report; the others were measured here.)
+5. **The card on a foray: one rule.** `hunt-word.ts` `forayIsHunt`: a foray is "hunting" when its style is any but the
+   two foragers' (`forage`, `glean`), or when the profile itself stalks (the needs lane's rule). `huntStyle` gives a
+   flesh-eater with no stored hunt style, whose profile stalks, the `stalk` style (a badger), so no forager's card says
+   hunting on land. Measured over the 193 species: every `wait`, `stalk`, `course`, `lurk`, `cruise`, `soar`, `perch` and
+   `wade` species says "hunting"; of 69 `forage` species 59 say "looking for food", 6 "grazing", 4 "browsing"; of 40
+   `glean` species 33 "food", 3 "flowers" and 4 "hunting" (the cormorants and their like: fishing). A wolf: course,
+   hunting. A great blue heron and a great egret: wade, hunting. A greylag goose: forage, grazing. The sunbirds: glean,
+   at flowers. A Hermann's tortoise: forage, grazing; a red-footed tortoise: forage, looking for food. A bullfrog
+   waiting for insects: wait, hunting (it was "looking for food").
+6. **`hover_drop`** (not changed; the air lane's): a common buzzard now makes 55 hover-and-drop hunts a day with 221
+   strikes (97 and 333 before the merge).
+
+Recipe hunts on the merged tree, a day of one animal: white-throated kingfisher 105 plunges, great cormorant 58,
+buzzard 55, great egret 41, small-clawed otter 35 (it was 102), European otter 26 (73% at night), grey heron 19,
+osprey 2. Stalk slots a day: a lion 18, a tiger 12, a wolf 51, a pine marten 67; a limpkin 157 and a northern
+snakehead 110, all still (for lane B3: those two are far more than any other).
+
+Limits moved, with the measurement: the waiters' agreement from 3.2 m to 4.2 m (`HUNT_WAIT_AGREE`; worst measured
+4.16 m against the chase's 5 m), and the waiters' pace bound in `ark-hunt-styles.test.ts` from 1.3 times a trot to
+1.3 times the sprint (the hurry is the design; the chameleon's 0.56 m/s at most is under its stored sprint, 3.86 m/s,
+which is itself far too high for a chameleon: lane B4's).
