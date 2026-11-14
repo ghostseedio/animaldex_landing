@@ -34,10 +34,33 @@ export type ChaseKind = "glide" | "bound" | "slither" | "dart" | "swoop" | "cuta
 /** Hoppers by name: the body plan says "mammal" for a rabbit as for a lion. */
 const HOPPERS = /(rabbit|hare|jackrabbit|kangaroo|wallaby|wallaroo|jerboa|springhare|pademelon|quokka|bettong|potoroo|frog|toad)/;
 
-export function chaseKind(input: {predatorSlug: string; predatorPlan: string | null; predatorWater: boolean; preyWater: boolean; predatorFlies: boolean}): ChaseKind {
+/** The biggest prey a bird that swoops takes from the air (prey length over its own): past this the scene cuts away. */
+export const SWOOP_PREY_MOST = 1.25;
+/** And the biggest any other bird takes on foot. */
+export const BIRD_PREY_MOST = 1.2;
+
+export function chaseKind(input: {
+    predatorSlug: string;
+    predatorPlan: string | null;
+    predatorWater: boolean;
+    preyWater: boolean;
+    predatorFlies: boolean;
+    /** It takes prey from the air (a raptor, an owl, a kingfisher: `hunting.ts` swoopsOnPrey). Absent: any flying bird does, as before. */
+    swoops?: boolean;
+    /** The prey's length over the predator's, when known. */
+    ratio?: number;
+}): ChaseKind {
     const plan = input.predatorPlan ?? "";
     // Birds come from the air, onto land or the water's surface; a penguin can't.
-    if ((plan === "bird" || input.predatorFlies) && !/penguin/.test(input.predatorSlug)) return "swoop";
+    if ((plan === "bird" || input.predatorFlies) && !/penguin/.test(input.predatorSlug)) {
+        // (Behaviours pass, B1: only a bird that hunts from the air stoops. A heron, a thrush or a hen takes its prey on
+        // foot; a duck, a grebe or a cormorant on the water is a cut-away, as any swimmer the chase cannot draw. And no
+        // bird stoops on, or runs down, an animal much bigger than itself: the meal is the server's, the scene cuts away.)
+        const ratio = input.ratio ?? 0;
+        if (input.swoops ?? true) return ratio > SWOOP_PREY_MOST ? "cutaway" : "swoop";
+        if (plan !== "bird" || input.predatorWater || input.preyWater || ratio > BIRD_PREY_MOST) return "cutaway";
+        return "glide";
+    }
     if (SWIMMING_PLANS.has(plan) || plan === "ray") return input.predatorWater && input.preyWater ? "dart" : "cutaway";
     if (input.predatorWater || input.preyWater) return "cutaway";
     if (plan === "snake") return "slither";
@@ -254,7 +277,37 @@ export type ChaseOptions = {
     /** The two are where the server says (`encounterBodies`): the hunter starts from its waypoint, however far (up to
      *  40 m), closing the gap in its stalk; otherwise a far one comes into view nearer. */
     exact?: boolean;
+    /** How its kind takes prey on land or in the water (`ChaseStyle`); a rush when absent. */
+    style?: ChaseStyle;
+    /** A bird that hunts from a perch (an owl, a kingfisher, a shrike): a short low glide, not a stoop from height. */
+    low?: boolean;
 };
+
+/**
+ * How a kind takes its prey (behaviours pass 2026-11, lane B1; `hunting.ts` chaseStyleOf gives each species its own):
+ * - rush: stalks in, low, then a short sprint and a lunge (a cat, most hunters; the chase as it was);
+ * - pounce: stalks close, freezes, and leaps onto it in a high arc (a fox, a small cat);
+ * - course: no stalk to speak of: it comes on at a trot and runs its prey down over a long chase (a wolf, a hyena, a
+ *   wild dog), the prey holding its lead for the first seconds;
+ * - strike: it does not run at all: it creeps the last of the way (or waits) and strikes from where it is (a snake, a
+ *   crocodile, a frog, a chameleon, a mantis, a heron). One found far from its prey comes into view near it: an
+ *   ambusher's prey comes to it.
+ */
+export type ChaseStyle = "rush" | "pounce" | "course" | "strike";
+
+/** How long the hunter is seen eating before the act ends (s): longer for a big meal, short for a mouthful. */
+export function eatSeconds(predatorLength: number, preyLength: number): number {
+    return 1.4 + 1.2 * Math.min(Math.max(preyLength / Math.max(predatorLength, 0.01), 0), 1);
+}
+
+/**
+ * A rusher breaks cover from at most this far (m): the server finds prey 5 to 18 m off, and from 16 m a cat's whole
+ * hunt was a crouch and a sprint, the stalk never seen. From 9 m it stalks the rest of the way in first.
+ */
+const RUSH_FROM_MOST = 9;
+/** A stalk closes the gap at up to this share of its sprint (a slinking trot), over at most STALK_MOST seconds. */
+const STALK_PACE_MOST = 0.35;
+const STALK_MOST = 7;
 
 function rng(seed: string): () => number {
     let h = 2166136261;
@@ -279,6 +332,8 @@ const steer = (from: number, to: number, max: number) => from + Math.max(Math.mi
 type Sample = {x: number; z: number; y: number; yaw: number; v: number; state: string; pitch: number; hidden?: boolean; dim?: number; scale?: number};
 
 const DT = 1 / 60;
+/** A raptor flies off with prey under this share of its own length; a longer one it eats on the ground. */
+export const SWOOP_CARRY_MOST = 0.5;
 /** Lunged at, the prey runs on straight at this share of its pace (the catch lands where it will be). */
 const LUNGE_PREY = 0.85;
 
@@ -354,11 +409,18 @@ function sampleAt(list: Sample[], t: number): Sample {
 function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: ChaseOptions): Run {
     const random = rng(o.seed ?? `${predator.x.toFixed(2)},${prey.x.toFixed(2)}`);
     const swim = kind === "dart";
+    const style: ChaseStyle = kind === "slither" ? "strike" : swim ? "rush" : o.style ?? "rush";
+    const strikes = style === "strike";
+    const courses = style === "course";
+    const pounces = style === "pounce";
     const flee: FleeStyle = o.flee ?? (swim ? "swim" : "run");
     const lp = Math.max(predator.length, 0.05);
     const lq = Math.max(prey.length, 0.05);
     const vp = swim ? chasePace(predator, "burst") : chasePace(predator, "sprint");
-    const vq = flee === "still" ? 0 : Math.min(swim || flee === "swim" ? chasePace(prey, "burst") : chasePace(prey, "flee"), vp * 0.72);
+    // (Run down over a long chase, the prey holds more of its lead at first.)
+    // (And it runs flat out, at its own sprint, not the held flee of a startled herd.)
+    const vq = flee === "still" ? 0 : Math.min(swim || flee === "swim" ? chasePace(prey, "burst") : courses ? chasePace(prey, "sprint") : chasePace(prey, "flee"), vp * (courses ? 0.86 : 0.72));
+    const tireAfter = courses ? 5 : 3.5;
     const vs = swim ? Math.max(vp * 0.25, 0.15) : Math.min(chasePace(predator, "stalk"), vp * 0.3);
     const ok = (x: number, z: number, water: boolean) => (water ? (o.water ? o.water(x, z) : true) : o.clear ? o.clear(x, z) : true);
     let dx = prey.x - predator.x;
@@ -373,13 +435,19 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
     const mouth = lp * 0.5;
     // Where it breaks cover: about 1.3 s of its sprint off (a chase of three or four seconds once the prey bolts and
     // darts; a snake, its strike's reach).
-    const launch = kind === "slither" ? lp * 0.7 + lq * 0.5 + mouth : Math.min(Math.max(vp * 1.3, lp * 2.5, 3), 16) + mouth;
-    const stalkFor = kind === "slither" ? 3.2 : 2.6;
+    // (By style: a striker from its strike's reach, a snake's seven tenths of its length, another's nine; a pouncer
+    // from three or four of its lengths; a courser from far off, it has no need of cover.)
+    const launch = strikes ? lp * (kind === "slither" ? 0.7 : 0.9) + lq * 0.5 + mouth : pounces ? Math.min(Math.max(lp * 3.5, 1.5), 8) + mouth : courses ? Math.min(Math.max(vp * 2.6, 10), 30) + mouth : Math.min(Math.max(vp * 1.3, lp * 2.5, 3), o.style ? RUSH_FROM_MOST : 16) + mouth;
+    const stalkFor = strikes ? 3.2 : 2.6;
     // From the server's positions it starts from its waypoint and closes faster (up to a slinking trot) to keep the
     // stalk to a few seconds; otherwise it comes into view from its side, at most this far off.
-    const exact = Boolean(o.exact) && distance <= 40;
-    const approach = exact ? Math.max(vs, (distance - launch) / 4.5) : vs;
-    const reach = exact ? Infinity : launch + vs * stalkFor;
+    // (Behaviours pass, B1: never faster than a slinking trot, `STALK_PACE_MOST` of its sprint, over at most
+    // `STALK_MOST` seconds, else it too comes into view nearer: a far one's stalk was a run at up to 5 m/s. One that
+    // strikes never crosses the ground to its prey: a snake does not run down a mouse over 40 m.)
+    const exact = Boolean(o.exact) && distance <= 40 && !strikes;
+    const stalkTime = exact && !o.style ? 4.5 : STALK_MOST;
+    const approach = exact ? Math.max(vs, Math.min((distance - launch) / 4.5, o.style ? vp * STALK_PACE_MOST : Infinity)) : vs;
+    const reach = exact ? launch + approach * stalkTime : launch + vs * stalkFor;
     const from = distance > reach ? {x: prey.x - dir.x * reach, z: prey.z - dir.z * reach} : {x: predator.x, z: predator.z};
     const face = heading(dir.x, dir.z);
     const ground = (x: number, z: number) => groundAt(x, z);
@@ -412,7 +480,10 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
     const turnQ = Math.min(Math.max(8 / Math.pow(lq, 0.4), 2.5), 12);
     let preyDim = 0;
     let lastStride = 0;
-    const maxT = 14;
+    let leap = 0;
+    // (It is seen eating longer over a big meal: 1.4 s as before with no style given.)
+    const eats = o.style ? eatSeconds(lp, lq) : 1.4;
+    const maxT = courses ? 17 : 14;
     for (let i = 0; ; i++) {
         const t = i * DT;
         let predState = "stalk";
@@ -430,7 +501,7 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
                 // The stalk (a snake's creep): straight at it, slow and low, until it is near enough to break.
                 p.yaw = steer(p.yaw, toPrey, turnP * DT);
                 const crouchFirst = gap <= launch;
-                if (crouchFirst || t > 0.35 + (exact ? 4.5 : stalkFor) * 1.2) {
+                if (crouchFirst || t > 0.35 + (exact ? stalkTime : stalkFor) * 1.2) {
                     if (crouchFirst && t < 0.85) {
                         predState = "freeze";
                     } else {
@@ -451,7 +522,7 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
             }
             if (tLaunch >= 0 && tLunge < 0) {
                 const since = t - tLaunch;
-                if (kind === "slither") {
+                if (strikes) {
                     tLunge = t;
                 } else {
                     predState = "run";
@@ -469,7 +540,7 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
                         puffs.push({x: p.x, y: ground(p.x, p.z), z: p.z, size: lp * 0.35, kind: "dust"});
                     }
                     // Near enough (or it tires of it), with nothing between: the lunge.
-                    if ((gap - mouth <= lq * 0.35 + lp * 0.25 || since > 6.5) && lineClear(p.x, p.z, q.x, q.z, (x, z) => ok(x, z, predWater), mouth + lq * 0.5)) tLunge = t;
+                    if ((gap - mouth <= lq * 0.35 + lp * (pounces ? 1.1 : 0.25) || since > (courses ? 9.5 : 6.5)) && lineClear(p.x, p.z, q.x, q.z, (x, z) => ok(x, z, predWater), mouth + lq * 0.5)) tLunge = t;
                 }
                 if (tFlee < 0 && t >= tLaunch + react && flee !== "still") {
                     tFlee = t;
@@ -481,7 +552,7 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
             }
             if (tLunge >= 0 && tc < 0 && t >= tLunge) {
                 // The lunge, the pounce, the strike: onto it, its mouth on the prey where the prey will be.
-                const span = kind === "slither" ? 0.24 : 0.32;
+                const span = strikes ? 0.24 : pounces ? 0.42 : 0.32;
                 if (t === tLunge) {
                     lungeFrom = {x: p.x, z: p.z};
                     // Where the prey will be at the catch: on along its way, at its lunging pace (it darts no more).
@@ -497,15 +568,17 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
                 p.x = lerp(lungeFrom.x, lungeTo.x, e);
                 p.z = lerp(lungeFrom.z, lungeTo.z, e);
                 p.yaw = steer(p.yaw, heading(lungeTo.x - lungeFrom.x + 1e-9, lungeTo.z - lungeFrom.z), turnP * 2 * DT);
-                predState = kind === "slither" ? "strike" : swim ? "strike" : "leap";
-                predPitch = kind === "slither" ? 0.05 : 0.18 * Math.sin(Math.PI * u);
+                predState = strikes ? "strike" : swim ? "strike" : "leap";
+                predPitch = strikes ? 0.05 : 0.18 * Math.sin(Math.PI * u);
+                // (A pounce goes up and comes down on it: half its length high.)
+                leap = pounces ? lp * 0.55 * Math.sin(Math.PI * u) : 0;
                 if (u >= 1) tc = t;
             }
             // The prey: grazing, then bolting and darting, slowing as it tires; round what is in its way.
             if (tFlee >= 0 && tc < 0) {
                 const since = t - tFlee;
-                const tire = since > 3.5 ? Math.max(1 - (since - 3.5) * 0.45, 0.3) : 1;
-                const lunging = tLunge >= 0 && kind !== "slither";
+                const tire = since > tireAfter ? Math.max(1 - (since - tireAfter) * 0.45, 0.3) : 1;
+                const lunging = tLunge >= 0 && !strikes;
                 if (lunging && lungeSpeed < 0) lungeSpeed = q.v * LUNGE_PREY;
                 q.v = lunging ? lungeSpeed : vq * Math.min(since / 0.35, 1) * tire;
                 const away = heading(q.x - p.x, q.z - p.z);
@@ -527,7 +600,8 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
             // Caught: it stands over it (eases to a stop a little on), head down; the prey sinks and fades.
             const after = t - tc;
             predState = "eat";
-            predPitch = (kind === "slither" ? 0.05 : 0.14) * Math.min(after / 0.3, 1) + 0.03 * Math.sin(after * 9) * Math.min(after / 0.3, 1);
+            predPitch = (strikes ? 0.05 : 0.14) * Math.min(after / 0.3, 1) + 0.03 * Math.sin(after * 9) * Math.min(after / 0.3, 1);
+            leap = 0;
             p.v = 0;
             preyState = "eat";
             preyDim = Math.min(after / 0.5, 1);
@@ -535,10 +609,10 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
         }
         // (In the water every way of going is a swim, the lunge a strike.)
         if (predWater) predState = predState === "leap" ? "strike" : predState === "eat" ? "eat" : "swim";
-        pred.push({x: p.x, z: p.z, y: yOf(predator, p.x, p.z, predWater), yaw: p.yaw, v: p.v, state: predState, pitch: predWater ? 0 : predPitch});
+        pred.push({x: p.x, z: p.z, y: yOf(predator, p.x, p.z, predWater) + (predWater ? 0 : leap), yaw: p.yaw, v: p.v, state: predState, pitch: predWater ? 0 : predPitch});
         const preyY = flee === "fly" && tc < 0 ? q.y : flee === "fly" ? Math.max(q.y - (t - tc) * 3, yOf(prey, q.x, q.z, false)) : yOf(prey, q.x, q.z, preyWater);
         prq.push({x: q.x, z: q.z, y: preyY - (tc >= 0 ? prey.height * 0.25 * preyDim : 0), yaw: q.yaw, v: q.v, state: preyState, pitch: preyPitch, dim: preyDim, scale: 1 - 0.85 * preyDim, hidden: tc >= 0 && t >= tc + 0.55});
-        if (tc >= 0 && t >= tc + 1.4) break;
+        if (tc >= 0 && t >= tc + eats) break;
         // Never let it run on: past `maxT` (its way to the prey blocked all along, or a hunter whose clip caps its sprint
         // below its prey's pace) it lunges whatever is between, and the catch comes at once after that. (Without the
         // `tc < 0` the loop reset the catch every step and never ended.)
@@ -587,7 +661,8 @@ function swoopChase(predator: ActBody, prey: ActBody, o: ChaseOptions): Run {
     const face = heading(dir.x, dir.z);
     const reach = Math.min(distance, 22);
     const from = {x: prey.x - dir.x * reach, z: prey.z - dir.z * reach};
-    const altitude = Math.max(predator.base > 2 ? predator.base : Math.max(predator.base, 0) + Math.max(8, lp * 9), Math.max(prey.base, 0) + 6);
+    // (From a perch, a short low glide: an owl, a kingfisher, a shrike. Else over, high, and the stoop.)
+    const altitude = o.low ? Math.max(predator.base > 2 ? Math.min(predator.base, Math.max(prey.base, 0) + 6) : Math.max(predator.base, 0) + Math.max(3, lp * 5), Math.max(prey.base, 0) + 2.5) : Math.max(predator.base > 2 ? predator.base : Math.max(predator.base, 0) + Math.max(8, lp * 9), Math.max(prey.base, 0) + 6);
     const cruise = Math.min(Math.max(lp * 7, 5), 14);
     const stoop = chasePace(predator, "dive");
     // Over toward it (from where it is: up into the air first when it stands), then the stoop from about 10 m out.
@@ -605,8 +680,10 @@ function swoopChase(predator: ActBody, prey: ActBody, o: ChaseOptions): Run {
     const prq: Sample[] = [];
     const q = {x: prey.x, z: prey.z, yaw: prey.yaw, v: 0, y: prey.base};
     const away = face + (random() < 0.5 ? -1 : 1) * (0.3 + 0.5 * random());
-    const carry = lq < lp * 0.75;
-    const end = tc + 1.6;
+    // (It carries off what is under half its own length, about a tenth of its weight; a bigger kill it mantles and eats
+    // where it fell. Behaviours pass, B1: it was three quarters, a buzzard flying off with a pheasant.)
+    const carry = lq < lp * (o.style || o.low !== undefined ? SWOOP_CARRY_MOST : 0.75);
+    const end = tc + (carry || !(o.style || o.low !== undefined) ? 1.6 : Math.max(eatSeconds(lp, lq), 1.6));
     for (let t = 0; t <= end + 1e-9; t += DT) {
         let state = "rest";
         if (t >= tFlee && t < tc) {
