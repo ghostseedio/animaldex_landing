@@ -17,7 +17,7 @@ import type {Camera, Mesh, Object3D, PerspectiveCamera, Scene, Vector3, WebGLRen
 import type {ModelLibrary} from "@/ark-scene/models";
 import type {QualityTier} from "@/ark-scene/post";
 import {arkBudget, arkCaps, GRASS_BUILD, overBudget, type ArkCaps} from "@/ark-scene/runtime/budgets";
-import {CameraObstacles, collideCamera, dampingFor, FollowSmoother, WheelGlide} from "@/ark-scene/runtime/camera";
+import {CameraObstacles, collideCamera, dampingFor, FollowSmoother, WheelGlide, type CameraObstacle} from "@/ark-scene/runtime/camera";
 import {refreshPeriod, RenderGovernor, type ArkPower, type ArkRenderMode} from "@/ark-scene/runtime/governor";
 import {ShaderHold, type HoldRenderer, type ShaderHoldStats} from "@/ark-scene/runtime/hold";
 import {FrameBudget, LoadPlanner, warmShaders} from "@/ark-scene/runtime/load";
@@ -116,6 +116,11 @@ export type ArkRuntimeContext = {
     renderTarget: () => WebGLRenderTarget | null;
     /** Part C: the one world's ground (the town's inside its square), for the camera's floor; absent: the wild island's. */
     groundAt?: (x: number, z: number) => number;
+    /**
+     * Part C: the other island's solid things for the camera's body (the town's buildings, world frame), once it is in
+     * the world; null until then. Asked until answered, then added to the scene's own once.
+     */
+    islandObstacles?: () => CameraObstacle[] | null;
 };
 
 /** The grass to build for the device's first tier (`buildVegetation`). */
@@ -159,6 +164,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     const recording = Boolean(ctx.options.recording);
     const ui = recording ? null : new RuntimeUi(ctx.el, {resetLabel: ctx.options.resetLabel, resetButton: ctx.options.resetButton, loadingBar: ctx.options.loadingBar, reducedMotion: Boolean(ctx.options.reducedMotion)}, () => resetView());
     let obstacles: CameraObstacles | null = null;
+    let islandObstaclesIn = false;
     let firstFrameMs: number | null = null;
     let shaders: ArkRuntimeStats["shaders"] = "pending";
     let warming = false;
@@ -212,11 +218,6 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
     const evictedAt = new Map<string, number>();
     ctx.library.gate = (slug, level) => {
         if (level !== "near" || !evictedAt.has(slug)) return true;
-        // (The kind the reader just chose is asked for again at once.)
-        if (planner.isWanted(slug)) {
-            evictedAt.delete(slug);
-            return true;
-        }
         if (planner.nearestInView(slug) > NEAR_AGAIN_WITHIN) return false;
         evictedAt.delete(slug);
         return true;
@@ -285,9 +286,13 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         lastBudget = now;
         const tier = ctx.tier();
         const budget = arkBudget(tier);
+        // (Kept as if drawn near now: the species the reader chose and is flying to, `library.urgent`; and a level in
+        // its first three seconds. Neither has been drawn near yet, so each was let go the moment it arrived whenever
+        // the budget's check fell on that frame, and loaded again.)
+        const used = (level: {slug: string; at: number}) => (level.slug === ctx.library.urgent || now - level.at < 3 ? now : lastNear.get(level.slug) ?? 0);
         const levels = ctx.library.levels().flatMap((level) => [
-            {slug: level.slug, level: level.level, bytes: level.texture, texture: true, lastNear: lastNear.get(level.slug) ?? 0},
-            {slug: level.slug, level: level.level, bytes: level.geometry, texture: false, lastNear: lastNear.get(level.slug) ?? 0}
+            {slug: level.slug, level: level.level, bytes: level.texture, texture: true, lastNear: used(level)},
+            {slug: level.slug, level: level.level, bytes: level.geometry, texture: false, lastNear: used(level)}
         ]);
         for (const drop of overBudget(levels, budget, now)) {
             ctx.dropNear(drop.slug);
@@ -469,6 +474,13 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         collide(target: Vector3, dt: number, closeUp: boolean) {
             // Built once (every fill tree, with its rank); a tier's share is applied at the query.
             obstacles ??= CameraObstacles.forScene();
+            if (!islandObstaclesIn) {
+                const more = ctx.islandObstacles?.() ?? null;
+                if (more) {
+                    for (const obstacle of more) obstacles.add(obstacle);
+                    islandObstaclesIn = true;
+                }
+            }
             const fill = ctx.fillShare(ctx.tier());
             // The scene's rules (keepInWorld): under the sea it keeps its own floor; the eye's height over the ground
             // is a quarter of the view distance, 3 cm to 1.2 m.
@@ -489,16 +501,6 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
 
         endFollow() {
             follow.reset();
-        },
-
-        /**
-         * The reader chose an animal of this kind and the camera is on its way: its far and near models are asked for
-         * now and loaded first, so they come in during the flight instead of being asked for at its end.
-         */
-        wanted(slug: string) {
-            if (!ctx.library.has(slug)) return;
-            planner.want(slug);
-            ctx.library.request(slug, "near");
         },
 
         /** One animal of a species seen this frame (the load order; a far model asked for once it is in view and near enough). */
@@ -650,7 +652,7 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
                 inView = planner.nearestVisible(viewSettled ? FAR_IN_VIEW[ctx.tier()] : Math.min(FIRST_VIEW_KINDS, FAR_IN_VIEW[ctx.tier()]));
                 for (const slug of inView) if (ctx.library.has(slug)) ctx.library.request(slug, "far");
                 // Queued far models of kinds the camera has left (the opening flight's path) give way to what is in view.
-                if (drawn % 64 === 1) pruned += ctx.library.prune((slug, level) => level === "near" || planner.recent(slug) || upfront.has(slug) || planner.isWanted(slug));
+                if (drawn % 64 === 1) pruned += ctx.library.prune((slug, level) => level === "near" || planner.recent(slug) || upfront.has(slug));
             }
             planner.endFrame();
             pace.begin();

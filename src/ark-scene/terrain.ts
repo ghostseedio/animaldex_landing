@@ -903,8 +903,16 @@ const WATER_VERTEX = `
 #include <common>
 #include <fog_pars_vertex>
 varying vec3 vWorld;
+#ifdef ARK_TIDAL
+// The v2 river's tidal reach (\`water-level.ts\` tidalFreshLevel): its last stretch eased onto the sea's level.
+attribute float arkTidal;
+uniform float tideLevel;
+#endif
 void main() {
     vec4 world = modelMatrix * vec4(position, 1.0);
+    #ifdef ARK_TIDAL
+    world.y += (tideLevel - world.y) * arkTidal;
+    #endif
     vWorld = world.xyz;
     vec4 mvPosition = viewMatrix * world;
     gl_Position = projectionMatrix * mvPosition;
@@ -924,6 +932,11 @@ uniform vec4 islandPatch;
 // Its chunks as drawn (r 1 drawn, 0 not): its sea floor only under a drawn chunk; elsewhere the open sea (never its
 // shallows showing white where its land is not drawn).
 uniform sampler2D islandDrawn;
+// The open sea's depth past the depth maps (m), and whether a map's last metres ease into it (0: no, as before). The
+// v2 island's map holds 12 m at its square's edge (the town's 16 m) where the open sea was 10 m: each square showed
+// as a darker rectangle in the sea from the whole views (graphics pass 2026-11-14).
+uniform float openDepth;
+uniform float seamBlend;
 uniform vec3 deep;
 uniform vec3 open;
 uniform vec3 shallow;
@@ -978,11 +991,13 @@ void main() {
     // The river flows (graphics pass): ripples carried downstream, streaks of foam over the shallows and stones.
     float flowing = smoothstep(0.42, 0.5, atFull.a) * inside;
     vec2 flowDir = vec2(cos((atFull.a - 0.5) * 6.2831853), sin((atFull.a - 0.5) * 6.2831853));
-    float depth = mix(10.0, at.r * 12.0, inside) + seaLevel;
+    vec2 uvEdge = min(uv, 1.0 - uv);
+    float depth = mix(openDepth, at.r * 12.0, inside * mix(1.0, smoothstep(0.0, 0.03, min(uvEdge.x, uvEdge.y)), seamBlend)) + seaLevel;
     vec2 uvIsland = (vWorld.xz - islandPatch.xy + islandPatch.z) / (2.0 * islandPatch.z);
     float onIsland = step(0.5, islandPatch.w) * step(0.0, uvIsland.x) * step(uvIsland.x, 1.0) * step(0.0, uvIsland.y) * step(uvIsland.y, 1.0) * (1.0 - inside);
     onIsland *= step(0.5, texture2D(islandDrawn, clamp(uvIsland, 0.0, 1.0)).r);
-    depth = mix(depth, texture2D(islandDepth, clamp(uvIsland, 0.0, 1.0)).r * islandPatch.w + seaLevel, onIsland);
+    vec2 uvIslandEdge = min(uvIsland, 1.0 - uvIsland);
+    depth = mix(depth, mix(openDepth, texture2D(islandDepth, clamp(uvIsland, 0.0, 1.0)).r * islandPatch.w, mix(1.0, smoothstep(0.0, 0.03, min(uvIslandEdge.x, uvIslandEdge.y)), seamBlend)) + seaLevel, onIsland);
     float reefy = at.g * inside;
     float fresh = at.b * inside;
     // The lake and the river keep their own level; the sea, with the tide, is drawn everywhere else.
@@ -1070,6 +1085,9 @@ function waterMesh(depth: DataTexture, fresh = false): {mesh: Mesh; material: Sh
                 islandDepth: {value: null},
                 islandPatch: {value: new Vector4(0, 0, 1, 0)},
                 islandDrawn: {value: null},
+                // (Today's island: 10 m and no easing, exactly as before.)
+                openDepth: {value: arkWorld() === "v2" ? 12 : 10},
+                seamBlend: {value: arkWorld() === "v2" ? 1 : 0},
                 deep: {value: srgb(WATER.deep)},
                 open: {value: srgb(WATER.open)},
                 shallow: {value: srgb(WATER.shallow)},
@@ -1147,6 +1165,10 @@ export function buildLandscape(grid: ChunkGrid = chunkGridFor(TERRAIN_HALF, SEGM
         freshWater.mesh.geometry = freshWaterGeometry(arrays as GroundArrays & {freshLevels: Float32Array});
         freshWater.mesh.frustumCulled = false;
         freshWater.material.uniforms.lake.value = WILD_LAKE_COLOUR.clone();
+        // The river meets the sea at the sea's level, whatever the tide (its geometry's `arkTidal`).
+        freshWater.material.defines = {...freshWater.material.defines, ARK_TIDAL: ""};
+        freshWater.material.uniforms.tideLevel = ARK_ENV.seaLevel;
+        freshWater.material.needsUpdate = true;
     }
     ground.add(freshWater.mesh);
     return {

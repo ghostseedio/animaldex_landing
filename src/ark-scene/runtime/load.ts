@@ -28,29 +28,6 @@ const UNSEEN = 1e6;
 export class LoadPlanner {
     private frame = 0;
     private readonly seen = new Map<string, Sighting>();
-    /** Kinds the reader chose (a flight to one has begun), each until a frame number: first in the queue meanwhile. */
-    private readonly wanted = new Map<string, number>();
-
-    /**
-     * The reader chose this kind (selected one of its animals; the camera is on its way): its levels load before
-     * everything else for the next `frames` drawn frames. The load order went by distance to the camera alone, so
-     * at the start of a flight from the island view the kind flown to ranked behind every kind near where the camera
-     * still was, and its near model was only asked for when the camera came within the near distance at the flight's
-     * end.
-     */
-    want(slug: string, frames = 600) {
-        this.wanted.set(slug, this.frame + frames);
-    }
-
-    /** Chosen by the reader lately (`want`). */
-    isWanted(slug: string): boolean {
-        const until = this.wanted.get(slug);
-        if (until === undefined) return false;
-        if (this.frame <= until) return true;
-        this.wanted.delete(slug);
-        return false;
-    }
-
     /** One animal of a species this frame: how far from the camera, and whether it is in view. */
     see(slug: string, distance: number, visible: boolean) {
         const known = this.seen.get(slug);
@@ -94,8 +71,6 @@ export class LoadPlanner {
 
     /** Lower first. Near and far of one species rank together (the far one is asked for first). */
     priority(slug: string, level: "near" | "far"): number {
-        // (The kind the reader chose: before everything, its far level first.)
-        if (this.wanted.size && this.isWanted(slug)) return level === "near" ? -0.5 : -1;
         const known = this.seen.get(slug);
         const base = !known || this.frame - known.frame > FRESH_FRAMES ? UNSEEN : known.distance * (known.visible ? 1 : OUT_OF_VIEW);
         // A near level only ever matters close by; just behind its own far level.
