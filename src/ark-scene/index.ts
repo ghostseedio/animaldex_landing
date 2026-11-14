@@ -297,11 +297,21 @@ const RESTING_AT_ROOST = ["resting", "AtRoost"].join("");
  * (nearest first; the rest as specks), how near the camera a member must be to be drawn at all (m), and how near for its
  * kind's far model to be asked for (m). Specks and figures are a copied matrix each: no schedule, no rig.
  */
-const RESTING_FIGURE_BUDGET = {high: 400, medium: 120, low: 60} as const;
+const RESTING_FIGURE_BUDGET = {high: 400, medium: 200, low: 120} as const;
 const RESTING_DRAW_WITHIN = 150;
 const RESTING_LOAD_WITHIN = 70;
 /** How many resting kinds (nearest the camera) are drawn as their models: each one a draw call and a far model. */
 const RESTING_FIGURE_KINDS = {high: 64, medium: 16, low: 8} as const;
+/**
+ * Animal rendering lane (2026-11-14): a resting kind with a member big on screen (the herds' own `HERD_SPECK_BELOW_PIXELS`)
+ * is drawn as its model before any other, up to this many kinds: a speck is a few-pixel stand-in, never a clay figure
+ * beside the reader's own cat (the town's yards and aviaries, 16 to 35 kinds big on screen at once on a phone).
+ * The figure budget went up with it (it was 120 and 60: a yard's cats and dogs took all of it, and the six kinds
+ * beside them stayed specks 50 px tall).
+ */
+const RESTING_FIGURE_KINDS_BIG = {high: 96, medium: 48, low: 32} as const;
+/** Past `RESTING_LOAD_WITHIN` a resting kind's model is asked for only when it is this many times the speck size on screen (an elephant across the zoo). */
+const RESTING_BIG_FAR = 3;
 /** A resting speck's tint before its kind's model is in (by body plan). */
 const RESTING_SPECK_COLOURS: Record<string, Color> = {"": new Color("#8f8670"), mammal: new Color("#8f7f66"), bird: new Color("#9a8a72"), fish: new Color("#7f97a3"), reptile: new Color("#7d8660"), turtle: new Color("#7d8660")};
 
@@ -2497,29 +2507,50 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (Lane TB: only the resting kinds nearest the camera are drawn as their models: a draw call and a far model each;
         // every other resting animal in reach is a speck, one mesh for all.)
         const figureKinds = new Set<string>();
+        /** The resting kinds in the order they take the figure budget: the kinds drawn as models first, nearest first. */
+        let restingOrdered = restingGroups;
         if (!restingOff && restingGroups.length) {
-            const nearest: Array<[string, number]> = [];
+            const nearest: Array<[string, number, boolean]> = [];
+            const perPixelNow = 2 * Math.tan(FOV * Math.PI / 360) / height;
+            let bigKinds = 0;
             for (const group of restingGroups) {
                 group.figures = 0;
                 group.specks = 0;
                 // (Its nearest member in view: a kind behind the camera never takes a model's place.)
                 let d = Infinity;
+                // (And whether that member is big on screen: then a speck would be a generic figure in plain sight.)
+                let big = false;
+                const sizeUp = 1 + (exaggerate - 1) * Math.min(Math.max(1.6 / group.length, 0.25), 1);
                 for (const m of group.members) {
                     const dm = (m.x - cameraPosition.x) ** 2 + (m.z - cameraPosition.z) ** 2;
-                    if (dm >= d || dm > RESTING_LOAD_WITHIN ** 2) continue;
+                    if (dm >= d || dm > RESTING_DRAW_WITHIN ** 2) continue;
                     restingPoint.set(m.x, Math.max(m.ground, 0) + group.height * 0.5, m.z);
-                    if (frustum.containsPoint(restingPoint)) d = dm;
+                    if (!frustum.containsPoint(restingPoint)) continue;
+                    const pixels = group.length * sizeUp / (perPixelNow * Math.max(cameraPosition.distanceTo(restingPoint), 0.01));
+                    // (Past the loading reach only a kind several times the speck size on screen counts at all.)
+                    if (dm > RESTING_LOAD_WITHIN ** 2 && pixels < HERD_SPECK_BELOW_PIXELS * RESTING_BIG_FAR) continue;
+                    d = dm;
+                    big = pixels >= HERD_SPECK_BELOW_PIXELS;
                 }
-                if (d < RESTING_LOAD_WITHIN ** 2) nearest.push([group.slug, d]);
+                if (d < Infinity) {
+                    nearest.push([group.slug, d, big]);
+                    if (big) bigKinds++;
+                }
             }
-            nearest.sort((a, b) => a[1] - b[1]);
-            for (const [slug, d] of nearest.slice(0, RESTING_FIGURE_KINDS[budgetTier])) {
+            // The kinds big on screen first, then the nearest: the first get their models whatever the usual count.
+            nearest.sort((a, b) => Number(b[2]) - Number(a[2]) || a[1] - b[1]);
+            const kindRank = new Map<string, number>();
+            for (const [slug, d] of nearest.slice(0, Math.max(RESTING_FIGURE_KINDS[budgetTier], Math.min(bigKinds, RESTING_FIGURE_KINDS_BIG[budgetTier])))) {
+                kindRank.set(slug, figureKinds.size);
                 figureKinds.add(slug);
                 // (Ranked for loading as a kind seen this frame at its nearest resting member's distance.)
                 runtime.see(slug, Math.sqrt(d), true);
             }
+            // (The figure budget in that order too: it was spent in the snapshot's order, so a kind across the town
+            // could take the figures of the one in front of the camera.)
+            if (figureKinds.size) restingOrdered = restingGroups.slice().sort((a, b) => (kindRank.get(a.slug) ?? 1e9) - (kindRank.get(b.slug) ?? 1e9));
         }
-        for (const herd of groups) {
+        for (const herd of restingOrdered === restingGroups ? groups : [...herds, ...restingOrdered]) {
             const resting = "resting" in herd;
             let budget = resting ? (figureKinds.has(herd.slug) ? restingBudget : 0) : herdBudget;
             herd.middles.fill(Number.NaN);
