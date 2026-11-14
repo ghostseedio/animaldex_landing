@@ -40,7 +40,7 @@ import {topOf, waterSurfaceOf} from "@/ark-scene/behaviour-water";
 import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {animalPersonality} from "@/lib/ark-clock";
-import {hashString} from "@/ark-scene/world";
+import {hashString, TERRAIN_HALF} from "@/ark-scene/world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import type {ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
@@ -48,6 +48,7 @@ import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, al
 import {breathRhythm, patrolRule, shoreSide, waterLife} from "@/ark-scene/water-life";
 import {speciesDepth} from "@/ark-scene/sea-depth";
 import {patrolLength, patrolRoute, turnRadiusOf} from "@/ark-scene/water-patrol";
+import {COURSE_TURN, courseAt, courseOf, courseWay, type Course} from "@/ark-scene/water-course";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {swimPaces} from "@/ark-scene/locomotion/swim";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
@@ -1467,7 +1468,7 @@ const LOOK_BACK = 6;
 /** Its intent before the walk check: planned, and kept in the water if it lives there. */
 function placedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
     return remember(memoOf(world, hoursAt, animal).placed, slot, () => {
-        const planned = keepToSide(world, profile, animal, activity, keepInWater(world, profile, animal, plannedIntent(world, profile, animal, activity, slot, hoursAt)), slot, hoursAt);
+        const planned = onCourse(world, profile, animal, keepToSide(world, profile, animal, activity, keepInWater(world, profile, animal, plannedIntent(world, profile, animal, activity, slot, hoursAt)), slot, hoursAt), slot);
         // (Collisions: a ground goal its body fits at; a perch up on a rock or a tree its body fits on.)
         if (!planned.to || planned.follow || aquatic(profile)) return planned;
         // (Its roost is made clear once, by `roostOf`, the same for everyone who asks: not moved again here.)
@@ -1757,6 +1758,91 @@ function keepToSide(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     return {doing, to: spot, mode: "ground", stay: beats()};
 }
 
+// MARK: Courses (water fixes on the merged tree)
+
+/** One of a kind that never stops swimming (`water-life.ts` patrolRule: a tuna, a pilchard, a shark, a whale, a dolphin; a jellyfish drifting). */
+function neverStops(profile: ArkBehaviourProfile): boolean {
+    return aquatic(profile) && (patrolRule(waterLife(profile.slug, profile))?.share[0] ?? 0) >= 1;
+}
+
+/** A patrol's pace (m/s) before a slot's or an animal's own share of it: its kind's cruise for its size times its way of life's share (`waterPatrol`). */
+function patrolPace(profile: ArkBehaviourProfile, length: number): number {
+    const life = waterLife(profile.slug, profile);
+    const rule = patrolRule(life);
+    if (!rule) return swimSpeedOf(profile, length);
+    const L = Math.max(length, 0.02);
+    const style = locoStyle(profile.slug).swim;
+    // (One with no swimming style of its own, a seal, a sea turtle, a squid: a swimmer's cruise for its size. Its free
+    // pace is held to its walk clip's cadence, and a sea lion swam at 0.1 m/s. A drifter keeps its own slow pace.)
+    const cruise = style ? swimPaces(L, style).cruise : life === "drifter" ? swimSpeedOf(profile, L) * 0.7 : swimPaces(L, "subcarangiform").cruise;
+    return cruise * rule.pace;
+}
+
+/**
+ * A never-stop swimmer's course (`water-course.ts`): the one smooth curve it patrols, a closed form of the time, so
+ * slot after slot is one unbroken swim. For a cruiser or a cetacean that is no group's member (a member keeps by its
+ * leader, who is on its course); its loop as wide as its range allows and no tighter than its turning circle
+ * (`turnRadiusOf`), over water deep enough for it all the way round, looked for outwards from its home. Null where its
+ * water has no room for one (it patrols slot by slot as before, `waterPatrol`). Worked out once per world and animal.
+ */
+let courses = new WeakMap<ScheduleWorld, WeakMap<ScheduleAnimal, Course | null>>();
+function courseFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal): Course | null {
+    if (animal.group || !aquatic(profile) || amphibious(profile)) return null;
+    let byAnimal = courses.get(world);
+    if (!byAnimal) courses.set(world, (byAnimal = new WeakMap()));
+    const known = byAnimal.get(animal);
+    if (known !== undefined) return known;
+    const life = waterLife(profile.slug, profile);
+    const rule = patrolRule(life);
+    let course: Course | null = null;
+    if (rule && rule.share[0] >= 1 && life !== "drifter") {
+        const L = Math.max(animal.length, 0.02);
+        const random = rng(hashString(`${animal.id}#course`));
+        const pace = patrolPace(profile, L) * (0.92 + 0.16 * random());
+        const least = COURSE_TURN * turnRadiusOf(L, pace);
+        // (As wide as its range, within its cap where a predator's or its prey's ground is near; its turning circle first.)
+        const want = Math.max(Math.min(homeRadius(profile, animal) * rule.reach, rangeCap(profile, animal)) / 1.3, least);
+        const need = Math.min(Math.max(L * 0.5, 0.3), 2);
+        const half = (world.sampler.half ?? TERRAIN_HALF) - 2;
+        const mid = world.sampler.centre ?? {x: 0, z: 0};
+        course = courseOf({
+            home: animal.home,
+            want,
+            least,
+            pace,
+            margin: Math.min(L * 0.5, 8),
+            reach: want * 2 + 20,
+            turn: hashString(`${animal.id}#round`) % 2 ? 1 : -1,
+            random,
+            // (The walk grid's cell: a ring looked at every 2 m is every cell of it.)
+            cell: 2,
+            wet: (x, z) => Math.abs(x - mid.x) < half && Math.abs(z - mid.z) < half && world.nav.swimmable(x, z, need)
+        });
+    }
+    byAnimal.set(animal, course);
+    return course;
+}
+
+/**
+ * A never-stop swimmer's own goal in the water, on its course: where its course has it when the slot ends, heading
+ * the way the course does there, in place of a spot drawn in its range (which its turning circle could not reach in
+ * the slot: `water-course.ts`). What the slot is for stays its own (a swim, a forage). Not its roost, a recipe's
+ * place, a watch on a predator, nor a member's place by its leader.
+ */
+function onCourse(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, planned: Intent, slot: number): Intent {
+    if (!planned.to || planned.follow || planned.recipe || planned.face !== undefined || planned.mode !== "water") return planned;
+    if (planned.doing === "sleep" || planned.doing === "to_roost" || planned.doing === "breathe" || planned.doing === "watch") return planned;
+    const course = courseFor(world, profile, animal);
+    if (!course) return planned;
+    const at = courseAt(course, slotStart(animal, slot) + SLOT_SECONDS);
+    // (Its depth as any water goal's, `waterSpot`, the slot's own.)
+    const floor = world.sampler.heightAt(at.x, at.z);
+    const level = surfaceAt(world, at.x, at.z);
+    const dive = rng(hashString(`${animal.id}#depth#${slot}`))();
+    const y = Math.min(Math.max(floor + animal.length * 0.6, Math.min(level - animal.length * 0.4 - dive * Math.max(surfaceY(world, at.x, at.z) - floor - animal.length, 0), level - 0.2)), level);
+    return {...planned, to: {x: at.x, y, z: at.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: [], heading: at.yaw};
+}
+
 function plannedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
     // A sitter with eggs in its nest (the props lane's nests: `behaviour-recipes.ts` sitterIntent) sits on it, awake or asleep.
     const start = slotStart(animal, slot);
@@ -1914,7 +2000,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     }
     // A flocking species' member flies with its leader when its leader is in the air (most of the time, not always).
     // A school keeps together nearly always (a loose cluster round its leader).
-    if (group && (FLOCKING.has(profile.social) || pod(profile)) && (flyer || aquatic(profile)) && random() < (aquatic(profile) ? 0.9 : 0.75)) {
+    if (group && (FLOCKING.has(profile.social) || pod(profile)) && (flyer || aquatic(profile)) && random() < (neverStops(profile) ? 2 : aquatic(profile) ? 0.9 : 0.75)) {
         const lead = leaderIntentAt(world, group, start + 1, hoursAt);
         // Its place is by its leader; what it does there is its own (a school's fish feed or cruise, a flock's birds fly),
         // so a school is one shape but not one state (problem 7).
@@ -2194,12 +2280,23 @@ function placeStay(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
     return {beats: out, finish: {...at, x, y: onGround ? y : at.y, z, yaw}};
 }
 
-/** A flock member's place beside its leader this slot, and its leader's trips over the slot. */
-function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): {trips: Trip[]; dx: number; dy: number; dz: number; finish: Spot} {
+/** A flock member's place beside its leader this slot (`place`, as its trip carries it), its leader's trips over the slot, and where the slot leaves it. */
+type Shadow = {trips: Trip[]; dx: number; dy: number; dz: number; finish: Spot; place: NonNullable<Trip["shadow"]>};
+function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): Shadow {
+    // (Remembered: the trip and the next slot's start both ask, and a water follower's room by its leader is kept by its place.)
+    return remember(memoOf(world, hoursAt, animal).shadows, slot, () => workShadowOf(world, animal, slot, hoursAt));
+}
+
+function workShadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, hoursAt: HoursAt): Shadow {
     const group = animal.group!;
     const start = slotStart(animal, slot);
     const end = start + SLOT_SECONDS;
-    const random = rng(hashString(`${animal.id}#flock#${slot}`));
+    // (Water fixes on the merged tree.) One that lives in the water, a school's fish, a pod's whale: its place is in the
+    // water, wherever its leader is in it (`ShadowWater`). In a group that never stops swimming its place is its own for
+    // good and drifts slowly (`steady`), where it was drawn anew each slot and reached by a dash.
+    const waterOnly = aquatic(group.profile) && !amphibious(group.profile) && !flies(group.profile);
+    const steady = waterOnly && neverStops(group.profile);
+    const random = rng(hashString(steady ? `${animal.id}#flock` : `${animal.id}#flock#${slot}`));
     const first = tripAt(world, group.profile, group.leader, start, hoursAt, group.activity);
     const trips = [first];
     if (first.end < end) trips.push(tripAt(world, group.profile, group.leader, first.end, hoursAt, group.activity, first));
@@ -2211,6 +2308,7 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
     // (Lane B6: a school or a pod in the water keeps closer, 0.6 of a flock's spacing: twelve pilchards were 5.5 lengths from their
     // nearest neighbour, where a school's fish are about one.)
     const spread = Math.max(animal.length, 0.3) * (1 + 0.35 * Math.sqrt(group.rank)) * (aquatic(group.profile) ? 0.6 : 1);
+    const water: ShadowWater | null = waterOnly ? {need: Math.min(Math.max(animal.length * 0.5, 0.3), 2), reach: bodyReachOf(animal, group.profile.slug), steady, t1: 0, t2: 0, p1: 0, p2: 0} : null;
     // (On the ground, a place by its leader it can stand at the slot's end: else it slid to the nearest open cell over
     // the slot's last seconds, sideways or backwards, the default view's sparrow. A few seeded tries, then that.)
     // (On its own bearing from its leader, as a herd member's own side (`memberSide`), each slot a little off it, wider
@@ -2221,12 +2319,30 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
         const d = (0.8 + random() * 2.2) * spread;
         dx = Math.cos(a) * d;
         dz = Math.sin(a) * d;
-        if (at.aloft || at.y < surfaceY(world, at.x, at.z) || world.nav.walkable(at.x + dx, at.z + dz)) break;
+        // (One that lives in the water: a place over water it can swim. Its leader afloat at the surface, a whale in a
+        // sea shallower than it is long, read as a leader on the ground, and the tries looked for land to stand on: a
+        // blue whale's follower lay 60 m inland in a house.)
+        if (water ? steady || waterFits(world, water, at.x + dx, at.z + dz) : at.aloft || at.y < surfaceY(world, at.x, at.z) || world.nav.walkable(at.x + dx, at.z + dz)) break;
     }
+    if (water && steady) {
+        // (Its place turns about its leader and comes nearer and goes further, slowly: at most about a seventh of its
+        // patrol's pace, so it swims its leader's way, never across it.)
+        const pace = Math.max(patrolPace(group.profile, animal.length), 1e-3);
+        const period = (k: number) => Math.min(Math.max((k * Math.hypot(dx, dz)) / pace, 20), 600);
+        water.t1 = period(25) * (0.8 + 0.4 * random());
+        water.t2 = period(17) * (0.8 + 0.4 * random());
+        water.p1 = random() * Math.PI * 2;
+        water.p2 = random() * Math.PI * 2;
+    }
+    const place: NonNullable<Trip["shadow"]> = water ? {trips, dx, dy, dz, water} : {trips, dx, dy, dz};
     const fx = at.x + dx;
     const fz = at.z + dz;
     let finish: Spot;
-    if (at.aloft) finish = {x: fx, y: at.y + dy, z: fz, nx: 0, ny: 1, nz: 0, point: null};
+    if (water) {
+        // (Where its place by its leader is as the slot ends, squeezed in where the water is narrow: `shadowPoint`.)
+        const p = shadowPoint(world, at, place, end, 1);
+        finish = {x: p.x, y: p.y, z: p.z, nx: 0, ny: 1, nz: 0, point: null, yaw: p.yaw};
+    } else if (at.aloft) finish = {x: fx, y: at.y + dy, z: fz, nx: 0, ny: 1, nz: 0, point: null};
     else if (at.y < surfaceY(world, at.x, at.z) || wet(world, {x: fx, z: fz})) {
         const top = surfaceY(world, fx, fz);
         finish = {x: fx, y: Math.min(Math.max(at.y + dy, world.sampler.heightAt(fx, fz) + 0.2), at.y >= surfaceY(world, at.x, at.z) - 0.01 ? top : top - 0.15), z: fz, nx: 0, ny: 1, nz: 0, point: null};
@@ -2243,7 +2359,7 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
         const lead = stationOf(world, group.profile, group.leader, rule, bout);
         if (Math.hypot(at.x - lead.x, at.z - lead.z) < Math.max(3, animal.length * 16)) finish = stationOf(world, group.profile, animal, rule, bout);
     }
-    return {trips, dx, dy, dz, finish};
+    return {trips, dx, dy, dz, finish, place};
 }
 
 /**
@@ -2269,7 +2385,7 @@ function arrivalYaw(animal: ScheduleAnimal, slot: number, now: Intent, before: S
     const roll = rng(hashString(still ? `${animal.id}#yaw#at#${Math.round(to.x * 2)},${Math.round(to.z * 2)}` : `${animal.id}#yaw#${slot}`))();
     const from = before && !still ? before : animal.home;
     const away = Math.hypot(to.x - from.x, to.z - from.z);
-    return now.face ?? (away > 0.5 ? Math.atan2(to.x - from.x, to.z - from.z) + (roll - 0.5) * (from === before ? 0.3 : 1.2) : roll * Math.PI * 2);
+    return now.face ?? now.heading ?? (away > 0.5 ? Math.atan2(to.x - from.x, to.z - from.z) + (roll - 0.5) * (from === before ? 0.3 : 1.2) : roll * Math.PI * 2);
 }
 
 /** Where its last slots were going (the nearest of the four before with a goal), or null. Pure in (id, slot). */
@@ -2336,7 +2452,7 @@ export function slotPlanAt(world: ScheduleWorld, profile: ArkBehaviourProfile, a
  * leader's flock and a predator's spacing all ask for the same leader's slot many times. Pure results, so this
  * changes nothing but the time taken. `forgetSchedules` after an animal's home, group or range changes.
  */
-type Memo = {intents: Map<number, Intent>; raw: Map<number, Intent>; placed: Map<number, Intent>; chains: Map<number, Array<Spot | null>>; trips: Map<number, Trip>};
+type Memo = {intents: Map<number, Intent>; raw: Map<number, Intent>; placed: Map<number, Intent>; chains: Map<number, Array<Spot | null>>; trips: Map<number, Trip>; shadows: Map<number, Shadow>};
 let memos = new WeakMap<ScheduleWorld, WeakMap<HoursAt, WeakMap<ScheduleAnimal, Memo>>>();
 function memoOf(world: ScheduleWorld, hoursAt: HoursAt, animal: ScheduleAnimal): Memo {
     let byClock = memos.get(world);
@@ -2344,7 +2460,7 @@ function memoOf(world: ScheduleWorld, hoursAt: HoursAt, animal: ScheduleAnimal):
     let byAnimal = byClock.get(hoursAt);
     if (!byAnimal) byClock.set(hoursAt, (byAnimal = new WeakMap()));
     let memo = byAnimal.get(animal);
-    if (!memo) byAnimal.set(animal, (memo = {intents: new Map(), raw: new Map(), placed: new Map(), chains: new Map(), trips: new Map()}));
+    if (!memo) byAnimal.set(animal, (memo = {intents: new Map(), raw: new Map(), placed: new Map(), chains: new Map(), trips: new Map(), shadows: new Map()}));
     return memo;
 }
 function remember<T>(map: Map<number, T>, slot: number, make: () => T): T {
@@ -2368,6 +2484,7 @@ export function forgetSchedules() {
     generation++;
     memos = new WeakMap();
     roosts = new WeakMap();
+    courses = new WeakMap();
     forgetRecipes();
 }
 
@@ -2415,11 +2532,11 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
             const legs: Leg[] = [];
             if (wait > 0.05) legs.push({mode: "pause", from, to: from, path: null, length: 0, seconds: wait, beat: "pause", yaw: from.yaw ?? lead.yaw});
             legs.push({mode: "shadow", from, to: finish, path: null, length: 0, seconds: SLOT_SECONDS - wait, beat: "fly", pace, lead0: {x: from.x - lead.x, y: from.y - lead.y, z: from.z - lead.z}});
-            return {...base, mode: "air", arrive: end, to: finish, finish, path: null, legs, stay: [], length: 0, running: false, shadow: {trips: shadow.trips, dx: shadow.dx, dy: shadow.dy, dz: shadow.dz}};
+            return {...base, mode: "air", arrive: end, to: finish, finish, path: null, legs, stay: [], length: 0, running: false, shadow: shadow.place};
         }
         let catchUp = 6;
         const joinAt = (t: number): Spot => {
-            const joined = shadowPoint(world, leaderAt(start + t), shadow, start + t, 0);
+            const joined = shadowPoint(world, leaderAt(start + t), shadow.place, start + t, 0);
             return {x: joined.x, y: joined.y, z: joined.z, nx: 0, ny: 1, nz: 0, point: null};
         };
         let join = joinAt(catchUp);
@@ -2443,12 +2560,54 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                 join = joinAt(catchUp);
             }
         }
-        const flat = Math.hypot(join.x - from.x, join.z - from.z);
+        let flat = Math.hypot(join.x - from.x, join.z - from.z);
         // (MA1: its leader not up in the air where it joins it (down already, or not off yet): it walks or swims there.)
         const afoot = now.mode !== "water" && !leaderAt(start + catchUp).aloft;
         const joinWet = wet(world, join);
+        const swum = now.mode === "water" || (afoot && joinWet && wet(world, from));
+        // (Water fixes on the merged tree.) A catch-up on the water is swum at its own pace: to where its place by its
+        // leader will be at the first moment (second by second) it can be there at that pace. It was 6 s whatever the
+        // way: a goose swam 182 m in 6 s, and every school's fish dashed to its slot's new place. Already in its place
+        // (a never-stop group's member, whose place is the same from slot to slot): no catch-up at all.
+        let flown: Leg | null = null;
+        if (swum) {
+            const own = neverStops(profile) ? patrolPace(profile, animal.length) * CATCH_UP : swimSpeedOf(profile, animal.length);
+            const at0 = joinAt(0);
+            if (Math.hypot(at0.x - from.x, at0.z - from.z) < Math.max(animal.length * 0.02, 0.05) && Math.abs(at0.y - from.y) < Math.max(animal.length * 0.05, 0.1)) {
+                const legs: Leg[] = [{mode: "shadow", from, to: finish, path: null, length: 0, seconds: SLOT_SECONDS, beat: "fly", pace}];
+                return {...base, mode: "water", arrive: end, to: finish, finish, path: null, legs, stay: [], length: 0, running: false, shadow: shadow.place};
+            }
+            let reached = false;
+            for (let t = 1; t <= SLOT_SECONDS - 8 && !reached; t += 1) {
+                const at = joinAt(t);
+                if (Math.hypot(at.x - from.x, at.z - from.z) <= own * t) {
+                    catchUp = t;
+                    join = at;
+                    reached = true;
+                }
+            }
+            if (!reached && flies(profile) && !raised(world, from)) {
+                // (Further than it swims in the slot, and it flies: it flies over and comes down by its leader, its own
+                // take-off, cruise and landing, to where its place will be when it lands.)
+                let seconds = Math.hypot(join.x - from.x, join.z - from.z) / Math.max(paces.cruise, 0.5) + 6;
+                for (let pass = 0; pass < 3; pass++) {
+                    const to = joinAt(Math.min(seconds, SLOT_SECONDS - 8));
+                    const mid = {x: (from.x + to.x) / 2, z: (from.z + to.z) / 2};
+                    flown = airLeg(world, paces, from, to, [from, mid, to], cruise, "fly", {run: wet(world, from) ? paces.runWater : paces.runGround, ski: wet(world, to) ? paces.skiWater : 0}, bodyRadiusOf(animal, profile.slug));
+                    seconds = flown.seconds;
+                    join = to;
+                }
+            } else if (!reached) {
+                // (Further than it swims in the slot at its pace, and no flyer: all of the slot but its last seconds.)
+                catchUp = SLOT_SECONDS - 8;
+                join = joinAt(catchUp);
+            }
+            flat = Math.hypot(join.x - from.x, join.z - from.z);
+        }
         const legs: Leg[] = [
-            now.mode === "water" || (afoot && joinWet && wet(world, from))
+            flown
+                ? flown
+                : swum
                 ? {mode: "water", from, to: join, path: [from, join], length: flat, seconds: catchUp, beat: "swim"}
                 : afoot
                   ? {mode: "ground", from, to: join, path: [from, join], length: flat, seconds: Math.max(catchUp, flat / Math.max(pace, 0.05)), beat: "walk"}
@@ -2456,7 +2615,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         ];
         legs[0].seconds = Math.min(legs[0].seconds, SLOT_SECONDS - 4);
         legs.push({mode: "shadow", from: join, to: finish, path: null, length: 0, seconds: SLOT_SECONDS - legs[0].seconds, beat: "fly", pace});
-        return {...base, mode: now.mode === "water" ? "water" : "air", arrive: end, to: finish, finish, path: null, legs, stay: [], length: 0, running: false, shadow: {trips: shadow.trips, dx: shadow.dx, dy: shadow.dy, dz: shadow.dz}};
+        return {...base, mode: now.mode === "water" ? "water" : "air", arrive: end, to: finish, finish, path: null, legs, stay: [], length: legs[0].mode === "shadow" ? 0 : flat, running: false, shadow: shadow.place};
     }
 
     const to = now.to ?? from;
@@ -2852,16 +3011,46 @@ function waterPatrol(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
     const share = rule.share[0] + (rule.share[1] - rule.share[0]) * random();
     const seconds = never ? SLOT_SECONDS : SLOT_SECONDS * share;
     const L = Math.max(animal.length, 0.02);
-    const style = locoStyle(profile.slug).swim;
-    // (One with no swimming style of its own, a seal, a sea turtle, a squid: a swimmer's cruise for its size. Its free
-    // pace is held to its walk clip's cadence, and a sea lion swam at 0.1 m/s. A drifter keeps its own slow pace.)
-    const cruise = style ? swimPaces(L, style).cruise : life === "drifter" ? swimSpeedOf(profile, L) * 0.7 : swimPaces(L, "subcarangiform").cruise;
-    const pace = cruise * rule.pace * (0.9 + 0.2 * random());
+    const need = Math.min(Math.max(L * 0.5, 0.3), 2);
+    const swimmable = (x: number, z: number) => world.nav.swimmable(x, z, need);
+    // (Water fixes on the merged tree.) On its course (`onCourse`): the slot's way is the course over the slot, exactly,
+    // where the last slot left it on it; from anywhere else (its roost in the morning, a recipe's place, a watch) a
+    // round back onto it, coming in on the course's heading, else the course's own shape carried over from where it
+    // is and closed up through the slot. Never a dash and a hang.
+    const course = now.heading !== undefined ? courseFor(world, profile, animal) : null;
+    if (course) {
+        const start = slotStart(animal, slot);
+        const at0 = courseAt(course, start);
+        const off = Math.hypot(from.x - at0.x, from.z - at0.z);
+        const yawOff = from.yaw === undefined ? 0 : Math.abs(Math.atan2(Math.sin(from.yaw - at0.yaw), Math.cos(from.yaw - at0.yaw)));
+        let way: NavPoint[] | null = off < 0.05 && yawOff < 0.05 ? courseWay(course, start, start + SLOT_SECONDS) : null;
+        if (!way && yawOff > 0.6) {
+            // (Facing some other way: a round that sets off the way it faces, kept where it comes in on the course's heading.)
+            const round = patrolRoute({from, to, fromYaw: from.yaw ?? null, toYaw: now.heading!, centre: {x: course.cx, z: course.cz}, radius: course.a * 1.3, length: course.pace * SLOT_SECONDS * 0.85, body: L, turn: course.w < 0 ? -1 : 1, turnRadius: turnRadiusOf(L, course.pace), random, wet: swimmable});
+            if (round && round.length >= 3) {
+                const before = round[round.length - 2];
+                const cameIn = Math.atan2(to.x - before.x, to.z - before.z);
+                const ratio = patrolLength(round) / (course.pace * SLOT_SECONDS);
+                if (Math.abs(Math.atan2(Math.sin(cameIn - now.heading!), Math.cos(cameIn - now.heading!))) < 0.2 && ratio > 0.6 && ratio < 1.4) way = round;
+            }
+        }
+        if (!way) {
+            const carried = courseWay(course, start, start + SLOT_SECONDS, from);
+            if (carried.every((p) => swimmable(p.x, p.z))) way = carried;
+        }
+        if (way) {
+            // (Its two ends to the bit: where the last slot left it, and where the next starts.)
+            way[0] = {x: from.x, z: from.z};
+            way[way.length - 1] = {x: to.x, z: to.z};
+            const length = patrolLength(way) + Math.abs(to.y - from.y);
+            return {mode: "water", from, to, path: way, length, seconds: SLOT_SECONDS, beat: "swim", look: Math.min(Math.max(Math.min(L * 1.5, (length / SLOT_SECONDS) * 1.2), 0.15), 1.5)};
+        }
+    }
+    const pace = patrolPace(profile, L) * (0.9 + 0.2 * random());
     // (A way under four of its lengths is no round: it swims straight there.)
     if (pace * seconds < L * 4) return null;
     const centre = groupCentre(world, animal, slot, hoursAt) ?? animal.home;
     const radius = Math.min(homeRadius(profile, animal) * rule.reach * (animal.group ? 0.5 : 1), rangeCap(profile, animal));
-    const need = Math.min(Math.max(L * 0.5, 0.3), 2);
     const settled = settle(world, profile, animal, slot, {...now, to}, activity, hoursAt);
     const path = patrolRoute({
         from,
@@ -2877,7 +3066,7 @@ function waterPatrol(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
         coarse: !never,
         turnRadius: turnRadiusOf(L, pace),
         random,
-        wet: (x, z) => world.nav.swimmable(x, z, need)
+        wet: swimmable
     });
     if (!path) return null;
     const length = patrolLength(path) + Math.abs(to.y - from.y);
@@ -3585,6 +3774,8 @@ const FLOWN_OVER: ReadonlySet<string> = new Set(["fence", "building", "post", "h
 
 /** A flock member taking off with its leader eases into its place by it over this long (s). */
 const JOIN_SECONDS = 5;
+/** A never-stop swimmer catching its group up swims this many times its patrol's pace (a tuna about its cruise, a whale 0.84 of it). */
+const CATCH_UP = 1.4;
 /** How often a flock's member goes with its leader's move or foray (the rest of the time it makes its own way, or stays). */
 const FLOCK_FOLLOWS = 0.9;
 /** A flock member comes down to its own landing place over this long (s), down as its leader is. */
@@ -3917,14 +4108,29 @@ function alongRouteBy(route: NavPoint[], share: number): {x: number; z: number; 
  * A flock or school member's point beside its leader's pose: its own offset, which breathes (the cluster loosens and
  * tightens, each member on its own rhythm; `ease` 0 holds it still, for the moment it joins), above or below in the
  * water and the air, and its own small difference of heading.
+ *
+ * (Water fixes on the merged tree.) One that lives in the water (`shadow.water`) is never put where it cannot swim:
+ * its offset is drawn in towards its leader as far as the water asks (`shadowRoom`), and in a group that never stops
+ * its place drifts on the clock (`shadowOffset`), the same through every slot.
  */
 function shadowPoint(world: ScheduleWorld, at: TripPose, shadow: NonNullable<Trip["shadow"]>, epochSeconds: number, ease: number): {x: number; y: number; z: number; yaw: number} {
+    const water = shadow.water;
+    const steady = Boolean(water?.steady);
+    if (steady) ease = 1;
     const phase = (shadow.dx * 7.3 + shadow.dz * 3.1) % (Math.PI * 2);
     // (Slowly and a little: a quick in-and-out round a resting leader read as swimming in circles.)
-    const breathe = 1 + ease * 0.08 * Math.sin(epochSeconds * 0.11 + phase);
+    const breathe = steady ? 1 : 1 + ease * 0.08 * Math.sin(epochSeconds * 0.11 + phase);
     const inWater = at.y < surfaceY(world, at.x, at.z) - 0.01;
-    const x = at.x + shadow.dx * breathe;
-    const z = at.z + shadow.dz * breathe;
+    let dx = shadow.dx;
+    let dz = shadow.dz;
+    if (water) {
+        const off = shadowOffset(shadow, epochSeconds);
+        const room = shadowRoom(world, shadow, epochSeconds);
+        dx = off.dx * room;
+        dz = off.dz * room;
+    }
+    const x = at.x + dx * breathe;
+    const z = at.z + dz * breathe;
     const floor = world.sampler.heightAt(x, z);
     const top = surfaceY(world, x, z);
     // (Lane B5: its leader down, it is down too, on what is under its own place: beside a leader up on a perch it hung
@@ -3933,6 +4139,85 @@ function shadowPoint(world: ScheduleWorld, at: TripPose, shadow: NonNullable<Tri
     const ground = at.aloft ? -Infinity : inWater ? floor + 0.2 : Math.max(floor, top);
     const ceiling = inWater ? top - 0.1 : Infinity;
     return {x, y: Math.min(Math.max(y, ground), ceiling), z, yaw: at.yaw + ease * 0.08 * Math.sin(epochSeconds * 0.15 + phase)};
+}
+
+/** Water a follower that lives in it can be over: deep enough for it, nothing solid within its body's reach, on the map. */
+function waterFits(world: ScheduleWorld, water: ShadowWater, x: number, z: number): boolean {
+    if (!world.nav.swimmable(x, z, water.need)) return false;
+    const half = (world.sampler.half ?? TERRAIN_HALF) - 2;
+    const mid = world.sampler.centre ?? {x: 0, z: 0};
+    if (Math.abs(x - mid.x) >= half || Math.abs(z - mid.z) >= half) return false;
+    const solid = world.nav.colliders;
+    return !solid || solid.distance(x, z, water.reach + 0.01) >= water.reach;
+}
+
+/** A water follower's offset from its leader at a world time: its slot's own, or (a never-stop group's) its own for good, turning and stretching slowly on the clock. */
+function shadowOffset(shadow: NonNullable<Trip["shadow"]>, epochSeconds: number): {dx: number; dz: number} {
+    const water = shadow.water;
+    if (!water?.steady) return {dx: shadow.dx, dz: shadow.dz};
+    const turn = 0.3 * Math.sin((epochSeconds / water.t1) * Math.PI * 2 + water.p1);
+    const scale = 1 + 0.2 * Math.sin((epochSeconds / water.t2) * Math.PI * 2 + water.p2);
+    const c = Math.cos(turn) * scale;
+    const k = Math.sin(turn) * scale;
+    return {dx: shadow.dx * c - shadow.dz * k, dz: shadow.dx * k + shadow.dz * c};
+}
+
+/** The shares of its offset a water follower may keep, nearest its leader first; and how often its room is looked at (s). */
+const ROOM_SHARES = [0.15, 0.3, 0.45, 0.6, 0.8, 1];
+const ROOM_STEP = 4;
+const ROOMS = new WeakMap<NonNullable<Trip["shadow"]>, {raw: Map<number, number>; eased: Map<number, number>}>();
+
+/** Its leader's pose at a world time, in the slot's trips or (a few seconds either side, for the room's easing) its leader's own. */
+function shadowLead(world: ScheduleWorld, shadow: NonNullable<Trip["shadow"]>, epochSeconds: number): TripPose {
+    const within = shadow.trips.find((trip) => epochSeconds >= trip.start && epochSeconds < trip.end);
+    if (within) return basePoseOnTrip(world, within, epochSeconds);
+    const owner = shadow.trips[0].owner;
+    if (!owner) return basePoseOnTrip(world, epochSeconds < shadow.trips[0].start ? shadow.trips[0] : shadow.trips[shadow.trips.length - 1], epochSeconds);
+    return basePoseOnTrip(world, tripAt(world, owner.profile, owner.animal, epochSeconds, owner.hoursAt, owner.activity), epochSeconds);
+}
+
+/**
+ * How much of its offset a water follower keeps at a world time (0…1): all of it in open water; by a shore, a rock or
+ * the map's edge, as much as leaves it over water it can swim all the way out from its leader (so it is on its
+ * leader's side of any land). Looked at every ROOM_STEP s on the clock (not the slot's: the same where two slots meet),
+ * the least of the moments 8 s either side, averaged over the same again and read between: it draws in before the
+ * shore comes and lets out after, smoothly. Remembered per place.
+ */
+function shadowRoom(world: ScheduleWorld, shadow: NonNullable<Trip["shadow"]>, epochSeconds: number): number {
+    const water = shadow.water;
+    if (!water) return 1;
+    let rooms = ROOMS.get(shadow);
+    if (!rooms) ROOMS.set(shadow, (rooms = {raw: new Map(), eased: new Map()}));
+    const cache = rooms;
+    const raw = (j: number): number => {
+        let v = cache.raw.get(j);
+        if (v === undefined) {
+            const time = j * ROOM_STEP;
+            const lead = shadowLead(world, shadow, time);
+            const off = shadowOffset(shadow, time);
+            v = 0;
+            // (A little past its offset: its place breathes out that far.)
+            for (const share of ROOM_SHARES) {
+                if (!waterFits(world, water, lead.x + off.dx * share * 1.08, lead.z + off.dz * share * 1.08)) break;
+                v = share;
+            }
+            cache.raw.set(j, v);
+        }
+        return v;
+    };
+    const eased = (j: number): number => {
+        let v = cache.eased.get(j);
+        if (v === undefined) {
+            v = 0;
+            for (let i = j - 2; i <= j + 2; i++) v += Math.min(raw(i - 2), raw(i - 1), raw(i), raw(i + 1), raw(i + 2));
+            v /= 5;
+            cache.eased.set(j, v);
+        }
+        return v;
+    };
+    const j = Math.floor(epochSeconds / ROOM_STEP);
+    const a = eased(j);
+    return a + (eased(j + 1) - a) * (epochSeconds / ROOM_STEP - j);
 }
 
 function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSeconds: number): TripPose {
