@@ -92,6 +92,7 @@ import {buildMotes} from "@/ark-scene/life";
 import {ArkLighting} from "@/ark-scene/lighting";
 import {ContactShadows, FindDots, GroundRings, type FindDot, type Ring, type Shadow} from "@/ark-scene/marks";
 import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
+import {skipEmptyDraws} from "@/ark-scene/runtime/empty-draws";
 import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {rigBasesFrom} from "@/ark-scene/rig-clips";
@@ -645,6 +646,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const forced = forcedTier();
     let tier: QualityTier = forced ?? tierFor(options.deviceMemoryGB);
     const renderer = new WebGLRenderer({antialias: tier === "low", powerPreference: "high-performance"});
+    // (No draw call with nothing to draw: `runtime/empty-draws.ts`.)
+    skipEmptyDraws(renderer);
     // One frame is several passes: count them all (reset at the frame's start).
     renderer.info.autoReset = false;
     renderer.toneMapping = ACESFilmicToneMapping;
