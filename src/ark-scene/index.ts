@@ -5509,6 +5509,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const modelIn = Boolean(model?.far) && (!held.close || Boolean(model?.near));
         return !modelIn && now - held.seen < (held.close ? ARRIVE_MODEL_SECONDS.close : ARRIVE_MODEL_SECONDS.far);
     };
+    /**
+     * For the page's loading card: what the held flight waits for and how much of it is in, each a real step (the
+     * behaviour world built, the animal's schedule wired, its far model, its near model for a close-up).
+     */
+    const flightHeld = (): {steps: number; done: number} | null => {
+        const held = arriving;
+        const entry = held && selectedId === held.id ? findEntry(held.id) : undefined;
+        if (!held || !entry) return null;
+        const model = library.get(entry.animal.model_slug);
+        const unseen = Boolean(entry.sched) && (!world || !entry.sched!.wired) && !entry.visitor && !entry.act && !entry.moment;
+        const steps = [!entry.sched || Boolean(world), !unseen, Boolean(model?.far)];
+        if (held.close) steps.push(Boolean(model?.near));
+        return {steps: steps.length, done: steps.filter(Boolean).length};
+    };
     /** The flight itself, the selection already told. */
     const flyToChosen = (id: string, close: boolean) => {
         arrivalResumed = true;
@@ -7008,6 +7022,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
         },
         loading: () => library.busy || Boolean(worldBuild) || Boolean(spacing),
+        flightHeld,
         hold: (id) => {
             const entry = findEntry(id);
             if (entry) entry.held = true;
