@@ -632,7 +632,6 @@ async function real() {
     let preyAwakeSamples = 0;
     let preyWatch = 0;
     const watchBy = new Map<string, number>();
-    const index = new Map(onIt.map((s, i) => [s, i]));
     const t0 = performance.now();
     for (const from of homesOnly ? [] : WINDOWS) {
         for (let t = 0; t < 600; t += STEP) {
@@ -806,7 +805,6 @@ async function real() {
     }
     console.log(lineOf("all", "all", rows));
     if (OUT) fs.writeFileSync(OUT, JSON.stringify({tally: Object.fromEntries(tally), closeRest: Object.fromEntries(closeRest), rows}, null, 1));
-    void index;
 }
 
 // MARK: The town island, where its animals are placed

@@ -4,7 +4,7 @@
  * (`src/ark-scene/reactive.ts`) in node: no rendering, no network, no randomness (the same numbers every run).
  *
  * Encounters (problem 6). Every prey species aboard (a stratified, seeded sample by body plan; `--limit`) meets a
- * predator of its own zone that the food links say can eat it (`canEat`), the way the audit lane counts them
+ * predator of its own zone that the layer takes for a threat to it (`kindThreat`), the way the audit lane counts them
  * (`ark-audit` metrics: an awake predator on the ground within 25 m is an encounter, under 6 m a close one):
  *   - a walking pass at closest distances of 2, 4, 6, 9, 13, 18 and 24 m (it walks 70 m in a straight line at a walk);
  *   - a predator standing still at 4, 10 and 20 m for 20 s.
@@ -27,7 +27,7 @@ import fs from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
-import {canEat, hasIntelProfile, intelProfile} from "@/ark-scene/intelligence-profile";
+import {bodyMass, canTake, foodLinked, hasIntelProfile, huntCompany, huntsByBuild, intelProfile} from "@/ark-scene/intelligence-profile";
 import {displayLength} from "@/ark-scene/sizes";
 import {ReactiveLayer, type ReactiveInput, type ReactiveOut, type ReactiveTier, type ReactiveWorld} from "@/ark-scene/reactive";
 import {hashString, heightAt, ZONE_SITES} from "@/ark-scene/world";
@@ -69,6 +69,10 @@ function input(id: string, slug: string, x: number, z: number, shared: Partial<R
         length: displayLength(slug, p.plan),
         size: b.size,
         speed: b.speed,
+        gait: b.gait,
+        walkPace: b.walkPace,
+        runPace: b.runPace,
+        roost: b.roost,
         dominance: b.dominance,
         social: b.social,
         diet: b.diet,
@@ -81,17 +85,29 @@ function input(id: string, slug: string, x: number, z: number, shared: Partial<R
 
 const unit = (key: string) => (hashString(key) % 100000) / 100000;
 
+/**
+ * Whether a hunter of one kind is a threat to another kind as the reactive layer has it (`ReactiveLayer.hunts`): the
+ * food links and body mass at each species' drawn length (the behaviours pass, lane B2; before it, the food links and
+ * the size stat, `canEat`, which paired 25 of 91 prey in the lane's fixture with hunters that could not take them: a
+ * giraffe with a rock python, a hedgehog with a mantis).
+ */
+function kindThreat(p: string, q: string): boolean {
+    const pi = intelProfile(p);
+    const qi = intelProfile(q);
+    if (!pi.hunt.some((h) => h !== "filter" && h !== "scavenge")) return false;
+    const pl = displayLength(p, pi.plan);
+    const ql = displayLength(q, qi.plan);
+    if (foodLinked(pi, qi)) return canTake(pi.plan, pl, huntCompany(pi.hunt, behaviourProfile(p).social), qi.plan, ql);
+    return huntsByBuild(pi, behaviourProfile(p).diet, qi, behaviourProfile(q).diet) && bodyMass(qi.plan, ql) <= 0.35 * bodyMass(pi.plan, pl);
+}
+
 /** Who could eat it, aboard and in its zone (ground hunters first: a hawk walking past is not how it meets one). */
 function predatorFor(prey: Row): Row | null {
-    const pi = intelProfile(prey.slug);
-    const pb = behaviourProfile(prey.slug);
     const water = WATER_PLANS.has(prey.plan);
     const eligible = aboard.filter((q) => {
         if (q.slug === prey.slug || q.zone !== prey.zone) return false;
         if (WATER_PLANS.has(q.plan) !== water) return false;
-        const qi = intelProfile(q.slug);
-        if (!qi.hunt.some((h) => h !== "filter" && h !== "scavenge")) return false;
-        return canEat(qi, pi, behaviourProfile(q.slug).size, pb.size);
+        return kindThreat(q.slug, prey.slug);
     });
     if (!eligible.length) return null;
     const ground = eligible.filter((q) => !["flying_bird", "bat", "flying_insect"].includes(q.plan));
@@ -99,7 +115,7 @@ function predatorFor(prey: Row): Row | null {
     return pool.slice().sort((a, b) => unit(`${prey.slug}|${a.slug}`) - unit(`${prey.slug}|${b.slug}`))[0];
 }
 
-type Run = {prey: string; plan: string; predator: string; kind: "pass" | "still"; d: number; nearest: number; reactedS: number | null; reactedAtM: number | null; looked: boolean; fled: boolean; defended: boolean; called: boolean; lookFrames: number; reactFrames: number};
+type Run = {prey: string; plan: string; predator: string; kind: "pass" | "still"; d: number; nearest: number; reactedS: number | null; reactedAtM: number | null; looked: boolean; fled: boolean; defended: boolean; called: boolean; lookFrames: number; reactFrames: number; frames: number; staringFrames: number; fleeFrames: number; fleeMetres: number; calls: number};
 
 let queries: ReactiveWorldQueries | null = null;
 function world(now: number, camera: {x: number; y: number; z: number}, terrain = false): ReactiveWorld {
@@ -146,6 +162,13 @@ function encounter(prey: Row, predator: Row, kind: "pass" | "still", d: number):
     let called = false;
     let lookFrames = 0;
     let reactFrames = 0;
+    // (The behaviours pass, lane B2: how much of the encounter it spends stopped for the predator, how fast it runs, how often it calls.)
+    let frames = 0;
+    let staringFrames = 0;
+    let fleeFrames = 0;
+    let fleeMetres = 0;
+    let calls = 0;
+    let last: {dx: number; dz: number} | null = null;
     // Two calm seconds first, the predator not yet in range.
     const settle = 2;
     for (let k = 0; k < (seconds + settle) * FPS; k++) {
@@ -167,6 +190,19 @@ function encounter(prey: Row, predator: Row, kind: "pass" | "still", d: number):
             start ??= t;
         }
         if (start === null || !o) continue;
+        if (inRange) {
+            frames++;
+            if (REACTIONS.has(o.action) && o.action !== "recover") staringFrames++;
+            if (o.action === "flee" && last) {
+                const step = Math.hypot(o.dx - last.dx, o.dz - last.dz);
+                if (step * FPS > 0.05) {
+                    fleeFrames++;
+                    fleeMetres += step;
+                }
+            }
+        }
+        if (o.called) calls++;
+        last = {dx: o.dx, dz: o.dz};
         const looking = o.looking === hunter.id;
         const reacting = REACTIONS.has(o.action) || looking;
         if (reacting && reactedS === null) {
@@ -182,7 +218,7 @@ function encounter(prey: Row, predator: Row, kind: "pass" | "still", d: number):
             if (looking) lookFrames++;
         }
     }
-    return {prey: prey.slug, plan: prey.plan, predator: predator.slug, kind, d, nearest: Math.round(nearest * 10) / 10, reactedS, reactedAtM, looked, fled, defended, called, lookFrames, reactFrames};
+    return {prey: prey.slug, plan: prey.plan, predator: predator.slug, kind, d, nearest: Math.round(nearest * 10) / 10, reactedS, reactedAtM, looked, fled, defended, called, lookFrames, reactFrames, frames, staringFrames, fleeFrames, fleeMetres, calls};
 }
 
 type Heads = {slug: string; plan: string; turnedShare: number; changesPerMin: number; yawRange: number; camera: boolean; cameraShare: number};
@@ -325,6 +361,22 @@ const summary = {
     byPlan: Object.fromEntries(plans.map((p) => [p, summarise(encounters.filter((r) => r.plan === p))])),
     byDistance: Object.fromEntries([2, 4, 6, 9, 13, 18, 24].map((d) => [`pass ${d} m`, summarise(encounters.filter((r) => r.kind === "pass" && r.d === d))])),
     lookAtThreatShare: pct(encounters.reduce((s, r) => s + r.lookFrames, 0), encounters.reduce((s, r) => s + r.reactFrames, 0)),
+    // The behaviours pass, lane B2 (docs/ark/behaviour-pass-2026-11/prey.md), guarded in tests/ark-audit/thresholds.json:
+    // a predator standing still 10 or 20 m off is looked at and then tolerated (the share of those 20 s the prey that
+    // noticed it spend stopped for it: 100% before the pass); a flight is at the locomotion lane's flee pace (the median
+    // speed of the runs with one, while it moves: 0.8 m/s before); and nobody calls over and over at one predator.
+    behaviours: (() => {
+        const far = encounters.filter((r) => r.kind === "still" && r.d >= 10 && r.reactedS !== null);
+        const flights = encounters.filter((r) => r.fleeFrames >= 3).map((r) => Math.round((r.fleeMetres / r.fleeFrames) * FPS * 100) / 100);
+        const callers = encounters.filter((r) => r.calls > 0);
+        return {
+            stillFarNoticed: far.length,
+            stillFarStoppedPct: pct(far.reduce((s, r) => s + r.staringFrames, 0), far.reduce((s, r) => s + r.frames, 0)),
+            flights: flights.length,
+            medianFleeSpeed: median(flights),
+            meanCallsPerCaller: callers.length ? Math.round((10 * callers.reduce((s, r) => s + r.calls, 0)) / callers.length) / 10 : null
+        };
+    })(),
     heads: {
         species: headRows.length,
         withHead: headed.length,

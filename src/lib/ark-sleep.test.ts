@@ -284,7 +284,9 @@ test("a sleeper stays asleep with a still wolf downwind, wakes with a start when
     {
         const layer = new ReactiveLayer({tier: "high"});
         const deer = animal("deer", "red-deer", 0, 0, {asleep: true, shared: {doing: "sleep"}});
-        const wolf = animal("wolf", "eurasian-wolf", 30, 0, {shared: {doing: "stalk", moving: true}});
+        // (Walking: one creeping, the schedule's `stalk`, is quieter and gets nearer before it wakes: below.)
+        // (And heading the way it walks: a predator walking at it is not one walking by, `menaceOf`.)
+        const wolf = animal("wolf", "eurasian-wolf", 30, 0, {shared: {doing: "wander", moving: true, yaw: -Math.PI / 2}});
         let wokeAt: number | null = null;
         let wolfAtWake = 0;
         const frames = run(layer, [deer, wolf], 14, {
@@ -307,6 +309,14 @@ test("a sleeper stays asleep with a still wolf downwind, wakes with a start when
         assert.ok(wolfAtWake > 3 && wolfAtWake < 14, `woke with the wolf ${wolfAtWake.toFixed(1)} m off`);
         assert.ok(startled, "with a start");
         assert.ok(fled, "and ran");
+        // A wolf creeping up (the behaviours pass: a stalker is quiet and low) is nearer when the sleeper wakes.
+        const quiet = new ReactiveLayer({tier: "high"});
+        const sleeper = animal("deer", "red-deer", 0, 0, {asleep: true, shared: {doing: "sleep"}});
+        const creeper = animal("wolf", "eurasian-wolf", 30, 0, {shared: {doing: "stalk", moving: true, yaw: -Math.PI / 2}});
+        const crept = run(quiet, [sleeper, creeper], 14, {move: (t) => (creeper.shared.x = Math.max(30 - (t - 1000) * 2.2, 1.5))});
+        const woke = crept.find((f) => f.out.get("deer")!.woke);
+        assert.ok(woke, "it wakes at a creeping wolf too");
+        assert.ok(30 - (woke!.t - 1000) * 2.2 < wolfAtWake, `later: ${(30 - (woke!.t - 1000) * 2.2).toFixed(1)} m against ${wolfAtWake.toFixed(1)} m`);
     }
 });
 
@@ -316,7 +326,8 @@ test("an alarm call wakes the herd; the one keeping watch sees the lion first", 
     const watch = animal("z-watch", "plains-zebra", 0, 0, {shared: {doing: "watch"}});
     const a = animal("z-a", "plains-zebra", -3, 1, {asleep: true, shared: {doing: "sleep"}});
     const b = animal("z-b", "plains-zebra", -4, -2, {asleep: true, shared: {doing: "sleep"}});
-    const lion = animal("lion", "african-lion", 40, 0, {shared: {doing: "stalk", moving: true}});
+    // (Walking in the open: a lion creeping, the schedule's `stalk`, is not seen 22 m off since the behaviours pass.)
+    const lion = animal("lion", "african-lion", 40, 0, {shared: {doing: "wander", moving: true}});
     let calledAt: number | null = null;
     const wokeAt = new Map<string, number>();
     const frames = run(layer, [watch, a, b, lion], 12, {move: (t) => (lion.shared.x = Math.max(40 - (t - 1000) * 1.6, 22))});

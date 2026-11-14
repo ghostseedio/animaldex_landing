@@ -3041,6 +3041,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 sessile: e.sched.profile.move === "sessile" && intel.plan === "other",
                 // Looked at or followed: the camera coming to it never wakes it (looking never changes what it does).
                 watched: e.animal.id === selectedId || e.animal.id === followId,
+                // Where it goes to ground, and whether people keep it (the town's houses, farms and zoo: `reactive.ts` `kept`).
+                roost: e.sched.profile.roost,
+                kept: e.animal.area ?? null,
                 shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving) || (e.act?.speed ?? 0) > 0.3, aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
             });
         }
