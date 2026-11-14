@@ -1005,6 +1005,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const runtime: ArkRuntime = createArkRuntime({
         // (Part C: the ground of the island under the camera: the same heights as the wild island's with one island.)
         groundAt: heightAt,
+        // (Part C: the town's buildings for the camera's body, once the town is in.)
+        islandObstacles: () => island?.cameraObstacles() ?? null,
         el,
         canvas,
         renderer,
