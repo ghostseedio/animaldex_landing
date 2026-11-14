@@ -547,9 +547,9 @@ uniform float townLampOn;
 void main() {
     vUv = uv;
     vec4 centre = modelViewMatrix * vec4(aHead.xyz, 1.0);
-    float size = mix(1.5, 2.4, aHead.w) * townLampOn;
-    // Fades far away (a lamp is a point of light there, and the haze has it).
-    vFade = 1.0 - smoothstep(120.0, 420.0, -centre.z);
+    float size = mix(1.5, 2.4, aHead.w);
+    // Fades far away (a lamp is a point of light there, and the haze has it); comes up with the lamp as it warms.
+    vFade = (1.0 - smoothstep(120.0, 420.0, -centre.z)) * townLampOn;
     centre.xy += position.xy * size;
     gl_Position = projectionMatrix * centre;
 }`,

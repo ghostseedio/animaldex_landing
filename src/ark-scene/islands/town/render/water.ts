@@ -56,6 +56,11 @@ void main() {
     float depth = fresh > 0.5 ? 1.4 : texture2D(depthMap, uv).r * 16.0 + seaLevel;
     if (uv.x < 0.0 || uv.y < 0.0 || uv.x > 1.0 || uv.y > 1.0) depth = 18.0;
     float scale = fresh > 0.5 ? 0.35 : 1.0;
+    // Far off the ripples are smaller than a pixel: they fade before they alias (as the wild sea's do), and the sun's
+    // glint rolls off under white. Unfaded, a pond or the harbour seen from a whole view toward the sun was a patch of
+    // white noise that crawled every frame.
+    float far = smoothstep(60.0, 260.0, distance(cameraPosition, vWorld));
+    scale *= 1.0 - 0.85 * far;
     float e = 0.35;
     float w0 = waves(vWorld.xz, arkTime);
     float wx = waves(vWorld.xz + vec2(e, 0.0), arkTime);
@@ -71,6 +76,8 @@ void main() {
     vec3 colour = mix(body, sky, fresnel * 0.85);
     vec3 r = reflect(-sunDirection, n);
     float glint = pow(max(dot(r, view), 0.0), 220.0) * 3.0 + pow(max(dot(r, view), 0.0), 24.0) * 0.12;
+    float sunCeiling = mix(30.0, 0.8, far);
+    glint = sunCeiling * (1.0 - exp(-glint / sunCeiling));
     colour += sunColor * glint * (fresh > 0.5 ? 0.6 : 1.0);
     // Foam at the shore and on the harbour wall's foot.
     float foam = fresh > 0.5 ? 0.0 : (1.0 - smoothstep(0.0, 0.55, depth)) * smoothstep(0.35, 0.75, vnoise(vWorld.xz * 1.4 + arkTime * 0.2));

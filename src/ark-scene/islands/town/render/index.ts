@@ -14,7 +14,7 @@ import {sampleTownGround, TOWN_SURFACES, townSurfaceWeights, type TownSurface} f
 import {TOWN_HALF, TOWN_SEGMENTS, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {TOWN_CHUNK_COUNT, TOWN_GRID, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
 import {binSpots, launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
-import {binsOut, boatIn, clockHands, lampsOn, marketDay, washingOut, type TownClock} from "@/ark-scene/islands/town/people";
+import {binsOut, boatIn, clockHands, lampsLevel, marketDay, washingOut, type TownClock} from "@/ark-scene/islands/town/people";
 import {BuildingDetail, buildBuilding, clockFaces, newBuildingChunk, paneGeometry, paneMaterial, patchBuildingSurfaces, windowState, type BuildingChunk, type WindowRecord} from "@/ark-scene/islands/town/render/buildings";
 import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/islands/town/render/scenery";
 import {binGeometry, boatGeometry, narrowboatGeometry, NARROWBOAT_LIVERIES, ChunkedSet, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
@@ -671,6 +671,10 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         detail.update(vehicles.eye, typeof performance !== "undefined" ? performance.now() : 0, drawn);
         // The town's frame in the world, for the paving and the lamps (`materials.ts` TOWN_LIGHT.origin).
         TOWN_LIGHT.origin.value.set(root.matrixWorld.elements[12], root.matrixWorld.elements[14]);
+        // The street lamps and the windows' night glow, warming up at dusk and fading before dawn (`people.ts` lampsLevel).
+        const lamps = lampsLevel(clock);
+        TOWN_LIGHT.lampOn.value = lamps;
+        if (glow) glow.visible = lamps > 0;
         const minute = Math.floor(clock.day * 1440 + clock.hours * 60);
         if (minute === lastMinute) return;
         lastMinute = minute;
@@ -721,8 +725,6 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             stallSet.set(i, placeMatrix(p.x, ground(p.x, p.z) + 0.1, p.z, plan.square.rot + (i < 5 ? 0 : Math.PI)), market, colour);
         });
         stallSet.write();
-        TOWN_LIGHT.lampOn.value = lampsOn(clock);
-        if (glow) glow.visible = lampsOn(clock) > 0;
         // Clock hands: hour (short, thick) and minute (long), turned in each face's plane.
         const {hour, minute: min} = clockHands(clock);
         const m = new Matrix4();

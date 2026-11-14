@@ -6,7 +6,9 @@
 <meta name="robots" content="noindex, nofollow">
 <title>The Ark</title>
 <style>
-  html, body { margin: 0; height: 100%; background: #ecdcc4; overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; }
+  html, body { margin: 0; height: 100%; background: #ecdcc4; overflow: hidden; overscroll-behavior: none; -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
+  /* A long press on a species icon is not a picture to share or save (the web views' own menu came up over the world). */
+  img { -webkit-touch-callout: none; -webkit-user-drag: none; }
   #ark { position: fixed; inset: 0; }
   /* What the host draws over the world's top and foot (?insetTop=, ?insetBottom= in px; the iOS panel's close button
      and title: insetTop=52): every corner overlay keeps clear of it, as of the safe area. */
@@ -514,6 +516,9 @@ window.AnimalDexArkStart = function () {
       onStatus: function (id, status) { tell({type: "ark:status", id: id, status: statusOut(status)}); },
       onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
+      // A lost WebGL context, back: it comes back empty (no sky light, parts of the town gone), so the page starts over,
+      // as if the browser had dropped it (twice at most in three minutes; a host hears ark:progress and ark:ready again).
+      onContextRestored: function () { if (Ark.arkReloadForRestoredContext) Ark.arkReloadForRestoredContext(); },
       onReady: function () {
         tell({type: "ark:ready"});
         // The loading screen gives way at the first good frame (the second drawn: the first is a fog wash).
