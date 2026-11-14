@@ -226,6 +226,9 @@ export type RecipeIntentInput = {
     kit: ScheduleKit;
 };
 
+/** How often a bird whose drawn nest is finished still takes a slot to it with material, against one building it. */
+export const NEST_TEND = 0.4;
+
 /** On unless a page or a test turns it off. */
 let enabled = true;
 export function setRecipesEnabled(on: boolean) {
@@ -249,10 +252,14 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         if (!template.replaces.includes(input.behaviour) && !template.replaces.includes(input.doing)) continue;
         if (!hourOk(template, input.hours)) continue;
         if (template.sex === "male" && sex === "female") continue;
-        // With the props' nests wired, it builds while its nest is growing (their stage), whatever the months say.
+        // With the props' nests wired, it builds while its nest is growing (their stage), whatever the months say; once
+        // its nest stands (the props draw it only in its breeding season, or with eggs or chicks, whose sitter sits),
+        // it keeps coming back to it with material now and then, tending it (`NEST_TEND`): the drawn nest is there
+        // through the season, the building of it only its first few Ark days.
         const building = id === "nest_build" && nestSource ? nestSource(input.animal.id, input.start) : null;
-        if (id === "nest_build" && nestSource && (!building || building.stage >= 1)) continue;
-        const chance = weight * 0.7 * (template.often ?? 1) * (building ? 1 : seasonFactor(species, template.season, input.start));
+        if (id === "nest_build" && nestSource && !building) continue;
+        const tending = building ? (building.stage >= 1 ? NEST_TEND : 1) : null;
+        const chance = weight * 0.7 * (template.often ?? 1) * (tending ?? seasonFactor(species, template.season, input.start));
         if (random() >= chance) continue;
         const to = goalSpot(input, template, random);
         if (!to) continue;
