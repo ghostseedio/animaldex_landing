@@ -4277,7 +4277,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             rigSpecies.add(slug);
             rigCount++;
             candidate.entry.rigOn = true;
-            rigs.request(slug);
+            // (The one looked at or followed, and the viewer's own, first: never left stiff by a full library.)
+            rigs.request(slug, rigPriority(candidate.entry) < 2);
         }
         let rigged = 0;
         for (const candidate of candidates) {
@@ -4739,7 +4740,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         look.end(now, shellMaterial);
         if (now - lastEvict > 5) {
             lastEvict = now;
-            rigs.evict(now - RIG_KEEP_SECONDS, RIG_KEEP);
+            // (And room under the caps for as many species as may be rigged at once: the caps count what is held.)
+            rigs.evict(now - RIG_KEEP_SECONDS, RIG_KEEP, (liteOn() ? RIG_CAPS_DRAWN_LITE : RIG_CAPS_DRAWN).species);
         }
         // The splashes of the moments.
         for (let i = ripples.length - 1; i >= 0; i--) {
