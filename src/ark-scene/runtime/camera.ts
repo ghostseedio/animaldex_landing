@@ -57,7 +57,11 @@ export function fitWhole(length: number, aspect: number, fovDegrees = 38): numbe
 /** `rank` (0–1, forest fill only): drawn, and so an obstacle, only under the tier's fill share. */
 type Ellipsoid = {kind: "ellipsoid"; x: number; y: number; z: number; rx: number; ry: number; rz: number; solid: boolean; rank?: number};
 type Capsule = {kind: "capsule"; x: number; z: number; y0: number; y1: number; r: number; rank?: number};
-type Box = {kind: "box"; x: number; z: number; y0: number; y1: number; hx: number; hz: number; rotation: number; rank?: number};
+/**
+ * `sight` (the town's buildings): the eye leaves toward what it looks at, to the near side of the wall between them
+ * (`sightExit`), not by the nearest face: out of a far wall the building itself would stand in the way.
+ */
+type Box = {kind: "box"; x: number; z: number; y0: number; y1: number; hx: number; hz: number; rotation: number; rank?: number; sight?: boolean};
 export type CameraObstacle = Ellipsoid | Capsule | Box;
 
 /**
@@ -112,34 +116,34 @@ const CELL = 8;
  */
 export class CameraObstacles {
     private readonly cells = new Map<string, CameraObstacle[]>();
-    readonly count: number;
+    count = 0;
 
     constructor(items: Array<DecorItem & {rank?: number}>, extra: CameraObstacle[] = []) {
-        let count = 0;
-        const add = (obstacle: CameraObstacle) => {
-            const reach = obstacle.kind === "ellipsoid" ? Math.max(obstacle.rx, obstacle.rz) : obstacle.kind === "capsule" ? obstacle.r : Math.hypot(obstacle.hx, obstacle.hz);
-            const x0 = Math.floor((obstacle.x - reach) / CELL);
-            const x1 = Math.floor((obstacle.x + reach) / CELL);
-            const z0 = Math.floor((obstacle.z - reach) / CELL);
-            const z1 = Math.floor((obstacle.z + reach) / CELL);
-            for (let cx = x0; cx <= x1; cx++) {
-                for (let cz = z0; cz <= z1; cz++) {
-                    const key = `${cx},${cz}`;
-                    const list = this.cells.get(key) ?? [];
-                    list.push(obstacle);
-                    this.cells.set(key, list);
-                }
-            }
-            count++;
-        };
         for (const item of items) {
             for (const obstacle of obstaclesOf(item)) {
                 if (typeof item.rank === "number") obstacle.rank = item.rank;
-                add(obstacle);
+                this.add(obstacle);
             }
         }
-        for (const obstacle of extra) add(obstacle);
-        this.count = count;
+        for (const obstacle of extra) this.add(obstacle);
+    }
+
+    /** One more obstacle (Part C: the town's buildings, once the town is in the world). */
+    add(obstacle: CameraObstacle): void {
+        const reach = obstacle.kind === "ellipsoid" ? Math.max(obstacle.rx, obstacle.rz) : obstacle.kind === "capsule" ? obstacle.r : Math.hypot(obstacle.hx, obstacle.hz);
+        const x0 = Math.floor((obstacle.x - reach) / CELL);
+        const x1 = Math.floor((obstacle.x + reach) / CELL);
+        const z0 = Math.floor((obstacle.z - reach) / CELL);
+        const z1 = Math.floor((obstacle.z + reach) / CELL);
+        for (let cx = x0; cx <= x1; cx++) {
+            for (let cz = z0; cz <= z1; cz++) {
+                const key = `${cx},${cz}`;
+                const list = this.cells.get(key) ?? [];
+                list.push(obstacle);
+                this.cells.set(key, list);
+            }
+        }
+        this.count++;
     }
 
     /** The scene's: the decor, the whole forest fill (with its ranks: `collideCamera` keeps a tier's share) and the cottage. */
@@ -209,6 +213,43 @@ export function penetration(obstacle: CameraObstacle, p: Point, margin: number):
     return {depth: radiusAlong * (1 - u), nx, ny, nz};
 }
 
+/**
+ * Where the straight line from a point inside a box (grown by `margin`) toward a target outside it leaves the box: the
+ * near side of the wall between the eye and what it looks at. Null when the point is not inside, or the line does not
+ * leave it before the target (the target is inside too).
+ */
+export function sightExit(box: Box, p: Point, target: Point, margin: number): Point | null {
+    const cos = Math.cos(box.rotation);
+    const sin = Math.sin(box.rotation);
+    const local = (q: Point) => {
+        const dx = q.x - box.x;
+        const dz = q.z - box.z;
+        return {x: dx * cos - dz * sin, y: q.y, z: dx * sin + dz * cos};
+    };
+    const a = local(p);
+    const b = local(target);
+    const hx = box.hx + margin;
+    const hz = box.hz + margin;
+    const top = box.y1 + margin;
+    if (Math.abs(a.x) >= hx || Math.abs(a.z) >= hz || a.y >= top || a.y <= box.y0) return null;
+    // The first of the box's faces the line crosses on its way out (the slabs' far sides).
+    let t = Infinity;
+    const leave = (from: number, to: number, low: number, high: number) => {
+        const d = to - from;
+        if (d > 1e-9) t = Math.min(t, (high - from) / d);
+        else if (d < -1e-9) t = Math.min(t, (low - from) / d);
+    };
+    leave(a.x, b.x, -hx, hx);
+    leave(a.z, b.z, -hz, hz);
+    leave(a.y, b.y, box.y0, top);
+    if (!(t > 0 && t < 1)) return null;
+    const k = Math.min(t + 0.01, 1);
+    return {x: p.x + (target.x - p.x) * k, y: p.y + (target.y - p.y) * k, z: p.z + (target.z - p.z) * k};
+}
+
+/** The nearest the eye is brought to its target by `sightExit` (m): nearer than this, the box pushes by its nearest face. */
+const SIGHT_NEAREST = 2.5;
+
 /** Whether a point is inside an obstacle (the target inside a crown: that crown is not pushed against). */
 export function inside(obstacle: CameraObstacle, p: Point, margin = 0): boolean {
     return penetration(obstacle, p, margin).depth > 0;
@@ -258,6 +299,18 @@ export function collideCamera(obstacles: CameraObstacles, camera: Vector3, targe
             if (inside(obstacle, target, 0.05)) continue;
             const hit = penetration(obstacle, camera, margin);
             if (hit.depth <= 0) continue;
+            if (obstacle.kind === "box" && obstacle.sight) {
+                // A building of the town: toward what the eye looks at, gliding (about a quarter of a second), so the
+                // view comes through the wall to its near side instead of cutting there.
+                const out = sightExit(obstacle, camera, target, margin);
+                if (out && Math.hypot(out.x - target.x, out.y - target.y, out.z - target.z) >= SIGHT_NEAREST) {
+                    const glide = ease(options.dt, 0.08);
+                    camera.x += (out.x - camera.x) * glide;
+                    camera.y += (out.y - camera.y) * glide;
+                    camera.z += (out.z - camera.z) * glide;
+                    continue;
+                }
+            }
             const k = solid ? 1 : ease(options.dt, 0.15);
             camera.x += hit.nx * hit.depth * k;
             camera.y += hit.ny * hit.depth * k;
