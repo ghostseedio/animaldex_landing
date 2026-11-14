@@ -461,7 +461,12 @@ test("a kind is not all doing one thing: every species of 3+ awake together shar
         }
     }
     assert.ok(awake > 10000, `awake moments ${awake}`);
-    assert.ok(same / awake < 0.08, `${((same / awake) * 100).toFixed(1)}% of awake moments a whole species in one state`);
+    // (The behaviours pass, lane B3 needs, 2026-11-14: 8% → 17%. Each kind now has its own day in bouts: a kind that
+    // feeds 60 to 80% of its waking time (a zebra, an elephant, a great tit) is all feeding at once far more often
+    // than when every species fed a third of its slots drawn one by one. Measured 14.6% with the needs in. What the
+    // limit still stops is a kind moving as one: members keep up to three tenths of a cycle off their leader, and one
+    // of a group is on watch.)
+    assert.ok(same / awake < 0.17, `${((same / awake) * 100).toFixed(1)}% of awake moments a whole species in one state`);
 });
 
 test("resting at home: asleep at its roost by night, and a den animal often in its den by day (for the runtime's rotation)", () => {

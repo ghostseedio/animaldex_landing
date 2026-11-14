@@ -418,13 +418,20 @@ const FED_DRAIN_PER_MINUTE: Record<ArkFeeder, number> = {plants: 0.05, mixed: 0.
 const FED_BALANCE = 0.68;
 
 export type ArkFedRates = {drain: number};
+/** How much of the way from full to its floor it runs down over the usual gap between two feeding bouts. */
+const FED_GAP_SHARE = 0.9;
 
 /**
  * Its rate from what it eats (the stored diet) and its size (its body length, m): a smaller body burns through its
  * food faster, as metabolism goes per unit of mass (Kleiber: mass to the -1/4, length to the -3/4), held to half and
  * double the metre's rate. `drain`: per second.
  */
-export function arkFedRates(diet: string | null | undefined, lengthMetres: number | null | undefined): ArkFedRates {
+export function arkFedRates(diet: string | null | undefined, lengthMetres: number | null | undefined, gapSeconds?: number | null): ArkFedRates {
+    // (Lane B3 needs, 2026-11-14: where its feeding rhythm is known, the waking seconds between two of its feeding bouts,
+    // it runs from full to its floor in a little over that: a shrew in minutes, a deer in an hour, a lion over its night,
+    // a python over its five days. By diet and length alone every animal emptied in 7 to 47 waking minutes, a crocodile
+    // as fast as a wren.)
+    if (typeof gapSeconds === "number" && gapSeconds > 0) return {drain: ((1 - ARK_FED_FLOOR) * FED_GAP_SHARE) / gapSeconds};
     const length = typeof lengthMetres === "number" && lengthMetres > 0 ? lengthMetres : 1;
     const size = Math.min(Math.max(Math.pow(length, -0.75), 0.5), 2);
     return {drain: (FED_DRAIN_PER_MINUTE[arkFeeder(diet)] * size) / 60};

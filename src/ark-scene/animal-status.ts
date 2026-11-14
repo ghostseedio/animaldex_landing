@@ -9,7 +9,7 @@
  * (the local reactive layer near the camera is not read). Visual only: nothing here decides anything on the Ark.
  */
 
-import {awakeAt, scheduleGeneration, slotOffset, slotPlanAt, SLOT_SECONDS, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type SlotPlan, type Trip} from "@/ark-scene/behaviour-schedule";
+import {awakeAt, feedingRhythm, needAt, scheduleGeneration, slotOffset, slotPlanAt, SLOT_SECONDS, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type SlotPlan, type Trip} from "@/ark-scene/behaviour-schedule";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {hash32} from "@/lib/ark-clock";
 import {arkActivityKey, arkFed, arkFedRates, type ArkActivityKey, type ArkFed, type ArkFedSlot, type ArkStatusGoal, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
@@ -47,6 +47,19 @@ const WAKE_SLOTS = Math.ceil(86_400 / SLOT_SECONDS) + 1;
 export type ScheduleStatus = {activity: ArkActivityKey; since: number; goal: ArkStatusGoal | null; log: ArkStatusLogEntry[]};
 
 /**
+ * What a server foray is called (decision 301, the behaviours pass): the server counts anything with a next meal as a
+ * hunter, a goose, a flamingo, a sunbird and a tortoise among them, and their cards said "hunting". Only one that
+ * hunts (its profile stalks: its stored diet is meat or fish) is hunting; any other is out feeding its own way: a
+ * grazer grazing, a browser browsing, a nectar feeder at flowers, the rest looking for food. Existing keys only.
+ */
+export function forayActivity(profile: Pick<ArkBehaviourProfile, "weights" | "diet" | "move">): ArkActivityKey {
+    if ((profile.weights.stalk ?? 0) > 0) return "hunting";
+    if (profile.diet === "nectar") return "flowers";
+    if (profile.move === "fly") return "food";
+    return profile.diet === "grazer" ? "grazing" : profile.diet === "browser" ? "browsing" : "food";
+}
+
+/**
  * Its status now. `trip`: the trip it is on (the scene's), for whether it is still on its way to its goal; `hunting`:
  * walking its forays under encounter hunting now (`hunting.ts`, from the server's next hunt).
  */
@@ -55,7 +68,7 @@ export function scheduleStatus(subject: ScheduleSubject, epoch: number, context:
     const trip = context.trip && context.trip.slot === plan.slot ? context.trip : null;
     const travelling = Boolean(trip && epoch < trip.arrive && trip.length > 0.5);
     const settled = keyOf(subject, plan);
-    const activity = context.hunting ? "hunting" : keyOf(subject, plan, {travelling});
+    const activity = context.hunting ? forayActivity(subject.profile) : keyOf(subject, plan, {travelling});
     // Back through its last slots: the run it is in now (since when), then the runs before it, newest first.
     let since = plan.start;
     let runKey = settled;
@@ -106,50 +119,69 @@ function goalOf(subject: ScheduleSubject, plan: SlotPlan, settled: ArkActivityKe
 
 /** What its card says it is doing that is eating: a forage, a graze, a browse, a catch (fishing, a pounce or a hawk), flowers, a zoo's feeding. */
 export const EATING: ReadonlySet<ArkActivityKey> = new Set<ArkActivityKey>(["food", "grazing", "browsing", "fishing", "hunting", "flowers", "feeding"]);
-/** Waking slots its daily hunger looks back over (two hours), and how far back at most it looks for them (a day and those). */
+/**
+ * Waking slots its daily hunger reads from its card's own activity (two hours), and the most it looks back over in all
+ * (its feeding cycle and a third: beyond the near slots from its needs alone, `needAt`, which costs no plan).
+ */
 const FED_AWAKE_SLOTS = 90;
-const FED_LOOK_SLOTS = Math.ceil(86_400 / SLOT_SECONDS) + FED_AWAKE_SLOTS;
-
-/** Each animal's slots as its daily hunger read them (0 asleep, 1 awake, 2 eating), for the schedules as they are now. */
-let fedMemo: {generation: number; world: ScheduleWorld | null; byId: Map<string, Map<number, number>>} = {generation: -1, world: null, byId: new Map()};
+const FED_CYCLES = 1.3;
+const FED_MOST_SLOTS = 9000;
 
 /**
- * How fed it is now (`arkFed`), from its own schedule: its slots back to two waking hours ago, awake or asleep by the
- * schedule's own rule (its slot's start), eating when its card would say it is eating there. `meals`: the server's kills
- * of its that landed (epoch seconds: its log's meals), each of which fills it. Its rates from its stored diet and its
- * body length. Remembered per animal, slot by slot, until the schedules change, so a card read each second works out
- * one new slot at most.
+ * Each animal's slots as its daily hunger read them (0 asleep, 1 awake, 2 eating), for the schedules as they are now:
+ * `near` from its card's activity, `far` from its needs. Two memos, so a slot reads the same whoever asked first.
+ */
+let fedMemo: {generation: number; world: ScheduleWorld | null; byId: Map<string, {near: Map<number, number>; far: Map<number, number>}>} = {generation: -1, world: null, byId: new Map()};
+
+/**
+ * How fed it is now (`arkFed`), from its own schedule: its slots back over a feeding cycle and a third, awake or asleep
+ * by the schedule's own rule (its slot's start). The last two waking hours are read from what its card would say it is
+ * doing there (eating: a graze, a forage, a catch, a zoo's feeding); the slots before them from its needs alone (a
+ * feeding bout or not: `needAt`, the rule its slots were chosen by), so a lion's bar remembers last night's hunt and a
+ * python's its meal four days ago without working out a thousand plans. `meals`: the server's kills of its that landed
+ * (epoch seconds: its log's meals), each of which fills it. It runs down over the gap between two of its feeding bouts
+ * (`feedingRhythm`), so it is low before a feeding bout and fills through it. Remembered per animal, slot by slot,
+ * until the schedules change, so a card read each second works out one new slot at most.
  */
 export function scheduleFed(subject: ScheduleSubject, epoch: number, meals: readonly number[] = []): ArkFed | null {
     if (fedMemo.generation !== scheduleGeneration() || fedMemo.world !== subject.world) fedMemo = {generation: scheduleGeneration(), world: subject.world, byId: new Map()};
     let known = fedMemo.byId.get(subject.id);
     if (!known) {
-        known = new Map();
+        known = {near: new Map(), far: new Map()};
         fedMemo.byId.set(subject.id, known);
         if (fedMemo.byId.size > 24) fedMemo.byId.delete(fedMemo.byId.keys().next().value as string);
     }
+    const rhythm = feedingRhythm(subject.profile, subject.activity);
+    const most = Math.min(Math.max(Math.ceil((rhythm.cycle * FED_CYCLES) / SLOT_SECONDS), FED_AWAKE_SLOTS), FED_MOST_SLOTS);
     const offset = slotOffset(subject.id);
     const now = Math.floor((epoch + offset) / SLOT_SECONDS);
     const slots: ArkFedSlot[] = [];
     let awake = 0;
-    for (let slot = now; slot > now - FED_LOOK_SLOTS && awake < FED_AWAKE_SLOTS; slot--) {
+    // (At most its waking slots and the sleeps between them: three slots asleep for each awake covers an 18-hour sleeper.)
+    for (let slot = now; slot > now - most * 4 - FED_AWAKE_SLOTS && awake < most; slot--) {
         const start = slot * SLOT_SECONDS - offset;
-        let flag = known.get(slot);
+        const near = awake < FED_AWAKE_SLOTS;
+        const memo = near ? known.near : known.far;
+        let flag = memo.get(slot);
         if (flag === undefined) {
-            flag = !awakeAt(subject.profile, subject.activity, subject.hoursAt(start)) ? 0 : EATING.has(keyOf(subject, planOf(subject, start + 0.5))) ? 2 : 1;
-            known.set(slot, flag);
+            if (!awakeAt(subject.profile, subject.activity, subject.hoursAt(start))) flag = 0;
+            else if (near) flag = EATING.has(keyOf(subject, planOf(subject, start + 0.5))) ? 2 : 1;
+            else flag = subject.feedingAt?.(start + SLOT_SECONDS / 2) || needAt(subject.profile, subject.animalAt(start + 0.5), subject.activity, start, subject.hoursAt) === "feed" ? 2 : 1;
+            memo.set(slot, flag);
         }
         if (flag) awake++;
         slots.push({start, end: start + SLOT_SECONDS, awake: flag > 0, eating: flag === 2});
     }
-    if (known.size > FED_LOOK_SLOTS * 2) {
-        known.forEach((_, slot) => {
-            if (slot <= now - FED_LOOK_SLOTS) known!.delete(slot);
-        });
+    for (const memo of [known.near, known.far]) {
+        if (memo.size > most * 8 + 2000) {
+            memo.forEach((_, slot) => {
+                if (slot <= now - most * 4 - FED_AWAKE_SLOTS) memo.delete(slot);
+            });
+        }
     }
     if (!awake) return null;
     slots.reverse();
-    return arkFed(slots, epoch, arkFedRates(subject.profile.diet, subject.animalAt(epoch).length), meals);
+    return arkFed(slots, epoch, arkFedRates(subject.profile.diet, subject.animalAt(epoch).length, rhythm.gap), meals);
 }
 
 // MARK: The live log's moments
@@ -250,7 +282,9 @@ export function pickMoment(window: number, subjects: readonly MomentSubject[], s
     const to = from + MOMENT_WINDOW_SECONDS;
     if (starts.length) {
         const first = [...starts].sort((a, b) => draw("ark-hunt", window, a.subject.id) - draw("ark-hunt", window, b.subject.id) || a.subject.id.localeCompare(b.subject.id))[0];
-        return {id: `now:hunt:${first.subject.id}:${window}`, kind: "hunting", activity: "hunting", animalId: first.subject.id, at: first.at, count: 1};
+        // (A forager's foray is said as its feeding, an everyday line: `forayActivity`.)
+        const activity = forayActivity(first.subject.profile);
+        return {id: `now:hunt:${first.subject.id}:${window}`, kind: activity === "hunting" ? "hunting" : "doing", activity, animalId: first.subject.id, at: first.at, count: 1};
     }
     const candidates: Array<{subject: MomentSubject; start: number; order: number}> = [];
     for (const subject of subjects) {

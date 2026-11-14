@@ -784,6 +784,10 @@ type Profile = {
     water: WaterKind | null;
     /** Its `fly` weight where its family or way of life sets it (`flightPropensity`), finer than the compact row's ninths. */
     flight: number | null;
+    /** Its day (`dayOf`, lane B3 needs): feeding and resting shares of its waking time, its cycle, drinks, sleep. */
+    day: Day;
+    /** Other weights finer than the compact row's ninths (a hoofed mammal's grooming, 0.05). */
+    fine: Partial<Record<Behaviour, number>>;
     src: Record<string, Source | Source[]>;
     defaults: string[];
 };
@@ -876,6 +880,181 @@ function waterKindOf(row: Row, plan: string, primary: Move, all: Set<Move>): {va
     if (plan === "insect" || plan === "flying_insect" || plan === "arachnid") return rule("skater", `plan ${plan}: on the surface`);
     if (primary === "swim") return rule("fish", `plan ${plan}: swims in the water`);
     return rule("bed", `plan ${plan}: on the bed`);
+}
+
+// MARK: Its day (the behaviours pass, lane B3 needs, 2026-11-14)
+
+/**
+ * How its kind spends a day: the share of its waking time in feeding bouts and in the rest after them, the length of
+ * one feeding cycle (minutes), its trips to water a day, the hours it sleeps (null: its activity's own, by the sun) and,
+ * for one that gorges, how many days lie between its feeding days. From the stored taxonomy, diet, size and zone
+ * (rules, never species one by one), then the text's own words about drinking and sleeping. The schedule turns it
+ * into bouts in order (`behaviour-schedule.ts` needAt). Before this every species had the same weights (rest 0.25,
+ * forage 0.5, drink 0.15...), so an elephant, a lion and a wren spent their waking time alike.
+ *
+ * Sources for the figures (rounded; the wild's where known): elephants feed 16-18 hours and sleep 2-4; giraffes sleep
+ * about 4.5; horses about 3; cattle graze about 8 hours, chew the cud about 8 and sleep about 4; lions rest about 20
+ * hours with 13 or so asleep; koalas sleep about 20 and feed 2-4; sloths sleep about 10 in the wild (15 kept); little
+ * brown bats sleep about 19; armadillos 17-18; hummingbirds sit about 80% of the day and feed for a minute or less every
+ * ten or so; small passerines feed most of a winter's day; herons stand and wait; cormorants fish for an hour or two
+ * and dry off; big constrictors feed every week or two; crocodiles about weekly.
+ */
+type Day = {feed: number; cycle: number; rest: number; drinks: number; sleep: number | null; every: number; ruminates: boolean};
+
+const NO_DRINK = /\b(rarely|seldom|never|hardly ever|does not|doesn't|do not|don't|without) (need(s|ing)? to |ever |having to )?drink(s|ing)?\b|\b(gets?|getting|obtains?|draws?|takes?|derives?|meets?) (nearly |almost |virtually )?(all|most|much) (of )?(its|their|the) (water|moisture|fluids?)( needs?)? from\b|\bwithout (free |standing |drinking |any )?water\b|\bno need (to|for) drink/i;
+const MUST_DRINK = /\b(drinks? (daily|every day|each day|regularly|often|twice)|must drink|needs? to drink|has to drink|water[- ]dependent|never (strays? )?far from water|visits? (the )?water ?holes? (daily|every))\b/i;
+const SLEEP_HOURS = /\b(sleep(s|ing)?|asleep|doz(es|ing))\b[^.;]{0,50}?\b(\d{1,2})(?:\s*(?:to|-|–|or)\s*(\d{1,2}))?\s*hours\b/i;
+
+function dayOf(row: Row, plan: string, diet: Diet, primary: Move, all: Set<Move>, zone: string, size: number | null, roost: Roost, social: Social, seabed: boolean, drinker: boolean): {value: Day; src: Source[]} {
+    const slug = row.slug!;
+    const fam = row.family_name ?? "";
+    const taxa = `${row.class_name ?? ""} ${row.order_name ?? ""} ${fam}`;
+    const big = size ?? 40;
+    const d = (feed: number, cycle: number, rest: number, drinks: number, sleep: number | null = null, extra: Partial<Day> = {}): Day => ({feed, cycle, rest, drinks, sleep, every: 1, ruminates: false, ...extra});
+    const found = ((): [string, Day] => {
+        if (primary === "sessile") return ["sessile: it feeds where it sits", d(0.5, 60, 0.5, 0)];
+        if (/Mammalia/.test(taxa)) {
+            if (/Cetacea/.test(taxa) || /^(Delphinidae|Balaenopteridae|Balaenidae|Physeteridae|Phocoenidae|Monodontidae|Eschrichtiidae|Ziphiidae|Iniidae|Platanistidae|Kogiidae|Pontoporiidae)$/.test(fam)) return diet === "filter" ? ["a baleen whale: feeds in long bouts, rests at the surface, never asleep on the schedule", d(0.45, 90, 0.25, 0, 0)] : ["a toothed whale: feeds, travels, rests at the surface, never asleep on the schedule", d(0.3, 60, 0.25, 0, 0)];
+            if (/Sirenia/.test(taxa)) return ["Sirenia: grazes six to eight hours, rests in the water", d(0.5, 120, 0.4, 0, 0)];
+            if (/^(Phocidae|Otariidae|Odobenidae)$/.test(fam)) return [`family ${fam}: fishes in bouts, hauls out to rest`, d(0.3, 180, 0.5, 0)];
+            // (The house cat and dog and their breeds: the stored pet flag, or a breed's parent.)
+            if ((row.pet || /^(domestic-dog|domestic-cat)$/.test(row.parent_slug ?? "")) && /^(Felidae|Canidae)$/.test(fam)) return [`a pet (${fam}): fed its meals, rests most of the day`, d(0.08, 360, 0.55, 2, fam === "Canidae" ? 9 : 12.5)];
+            if (/Proboscidea/.test(taxa)) return ["Proboscidea: feeds about 16 hours, sleeps about 3", d(0.8, 240, 0.08, 1.5, 3)];
+            if (fam === "Giraffidae") return ["Giraffidae: browses most of the day, chews the cud, sleeps about 4.5 hours", d(0.65, 150, 0.25, 0.5, 4.5, {ruminates: true})];
+            if (fam === "Equidae") return ["Equidae: grazes about 16 hours, sleeps about 3", d(0.68, 180, 0.18, 1.5, 3)];
+            if (fam === "Rhinocerotidae") return ["Rhinocerotidae: feeds morning and evening, wallows and rests", d(0.5, 180, 0.4, 1, 8)];
+            if (fam === "Tapiridae") return ["Tapiridae", d(0.55, 150, 0.3, 1, 7)];
+            if (fam === "Hippopotamidae") return ["Hippopotamidae: grazes five or six hours of the night, rests in the water", d(0.55, 300, 0.35, 0, 10)];
+            if (/^(Bovidae|Cervidae|Antilocapridae|Moschidae|Tragulidae)$/.test(fam)) return [`family ${fam}: a ruminant grazes or browses, then lies down to chew; sleeps about 4.5 hours`, d(0.58, big < 35 ? 90 : 150, 0.32, zone === "desert" ? 0.3 : 1.5, 4.5, {ruminates: true})];
+            if (fam === "Camelidae") return ["Camelidae", d(0.55, 150, 0.3, 0.3, 6, {ruminates: true})];
+            if (/^(Suidae|Tayassuidae)$/.test(fam)) return [`family ${fam}: roots for food, wallows and rests`, d(0.5, 90, 0.35, 2, 8.5)];
+            if (fam === "Felidae") return big >= 45 ? ["Felidae, large: one hunt a night, rests about 20 hours", d(0.12, 600, 0.68, 1, 13)] : ["Felidae, small: hunts in bouts, rests most of its day", d(0.25, 240, 0.5, 1, 12.5)];
+            if (fam === "Canidae") return ["Canidae", d(0.3, 240, 0.4, 1.5, 10)];
+            if (fam === "Hyaenidae") return ["Hyaenidae", d(0.2, 360, 0.55, 1, 10)];
+            if (fam === "Ursidae") return ["Ursidae: forages most of its waking", d(0.6, 150, 0.25, 1.5, 9)];
+            if (/Carnivora/.test(taxa)) return [`a small carnivore (${fam})`, d(0.45, 90, 0.3, 1, 12)];
+            if (fam === "Hominidae") return ["Hominidae", d(0.5, 120, 0.3, 1, 9.5)];
+            if (/^(Lorisidae|Galagidae|Tarsiidae|Daubentoniidae|Cheirogaleidae|Lepilemuridae|Aotidae)$/.test(fam)) return [`family ${fam}: a night primate`, d(0.5, 45, 0.2, 0.5, 12)];
+            if (/Primates/.test(taxa)) return diet === "browser" ? ["a leaf-eating primate: feeds, then sits and digests", d(0.4, 120, 0.45, 0, 10)] : ["Primates", d(0.45, 60, 0.25, 1, 10)];
+            if (/Chiroptera/.test(taxa)) return fam === "Pteropodidae" ? ["Pteropodidae: feeds at fruit and flowers, hangs up to rest", d(0.5, 60, 0.35, 0.5, 14)] : ["Chiroptera: hawks insects at dusk and before dawn, sleeps about 18 hours", d(0.7, 40, 0.2, 1, 18)];
+            if (/Rodentia/.test(taxa)) {
+                const dry = zone === "desert" || /^(Heteromyidae|Dipodidae)$/.test(fam);
+                if (big >= 30) return ["Rodentia, large", d(0.5, 90, 0.3, 1, 9)];
+                if (fam === "Sciuridae") return ["Sciuridae", d(0.55, 30, 0.2, dry ? 0 : 0.5, 13)];
+                return ["Rodentia, small: feeds in many short bouts", d(0.5, 25, 0.25, dry ? 0 : 0.5, 12.5)];
+            }
+            if (/Lagomorpha/.test(taxa)) return ["Lagomorpha", d(0.5, 45, 0.3, 0.3, 8.5)];
+            if (fam === "Soricidae") return ["Soricidae: feeds every quarter of an hour round the clock", d(0.75, 20, 0.1, 0.5, 8)];
+            if (fam === "Talpidae") return ["Talpidae", d(0.6, 60, 0.25, 0, 9)];
+            if (/Erinaceomorpha|Soricomorpha|Eulipotyphla/.test(taxa)) return ["a hedgehog or its kin", d(0.65, 60, 0.15, 1, 10)];
+            if (/Cingulata/.test(taxa)) return ["Cingulata: sleeps 17 hours or so", d(0.7, 60, 0.15, 0.5, 17)];
+            if (/^(Bradypodidae|Megalonychidae|Choloepodidae)$/.test(fam)) return [`family ${fam}: a sloth`, d(0.45, 120, 0.45, 0, 14)];
+            if (/Pilosa|Pholidota|Tubulidentata/.test(taxa)) return ["an ant and termite eater: many short visits", d(0.7, 30, 0.15, 0.5, 14)];
+            if (fam === "Phascolarctidae") return ["Phascolarctidae: sleeps about 20 hours, feeds most of the rest, drinks almost never", d(0.65, 120, 0.25, 0, 20)];
+            if (/^(Macropodidae|Potoroidae)$/.test(fam)) return [`family ${fam}`, d(0.6, 120, 0.3, zone === "desert" ? 0.2 : 0.5, 8)];
+            if (fam === "Vombatidae") return ["Vombatidae", d(0.6, 150, 0.2, 0.3, 15)];
+            if (/Diprotodontia|Dermoptera/.test(taxa)) return ["a possum, a glider or a colugo", d(0.5, 45, 0.25, 0.3, 14)];
+            if (/Didelphimorphia|Microbiotheria/.test(taxa)) return ["an opossum", d(0.5, 45, 0.2, 1, 17)];
+            if (/Dasyuromorphia|Peramelemorphia|Notoryctemorphia/.test(taxa)) return ["a small marsupial hunter or digger", d(0.45, 60, 0.3, 0.5, 12)];
+            if (fam === "Ornithorhynchidae") return ["Ornithorhynchidae: forages in the water most of its waking", d(0.7, 60, 0.15, 0, 14)];
+            if (/Monotremata/.test(taxa)) return ["an echidna", d(0.6, 30, 0.2, 0.3, 12)];
+            if (/Hyracoidea/.test(taxa)) return ["Hyracoidea: feeds about an hour, basks and rests the rest", d(0.2, 240, 0.65, 0.3, 6)];
+            if (/Afrosoricida/.test(taxa)) return ["Afrosoricida", d(0.6, 30, 0.2, 0.5, 15)];
+            if (/Macroscelidea|Scandentia/.test(taxa)) return ["a sengi or a treeshrew", d(0.6, 30, 0.15, 0.5, 9)];
+            // Any other mammal: by what it eats, sleeping less the bigger it is.
+            const sleep = big <= 10 ? 12.5 : big <= 25 ? 11 : big <= 45 ? 9.5 : big <= 70 ? 7 : 5;
+            if (diet === "grazer" || diet === "browser") return ["a plant-eating mammal, by size", d(0.6, big < 35 ? 60 : 150, 0.25, 1, sleep)];
+            if (diet === "meat" || diet === "fish" || diet === "carrion") return ["a hunting mammal, by size", d(big >= 45 ? 0.15 : 0.35, big >= 45 ? 480 : 120, big >= 45 ? 0.6 : 0.4, 1, sleep)];
+            return ["a mammal, by size", d(0.5, big < 25 ? 30 : 90, 0.25, 1, sleep)];
+        }
+        if (/Aves/.test(taxa)) {
+            if (fam === "Trochilidae") return ["Trochilidae: feeds for a minute every ten or so, sits on its perch between", d(0.28, 9, 0.58, 0)];
+            if (/^(Nectariniidae|Meliphagidae|Dicaeidae|Zosteropidae|Thraupidae)$/.test(fam) && diet === "nectar") return [`family ${fam}: a nectar feeder`, d(0.45, 15, 0.3, 0.5)];
+            if (/^(Cathartidae)$/.test(fam) || /(?:^|-)(vulture|condor|lammergeier)(?:-|$)/.test(slug)) return ["a vulture: sits, soars to search, feeds briefly at a carcass", d(0.08, 360, 0.55, 0.3)];
+            if (/^(Accipitridae|Falconidae|Pandionidae|Sagittariidae|Strigidae|Tytonidae)$/.test(fam)) return [`family ${fam}: a raptor sits on its perch most of the day and hunts in short bouts`, d(0.15, 180, 0.6, 0.3)];
+            if (fam === "Phoenicopteridae") return ["Phoenicopteridae: filters head down for hours", d(0.6, 90, 0.3, 0)];
+            if (/^(Ardeidae|Ciconiidae|Threskiornithidae|Balaenicipitidae|Scopidae|Aramidae)$/.test(fam)) return [`family ${fam}: stands and waits or wades and probes`, d(0.5, 60, 0.35, 0)];
+            if (/^(Scolopacidae|Charadriidae|Recurvirostridae|Haematopodidae|Jacanidae|Rostratulidae|Burhinidae|Glareolidae)$/.test(fam)) return [`family ${fam}: a shorebird feeds nearly all the time the tide lets it`, d(0.7, 45, 0.2, 0)];
+            if (/^(Phalacrocoracidae|Anhingidae|Pelecanidae|Sulidae|Fregatidae)$/.test(fam)) return [`family ${fam}: fishes for an hour or two, loafs and dries off the rest`, d(0.2, 120, 0.6, 0)];
+            if (/Sphenisciformes/.test(taxa)) return ["a penguin: fishes at sea in bouts, stands ashore between", d(0.35, 180, 0.45, 0)];
+            if (/^(Laridae|Stercorariidae|Alcidae|Diomedeidae|Procellariidae|Hydrobatidae|Oceanitidae|Phaethontidae)$/.test(fam)) return [`family ${fam}: a seabird`, d(0.4, 60, 0.35, 0)];
+            if (/^(Podicipedidae|Gaviidae)$/.test(fam)) return [`family ${fam}: dives for fish in bouts, rests and preens afloat`, d(0.4, 60, 0.4, 0)];
+            if (fam === "Rallidae") return ["Rallidae", d(0.55, 45, 0.3, 0)];
+            if (/Anseriformes/.test(taxa)) return /(?:^|-)(goose|swan)$/.test(slug) || diet === "grazer" ? ["a goose or a swan: grazes most of the day", d(0.6, 90, 0.28, 0)] : ["a duck: feeds in bouts, loafs and preens on the bank or the water", d(0.45, 60, 0.4, 0)];
+            if (/Galliformes|Tinamiformes|Otidiformes|Pteroclidiformes/.test(taxa)) return ["a ground bird: pecks and scratches morning and evening, rests and dust-bathes at midday", d(0.5, 45, 0.3, /Pteroclidiformes/.test(taxa) ? 1 : 2)];
+            if (/Columbiformes/.test(taxa)) return ["Columbiformes: fills its crop, then sits and digests; drinks twice a day", d(0.35, 60, 0.45, 2)];
+            if (/Psittaciformes/.test(taxa)) return ["Psittaciformes: feeds morning and late afternoon, rests, preens and plays between", d(0.35, 90, 0.4, 1)];
+            if (/Struthioniformes|Rheiformes|Casuariiformes|Apterygiformes/.test(taxa)) return ["a ratite", d(0.55, 90, 0.25, zone === "desert" ? 0.3 : 1)];
+            if (/^(Hirundinidae|Apodidae|Hemiprocnidae|Artamidae)$/.test(fam)) return [`family ${fam}: feeds on the wing most of the day`, d(0.7, 30, 0.15, 1)];
+            if (/^(Alcedinidae|Meropidae|Coraciidae|Brachypteraciidae|Laniidae|Tyrannidae|Bucconidae|Galbulidae|Trogonidae|Momotidae|Todidae|Podargidae|Nyctibiidae|Caprimulgidae|Steatornithidae|Monarchidae|Dicruridae)$/.test(fam)) return [`family ${fam}: sits and watches from a perch, sallies out to catch`, d(0.3, 30, 0.5, 0.3)];
+            if (/^(Gruidae|Cariamidae|Anhimidae|Eurypygidae|Rhynochetidae|Bucorvidae)$/.test(fam)) return [`family ${fam}: walks and forages most of the day`, d(0.6, 90, 0.25, 1)];
+            if (/^(Corvidae|Sturnidae)$/.test(fam)) return [`family ${fam}`, d(0.5, 40, 0.25, 1)];
+            if (/^(Bucerotidae|Ramphastidae|Musophagidae|Cuculidae|Picidae|Megalaimidae|Lybiidae|Capitonidae|Opisthocomidae)$/.test(fam)) return [`family ${fam}`, d(diet === "browser" ? 0.3 : 0.45, 60, diet === "browser" ? 0.55 : 0.35, 0.5)];
+            if (big <= 15) return ["a small bird: feeds most of the day in many short bouts", d(0.65, 20, 0.15, diet === "seeds" ? 2 : 1)];
+            return ["a bird, by size", d(0.5, 40, 0.3, diet === "seeds" ? 2 : 1)];
+        }
+        // (Never asleep on the schedule: it lies still on the bank by day and in the water by night, and by its stored
+        // activity, nocturnal for most, it was away in its roost through the hours it basks.)
+        if (/Crocodylia/.test(taxa)) return ["Crocodylia: lies in the water or basks on the bank, day and night; feeds one day in three or so", d(0.04, 600, 0.8, 0, 0, {every: 3})];
+        if (/Testudines/.test(taxa)) {
+            if (fam === "Testudinidae") return ["Testudinidae: grazes morning and late afternoon, basks, shelters at midday", d(0.35, 120, 0.5, zone === "desert" ? 0.1 : 0.3)];
+            if (/^(Cheloniidae|Dermochelyidae)$/.test(fam)) return [`family ${fam}: a sea turtle feeds for hours, rests on the bottom`, d(0.45, 120, 0.3, 0)];
+            return ["a freshwater turtle: basks for hours, feeds in the water", d(0.25, 120, 0.6, 0)];
+        }
+        if (/Squamata|Sphenodontia|Reptilia/.test(taxa)) {
+            if (plan === "legless" || /^(Boidae|Pythonidae|Viperidae|Elapidae|Colubridae|Pseudoxyrhophiidae|Atractaspididae|Xenopeltidae|Homalopsidae|Lamprophiidae|Natricidae|Dipsadidae)$/.test(fam)) return /^(Boidae|Pythonidae)$/.test(fam) ? [`family ${fam}: lies up for days, feeds one day in five`, d(0.03, 600, 0.88, 0.2, null, {every: 5})] : ["a snake: lies up, hunts one day in three", d(0.06, 480, 0.78, 0.2, null, {every: 3})];
+            if (/^(Varanidae|Helodermatidae|Lanthanotidae|Teiidae)$/.test(fam)) return [`family ${fam}: basks, then ranges for food`, d(0.3, 180, 0.5, 0.3, null, fam === "Helodermatidae" ? {every: 3} : {})];
+            if (diet === "browser" || diet === "grazer" || diet === "fruit" || diet === "algae") return ["a plant-eating lizard: basks, feeds for an hour or two, basks again", d(0.25, 180, 0.65, zone === "desert" ? 0 : 0.2)];
+            return ["a lizard: basks and watches, darts out to feed", d(0.3, 45, 0.55, zone === "desert" ? 0 : 0.2)];
+        }
+        if (/Amphibia/.test(taxa)) return ["Amphibia: sits and waits; takes water through its skin", d(0.25, 60, 0.65, 0)];
+        if (plan === "fish" || /Elasmobranchii|Actinopterygii|Chondrichthyes|Teleostei|Holocephali|Coelacanthi|Dipneusti|Myxini|Petromyzonti/.test(taxa)) {
+            if (diet === "algae" || diet === "grazer" || diet === "detritus") return ["a grazing fish: feeds nearly all day", d(0.7, 40, 0.1, 0)];
+            if (diet === "filter") return ["a plankton feeder: it swims on through the night, never asleep on the schedule", d(0.6, 60, 0.1, 0, 0)];
+            if (diet === "meat" || diet === "fish") return seabed || ["crevice", "bottom", "reef", "cave", "burrow", "den"].includes(roost) && social === "solitary" ? ["a fish that lies in wait", d(0.1, 240, 0.7, 0)] : ["a hunting fish that cruises: it never stops swimming, so never asleep on the schedule", d(0.25, 120, 0.1, 0, 0)];
+            return ["a fish", d(0.5, 40, 0.15, 0)];
+        }
+        if (plan === "arachnid") return ["an arachnid: waits most of its time", d(0.1, 240, 0.85, 0)];
+        if (plan === "cephalopod_jelly") return /(?:^|-)(octopus|cuttlefish|nautilus)(?:-|$)/.test(slug) ? ["an octopus or its kin: keeps to its den, hunts in bouts", d(0.2, 180, 0.6, 0)] : ["a drifter", d(0.3, 60, 0.05, 0)];
+        if (plan === "flying_insect" || plan === "insect") {
+            if (social === "colony" || /(?:^|-)(ant|termite)(?:-|$)/.test(slug)) return ["a colony insect: works nearly all its waking", d(0.75, 30, 0.05, 0)];
+            if (diet === "nectar") return ["a nectar-feeding insect: flower to flower, with rests in the sun", d(0.55, 12, 0.25, 0)];
+            if (diet === "meat" || diet === "insects" || diet === "blood") return all.has("fly") ? ["a hunting insect on the wing", d(0.4, 20, 0.35, 0)] : ["a hunting insect that waits", d(0.15, 120, 0.75, 0)];
+            return ["a plant-eating insect", d(0.5, 30, 0.4, 0)];
+        }
+        if (plan === "crustacean") return ["a crustacean: picks over its ground", d(0.5, 30, 0.3, 0)];
+        // Anything else: by what it eats (the scene's own defaults for a species with no row, `behaviour-profile.ts` DIET_DAYS).
+        const byDiet: Record<string, [number, number, number, number]> = {grazer: [0.6, 120, 0.25, 1], browser: [0.55, 120, 0.25, 1], seeds: [0.5, 25, 0.25, 1], fruit: [0.45, 40, 0.3, 1], nectar: [0.35, 12, 0.45, 0], insects: [0.5, 25, 0.25, 0.5], fish: [0.3, 90, 0.45, 0], meat: [0.2, 240, 0.55, 0.5], carrion: [0.15, 240, 0.5, 0.5], blood: [0.2, 120, 0.6, 0], filter: [0.6, 60, 0.2, 0], algae: [0.6, 40, 0.2, 0], detritus: [0.5, 40, 0.3, 0], omnivore: [0.45, 60, 0.3, 1]};
+        const [feed, cycle, rest, drinks] = byDiet[diet] ?? byDiet.omnivore;
+        return [`diet ${diet}`, d(feed, cycle, rest, drinks)];
+    })();
+    const value = {...found[1]};
+    const src: Source[] = [{rule: found[0]}];
+    // It drinks only if it is a land animal that goes to water at all (`drinker`).
+    if (!drinker) value.drinks = 0;
+    else {
+        const dry = find(row, ["diet", "traits", "facts", "habitat", "spotlight"], NO_DRINK);
+        const wet = dry ? null : find(row, ["diet", "traits", "facts", "habitat", "spotlight", "look"], MUST_DRINK);
+        if (dry) {
+            value.drinks = 0;
+            src.push({field: dry.field, phrase: dry.phrase});
+        } else if (wet && value.drinks < 1.5) {
+            value.drinks = 1.5;
+            src.push({field: wet.field, phrase: wet.phrase});
+        }
+    }
+    const slept = find(row, ["sleep"], SLEEP_HOURS);
+    if (slept) {
+        const m = SLEEP_HOURS.exec(slept.phrase) ?? SLEEP_HOURS.exec(row.sleep_pattern ?? "");
+        const a = m ? Number(m[4]) : NaN;
+        const b = m && m[5] ? Number(m[5]) : a;
+        const hours = (a + b) / 2;
+        if (hours >= 2 && hours <= 22) {
+            value.sleep = Math.round(hours * 2) / 2;
+            src.push({field: slept.field, phrase: slept.phrase});
+        }
+    }
+    return {value, src};
 }
 
 function profile(row: Row): Profile {
@@ -1057,6 +1236,10 @@ function profile(row: Row): Profile {
     }
     const water = waterKindOf(row, plan, moves.primary, all);
     if (water) src.water = water.src;
+    // (Lane B3 needs: its day, and a hoofed mammal's grooming, a lick or a scratch now and then, as a fine weight.)
+    const day = dayOf(row, plan, diet.value, moves.primary, all, zone, size, roost.value, social.value, seabed, Boolean(b.drink));
+    src.day = day.src;
+    const hoofed = /^(Artiodactyla|Perissodactyla|Proboscidea|Cetartiodactyla)$/.test(row.order_name ?? "") && Boolean(b.groom);
 
     return {
         slug,
@@ -1092,6 +1275,8 @@ function profile(row: Row): Profile {
         seabed,
         water: water?.value ?? null,
         flight: flight?.value ?? null,
+        day: day.value,
+        fine: hoofed ? {groom: 0.05} : {},
         src,
         defaults
     };
@@ -1137,13 +1322,17 @@ for (const p of profiles) {
     const interactions = p.interactions.map((i) => INTERACTIONS.indexOf(i).toString(36)).join("");
     const flags = [p.defaults.length ? "d" : "", p.breathes ? "b" : "", p.seabed ? "s" : "", p.surface === "upside" ? "u" : p.surface === "any" ? "a" : "", p.altitude ? p.altitude[0] : ""].join("");
     // (Lane MA3: its water kind, and its fly weight in hundredths where its family sets it, `k:w` by behaviour index.)
-    const fine = p.flight !== null ? `${BEHAVIOURS.indexOf("fly").toString(36)}:${Math.round(p.flight * 100)}` : "";
-    const tail = p.water || fine ? [p.water ?? "", fine] : [];
+    // (Lane B3 needs: other fine weights the same way, and its day as a last field:
+    // feed %,cycle minutes,rest %,drinks a day x10,sleep hours x10 (empty: its activity's own),every (days),flags (r ruminates).)
+    const fine = [...(p.flight !== null ? [`${BEHAVIOURS.indexOf("fly").toString(36)}:${Math.round(p.flight * 100)}`] : []), ...Object.entries(p.fine).map(([k, w]) => `${BEHAVIOURS.indexOf(k as Behaviour).toString(36)}:${Math.round((w ?? 0) * 100)}`)].join(",");
+    const d = p.day;
+    const day = [Math.round(d.feed * 100), d.cycle, Math.round(d.rest * 100), Math.round(d.drinks * 10), d.sleep === null ? "" : Math.round(d.sleep * 10), d.every, d.ruminates ? "r" : ""].join(",");
+    const tail = [p.water ?? "", fine, day];
     compact[p.slug] = [p.move, p.moves.join(","), p.activity[0], p.rhythm.map((r) => r[0]).join(""), p.roost, p.social, p.diet, behaviours, interactions, flags, p.size ?? "", p.speed ?? "", p.dominance ?? "", p.gait ?? "", p.walkPace ?? "", p.runPace ?? "", ...tail].join("|");
 }
 fs.writeFileSync(
     path.join(root, "src/ark-scene/behaviours.json"),
-    `{"about":"Generated by scripts/ark-behaviour-profiles.mts (full profiles with source phrases: data/ark/behaviour-profiles.json). Rows: move|moves|activity d n c a|rhythm (t two peaks, s siesta)|roost|social|diet|behaviours (index base 36 + weight 0-9)|interactions (index base 36)|flags (d a default, b breathes air, s seabed, u/a surface upside/any, l/m/h flight band)|size|speed|dominance|gait (the rig's fastest ground clip, body lengths/s)|walk pace|run pace (the clips' own, ground_speed/duty)[|water kind (how it is in the water: dabbler, diver, swan, goose, grebe, cormorant, pelican, coot, wader, bird, penguin, otter, seal, mammal, croc, turtle, lizard, snake, amphibian, fish, skater, bed)|fine weights (behaviour index base 36 : weight in hundredths, over the ninths)]. Decoded by behaviour-profile.ts.",\n"species":{\n${Object.entries(compact)
+    `{"about":"Generated by scripts/ark-behaviour-profiles.mts (full profiles with source phrases: data/ark/behaviour-profiles.json). Rows: move|moves|activity d n c a|rhythm (t two peaks, s siesta)|roost|social|diet|behaviours (index base 36 + weight 0-9)|interactions (index base 36)|flags (d a default, b breathes air, s seabed, u/a surface upside/any, l/m/h flight band)|size|speed|dominance|gait (the rig's fastest ground clip, body lengths/s)|walk pace|run pace (the clips' own, ground_speed/duty)|water kind (how it is in the water: dabbler, diver, swan, goose, grebe, cormorant, pelican, coot, wader, bird, penguin, otter, seal, mammal, croc, turtle, lizard, snake, amphibian, fish, skater, bed; or empty)|fine weights (behaviour index base 36 : weight in hundredths, over the ninths; or empty)|its day (feed % of its waking time,feeding cycle minutes,rest % after feeding,drinks a day x10,sleep hours x10 or empty for its activity's own,days between feeding days,r if it ruminates). Decoded by behaviour-profile.ts.",\n"species":{\n${Object.entries(compact)
         .map(([slug, row]) => `${JSON.stringify(slug)}:${JSON.stringify(row)}`)
         .join(",\n")}\n}}\n`
 );

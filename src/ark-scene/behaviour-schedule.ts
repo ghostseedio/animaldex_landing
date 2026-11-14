@@ -26,7 +26,7 @@
  * slot. Nothing here decides anything in the Ark (the server does that).
  */
 
-import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, PACE_CAP, runFactor, swimPaceLength, swimSpeedOf, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
+import {bodyLengthsPerSecond, dayOf, freeBodyLengthsPerSecond, PACE_CAP, runFactor, swimPaceLength, swimSpeedOf, type ArkBehaviour, type ArkBehaviourProfile, type ArkInteraction, type ArkRoost} from "@/ark-scene/behaviour-profile";
 import {alongPath, MAX_SLOPE, MOUNTAIN_SLOPE, navGrid, navGridBuild, pathLength, type NavGrid, type NavPoint} from "@/ark-scene/behaviour-nav";
 import {bodyShape} from "@/ark-scene/collide/bodies";
 import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
@@ -49,6 +49,8 @@ export const SLOT_SECONDS = 80;
 const RAISED_TAGS: AttachTag[] = ["branch", "canopy_hang", "cliff_ledge", "post", "rock_top", "tree_hollow"];
 /** A night watch stands this many slots (sleep lane: about five minutes). */
 export const NIGHT_WATCH_SLOTS = 4;
+/** A day watch stands this many slots (lane B3 needs: about four minutes), then the next member's turn. */
+export const DAY_WATCH_SLOTS = 3;
 
 /** Each animal's slots are shifted by its own offset (from its id), so a thousand animals don't all change plans in the same frame. */
 export function slotOffset(id: string): number {
@@ -192,6 +194,8 @@ export type ScheduleAnimal = {
     thrive?: ArkThrive;
     /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
     roost?: Spot | null;
+    /** A zoo's feeding time (lane B3 needs): its enclosure's station is its home for these slots, and it feeds there (`needAt`). */
+    feeding?: boolean;
 };
 
 /** A predator as its prey sees it: its own schedule animal, profile and activity. */
@@ -204,9 +208,92 @@ export function sunElevationAt(hours: number): number {
     return 58 * Math.sin((2 * Math.PI * (hours - 6)) / 24);
 }
 
-export function awakeAt(profile: ArkBehaviourProfile, activity: ArkBehaviourProfile["activity"] | null | undefined, hours: number): boolean {
-    return isAwake(activity ?? profile.activity, sunElevationAt(hours));
+// MARK: Sleep and waking hours (lane B3 needs)
+
+/**
+ * Its sleeps in the 24 hours, as `[from, to, from, to...]` in hours (a `to` past 24 runs over midnight), from how long
+ * its kind sleeps (`ArkDay.sleep`: a koala 20 hours, a giraffe four and a half) and when it is up (its stored
+ * activity). Null: its activity's own hours by the sun (`isAwake`), as before, for every kind with no hours written.
+ *
+ * - By day (diurnal): one sleep about midnight; a long sleeper (a squirrel) naps at midday too; a short sleeper (an
+ *   elephant, a horse, a cow: five and a half hours or less) sleeps three short bouts in the small hours and is up
+ *   between them.
+ * - By night: the same about noon; a long sleeper (a koala, a bat) sleeps again about midnight, so it is up at dusk
+ *   and before dawn.
+ * - At the day's two ends (crepuscular): a sleep through the middle of the day and one about midnight, up from before
+ *   dawn into the morning and from late afternoon into the evening (twelve hours' sleep when none is written; by the
+ *   sun's height alone it slept nineteen).
+ * - At any hour: none when no hours are written (a dolphin, a shark); else short sleeps in the night, and with more
+ *   than six hours one at midday too.
+ */
+function sleepWindows(profile: ArkBehaviourProfile, kind: ArkBehaviourProfile["activity"]): number[] | null {
+    const written = dayOf(profile).sleep;
+    const hours = written ?? (kind === "crepuscular" ? 12 : null);
+    if (hours === null) return null;
+    const key = `${kind}|${hours}`;
+    let windows = SLEEPS.get(key);
+    if (windows === undefined) {
+        const nap = (centre: number, length: number) => [centre - length / 2, centre + length / 2];
+        const S = Math.min(Math.max(hours, 0), 23);
+        if (S <= 0) windows = [];
+        else if (kind === "crepuscular") windows = [...nap(12.5, Math.min(S * 0.55, 10)), ...nap(0.5, S - Math.min(S * 0.55, 10))];
+        else if (kind === "nocturnal") windows = S <= 5.5 ? [...nap(10, S / 3), ...nap(12.5, S / 3), ...nap(15, S / 3)] : S <= 13 ? nap(12, S) : [...nap(12, 13), ...nap(0.5, S - 13)];
+        else if (kind === "any" && S > 6) windows = [...nap(23.5, S / 3), ...nap(3.5, S / 3), ...nap(13, S / 3)];
+        else windows = S <= 5.5 || kind === "any" ? [...nap(23, S / 3), ...nap(1.5, S / 3), ...nap(4, S / 3)] : S <= 13 ? nap(0, S) : [...nap(0, 13), ...nap(13, S - 13)];
+        SLEEPS.set(key, windows);
+    }
+    return windows;
 }
+const SLEEPS = new Map<string, number[]>();
+
+export function awakeAt(profile: ArkBehaviourProfile, activity: ArkBehaviourProfile["activity"] | null | undefined, hours: number): boolean {
+    const kind = activity ?? profile.activity;
+    const windows = sleepWindows(profile, kind);
+    if (!windows) return isAwake(kind, sunElevationAt(hours));
+    const h = ((hours % 24) + 24) % 24;
+    for (let i = 0; i < windows.length; i += 2) {
+        const from = windows[i];
+        const to = windows[i + 1];
+        if ((h >= from && h < to) || (h + 24 >= from && h + 24 < to) || (h - 24 >= from && h - 24 < to)) return false;
+    }
+    return true;
+}
+
+/**
+ * Its waking day: the hour its longest waking stretch begins and how long that is (hours), by the same rule as
+ * `awakeAt`. One that never sleeps: from dawn, the whole day.
+ */
+export function wakingDay(profile: ArkBehaviourProfile, activity: ArkBehaviourProfile["activity"] | null | undefined): {wake: number; hours: number} {
+    const kind = activity ?? profile.activity;
+    const key = `${kind}|${dayOf(profile).sleep ?? ""}`;
+    let day = WAKING.get(key);
+    if (!day) {
+        // Every three minutes round the clock: the longest run awake.
+        const STEP = 0.05;
+        const N = Math.round(24 / STEP);
+        let best = {wake: 6, hours: 24};
+        let first = -1;
+        for (let i = 0; i < N; i++) if (!awakeAt(profile, activity, i * STEP)) { first = i; break; }
+        if (first >= 0) {
+            best = {wake: 0, hours: 0};
+            let from = -1;
+            for (let k = 1; k <= N; k++) {
+                const i = (first + k) % N;
+                const up = k < N && awakeAt(profile, activity, i * STEP);
+                if (up && from < 0) from = k;
+                if (!up && from >= 0) {
+                    if ((k - from) * STEP > best.hours + 1e-9) best = {wake: ((first + from) % N) * STEP, hours: (k - from) * STEP};
+                    from = -1;
+                }
+            }
+            if (best.hours <= 0) best = {wake: 6, hours: 24};
+        }
+        day = best;
+        WAKING.set(key, day);
+    }
+    return day;
+}
+const WAKING = new Map<string, {wake: number; hours: number}>();
 
 // MARK: Seeded choices
 
@@ -249,7 +336,8 @@ function hourly(profile: ArkBehaviourProfile, behaviour: ArkBehaviour, weight: n
         case "circle_light":
             return night ? weight * 3 : 0;
         case "drink":
-            return weight * (1 + dawn + dusk);
+            // (Its trips to water are its day's own: `needAt`.)
+            return weight;
         case "flee":
         case "flock":
             return 0;
@@ -270,11 +358,172 @@ function chronotype(id: string): number {
     return (((hashString(`${id}#chrono`) % 1000) / 1000) - 0.5) * 1.5;
 }
 
-function pick(profile: ArkBehaviourProfile, id: string, hoursNow: number, roll: number, bold: number, curious: number, avoid?: ArkBehaviour | null): ArkBehaviour {
+// MARK: Needs (lane B3, the behaviours pass of 2026-11-14)
+
+/**
+ * What a waking slot is for, before the choice among its behaviours: a feeding bout, the rest that follows it, the
+ * time between (travel, a flight, a swim, whatever else it does), a trip to water, a bask on waking.
+ */
+export type ArkNeed = "feed" | "rest" | "free" | "drink" | "bask";
+
+/** A cycle this long or longer (minutes) is counted from its waking, not round the clock: a lion's one hunt a night. */
+const LONG_CYCLE = 240;
+/** When in its waking day it goes to water (shares of its waking stretch): after its first feed, before its last light, then between. */
+const DRINK_AT = [0.14, 0.84, 0.5, 0.32, 0.68];
+/** Hot, open ground: a day animal there rests through the middle of the day. */
+const HOT_ZONES: ReadonlySet<ArkZone> = new Set<ArkZone>(["desert", "grassland"]);
+
+const unit = (key: string) => (hashString(key) % 100_003) / 100_003;
+
+/**
+ * The need a slot answers (visual only; the server's ecology feeds and starves, never this). Pure in the animal's id,
+ * its group's leader's id, the slot's start and the island's hour then: the same for every viewer, and no slot waits
+ * on another.
+ *
+ * Its waking time runs in feeding cycles (`ArkDay`, from its taxonomy, diet and size): a feeding bout, then the rest
+ * that follows it (a ruminant lies down to chew, a lion sleeps off its meal, a hummingbird sits on its perch), then the
+ * time between. So hunger leads to feeding and feeding to rest, in bouts of the length its kind keeps, where every
+ * slot used to be drawn on its own (an elephant changed what it was doing 30 times an hour, fed 2.2 hours a day in
+ * 80-second bouts and slept 11.5).
+ * - A short cycle (a shrew's 20 minutes, a deer's two and a half hours) runs round the clock from the animal's own
+ *   phase and at its own length (0.85-1.15 of its kind's), each bout 0.8-1.2 of its share; busier at dawn and dusk and
+ *   resting through midday where its kind does (two peaks, a siesta, a day animal on hot open ground).
+ * - A long cycle (a cat's, a crocodile's) is counted from its waking: it gets up, sets about feeding, and rests the
+ *   rest of its waking stretch. One that feeds one day in several (a python) does so on its own days.
+ * - A group keeps its leader's rhythm, each member up to three tenths of a cycle off it: a herd grazes and lies up
+ *   more or less together, never all on the same beat.
+ * - Trips to water are its day's own (`ArkDay.drinks`: one or two for most land mammals, none for a koala or a
+ *   kangaroo rat), at their hours of its waking day, the whole group at once.
+ * - One that basks (a lizard, a tortoise, a crocodile; a lemur) does that first on a morning's waking, before anything else.
+ * - Its last 20 minutes before it sleeps it rests (at dusk a day bird preens and settles).
+ */
+export function needAt(profile: ArkBehaviourProfile, animal: Pick<ScheduleAnimal, "id" | "zone" | "group" | "feeding">, activity: ArkBehaviourProfile["activity"] | null | undefined, start: number, hoursAt: HoursAt): ArkNeed {
+    // A zoo's feeding time: the keepers have put its food down.
+    if (animal.feeding) return "feed";
+    const day = dayOf(profile);
+    const kind = activity ?? profile.activity;
+    const hours = hoursAt(start);
+    const waking = wakingDay(profile, activity);
+    // Hours since its waking day began, and the epoch day that began on (its feeding days and its drinks are per day).
+    const since = (((hours - waking.wake) % 24) + 24) % 24;
+    // (Its waking began at the same moment whichever of the day's slots asks; a hair past the half so a waking that
+    // begins exactly on it never reads as two days.)
+    const dayIndex = Math.floor((start - since * 3600) / 86_400 + 0.5 + 1e-7);
+    const lead = animal.group ? animal.group.leader.id : animal.id;
+
+    // Its trips to water.
+    if (day.drinks > 0 && (profile.weights.drink ?? 0) > 0) {
+        const slotHours = (((hoursAt(start + SLOT_SECONDS) - hours) % 24) + 24) % 24;
+        if (slotHours > 1e-6 && slotHours < 1) {
+            const count = Math.min(Math.floor(day.drinks) + (unit(`${lead}#${dayIndex}#drinks`) < day.drinks - Math.floor(day.drinks) ? 1 : 0), DRINK_AT.length);
+            for (let i = 0; i < count; i++) {
+                const at = (DRINK_AT[i] + (unit(`${lead}#${dayIndex}#drink${i}`) - 0.5) * 0.12) * waking.hours;
+                if (at >= since && at < since + slotHours) return "drink";
+            }
+        } else {
+            // (The hour pinned, a recording's: as often, by the clock alone.)
+            const period = 86_400 / day.drinks;
+            const phase = unit(`${lead}#drinks`) * period;
+            if (Math.floor((start + phase) / period) !== Math.floor((start + SLOT_SECONDS + phase) / period)) return "drink";
+        }
+    }
+    const inDay = since < waking.hours;
+    // A basker warms up first: the first hour or so of a waking that begins in the morning (the sun up, before noon).
+    if ((profile.weights.bask ?? 0) > 0 && inDay && hours > 5.5 && hours < 11.5 && since < 1.2 + 0.8 * unit(`${animal.id}#bask`)) return "bask";
+    // Winding down: its last 20 minutes up.
+    if (inDay && waking.hours < 24 && since > waking.hours - 0.33) return "rest";
+
+    const shifted = (((hours + chronotype(animal.id)) % 24) + 24) % 24;
+    const dawn = Math.exp(-(((shifted - 6.5) / 1.5) ** 2));
+    const dusk = Math.exp(-(((shifted - 18.5) / 1.5) ** 2));
+    const midday = Math.exp(-(((shifted - 13) / 2) ** 2));
+    let u: number;
+    let n: number;
+    let feed = day.feed;
+    let rest = day.rest;
+    const member = animal.group ? unit(`${animal.id}#member`) - 0.5 : 0;
+    if (day.cycle >= LONG_CYCLE) {
+        const cycles = Math.max(1, Math.round((waking.hours * 60) / day.cycle));
+        // (It starts a twelfth of a cycle before a feeding bout: up, a stretch, a look round, then off.)
+        const x = (since / waking.hours) * cycles + 11 / 12 + member * 0.1;
+        n = Math.floor(x) + dayIndex * 8;
+        u = x - Math.floor(x);
+        if (day.every > 1) feed = (dayIndex + hashString(`${lead}#feedday`)) % day.every === 0 ? Math.min(day.feed * day.every, 0.5) : 0;
+    } else {
+        const length = day.cycle * 60 * (0.85 + 0.3 * unit(`${lead}#cycle`));
+        const t = start + unit(`${lead}#phase`) * length + member * 0.6 * length;
+        n = Math.floor(t / length);
+        u = t / length - n;
+        // Busier at the day's two ends, resting through its middle, where its kind is.
+        if (kind === "crepuscular" || profile.twoPeaks) feed *= 0.75 + 0.6 * (dawn + dusk) - (profile.siesta || profile.twoPeaks ? 0.35 * midday : 0);
+        if (profile.siesta || (kind === "diurnal" && HOT_ZONES.has(animal.zone))) {
+            rest *= 1 + (profile.siesta ? 1.6 : 0.9) * midday;
+            feed *= 1 - (profile.siesta ? 0.5 : 0.3) * midday;
+        }
+    }
+    feed = Math.min(Math.max(feed * (0.8 + 0.4 * unit(`${lead}#${n}#bout`)), 0), 0.95);
+    rest = Math.min(Math.max(rest, 0), 1 - feed);
+    return u < feed ? "feed" : u < feed + rest ? "rest" : "free";
+}
+
+/**
+ * Its feeding rhythm in waking seconds, for its card's fed bar (`animal-status.ts` scheduleFed): one whole feeding
+ * cycle (over its feeding days, for one that feeds one day in several) and the gap in it between two feeding bouts.
+ */
+export function feedingRhythm(profile: ArkBehaviourProfile, activity: ArkBehaviourProfile["activity"] | null | undefined): {cycle: number; gap: number} {
+    const day = dayOf(profile);
+    const waking = wakingDay(profile, activity);
+    const cycle = day.cycle >= LONG_CYCLE ? ((waking.hours * 3600) / Math.max(1, Math.round((waking.hours * 60) / day.cycle))) * day.every : day.cycle * 60;
+    return {cycle, gap: Math.max(cycle * (1 - Math.min(Math.max(day.feed, 0.01), 0.95)), 300)};
+}
+
+/**
+ * Rests and feeding bouts hold their ground in spells: through one spell a resting animal keeps one place and one way
+ * of resting (its perch, its patch of shade, its basking rock), and a feeding one keeps to one patch (its grass, its
+ * litter), stepping about in it; the next spell may be somewhere else. The spell's index at a slot's start: about 40
+ * minutes of rest, 15 of feeding, each animal's own length (0.75-1.25) and phase. (Each slot still has its own goal,
+ * the same one through the spell, so no slot waits on the ones before it.)
+ */
+function spellOf(id: string, need: ArkNeed, start: number): number {
+    const length = (need === "feed" ? 900 : 2400) * (0.75 + 0.5 * unit(`${id}#spell`));
+    return Math.floor((start + unit(`${id}#spell-phase`) * length) / length);
+}
+
+const FEEDS: ReadonlySet<ArkBehaviour> = new Set<ArkBehaviour>(["forage", "graze", "visit_flowers", "stalk"]);
+const RESTS: ReadonlySet<ArkBehaviour> = new Set<ArkBehaviour>(["rest", "groom", "bask", "hide", "perch"]);
+/**
+ * How a need shares a slot among the three kinds of behaviour: in a feeding bout it feeds (one slot in thirty or so it
+ * does something else), in its rest it rests, grooms, basks or sits on its perch, between them it mostly travels. The
+ * shares are of the slot's whole draw, whatever the profile's weights add up to in each kind (as plain multipliers a
+ * cow, whose resting weights are a quarter of its feeding ones, left its rest one slot in six). It drinks on its trips
+ * to water and at no other time (as one behaviour among the rest, every land animal near water went to it 20 to 70
+ * times a day).
+ */
+const NEED_SHARES: Record<Exclude<ArkNeed, "drink">, {feed: number; rest: number; free: number}> = {
+    feed: {feed: 0.965, rest: 0.015, free: 0.02},
+    rest: {feed: 0.01, rest: 0.965, free: 0.025},
+    bask: {feed: 0.01, rest: 0.975, free: 0.015},
+    free: {feed: 0.06, rest: 0.14, free: 0.8}
+};
+const kindOf = (behaviour: ArkBehaviour): "feed" | "rest" | "free" => (FEEDS.has(behaviour) ? "feed" : RESTS.has(behaviour) ? "rest" : "free");
+/** Within its rest, resting itself comes first (a lion groomed a third of its rest), and a basker's first hour is its bask. */
+function withinNeed(need: ArkNeed, behaviour: ArkBehaviour): number {
+    if (behaviour === "rest" && need !== "bask") return 2.5;
+    return need === "bask" && behaviour === "bask" ? 14 : 1;
+}
+
+function pick(profile: ArkBehaviourProfile, id: string, hoursNow: number, roll: number, bold: number, curious: number, need: ArkNeed, avoid?: ArkBehaviour | null): ArkBehaviour {
     const hours = (((hoursNow + chronotype(id)) % 24) + 24) % 24;
-    const entries = (Object.entries(profile.weights) as Array<[ArkBehaviour, number]>)
-        .map(([b, w]) => [b, (b === avoid ? hourly(profile, b, w, hours, bold, curious) * 0.25 : hourly(profile, b, w, hours, bold, curious)) * leaning(id, b)] as const)
+    // (Its trip to water: it drinks.)
+    if (need === "drink" && (profile.weights.drink ?? 0) > 0) return "drink";
+    const pulls = (Object.entries(profile.weights) as Array<[ArkBehaviour, number]>)
+        .map(([b, w]) => [b, b === "drink" ? 0 : (b === avoid ? hourly(profile, b, w, hours, bold, curious) * 0.25 : hourly(profile, b, w, hours, bold, curious)) * leaning(id, b) * withinNeed(need, b)] as const)
         .filter(([, w]) => w > 0);
+    // Each kind's pulls scaled to the need's share of the slot (a kind it has nothing of leaves its share to the others).
+    const sums = {feed: 0, rest: 0, free: 0};
+    for (const [b, w] of pulls) sums[kindOf(b)] += w;
+    const shares = NEED_SHARES[need === "drink" ? "free" : need];
+    const entries = pulls.map(([b, w]) => [b, (w / sums[kindOf(b)]) * shares[kindOf(b)]] as const);
     const total = entries.reduce((sum, [, w]) => sum + w, 0);
     if (!total) return "rest";
     let at = roll * total;
@@ -990,6 +1239,8 @@ function groupCentre(world: ScheduleWorld, animal: ScheduleAnimal, slot: number,
 type Intent = {doing: ArkDoing; to: Spot | null; mode: TripMode; stay: Array<Omit<StayBeat, "x" | "z" | "yaw"> & {dx?: number; dz?: number; turn?: number}>; follow?: boolean; /** Its heading once there (a prey animal faces the predator it watches); else seeded. */ face?: number; recipe?: string; /** A flight round and back down where it took off (`roundRoute`). */ round?: boolean};
 
 const STAY_DOINGS: ReadonlySet<ArkDoing> = new Set<ArkDoing>(["rest", "groom", "idle", "sleep", "watch"]);
+/** Settled where it is: a flock does not take off after a leader that is doing one of these. */
+const SETTLED: ReadonlySet<ArkDoing> = new Set<ArkDoing>(["rest", "groom", "perch", "bask", "hide", "sleep", "idle"]);
 
 /**
  * Its beats at the destination: the grazing loop (head down to bite, chew, a step on, now and then the head up to
@@ -1402,7 +1653,10 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     // A group's watch: one member at a time (in turn, seeded by the group) keeps watch while the others do their own things,
     // by day and (for herds and troops) through the night.
     const size = group ? group.size : 0;
-    const watchTurn = size >= 3 ? (slot + hashString(group!.leader.id)) % size === group!.rank : false;
+    // (Lane B3 needs: a turn on watch lasts `DAY_WATCH_SLOTS` slots, about four minutes, on the shared clock as the
+    // night watch below; a turn of one slot took each member off its grazing every `size` slots, a herd of four's every 5 minutes.)
+    const dayWindow = Math.floor((start + SLOT_SECONDS / 2) / (SLOT_SECONDS * DAY_WATCH_SLOTS));
+    const watchTurn = size >= 3 ? (dayWindow + hashString(group!.leader.id)) % size === group!.rank : false;
     if (!awake) {
         const roost = roostOf(world, profile, animal);
         // The night watch (sleep lane): always one of the members (never the leader's turn with nobody up), standing about
@@ -1480,8 +1734,12 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         const lead = leaderIntentAt(world, group, start + 1, hoursAt);
         // Its place is by its leader; what it does there is its own (a school's fish feed or cruise, a flock's birds fly),
         // so a school is one shape but not one state (problem 7).
-        if ((lead.mode === "air" || (aquatic(profile) && lead.mode === "water")) && lead.to) {
-            const own: ArkDoing = lead.mode === "air" ? "fly" : random() < 0.45 ? "forage" : "swim";
+        // (Lane B3 needs: not while its leader is settled, resting on its perch through its spell: its goal is the same
+        // perch slot after slot, in the air only by name, and a member "flying with it" dropped 9.6 m off its own perch.)
+        if ((lead.mode === "air" || (aquatic(profile) && lead.mode === "water")) && lead.to && !(lead.mode === "air" && SETTLED.has(lead.doing))) {
+            // (Lane B3 needs: a school's fish feeds through its own feeding bouts and cruises between them, each a
+            // little off its leader's rhythm; drawn slot by slot, 45 in 100, it changed every slot or two.)
+            const own: ArkDoing = lead.mode === "air" ? "fly" : needAt(profile, animal, activity, start, hoursAt) === "feed" ? "forage" : "swim";
             return {doing: own, to: null, mode: lead.mode, stay: [], follow: true};
         }
     }
@@ -1491,9 +1749,28 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     }
     // Its own choice; a group member is a little less likely to do just what its leader does now.
     const leaderDoing = group ? leaderIntentAt(world, group, start + 1, hoursAt).doing : null;
-    let behaviour = pick(profile, animal.id, hours, random(), personality.boldness, personality.curiosity, leaderDoing as ArkBehaviour | null);
+    // (Lane B3 needs: what the slot is for, a feeding bout, its rest, a trip to water, comes first; then its choice within it.)
+    const need = needAt(profile, animal, activity, start, hoursAt);
+    let behaviour = pick(profile, animal.id, hours, random(), personality.boldness, personality.curiosity, need, leaderDoing as ArkBehaviour | null);
+    // (Its spell's own seeded stream, `spellOf`: where it rests or feeds is drawn from it, the same through the spell.)
+    const spell = need === "rest" || need === "bask" || need === "feed" ? rng(hashString(`${animal.id}#spell#${need}#${spellOf(animal.id, need, start)}`)) : null;
+    // A rest keeps one way of resting through its spell (a bird its perch: it sits, rests and preens there); what it
+    // does there this slot, a rest or a groom, is the slot's own.
+    let there: ArkDoing | null = null;
+    if (spell && need !== "feed" && RESTS.has(behaviour)) {
+        let settled = pick(profile, animal.id, hours, spell(), personality.boldness, personality.curiosity, need, null);
+        if (RESTS.has(settled)) {
+            // (A wading bird's rest may be standing in its shallows: `WADING`, below.)
+            if (profile.move === "fly" && profile.water !== "wader" && (profile.weights.perch ?? 0) > 0 && (settled === "rest" || settled === "groom")) settled = "perch";
+            there = behaviour === "rest" || behaviour === "groom" ? behaviour : (settled as ArkDoing);
+            behaviour = settled;
+        }
+    }
+    // (Where: the spell's roll through a rest or a feeding bout, the slot's own otherwise; a rest's place in its patch too.)
+    const placeRandom = spell ?? random;
+    const spotRandom = spell && need !== "feed" ? spell : random;
     // A browser's grazing is at bushes and trees.
-    let doing: ArkDoing = behaviour as ArkDoing;
+    let doing: ArkDoing = there ?? (behaviour as ArkDoing);
     if ((behaviour === "graze" || behaviour === "forage") && (profile.diet === "browser" || profile.diet === "fruit") && walks(profile) && !flyer) doing = "browse";
     else if (behaviour === "graze" || (behaviour === "forage" && profile.diet === "grazer")) doing = "graze";
     // A recipe from its stored behaviours may take this slot (a perch by the water to fish from, its nest, bare ground).
@@ -1502,15 +1779,18 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     if (planned && !(planned.mode === "air" && !airAllowed(profile, animal, slot))) return {doing: planned.doing as ArkDoing, to: planned.to, mode: planned.mode, stay: [], recipe: planned.recipe};
     // A wading bird (a heron, an egret, a stork, an ibis) stands in the shallows to fish and to rest, its legs in the
     // water (lane MA3: the audit's herons were never in the water but for a minute's spear). Its own seeded stream.
-    if (profile.water === "wader" && WADING.has(behaviour) && rng(hashString(`${animal.id}#wade#${slot}`))() < WADE_SHARE) {
-        const shallows = shallowsNear(world, animal, centre, Math.min(Math.max(radius * 1.6, 8), 40), slot);
+    // (Lane B3 needs: through a spell of rest or feeding it keeps to the shallows or out of them, and to one stand in
+    // them, drawn by the spell: slot by slot it changed its stand every 80 s.)
+    const wadeKey = spell ? spellOf(animal.id, need, start) * 2 + (need === "feed" ? 1 : 0) : slot;
+    if (profile.water === "wader" && WADING.has(behaviour) && rng(hashString(`${animal.id}#wade#${wadeKey}`))() < WADE_SHARE) {
+        const shallows = shallowsNear(world, animal, centre, Math.min(Math.max(radius * 1.6, 8), 40), wadeKey);
         if (shallows) {
             const wadeRandom = rng(hashString(`${animal.id}#wade-beats#${slot}`));
             // (One that walks first, a rail, a gallinule, walks to its shallows within its walk's reach, and flies further
             // only as often as it flies: lane MA3, a water rail hopped 4-10 m to the shallows 36 times a day.)
             const way = Math.hypot(shallows.x - centre.x, shallows.z - centre.z);
             const far = profile.move === "fly" ? way > Math.max(3, animal.length * 6) : way > walkReach(profile, animal) && airAllowed(profile, animal, slot);
-            return {doing: behaviour === "wander" ? "forage" : (behaviour as ArkDoing), to: shallows, mode: flyer && far ? "air" : "ground", stay: stayBeats(behaviour === "forage" || behaviour === "wander" ? "watch" : "rest", wadeRandom, null)};
+            return {doing: behaviour === "wander" ? "forage" : (there ?? (behaviour as ArkDoing)), to: shallows, mode: flyer && far ? "air" : "ground", stay: stayBeats(behaviour === "forage" || behaviour === "wander" ? "watch" : "rest", wadeRandom, null)};
         }
     }
     if (behaviour === "stalk" && !animal.prey) behaviour = "wander";
@@ -1537,7 +1817,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             // swim at a duck's 0.3 m/s: a flock's member searched only its small share of the flock's spread, and its swim
             // reach is its walk clip's, and it never came ashore.)
             const bank = place === "shore" && aquatic(profile) && amphibious(profile) ? 20 : 0;
-            const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(Math.max(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), bank), cap), random());
+            const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(Math.max(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), bank), cap), placeRandom());
             if (point) {
                 const up = point.y > topAt(world, point.x, point.z) + 0.5;
                 // (Lane MA3: a bird that walks or swims first flies up to a perch, a branch, a ledge only as often as it flies:
@@ -1548,8 +1828,8 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
                 // point or standing in the ledges' even row.
                 const spread = point.tag === "grass" ? 3.2 : point.tag === "shade" || point.tag === "leaf_litter" ? 1.4 : point.tag === "cliff_ledge" ? 1.8 : point.tag === "rock_top" ? 1 : point.tag === "water_edge" ? 0.9 : 0;
                 if (spread && !up) {
-                    const a = random() * Math.PI * 2;
-                    const r = spread * (0.25 + 0.75 * Math.sqrt(random())) * Math.max(Math.min(animal.length, 2), 0.3);
+                    const a = spotRandom() * Math.PI * 2;
+                    const r = spread * (0.25 + 0.75 * Math.sqrt(spotRandom())) * Math.max(Math.min(animal.length, 2), 0.3);
                     const x = point.x + Math.cos(a) * r;
                     const z = point.z + Math.sin(a) * r;
                     // (A bird flies to its spot on a ledge: dry ground is enough, it need not be walkable.)
@@ -1626,14 +1906,22 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         default: {
             const stayDoing: ArkDoing = STAY_DOINGS.has(doing) ? doing : "rest";
             // A group member that rests keeps near its group (it walks to it first if it has drifted away).
-            if (group) return {doing: stayDoing, to: rangeSpot(world, profile, groupAnimal, centre, radius * 0.6, random), mode: aquatic(profile) ? "water" : "ground", stay: stayBeats(stayDoing, random, null)};
+            if (group) return {doing: stayDoing, to: rangeSpot(world, profile, groupAnimal, centre, radius * 0.6, spotRandom), mode: aquatic(profile) ? "water" : "ground", stay: stayBeats(stayDoing, random, null)};
             // A den, burrow, cave, hole or crevice animal mostly rests in it, out of sight (`restingAtRoost`: the runtime's
-            // rotation hides the ones resting at home, so one out of sight is plausibly there). Its own seeded stream.
-            if (stayDoing === "rest" && ENCLOSED_ROOSTS.has(profile.roost) && rng(hashString(`${animal.id}#den#${slot}`))() < 0.6) {
+            // rotation hides the ones resting at home, so one out of sight is plausibly there). Its own seeded stream
+            // (lane B3 needs: one draw for a whole rest spell, in or out, not in and out slot by slot).
+            const resting = spell && need !== "feed";
+            if ((stayDoing === "rest" || (resting && stayDoing === "groom")) && ENCLOSED_ROOSTS.has(profile.roost) && rng(hashString(resting ? `${animal.id}#den#spell#${spellOf(animal.id, need, start)}` : `${animal.id}#den#${slot}`))() < 0.6) {
                 const roost = roostOf(world, profile, animal);
                 const travel: TripMode = aquatic(profile) ? "water" : flyer && raised(world, roost) ? "air" : profile.surface && roost.ny < 0.7 ? "surface" : "ground";
                 return {doing: "rest", to: roost, mode: travel, stay: stayBeats("rest", random, null)};
             }
+            // (Lane B3 needs: a rest with no place of its kind near has its own spot through the spell, near where it
+            // lives: it goes there, settles and stays; a bird with no perch that suits it sits on the ground, a fish
+            // holds its station. With no goal a rest stayed wherever the last slot left it, and once four such slots
+            // had gone by every slot after them went home as a wander, `plannedIntent`: a long rest never was one, and
+            // an eagle with no perch "wandered" through 60% of its day.)
+            if (resting) return {doing: stayDoing, to: rangeSpot(world, profile, animal, own, Math.max(Math.min(radius * 0.5, animal.length * 6), 0.5), spell!), mode: aquatic(profile) ? "water" : flyer && profile.move === "fly" ? "air" : profile.surface ? "surface" : "ground", stay: stayBeats(stayDoing, random, null)};
             return {doing: stayDoing, to: null, mode: "stay", stay: stayBeats(stayDoing, random, null)};
         }
     }

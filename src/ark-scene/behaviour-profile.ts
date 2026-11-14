@@ -60,18 +60,80 @@ export type ArkBehaviourProfile = {
     /** Its walk's and its run's own pace (body lengths a second: the clip's ground_speed over its duty); null without. */
     walkPace: number | null;
     runPace: number | null;
+    /** Its day (lane B3 needs): how much of its waking time it feeds and rests, in what cycle, how often it drinks, how long it sleeps; null: by its diet (`dayOf`). */
+    day: ArkDay | null;
     /** Some field is a body-plan default (data missing). */
     defaulted: boolean;
     /** Not in the table: the body plan's defaults. */
     fallback: boolean;
 };
 
+/**
+ * Its day's needs (lane B3, the behaviours pass of 2026-11-14; `scripts/ark-behaviour-profiles.mts` dayOf, from its
+ * taxonomy, diet and size): the schedule turns them into bouts in order (`behaviour-schedule.ts` needAt), so a grazer
+ * grazes for an hour or two and then lies down to chew, a hummingbird feeds for a minute every ten, a lion lies about
+ * most of its few waking hours, and a python feeds one day in five.
+ */
+export type ArkDay = {
+    /** The share of its waking time in feeding bouts (0-1). */
+    feed: number;
+    /** One feeding cycle (a feeding bout, the rest after it, then whatever else it does), minutes. */
+    cycle: number;
+    /** The share of its waking time in the rest that follows a feeding bout (0-1). */
+    rest: number;
+    /** Trips to water a day (0: never; 0.5: every other day). */
+    drinks: number;
+    /** Hours asleep in the 24; null: its activity's own hours (`ark-daylight.ts` isAwake). */
+    sleep: number | null;
+    /** It feeds one day in this many (a snake, a crocodile); 1: every day. */
+    every: number;
+    /** It chews the cud through the rest after a feeding bout. */
+    ruminates: boolean;
+};
+
+/** A species with no day written (a model newer than the profiles): by what it eats. `[feed, cycle, rest, drinks]`. */
+const DIET_DAYS: Record<string, [number, number, number, number]> = {
+    grazer: [0.6, 120, 0.25, 1],
+    browser: [0.55, 120, 0.25, 1],
+    seeds: [0.5, 25, 0.25, 1],
+    fruit: [0.45, 40, 0.3, 1],
+    nectar: [0.35, 12, 0.45, 0],
+    insects: [0.5, 25, 0.25, 0.5],
+    fish: [0.3, 90, 0.45, 0],
+    meat: [0.2, 240, 0.55, 0.5],
+    carrion: [0.15, 240, 0.5, 0.5],
+    blood: [0.2, 120, 0.6, 0],
+    filter: [0.6, 60, 0.2, 0],
+    algae: [0.6, 40, 0.2, 0],
+    detritus: [0.5, 40, 0.3, 0],
+    omnivore: [0.45, 60, 0.3, 1]
+};
+const dayCache = new Map<string, ArkDay>();
+/** Its day: the generator's, or its diet's. */
+export function dayOf(profile: Pick<ArkBehaviourProfile, "day" | "diet">): ArkDay {
+    if (profile.day) return profile.day;
+    let day = dayCache.get(profile.diet);
+    if (!day) {
+        const [feed, cycle, rest, drinks] = DIET_DAYS[profile.diet] ?? DIET_DAYS.omnivore;
+        day = {feed, cycle, rest, drinks, sleep: null, every: 1, ruminates: false};
+        dayCache.set(profile.diet, day);
+    }
+    return day;
+}
+
+/** The row's day field: `feed %,cycle min,rest %,drinks x10,sleep hours x10 (empty: by its activity),every,flags (r ruminates)`. */
+function decodeDay(field: string): ArkDay | null {
+    if (!field) return null;
+    const [feed, cycle, rest, drinks, sleep, every, flags = ""] = field.split(",");
+    return {feed: Number(feed) / 100, cycle: Math.max(Number(cycle), 4), rest: Number(rest) / 100, drinks: Number(drinks) / 10, sleep: sleep === "" || sleep === undefined ? null : Number(sleep) / 10, every: Math.max(Number(every) || 1, 1), ruminates: flags.includes("r")};
+}
+
 const ACTIVITY: Record<string, ArkProfileActivity> = {d: "diurnal", n: "nocturnal", c: "crepuscular", a: "any"};
 const ROWS = (table as {species: Record<string, string>}).species;
 const cache = new Map<string, ArkBehaviourProfile>();
 
 export function decodeBehaviourRow(slug: string, row: string): ArkBehaviourProfile {
-    const [move, moves, activity, rhythm, roost, social, diet, behaviours, interactions, flags, size, speed, dominance, gait, walkPace, runPace, water = "", fine = ""] = row.split("|");
+    const [move, moves, activity, rhythm, roost, social, diet, behaviours, interactions, flags, size, speed, dominance, gait, walkPace, runPace, water = "", fine = "", day = ""] = row.split("|");
     const weights: Partial<Record<ArkBehaviour, number>> = {};
     for (let i = 0; i + 1 < behaviours.length; i += 2) {
         const name = ARK_BEHAVIOURS[parseInt(behaviours[i], 36)];
@@ -107,6 +169,7 @@ export function decodeBehaviourRow(slug: string, row: string): ArkBehaviourProfi
         gait: number(gait),
         walkPace: number(walkPace),
         runPace: number(runPace),
+        day: decodeDay(day),
         defaulted: flags.includes("d"),
         fallback: false
     };
@@ -133,7 +196,7 @@ export function behaviourProfile(slug: string, plan?: string | null): ArkBehavio
     const row = ROWS[slug];
     const profile: ArkBehaviourProfile = row
         ? decodeBehaviourRow(slug, row)
-        : {slug, ...GROUND, ...PLAN_DEFAULTS[plan ?? ""], twoPeaks: false, siesta: false, breathes: false, seabed: false, water: null, size: null, speed: null, dominance: null, gait: null, walkPace: null, runPace: null, defaulted: true, fallback: true};
+        : {slug, ...GROUND, ...PLAN_DEFAULTS[plan ?? ""], twoPeaks: false, siesta: false, breathes: false, seabed: false, water: null, size: null, speed: null, dominance: null, gait: null, walkPace: null, runPace: null, day: null, defaulted: true, fallback: true};
     cache.set(slug, profile);
     return profile;
 }
