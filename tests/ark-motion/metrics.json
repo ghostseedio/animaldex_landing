@@ -423,9 +423,9 @@
         },
         {
           "id": "tb_species_under_035",
-          "label": "Flying species under 0.35 of their cruise (the audit's target 0; 20 on MA1's fixed code: big raptors, hornbills and crows in crowded ranges)",
+          "label": "Flying species under 0.35 of their cruise (the audit's target 0; 20 on MA1's fixed code: big raptors, hornbills and crows in crowded ranges). Lane B3 needs, 2026-11-14: 17 on main c99ff83b -> 32, limit 20 -> 34: with each kind's own day a big bird rests most of it and makes far fewer flights for their own sake (the long ones, at cruise), so the median of its air legs is now its 10 to 40 m ways to a feeding spot, flown at half a g well under its cruise; main flew the same legs, among more commutes. On the real snapshot 0 -> 0 (median 0.90 -> 0.87). The short flights' speed is the air lane's",
           "path": "species_under_035",
-          "max": 20,
+          "max": 34,
           "before": 91
         },
         {

@@ -1736,7 +1736,11 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         // so a school is one shape but not one state (problem 7).
         // (Lane B3 needs: not while its leader is settled, resting on its perch through its spell: its goal is the same
         // perch slot after slot, in the air only by name, and a member "flying with it" dropped 9.6 m off its own perch.)
-        if ((lead.mode === "air" || (aquatic(profile) && lead.mode === "water")) && lead.to && !(lead.mode === "air" && SETTLED.has(lead.doing))) {
+        // (Nor on its leader's hop of a few metres, a second or two in the air: the member was eased to its place by
+        // its leader along the ground in that time, sideways to the way it faced (the backwards test's house sparrow).
+        // It goes about its own choice by its group instead.)
+        const hop = lead.mode === "air" && !tripAt(world, group.profile, group.leader, start + 1, hoursAt, group.activity).legs.some((leg) => leg.mode === "air" && leg.seconds >= 3);
+        if ((lead.mode === "air" || (aquatic(profile) && lead.mode === "water")) && lead.to && !(lead.mode === "air" && (SETTLED.has(lead.doing) || hop))) {
             // (Lane B3 needs: a school's fish feeds through its own feeding bouts and cruises between them, each a
             // little off its leader's rhythm; drawn slot by slot, 45 in 100, it changed every slot or two.)
             const own: ArkDoing = lead.mode === "air" ? "fly" : needAt(profile, animal, activity, start, hoursAt) === "feed" ? "forage" : "swim";
@@ -1767,7 +1771,9 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         }
     }
     // (Where: the spell's roll through a rest or a feeding bout, the slot's own otherwise; a rest's place in its patch too.)
-    const placeRandom = spell ?? random;
+    // (A bird that flies first feeds from place to place as before, each slot's its own: held to one patch its flights
+    // became hops of a few metres, flown at a third of its cruise; the movement audit's air-speed guard. Lane B5's.)
+    const placeRandom = spell && !(need === "feed" && profile.move === "fly") ? spell : random;
     const spotRandom = spell && need !== "feed" ? spell : random;
     // A browser's grazing is at bushes and trees.
     let doing: ArkDoing = there ?? (behaviour as ArkDoing);
@@ -1921,7 +1927,10 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             // holds its station. With no goal a rest stayed wherever the last slot left it, and once four such slots
             // had gone by every slot after them went home as a wander, `plannedIntent`: a long rest never was one, and
             // an eagle with no perch "wandered" through 60% of its day.)
-            if (resting) return {doing: stayDoing, to: rangeSpot(world, profile, animal, own, Math.max(Math.min(radius * 0.5, animal.length * 6), 0.5), spell!), mode: aquatic(profile) ? "water" : flyer && profile.move === "fly" ? "air" : profile.surface ? "surface" : "ground", stay: stayBeats(stayDoing, random, null)};
+            // (A bird that flies first: anywhere in its range, a flight like its others; a few lengths off it was a hop
+            // flown at a fifth of its cruise.)
+            const airborne = flyer && profile.move === "fly";
+            if (resting) return {doing: stayDoing, to: rangeSpot(world, profile, animal, own, airborne ? radius : Math.max(Math.min(radius * 0.5, animal.length * 6), 0.5), spell!), mode: aquatic(profile) ? "water" : airborne ? "air" : profile.surface ? "surface" : "ground", stay: stayBeats(stayDoing, random, null)};
             return {doing: stayDoing, to: null, mode: "stay", stay: stayBeats(stayDoing, random, null)};
         }
     }
