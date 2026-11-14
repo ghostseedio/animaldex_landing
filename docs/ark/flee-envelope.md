@@ -1,6 +1,6 @@
 # The flee envelope (intelligence ↔ behaviour)
 
-**Status:** agreed with the behaviour lane (67d6ddf3): §6.2 and §6.3. Lane: `ark-intelligence-web`. Numbers come from `src/ark-scene/reactive.ts`, `src/ark-scene/intelligence.json` and `src/ark-scene/sizes.ts` as of 75cd81a3. Where a number changes later, this file changes with it.
+**Status:** agreed with the behaviour lane (67d6ddf3): §6.2 and §6.3. Lane: `ark-intelligence-web`. Numbers come from `src/ark-scene/reactive.ts`, `src/ark-scene/intelligence.json` and `src/ark-scene/sizes.ts` as of 75cd81a3 (§2.1, §3, §4 and the real-pairs table: as of the behaviours pass, 2026-11-14, branch `ark-beh-prey`; the per-plan medians in §2 are still 75cd81a3's). Where a number changes later, this file changes with it.
 
 **Changes since the first draft (1e0b5ba5):**
 
@@ -73,7 +73,7 @@ An animal reacts only to an animal that would hunt it (`ReactiveLayer.threatens`
 - **Body mass** (`canTake`, `bodyMass`: mass from the drawn length by the catalogue's allometry, with each body plan's share of a four-legged body's weight: a bird 0.15, a snake 0.03, a lizard 0.04 rising with its length). A hunter alone takes prey up to 4 times its own weight; one that lives in a group up to 8; a pack hunter up to 12; a bird of prey 1.5; a snake its own weight. It is this individual's size that counts: a cub is no threat to a zebra.
   - Before the pass this was the size stat (prey no more than 6 points above the hunter, 18 for a pack). The stat ranks animals within their own kind, so it let a rock python (72) threaten a giraffe (78), a mantis a hedgehog and a rat snake a roe deer, and kept a stoat (11) from a rabbit (18).
 - **Pets.** The ecology gives cats, dogs and a ferret no food links. A meat-eating four-legged hunter with no links at all is read by its build (`huntsByBuild`): it goes after land animals and birds, themselves no meat-eaters, up to a third of its own weight (a cat a sparrow, a pigeon, a mouse; a dog a hen, a rabbit, a duck).
-- **A much bigger hunter** (`rival`): a ground hunter gives way to another at least 2.5 times its weight (a cheetah or a jackal to a lion, a fox to a wolf, a cat to a dog). The bigger pays the smaller no mind.
+- **A much bigger hunter** (`threatens`): a ground hunter gives way to another at least 2.5 times its weight (a cheetah or a jackal to a lion, a fox to a wolf, a cat to a dog). The bigger pays the smaller no mind.
 - **Kept animals** (`ReactiveInput.kept`, the town island's `area`; `apart`). A zoo animal is apart from everything: its fence, and the habit of the ones it shares its enclosure with. Two animals kept at homes or on farms are used to one another (the yard dog and the hens). Between a kept animal and a wild one nothing changes: the garden's sparrows and the house cat, the hens and a fox. Across a fence or a household a hunter still watches what it would hunt (`watch_prey`); it never stalks it. The camera never backs a kept animal off or wakes it.
 
 A hunter near the camera that is not acting out a server meal creeps at its prey (the local `stalk`) only when the schedule has it hunting (`stalk`) or up and about and hungry (`forage`, `wander`); one lying up, grooming, basking or drinking only watches. Its prey can tell (§3).
@@ -108,21 +108,21 @@ What `perceive()` does with those ranges each time it looks:
 | bat | 7 | 0.2 / 0.4 / 0.6 | 6 | 30 | 1.6 / 2.0 / 2.6 |
 | other | 68 | 0.2 / 0.3 / 1.2 | 0 | 0 | 0.5 / 0.6 / 0.9 |
 
-**Real pairs.** Each figure is the farthest distance at which `perceive()` says yes. The predator stands broadside, by day unless the column says night, with a light wind blowing away from the prey (so no smell) and no line-of-sight test:
+**Real pairs** (recomputed 2026-11-14 on the behaviours pass, at today's true drawn sizes). Each figure is the farthest distance at which `perceive()` says yes. The predator is off to the prey's side, by day unless the column says night, with a light wind blowing away from the prey (so no smell) and no line-of-sight test:
 
-| Prey | Predator | Prey drawn m | Walking predator (day) | Still predator (day) | Walking predator (night) | Flight distance | Flee reach | Flee speed m/s |
-|---|---|---|---|---|---|---|---|---|
-| house mouse | red fox | 0.3 | 24.6 | 13.3 | 24.6 (heard) | 3.6 | 2.5 | 1.4 |
-| red squirrel | red fox | 0.4 | 25.7 | 14.0 | 25.7 | 4.2 | 3.0 | 1.9 |
-| meerkat | (a jackal-sized hunter) | 0.6 | 24.2 | 14.0 | 16.8 | 4.7 | 3.5 | 2.9 |
-| European rabbit | red fox | 0.6 | 41.4 | 14.7 | 41.4 | 5.2 | 3.8 | 2.6 |
-| roe deer | Eurasian wolf | 1.3 | 50.9 | 16.8 | 50.9 | 7.3 | 6.1 | 4.3 |
-| red deer | Eurasian wolf | 1.8 | 38.8 | 19.6 | 38.8 | 10.0 | 7.6 | 5.7 |
-| plains zebra | African lion | 1.7 | 40.0 | 19.9 | 40.0 | 9.6 | 7.4 | 5.5 |
-| house sparrow | domestic cat | 0.4 | 31.0 | 17.4 | 19.8 | 3.3 | 2.8 | 2.0 |
-| mallard | red fox | 0.8 | 35.8 | 20.1 | 22.4 | 4.8 | 4.3 | 3.4 |
-| green iguana | jaguar | 1.3 | 18.1 | 10.1 | 10.2 | 4.0 | 6.0 | 3.2 |
-| green sea turtle | tiger shark | 1.5 | 18.1 | 10.1 | 7.0 | 4.4 | 6.8 | 3.6 |
+| Prey | Predator | Prey drawn m | Walking predator (day) | Still predator (day) | Creeping predator (day) | Walking predator (night) | Flight distance | Flee reach | Flee speed m/s |
+|---|---|---|---|---|---|---|---|---|---|
+| house mouse | red fox | 0.1 | 23.6 (heard) | 11.3 | 8.0 | 23.6 (heard) | 3.6 | 2.0 | 2.1 |
+| red squirrel | red fox | 0.2 | 24.7 (heard) | 11.8 | 8.4 | 24.7 (heard) | 4.2 | 2.3 | 3.2 |
+| meerkat | European wildcat | 0.3 | 25.2 (heard) | 12.1 | 8.6 | 25.2 (heard) | 4.7 | 2.4 | 4.1 |
+| European rabbit | red fox | 0.3 | 39.8 (heard) | 13.0 | 9.3 | 39.8 (heard) | 5.2 | 2.7 | 4.5 |
+| roe deer | Eurasian wolf | 1.0 | 50.6 (heard) | 16.5 | 11.8 | 50.6 (heard) | 7.3 | 5.1 | 8.0 |
+| red deer | Eurasian wolf | 1.7 | 38.5 (heard) | 19.1 | 13.6 | 38.5 (heard) | 10 | 7.4 | 8.0 |
+| plains zebra | African lion | 2.1 | 41.0 (heard) | 20.4 | 14.6 | 41.0 (heard) | 9.6 | 8.9 | 8.0 |
+| house sparrow | domestic cat | 0.1 | 29.2 | 16.3 | 11.6 | 18.7 (heard) | 3.3 | 2.0 | 0.9 |
+| mallard | red fox | 0.6 | 34.3 | 19.2 | 13.7 | 21.5 (heard) | 4.8 | 3.5 | 3.7 |
+| green iguana | jaguar | 1.5 | 17.4 | 9.7 | 6.9 | 9.8 (heard) | 4 | 6.8 | 5.7 |
+| green sea turtle | tiger shark | 1.2 | 20.1 | 11.2 | 8.0 | 5.4 (heard) | 4.4 | 5.7 | 0.3 |
 
 - **Alarm calls.** When an animal that calls (stored alarm calls, a sentinel, or a group-living default) notices the predator, it calls: once each time it takes a fresh look at it (§3), never more than every 8 s. (Before the pass it called every 8 s for as long as the predator was in sight.) The call reaches its own kind within `hearing × 1.6 × (1 − 0.4·rain)`. One that has settled to tolerating that predator takes no notice of calls about it.
 - **Eavesdropping.** Other group-living species react to the call only when the caller's threat could eat them too.
@@ -197,10 +197,10 @@ Modifiers: stored shy or wary text gives ×1.4, stored curious or bold text ×0.
 
 | | Value | At a glance |
 |---|---|---|
-| Flee reach (the envelope when fleeing) | `clamp(3.5·L + 1.5, 2, 9)` m, L = drawn length | mouse 2.0, sparrow 2.0, rabbit 2.7, roe deer 5.9, red deer 7.4, zebra 8.9, elephant 9 |
+| Flee reach (the envelope when fleeing) | `clamp(3.5·L + 1.5, 2, 9)` m, L = drawn length | mouse 2.0, sparrow 2.0, rabbit 2.7, roe deer 5.1, red deer 7.4, zebra 8.9, elephant 9 |
 | Calm reach (its own business) | `clamp(0.8·L + 0.4, 0.5, 2.5)` m | mouse 0.5, deer 1.7, elephant 2.5 |
-| Flee speed (`fleeSpeed`) | `min(fleePace, 8)` m/s: the locomotion lane's held flee for its body (`locomotion/flee.ts`: 0.65 of the allometric sprint for its size and plan, moved ±30% by its speed stat), the pace the prey of a meal's chase runs at | zebra 8, red deer 8, impala 8, chital 8, alpine marmot 5.3, rabbit 4.5, hen 2.8, mouse 2.1, wall lizard 1.6, sparrow (on foot) 0.9, frog 0.4, tortoise 0.3 |
-| Getting up to speed | `1 − exp(−t / τ)`, `τ = accelTime(L) / 3`; it eases up over the last quarter second | a zebra covers its 8.9 m in about 1.5 s |
+| Flee speed (`fleeSpeed`) | `min(fleePace, 8)` m/s: the locomotion lane's held flee for its body (`locomotion/flee.ts`: 0.65 of the allometric sprint for its size and plan, moved ±30% by its speed stat), the pace the prey of a meal's chase runs at | zebra 8, red deer 8, impala 8, chital 8, elephant 5.3, alpine marmot 5.3, rabbit 4.5, hen 2.8, mouse 2.1, wall lizard 1.6, sparrow (on foot) 0.9, frog 0.4, tortoise 0.1 |
+| Getting up to speed | `1 − exp(−t / τ)`, `τ = accelTime(L) / 3`; it eases up over the last quarter second | a zebra (τ 0.30 s) covers its 8.9 m in about a second and a half |
 | Body turn while fleeing | it faces the way it runs (a full turn on the spot first if that is more than 70° off) | |
 
 **Duration**, as a timeline:

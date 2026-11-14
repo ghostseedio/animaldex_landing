@@ -571,7 +571,7 @@ const BODY_WATCH = new Set<ReactiveAction>(["alert", "freeze", "threat_display",
 /** How much further the one on sentinel watch sees: it is looking for exactly this. */
 const SENTINEL_SIGHT = 1.6;
 const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
-/** The bodies among which a smaller hunter gives way to a bigger one (`rival`). */
+/** The bodies among which a smaller hunter gives way to a bigger one (`threatens`, `relation` bit 4). */
 const RIVAL_PLANS = new Set(["quadruped", "lizard"]);
 // (`browse` was missing until the behaviours pass: a browsing deer or giraffe near the camera never fed, it looked round all the time.)
 const FEEDING = new Set(["forage", "graze", "browse", "visit_flowers", "drink"]);
@@ -595,10 +595,8 @@ export class ReactiveLayer {
     private agents = new Map<string, Agent>();
     private frame = 0;
     private alarms: AlarmCall[] = [];
-    /** Who could eat whom, per species pair (the food links don't change). */
-    private eatsCache = new Map<string, Map<string, 0 | 1 | 2>>();
-    /** Which pairs of kinds are both hunters that catch their food (`rival`). */
-    private rivalCache = new Map<string, Map<string, boolean>>();
+    /** What each kind is to each other kind (`relation`): the food links and builds don't change. */
+    private eatsCache = new Map<string, Map<string, number>>();
     /** Lines of sight per pair, kept half a second (the terrain doesn't move; an animal walks a step). */
     private sightCache = new Map<string, {t: number; v: number; ttl: number}>();
     private around: (x: number, z: number, r: number) => ReactiveInput[] = () => [];
@@ -1461,10 +1459,11 @@ export class ReactiveLayer {
     }
 
     /**
-     * Whether `a` eats `b`'s kind (cached per species pair): 1 by the ecology's food links, 2 by its build (a pet
-     * with no links: `huntsByBuild`), 0 not.
+     * What kind `a` is to kind `b` (worked out once per pair of species, one look-up a call): bit 1, it eats it by the
+     * ecology's food links; bit 2, by its build (a pet with no links: `huntsByBuild`); bit 4, both are ground hunters
+     * that catch their food, so the smaller gives way to a much bigger one (`threatens`). 0: nothing to each other.
      */
-    private eats(a: ReactiveInput, b: ReactiveInput): 0 | 1 | 2 {
+    private relation(a: ReactiveInput, b: ReactiveInput): number {
         let row = this.eatsCache.get(a.slug);
         if (!row) {
             row = new Map();
@@ -1472,46 +1471,43 @@ export class ReactiveLayer {
         }
         let v = row.get(b.slug);
         if (v === undefined) {
-            v = foodLinked(a.intel, b.intel) ? 1 : huntsByBuild(a.intel, a.diet, b.intel, b.diet) ? 2 : 0;
+            v = 0;
+            if (a.slug !== b.slug) {
+                v = foodLinked(a.intel, b.intel) ? 1 : huntsByBuild(a.intel, a.diet, b.intel, b.diet) ? 2 : 0;
+                const catches = (i: ReactiveInput) => RIVAL_PLANS.has(i.plan) && (i.diet === "meat" || i.diet === "carrion") && i.intel.hunt.some((h) => h !== "filter" && h !== "scavenge");
+                if (catches(a) && catches(b)) v |= 4;
+            }
             row.set(b.slug, v);
         }
         return v;
     }
 
-    /**
-     * Whether `a` would hunt `b`: it eats its kind (`eats`) and could take a body of that size (`canTake`, this
-     * individual's own size: a cub is no threat to a zebra; a pet read by its build takes only small things, a third
-     * of its weight). Across a fence or within a household it only watches it (`apart`).
-     */
-    private hunts(a: ReactiveInput, b: ReactiveInput): boolean {
-        const kind = this.eats(a, b);
-        if (!kind) return false;
-        if (kind === 2) return bodyMass(b.plan, b.length) <= 0.35 * bodyMass(a.plan, a.length);
+    /** Whether `a`, eating `b`'s kind (`relation` bits 1 and 2), could take this one: `canTake` by its own size; a pet read by its build only small things, a third of its weight. */
+    private takes(a: ReactiveInput, b: ReactiveInput, kind: number): boolean {
+        if (kind & 2) return bodyMass(b.plan, b.length) <= 0.35 * bodyMass(a.plan, a.length);
         return canTake(a.plan, a.length, huntCompany(a.intel.hunt, a.social), b.plan, b.length);
     }
 
-    /** Whether `a` is a threat to `b`: it would hunt it (`hunts`) and nothing stands between them (`apart`: a zoo's fence, the habit of a home or a farm), or it is a much bigger hunter than the hunter `b` (`rival`). */
-    private threatens(a: ReactiveInput, b: ReactiveInput): boolean {
-        if (apart(a, b)) return false;
-        return this.hunts(a, b) || this.rival(a, b);
+    /**
+     * Whether `a` would hunt `b`: it eats its kind and could take a body of that size (this individual's own: a cub
+     * is no threat to a zebra). Across a fence or within a household it only watches it (`apart`).
+     */
+    private hunts(a: ReactiveInput, b: ReactiveInput): boolean {
+        const kind = this.relation(a, b) & 3;
+        return kind !== 0 && this.takes(a, b, kind);
     }
 
     /**
-     * A hunter gives way to a much bigger hunter (a cheetah, a leopard or a jackal to a lion, a fox to a wolf, a cat
-     * to a dog): both catch their food, both walk the ground, and `a` is at least two and a half times `b`'s weight.
-     * `b` treats `a` as it would a predator (it watches, moves off, runs when it is close); `a` pays `b` no mind.
+     * Whether `a` is a threat to `b`: it would hunt it (`hunts`) and nothing stands between them (`apart`: a zoo's
+     * fence, the habit of a home or a farm); or it is a much bigger hunter than the hunter `b`: a ground hunter gives
+     * way to another at least two and a half times its weight (a cheetah, a leopard or a jackal to a lion, a fox to a
+     * wolf, a cat to a dog), treating it as it would a predator, while the bigger pays it no mind.
      */
-    private rival(a: ReactiveInput, b: ReactiveInput): boolean {
-        if (!RIVAL_PLANS.has(a.plan) || !RIVAL_PLANS.has(b.plan) || a.slug === b.slug) return false;
-        let row = this.rivalCache.get(a.slug);
-        if (!row) this.rivalCache.set(a.slug, (row = new Map()));
-        let kind = row.get(b.slug);
-        if (kind === undefined) {
-            const catches = (i: ReactiveInput) => (i.diet === "meat" || i.diet === "carrion") && i.intel.hunt.some((h) => h !== "filter" && h !== "scavenge");
-            kind = catches(a) && catches(b);
-            row.set(b.slug, kind);
-        }
-        return kind && bodyMass(a.plan, a.length) >= 2.5 * bodyMass(b.plan, b.length);
+    private threatens(a: ReactiveInput, b: ReactiveInput): boolean {
+        const kind = this.relation(a, b);
+        if (!kind || apart(a, b)) return false;
+        if (kind & 3 && this.takes(a, b, kind)) return true;
+        return (kind & 4) !== 0 && bodyMass(a.plan, a.length) >= 2.5 * bodyMass(b.plan, b.length);
     }
 
     /** Whether `predator` is creeping up on `me` here (the local stalk: `menaceOf`'s `stalkingMe`). */

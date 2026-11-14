@@ -49,8 +49,9 @@ const WITH_SIGHT = flag("sight");
 const ENCOUNTER_M = 25;
 const CLOSE_M = 6;
 const FPS = 30;
-const REACTIONS = new Set<ReactiveOut["action"]>(["alert", "freeze", "flee", "threat_display", "play_dead", "shield_young", "hide_behind_parent", "recover"]);
-const DEFENCES = new Set<ReactiveOut["action"]>(["flee", "freeze", "threat_display", "play_dead", "shield_young", "hide_behind_parent"]);
+const REACTIONS = new Set<ReactiveOut["action"]>(["alert", "freeze", "flee", "threat_display", "play_dead", "shield_young", "hide_behind_parent", "withdraw", "recover"]);
+// (`withdraw`, an armoured animal pulling in, was missing: a tortoise in its shell read as "reacts, no flight".)
+const DEFENCES = new Set<ReactiveOut["action"]>(["flee", "freeze", "threat_display", "play_dead", "shield_young", "hide_behind_parent", "withdraw"]);
 const WATER_PLANS = new Set(["fish", "cephalopod_jelly"]);
 /** Plans whose head does not turn by design (`head-look.ts`: no neck to speak of). */
 const NO_HEAD = new Set(["crustacean", "arachnid", "other", "cephalopod_jelly"]);
