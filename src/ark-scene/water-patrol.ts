@@ -33,6 +33,11 @@ export type PatrolInput = {
     /** Which way round when its heading does not say (1 or -1), and a seeded 0…1 stream. */
     turn: 1 | -1;
     random: () => number;
+    /**
+     * The tightest circle it turns (m, its radius): by its size and its pace (`turnRadiusOf`). Absent: two and a half
+     * steps of its way, whatever its size.
+     */
+    turnRadius?: number;
     /** Fewer steps to the way (36, 72 at most): for one that stops at its goal, where no next slot hangs on its heading. */
     coarse?: boolean;
     /** Over water it can swim, at a point; and all the way from one point to another. */
@@ -60,8 +65,21 @@ function pointAt(points: PatrolPoint[], along: number): PatrolPoint {
     return points[points.length - 1];
 }
 
-/** The most it turns in one step of its way (radians): a turning circle of two and a half steps. */
+/** The most it turns in one step of its way (radians): a turning circle of two and a half steps, where its size asks no wider. */
 const STEP_TURN = 0.4;
+
+/**
+ * The tightest circle a swimmer turns on its way (m, its radius), by its body's length and its pace: 1.2 of its
+ * length at least, more for the biggest (a 14 m whale's turn is a wide arc, a dolphin's a few metres), and never a full turn in under
+ * half a minute at its pace (a round is a swim, not a spin). So at its patrol's pace a dolphin takes about a quarter
+ * of a minute to come right round, a great whale most of a minute. (Behaviours pass, the merged tree: every size had
+ * the same two-and-a-half-step circle, and a humpback turned 500 degrees in 20 s.)
+ */
+export function turnRadiusOf(length: number, pace: number): number {
+    // (Wider than 1.2 of its length for the great whales: half its length to the power of one and a half, a 13 m humpback's
+    // 19 m.)
+    return Math.max(length * 1.2, 0.4 * length ** 1.5, (pace * 30) / (2 * Math.PI));
+}
 
 /**
  * The way as a swimmer swims it: from the polyline's start, on `yaw` (else along its first run), a step at a time
@@ -74,7 +92,10 @@ const STEP_TURN = 0.4;
  * are eased onto the polyline's end (it comes in within about a step of it). Null when it cannot get there in three
  * times the polyline's length.
  */
-function swum(points: PatrolPoint[], step: number, yaw: number | null, runIn: boolean): PatrolPoint[] | null {
+function swum(points: PatrolPoint[], step: number, yaw: number | null, runIn: boolean, turnRadius: number): PatrolPoint[] | null {
+    // (Its turn a step, and how near a point of its way counts as reached: its turning circle's.)
+    const most1 = Math.min(STEP_TURN, step / Math.max(turnRadius, 1e-6));
+    const reach = Math.max(step * 2.5, turnRadius);
     const total = patrolLength(points);
     const end = points[points.length - 1];
     const gate = points[points.length - 2];
@@ -92,19 +113,19 @@ function swum(points: PatrolPoint[], step: number, yaw: number | null, runIn: bo
     for (let k = 0; k < most; k++) {
         let aim: PatrolPoint;
         if (run > 0 && !onRun) {
-            while (target < before && dist(at, pointAt(points, target)) < step * 2.5) target += step * 0.5;
+            while (target < before && dist(at, pointAt(points, target)) < reach) target += step * 0.5;
             aim = target >= before ? gate : pointAt(points, target);
             // (At the run's start, or a full turn spent trying for it: onto the run.)
             // (By the run's start and heading its way, not passing it the other way; or a turn and a quarter spent
             // trying for it: onto the run.)
-            if (target >= before && ((dist(at, gate) < step * 2.5 && Math.sin(heading) * fx + Math.cos(heading) * fz > 0.2) || waited > Math.PI * 2.5)) onRun = true;
+            if (target >= before && ((dist(at, gate) < reach && Math.sin(heading) * fx + Math.cos(heading) * fz > 0.2) || waited > Math.PI * 2.5)) onRun = true;
         } else {
-            while (target < total && dist(at, pointAt(points, target)) < step * 2.5) target += step * 0.5;
+            while (target < total && dist(at, pointAt(points, target)) < reach) target += step * 0.5;
             aim = target >= total ? end : pointAt(points, target);
         }
         if (onRun) {
             const along = Math.min(Math.max((at.x - gate.x) * fx + (at.z - gate.z) * fz, 0), run);
-            const to = Math.min(along + step * 2.5, run);
+            const to = Math.min(along + reach, run);
             aim = {x: gate.x + fx * to, z: gate.z + fz * to};
             target = total;
         }
@@ -124,9 +145,9 @@ function swum(points: PatrolPoint[], step: number, yaw: number | null, runIn: bo
         }
         const want = Math.atan2(aim.x - at.x, aim.z - at.z);
         const turn = Math.atan2(Math.sin(want - heading), Math.cos(want - heading));
-        heading += Math.min(Math.max(turn, -STEP_TURN), STEP_TURN);
+        heading += Math.min(Math.max(turn, -most1), most1);
         // (Circling the run's start, which lies inside its turning circle: after a turn and a quarter, onto the run.)
-        if (run > 0 && !onRun && target >= before) waited += Math.min(Math.abs(turn), STEP_TURN);
+        if (run > 0 && !onRun && target >= before) waited += Math.min(Math.abs(turn), most1);
         at = {x: at.x + Math.sin(heading) * step, z: at.z + Math.cos(heading) * step};
         out.push(at);
     }
@@ -179,15 +200,80 @@ export function patrolRoute(input: PatrolInput): PatrolPoint[] | null {
     // (Where its round runs into the shore, a smaller one, twice at most, never under three of its lengths across its
     // radius: a 1.6 m seal turned a full circle in under 20 s on a 2 m round.)
     const smaller = (share: number) => (input.radius * share >= input.body * 3 ? roundOf(input, input.radius * share) : null);
-    return roundOf(input, input.radius) ?? smaller(0.6) ?? smaller(0.35);
+    // (Where no round fits its time and its turning circle, a great whale's 120 m in a slot against a circle 38 m
+    // across: no round, its way there in two arcs that meet, `met`. For it first; for the others when no round is found.)
+    const wide = (input.turnRadius ?? 0) * 6 > input.length;
+    if (wide) return met(input) ?? roundOf(input, input.radius);
+    return roundOf(input, input.radius) ?? smaller(0.6) ?? smaller(0.35) ?? met(input);
 }
 
-function roundOf(input: PatrolInput, within: number): PatrolPoint[] | null {
+/**
+ * Its way as two arcs that meet (for a swimmer with a wide turning circle): one swum from where it is, the way it
+ * faces; the other swum backwards from its goal, off against the heading it must come in on; each straight for a
+ * stretch (so the way is about as long as asked), then turning towards the other at its turning circle until they
+ * meet head on. Joined, the way sets off as it faces and comes in on its heading exactly, with no corner between: its
+ * two ends are swum, not aimed at. Null when they do not meet (circling each other) or the way leaves its water.
+ */
+function met(input: PatrolInput): PatrolPoint[] | null {
+    const {from, to, wet} = input;
+    const direct = dist(from, to);
+    if (input.length < Math.max(direct * 1.15, input.body * 2, 0.5)) return null;
+    const turning = Math.max(input.turnRadius ?? 0, input.length / 26);
+    const step = Math.max(input.length / (input.coarse ? 36 : 64), 1e-3);
+    const most1 = Math.min(STEP_TURN, step / turning);
+    const line = Math.atan2(to.x - from.x, to.z - from.z);
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    // (Straight first for a share of what the way asks beyond the straight line and a half turn each: longest first.)
+    for (const share of [0.5, 0.3, 0.15, 0]) {
+        const straight = Math.max(input.length - direct - Math.PI * turning, 0) * share;
+        let a = from;
+        let b = to;
+        let ha = input.fromYaw ?? line;
+        let hb = (input.toYaw ?? line) + Math.PI;
+        const first: PatrolPoint[] = [a];
+        const last: PatrolPoint[] = [b];
+        let ok = false;
+        for (let k = 0; k < 200; k++) {
+            if (dist(a, b) < step * 1.5) {
+                ok = true;
+                break;
+            }
+            const free = k * step >= straight;
+            if (free) ha += Math.min(Math.max(wrap(Math.atan2(b.x - a.x, b.z - a.z) - ha), -most1), most1);
+            a = {x: a.x + Math.sin(ha) * step, z: a.z + Math.cos(ha) * step};
+            if (dist(a, b) < step * 1.5) {
+                first.push(a);
+                ok = true;
+                break;
+            }
+            if (free) hb += Math.min(Math.max(wrap(Math.atan2(a.x - b.x, a.z - b.z) - hb), -most1), most1);
+            b = {x: b.x + Math.sin(hb) * step, z: b.z + Math.cos(hb) * step};
+            if (!wet(a.x, a.z) || !wet(b.x, b.z)) break;
+            first.push(a);
+            last.push(b);
+        }
+        // (Met head on, within half a radian: passing side by side is no meeting, the join would be a corner.)
+        if (!ok || Math.abs(wrap(ha - (hb + Math.PI))) > 0.5) continue;
+        // (Where they meet: the middle of the two, in place of both.)
+        const pa = first[first.length - 1];
+        const pb = last[last.length - 1];
+        const way = first.length > 1 && last.length > 1 ? [...first.slice(0, -1), {x: (pa.x + pb.x) / 2, z: (pa.z + pb.z) / 2}, ...last.slice(0, -1).reverse()] : [...first, ...last.reverse()];
+        if (way.length < 3 || patrolLength(way) > input.length * 1.5) continue;
+        // (Over water at every point of it, its two ends too.)
+        if (way.some((p) => !wet(p.x, p.z))) continue;
+        return thinned(way);
+    }
+    return null;
+}
+
+function roundOf(input: PatrolInput, within: number, round = true): PatrolPoint[] | null {
     const {from, to, centre, wet, random} = input;
     const direct = dist(from, to);
     if (input.length < Math.max(direct * 1.15, input.body * 2, 0.5)) return null;
     // (Half a lap of its range or so in a slot: a short way keeps to a smaller round.)
-    const radius = Math.max(Math.min(within, input.length / 2.5), input.body * 3, 0.4);
+    const turning = input.turnRadius ?? 0;
+    // (Its round a little wider than its turning circle at least.)
+    const radius = Math.max(Math.min(within, input.length / 2.5), turning ? Math.max(input.body * 2, turning * 1.3) : input.body * 3, 0.4);
     // (Its set-off and its coming in run straight for a few lengths, a twenty-fifth of the way at least.)
     const lead = Math.min(Math.max(input.body * 2, 0.5, input.length * 0.04), Math.max(radius * 0.5, 0.3), input.length * 0.12);
     const points: PatrolPoint[] = [from];
@@ -210,7 +296,7 @@ function roundOf(input: PatrolInput, within: number): PatrolPoint[] | null {
     const setOff = input.fromYaw !== null && add(off(from, input.fromYaw, lead, 0)) ? last : null;
     // Coming in on the heading it will leave by: a run of its lead straight in.
     // (Long enough to be on its heading by its goal: a sixth of the way, ten steps, four of its turning circles' radii.)
-    let leadIn = Math.min(Math.max(lead, input.length * 0.16), Math.max(radius, lead));
+    let leadIn = Math.min(Math.max(lead, input.length * 0.16, turning * 1.2), Math.max(radius, lead));
     let end: PatrolPoint = to;
     // (As long a run as its water has room for behind its goal.)
     for (const run of input.toYaw !== null ? [leadIn, leadIn * 0.6, Math.max(leadIn * 0.3, lead), lead] : []) {
@@ -230,7 +316,7 @@ function roundOf(input: PatrolInput, within: number): PatrolPoint[] | null {
         if (Math.abs(along) > 0.2) turn = along > 0 ? 1 : -1;
     }
     let misses = 0;
-    for (let k = 0; k < 28 && misses < 10; k++) {
+    for (let k = 0; round && k < 28 && misses < 10; k++) {
         // Long enough, and behind where it must come in (so it need not double back to come in on its heading): from
         // four fifths of the way asked; a quarter over it at most.
         const so = total + dist(last, end) + tail;
@@ -273,11 +359,13 @@ function roundOf(input: PatrolInput, within: number): PatrolPoint[] | null {
     // (two and a half steps) is a quarter of its round's radius at most. Every corner an arc.
     const whole = patrolLength(points);
     const step = input.coarse ? Math.max(whole / 72, Math.min(whole / 36, radius * 0.14)) : Math.max(whole / 120, Math.min(whole / 64, radius * 0.1));
-    const way = swum(opened(points, step * 3, wet), step, input.fromYaw, runIn);
+    const way = swum(opened(points, Math.max(step * 3, turning * 2), wet), step, input.fromYaw, runIn, turning);
     // (An arc is inside its corner: over water wherever both runs were, save round a headland's tip. No way it can
     // swim, or one over land: no patrol, it swims straight to its goal as before.)
     if (!way) return null;
     for (const p of way) if (!wet(p.x, p.z)) return null;
+    // (Half as long again as asked or more: it would have to swim it half as fast again. A smaller round, or none.)
+    if (patrolLength(way) > input.length * 1.5) return null;
     return thinned(way);
 }
 
