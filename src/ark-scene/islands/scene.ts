@@ -518,6 +518,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
                 variant = Object.create(animal, {
                     home: {value: {x: station.x + origin.x, y: station.y, z: station.z + origin.z}, enumerable: true},
                     range: {value: station.range * 1.5, enumerable: true},
+                    // (Lane B3 needs: it feeds there, `behaviour-schedule.ts` needAt.)
+                    feeding: {value: true, enumerable: true},
                     // (Its group's leader feeds too: the same enclosure, the same time.)
                     group: {get: () => (animal.group ? {...animal.group, leader: lead(animal.group.leader)} : animal.group), enumerable: true}
                 }) as ScheduleAnimal;

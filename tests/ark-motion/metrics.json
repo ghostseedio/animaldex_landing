@@ -423,9 +423,9 @@
         },
         {
           "id": "tb_species_under_035",
-          "label": "Flying species under 0.35 of their cruise (the audit's target 0; 20 on MA1's fixed code: big raptors, hornbills and crows in crowded ranges)",
+          "label": "Flying species under 0.35 of their cruise (the audit's target 0; 20 on MA1's fixed code: big raptors, hornbills and crows in crowded ranges). Lane B3 needs, 2026-11-14: 17 on main c99ff83b -> 32, limit 20 -> 34: with each kind's own day a big bird rests most of it and makes far fewer flights for their own sake (the long ones, at cruise), so the median of its air legs is now its 10 to 40 m ways to a feeding spot, flown at half a g well under its cruise; main flew the same legs, among more commutes. On the real snapshot 0 -> 0 (median 0.90 -> 0.87). The short flights' speed is the air lane's",
           "path": "species_under_035",
-          "max": 20,
+          "max": 34,
           "before": 91
         },
         {
@@ -609,6 +609,97 @@
           "path": "perch_swim_share",
           "min": 0.34,
           "before": 0.323
+        }
+      ]
+    },
+    {
+      "name": "b3-needs",
+      "lane": "B3 needs (the behaviours pass): the day's shares, bouts, sleep, water, the fed bar",
+      "requires": [
+        "src/lib/ark-needs.test.ts",
+        "src/lib/ark-motion-metrics.ts"
+      ],
+      "tests": [
+        "src/lib/ark-needs.test.ts"
+      ],
+      "metricTests": "fixture|sleep by kind|feeding by kind|trips to water",
+      "output": "$ARK_MOTION_METRICS_DIR/b3-needs.jsonl",
+      "metrics": [
+        {
+          "id": "b3_sleep_hours_spread",
+          "label": "Hours asleep, the longest sleeper less the shortest of 15 well-known species (a koala's 20 against an elephant's 3; before, of those on the snapshot, 19.1 crepuscular against 0 for 'any', by no rule of their kind)",
+          "path": "sleep_hours_spread",
+          "min": 15
+        },
+        {
+          "id": "b3_elephant_feed_share",
+          "label": "An elephant's share of its waking time in feeding bouts (its needs; real: 16 to 18 of 21 hours)",
+          "path": "elephant_feed_share_awake",
+          "min": 0.65
+        },
+        {
+          "id": "b3_lion_feed_share",
+          "label": "A lion's share of its waking time in feeding bouts (its needs; its card said food or prowling 57% of large hunters' waking time)",
+          "path": "lion_feed_share_awake",
+          "max": 0.2,
+          "before": 0.57
+        },
+        {
+          "id": "b3_cow_feed_bout",
+          "label": "A cow's median feeding bout, minutes (its needs; 1.3 on the schedule before)",
+          "path": "cow_feed_bout_median_min",
+          "min": 30,
+          "before": 1.3
+        },
+        {
+          "id": "b3_hummingbird_bouts",
+          "label": "A hummingbird's feeding bouts a day (a minute or two every ten)",
+          "path": "hummingbird_feed_bouts_a_day",
+          "min": 50
+        },
+        {
+          "id": "b3_zebra_drinks",
+          "label": "A zebra's trips to water a day (animals near water went 16 to 70 times a day)",
+          "path": "zebra_drinks_a_day",
+          "max": 2,
+          "min": 1
+        },
+        {
+          "id": "b3_activity_changes",
+          "label": "Fixture: changes between feeding, moving and settled per waking hour (28.5 changes of the card's category on the real snapshot's species before)",
+          "path": "activity_changes_per_awake_hour",
+          "max": 12,
+          "before": 28.5
+        },
+        {
+          "id": "b3_feeding_in_bouts",
+          "label": "Fixture: the share of feeding slots in bouts of four slots (five minutes) and up (drawn slot by slot: about a tenth)",
+          "path": "feeding_in_bouts_share",
+          "min": 0.6
+        },
+        {
+          "id": "b3_grazer_feed_share",
+          "label": "Fixture: grazers' and browsers' median share of four waking hours feeding",
+          "path": "grazer_feed_share_morning",
+          "min": 0.4
+        },
+        {
+          "id": "b3_rest_stays_put",
+          "label": "Fixture: walkers' resting slots that stay where the last one was (a long rest got up every fifth slot)",
+          "path": "rest_slots_staying_put_share",
+          "min": 0.85
+        },
+        {
+          "id": "b3_fed_before_bout",
+          "label": "Fixture: the fed bar at the start of a feeding bout",
+          "path": "fed_before_feeding_bout",
+          "max": 0.62
+        },
+        {
+          "id": "b3_fed_after_bout",
+          "label": "Fixture: the fed bar at the end of a feeding bout",
+          "path": "fed_after_feeding_bout",
+          "min": 0.68
         }
       ]
     }

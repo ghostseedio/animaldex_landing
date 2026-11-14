@@ -5,13 +5,18 @@ import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {ReactiveLayer, SLEEP_HEARING, SLEEP_SIGHT, perceive, type ReactiveInput, type ReactiveOut, type ReactiveWorld, type SharedPose} from "@/ark-scene/reactive";
 import {
+    LYING_PRESS,
     POSTURE_SPECS,
+    PROCEDURAL_DROP_MOST,
+    PROCEDURAL_ROLL_MOST,
     SLEEP_POSTURES,
+    bodyLegShare,
     breathRate,
     decodeSleepRow,
     getUpSeconds,
     goesIntoRoost,
     lieDownSeconds,
+    lyingDrop,
     packSleep,
     restStatus,
     roostOffset,
@@ -23,7 +28,11 @@ import {
     sleepStages,
     sleepStir,
     sleepStyle,
-    stepSleep
+    stepSleep,
+    torsoLowest,
+    undersideShare,
+    type SleepGeometry,
+    type SleepPosture
 } from "@/ark-scene/sleep";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {roostOf, scheduleWorld, tripAt, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
@@ -235,6 +244,118 @@ test("each posture asks the rig for its own v6 sleep clip first, then its kind's
     assert.equal(clipped.headWeight, 0);
     assert.equal(clipped.breath, 0);
     assert.equal(clipped.eyes, own.eyes);
+});
+
+// MARK: The procedural body (the behaviours pass, 2026-11-14: a chital's legs cut off at the grass, a rabbit on its back)
+
+/** A mesh of points as `undersideShare` reads one. */
+function meshOf(points: Array<[number, number, number]>): SleepGeometry {
+    const xs = points.map((p) => p[0]);
+    const ys = points.map((p) => p[1]);
+    const zs = points.map((p) => p[2]);
+    return {
+        boundingBox: {min: {x: Math.min(...xs), y: Math.min(...ys), z: Math.min(...zs)}, max: {x: Math.max(...xs), y: Math.max(...ys), z: Math.max(...zs)}},
+        getAttribute: (name) => (name === "position" ? {count: points.length, getX: (i) => points[i][0], getY: (i) => points[i][1], getZ: (i) => points[i][2]} : undefined)
+    };
+}
+/** A box's surface as a lattice of points. */
+function boxPoints(x0: number, x1: number, y0: number, y1: number, z0: number, z1: number, n = 6): Array<[number, number, number]> {
+    const out: Array<[number, number, number]> = [];
+    for (let a = 0; a <= n; a++) for (let b = 0; b <= n; b++) for (let c = 0; c <= n; c++) {
+        if (a % n && b % n && c % n) continue;
+        out.push([x0 + ((x1 - x0) * a) / n, y0 + ((y1 - y0) * b) / n, z0 + ((z1 - z0) * c) / n]);
+    }
+    return out;
+}
+
+test("the procedural body: a mesh's own underside is read from between its feet (a deer's belly; a bird keeps its feet)", () => {
+    // A deer: a torso from half its height up, on four legs at its ends, a neck and head out in front, a tail behind.
+    const deer = meshOf([
+        ...boxPoints(-0.15, 0.15, 0.5, 0.85, -0.45, 0.25, 8),
+        ...boxPoints(-0.13, -0.07, 0, 0.5, -0.43, -0.37), ...boxPoints(0.07, 0.13, 0, 0.5, -0.43, -0.37),
+        ...boxPoints(-0.13, -0.07, 0, 0.5, 0.17, 0.23), ...boxPoints(0.07, 0.13, 0, 0.5, 0.17, 0.23),
+        ...boxPoints(-0.05, 0.05, 0.7, 1, 0.25, 0.5)
+    ]);
+    const deerShare = undersideShare(deer, {z0: -0.43, z1: 0.23})!;
+    assert.ok(Math.abs(deerShare - 0.5) < 0.03, `a deer's underside at ${deerShare} of its height`);
+    // With no footprint: the middle of its length, still its belly.
+    assert.ok(Math.abs(undersideShare(deer, null)! - 0.5) < 0.03);
+    // A flamingo: its legs stand under the middle of it, so its underside reads at its feet and it keeps them.
+    const flamingo = meshOf([...boxPoints(-0.1, 0.1, 0.55, 0.8, -0.2, 0.2, 8), ...boxPoints(-0.06, -0.03, 0, 0.55, -0.02, 0.02, 8), ...boxPoints(0.03, 0.06, 0, 0.55, -0.02, 0.02, 8), ...boxPoints(-0.03, 0.03, 0.8, 1.5, 0.2, 0.3)]);
+    assert.ok(undersideShare(flamingo, {z0: -0.03, z1: 0.03})! < 0.1, `a flamingo's reads ${undersideShare(flamingo, {z0: -0.03, z1: 0.03})}`);
+    // A snake: its belly is its base.
+    assert.ok(undersideShare(meshOf(boxPoints(-0.1, 0.1, 0, 0.1, -0.5, 0.5, 8)), null)! < 0.02);
+    // A mesh whose middle is only a high tail never reads past the cap; too few points, nothing.
+    const tail = meshOf([...boxPoints(-0.1, 0.1, 0, 0.3, -0.5, -0.3), ...boxPoints(-0.02, 0.02, 0.9, 1, -0.3, 0.5, 8)]);
+    assert.ok(undersideShare(tail, null)! <= PROCEDURAL_DROP_MOST);
+    assert.equal(undersideShare(meshOf([[0, 0, 0], [0, 1, 0], [1, 1, 1]]), null), null);
+    // Once per mesh.
+    assert.equal(bodyLegShare(deer, {z0: -0.43, z1: 0.23}), deerShare);
+    assert.equal(bodyLegShare(deer, null), deerShare, "remembered by its mesh");
+});
+
+test("the procedural body, every species' postures: its chest meets the ground and goes no further, it leans but never rolls onto its side or back, and a clip takes all of it", () => {
+    const slugs = Object.keys((behaviours as {species: Record<string, string>}).species);
+    const postures = new Map<SleepPosture, number>();
+    for (const slug of slugs) {
+        const style = sleepStyle(slug);
+        for (const posture of [style.posture, ...style.alts]) postures.set(posture, (postures.get(posture) ?? 0) + 1);
+    }
+    assert.ok(postures.size >= 10 && slugs.length > 2000);
+    // Bodies: narrow to wide, the model's origin at its middle or at its feet; undersides from the ground to past half its height.
+    const boxes = [
+        {minX: -0.19, maxX: 0.19, minY: -0.525, maxY: 0.525},
+        {minX: -0.27, maxX: 0.27, minY: -0.45, maxY: 0.45},
+        {minX: -0.3, maxX: 0.3, minY: -0.16, maxY: 0.17},
+        {minX: -0.13, maxX: 0.13, minY: -0.05, maxY: 0.05},
+        {minX: -0.18, maxX: 0.18, minY: 0, maxY: 1.6},
+        {minX: -0.6, maxX: 0.6, minY: 0, maxY: 0.5}
+    ];
+    const shares: Array<number | null> = [null, 0, 0.04, 0.12, 0.25, 0.4, 0.5, 0.62, 0.9];
+    let checked = 0;
+    for (const slug of slugs) {
+        const style = sleepStyle(slug);
+        for (const posture of [style.posture, ...style.alts]) {
+            const spec = POSTURE_SPECS[posture];
+            for (const side of [1, -1] as const) {
+                const now = {t: 1, posture, side, head: 0 as const, spec, down: true, startled: false};
+                for (const legShare of shares) {
+                    const own = sleepDraw(now, {id: slug, slug, length: 1, epoch: 1000, procedural: 1, reduced: true, legShare});
+                    // It leans, at most: never onto its side, never past it.
+                    assert.ok(Math.abs(own.roll) <= PROCEDURAL_ROLL_MOST + 1e-9, `${slug} ${posture}: rolled ${own.roll}`);
+                    assert.ok(Math.abs(own.roll) <= spec.roll + 1e-9, `${slug} ${posture}: rolled past its posture's own ${own.roll}`);
+                    // Lowered by no more than its own underside's height (and the press of a lying body on the ground).
+                    if (legShare !== null) assert.ok(own.legs <= Math.min(legShare, PROCEDURAL_DROP_MOST) + (spec.lying ? LYING_PRESS : 0) + 1e-9, `${slug} ${posture}: lowered ${own.legs} with its underside at ${legShare}`);
+                    else assert.equal(own.legs, spec.drop);
+                    assert.ok(own.legs <= PROCEDURAL_DROP_MOST + 1e-9);
+                    if (legShare !== null && spec.lying) assert.ok(own.legs >= Math.min(legShare, PROCEDURAL_DROP_MOST), `${slug} ${posture}: left ${legShare - own.legs} of its height in the air`);
+                    // As drawn: the lowest of its torso is on the ground, not under it and not over it.
+                    for (const box of boxes) {
+                        const lowered = torsoLowest(box, own.legs, own.roll) - lyingDrop(box, own.legs, own.roll);
+                        assert.ok(Math.abs(lowered - box.minY) < 1e-9 || (own.legs <= 0 && Math.abs(own.roll) < 1e-4), `${slug} ${posture}: its torso's lowest ${lowered - box.minY} from the ground`);
+                    }
+                    checked++;
+                }
+                // A rig playing a clip (a sleep clip, or the way down or up): none of the procedural body on top of it.
+                const clipped = sleepDraw(now, {id: slug, slug, length: 1, epoch: 1000, procedural: 0, reduced: true, legShare: 0.4});
+                assert.deepEqual([clipped.legs, clipped.roll === 0, clipped.pitch === 0, clipped.curl === 0, clipped.headWeight], [0, true, true, true, 0], `${slug} ${posture} under a clip`);
+                // Fading in: in proportion.
+                const half = sleepDraw(now, {id: slug, slug, length: 1, epoch: 1000, procedural: 0.5, reduced: true, legShare: 0.4});
+                assert.ok(Math.abs(half.roll) <= 0.5 * PROCEDURAL_ROLL_MOST + 1e-9);
+            }
+        }
+    }
+    assert.ok(checked > 40000, `${checked} bodies checked`);
+    // The two the graphics pass saw. A chital, on its chest: its underside half its height up, it comes down by that
+    // (0.4 before: a tenth of its height of leg left showing, its body in the air).
+    assert.equal(sleepStyle("chital").posture, "sternal");
+    const chital = sleepDraw({t: 1, posture: "sternal", side: 1, head: 0, spec: POSTURE_SPECS.sternal, down: true, startled: false}, {id: "c", slug: "chital", length: 1.4, epoch: 1000, procedural: 1, reduced: true, legShare: 0.5});
+    assert.ok(Math.abs(chital.legs - (0.5 + LYING_PRESS)) < 1e-9);
+    // A domestic rabbit, "stretched on its side" by its text: without a clip it lies on its chest and leans 20 degrees
+    // (72 before, its stiff legs up in the air).
+    assert.ok([sleepStyle("domestic-rabbit").posture, ...sleepStyle("domestic-rabbit").alts].includes("side"));
+    const rabbit = sleepDraw({t: 1, posture: "side", side: 1, head: 0, spec: POSTURE_SPECS.side, down: true, startled: false}, {id: "r", slug: "domestic-rabbit", length: 0.4, epoch: 1000, procedural: 1, reduced: true, legShare: 0.15});
+    assert.ok(Math.abs(Math.abs(rabbit.roll) - PROCEDURAL_ROLL_MOST) < 1e-9 && PROCEDURAL_ROLL_MOST < 0.4);
 });
 
 // MARK: Waking (the reactive layer)
