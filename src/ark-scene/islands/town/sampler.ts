@@ -18,8 +18,8 @@
 import type {ArkZone} from "@/ark-scene/types";
 import type {ArkWorldSampler, AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
-import {inPoly, polyEdgeDistance, polylineDistance, type Poly} from "@/ark-scene/islands/town/geom";
-import {sampleTownGround, townHeight, type TownSurface} from "@/ark-scene/islands/town/ground";
+import {inBox, inPoly, polyEdgeDistance, polylineDistance, type Box, type Poly} from "@/ark-scene/islands/town/geom";
+import {sampleTownGround, townBuildingFloor, townHeight, type TownSurface} from "@/ark-scene/islands/town/ground";
 import {TOWN_HALF, townPlan} from "@/ark-scene/islands/town/plan";
 import {townAreas, zooLayout, zooSpotsFor, type SpotWhere, type TownSpot} from "@/ark-scene/islands/town/areas";
 import {townObstacles} from "@/ark-scene/islands/town/obstacles";
@@ -110,6 +110,51 @@ const ZONE_BY_SURFACE: Record<TownSurface, ArkZone> = {
     bank: "river_lake",
     water: "river_lake"
 };
+
+/** How far over a roof (or a tower's top) a flight keeps, and how far round its walls that holds (m). */
+const ROOF_CLEAR = 0.3;
+const ROOF_REACH = 0.15;
+
+/**
+ * The town's roofs as a flight's floor (lane town birds, `ArkWorldSampler.flightFloor`): over a building's footprint
+ * (and ROOF_REACH round it) its roof's top (its drawn floor, `townBuildingFloor`, and its height), and over a tower or
+ * a chimney (`Building.tall`) its top, ROOF_CLEAR higher; elsewhere -Infinity (the ground's own height rules). Before,
+ * the town had none: a sparrow's 1.6 m cruise and a gull's 6 m flew through the houses in their way (1,256 daytime
+ * flight samples inside a building on the real town; the colliders scraped all but 20 along a wall). In the town's own
+ * frame, bucketed by BUCKET m, made once.
+ */
+let roofs: {buckets: Map<number, Array<{box: Box; top: number}>>} | null = null;
+function townRoofTop(x: number, z: number): number {
+    if (!roofs) {
+        const buckets = new Map<number, Array<{box: Box; top: number}>>();
+        const put = (box: Box, top: number) => {
+            const r = Math.hypot(box.w, box.d) / 2 + ROOF_REACH;
+            for (let i = Math.floor((box.x - r + 1000) / BUCKET); i <= Math.floor((box.x + r + 1000) / BUCKET); i++) {
+                for (let j = Math.floor((box.z - r + 1000) / BUCKET); j <= Math.floor((box.z + r + 1000) / BUCKET); j++) {
+                    const key = i * 4096 + j;
+                    const list = buckets.get(key) ?? [];
+                    if (!list.length) buckets.set(key, list);
+                    list.push({box, top});
+                }
+            }
+        };
+        for (const b of townPlan().buildings) {
+            const floor = townBuildingFloor(b.at);
+            put(b.at, floor + b.top + ROOF_CLEAR);
+            // (A tower or a chimney over the roof: the church's tower is 7.4 m across, a chimney 2.5 m.)
+            if (b.tall) {
+                const side = b.kind === "church" ? 7.4 : 2.5;
+                put({x: b.tall.x, z: b.tall.z, w: side, d: side, rot: b.at.rot}, floor + b.tall.y + ROOF_CLEAR);
+            }
+        }
+        roofs = {buckets};
+    }
+    let top = -Infinity;
+    for (const r of roofs.buckets.get(Math.floor((x + 1000) / BUCKET) * 4096 + Math.floor((z + 1000) / BUCKET)) ?? []) {
+        if (r.top > top && inBox(r.box, x, z, ROOF_REACH)) top = r.top;
+    }
+    return top;
+}
 
 export type TownSampler = ArkWorldSampler & {readonly half: number; readonly centre: {x: number; z: number}};
 
@@ -270,6 +315,8 @@ export function townWorldSampler(open: readonly string[], origin: {x: number; z:
         // (L5: the walk grid's clearance and its paths exact against the town's own colliders, `colliders.ts`.)
         ...(colliders ? {colliders} : {}),
         heightAt: (x, z) => townHeight(x - ox, z - oz),
+        // (Lane town birds: a flight keeps over the roofs, the towers and the chimneys in its way: `townRoofTop`.)
+        flightFloor: (x, z) => townRoofTop(x - ox, z - oz),
         // (Lane TB: the canal's, the millpond's and the farm pond's own level, held by the lock; the sea's 0 elsewhere,
         // under every bit of the town's dry land. A swimmer floats on the water that is drawn, never 1 m under it.)
         waterSurface: (x, z) => townWaterSurface(x - ox, z - oz) ?? 0,

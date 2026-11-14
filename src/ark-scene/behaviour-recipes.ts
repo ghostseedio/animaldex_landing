@@ -365,7 +365,9 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
                 const x = centre.x + Math.sin(a) * r;
                 const z = centre.z + Math.cos(a) * r;
                 if (k < 7 && !openAir(world, x, z)) continue;
-                return {x, y: topOf(world.sampler, x, z) + 3 + random() * 3, z, nx: 0, ny: 1, nz: 0, point: null};
+                // (Over a roof where nothing else was open, the town's: 3–6 m over the roof, never in the house; lane town birds.)
+                const floor = Math.max(topOf(world.sampler, x, z), world.sampler.flightFloor?.(x, z) ?? -Infinity);
+                return {x, y: floor + 3 + random() * 3, z, nx: 0, ny: 1, nz: 0, point: null};
             }
             return null;
         }
