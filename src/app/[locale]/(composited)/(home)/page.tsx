@@ -41,9 +41,6 @@ import {daylightAt} from "@/lib/ark-daylight";
 
 const ART = "/images/home/ark";
 
-/** The hero's frame: the Ark at 17:18 island time on 10 November 2026, rendered from the live world. */
-const POSTER_AT = Date.UTC(2026, 10, 10, 17, 18);
-
 /** A day on the Ark: the frames drawn, each at its island hour of 10 November 2026 (island time is UTC). */
 const DAY_FRAMES: Array<{key: string; hours: number}> = [
     {key: "0200", hours: 2},
@@ -219,7 +216,8 @@ export default async function Home({params}: HomePageProps) {
 
         const posterWide = (format: string) => [1280, 1920, 2400].map((width) => `${ART}/poster-wide-${width}.${format} ${width}w`).join(", ");
         const posterTall = (format: string) => [640, 828, 1080].map((width) => `${ART}/poster-tall-${width}.${format} ${width}w`).join(", ");
-        const posterCaption = t("hero.poster", {time: islandClock(POSTER_AT, locale), date: shortDate(POSTER_AT, locale)});
+        // (No clock or date: the poster is one fixed render, and a days-old stamp read as "now" on phones.)
+        const posterCaption = t("hero.poster");
         const dayFrames = DAY_FRAMES.map((frame) => dayFrame(frame, t, locale));
         const plateSizes = "(min-width: 1024px) 28rem, (min-width: 640px) 45vw, 92vw";
         const foodChainClass = "[&_h2]:font-display [&_h2]:text-[2.5rem] [&_h2]:font-bold [&_h2]:leading-[0.95] [&_h2]:tracking-tight md:[&_h2]:text-6xl";

@@ -30,7 +30,7 @@ test("robots.txt keeps crawlers off every /api path, and off nothing new", () =>
     for (const kept of ["/admin", "/api/admin", "/app", "/api/app", "/compare/"]) {
         assert.ok(disallow.includes(kept), kept);
     }
-    assert.equal(rule?.allow, "/");
+    assert.deepEqual(rule?.allow, ["/", "/api/og/"]);
     assert.equal(rule?.userAgent, "*");
 });
 

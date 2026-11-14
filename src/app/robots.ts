@@ -5,7 +5,8 @@ export default function robots(): MetadataRoute.Robots {
     return {
         rules: {
             userAgent: "*",
-            allow: "/",
+            // /api/og/: the share-card images link previews fetch (X, Slack, iMessage); still noindex by header.
+            allow: ["/", "/api/og/"],
             // Operator tooling. The pages already require a session and carry
             // noindex; this keeps crawlers off the paths as well, so the admin
             // surface is not advertised by a robots.txt fetch.
