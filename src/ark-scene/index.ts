@@ -675,6 +675,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     canvas.tabIndex = 0;
     // The world takes the keyboard (A18): arrows move the view, + and − zoom, Esc closes the card.
     canvas.setAttribute("role", "application");
+    // A lost context, back: it comes back empty, and the page starts the scene again (`ArkSceneOptions.onContextRestored`).
+    const onContextRestored = () => options.onContextRestored?.();
+    canvas.addEventListener("webglcontextrestored", onContextRestored);
     if (options.canvasLabel) canvas.setAttribute("aria-label", options.canvasLabel);
     if (getComputedStyle(el).position === "static") el.style.position = "relative";
     el.appendChild(canvas);
@@ -993,7 +996,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             sceneModule.setShadows(settings.shadows > 0);
         }
         pixelRatio = Math.min(window.devicePixelRatio || 1, settings.pixelRatio);
-        renderer.setPixelRatio(drawRatio());
+        // (The canvas takes the tier's pixel ratio when the next frame is drawn: `resize`, `sizeCanvas`.)
         if (pacer) {
             pacer.setTier(tier, performance.now() / 1000);
             if (runtime.ready) runtime.setPaceCap(pacer.interval);
@@ -5090,6 +5093,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
         let distance = camera.position.distanceTo(target);
         let near = Math.min(Math.max(distance * 0.08, 0.01), 0.4);
+        // From far, the near plane goes out with the view (a fiftieth of its distance past 20 m, 12 m at most). Held at
+        // 0.4 m, the depth buffer's step was 3 cm at the town from its own whole view and 7 to 12 cm from the wild
+        // island's: its window panes stand 3.5 cm off their walls, so they and the walls flickered through each other
+        // as the view drifted (the lit windows blinking on and off at night), and touching walls did the same.
+        if (distance > 20) near = Math.min(distance * 0.02, 12);
         // Close up to an animal under about 5 cm (an ant, a gecko's hatchling, a spider): the scenery around it is huge at
         // its scale. The camera keeps above the ground it is on, and the near plane comes out to just short of the animal,
         // so a grass blade or a leaf the camera is in is cut away instead of filling the view.
@@ -5550,19 +5558,35 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         applyInset();
     };
 
-    const resize = () => {
-        const rect = el.getBoundingClientRect();
-        width = Math.max(1, Math.round(rect.width));
-        height = Math.max(1, Math.round(rect.height));
+    /**
+     * The drawing buffer's size and pixel ratio are set just before a frame is drawn, never after one. Setting them
+     * empties the canvas, and a canvas emptied after its frame was drawn is a black frame on screen: each step of a
+     * phone's adaptive resolution and each tier change (made at a frame's end), each resize of the page or the app's
+     * panel (the observer runs after the frame's drawing), and for as long as a tier change's shaders compiled. Until
+     * the next drawn frame the last picture stays up, stretched to the new box if that changed.
+     */
+    let canvasStale = false;
+    let drawnOnce = false;
+    const sizeCanvas = () => {
+        canvasStale = false;
+        if (renderer.getPixelRatio() !== drawRatio()) renderer.setPixelRatio(drawRatio());
         renderer.setSize(width, height, false);
-        camera.aspect = width / height;
-        applyInset();
-        tokens.setViewport(FOV, height, width < 640);
-        dots.setViewport(FOV, height);
         post.setSize(width, height, drawRatio());
         motes.setPixelRatio(drawRatio());
         dust.setPixelRatio(drawRatio());
         liveliness.setPixelRatio(drawRatio());
+    };
+    const resize = () => {
+        const rect = el.getBoundingClientRect();
+        width = Math.max(1, Math.round(rect.width));
+        height = Math.max(1, Math.round(rect.height));
+        camera.aspect = width / height;
+        applyInset();
+        tokens.setViewport(FOV, height, width < 640);
+        dots.setViewport(FOV, height);
+        // (Before the first frame there is no picture to keep: sized at once.)
+        if (drawnOnce) canvasStale = true;
+        else sizeCanvas();
     };
     const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(el);
@@ -5931,6 +5955,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // MARK: The hour
 
     let lastClock = performance.now() / 1000;
+    let lastLight = lastClock;
     const setLight = () => {
         lighting.setHours(hoursNow(), fog);
         micro?.setNight(lighting.daylight.night);
@@ -6505,11 +6530,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         micro?.step(camera.position);
         for (const sceneModule of modules) sceneModule.step(elapsed, camera, controls.target);
         stepTalking(elapsed);
-        // The hour: read again every minute (the light changes only a little).
+        // The hour: read again every minute (who is asleep, the props' lights). The light itself every five seconds: at
+        // dawn and dusk a minute's step showed (the sun climbs a quarter of a degree a minute, the picture's brightness a
+        // seventieth of its range), and `lighting.step` eases the photographed sky in when it arrives.
         if (now - lastClock > (clockScale > 1 ? 0.25 : 60) && !replay) {
             lastClock = now;
+            lastLight = now;
             setLight();
+        } else if (now - lastLight > 5 && !replay) {
+            lastLight = now;
+            lighting.setHours(hoursNow(), fog);
+            micro?.setNight(lighting.daylight.night);
         }
+        lighting.step(now);
         stepReplay(now);
         // Runtime: the resting rotation moved on (every 5 minutes on the shared clock): who is outside, again.
         perf.lap("scenery");
@@ -6580,7 +6613,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         post.setTiltShift(Math.min(Math.max((viewDistance - 110) / 260, 0), width < height ? 0.18 : 0.3));
         perf.lap("plants");
         renderer.info.reset();
+        if (canvasStale) sizeCanvas();
         post.render();
+        drawnOnce = true;
         perf.lap("render");
         placeLabels();
         placeVisitorLabel();
@@ -6611,8 +6646,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (decision.changed) {
                     runtime.setPaceCap(decision.interval);
                     if (decision.scale !== resolutionScale) {
+                        // (The canvas takes the new scale when the next frame is drawn, never after this one: `sizeCanvas`.)
                         resolutionScale = decision.scale;
-                        renderer.setPixelRatio(drawRatio());
                         resize();
                     }
                     if (decision.dropTier && !forced && tier !== "low") applyTier(lowerTier(tier));
@@ -7024,6 +7059,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             perf.dispose();
             resizeObserver.disconnect();
             visibility.disconnect();
+            canvas.removeEventListener("webglcontextrestored", onContextRestored);
             canvas.removeEventListener("pointerdown", onPointerDown);
             canvas.removeEventListener("pointerup", onPointerUp);
             canvas.removeEventListener("pointermove", onPointerMove);

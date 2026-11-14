@@ -10,6 +10,7 @@ import {readArkPopulationThen, type ArkPopulationThen} from "@/lib/ark-populatio
 import type {ArkPageSummary} from "@/lib/ark-page-summary";
 import {arkNewArrivals} from "@/lib/ark-live-log";
 import {fetchArkHunting} from "@/lib/ark-hunting";
+import {arkReloadForRestoredContext} from "@/lib/ark-context-restore";
 import {ArkAnimalCard, ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-animal-card";
 import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkArchipelagoHandle} from "@/ark-scene/islands/archipelago";
@@ -407,6 +408,8 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                         hours,
                         onFollowEnd: () => setFollowing(false),
                         onSoundCredits: () => setCredits(sceneRef.current?.sound().credits ?? []),
+                        // A lost WebGL context, back: it comes back empty, so the page starts over (`ark-context-restore.ts`).
+                        onContextRestored: () => void arkReloadForRestoredContext(),
                         onReady: () => {
                             setReady(true);
                             settleCancel = arkWhenSettled(sceneRef.current, () => {

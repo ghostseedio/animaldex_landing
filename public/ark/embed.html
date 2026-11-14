@@ -513,6 +513,9 @@ window.AnimalDexArkStart = function () {
       onStatus: function (id, status) { tell({type: "ark:status", id: id, status: statusOut(status)}); },
       onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
+      // A lost WebGL context, back: it comes back empty (no sky light, parts of the town gone), so the page starts over,
+      // as if the browser had dropped it (twice at most in three minutes; a host hears ark:progress and ark:ready again).
+      onContextRestored: function () { if (Ark.arkReloadForRestoredContext) Ark.arkReloadForRestoredContext(); },
       onReady: function () {
         tell({type: "ark:ready"});
         // The loading screen gives way at the first good frame (the second drawn: the first is a fog wash).
