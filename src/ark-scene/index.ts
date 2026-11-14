@@ -110,7 +110,7 @@ import {gripPoint} from "@/ark-scene/map/grip";
 import {hamletHash, hamletPlotsFor, hamletState, plotSpots, type HamletResident} from "@/ark-scene/map/hamlet";
 import type {HomePlot} from "@/ark-scene/props/home-layout";
 import {mapHabitatAt, onSchedule, scheduleRoost} from "@/ark-scene/map/place";
-import {ArkPost, arkCpuScoreMs, lowerTier, tierFor, type QualityTier} from "@/ark-scene/post";
+import {ArkPost, arkCpuScoreMs, lowerTier, tierFor, tierTrialFailed, tierTrialState, type QualityTier} from "@/ark-scene/post";
 import {ArkPerf, arkPerfAsked} from "@/ark-scene/runtime/perf";
 import {ArkFramePacer, SLOW_CPU_MS} from "@/ark-scene/runtime/pace";
 import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize, screenWeight, SWIMMING_PLANS} from "@/ark-scene/sizes";
@@ -289,6 +289,8 @@ const TIER_SETTINGS: Record<QualityTier, {shadows: number; grass: number; pixelR
     low: {shadows: 0, grass: 0, pixelRatio: 1, fill: 0.3}
 };
 const MAX_GRASS = TIER_SETTINGS.high.grass;
+/** The low tier's pixel ratio at most, on a touch device whose frames have room for it (`runtime/pace.ts` rule 4). */
+const LOW_SHARP_RATIO = 1.5;
 /** Runtime (live budget): behaviour's resting-at-home test, looked up by name until it is in the release. */
 const RESTING_AT_ROOST = ["resting", "AtRoost"].join("");
 
@@ -663,6 +665,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let resolutionScale = 1;
     /** The drawing buffer's pixels per CSS pixel: the tier's pixel ratio at the pacing's scale. */
     const drawRatio = () => pixelRatio * resolutionScale;
+    /**
+     * (Performance lane.) The highest scale the pacing may reach (`pace.ts` rule 4). The low tier draws one buffer pixel
+     * a CSS pixel; on a denser screen, frames to spare earn up to `LOW_SHARP_RATIO` (never past the screen's own
+     * density). Not while battery saver or heat holds the tier down, nor when the reader asked for the lighter view.
+     */
+    const scaleTop = () => (tier === "low" && liteChoice !== true && !runtime.powerCapped() ? Math.max(Math.min(window.devicePixelRatio || 1, LOW_SHARP_RATIO) / pixelRatio, 1) : 1);
     renderer.setPixelRatio(drawRatio());
     // The frame profiler and its overlay (`?perf=1`, runtime/perf.ts): off, every mark is one early return.
     const perf = new ArkPerf(arkPerfAsked());
@@ -1012,6 +1020,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (The canvas takes the tier's pixel ratio when the next frame is drawn: `resize`, `sizeCanvas`.)
         if (pacer) {
             pacer.setTier(tier, performance.now() / 1000);
+            // (A scale earned above the low tier's ratio is not the next tier's.)
+            pacer.setTop(scaleTop(), performance.now() / 1000);
+            resolutionScale = pacer.resolution;
             if (runtime.ready) runtime.setPaceCap(pacer.interval);
         }
         motes.points.visible = !reducedMotion && !liteOn();
@@ -6797,6 +6808,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 frameIntervals.push(interval);
                 if (frameIntervals.length > 60) frameIntervals.shift();
             }
+            if (pacer && Math.abs(pacer.scaleTop - scaleTop()) > 0.006) {
+                // (Battery saver or heat came or went, the lighter view was asked for: a scale over the top comes down now.)
+                pacer.setTop(scaleTop(), startedAt / 1000);
+                if (pacer.resolution !== resolutionScale) {
+                    resolutionScale = pacer.resolution;
+                    resize();
+                }
+            }
             if (interval < 2000 && pacer) {
                 // A touch device: the pacing (runtime/pace.ts) instead of the tier check. A tier pinned for measuring
                 // (`__arkQuality`) is never dropped; the start (the world being built, the first models) never judged for a drop.
@@ -6808,7 +6827,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                         resolutionScale = decision.scale;
                         resize();
                     }
-                    if (decision.dropTier && !forced && tier !== "low") applyTier(lowerTier(tier));
+                    if (decision.dropTier && !forced && tier !== "low") {
+                        // (A tier on trial that the frames did not hold: the low tier from the start next time, `runtime/trial.ts`.)
+                        tierTrialFailed("pace");
+                        applyTier(lowerTier(tier));
+                    }
                 }
             } else if (pacer) {
                 // (Back from a pause, the panel covered or the page hidden: the pacing starts its measuring over.)
@@ -6841,7 +6864,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         if (memoryDropAsked) {
             memoryDropAsked = false;
-            if (!forced && tier !== "low") applyTier(lowerTier(tier));
+            if (!forced && tier !== "low") {
+                tierTrialFailed("memory");
+                applyTier(lowerTier(tier));
+            }
         }
         lastDrawn = startedAt;
         if (!ready) {
@@ -6866,6 +6892,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         tier,
         dpr: renderer.getPixelRatio(),
         scale: resolutionScale,
+        // (A touch device: its main thread's benchmark, `pace.ts` arkCpuScore, and the tier's trial, `runtime/trial.ts`.)
+        device: pacer ? `bench ${(arkCpuScoreMs() ?? 0).toFixed(1)} ms${tierTrialState() ? `  ${tierTrialState()}` : ""}` : null,
         drawn: counts.near + counts.far + counts.token,
         rigged: counts.rigged,
         mode: runtime.handle.runtime().mode,
