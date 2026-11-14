@@ -21,7 +21,8 @@ import {SMAAPass} from "three/examples/jsm/postprocessing/SMAAPass.js";
 import {FXAAShader} from "three/examples/jsm/shaders/FXAAShader.js";
 import {HorizontalTiltShiftShader} from "three/examples/jsm/shaders/HorizontalTiltShiftShader.js";
 import {VerticalTiltShiftShader} from "three/examples/jsm/shaders/VerticalTiltShiftShader.js";
-import {chooseTier, deviceSignals} from "@/ark-scene/streaming/tiers";
+import {chooseTier, deviceSignals, tierOnTrial} from "@/ark-scene/streaming/tiers";
+import {TierTrial, type TrialStore, type TrialWhy} from "@/ark-scene/runtime/trial";
 import {arkCpuScore, tierForCpu} from "@/ark-scene/runtime/pace";
 
 export type QualityTier = "high" | "medium" | "low";
@@ -38,7 +39,53 @@ export function tierFor(appMemoryGB?: number | null): QualityTier {
     // page: the prebuild and the mount ask the same question and must get the same answer).
     if (!signals.coarse) return tier;
     cpuScoreMs ??= arkCpuScore();
-    return tierForCpu(tier, cpuScoreMs);
+    const byCpu = tierForCpu(tier, cpuScoreMs);
+    // A device that hides what it is (iOS WebKit: `streaming/tiers.ts` hidesCores) starts on the medium tier on trial:
+    // the low tier instead if it did not hold it lately (`runtime/trial.ts`).
+    if (byCpu !== "medium" || !tierOnTrial(signals)) return byCpu;
+    trial ??= startTrial();
+    return trial.tier;
+}
+
+/** The tier's trial on this page (null: the tier is the device's own answer), started once a page. */
+let trial: TierTrial | null = null;
+function startTrial(): TierTrial {
+    let store: TrialStore | null = null;
+    try {
+        store = window.localStorage;
+    } catch {
+        store = null;
+    }
+    const visible = () => document.visibilityState !== "hidden";
+    const started = new TierTrial(store, Date.now(), visible());
+    if (!started.on) return started;
+    // The page's own life: on screen, put away, gone. (Listeners for the page's life: the trial is the page's, not a scene's.)
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const seen = (shown: boolean) => {
+        if (timer !== null) clearTimeout(timer);
+        timer = null;
+        const left = started.seen(shown, Date.now());
+        if (left === null) return;
+        timer = setTimeout(() => {
+            timer = null;
+            if (!started.tick(Date.now())) seen(visible());
+        }, left + 250);
+    };
+    document.addEventListener("visibilitychange", () => seen(visible()));
+    window.addEventListener("pagehide", () => seen(false));
+    window.addEventListener("pageshow", () => seen(visible()));
+    seen(visible());
+    return started;
+}
+
+/** The scene dropped the tier this page started on (the pacing, or the memory check): remembered, if it was on trial. */
+export function tierTrialFailed(why: TrialWhy) {
+    trial?.failed(why, Date.now());
+}
+
+/** For the frame profiler's overlay: the medium tier on trial, held, or why the low tier instead; null where the tier is the device's own answer. */
+export function tierTrialState(): "trial" | "held" | TrialWhy | null {
+    return trial ? trial.state : null;
 }
 
 /** This page's main-thread benchmark (`runtime/pace.ts` arkCpuScore), once. */

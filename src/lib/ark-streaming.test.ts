@@ -16,7 +16,7 @@ import {
     type ChunkSpan
 } from "@/ark-scene/streaming/chunks";
 import {ArkStreamer, spansFromHeights} from "@/ark-scene/streaming";
-import {ARK_STREAM_TIERS, chooseTier, heapBudgetMB, MIN_RENDER_SCALE, stepRenderScale, type StreamTierName} from "@/ark-scene/streaming/tiers";
+import {ARK_STREAM_TIERS, chooseTier, heapBudgetMB, hidesCores, MIN_RENDER_SCALE, stepRenderScale, tierOnTrial, type StreamTierName} from "@/ark-scene/streaming/tiers";
 import {hazeEndDepth, hazeFog} from "@/ark-scene/streaming/haze";
 import {ChunkedInstances} from "@/ark-scene/streaming/instances";
 import {tileGeometry, MAP_STRIDE} from "@/ark-scene/streaming/ground-tiles";
@@ -171,6 +171,29 @@ test("streaming: the tier from what the device says", () => {
     // iOS says nothing of its memory: six cores is medium, four is low.
     assert.equal(chooseTier({coarse: true, cores: 6, memoryGB: null, heapLimitMB: null}), "medium");
     assert.equal(chooseTier({coarse: true, cores: 4, memoryGB: null, heapLimitMB: null}), "low");
+    // iOS WebKit answers 4 for every iPhone (six cores, all of them): a hidden count is not a weak device.
+    const iphone = "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148";
+    const ipad = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Safari/605.1.15";
+    const android = "Mozilla/5.0 (Linux; Android 14; Pixel 6a) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Mobile Safari/537.36";
+    assert.equal(hidesCores(iphone, 5, 4), true);
+    assert.equal(hidesCores(ipad, 5, 4), true);
+    // (A Mac is not an iPad; an iPad that says eight has eight; Android says what it has.)
+    assert.equal(hidesCores(ipad, 0, 4), false);
+    assert.equal(hidesCores(ipad, 5, 8), false);
+    assert.equal(hidesCores(android, 5, 4), false);
+    const hidden = {coarse: true, cores: null, coresHidden: true, memoryGB: null, heapLimitMB: null, screenRatio: 3};
+    assert.equal(chooseTier(hidden), "medium");
+    assert.equal(tierOnTrial(hidden), true);
+    // A 2× screen with nothing else known may be a 3 GB iPhone or iPad (the XR, the SE): the low tier, as 3 GB is.
+    assert.equal(chooseTier({...hidden, screenRatio: 2}), "low");
+    assert.equal(chooseTier({...hidden, screenRatio: 2, memoryGB: 4, cores: 6, coresHidden: false}), "medium");
+    // The app's figures (`?mem=`, `?cores=`) are the device's own answer: a 3 GB iPhone low, a 6 GB one medium, neither on trial.
+    assert.equal(chooseTier({...hidden, memoryGB: 3}), "low");
+    assert.equal(chooseTier({coarse: true, cores: 6, coresHidden: false, memoryGB: 6, heapLimitMB: null}), "medium");
+    assert.equal(tierOnTrial({...hidden, memoryGB: 6}), false);
+    assert.equal(tierOnTrial({coarse: true, cores: 6, coresHidden: false, memoryGB: null, heapLimitMB: null}), false);
+    // (A count nobody gave and nobody hides is still four: an unknown browser on a touch device starts low.)
+    assert.equal(chooseTier({coarse: true, cores: null, memoryGB: null, heapLimitMB: null}), "low");
     // The heap budget is never over half the heap's own limit.
     assert.equal(heapBudgetMB(ARK_STREAM_TIERS.medium, 512), 256);
     assert.equal(heapBudgetMB(ARK_STREAM_TIERS.medium, null), ARK_STREAM_TIERS.medium.memory.heapMB);

@@ -67,6 +67,8 @@ export type ArkPerfReport = {
     tier: string;
     dpr: number;
     scale: number;
+    /** How the tier was come by (the main thread's benchmark, a tier on trial): a touch device's line on the overlay. */
+    device: string | null;
     drawn: number;
     rigged: number;
     mode: string;
@@ -77,7 +79,7 @@ export type ArkPerfReport = {
 };
 
 /** What the scene hands the overlay each time it is rewritten. */
-export type ArkPerfScene = {gpu: ArkPerfGpu; tier: string; dpr: number; scale: number; drawn: number; rigged: number; mode: string; inView: boolean};
+export type ArkPerfScene = {gpu: ArkPerfGpu; tier: string; dpr: number; scale: number; device?: string | null; drawn: number; rigged: number; mode: string; inView: boolean};
 
 const STORAGE_KEY = "ark:perf";
 
@@ -306,6 +308,7 @@ export class ArkPerf {
             tier: scene.tier,
             dpr: Math.round(scene.dpr * 100) / 100,
             scale: Math.round(scene.scale * 100) / 100,
+            device: scene.device ?? null,
             drawn: scene.drawn,
             rigged: scene.rigged,
             mode: scene.mode,
@@ -322,7 +325,8 @@ export class ArkPerf {
             `${r.fps} fps  p95 ${r.interval.p95} ms`,
             `>16ms ${r.interval.over16}%  >33ms ${r.interval.over33}%`,
             `cpu ${r.cpu.p50}/${r.cpu.p95} ms  ${r.mode}`,
-            `${r.tier}  dpr ${r.dpr}${r.scale < 0.999 ? ` (x${r.scale})` : ""}`,
+            `${r.tier}  dpr ${r.dpr}${Math.abs(r.scale - 1) > 0.001 ? ` (x${r.scale})` : ""}`,
+            ...(r.device ? [r.device] : []),
             `calls ${r.gpu.calls}  tris ${tris}`,
             `prog ${r.gpu.programs}  tex ${r.gpu.textures}`,
             `heap ${r.heapMB ?? "n/a"} MB`,

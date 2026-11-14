@@ -23,6 +23,12 @@
  * change re-makes every render target and is seen as a soften or a sharpen.)
  * 3. **The tier.** Only once the start is over: locked at 30 and as low as the resolution goes, still missing 30 for
  *    3 s; or locked at 30 by the script's own work for 15 s on end (a phone then trades the tier's finish for 60).
+ * 4. **Above the tier's pixel ratio** (the low tier on a dense screen, `setTop`). The low tier draws one buffer pixel
+ *    a CSS pixel: on a 3× phone screen every edge is a stair and a lit window two pixels wide twinkles. Once the
+ *    start is over and the frames have been on time for 10 s at the rate they hold, the scale steps up (1.25, then
+ *    1.5, never past the screen's own density); a step that makes the frames late is taken back by rule 1 and stays
+ *    out of reach for 6 minutes, twice as long each time (to 15). It starts at 1, as before: a phone with nothing to
+ *    spare never leaves it.
  *
  * Pure: the clock is passed in. The scene applies what `step` returns.
  */
@@ -56,6 +62,11 @@ const RETRY_FIRST_S = 8;
 const RETRY_MOST_S = 300;
 export const SCALE_STEP = 0.1;
 export const SCALE_FLOOR = 0.7;
+/** The steps above the tier's own pixel ratio (rule 4), and how long the frames must have been on time for one. */
+export const SHARP_STEP = 0.25;
+const SHARP_UP_AFTER_S = 10;
+/** A scale above 1 found too high stays out of reach this many times longer than one below (it was a bonus, not the picture). */
+const SHARP_HOLD_TIMES = 4;
 const SCALE_UP_AFTER_S = 6;
 const SCALE_COOLDOWN_S = 1.5;
 /**
@@ -83,6 +94,8 @@ export class ArkFramePacer {
     /** When the display rate was last tried again (a failure within a few seconds of it counts against it). */
     private triedAt = -Infinity;
     private scale = 1;
+    /** The highest scale (rule 4): 1, or more for the low tier on a dense screen (`setTop`). */
+    private top = 1;
     private changedScaleAt = -Infinity;
     /** Per rate, the scale its frames were late at, and until when it stays out of reach (no bouncing back up). */
     private readonly ceiling: Record<Rate, {scale: number; until: number; times: number} | null> = {full: null, locked: null};
@@ -148,6 +161,38 @@ export class ArkFramePacer {
         this.retryAt = Math.max(this.retryAt, now + 2);
     }
 
+    /**
+     * The highest scale the frames may earn (1: the tier's own pixel ratio, as before). The scene sets it: above 1 only
+     * on the low tier of a screen denser than the tier draws, with no power cap and no lighter view asked for. A scale
+     * over a lowered top comes down to it at once (the scene applies `resolution`).
+     */
+    setTop(top: number, now: number) {
+        const next = Math.max(round2(top), 1);
+        if (next === this.top) return;
+        this.top = next;
+        if (this.scale > next + 1e-6) {
+            this.scale = next;
+            this.changedScaleAt = now;
+            this.reset(now);
+        }
+    }
+
+    get scaleTop(): number {
+        return this.top;
+    }
+
+    /** The next scale down: a tenth under 1, the steps of rule 4 above it. */
+    private down(scale: number): number {
+        if (scale > 1 + 1e-6) return Math.max(round2(Math.ceil((scale - 1) / SHARP_STEP - 1e-6) * SHARP_STEP + 1 - SHARP_STEP), 1);
+        return Math.max(round2(scale - SCALE_STEP), SCALE_FLOOR);
+    }
+
+    /** The next scale up, never past the top. */
+    private up(scale: number): number {
+        if (scale >= 1 - 1e-6) return Math.min(round2(Math.floor((scale - 1) / SHARP_STEP + 1e-6) * SHARP_STEP + 1 + SHARP_STEP), this.top);
+        return Math.min(round2(scale + SCALE_STEP), 1);
+    }
+
     get interval(): number {
         return this.locked ? PACE_LOCK_MS : 0;
     }
@@ -195,13 +240,16 @@ export class ArkFramePacer {
             this.onTimeSince = null;
             // 1. The resolution: late frames with short work (the GPU's, not the script's) give up a step of resolution
             // first; that scale stays out of reach at this rate for a while (no bouncing).
-            if (typical > limit && work < target * 0.6 && this.scale > SCALE_FLOOR + 1e-6) {
+            // (Locked, a scale above the tier's own, rule 4, is given back whatever made the frames late: there is no
+            // lower rate to give, and it was a bonus. At the display's rate the script's lateness locks the rate, below.)
+            if (((this.locked && this.scale > 1 + 1e-6) || (typical > limit && work < target * 0.6)) && this.scale > SCALE_FLOOR + 1e-6) {
                 if (!cooled) return keep();
                 // (The same scale found too high again: out of reach twice as long.)
                 const before = this.ceiling[rate];
                 const times = before && Math.abs(before.scale - this.scale) < 1e-6 ? before.times + 1 : 0;
-                this.ceiling[rate] = {scale: this.scale, until: now + Math.min(CEILING_HOLD_S * 2 ** times, CEILING_HOLD_MOST_S), times};
-                this.scale = Math.max(round2(this.scale - SCALE_STEP), SCALE_FLOOR);
+                const hold = CEILING_HOLD_S * (this.scale > 1 + 1e-6 ? SHARP_HOLD_TIMES : 1);
+                this.ceiling[rate] = {scale: this.scale, until: now + Math.min(hold * 2 ** times, CEILING_HOLD_MOST_S), times};
+                this.scale = this.down(this.scale);
                 this.changedScaleAt = now;
                 this.reset(now);
                 return keep(true);
@@ -245,8 +293,10 @@ export class ArkFramePacer {
         this.slowSince = null;
         this.onTimeSince ??= now;
         // On time: back up a step after a while, never to a scale found too high at this rate lately.
-        if (this.scale < 1 && cooled && now - this.onTimeSince >= SCALE_UP_AFTER_S) {
-            const next = Math.min(round2(this.scale + SCALE_STEP), 1);
+        // (Above the tier's own pixel ratio, rule 4: only once the start is over, and after longer on time.)
+        const sharper = this.scale >= 1 - 1e-6;
+        if (this.scale < this.top - 1e-6 && cooled && now - this.onTimeSince >= (sharper ? SHARP_UP_AFTER_S : SCALE_UP_AFTER_S) && (!sharper || settled)) {
+            const next = this.up(this.scale);
             const ceiling = this.ceiling[rate];
             if (!ceiling || now > ceiling.until || next < ceiling.scale - 1e-6) {
                 this.scale = next;
@@ -277,7 +327,7 @@ export class ArkFramePacer {
                     this.changedScaleAt = now;
                 }
             } else if (ceiling && now <= ceiling.until && this.scale >= ceiling.scale - 1e-6) {
-                this.scale = Math.max(round2(ceiling.scale - SCALE_STEP), SCALE_FLOOR);
+                this.scale = this.down(ceiling.scale);
                 this.changedScaleAt = now;
             }
             this.reset(now);

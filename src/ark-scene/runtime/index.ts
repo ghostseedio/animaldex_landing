@@ -513,6 +513,11 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
             return governor.uncapped(performance.now() / 1000);
         },
 
+        /** Battery saver or heat holds the tier down now (no resolution above the tier's own meanwhile). */
+        powerCapped(): boolean {
+            return governor.tierCap() !== null;
+        },
+
         /** Full rate but for the frame pacing's own cap (`runtime/pace.ts` measures these). */
         drawsFull(): boolean {
             return governor.drawsFull(performance.now() / 1000);
