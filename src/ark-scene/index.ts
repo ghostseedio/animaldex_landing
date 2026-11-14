@@ -770,6 +770,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Part B (docs/ark/streaming.md): the world in chunks along the ground's grid; the ground in tiles, the plants by chunk.
     const chunkGrid = chunkGridFor(TERRAIN_HALF, GROUND_SEGMENTS);
     const landscape = buildLandscape(chunkGrid);
+    // (A live view: the ground's tiles coming within the render distance are built in full two a frame, the nearest to
+    // what the camera looks at first, `streaming/ground-tiles.ts`; a recording builds them at once, as before.)
+    if (landscape && !options.recording) landscape.tiles.spread = 2;
     const graphicsBase = (options.graphicsBase ?? "/ark/graphics").replace(/\/+$/, "");
     void loadGroundTextures(graphicsBase);
     lighting.loadDaySky(`${graphicsBase}/sky-day.hdr`);
@@ -6528,7 +6531,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         perf.lap("camera");
         // Part B: which chunks are drawn from here, the edge haze, the memory check; the ground's hidden tiles let go.
         streamer.update(camera.position, camera.position.distanceTo(controls.target), FOV, width / Math.max(height, 1), now, controls.target);
-        landscape?.tiles.release(now);
+        landscape?.tiles.release(now, controls.target);
         streamCull.step(now);
         perf.lap("stream");
         stepLayers(elapsed);
