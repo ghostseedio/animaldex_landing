@@ -137,7 +137,11 @@ export class IconTokens {
     private readonly view = new Vector3();
     onIconLoad: () => void = () => undefined;
 
-    constructor(private readonly iconUrl: (slug: string) => string, atlasSize = 2048) {
+    /**
+     * `fallbackUrl`: drawn for a species whose icon fails to load (no art in the bucket: the generic figure, as the
+     * page's own cards show). Without it such a token stayed a bare shadow for good.
+     */
+    constructor(private readonly iconUrl: (slug: string) => string, atlasSize = 2048, private readonly fallbackUrl: string | null = null) {
         this.canvas = document.createElement("canvas");
         this.canvas.width = atlasSize;
         this.canvas.height = atlasSize;
@@ -220,14 +224,23 @@ export class IconTokens {
         const image = new Image();
         image.crossOrigin = "anonymous";
         image.decoding = "async";
+        // No art for this species (the bucket answers 400): the fallback figure in its cell, once.
+        image.onerror = () => {
+            const fallback = this.fallbackUrl;
+            if (this.disposed || !fallback || image.src === fallback) return;
+            image.src = fallback;
+        };
         image.onload = () => {
             if (this.disposed) return;
             const x = (index % this.columns) * CELL;
             const y = Math.floor(index / this.columns) * CELL;
             const inner = CELL - PAD * 2;
-            const scale = Math.min(inner / image.width, inner / image.height);
-            const w = image.width * scale;
-            const h = image.height * scale;
+            // (An SVG with no size of its own, the fallback figure, reports none in some browsers: square.)
+            const iw = image.width || inner;
+            const ih = image.height || inner;
+            const scale = Math.min(inner / iw, inner / ih);
+            const w = iw * scale;
+            const h = ih * scale;
             this.context.clearRect(x, y, CELL, CELL);
             this.context.drawImage(image, x + (CELL - w) / 2, y + (CELL - h) / 2, w, h);
             cell.loaded = true;
