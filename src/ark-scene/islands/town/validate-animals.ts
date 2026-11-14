@@ -2,7 +2,7 @@
  * The town's animals checked where they are drawn (lane TB: "zero sinking, zero floating, and no animal inside a wall
  * or a tank wall"). Pure (node and browser): the town's own placement, tanks and displays, its drawn ground and walk
  * surfaces, the grounding stand (`grounding/stand.ts`, the scene's), the true bases (`grounding/base.ts`), and, through
- * an Ark day, the behaviour schedule on the town's own world (`sampler.ts`), as the scene draws them.
+ * an Ark day, the behaviour schedule on the town's own world (`sampler.ts`, with the town's colliders), as the scene draws them.
  *
  * Each animal is one of:
  * - **in a tank** (the aquarium's, a home's, a garden pond): its body (its drawn length along its heading, its width
@@ -35,6 +35,7 @@ import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townHouseholds, zooLayout} from "@/ark-scene/islands/town/areas";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {placeTownAnimals, type TownPlace} from "@/ark-scene/islands/town/placement";
+import {townColliderSet} from "@/ark-scene/islands/town/colliders";
 import {townWorldSampler} from "@/ark-scene/islands/town/sampler";
 import {setTownWalkSurfaces, townDrawnHeight, townWalkSurfaces, townWaterLevel, townWaterSurface, type TownWalkSurfaces} from "@/ark-scene/islands/town/drawn-ground";
 import {homeDisplayFloors, homeSiteFootprints, homeSites, perchHeight, tankBox, tankPose, zooHouseFloors, zooHouseFrame, type HomeSite} from "@/ark-scene/islands/town/tanks";
@@ -159,7 +160,14 @@ export function validateTownAnimals(animals: readonly ArkAnimal[], options: Town
     const drawn = (x: number, z: number) => townDrawnHeight(x, z, surfaces);
     /** The drawn ground under a body at a height (stacked floors: the one it is on). */
     const drawnAt = (near: number) => (x: number, z: number) => townDrawnHeight(x, z, surfaces, near);
-    const sampler = townWorldSampler(placed.open);
+    // (The town's colliders in its behaviour world, as the scene builds it, `islands/scene.ts`: a goal is moved clear of
+    // everything solid for the body (`clearOfSolid`) and a stay's step is checked for it. Without them the schedule knew
+    // the buildings only by the walk grid's 2 m cells, a spot up to a metre inside a footprint passing as open ground:
+    // once the kept horses, cows and goats were awake and grazing by day (behaviours pass, lane B3; before, a paddock
+    // horse was asleep at one spot at every sample of the day) five of them stood grazing with their middle in a stable,
+    // a farmhouse or a barn at this check's twelve samples, 63 samples of 39,770 over 240; with the colliders none of
+    // those, and 4 of 39,770, two goats browsing a step through a garden room or pond, which the colliders do not hold.)
+    const sampler = townWorldSampler(placed.open, {x: 0, z: 0}, townColliderSet(placed.open, {x: 0, z: 0}));
     const world = options.schedule === false ? null : scheduleWorld(sampler);
     const roomsAndPonds = homeSiteFootprints(households, plan);
     const buildings = plan.buildings.map((b) => b.at);

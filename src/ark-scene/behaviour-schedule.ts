@@ -1928,7 +1928,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         // one already over too (their slots start at different moments): the member then waited through its slot for
         // its leader's next air leg, a 0.8 s hop of 3 m, "took off with it" from 26 m behind, and was eased those 26 m
         // along the ground in 5 s, sideways to the way it faced: the backwards test's house sparrow again.)
-        const hop = lead.mode === "air" && leaderFlightIn(world, group, start, hoursAt) === null;
+        const hop = process.env.ARK_NO_FLIGHTIN ? lead.mode === "air" && !tripAt(world, group.profile, group.leader, start + 1, hoursAt, group.activity).legs.some((leg) => leg.mode === "air" && leg.seconds >= 3) : lead.mode === "air" && leaderFlightIn(world, group, start, hoursAt) === null;
         if ((lead.mode === "air" || (aquatic(profile) && lead.mode === "water")) && lead.to && !(lead.mode === "air" && (SETTLED.has(lead.doing) || hop))) {
             // (Lane B3 needs: a school's fish feeds through its own feeding bouts and cruises between them, each a
             // little off its leader's rhythm; drawn slot by slot, 45 in 100, it changed every slot or two.)
@@ -2416,7 +2416,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         }
         // (The merged tree: only its leader's real flight, as the follow rule reads it, `leaderFlightIn`: never a hop of a
         // second before it, which it "took off with" from wherever it stood.)
-        if (off !== null) off = leaderFlightIn(world, animal.group, start, hoursAt);
+        if (off !== null && !process.env.ARK_NO_FLIGHTIN) off = leaderFlightIn(world, animal.group, start, hoursAt);
         if (off !== null && off >= start && off < end - 3) {
             const wait = off - start;
             const lead = leaderAt(off);

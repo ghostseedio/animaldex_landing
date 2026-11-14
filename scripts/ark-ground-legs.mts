@@ -84,6 +84,11 @@ const trace = args.includes("--trace");
  */
 const jumps = args.includes("--jumps");
 let jumpCount = 0;
+// (`--follows`: a flock member's take-offs with its leader, and those that are no take-off: its leader only hops, or
+// is not in the air at all, and the member is eased to its place by it along the ground, however far off it stood.)
+const follows = args.includes("--follows");
+let takeOffs = 0;
+let easedAlong = 0;
 let farCount = 0;
 /** `--plans`: only species whose model's plan is one of these (the model library's: mammal, bird, reptile, turtle, frog, arthropod, snake...). */
 const onlyPlans = value("--plans")?.split(",");
@@ -293,6 +298,27 @@ for (const s of subjects) {
                 t!.legs.push({doing: trip.doing, beat: leg.beat, length: leg.length, seconds: leg.seconds, speed: leg.length / (leg.seconds - ramps), points: (leg.path ?? []).length, ...stats});
             }
             if (groundLegs) t!.movingSlots++;
+            if (follows && s.leader?.sched) {
+                let at = trip.start;
+                for (const leg of trip.legs) {
+                    if (leg.mode === "shadow" && leg.lead0) {
+                        takeOffs++;
+                        const flat = Math.hypot(leg.lead0.x, leg.lead0.z);
+                        const lt = tripOf(s.leader.sched, s.leader.animal.activity, at + 0.01);
+                        let la = lt.start;
+                        let under: {mode: string; seconds: number; length: number} | null = null;
+                        for (const ll of lt.legs) {
+                            if (at + 0.01 >= la && at + 0.01 < la + ll.seconds) under = {mode: ll.mode, seconds: ll.seconds, length: ll.length};
+                            la += ll.seconds;
+                        }
+                        if (flat > Math.max(L * 2, 1) && !(under?.mode === "air" && under.seconds >= 3)) {
+                            easedAlong++;
+                            console.log(`eased ${slug} ${s.animal.id.slice(0, 8)} slot ${trip.slot}: ${flat.toFixed(1)} m from its place by its leader, whose leg then is ${under ? `${under.mode} ${under.length.toFixed(1)} m ${under.seconds.toFixed(1)} s` : "a stay"}`);
+                        }
+                    }
+                    at += leg.seconds;
+                }
+            }
             // (The merged tree: a rest that follows a rest in the slot before, and whether it walked somewhere for it: a rest
             // keeps its place through its spell, lane B3 needs.)
             if (last && last.slot === trip.slot - 1 && RESTING.has(last.doing) && RESTING.has(trip.doing)) {
@@ -530,6 +556,7 @@ for (const plan of plans) {
     for (const r of of) gaits[r.legGait ?? "-"] = (gaits[r.legGait ?? "-"] ?? 0) + 1;
     console.log(`${plan.padEnd(16)} ${pad(of.length, 4)}  ${pad(r3(median(of.map((r) => r.legSpeed))), 6)}  Fr ${pad(r3(quantile(of.map((r) => r.legFroude), 0.1)), 6)} / ${pad(r3(median(of.map((r) => r.legFroude))), 6)} / ${pad(r3(quantile(of.map((r) => r.legFroude), 0.9)), 6)}  ${JSON.stringify(gaits)}  start ${r2(median(of.map((r) => r.startShare).filter(Number.isFinite)))}  lockstep ${r2(median(of.filter((r) => r.follow > 20).map((r) => r.lockstep)))}`);
 }
+if (follows) console.log(`follows: ${takeOffs} take-offs with a leader; eased along the ground to a leader that only hops or stands: ${easedAlong}`);
 if (jumps) console.log(`jumps: ${jumpCount}; further in 30 s than a sprint takes it: ${farCount}`);
 if (args.includes("--list")) {
     console.log("\nper species: slug plan n L hip | walk m/s bls Fr gait | run m/s gait | top | legs: median speed, length (m, body lengths), seconds, straightness | step m/s | start share | backwards | lockstep");
