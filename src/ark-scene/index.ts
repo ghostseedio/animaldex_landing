@@ -1906,9 +1906,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         statusAt = -Infinity;
     };
     /** Its schedule as the status reads it (on it and wired), with a zoo's feeding time (Part C). */
+    /** While its plans are still being worked out a few a frame (`warmStatus`): its status said plainly, as one off the schedule. */
+    let statusLight = false;
     const subjectOf = (entry: Entry): ScheduleSubject | null => {
         const own = entry.sched;
-        if (!own || !world || !own.wired || entry.visitor) return null;
+        if (statusLight || !own || !world || !own.wired || entry.visitor) return null;
         const town = island && townIds.has(entry.animal.id) ? island : null;
         return {
             id: entry.animal.id,
@@ -1953,17 +1955,91 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let statusAt = -Infinity;
     let toldStatus = "";
     let selectionBars: ArkSelectionBars | null = null;
+    /**
+     * A status's costly part, a little a frame (graphics and performance pass, 2026-11). A status is the animal's
+     * plans for its last ten slots and, for its "fed" bar, its last ninety waking slots (`animal-status.ts`
+     * scheduleStatus, scheduleFed), each plan a placed, path-searched intent. Worked out in one go for an animal just
+     * tapped, that was the frame after the tap: 0.9 s on the phone profile (4x CPU), 1 to 2.4 s on the low one, 0.2 s
+     * on a desktop, and again after every re-wiring of the schedules while a card was open. Both functions remember
+     * each slot as it is worked out and ask the subject for its animal once per plan, before the schedule's own code
+     * is entered. So a dry run through a subject that stops the run there once `STATUS_SLICE_MS` are spent leaves what
+     * it did remembered; the next frame's run goes on from it, and the status itself is asked for when a run comes
+     * through: the same answers, a few plans a frame. True when everything it needs is remembered.
+     */
+    const STATUS_SLICE_MS = 6;
+    /** With the view at rest (no flight, no finger down) a longer slice: the card is whole sooner. */
+    const STATUS_SLICE_REST_MS = 12;
+    const STATUS_STOP = {stop: true};
+    let statusWarm: {id: string; generation: number; world: ScheduleWorld} | null = null;
+    let statusWarming: {id: string; runs: number} | null = null;
+    /** The status shown is still the light one (or the one from before a re-wiring): asked again every frame. */
+    let statusPending = false;
+    const warmStatus = (entry: Entry): boolean => {
+        const subject = options.recording || !scheduled(entry) || entry.act ? null : subjectOf(entry);
+        if (!subject) return true;
+        const generation = behaviourSchedule.scheduleGeneration();
+        if (statusWarm && statusWarm.id === subject.id && statusWarm.generation === generation && statusWarm.world === subject.world) return true;
+        if (statusWarming?.id !== subject.id) statusWarming = {id: subject.id, runs: 0};
+        // (Should the status ever stop remembering slot by slot, the runs would never come through: after this many
+        // the status itself, in one go, as before.)
+        if (++statusWarming.runs <= 1200) {
+            const began = performance.now();
+            const slice = flight || pointers > 0 ? STATUS_SLICE_MS : STATUS_SLICE_REST_MS;
+            let asked = 0;
+            const sliced: ScheduleSubject = {
+                ...subject,
+                animalAt: (epoch) => {
+                    if (asked++ > 0 && performance.now() - began > slice) throw STATUS_STOP;
+                    return subject.animalAt(epoch);
+                }
+            };
+            const epoch = worldMs() / 1000;
+            try {
+                scheduleFed(sliced, epoch, []);
+                scheduleStatus(sliced, epoch, {});
+            } catch (error) {
+                if (error === STATUS_STOP) return false;
+                throw error;
+            }
+        }
+        statusWarm = {id: subject.id, generation, world: subject.world};
+        statusWarming = null;
+        return true;
+    };
+    /** Its status without its plans (what an animal off the schedule gets): what a card shows while they are worked out. */
+    const lightStatus = (entry: Entry): ArkAnimalStatus => {
+        statusLight = true;
+        try {
+            return statusOf(entry);
+        } finally {
+            statusLight = false;
+        }
+    };
     const tellStatus = (now: number) => {
         const entry = selectedId ? findEntry(selectedId) : null;
         if (!entry) {
             selectedStatus = null;
             toldStatus = "";
+            statusPending = false;
             selectionBars?.set(null);
             return;
         }
         const same = selectedStatus?.id === entry.animal.id;
-        if (same && now - statusAt < 1000) return;
-        if (!same) toldStatus = "";
+        if (same && !statusPending && now - statusAt < 1000) return;
+        // Its plans a few a frame first. Meanwhile a newly selected animal's card has its light status (told once, its
+        // bars not shown until they are whole); one whose schedules were re-wired keeps what it showed.
+        if (!warmStatus(entry)) {
+            if (!same) {
+                selectedStatus = lightStatus(entry);
+                toldStatus = arkStatusSignature(selectedStatus);
+                selectionBars?.set(null);
+                options.onStatus?.(entry.animal.id, selectedStatus);
+            }
+            statusPending = true;
+            return;
+        }
+        if (!same || statusPending) toldStatus = "";
+        statusPending = false;
         statusAt = now;
         selectedStatus = statusOf(entry);
         const signature = arkStatusSignature(selectedStatus);
@@ -6751,7 +6827,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         animalStatus: (id) => {
             const entry = findEntry(id);
             if (!entry) return null;
-            return selectedStatus?.id === id && performance.now() - statusAt < 1000 ? selectedStatus : statusOf(entry);
+            if (selectedStatus?.id === id && (statusPending || performance.now() - statusAt < 1000)) return selectedStatus;
+            // (Asked at the tap itself, by the page's card: its plans are not worked out in the tap, `warmStatus`.)
+            return warmStatus(entry) ? statusOf(entry) : lightStatus(entry);
         },
         noteRecord,
         happening,
