@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "Hayvanların paylaşılan tek bir dünyası. Her biri birinin yakalamasıyla gemiye bindi; insanların hayvanlarıyla attığı adımlar da onların serpilmesini sağlıyor.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "İnsanların gerçek yakalamalarıyla dolan canlı bir 3D dünya.",
+            "animals": "hayvan",
+            "species": "tür",
+            "people": "kişi",
+            "figuresLabel": "Şu an gemide",
+            "how": "Ark nasıl çalışır",
+            "latest": "Son gelenler",
+            "latestAria": "Gemiye en son binen türler"
+        },
         "title": "Yakalamalar onları gemiye bindirir. Adımlar serpilmelerini sağlar.",
         "beginning": "Ark daha yeni başlıyor: {founders} tarafından getirilen {animals}.",
         "aboard": "Gemide {animals} var ({species}); hepsini {founders} getirdi.",
@@ -433,8 +444,8 @@
             "countAboard": "Gemide {count}"
         },
         "seo": {
-            "metaTitle": "Ark: Canlı, Paylaşılan Bir Hayvan Dünyası Simülasyonu",
-            "metaDescription": "Canlı, paylaşılan bir 3D hayvan dünyası. Hayvanlar insanların yakalamalarıyla gemiye biner; sonra saha rehberlerine dayanan kurallarla beslenir, yavru büyütür ve yaşlanır.",
+            "metaTitle": "AnimalDex Ark: gerçek hayvanların canlı 3D dünyası",
+            "metaDescription": "Her hayvanın bir dersi var. AnimalDex Ark canlı, paylaşılan bir 3D dünya: her hayvan gerçek bir yakalamayla gemiye bindi ve saha rehberine göre yaşıyor.",
             "metaFocusTitle": "Ark'ta {animal}",
             "metaFocusDescription": "Canlı, paylaşılan bir 3D hayvan dünyası olan Ark'ta {animal}: burada her hayvanın hayatı, saha rehberine dayanan kurallara göre işler.",
             "aboutEyebrow": "Ark hakkında",

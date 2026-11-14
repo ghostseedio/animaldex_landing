@@ -918,10 +918,9 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     };
 
     return (
-        <div className="-mt-8">
-            {/* The world fills the screen under the site's header (decision 239): the title and the counts line stay for a
-                screen reader (the counts are also the overlay's heading). */}
-            <h1 id="ark-title" className="sr-only">{words.eyebrow}</h1>
+        <div>
+            {/* The world fills the screen under the site's header and the band over it (`ark-intro.tsx`, which holds the
+                page's heading); the counts line stays for a screen reader (the counts are also the overlay's heading). */}
             <p className="sr-only" aria-live="polite">{status}</p>
 
             {/* What a screen reader hears as it happens (A18): arrivals, a card opening, the replay's summary. */}
@@ -933,7 +932,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
             ) : null}
 
             {/* The world, edge to edge and as tall as the screen under the header; who is aboard over it. */}
-            <section ref={worldRef} aria-label={words.eyebrow} data-ark-loading={loaderShown ? "" : undefined} className="relative h-[calc(100svh-4.0625rem)] min-h-[30rem] w-full overflow-hidden bg-[#ecdcc4]">
+            <section ref={worldRef} aria-label={words.eyebrow} data-ark-loading={loaderShown ? "" : undefined} className="relative h-[calc(100svh-4.0625rem-var(--ark-intro-h,0px))] min-h-[30rem] w-full overflow-hidden bg-[#ecdcc4]">
                 {snapshot && !failed ? <div ref={mountRef} className="absolute inset-0" onPointerUp={worldTapped} /> : null}
                 {snapshot && !failed ? <div ref={liveHostRef} className="pointer-events-none absolute inset-0" /> : null}
 

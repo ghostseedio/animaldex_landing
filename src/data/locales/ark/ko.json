@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "동물들이 함께 사는 하나의 공유 세계예요. 여기 있는 동물은 모두 누군가의 캡처로 탑승했고, 사람들이 동물과 함께하는 할 일이 동물들을 건강하게 지켜요.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "사람들이 실제로 잡은 동물로 채워진 살아 있는 3D 세계.",
+            "animals": "마리",
+            "species": "종",
+            "people": "명",
+            "figuresLabel": "지금 탑승 중",
+            "how": "Ark는 이렇게 움직여요",
+            "latest": "최근 탑승",
+            "latestAria": "가장 최근에 탑승한 종"
+        },
         "title": "캡처로 탑승하고, 할 일로 건강하게 지내요",
         "beginning": "Ark가 이제 막 시작됐어요. {founders}이 데려온 {animals}가 있어요.",
         "aboard": "{species}, {animals}가 탑승해 있어요. {founders}이 데려왔어요.",
@@ -433,8 +444,8 @@
             "countAboard": "{count}마리 탑승 중"
         },
         "seo": {
-            "metaTitle": "Ark: 실시간으로 함께하는 동물 세계 시뮬레이션",
-            "metaDescription": "실시간으로 함께하는 3D 동물 세계예요. 동물들은 사람들의 캡처로 탑승하고, 이후 자신의 기록에 바탕을 둔 규칙에 따라 먹고, 새끼를 키우고, 나이 들어요.",
+            "metaTitle": "AnimalDex Ark: 진짜 동물이 사는 실시간 3D 세계",
+            "metaDescription": "모든 동물에게는 배울 점이 있어요. AnimalDex Ark는 함께 보는 실시간 3D 세계예요. 모든 동물은 실제 포획으로 탑승하고 도감의 규칙대로 살아요.",
             "metaFocusTitle": "Ark의 {animal}",
             "metaFocusDescription": "Ark에 있는 {animal}을(를) 만나 보세요. Ark는 실시간으로 함께하는 3D 동물 세계로, 모든 동물의 삶이 자신의 기록에 바탕을 둔 규칙을 따라요.",
             "aboutEyebrow": "Ark 소개",

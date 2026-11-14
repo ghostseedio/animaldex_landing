@@ -89,6 +89,7 @@
     "aiAndSafety": "AI & keamanan",
     "search": "Cari",
     "theArk": "Ark",
+    "animalDexArk": "AnimalDex Ark",
     "howTheArkWorks": "Cara kerja Ark",
     "arkFoodChain": "Siapa memangsa siapa",
     "aboutAnimalDex": "Tentang AnimalDex"
@@ -4159,6 +4160,17 @@
     "metaTitle": "Ark",
     "metaDescription": "Satu dunia hewan bersama. Setiap hewan naik ke Ark lewat tangkapan seseorang, dan langkah yang diambil orang bersama hewannya membuat mereka berkembang.",
     "eyebrow": "Ark",
+    "intro": {
+      "title": "AnimalDex Ark",
+      "tagline": "Satu dunia 3D yang hidup, diisi tangkapan nyata orang-orang.",
+      "animals": "hewan",
+      "species": "spesies",
+      "people": "orang",
+      "figuresLabel": "Di Ark sekarang",
+      "how": "Cara kerja Ark",
+      "latest": "Terbaru naik",
+      "latestAria": "Spesies yang paling baru naik ke Ark"
+    },
     "title": "Tangkapan membawa mereka naik. Langkah membuat mereka berkembang.",
     "beginning": "Ark baru saja dimulai: {animals}, dibawa oleh {founders}.",
     "aboard": "{animals} dari {species} ada di Ark, dibawa oleh {founders}.",
@@ -4438,8 +4450,8 @@
       "countAboard": "{count} di Ark"
     },
     "seo": {
-      "metaTitle": "Ark: Simulasi Dunia Hewan Bersama yang Hidup",
-      "metaDescription": "Dunia hewan 3D bersama yang hidup. Hewan naik ke Ark lewat tangkapan orang-orang, lalu makan, membesarkan anak, dan menua dengan aturan berdasarkan panduan lapangan mereka.",
+      "metaTitle": "AnimalDex Ark: dunia 3D hidup berisi hewan nyata",
+      "metaDescription": "Setiap hewan punya pelajaran. AnimalDex Ark adalah dunia 3D bersama yang hidup: tiap hewan naik lewat tangkapan nyata dan hidup sesuai panduan lapangannya.",
       "metaFocusTitle": "{animal} di Ark",
       "metaFocusDescription": "Lihat {animal} di Ark, dunia hewan 3D bersama yang hidup, tempat hidup setiap hewan mengikuti aturan berdasarkan panduan lapangannya.",
       "aboutEyebrow": "Tentang Ark",
@@ -4679,14 +4691,6 @@
       "foodBody": "Ketuk hewan mana pun di Ark untuk melihat apa yang dimakannya dan apa yang memangsanya, dengan kata-kata panduan lapangannya sendiri.",
       "aboutTitle": "Dunia riset yang hidup",
       "aboutBody": "Mengapa AnimalDex adalah dunia bersama untuk diamati dan dipelajari, bukan permainan untuk dimenangkan."
-    },
-    "arkIntro": {
-      "what": "Ark adalah satu dunia hewan 3D yang hidup, dibagi dan dilihat sama oleh semua orang.",
-      "arrive": "Tak ada hewan yang ditaruh dengan tangan: saat seseorang menangkap hewan dengan AnimalDex, satu dari jenisnya naik ke Ark dan menetap.",
-      "counts": "Saat ini {animals} hewan dari {species} spesies hidup di Ark, dibawa oleh {founders} orang, masing-masing hidup dengan aturan berdasarkan panduan lapangannya.",
-      "countsUnavailable": "Setiap hewan di Ark hidup dengan aturan berdasarkan panduan lapangannya, tak pernah ditaruh dengan tangan.",
-      "recentTitle": "Terbaru naik",
-      "recentAria": "Spesies yang paling baru naik ke Ark"
     },
     "breadcrumbLabel": "Jejak navigasi"
   },

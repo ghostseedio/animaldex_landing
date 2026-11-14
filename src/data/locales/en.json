@@ -89,6 +89,7 @@
     "aiAndSafety": "AI & safety",
     "search": "Search",
     "theArk": "The Ark",
+    "animalDexArk": "AnimalDex Ark",
     "howTheArkWorks": "How the Ark works",
     "arkFoodChain": "Who eats whom",
     "aboutAnimalDex": "About AnimalDex"
@@ -4174,6 +4175,17 @@
     "metaTitle": "The Ark",
     "metaDescription": "One shared world of animals. Each one came aboard with someone's capture, and the steps people take with their animals keep them thriving.",
     "eyebrow": "The Ark",
+    "intro": {
+      "title": "AnimalDex Ark",
+      "tagline": "One live 3D world, filled by people's real catches.",
+      "animals": "animals",
+      "species": "species",
+      "people": "people",
+      "figuresLabel": "Aboard now",
+      "how": "How the Ark works",
+      "latest": "Latest aboard",
+      "latestAria": "The species that most recently came aboard"
+    },
     "title": "Captures bring them aboard. Steps keep them thriving.",
     "beginning": "The Ark is just beginning: {animals}, brought by {founders}.",
     "aboard": "{animals} of {species} aboard, brought by {founders}.",
@@ -4604,8 +4616,8 @@
       "countAboard": "{count} aboard"
     },
     "seo": {
-      "metaTitle": "The Ark: A Live, Shared Animal World Simulation",
-      "metaDescription": "A live, shared 3D animal world. Animals come aboard with people's captures, then eat, raise young and grow old by rules based on their field guides.",
+      "metaTitle": "AnimalDex Ark: a live 3D world of real animals",
+      "metaDescription": "Every animal has a lesson. The AnimalDex Ark is a live, shared 3D world: each animal came aboard with a real catch and lives by its field guide.",
       "metaFocusTitle": "The {animal} in the Ark",
       "metaFocusDescription": "See the {animal} in the Ark, a live, shared 3D animal world where each animal's life follows rules based on its field guide.",
       "aboutEyebrow": "About the Ark",
@@ -4694,14 +4706,6 @@
       "foodBody": "Tap any animal aboard to see what it eats and what eats it, in its field guide's own words.",
       "aboutTitle": "A living research world",
       "aboutBody": "Why AnimalDex is a shared world to watch and learn from, not a game to win."
-    },
-    "arkIntro": {
-      "what": "The Ark is one live 3D animal world that everyone shares and sees the same way.",
-      "arrive": "Nobody places an animal by hand: when someone catches one with AnimalDex, one of its kind comes aboard and stays.",
-      "counts": "Right now {animals} animals of {species} species live aboard, brought by {founders} people, each living by rules based on its field guide.",
-      "countsUnavailable": "Every animal aboard lives by rules based on its field guide, never placed by hand.",
-      "recentTitle": "Latest aboard",
-      "recentAria": "The species that most recently came aboard"
     },
     "breadcrumbLabel": "Breadcrumb"
   },

@@ -2,12 +2,12 @@ import type {Metadata} from "next";
 import ArkRecordView from "@/app/[locale]/(composited)/ark/ark-record-view";
 import ArkAbout from "@/app/[locale]/(composited)/ark/ark-about";
 import ArkSeoSummary from "@/app/[locale]/(composited)/ark/ark-seo-summary";
-import ArkIntro, {type ArkIntroWords} from "@/app/[locale]/(composited)/ark/ark-intro";
+import ArkIntro, {ARK_INTRO_HEIGHT} from "@/app/[locale]/(composited)/ark/ark-intro";
 import {readArkRecentArrivals} from "@/data/ark-recent-arrivals";
 import {getPageWords, word} from "@/loaders/page-words";
-import {ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
+import {ABOUT_PATH, ARK_FOOD_CHAIN_PATH, ARK_HOW_IT_WORKS_PATH, ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
 import {clampMetaDescription} from "@/lib/seo/page-metadata";
-import {arkJsonLd, breadcrumbJsonLd, jsonLdHtml, type JsonLd} from "@/lib/seo/structured-data";
+import {arkJsonLd, breadcrumbJsonLd, jsonLdHtml, siteNavigationJsonLd, webPageJsonLd, type JsonLd} from "@/lib/seo/structured-data";
 import ArkView, {type ArkFixtureLife} from "@/app/[locale]/(composited)/ark/ark-view";
 import {readPublicArk} from "@/data/ark-public";
 import {readArkVoyage} from "@/data/ark-voyage";
@@ -17,7 +17,7 @@ import {arkFocusSlug, arkOgImagePath, arkSpeciesShare} from "@/lib/ark-seo";
 import {fillArkWords} from "@/lib/ark-words";
 import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
 import {TALKING_MODELS_BASE_URL} from "@/lib/talking-models/catalog";
-import {getLocalePath, getMetadataLocale} from "@/lib/site";
+import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {getArkWords} from "@/loaders/ark-words";
 import {arkDirection} from "@/lib/ark-languages";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -208,13 +208,18 @@ export async function generateMetadata({params, searchParams}: Props): Promise<M
 }
 
 /**
- * The Ark as schema.org says it (SEO lane S3, S1's D5): a free browser simulation (WebApplication) that is part
- * of the AnimalDex app, and where it sits on the site.
+ * The Ark as schema.org says it (SEO lane S3, S1's D5): the page, a free browser simulation (WebApplication) that is
+ * part of the AnimalDex app, where it sits on the site, and its own links as navigation (2026-11-14: someone searching
+ * "animaldex ark" should land here, with the pages about it as sitelinks). Named "AnimalDex Ark", "The Ark" as its
+ * other name.
  */
-function arkPageJsonLd(locale: string, description: string, name: string, homeName: string): JsonLd[] {
+function arkPageJsonLd(input: {locale: string; title: string; description: string; name: string; alternateName: string; homeName: string; links: Array<{name: string; path: string}>}): JsonLd[] {
+    const {locale, name} = input;
     return [
-        arkJsonLd({locale, name, description, image: ARK_RENDER_IMAGE}),
-        breadcrumbJsonLd(locale, [{name: homeName, path: "/"}, {name, path: "/ark"}])
+        webPageJsonLd({locale, path: "/ark", name: input.title, description: input.description, image: ARK_RENDER_IMAGE, mainEntity: {"@type": "WebApplication", "@id": `${getAbsoluteUrl("en", "/ark")}#ark`, name}}),
+        arkJsonLd({locale, name, alternateName: input.alternateName, description: input.description, image: ARK_RENDER_IMAGE}),
+        breadcrumbJsonLd(locale, [{name: input.homeName, path: "/"}, {name, path: "/ark"}]),
+        siteNavigationJsonLd(locale, input.links)
     ];
 }
 
@@ -500,7 +505,7 @@ export default async function ArkPage({params, searchParams}: Props) {
     const fixtureFounders = Boolean(mode) && development && searchParams.founders !== "0";
     const record = searchParams.record === "1" && (development || process.env.ARK_RECORD_ENABLED === "1");
     // The live Ark: the public read from the data cache (decision 246); the visitor's own (`mine`) only for the recorder.
-    const [{words, talk, language}, data, arrivals, seoWords] = await Promise.all([
+    const [{words, talk, language}, data, arrivals, navWords] = await Promise.all([
         getArkWords(locale, langOf(searchParams)),
         mode ? loadFixture(mode, fixtureFounders).then((fixture) => ({fixture, read: null, shared: null}))
             : local ? Promise.resolve({fixture: null, read: null, shared: null})
@@ -508,7 +513,7 @@ export default async function ArkPage({params, searchParams}: Props) {
             : readPublicArk(PUBLIC_REVALIDATE_SECONDS).then((shared) => ({fixture: null, read: null, shared})),
         // The newest arrivals under the heading (CC 3): the live log only, never beside a fixture or a local snapshot.
         mode || local ? Promise.resolve(null) : readArkRecentArrivals(),
-        getPageWords(locale, "seo")
+        getPageWords(locale, "nav")
     ]);
     const snapshot = local?.snapshot ?? data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null) ?? data.shared;
     // Handed to the client as props only in development's modes: the live Ark is read by the client after the first paint.
@@ -520,21 +525,26 @@ export default async function ArkPage({params, searchParams}: Props) {
     const wordsLocale = otherLanguage ? language : locale;
     // The words under the world: the snapshot the page drew (the same Ark for everyone; `mine` is never said there).
     const speciesPages = new Set((snapshot?.animals ?? []).map((animal) => animal.model_slug).filter((slug) => isPublishedAnimalSlug(slug)));
-    const introWords: ArkIntroWords = {
-        what: word(seoWords, "arkIntro.what"),
-        arrive: word(seoWords, "arkIntro.arrive"),
-        counts: word(seoWords, "arkIntro.counts"),
-        countsUnavailable: word(seoWords, "arkIntro.countsUnavailable"),
-        recentTitle: word(seoWords, "arkIntro.recentTitle"),
-        recentAria: word(seoWords, "arkIntro.recentAria")
-    };
     const view = (
         <>
         <script
             type="application/ld+json"
-            dangerouslySetInnerHTML={{__html: jsonLdHtml(arkPageJsonLd(locale, words.seo.metaDescription, words.eyebrow, words.seo.breadcrumbHome))}}
+            dangerouslySetInnerHTML={{__html: jsonLdHtml(arkPageJsonLd({
+                locale,
+                title: words.seo.metaTitle,
+                description: clampMetaDescription(words.seo.metaDescription),
+                name: words.intro.title,
+                alternateName: words.eyebrow,
+                homeName: words.seo.breadcrumbHome,
+                links: [
+                    {name: word(navWords, "animalDexArk"), path: "/ark"},
+                    {name: word(navWords, "howTheArkWorks"), path: ARK_HOW_IT_WORKS_PATH},
+                    {name: word(navWords, "arkFoodChain"), path: ARK_FOOD_CHAIN_PATH},
+                    {name: word(navWords, "aboutAnimalDex"), path: ABOUT_PATH}
+                ]
+            }))}}
         />
-        <ArkIntro label={words.eyebrow} words={introWords} counts={snapshot?.counts ?? null} arrivals={arrivals} locale={wordsLocale} />
+        <ArkIntro words={words.intro} counts={snapshot?.counts ?? null} arrivals={arrivals} locale={wordsLocale} howHref={ARK_HOW_IT_WORKS_PATH} />
         <ArkView
             locale={wordsLocale}
             initial={handed}
@@ -563,5 +573,6 @@ export default async function ArkPage({params, searchParams}: Props) {
         </>
     );
     // Another language than the site's: its own lang and direction, so screen readers and right-to-left scripts read it right.
-    return otherLanguage ? <div lang={language} dir={arkDirection(language)}>{view}</div> : view;
+    // The band's height as a variable for the world under it (`ARK_INTRO_HEIGHT`).
+    return otherLanguage ? <div lang={language} dir={arkDirection(language)} className={ARK_INTRO_HEIGHT}>{view}</div> : <div className={ARK_INTRO_HEIGHT}>{view}</div>;
 }

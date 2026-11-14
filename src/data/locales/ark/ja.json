@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "動物たちが暮らす、みんなで分かち合うひとつの世界。どの動物も誰かのキャプチャで乗り込み、人々が動物と取り組むステップが、動物たちを元気に保っています。",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "人々が本当に捕まえた動物でできた、生きている3Dの世界。",
+            "animals": "匹",
+            "species": "種",
+            "people": "人",
+            "figuresLabel": "いま乗船中",
+            "how": "Arkのしくみ",
+            "latest": "最近の乗船",
+            "latestAria": "最近乗船した種"
+        },
         "title": "キャプチャで乗り込み、ステップで元気に暮らします",
         "beginning": "Arkはまだ始まったばかりです。{founders}が{animals}を連れてきました。",
         "aboard": "{species}、{animals}が乗船中です。連れてきたのは{founders}です。",
@@ -433,8 +444,8 @@
             "countAboard": "{count}匹が乗船中"
         },
         "seo": {
-            "metaTitle": "Ark：みんなで分かち合う、動物世界のライブシミュレーション",
-            "metaDescription": "みんなで分かち合う、ライブの3D動物世界。動物たちはみんなのキャプチャで乗り込み、その記録をもとにしたルールで食べ、子を育て、年をとっていきます。",
+            "metaTitle": "AnimalDex Ark：本物の動物が暮らすライブ3Dの世界",
+            "metaDescription": "どの動物にも教えがある。AnimalDex Arkはみんなで共有するライブ3Dの世界。どの動物も本当のキャプチャーで乗船し、図鑑のルールに沿って暮らします。",
             "metaFocusTitle": "Arkにいる{animal}",
             "metaFocusDescription": "Arkにいる{animal}を見てみましょう。Arkは、みんなで分かち合うライブの3D動物世界で、どの動物の暮らしもその記録をもとにしたルールに沿っています。",
             "aboutEyebrow": "Arkについて",

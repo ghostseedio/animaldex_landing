@@ -351,10 +351,26 @@ export type ArkFoundersWords = {
 /** "Name now, ask age after": the age check's own words, asked once on the Ark or the profile (`ArkAgeAsk`). */
 export type ArkAgeAskWords = {title: string; body: string; yearLabel: string; continue: string; notNow: string; note: string; failed: string};
 
+/** /ark's band over the world (2026-11-14): the name, one line, the live figures, the newest arrivals. */
+export type ArkIntroWords = {
+    /** "AnimalDex Ark": the page's heading in every language (what people search for). */
+    title: string;
+    tagline: string;
+    /** The figures' labels, under each live count. */
+    animals: string;
+    species: string;
+    people: string;
+    figuresLabel: string;
+    how: string;
+    latest: string;
+    latestAria: string;
+};
+
 export type ArkWords = {
     metaTitle: string;
     metaDescription: string;
     eyebrow: string;
+    intro: ArkIntroWords;
     title: string;
     beginning: string;
     aboard: string;

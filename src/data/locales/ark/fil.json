@@ -3,6 +3,17 @@
         "metaTitle": "Ang Ark",
         "metaDescription": "Iisang mundo ng mga hayop na pinagsasaluhan ng lahat. Sumakay ang bawat isa dahil sa kuha ng isang tao, at pinapanatili silang masigla ng mga hakbang na ginagawa ng mga tao kasama ang kanilang mga hayop.",
         "eyebrow": "Ang Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Isang buhay na 3D na mundo, puno ng tunay na huli ng mga tao.",
+            "animals": "hayop",
+            "species": "species",
+            "people": "tao",
+            "figuresLabel": "Nakasakay ngayon",
+            "how": "Paano gumagana ang Ark",
+            "latest": "Pinakabagong sakay",
+            "latestAria": "Ang mga species na pinakabagong sumakay"
+        },
         "title": "Isinasakay sila ng mga kuha. Pinapanatili silang masigla ng mga hakbang.",
         "beginning": "Nagsisimula pa lang ang Ark: {animals}, dinala ng {founders}.",
         "aboard": "{animals} mula sa {species} ang nakasakay, dinala ng {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} ang nakasakay"
         },
         "seo": {
-            "metaTitle": "Ang Ark: Isang Buhay at Pinagsasaluhang Simulation ng Mundo ng mga Hayop",
-            "metaDescription": "Isang buhay at pinagsasaluhang 3D na mundo ng mga hayop. Sumasakay ang mga hayop dahil sa mga kuha ng mga tao, at saka kumakain, nagpapalaki ng anak at tumatanda ayon sa mga patakarang batay sa kanilang field guide.",
+            "metaTitle": "AnimalDex Ark: buhay na 3D na mundo ng tunay na hayop",
+            "metaDescription": "Bawat hayop ay may aral. Ang AnimalDex Ark ay buhay at pinagsasaluhang 3D na mundo: bawat hayop ay galing sa tunay na huli at sumusunod sa field guide nito.",
             "metaFocusTitle": "Ang {animal} sa Ark",
             "metaFocusDescription": "Tingnan ang {animal} sa Ark, isang buhay at pinagsasaluhang 3D na mundo ng mga hayop kung saan sinusunod ng buhay ng bawat hayop ang mga patakarang batay sa field guide nito.",
             "aboutEyebrow": "Tungkol sa Ark",

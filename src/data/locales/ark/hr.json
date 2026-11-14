@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "Jedan zajednički svijet životinja. Svaka se ukrcala zahvaljujući nečijem ulovu, a koraci koje ljudi rade sa svojim životinjama pomažu im da napreduju.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Jedan živi 3D svijet, pun stvarnih ulova ljudi.",
+            "animals": "životinja",
+            "species": "vrsta",
+            "people": "ljudi",
+            "figuresLabel": "Sada na brodu",
+            "how": "Kako Ark radi",
+            "latest": "Najnoviji na brodu",
+            "latestAria": "Vrste koje su se najnovije ukrcale"
+        },
         "title": "Ulovi ih ukrcavaju. Koraci im pomažu da napreduju.",
         "beginning": "Ark tek počinje: {animals}. Tko ih je doveo: {founders}.",
         "aboard": "Na brodu: {animals}, {species}. Tko ih je doveo: {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "Na brodu: {count}"
         },
         "seo": {
-            "metaTitle": "Ark: živi, zajednički simulirani svijet životinja",
-            "metaDescription": "Živi, zajednički 3D svijet životinja. Životinje se ukrcavaju zahvaljujući ulovima ljudi, a zatim jedu, podižu mladunčad i stare prema pravilima temeljenima na zapisima o njima.",
+            "metaTitle": "AnimalDex Ark: živi 3D svijet stvarnih životinja",
+            "metaDescription": "Svaka životinja ima lekciju. AnimalDex Ark je živi, zajednički 3D svijet: svaka životinja ukrcala se stvarnim ulovom i živi po svom terenskom vodiču.",
             "metaFocusTitle": "{animal} u Arku",
             "metaFocusDescription": "Pogledaj vrstu {animal} u Arku, živom, zajedničkom 3D svijetu životinja u kojem život svake životinje slijedi pravila temeljena na zapisu o njoj.",
             "aboutEyebrow": "O Arku",

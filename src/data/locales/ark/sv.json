@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "En gemensam värld av djur. Varje djur kom ombord med någons fångst, och stegen som människor tar med sina djur får dem att trivas.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "En levande 3D-värld, fylld av människors riktiga fångster.",
+            "animals": "djur",
+            "species": "arter",
+            "people": "personer",
+            "figuresLabel": "Ombord nu",
+            "how": "Så fungerar Ark",
+            "latest": "Senast ombord",
+            "latestAria": "Arterna som senast kom ombord"
+        },
         "title": "Fångster tar dem ombord. Steg får dem att trivas.",
         "beginning": "Ark har precis börjat: {animals}, tagna hit av {founders}.",
         "aboard": "{animals} av {species} ombord, tagna hit av {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} ombord"
         },
         "seo": {
-            "metaTitle": "Ark: en levande, gemensam simulering av en djurvärld",
-            "metaDescription": "En levande, gemensam djurvärld i 3D. Djur kommer ombord med människors fångster, och äter, får ungar och åldras sedan enligt regler som bygger på deras fälthandbok.",
+            "metaTitle": "AnimalDex Ark: en levande 3D-värld av riktiga djur",
+            "metaDescription": "Varje djur har en läxa. AnimalDex Ark är en levande, gemensam 3D-värld: varje djur kom ombord med en riktig fångst och lever efter sin fälthandbok.",
             "metaFocusTitle": "{animal} i Ark",
             "metaFocusDescription": "Se {animal} i Ark, en levande, gemensam djurvärld i 3D där varje djurs liv följer regler som bygger på dess fälthandbok.",
             "aboutEyebrow": "Om Ark",

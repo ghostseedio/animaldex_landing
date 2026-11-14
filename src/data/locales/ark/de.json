@@ -3,6 +3,17 @@
         "metaTitle": "Die Ark",
         "metaDescription": "Eine gemeinsame Welt voller Tiere. Jedes kam an Bord, weil jemand es aufgenommen hat, und die Schritte, die Menschen mit ihren Tieren machen, lassen sie gedeihen.",
         "eyebrow": "Die Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Eine lebendige 3D-Welt, gefüllt mit echten Fängen von Menschen.",
+            "animals": "Tiere",
+            "species": "Arten",
+            "people": "Menschen",
+            "figuresLabel": "Jetzt an Bord",
+            "how": "So funktioniert die Ark",
+            "latest": "Zuletzt an Bord",
+            "latestAria": "Die Arten, die zuletzt an Bord kamen"
+        },
         "title": "Aufnahmen bringen sie an Bord. Schritte lassen sie gedeihen.",
         "beginning": "Die Ark fängt gerade erst an: {animals}, gebracht von {founders}.",
         "aboard": "{animals} aus {species} an Bord, gebracht von {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} an Bord"
         },
         "seo": {
-            "metaTitle": "Die Ark: eine lebendige, gemeinsame Simulation einer Tierwelt",
-            "metaDescription": "Eine lebendige, gemeinsame 3D-Tierwelt. Tiere kommen durch die Aufnahmen von Menschen an Bord. Dann fressen sie, ziehen Junge auf und werden alt, nach Regeln, die auf ihrem Field Guide beruhen.",
+            "metaTitle": "AnimalDex Ark: eine lebendige 3D-Welt echter Tiere",
+            "metaDescription": "Jedes Tier hat eine Lektion. Die AnimalDex Ark ist eine lebendige, gemeinsame 3D-Welt: Jedes Tier kam mit einem echten Fang und lebt nach seinem Feldführer.",
             "metaFocusTitle": "{animal} in der Ark",
             "metaFocusDescription": "Sieh {animal} in der Ark, einer lebendigen, gemeinsamen 3D-Tierwelt, in der das Leben jedes Tiers Regeln folgt, die auf seinem Field Guide beruhen.",
             "aboutEyebrow": "Über die Ark",

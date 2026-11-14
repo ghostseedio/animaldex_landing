@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "Jeden společný svět zvířat. Každé nastoupilo na palubu díky něčímu úlovku a kroky, které lidé se svými zvířaty dělají, jim pomáhají prosperovat.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Jeden živý 3D svět plný skutečných úlovků lidí.",
+            "animals": "zvířat",
+            "species": "druhů",
+            "people": "lidí",
+            "figuresLabel": "Teď na palubě",
+            "how": "Jak Ark funguje",
+            "latest": "Nejnovější na palubě",
+            "latestAria": "Druhy, které na palubu přišly naposledy"
+        },
         "title": "Úlovky je přivádějí na palubu. Kroky jim pomáhají prosperovat.",
         "beginning": "Ark teprve začíná: {animals}. Kdo je přivedl: {founders}.",
         "aboard": "Na palubě: {animals}, {species}. Kdo je přivedl: {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "Na palubě: {count}"
         },
         "seo": {
-            "metaTitle": "Ark: živá, společná simulace světa zvířat",
-            "metaDescription": "Živý, společný 3D svět zvířat. Zvířata nastupují na palubu díky úlovkům lidí a pak žerou, vychovávají mláďata a stárnou podle pravidel založených na jejich terénních průvodcích.",
+            "metaTitle": "AnimalDex Ark: živý 3D svět skutečných zvířat",
+            "metaDescription": "Každé zvíře má co naučit. AnimalDex Ark je živý společný 3D svět: každé zvíře přišlo se skutečným úlovkem a žije podle svého terénního průvodce.",
             "metaFocusTitle": "{animal} v Ark",
             "metaFocusDescription": "Podívej se na druh {animal} v Ark, živém společném 3D světě zvířat, kde se život každého zvířete řídí pravidly podle jeho terénního průvodce.",
             "aboutEyebrow": "O Ark",

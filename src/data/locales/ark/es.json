@@ -3,6 +3,17 @@
         "metaTitle": "El Ark",
         "metaDescription": "Un mundo compartido de animales. Cada uno subió a bordo con la captura de alguien, y los pasos que la gente da con sus animales hacen que sigan prosperando.",
         "eyebrow": "El Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Un mundo 3D vivo, lleno de capturas reales de la gente.",
+            "animals": "animales",
+            "species": "especies",
+            "people": "personas",
+            "figuresLabel": "A bordo ahora",
+            "how": "Cómo funciona el Ark",
+            "latest": "Últimos a bordo",
+            "latestAria": "Las especies que subieron a bordo más recientemente"
+        },
         "title": "Las capturas los suben a bordo. Los pasos hacen que prosperen.",
         "beginning": "El Ark apenas empieza: {animals}, gracias a {founders}.",
         "aboard": "{animals} de {species} a bordo, gracias a {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} a bordo"
         },
         "seo": {
-            "metaTitle": "El Ark: una simulación viva y compartida de un mundo animal",
-            "metaDescription": "Un mundo animal en 3D, vivo y compartido. Los animales suben a bordo con las capturas de la gente, y luego comen, crían y envejecen según reglas basadas en su guía de campo.",
+            "metaTitle": "AnimalDex Ark: un mundo 3D vivo de animales reales",
+            "metaDescription": "Cada animal tiene una lección. El AnimalDex Ark es un mundo 3D vivo y compartido: cada animal subió con una captura real y vive según su guía de campo.",
             "metaFocusTitle": "{animal} en el Ark",
             "metaFocusDescription": "Descubre {animal} en el Ark, un mundo animal en 3D, vivo y compartido, donde la vida de cada animal sigue reglas basadas en su guía de campo.",
             "aboutEyebrow": "Sobre el Ark",

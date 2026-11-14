@@ -3,6 +3,17 @@
         "metaTitle": "Ark",
         "metaDescription": "Satu dunia haiwan yang dikongsi. Setiap satu naik ke Ark melalui tangkapan seseorang, dan langkah yang diambil orang bersama haiwan mereka memastikan haiwan itu terus berkembang baik.",
         "eyebrow": "Ark",
+        "intro": {
+            "title": "AnimalDex Ark",
+            "tagline": "Satu dunia 3D yang hidup, dipenuhi tangkapan sebenar orang ramai.",
+            "animals": "haiwan",
+            "species": "spesies",
+            "people": "orang",
+            "figuresLabel": "Di atas kapal kini",
+            "how": "Cara Ark berfungsi",
+            "latest": "Terbaru naik",
+            "latestAria": "Spesies yang paling baru naik ke kapal"
+        },
         "title": "Tangkapan membawa mereka naik. Langkah memastikan mereka berkembang baik.",
         "beginning": "Ark baru bermula: {animals}, dibawa oleh {founders}.",
         "aboard": "{animals} daripada {species} di atas kapal, dibawa oleh {founders}.",
@@ -433,8 +444,8 @@
             "countAboard": "{count} di atas kapal"
         },
         "seo": {
-            "metaTitle": "Ark: Simulasi Dunia Haiwan Langsung yang Dikongsi",
-            "metaDescription": "Dunia haiwan 3D yang langsung dan dikongsi. Haiwan naik ke Ark melalui tangkapan orang ramai, kemudian makan, membesarkan anak dan menjadi tua mengikut peraturan berdasarkan panduan lapangan mereka.",
+            "metaTitle": "AnimalDex Ark: dunia 3D hidup haiwan sebenar",
+            "metaDescription": "Setiap haiwan ada pengajarannya. AnimalDex Ark ialah dunia 3D hidup yang dikongsi: tiap haiwan datang dari tangkapan sebenar dan hidup ikut panduan lapangannya.",
             "metaFocusTitle": "{animal} di Ark",
             "metaFocusDescription": "Lihat {animal} di Ark, dunia haiwan 3D yang langsung dan dikongsi, tempat kehidupan setiap haiwan mengikut peraturan berdasarkan panduan lapangannya.",
             "aboutEyebrow": "Tentang Ark",
