@@ -3276,24 +3276,32 @@ function soarTrip(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     const random = rng(hashString(`${animal.id}#soar#${slot}`));
     if (soar && fromAloft) {
         const n = SLOT_SECONDS;
-        const heights = soarHeights(world, soar, start, n);
+        // (A second either side of the slot too, for its curve's ends: `trackAt`'s lead. Two slots of a soar then meet at
+        // one heading and one speed; they met at half pace and a quarter of a radian apart.)
+        const heights = soarHeights(world, soar, start - 1, n + 2);
         const track = new Float32Array((n + 1) * 3);
         for (let i = 0; i <= n; i++) {
             const at = soar.at(start + i);
             track[i * 3] = at.x;
-            track[i * 3 + 1] = heights[i];
+            track[i * 3 + 1] = heights[i + 1];
             track[i * 3 + 2] = at.z;
         }
         // (Exactly where its slots meet.)
         track.set([from.x, from.y, from.z], 0);
         track.set([to.x, to.y, to.z], n * 3);
+        const pre = soar.at(start - 1);
+        const post = soar.at(end + 1);
+        const lead = new Float32Array([pre.x, heights[0], pre.z, post.x, heights[n + 2], post.z]);
         let length = 0;
         for (let i = 1; i <= n; i++) length += Math.hypot(track[i * 3] - track[i * 3 - 3], track[i * 3 + 2] - track[i * 3 - 1]);
-        const leg: Leg = {mode: "air", from, to, path: null, length, seconds: n, beat: soar.beat, plan: {seconds: n, knots: [0, 1, 1, 1], liftoff: 0, touchdown: 1, rise: 1e-4, fall: 1e-4, height: 0, peak: length / n, soar: {from: true, to: true, track}}};
+        const leg: Leg = {mode: "air", from, to, path: null, length, seconds: n, beat: soar.beat, plan: {seconds: n, knots: [0, 1, 1, 1], liftoff: 0, touchdown: 1, rise: 1e-4, fall: 1e-4, height: 0, peak: length / n, soar: {from: true, to: true, track, lead}}};
         return {...base, mode: "air", arrive: end, to, finish: settled.finish, path: null, legs: [leg], stay: [], length, running: false};
     }
     if (soar) {
-        // Up into it: a wait where it sits, then out to where its track will be and on along it to the slot's end.
+        // Up into it: a wait where it sits, a way out to where its track will be, and from there on its track itself to
+        // the slot's end. (Two legs. They were one, a route through its track's points flown at one pace and fitted into
+        // what was left of the slot: its take-off was squeezed with it, to 1.3 times a kite's acceleration cap, and it
+        // came to the slot's end at that pace and along its last chord, not at its track's speed and heading.)
         const v = soar.pace;
         const legs: Leg[] = [];
         let wait = 2 + random() * 20;
@@ -3302,36 +3310,43 @@ function soarTrip(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
             const at = soar.at(join);
             join = Math.min(Math.max(start + wait + Math.hypot(at.x - from.x, at.z - from.z) / v + v / paces.accel / 2, start + wait + 2), end - 10);
         }
+        // (A whole number of seconds before the slot's end: its track from there is read each second.)
+        join = end - Math.round(end - join);
         // (It meets its track where its track heads away from it, within the next quarter minute: it flies out along a
-        // tangent of its circle and onto it, never straight at it and round a corner.)
+        // tangent of its circle and onto it, never straight at it and round a corner. And far enough off to be at its
+        // track's speed by then at its take-off's acceleration.)
+        const tangent = (t: number) => {
+            const a = soar.at(t - 1);
+            const b = soar.at(t + 1);
+            return {x: (b.x - a.x) / 2, z: (b.z - a.z) / 2};
+        };
         let aligned = Infinity;
         for (let t = join, k = 0; k <= 16 && t <= end - 10; t += 1, k++) {
             const at = soar.at(t);
-            const off = Math.abs(Math.atan2(Math.sin(Math.atan2(at.x - from.x, at.z - from.z) - at.yaw), Math.cos(Math.atan2(at.x - from.x, at.z - from.z) - at.yaw)));
+            const going = tangent(t);
+            const far = Math.hypot(at.x - from.x, at.z - from.z);
+            const off = Math.abs(Math.atan2(Math.sin(Math.atan2(at.x - from.x, at.z - from.z) - at.yaw), Math.cos(Math.atan2(at.x - from.x, at.z - from.z) - at.yaw))) + (far < ((going.x * going.x + going.z * going.z) / (2 * paces.accel)) * 1.25 + 1 ? 10 : 0);
             if (off < aligned - 1e-9) {
                 aligned = off;
                 join = t;
             }
         }
+        const n = Math.round(end - join);
         const first = soar.at(join);
+        const going = tangent(join);
+        const vJoin = Math.max(Math.hypot(going.x, going.z), 1e-3);
         const out = Math.hypot(first.x - from.x, first.z - from.z);
-        // (It sits until it is time to leave for there at its pace.)
-        wait = Math.max(wait, join - start - out / v - v / paces.accel / 2);
+        // Its way out: straight for a point a step short of where it joins, on its track's own line through there, and in
+        // along that line: it comes onto its track heading as its track does.
+        const back = Math.min(vJoin, out / 3);
+        const short = {x: first.x - (going.x / vJoin) * back, z: first.z - (going.z / vJoin) * back};
+        const steps = Math.max(Math.round(Math.hypot(short.x - from.x, short.z - from.z) / (v * 2)), 2);
         const route: NavPoint[] = [{x: from.x, z: from.z}];
-        const times: number[] = [start + wait];
-        // (Its way out in steps about as long as its track's, so the curve through them is even.)
-        const steps = Math.max(Math.round(out / (v * 2)), 1);
-        for (let k = 1; k < steps; k++) {
-            route.push({x: from.x + ((first.x - from.x) * k) / steps, z: from.z + ((first.z - from.z) * k) / steps});
-            times.push(start + wait + ((join - start - wait) * k) / steps);
-        }
-        for (let t = join; t < end - 1; t += 2) {
-            const at = soar.at(t);
-            route.push({x: at.x, z: at.z});
-            times.push(t);
-        }
-        route.push({x: to.x, z: to.z});
-        times.push(end);
+        for (let k = 1; k < steps; k++) route.push({x: from.x + ((short.x - from.x) * k) / steps, z: from.z + ((short.z - from.z) * k) / steps});
+        route.push(short, {x: first.x, z: first.z});
+        const flat = Math.max(routeLength(route), 0.01);
+        // (It sits until it is time to leave for there at its pace.)
+        wait = Math.max(wait, join - start - flat / v - v / paces.accel / 2);
         const heading = Math.atan2(route[1].x - from.x, route[1].z - from.z);
         if (from.yaw !== undefined) {
             const turn = Math.abs(Math.atan2(Math.sin(heading - from.yaw), Math.cos(heading - from.yaw)));
@@ -3341,52 +3356,76 @@ function soarTrip(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
             }
         }
         legs.push({mode: "pause", from, to: from, path: null, length: 0, seconds: wait, beat: "pause", yaw: heading});
-        const flat = Math.max(routeLength(route), 0.01);
-        // Its heights along its route: up from where it sits to its track's over its way out, then its track's own.
-        const perSecond = soarHeights(world, soar, start, SLOT_SECONDS);
-        const heightAtTime = (t: number) => {
-            const f = Math.min(Math.max(t - start, 0), SLOT_SECONDS);
-            const i = Math.min(Math.floor(f), SLOT_SECONDS - 1);
-            return perSecond[i] + (perSecond[i + 1] - perSecond[i]) * (f - i);
-        };
-        const K = 64;
-        const alt = new Float32Array(K + 1);
-        const along: number[] = [0];
-        for (let i = 1; i < route.length; i++) along.push(along[i - 1] + Math.hypot(route[i].x - route[i - 1].x, route[i].z - route[i - 1].z));
-        const total = along[along.length - 1] || 1;
-        const joined = heightAtTime(join);
-        let seg = 1;
-        for (let i = 0; i <= K; i++) {
-            const d = (i / K) * total;
-            while (seg < along.length - 1 && along[seg] < d) seg++;
-            const k = (d - along[seg - 1]) / Math.max(along[seg] - along[seg - 1], 1e-6);
-            const t = times[seg - 1] + (times[seg] - times[seg - 1]) * Math.min(Math.max(k, 0), 1);
-            if (t < join) {
-                const q = Math.min(d / Math.max(out, 1e-6), 1);
-                alt[i] = from.y + (joined - from.y) * q * q * (3 - 2 * q);
-            } else alt[i] = heightAtTime(t);
-            // (Never steeper than it climbs; and over the ground, the rocks and the crowns on its way out.)
-            alt[i] = Math.min(alt[i], from.y + d * Math.tan(paces.climb));
-            // (All the way: where its track is over a wood before it has climbed to it at its angle, it climbs steeper.)
-            if (i > 0 && i < K) {
-                const over = alongRouteBy(route, i / K);
-                alt[i] = Math.max(alt[i], soarFloorAt(world, over.x, over.z) + (t < join ? 2 : SOAR_CLEAR));
+        const away = join - start - legs.reduce((sum, leg) => sum + leg.seconds, 0);
+        // Its heights, along its way out (K steps) and then at each second of its track: up from where it sits to its
+        // track's, never steeper than it climbs, and over the ground, the rocks and the crowns all the way (where its
+        // track is over a wood before it has climbed to it at its angle, it climbs steeper).
+        const heights = soarHeights(world, soar, join - 1, n + 2);
+        const K = Math.min(Math.max(Math.round(flat / 4), 8), 48);
+        const alt = new Float32Array(K + n + 1);
+        const along = new Float32Array(K + n + 1);
+        const climb = Math.tan(paces.climb);
+        const track = new Float32Array((n + 1) * 3);
+        for (let i = 0; i < K; i++) {
+            const q = i / K;
+            along[i] = q * flat;
+            alt[i] = Math.min(from.y + (heights[1] - from.y) * q * q * (3 - 2 * q), from.y + along[i] * climb);
+            if (i > 0) {
+                const over = alongRouteBy(route, q);
+                alt[i] = Math.max(alt[i], soarFloorAt(world, over.x, over.z) + 2);
             }
         }
-        alt[0] = from.y;
-        alt[K] = to.y;
-        easedHeights(alt, flat / K, Math.tan(0.7), Math.tan(0.7));
-        alt[0] = from.y;
-        alt[K] = to.y;
-        const seconds = end - start - legs.reduce((sum, leg) => sum + leg.seconds, 0);
-        const plan = planSoarLeg(paces, flat, {pace: v, from: false, to: true, climb: out});
-        legs.push({mode: "air", from, to, path: route, length: flat, seconds, beat: soar.beat, plan: {...plan, seconds, soar: {from: false, to: true, alt}}});
-        return {...base, mode: "air", arrive: end, to, finish: settled.finish, path: null, legs, stay: [], length: flat, running: false};
+        for (let i = 0; i <= n; i++) {
+            const at = i === n ? to : soar.at(join + i);
+            track[i * 3] = at.x;
+            track[i * 3 + 2] = at.z;
+            along[K + i] = i === 0 ? flat : along[K + i - 1] + Math.hypot(track[i * 3] - track[i * 3 - 3], track[i * 3 + 2] - track[i * 3 - 1]);
+            alt[K + i] = heights[i + 1];
+            const most = from.y + along[K + i] * climb;
+            if (alt[K + i] > most) {
+                // (Still climbing to its track: over what is under it here and through the half second either side.)
+                let under = -Infinity;
+                for (let k = -3; k <= 3; k++) {
+                    const near = soar.at(join + i + k / 6);
+                    under = Math.max(under, soarFloorAt(world, near.x, near.z));
+                }
+                alt[K + i] = Math.max(most, under + (soar.clear ?? 2));
+            }
+        }
+        const ease = () => {
+            alt[0] = from.y;
+            alt[K + n] = to.y;
+            const slope = Math.tan(0.7);
+            for (let i = 1; i < alt.length; i++) alt[i] = Math.max(alt[i], alt[i - 1] - slope * (along[i] - along[i - 1]));
+            for (let i = alt.length - 2; i >= 0; i--) alt[i] = Math.max(alt[i], alt[i + 1] - slope * (along[i + 1] - along[i]));
+            alt[0] = from.y;
+            alt[K + n] = to.y;
+        };
+        ease();
+        for (let i = 0; i <= n; i++) track[i * 3 + 1] = alt[K + i];
+        const joined: Spot = {x: first.x, y: alt[K], z: first.z, nx: 0, ny: 1, nz: 0, point: null};
+        const plan = planSoarLeg(paces, flat, {pace: v, from: false, to: true, climb: out, seconds: away, leave: vJoin});
+        legs.push({mode: "air", from, to: joined, path: route, length: flat, seconds: away, beat: soar.beat, plan: {...plan, seconds: away, soar: {from: false, to: true, alt: alt.slice(0, K + 1)}}});
+        // (Its curve's ends: a second before where it joins, at the height that keeps its way out's climb going; a
+        // second after the slot's end.)
+        const pre = soar.at(join - 1);
+        const post = soar.at(end + 1);
+        const rising = ((alt[K] - alt[K - 1]) / Math.max(flat / K, 1e-6)) * vJoin;
+        const lead = new Float32Array([pre.x, alt[K + 1] - 2 * rising, pre.z, post.x, heights[n + 2], post.z]);
+        let length = 0;
+        for (let i = 1; i <= n; i++) length += Math.hypot(track[i * 3] - track[i * 3 - 3], track[i * 3 + 2] - track[i * 3 - 1]);
+        legs.push({mode: "air", from: joined, to, path: null, length, seconds: n, beat: soar.beat, plan: {seconds: n, knots: [0, 1, 1, 1], liftoff: 0, touchdown: 1, rise: 1e-4, fall: 1e-4, height: 0, peak: length / n, soar: {from: true, to: true, track, lead}}});
+        return {...base, mode: "air", arrive: end, to, finish: settled.finish, path: null, legs, stay: [], length: flat + length, running: false};
     }
     if (!fromAloft) return null;
     // Down out of it: on along its heading, round, and in to where it lands.
-    const flat = Math.hypot(to.x - from.x, to.z - from.z);
-    const heading = from.yaw ?? Math.atan2(to.x - from.x, to.z - from.z);
+    // (Its heading and its speed as the slot starts are its track's own there, so it leaves its soar as it was flying it:
+    // it used to start this leg at its cruise whatever its track's pace, a step of a fifth of it in one frame.)
+    const before = rule ? soaring(world, profile, animal, activity, rule, slot - 1, hoursAt) : null;
+    const was = before ? {a: before.at(start - 1), b: before.at(start + 1)} : null;
+    const moving = was ? Math.hypot(was.b.x - was.a.x, was.b.z - was.a.z) / 2 : 0;
+    const heading = was && moving > 1e-3 ? Math.atan2(was.b.x - was.a.x, was.b.z - was.a.z) : from.yaw ?? Math.atan2(to.x - from.x, to.z - from.z);
+    const enter = was && moving > 1e-3 ? moving : paces.cruise;
     const drop = Math.max(from.y - to.y, 0);
     const need = drop / Math.tan(Math.min(Math.max(paces.descent, 0.3), 0.6));
     // Its way down is a turn and a straight (lane B5): from its heading it turns at its bank's radius, towards the
@@ -3397,16 +3436,20 @@ function soarTrip(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     const R = Math.max((paces.cruise * paces.cruise) / (G * Math.tan((30 * Math.PI) / 180)), 10);
     const hx = Math.sin(heading);
     const hz = Math.cos(heading);
-    const away = Math.atan2(to.x - from.x, to.z - from.z);
+    // (A step straight on first, as long as its turn's: its route's first chord is then its heading itself, where a turn
+    // from its first point began a sixth of a radian round it.)
+    const sx = from.x + hx * R * 0.35;
+    const sz = from.z + hz * R * 0.35;
+    const away = Math.atan2(to.x - sx, to.z - sz);
     const swing = Math.atan2(Math.sin(away - heading), Math.cos(away - heading));
     let side = swing >= 0 ? 1 : -1;
     // (Its turn's middle on that side, by its radius; the other side when its landing is inside that circle.)
-    let ox = from.x + side * R * hz;
-    let oz = from.z - side * R * hx;
+    let ox = sx + side * R * hz;
+    let oz = sz - side * R * hx;
     if (Math.hypot(to.x - ox, to.z - oz) < R * 1.1) {
         side = -side;
-        ox = from.x + side * R * hz;
-        oz = from.z - side * R * hx;
+        ox = sx + side * R * hz;
+        oz = sz - side * R * hx;
     }
     const d = Math.max(Math.hypot(to.x - ox, to.z - oz), R * 1.001);
     const bearing = Math.atan2(to.x - ox, to.z - oz);
@@ -3422,13 +3465,17 @@ function soarTrip(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
         // (On its circle heading psi it is at the middle less its radius along its heading's right-hand normal, times its side.)
         route.push({x: ox - side * R * Math.cos(psi), z: oz + side * R * Math.sin(psi)});
     }
-    route[0] = {x: from.x, z: from.z};
+    route[0] = {x: sx, z: sz};
+    route.unshift({x: from.x, z: from.z});
     const off = route[route.length - 1];
     const runs = Math.max(Math.round(Math.hypot(to.x - off.x, to.z - off.z) / Math.max(R * 0.35, 4)), 1);
     for (let k = 1; k <= runs; k++) route.push(k === runs ? {x: to.x, z: to.z} : {x: off.x + ((to.x - off.x) * k) / runs, z: off.z + ((to.z - off.z) * k) / runs});
     const length = Math.max(routeLength(route), 0.01);
     const ski = wet(world, to) && !raised(world, to) ? paces.skiWater : 0;
-    const plan = planSoarLeg(paces, length, {pace: paces.cruise, from: true, to: false, descend: Math.min(length * 0.5, Math.max(animal.length * 8, 15)), ski});
+    const landing = {pace: paces.cruise, from: true, to: false, enter, descend: Math.min(length * 0.5, Math.max(animal.length * 8, 15)), ski};
+    let plan = planSoarLeg(paces, length, landing);
+    // (A way down longer than its slot at its cruise: at the pace that fits it, braking as hard as ever, not squeezed.)
+    if (plan.seconds > SLOT_SECONDS - 6) plan = planSoarLeg(paces, length, {...landing, seconds: SLOT_SECONDS - 6});
     // Its heights: a line down from where it is to where it lands, over the crowns and the rocks until its last stretch.
     const K = 48;
     const alt = new Float32Array(K + 1);
@@ -3956,7 +4003,7 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
             const plan = leg.plan;
             if (plan?.soar?.track) {
                 // (Lane B5: a soar's own track, by time: round its thermal, along its glide.)
-                const at = trackAt(plan.soar.track, u);
+                const at = trackAt(plan.soar.track, u, plan.soar.lead);
                 return {x: at.x, y: at.y, z: at.z, yaw: at.yaw, moving, aloft: true, ...up, beat: leg.beat === "glide" ? "glide" : "fly", air: {stage: "cruise", speed: at.rate / Math.max(leg.seconds, 1e-6), from: from.y, to: to.y}};
             }
             if (!plan) {

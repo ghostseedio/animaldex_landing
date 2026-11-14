@@ -273,9 +273,11 @@ export type AirPlan = {
      * A leg of a soar (lane B5, `soarAt`): whether it starts and ends up in the air, its heights along its route at
      * even shares of it (m, the scene's y) in place of the line between its ends, and, for a leg that is all soaring,
      * its track itself: [x, y, z] at even times through the leg, read between them (`trackAt`), so its speed is the
-     * track's own (slower round a thermal, faster on the glide to the next).
+     * track's own (slower round a thermal, faster on the glide to the next). `lead` is where its track was a step before
+     * its first point and is a step after its last ([x, y, z] twice): its curve's ends then head and move as the track
+     * does through them, so two slots of one soar meet at one heading and one speed.
      */
-    soar?: {from: boolean; to: boolean; alt?: Float32Array; track?: Float32Array};
+    soar?: {from: boolean; to: boolean; alt?: Float32Array; track?: Float32Array; lead?: Float32Array};
 };
 
 /**
@@ -529,12 +531,18 @@ export const THERMAL_HOURS: [number, number] = [10, 16.5];
  * slowly; then glides at its cruise to the next thermal, sinking. `reach` is how far from its home a thermal forms;
  * `span` how high it rides over its soar's floor; `wind` what the thermals drift with (m/s).
  */
-export type SoarSpec = {circle: number; glide: number; radius: number; reach: number; span: number; climb: number; sink: number; wind: {x: number; z: number}};
+export type SoarSpec = {circle: number; glide: number; radius: number; reach: number; span: number; climb: number; sink: number; wind: {x: number; z: number}; ease?: number};
 export const SOAR_BANK = (24 * Math.PI) / 180;
-export function soarSpecOf(paces: Pick<AirPaces, "cruise" | "glide">, span: number, cap: number, wind: {x: number; z: number}): SoarSpec {
+/**
+ * (`ease`, m/s²: how fast its pace changes between its circle's and its glide's: half of what its mass allows at a
+ * take-off or a landing, since its track is read through a point a second and the curve through them changes pace up
+ * to twice as fast as the points do; an eighth of a g when its paces do not say. It left a thermal and joined the next
+ * at a step: a pelican from 15.5 to 11 m/s in a second, over its cap.)
+ */
+export function soarSpecOf(paces: Pick<AirPaces, "cruise" | "glide"> & Partial<Pick<AirPaces, "accel" | "brake">>, span: number, cap: number, wind: {x: number; z: number}): SoarSpec {
     const circle = paces.glide;
     const radius = clamp((circle * circle) / (G * Math.tan(SOAR_BANK)), 12, 45);
-    return {circle, glide: paces.cruise, radius, reach: clamp(cap - radius, radius * 2, 110), span, climb: 0.4, sink: 1.2, wind};
+    return {circle, glide: paces.cruise, radius, reach: clamp(cap - radius, radius * 2, 110), span, climb: 0.4, sink: 1.2, wind, ease: 0.5 * Math.min(paces.accel ?? 0.25 * G, paces.brake ?? 0.25 * G)};
 }
 
 /** Where a soar is at a moment: its place, its height over its soar's floor (m), its heading, and whether it circles. */
@@ -580,6 +588,7 @@ export function soarAt(seed: number, home: {x: number; z: number}, spec: SoarSpe
      * apart turning the same way, the line between their middles turned by asin((r' - r) / D); turning opposite ways,
      * the crossing tangent, by asin((r' + r) / D)).
      */
+    const rate = spec.ease ?? 0.125 * G;
     const leave = (k: number, c: {x: number; z: number; dir: number}, n: {x: number; z: number; dir: number}) => {
         const lean = n.dir * rhoOf(k + 1) - c.dir * rhoOf(k);
         let glide = P * 0.15;
@@ -593,7 +602,12 @@ export function soarAt(seed: number, home: {x: number; z: number}, spec: SoarSpe
             const a = Math.atan2(dz, dx) + Math.asin(clamp(lean / far, -0.95, 0.95));
             ux = Math.cos(a);
             uz = Math.sin(a);
-            glide = clamp(Math.sqrt(Math.max(far * far - lean * lean, 0)) / spec.glide, 1.5, P * 0.45);
+            // (At its glide's pace however short the way: a second and a half at the least stood it nearly still in the
+            // air where two thermals' circles all but touch, 3 m in 1.5 s for a pelican that glides at 15 m/s. And the
+            // time it takes to speed up from its circle's pace and slow to the next one's, or all of a short way at its
+            // circle's pace.)
+            const way = Math.sqrt(Math.max(far * far - lean * lean, 0));
+            glide = clamp(way / spec.glide + Math.min((spec.glide - spec.circle) ** 2 / (rate * spec.glide), way / spec.circle - way / spec.glide), 0.05, P * 0.45);
         }
         return {ux, uz, glide};
     };
@@ -610,9 +624,12 @@ export function soarAt(seed: number, home: {x: number; z: number}, spec: SoarSpe
     const out = Math.atan2(-c.dir * goesOut.uz, c.dir * goesOut.ux);
     // It turns at about its pace's rate, a little quicker or slower so that it comes round to its way out as it leaves.
     // (Every member the same number of turns in a thermal, its leader's: one on a smaller circle never laps it.)
-    const nominal = (spec.circle / spec.radius) * (e - s);
-    const part = ((((out - into) * c.dir) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
-    const turned = part + Math.PI * 2 * Math.max(Math.round((nominal - part) / (Math.PI * 2)), 1);
+    // (The angle it turns through in a thermal that it enters heading `from` and leaves heading `to` over `seconds`.)
+    const turnOf = (from: number, to: number, dir: number, seconds: number) => {
+        const part = ((((to - from) * dir) % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
+        return part + Math.PI * 2 * Math.max(Math.round(((spec.circle / spec.radius) * seconds - part) / (Math.PI * 2)), 1);
+    };
+    const turned = turnOf(into, out, c.dir, e - s);
     const low = spec.span * (0.15 + 0.3 * seeded(seed, 44 + (j % 100000) * 5)) * (member ? 0.6 + 0.8 * seeded(own, 6) : 1);
     const high = spec.span * (0.7 + 0.3 * seeded(seed, 45 + (j % 100000) * 5)) * (member ? 0.75 + 0.25 * seeded(own, 7) : 1);
     if (t < e) {
@@ -627,7 +644,22 @@ export function soarAt(seed: number, home: {x: number; z: number}, spec: SoarSpe
     const nx = next.x + Math.sin(intoNext) * rhoNext;
     const nz = next.z + Math.cos(intoNext) * rhoNext;
     const lowNext = spec.span * (0.15 + 0.3 * seeded(seed, 44 + ((j + 1) % 100000) * 5)) * (member ? 0.6 + 0.8 * seeded(own, 6) : 1);
-    const k = Math.min((t - e) / Math.max(s + P - e, 1e-6), 1);
+    // Along its glide it eases from its circle's pace up to its glide's and down to the next circle's (each at `rate`,
+    // the level pace between them the one that brings it there as that thermal starts), not at one pace from end to end.
+    const T = Math.max(s + P - e, 1e-6);
+    const D = Math.hypot(nx - ex, nz - ez);
+    const afterNext = leave(j + 1, next, centre(j + 2));
+    // (Each circle's pace over the ground along the glide's line: round its circle, and its thermal's drift.)
+    const drift = (spec.wind.x * (nx - ex) + spec.wind.z * (nz - ez)) / Math.max(D, 1e-6);
+    const vFrom = (rho * turned) / Math.max(e - s, 1e-6) + drift;
+    const vTo = (rhoNext * turnOf(intoNext, Math.atan2(-next.dir * afterNext.uz, next.dir * afterNext.ux), next.dir, P - afterNext.glide)) / Math.max(P - afterNext.glide, 1e-6) + drift;
+    const level = D / T;
+    const r0 = Math.min(Math.abs(level - vFrom) / rate, T / 2);
+    const r1 = Math.min(Math.abs(level - vTo) / rate, T / 2);
+    const V = (D - (vFrom * r0) / 2 - (vTo * r1) / 2) / Math.max(T - r0 / 2 - r1 / 2, 1e-6);
+    const tau = clamp(t - e, 0, T);
+    const gone = tau < r0 ? vFrom * tau + ((V - vFrom) * tau * tau) / (2 * r0) : tau <= T - r1 ? ((vFrom + V) / 2) * r0 + V * (tau - r0) : D - (vTo * (T - tau) + ((V - vTo) * (T - tau) * (T - tau)) / (2 * Math.max(r1, 1e-6)));
+    const k = D > 1e-6 ? clamp(gone / D, 0, 1) : tau / T;
     return {x: ex + (nx - ex) * k, z: ez + (nz - ez) * k, lift: high + (lowNext - high) * k, yaw: Math.atan2(nx - ex, nz - ez), circling: false, thermal: j};
 }
 
@@ -662,13 +694,18 @@ export function hawkAt(seed: number, home: {x: number; z: number}, spec: {cruise
     return {x: here.x, z: here.z, lift, yaw: Math.atan2(ahead.x - here.x, ahead.z - here.z), circling: false, thermal: 0};
 }
 
-/** A point of a track of [x, y, z] at even times, a share u of the way through it (a Catmull-Rom through its points), and its heading and speed (per unit of u). */
-export function trackAt(track: Float32Array, u: number): {x: number; y: number; z: number; yaw: number; rate: number} {
+/**
+ * A point of a track of [x, y, z] at even times, a share u of the way through it (a Catmull-Rom through its points), and
+ * its heading and speed (per unit of u). `lead`: the track's point a step before its first and a step after its last
+ * ([x, y, z] twice). Without it the curve's ends are its own end points twice, which halves its speed there and heads
+ * it along its first and last chords: a soar's slots met at half pace and a quarter of a radian apart, every 80 s.
+ */
+export function trackAt(track: Float32Array, u: number, lead?: Float32Array | null): {x: number; y: number; z: number; yaw: number; rate: number} {
     const n = track.length / 3 - 1;
     const f = clamp(u, 0, 1) * n;
     const i = Math.min(Math.floor(f), n - 1);
     const t = f - i;
-    const at = (k: number, c: number) => track[clamp(k, 0, n) * 3 + c];
+    const at = (k: number, c: number) => (lead && k < 0 ? lead[c] : lead && k > n ? lead[3 + c] : track[clamp(k, 0, n) * 3 + c]);
     const cr = (c: number) => {
         const a = at(i - 1, c);
         const b = at(i, c);
@@ -690,35 +727,75 @@ export function trackAt(track: Float32Array, u: number): {x: number; y: number; 
 
 /**
  * A soar's leg that takes off into it or comes down out of it (pure): up to its pace at its take-off's acceleration
- * when it starts on a perch or the ground (already at it when it starts in the air), level, and down from it at its
- * braking when it lands (still at it when it ends in the air). It climbs over `climb` metres of its route from where it
- * starts and comes down to land over its last `descend` metres (for the rig's stages: its heights are its own).
+ * when it starts on a perch or the ground, level, and down from it at its braking when it lands. An end up in the air
+ * is at the soar's own speed there (`enter` where it starts, `leave` where it ends; its pace when not given) and eases
+ * between that and its level pace at the same rates: it never steps. `seconds`: the time it has (it must be where its
+ * soar is as its slot ends): its level pace is then the one that takes exactly that long at those rates, where the
+ * leg used to be planned at its pace and squeezed into its slot, speeds and take-off with it (1.3 times a kite's cap).
+ * It climbs over `climb` metres of its route from where it starts and comes down to land over its last `descend`
+ * metres (for the rig's stages: its heights are its own).
  */
-export function planSoarLeg(paces: AirPaces, length: number, opts: {pace: number; from: boolean; to: boolean; climb?: number; descend?: number; ski?: number}): AirPlan {
+export function planSoarLeg(paces: AirPaces, length: number, opts: {pace: number; from: boolean; to: boolean; climb?: number; descend?: number; ski?: number; seconds?: number; enter?: number; leave?: number}): AirPlan {
     const L = Math.max(length, 0.01);
-    let V = opts.pace;
     const a = paces.accel;
     const b = paces.brake;
-    let td = opts.to ? 0 : Math.min(opts.ski ?? 0, V);
-    const need = (v: number, t: number) => (opts.from ? 0 : (v * v) / (2 * a)) + (opts.to ? 0 : (v * v - t * t) / (2 * b) + (t * t) / (2 * b));
-    if (need(V, td) > L) {
-        td = 0;
-        V = Math.min(V, Math.sqrt(L / ((opts.from ? 0 : 1 / (2 * a)) + (opts.to ? 0 : 1 / (2 * b)) || 1)));
+    const v0 = opts.from ? Math.max(opts.enter ?? opts.pace, 0) : 0;
+    const v1 = opts.to ? Math.max(opts.leave ?? opts.pace, 0) : null;
+    // The leg at a level pace V: from its speed at the start to V, level, to its speed at the end (and a ski to rest).
+    // (The room it has left for level flight falls as V rises past both ends' speeds: what fits is every pace up to one.)
+    const shape = (V: number, ski: number) => {
+        const td = Math.min(ski, V);
+        const end = v1 ?? td;
+        const r0 = V >= v0 ? a : b;
+        const r2 = V >= end ? b : a;
+        const t = [Math.abs(V - v0) / r0, 0, Math.abs(V - end) / r2, v1 === null ? td / b : 0];
+        const level = L - Math.abs(V * V - v0 * v0) / (2 * r0) - Math.abs(V * V - end * end) / (2 * r2) - (v1 === null ? (td * td) / (2 * b) : 0);
+        t[1] = Math.max(level, 0) / Math.max(V, 1e-6);
+        return {t, level, td, end, seconds: t[0] + t[1] + t[2] + t[3]};
+    };
+    let V = opts.pace;
+    let ski = v1 === null ? Math.min(opts.ski ?? 0, V) : 0;
+    if (shape(V, ski).level < 0) {
+        // Too short to reach its pace: no ski, and the fastest it has the room for.
+        ski = 0;
+        let lo = 0;
+        let hi = V;
+        for (let k = 0; k < 50; k++) {
+            const mid = (lo + hi) / 2;
+            if (shape(mid, ski).level >= 0) lo = mid;
+            else hi = mid;
+        }
+        V = Math.max(lo, 1e-3);
     }
-    const dUp = opts.from ? 0 : (V * V) / (2 * a);
-    const dDown = opts.to ? 0 : (V * V - td * td) / (2 * b);
-    const dSki = opts.to ? 0 : (td * td) / (2 * b);
-    const t = [opts.from ? 0 : V / a, Math.max(L - dUp - dDown - dSki, 0) / Math.max(V, 1e-6), opts.to ? 0 : (V - td) / b, opts.to ? 0 : td / b];
+    if (opts.seconds !== undefined && opts.seconds > 0) {
+        // The level pace that takes the time it has (the quicker, the sooner there): from a third of its pace to 1.6
+        // times its cruise, and never more than it has the room to reach.
+        let lo = Math.min(opts.pace / 3, V);
+        let hi = Math.max(paces.cruise * 1.6, opts.pace);
+        const slowest = shape(lo, ski);
+        if (slowest.level >= 0) {
+            for (let k = 0; k < 60 && slowest.seconds > opts.seconds; k++) {
+                const mid = (lo + hi) / 2;
+                const at = shape(mid, ski);
+                if (at.level >= 0 && at.seconds > opts.seconds) lo = mid;
+                else hi = mid;
+            }
+            V = lo;
+        }
+    }
+    const {t, td, end} = shape(V, ski);
     const seconds = Math.max(t[0] + t[1] + t[2] + t[3], 0.05);
-    const speeds = [V, V, td, 0];
-    const knots = [0, opts.from ? 1 : 0];
+    const speeds = [V, V, end, 0];
+    const top = Math.max(V, 1e-6);
+    const knots = [0, v0 / top];
     let at = 0;
     for (let i = 0; i < 4; i++) {
         if (t[i] <= 1e-6) continue;
         at += t[i];
-        knots.push(Math.min(at / seconds, 1), speeds[i] / Math.max(V, 1e-6));
+        knots.push(Math.min(at / seconds, 1), speeds[i] / top);
     }
-    if (knots[knots.length - 2] < 1) knots.push(1, opts.to ? 1 : 0);
+    if (knots[knots.length - 2] < 1) knots.push(1, v1 === null ? 0 : end / top);
+    const dSki = v1 === null ? (td * td) / (2 * b) : 0;
     return {seconds, knots, liftoff: 0, touchdown: 1 - dSki / L, rise: clamp((opts.climb ?? 0) / L, 1e-4, 0.9), fall: clamp((opts.descend ?? 0) / L, 1e-4, 0.9), height: 0, peak: V, soar: {from: opts.from, to: opts.to}};
 }
 

@@ -15,9 +15,9 @@ import {readFileSync} from "node:fs";
 import test from "node:test";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {groupSpread, poseOnTrip, rangeReach, scheduleWorld, spaceHomes, tripAt, wireThreats, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
+import {groupSpread, poseOnTrip, rangeReach, scheduleWorld, SLOT_SECONDS, spaceHomes, tripAt, wireThreats, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
-import {airPacesOf, airProgress, aloftSlots, FLIGHT_WAYS, flightHop, flightSpec, flightWay, hawkAt, planSoarLeg, SOAR_BANK, soarAt, soarSpecOf, stationBout, takeoffClass, trackAt, UNRIGGED_PITCH_MOST, unriggedFlightPitch, type FlightWay} from "@/ark-scene/locomotion/flight";
+import {airPacesOf, airProgress, aloftSlots, FLIGHT_WAYS, flightAccelOf, flightHop, flightSpec, flightWay, hawkAt, planSoarLeg, SOAR_BANK, soarAt, soarSpecOf, stationBout, takeoffClass, trackAt, UNRIGGED_PITCH_MOST, unriggedFlightPitch, type FlightWay} from "@/ark-scene/locomotion/flight";
 import waysTable from "@/ark-scene/locomotion/flight-ways.json";
 import {recordMotionMetric} from "@/lib/ark-motion-metrics";
 import {placeAnimals} from "@/ark-scene/placement";
@@ -129,6 +129,25 @@ test("B5: a soar is wide, rises in its thermal, drifts with the wind, and never 
         recordMotionMetric("b5", `soar_turns_per_minute_${name.split("-").pop()}`, turned / TAU / 30);
         assert.ok(turned / TAU / 30 < 6, `${name} turns a minute ${turned / TAU / 30}`);
         assert.ok(circling / 7200 > 0.8);
+        // Its pace between its circle's and its glide's eases (BA2: it stepped from one to the other, and where two
+        // thermals' circles all but touched it stood nearly still for a second and a half): never under 0.7 of its
+        // circle's pace, and never changing faster than three quarters of what its mass allows (it eases at half of
+        // it; a short glide between two circles of different paces a little faster: 0.62 and 0.59 measured).
+        let slowest = Infinity;
+        let hardest = 0;
+        let last: number | null = null;
+        let was = soarAt(0.3, home, spec, t0);
+        for (let i = 1; i <= 14400; i++) {
+            const at = soarAt(0.3, home, spec, t0 + i * 0.125);
+            const pace = Math.hypot(at.x - was.x, at.z - was.z) / 0.125;
+            slowest = Math.min(slowest, pace);
+            if (last !== null) hardest = Math.max(hardest, Math.abs(pace - last) / 0.125);
+            last = pace;
+            was = at;
+        }
+        assert.ok(slowest >= spec.circle * 0.7, `${name} slows to ${slowest.toFixed(2)} m/s (its circle's pace ${spec.circle.toFixed(2)})`);
+        console.log(`${name}'s soar: slowest ${(slowest / spec.circle).toFixed(2)} of its circle's pace; its pace changes at ${(hardest / Math.min(paces.accel, paces.brake)).toFixed(2)} of its cap at the most`);
+        assert.ok(hardest <= Math.min(paces.accel, paces.brake) * 0.75, `${name}'s pace changes at ${hardest.toFixed(2)} m/s² (its cap ${Math.min(paces.accel, paces.brake).toFixed(2)})`);
     }
 });
 
@@ -197,6 +216,38 @@ test("B5: a soar's legs up into it and down out of it start and end at the right
     assert.deepEqual([trackAt(track, 0).x, trackAt(track, 0).y], [0, 10]);
     assert.deepEqual([trackAt(track, 1).x, trackAt(track, 1).y], [24, 13]);
     assert.ok(Math.abs(trackAt(track, 0.5).x - 12) < 1e-6 && Math.abs(trackAt(track, 0.5).yaw - Math.PI / 2) < 1e-6);
+    // (BA2) Fitted to the time it has, its take-off is still at its mass's acceleration: the leg used to be planned at
+    // its pace and squeezed into what was left of its slot, its take-off with it (1.3 times a kite's cap on the real
+    // snapshot). And it comes to its track at its track's speed there.
+    for (const share of [0.85, 1, 1.2]) {
+        const fit = planSoarLeg(buzzard, 400, {pace: 8, from: false, to: true, leave: 9.5, seconds: up.seconds * share});
+        assert.ok(Math.abs(fit.seconds - up.seconds * share) < 1e-3, `${share}: ${fit.seconds} s for ${up.seconds * share}`);
+        const accel = fit.peak / (fit.knots[2] * fit.seconds);
+        assert.ok(Math.abs(accel - buzzard.accel) < buzzard.accel * 1e-3, `${share}: takes off at ${accel.toFixed(2)} m/s² (its mass's ${buzzard.accel.toFixed(2)})`);
+        assert.ok(Math.abs(fit.knots[fit.knots.length - 1] * fit.peak - 9.5) < 1e-6, `${share}: joins at ${fit.knots[fit.knots.length - 1] * fit.peak} m/s`);
+        // (Every change of pace along it within its mass's.)
+        for (let i = 2; i < fit.knots.length; i += 2) {
+            const rate = (Math.abs(fit.knots[i + 1] - fit.knots[i - 1]) * fit.peak) / Math.max((fit.knots[i] - fit.knots[i - 2]) * fit.seconds, 1e-9);
+            assert.ok(rate <= Math.max(buzzard.accel, buzzard.brake) * 1.001, `${share}: ${rate.toFixed(2)} m/s²`);
+        }
+    }
+    // Out of its soar it starts at the speed it was soaring at, and eases to its cruise.
+    const leaves = planSoarLeg(buzzard, 200, {pace: 10, from: true, to: false, enter: 8, descend: 30});
+    assert.ok(Math.abs(leaves.knots[1] * leaves.peak - 8) < 1e-6 && Math.abs(leaves.peak - 10) < 1e-6);
+    assert.ok((2 / (leaves.knots[2] * leaves.seconds)) <= buzzard.accel * 1.001);
+    // A way down longer than its slot at its cruise: quicker, braking as hard as ever (not squeezed).
+    const long = planSoarLeg(buzzard, 900, {pace: 10, from: true, to: false, enter: 10, seconds: 74});
+    assert.ok(Math.abs(long.seconds - 74) < 1e-3 && long.peak > 10 && long.peak < 13);
+    assert.ok(long.peak / ((1 - long.knots[long.knots.length - 4]) * long.seconds) <= buzzard.brake * 1.001);
+    // A track's ends with the points before and after it: at its own speed and heading there, where the curve's ends
+    // were its end points twice (half its speed, along its first and last chords).
+    const bend = new Float32Array([0, 10, 0, 8, 10, 0, 16, 10, 2, 24, 10, 6]);
+    assert.ok(Math.abs(trackAt(bend, 0).rate - 12) < 1e-6, "an end with no lead is at half pace");
+    const lead = new Float32Array([-8, 10, 0, 32, 10, 12]);
+    assert.ok(Math.abs(trackAt(bend, 0, lead).rate - 24) < 1e-6 && Math.abs(trackAt(bend, 0, lead).yaw - Math.PI / 2) < 1e-6);
+    const end = trackAt(bend, 1, lead);
+    assert.ok(Math.abs(end.yaw - Math.atan2(16, 10)) < 1e-6 && Math.abs(end.rate - (Math.hypot(16, 10) / 2) * 3) < 1e-6);
+    assert.deepEqual([end.x, end.z], [24, 6]);
 });
 
 test("B5: a hop from A to B (the hunt lane's forays) leaves and lands at rest, at its mass's acceleration, on its spots", () => {
@@ -370,6 +421,69 @@ test("B5: in the warm hours a soarer soars for minutes at a time, well up, with 
     assert.ok(warmAir / warmAwake >= 0.12, `warm share ${warmAir / warmAwake}`);
     assert.ok(perHour <= 9, `${perHour.toFixed(1)} flights an hour`);
     assert.ok(coolLongest <= 120, `a ${coolLongest} s flight at 07:30`);
+});
+
+test("B5: a soarer's speed and heading never step where its soar's legs meet (its way out and its track, slot and slot, its track and its way down)", () => {
+    // (BA2, 2026-11-14. Measured as MA1 measures a take-off: its speed's change over a tenth of a second, as a share of
+    // its mass's cap. On the real snapshot before: 6 times its cap at the median where its way out met its track, 2.6
+    // where two slots met, 9.4 where its way down began, and its heading a quarter of a radian apart in one frame; the
+    // scene showed a hitch and a snap every 80 s of every soar.)
+    const hoursAt = () => 12.5;
+    let worst = 0;
+    let worstAt = "";
+    let snap = 0;
+    let snapAt = "";
+    let joins = 0;
+    const kinds = new Set<string>();
+    for (const i of soarers) {
+        const mass = flightSpec(i.a.model_slug, i.animal.length)?.massKg ?? 0;
+        const cap = Math.max(...Object.values(flightAccelOf(mass)));
+        const measure = (kind: string, at: number, pose: (t: number) => {x: number; z: number; yaw: number}) => {
+            const pts = [];
+            for (let k = -45; k <= 45; k++) pts.push(pose(at + k / 60));
+            const v = pts.slice(1).map((p, k) => Math.hypot(p.x - pts[k].x, p.z - pts[k].z) * 60);
+            for (let k = 3; k < v.length - 3; k++) {
+                const acc = (Math.abs(v[k + 3] - v[k - 3]) * 10) / cap;
+                if (acc > worst) {
+                    worst = acc;
+                    worstAt = `${i.a.model_slug} ${kind}`;
+                }
+            }
+            for (let k = 40; k < 50; k++) {
+                const turn = Math.abs(wrap(pts[k + 1].yaw - pts[k].yaw));
+                if (turn > snap) {
+                    snap = turn;
+                    snapAt = `${i.a.model_slug} ${kind}`;
+                }
+            }
+            joins++;
+            kinds.add(kind);
+        };
+        let prev: Trip | null = null;
+        for (let k = 0; k < 180; k++) {
+            const trip: Trip = tripAt(world, i.profile, i.animal, DAY + k * SLOT_SECONDS + 1, hoursAt, i.a.activity);
+            const soars = (leg: Trip["legs"][number] | undefined) => (leg?.mode === "air" ? leg.plan?.soar : undefined);
+            // Its way out's end and its track's start, inside the slot it takes off in.
+            let at = trip.start;
+            for (let l = 0; l + 1 < trip.legs.length; l++) {
+                at += trip.legs[l].seconds;
+                if (soars(trip.legs[l])?.to && soars(trip.legs[l + 1])?.from) measure("way out to track", at, (t) => poseOnTrip(world, trip, Math.max(t, trip.start)));
+            }
+            // Where this slot begins up in the air.
+            const before = prev;
+            if (before && before.end === trip.start && soars(before.legs[before.legs.length - 1])?.to) {
+                const first = trip.legs.find((leg) => leg.mode === "air");
+                if (soars(first)?.from) measure(soars(first)!.to ? "slot to slot" : "track to way down", trip.start, (t) => (t < trip.start ? poseOnTrip(world, before, Math.min(t, before.end - 1e-6)) : poseOnTrip(world, trip, t)));
+            }
+            prev = trip;
+        }
+    }
+    console.log(`soar hand-offs: ${joins} (${[...kinds].join(", ")}); worst ${worst.toFixed(3)} of its mass's cap (${worstAt}); a frame's heading step at most ${snap.toFixed(3)} rad (${snapAt})`);
+    assert.ok(joins > 100 && kinds.size === 3, `${joins} joins: ${[...kinds]}`);
+    recordMotionMetric("b5", "soar_handoff_accel_share_of_cap", worst);
+    recordMotionMetric("b5", "soar_handoff_heading_step_rad", snap, "rad");
+    assert.ok(worst <= 1.08, `${worst.toFixed(2)} of its cap (${worstAt})`);
+    assert.ok(snap <= 0.15, `${snap.toFixed(3)} rad in a frame (${snapAt})`);
 });
 
 test("B5: a bird that sits and waits flies a few times an hour; a wader fewer", () => {

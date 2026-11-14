@@ -205,7 +205,9 @@ test("MA1 metric: take-off and landing horizontal acceleration within its mass's
     let worst = 0;
     let worstBig = 0;
     let at = "";
-    for (const f of flights.filter((_, k) => k % 3 === 0)) {
+    // (One flight in three, and every leg of a soar: BA2. The golden eagle's take-off into a soar at 1.095 of its cap
+    // was in this list all along, and in the sample only once other lanes' flights had shifted which third is taken.)
+    for (const f of flights.filter((x, k) => k % 3 === 0 || x.leg.plan?.soar)) {
         if (f.trip.shadow || f.trip.recipe) continue;
         const span = Math.min(2.5, f.leg.seconds / 2);
         // (Lane B5: a soar's leg is at its pace where it starts or ends up in the air: no take-off there, no landing.)
