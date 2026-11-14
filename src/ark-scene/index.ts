@@ -5256,6 +5256,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         toldState = null;
         tellState();
         if (entry && flyTo) {
+            // Its models and its rig are asked for now, first in the queue (`runtime.wanted`): they come in while the
+            // camera flies there, not once it has arrived.
+            runtime.wanted(entry.animal.model_slug);
+            if (!reducedMotion) rigs.request(entry.animal.model_slug);
             // A selection from the page (the HUD, `?focus=`) ends the opening, as a touch does.
             opening = false;
             controls.autoRotate = false;
