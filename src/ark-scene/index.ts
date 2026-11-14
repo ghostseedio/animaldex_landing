@@ -74,7 +74,7 @@ import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, clearBearing, deathPose, encounterBodies, mealEncounter, mealStage, preyFleeStyle, setChasePaces, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
 import {headLimits} from "@/ark-scene/head-look";
-import {goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
+import {bodyLegShare, goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
@@ -4487,7 +4487,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // shader below. The same near and far (only the fine parts fade with distance), so a level change never pops.
             const sn = entry.sleepNow ?? null;
             const clipShare = sn && rig && entry.sleepClipped && entry.rig ? entry.rig.weight : 0;
-            const slept = sn && !surface && !act ? sleepDraw(sn, {id: animal.id, slug: animal.model_slug, length: entry.length, epoch: epochNow, procedural: 1 - clipShare, reduced: reducedMotion}) : null;
+            // (Its own underside's height, from the mesh it is drawn with: it lies down until its chest meets the ground,
+            // no further and no less. `sleep.ts` bodyLegShare, once per mesh.)
+            const sleepMesh = sn && !surface && !act ? (level === "near" ? model.near ?? model.far : model.far ?? model.near) ?? null : null;
+            const slept = sn && !surface && !act ? sleepDraw(sn, {id: animal.id, slug: animal.model_slug, length: entry.length, epoch: epochNow, procedural: 1 - clipShare, reduced: reducedMotion, legShare: sleepMesh ? bodyLegShare(sleepMesh.geometry, modelBase(animal.model_slug)?.footprint) : null}) : null;
             if (slept) {
                 // (Its stirred heading only while it keeps still: moving, a foal at its mother's heel say, it faces where
                 // it goes; eased out and in, so nothing snaps. 2026-11-12.)

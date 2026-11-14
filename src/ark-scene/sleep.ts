@@ -393,7 +393,7 @@ export type SleepDraw = {
  * tail flick). `procedural` 0…1: how much of the body and head the scene draws (a rig with lying clips does them:
  * `sleepClip`). Pure in (its state, its id, the world clock).
  */
-export function sleepDraw(now: SleepNow, input: {id: string; slug: string; length: number; epoch: number; procedural: number; reduced: boolean}): SleepDraw {
+export function sleepDraw(now: SleepNow, input: {id: string; slug: string; length: number; epoch: number; procedural: number; reduced: boolean; legShare?: number | null}): SleepDraw {
     const style = sleepStyle(input.slug);
     const spec = now.spec;
     const stages = sleepStages(now.t);
@@ -404,8 +404,10 @@ export function sleepDraw(now: SleepNow, input: {id: string; slug: string; lengt
     const k = Math.min(Math.max(input.procedural, 0), 1);
     const headWeight = stages.head * k;
     return {
-        legs: spec.drop * stages.body * k,
-        roll: -spec.roll * now.side * stages.roll * (1 - 0.5 * (1 - k)),
+        legs: proceduralDrop(spec, input.legShare) * stages.body * k,
+        // (All of it gives way to a clip, the roll too: half of it stayed on under a sleep clip, so a rig lying on
+        // its side by its own `sleep_side` was turned a further 36 degrees, past its side.)
+        roll: -proceduralRoll(spec) * now.side * stages.roll * k,
         pitch: spec.pitch * stages.body * k,
         yaw: stir.shift * settled,
         headYaw: head.yaw * (1 - 0.5 * lift),
@@ -420,12 +422,100 @@ export function sleepDraw(now: SleepNow, input: {id: string; slug: string; lengt
 }
 
 /**
+ * The most a procedural body leans onto a side (radians, about 20 degrees). Its legs are its standing mesh's: they
+ * cannot be folded or laid out, so turned onto its side (the `side` posture's 72 degrees) they stood out stiff, up in
+ * the air (the behaviours pass: a rabbit "on its back", its rig playing its idle under the turn). Flat on its side
+ * is a clip's (`sleep_side`); without one it lies on its chest, leaning.
+ */
+export const PROCEDURAL_ROLL_MOST = 0.35;
+/** How far into the ground a body lying on it is pressed (a share of its height): it rests on it, never hovers a hair over it. */
+export const LYING_PRESS = 0.015;
+/** The most of its height a procedural body is lowered by, whatever its mesh says (a mesh read wrongly never buries it). */
+export const PROCEDURAL_DROP_MOST = 0.62;
+
+/** A posture's roll as the procedural body takes it: within `PROCEDURAL_ROLL_MOST`. */
+export function proceduralRoll(spec: PostureSpec): number {
+    return Math.min(spec.roll, PROCEDURAL_ROLL_MOST);
+}
+
+/**
+ * How much of its height a procedural body is lowered by (the legs' share that goes under it). `legShare`: how high
+ * its own underside is over its feet, as a share of its height (`bodyLegShare`, from its mesh). Lying (on its chest,
+ * curled, flat) it comes down by exactly that, so its chest meets the ground with its legs under it, out of sight;
+ * sitting, tucked or standing it comes down by its posture's share, never further than its underside. With no mesh to
+ * read: its posture's share, as before.
+ *
+ * (The behaviours pass, 2026-11-14: one share for every body, 0.4 of the height on its chest, left a deer's legs cut
+ * off at the grass with its body still in the air (its underside is half its height up), sank a pig's belly a tenth of
+ * its height into the ground, and cut a flamingo's legs in half as it "sat".)
+ */
+export function proceduralDrop(spec: PostureSpec, legShare?: number | null): number {
+    if (typeof legShare !== "number" || !Number.isFinite(legShare)) return spec.drop;
+    const share = Math.min(Math.max(legShare, 0), PROCEDURAL_DROP_MOST);
+    return spec.lying ? Math.min(share + LYING_PRESS, PROCEDURAL_DROP_MOST) : Math.min(spec.drop, share);
+}
+
+/** A mesh as `bodyLegShare` reads it (three's BufferGeometry fits). */
+export type SleepGeometry = {
+    boundingBox: {min: {x: number; y: number; z: number}; max: {x: number; y: number; z: number}} | null;
+    getAttribute(name: string): {count: number; getX(i: number): number; getY(i: number): number; getZ(i: number): number} | undefined;
+};
+const LEG_SHARES = new WeakMap<object, number | null>();
+
+/**
+ * How high a model's underside is over its feet, as a share of its height (x across, y up, z along), from its own
+ * mesh: over the stretch of its length between its feet (the middle of its footprint, `grounding/base.ts`; with none,
+ * the middle of its length) and the middle of its width, the height that all but the lowest twentieth of its points
+ * are above. Between a deer's fore and hind legs that is its belly; a bird's legs stand in that stretch, so it reads
+ * low and the bird keeps its feet. Worked out once per mesh; null with too few points to tell.
+ */
+export function bodyLegShare(geometry: SleepGeometry, footprint?: {z0: number; z1: number} | null): number | null {
+    const known = LEG_SHARES.get(geometry);
+    if (known !== undefined) return known;
+    const share = undersideShare(geometry, footprint ?? null);
+    LEG_SHARES.set(geometry, share);
+    return share;
+}
+
+export function undersideShare(geometry: SleepGeometry, footprint: {z0: number; z1: number} | null): number | null {
+    const box = geometry.boundingBox;
+    const points = geometry.getAttribute("position");
+    if (!box || !points || points.count < 24) return null;
+    const height = box.max.y - box.min.y;
+    const length = box.max.z - box.min.z;
+    const width = box.max.x - box.min.x;
+    if (!(height > 0) || !(length > 0)) return null;
+    const between = footprint && footprint.z1 > footprint.z0;
+    const zc = between ? (footprint!.z0 + footprint!.z1) / 2 : (box.min.z + box.max.z) / 2;
+    const reach = between ? Math.max((footprint!.z1 - footprint!.z0) * 0.18, length * 0.05) : length * 0.1;
+    const cx = (box.min.x + box.max.x) / 2;
+    const across = Math.max(width * 0.3, 1e-6);
+    // (Every n-th point of a big mesh: a few thousand say as much.)
+    const step = Math.max(1, Math.floor(points.count / 6000));
+    const heights: number[] = [];
+    for (let i = 0; i < points.count; i += step) {
+        if (Math.abs(points.getZ(i) - zc) > reach || Math.abs(points.getX(i) - cx) > across) continue;
+        heights.push(points.getY(i));
+    }
+    if (heights.length < 8) return null;
+    heights.sort((a, b) => a - b);
+    const low = heights[Math.floor(heights.length * 0.05)];
+    return Math.min(Math.max((low - box.min.y) / height, 0), PROCEDURAL_DROP_MOST);
+}
+
+/**
  * How far to lower a model lying down (model units, before its scale): its torso (the box above its legs' share of
  * the height, a little inside its width) turned by the roll about the model's origin, so the lowest of it meets the
- * ground where its feet stood. 0 standing.
+ * ground where its feet stood. 0 standing. (Never under 0 into the ground: a wide body leaning with no legs to take
+ * down had its low side up to 7% of its height under the ground; it is raised to rest on it instead.)
  */
 export function lyingDrop(box: {minX: number; maxX: number; minY: number; maxY: number}, legs: number, roll: number): number {
     if (legs <= 0 && Math.abs(roll) < 1e-4) return 0;
+    return torsoLowest(box, legs, roll) - box.minY;
+}
+
+/** The lowest point of its torso (the box above its legs' share, three quarters of its width) turned by the roll about the model's origin. */
+export function torsoLowest(box: {minX: number; maxX: number; minY: number; maxY: number}, legs: number, roll: number): number {
     const height = box.maxY - box.minY;
     const cx = (box.minX + box.maxX) / 2;
     const hw = ((box.maxX - box.minX) / 2) * 0.75;
@@ -434,7 +524,7 @@ export function lyingDrop(box: {minX: number; maxX: number; minY: number; maxY: 
     const c = Math.cos(roll);
     let lowest = Infinity;
     for (const x of [cx - hw, cx + hw]) for (const y of [bottom, box.maxY]) lowest = Math.min(lowest, x * s + y * c);
-    return Math.max(lowest - box.minY, 0);
+    return lowest;
 }
 
 /**
