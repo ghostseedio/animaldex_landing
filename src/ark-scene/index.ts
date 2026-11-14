@@ -3041,6 +3041,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const intel = intelProfile(e.animal.model_slug, null, e.stats.intelligence);
             const sp = e.sched.pose;
             const young = youngFor(e);
+            // A hunter acting out a meal (`acts.ts`) is awake whatever its schedule has it at, creeping while the act has it
+            // stalking or frozen before its leap, and still once it eats (its act's own speed, not its schedule's
+            // walking): its quarry's neighbours read that (`reactive.ts` `menaceOf`).
+            const hunterAct = e.act?.role === "hunter" ? e.act : null;
             byId.set(e.animal.id, c);
             inputs.push({
                 id: e.animal.id,
@@ -3056,7 +3060,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 social: e.sched.profile.social,
                 diet: e.sched.profile.diet,
                 intel,
-                asleep: e.state.asleep,
+                asleep: e.state.asleep && !hunterAct,
                 acting: Boolean(e.act || e.moment || e.visitor) || !scheduled(e),
                 // A predator running down its prey in a meal's chase (`acts.ts`): nearby prey scatter from it.
                 chasing: Boolean(e.act?.role === "hunter" && (e.act.speed ?? 0) > Math.max(e.length, 0.3) * 1.2),
@@ -3067,7 +3071,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 sessile: e.sched.profile.move === "sessile" && intel.plan === "other",
                 // Looked at or followed: the camera coming to it never wakes it (looking never changes what it does).
                 watched: e.animal.id === selectedId || e.animal.id === followId,
-                shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving) || (e.act?.speed ?? 0) > 0.3, aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
+                // Where it goes to ground, and whether people keep it (the town's houses, farms and zoo: `reactive.ts` `kept`).
+                roost: e.sched.profile.roost,
+                kept: e.animal.area ?? null,
+                shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: hunterAct ? (hunterAct.speed ?? 0) > 0.3 : Boolean(sp?.moving) || (e.act?.speed ?? 0) > 0.3, aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: hunterAct && (hunterAct.state === "stalk" || hunterAct.state === "freeze") ? "stalk" : sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
             });
         }
         reactiveInputs = inputs.length;

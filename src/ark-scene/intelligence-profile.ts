@@ -216,11 +216,83 @@ export function foodGroupName(index: number): string | undefined {
  * unless it hunts in a pack. Sizes are the 0–100 size stat. Visual only: it decides who looks up, never a meal.
  */
 export function canEat(predator: ArkIntelProfile, prey: ArkIntelProfile, predatorSize: number | null, preySize: number | null): boolean {
-    if (predator.slug === prey.slug) return false;
-    let linked = predator.eatsSpecies.has(prey.slug);
-    if (!linked) linked = Array.from(prey.in).some((g) => predator.eats.has(g));
-    if (!linked) return false;
+    if (!foodLinked(predator, prey)) return false;
     const a = predatorSize ?? 30;
     const b = preySize ?? 20;
     return b <= a + (predator.hunt.includes("pack") ? 18 : 6);
 }
+
+/** Whether the ecology's food links have `predator` eating `prey`'s kind (a food group of the prey's that it eats, or the prey by name), whatever their sizes. */
+export function foodLinked(predator: ArkIntelProfile, prey: ArkIntelProfile): boolean {
+    if (predator.slug === prey.slug) return false;
+    if (predator.eatsSpecies.has(prey.slug)) return true;
+    let linked = false;
+    prey.in.forEach((g) => {
+        if (predator.eats.has(g)) linked = true;
+    });
+    return linked;
+}
+
+/**
+ * A body's mass (kg) from its drawn length and body plan: the catalogue's allometry for a four-legged body
+ * (L = 0.33 · M^(1/3), `locomotion/flee.ts`), and each other plan's share of it (a bird of that length is feathers
+ * and tail, a snake a rope, a lizard half tail). Rough on purpose: it only has to tell a python from a giraffe.
+ */
+const MASS_SHARE: Record<string, number> = {
+    quadruped: 1,
+    primate: 1,
+    flying_bird: 0.15,
+    walking_bird: 0.25,
+    flightless_bird: 0.5,
+    bat: 0.08,
+    legless: 0.03,
+    turtle: 1.5,
+    amphibian: 0.6,
+    fish: 0.4,
+    cephalopod_jelly: 0.3,
+    crustacean: 1,
+    insect: 0.2,
+    flying_insect: 0.1,
+    arachnid: 2,
+    other: 0.5
+};
+export function bodyMass(plan: string | null | undefined, length: number): number {
+    const cube = Math.pow(Math.max(length, 0.005) / 0.33, 3);
+    // (The bigger a lizard the stockier: a wall lizard is a sliver, a monitor or a crocodile a barrel. A 0.2 m lizard
+    // 9 g, a 2.6 m Komodo dragon 90 kg, a 3.4 m alligator 260 kg.)
+    if (plan === "lizard") return cube * 0.04 * Math.pow(1 + Math.max(length, 0), 1.2);
+    return cube * (MASS_SHARE[plan ?? ""] ?? 1);
+}
+
+/**
+ * Whether a hunter of this body could take prey of that body (the behaviours pass, lane B2). The food links say what
+ * kind of thing it eats; the size stat ranks animals within their own kind, so between kinds `canEat` lets a rock
+ * python (size 72) threaten a giraffe (78), a mantis a hedgehog and a rat snake a roe deer, and keeps a stoat (11)
+ * from a rabbit (18). By body mass instead: a hunter alone takes prey up to four times its own weight (a stoat a
+ * rabbit, a lynx a roe deer, a leopard a boar), one that lives in a group up to eight (a lion a buffalo, a hyena a
+ * wildebeest), a pack hunter up to twelve (wolves a red deer), a bird of prey one and a half (it has to pin or lift
+ * it), a snake its own weight (it swallows it whole). Visual only: it decides who looks up and who is stalked,
+ * never a meal.
+ */
+export function canTake(predatorPlan: string, predatorLength: number, company: "alone" | "group" | "pack", preyPlan: string, preyLength: number): boolean {
+    const share = predatorPlan === "legless" ? 1 : predatorPlan === "flying_bird" || predatorPlan === "bat" ? 1.5 : company === "pack" ? 12 : company === "group" ? 8 : 4;
+    return bodyMass(preyPlan, preyLength) <= share * bodyMass(predatorPlan, predatorLength);
+}
+
+/** How a hunter hunts for `canTake`: a pack hunter (its stored hunt), one that lives in a group, or alone. */
+export function huntCompany(hunt: readonly string[], social: string): "alone" | "group" | "pack" {
+    return hunt.includes("pack") || social === "pack" ? "pack" : social === "group" || social === "herd" || social === "troop" || social === "flock" || social === "school" || social === "colony" ? "group" : "alone";
+}
+
+/**
+ * A hunter the ecology gives no food links at all (the pets: cats, dogs, a ferret take no part in it) is read by its
+ * build instead: a meat-eating four-legged hunter goes after land animals and birds, themselves no meat-eaters, up to
+ * a third of its own weight (a cat a sparrow, a pigeon, a mouse; a dog a hen, a rabbit, a duck). Visual only, and
+ * only what near the camera looks up at whom: a cat watching the garden's birds, the birds keeping an eye on it.
+ */
+export function huntsByBuild(predator: ArkIntelProfile, predatorDiet: string, prey: ArkIntelProfile, preyDiet: string): boolean {
+    if (predator.slug === prey.slug || predator.eats.size || predator.eatsSpecies.size) return false;
+    if (predator.plan !== "quadruped" || predatorDiet !== "meat" || !predator.hunt.some((h) => h !== "filter" && h !== "scavenge")) return false;
+    return prey.in.size > 0 && preyDiet !== "meat" && BUILD_PREY.has(prey.plan);
+}
+const BUILD_PREY = new Set(["quadruped", "flying_bird", "walking_bird", "lizard", "amphibian"]);

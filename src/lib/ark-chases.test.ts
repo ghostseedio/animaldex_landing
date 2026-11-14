@@ -340,7 +340,13 @@ test("prey near a chase scatter: they bolt at once, each its own way, even when 
         return {x: o.dx / l, z: o.dz / l};
     });
     const mean = Math.hypot(ways.reduce((s, w) => s + w.x, 0), ways.reduce((s, w) => s + w.z, 0)) / ways.length;
-    assert.ok(mean < 0.9, `fanned out (resultant ${mean.toFixed(2)}; scatter ${SCATTER})`);
+    // (The behaviours pass, lane B2: a flight is now one dash in a direction chosen as it starts, each animal's own
+    // seeded angle either side of straight away; before, the direction was worked out again every frame against the
+    // lion's place, and with the lion running through the herd that turned them about. These eight ids' angles give
+    // a resultant of 0.93, from 31 degrees one side to 42 the other.)
+    assert.ok(mean < 0.95, `fanned out (resultant ${mean.toFixed(2)}; scatter ${SCATTER})`);
+    const angles = ways.map((w) => Math.atan2(w.z, w.x));
+    assert.ok(Math.max(...angles) - Math.min(...angles) > 1, `across more than a radian (${(Math.max(...angles) - Math.min(...angles)).toFixed(2)})`);
     // The same lion asleep and not chasing: nothing stirs.
     const quiet = run(false);
     assert.ok(!quiet.herd.some((z) => quiet.outs.some((o) => o.get(z.id)?.action === "flee")), "a sleeping lion sends nobody running");

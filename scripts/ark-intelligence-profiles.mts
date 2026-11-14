@@ -281,6 +281,9 @@ const PARROT = /^(Psittacidae|Cacatuidae|Psittaculidae|Strigopidae|Nestoridae)$/
 const GREAT_APE = /^Hominidae$/;
 const CETACEAN = /^(Delphinidae|Monodontidae|Phocoenidae|Iniidae|Platanistidae|Pontoporiidae|Physeteridae|Kogiidae|Ziphiidae|Balaenopteridae|Balaenidae|Eschrichtiidae|Neobalaenidae)$/;
 const OCTOPUS = /^(Octopodidae|Enteroctopodidae|Amphitretidae|Argonautidae|Tremoctopodidae)$/;
+// The behaviours pass, lane B2 (prey): families whose defence is a weapon they carry, whatever the stored text says of it.
+const SKUNK = /^Mephitidae$/;
+const QUILLED = /^(Hystricidae|Erethizontidae)$/;
 
 const HUNTER_DIETS = new Set(["meat", "fish", "carrion", "blood"]);
 const SMALL_PREY_DIETS = new Set(["insects"]);
@@ -519,6 +522,13 @@ function defenceOf(row: Row, b: Behaviour, defaults: string[], hunt: Entry<Hunt>
     }
     const dead = reviewedHit(reviewed.play_dead, row);
     if (dead) add("play_dead", dead.source);
+    // (Lane B2: a skunk's spray and a porcupine's quills are why they stand their ground: the reactive layer's `armed`.)
+    const fam = row.family_name ?? "";
+    if (SKUNK.test(fam)) add("chemical", {rule: `${fam}: sprays musk`});
+    if (QUILLED.test(fam)) {
+        add("armour", {rule: `${fam}: quills`});
+        add("threat", {rule: `${fam}: raises and rattles its quills`});
+    }
     const fly = b.move === "fly" || b.moves.includes("fly");
     const grouped = ["herd", "flock", "school", "troop", "colony", "group", "swarm"].includes(b.social);
     if (grouped) add("group", {rule: `social ${b.social} (behaviour profile)`});
@@ -538,6 +548,8 @@ function defenceOf(row: Row, b: Behaviour, defaults: string[], hunt: Entry<Hunt>
         else if (b.plan === "primate" || (b.moves.includes("climb") && b.plan === "quadruped")) d("flee_tree", `plan ${b.plan}, climbs`);
         else if (["tree", "tree_hole"].includes(b.roost) && ["quadruped", "lizard", "legless", "amphibian", "insect", "arachnid"].includes(b.plan)) d("flee_tree", `roost ${b.roost}: up its tree`);
         else if (b.plan === "flightless_bird" && (b.move === "swim" || b.moves.includes("swim"))) d("flee_water", "plan flightless_bird, swims");
+        // (Lane B2: an ostrich, an emu, a rhea, a cassowary runs in the open; it does not look for a bush.)
+        else if (b.plan === "flightless_bird" && (b.size ?? 0) >= 30) d("flee_open", `a big running bird (size ${b.size}): runs in the open`);
         else if ((b.plan === "fish" || b.plan === "cephalopod_jelly") && b.zone === "open_ocean") d("flee_open", "open ocean: swims off");
         else if (b.plan === "amphibian" || (b.plan === "turtle" && (b.moves.includes("swim") || b.move === "swim")) || b.interactions.includes("water_surface")) d("flee_water", `plan ${b.plan}, swims`);
         else if (b.roost === "burrow" || b.roost === "den" || b.roost === "crevice") d("flee_cover", `roost ${b.roost}: back to it`);
@@ -613,7 +625,10 @@ function profile(row: Row) {
     const size = b.size ?? 20;
     const base = b.plan === "quadruped" ? 3 + size * 0.12 : ["flying_bird", "walking_bird", "flightless_bird"].includes(b.plan) ? 2.5 + size * 0.1 : b.plan === "primate" ? 3 + size * 0.08 : ["insect", "arachnid", "flying_insect", "crustacean", "other"].includes(b.plan) ? 0.4 + size * 0.03 : 1.5 + size * 0.06;
     const hunter = hunt.length > 0 && !hunt.every((h) => h.style === "filter" || h.style === "scavenge");
-    const flight = Math.round(base * (shy ? 1.4 : 1) * (curious ? 0.7 : 1) * (hunter && size > 40 ? 0.5 : 1) * 10) / 10;
+    // (Lane B2: the biggest, most dominant animals let things nearest of all, not furthest: with the size alone an
+    // elephant moved off at 14 m, a rhinoceros at 12.8, a buffalo at 10.9. Size 60 and dominance 80 or more: 0.6.)
+    const giant = !hunter && size >= 60 && (b.dominance ?? 0) >= 80;
+    const flight = Math.round(base * (shy ? 1.4 : 1) * (curious ? 0.7 : 1) * (hunter && size > 40 ? 0.5 : 1) * (giant ? 0.6 : 1) * 10) / 10;
     return {
         slug,
         id: row.id,
@@ -627,7 +642,7 @@ function profile(row: Row) {
         defence,
         tools,
         social,
-        flight: {distance: flight, src: shy ? src(shy) : curious ? src(curious) : ({rule: `plan ${b.plan}, size ${size}`} as Source)},
+        flight: {distance: flight, src: shy ? src(shy) : curious ? src(curious) : ({rule: `plan ${b.plan}, size ${size}${giant ? `, dominance ${b.dominance}: a giant` : ""}`} as Source)},
         food: {eats: [...(eatsGroups.get(slug) ?? [])].map((g) => groupLabels[g]), prey: [...(eatsSpecies.get(slug) ?? [])], in: [...(inGroups.get(slug) ?? [])].map((g) => groupLabels[g])},
         defaults: [...new Set(defaults)]
     };
