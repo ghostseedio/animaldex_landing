@@ -302,6 +302,25 @@ the grass like a tent; with it off they were folded (clips idle and walk, rig co
   finer. The cat's pace changed (1.37 → 1.02 lengths a second), so its seeded stalk ends elsewhere than it did. The
   fix is the recipe's (a finer check, or the leg's end): the hunt lane's file, not edited here.
 
+## The behaviour audit and the jump scan
+
+- The behaviour audit in CI's configuration (`scripts/ark-behaviour-audit.mts`, then `ark-audit-check.mts`): 24 of
+  25 checks hold (flyers 684, turns 0.69 a minute, never move 831, grazing 28.7%, amphibians 421, heads 99.7%, near
+  the camera prey react 95.9% and flee 77.1%). **One is worse: "crossings that jump (snap)" 3 against a limit of 0.**
+  The measure counts a land-to-water crossing of over 180 m between two samples 30 s apart with neither in the air.
+  `ark-ground-legs.mts --jumps --amphibious --windows 144` scans the same animals every 2 s through the day: on main
+  93 steps no animal makes, on this branch 129. On both, all but eight or nine are a flock member catching up its
+  leader on the water (`tripFor`'s follow legs give the catch-up 6 s whatever its length: a domestic goose swims
+  182 m in 6 s); those went from 85 to 120. The rest are the same on both: three sleepers that jump to their roost at
+  a block seam of the walk chain (a grey seal 90 m, a southern elephant seal 114 m, a Galápagos penguin 78 m, at the
+  same slots on main), a proboscis monkey's recipe episodes. The limit in `tests/ark-audit/thresholds.json` is not
+  changed here: the follow legs are the air and water lanes'.
+- Over every species for two hours of the day the same scan finds, on main and here alike, a patas monkey and an
+  emperor tamarin held off their schedule by a recipe episode and let go with a jump of 23 and 41 m (here also a
+  prairie dog, 12.5 m); and a flock member that walks first, left far off by its leader's flight, running back on
+  foot (a helmeted curassow, 644 m round the water in its slot at 8.7 m/s; on main a ruffed grouse, 133 m). Both are
+  in "For other lanes".
+
 ## Cost
 
 - The schedule: `groundProgress` per walking animal per pose: 20 to 70 ns for a steady leg, 250 to 440 ns for a burst
@@ -352,6 +371,15 @@ the grass like a tent; with it off they were folded (clips idle and walk, rig co
   much shorter.
 - **B6.** A swimmer's long swim is squeezed into its slot with the rest of its trip (a Reeves' turtle's 8.3 m swim in
   62 s). The legless lizard and the axolotl take swims they walk to.
+- **B5 and B6: a flock member's catch-up.** `tripFor`'s follow legs give a member 6 s to reach its leader on the
+  water whatever the distance (a domestic goose 182 m in 6 s, 120 such steps a day on the fixture, 85 on main), and a
+  member that walks first, left far from its group by its leader's flight, walks back however far (the curassow's
+  644 m): it flies only as often as its appetite for flying allows (`airAllowed`). A way on foot or by water longer
+  than the slot wants a flight, or a catch-up at the animal's own pace over several slots.
+- **Recipes (B1, B3).** A pair's or a stay's episode can hold an animal away from where its schedule has it and let
+  it go with a jump (a patas monkey 23 m, an emperor tamarin 41 m, on main too).
+- **The walk chain (decision 202's "a stay never jumps").** Three sleepers still jump to their roost at a block seam
+  (above), on main too: the two chains a block apart do not agree where the animal is.
 - **The model library:** five wrong plans (above).
 
 ## Rig needs (the rigging pipeline; not in this pass)

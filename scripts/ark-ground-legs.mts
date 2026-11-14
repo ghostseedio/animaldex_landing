@@ -6,6 +6,7 @@
  *   npx tsx --tsconfig scripts/tsconfig.scripts.json scripts/ark-ground-legs.mts <snapshot.json | --validator>
  *       [--islands <routing.json>] [--world v1|v2] [--rigs <rig-info.json>] [--species a,b] [--windows 12] [--kin 2]
  *       [--plans mammal,reptile,turtle,frog,arthropod,snake,bird] [--json out.json] [--record <lane>] [--list] [--trace]
+ *       [--jumps] [--amphibious]
  *
  * For each animal with a ground leg, over twelve 10-minute windows of an island day (as `ark-time-budget.mts`):
  *   - every ground leg its trips make, by what the slot is for (wander, forage, graze, drink, to_roost, play, stalk...):
@@ -76,6 +77,13 @@ const rigs: Record<string, RigInfo> = value("--rigs") ? JSON.parse(readFileSync(
 const only = value("--species")?.split(",");
 /** `--trace`: print every trip's legs (mode, beat, length, time, speed over its walking pace) of the species looked at. */
 const trace = args.includes("--trace");
+/**
+ * `--jumps`: every two seconds through each window, a step no animal makes (over 6 m/s and ten of its lengths a second,
+ * neither end in the air) is printed: a jump at a slot's seam, or a flight shorter than the two seconds.
+ */
+const jumps = args.includes("--jumps");
+let jumpCount = 0;
+let farCount = 0;
 /** `--plans`: only species whose model's plan is one of these (the model library's: mammal, bird, reptile, turtle, frog, arthropod, snake...). */
 const onlyPlans = value("--plans")?.split(",");
 const windows = Number(value("--windows") ?? "12");
@@ -245,6 +253,11 @@ for (const s of subjects) {
     const slug = s.animal.model_slug;
     if (only && !only.includes(slug)) continue;
     if (onlyPlans && !onlyPlans.includes(modelBase(slug)?.plan ?? "")) continue;
+    // (`--amphibious`: only those that swim and also walk or fly, as the behaviour audit counts its land and water crossings.)
+    if (args.includes("--amphibious")) {
+        const q = s.sched.profile;
+        if (!((q.move === "swim" || q.moves.includes("swim")) && (q.move === "walk" || q.moves.includes("walk") || q.move === "fly" || q.moves.includes("fly")) && !q.seabed)) continue;
+    }
     const own = s.sched;
     const p = own.profile;
     const L = Math.max(s.length, 0.05);
@@ -263,7 +276,7 @@ for (const s of subjects) {
             if (trip === seen) continue;
             seen = trip;
             t!.slots++;
-            if (trace) console.log(`${slug} ${s.animal.id.slice(0, 8)} slot ${trip.slot} ${trip.doing} mode ${trip.mode}${trip.running ? " running" : ""} recipe ${trip.recipe ?? "-"} travel ${(trip.arrive - trip.start).toFixed(1)} s: ${trip.legs.map((leg) => `${leg.mode}/${leg.beat} ${leg.length.toFixed(2)} m ${leg.seconds.toFixed(1)} s${leg.seconds > 0 && leg.length > 0 ? ` (${(leg.length / leg.seconds / Math.max(t!.walk, 1e-9)).toFixed(2)}x)` : ""}`).join(" | ")}`);
+            if (trace) console.log(`${slug} ${s.animal.id.slice(0, 8)} slot ${trip.slot} ${trip.doing} mode ${trip.mode}${trip.running ? " running" : ""} recipe ${trip.recipe ?? "-"} from ${trip.from.x.toFixed(1)},${trip.from.z.toFixed(1)} (ground ${heightAt(trip.from.x, trip.from.z).toFixed(2)}) to ${trip.to.x.toFixed(1)},${trip.to.z.toFixed(1)} (ground ${heightAt(trip.to.x, trip.to.z).toFixed(2)}), ${Math.hypot(trip.to.x - trip.from.x, trip.to.z - trip.from.z).toFixed(1)} m straight, travel ${(trip.arrive - trip.start).toFixed(1)} s: ${trip.legs.map((leg) => `${leg.mode}/${leg.beat} ${leg.length.toFixed(2)} m ${leg.seconds.toFixed(1)} s${leg.seconds > 0 && leg.length > 0 ? ` (${(leg.length / leg.seconds / Math.max(t!.walk, 1e-9)).toFixed(2)}x)` : ""}`).join(" | ")}`);
             let groundLegs = 0;
             for (const leg of trip.legs) {
                 if (leg.mode === "pause") {
@@ -284,6 +297,29 @@ for (const s of subjects) {
                 if (dist > 1e-4) t!.steps.push({beat: b.beat, dist, dur: b.dur ?? (b.beat === "play" ? 0.8 : b.beat === "stalk" ? 2.5 : 1.2)});
                 before = {x: b.x, z: b.z};
             });
+        }
+        if (jumps) {
+            let before: {x: number; z: number; aloft: boolean; doing: string; slot: number} | null = null;
+            // (And the behaviour audit's own measure of a snapped crossing, `ark-audit/metrics.ts`: further in 30 s than
+            // 6 m/s or ten lengths a second takes it, neither end in the air: a way squeezed into its slot at a sprint.)
+            const trail: Array<{x: number; z: number; aloft: boolean}> = [];
+            for (let at = from; at < from + WINDOW; at += 2) {
+                const trip = tripOf(own, s.animal.activity, at);
+                const pose = sched.poseOnTrip(world, trip, at);
+                const now = {x: pose.x, z: pose.z, aloft: Boolean(pose.aloft) || pose.beat === "fly" || pose.beat === "glide", doing: trip.doing, slot: trip.slot};
+                if (before && !before.aloft && !now.aloft && Math.hypot(now.x - before.x, now.z - before.z) > Math.max(6, L * 10) * 2) {
+                    jumpCount++;
+                    console.log(`jump ${slug} ${s.animal.id.slice(0, 8)} at ${at}: ${Math.hypot(now.x - before.x, now.z - before.z).toFixed(1)} m in 2 s, ${before.doing} (slot ${before.slot}) -> ${now.doing} (slot ${now.slot}); legs ${trip.legs.map((leg) => `${leg.mode} ${leg.length.toFixed(1)} m ${leg.seconds.toFixed(1)} s`).join(" | ")}`);
+                }
+                const ago = trail.length >= 15 ? trail[trail.length - 15] : null;
+                if (ago && !ago.aloft && !now.aloft && Math.hypot(now.x - ago.x, now.z - ago.z) > Math.max(6, L * 10) * 30) {
+                    farCount++;
+                    console.log(`far ${slug} ${s.animal.id.slice(0, 8)} at ${at}: ${Math.hypot(now.x - ago.x, now.z - ago.z).toFixed(0)} m in 30 s, ${trip.doing} mode ${trip.mode}${trip.running ? " running" : ""}; legs ${trip.legs.map((leg) => `${leg.mode}/${leg.beat} ${leg.length.toFixed(1)} m ${leg.seconds.toFixed(1)} s`).join(" | ")}`);
+                    trail.length = 0;
+                }
+                trail.push(now);
+                before = now;
+            }
         }
         if (w >= kinWindows) return;
         // 10 Hz through the window's moves (each trip's way there and two seconds on, and each step of its stay):
@@ -474,6 +510,7 @@ for (const plan of plans) {
     for (const r of of) gaits[r.legGait ?? "-"] = (gaits[r.legGait ?? "-"] ?? 0) + 1;
     console.log(`${plan.padEnd(16)} ${pad(of.length, 4)}  ${pad(r3(median(of.map((r) => r.legSpeed))), 6)}  Fr ${pad(r3(quantile(of.map((r) => r.legFroude), 0.1)), 6)} / ${pad(r3(median(of.map((r) => r.legFroude))), 6)} / ${pad(r3(quantile(of.map((r) => r.legFroude), 0.9)), 6)}  ${JSON.stringify(gaits)}  start ${r2(median(of.map((r) => r.startShare).filter(Number.isFinite)))}  lockstep ${r2(median(of.filter((r) => r.follow > 20).map((r) => r.lockstep)))}`);
 }
+if (jumps) console.log(`jumps: ${jumpCount}; further in 30 s than a sprint takes it: ${farCount}`);
 if (args.includes("--list")) {
     console.log("\nper species: slug plan n L hip | walk m/s bls Fr gait | run m/s gait | top | legs: median speed, length (m, body lengths), seconds, straightness | step m/s | start share | backwards | lockstep");
     for (const r of rows.sort((a, b) => (Number.isFinite(b.legFroude) ? b.legFroude : -1) - (Number.isFinite(a.legFroude) ? a.legFroude : -1))) {
