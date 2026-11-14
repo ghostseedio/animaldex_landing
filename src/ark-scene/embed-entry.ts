@@ -22,6 +22,7 @@ import {mountArchipelago} from "@/ark-scene/islands/archipelago";
 import {arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {mergeArkIslandsRouting} from "@/lib/ark-islands-local";
 import {arkStatusForHost} from "@/lib/ark-animal-status";
+import {arkReloadForRestoredContext} from "@/lib/ark-context-restore";
 import {ARK_LOAD_START, arkAgoText, arkAnimalsShare, arkLoadAnimals, arkLoadProgress, arkLoadStage, arkLoadStep, arkLoadWorking, arkNewestArrival, arkProgressMessage, arkWhenSettled, markArkLoad} from "@/lib/ark-loading";
 
 declare global {
@@ -48,6 +49,8 @@ declare global {
             mergeArkIslandsRouting?: typeof mergeArkIslandsRouting;
             /** Decision 240: an animal's status for the host (`ark:selected`, `ark:status`), its lines in the app's language. */
             arkStatusForHost: typeof arkStatusForHost;
+            /** A lost WebGL context, back: the page reloads (`src/lib/ark-context-restore.ts`), twice at most in three minutes. */
+            arkReloadForRestoredContext: typeof arkReloadForRestoredContext;
             /** The loading screen (`src/lib/ark-loading.ts`). */
             ARK_LOAD_START: typeof ARK_LOAD_START;
             arkLoadStep: typeof arkLoadStep;
@@ -79,6 +82,7 @@ window.AnimalDexArk = {
     arkOpeningIsland,
     mergeArkIslandsRouting: process.env.NODE_ENV !== "production" ? mergeArkIslandsRouting : undefined,
     arkStatusForHost,
+    arkReloadForRestoredContext,
     ARK_LOAD_START,
     arkLoadStep,
     arkLoadAnimals,

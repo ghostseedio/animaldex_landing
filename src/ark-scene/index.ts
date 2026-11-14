@@ -659,6 +659,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     canvas.tabIndex = 0;
     // The world takes the keyboard (A18): arrows move the view, + and − zoom, Esc closes the card.
     canvas.setAttribute("role", "application");
+    // A lost context, back: it comes back empty, and the page starts the scene again (`ArkSceneOptions.onContextRestored`).
+    const onContextRestored = () => options.onContextRestored?.();
+    canvas.addEventListener("webglcontextrestored", onContextRestored);
     if (options.canvasLabel) canvas.setAttribute("aria-label", options.canvasLabel);
     if (getComputedStyle(el).position === "static") el.style.position = "relative";
     el.appendChild(canvas);
@@ -6939,6 +6942,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             perf.dispose();
             resizeObserver.disconnect();
             visibility.disconnect();
+            canvas.removeEventListener("webglcontextrestored", onContextRestored);
             canvas.removeEventListener("pointerdown", onPointerDown);
             canvas.removeEventListener("pointerup", onPointerUp);
             canvas.removeEventListener("pointermove", onPointerMove);

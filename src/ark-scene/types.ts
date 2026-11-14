@@ -293,6 +293,12 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
     wildIslandRegionLabels?: Partial<Record<ArkRegion, string>>;
     /** Called once the first frame is drawn. */
     onReady?: () => void;
+    /**
+     * The WebGL context was lost and has come back, empty (an app long in the background, the GPU's process restarted).
+     * The scene cannot go on from that (`src/lib/ark-context-restore.ts`): the page starts it again
+     * (`arkReloadForRestoredContext`). Without this the scene draws on as three restores it: dark, parts missing.
+     */
+    onContextRestored?: () => void;
     /** Honour prefers-reduced-motion: no idle motion, no camera flights. */
     reducedMotion?: boolean;
     /**
