@@ -1149,6 +1149,19 @@ export function beatClip(beat: string | null | undefined, doing: string | null |
 
 export const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
 
+/**
+ * Animal rendering lane (2026-11-14): a re-rigged bird (rig code v7, the v3 set's folding wings) on the ground plays
+ * its baked clip alone. Through the locomotion layer its wings hung open to the ground, a flamingo in a red skirt, a
+ * bulbul a flat tent, in idle and walk alike; the baked clips hold them folded (`evidence/animal-render/wings/`:
+ * the same bird with `__arkLoco` on and off). In the air the layer still poses it (its flight drivers). To take out
+ * once the layer's ground pose keeps a v7 rig's wings as its clip has them (development:
+ * `globalThis.__arkBirdGroundLoco = true` puts the layer back, to compare).
+ */
+export function birdGroundBaked(model: Pick<RigModel, "code">, state: Pick<RigState, "flying">): boolean {
+    if ((globalThis as {__arkBirdGroundLoco?: boolean}).__arkBirdGroundLoco === true) return false;
+    return Boolean(model.code?.startsWith("v7")) && !state.flying;
+}
+
 /** Whether the locomotion layer poses rigs (development: `globalThis.__arkLoco = false` turns it off for a before/after). */
 export function locoOn(): boolean {
     return (globalThis as {__arkLoco?: boolean}).__arkLoco !== false;
@@ -1181,6 +1194,7 @@ export type RigLiveInput = {
  */
 export function rigLivePose(model: RigModel, state: RigState, input: RigLiveInput, row: number): {code: number; gait: GaitState | null} | null {
     if (!model.loco || !locoOn() || state.weight <= 0) return null;
+    if (birdGroundBaked(model, state)) return null;
     const now = model.clips[state.now.name];
     const from = state.from ? model.clips[state.from.name] : undefined;
     const a: ClipRows | null = now ? clipRows(now, state.now.phase) : null;
