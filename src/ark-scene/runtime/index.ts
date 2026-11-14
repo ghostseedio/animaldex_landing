@@ -251,9 +251,13 @@ export function createArkRuntime(ctx: ArkRuntimeContext) {
         lastBudget = now;
         const tier = ctx.tier();
         const budget = arkBudget(tier);
+        // (Kept as if drawn near now: the species the reader chose and is flying to, `library.urgent`; and a level in
+        // its first three seconds. Neither has been drawn near yet, so each was let go the moment it arrived whenever
+        // the budget's check fell on that frame, and loaded again.)
+        const used = (level: {slug: string; at: number}) => (level.slug === ctx.library.urgent || now - level.at < 3 ? now : lastNear.get(level.slug) ?? 0);
         const levels = ctx.library.levels().flatMap((level) => [
-            {slug: level.slug, level: level.level, bytes: level.texture, texture: true, lastNear: lastNear.get(level.slug) ?? 0},
-            {slug: level.slug, level: level.level, bytes: level.geometry, texture: false, lastNear: lastNear.get(level.slug) ?? 0}
+            {slug: level.slug, level: level.level, bytes: level.texture, texture: true, lastNear: used(level)},
+            {slug: level.slug, level: level.level, bytes: level.geometry, texture: false, lastNear: used(level)}
         ]);
         for (const drop of overBudget(levels, budget, now)) {
             ctx.dropNear(drop.slug);
