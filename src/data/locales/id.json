@@ -451,9 +451,9 @@
   },
   "landing": {
     "hero": {
-      "taglineLead": "Tangkap hewan di dunia nyata",
-      "taglineRest": "lalu jadikan teman AI di dunia 3D.",
-      "sentence": "Hewan naik ke Bahtera dari foto orang dan hidup menurut panduan lapangannya sendiri, di satu dunia yang dibagi semua orang.",
+      "taglineLead": "Tangkap hewan nyata.",
+      "taglineRest": "Ajak mereka bicara.",
+      "slogan": "Setiap hewan punya pelajaran.",
       "explore": "Jelajahi Bahtera langsung",
       "seeLive": "Lihat langsung",
       "loading": "Memuat dunianya",
@@ -2588,7 +2588,7 @@
   "meta": {
     "fullTitle": "AnimalDex: Tangkap Hewan Nyata Jadi Teman AI di Dunia 3D",
     "title": "AnimalDex",
-    "description": "Tanya apa saja pada hewan mana pun. Ia menjawab dari cara jenisnya hidup dan memberi satu langkah kecil. Tiap hewan yang kamu tangkap naik ke Ark bersama.",
+    "description": "AnimalDex: setiap hewan punya pelajaran. Tangkap hewan nyata, ajak mereka bicara, dan temui lagi di Ark, dunia 3D hidup milik semua orang.",
     "privacyTitle": "Kebijakan Privasi AnimalDex",
     "privacyDescription": "Pelajari cara AnimalDex menangani privasi untuk pemindaian hewan AI, fitur koleksi satwa liar, dan dukungan akun.",
     "termsTitle": "Ketentuan Penggunaan AnimalDex",

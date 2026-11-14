@@ -268,8 +268,12 @@ test("Talk is the way in everywhere: the home hero, the article, How it works, t
     assert.doesNotMatch(en.home.heroSubhead, /\bPower\b/);
     assert.doesNotMatch(id.home.heroSubhead, /Kekuatan/);
     for (const copy of [en.meta.description, id.meta.description, en.home.intro, id.home.intro]) assert.ok(copy.length < 155, `${copy.length}: ${copy}`);
-    assert.match(en.meta.description, /^Ask any animal anything\./);
+    // The brand's slogan leads the default description (owner, 2026-11-14), in both languages.
+    assert.match(en.meta.description, /^AnimalDex: every animal has a lesson\./);
+    assert.match(id.meta.description, /^AnimalDex: setiap hewan punya pelajaran\./);
     assert.match(en.meta.description, /the Ark/);
+    assert.equal(en.landing.hero.slogan, "Every animal has a lesson.");
+    assert.equal(en.nav.description, en.landing.hero.slogan, "the footer and the hero say the same slogan");
     assert.match(en.home.intro, /one small step/);
     // The audience band, cut to four (CC 3).
     assert.deepEqual(Object.keys(en.home.team.roles), ["question", "animalLover", "photographer", "family"]);

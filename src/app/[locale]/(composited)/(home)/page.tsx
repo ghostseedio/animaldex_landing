@@ -26,7 +26,7 @@ import {daylightAt} from "@/lib/ark-daylight";
 /**
  * The home page (landing lane S2, 2026-11-12): the live Ark first, then what it is made of, in pictures.
  *
- *   1. The hero: the real Ark (a frame of it, then the live 3D world) behind the tagline.
+ *   1. The hero: the real Ark (a frame of it, then the live 3D world) behind the headline and the slogan.
  *   2. Who is aboard right now (the public read and the event log).
  *   3. From your camera to the Ark: a real capture, a Komodo dragon in the Ark, its talking model.
  *   4. A day on the Ark: one real day of the shared clock, as the reader scrolls.
@@ -269,9 +269,13 @@ export default async function Home({params}: HomePageProps) {
                 >
                     <h1 className="max-w-5xl text-white">
                         <span className="block font-display text-[3.1rem] font-extrabold uppercase leading-[0.86] tracking-[-0.005em] [text-wrap:balance] sm:text-7xl lg:text-[6.25rem]">{t("hero.taglineLead")}</span>
-                        <span className="mt-3 block font-display-italic text-[1.7rem] font-semibold italic leading-[1.02] text-white/90 [text-wrap:balance] sm:text-4xl lg:mt-4 lg:text-[2.75rem]">{t("hero.taglineRest")}</span>
+                        <span className="mt-2 block font-display-italic text-[2.25rem] font-semibold italic leading-[1] text-white/90 [text-wrap:balance] sm:text-5xl lg:mt-3 lg:text-[3.75rem]">{t("hero.taglineRest")}</span>
                     </h1>
-                    <p className="mt-5 max-w-[34rem] text-base leading-relaxed text-white/80 md:mt-6 md:text-lg">{t("hero.sentence")}</p>
+                    {/* The brand's slogan, the one line under the headline (owner, 2026-11-14). */}
+                    <p className="mt-6 flex items-center gap-3 font-display text-lg font-semibold leading-snug text-white/85 md:mt-7 md:text-2xl">
+                        <span aria-hidden="true" className="h-[2px] w-8 shrink-0 bg-primary-400" />
+                        {t("hero.slogan")}
+                    </p>
                     <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4">
                         <StoreBadges locale={locale} placement="home_hero" t={t} />
                         <Link href="/ark" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-white underline decoration-white/40 underline-offset-[6px] transition-colors hover:decoration-primary-400">
