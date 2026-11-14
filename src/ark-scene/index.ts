@@ -6331,10 +6331,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     const measured: number[] = [];
 
-    const frame = () => {
+    const frame = (stamp?: number) => {
         if (disposed) return;
         // Runtime: hidden, the loop stops until visible again (onWake); idle-capped or warming shaders, this display frame is skipped.
-        const step = runtime.frame(performance.now());
+        // (The animation frame's own time: the runtime reads the display's refresh rate off it.)
+        const step = runtime.frame(performance.now(), stamp);
         if (step === "sleep") {
             raf = 0;
             return;
