@@ -234,20 +234,29 @@ export function decodeArkStepResult(raw: unknown): ArkStepResult | null {
     };
 }
 
-export type ArkStepResultWords = ArkThriveWords & {resultOne: string; resultOther: string; resultLater: string; resultPoints: string};
+export type ArkStepResultWords = {resultOther: string; resultLater: string; resultPoints: string; resultSee: string};
 
 /**
- * The line under the reply that finished a step that worked: "Your Komodo
- * Dragons are thriving", the band it left them in, and "+30 Ark Score".
- * Null while pending (the outbox applies it within about a minute).
+ * The line under the reply that finished a step that worked, in one line
+ * (owner, 2026-11-15): "It worked. Your Komodo Dragons are thriving: more
+ * young, hunted last." and "+30 Ark Score"; with none of theirs aboard, "It
+ * worked. Your Komodo Dragon will thrive once one is aboard.". The thriving
+ * words only when the step left them Good or Prime (Ordinary means the
+ * server's thrive rules are off: as the apps, only the points then).
+ * `thriving` says the line offers "See them". Null while pending (the outbox
+ * applies it within about a minute) or with nothing to say.
  */
-export function arkStepResultLines(result: ArkStepResult, words: ArkStepResultWords, locale: string, plural: (name: string) => string = (name) => name): {line: string; band: string | null; points: string | null} | null {
+export function arkStepResultLines(result: ArkStepResult, words: ArkStepResultWords, locale: string, plural: (name: string) => string = (name) => name): {line: string | null; thriving: boolean; points: string | null} | null {
     if (result.status !== "done" || !result.species) return null;
-    const name = result.livingBrought >= 2 && locale.toLowerCase().startsWith("en") ? plural(result.species) : result.species;
-    const template = result.livingBrought <= 0 ? words.resultLater : result.livingBrought >= 2 ? words.resultOther : words.resultOne;
-    return {
-        line: template.split("{species}").join(name),
-        band: result.livingBrought > 0 && result.thriveAfter ? arkThriveWords(result.thriveAfter, words) : null,
-        points: result.points !== null && result.points > 0 ? words.resultPoints.split("{points}").join(result.points.toLocaleString(locale)) : null
-    };
+    const english = locale.toLowerCase().startsWith("en");
+    const better = result.thriveAfter === "good" || result.thriveAfter === "prime";
+    const thriving = better && result.livingBrought > 0;
+    const line = !better
+        ? null
+        : thriving
+            ? words.resultOther.split("{species}").join(english ? plural(result.species) : result.species)
+            : words.resultLater.split("{species}").join(result.species);
+    const points = result.points !== null && result.points > 0 ? words.resultPoints.split("{points}").join(result.points.toLocaleString(locale)) : null;
+    if (!line && !points) return null;
+    return {line, thriving, points};
 }

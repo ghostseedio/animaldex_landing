@@ -423,6 +423,7 @@ export function ArkScoreExplainer({words}: {words: ArkWords}) {
         <div className="mt-4 border border-primary-400/25 bg-primary-400/[0.06] px-3.5 py-3" role="note" data-testid="ark-score-explainer">
             <p className="text-[13px] font-bold leading-5 text-white">{words.explainTitle}</p>
             <p className="mt-1 text-[12px] leading-[18px] text-white/70">{words.explainBody}</p>
+            <p className="mt-1.5 text-[12px] font-semibold leading-[18px] text-white">{words.explainThrive}</p>
             <button
                 type="button"
                 onClick={dismiss}

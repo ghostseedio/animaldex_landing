@@ -140,10 +140,14 @@ test("voyage_capture_state_v1: every state, and what the capture band shows for 
 
 test("voyage_step_result_v1: the line under a step that worked, its band and its locked points", () => {
     const result = (extra: Record<string, unknown>) => decodeArkStepResult({status: "done", species: "Komodo Dragon", living_brought: 2, thrive_before: "good", thrive_after: "prime", points: 30, ...extra})!;
-    assert.deepEqual(arkStepResultLines(result({}), ARK_COPY, "en", plural), {line: "Your Komodo Dragons are thriving", band: "In prime condition", points: "+30 Ark Score"});
-    assert.deepEqual(arkStepResultLines(result({living_brought: 1, thrive_after: "good", points: 10}), ARK_COPY, "en", plural), {line: "Your Komodo Dragon is thriving", band: "In good condition", points: "+10 Ark Score"});
-    // None aboard (not captured, died, no model yet): it will thrive once one is; the condition waits, so no band.
-    assert.deepEqual(arkStepResultLines(result({living_brought: 0, thrive_after: "good"}), ARK_COPY, "en", plural), {line: "Your Komodo Dragon will thrive once one is aboard", band: null, points: "+30 Ark Score"});
+    // Owner, 2026-11-15: what the step did, in one line, whatever the band; "See them" goes with it.
+    assert.deepEqual(arkStepResultLines(result({}), ARK_COPY, "en", plural), {line: "It worked. Your Komodo Dragons are thriving: more young, hunted last.", thriving: true, points: "+30 Ark Score"});
+    assert.deepEqual(arkStepResultLines(result({living_brought: 1, thrive_after: "good", points: 10}), ARK_COPY, "en", plural), {line: "It worked. Your Komodo Dragons are thriving: more young, hunted last.", thriving: true, points: "+10 Ark Score"});
+    // None aboard (not captured, died, no model yet): it will thrive once one is; nothing to see yet.
+    assert.deepEqual(arkStepResultLines(result({living_brought: 0, thrive_after: "good"}), ARK_COPY, "en", plural), {line: "It worked. Your Komodo Dragon will thrive once one is aboard.", thriving: false, points: "+30 Ark Score"});
+    // The server's thrive rules off (still Ordinary): as the apps, only the points; none, no line at all.
+    assert.deepEqual(arkStepResultLines(result({thrive_after: "ordinary", points: 4}), ARK_COPY, "en", plural), {line: null, thriving: false, points: "+4 Ark Score"});
+    assert.equal(arkStepResultLines(result({thrive_after: "ordinary", points: 0}), ARK_COPY, "en", plural), null);
     // Pending: nothing yet (and the pending answer carries no band or points).
     const pending = decodeArkStepResult({status: "pending", species: "Komodo Dragon", living_brought: 1, thrive_after: "prime", points: 30})!;
     assert.deepEqual([pending.thriveAfter, pending.points], [null, null]);

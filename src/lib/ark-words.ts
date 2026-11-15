@@ -401,6 +401,8 @@ export type ArkWords = {
     regionsLabel: string;
     howTitle: string;
     howBody: string;
+    /** What a step that works does, in one line under `howBody` (owner, 2026-11-15). */
+    howThrive: string;
     howCta: string;
     /** A deleted account's animals (A5): the server's "Former voyager", in the reader's language. */
     formerVoyager: string;

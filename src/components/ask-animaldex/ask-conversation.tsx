@@ -2710,6 +2710,8 @@ function AskConversation({
                 words={words.ark}
                 locale={locale}
                 share={share}
+                onSee={arkPanel && stepResult.animal ? () => arkPanel.show(stepResult.animal!) : undefined}
+                seeHref={arkSpecies.slug ? `/ark?focus=${encodeURIComponent(arkSpecies.slug)}` : undefined}
             />
         ) : null;
         if (!arrival) return resultLine;

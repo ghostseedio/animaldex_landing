@@ -78,13 +78,12 @@ test("ark_stats_v1 with the 3.3 keys: the world score, its week, and life standi
     assert.equal(old?.weekChange, null);
 });
 
-test("the step's line by state and band: thrive, be in prime, stay in prime, thrive once one is aboard", () => {
+test("the step's line: one whatever the band (your animals in the Ark thrive), or thrive once one is aboard", () => {
     const plural = (name: string) => `${name}s`;
-    const offer = (extra: Partial<Parameters<typeof arkStepOfferLine>[0]> = {}) => ({state: "thrive" as const, species: "Komodo Dragon", livingBrought: 2, bandNow: "ordinary" as const, bandIfWorked: "good" as const, ...extra});
-    assert.equal(arkStepOfferLine(offer(), words, "en", plural), "If this works, your Komodo Dragons will thrive");
-    assert.equal(arkStepOfferLine(offer({livingBrought: 1}), words, "en", plural), "If this works, your Komodo Dragon will thrive");
-    assert.equal(arkStepOfferLine(offer({bandNow: "good", bandIfWorked: "prime"}), words, "en", plural), "If this works, your Komodo Dragons will be in prime condition");
-    assert.equal(arkStepOfferLine(offer({bandNow: "prime", bandIfWorked: "prime"}), words, "en", plural), "If this works, your Komodo Dragons will stay in prime condition");
+    const offer = (extra: Partial<Parameters<typeof arkStepOfferLine>[0]> = {}) => ({state: "thrive" as const, species: "Komodo Dragon", livingBrought: 2, ...extra});
+    assert.equal(arkStepOfferLine(offer(), words, "en", plural), "If this works, your Komodo Dragons in the Ark thrive");
+    // The kind, in the plural in English, however many of theirs are aboard.
+    assert.equal(arkStepOfferLine(offer({livingBrought: 1}), words, "en", plural), "If this works, your Komodo Dragons in the Ark thrive");
     assert.equal(arkStepOfferLine(offer({state: "thrive_later", livingBrought: 0}), words, "en", plural), "If this works, your Komodo Dragon will thrive once one is aboard");
     // Not English: the name as it is, never pluralised.
     assert.equal(arkStepOfferLine(offer(), {...words, offerThrive: "Kalau berhasil, {species} milikmu akan berkembang"}, "id", plural), "Kalau berhasil, Komodo Dragon milikmu akan berkembang");

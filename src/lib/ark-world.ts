@@ -227,8 +227,6 @@ export function arkStepOfferFromSnapshot(
 
 export type ArkWorldWords = {
     offerThrive: string;
-    offerPrime: string;
-    offerStayPrime: string;
     offerLater: string;
     arrival: string;
     arrivalAn: string;
@@ -240,22 +238,19 @@ export function arkTakesAn(name: string, locale: string): boolean {
 }
 
 /**
- * The step card's line, by state and band: "If this works, your Komodo
- * Dragons will thrive"; "…will be in prime condition" when one more step
- * would get them there; "…will stay in prime condition" when they are; and,
- * with none aboard, "…will thrive once one is aboard". `plural` names two in
- * English ("Komodo Dragons"); other languages say the name as it is (A17).
+ * The step card's line, one whatever the band (owner, 2026-11-15: "make
+ * clear what completing steps does"): "If this works, your Komodo Dragons in
+ * the Ark thrive"; with none aboard, "…will thrive once one is aboard".
+ * `plural` names the kind in English ("Komodo Dragons"); other languages say
+ * the name as it is (A17).
  */
-export function arkStepOfferLine(offer: Pick<ArkStepOffer, "state" | "species" | "livingBrought" | "bandNow" | "bandIfWorked">, words: ArkWorldWords, locale: string, plural: (name: string) => string = (name) => name): string {
-    const name = offer.livingBrought >= 2 && locale.toLowerCase().startsWith("en") ? plural(offer.species) : offer.species;
-    const template = offer.state === "thrive_later"
-        ? words.offerLater
-        : offer.bandNow === "prime"
-            ? words.offerStayPrime
-            : offer.bandIfWorked === "prime"
-                ? words.offerPrime
-                : words.offerThrive;
-    return template.split("{species}").join(name);
+export function arkStepOfferLine(offer: Pick<ArkStepOffer, "state" | "species" | "livingBrought">, words: ArkWorldWords, locale: string, plural: (name: string) => string = (name) => name): string {
+    const english = locale.toLowerCase().startsWith("en");
+    if (offer.state === "thrive_later") {
+        const name = offer.livingBrought >= 2 && english ? plural(offer.species) : offer.species;
+        return words.offerLater.split("{species}").join(name);
+    }
+    return words.offerThrive.split("{species}").join(english ? plural(offer.species) : offer.species);
 }
 
 /** The thread's line when a step brought the animal aboard (before captures did): "A Red Fox came aboard the Ark". */
