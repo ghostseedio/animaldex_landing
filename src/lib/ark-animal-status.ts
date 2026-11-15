@@ -14,10 +14,11 @@
  * - **Log**: the server's record of this animal (it came aboard or was born, a meal, young, a clutch, a pair bred: only
  *   what the snapshot, its life story or the event log say) and what its schedule had it doing over its last slots.
  *   Newest first. Nothing is made up: an entry is either the server's or the schedule's.
- * - **Bars** (card truth, 2026-11-13): how fed it is over its day and its energy, both from the schedule it already runs
- *   (its eating and waking slots: visual only, the same for every viewer), the server's hungry over both; how far from
- *   dying (the server's condition: hungry, old); its age against its lifespan only when the data has a lifespan (the
- *   public reads don't send one yet, so that bar is not drawn).
+ * - **Bars** (card truth, 2026-11-13; real values, 2026-11-15): how fed it is over its day and its energy, both from its
+ *   own schedule (its eating and waking slots: the same for every viewer, worked out even when it is not drawn moving on
+ *   it), the server's hungry over both; how far from dying (the server's condition: hungry, old); its age against its
+ *   kind's wild lifespan as the read sends it ("about" when that lifespan is an estimate). A bar whose data is
+ *   genuinely missing is not drawn: never a made-up value.
  */
 
 import type {ArkCondition} from "@/ark-scene/types";
@@ -202,7 +203,7 @@ export function arkActivityKey(input: ArkActivityInput): ArkActivityKey {
 // MARK: The status
 
 /** A server record's kind, as the card's log says it. */
-export type ArkRecordKind = "arrived" | "born" | "hatched" | "meal" | "young" | "laid" | "mated";
+export type ArkRecordKind = "arrived" | "born" | "hatched" | "meal" | "young" | "laid" | "mated" | "stepFed";
 
 /**
  * One line of an animal's own log. `record`: the server's (stamped with its Ark day); `schedule`: what its schedule had
@@ -234,6 +235,8 @@ export type ArkStatusBar = {
     state: "fed" | "low" | "eating" | "hungry" | "good" | "old" | "life" | "awake" | "asleep";
     /** Energy: since when it has been awake (or asleep), epoch seconds on the shared clock. */
     since?: number;
+    /** Age: its lifespan is an estimate (the card says "about"). */
+    estimate?: boolean;
 };
 export type ArkStatusBarKey = "fed" | "health" | "energy" | "age";
 export type ArkStatusBars = {fed: ArkStatusBar | null; health: ArkStatusBar | null; energy: ArkStatusBar | null; age: ArkStatusBar | null};
@@ -305,6 +308,8 @@ export function arkDayOf(ms: number, voyageStartMs: number | null): number | nul
  * the birth for the young itself), a clutch and a pair bred for each parent. Only animals named by the event.
  */
 export function arkRecordNotesFromEvents(events: ReadonlyArray<{id: string; kind: string; at: string; ark_day: number | null; animal: {id: string} | null; other: {id: string; name: string} | null; parents: string[]; from_egg: boolean; eggs: number | null; source?: "capture" | "step" | null}>): ArkRecordNote[] {
+    // (A step's meal, `fed` with source `step`: AnimalDex docs/ark/step-feeds.md, behind voyage_config.step_feeds. A
+    // `fed` row without it is the end of a hunger, said by the bars, not the log.)
     const notes: ArkRecordNote[] = [];
     const litters = new Map<string, ArkRecordNote[]>();
     for (const event of events) {
@@ -337,6 +342,9 @@ export function arkRecordNotesFromEvents(events: ReadonlyArray<{id: string; kind
                 break;
             case "arrival":
                 if (event.animal) notes.push({animalId: event.animal.id, id: `event:${event.id}`, kind: "arrived", at, day, via: event.source ?? null});
+                break;
+            case "fed":
+                if (event.animal && event.source === "step") notes.push({animalId: event.animal.id, id: `event:${event.id}`, kind: "stepFed", at, day, via: "step"});
                 break;
             default:
                 break;
@@ -372,18 +380,22 @@ export type ArkBarsInput = {
     /** Its born (or boarded) Ark day and its wild lifespan in days: the age bar only when both are known. */
     bornDay?: number | null;
     lifespanDays?: number | null;
+    /** Its lifespan is an estimate (from relatives or body size): the card says "about". */
+    lifespanEstimate?: boolean;
 };
 
 /**
  * - Fed: its daily hunger over the day it is seen living (`arkFed`, from its schedule's own eating and waking), between
- *   `ARK_FED_FLOOR` and full; hungry (the server: it can starve) is nearly empty and red, whatever its day says. Off the
- *   schedule (reduced motion, a micro animal, a replay's act), no fed bar. (Not the server's meal clock: that counts the
+ *   `ARK_FED_FLOOR` and full; hungry (the server: it can starve) is nearly empty and red, whatever its day says. Its
+ *   schedule is worked out for the card even when it is not drawn moving on it (reduced motion, a micro animal, a
+ *   replay's act): its bars are a function of the clock and its id, only the drawing is skipped. (Not the server's meal clock: that counts the
  *   rare kills of other Ark animals, scaled rare so populations last, while its everyday food is the unmodelled
  *   background; it is no animal's hunger. A kill still shows in its log when one lands, and fills it.)
  * - Health, how far from dying: old (at least four fifths of its wild lifespan gone: the read's `old_from_life_fraction`)
  *   is a fifth, red; hungry is amber; otherwise full.
  * - Energy: its day's sleep and wake (`arkEnergy`), when it sleeps.
- * - Age: the life it has left, from its lifespan, when known.
+ * - Age: the life it has left, from its kind's wild lifespan as the read's `old` reads it (from its born or boarded Ark
+ *   day: at a fifth left the read says old), when known; `estimate` when that lifespan is.
  */
 export function arkStatusBars(input: ArkBarsInput): ArkStatusBars {
     const {condition} = input;
@@ -528,7 +540,7 @@ function ageBar(input: ArkBarsInput): ArkStatusBar | null {
     const {bornDay, lifespanDays, arkDay} = input;
     if (typeof bornDay !== "number" || typeof lifespanDays !== "number" || arkDay === null || !(lifespanDays > 0)) return null;
     const left = Math.min(Math.max(1 - (arkDay - bornDay) / lifespanDays, 0), 1);
-    return {value: round(left), tone: arkBarTone(left), state: "life"};
+    return {value: round(left), tone: arkBarTone(left), state: "life", ...(input.lifespanEstimate ? {estimate: true} : {})};
 }
 
 function round(value: number): number {
@@ -579,6 +591,10 @@ export type ArkCardWords = {
     fedLow: string;
     healthGood: string;
     lifeLeft: string;
+    /** The age bar when its lifespan is an estimate ("About {percent} of its life left"). */
+    lifeLeftAbout: string;
+    /** A step's meal in its log (`fed`, source step). */
+    stepFed: string;
     /** The energy bar (card truth, 2026-11-13), and what it says: awake (or asleep) since a time on the island's clock. */
     energy: string;
     awakeSince: string;
@@ -657,6 +673,8 @@ export const ARK_CARD_ENGLISH: ArkCardWords = {
     fedLow: "Getting hungry",
     healthGood: "In good health",
     lifeLeft: "{percent} of its life left",
+    lifeLeftAbout: "About {percent} of its life left",
+    stepFed: "Fed after a step that worked",
     energy: "Energy",
     awakeSince: "Awake since {time}",
     asleepSince: "Asleep since {time}"
@@ -732,6 +750,9 @@ export function arkStatusText(status: ArkAnimalStatus, words: ArkStatusWords, lo
             case "mated":
                 text = words.card.mated;
                 break;
+            case "stepFed":
+                text = words.card.stepFed || ARK_CARD_ENGLISH.stepFed;
+                break;
             default:
                 text = "";
         }
@@ -739,11 +760,11 @@ export function arkStatusText(status: ArkAnimalStatus, words: ArkStatusWords, lo
     });
     const bars: ArkStatusText["bars"] = [];
     const {fed, health, energy, age} = status.bars;
-    const card = (key: "energy" | "awakeSince" | "asleepSince") => words.card[key] || ARK_CARD_ENGLISH[key];
+    const card = (key: "energy" | "awakeSince" | "asleepSince" | "lifeLeftAbout") => words.card[key] || ARK_CARD_ENGLISH[key];
     if (fed) bars.push({key: "fed", label: words.card.fed, value: fed.value, tone: fed.tone, text: fed.state === "hungry" ? words.life.hungry : fed.value < 0.6 ? words.card.fedLow : words.life.well_fed});
     if (health) bars.push({key: "health", label: words.card.health, value: health.value, tone: health.tone, text: health.state === "old" ? words.life.old : health.state === "hungry" ? words.life.hungry : words.card.healthGood});
     if (energy) bars.push({key: "energy", label: card("energy"), value: energy.value, tone: energy.tone, text: fillArkWords(card(energy.state === "asleep" ? "asleepSince" : "awakeSince"), {time: arkIslandTime(energy.since ?? 0, locale)})});
-    if (age) bars.push({key: "age", label: words.card.age, value: age.value, tone: age.tone, text: fillArkWords(words.card.lifeLeft, {percent: `${Math.round(age.value * 100).toLocaleString(locale)}%`})});
+    if (age) bars.push({key: "age", label: words.card.age, value: age.value, tone: age.tone, text: fillArkWords(age.estimate ? card("lifeLeftAbout") : words.card.lifeLeft, {percent: `${Math.round(age.value * 100).toLocaleString(locale)}%`})});
     return {now, next, log: log.filter((line) => line.text), bars};
 }
 

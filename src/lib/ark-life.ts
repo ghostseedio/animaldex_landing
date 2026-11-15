@@ -86,7 +86,7 @@ export type ArkEvent = {
     eggs: number | null;
     /** On a `milestone` (a worked step): the band the step left the person's animals in; else null. */
     thrive: ArkThrive | null;
-    /** On an `arrival`: how it came aboard (a capture, or before them a step); else null. */
+    /** On an `arrival`: how it came aboard (a capture, or before them a step); on a `fed`, `step` for a step's meal; else null. */
     source: ArkArrivalSource | null;
     /**
      * On a `meal` under encounter hunting (AnimalDex docs/ark/encounter-hunting.md): where the hunter found its prey,
@@ -249,7 +249,8 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             from_egg: payload.from_egg === true || row.from_egg === true,
             eggs: eggs !== null && eggs > 0 ? Math.min(eggs, 9999) : null,
             thrive: kind === "milestone" ? decodeArkThriveField(row.thrive ?? payload.band) : null,
-            source: kind === "arrival" ? arkArrivalSource(row.source ?? payload.source) : null,
+            // (A `fed` row's too: a step that worked fed its person's animals, AnimalDex docs/ark/step-feeds.md.)
+            source: kind === "arrival" || kind === "fed" ? arkArrivalSource(row.source ?? payload.source) : null,
             ...(encounter ? {encounter} : {})
         });
     });

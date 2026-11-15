@@ -134,6 +134,7 @@ import {buildVegetation} from "@/ark-scene/vegetation";
 import {seaEpochSeconds} from "@/ark-scene/fish-schools";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake} from "@/lib/ark-daylight";
+import {arkAwakeAtHour, arkSleepOf, type Sleep} from "@/ark-scene/sleep-hours";
 import {islandHours} from "@/lib/ark-clock";
 import {ArkLiveliness, type LiveAnimal, type LivePin} from "@/ark-scene/liveliness-scene";
 import {attachVary, setVary} from "@/ark-scene/ark-variation";
@@ -494,7 +495,7 @@ type HerdDraw = {
     slug: string;
     /** A member, for its size and stats (all of a species are drawn the same size). */
     sample: ArkAnimal;
-    members: Array<{id: string; x: number; z: number; ground: number; yaw: number; water: boolean; phase: number; mine: boolean; awake: boolean; activity: ArkAnimal["activity"]}>;
+    members: Array<{id: string; x: number; z: number; ground: number; yaw: number; water: boolean; phase: number; mine: boolean; awake: boolean; activity: ArkAnimal["activity"]; sleep?: Sleep | null}>;
     centre: {x: number; z: number};
     radius: number;
     /** The member nearest the middle: the badge stands over it. */
@@ -1487,21 +1488,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let tripsHeld = 0;
     let scheduledCount = 0;
     const scheduleHours: HoursAt = (epoch) => pinnedHours ?? islandHours(epoch * 1000, ISLAND_OFFSET_HOURS);
+    /** Awake now off the schedule: the sun's rule, or one active at any hour's own bouts on the island clock (`sleep-hours.ts`). */
+    const awakeNowOf = (activity: ArkAnimal["activity"] | null, sleep: Sleep | null | undefined): boolean =>
+        activity === "any" && sleep ? arkAwakeAtHour(activity, scheduleHours(worldMs() / 1000), sleep) : isAwake(activity, sunElevation);
     const GROUPED = new Set(["herd", "flock", "school", "troop", "pack", "group", "colony", "swarm"]);
-    const makeSched = (animal: ArkAnimal, place: Placement, length: number): Sched | null => {
+    const makeSched = (animal: ArkAnimal, place: Placement, length: number, statusOnly = false): Sched | null => {
         // Everyone but a true micro animal and an underground one (`map/place.ts` onSchedule); a perched bird or bat from its perch.
         // (Nor one the depth classifier holds off the water: the schedule would land a frigatebird on the sea to rest.)
-        if (!scheduleOn || !onSchedule(place, animal.model_slug) || !onBehaviourSchedule(animal.model_slug)) return null;
+        // (`statusOnly`: its day as its card's bars read it, never drawn: `statusSchedOf`.)
+        if (!scheduleOn || (!statusOnly && (!onSchedule(place, animal.model_slug) || !onBehaviourSchedule(animal.model_slug)))) return null;
         // (Part C: a town animal kept still at a window, behind the glass or in a tank stays at its spot.)
         const inTown = Boolean(island?.has(animal));
         // (Until the town's behaviour world is in, its animals stand at their places: `townWorldReady` wires them then.)
-        if (inTown && (!island!.scheduled(animal.id) || !townWorld)) return null;
+        if (inTown && ((!statusOnly && !island!.scheduled(animal.id)) || !townWorld)) return null;
         const sea = !inTown && ZONE_SITES[animal.zone]?.kind === "sea";
         return {
             // (Its roost the first time its schedule asks: the den search out of the mount, `withLazyRoost`; the runtime's
             // sliced mount may have found it already, `mapRoostOf`'s memo.)
             // (Part C: a town animal's range is its garden, paddock or enclosure; it finds its roost among the town's places.)
-            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), ...(inTown ? {range: island!.rangeOf(animal.id)} : {})}, () => (inTown ? null : mapRoostOf(place, animal.zone))),
+            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), sleep: arkSleepOf(animal), ...(inTown ? {range: island!.rangeOf(animal.id)} : {})}, () => (inTown ? null : mapRoostOf(place, animal.zone))),
             profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
             trip: null,
             lead: null,
@@ -1850,6 +1855,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return behaviourState({
             activity: entry.animal.activity,
             elevation: sunElevation,
+            // (One active at any hour sleeps its own bouts: every animal sleeps, `sleep-hours.ts`.)
+            asleepOwn: entry.animal.activity === "any" ? !awakeNowOf("any", arkSleepOf(entry.animal)) : undefined,
             flyer: fliesOver(entry.animal),
             acting: Boolean(entry.act),
             visitor: entry.visitor,
@@ -1958,8 +1965,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const applyHours = () => {
         sunElevation = lighting.daylight.elevation;
         for (const entry of allEntries()) refreshState(entry);
-        for (const herd of herds) for (const member of herd.members) member.awake = isAwake(member.activity ?? null, sunElevation);
-        for (const group of restingGroups) for (const member of group.members) member.awake = isAwake(member.activity ?? null, sunElevation);
+        for (const herd of herds) for (const member of herd.members) member.awake = awakeNowOf(member.activity ?? null, member.sleep);
+        for (const group of restingGroups) for (const member of group.members) member.awake = awakeNowOf(member.activity ?? null, member.sleep);
         tellState();
     };
 
@@ -1983,8 +1990,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** Its schedule as the status reads it (on it and wired), with a zoo's feeding time (Part C). */
     /** While its plans are still being worked out a few a frame (`warmStatus`): its status said plainly, as one off the schedule. */
     let statusLight = false;
-    const subjectOf = (entry: Entry): ScheduleSubject | null => {
-        const own = entry.sched;
+    const subjectOf = (entry: Entry, own: Sched | null | undefined = entry.sched): ScheduleSubject | null => {
         if (statusLight || !own || !world || !own.wired || entry.visitor) return null;
         const town = island && townIds.has(entry.animal.id) ? island : null;
         return {
@@ -1997,10 +2003,34 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             hoursAt: scheduleHours
         };
     };
+    /**
+     * Its day as its card's bars read it (bars truth, 2026-11-15: "I don't want fake values"): its own schedule, whether
+     * or not it is drawn moving on it now (with motion reduced, in a replay's act); one never on it (a micro animal, a
+     * hamlet resident, an underground one, one held off the water, a town animal kept still) has a schedule of its own
+     * made for its card alone, never drawn (`statusSchedOf`). Its schedule is a pure function of the shared clock and its
+     * id, so every viewer reads the same bars; only the drawing is skipped.
+     */
+    const statusScheds = new Map<string, {place: Placement; world: ScheduleWorld | null; town: ScheduleWorld | null; own: Sched | null}>();
+    const statusSchedOf = (entry: Entry): Sched | null => {
+        if (entry.sched || entry.visitor || !world) return null;
+        let known = statusScheds.get(entry.animal.id);
+        // (Made again when its place or the worlds change: a new snapshot, the town's world in.)
+        if (!known || known.place !== entry.place || known.world !== world || known.town !== townWorld) {
+            const own = makeSched(entry.animal, entry.place, entry.length, true);
+            // (Its own day, as it is: no group, no spacing from its prey; wired as it stands.)
+            if (own) own.wired = true;
+            known = {place: entry.place, world, town: townWorld, own};
+            statusScheds.set(entry.animal.id, known);
+            if (statusScheds.size > 64) statusScheds.delete(statusScheds.keys().next().value as string);
+        }
+        return known.own;
+    };
+    const barsSubjectOf = (entry: Entry): ScheduleSubject | null => subjectOf(entry, entry.sched ?? statusSchedOf(entry));
     const statusOf = (entry: Entry): ArkAnimalStatus => {
         const epoch = worldMs() / 1000;
         const animal = entry.animal;
         const subject = scheduled(entry) && !entry.act ? subjectOf(entry) : null;
+        const bars = barsSubjectOf(entry);
         const huntingNow = Boolean(subject && hunting.active && hunting.hunting(animal, epoch));
         const plan = subject ? scheduleStatus(subject, epoch, {trip: entry.sched?.trip ?? null, hunting: huntingNow}) : null;
         // Off the schedule (reduced motion, a micro or underground animal, a replay's act): its one state, said plainly.
@@ -2009,21 +2039,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const record: ArkStatusLogEntry[] = [arkOriginEntry(animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null}))];
         // How fed it is and its energy over its day (card truth, 2026-11-13): from its own schedule, its eating and waking
         // slots (awake at its slot's start, as the schedule reads it); a kill of its on record (its log's meals) fills it.
-        const fed = subject ? scheduleFed(subject, epoch, notes.filter((note) => note.kind === "meal").map((note) => note.at / 1000)) : null;
-        const energy = subject ? energyOf(subject, epoch) : null;
+        // (A kill of its, or a step's meal for it, `fed` with source step: each fills it from that moment.)
+        const fed = bars ? scheduleFed(bars, epoch, notes.filter((note) => note.kind === "meal" || note.kind === "stepFed").map((note) => note.at / 1000)) : null;
+        const energy = bars ? energyOf(bars, epoch) : null;
         return {
             id: animal.id,
             activity,
             since: plan?.since ?? null,
             goal: plan?.goal ?? null,
             log: arkStatusLog(plan?.log ?? [], record),
-            bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), fed, energy})
+            bars: arkStatusBars({condition: animal.condition, arkDay: arkDayNow(current, Date.now()), fed, energy, bornDay: animal.born_ark_day ?? null, lifespanDays: animal.lifespan_days ?? null, lifespanEstimate: animal.lifespan_estimate === true})
         };
     };
     const energyOf = (subject: ScheduleSubject, epoch: number) => {
         const offset = slotOffset(subject.id);
         const slotStartOf = (t: number) => Math.floor((t + offset) / SLOT_SECONDS) * SLOT_SECONDS - offset;
-        return arkEnergy((t) => scheduleAwakeAt(subject.profile, subject.activity, subject.hoursAt(slotStartOf(t))), epoch, SLOT_SECONDS, slotStartOf);
+        const sleep = subject.animalAt(epoch).sleep;
+        return arkEnergy((t) => scheduleAwakeAt(subject.profile, subject.activity, subject.hoursAt(slotStartOf(t)), sleep), epoch, SLOT_SECONDS, slotStartOf);
     };
     /** The selected animal's status as last worked out (about once a second), and what was last told. */
     let selectedStatus: ArkAnimalStatus | null = null;
@@ -2050,8 +2082,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** The status shown is still the light one (or the one from before a re-wiring): asked again every frame. */
     let statusPending = false;
     const warmStatus = (entry: Entry): boolean => {
-        const subject = options.recording || !scheduled(entry) || entry.act ? null : subjectOf(entry);
+        const subject = options.recording ? null : barsSubjectOf(entry);
         if (!subject) return true;
+        // (Its card's "Now" from its plans only while it is drawn on its schedule; its bars from its day either way.)
+        const drawn = scheduled(entry) && !entry.act;
         const generation = behaviourSchedule.scheduleGeneration();
         if (statusWarm && statusWarm.id === subject.id && statusWarm.generation === generation && statusWarm.world === subject.world) return true;
         if (statusWarming?.id !== subject.id) statusWarming = {id: subject.id, runs: 0};
@@ -2071,7 +2105,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const epoch = worldMs() / 1000;
             try {
                 scheduleFed(sliced, epoch, []);
-                scheduleStatus(sliced, epoch, {});
+                if (drawn) scheduleStatus(sliced, epoch, {});
             } catch (error) {
                 if (error === STATUS_STOP) return false;
                 throw error;
@@ -2226,7 +2260,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!animals.length) return;
             const members = animals.map((animal) => {
                 const place = places.get(animal.id)!;
-                return {id: animal.id, x: place.x, z: place.z, ground: place.ground, yaw: place.yaw, water: place.water, phase: phaseOf(animal.id), mine: animal.mine, awake: true, activity: animal.activity ?? null};
+                return {id: animal.id, x: place.x, z: place.z, ground: place.ground, yaw: place.yaw, water: place.water, phase: phaseOf(animal.id), mine: animal.mine, awake: true, activity: animal.activity ?? null, sleep: arkSleepOf(animal)};
             });
             const cx = members.reduce((sum, m) => sum + m.x, 0) / members.length;
             const cz = members.reduce((sum, m) => sum + m.z, 0) / members.length;
@@ -2292,7 +2326,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const place = places.get(animal.id)!;
                 // (In a tank: at its loop's point and depth at a fixed moment, so a tank's figures spread through its water.)
                 const at = isl?.figurePose(animal.id, body.display) ?? null;
-                return {id: animal.id, x: at?.x ?? place.x, z: at?.z ?? place.z, ground: place.ground, yaw: at?.yaw ?? place.yaw, water: false, phase: phaseOf(animal.id), mine: animal.mine, awake: isAwake(animal.activity ?? null, sunElevation), activity: animal.activity ?? null};
+                return {id: animal.id, x: at?.x ?? place.x, z: at?.z ?? place.z, ground: place.ground, yaw: at?.yaw ?? place.yaw, water: false, phase: phaseOf(animal.id), mine: animal.mine, awake: awakeNowOf(animal.activity ?? null, arkSleepOf(animal)), activity: animal.activity ?? null, sleep: arkSleepOf(animal)};
             });
             let x0 = Infinity;
             let x1 = -Infinity;

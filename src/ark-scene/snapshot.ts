@@ -62,6 +62,11 @@ function animal(raw: unknown): ArkAnimal | null {
     if (generation !== null) life.generation = generation;
     if (row.condition === "well_fed" || row.condition === "hungry" || row.condition === "old") life.condition = row.condition;
     if (typeof row.born_ark_day === "number" && Number.isFinite(row.born_ark_day)) life.born_ark_day = row.born_ark_day;
+    // Its kind's wild lifespan (the age bar), when the server sends one.
+    if (typeof row.lifespan_days === "number" && Number.isFinite(row.lifespan_days) && row.lifespan_days > 0) {
+        life.lifespan_days = row.lifespan_days;
+        life.lifespan_estimate = row.lifespan_estimate === true;
+    }
     if ("activity" in row) life.activity = arkActivity(row.activity);
     if (row.sociality === "solitary" || row.sociality === "pair" || row.sociality === "group") life.sociality = row.sociality;
     if (bringers.length) life.bringers = bringers;

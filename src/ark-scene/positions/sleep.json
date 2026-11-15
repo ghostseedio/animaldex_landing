@@ -1,0 +1,674 @@
+{
+ "v": 1,
+ "about": "Hours of sleep a day for the Ark's species active at any hour (scripts/ark/generate_sleep_hours.py; positions.ts sleepWindows places them in bouts by each animal's id). 0: does not sleep. Copied byte for byte to the web.",
+ "hours": {
+  "03deaaab-3aec-4097-9040-8d94a6b7b6f0": 8.0,
+  "04e33b21-c6fe-42dd-b98c-7dcfb2105aba": 14.4,
+  "07ee7043-4381-4918-a64f-a8b9d623cb9f": 10.0,
+  "083610be-de4f-5ebc-b52d-0010644beb62": 8.0,
+  "089ea7b2-e358-4675-83fd-98f24bd99de3": 8.0,
+  "08eb6ca9-f304-4f88-93f7-eec838cee4f3": 8.0,
+  "0913bcec-6a99-4d89-98af-2fb4adc700c1": 0.0,
+  "0925d486-070a-4f4c-84cb-dc770434dc1b": 10.1,
+  "0a29f000-6fa2-45ec-bb7c-fec4c8c8a950": 8.0,
+  "0b962924-9590-4efb-a53c-b006ab784e1c": 8.0,
+  "0c4c4805-380d-418a-ae4d-ee3c7a2efa38": 8.0,
+  "0c568f79-09ea-44dd-be34-a1033d8f150c": 8.0,
+  "0d6921fe-368f-4fa1-bfd2-81b4d37134d6": 8.0,
+  "0f607982-ca7d-412d-b2a8-9e786d2e1aa2": 12.5,
+  "1288f389-8d2b-49f4-9424-20c9318aa002": 9.1,
+  "12bddce2-0d71-47b8-b330-3e5338a5774f": 14.4,
+  "1407e26d-aa17-4af3-864d-7a69f66a5587": 10.0,
+  "191f2749-42e2-4209-a400-3bc9d2b49b00": 2.0,
+  "1bae8297-0db9-4a5b-a41d-a3e600bbb700": 10.0,
+  "1df1fca2-1ba4-44e0-99cc-2df6181b5eaf": 8.0,
+  "1fcbc05c-d0f3-4fd9-83ac-71167e620e59": 8.0,
+  "214651cf-d686-4b6c-8a22-994859215d5b": 12.5,
+  "21e20ddd-60f6-4a84-8fe1-82579a54aeb8": 10.0,
+  "22a10b70-bfdb-4c91-b992-6be181957973": 8.0,
+  "266b4ae0-449c-47ab-8590-e24a77c9130e": 10.0,
+  "2823d388-5cfb-43a3-9bba-624e9bce66ee": 8.0,
+  "298a240f-9146-4dfe-868b-4e63e9217151": 10.0,
+  "2a34e9f1-9a51-4676-bd42-57622ed970b6": 6.5,
+  "2b985407-dd16-4c32-aab2-b1ef2c93a45a": 10.0,
+  "2bab029f-bcce-4817-9257-b87175438818": 8.0,
+  "2bc1771f-5aaa-4920-b8af-95061ca07be2": 10.0,
+  "2caf64a8-634b-46a5-8255-76d8497a0b0e": 0.0,
+  "2de0fbc5-8e0e-4214-8764-f3dd2611bfce": 10.0,
+  "2e85b3a8-2553-4f69-b344-17d686759957": 10.0,
+  "2ea171c8-bdc1-42b5-b301-d78aa088b9e9": 8.0,
+  "2f447b26-e66c-47f2-8496-38648a71ff4f": 14.4,
+  "310e8909-feaa-4290-b562-b526a80cf43d": 8.0,
+  "32415e59-80a9-4cd3-b7df-6737c3fd3590": 10.0,
+  "32c83d3c-c945-4469-bed0-616a843c56ba": 8.0,
+  "342435e7-41c5-4492-a87f-30807041f3df": 8.0,
+  "34b58969-3a77-4a6a-b5ff-44dbc12e6d72": 8.0,
+  "34c1ff7e-cec0-4c4c-b110-9798fbf1fdc5": 8.0,
+  "36eb12a4-b5f8-4247-a9be-b02c7525b7b5": 10.0,
+  "375e96bc-1f2a-4178-8ba0-aa0ac3596d08": 8.0,
+  "3864fbed-7317-4b38-ac5f-1d1e39dd8537": 8.0,
+  "3868f85b-2c55-4653-bbc4-02098923d17e": 8.0,
+  "3baa14d1-7037-468a-af15-e33ae8f4a060": 8.0,
+  "3c0c5046-1659-41aa-92fd-27108804de86": 8.0,
+  "3ce0223c-328f-4c58-a179-b103c8b68173": 10.0,
+  "3d5541a5-56c2-4286-9e21-55dd759295ad": 10.0,
+  "3d6e6d01-9979-4e2e-8598-3ac9ce42eaeb": 10.0,
+  "3df16ec2-3812-4785-8f77-ca846fe7e247": 8.0,
+  "3e2f4d77-f261-473d-9bcf-139083b20c5d": 3.0,
+  "3ee80e06-ce44-4f0f-ba8e-d88526d622a9": 3.0,
+  "4031b3f1-b319-4ac0-9fec-35c4276f4b9f": 8.0,
+  "4057dcb8-9052-4bc9-998e-4b354fe34abe": 10.0,
+  "41c0f831-57be-4efa-ba04-c4c804ab49d7": 10.0,
+  "4387753a-cd40-45b8-9613-711dbb815b5d": 10.6,
+  "46cc9430-75e3-4106-a98c-9a809d3fb2d4": 10.0,
+  "4892e0a6-9384-4ca8-8baf-a14f48a52769": 5.2,
+  "489eb864-7a3e-47b9-ac54-6fc14e69048e": 8.7,
+  "495921bd-99e0-4d73-8167-ede096731c83": 5.2,
+  "49bba3bc-7cfb-4a7c-a695-672033504e75": 10.0,
+  "4d3ce75e-ef3b-4538-8e7a-e1545bada8ec": 5.2,
+  "51854f58-8b5c-4af3-bc33-374b8bf96aa7": 6.5,
+  "52e2a789-d7be-4da0-87a3-d199d4eaacc2": 10.1,
+  "5336fbdf-1c98-412d-b9d9-07117b6dc160": 14.4,
+  "53a40af4-8088-436a-8292-9693e8558b71": 8.0,
+  "54b356e1-628a-4f43-a331-f7c681c6ecd4": 6.3,
+  "55a84769-9a64-436d-9b44-a66dc9af21eb": 4.8,
+  "565a6b8e-4e8b-4bfc-a5b4-f194c5cd753d": 5.2,
+  "56939801-883f-45d6-9c5e-cfb273c78a96": 10.0,
+  "56c7c3ab-c8a8-497e-8b10-9cd7f169c854": 10.0,
+  "56f70794-4408-4f0a-b868-1c2d04496a01": 10.1,
+  "573f312b-952f-49d4-a8f7-31cbf06bc1dd": 4.4,
+  "57b848b6-5287-4d4e-a615-63e5cb883bbd": 2.0,
+  "5971167b-6ee0-4f0c-9adb-09e31d2b2c53": 10.0,
+  "5ce422d1-b993-487f-94d0-421a4587391f": 8.0,
+  "5e551535-9996-4b3d-88fc-5733e3934d79": 8.0,
+  "60c9cee8-f3b4-4f32-bfa6-6e7ec5b65449": 10.0,
+  "61c3a5eb-8d26-4ad2-9a42-b7e652d8f6f1": 10.0,
+  "652bdcc0-0419-466a-b881-02087ba56b03": 10.0,
+  "65fb9f27-949d-4a85-aa79-913316b58f0a": 8.0,
+  "69463005-93be-48b7-844d-8939a9737a5d": 8.0,
+  "696281b7-35ee-4f2a-b571-cbd4dd3d7522": 10.0,
+  "6d45b9be-a6c7-448f-a0f7-e097e0b72f20": 8.0,
+  "6d4c2b31-82c2-4716-a24a-f1889e9ca674": 8.0,
+  "6f7b0ca4-6fad-4a96-880e-cee3e1696da5": 2.0,
+  "6fae3226-01f9-4a60-8650-24ce6883863b": 12.5,
+  "70907582-ca24-5f74-bdd6-8e0563101882": 4.8,
+  "721af43e-dfd9-40bb-be67-039ade37e11b": 0.0,
+  "727b3b3f-9373-4ad3-b327-e22ad3197579": 10.0,
+  "73baaab8-a45d-44a6-a208-8ac38aab8100": 9.6,
+  "75b4678f-22b3-430d-9c50-f5d904fc0ae2": 8.0,
+  "76681aa3-8074-4bf9-8c9e-34aa7eabcb1d": 4.4,
+  "775ac069-d15b-4f19-8a90-ccdf3ad7a29f": 10.0,
+  "79b986aa-37e3-4cf0-818d-17cfe11b8901": 12.5,
+  "7b2bb109-f113-4976-8adf-c0c79fa36dfb": 10.0,
+  "7b99b5c7-708b-49f1-a7df-088bf43e7167": 10.0,
+  "7d63b13d-d274-4a5d-983c-1d5aa9647583": 10.0,
+  "7dd67880-4152-4702-ac39-93e252800ed8": 8.4,
+  "7ec85a9d-7088-427d-a6c4-0b3d48d80c73": 12.5,
+  "82508ae7-c888-44c7-9cb1-d1a93ed7d2fe": 10.0,
+  "82b9245d-fef6-4a02-905f-77e017107a0c": 8.0,
+  "832e1e7e-8059-4d6b-8d05-4b9101eb9ce5": 10.1,
+  "85fd945d-1452-4b1d-b3e8-3d737b2eac6c": 10.0,
+  "8b73d72b-cd5a-44c0-8b17-6326aa37092a": 8.0,
+  "8c188f45-df40-4c7b-b8d0-4fe79f35f1a5": 4.8,
+  "8c1b93ad-4f4f-49b7-b401-fd4ecbcb6691": 5.2,
+  "8f795df4-31d5-411e-85cb-9f978f68f86e": 8.0,
+  "9108a9e1-cf29-4b80-b227-71fce2c02a88": 8.0,
+  "92159faf-213d-4eae-b2cf-24d595bc2264": 10.0,
+  "92f3b2ca-08f2-43fa-ab82-4b5073951894": 4.0,
+  "948715a6-8307-438b-a05e-1851aa81d57c": 10.1,
+  "94b20d06-3ffd-430c-81ad-f0393251a38f": 11.0,
+  "96a42dc5-227d-49a9-bbcd-e627dd37c385": 8.0,
+  "97108390-ef0f-44d7-a16a-0ddb6f6f76da": 10.0,
+  "97daf592-8f28-42bc-aa2d-72c07c7c0fd3": 10.0,
+  "9838bbdb-8b82-4c85-a9c2-358745a57880": 12.5,
+  "992cf5df-158e-439b-bb6b-3f6d15f12d97": 8.0,
+  "9c3bb2b6-2c7f-442e-a864-1c37407c7f7b": 8.0,
+  "9cb5381a-b221-42cb-aeca-a555db55ba59": 5.2,
+  "9cc564b7-8823-499e-a416-cfeb89e5a7df": 14.4,
+  "9de72ffb-75c1-41fa-8e49-6e6d46d24ff0": 4.8,
+  "9eaae4e6-fef1-4e2c-bd3c-e4e659812b40": 10.0,
+  "9fbbdfdb-4b12-4907-9bae-4947679ef2c7": 0.0,
+  "9fbfb9ff-2eb2-43d1-af5e-bd61356876b7": 8.0,
+  "a1b2c3d4-e5f6-4789-a012-3456789abcde": 4.8,
+  "a2b8639e-5036-4777-bd27-7096dd429755": 5.2,
+  "a34b06af-7ee7-4b07-8b5b-850313206e1c": 4.8,
+  "a41ac48b-05a8-4101-8401-4f4338e7b8ad": 10.6,
+  "a8126cf2-4dab-4686-b78c-080eee4b1f92": 5.2,
+  "a8fdd815-e3dd-4824-9365-90df97da39fa": 8.0,
+  "a9063db5-fd01-462b-a0aa-f98a80378699": 10.0,
+  "a90f96dd-ce3b-4b93-b8e6-74a5837858d8": 6.5,
+  "a9257dd9-0baa-45a3-b3f0-4846577b6ce9": 8.0,
+  "a9389cc2-dbd1-4709-9488-8aaba5540bd4": 9.6,
+  "ae22d800-d14c-4d58-a4ca-a730d3c50120": 10.0,
+  "af34b2a8-a7b5-4995-b469-7e8b4ca5f6ee": 8.0,
+  "b085e110-0e93-4301-8d02-03727f6d339d": 2.0,
+  "b2c3d4e5-f6a7-4890-b123-456789abcdef": 4.8,
+  "b2cbfb3a-8e7b-49a5-8027-e9afcfe8aa88": 4.8,
+  "b2e76645-76df-473f-938f-ea63c4a3d22a": 8.0,
+  "b3090597-8fdd-4783-9876-239dd44553b8": 8.0,
+  "b3cab09c-bbf3-438f-9975-f9131aaaa70f": 8.0,
+  "b65ecb44-4684-4282-ad03-385b8717be49": 8.0,
+  "b85681d4-5a8a-4e9a-b536-c5b244144827": 10.0,
+  "b90ca8bb-4327-4a4f-8bda-b353517cb33d": 8.0,
+  "b9181e4f-213c-439e-903b-29b8a7381e9e": 8.0,
+  "b921dc74-318a-4aaa-904c-fa4bebdef929": 12.5,
+  "b966428f-0342-463e-a7a6-d85599553007": 8.0,
+  "ba62d117-b5ec-4b1b-8fe4-6cd14e80e17c": 15.6,
+  "bb156035-5353-40ee-876c-9ef22d78fac5": 10.0,
+  "bb3a085f-cd13-4073-9ceb-55e9df0428d7": 4.6,
+  "bd675401-8a57-46d2-a271-7aa9931fa60c": 8.6,
+  "be947cdb-098f-43fa-ba2a-4a5e8cbc08fd": 8.0,
+  "bfb9cc8e-8ca3-4f90-a560-cde3752f2004": 6.2,
+  "c3bc359b-fd51-4e93-b6ff-16354b2c5816": 10.0,
+  "c77f8bc4-c073-4a77-ad24-788b76fbbbda": 2.9,
+  "c9e38351-7152-44fa-859c-c1630ba50802": 10.0,
+  "cb12e181-472e-40a1-bbd0-24cef35168f9": 10.0,
+  "cbe61d7b-30a4-476e-87a7-3de630a8fed7": 8.0,
+  "cc69b227-85ff-450c-92fa-5f8832d50867": 8.0,
+  "cfca7a72-5d95-4981-84a9-5b7d68945fd5": 6.5,
+  "d07bb308-0f93-4c70-bd3c-53a9c720282e": 10.0,
+  "d1bcf4da-2eb2-44ad-a1b4-db6405016440": 8.0,
+  "d4caa55a-a65b-4823-9e81-cc9e28e3912a": 10.0,
+  "d77cbc9f-410f-46d4-bf84-fdb33351b9df": 8.0,
+  "da419727-8089-486d-a583-ea687d6fbe5a": 8.0,
+  "da6c2020-f165-47d3-8c0a-5218b5d306dd": 4.8,
+  "dbde4eb6-cb0c-4de6-b89e-53267987f13a": 8.0,
+  "ddb76140-1078-47a6-a3b4-48059b25ba94": 10.3,
+  "ddbc5e18-9d6c-4fe4-838c-2b655e812ece": 10.0,
+  "ddd1950b-b777-4239-807b-2a947c82495d": 10.0,
+  "de0d952c-f317-45df-b09c-5bc4ea7600d9": 8.0,
+  "df5e29ce-bbbd-42c1-91b2-9eb8ac31db9d": 8.0,
+  "e1cce964-e4d5-497d-a891-ee8364c37618": 10.0,
+  "e69ad801-8ad8-484d-b1c6-5de980fd374d": 8.0,
+  "e6d1605b-fff5-4b9e-a2b6-81e912197828": 10.0,
+  "e70ae3ba-dfc7-4f03-b677-1b5d1c3b1d0a": 4.8,
+  "e75d8baa-8492-44fd-a116-e6b3d8f0682c": 5.2,
+  "e8d9e50f-6add-41b4-9aef-b0b89bfd156b": 8.0,
+  "eb72c01b-3573-4e99-9408-78d9e029ab7e": 10.6,
+  "eed03d4e-eb5a-44ca-9589-67bec5263eba": 8.0,
+  "f198f99c-979a-4a31-922a-f0000a5c18c6": 5.2,
+  "f236cc4d-ad80-4b38-a29d-baed321a2d24": 6.2,
+  "f25445a3-0b55-472f-9c28-df6e8a4918af": 12.5,
+  "f2f2c627-dd0d-46c8-94b8-a168c8d30eff": 5.2,
+  "f545f29f-248d-4b30-b584-cd8e0d55d4c6": 8.0,
+  "fda49e28-832f-4fa4-94b1-e1d5c80f50da": 8.0
+ },
+ "rule": {
+  "03deaaab-3aec-4097-9040-8d94a6b7b6f0": "class Ophiuroidea",
+  "04e33b21-c6fe-42dd-b98c-7dcfb2105aba": "family Mustelidae",
+  "07ee7043-4381-4918-a64f-a8b9d623cb9f": "class Amphibia",
+  "083610be-de4f-5ebc-b52d-0010644beb62": "class Elasmobranchii",
+  "089ea7b2-e358-4675-83fd-98f24bd99de3": "class Echinoidea",
+  "08eb6ca9-f304-4f88-93f7-eec838cee4f3": "fish order Perciformes",
+  "0913bcec-6a99-4d89-98af-2fb4adc700c1": "class Demospongiae",
+  "0925d486-070a-4f4c-84cb-dc770434dc1b": "family Ursidae",
+  "0a29f000-6fa2-45ec-bb7c-fec4c8c8a950": "class Elasmobranchii",
+  "0b962924-9590-4efb-a53c-b006ab784e1c": "class Ascidiacea",
+  "0c4c4805-380d-418a-ae4d-ee3c7a2efa38": "class Scyphozoa",
+  "0c568f79-09ea-44dd-be34-a1033d8f150c": "class Holothuroidea",
+  "0d6921fe-368f-4fa1-bfd2-81b4d37134d6": "fish order Anguilliformes",
+  "0f607982-ca7d-412d-b2a8-9e786d2e1aa2": "order Rodentia",
+  "1288f389-8d2b-49f4-9424-20c9318aa002": "family Suidae",
+  "12bddce2-0d71-47b8-b330-3e5338a5774f": "family Mustelidae",
+  "1407e26d-aa17-4af3-864d-7a69f66a5587": "class Amphibia",
+  "191f2749-42e2-4209-a400-3bc9d2b49b00": "family Elephantidae",
+  "1bae8297-0db9-4a5b-a41d-a3e600bbb700": "class Insecta",
+  "1df1fca2-1ba4-44e0-99cc-2df6181b5eaf": "fish order Elopiformes",
+  "1fcbc05c-d0f3-4fd9-83ac-71167e620e59": "class Dipneusti",
+  "214651cf-d686-4b6c-8a22-994859215d5b": "order Rodentia",
+  "21e20ddd-60f6-4a84-8fe1-82579a54aeb8": "class Aves",
+  "22a10b70-bfdb-4c91-b992-6be181957973": "class Elasmobranchii",
+  "266b4ae0-449c-47ab-8590-e24a77c9130e": "class Testudines",
+  "2823d388-5cfb-43a3-9bba-624e9bce66ee": "fish order Scorpaeniformes",
+  "298a240f-9146-4dfe-868b-4e63e9217151": "class Amphibia",
+  "2a34e9f1-9a51-4676-bd42-57622ed970b6": "family Dugongidae",
+  "2b985407-dd16-4c32-aab2-b1ef2c93a45a": "class Testudines",
+  "2bab029f-bcce-4817-9257-b87175438818": "class Malacostraca",
+  "2bc1771f-5aaa-4920-b8af-95061ca07be2": "class Arachnida",
+  "2caf64a8-634b-46a5-8255-76d8497a0b0e": "class Demospongiae",
+  "2de0fbc5-8e0e-4214-8764-f3dd2611bfce": "class Aves",
+  "2e85b3a8-2553-4f69-b344-17d686759957": "class Crocodylia",
+  "2ea171c8-bdc1-42b5-b301-d78aa088b9e9": "fish order Scorpaeniformes",
+  "2f447b26-e66c-47f2-8496-38648a71ff4f": "family Mustelidae",
+  "310e8909-feaa-4290-b562-b526a80cf43d": "class Gastropoda",
+  "32415e59-80a9-4cd3-b7df-6737c3fd3590": "class Aves",
+  "32c83d3c-c945-4469-bed0-616a843c56ba": "fish order Perciformes",
+  "342435e7-41c5-4492-a87f-30807041f3df": "class Anthozoa",
+  "34b58969-3a77-4a6a-b5ff-44dbc12e6d72": "class Eurotatoria",
+  "34c1ff7e-cec0-4c4c-b110-9798fbf1fdc5": "fish order Syngnathiformes",
+  "36eb12a4-b5f8-4247-a9be-b02c7525b7b5": "class Insecta",
+  "375e96bc-1f2a-4178-8ba0-aa0ac3596d08": "class Echinoidea",
+  "3864fbed-7317-4b38-ac5f-1d1e39dd8537": "class Malacostraca",
+  "3868f85b-2c55-4653-bbc4-02098923d17e": "class Gastropoda",
+  "3baa14d1-7037-468a-af15-e33ae8f4a060": "fish order Perciformes",
+  "3c0c5046-1659-41aa-92fd-27108804de86": "class Elasmobranchii",
+  "3ce0223c-328f-4c58-a179-b103c8b68173": "class Insecta",
+  "3d5541a5-56c2-4286-9e21-55dd759295ad": "class Aves",
+  "3d6e6d01-9979-4e2e-8598-3ac9ce42eaeb": "class Collembola",
+  "3df16ec2-3812-4785-8f77-ca846fe7e247": "class Scyphozoa",
+  "3e2f4d77-f261-473d-9bcf-139083b20c5d": "family Cervidae",
+  "3ee80e06-ce44-4f0f-ba8e-d88526d622a9": "family Cervidae",
+  "4031b3f1-b319-4ac0-9fec-35c4276f4b9f": "class Elasmobranchii",
+  "4057dcb8-9052-4bc9-998e-4b354fe34abe": "class Squamata",
+  "41c0f831-57be-4efa-ba04-c4c804ab49d7": "class Aves",
+  "4387753a-cd40-45b8-9613-711dbb815b5d": "family Bathyergidae",
+  "46cc9430-75e3-4106-a98c-9a809d3fb2d4": "class Insecta",
+  "4892e0a6-9384-4ca8-8baf-a14f48a52769": "order Cetacea",
+  "489eb864-7a3e-47b9-ac54-6fc14e69048e": "family Otariidae",
+  "495921bd-99e0-4d73-8167-ede096731c83": "order Cetacea",
+  "49bba3bc-7cfb-4a7c-a695-672033504e75": "class Arachnida",
+  "4d3ce75e-ef3b-4538-8e7a-e1545bada8ec": "order Cetacea",
+  "51854f58-8b5c-4af3-bc33-374b8bf96aa7": "family Trichechidae",
+  "52e2a789-d7be-4da0-87a3-d199d4eaacc2": "family Ursidae",
+  "5336fbdf-1c98-412d-b9d9-07117b6dc160": "order Pilosa",
+  "53a40af4-8088-436a-8292-9693e8558b71": "class Cephalopoda",
+  "54b356e1-628a-4f43-a331-f7c681c6ecd4": "family Eupleridae",
+  "55a84769-9a64-436d-9b44-a66dc9af21eb": "family Termitidae",
+  "565a6b8e-4e8b-4bfc-a5b4-f194c5cd753d": "order Cetacea",
+  "56939801-883f-45d6-9c5e-cfb273c78a96": "class Aves",
+  "56c7c3ab-c8a8-497e-8b10-9cd7f169c854": "class Testudines",
+  "56f70794-4408-4f0a-b868-1c2d04496a01": "class Mammalia",
+  "573f312b-952f-49d4-a8f7-31cbf06bc1dd": "family Rhinocerotidae",
+  "57b848b6-5287-4d4e-a615-63e5cb883bbd": "family Elephantidae",
+  "5971167b-6ee0-4f0c-9adb-09e31d2b2c53": "class Aves",
+  "5ce422d1-b993-487f-94d0-421a4587391f": "fish order Lophiiformes",
+  "5e551535-9996-4b3d-88fc-5733e3934d79": "class Cephalopoda",
+  "60c9cee8-f3b4-4f32-bfa6-6e7ec5b65449": "class Arachnida",
+  "61c3a5eb-8d26-4ad2-9a42-b7e652d8f6f1": "class Squamata",
+  "652bdcc0-0419-466a-b881-02087ba56b03": "class Aves",
+  "65fb9f27-949d-4a85-aa79-913316b58f0a": "class Maxillopoda",
+  "69463005-93be-48b7-844d-8939a9737a5d": "class Bivalvia",
+  "696281b7-35ee-4f2a-b571-cbd4dd3d7522": "class Testudines",
+  "6d45b9be-a6c7-448f-a0f7-e097e0b72f20": "class Gastropoda",
+  "6d4c2b31-82c2-4716-a24a-f1889e9ca674": "fish order Osmeriformes",
+  "6f7b0ca4-6fad-4a96-880e-cee3e1696da5": "family Elephantidae",
+  "6fae3226-01f9-4a60-8650-24ce6883863b": "order Rodentia",
+  "70907582-ca24-5f74-bdd6-8e0563101882": "family Termitidae",
+  "721af43e-dfd9-40bb-be67-039ade37e11b": "not an animal",
+  "727b3b3f-9373-4ad3-b327-e22ad3197579": "class Amphibia",
+  "73baaab8-a45d-44a6-a208-8ac38aab8100": "family Bradypodidae",
+  "75b4678f-22b3-430d-9c50-f5d904fc0ae2": "class Elasmobranchii",
+  "76681aa3-8074-4bf9-8c9e-34aa7eabcb1d": "family Rhinocerotidae",
+  "775ac069-d15b-4f19-8a90-ccdf3ad7a29f": "class Aves",
+  "79b986aa-37e3-4cf0-818d-17cfe11b8901": "order Rodentia",
+  "7b2bb109-f113-4976-8adf-c0c79fa36dfb": "class Arachnida",
+  "7b99b5c7-708b-49f1-a7df-088bf43e7167": "class Aves",
+  "7d63b13d-d274-4a5d-983c-1d5aa9647583": "class Insecta",
+  "7dd67880-4152-4702-ac39-93e252800ed8": "family Leporidae",
+  "7ec85a9d-7088-427d-a6c4-0b3d48d80c73": "family Canidae",
+  "82508ae7-c888-44c7-9cb1-d1a93ed7d2fe": "class Aves",
+  "82b9245d-fef6-4a02-905f-77e017107a0c": "class Cephalopoda",
+  "832e1e7e-8059-4d6b-8d05-4b9101eb9ce5": "family Ursidae",
+  "85fd945d-1452-4b1d-b3e8-3d737b2eac6c": "class Aves",
+  "8b73d72b-cd5a-44c0-8b17-6326aa37092a": "fish order Perciformes",
+  "8c188f45-df40-4c7b-b8d0-4fe79f35f1a5": "family Formicidae",
+  "8c1b93ad-4f4f-49b7-b401-fd4ecbcb6691": "order Cetacea",
+  "8f795df4-31d5-411e-85cb-9f978f68f86e": "class Malacostraca",
+  "9108a9e1-cf29-4b80-b227-71fce2c02a88": "class Malacostraca",
+  "92159faf-213d-4eae-b2cf-24d595bc2264": "class Insecta",
+  "92f3b2ca-08f2-43fa-ab82-4b5073951894": "family Bovidae",
+  "948715a6-8307-438b-a05e-1851aa81d57c": "family Ursidae",
+  "94b20d06-3ffd-430c-81ad-f0393251a38f": "family Spheniscidae",
+  "96a42dc5-227d-49a9-bbcd-e627dd37c385": "class Elasmobranchii",
+  "97108390-ef0f-44d7-a16a-0ddb6f6f76da": "class Amphibia",
+  "97daf592-8f28-42bc-aa2d-72c07c7c0fd3": "class Arachnida",
+  "9838bbdb-8b82-4c85-a9c2-358745a57880": "order Rodentia",
+  "992cf5df-158e-439b-bb6b-3f6d15f12d97": "class Polychaeta",
+  "9c3bb2b6-2c7f-442e-a864-1c37407c7f7b": "class Gastropoda",
+  "9cb5381a-b221-42cb-aeca-a555db55ba59": "order Cetacea",
+  "9cc564b7-8823-499e-a416-cfeb89e5a7df": "family Mustelidae",
+  "9de72ffb-75c1-41fa-8e49-6e6d46d24ff0": "family Formicidae",
+  "9eaae4e6-fef1-4e2c-bd3c-e4e659812b40": "class Aves",
+  "9fbbdfdb-4b12-4907-9bae-4947679ef2c7": "class Hexactinellida",
+  "9fbfb9ff-2eb2-43d1-af5e-bd61356876b7": "class Elasmobranchii",
+  "a1b2c3d4-e5f6-4789-a012-3456789abcde": "family Formicidae",
+  "a2b8639e-5036-4777-bd27-7096dd429755": "order Cetacea",
+  "a34b06af-7ee7-4b07-8b5b-850313206e1c": "family Formicidae",
+  "a41ac48b-05a8-4101-8401-4f4338e7b8ad": "family Bathyergidae",
+  "a8126cf2-4dab-4686-b78c-080eee4b1f92": "order Cetacea",
+  "a8fdd815-e3dd-4824-9365-90df97da39fa": "class Malacostraca",
+  "a9063db5-fd01-462b-a0aa-f98a80378699": "class Insecta",
+  "a90f96dd-ce3b-4b93-b8e6-74a5837858d8": "family Apidae",
+  "a9257dd9-0baa-45a3-b3f0-4846577b6ce9": "class Branchiopoda",
+  "a9389cc2-dbd1-4709-9488-8aaba5540bd4": "family Bradypodidae",
+  "ae22d800-d14c-4d58-a4ca-a730d3c50120": "class Aves",
+  "af34b2a8-a7b5-4995-b469-7e8b4ca5f6ee": "fish order Characiformes",
+  "b085e110-0e93-4301-8d02-03727f6d339d": "family Elephantidae",
+  "b2c3d4e5-f6a7-4890-b123-456789abcdef": "family Formicidae",
+  "b2cbfb3a-8e7b-49a5-8027-e9afcfe8aa88": "family Formicidae",
+  "b2e76645-76df-473f-938f-ea63c4a3d22a": "fish order Perciformes",
+  "b3090597-8fdd-4783-9876-239dd44553b8": "class Hydrozoa",
+  "b3cab09c-bbf3-438f-9975-f9131aaaa70f": "fish order Acipenseriformes",
+  "b65ecb44-4684-4282-ad03-385b8717be49": "fish order Perciformes",
+  "b85681d4-5a8a-4e9a-b536-c5b244144827": "class Insecta",
+  "b90ca8bb-4327-4a4f-8bda-b353517cb33d": "class Hydrozoa",
+  "b9181e4f-213c-439e-903b-29b8a7381e9e": "class Elasmobranchii",
+  "b921dc74-318a-4aaa-904c-fa4bebdef929": "family Canidae",
+  "b966428f-0342-463e-a7a6-d85599553007": "class Branchiopoda",
+  "ba62d117-b5ec-4b1b-8fe4-6cd14e80e17c": "family Tenrecidae",
+  "bb156035-5353-40ee-876c-9ef22d78fac5": "class Aves",
+  "bb3a085f-cd13-4073-9ceb-55e9df0428d7": "family Giraffidae",
+  "bd675401-8a57-46d2-a271-7aa9931fa60c": "family Tachyglossidae",
+  "be947cdb-098f-43fa-ba2a-4a5e8cbc08fd": "class Echinoidea",
+  "bfb9cc8e-8ca3-4f90-a560-cde3752f2004": "family Phocidae",
+  "c3bc359b-fd51-4e93-b6ff-16354b2c5816": "class Insecta",
+  "c77f8bc4-c073-4a77-ad24-788b76fbbbda": "family Equidae",
+  "c9e38351-7152-44fa-859c-c1630ba50802": "class Aves",
+  "cb12e181-472e-40a1-bbd0-24cef35168f9": "class Insecta",
+  "cbe61d7b-30a4-476e-87a7-3de630a8fed7": "fish order Perciformes",
+  "cc69b227-85ff-450c-92fa-5f8832d50867": "class Polychaeta",
+  "cfca7a72-5d95-4981-84a9-5b7d68945fd5": "family Trichechidae",
+  "d07bb308-0f93-4c70-bd3c-53a9c720282e": "class Aves",
+  "d1bcf4da-2eb2-44ad-a1b4-db6405016440": "class Tentaculata",
+  "d4caa55a-a65b-4823-9e81-cc9e28e3912a": "class Arachnida",
+  "d77cbc9f-410f-46d4-bf84-fdb33351b9df": "class Elasmobranchii",
+  "da419727-8089-486d-a583-ea687d6fbe5a": "class Elasmobranchii",
+  "da6c2020-f165-47d3-8c0a-5218b5d306dd": "family Formicidae",
+  "dbde4eb6-cb0c-4de6-b89e-53267987f13a": "fish order Beryciformes",
+  "ddb76140-1078-47a6-a3b4-48059b25ba94": "family Talpidae",
+  "ddbc5e18-9d6c-4fe4-838c-2b655e812ece": "class Squamata",
+  "ddd1950b-b777-4239-807b-2a947c82495d": "class Aves",
+  "de0d952c-f317-45df-b09c-5bc4ea7600d9": "class Pilidiophora",
+  "df5e29ce-bbbd-42c1-91b2-9eb8ac31db9d": "class Gastropoda",
+  "e1cce964-e4d5-497d-a891-ee8364c37618": "class Insecta",
+  "e69ad801-8ad8-484d-b1c6-5de980fd374d": "class Bivalvia",
+  "e6d1605b-fff5-4b9e-a2b6-81e912197828": "class Insecta",
+  "e70ae3ba-dfc7-4f03-b677-1b5d1c3b1d0a": "family Formicidae",
+  "e75d8baa-8492-44fd-a116-e6b3d8f0682c": "order Cetacea",
+  "e8d9e50f-6add-41b4-9aef-b0b89bfd156b": "class Maxillopoda",
+  "eb72c01b-3573-4e99-9408-78d9e029ab7e": "family Spalacidae",
+  "eed03d4e-eb5a-44ca-9589-67bec5263eba": "class Holothuroidea",
+  "f198f99c-979a-4a31-922a-f0000a5c18c6": "order Cetacea",
+  "f236cc4d-ad80-4b38-a29d-baed321a2d24": "family Phocidae",
+  "f25445a3-0b55-472f-9c28-df6e8a4918af": "family Felidae",
+  "f2f2c627-dd0d-46c8-94b8-a168c8d30eff": "order Cetacea",
+  "f545f29f-248d-4b30-b584-cd8e0d55d4c6": "class Elasmobranchii",
+  "fda49e28-832f-4fa4-94b1-e1d5c80f50da": "class Malacostraca"
+ },
+ "rules": {
+  "class Amphibia": {
+   "hours": 10.0,
+   "source": "estimate: rest as the reptiles; sleep-like rest in tree frogs (Hobson et al. 1968)"
+  },
+  "class Anthozoa": {
+   "hours": 8.0,
+   "source": "estimate: as the cnidarians (Nath et al. 2017)"
+  },
+  "class Arachnida": {
+   "hours": 10.0,
+   "source": "estimate: jumping spiders have sleep-like rest at night (Rößler et al. 2022, PNAS)"
+  },
+  "class Ascidiacea": {
+   "hours": 8.0,
+   "source": "estimate: invertebrate rest"
+  },
+  "class Aves": {
+   "hours": 10.0,
+   "source": "estimate: about 10 h across the birds measured, in short bouts (Roth, Lesku et al. 2006; Rattenborg 2006)"
+  },
+  "class Bivalvia": {
+   "hours": 8.0,
+   "source": "estimate: invertebrate rest, as the molluscs"
+  },
+  "class Branchiopoda": {
+   "hours": 8.0,
+   "source": "estimate: as the crustaceans (Ramón et al. 2004)"
+  },
+  "class Cephalopoda": {
+   "hours": 8.0,
+   "source": "estimate: octopuses have quiet and active sleep (Medeiros et al. 2021, iScience)"
+  },
+  "class Collembola": {
+   "hours": 10.0,
+   "source": "estimate: as the insects"
+  },
+  "class Crocodylia": {
+   "hours": 10.0,
+   "source": "estimate: as the reptiles (Libourel & Herrel 2016)"
+  },
+  "class Demospongiae": {
+   "hours": 0.0,
+   "source": "a sponge has no nervous system and does not sleep"
+  },
+  "class Dipneusti": {
+   "hours": 8.0,
+   "source": "estimate: as the fish"
+  },
+  "class Echinoidea": {
+   "hours": 8.0,
+   "source": "estimate: invertebrate rest"
+  },
+  "class Elasmobranchii": {
+   "hours": 8.0,
+   "source": "estimate: rest periods; sleep shown in the draughtsboard shark (Kelly et al. 2022, Biol Lett)"
+  },
+  "class Eurotatoria": {
+   "hours": 8.0,
+   "source": "estimate: invertebrate rest"
+  },
+  "class Gastropoda": {
+   "hours": 8.0,
+   "source": "estimate: sea hares have a sleep-like state (Vorster et al. 2014)"
+  },
+  "class Hexactinellida": {
+   "hours": 0.0,
+   "source": "a sponge has no nervous system and does not sleep"
+  },
+  "class Holothuroidea": {
+   "hours": 8.0,
+   "source": "estimate: invertebrate rest"
+  },
+  "class Hydrozoa": {
+   "hours": 8.0,
+   "source": "estimate: Hydra has a sleep-like state (Kanaya et al. 2020, Sci Adv)"
+  },
+  "class Insecta": {
+   "hours": 10.0,
+   "source": "estimate: fruit flies sleep about 10 to 12 h a day (Hendricks et al. 2000; Shaw et al. 2000)"
+  },
+  "class Malacostraca": {
+   "hours": 8.0,
+   "source": "estimate: crayfish have a sleep-like state (Ramón et al. 2004, PNAS 101)"
+  },
+  "class Mammalia": {
+   "hours": 10.1,
+   "source": "estimate: the middle of the mammals measured, about 10 h (msleep)"
+  },
+  "class Maxillopoda": {
+   "hours": 8.0,
+   "source": "estimate: as the crustaceans (Ramón et al. 2004)"
+  },
+  "class Ophiuroidea": {
+   "hours": 8.0,
+   "source": "estimate: invertebrate rest"
+  },
+  "class Pilidiophora": {
+   "hours": 8.0,
+   "source": "estimate: invertebrate rest"
+  },
+  "class Polychaeta": {
+   "hours": 8.0,
+   "source": "estimate: invertebrate rest"
+  },
+  "class Scyphozoa": {
+   "hours": 8.0,
+   "source": "estimate: the jellyfish Cassiopea sleeps at night (Nath et al. 2017, Curr Biol 27)"
+  },
+  "class Squamata": {
+   "hours": 10.0,
+   "source": "estimate: reptiles rest about half the day, with sleep-like states (Libourel & Herrel 2016, Biol Rev 91)"
+  },
+  "class Tentaculata": {
+   "hours": 8.0,
+   "source": "estimate: invertebrate rest"
+  },
+  "class Testudines": {
+   "hours": 10.0,
+   "source": "estimate: as the reptiles (Libourel & Herrel 2016)"
+  },
+  "family Apidae": {
+   "hours": 6.5,
+   "source": "estimate: honey bee foragers sleep 5 to 8 h, mostly at night (Kaiser 1988, J Comp Physiol A 163; Klein et al. 2008)"
+  },
+  "family Bathyergidae": {
+   "hours": 10.6,
+   "source": "mole rat 10.6 h (msleep)"
+  },
+  "family Bovidae": {
+   "hours": 4.0,
+   "source": "cattle 4.0 h, sheep 3.8 h (msleep)"
+  },
+  "family Bradypodidae": {
+   "hours": 9.6,
+   "source": "wild brown-throated sloth 9.6 h (Rattenborg et al. 2008, Biol Lett 4:402)"
+  },
+  "family Canidae": {
+   "hours": 12.5,
+   "source": "arctic fox 12.5 h (msleep)"
+  },
+  "family Cervidae": {
+   "hours": 3.0,
+   "source": "roe deer 3.0 h (msleep)"
+  },
+  "family Dugongidae": {
+   "hours": 6.5,
+   "source": "estimate: as the manatees (Mukhametov et al. 1992)"
+  },
+  "family Elephantidae": {
+   "hours": 2.0,
+   "source": "wild African elephants sleep about 2 h a day, mostly lying after 02:00 (Gravett et al. 2017, PLoS ONE 12:e0171903)"
+  },
+  "family Equidae": {
+   "hours": 2.9,
+   "source": "horse 2.9 h, donkey 3.1 h (msleep); applied to zebras"
+  },
+  "family Eupleridae": {
+   "hours": 6.3,
+   "source": "estimate: genet 6.3 h (msleep), the nearest viverrid-like carnivore measured"
+  },
+  "family Felidae": {
+   "hours": 12.5,
+   "source": "domestic cat 12.5 h (msleep)"
+  },
+  "family Formicidae": {
+   "hours": 4.8,
+   "source": "fire ant workers: about 250 naps a day, 4.8 h in all (Cassill et al. 2009, PLoS ONE 4:e6045)"
+  },
+  "family Giraffidae": {
+   "hours": 4.6,
+   "source": "giraffes: 4.6 h a day in short bouts (Tobler & Schwierin 1996, J Zool 240)"
+  },
+  "family Leporidae": {
+   "hours": 8.4,
+   "source": "rabbit 8.4 h (msleep)"
+  },
+  "family Mustelidae": {
+   "hours": 14.4,
+   "source": "ferret 14.4 h (msleep)"
+  },
+  "family Otariidae": {
+   "hours": 8.7,
+   "source": "northern fur seal 8.7 h (msleep)"
+  },
+  "family Phocidae": {
+   "hours": 6.2,
+   "source": "grey seal 6.2 h (msleep)"
+  },
+  "family Rhinocerotidae": {
+   "hours": 4.4,
+   "source": "estimate: Brazilian tapir 4.4 h (msleep), the nearest perissodactyl measured"
+  },
+  "family Spalacidae": {
+   "hours": 10.6,
+   "source": "mole rat 10.6 h (msleep)"
+  },
+  "family Spheniscidae": {
+   "hours": 11.0,
+   "source": "chinstrap penguins about 11 h a day in thousands of seconds-long microsleeps (Libourel et al. 2023, Science 382:1026)"
+  },
+  "family Suidae": {
+   "hours": 9.1,
+   "source": "pig 9.1 h (msleep)"
+  },
+  "family Tachyglossidae": {
+   "hours": 8.6,
+   "source": "short-beaked echidna 8.6 h (msleep)"
+  },
+  "family Talpidae": {
+   "hours": 10.3,
+   "source": "star-nosed mole 10.3 h (msleep)"
+  },
+  "family Tenrecidae": {
+   "hours": 15.6,
+   "source": "tenrec 15.6 h (msleep)"
+  },
+  "family Termitidae": {
+   "hours": 4.8,
+   "source": "estimate: as the ant workers (Cassill et al. 2009)"
+  },
+  "family Trichechidae": {
+   "hours": 6.5,
+   "source": "estimate: Amazonian manatee about a quarter of the day (Mukhametov et al. 1992)"
+  },
+  "family Ursidae": {
+   "hours": 10.1,
+   "source": "estimate: carnivore figure, dog 10.1 h (msleep); no bear measured"
+  },
+  "fish order Acipenseriformes": {
+   "hours": 8.0,
+   "source": "estimate: fish rest at night (zebrafish, Zhdanova et al. 2001)"
+  },
+  "fish order Anguilliformes": {
+   "hours": 8.0,
+   "source": "estimate: fish rest at night (zebrafish, Zhdanova et al. 2001)"
+  },
+  "fish order Beryciformes": {
+   "hours": 8.0,
+   "source": "estimate: fish rest at night (zebrafish, Zhdanova et al. 2001)"
+  },
+  "fish order Characiformes": {
+   "hours": 8.0,
+   "source": "estimate: fish rest at night (zebrafish, Zhdanova et al. 2001)"
+  },
+  "fish order Elopiformes": {
+   "hours": 8.0,
+   "source": "estimate: fish rest at night (zebrafish, Zhdanova et al. 2001)"
+  },
+  "fish order Lophiiformes": {
+   "hours": 8.0,
+   "source": "estimate: fish rest at night (zebrafish, Zhdanova et al. 2001)"
+  },
+  "fish order Osmeriformes": {
+   "hours": 8.0,
+   "source": "estimate: fish rest at night (zebrafish, Zhdanova et al. 2001)"
+  },
+  "fish order Perciformes": {
+   "hours": 8.0,
+   "source": "estimate: fish rest at night (zebrafish, Zhdanova et al. 2001)"
+  },
+  "fish order Scorpaeniformes": {
+   "hours": 8.0,
+   "source": "estimate: fish rest at night (zebrafish, Zhdanova et al. 2001)"
+  },
+  "fish order Syngnathiformes": {
+   "hours": 8.0,
+   "source": "estimate: fish rest at night (zebrafish, Zhdanova et al. 2001)"
+  },
+  "not an animal": {
+   "hours": 0.0,
+   "source": "a plant does not sleep"
+  },
+  "order Cetacea": {
+   "hours": 5.2,
+   "source": "bottlenose dolphin 5.2 h, porpoise 5.6 h (msleep), one half of the brain at a time; estimate for the great whales"
+  },
+  "order Pilosa": {
+   "hours": 14.4,
+   "source": "estimate: three-toed sloth 14.4 h in captivity (msleep)"
+  },
+  "order Rodentia": {
+   "hours": 12.5,
+   "source": "mouse 12.5 h (msleep)"
+  }
+ }
+}
