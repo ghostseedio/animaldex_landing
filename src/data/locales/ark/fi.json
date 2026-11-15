@@ -315,7 +315,15 @@
             "nest": "{aAnimal} rakentaa pesää",
             "alarm": "{aAnimal} päästi varoitushuudon",
             "matedOne": "{animals}: pari pariutui",
-            "matedOther": "{animals}: {count} paria pariutui"
+            "matedOther": "{animals}: {count} paria pariutui",
+            "heartsLeftOne": "1 ♥ jäljellä",
+            "heartsLeftOther": "{n} ♥ jäljellä",
+            "heartsLeftNone": "ei ♥ jäljellä",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{aPredator} söi: {animal}",
+            "revived": "{animal} on palannut",
+            "revivedYoung": "{animal} on palannut, taas nuori aikuinen",
+            "gone": "{animal} on poissa Arkista"
         },
         "card": {
             "now": "Nyt: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Ei nyt",
             "note": "Kysytään vain kerran. Jos olet alle 18-vuotias, eläimesi näkyvät Voyager-numerolla eivätkä @usernamella.",
             "failed": "Se ei mennyt läpi. Yritä uudelleen hetken kuluttua."
+        },
+        "hearts": {
+            "livesOne": "1 elämä Arkissa",
+            "livesOther": "{n} elämää Arkissa",
+            "livesNone": "Arkissa ei ole enää elämiä",
+            "label": "{n}/3 sydäntä",
+            "recovering": "Toipuu · palaa {when}",
+            "whenHour": "tunnin sisällä",
+            "whenHours": "noin {n} tunnin päästä",
+            "whenTomorrow": "huomenna",
+            "whenDays": "{n} päivän päästä",
+            "restore": "Palauta sydän · {credits} krediittiä",
+            "restoring": "Palautetaan…",
+            "note": "Jokainen sydän on yksi elämä lisää eläimellesi Arkissa.",
+            "noCredits": "Tarvitset {credits} krediittiä sydämen palauttamiseen.",
+            "getCredits": "Hanki krediittejä",
+            "failed": "Se ei onnistunut. Yritä hetken päästä uudelleen.",
+            "recoveringOne": "1 toipuu",
+            "recoveringOther": "{count} toipuu",
+            "away": "Se on poissa toipuessaan ja tulee sitten taas ulos kodistaan."
         }
     },
     "talkPage": {

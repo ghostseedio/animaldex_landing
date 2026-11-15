@@ -315,7 +315,15 @@
             "nest": "{aAnimal} bygger reir",
             "alarm": "{aAnimal} slo alarm",
             "matedOne": "{animals}: et par har paret seg",
-            "matedOther": "{animals}: {count} par har paret seg"
+            "matedOther": "{animals}: {count} par har paret seg",
+            "heartsLeftOne": "1 ♥ igjen",
+            "heartsLeftOther": "{n} ♥ igjen",
+            "heartsLeftNone": "ingen ♥ igjen",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} ble spist av {aPredator}",
+            "revived": "{animal} er tilbake",
+            "revivedYoung": "{animal} er tilbake som ung voksen igjen",
+            "gone": "{animal} har forlatt Ark"
         },
         "card": {
             "now": "Nå: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Ikke nå",
             "note": "Spørres bare én gang. Er du under 18, vises dyrene dine med et Voyager-nummer i stedet for ditt @username.",
             "failed": "Det gikk ikke gjennom. Prøv igjen om et øyeblikk."
+        },
+        "hearts": {
+            "livesOne": "1 liv i Ark",
+            "livesOther": "{n} liv i Ark",
+            "livesNone": "Ingen liv igjen i Ark",
+            "label": "{n} av 3 hjerter",
+            "recovering": "Kommer seg · er tilbake {when}",
+            "whenHour": "innen en time",
+            "whenHours": "om omtrent {n} timer",
+            "whenTomorrow": "i morgen",
+            "whenDays": "om {n} dager",
+            "restore": "Gjenopprett et hjerte · {credits} kreditter",
+            "restoring": "Gjenoppretter…",
+            "note": "Hvert hjerte er ett liv til for dyret ditt i Ark.",
+            "noCredits": "Du trenger {credits} kreditter for å gjenopprette et hjerte.",
+            "getCredits": "Skaff kreditter",
+            "failed": "Det gikk ikke. Prøv igjen om litt.",
+            "recoveringOne": "1 kommer seg",
+            "recoveringOther": "{count} kommer seg",
+            "away": "Det er borte mens det kommer seg, og går så ut av hjemmet sitt igjen."
         }
     },
     "talkPage": {

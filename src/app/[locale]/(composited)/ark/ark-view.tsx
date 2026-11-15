@@ -33,6 +33,8 @@ import {ARK_LOAD_START, arkAnimalsShare, arkLoadAnimals, arkLoadStage, arkLoadSt
 import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
 import {noteArkArrivalsSeen, startArkSession, trackArk} from "@/lib/ark-measure-client";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
+import {ArkRecoveringCard} from "@/app/[locale]/(composited)/ark/ark-lives";
+import {arkHeartsForScene, arkHeartsWords, arkRecoveringAnimals, arkTrueArrivals, arkWithHearts, decodeArkOwnerHearts, type ArkOwnerHearts} from "@/lib/ark-hearts";
 
 export type {ArkWords} from "@/lib/ark-words";
 
@@ -84,7 +86,12 @@ type Props = {
     liveFeed?: boolean;
     /** The newest arrival (the server's "Latest aboard", first): the loading card's line from the first paint. */
     newest?: ArkLoaderNewest | null;
+    /** Development's `&hearts=1`: an owner's hearts read in the contract's shapes (`lib/ark-hearts-fixture.ts`). */
+    fixtureHearts?: ArkOwnerHearts | null;
 };
+
+/** The owner's hearts are read again at most this often, when a refresh changed who is aboard. */
+const HEARTS_REFRESH_MS = 30_000;
 
 /** The contract's refresh: every 45 s while the tab is in front. */
 const REFRESH_MS = 45_000;
@@ -206,7 +213,7 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, summary: pageSummary = null, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false, newest: newestAboard = null}: Props) {
+export default function ArkView({locale, initial, summary: pageSummary = null, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false, newest: newestAboard = null, fixtureHearts = null}: Props) {
     arkPerfCountRender();
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
@@ -226,6 +233,10 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     const [selectedRest, setSelectedRest] = useState<{id: string; rest: string | null} | null>(null);
     const onRest = useCallback((id: string, rest: string | null) => setSelectedRest({id, rest}), []);
     const [mineOnly, setMineOnly] = useState(false);
+    // Hearts are lives (behind the server's `ark_hearts`): the reader's own animals' hearts, null while off or unread.
+    const [ownerHearts, setOwnerHearts] = useState<ArkOwnerHearts | null>(fixtureHearts);
+    const [recoveringOpen, setRecoveringOpen] = useState(false);
+    const heartsWords = useMemo(() => arkHeartsWords(words.hearts), [words]);
     // Part C: the island loaded now, and whether a crossing is under way (one island at a time; `islands/archipelago.ts`).
     const [island, setIsland] = useState<ArkIsland>("wild");
     const [crossing, setCrossing] = useState(false);
@@ -291,7 +302,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     const herdAnimal = herd ? snapshot?.animals.find((animal) => arkLookKey(animal) === herd.key) ?? null : null;
     const herdSpeciesKey = herdAnimal ? arkSpeciesKey(herdAnimal) : null;
     // The live log over the world (owner, 2026-11-11): the Ark's record as it happens, and what is seen near the camera.
-    const {hostRef: liveHostRef, observe: observeLive} = useArkLive({sceneRef, snapshotRef, setSnapshot, ready, words, locale, fixture, feed: liveFeed, growFrom, covered: Boolean(selected || herd), reducedMotion});
+    const {hostRef: liveHostRef, observe: observeLive} = useArkLive({sceneRef, snapshotRef, setSnapshot, ready, words, locale, fixture, feed: liveFeed, growFrom, covered: Boolean(selected || herd || recoveringOpen), reducedMotion});
 
     useEffect(() => {
         try {
@@ -497,23 +508,25 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
 
     // The tap card covers the foot of the world: the view moves up so the animal (and its bars) stay above it (on a
     // desktop too since decision 240: the world there is short enough for the card to cover the animal).
-    // (And the overlays over the world keep clear of it: `--ark-card-h`, decision 239.)
+    // (And the overlays over the world keep clear of it: `--ark-card-h`, decision 239.) The recovering card is a band
+    // there too: the overlays keep clear of it, but the view stays (its animal is not on the map).
     const bandRef = useRef<HTMLDivElement | null>(null);
+    const recoveringBand = recoveringOpen && !selected && !herd;
     useEffect(() => {
         const band = bandRef.current;
         const scene = sceneRef.current;
         const card = (height: number) => worldRef.current?.style.setProperty("--ark-card-h", `${Math.round(height)}px`);
-        if (!(selected || herd) || !band) {
+        if (!(selected || herd || recoveringBand) || !band) {
             card(0);
             scene?.setViewInset(0);
             return;
         }
-        if (!scene) return;
+        if (!scene && !recoveringBand) return;
         const phone = window.matchMedia("(max-width: 767px)");
         const apply = () => {
             const height = band.getBoundingClientRect().height;
             card(height);
-            scene.setViewInset(height);
+            scene?.setViewInset(recoveringBand ? 0 : height);
         };
         apply();
         const observer = new ResizeObserver(apply);
@@ -523,7 +536,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
             observer.disconnect();
             phone.removeEventListener?.("change", apply);
         };
-    }, [selected, herd]);
+    }, [selected, herd, recoveringBand]);
 
     // MARK: Its life story
 
@@ -588,6 +601,54 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         if (back && document.contains(back)) back.focus();
         else if (back) mountRef.current?.querySelector("canvas")?.focus();
     }, [selected, herd, words]);
+
+    // MARK: Hearts
+
+    // The reader's own animals' hearts (`/api/ark/hearts`): once signed in and the Ark is read, then again when a refresh
+    // changes who is aboard (a death, a return), at most every 30 s. Null (off, signed out, absent): nothing shows.
+    const heartsSignedIn = signedIn || Boolean(session.user);
+    const aboardKey = snapshot ? `${snapshot.animals.length}:${snapshot.animals.filter((animal) => animal.mine).map((animal) => animal.id).join(",")}` : "";
+    const heartsReadAt = useRef(0);
+    useEffect(() => {
+        if (fixture || local || !heartsSignedIn || !aboardKey) return;
+        const wait = Math.max(heartsReadAt.current + HEARTS_REFRESH_MS - Date.now(), 0);
+        let stopped = false;
+        const timer = setTimeout(() => {
+            heartsReadAt.current = Date.now();
+            void fetch("/api/ark/hearts", {cache: "no-store"})
+                .then((response) => (response.ok ? response.json() : null))
+                .then((body: {hearts?: unknown} | null) => {
+                    if (!stopped) setOwnerHearts(decodeArkOwnerHearts(body?.hearts));
+                })
+                .catch(() => undefined);
+        }, wait);
+        return () => {
+            stopped = true;
+            clearTimeout(timer);
+        };
+    }, [fixture, local, heartsSignedIn, aboardKey]);
+    // The bars' hearts row: the scene's copy of them.
+    useEffect(() => {
+        if (ready) sceneRef.current?.setHearts?.(arkHeartsForScene(ownerHearts));
+    }, [ready, ownerHearts]);
+    const recovering = useMemo(() => arkRecoveringAnimals(ownerHearts), [ownerHearts]);
+    useEffect(() => {
+        if (!recovering.length) setRecoveringOpen(false);
+    }, [recovering.length]);
+    // A notice's tap (`/ark?focus=<slug>`) for an animal of the reader's that is away: its recovering card, once.
+    const focusRecoveringDone = useRef(false);
+    useEffect(() => {
+        if (focusRecoveringDone.current || !focusOn || !recovering.length || !snapshot) return;
+        const wanted = focusOn.toLowerCase();
+        const away = recovering.some((entry) => entry.id === wanted || entry.modelSlug === wanted);
+        const here = snapshot.animals.some((animal) => animal.mine && (animal.id === wanted || animal.model_slug === wanted));
+        focusRecoveringDone.current = true;
+        if (away && !here) setRecoveringOpen(true);
+    }, [focusOn, recovering, snapshot]);
+    const onHeartRestored = useCallback((captureId: string, next: number) => {
+        setOwnerHearts((current) => (current ? arkWithHearts(current, captureId, next) : current));
+    }, []);
+    const selectedLives = selected && selected.mine ? ownerHearts?.animals[selected.id.toLowerCase()] ?? null : null;
 
     useEffect(() => {
         try {
@@ -730,7 +791,8 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         const before = snapshotRef.current;
         if (sameAnimals(before, next)) return;
         // The notice is for arrivals only: the young born on the Ark are the live log's (`arkNewArrivals`).
-        const fresh = arkNewArrivals(before?.animals ?? [], next.animals);
+        // (One back from recovering keeps its old `arrived_at`: it is not a new arrival.)
+        const fresh = arkTrueArrivals(arkNewArrivals(before?.animals ?? [], next.animals), before?.as_of ?? null);
         snapshotRef.current = next;
         setSnapshot(next);
         sceneRef.current?.update(next);
@@ -1057,7 +1119,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                             arrivalKey={arrival ? arkSpeciesKey(arrival) : null}
                             onSpecies={pickSpecies}
                             shareLocalePath={shareLocalePath}
-                            filters={twoIslands || showMineToggle ? (
+                            filters={twoIslands || showMineToggle || recovering.length ? (
                                 <>
                                     {twoIslands ? (
                                         <div role="group" aria-label={islandWords.label} className="flex rounded-full bg-white/[0.07] p-0.5">
@@ -1083,6 +1145,22 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                                             className={`inline-flex h-11 items-center rounded-full px-3 text-[12px] font-semibold transition-colors motion-reduce:transition-none md:h-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c8fa63] ${mineOnly ? "bg-[#a7f432] text-canvas-950" : "bg-white/[0.07] text-white/70 hover:text-white"}`}
                                         >
                                             {words.myAnimals}
+                                        </button>
+                                    ) : null}
+                                    {recovering.length ? (
+                                        <button
+                                            type="button"
+                                            aria-expanded={recoveringOpen}
+                                            data-testid="ark-recovering-chip"
+                                            onClick={() => {
+                                                if (selected) sceneRef.current?.select(null);
+                                                if (herd) sceneRef.current?.selectHerd(null);
+                                                setRecoveringOpen((open) => !open);
+                                            }}
+                                            className={`inline-flex h-11 items-center gap-1.5 rounded-full px-3 text-[12px] font-semibold transition-colors motion-reduce:transition-none md:h-8 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c8fa63] ${recoveringOpen ? "bg-[#c9d6ff] text-canvas-950" : "bg-white/[0.07] text-[#c9d6ff] hover:text-white"}`}
+                                        >
+                                            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinejoin="round" aria-hidden="true"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" /></svg>
+                                            {recovering.length === 1 ? heartsWords.recoveringOne : fillArkWords(heartsWords.recoveringOther, {count: recovering.length.toLocaleString(locale)})}
                                         </button>
                                     ) : null}
                                 </>
@@ -1116,7 +1194,12 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                             localePath: shareLocalePath,
                             text: fillArkWords(words.share.textAnimal, {animal: selected.name, count: (snapshot?.animals.filter((animal) => arkSpeciesKey(animal) === arkSpeciesKey(selected)).length ?? 1).toLocaleString(locale)})
                         }}
+                        lives={selectedLives && ownerHearts ? {entry: selectedLives, words: heartsWords, cost: ownerHearts.healCost, onRestored: onHeartRestored} : null}
                     />
+                ) : null}
+
+                {recoveringOpen && recovering.length && !selected && !herd && ownerHearts ? (
+                    <ArkRecoveringCard bandRef={bandRef} entries={recovering} words={heartsWords} locale={locale} cost={ownerHearts.healCost} onRestored={onHeartRestored} onClose={() => setRecoveringOpen(false)} closeLabel={words.close} />
                 ) : null}
 
                 {herd && !selected ? (

@@ -315,7 +315,15 @@
             "nest": "{aAnimal} fa el niu",
             "alarm": "{aAnimal} ha fet un crit d'alarma",
             "matedOne": "{animals}: una parella s'ha aparellat",
-            "matedOther": "{animals}: {count} parelles s'han aparellat"
+            "matedOther": "{animals}: {count} parelles s'han aparellat",
+            "heartsLeftOne": "queda 1 ♥",
+            "heartsLeftOther": "queden {n} ♥",
+            "heartsLeftNone": "no queda cap ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{aPredator} s'ha menjat {animal}",
+            "revived": "{animal} ha tornat",
+            "revivedYoung": "{animal} ha tornat, jove adult de nou",
+            "gone": "{animal} ja no és a l'Ark"
         },
         "card": {
             "now": "Ara: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Ara no",
             "note": "Només es pregunta un cop. Si tens menys de 18 anys, els teus animals es mostren amb un número de Voyager en lloc del teu @username.",
             "failed": "No s'ha pogut fer. Torna-ho a provar d'aquí un moment."
+        },
+        "hearts": {
+            "livesOne": "1 vida a l'Ark",
+            "livesOther": "{n} vides a l'Ark",
+            "livesNone": "No queden vides a l'Ark",
+            "label": "{n} de 3 cors",
+            "recovering": "Es recupera · torna {when}",
+            "whenHour": "d'aquí a una hora",
+            "whenHours": "d'aquí a unes {n} hores",
+            "whenTomorrow": "demà",
+            "whenDays": "d'aquí a {n} dies",
+            "restore": "Recupera un cor · {credits} crèdits",
+            "restoring": "Recuperant…",
+            "note": "Cada cor és una vida més per al teu animal a l'Ark.",
+            "noCredits": "Necessites {credits} crèdits per recuperar un cor.",
+            "getCredits": "Aconsegueix crèdits",
+            "failed": "No ha funcionat. Torna-ho a provar d'aquí a una estona.",
+            "recoveringOne": "1 es recupera",
+            "recoveringOther": "{count} es recuperen",
+            "away": "És fora mentre es recupera, i després torna a sortir del seu cau."
         }
     },
     "talkPage": {

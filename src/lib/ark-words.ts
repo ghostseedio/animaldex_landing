@@ -9,6 +9,7 @@ import type {ArkRegion, ArkZone} from "@/ark-scene/types";
 import type {ArkLiveWords} from "@/lib/ark-live-words";
 import type {ArkActivityWords, ArkCardWords} from "@/lib/ark-animal-status";
 import type {ArkLoaderWords} from "@/lib/ark-loading";
+import type {ArkHeartsWords} from "@/lib/ark-hearts";
 
 export type ArkHudWords = {
     label: string;
@@ -428,6 +429,8 @@ export type ArkWords = {
     species: ArkSpeciesWords;
     founders: ArkFoundersWords;
     age: ArkAgeAskWords;
+    /** Hearts are lives (behind the server's `ark_hearts`): the card's lives row, recovering, the restore. */
+    hearts?: Partial<ArkHeartsWords>;
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */

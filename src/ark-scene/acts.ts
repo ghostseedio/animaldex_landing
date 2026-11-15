@@ -847,6 +847,38 @@ export function deathPose(body: ActBody, t: number): ActPose {
 }
 
 export const DEATH_SECONDS = 3.3;
+
+/**
+ * Hearts are lives (AnimalDex docs/ark/HEARTS-LIVES-DESIGN.md, section 6, "Scene act"): an animal back from recovering
+ * comes up out of its den, burrow or roost at its kept home spot (`home`: its slot, never where it was eaten), a little
+ * small and hazy at first, then walks from there to where its schedule has it now (`to`, worked out each frame), and its
+ * schedule takes over. Pure: a function of the seconds since its `revived` event was read.
+ */
+export function emergePose(home: ActBody, to: ActBody, t: number): ActPose {
+    const pose = still(home);
+    const up = smooth(t / REVIVE_RISE_SECONDS);
+    pose.base = home.base - home.height * 0.45 * (1 - up);
+    pose.scale = 0.55 + 0.45 * up;
+    pose.dim = 0.7 * (1 - up);
+    pose.pitch = -0.18 * (1 - up);
+    const dx = to.x - home.x;
+    const dz = to.z - home.z;
+    const far = Math.hypot(dx, dz);
+    if (far > 0.05) pose.yaw = turn(home.yaw, heading(dx, dz), smooth(t / REVIVE_RISE_SECONDS));
+    const walk = smooth(span(t, REVIVE_RISE_SECONDS, REVIVE_SECONDS));
+    if (walk > 0) {
+        pose.x = lerp(home.x, to.x, walk);
+        pose.z = lerp(home.z, to.z, walk);
+        pose.base = lerp(pose.base, to.base, walk);
+        pose.yaw = walk > 0.85 ? turn(pose.yaw, to.yaw, (walk - 0.85) / 0.15) : pose.yaw;
+        pose.speed = far / Math.max(REVIVE_SECONDS - REVIVE_RISE_SECONDS, 0.1);
+    }
+    return pose;
+}
+
+/** Up out of its home, then on its way: the whole act (s), and the rise inside it. */
+export const REVIVE_RISE_SECONDS = 1.3;
+export const REVIVE_SECONDS = 3.4;
 export const ARRIVAL_SECONDS = 2.2;
 export const BIRTH_SECONDS = 2.8;
 export const EXTINCTION_SECONDS = 2.2;

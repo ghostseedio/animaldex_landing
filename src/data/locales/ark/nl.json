@@ -315,7 +315,15 @@
             "nest": "{aAnimal} bouwt een nest",
             "alarm": "{aAnimal} slaakte een alarmroep",
             "matedOne": "{animals}: een paar heeft gepaard",
-            "matedOther": "{animals}: {count} paren hebben gepaard"
+            "matedOther": "{animals}: {count} paren hebben gepaard",
+            "heartsLeftOne": "nog 1 ♥",
+            "heartsLeftOther": "nog {n} ♥",
+            "heartsLeftNone": "geen ♥ meer",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} is opgegeten door {aPredator}",
+            "revived": "{animal} is terug",
+            "revivedYoung": "{animal} is terug, weer jong volwassen",
+            "gone": "{animal} is uit de Ark vertrokken"
         },
         "card": {
             "now": "Nu: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Niet nu",
             "note": "Wordt maar één keer gevraagd. Onder de 18 tonen je dieren een Voyager-nummer in plaats van je @username.",
             "failed": "Dat is niet gelukt. Probeer het zo opnieuw."
+        },
+        "hearts": {
+            "livesOne": "1 leven in de Ark",
+            "livesOther": "{n} levens in de Ark",
+            "livesNone": "Geen levens meer in de Ark",
+            "label": "{n} van 3 harten",
+            "recovering": "Herstelt · komt {when} terug",
+            "whenHour": "binnen een uur",
+            "whenHours": "over ongeveer {n} uur",
+            "whenTomorrow": "morgen",
+            "whenDays": "over {n} dagen",
+            "restore": "Herstel een hart · {credits} credits",
+            "restoring": "Herstellen…",
+            "note": "Elk hart is nog een leven voor je dier in de Ark.",
+            "noCredits": "Je hebt {credits} credits nodig om een hart te herstellen.",
+            "getCredits": "Credits halen",
+            "failed": "Dat is niet gelukt. Probeer het zo nog eens.",
+            "recoveringOne": "1 herstelt",
+            "recoveringOther": "{count} herstellen",
+            "away": "Het is weg zolang het herstelt en komt daarna weer uit zijn thuis."
         }
     },
     "talkPage": {

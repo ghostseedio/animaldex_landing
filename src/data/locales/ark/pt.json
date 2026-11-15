@@ -315,7 +315,15 @@
             "nest": "{aAnimal} está construindo um ninho",
             "alarm": "{aAnimal} deu um grito de alarme",
             "matedOne": "{animals}: um casal acasalou",
-            "matedOther": "{animals}: {count} casais acasalaram"
+            "matedOther": "{animals}: {count} casais acasalaram",
+            "heartsLeftOne": "resta 1 ♥",
+            "heartsLeftOther": "restam {n} ♥",
+            "heartsLeftNone": "nenhum ♥ restante",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} foi comido por {aPredator}",
+            "revived": "{animal} voltou",
+            "revivedYoung": "{animal} voltou, jovem adulto de novo",
+            "gone": "{animal} saiu da Ark"
         },
         "card": {
             "now": "Agora: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Agora não",
             "note": "Perguntamos só uma vez. Se você tiver menos de 18 anos, seus animais aparecem com um número de Voyager em vez do seu @username.",
             "failed": "Não deu certo. Tente novamente em instantes."
+        },
+        "hearts": {
+            "livesOne": "1 vida na Ark",
+            "livesOther": "{n} vidas na Ark",
+            "livesNone": "Nenhuma vida restante na Ark",
+            "label": "{n} de 3 corações",
+            "recovering": "Se recuperando · volta {when}",
+            "whenHour": "em menos de uma hora",
+            "whenHours": "em cerca de {n} horas",
+            "whenTomorrow": "amanhã",
+            "whenDays": "em {n} dias",
+            "restore": "Restaurar um coração · {credits} créditos",
+            "restoring": "Restaurando…",
+            "note": "Cada coração é mais uma vida para o seu animal na Ark.",
+            "noCredits": "Você precisa de {credits} créditos para restaurar um coração.",
+            "getCredits": "Obter créditos",
+            "failed": "Não deu certo. Tente de novo daqui a pouco.",
+            "recoveringOne": "1 se recuperando",
+            "recoveringOther": "{count} se recuperando",
+            "away": "Ele fica fora enquanto se recupera e depois sai de novo da sua toca."
         }
     },
     "talkPage": {

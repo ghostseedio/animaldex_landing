@@ -29,7 +29,10 @@ import {arkLabelHasFounderKey, arkLabelText, decodeArkFounder, decodeArkFounderS
  * (A3): the step that brought an animal was revised after it arrived; the
  * animal stays. Counted in its life story, never acted out.
  */
-export const ARK_EVENT_KINDS = ["arrival", "milestone", "meal", "birth", "laid", "death_old", "starved", "eaten", "extinction", "hungry", "fed", "revised", "mated"] as const;
+export const ARK_EVENT_KINDS = ["arrival", "milestone", "meal", "birth", "laid", "death_old", "starved", "eaten", "extinction", "hungry", "fed", "revised", "mated", "revived", "revive_failed"] as const;
+/* `revived` / `revive_failed` (hearts are lives, AnimalDex docs/ark/HEARTS-LIVES-DESIGN.md section 6): an animal back
+ * from recovering at its home spot (`payload {cause, heartsLeft, ageReset, revive}`), or one whose revive could not
+ * happen (`{reason, cause}`): said in the live log; the scene walks a revived one out of its home. */
 /* `mated` (owner, 2026-11-11, the live log): a pair bred, `parents: [id, id]`, written just before its litter's
  * `birth` rows or its clutch's `laid` row. Said in the live log; not acted out in the replay. */
 export type ArkEventKind = typeof ARK_EVENT_KINDS[number];
@@ -94,7 +97,26 @@ export type ArkEvent = {
      * pool meal: the scene then acts it out from today's places.
      */
     encounter?: ArkMealEncounter;
+    /**
+     * Hearts (behind the server's `ark_hearts`): on a death (`eaten`, `death_old`, `starved`), `payload.lives`: the
+     * hearts its card has left and, while it recovers, the Ark day it is back; `final` when it is gone. On `revived`,
+     * the hearts left and whether it came back a young adult (old age). Absent with hearts off.
+     */
+    lives?: ArkEventLives;
 };
+
+export type ArkEventLives = {heartsLeft: number; returnsDay: number | null; final: boolean; ageReset: boolean; cause: "eaten" | "starved" | "died_old" | null};
+
+/** `payload.lives` (a death) or the `revived` payload itself, checked; null when there is none. */
+export function decodeArkEventLives(kind: string, payload: Record<string, unknown>): ArkEventLives | null {
+    const source = kind === "revived" ? payload : payload.lives && typeof payload.lives === "object" && !Array.isArray(payload.lives) ? payload.lives as Record<string, unknown> : null;
+    if (!source) return null;
+    const left = typeof source.heartsLeft === "number" && Number.isFinite(source.heartsLeft) ? Math.min(Math.max(Math.round(source.heartsLeft), 0), 3) : null;
+    if (left === null) return null;
+    const returns = typeof source.returnsDay === "number" && Number.isFinite(source.returnsDay) ? source.returnsDay : null;
+    const cause = source.cause === "eaten" || source.cause === "starved" || source.cause === "died_old" ? source.cause : null;
+    return {heartsLeft: left, returnsDay: returns, final: source.final === true, ageReset: source.ageReset === true, cause};
+}
 
 /** A meal's geometry (scene metres, the axes of `placement.ts`): the step's time, the hunter's waypoint, the prey's disc. */
 export type ArkMealEncounter = {
@@ -233,6 +255,11 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             .filter((id): id is string => Boolean(id));
         const eggs = whole(payload.eggs ?? payload.clutch ?? row.eggs);
         const encounter = kind === "meal" ? decodeArkMealEncounter(row.encounter ?? payload.encounter) : undefined;
+        // The hearts: a read's own `lives` field when it sends one, else the payload's (the public read sends neither
+        // today, and the lines then say no count: never a made-up one).
+        const livesRow = record(row.lives);
+        const livesSource = livesRow ? (kind === "revived" ? livesRow : {lives: livesRow}) : payload;
+        const lives = kind === "revived" || kind === "eaten" || kind === "death_old" || kind === "starved" ? decodeArkEventLives(kind, livesSource) : null;
         events.push({
             id: serial !== null ? String(serial) : `${at}-${index}`,
             serial: serial ?? Number.MAX_SAFE_INTEGER,
@@ -250,7 +277,8 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             eggs: eggs !== null && eggs > 0 ? Math.min(eggs, 9999) : null,
             thrive: kind === "milestone" ? decodeArkThriveField(row.thrive ?? payload.band) : null,
             source: kind === "arrival" ? arkArrivalSource(row.source ?? payload.source) : null,
-            ...(encounter ? {encounter} : {})
+            ...(encounter ? {encounter} : {}),
+            ...(lives ? {lives} : {})
         });
     });
     return events

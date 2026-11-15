@@ -315,7 +315,15 @@
             "nest": "{aAnimal}이(가) 둥지를 짓고 있어요",
             "alarm": "{aAnimal}이(가) 경계음을 냈어요",
             "matedOne": "{animals} 한 쌍이 짝짓기를 했어요",
-            "matedOther": "{animals} {count}쌍이 짝짓기를 했어요"
+            "matedOther": "{animals} {count}쌍이 짝짓기를 했어요",
+            "heartsLeftOne": "♥ 1개 남음",
+            "heartsLeftOther": "♥ {n}개 남음",
+            "heartsLeftNone": "♥ 남지 않음",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}이(가) {aPredator}에게 먹혔어요",
+            "revived": "{animal}이(가) 돌아왔어요",
+            "revivedYoung": "{animal}이(가) 다시 어린 성체로 돌아왔어요",
+            "gone": "{animal}이(가) Ark를 떠났어요"
         },
         "card": {
             "now": "지금: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "나중에",
             "note": "한 번만 물어봐요. 만 18세 미만이면 내 동물에 @username 대신 Voyager 번호가 표시돼요.",
             "failed": "전송되지 않았어요. 잠시 후 다시 시도해 주세요."
+        },
+        "hearts": {
+            "livesOne": "Ark에서 생명 1개",
+            "livesOther": "Ark에서 생명 {n}개",
+            "livesNone": "Ark에 남은 생명이 없어요",
+            "label": "하트 {n}/3",
+            "recovering": "회복 중 · {when} 돌아와요",
+            "whenHour": "1시간 안에",
+            "whenHours": "약 {n}시간 후에",
+            "whenTomorrow": "내일",
+            "whenDays": "{n}일 후에",
+            "restore": "하트 회복 · {credits}크레딧",
+            "restoring": "회복하는 중…",
+            "note": "하트 하나는 Ark에서 내 동물의 생명 하나예요.",
+            "noCredits": "하트를 회복하려면 {credits}크레딧이 필요해요.",
+            "getCredits": "크레딧 받기",
+            "failed": "처리되지 않았어요. 잠시 후 다시 시도해 주세요.",
+            "recoveringOne": "1마리 회복 중",
+            "recoveringOther": "{count}마리 회복 중",
+            "away": "회복하는 동안 자리를 비우고, 그다음 다시 집에서 걸어 나와요."
         }
     },
     "talkPage": {

@@ -315,7 +315,15 @@
             "nest": "{aAnimal} construit son nid",
             "alarm": "{aAnimal} a lancé un cri d'alarme",
             "matedOne": "{animals} : un couple s'est accouplé",
-            "matedOther": "{animals} : {count} couples se sont accouplés"
+            "matedOther": "{animals} : {count} couples se sont accouplés",
+            "heartsLeftOne": "reste 1 ♥",
+            "heartsLeftOther": "reste {n} ♥",
+            "heartsLeftNone": "plus aucun ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} a été mangé par {aPredator}",
+            "revived": "{animal} est de retour",
+            "revivedYoung": "{animal} est de retour, de nouveau jeune adulte",
+            "gone": "{animal} a quitté l'Ark"
         },
         "card": {
             "now": "Maintenant : {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Pas maintenant",
             "note": "Demandé une seule fois. Avant 18 ans, vos animaux s’affichent avec un numéro de Voyager au lieu de votre @username.",
             "failed": "L'envoi a échoué. Réessayez dans un instant."
+        },
+        "hearts": {
+            "livesOne": "1 vie dans l'Ark",
+            "livesOther": "{n} vies dans l'Ark",
+            "livesNone": "Plus aucune vie dans l'Ark",
+            "label": "{n} cœurs sur 3",
+            "recovering": "En convalescence · revient {when}",
+            "whenHour": "d'ici une heure",
+            "whenHours": "dans environ {n} heures",
+            "whenTomorrow": "demain",
+            "whenDays": "dans {n} jours",
+            "restore": "Restaurer un cœur · {credits} crédits",
+            "restoring": "Restauration…",
+            "note": "Chaque cœur est une vie de plus pour ton animal dans l'Ark.",
+            "noCredits": "Il te faut {credits} crédits pour restaurer un cœur.",
+            "getCredits": "Obtenir des crédits",
+            "failed": "Ça n'a pas marché. Réessaie dans un instant.",
+            "recoveringOne": "1 en convalescence",
+            "recoveringOther": "{count} en convalescence",
+            "away": "Il s'absente le temps de se remettre, puis ressort de chez lui."
         }
     },
     "talkPage": {

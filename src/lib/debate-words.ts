@@ -62,6 +62,14 @@ export function debateProblemText(code: DebateProblemCode | null | undefined, wo
  * what a win by the asker's own animal brings. With none, nothing is at stake
  * (`debate.ownOnly`).
  */
+/**
+ * Whether debates still put hearts on (`debates_config_v1().hearts_in_debates`): `companionWordsForHearts` empties the
+ * roster's out-of-hearts line once they don't, so the words say it wherever they go.
+ */
+export function debatesUseHearts(words: CompanionWords): boolean {
+    return words.roster.offRoster.trim() !== "";
+}
+
 export function debateStakeNote(pickedCount: number, words: CompanionWords): string {
     return fillWords(words.debate.stakeNote, {credits: debateWinnerCredits(pickedCount + 1)});
 }
@@ -96,7 +104,8 @@ export function debateResultLines(debate: Debate, words: CompanionWords): string
             : fillWords(words.debateWeb.wonBy, {name}));
     }
     for (const participant of debate.participants) {
-        if (participant.ownerIsMe && participant.heartLost) lines.push(fillWords(words.debate.lost, {name: debateAnimalName(participant)}));
+        // (Not said once hearts are out of debates: `lost` is empty.)
+        if (participant.ownerIsMe && participant.heartLost && words.debate.lost) lines.push(fillWords(words.debate.lost, {name: debateAnimalName(participant)}));
     }
     return lines;
 }

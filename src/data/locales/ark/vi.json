@@ -315,7 +315,15 @@
             "nest": "{aAnimal} đang làm tổ",
             "alarm": "{aAnimal} đã kêu báo động",
             "matedOne": "Một cặp {animals} đã giao phối",
-            "matedOther": "{count} cặp {animals} đã giao phối"
+            "matedOther": "{count} cặp {animals} đã giao phối",
+            "heartsLeftOne": "còn 1 ♥",
+            "heartsLeftOther": "còn {n} ♥",
+            "heartsLeftNone": "không còn ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "Con {animal} đã bị {aPredator} ăn",
+            "revived": "Con {animal} đã trở lại",
+            "revivedYoung": "Con {animal} đã trở lại, lại là con trưởng thành trẻ",
+            "gone": "Con {animal} đã rời Ark"
         },
         "card": {
             "now": "Lúc này: đang {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Để sau",
             "note": "Chỉ hỏi một lần. Nếu bạn dưới 18 tuổi, các con vật của bạn sẽ hiện số Voyager thay vì @username của bạn.",
             "failed": "Gửi không thành công. Hãy thử lại sau giây lát."
+        },
+        "hearts": {
+            "livesOne": "1 mạng trên Ark",
+            "livesOther": "{n} mạng trên Ark",
+            "livesNone": "Không còn mạng nào trên Ark",
+            "label": "{n}/3 trái tim",
+            "recovering": "Đang hồi phục · trở lại {when}",
+            "whenHour": "trong vòng một giờ",
+            "whenHours": "sau khoảng {n} giờ",
+            "whenTomorrow": "ngày mai",
+            "whenDays": "sau {n} ngày",
+            "restore": "Hồi một trái tim · {credits} Credits",
+            "restoring": "Đang hồi…",
+            "note": "Mỗi trái tim là thêm một mạng cho con vật của bạn trên Ark.",
+            "noCredits": "Bạn cần {credits} Credits để hồi một trái tim.",
+            "getCredits": "Nhận Credits",
+            "failed": "Chưa được. Hãy thử lại sau giây lát.",
+            "recoveringOne": "1 con đang hồi phục",
+            "recoveringOther": "{count} con đang hồi phục",
+            "away": "Nó vắng mặt trong lúc hồi phục, rồi lại bước ra từ nơi ở của mình."
         }
     },
     "talkPage": {

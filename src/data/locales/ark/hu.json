@@ -315,7 +315,15 @@
             "nest": "{aAnimal} fészket épít",
             "alarm": "{aAnimal} riasztó hangot adott",
             "matedOne": "{animals}: egy pár párzott",
-            "matedOther": "{animals}: {count} pár párzott"
+            "matedOther": "{animals}: {count} pár párzott",
+            "heartsLeftOne": "1 ♥ maradt",
+            "heartsLeftOther": "{n} ♥ maradt",
+            "heartsLeftNone": "nem maradt ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}: elkapta {aPredator}",
+            "revived": "{animal} visszatért",
+            "revivedYoung": "{animal} visszatért, újra fiatal felnőttként",
+            "gone": "{animal} elment az Arkból"
         },
         "card": {
             "now": "Most: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Most nem",
             "note": "Csak egyszer kérdezzük. 18 év alatt az állataid a @username helyett Voyager-számmal jelennek meg.",
             "failed": "Ez nem sikerült. Próbáld újra egy pillanat múlva."
+        },
+        "hearts": {
+            "livesOne": "1 élet az Arkban",
+            "livesOther": "{n} élet az Arkban",
+            "livesNone": "Nincs több élet az Arkban",
+            "label": "{n}/3 szív",
+            "recovering": "Lábadozik · {when} tér vissza",
+            "whenHour": "egy órán belül",
+            "whenHours": "nagyjából {n} óra múlva",
+            "whenTomorrow": "holnap",
+            "whenDays": "{n} nap múlva",
+            "restore": "Szív visszaállítása · {credits} kredit",
+            "restoring": "Visszaállítás…",
+            "note": "Minden szív még egy élet az állatodnak az Arkban.",
+            "noCredits": "Egy szív visszaállításához {credits} kredit kell.",
+            "getCredits": "Kredit vásárlása",
+            "failed": "Ez nem sikerült. Próbáld újra egy kis idő múlva.",
+            "recoveringOne": "1 lábadozik",
+            "recoveringOther": "{count} lábadozik",
+            "away": "Távol van, amíg felépül, aztán újra kijön az otthonából."
         }
     },
     "talkPage": {

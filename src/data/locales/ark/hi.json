@@ -315,7 +315,15 @@
             "nest": "{aAnimal} घोंसला बना रहा है",
             "alarm": "{aAnimal} ने ख़तरे की पुकार दी",
             "matedOne": "{animals} के एक जोड़े ने संभोग किया",
-            "matedOther": "{animals} के {count} जोड़ों ने संभोग किया"
+            "matedOther": "{animals} के {count} जोड़ों ने संभोग किया",
+            "heartsLeftOne": "1 ♥ बचा",
+            "heartsLeftOther": "{n} ♥ बचे",
+            "heartsLeftNone": "कोई ♥ नहीं बचा",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} को {aPredator} ने खा लिया",
+            "revived": "{animal} लौट आया",
+            "revivedYoung": "{animal} फिर से युवा वयस्क बनकर लौट आया",
+            "gone": "{animal} Ark से चला गया"
         },
         "card": {
             "now": "अभी: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "अभी नहीं",
             "note": "यह सिर्फ़ एक बार पूछा जाता है। 18 से कम उम्र होने पर आपके जानवर आपके @username की जगह Voyager नंबर के साथ दिखेंगे।",
             "failed": "यह नहीं हो पाया। थोड़ी देर में फिर कोशिश करें।"
+        },
+        "hearts": {
+            "livesOne": "Ark में 1 जीवन",
+            "livesOther": "Ark में {n} जीवन",
+            "livesNone": "Ark में कोई जीवन नहीं बचा",
+            "label": "3 में से {n} दिल",
+            "recovering": "ठीक हो रहा है · {when} लौटेगा",
+            "whenHour": "एक घंटे के भीतर",
+            "whenHours": "लगभग {n} घंटे में",
+            "whenTomorrow": "कल",
+            "whenDays": "{n} दिन में",
+            "restore": "एक दिल वापस पाएँ · {credits} क्रेडिट",
+            "restoring": "वापस ला रहे हैं…",
+            "note": "हर दिल Ark में आपके जानवर के लिए एक और जीवन है।",
+            "noCredits": "एक दिल वापस पाने के लिए आपको {credits} क्रेडिट चाहिए।",
+            "getCredits": "क्रेडिट पाएँ",
+            "failed": "यह नहीं हो पाया। थोड़ी देर में फिर कोशिश करें।",
+            "recoveringOne": "1 ठीक हो रहा है",
+            "recoveringOther": "{count} ठीक हो रहे हैं",
+            "away": "ठीक होने तक यह दूर रहता है, फिर अपने घर से फिर बाहर आता है।"
         }
     },
     "talkPage": {

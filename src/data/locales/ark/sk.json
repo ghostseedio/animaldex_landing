@@ -315,7 +315,15 @@
             "nest": "{aAnimal} stavia hniezdo",
             "alarm": "{aAnimal} vydáva varovné volanie",
             "matedOne": "{animals}: pár sa spáril",
-            "matedOther": "{animals}: spárené páry: {count}"
+            "matedOther": "{animals}: spárené páry: {count}",
+            "heartsLeftOne": "zostáva 1 ♥",
+            "heartsLeftOther": "zostáva {n} ♥",
+            "heartsLeftNone": "nezostáva žiadne ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}: zožral ho {aPredator}",
+            "revived": "{animal} je späť",
+            "revivedYoung": "{animal} je späť, znova mladý dospelý",
+            "gone": "{animal} odchádza z Arku"
         },
         "card": {
             "now": "Teraz: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Teraz nie",
             "note": "Pýtame sa len raz. Ak ešte nemáš 18, tvoje zvieratá sa zobrazia s číslom Voyager namiesto tvojho @username.",
             "failed": "Nepodarilo sa. Skús to o chvíľu znova."
+        },
+        "hearts": {
+            "livesOne": "1 život v Arku",
+            "livesOther": "Životy v Arku: {n}",
+            "livesNone": "V Arku už nezostal žiadny život",
+            "label": "{n} z 3 sŕdc",
+            "recovering": "Zotavuje sa · vráti sa {when}",
+            "whenHour": "do hodiny",
+            "whenHours": "asi o {n} h",
+            "whenTomorrow": "zajtra",
+            "whenDays": "o {n} dni",
+            "restore": "Obnoviť srdce · {credits} kreditov",
+            "restoring": "Obnovuje sa…",
+            "note": "Každé srdce je ďalší život pre tvoje zviera v Arku.",
+            "noCredits": "Na obnovenie srdca potrebuješ {credits} kreditov.",
+            "getCredits": "Získať kredity",
+            "failed": "Nepodarilo sa to. Skús to o chvíľu znova.",
+            "recoveringOne": "1 sa zotavuje",
+            "recoveringOther": "Zotavuje sa: {count}",
+            "away": "Je preč, kým sa zotavuje, potom znova vyjde zo svojho domova."
         }
     },
     "talkPage": {

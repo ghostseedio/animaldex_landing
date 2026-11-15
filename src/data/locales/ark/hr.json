@@ -315,7 +315,15 @@
             "nest": "{aAnimal} gradi gnijezdo",
             "alarm": "{aAnimal} oglašava uzbunu",
             "matedOne": "{animals}: par se pario",
-            "matedOther": "{animals}: parilo se parova: {count}"
+            "matedOther": "{animals}: parilo se parova: {count}",
+            "heartsLeftOne": "preostalo 1 ♥",
+            "heartsLeftOther": "preostalo {n} ♥",
+            "heartsLeftNone": "nema više ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}: pojeo ga je {aPredator}",
+            "revived": "{animal} se vratio",
+            "revivedYoung": "{animal} se vratio, opet mlada odrasla životinja",
+            "gone": "{animal} je otišao iz Arka"
         },
         "card": {
             "now": "Sada: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Ne sada",
             "note": "Pitamo samo jednom. Ako imaš manje od 18 godina, tvoje se životinje prikazuju s Voyager brojem, a ne s tvojim @username.",
             "failed": "To nije prošlo. Pokušaj ponovno za trenutak."
+        },
+        "hearts": {
+            "livesOne": "1 život u Arku",
+            "livesOther": "Životi u Arku: {n}",
+            "livesNone": "U Arku nema više života",
+            "label": "{n} od 3 srca",
+            "recovering": "Oporavlja se · vraća se {when}",
+            "whenHour": "unutar sat vremena",
+            "whenHours": "za otprilike {n} h",
+            "whenTomorrow": "sutra",
+            "whenDays": "za {n} dana",
+            "restore": "Vrati srce · {credits} kredita",
+            "restoring": "Vraćanje…",
+            "note": "Svako srce još je jedan život za tvoju životinju u Arku.",
+            "noCredits": "Za vraćanje srca trebaš {credits} kredita.",
+            "getCredits": "Nabavi kredite",
+            "failed": "Nije uspjelo. Pokušaj ponovno za trenutak.",
+            "recoveringOne": "1 se oporavlja",
+            "recoveringOther": "Oporavlja se: {count}",
+            "away": "Odsutna je dok se oporavlja, a onda opet izlazi iz svog doma."
         }
     },
     "talkPage": {

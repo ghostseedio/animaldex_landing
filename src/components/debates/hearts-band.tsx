@@ -47,7 +47,9 @@ export default function HeartsBand({captureId, hearts: initialHearts, powerEarne
     const [savingRoster, setSavingRoster] = useState(false);
     const heal = canHealHeart(hearts, null);
     // Out of hearts, the heal button is right here: no need to say where (newcomer UX vet, P1-5).
-    const status = hearts <= 0 ? words.debateWeb.outOfHearts : hearts >= DEBATE_MAX_HEARTS ? words.heal.full : null;
+    const status = hearts <= 0 ? words.debateWeb.outOfHearts : hearts >= DEBATE_MAX_HEARTS ? words.heal.full
+        // Hearts are Ark lives (`ark_hearts` on): "2 lives in the Ark", "1 life in the Ark".
+        : hearts === 1 && words.heal.life ? words.heal.life : words.heal.lives ? fillWords(words.heal.lives, {n: hearts}) : null;
     const web = words.debateWeb;
 
     const healOne = () => {
@@ -98,6 +100,7 @@ export default function HeartsBand({captureId, hearts: initialHearts, powerEarne
                         {healing ? web.healing : words.heal.one}
                     </button>
                 ) : null}
+                {heal.can && words.heal.note ? <p className="-mt-1 text-xs leading-5 text-white/55">{words.heal.note}</p> : null}
                 {problem ? (
                     <p role="alert" className="text-xs leading-5 text-white/60">
                         {problem.text}

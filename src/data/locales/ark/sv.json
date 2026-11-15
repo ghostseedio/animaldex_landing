@@ -315,7 +315,15 @@
             "nest": "{aAnimal} bygger bo",
             "alarm": "{aAnimal} slog larm",
             "matedOne": "{animals}: ett par har parat sig",
-            "matedOther": "{animals}: {count} par har parat sig"
+            "matedOther": "{animals}: {count} par har parat sig",
+            "heartsLeftOne": "1 ♥ kvar",
+            "heartsLeftOther": "{n} ♥ kvar",
+            "heartsLeftNone": "inga ♥ kvar",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} blev uppäten av {aPredator}",
+            "revived": "{animal} är tillbaka",
+            "revivedYoung": "{animal} är tillbaka som ung vuxen igen",
+            "gone": "{animal} har lämnat Ark"
         },
         "card": {
             "now": "Nu: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Inte nu",
             "note": "Frågas bara en gång. Är du under 18 visas dina djur med ett Voyager-nummer i stället för ditt @username.",
             "failed": "Det gick inte igenom. Försök igen om en stund."
+        },
+        "hearts": {
+            "livesOne": "1 liv i Ark",
+            "livesOther": "{n} liv i Ark",
+            "livesNone": "Inga liv kvar i Ark",
+            "label": "{n} av 3 hjärtan",
+            "recovering": "Återhämtar sig · tillbaka {when}",
+            "whenHour": "inom en timme",
+            "whenHours": "om ungefär {n} timmar",
+            "whenTomorrow": "i morgon",
+            "whenDays": "om {n} dagar",
+            "restore": "Återställ ett hjärta · {credits} krediter",
+            "restoring": "Återställer…",
+            "note": "Varje hjärta är ett liv till för ditt djur i Ark.",
+            "noCredits": "Du behöver {credits} krediter för att återställa ett hjärta.",
+            "getCredits": "Skaffa krediter",
+            "failed": "Det gick inte. Försök igen om en stund.",
+            "recoveringOne": "1 återhämtar sig",
+            "recoveringOther": "{count} återhämtar sig",
+            "away": "Det är borta medan det återhämtar sig och går sedan ut ur sitt hem igen."
         }
     },
     "talkPage": {

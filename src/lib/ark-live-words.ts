@@ -34,6 +34,15 @@ export type ArkLiveWords = {
     /** A pair bred (the server's `mated`): "Two Plains Zebras mated". */
     matedOne: string;
     matedOther: string;
+    /** Hearts are lives (behind `ark_hearts`): a death's hearts left ("{line} · 2 ♥ left"), a return, a final end. */
+    heartsLeftOne: string;
+    heartsLeftOther: string;
+    heartsLeftNone: string;
+    withHearts: string;
+    eatenBy: string;
+    revived: string;
+    revivedYoung: string;
+    gone: string;
 };
 
 /** English, as `en.json` has it: the fallback when a reader's words lack `live`. */
@@ -61,5 +70,13 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     nest: "{aAnimal} is building a nest",
     alarm: "{aAnimal} gave an alarm call",
     matedOne: "Two {animals} mated",
-    matedOther: "{count} pairs of {animals} mated"
+    matedOther: "{count} pairs of {animals} mated",
+    heartsLeftOne: "1 ♥ left",
+    heartsLeftOther: "{n} ♥ left",
+    heartsLeftNone: "no ♥ left",
+    withHearts: "{line} · {hearts}",
+    eatenBy: "{animal} was eaten by {aPredator}",
+    revived: "{animal} is back",
+    revivedYoung: "{animal} is back, a young adult again",
+    gone: "{animal} is gone from the Ark"
 };

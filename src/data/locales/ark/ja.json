@@ -315,7 +315,15 @@
             "nest": "{aAnimal}が巣を作っています",
             "alarm": "{aAnimal}が警戒の声を上げました",
             "matedOne": "{animals}のペアが交尾しました",
-            "matedOther": "{animals}の{count}組のペアが交尾しました"
+            "matedOther": "{animals}の{count}組のペアが交尾しました",
+            "heartsLeftOne": "残り1 ♥",
+            "heartsLeftOther": "残り{n} ♥",
+            "heartsLeftNone": "♥は残っていません",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}が{aPredator}に食べられました",
+            "revived": "{animal}が戻ってきました",
+            "revivedYoung": "{animal}が若い成体に戻って帰ってきました",
+            "gone": "{animal}はArkからいなくなりました"
         },
         "card": {
             "now": "いま：{activity}",
@@ -518,6 +526,26 @@
             "notNow": "今はしない",
             "note": "一度だけおたずねします。18歳未満の場合、あなたの動物には@usernameではなくVoyager番号が表示されます。",
             "failed": "送信できませんでした。少ししてからもう一度お試しください。"
+        },
+        "hearts": {
+            "livesOne": "Arkでの命 1つ",
+            "livesOther": "Arkでの命 {n}つ",
+            "livesNone": "Arkでの命は残っていません",
+            "label": "ハート {n}/3",
+            "recovering": "回復中 · {when}戻ります",
+            "whenHour": "1時間以内に",
+            "whenHours": "約{n}時間後に",
+            "whenTomorrow": "明日",
+            "whenDays": "{n}日後に",
+            "restore": "ハートを回復 · {credits}クレジット",
+            "restoring": "回復しています…",
+            "note": "ハート1つで、Arkでのあなたの動物の命が1つ増えます。",
+            "noCredits": "ハートの回復には{credits}クレジットが必要です。",
+            "getCredits": "クレジットを入手",
+            "failed": "うまくいきませんでした。少ししてからもう一度お試しください。",
+            "recoveringOne": "1匹が回復中",
+            "recoveringOther": "{count}匹が回復中",
+            "away": "回復するあいだは姿を消し、その後また自分のすみかから出てきます。"
         }
     },
     "talkPage": {

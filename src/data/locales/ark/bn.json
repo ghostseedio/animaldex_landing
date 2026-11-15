@@ -315,7 +315,15 @@
             "nest": "{aAnimal} বাসা বানাচ্ছে",
             "alarm": "{aAnimal} বিপদের ডাক দিয়েছে",
             "matedOne": "এক জোড়া {animals} মিলিত হয়েছে",
-            "matedOther": "{count} জোড়া {animals} মিলিত হয়েছে"
+            "matedOther": "{count} জোড়া {animals} মিলিত হয়েছে",
+            "heartsLeftOne": "১ ♥ বাকি",
+            "heartsLeftOther": "{n} ♥ বাকি",
+            "heartsLeftNone": "কোনো ♥ বাকি নেই",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}-কে {aPredator} খেয়ে ফেলেছে",
+            "revived": "{animal} ফিরে এসেছে",
+            "revivedYoung": "{animal} আবার তরুণ প্রাপ্তবয়স্ক হয়ে ফিরে এসেছে",
+            "gone": "{animal} Ark থেকে চলে গেছে"
         },
         "card": {
             "now": "এখন: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "এখন নয়",
             "note": "একবারই জিজ্ঞাসা করা হয়। ১৮ বছরের কম হলে আপনার প্রাণীরা আপনার @username-এর বদলে Voyager নম্বরে দেখাবে।",
             "failed": "এটি হয়নি। একটু পরে আবার চেষ্টা করুন।"
+        },
+        "hearts": {
+            "livesOne": "Ark-এ ১টি জীবন",
+            "livesOther": "Ark-এ {n}টি জীবন",
+            "livesNone": "Ark-এ আর কোনো জীবন নেই",
+            "label": "৩টির মধ্যে {n}টি হৃদয়",
+            "recovering": "সেরে উঠছে · ফিরবে {when}",
+            "whenHour": "এক ঘণ্টার মধ্যে",
+            "whenHours": "প্রায় {n} ঘণ্টা পরে",
+            "whenTomorrow": "আগামীকাল",
+            "whenDays": "{n} দিন পরে",
+            "restore": "একটি হৃদয় ফেরান · {credits} ক্রেডিট",
+            "restoring": "ফেরানো হচ্ছে…",
+            "note": "প্রতিটি হৃদয় Ark-এ আপনার প্রাণীর জন্য আরও একটি জীবন।",
+            "noCredits": "একটি হৃদয় ফেরাতে আপনার {credits} ক্রেডিট লাগবে।",
+            "getCredits": "ক্রেডিট নিন",
+            "failed": "এটা হয়নি। একটু পরে আবার চেষ্টা করুন।",
+            "recoveringOne": "১টি সেরে উঠছে",
+            "recoveringOther": "{count}টি সেরে উঠছে",
+            "away": "সেরে ওঠার সময় এটি দূরে থাকে, তারপর আবার নিজের ঘর থেকে বেরিয়ে আসে।"
         }
     },
     "talkPage": {

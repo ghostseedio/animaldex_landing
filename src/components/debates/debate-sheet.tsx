@@ -50,7 +50,7 @@ import {
     type DebateProblemCode,
     type DebateVisibility
 } from "@/lib/debates";
-import {debateProblemText, debateStakeNote} from "@/lib/debate-words";
+import {debateProblemText, debateStakeNote, debatesUseHearts} from "@/lib/debate-words";
 import {approvePublicDebate, cancelDebate, createDebate, createDebateV2, fetchDebate, loadDebateCandidates, loadDebateCandidatesV2, noteDebateChanged, setDebateRoster} from "@/components/debates/use-debates";
 import {DebateWildTag} from "@/components/debates/debate-v2-views";
 
@@ -433,11 +433,13 @@ export default function DebateSetup({
     const draftHasStakes = draft
         ? draft.stakes ?? (draft.participants.length > 1 ? debateHasStakes({...draft, stakes: null}) : othersPicked(candidates ?? [], picked) > 0)
         : false;
-    const stakeLine = (hasStakes: boolean, count: number) => (hasStakes ? debateStakeNote(count, words) : words.debate.ownOnly);
+    // (With hearts out of debates, own-only says nothing: `ownOnly` is empty, and so is the line.)
+    const stakeLine = (hasStakes: boolean, count: number) => (hasStakes ? debateStakeNote(count, words) : words.debate.ownOnly) || null;
     const pickedOthers = othersPicked(candidates ?? [], picked);
     // With a stake (someone else's animal picked), the host and your own picks each need a heart
     // (SPEC section 7): the first of yours without one, to heal on its card, or pick only your own.
-    const heartless = visibility !== "public" || pickedOthers === 0
+    // Hearts are Ark lives once the server says so (`hearts_in_debates` false): no stake, so no roster lock either.
+    const heartless = !debatesUseHearts(words) || visibility !== "public" || pickedOthers === 0
         ? null
         : host.hearts !== null && host.hearts <= 0
             ? host.captureId
@@ -636,11 +638,14 @@ export default function DebateSetup({
                     <p className="mt-3 whitespace-pre-line border-l-2 border-white/15 pl-3 text-[15px] leading-6 text-white">{publicText}</p>
                 )}
             </div>
-            <p className={`${rule} ${pad} py-3 text-xs leading-5 text-white/70`} data-testid="debate-stake">{draft && draftHasStakes && draft.creditsForWinner !== null
-                ? fillWords(words.debate.stakeNote, {credits: draft.creditsForWinner})
-                : stakeLine(draftHasStakes, draft && draft.participants.length > 1
-                    ? draft.participants.filter((participant) => !participant.isAskerOwned).length
-                    : othersPicked(candidates ?? [], picked))}</p>
+            {(() => {
+                const line = draft && draftHasStakes && draft.creditsForWinner !== null
+                    ? fillWords(words.debate.stakeNote, {credits: draft.creditsForWinner})
+                    : stakeLine(draftHasStakes, draft && draft.participants.length > 1
+                        ? draft.participants.filter((participant) => !participant.isAskerOwned).length
+                        : othersPicked(candidates ?? [], picked));
+                return line ? <p className={`${rule} ${pad} py-3 text-xs leading-5 text-white/70`} data-testid="debate-stake">{line}</p> : null;
+            })()}
         </>
     ) : (
         <>
@@ -761,7 +766,7 @@ export default function DebateSetup({
                     <p className="mt-1.5 line-clamp-4 text-sm leading-6 text-white/85">{problem}</p>
                 )}
             </div>
-            {visibility === "public" && picked.length > 0 && !publicBlocker ? (
+            {visibility === "public" && picked.length > 0 && !publicBlocker && (hostOutOfHearts || stakeLine(pickedOthers > 0, pickedOthers)) ? (
                 <p className={`border-t border-white/[0.08] ${pad} py-3 text-xs leading-5 text-white/70`} data-testid="debate-stake">
                     {hostOutOfHearts ? (
                         <>

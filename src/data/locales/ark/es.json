@@ -315,7 +315,15 @@
             "nest": "{aAnimal} está construyendo un nido",
             "alarm": "{aAnimal} dio una llamada de alarma",
             "matedOne": "{animals}: una pareja se apareó",
-            "matedOther": "{animals}: {count} parejas se aparearon"
+            "matedOther": "{animals}: {count} parejas se aparearon",
+            "heartsLeftOne": "queda 1 ♥",
+            "heartsLeftOther": "quedan {n} ♥",
+            "heartsLeftNone": "no queda ningún ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{aPredator} se comió a {animal}",
+            "revived": "{animal} ha vuelto",
+            "revivedYoung": "{animal} ha vuelto, otra vez adulto joven",
+            "gone": "{animal} ya no está en el Ark"
         },
         "card": {
             "now": "Ahora: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Ahora no",
             "note": "Solo se pregunta una vez. Si tienes menos de 18 años, tus animales aparecen con un número de Voyager en lugar de tu @username.",
             "failed": "No se pudo enviar. Inténtalo de nuevo en un momento."
+        },
+        "hearts": {
+            "livesOne": "1 vida en el Ark",
+            "livesOther": "{n} vidas en el Ark",
+            "livesNone": "No quedan vidas en el Ark",
+            "label": "{n} de 3 corazones",
+            "recovering": "Recuperándose · vuelve {when}",
+            "whenHour": "en menos de una hora",
+            "whenHours": "en unas {n} horas",
+            "whenTomorrow": "mañana",
+            "whenDays": "en {n} días",
+            "restore": "Recuperar un corazón · {credits} créditos",
+            "restoring": "Recuperando…",
+            "note": "Cada corazón es una vida más para tu animal en el Ark.",
+            "noCredits": "Necesitas {credits} créditos para recuperar un corazón.",
+            "getCredits": "Conseguir créditos",
+            "failed": "No se pudo completar. Inténtalo de nuevo en un momento.",
+            "recoveringOne": "1 recuperándose",
+            "recoveringOther": "{count} recuperándose",
+            "away": "Está fuera mientras se recupera y luego vuelve a salir de su hogar."
         }
     },
     "talkPage": {

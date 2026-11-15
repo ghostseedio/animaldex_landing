@@ -3279,17 +3279,31 @@
       "offerAnimal": "Tambahkan salah satu hewanmu",
       "offerAnimalTitle": "Hewanmu yang mana yang perlu ikut menimbang?",
       "offerAnimalNone": "Belum ada hewanmu yang punya Kekuatan yang bisa ikut di sini.",
-      "offerAnimalWorking": "Hewanmu sedang berpikir…"
+      "offerAnimalWorking": "Hewanmu sedang berpikir…",
+      "stakeNoteXp": "Komunitas memilih cara yang paling cocok. Kartu pemenang mendapat +10 XP.",
+      "drawQuiet": "Suara yang masuk tidak cukup."
     },
     "roster": {
       "optIn": "Izinkan hewan saya ikut debat publik",
       "optInNote": "Hanya hewan yang Kekuatannya sudah didapatkan. Setiap debat mempertaruhkan 1 hati, dan hewan yang menang memberi Anda Kredit.",
-      "offRoster": "Hatinya habis. Pulihkan satu hati seharga 5 Kredit di kartunya."
+      "offRoster": "Hatinya habis. Pulihkan satu hati seharga 5 Kredit di kartunya.",
+      "optInNoteXp": "Hanya hewan yang Kekuatannya sudah didapatkan. Hewan yang menang memberi kartunya XP."
     },
     "heal": {
       "title": "Hati",
       "one": "Pulihkan satu hati: 5 Kredit",
-      "full": "Ketiga hati penuh"
+      "full": "Ketiga hati penuh",
+      "arkTitle": "Nyawa di Ark",
+      "arkOne": "Pulihkan satu hati · 5 Kredit",
+      "arkLife": "1 nyawa di Ark",
+      "arkLives": "{n} nyawa di Ark",
+      "arkNone": "Tidak ada nyawa tersisa di Ark",
+      "arkNote": "Setiap hati adalah satu nyawa lagi untuk hewanmu di Ark.",
+      "arkNoCredits": "Kamu perlu 5 Kredit untuk memulihkan satu hati.",
+      "arkRestoring": "Memulihkan…",
+      "lives": "",
+      "life": "",
+      "note": ""
     },
     "debates": {
       "tab": "Debat"
@@ -4520,7 +4534,15 @@
       "nest": "{aAnimal} sedang membuat sarang",
       "alarm": "{aAnimal} memberi tanda bahaya",
       "matedOne": "Sepasang {animals} kawin",
-      "matedOther": "{count} pasang {animals} kawin"
+      "matedOther": "{count} pasang {animals} kawin",
+      "heartsLeftOne": "sisa 1 ♥",
+      "heartsLeftOther": "sisa {n} ♥",
+      "heartsLeftNone": "tidak ada ♥ tersisa",
+      "withHearts": "{line} · {hearts}",
+      "eatenBy": "{animal} dimakan oleh {aPredator}",
+      "revived": "{animal} sudah kembali",
+      "revivedYoung": "{animal} sudah kembali, kembali menjadi dewasa muda",
+      "gone": "{animal} sudah pergi dari Ark"
     },
     "card": {
       "now": "Sekarang: {activity}",
@@ -4675,6 +4697,26 @@
       "notNow": "Nanti saja",
       "note": "Ditanyakan sekali. Jika di bawah 18 tahun, hewanmu tampil dengan nomor Voyager, bukan @username-mu.",
       "failed": "Belum berhasil. Coba lagi sebentar lagi."
+    },
+    "hearts": {
+      "livesOne": "1 nyawa di Ark",
+      "livesOther": "{n} nyawa di Ark",
+      "livesNone": "Tidak ada nyawa tersisa di Ark",
+      "label": "{n} dari 3 hati",
+      "recovering": "Sedang pulih · kembali {when}",
+      "whenHour": "dalam satu jam",
+      "whenHours": "sekitar {n} jam lagi",
+      "whenTomorrow": "besok",
+      "whenDays": "{n} hari lagi",
+      "restore": "Pulihkan satu hati · {credits} Kredit",
+      "restoring": "Memulihkan…",
+      "note": "Setiap hati adalah satu nyawa lagi untuk hewanmu di Ark.",
+      "noCredits": "Kamu perlu {credits} Kredit untuk memulihkan satu hati.",
+      "getCredits": "Dapatkan Kredit",
+      "failed": "Itu tidak berhasil. Coba lagi sebentar lagi.",
+      "recoveringOne": "1 sedang pulih",
+      "recoveringOther": "{count} sedang pulih",
+      "away": "Ia pergi sementara untuk pulih, lalu keluar lagi dari rumahnya."
     }
   },
   "seo": {

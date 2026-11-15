@@ -315,7 +315,15 @@
             "nest": "{aAnimal} ਆਲ੍ਹਣਾ ਬਣਾ ਰਿਹਾ ਹੈ",
             "alarm": "{aAnimal} ਨੇ ਖ਼ਤਰੇ ਦੀ ਆਵਾਜ਼ ਦਿੱਤੀ",
             "matedOne": "{animals} ਦੇ ਇੱਕ ਜੋੜੇ ਨੇ ਮੇਲ ਕੀਤਾ",
-            "matedOther": "{animals} ਦੇ {count} ਜੋੜਿਆਂ ਨੇ ਮੇਲ ਕੀਤਾ"
+            "matedOther": "{animals} ਦੇ {count} ਜੋੜਿਆਂ ਨੇ ਮੇਲ ਕੀਤਾ",
+            "heartsLeftOne": "1 ♥ ਬਾਕੀ",
+            "heartsLeftOther": "{n} ♥ ਬਾਕੀ",
+            "heartsLeftNone": "ਕੋਈ ♥ ਬਾਕੀ ਨਹੀਂ",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} ਨੂੰ {aPredator} ਨੇ ਖਾ ਲਿਆ",
+            "revived": "{animal} ਵਾਪਸ ਆ ਗਿਆ",
+            "revivedYoung": "{animal} ਮੁੜ ਜਵਾਨ ਬਾਲਗ ਬਣ ਕੇ ਵਾਪਸ ਆ ਗਿਆ",
+            "gone": "{animal} Ark ਤੋਂ ਚਲਾ ਗਿਆ"
         },
         "card": {
             "now": "ਹੁਣ: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "ਹੁਣੇ ਨਹੀਂ",
             "note": "ਇਹ ਸਿਰਫ਼ ਇੱਕ ਵਾਰ ਪੁੱਛਿਆ ਜਾਂਦਾ ਹੈ। 18 ਤੋਂ ਘੱਟ ਉਮਰ ਹੋਣ 'ਤੇ ਤੁਹਾਡੇ ਜਾਨਵਰ ਤੁਹਾਡੇ @username ਦੀ ਥਾਂ Voyager ਨੰਬਰ ਨਾਲ ਦਿਖਣਗੇ।",
             "failed": "ਇਹ ਨਹੀਂ ਹੋ ਸਕਿਆ। ਥੋੜ੍ਹੀ ਦੇਰ ਬਾਅਦ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"
+        },
+        "hearts": {
+            "livesOne": "Ark ਵਿੱਚ 1 ਜੀਵਨ",
+            "livesOther": "Ark ਵਿੱਚ {n} ਜੀਵਨ",
+            "livesNone": "Ark ਵਿੱਚ ਕੋਈ ਜੀਵਨ ਨਹੀਂ ਬਚਿਆ",
+            "label": "3 ਵਿੱਚੋਂ {n} ਦਿਲ",
+            "recovering": "ਠੀਕ ਹੋ ਰਿਹਾ ਹੈ · {when} ਵਾਪਸ ਆਵੇਗਾ",
+            "whenHour": "ਇੱਕ ਘੰਟੇ ਦੇ ਅੰਦਰ",
+            "whenHours": "ਲਗਭਗ {n} ਘੰਟਿਆਂ ਵਿੱਚ",
+            "whenTomorrow": "ਕੱਲ੍ਹ",
+            "whenDays": "{n} ਦਿਨਾਂ ਵਿੱਚ",
+            "restore": "ਇੱਕ ਦਿਲ ਵਾਪਸ ਲਿਆਓ · {credits} ਕ੍ਰੈਡਿਟ",
+            "restoring": "ਵਾਪਸ ਲਿਆ ਰਹੇ ਹਾਂ…",
+            "note": "ਹਰ ਦਿਲ Ark ਵਿੱਚ ਤੁਹਾਡੇ ਜਾਨਵਰ ਲਈ ਇੱਕ ਹੋਰ ਜੀਵਨ ਹੈ।",
+            "noCredits": "ਇੱਕ ਦਿਲ ਵਾਪਸ ਲਿਆਉਣ ਲਈ ਤੁਹਾਨੂੰ {credits} ਕ੍ਰੈਡਿਟ ਚਾਹੀਦੇ ਹਨ।",
+            "getCredits": "ਕ੍ਰੈਡਿਟ ਲਓ",
+            "failed": "ਇਹ ਨਹੀਂ ਹੋਇਆ। ਥੋੜ੍ਹੀ ਦੇਰ ਬਾਅਦ ਫਿਰ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
+            "recoveringOne": "1 ਠੀਕ ਹੋ ਰਿਹਾ ਹੈ",
+            "recoveringOther": "{count} ਠੀਕ ਹੋ ਰਹੇ ਹਨ",
+            "away": "ਠੀਕ ਹੋਣ ਤੱਕ ਇਹ ਦੂਰ ਰਹਿੰਦਾ ਹੈ, ਫਿਰ ਮੁੜ ਆਪਣੇ ਘਰ ਤੋਂ ਬਾਹਰ ਆਉਂਦਾ ਹੈ।"
         }
     },
     "talkPage": {

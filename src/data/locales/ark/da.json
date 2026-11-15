@@ -315,7 +315,15 @@
             "nest": "{aAnimal} bygger rede",
             "alarm": "{aAnimal} slog alarm",
             "matedOne": "{animals}: et par har parret sig",
-            "matedOther": "{animals}: {count} par har parret sig"
+            "matedOther": "{animals}: {count} par har parret sig",
+            "heartsLeftOne": "1 ♥ tilbage",
+            "heartsLeftOther": "{n} ♥ tilbage",
+            "heartsLeftNone": "ingen ♥ tilbage",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} blev ædt af {aPredator}",
+            "revived": "{animal} er tilbage",
+            "revivedYoung": "{animal} er tilbage som ung voksen igen",
+            "gone": "{animal} er væk fra Ark"
         },
         "card": {
             "now": "Nu: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Ikke nu",
             "note": "Spørges kun én gang. Er du under 18, vises dine dyr med et Voyager-nummer i stedet for dit @username.",
             "failed": "Det gik ikke igennem. Prøv igen om lidt."
+        },
+        "hearts": {
+            "livesOne": "1 liv i Ark",
+            "livesOther": "{n} liv i Ark",
+            "livesNone": "Ingen liv tilbage i Ark",
+            "label": "{n} af 3 hjerter",
+            "recovering": "Kommer sig · vender tilbage {when}",
+            "whenHour": "inden for en time",
+            "whenHours": "om cirka {n} timer",
+            "whenTomorrow": "i morgen",
+            "whenDays": "om {n} dage",
+            "restore": "Genopret et hjerte · {credits} kreditter",
+            "restoring": "Genopretter…",
+            "note": "Hvert hjerte er ét liv mere for dit dyr i Ark.",
+            "noCredits": "Du skal bruge {credits} kreditter for at genoprette et hjerte.",
+            "getCredits": "Få kreditter",
+            "failed": "Det gik ikke igennem. Prøv igen om lidt.",
+            "recoveringOne": "1 kommer sig",
+            "recoveringOther": "{count} kommer sig",
+            "away": "Det er væk, mens det kommer sig, og går så ud af sit hjem igen."
         }
     },
     "talkPage": {

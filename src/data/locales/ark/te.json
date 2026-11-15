@@ -315,7 +315,15 @@
             "nest": "{aAnimal} గూడు కడుతోంది",
             "alarm": "{aAnimal} హెచ్చరిక కూత పెట్టింది",
             "matedOne": "ఒక జంట {animals} జతకట్టాయి",
-            "matedOther": "{count} జంటల {animals} జతకట్టాయి"
+            "matedOther": "{count} జంటల {animals} జతకట్టాయి",
+            "heartsLeftOne": "1 ♥ మిగిలింది",
+            "heartsLeftOther": "{n} ♥ మిగిలాయి",
+            "heartsLeftNone": "♥ ఏవీ మిగల్లేదు",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} ను {aPredator} తినేసింది",
+            "revived": "{animal} తిరిగి వచ్చింది",
+            "revivedYoung": "{animal} మళ్లీ యువ పెద్దదిగా తిరిగి వచ్చింది",
+            "gone": "{animal} Ark నుంచి వెళ్లిపోయింది"
         },
         "card": {
             "now": "ఇప్పుడు: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "ఇప్పుడు వద్దు",
             "note": "ఒక్కసారి మాత్రమే అడుగుతాం. మీకు 18 ఏళ్ల కంటే తక్కువ అయితే, మీ జంతువులు మీ @username బదులు Voyager నంబర్‌తో కనిపిస్తాయి.",
             "failed": "అది జరగలేదు. కాసేపట్లో మళ్లీ ప్రయత్నించండి."
+        },
+        "hearts": {
+            "livesOne": "Ark లో 1 ప్రాణం",
+            "livesOther": "Ark లో {n} ప్రాణాలు",
+            "livesNone": "Ark లో ప్రాణాలు ఏవీ మిగల్లేదు",
+            "label": "3 లో {n} హృదయాలు",
+            "recovering": "కోలుకుంటోంది · {when} తిరిగి వస్తుంది",
+            "whenHour": "ఒక గంటలోపు",
+            "whenHours": "సుమారు {n} గంటల్లో",
+            "whenTomorrow": "రేపు",
+            "whenDays": "{n} రోజుల్లో",
+            "restore": "ఒక హృదయాన్ని తిరిగి పొందండి · {credits} క్రెడిట్‌లు",
+            "restoring": "తిరిగి పొందుతోంది…",
+            "note": "ప్రతి హృదయం Ark లో మీ జంతువుకు ఇంకో ప్రాణం.",
+            "noCredits": "ఒక హృదయాన్ని తిరిగి పొందడానికి {credits} క్రెడిట్‌లు కావాలి.",
+            "getCredits": "క్రెడిట్‌లు పొందండి",
+            "failed": "అది జరగలేదు. కాసేపాగి మళ్లీ ప్రయత్నించండి.",
+            "recoveringOne": "1 కోలుకుంటోంది",
+            "recoveringOther": "{count} కోలుకుంటున్నాయి",
+            "away": "కోలుకునే వరకు అది దూరంగా ఉంటుంది, తర్వాత మళ్లీ తన ఇంటి నుంచి బయటకు వస్తుంది."
         }
     },
     "talkPage": {

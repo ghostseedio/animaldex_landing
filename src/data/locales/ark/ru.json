@@ -315,7 +315,15 @@
             "nest": "{aAnimal} строит гнездо",
             "alarm": "{aAnimal} подаёт сигнал тревоги",
             "matedOne": "{animals}: пара спарилась",
-            "matedOther": "{animals}: спарились пары ({count})"
+            "matedOther": "{animals}: спарились пары ({count})",
+            "heartsLeftOne": "осталось 1 ♥",
+            "heartsLeftOther": "осталось {n} ♥",
+            "heartsLeftNone": "♥ не осталось",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}: съеден, охотник — {aPredator}",
+            "revived": "{animal} вернулся",
+            "revivedYoung": "{animal} вернулся снова молодым взрослым",
+            "gone": "{animal} покинул Ark"
         },
         "card": {
             "now": "Сейчас: {activity}",
@@ -518,6 +526,26 @@
             "notNow": "Не сейчас",
             "note": "Спрашиваем один раз. Если вам меньше 18, ваши животные показываются с номером Voyager вместо вашего @username.",
             "failed": "Не получилось. Попробуйте ещё раз чуть позже."
+        },
+        "hearts": {
+            "livesOne": "1 жизнь в Ark",
+            "livesOther": "Жизней в Ark: {n}",
+            "livesNone": "В Ark не осталось жизней",
+            "label": "{n} из 3 сердец",
+            "recovering": "Восстанавливается · вернётся {when}",
+            "whenHour": "в течение часа",
+            "whenHours": "примерно через {n} ч",
+            "whenTomorrow": "завтра",
+            "whenDays": "через {n} дн.",
+            "restore": "Восстановить сердце · {credits} кредитов",
+            "restoring": "Восстанавливаем…",
+            "note": "Каждое сердце — ещё одна жизнь твоего животного в Ark.",
+            "noCredits": "Чтобы восстановить сердце, нужно {credits} кредитов.",
+            "getCredits": "Получить кредиты",
+            "failed": "Не получилось. Попробуй ещё раз чуть позже.",
+            "recoveringOne": "1 восстанавливается",
+            "recoveringOther": "Восстанавливаются: {count}",
+            "away": "Пока оно восстанавливается, его нет, а потом оно снова выходит из своего дома."
         }
     },
     "talkPage": {
