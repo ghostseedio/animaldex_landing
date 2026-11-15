@@ -76,10 +76,7 @@ export function rhythmChoice(profile: ArkBehaviourProfile, thrive: ArkThrive | n
             const inModes = new Set(kinds.map(([k]) => k));
             const rest = entries.filter(([b]) => !inModes.has(BEHAVIOUR_KIND[b] as SdCategory));
             const restMass = rest.reduce((s, [, w]) => s + w, 0);
-            // (Never less of its modes' kinds than its profile already gave them: an animal not kept by steps is off its
-            // kind's rhythm by what it lacks, not pushed below the day it had; the behaviour audit's grazers grazed 25.5 %
-            // of their waking time at the grass, under its 26 %, when an ordinary grazer was.)
-            const cover = restMass > 0 ? Math.max(shift.cover, (mass - restMass) / mass) : 1;
+            const cover = restMass > 0 ? shift.cover : 1;
             for (const [kind, share] of kinds) {
                 const own = entries.filter(([b]) => BEHAVIOUR_KIND[b] === kind);
                 const ownMass = own.reduce((s, [, w]) => s + w, 0);
