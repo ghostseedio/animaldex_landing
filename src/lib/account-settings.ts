@@ -47,8 +47,10 @@ export const PUSH_PREFERENCE_ROWS: Array<{id: keyof PushPreferences; title: stri
     {id: "captureUpdates", title: "Your captures", subtitle: "Merges and corrections to animals you have captured."},
     {id: "socialActivity", title: "Activity", subtitle: "New captures from people you follow."},
     {id: "directMessages", title: "Messages", subtitle: "New messages from collectors and AnimalDex Support."},
-    {id: "animalMessages", title: "Animal messages", subtitle: "When an animal you talk with writes to you."},
-    {id: "creditBonuses", title: "Credits", subtitle: "Missions, referrals, and other free Credit rewards."}
+    {id: "animalMessages", title: "Animal messages", subtitle: "When an animal you talk with writes to you."}
+    // No Credits row: Credit bonuses have been in-app only since 20261104162000
+    // (AnimalDex docs/notifications-audit-2026-11.md), so a switch for their alert switched nothing.
+    // The column stays in PushPreferences so a save never resets it.
 ];
 
 // MARK: - Record privacy (iOS `PlayRecordSection`, migration 20261019170000)
