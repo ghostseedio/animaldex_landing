@@ -35,9 +35,10 @@ function near(a: unknown, b: unknown, msg: string): void {
 }
 
 test("positions: the pinned copy (positions.ts, atlas.json, contract.json) and the contract's own hashes", () => {
-    for (const name of ["positions.ts", "atlas.json", "contract.json"]) assert.equal(sha(name), pin.sha256[name], `${name} is not the pinned one: copy it from AnimalDex and re-pin`);
+    for (const name of ["positions.ts", "atlas.json", "contract.json", "sleep.json"]) assert.equal(sha(name), pin.sha256[name], `${name} is not the pinned one: copy it from AnimalDex and re-pin`);
     assert.equal(contract.positionsSha256, pin.sha256["positions.ts"]);
     assert.equal(contract.atlasSha256, pin.sha256["atlas.json"]);
+    assert.equal(contract.sleepSha256, pin.sha256["sleep.json"]);
     assert.equal(P.POSITIONS_VERSION, contract.version);
     assert.equal(P.POSITIONS_VERSION, pin.positionsVersion);
 });
@@ -52,6 +53,13 @@ test("positions: every contract case answers as on the server", () => {
     for (const [act, start, d, v] of c.awake) assert.equal(P.awakeAt(act, start, d, 0), v);
     for (const [act, start, a, b, v] of c.awakeDays) near(P.awakeArkDays(act, start, a, b, 0), v, "awakeDays");
     for (const [act, start, a, need, v] of c.afterAwake) near(P.arkDayAfterAwake(act, start, a, need, 0), v, "afterAwake");
+    // Polyphasic sleep (version 4): one active at any hour sleeps its own bouts, as on the server.
+    for (const [sleep, want] of c.sleepWindows) near(P.sleepWindows(sleep), want, "sleepWindows");
+    for (const [sleep, start, d, v] of c.sleepAwake) assert.equal(P.awakeAt("any", start, d, 0, sleep), v);
+    for (const [sleep, start, a, b, v] of c.sleepDays) near(P.awakeArkDays("any", start, a, b, 0, sleep), v, "sleepDays");
+    for (const [sleep, start, a, need, v] of c.sleepAfter) near(P.arkDayAfterAwake("any", start, a, need, 0, sleep), v, "sleepAfter");
+    const table = JSON.parse(read("sleep.json").toString("utf8"));
+    for (const [id, kind, speciesId, want] of c.sleepOf) near(P.sleepOf(table, id, kind, speciesId), want, "sleepOf");
     for (const [ref, want] of c.home) {
         const h = P.homeOf(atlas, ref);
         near(h ? {x: h.x, z: h.z, r: h.r, island: h.island} : null, want, `home ${ref.slug} ${ref.slot}`);

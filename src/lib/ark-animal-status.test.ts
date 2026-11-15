@@ -335,7 +335,7 @@ test("the bars: fed from its day (the server's hungry over it), health from the 
     assert.deepEqual(day(0.45, true), {value: 0.45, tone: "warn", state: "eating"});
     assert.equal(day(0.1).value, ARK_FED_FLOOR, "never below the floor: nothing starves of its day");
     assert.deepEqual(arkStatusBars({condition: "hungry", arkDay: 100, fed: {value: 0.9, eating: false}}).fed, {value: 0.12, tone: "bad", state: "hungry"}, "the server's hungry first");
-    assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100}).fed, null, "off its schedule: no fed bar");
+    assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100}).fed, null, "no day of its own given: no fed bar");
     const health = (condition: "well_fed" | "hungry" | "old") => arkStatusBars({condition, arkDay: 100}).health!;
     assert.deepEqual(health("well_fed"), {value: 1, tone: "good", state: "good"});
     assert.deepEqual(health("hungry"), {value: 0.45, tone: "warn", state: "hungry"});
@@ -344,6 +344,8 @@ test("the bars: fed from its day (the server's hungry over it), health from the 
     assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100}).age, null);
     assert.deepEqual(arkStatusBars({condition: "well_fed", arkDay: 100, bornDay: 25, lifespanDays: 300}).age, {value: 0.75, tone: "good", state: "life"});
     assert.equal(arkStatusBars({condition: "well_fed", arkDay: 100, bornDay: 0, lifespanDays: 90}).age!.value, 0);
+    // An estimated lifespan (2026-11-15 fill): the same bar, said "about".
+    assert.deepEqual(arkStatusBars({condition: "well_fed", arkDay: 100, bornDay: 25, lifespanDays: 300, lifespanEstimate: true}).age, {value: 0.75, tone: "good", state: "life", estimate: true});
     // An older server (no condition): no health bar.
     assert.deepEqual(arkStatusBars({condition: null, arkDay: 100}), {fed: null, health: null, energy: null, age: null});
     assert.deepEqual([0, 0.29, 0.3, 0.59, 0.6, 1].map(arkBarTone), ["bad", "bad", "warn", "warn", "good", "good"]);
@@ -487,4 +489,36 @@ test("a status in words: now, next or when it wakes, its log stamped, its bars s
     assert.equal(host.text.now, "Now: sucht Futter");
     assert.equal(host.activity, "food");
     assert.equal(arkStatusForHost(null, null, "en"), null);
+});
+
+test("real values (2026-11-15): a step's meal is in its log and fills its day; the age bar says \"about\" for an estimate; the read's lifespan decodes", () => {
+    // A step's meal (`fed`, source step: AnimalDex docs/ark/step-feeds.md); a `fed` row without it says nothing in the log.
+    const at = "2026-11-15T01:00:00Z";
+    const row = (id: number, source: unknown) => ({id, kind: "fed", at, ark_day: 160.2, animal: {id: "a1", species_profile_id: "s", name: "Lion", model_slug: "african-lion", zone: "grassland"}, payload: source ? {source} : {}});
+    const events = decodeArkEvents({events: [row(1, "step"), row(2, null)]}, null);
+    assert.deepEqual(events.map((e) => e.source), ["step", null]);
+    const notes = arkRecordNotesFromEvents(events);
+    assert.equal(notes.length, 1);
+    assert.deepEqual({kind: notes[0].kind, animalId: notes[0].animalId, day: notes[0].day}, {kind: "stepFed", animalId: "a1", day: 160});
+    // Its day: the meal fills it from that moment, then it runs down by its normal rule.
+    const t0 = 1_000_000;
+    const slots = Array.from({length: 40}, (_, k) => ({start: t0 + k * 80, end: t0 + (k + 1) * 80, awake: true, eating: false}));
+    const rates = arkFedRates("meat", 1);
+    const without = arkFed(slots, t0 + 3000, rates)!;
+    const fedAt = t0 + 2900;
+    const withMeal = arkFed(slots, t0 + 3000, rates, [fedAt])!;
+    assert.ok(withMeal.value > without.value);
+    assert.ok(Math.abs(withMeal.value - (1 - rates.drain * 100)) < 0.002, "full at the meal, then its drain");
+    // The card's words for both.
+    const status: ArkAnimalStatus = {id: "a1", activity: null, since: null, goal: null, log: [{id: "event:1", source: "record", at: Date.parse(at), day: 160, kind: "stepFed"}], bars: arkStatusBars({condition: "well_fed", arkDay: 100, bornDay: 25, lifespanDays: 300, lifespanEstimate: true})};
+    const text = arkStatusText(status, arkStatusWords(english), "en");
+    assert.equal(text.log[0].text, "Fed after a step that worked");
+    assert.equal(text.bars.find((bar) => bar.key === "age")!.text, "About 75% of its life left");
+    const sourced = arkStatusText({...status, bars: arkStatusBars({condition: "well_fed", arkDay: 100, bornDay: 25, lifespanDays: 300})}, arkStatusWords(english), "en");
+    assert.equal(sourced.bars.find((bar) => bar.key === "age")!.text, "75% of its life left");
+    // The read's lifespan (voyage_public_animal_extras, AnimalDex 20261119100000), only when it sends one.
+    const base = (fixtureV2 as {animals: Array<Record<string, unknown>>}).animals[0];
+    const decoded = decodeArkSnapshot({...(fixtureV2 as object), animals: [{...base, lifespan_days: 5478.75, lifespan_estimate: true}, {...base, id: "x2"}]})!;
+    assert.deepEqual([decoded.animals[0].lifespan_days, decoded.animals[0].lifespan_estimate], [5478.75, true]);
+    assert.equal(decoded.animals[1].lifespan_days, undefined);
 });

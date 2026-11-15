@@ -37,6 +37,7 @@ import {DEN_DRY, SURF_REACH} from "@/ark-scene/map/points";
 import {topOf, waterSurfaceOf} from "@/ark-scene/behaviour-water";
 import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
+import {arkAwakeAtHour, type Sleep} from "@/ark-scene/sleep-hours";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
 import type {ArkZone, ArkThrive} from "@/ark-scene/types";
@@ -192,6 +193,8 @@ export type ScheduleAnimal = {
     thrive?: ArkThrive;
     /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
     roost?: Spot | null;
+    /** Its own sleep, when it is active at any hour (`sleep-hours.ts` arkSleepOf): it sleeps in bouts of its own. */
+    sleep?: Sleep | null;
 };
 
 /** A predator as its prey sees it: its own schedule animal, profile and activity. */
@@ -204,8 +207,13 @@ export function sunElevationAt(hours: number): number {
     return 58 * Math.sin((2 * Math.PI * (hours - 6)) / 24);
 }
 
-export function awakeAt(profile: ArkBehaviourProfile, activity: ArkBehaviourProfile["activity"] | null | undefined, hours: number): boolean {
-    return isAwake(activity ?? profile.activity, sunElevationAt(hours));
+/**
+ * Awake at an island hour: the sun's rule for its activity; one active at any hour that has a sleep of its own
+ * (`ScheduleAnimal.sleep`, `sleep-hours.ts`) is asleep in its own bouts (every animal sleeps, 2026-11-15).
+ */
+export function awakeAt(profile: ArkBehaviourProfile, activity: ArkBehaviourProfile["activity"] | null | undefined, hours: number, sleep?: Sleep | null): boolean {
+    const act = activity ?? profile.activity;
+    return act === "any" && sleep ? arkAwakeAtHour(act, hours, sleep) : isAwake(act, sunElevationAt(hours));
 }
 
 // MARK: Seeded choices
@@ -1388,7 +1396,7 @@ function keepInWater(world: ScheduleWorld, profile: ArkBehaviourProfile, animal:
 function plannedIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
     // A sitter with eggs in its nest (the props lane's nests: `behaviour-recipes.ts` sitterIntent) sits on it, awake or asleep.
     const start = slotStart(animal, slot);
-    const sitting = sitterIntent({world, profile, animal, start, awake: awakeAt(profile, activity, hoursAt(start)), kit: KIT});
+    const sitting = sitterIntent({world, profile, animal, start, awake: awakeAt(profile, activity, hoursAt(start), animal.sleep), kit: KIT});
     if (sitting) return {doing: sitting.doing as ArkDoing, to: sitting.to, mode: sitting.mode, stay: [], recipe: sitting.recipe};
     const raw = rawIntent(world, profile, animal, activity, slot, hoursAt);
     // (Decision 202: a goal on foot further than it can walk in a slot, at the most its pace cap allows, isn't taken: a
@@ -1437,8 +1445,8 @@ function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: S
 function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
     const start = slotStart(animal, slot);
     const hours = hoursAt(start);
-    const awake = awakeAt(profile, activity, hours);
-    const wasAwake = awakeAt(profile, activity, hoursAt(start - SLOT_SECONDS));
+    const awake = awakeAt(profile, activity, hours, animal.sleep);
+    const wasAwake = awakeAt(profile, activity, hoursAt(start - SLOT_SECONDS), animal.sleep);
     const flyer = flies(profile);
     const random = rng(hashString(`${animal.id}#${slot}`));
     const group = animal.group;
@@ -2897,7 +2905,7 @@ export function drawnRecipeAt(world: ScheduleWorld, trip: Trip, epochSeconds: nu
 
 /** The pair meetings it has that start between two world times, as its pose plays them (`behaviour-recipes.ts` pairMeetings). */
 export function pairMeetingsAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, from: number, to: number, hoursAt: HoursAt, activity?: ArkBehaviourProfile["activity"] | null): DrawnRecipe[] {
-    return pairMeetings(world, {animal, profile, slug: profile.slug, activity, hoursAt}, KIT, from, to, (t) => !awakeAt(profile, activity, hoursAt(slotStart(animal, slotOf(animal, t)))));
+    return pairMeetings(world, {animal, profile, slug: profile.slug, activity, hoursAt}, KIT, from, to, (t) => !awakeAt(profile, activity, hoursAt(slotStart(animal, slotOf(animal, t))), animal.sleep));
 }
 
 /**

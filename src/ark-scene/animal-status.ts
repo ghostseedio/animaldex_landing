@@ -149,7 +149,7 @@ function goalOf(subject: ScheduleSubject, plan: SlotPlan, settled: ArkActivityKe
         // Asleep: it wakes at the first slot that starts in its waking hours (the schedule's own rule).
         for (let k = 1; k <= WAKE_SLOTS; k++) {
             const start = plan.start + k * SLOT_SECONDS;
-            if (awakeAt(subject.profile, subject.activity, subject.hoursAt(start))) return {kind: "wakes", at: start};
+            if (awakeAt(subject.profile, subject.activity, subject.hoursAt(start), subject.animalAt(start).sleep)) return {kind: "wakes", at: start};
         }
         return null;
     }
@@ -320,7 +320,7 @@ export function scheduleFed(subject: ScheduleSubject, epoch: number, meals: read
         const start = slot * SLOT_SECONDS - offset;
         let flag = known.get(slot);
         if (flag === undefined) {
-            flag = !awakeAt(subject.profile, subject.activity, subject.hoursAt(start)) ? 0 : EATING.has(keyOf(subject, planOf(subject, start + 0.5))) ? 2 : 1;
+            flag = !awakeAt(subject.profile, subject.activity, subject.hoursAt(start), subject.animalAt(start).sleep) ? 0 : EATING.has(keyOf(subject, planOf(subject, start + 0.5))) ? 2 : 1;
             known.set(slot, flag);
         }
         if (flag) awake++;

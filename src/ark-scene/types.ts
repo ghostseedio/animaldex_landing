@@ -130,6 +130,12 @@ export type ArkAnimal = {
     generation?: number;
     condition?: ArkCondition | null;
     born_ark_day?: number | null;
+    /**
+     * Its kind's wild lifespan in days, the figure the read's `old` uses (`voyage_public_animal_extras`, AnimalDex
+     * migration 20261119100000), and whether it is an estimate (the card says "about"); absent from an older server.
+     */
+    lifespan_days?: number | null;
+    lifespan_estimate?: boolean;
     /** The species' stored activity: when it sleeps (the scene's day and night). */
     activity?: ArkActivity | null;
     sociality?: ArkSociality | null;

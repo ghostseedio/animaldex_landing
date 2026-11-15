@@ -16,6 +16,7 @@
 import {ARK_DAY_MS, STEPS_PER_ARK_DAY, awakeAt, decodeAtlas, forayAt, homeOf, stepIndex, type Atlas, type Home} from "@/ark-scene/positions/positions";
 import type {ArkDoing, TripPose} from "@/ark-scene/behaviour-schedule";
 import type {ArkAnimal} from "@/ark-scene/types";
+import {arkSleepOf} from "@/ark-scene/sleep-hours";
 import type {ArkHunting} from "@/lib/ark-hunting";
 import pin from "@/ark-scene/positions/PIN.json";
 
@@ -91,7 +92,8 @@ export class HuntingLayer {
     /** Is it hunting at step k: its next hunt has come and it is awake (the module's sleep, its stored activity first). */
     private on(animal: ArkAnimal, home: Home, from: number, k: number): boolean {
         const day = k / STEPS_PER_ARK_DAY;
-        return day >= from && awakeAt(animal.activity ?? home.sheet.activity ?? null, this.state!.startedAtMs, day, 0);
+        // (One active at any hour sleeps its own bouts, as the server's awake time has it: `sleep-hours.ts`.)
+        return day >= from && awakeAt(animal.activity ?? home.sheet.activity ?? null, this.state!.startedAtMs, day, 0, arkSleepOf(animal));
     }
 
     /** True when this animal is walking its forays now (the tap card, the audit). */

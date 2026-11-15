@@ -44,6 +44,8 @@ export type ArkBehaviourInput = {
     activity: ArkActivity | null | undefined;
     /** The sun's elevation the scene is lit for (degrees). */
     elevation: number;
+    /** One active at any hour with a sleep of its own (`sleep-hours.ts`): asleep in its own bouts now, off the schedule. */
+    asleepOwn?: boolean;
     /** A bird of the air over land (`flyers.ts`): it flies while awake. */
     flyer: boolean;
     /** Acting out a server event (a replay's act): wide awake, on the act's own path. */
@@ -78,7 +80,7 @@ const SCHEDULED = new Map<string, ArkBehaviourState>();
 
 export function behaviourState(input: ArkBehaviourInput): ArkBehaviourState {
     const plan = input.scheduled;
-    const awake = plan ? plan.doing !== "sleep" : Boolean(input.acting || input.visitor) || isAwake(input.activity ?? null, input.elevation);
+    const awake = plan ? plan.doing !== "sleep" : Boolean(input.acting || input.visitor) || (input.asleepOwn !== undefined ? !input.asleepOwn : isAwake(input.activity ?? null, input.elevation));
     // Up for air on its breath cycle (not in an act, nor the visitor, nor with motion reduced).
     const breather = input.breather && !input.acting && !input.visitor && !input.reducedMotion ? input.breather : null;
     const breathing = breather ? (breather.breath ?? breathAt(breather.seed, breather.clock, !awake)) > 0 : false;
