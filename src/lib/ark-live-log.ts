@@ -31,7 +31,7 @@ import {ARK_ACTIVITY_ENGLISH, type ArkActivityKey, type ArkActivityWords} from "
 import {pluralAnimalName} from "@/lib/ark-population";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 
-export type ArkLiveServerKind = "arrival" | "mated" | "birth" | "hatched" | "laid" | "meal" | "death" | "starved" | "extinction";
+export type ArkLiveServerKind = "arrival" | "mated" | "birth" | "hatched" | "laid" | "meal" | "death" | "starved" | "extinction" | "revived" | "gone";
 export type ArkLiveSeenKind = "courting" | "contest" | "fishing" | "nest" | "alarm";
 export type ArkLiveKind = ArkLiveServerKind | ArkLiveSeenKind | ScheduleMomentKind | "more";
 export type ArkLiveSource = "server" | "seen" | "now";
@@ -58,6 +58,13 @@ export type ArkLiveItem = {
     group?: number | null;
     /** A schedule moment's activity (`ark.activity`): what it set about. */
     activity?: ArkActivityKey | null;
+    /**
+     * Hearts are lives (behind the server's `ark_hearts`): the hearts its card has left, on a death it recovers from
+     * ("· 2 ♥ left") and on its return ("is back, 2 ♥ left"). Absent with hearts off: the line reads as before.
+     */
+    hearts?: number | null;
+    /** A return from old age: a young adult again. */
+    young?: boolean;
     focus: ArkLiveFocus;
 };
 
@@ -81,6 +88,9 @@ function focusOn(animal: ArkEventAnimal | null): ArkLiveFocus {
 export function arkLiveServerItems(events: readonly ArkEvent[]): ArkLiveItem[] {
     const items: ArkLiveItem[] = [];
     const litters = new Map<string, ArkLiveItem>();
+    // The eaten one's hearts (its `eaten` row's `payload.lives`) ride on its meal's line.
+    const eatenLives = new Map<string, number>();
+    for (const event of events) if (event.kind === "eaten" && event.animal && event.lives && !event.lives.final) eatenLives.set(event.animal.id, event.lives.heartsLeft);
     for (const event of events) {
         const animal = event.animal;
         switch (event.kind) {
@@ -111,12 +121,26 @@ export function arkLiveServerItems(events: readonly ArkEvent[]): ArkLiveItem[] {
             case "laid":
                 if (animal) items.push({id: event.id, kind: "laid", source: "server", key: `laid:${speciesOf(animal)}`, animal: animal.name, other: null, count: 1, eggs: event.eggs, focus: {...focusOn(animal), animalId: event.parents[0] ?? animal.id}});
                 break;
-            case "meal":
-                if (animal && event.other) items.push({id: event.id, kind: "meal", source: "server", key: `meal:${speciesOf(animal)}:${speciesOf(event.other)}`, animal: animal.name, other: event.other.name, count: 1, eggs: null, focus: focusOn(animal)});
+            case "meal": {
+                if (!animal || !event.other) break;
+                const hearts = eatenLives.get(event.other.id);
+                items.push({id: event.id, kind: "meal", source: "server", key: `meal:${speciesOf(animal)}:${speciesOf(event.other)}${hearts !== undefined ? `:h${event.other.id}` : ""}`, animal: animal.name, other: event.other.name, count: 1, eggs: null, ...(hearts !== undefined ? {hearts} : {}), focus: focusOn(animal)});
                 break;
+            }
             case "death_old":
-            case "starved":
-                if (animal) items.push({id: event.id, kind: event.kind === "starved" ? "starved" : "death", source: "server", key: `${event.kind}:${speciesOf(animal)}`, animal: animal.name, other: null, count: 1, eggs: null, focus: {...focusOn(animal), animalId: null}});
+            case "starved": {
+                if (!animal) break;
+                // One it recovers from is its own line (never folded into "3 died of old age"), with its hearts left.
+                const hearts = event.lives && !event.lives.final ? event.lives.heartsLeft : undefined;
+                items.push({id: event.id, kind: event.kind === "starved" ? "starved" : "death", source: "server", key: `${event.kind}:${speciesOf(animal)}${hearts !== undefined ? `:h${animal.id}` : ""}`, animal: animal.name, other: null, count: 1, eggs: null, ...(hearts !== undefined ? {hearts} : {}), focus: {...focusOn(animal), animalId: null}});
+                break;
+            }
+            case "revived":
+                // Back from recovering, at its home: the camera may fly to it (it is aboard again).
+                if (animal) items.push({id: event.id, kind: "revived", source: "server", key: `revived:${animal.id}`, animal: animal.name, other: null, count: 1, eggs: null, hearts: event.lives?.heartsLeft ?? null, young: event.lives?.ageReset === true, focus: focusOn(animal)});
+                break;
+            case "revive_failed":
+                if (animal) items.push({id: event.id, kind: "gone", source: "server", key: `gone:${animal.id}`, animal: animal.name, other: null, count: 1, eggs: null, focus: {...focusOn(animal), animalId: null}});
                 break;
             case "extinction": {
                 const name = event.species?.name || animal?.name || "";
@@ -273,7 +297,7 @@ export type ArkLiveLogOptions = {
 export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, nowLife: 20_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6};
 
 /** The kinds the record keeps first when a burst is bigger than the log: the rare and the sad before the many. */
-const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, meal: 1, starved: 2, death: 3, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, hunting: 7, eggs: 7, playing: 7, toWater: 7, home: 7, flock: 7, group: 7, doing: 7, breathing: 7, calling: 7, bathing: 7, feeding: 7, more: 8};
+const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, meal: 1, starved: 2, death: 3, gone: 3, revived: 3, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, hunting: 7, eggs: 7, playing: 7, toWater: 7, home: 7, flock: 7, group: 7, doing: 7, breathing: 7, calling: 7, bathing: 7, feeding: 7, more: 8};
 
 /**
  * The log's state: the lines on screen and the items waiting. `push` takes new items, `step` lets the next one
@@ -386,7 +410,32 @@ function isEnglish(locale: string): boolean {
 }
 
 /** A line as the reader reads it. `locale`: the words' language (English names take their plural). */
-export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity">>, words: ArkLiveText, locale: string): string {
+export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young">>, words: ArkLiveText, locale: string): string {
+    const text = arkLiveLineBase(line, words, locale);
+    const hearts = line.hearts;
+    if (typeof hearts !== "number" || line.kind === "revived" || (line.kind !== "meal" && line.kind !== "death" && line.kind !== "starved")) return text;
+    return fillArkWords(words.live.withHearts ?? ARK_LIVE_HEARTS_ENGLISH.withHearts, {line: text, hearts: arkHeartsLeftText(hearts, words, locale)});
+}
+
+const ARK_LIVE_HEARTS_ENGLISH = {
+    heartsLeftOne: "1 ♥ left",
+    heartsLeftOther: "{n} ♥ left",
+    heartsLeftNone: "no ♥ left",
+    withHearts: "{line} · {hearts}",
+    eatenBy: "{animal} was eaten by {aPredator}",
+    revived: "{animal} is back",
+    revivedYoung: "{animal} is back, a young adult again",
+    gone: "{animal} is gone from the Ark"
+} as const;
+
+/** "2 ♥ left", "1 ♥ left", "no ♥ left". */
+export function arkHeartsLeftText(hearts: number, words: ArkLiveText, locale: string): string {
+    const live = {...ARK_LIVE_HEARTS_ENGLISH, ...words.live};
+    const n = Math.min(Math.max(Math.round(hearts), 0), 3);
+    return n === 0 ? live.heartsLeftNone : n === 1 ? live.heartsLeftOne : fillArkWords(live.heartsLeftOther, {n: n.toLocaleString(locale)});
+}
+
+function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young">>, words: ArkLiveText, locale: string): string {
     const live = words.live;
     const replay = words.replay;
     const many = line.count > 1;
@@ -443,6 +492,8 @@ export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "oth
             return times(one);
         }
         case "meal":
+            // One it recovers from (hearts on): said from its side, so its hearts left read as its own.
+            if (typeof line.hearts === "number" && line.other) return fillArkWords(live.eatenBy ?? ARK_LIVE_HEARTS_ENGLISH.eatenBy, {animal: line.other, aPredator: arkWithArticle(line.animal, words)});
             return times(fillArkWords(replay.meal, {predator: line.animal, aPrey: arkWithArticle(line.other ?? "", words)}));
         case "death":
             return many ? fillArkWords(live.deathOther, {count, animals}) : fillArkWords(replay.death, {animal: line.animal});
@@ -450,6 +501,13 @@ export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "oth
             return times(fillArkWords(replay.starved, {animal: line.animal}));
         case "extinction":
             return fillArkWords(replay.extinction, {animal: line.animal});
+        case "revived": {
+            const hearts = {...ARK_LIVE_HEARTS_ENGLISH, ...live};
+            // The contract (HEARTS-LIVES-DESIGN section 6): "Komodo dragon is back", no hearts count on a return.
+            return fillArkWords(line.young ? hearts.revivedYoung : hearts.revived, {animal: line.animal});
+        }
+        case "gone":
+            return fillArkWords(live.gone ?? ARK_LIVE_HEARTS_ENGLISH.gone, {animal: line.animal});
         case "courting":
             return times(fillArkWords(live.courting, {aAnimal}));
         case "contest":

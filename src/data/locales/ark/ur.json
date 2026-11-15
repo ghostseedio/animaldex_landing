@@ -317,7 +317,15 @@
             "nest": "{aAnimal} گھونسلا بنا رہا ہے",
             "alarm": "{aAnimal} نے خطرے کی پکار دی",
             "matedOne": "{animals} کے ایک جوڑے نے ملاپ کیا",
-            "matedOther": "{animals} کے {count} جوڑوں نے ملاپ کیا"
+            "matedOther": "{animals} کے {count} جوڑوں نے ملاپ کیا",
+            "heartsLeftOne": "1 ♥ باقی",
+            "heartsLeftOther": "{n} ♥ باقی",
+            "heartsLeftNone": "کوئی ♥ باقی نہیں",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} کو {aPredator} نے کھا لیا",
+            "revived": "{animal} واپس آ گیا",
+            "revivedYoung": "{animal} دوبارہ نوجوان بالغ بن کر واپس آ گیا",
+            "gone": "{animal} Ark سے چلا گیا"
         },
         "card": {
             "now": "ابھی: {activity}",
@@ -559,6 +567,26 @@
             "alt": "وہ تصویر جو اس {species} کو جہاز پر لائی",
             "open": "تصویر بڑی دیکھیں",
             "close": "تصویر بند کریں"
+        },
+        "hearts": {
+            "livesOne": "Ark میں 1 زندگی",
+            "livesOther": "Ark میں {n} زندگیاں",
+            "livesNone": "Ark میں کوئی زندگی باقی نہیں",
+            "label": "3 میں سے {n} دل",
+            "recovering": "صحت یاب ہو رہا ہے · {when} واپس آئے گا",
+            "whenHour": "ایک گھنٹے کے اندر",
+            "whenHours": "تقریباً {n} گھنٹوں میں",
+            "whenTomorrow": "کل",
+            "whenDays": "{n} دن میں",
+            "restore": "ایک دل واپس لائیں · {credits} کریڈٹ",
+            "restoring": "واپس لا رہے ہیں…",
+            "note": "ہر دل Ark میں آپ کے جانور کے لیے ایک اور زندگی ہے۔",
+            "noCredits": "ایک دل واپس لانے کے لیے آپ کو {credits} کریڈٹ چاہییں۔",
+            "getCredits": "کریڈٹ حاصل کریں",
+            "failed": "یہ نہیں ہو سکا۔ تھوڑی دیر بعد دوبارہ کوشش کریں۔",
+            "recoveringOne": "1 صحت یاب ہو رہا ہے",
+            "recoveringOther": "{count} صحت یاب ہو رہے ہیں",
+            "away": "صحت یاب ہونے تک یہ دور رہتا ہے، پھر دوبارہ اپنے گھر سے باہر آتا ہے۔"
         }
     },
     "talkPage": {

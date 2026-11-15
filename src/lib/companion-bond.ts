@@ -219,6 +219,8 @@ export const DEBATE_COPY = {
     publicTextNote: "Names and details are left out. Change anything you like.",
     approve: "Post the debate",
     stakeNote: "Each animal puts 1 heart on it. The winner's owner gets {credits} Credits.",
+    /** Hearts are Ark lives only (AnimalDex docs/ark/HEARTS-LIVES-DESIGN.md section 6): `stakeNote` once `hearts_in_debates` is false. */
+    stakeNoteXp: "The community picks the way that fits best. The winner's card gets +10 XP.",
     notPublic: "This one stays private. It's too personal to post.",
     begin: "Start the debate",
     reportTitle: "Debate report",
@@ -232,6 +234,8 @@ export const DEBATE_COPY = {
     won: "{name}'s way won. +{credits} Credits",
     lost: "{name} lost a heart.",
     draw: "Not enough votes came in. No hearts or Credits moved.",
+    /** `draw` once `hearts_in_debates` is false. */
+    drawQuiet: "Not enough votes came in.",
     cantVoteOwn: "You can't vote on a debate you're in.",
     // SPEC section 6 (owner, 2026-10-30): the offer is the animal's own words; these are the app's.
     yes: "Yes, start a debate",
@@ -475,6 +479,8 @@ export const ARK_COPY = {
 export const ROSTER_COPY = {
     optIn: "Let my animals join public debates",
     optInNote: "Only animals with their Power earned. Each debate puts 1 heart on it, and a winning animal earns you Credits.",
+    /** `optInNote` once `hearts_in_debates` is false. */
+    optInNoteXp: "Only animals with their Power earned. A winning animal earns its card XP.",
     /** Newcomer UX vet (2026-10-30, P1-5): says what healing costs and where, away from the card. */
     offRoster: "Out of hearts. Heal a heart for 5 Credits on its card."
 } as const;
@@ -482,7 +488,20 @@ export const ROSTER_COPY = {
 export const HEAL_COPY = {
     title: "Hearts",
     one: "Heal a heart: 5 Credits",
-    full: "All 3 hearts"
+    full: "All 3 hearts",
+    /** Hearts are Ark lives (`ark_hearts` on): the card's hearts band says so (AnimalDex docs/ark/HEARTS-LIVES-DESIGN.md section 6). */
+    arkTitle: "Lives in the Ark",
+    arkOne: "Restore a heart · 5 Credits",
+    arkLife: "1 life in the Ark",
+    arkLives: "{n} lives in the Ark",
+    arkNone: "No lives left in the Ark",
+    arkNote: "Each heart is one more life for your animal in the Ark.",
+    arkNoCredits: "You need 5 Credits to restore a heart.",
+    arkRestoring: "Restoring…",
+    /** Filled only with `ark_hearts` on (`companionWordsForHearts`): the band's lives line and the note under its button. */
+    lives: "",
+    life: "",
+    note: ""
 } as const;
 
 /**
@@ -702,6 +721,31 @@ function overlay<T extends Record<string, unknown>>(base: T, raw: unknown): T {
 /** A locale's `companions` labels over the English ones: every key there, in that language where it has one. */
 export function companionWords(raw: unknown): CompanionWords {
     return overlay(COMPANION_WORDS_EN as CompanionWords, raw);
+}
+
+/**
+ * The words as the server's switches have them (`debates_config_v1`): with `heartsInDebates` false, debates put no heart
+ * on and pay no Credits, so their copy says the XP instead and drops the heart lines (empty: not shown); with
+ * `arkHearts` on, the card's hearts band speaks of lives in the Ark and "Restore a heart". Either unknown (null): as is.
+ */
+export function companionWordsForHearts(words: CompanionWords, flags: {heartsInDebates: boolean | null; arkHearts: boolean | null}): CompanionWords {
+    let out = words;
+    if (flags.heartsInDebates === false) {
+        out = {
+            ...out,
+            debate: {...out.debate, stakeNote: out.debate.stakeNoteXp, draw: out.debate.drawQuiet, lost: "", ownOnly: ""},
+            roster: {...out.roster, optInNote: out.roster.optInNoteXp, offRoster: ""},
+            debateWeb: {...out.debateWeb, problems: {...out.debateWeb.problems, noHearts: out.debateWeb.problems.generic}}
+        };
+    }
+    if (flags.arkHearts === true) {
+        out = {
+            ...out,
+            heal: {...out.heal, title: out.heal.arkTitle, one: out.heal.arkOne, full: fillWords(out.heal.arkLives, {n: 3}), lives: out.heal.arkLives, life: out.heal.arkLife, note: out.heal.arkNote},
+            debateWeb: {...out.debateWeb, outOfHearts: out.heal.arkNone, healing: out.heal.arkRestoring, problems: {...out.debateWeb.problems, noCredits: out.heal.arkNoCredits}}
+        };
+    }
+    return out;
 }
 
 /** "{n}"-style placeholders filled in. */

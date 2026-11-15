@@ -3314,17 +3314,31 @@
       "offerAnimal": "Add one of your animals",
       "offerAnimalTitle": "Which of your animals should weigh in?",
       "offerAnimalNone": "None of your animals with a Power can join this one.",
-      "offerAnimalWorking": "Your animal is thinking…"
+      "offerAnimalWorking": "Your animal is thinking…",
+      "stakeNoteXp": "The community picks the way that fits best. The winner's card gets +10 XP.",
+      "drawQuiet": "Not enough votes came in."
     },
     "roster": {
       "optIn": "Let my animals join public debates",
       "optInNote": "Only animals with their Power earned. Each debate puts 1 heart on it, and a winning animal earns you Credits.",
-      "offRoster": "Out of hearts. Heal a heart for 5 Credits on its card."
+      "offRoster": "Out of hearts. Heal a heart for 5 Credits on its card.",
+      "optInNoteXp": "Only animals with their Power earned. A winning animal earns its card XP."
     },
     "heal": {
       "title": "Hearts",
       "one": "Heal a heart: 5 Credits",
-      "full": "All 3 hearts"
+      "full": "All 3 hearts",
+      "arkTitle": "Lives in the Ark",
+      "arkOne": "Restore a heart · 5 Credits",
+      "arkLife": "1 life in the Ark",
+      "arkLives": "{n} lives in the Ark",
+      "arkNone": "No lives left in the Ark",
+      "arkNote": "Each heart is one more life for your animal in the Ark.",
+      "arkNoCredits": "You need 5 Credits to restore a heart.",
+      "arkRestoring": "Restoring…",
+      "lives": "",
+      "life": "",
+      "note": ""
     },
     "debates": {
       "tab": "Debates"
@@ -4509,7 +4523,15 @@
       "nest": "{aAnimal} is building a nest",
       "alarm": "{aAnimal} gave an alarm call",
       "matedOne": "Two {animals} mated",
-      "matedOther": "{count} pairs of {animals} mated"
+      "matedOther": "{count} pairs of {animals} mated",
+      "heartsLeftOne": "1 ♥ left",
+      "heartsLeftOther": "{n} ♥ left",
+      "heartsLeftNone": "no ♥ left",
+      "withHearts": "{line} · {hearts}",
+      "eatenBy": "{animal} was eaten by {aPredator}",
+      "revived": "{animal} is back",
+      "revivedYoung": "{animal} is back, a young adult again",
+      "gone": "{animal} is gone from the Ark"
     },
     "card": {
       "now": "Now: {activity}",
@@ -4751,6 +4773,26 @@
       "alt": "Photo that brought this {species} aboard",
       "open": "See the photo larger",
       "close": "Close the photo"
+    },
+    "hearts": {
+      "livesOne": "1 life in the Ark",
+      "livesOther": "{n} lives in the Ark",
+      "livesNone": "No lives left in the Ark",
+      "label": "{n} of 3 hearts",
+      "recovering": "Recovering · returns {when}",
+      "whenHour": "within the hour",
+      "whenHours": "in about {n} hours",
+      "whenTomorrow": "tomorrow",
+      "whenDays": "in {n} days",
+      "restore": "Restore a heart · {credits} Credits",
+      "restoring": "Restoring…",
+      "note": "Each heart is one more life for your animal in the Ark.",
+      "noCredits": "You need {credits} Credits to restore a heart.",
+      "getCredits": "Get Credits",
+      "failed": "That didn't go through. Try again in a moment.",
+      "recoveringOne": "1 recovering",
+      "recoveringOther": "{count} recovering",
+      "away": "It's away while it recovers, then walks out of its home again."
     }
   },
   "seo": {

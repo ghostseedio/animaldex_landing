@@ -317,7 +317,15 @@
             "nest": "{aAnimal} માળો બાંધી રહ્યું છે",
             "alarm": "{aAnimal} એ ચેતવણીનો અવાજ કર્યો",
             "matedOne": "{animals} ની એક જોડીએ સંવનન કર્યું",
-            "matedOther": "{animals} ની {count} જોડીઓએ સંવનન કર્યું"
+            "matedOther": "{animals} ની {count} જોડીઓએ સંવનન કર્યું",
+            "heartsLeftOne": "1 ♥ બાકી",
+            "heartsLeftOther": "{n} ♥ બાકી",
+            "heartsLeftNone": "કોઈ ♥ બાકી નથી",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} ને {aPredator} ખાઈ ગયું",
+            "revived": "{animal} પાછું આવ્યું",
+            "revivedYoung": "{animal} ફરી યુવાન પુખ્ત બનીને પાછું આવ્યું",
+            "gone": "{animal} Ark માંથી ચાલ્યું ગયું"
         },
         "card": {
             "now": "હમણાં: {activity}",
@@ -559,6 +567,26 @@
             "alt": "જે ફોટાએ આ {species}ને વહાણમાં લાવ્યું",
             "open": "ફોટો મોટો જુઓ",
             "close": "ફોટો બંધ કરો"
+        },
+        "hearts": {
+            "livesOne": "Ark માં 1 જીવન",
+            "livesOther": "Ark માં {n} જીવન",
+            "livesNone": "Ark માં કોઈ જીવન બાકી નથી",
+            "label": "3 માંથી {n} હૃદય",
+            "recovering": "સાજું થઈ રહ્યું છે · {when} પાછું આવશે",
+            "whenHour": "એક કલાકમાં",
+            "whenHours": "લગભગ {n} કલાકમાં",
+            "whenTomorrow": "કાલે",
+            "whenDays": "{n} દિવસમાં",
+            "restore": "એક હૃદય પાછું મેળવો · {credits} ક્રેડિટ",
+            "restoring": "પાછું મેળવી રહ્યા છીએ…",
+            "note": "દરેક હૃદય Ark માં તમારા પ્રાણી માટે એક વધુ જીવન છે.",
+            "noCredits": "એક હૃદય પાછું મેળવવા તમને {credits} ક્રેડિટ જોઈએ.",
+            "getCredits": "ક્રેડિટ મેળવો",
+            "failed": "એ થયું નહીં. થોડી વારમાં ફરી પ્રયાસ કરો.",
+            "recoveringOne": "1 સાજું થઈ રહ્યું છે",
+            "recoveringOther": "{count} સાજાં થઈ રહ્યાં છે",
+            "away": "સાજું થાય ત્યાં સુધી તે દૂર છે, પછી ફરી પોતાના ઘરમાંથી બહાર આવે છે."
         }
     },
     "talkPage": {

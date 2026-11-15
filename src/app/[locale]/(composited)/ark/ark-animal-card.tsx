@@ -17,6 +17,8 @@ import {arkRecordNoteFromLife, arkStatusSignature, arkStatusText, type ArkAnimal
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 import {arkPhotoAspect, type ArkCapturePhoto} from "@/lib/ark-capture-photo";
 import {ArkRhythmLine, ArkRhythmPanel, useAnimalRhythm} from "@/app/[locale]/(composited)/ark/ark-rhythm";
+import {ArkLivesRow} from "@/app/[locale]/(composited)/ark/ark-lives";
+import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
 
 /**
  * The tapped animal's card along the world's foot (decision 240, owner 2026-11-12: "should be showing all the animals
@@ -167,9 +169,14 @@ type CardProps = {
     focusOnOpen: boolean;
     /** Share this animal's kind on the Ark: the page's path and the words that go with the link. */
     share: {localePath: string; text: string};
+    /**
+     * Hearts are lives (behind the server's `ark_hearts`): the owner's own animal's hearts and the restore, or null
+     * (someone else's animal, hearts off, the read absent): the card is as it was.
+     */
+    lives?: {entry: ArkAnimalHearts; words: ArkHeartsWords; cost: number; onRestored: (captureId: string, hearts: number) => void} | null;
 };
 
-export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, photo = null, arkDay, voyageStart, scene, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share}: CardProps) {
+export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, photo = null, arkDay, voyageStart, scene, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share, lives = null}: CardProps) {
     arkPerfCountRender();
     const life = state?.life ?? null;
     const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
@@ -308,6 +315,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             {text?.next ? <p data-testid="ark-card-next" className="mt-0.5 text-[12.5px] italic leading-snug text-ink-300">{text.next}</p> : null}
                         </div>
                         {rhythmNow ? <ArkRhythmLine rhythm={rhythmNow} open={rhythmOpen} onToggle={() => setRhythmOpen((v) => !v)} /> : null}
+                        {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} /> : null}
                         {placeholder ? <p className="mt-1 text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
                         {/* The last of its kind aboard (the server's last_of_kind): it ages out honestly unless another is caught. */}
                         {animal.last_of_kind ? <p data-testid="ark-card-last-of-kind" className="mt-1 text-[12px] font-semibold leading-snug text-[#ffe2a8]">{words.life.lastOfKind}</p> : null}

@@ -317,7 +317,15 @@
             "nest": "{aAnimal} בונה קן",
             "alarm": "{aAnimal} השמיע קריאת אזעקה",
             "matedOne": "זוג {animals} הזדווג",
-            "matedOther": "{count} זוגות {animals} הזדווגו"
+            "matedOther": "{count} זוגות {animals} הזדווגו",
+            "heartsLeftOne": "נשאר 1 ♥",
+            "heartsLeftOther": "נשארו {n} ♥",
+            "heartsLeftNone": "לא נשארו ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} נטרף על ידי {aPredator}",
+            "revived": "{animal} חזר",
+            "revivedYoung": "{animal} חזר, שוב בוגר צעיר",
+            "gone": "{animal} עזב את ה-Ark"
         },
         "card": {
             "now": "עכשיו: {activity}",
@@ -559,6 +567,26 @@
             "alt": "התמונה שהעלתה את ה{species} הזה לספינה",
             "open": "הצגת התמונה בגדול",
             "close": "סגירת התמונה"
+        },
+        "hearts": {
+            "livesOne": "חיים אחד ב-Ark",
+            "livesOther": "{n} חיים ב-Ark",
+            "livesNone": "לא נשארו חיים ב-Ark",
+            "label": "{n} מתוך 3 לבבות",
+            "recovering": "מחלים · חוזר {when}",
+            "whenHour": "תוך שעה",
+            "whenHours": "בעוד כ-{n} שעות",
+            "whenTomorrow": "מחר",
+            "whenDays": "בעוד {n} ימים",
+            "restore": "שחזור לב · {credits} קרדיטים",
+            "restoring": "משחזר…",
+            "note": "כל לב הוא עוד חיים לחיה שלך ב-Ark.",
+            "noCredits": "צריך {credits} קרדיטים כדי לשחזר לב.",
+            "getCredits": "קבלת קרדיטים",
+            "failed": "זה לא הצליח. נסו שוב בעוד רגע.",
+            "recoveringOne": "1 מחלים",
+            "recoveringOther": "{count} מחלימים",
+            "away": "הוא לא כאן בזמן שהוא מחלים, ואז יוצא שוב מביתו."
         }
     },
     "talkPage": {

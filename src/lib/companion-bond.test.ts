@@ -223,7 +223,11 @@ test("the Debates words are the SPEC's, word for word, and no battle word is lef
     // Ask the public (owner, 2026-11-03) says the same "nothing at stake".
     assert.equal(COMPANION_WORDS_EN.debateWeb.askedPublicNote, "Asked in public. Nothing at stake: the community picks the way that helps most.");
     const {askedPublicNote: _askedPublicNote, ...webChecked} = COMPANION_WORDS_EN.debateWeb;
-    const english = said({debate: retiredChecked, roster: ROSTER_COPY, heal: HEAL_COPY, web: webChecked}).join("\n");
+    // Hearts are Ark lives (owner, 2026-11-15; AnimalDex docs/ark/HEARTS-LIVES-DESIGN.md section 6): the card's
+    // "Restore a heart · 5 Credits" is the owner's own wording, so the Ark-lives heal words are not checked for "Restore".
+    const {arkOne: _arkOne, arkRestoring: _arkRestoring, arkNoCredits: _arkNoCredits, ...healChecked} = HEAL_COPY;
+    assert.equal(HEAL_COPY.arkOne, "Restore a heart · 5 Credits");
+    const english = said({debate: retiredChecked, roster: ROSTER_COPY, heal: healChecked, web: webChecked}).join("\n");
     for (const retired of ["Battle", "battle", "Opponent", "Rival", "Arena", "Matchup", "Rulebook", "Restore", "stake", "Tier "]) {
         assert.equal(english.includes(retired), false, retired);
     }

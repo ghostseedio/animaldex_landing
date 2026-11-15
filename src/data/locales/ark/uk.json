@@ -317,7 +317,15 @@
             "nest": "{aAnimal} будує гніздо",
             "alarm": "{aAnimal} подає сигнал тривоги",
             "matedOne": "{animals}: пара спарувалася",
-            "matedOther": "{animals}: спарувалися пари ({count})"
+            "matedOther": "{animals}: спарувалися пари ({count})",
+            "heartsLeftOne": "лишилося 1 ♥",
+            "heartsLeftOther": "лишилося {n} ♥",
+            "heartsLeftNone": "♥ не лишилося",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}: з'їдено, мисливець — {aPredator}",
+            "revived": "{animal} повернувся",
+            "revivedYoung": "{animal} повернувся знову молодим дорослим",
+            "gone": "{animal} покинув Ark"
         },
         "card": {
             "now": "Зараз: {activity}",
@@ -559,6 +567,26 @@
             "alt": "Фото, з яким ця тварина ({species}) потрапила на борт",
             "open": "Переглянути фото більшим",
             "close": "Закрити фото"
+        },
+        "hearts": {
+            "livesOne": "1 життя в Ark",
+            "livesOther": "Життів в Ark: {n}",
+            "livesNone": "В Ark не лишилося життів",
+            "label": "{n} з 3 сердець",
+            "recovering": "Відновлюється · повернеться {when}",
+            "whenHour": "протягом години",
+            "whenHours": "приблизно за {n} год",
+            "whenTomorrow": "завтра",
+            "whenDays": "за {n} дн.",
+            "restore": "Відновити серце · {credits} кредитів",
+            "restoring": "Відновлюємо…",
+            "note": "Кожне серце — ще одне життя твоєї тварини в Ark.",
+            "noCredits": "Щоб відновити серце, потрібно {credits} кредитів.",
+            "getCredits": "Отримати кредити",
+            "failed": "Не вдалося. Спробуй ще раз трохи згодом.",
+            "recoveringOne": "1 відновлюється",
+            "recoveringOther": "Відновлюються: {count}",
+            "away": "Поки воно відновлюється, його немає, а потім воно знову виходить зі свого дому."
         }
     },
     "talkPage": {

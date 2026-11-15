@@ -317,7 +317,15 @@
             "nest": "{aAnimal} กำลังสร้างรัง",
             "alarm": "{aAnimal} ส่งเสียงเตือนภัย",
             "matedOne": "{animals} คู่หนึ่งผสมพันธุ์กัน",
-            "matedOther": "{animals} {count} คู่ผสมพันธุ์กัน"
+            "matedOther": "{animals} {count} คู่ผสมพันธุ์กัน",
+            "heartsLeftOne": "เหลือ 1 ♥",
+            "heartsLeftOther": "เหลือ {n} ♥",
+            "heartsLeftNone": "ไม่เหลือ ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} ถูก{aPredator}กิน",
+            "revived": "{animal} กลับมาแล้ว",
+            "revivedYoung": "{animal} กลับมาเป็นตัวเต็มวัยวัยหนุ่มสาวอีกครั้ง",
+            "gone": "{animal} จากไปจาก Ark แล้ว"
         },
         "card": {
             "now": "ตอนนี้: กำลัง{activity}",
@@ -559,6 +567,26 @@
             "alt": "ภาพที่พา{species}ตัวนี้ขึ้นเรือ",
             "open": "ดูภาพขนาดใหญ่",
             "close": "ปิดภาพ"
+        },
+        "hearts": {
+            "livesOne": "1 ชีวิตใน Ark",
+            "livesOther": "{n} ชีวิตใน Ark",
+            "livesNone": "ไม่มีชีวิตเหลือใน Ark",
+            "label": "{n} จาก 3 หัวใจ",
+            "recovering": "กำลังพักฟื้น · กลับมา{when}",
+            "whenHour": "ภายในหนึ่งชั่วโมง",
+            "whenHours": "ในอีกราว {n} ชั่วโมง",
+            "whenTomorrow": "พรุ่งนี้",
+            "whenDays": "ในอีก {n} วัน",
+            "restore": "คืนหัวใจ 1 ดวง · {credits} เครดิต",
+            "restoring": "กำลังคืนหัวใจ…",
+            "note": "หัวใจแต่ละดวงคืออีกหนึ่งชีวิตของสัตว์ของคุณใน Ark",
+            "noCredits": "คุณต้องใช้ {credits} เครดิตเพื่อคืนหัวใจ 1 ดวง",
+            "getCredits": "รับเครดิต",
+            "failed": "ไม่สำเร็จ ลองอีกครั้งในอีกสักครู่",
+            "recoveringOne": "1 ตัวกำลังพักฟื้น",
+            "recoveringOther": "{count} ตัวกำลังพักฟื้น",
+            "away": "มันจะหายไประหว่างพักฟื้น แล้วจึงเดินออกจากบ้านของมันอีกครั้ง"
         }
     },
     "talkPage": {

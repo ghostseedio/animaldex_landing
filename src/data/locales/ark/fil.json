@@ -317,7 +317,15 @@
             "nest": "{aAnimal} ang gumagawa ng pugad",
             "alarm": "{aAnimal} ang nagbabala ng panganib",
             "matedOne": "Nagpares ang dalawang {animals}",
-            "matedOther": "Nagpares ang {count} pares ng {animals}"
+            "matedOther": "Nagpares ang {count} pares ng {animals}",
+            "heartsLeftOne": "1 ♥ na lang",
+            "heartsLeftOther": "{n} ♥ na lang",
+            "heartsLeftNone": "wala nang ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "Kinain ng {aPredator} ang {animal}",
+            "revived": "Nakabalik na ang {animal}",
+            "revivedYoung": "Nakabalik na ang {animal}, batang adulto ulit",
+            "gone": "Wala na sa Ark ang {animal}"
         },
         "card": {
             "now": "Ngayon: {activity}",
@@ -559,6 +567,26 @@
             "alt": "Larawang nagdala sa {species} na ito sa barko",
             "open": "Tingnan nang mas malaki ang larawan",
             "close": "Isara ang larawan"
+        },
+        "hearts": {
+            "livesOne": "1 buhay sa Ark",
+            "livesOther": "{n} buhay sa Ark",
+            "livesNone": "Wala nang buhay sa Ark",
+            "label": "{n} sa 3 puso",
+            "recovering": "Nagpapagaling · babalik {when}",
+            "whenHour": "sa loob ng isang oras",
+            "whenHours": "sa mga {n} oras",
+            "whenTomorrow": "bukas",
+            "whenDays": "sa {n} araw",
+            "restore": "Ibalik ang isang puso · {credits} Credits",
+            "restoring": "Ibinabalik…",
+            "note": "Bawat puso ay isa pang buhay para sa hayop mo sa Ark.",
+            "noCredits": "Kailangan mo ng {credits} Credits para ibalik ang isang puso.",
+            "getCredits": "Kumuha ng Credits",
+            "failed": "Hindi iyon natuloy. Subukan ulit maya-maya.",
+            "recoveringOne": "1 nagpapagaling",
+            "recoveringOther": "{count} nagpapagaling",
+            "away": "Wala muna ito habang nagpapagaling, saka lalabas ulit mula sa tahanan nito."
         }
     },
     "talkPage": {

@@ -317,7 +317,15 @@
             "nest": "{aAnimal} sedang membina sarang",
             "alarm": "{aAnimal} membunyikan amaran bahaya",
             "matedOne": "Sepasang {animals} mengawan",
-            "matedOther": "{count} pasang {animals} mengawan"
+            "matedOther": "{count} pasang {animals} mengawan",
+            "heartsLeftOne": "tinggal 1 ♥",
+            "heartsLeftOther": "tinggal {n} ♥",
+            "heartsLeftNone": "tiada ♥ lagi",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} dimakan oleh {aPredator}",
+            "revived": "{animal} sudah kembali",
+            "revivedYoung": "{animal} sudah kembali, dewasa muda semula",
+            "gone": "{animal} sudah tiada dari Ark"
         },
         "card": {
             "now": "Sekarang: {activity}",
@@ -559,6 +567,26 @@
             "alt": "Foto yang membawa {species} ini naik ke kapal",
             "open": "Lihat foto lebih besar",
             "close": "Tutup foto"
+        },
+        "hearts": {
+            "livesOne": "1 nyawa di Ark",
+            "livesOther": "{n} nyawa di Ark",
+            "livesNone": "Tiada nyawa lagi di Ark",
+            "label": "{n} daripada 3 hati",
+            "recovering": "Sedang pulih · kembali {when}",
+            "whenHour": "dalam masa sejam",
+            "whenHours": "dalam kira-kira {n} jam",
+            "whenTomorrow": "esok",
+            "whenDays": "dalam {n} hari",
+            "restore": "Pulihkan satu hati · {credits} Kredit",
+            "restoring": "Memulihkan…",
+            "note": "Setiap hati ialah satu lagi nyawa untuk haiwan anda di Ark.",
+            "noCredits": "Anda perlukan {credits} Kredit untuk memulihkan satu hati.",
+            "getCredits": "Dapatkan Kredit",
+            "failed": "Itu tidak berjaya. Cuba lagi sebentar lagi.",
+            "recoveringOne": "1 sedang pulih",
+            "recoveringOther": "{count} sedang pulih",
+            "away": "Ia pergi seketika untuk pulih, kemudian keluar semula dari rumahnya."
         }
     },
     "talkPage": {

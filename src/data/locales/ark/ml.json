@@ -317,7 +317,15 @@
             "nest": "{aAnimal} കൂട് കെട്ടുന്നു",
             "alarm": "{aAnimal} അപായ വിളി മുഴക്കി",
             "matedOne": "ഒരു ജോഡി {animals} ഇണചേർന്നു",
-            "matedOther": "{count} ജോഡി {animals} ഇണചേർന്നു"
+            "matedOther": "{count} ജോഡി {animals} ഇണചേർന്നു",
+            "heartsLeftOne": "1 ♥ ബാക്കി",
+            "heartsLeftOther": "{n} ♥ ബാക്കി",
+            "heartsLeftNone": "♥ ഒന്നും ബാക്കിയില്ല",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}-നെ {aPredator} തിന്നു",
+            "revived": "{animal} തിരിച്ചെത്തി",
+            "revivedYoung": "{animal} വീണ്ടും യുവ മുതിർന്നതായി തിരിച്ചെത്തി",
+            "gone": "{animal} Ark വിട്ടുപോയി"
         },
         "card": {
             "now": "ഇപ്പോൾ: {activity}",
@@ -559,6 +567,26 @@
             "alt": "ഈ {species}-നെ കപ്പലിൽ എത്തിച്ച ഫോട്ടോ",
             "open": "ഫോട്ടോ വലുതായി കാണുക",
             "close": "ഫോട്ടോ അടയ്ക്കുക"
+        },
+        "hearts": {
+            "livesOne": "Ark-ൽ 1 ജീവൻ",
+            "livesOther": "Ark-ൽ {n} ജീവനുകൾ",
+            "livesNone": "Ark-ൽ ഇനി ജീവനുകളില്ല",
+            "label": "3-ൽ {n} ഹൃദയങ്ങൾ",
+            "recovering": "സുഖം പ്രാപിക്കുന്നു · {when} തിരിച്ചെത്തും",
+            "whenHour": "ഒരു മണിക്കൂറിനുള്ളിൽ",
+            "whenHours": "ഏകദേശം {n} മണിക്കൂറിനുള്ളിൽ",
+            "whenTomorrow": "നാളെ",
+            "whenDays": "{n} ദിവസത്തിനുള്ളിൽ",
+            "restore": "ഒരു ഹൃദയം വീണ്ടെടുക്കുക · {credits} ക്രെഡിറ്റുകൾ",
+            "restoring": "വീണ്ടെടുക്കുന്നു…",
+            "note": "ഓരോ ഹൃദയവും Ark-ൽ നിങ്ങളുടെ മൃഗത്തിന് ഒരു ജീവൻ കൂടിയാണ്.",
+            "noCredits": "ഒരു ഹൃദയം വീണ്ടെടുക്കാൻ {credits} ക്രെഡിറ്റുകൾ വേണം.",
+            "getCredits": "ക്രെഡിറ്റുകൾ നേടുക",
+            "failed": "അത് നടന്നില്ല. അൽപ്പസമയത്തിന് ശേഷം വീണ്ടും ശ്രമിക്കുക.",
+            "recoveringOne": "1 സുഖം പ്രാപിക്കുന്നു",
+            "recoveringOther": "{count} എണ്ണം സുഖം പ്രാപിക്കുന്നു",
+            "away": "സുഖം പ്രാപിക്കുന്നതുവരെ അത് മാറിനിൽക്കും, പിന്നെ വീണ്ടും തന്റെ വീട്ടിൽനിന്ന് പുറത്തുവരും."
         }
     },
     "talkPage": {

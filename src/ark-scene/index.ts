@@ -71,7 +71,7 @@ import {
     type BufferGeometry
 } from "three";
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
-import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, chaseKind, clearBearing, deathPose, encounterBodies, mealEncounter, mealStage, preyFleeStyle, setChasePaces, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
+import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, REVIVE_SECONDS, chaseKind, clearBearing, deathPose, emergePose, encounterBodies, mealEncounter, mealStage, preyFleeStyle, setChasePaces, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
 import {headLimits} from "@/ark-scene/head-look";
 import {goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
@@ -2142,6 +2142,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let toldStatus = "";
     let toldRhythm: string | null = null;
     let selectionBars: ArkSelectionBars | null = null;
+    /** Hearts are lives: the owner's own animals' hearts (`setHearts`), for the bars' hearts row; null with hearts off. */
+    let hearts: Map<string, number> | null = null;
+    const heartsOf = (id: string): number | null => hearts?.get(id) ?? null;
+    /** Back from recovering (`revive`): when its walk out of its home began (null: not drawn yet), where from, its pose. */
+    const reviving = new Map<string, {from: number | null; home: ActBody | null; pose: ActPose | null; asked: number}>();
     /**
      * A status's costly part, a little a frame (graphics and performance pass, 2026-11). A status is the animal's
      * plans for its last ten slots and, for its "fed" bar, its last ninety waking slots (`animal-status.ts`
@@ -2262,7 +2267,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         statusPending = false;
         statusAt = now;
         selectedStatus = statusOf(entry);
-        const signature = arkStatusSignature(selectedStatus);
+        // (Its hearts, the owner's own, in the signature: a heart restored shows at once.)
+        const signature = `${arkStatusSignature(selectedStatus)}|h${heartsOf(entry.animal.id) ?? ""}`;
         // Who brought it and its Talk link (the host's, from its founders read, which can land after the selection).
         const extras = selectionExtrasOf(entry.animal);
         const extrasSignature = extras ? JSON.stringify(extras) : "";
@@ -2275,7 +2281,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (Its species' name over them, as its card has it: never a nickname. Under it, "Brought by @handle" only when the
         // server names its founder: docs/ark/CAPTURE-MEDIA-CONTRACT.md section 1.)
         (selectionBars ??= new ArkSelectionBars(labelLayer, reducedMotion, options.onSelectionLink ?? null))
-            .set(selectedStatus.bars, entry.animal.name, extras, {animalId: entry.animal.id, slug: entry.animal.model_slug}, rhythmState);
+            .set(selectedStatus.bars, entry.animal.name, extras, {animalId: entry.animal.id, slug: entry.animal.model_slug}, rhythmState, heartsOf(entry.animal.id));
         if (signature === toldStatus) return;
         toldStatus = signature;
         options.onStatus?.(entry.animal.id, selectedStatus);
@@ -4449,6 +4455,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (streamStateAt(at.x, at.z) === STATE_MAP) streamDots.push({x: at.x, y: Math.max(at.y, 0) + 0.6, z: at.z, pixels: 5, alpha: mineOnly && !entry.animal.mine ? 0.35 : 0.85});
         };
         for (const entry of allEntries()) {
+            if (reviving.size) stepRevive(entry);
             const slug = entry.animal.model_slug;
             const model = library.get(slug);
             if (entry.held || entry.act?.hidden) {
@@ -6652,6 +6659,40 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {x: where.x, z: where.z, base: where.base, yaw: where.yaw, length: entry.length, height, speed: moveSpeed(entry.animal, entry.length)};
     };
 
+    /**
+     * Hearts are lives (AnimalDex docs/ark/HEARTS-LIVES-DESIGN.md, section 6): an animal back from recovering walks out of
+     * its home spot (`acts.ts` emergePose), from the first frame it is aboard after its `revived` event was read; with
+     * reduced motion, or under a replay, it is simply there. Never the place it was eaten: its kept slot.
+     */
+    const stepRevive = (entry: Entry) => {
+        const back = reviving.get(entry.animal.id);
+        if (!back) return;
+        if (replay || reducedMotion) {
+            reviving.delete(entry.animal.id);
+            if (back.pose && entry.act === back.pose) entry.act = null;
+            return;
+        }
+        const now = elapsedNow();
+        if (back.from === null) {
+            back.from = now;
+            // Not a newcomer: no arrival's grow and ripple.
+            entry.arrivedAt = null;
+            entry.held = false;
+            const at = bodyOf(entry);
+            back.home = {...at, x: entry.place.x, z: entry.place.z, base: entry.place.ground, yaw: entry.place.yaw};
+        }
+        const t = now - back.from;
+        if (t >= REVIVE_SECONDS || !back.home) {
+            reviving.delete(entry.animal.id);
+            if (entry.act === back.pose) entry.act = null;
+            return;
+        }
+        // (Another act took it meanwhile: that one plays.)
+        if (entry.act && entry.act !== back.pose) return;
+        back.pose = emergePose(back.home, bodyOf(entry), t);
+        entry.act = back.pose;
+    };
+
     const entryFor = (animal: ArkEventAnimal): Entry | null => findEntry(animal.id) ?? ghosts.find((ghost) => ghost.animal.id === animal.id) ?? null;
 
     // MARK: Meals (lane ark-kills-real: the catch, the meal, traces, scavengers)
@@ -7884,6 +7925,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setCutaway: (open) => {
             cutawayWanted = open;
             cutawayAt = null;
+        },
+        revive: (id) => {
+            // (Its read may still be placing it: it walks out once it is aboard; one never placed is dropped after a while.)
+            const asked = performance.now();
+            for (const [key, back] of Array.from(reviving)) if (back.from === null && asked - back.asked > 120_000) reviving.delete(key);
+            if (!reviving.has(id)) reviving.set(id, {from: null, home: null, pose: null, asked});
+        },
+        setHearts: (next) => {
+            hearts = next ? new Map(Object.entries(next)) : null;
+            // The bars say it at their next read.
+            toldStatus = "";
+            statusAt = 0;
         },
         arrive: (id) => {
             const entry = findEntry(id);

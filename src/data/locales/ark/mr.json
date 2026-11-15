@@ -317,7 +317,15 @@
             "nest": "{aAnimal} घरटे बांधत आहे",
             "alarm": "{aAnimal} ने धोक्याची हाक दिली",
             "matedOne": "{animals} च्या एका जोडीचे मिलन झाले",
-            "matedOther": "{animals} च्या {count} जोड्यांचे मिलन झाले"
+            "matedOther": "{animals} च्या {count} जोड्यांचे मिलन झाले",
+            "heartsLeftOne": "1 ♥ उरले",
+            "heartsLeftOther": "{n} ♥ उरले",
+            "heartsLeftNone": "एकही ♥ उरले नाही",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} ला {aPredator} ने खाल्ले",
+            "revived": "{animal} परत आला",
+            "revivedYoung": "{animal} पुन्हा तरुण प्रौढ होऊन परत आला",
+            "gone": "{animal} Ark मधून गेला"
         },
         "card": {
             "now": "आत्ता: {activity}",
@@ -559,6 +567,26 @@
             "alt": "ज्या फोटोने या {species}ला जहाजावर आणले",
             "open": "फोटो मोठा पाहा",
             "close": "फोटो बंद करा"
+        },
+        "hearts": {
+            "livesOne": "Ark मध्ये 1 जीव",
+            "livesOther": "Ark मध्ये {n} जीव",
+            "livesNone": "Ark मध्ये एकही जीव उरला नाही",
+            "label": "3 पैकी {n} हृदये",
+            "recovering": "बरा होत आहे · {when} परत येईल",
+            "whenHour": "एका तासात",
+            "whenHours": "सुमारे {n} तासांत",
+            "whenTomorrow": "उद्या",
+            "whenDays": "{n} दिवसांत",
+            "restore": "एक हृदय परत मिळवा · {credits} क्रेडिट",
+            "restoring": "परत मिळवत आहे…",
+            "note": "प्रत्येक हृदय म्हणजे Ark मध्ये तुमच्या प्राण्यासाठी आणखी एक जीव.",
+            "noCredits": "एक हृदय परत मिळवण्यासाठी तुम्हाला {credits} क्रेडिट लागतील.",
+            "getCredits": "क्रेडिट मिळवा",
+            "failed": "ते झाले नाही. थोड्या वेळाने पुन्हा प्रयत्न करा.",
+            "recoveringOne": "1 बरा होत आहे",
+            "recoveringOther": "{count} बरे होत आहेत",
+            "away": "बरा होईपर्यंत तो दूर असतो, मग पुन्हा आपल्या घरातून बाहेर येतो."
         }
     },
     "talkPage": {

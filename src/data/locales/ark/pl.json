@@ -317,7 +317,15 @@
             "nest": "{aAnimal} buduje gniazdo",
             "alarm": "{aAnimal} wydaje okrzyk ostrzegawczy",
             "matedOne": "{animals}: para się sparzyła",
-            "matedOther": "{animals}: sparzone pary: {count}"
+            "matedOther": "{animals}: sparzone pary: {count}",
+            "heartsLeftOne": "zostało 1 ♥",
+            "heartsLeftOther": "zostało {n} ♥",
+            "heartsLeftNone": "nie zostało żadne ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}: zjedzony przez {aPredator}",
+            "revived": "{animal} wraca",
+            "revivedYoung": "{animal} wraca, znów jako młody dorosły",
+            "gone": "{animal} odchodzi z Ark"
         },
         "card": {
             "now": "Teraz: {activity}",
@@ -559,6 +567,26 @@
             "alt": "Zdjęcie, dzięki któremu to zwierzę ({species}) trafiło na pokład",
             "open": "Zobacz większe zdjęcie",
             "close": "Zamknij zdjęcie"
+        },
+        "hearts": {
+            "livesOne": "1 życie w Ark",
+            "livesOther": "Życia w Ark: {n}",
+            "livesNone": "Brak żyć w Ark",
+            "label": "{n} z 3 serc",
+            "recovering": "Dochodzi do siebie · wraca {when}",
+            "whenHour": "w ciągu godziny",
+            "whenHours": "za około {n} godz.",
+            "whenTomorrow": "jutro",
+            "whenDays": "za {n} dni",
+            "restore": "Przywróć serce · {credits} kredytów",
+            "restoring": "Przywracanie…",
+            "note": "Każde serce to jeszcze jedno życie twojego zwierzęcia w Ark.",
+            "noCredits": "Potrzebujesz {credits} kredytów, aby przywrócić serce.",
+            "getCredits": "Zdobądź kredyty",
+            "failed": "Nie udało się. Spróbuj ponownie za chwilę.",
+            "recoveringOne": "1 dochodzi do siebie",
+            "recoveringOther": "Dochodzi do siebie: {count}",
+            "away": "Nie ma go, póki dochodzi do siebie, a potem znów wychodzi ze swojego domu."
         }
     },
     "talkPage": {

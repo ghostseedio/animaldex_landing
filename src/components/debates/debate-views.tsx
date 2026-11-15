@@ -189,7 +189,7 @@ export function DebateQuietSection({debate, words, locale}: {debate: Debate; wor
                 <DebateFaces debate={debate} size={26} />
                 <span className="min-w-0 text-[13px] font-semibold leading-5 text-white">{debateLine(debate, words, locale)}</span>
             </div>
-            {debateIsOwnOnly(debate) ? <p className="text-[12px] leading-4 text-white/55" data-testid="debate-own-only">{words.debate.ownOnly}</p> : null}
+            {debateIsOwnOnly(debate) && words.debate.ownOnly ? <p className="text-[12px] leading-4 text-white/55" data-testid="debate-own-only">{words.debate.ownOnly}</p> : null}
         </section>
     );
 }

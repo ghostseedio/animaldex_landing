@@ -100,7 +100,7 @@ import {arkPageSummary} from "@/lib/ark-page-summary";
  * The page stays dynamic for its query (`?focus=` cards, `?lang=`), but its render is cheap.
  */
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string; hearts?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -517,7 +517,10 @@ export default async function ArkPage({params, searchParams}: Props) {
     ]);
     const snapshot = local?.snapshot ?? data.fixture?.snapshot ?? (data.read?.available ? data.read.snapshot : null) ?? data.shared;
     // Handed to the client as props only in development's modes: the live Ark is read by the client after the first paint.
-    const handed = local || mode ? snapshot : null;
+    const handedRead = local || mode ? snapshot : null;
+    // Development's hearts (`&hearts=1` with a fixture): an owner's hearts read in the contract's shapes.
+    const heartsFixture = mode && development && searchParams.hearts === "1" && handedRead ? (await import("@/lib/ark-hearts-fixture")).arkHeartsFixture(handedRead) : null;
+    const handed = heartsFixture?.snapshot ?? handedRead;
     const fixtureLife = mode ? await loadFixtureLife(mode, fixtureFounders) : null;
     const founders = local?.founders ?? data.fixture?.founders ?? (data.read?.available ? data.read.founders : ARK_NO_FOUNDERS);
     if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase(searchParams)} events={fixtureLife?.events ?? null} />;
@@ -567,6 +570,7 @@ export default async function ArkPage({params, searchParams}: Props) {
             shareLocalePath={getLocalePath(locale, "/ark")}
             liveFeed={Boolean(mode) && development && (searchParams.feed === "1" || searchParams.fixture === "live" || (mode === "grow" && searchParams.feed !== "0"))}
             newest={arrivals?.[0] ? {name: arrivals[0].name, slug: arrivals[0].slug, at: arrivals[0].at} : null}
+            fixtureHearts={heartsFixture?.hearts ?? null}
         />
         <ArkAbout snapshot={snapshot} words={words} locale={wordsLocale} speciesPages={speciesPages} />
         {await ArkSeoSummary({locale})}

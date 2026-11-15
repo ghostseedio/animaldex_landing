@@ -317,7 +317,15 @@
             "nest": "{aAnimal} در حال ساختن لانه است",
             "alarm": "{aAnimal} بانگ خطر داد",
             "matedOne": "یک جفت {animals} جفت‌گیری کردند",
-            "matedOther": "{count} جفت {animals} جفت‌گیری کردند"
+            "matedOther": "{count} جفت {animals} جفت‌گیری کردند",
+            "heartsLeftOne": "۱ ♥ مانده",
+            "heartsLeftOther": "{n} ♥ مانده",
+            "heartsLeftNone": "هیچ ♥ نمانده",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} را {aPredator} خورد",
+            "revived": "{animal} برگشت",
+            "revivedYoung": "{animal} برگشت، دوباره بالغی جوان",
+            "gone": "{animal} از Ark رفت"
         },
         "card": {
             "now": "اکنون: {activity}",
@@ -559,6 +567,26 @@
             "alt": "عکسی که این {species} را به کشتی آورد",
             "open": "دیدن عکس در اندازهٔ بزرگ‌تر",
             "close": "بستن عکس"
+        },
+        "hearts": {
+            "livesOne": "۱ جان در Ark",
+            "livesOther": "{n} جان در Ark",
+            "livesNone": "هیچ جانی در Ark نمانده",
+            "label": "{n} از ۳ قلب",
+            "recovering": "در حال بهبود · {when} برمی‌گردد",
+            "whenHour": "تا یک ساعت دیگر",
+            "whenHours": "حدود {n} ساعت دیگر",
+            "whenTomorrow": "فردا",
+            "whenDays": "{n} روز دیگر",
+            "restore": "بازگرداندن یک قلب · {credits} اعتبار",
+            "restoring": "در حال بازگرداندن…",
+            "note": "هر قلب یک جان دیگر برای حیوانت در Ark است.",
+            "noCredits": "برای بازگرداندن یک قلب به {credits} اعتبار نیاز داری.",
+            "getCredits": "گرفتن اعتبار",
+            "failed": "انجام نشد. کمی بعد دوباره امتحان کن.",
+            "recoveringOne": "۱ در حال بهبود",
+            "recoveringOther": "{count} در حال بهبود",
+            "away": "تا بهبود پیدا کند دور است، بعد دوباره از خانه‌اش بیرون می‌آید."
         }
     },
     "talkPage": {

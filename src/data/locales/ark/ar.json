@@ -317,7 +317,15 @@
             "nest": "{aAnimal} يبني عشًا",
             "alarm": "أطلق {aAnimal} نداء إنذار",
             "matedOne": "تزاوج زوج من {animals}",
-            "matedOther": "تزاوج {count} أزواج من {animals}"
+            "matedOther": "تزاوج {count} أزواج من {animals}",
+            "heartsLeftOne": "بقي 1 ♥",
+            "heartsLeftOther": "بقي {n} ♥",
+            "heartsLeftNone": "لم يبقَ ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "أكل {aPredator} {animal}",
+            "revived": "عاد {animal}",
+            "revivedYoung": "عاد {animal} بالغًا شابًا من جديد",
+            "gone": "رحل {animal} عن Ark"
         },
         "card": {
             "now": "الآن: {activity}",
@@ -559,6 +567,26 @@
             "alt": "الصورة التي أحضرت هذا الـ{species} إلى السفينة",
             "open": "عرض الصورة بحجم أكبر",
             "close": "إغلاق الصورة"
+        },
+        "hearts": {
+            "livesOne": "حياة واحدة في Ark",
+            "livesOther": "{n} أرواح في Ark",
+            "livesNone": "لم تبقَ أرواح في Ark",
+            "label": "{n} من 3 قلوب",
+            "recovering": "يتعافى · يعود {when}",
+            "whenHour": "خلال ساعة",
+            "whenHours": "بعد نحو {n} ساعات",
+            "whenTomorrow": "غدًا",
+            "whenDays": "بعد {n} أيام",
+            "restore": "استعد قلبًا · {credits} رصيد",
+            "restoring": "جارٍ الاستعادة…",
+            "note": "كل قلب حياة إضافية لحيوانك في Ark.",
+            "noCredits": "تحتاج إلى {credits} رصيد لاستعادة قلب.",
+            "getCredits": "احصل على رصيد",
+            "failed": "لم يتم ذلك. حاول مرة أخرى بعد قليل.",
+            "recoveringOne": "1 يتعافى",
+            "recoveringOther": "{count} يتعافون",
+            "away": "إنه غائب ريثما يتعافى، ثم يخرج من بيته من جديد."
         }
     },
     "talkPage": {

@@ -11,6 +11,7 @@ import type {ArkActivityWords, ArkCardWords} from "@/lib/ark-animal-status";
 import type {ArkLoaderWords} from "@/lib/ark-loading";
 import type {ArkLostWords} from "@/lib/ark-extinct";
 import type {ArkHuntWords} from "@/lib/ark-live-hunt";
+import type {ArkHeartsWords} from "@/lib/ark-hearts";
 
 export type ArkHudWords = {
     label: string;
@@ -440,6 +441,8 @@ export type ArkWords = {
     lost?: Partial<ArkLostWords>;
     /** The photo that brought it aboard, on the tap card (docs/ark/CAPTURE-MEDIA-CONTRACT.md): its alt text ({species}), open and close. */
     photo: {alt: string; open: string; close: string};
+    /** Hearts are lives (behind the server's `ark_hearts`): the card's lives row, recovering, the restore. */
+    hearts?: Partial<ArkHeartsWords>;
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */

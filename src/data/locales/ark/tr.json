@@ -317,7 +317,15 @@
             "nest": "{aAnimal} yuva yapıyor",
             "alarm": "{aAnimal} tehlike çağrısı yaptı",
             "matedOne": "Bir çift {animals} çiftleşti",
-            "matedOther": "{count} çift {animals} çiftleşti"
+            "matedOther": "{count} çift {animals} çiftleşti",
+            "heartsLeftOne": "1 ♥ kaldı",
+            "heartsLeftOther": "{n} ♥ kaldı",
+            "heartsLeftNone": "hiç ♥ kalmadı",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}, {aPredator} tarafından yendi",
+            "revived": "{animal} geri döndü",
+            "revivedYoung": "{animal} yeniden genç bir yetişkin olarak döndü",
+            "gone": "{animal} Ark'tan ayrıldı"
         },
         "card": {
             "now": "Şimdi: {activity}",
@@ -559,6 +567,26 @@
             "alt": "Bu {species} hayvanını gemiye getiren fotoğraf",
             "open": "Fotoğrafı büyük gör",
             "close": "Fotoğrafı kapat"
+        },
+        "hearts": {
+            "livesOne": "Ark'ta 1 can",
+            "livesOther": "Ark'ta {n} can",
+            "livesNone": "Ark'ta hiç can kalmadı",
+            "label": "3 kalpten {n}",
+            "recovering": "İyileşiyor · {when} dönüyor",
+            "whenHour": "bir saat içinde",
+            "whenHours": "yaklaşık {n} saat sonra",
+            "whenTomorrow": "yarın",
+            "whenDays": "{n} gün sonra",
+            "restore": "Bir kalbi geri getir · {credits} Kredi",
+            "restoring": "Geri getiriliyor…",
+            "note": "Her kalp, hayvanın için Ark'ta bir can daha demek.",
+            "noCredits": "Bir kalbi geri getirmek için {credits} Krediye ihtiyacın var.",
+            "getCredits": "Kredi al",
+            "failed": "Olmadı. Birazdan tekrar dene.",
+            "recoveringOne": "1 iyileşiyor",
+            "recoveringOther": "{count} iyileşiyor",
+            "away": "İyileşene kadar ortada yok, sonra yine evinden çıkıp geliyor."
         }
     },
     "talkPage": {

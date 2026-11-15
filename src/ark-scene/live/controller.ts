@@ -200,7 +200,20 @@ export class ArkLive {
             if (event.animal && (event.kind === "arrival" || event.kind === "birth")) this.remember(`animal:${event.animal.id}`);
         }
         this.noteRecord(decoded);
+        this.revive(decoded);
         this.push(arkLiveServerItems(decoded));
+    }
+
+    /** Hearts are lives: an animal back from recovering walks out of its home (the scene's `revive`), once. */
+    private revive(events: readonly ArkEvent[]) {
+        for (const event of events) {
+            if (event.kind !== "revived" || !event.animal) continue;
+            try {
+                this.options.scene()?.revive?.(event.animal.id);
+            } catch {
+                // (A scene without it: the animal is simply there again.)
+            }
+        }
     }
 
     /** The record's lines for the animals they are about, for their own logs on the tap card. */
@@ -261,6 +274,7 @@ export class ArkLive {
                 // A page at a time (the read's limit): the rest of a burst is read next, never left for the next change.
                 more = body.more === true && newest > from;
                 this.noteRecord(events);
+                this.revive(events);
                 this.push(arkLiveServerItems(events));
             })
             .catch(() => {

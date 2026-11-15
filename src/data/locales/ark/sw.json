@@ -317,7 +317,15 @@
             "nest": "{aAnimal} anajenga kiota",
             "alarm": "{aAnimal} alitoa mlio wa tahadhari",
             "matedOne": "Jozi ya {animals} imepandana",
-            "matedOther": "Jozi {count} za {animals} zimepandana"
+            "matedOther": "Jozi {count} za {animals} zimepandana",
+            "heartsLeftOne": "♥ 1 imebaki",
+            "heartsLeftOther": "♥ {n} zimebaki",
+            "heartsLeftNone": "hakuna ♥ iliyobaki",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} aliliwa na {aPredator}",
+            "revived": "{animal} amerudi",
+            "revivedYoung": "{animal} amerudi, mtu mzima kijana tena",
+            "gone": "{animal} ameondoka Ark"
         },
         "card": {
             "now": "Sasa: {activity}",
@@ -559,6 +567,26 @@
             "alt": "Picha iliyomleta {species} huyu melini",
             "open": "Tazama picha kubwa zaidi",
             "close": "Funga picha"
+        },
+        "hearts": {
+            "livesOne": "Maisha 1 ndani ya Ark",
+            "livesOther": "Maisha {n} ndani ya Ark",
+            "livesNone": "Hakuna maisha yaliyobaki ndani ya Ark",
+            "label": "Mioyo {n} kati ya 3",
+            "recovering": "Inapona · inarudi {when}",
+            "whenHour": "ndani ya saa moja",
+            "whenHours": "baada ya takriban saa {n}",
+            "whenTomorrow": "kesho",
+            "whenDays": "baada ya siku {n}",
+            "restore": "Rejesha moyo · Credits {credits}",
+            "restoring": "Inarejesha…",
+            "note": "Kila moyo ni maisha mengine kwa mnyama wako ndani ya Ark.",
+            "noCredits": "Unahitaji Credits {credits} kurejesha moyo.",
+            "getCredits": "Pata Credits",
+            "failed": "Haikufaulu. Jaribu tena baada ya muda mfupi.",
+            "recoveringOne": "1 inapona",
+            "recoveringOther": "{count} zinapona",
+            "away": "Iko mbali inapopona, kisha inatoka tena nyumbani kwake."
         }
     },
     "talkPage": {

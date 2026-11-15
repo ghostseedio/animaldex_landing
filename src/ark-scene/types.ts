@@ -563,6 +563,14 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     /** A held animal comes aboard now, with the entrance it has in a replay. */
     arrive: (id: string) => void;
     /**
+     * Hearts are lives (behind the server's `ark_hearts`): an animal back from recovering (its `revived` event) walks
+     * out of its den, burrow or roost at its home spot, from the first frame it is aboard. Optional: an older scene
+     * shows it simply there.
+     */
+    revive?: (id: string) => void;
+    /** The reader's own animals' hearts (0..3 by animal id), for the bars' hearts row; null: none shown (hearts off). */
+    setHearts?: (hearts: Record<string, number> | null) => void;
+    /**
      * A cross-layer moment (`moments.ts`: a seabird's dive, a whale surfacing,
      * an owl's swoop, a primate dropping to the ground), cosmetic only, by
      * this animal or the first that can: returns who acts it out, or null.

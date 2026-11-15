@@ -317,7 +317,15 @@
             "nest": "{aAnimal}正在筑巢",
             "alarm": "{aAnimal}发出了警报叫声",
             "matedOne": "一对{animals}交配了",
-            "matedOther": "{count} 对{animals}交配了"
+            "matedOther": "{count} 对{animals}交配了",
+            "heartsLeftOne": "剩 1 ♥",
+            "heartsLeftOther": "剩 {n} ♥",
+            "heartsLeftNone": "没有剩下的 ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal}被{aPredator}吃掉了",
+            "revived": "{animal}回来了",
+            "revivedYoung": "{animal}回来了，又是年轻的成年个体",
+            "gone": "{animal}离开了 Ark"
         },
         "card": {
             "now": "现在：{activity}",
@@ -559,6 +567,26 @@
             "alt": "把这只{species}带上船的照片",
             "open": "查看大图",
             "close": "关闭照片"
+        },
+        "hearts": {
+            "livesOne": "在 Ark 中有 1 条命",
+            "livesOther": "在 Ark 中有 {n} 条命",
+            "livesNone": "在 Ark 中已没有命",
+            "label": "{n}/3 颗心",
+            "recovering": "恢复中 · {when}回来",
+            "whenHour": "一小时内",
+            "whenHours": "大约 {n} 小时后",
+            "whenTomorrow": "明天",
+            "whenDays": "{n} 天后",
+            "restore": "恢复一颗心 · {credits} 积分",
+            "restoring": "正在恢复…",
+            "note": "每颗心都是你的动物在 Ark 中多出的一条命。",
+            "noCredits": "恢复一颗心需要 {credits} 积分。",
+            "getCredits": "获取积分",
+            "failed": "没有成功。请稍后再试。",
+            "recoveringOne": "1 只恢复中",
+            "recoveringOther": "{count} 只恢复中",
+            "away": "它恢复期间会暂时离开，之后再从自己的家里走出来。"
         }
     },
     "talkPage": {

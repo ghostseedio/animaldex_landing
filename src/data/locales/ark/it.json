@@ -317,7 +317,15 @@
             "nest": "{aAnimal} sta costruendo il nido",
             "alarm": "{aAnimal} ha lanciato un richiamo d'allarme",
             "matedOne": "{animals}: una coppia si è accoppiata",
-            "matedOther": "{animals}: {count} coppie si sono accoppiate"
+            "matedOther": "{animals}: {count} coppie si sono accoppiate",
+            "heartsLeftOne": "resta 1 ♥",
+            "heartsLeftOther": "restano {n} ♥",
+            "heartsLeftNone": "nessun ♥ rimasto",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} è stato mangiato da {aPredator}",
+            "revived": "{animal} è tornato",
+            "revivedYoung": "{animal} è tornato, di nuovo giovane adulto",
+            "gone": "{animal} non è più nell'Ark"
         },
         "card": {
             "now": "Ora: {activity}",
@@ -559,6 +567,26 @@
             "alt": "Foto che ha portato questo {species} a bordo",
             "open": "Vedi la foto più grande",
             "close": "Chiudi la foto"
+        },
+        "hearts": {
+            "livesOne": "1 vita nell'Ark",
+            "livesOther": "{n} vite nell'Ark",
+            "livesNone": "Nessuna vita rimasta nell'Ark",
+            "label": "{n} cuori su 3",
+            "recovering": "In convalescenza · torna {when}",
+            "whenHour": "entro un'ora",
+            "whenHours": "tra circa {n} ore",
+            "whenTomorrow": "domani",
+            "whenDays": "tra {n} giorni",
+            "restore": "Ripristina un cuore · {credits} crediti",
+            "restoring": "Ripristino…",
+            "note": "Ogni cuore è una vita in più per il tuo animale nell'Ark.",
+            "noCredits": "Ti servono {credits} crediti per ripristinare un cuore.",
+            "getCredits": "Ottieni crediti",
+            "failed": "Non è andato a buon fine. Riprova tra un momento.",
+            "recoveringOne": "1 in convalescenza",
+            "recoveringOther": "{count} in convalescenza",
+            "away": "È via mentre si riprende, poi esce di nuovo dalla sua tana."
         }
     },
     "talkPage": {

@@ -317,7 +317,15 @@
             "nest": "{aAnimal} își face cuib",
             "alarm": "{aAnimal} a dat un semnal de alarmă",
             "matedOne": "{animals}: o pereche s-a împerecheat",
-            "matedOther": "{animals}: perechi împerecheate: {count}"
+            "matedOther": "{animals}: perechi împerecheate: {count}",
+            "heartsLeftOne": "mai are 1 ♥",
+            "heartsLeftOther": "mai are {n} ♥",
+            "heartsLeftNone": "nu mai are ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} a fost mâncat de {aPredator}",
+            "revived": "{animal} s-a întors",
+            "revivedYoung": "{animal} s-a întors, din nou adult tânăr",
+            "gone": "{animal} a plecat din Ark"
         },
         "card": {
             "now": "Acum: {activity}",
@@ -559,6 +567,26 @@
             "alt": "Fotografia care a adus acest {species} la bord",
             "open": "Vezi fotografia mai mare",
             "close": "Închide fotografia"
+        },
+        "hearts": {
+            "livesOne": "1 viață în Ark",
+            "livesOther": "{n} vieți în Ark",
+            "livesNone": "Nu mai sunt vieți în Ark",
+            "label": "{n} din 3 inimi",
+            "recovering": "Se reface · revine {when}",
+            "whenHour": "în mai puțin de o oră",
+            "whenHours": "în aproximativ {n} ore",
+            "whenTomorrow": "mâine",
+            "whenDays": "în {n} zile",
+            "restore": "Refă o inimă · {credits} credite",
+            "restoring": "Se reface…",
+            "note": "Fiecare inimă e încă o viață pentru animalul tău în Ark.",
+            "noCredits": "Ai nevoie de {credits} credite ca să refaci o inimă.",
+            "getCredits": "Obține credite",
+            "failed": "Nu a mers. Încearcă din nou peste puțin timp.",
+            "recoveringOne": "1 se reface",
+            "recoveringOther": "{count} se refac",
+            "away": "E plecat cât se reface, apoi iese din nou din casa lui."
         }
     },
     "talkPage": {

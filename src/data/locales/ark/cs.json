@@ -317,7 +317,15 @@
             "nest": "{aAnimal} staví hnízdo",
             "alarm": "{aAnimal} vydává varovné volání",
             "matedOne": "{animals}: pár se spářil",
-            "matedOther": "{animals}: spářené páry: {count}"
+            "matedOther": "{animals}: spářené páry: {count}",
+            "heartsLeftOne": "zbývá 1 ♥",
+            "heartsLeftOther": "zbývá {n} ♥",
+            "heartsLeftNone": "nezbývá žádné ♥",
+            "withHearts": "{line} · {hearts}",
+            "eatenBy": "{animal} sežral(a) {aPredator}",
+            "revived": "{animal} je zpět",
+            "revivedYoung": "{animal} je zpět, znovu mladý dospělý",
+            "gone": "{animal} odchází z Arku"
         },
         "card": {
             "now": "Teď: {activity}",
@@ -559,6 +567,26 @@
             "alt": "Fotka, která přivedla tohoto tvora ({species}) na palubu",
             "open": "Zobrazit fotku větší",
             "close": "Zavřít fotku"
+        },
+        "hearts": {
+            "livesOne": "1 život v Arku",
+            "livesOther": "Životy v Arku: {n}",
+            "livesNone": "V Arše už nezbývá žádný život",
+            "label": "{n} ze 3 srdcí",
+            "recovering": "Zotavuje se · vrátí se {when}",
+            "whenHour": "do hodiny",
+            "whenHours": "asi za {n} h",
+            "whenTomorrow": "zítra",
+            "whenDays": "za {n} dny",
+            "restore": "Obnovit srdce · {credits} kreditů",
+            "restoring": "Obnovuji…",
+            "note": "Každé srdce je další život pro tvé zvíře v Arku.",
+            "noCredits": "K obnovení srdce potřebuješ {credits} kreditů.",
+            "getCredits": "Získat kredity",
+            "failed": "Nepovedlo se to. Zkus to za chvíli znovu.",
+            "recoveringOne": "1 se zotavuje",
+            "recoveringOther": "Zotavuje se: {count}",
+            "away": "Je pryč, dokud se zotavuje, pak znovu vyjde ze svého domova."
         }
     },
     "talkPage": {

@@ -75,6 +75,15 @@ const LINK_STYLE = {
     cursor: "pointer"
 } as const;
 
+const ARK_BAR_HEARTS = 3;
+const HEART_PATH = "M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z";
+
+/** The hearts row's markup: `filled` of 3 filled, the rest outlined (♥♥♡). Pure. */
+export function arkBarHeartsMarkup(filled: number): string {
+    const n = Math.min(Math.max(Math.round(filled), 0), ARK_BAR_HEARTS);
+    return Array.from({length: ARK_BAR_HEARTS}, (_, i) => `<svg viewBox="0 0 24 24" width="${ICON_PX - 1}" height="${ICON_PX - 1}" fill="${i < n ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2.2" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="${HEART_PATH}"/></svg>`).join("");
+}
+
 /**
  * Where the bars go so that they overlap none of `boxes` (the chips and buttons over the view): beside the one they
  * would cover, on the side that moves them least, when they fit there inside the view; else below it. Pure.
@@ -100,6 +109,9 @@ export class ArkSelectionBars {
     private links: {talk: ArkSelectionLink | null; profile: ArkSelectionLink | null} = {talk: null, profile: null};
     private readonly head: HTMLDivElement;
     private readonly dot: HTMLSpanElement;
+    /** Hearts are lives: the owner's own animal's hearts (♥♥♡), a tiny row under the bars; hidden with none. */
+    private readonly hearts: HTMLDivElement;
+    private heartsShown: number | null = null;
     private shown = false;
     private any = false;
     private size: {w: number; h: number} | null = null;
@@ -207,6 +219,11 @@ export class ArkSelectionBars {
             el.appendChild(row);
             this.rows.set(key, {row, fill});
         }
+        const hearts = document.createElement("div");
+        hearts.dataset.arkHearts = "";
+        Object.assign(hearts.style, {display: "none", alignItems: "center", gap: "2px", paddingTop: "1px", color: "#ff8f8f"});
+        el.appendChild(hearts);
+        this.hearts = hearts;
         // The pointer down to the animal.
         const tick = document.createElement("span");
         tick.setAttribute("aria-hidden", "true");
@@ -273,8 +290,9 @@ export class ArkSelectionBars {
      * The selected animal's bars and its species' name (never a nickname), or null (nothing selected, or nothing to
      * show); `extras`, who brought it and its Talk link (section 1 and 3 of the capture media contract).
      */
-    set(bars: ArkStatusBars | null, name: string | null = null, extras: ArkSelectionExtras | null = null, ids: {animalId: string; slug: string} | null = null, rhythm: SdRhythmState | null = null) {
+    set(bars: ArkStatusBars | null, name: string | null = null, extras: ArkSelectionExtras | null = null, ids: {animalId: string; slug: string} | null = null, rhythm: SdRhythmState | null = null, hearts: number | null = null) {
         this.any = false;
+        this.setHearts(hearts);
         const label = name?.trim() || "";
         if (this.nameText.textContent !== label) this.nameText.textContent = label;
         this.name.style.display = label ? "flex" : "none";
@@ -302,6 +320,22 @@ export class ArkSelectionBars {
         }
         this.size = null;
         if (!this.any) this.hide();
+    }
+
+    /** Its hearts row (0..3 filled of 3), or none. Pure DOM; the markup is built once per count. */
+    private setHearts(hearts: number | null) {
+        const n = typeof hearts === "number" && Number.isFinite(hearts) ? Math.min(Math.max(Math.round(hearts), 0), ARK_BAR_HEARTS) : null;
+        if (n === this.heartsShown) return;
+        this.heartsShown = n;
+        this.size = null;
+        if (n === null) {
+            this.hearts.style.display = "none";
+            this.hearts.replaceChildren();
+            return;
+        }
+        this.hearts.innerHTML = arkBarHeartsMarkup(n);
+        this.hearts.dataset.arkHearts = String(n);
+        this.hearts.style.display = "flex";
     }
 
     /** Over the point above its head (CSS px in the view), kept inside the view; hidden when it is out of sight. */
