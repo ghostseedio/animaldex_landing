@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import path from "node:path";
 import test from "node:test";
-import {ARK_LOAD_START, ARK_LOAD_WEIGHTS, arkAgoText, arkAnimalsShare, arkLoaderStageText, arkLoadAnimals, arkLoadProgress, arkLoadStage, arkLoadStep, arkLoadWorking, arkNewestArrival, arkProgressMessage, arkWhenSettled, readArkProgressMessage, type ArkLoadState, type ArkLoadStep} from "./ark-loading";
+import {ARK_FAILURE_TEXT_MAX, ARK_LOAD_START, ARK_LOAD_WEIGHTS, arkFailedMessage, arkFailureText, arkAgoText, arkAnimalsShare, arkLoaderStageText, arkLoadAnimals, arkLoadProgress, arkLoadStage, arkLoadStep, arkLoadWorking, arkNewestArrival, arkProgressMessage, arkWhenSettled, readArkProgressMessage, type ArkLoadState, type ArkLoadStep} from "./ark-loading";
 import {ARK_POSTER, ARK_POSTER_BLURRED, ARK_POSTER_PLACEHOLDER} from "./ark-poster";
 
 const root = path.join(__dirname, "..", "..");
@@ -237,4 +237,21 @@ test("loading: while the host's selection waits for its flight the card stays in
     }
     assert.deepEqual(told, ["animals 0.85", "animals 0.9", "animals 0.95", "animals 0.95", "animals 0.996", "done 1"]);
     assert.deepEqual(arkProgressMessage(state), {type: "ark:progress", stage: "done", progress: 1});
+});
+
+test("arkFailureText: one short line from whatever was thrown", () => {
+    assert.equal(arkFailureText(new Error("Error creating WebGL context.")), "Error: Error creating WebGL context.");
+    assert.equal(arkFailureText(new TypeError("x is undefined")), "TypeError: x is undefined");
+    assert.equal(arkFailureText("context lost"), "context lost");
+    assert.equal(arkFailureText({message: "worker died"}), "worker died");
+    assert.equal(arkFailureText(null), "unknown");
+    assert.equal(arkFailureText("  \n "), "unknown");
+    assert.equal(arkFailureText("a\n  b"), "a b");
+    const long = arkFailureText("x".repeat(500));
+    assert.equal(long.length, ARK_FAILURE_TEXT_MAX);
+    assert.ok(long.endsWith("…"));
+});
+
+test("arkFailedMessage: the host's ark:failed", () => {
+    assert.deepEqual(arkFailedMessage(new Error("boom")), {type: "ark:failed", reason: "Error: boom"});
 });

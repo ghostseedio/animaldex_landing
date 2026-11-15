@@ -43,6 +43,15 @@
   body:has(#ark-loader.said.done) [data-ark-live="log"] { animation: arkLogIn 750ms ease-out backwards; }
   @keyframes arkLogIn { 0%, 62% { opacity: 0; } 100% { opacity: 1; } }
   #ark-loader.done .card { opacity: 0; transition-duration: 450ms; }
+  /* The Ark could not be built (a Galaxy A02s, 2026-11-15): the card says so, who is aboard below, and why, small. */
+  #ark-loader.failed .card { opacity: 1; pointer-events: auto; width: min(24rem, calc(100% - 24px)); max-height: calc(100% - 36px - env(safe-area-inset-bottom) - env(safe-area-inset-top)); overflow-y: auto; overscroll-behavior: contain; }
+  #ark-loader.failed .stage .dot { animation: none; background: #f0b45a; }
+  #ark-loader.failed .stage .text { white-space: normal; }
+  #ark-loader.failed .bar, #ark-loader.failed .facts { display: none; }
+  #ark-loader .aboard { list-style: none; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px solid rgba(255, 255, 255, 0.1); font-weight: 500; }
+  #ark-loader .aboard li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
+  #ark-loader .aboard .n { font-variant-numeric: tabular-nums; color: rgba(255, 252, 244, 0.7); }
+  #ark-loader .why { margin: 6px 0 0; font: 400 10.5px/1.35 ui-monospace, SFMono-Regular, Menlo, monospace; color: rgba(255, 252, 244, 0.55); word-break: break-word; }
   #ark-loader .stage { display: flex; align-items: center; gap: 8px; margin: 0; min-height: 20px; }
   #ark-loader .stage .dot { flex: none; width: 6px; height: 6px; border-radius: 3px; background: #c8fa63; animation: arkLoaderPulse 2s ease-in-out infinite; }
   #ark-loader .stage .text { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
@@ -218,7 +227,7 @@
   var iconImage = null;
   function render(state) {
     last = state;
-    if (!on || !root) return;
+    if (!on || !root || failed) return;
     var words = said || ENGLISH;
     var text = state.stage === "data" ? words.data : state.stage === "world" ? words.world : words.animals;
     if (said) $(".stage .text").textContent = text;
@@ -277,8 +286,9 @@
     if (iconImage && state.showIcon && state.newest && !iconImage.getAttribute("src")) iconImage.src = state.newest.icon;
   }
   var gone = false;
+  var failed = false;
   function done() {
-    if (gone || !root) return;
+    if (gone || !root || failed) return;
     gone = true;
     root.classList.add("world", "done");
     document.body.classList.remove("ark-loading");
@@ -297,7 +307,38 @@
   requestAnimationFrame(function () {
     requestAnimationFrame(function () { tell({type: "ark:progress", stage: "data", progress: 0}); });
   });
-  window.AnimalDexArkLoader = {render: render, done: done, tell: tell, words: words, snapshotRead: snapshotRead, snapshotTag: snapshotTag, on: on};
+  // The Ark could not be built: {message, rows: [{name, count}], why} on the card, which stays (the scene never came).
+  function fail(info) {
+    if (failed || gone || !root) return;
+    failed = true;
+    root.classList.add("failed", "said");
+    $(".stage .text").textContent = info.message;
+    var card = $(".card");
+    // (Why first, under the words: in a screenshot of the card, not at the foot of a long list.)
+    if (info.why) {
+      var why = document.createElement("p");
+      why.className = "why";
+      why.textContent = info.why;
+      card.appendChild(why);
+    }
+    if (info.rows && info.rows.length) {
+      var list = document.createElement("ul");
+      list.className = "aboard";
+      info.rows.forEach(function (row) {
+        var item = document.createElement("li");
+        var name = document.createElement("span");
+        name.textContent = row.name;
+        var count = document.createElement("span");
+        count.className = "n";
+        count.textContent = row.count.toLocaleString(lang);
+        item.appendChild(name);
+        item.appendChild(count);
+        list.appendChild(item);
+      });
+      card.appendChild(list);
+    }
+  }
+  window.AnimalDexArkLoader = {render: render, done: done, fail: fail, tell: tell, words: words, snapshotRead: snapshotRead, snapshotTag: snapshotTag, on: on};
   // The host's messages before the scene's code runs (it runs after the first paint now): kept, and handed to the
   // script below when it starts (`AnimalDexArkEarly`), so an app that speaks as soon as the page has loaded loses nothing.
   var early = [];
@@ -654,6 +695,36 @@ window.AnimalDexArkStart = function () {
   var prepared = null;
   // Part C: the one world's handle while it mounts (the scene is handed over once it is up: `mounted`).
   var mounting = null;
+  // The Ark could not be built (a Galaxy A02s, 2026-11-15, stuck on "Building the island" in the browser and the app):
+  // before, an error thrown while the island was made (three's "Error creating WebGL context", the mount's own) or a
+  // context lost before the first frame was swallowed and the card waited for good. Now the card says the Ark cannot
+  // be drawn here, lists who is aboard (as the site's /ark does) and shows why, small; the host hears ark:failed.
+  var loadFailed = false;
+  function failLoad(error) {
+    if (loadFailed || load.frame) return;
+    loadFailed = true;
+    var message = Ark.arkFailedMessage(error);
+    try { console.error("[ark] the Ark could not be built:", message.reason); } catch (x) {}
+    tell(message);
+    var rows = [];
+    try { rows = Ark.arkRankedSpecies(shown).slice(0, 80).map(function (row) { return {name: row.name, count: row.count}; }); } catch (x) {}
+    var gl = "";
+    try {
+      var probe = document.createElement("canvas").getContext("webgl2") || document.createElement("canvas").getContext("webgl");
+      var info = probe && probe.getExtension("WEBGL_debug_renderer_info");
+      gl = probe ? " · " + (info ? probe.getParameter(info.UNMASKED_RENDERER_WEBGL) : probe.getParameter(probe.RENDERER)) : " · no WebGL";
+    } catch (x) {}
+    loader.fail({
+      message: (words && words.noWebgl) || "This browser can't draw the Ark in 3D. Here is who is aboard.",
+      rows: rows,
+      why: message.reason + gl + " · " + (navigator.deviceMemory || "?") + " GB"
+    });
+  }
+  // A context lost before the first frame: the browser may hand one back (the page then reloads); if not, it failed.
+  document.addEventListener("webglcontextlost", function () {
+    if (load.frame || loadFailed) return;
+    setTimeout(function () { if (!load.frame) failLoad("WebGL context lost before the first frame"); }, Ark.ARK_LOST_CONTEXT_WAIT_MS);
+  }, true);
   function show(snapshot) {
     if (!snapshot) return;
     shown = snapshot;
@@ -672,6 +743,7 @@ window.AnimalDexArkStart = function () {
   }
 
   function mount(snapshot) {
+    if (loadFailed) return;
     if (scene) { scene.update(snapshot); return; }
     var options = {
       snapshot: snapshot,
@@ -739,15 +811,15 @@ window.AnimalDexArkStart = function () {
     if (Ark.mountArchipelago) {
       options.openOn = Ark.arkOpeningIsland ? Ark.arkOpeningIsland(snapshot) : undefined;
       options.workers = {scenery: "./ark-prebuild-worker.js", places: "./ark-prebuild-places-worker.js", town: "./ark-town-worker.js"};
-      mounting = Ark.mountArchipelago(document.getElementById("ark"), options);
+      try { mounting = Ark.mountArchipelago(document.getElementById("ark"), options); } catch (error) { failLoad(error); return; }
       // (A development build: the handle for probes, as the page's `__arkScene`.)
       if (devBuild) window.__arkScene = mounting;
       if (selectHeld) mounting.select(selectHeld.id || null, Boolean(selectHeld.closeUp));
       selectHeld = null;
-      mounting.mounted().then(function () { loadStep("prepared"); scene = mounting; mounted(shown || snapshot); });
+      mounting.mounted().then(function () { loadStep("prepared"); scene = mounting; mounted(shown || snapshot); }).catch(failLoad);
       return;
     }
-    scene = Ark.mountArk(document.getElementById("ark"), options);
+    try { scene = Ark.mountArk(document.getElementById("ark"), options); } catch (error) { failLoad(error); return; }
     loadStep("prepared");
     if (selectHeld) scene.select(selectHeld.id || null, Boolean(selectHeld.closeUp));
     selectHeld = null;
