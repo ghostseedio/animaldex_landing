@@ -98,6 +98,11 @@ export type ArkAnimal = {
     /** The species has no Ark model yet (A13): drawn as the neutral placeholder figure. */
     placeholder?: boolean;
     /**
+     * The last of its kind aboard (`last_of_kind`, 20261119110000, sent only when true): no other living animal or egg
+     * of its kind is on the Ark, so it cannot breed and will age out. The card says so.
+     */
+    last_of_kind?: boolean;
+    /**
      * Its kind (A1): a breed's parent species (a Labrador's Domestic Dog),
      * whose pairs, breeding and cap apply. Breeds of one kind are one row in
      * the population panel. Absent: its own kind.

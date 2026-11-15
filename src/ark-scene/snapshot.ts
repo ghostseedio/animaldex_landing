@@ -87,6 +87,8 @@ function animal(raw: unknown): ArkAnimal | null {
     const rank = whole(row.slot_rank);
     if (slot !== null && rank !== null) Object.assign(life, {slot, slot_rank: rank});
     if (placeholder) life.placeholder = true;
+    // The last of its kind aboard (sent only when true): no mate, it will age out; the card says so.
+    if (row.last_of_kind === true) life.last_of_kind = true;
     const kind = text(row.kind_species_profile_id);
     if (kind && kind !== text(row.species_profile_id)) {
         life.kind_species_profile_id = kind;

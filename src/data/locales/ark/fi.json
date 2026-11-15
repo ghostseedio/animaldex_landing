@@ -190,6 +190,7 @@
             "hatchedAboard": "Kuoriutunut Arkissa",
             "hatched": "Kuoriutui",
             "placeholder": "Sen 3D-hahmoa tehdään vielä: toistaiseksi näkyy sijaishahmo.",
+            "lastOfKind": "Lajinsa viimeinen aluksella: nappaa toinen, niin se saa parin",
             "revised": "Sen askel",
             "revisedWorked": "päivitetty: se toimi taas",
             "revisedNot": "päivitetty: se ei sittenkään toiminut, mutta eläin jää kyytiin",
