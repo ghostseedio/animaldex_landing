@@ -192,3 +192,43 @@ test("not walked across the Ark: different worlds, too far apart, or long over; 
     assert.equal(now(x), null);
     assert.equal(now(y)?.state, "walk");
 });
+
+test("a contest first: where the species' males contest and a real rival is near, the two spar, the rival runs off, then the mating goes on", async () => {
+    const {contestScript, contestPose} = await import("@/ark-scene/live-matings");
+    const stag: E = {id: "stag", x: 0, z: 0, world: "wild", act: null, male: true};
+    const hind: E = {id: "hind", x: 6, z: 0, world: "wild", act: null, male: false};
+    const rival: E = {id: "rival", x: 0, z: 30, world: "wild", act: null, male: true};
+    const h = {...host([stag, hind, rival]), contest: () => "clash" as const, rival: () => rival};
+    const live = new LiveMatings<E>(h, (e) => e.id);
+    live.add([{key: "m", a: "stag", b: "hind", t0: 100}], 100);
+    live.step(101);
+    assert.ok(stag.act && rival.act, "the two males are posed");
+    assert.equal(hind.act, null, "she is left to her day while they contest");
+    assert.deepEqual(live.pins().sort(), ["hind", "rival", "stag"]);
+    const c = contestScript({x: 0, z: 0, length: 2, pace: 1}, {x: 0, z: 30, length: 2, pace: 1}, "clash", "m")!;
+    // They meet on his ground, face each other, and come together again and again.
+    const mid = c.walk + 2.2;
+    const m = contestPose(c, true, mid, () => 0, "rival")!;
+    const r = contestPose(c, false, mid, () => 0, "stag")!;
+    assert.ok(Math.abs(Math.abs(m.yaw - r.yaw) - Math.PI) < 1e-6, "head to head");
+    assert.ok(Math.hypot(m.x - r.x, m.z - r.z) < 2.6, "locked together at the clash");
+    assert.equal(m.state, "clash");
+    // The rival runs off; the male stays.
+    const lost = contestPose(c, false, c.end - 0.01, () => 0, "stag")!;
+    assert.equal(lost.state, "run");
+    assert.ok(Math.hypot(lost.x - c.centre.x, lost.z - c.centre.z) > 9);
+    // Then the mating, from where the contest left him.
+    live.step(100 + c.end + 1);
+    assert.equal(rival.act, null, "the rival is released");
+    assert.ok(stag.act && hind.act, "the pair now acts the mating");
+    assert.deepEqual(live.debug()[0].phase, "acting");
+});
+
+test("no rival near, or a species whose males do not contest: the mating as before", () => {
+    const a: E = {id: "a", x: 0, z: 0, world: "wild", act: null, male: true};
+    const b: E = {id: "b", x: 6, z: 0, world: "wild", act: null, male: false};
+    const live = new LiveMatings<E>({...host([a, b]), contest: () => "clash" as const, rival: () => null}, (e) => e.id);
+    live.add([{key: "m", a: "a", b: "b", t0: 0}], 0);
+    live.step(1);
+    assert.ok(a.act && b.act);
+});

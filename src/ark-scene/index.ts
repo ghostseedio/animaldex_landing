@@ -213,7 +213,7 @@ import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
-import {LiveMatings} from "@/ark-scene/live-matings";
+import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {LiveBirths} from "@/ark-scene/live-births";
 import pouchTable from "@/ark-scene/pouch.json";
 import {speciesCare} from "@/lib/ark-age";
@@ -6921,8 +6921,29 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setAct: (entry, pose) => {
             entry.act = pose;
         },
-        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id))
-    });
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id)),
+        // A contest first (handover §5): where the species' recipes have rival males contest, and a real male is near.
+        contest: (entry) => {
+            const ids = new Set(speciesRecipes(entry.animal.model_slug).recipes.map((r) => r.id));
+            return ids.has("antler_clash") || ids.has("horn_clash") ? "clash" : ids.has("box_spar") ? "box" : ids.has("wrestle") || ids.has("jaw_spar") || ids.has("lizard_contest") ? "wrestle" : null;
+        },
+        rival: (male, female, epoch) => {
+            if (!world || reducedMotion || !male.sched) return null;
+            const kind = male.animal.kind_species_profile_id || male.animal.species_profile_id || male.animal.model_slug;
+            const at = schedulePose(male, epoch);
+            let best: {entry: Entry; d: number} | null = null;
+            for (const e of allEntries()) {
+                if (e === male || e === female || e.held || e.visitor || !e.sched || e.sched.animal.young) continue;
+                if ((e.animal.kind_species_profile_id || e.animal.species_profile_id || e.animal.model_slug) !== kind) continue;
+                if (worldOf(e.animal) !== worldOf(male.animal) || sexLook(e.animal.id, e.animal.model_slug).sex !== "male") continue;
+                const p = schedulePose(e, epoch);
+                const d = Math.hypot(p.x - at.x, p.z - at.z);
+                // (The nearest; ties by id, so every viewer picks the same one.)
+                if (d <= CONTEST_MAX_APART && (!best || d < best.d || (d === best.d && e.animal.id < best.entry.animal.id))) best = {entry: e, d};
+            }
+            return best?.entry ?? null;
+        }
+    }, (entry) => entry.animal.id);
     /**
      * The record's live births acted out (handover §5): the mother settles, the young are born, licked, get up and
      * suckle, by the species' care (`live-births.ts`). A meal or a mating under way has the animal first.

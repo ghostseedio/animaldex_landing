@@ -54,7 +54,94 @@ export type LiveMatingsHost<E> = {
     setAct: (entry: E, pose: ActPose | null) => void;
     /** Held by something else now (a replay's act, a meal, a moment): left alone. */
     busy: (entry: E) => boolean;
+    /** How its species' rival males contest (its recipes: antlers or horns clash, boxing, wrestling), or null. */
+    contest?: (entry: E) => ContestKind | null;
+    /** A rival for the male before this mating: a real male of his kind near him at the time (not the female), or null. */
+    rival?: (male: E, female: E, epoch: number) => E | null;
 };
+
+/**
+ * A contest before a mating (handover §5, "males fight each other"; decision 369): where the species' rival males
+ * contest and a real male of the kind is near, he challenges first; the two spar, the rival gives way and runs off,
+ * and the mating goes on as the record has it. Acting only: the record's pair is the pair (the engine has no sexes,
+ * so the record's male always wins), and with no rival near there is no contest.
+ */
+export type ContestKind = "clash" | "box" | "wrestle";
+export type ContestScript = {
+    kind: ContestKind;
+    centre: Point;
+    /** Unit vector from the male's side to the rival's, and its yaw. */
+    axis: Point;
+    yaw: number;
+    /** Half the distance between the two when they are locked. */
+    half: number;
+    from: {m: Point; r: Point};
+    walk: number;
+    bouts: number;
+    /** The rival runs off to here, until `end`. */
+    away: Point;
+    end: number;
+    /** Where the male stands when it is over (the mating starts from here). */
+    mEnd: Point;
+};
+
+const CONTEST_WALK_MAX = 20;
+const CONTEST_BOUTS = 14;
+const CONTEST_FLEE = 5;
+/** A rival farther than this from the male (m) does not come. */
+export const CONTEST_MAX_APART = 45;
+
+/** The contest's script from the two males' places at its start. Pure. */
+export function contestScript(male: Point & {length: number; pace: number}, rival: Point & {length: number; pace: number}, kind: ContestKind, key: string): ContestScript | null {
+    const d = Math.hypot(rival.x - male.x, rival.z - male.z);
+    if (!(d <= CONTEST_MAX_APART) || d < 0.01) return null;
+    const axis = {x: (rival.x - male.x) / d, z: (rival.z - male.z) / d};
+    // They meet nearer the male (it is his ground): a third of the way to the rival.
+    const centre = add(male, axis, d / 3);
+    const half = Math.max((male.length + rival.length) * 0.27, 0.05);
+    const walk = clamp(Math.max(d / 3 / Math.max(male.pace, 0.3), (d * 2) / 3 / Math.max(rival.pace * 1.6, 0.3)), 2, CONTEST_WALK_MAX);
+    const bouts = CONTEST_BOUTS + Math.round(unit(`${key}:bouts`) * 8);
+    const run = Math.max(rival.length * 6, 10);
+    const away = add(centre, axis, half + run);
+    return {kind, centre, axis, yaw: yawOf(axis), half, from: {m: {x: male.x, z: male.z}, r: {x: rival.x, z: rival.z}}, walk, bouts, away, end: walk + bouts + CONTEST_FLEE, mEnd: add(centre, axis, -half)};
+}
+
+/** One of the two rivals' pose `s` seconds into the contest (`isMale`: the one that mates). Pure. */
+export function contestPose(c: ContestScript, isMale: boolean, s: number, ground: (x: number, z: number) => number, otherId: string): ActPose | null {
+    if (s < 0 || s >= c.end) return null;
+    const sign = isMale ? -1 : 1;
+    const face = isMale ? c.yaw : c.yaw + Math.PI;
+    const mk = (p: Point, yaw: number, state: string, speed = 0, pitch = 0): ActPose => ({x: p.x, z: p.z, base: ground(p.x, p.z), yaw, pitch, roll: 0, scale: 1, dim: 0, hidden: false, state, speed, with: otherId});
+    const locked = add(c.centre, c.axis, sign * c.half);
+    if (s < c.walk) {
+        const from = isMale ? c.from.m : c.from.r;
+        const k = ease(s / c.walk);
+        const d = Math.hypot(locked.x - from.x, locked.z - from.z);
+        return mk(lerpP(from, locked, k), d > 0.05 ? yawTo(from, locked) : face, isMale ? "walk" : "run", d / c.walk);
+    }
+    const t = s - c.walk;
+    if (t < c.bouts) {
+        if (c.kind === "clash") {
+            // Back off, then come together head to head: one clash every 2.6 s.
+            const u = (t % 2.6) / 2.6;
+            const apart = u < 0.55 ? ease(u / 0.55) : 1 - ease((u - 0.55) / 0.2);
+            const back = c.half * 1.3 * Math.max(apart, 0);
+            const hit = u >= 0.75;
+            return mk(add(locked, c.axis, sign * back), face, hit ? "clash" : u < 0.55 ? "walk" : "run", hit ? 0 : c.half, hit ? 0.12 : 0);
+        }
+        if (c.kind === "box") return mk(add(locked, c.axis, sign * c.half * 0.15 * Math.sin(t * 5 + (isMale ? 0 : 1.7))), face, "box", 0, -0.35 + 0.06 * Math.sin(t * 7));
+        // Wrestle: locked together, turning slowly about the middle, heaving.
+        const turn = t * 0.35;
+        const ax = {x: c.axis.x * Math.cos(turn) + c.axis.z * Math.sin(turn), z: c.axis.z * Math.cos(turn) - c.axis.x * Math.sin(turn)};
+        const heave = c.half * 0.12 * Math.sin(t * 3.1);
+        return mk(add(c.centre, ax, sign * (c.half * 0.85 + (isMale ? heave : -heave))), yawOf(ax) + (isMale ? 0 : Math.PI), "fight");
+    }
+    // Over: the rival turns and runs; the male watches it go.
+    const f = (t - c.bouts) / CONTEST_FLEE;
+    if (isMale) return mk(locked, face, "scan");
+    const d = Math.hypot(c.away.x - locked.x, c.away.z - locked.z);
+    return mk(lerpP(locked, c.away, ease(f)), c.yaw, "run", d / CONTEST_FLEE);
+}
 
 /** Farther apart than this (m) at the start: not walked across the Ark. */
 export const MATING_MAX_APART = 160;
@@ -115,7 +202,7 @@ export type MatingScript = {
     f: {length: number; height: number; pace: number};
 };
 
-type Live<E> = {act: MatingAct; script: MatingScript | null; failed: boolean; over: boolean; acting: Set<E>};
+type Live<E> = {act: MatingAct; script: MatingScript | null; failed: boolean; over: boolean; acting: Set<E>; contest?: {script: ContestScript; rival: string; maleFirst: boolean} | null};
 
 const ease = (u: number) => {
     const c = Math.min(Math.max(u, 0), 1);
@@ -387,7 +474,12 @@ export function matingPose(script: MatingScript, first: boolean, s: number, grou
 export class LiveMatings<E> {
     private matings: Live<E>[] = [];
 
-    constructor(private readonly host: LiveMatingsHost<E>) {}
+    /** A rival entry's id (the host's entries are opaque here). */
+    private readonly rivalId?: (entry: E) => string;
+
+    constructor(private readonly host: LiveMatingsHost<E>, rivalId?: (entry: E) => string) {
+        this.rivalId = rivalId;
+    }
 
     /** New matings from the record (one already known is kept as it is); those long over are forgotten. */
     add(acts: MatingAct[], epoch: number): void {
@@ -395,7 +487,7 @@ export class LiveMatings<E> {
         for (const act of acts) {
             if (!Number.isFinite(act.t0) || known.has(act.key) || act.a === act.b) continue;
             if (epoch - act.t0 > MATING_LIVE_SECONDS) continue;
-            this.matings.push({act, script: null, failed: false, over: false, acting: new Set()});
+            this.matings.push({act, script: null, failed: false, over: false, acting: new Set(), contest: undefined});
             known.add(act.key);
         }
         this.matings.sort((x, y) => x.act.t0 - y.act.t0);
@@ -413,7 +505,7 @@ export class LiveMatings<E> {
     /** Every id a mating under way names now (drawn one by one, never as a herd's figure). */
     pins(): string[] {
         const out: string[] = [];
-        for (const m of this.matings) if (m.acting.size) out.push(m.act.a, m.act.b);
+        for (const m of this.matings) if (m.acting.size) out.push(m.act.a, m.act.b, ...(m.contest ? [m.contest.rival] : []));
         return out;
     }
 
@@ -440,13 +532,54 @@ export class LiveMatings<E> {
                 if (m.acting.size) this.release(m);
                 continue;
             }
+            if (m.contest === undefined) {
+                // A rival first, where the species' males contest and one is near (decided once, from the time's places).
+                m.contest = null;
+                const maleFirst = !(h.male(b) === true && h.male(a) !== true);
+                const male = maleFirst ? a : b;
+                const female = maleFirst ? b : a;
+                const kind = h.together(a, b) ? h.contest?.(male) ?? null : null;
+                const rival = kind ? h.rival?.(male, female, m.act.t0) ?? null : null;
+                const pm = rival ? h.scheduleAt(male, m.act.t0) : null;
+                const pr = rival ? h.scheduleAt(rival, m.act.t0) : null;
+                const id = rival ? this.rivalId?.(rival) ?? null : null;
+                if (kind && rival && pm && pr && id && !pm.aloft && !pr.aloft) {
+                    const script = contestScript({x: pm.x, z: pm.z, length: h.length(male), pace: h.walk(male)}, {x: pr.x, z: pr.z, length: h.length(rival), pace: h.walk(rival)}, kind, m.act.key);
+                    if (script) m.contest = {script, rival: id, maleFirst};
+                }
+            }
+            const lead = m.contest ? m.contest.script.end : 0;
+            if (m.contest && s < lead) {
+                const c = m.contest;
+                const male = c.maleFirst ? a : b;
+                const rival = h.find(c.rival);
+                const acting = new Set<E>();
+                const put = (entry: E | null, act: ActPose | null) => {
+                    if (!entry || !act || h.busy(entry)) return;
+                    h.setAct(entry, act);
+                    acting.add(entry);
+                };
+                put(male, contestPose(c.script, true, s, h.ground, c.rival));
+                put(rival, contestPose(c.script, false, s, h.ground, c.maleFirst ? m.act.a : m.act.b));
+                m.acting.forEach((e) => {
+                    if (!acting.has(e)) h.setAct(e, null);
+                });
+                m.acting = acting;
+                continue;
+            }
             if (!m.script) {
                 if (!h.together(a, b)) {
                     m.failed = true;
                     continue;
                 }
-                const pa = h.scheduleAt(a, m.act.t0);
-                const pb = h.scheduleAt(b, m.act.t0);
+                // (After a contest the male starts from where it ended, and she from where her day has her by then.)
+                const at = (entry: E, first: boolean) => {
+                    const c = m.contest;
+                    if (c && first === c.maleFirst) return c.script.mEnd;
+                    return h.scheduleAt(entry, m.act.t0 + lead);
+                };
+                const pa = at(a, true);
+                const pb = at(b, false);
                 const script = pa && pb ? matingScript(this.body(a, pa), this.body(b, pb), m.act.key) : null;
                 if (!script) {
                     m.failed = true;
@@ -455,15 +588,16 @@ export class LiveMatings<E> {
                 m.script = script;
             }
             const sc = m.script;
+            const sM = s - lead;
             const acting = new Set<E>();
             const pose = (entry: E, act: ActPose | null) => {
                 if (!act || h.busy(entry)) return;
                 h.setAct(entry, act);
                 acting.add(entry);
             };
-            if (s < sc.paired) {
-                pose(a, matingPose(sc, true, s, h.ground, m.act.b));
-                pose(b, matingPose(sc, false, s, h.ground, m.act.a));
+            if (sM < sc.paired) {
+                pose(a, matingPose(sc, true, sM, h.ground, m.act.b));
+                pose(b, matingPose(sc, false, sM, h.ground, m.act.a));
             } else {
                 // Part: each back to where its day has it now.
                 const last = sc.attempts[sc.attempts.length - 1];
@@ -472,7 +606,7 @@ export class LiveMatings<E> {
                     if (!now) return null;
                     const d = Math.hypot(now.x - from.x, now.z - from.z);
                     const seconds = Math.min(Math.max(d / Math.max(pace, 0.3), RETURN_MIN), RETURN_MAX);
-                    const k = (s - sc.paired) / seconds;
+                    const k = (sM - sc.paired) / seconds;
                     if (k >= 1) return null;
                     const e = ease(k);
                     const x = from.x + (now.x - from.x) * e;
