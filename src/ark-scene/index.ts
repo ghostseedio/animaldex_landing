@@ -94,6 +94,7 @@ import {ContactShadows, FindDots, GroundRings, type FindDot, type Ring, type Sha
 import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {skipEmptyDraws} from "@/ark-scene/runtime/empty-draws";
 import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
+import {antColony, antPose, antSpec, type AntColony, type AntGround, type AntPose} from "@/ark-scene/ant-trails";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {rigBasesFrom} from "@/ark-scene/rig-clips";
 import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
@@ -198,7 +199,7 @@ import {worldSampler} from "@/ark-scene/world-sampler";
 import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
-import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
+import {hashString, heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
 import {townWorldOrigin} from "@/ark-scene/islands";
 import {TOWN_GRID, TOWN_NEAR_LIVE} from "@/ark-scene/islands/town/chunks";
@@ -440,6 +441,13 @@ type Entry = {
     recipeAct?: RecipeAct | null;
     /** Ambient flock-mates round a small animal's spot (a swarm, a cluster). */
     recipeFlock?: Flock | null;
+    /**
+     * An ant on its colony's trail (`ant-trails.ts`): its colony, its place in the file, its ground and its kind's
+     * waking hours (undefined: not worked out yet; null: not an ant on a trail), where it is now, and what it carries home.
+     */
+    ant?: {colony: AntColony; rank: number; ground: AntGround; awake: (epoch: number) => boolean} | null;
+    antNow?: AntPose | null;
+    antCarry?: RecipeAct | null;
     /** The duller sex's dim (`sexDim`), worked out once. */
     sexDim?: number;
     /** Its gait (`rig-player.ts` stepGait): its pace and step cycle by the distance it covers, rigged or not. */
@@ -1492,6 +1500,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Everyone but a true micro animal and an underground one (`map/place.ts` onSchedule); a perched bird or bat from its perch.
         // (Nor one the depth classifier holds off the water: the schedule would land a frigatebird on the sea to rest.)
         if (!scheduleOn || !onSchedule(place, animal.model_slug) || !onBehaviourSchedule(animal.model_slug)) return null;
+        // (An ant forages on its colony's trail and rests by its nest instead: `ant-trails.ts`, `antTrailOf`.)
+        if (antSpec(animal.model_slug)) return null;
         // (Part C: a town animal kept still at a window, behind the glass or in a tank stays at its spot.)
         const inTown = Boolean(island?.has(animal));
         // (Until the town's behaviour world is in, its animals stand at their places: `townWorldReady` wires them then.)
@@ -2004,7 +2014,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const huntingNow = Boolean(subject && hunting.active && hunting.hunting(animal, epoch));
         const plan = subject ? scheduleStatus(subject, epoch, {trip: entry.sched?.trip ?? null, hunting: huntingNow}) : null;
         // Off the schedule (reduced motion, a micro or underground animal, a replay's act): its one state, said plainly.
-        const activity = plan ? plan.activity : arkActivityKey({doing: null, asleep: entry.state.asleep, airborne: entry.state.airborne, breathing: entry.state.breathing});
+        // (An ant out on its colony's trail is foraging: `ant-trails.ts`.)
+        const onTrail = Boolean(entry.antNow && entry.antNow.leg !== "nest");
+        const activity = plan ? plan.activity : onTrail ? arkActivityKey({doing: "forage", asleep: false, airborne: false, breathing: false}) : arkActivityKey({doing: null, asleep: entry.state.asleep, airborne: entry.state.airborne, breathing: entry.state.breathing});
         const notes = records.get(animal.id) ?? [];
         const record: ArkStatusLogEntry[] = [arkOriginEntry(animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null}))];
         // How fed it is and its energy over its day (card truth, 2026-11-13): from its own schedule, its eating and waking
@@ -3477,6 +3489,33 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {x, z, base, yaw, pitch, roll: 0, afloat: true, water: spec, school: follower ? {x: lx, z: lz} : undefined, ...(surface ? {surface} : {})};
     };
 
+    /**
+     * Its colony's trail, if it is an ant that forages on one (`ant-trails.ts`): the nest is its slot's attach point (a
+     * micro animal's), else (a town ant on the ground) its group leader's place. Worked out once, when its island's
+     * behaviour world is in (until then it stands at its place).
+     */
+    const antTrailOf = (entry: Entry): NonNullable<Entry["ant"]> | null => {
+        if (entry.ant !== undefined) return entry.ant;
+        const animal = entry.animal;
+        if (!antSpec(animal.model_slug)) return (entry.ant = null);
+        const own = townIds.has(animal.id) ? townWorld : world;
+        if (!own) return null;
+        const place = entry.place;
+        let nest = place.micro && place.map?.attach ? place.map.attach : null;
+        if (!nest) {
+            const leader = place.leader ? findEntry(place.leader)?.place ?? place : place;
+            nest = {id: `nest:${place.leader ?? animal.id}`, tag: "worm_hole", x: leader.x, y: heightAt(leader.x, leader.z), z: leader.z, normal: [0, 1, 0], tangent: [0, 0, 1], size: {min: 0, max: 1}, zone: animal.zone};
+        }
+        const ground: AntGround = {heightAt, walkable: (x, z) => own.nav.walkable(x, z) && !own.sampler.isWater(x, z)};
+        const colony = antColony(animal.model_slug, animal.zone, animal.slot ?? hashString(animal.id), nest, entry.trueLength, ground);
+        if (!colony) return (entry.ant = null);
+        const profile = behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan);
+        const awake = (epoch: number) => scheduleAwakeAt(profile, animal.activity, scheduleHours(epoch));
+        return (entry.ant = {colony, rank: animal.slot_rank ?? place.rank ?? 0, ground, awake});
+    };
+    /** What a loaded forager carries home, drawn at its mouth by the recipes' scene (a seed, a bit of insect). */
+    const antCarryAct = (id: string, item: "insect" | "seed"): RecipeAct => ({episode: `ant#${id}`, recipe: "ant_trail", block: "walk", state: "walk", u: 0, pitch: 0, roll: 0, own: false, carry: {item, at: "mouth"}, prey: null, catch: null, fx: null, mark: null, label: "Carrying food home"});
+
     const pose = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
         // An act's pose, from a replayed event.
         if (entry.act) {
@@ -3515,6 +3554,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return {x: host.middle.x + place.host.dx, z: host.middle.z + place.host.dz, base, yaw, pitch: 0, roll: 0, afloat: rider};
             }
         }
+        // An ant on its colony's trail, or at its spot by the nest (`ant-trails.ts`): pure in the world time, every viewer alike.
+        const trail = !entry.visitor && scheduleOn && !reducedMotion ? antTrailOf(entry) : null;
+        if (trail) {
+            const now = antPose(trail.colony, entry.animal.id, trail.rank, entry.trueLength, worldMs() / 1000, trail.awake, trail.ground);
+            entry.antNow = now;
+            entry.antCarry = now.leg === "back" && now.carrying ? antCarryAct(entry.animal.id, now.carrying) : null;
+            const point: SurfacePoint = {x: now.x, y: now.y, z: now.z, nx: now.nx, ny: now.ny, nz: now.nz, tx: now.tx, ty: now.ty, tz: now.tz};
+            // On a leaf, bark or a branch of a tree in the wind: moved with it, as at its microhabitat.
+            const swaying = !trail.colony.ground ? place.micro?.attach?.source : undefined;
+            if (swaying) {
+                const sway = attachSway(swaying, ARK_TIME.value, ARK_WIND_VECTOR.value);
+                point.x += sway.x;
+                point.y += sway.y;
+                point.z += sway.z;
+            }
+            return {x: point.x, z: point.z, base: point.y, yaw: Math.atan2(point.tx, point.tz), pitch: 0, roll: 0, afloat: true, surface: point};
+        }
+        entry.antNow = null;
+        entry.antCarry = null;
         if (scheduled(entry) && entry.sched!.pose && !(entry.depth && waterMotion(entry.depth) === "hole")) {
             const at = fromSchedule(entry, modelHeight);
             // Part C: a zoo animal never leaves its enclosure (the mask is its hard bound, whatever its schedule's route).
@@ -4199,6 +4257,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const c of list) {
             const own = c.entry.sched;
             if (c.entry.recipeFlock) flocks.push(c.entry.recipeFlock);
+            // A loaded ant's seed or bit of insect, close by only (it is a few millimetres).
+            if (c.entry.antCarry && c.visible && c.distance < 12) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act: c.entry.antCarry});
             const flockNow = (own?.pose as RecipePose | null | undefined)?.flock;
             if (flockNow) flocks.push(flockNow);
             // A house starling's murmuration (its flockmates are drawn round it, far as it may be).

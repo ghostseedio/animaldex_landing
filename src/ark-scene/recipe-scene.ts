@@ -215,6 +215,9 @@ export class RecipeScene {
                 else if (kind === "twig" || kind === "grass") this.put(this.items[kind], x, y, z, a.yaw + Math.PI / 2 + 0.3, 0.2, 0, Math.max(l * 0.025, 0.004), Math.max(l * 0.025, 0.004), Math.min(Math.max(l * 0.7, 0.08), 1.2), colour);
                 else if (kind === "worm") this.put(this.items.worm, x, y - l * 0.06, z, a.yaw + wiggle, 1.1, 0, Math.max(l * 0.02, 0.004), Math.max(l * 0.02, 0.004), Math.max(l * 0.35, 0.05));
                 // (An insect at its own size, a grasshopper's or a moth's, crossways in the mouth or bill: not scaled to the hunter.)
+                // (A tiny carrier, an ant: what it carries at its own scale, a seed or a bit of insect about half its length.)
+                else if (l < 0.05 && kind === "insect") this.put(this.items.insect, x, y, z, a.yaw + Math.PI / 2, 0, 0, l * 0.3, l * 0.3, l * 0.8, "#4a3b2a");
+                else if (l < 0.05) this.put(this.items[kind], x, y, z, a.yaw, 0, 0, l * 0.35, l * 0.3, l * 0.45, colour);
                 else if (kind === "insect") this.put(this.items.insect, x, y, z, a.yaw + Math.PI / 2, 0, 0, 0.012, 0.012, 0.04, "#7b8a3c");
                 else this.put(this.items[kind], x, y, z, a.yaw, 0, 0, Math.max(l * 0.12, 0.015), Math.max(l * 0.1, 0.012), Math.max(l * 0.12, 0.015), colour);
             }
