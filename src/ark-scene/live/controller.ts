@@ -207,6 +207,7 @@ export class ArkLive {
         this.noteRecord(decoded);
         this.revive(decoded);
         this.mate(decoded);
+        this.born(decoded);
         this.push(arkLiveServerItems(decoded));
     }
 
@@ -235,6 +236,26 @@ export class ArkLive {
         if (!matings.length) return;
         try {
             this.options.scene()?.addMatings?.(matings);
+        } catch {
+            // (A scene without it: the log says it all the same.)
+        }
+    }
+
+    /** Live young were born (not a hatching): the litter's birth is acted in the live world (the scene's `addBirths`). */
+    private born(events: readonly ArkEvent[]) {
+        const litters = new Map<string, {key: string; parents: string[]; young: string[]; t0: number}>();
+        for (const event of events) {
+            if (event.kind !== "birth" || event.from_egg || !event.animal || !event.parents.length) continue;
+            const t0 = Date.parse(event.at) / 1000;
+            if (!Number.isFinite(t0)) continue;
+            const key = `birth:${event.at}:${[...event.parents].sort().join(",")}`;
+            const litter = litters.get(key);
+            if (litter) litter.young.push(event.animal.id);
+            else litters.set(key, {key, parents: [...event.parents], young: [event.animal.id], t0});
+        }
+        if (!litters.size) return;
+        try {
+            this.options.scene()?.addBirths?.(Array.from(litters.values()));
         } catch {
             // (A scene without it: the log says it all the same.)
         }
@@ -300,6 +321,7 @@ export class ArkLive {
                 this.noteRecord(events);
                 this.revive(events);
                 this.mate(events);
+                this.born(events);
                 this.push(arkLiveServerItems(events));
             })
             .catch(() => {

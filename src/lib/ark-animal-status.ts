@@ -63,6 +63,8 @@ export const ARK_ACTIVITIES = [
     "flowers",
     "light",
     "feeding",
+    "birthing",
+    "nursing",
     "about"
 ] as const;
 export type ArkActivityKey = typeof ARK_ACTIVITIES[number];
@@ -651,6 +653,8 @@ export const ARK_ACTIVITY_ENGLISH: ArkActivityWords = {
     flowers: "visiting flowers",
     light: "circling a light",
     feeding: "at feeding time",
+    birthing: "giving birth",
+    nursing: "nursing its young",
     about: "out and about",
     tag: "Now",
     tagNote: "Happening now on the Ark’s shared clock, the same for everyone. Solid lines are the Ark’s record.",

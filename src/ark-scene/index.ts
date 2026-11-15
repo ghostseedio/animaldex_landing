@@ -214,6 +214,9 @@ import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {LiveMatings} from "@/ark-scene/live-matings";
+import {LiveBirths} from "@/ark-scene/live-births";
+import pouchTable from "@/ark-scene/pouch.json";
+import {speciesCare} from "@/lib/ark-age";
 import {mealOnStage, mealScript, DRINK_REACH, type MealCatch} from "@/ark-scene/meal-acts";
 import {MealTraces} from "@/ark-scene/meal-traces";
 import {bodyMassKg, isScavenger, mealPlan, type MealPlan, type MealSide, type ScavengerCandidate} from "@/ark-scene/meals";
@@ -6920,6 +6923,38 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id))
     });
+    /**
+     * The record's live births acted out (handover §5): the mother settles, the young are born, licked, get up and
+     * suckle, by the species' care (`live-births.ts`). A meal or a mating under way has the animal first.
+     */
+    const POUCHED = new Set((pouchTable as {slugs: string[]}).slugs);
+    const liveBirths = new LiveBirths<Entry>({
+        find: (id) => {
+            const e = entryById.get(id);
+            return e && !e.held && !e.visitor ? e : null;
+        },
+        scheduleAt: (entry, epoch) => {
+            if (!entry.sched || !world || reducedMotion) return null;
+            const at = schedulePose(entry, epoch);
+            // (Not in the air, not out at sea on the wing: a birth is on the ground or in the water where it lives.)
+            return at.aloft ? null : {x: at.x, z: at.z, yaw: at.yaw};
+        },
+        ground: (x, z) => Math.max(heightAt(x, z), -0.3),
+        walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
+        length: (entry) => entry.length,
+        height: (entry) => entry.drawnHeight,
+        plan: (entry) => library.get(entry.animal.model_slug)?.behaviour?.plan ?? null,
+        care: (entry) => speciesCare(entry.animal.model_slug, library.get(entry.animal.model_slug)?.behaviour?.plan ?? null).kind,
+        pouch: (entry) => POUCHED.has(entry.animal.model_slug),
+        male: (entry) => {
+            const sex = sexLook(entry.animal.id, entry.animal.model_slug).sex;
+            return sex === "male" ? true : sex === "female" ? false : null;
+        },
+        setAct: (entry, pose) => {
+            entry.act = pose;
+        },
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id))
+    });
     /** The meals' traces this frame (feathers, fur, scales, pressed grass), and the pressed grass for the grass to bend. */
     let tracesNow: ReturnType<typeof liveMeals.traces> = [];
     const stepMealTraces = () => {
@@ -6966,11 +7001,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** The live world's meals, a frame (after the replay's acts): poses, and their pins for the herds. */
     const stepLiveMeals = () => {
-        if ((!liveMeals.size && !liveMatings.size) || reducedMotion) return;
+        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size) || reducedMotion) return;
         const epoch = worldMs() / 1000;
         if (liveMeals.size) liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
         if (liveMatings.size) liveMatings.step(epoch);
-        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins()]);
+        if (liveBirths.size) liveBirths.step(epoch);
+        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins()]);
         if (pins.size !== mealPins.size || Array.from(pins).some((id) => !mealPins.has(id))) {
             mealPins = pins;
             refreshLive();
@@ -7719,7 +7755,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
@@ -7833,6 +7869,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         addMatings: (matings) => {
             liveMatings.add(matings, worldMs() / 1000);
+        },
+        addBirths: (births) => {
+            liveBirths.add(births, worldMs() / 1000);
         },
         liveHunt: () => liveHuntNow(),
         setSound: (on) => liveliness.setSound(on),

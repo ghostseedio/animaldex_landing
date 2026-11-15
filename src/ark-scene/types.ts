@@ -483,6 +483,11 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * the two walk to each other, court, nuzzle and lie together, then go back to their day. New ones are added.
      */
     addMatings?: (matings: Array<{key: string; a: string; b: string; t0: number}>) => void;
+    /**
+     * The record's live births (`birth` events that are not hatchings: a litter's parents, its young, its time on the
+     * shared clock), acted out in the live world: the mother settles, the young are born, licked and suckle.
+     */
+    addBirths?: (births: Array<{key: string; parents: string[]; young: string[]; t0: number}>) => void;
     /** The newest real hunt or meal under way on the island (the page's marker), or null. */
     liveHunt?: () => ArkLiveHunt | null;
     /**

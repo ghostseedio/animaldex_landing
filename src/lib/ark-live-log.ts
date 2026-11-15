@@ -331,7 +331,9 @@ export class ArkLiveLog {
 
     push(items: readonly ArkLiveItem[], now: number): boolean {
         let changed = false;
-        for (const h of [...this.hunts]) if (now - h[1] > this.options.huntWindow) this.hunts.delete(h[0]);
+        this.hunts.forEach((at, id) => {
+            if (now - at > this.options.huntWindow) this.hunts.delete(id);
+        });
         for (let item of items) {
             const hunter = item.focus.animalId;
             if (item.source === "now" && item.kind === "hunting" && hunter) this.hunts.set(hunter, now);
