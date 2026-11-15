@@ -6,13 +6,13 @@
  * none opens a window:
  *
  * - under a live step card, what the step does for the reader's animals of
- *   that kind ("If this works, your Komodo Dragons will thrive", "…will be in
- *   prime condition", "…will stay in prime condition", "…will thrive once one
- *   is aboard"), by the server's state and bands;
+ *   that kind ("If this works, your Komodo Dragons in the Ark thrive", or
+ *   "…will thrive once one is aboard"), by the server's state;
  * - in the thread, under the reply that finished a step that worked, what it
- *   did: "Your Komodo Dragons are thriving", the band it left them in, and the
- *   step's locked Ark Score points ("+30 Ark Score"). Fresh (it landed while
- *   the chat was open), it plays in;
+ *   did: "It worked. Your Komodo Dragons are thriving: more young, hunted
+ *   last.", the step's locked Ark Score points ("+30 Ark Score") and "See
+ *   them" (the Ark on that kind). Fresh (it landed while the chat was open),
+ *   it plays in;
  * - under that line (D6, owner 2026-11-11: the founders' story moment moved
  *   from the arrival to the step that worked), when the reader may share it
  *   (founders contract, section 4): one calm moment, in place, never a window:
@@ -24,6 +24,7 @@
  *   panel beside the chat on it, when the chat has one.
  */
 
+import Link from "@/app/[locale]/_components/link";
 import {AskSpecialBubble} from "@/components/ask-animaldex/ask-messenger";
 import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 import {arkArrivalLine, arkStepOfferLine, type ArkStepOffer, type ArkWorldWords} from "@/lib/ark-world";
@@ -76,14 +77,18 @@ export function ArkStepOfferNote({offer, words, locale}: {offer: ArkStepOffer; w
 /**
  * In the thread, under the reply that finished a step that worked: what it
  * did for their animals of this kind, in the step card's own container, with
- * the kind's icon, the band in plain words, and the step's points.
+ * the kind's icon, the step's points and "See them".
  */
-export function ArkStepResultLine({result, slug, fresh, words, locale, plain = true, share = null}: {
+export function ArkStepResultLine({result, slug, fresh, words, locale, plain = true, share = null, onSee, seeHref}: {
     result: ArkStepResult;
     slug: string | null;
     fresh: boolean;
     words: ArkStepResultWords;
     locale: string;
+    /** "See them": the Ark panel beside the chat, on their animal of the kind. */
+    onSee?: () => void;
+    /** Without a panel: the Ark page, flown to the kind (`/ark?focus=`). */
+    seeHref?: string;
     /** The chat's plain thread (full width, as the step card); false beside the animal's face. */
     plain?: boolean;
     /**
@@ -105,19 +110,23 @@ export function ArkStepResultLine({result, slug, fresh, words, locale, plain = t
                         </span>
                     ) : null}
                     <div className="min-w-0 flex-1">
-                        <p className="text-[13px] font-semibold leading-5 text-white">
-                            <span className="mr-1.5 inline-block align-[-2px] text-primary-300"><ArkGlyph /></span>
-                            {lines.line}
-                        </p>
-                        {lines.band || lines.points ? (
-                            <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-                                {lines.band ? (
-                                    <span className={`rounded-full px-2 py-0.5 text-[12px] font-semibold leading-5 ${result.thriveAfter === "ordinary" ? "bg-white/[0.08] text-white/80" : "bg-primary-400/15 text-primary-200"}`}>{lines.band}</span>
-                                ) : null}
-                                {lines.points ? <span className="text-[12px] font-bold tabular-nums text-primary-300" data-testid="ark-step-result-points">{lines.points}</span> : null}
+                        {lines.line ? (
+                            <p className="text-[13px] font-semibold leading-5 text-white">
+                                <span className="mr-1.5 inline-block align-[-2px] text-primary-300"><ArkGlyph /></span>
+                                {lines.line}
+                            </p>
+                        ) : null}
+                        {lines.points ? (
+                            <p className={lines.line ? "mt-1" : ""}>
+                                <span className="text-[12px] font-bold tabular-nums text-primary-300" data-testid="ark-step-result-points">{lines.points}</span>
                             </p>
                         ) : null}
                     </div>
+                    {lines.thriving && onSee ? (
+                        <button type="button" onClick={onSee} className={SEE_BUTTON} data-testid="ark-step-result-see">{words.resultSee}</button>
+                    ) : lines.thriving && seeHref ? (
+                        <Link href={seeHref} className={SEE_BUTTON} data-testid="ark-step-result-see">{words.resultSee}</Link>
+                    ) : null}
                 </div>
                 {share ? <ArkFounderShareLine animalId={share.animalId} species={result.species} stepId={share.stepId} stepText={share.stepText} words={share.words} /> : null}
             </AskSpecialBubble>
@@ -169,6 +178,7 @@ export function ArkArrivalLine({species, slug, fresh, words, locale, onSee, plai
     );
 }
 
+const SEE_BUTTON = "shrink-0 rounded-full border border-white/14 px-3 py-1.5 text-[12px] font-semibold text-white transition-colors hover:border-primary-400 hover:text-primary-200";
 const CHIP = "inline-flex min-h-8 items-center justify-center rounded-full px-3 text-[12px] font-semibold transition-colors disabled:opacity-60";
 const CHIP_PRIMARY = `${CHIP} bg-primary-400 text-canvas-950 hover:bg-primary-300`;
 const CHIP_PLAIN = `${CHIP} border border-white/14 text-white hover:border-primary-400 hover:text-primary-200`;

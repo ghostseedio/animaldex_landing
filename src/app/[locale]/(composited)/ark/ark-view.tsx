@@ -1140,6 +1140,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                     <div className="max-w-2xl">
                         <h2 id="ark-how" className="font-display text-2xl font-extrabold tracking-tight text-white md:text-3xl">{words.howTitle}</h2>
                         <p className="mt-3 text-base leading-relaxed text-ink-200">{words.howBody}</p>
+                        <p className="mt-2 text-base font-semibold leading-relaxed text-white">{words.howThrive}</p>
                     </div>
                     <Link href="/talk" className={`${pill} bg-primary-400 text-canvas-950 hover:bg-primary-100 md:min-h-12 md:px-7 md:text-base`}>
                         {words.howCta}

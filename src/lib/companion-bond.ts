@@ -348,25 +348,25 @@ export const ARK_COPY = {
     /** The one-time explanation band over the score (dismissed for good, per browser). */
     explainTitle: "How your Ark Score grows",
     explainBody: "Each step with an animal that works earns points: more when the Ark needs that animal (a lone one, or a kind in decline or at risk), fewer when plenty are aboard. Captures bring animals aboard but never lower your score, and nobody else can lower it. It only ever goes up. Your life bars are below, as before.",
+    /** What a step that works does, in one line (owner, 2026-11-15: "make clear what completing steps does"). */
+    explainThrive: "Steps that work make your animals thrive: more young, hunted last.",
     explainDismiss: "Got it",
     /**
-     * Captures + thrive (2026-11-11): one line under a live step card, what a
-     * step that works does for the reader's animals of that kind
-     * (`voyage_step_offer_state_v1`: `thrive`, `thrive_later`, and the band now
-     * and after). UI labels, never the animal's words.
+     * Captures + thrive (2026-11-11; one line whatever the band, owner
+     * 2026-11-15): under a live step card, what a step that works does for the
+     * reader's animals of that kind (`voyage_step_offer_state_v1`: `thrive`,
+     * `thrive_later`). UI labels, never the animal's words.
      */
-    offerThrive: "If this works, your {species} will thrive",
-    offerPrime: "If this works, your {species} will be in prime condition",
-    offerStayPrime: "If this works, your {species} will stay in prime condition",
+    offerThrive: "If this works, your {species} in the Ark thrive",
     offerLater: "If this works, your {species} will thrive once one is aboard",
     /**
      * Under the reply that finished a step that worked (`voyage_step_result_v1`):
-     * what it did for them, the band it left them in and the step's locked points.
+     * what it did for them, the step's locked points, and "See them" (the Ark on that kind).
      */
-    resultOne: "Your {species} is thriving",
-    resultOther: "Your {species} are thriving",
-    resultLater: "Your {species} will thrive once one is aboard",
+    resultOther: "It worked. Your {species} are thriving: more young, hunted last.",
+    resultLater: "It worked. Your {species} will thrive once one is aboard.",
     resultPoints: "+{points} Ark Score",
+    resultSee: "See them",
     /** The condition bands in plain words (the tap card's own words; never the number). */
     thrivePrime: "In prime condition",
     thriveGood: "In good condition",
