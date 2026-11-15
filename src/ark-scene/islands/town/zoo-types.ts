@@ -42,7 +42,11 @@ export type ZooTypeSpec = {
     /** Residents today, 3× and at a year (the plan's table; for the validator's capacity check). */
     residents: {today: number; triple: number; year: number};
     form: ZooForm;
-    /** Feeding times on the island clock (hours), scene only (plan §5); `weekly` once an Ark week. */
+    /**
+     * The keepers' day round on the island clock (hours), scene only (plan §5): the feeding times of its day-active
+     * residents (diurnal, and "any"); `weekly` once an Ark week. Night and twilight residents are fed in their own waking
+     * hours (`zooFeedingTimes`).
+     */
     feeding: number[];
     weekly?: boolean;
     /** Enrichment props drawn in it (plan §5). */
@@ -58,12 +62,40 @@ export const ZOO_TYPES: Record<ZooEnclosureType, ZooTypeSpec> = {
     small_mammals: {label: "Small mammals and Australian walk-through", capacity: 16, w: 14, d: 10, slots: 3, launch: 3, residents: {today: 33, triple: 99, year: 80}, form: "paddock", feeding: [10.5, 15.5], enrichment: ["burrow_box", "logs", "puzzle_feeder"]},
     primate_house: {label: "Primate house", capacity: 16, w: 24, d: 16, slots: 4, launch: 2, residents: {today: 27, triple: 81, year: 62}, form: "house", feeding: [10, 14], enrichment: ["climbing_frame", "hammock", "puzzle_feeder", "scatter_feed"]},
     hoofstock_paddocks: {label: "Hoofstock paddocks", capacity: 18, w: 30, d: 22, slots: 3, launch: 2, residents: {today: 20, triple: 60, year: 47}, form: "paddock", feeding: [9.5, 15], enrichment: ["hay_net", "salt_lick", "logs"]},
-    nocturnal_house: {label: "Nocturnal house", capacity: 24, w: 14, d: 10, slots: 2, launch: 1, residents: {today: 15, triple: 45, year: 38}, form: "house", feeding: [11], enrichment: ["hollow_logs", "insect_feeder"]},
+    nocturnal_house: {label: "Nocturnal house", capacity: 24, w: 14, d: 10, slots: 2, launch: 1, residents: {today: 15, triple: 45, year: 38}, form: "house", feeding: [15], enrichment: ["hollow_logs", "insect_feeder"]},
     bears_wolves: {label: "Bears and wolves", capacity: 8, w: 24, d: 18, slots: 3, launch: 2, residents: {today: 13, triple: 39, year: 44}, form: "paddock", feeding: [16], enrichment: ["ice_block", "scent_trail", "logs", "pool"]},
     insect_house: {label: "Insect house", capacity: 60, w: 12, d: 10, slots: 1, launch: 1, residents: {today: 11, triple: 33, year: 38}, form: "house", feeding: [12], enrichment: ["butterfly_feeder", "leaf_litter"]},
     penguin_seal_pools: {label: "Penguin and seal pools", capacity: 30, w: 24, d: 16, slots: 1, launch: 1, residents: {today: 9, triple: 27, year: 17}, form: "pool", feeding: [11, 15], enrichment: ["fish_scatter", "rocks", "ice_block"]},
     big_cats: {label: "Big cats", capacity: 6, w: 24, d: 18, slots: 2, launch: 1, residents: {today: 6, triple: 18, year: 10}, form: "paddock", feeding: [16], weekly: false, enrichment: ["scent_trail", "logs", "high_platform", "ball"]}
 };
+
+/**
+ * When a resident is fed follows its waking hours (lane ark-its-day, 2026-11-15: the nocturnal house was fed at 11:00
+ * while its residents slept, so nobody came). Real zoos feed each animal while it is up: day-active species on the
+ * keepers' morning and afternoon rounds; nocturnal ones at dusk, as a reversed-lighting house's lights go down; dawn
+ * and dusk animals at dawn and dusk (once, at dusk, where the type is fed once a day). Big cats keep their fast day and
+ * the reptile house its once-a-week feed, whatever the resident's hours.
+ */
+export type ZooRhythm = "day" | "night" | "twilight";
+
+/** A resident's rhythm from its activity (the behaviour schedule's: its own, else its kind's); no data keeps the day's. */
+export function zooRhythm(activity: string | null | undefined): ZooRhythm {
+    return activity === "nocturnal" ? "night" : activity === "crepuscular" ? "twilight" : "day";
+}
+
+/** Dusk, the night residents' feed (island hours): the sun just down, the nocturnal house's lights dimming. */
+export const ZOO_DUSK_NIGHT_FEED = 18.5;
+/** Dawn and dusk, the twilight residents' feeds (island hours): the sun just up, and just going down. */
+export const ZOO_DAWN_FEED = 6;
+export const ZOO_DUSK_FEED = 17.5;
+
+/** A resident's feeding times (island hours, each `FEED_HOURS` long) in an enclosure type, by its rhythm. */
+export function zooFeedingTimes(type: ZooEnclosureType, rhythm: ZooRhythm): readonly number[] {
+    const day = ZOO_TYPES[type].feeding;
+    if (rhythm === "night") return [ZOO_DUSK_NIGHT_FEED];
+    if (rhythm === "twilight") return day.length > 1 ? [ZOO_DAWN_FEED, ZOO_DUSK_FEED] : [ZOO_DUSK_FEED];
+    return day;
+}
 
 /** Slots in all (the plan's "room for about 40"). */
 export const ZOO_SLOT_TOTAL = ZOO_ENCLOSURE_TYPES.reduce((sum, type) => sum + ZOO_TYPES[type].slots, 0);

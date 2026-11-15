@@ -337,7 +337,17 @@
             "lifeLeft": "Gli resta il {percent} della vita",
             "energy": "Energia",
             "awakeSince": "Sveglio dalle {time}",
-            "asleepSince": "Dorme dalle {time}"
+            "asleepSince": "Dorme dalle {time}",
+            "itsDay": "La sua giornata",
+            "dayLast": "Ultime 24 ore",
+            "dayEarlier": "Giorno prima",
+            "dayLater": "Giorno dopo",
+            "dayNow": "Ora",
+            "dayWorking": "Calcolo la sua giornata…",
+            "dayRecord": "Nel suo registro",
+            "dayNone": "Al momento non si può calcolare la giornata di questo animale.",
+            "dayClose": "Chiudi la sua giornata",
+            "dayHint": "Cosa ha fatto, secondo il programma condiviso dell’Ark: lo stesso per tutti. I punti sono il registro dell’Ark."
         },
         "activity": {
             "food": "cerca cibo",

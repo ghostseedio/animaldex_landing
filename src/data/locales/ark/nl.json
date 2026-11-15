@@ -337,7 +337,17 @@
             "lifeLeft": "Nog {percent} levensduur over",
             "energy": "Energie",
             "awakeSince": "Wakker sinds {time}",
-            "asleepSince": "Slaapt sinds {time}"
+            "asleepSince": "Slaapt sinds {time}",
+            "itsDay": "Zijn dag",
+            "dayLast": "Laatste 24 uur",
+            "dayEarlier": "Dag ervoor",
+            "dayLater": "Dag erna",
+            "dayNow": "Nu",
+            "dayWorking": "Zijn dag wordt berekend…",
+            "dayRecord": "In zijn logboek",
+            "dayNone": "De dag van dit dier kan nu niet worden berekend.",
+            "dayClose": "Zijn dag sluiten",
+            "dayHint": "Wat het deed, volgens het gedeelde schema van de Ark: voor iedereen hetzelfde. Stippen zijn de gegevens van de Ark."
         },
         "activity": {
             "food": "zoekt voedsel",

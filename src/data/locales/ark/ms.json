@@ -337,7 +337,17 @@
             "lifeLeft": "Baki hayat {percent}",
             "energy": "Tenaga",
             "awakeSince": "Berjaga sejak pukul {time}",
-            "asleepSince": "Tidur sejak pukul {time}"
+            "asleepSince": "Tidur sejak pukul {time}",
+            "itsDay": "Harinya",
+            "dayLast": "24 jam lalu",
+            "dayEarlier": "Hari sebelumnya",
+            "dayLater": "Hari berikutnya",
+            "dayNow": "Sekarang",
+            "dayWorking": "Mengira harinya…",
+            "dayRecord": "Dalam rekodnya",
+            "dayNone": "Hari haiwan ini tidak dapat dikira sekarang.",
+            "dayClose": "Tutup harinya",
+            "dayHint": "Apa yang dilakukannya, daripada jadual bersama Ark: sama untuk semua orang. Titik ialah rekod Ark."
         },
         "activity": {
             "food": "mencari makanan",

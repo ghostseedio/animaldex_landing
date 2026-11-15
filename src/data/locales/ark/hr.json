@@ -337,7 +337,17 @@
             "lifeLeft": "Preostalo je {percent} života",
             "energy": "Energija",
             "awakeSince": "Budan od {time}",
-            "asleepSince": "Spava od {time}"
+            "asleepSince": "Spava od {time}",
+            "itsDay": "Njegov dan",
+            "dayLast": "Zadnja 24 sata",
+            "dayEarlier": "Prethodni dan",
+            "dayLater": "Sljedeći dan",
+            "dayNow": "Sada",
+            "dayWorking": "Izračunavam njegov dan…",
+            "dayRecord": "U njegovu zapisu",
+            "dayNone": "Dan ove životinje sada se ne može izračunati.",
+            "dayClose": "Zatvori njegov dan",
+            "dayHint": "Što je radila, prema zajedničkom rasporedu broda Ark: isto za sve. Točke su zapis broda Ark."
         },
         "activity": {
             "food": "traži hranu",

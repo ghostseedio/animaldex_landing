@@ -392,12 +392,18 @@
  *   {type: "ark:activity"}                                       the reader did something on the host page (for ?idle=)
  *   {type: "ark:sound", value: false}                            sound off (on only ever from the panel's own sound button: a tap)
  *   {type: "ark:extinct"}                                        Lost from the Ark, please: answered with {type: "ark:extinct", ...}
+ *   {type: "ark:day", id, from, to, request?}                    an animal's day over [from, to) (epoch ms; at most a day long, at most
+ *                                                                a week back, clamped): answered with ark:day below; a newer request
+ *                                                                replaces one still being worked out (docs/ark/ITS-DAY-CONTRACT.md)
  * To the host: {type: "ark:selected", animal, founders, status}, where founders is that animal's named founders and shared story
  * from the same answer (src/lib/ark-founders.ts ArkAnimalFounders: {brought_by, bringers, story}, each founder
  * {display_name, handle, avatar_url}; null while the server's founder_names switch is off or the animal has none), so the
  * host's card can show "@handle" and open /u/{handle}, and status is what it is doing (decision 240: src/lib/ark-animal-status.ts
  * ArkAnimalStatus, {id, activity, since, goal, log, bars}, plus text: {now, next, log, bars} in ?lang's words), then
  * {type: "ark:status", id, status} whenever the selected animal's status changes (about once a second at most);
+ * {type: "ark:day", request, id, from, to, done, day} for an ark:day request: day is src/lib/ark-animal-status.ts ArkAnimalDay
+ * ({id, from, to, since, done, segments: [{from, to, activity}], events}) plus text: {activities, events} in ?lang's words, or
+ * null (not in the scene, or off the schedule); sent as it is worked out (done false, about twice a second), then once done;
  * {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
  * {type: "ark:open-profile", handle} when a bringer's @username is tapped on the web's own Ark cards running in the
  * app (src/lib/ark-profile-link.ts; their links are real /u/{handle} links too, which the apps also intercept), or in the
@@ -485,6 +491,30 @@ window.AnimalDexArkStart = function () {
       if (hud) hud.setWords(words, body.language);
     })
     .catch(function () {})]);
+
+  // An animal's day for the host (ark:day; lane ark-its-day): worked out a little a frame by the scene, told as it goes.
+  var dayAbort = null;
+  function dayFor(live, message) {
+    if (dayAbort) dayAbort.abort();
+    var abort = new AbortController();
+    dayAbort = abort;
+    var from = Number(message.from);
+    var to = Number(message.to);
+    var request = message.request === undefined ? null : message.request;
+    function reply(day, done) {
+      if (abort.signal.aborted) return;
+      var out = day && Ark.arkDayForHost ? Ark.arkDayForHost(day, words, document.documentElement.lang || lang || "en") : day;
+      tell({type: "ark:day", request: request, id: message.id || null, from: from, to: to, done: done, day: out || null});
+    }
+    if (!live.animalDay || !message.id) { reply(null, true); return; }
+    var told = 0;
+    live.animalDay(String(message.id), from, to, {signal: abort.signal, onProgress: function (day) {
+      var now = Date.now();
+      if (now - told < 500) return;
+      told = now;
+      reply(day, false);
+    }}).then(function (day) { reply(day, true); }, function () { reply(null, true); });
+  }
 
   // An animal's status for the host, its lines in the app's words (English until they read).
   function statusOut(status) {
@@ -893,6 +923,7 @@ window.AnimalDexArkStart = function () {
     else if (live && message.type === "ark:herd") live.selectHerd(message.key || null);
     else if (live && message.type === "ark:lite") live.setLite(message.value === true ? true : message.value === false ? false : null);
     else if (scene && message.type === "ark:sound" && message.value === false) setSound(false);
+    else if (live && message.type === "ark:day") dayFor(live, message);
   }
   if (motion.addEventListener) motion.addEventListener("change", function () { if (scene) scene.setReducedMotion(motion.matches); });
   window.AnimalDexArkHost = {send: receive};

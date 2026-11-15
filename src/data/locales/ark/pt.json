@@ -337,7 +337,17 @@
             "lifeLeft": "Restam {percent} da sua vida",
             "energy": "Energia",
             "awakeSince": "Acordado desde as {time}",
-            "asleepSince": "Dormindo desde as {time}"
+            "asleepSince": "Dormindo desde as {time}",
+            "itsDay": "O dia dele",
+            "dayLast": "Últimas 24 horas",
+            "dayEarlier": "Dia anterior",
+            "dayLater": "Dia seguinte",
+            "dayNow": "Agora",
+            "dayWorking": "Calculando o dia dele…",
+            "dayRecord": "No registro dele",
+            "dayNone": "Não é possível calcular o dia deste animal agora.",
+            "dayClose": "Fechar o dia dele",
+            "dayHint": "O que ele fez, pela agenda compartilhada da Ark: a mesma para todos. Os pontos são o registro da Ark."
         },
         "activity": {
             "food": "procurando comida",

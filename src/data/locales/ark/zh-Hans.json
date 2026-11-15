@@ -337,7 +337,17 @@
             "lifeLeft": "剩余寿命 {percent}",
             "energy": "精力",
             "awakeSince": "{time} 起醒着",
-            "asleepSince": "{time} 起在睡觉"
+            "asleepSince": "{time} 起在睡觉",
+            "itsDay": "它的一天",
+            "dayLast": "过去 24 小时",
+            "dayEarlier": "前一天",
+            "dayLater": "后一天",
+            "dayNow": "现在",
+            "dayWorking": "正在推算它的一天…",
+            "dayRecord": "记录",
+            "dayNone": "现在无法推算这只动物的一天。",
+            "dayClose": "关闭它的一天",
+            "dayHint": "它做了什么，来自 Ark 的共享日程：每个人看到的都一样。圆点是 Ark 的记录。"
         },
         "activity": {
             "food": "觅食",

@@ -337,7 +337,17 @@
             "lifeLeft": "Kalan ömür: {percent}",
             "energy": "Enerji",
             "awakeSince": "{time} saatinden beri uyanık",
-            "asleepSince": "{time} saatinden beri uyuyor"
+            "asleepSince": "{time} saatinden beri uyuyor",
+            "itsDay": "Günü",
+            "dayLast": "Son 24 saat",
+            "dayEarlier": "Önceki gün",
+            "dayLater": "Sonraki gün",
+            "dayNow": "Şimdi",
+            "dayWorking": "Günü hesaplanıyor…",
+            "dayRecord": "Kaydında",
+            "dayNone": "Bu hayvanın günü şu anda hesaplanamıyor.",
+            "dayClose": "Gününü kapat",
+            "dayHint": "Ne yaptığı, Ark'ın ortak programına göre: herkes için aynı. Noktalar Ark'ın kaydıdır."
         },
         "activity": {
             "food": "yiyecek arıyor",

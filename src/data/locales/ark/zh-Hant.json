@@ -337,7 +337,17 @@
             "lifeLeft": "剩餘壽命 {percent}",
             "energy": "精力",
             "awakeSince": "{time} 起醒著",
-            "asleepSince": "{time} 起在睡覺"
+            "asleepSince": "{time} 起在睡覺",
+            "itsDay": "牠的一天",
+            "dayLast": "過去 24 小時",
+            "dayEarlier": "前一天",
+            "dayLater": "後一天",
+            "dayNow": "現在",
+            "dayWorking": "正在推算牠的一天…",
+            "dayRecord": "紀錄",
+            "dayNone": "現在無法推算這隻動物的一天。",
+            "dayClose": "關閉牠的一天",
+            "dayHint": "牠做了什麼，來自 Ark 的共享日程：每個人看到的都一樣。圓點是 Ark 的紀錄。"
         },
         "activity": {
             "food": "覓食",

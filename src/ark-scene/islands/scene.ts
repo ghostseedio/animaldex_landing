@@ -83,7 +83,11 @@ export type ArkIslandScene = {
     setShadows: (on: boolean) => void;
     setTier: (tier: "high" | "medium" | "low") => void;
     /** Its animals' places in the world frame (the snapshot's animals of this island). */
-    place: (animals: ArkAnimal[]) => Map<string, Placement>;
+    /**
+     * Its animals' places in the world frame (the snapshot's animals of this island). `activityOf`: each one's activity as
+     * its behaviour schedule reads it (its own, else its kind's), for its zoo enclosure's feeding times (`zooRhythm`).
+     */
+    place: (animals: ArkAnimal[], activityOf?: (animal: ArkAnimal) => string | null | undefined) => Map<string, Placement>;
     /** The town's facts for a placed animal (its area, home, enclosure and range; local frame). */
     townPlace: (id: string) => TownPlace | undefined;
     /**
@@ -126,10 +130,12 @@ export type ArkIslandScene = {
     /** A kept animal (house, farm, zoo): its home is never moved away from prey. */
     kept: (id: string) => boolean;
     /**
-     * A zoo resident's schedule animal for the slot holding `epoch`: during its enclosure's feeding (on the island clock,
-     * decided at the slot's start) the same animal with the feeding station as its home and a small range; else itself.
+     * A zoo resident's schedule animal for the slot holding `epoch`: during its feeding (its rhythm's feeding times in its
+     * enclosure, on the island clock, decided at the slot's start) the same animal with the feeding station as its home
+     * and a small range; else itself. `rhythm`: its activity and whether it is awake at a world time (the schedule's
+     * `awakeAt`): asleep at the slot's start, it is not fed (lane ark-its-day: feeding falls in its waking hours).
      */
-    feedingAnimal: (animal: ScheduleAnimal, epoch: number) => ScheduleAnimal;
+    feedingAnimal: (animal: ScheduleAnimal, epoch: number, rhythm?: {activity: string | null | undefined; awake: (epochSeconds: number) => boolean}) => ScheduleAnimal;
     /** Its whole-island view: target (world) and the radius it fits. */
     home: {x: number; z: number; radius: number; radiusTall: number};
     /** The camera's target is kept within this of its middle. */
@@ -187,7 +193,7 @@ export function nextTask(): Promise<void> {
  */
 export async function loadTownScene(options: {tier: "high" | "medium" | "low"; animals: readonly ArkAnimal[]; offsetHours?: number; origin?: {x: number; z: number}; prepared?: TownPrepared | null; sliceMs?: number; between?: "idle" | "task"}): Promise<ArkIslandScene> {
     const pause = options.between === "task" ? nextTask : idle;
-    const [{townIslandSteps}, {townClockAt}, {placeTownAnimals}, {enclosuresIn, launchEnclosures, zooLayout}, {inPoly, centroid}, {townWorldSampler}, {buildZooLife}, {zooFeedingAt, feedingHome}, {SLOT_SECONDS, slotOffset}, {townHeight}] = await Promise.all([
+    const [{townIslandSteps}, {townClockAt}, {placeTownAnimals}, {enclosuresIn, launchEnclosures, zooLayout}, {inPoly, centroid}, {townWorldSampler}, {buildZooLife}, {residentFeeding, zooRhythm, feedingHome}, {SLOT_SECONDS, slotOffset}, {townHeight}] = await Promise.all([
         import("@/ark-scene/islands/town/render/index"),
         import("@/ark-scene/islands/town/people"),
         import("@/ark-scene/islands/town/placement"),
@@ -422,7 +428,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         },
         setShadows: town.setShadows,
         setTier: town.setTier,
-        place: (animals) => {
+        place: (animals, activityOf) => {
             const placed = placeTownAnimals(animals, joinOpen ?? undefined);
             // The zoo's open enclosures follow the snapshot (an arrival opening the next plot).
             const key = placed.open.join(",");
@@ -437,6 +443,17 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
                 walkSurfacesNow();
             }
             towned = placed.town;
+            // Each enclosure's residents' rhythms: the food goes down at each one's feeding times.
+            const rhythms = new Map<string, Array<ReturnType<typeof zooRhythm>>>();
+            for (const animal of animals) {
+                const enclosure = placed.town.get(animal.id)?.enclosure;
+                if (!enclosure) continue;
+                const rhythm = zooRhythm(activityOf ? activityOf(animal) : animal.activity);
+                const list = rhythms.get(enclosure.id) ?? [];
+                if (!list.includes(rhythm)) list.push(rhythm);
+                rhythms.set(enclosure.id, list);
+            }
+            zooLife.setRhythms(rhythms);
             showPetHomes(placed.town);
             for (const animal of animals) townAnimals.set(animal.id, animal);
             const world = new Map<string, Placement>();
@@ -520,13 +537,15 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const area = towned.get(id)?.area;
             return area === "house" || area === "farm" || area === "zoo";
         },
-        feedingAnimal: (animal, epoch) => {
+        feedingAnimal: (animal, epoch, rhythm) => {
             const enclosure = towned.get(animal.id)?.enclosure;
             if (!enclosure) return animal;
-            // (Decided at the start of the slot holding `epoch`: one goal a slot, the schedule's rule.)
+            // (Decided at the start of the slot holding `epoch`: one goal a slot, the schedule's rule; at its own rhythm's
+            // times, and only awake then.)
             const offset = slotOffset(animal.id);
             const start = Math.floor((epoch + offset) / SLOT_SECONDS) * SLOT_SECONDS - offset;
-            if (!zooFeedingAt(enclosure.type, clockAt(start * 1000))) return animal;
+            const own = zooRhythm(rhythm ? rhythm.activity : townAnimals.get(animal.id)?.activity);
+            if (!residentFeeding(enclosure.type, own, clockAt(start * 1000), rhythm ? rhythm.awake(start) : true)) return animal;
             let variant = feeding.get(animal);
             if (!variant) {
                 const station = feedingHome(enclosure, townHeight);

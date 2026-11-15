@@ -337,7 +337,17 @@
             "lifeLeft": "{percent} av livet kvar",
             "energy": "Energi",
             "awakeSince": "Vaken sedan {time}",
-            "asleepSince": "Sover sedan {time}"
+            "asleepSince": "Sover sedan {time}",
+            "itsDay": "Dess dag",
+            "dayLast": "Senaste 24 timmarna",
+            "dayEarlier": "Dagen före",
+            "dayLater": "Dagen efter",
+            "dayNow": "Nu",
+            "dayWorking": "Räknar ut dess dag…",
+            "dayRecord": "I dess logg",
+            "dayNone": "Det går inte att räkna ut det här djurets dag just nu.",
+            "dayClose": "Stäng dess dag",
+            "dayHint": "Vad det gjorde, enligt Arks gemensamma schema: samma för alla. Prickarna är Arks logg."
         },
         "activity": {
             "food": "letar efter föda",

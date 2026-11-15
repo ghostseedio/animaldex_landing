@@ -337,7 +337,17 @@
             "lifeLeft": "Îi mai rămâne {percent} din viață",
             "energy": "Energie",
             "awakeSince": "Treaz de la {time}",
-            "asleepSince": "Doarme de la {time}"
+            "asleepSince": "Doarme de la {time}",
+            "itsDay": "Ziua lui",
+            "dayLast": "Ultimele 24 de ore",
+            "dayEarlier": "Ziua dinainte",
+            "dayLater": "Ziua următoare",
+            "dayNow": "Acum",
+            "dayWorking": "Se calculează ziua lui…",
+            "dayRecord": "În registrul lui",
+            "dayNone": "Ziua acestui animal nu poate fi calculată acum.",
+            "dayClose": "Închide ziua lui",
+            "dayHint": "Ce a făcut, după programul comun al Ark: același pentru toți. Punctele sunt registrul Ark."
         },
         "activity": {
             "food": "caută hrană",

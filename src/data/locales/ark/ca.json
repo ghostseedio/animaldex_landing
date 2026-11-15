@@ -337,7 +337,17 @@
             "lifeLeft": "Li queda el {percent} de la vida",
             "energy": "Energia",
             "awakeSince": "Despert des de les {time}",
-            "asleepSince": "Adormit des de les {time}"
+            "asleepSince": "Adormit des de les {time}",
+            "itsDay": "El seu dia",
+            "dayLast": "Últimes 24 hores",
+            "dayEarlier": "Dia anterior",
+            "dayLater": "Dia següent",
+            "dayNow": "Ara",
+            "dayWorking": "Calculant el seu dia…",
+            "dayRecord": "Al seu registre",
+            "dayNone": "Ara no es pot calcular el dia d’aquest animal.",
+            "dayClose": "Tanca el seu dia",
+            "dayHint": "Què ha fet, segons l’horari compartit de l’Ark: el mateix per a tothom. Els punts són el registre de l’Ark."
         },
         "activity": {
             "food": "busca menjar",

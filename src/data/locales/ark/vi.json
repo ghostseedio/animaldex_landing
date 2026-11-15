@@ -337,7 +337,17 @@
             "lifeLeft": "Còn {percent} tuổi thọ",
             "energy": "Năng lượng",
             "awakeSince": "Thức từ {time}",
-            "asleepSince": "Ngủ từ {time}"
+            "asleepSince": "Ngủ từ {time}",
+            "itsDay": "Một ngày của nó",
+            "dayLast": "24 giờ qua",
+            "dayEarlier": "Ngày trước",
+            "dayLater": "Ngày sau",
+            "dayNow": "Bây giờ",
+            "dayWorking": "Đang tính một ngày của nó…",
+            "dayRecord": "Trong nhật ký của nó",
+            "dayNone": "Hiện chưa thể tính một ngày của con vật này.",
+            "dayClose": "Đóng một ngày của nó",
+            "dayHint": "Những gì nó đã làm, theo lịch chung của Ark: giống nhau với mọi người. Các chấm là nhật ký của Ark."
         },
         "activity": {
             "food": "tìm thức ăn",

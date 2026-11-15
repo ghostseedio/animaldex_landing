@@ -337,7 +337,17 @@
             "lifeLeft": "寿命の残り{percent}",
             "energy": "元気",
             "awakeSince": "{time}から起きています",
-            "asleepSince": "{time}から眠っています"
+            "asleepSince": "{time}から眠っています",
+            "itsDay": "この子の一日",
+            "dayLast": "過去24時間",
+            "dayEarlier": "前の日",
+            "dayLater": "次の日",
+            "dayNow": "今",
+            "dayWorking": "一日を計算しています…",
+            "dayRecord": "記録",
+            "dayNone": "この動物の一日は今は計算できません。",
+            "dayClose": "一日を閉じる",
+            "dayHint": "Arkの共有スケジュールからみた行動です。誰が見ても同じです。点はArkの記録です。"
         },
         "activity": {
             "food": "食べ物を探しています",

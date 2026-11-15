@@ -337,7 +337,17 @@
             "lifeLeft": "{percent} ng buhay ang natitira",
             "energy": "Lakas",
             "awakeSince": "Gising mula {time}",
-            "asleepSince": "Tulog mula {time}"
+            "asleepSince": "Tulog mula {time}",
+            "itsDay": "Ang araw nito",
+            "dayLast": "Huling 24 na oras",
+            "dayEarlier": "Naunang araw",
+            "dayLater": "Sunod na araw",
+            "dayNow": "Ngayon",
+            "dayWorking": "Kinukuwenta ang araw nito…",
+            "dayRecord": "Sa tala nito",
+            "dayNone": "Hindi pa makuwenta ang araw ng hayop na ito ngayon.",
+            "dayClose": "Isara ang araw nito",
+            "dayHint": "Ang ginawa nito, mula sa pinagsasaluhang iskedyul ng Ark: pareho para sa lahat. Ang mga tuldok ay tala ng Ark."
         },
         "activity": {
             "food": "naghahanap ng pagkain",

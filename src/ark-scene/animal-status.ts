@@ -164,6 +164,128 @@ function goalOf(subject: ScheduleSubject, plan: SlotPlan, settled: ArkActivityKe
     return null;
 }
 
+// MARK: Its day (lane ark-its-day, 2026-11-15)
+
+/**
+ * Its day is worked out on a grid of this many world seconds: each of its slots in cells of this length from the
+ * slot's start, each cell said as the card says the cell's middle (`scheduleStatus` with the scene's trip for that
+ * slot). Two seconds is far finer than a day's band draws (about 90 s a pixel), and the cells keep the work bounded.
+ */
+export const DAY_STEP_SECONDS = 2;
+/** The middle of a cell (s after its start): where its day reads the card. */
+export const DAY_CELL_READ = DAY_STEP_SECONDS / 2;
+/** Pair meetings begun this long before a slot can still be on in it (a meeting is at most 90 s). */
+const DAY_MEETING_BACK = 2 * SLOT_SECONDS;
+
+/** A stretch of its day said one way: from, to (world seconds), and what the card says through it. */
+export type DayRun = {from: number; to: number; key: ArkActivityKey};
+
+/**
+ * Its day through one slot, as the card would say it at every cell's middle (the truth rule: what the scene draws
+ * then). The same pieces `scheduleStatus` puts together for "now", in the same order: the slot's goal as the card says
+ * it (`slotSegments`, a flight only while it is in the air), the pair meetings over it (`layEpisode`, as the card lays
+ * them), on its way to its goal (heading to water, on the prowl) while that is the slot's own stretch, and then what
+ * its pose plays (`drawnRecipeAt`: its stay's episode, a meeting, a murmuration) or, for a flyer on a settled slot, its
+ * flight. Not here: encounter hunting's forays (the server's, now only); its meals are on its record.
+ */
+function daySlotCells(subject: ScheduleSubject, plan: SlotPlan, previous: Segment[]): {cells: ArkActivityKey[]} {
+    const asleep = plan.doing === "sleep";
+    const trip = asleep ? null : tripIn(subject, plan, null);
+    const segments = slotSegments(subject, plan, trip);
+    let timeline: Segment[] = [...previous, ...segments];
+    const at = plan.start + 0.5;
+    for (const meeting of pairMeetingsAt(subject.world, subject.profile, subject.animalAt(at), plan.start - DAY_MEETING_BACK, plan.end, subject.hoursAt, subject.activity)) {
+        if (meeting.t1 <= (previous[0]?.at ?? plan.start)) continue;
+        const key = arkRecipeActivity(meeting.recipe);
+        if (key) timeline = layEpisode(timeline, meeting.t0, meeting.t1, key);
+    }
+    const runs: Segment[] = [];
+    for (const seg of timeline) if (!runs.length || runs[runs.length - 1].key !== seg.key) runs.push(seg);
+    const settled = keyOf(subject, plan);
+    const travelKey = trip && trip.length > 0.5 ? keyOf(subject, plan, {travelling: true}) : settled;
+    const flyer = subject.profile.move === "fly";
+    const span = trip && flyer && SETTLED.has(settled) ? flightSpan(trip) : null;
+    const cells: ArkActivityKey[] = [];
+    let index = 0;
+    for (let t = plan.start + DAY_CELL_READ; t < plan.end; t += DAY_STEP_SECONDS) {
+        while (index + 1 < runs.length && runs[index + 1].at <= t) index++;
+        const run = runs[index];
+        let key: ArkActivityKey = run && run.at <= t ? run.key : settled;
+        // (Its slot's own stretch from the slot's start, on its way there: as the card says it travelling.)
+        if (trip && t < trip.arrive && key === settled && run && run.at <= plan.start) key = travelKey;
+        if (trip) {
+            const drawn = drawnRecipeAt(subject.world, trip, t);
+            const said = drawn ? arkRecipeActivity(drawn.recipe) : null;
+            if (said) key = said;
+            else if (!drawn && span && t >= span.from && t < span.to) key = "flying";
+        }
+        cells.push(key);
+    }
+    return {cells};
+}
+
+/** Working out its day over a window, a slot at a time (`step`), newest first; its runs so far in `runs` (oldest first). */
+export type DayCursor = {
+    readonly from: number;
+    readonly to: number;
+    /** Worked out from here to `to` (world seconds): its latest hours come first. */
+    since: number;
+    runs: DayRun[];
+    done: boolean;
+    /** Works out its next slot back. */
+    step: () => void;
+};
+
+/**
+ * Its day over a window [from, to) (world seconds), worked out lazily, a slot per `step` (about half a millisecond to a
+ * few on a phone: the slot's trip is the cost), newest first, so a page can do it a little a frame and show its latest
+ * hours at once. Pure: the same for every viewer, nothing stored; a cell is said as the card says it then
+ * (`daySlotCells`).
+ */
+export function dayCursor(subject: ScheduleSubject, from: number, to: number): DayCursor {
+    let plan = planOf(subject, to - 1e-3);
+    const cursor: DayCursor = {
+        from,
+        to,
+        since: to,
+        runs: [],
+        done: from >= to,
+        step: () => {
+            if (cursor.done) return;
+            const before = planOf(subject, plan.start - SLOT_SECONDS + 0.5);
+            const {cells} = daySlotCells(subject, plan, slotSegments(subject, before, null));
+            for (let k = cells.length - 1; k >= 0; k--) {
+                const a = Math.max(plan.start + k * DAY_STEP_SECONDS, from);
+                const b = Math.min(plan.start + (k + 1) * DAY_STEP_SECONDS, plan.end, to);
+                if (b <= a) continue;
+                const first = cursor.runs[0];
+                if (first && first.key === cells[k] && first.from <= b + 1e-6) first.from = a;
+                else cursor.runs.unshift({from: a, to: b, key: cells[k]});
+            }
+            cursor.since = Math.max(plan.start, from);
+            if (plan.start <= from) {
+                cursor.done = true;
+                return;
+            }
+            plan = before;
+        }
+    };
+    return cursor;
+}
+
+/** What its day says at a world time (the run holding it), or null outside what is worked out. */
+export function dayKeyAt(runs: readonly DayRun[], t: number): ArkActivityKey | null {
+    let lo = 0;
+    let hi = runs.length - 1;
+    while (lo <= hi) {
+        const mid = (lo + hi) >> 1;
+        if (runs[mid].to <= t) lo = mid + 1;
+        else if (runs[mid].from > t) hi = mid - 1;
+        else return runs[mid].key;
+    }
+    return null;
+}
+
 // MARK: How fed it is over its day
 
 /** What its card says it is doing that is eating: a forage, a graze, a browse, a catch (fishing, a pounce or a hawk), flowers, a zoo's feeding. */

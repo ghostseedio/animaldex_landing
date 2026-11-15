@@ -173,9 +173,9 @@ import type {ResolvePose} from "@/ark-scene/collide/resolve";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
 import {awakeAt as scheduleAwakeAt, forgetSchedules, slotOffset, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, waterEdgeAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
-import {MOMENT_WINDOW_SECONDS, pickMoment, scheduleFed, scheduleStatus, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
+import {dayCursor, MOMENT_WINDOW_SECONDS, pickMoment, scheduleFed, scheduleStatus, type DayCursor, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
 import {ArkSelectionBars} from "@/ark-scene/selection-bars";
-import {arkActivityKey, arkEnergy, arkOriginEntry, arkStatusBars, arkStatusLog, arkStatusSignature, type ArkAnimalStatus, type ArkRecordNote, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
+import {arkActivityKey, arkDayWindow, arkEnergy, arkOriginEntry, arkStatusBars, arkStatusLog, arkStatusSignature, type ArkAnimalDay, type ArkAnimalStatus, type ArkRecordNote, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
@@ -630,7 +630,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             places = placeAnimals(options.wildAnimals && wild.length === options.wildAnimals.length && wild.every((a, i) => a === options.wildAnimals![i]) ? options.wildAnimals : wild);
             if (!ghosts) lastWild = {animals: wild, places: new Map(places)};
         }
-        isl.place(town).forEach((place, id) => places.set(id, place));
+        isl.place(town, (animal) => animal.activity ?? behaviourProfile(animal.model_slug).activity).forEach((place, id) => places.set(id, place));
         // (The town's colliders for the motion pass, L5's per island: its enclosures follow the snapshot.)
         setIslandColliders({contains: isl.contains, set: isl.colliders()});
         // (A replay's departed are added to the town's list; a snapshot's replace it.)
@@ -1543,10 +1543,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!trip || epoch < trip.start || epoch >= trip.end) {
             // Part C: a zoo animal's feeding time takes it to its enclosure's station (its home for those slots), on the
             // island clock; a feeding's first and last slot start where the slot before ended, for every viewer alike.
-            const who = island ? island.feedingAnimal(animal, epoch) : animal;
+            // (Fed only awake at its slot's start, at its own rhythm's times: lane ark-its-day.)
+            const rhythm = {activity: activity ?? profile.activity, awake: (t: number) => scheduleAwakeAt(profile, activity, scheduleHours(t))};
+            const who = island ? island.feedingAnimal(animal, epoch, rhythm) : animal;
             let previous = trip;
             if (island) {
-                const before = island.feedingAnimal(animal, epoch - SLOT_SECONDS);
+                const before = island.feedingAnimal(animal, epoch - SLOT_SECONDS, rhythm);
                 const held = previous && epoch - SLOT_SECONDS >= previous.start && epoch - SLOT_SECONDS < previous.end;
                 if (before !== who && !held) previous = tripAt(worldOf(animal), profile, before, epoch - SLOT_SECONDS, scheduleHours, activity, null);
             }
@@ -2004,12 +2006,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const own = entry.sched;
         if (statusLight || !own || !world || !own.wired || entry.visitor) return null;
         const town = island && townIds.has(entry.animal.id) ? island : null;
+        const rhythm = {activity: entry.animal.activity ?? own.profile.activity, awake: (t: number) => scheduleAwakeAt(own.profile, entry.animal.activity, scheduleHours(t))};
         return {
             id: entry.animal.id,
             world: worldOf(own.animal),
             profile: own.profile,
-            animalAt: town ? (epoch) => town.feedingAnimal(own.animal, epoch) : () => own.animal,
-            feedingAt: town ? (epoch) => town.feedingAnimal(own.animal, epoch) !== own.animal : null,
+            animalAt: town ? (epoch) => town.feedingAnimal(own.animal, epoch, rhythm) : () => own.animal,
+            feedingAt: town ? (epoch) => town.feedingAnimal(own.animal, epoch, rhythm) !== own.animal : null,
             activity: entry.animal.activity,
             hoursAt: scheduleHours
         };
@@ -2042,6 +2045,63 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const offset = slotOffset(subject.id);
         const slotStartOf = (t: number) => Math.floor((t + offset) / SLOT_SECONDS) * SLOT_SECONDS - offset;
         return arkEnergy((t) => scheduleAwakeAt(subject.profile, subject.activity, subject.hoursAt(slotStartOf(t))), epoch, SLOT_SECONDS, slotStartOf);
+    };
+    /**
+     * Its day (lane ark-its-day): what it did over a window, as the card would have said it at every moment
+     * (`animal-status.ts` dayCursor), and its record lines in the window. A day is about a thousand slots, each a placed,
+     * path-searched plan, so it is worked out a slot at a time in short slices a frame (shorter while the view moves),
+     * told as it goes; a re-wiring of the schedules starts it again (its plans changed). Nothing is stored.
+     */
+    const DAY_SLICE_MS = 4;
+    const DAY_SLICE_REST_MS = 8;
+    const animalDay = (id: string, fromMs: number, toMs: number, dayOptions: {signal?: AbortSignal; onProgress?: (day: ArkAnimalDay) => void} = {}): Promise<ArkAnimalDay | null> => {
+        const range = arkDayWindow(fromMs, toMs, worldMs());
+        const entry = findEntry(id);
+        if (!range || !entry) return Promise.resolve(null);
+        const recordIn = (): ArkStatusLogEntry[] => {
+            const notes = records.get(id) ?? [];
+            const all: ArkStatusLogEntry[] = [arkOriginEntry(entry.animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null}))];
+            return all.filter((line) => line.at >= range.from && line.at < range.to).sort((a, b) => a.at - b.at);
+        };
+        return new Promise((resolve) => {
+            let cursor: DayCursor | null = null;
+            let generation = -1;
+            let subjectWorld: ScheduleWorld | null = null;
+            let told = 0;
+            const out = (): ArkAnimalDay => ({
+                id,
+                from: range.from,
+                to: range.to,
+                since: (cursor?.since ?? range.to / 1000) * 1000,
+                done: Boolean(cursor?.done),
+                segments: (cursor?.runs ?? []).map((run) => ({from: run.from * 1000, to: run.to * 1000, activity: run.key})),
+                events: recordIn()
+            });
+            const frame = () => {
+                if (dayOptions.signal?.aborted || disposed) return resolve(null);
+                const live = findEntry(id);
+                const subject = live && !live.act ? subjectOf(live) : null;
+                if (!subject) {
+                    // (Still being wired, or off the schedule: asked again next frame, a few seconds at most.)
+                    if (++told > 600) return resolve(null);
+                    requestAnimationFrame(frame);
+                    return;
+                }
+                const now = behaviourSchedule.scheduleGeneration();
+                if (!cursor || now !== generation || subject.world !== subjectWorld) {
+                    cursor = dayCursor(subject, range.from / 1000, range.to / 1000);
+                    generation = now;
+                    subjectWorld = subject.world;
+                }
+                const began = performance.now();
+                const slice = flight || pointers > 0 ? DAY_SLICE_MS : DAY_SLICE_REST_MS;
+                while (!cursor.done && performance.now() - began < slice) cursor.step();
+                if (cursor.done) return resolve(out());
+                dayOptions.onProgress?.(out());
+                requestAnimationFrame(frame);
+            };
+            requestAnimationFrame(frame);
+        });
     };
     /** The selected animal's status as last worked out (about once a second), and what was last told. */
     let selectedStatus: ArkAnimalStatus | null = null;
@@ -7715,6 +7775,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return warmStatus(entry) ? statusOf(entry) : lightStatus(entry);
         },
         noteRecord,
+        animalDay,
         happening,
         reactive: (id) => {
             const r = findEntry(id)?.reactive;

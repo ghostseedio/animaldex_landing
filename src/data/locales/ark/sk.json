@@ -337,7 +337,17 @@
             "lifeLeft": "Zostáva {percent} života",
             "energy": "Energia",
             "awakeSince": "Hore od {time}",
-            "asleepSince": "Spí od {time}"
+            "asleepSince": "Spí od {time}",
+            "itsDay": "Jeho deň",
+            "dayLast": "Posledných 24 hodín",
+            "dayEarlier": "Predchádzajúci deň",
+            "dayLater": "Nasledujúci deň",
+            "dayNow": "Teraz",
+            "dayWorking": "Počítam jeho deň…",
+            "dayRecord": "V jeho zázname",
+            "dayNone": "Deň tohto zvieraťa sa teraz nedá vypočítať.",
+            "dayClose": "Zavrieť jeho deň",
+            "dayHint": "Čo robilo, podľa spoločného rozvrhu Ark: pre všetkých rovnaké. Bodky sú záznam Ark."
         },
         "activity": {
             "food": "hľadá potravu",

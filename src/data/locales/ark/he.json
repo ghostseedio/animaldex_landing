@@ -337,7 +337,17 @@
             "lifeLeft": "נותרו {percent} מחייו",
             "energy": "אנרגיה",
             "awakeSince": "ער מאז {time}",
-            "asleepSince": "ישן מאז {time}"
+            "asleepSince": "ישן מאז {time}",
+            "itsDay": "היום שלו",
+            "dayLast": "24 השעות האחרונות",
+            "dayEarlier": "היום הקודם",
+            "dayLater": "היום הבא",
+            "dayNow": "עכשיו",
+            "dayWorking": "מחשבים את היום שלו…",
+            "dayRecord": "ברשומות שלו",
+            "dayNone": "אי אפשר לחשב עכשיו את היום של בעל החיים הזה.",
+            "dayClose": "סגירת היום שלו",
+            "dayHint": "מה הוא עשה, לפי לוח הזמנים המשותף של Ark: זהה לכולם. הנקודות הן היומן של Ark."
         },
         "activity": {
             "food": "בחיפוש אחר מזון",

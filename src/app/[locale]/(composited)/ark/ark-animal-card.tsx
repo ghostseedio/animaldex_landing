@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useEffect, useMemo, useRef, useState} from "react";
+import React, {Suspense, lazy, useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
 import Link from "@/app/[locale]/_components/link";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
@@ -25,6 +25,9 @@ import {arkPhotoAspect, type ArkCapturePhoto} from "@/lib/ark-capture-photo";
  * next moves as a compact row. The life story in full opens inside it. On a phone it covers about a third of the
  * screen at most, the Ark above it.
  */
+
+/** Its day (lane ark-its-day): loaded only when opened. */
+const ArkItsDay = lazy(() => import("@/app/[locale]/(composited)/ark/ark-its-day"));
 
 /** A tapped animal's life story (`voyage_animal_life_v1`), as ark-view reads it. */
 export type ArkCardLife = {id: string; life: ArkLife | null; loading: boolean};
@@ -173,6 +176,8 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     const placeholder = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug);
     const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager, named);
     const status = useAnimalStatus(scene, animal.id);
+    const [dayOpen, setDayOpen] = useState<string | null>(null);
+    const dayShown = dayOpen === animal.id;
     const text = useMemo(() => (status ? arkStatusText(status, {activity: words.activity, card: words.card, story: words.story, life: words.life, replay: words.replay}, locale) : null), [status, words, locale]);
 
     // Its life story's record for its log: its last meal (an Ark day from the voyage's start), and a hatching.
@@ -224,6 +229,9 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         <circle cx="10" cy="10" r="3" fill={following ? "currentColor" : "none"} />
                         <path d="M10 1.8v3M10 15.2v3M1.8 10h3M15.2 10h3" />
                     </svg>
+                </button>
+                <button type="button" aria-expanded={dayShown} onClick={() => setDayOpen(dayShown ? null : animal.id)} aria-label={words.card.itsDay} title={words.card.itsDay} data-testid="ark-card-its-day" className={`${iconButton} ${dayShown ? "border-primary-400 bg-primary-400/15 text-primary-100" : "border-line-100 text-ink-100 hover:border-primary-400"}`}>
+                    <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><circle cx="10" cy="10" r="7.2" /><path d="M10 5.6V10l3 1.8" /></svg>
                 </button>
                 {hasLife ? (
                     <button type="button" aria-expanded={storyOpen} onClick={onStory} aria-label={storyOpen ? words.life.hideStory : words.life.showStory} title={storyOpen ? words.life.hideStory : words.life.showStory} className={`${iconButton} ${storyOpen ? "border-primary-400 bg-primary-400/15 text-primary-100" : "border-line-100 text-ink-100 hover:border-primary-400"}`}>
@@ -281,7 +289,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                 </div>
 
                 {/* Its status: chips, what it is doing now and next (left), its log (right on a desktop, under on a phone). */}
-                <div className={`mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] md:pl-[3.75rem] ${storyOpen ? "hidden md:grid" : ""}`}>
+                <div className={`mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] md:pl-[3.75rem] ${storyOpen || dayShown ? "hidden md:grid" : ""}`}>
                     <div className="min-w-0">
                         {chips.length ? (
                             <p className="flex flex-wrap gap-1.5">
@@ -312,6 +320,11 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                     ) : null}
                 </div>
 
+                {dayShown ? (
+                    <Suspense fallback={<p className="mt-2 h-24 text-[11.5px] italic text-ink-400 md:pl-[3.75rem]">{words.card.dayWorking}</p>}>
+                        <ArkItsDay id={animal.id} scene={scene} words={words} locale={locale} onClose={() => setDayOpen(null)} />
+                    </Suspense>
+                ) : null}
                 {storyOpen ? <ArkLifeStory animal={animal} life={life} state={state} facts={facts} words={words} locale={locale} rest={restWords} /> : null}
 
                 <div className="mt-2 flex items-center gap-2 md:hidden">{moves}</div>

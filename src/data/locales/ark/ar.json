@@ -337,7 +337,17 @@
             "lifeLeft": "تبقّى {percent} من عمره",
             "energy": "الطاقة",
             "awakeSince": "مستيقظ منذ {time}",
-            "asleepSince": "نائم منذ {time}"
+            "asleepSince": "نائم منذ {time}",
+            "itsDay": "يومه",
+            "dayLast": "آخر 24 ساعة",
+            "dayEarlier": "اليوم السابق",
+            "dayLater": "اليوم التالي",
+            "dayNow": "الآن",
+            "dayWorking": "جارٍ حساب يومه…",
+            "dayRecord": "في سجله",
+            "dayNone": "لا يمكن حساب يوم هذا الحيوان الآن.",
+            "dayClose": "إغلاق يومه",
+            "dayHint": "ما فعله، من جدول Ark المشترك: هو نفسه للجميع. النقاط هي سجل Ark."
         },
         "activity": {
             "food": "يبحث عن الطعام",

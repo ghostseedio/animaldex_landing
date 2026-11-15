@@ -23,7 +23,7 @@ import {arkSyncMeals, mountArkHuntMarker} from "@/ark-scene/live-hunt-feed";
 import {mountArchipelago} from "@/ark-scene/islands/archipelago";
 import {arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {mergeArkIslandsRouting} from "@/lib/ark-islands-local";
-import {arkStatusForHost} from "@/lib/ark-animal-status";
+import {arkDayForHost, arkStatusForHost} from "@/lib/ark-animal-status";
 import {arkSelectionExtras} from "@/lib/ark-selection-extras";
 import {arkReloadForRestoredContext} from "@/lib/ark-context-restore";
 import {sameArkPush, sameJsonSliced} from "@/ark-scene/runtime/same";
@@ -61,6 +61,8 @@ declare global {
             arkStatusForHost: typeof arkStatusForHost;
             /** The box over the selected animal's bars: "Brought by @handle" and its Talk link (docs/ark/CAPTURE-MEDIA-CONTRACT.md). */
             arkSelectionExtras: typeof arkSelectionExtras;
+            /** Lane ark-its-day: an animal's day for the host (`ark:day`), its words in the app's language. */
+            arkDayForHost: typeof arkDayForHost;
             /** A lost WebGL context, back: the page reloads (`src/lib/ark-context-restore.ts`), twice at most in three minutes. */
             arkReloadForRestoredContext: typeof arkReloadForRestoredContext;
             /** A host's push of an unchanged Ark (`ark:snapshot`): found out in slices, nothing decoded (`runtime/same.ts`). */
@@ -103,6 +105,7 @@ window.AnimalDexArk = {
     mergeArkIslandsRouting: process.env.NODE_ENV !== "production" ? mergeArkIslandsRouting : undefined,
     arkStatusForHost,
     arkSelectionExtras,
+    arkDayForHost,
     arkReloadForRestoredContext,
     sameArkPush,
     sameJsonSliced,
