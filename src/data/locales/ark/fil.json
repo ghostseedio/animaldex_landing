@@ -323,6 +323,7 @@
             "heartsLeftNone": "wala nang ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "Kinain ng {aPredator} ang {animal}",
+            "caught": "Nahuli ng {aPredator} ang {aPrey}",
             "revived": "Nakabalik na ang {animal}",
             "revivedYoung": "Nakabalik na ang {animal}, batang adulto ulit",
             "gone": "Wala na sa Ark ang {animal}"
@@ -396,6 +397,8 @@
             "flowers": "dumadalaw sa mga bulaklak",
             "light": "umiikot sa paligid ng ilaw",
             "feeding": "oras ng pagpapakain",
+            "birthing": "nanganganak",
+            "nursing": "nagpapasuso sa mga anak niya",
             "about": "naglilibot",
             "tag": "Ngayon",
             "tagNote": "Nangyayari ngayon ayon sa pinagsasaluhang orasan ng Ark, pareho para sa lahat. Ang mga buong linya ay talaan ng Ark.",

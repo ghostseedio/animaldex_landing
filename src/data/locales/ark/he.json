@@ -323,6 +323,7 @@
             "heartsLeftNone": "לא נשארו ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} נטרף על ידי {aPredator}",
+            "caught": "{aPredator} תפס {aPrey}",
             "revived": "{animal} חזר",
             "revivedYoung": "{animal} חזר, שוב בוגר צעיר",
             "gone": "{animal} עזב את ה-Ark"
@@ -396,6 +397,8 @@
             "flowers": "בביקור בפרחים",
             "light": "בריחוף סביב אור",
             "feeding": "בזמן האכלה",
+            "birthing": "בזמן המלטה",
+            "nursing": "בזמן הנקה",
             "about": "בסיבוב בסביבה",
             "tag": "עכשיו",
             "tagNote": "קורה עכשיו לפי השעון המשותף של Ark, אותו דבר לכולם. שורות רציפות הן היומן של Ark.",

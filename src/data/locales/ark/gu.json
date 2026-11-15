@@ -323,6 +323,7 @@
             "heartsLeftNone": "કોઈ ♥ બાકી નથી",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} ને {aPredator} ખાઈ ગયું",
+            "caught": "{aPredator} એ {aPrey} ને પકડ્યું",
             "revived": "{animal} પાછું આવ્યું",
             "revivedYoung": "{animal} ફરી યુવાન પુખ્ત બનીને પાછું આવ્યું",
             "gone": "{animal} Ark માંથી ચાલ્યું ગયું"
@@ -396,6 +397,8 @@
             "flowers": "ફૂલો પર ફરે છે",
             "light": "પ્રકાશની આસપાસ ચક્કર મારે છે",
             "feeding": "ખાવાનો સમય છે",
+            "birthing": "બચ્ચાંને જન્મ આપે છે",
+            "nursing": "બચ્ચાંને દૂધ પીવડાવે છે",
             "about": "આમતેમ ફરે છે",
             "tag": "હમણાં",
             "tagNote": "Ark ની સહિયારી ઘડિયાળ મુજબ હમણાં થઈ રહ્યું છે, બધા માટે એકસરખું. સળંગ લીટીઓ Ark નો રેકોર્ડ છે.",

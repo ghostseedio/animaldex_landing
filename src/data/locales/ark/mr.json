@@ -323,6 +323,7 @@
             "heartsLeftNone": "एकही ♥ उरले नाही",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} ला {aPredator} ने खाल्ले",
+            "caught": "{aPredator} ने {aPrey} ला पकडले",
             "revived": "{animal} परत आला",
             "revivedYoung": "{animal} पुन्हा तरुण प्रौढ होऊन परत आला",
             "gone": "{animal} Ark मधून गेला"
@@ -396,6 +397,8 @@
             "flowers": "फुलांवर भिरभिरत आहे",
             "light": "प्रकाशाभोवती घिरट्या घालत आहे",
             "feeding": "खाण्याची वेळ आहे",
+            "birthing": "पिल्लांना जन्म देत आहे",
+            "nursing": "पिल्लांना दूध पाजत आहे",
             "about": "इकडेतिकडे फिरत आहे",
             "tag": "आत्ता",
             "tagNote": "Ark च्या सामायिक घड्याळानुसार आत्ता घडत आहे, सर्वांसाठी सारखेच. भरीव ओळी Ark ची नोंद आहेत.",

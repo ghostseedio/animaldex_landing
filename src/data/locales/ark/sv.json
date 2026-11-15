@@ -323,6 +323,7 @@
             "heartsLeftNone": "inga ♥ kvar",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} blev uppäten av {aPredator}",
+            "caught": "{aPredator} fångade {aPrey}",
             "revived": "{animal} är tillbaka",
             "revivedYoung": "{animal} är tillbaka som ung vuxen igen",
             "gone": "{animal} har lämnat Ark"
@@ -396,6 +397,8 @@
             "flowers": "besöker blommor",
             "light": "cirklar kring ett ljus",
             "feeding": "får mat",
+            "birthing": "föder ungar",
+            "nursing": "ger sina ungar di",
             "about": "är i farten",
             "tag": "Nu",
             "tagNote": "Händer nu enligt Arks gemensamma klocka, likadant för alla. Heldragna rader är Arks logg.",

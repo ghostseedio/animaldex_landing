@@ -323,6 +323,7 @@
             "heartsLeftNone": "♥ не осталось",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}: съеден, охотник — {aPredator}",
+            "caught": "{aPredator} ловит добычу: {aPrey}",
             "revived": "{animal} вернулся",
             "revivedYoung": "{animal} вернулся снова молодым взрослым",
             "gone": "{animal} покинул Ark"
@@ -396,6 +397,8 @@
             "flowers": "посещает цветы",
             "light": "кружит вокруг света",
             "feeding": "получает корм",
+            "birthing": "рожает детёнышей",
+            "nursing": "кормит детёнышей молоком",
             "about": "гуляет по округе",
             "tag": "Сейчас",
             "tagNote": "Происходит сейчас по общим часам Ark, одинаково для всех. Сплошные строки — журнал Ark.",

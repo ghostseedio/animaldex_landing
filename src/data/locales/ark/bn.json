@@ -323,6 +323,7 @@
             "heartsLeftNone": "কোনো ♥ বাকি নেই",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}-কে {aPredator} খেয়ে ফেলেছে",
+            "caught": "{aPredator} {aPrey}-কে ধরেছে",
             "revived": "{animal} ফিরে এসেছে",
             "revivedYoung": "{animal} আবার তরুণ প্রাপ্তবয়স্ক হয়ে ফিরে এসেছে",
             "gone": "{animal} Ark থেকে চলে গেছে"
@@ -396,6 +397,8 @@
             "flowers": "ফুলে ফুলে ঘুরছে",
             "light": "আলোর চারপাশে ঘুরছে",
             "feeding": "খাওয়ানোর সময় হয়েছে",
+            "birthing": "বাচ্চার জন্ম দিচ্ছে",
+            "nursing": "বাচ্চাকে দুধ খাওয়াচ্ছে",
             "about": "এদিক-ওদিক ঘুরছে",
             "tag": "এখন",
             "tagNote": "Ark-এর ভাগ করা ঘড়ি অনুযায়ী এখনই ঘটছে, সবার জন্য একই। টানা লাইনগুলো Ark-এর রেকর্ড।",

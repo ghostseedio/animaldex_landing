@@ -323,6 +323,7 @@
             "heartsLeftNone": "♥は残っていません",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}が{aPredator}に食べられました",
+            "caught": "{aPredator}が{aPrey}を捕まえました",
             "revived": "{animal}が戻ってきました",
             "revivedYoung": "{animal}が若い成体に戻って帰ってきました",
             "gone": "{animal}はArkからいなくなりました"
@@ -396,6 +397,8 @@
             "flowers": "花を訪れています",
             "light": "明かりの周りを飛び回っています",
             "feeding": "えさの時間です",
+            "birthing": "赤ちゃんを産んでいます",
+            "nursing": "子どもにお乳をあげています",
             "about": "あちこち出歩いています",
             "tag": "いま",
             "tagNote": "Arkの共有時計で、いま起きていること。誰にとっても同じです。実線はArkの記録です。",

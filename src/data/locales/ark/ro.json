@@ -323,6 +323,7 @@
             "heartsLeftNone": "nu mai are ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} a fost mâncat de {aPredator}",
+            "caught": "{aPredator} a prins {aPrey}",
             "revived": "{animal} s-a întors",
             "revivedYoung": "{animal} s-a întors, din nou adult tânăr",
             "gone": "{animal} a plecat din Ark"
@@ -396,6 +397,8 @@
             "flowers": "vizitează flori",
             "light": "se rotește în jurul unei lumini",
             "feeding": "primește hrana",
+            "birthing": "naște pui",
+            "nursing": "își alăptează puii",
             "about": "umblă de colo-colo",
             "tag": "Acum",
             "tagNote": "Se întâmplă acum după ceasul comun al Ark, la fel pentru toți. Liniile continue sunt jurnalul Ark.",

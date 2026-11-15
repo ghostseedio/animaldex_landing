@@ -323,6 +323,7 @@
             "heartsLeftNone": "لم يبقَ ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "أكل {aPredator} {animal}",
+            "caught": "اصطاد {aPredator} {aPrey}",
             "revived": "عاد {animal}",
             "revivedYoung": "عاد {animal} بالغًا شابًا من جديد",
             "gone": "رحل {animal} عن Ark"
@@ -396,6 +397,8 @@
             "flowers": "يزور الأزهار",
             "light": "يحوم حول ضوء",
             "feeding": "في وقت الإطعام",
+            "birthing": "في وقت الولادة",
+            "nursing": "في وقت الرضاعة",
             "about": "يتنقّل هنا وهناك",
             "tag": "الآن",
             "tagNote": "يحدث الآن وفق ساعة Ark المشتركة، وهي نفسها للجميع. الأسطر المتصلة هي سجل Ark.",

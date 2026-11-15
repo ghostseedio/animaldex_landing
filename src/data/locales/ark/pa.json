@@ -323,6 +323,7 @@
             "heartsLeftNone": "ਕੋਈ ♥ ਬਾਕੀ ਨਹੀਂ",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} ਨੂੰ {aPredator} ਨੇ ਖਾ ਲਿਆ",
+            "caught": "{aPredator} ਨੇ {aPrey} ਨੂੰ ਫੜ ਲਿਆ",
             "revived": "{animal} ਵਾਪਸ ਆ ਗਿਆ",
             "revivedYoung": "{animal} ਮੁੜ ਜਵਾਨ ਬਾਲਗ ਬਣ ਕੇ ਵਾਪਸ ਆ ਗਿਆ",
             "gone": "{animal} Ark ਤੋਂ ਚਲਾ ਗਿਆ"
@@ -396,6 +397,8 @@
             "flowers": "ਫੁੱਲਾਂ ਉੱਤੇ ਮੰਡਰਾ ਰਿਹਾ ਹੈ",
             "light": "ਰੋਸ਼ਨੀ ਦੁਆਲੇ ਚੱਕਰ ਲਾ ਰਿਹਾ ਹੈ",
             "feeding": "ਖਾਣੇ ਦਾ ਵੇਲਾ ਹੈ",
+            "birthing": "ਬੱਚੇ ਦਾ ਜਨਮ ਹੋ ਰਿਹਾ ਹੈ",
+            "nursing": "ਬੱਚਿਆਂ ਨੂੰ ਦੁੱਧ ਪਿਆਉਣ ਦਾ ਵੇਲਾ ਹੈ",
             "about": "ਇੱਧਰ-ਉੱਧਰ ਘੁੰਮ ਰਿਹਾ ਹੈ",
             "tag": "ਹੁਣ",
             "tagNote": "Ark ਦੀ ਸਾਂਝੀ ਘੜੀ ਮੁਤਾਬਕ ਹੁਣੇ ਹੋ ਰਿਹਾ ਹੈ, ਸਭ ਲਈ ਇੱਕੋ ਜਿਹਾ। ਪੂਰੀਆਂ ਲਕੀਰਾਂ Ark ਦਾ ਰਿਕਾਰਡ ਹਨ।",

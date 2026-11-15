@@ -323,6 +323,7 @@
             "heartsLeftNone": "♥ 남지 않음",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}이(가) {aPredator}에게 먹혔어요",
+            "caught": "{aPredator}이(가) {aPrey}을(를) 잡았어요",
             "revived": "{animal}이(가) 돌아왔어요",
             "revivedYoung": "{animal}이(가) 다시 어린 성체로 돌아왔어요",
             "gone": "{animal}이(가) Ark를 떠났어요"
@@ -396,6 +397,8 @@
             "flowers": "꽃을 찾아다니는 중",
             "light": "불빛 주위를 맴도는 중",
             "feeding": "먹이를 받는 중",
+            "birthing": "새끼를 낳는 중",
+            "nursing": "새끼에게 젖을 먹이는 중",
             "about": "돌아다니는 중",
             "tag": "지금",
             "tagNote": "Ark의 공유 시계로 지금 일어나는 일이에요. 모두에게 똑같아요. 실선은 Ark의 기록이에요.",

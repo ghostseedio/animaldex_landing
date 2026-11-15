@@ -323,6 +323,7 @@
             "heartsLeftNone": "nezbývá žádné ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} sežral(a) {aPredator}",
+            "caught": "{aPredator} ulovil(a): {aPrey}",
             "revived": "{animal} je zpět",
             "revivedYoung": "{animal} je zpět, znovu mladý dospělý",
             "gone": "{animal} odchází z Arku"
@@ -396,6 +397,8 @@
             "flowers": "navštěvuje květy",
             "light": "krouží kolem světla",
             "feeding": "dostává krmení",
+            "birthing": "rodí mláďata",
+            "nursing": "kojí mláďata",
             "about": "je na toulkách",
             "tag": "Teď",
             "tagNote": "Děje se teď podle společných hodin Ark, pro všechny stejně. Plné řádky jsou záznam Ark.",

@@ -323,6 +323,7 @@
             "heartsLeftNone": "ei ♥ jäljellä",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{aPredator} söi: {animal}",
+            "caught": "{aPredator} sai saaliin: {aPrey}",
             "revived": "{animal} on palannut",
             "revivedYoung": "{animal} on palannut, taas nuori aikuinen",
             "gone": "{animal} on poissa Arkista"
@@ -396,6 +397,8 @@
             "flowers": "vierailee kukilla",
             "light": "kiertää valoa",
             "feeding": "saa ruokaa",
+            "birthing": "synnyttää",
+            "nursing": "imettää poikasiaan",
             "about": "on liikkeellä",
             "tag": "Nyt",
             "tagNote": "Tapahtuu nyt Arkin yhteisen kellon mukaan, kaikille samoin. Yhtenäiset rivit ovat Arkin kirjaa.",

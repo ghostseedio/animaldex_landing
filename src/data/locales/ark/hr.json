@@ -323,6 +323,7 @@
             "heartsLeftNone": "nema više ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}: pojeo ga je {aPredator}",
+            "caught": "{aPredator} je ulovio: {aPrey}",
             "revived": "{animal} se vratio",
             "revivedYoung": "{animal} se vratio, opet mlada odrasla životinja",
             "gone": "{animal} je otišao iz Arka"
@@ -396,6 +397,8 @@
             "flowers": "obilazi cvjetove",
             "light": "kruži oko svjetla",
             "feeding": "dobiva hranu",
+            "birthing": "rađa mlade",
+            "nursing": "doji mlade",
             "about": "obilazi okolicu",
             "tag": "Sada",
             "tagNote": "Događa se sada prema zajedničkom satu broda Ark, isto za sve. Pune linije su zapis broda Ark.",

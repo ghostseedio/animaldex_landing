@@ -323,6 +323,7 @@
             "heartsLeftNone": "ingen ♥ igjen",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} ble spist av {aPredator}",
+            "caught": "{aPredator} fanget {aPrey}",
             "revived": "{animal} er tilbake",
             "revivedYoung": "{animal} er tilbake som ung voksen igjen",
             "gone": "{animal} har forlatt Ark"
@@ -396,6 +397,8 @@
             "flowers": "besøker blomster",
             "light": "sirkler rundt et lys",
             "feeding": "blir fôret",
+            "birthing": "føder unger",
+            "nursing": "dier ungene sine",
             "about": "er på farten",
             "tag": "Nå",
             "tagNote": "Skjer nå etter Arks felles klokke, likt for alle. Heltrukne linjer er Arks logg.",

@@ -323,6 +323,7 @@
             "heartsLeftNone": "plus aucun ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} a été mangé par {aPredator}",
+            "caught": "{aPredator} a attrapé {aPrey}",
             "revived": "{animal} est de retour",
             "revivedYoung": "{animal} est de retour, de nouveau jeune adulte",
             "gone": "{animal} a quitté l'Ark"
@@ -396,6 +397,8 @@
             "flowers": "butine des fleurs",
             "light": "tourne autour d'une lumière",
             "feeding": "reçoit sa ration",
+            "birthing": "donne naissance",
+            "nursing": "allaite ses petits",
             "about": "est de sortie",
             "tag": "Maintenant",
             "tagNote": "Se passe maintenant selon l'horloge partagée de l'Ark, la même pour tous. Les lignes pleines sont le registre de l'Ark.",

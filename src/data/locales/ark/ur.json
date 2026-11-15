@@ -323,6 +323,7 @@
             "heartsLeftNone": "کوئی ♥ باقی نہیں",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} کو {aPredator} نے کھا لیا",
+            "caught": "{aPredator} نے {aPrey} کو پکڑ لیا",
             "revived": "{animal} واپس آ گیا",
             "revivedYoung": "{animal} دوبارہ نوجوان بالغ بن کر واپس آ گیا",
             "gone": "{animal} Ark سے چلا گیا"
@@ -396,6 +397,8 @@
             "flowers": "پھولوں پر منڈلا رہا ہے",
             "light": "روشنی کے گرد چکر لگا رہا ہے",
             "feeding": "خوراک کا وقت ہے",
+            "birthing": "بچے کی پیدائش ہو رہی ہے",
+            "nursing": "بچوں کو دودھ پلانے کا وقت ہے",
             "about": "ادھر ادھر گھوم رہا ہے",
             "tag": "ابھی",
             "tagNote": "Ark کی مشترکہ گھڑی کے مطابق ابھی ہو رہا ہے، سب کے لیے ایک جیسا۔ مسلسل لکیریں Ark کا ریکارڈ ہیں۔",

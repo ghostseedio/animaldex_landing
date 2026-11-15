@@ -323,6 +323,7 @@
             "heartsLeftNone": "hiç ♥ kalmadı",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}, {aPredator} tarafından yendi",
+            "caught": "{aPredator}, {aPrey} yakaladı",
             "revived": "{animal} geri döndü",
             "revivedYoung": "{animal} yeniden genç bir yetişkin olarak döndü",
             "gone": "{animal} Ark'tan ayrıldı"
@@ -396,6 +397,8 @@
             "flowers": "çiçekleri ziyaret ediyor",
             "light": "bir ışığın etrafında dönüyor",
             "feeding": "besleniyor",
+            "birthing": "doğum yapıyor",
+            "nursing": "yavrularını emziriyor",
             "about": "ortalıkta dolaşıyor",
             "tag": "Şimdi",
             "tagNote": "Ark'ın ortak saatine göre şu an oluyor, herkes için aynı. Düz çizgiler Ark'ın kaydı.",

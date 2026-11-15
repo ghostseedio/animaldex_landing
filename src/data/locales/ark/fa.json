@@ -323,6 +323,7 @@
             "heartsLeftNone": "هیچ ♥ نمانده",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} را {aPredator} خورد",
+            "caught": "{aPredator} {aPrey} را شکار کرد",
             "revived": "{animal} برگشت",
             "revivedYoung": "{animal} برگشت، دوباره بالغی جوان",
             "gone": "{animal} از Ark رفت"
@@ -396,6 +397,8 @@
             "flowers": "در حال سر زدن به گل‌ها",
             "light": "در حال چرخیدن دور یک نور",
             "feeding": "در وقت غذادهی",
+            "birthing": "در حال زایمان",
+            "nursing": "در حال شیر دادن به بچه‌هایش",
             "about": "در حال گشت‌وگذار",
             "tag": "اکنون",
             "tagNote": "طبق ساعت مشترک Ark همین حالا رخ می‌دهد، برای همه یکسان. خط‌های پیوسته ثبت Ark هستند.",

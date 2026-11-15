@@ -323,6 +323,7 @@
             "heartsLeftNone": "δεν απομένει ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}: το έφαγε {aPredator}",
+            "caught": "{aPredator} έπιασε {aPrey}",
             "revived": "{animal} επέστρεψε",
             "revivedYoung": "{animal} επέστρεψε, ξανά νεαρό ενήλικο",
             "gone": "{animal} έφυγε από την Ark"
@@ -396,6 +397,8 @@
             "flowers": "επισκέπτεται λουλούδια",
             "light": "κάνει κύκλους γύρω από ένα φως",
             "feeding": "είναι ώρα ταΐσματος",
+            "birthing": "γεννάει",
+            "nursing": "θηλάζει τα μικρά του",
             "about": "τριγυρίζει",
             "tag": "Τώρα",
             "tagNote": "Συμβαίνει τώρα με το κοινό ρολόι της Ark, ίδιο για όλους. Οι συνεχείς γραμμές είναι το αρχείο της Ark.",

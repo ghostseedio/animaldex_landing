@@ -323,6 +323,7 @@
             "heartsLeftNone": "không còn ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "Con {animal} đã bị {aPredator} ăn",
+            "caught": "{aPredator} đã bắt được {aPrey}",
             "revived": "Con {animal} đã trở lại",
             "revivedYoung": "Con {animal} đã trở lại, lại là con trưởng thành trẻ",
             "gone": "Con {animal} đã rời Ark"
@@ -396,6 +397,8 @@
             "flowers": "ghé thăm hoa",
             "light": "lượn quanh ánh đèn",
             "feeding": "được cho ăn",
+            "birthing": "sinh con",
+            "nursing": "cho con bú",
             "about": "đi loanh quanh",
             "tag": "Lúc này",
             "tagNote": "Đang diễn ra theo đồng hồ chung của Ark, như nhau với mọi người. Dòng liền là nhật ký của Ark.",

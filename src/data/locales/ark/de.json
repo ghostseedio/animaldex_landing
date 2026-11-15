@@ -323,6 +323,7 @@
             "heartsLeftNone": "kein ♥ mehr",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} wurde von {aPredator} gefressen",
+            "caught": "{aPredator} hat {aPrey} gefangen",
             "revived": "{animal} ist zurück",
             "revivedYoung": "{animal} ist zurück, wieder ein junges erwachsenes Tier",
             "gone": "{animal} hat die Ark verlassen"
@@ -396,6 +397,8 @@
             "flowers": "besucht Blüten",
             "light": "umkreist ein Licht",
             "feeding": "wird gefüttert",
+            "birthing": "bringt Junge zur Welt",
+            "nursing": "säugt seine Jungen",
             "about": "ist unterwegs",
             "tag": "Jetzt",
             "tagNote": "Passiert gerade, nach der gemeinsamen Uhr der Ark, für alle gleich. Durchgezogene Zeilen sind das Logbuch der Ark.",

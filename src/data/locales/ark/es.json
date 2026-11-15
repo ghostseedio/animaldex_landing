@@ -323,6 +323,7 @@
             "heartsLeftNone": "no queda ningún ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{aPredator} se comió a {animal}",
+            "caught": "{aPredator} atrapó a {aPrey}",
             "revived": "{animal} ha vuelto",
             "revivedYoung": "{animal} ha vuelto, otra vez adulto joven",
             "gone": "{animal} ya no está en el Ark"
@@ -396,6 +397,8 @@
             "flowers": "visitando flores",
             "light": "dando vueltas a una luz",
             "feeding": "recibiendo su comida",
+            "birthing": "dando a luz",
+            "nursing": "amamantando a sus crías",
             "about": "dando una vuelta",
             "tag": "Ahora",
             "tagNote": "Ocurre ahora según el reloj compartido del Ark, igual para todos. Las líneas continuas son el registro del Ark.",

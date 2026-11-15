@@ -323,6 +323,7 @@
             "heartsLeftNone": "ไม่เหลือ ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} ถูก{aPredator}กิน",
+            "caught": "{aPredator} จับ {aPrey} ได้",
             "revived": "{animal} กลับมาแล้ว",
             "revivedYoung": "{animal} กลับมาเป็นตัวเต็มวัยวัยหนุ่มสาวอีกครั้ง",
             "gone": "{animal} จากไปจาก Ark แล้ว"
@@ -396,6 +397,8 @@
             "flowers": "ตอมดอกไม้",
             "light": "บินวนรอบแสงไฟ",
             "feeding": "ได้รับอาหาร",
+            "birthing": "คลอดลูก",
+            "nursing": "ให้นมลูก",
             "about": "เดินไปมา",
             "tag": "ตอนนี้",
             "tagNote": "กำลังเกิดขึ้นตามนาฬิการ่วมของ Ark เหมือนกันสำหรับทุกคน เส้นทึบคือบันทึกของ Ark",

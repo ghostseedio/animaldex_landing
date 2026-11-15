@@ -4562,6 +4562,7 @@
       "heartsLeftNone": "tidak ada ♥ tersisa",
       "withHearts": "{line} · {hearts}",
       "eatenBy": "{animal} dimakan oleh {aPredator}",
+      "caught": "{aPredator} menangkap {aPrey}",
       "revived": "{animal} sudah kembali",
       "revivedYoung": "{animal} sudah kembali, kembali menjadi dewasa muda",
       "gone": "{animal} sudah pergi dari Ark"
@@ -4635,6 +4636,8 @@
       "flowers": "mengunjungi bunga",
       "light": "mengitari cahaya",
       "feeding": "diberi makan",
+      "birthing": "melahirkan",
+      "nursing": "menyusui anaknya",
       "about": "berkeliling",
       "tag": "Sekarang",
       "tagNote": "Sedang terjadi menurut jam bersama Ark, sama untuk semua orang. Baris utuh adalah catatan Ark.",

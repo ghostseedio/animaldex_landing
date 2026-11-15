@@ -323,6 +323,7 @@
             "heartsLeftNone": "hakuna ♥ iliyobaki",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} aliliwa na {aPredator}",
+            "caught": "{aPredator} alimkamata {aPrey}",
             "revived": "{animal} amerudi",
             "revivedYoung": "{animal} amerudi, mtu mzima kijana tena",
             "gone": "{animal} ameondoka Ark"
@@ -396,6 +397,8 @@
             "flowers": "anatembelea maua",
             "light": "anazunguka mwanga",
             "feeding": "ni wakati wa kulishwa",
+            "birthing": "anazaa",
+            "nursing": "ananyonyesha watoto wake",
             "about": "anatembea huku na huko",
             "tag": "Sasa",
             "tagNote": "Inatokea sasa kwa saa ya pamoja ya Ark, sawa kwa kila mtu. Mistari kamili ni kumbukumbu za Ark.",

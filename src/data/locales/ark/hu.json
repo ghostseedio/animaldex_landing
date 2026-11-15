@@ -323,6 +323,7 @@
             "heartsLeftNone": "nem maradt ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}: elkapta {aPredator}",
+            "caught": "{aPredator} zsákmányt ejtett: {aPrey}",
             "revived": "{animal} visszatért",
             "revivedYoung": "{animal} visszatért, újra fiatal felnőttként",
             "gone": "{animal} elment az Arkból"
@@ -396,6 +397,8 @@
             "flowers": "virágokat látogat",
             "light": "egy fény körül kering",
             "feeding": "épp etetik",
+            "birthing": "világra hozza a kicsinyét",
+            "nursing": "szoptatja a kicsinyeit",
             "about": "jár-kel",
             "tag": "Most",
             "tagNote": "Most történik az Ark közös órája szerint, mindenkinek ugyanúgy. A folytonos sorok az Ark naplója.",

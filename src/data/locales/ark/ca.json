@@ -323,6 +323,7 @@
             "heartsLeftNone": "no queda cap ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{aPredator} s'ha menjat {animal}",
+            "caught": "{aPredator} ha atrapat {aPrey}",
             "revived": "{animal} ha tornat",
             "revivedYoung": "{animal} ha tornat, jove adult de nou",
             "gone": "{animal} ja no és a l'Ark"
@@ -396,6 +397,8 @@
             "flowers": "visita flors",
             "light": "fa voltes a una llum",
             "feeding": "rep el menjar",
+            "birthing": "pareix",
+            "nursing": "alleta les cries",
             "about": "va amunt i avall",
             "tag": "Ara",
             "tagNote": "Passa ara segons el rellotge compartit de l'Ark, igual per a tothom. Les línies contínues són el registre de l'Ark.",

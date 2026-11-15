@@ -323,6 +323,7 @@
             "heartsLeftNone": "geen ♥ meer",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} is opgegeten door {aPredator}",
+            "caught": "{aPredator} heeft {aPrey} gevangen",
             "revived": "{animal} is terug",
             "revivedYoung": "{animal} is terug, weer jong volwassen",
             "gone": "{animal} is uit de Ark vertrokken"
@@ -396,6 +397,8 @@
             "flowers": "bezoekt bloemen",
             "light": "draait rondjes om een licht",
             "feeding": "wordt gevoerd",
+            "birthing": "krijgt jongen",
+            "nursing": "zoogt zijn jongen",
             "about": "is op pad",
             "tag": "Nu",
             "tagNote": "Gebeurt nu volgens de gedeelde klok van de Ark, voor iedereen hetzelfde. Doorgetrokken regels zijn het logboek van de Ark.",

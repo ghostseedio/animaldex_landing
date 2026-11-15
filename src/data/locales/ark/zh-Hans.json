@@ -323,6 +323,7 @@
             "heartsLeftNone": "没有剩下的 ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}被{aPredator}吃掉了",
+            "caught": "{aPredator}抓住了{aPrey}",
             "revived": "{animal}回来了",
             "revivedYoung": "{animal}回来了，又是年轻的成年个体",
             "gone": "{animal}离开了 Ark"
@@ -396,6 +397,8 @@
             "flowers": "造访花朵",
             "light": "绕着灯光打转",
             "feeding": "喂食时间",
+            "birthing": "在生宝宝",
+            "nursing": "在给宝宝喂奶",
             "about": "四处走动",
             "tag": "此刻",
             "tagNote": "按 Ark 的共享时钟此刻正在发生，对每个人都一样。实线是 Ark 的记录。",

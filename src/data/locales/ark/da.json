@@ -323,6 +323,7 @@
             "heartsLeftNone": "ingen ♥ tilbage",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} blev ædt af {aPredator}",
+            "caught": "{aPredator} fangede {aPrey}",
             "revived": "{animal} er tilbage",
             "revivedYoung": "{animal} er tilbage som ung voksen igen",
             "gone": "{animal} er væk fra Ark"
@@ -396,6 +397,8 @@
             "flowers": "besøger blomster",
             "light": "kredser om et lys",
             "feeding": "bliver fodret",
+            "birthing": "føder unger",
+            "nursing": "giver sine unger die",
             "about": "er på farten",
             "tag": "Nu",
             "tagNote": "Sker nu efter Arks fælles ur, det samme for alle. Hele linjer er Arks optegnelse.",

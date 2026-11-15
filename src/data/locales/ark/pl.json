@@ -323,6 +323,7 @@
             "heartsLeftNone": "nie zostało żadne ♥",
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}: zjedzony przez {aPredator}",
+            "caught": "{aPredator} łapie zdobycz: {aPrey}",
             "revived": "{animal} wraca",
             "revivedYoung": "{animal} wraca, znów jako młody dorosły",
             "gone": "{animal} odchodzi z Ark"
@@ -396,6 +397,8 @@
             "flowers": "odwiedza kwiaty",
             "light": "krąży wokół światła",
             "feeding": "dostaje karmę",
+            "birthing": "rodzi młode",
+            "nursing": "karmi młode mlekiem",
             "about": "kręci się po okolicy",
             "tag": "Teraz",
             "tagNote": "Dzieje się teraz według wspólnego zegara Ark, tak samo dla wszystkich. Linie ciągłe to zapis Ark.",
