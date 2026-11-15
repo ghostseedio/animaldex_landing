@@ -122,6 +122,8 @@ export type ArkLifeWords = {
     hatched: string;
     /** A species with no Ark model yet (A13): the stand-in figure, said so. */
     placeholder: string;
+    /** The last of its kind aboard (`last_of_kind`): it has no mate and will age out ("catch another to give it a mate"). */
+    lastOfKind: string;
     /** A3: the step that brought it was revised after it arrived (it stays aboard). */
     revised: string;
     revisedWorked: string;

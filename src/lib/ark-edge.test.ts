@@ -9,6 +9,7 @@ import {drawnEggs, nestKind} from "@/ark-scene/nests";
 import {arkPlaceholderSlug, isArkPlaceholderSlug} from "@/ark-scene/placeholder";
 import {placeAnimals} from "@/ark-scene/placement";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
+import {ARK_PUBLIC_EDGE_KEYS} from "@/lib/ark-capture";
 import {arkBringerLabel, arkHatchNest, arkJoinLabels, decodeArkEvents, decodeArkLife, isQuietArkReplay, planArkReplay} from "@/lib/ark-life";
 import {arkMissingModels, decodeArkMissingModels} from "@/lib/ark-missing-models";
 import {arkPopulation, arkSpeciesAboard} from "@/lib/ark-population";
@@ -207,6 +208,21 @@ test("A5 former voyager: the server's label said in the reader's language, a Voy
     assert.equal(arkBringerLabel("Voyager 12", "Mantan voyager"), "Voyager 12");
     assert.equal(arkJoinLabels(["Voyager 2", "Former voyager"], "id", "Mantan voyager"), "Voyager 2 dan Mantan voyager");
     assert.equal((id as {ark: {formerVoyager: string}}).ark.formerVoyager, "Mantan voyager");
+});
+
+test("the last of its kind aboard (last_of_kind, sent only when true): decoded, said in every Ark language", async () => {
+    const snapshot = decodeArkSnapshot({...raw(), animals: [{...raw().animals[0], id: "l1", last_of_kind: true}, {...raw().animals[0], id: "l2", last_of_kind: "yes"}, {...raw().animals[0], id: "l3"}]})!;
+    assert.deepEqual(snapshot.animals.map((a) => a.last_of_kind), [true, undefined, undefined]);
+    assert.ok(ARK_PUBLIC_EDGE_KEYS.has("last_of_kind"));
+    const english = (en as {ark: {life: {lastOfKind: string}}}).ark.life.lastOfKind;
+    assert.equal(english, "Last of its kind aboard: catch another to give it a mate");
+    assert.ok((id as {ark: {life: {lastOfKind: string}}}).ark.life.lastOfKind.includes(":"));
+    const {readdirSync, readFileSync} = await import("node:fs");
+    const dir = new URL("../data/locales/ark/", import.meta.url);
+    for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) {
+        const text = (JSON.parse(readFileSync(new URL(file, dir), "utf8")) as {ark: {life: {lastOfKind?: string}}}).ark.life.lastOfKind;
+        assert.ok(text && text !== english && /[:：]/.test(text), file);
+    }
 });
 
 test("A13 the server's placeholder flag with a null slug, in the snapshot and in the capture check", () => {

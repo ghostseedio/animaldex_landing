@@ -4361,6 +4361,7 @@
       "hatchedAboard": "Hatched on the Ark",
       "hatched": "Hatched",
       "placeholder": "Its 3D figure is still being made: a stand-in shows it for now.",
+      "lastOfKind": "Last of its kind aboard: catch another to give it a mate",
       "revised": "Its step",
       "revisedWorked": "revised: it worked again",
       "revisedNot": "revised: it didn't work after all, but it stays aboard",
