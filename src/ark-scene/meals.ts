@@ -85,6 +85,8 @@ export type MealPosture = {feed: "stand" | "prone"; rest: "lie" | "bask" | "stan
 
 const FELIDS = /(^|-)(lion|tiger|leopard|cheetah|jaguar|puma|cougar|lynx|bobcat|caracal|serval|ocelot|margay|wildcat|cat|jaguarundi)$/;
 const NOT_FELIDS = /(sea-lion|antlion|catfish|cattle|catbird)/;
+/** (Not dogs: a prairie dog, a flying fox.) */
+const NOT_CANIDS = /(prairie-dog|flying-fox)/;
 const CANIDS = /(wolf|jackal|wild-dog|dingo|coyote|fox|dhole|hyena|aardwolf|dog)$/;
 const BEARS = /(^|-)bear$/;
 const LIZARDS_AND_CROCS = /(crocodile|alligator|caiman|gharial|monitor|komodo|tegu|goanna)/;
@@ -92,7 +94,7 @@ const LIZARDS_AND_CROCS = /(crocodile|alligator|caiman|gharial|monitor|komodo|te
 export function mealPosture(side: Pick<MealSide, "slug" | "plan" | "flies">): MealPosture {
     const slug = side.slug;
     if (FELIDS.test(slug) && !NOT_FELIDS.test(slug)) return {feed: "prone", rest: "lie"};
-    if (CANIDS.test(slug) || BEARS.test(slug)) return {feed: "stand", rest: "lie"};
+    if ((CANIDS.test(slug) && !NOT_CANIDS.test(slug)) || BEARS.test(slug)) return {feed: "stand", rest: "lie"};
     if (LIZARDS_AND_CROCS.test(slug)) return {feed: "stand", rest: "bask"};
     const kind = mealKind(side);
     if (kind === "mammal") return {feed: "stand", rest: "lie"};
