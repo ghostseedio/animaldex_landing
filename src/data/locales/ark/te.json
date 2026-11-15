@@ -587,6 +587,16 @@
             "recoveringOne": "1 కోలుకుంటోంది",
             "recoveringOther": "{count} కోలుకుంటున్నాయి",
             "away": "కోలుకునే వరకు అది దూరంగా ఉంటుంది, తర్వాత మళ్లీ తన ఇంటి నుంచి బయటకు వస్తుంది."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "ఈ పరికరం కోసం తేలికైన Ark",
+            "open3d": "3D Ark తెరవండి",
+            "slowNote": "ఈ పరికరంలో కొన్ని నిమిషాలు పట్టవచ్చు",
+            "switchLite": "Ark Lite కి మారండి",
+            "ready3d": "3D Ark సిద్ధంగా ఉంది",
+            "where": "అవి ఎక్కడ నివసిస్తాయి",
+            "kindsMore": "+{count} మరిన్ని జాతులు"
         }
     },
     "talkPage": {

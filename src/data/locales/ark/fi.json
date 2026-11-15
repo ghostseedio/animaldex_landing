@@ -587,6 +587,16 @@
             "recoveringOne": "1 toipuu",
             "recoveringOther": "{count} toipuu",
             "away": "Se on poissa toipuessaan ja tulee sitten taas ulos kodistaan."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Kevyempi Ark tälle laitteelle",
+            "open3d": "Avaa Ark 3D:nä",
+            "slowNote": "Tällä laitteella siihen voi mennä muutama minuutti",
+            "switchLite": "Vaihda Ark Liteen",
+            "ready3d": "Ark 3D:nä on valmis",
+            "where": "Missä ne elävät",
+            "kindsMore": "+{count} muuta lajia"
         }
     },
     "talkPage": {

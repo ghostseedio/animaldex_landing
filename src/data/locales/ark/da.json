@@ -587,6 +587,16 @@
             "recoveringOne": "1 kommer sig",
             "recoveringOther": "{count} kommer sig",
             "away": "Det er væk, mens det kommer sig, og går så ud af sit hjem igen."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "En lettere Ark til denne enhed",
+            "open3d": "Åbn Ark i 3D",
+            "slowNote": "Det kan tage et par minutter på denne enhed",
+            "switchLite": "Skift til Ark Lite",
+            "ready3d": "Ark i 3D er klar",
+            "where": "Hvor de bor",
+            "kindsMore": "+{count} arter mere"
         }
     },
     "talkPage": {

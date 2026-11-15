@@ -587,6 +587,16 @@
             "recoveringOne": "1 se oporavlja",
             "recoveringOther": "Oporavlja se: {count}",
             "away": "Odsutna je dok se oporavlja, a onda opet izlazi iz svog doma."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Lakši Ark za ovaj uređaj",
+            "open3d": "Otvori Ark u 3D-u",
+            "slowNote": "Na ovom uređaju to može potrajati nekoliko minuta",
+            "switchLite": "Prijeđi na Ark Lite",
+            "ready3d": "Ark u 3D-u je spreman",
+            "where": "Gdje žive",
+            "kindsMore": "+{count} vrsta više"
         }
     },
     "talkPage": {

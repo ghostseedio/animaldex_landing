@@ -587,6 +587,16 @@
             "recoveringOne": "1 nagpapagaling",
             "recoveringOther": "{count} nagpapagaling",
             "away": "Wala muna ito habang nagpapagaling, saka lalabas ulit mula sa tahanan nito."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Mas magaang Ark para sa device na ito",
+            "open3d": "Buksan ang Ark sa 3D",
+            "slowNote": "Maaaring tumagal ito nang ilang minuto sa device na ito",
+            "switchLite": "Lumipat sa Ark Lite",
+            "ready3d": "Handa na ang Ark sa 3D",
+            "where": "Kung saan sila nakatira",
+            "kindsMore": "+{count} pang uri"
         }
     },
     "talkPage": {

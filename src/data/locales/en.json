@@ -4793,6 +4793,16 @@
       "recoveringOne": "1 recovering",
       "recoveringOther": "{count} recovering",
       "away": "It's away while it recovers, then walks out of its home again."
+    },
+    "liteView": {
+      "title": "Ark Lite",
+      "subtitle": "A lighter Ark for this device",
+      "open3d": "Open the 3D Ark",
+      "slowNote": "It can take a few minutes on this device",
+      "switchLite": "Switch to Ark Lite",
+      "ready3d": "The 3D Ark is ready",
+      "where": "Where they are",
+      "kindsMore": "+{count} more kinds"
     }
   },
   "seo": {

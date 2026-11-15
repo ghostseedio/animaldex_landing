@@ -587,6 +587,16 @@
             "recoveringOne": "1 con đang hồi phục",
             "recoveringOther": "{count} con đang hồi phục",
             "away": "Nó vắng mặt trong lúc hồi phục, rồi lại bước ra từ nơi ở của mình."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Ark nhẹ hơn cho thiết bị này",
+            "open3d": "Mở Ark 3D",
+            "slowNote": "Có thể mất vài phút trên thiết bị này",
+            "switchLite": "Chuyển sang Ark Lite",
+            "ready3d": "Ark 3D đã sẵn sàng",
+            "where": "Nơi chúng sống",
+            "kindsMore": "+{count} loài khác"
         }
     },
     "talkPage": {

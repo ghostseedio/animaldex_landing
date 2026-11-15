@@ -587,6 +587,16 @@
             "recoveringOne": "۱ در حال بهبود",
             "recoveringOther": "{count} در حال بهبود",
             "away": "تا بهبود پیدا کند دور است، بعد دوباره از خانه‌اش بیرون می‌آید."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "نسخه‌ای سبک‌تر از Ark برای این دستگاه",
+            "open3d": "باز کردن Ark سه‌بعدی",
+            "slowNote": "ممکن است روی این دستگاه چند دقیقه طول بکشد",
+            "switchLite": "رفتن به Ark Lite",
+            "ready3d": "Ark سه‌بعدی آماده است",
+            "where": "کجا زندگی می‌کنند",
+            "kindsMore": "+{count} گونهٔ دیگر"
         }
     },
     "talkPage": {

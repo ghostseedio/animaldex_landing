@@ -587,6 +587,16 @@
             "recoveringOne": "1 dochodzi do siebie",
             "recoveringOther": "Dochodzi do siebie: {count}",
             "away": "Nie ma go, póki dochodzi do siebie, a potem znów wychodzi ze swojego domu."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Lżejsza Ark na to urządzenie",
+            "open3d": "Otwórz Ark w 3D",
+            "slowNote": "Na tym urządzeniu może to potrwać kilka minut",
+            "switchLite": "Przełącz na Ark Lite",
+            "ready3d": "Ark w 3D jest gotowa",
+            "where": "Gdzie żyją",
+            "kindsMore": "+{count} innych gatunków"
         }
     },
     "talkPage": {

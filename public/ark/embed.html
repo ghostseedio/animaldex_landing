@@ -48,6 +48,8 @@
   #ark-loader.failed .stage .dot { animation: none; background: #f0b45a; }
   #ark-loader.failed .stage .text { white-space: normal; }
   #ark-loader.failed .bar, #ark-loader.failed .facts { display: none; }
+  /* Ark Lite's offer (decision 358): on the card once the 3D Ark has kept a phone waiting. */
+  #ark-loader .offer { display: inline-flex; align-items: center; min-height: 34px; margin-top: 10px; padding: 6px 12px; border-radius: 10px; border: 1px solid rgba(200, 250, 99, 0.5); background: rgba(200, 250, 99, 0.12); color: #e7fdb8; font: 700 12.5px/1.2 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; pointer-events: auto; cursor: pointer; }
   #ark-loader .aboard { list-style: none; margin: 10px 0 0; padding: 10px 0 0; border-top: 1px solid rgba(255, 255, 255, 0.1); font-weight: 500; }
   #ark-loader .aboard li { display: flex; justify-content: space-between; gap: 12px; padding: 3px 0; }
   #ark-loader .aboard .n { font-variant-numeric: tabular-nums; color: rgba(255, 252, 244, 0.7); }
@@ -338,7 +340,19 @@
       card.appendChild(list);
     }
   }
-  window.AnimalDexArkLoader = {render: render, done: done, fail: fail, tell: tell, words: words, snapshotRead: snapshotRead, snapshotTag: snapshotTag, on: on};
+  // Ark Lite's offer (decision 358): a button on the card, once.
+  var offered = false;
+  function offer(label, onPick) {
+    if (offered || gone || failed || !root) return;
+    offered = true;
+    var button = document.createElement("button");
+    button.type = "button";
+    button.className = "offer";
+    button.textContent = label;
+    button.addEventListener("click", onPick);
+    $(".card").appendChild(button);
+  }
+  window.AnimalDexArkLoader = {render: render, done: done, fail: fail, offer: offer, tell: tell, words: words, snapshotRead: snapshotRead, snapshotTag: snapshotTag, on: on};
   // The host's messages before the scene's code runs (it runs after the first paint now): kept, and handed to the
   // script below when it starts (`AnimalDexArkEarly`), so an app that speaks as soon as the page has loaded loses nothing.
   var early = [];
@@ -524,6 +538,78 @@ window.AnimalDexArkStart = function () {
   // Never waited on for long: offline, the scene comes up after 2.5 s without them. (One read with the loading
   // screen's script above, which asked already when it shows another language.)
   var loader = window.AnimalDexArkLoader;
+  // Ark Lite (decision 358, `src/lib/ark-lite.ts`): the Ark without the 3D world, for a phone that cannot build it in a
+  // time anyone waits (a Galaxy A02s: about 250 s to the first frame). Asked for (`?view=lite|3d`), else this device's
+  // last choice, else 2 GB or less (the browser's figure or the app's `?mem=`) or a very slow main thread: Lite, with
+  // "Open the 3D Ark" on it. Everyone else: the 3D Ark, and "Switch to Ark Lite" on the card after 20 s without it.
+  var liteAble = Boolean(Ark.mountArkLite && Ark.arkChooseView);
+  var viewStored = null;
+  try { viewStored = localStorage.getItem(Ark.ARK_VIEW_KEY); } catch (x) {}
+  var appMemory = Number(params.get("mem"));
+  var deviceMemory = appMemory > 0 ? appMemory : (navigator.deviceMemory || null);
+  var viewChoice = {view: "3d", why: "default"};
+  if (liteAble) {
+    var decided = Ark.arkChooseView({asked: params.get("view"), stored: viewStored, memoryGB: deviceMemory});
+    if (decided.why === "default" && Ark.arkCpuScore) {
+      try { decided = Ark.arkChooseView({memoryGB: deviceMemory, cpuMs: Ark.arkCpuScore()}); } catch (x) {}
+    }
+    viewChoice = decided;
+  }
+  // The 3D Ark is built only once wanted (on Lite, never unless asked for); Lite shown over it while `liteShown`.
+  var want3d = viewChoice.view !== "lite";
+  var liteShown = false;
+  var lite = null;
+  var liteHud = null;
+  function rememberView(view) { try { localStorage.setItem(Ark.ARK_VIEW_KEY, view); } catch (x) {} }
+  function liteTalk() { return talkWords ? {a: talkWords.animalTitleA, an: talkWords.animalTitleAn} : null; }
+  function liteMount() {
+    lite = Ark.mountArkLite(document.body, {
+      words: words,
+      locale: document.documentElement.lang || lang || "en",
+      iconUrl: function (slug) { return iconless[slug] ? "" : icons + encodeURIComponent(slug) + ".webp"; },
+      // (The poster's few-hundred-byte placeholder, blurred, as the loading screen: never the full poster's download.)
+      posterUrl: Ark.ARK_POSTER_BLURRED ? Ark.ARK_POSTER_BLURRED.tall : null,
+      linkLocale: /^id([-_]|$)/i.test(document.documentElement.lang || lang || "") ? "id" : null,
+      talk: liteTalk(),
+      onOpen3d: open3d,
+      onTalk: function (animal) {
+        if (!hasHost()) return false;
+        tell({type: "ark:talk", speciesSlug: animal.model_slug, animalId: animal.id});
+        return true;
+      }
+    });
+    lite.root.style.position = "fixed";
+    if (Ark.mountArkLiveHud) {
+      liteHud = Ark.mountArkLiveHud(lite.root, {
+        scene: function () { return null; },
+        words: words,
+        locale: document.documentElement.lang || lang || "en",
+        eventsUrl: fixtureAsked || feedOn ? null : "/api/ark/events",
+        iconUrl: function (slug) { return icons + encodeURIComponent(slug) + ".webp"; },
+        log: true,
+        bars: false,
+        reducedMotion: motion.matches
+      });
+    }
+    if (shown) { lite.update(shown); if (liteHud) liteHud.snapshot(shown); }
+  }
+  function showLite() {
+    if (!lite) liteMount();
+    liteShown = true;
+    lite.setShown(true);
+    lite.set3dReady(Boolean(load.frame));
+    tell({type: "ark:view", view: "lite"});
+  }
+  function open3d() {
+    rememberView("3d");
+    liteShown = false;
+    if (lite) lite.setShown(false);
+    tell({type: "ark:view", view: "3d"});
+    if (!want3d) {
+      want3d = true;
+      if (shown) show(shown);
+    }
+  }
   var wordsRead = Promise.race([new Promise(function (resolve) { setTimeout(resolve, 2500); }), loader.words()
     .then(function (body) {
       if (!body || !body.ark) return;
@@ -533,6 +619,8 @@ window.AnimalDexArkStart = function () {
       document.documentElement.dir = body.dir;
       document.title = words.metaTitle || document.title;
       if (hud) hud.setWords(words, body.language);
+      if (lite) lite.setWords(words, body.language, liteTalk());
+      if (liteHud) liteHud.setWords(words, body.language);
     })
     .catch(function () {})]);
 
@@ -690,6 +778,16 @@ window.AnimalDexArkStart = function () {
     }, 300);
   }
   loadStep("code");
+  // Ark Lite (decision 358): at once on a phone it was chosen for; elsewhere offered on the card after 20 s without the
+  // 3D Ark's first frame (the 3D Ark keeps loading behind, and Lite says when it is ready).
+  if (liteAble) {
+    if (!want3d) showLite();
+    else setTimeout(function () {
+      if (load.frame || loadFailed || liteShown || !loader.offer) return;
+      var liteWords = Ark.arkLiteWords(words && words.liteView);
+      loader.offer(liteWords.switchLite, function () { rememberView("lite"); showLite(); });
+    }, Ark.ARK_LITE_OFFER_MS);
+  }
 
   // The runtime's prebuild (the mount's heavy seeded work in a worker), once, before the first mount.
   var prepared = null;
@@ -730,8 +828,11 @@ window.AnimalDexArkStart = function () {
     shown = snapshot;
     loadData(snapshot);
     if (hud) hud.snapshot(snapshot);
+    if (lite) { lite.update(snapshot); if (liteHud) liteHud.snapshot(snapshot); }
     if (scene) { scene.update(snapshot); return; }
     if (mounting) { mounting.update(snapshot); return; }
+    // (Ark Lite: the 3D Ark waits until it is asked for.)
+    if (!want3d) return;
     // (The archipelago does the prebuild itself, with this page's worker files.)
     if (Ark.mountArchipelago) { mount(snapshot); return; }
     if (!prepared && Ark.prepareArk) {
@@ -803,6 +904,7 @@ window.AnimalDexArkStart = function () {
         tell({type: "ark:ready"});
         // The loading screen gives way at the first good frame (the second drawn: the first is a fog wash).
         Ark.arkWhenSettled(scene || mounting, function () {
+          if (lite) lite.set3dReady(true);
           loadStep("frame");
           loadAnimals();
         });

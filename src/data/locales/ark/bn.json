@@ -587,6 +587,16 @@
             "recoveringOne": "১টি সেরে উঠছে",
             "recoveringOther": "{count}টি সেরে উঠছে",
             "away": "সেরে ওঠার সময় এটি দূরে থাকে, তারপর আবার নিজের ঘর থেকে বেরিয়ে আসে।"
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "এই ডিভাইসের জন্য হালকা Ark",
+            "open3d": "3D Ark খুলুন",
+            "slowNote": "এই ডিভাইসে কয়েক মিনিট লাগতে পারে",
+            "switchLite": "Ark Lite-এ যান",
+            "ready3d": "3D Ark প্রস্তুত",
+            "where": "কোথায় তারা থাকে",
+            "kindsMore": "আরও +{count}টি প্রজাতি"
         }
     },
     "talkPage": {

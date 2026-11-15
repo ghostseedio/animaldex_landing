@@ -587,6 +587,16 @@
             "recoveringOne": "1 sedang pulih",
             "recoveringOther": "{count} sedang pulih",
             "away": "Ia pergi seketika untuk pulih, kemudian keluar semula dari rumahnya."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Ark yang lebih ringan untuk peranti ini",
+            "open3d": "Buka Ark 3D",
+            "slowNote": "Ia mungkin mengambil masa beberapa minit pada peranti ini",
+            "switchLite": "Tukar ke Ark Lite",
+            "ready3d": "Ark 3D sudah sedia",
+            "where": "Tempat mereka tinggal",
+            "kindsMore": "+{count} spesies lagi"
         }
     },
     "talkPage": {

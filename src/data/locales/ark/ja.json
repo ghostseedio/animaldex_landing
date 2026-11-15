@@ -587,6 +587,16 @@
             "recoveringOne": "1匹が回復中",
             "recoveringOther": "{count}匹が回復中",
             "away": "回復するあいだは姿を消し、その後また自分のすみかから出てきます。"
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "この端末向けの軽いArk",
+            "open3d": "3DのArkを開く",
+            "slowNote": "この端末では数分かかることがあります",
+            "switchLite": "Ark Liteに切り替える",
+            "ready3d": "3DのArkの準備ができました",
+            "where": "すんでいる場所",
+            "kindsMore": "ほか{count}種"
         }
     },
     "talkPage": {

@@ -587,6 +587,16 @@
             "recoveringOne": "1 se zotavuje",
             "recoveringOther": "Zotavuje se: {count}",
             "away": "Je pryč, dokud se zotavuje, pak znovu vyjde ze svého domova."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Lehčí Ark pro toto zařízení",
+            "open3d": "Otevřít Ark ve 3D",
+            "slowNote": "Na tomto zařízení to může trvat několik minut",
+            "switchLite": "Přepnout na Ark Lite",
+            "ready3d": "Ark ve 3D je připravená",
+            "where": "Kde žijí",
+            "kindsMore": "+{count} dalších druhů"
         }
     },
     "talkPage": {

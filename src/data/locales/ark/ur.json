@@ -587,6 +587,16 @@
             "recoveringOne": "1 صحت یاب ہو رہا ہے",
             "recoveringOther": "{count} صحت یاب ہو رہے ہیں",
             "away": "صحت یاب ہونے تک یہ دور رہتا ہے، پھر دوبارہ اپنے گھر سے باہر آتا ہے۔"
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "اس ڈیوائس کے لیے ہلکا Ark",
+            "open3d": "3D Ark کھولیں",
+            "slowNote": "اس ڈیوائس پر چند منٹ لگ سکتے ہیں",
+            "switchLite": "Ark Lite پر جائیں",
+            "ready3d": "3D Ark تیار ہے",
+            "where": "وہ کہاں رہتے ہیں",
+            "kindsMore": "+{count} مزید انواع"
         }
     },
     "talkPage": {

@@ -27,6 +27,10 @@ import {arkDayForHost, arkStatusForHost} from "@/lib/ark-animal-status";
 import {arkSelectionExtras} from "@/lib/ark-selection-extras";
 import {arkReloadForRestoredContext} from "@/lib/ark-context-restore";
 import {arkRankedSpecies} from "@/lib/ark-population-change";
+import {ARK_LITE_OFFER_MS, ARK_VIEW_KEY, arkChooseView, arkLiteWords} from "@/lib/ark-lite";
+import {mountArkLite} from "@/ark-scene/lite/lite-view";
+import {ARK_POSTER_BLURRED} from "@/lib/ark-poster";
+import {arkCpuScore} from "@/ark-scene/runtime/pace";
 import {sameArkPush, sameJsonSliced} from "@/ark-scene/runtime/same";
 import {ARK_LOAD_START, ARK_LOST_CONTEXT_WAIT_MS, arkAgoText, arkFailedMessage, arkAnimalsHeld, arkAnimalsShare, arkLoadAnimals, arkLoadProgress, arkLoadStage, arkLoadStep, arkLoadWorking, arkNewestArrival, arkProgressMessage, arkWhenSettled, markArkLoad} from "@/lib/ark-loading";
 
@@ -70,6 +74,14 @@ declare global {
             arkFailedMessage: typeof arkFailedMessage;
             ARK_LOST_CONTEXT_WAIT_MS: typeof ARK_LOST_CONTEXT_WAIT_MS;
             arkRankedSpecies: typeof arkRankedSpecies;
+            /** Ark Lite (decision 358): the page, who gets it, its words, the offer's wait, the reader's choice's key, the CPU score. */
+            mountArkLite: typeof mountArkLite;
+            arkChooseView: typeof arkChooseView;
+            arkLiteWords: typeof arkLiteWords;
+            ARK_LITE_OFFER_MS: typeof ARK_LITE_OFFER_MS;
+            ARK_VIEW_KEY: typeof ARK_VIEW_KEY;
+            arkCpuScore: typeof arkCpuScore;
+            ARK_POSTER_BLURRED: typeof ARK_POSTER_BLURRED;
             /** A host's push of an unchanged Ark (`ark:snapshot`): found out in slices, nothing decoded (`runtime/same.ts`). */
             sameArkPush: typeof sameArkPush;
             sameJsonSliced: typeof sameJsonSliced;
@@ -115,6 +127,13 @@ window.AnimalDexArk = {
     arkFailedMessage,
     ARK_LOST_CONTEXT_WAIT_MS,
     arkRankedSpecies,
+    mountArkLite,
+    arkChooseView,
+    arkLiteWords,
+    ARK_LITE_OFFER_MS,
+    ARK_VIEW_KEY,
+    arkCpuScore,
+    ARK_POSTER_BLURRED,
     sameArkPush,
     sameJsonSliced,
     ARK_LOAD_START,

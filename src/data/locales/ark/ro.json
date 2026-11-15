@@ -587,6 +587,16 @@
             "recoveringOne": "1 se reface",
             "recoveringOther": "{count} se refac",
             "away": "E plecat cât se reface, apoi iese din nou din casa lui."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "O Ark mai ușoară pentru acest dispozitiv",
+            "open3d": "Deschide Ark în 3D",
+            "slowNote": "Pe acest dispozitiv poate dura câteva minute",
+            "switchLite": "Treci la Ark Lite",
+            "ready3d": "Ark în 3D e gata",
+            "where": "Unde trăiesc",
+            "kindsMore": "+{count} alte specii"
         }
     },
     "talkPage": {

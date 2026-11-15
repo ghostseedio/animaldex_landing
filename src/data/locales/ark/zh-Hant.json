@@ -587,6 +587,16 @@
             "recoveringOne": "1 隻恢復中",
             "recoveringOther": "{count} 隻恢復中",
             "away": "牠恢復期間會暫時離開，之後再從自己的家裡走出來。"
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "適合這部裝置的輕量版 Ark",
+            "open3d": "開啟 3D Ark",
+            "slowNote": "在這部裝置上可能需要幾分鐘",
+            "switchLite": "切換到 Ark Lite",
+            "ready3d": "3D Ark 已準備好",
+            "where": "牠們住在哪裡",
+            "kindsMore": "另有 {count} 個物種"
         }
     },
     "talkPage": {

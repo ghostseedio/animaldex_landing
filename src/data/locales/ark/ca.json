@@ -587,6 +587,16 @@
             "recoveringOne": "1 es recupera",
             "recoveringOther": "{count} es recuperen",
             "away": "És fora mentre es recupera, i després torna a sortir del seu cau."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Una Ark més lleugera per a aquest dispositiu",
+            "open3d": "Obre l'Ark en 3D",
+            "slowNote": "Pot trigar uns minuts en aquest dispositiu",
+            "switchLite": "Canvia a Ark Lite",
+            "ready3d": "L'Ark en 3D està a punt",
+            "where": "On viuen",
+            "kindsMore": "+{count} espècies més"
         }
     },
     "talkPage": {
