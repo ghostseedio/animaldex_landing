@@ -135,7 +135,7 @@ import {seaEpochSeconds} from "@/ark-scene/fish-schools";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake} from "@/lib/ark-daylight";
 import {arkAwakeAtHour, arkSleepOf, type Sleep} from "@/ark-scene/sleep-hours";
-import {hash32, islandHours} from "@/lib/ark-clock";
+import {ARK_DAY_MS, hash32, islandHours} from "@/lib/ark-clock";
 import {ArkLiveliness, type LiveAnimal, type LivePin} from "@/ark-scene/liveliness-scene";
 import {attachVary, setVary} from "@/ark-scene/ark-variation";
 import {tideFit} from "@/lib/ark-liveliness";
@@ -215,10 +215,11 @@ import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {LiveBirths} from "@/ark-scene/live-births";
+import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
 import {speciesCare} from "@/lib/ark-age";
 import {mealOnStage, mealScript, DRINK_REACH, type MealCatch} from "@/ark-scene/meal-acts";
-import {MealTraces} from "@/ark-scene/meal-traces";
+import {MealTraces, type TraceDraw} from "@/ark-scene/meal-traces";
 import {bodyMassKg, isScavenger, mealPlan, type MealPlan, type MealSide, type ScavengerCandidate} from "@/ark-scene/meals";
 import * as liveBudget from "@/ark-scene/live-budget";
 import {selectAim, selectionPins, selectionSurvives} from "@/ark-scene/selection";
@@ -6977,9 +6978,74 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id))
     });
     /** The meals' traces this frame (feathers, fur, scales, pressed grass), and the pressed grass for the grass to bend. */
-    let tracesNow: ReturnType<typeof liveMeals.traces> = [];
+    let tracesNow: TraceDraw[] = [];
+    /**
+     * Dung (`dung.ts`, handover §5): the droppings of the land mammals near where the camera looks, each where its day
+     * had it when it fell (pure in the time: the same marks for every viewer), and the pause of one whose moment has
+     * just come while it stands still. Listed every 2 s; the pauses posed every frame.
+     */
+    const DUNG_NEAR = 90;
+    const dungPlaces = new Map<string, {x: number; z: number; yaw: number; still: boolean} | null>();
+    let dungListedAt = -Infinity;
+    let dungMarks: TraceDraw[] = [];
+    let dungPauses: Array<{entry: Entry; key: string; at: number; place: {x: number; z: number; yaw: number}}> = [];
+    const dungActing = new Set<Entry>();
+    const stepDung = () => {
+        if (!world || reducedMotion || !scheduleOn) {
+            if (dungMarks.length) dungMarks = [];
+            return;
+        }
+        const epoch = worldMs() / 1000;
+        const now = performance.now();
+        if (now - dungListedAt > 2000) {
+            dungListedAt = now;
+            const marks: typeof dungMarks = [];
+            const pauses: typeof dungPauses = [];
+            const day = ARK_DAY_MS / 1000;
+            if (dungPlaces.size > 4000) dungPlaces.clear();
+            for (const e of allEntries()) {
+                const at = e.sched?.pose;
+                if (!e.sched || !at || e.held || e.visitor) continue;
+                if (Math.hypot(at.x - controls.target.x, at.z - controls.target.z) > DUNG_NEAR) continue;
+                const plan = library.get(e.animal.model_slug)?.behaviour?.plan ?? null;
+                if (!leavesDung(plan, e.length, Boolean(e.place.water) || atSeaOf(e) || Boolean(e.place.hamlet))) continue;
+                const diet = dungDiet(e.sched.profile.diet);
+                for (const drop of dungDrops(e.animal.id, diet, epoch, day)) {
+                    let place = dungPlaces.get(drop.key);
+                    if (place === undefined) {
+                        const p = schedulePose(e, drop.at);
+                        const later = schedulePose(e, drop.at + DUNG_PAUSE_SECONDS);
+                        // (Not in the air, not in the water, not asleep in its den.)
+                        place = p.aloft || heightAt(p.x, p.z) < 0.05 || p.doing === "sleep" ? null : {x: p.x, z: p.z, yaw: p.yaw, still: Math.hypot(later.x - p.x, later.z - p.z) < 0.3};
+                        dungPlaces.set(drop.key, place);
+                    }
+                    if (!place) continue;
+                    const age = epoch - drop.at;
+                    marks.push({key: drop.key, x: place.x, y: 0, z: place.z, kind: "dung", flattened: false, size: Math.min(Math.max(e.length * 0.14, 0.06), 0.5), amount: 1, alpha: dungAlpha(age), seed: drop.key});
+                    if (place.still && age < DUNG_PAUSE_SECONDS + DUNG_SNIFF_SECONDS + 2) pauses.push({entry: e, key: drop.key, at: drop.at, place});
+                }
+            }
+            dungMarks = marks;
+            dungPauses = pauses;
+        }
+        const acting = new Set<Entry>();
+        for (const pause of dungPauses) {
+            const e = pause.entry;
+            if (e.moment || e.visitor || e.held || (e.act && !dungActing.has(e)) || mealPins.has(e.animal.id)) continue;
+            const act = dungPose(pause.place, pause.place.yaw, Math.max(heightAt(pause.place.x, pause.place.z), 0), dungDiet(e.sched!.profile.diet), e.length, pause.key, epoch - pause.at);
+            if (!act) continue;
+            e.act = act;
+            acting.add(e);
+        }
+        dungActing.forEach((e) => {
+            if (!acting.has(e)) e.act = null;
+        });
+        dungActing.clear();
+        acting.forEach((e) => dungActing.add(e));
+    };
     const stepMealTraces = () => {
-        const next = liveMeals.size ? liveMeals.traces(worldMs() / 1000) : [];
+        stepDung();
+        const next = (liveMeals.size ? (liveMeals.traces(worldMs() / 1000) as TraceDraw[]) : []).concat(dungMarks);
         if (!next.length && !tracesNow.length) return;
         tracesNow = next;
         mealTraces.set(next, (x, z) => Math.max(heightAt(x, z), 0));
