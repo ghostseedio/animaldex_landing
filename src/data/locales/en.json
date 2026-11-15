@@ -452,6 +452,7 @@
   "landing": {
     "hero": {
       "taglineLead": "Catch real animals.",
+      "taglineMiddle": "Meet them in a living world.",
       "taglineRest": "Talk to them.",
       "slogan": "Every animal has a lesson.",
       "explore": "Explore the live Ark",
@@ -461,7 +462,9 @@
       "interactDone": "Done exploring",
       "poster": "A moment on the Ark",
       "live": "Live, {time} on the island",
-      "sceneLabel": "The Ark: a shared 3D world of animal species, live"
+      "sceneLabel": "The Ark: a shared 3D world of animal species, live",
+      "real": "A real Komodo dragon, Komodo National Park",
+      "replay": "Play the opening again"
     },
     "taglines": {
       "b": {

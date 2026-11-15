@@ -452,6 +452,7 @@
   "landing": {
     "hero": {
       "taglineLead": "Tangkap hewan nyata.",
+      "taglineMiddle": "Temui mereka di dunia yang hidup.",
       "taglineRest": "Ajak mereka bicara.",
       "slogan": "Setiap hewan punya pelajaran.",
       "explore": "Jelajahi Bahtera langsung",
@@ -461,7 +462,9 @@
       "interactDone": "Selesai menjelajah",
       "poster": "Sesaat di Bahtera",
       "live": "Langsung, pukul {time} di pulau",
-      "sceneLabel": "Bahtera: dunia 3D bersama berisi spesies hewan, langsung"
+      "sceneLabel": "Bahtera: dunia 3D bersama berisi spesies hewan, langsung",
+      "real": "Komodo sungguhan, Taman Nasional Komodo",
+      "replay": "Putar ulang pembukaan"
     },
     "taglines": {
       "b": {
