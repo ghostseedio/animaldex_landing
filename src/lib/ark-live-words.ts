@@ -40,6 +40,8 @@ export type ArkLiveWords = {
     heartsLeftNone: string;
     withHearts: string;
     eatenBy: string;
+    /** A meal that ends a hunt seen setting out: "A Lion caught a Plains Zebra". */
+    caught?: string;
     revived: string;
     revivedYoung: string;
     gone: string;
@@ -76,6 +78,7 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     heartsLeftNone: "no ♥ left",
     withHearts: "{line} · {hearts}",
     eatenBy: "{animal} was eaten by {aPredator}",
+    caught: "{aPredator} caught {aPrey}",
     revived: "{animal} is back",
     revivedYoung: "{animal} is back, a young adult again",
     gone: "{animal} is gone from the Ark"

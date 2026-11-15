@@ -4529,6 +4529,7 @@
       "heartsLeftNone": "no ♥ left",
       "withHearts": "{line} · {hearts}",
       "eatenBy": "{animal} was eaten by {aPredator}",
+      "caught": "{aPredator} caught {aPrey}",
       "revived": "{animal} is back",
       "revivedYoung": "{animal} is back, a young adult again",
       "gone": "{animal} is gone from the Ark"

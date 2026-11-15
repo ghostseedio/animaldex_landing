@@ -215,3 +215,31 @@ test("the fixture feed with a pool (?fixture=grow): arrivals come from the pool 
     assert.equal(step.beat, "pair");
     assert.ok(step.snapshot.animals.slice(6).every((a) => snapshot.animals.some((b) => b.id === a.id)), "the newcomers are the fixture's next animals");
 });
+
+test("a hunt's outcome: the record's meal for a predator seen setting out to hunt says it caught its prey, and the hunting line gives way", () => {
+    const log = new ArkLiveLog({gap: 0, seenGap: 0});
+    const focus = (animalId: string) => ({animalId, speciesId: "lion", zone: null});
+    log.push([item({id: "now:hunt:L1:9", key: "now:hunting:hunting:lion", kind: "hunting", source: "now", animal: "African Lion", activity: "hunting", focus: focus("L1")})], 0);
+    log.step(0);
+    assert.equal(log.lines[0].kind, "hunting");
+    // 40 minutes on, the record: L1 caught a zebra.
+    log.push([item({id: "m1", key: "meal:lion:zebra", kind: "meal", animal: "African Lion", other: "Plains Zebra", focus: focus("L1")})], 40 * 60_000);
+    log.step(40 * 60_000);
+    assert.equal(log.lines.some((l) => l.kind === "hunting"), false);
+    const meal = log.lines.find((l) => l.kind === "meal")!;
+    assert.equal(meal.hunted, true);
+    assert.equal(arkLiveLineText(meal, {live: english.live, replay: english.replay}, "en"), "An African Lion caught a Plains Zebra");
+    // Another lion's meal, never seen hunting: the plain meal line.
+    log.push([item({id: "m2", key: "meal:lion:gnu", kind: "meal", animal: "African Lion", other: "Blue Wildebeest", focus: focus("L2")})], 41 * 60_000);
+    log.step(41 * 60_000);
+    assert.equal(log.lines.find((l) => l.id === "m2")!.hunted, undefined);
+});
+
+test("a hunt's outcome: past the window, a meal is a plain meal again", () => {
+    const log = new ArkLiveLog({gap: 0, seenGap: 0});
+    const focus = {animalId: "L1", speciesId: "lion", zone: null};
+    log.push([item({id: "now:hunt:L1:9", key: "k", kind: "hunting", source: "now", animal: "African Lion", focus})], 0);
+    log.push([item({id: "m1", key: "meal:lion:zebra", kind: "meal", animal: "African Lion", other: "Plains Zebra", focus})], ARK_LIVE_LOG_DEFAULTS.huntWindow + 1);
+    log.step(ARK_LIVE_LOG_DEFAULTS.huntWindow + 1);
+    assert.equal(log.lines.find((l) => l.kind === "meal")?.hunted, undefined);
+});
