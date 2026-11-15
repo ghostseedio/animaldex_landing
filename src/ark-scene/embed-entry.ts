@@ -26,8 +26,9 @@ import {mergeArkIslandsRouting} from "@/lib/ark-islands-local";
 import {arkDayForHost, arkStatusForHost} from "@/lib/ark-animal-status";
 import {arkSelectionExtras} from "@/lib/ark-selection-extras";
 import {arkReloadForRestoredContext} from "@/lib/ark-context-restore";
+import {arkRankedSpecies} from "@/lib/ark-population-change";
 import {sameArkPush, sameJsonSliced} from "@/ark-scene/runtime/same";
-import {ARK_LOAD_START, arkAgoText, arkAnimalsHeld, arkAnimalsShare, arkLoadAnimals, arkLoadProgress, arkLoadStage, arkLoadStep, arkLoadWorking, arkNewestArrival, arkProgressMessage, arkWhenSettled, markArkLoad} from "@/lib/ark-loading";
+import {ARK_LOAD_START, ARK_LOST_CONTEXT_WAIT_MS, arkAgoText, arkFailedMessage, arkAnimalsHeld, arkAnimalsShare, arkLoadAnimals, arkLoadProgress, arkLoadStage, arkLoadStep, arkLoadWorking, arkNewestArrival, arkProgressMessage, arkWhenSettled, markArkLoad} from "@/lib/ark-loading";
 
 declare global {
     interface Window {
@@ -65,6 +66,10 @@ declare global {
             arkDayForHost: typeof arkDayForHost;
             /** A lost WebGL context, back: the page reloads (`src/lib/ark-context-restore.ts`), twice at most in three minutes. */
             arkReloadForRestoredContext: typeof arkReloadForRestoredContext;
+            /** The Ark could not be built (a Galaxy A02s, 2026-11-15): the host's `ark:failed`, the wait for a lost context, who is aboard as a list. */
+            arkFailedMessage: typeof arkFailedMessage;
+            ARK_LOST_CONTEXT_WAIT_MS: typeof ARK_LOST_CONTEXT_WAIT_MS;
+            arkRankedSpecies: typeof arkRankedSpecies;
             /** A host's push of an unchanged Ark (`ark:snapshot`): found out in slices, nothing decoded (`runtime/same.ts`). */
             sameArkPush: typeof sameArkPush;
             sameJsonSliced: typeof sameJsonSliced;
@@ -107,6 +112,9 @@ window.AnimalDexArk = {
     arkSelectionExtras,
     arkDayForHost,
     arkReloadForRestoredContext,
+    arkFailedMessage,
+    ARK_LOST_CONTEXT_WAIT_MS,
+    arkRankedSpecies,
     sameArkPush,
     sameJsonSliced,
     ARK_LOAD_START,

@@ -233,3 +233,33 @@ export function readArkProgressMessage(data: unknown): {stage: ArkLoadStage; pro
     if (!stage || typeof message.progress !== "number") return null;
     return {stage, progress: clamp01(message.progress)};
 }
+
+/**
+ * Why the Ark could not be built, in one short line (a Galaxy A02s, 2026-11-15: stuck on "Building the island" in the
+ * browser and the app). Shown small under the loading card's words and sent to the host (`ark:failed`), so a
+ * screenshot from a phone whose console cannot be read says what went wrong.
+ */
+export const ARK_FAILURE_TEXT_MAX = 160;
+
+export function arkFailureText(error: unknown): string {
+    let text: string;
+    if (error instanceof Error) text = error.message ? `${error.name}: ${error.message}` : error.name;
+    else if (typeof error === "string") text = error;
+    else if (error && typeof error === "object" && typeof (error as {message?: unknown}).message === "string") text = (error as {message: string}).message;
+    else text = "unknown";
+    text = text.replace(/\s+/g, " ").trim() || "unknown";
+    return text.length > ARK_FAILURE_TEXT_MAX ? `${text.slice(0, ARK_FAILURE_TEXT_MAX - 1)}…` : text;
+}
+
+/** The message the embed sends its host when the Ark cannot be built: the host may close it or show its own words. */
+export type ArkFailedMessage = {type: "ark:failed"; reason: string};
+
+export function arkFailedMessage(error: unknown): ArkFailedMessage {
+    return {type: "ark:failed", reason: arkFailureText(error)};
+}
+
+/**
+ * A lost context with no first frame yet waits this long (ms) for the browser to hand one back (the page then
+ * reloads, `ark-context-restore.ts`); after it, the load has failed.
+ */
+export const ARK_LOST_CONTEXT_WAIT_MS = 8000;

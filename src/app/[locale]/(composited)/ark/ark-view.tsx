@@ -35,7 +35,7 @@ import {useParams} from "next/navigation";
 import ArkAgeAsk from "@/components/ark/ark-age-ask";
 import {ARK_SOUND_STORAGE_KEY, initialSoundPreference, storedSoundPreference} from "@/lib/ark-sound";
 import ArkLoaderCard, {type ArkLoaderNewest} from "@/app/[locale]/(composited)/ark/ark-loader";
-import {ARK_LOAD_START, arkAnimalsShare, arkLoadAnimals, arkLoadStage, arkLoadStep, arkNewestArrival, arkWhenSettled, markArkLoad, type ArkLoadState, type ArkLoadStep} from "@/lib/ark-loading";
+import {ARK_LOAD_START, ARK_LOST_CONTEXT_WAIT_MS, arkAnimalsShare, arkFailureText, arkLoadAnimals, arkLoadStage, arkLoadStep, arkNewestArrival, arkWhenSettled, markArkLoad, type ArkLoadState, type ArkLoadStep} from "@/lib/ark-loading";
 import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
 import {noteArkArrivalsSeen, startArkSession, trackArk} from "@/lib/ark-measure-client";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
@@ -458,9 +458,17 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                     });
                     sceneRef.current = handle;
                     // The island's seeded work done in its worker and the scene made (before its first frame).
-                    void (handle as ArkArchipelagoHandle).mounted?.().then(() => {
-                        if (!disposed) stepLoad("prepared");
-                    });
+                    // (A Galaxy A02s, 2026-11-15: an error while the island was made, three's "Error creating WebGL
+                    // context" or the mount's own, was swallowed and the card waited for good. Now: the list, as without WebGL.)
+                    void (handle as ArkArchipelagoHandle).mounted?.().then(
+                        () => {
+                            if (!disposed) stepLoad("prepared");
+                        },
+                        (error: unknown) => {
+                            console.error("[ark] the Ark could not be built:", arkFailureText(error));
+                            if (!disposed) setFailed(true);
+                        }
+                    );
                     // "See it in the Ark" (`?focus=`): straight to that animal or species, the reader's own first, on its island.
                     const focused = arkPickAnimal(arkFocusAnimals(snapshotRef.current ?? first, focusOn), null);
                     if (focused) {
@@ -494,6 +502,21 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         // The scene is built once, when the Ark is first read; later snapshots go through update().
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [hasSnapshot]);
+
+    // A context lost before the first frame: the browser may hand one back (the page then reloads, `ark-context-restore.ts`);
+    // if not within the wait, the Ark cannot be drawn here: the list, as without WebGL (a Galaxy A02s, 2026-11-15).
+    useEffect(() => {
+        if (settled || failed) return;
+        let timer: ReturnType<typeof setTimeout> | null = null;
+        const lost = () => {
+            if (timer === null) timer = setTimeout(() => setFailed(true), ARK_LOST_CONTEXT_WAIT_MS);
+        };
+        document.addEventListener("webglcontextlost", lost, true);
+        return () => {
+            document.removeEventListener("webglcontextlost", lost, true);
+            if (timer !== null) clearTimeout(timer);
+        };
+    }, [settled, failed]);
 
     useEffect(() => {
         sceneRef.current?.setMineOnly(mineOnly);
