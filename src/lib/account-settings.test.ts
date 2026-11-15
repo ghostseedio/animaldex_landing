@@ -58,8 +58,8 @@ test("record privacy reads one audience as itself and a mix as Custom (iOS playR
     assert.equal(recordPrivacySummary(decodeRecordPrivacy(null)), "Everyone");
 });
 
-test("alert types are iOS's five, Animal messages after Messages", () => {
-    assert.deepEqual(PUSH_PREFERENCE_ROWS.map((row) => row.title), ["Your captures", "Activity", "Messages", "Animal messages", "Credits"]);
+test("alert types are iOS's four, Animal messages after Messages, no Credits", () => {
+    assert.deepEqual(PUSH_PREFERENCE_ROWS.map((row) => row.title), ["Your captures", "Activity", "Messages", "Animal messages"]);
 });
 
 test("account standing says what iOS says, and keeps removed strikes apart", () => {
