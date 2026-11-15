@@ -596,7 +596,14 @@
             "switchLite": "Overschakelen naar Ark Lite",
             "ready3d": "De Ark in 3D is klaar",
             "where": "Waar ze leven",
-            "kindsMore": "+{count} soorten meer"
+            "kindsMore": "+{count} soorten meer",
+            "latest": "Nieuw op de Ark",
+            "live": "Live",
+            "showMore": "Meer tonen",
+            "showLess": "Minder tonen",
+            "tapKind": "Tik op een soort om te zien wie elk dier meebracht",
+            "animalsMore": "+{count} meer",
+            "you": "Jij"
         }
     },
     "talkPage": {

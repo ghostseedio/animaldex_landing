@@ -596,7 +596,14 @@
             "switchLite": "Bytt til Ark Lite",
             "ready3d": "Ark i 3D er klar",
             "where": "Hvor de bor",
-            "kindsMore": "+{count} arter til"
+            "kindsMore": "+{count} arter til",
+            "latest": "Siste nytt på Arken",
+            "live": "Direkte",
+            "showMore": "Vis mer",
+            "showLess": "Vis mindre",
+            "tapKind": "Trykk på en art for å se hvem som tok med hvert dyr",
+            "animalsMore": "+{count} til",
+            "you": "Deg"
         }
     },
     "talkPage": {

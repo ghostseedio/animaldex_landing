@@ -596,7 +596,14 @@
             "switchLite": "Ark Lite پر جائیں",
             "ready3d": "3D Ark تیار ہے",
             "where": "وہ کہاں رہتے ہیں",
-            "kindsMore": "+{count} مزید انواع"
+            "kindsMore": "+{count} مزید انواع",
+            "latest": "کشتی پر تازہ ترین",
+            "live": "لائیو",
+            "showMore": "مزید دکھائیں",
+            "showLess": "کم دکھائیں",
+            "tapKind": "کون سا جانور کون لایا، دیکھنے کے لیے کسی نوع پر ٹیپ کریں",
+            "animalsMore": "+{count} مزید",
+            "you": "آپ"
         }
     },
     "talkPage": {

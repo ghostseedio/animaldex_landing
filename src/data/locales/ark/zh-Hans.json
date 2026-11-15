@@ -596,7 +596,14 @@
             "switchLite": "切换到 Ark Lite",
             "ready3d": "3D Ark 已就绪",
             "where": "它们住在哪里",
-            "kindsMore": "另有 {count} 个物种"
+            "kindsMore": "另有 {count} 个物种",
+            "latest": "方舟最新动态",
+            "live": "直播",
+            "showMore": "显示更多",
+            "showLess": "收起",
+            "tapKind": "点按一个物种，看看每只是谁带来的",
+            "animalsMore": "+{count} 只",
+            "you": "你"
         }
     },
     "talkPage": {

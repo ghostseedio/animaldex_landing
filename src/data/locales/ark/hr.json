@@ -596,7 +596,14 @@
             "switchLite": "Prijeđi na Ark Lite",
             "ready3d": "Ark u 3D-u je spreman",
             "where": "Gdje žive",
-            "kindsMore": "+{count} vrsta više"
+            "kindsMore": "+{count} vrsta više",
+            "latest": "Najnovije na Arci",
+            "live": "Uživo",
+            "showMore": "Prikaži više",
+            "showLess": "Prikaži manje",
+            "tapKind": "Dodirnite vrstu da vidite tko je koju životinju doveo",
+            "animalsMore": "+{count} više",
+            "you": "Vi"
         }
     },
     "talkPage": {

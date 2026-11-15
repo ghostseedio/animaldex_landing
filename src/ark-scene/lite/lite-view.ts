@@ -1,14 +1,24 @@
 /**
  * Ark Lite's page (`src/lib/ark-lite.ts` says what and for whom): the Ark without the 3D world. Plain DOM, as the live
- * log and bars are, so the apps' embed and /ark draw the same thing. The live log is mounted into it by its page
- * (`mountArkLiveHud` with no scene: the server's record), floating at its foot as over the world.
+ * log and bars are, so the apps' embed and /ark draw the same thing.
  *
- * Privacy: the reader's own animals only (the snapshot's `mine`); everyone else's as kinds and counts.
+ * - "Latest on the Ark" (`src/lib/ark-lite-feed.ts`): the record as it comes, newest first, with a Live dot; it reads
+ *   the server's record every 30 s while shown, and new lines light up as they land.
+ * - The reader's own animals.
+ * - Where they are: each region's kinds; a tapped kind lists its animals and who brought each one (decision 359).
+ *
+ * Privacy: the record's lines name species only; a founder is named only as the 3D Ark's box names one (the founders
+ * read's @handle, while the server names founders), never a Voyager label or a display name.
  */
 
 import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkFounders} from "@/lib/ark-founders";
+import {decodeArkEvents} from "@/lib/ark-life";
+import {arkLiveLineText} from "@/lib/ark-live-log";
+import {arkLiveTextOf, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
+import {ARK_LITE_FEED_BACK_MS, ARK_LITE_FEED_LONG, ARK_LITE_FEED_POLL_MS, ARK_LITE_FEED_SHORT, arkLiteFeedFromEvents, arkLiteFeedLines, arkLiteFeedMerge, arkLiteFeedSeed, type ArkLiteFeedEntry} from "@/lib/ark-lite-feed";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
-import {arkLiteModel, arkLiteWords, type ArkLiteMine, type ArkLiteModel, type ArkLiteViewWords} from "@/lib/ark-lite";
+import {arkLiteKindAnimals, arkLiteModel, arkLiteWords, type ArkLiteKind, type ArkLiteMine, type ArkLiteModel, type ArkLiteViewWords} from "@/lib/ark-lite";
 import {arkAgoText} from "@/lib/ark-loading";
 import {arkSelectionExtras} from "@/lib/ark-selection-extras";
 import {fillArkWords} from "@/lib/ark-words";
@@ -31,6 +41,10 @@ export type ArkLiteOptions = {
     linkLocale?: string | null;
     /** The Talk pages' "Talk to a {animal}" / "Talk to an {animal}" (the words read's `talkPage`). */
     talk?: {a?: string | null; an?: string | null} | null;
+    /** The server's record (`/api/ark/events`), or null: the snapshot's arrivals and births only. */
+    eventsUrl?: string | null;
+    /** A bringer's @handle tapped; true when the host handled it (the link then does not navigate). */
+    onProfile?: ((handle: string) => boolean) | null;
 };
 
 export type ArkLiteHandle = {
@@ -40,6 +54,8 @@ export type ArkLiteHandle = {
     setWords: (words: Loose, locale: string, talk?: {a?: string | null; an?: string | null} | null) => void;
     /** The 3D Ark loading behind: "Open the 3D Ark" becomes "The 3D Ark is ready". */
     set3dReady: (ready: boolean) => void;
+    /** The founders read beside the snapshot (who brought which animal, while the server names founders). */
+    setFounders: (founders: ArkFounders | null) => void;
     setShown: (shown: boolean) => void;
     dispose: () => void;
 };
@@ -52,7 +68,7 @@ const CSS = `
 .arkl-bg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.55}
 .arkl-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,20,14,.25) 0,rgba(14,20,14,.82) 38%,rgba(14,20,14,.94) 100%)}
 .arkl-scroll{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-.arkl-col{box-sizing:border-box;max-width:34rem;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(150px + env(safe-area-inset-bottom,0px) + var(--ark-inset-bottom,0px))}
+.arkl-col{box-sizing:border-box;max-width:34rem;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px) + var(--ark-inset-bottom,0px))}
 .arkl-head{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
 .arkl-title{margin:0;font:700 22px/1.15 ${FONT};letter-spacing:-.01em}
 .arkl-sub{margin:0;color:rgba(255,252,244,.66);font-size:12.5px}
@@ -87,6 +103,35 @@ const CSS = `
 .arkl-kind .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .arkl-kind .c{color:rgba(255,252,244,.6);font-variant-numeric:tabular-nums}
 .arkl-more{align-self:center;color:rgba(255,252,244,.55);font-size:11.5px}
+button.arkl-kind{border:0;color:inherit;font:inherit;cursor:pointer;text-align:left}
+button.arkl-kind.open{background:rgba(200,250,99,.22)}
+button.arkl-more{border:0;background:none;padding:6px 4px;font:600 11.5px/1.2 ${FONT};cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.arkl-hint{margin:-2px 0 8px;color:rgba(255,252,244,.55);font-size:11.5px}
+.arkl-who{list-style:none;margin:10px 0 0;padding:8px 0 0;border-top:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:6px}
+.arkl-who li{display:flex;justify-content:space-between;gap:10px;font-size:12px;line-height:1.3}
+.arkl-who .w{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arkl-who .w b{font-weight:700}
+.arkl-who .w .by{color:rgba(255,252,244,.72)}
+.arkl-who a{color:#c8fa63;font-weight:700;text-decoration:none}
+.arkl-who .you{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;background:#c8fa63;color:#14200c;font-size:10.5px;font-weight:700}
+.arkl-who .ago{flex:none;color:rgba(255,252,244,.5);font-variant-numeric:tabular-nums}
+.arkl-feedh{display:flex;align-items:center;gap:8px}
+.arkl-live{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:999px;background:rgba(255,107,122,.16);color:#ff8d98;font-size:10.5px;letter-spacing:.06em}
+.arkl-live i{width:7px;height:7px;border-radius:4px;background:#ff5a6c;animation:arkl-pulse 1.6s ease-in-out infinite}
+.arkl-live.off{background:rgba(255,255,255,.08);color:rgba(255,252,244,.5)}
+.arkl-live.off i{background:rgba(255,255,255,.35);animation:none}
+@keyframes arkl-pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.35;transform:scale(.7)}}
+.arkl-feed{list-style:none;margin:0;padding:4px 0;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(14,20,14,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.arkl-ev{display:flex;align-items:center;gap:10px;padding:7px 12px;font-size:12.5px;line-height:1.3}
+.arkl-ev+.arkl-ev{border-top:1px solid rgba(255,255,255,.06)}
+.arkl-ev .i{flex:none;width:28px;height:28px;border-radius:14px;background:#f6f1e7;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.arkl-ev .i img{width:24px;height:24px;object-fit:contain}
+.arkl-ev .t{flex:1;min-width:0}
+.arkl-ev .ago{flex:none;color:rgba(255,252,244,.5);font-size:11px;font-variant-numeric:tabular-nums}
+.arkl-ev.new{animation:arkl-new 2.4s ease-out}
+@keyframes arkl-new{0%{background:rgba(200,250,99,.32)}100%{background:transparent}}
+.arkl-feedmore{display:block;margin:6px auto 0;border:0;background:none;color:rgba(255,252,244,.7);font:600 12px/1.2 ${FONT};padding:6px 10px;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+@media (prefers-reduced-motion:reduce){.arkl-live i,.arkl-ev.new{animation:none}}
 `;
 
 function ensureStyle() {
@@ -138,6 +183,19 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
     let hearts: Readonly<Record<string, number>> | null = null;
     let ready = false;
     let talk = options.talk ?? null;
+    let founders: ArkFounders | null = null;
+    let shown = true;
+    let disposed = false;
+    /** The record read so far, newest first; the lines drawn last (new ones light up); "Show more" open. */
+    let feed: ArkLiteFeedEntry[] = [];
+    const drawn = new Set<string>();
+    let feedLong = false;
+    let feedOk = true;
+    let cursor = Date.now() - ARK_LITE_FEED_BACK_MS;
+    let reading = false;
+    /** Regions with all their kinds shown; the kind whose animals are listed ("region|key"). */
+    const allKinds = new Set<string>();
+    let openKind: string | null = null;
 
     const root = el("div", "arkl");
     root.dataset.arkLite = "1";
@@ -151,6 +209,95 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
     host.appendChild(root);
 
     const number = (n: number) => n.toLocaleString(locale);
+    const feedBox = el("section");
+
+    function liveText() {
+        return arkLiveTextOf({live: sub(words, "live"), replay: sub(words, "replay"), activity: sub(words, "activity")} as ArkLiveWordsIn);
+    }
+
+    function renderFeed() {
+        const lines = arkLiteFeedLines(feed, feedLong ? ARK_LITE_FEED_LONG : ARK_LITE_FEED_SHORT);
+        if (!lines.length) {
+            feedBox.replaceChildren();
+            return;
+        }
+        const first = drawn.size === 0;
+        const head = el("h2", "arkl-h arkl-feedh");
+        head.appendChild(el("span", undefined, lite.latest));
+        const live = el("span", `arkl-live${feedOk && options.eventsUrl ? "" : " off"}`);
+        live.appendChild(el("i"));
+        live.appendChild(el("span", undefined, lite.live));
+        head.appendChild(live);
+        const list = el("ul", "arkl-feed");
+        list.setAttribute("aria-live", "polite");
+        const text = liveText();
+        const now = new Date();
+        for (const line of lines) {
+            const fresh = !first && !drawn.has(line.id);
+            const item = el("li", `arkl-ev${fresh ? " new" : ""}`);
+            item.appendChild(icon("i", line.slug, options.iconUrl));
+            item.appendChild(el("span", "t", arkLiveLineText(line.item, text, locale)));
+            item.appendChild(el("span", "ago", arkAgoText(line.at, now, locale)));
+            list.appendChild(item);
+        }
+        for (const line of lines) for (const id of line.ids) drawn.add(id);
+        const toggle = el("button", "arkl-feedmore", feedLong ? lite.showLess : lite.showMore);
+        toggle.type = "button";
+        toggle.addEventListener("click", () => {
+            feedLong = !feedLong;
+            renderFeed();
+        });
+        feedBox.replaceChildren(head, list);
+        if (arkLiteFeedLines(feed, ARK_LITE_FEED_SHORT + 1).length > ARK_LITE_FEED_SHORT) feedBox.appendChild(toggle);
+    }
+
+    function addFeed(entries: ArkLiteFeedEntry[]) {
+        if (!entries.length) return;
+        feed = arkLiteFeedMerge(feed, entries);
+        renderFeed();
+    }
+
+    function readFeed(again = 0) {
+        const url = options.eventsUrl;
+        if (!url || reading || disposed) return;
+        reading = true;
+        const since = new Date(cursor).toISOString();
+        let more = false;
+        fetch(`${url}?since=${encodeURIComponent(since)}`, {cache: "no-store"})
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: {events?: unknown; available?: boolean; more?: boolean} | null) => {
+                if (disposed) return;
+                feedOk = Boolean(body && body.available !== false);
+                if (!body || !feedOk) return;
+                const events = decodeArkEvents(body.events ?? [], snapshot);
+                let newest = cursor;
+                for (const event of events) newest = Math.max(newest, Date.parse(event.at) || 0);
+                more = body.more === true && newest > cursor;
+                cursor = newest;
+                feed = arkLiteFeedMerge(feed, arkLiteFeedFromEvents(events));
+            })
+            .catch(() => {
+                feedOk = false;
+            })
+            .finally(() => {
+                reading = false;
+                if (disposed) return;
+                renderFeed();
+                if (more && again < 3) readFeed(again + 1);
+            });
+    }
+
+    const visible = () => shown && !disposed && (typeof document === "undefined" || document.visibilityState !== "hidden");
+    // Every 30 s while shown: the record since the newest line, and the lines' times moved on.
+    const timer = setInterval(() => {
+        if (!visible()) return;
+        if (options.eventsUrl) readFeed();
+        else renderFeed();
+    }, ARK_LITE_FEED_POLL_MS);
+    const onVisible = () => {
+        if (visible()) readFeed();
+    };
+    if (typeof document !== "undefined") document.addEventListener("visibilitychange", onVisible);
 
     function header(model: ArkLiteModel): HTMLElement {
         const head = el("header", "arkl-head");
@@ -213,6 +360,54 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
         return item;
     }
 
+    function byline(animal: {name: string; origin: "arrived" | "born"; handle: string | null}): HTMLElement | null {
+        const extras = arkSelectionExtras({
+            animal: {name: animal.name, model_slug: "", placeholder: true, origin: animal.origin},
+            founder: animal.handle ? {handle: animal.handle} : null,
+            words: {broughtBy: str(sub(sub(words, "founders"), "card").broughtBy, ""), bornAboard: str(sub(words, "life").bornAboard, "")},
+            locale: options.linkLocale ?? null
+        });
+        const by = extras.byline;
+        if (!by) return null;
+        const span = el("span", "by");
+        if (by.kind === "text") {
+            span.textContent = by.text;
+            return span;
+        }
+        const [before, after = ""] = by.template.split("{name}");
+        span.appendChild(document.createTextNode(before));
+        const link = el("a", undefined, `@${by.handle}`);
+        link.href = by.href;
+        link.addEventListener("click", (event) => {
+            if (options.onProfile?.(by.handle)) event.preventDefault();
+        });
+        span.appendChild(link);
+        if (after) span.appendChild(document.createTextNode(after));
+        return span;
+    }
+
+    function whoList(region: string, kind: ArkLiteKind): HTMLElement {
+        const list = el("ul", "arkl-who");
+        const {animals, more} = arkLiteKindAnimals(snapshot, founders, region, kind.key);
+        const now = new Date();
+        for (const animal of animals) {
+            const row = el("li");
+            const who = el("span", "w");
+            who.appendChild(el("b", undefined, animal.name));
+            const by = byline(animal);
+            if (by) {
+                who.appendChild(document.createTextNode(" · "));
+                who.appendChild(by);
+            }
+            if (animal.mine) who.appendChild(el("span", "you", lite.you));
+            row.appendChild(who);
+            row.appendChild(el("span", "ago", arkAgoText(animal.arrivedAt, now, locale)));
+            list.appendChild(row);
+        }
+        if (more > 0) list.appendChild(el("li", "arkl-more", fillArkWords(lite.animalsMore, {count: number(more)})));
+        return list;
+    }
+
     function regionCard(region: ArkLiteModel["regions"][number]): HTMLElement {
         const card = el("li", "arkl-region");
         const top = el("div", "arkl-rtop");
@@ -225,16 +420,35 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
         bar.appendChild(fill);
         card.appendChild(bar);
         const kinds = el("div", "arkl-kinds");
-        for (const kind of region.kinds) {
-            const chip = el("span", `arkl-kind${kind.mine > 0 ? " mine" : ""}`);
+        const showAll = allKinds.has(region.region);
+        let open: ArkLiteKind | null = null;
+        for (const kind of showAll ? [...region.kinds, ...region.rest] : region.kinds) {
+            const id = `${region.region}|${kind.key}`;
+            if (openKind === id) open = kind;
+            const chip = el("button", `arkl-kind${kind.mine > 0 ? " mine" : ""}${openKind === id ? " open" : ""}`);
+            chip.type = "button";
+            chip.setAttribute("aria-expanded", openKind === id ? "true" : "false");
             chip.appendChild(icon("i", kind.slug || null, options.iconUrl));
             chip.appendChild(el("span", "t", kind.name));
             chip.appendChild(el("span", "c", number(kind.count)));
+            chip.addEventListener("click", () => {
+                openKind = openKind === id ? null : id;
+                render();
+            });
             kinds.appendChild(chip);
         }
-        const more = region.species - region.kinds.length;
-        if (more > 0) kinds.appendChild(el("span", "arkl-more", fillArkWords(lite.kindsMore, {count: number(more)})));
+        if (region.rest.length) {
+            const more = el("button", "arkl-more", showAll ? lite.showLess : fillArkWords(lite.kindsMore, {count: number(region.rest.length)}));
+            more.type = "button";
+            more.addEventListener("click", () => {
+                if (showAll) allKinds.delete(region.region);
+                else allKinds.add(region.region);
+                render();
+            });
+            kinds.appendChild(more);
+        }
         card.appendChild(kinds);
+        if (open) card.appendChild(whoList(region.region, open));
         return card;
     }
 
@@ -243,6 +457,7 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
         const top = scroll.scrollTop;
         col.replaceChildren();
         col.appendChild(header(model));
+        col.appendChild(feedBox);
         if (model.mine.length) {
             col.appendChild(el("h2", "arkl-h", str(words?.myAnimals, "My animals")));
             const list = el("ul", "arkl-list");
@@ -251,6 +466,7 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
         }
         if (model.regions.length) {
             col.appendChild(el("h2", "arkl-h", lite.where));
+            col.appendChild(el("p", "arkl-hint", lite.tapKind));
             const list = el("ul", "arkl-list");
             for (const region of model.regions) list.appendChild(regionCard(region));
             col.appendChild(list);
@@ -259,10 +475,14 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
     }
 
     render();
+    readFeed();
     return {
         root,
         update: (next) => {
             snapshot = next;
+            // Its newest arrivals and births at once (the record's own reading of them replaces these as it comes).
+            feed = arkLiteFeedMerge(feed, arkLiteFeedSeed(next));
+            renderFeed();
             render();
         },
         setHearts: (next) => {
@@ -274,6 +494,7 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
             if (nextTalk !== undefined) talk = nextTalk;
             locale = nextLocale || locale;
             lite = arkLiteWords(sub(words, "liteView"));
+            renderFeed();
             render();
         },
         set3dReady: (next) => {
@@ -281,9 +502,21 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
             ready = next;
             render();
         },
-        setShown: (shown) => {
-            root.hidden = !shown;
+        setFounders: (next) => {
+            founders = next;
+            if (openKind) render();
         },
-        dispose: () => root.remove()
+        setShown: (next) => {
+            const was = shown;
+            shown = next;
+            root.hidden = !next;
+            if (next && !was) readFeed();
+        },
+        dispose: () => {
+            disposed = true;
+            clearInterval(timer);
+            if (typeof document !== "undefined") document.removeEventListener("visibilitychange", onVisible);
+            root.remove();
+        }
     };
 }

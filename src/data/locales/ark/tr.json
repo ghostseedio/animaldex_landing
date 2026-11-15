@@ -596,7 +596,14 @@
             "switchLite": "Ark Lite'a geç",
             "ready3d": "3D Ark hazır",
             "where": "Nerede yaşıyorlar",
-            "kindsMore": "+{count} tür daha"
+            "kindsMore": "+{count} tür daha",
+            "latest": "Gemide son olanlar",
+            "live": "Canlı",
+            "showMore": "Daha fazla göster",
+            "showLess": "Daha az göster",
+            "tapKind": "Her birini kimin getirdiğini görmek için bir türe dokun",
+            "animalsMore": "+{count} daha",
+            "you": "Sen"
         }
     },
     "talkPage": {

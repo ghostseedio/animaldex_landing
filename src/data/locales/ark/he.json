@@ -596,7 +596,14 @@
             "switchLite": "מעבר ל-Ark Lite",
             "ready3d": "Ark ב-3D מוכן",
             "where": "איפה הם חיים",
-            "kindsMore": "+{count} מינים נוספים"
+            "kindsMore": "+{count} מינים נוספים",
+            "latest": "החדשות בתיבה",
+            "live": "בשידור חי",
+            "showMore": "הצג עוד",
+            "showLess": "הצג פחות",
+            "tapKind": "הקישו על מין כדי לראות מי הביא כל אחד",
+            "animalsMore": "+{count} נוספים",
+            "you": "את/ה"
         }
     },
     "talkPage": {

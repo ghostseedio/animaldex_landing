@@ -596,7 +596,14 @@
             "switchLite": "เปลี่ยนเป็น Ark Lite",
             "ready3d": "Ark แบบ 3D พร้อมแล้ว",
             "where": "ที่ที่พวกมันอาศัย",
-            "kindsMore": "อีก {count} ชนิด"
+            "kindsMore": "อีก {count} ชนิด",
+            "latest": "ล่าสุดบนเรือ",
+            "live": "สด",
+            "showMore": "แสดงเพิ่ม",
+            "showLess": "แสดงน้อยลง",
+            "tapKind": "แตะชนิดสัตว์เพื่อดูว่าใครพาแต่ละตัวมา",
+            "animalsMore": "+อีก {count}",
+            "you": "คุณ"
         }
     },
     "talkPage": {

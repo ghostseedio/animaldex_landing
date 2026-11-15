@@ -596,7 +596,14 @@
             "switchLite": "Váltás Ark Lite-ra",
             "ready3d": "Az Ark 3D-ben elkészült",
             "where": "Hol élnek",
-            "kindsMore": "+{count} további faj"
+            "kindsMore": "+{count} további faj",
+            "latest": "Legfrissebb a Bárkán",
+            "live": "Élő",
+            "showMore": "Több",
+            "showLess": "Kevesebb",
+            "tapKind": "Koppints egy fajra, hogy lásd, ki melyik állatot hozta",
+            "animalsMore": "+{count} további",
+            "you": "Te"
         }
     },
     "talkPage": {

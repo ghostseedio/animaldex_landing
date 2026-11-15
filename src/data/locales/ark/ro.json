@@ -596,7 +596,14 @@
             "switchLite": "Treci la Ark Lite",
             "ready3d": "Ark în 3D e gata",
             "where": "Unde trăiesc",
-            "kindsMore": "+{count} alte specii"
+            "kindsMore": "+{count} alte specii",
+            "latest": "Cele mai noi pe Arcă",
+            "live": "Live",
+            "showMore": "Arată mai mult",
+            "showLess": "Arată mai puțin",
+            "tapKind": "Atinge o specie ca să vezi cine a adus fiecare animal",
+            "animalsMore": "+{count} în plus",
+            "you": "Tu"
         }
     },
     "talkPage": {

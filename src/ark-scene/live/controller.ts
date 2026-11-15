@@ -69,6 +69,11 @@ function words(input: ArkLiveWordsIn): {text: ArkLiveText; showMe: string} {
     };
 }
 
+/** The log's words with English under what is missing: for a page that says the record's lines itself (Ark Lite). */
+export function arkLiveTextOf(input: ArkLiveWordsIn): ArkLiveText {
+    return words(input).text;
+}
+
 /** Pages of the event log read in a row at most when the server says there are more (`more`). */
 const MORE_PAGES = 4;
 /** How long a moment's animal and kind keep the same act seen near the camera from being said again (ms). */

@@ -596,7 +596,14 @@
             "switchLite": "انتقل إلى Ark Lite",
             "ready3d": "Ark بتقنية 3D جاهز",
             "where": "أين يعيشون",
-            "kindsMore": "+{count} أنواع أخرى"
+            "kindsMore": "+{count} أنواع أخرى",
+            "latest": "آخر الأخبار على السفينة",
+            "live": "مباشر",
+            "showMore": "عرض المزيد",
+            "showLess": "عرض أقل",
+            "tapKind": "اضغط على نوع لترى من أحضر كل واحد",
+            "animalsMore": "+{count} أخرى",
+            "you": "أنت"
         }
     },
     "talkPage": {

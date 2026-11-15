@@ -596,7 +596,14 @@
             "switchLite": "Перейти на Ark Lite",
             "ready3d": "Ark в 3D готов",
             "where": "Где они живут",
-            "kindsMore": "ещё {count} видов"
+            "kindsMore": "ещё {count} видов",
+            "latest": "Последнее на Ковчеге",
+            "live": "В эфире",
+            "showMore": "Показать ещё",
+            "showLess": "Свернуть",
+            "tapKind": "Нажмите на вид, чтобы увидеть, кто привёз каждое животное",
+            "animalsMore": "+{count} ещё",
+            "you": "Вы"
         }
     },
     "talkPage": {

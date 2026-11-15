@@ -596,7 +596,14 @@
             "switchLite": "Ark Lite 'ਤੇ ਜਾਓ",
             "ready3d": "3D Ark ਤਿਆਰ ਹੈ",
             "where": "ਉਹ ਕਿੱਥੇ ਰਹਿੰਦੇ ਹਨ",
-            "kindsMore": "+{count} ਹੋਰ ਪ੍ਰਜਾਤੀਆਂ"
+            "kindsMore": "+{count} ਹੋਰ ਪ੍ਰਜਾਤੀਆਂ",
+            "latest": "ਆਰਕ 'ਤੇ ਤਾਜ਼ਾ",
+            "live": "ਲਾਈਵ",
+            "showMore": "ਹੋਰ ਦਿਖਾਓ",
+            "showLess": "ਘੱਟ ਦਿਖਾਓ",
+            "tapKind": "ਕੌਣ ਕਿਹੜਾ ਜਾਨਵਰ ਲਿਆਇਆ ਦੇਖਣ ਲਈ ਕਿਸੇ ਪ੍ਰਜਾਤੀ 'ਤੇ ਟੈਪ ਕਰੋ",
+            "animalsMore": "+{count} ਹੋਰ",
+            "you": "ਤੁਸੀਂ"
         }
     },
     "talkPage": {

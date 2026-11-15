@@ -596,7 +596,14 @@
             "switchLite": "Ark Lite-এ যান",
             "ready3d": "3D Ark প্রস্তুত",
             "where": "কোথায় তারা থাকে",
-            "kindsMore": "আরও +{count}টি প্রজাতি"
+            "kindsMore": "আরও +{count}টি প্রজাতি",
+            "latest": "আর্কে সর্বশেষ",
+            "live": "লাইভ",
+            "showMore": "আরও দেখান",
+            "showLess": "কম দেখান",
+            "tapKind": "কে কোনটি এনেছে দেখতে একটি প্রজাতিতে ট্যাপ করুন",
+            "animalsMore": "+আরও {count}",
+            "you": "আপনি"
         }
     },
     "talkPage": {

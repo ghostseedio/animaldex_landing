@@ -559,7 +559,6 @@ window.AnimalDexArkStart = function () {
   var want3d = viewChoice.view !== "lite";
   var liteShown = false;
   var lite = null;
-  var liteHud = null;
   function rememberView(view) { try { localStorage.setItem(Ark.ARK_VIEW_KEY, view); } catch (x) {} }
   function liteTalk() { return talkWords ? {a: talkWords.animalTitleA, an: talkWords.animalTitleAn} : null; }
   function liteMount() {
@@ -576,22 +575,19 @@ window.AnimalDexArkStart = function () {
         if (!hasHost()) return false;
         tell({type: "ark:talk", speciesSlug: animal.model_slug, animalId: animal.id});
         return true;
+      },
+      // "Latest on the Ark": the server's record, read every 30 s while shown (its own feed; no floating log over it).
+      eventsUrl: fixtureAsked || feedOn ? null : "/api/ark/events",
+      // A bringer's @handle in a tapped kind's list: the app's own profile, as the 3D Ark's box does it.
+      onProfile: function (handle) {
+        if (!hasHost()) return false;
+        tell({type: "ark:open-profile", handle: handle});
+        return true;
       }
     });
     lite.root.style.position = "fixed";
-    if (Ark.mountArkLiveHud) {
-      liteHud = Ark.mountArkLiveHud(lite.root, {
-        scene: function () { return null; },
-        words: words,
-        locale: document.documentElement.lang || lang || "en",
-        eventsUrl: fixtureAsked || feedOn ? null : "/api/ark/events",
-        iconUrl: function (slug) { return icons + encodeURIComponent(slug) + ".webp"; },
-        log: true,
-        bars: false,
-        reducedMotion: motion.matches
-      });
-    }
-    if (shown) { lite.update(shown); if (liteHud) liteHud.snapshot(shown); }
+    lite.setFounders(founders);
+    if (shown) lite.update(shown);
   }
   function showLite() {
     if (!lite) liteMount();
@@ -620,7 +616,6 @@ window.AnimalDexArkStart = function () {
       document.title = words.metaTitle || document.title;
       if (hud) hud.setWords(words, body.language);
       if (lite) lite.setWords(words, body.language, liteTalk());
-      if (liteHud) liteHud.setWords(words, body.language);
     })
     .catch(function () {})]);
 
@@ -828,7 +823,7 @@ window.AnimalDexArkStart = function () {
     shown = snapshot;
     loadData(snapshot);
     if (hud) hud.snapshot(snapshot);
-    if (lite) { lite.update(snapshot); if (liteHud) liteHud.snapshot(snapshot); }
+    if (lite) { lite.setFounders(founders); lite.update(snapshot); }
     if (scene) { scene.update(snapshot); return; }
     if (mounting) { mounting.update(snapshot); return; }
     // (Ark Lite: the 3D Ark waits until it is asked for.)

@@ -1173,6 +1173,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                         ready3d={settled}
                         onOpen3d={open3d}
                         eventsUrl={fixture ? null : "/api/ark/events"}
+                        founders={founders}
                     />
                 ) : null}
 

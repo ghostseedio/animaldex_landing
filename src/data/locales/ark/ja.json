@@ -596,7 +596,14 @@
             "switchLite": "Ark Liteに切り替える",
             "ready3d": "3DのArkの準備ができました",
             "where": "すんでいる場所",
-            "kindsMore": "ほか{count}種"
+            "kindsMore": "ほか{count}種",
+            "latest": "箱舟の最新情報",
+            "live": "ライブ",
+            "showMore": "もっと見る",
+            "showLess": "閉じる",
+            "tapKind": "種類をタップすると、それぞれを連れてきた人が見られます",
+            "animalsMore": "+{count}件",
+            "you": "あなた"
         }
     },
     "talkPage": {

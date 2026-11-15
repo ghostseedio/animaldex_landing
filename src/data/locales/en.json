@@ -4802,7 +4802,14 @@
       "switchLite": "Switch to Ark Lite",
       "ready3d": "The 3D Ark is ready",
       "where": "Where they are",
-      "kindsMore": "+{count} more kinds"
+      "kindsMore": "+{count} more kinds",
+      "latest": "Latest on the Ark",
+      "live": "Live",
+      "showMore": "Show more",
+      "showLess": "Show less",
+      "tapKind": "Tap a kind to see who brought each one",
+      "animalsMore": "+{count} more",
+      "you": "You"
     }
   },
   "seo": {
