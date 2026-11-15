@@ -2,6 +2,7 @@ import "server-only";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import type {ArkSnapshot} from "@/ark-scene/types";
 import {readPublicArk} from "@/data/ark-public";
+import {arkLandingHunt, decodeArkHunting, decodeArkHuntingResponse, type ArkLandingHunt} from "@/lib/ark-hunting";
 import {arkActivity, isAwake, sunElevation} from "@/lib/ark-daylight";
 import {arkHappeningsSince, arkPopulationSeries, arkSeriesTimes} from "@/lib/ark-population-series";
 import {arkSpeciesKey} from "@/lib/ark-population";
@@ -119,7 +120,10 @@ function slim(item: unknown): Row | null {
         const animal = record(value);
         return animal ? {id: text(animal.id), species_profile_id: text(animal.species_profile_id), model_slug: text(animal.model_slug)} : null;
     };
-    return {id: row.id ?? null, at: text(row.at), kind: text(row.kind), species_profile_id: text(row.species_profile_id), animal: animalOf(row.animal), other: animalOf(row.other)};
+    const kind = text(row.kind);
+    // (A meal under encounter hunting carries its geometry: kept as a flag, so the page knows hunts have begun.)
+    const encounter = kind === "meal" && Boolean(row.encounter ?? record(row.payload)?.encounter);
+    return {id: row.id ?? null, at: text(row.at), kind, species_profile_id: text(row.species_profile_id), animal: animalOf(row.animal), other: animalOf(row.other), ...(encounter ? {encounter: true} : {})};
 }
 
 async function readLogPage(since: string): Promise<{events: unknown[]; next: string | null; more: boolean} | null> {
@@ -205,6 +209,30 @@ async function readLog(startedAt: string): Promise<{rows: Row[]; complete: boole
     return {rows: log.rows, complete: log.complete, gapAt: log.gapAt};
 }
 
+// MARK: Hunting
+
+/** `voyage_hunting_v1` (mode, clock, every living predator's next hunt), or null when it cannot be read. */
+async function readHunting(): Promise<ReturnType<typeof decodeArkHunting>> {
+    const url = getSupabaseUrl();
+    const key = getSupabasePublicKey();
+    try {
+        if (url && key) {
+            const response = await fetch(`${url}/rest/v1/rpc/voyage_hunting_v1`, {
+                method: "POST",
+                headers: getSupabaseHeaders(key, {"Content-Type": "application/json"}),
+                body: JSON.stringify({p_voyage: "first"}),
+                cache: "no-store"
+            });
+            return response.ok ? decodeArkHunting(await response.json().catch(() => null)) : null;
+        }
+        if (!viaLiveSite()) return null;
+        const response = await fetch(`${LIVE_SITE}/api/ark/hunting`, {cache: "no-store"});
+        return response.ok ? decodeArkHuntingResponse(await response.json().catch(() => null)) : null;
+    } catch {
+        return null;
+    }
+}
+
 // MARK: The summary
 
 function awakeByHour(snapshot: ArkSnapshot): number[] {
@@ -227,14 +255,18 @@ function topSpecies(snapshot: ArkSnapshot, count: number): ArkLandingSummary["to
     return Array.from(rows.values()).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name)).slice(0, count);
 }
 
-const EMPTY: ArkLandingSummary = {available: false, asOf: null, startedAt: null, counts: {animals: 0, species: 0, founders: 0}, today: null, top: [], awake: [], series: null};
+const EMPTY: ArkLandingSummary = {available: false, asOf: null, startedAt: null, counts: {animals: 0, species: 0, founders: 0}, today: null, top: [], awake: [], series: null, hunt: null};
 
 async function buildSummary(): Promise<ArkLandingSummary> {
     const snapshot = await readSnapshot();
     if (!snapshot) return EMPTY;
     const startedAt = snapshot.voyage.started_at;
     const now = Date.parse(snapshot.as_of ?? "") || Date.now();
-    const {rows, complete, gapAt} = startedAt ? await readLog(startedAt) : {rows: [], complete: false, gapAt: null};
+    const [{rows, complete, gapAt}, hunting] = await Promise.all([
+        startedAt ? readLog(startedAt) : Promise.resolve({rows: [] as Row[], complete: false, gapAt: null}),
+        readHunting()
+    ]);
+    const hunt: ArkLandingHunt | null = arkLandingHunt(hunting, complete && rows.some((row) => row.encounter === true));
     const since = now - DAY_MS;
     const series = startedAt && rows.length
         ? arkPopulationSeries(snapshot, rows, {times: arkSeriesTimes(Date.parse(startedAt), now, SERIES_POINTS), top: SERIES_SPECIES, complete: complete || gapAt !== null, unloggedCameAt: gapAt})
@@ -247,7 +279,8 @@ async function buildSummary(): Promise<ArkLandingSummary> {
         today: complete || (gapAt !== null && gapAt < since) ? {since: new Date(since).toISOString(), ...arkHappeningsSince(rows, since)} : null,
         top: topSpecies(snapshot, 3),
         awake: awakeByHour(snapshot),
-        series
+        series,
+        hunt
     };
 }
 

@@ -482,7 +482,10 @@
       "meals": "Mangsa dimakan, 24 jam terakhir",
       "asOf": "Dari catatan publik Bahtera, {time}",
       "unavailable": "Angka langsung belum bisa dibaca sekarang.",
-      "noMeals": "Belum ada yang dimangsa: pendatang baru mendapat masa aman saat peluncuran.",
+      "huntsFirstOn": "Perburuan pertama mulai {date}",
+      "huntsFirstIn": "Perburuan pertama dalam {duration}",
+      "huntsNextOn": "Perburuan berikutnya mulai {date}",
+      "huntsNextIn": "Perburuan berikutnya dalam {duration}",
       "top": "Paling banyak: {list}. Bahtera berisi apa yang difoto orang."
     },
     "steps": {
