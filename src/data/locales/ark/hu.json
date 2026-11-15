@@ -587,6 +587,16 @@
             "recoveringOne": "1 lábadozik",
             "recoveringOther": "{count} lábadozik",
             "away": "Távol van, amíg felépül, aztán újra kijön az otthonából."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Könnyebb Ark ehhez az eszközhöz",
+            "open3d": "Az Ark megnyitása 3D-ben",
+            "slowNote": "Ezen az eszközön ez néhány percig is eltarthat",
+            "switchLite": "Váltás Ark Lite-ra",
+            "ready3d": "Az Ark 3D-ben elkészült",
+            "where": "Hol élnek",
+            "kindsMore": "+{count} további faj"
         }
     },
     "talkPage": {

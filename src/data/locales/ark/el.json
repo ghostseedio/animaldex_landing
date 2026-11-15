@@ -587,6 +587,16 @@
             "recoveringOne": "1 αναρρώνει",
             "recoveringOther": "{count} αναρρώνουν",
             "away": "Λείπει όσο αναρρώνει, και μετά βγαίνει ξανά από το σπίτι του."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Μια πιο ελαφριά Ark για αυτή τη συσκευή",
+            "open3d": "Άνοιξε την Ark σε 3D",
+            "slowNote": "Μπορεί να πάρει μερικά λεπτά σε αυτή τη συσκευή",
+            "switchLite": "Μετάβαση στο Ark Lite",
+            "ready3d": "Η Ark σε 3D είναι έτοιμη",
+            "where": "Πού ζουν",
+            "kindsMore": "+{count} ακόμη είδη"
         }
     },
     "talkPage": {

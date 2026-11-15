@@ -587,6 +587,16 @@
             "recoveringOne": "1 відновлюється",
             "recoveringOther": "Відновлюються: {count}",
             "away": "Поки воно відновлюється, його немає, а потім воно знову виходить зі свого дому."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Легший Ark для цього пристрою",
+            "open3d": "Відкрити Ark у 3D",
+            "slowNote": "На цьому пристрої це може тривати кілька хвилин",
+            "switchLite": "Перейти на Ark Lite",
+            "ready3d": "Ark у 3D готовий",
+            "where": "Де вони живуть",
+            "kindsMore": "ще {count} видів"
         }
     },
     "talkPage": {

@@ -27,7 +27,7 @@ const FADE_MS = 450;
  * population chip's, beside it, so they are not said twice. A screen reader hears the stage as it changes; the bar is
  * a progressbar with the stage as its text.
  */
-export default function ArkLoaderCard({state, words, newest, locale}: {state: ArkLoadState; words: ArkWords; newest: ArkLoaderNewest | null; locale: string}) {
+export default function ArkLoaderCard({state, words, newest, locale, offer = null}: {state: ArkLoadState; words: ArkWords; newest: ArkLoaderNewest | null; locale: string; offer?: {label: string; onPick: () => void} | null}) {
     // The icon is asked for once the world is drawn (17 KB was 0.1 s to the first frame on slow 4G): until then its
     // circle in the placeholder's grey.
     const showIcon = state.frame;
@@ -81,6 +81,12 @@ export default function ArkLoaderCard({state, words, newest, locale}: {state: Ar
                         <span className="mt-0.5 block truncate text-[13px] font-semibold">{newest.name}</span>
                     </span>
                 </div>
+            ) : null}
+            {/* Ark Lite's offer (decision 358): once the 3D Ark has kept the reader waiting. */}
+            {offer ? (
+                <button type="button" onClick={offer.onPick} className="mt-2.5 inline-flex min-h-[34px] items-center rounded-[10px] border border-[#c8fa63]/50 bg-[#c8fa63]/[0.12] px-3 text-[12.5px] font-bold text-[#e7fdb8]">
+                    {offer.label}
+                </button>
             ) : null}
         </div>
     );

@@ -587,6 +587,16 @@
             "recoveringOne": "1마리 회복 중",
             "recoveringOther": "{count}마리 회복 중",
             "away": "회복하는 동안 자리를 비우고, 그다음 다시 집에서 걸어 나와요."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "이 기기를 위한 가벼운 Ark",
+            "open3d": "3D Ark 열기",
+            "slowNote": "이 기기에서는 몇 분 걸릴 수 있어요",
+            "switchLite": "Ark Lite로 전환",
+            "ready3d": "3D Ark가 준비됐어요",
+            "where": "사는 곳",
+            "kindsMore": "+{count}종 더"
         }
     },
     "talkPage": {

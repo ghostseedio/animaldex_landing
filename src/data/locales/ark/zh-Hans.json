@@ -587,6 +587,16 @@
             "recoveringOne": "1 只恢复中",
             "recoveringOther": "{count} 只恢复中",
             "away": "它恢复期间会暂时离开，之后再从自己的家里走出来。"
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "适合此设备的轻量版 Ark",
+            "open3d": "打开 3D Ark",
+            "slowNote": "在此设备上可能需要几分钟",
+            "switchLite": "切换到 Ark Lite",
+            "ready3d": "3D Ark 已就绪",
+            "where": "它们住在哪里",
+            "kindsMore": "另有 {count} 个物种"
         }
     },
     "talkPage": {

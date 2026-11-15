@@ -587,6 +587,16 @@
             "recoveringOne": "1 يتعافى",
             "recoveringOther": "{count} يتعافون",
             "away": "إنه غائب ريثما يتعافى، ثم يخرج من بيته من جديد."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "نسخة أخف من Ark لهذا الجهاز",
+            "open3d": "افتح Ark بتقنية 3D",
+            "slowNote": "قد يستغرق ذلك بضع دقائق على هذا الجهاز",
+            "switchLite": "انتقل إلى Ark Lite",
+            "ready3d": "Ark بتقنية 3D جاهز",
+            "where": "أين يعيشون",
+            "kindsMore": "+{count} أنواع أخرى"
         }
     },
     "talkPage": {

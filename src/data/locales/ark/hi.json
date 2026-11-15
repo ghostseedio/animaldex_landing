@@ -587,6 +587,16 @@
             "recoveringOne": "1 ठीक हो रहा है",
             "recoveringOther": "{count} ठीक हो रहे हैं",
             "away": "ठीक होने तक यह दूर रहता है, फिर अपने घर से फिर बाहर आता है।"
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "इस डिवाइस के लिए हल्का Ark",
+            "open3d": "3D Ark खोलें",
+            "slowNote": "इस डिवाइस पर कुछ मिनट लग सकते हैं",
+            "switchLite": "Ark Lite पर जाएँ",
+            "ready3d": "3D Ark तैयार है",
+            "where": "वे कहाँ रहते हैं",
+            "kindsMore": "+{count} और प्रजातियाँ"
         }
     },
     "talkPage": {

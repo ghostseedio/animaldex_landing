@@ -4778,6 +4778,16 @@
       "recoveringOne": "1 sedang pulih",
       "recoveringOther": "{count} sedang pulih",
       "away": "Ia pergi sementara untuk pulih, lalu keluar lagi dari rumahnya."
+    },
+    "liteView": {
+      "title": "Ark Lite",
+      "subtitle": "Ark yang lebih ringan untuk perangkat ini",
+      "open3d": "Buka Ark 3D",
+      "slowNote": "Bisa makan waktu beberapa menit di perangkat ini",
+      "switchLite": "Beralih ke Ark Lite",
+      "ready3d": "Ark 3D sudah siap",
+      "where": "Tempat mereka tinggal",
+      "kindsMore": "+{count} spesies lagi"
     }
   },
   "seo": {

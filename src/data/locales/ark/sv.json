@@ -587,6 +587,16 @@
             "recoveringOne": "1 återhämtar sig",
             "recoveringOther": "{count} återhämtar sig",
             "away": "Det är borta medan det återhämtar sig och går sedan ut ur sitt hem igen."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "En lättare Ark för den här enheten",
+            "open3d": "Öppna Ark i 3D",
+            "slowNote": "Det kan ta några minuter på den här enheten",
+            "switchLite": "Byt till Ark Lite",
+            "ready3d": "Ark i 3D är klar",
+            "where": "Var de lever",
+            "kindsMore": "+{count} arter till"
         }
     },
     "talkPage": {

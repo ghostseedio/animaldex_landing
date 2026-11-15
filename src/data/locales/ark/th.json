@@ -587,6 +587,16 @@
             "recoveringOne": "1 ตัวกำลังพักฟื้น",
             "recoveringOther": "{count} ตัวกำลังพักฟื้น",
             "away": "มันจะหายไประหว่างพักฟื้น แล้วจึงเดินออกจากบ้านของมันอีกครั้ง"
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Ark แบบเบาสำหรับอุปกรณ์นี้",
+            "open3d": "เปิด Ark แบบ 3D",
+            "slowNote": "อาจใช้เวลาสักครู่บนอุปกรณ์นี้",
+            "switchLite": "เปลี่ยนเป็น Ark Lite",
+            "ready3d": "Ark แบบ 3D พร้อมแล้ว",
+            "where": "ที่ที่พวกมันอาศัย",
+            "kindsMore": "อีก {count} ชนิด"
         }
     },
     "talkPage": {

@@ -587,6 +587,16 @@
             "recoveringOne": "1 inapona",
             "recoveringOther": "{count} zinapona",
             "away": "Iko mbali inapopona, kisha inatoka tena nyumbani kwake."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Ark nyepesi kwa kifaa hiki",
+            "open3d": "Fungua Ark ya 3D",
+            "slowNote": "Inaweza kuchukua dakika chache kwenye kifaa hiki",
+            "switchLite": "Badili kwenda Ark Lite",
+            "ready3d": "Ark ya 3D iko tayari",
+            "where": "Wanakoishi",
+            "kindsMore": "+{count} spishi zaidi"
         }
     },
     "talkPage": {

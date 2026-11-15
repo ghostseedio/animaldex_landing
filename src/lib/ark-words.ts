@@ -421,6 +421,8 @@ export type ArkWords = {
     capture: ArkCaptureWords;
     herd: ArkHerdWords;
     lite: ArkLiteWords;
+    /** Ark Lite, the Ark without the 3D world (decision 358, `lib/ark-lite.ts`); optional: an older bundle lacks it. */
+    liteView?: import("@/lib/ark-lite").ArkLiteViewWords;
     /** The live log over the world and the population bars (owner, 2026-11-11). */
     live: ArkLiveWords;
     /** The tap card's "Now" and "Next", its log and bars (decision 240). */

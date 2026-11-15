@@ -587,6 +587,16 @@
             "recoveringOne": "1 குணமடைகிறது",
             "recoveringOther": "{count} குணமடைகின்றன",
             "away": "குணமடையும் வரை அது விலகி இருக்கும், பிறகு மீண்டும் தன் வீட்டிலிருந்து வெளியே வரும்."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "இந்தச் சாதனத்துக்கான இலகுவான Ark",
+            "open3d": "3D Ark-ஐத் திற",
+            "slowNote": "இந்தச் சாதனத்தில் சில நிமிடங்கள் ஆகலாம்",
+            "switchLite": "Ark Lite-க்கு மாறு",
+            "ready3d": "3D Ark தயார்",
+            "where": "அவை எங்கே வாழ்கின்றன",
+            "kindsMore": "+{count} மேலும் இனங்கள்"
         }
     },
     "talkPage": {

@@ -587,6 +587,16 @@
             "recoveringOne": "1 iyileşiyor",
             "recoveringOther": "{count} iyileşiyor",
             "away": "İyileşene kadar ortada yok, sonra yine evinden çıkıp geliyor."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Bu cihaz için daha hafif bir Ark",
+            "open3d": "Ark'ı 3D aç",
+            "slowNote": "Bu cihazda birkaç dakika sürebilir",
+            "switchLite": "Ark Lite'a geç",
+            "ready3d": "3D Ark hazır",
+            "where": "Nerede yaşıyorlar",
+            "kindsMore": "+{count} tür daha"
         }
     },
     "talkPage": {

@@ -587,6 +587,16 @@
             "recoveringOne": "1 in convalescenza",
             "recoveringOther": "{count} in convalescenza",
             "away": "È via mentre si riprende, poi esce di nuovo dalla sua tana."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Un'Ark più leggera per questo dispositivo",
+            "open3d": "Apri l'Ark in 3D",
+            "slowNote": "Su questo dispositivo può richiedere qualche minuto",
+            "switchLite": "Passa ad Ark Lite",
+            "ready3d": "L'Ark in 3D è pronta",
+            "where": "Dove vivono",
+            "kindsMore": "+{count} altre specie"
         }
     },
     "talkPage": {

@@ -587,6 +587,16 @@
             "recoveringOne": "1 herstelt",
             "recoveringOther": "{count} herstellen",
             "away": "Het is weg zolang het herstelt en komt daarna weer uit zijn thuis."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Een lichtere Ark voor dit apparaat",
+            "open3d": "De Ark in 3D openen",
+            "slowNote": "Dit kan op dit apparaat een paar minuten duren",
+            "switchLite": "Overschakelen naar Ark Lite",
+            "ready3d": "De Ark in 3D is klaar",
+            "where": "Waar ze leven",
+            "kindsMore": "+{count} soorten meer"
         }
     },
     "talkPage": {

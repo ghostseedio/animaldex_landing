@@ -587,6 +587,16 @@
             "recoveringOne": "1 מחלים",
             "recoveringOther": "{count} מחלימים",
             "away": "הוא לא כאן בזמן שהוא מחלים, ואז יוצא שוב מביתו."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Ark קל יותר למכשיר הזה",
+            "open3d": "פתיחת Ark ב-3D",
+            "slowNote": "במכשיר הזה זה עשוי לקחת כמה דקות",
+            "switchLite": "מעבר ל-Ark Lite",
+            "ready3d": "Ark ב-3D מוכן",
+            "where": "איפה הם חיים",
+            "kindsMore": "+{count} מינים נוספים"
         }
     },
     "talkPage": {

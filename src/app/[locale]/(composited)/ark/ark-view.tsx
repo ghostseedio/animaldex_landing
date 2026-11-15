@@ -6,6 +6,8 @@ import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth
 import ArkPopulationHud from "@/app/[locale]/(composited)/ark/ark-population-hud";
 import {ArkPoster, ArkToast, ArkWorldTools, ARK_GLASS} from "@/app/[locale]/(composited)/ark/ark-world-tools";
 import {useArkLive} from "@/app/[locale]/(composited)/ark/use-ark-live";
+import ArkLiteLayer from "@/app/[locale]/(composited)/ark/ark-lite-layer";
+import {ARK_LITE_OFFER_MS, ARK_VIEW_KEY, arkChooseView, arkLiteWords, type ArkView} from "@/lib/ark-lite";
 import {readArkPopulationThen, type ArkPopulationThen} from "@/lib/ark-population-change";
 import type {ArkPageSummary} from "@/lib/ark-page-summary";
 import {arkNewArrivals} from "@/lib/ark-live-log";
@@ -381,10 +383,54 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
 
     // MARK: The scene
 
+    // Ark Lite (decision 358, `lib/ark-lite.ts`): the view chosen on the client (null until then: the 3D Ark waits for
+    // it). Lite is shown over the world; "Open the 3D Ark" builds it, "Switch to Ark Lite" (after 20 s without the 3D
+    // Ark's first frame) shows Lite while the 3D Ark goes on loading behind.
+    const [arkView, setArkView] = useState<ArkView | null>(null);
+    const [liteShown, setLiteShown] = useState(false);
+    const [liteOffer, setLiteOffer] = useState(false);
+    const rememberView = useCallback((view: ArkView) => {
+        try {
+            window.localStorage.setItem(ARK_VIEW_KEY, view);
+        } catch {
+            // (Not remembered: the device decides next time.)
+        }
+    }, []);
+    useEffect(() => {
+        let cancelled = false;
+        const apply = (view: ArkView) => {
+            if (cancelled) return;
+            setArkView(view);
+            setLiteShown(view === "lite");
+        };
+        let stored: string | null = null;
+        try {
+            stored = window.localStorage.getItem(ARK_VIEW_KEY);
+        } catch {
+            stored = null;
+        }
+        const memoryGB = (navigator as Navigator & {deviceMemory?: number}).deviceMemory ?? null;
+        const first = arkChooseView({asked: new URLSearchParams(window.location.search).get("view"), stored, memoryGB});
+        if (first.why !== "default") apply(first.view);
+        else void import("@/ark-scene/runtime/pace").then(({arkCpuScore}) => apply(arkChooseView({memoryGB, cpuMs: arkCpuScore()}).view)).catch(() => apply("3d"));
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+    const open3d = useCallback(() => {
+        rememberView("3d");
+        setLiteShown(false);
+        setArkView("3d");
+    }, [rememberView]);
+    const switchToLite = useCallback(() => {
+        rememberView("lite");
+        setLiteShown(true);
+    }, [rememberView]);
+
     useEffect(() => {
         const el = mountRef.current;
         const first = snapshotRef.current;
-        if (!el || !first) return;
+        if (!el || !first || arkView !== "3d") return;
         let disposed = false;
         let handle: ArkSceneHandle | null = null;
         let settleCancel: (() => void) | null = null;
@@ -499,9 +545,16 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
             handle?.dispose();
             sceneRef.current = null;
         };
-        // The scene is built once, when the Ark is first read; later snapshots go through update().
+        // The scene is built once, when the Ark is first read and the 3D Ark is wanted; later snapshots go through update().
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [hasSnapshot]);
+    }, [hasSnapshot, arkView]);
+
+    // The offer on the loading card once the 3D Ark has kept the reader waiting without its first frame.
+    useEffect(() => {
+        if (arkView !== "3d" || settled || failed) return;
+        const timer = setTimeout(() => setLiteOffer(true), ARK_LITE_OFFER_MS);
+        return () => clearTimeout(timer);
+    }, [arkView, settled, failed]);
 
     // A context lost before the first frame: the browser may hand one back (the page then reloads, `ark-context-restore.ts`);
     // if not within the wait, the Ark cannot be drawn here: the list, as without WebGL (a Galaxy A02s, 2026-11-15).
@@ -704,6 +757,8 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         if (ready) sceneRef.current?.setHearts?.(arkHeartsForScene(ownerHearts));
     }, [ready, ownerHearts]);
     const recovering = useMemo(() => arkRecoveringAnimals(ownerHearts), [ownerHearts]);
+    /** Ark Lite's hearts by animal (one object per read, not per render: the Lite page redraws on a change). */
+    const liteHearts = useMemo(() => arkHeartsForScene(ownerHearts), [ownerHearts]);
     useEffect(() => {
         if (!recovering.length) setRecoveringOpen(false);
     }, [recovering.length]);
@@ -1028,7 +1083,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         return animal ? {name: animal.name, slug: animal.model_slug, at: animal.arrived_at} : null;
     }, [newestAboard, snapshot]);
     const loadStage = arkLoadStage(load);
-    const loaderShown = !failed && !(unavailable && !snapshot) && !loadGaveUp && loadStage !== "done";
+    const loaderShown = !liteShown && !failed && !(unavailable && !snapshot) && !loadGaveUp && loadStage !== "done";
 
     // A tap in a list off the world (the reader scrolled down): the world comes back into view.
     const showWorld = () => {
@@ -1106,6 +1161,21 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                     </div>
                 ) : null}
 
+                {/* Ark Lite over everything in the world's frame (decision 358). */}
+                {liteShown && (snapshot || !unavailable) ? (
+                    <ArkLiteLayer
+                        snapshot={snapshot}
+                        hearts={liteHearts}
+                        words={words}
+                        locale={locale}
+                        linkLocale={siteLocale}
+                        talk={talkTitles}
+                        ready3d={settled}
+                        onOpen3d={open3d}
+                        eventsUrl={fixture ? null : "/api/ark/events"}
+                    />
+                ) : null}
+
                 {/* Over the world (decision 239): the toolbar (top start), the notices under it, who is aboard (top end; under
                     the toolbar on a phone). Clear of the live log and the reset button at the foot, and of an open card
                     (`--ark-card-h`, from the band's height). */}
@@ -1121,7 +1191,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
 
                         <div className="pointer-events-none col-span-2 row-start-3 flex min-w-0 flex-col items-start gap-2 self-start md:col-span-1 md:row-start-2">
                             {/* The loading card (decision rows, loading lane): the load's stages, the bar, the newest arrival. */}
-                            {!failed && !(unavailable && !snapshot) && !loadGaveUp ? <ArkLoaderCard state={load} words={words} newest={newestAboard ?? newestFromArk} locale={locale} /> : null}
+                            {!failed && !(unavailable && !snapshot) && !loadGaveUp ? <ArkLoaderCard state={load} words={words} newest={newestAboard ?? newestFromArk} locale={locale} offer={liteOffer && !settled && !liteShown ? {label: arkLiteWords(words.liteView).switchLite, onPick: switchToLite} : null} /> : null}
                             {replay ? (
                                 <ArkToast role="status" aria-live="polite">
                                     <div className="min-w-0 flex-1">

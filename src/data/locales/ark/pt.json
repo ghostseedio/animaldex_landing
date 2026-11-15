@@ -587,6 +587,16 @@
             "recoveringOne": "1 se recuperando",
             "recoveringOther": "{count} se recuperando",
             "away": "Ele fica fora enquanto se recupera e depois sai de novo da sua toca."
+        },
+        "liteView": {
+            "title": "Ark Lite",
+            "subtitle": "Uma Ark mais leve para este aparelho",
+            "open3d": "Abrir a Ark em 3D",
+            "slowNote": "Pode levar alguns minutos neste aparelho",
+            "switchLite": "Mudar para Ark Lite",
+            "ready3d": "A Ark em 3D está pronta",
+            "where": "Onde vivem",
+            "kindsMore": "+{count} outras espécies"
         }
     },
     "talkPage": {
