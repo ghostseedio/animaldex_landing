@@ -4,7 +4,7 @@ import type {ArkSnapshot} from "@/ark-scene/types";
 import {readPublicArk} from "@/data/ark-public";
 import {arkLandingHunt, decodeArkHunting, decodeArkHuntingResponse, type ArkLandingHunt} from "@/lib/ark-hunting";
 import {arkActivity, isAwake, sunElevation} from "@/lib/ark-daylight";
-import {arkHappeningsSince, arkPopulationSeries, arkSeriesTimes} from "@/lib/ark-population-series";
+import {arkHappeningsBetween, arkHappeningsSince, arkPopulationSeries, arkSeriesTimes} from "@/lib/ark-population-series";
 import {arkSpeciesKey} from "@/lib/ark-population";
 import {isMissingArkFunction} from "@/lib/ark-story";
 import {getSupabaseHeaders, getSupabasePublicKey, getSupabaseUrl} from "@/lib/supabase-http";
@@ -277,6 +277,7 @@ async function buildSummary(): Promise<ArkLandingSummary> {
         startedAt,
         counts: snapshot.counts,
         today: complete || (gapAt !== null && gapAt < since) ? {since: new Date(since).toISOString(), ...arkHappeningsSince(rows, since)} : null,
+        yesterday: complete || (gapAt !== null && gapAt < since - DAY_MS) ? arkHappeningsBetween(rows, since - DAY_MS, since) : null,
         top: topSpecies(snapshot, 3),
         awake: awakeByHour(snapshot),
         series,

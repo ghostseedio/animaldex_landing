@@ -18,6 +18,8 @@ export type ArkLandingSummary = {
     counts: {animals: number; species: number; founders: number};
     /** The last 24 hours of the log; null when it could not be read whole. */
     today: {since: string; arrivals: number; births: number; meals: number; deaths: number} | null;
+    /** The 24 hours before `today` (for its changes); null when the log does not reach back that far whole. */
+    yesterday?: {arrivals: number; births: number; meals: number; deaths: number} | null;
     /** The species with the most aboard, biggest first (the Ark is what people photograph). */
     top: Array<{name: string; slug: string; count: number}>;
     /** How many of those aboard are awake at each island hour (0–23), by the scene's own rule (`isAwake`). */
