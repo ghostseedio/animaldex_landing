@@ -70,6 +70,10 @@ export type ActPose = {
     with?: string;
     /** Its side in a meal's chase: the hunter (nearby prey scatter from it, `reactive.ts` `chasing`) or its quarry. */
     role?: "hunter" | "quarry";
+    /** Lying on its side after the catch (`meal-acts.ts`): the side (sign) and how far down (0–1), for the drawn roll. */
+    lying?: number;
+    /** What the card says it is doing while drawn so (`ark.activity.*`): a meal's eating, drinking, resting, a scavenger. */
+    meal?: "hunting" | "eating" | "drinking" | "resting" | "scavenging";
 };
 
 export type ActBody = {
@@ -254,6 +258,8 @@ export type ChaseOptions = {
     /** The two are where the server says (`encounterBodies`): the hunter starts from its waypoint, however far (up to
      *  40 m), closing the gap in its stalk; otherwise a far one comes into view nearer. */
     exact?: boolean;
+    /** The meal follows (`meal-acts.ts`): the chase ends at the catch, with no fade and no carrying off. */
+    meal?: boolean;
 };
 
 function rng(seed: string): () => number {
@@ -538,7 +544,7 @@ function landOrWaterChase(kind: ChaseKind, predator: ActBody, prey: ActBody, o: 
         pred.push({x: p.x, z: p.z, y: yOf(predator, p.x, p.z, predWater), yaw: p.yaw, v: p.v, state: predState, pitch: predWater ? 0 : predPitch});
         const preyY = flee === "fly" && tc < 0 ? q.y : flee === "fly" ? Math.max(q.y - (t - tc) * 3, yOf(prey, q.x, q.z, false)) : yOf(prey, q.x, q.z, preyWater);
         prq.push({x: q.x, z: q.z, y: preyY - (tc >= 0 ? prey.height * 0.25 * preyDim : 0), yaw: q.yaw, v: q.v, state: preyState, pitch: preyPitch, dim: preyDim, scale: 1 - 0.85 * preyDim, hidden: tc >= 0 && t >= tc + 0.55});
-        if (tc >= 0 && t >= tc + 1.4) break;
+        if (tc >= 0 && t >= tc + (o.meal ? 0 : 1.4)) break;
         // Never let it run on: past `maxT` (its way to the prey blocked all along, or a hunter whose clip caps its sprint
         // below its prey's pace) it lunges whatever is between, and the catch comes at once after that. (Without the
         // `tc < 0` the loop reset the catch every step and never ended.)
@@ -606,7 +612,7 @@ function swoopChase(predator: ActBody, prey: ActBody, o: ChaseOptions): Run {
     const q = {x: prey.x, z: prey.z, yaw: prey.yaw, v: 0, y: prey.base};
     const away = face + (random() < 0.5 ? -1 : 1) * (0.3 + 0.5 * random());
     const carry = lq < lp * 0.75;
-    const end = tc + 1.6;
+    const end = o.meal ? tc : tc + 1.6;
     for (let t = 0; t <= end + 1e-9; t += DT) {
         let state = "rest";
         if (t >= tFlee && t < tc) {
