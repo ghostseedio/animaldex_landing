@@ -583,6 +583,17 @@ export type ArkCardWords = {
     energy: string;
     awakeSince: string;
     asleepSince: string;
+    /** Its day (lane ark-its-day): the button, the window's heading, paging a day at a time, its marks. */
+    itsDay: string;
+    dayLast: string;
+    dayEarlier: string;
+    dayLater: string;
+    dayNow: string;
+    dayWorking: string;
+    dayRecord: string;
+    dayNone: string;
+    dayClose: string;
+    dayHint: string;
 };
 
 /** English, as `en.json` has it: the embed's fallback until (or unless) its words read. */
@@ -659,7 +670,17 @@ export const ARK_CARD_ENGLISH: ArkCardWords = {
     lifeLeft: "{percent} of its life left",
     energy: "Energy",
     awakeSince: "Awake since {time}",
-    asleepSince: "Asleep since {time}"
+    asleepSince: "Asleep since {time}",
+    itsDay: "Its day",
+    dayLast: "Last 24 hours",
+    dayEarlier: "Earlier day",
+    dayLater: "Later day",
+    dayNow: "Now",
+    dayWorking: "Working out its day…",
+    dayRecord: "On its record",
+    dayNone: "Its day can’t be worked out for this animal now.",
+    dayClose: "Close its day",
+    dayHint: "What it did, from the Ark’s shared schedule: the same for everyone. Dots are the Ark’s record."
 };
 
 /** The words a status needs: the activities, the card's, and the life story's and the story's few it borrows. */
@@ -791,4 +812,57 @@ export function arkStatusWords(ark: Loose): ArkStatusWords {
 export function arkStatusForHost(status: ArkAnimalStatus | null | undefined, ark: Loose, locale: string): (ArkAnimalStatus & {text: ArkStatusText}) | null {
     if (!status) return null;
     return {...status, text: arkStatusText(status, arkStatusWords(ark), locale)};
+}
+
+// MARK: Its day (lane ark-its-day, 2026-11-15)
+
+/** A stretch of its day (epoch ms) and what the card says through it. */
+export type ArkDaySegment = {from: number; to: number; activity: ArkActivityKey};
+
+/**
+ * Its day over a window (epoch ms): what it did, worked out from the same schedule and status the card reads (the scene's
+ * `animalDay`), and the server's record lines inside the window (meals, young, eggs laid, mating, its arrival).
+ * `since`: worked out from here to `to` (a long window is worked out a little a frame, its latest hours first); `done`
+ * once it is all there.
+ */
+export type ArkAnimalDay = {id: string; from: number; to: number; since: number; done: boolean; segments: ArkDaySegment[]; events: ArkStatusLogEntry[]};
+
+/** The longest window an `animalDay` works out at once, and how far back it may go (bounded work, a week). */
+export const ARK_DAY_MAX_MS = 24 * 3_600_000;
+export const ARK_DAY_BACK_MS = 7 * 24 * 3_600_000;
+
+/** A day window clamped to what may be asked: at most a day long, ending by `now`, starting at most a week back. */
+export function arkDayWindow(from: number, to: number, now: number): {from: number; to: number} | null {
+    if (!Number.isFinite(from) || !Number.isFinite(to)) return null;
+    const end = Math.min(to, now);
+    const start = Math.max(from, end - ARK_DAY_MAX_MS, now - ARK_DAY_BACK_MS - ARK_DAY_MAX_MS);
+    return end > start ? {from: start, to: end} : null;
+}
+
+export type ArkDayText = {
+    segments: Array<ArkDaySegment & {text: string; stamp: string}>;
+    events: Array<{id: string; at: number; kind: ArkStatusLogEntry["kind"]; stamp: string; text: string}>;
+};
+
+/** Its day in the reader's words: each stretch's activity as the card says it, each record line's, stamped on the island's clock. */
+export function arkDayText(day: ArkAnimalDay, words: ArkStatusWords, locale: string): ArkDayText {
+    const act = (key: ArkActivityKey) => capitalised(words.activity[key] ?? ARK_ACTIVITY_ENGLISH[key]);
+    const lines = arkStatusText({id: day.id, activity: null, since: null, goal: null, log: day.events, bars: {fed: null, health: null, energy: null, age: null}}, words, locale).log;
+    const byId = new Map(lines.map((line) => [line.id, line.text]));
+    return {
+        segments: day.segments.map((segment) => ({...segment, text: act(segment.activity), stamp: `${arkIslandTime(segment.from / 1000, locale)}–${arkIslandTime(segment.to / 1000, locale)}`})),
+        events: day.events.filter((entry) => byId.get(entry.id)).map((entry) => ({id: entry.id, at: entry.at, kind: entry.kind, stamp: arkIslandTime(entry.at / 1000, locale), text: byId.get(entry.id)!}))
+    };
+}
+
+/** Its day's words for the apps: each activity it had once (not per stretch: a day is a thousand or more), and its record lines. */
+export type ArkDayHostText = {activities: Partial<Record<ArkActivityKey, string>>; events: ArkDayText["events"]};
+
+/** Its day for the apps (`ark:day`): as the scene has it, with its activities' and record lines' words in the reader's language. */
+export function arkDayForHost(day: ArkAnimalDay | null | undefined, ark: Loose, locale: string): (ArkAnimalDay & {text: ArkDayHostText}) | null {
+    if (!day) return null;
+    const words = arkStatusWords(ark);
+    const activities: Partial<Record<ArkActivityKey, string>> = {};
+    for (const segment of day.segments) activities[segment.activity] ??= capitalised(words.activity[segment.activity] ?? ARK_ACTIVITY_ENGLISH[segment.activity]);
+    return {...day, text: {activities, events: arkDayText({...day, segments: []}, words, locale).events}};
 }

@@ -336,7 +336,17 @@
             "lifeLeft": "Zbývá {percent} života",
             "energy": "Energie",
             "awakeSince": "Vzhůru od {time}",
-            "asleepSince": "Spí od {time}"
+            "asleepSince": "Spí od {time}",
+            "itsDay": "Jeho den",
+            "dayLast": "Posledních 24 hodin",
+            "dayEarlier": "Předchozí den",
+            "dayLater": "Další den",
+            "dayNow": "Teď",
+            "dayWorking": "Počítám jeho den…",
+            "dayRecord": "V jeho záznamu",
+            "dayNone": "Den tohoto zvířete teď nejde spočítat.",
+            "dayClose": "Zavřít jeho den",
+            "dayHint": "Co dělalo, podle společného rozvrhu Ark: pro všechny stejné. Tečky jsou záznam Ark."
         },
         "activity": {
             "food": "hledá potravu",

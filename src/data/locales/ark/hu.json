@@ -336,7 +336,17 @@
             "lifeLeft": "Hátralévő élete: {percent}",
             "energy": "Energia",
             "awakeSince": "{time} óta ébren",
-            "asleepSince": "{time} óta alszik"
+            "asleepSince": "{time} óta alszik",
+            "itsDay": "A napja",
+            "dayLast": "Az elmúlt 24 óra",
+            "dayEarlier": "Előző nap",
+            "dayLater": "Következő nap",
+            "dayNow": "Most",
+            "dayWorking": "A napja kiszámítása…",
+            "dayRecord": "A naplójában",
+            "dayNone": "Ennek az állatnak a napja most nem számítható ki.",
+            "dayClose": "A napja bezárása",
+            "dayHint": "Mit csinált, az Ark közös menetrendje szerint: mindenkinek ugyanaz. A pöttyök az Ark feljegyzései."
         },
         "activity": {
             "food": "élelmet keres",

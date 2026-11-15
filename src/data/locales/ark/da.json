@@ -336,7 +336,17 @@
             "lifeLeft": "{percent} af levetiden tilbage",
             "energy": "Energi",
             "awakeSince": "Vågen siden {time}",
-            "asleepSince": "Sover siden {time}"
+            "asleepSince": "Sover siden {time}",
+            "itsDay": "Dens dag",
+            "dayLast": "Seneste 24 timer",
+            "dayEarlier": "Dagen før",
+            "dayLater": "Dagen efter",
+            "dayNow": "Nu",
+            "dayWorking": "Regner dens dag ud…",
+            "dayRecord": "I dens logbog",
+            "dayNone": "Dens dag kan ikke regnes ud for dette dyr lige nu.",
+            "dayClose": "Luk dens dag",
+            "dayHint": "Hvad den lavede, fra Arks fælles skema: det samme for alle. Prikkerne er Arks optegnelser."
         },
         "activity": {
             "food": "leder efter føde",

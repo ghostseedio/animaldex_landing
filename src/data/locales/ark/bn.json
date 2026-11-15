@@ -336,7 +336,17 @@
             "lifeLeft": "আয়ুর {percent} বাকি",
             "energy": "শক্তি",
             "awakeSince": "{time} থেকে জেগে আছে",
-            "asleepSince": "{time} থেকে ঘুমিয়ে আছে"
+            "asleepSince": "{time} থেকে ঘুমিয়ে আছে",
+            "itsDay": "ওর দিন",
+            "dayLast": "শেষ ২৪ ঘণ্টা",
+            "dayEarlier": "আগের দিন",
+            "dayLater": "পরের দিন",
+            "dayNow": "এখন",
+            "dayWorking": "ওর দিনটা হিসাব করা হচ্ছে…",
+            "dayRecord": "ওর রেকর্ডে",
+            "dayNone": "এই প্রাণীর দিন এখন হিসাব করা যাচ্ছে না।",
+            "dayClose": "ওর দিন বন্ধ করুন",
+            "dayHint": "ও যা করেছে, Ark-এর সবার জন্য একই সময়সূচি থেকে। বিন্দুগুলো Ark-এর রেকর্ড।"
         },
         "activity": {
             "food": "খাবার খুঁজছে",

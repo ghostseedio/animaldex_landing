@@ -336,7 +336,17 @@
             "lifeLeft": "{percent} از عمرش باقی مانده",
             "energy": "انرژی",
             "awakeSince": "از {time} بیدار است",
-            "asleepSince": "از {time} خواب است"
+            "asleepSince": "از {time} خواب است",
+            "itsDay": "روزش",
+            "dayLast": "۲۴ ساعت گذشته",
+            "dayEarlier": "روز قبل",
+            "dayLater": "روز بعد",
+            "dayNow": "اکنون",
+            "dayWorking": "در حال محاسبهٔ روزش…",
+            "dayRecord": "در سابقه‌اش",
+            "dayNone": "روز این حیوان الان قابل محاسبه نیست.",
+            "dayClose": "بستن روزش",
+            "dayHint": "کاری که کرد، از برنامهٔ مشترک Ark: برای همه یکسان. نقطه‌ها سابقهٔ Ark هستند."
         },
         "activity": {
             "food": "در جست‌وجوی غذا",

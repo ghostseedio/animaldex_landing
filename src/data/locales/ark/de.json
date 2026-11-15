@@ -336,7 +336,17 @@
             "lifeLeft": "{percent} Lebenszeit übrig",
             "energy": "Energie",
             "awakeSince": "Wach seit {time}",
-            "asleepSince": "Schläft seit {time}"
+            "asleepSince": "Schläft seit {time}",
+            "itsDay": "Sein Tag",
+            "dayLast": "Letzte 24 Stunden",
+            "dayEarlier": "Tag davor",
+            "dayLater": "Tag danach",
+            "dayNow": "Jetzt",
+            "dayWorking": "Sein Tag wird berechnet…",
+            "dayRecord": "In seinem Logbuch",
+            "dayNone": "Der Tag dieses Tiers lässt sich gerade nicht berechnen.",
+            "dayClose": "Seinen Tag schließen",
+            "dayHint": "Was es getan hat, nach dem gemeinsamen Zeitplan der Ark: für alle gleich. Punkte sind Einträge der Ark."
         },
         "activity": {
             "food": "sucht Futter",

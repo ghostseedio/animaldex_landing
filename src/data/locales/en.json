@@ -4508,7 +4508,17 @@
       "lifeLeft": "{percent} of its life left",
       "energy": "Energy",
       "awakeSince": "Awake since {time}",
-      "asleepSince": "Asleep since {time}"
+      "asleepSince": "Asleep since {time}",
+      "itsDay": "Its day",
+      "dayLast": "Last 24 hours",
+      "dayEarlier": "Earlier day",
+      "dayLater": "Later day",
+      "dayNow": "Now",
+      "dayWorking": "Working out its day…",
+      "dayRecord": "On its record",
+      "dayNone": "Its day can’t be worked out for this animal now.",
+      "dayClose": "Close its day",
+      "dayHint": "What it did, from the Ark’s shared schedule: the same for everyone. Dots are the Ark’s record."
     },
     "activity": {
       "food": "looking for food",

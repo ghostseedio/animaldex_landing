@@ -3,9 +3,12 @@
  * enclosure is fed, what is put down, and what enrichment it has out. Scene only, pure functions of the island clock
  * and the enclosure (the same for every viewer and the livestream; the director can plan its shots on them).
  *
- * - **Feeding times** (`zoo-types.ts` `feeding`, island hours): each lasts `FEED_HOURS`. Penguins and seals 11:00 and
- *   15:00, primates 10:00 and 14:00, big cats 16:00 (a fast day each Ark week: Sunday), the aquarium 13:00, birds in
- *   the morning, the reptile house once a week (Wednesday) for its snakes and crocodiles.
+ * - **Feeding times** (`zoo-types.ts` `zooFeedingTimes`, island hours): each lasts `FEED_HOURS`, inside the resident's
+ *   waking hours (lane ark-its-day). Day-active residents on the keepers' rounds: penguins and seals 11:00 and 15:00,
+ *   primates 10:00 and 14:00, big cats 16:00 (a fast day each Ark week: Sunday), the aquarium 13:00, birds in the
+ *   morning, the reptile house once a week (Wednesday) for its snakes and crocodiles; nocturnal residents at dusk
+ *   (18:30), dawn-and-dusk ones at 06:00 and 17:30 (17:30 where the type is fed once a day). A resident asleep at its
+ *   slot's start is not fed (it sleeps on: `residentFeeding`), so the card never says "at feeding time" of a sleeper.
  * - **During a feeding** the keepers' hatch is open and the food is down at the station, eaten away over the window;
  *   the residents' behaviour schedule takes them to the station (their home for those slots: `feedingHome`), so they
  *   gather, eat and disperse on the same schedule and motion pass as always. No keeper is drawn.
@@ -16,7 +19,9 @@
 import type {TownClock} from "@/ark-scene/islands/town/people";
 import type {ZooEnclosure} from "@/ark-scene/islands/town/areas";
 import type {ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
-import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
+import {zooFeedingTimes, ZOO_TYPES, type ZooRhythm} from "@/ark-scene/islands/town/zoo-types";
+
+export {zooRhythm} from "@/ark-scene/islands/town/zoo-types";
 
 /** How long a feeding lasts (island hours). */
 export const FEED_HOURS = 0.5;
@@ -50,16 +55,33 @@ function weekdayOf(day: number): number {
     return ((day % 7) + 7) % 7;
 }
 
-/** The enclosure type's feeding now (on the island clock), or null. */
-export function zooFeedingAt(type: ZooEnclosureType, clock: TownClock): ZooFeeding | null {
+/** The rhythms fed in an enclosure when none is known (its day round alone). */
+const DAY_ONLY: readonly ZooRhythm[] = ["day"];
+
+/**
+ * The enclosure type's feeding now (on the island clock), or null: any of its residents' rhythms' feeding times
+ * (`rhythms`: those living in it; the day round alone by default). The food put down at the station.
+ */
+export function zooFeedingAt(type: ZooEnclosureType, clock: TownClock, rhythms: readonly ZooRhythm[] = DAY_ONLY): ZooFeeding | null {
     const spec = ZOO_TYPES[type];
     const weekday = weekdayOf(clock.day);
     if (spec.weekly && weekday !== WEEKLY_FEED_DAY) return null;
     if (type === "big_cats" && weekday === FAST_DAY) return null;
-    for (const start of spec.feeding) {
-        if (clock.hours >= start && clock.hours < start + FEED_HOURS) return {type, food: ZOO_FOOD[type], eaten: (clock.hours - start) / FEED_HOURS, start, end: start + FEED_HOURS};
+    for (const rhythm of rhythms) {
+        for (const start of zooFeedingTimes(type, rhythm)) {
+            if (clock.hours >= start && clock.hours < start + FEED_HOURS) return {type, food: ZOO_FOOD[type], eaten: (clock.hours - start) / FEED_HOURS, start, end: start + FEED_HOURS};
+        }
     }
     return null;
+}
+
+/**
+ * Whether one resident is at its feeding now: one of its rhythm's feeding times in its enclosure (`clock`: at its slot's
+ * start, one goal a slot), and it awake then by the behaviour schedule's own rule (`awake`, its `awakeAt`): a resident
+ * asleep at its feed sleeps on, so it is never shown "at feeding time" asleep, whatever the awake model.
+ */
+export function residentFeeding(type: ZooEnclosureType, rhythm: ZooRhythm, clock: TownClock, awake: boolean): ZooFeeding | null {
+    return awake ? zooFeedingAt(type, clock, [rhythm]) : null;
 }
 
 /** Whether an enclosure is being fed at an epoch time (ms) with this island clock. */

@@ -336,7 +336,17 @@
             "lifeLeft": "Elinaikaa jäljellä {percent}",
             "energy": "Energia",
             "awakeSince": "Hereillä klo {time} alkaen",
-            "asleepSince": "Unessa klo {time} alkaen"
+            "asleepSince": "Unessa klo {time} alkaen",
+            "itsDay": "Sen päivä",
+            "dayLast": "Viimeiset 24 tuntia",
+            "dayEarlier": "Edellinen päivä",
+            "dayLater": "Seuraava päivä",
+            "dayNow": "Nyt",
+            "dayWorking": "Lasketaan sen päivää…",
+            "dayRecord": "Sen kirjauksissa",
+            "dayNone": "Tämän eläimen päivää ei voi laskea juuri nyt.",
+            "dayClose": "Sulje sen päivä",
+            "dayHint": "Mitä se teki Arkin yhteisen aikataulun mukaan: sama kaikille. Pisteet ovat Arkin kirjauksia."
         },
         "activity": {
             "food": "etsii ruokaa",

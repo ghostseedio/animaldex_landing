@@ -336,7 +336,17 @@
             "lifeLeft": "{percent} av levetiden igjen",
             "energy": "Energi",
             "awakeSince": "Våken siden {time}",
-            "asleepSince": "Sover siden {time}"
+            "asleepSince": "Sover siden {time}",
+            "itsDay": "Dagen dens",
+            "dayLast": "Siste 24 timer",
+            "dayEarlier": "Dagen før",
+            "dayLater": "Dagen etter",
+            "dayNow": "Nå",
+            "dayWorking": "Regner ut dagen dens…",
+            "dayRecord": "I loggen dens",
+            "dayNone": "Dagen til dette dyret kan ikke regnes ut nå.",
+            "dayClose": "Lukk dagen dens",
+            "dayHint": "Hva den gjorde, etter Arks felles timeplan: lik for alle. Prikkene er Arks logg."
         },
         "activity": {
             "food": "leter etter mat",

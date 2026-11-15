@@ -336,7 +336,17 @@
             "lifeLeft": "Zostało {percent} życia",
             "energy": "Energia",
             "awakeSince": "Nie śpi od {time}",
-            "asleepSince": "Śpi od {time}"
+            "asleepSince": "Śpi od {time}",
+            "itsDay": "Jego dzień",
+            "dayLast": "Ostatnie 24 godziny",
+            "dayEarlier": "Poprzedni dzień",
+            "dayLater": "Następny dzień",
+            "dayNow": "Teraz",
+            "dayWorking": "Obliczam jego dzień…",
+            "dayRecord": "W jego zapisie",
+            "dayNone": "Nie można teraz obliczyć dnia tego zwierzęcia.",
+            "dayClose": "Zamknij jego dzień",
+            "dayHint": "Co robiło, według wspólnego planu Ark: dla wszystkich taki sam. Kropki to zapis Ark."
         },
         "activity": {
             "food": "szuka pożywienia",

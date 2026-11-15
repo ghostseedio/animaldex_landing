@@ -2,7 +2,7 @@ import type {ArkHunting} from "@/lib/ark-hunting";
 import type {ArkActivity} from "@/lib/ark-daylight";
 import type {ArkAct} from "@/lib/ark-life";
 import type {ArkSeenNow} from "@/lib/ark-live-log";
-import type {ArkActivityKey, ArkAnimalStatus, ArkRecordNote} from "@/lib/ark-animal-status";
+import type {ArkActivityKey, ArkAnimalDay, ArkAnimalStatus, ArkRecordNote} from "@/lib/ark-animal-status";
 import type {ScheduleMomentKind} from "@/ark-scene/animal-status";
 import type {ArkStats} from "@/ark-scene/stats";
 import type {ArkMomentKind} from "@/ark-scene/moments";
@@ -486,6 +486,13 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     animalStatus?: (id: string) => ArkAnimalStatus | null;
     /** Record lines for animals' logs, from the server (the page's life story, the live log's events): never made up. */
     noteRecord?: (notes: readonly ArkRecordNote[]) => void;
+    /**
+     * Lane ark-its-day: an animal's day over a window (epoch ms, at most a day long, at most a week back, clamped): what
+     * it did as the card would have said it at every moment (the same schedule and status function), and its record
+     * lines in the window. Worked out a little a frame; `onProgress` as it goes; null when it is not in the scene, off
+     * the schedule, or `signal` aborts.
+     */
+    animalDay?: (id: string, from: number, to: number, options?: {signal?: AbortSignal; onProgress?: (day: ArkAnimalDay) => void}) => Promise<ArkAnimalDay | null>;
     /**
      * The live log's moments from the behaviour schedule (`animal-status.ts` pickMoment): at most one per window of the
      * shared clock, from `after` (the last window the caller has) to the last window done; the same for every viewer.

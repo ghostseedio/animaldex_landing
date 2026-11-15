@@ -336,7 +336,17 @@
             "lifeLeft": "Amebakiza {percent} ya maisha yake",
             "energy": "Nguvu",
             "awakeSince": "Macho tangu {time}",
-            "asleepSince": "Amelala tangu {time}"
+            "asleepSince": "Amelala tangu {time}",
+            "itsDay": "Siku yake",
+            "dayLast": "Saa 24 zilizopita",
+            "dayEarlier": "Siku iliyotangulia",
+            "dayLater": "Siku inayofuata",
+            "dayNow": "Sasa",
+            "dayWorking": "Inakokotoa siku yake…",
+            "dayRecord": "Kwenye rekodi yake",
+            "dayNone": "Siku ya mnyama huyu haiwezi kukokotolewa sasa.",
+            "dayClose": "Funga siku yake",
+            "dayHint": "Alichofanya, kwa ratiba ya pamoja ya Ark: sawa kwa kila mtu. Nukta ni rekodi ya Ark."
         },
         "activity": {
             "food": "anatafuta chakula",

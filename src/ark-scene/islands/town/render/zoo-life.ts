@@ -12,6 +12,7 @@ import type {ZooEnclosure} from "@/ark-scene/islands/town/areas";
 import type {TownClock} from "@/ark-scene/islands/town/people";
 import {iceLeft, zooFeedingAt, type ZooFood} from "@/ark-scene/islands/town/zoo-life";
 import {buildZooHouses} from "@/ark-scene/islands/town/render/zoo-houses";
+import type {ZooRhythm} from "@/ark-scene/islands/town/zoo-types";
 
 const UP = new Vector3(0, 1, 0);
 const FOOD_COLOUR: Record<ZooFood, string> = {fish: "#9fb3bf", hay: "#c9b26a", meat: "#8a3b30", fruit: "#d9822b", seed: "#c8a46b", insects: "#5a4a3a", pellets: "#9c7a4f"};
@@ -77,7 +78,15 @@ function prop(what: string, x: number, y: number, z: number, seed: number): Buff
 }
 
 /** `floors`: the zoo houses' floors for the town's drawn ground (lane TB, `drawn-ground.ts`). */
-export type ZooLife = {group: Group; update: (clock: TownClock) => void; dispose: () => void; stats: () => {feeding: number}; floors: Float32Array};
+export type ZooLife = {
+    group: Group;
+    update: (clock: TownClock) => void;
+    /** Its residents' rhythms per enclosure id (`zooRhythm`): the food goes down at each one's feeding times. */
+    setRhythms: (byEnclosure: ReadonlyMap<string, readonly ZooRhythm[]>) => void;
+    dispose: () => void;
+    stats: () => {feeding: number};
+    floors: Float32Array;
+};
 
 export function buildZooLife(enclosures: readonly ZooEnclosure[], groundAt: (x: number, z: number) => number): ZooLife {
     const group = new Group();
@@ -117,13 +126,14 @@ export function buildZooLife(enclosures: readonly ZooEnclosure[], groundAt: (x: 
     const iceTypes = new Set(["bears_wolves", "penguin_seal_pools", "big_cats"]);
     let lastMinute = -1;
     let feeding = 0;
+    let rhythms: ReadonlyMap<string, readonly ZooRhythm[]> = new Map();
     const update = (clock: TownClock) => {
         const minute = Math.floor((clock.day * 24 + clock.hours) * 60);
         if (minute === lastMinute) return;
         lastMinute = minute;
         feeding = 0;
         open.forEach((e, i) => {
-            const fed = zooFeedingAt(e.type, clock);
+            const fed = zooFeedingAt(e.type, clock, rhythms.get(e.id));
             const y = groundAt(e.feeding.x, e.feeding.z);
             const left = fed ? 1 - fed.eaten : 0;
             if (fed) feeding++;
@@ -144,6 +154,10 @@ export function buildZooLife(enclosures: readonly ZooEnclosure[], groundAt: (x: 
     return {
         group,
         update,
+        setRhythms: (byEnclosure) => {
+            rhythms = byEnclosure;
+            lastMinute = -1;
+        },
         stats: () => ({feeding}),
         floors: houses.floors,
         dispose: () => {
