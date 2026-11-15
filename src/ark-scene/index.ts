@@ -213,6 +213,7 @@ import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
+import {LiveMatings} from "@/ark-scene/live-matings";
 import {mealOnStage, mealScript, DRINK_REACH, type MealCatch} from "@/ark-scene/meal-acts";
 import {MealTraces} from "@/ark-scene/meal-traces";
 import {bodyMassKg, isScavenger, mealPlan, type MealPlan, type MealSide, type ScavengerCandidate} from "@/ark-scene/meals";
@@ -6887,6 +6888,38 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             ghost.held = held;
         }
     });
+    /** The record's matings acted out (owner 2026-11-15): the two walk to each other, court, nuzzle and lie together. */
+    const liveMatings = new LiveMatings<Entry>({
+        find: (id) => {
+            const e = entryById.get(id);
+            return e && !e.held && !e.visitor ? e : null;
+        },
+        scheduleAt: (entry, epoch) => {
+            if (!entry.sched || !world || reducedMotion) return null;
+            const at = schedulePose(entry, epoch);
+            return {x: at.x, z: at.z, y: at.y, yaw: at.yaw, doing: at.doing, aloft: at.aloft};
+        },
+        ground: (x, z) => Math.max(heightAt(x, z), -0.3),
+        walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
+        // The drawn body (what the viewer sees touch and mount), not the real metres.
+        length: (entry) => entry.length,
+        height: (entry) => entry.drawnHeight,
+        plan: (entry) => library.get(entry.animal.model_slug)?.behaviour?.plan ?? null,
+        // The species' own courtship from its recipes (a display, a dance together); else he chases her.
+        courtship: (entry) => {
+            const ids = new Set(speciesRecipes(entry.animal.model_slug).recipes.map((r) => r.id));
+            return ids.has("court_dance") ? "dance" : ids.has("court_display") ? "display" : null;
+        },
+        male: (entry) => {
+            const sex = sexLook(entry.animal.id, entry.animal.model_slug).sex;
+            return sex === "male" ? true : sex === "female" ? false : null;
+        },
+        together: (a, b) => worldOf(a.animal) === worldOf(b.animal),
+        setAct: (entry, pose) => {
+            entry.act = pose;
+        },
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id))
+    });
     /** The meals' traces this frame (feathers, fur, scales, pressed grass), and the pressed grass for the grass to bend. */
     let tracesNow: ReturnType<typeof liveMeals.traces> = [];
     const stepMealTraces = () => {
@@ -6933,10 +6966,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** The live world's meals, a frame (after the replay's acts): poses, and their pins for the herds. */
     const stepLiveMeals = () => {
-        if (!liveMeals.size || reducedMotion) return;
+        if ((!liveMeals.size && !liveMatings.size) || reducedMotion) return;
         const epoch = worldMs() / 1000;
-        liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
-        const pins = new Set(liveMeals.pins());
+        if (liveMeals.size) liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
+        if (liveMatings.size) liveMatings.step(epoch);
+        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins()]);
         if (pins.size !== mealPins.size || Array.from(pins).some((id) => !mealPins.has(id))) {
             mealPins = pins;
             refreshLive();
@@ -7685,7 +7719,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
@@ -7796,6 +7830,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 mealPins = new Set();
                 refreshLive();
             }
+        },
+        addMatings: (matings) => {
+            liveMatings.add(matings, worldMs() / 1000);
         },
         liveHunt: () => liveHuntNow(),
         setSound: (on) => liveliness.setSound(on),
