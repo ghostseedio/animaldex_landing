@@ -88,7 +88,20 @@
 </style>
 <!-- The scene's code: fetched from the start, run only once the page has painted (the script at the foot): a script
      tag here or in the body held WebKit's first paint (the apps' iOS panel) for the whole ~1.6 MB download. -->
-<link rel="preload" href="./ark-scene.js" as="script">
+<script>
+  // The Ark's code by this page's deploy (decision 360): the CDN lets a phone keep ./ark-scene.js for 4 hours, and a
+  // new page with the old code broke Ark Lite (2026-11-15: setFounders missing, an empty page). This page is never
+  // cached and its Last-Modified is the image's build time, so each deploy asks for its own code and workers; the
+  // same deploy's stay cached. (No header: the time now, so fresh every load, never stale.)
+  window.ARK_CODE_V = "?v=" + (Date.parse(document.lastModified) || Date.now());
+  (function () {
+    var link = document.createElement("link");
+    link.rel = "preload";
+    link.as = "script";
+    link.href = "./ark-scene.js" + window.ARK_CODE_V;
+    document.head.appendChild(link);
+  })();
+</script>
 </head>
 <body>
 <div id="ark"></div>
@@ -381,7 +394,7 @@
   var failures = 0;
   function insert() {
     var script = document.createElement("script");
-    script.src = "./ark-scene.js";
+    script.src = "./ark-scene.js" + window.ARK_CODE_V;
     script.async = true;
     script.onload = function () { if (window.AnimalDexArkStart) window.AnimalDexArkStart(); };
     script.onerror = function () {
@@ -586,7 +599,7 @@ window.AnimalDexArkStart = function () {
       }
     });
     lite.root.style.position = "fixed";
-    lite.setFounders(founders);
+    if (lite.setFounders) lite.setFounders(founders);
     if (shown) lite.update(shown);
   }
   function showLite() {
@@ -823,7 +836,7 @@ window.AnimalDexArkStart = function () {
     shown = snapshot;
     loadData(snapshot);
     if (hud) hud.snapshot(snapshot);
-    if (lite) { lite.setFounders(founders); lite.update(snapshot); }
+    if (lite) { if (lite.setFounders) lite.setFounders(founders); lite.update(snapshot); }
     if (scene) { scene.update(snapshot); return; }
     if (mounting) { mounting.update(snapshot); return; }
     // (Ark Lite: the 3D Ark waits until it is asked for.)
@@ -831,7 +844,7 @@ window.AnimalDexArkStart = function () {
     // (The archipelago does the prebuild itself, with this page's worker files.)
     if (Ark.mountArchipelago) { mount(snapshot); return; }
     if (!prepared && Ark.prepareArk) {
-      prepared = Ark.prepareArk({snapshot: snapshot, workerUrl: "./ark-prebuild-worker.js", placesWorkerUrl: "./ark-prebuild-places-worker.js"}).then(function () { prepared = true; mount(snapshot); }, function () { prepared = true; mount(snapshot); });
+      prepared = Ark.prepareArk({snapshot: snapshot, workerUrl: "./ark-prebuild-worker.js" + window.ARK_CODE_V, placesWorkerUrl: "./ark-prebuild-places-worker.js" + window.ARK_CODE_V}).then(function () { prepared = true; mount(snapshot); }, function () { prepared = true; mount(snapshot); });
       return;
     }
     if (prepared !== true && Ark.prepareArk) return;
@@ -907,7 +920,7 @@ window.AnimalDexArkStart = function () {
     };
     if (Ark.mountArchipelago) {
       options.openOn = Ark.arkOpeningIsland ? Ark.arkOpeningIsland(snapshot) : undefined;
-      options.workers = {scenery: "./ark-prebuild-worker.js", places: "./ark-prebuild-places-worker.js", town: "./ark-town-worker.js"};
+      options.workers = {scenery: "./ark-prebuild-worker.js" + window.ARK_CODE_V, places: "./ark-prebuild-places-worker.js" + window.ARK_CODE_V, town: "./ark-town-worker.js" + window.ARK_CODE_V};
       try { mounting = Ark.mountArchipelago(document.getElementById("ark"), options); } catch (error) { failLoad(error); return; }
       // (A development build: the handle for probes, as the page's `__arkScene`.)
       if (devBuild) window.__arkScene = mounting;
