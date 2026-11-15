@@ -12,7 +12,8 @@
  * runtime, so a rig republish needs no web deploy, and an empty manifest
  * turns every rig off.
  *
- * The scene reads v2 first and v1 for every species v2 does not list
+ * The scene reads the release's set first (an overlay set then the set under
+ * it, `ARK_RIG_UNDER`) and v1 for every species none of them lists
  * (`rigBasesFrom`, `RigLibrary`): v1 files are never removed, and each file
  * is self-contained.
  *
@@ -160,9 +161,15 @@ export function rigPlayable(manifest: RigManifest | null | undefined, slug: stri
  * every species reads the fallback set, and a species the new set does not
  * list reads it too.
  */
-export const ARK_RIG_VERSION = "v3";   // v3 (MA2): the birds re-rigged (rig code v7: bills and skulls on the head bone, folding wings); every other species' file as v2
+export const ARK_RIG_VERSION = "v4";   // v4 (lane ark-rig-lie): an overlay of 17 cats, dogs and the polar bear that now lie down (lie, sleep, get_up); every other species from v3
 /** The set every species falls back to: v1 is never overwritten or removed (contract section 6). */
 export const ARK_RIG_FALLBACK = "v1";
+/**
+ * Overlay sets: a set that lists only the species re-made since an earlier one (its manifest says `"over": "v3"`,
+ * `publish_rig.py --over v3`). The scene reads the overlay, then the set under it, then the fallback, so a small re-make
+ * goes up as a few files instead of the whole set. (v4 over v3: AnimalDex `docs/ark/rig-v2-manifest.md` section 10.)
+ */
+export const ARK_RIG_UNDER: Readonly<Record<string, string>> = {v4: "v3"};
 
 /**
  * The rig folder for a model folder: `…/talking-models/v1/ark` →
@@ -184,8 +191,11 @@ export function rigBasesFrom(modelBase: string, first?: string | null): string[]
     if (first === null) return [];
     const main = first === undefined ? rigBaseFrom(modelBase) : first.replace(/\/+$/, "");
     const fallback = rigBaseFrom(modelBase, ARK_RIG_FALLBACK);
+    // An overlay set (ARK_RIG_UNDER) beside the model set reads the set under it next (v4, then v3).
+    const named = main ? /\/ark-rig\/(v[0-9]{1,3})$/.exec(main) : null;
+    const under = named && ARK_RIG_UNDER[named[1]] ? main!.replace(/v[0-9]{1,3}$/, ARK_RIG_UNDER[named[1]]) : null;
     const out: string[] = [];
-    for (const base of [main, fallback]) if (base && !out.includes(base)) out.push(base);
+    for (const base of [main, under, fallback]) if (base && !out.includes(base)) out.push(base);
     return out;
 }
 

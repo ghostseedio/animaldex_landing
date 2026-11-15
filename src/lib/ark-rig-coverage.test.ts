@@ -34,7 +34,10 @@ export const COVERAGE_MOST: Record<string, Record<Gap, number>> = {
     // v3, one of the 5 birds v2 left out that MA2 put in (decision 277, row 10); in v2 it played a v1 file with no
     // flight, so this is coverage that grew, not a lost clip. Its water entry/exit and stroke clips are queued for the
     // next rigging pass.
-    v3: {frozenWings: 1, noTakeoffLanding: 0, fliesUnapproved: 0, swimmersNoStroke: 70, swimmersNoEntry: 109}
+    v3: {frozenWings: 1, noTakeoffLanding: 0, fliesUnapproved: 0, swimmersNoStroke: 70, swimmersNoEntry: 109},
+    // v4 (lane ark-rig-lie): an overlay over v3 of 17 cats, dogs and the polar bear that gained lying clips; the fixture is
+    // v3's detail with those 17 entries replaced (their movement clips unchanged), so its counts are v3's.
+    v4: {frozenWings: 1, noTakeoffLanding: 0, fliesUnapproved: 0, swimmersNoStroke: 70, swimmersNoEntry: 109}
 };
 
 const BIRDISH = new Set(["flying_bird", "walking_bird", "flightless_bird", "bat"]);

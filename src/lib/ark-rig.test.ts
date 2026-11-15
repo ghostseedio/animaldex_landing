@@ -67,12 +67,13 @@ test("rig clips: a sitting rest pose holds every moving clip, flight and water i
     for (const name of ["enter_water", "exit_water", "walk", "flap"]) assert.equal(rigClip(sitting, "agile-wallaby", name), null, name);
 });
 
-test("rig sets: the release's set (v3) first, v1 for every species it does not list; a v2 folder's manifest counts only at version 2", () => {
-    assert.equal(ARK_RIG_VERSION, "v3");
+test("rig sets: the release's set (v4, an overlay over v3) first, then v3, v1 for every species they do not list; a v2 folder's manifest counts only at version 2", () => {
+    assert.equal(ARK_RIG_VERSION, "v4");
     assert.equal(ARK_RIG_FALLBACK, "v1");
     const models = "https://x.supabase.co/storage/v1/object/public/talking-models/v1/ark";
     const rigRoot = "https://x.supabase.co/storage/v1/object/public/talking-models/ark-rig";
-    assert.deepEqual(rigBasesFrom(models), [`${rigRoot}/v3`, `${rigRoot}/v1`], "the release's set, then the fallback");
+    assert.deepEqual(rigBasesFrom(models), [`${rigRoot}/v4`, `${rigRoot}/v3`, `${rigRoot}/v1`], "the release's overlay, the set under it, then the fallback");
+    assert.deepEqual(rigBasesFrom(models, `${rigRoot}/v4`), [`${rigRoot}/v4`, `${rigRoot}/v3`, `${rigRoot}/v1`], "?rigv=v4: the overlay reads v3 under it");
     assert.deepEqual(rigBasesFrom(models, null), [], "rigs off (?rig=0, reduced motion pages)");
     assert.deepEqual(rigBasesFrom(models, `${rigRoot}/v1`), [`${rigRoot}/v1`], "?rigv=v1: the v1 set alone");
     assert.deepEqual(rigBasesFrom(models, `${rigRoot}/v3/`), [`${rigRoot}/v3`, `${rigRoot}/v1`], "?rigv=v3: v3 then v1");

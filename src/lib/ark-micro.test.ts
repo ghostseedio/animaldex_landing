@@ -156,7 +156,7 @@ test("rig player: the rig folder beside the model set, texture rows, planted fee
     assert.equal(rigBaseFrom("/somewhere/else"), null);
     // Versioned: a re-made set (v3) beside the old ones; the release moves ARK_RIG_VERSION (v1 stays the fallback: ark-rig.test.ts).
     const {ARK_RIG_VERSION} = await import("@/ark-scene/rig-clips");
-    assert.equal(ARK_RIG_VERSION, "v3");
+    assert.equal(ARK_RIG_VERSION, "v4");
     assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark", "v2"), "/api/dev/ark-models/ark-rig/v2");
     assert.equal(rigBaseFrom("/api/dev/ark-models/v1/ark", "../x"), null);
     const walk = {name: "walk", frames: 24, loop: true, seconds: 0.5, ground_speed: 0.2, pass: true, row: 49, rows: 25};
