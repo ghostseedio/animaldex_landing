@@ -22,6 +22,8 @@ const TONE: Record<ArkActivityKey, string> = {
     browsing: "#56b878",
     flowers: "#56b878",
     feeding: "#8fd16b",
+    eating: "#56b878",
+    scavenging: "#b88a4f",
     hunting: "#e0704f",
     fishing: "#3fb4a8",
     drinking: "#4aa8e0",
