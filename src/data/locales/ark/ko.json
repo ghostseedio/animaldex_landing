@@ -596,7 +596,14 @@
             "switchLite": "Ark Lite로 전환",
             "ready3d": "3D Ark가 준비됐어요",
             "where": "사는 곳",
-            "kindsMore": "+{count}종 더"
+            "kindsMore": "+{count}종 더",
+            "latest": "방주의 최신 소식",
+            "live": "라이브",
+            "showMore": "더 보기",
+            "showLess": "간단히 보기",
+            "tapKind": "종류를 탭하면 누가 각 동물을 데려왔는지 볼 수 있어요",
+            "animalsMore": "+{count}개 더",
+            "you": "나"
         }
     },
     "talkPage": {

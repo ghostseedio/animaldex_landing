@@ -596,7 +596,14 @@
             "switchLite": "Ark Lite पर जाएँ",
             "ready3d": "3D Ark तैयार है",
             "where": "वे कहाँ रहते हैं",
-            "kindsMore": "+{count} और प्रजातियाँ"
+            "kindsMore": "+{count} और प्रजातियाँ",
+            "latest": "आर्क पर ताज़ा",
+            "live": "लाइव",
+            "showMore": "और दिखाएँ",
+            "showLess": "कम दिखाएँ",
+            "tapKind": "कौन सा जानवर कौन लाया, देखने के लिए किसी प्रजाति पर टैप करें",
+            "animalsMore": "+{count} और",
+            "you": "आप"
         }
     },
     "talkPage": {

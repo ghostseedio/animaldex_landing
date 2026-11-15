@@ -596,7 +596,14 @@
             "switchLite": "Tukar ke Ark Lite",
             "ready3d": "Ark 3D sudah sedia",
             "where": "Tempat mereka tinggal",
-            "kindsMore": "+{count} spesies lagi"
+            "kindsMore": "+{count} spesies lagi",
+            "latest": "Terkini di Bahtera",
+            "live": "Langsung",
+            "showMore": "Tunjuk lagi",
+            "showLess": "Tunjuk kurang",
+            "tapKind": "Ketik satu jenis untuk melihat siapa yang membawa setiap satu",
+            "animalsMore": "+{count} lagi",
+            "you": "Anda"
         }
     },
     "talkPage": {

@@ -596,7 +596,14 @@
             "switchLite": "Badili kwenda Ark Lite",
             "ready3d": "Ark ya 3D iko tayari",
             "where": "Wanakoishi",
-            "kindsMore": "+{count} spishi zaidi"
+            "kindsMore": "+{count} spishi zaidi",
+            "latest": "Habari mpya kwenye Safina",
+            "live": "Mubashara",
+            "showMore": "Onyesha zaidi",
+            "showLess": "Onyesha kidogo",
+            "tapKind": "Gusa aina moja kuona nani alileta kila mmoja",
+            "animalsMore": "+{count} zaidi",
+            "you": "Wewe"
         }
     },
     "talkPage": {

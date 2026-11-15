@@ -596,7 +596,14 @@
             "switchLite": "Přepnout na Ark Lite",
             "ready3d": "Ark ve 3D je připravená",
             "where": "Kde žijí",
-            "kindsMore": "+{count} dalších druhů"
+            "kindsMore": "+{count} dalších druhů",
+            "latest": "Nejnovější na Arše",
+            "live": "Živě",
+            "showMore": "Zobrazit více",
+            "showLess": "Zobrazit méně",
+            "tapKind": "Klepněte na druh a uvidíte, kdo které zvíře přivezl",
+            "animalsMore": "+{count} dalších",
+            "you": "Vy"
         }
     },
     "talkPage": {

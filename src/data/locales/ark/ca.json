@@ -596,7 +596,14 @@
             "switchLite": "Canvia a Ark Lite",
             "ready3d": "L'Ark en 3D està a punt",
             "where": "On viuen",
-            "kindsMore": "+{count} espècies més"
+            "kindsMore": "+{count} espècies més",
+            "latest": "El més recent a l'Arca",
+            "live": "En directe",
+            "showMore": "Mostra'n més",
+            "showLess": "Mostra'n menys",
+            "tapKind": "Toca una espècie per veure qui ha portat cada animal",
+            "animalsMore": "+{count} més",
+            "you": "Tu"
         }
     },
     "talkPage": {

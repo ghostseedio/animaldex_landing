@@ -596,7 +596,14 @@
             "switchLite": "Vaihda Ark Liteen",
             "ready3d": "Ark 3D:nä on valmis",
             "where": "Missä ne elävät",
-            "kindsMore": "+{count} muuta lajia"
+            "kindsMore": "+{count} muuta lajia",
+            "latest": "Uusimmat Arkissa",
+            "live": "Live",
+            "showMore": "Näytä lisää",
+            "showLess": "Näytä vähemmän",
+            "tapKind": "Napauta lajia nähdäksesi, kuka toi minkäkin eläimen",
+            "animalsMore": "+{count} lisää",
+            "you": "Sinä"
         }
     },
     "talkPage": {

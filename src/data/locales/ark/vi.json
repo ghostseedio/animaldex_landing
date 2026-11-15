@@ -596,7 +596,14 @@
             "switchLite": "Chuyển sang Ark Lite",
             "ready3d": "Ark 3D đã sẵn sàng",
             "where": "Nơi chúng sống",
-            "kindsMore": "+{count} loài khác"
+            "kindsMore": "+{count} loài khác",
+            "latest": "Mới nhất trên Con Tàu",
+            "live": "Trực tiếp",
+            "showMore": "Xem thêm",
+            "showLess": "Thu gọn",
+            "tapKind": "Chạm vào một loài để xem ai đã mang từng con",
+            "animalsMore": "+{count} nữa",
+            "you": "Bạn"
         }
     },
     "talkPage": {

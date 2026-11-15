@@ -596,7 +596,14 @@
             "switchLite": "Μετάβαση στο Ark Lite",
             "ready3d": "Η Ark σε 3D είναι έτοιμη",
             "where": "Πού ζουν",
-            "kindsMore": "+{count} ακόμη είδη"
+            "kindsMore": "+{count} ακόμη είδη",
+            "latest": "Τα τελευταία στην Κιβωτό",
+            "live": "Ζωντανά",
+            "showMore": "Περισσότερα",
+            "showLess": "Λιγότερα",
+            "tapKind": "Πατήστε ένα είδος για να δείτε ποιος έφερε το καθένα",
+            "animalsMore": "+{count} ακόμα",
+            "you": "Εσύ"
         }
     },
     "talkPage": {

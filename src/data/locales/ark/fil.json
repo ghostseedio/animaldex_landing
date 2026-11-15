@@ -596,7 +596,14 @@
             "switchLite": "Lumipat sa Ark Lite",
             "ready3d": "Handa na ang Ark sa 3D",
             "where": "Kung saan sila nakatira",
-            "kindsMore": "+{count} pang uri"
+            "kindsMore": "+{count} pang uri",
+            "latest": "Pinakabago sa Arka",
+            "live": "Live",
+            "showMore": "Ipakita pa",
+            "showLess": "Ipakita nang kaunti",
+            "tapKind": "I-tap ang isang uri para makita kung sino ang nagdala sa bawat isa",
+            "animalsMore": "+{count} pa",
+            "you": "Ikaw"
         }
     },
     "talkPage": {

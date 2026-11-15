@@ -596,7 +596,14 @@
             "switchLite": "Przełącz na Ark Lite",
             "ready3d": "Ark w 3D jest gotowa",
             "where": "Gdzie żyją",
-            "kindsMore": "+{count} innych gatunków"
+            "kindsMore": "+{count} innych gatunków",
+            "latest": "Najnowsze na Arce",
+            "live": "Na żywo",
+            "showMore": "Pokaż więcej",
+            "showLess": "Pokaż mniej",
+            "tapKind": "Dotknij gatunku, aby zobaczyć, kto przywiózł każde zwierzę",
+            "animalsMore": "+{count} więcej",
+            "you": "Ty"
         }
     },
     "talkPage": {
