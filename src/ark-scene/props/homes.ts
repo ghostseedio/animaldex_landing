@@ -36,6 +36,7 @@ import {microCorner} from "@/ark-scene/micro-decor";
 import {LAKE, RIVER, sampleGround, ZONE_SITES} from "@/ark-scene/world";
 import type {ArkZone} from "@/ark-scene/types";
 // The active termite mounds (scenery lane: one list shared with the obstacles, each seated on its slope).
+import {WEB_BUILD_SECONDS, WEB_CYCLE_SECONDS, threadOrder} from "@/ark-scene/props/web-spin";
 import {activeTermiteMounds} from "@/ark-scene/mounds";
 
 /** A web: its centre, the way its face looks, its radius. Its threads and dew are drawn by `buildWebs`. */
@@ -701,8 +702,11 @@ export function* buildHomesSteps(presence: Presence, placeOf: (id: string) => Pl
 }
 
 /** Orb webs: radials and a spiral in thin silk lines, one draw call for all. Returns the dew beads' positions too. */
-export function buildWebs(webs: WebSpot[]): {lines: LineSegments; beads: Float32Array} {
+export function buildWebs(webs: WebSpot[]): {lines: LineSegments; beads: Float32Array; phase: {value: number}} {
     const positions: number[] = [];
+    // Each thread's place in the spinning and its web's seed (`web-spin.ts`): the shader draws only what is spun so far.
+    const orders: number[] = [];
+    const seeds: number[] = [];
     const beads: number[] = [];
     const random = propRandom("web-threads");
     const matrix = new Matrix4();
@@ -710,6 +714,8 @@ export function buildWebs(webs: WebSpot[]): {lines: LineSegments; beads: Float32
     for (const web of webs) {
         matrix.makeRotationY(web.facing).setPosition(web.x, web.y, web.z);
         const local: number[] = [];
+        const order: number[] = [];
+        const seed = random();
         const spokes = 14 + Math.floor(random() * 6);
         const r = web.radius;
         const spoke = (k: number) => (k / spokes) * Math.PI * 2 + Math.sin(k * 1.7) * 0.08;
@@ -717,6 +723,7 @@ export function buildWebs(webs: WebSpot[]): {lines: LineSegments; beads: Float32
             const a = spoke(k);
             const reach = r * (0.85 + 0.25 * Math.sin(k * 2.3));
             local.push(0, 0, 0, Math.cos(a) * reach, Math.sin(a) * reach, 0);
+            order.push(threadOrder("spoke", k, spokes));
         }
         // The spiral, ring by ring, between the spokes.
         const turns = 9;
@@ -728,16 +735,37 @@ export function buildWebs(webs: WebSpot[]): {lines: LineSegments; beads: Float32
             const a0 = spoke(k0);
             const a1 = spoke(k1) + (k1 === 0 ? Math.PI * 2 : 0);
             local.push(Math.cos(a0) * r0, Math.sin(a0) * r0, 0, Math.cos(a1) * r1, Math.sin(a1) * r1, 0);
+            order.push(threadOrder("spiral", t, turns * spokes));
             if (t % 2 === 0) beads.push(...v.set(Math.cos(a0) * r0, Math.sin(a0) * r0 - 0.004, 0.002).applyMatrix4(matrix).toArray());
         }
         // Anchor threads out to what it hangs on.
-        for (const a of [0.6, 2.4, 4.3]) local.push(Math.cos(a) * r * 0.9, Math.sin(a) * r * 0.9, 0, Math.cos(a) * r * 1.7, Math.sin(a) * r * 1.6, 0);
-        for (let i = 0; i < local.length; i += 3) positions.push(...v.set(local[i], local[i + 1], local[i + 2]).applyMatrix4(matrix).toArray());
+        [0.6, 2.4, 4.3].forEach((a, i) => {
+            local.push(Math.cos(a) * r * 0.9, Math.sin(a) * r * 0.9, 0, Math.cos(a) * r * 1.7, Math.sin(a) * r * 1.6, 0);
+            order.push(threadOrder("anchor", i, 3));
+        });
+        for (let i = 0; i < local.length; i += 3) {
+            positions.push(...v.set(local[i], local[i + 1], local[i + 2]).applyMatrix4(matrix).toArray());
+            // (Both ends of a thread share its order: a thread is there or it is not.)
+            orders.push(order[Math.floor(i / 6)]);
+            seeds.push(seed);
+        }
     }
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
-    const lines = new LineSegments(geometry, new LineBasicMaterial({color: new Color("#eef2f4"), transparent: true, opacity: 0.26, depthWrite: false}));
+    geometry.setAttribute("aOrder", new BufferAttribute(new Float32Array(orders), 1));
+    geometry.setAttribute("aSeed", new BufferAttribute(new Float32Array(seeds), 1));
+    // The shared clock within the webs' cycle (s); below 0: every web whole (reduced motion, still pictures).
+    const phase = {value: -1};
+    const material = new LineBasicMaterial({color: new Color("#eef2f4"), transparent: true, opacity: 0.26, depthWrite: false});
+    material.onBeforeCompile = (shader) => {
+        shader.uniforms.uWebPhase = phase;
+        shader.vertexShader = shader.vertexShader
+            .replace("#include <common>", `#include <common>\nattribute float aOrder;\nattribute float aSeed;\nuniform float uWebPhase;\nvarying float vSpun;`)
+            .replace("#include <begin_vertex>", `#include <begin_vertex>\nfloat webAt = mod(uWebPhase + aSeed * ${WEB_CYCLE_SECONDS.toFixed(3)}, ${WEB_CYCLE_SECONDS.toFixed(3)});\nvSpun = uWebPhase < 0.0 ? 1.0 : step(aOrder, clamp(webAt / ${WEB_BUILD_SECONDS.toFixed(1)}, 0.0, 1.0));`);
+        shader.fragmentShader = shader.fragmentShader.replace("#include <common>", `#include <common>\nvarying float vSpun;`).replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>\nif (vSpun < 0.5) discard;`);
+    };
+    const lines = new LineSegments(geometry, material);
     lines.name = "props:webs";
-    return {lines, beads: new Float32Array(beads)};
+    return {lines, beads: new Float32Array(beads), phase};
 }
 

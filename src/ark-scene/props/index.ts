@@ -24,6 +24,7 @@
  * Visual only: nothing here decides anything that happens in the Ark.
  */
 
+import {WEB_CYCLE_SECONDS} from "@/ark-scene/props/web-spin";
 import {Group, Vector3} from "three";
 import {ARK_ENV, ARK_SUN} from "@/ark-scene/glsl";
 import type {ArkSceneModule, ArkSceneModuleContext} from "@/ark-scene/scene-modules";
@@ -322,6 +323,8 @@ export function createPropsModule(context: ArkSceneModuleContext): ArkSceneModul
                 // The nests grow with the Ark's days (nest-growth.ts): refill when one has visibly grown.
                 if (homes?.setNestStages(arkDayNow(snapshot, nowMs, arkDayPin))) moved = true;
             }
+            // The webs are respun once an Ark day, each at its own moment (`web-spin.ts`); whole with reduced motion.
+            if (webs) webs.phase.value = reducedMotion ? -1 : (Date.now() / 1000) % WEB_CYCLE_SECONDS;
             effects.setPixelRatio(context.renderer.getPixelRatio());
             sun.copy(ARK_SUN.value as Vector3);
             effects.update(reducedMotion ? {...conditions, wind: 0} : conditions, camera.position, sun);

@@ -24,6 +24,8 @@ const SCENES: Record<string, Scene> = {
     den: {zone: "grassland", hours: 9, kind: "birth", cast: [{slug: "african-lion", name: "African Lion", n: 2, young: 2}]},
     // The rut: a rival stag first, then the mating.
     contest: {zone: "grassland", hours: 8, kind: "mating", cast: [{slug: "red-deer", name: "Red Deer", n: 6}]},
+    // The webs of a garden's spiders, respun through the day.
+    web: {zone: "farm_garden", hours: 7, kind: "dung", cast: [{slug: "black-and-yellow-garden-spider", name: "Black-and-yellow Garden Spider", n: 3}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -97,6 +99,19 @@ async function main() {
     const api = {
         info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a, b}),
         dung: () => debug.traces().filter((t) => t.kind === "dung"),
+        /** The webs' mesh: where its first web is, how many threads, and the clock's place in the webs' cycle. */
+        webs: () => {
+            const lines = (debug as unknown as {scene: {getObjectByName: (n: string) => {geometry: {attributes: Record<string, {array: Float32Array; count: number}>}; visible: boolean} | undefined}}).scene.getObjectByName("props:webs");
+            if (!lines) return null;
+            const p = lines.geometry.attributes.position.array;
+            return {x: p[0], y: p[1], z: p[2], vertices: lines.geometry.attributes.position.count, seed: lines.geometry.attributes.aSeed.array[0], visible: lines.visible};
+        },
+        /** The world at an absolute time (s), looking at a point from close by. */
+        look: async (epoch: number, at: {x: number; y: number; z: number}, distance: number) => {
+            await setAt(epoch);
+            handle.setView({target: at, distance, polar: 1.35, azimuth: 0.4});
+            await frames(6);
+        },
         /** The world at `s` seconds after the event, from `distance`, on an animal (`follow`) or a point. */
         shot: async (s: number, distance: number, follow?: string, point?: {x: number; z: number}, azimuth = 0.7, polar = 1.15) => {
             await setAt(t0 + s - 2.5);
