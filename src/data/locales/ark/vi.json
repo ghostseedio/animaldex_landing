@@ -518,6 +518,21 @@
             "notNow": "Để sau",
             "note": "Chỉ hỏi một lần. Nếu bạn dưới 18 tuổi, các con vật của bạn sẽ hiện số Voyager thay vì @username của bạn.",
             "failed": "Gửi không thành công. Hãy thử lại sau giây lát."
+        },
+        "lost": {
+            "title": "Đã mất khỏi Ark",
+            "intro": "Những loài đã mất con vật cuối cùng. Bắt được một con là loài đó trở lại.",
+            "when": "Tuyệt chủng vào ngày {day} của Ark · {date}",
+            "back": "Đã trở lại tàu",
+            "diedOld": "Con cuối cùng chết vì già",
+            "eatenBy": "Con cuối cùng bị {animal} ăn",
+            "eaten": "Con cuối cùng bị ăn",
+            "starved": "Con cuối cùng chết đói",
+            "speciesLine": "Tuyệt chủng trên Ark từ ngày {day} của Ark · {date}.",
+            "speciesBack": "Đã trở lại tàu: từng tuyệt chủng vào ngày {day} của Ark · {date}.",
+            "notAboard": "Hiện không có con {animal} nào trên tàu.",
+            "bringBack": "Bắt một con để đưa nó trở lại",
+            "listLabel": "Các loài đã mất khỏi Ark, mới nhất trước"
         }
     },
     "talkPage": {

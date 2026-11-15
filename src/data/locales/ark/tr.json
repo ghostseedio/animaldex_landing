@@ -518,6 +518,21 @@
             "notNow": "Şimdi değil",
             "note": "Yalnızca bir kez sorulur. 18 yaşından küçüksen hayvanların @username yerine bir Voyager numarasıyla görünür.",
             "failed": "Bu gerçekleşmedi. Birazdan tekrar dene."
+        },
+        "lost": {
+            "title": "Ark'tan kaybolanlar",
+            "intro": "Son hayvanı da gitmiş türler. Birini yakalarsan geri gelir.",
+            "when": "Ark'ın {day}. gününde nesli tükendi · {date}",
+            "back": "Yeniden gemide",
+            "diedOld": "Sonuncusu yaşlılıktan öldü",
+            "eatenBy": "Sonuncusunu {animal} yedi",
+            "eaten": "Sonuncusu yenildi",
+            "starved": "Sonuncusu açlıktan öldü",
+            "speciesLine": "Ark'ın {day}. gününden beri Ark'ta nesli tükenmiş · {date}.",
+            "speciesBack": "Yeniden gemide: Ark'ın {day}. gününde nesli tükenmişti · {date}.",
+            "notAboard": "Şu an gemide hiç {animal} yok.",
+            "bringBack": "Geri getirmek için birini yakala",
+            "listLabel": "Ark'tan kaybolan türler, en yeni önce"
         }
     },
     "talkPage": {

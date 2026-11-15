@@ -518,6 +518,21 @@
             "notNow": "Huwag muna",
             "note": "Isang beses lang itatanong. Kung wala ka pang 18, numero ng Voyager ang ipapakita sa mga hayop mo sa halip na ang @username mo.",
             "failed": "Hindi iyon naipadala. Subukan ulit maya-maya."
+        },
+        "lost": {
+            "title": "Nawala sa Ark",
+            "intro": "Mga uring wala na ang huling hayop. Kapag nahuli mo ang isa, babalik ito.",
+            "when": "Naubos noong araw {day} ng Ark · {date}",
+            "back": "Nakasakay ulit",
+            "diedOld": "Namatay sa katandaan ang huli",
+            "eatenBy": "Kinain ng {animal} ang huli",
+            "eaten": "Kinain ang huli",
+            "starved": "Namatay sa gutom ang huli",
+            "speciesLine": "Ubos na sa Ark mula araw {day} ng Ark · {date}.",
+            "speciesBack": "Nakasakay ulit: naubos noong araw {day} ng Ark · {date}.",
+            "notAboard": "Walang {animal} na nakasakay ngayon.",
+            "bringBack": "Manghuli ng isa para ibalik ito",
+            "listLabel": "Mga uring nawala sa Ark, pinakabago muna"
         }
     },
     "talkPage": {

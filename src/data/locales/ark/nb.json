@@ -518,6 +518,21 @@
             "notNow": "Ikke nå",
             "note": "Spørres bare én gang. Er du under 18, vises dyrene dine med et Voyager-nummer i stedet for ditt @username.",
             "failed": "Det gikk ikke gjennom. Prøv igjen om et øyeblikk."
+        },
+        "lost": {
+            "title": "Borte fra Ark",
+            "intro": "Arter der det siste dyret er borte. Fanger du ett, kommer arten tilbake.",
+            "when": "Utdødd på Ark-dag {day} · {date}",
+            "back": "Om bord igjen",
+            "diedOld": "Det siste døde av alderdom",
+            "eatenBy": "Det siste ble spist av {animal}",
+            "eaten": "Det siste ble spist",
+            "starved": "Det siste sultet i hjel",
+            "speciesLine": "Utdødd på Ark siden Ark-dag {day} · {date}.",
+            "speciesBack": "Om bord igjen: døde ut på Ark-dag {day} · {date}.",
+            "notAboard": "Ingen {animal} er om bord nå.",
+            "bringBack": "Fang en for å bringe den tilbake",
+            "listLabel": "Arter borte fra Ark, nyeste først"
         }
     },
     "talkPage": {

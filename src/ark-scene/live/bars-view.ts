@@ -15,6 +15,7 @@ import {arkBarCeiling, arkBarShare} from "@/lib/ark-live-bars";
 import {arkChangeOf, arkChangeText, arkRankedSpecies, arkTotalChange, readArkPopulationThen, type ArkChange, type ArkPopulationThen} from "@/lib/ark-population-change";
 import {arkPickAnimal, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-population";
 import {fillArkWords} from "@/lib/ark-words";
+import {ARK_LOST_WORDS_EN, arkExtinctHow, arkExtinctWhen, fetchArkExtinct, type ArkExtinction, type ArkLostWords} from "@/lib/ark-extinct";
 import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 
 const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif)";
@@ -44,6 +45,8 @@ export type ArkBarsWords = {
     yours: string;
     herdTag: string;
     list: string;
+    /** Lost from the Ark (`lib/ark-extinct.ts`); English where absent. */
+    lost?: ArkLostWords;
 };
 
 export type ArkBarsViewOptions = {
@@ -59,6 +62,13 @@ export type ArkBarsViewOptions = {
      * from. Without it, and for a species with no Ark model (A13), the Ark's generic figure.
      */
     iconUrl?: ((slug: string) => string) | null;
+    /**
+     * Lost from the Ark's read (`/api/ark/extinct`); null: no section (development's fixtures). The section shows only
+     * once the read answers with at least one species.
+     */
+    extinctUrl?: string | null;
+    /** A lost species tapped (the embed tells its host `ark:open-species`). Absent: its rows are not buttons. */
+    onLostSpecies?: ((one: ArkExtinction) => void) | null;
 };
 
 type Row = {el: HTMLLIElement; button: HTMLButtonElement; icon: HTMLImageElement; name: HTMLSpanElement; mine: HTMLSpanElement; fill: HTMLSpanElement; change: HTMLSpanElement; count: HTMLSpanElement; slug: string};
@@ -93,6 +103,14 @@ export class ArkBarsView {
     private readonly subline: HTMLSpanElement;
     private readonly close: HTMLButtonElement;
     private readonly list: HTMLUListElement;
+    private readonly lost: HTMLDivElement;
+    private readonly lostToggle: HTMLButtonElement;
+    private readonly lostTitle: HTMLSpanElement;
+    private readonly lostCount: HTMLSpanElement;
+    private readonly lostBody: HTMLDivElement;
+    private lostList: ArkExtinction[] = [];
+    private lostOpen = false;
+    private lostAsked = false;
     private readonly rows = new Map<string, Row>();
     private snapshot: ArkSnapshot | null = null;
     private ranked: ArkSpeciesRow[] = [];
@@ -173,7 +191,27 @@ export class ArkBarsView {
             this.draw();
         }, {passive: true});
         Object.assign(list.style, {listStyle: "none", margin: "0", padding: "4px 0", minHeight: "0", flex: "1 1 auto", overflowY: "auto", overscrollBehavior: "contain", borderTop: "1px solid rgba(255, 255, 255, 0.08)", scrollbarWidth: "thin"});
-        panel.append(head, list);
+        // Lost from the Ark, after the living: one folded line, hidden until the read answers with one.
+        const lost = document.createElement("div");
+        lost.dataset.arkLost = "0";
+        Object.assign(lost.style, {display: "none", flex: "0 0 auto", flexDirection: "column", borderTop: "1px solid rgba(255, 255, 255, 0.08)", minHeight: "0"});
+        const lostToggle = document.createElement("button");
+        lostToggle.type = "button";
+        lostToggle.setAttribute("aria-expanded", "false");
+        Object.assign(lostToggle.style, {display: "flex", alignItems: "center", gap: "8px", width: "100%", minHeight: "44px", padding: "0 10px 0 14px", border: "0", background: "transparent", color: "rgba(255, 252, 244, 0.72)", font: `700 12px/1.2 ${FONT}`, textAlign: "start", cursor: "pointer"});
+        const lostDot = document.createElement("span");
+        lostDot.setAttribute("aria-hidden", "true");
+        Object.assign(lostDot.style, {flex: "0 0 auto", width: "6px", height: "6px", borderRadius: "999px", background: "#8a8579"});
+        const lostTitle = document.createElement("span");
+        lostTitle.style.flex = "1";
+        const lostCount = document.createElement("span");
+        Object.assign(lostCount.style, {opacity: "0.6", fontVariantNumeric: "tabular-nums"});
+        lostToggle.append(lostDot, lostTitle, lostCount, caret(false, reduced));
+        lostToggle.addEventListener("click", () => this.setLostOpen(!this.lostOpen));
+        const lostBody = document.createElement("div");
+        Object.assign(lostBody.style, {display: "none", maxHeight: "12rem", overflowY: "auto", overscrollBehavior: "contain", paddingBottom: "4px"});
+        lost.append(lostToggle, lostBody);
+        panel.append(head, list, lost);
 
         root.append(chip, panel);
         host.appendChild(root);
@@ -188,7 +226,116 @@ export class ArkBarsView {
         this.subline = subline;
         this.close = close;
         this.list = list;
+        this.lost = lost;
+        this.lostToggle = lostToggle;
+        this.lostTitle = lostTitle;
+        this.lostCount = lostCount;
+        this.lostBody = lostBody;
         this.applyCollapsed();
+    }
+
+    /** Lost from the Ark as read (the embed hands it to its host on `ark:extinct` too). */
+    lostSpecies(): ArkExtinction[] {
+        return this.lostList.slice();
+    }
+
+    /** The read's answer (from this view's own read, or the embed's). */
+    setLost(list: ArkExtinction[]) {
+        this.lostList = list.slice();
+        this.drawLost();
+    }
+
+    private setLostOpen(open: boolean) {
+        this.lostOpen = open;
+        this.drawLost();
+    }
+
+    private drawLost() {
+        const words = this.options.words.lost ?? ARK_LOST_WORDS_EN;
+        const locale = this.options.locale;
+        const list = this.lostList;
+        this.lost.dataset.arkLost = String(list.length);
+        this.lost.style.display = list.length ? "flex" : "none";
+        if (!list.length) return;
+        this.lostTitle.textContent = words.title;
+        this.lostCount.textContent = list.length.toLocaleString(locale);
+        this.lostToggle.setAttribute("aria-expanded", this.lostOpen ? "true" : "false");
+        const turn = this.lostToggle.lastElementChild as HTMLElement | null;
+        if (turn) turn.style.transform = this.lostOpen ? "rotate(180deg)" : "none";
+        this.lostBody.style.display = this.lostOpen ? "block" : "none";
+        this.lostBody.replaceChildren();
+        if (!this.lostOpen) return;
+        const intro = document.createElement("p");
+        Object.assign(intro.style, {margin: "0", padding: "0 14px 4px", font: `500 11px/1.35 ${FONT}`, opacity: "0.5"});
+        intro.textContent = words.intro;
+        const ul = document.createElement("ul");
+        ul.setAttribute("aria-label", words.listLabel);
+        Object.assign(ul.style, {listStyle: "none", margin: "0", padding: "0"});
+        for (const one of list) {
+            const li = document.createElement("li");
+            const tap = this.options.onLostSpecies;
+            const row = document.createElement(tap ? "button" : "div");
+            if (row instanceof HTMLButtonElement) {
+                row.type = "button";
+                row.addEventListener("click", () => tap?.(one));
+            }
+            Object.assign(row.style, {display: "flex", alignItems: "center", gap: "10px", width: "100%", minHeight: "44px", padding: "5px 14px", border: "0", background: "transparent", color: "inherit", font: "inherit", textAlign: "start", cursor: tap ? "pointer" : "default"});
+            const badge = document.createElement("span");
+            Object.assign(badge.style, {flex: "0 0 auto", width: "24px", height: "24px", borderRadius: "999px", background: "#f6f1e7", display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden", opacity: one.backAboard ? "1" : "0.6", filter: one.backAboard ? "none" : "grayscale(1)"});
+            const icon = document.createElement("img");
+            icon.alt = "";
+            icon.width = 24;
+            icon.height = 24;
+            icon.loading = "lazy";
+            Object.assign(icon.style, {width: "84%", height: "84%", objectFit: "contain"});
+            icon.addEventListener("error", () => {
+                if (!icon.src.endsWith(ARK_PLACEHOLDER_ICON)) icon.src = ARK_PLACEHOLDER_ICON;
+            });
+            icon.src = this.options.iconUrl && one.modelSlug && !isArkPlaceholderSlug(one.modelSlug) ? this.options.iconUrl(one.modelSlug) : ARK_PLACEHOLDER_ICON;
+            badge.appendChild(icon);
+            const middle = document.createElement("span");
+            Object.assign(middle.style, {flex: "1", minWidth: "0", display: "block"});
+            const top = document.createElement("span");
+            Object.assign(top.style, {display: "flex", alignItems: "center", gap: "6px"});
+            const name = document.createElement("span");
+            Object.assign(name.style, {minWidth: "0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", font: `600 13px/1.2 ${FONT}`, opacity: one.backAboard ? "1" : "0.75"});
+            name.textContent = one.name;
+            top.appendChild(name);
+            if (one.backAboard) {
+                const back = document.createElement("span");
+                Object.assign(back.style, {flex: "0 0 auto", padding: "1px 6px", borderRadius: "999px", background: "rgba(200, 250, 99, 0.15)", color: LIME, font: `700 10px/1.2 ${FONT}`});
+                back.textContent = words.back;
+                top.appendChild(back);
+            }
+            const when = arkExtinctWhen(words.when, one, locale);
+            const how = arkExtinctHow(words, one);
+            const line = (value: string, alpha: string) => {
+                const span = document.createElement("span");
+                Object.assign(span.style, {display: "block", marginTop: "2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", font: `500 11px/1.2 ${FONT}`, opacity: alpha});
+                span.textContent = value;
+                return span;
+            };
+            middle.append(top, line(when, "0.55"));
+            if (how) middle.appendChild(line(how, "0.45"));
+            row.setAttribute("aria-label", [one.name, when, how, one.backAboard ? words.back : null].filter(Boolean).join(", "));
+            row.append(badge, middle);
+            li.appendChild(row);
+            ul.appendChild(li);
+        }
+        this.lostBody.append(intro, ul);
+    }
+
+    /** Its own read of Lost from the Ark, once, a moment after the first snapshot (never competing with the scene). */
+    private askLost() {
+        if (this.lostAsked || !this.options.extinctUrl) return;
+        this.lostAsked = true;
+        const url = this.options.extinctUrl;
+        setTimeout(() => {
+            if (this.disposed) return;
+            void fetchArkExtinct(url).then((answer) => {
+                if (!this.disposed && answer.available) this.setLost(answer.extinctions);
+            });
+        }, CHANGE_READ_AFTER_MS);
     }
 
     private applyCollapsed() {
@@ -215,6 +362,7 @@ export class ArkBarsView {
     setWords(words: ArkBarsWords, locale: string) {
         this.options = {...this.options, words, locale};
         if (this.snapshot) this.draw();
+        this.drawLost();
         this.applyCollapsed();
     }
 
@@ -229,6 +377,7 @@ export class ArkBarsView {
         this.ranked = arkRankedSpecies(snapshot);
         if (!this.collapsed && !this.built) this.built = ROWS_STEP;
         this.draw();
+        this.askLost();
         // The 24-hour change: the log read once, a moment after the first snapshot (kept a few minutes per device).
         if (!this.asked && this.options.eventsUrl) {
             this.asked = true;

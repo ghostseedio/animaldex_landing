@@ -518,6 +518,21 @@
             "notNow": "Agora não",
             "note": "Perguntamos só uma vez. Se você tiver menos de 18 anos, seus animais aparecem com um número de Voyager em vez do seu @username.",
             "failed": "Não deu certo. Tente novamente em instantes."
+        },
+        "lost": {
+            "title": "Perdidas da Ark",
+            "intro": "Espécies cujo último animal se foi. Capturar um traz a espécie de volta.",
+            "when": "Extinta no dia {day} da Ark · {date}",
+            "back": "De volta a bordo",
+            "diedOld": "O último morreu de velhice",
+            "eatenBy": "O último foi comido por: {animal}",
+            "eaten": "O último foi comido",
+            "starved": "O último morreu de fome",
+            "speciesLine": "Extinta na Ark desde o dia {day} da Ark · {date}.",
+            "speciesBack": "De volta a bordo: foi extinta no dia {day} da Ark · {date}.",
+            "notAboard": "Nenhum {animal} está a bordo agora.",
+            "bringBack": "Capture um para trazê-lo de volta",
+            "listLabel": "Espécies perdidas da Ark, as mais recentes primeiro"
         }
     },
     "talkPage": {

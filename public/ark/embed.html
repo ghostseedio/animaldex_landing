@@ -391,6 +391,7 @@
  *   {type: "ark:reset"}                                          fly back to the whole island (the scene's own reset button does the same)
  *   {type: "ark:activity"}                                       the reader did something on the host page (for ?idle=)
  *   {type: "ark:sound", value: false}                            sound off (on only ever from the panel's own sound button: a tap)
+ *   {type: "ark:extinct"}                                        Lost from the Ark, please: answered with {type: "ark:extinct", ...}
  * To the host: {type: "ark:selected", animal, founders, status}, where founders is that animal's named founders and shared story
  * from the same answer (src/lib/ark-founders.ts ArkAnimalFounders: {brought_by, bringers, story}, each founder
  * {display_name, handle, avatar_url}; null while the server's founder_names switch is off or the animal has none), so the
@@ -401,6 +402,10 @@
  * {type: "ark:open-profile", handle} when a bringer's @username is tapped on the web's own Ark cards running in the
  * app (src/lib/ark-profile-link.ts; their links are real /u/{handle} links too, which the apps also intercept),
  * {type: "ark:sound", on} when the viewer turns sound on or off,
+ * {type: "ark:extinct", available, extinctions: [...]} in answer to the host's {type: "ark:extinct"} (Lost from the Ark,
+ * /api/ark/extinct; available false: no read yet, show nothing; docs/ark/EXTINCT-CONTRACT.md),
+ * {type: "ark:open-species", species_profile_id, page_slug, name} when a lost species is tapped in the bars' "Lost from
+ * the Ark" (with no host the page opens /animals/<page_slug> itself),
  * {type: "ark:progress", stage, progress} as the load goes (first once a frame of the loading screen is drawn; stage "data" | "world" |
  * "animals" | "done", progress 0…1 from real steps only: src/lib/ark-loading.ts),
  * and {type: "ark:tier", tier, lite} through webkit.messageHandlers.ark,
@@ -486,6 +491,24 @@ window.AnimalDexArkStart = function () {
     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ark) window.webkit.messageHandlers.ark.postMessage(message);
     else if (window.AndroidArk && window.AndroidArk.postMessage) window.AndroidArk.postMessage(text);
     else if (window.parent !== window) window.parent.postMessage(message, "*");
+  }
+
+  // Somebody to tell: the apps' web views or a parent frame.
+  function hasHost() {
+    return Boolean((window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ark) || (window.AndroidArk && window.AndroidArk.postMessage) || window.parent !== window);
+  }
+  // A lost species tapped: the host opens it (its species view); a page on its own opens the species page.
+  function openSpecies(one) {
+    if (!one) return;
+    if (hasHost()) tell({type: "ark:open-species", species_profile_id: one.speciesProfileId, page_slug: one.pageSlug, name: one.name});
+    else if (one.pageSlug) location.href = "/animals/" + encodeURIComponent(one.pageSlug);
+  }
+  // The host asks for Lost from the Ark (ark:extinct): the bars' list when read, else a read of its own.
+  function answerExtinct() {
+    var held = hud && hud.lostSpecies ? hud.lostSpecies() : [];
+    if (held.length) { tell(Object.assign({type: "ark:extinct"}, Ark.arkExtinctForHost({available: true, extinctions: held}))); return; }
+    if (!Ark.fetchArkExtinct || fixtureAsked) { tell({type: "ark:extinct", available: false, extinctions: []}); return; }
+    Ark.fetchArkExtinct("/api/ark/extinct").then(function (answer) { tell(Object.assign({type: "ark:extinct"}, Ark.arkExtinctForHost(answer))); });
   }
 
   // The loading screen's steps (src/lib/ark-loading.ts, through the bundle): each real step moves the bar, tells the
@@ -652,6 +675,9 @@ window.AnimalDexArkStart = function () {
         locale: document.documentElement.lang || lang || "en",
         eventsUrl: fixtureAsked || feedOn ? null : "/api/ark/events",
         iconUrl: function (slug) { return icons + encodeURIComponent(slug) + ".webp"; },
+        // Lost from the Ark under who is aboard (hidden until /api/ark/extinct answers with one).
+        extinctUrl: fixtureAsked || feedOn ? null : "/api/ark/extinct",
+        onLostSpecies: openSpecies,
         log: hudLog,
         bars: hudBars,
         reducedMotion: motion.matches
@@ -784,6 +810,7 @@ window.AnimalDexArkStart = function () {
   function receive(message) {
     if (!message || typeof message !== "object") return;
     if (message.type === "ark:activity") { activity(); return; }
+    if (message.type === "ark:extinct") { answerExtinct(); return; }
     if (message.type === "ark:visible" || message.type === "ark:power") {
       if (message.type === "ark:visible") {
         var shownBefore = hostVisible;

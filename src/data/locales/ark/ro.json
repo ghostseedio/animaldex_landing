@@ -518,6 +518,21 @@
             "notNow": "Nu acum",
             "note": "Te întrebăm o singură dată. Dacă ai sub 18 ani, animalele tale apar cu un număr Voyager în locul numelui tău @username.",
             "failed": "Nu a mers. Încearcă din nou peste puțin timp."
+        },
+        "lost": {
+            "title": "Pierdute din Ark",
+            "intro": "Specii al căror ultim animal nu mai e. Prinzi unul și specia revine.",
+            "when": "Dispărută în ziua Ark {day} · {date}",
+            "back": "Din nou la bord",
+            "diedOld": "Ultimul a murit de bătrânețe",
+            "eatenBy": "Ultimul a fost mâncat de: {animal}",
+            "eaten": "Ultimul a fost mâncat",
+            "starved": "Ultimul a murit de foame",
+            "speciesLine": "Dispărută din Ark din ziua Ark {day} · {date}.",
+            "speciesBack": "Din nou la bord: dispăruse în ziua Ark {day} · {date}.",
+            "notAboard": "{animal}: niciunul la bord acum.",
+            "bringBack": "Prinde unul ca să-l aduci înapoi",
+            "listLabel": "Specii pierdute din Ark, cele mai noi întâi"
         }
     },
     "talkPage": {

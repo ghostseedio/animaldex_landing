@@ -518,6 +518,21 @@
             "notNow": "Ei nyt",
             "note": "Kysytään vain kerran. Jos olet alle 18-vuotias, eläimesi näkyvät Voyager-numerolla eivätkä @usernamella.",
             "failed": "Se ei mennyt läpi. Yritä uudelleen hetken kuluttua."
+        },
+        "lost": {
+            "title": "Kadonneet Arkista",
+            "intro": "Lajit, joiden viimeinen eläin on poissa. Kun nappaat yhden, laji palaa.",
+            "when": "Kuoli sukupuuttoon Ark-päivänä {day} · {date}",
+            "back": "Taas kyydissä",
+            "diedOld": "Viimeinen kuoli vanhuuteen",
+            "eatenBy": "Viimeisen söi {animal}",
+            "eaten": "Viimeinen syötiin",
+            "starved": "Viimeinen nääntyi nälkään",
+            "speciesLine": "Kuollut sukupuuttoon Arkissa Ark-päivästä {day} · {date}.",
+            "speciesBack": "Taas kyydissä: kuoli sukupuuttoon Ark-päivänä {day} · {date}.",
+            "notAboard": "{animal} ei ole nyt kyydissä.",
+            "bringBack": "Nappaa yksi ja tuo se takaisin",
+            "listLabel": "Arkista kadonneet lajit, uusimmat ensin"
         }
     },
     "talkPage": {

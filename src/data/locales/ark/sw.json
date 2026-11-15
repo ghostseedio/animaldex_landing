@@ -518,6 +518,21 @@
             "notNow": "Si sasa",
             "note": "Huulizwa mara moja tu. Ukiwa chini ya miaka 18, wanyama wako huonyeshwa kwa namba ya Voyager badala ya @username yako.",
             "failed": "Haikufanikiwa. Jaribu tena baada ya muda mfupi."
+        },
+        "lost": {
+            "title": "Waliopotea kutoka Ark",
+            "intro": "Spishi ambazo mnyama wao wa mwisho ameondoka. Ukimkamata mmoja, inarudi.",
+            "when": "Ilitoweka siku ya Ark {day} · {date}",
+            "back": "Ndani tena",
+            "diedOld": "Wa mwisho alikufa kwa uzee",
+            "eatenBy": "Wa mwisho aliliwa na {animal}",
+            "eaten": "Wa mwisho aliliwa",
+            "starved": "Wa mwisho alikufa kwa njaa",
+            "speciesLine": "Imetoweka katika Ark tangu siku ya Ark {day} · {date}.",
+            "speciesBack": "Ndani tena: ilitoweka siku ya Ark {day} · {date}.",
+            "notAboard": "Hakuna {animal} ndani sasa.",
+            "bringBack": "Mkamate mmoja umrudishe",
+            "listLabel": "Spishi zilizopotea kutoka Ark, mpya kwanza"
         }
     },
     "talkPage": {

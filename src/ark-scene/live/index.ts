@@ -9,6 +9,7 @@ import {ArkBarsView, type ArkBarsWords} from "@/ark-scene/live/bars-view";
 import type {ArkLiveWords} from "@/lib/ark-live-words";
 import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkActivityWords} from "@/lib/ark-animal-status";
+import {arkLostWords, type ArkExtinction} from "@/lib/ark-extinct";
 
 export {ArkLive} from "@/ark-scene/live/controller";
 
@@ -21,6 +22,8 @@ export type ArkHudWordsIn = {
     activity?: Partial<ArkActivityWords> | null;
     speciesOne?: string | null;
     speciesOther?: string | null;
+    /** Lost from the Ark's words (`ark.lost`). */
+    lost?: Record<string, unknown> | null;
     hud?: Partial<Record<"show" | "hide" | "chip" | "rowCount" | "change24h" | "changeWindow" | "yours" | "herdTag" | "listLabel", string>> | null;
 } | null;
 
@@ -36,6 +39,10 @@ export type ArkLiveHudOptions = {
     log?: boolean;
     bars?: boolean;
     reducedMotion?: boolean;
+    /** Lost from the Ark's read (`/api/ark/extinct`) under who is aboard; null/absent: none. */
+    extinctUrl?: string | null;
+    /** A lost species tapped. */
+    onLostSpecies?: ((one: ArkExtinction) => void) | null;
 };
 
 function barsWords(words: ArkHudWordsIn): ArkBarsWords {
@@ -51,7 +58,8 @@ function barsWords(words: ArkHudWordsIn): ArkBarsWords {
         speciesOther: words?.speciesOther || "{count} species",
         yours: hud.yours || "Yours",
         herdTag: hud.herdTag || "herd",
-        list: hud.listLabel || "Every species aboard, the most numerous first"
+        list: hud.listLabel || "Every species aboard, the most numerous first",
+        lost: arkLostWords(words?.lost)
     };
 }
 
@@ -63,6 +71,8 @@ export type ArkLiveHud = {
     setWords: (words: ArkHudWordsIn, locale: string) => void;
     setSelected: (id: string | null) => void;
     setCovered: (covered: boolean) => void;
+    /** Lost from the Ark as the bars read it (empty until then, or without the bars). */
+    lostSpecies: () => ArkExtinction[];
     dispose: () => void;
 };
 
@@ -70,7 +80,7 @@ export type ArkLiveHud = {
 export function mountArkLiveHud(host: HTMLElement, options: ArkLiveHudOptions): ArkLiveHud {
     const log = options.log === false ? null : new ArkLive({host, scene: options.scene, words: options.words as ArkLiveWordsIn, locale: options.locale, eventsUrl: options.eventsUrl, reducedMotion: options.reducedMotion, storageKey: null});
     // Who is aboard starts as its chip, every time (decision 239; nothing is remembered in the apps' panel).
-    const bars = options.bars === false ? null : new ArkBarsView(host, {scene: options.scene, words: barsWords(options.words), locale: options.locale, reducedMotion: Boolean(options.reducedMotion), collapsed: true, eventsUrl: options.eventsUrl, iconUrl: options.iconUrl ?? null});
+    const bars = options.bars === false ? null : new ArkBarsView(host, {scene: options.scene, words: barsWords(options.words), locale: options.locale, reducedMotion: Boolean(options.reducedMotion), collapsed: true, eventsUrl: options.eventsUrl, iconUrl: options.iconUrl ?? null, extinctUrl: options.extinctUrl ?? null, onLostSpecies: options.onLostSpecies ?? null});
     return {
         snapshot: (snapshot) => {
             log?.snapshot(snapshot);
@@ -83,6 +93,7 @@ export function mountArkLiveHud(host: HTMLElement, options: ArkLiveHudOptions): 
         },
         setSelected: (id) => bars?.setSelected(id),
         setCovered: (covered) => log?.setCovered(covered),
+        lostSpecies: () => bars?.lostSpecies() ?? [],
         dispose: () => {
             log?.dispose();
             bars?.dispose();

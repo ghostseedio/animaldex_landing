@@ -518,6 +518,21 @@
             "notNow": "Pas maintenant",
             "note": "Demandé une seule fois. Avant 18 ans, vos animaux s’affichent avec un numéro de Voyager au lieu de votre @username.",
             "failed": "L'envoi a échoué. Réessayez dans un instant."
+        },
+        "lost": {
+            "title": "Disparues de l'Ark",
+            "intro": "Les espèces dont le dernier animal n'est plus là. En capturer un la fait revenir.",
+            "when": "Éteinte au jour {day} de l'Ark · {date}",
+            "back": "De retour à bord",
+            "diedOld": "Le dernier est mort de vieillesse",
+            "eatenBy": "Le dernier a été mangé : {animal}",
+            "eaten": "Le dernier a été mangé",
+            "starved": "Le dernier est mort de faim",
+            "speciesLine": "Éteinte sur l'Ark depuis le jour {day} de l'Ark · {date}.",
+            "speciesBack": "De retour à bord : éteinte au jour {day} de l'Ark · {date}.",
+            "notAboard": "{animal} : aucun à bord en ce moment.",
+            "bringBack": "Capturez-en un pour le faire revenir",
+            "listLabel": "Espèces disparues de l'Ark, les plus récentes d'abord"
         }
     },
     "talkPage": {

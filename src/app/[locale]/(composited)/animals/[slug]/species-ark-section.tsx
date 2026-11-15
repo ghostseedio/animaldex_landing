@@ -1,9 +1,11 @@
 import Link from "@/app/[locale]/_components/link";
 import SpeciesArkCount from "@/app/[locale]/(composited)/animals/[slug]/species-ark-count";
 import {readArkFoodChainAboard, readArkFoodChainEntry} from "@/data/ark-food-chain";
-import {readArkCanBoard, readArkFoodLinks, readPublicArk, type ArkFoodLink} from "@/data/ark-public";
+import SpeciesArkLost from "@/app/[locale]/(composited)/animals/[slug]/species-ark-lost";
+import {readArkCanBoard, readArkExtinctions, readArkFoodLinks, readPublicArk, type ArkFoodLink} from "@/data/ark-public";
 import {readArkSpeciesTrends} from "@/data/ark-species-trends";
 import {arkFoodChainKind, arkFoodChainLooks, type ArkFoodChainEntry, type ArkFoodChainSpecies} from "@/lib/ark-food-chain";
+import {arkExtinctionOf, arkLostWords, type ArkExtinction, type ArkLostWords} from "@/lib/ark-extinct";
 import {arkSpeciesAboard} from "@/lib/ark-population";
 import {arkSpeciesTrendLine, arkSpeciesTrendOf} from "@/lib/ark-species-trend";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
@@ -48,6 +50,9 @@ export type SpeciesArk = {
     foodChain?: ArkFoodChainEntry | null;
     /** "Since November 5: 2 came aboard." Null when the log could not be read to the end of the window. */
     trend?: string | null;
+    /** Lost from the Ark: its logged extinction (null: never logged, or the read is not there yet), and the words. */
+    lost?: ArkExtinction | null;
+    lostWords?: ArkLostWords;
 };
 
 const TREND_DAYS = 7;
@@ -57,13 +62,14 @@ function trendDate(since: string): string {
 }
 
 export async function loadSpeciesArk({slug, speciesProfileId}: {slug: string; speciesProfileId: string | null}): Promise<SpeciesArk | null> {
-    const [{words}, snapshot, links, canBoard, read, inTheArk] = await Promise.all([
+    const [{words}, snapshot, links, canBoard, read, inTheArk, extinctions] = await Promise.all([
         getArkWords("en"),
         readPublicArk(REVALIDATE_SECONDS),
         speciesProfileId ? readArkFoodLinks(speciesProfileId, REVALIDATE_SECONDS) : Promise.resolve(null),
         readArkCanBoard({speciesProfileId, slug}, REVALIDATE_SECONDS),
         readArkFoodChainAboard(REVALIDATE_SECONDS),
-        getPageWords("en", "species.inTheArk")
+        getPageWords("en", "species.inTheArk"),
+        readArkExtinctions(REVALIDATE_SECONDS).catch(() => null)
     ]);
     // Before the Ark is open (or when it cannot be read) the page says nothing about it.
     if (!snapshot) return null;
@@ -89,7 +95,8 @@ export async function loadSpeciesArk({slug, speciesProfileId}: {slug: string; sp
         }, trendDate(trends.since), "en")
         : null;
     const extra = {arkEats: word(inTheArk, "arkEats"), arkEatenBy: word(inTheArk, "arkEatenBy"), foodChain: word(inTheArk, "foodChain")};
-    return {words, extra, count: aboard.count, focusSlug: aboard.animals[0]?.model_slug ?? slug, canBoard, links: links ?? [], foodChain, trend};
+    const lost = arkExtinctionOf(extinctions, {speciesProfileId, slug});
+    return {words, extra, count: aboard.count, focusSlug: aboard.animals[0]?.model_slug ?? slug, canBoard, links: links ?? [], foodChain, trend, lost, lostWords: arkLostWords(words.lost)};
 }
 
 type Props = {slug: string; speciesProfileId: string | null; name: string; ark: SpeciesArk | null};
@@ -149,6 +156,7 @@ export default function SpeciesArkSection({slug, speciesProfileId, name, ark}: P
     const chain = ark.foodChain && !ark.foodChain.kept ? ark.foodChain : null;
     const arkPrey = chain ? uniqueSpecies(chain.eats.flatMap((rule) => rule.prey)) : [];
     const arkPredators = chain ? uniqueSpecies(chain.eatenBy.map((item) => item.predator)) : [];
+    const lostNow = Boolean(ark.lost && !ark.lost.backAboard);
     return (
         <section id="ark" aria-labelledby="species-ark-title" className="scroll-mt-28 border border-white/10 bg-surface-900/55 p-5 md:p-8">
             <h2 id="species-ark-title" className="font-display text-3xl font-bold text-white md:text-4xl">{copy.title}</h2>
@@ -157,8 +165,10 @@ export default function SpeciesArkSection({slug, speciesProfileId, name, ark}: P
                 slug={slug}
                 name={name}
                 initial={count}
-                words={{aboardOne: copy.aboardOne, aboardOther: copy.aboardOther, notAboard: canBoard ? copy.notAboard : copy.notAboardPlain}}
+                words={{aboardOne: copy.aboardOne, aboardOther: copy.aboardOther, notAboard: lostNow && ark.lostWords ? ark.lostWords.notAboard : canBoard ? copy.notAboard : copy.notAboardPlain}}
             />
+            {/* Lost from the Ark: only when the server logged its extinction (checked again in the browser). */}
+            {ark.lostWords ? <SpeciesArkLost speciesProfileId={speciesProfileId} slug={slug} initial={ark.lost ?? null} words={ark.lostWords} /> : null}
             {ark.trend ? <p className="mt-1 text-base text-ink-200">{ark.trend}</p> : null}
             <p className="mt-2 max-w-3xl text-base leading-7 text-ink-200">{copy.body}</p>
             {eats.length || eatenBy.length ? (
