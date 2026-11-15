@@ -518,6 +518,11 @@
             "notNow": "Inte nu",
             "note": "Frågas bara en gång. Är du under 18 visas dina djur med ett Voyager-nummer i stället för ditt @username.",
             "failed": "Det gick inte igenom. Försök igen om en stund."
+        },
+        "photo": {
+            "alt": "Fotot som tog den här {species} ombord",
+            "open": "Se fotot större",
+            "close": "Stäng fotot"
         }
     },
     "talkPage": {

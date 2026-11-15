@@ -518,6 +518,11 @@
             "notNow": "Agora não",
             "note": "Perguntamos só uma vez. Se você tiver menos de 18 anos, seus animais aparecem com um número de Voyager em vez do seu @username.",
             "failed": "Não deu certo. Tente novamente em instantes."
+        },
+        "photo": {
+            "alt": "Foto que trouxe este {species} a bordo",
+            "open": "Ver a foto maior",
+            "close": "Fechar a foto"
         }
     },
     "talkPage": {

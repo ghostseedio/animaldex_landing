@@ -428,6 +428,8 @@ export type ArkWords = {
     species: ArkSpeciesWords;
     founders: ArkFoundersWords;
     age: ArkAgeAskWords;
+    /** The photo that brought it aboard, on the tap card (docs/ark/CAPTURE-MEDIA-CONTRACT.md): its alt text ({species}), open and close. */
+    photo: {alt: string; open: string; close: string};
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */

@@ -399,7 +399,10 @@
  * {type: "ark:status", id, status} whenever the selected animal's status changes (about once a second at most);
  * {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
  * {type: "ark:open-profile", handle} when a bringer's @username is tapped on the web's own Ark cards running in the
- * app (src/lib/ark-profile-link.ts; their links are real /u/{handle} links too, which the apps also intercept),
+ * app (src/lib/ark-profile-link.ts; their links are real /u/{handle} links too, which the apps also intercept), or in the
+ * box over the selected animal's bars ("Brought by @handle", docs/ark/CAPTURE-MEDIA-CONTRACT.md),
+ * {type: "ark:talk", speciesSlug, animalId} when the Talk button in that box is tapped: the app opens its own chat with
+ * that species (speciesSlug is the animal's model_slug, the Talk pages' slug),
  * {type: "ark:sound", on} when the viewer turns sound on or off,
  * {type: "ark:progress", stage, progress} as the load goes (first once a frame of the loading screen is drawn; stage "data" | "world" |
  * "animals" | "done", progress 0…1 from real steps only: src/lib/ark-loading.ts),
@@ -457,6 +460,8 @@ window.AnimalDexArkStart = function () {
   }
   // The Ark's words in the app's language (null until read, or if the read fails: the scene then shows numbers only).
   var words = null;
+  // The Talk pages' "Talk to a {animal}" titles, from the same read (the bars box's Talk button).
+  var talkWords = null;
   // Never waited on for long: offline, the scene comes up after 2.5 s without them. (One read with the loading
   // screen's script above, which asked already when it shows another language.)
   var loader = window.AnimalDexArkLoader;
@@ -464,6 +469,7 @@ window.AnimalDexArkStart = function () {
     .then(function (body) {
       if (!body || !body.ark) return;
       words = body.ark;
+      talkWords = body.talkPage || null;
       document.documentElement.lang = body.language;
       document.documentElement.dir = body.dir;
       document.title = words.metaTitle || document.title;
@@ -481,6 +487,10 @@ window.AnimalDexArkStart = function () {
     return String(template).replace(/\{(\w+)\}/g, function (match, key) { return key in values ? String(values[key]) : match; });
   }
 
+  // A host to tell: the apps' bridges, or a page framing this one.
+  function hasHost() {
+    return Boolean((window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ark) || (window.AndroidArk && window.AndroidArk.postMessage) || window.parent !== window);
+  }
   function tell(message) {
     var text = JSON.stringify(message);
     if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.ark) window.webkit.messageHandlers.ark.postMessage(message);
@@ -608,6 +618,30 @@ window.AnimalDexArkStart = function () {
       },
       // Decision 240: the selected animal's status as it changes (what it is doing, its next goal, its log, its bars).
       onStatus: function (id, status) { tell({type: "ark:status", id: id, status: statusOut(status)}); },
+      // The box over the selected animal's bars (docs/ark/CAPTURE-MEDIA-CONTRACT.md): "Brought by @handle" when the server
+      // names its founder, "Born on the Ark", and its Talk link, in the app's words. A tap on the @handle or Talk tells the
+      // app (ark:open-profile, ark:talk) instead of navigating the web view; opened on its own in a browser, the links go.
+      selectionExtras: function (animal) {
+        if (!Ark.arkSelectionExtras || !animal) return null;
+        var named = foundersOf(animal);
+        return Ark.arkSelectionExtras({
+          animal: animal,
+          founder: named ? named.brought_by : null,
+          words: {
+            broughtBy: words && words.founders && words.founders.card ? words.founders.card.broughtBy : null,
+            bornAboard: words && words.life ? words.life.bornAboard : null,
+            talkA: talkWords ? talkWords.animalTitleA : null,
+            talkAn: talkWords ? talkWords.animalTitleAn : null
+          },
+          locale: /^id([-_]|$)/i.test(document.documentElement.lang || lang || "") ? "id" : null
+        });
+      },
+      onSelectionLink: function (link) {
+        if (!hasHost()) return false;
+        if (link.kind === "profile") tell({type: "ark:open-profile", handle: link.handle});
+        else if (link.kind === "talk") tell({type: "ark:talk", speciesSlug: link.slug, animalId: link.animalId});
+        return true;
+      },
       onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
       // A lost WebGL context, back: it comes back empty (no sky light, parts of the town gone), so the page starts over,

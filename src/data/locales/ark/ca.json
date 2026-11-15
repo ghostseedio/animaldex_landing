@@ -518,6 +518,11 @@
             "notNow": "Ara no",
             "note": "Només es pregunta un cop. Si tens menys de 18 anys, els teus animals es mostren amb un número de Voyager en lloc del teu @username.",
             "failed": "No s'ha pogut fer. Torna-ho a provar d'aquí un moment."
+        },
+        "photo": {
+            "alt": "Foto que va portar aquest {species} a bord",
+            "open": "Mira la foto més gran",
+            "close": "Tanca la foto"
         }
     },
     "talkPage": {

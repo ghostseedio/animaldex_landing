@@ -518,6 +518,11 @@
             "notNow": "Şimdi değil",
             "note": "Yalnızca bir kez sorulur. 18 yaşından küçüksen hayvanların @username yerine bir Voyager numarasıyla görünür.",
             "failed": "Bu gerçekleşmedi. Birazdan tekrar dene."
+        },
+        "photo": {
+            "alt": "Bu {species} hayvanını gemiye getiren fotoğraf",
+            "open": "Fotoğrafı büyük gör",
+            "close": "Fotoğrafı kapat"
         }
     },
     "talkPage": {

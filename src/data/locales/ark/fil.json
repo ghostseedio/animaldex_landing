@@ -518,6 +518,11 @@
             "notNow": "Huwag muna",
             "note": "Isang beses lang itatanong. Kung wala ka pang 18, numero ng Voyager ang ipapakita sa mga hayop mo sa halip na ang @username mo.",
             "failed": "Hindi iyon naipadala. Subukan ulit maya-maya."
+        },
+        "photo": {
+            "alt": "Larawang nagdala sa {species} na ito sa barko",
+            "open": "Tingnan nang mas malaki ang larawan",
+            "close": "Isara ang larawan"
         }
     },
     "talkPage": {

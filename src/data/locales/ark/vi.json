@@ -518,6 +518,11 @@
             "notNow": "Để sau",
             "note": "Chỉ hỏi một lần. Nếu bạn dưới 18 tuổi, các con vật của bạn sẽ hiện số Voyager thay vì @username của bạn.",
             "failed": "Gửi không thành công. Hãy thử lại sau giây lát."
+        },
+        "photo": {
+            "alt": "Bức ảnh đã đưa {species} này lên tàu",
+            "open": "Xem ảnh lớn hơn",
+            "close": "Đóng ảnh"
         }
     },
     "talkPage": {

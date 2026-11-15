@@ -518,6 +518,11 @@
             "notNow": "Pas maintenant",
             "note": "Demandé une seule fois. Avant 18 ans, vos animaux s’affichent avec un numéro de Voyager au lieu de votre @username.",
             "failed": "L'envoi a échoué. Réessayez dans un instant."
+        },
+        "photo": {
+            "alt": "Photo qui a fait monter ce {species} à bord",
+            "open": "Voir la photo en plus grand",
+            "close": "Fermer la photo"
         }
     },
     "talkPage": {

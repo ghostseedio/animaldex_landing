@@ -518,6 +518,11 @@
             "notNow": "Teraz nie",
             "note": "Pýtame sa len raz. Ak ešte nemáš 18, tvoje zvieratá sa zobrazia s číslom Voyager namiesto tvojho @username.",
             "failed": "Nepodarilo sa. Skús to o chvíľu znova."
+        },
+        "photo": {
+            "alt": "Fotka, ktorá priviedla toto zviera ({species}) na palubu",
+            "open": "Zobraziť fotku väčšiu",
+            "close": "Zavrieť fotku"
         }
     },
     "talkPage": {

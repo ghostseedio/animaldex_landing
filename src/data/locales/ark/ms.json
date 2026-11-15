@@ -518,6 +518,11 @@
             "notNow": "Bukan sekarang",
             "note": "Ditanya sekali sahaja. Jika anda di bawah 18 tahun, haiwan anda dipaparkan dengan nombor Voyager, bukan @username anda.",
             "failed": "Tidak berjaya dihantar. Cuba lagi sebentar lagi."
+        },
+        "photo": {
+            "alt": "Foto yang membawa {species} ini naik ke kapal",
+            "open": "Lihat foto lebih besar",
+            "close": "Tutup foto"
         }
     },
     "talkPage": {

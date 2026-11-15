@@ -518,6 +518,11 @@
             "notNow": "Ikke nu",
             "note": "Spørges kun én gang. Er du under 18, vises dine dyr med et Voyager-nummer i stedet for dit @username.",
             "failed": "Det gik ikke igennem. Prøv igen om lidt."
+        },
+        "photo": {
+            "alt": "Foto, der bragte denne {species} om bord",
+            "open": "Se billedet større",
+            "close": "Luk billedet"
         }
     },
     "talkPage": {

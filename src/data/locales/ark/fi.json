@@ -518,6 +518,11 @@
             "notNow": "Ei nyt",
             "note": "Kysytään vain kerran. Jos olet alle 18-vuotias, eläimesi näkyvät Voyager-numerolla eivätkä @usernamella.",
             "failed": "Se ei mennyt läpi. Yritä uudelleen hetken kuluttua."
+        },
+        "photo": {
+            "alt": "Kuva, joka toi tämän eläimen ({species}) laivaan",
+            "open": "Näytä kuva suurempana",
+            "close": "Sulje kuva"
         }
     },
     "talkPage": {

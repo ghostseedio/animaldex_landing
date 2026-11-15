@@ -518,6 +518,11 @@
             "notNow": "Jetzt nicht",
             "note": "Wird nur einmal gefragt. Unter 18 erscheinen deine Tiere mit einer Voyager-Nummer statt mit deinem @username.",
             "failed": "Das hat nicht geklappt. Versuch es gleich noch einmal."
+        },
+        "photo": {
+            "alt": "Foto, mit dem dieses Tier ({species}) an Bord kam",
+            "open": "Foto größer ansehen",
+            "close": "Foto schließen"
         }
     },
     "talkPage": {

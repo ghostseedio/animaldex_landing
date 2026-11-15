@@ -518,6 +518,11 @@
             "notNow": "Ne sada",
             "note": "Pitamo samo jednom. Ako imaš manje od 18 godina, tvoje se životinje prikazuju s Voyager brojem, a ne s tvojim @username.",
             "failed": "To nije prošlo. Pokušaj ponovno za trenutak."
+        },
+        "photo": {
+            "alt": "Fotografija koja je ovu životinju ({species}) dovela na brod",
+            "open": "Pogledaj veću fotografiju",
+            "close": "Zatvori fotografiju"
         }
     },
     "talkPage": {

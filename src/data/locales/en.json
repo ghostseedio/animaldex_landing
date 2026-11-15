@@ -4554,9 +4554,9 @@
         "playing": "A young {animal} is playing",
         "toWater": "{count} {animals} are heading to water",
         "home": "{count} {animals} are heading home",
-      "flock": "{count} {animals} took to the air",
-      "doing": "{aAnimal} is {activity}",
-      "group": "{count} {animals} are {activity}",
+        "flock": "{count} {animals} took to the air",
+        "doing": "{aAnimal} is {activity}",
+        "group": "{count} {animals} are {activity}",
         "breathing": "{aAnimal} came up for air",
         "calling": "{aAnimal} is calling",
         "bathing": "{aAnimal} is bathing",
@@ -4690,6 +4690,11 @@
       "notNow": "Not now",
       "note": "Asked once. Under 18, your animals show as a Voyager number instead of your @username.",
       "failed": "That didn't go through. Try again in a moment."
+    },
+    "photo": {
+      "alt": "Photo that brought this {species} aboard",
+      "open": "See the photo larger",
+      "close": "Close the photo"
     }
   },
   "seo": {

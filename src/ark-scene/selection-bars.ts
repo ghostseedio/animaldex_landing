@@ -11,6 +11,14 @@
  * for it nor its founder's name. Up to two bar rows wide (a long name widens the box, the bars stay their width), cut
  * with an ellipsis only past that; `dir="auto"` so a
  * right-to-left name reads right to left.
+ *
+ * Under the name, who brought it (owner, 2026-11-15: "it's got the new animal [name] but hasn't got the 'Brought by' like
+ * on web"; docs/ark/CAPTURE-MEDIA-CONTRACT.md section 1): "Brought by @handle" only when the server names its founder,
+ * "Born on the Ark" for one born aboard, nothing for a Voyager. The @handle is a real link to the founder's profile, and
+ * a small Talk button sits at the end of the name line for a talkable species (section 3); the host decides what a tap
+ * does (`onLink`: the apps' embed tells the app instead of navigating). Those two are the box's only live parts: they
+ * take their own taps (never the camera's) and keyboard focus while the box shows; the bars stay hidden from screen
+ * readers. The box sits in its own layer beside the scene's labels, which are hidden from screen readers.
  */
 
 import {ARK_STATUS_BAR_KEYS, type ArkBarTone, type ArkStatusBarKey, type ArkStatusBars} from "@/lib/ark-animal-status";
@@ -38,6 +46,33 @@ const NAME_MAX_PX = ROW_PX * 2;
 
 type Box = {left: number; top: number; right: number; bottom: number};
 
+/** Under the name: a named founder ("Brought by {name}" with the @handle linked) or a plain line ("Born on the Ark"). */
+export type ArkSelectionByline =
+    | {kind: "founder"; template: string; handle: string; href: string}
+    | {kind: "text"; text: string};
+
+/** What the host adds to the selected animal's box: who brought it, and its Talk link (null: not talkable). */
+export type ArkSelectionExtras = {byline: ArkSelectionByline | null; talk: {label: string; href: string} | null};
+
+/** A tap on one of the box's links; the host answers true when it handled it (the link then does not navigate). */
+export type ArkSelectionLink = {kind: "profile"; handle: string} | {kind: "talk"; slug: string; animalId: string};
+
+/** The parts of `template` around `{name}` ("Brought by {name}" -> ["Brought by ", ""]); no `{name}`: all before it. */
+export function bylineParts(template: string): [string, string] {
+    const at = template.indexOf("{name}");
+    return at < 0 ? [`${template} `, ""] : [template.slice(0, at), template.slice(at + 6)];
+}
+
+const LINK_STYLE = {
+    pointerEvents: "auto",
+    color: "rgba(255, 252, 244, 0.96)",
+    textDecoration: "underline",
+    textDecorationColor: "rgba(255, 252, 244, 0.45)",
+    textUnderlineOffset: "2px",
+    outlineOffset: "2px",
+    cursor: "pointer"
+} as const;
+
 /**
  * Where the bars go so that they overlap none of `boxes` (the chips and buttons over the view): beside the one they
  * would cover, on the side that moves them least, when they fit there inside the view; else below it. Pure.
@@ -57,13 +92,22 @@ export class ArkSelectionBars {
     readonly el: HTMLDivElement;
     private readonly rows = new Map<ArkStatusBarKey, {row: HTMLDivElement; fill: HTMLSpanElement}>();
     private readonly name: HTMLDivElement;
+    private readonly nameText: HTMLSpanElement;
+    private readonly talk: HTMLAnchorElement;
+    private readonly byline: HTMLDivElement;
+    private links: {talk: ArkSelectionLink | null; profile: ArkSelectionLink | null} = {talk: null, profile: null};
     private shown = false;
     private any = false;
     private size: {w: number; h: number} | null = null;
     /** What is drawn over the view (the HUD's chips, the sound button), in the layer's own pixels, and the host's top inset. */
     private chips: {at: number; top: number; boxes: Box[]} | null = null;
 
-    constructor(layer: HTMLElement, private reducedMotion: boolean) {
+    /** `layer`: the scene's label layer; the box goes in a layer of its own just after it (not hidden from screen readers). */
+    constructor(labels: HTMLElement, private reducedMotion: boolean, private readonly onLink: ((link: ArkSelectionLink) => boolean) | null = null) {
+        const layer = document.createElement("div");
+        layer.dataset.arkBarsLayer = "";
+        Object.assign(layer.style, {position: "absolute", inset: "0", pointerEvents: "none", overflow: "hidden"});
+        labels.after(layer);
         const el = document.createElement("div");
         el.dataset.arkBars = "selected";
         Object.assign(el.style, {
@@ -86,10 +130,7 @@ export class ArkSelectionBars {
             transition: reducedMotion ? "none" : "opacity 220ms ease",
             willChange: "transform"
         });
-        const name = document.createElement("div");
-        name.dir = "auto";
-        Object.assign(name.style, {
-            display: "none",
+        const line = {
             maxWidth: `${NAME_MAX_PX}px`,
             overflow: "hidden",
             textOverflow: "ellipsis",
@@ -98,13 +139,47 @@ export class ArkSelectionBars {
             font: `600 ${ICON_PX}px/1.15 ${FONT}`,
             letterSpacing: "-0.01em",
             color: "rgba(255, 252, 244, 0.96)",
-            textShadow: "0 1px 2px rgba(0, 0, 0, 0.45)",
-            paddingBottom: "1px"
+            textShadow: "0 1px 2px rgba(0, 0, 0, 0.45)"
+        };
+        // The name line: the species' name, and the Talk button at its end when there is one.
+        const name = document.createElement("div");
+        Object.assign(name.style, {display: "none", alignItems: "center", gap: "5px", maxWidth: `${NAME_MAX_PX + ICON_PX + 9}px`, paddingBottom: "1px"});
+        const nameText = document.createElement("span");
+        nameText.dir = "auto";
+        nameText.setAttribute("aria-hidden", "true");
+        Object.assign(nameText.style, {...line, display: "block", minWidth: "0", flex: "0 1 auto"});
+        const talk = document.createElement("a");
+        talk.dataset.arkBarsTalk = "";
+        talk.innerHTML = `<svg viewBox="0 0 24 24" width="${ICON_PX}" height="${ICON_PX}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20 12a7.5 7.5 0 0 1-11.2 6.5L4 20l1.5-4.3A7.5 7.5 0 1 1 20 12z"/></svg>`;
+        Object.assign(talk.style, {
+            ...LINK_STYLE,
+            display: "none",
+            flex: "0 0 auto",
+            alignItems: "center",
+            justifyContent: "center",
+            width: `${ICON_PX + 8}px`,
+            height: `${ICON_PX + 8}px`,
+            margin: "-4px -3px -4px 0",
+            borderRadius: "999px",
+            background: "rgba(143, 214, 148, 0.22)",
+            textDecoration: "none"
         });
+        name.append(nameText, talk);
         el.appendChild(name);
         this.name = name;
+        this.nameText = nameText;
+        this.talk = talk;
+        // Who brought it, under the name.
+        const byline = document.createElement("div");
+        byline.dataset.arkBarsBy = "";
+        byline.dir = "auto";
+        Object.assign(byline.style, {...line, display: "none", font: `500 ${ICON_PX}px/1.2 ${FONT}`, color: "rgba(255, 252, 244, 0.78)", marginTop: "-2px", paddingBottom: "1px"});
+        el.appendChild(byline);
+        this.byline = byline;
+        for (const link of [talk]) this.guard(link, "talk");
         for (const key of KEYS) {
             const row = document.createElement("div");
+            row.setAttribute("aria-hidden", "true");
             Object.assign(row.style, {display: "none", alignItems: "center", gap: "5px"});
             const icon = document.createElement("span");
             icon.innerHTML = `<svg viewBox="0 0 24 24" width="${ICON_PX}" height="${ICON_PX}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${ICON[key]}</svg>`;
@@ -120,10 +195,12 @@ export class ArkSelectionBars {
         }
         // The pointer down to the animal.
         const tick = document.createElement("span");
+        tick.setAttribute("aria-hidden", "true");
         Object.assign(tick.style, {position: "absolute", left: "50%", bottom: "-5px", width: "8px", height: "8px", marginLeft: "-4px", transform: "rotate(45deg)", background: "rgba(14, 20, 14, 0.72)", borderRight: "1px solid rgba(255, 255, 255, 0.18)", borderBottom: "1px solid rgba(255, 255, 255, 0.18)"});
         el.appendChild(tick);
         layer.appendChild(el);
         this.el = el;
+        this.live(false);
     }
 
     setReducedMotion(reduced: boolean) {
@@ -131,12 +208,71 @@ export class ArkSelectionBars {
         this.el.style.transition = reduced ? "none" : "opacity 220ms ease";
     }
 
-    /** The selected animal's bars and its species' name (never a nickname), or null (nothing selected, or nothing to show). */
-    set(bars: ArkStatusBars | null, name: string | null = null) {
+    /** A link of the box: its own taps (never the camera's), and the host's say on what a tap does. */
+    private guard(link: HTMLAnchorElement, kind: "talk" | "profile") {
+        const stop = (event: Event) => event.stopPropagation();
+        link.addEventListener("pointerdown", stop);
+        link.addEventListener("pointerup", stop);
+        link.addEventListener("dblclick", stop);
+        link.addEventListener("keydown", stop);
+        link.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const told = this.links[kind];
+            if (told && this.onLink?.(told)) event.preventDefault();
+        });
+    }
+
+    /** The links take taps and focus only while the box shows. */
+    private live(on: boolean) {
+        for (const link of Array.from(this.el.querySelectorAll("a"))) {
+            link.tabIndex = on ? 0 : -1;
+            link.style.pointerEvents = on ? "auto" : "none";
+        }
+    }
+
+    private setByline(byline: ArkSelectionByline | null) {
+        const key = byline ? (byline.kind === "founder" ? `f|${byline.template}|${byline.handle}|${byline.href}` : `t|${byline.text}`) : "";
+        if (this.byline.dataset.key === key) return;
+        this.byline.dataset.key = key;
+        this.byline.replaceChildren();
+        this.links.profile = null;
+        this.byline.style.display = byline ? "block" : "none";
+        if (!byline) return;
+        if (byline.kind === "text") {
+            this.byline.textContent = byline.text;
+            return;
+        }
+        const [before, after] = bylineParts(byline.template);
+        const link = document.createElement("a");
+        link.href = byline.href;
+        link.textContent = `@${byline.handle}`;
+        link.dir = "ltr";
+        link.dataset.arkBarsProfile = byline.handle;
+        Object.assign(link.style, LINK_STYLE, {pointerEvents: this.shown ? "auto" : "none"});
+        link.tabIndex = this.shown ? 0 : -1;
+        this.guard(link, "profile");
+        this.links.profile = {kind: "profile", handle: byline.handle};
+        this.byline.append(before, link, after);
+    }
+
+    /**
+     * The selected animal's bars and its species' name (never a nickname), or null (nothing selected, or nothing to
+     * show); `extras`, who brought it and its Talk link (section 1 and 3 of the capture media contract).
+     */
+    set(bars: ArkStatusBars | null, name: string | null = null, extras: ArkSelectionExtras | null = null, ids: {animalId: string; slug: string} | null = null) {
         this.any = false;
         const label = name?.trim() || "";
-        if (this.name.textContent !== label) this.name.textContent = label;
-        this.name.style.display = label ? "block" : "none";
+        if (this.nameText.textContent !== label) this.nameText.textContent = label;
+        this.name.style.display = label ? "flex" : "none";
+        const talk = label && extras?.talk && ids ? extras.talk : null;
+        this.talk.style.display = talk ? "inline-flex" : "none";
+        this.links.talk = talk && ids ? {kind: "talk", slug: ids.slug, animalId: ids.animalId} : null;
+        if (talk) {
+            if (this.talk.getAttribute("href") !== talk.href) this.talk.href = talk.href;
+            this.talk.setAttribute("aria-label", talk.label);
+            this.talk.title = talk.label;
+        }
+        this.setByline(extras?.byline ?? null);
         for (const key of KEYS) {
             const bar = bars?.[key] ?? null;
             const {row, fill} = this.rows.get(key)!;
@@ -171,6 +307,7 @@ export class ArkSelectionBars {
         if (!this.shown) {
             this.shown = true;
             this.el.style.opacity = "1";
+            this.live(true);
         }
     }
 
@@ -204,9 +341,10 @@ export class ArkSelectionBars {
         if (!this.shown) return;
         this.shown = false;
         this.el.style.opacity = "0";
+        this.live(false);
     }
 
     dispose() {
-        this.el.remove();
+        this.el.parentElement?.remove();
     }
 }

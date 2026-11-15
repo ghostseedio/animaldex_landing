@@ -518,6 +518,11 @@
             "notNow": "Nu acum",
             "note": "Te întrebăm o singură dată. Dacă ai sub 18 ani, animalele tale apar cu un număr Voyager în locul numelui tău @username.",
             "failed": "Nu a mers. Încearcă din nou peste puțin timp."
+        },
+        "photo": {
+            "alt": "Fotografia care a adus acest {species} la bord",
+            "open": "Vezi fotografia mai mare",
+            "close": "Închide fotografia"
         }
     },
     "talkPage": {

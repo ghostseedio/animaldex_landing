@@ -8,6 +8,8 @@ import type {ArkStats} from "@/ark-scene/stats";
 import type {ArkMomentKind} from "@/ark-scene/moments";
 import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import type {ArkRestStatus} from "@/ark-scene/sleep";
+import type {ArkSelectionExtras, ArkSelectionLink} from "@/ark-scene/selection-bars";
+export type {ArkSelectionByline, ArkSelectionExtras, ArkSelectionLink} from "@/ark-scene/selection-bars";
 
 export type {ArkRestStatus} from "@/ark-scene/sleep";
 import type {ArkRuntimeHandle, ArkRuntimeOptions} from "@/ark-scene/runtime";
@@ -288,6 +290,13 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
      * selected and whenever that changes (at most about once a second): the tap card and the embed's `ark:status`.
      */
     onStatus?: (id: string, status: ArkAnimalStatus) => void;
+    /**
+     * Who brought the selected animal and its Talk link, for the box over its bars (docs/ark/CAPTURE-MEDIA-CONTRACT.md
+     * sections 1 and 3): the host's words and links, as its founders read has them. Absent: the name and bars only.
+     */
+    selectionExtras?: (animal: ArkAnimal) => ArkSelectionExtras | null;
+    /** A tap on the box's @handle or Talk link: true when the host handled it (the embed tells the app), so the link does not navigate. */
+    onSelectionLink?: (link: ArkSelectionLink) => boolean;
     mineOnly?: boolean;
     /** The seven regions' names, drawn over the world when it is seen from far. */
     regionLabels?: Partial<Record<ArkRegion, string>>;
