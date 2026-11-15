@@ -1077,3 +1077,24 @@ html:not([data-hero="b"]) [data-hero-arm="b"] {
 .ark-panel-over { animation: arkPanelIn 260ms var(--ease-spring) both; }
 @keyframes arkPanelIn { from { transform: translateX(32px); opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .ark-panel-over { animation: none; } }
+
+/* The home hero's opening (home-ark-hero.tsx): the real frame drifts once; a second visit this session, set before
+   the first paint, opens on the Ark; reduced motion, Save-Data or 2G/3G keep the cross-fades and drop all movement. */
+@keyframes heroRealDrift {
+    from { transform: scale(1); }
+    to { transform: scale(1.07) translate3d(-1.2%, 0.8%, 0); }
+}
+.hero-real-drift {
+    transform-origin: 62% 28%;
+    animation: heroRealDrift 4.6s cubic-bezier(0.25, 0.6, 0.35, 1) both;
+}
+html[data-hero-played] [data-hero-opening] {
+    visibility: hidden;
+    opacity: 0;
+}
+html[data-hero-armed]:not([data-hero-played]) #top:is([data-step="real"], [data-step="card"]) [data-hero-middle] { opacity: 0; }
+html[data-hero-lite] .hero-real-drift { animation: none; }
+html[data-hero-lite] .hero-motion { transform: none !important; }
+@media (prefers-reduced-motion: reduce) {
+    .hero-real-drift { animation: none; }
+}

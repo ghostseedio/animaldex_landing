@@ -1,6 +1,6 @@
 import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
-import HomeArkHero from "@/app/[locale]/(composited)/(home)/_components/home-ark-hero";
+import HomeArkHero, {HERO_OPENING_SCRIPT} from "@/app/[locale]/(composited)/(home)/_components/home-ark-hero";
 import HomeLiveNumbers from "@/app/[locale]/(composited)/(home)/_components/home-live-numbers";
 import HomeArkDay, {type HomeArkDayFrame} from "@/app/[locale]/(composited)/(home)/_components/home-ark-day";
 import HomeArkPopulations from "@/app/[locale]/(composited)/(home)/_components/home-ark-populations";
@@ -26,7 +26,8 @@ import {daylightAt} from "@/lib/ark-daylight";
 /**
  * The home page (landing lane S2, 2026-11-12): the live Ark first, then what it is made of, in pictures.
  *
- *   1. The hero: the real Ark (a frame of it, then the live 3D world) behind the headline and the slogan.
+ *   1. The hero: a real Komodo dragon (a frame of the owner's own footage), its capture card, then the push into the
+ *      real Ark (a frame of it, then the live 3D world), behind the headline and the slogan.
  *   2. Who is aboard right now (the public read and the event log).
  *   3. From your camera to the Ark: a real capture, a Komodo dragon in the Ark, its talking model.
  *   4. A day on the Ark: one real day of the shared clock, as the reader scrolls.
@@ -167,13 +168,13 @@ function Specimen({name, latin, line}: {name: string; latin: string; line: strin
     );
 }
 
-function Picture({name, widths, alt, sizes, className}: {name: string; widths: number[]; alt: string; sizes: string; className?: string}) {
+function Picture({name, widths, alt, sizes, className, loading = "lazy", fetchPriority}: {name: string; widths: number[]; alt: string; sizes: string; className?: string; loading?: "lazy" | "eager"; fetchPriority?: "high" | "low" | "auto"}) {
     const set = (format: string) => widths.map((width) => `${ART}/${name}-${width}.${format} ${width}w`).join(", ");
     return (
         <picture>
             <source type="image/avif" srcSet={set("avif")} sizes={sizes} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={`${ART}/${name}-${widths[0]}.webp`} srcSet={set("webp")} sizes={sizes} alt={alt} loading="lazy" decoding="async" className={className} />
+            <img src={`${ART}/${name}-${widths[0]}.webp`} srcSet={set("webp")} sizes={sizes} alt={alt} loading={loading} fetchPriority={fetchPriority} decoding="async" className={className} />
         </picture>
     );
 }
@@ -218,6 +219,11 @@ export default async function Home({params}: HomePageProps) {
         const posterTall = (format: string) => [640, 828, 1080].map((width) => `${ART}/poster-tall-${width}.${format} ${width}w`).join(", ");
         // (No clock or date: the poster is one fixed render, and a days-old stamp read as "now" on phones.)
         const posterCaption = t("hero.poster");
+        // The opening's real frame: the owner's own footage of a wild Komodo dragon (Komodo Island, Komodo National Park, 14 October 2026),
+        // one frame each for wide and tall screens, cut clear of passers-by (`public/images/home/ark/real-komodo-*`).
+        const realWide = (format: string) => [1024, 1480].map((width) => `${ART}/real-komodo-wide-${width}.${format} ${width}w`).join(", ");
+        const realTall = (format: string) => [480, 680].map((width) => `${ART}/real-komodo-tall-${width}.${format} ${width}w`).join(", ");
+        const cardSizes = "(min-width: 1024px) 16rem, (min-width: 768px) 14rem, (min-width: 640px) 11rem, 8.75rem";
         const dayFrames = DAY_FRAMES.map((frame) => dayFrame(frame, t, locale));
         const plateSizes = "(min-width: 1024px) 28rem, (min-width: 640px) 45vw, 92vw";
         const foodChainClass = "[&_h2]:font-display [&_h2]:text-[2.5rem] [&_h2]:font-bold [&_h2]:leading-[0.95] [&_h2]:tracking-tight md:[&_h2]:text-6xl";
@@ -232,6 +238,10 @@ export default async function Home({params}: HomePageProps) {
             <>
                 {/* No FAQPage: the questions left the page (2026-11-01), and the markup has to match what is shown. */}
                 <script type="application/ld+json" dangerouslySetInnerHTML={{__html: jsonLdHtml(homeSchema)}} />
+                {/* The hero's real frame, fetched first; and whether the opening already played this session (before the first paint). */}
+                <link rel="preload" as="image" type="image/avif" media="(min-width: 768px)" imageSrcSet={realWide("avif")} imageSizes="100vw" />
+                <link rel="preload" as="image" type="image/avif" media="(max-width: 767px)" imageSrcSet={realTall("avif")} imageSizes="100vw" />
+                <script dangerouslySetInnerHTML={{__html: HERO_OPENING_SCRIPT}} />
 
                 {/* 1. The live Ark. */}
                 <HomeArkHero
@@ -245,7 +255,33 @@ export default async function Home({params}: HomePageProps) {
                         poster: posterCaption,
                         live: t("hero.live"),
                         sceneLabel: t("hero.sceneLabel"),
-                        stages: arkLoaderStages(messages)
+                        stages: arkLoaderStages(messages),
+                        real: t("hero.real"),
+                        replay: t("hero.replay")
+                    }}
+                    real={
+                        <picture>
+                            <source media="(min-width: 768px)" type="image/avif" srcSet={realWide("avif")} sizes="100vw" />
+                            <source media="(min-width: 768px)" type="image/webp" srcSet={realWide("webp")} sizes="100vw" />
+                            <source type="image/avif" srcSet={realTall("avif")} sizes="100vw" />
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                                src={`${ART}/real-komodo-tall-480.webp`}
+                                srcSet={realTall("webp")}
+                                sizes="100vw"
+                                alt=""
+                                fetchPriority="high"
+                                className="h-full w-full object-cover object-[50%_20%] md:object-[50%_12%]"
+                            />
+                        </picture>
+                    }
+                    card={{
+                        name: "Komodo Dragon",
+                        latin: "Varanus komodoensis",
+                        catchLine: t("steps.catchLabel", {date: shortDate(CAPTURED_AT, locale)}),
+                        aboardLine: t("steps.aboardLabel", {date: shortDate(ABOARD_AT, locale)}),
+                        catchArt: <Picture name="catch-komodo" widths={[480, 960]} alt="" sizes={cardSizes} className="h-full w-full object-cover" loading="eager" fetchPriority="low" />,
+                        aboardArt: <Picture name="aboard-komodo" widths={[480, 720]} alt="" sizes={cardSizes} className="h-full w-full object-cover" loading="eager" fetchPriority="low" />
                     }}
                     poster={
                         <picture>
@@ -259,7 +295,7 @@ export default async function Home({params}: HomePageProps) {
                                 srcSet={posterTall("webp")}
                                 sizes="100vw"
                                 alt={posterCaption}
-                                fetchPriority="high"
+                                fetchPriority="low"
                                 className="h-full w-full object-cover object-[50%_40%] md:object-[38%_50%]"
                             />
                         </picture>
@@ -267,7 +303,9 @@ export default async function Home({params}: HomePageProps) {
                 >
                     <h1 className="max-w-5xl text-white">
                         <span className="block font-display text-[3.1rem] font-extrabold uppercase leading-[0.86] tracking-[-0.005em] [text-wrap:balance] sm:text-7xl lg:text-[6.25rem]">{t("hero.taglineLead")}</span>
-                        <span className="mt-2 block font-display-italic text-[2.25rem] font-semibold italic leading-[1] text-white/90 [text-wrap:balance] sm:text-5xl lg:mt-3 lg:text-[3.75rem]">{t("hero.taglineRest")}</span>
+                        {/* The middle line lands with the push into the Ark (shown at once without script, on a second visit or after it). */}
+                        <span data-hero-middle="" className="mt-2 block font-display-italic text-[1.85rem] font-semibold italic leading-[1.02] text-white/90 transition-opacity duration-700 [text-wrap:balance] sm:text-4xl lg:mt-3 lg:text-[3.1rem]">{t("hero.taglineMiddle")}</span>
+                        <span className="mt-1 block font-display-italic text-[1.85rem] font-semibold italic leading-[1.02] text-white/90 [text-wrap:balance] sm:text-4xl lg:mt-1.5 lg:text-[3.1rem]">{t("hero.taglineRest")}</span>
                     </h1>
                     {/* The brand's slogan, the one line under the headline (owner, 2026-11-14). */}
                     <p className="mt-6 flex items-center gap-3 font-display text-lg font-semibold leading-snug text-white/85 md:mt-7 md:text-2xl">
