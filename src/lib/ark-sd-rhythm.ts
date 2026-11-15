@@ -250,7 +250,7 @@ export type ArkRhythmThrive = "ordinary" | "good" | "prime";
  */
 export type ArkRhythmShift = {cover: number; feed: number; still: number; move: number; bout: number};
 
-export const ARK_RHYTHM_COVER: Record<ArkRhythmThrive, number> = {prime: 0.78, good: 0.66, ordinary: 0.38};
+export const ARK_RHYTHM_COVER: Record<ArkRhythmThrive, number> = {prime: 0.78, good: 0.66, ordinary: 0.46};
 
 export function arkRhythmShift(thrive: ArkRhythmThrive | null | undefined, condition: ArkRhythmCondition): ArkRhythmShift {
     const shift: ArkRhythmShift = {cover: ARK_RHYTHM_COVER[thrive ?? "ordinary"], feed: 1, still: thrive === "ordinary" || !thrive ? 1.35 : 1, move: 1, bout: 1};
