@@ -343,6 +343,8 @@
             "grazing": "beiter",
             "browsing": "spiser blader",
             "hunting": "jakter",
+            "eating": "eter byttet sitt",
+            "scavenging": "eter åtsel",
             "waiting": "lurer på bytte",
             "prowling": "lusker rundt",
             "fishing": "fisker",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal} bader",
                 "feeding": "Fôringstid for {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "En jakt pågår · {animal}",
+            "eating": "Et måltid pågår · {animal}",
+            "label": "{line}. Vis meg"
         },
         "sound": {
             "label": "Lyd",

@@ -343,6 +343,8 @@
             "grazing": "במרעה",
             "browsing": "באכילת עלים",
             "hunting": "בציד",
+            "eating": "אוכל את טרפו",
+            "scavenging": "אוכל נבלות",
             "waiting": "במארב לטרף",
             "prowling": "בשיטוט אחר טרף",
             "fishing": "בדיג",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal} מתרחץ",
                 "feeding": "זמן האכלה: {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "ציד מתרחש עכשיו · {animal}",
+            "eating": "ארוחה מתרחשת עכשיו · {animal}",
+            "label": "{line}. הראה לי"
         },
         "sound": {
             "label": "צליל",

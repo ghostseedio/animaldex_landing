@@ -132,7 +132,7 @@ test("a big cat on a deer: the deer lies on its side where it fell, the cat feed
         assert.equal(pose.doing, "eating");
         assert.ok(Math.hypot(pose.x - p.x, pose.z - p.z) < 1e-6, "stays over it");
     }
-    assert.deepEqual([...states].sort(), ["eat", "scan"]);
+    assert.deepEqual(Array.from(states).sort(), ["eat", "scan"]);
     // Then a drink at the water, then a rest a few lengths off.
     assert.ok(script.drink, "water 12 m off: it drinks");
     assert.equal(predatorAt(script, script.drink!.from + 1).doing, "drinking");

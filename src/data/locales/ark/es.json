@@ -343,6 +343,8 @@
             "grazing": "pastando",
             "browsing": "comiendo hojas",
             "hunting": "cazando",
+            "eating": "comiendo su presa",
+            "scavenging": "carroñeando",
             "waiting": "esperando a su presa",
             "prowling": "merodeando",
             "fishing": "pescando",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal} se está bañando",
                 "feeding": "Hora de comer para {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "Hay una caza en marcha · {animal}",
+            "eating": "Se está comiendo una presa · {animal}",
+            "label": "{line}. Muéstramelo"
         },
         "sound": {
             "label": "Sonido",

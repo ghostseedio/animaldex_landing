@@ -343,6 +343,8 @@
             "grazing": "пасётся",
             "browsing": "объедает листья",
             "hunting": "охотится",
+            "eating": "ест свою добычу",
+            "scavenging": "питается падалью",
             "waiting": "подстерегает добычу",
             "prowling": "рыщет в поисках добычи",
             "fishing": "ловит рыбу",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal} купается",
                 "feeding": "Время кормления: {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "Идёт охота · {animal}",
+            "eating": "Идёт трапеза · {animal}",
+            "label": "{line}. Показать"
         },
         "sound": {
             "label": "Звук",

@@ -343,6 +343,8 @@
             "grazing": "pascola",
             "browsing": "bruca le foglie",
             "hunting": "caccia",
+            "eating": "mangia la sua preda",
+            "scavenging": "si nutre di carcasse",
             "waiting": "aspetta una preda",
             "prowling": "si aggira in cerca di prede",
             "fishing": "pesca",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal} fa il bagno",
                 "feeding": "Ora del pasto per {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "È in corso una caccia · {animal}",
+            "eating": "È in corso un pasto · {animal}",
+            "label": "{line}. Mostramelo"
         },
         "sound": {
             "label": "Audio",

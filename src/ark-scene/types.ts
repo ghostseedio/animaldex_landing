@@ -183,6 +183,9 @@ export type ArkSnapshot = {
     islands?: ArkIslandCounts;
 };
 
+/** A real hunt under way (`liveHunt`): the hunter, its species, and whether it is still hunting or eating its catch. */
+export type ArkLiveHunt = {id: string; name: string; slug: string; phase: "hunting" | "eating"; since: number};
+
 export type ArkSceneStats = {
     drawCalls: number;
     triangles: number;
@@ -448,6 +451,14 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * mode every due, awake predator walks its forays from the shared position module; null (or the pool) is today's.
      */
     setHunting?: (hunting: ArkHunting | null) => void;
+    /**
+     * Realistic kills (lane ark-kills-real): the server's encounter meals to act in the live world (a meal row of the
+     * event log, with its encounter), from its encounter step on the shared clock: the chase, the meal, the predator's
+     * drink and rest, scavengers, traces. An empty list stops them.
+     */
+    setMeals?: (meals: Extract<ArkAct, {kind: "meal"}>[]) => void;
+    /** The newest real hunt or meal under way on the island (the page's marker), or null. */
+    liveHunt?: () => ArkLiveHunt | null;
     /**
      * The animal-look pass on or off (off: every animal exactly as before). `islandMs` pins the island time its
      * swims are timed by (who is wet from a swim), or follows the clock again with null.

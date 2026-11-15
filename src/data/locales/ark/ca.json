@@ -343,6 +343,8 @@
             "grazing": "pastura",
             "browsing": "menja fulles",
             "hunting": "caça",
+            "eating": "es menja la presa",
+            "scavenging": "menja carronya",
             "waiting": "està a l'aguait d'una presa",
             "prowling": "ronda buscant preses",
             "fishing": "pesca",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal} es banya",
                 "feeding": "Hora de menjar per a {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "Hi ha una cacera en marxa · {animal}",
+            "eating": "S'està menjant una presa · {animal}",
+            "label": "{line}. Mostra-m'ho"
         },
         "sound": {
             "label": "So",

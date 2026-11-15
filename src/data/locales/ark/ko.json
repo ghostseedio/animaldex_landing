@@ -343,6 +343,8 @@
             "grazing": "풀을 뜯는 중",
             "browsing": "나뭇잎을 뜯어 먹는 중",
             "hunting": "사냥하는 중",
+            "eating": "사냥감을 먹는 중",
+            "scavenging": "죽은 동물을 먹는 중",
             "waiting": "먹이를 기다리는 중",
             "prowling": "먹이를 찾아 어슬렁거리는 중",
             "fishing": "물고기를 잡는 중",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal}이(가) 목욕하고 있어요",
                 "feeding": "{aAnimal}의 먹이 시간이에요"
             }
+        },
+        "hunt": {
+            "hunting": "사냥이 진행 중이에요 · {animal}",
+            "eating": "사냥감을 먹고 있어요 · {animal}",
+            "label": "{line}. 보기"
         },
         "sound": {
             "label": "소리",

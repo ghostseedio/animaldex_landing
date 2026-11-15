@@ -343,6 +343,8 @@
             "grazing": "草を食べています",
             "browsing": "木の葉を食べています",
             "hunting": "狩りをしています",
+            "eating": "獲物を食べています",
+            "scavenging": "死骸をあさっています",
             "waiting": "獲物を待ち伏せしています",
             "prowling": "獲物を求めてうろついています",
             "fishing": "魚をとっています",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal}が水浴びをしています",
                 "feeding": "{aAnimal}のえさの時間です"
             }
+        },
+        "hunt": {
+            "hunting": "狩りが行われています · {animal}",
+            "eating": "獲物を食べています · {animal}",
+            "label": "{line}. 見てみる"
         },
         "sound": {
             "label": "サウンド",

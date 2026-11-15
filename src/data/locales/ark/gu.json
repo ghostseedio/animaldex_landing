@@ -343,6 +343,8 @@
             "grazing": "ચરે છે",
             "browsing": "પાંદડાં ખાય છે",
             "hunting": "શિકાર કરે છે",
+            "eating": "પોતાનો શિકાર ખાય છે",
+            "scavenging": "મડદું ખાય છે",
             "waiting": "શિકારની રાહ જુએ છે",
             "prowling": "શિકારની શોધમાં ફરે છે",
             "fishing": "માછલી પકડે છે",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal} નહાય છે",
                 "feeding": "{aAnimal} નો ખાવાનો સમય"
             }
+        },
+        "hunt": {
+            "hunting": "શિકાર ચાલી રહ્યો છે · {animal}",
+            "eating": "શિકારનું ભોજન ચાલી રહ્યું છે · {animal}",
+            "label": "{line}. મને બતાવો"
         },
         "sound": {
             "label": "અવાજ",

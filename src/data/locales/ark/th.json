@@ -343,6 +343,8 @@
             "grazing": "เล็มหญ้า",
             "browsing": "กินใบไม้",
             "hunting": "ล่าเหยื่อ",
+            "eating": "กินเหยื่อที่จับได้",
+            "scavenging": "กินซาก",
             "waiting": "ซุ่มรอเหยื่อ",
             "prowling": "ด้อมหาเหยื่อ",
             "fishing": "จับปลา",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal} กำลังอาบน้ำ",
                 "feeding": "ได้เวลาให้อาหาร {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "มีการล่าเหยื่ออยู่ · {animal}",
+            "eating": "กำลังกินเหยื่ออยู่ · {animal}",
+            "label": "{line}. ดูเลย"
         },
         "sound": {
             "label": "เสียง",

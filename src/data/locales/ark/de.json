@@ -343,6 +343,8 @@
             "grazing": "grast",
             "browsing": "frisst Blätter",
             "hunting": "jagt",
+            "eating": "frisst seine Beute",
+            "scavenging": "frisst Aas",
             "waiting": "lauert auf Beute",
             "prowling": "pirscht umher",
             "fishing": "fischt",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal} badet",
                 "feeding": "Fütterungszeit für {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "Eine Jagd läuft · {animal}",
+            "eating": "Eine Mahlzeit läuft · {animal}",
+            "label": "{line}. Zeig es mir"
         },
         "sound": {
             "label": "Ton",

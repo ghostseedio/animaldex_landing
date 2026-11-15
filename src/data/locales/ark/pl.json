@@ -343,6 +343,8 @@
             "grazing": "pasie się",
             "browsing": "skubie liście",
             "hunting": "poluje",
+            "eating": "zjada swoją zdobycz",
+            "scavenging": "żywi się padliną",
             "waiting": "czatuje na zdobycz",
             "prowling": "skrada się w okolicy",
             "fishing": "łowi ryby",
@@ -390,6 +392,11 @@
                 "bathing": "{aAnimal} kąpie się",
                 "feeding": "Pora karmienia: {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "Trwa polowanie · {animal}",
+            "eating": "Trwa posiłek · {animal}",
+            "label": "{line}. Pokaż"
         },
         "sound": {
             "label": "Dźwięk",

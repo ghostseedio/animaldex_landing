@@ -55,7 +55,7 @@ export type MealScript = {
     carry: number;
     feedFrom: number;
     feedTo: number;
-    drink: {to: {x: number; z: number; yaw: number}; walkFrom: number; from: number; to: number} | null;
+    drink: {at: {x: number; z: number; yaw: number}; walkFrom: number; from: number; to: number} | null;
     rest: {at: {x: number; z: number; yaw: number}; walkFrom: number; from: number; to: number};
     /** When the predator leaves the carcass (scavengers may come from then), and when its rest is over. */
     leaves: number;
@@ -116,12 +116,12 @@ export function mealScript(plan: MealPlan, c: MealCatch): MealScript {
     if (plan.drinkSeconds > 0 && c.water && !c.predatorSwims && Math.hypot(c.water.x - feed.x, c.water.z - feed.z) <= DRINK_REACH) {
         const d = Math.hypot(c.water.x - feed.x, c.water.z - feed.z);
         const walkFor = Math.min(Math.max(d / walk, 1.5), 30);
-        drink = {to: {x: c.water.x, z: c.water.z, yaw: d > 0.1 ? heading(c.water.x - feed.x, c.water.z - feed.z) : feed.yaw}, walkFrom: t, from: t + walkFor, to: t + walkFor + plan.drinkSeconds};
+        drink = {at: {x: c.water.x, z: c.water.z, yaw: d > 0.1 ? heading(c.water.x - feed.x, c.water.z - feed.z) : feed.yaw}, walkFrom: t, from: t + walkFor, to: t + walkFor + plan.drinkSeconds};
         t = drink.to;
     }
     // The rest: a few body lengths off to one side (back from the water when it drank), lying up.
-    const from = drink ? drink.to : feed;
-    const bearing = drink ? drink.to.yaw + Math.PI + side * 0.6 : feed.yaw + side * (1.7 + 0.6 * random());
+    const from = drink ? drink.at : feed;
+    const bearing = drink ? drink.at.yaw + Math.PI + side * 0.6 : feed.yaw + side * (1.7 + 0.6 * random());
     const at = plan.restSeconds > 0 && !c.predatorSwims ? clearSpot(from, bearing, Math.max(p.length * 2.5, 1.5), c.clear) : {x: from.x, z: from.z};
     const restWalk = Math.hypot(at.x - from.x, at.z - from.z) / walk;
     const restYaw = restWalk > 0.05 ? heading(at.x - from.x, at.z - from.z) + side * 0.8 : from.yaw;
@@ -158,13 +158,13 @@ export function predatorAt(s: MealScript, u: number): MealPose {
         const yaw = Math.hypot(to.x - from.x, to.z - from.z) > 0.05 ? heading(to.x - from.x, to.z - from.z) : to.yaw ?? s.feed.yaw;
         return pose(lerp(from.x, to.x, k), lerp(from.z, to.z, k), yaw, "walk", 0, k < 1 ? Math.hypot(to.x - from.x, to.z - from.z) / Math.max(b - a, 0.1) : 0, doing);
     };
-    const restFrom = s.drink ? s.drink.to : s.feed;
+    const restFrom = s.drink ? s.drink.at : s.feed;
     if (s.drink && u < s.drink.to) {
-        if (u < s.drink.from) return walkTo(s.feed, s.drink.to, s.drink.walkFrom, s.drink.from, u, "drinking");
+        if (u < s.drink.from) return walkTo(s.feed, s.drink.at, s.drink.walkFrom, s.drink.from, u, "drinking");
         // Head down at the edge, lapping (a small bob), looking up now and then.
         const v = u - s.drink.from;
         const up = Math.sin(v * 0.9) > 0.92;
-        return pose(s.drink.to.x, s.drink.to.z, s.drink.to.yaw, up ? "scan" : "eat", up ? 0 : 0.16 + 0.02 * Math.sin(v * 7), 0, "drinking");
+        return pose(s.drink.at.x, s.drink.at.z, s.drink.at.yaw, up ? "scan" : "eat", up ? 0 : 0.16 + 0.02 * Math.sin(v * 7), 0, "drinking");
     }
     if (u < s.rest.from) return walkTo(restFrom, s.rest.at, s.rest.walkFrom, s.rest.from, u, "resting");
     // Lying up, digesting; a slow look round now and then.
