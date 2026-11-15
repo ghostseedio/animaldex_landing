@@ -206,6 +206,7 @@ export class ArkLive {
         }
         this.noteRecord(decoded);
         this.revive(decoded);
+        this.mate(decoded);
         this.push(arkLiveServerItems(decoded));
     }
 
@@ -218,6 +219,24 @@ export class ArkLive {
             } catch {
                 // (A scene without it: the animal is simply there again.)
             }
+        }
+    }
+
+    /** A pair bred: the two walk to each other and pair in the live world (the scene's `addMatings`), at its time. */
+    private mate(events: readonly ArkEvent[]) {
+        const matings: Array<{key: string; a: string; b: string; t0: number}> = [];
+        for (const event of events) {
+            if (event.kind !== "mated") continue;
+            const a = event.animal?.id ?? event.parents[0];
+            const b = event.other?.id ?? event.parents[1];
+            const t0 = Date.parse(event.at) / 1000;
+            if (a && b && a !== b && Number.isFinite(t0)) matings.push({key: `mated:${event.id}`, a, b, t0});
+        }
+        if (!matings.length) return;
+        try {
+            this.options.scene()?.addMatings?.(matings);
+        } catch {
+            // (A scene without it: the log says it all the same.)
         }
     }
 
@@ -280,6 +299,7 @@ export class ArkLive {
                 more = body.more === true && newest > from;
                 this.noteRecord(events);
                 this.revive(events);
+                this.mate(events);
                 this.push(arkLiveServerItems(events));
             })
             .catch(() => {

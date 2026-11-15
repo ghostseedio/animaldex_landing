@@ -478,6 +478,11 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * drink and rest, scavengers, traces. An empty list stops them.
      */
     setMeals?: (meals: Extract<ArkAct, {kind: "meal"}>[]) => void;
+    /**
+     * The record's matings (`mated` events: its two animals, its time on the shared clock), acted out in the live world:
+     * the two walk to each other, court, nuzzle and lie together, then go back to their day. New ones are added.
+     */
+    addMatings?: (matings: Array<{key: string; a: string; b: string; t0: number}>) => void;
     /** The newest real hunt or meal under way on the island (the page's marker), or null. */
     liveHunt?: () => ArkLiveHunt | null;
     /**
