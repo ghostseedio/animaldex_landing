@@ -16,6 +16,7 @@ import {arkLineageHasAny, arkLineageLine, arkThriveWords} from "@/lib/ark-thrive
 import {arkRecordNoteFromLife, arkStatusSignature, arkStatusText, type ArkAnimalStatus, type ArkRecordNote} from "@/lib/ark-animal-status";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 import {arkPhotoAspect, type ArkCapturePhoto} from "@/lib/ark-capture-photo";
+import {ArkRhythmLine, ArkRhythmPanel, useAnimalRhythm} from "@/app/[locale]/(composited)/ark/ark-rhythm";
 
 /**
  * The tapped animal's card along the world's foot (decision 240, owner 2026-11-12: "should be showing all the animals
@@ -178,6 +179,10 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     const status = useAnimalStatus(scene, animal.id);
     const [dayOpen, setDayOpen] = useState<string | null>(null);
     const dayShown = dayOpen === animal.id;
+    // Its rhythm against its kind's System Dynamics (lane ark-sd-align): a line under "now", the comparison on a tap.
+    const rhythm = useAnimalRhythm(scene, animal.id);
+    const [rhythmOpen, setRhythmOpen] = useState(false);
+    const rhythmNow = rhythm && rhythm !== "pending" ? rhythm : null;
     const text = useMemo(() => (status ? arkStatusText(status, {activity: words.activity, card: words.card, story: words.story, life: words.life, replay: words.replay}, locale) : null), [status, words, locale]);
 
     // Its life story's record for its log: its last meal (an Ark day from the voyage's start), and a hatching.
@@ -302,6 +307,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             {nowLine ? <p data-testid="ark-card-now" data-activity={status?.activity ?? undefined} className={`mt-1.5 text-[14px] font-semibold italic leading-snug md:text-[15px] ${asleepNow ? "text-[#c9d6ff]" : "text-white"}`}>{nowLine}</p> : null}
                             {text?.next ? <p data-testid="ark-card-next" className="mt-0.5 text-[12.5px] italic leading-snug text-ink-300">{text.next}</p> : null}
                         </div>
+                        {rhythmNow ? <ArkRhythmLine rhythm={rhythmNow} open={rhythmOpen} onToggle={() => setRhythmOpen((v) => !v)} /> : null}
                         {placeholder ? <p className="mt-1 text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
                         {/* The last of its kind aboard (the server's last_of_kind): it ages out honestly unless another is caught. */}
                         {animal.last_of_kind ? <p data-testid="ark-card-last-of-kind" className="mt-1 text-[12px] font-semibold leading-snug text-[#ffe2a8]">{words.life.lastOfKind}</p> : null}
@@ -327,6 +333,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         <ArkItsDay id={animal.id} scene={scene} words={words} locale={locale} onClose={() => setDayOpen(null)} />
                     </Suspense>
                 ) : null}
+                {rhythmNow && rhythmOpen && !storyOpen ? <ArkRhythmPanel rhythm={rhythmNow} speciesProfileId={animal.species_profile_id} talkHref={placeholder ? null : `/talk/${animal.model_slug}`} /> : null}
                 {storyOpen ? <ArkLifeStory animal={animal} life={life} state={state} facts={facts} words={words} locale={locale} rest={restWords} /> : null}
 
                 <div className="mt-2 flex items-center gap-2 md:hidden">{moves}</div>

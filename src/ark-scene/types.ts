@@ -4,6 +4,7 @@ import type {ArkAct} from "@/lib/ark-life";
 import type {ArkSeenNow} from "@/lib/ark-live-log";
 import type {ArkActivityKey, ArkAnimalDay, ArkAnimalStatus, ArkRecordNote} from "@/lib/ark-animal-status";
 import type {ScheduleMomentKind} from "@/ark-scene/animal-status";
+import type {ArkRhythmStatus} from "@/ark-scene/rhythm-status";
 import type {ArkStats} from "@/ark-scene/stats";
 import type {ArkMomentKind} from "@/ark-scene/moments";
 import type {ArkBehaviourState} from "@/ark-scene/behaviour-state";
@@ -515,6 +516,13 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * null when it is not in the scene.
      */
     animalStatus?: (id: string) => ArkAnimalStatus | null;
+    /**
+     * Lane `ark-sd-align`: an animal's day in the Ark against its kind's System Dynamics (`rhythm-status.ts`): its last
+     * 24 hours' line, its share of each SD mode's kind, its tempo, its "in rhythm" score and why it is off. Worked out a
+     * little a call (about `budgetMs`): "pending" until it is whole; null when it is not in the scene, off its schedule,
+     * or its kind has no System Dynamics. `stepFeeds`: the server's `step_feeds` switch, when the page knows it.
+     */
+    animalRhythm?: (id: string, options?: {budgetMs?: number; stepFeeds?: boolean}) => ArkRhythmStatus | "pending" | null;
     /** Record lines for animals' logs, from the server (the page's life story, the live log's events): never made up. */
     noteRecord?: (notes: readonly ArkRecordNote[]) => void;
     /**

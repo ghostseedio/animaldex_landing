@@ -21,10 +21,12 @@
  * readers. The box sits in its own layer beside the scene's labels, which are hidden from screen readers.
  */
 
+import type {SdRhythmState} from "@/lib/ark-sd-rhythm";
 import {ARK_STATUS_BAR_KEYS, type ArkBarTone, type ArkStatusBarKey, type ArkStatusBars} from "@/lib/ark-animal-status";
 
 const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif)";
 const TONE: Record<ArkBarTone, string> = {good: "#8fd694", warn: "#f2c14e", bad: "#ef6f5c"};
+const RHYTHM: Record<SdRhythmState, string> = {in: TONE.good, slightly: TONE.warn, out: TONE.bad};
 /** The bars' icons: a bowl (fed), a heart (health), a bolt (energy), an hourglass (life left). */
 const ICON: Record<ArkStatusBarKey, string> = {
     fed: `<path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9.5 7.5c0-1.2 1.2-1.6 1.2-3M14 7.5c0-1.2 1.2-1.6 1.2-3"/>`,
@@ -96,6 +98,8 @@ export class ArkSelectionBars {
     private readonly talk: HTMLAnchorElement;
     private readonly byline: HTMLDivElement;
     private links: {talk: ArkSelectionLink | null; profile: ArkSelectionLink | null} = {talk: null, profile: null};
+    private readonly head: HTMLDivElement;
+    private readonly dot: HTMLSpanElement;
     private shown = false;
     private any = false;
     private size: {w: number; h: number} | null = null;
@@ -165,7 +169,17 @@ export class ArkSelectionBars {
             textDecoration: "none"
         });
         name.append(nameText, talk);
-        el.appendChild(name);
+        // Its rhythm (lane ark-sd-align): a small dot before its name, in rhythm with its kind's System Dynamics (green),
+        // slightly off (amber), out of rhythm (red); the card says it in words. None until it is worked out.
+        const head = document.createElement("div");
+        Object.assign(head.style, {display: "none", alignItems: "center", gap: "4px"});
+        const dot = document.createElement("span");
+        dot.dataset.arkRhythm = "";
+        Object.assign(dot.style, {display: "none", flex: "0 0 auto", width: "6px", height: "6px", borderRadius: "999px"});
+        head.append(dot, name);
+        el.appendChild(head);
+        this.head = head;
+        this.dot = dot;
         this.name = name;
         this.nameText = nameText;
         this.talk = talk;
@@ -259,11 +273,15 @@ export class ArkSelectionBars {
      * The selected animal's bars and its species' name (never a nickname), or null (nothing selected, or nothing to
      * show); `extras`, who brought it and its Talk link (section 1 and 3 of the capture media contract).
      */
-    set(bars: ArkStatusBars | null, name: string | null = null, extras: ArkSelectionExtras | null = null, ids: {animalId: string; slug: string} | null = null) {
+    set(bars: ArkStatusBars | null, name: string | null = null, extras: ArkSelectionExtras | null = null, ids: {animalId: string; slug: string} | null = null, rhythm: SdRhythmState | null = null) {
         this.any = false;
         const label = name?.trim() || "";
         if (this.nameText.textContent !== label) this.nameText.textContent = label;
         this.name.style.display = label ? "flex" : "none";
+        this.dot.style.display = rhythm ? "inline-block" : "none";
+        this.dot.dataset.arkRhythm = rhythm ?? "";
+        if (rhythm) this.dot.style.background = RHYTHM[rhythm];
+        this.head.style.display = label || rhythm ? "flex" : "none";
         const talk = label && extras?.talk && ids ? extras.talk : null;
         this.talk.style.display = talk ? "inline-flex" : "none";
         this.links.talk = talk && ids ? {kind: "talk", slug: ids.slug, animalId: ids.animalId} : null;

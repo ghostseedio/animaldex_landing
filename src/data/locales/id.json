@@ -546,6 +546,18 @@
         "falling": "Air mulai surut"
       }
     },
+    "rhythm": {
+      "eyebrow": "Alaminya di Ark",
+      "title": "Selaras dengan alamnya",
+      "line": "Langkah yang berhasil membawanya kembali.",
+      "sd": "System Dynamics",
+      "ark": "Di Ark",
+      "live": "Langsung · 24 jam",
+      "kind": "Jenisnya · sehari",
+      "step": "Satu langkah",
+      "see": "Lihat langsung",
+      "by": "dibawa oleh {name}"
+    },
     "foodChain": {
       "eyebrow": "Siapa memakan siapa"
     },

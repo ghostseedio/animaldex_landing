@@ -40,7 +40,8 @@ import {isAwake} from "@/lib/ark-daylight";
 import {arkAwakeAtHour, type Sleep} from "@/ark-scene/sleep-hours";
 import {animalPersonality} from "@/lib/ark-clock";
 import {hashString} from "@/ark-scene/world";
-import type {ArkZone, ArkThrive} from "@/ark-scene/types";
+import {boutPhase, rhythmChoice} from "@/ark-scene/sd-rhythm";
+import type {ArkCondition, ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
 import {coatOf, drawnRecipe, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, pairMeetings, recipeRoostTags, sexLook, sitterIntent, type DrawnRecipe, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
@@ -191,6 +192,13 @@ export type ScheduleAnimal = {
      * and for who claims the best places first. Not read yet: every band is scheduled the same.
      */
     thrive?: ArkThrive;
+    /** The server's condition (hunger and age): with `thrive`, how far it is off its kind's SD rhythm (`sd-rhythm.ts`). */
+    condition?: ArkCondition | null;
+    /**
+     * Kept in the town (a pet's garden, a farm's paddock, a zoo's enclosure; Part C): its day is its keeper's place's, not
+     * its kind's wild rhythm, so its kind's System Dynamics does not shape it (`sd-rhythm.ts`, lane ark-sd-align).
+     */
+    kept?: boolean;
     /** A fixed roost the map gives it (its perch, or the roost its text names: `map/place.ts` scheduleRoost); it sleeps there. */
     roost?: Spot | null;
     /** Its own sleep, when it is active at any hour (`sleep-hours.ts` arkSleepOf): it sleeps in bouts of its own. */
@@ -278,9 +286,9 @@ function chronotype(id: string): number {
     return (((hashString(`${id}#chrono`) % 1000) / 1000) - 0.5) * 1.5;
 }
 
-function pick(profile: ArkBehaviourProfile, id: string, hoursNow: number, roll: number, bold: number, curious: number, avoid?: ArkBehaviour | null): ArkBehaviour {
+function pick(profile: ArkBehaviourProfile, id: string, hoursNow: number, roll: number, bold: number, curious: number, avoid?: ArkBehaviour | null, weights: Partial<Record<ArkBehaviour, number>> = profile.weights): ArkBehaviour {
     const hours = (((hoursNow + chronotype(id)) % 24) + 24) % 24;
-    const entries = (Object.entries(profile.weights) as Array<[ArkBehaviour, number]>)
+    const entries = (Object.entries(weights) as Array<[ArkBehaviour, number]>)
         .map(([b, w]) => [b, (b === avoid ? hourly(profile, b, w, hours, bold, curious) * 0.25 : hourly(profile, b, w, hours, bold, curious)) * leaning(id, b)] as const)
         .filter(([, w]) => w > 0);
     const total = entries.reduce((sum, [, w]) => sum + w, 0);
@@ -291,6 +299,25 @@ function pick(profile: ArkBehaviourProfile, id: string, hoursNow: number, roll: 
         if (at <= 0) return b;
     }
     return entries[entries.length - 1][0];
+}
+
+/**
+ * Its own choice for a slot. Where its kind has System Dynamics (`sd-rhythm.ts`, lane `ark-sd-align`): its behaviours'
+ * pull re-shared to its SD modes at its state (thrive band, condition), and one choice held for its tempo's bout (the
+ * roll and the hour of the bout's first slot, so a LOW species keeps at one thing for minutes, a HIGH one switches slot by
+ * slot). Without SD: today's choice, to the bit.
+ */
+function rhythmPick(profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, hours: number, roll: number, personality: {boldness: number; curiosity: number}, avoid: ArkBehaviour | null): ArkBehaviour {
+    const rhythm = animal.kept ? null : rhythmChoice(profile, animal.thrive, animal.condition);
+    if (!rhythm) return pick(profile, animal.id, hours, roll, personality.boldness, personality.curiosity, avoid);
+    if (rhythm.bout <= 1) return pick(profile, animal.id, hours, roll, personality.boldness, personality.curiosity, avoid, rhythm.weights);
+    const phase = boutPhase(hashString(`${animal.id}#bout`), rhythm.bout);
+    const block = Math.floor((slot + phase) / rhythm.bout);
+    const first = block * rhythm.bout - phase;
+    const held = rng(hashString(`${animal.id}#bout#${block}`))();
+    // (The hour's pull still shapes it slot by slot, smoothly: the same roll a few minutes on picks the same, but a
+    // siesta's or a dusk's pull still turns it. A group member's turning from its leader only at the bout's start.)
+    return pick(profile, animal.id, hours, held, personality.boldness, personality.curiosity, first === slot ? avoid : null, rhythm.weights);
 }
 
 // MARK: Places
@@ -1544,13 +1571,13 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     }
     // Its own choice; a group member is a little less likely to do just what its leader does now.
     const leaderDoing = group ? leaderIntentAt(world, group, start + 1, hoursAt).doing : null;
-    let behaviour = pick(profile, animal.id, hours, random(), personality.boldness, personality.curiosity, leaderDoing as ArkBehaviour | null);
+    let behaviour = rhythmPick(profile, animal, slot, hours, random(), personality, leaderDoing as ArkBehaviour | null);
     // A browser's grazing is at bushes and trees.
     let doing: ArkDoing = behaviour as ArkDoing;
     if ((behaviour === "graze" || behaviour === "forage") && (profile.diet === "browser" || profile.diet === "fruit") && walks(profile) && !flyer) doing = "browse";
     else if (behaviour === "graze" || (behaviour === "forage" && profile.diet === "grazer")) doing = "graze";
     // A recipe from its stored behaviours may take this slot (a perch by the water to fish from, its nest, bare ground).
-    const planned = recipeIntent({world, profile, animal, slug: profile.slug, slot, start, hours, behaviour, doing, centre, radius, kit: KIT});
+    const planned = recipeIntent({world, profile, animal, slug: profile.slug, slot, start, hours, behaviour, doing, centre, radius, kit: KIT, socialPull: animal.kept ? undefined : rhythmChoice(profile, animal.thrive, animal.condition)?.socialPull});
     // (Lane MA3: one that walks or swims first takes a recipe up by air, a nest in a tree, only as often as it flies.)
     if (planned && !(planned.mode === "air" && !airAllowed(profile, animal, slot))) return {doing: planned.doing as ArkDoing, to: planned.to, mode: planned.mode, stay: [], recipe: planned.recipe};
     // A wading bird (a heron, an egret, a stork, an ibis) stands in the shallows to fish and to rest, its legs in the

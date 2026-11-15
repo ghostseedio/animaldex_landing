@@ -4,6 +4,7 @@ import {useEffect, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import type {SpeciesSystemDynamics} from "@/lib/system-dynamics";
 import SystemDynamicsPanel from "@/components/animal-detail/system-dynamics/system-dynamics-panel";
+import SdInTheArk from "@/components/ark/sd-in-the-ark";
 
 /**
  * Mounts System Dynamics on the Learn tab of both the public species page and
@@ -53,37 +54,46 @@ export default function SystemDynamicsSection({
 
     if (!speciesProfileId) return null;
 
+    // Its kind's day in the Ark beside its System Dynamics (lane ark-sd-align), and the anchor the Ark card links to.
+    const inTheArk = dynamics ? <SdInTheArk speciesProfileId={speciesProfileId} sdPath={dynamics.waveform?.pathD ?? null} /> : null;
+
     if (isLocked && dynamics) {
         // The same card iOS shows a free viewer, with the upgrade in place of the
         // "Explore" affordance. The payload carries the signature, frequency
         // profile, waveform and closing line — the interpretation is withheld
         // server-side, so nothing gated is in the page.
         return (
-            <SystemDynamicsPanel
-                dynamics={dynamics}
-                animalName={animalName}
-                defersHeadlineToAnimalPower={defersHeadlineToAnimalPower}
-                locked
-                lockedAction={(
-                    <Link
-                        href="/app/billing"
-                        className="inline-flex min-h-11 w-fit items-center gap-2 bg-primary-400 px-5 text-sm font-black text-canvas-950 transition-colors hover:bg-primary-300"
-                    >
-                        Unlock with Pro
-                        <span aria-hidden="true">→</span>
-                    </Link>
-                )}
-            />
+            <div id="system-dynamics" className="scroll-mt-24">
+                <SystemDynamicsPanel
+                    dynamics={dynamics}
+                    animalName={animalName}
+                    defersHeadlineToAnimalPower={defersHeadlineToAnimalPower}
+                    locked
+                    lockedAction={(
+                        <Link
+                            href="/app/billing"
+                            className="inline-flex min-h-11 w-fit items-center gap-2 bg-primary-400 px-5 text-sm font-black text-canvas-950 transition-colors hover:bg-primary-300"
+                        >
+                            Unlock with Pro
+                            <span aria-hidden="true">→</span>
+                        </Link>
+                    )}
+                />
+                {inTheArk}
+            </div>
         );
     }
 
     if (!dynamics) return null;
 
     return (
-        <SystemDynamicsPanel
-            dynamics={dynamics}
-            animalName={animalName}
-            defersHeadlineToAnimalPower={defersHeadlineToAnimalPower}
-        />
+        <div id="system-dynamics" className="scroll-mt-24">
+            <SystemDynamicsPanel
+                dynamics={dynamics}
+                animalName={animalName}
+                defersHeadlineToAnimalPower={defersHeadlineToAnimalPower}
+            />
+            {inTheArk}
+        </div>
     );
 }

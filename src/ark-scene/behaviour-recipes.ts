@@ -29,6 +29,7 @@ import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, swimSpeedOf, 
 import type {ArkBeat, HoursAt, ScheduleAnimal, ScheduleWorld, Spot, Trip, TripMode, TripPose} from "@/ark-scene/behaviour-schedule";
 import type {AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import {hashString} from "@/ark-scene/world";
+import {arkRecipeActivity} from "@/lib/ark-animal-status";
 import {buildQuarry, quarryAt, type QuarryLook, type QuarryNow, type QuarryTrack} from "@/ark-scene/recipe-hunt";
 
 // MARK: Species data
@@ -224,7 +225,15 @@ export type RecipeIntentInput = {
     centre: {x: number; z: number};
     radius: number;
     kit: ScheduleKit;
+    /**
+     * How much more often its social recipes (courting, calling, sparring, its nest) take a slot: its kind's System
+     * Dynamics' social share at its state (`sd-rhythm.ts` socialPull, lane ark-sd-align); 1, or absent, as before.
+     */
+    socialPull?: number;
 };
+
+/** The recipes the card calls social (`ark-animal-status.ts` arkRecipeActivity): what an SD social mode is. */
+const SOCIAL_RECIPE = new Set(["courting", "sparring", "playing", "calling", "nest", "eggs"]);
 
 /** How often a bird whose drawn nest is finished still takes a slot to it with material, against one building it. */
 export const NEST_TEND = 0.4;
@@ -259,7 +268,8 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         const building = id === "nest_build" && nestSource ? nestSource(input.animal.id, input.start) : null;
         if (id === "nest_build" && nestSource && !building) continue;
         const tending = building ? (building.stage >= 1 ? NEST_TEND : 1) : null;
-        const chance = weight * 0.7 * (template.often ?? 1) * (tending ?? seasonFactor(species, template.season, input.start));
+        const pull = input.socialPull && input.socialPull !== 1 && SOCIAL_RECIPE.has(arkRecipeActivity(id) ?? "") ? input.socialPull : 1;
+        const chance = weight * 0.7 * (template.often ?? 1) * (tending ?? seasonFactor(species, template.season, input.start)) * pull;
         if (random() >= chance) continue;
         const to = goalSpot(input, template, random);
         if (!to) continue;
