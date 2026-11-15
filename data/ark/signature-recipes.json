@@ -1,0 +1,1654 @@
+{
+ "about": "Signature behaviours, wave 1 (AnimalDex docs/ark/behaviours-plan.md, decision 369): species whose own text states a behaviour an existing recipe shows, but whose recipes lacked it. Each row keeps the stored field and the exact sentence. Applied to src/ark-scene/recipes.json by scripts/ark-signature-recipes.mts (run it after scripts/ark-behaviour-recipes.mts regenerates the table).",
+ "version": "signature-wave-1",
+ "additions": [
+  {
+   "slug": "african-penguin",
+   "name": "African Penguin",
+   "recipe": "dig_burrow",
+   "behaviour": "nests in burrows",
+   "field": "story",
+   "quote": "The burrow-nesting coastal penguin."
+  },
+  {
+   "slug": "aldabra-giant-tortoise",
+   "name": "Aldabra Giant Tortoise",
+   "recipe": "dig_burrow",
+   "behaviour": "female lays eggs in soil nest and leaves",
+   "field": "young",
+   "quote": "Females lay eggs in soil nests"
+  },
+  {
+   "slug": "aldabra-giant-tortoise",
+   "name": "Aldabra Giant Tortoise",
+   "recipe": "wallow",
+   "behaviour": "rests in shade and wallows in heat",
+   "field": "sleep",
+   "quote": "Day-active but rests during heat, using shade, wallows, and slow rhythms"
+  },
+  {
+   "slug": "alligator-snapping-turtle",
+   "name": "Alligator Snapping Turtle",
+   "recipe": "beach_nest",
+   "behaviour": "females leave water to bury clutches",
+   "field": "young",
+   "quote": "Females leave water to bury clutches in sandy or loose soil"
+  },
+  {
+   "slug": "amazon-sailfin-catfish",
+   "name": "Amazon Sailfin Catfish",
+   "recipe": "dig_burrow",
+   "behaviour": "male digs a metre-long tunnel into the riverbank and guards the clutch inside",
+   "field": "young",
+   "quote": "The male digs and holds the bank tunnel, and the female lays inside it; he guards the clutch until it hatches."
+  },
+  {
+   "slug": "amboina-sailfin-lizard",
+   "name": "Amboina Sailfin Lizard",
+   "recipe": "beach_nest",
+   "behaviour": "female buries eggs in bank nest",
+   "field": "young",
+   "quote": "Females dig a shallow nest in soil or sand on the bank above the waterline and bury their eggs."
+  },
+  {
+   "slug": "american-badger",
+   "name": "American Badger",
+   "recipe": "mixed_follow",
+   "behaviour": "hunts alongside a coyote",
+   "field": "facts",
+   "quote": "They sometimes hunt near coyotes, each using different strengths"
+  },
+  {
+   "slug": "american-badger",
+   "name": "American Badger",
+   "recipe": "root_dig",
+   "behaviour": "digs rapidly after burrowing prey",
+   "field": "facts",
+   "quote": "American Badgers can dig rapidly after burrowing prey"
+  },
+  {
+   "slug": "american-crow",
+   "name": "American Crow",
+   "recipe": "cluster",
+   "behaviour": "gathers at communal roosts at dusk",
+   "field": "sleep",
+   "quote": "then gather at communal roosts"
+  },
+  {
+   "slug": "american-kestrel",
+   "name": "American Kestrel",
+   "recipe": "pounce",
+   "behaviour": "drops from a wire, catches a grasshopper and eats it back on the perch",
+   "field": "story",
+   "quote": "A kestrel sitting on a roadside wire drops to the verge and flies back with a grasshopper gripped in one foot, then eats it on the perch."
+  },
+  {
+   "slug": "american-robin",
+   "name": "American Robin",
+   "recipe": "cluster",
+   "behaviour": "huge communal winter roosts in dense trees",
+   "field": "sleep",
+   "quote": "Outside the breeding season birds gather at dusk in communal roosts in dense trees, some holding many thousands."
+  },
+  {
+   "slug": "annam-pond-turtle",
+   "name": "Annam Pond Turtle",
+   "recipe": "beach_nest",
+   "behaviour": "female digs nest hole",
+   "field": "young",
+   "quote": "females lay clutches of about 5 to 8 eggs in a hole dug in soil"
+  },
+  {
+   "slug": "asian-forest-tortoise",
+   "name": "Asian Forest Tortoise",
+   "recipe": "wallow",
+   "behaviour": "pushes into damp leaf litter or mud for hours on warm days",
+   "field": "story",
+   "quote": "On warm days it pushes itself into damp leaf litter or soft mud and stays there for hours"
+  },
+  {
+   "slug": "asian-glossy-starling",
+   "name": "Asian Glossy Starling",
+   "recipe": "cluster",
+   "behaviour": "thousands gather at dusk communal roosts, often with mynas",
+   "field": "evidence",
+   "quote": "At dusk, noisy flocks, sometimes in their thousands, gather in communal roosts in tall city trees, palms, or on buildings, often alongside other species."
+  },
+  {
+   "slug": "asian-honey-bee",
+   "name": "Asian Honey Bee",
+   "recipe": "cluster",
+   "behaviour": "clusters together in cold winters living on stored honey",
+   "field": "sleep",
+   "quote": "In regions with cold winters the bees cluster together and live on stored honey until spring."
+  },
+  {
+   "slug": "asian-hornet",
+   "name": "Asian Hornet",
+   "recipe": "hawk_insects",
+   "behaviour": "hovers in front of a beehive and snatches returning bees out of the air",
+   "field": "story",
+   "quote": "The Asian Hornet hovers in front of a beehive like a tiny helicopter, snatches returning honeybees out of the air and carries them home to feed its larvae."
+  },
+  {
+   "slug": "asian-small-clawed-otter",
+   "name": "Asian Small-clawed Otter",
+   "recipe": "probe_feed",
+   "behaviour": "gropes under stones and mud with forepaws",
+   "field": "facts",
+   "quote": "Much of its food is found by touch, as it gropes under stones and in mud with its sensitive forepaws."
+  },
+  {
+   "slug": "barbary-macaque",
+   "name": "Barbary Macaque",
+   "recipe": "cluster",
+   "behaviour": "huddles in cold weather",
+   "field": "sleep",
+   "quote": "Day-active, sleeping in trees or cliffs and huddling in cold weather, making warmth something the group builds together."
+  },
+  {
+   "slug": "barn-owl",
+   "name": "Barn Owl",
+   "recipe": "hover_drop",
+   "behaviour": "flies silently, ghost-like, then strikes prey hidden under grass or snow",
+   "field": "evidence",
+   "quote": "Barn Owls hunt small mammals (like voles) in complete darkness, often striking prey hidden under vegetation or snow."
+  },
+  {
+   "slug": "bengal-tiger",
+   "name": "Bengal Tiger",
+   "recipe": "pounce",
+   "behaviour": "patient lone stalk then explosive finish",
+   "field": "story",
+   "quote": "The Bengal Tiger moves alone with patience, silence, and explosive finish."
+  },
+  {
+   "slug": "black-crested-coquette",
+   "name": "Black-crested Coquette",
+   "recipe": "hawk_insects",
+   "behaviour": "catches tiny insects in flight",
+   "field": "evidence",
+   "quote": "Beyond nectar, Coquettes also catch tiny insects and spiders in flight."
+  },
+  {
+   "slug": "black-swan",
+   "name": "Black Swan",
+   "recipe": "groom_self",
+   "behaviour": "spends long periods preening",
+   "field": "evidence",
+   "quote": "Black Swans spend significant time preening their dark plumage, meticulously maintaining their feathers."
+  },
+  {
+   "slug": "blue-wildebeest",
+   "name": "Blue Wildebeest",
+   "recipe": "mixed_follow",
+   "behaviour": "grazes alongside plains zebra",
+   "field": "facts",
+   "quote": "It often grazes alongside plains zebra, which crop the taller, coarser grass and expose the short growth beneath."
+  },
+  {
+   "slug": "bluestreak-cleaner-wrasse",
+   "name": "Bluestreak Cleaner Wrasse",
+   "recipe": "allogroom",
+   "behaviour": "cleans parasites off visiting client fish at a reef station",
+   "field": "story",
+   "quote": "A reef fish that earns safety by removing parasites and irritation from larger animals."
+  },
+  {
+   "slug": "bocages-wall-lizard",
+   "name": "Bocage's Wall Lizard",
+   "recipe": "pounce",
+   "behaviour": "dash from basking spot to catch insects",
+   "field": "evidence",
+   "quote": "or by a quick dash from a basking spot"
+  },
+  {
+   "slug": "bolivian-squirrel-monkey",
+   "name": "Bolivian Squirrel Monkey",
+   "recipe": "cluster",
+   "behaviour": "sleeps huddled in clusters along branches",
+   "field": "sleep",
+   "quote": "At night the troop sleeps in tall trees, huddled in small clusters along the branches."
+  },
+  {
+   "slug": "bolivian-squirrel-monkey",
+   "name": "Bolivian Squirrel Monkey",
+   "recipe": "scent_mark",
+   "behaviour": "rubs urine on hands and feet (scent on branches)",
+   "field": "facts",
+   "quote": "Individuals sometimes rub urine onto their hands and feet, leaving scent on the branches they travel along."
+  },
+  {
+   "slug": "brahminy-kite",
+   "name": "Brahminy Kite",
+   "recipe": "talon_grab",
+   "behaviour": "soars over water scanning, swoops only when it spots food",
+   "field": "evidence",
+   "quote": "From their high vantage point, Brahminy Kites scan large areas of water and land for fish, crabs, small animals, and carrion, swooping down only when an opportunity is identified."
+  },
+  {
+   "slug": "brazilian-lava-lizard",
+   "name": "Brazilian Lava Lizard",
+   "recipe": "pounce",
+   "behaviour": "motionless on rock then dashes out at insect",
+   "field": "story",
+   "quote": "It sits motionless on speckled rock or sand, its grey-brown mottling blending with the surface, until an insect passes and it dashes out."
+  },
+  {
+   "slug": "brown-shrike",
+   "name": "Brown Shrike",
+   "recipe": "pounce",
+   "behaviour": "watches from open perch and drops onto insects and lizards",
+   "field": "story",
+   "quote": "The Brown Shrike watches from an open perch, drops onto insects and small lizards"
+  },
+  {
+   "slug": "brown-throated-sunbird",
+   "name": "Brown-throated Sunbird",
+   "recipe": "probe_feed",
+   "behaviour": "perches beside a flower and probes nectar",
+   "field": "story",
+   "quote": "perches beside a flower and pushes its curved bill inside to drink nectar"
+  },
+  {
+   "slug": "brown-wood-owl",
+   "name": "Brown Wood Owl",
+   "recipe": "pounce",
+   "behaviour": "perches silently then swoops down on prey",
+   "field": "evidence",
+   "quote": "They often perch silently on a branch, listening and watching intently in low light conditions, before swooping down rapidly and silently to capture unsuspecting prey."
+  },
+  {
+   "slug": "buff-tip-moth",
+   "name": "Buff-tip Moth",
+   "recipe": "cluster",
+   "behaviour": "caterpillars feed together, then separate as they grow",
+   "field": "young",
+   "quote": "The caterpillars feed together, then separate as they grow"
+  },
+  {
+   "slug": "campbells-dwarf-hamster",
+   "name": "Campbell's Dwarf Hamster",
+   "recipe": "scent_mark",
+   "behaviour": "marks the ground by rubbing its belly",
+   "field": "facts",
+   "quote": "Both sexes carry a scent gland on the belly and mark the ground by rubbing it."
+  },
+  {
+   "slug": "capybara",
+   "name": "Capybara",
+   "recipe": "cluster",
+   "behaviour": "group rests together at the water's edge",
+   "field": "evidence",
+   "quote": "often resting communally during the hottest parts of the day or night, frequently partly submerged or at the water's edge"
+  },
+  {
+   "slug": "carolina-wolf-spider",
+   "name": "Carolina Wolf Spider",
+   "recipe": "pounce",
+   "behaviour": "chases ground insects, pins them with front legs",
+   "field": "story",
+   "quote": "At night it leaves its burrow and chases down crickets, beetles and other ground insects, pinning them with its front legs before it bites."
+  },
+  {
+   "slug": "carpenter-ant",
+   "name": "Carpenter Ant",
+   "recipe": "box_spar",
+   "behaviour": "neighbouring majors settle borders with long ritualised front-leg boxing",
+   "field": "facts",
+   "quote": "Neighbouring majors settle borders with long ritualised front-leg boxing rather than constant lethal fights."
+  },
+  {
+   "slug": "carpenter-ant",
+   "name": "Carpenter Ant",
+   "recipe": "swarm",
+   "behaviour": "winged males and queens leave in nuptial flights about every 188 days",
+   "field": "facts",
+   "quote": "Nuptial flights follow a circa-semiannual rhythm near one hundred eighty-eight days apart."
+  },
+  {
+   "slug": "chilean-swallow",
+   "name": "Chilean Swallow",
+   "recipe": "mixed_follow",
+   "behaviour": "autumn/winter flocks mixing with other swallows",
+   "field": "facts",
+   "quote": "In autumn and winter it gathers in flocks that may mix with other swallow species."
+  },
+  {
+   "slug": "citrus-flatid-planthopper",
+   "name": "Citrus Flatid Planthopper",
+   "recipe": "cluster",
+   "behaviour": "nymphs feed in groups on stems; adults jump or fly off when disturbed",
+   "field": "young",
+   "quote": "Nymphs hatch in late spring and pass through five stages, often feeding in groups"
+  },
+  {
+   "slug": "collared-peccary",
+   "name": "Collared Peccary",
+   "recipe": "cluster",
+   "behaviour": "herd huddles pressed together on cold nights",
+   "field": "story",
+   "quote": "On cold nights herd members rest pressed tightly together in a cave, under a bank or in thick brush, sharing body heat."
+  },
+  {
+   "slug": "common-bed-bug",
+   "name": "Common Bed Bug",
+   "recipe": "cluster",
+   "behaviour": "clusters in cracks and crevices by day",
+   "field": "sleep",
+   "quote": "By day it clusters in cracks, seams and crevices near beds."
+  },
+  {
+   "slug": "common-grass-blue",
+   "name": "Common Grass Blue",
+   "recipe": "cluster",
+   "behaviour": "roosts on grass stems with wings closed, several close together",
+   "field": "sleep",
+   "quote": "In dull weather and overnight it roosts on grass stems or seed heads with the wings closed, often several close together."
+  },
+  {
+   "slug": "common-green-magpie",
+   "name": "Common Green Magpie",
+   "recipe": "mixed_follow",
+   "behaviour": "joins mixed-species foraging flocks",
+   "field": "facts",
+   "quote": "is reported to join mixed-species foraging flocks at times."
+  },
+  {
+   "slug": "common-house-gecko",
+   "name": "Common House Gecko",
+   "recipe": "lizard_contest",
+   "behaviour": "males fight over feeding spots",
+   "field": "sexes",
+   "quote": "they are the ones that call and fight over feeding spots"
+  },
+  {
+   "slug": "common-house-gecko",
+   "name": "Common House Gecko",
+   "recipe": "pounce",
+   "behaviour": "hunts insects at lit walls at night",
+   "field": "evidence",
+   "quote": "Common House Geckos frequently hunt insects attracted to artificial lights on walls and ceilings of human dwellings at night."
+  },
+  {
+   "slug": "common-kestrel",
+   "name": "Common Kestrel",
+   "recipe": "pounce",
+   "behaviour": "hunts from perches more in winter",
+   "field": "facts",
+   "quote": "In winter, when food is short, kestrels hunt more from perches, which costs much less energy than hovering."
+  },
+  {
+   "slug": "common-kingfisher",
+   "name": "Common Kingfisher",
+   "recipe": "dig_burrow",
+   "behaviour": "digs a nest tunnel into a riverbank",
+   "field": "facts",
+   "quote": "Common Kingfishers often nest in tunnels dug into riverbanks."
+  },
+  {
+   "slug": "common-marmoset",
+   "name": "Common Marmoset",
+   "recipe": "cluster",
+   "behaviour": "sleeps huddled in vine tangle",
+   "field": "sleep",
+   "quote": "The group sleeps huddled together in a vine tangle, dense tree crown or hollow, and rests again in the heat of midday."
+  },
+  {
+   "slug": "common-myna",
+   "name": "Common Myna",
+   "recipe": "cluster",
+   "behaviour": "large noisy communal evening roosts",
+   "field": "sleep",
+   "quote": "In the evening birds gather in large, noisy communal roosts in trees, sometimes hundreds or thousands together"
+  },
+  {
+   "slug": "common-myna",
+   "name": "Common Myna",
+   "recipe": "mixed_follow",
+   "behaviour": "follows grazing cattle and ploughs, snapping flushed insects",
+   "field": "story",
+   "quote": "Mynas follow grazing cattle and ploughs, snapping up grasshoppers and other insects disturbed from the grass."
+  },
+  {
+   "slug": "common-raven",
+   "name": "Common Raven",
+   "recipe": "mixed_follow",
+   "behaviour": "follows wolves to carcasses",
+   "field": "evidence",
+   "quote": "Ravens follow wolves and other predators to carcasses"
+  },
+  {
+   "slug": "common-wall-gecko",
+   "name": "Common Wall Gecko",
+   "recipe": "pounce",
+   "behaviour": "waits motionless beside wall lamps for moths",
+   "field": "story",
+   "quote": "On warm nights it stations itself beside outdoor lamps on house walls, clinging motionless until a moth lands within reach."
+  },
+  {
+   "slug": "coppery-titi-monkey",
+   "name": "Coppery Titi Monkey",
+   "recipe": "cluster",
+   "behaviour": "family sleeps huddled on a branch",
+   "field": "sleep",
+   "quote": "At night the family sleeps huddled together on a branch hidden among dense vines or leaves."
+  },
+  {
+   "slug": "coypu",
+   "name": "Coypu",
+   "recipe": "dig_burrow",
+   "behaviour": "burrows into riverbanks",
+   "field": "facts",
+   "quote": "its burrowing collapses the riverbanks it digs into"
+  },
+  {
+   "slug": "crested-serpent-eagle",
+   "name": "Crested Serpent Eagle",
+   "recipe": "pounce",
+   "behaviour": "watches the forest floor from a shaded perch below the canopy, drops on snakes and grips behind the head",
+   "field": "evidence",
+   "quote": "The eagle hunts from a shaded perch below the canopy, watching the forest floor for movement, rather than quartering the ground in flight."
+  },
+  {
+   "slug": "crimson-sunbird",
+   "name": "Crimson Sunbird",
+   "recipe": "probe_feed",
+   "behaviour": "pierces base of tubular flowers to reach nectar",
+   "field": "facts",
+   "quote": "it sometimes pierces the base of long tubular flowers to reach the nectar."
+  },
+  {
+   "slug": "danube-river-snail",
+   "name": "Danube River Snail",
+   "recipe": "bury_sand",
+   "behaviour": "inactive in winter, sheltering in bottom mud",
+   "field": "sleep",
+   "quote": "becomes largely inactive in winter, sheltering in bottom mud"
+  },
+  {
+   "slug": "desert-cottontail",
+   "name": "Desert Cottontail",
+   "recipe": "nest_build",
+   "behaviour": "fur-lined nest for young",
+   "field": "young",
+   "quote": "females give birth to usually 2 to 4 blind, naked young in a fur-lined nest"
+  },
+  {
+   "slug": "desert-locust",
+   "name": "Desert Locust",
+   "recipe": "cluster",
+   "behaviour": "swarms roost in trees, bask in early sun and take off once warm",
+   "field": "sleep",
+   "quote": "They roost overnight in trees and bushes, bask in the early sun and take off once warm, usually a few hours after sunrise, settling again before dusk."
+  },
+  {
+   "slug": "diamondback-terrapin",
+   "name": "Diamondback Terrapin",
+   "recipe": "beach_nest",
+   "behaviour": "females come ashore to dig nests above high-tide line",
+   "field": "young",
+   "quote": "Females come ashore in early summer to dig nests in sand above the high-tide line"
+  },
+  {
+   "slug": "domestic-cat",
+   "name": "Domestic Cat",
+   "recipe": "wrestle",
+   "behaviour": "kittens play",
+   "field": "young",
+   "quote": "Females can bear litters of kittens that learn through play, nursing, and observation."
+  },
+  {
+   "slug": "domestic-dog",
+   "name": "Domestic Dog",
+   "recipe": "wrestle",
+   "behaviour": "pups learn through play",
+   "field": "young",
+   "quote": "Females bear litters and pups develop through play, nursing, and social learning."
+  },
+  {
+   "slug": "domestic-pig",
+   "name": "Domestic Pig",
+   "recipe": "cluster",
+   "behaviour": "group sleeps lying close together",
+   "field": "sleep",
+   "quote": "sleeping through the night in groups lying close together"
+  },
+  {
+   "slug": "domestic-sheep",
+   "name": "Domestic Sheep",
+   "recipe": "cluster",
+   "behaviour": "huddles into a tight mass in cold or threat",
+   "field": "evidence",
+   "quote": "In cold weather or when feeling threatened, sheep will huddle closely together, often forming a tight mass."
+  },
+  {
+   "slug": "dusky-sleeper",
+   "name": "Dusky Sleeper",
+   "recipe": "bury_sand",
+   "behaviour": "lies still under roots and stones by day, partly covered by sediment",
+   "field": "sleep",
+   "quote": "By day it rests motionless on the bottom, tucked under roots, rocks or debris, sometimes partly covered by soft sediment."
+  },
+  {
+   "slug": "eastern-chipmunk",
+   "name": "Eastern Chipmunk",
+   "recipe": "dig_burrow",
+   "behaviour": "carries soil away so the burrow has no spoil heap",
+   "field": "facts",
+   "quote": "Burrow entrances have no spoil heap, because soil is carried away and scattered before the hole is opened."
+  },
+  {
+   "slug": "eastern-gray-squirrel",
+   "name": "Eastern Gray Squirrel",
+   "recipe": "nest_build",
+   "behaviour": "builds dreys of twigs and leaves in high forks",
+   "field": "facts",
+   "quote": "A drey is a ball of twigs and leaves wedged in a high fork and lined with shredded bark or grass, and one squirrel may use several."
+  },
+  {
+   "slug": "eastern-lubber-grasshopper",
+   "name": "Eastern Lubber Grasshopper",
+   "recipe": "cluster",
+   "behaviour": "slow clumsy walk; rests at night in small groups on stems",
+   "field": "sleep",
+   "quote": "At night and in bad weather it rests clinging to stems and leaves of low vegetation, often in small groups."
+  },
+  {
+   "slug": "emu",
+   "name": "Emu",
+   "recipe": "incubate_sit",
+   "behaviour": "male sits on the eggs for about eight weeks, scarcely eating, then guards striped chicks",
+   "field": "evidence",
+   "quote": "The male incubates the clutch for around eight weeks, eating and drinking very little and losing a large proportion of his body weight, then raises the chicks for over a year."
+  },
+  {
+   "slug": "eurasian-eagle-owl",
+   "name": "Eurasian Eagle-Owl",
+   "recipe": "pounce",
+   "behaviour": "silent approach and powerful talon strike at night",
+   "field": "evidence",
+   "quote": "The owl flies silently, approaching prey undetected, and strikes with powerful talons for a swift, conclusive capture."
+  },
+  {
+   "slug": "eurasian-magpie",
+   "name": "Eurasian Magpie",
+   "recipe": "cluster",
+   "behaviour": "winter shared roosts of dozens to hundreds",
+   "field": "sleep",
+   "quote": "in winter many birds gather at shared roosts that can hold dozens or even hundreds."
+  },
+  {
+   "slug": "eurasian-tree-sparrow",
+   "name": "Eurasian Tree Sparrow",
+   "recipe": "cluster",
+   "behaviour": "flocks roost together at dusk in hedges or reedbeds",
+   "field": "sleep",
+   "quote": "Outside the breeding season flocks gather at dusk in dense hedges, ivy or reedbeds to roost together"
+  },
+  {
+   "slug": "european-hornet",
+   "name": "European Hornet",
+   "recipe": "aerial_hawk",
+   "behaviour": "hunts on into the night when other wasps have stopped",
+   "field": "story",
+   "quote": "The European Hornet hunts on into the night, drawn to lit windows, when other wasps have long stopped."
+  },
+  {
+   "slug": "european-pond-terrapin",
+   "name": "European Pond Terrapin",
+   "recipe": "beach_nest",
+   "behaviour": "digs nest with hind feet, covers and leaves",
+   "field": "young",
+   "quote": "in a hole dug with the hind feet and then covered and left"
+  },
+  {
+   "slug": "european-starling",
+   "name": "European Starling",
+   "recipe": "cluster",
+   "behaviour": "shared roosts outside breeding season",
+   "field": "sleep",
+   "quote": "outside the breeding season birds gather in shared roosts in reedbeds, conifers, city buildings or under piers and bridges"
+  },
+  {
+   "slug": "fowlers-toad",
+   "name": "Fowler's Toad",
+   "recipe": "bury_sand",
+   "behaviour": "shuffles backwards into sand until only its back shows",
+   "field": "story",
+   "quote": "Fowler's Toad shuffles backwards into loose sand until only its speckled back shows, and that skin looks just like the ground around it."
+  },
+  {
+   "slug": "galapagos-tortoise",
+   "name": "Galápagos Tortoise",
+   "recipe": "wallow",
+   "behaviour": "sleeps half-submerged in mud wallows",
+   "field": "sleep",
+   "quote": "At night it sleeps in shallow scrapes, under bushes, or half-submerged in mud wallows and pools."
+  },
+  {
+   "slug": "giant-day-gecko",
+   "name": "Giant Day Gecko",
+   "recipe": "lizard_contest",
+   "behaviour": "males defend trunk and fight intruders",
+   "field": "facts",
+   "quote": "Males defend a trunk or patch of wall against other males and may fight an intruder that stays."
+  },
+  {
+   "slug": "giant-moray",
+   "name": "Giant Moray",
+   "recipe": "mixed_follow",
+   "behaviour": "hunts together with groupers",
+   "field": "facts",
+   "quote": "Some morays cooperate with other predators such as groupers in reef hunting systems."
+  },
+  {
+   "slug": "giant-mud-crab",
+   "name": "Giant Mud Crab",
+   "recipe": "dig_burrow",
+   "behaviour": "digs burrow in mangrove mud, walks out to feed on night high tide",
+   "field": "story",
+   "quote": "A Giant Mud Crab digs a burrow in soft mangrove mud and hides there by day, then walks out to feed when the tide covers the mud at night."
+  },
+  {
+   "slug": "giant-whip-scorpion",
+   "name": "Giant Whip Scorpion",
+   "recipe": "dig_burrow",
+   "behaviour": "digs its burrow with its pincers",
+   "field": "sleep",
+   "quote": "It spends the day in a burrow it digs with its pincers"
+  },
+  {
+   "slug": "goffins-cockatoo",
+   "name": "Goffin's Cockatoo",
+   "recipe": "stick_tool",
+   "behaviour": "bites a splinter, trims it and uses it to work seed out of a fruit stone",
+   "field": "story",
+   "quote": "Some Goffin's cockatoos bite a splinter from a branch, trim it to length and use it to work the seed out of a fruit stone."
+  },
+  {
+   "slug": "golden-stag-beetle",
+   "name": "Golden Stag Beetle",
+   "recipe": "jaw_spar",
+   "behaviour": "males wrestle with antler-like jaws",
+   "field": "traits",
+   "quote": "Antler-like jaws and wrestling"
+  },
+  {
+   "slug": "gray-angelfish",
+   "name": "Gray Angelfish",
+   "recipe": "allogroom",
+   "behaviour": "juveniles run cleaning stations, picking parasites from bigger fish",
+   "field": "facts",
+   "quote": "Juveniles set up cleaning stations and pick parasites from larger fish."
+  },
+  {
+   "slug": "gray-angelfish",
+   "name": "Gray Angelfish",
+   "recipe": "mixed_follow",
+   "behaviour": "adult pairs patrol the reef together patch to patch",
+   "field": "story",
+   "quote": "Adult pairs patrol a wide stretch of reef and hard bottom together, moving steadily from one feeding patch to the next."
+  },
+  {
+   "slug": "great-crow",
+   "name": "Great Crow",
+   "recipe": "cluster",
+   "behaviour": "roosts communally in large dry-season aggregations",
+   "field": "facts",
+   "quote": "The species roosts communally in the dry season, sometimes in large aggregations in sheltered gullies."
+  },
+  {
+   "slug": "great-kiskadee",
+   "name": "Great Kiskadee",
+   "recipe": "perch_plunge",
+   "behaviour": "brief flights from an exposed perch to prey and straight back, incl. fish off the surface",
+   "field": "evidence",
+   "quote": "Attacks are brief outward flights from the perch to the prey and straight back, rather than sustained pursuit or patrolling."
+  },
+  {
+   "slug": "great-tailed-grackle",
+   "name": "Great-tailed Grackle",
+   "recipe": "cluster",
+   "behaviour": "thousands-strong noisy communal roosts",
+   "field": "sleep",
+   "quote": "At dusk flocks gather in noisy communal roosts, sometimes thousands strong in winter"
+  },
+  {
+   "slug": "greater-kudu",
+   "name": "Greater Kudu",
+   "recipe": "horn_clash",
+   "behaviour": "males use spiral horns in display and contests",
+   "field": "traits",
+   "quote": "Huge spiral horns in males used for display and contests."
+  },
+  {
+   "slug": "greater-rhea",
+   "name": "Greater Rhea",
+   "recipe": "incubate_sit",
+   "behaviour": "several females lay in one male's scrape; he alone incubates the pooled clutch",
+   "field": "evidence",
+   "quote": "Several females lay their eggs into the same scrape made by a single male, producing clutches that can hold twenty to fifty eggs from different mothers."
+  },
+  {
+   "slug": "green-iguana",
+   "name": "Green Iguana",
+   "recipe": "dig_burrow",
+   "behaviour": "females move to nesting ground and dig burrows",
+   "field": "young",
+   "quote": "Females lay clutches of eggs in burrows or nest chambers, often after moving to suitable nesting ground."
+  },
+  {
+   "slug": "groundhog",
+   "name": "Groundhog",
+   "recipe": "dig_burrow",
+   "behaviour": "young leave to dig their own burrows by midsummer",
+   "field": "young",
+   "quote": "leave to dig their own burrows by midsummer"
+  },
+  {
+   "slug": "guinea-pig",
+   "name": "Guinea Pig",
+   "recipe": "cluster",
+   "behaviour": "huddles together when resting or insecure",
+   "field": "evidence",
+   "quote": "Guinea pigs are highly social and often huddle together, especially when resting or feeling insecure."
+  },
+  {
+   "slug": "guppy",
+   "name": "Guppy",
+   "recipe": "court_display",
+   "behaviour": "males display colours and fins to females with special swimming and posturing",
+   "field": "evidence",
+   "quote": "Male guppies actively display their vibrant colors and elaborate fins to females through specific swimming patterns and posturing."
+  },
+  {
+   "slug": "hawksbill-sea-turtle",
+   "name": "Hawksbill Sea Turtle",
+   "recipe": "probe_feed",
+   "behaviour": "probes beak into coral crevices for sponges",
+   "field": "story",
+   "quote": "The Hawksbill Sea Turtle uses a narrow hooked beak to reach food tucked deep inside coral reefs."
+  },
+  {
+   "slug": "house-sparrow",
+   "name": "House Sparrow",
+   "recipe": "cluster",
+   "behaviour": "noisy flocks gather and chatter before roosting",
+   "field": "sleep",
+   "quote": "Before dusk, noisy flocks gather in dense hedges, ivy, creepers or under eaves and chatter loudly before settling for the night."
+  },
+  {
+   "slug": "house-wren",
+   "name": "House Wren",
+   "recipe": "nest_build",
+   "behaviour": "male starts several dummy nests",
+   "field": "young",
+   "quote": "males often starting multiple dummy nests nearby"
+  },
+  {
+   "slug": "humboldt-penguin",
+   "name": "Humboldt Penguin",
+   "recipe": "dig_burrow",
+   "behaviour": "digs nest burrows into guano",
+   "field": "facts",
+   "quote": "It is listed as Vulnerable; past guano harvesting destroyed many of the deposits it once dug burrows into."
+  },
+  {
+   "slug": "indian-pied-myna",
+   "name": "Indian Pied Myna",
+   "recipe": "cluster",
+   "behaviour": "large communal roosts",
+   "field": "evidence",
+   "quote": "Indian Pied Mynas gather in large, often noisy, communal roosts"
+  },
+  {
+   "slug": "indochinese-tiger",
+   "name": "Indochinese Tiger",
+   "recipe": "pounce",
+   "behaviour": "silent stalk then short powerful attack",
+   "field": "evidence",
+   "quote": "After a silent stalk, the tiger waits for the opportune moment, then launches a sudden, powerful, short-distance attack."
+  },
+  {
+   "slug": "indonesian-blue-tongued-skink",
+   "name": "Indonesian Blue-tongued Skink",
+   "recipe": "probe_feed",
+   "behaviour": "forages through leaf litter; shelters in midday heat",
+   "field": "sleep",
+   "quote": "It basks in the morning to warm up, then forages through leaf litter, and shelters at night and in the hottest hours under logs, in burrows or in deep litter."
+  },
+  {
+   "slug": "jackdaw",
+   "name": "Jackdaw",
+   "recipe": "cluster",
+   "behaviour": "communal roosts and flock foraging",
+   "field": "evidence",
+   "quote": "Jackdaws roost communally in large numbers and forage in flocks"
+  },
+  {
+   "slug": "japanese-beetle",
+   "name": "Japanese Beetle",
+   "recipe": "cluster",
+   "behaviour": "clusters on sunlit leaves to feed and mate",
+   "field": "sleep",
+   "quote": "clustering on sunlit leaves"
+  },
+  {
+   "slug": "javan-ferret-badger",
+   "name": "Javan Ferret-Badger",
+   "recipe": "worm_pull",
+   "behaviour": "snuffles leaf litter and digs out worms with long claws at night",
+   "field": "story",
+   "quote": "The Javan Ferret-Badger comes out at night on the forest floors of Java and Bali, snuffling through the leaf litter and digging out worms and insects with its long claws."
+  },
+  {
+   "slug": "javan-myna",
+   "name": "Javan Myna",
+   "recipe": "cluster",
+   "behaviour": "gathers at roosts before dusk calling until dark",
+   "field": "sleep",
+   "quote": "Before dusk birds gather in shared roosts in the dense crowns of roadside trees or on building ledges, calling loudly until dark"
+  },
+  {
+   "slug": "komodo-dragon",
+   "name": "Komodo Dragon",
+   "recipe": "dig_burrow",
+   "behaviour": "lays eggs in burrows or mound nests",
+   "field": "young",
+   "quote": "Females lay eggs in nesting burrows or mound nests"
+  },
+  {
+   "slug": "kuhls-pipistrelle-bat",
+   "name": "Kuhl's Pipistrelle Bat",
+   "recipe": "cluster",
+   "behaviour": "females form nursery colonies",
+   "field": "young",
+   "quote": "Females gather in nursery colonies, usually of 20 to 100 bats, in buildings."
+  },
+  {
+   "slug": "laughing-kookaburra",
+   "name": "Laughing Kookaburra",
+   "recipe": "pounce",
+   "behaviour": "perches still on a branch then swoops to pounce on ground prey",
+   "field": "traits",
+   "quote": "Perch-and-Pounce Hunting: stillness on a branch becomes sudden ground action."
+  },
+  {
+   "slug": "leaf-eating-slug",
+   "name": "Leaf-eating Slug",
+   "recipe": "bury_sand",
+   "behaviour": "burrows into moist soil by day; dry spells keep it underground",
+   "field": "sleep",
+   "quote": "By day it burrows a short way into moist soil or lies flattened beneath stones, and dry spells keep it underground."
+  },
+  {
+   "slug": "leopard-gecko",
+   "name": "Leopard Gecko",
+   "recipe": "pounce",
+   "behaviour": "waits at burrow mouths for insects",
+   "field": "story",
+   "quote": "making it a ground hunter that waits at burrow mouths for passing insects"
+  },
+  {
+   "slug": "leopard-tortoise",
+   "name": "Leopard Tortoise",
+   "recipe": "dig_burrow",
+   "behaviour": "female digs nest",
+   "field": "young",
+   "quote": "Females dig nests and lay clutches of eggs in soil"
+  },
+  {
+   "slug": "leopoldi-stingray",
+   "name": "Leopoldi Stingray",
+   "recipe": "bury_sand",
+   "behaviour": "lies still by day with sediment flicked over its back",
+   "field": "sleep",
+   "quote": "By day it lies still on the river bed for long periods, often with a thin layer of sediment flicked over its back"
+  },
+  {
+   "slug": "lesser-banded-hornet",
+   "name": "Lesser Banded Hornet",
+   "recipe": "hawk_insects",
+   "behaviour": "hunts honey bees at hive entrances",
+   "field": "facts",
+   "quote": "Colonies hunt honey bees at hive entrances"
+  },
+  {
+   "slug": "limpkin",
+   "name": "Limpkin",
+   "recipe": "shell_tool",
+   "behaviour": "slides its bill into an apple snail's shell and snips it free",
+   "field": "story",
+   "quote": "The Limpkin has a long bill that bends slightly to the right at the tip, a perfect fit for sliding into the curled shell of an apple snail and snipping the snail free."
+  },
+  {
+   "slug": "little-owl",
+   "name": "Little Owl",
+   "recipe": "bask_sun",
+   "behaviour": "sits at its hole entrance sunning by day",
+   "field": "sleep",
+   "quote": "Rests by day in a tree hole, barn or rock cleft, often sitting at the entrance in the sun."
+  },
+  {
+   "slug": "little-owl",
+   "name": "Little Owl",
+   "recipe": "pounce",
+   "behaviour": "watches from a fence post at twilight, glides down onto voles and beetles",
+   "field": "story",
+   "quote": "From a fence post at twilight it watches the grass below, then glides down onto a vole or beetle it has picked out by sight and sound."
+  },
+  {
+   "slug": "long-tailed-macaque",
+   "name": "Long-tailed Macaque",
+   "recipe": "cluster",
+   "behaviour": "huddles at branch ends in sleeping trees over rivers",
+   "field": "sleep",
+   "quote": "Sleeping trees, often ones overhanging a river, are occupied before dusk, and the animals huddle in small groups near the ends of branches until first light."
+  },
+  {
+   "slug": "long-tailed-macaque",
+   "name": "Long-tailed Macaque",
+   "recipe": "shell_tool",
+   "behaviour": "uses stones as hammers to open oysters and nuts",
+   "field": "facts",
+   "quote": "On coasts and islands in Thailand and Myanmar, some populations use stones as hammers to open oysters, sea snails and nuts."
+  },
+  {
+   "slug": "malachite-butterfly",
+   "name": "Malachite Butterfly",
+   "recipe": "cluster",
+   "behaviour": "hangs under leaves at night, sometimes several together",
+   "field": "sleep",
+   "quote": "At night adults hang under the leaves of low shrubs, sometimes several together."
+  },
+  {
+   "slug": "malaysian-field-rat",
+   "name": "Malaysian Field Rat",
+   "recipe": "nest_build",
+   "behaviour": "nests of shredded vegetation in palm crowns or undergrowth",
+   "field": "sleep",
+   "quote": "It spends the day in nests of shredded vegetation hidden in dense undergrowth, frond piles or palm crowns"
+  },
+  {
+   "slug": "mandrill",
+   "name": "Mandrill",
+   "recipe": "scent_mark",
+   "behaviour": "males rub chest scent gland on tree trunks",
+   "field": "facts",
+   "quote": "Adult males rub a scent gland on the chest against tree trunks, leaving marks that other mandrills sniff."
+  },
+  {
+   "slug": "mangrove-crab",
+   "name": "Mangrove Crab",
+   "recipe": "box_spar",
+   "behaviour": "defends burrow entrance with raised claws and sideways shoves",
+   "field": "facts",
+   "quote": "Individuals frequently occupy and maintain the same burrow for long periods, defending the entrance against similar-sized neighbours with raised claws and sideways shoves."
+  },
+  {
+   "slug": "mangrove-horseshoe-crab",
+   "name": "Mangrove Horseshoe Crab",
+   "recipe": "bury_sand",
+   "behaviour": "ploughs through soft mud on the flood, buries on the ebb",
+   "field": "sleep",
+   "quote": "Mangrove Horseshoe Crabs move with the tide rather than the clock, ploughing across flats on the flood and burying on the ebb."
+  },
+  {
+   "slug": "masked-lovebird",
+   "name": "Masked Lovebird",
+   "recipe": "allogroom",
+   "behaviour": "pairs preen each other",
+   "field": "facts",
+   "quote": "Pairs stay together for long periods and preen each other, behaviour that gave lovebirds their common name."
+  },
+  {
+   "slug": "mediterranean-house-gecko",
+   "name": "Mediterranean House Gecko",
+   "recipe": "pounce",
+   "behaviour": "waits by lamps at night to snap moths",
+   "field": "story",
+   "quote": "On warm nights it waits beside outdoor lamps and darts out to snap up moths and other insects that the light draws in."
+  },
+  {
+   "slug": "meerkat",
+   "name": "Meerkat",
+   "recipe": "bask_sun",
+   "behaviour": "warms up near burrow in the morning",
+   "field": "sleep",
+   "quote": "Meerkats are diurnal, warming up near burrows before foraging and returning underground to rest."
+  },
+  {
+   "slug": "moon-jellyfish",
+   "name": "Moon Jellyfish",
+   "recipe": "swarm",
+   "behaviour": "gathers in dense swarms near the surface",
+   "field": "traits",
+   "quote": "Often gathers in dense swarms near the surface"
+  },
+  {
+   "slug": "mourning-cloak",
+   "name": "Mourning Cloak",
+   "recipe": "bask_sun",
+   "behaviour": "basks with wings spread toward the sun on cold spring mornings",
+   "field": "story",
+   "quote": "On a cold spring morning it settles with wings spread towards the sun, often on a pale trunk or path, warming its flight muscles before it takes off."
+  },
+  {
+   "slug": "mugger-crocodile",
+   "name": "Mugger Crocodile",
+   "recipe": "beach_nest",
+   "behaviour": "digs nest hole in sandy bank",
+   "field": "young",
+   "quote": "In the dry season the female digs a nest hole in a sandy bank"
+  },
+  {
+   "slug": "multicolored-asian-lady-beetle",
+   "name": "Multicolored Asian Lady Beetle",
+   "recipe": "cluster",
+   "behaviour": "adults gather in large numbers on pale sunlit walls in autumn",
+   "field": "facts",
+   "quote": "In autumn adults gather in large numbers on pale, sunlit walls, then overwinter in cracks, roof spaces and houses."
+  },
+  {
+   "slug": "northern-flicker",
+   "name": "Northern Flicker",
+   "recipe": "probe_feed",
+   "behaviour": "woodpecker that feeds on the ground, licking up ants",
+   "field": "traits",
+   "quote": "Unlike many woodpeckers, it often feeds on the ground"
+  },
+  {
+   "slug": "olive-backed-sunbird",
+   "name": "Olive-backed Sunbird",
+   "recipe": "probe_feed",
+   "behaviour": "flicks constantly between flowers probing nectar",
+   "field": "traits",
+   "quote": "Constant flicking movement between flowers"
+  },
+  {
+   "slug": "oriental-garden-lizard",
+   "name": "Oriental Garden Lizard",
+   "recipe": "pounce",
+   "behaviour": "hunts from a perch with short rapid attack",
+   "field": "evidence",
+   "quote": "The lizard commonly hunts visually from a perch, observing its surroundings before making a short, rapid attack on prey."
+  },
+  {
+   "slug": "oriental-white-eye",
+   "name": "Oriental White-eye",
+   "recipe": "allogroom",
+   "behaviour": "flock mates preen each other",
+   "field": "facts",
+   "quote": "Flock mates often preen each other"
+  },
+  {
+   "slug": "osprey",
+   "name": "Osprey",
+   "recipe": "air_plunge",
+   "behaviour": "plunges feet-first into water to seize fish",
+   "field": "evidence",
+   "quote": "The bird plunges feet-first, closes its nostrils on entry, and has dense oily plumage that prevents waterlogging, unlike cormorants which must dry out."
+  },
+  {
+   "slug": "ostrich",
+   "name": "Ostrich",
+   "recipe": "incubate_sit",
+   "behaviour": "communal nest around a dominant pair",
+   "field": "young",
+   "quote": "Females lay large eggs in ground nests, often with communal nesting around a dominant pair."
+  },
+  {
+   "slug": "painted-turtle",
+   "name": "Painted Turtle",
+   "recipe": "beach_nest",
+   "behaviour": "female digs flask nest in sunny soil near water",
+   "field": "young",
+   "quote": "females dig a flask-shaped nest in open, sunny soil, usually within about 200 metres of water"
+  },
+  {
+   "slug": "palm-cockatoo",
+   "name": "Palm Cockatoo",
+   "recipe": "nest_build",
+   "behaviour": "builds a platform of splintered sticks inside the hollow",
+   "field": "facts",
+   "quote": "Before laying, the pair builds a deep platform of splintered sticks inside the hollow, which may keep the egg above standing water."
+  },
+  {
+   "slug": "pantropical-jumping-spider",
+   "name": "Pantropical Jumping Spider",
+   "recipe": "court_dance",
+   "behaviour": "male jerky side-to-side dance with front legs raised",
+   "field": "facts",
+   "quote": "Males are reported to court females with a jerky side-to-side dance, holding up their front legs."
+  },
+  {
+   "slug": "pantropical-jumping-spider",
+   "name": "Pantropical Jumping Spider",
+   "recipe": "pounce",
+   "behaviour": "walks into range on a sunny wall, then jumps",
+   "field": "story",
+   "quote": "The Pantropical Jumping Spider walks into range on a wall, then jumps."
+  },
+  {
+   "slug": "peach-faced-lovebird",
+   "name": "Peach-faced Lovebird",
+   "recipe": "allogroom",
+   "behaviour": "pairs preen each other",
+   "field": "facts",
+   "quote": "Pairs preen each other and stay together for long periods, which gave lovebirds their common name."
+  },
+  {
+   "slug": "peterss-jumping-spider",
+   "name": "Peters's Jumping Spider",
+   "recipe": "court_dance",
+   "behaviour": "male dance: waving dark front legs, stepping side to side",
+   "field": "facts",
+   "quote": "Males court females with a dance, raising and waving their dark front legs while stepping from side to side in front of her."
+  },
+  {
+   "slug": "peterss-jumping-spider",
+   "name": "Peters's Jumping Spider",
+   "recipe": "pounce",
+   "behaviour": "leaps with silk safety line; a miss ends dangling",
+   "field": "facts",
+   "quote": "Before leaping it attaches a silk safety line to the surface, so a missed jump ends dangling rather than falling."
+  },
+  {
+   "slug": "philippine-crocodile",
+   "name": "Philippine Crocodile",
+   "recipe": "incubate_sit",
+   "behaviour": "female guards nest near water",
+   "field": "young",
+   "quote": "Females lay eggs in nests near water and may guard nesting areas."
+  },
+  {
+   "slug": "pied-butcherbird",
+   "name": "Pied Butcherbird",
+   "recipe": "pounce",
+   "behaviour": "watches from exposed perch, launches at prey, returns to lookout",
+   "field": "story",
+   "quote": "It watches from an exposed perch, launches when prey reveals itself and returns to a useful lookout."
+  },
+  {
+   "slug": "pied-crow",
+   "name": "Pied Crow",
+   "recipe": "cluster",
+   "behaviour": "hundreds share dusk roosts in tall trees",
+   "field": "sleep",
+   "quote": "Outside the breeding season birds gather towards dusk at shared roosts in tall trees, where hundreds may spend the night together."
+  },
+  {
+   "slug": "plains-zebra",
+   "name": "Plains Zebra",
+   "recipe": "jaw_spar",
+   "behaviour": "stallions fight using canines",
+   "field": "sexes",
+   "quote": "have larger canine teeth, which they use in fights"
+  },
+  {
+   "slug": "plains-zebra",
+   "name": "Plains Zebra",
+   "recipe": "mixed_follow",
+   "behaviour": "moves ahead of wildebeest, cropping tall grass",
+   "field": "facts",
+   "quote": "On the Serengeti plains, zebras often move ahead of the wildebeest, cropping the tall, coarse grass and exposing shorter growth beneath."
+  },
+  {
+   "slug": "platypus",
+   "name": "Platypus",
+   "recipe": "dig_burrow",
+   "behaviour": "lays eggs in a nesting burrow",
+   "field": "facts",
+   "quote": "Females lay eggs in nesting burrows, a rare trait among mammals."
+  },
+  {
+   "slug": "platypus",
+   "name": "Platypus",
+   "recipe": "incubate_sit",
+   "behaviour": "lays eggs in a nesting burrow",
+   "field": "facts",
+   "quote": "Females lay eggs in nesting burrows, a rare trait among mammals."
+  },
+  {
+   "slug": "racket-tailed-roller",
+   "name": "Racket-tailed Roller",
+   "recipe": "pounce",
+   "behaviour": "watches from a perch then drops to seize prey on the ground",
+   "field": "evidence",
+   "quote": "The Racket-tailed Roller watches from a perch, often within the canopy, before dropping to the ground to seize its prey."
+  },
+  {
+   "slug": "rainbow-crab",
+   "name": "Rainbow Crab",
+   "recipe": "cache_food",
+   "behaviour": "drags food into its burrow",
+   "field": "evidence",
+   "quote": "Food is gathered near the burrow, and some is reportedly dragged inside."
+  },
+  {
+   "slug": "red-imported-fire-ant",
+   "name": "Red Imported Fire Ant",
+   "recipe": "swarm",
+   "behaviour": "winged queens and males pour from the mound after rain to mate in the air",
+   "field": "facts",
+   "quote": "After rain on warm days, winged queens and males pour from the mound to mate in the air"
+  },
+  {
+   "slug": "red-river-hog",
+   "name": "Red River Hog",
+   "recipe": "nest_build",
+   "behaviour": "piglets born in sheltered nests",
+   "field": "young",
+   "quote": "Females give birth to piglets in sheltered nests or dense cover"
+  },
+  {
+   "slug": "red-squirrel",
+   "name": "Red Squirrel",
+   "recipe": "nest_build",
+   "behaviour": "raises young in dreys",
+   "field": "young",
+   "quote": "Females raise young in tree nests called dreys"
+  },
+  {
+   "slug": "red-tegu",
+   "name": "Red Tegu",
+   "recipe": "incubate_sit",
+   "behaviour": "female lines nest with plants and guards it",
+   "field": "young",
+   "quote": "She is reported to line the nest with plant material and to stay and guard it"
+  },
+  {
+   "slug": "red-tegu",
+   "name": "Red Tegu",
+   "recipe": "root_dig",
+   "behaviour": "tongue-flicking forager that stops to dig for eggs and grubs",
+   "field": "story",
+   "quote": "A foraging tegu covers ground steadily, flicking its long forked tongue to pick up scent and stopping to dig where it finds eggs, grubs or fallen fruit."
+  },
+  {
+   "slug": "red-winged-blackbird",
+   "name": "Red-winged Blackbird",
+   "recipe": "cluster",
+   "behaviour": "winter dusk roosts shared with grackles, cowbirds, starlings",
+   "field": "sleep",
+   "quote": "Outside the breeding season it gathers at dusk in communal roosts in marshes and thickets, often shared with grackles, cowbirds and starlings"
+  },
+  {
+   "slug": "redclaw-crayfish",
+   "name": "Redclaw Crayfish",
+   "recipe": "dig_burrow",
+   "behaviour": "digs shallow burrows into banks",
+   "field": "evidence",
+   "quote": "Redclaw crayfish dig shallow burrows into banks and utilize existing submerged cover like logs and rocks."
+  },
+  {
+   "slug": "reticulated-river-stingray",
+   "name": "Reticulated River Stingray",
+   "recipe": "bury_sand",
+   "behaviour": "rests buried to the eyes in sand or mud by day",
+   "field": "sleep",
+   "quote": "buried to the eyes in sand or mud"
+  },
+  {
+   "slug": "rhinoceros",
+   "name": "Rhinoceros",
+   "recipe": "dust_bathe",
+   "behaviour": "wallows in mud or dust",
+   "field": "evidence",
+   "quote": "frequently wallow in mud or dust"
+  },
+  {
+   "slug": "rhinoceros-iguana",
+   "name": "Rhinoceros Iguana",
+   "recipe": "dig_burrow",
+   "behaviour": "female digs nest",
+   "field": "young",
+   "quote": "Females dig nests and lay eggs in soil or sand"
+  },
+  {
+   "slug": "rice-grasshopper",
+   "name": "Rice Grasshopper",
+   "recipe": "cluster",
+   "behaviour": "nymphs and adults rest in groups on sunny leaf blades",
+   "field": "facts",
+   "quote": "Nymphs and adults often rest in groups on leaf blades in sunny paddies."
+  },
+  {
+   "slug": "ring-billed-gull",
+   "name": "Ring-billed Gull",
+   "recipe": "aerial_hawk",
+   "behaviour": "gathers over swarms of emerging mayflies and flying ants to hawk them",
+   "field": "facts",
+   "quote": "It catches insects in flight, and gathers over swarms of emerging mayflies and flying ants."
+  },
+  {
+   "slug": "ring-tailed-lemur",
+   "name": "Ring-tailed Lemur",
+   "recipe": "cluster",
+   "behaviour": "huddles to sleep in groups",
+   "field": "sleep",
+   "quote": "Day-active, sleeping in groups and warming after cool nights, so shared heat becomes a daily ritual rather than just comfort."
+  },
+  {
+   "slug": "roadside-hawk",
+   "name": "Roadside Hawk",
+   "recipe": "pounce",
+   "behaviour": "drops from a low post onto prey and flies back up to wait",
+   "field": "story",
+   "quote": "From a low post it watches the grass below, drops onto a grasshopper, lizard or mouse, and flies back up to wait again."
+  },
+  {
+   "slug": "rook",
+   "name": "Rook",
+   "recipe": "cluster",
+   "behaviour": "communal roost after feeding",
+   "field": "sleep",
+   "quote": "Rooks are diurnal and often gather to roost communally after feeding."
+  },
+  {
+   "slug": "russian-tortoise",
+   "name": "Russian Tortoise",
+   "recipe": "dig_burrow",
+   "behaviour": "digs metre-long burrows with strong forelimbs",
+   "field": "facts",
+   "quote": "Its compact body and strong forelimbs are built for digging burrows, which are reported to reach a metre or more."
+  },
+  {
+   "slug": "savannah-monitor",
+   "name": "Savannah Monitor",
+   "recipe": "dig_burrow",
+   "behaviour": "digs/enlarges burrows and termite mounds, stays in through heat and dry season",
+   "field": "story",
+   "quote": "It digs its own burrows or enlarges existing holes and termite mounds, then stays inside through the hottest hours and much of the dry season."
+  },
+  {
+   "slug": "scarlet-ibis",
+   "name": "Scarlet Ibis",
+   "recipe": "bill_sweep",
+   "behaviour": "probes mud with a side-to-side bill sweep",
+   "field": "evidence",
+   "quote": "Scarlet Ibises use their long, decurved bills to probe soft mud and shallow water, often with a side-to-side motion, to locate hidden prey like crabs, shrimp, and worms."
+  },
+  {
+   "slug": "siamese-crocodile",
+   "name": "Siamese Crocodile",
+   "recipe": "incubate_sit",
+   "behaviour": "female guards nest",
+   "field": "young",
+   "quote": "Females build nests and lay clutches of eggs, often guarding the nest or young."
+  },
+  {
+   "slug": "slender-skimmer",
+   "name": "Slender Skimmer",
+   "recipe": "aerial_hawk",
+   "behaviour": "catches small insects in mid-air and also other dragonflies",
+   "field": "facts",
+   "quote": "Adults hunt small flying insects on the wing and are also reported to catch and eat other dragonflies."
+  },
+  {
+   "slug": "song-thrush",
+   "name": "Song Thrush",
+   "recipe": "shell_tool",
+   "behaviour": "smashes snails against a rock anvil",
+   "field": "evidence",
+   "quote": "Song Thrushes repeatedly pick up snails and smash them against a hard surface, typically a specific rock, until the shell breaks."
+  },
+  {
+   "slug": "southeastern-five-lined-skink",
+   "name": "Southeastern Five-lined Skink",
+   "recipe": "incubate_sit",
+   "behaviour": "female coils around her clutch until it hatches",
+   "field": "young",
+   "quote": "the female usually stays coiled around the clutch until it hatches"
+  },
+  {
+   "slug": "southern-cassowary",
+   "name": "Southern Cassowary",
+   "recipe": "incubate_sit",
+   "behaviour": "male alone incubates the green eggs and raises the chicks",
+   "field": "evidence",
+   "quote": "The male Southern Cassowary takes sole responsibility for incubating the strikingly green eggs and raising the chicks for up to nine months."
+  },
+  {
+   "slug": "southern-mole-cricket",
+   "name": "Southern Mole Cricket",
+   "recipe": "dig_burrow",
+   "behaviour": "digs with shovel-like front legs",
+   "field": "story",
+   "quote": "The Southern Mole Cricket digs with front legs shaped like little shovels"
+  },
+  {
+   "slug": "spotted-wood-owl",
+   "name": "Spotted Wood Owl",
+   "recipe": "pounce",
+   "behaviour": "perches motionless listening most of the night, then a short silent descent",
+   "field": "evidence",
+   "quote": "The attack is a short, direct descent from the perch, with strong talons taking the prey at the end, and the owl returns to a perch rather than pursuing a miss."
+  },
+  {
+   "slug": "sri-lankan-elephant",
+   "name": "Sri Lankan Elephant",
+   "recipe": "dust_bathe",
+   "behaviour": "dust and mud baths redden the skin",
+   "field": "traits",
+   "quote": "Grey skin, often reddened by dust and mud baths"
+  },
+  {
+   "slug": "stalk-eyed-fly",
+   "name": "Stalk-eyed Fly",
+   "recipe": "cluster",
+   "behaviour": "gathers at night in aggregations on hanging rootlets over streams",
+   "field": "facts",
+   "quote": "Flies gather at night in aggregations on hanging rootlets and fine vegetation over streams, often dozens together."
+  },
+  {
+   "slug": "stump-tailed-macaque",
+   "name": "Stump-tailed Macaque",
+   "recipe": "cluster",
+   "behaviour": "sleeps huddled in contact",
+   "field": "sleep",
+   "quote": "At night troop members sleep in tall trees, often sitting huddled together in contact."
+  },
+  {
+   "slug": "sugar-glider",
+   "name": "Sugar Glider",
+   "recipe": "cluster",
+   "behaviour": "group sleeps together in tree hollows",
+   "field": "sleep",
+   "quote": "Sugar Gliders sleep in hollows by day and move in social groups through trees at night."
+  },
+  {
+   "slug": "sulcata-tortoise",
+   "name": "Sulcata Tortoise",
+   "recipe": "dig_burrow",
+   "behaviour": "excavates deep burrows and retreats in midday heat/drought",
+   "field": "evidence",
+   "quote": "Tortoises are most active during the cooler parts of the day (early morning, late afternoon) and retreat into their burrows during the peak heat of midday or during prolonged dry spells."
+  },
+  {
+   "slug": "sumatran-tiger",
+   "name": "Sumatran Tiger",
+   "recipe": "pounce",
+   "behaviour": "gets very close undetected then sudden attack",
+   "field": "evidence",
+   "quote": "Sumatran Tigers are ambush predators, relying on getting very close to their prey undetected before launching a sudden, powerful attack."
+  },
+  {
+   "slug": "termite",
+   "name": "Termite",
+   "recipe": "swarm",
+   "behaviour": "winged alates pour out in brief rainy-season swarms",
+   "field": "traits",
+   "quote": "Winged alates emerging in brief rainy-season swarms"
+  },
+  {
+   "slug": "threadfin-acara",
+   "name": "Threadfin Acara",
+   "recipe": "dig_burrow",
+   "behaviour": "pair digs a breeding tunnel in the river bed and guards its entrance",
+   "field": "evidence",
+   "quote": "Parent fish actively patrol and defend the immediate area around the opening of their excavated nest."
+  },
+  {
+   "slug": "tiger-moth",
+   "name": "Tiger Moth",
+   "recipe": "cluster",
+   "behaviour": "blackish yellow-ringed larvae feed in groups under fig leaves",
+   "field": "facts",
+   "quote": "Larvae rest beneath Ficus leaves and feed in groups after eggs are laid in batches."
+  },
+  {
+   "slug": "tokay-gecko",
+   "name": "Tokay Gecko",
+   "recipe": "incubate_sit",
+   "behaviour": "may guard eggs stuck to surfaces",
+   "field": "young",
+   "quote": "Females lay eggs in sheltered places, often attached to surfaces, and may guard them in some situations."
+  },
+  {
+   "slug": "tropical-house-gecko",
+   "name": "Tropical House Gecko",
+   "recipe": "pounce",
+   "behaviour": "waits beside lamps at night to snap insects",
+   "field": "story",
+   "quote": "The Tropical House Gecko settles on the wall beside a lamp after dark and snaps up the insects that the light draws in."
+  },
+  {
+   "slug": "tufted-capuchin",
+   "name": "Tufted Capuchin",
+   "recipe": "cluster",
+   "behaviour": "sleeps sitting close together in palm crowns",
+   "field": "sleep",
+   "quote": "At dusk the group settles in tall trees, often in palm crowns or large emergent trees, and sleeps on branches with members sitting close together."
+  },
+  {
+   "slug": "tufted-capuchin",
+   "name": "Tufted Capuchin",
+   "recipe": "mixed_follow",
+   "behaviour": "squirrel monkeys travel alongside",
+   "field": "facts",
+   "quote": "Squirrel monkeys often travel with tufted capuchin groups, following them through the canopy and feeding alongside them."
+  },
+  {
+   "slug": "tufted-capuchin",
+   "name": "Tufted Capuchin",
+   "recipe": "shell_tool",
+   "behaviour": "cracks nuts with stones",
+   "field": "evidence",
+   "quote": "Tufted Capuchins are known for tool use in some populations, such as using stones to crack nuts."
+  },
+  {
+   "slug": "tufted-gray-langur",
+   "name": "Tufted Gray Langur",
+   "recipe": "mixed_follow",
+   "behaviour": "spotted deer feed below on leaves it drops; both bolt at each other's alarm",
+   "field": "story",
+   "quote": "The Tufted Gray Langur feeds in the treetops while spotted deer gather below for the leaves it drops, and each species bolts at the other's alarm call."
+  },
+  {
+   "slug": "two-striped-telamonia",
+   "name": "Two-striped Telamonia",
+   "recipe": "court_dance",
+   "behaviour": "male courtship: raised waving front legs, sideways steps",
+   "field": "facts",
+   "quote": "males court females with a display of raised, waving front legs and sideways steps"
+  },
+  {
+   "slug": "vampire-crab",
+   "name": "Vampire Crab",
+   "recipe": "dig_burrow",
+   "behaviour": "day in burrow dug into damp bank, out from dusk",
+   "field": "sleep",
+   "quote": "In the wild they are thought to spend daylight hours in a burrow dug into a damp bank, or under stones, roots and leaf litter, where the air stays humid."
+  },
+  {
+   "slug": "welcome-swallow",
+   "name": "Welcome Swallow",
+   "recipe": "cluster",
+   "behaviour": "flocks roost together in reedbeds, wires, ledges",
+   "field": "sleep",
+   "quote": "Outside the breeding season birds gather to roost together, sometimes in large flocks"
+  },
+  {
+   "slug": "western-gorilla",
+   "name": "Western Gorilla",
+   "recipe": "stick_tool",
+   "behaviour": "tests swamp depth with a stick before wading",
+   "field": "facts",
+   "quote": "A wild female in the Republic of the Congo was photographed testing the depth of a swamp pool with a stick before wading in."
+  },
+  {
+   "slug": "western-honey-bee",
+   "name": "Western Honey Bee",
+   "recipe": "cluster",
+   "behaviour": "overwinters as a shivering cluster",
+   "field": "facts",
+   "quote": "overwinters as a cluster that shivers to keep its centre near 34 degrees Celsius"
+  },
+  {
+   "slug": "western-lowland-gorilla",
+   "name": "Western Lowland Gorilla",
+   "recipe": "wrestle",
+   "behaviour": "young play and stay close",
+   "field": "facts",
+   "quote": "Young gorillas spend years learning social life through play and closeness."
+  },
+  {
+   "slug": "western-yellow-wagtail",
+   "name": "Western Yellow Wagtail",
+   "recipe": "mixed_follow",
+   "behaviour": "runs around the feet of grazing cattle catching flushed insects",
+   "field": "story",
+   "quote": "The Western Yellow Wagtail runs around the feet of grazing cattle and snaps up the insects they stir from the grass."
+  },
+  {
+   "slug": "white-nosed-coati",
+   "name": "White-nosed Coati",
+   "recipe": "probe_feed",
+   "behaviour": "digs and sniffs with snout and claws",
+   "field": "traits",
+   "quote": "Claws and nose together: digging and smelling turn curiosity into food."
+  },
+  {
+   "slug": "white-throated-kingfisher",
+   "name": "White-throated Kingfisher",
+   "recipe": "dig_burrow",
+   "behaviour": "nests at the end of a long tunnel",
+   "field": "predators",
+   "quote": "Snakes, monitor lizards and rats are the likeliest threats to eggs and chicks, which are protected by the long nest tunnel."
+  },
+  {
+   "slug": "white-throated-kingfisher",
+   "name": "White-throated Kingfisher",
+   "recipe": "pounce",
+   "behaviour": "drops from a wire or branch onto lizards, crabs and insects far from water",
+   "field": "story",
+   "quote": "The White-throated Kingfisher often hunts far from water, dropping from a wire or branch onto lizards, frogs, crabs and large insects as well as fish."
+  },
+  {
+   "slug": "yellow-tang",
+   "name": "Yellow Tang",
+   "recipe": "allogroom",
+   "behaviour": "cleans algae off the shells of visiting green sea turtles",
+   "field": "facts",
+   "quote": "It cleans algae off the shells of green sea turtles, which visit reef to be groomed."
+  },
+  {
+   "slug": "yellowfin-surgeonfish",
+   "name": "Yellowfin Surgeonfish",
+   "recipe": "mixed_follow",
+   "behaviour": "feeds in mixed groups with other surgeonfishes over open sand",
+   "field": "facts",
+   "quote": "It is often reported feeding in mixed groups with other surgeonfishes over open ground rather than alone."
+  },
+  {
+   "slug": "zebu",
+   "name": "Zebu",
+   "recipe": "cluster",
+   "behaviour": "herd lies down together at night",
+   "field": "sleep",
+   "quote": "At night the herd lies down together"
+  }
+ ]
+}
