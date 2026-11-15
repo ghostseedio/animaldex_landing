@@ -6901,7 +6901,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         ground: (x, z) => Math.max(heightAt(x, z), -0.3),
         walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
-        length: (entry) => entry.trueLength,
+        // The drawn body (what the viewer sees touch and mount), not the real metres.
+        length: (entry) => entry.length,
+        height: (entry) => entry.drawnHeight,
+        plan: (entry) => library.get(entry.animal.model_slug)?.behaviour?.plan ?? null,
+        // The species' own courtship from its recipes (a display, a dance together); else he chases her.
+        courtship: (entry) => {
+            const ids = new Set(speciesRecipes(entry.animal.model_slug).recipes.map((r) => r.id));
+            return ids.has("court_dance") ? "dance" : ids.has("court_display") ? "display" : null;
+        },
+        male: (entry) => {
+            const sex = sexLook(entry.animal.id, entry.animal.model_slug).sex;
+            return sex === "male" ? true : sex === "female" ? false : null;
+        },
         together: (a, b) => worldOf(a.animal) === worldOf(b.animal),
         setAct: (entry, pose) => {
             entry.act = pose;
