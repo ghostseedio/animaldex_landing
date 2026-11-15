@@ -482,7 +482,10 @@
       "meals": "Meals, last 24 h",
       "asOf": "From the Ark's public record, {time}",
       "unavailable": "The live numbers can't be read right now.",
-      "noMeals": "No meals yet: new arrivals have a head start at launch.",
+      "huntsFirstOn": "First hunts from {date}",
+      "huntsFirstIn": "First hunt in {duration}",
+      "huntsNextOn": "Next hunts from {date}",
+      "huntsNextIn": "Next hunt in {duration}",
       "top": "Most aboard: {list}. The Ark holds what people photograph."
     },
     "steps": {
