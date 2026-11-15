@@ -518,6 +518,21 @@
             "notNow": "Ne sada",
             "note": "Pitamo samo jednom. Ako imaš manje od 18 godina, tvoje se životinje prikazuju s Voyager brojem, a ne s tvojim @username.",
             "failed": "To nije prošlo. Pokušaj ponovno za trenutak."
+        },
+        "lost": {
+            "title": "Nestali s Arka",
+            "intro": "Vrste čija je posljednja životinja nestala. Ulovite jednu i vratit će se.",
+            "when": "Izumrla na Ark dan {day} · {date}",
+            "back": "Ponovno na brodu",
+            "diedOld": "Posljednja je uginula od starosti",
+            "eatenBy": "Posljednju je pojeo: {animal}",
+            "eaten": "Posljednja je pojedena",
+            "starved": "Posljednja je uginula od gladi",
+            "speciesLine": "Izumrla na Arku od Ark dana {day} · {date}.",
+            "speciesBack": "Ponovno na brodu: izumrla na Ark dan {day} · {date}.",
+            "notAboard": "{animal}: trenutačno nijedna na brodu.",
+            "bringBack": "Ulovite jednu da je vratite",
+            "listLabel": "Vrste nestale s Arka, najnovije prve"
         }
     },
     "talkPage": {

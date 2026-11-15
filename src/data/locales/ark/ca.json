@@ -518,6 +518,21 @@
             "notNow": "Ara no",
             "note": "Només es pregunta un cop. Si tens menys de 18 anys, els teus animals es mostren amb un número de Voyager en lloc del teu @username.",
             "failed": "No s'ha pogut fer. Torna-ho a provar d'aquí un moment."
+        },
+        "lost": {
+            "title": "Perdudes de l'Ark",
+            "intro": "Espècies que han perdut el darrer animal. Si en captures un, torna.",
+            "when": "Extingida el dia {day} de l'Ark · {date}",
+            "back": "De nou a bord",
+            "diedOld": "L'últim va morir de vell",
+            "eatenBy": "L'últim se'l va menjar: {animal}",
+            "eaten": "L'últim va ser devorat",
+            "starved": "L'últim va morir de gana",
+            "speciesLine": "Extingida a l'Ark des del dia {day} de l'Ark · {date}.",
+            "speciesBack": "De nou a bord: es va extingir el dia {day} de l'Ark · {date}.",
+            "notAboard": "Ara no hi ha cap exemplar de {animal} a bord.",
+            "bringBack": "Captura'n un per fer-lo tornar",
+            "listLabel": "Espècies perdudes de l'Ark, les més recents primer"
         }
     },
     "talkPage": {

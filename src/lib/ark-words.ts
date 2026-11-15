@@ -9,6 +9,7 @@ import type {ArkRegion, ArkZone} from "@/ark-scene/types";
 import type {ArkLiveWords} from "@/lib/ark-live-words";
 import type {ArkActivityWords, ArkCardWords} from "@/lib/ark-animal-status";
 import type {ArkLoaderWords} from "@/lib/ark-loading";
+import type {ArkLostWords} from "@/lib/ark-extinct";
 
 export type ArkHudWords = {
     label: string;
@@ -428,6 +429,8 @@ export type ArkWords = {
     species: ArkSpeciesWords;
     founders: ArkFoundersWords;
     age: ArkAgeAskWords;
+    /** Lost from the Ark (`lib/ark-extinct.ts`, read through `arkLostWords`). Optional: an older bundle lacks them. */
+    lost?: Partial<ArkLostWords>;
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */

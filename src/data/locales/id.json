@@ -483,9 +483,15 @@
       "founders": "Pendiri",
       "births": "Kelahiran, 24 jam terakhir",
       "meals": "Mangsa dimakan, 24 jam terakhir",
+      "extinct": "Spesies punah",
+      "changeDay": "24 jam",
+      "changeWeek": "minggu ini",
       "asOf": "Dari catatan publik Bahtera, {time}",
       "unavailable": "Angka langsung belum bisa dibaca sekarang.",
-      "noMeals": "Belum ada yang dimangsa: pendatang baru mendapat masa aman saat peluncuran.",
+      "huntsFirstOn": "Perburuan pertama mulai {date}",
+      "huntsFirstIn": "Perburuan pertama dalam {duration}",
+      "huntsNextOn": "Perburuan berikutnya mulai {date}",
+      "huntsNextIn": "Perburuan berikutnya dalam {duration}",
       "top": "Paling banyak: {list}. Bahtera berisi apa yang difoto orang."
     },
     "steps": {
@@ -4678,6 +4684,21 @@
       "notNow": "Nanti saja",
       "note": "Ditanyakan sekali. Jika di bawah 18 tahun, hewanmu tampil dengan nomor Voyager, bukan @username-mu.",
       "failed": "Belum berhasil. Coba lagi sebentar lagi."
+    },
+    "lost": {
+      "title": "Hilang dari Ark",
+      "intro": "Spesies yang hewan terakhirnya sudah tiada. Menangkap satu membawanya kembali.",
+      "when": "Punah pada hari Ark {day} · {date}",
+      "back": "Kembali di Ark",
+      "diedOld": "Yang terakhir mati karena usia tua",
+      "eatenBy": "Yang terakhir dimakan {animal}",
+      "eaten": "Yang terakhir dimakan",
+      "starved": "Yang terakhir kelaparan",
+      "speciesLine": "Punah di Ark sejak hari Ark {day} · {date}.",
+      "speciesBack": "Kembali di Ark: sempat punah pada hari Ark {day} · {date}.",
+      "notAboard": "Saat ini tidak ada {animal} di Ark.",
+      "bringBack": "Tangkap satu untuk membawanya kembali",
+      "listLabel": "Spesies yang hilang dari Ark, terbaru dulu"
     }
   },
   "seo": {

@@ -6,6 +6,7 @@
  *
  * Nothing here decides anything: it reads what the server wrote. No user id ever comes through it.
  */
+import {ARK_DAY_MS} from "@/lib/ark-clock";
 import {decodeArkMealEncounter, type ArkMealEncounter} from "@/lib/ark-life";
 
 export type ArkHunting = {
@@ -80,4 +81,24 @@ export async function fetchArkHunting(url = "/api/ark/hunting"): Promise<ArkHunt
     } catch {
         return null;
     }
+}
+
+/**
+ * What the home page's "meals, last 24 hours" can honestly say when it is 0 (owner 2026-11-15: never a bare 0 while
+ * no predator has been due). `counting`: a 0 is a real count (the pool, no predators, or some predator is due now and
+ * found nothing). `waiting`: no living predator is due before `at` (the soonest `hunt_from` as a real time), and `first`
+ * when no encounter meal has happened yet. Null: no hunting read, or it lacks the clock (the figure is then hidden).
+ */
+export type ArkLandingHunt = {state: "counting"} | {state: "waiting"; at: string; first: boolean};
+
+export function arkLandingHunt(hunting: ArkHunting | null, encounterMealSeen: boolean): ArkLandingHunt | null {
+    if (!hunting) return null;
+    if (hunting.hunting === "pool" || hunting.predators.size === 0) return {state: "counting"};
+    if (hunting.arkDay === null || hunting.startedAtMs === null) return null;
+    let soonest = Infinity;
+    hunting.predators.forEach((from) => {
+        soonest = Math.min(soonest, from);
+    });
+    if (soonest <= hunting.arkDay) return {state: "counting"};
+    return {state: "waiting", at: new Date(hunting.startedAtMs + soonest * ARK_DAY_MS).toISOString(), first: !encounterMealSeen && hunting.meals.length === 0};
 }

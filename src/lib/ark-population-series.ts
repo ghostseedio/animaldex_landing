@@ -172,6 +172,13 @@ export function arkSeriesTimes(from: number, to: number, count: number): number[
 }
 
 /** What happened in the last `windowMs` before `now` (ms), from the log: the numbers band's "today". */
+/** The same counts for the window [from, to). */
+export function arkHappeningsBetween(rows: unknown, from: number, to: number): {arrivals: number; births: number; meals: number; deaths: number} {
+    const all = arkHappeningsSince(rows, from);
+    const after = arkHappeningsSince(rows, to);
+    return {arrivals: all.arrivals - after.arrivals, births: all.births - after.births, meals: all.meals - after.meals, deaths: all.deaths - after.deaths};
+}
+
 export function arkHappeningsSince(rows: unknown, since: number): {arrivals: number; births: number; meals: number; deaths: number} {
     const out = {arrivals: 0, births: 0, meals: 0, deaths: 0};
     for (const item of arkEventRows(rows)) {

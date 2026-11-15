@@ -518,6 +518,21 @@
             "notNow": "今はしない",
             "note": "一度だけおたずねします。18歳未満の場合、あなたの動物には@usernameではなくVoyager番号が表示されます。",
             "failed": "送信できませんでした。少ししてからもう一度お試しください。"
+        },
+        "lost": {
+            "title": "Arkから消えた種",
+            "intro": "最後の一匹がいなくなった種です。捕まえれば戻ってきます。",
+            "when": "Ark {day}日目に絶滅 · {date}",
+            "back": "再び乗船中",
+            "diedOld": "最後の一匹は老衰で死にました",
+            "eatenBy": "最後の一匹は{animal}に食べられました",
+            "eaten": "最後の一匹は食べられました",
+            "starved": "最後の一匹は飢えで死にました",
+            "speciesLine": "Ark {day}日目からArkで絶滅中 · {date}。",
+            "speciesBack": "再び乗船中：Ark {day}日目に絶滅していました · {date}。",
+            "notAboard": "{animal}は今は乗船していません。",
+            "bringBack": "捕まえて連れ戻そう",
+            "listLabel": "Arkから消えた種、新しい順"
         }
     },
     "talkPage": {

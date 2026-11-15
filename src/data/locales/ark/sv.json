@@ -518,6 +518,21 @@
             "notNow": "Inte nu",
             "note": "Frågas bara en gång. Är du under 18 visas dina djur med ett Voyager-nummer i stället för ditt @username.",
             "failed": "Det gick inte igenom. Försök igen om en stund."
+        },
+        "lost": {
+            "title": "Förlorade från Ark",
+            "intro": "Arter vars sista djur är borta. Fångar du ett kommer arten tillbaka.",
+            "when": "Utdöd på Ark-dag {day} · {date}",
+            "back": "Ombord igen",
+            "diedOld": "Den sista dog av ålder",
+            "eatenBy": "Den sista åts av {animal}",
+            "eaten": "Den sista blev uppäten",
+            "starved": "Den sista svalt ihjäl",
+            "speciesLine": "Utdöd på Ark sedan Ark-dag {day} · {date}.",
+            "speciesBack": "Ombord igen: dog ut på Ark-dag {day} · {date}.",
+            "notAboard": "Ingen {animal} är ombord nu.",
+            "bringBack": "Fånga en för att ta tillbaka den",
+            "listLabel": "Arter förlorade från Ark, nyaste först"
         }
     },
     "talkPage": {

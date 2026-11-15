@@ -518,6 +518,21 @@
             "notNow": "Ahora no",
             "note": "Solo se pregunta una vez. Si tienes menos de 18 años, tus animales aparecen con un número de Voyager en lugar de tu @username.",
             "failed": "No se pudo enviar. Inténtalo de nuevo en un momento."
+        },
+        "lost": {
+            "title": "Perdidas del Ark",
+            "intro": "Especies cuyo último animal ya no está. Si capturas uno, vuelve.",
+            "when": "Extinta el día {day} del Ark · {date}",
+            "back": "De nuevo a bordo",
+            "diedOld": "El último murió de viejo",
+            "eatenBy": "Al último se lo comió: {animal}",
+            "eaten": "Al último se lo comieron",
+            "starved": "El último murió de hambre",
+            "speciesLine": "Extinta en el Ark desde el día {day} del Ark · {date}.",
+            "speciesBack": "De nuevo a bordo: se extinguió el día {day} del Ark · {date}.",
+            "notAboard": "Ahora no hay ningún ejemplar de {animal} a bordo.",
+            "bringBack": "Captura uno para traerlo de vuelta",
+            "listLabel": "Especies perdidas del Ark, las más recientes primero"
         }
     },
     "talkPage": {

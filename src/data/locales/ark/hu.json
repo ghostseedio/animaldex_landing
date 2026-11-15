@@ -518,6 +518,21 @@
             "notNow": "Most nem",
             "note": "Csak egyszer kérdezzük. 18 év alatt az állataid a @username helyett Voyager-számmal jelennek meg.",
             "failed": "Ez nem sikerült. Próbáld újra egy pillanat múlva."
+        },
+        "lost": {
+            "title": "Eltűntek az Arkról",
+            "intro": "Fajok, amelyeknek az utolsó állata is odavan. Ha fogsz egyet, visszatér.",
+            "when": "Kihalt az Ark {day}. napján · {date}",
+            "back": "Újra a fedélzeten",
+            "diedOld": "Az utolsó végelgyengülésben pusztult el",
+            "eatenBy": "Az utolsót megette: {animal}",
+            "eaten": "Az utolsót megették",
+            "starved": "Az utolsó éhen pusztult",
+            "speciesLine": "Az Arkon kihalt az Ark {day}. napja óta · {date}.",
+            "speciesBack": "Újra a fedélzeten: kihalt az Ark {day}. napján · {date}.",
+            "notAboard": "{animal}: most egy sincs a fedélzeten.",
+            "bringBack": "Fogj egyet, hogy visszahozd",
+            "listLabel": "Az Arkról eltűnt fajok, a legújabb elöl"
         }
     },
     "talkPage": {

@@ -518,6 +518,21 @@
             "notNow": "Non ora",
             "note": "Te lo chiediamo una volta sola. Se hai meno di 18 anni, i tuoi animali appaiono con un numero Voyager invece del tuo @username.",
             "failed": "Non è andato a buon fine. Riprova tra un momento."
+        },
+        "lost": {
+            "title": "Perse dall'Ark",
+            "intro": "Specie il cui ultimo animale non c'è più. Catturarne uno la riporta.",
+            "when": "Estinta il giorno {day} dell'Ark · {date}",
+            "back": "Di nuovo a bordo",
+            "diedOld": "L'ultimo è morto di vecchiaia",
+            "eatenBy": "L'ultimo è stato mangiato da: {animal}",
+            "eaten": "L'ultimo è stato mangiato",
+            "starved": "L'ultimo è morto di fame",
+            "speciesLine": "Estinta sull'Ark dal giorno {day} dell'Ark · {date}.",
+            "speciesBack": "Di nuovo a bordo: si era estinta il giorno {day} dell'Ark · {date}.",
+            "notAboard": "{animal}: nessuno a bordo adesso.",
+            "bringBack": "Catturane uno per riportarlo",
+            "listLabel": "Specie perse dall'Ark, le più recenti prima"
         }
     },
     "talkPage": {

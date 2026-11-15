@@ -2,12 +2,14 @@
 
 import React, {useCallback, useEffect, useId, useMemo, useRef, useState} from "react";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
+import ArkLostList from "@/app/[locale]/(composited)/ark/ark-lost-list";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import type {ArkSnapshot} from "@/ark-scene/types";
 import {arkIconUrl} from "@/ark-scene/placeholder-icon";
 import {arkBarCeiling, arkBarShare} from "@/lib/ark-live-bars";
 import {arkChangeOf, arkChangeText, arkRankedSpecies, arkTotalChange, type ArkChange, type ArkChangeScope, type ArkPopulationThen} from "@/lib/ark-population-change";
 import type {ArkSpeciesRow} from "@/lib/ark-population";
+import {arkLostWords} from "@/lib/ark-extinct";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 
@@ -95,6 +97,7 @@ function Caret({up}: {up: boolean}) {
 export default function ArkPopulationHud({snapshot, counts, listed, scope, then, totalThen, words, locale, selectedKey, herdKeys, arrivalKey, onSpecies, filters = null, shareLocalePath = "/ark"}: Props) {
     arkPerfCountRender();
     const hud = words.hud;
+    const lostWords = useMemo(() => arkLostWords(words.lost), [words.lost]);
     const panelId = useId();
     const listRef = useRef<HTMLUListElement | null>(null);
     const headingRef = useRef<HTMLHeadingElement | null>(null);
@@ -303,6 +306,8 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                     })}
                     {shownRows.length < rows.length ? <li ref={moreRef} aria-hidden="true" className="h-px" /> : null}
                 </ul>
+                {/* After the living: the species the server logged as gone (hidden until its read answers). */}
+                <ArkLostList words={lostWords} locale={locale} />
             </div>
         </section>
     );

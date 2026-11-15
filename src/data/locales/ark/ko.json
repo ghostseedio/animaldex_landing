@@ -518,6 +518,21 @@
             "notNow": "나중에",
             "note": "한 번만 물어봐요. 만 18세 미만이면 내 동물에 @username 대신 Voyager 번호가 표시돼요.",
             "failed": "전송되지 않았어요. 잠시 후 다시 시도해 주세요."
+        },
+        "lost": {
+            "title": "Ark에서 사라진 종",
+            "intro": "마지막 개체까지 사라진 종이에요. 한 마리를 잡으면 돌아와요.",
+            "when": "Ark {day}일째 멸종 · {date}",
+            "back": "다시 탑승",
+            "diedOld": "마지막 개체는 늙어서 죽었어요",
+            "eatenBy": "마지막 개체는 {animal}에게 먹혔어요",
+            "eaten": "마지막 개체는 먹혔어요",
+            "starved": "마지막 개체는 굶어 죽었어요",
+            "speciesLine": "Ark {day}일째부터 Ark에서 멸종 · {date}.",
+            "speciesBack": "다시 탑승: Ark {day}일째에 멸종했었어요 · {date}.",
+            "notAboard": "지금은 탑승한 {animal}이(가) 없어요.",
+            "bringBack": "한 마리를 잡아 다시 데려오세요",
+            "listLabel": "Ark에서 사라진 종, 최신순"
         }
     },
     "talkPage": {

@@ -334,9 +334,12 @@ export default async function Home({params}: HomePageProps) {
                                 founders: t("numbers.founders"),
                                 births: t("numbers.births"),
                                 meals: t("numbers.meals"),
+                                extinct: t("numbers.extinct"),
+                                changeDay: t("numbers.changeDay"),
+                                changeWeek: t("numbers.changeWeek"),
                                 asOf: t("numbers.asOf"),
                                 unavailable: t("numbers.unavailable"),
-                                noMeals: t("numbers.noMeals"),
+                                hunts: {firstOn: t("numbers.huntsFirstOn"), firstIn: t("numbers.huntsFirstIn"), nextOn: t("numbers.huntsNextOn"), nextIn: t("numbers.huntsNextIn")},
                                 top: t("numbers.top")
                             }}
                         />

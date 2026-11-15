@@ -518,6 +518,21 @@
             "notNow": "Teď ne",
             "note": "Ptáme se jen jednou. Pokud ti ještě není 18, tvá zvířata se ukážou s číslem Voyager místo tvého @username.",
             "failed": "Nepodařilo se. Zkus to za chvíli znovu."
+        },
+        "lost": {
+            "title": "Ztraceno z Ark",
+            "intro": "Druhy, jejichž poslední zvíře zmizelo. Když jedno ulovíte, vrátí se.",
+            "when": "Vyhynul v den Ark {day} · {date}",
+            "back": "Zpět na palubě",
+            "diedOld": "Poslední zemřel stářím",
+            "eatenBy": "Posledního sežral: {animal}",
+            "eaten": "Poslední byl sežrán",
+            "starved": "Poslední zemřel hlady",
+            "speciesLine": "Na Ark vyhynulý ode dne Ark {day} · {date}.",
+            "speciesBack": "Zpět na palubě: vyhynul v den Ark {day} · {date}.",
+            "notAboard": "Druh {animal} teď na palubě není.",
+            "bringBack": "Ulovte jedno a vraťte ho",
+            "listLabel": "Druhy ztracené z Ark, nejnovější první"
         }
     },
     "talkPage": {

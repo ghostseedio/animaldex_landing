@@ -483,9 +483,15 @@
       "founders": "Founders",
       "births": "Births, last 24 h",
       "meals": "Meals, last 24 h",
+      "extinct": "Extinct species",
+      "changeDay": "24 h",
+      "changeWeek": "this week",
       "asOf": "From the Ark's public record, {time}",
       "unavailable": "The live numbers can't be read right now.",
-      "noMeals": "No meals yet: new arrivals have a head start at launch.",
+      "huntsFirstOn": "First hunts from {date}",
+      "huntsFirstIn": "First hunt in {duration}",
+      "huntsNextOn": "Next hunts from {date}",
+      "huntsNextIn": "Next hunt in {duration}",
       "top": "Most aboard: {list}. The Ark holds what people photograph."
     },
     "steps": {
@@ -4557,9 +4563,9 @@
         "playing": "A young {animal} is playing",
         "toWater": "{count} {animals} are heading to water",
         "home": "{count} {animals} are heading home",
-      "flock": "{count} {animals} took to the air",
-      "doing": "{aAnimal} is {activity}",
-      "group": "{count} {animals} are {activity}",
+        "flock": "{count} {animals} took to the air",
+        "doing": "{aAnimal} is {activity}",
+        "group": "{count} {animals} are {activity}",
         "breathing": "{aAnimal} came up for air",
         "calling": "{aAnimal} is calling",
         "bathing": "{aAnimal} is bathing",
@@ -4693,6 +4699,21 @@
       "notNow": "Not now",
       "note": "Asked once. Under 18, your animals show as a Voyager number instead of your @username.",
       "failed": "That didn't go through. Try again in a moment."
+    },
+    "lost": {
+      "title": "Lost from the Ark",
+      "intro": "Species whose last animal is gone. Catching one brings it back.",
+      "when": "Extinct on Ark day {day} · {date}",
+      "back": "Back aboard",
+      "diedOld": "Last one died of old age",
+      "eatenBy": "Last one eaten by {animal}",
+      "eaten": "Last one eaten",
+      "starved": "Last one starved",
+      "speciesLine": "Extinct on the Ark since Ark day {day} · {date}.",
+      "speciesBack": "Back aboard: it died out on Ark day {day} · {date}.",
+      "notAboard": "No {animal} is aboard now.",
+      "bringBack": "Catch one to bring it back",
+      "listLabel": "Species lost from the Ark, newest first"
     }
   },
   "seo": {

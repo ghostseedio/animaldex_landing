@@ -518,6 +518,21 @@
             "notNow": "Jetzt nicht",
             "note": "Wird nur einmal gefragt. Unter 18 erscheinen deine Tiere mit einer Voyager-Nummer statt mit deinem @username.",
             "failed": "Das hat nicht geklappt. Versuch es gleich noch einmal."
+        },
+        "lost": {
+            "title": "Aus der Ark verschwunden",
+            "intro": "Arten, deren letztes Tier fort ist. Wer eins fängt, holt die Art zurück.",
+            "when": "Ausgestorben an Ark-Tag {day} · {date}",
+            "back": "Wieder an Bord",
+            "diedOld": "Das letzte starb an Altersschwäche",
+            "eatenBy": "Das letzte wurde gefressen von: {animal}",
+            "eaten": "Das letzte wurde gefressen",
+            "starved": "Das letzte ist verhungert",
+            "speciesLine": "Auf der Ark ausgestorben seit Ark-Tag {day} · {date}.",
+            "speciesBack": "Wieder an Bord: ausgestorben an Ark-Tag {day} · {date}.",
+            "notAboard": "Gerade ist kein Tier der Art {animal} an Bord.",
+            "bringBack": "Fang eins, um es zurückzuholen",
+            "listLabel": "Aus der Ark verschwundene Arten, neueste zuerst"
         }
     },
     "talkPage": {

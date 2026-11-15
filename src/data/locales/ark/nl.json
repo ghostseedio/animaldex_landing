@@ -518,6 +518,21 @@
             "notNow": "Niet nu",
             "note": "Wordt maar één keer gevraagd. Onder de 18 tonen je dieren een Voyager-nummer in plaats van je @username.",
             "failed": "Dat is niet gelukt. Probeer het zo opnieuw."
+        },
+        "lost": {
+            "title": "Verdwenen uit de Ark",
+            "intro": "Soorten waarvan het laatste dier weg is. Vang er één en de soort komt terug.",
+            "when": "Uitgestorven op Ark-dag {day} · {date}",
+            "back": "Weer aan boord",
+            "diedOld": "De laatste stierf van ouderdom",
+            "eatenBy": "De laatste is opgegeten door {animal}",
+            "eaten": "De laatste is opgegeten",
+            "starved": "De laatste is verhongerd",
+            "speciesLine": "Uitgestorven in de Ark sinds Ark-dag {day} · {date}.",
+            "speciesBack": "Weer aan boord: stierf uit op Ark-dag {day} · {date}.",
+            "notAboard": "Er is nu geen {animal} aan boord.",
+            "bringBack": "Vang er één om hem terug te brengen",
+            "listLabel": "Soorten verdwenen uit de Ark, nieuwste eerst"
         }
     },
     "talkPage": {

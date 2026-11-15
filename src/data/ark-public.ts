@@ -4,6 +4,7 @@ import type {ArkSnapshot} from "@/ark-scene/types";
 
 export type {ArkFoodLink} from "@/lib/ark-seo";
 import {arkFoodLinkOthers, arkFoodLinks, type ArkFoodLink, type ArkFoodLinkRow} from "@/lib/ark-seo";
+import {decodeArkExtinctions, type ArkExtinction} from "@/lib/ark-extinct";
 import {isMissingArkFunction} from "@/lib/ark-story";
 import {getSupabaseHeaders, getSupabasePublicKey, getSupabaseServiceKey, getSupabaseUrl} from "@/lib/supabase-http";
 
@@ -150,4 +151,15 @@ export async function readArkCanBoard(species: {speciesProfileId?: string | null
     } catch {
         return null;
     }
+}
+
+/**
+ * Lost from the Ark (`voyage_extinctions_v1`): every species the server logged an extinction for, newest first. Null
+ * before the function exists or when the read fails (the species page then says nothing about it). Contract:
+ * docs/ark/EXTINCT-CONTRACT.md.
+ */
+export async function readArkExtinctions(revalidate = 3600): Promise<ArkExtinction[] | null> {
+    const read = await rpc("voyage_extinctions_v1", revalidate);
+    if (read.error) return null;
+    return decodeArkExtinctions(read.data);
 }

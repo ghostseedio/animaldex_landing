@@ -518,6 +518,21 @@
             "notNow": "暫時不要",
             "note": "只問一次。未滿 18 歲時，你的動物會顯示 Voyager 編號，而不是你的 @username。",
             "failed": "沒有成功。請稍後再試。"
+        },
+        "lost": {
+            "title": "從 Ark 消失的物種",
+            "intro": "最後一隻也不在了的物種。捉到一隻，牠就會回來。",
+            "when": "於 Ark 第 {day} 天滅絕 · {date}",
+            "back": "重新登船",
+            "diedOld": "最後一隻老死了",
+            "eatenBy": "最後一隻被{animal}吃掉了",
+            "eaten": "最後一隻被吃掉了",
+            "starved": "最後一隻餓死了",
+            "speciesLine": "自 Ark 第 {day} 天起在 Ark 上滅絕 · {date}。",
+            "speciesBack": "重新登船：曾於 Ark 第 {day} 天滅絕 · {date}。",
+            "notAboard": "船上現在沒有{animal}。",
+            "bringBack": "捉一隻把牠帶回來",
+            "listLabel": "從 Ark 消失的物種，最新的在前"
         }
     },
     "talkPage": {
