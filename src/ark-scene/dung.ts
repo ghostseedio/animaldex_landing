@@ -28,7 +28,7 @@ const SNIFF_SHARE = 0.35;
 
 /** Who leaves dung the viewer can see: land mammals big enough (their rig's plan, their drawn length in m). */
 export function leavesDung(plan: string | null, length: number, inWater: boolean): boolean {
-    return !inWater && (plan === "quadruped" || plan === "primate") && length >= 0.25;
+    return !inWater && plan === "mammal" && length >= 0.25;
 }
 
 /** Its diet's group from its behaviour profile's diet (`behaviours.json`). */

@@ -39,7 +39,7 @@ export type LiveBirthsHost<E> = {
     /** Its drawn body length and height (m). */
     length: (entry: E) => number;
     height: (entry: E) => number;
-    /** Its rig's body plan (quadruped, primate, lizard…), or null. */
+    /** Its model's plan (`ark.json` behaviour.plan: mammal, reptile, snake, arthropod, fish…), or null. */
     plan: (entry: E) => string | null;
     /** Its species' care of the young (`care.json`), or null. */
     care: (entry: E) => ArkCareKind | null;
@@ -60,7 +60,7 @@ const NURSE = 30;
 const PART_MIN = 4;
 const PART_MAX = 20;
 /** A tall hoofed mother (drawn height, m) gives birth standing. */
-const STAND_HEIGHT = 1.7;
+const STAND_HEIGHT = 2.4;
 /** The young drawn at most (a big litter's others are tucked out of sight in the den or among the first). */
 const SHOWN_MAX = 6;
 
@@ -98,18 +98,18 @@ function unit(key: string): number {
 
 /** How the species gives birth, from its body plan and care. */
 export function birthStyle(plan: string | null, care: ArkCareKind | null, pouch: boolean): BirthStyle {
+    // (The model's plan: mammal, arthropod, reptile, snake, fish… A carried young that is not in a pouch clings: primates,
+    // sloths, anteaters, bats. An arthropod's carried young ride its back: scorpions, whip scorpions.)
     if (pouch) return "pouch";
-    if (plan === "arachnid") return "back";
-    if (plan === "primate") return "cling";
-    const mammal = plan === "quadruped" || plan === "bat";
-    if (mammal) return care === "follow" || care === "guard" ? "open" : care === "carry" ? "cling" : "den";
+    if (plan === "arthropod" || plan === "arachnid") return care === "carry" ? "back" : "beside";
+    if (plan === "mammal") return care === "follow" || care === "guard" ? "open" : care === "carry" ? "cling" : "den";
     return "beside";
 }
 
 /** The litter's script, built once from where the mother's day has her at the birth. */
 export function birthScript(mother: Point & {yaw: number; length: number; height: number; pace: number; plan: string | null; care: ArkCareKind | null; pouch: boolean}, young: number, key: string, youngPace = 0.4): BirthScript {
     const style = birthStyle(mother.plan, mother.care, mother.pouch);
-    const standing = style === "open" && mother.plan === "quadruped" && mother.height >= STAND_HEIGHT;
+    const standing = style === "open" && mother.height >= STAND_HEIGHT;
     const n = clamp(young, 1, SHOWN_MAX);
     const dir = {x: Math.sin(mother.yaw), z: Math.cos(mother.yaw)};
     const side = {x: dir.z, z: -dir.x};
@@ -319,7 +319,7 @@ export class LiveBirths<E> {
         this.births = this.births.filter((b) => !(b.over || b.failed) || b.acting.size > 0 || epoch - b.act.t0 < BIRTH_LIVE_SECONDS);
     }
 
-    debug(): Array<{key: string; t0: number; phase: string; style?: BirthStyle; young: number}> {
-        return this.births.map((b) => ({key: b.act.key, t0: b.act.t0, phase: b.failed ? "skipped" : b.over ? "over" : b.script ? "acting" : "waiting", ...(b.script ? {style: b.script.style} : {}), young: b.act.young.length}));
+    debug(): Array<{key: string; t0: number; mother: string | null; end: number | null; phase: string; style?: BirthStyle; young: number}> {
+        return this.births.map((b) => ({key: b.act.key, t0: b.act.t0, mother: b.motherId, end: b.script ? Math.round(b.script.end) : null, phase: b.failed ? "skipped" : b.over ? "over" : b.script ? "acting" : "waiting", ...(b.script ? {style: b.script.style} : {}), young: b.act.young.length}));
     }
 }

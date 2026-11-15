@@ -6,15 +6,15 @@ import {LiveBirths, birthScript, birthStyle, motherPose, youngPose, type LiveBir
 type E = {id: string; plan: string; care: "follow" | "carry" | "nest" | "guard" | "none"; male: boolean | null; h: number; pouch?: boolean; act: ActPose | null};
 
 const ground = () => 0;
-const mother = (o: Partial<Parameters<typeof birthScript>[0]> = {}) => ({x: 0, z: 0, yaw: 0, length: 2, height: 1.2, pace: 1, plan: "quadruped", care: "follow" as const, pouch: false, ...o});
+const mother = (o: Partial<Parameters<typeof birthScript>[0]> = {}) => ({x: 0, z: 0, yaw: 0, length: 2, height: 1.2, pace: 1, plan: "mammal", care: "follow" as const, pouch: false, ...o});
 
 test("birth style: from the body plan and the species' care", () => {
-    assert.equal(birthStyle("quadruped", "follow", false), "open");
-    assert.equal(birthStyle("quadruped", "nest", false), "den");
-    assert.equal(birthStyle("primate", "carry", false), "cling");
-    assert.equal(birthStyle("quadruped", "carry", true), "pouch");
-    assert.equal(birthStyle("arachnid", "carry", false), "back");
-    assert.equal(birthStyle("legless", "none", false), "beside");
+    assert.equal(birthStyle("mammal", "follow", false), "open");
+    assert.equal(birthStyle("mammal", "nest", false), "den");
+    assert.equal(birthStyle("mammal", "carry", false), "cling");
+    assert.equal(birthStyle("mammal", "carry", true), "pouch");
+    assert.equal(birthStyle("arthropod", "carry", false), "back");
+    assert.equal(birthStyle("snake", "none", false), "beside");
 });
 
 test("an open birth: she lies, the young are hidden until born one by one, are licked, rise, then suckle at her flank", () => {
@@ -44,7 +44,7 @@ test("a marsupial's newborn is never drawn on the ground (it is in the pouch)", 
 });
 
 test("a scorpion's young ride on her back", () => {
-    const sc = birthScript(mother({plan: "arachnid", care: "carry", height: 0.05, length: 0.12}), 3, "s");
+    const sc = birthScript(mother({plan: "arthropod", care: "carry", height: 0.05, length: 0.12}), 3, "s");
     const y = youngPose(sc, 0, sc.first + 1, ground);
     assert.ok(y.base > 0.03, "up on her back");
 });
@@ -67,9 +67,9 @@ const host = (entries: E[], place = {x: 0, z: 0, yaw: 0}): LiveBirthsHost<E> => 
 });
 
 test("the layer: the mother is the parent drawn female; the father is left alone; all are released at the end", () => {
-    const dad: E = {id: "dad", plan: "quadruped", care: "follow", male: true, h: 1.2, act: null};
-    const mum: E = {id: "mum", plan: "quadruped", care: "follow", male: false, h: 1.2, act: null};
-    const calf: E = {id: "calf", plan: "quadruped", care: "follow", male: null, h: 0.6, act: null};
+    const dad: E = {id: "dad", plan: "mammal", care: "follow", male: true, h: 1.2, act: null};
+    const mum: E = {id: "mum", plan: "mammal", care: "follow", male: false, h: 1.2, act: null};
+    const calf: E = {id: "calf", plan: "mammal", care: "follow", male: null, h: 0.6, act: null};
     const births = new LiveBirths(host([dad, mum, calf]));
     births.add([{key: "b1", parents: ["dad", "mum"], young: ["calf"], t0: 1000}], 1000);
     births.step(1001);
@@ -83,7 +83,7 @@ test("the layer: the mother is the parent drawn female; the father is left alone
 });
 
 test("the layer: a birth long past is not acted", () => {
-    const mum: E = {id: "mum", plan: "quadruped", care: "follow", male: false, h: 1.2, act: null};
+    const mum: E = {id: "mum", plan: "mammal", care: "follow", male: false, h: 1.2, act: null};
     const births = new LiveBirths(host([mum]));
     births.add([{key: "old", parents: ["mum"], young: ["x"], t0: 0}], 10_000);
     assert.equal(births.size, 0);

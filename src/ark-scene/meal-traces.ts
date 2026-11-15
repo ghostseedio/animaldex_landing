@@ -13,7 +13,7 @@ export type TraceDraw = {key: string; x: number; y: number; z: number; kind: Tra
 
 /** Each kind's bits: how many (at full), their size (m, length by width, of the trace's spread), their colours. */
 const BITS: Record<Exclude<TraceKind, "none"> | "dung", {count: number; length: number; width: number; colors: number[]}> = {
-    dung: {count: 5, length: 0.05, width: 0.045, colors: [0x3b2f22, 0x4a3a28, 0x33291e]},
+    dung: {count: 7, length: 0.1, width: 0.085, colors: [0x3b2f22, 0x4a3a28, 0x33291e]},
     feathers: {count: 14, length: 0.09, width: 0.026, colors: [0xe9e4d8, 0xc9c1b1, 0x8f877a, 0x6d665c]},
     fur: {count: 12, length: 0.07, width: 0.05, colors: [0xa07e5a, 0x8a6c4c, 0xb89a74, 0x7a6048]},
     scales: {count: 10, length: 0.022, width: 0.018, colors: [0xc4cdc9, 0xa9b3ae, 0xd9dccf]}

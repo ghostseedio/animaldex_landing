@@ -3304,10 +3304,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const keepApart = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: Pose}>, dt: number) => {
         const near = list.filter((c) => c.visible && c.entry.sched && scheduled(c.entry) && c.distance < 45 && !c.entry.sched.pose?.aloft).sort((a, b) => a.distance - b.distance).slice(0, 80);
+        // Animals in an act (a birth, a mating, a contest, a meal) stand where the act has them: the others give them room.
+        const acting = list.filter((c) => c.visible && c.distance < 45 && c.entry.act && !c.entry.act.hidden && !c.entry.act.role);
         for (let i = 0; i < near.length; i++) {
             const a = near[i];
             const pa = a.entry.sched!.profile;
             let look: number | null = null;
+            for (const f of acting) {
+                const dx = a.pose.x - f.entry.act!.x;
+                const dz = a.pose.z - f.entry.act!.z;
+                const d = Math.hypot(dx, dz);
+                const room = (a.entry.length + f.entry.length) * 0.55;
+                if (d >= room) continue;
+                const onGround = Math.abs(a.pose.base - Math.max(heightAt(a.pose.x, a.pose.z), 0)) < 0.05;
+                // (Straight off it; one standing exactly on it steps off along its own heading.)
+                const ux = d > 1e-4 ? dx / d : Math.sin(a.pose.yaw);
+                const uz = d > 1e-4 ? dz / d : Math.cos(a.pose.yaw);
+                a.pose.x += ux * (room - d);
+                a.pose.z += uz * (room - d);
+                if (onGround) a.pose.base = Math.max(heightAt(a.pose.x, a.pose.z), 0);
+            }
             for (let j = 0; j < near.length; j++) {
                 if (i === j) continue;
                 const b = near[j];
@@ -7021,7 +7037,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     }
                     if (!place) continue;
                     const age = epoch - drop.at;
-                    marks.push({key: drop.key, x: place.x, y: 0, z: place.z, kind: "dung", flattened: false, size: Math.min(Math.max(e.length * 0.14, 0.06), 0.5), amount: 1, alpha: dungAlpha(age), seed: drop.key});
+                    marks.push({key: drop.key, x: place.x, y: 0, z: place.z, kind: "dung", flattened: false, size: Math.min(Math.max(e.length * 0.08, 0.05), 0.3), amount: 1, alpha: dungAlpha(age), seed: drop.key});
                     if (place.still && age < DUNG_PAUSE_SECONDS + DUNG_SNIFF_SECONDS + 2) pauses.push({entry: e, key: drop.key, at: drop.at, place});
                 }
             }

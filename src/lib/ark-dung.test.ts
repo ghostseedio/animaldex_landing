@@ -5,10 +5,10 @@ import {DUNG_LIFE_SECONDS, DUNG_PAUSE_SECONDS, dungAlpha, dungDiet, dungDrops, d
 const DAY = 3314;
 
 test("who leaves dung: land mammals big enough to see", () => {
-    assert.equal(leavesDung("quadruped", 2, false), true);
-    assert.equal(leavesDung("quadruped", 0.1, false), false);
-    assert.equal(leavesDung("quadruped", 2, true), false);
-    assert.equal(leavesDung("flying_bird", 1, false), false);
+    assert.equal(leavesDung("mammal", 2, false), true);
+    assert.equal(leavesDung("mammal", 0.1, false), false);
+    assert.equal(leavesDung("mammal", 2, true), false);
+    assert.equal(leavesDung("bird", 1, false), false);
     assert.equal(dungDiet("grazer"), "plants");
     assert.equal(dungDiet("meat"), "meat");
     assert.equal(dungDiet("insects"), "mixed");

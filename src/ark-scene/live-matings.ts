@@ -229,11 +229,19 @@ function unit(key: string): number {
 
 /** How a body plan mounts. */
 export function mountKind(plan: string | null): MountKind {
+    // The scene's plan is the model's (`ark.json` behaviour.plan: mammal, bird, reptile, snake, frog, arthropod…); the
+    // rig contract's names are kept too. (Fixed 2026-11-16: only the rig's names were listed, so every bird, snake,
+    // lizard, frog and insect mounted like a mammal.)
     switch (plan) {
+        case "bird":
         case "flying_bird":
         case "walking_bird":
         case "flightless_bird":
             return "perch";
+        case "reptile":
+        case "frog":
+        case "arthropod":
+        case "butterfly":
         case "lizard":
         case "turtle":
         case "insect":
@@ -242,6 +250,13 @@ export function mountKind(plan: string | null): MountKind {
         case "crustacean":
         case "amphibian":
             return "low";
+        case "snake":
+        case "eel":
+        case "ray":
+        case "cetacean":
+        case "cephalopod":
+        case "jellyfish":
+        case "worm":
         case "fish":
         case "legless":
         case "cephalopod_jelly":
@@ -627,12 +642,13 @@ export class LiveMatings<E> {
         this.matings = this.matings.filter((m) => !(m.over || m.failed) || m.acting.size > 0 || epoch - m.act.t0 < MATING_LIVE_SECONDS);
     }
 
-    debug(): Array<{key: string; t0: number; phase: string; court?: Courtship; mount?: MountKind; tries?: number; paired?: number}> {
+    debug(): Array<{key: string; t0: number; phase: string; court?: Courtship; mount?: MountKind; tries?: number; paired?: number; contest?: ContestKind; rival?: string; contestEnd?: number}> {
         return this.matings.map((m) => ({
             key: m.act.key,
             t0: m.act.t0,
             phase: m.failed ? "skipped" : m.over ? "over" : m.script ? "acting" : "waiting",
-            ...(m.script ? {court: m.script.court, mount: m.script.mount, tries: m.script.attempts.length, paired: Math.round(m.script.paired)} : {})
+            ...(m.script ? {court: m.script.court, mount: m.script.mount, tries: m.script.attempts.length, paired: Math.round(m.script.paired)} : {}),
+            ...(m.contest ? {contest: m.contest.script.kind, rival: m.contest.rival, contestEnd: Math.round(m.contest.script.end)} : {})
         }));
     }
 }

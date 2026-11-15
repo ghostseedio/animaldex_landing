@@ -232,3 +232,10 @@ test("no rival near, or a species whose males do not contest: the mating as befo
     live.step(1);
     assert.ok(a.act && b.act);
 });
+
+test("the mount by the model's plan (ark.json): a bird steps on, a lizard, frog or insect climbs on low, a snake or fish lies alongside", () => {
+    assert.equal(mountKind("mammal"), "mount");
+    assert.equal(mountKind("bird"), "perch");
+    for (const plan of ["reptile", "frog", "arthropod", "turtle", "butterfly"]) assert.equal(mountKind(plan), "low", plan);
+    for (const plan of ["snake", "fish", "eel", "cetacean"]) assert.equal(mountKind(plan), "alongside", plan);
+});
