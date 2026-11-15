@@ -283,7 +283,7 @@ test("the real Ark's town animals on their shared schedules: the cars stop short
         const range = Math.max(info.range, 0.6) * 1.5;
         if (!near(p.x, p.z, range + 4)) continue;
         const length = Math.max(animal.length_m ?? 0.4, 0.05);
-        who.push({sched: {id: animal.id, zone: animal.zone, home: {x: p.x, y: p.ground, z: p.z}, length, sea: false, range}, profile: behaviourProfile(animal.model_slug), r: bodyShape(animal.model_slug, length).radius, h: bodyShape(animal.model_slug, length).height});
+        who.push({sched: {id: animal.id, zone: animal.zone, home: {x: p.x, y: p.ground, z: p.z}, length, sea: false, range, kept: true}, profile: behaviourProfile(animal.model_slug), r: bodyShape(animal.model_slug, length).radius, h: bodyShape(animal.model_slug, length).height});
     }
     assert.ok(who.length > 50, `${who.length} animals live within reach of a moving lane`);
     const poseAt = (w: Who, epoch: number) => poseOnTrip(world, tripAt(world, w.profile, w.sched, epoch, hours), epoch);

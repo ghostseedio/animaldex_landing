@@ -6,6 +6,8 @@ import HomeArkDay, {type HomeArkDayFrame} from "@/app/[locale]/(composited)/(hom
 import HomeArkPopulations from "@/app/[locale]/(composited)/(home)/_components/home-ark-populations";
 import HomeLoopVideo from "@/app/[locale]/(composited)/(home)/_components/home-loop-video";
 import HomeArkBand from "@/app/[locale]/(composited)/(home)/_components/home-ark-band";
+import HomeRhythm from "@/app/[locale]/(composited)/(home)/_components/home-rhythm";
+import {readHomeRhythmPick} from "@/data/ark-home-rhythm";
 import ArkFoodChainSection from "@/components/ark/ark-food-chain-section";
 import HomeFoodChainDev from "@/app/[locale]/(composited)/(home)/_components/home-food-chain-dev";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
@@ -227,6 +229,8 @@ export default async function Home({params}: HomePageProps) {
             ?? (await HomeFoodChainDev({locale, limit: 6, className: foodChainClass}));
         // The Ark band's counts (CC 3): the public read's cached counts with the service role, once per ISR window.
         const arkCounts = await timeDevStep(timer, "ark-counts", () => readArkHomeCounts());
+        // The rhythm section's animal (lane ark-sd-align): a named founder's animal aboard, by the day; none, no section.
+        const rhythmPick = await timeDevStep(timer, "rhythm-pick", () => readHomeRhythmPick().catch(() => null));
 
         return (
             <>
@@ -373,6 +377,25 @@ export default async function Home({params}: HomePageProps) {
                             <Link href={ARK_HOW_IT_WORKS_HREF} className="inline-flex min-h-11 items-center text-white underline decoration-white/30 underline-offset-[6px] hover:decoration-primary-400">{t("steps.howTheArkWorks")}</Link>
                         </p>
                     </section>
+
+                    {/* 3a. In rhythm with its nature (lane ark-sd-align): one real animal's day against its System Dynamics, and the loop. */}
+                    {rhythmPick ? (
+                        <section aria-labelledby="home-rhythm-title" className="pt-24 md:pt-32">
+                            <header className="grid gap-y-4 border-t border-line-200 pt-3 md:grid-cols-12 md:gap-x-8">
+                                <p className="flex items-center gap-3 text-[11px] font-bold uppercase tracking-[0.18em] text-ink-300 md:col-span-12">
+                                    <span>{t("rhythm.eyebrow")}</span>
+                                </p>
+                                <h2 id="home-rhythm-title" className="font-display text-[2.5rem] font-bold leading-[0.95] tracking-tight text-white [text-wrap:balance] md:col-span-7 md:text-6xl">{t("rhythm.title")}</h2>
+                                <p className="max-w-xl self-end text-base leading-relaxed text-ink-200 md:col-span-5 md:text-lg">{t("rhythm.line")}</p>
+                            </header>
+                            <div className="mt-8 md:mt-10">
+                                <HomeRhythm
+                                    pick={rhythmPick}
+                                    words={{eyebrow: t("rhythm.eyebrow"), title: t("rhythm.title"), line: t("rhythm.line"), sd: t("rhythm.sd"), ark: t("rhythm.ark"), live: t("rhythm.live"), kind: t("rhythm.kind"), step: t("rhythm.step"), see: t("rhythm.see"), by: t("rhythm.by")}}
+                                />
+                            </div>
+                        </section>
+                    ) : null}
 
                     {/* 3b. The shared Ark (CC 3): every animal caught comes aboard; the live counts, a still, the way in. */}
                     <HomeArkBand

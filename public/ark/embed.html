@@ -381,6 +381,7 @@
  *   {type: "ark:talking", talking: {slug, animalId, active}}     an animal starts or stops talking (its full talking model stands in)
  *   {type: "ark:talk-text", chunk}                               more of its reply as it is typed: the jaw says it
  *   {type: "ark:talk-pulse", level}                              the reply heard aloud: its loudness now, 0…1
+ *   {type: "ark:rhythm-of", id}                                  an animal's rhythm against its kind's System Dynamics, answered with ark:rhythm
  *   {type: "ark:herd", key}                                      a herd (a very popular species): fly to it, or null to clear
  *   {type: "ark:lite", value}                                    the lighter view: true, false, or null (the device decides)
  *   {type: "ark:visible", visible}                               the panel shown (true) or covered / the app in the background (false):
@@ -397,6 +398,8 @@
  * host's card can show "@handle" and open /u/{handle}, and status is what it is doing (decision 240: src/lib/ark-animal-status.ts
  * ArkAnimalStatus, {id, activity, since, goal, log, bars}, plus text: {now, next, log, bars} in ?lang's words), then
  * {type: "ark:status", id, status} whenever the selected animal's status changes (about once a second at most);
+ * {type: "ark:rhythm", id, rhythm} its day against its kind's System Dynamics once worked out, and when it changes
+ * (src/ark-scene/rhythm-status.ts ArkRhythmStatus, or null when its kind has none; AnimalDex docs/ark/sd-rhythm-contract.md);
  * {type: "ark:herd", herd: {key, slug, name, count, mine} | null}
  * {type: "ark:open-profile", handle} when a bringer's @username is tapped on the web's own Ark cards running in the
  * app (src/lib/ark-profile-link.ts; their links are real /u/{handle} links too, which the apps also intercept),
@@ -472,6 +475,26 @@ window.AnimalDexArkStart = function () {
     .catch(function () {})]);
 
   // An animal's status for the host, its lines in the app's words (English until they read).
+  // Lane ark-sd-align (docs/ark/sd-rhythm-contract.md): the selected animal's rhythm against its kind's System Dynamics,
+  // worked out a few milliseconds a tick until whole, then told when it changes: {type: "ark:rhythm", id, rhythm}.
+  var rhythmTold = "";
+  var rhythmTimer = 0;
+  function tellRhythm(id) {
+    var live = scene || mounting;
+    if (!live || !live.animalRhythm || rhythmTimer) return;
+    var tries = 0;
+    (function step() {
+      rhythmTimer = 0;
+      var rhythm = live.animalRhythm(id, {budgetMs: 6});
+      if (rhythm === "pending" && ++tries < 400) { rhythmTimer = setTimeout(step, 60); return; }
+      if (rhythm === "pending") return;
+      var signature = rhythm ? id + ":" + rhythm.to + ":" + rhythm.agreement.score.toFixed(3) : id + ":none";
+      if (signature === rhythmTold) return;
+      rhythmTold = signature;
+      tell({type: "ark:rhythm", id: id, rhythm: rhythm});
+    })();
+  }
+
   function statusOut(status) {
     if (!status) return null;
     return Ark.arkStatusForHost ? Ark.arkStatusForHost(status, words, document.documentElement.lang || lang || "en") : status;
@@ -607,7 +630,7 @@ window.AnimalDexArkStart = function () {
         tell({type: "ark:selected", animal: animal, founders: foundersOf(animal), status: statusOut(status)});
       },
       // Decision 240: the selected animal's status as it changes (what it is doing, its next goal, its log, its bars).
-      onStatus: function (id, status) { tell({type: "ark:status", id: id, status: statusOut(status)}); },
+      onStatus: function (id, status) { tell({type: "ark:status", id: id, status: statusOut(status)}); tellRhythm(id); },
       onHerd: function (herd) { tell({type: "ark:herd", herd: herd}); },
       onTier: function (tier, isLite) { tell({type: "ark:tier", tier: tier, lite: isLite}); },
       // A lost WebGL context, back: it comes back empty (no sky light, parts of the town gone), so the page starts over,
@@ -818,6 +841,8 @@ window.AnimalDexArkStart = function () {
     }
     else if (live && message.type === "ark:region") live.focusRegion(message.region || null);
     else if (scene && message.type === "ark:visitor") tell({type: "ark:visitor-id", id: scene.setVisitor(message.visitor || null)});
+    // Lane ark-sd-align: any animal's rhythm, unselected (the home page's rhythm section): answered with ark:rhythm.
+    else if (scene && message.type === "ark:rhythm-of" && message.id) { rhythmTold = ""; tellRhythm(String(message.id)); }
     else if (scene && message.type === "ark:talking") scene.setTalking(message.talking || null);
     else if (scene && message.type === "ark:talk-text") scene.talkText(String(message.chunk || ""));
     else if (scene && message.type === "ark:talk-pulse") scene.talkPulse(Number(message.level) || 0);

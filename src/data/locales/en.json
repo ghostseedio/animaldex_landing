@@ -537,6 +537,18 @@
         "falling": "Tide falling"
       }
     },
+    "rhythm": {
+      "eyebrow": "Its nature in the Ark",
+      "title": "In rhythm with its nature",
+      "line": "A step that works brings it back.",
+      "sd": "System Dynamics",
+      "ark": "In the Ark",
+      "live": "Live · 24 h",
+      "kind": "Its kind · a day",
+      "step": "A step",
+      "see": "See it live",
+      "by": "brought by {name}"
+    },
     "foodChain": {
       "eyebrow": "Who eats whom"
     },

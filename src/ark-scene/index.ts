@@ -172,6 +172,7 @@ import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
 import {awakeAt as scheduleAwakeAt, forgetSchedules, slotOffset, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, waterEdgeAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {MOMENT_WINDOW_SECONDS, pickMoment, scheduleFed, scheduleStatus, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
+import {scheduleRhythm, type ArkRhythmStatus} from "@/ark-scene/rhythm-status";
 import {ArkSelectionBars} from "@/ark-scene/selection-bars";
 import {arkActivityKey, arkEnergy, arkOriginEntry, arkStatusBars, arkStatusLog, arkStatusSignature, type ArkAnimalStatus, type ArkRecordNote, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
 import {setGrassPress} from "@/ark-scene/grass-press";
@@ -1501,7 +1502,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (Its roost the first time its schedule asks: the den search out of the mount, `withLazyRoost`; the runtime's
             // sliced mount may have found it already, `mapRoostOf`'s memo.)
             // (Part C: a town animal's range is its garden, paddock or enclosure; it finds its roost among the town's places.)
-            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), ...(inTown ? {range: island!.rangeOf(animal.id)} : {})}, () => (inTown ? null : mapRoostOf(place, animal.zone))),
+            animal: withLazyRoost({id: animal.id, zone: animal.zone, home: {x: place.x, y: place.ground, z: place.z}, length, sea, thrive: arkThriveOf(animal), condition: animal.condition ?? null, ...(inTown ? {range: island!.rangeOf(animal.id), kept: true} : {})}, () => (inTown ? null : mapRoostOf(place, animal.zone))),
             profile: behaviourProfile(animal.model_slug, library.get(animal.model_slug)?.behaviour?.plan),
             trip: null,
             lead: null,
@@ -2029,6 +2030,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let selectedStatus: ArkAnimalStatus | null = null;
     let statusAt = -Infinity;
     let toldStatus = "";
+    let toldRhythm: string | null = null;
     let selectionBars: ArkSelectionBars | null = null;
     /**
      * A status's costly part, a little a frame (graphics and performance pass, 2026-11). A status is the animal's
@@ -2081,6 +2083,29 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         statusWarming = null;
         return true;
     };
+    /**
+     * Its rhythm against its kind's System Dynamics (lane ark-sd-align, `rhythm-status.ts`): a little a call, as the
+     * status's warming (each slot's key is remembered, so a run stopped part way goes on); "pending" until whole.
+     */
+    const rhythmOf = (entry: Entry, budgetMs: number, stepFeeds: boolean): ArkRhythmStatus | "pending" | null => {
+        const subject = scheduled(entry) && !entry.act && !options.recording ? subjectOf(entry) : null;
+        if (!subject) return null;
+        const began = performance.now();
+        let n = 0;
+        const sliced: ScheduleSubject = {
+            ...subject,
+            animalAt: (epoch) => {
+                if (n++ > 0 && performance.now() - began > budgetMs) throw STATUS_STOP;
+                return subject.animalAt(epoch);
+            }
+        };
+        try {
+            return scheduleRhythm(sliced, worldMs() / 1000, {thrive: arkThriveOf(entry.animal), condition: entry.animal.condition ?? null, stepFeeds});
+        } catch (error) {
+            if (error === STATUS_STOP) return "pending";
+            throw error;
+        }
+    };
     /** Its status without its plans (what an animal off the schedule gets): what a card shows while they are worked out. */
     const lightStatus = (entry: Entry): ArkAnimalStatus => {
         statusLight = true;
@@ -2118,10 +2143,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         statusAt = now;
         selectedStatus = statusOf(entry);
         const signature = arkStatusSignature(selectedStatus);
+        // (Its rhythm's dot, lane ark-sd-align: a few milliseconds a second until it is whole, then remembered.)
+        const rhythm = rhythmOf(entry, 4, false);
+        const rhythmState = rhythm && rhythm !== "pending" ? rhythm.agreement.state : null;
+        if (signature === toldStatus && rhythmState === toldRhythm) return;
+        toldRhythm = rhythmState;
+        // (Its species' name over them, as its card has it: never a nickname, never its founder's.)
+        (selectionBars ??= new ArkSelectionBars(labelLayer, reducedMotion)).set(selectedStatus.bars, entry.animal.name, rhythmState);
         if (signature === toldStatus) return;
         toldStatus = signature;
-        // (Its species' name over them, as its card has it: never a nickname, never its founder's.)
-        (selectionBars ??= new ArkSelectionBars(labelLayer, reducedMotion)).set(selectedStatus.bars, entry.animal.name);
         options.onStatus?.(entry.animal.id, selectedStatus);
     };
     const barsPoint = new Vector3();
@@ -7414,6 +7444,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (selectedStatus?.id === id && (statusPending || performance.now() - statusAt < 1000)) return selectedStatus;
             // (Asked at the tap itself, by the page's card: its plans are not worked out in the tap, `warmStatus`.)
             return warmStatus(entry) ? statusOf(entry) : lightStatus(entry);
+        },
+        animalRhythm: (id, asked = {}) => {
+            const entry = findEntry(id);
+            return entry ? rhythmOf(entry, asked.budgetMs ?? 8, asked.stepFeeds ?? false) : null;
         },
         noteRecord,
         happening,
