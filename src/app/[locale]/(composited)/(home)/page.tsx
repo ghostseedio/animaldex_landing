@@ -219,7 +219,7 @@ export default async function Home({params}: HomePageProps) {
         const posterTall = (format: string) => [640, 828, 1080].map((width) => `${ART}/poster-tall-${width}.${format} ${width}w`).join(", ");
         // (No clock or date: the poster is one fixed render, and a days-old stamp read as "now" on phones.)
         const posterCaption = t("hero.poster");
-        // The opening's real frame: the owner's own footage of a wild Komodo dragon (Komodo National Park, 14 October 2026),
+        // The opening's real frame: the owner's own footage of a wild Komodo dragon (Komodo Island, Komodo National Park, 14 October 2026),
         // one frame each for wide and tall screens, cut clear of passers-by (`public/images/home/ark/real-komodo-*`).
         const realWide = (format: string) => [1024, 1480].map((width) => `${ART}/real-komodo-wide-${width}.${format} ${width}w`).join(", ");
         const realTall = (format: string) => [480, 680].map((width) => `${ART}/real-komodo-tall-${width}.${format} ${width}w`).join(", ");

@@ -18,7 +18,7 @@ import {readArkProgressMessage, type ArkLoadStage} from "@/lib/ark-loading";
  * there under it until the world covers it (a poster fading out at the same time let the dark page through: a dip).
  *
  * Before the Ark, the real animal (owner, 2026-11-15: the low-poly world first read as a kids' game). The hero opens
- * on a real Komodo dragon, a frame of the owner's own footage from Komodo National Park (14 October 2026), drifting
+ * on a real Komodo dragon, a frame of the owner's own footage from Komodo Island, Komodo National Park (14 October 2026), drifting
  * slowly; its capture card slides in (the app's real capture of that dragon, "Photographed {date}"); then the frame
  * pushes away into the Ark, where the card turns to the same dragon aboard; then the card goes and the hero rests on
  * the Ark (its poster, then the live world, as before). About 7.5 s, once a session (`sessionStorage`, read before the
@@ -50,7 +50,7 @@ export type HomeArkHeroWords = {
     sceneLabel: string;
     /** The loading stages (the Ark's `loader` words): until who is aboard is read, until the world's first frame. */
     stages: {data: string; world: string};
-    /** The caption over the real frame ("A real Komodo dragon, Komodo National Park"). */
+    /** The caption over the real frame ("A real Komodo dragon, Komodo Island, Komodo National Park"). */
     real: string;
     /** The replay button's label. */
     replay: string;
