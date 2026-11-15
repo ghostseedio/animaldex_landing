@@ -132,7 +132,11 @@ test("a big cat on a deer: the deer lies on its side where it fell, the cat feed
         assert.equal(pose.doing, "eating");
         assert.ok(Math.hypot(pose.x - p.x, pose.z - p.z) < 1e-6, "stays over it");
     }
-    assert.deepEqual(Array.from(states).sort(), ["eat", "scan"]);
+    assert.deepEqual(Array.from(states).sort(), ["rest"], "a big cat feeds lying prone (its rig's lying pose), glancing up as it lies");
+    const wolf = mealScript(mealPlan(side("eurasian-wolf", "mammal", 1.3), DEER, "w"), {...script.c});
+    const wolfStates = new Set<string>();
+    for (let u = 0; u < wolf.plan.feedSeconds; u += 0.5) wolfStates.add(predatorAt(wolf, u).state!);
+    assert.deepEqual(Array.from(wolfStates).sort(), ["eat", "scan"], "a wolf stands and tears, glancing up");
     // Then a drink at the water, then a rest a few lengths off.
     assert.ok(script.drink, "water 12 m off: it drinks");
     assert.equal(predatorAt(script, script.drink!.from + 1).doing, "drinking");
@@ -198,4 +202,37 @@ test("scavengers: carrion eaters near and awake come, the predator's own prey ke
     assert.ok(flying.base > 2 && (flying.state === "fly" || flying.state === "glide"), "flies in");
     const eating = scavengerAt(visit, visit.arrive + 1);
     assert.ok(Math.hypot(eating.x, eating.z) < 2 && eating.base === 0 && eating.state === "eat");
+});
+
+test("postures by kind: big cats lie prone to feed and lie up after; dogs stand and tear; crocs and monitors bask", async () => {
+    const {mealPosture} = await import("@/ark-scene/meals");
+    for (const slug of ["african-lion", "bengal-tiger", "snow-leopard", "cheetah", "jaguar", "eurasian-lynx"]) assert.deepEqual(mealPosture({slug, plan: "mammal"}), {feed: "prone", rest: "lie"}, slug);
+    for (const slug of ["eurasian-wolf", "golden-jackal", "african-wild-dog", "spotted-hyena", "brown-bear", "red-fox"]) assert.deepEqual(mealPosture({slug, plan: "mammal"}), {feed: "stand", rest: "lie"}, slug);
+    assert.deepEqual(mealPosture({slug: "california-sea-lion", plan: "mammal"}), {feed: "stand", rest: "lie"}, "a sea lion is no cat");
+    assert.deepEqual(mealPosture({slug: "komodo-dragon", plan: "reptile"}), {feed: "stand", rest: "bask"});
+    assert.deepEqual(mealPosture({slug: "american-alligator", plan: "reptile"}), {feed: "stand", rest: "bask"});
+    assert.deepEqual(mealPosture({slug: "red-tailed-hawk", plan: "bird", flies: true}), {feed: "stand", rest: "stand"}, "a raptor mantles standing");
+    const lion = mealPlan(LION, DEER, "p");
+    const s = mealScript(lion, {kind: "glide", predator: {x: 0, z: 0, base: 0, yaw: 0, length: 2.5, height: 1.1}, prey: {x: 0, z: 1.6, base: 0, yaw: 0, length: 2, height: 1.3}, preyInWater: false, predatorSwims: false, ground: () => 0, clear: () => true, water: null, walk: 1});
+    assert.equal(predatorAt(s, 5).state, "rest", "prone over its prey (its rig's lying pose)");
+    assert.equal(predatorAt(s, 5).doing, "eating");
+    assert.equal(predatorAt(s, s.rest.from + 2).state, "rest");
+    const komodo = mealPlan(side("komodo-dragon", "reptile", 2.5), DEER, "k");
+    const sk = mealScript(komodo, {...s.c});
+    assert.equal(predatorAt(sk, sk.rest.from + 2).state, "bask");
+});
+
+test("a snake's prey stays in view at the jaw for the first third of the swallow, at full size", () => {
+    const py = mealPlan(PYTHON, RAT, "jaw");
+    const sp = mealScript(py, {kind: "slither", predator: {x: 0, z: 0, base: 0, yaw: 0, length: 5, height: 0.25}, prey: {x: 0, z: 2.6, base: 0, yaw: 0, length: 0.25, height: 0.1}, preyInWater: false, predatorSwims: false, ground: () => 0, clear: () => true, water: null, walk: 0.5, mouth: {forward: 1.2, side: 0.3, up: 0.1}});
+    const q0 = {x: 0, z: 2.6, base: 0, yaw: 0, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false};
+    const held = preyAt(sp, sp.feedFrom + py.feedSeconds * 0.3, q0, sp.leaves);
+    assert.equal(held.scale, 1);
+    assert.ok(!held.hidden);
+    // At the jaw: the snake's head (its mouth, as the model says) brought up to where the prey was struck, the prey just
+    // in front of it, held up off the ground (a small catch flat on its side is lost in the grass).
+    const head = predatorAt(sp, sp.feedFrom + 1);
+    const mouth = {x: head.x + Math.sin(head.yaw) * 1.2 + Math.cos(head.yaw) * 0.3, z: head.z + Math.cos(head.yaw) * 1.2 - Math.sin(head.yaw) * 0.3};
+    assert.ok(Math.hypot(held.x - mouth.x, held.z - mouth.z) < 0.15, `${held.x} ${held.z} by ${mouth.x} ${mouth.z}`);
+    assert.ok(held.base > 0 && !held.lying);
 });

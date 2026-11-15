@@ -38,6 +38,11 @@ export type MealCatch = {
     water: {x: number; z: number} | null;
     /** Its walking pace (m/s). */
     walk: number;
+    /**
+     * Where its mouth is on its drawn model (m from its origin: ahead, to its right, up), when the scene knows (the
+     * model's foremost point: a coiled python's head is not half its length ahead). Absent: half its length ahead.
+     */
+    mouth?: {forward: number; side: number; up: number} | null;
 };
 
 /** How far it goes for a drink after a meal (m). */
@@ -98,6 +103,15 @@ export function mealScript(plan: MealPlan, c: MealCatch): MealScript {
         const yaw = Math.hypot(land.x - p.x, land.z - p.z) > 0.2 ? heading(land.x - p.x, land.z - p.z) : p.yaw;
         feed = {x: land.x, z: land.z, base: c.ground(land.x, land.z), yaw};
         carry = Math.min(Math.max(Math.hypot(land.x - p.x, land.z - p.z) / 6, 1.2), 3);
+    } else if (c.kind === "slither") {
+        // A snake's jaws on its prey: its head (its mouth, `c.mouth`) brought up to it over the moment after the strike.
+        const reach = (c.mouth?.forward ?? p.length * 0.5) + q.length * 0.45;
+        const yaw = Math.hypot(q.x - p.x, q.z - p.z) > 0.05 ? heading(q.x - p.x, q.z - p.z) : p.yaw;
+        const side = c.mouth?.side ?? 0;
+        const x = q.x - Math.sin(yaw) * reach - Math.cos(yaw) * side;
+        const z = q.z - Math.cos(yaw) * reach + Math.sin(yaw) * side;
+        feed = {x, z, base: c.ground(x, z), yaw};
+        carry = 0.5;
     } else if (c.kind === "swoop" && struckAloft) {
         // (Mantled on the ground where it struck.)
         feed = {x: p.x, z: p.z, base: c.ground(p.x, p.z), yaw: p.yaw};
@@ -143,14 +157,17 @@ export function predatorAt(s: MealScript, u: number): MealPose {
     if (u < s.carry) {
         // Up with it (or down from its strike) and onto dry ground.
         const k = smooth(u / s.carry);
-        const lift = Math.sin(Math.PI * k) * Math.max(p.length * 2, 1.2);
+        const lift = c.kind === "swoop" ? Math.sin(Math.PI * k) * Math.max(p.length * 2, 1.2) : 0;
         const y = lerp(p.base, s.feed.base, k) + lift;
+        if (c.kind !== "swoop") return pose(lerp(p.x, s.feed.x, k), lerp(p.z, s.feed.z, k), s.feed.yaw, "eat", 0.03, Math.hypot(s.feed.x - p.x, s.feed.z - p.z) / Math.max(s.carry, 0.1), "eating");
         return pose(lerp(p.x, s.feed.x, k), lerp(p.z, s.feed.z, k), s.feed.yaw, k < 0.85 ? "fly" : "land", -0.2 * Math.sin(Math.PI * k), Math.hypot(s.feed.x - p.x, s.feed.z - p.z) / Math.max(s.carry, 0.1), "eating", y);
     }
     if (u < s.feedTo) {
         const v = u - s.feedFrom;
         if (s.plan.style === "swallow") return {...swallowPose(s, v), doing: "eating"};
         const beat = feedBeatAt(s.bouts, v);
+        // A big cat lies prone over it, the prey between its forepaws (its rig's lying pose), looking up now and then.
+        if (s.plan.posture.feed === "prone") return pose(s.feed.x, s.feed.z, s.feed.yaw + beat.look * 0.6, "rest", 0, 0, "eating");
         return pose(s.feed.x, s.feed.z, s.feed.yaw + beat.look, beat.state, beat.pitch, 0, "eating");
     }
     const walkTo = (from: {x: number; z: number}, to: {x: number; z: number; yaw?: number}, a: number, b: number, w: number, doing: MealDoing): MealPose => {
@@ -170,14 +187,18 @@ export function predatorAt(s: MealScript, u: number): MealPose {
     // Lying up, digesting; a slow look round now and then.
     const v = u - s.rest.from;
     const look = Math.sin(v * 0.21 + s.side) > 0.85 ? s.side * 0.25 : 0;
-    return pose(s.rest.at.x, s.rest.at.z, s.rest.at.yaw + look, "rest", 0, 0, "resting");
+    return pose(s.rest.at.x, s.rest.at.z, s.rest.at.yaw + look, s.plan.posture.rest === "bask" ? "bask" : "rest", 0, 0, "resting");
 }
 
 /** Where the mouth is: the front of the body, low with its head down, high with it up. */
 function mouthOf(s: MealScript, up: number): {x: number; z: number; y: number} {
     const p = s.c.predator;
-    const reach = p.length * 0.5;
-    return {x: s.feed.x + Math.sin(s.feed.yaw) * reach, z: s.feed.z + Math.cos(s.feed.yaw) * reach, y: s.feed.base + p.height * lerp(0.15, 0.8, up)};
+    const m = s.c.mouth;
+    const reach = m ? m.forward : p.length * 0.5;
+    const side = m ? m.side : 0;
+    const low = m ? Math.min(m.up, p.height * 0.5) : p.height * 0.15;
+    const yaw = s.feed.yaw;
+    return {x: s.feed.x + Math.sin(yaw) * reach + Math.cos(yaw) * side, z: s.feed.z + Math.cos(yaw) * reach - Math.sin(yaw) * side, y: s.feed.base + lerp(low, p.height * 0.8, up)};
 }
 
 /**
@@ -207,6 +228,7 @@ function swallowPose(s: MealScript, v: number): ActPose {
 export function preyAt(s: MealScript, u: number, atCatch: ActPose, carcassEnd: number): ActPose {
     const q = s.c.prey;
     const lying = (k: number): ActPose => ({x: s.carcass.x, z: s.carcass.z, base: s.carcass.base, yaw: s.carcass.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: "lie", speed: 0, lying: s.side * k});
+    if (u < s.carry && s.c.kind !== "swoop") return {...lying(Math.min(u / 0.4, 1)), x: s.c.prey.x, z: s.c.prey.z, lying: s.side * 0.9 * Math.min(u / 0.4, 1)};
     if (u < s.carry) {
         // Under its feet as it goes.
         const pred = predatorAt(s, u);
@@ -217,11 +239,13 @@ export function preyAt(s: MealScript, u: number, atCatch: ActPose, carcassEnd: n
         const S = s.plan.feedSeconds;
         const snake = s.c.kind === "slither";
         if (snake) {
-            // Head first into the jaws: it slides along the snake's way, smaller as it goes in.
-            const k = smooth((v / S - 0.1) / 0.85);
+            // Held at the jaw, in full view, for the first third (the snake's jaws working round its head); then head first
+            // into the jaws: it slides along the snake's way, smaller as it goes in.
+            const k = smooth((v / S - 0.35) / 0.6);
             const mouth = mouthOf(s, 0);
-            const into = q.length * 0.5 * k;
-            return {...lying(1), x: mouth.x - Math.sin(s.feed.yaw) * into, z: mouth.z - Math.cos(s.feed.yaw) * into, yaw: s.feed.yaw, lying: 0, scale: Math.max(1 - 0.92 * k, 0.05), hidden: k >= 0.99};
+            const out = q.length * 0.5 * (1 - k) - q.length * 0.3 * k;
+            // (Upright in the jaws, held up off the ground a little: a small catch lying flat is lost in the grass.)
+            return {...lying(1), x: mouth.x + Math.sin(s.feed.yaw) * out, z: mouth.z + Math.cos(s.feed.yaw) * out, base: s.feed.base + Math.max(q.height * 0.5, 0.05), yaw: s.feed.yaw + Math.PI, pitch: 0.25, lying: 0, scale: Math.max(1 - 0.92 * k, 0.05), hidden: k >= 0.99};
         }
         const w = v / S;
         if (w < 0.2) return {...lying(smooth(w / 0.06)), x: mouthOf(s, 0).x, z: mouthOf(s, 0).z};

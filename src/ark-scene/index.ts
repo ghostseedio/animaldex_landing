@@ -288,7 +288,7 @@ const FLYERS = ARK_FLYERS;
 /** A catch lying on its side (rad): over onto its flank, not quite flat. */
 const LYING_ROLL = 1.42;
 /** A meal act's states the rig plays from its own clips (`rig-player.ts` RECIPE_CLIPS): feeding, a glance up, lying up. */
-const MEAL_CLIP_STATES = new Set(["eat", "scan", "rest"]);
+const MEAL_CLIP_STATES = new Set(["eat", "scan", "rest", "bask"]);
 
 /** The island's hour offset from UTC: everyone sees the same time of day (graphics pass; `src/lib/ark-clock.ts`). */
 const ISLAND_OFFSET_HOURS = 0;
@@ -6525,6 +6525,37 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const length = Math.max(entry.trueLength, 0.01);
         return {slug, plan, flies, water, length, massKg: bodyMassKg({slug, plan, flies}, length), diet: (entry.sched?.profile ?? behaviourProfile(slug, plan)).diet};
     };
+    /** Where a model's mouth is (its foremost vertices, model units), per species; then scaled to the entry. */
+    const mouthPoints = new Map<string, {x: number; y: number; z: number; minY: number; bodyLength: number} | null>();
+    const mouthOfModel = (entry: Entry): MealCatch["mouth"] => {
+        const slug = entry.animal.model_slug;
+        const model = library.get(slug);
+        if (!mouthPoints.has(slug) && model) {
+            const geometry = model && !model.placeholder && !model.facing ? (model.near ?? model.far)?.geometry ?? null : null;
+            const position = geometry?.getAttribute("position");
+            let found: {x: number; y: number; z: number; minY: number; bodyLength: number} | null = null;
+            if (model && position && position.count) {
+                let max = -Infinity;
+                for (let i = 0; i < position.count; i++) max = Math.max(max, position.getZ(i));
+                let n = 0;
+                let x = 0;
+                let y = 0;
+                const near = max - Math.max(model.bodyLength * 0.02, 1e-4);
+                for (let i = 0; i < position.count; i++) {
+                    if (position.getZ(i) < near) continue;
+                    x += position.getX(i);
+                    y += position.getY(i);
+                    n++;
+                }
+                found = n ? {x: x / n, y: y / n, z: max, minY: model.minY, bodyLength: model.bodyLength} : null;
+            }
+            mouthPoints.set(slug, found);
+        }
+        const m = mouthPoints.get(slug);
+        if (!m) return null;
+        const k = entry.length / Math.max(m.bodyLength, 1e-6);
+        return {forward: m.z * k, side: m.x * k, up: Math.max((m.y - m.minY) * k, 0)};
+    };
     /** The nearest water's edge a drinker can reach from a spot (dry ground beside water), searched on rings; or null. */
     const waterEdgeNear = (x: number, z: number, reach = DRINK_REACH): {x: number; z: number} | null => {
         for (let r = 2; r <= reach; r += 1.5) {
@@ -6583,6 +6614,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const q = stage.prey(at);
         const predatorSwims = kind === "dart" || (predatorWater && !FLYERS.has(predator.animal.model_slug));
         const catchInfo: Omit<MealCatch, "predator" | "prey" | "kind"> = {
+            mouth: mouthOfModel(predator),
             preyInWater: preyWater || heightAt(q.x, q.z) < -0.05,
             predatorSwims,
             ground: (x, z) => Math.max(heightAt(x, z), -0.3),
@@ -6620,6 +6652,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const ghost = Object.assign(newEntry(animal, place, null), {ghost: true});
             ghost.leader = null;
             mealGhosts = [...mealGhosts, ghost];
+            // Both models, near and far, as a replay asks for its acts' (a small prey's is otherwise asked for only close by).
+            void library.ready().then(() => {
+                for (const slug of [act.prey.model_slug, act.predator.model_slug]) {
+                    if (!library.has(slug)) continue;
+                    library.request(slug, "far");
+                    library.request(slug, "near");
+                    tokens.ensure(slug);
+                }
+            });
             // The living one (a read not yet refreshed since it was eaten): out of sight while its stand-in is acted.
             const alive = entryById.get(animal.id);
             if (alive) alive.held = true;
@@ -6675,9 +6716,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         mealTraces.set(next, (x, z) => Math.max(heightAt(x, z), 0));
     };
     const pressedByMeals = (from: Vector3) =>
-        tracesNow
+        liveMeals
+            .pressed(worldMs() / 1000)
+            .filter((p) => Math.hypot(p.x - from.x, p.z - from.z) < 60)
+            .map((p) => ({x: p.x, y: Math.max(heightAt(p.x, p.z), 0), z: p.z, radius: p.radius}))
+            .concat(tracesNow
             .filter((t) => t.flattened && t.alpha > 0.2 && Math.hypot(t.x - from.x, t.z - from.z) < 60)
-            .map((t) => ({x: t.x, y: Math.max(heightAt(t.x, t.z), 0), z: t.z, radius: t.size * 0.6 * t.alpha}));
+            .map((t) => ({x: t.x, y: Math.max(heightAt(t.x, t.z), 0), z: t.z, radius: t.size * 0.6 * t.alpha})));
     /**
      * The newest real hunt under way (the page's marker): a meal being acted (its chase or its feeding) first, else the
      * predator whose encounter forays began last (awake and due: the server hunts on exactly those). Once a second.

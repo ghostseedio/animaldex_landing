@@ -9,8 +9,9 @@ import {useArkLive} from "@/app/[locale]/(composited)/ark/use-ark-live";
 import {readArkPopulationThen, type ArkPopulationThen} from "@/lib/ark-population-change";
 import type {ArkPageSummary} from "@/lib/ark-page-summary";
 import {arkNewArrivals} from "@/lib/ark-live-log";
-import {fetchArkHunting, type ArkHunting} from "@/lib/ark-hunting";
-import {arkHuntLine, arkLiveMealsFrom, ARK_LIVE_MEAL_SECONDS} from "@/lib/ark-live-hunt";
+import {fetchArkHunting} from "@/lib/ark-hunting";
+import {arkHuntLine} from "@/lib/ark-live-hunt";
+import {arkSyncMeals} from "@/ark-scene/live-hunt-feed";
 import {arkReloadForRestoredContext} from "@/lib/ark-context-restore";
 import {ArkAnimalCard, ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-animal-card";
 import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkLiveHunt, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
@@ -842,37 +843,12 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     useEffect(() => {
         if (!ready || fixture || liveFeed || local) return;
         let stopped = false;
-        // The meals the read lists that the live world may still be acting (their records from the event log, once each).
-        let mealsKey = "";
-        const syncMeals = (read: ArkHunting | null) => {
-            const scene = sceneRef.current;
-            if (!scene?.setMeals) return;
-            const now = Date.now() / 1000;
-            const live = (read?.meals ?? []).filter((meal) => typeof meal.encounter.t === "number" && meal.encounter.t > now - ARK_LIVE_MEAL_SECONDS && meal.encounter.t <= now + 60);
-            const key = live.map((meal) => meal.id).sort().join(",");
-            if (key === mealsKey) return;
-            mealsKey = key;
-            if (!live.length) {
-                scene.setMeals([]);
-                return;
-            }
-            const since = Math.min(...live.map((meal) => meal.encounter.t as number)) - 600;
-            void fetch(`/api/ark/events?since=${encodeURIComponent(new Date(since * 1000).toISOString())}`, {cache: "no-store"})
-                .then((response) => (response.ok ? response.json() : {events: []}))
-                .then((body: {events?: unknown}) => {
-                    if (stopped || sceneRef.current !== scene) return;
-                    scene.setMeals?.(arkLiveMealsFrom(live, decodeArkEvents(body.events ?? [], snapshotRef.current)));
-                })
-                .catch(() => {
-                    mealsKey = "";
-                });
-        };
         const run = () => {
             if (document.visibilityState !== "visible") return;
             void fetchArkHunting().then((read) => {
                 if (stopped) return;
                 sceneRef.current?.setHunting?.(read);
-                syncMeals(read);
+                arkSyncMeals(sceneRef.current, read, {snapshot: snapshotRef.current});
             });
         };
         run();

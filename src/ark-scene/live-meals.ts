@@ -4,9 +4,9 @@
  * predator's drink and rest, the scavengers that come to what is left, and the traces left behind.
  *
  * The scene never decides a kill: a meal comes from the hunting read (`voyage_hunting_v1`'s recent meals with their
- * geometry) and the event log's records of the two animals. The server works the world out on its tick, so a meal is
- * usually known some minutes after its step: the layer draws whatever part of it is still going on (a long feed, the
- * rest, the traces), and nothing of one already over.
+ * geometry) and the event log's records of the two animals. The server works the world out on its tick (every 10
+ * minutes), so a meal is known up to that long after its step: the layer draws whatever part of it is still going on
+ * (a long feed, the rest, the scavengers, the traces), and nothing of one already over.
  *
  * The scene (`index.ts`) gives it its entries through `LiveMealsHost`; this layer only says, per frame, which act pose
  * each of them takes (the replay's own `entry.act`), so nothing here touches the renderer.
@@ -306,6 +306,19 @@ export class LiveMeals<E> {
             const amount = Math.min(u / Math.max(b.script.plan.feedSeconds, 1), 1);
             const alpha = life <= t.seconds * (2 / 3) ? 1 : 1 - (life - t.seconds * (2 / 3)) / (t.seconds / 3);
             out.push({key: m.key, x: b.script.carcass.x, y: b.script.carcass.base, z: b.script.carcass.z, kind: t.kind, flattened: t.flattened, size: t.size, amount, alpha: Math.max(alpha, 0), seed: b.script.plan.seed});
+        }
+        return out;
+    }
+
+    /** Where a catch lies being eaten now (the grass round it pressed down by the struggle, so it is seen). */
+    pressed(epoch: number): Array<{x: number; z: number; radius: number}> {
+        const out: Array<{x: number; z: number; radius: number}> = [];
+        for (const m of this.meals) {
+            const b = m.built;
+            if (!b || m.over) continue;
+            const u = epoch - m.t0 - b.catchAt;
+            if (u < 0 || u > b.carcassEnd + 3) continue;
+            out.push({x: b.script.carcass.x, z: b.script.carcass.z, radius: Math.max(b.script.c.prey.length * 1.6, 0.45)});
         }
         return out;
     }

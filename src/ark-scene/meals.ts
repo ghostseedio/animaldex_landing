@@ -69,8 +69,36 @@ export type MealPlan = {
     trace: MealTrace;
     /** Up to two carrion eaters may come to what is left (a feed on land of something worth it). */
     scavengers: number;
+    /** How it holds itself to feed and to rest (`mealPosture`). */
+    posture: MealPosture;
     seed: string;
 };
+
+/**
+ * Feeding and resting postures by kind (owner, 2026-11-15: not standing for everyone). Big cats lie prone with the prey
+ * between their forepaws to feed, and lie down after; dogs, wolves, jackals and hyenas stand and tear, then lie down;
+ * bears lie (they often sit, which no rig has); raptors mantle over it standing; crocodilians and monitors stand to feed
+ * and bask after; anything else stands to feed and lies up when its rig can (the rigs' own lie and bask clips: a model
+ * without them keeps standing).
+ */
+export type MealPosture = {feed: "stand" | "prone"; rest: "lie" | "bask" | "stand"};
+
+const FELIDS = /(^|-)(lion|tiger|leopard|cheetah|jaguar|puma|cougar|lynx|bobcat|caracal|serval|ocelot|margay|wildcat|cat|jaguarundi)$/;
+const NOT_FELIDS = /(sea-lion|antlion|catfish|cattle|catbird)/;
+const CANIDS = /(wolf|jackal|wild-dog|dingo|coyote|fox|dhole|hyena|aardwolf|dog)$/;
+const BEARS = /(^|-)bear$/;
+const LIZARDS_AND_CROCS = /(crocodile|alligator|caiman|gharial|monitor|komodo|tegu|goanna)/;
+
+export function mealPosture(side: Pick<MealSide, "slug" | "plan" | "flies">): MealPosture {
+    const slug = side.slug;
+    if (FELIDS.test(slug) && !NOT_FELIDS.test(slug)) return {feed: "prone", rest: "lie"};
+    if (CANIDS.test(slug) || BEARS.test(slug)) return {feed: "stand", rest: "lie"};
+    if (LIZARDS_AND_CROCS.test(slug)) return {feed: "stand", rest: "bask"};
+    const kind = mealKind(side);
+    if (kind === "mammal") return {feed: "stand", rest: "lie"};
+    if (kind === "reptile") return {feed: "stand", rest: "bask"};
+    return {feed: "stand", rest: "stand"};
+}
 
 type Kind = "mammal" | "bird" | "snake" | "swimmer" | "frog" | "reptile" | "other";
 
@@ -167,7 +195,7 @@ export function mealPlan(predator: MealSide, prey: MealSide, seed: string): Meal
     const trace = traceOf(predator, prey, style);
     // Something worth coming for: a feed on land of a prey of a kilogram or more (two scavengers from ten).
     const scavengers = style === "feed" && !prey.water && !predator.water && m >= 1 ? (m >= 10 ? 2 : 1) : 0;
-    return {style, feedSeconds, naturalMinutes: natural, eatenKg: eaten, restSeconds, drinkSeconds, trace, scavengers, seed};
+    return {style, feedSeconds, naturalMinutes: natural, eatenKg: eaten, restSeconds, drinkSeconds, trace, scavengers, posture: mealPosture(predator), seed};
 }
 
 /**

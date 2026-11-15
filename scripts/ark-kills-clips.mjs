@@ -71,7 +71,7 @@ try {
 }
 
 /** How close each pair is framed (m). */
-const DISTANCE = {lion: 9, heron: 5.5, hawk: 4.2, python: 5};
+const DISTANCE = {lion: 7.5, heron: 5, hawk: 4, python: 2.6};
 const summary = {};
 for (const pair of pairs) {
     const context = await browser.newContext({viewport: {width, height}});
@@ -82,7 +82,7 @@ for (const pair of pairs) {
         if (m.type() === "error") errors.push(m.text().slice(0, 300));
         if (m.text().startsWith("[kills]")) console.log(pair, m.text().slice(0, 600));
     });
-    await page.goto(`${base}?pair=${pair}&quality=high`, {waitUntil: "domcontentloaded", timeout: 120000});
+    await page.goto(`${base}?pair=${pair}&quality=high${process.argv.includes("--where") ? "&where=1" : ""}${pair === "python" ? "&jaw=1" : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
     page.on("pageerror", (e) => console.log(pair, "page error:", e.message.slice(0, 300)));
     try {
         await page.waitForFunction(() => window.__kills, null, {timeout: 300000});

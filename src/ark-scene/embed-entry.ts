@@ -18,6 +18,7 @@ import {mountArkLiveHud} from "@/ark-scene/live";
 import {ArkLiveFixtureFeed} from "@/lib/ark-live-fixture";
 import {arkFoundersOf, decodeArkFounders} from "@/lib/ark-founders";
 import {fetchArkHunting} from "@/lib/ark-hunting";
+import {arkSyncMeals, mountArkHuntMarker} from "@/ark-scene/live-hunt-feed";
 import {mountArchipelago} from "@/ark-scene/islands/archipelago";
 import {arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {mergeArkIslandsRouting} from "@/lib/ark-islands-local";
@@ -37,6 +38,9 @@ declare global {
             decodeArkFounders: typeof decodeArkFounders;
             /** Encounter hunting's read (`/api/ark/hunting`), for the embed's refresh; null under the pool. */
             fetchArkHunting: typeof fetchArkHunting;
+            /** Realistic kills: the read's live meals to the scene, and the marker chip drawn in the page. */
+            arkSyncMeals: typeof arkSyncMeals;
+            mountArkHuntMarker: typeof mountArkHuntMarker;
             ArkLiveFixtureFeed?: typeof ArkLiveFixtureFeed;
             /**
              * Part C (decisions 141-154): the one world with the town across the strait, the town built off the first frame,
@@ -81,6 +85,8 @@ window.AnimalDexArk = {
     arkFoundersOf,
     decodeArkFounders,
     fetchArkHunting,
+    arkSyncMeals,
+    mountArkHuntMarker,
     ArkLiveFixtureFeed: process.env.NODE_ENV !== "production" ? ArkLiveFixtureFeed : undefined,
     mountArchipelago,
     arkTwoIslands,
