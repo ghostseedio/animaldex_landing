@@ -344,6 +344,8 @@
             "grazing": "anakula majani",
             "browsing": "anakula majani ya miti",
             "hunting": "anawinda",
+            "eating": "anakula windo lake",
+            "scavenging": "anakula mizoga",
             "waiting": "anavizia mawindo",
             "prowling": "anazunguka akitafuta mawindo",
             "fishing": "anavua samaki",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} anaoga",
                 "feeding": "Wakati wa kumlisha {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "Uwindaji unaendelea · {animal}",
+            "eating": "Mlo unaendelea · {animal}",
+            "label": "{line}. Nionyeshe"
         },
         "sound": {
             "label": "Sauti",

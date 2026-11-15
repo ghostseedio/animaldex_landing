@@ -344,6 +344,8 @@
             "grazing": "يرعى",
             "browsing": "يقتات على أوراق الشجر",
             "hunting": "يصطاد",
+            "eating": "يأكل فريسته",
+            "scavenging": "يقتات على الجيف",
             "waiting": "يترصّد فريسة",
             "prowling": "يتسلّل بحثًا عن فريسة",
             "fishing": "يصطاد السمك",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} يستحم",
                 "feeding": "حان وقت إطعام {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "صيد يجري الآن · {animal}",
+            "eating": "وجبة تجري الآن · {animal}",
+            "label": "{line}. أرني"
         },
         "sound": {
             "label": "الصوت",

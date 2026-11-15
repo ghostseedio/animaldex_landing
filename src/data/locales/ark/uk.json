@@ -344,6 +344,8 @@
             "grazing": "пасеться",
             "browsing": "об'їдає листя",
             "hunting": "полює",
+            "eating": "їсть свою здобич",
+            "scavenging": "живиться падлом",
             "waiting": "чатує на здобич",
             "prowling": "нишпорить у пошуках здобичі",
             "fishing": "ловить рибу",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} купається",
                 "feeding": "Час годування: {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "Триває полювання · {animal}",
+            "eating": "Триває трапеза · {animal}",
+            "label": "{line}. Показати"
         },
         "sound": {
             "label": "Звук",

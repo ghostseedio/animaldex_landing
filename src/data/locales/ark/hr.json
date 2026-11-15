@@ -344,6 +344,8 @@
             "grazing": "pase",
             "browsing": "brsti lišće",
             "hunting": "lovi",
+            "eating": "jede svoj plijen",
+            "scavenging": "jede strvinu",
             "waiting": "vreba plijen",
             "prowling": "šulja se uokolo",
             "fishing": "lovi ribu",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} se kupa",
                 "feeding": "Vrijeme hranjenja: {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "Lov je u tijeku · {animal}",
+            "eating": "Obrok je u tijeku · {animal}",
+            "label": "{line}. Pokaži"
         },
         "sound": {
             "label": "Zvuk",

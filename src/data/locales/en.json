@@ -4524,6 +4524,8 @@
       "grazing": "grazing",
       "browsing": "browsing on leaves",
       "hunting": "hunting",
+      "eating": "eating its catch",
+      "scavenging": "scavenging",
       "waiting": "waiting for prey",
       "prowling": "on the prowl",
       "fishing": "fishing",
@@ -4571,6 +4573,11 @@
         "bathing": "{aAnimal} is bathing",
         "feeding": "Feeding time for {aAnimal}"
       }
+    },
+    "hunt": {
+      "hunting": "A hunt is under way · {animal}",
+      "eating": "A meal is under way · {animal}",
+      "label": "{line}. Show me"
     },
     "sound": {
       "label": "Sound",

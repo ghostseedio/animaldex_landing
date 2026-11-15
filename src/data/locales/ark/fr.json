@@ -344,6 +344,8 @@
             "grazing": "broute",
             "browsing": "broute des feuilles",
             "hunting": "chasse",
+            "eating": "mange sa proie",
+            "scavenging": "se nourrit de charogne",
             "waiting": "guette une proie",
             "prowling": "rôde",
             "fishing": "pêche",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} se baigne",
                 "feeding": "C'est l'heure du repas pour {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "Une chasse est en cours · {animal}",
+            "eating": "Un repas est en cours · {animal}",
+            "label": "{line}. Me montrer"
         },
         "sound": {
             "label": "Son",

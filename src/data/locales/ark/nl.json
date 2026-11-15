@@ -344,6 +344,8 @@
             "grazing": "graast",
             "browsing": "eet bladeren",
             "hunting": "jaagt",
+            "eating": "eet zijn prooi",
+            "scavenging": "eet aas",
             "waiting": "loert op een prooi",
             "prowling": "sluipt rond",
             "fishing": "vist",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} neemt een bad",
                 "feeding": "{aAnimal} krijgt eten"
             }
+        },
+        "hunt": {
+            "hunting": "Er is een jacht bezig · {animal}",
+            "eating": "Er wordt een prooi gegeten · {animal}",
+            "label": "{line}. Laat zien"
         },
         "sound": {
             "label": "Geluid",

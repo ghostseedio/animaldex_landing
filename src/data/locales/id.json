@@ -4557,6 +4557,8 @@
       "grazing": "merumput",
       "browsing": "memakan dedaunan",
       "hunting": "berburu",
+      "eating": "memakan buruannya",
+      "scavenging": "memakan bangkai",
       "waiting": "menunggu mangsa",
       "prowling": "mengendap-endap mencari mangsa",
       "fishing": "menangkap ikan",
@@ -4604,6 +4606,11 @@
         "bathing": "{aAnimal} sedang mandi",
         "feeding": "Waktu makan untuk {aAnimal}"
       }
+    },
+    "hunt": {
+      "hunting": "Perburuan sedang berlangsung · {animal}",
+      "eating": "Sedang menyantap buruan · {animal}",
+      "label": "{line}. Tunjukkan"
     },
     "sound": {
       "label": "Suara",

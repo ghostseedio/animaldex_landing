@@ -344,6 +344,8 @@
             "grazing": "nanginginain",
             "browsing": "kumakain ng mga dahon",
             "hunting": "nangangaso",
+            "eating": "kinakain ang nahuli niya",
+            "scavenging": "kumakain ng bangkay",
             "waiting": "nag-aabang ng biktima",
             "prowling": "naglilibot para manghuli",
             "fishing": "nangingisda",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} ang naliligo",
                 "feeding": "{aAnimal} ang pinapakain"
             }
+        },
+        "hunt": {
+            "hunting": "May pangangaso ngayon · {animal}",
+            "eating": "May kumakain ng nahuli ngayon · {animal}",
+            "label": "{line}. Ipakita"
         },
         "sound": {
             "label": "Tunog",

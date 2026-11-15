@@ -344,6 +344,8 @@
             "grazing": "吃草",
             "browsing": "啃食树叶",
             "hunting": "捕猎",
+            "eating": "在吃猎物",
+            "scavenging": "在吃腐肉",
             "waiting": "等待猎物",
             "prowling": "潜行寻猎",
             "fishing": "捕鱼",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal}正在洗澡",
                 "feeding": "{aAnimal}的喂食时间到了"
             }
+        },
+        "hunt": {
+            "hunting": "正在捕猎 · {animal}",
+            "eating": "正在进食猎物 · {animal}",
+            "label": "{line}. 带我去看"
         },
         "sound": {
             "label": "声音",

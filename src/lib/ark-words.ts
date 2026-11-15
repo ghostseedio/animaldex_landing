@@ -10,6 +10,7 @@ import type {ArkLiveWords} from "@/lib/ark-live-words";
 import type {ArkActivityWords, ArkCardWords} from "@/lib/ark-animal-status";
 import type {ArkLoaderWords} from "@/lib/ark-loading";
 import type {ArkLostWords} from "@/lib/ark-extinct";
+import type {ArkHuntWords} from "@/lib/ark-live-hunt";
 
 export type ArkHudWords = {
     label: string;
@@ -423,6 +424,8 @@ export type ArkWords = {
     card: ArkCardWords;
     /** What an animal is doing, in plain words, and the live log's lines of the schedule's moments (decision 240). */
     activity: ArkActivityWords;
+    /** The live hunt marker (lane ark-kills-real); optional: an older bundle lacks it. */
+    hunt?: ArkHuntWords;
     sound: ArkSoundWords;
     a11y: ArkA11yWords;
     person: ArkPersonWords;

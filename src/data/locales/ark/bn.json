@@ -344,6 +344,8 @@
             "grazing": "ঘাস খাচ্ছে",
             "browsing": "পাতা খাচ্ছে",
             "hunting": "শিকার করছে",
+            "eating": "শিকার খাচ্ছে",
+            "scavenging": "মড়া খাচ্ছে",
             "waiting": "শিকারের অপেক্ষায় ওত পেতে আছে",
             "prowling": "শিকারের খোঁজে ঘুরছে",
             "fishing": "মাছ ধরছে",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} স্নান করছে",
                 "feeding": "{aAnimal}-কে খাওয়ানোর সময়"
             }
+        },
+        "hunt": {
+            "hunting": "একটি শিকার চলছে · {animal}",
+            "eating": "শিকার খাওয়া চলছে · {animal}",
+            "label": "{line}. আমাকে দেখান"
         },
         "sound": {
             "label": "শব্দ",

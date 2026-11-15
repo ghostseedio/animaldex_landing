@@ -344,6 +344,8 @@
             "grazing": "legel",
             "browsing": "leveleket eszik",
             "hunting": "vadászik",
+            "eating": "eszi a zsákmányát",
+            "scavenging": "dögöt eszik",
             "waiting": "zsákmányra les",
             "prowling": "portyázik",
             "fishing": "halászik",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} fürdik",
                 "feeding": "{aAnimal} etetési ideje"
             }
+        },
+        "hunt": {
+            "hunting": "Vadászat zajlik · {animal}",
+            "eating": "Lakoma zajlik · {animal}",
+            "label": "{line}. Mutasd"
         },
         "sound": {
             "label": "Hang",

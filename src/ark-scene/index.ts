@@ -134,7 +134,7 @@ import {buildVegetation} from "@/ark-scene/vegetation";
 import {seaEpochSeconds} from "@/ark-scene/fish-schools";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake} from "@/lib/ark-daylight";
-import {islandHours} from "@/lib/ark-clock";
+import {hash32, islandHours} from "@/lib/ark-clock";
 import {ArkLiveliness, type LiveAnimal, type LivePin} from "@/ark-scene/liveliness-scene";
 import {attachVary, setVary} from "@/ark-scene/ark-variation";
 import {tideFit} from "@/lib/ark-liveliness";
@@ -149,6 +149,7 @@ import {
     type ArkCameraView,
     type ArkHappening,
     type ArkHerdInfo,
+    type ArkLiveHunt,
     type ArkReplayRun,
     type ArkRegion,
     type ArkSceneHandle,
@@ -209,6 +210,10 @@ import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
 import {warmShaders} from "@/ark-scene/runtime/load";
 import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
+import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
+import {mealOnStage, mealScript, DRINK_REACH, type MealCatch} from "@/ark-scene/meal-acts";
+import {MealTraces} from "@/ark-scene/meal-traces";
+import {bodyMassKg, isScavenger, mealPlan, type MealPlan, type MealSide, type ScavengerCandidate} from "@/ark-scene/meals";
 import * as liveBudget from "@/ark-scene/live-budget";
 import {selectAim, selectionPins, selectionSurvives} from "@/ark-scene/selection";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
@@ -281,6 +286,10 @@ const MICRO_MIN_DISTANCE = CAMERA_RANGE.close;
 
 /** Birds that take to the air above their zone. */
 const FLYERS = ARK_FLYERS;
+/** A catch lying on its side (rad): over onto its flank, not quite flat. */
+const LYING_ROLL = 1.42;
+/** A meal act's states the rig plays from its own clips (`rig-player.ts` RECIPE_CLIPS): feeding, a glance up, lying up. */
+const MEAL_CLIP_STATES = new Set(["eat", "scan", "rest", "bask"]);
 
 /** The island's hour offset from UTC: everyone sees the same time of day (graphics pass; `src/lib/ark-clock.ts`). */
 const ISLAND_OFFSET_HOURS = 0;
@@ -793,6 +802,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     scene.add(liveliness.root);
     const dust = new DustPuffs();
     scene.add(dust.points);
+    /** What meals leave on the ground (`meal-traces.ts`): feathers, fur, scales, pressed grass. */
+    const mealTraces = new MealTraces();
+    scene.add(mealTraces.patches, mealTraces.bits);
     // The behaviour recipes' near detail: catches and nest material carried, splashes, dirt, holes and mounds, nests,
     // ambient fish and flockmates (`recipe-scene.ts`); the poses are the schedule's.
     const recipeScene = new RecipeScene();
@@ -1124,7 +1136,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let jetty: Group | null = null;
     /** A replay's stand-ins for animals that are gone now. */
     let ghosts: Entry[] = [];
-    const allEntries = () => (visitor || ghosts.length ? [...entries, ...ghosts, ...(visitor ? [visitor] : [])] : entries);
+    /** The live world's stand-ins for animals eaten in a meal still being acted (`live-meals.ts`). */
+    let mealGhosts: Entry[] = [];
+    const allEntries = () => (visitor || ghosts.length || mealGhosts.length ? [...entries, ...ghosts, ...mealGhosts, ...(visitor ? [visitor] : [])] : entries);
     const findEntry = (id: string | null) => (id ? entryById.get(id) ?? (visitor?.animal.id === id ? visitor : null) : null);
     /** The animal the camera follows (until any drag). */
     let followId: string | null = null;
@@ -1152,6 +1166,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** Pinned representatives: the one selected (a herd member promoted), and a replay's animals. */
     let selectionPin: string | null = null;
     let replayPins = new Set<string>();
+    /** Meal ids pinned (drawn one by one) while the live world acts them. */
+    let mealPins = new Set<string>();
     let placedFor: ArkSnapshot | null = null;
     let placedAll = new Map<string, Placement>();
     let disposed = false;
@@ -2005,7 +2021,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const huntingNow = Boolean(subject && hunting.active && hunting.hunting(animal, epoch));
         const plan = subject ? scheduleStatus(subject, epoch, {trip: entry.sched?.trip ?? null, hunting: huntingNow}) : null;
         // Off the schedule (reduced motion, a micro or underground animal, a replay's act): its one state, said plainly.
-        const activity = plan ? plan.activity : arkActivityKey({doing: null, asleep: entry.state.asleep, airborne: entry.state.airborne, breathing: entry.state.breathing});
+        // (A meal's act says what it is drawn doing: hunting in the chase, eating, drinking, resting after it, scavenging.)
+        const activity = entry.act?.meal ?? (plan ? plan.activity : arkActivityKey({doing: null, asleep: entry.state.asleep, airborne: entry.state.airborne, breathing: entry.state.breathing}));
         const notes = records.get(animal.id) ?? [];
         const record: ArkStatusLogEntry[] = [arkOriginEntry(animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null}))];
         // How fed it is and its energy over its day (card truth, 2026-11-13): from its own schedule, its eating and waking
@@ -2348,7 +2365,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** Again from the snapshot as it is: after a pin changed (a herd member selected, a replay's animals). */
     const refreshLive = () => {
-        if (herds.length || replayPins.size || selectionPin) setSnapshot(current, false);
+        if (herds.length || replayPins.size || mealPins.size || selectionPin) setSnapshot(current, false);
     };
 
     // The hamlet (`map/hamlet.ts`): its plots' key, its residents, and who is out now (worked out once a second), on the
@@ -2404,7 +2421,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         places.forEach((place) => streamer.markContent(place.x, place.z));
         // A very popular species (A14): its representatives drawn one by one, the rest as the herd.
         // (The selected animal too, while aboard: it stays drawn one by one as the town joins or a new read comes.)
-        const pins = selectionPins(aboard, {selected: selectedId, promoted: selectionPin, followed: followId, replay: replayPins});
+        const pins = selectionPins(aboard, {selected: selectedId, promoted: selectionPin, followed: followId, replay: mealPins.size ? Array.from(replayPins).concat(Array.from(mealPins)) : replayPins});
         // (Development: `window.__arkHerdOff = true` before mounting draws everyone one by one, to measure against.)
         const herdOff = (globalThis as {__arkHerdOff?: boolean}).__arkHerdOff === true;
         liveliness.setSnapshot(snapshot.animals, snapshot.ark_day);
@@ -3497,7 +3514,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // An act's pose, from a replayed event.
         if (entry.act) {
             const act = entry.act;
-            return {x: act.x, z: act.z, base: act.base, yaw: act.yaw, pitch: act.pitch, roll: act.roll, afloat: act.base < -0.02 || act.base > Math.max(heightAt(act.x, act.z), 0) + 0.3};
+            // (Lying on its side after a catch, `meal-acts.ts`: rolled over, lowered onto the ground where it is drawn.)
+            const lying = act.lying ? Math.sign(act.lying) * LYING_ROLL * Math.min(Math.abs(act.lying), 1) : 0;
+            return {x: act.x, z: act.z, base: act.base, yaw: act.yaw, pitch: act.pitch, roll: act.roll + lying, afloat: act.base < -0.02 || act.base > Math.max(heightAt(act.x, act.z), 0) + 0.3};
         }
         const place = entry.place;
         if (entry.moment) {
@@ -4035,7 +4054,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // distance it covers while it moves, a one-shot (into or out of the water, a take-off, a shake) from its start, a
         // hold when nothing else plays. Otherwise its block's beat (below) plays.
         const reacted = Boolean(reacting && want === reacting.name);
-        const fromRecipe = !state.flying && !reacted && recipeAct ? recipeClip(recipeAct.state, (name) => Boolean(clip(name))) : null;
+        // (A meal's act, `meal-acts.ts`: head down feeding, a glance up, lying up to rest, on the rig's own clips.)
+        const mealState = !recipeAct && entry.act?.meal && entry.act.state && MEAL_CLIP_STATES.has(entry.act.state) ? entry.act.state : null;
+        const fromRecipe = !state.flying && !reacted && (recipeAct || mealState) ? recipeClip(recipeAct?.state ?? mealState, (name) => Boolean(clip(name))) : null;
         let byRecipe = false;
         if (fromRecipe && !(watching && headDown(fromRecipe.name))) {
             if (fromRecipe.play === "distance") {
@@ -4451,14 +4472,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // The muzzles of the grazers biting and the bodies of the walkers nearest the camera, for the grass to bend at (`grass-press.ts`).
             const biting = (c: (typeof candidates)[number]) => c.entry.sched!.pose?.beat === "bite" || c.entry.sched!.pose?.beat === "chew";
             setGrassPress(
-                candidates
+                // (Where a meal pressed the grass flat, `meal-traces.ts`: nearest the camera first, like the rest.)
+                pressedByMeals(cameraPosition).concat(candidates
                     .filter((c) => c.visible && c.distance < 40 && c.entry.sched && !c.entry.sched.pose?.aloft && !c.pose.afloat && (biting(c) || c.entry.sched.pose?.moving))
                     .sort((a, b) => a.distance - b.distance)
                     .map((c) =>
                         biting(c)
                             ? {x: c.pose.x + Math.sin(c.pose.yaw) * c.entry.length * 0.5, y: c.pose.base, z: c.pose.z + Math.cos(c.pose.yaw) * c.entry.length * 0.5, radius: Math.max(c.entry.length * 0.18, 0.08)}
                             : {x: c.pose.x, y: c.pose.base, z: c.pose.z, radius: Math.max(c.entry.length * 0.35, 0.1)}
-                    )
+                    ))
             );
             stepRecipeScene(candidates, now, epochNow);
             behaviourFrameMs += performance.now() - started;
@@ -4762,6 +4784,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 } else if (box) where.base -= lyingDrop({minX: box.min.x, maxX: box.max.x, minY: box.min.y, maxY: box.max.y}, slept.legs, slept.roll) * s;
             }
             if (entry.denIn) where.base -= entry.denIn * modelHeight * 1.1;
+            // A catch lying on its side (`meal-acts.ts`): its body turned by the roll, lowered so its side meets the ground.
+            if (act?.lying && !where.water) {
+                const box = (level === "near" ? model.near ?? model.far : model.far ?? model.near)?.geometry.boundingBox ?? null;
+                if (box) where.base -= lyingDrop({minX: box.min.x, maxX: box.max.x, minY: box.min.y, maxY: box.max.y}, 0, where.roll) * s;
+            }
             // (Lane L2: a sidewinder's body lies across its way while it moves, `l2Sidewind`.)
             if (entry.l2 && !where.water && !act) where.yaw += l2Sidewind(entry.l2, entry.phase);
             let stand: Stand | null = null;
@@ -6504,6 +6531,254 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const entryFor = (animal: ArkEventAnimal): Entry | null => findEntry(animal.id) ?? ghosts.find((ghost) => ghost.animal.id === animal.id) ?? null;
 
+    // MARK: Meals (lane ark-kills-real: the catch, the meal, traces, scavengers)
+
+    /** One side of a meal as its rules read it (`meals.ts`): its body plan, true length and mass, its diet. */
+    const mealSideOf = (entry: Entry, water: boolean): MealSide => {
+        const slug = entry.animal.model_slug;
+        const plan = library.get(slug)?.behaviour?.plan ?? null;
+        const flies = FLYERS.has(slug) && ZONE_SITES[entry.animal.zone]?.kind !== "sea";
+        const length = Math.max(entry.trueLength, 0.01);
+        return {slug, plan, flies, water, length, massKg: bodyMassKg({slug, plan, flies}, length), diet: (entry.sched?.profile ?? behaviourProfile(slug, plan)).diet};
+    };
+    /** Where a model's mouth is (its foremost vertices, model units), per species; then scaled to the entry. */
+    const mouthPoints = new Map<string, {x: number; y: number; z: number; minY: number; bodyLength: number} | null>();
+    const mouthOfModel = (entry: Entry): MealCatch["mouth"] => {
+        const slug = entry.animal.model_slug;
+        const model = library.get(slug);
+        if (!mouthPoints.has(slug) && model) {
+            const geometry = model && !model.placeholder && !model.facing ? (model.near ?? model.far)?.geometry ?? null : null;
+            const position = geometry?.getAttribute("position");
+            let found: {x: number; y: number; z: number; minY: number; bodyLength: number} | null = null;
+            if (model && position && position.count) {
+                let max = -Infinity;
+                for (let i = 0; i < position.count; i++) max = Math.max(max, position.getZ(i));
+                let n = 0;
+                let x = 0;
+                let y = 0;
+                const near = max - Math.max(model.bodyLength * 0.02, 1e-4);
+                for (let i = 0; i < position.count; i++) {
+                    if (position.getZ(i) < near) continue;
+                    x += position.getX(i);
+                    y += position.getY(i);
+                    n++;
+                }
+                found = n ? {x: x / n, y: y / n, z: max, minY: model.minY, bodyLength: model.bodyLength} : null;
+            }
+            mouthPoints.set(slug, found);
+        }
+        const m = mouthPoints.get(slug);
+        if (!m) return null;
+        const k = entry.length / Math.max(m.bodyLength, 1e-6);
+        return {forward: m.z * k, side: m.x * k, up: Math.max((m.y - m.minY) * k, 0)};
+    };
+    /** The nearest water's edge a drinker can reach from a spot (dry ground beside water), searched on rings; or null. */
+    const waterEdgeNear = (x: number, z: number, reach = DRINK_REACH): {x: number; z: number} | null => {
+        for (let r = 2; r <= reach; r += 1.5) {
+            for (let i = 0; i < 16; i++) {
+                const a = (i / 16) * Math.PI * 2;
+                const wx = x + Math.sin(a) * r;
+                const wz = z + Math.cos(a) * r;
+                if (heightAt(wx, wz) >= -0.05) continue;
+                // Back toward the spot until the ground is dry: the edge.
+                for (let k = 0.4; k <= r; k += 0.4) {
+                    const ex = wx - Math.sin(a) * k;
+                    const ez = wz - Math.cos(a) * k;
+                    if (heightAt(ex, ez) >= 0.02) return {x: ex, z: ez};
+                }
+            }
+        }
+        return null;
+    };
+    /**
+     * A meal's chase and its meal script. With the server's encounter the two start exactly where it says (the hunter
+     * at its waypoint, the prey at its disc's middle), so a replay and the live world act the same meal the same way for
+     * every viewer; without one (the pool) from where the scene has them, as before.
+     */
+    const buildMealStage = (act: MealAct, predator: Entry, prey: Entry): {kind: ReturnType<typeof chaseKind>; stage: MealStage; bodies: {predator: ActBody; prey: ActBody}; script: ReturnType<typeof mealScript> | null; plan: MealPlan | null; catchInfo: Omit<MealCatch, "predator" | "prey" | "kind"> | null} => {
+        const model = library.get(predator.animal.model_slug);
+        const predatorWater = inWater(predator);
+        const preyWater = inWater(prey);
+        const kind = chaseKind({
+            predatorSlug: predator.animal.model_slug,
+            predatorPlan: model?.behaviour?.plan ?? null,
+            predatorWater,
+            preyWater,
+            predatorFlies: FLYERS.has(predator.animal.model_slug) && ZONE_SITES[predator.animal.zone]?.kind !== "sea"
+        });
+        // The chase (L7, `acts.ts`): with both sides' speeds, the prey's way of fleeing, the ground or water each may cross.
+        const chaser = (entry: Entry): ActBody => ({...bodyOf(entry), speedStat: entry.stats.speed, gait: entry.sched?.profile.gait ?? null, slug: entry.animal.model_slug});
+        const encounter = mealEncounter(act);
+        let bodies: {predator: ActBody; prey: ActBody};
+        if (encounter) {
+            const hunter = chaser(predator);
+            const quarry = chaser(prey);
+            const ground = (x: number, z: number) => Math.max(heightAt(x, z), -0.3);
+            const ph = {...hunter, x: encounter.predator.x, z: encounter.predator.z, base: predatorWater ? Math.min(hunter.base, -0.05) : hunter.base > ground(hunter.x, hunter.z) + 0.3 ? hunter.base : ground(encounter.predator.x, encounter.predator.z)};
+            const qh = {...quarry, x: encounter.prey.x, z: encounter.prey.z, base: preyWater ? Math.min(quarry.base, -0.05) : ground(encounter.prey.x, encounter.prey.z), yaw: ((hash32(act.prey.id) % 6283) / 1000) - Math.PI};
+            bodies = encounterBodies(ph, qh, encounter);
+        } else bodies = {predator: chaser(predator), prey: chaser(prey)};
+        const flee = preyFleeStyle({preySlug: prey.animal.model_slug, preyPlan: library.get(prey.animal.model_slug)?.behaviour?.plan ?? null, preyWater, preyFlies: FLYERS.has(prey.animal.model_slug) && ZONE_SITES[prey.animal.zone]?.kind !== "sea", speedStat: prey.stats.speed});
+        const chaseGround = (x: number, z: number) => !world || (world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.3) && !collideBlocked(x, z, 0.3));
+        const seed = `${act.prey.id}#${act.at}`;
+        const withMeal = kind !== "cutaway";
+        const stage = mealStage(kind, bodies.predator, bodies.prey, {seed, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter), meal: withMeal});
+        if (!withMeal) return {kind, stage, bodies, script: null, plan: null, catchInfo: null};
+        const plan = mealPlan(mealSideOf(predator, predatorWater), mealSideOf(prey, preyWater), seed);
+        const at = stage.catchAt ?? stage.seconds;
+        const p = stage.predator(at)!;
+        const q = stage.prey(at);
+        const predatorSwims = kind === "dart" || (predatorWater && !FLYERS.has(predator.animal.model_slug));
+        const catchInfo: Omit<MealCatch, "predator" | "prey" | "kind"> = {
+            mouth: mouthOfModel(predator),
+            preyInWater: preyWater || heightAt(q.x, q.z) < -0.05,
+            predatorSwims,
+            ground: (x, z) => Math.max(heightAt(x, z), -0.3),
+            clear: (x, z) => heightAt(x, z) >= 0.02 && chaseGround(x, z),
+            water: plan.drinkSeconds > 0 ? waterEdgeNear(q.x, q.z) : null,
+            walk: Math.max(moveSpeed(predator.animal, predator.length) * 0.5, 0.3)
+        };
+        const script = mealScript(plan, {...catchInfo, kind, predator: {x: p.x, z: p.z, base: p.base, yaw: p.yaw, length: bodies.predator.length, height: bodies.predator.height}, prey: {x: q.x, z: q.z, base: q.base, yaw: q.yaw, length: bodies.prey.length, height: bodies.prey.height}});
+        return {kind, stage, bodies, script, plan, catchInfo};
+    };
+    /** A stand-in for an eaten animal, from the event's record (the replay's `ghostAnimalsOf`, one at a time). */
+    const ghostAnimalOf = (animal: ArkEventAnimal): ArkAnimal => ({
+        id: animal.id,
+        species_profile_id: animal.species_profile_id,
+        name: animal.name,
+        scientific_name: null,
+        model_slug: animal.model_slug,
+        zone: animal.zone,
+        arrived_at: animal.arrived_at ?? "",
+        brought_by: {label: "", named: false},
+        mine: false,
+        origin: animal.origin ?? undefined,
+        generation: animal.generation ?? undefined,
+        slot: animal.slot,
+        slot_rank: animal.slot_rank,
+        sociality: animal.sociality,
+        activity: animal.activity
+    });
+    const liveMeals = new LiveMeals<Entry>({
+        find: (id) => entryById.get(id) ?? null,
+        ghost: (act) => {
+            const animal = ghostAnimalOf(act.prey);
+            const place = placeAll([animal], true).get(animal.id);
+            if (!place) return null;
+            const ghost = Object.assign(newEntry(animal, place, null), {ghost: true});
+            ghost.leader = null;
+            mealGhosts = [...mealGhosts, ghost];
+            // Both models, near and far, as a replay asks for its acts' (a small prey's is otherwise asked for only close by).
+            void library.ready().then(() => {
+                for (const slug of [act.prey.model_slug, act.predator.model_slug]) {
+                    if (!library.has(slug)) continue;
+                    library.request(slug, "far");
+                    library.request(slug, "near");
+                    tokens.ensure(slug);
+                }
+            });
+            // The living one (a read not yet refreshed since it was eaten): out of sight while its stand-in is acted.
+            const alive = entryById.get(animal.id);
+            if (alive) alive.held = true;
+            return ghost;
+        },
+        drop: (ghost) => {
+            mealGhosts = mealGhosts.filter((g) => g !== ghost);
+        },
+        stage: (act, predator, prey) => {
+            const built = buildMealStage(act, predator, prey);
+            if (!built.script || !built.plan || !built.catchInfo) return null;
+            return {stage: built.stage, kind: built.kind, plan: built.plan, catch: built.catchInfo, predatorHeight: built.bodies.predator.height, preyHeight: built.bodies.prey.height, predatorLength: built.bodies.predator.length, preyLength: built.bodies.prey.length};
+        },
+        scheduleAt: (entry, epoch) => {
+            if (!entry.sched || !world || reducedMotion) return null;
+            const at = schedulePose(entry, epoch);
+            return {x: at.x, z: at.z, y: at.y, yaw: at.yaw, doing: at.doing, aloft: at.aloft};
+        },
+        candidates: (spot, epoch) => {
+            const out: Array<ScavengerCandidate & {entry: Entry; height: number; walk: number}> = [];
+            for (const e of entries) {
+                if (!e.sched || e.visitor || e.held || townIds.has(e.animal.id)) continue;
+                const slug = e.animal.model_slug;
+                const plan = library.get(slug)?.behaviour?.plan ?? null;
+                const c = {slug, plan, diet: e.sched.profile.diet, length: e.trueLength};
+                if (!isScavenger(c)) continue;
+                // (Its home far beyond its reach: not worth asking its schedule.)
+                const flies = e.sched.profile.move === "fly";
+                if (Math.hypot(e.sched.animal.home.x - spot.x, e.sched.animal.home.z - spot.z) > (flies ? 160 : 90)) continue;
+                const at = schedulePose(e, epoch);
+                const model = library.get(slug);
+                out.push({id: e.animal.id, ...c, flies, x: at.x, z: at.z, awake: at.doing !== "sleep" && at.doing !== "to_roost", entry: e, height: model ? model.height * (e.length / model.bodyLength) : e.length * 0.6, walk: Math.max(moveSpeed(e.animal, e.length) * 0.5, 0.3)});
+            }
+            return out;
+        },
+        eats,
+        ground: (x, z) => Math.max(heightAt(x, z), -0.3),
+        walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
+        setAct: (entry, pose) => {
+            entry.act = pose;
+        },
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id))),
+        hold: (ghost, held) => {
+            ghost.held = held;
+        }
+    });
+    /** The meals' traces this frame (feathers, fur, scales, pressed grass), and the pressed grass for the grass to bend. */
+    let tracesNow: ReturnType<typeof liveMeals.traces> = [];
+    const stepMealTraces = () => {
+        const next = liveMeals.size ? liveMeals.traces(worldMs() / 1000) : [];
+        if (!next.length && !tracesNow.length) return;
+        tracesNow = next;
+        mealTraces.set(next, (x, z) => Math.max(heightAt(x, z), 0));
+    };
+    const pressedByMeals = (from: Vector3) =>
+        liveMeals
+            .pressed(worldMs() / 1000)
+            .filter((p) => Math.hypot(p.x - from.x, p.z - from.z) < 60)
+            .map((p) => ({x: p.x, y: Math.max(heightAt(p.x, p.z), 0), z: p.z, radius: p.radius}))
+            .concat(tracesNow
+            .filter((t) => t.flattened && t.alpha > 0.2 && Math.hypot(t.x - from.x, t.z - from.z) < 60)
+            .map((t) => ({x: t.x, y: Math.max(heightAt(t.x, t.z), 0), z: t.z, radius: t.size * 0.6 * t.alpha})));
+    /**
+     * The newest real hunt under way (the page's marker): a meal being acted (its chase or its feeding) first, else the
+     * predator whose encounter forays began last (awake and due: the server hunts on exactly those). Once a second.
+     */
+    let huntAsked: {at: number; hunt: ArkLiveHunt | null} | null = null;
+    const liveHuntNow = (): ArkLiveHunt | null => {
+        const now = performance.now();
+        if (huntAsked && now - huntAsked.at < 1000) return huntAsked.hunt;
+        const epoch = worldMs() / 1000;
+        const said = (id: string, phase: ArkLiveHunt["phase"], since: number): ArkLiveHunt | null => {
+            const entry = entryById.get(id);
+            return entry ? {id, name: entry.animal.name, slug: entry.animal.model_slug, phase, since} : null;
+        };
+        const meal = liveMeals.newest(epoch);
+        let hunt = meal ? said(meal.predator, meal.phase, meal.t0) : null;
+        if (!hunt && hunting.active) {
+            let best: {id: string; since: number} | null = null;
+            for (const id of hunting.predators()) {
+                const entry = entryById.get(id);
+                if (!entry) continue;
+                const since = hunting.since(entry.animal, epoch);
+                if (since !== null && (!best || since > best.since || (since === best.since && id > best.id))) best = {id, since};
+            }
+            hunt = best ? said(best.id, "hunting", best.since) : null;
+        }
+        huntAsked = {at: now, hunt};
+        return hunt;
+    };
+    /** The live world's meals, a frame (after the replay's acts): poses, and their pins for the herds. */
+    const stepLiveMeals = () => {
+        if (!liveMeals.size || reducedMotion) return;
+        const epoch = worldMs() / 1000;
+        liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
+        const pins = new Set(liveMeals.pins());
+        if (pins.size !== mealPins.size || Array.from(pins).some((id) => !mealPins.has(id))) {
+            mealPins = pins;
+            refreshLive();
+        }
+    };
+
     /** The camera across a chase: side on, the short way round from where it looks now. */
     const sideOn = (dx: number, dz: number) => {
         spherical.setFromVector3(offset.copy(camera.position).sub(controls.target));
@@ -6674,22 +6949,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             run.actingFrom = performance.now() / 1000;
             return;
         }
-        const model = library.get(predator.animal.model_slug);
-        const kind = chaseKind({
-            predatorSlug: predator.animal.model_slug,
-            predatorPlan: model?.behaviour?.plan ?? null,
-            predatorWater: inWater(predator),
-            preyWater: inWater(prey),
-            predatorFlies: FLYERS.has(predator.animal.model_slug) && ZONE_SITES[predator.animal.zone]?.kind !== "sea"
-        });
-        // The chase (L7, `acts.ts`): from the server's positions when hunting is encounter-based, with both sides' speeds,
-        // the prey's way of fleeing, and the ground or water each may cross. Each act names its partner (`with`).
-        const chaser = (entry: Entry): ActBody => ({...bodyOf(entry), speedStat: entry.stats.speed, gait: entry.sched?.profile.gait ?? null, slug: entry.animal.model_slug});
-        const encounter = mealEncounter(act);
-        const bodies = encounter ? encounterBodies(chaser(predator), chaser(prey), encounter) : {predator: chaser(predator), prey: chaser(prey)};
-        const flee = preyFleeStyle({preySlug: prey.animal.model_slug, preyPlan: library.get(prey.animal.model_slug)?.behaviour?.plan ?? null, preyWater: inWater(prey), preyFlies: FLYERS.has(prey.animal.model_slug) && ZONE_SITES[prey.animal.zone]?.kind !== "sea", speedStat: prey.stats.speed});
-        const chaseGround = (x: number, z: number) => !world || (world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.3) && !collideBlocked(x, z, 0.3));
-        const stage: MealStage = mealStage(kind, bodies.predator, bodies.prey, {seed: `${act.prey.id}#${act.at}`, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter)});
+        // The chase (L7, `acts.ts`) from the server's encounter, then the meal by rule (`meals.ts`, `meal-acts.ts`): in a
+        // replay a summary of it (a few feeding bouts, a whole swallow); if the live world is still acting it, the
+        // carcass stays for it to carry on.
+        const built = buildMealStage(act, predator, prey);
+        const kind = built.kind;
+        const bodies = built.bodies;
+        let stage: MealStage = built.stage;
+        if (built.script) {
+            const live = liveMeals.under(act.predator.id, act.prey.id, worldMs() / 1000);
+            const swallow = built.script.plan.style === "swallow";
+            const show = swallow ? Math.min(built.script.plan.feedSeconds, 10) + built.script.carry + 0.8 : built.script.carry + 8 + (live ? 0 : 2.6);
+            const summary = swallow && built.script.plan.feedSeconds > 10 ? mealScript({...built.script.plan, feedSeconds: 10}, built.script.c) : built.script;
+            stage = mealOnStage(stage, summary, show, live ? Infinity : show - 2.6);
+        }
         const partnered = (pose: ActPose | null, id: string, role: ActPose["role"]): ActPose | null => (pose ? {...pose, with: id, role} : null);
         // Both hold where they are while the camera comes.
         prey.act = partnered(stage.prey(0), predator.animal.id, "quarry");
@@ -7053,6 +7326,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         lighting.step(now);
         stepReplay(now);
+        stepLiveMeals();
+        stepMealTraces();
         // Runtime: the resting rotation moved on (every 5 minutes on the shared clock): who is outside, again.
         perf.lap("scenery");
         if (!replay && runtime.rotationDue(liteOn())) setSnapshot(current, true);
@@ -7246,7 +7521,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
@@ -7351,6 +7626,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 })
                 .catch(() => hunting.set(null, null, null));
         },
+        setMeals: (meals) => {
+            liveMeals.set(meals.filter((meal) => meal.kind === "meal"));
+            if (!liveMeals.size && mealPins.size) {
+                mealPins = new Set();
+                refreshLive();
+            }
+        },
+        liveHunt: () => liveHuntNow(),
         setSound: (on) => liveliness.setSound(on),
         sound: () => ({on: liveliness.audio.playing, unlocked: liveliness.audio.unlocked, credits: liveliness.audio.credits()}),
         setSoundVolume: (volume) => liveliness.audio.setVolume(volume),
@@ -7639,6 +7922,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             talking.actor?.dispose();
             replay = null;
             dust.dispose();
+            mealTraces.dispose();
             recipeScene.dispose();
             setNestSource(null);
             setRecipeArkDay(null);

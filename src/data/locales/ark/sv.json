@@ -344,6 +344,8 @@
             "grazing": "betar",
             "browsing": "äter löv",
             "hunting": "jagar",
+            "eating": "äter sitt byte",
+            "scavenging": "äter as",
             "waiting": "lurar på byte",
             "prowling": "smyger omkring",
             "fishing": "fiskar",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} badar",
                 "feeding": "Matdags för {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "En jakt pågår · {animal}",
+            "eating": "En måltid pågår · {animal}",
+            "label": "{line}. Visa mig"
         },
         "sound": {
             "label": "Ljud",

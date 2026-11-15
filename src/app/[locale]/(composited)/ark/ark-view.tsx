@@ -10,9 +10,11 @@ import {readArkPopulationThen, type ArkPopulationThen} from "@/lib/ark-populatio
 import type {ArkPageSummary} from "@/lib/ark-page-summary";
 import {arkNewArrivals} from "@/lib/ark-live-log";
 import {fetchArkHunting} from "@/lib/ark-hunting";
+import {arkHuntLine} from "@/lib/ark-live-hunt";
+import {arkSyncMeals} from "@/ark-scene/live-hunt-feed";
 import {arkReloadForRestoredContext} from "@/lib/ark-context-restore";
 import {ArkAnimalCard, ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-animal-card";
-import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkLiveHunt, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkArchipelagoHandle} from "@/ark-scene/islands/archipelago";
 import {arkIslandCounts, arkIslandSnapshot, arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
@@ -256,6 +258,8 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         if (step !== "animals") setLoad((state) => arkLoadStep(state, step));
     }, []);
     const [arrival, setArrival] = useState<ArkAnimal | null>(null);
+    /** The newest real hunt or meal under way on the island (the marker), from the scene once a second. */
+    const [liveHunt, setLiveHunt] = useState<ArkLiveHunt | null>(null);
     /** Each species' count 24 hours ago, from the event log (decision 239); null until read, or when it can't be. */
     const [then, setThen] = useState<ArkPopulationThen | null>(null);
     const [life, setLife] = useState<LifeState | null>(null);
@@ -887,7 +891,9 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         const run = () => {
             if (document.visibilityState !== "visible") return;
             void fetchArkHunting().then((read) => {
-                if (!stopped) sceneRef.current?.setHunting?.(read);
+                if (stopped) return;
+                sceneRef.current?.setHunting?.(read);
+                arkSyncMeals(sceneRef.current, read, {snapshot: snapshotRef.current});
             });
         };
         run();
@@ -903,6 +909,16 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         const timer = setTimeout(() => setArrival(null), 9000);
         return () => clearTimeout(timer);
     }, [arrival]);
+
+    // The live hunt marker: the newest real hunt or meal under way anywhere on the island (the scene's, once a second).
+    useEffect(() => {
+        if (!ready) return;
+        const timer = setInterval(() => {
+            const hunt = sceneRef.current?.liveHunt?.() ?? null;
+            setLiveHunt((was) => (was?.id === hunt?.id && was?.phase === hunt?.phase ? was : hunt));
+        }, 1000);
+        return () => clearInterval(timer);
+    }, [ready]);
 
     // MARK: Words
 
@@ -1050,6 +1066,21 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                                         <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                                     </button>
                                 </ArkToast>
+                            ) : null}
+
+                            {liveHunt && !replay && selected?.id !== liveHunt.id ? (
+                                <button
+                                    type="button"
+                                    onClick={() => sceneRef.current?.select(liveHunt.id)}
+                                    aria-label={arkHuntLine(words, liveHunt, "label")}
+                                    className={`${ARK_GLASS} pointer-events-auto inline-flex h-9 max-w-full items-center gap-2 rounded-full px-3 text-[12.5px] font-semibold text-white/85 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#c8fa63] md:h-8`}
+                                >
+                                    <span className="relative flex h-2 w-2 shrink-0" aria-hidden="true">
+                                        <span className="absolute inline-flex h-full w-full rounded-full bg-[#f2b25c] opacity-60 motion-safe:animate-ping" />
+                                        <span className="relative inline-flex h-2 w-2 rounded-full bg-[#f2b25c]" />
+                                    </span>
+                                    <span className="min-w-0 truncate">{arkHuntLine(words, liveHunt, "line")}</span>
+                                </button>
                             ) : null}
 
                             {arrival && !selected && !herd && !replay && !summary ? (

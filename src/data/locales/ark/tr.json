@@ -344,6 +344,8 @@
             "grazing": "otluyor",
             "browsing": "yaprak yiyor",
             "hunting": "avlanıyor",
+            "eating": "avını yiyor",
+            "scavenging": "leş yiyor",
             "waiting": "pusuda av bekliyor",
             "prowling": "sinsice dolaşıyor",
             "fishing": "balık tutuyor",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} yıkanıyor",
                 "feeding": "{aAnimal} için yemek zamanı"
             }
+        },
+        "hunt": {
+            "hunting": "Bir av sürüyor · {animal}",
+            "eating": "Bir av yemeği sürüyor · {animal}",
+            "label": "{line}. Göster"
         },
         "sound": {
             "label": "Ses",

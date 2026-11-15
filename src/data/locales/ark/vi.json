@@ -344,6 +344,8 @@
             "grazing": "gặm cỏ",
             "browsing": "ăn lá cây",
             "hunting": "săn mồi",
+            "eating": "ăn con mồi",
+            "scavenging": "ăn xác",
             "waiting": "nằm chờ con mồi",
             "prowling": "rình mồi",
             "fishing": "bắt cá",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} đang tắm",
                 "feeding": "{aAnimal} đến giờ được cho ăn"
             }
+        },
+        "hunt": {
+            "hunting": "Một cuộc săn đang diễn ra · {animal}",
+            "eating": "Một bữa ăn đang diễn ra · {animal}",
+            "label": "{line}. Cho tôi xem"
         },
         "sound": {
             "label": "Âm thanh",

@@ -344,6 +344,8 @@
             "grazing": "spása trávu",
             "browsing": "obhrýza lístie",
             "hunting": "loví",
+            "eating": "žerie svoju korisť",
+            "scavenging": "žerie zdochlinu",
             "waiting": "číha na korisť",
             "prowling": "sliedi okolo",
             "fishing": "loví ryby",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} sa kúpe",
                 "feeding": "Čas kŕmenia: {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "Prebieha lov · {animal}",
+            "eating": "Prebieha hostina · {animal}",
+            "label": "{line}. Ukázať"
         },
         "sound": {
             "label": "Zvuk",

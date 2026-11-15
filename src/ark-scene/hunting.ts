@@ -105,6 +105,25 @@ export class HuntingLayer {
         return this.on(animal, home, from, k) || this.on(animal, home, from, k + 1);
     }
 
+    /** When its forays began (epoch s; the newest hunt under way is the marker's), or null when it is not hunting now. */
+    since(animal: ArkAnimal, epochSeconds: number): number | null {
+        const st = this.state;
+        const from = st?.from.get(animal.id);
+        if (!st || from === undefined) return null;
+        const home = this.home(animal);
+        if (!home) return null;
+        let k = stepIndex((epochSeconds * 1000 - st.startedAtMs) / ARK_DAY_MS);
+        if (!this.on(animal, home, from, k)) return null;
+        // Back to its first step on (a day at most).
+        for (let n = 0; n < STEPS_PER_ARK_DAY && this.on(animal, home, from, k - 1); n++) k--;
+        return (st.startedAtMs + (k / STEPS_PER_ARK_DAY) * ARK_DAY_MS) / 1000;
+    }
+
+    /** The predators the read names (their ids). */
+    predators(): string[] {
+        return this.state ? Array.from(this.state.from.keys()) : [];
+    }
+
     /**
      * Its pose now when it hunts (or is on its way into or out of a hunt), else null (its schedule's). `schedule` is its
      * schedule's pose at this moment; `heightAt` the ground's height.

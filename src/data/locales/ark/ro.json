@@ -344,6 +344,8 @@
             "grazing": "paște",
             "browsing": "mănâncă frunze",
             "hunting": "vânează",
+            "eating": "își mănâncă prada",
+            "scavenging": "se hrănește cu stârvuri",
             "waiting": "pândește o pradă",
             "prowling": "dă târcoale în căutarea prăzii",
             "fishing": "pescuiește",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} face baie",
                 "feeding": "Ora mesei pentru {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "O vânătoare e în desfășurare · {animal}",
+            "eating": "O masă e în desfășurare · {animal}",
+            "label": "{line}. Arată-mi"
         },
         "sound": {
             "label": "Sunet",

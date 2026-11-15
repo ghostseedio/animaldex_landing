@@ -412,6 +412,8 @@
  * {type: "ark:progress", stage, progress} as the load goes (first once a frame of the loading screen is drawn; stage "data" | "world" |
  * "animals" | "done", progress 0…1 from real steps only: src/lib/ark-loading.ts),
  * and {type: "ark:tier", tier, lite} through webkit.messageHandlers.ark,
+ * (Realistic kills: the hunting read's meals are acted in the world and the newest hunt or meal under way shows as a chip
+ * drawn in the page, top start under --ark-inset-top like the sound button; a tap flies there. No host message.)
  * window.AndroidArk.postMessage, or the parent frame.
  */
 window.AnimalDexArkStart = function () {
@@ -432,6 +434,8 @@ window.AnimalDexArkStart = function () {
   var scene = null;
   // Encounter hunting's latest read (null: the pool, or not read yet).
   var hunting = null;
+  // The hunt marker chip (realistic kills), once the scene is up.
+  var huntMarker = null;
   // The named founders and shared stories beside the snapshot (the same answer's; none while founder_names is off).
   var founders = null;
   function foundersFrom(body, raw) {
@@ -702,6 +706,9 @@ window.AnimalDexArkStart = function () {
     for (var held in runtimeHeld) scene.receive(runtimeHeld[held]);
     runtimeHeld = {};
     if (hunting && scene.setHunting) scene.setHunting(hunting);
+    // Realistic kills: the meals under way (the read's, with the event log's records) and the marker chip, in the page.
+    if (hunting && Ark.arkSyncMeals) Ark.arkSyncMeals(scene, hunting, {snapshot: snapshot});
+    if (Ark.mountArkHuntMarker && !huntMarker) huntMarker = Ark.mountArkHuntMarker(function () { return scene; }, function () { return words; });
     if ((hudLog || hudBars) && Ark.mountArkLiveHud) {
       hud = Ark.mountArkLiveHud(document.getElementById("ark"), {
         scene: function () { return scene; },
@@ -816,6 +823,7 @@ window.AnimalDexArkStart = function () {
           Ark.fetchArkHunting().then(function (read) {
             hunting = read;
             if (scene && scene.setHunting) scene.setHunting(read);
+            if (scene && Ark.arkSyncMeals) Ark.arkSyncMeals(scene, read, {});
           });
         }
       })

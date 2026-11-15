@@ -344,6 +344,8 @@
             "grazing": "laiduntaa",
             "browsing": "syö lehtiä",
             "hunting": "saalistaa",
+            "eating": "syö saalistaan",
+            "scavenging": "syö raatoa",
             "waiting": "väijyy saalista",
             "prowling": "hiiviskelee",
             "fishing": "kalastaa",
@@ -391,6 +393,11 @@
                 "bathing": "{aAnimal} kylpee",
                 "feeding": "Ruokinta-aika: {aAnimal}"
             }
+        },
+        "hunt": {
+            "hunting": "Saalistus on käynnissä · {animal}",
+            "eating": "Ateria on käynnissä · {animal}",
+            "label": "{line}. Näytä"
         },
         "sound": {
             "label": "Ääni",
