@@ -533,6 +533,11 @@
             "notAboard": "Şu an gemide hiç {animal} yok.",
             "bringBack": "Geri getirmek için birini yakala",
             "listLabel": "Ark'tan kaybolan türler, en yeni önce"
+        },
+        "photo": {
+            "alt": "Bu {species} hayvanını gemiye getiren fotoğraf",
+            "open": "Fotoğrafı büyük gör",
+            "close": "Fotoğrafı kapat"
         }
     },
     "talkPage": {

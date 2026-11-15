@@ -26,6 +26,10 @@ import {fixtureArkStory} from "@/lib/ark-story";
 import {ARK_NO_FOUNDERS, decodeArkFounders, type ArkFounders} from "@/lib/ark-founders";
 import {ArkBringerNames, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
+import {arkSelectionExtras} from "@/lib/ark-selection-extras";
+import {decodeArkCapturePhoto, type ArkCapturePhoto} from "@/lib/ark-capture-photo";
+import {postArkOpenProfile} from "@/lib/ark-profile-link";
+import {useParams} from "next/navigation";
 import ArkAgeAsk from "@/components/ark/ark-age-ask";
 import {ARK_SOUND_STORAGE_KEY, initialSoundPreference, storedSoundPreference} from "@/lib/ark-sound";
 import ArkLoaderCard, {type ArkLoaderNewest} from "@/app/[locale]/(composited)/ark/ark-loader";
@@ -214,6 +218,11 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     const sceneOf = useCallback(() => sceneRef.current, []);
     const [snapshot, setSnapshot] = useState<ArkSnapshot | null>(initial);
     const [founders, setFounders] = useState<ArkFounders>(initialFounders);
+    /** The founders now, for the box over the selected animal's bars ("Brought by @handle"), which the scene asks for. */
+    const foundersRef = useRef(founders);
+    foundersRef.current = founders;
+    /** The site's locale for its links (`/id/u/…`), not the Ark's language (`?lang=` may be any app language). */
+    const siteLocale = useParams<{locale?: string}>()?.locale ?? null;
     const snapshotRef = useRef(snapshot);
     const hasSnapshot = Boolean(snapshot);
     /** The client's read of the live Ark failed (or the Ark is not there yet): "opens soon". */
@@ -251,6 +260,9 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     const [then, setThen] = useState<ArkPopulationThen | null>(null);
     const [life, setLife] = useState<LifeState | null>(null);
     const livesRef = useRef(new Map<string, ArkLife | null>());
+    /** The tapped animal's capture photo (`/api/ark/photo/<id>`, docs/ark/CAPTURE-MEDIA-CONTRACT.md): once per animal per visit. */
+    const [photo, setPhoto] = useState<{id: string; photo: ArkCapturePhoto | null} | null>(null);
+    const photosRef = useRef(new Map<string, ArkCapturePhoto | null>());
     const [following, setFollowing] = useState(false);
     const [storyOpen, setStoryOpen] = useState(false);
     const [replay, setReplay] = useState<ReplayState | null>(null);
@@ -395,6 +407,16 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                         onSelect,
                         onBehaviour,
                         onRest,
+                        // Over the selected animal's bars: "Brought by @handle" when the server names its founder, "Born on
+                        // the Ark", its Talk link (docs/ark/CAPTURE-MEDIA-CONTRACT.md). The links navigate as links do; inside
+                        // the apps' web view a tapped @handle tells the app instead (as the card's does).
+                        selectionExtras: (animal) => arkSelectionExtras({
+                            animal,
+                            founder: foundersRef.current.animals[animal.id]?.brought_by ?? null,
+                            words: {broughtBy: words.founders.card.broughtBy, bornAboard: words.life.bornAboard, talkA: talkTitles.a, talkAn: talkTitles.an},
+                            locale: siteLocale
+                        }),
+                        onSelectionLink: (link) => link.kind === "profile" ? postArkOpenProfile(window as unknown as Parameters<typeof postArkOpenProfile>[0], link.handle) : false,
                         onHerd: setHerd,
                         herdBadge: (count) => fillArkWords(words.herd.badge, {count: count.toLocaleString(locale)}),
                         canvasLabel: words.a11y.scene,
@@ -562,6 +584,29 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
             });
         return () => controller.abort();
     }, [selected, fixture, fixtureLife, publicStory]);
+
+    // MARK: The photo that brought it aboard (a named founder's public capture; the server decides, or null).
+
+    useEffect(() => {
+        if (!selected || selected.origin === "born") return;
+        const id = selected.id;
+        const known = photosRef.current;
+        if (known.has(id)) {
+            setPhoto({id, photo: known.get(id) ?? null});
+            return;
+        }
+        const controller = new AbortController();
+        fetch(`/api/ark/photo/${encodeURIComponent(id)}`, {signal: controller.signal})
+            .then((response) => (response.ok ? response.json() : {photo: null}))
+            .then((body: {photo?: unknown}) => {
+                // The route decodes it already; decoded again here, as nothing from the network is trusted.
+                const told = decodeArkCapturePhoto(body.photo ? {...(body.photo as object), animal_id: id} : null, id);
+                known.set(id, told);
+                setPhoto({id, photo: told});
+            })
+            .catch(() => undefined);
+        return () => controller.abort();
+    }, [selected]);
 
     // What a screen reader hears when a card opens (A18).
     useEffect(() => {
@@ -1101,6 +1146,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                         arrived={dateFormat.format(new Date(selected.arrived_at))}
                         life={life?.id === selected.id ? life : null}
                         founders={founders.animals[selected.id] ?? null}
+                        photo={photo?.id === selected.id ? photo.photo : null}
                         arkDay={snapshot?.ark_day ?? null}
                         voyageStart={snapshot?.voyage.started_at ?? null}
                         scene={sceneOf}

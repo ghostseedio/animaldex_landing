@@ -533,6 +533,11 @@
             "notAboard": "{animal}: niciunul la bord acum.",
             "bringBack": "Prinde unul ca să-l aduci înapoi",
             "listLabel": "Specii pierdute din Ark, cele mai noi întâi"
+        },
+        "photo": {
+            "alt": "Fotografia care a adus acest {species} la bord",
+            "open": "Vezi fotografia mai mare",
+            "close": "Închide fotografia"
         }
     },
     "talkPage": {

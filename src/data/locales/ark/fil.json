@@ -533,6 +533,11 @@
             "notAboard": "Walang {animal} na nakasakay ngayon.",
             "bringBack": "Manghuli ng isa para ibalik ito",
             "listLabel": "Mga uring nawala sa Ark, pinakabago muna"
+        },
+        "photo": {
+            "alt": "Larawang nagdala sa {species} na ito sa barko",
+            "open": "Tingnan nang mas malaki ang larawan",
+            "close": "Isara ang larawan"
         }
     },
     "talkPage": {

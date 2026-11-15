@@ -431,6 +431,8 @@ export type ArkWords = {
     age: ArkAgeAskWords;
     /** Lost from the Ark (`lib/ark-extinct.ts`, read through `arkLostWords`). Optional: an older bundle lacks them. */
     lost?: Partial<ArkLostWords>;
+    /** The photo that brought it aboard, on the tap card (docs/ark/CAPTURE-MEDIA-CONTRACT.md): its alt text ({species}), open and close. */
+    photo: {alt: string; open: string; close: string};
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */

@@ -533,6 +533,11 @@
             "notAboard": "Ingen {animal} är ombord nu.",
             "bringBack": "Fånga en för att ta tillbaka den",
             "listLabel": "Arter förlorade från Ark, nyaste först"
+        },
+        "photo": {
+            "alt": "Fotot som tog den här {species} ombord",
+            "open": "Se fotot större",
+            "close": "Stäng fotot"
         }
     },
     "talkPage": {

@@ -533,6 +533,11 @@
             "notAboard": "Ahora no hay ningún ejemplar de {animal} a bordo.",
             "bringBack": "Captura uno para traerlo de vuelta",
             "listLabel": "Especies perdidas del Ark, las más recientes primero"
+        },
+        "photo": {
+            "alt": "Foto que trajo a este {species} a bordo",
+            "open": "Ver la foto más grande",
+            "close": "Cerrar la foto"
         }
     },
     "talkPage": {

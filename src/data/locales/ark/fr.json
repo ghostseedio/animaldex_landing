@@ -533,6 +533,11 @@
             "notAboard": "{animal} : aucun à bord en ce moment.",
             "bringBack": "Capturez-en un pour le faire revenir",
             "listLabel": "Espèces disparues de l'Ark, les plus récentes d'abord"
+        },
+        "photo": {
+            "alt": "Photo qui a fait monter ce {species} à bord",
+            "open": "Voir la photo en plus grand",
+            "close": "Fermer la photo"
         }
     },
     "talkPage": {

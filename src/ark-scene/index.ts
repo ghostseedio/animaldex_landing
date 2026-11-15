@@ -153,6 +153,7 @@ import {
     type ArkRegion,
     type ArkSceneHandle,
     type ArkSceneOptions,
+    type ArkSelectionExtras,
     type ArkSceneStats,
     type ArkSnapshot,
     type ArkTalking,
@@ -2082,6 +2083,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return true;
     };
     /** Its status without its plans (what an animal off the schedule gets): what a card shows while they are worked out. */
+    let toldExtras = "";
+    const selectionExtrasOf = (animal: ArkAnimal): ArkSelectionExtras | null => {
+        try {
+            return options.selectionExtras?.(animal) ?? null;
+        } catch {
+            return null;
+        }
+    };
     const lightStatus = (entry: Entry): ArkAnimalStatus => {
         statusLight = true;
         try {
@@ -2118,10 +2127,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         statusAt = now;
         selectedStatus = statusOf(entry);
         const signature = arkStatusSignature(selectedStatus);
+        // Who brought it and its Talk link (the host's, from its founders read, which can land after the selection).
+        const extras = selectionExtrasOf(entry.animal);
+        const extrasSignature = extras ? JSON.stringify(extras) : "";
+        if (signature === toldStatus && extrasSignature === toldExtras) return;
+        toldExtras = extrasSignature;
+        // (Its species' name over them, as its card has it: never a nickname. Under it, "Brought by @handle" only when the
+        // server names its founder: docs/ark/CAPTURE-MEDIA-CONTRACT.md section 1.)
+        (selectionBars ??= new ArkSelectionBars(labelLayer, reducedMotion, options.onSelectionLink ?? null))
+            .set(selectedStatus.bars, entry.animal.name, extras, {animalId: entry.animal.id, slug: entry.animal.model_slug});
         if (signature === toldStatus) return;
         toldStatus = signature;
-        // (Its species' name over them, as its card has it: never a nickname, never its founder's.)
-        (selectionBars ??= new ArkSelectionBars(labelLayer, reducedMotion)).set(selectedStatus.bars, entry.animal.name);
         options.onStatus?.(entry.animal.id, selectedStatus);
     };
     const barsPoint = new Vector3();

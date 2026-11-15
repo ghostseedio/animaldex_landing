@@ -533,6 +533,11 @@
             "notAboard": "{animal}: most egy sincs a fedélzeten.",
             "bringBack": "Fogj egyet, hogy visszahozd",
             "listLabel": "Az Arkról eltűnt fajok, a legújabb elöl"
+        },
+        "photo": {
+            "alt": "A fotó, amellyel ez az állat ({species}) a fedélzetre került",
+            "open": "Fotó nagyobb méretben",
+            "close": "Fotó bezárása"
         }
     },
     "talkPage": {

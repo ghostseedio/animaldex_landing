@@ -533,6 +533,11 @@
             "notAboard": "Gerade ist kein Tier der Art {animal} an Bord.",
             "bringBack": "Fang eins, um es zurückzuholen",
             "listLabel": "Aus der Ark verschwundene Arten, neueste zuerst"
+        },
+        "photo": {
+            "alt": "Foto, mit dem dieses Tier ({species}) an Bord kam",
+            "open": "Foto größer ansehen",
+            "close": "Foto schließen"
         }
     },
     "talkPage": {

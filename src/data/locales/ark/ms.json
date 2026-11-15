@@ -533,6 +533,11 @@
             "notAboard": "Tiada {animal} di atas kapal sekarang.",
             "bringBack": "Tangkap satu untuk membawanya kembali",
             "listLabel": "Spesies yang hilang dari Ark, terbaharu dahulu"
+        },
+        "photo": {
+            "alt": "Foto yang membawa {species} ini naik ke kapal",
+            "open": "Lihat foto lebih besar",
+            "close": "Tutup foto"
         }
     },
     "talkPage": {

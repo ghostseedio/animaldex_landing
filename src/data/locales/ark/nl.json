@@ -533,6 +533,11 @@
             "notAboard": "Er is nu geen {animal} aan boord.",
             "bringBack": "Vang er één om hem terug te brengen",
             "listLabel": "Soorten verdwenen uit de Ark, nieuwste eerst"
+        },
+        "photo": {
+            "alt": "Foto waarmee deze {species} aan boord kwam",
+            "open": "Bekijk de foto groter",
+            "close": "Foto sluiten"
         }
     },
     "talkPage": {

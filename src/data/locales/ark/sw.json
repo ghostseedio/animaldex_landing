@@ -533,6 +533,11 @@
             "notAboard": "Hakuna {animal} ndani sasa.",
             "bringBack": "Mkamate mmoja umrudishe",
             "listLabel": "Spishi zilizopotea kutoka Ark, mpya kwanza"
+        },
+        "photo": {
+            "alt": "Picha iliyomleta {species} huyu melini",
+            "open": "Tazama picha kubwa zaidi",
+            "close": "Funga picha"
         }
     },
     "talkPage": {

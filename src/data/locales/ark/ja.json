@@ -533,6 +533,11 @@
             "notAboard": "{animal}は今は乗船していません。",
             "bringBack": "捕まえて連れ戻そう",
             "listLabel": "Arkから消えた種、新しい順"
+        },
+        "photo": {
+            "alt": "この{species}を船に乗せた写真",
+            "open": "写真を大きく見る",
+            "close": "写真を閉じる"
         }
     },
     "talkPage": {

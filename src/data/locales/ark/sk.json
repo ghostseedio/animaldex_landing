@@ -533,6 +533,11 @@
             "notAboard": "{animal}: teraz nie na palube.",
             "bringBack": "Ulovte jedno a vráťte ho",
             "listLabel": "Druhy stratené z Ark, najnovšie prvé"
+        },
+        "photo": {
+            "alt": "Fotka, ktorá priviedla toto zviera ({species}) na palubu",
+            "open": "Zobraziť fotku väčšiu",
+            "close": "Zavrieť fotku"
         }
     },
     "talkPage": {

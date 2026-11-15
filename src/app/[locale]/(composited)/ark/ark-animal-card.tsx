@@ -1,6 +1,7 @@
 "use client";
 
 import React, {useEffect, useMemo, useRef, useState} from "react";
+import {createPortal} from "react-dom";
 import Link from "@/app/[locale]/_components/link";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
@@ -14,6 +15,7 @@ import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {arkLineageHasAny, arkLineageLine, arkThriveWords} from "@/lib/ark-thrive";
 import {arkRecordNoteFromLife, arkStatusSignature, arkStatusText, type ArkAnimalStatus, type ArkRecordNote} from "@/lib/ark-animal-status";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
+import {arkPhotoAspect, type ArkCapturePhoto} from "@/lib/ark-capture-photo";
 
 /**
  * The tapped animal's card along the world's foot (decision 240, owner 2026-11-12: "should be showing all the animals
@@ -142,6 +144,8 @@ type CardProps = {
     life: ArkCardLife | null;
     /** This animal's founders from the snapshot (shown before its life story reads). */
     founders: ArkAnimalFounders | null;
+    /** The photo that brought it aboard (`/api/ark/photo/<id>`), or null: no block at all. */
+    photo?: ArkCapturePhoto | null;
     arkDay: number | null;
     /** The voyage's start (the snapshot's), for the Ark day of a meal its life story names. */
     voyageStart: string | null;
@@ -161,7 +165,7 @@ type CardProps = {
     share: {localePath: string; text: string};
 };
 
-export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, arkDay, voyageStart, scene, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share}: CardProps) {
+export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, photo = null, arkDay, voyageStart, scene, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share}: CardProps) {
     arkPerfCountRender();
     const life = state?.life ?? null;
     const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
@@ -269,6 +273,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             )}
                         </p>
                     </div>
+                    {photo ? <ArkCapturePhotoThumb key={animal.id} photo={photo} species={animal.name} words={words} /> : null}
                     <div className="hidden shrink-0 items-center gap-2 md:flex">{moves}</div>
                     <button type="button" onClick={onClose} aria-label={words.close} className="-mr-1 -mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
                         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -312,6 +317,67 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                 <div className="mt-2 flex items-center gap-2 md:hidden">{moves}</div>
             </div>
         </div>
+    );
+}
+
+/**
+ * The photo that brought it aboard (docs/ark/CAPTURE-MEDIA-CONTRACT.md section 2.4): a small 640 px derivative beside who
+ * brought it, lazy-loaded; a tap opens the 1200 px one over the page (Escape, the close button or the backdrop closes
+ * it). The server shows it only for a named founder's public capture. A photo that fails to load draws nothing.
+ */
+function ArkCapturePhotoThumb({photo, species, words}: {photo: ArkCapturePhoto; species: string; words: ArkWords}) {
+    const [failed, setFailed] = useState(false);
+    const [open, setOpen] = useState(false);
+    const closeRef = useRef<HTMLButtonElement | null>(null);
+    const openerRef = useRef<HTMLButtonElement | null>(null);
+    const alt = fillArkWords(words.photo.alt, {species});
+    useEffect(() => {
+        if (!open) return;
+        closeRef.current?.focus({preventScroll: true});
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key !== "Escape") return;
+            event.stopPropagation();
+            setOpen(false);
+        };
+        window.addEventListener("keydown", onKey, true);
+        return () => window.removeEventListener("keydown", onKey, true);
+    }, [open]);
+    const close = () => {
+        setOpen(false);
+        openerRef.current?.focus({preventScroll: true});
+    };
+    if (failed) return null;
+    const aspect = arkPhotoAspect(photo.thumb);
+    return (
+        <>
+            <button
+                ref={openerRef}
+                type="button"
+                onClick={() => setOpen(true)}
+                aria-label={words.photo.open}
+                title={words.photo.open}
+                data-testid="ark-card-photo"
+                className="rows-in relative h-11 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-white/[0.06] shadow-[0_2px_10px_rgba(0,0,0,0.3)] transition-transform duration-200 hover:scale-[1.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none md:h-12"
+                style={{aspectRatio: String(aspect)}}
+            >
+                {/* eslint-disable-next-line @next/next/no-img-element -- a signed storage redirect, not an optimisable asset */}
+                <img src={photo.thumb.path} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(true)} className="h-full w-full object-cover" width={photo.thumb.width ?? undefined} height={photo.thumb.height ?? undefined} />
+            </button>
+            {/* (On the page's body: the card's backdrop blur would make it the overlay's box.) */}
+            {open && typeof document !== "undefined" ? createPortal(
+                <div role="dialog" aria-modal="true" aria-label={alt} data-testid="ark-card-photo-large" className="rows-in fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={close}>
+                    <figure className="relative max-h-full max-w-[min(64rem,100%)]" onClick={(event) => event.stopPropagation()}>
+                        {/* eslint-disable-next-line @next/next/no-img-element -- a signed storage redirect */}
+                        <img src={photo.large.path} alt={alt} decoding="async" className="max-h-[82svh] w-auto max-w-full rounded-xl object-contain shadow-2xl" width={photo.large.width ?? undefined} height={photo.large.height ?? undefined} />
+                        <figcaption className="mt-2 text-center text-[12.5px] text-ink-200">{alt}</figcaption>
+                        <button ref={closeRef} type="button" onClick={close} aria-label={words.photo.close} className="absolute -right-2 -top-2 flex h-9 w-9 items-center justify-center rounded-full bg-canvas-950/90 text-ink-100 ring-1 ring-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
+                            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
+                        </button>
+                    </figure>
+                </div>,
+                document.body
+            ) : null}
+        </>
     );
 }
 

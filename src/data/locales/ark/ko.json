@@ -533,6 +533,11 @@
             "notAboard": "지금은 탑승한 {animal}이(가) 없어요.",
             "bringBack": "한 마리를 잡아 다시 데려오세요",
             "listLabel": "Ark에서 사라진 종, 최신순"
+        },
+        "photo": {
+            "alt": "이 {species}을(를) 배에 태운 사진",
+            "open": "사진 크게 보기",
+            "close": "사진 닫기"
         }
     },
     "talkPage": {

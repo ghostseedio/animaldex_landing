@@ -533,6 +533,11 @@
             "notAboard": "Ara no hi ha cap exemplar de {animal} a bord.",
             "bringBack": "Captura'n un per fer-lo tornar",
             "listLabel": "Espècies perdudes de l'Ark, les més recents primer"
+        },
+        "photo": {
+            "alt": "Foto que va portar aquest {species} a bord",
+            "open": "Mira la foto més gran",
+            "close": "Tanca la foto"
         }
     },
     "talkPage": {

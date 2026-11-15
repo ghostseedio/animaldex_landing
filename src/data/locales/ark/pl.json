@@ -533,6 +533,11 @@
             "notAboard": "{animal}: teraz nie ma żadnego na pokładzie.",
             "bringBack": "Złap jednego, by go przywrócić",
             "listLabel": "Gatunki utracone z Ark, najnowsze najpierw"
+        },
+        "photo": {
+            "alt": "Zdjęcie, dzięki któremu to zwierzę ({species}) trafiło na pokład",
+            "open": "Zobacz większe zdjęcie",
+            "close": "Zamknij zdjęcie"
         }
     },
     "talkPage": {

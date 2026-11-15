@@ -4714,6 +4714,11 @@
       "notAboard": "No {animal} is aboard now.",
       "bringBack": "Catch one to bring it back",
       "listLabel": "Species lost from the Ark, newest first"
+    },
+    "photo": {
+      "alt": "Photo that brought this {species} aboard",
+      "open": "See the photo larger",
+      "close": "Close the photo"
     }
   },
   "seo": {

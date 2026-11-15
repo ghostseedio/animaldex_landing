@@ -533,6 +533,11 @@
             "notAboard": "{animal}: trenutačno nijedna na brodu.",
             "bringBack": "Ulovite jednu da je vratite",
             "listLabel": "Vrste nestale s Arka, najnovije prve"
+        },
+        "photo": {
+            "alt": "Fotografija koja je ovu životinju ({species}) dovela na brod",
+            "open": "Pogledaj veću fotografiju",
+            "close": "Zatvori fotografiju"
         }
     },
     "talkPage": {

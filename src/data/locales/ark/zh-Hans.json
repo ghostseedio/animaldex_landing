@@ -533,6 +533,11 @@
             "notAboard": "船上现在没有{animal}。",
             "bringBack": "捉一只把它带回来",
             "listLabel": "从 Ark 消失的物种，最新的在前"
+        },
+        "photo": {
+            "alt": "把这只{species}带上船的照片",
+            "open": "查看大图",
+            "close": "关闭照片"
         }
     },
     "talkPage": {

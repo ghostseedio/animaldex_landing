@@ -533,6 +533,11 @@
             "notAboard": "{animal} ei ole nyt kyydissä.",
             "bringBack": "Nappaa yksi ja tuo se takaisin",
             "listLabel": "Arkista kadonneet lajit, uusimmat ensin"
+        },
+        "photo": {
+            "alt": "Kuva, joka toi tämän eläimen ({species}) laivaan",
+            "open": "Näytä kuva suurempana",
+            "close": "Sulje kuva"
         }
     },
     "talkPage": {

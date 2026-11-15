@@ -533,6 +533,11 @@
             "notAboard": "Ingen {animal} er om bord nå.",
             "bringBack": "Fang en for å bringe den tilbake",
             "listLabel": "Arter borte fra Ark, nyeste først"
+        },
+        "photo": {
+            "alt": "Bildet som brakte denne {species} om bord",
+            "open": "Se bildet større",
+            "close": "Lukk bildet"
         }
     },
     "talkPage": {

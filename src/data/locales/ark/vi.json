@@ -533,6 +533,11 @@
             "notAboard": "Hiện không có con {animal} nào trên tàu.",
             "bringBack": "Bắt một con để đưa nó trở lại",
             "listLabel": "Các loài đã mất khỏi Ark, mới nhất trước"
+        },
+        "photo": {
+            "alt": "Bức ảnh đã đưa {species} này lên tàu",
+            "open": "Xem ảnh lớn hơn",
+            "close": "Đóng ảnh"
         }
     },
     "talkPage": {
