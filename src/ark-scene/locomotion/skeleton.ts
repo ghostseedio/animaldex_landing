@@ -29,7 +29,7 @@ export type RawSkeleton = {
 };
 
 const SPRAWLING: ReadonlySet<string> = new Set(["insect", "arachnid", "crustacean", "lizard", "amphibian", "turtle"]);
-const LEG = /^leg(\d+)([LR])_(upper|lower|foot)$/;
+const LEG = /^leg(\d+)([LR])_(upper|shank|lower|foot)$/;
 const PLANS: ReadonlySet<string> = new Set(["quadruped", "primate", "walking_bird", "flying_bird", "flightless_bird", "bat", "flying_insect", "insect", "arachnid", "crustacean", "amphibian", "lizard", "turtle", "legless", "fish", "cephalopod_jelly", "other"]);
 
 const v3 = (m: Matrix4): [number, number, number] => {
@@ -79,14 +79,14 @@ export function buildLocoRig(raw: RawSkeleton): LocoRig {
     }
     if (!count) minX = minY = minZ = maxX = maxY = maxZ = 0;
     const height = maxY - minY;
-    // Legs: leg{n}{L|R}_{upper,lower,foot}.
-    const chains = new Map<string, {n: number; side: "L" | "R"; upper?: number; lower?: number; foot?: number}>();
+    // Legs: leg{n}{L|R}_{upper,lower,foot}, and a lying rig's `shank` between upper and lower (ark-rig v4).
+    const chains = new Map<string, {n: number; side: "L" | "R"; upper?: number; shank?: number; lower?: number; foot?: number}>();
     raw.bones.forEach((name, i) => {
         const m = LEG.exec(name);
         if (!m) return;
         const key = `${m[1]}${m[2]}`;
         const chain = chains.get(key) ?? {n: Number(m[1]), side: m[2] as "L" | "R"};
-        chain[m[3] as "upper" | "lower" | "foot"] = i;
+        chain[m[3] as "upper" | "shank" | "lower" | "foot"] = i;
         chains.set(key, chain);
     });
     const complete = Array.from(chains.values()).filter((c) => c.upper !== undefined && c.lower !== undefined && c.foot !== undefined);
@@ -105,6 +105,7 @@ export function buildLocoRig(raw: RawSkeleton): LocoRig {
         return {
             key: `${c.side}${pair + 1}`,
             upper: c.upper!,
+            ...(c.shank !== undefined ? {shank: c.shank} : {}),
             lower: c.lower!,
             foot: c.foot!,
             pair,

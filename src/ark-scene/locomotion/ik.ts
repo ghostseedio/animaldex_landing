@@ -52,7 +52,8 @@ export type LegSolve = {
 
 /**
  * Put the leg's ankle at `target` (mesh space): bend the knee to the length needed, point the chain at the target
- * from the hip, then roll it about that line so the knee faces its pole. Changes `world` for upper, lower and foot.
+ * from the hip, then roll it about that line so the knee faces its pole. Changes `world` for upper, lower and foot (and a
+ * lying rig's shank, which turns with upper).
  * `softness`: the share of full stretch kept back (a leg never snaps straight).
  */
 export function solveLeg(leg: LocoLeg, world: Matrix4[], target: Vector3, pole: Vector3, softness = 0.015): LegSolve {
@@ -84,6 +85,7 @@ export function solveLeg(leg: LocoLeg, world: Matrix4[], target: Vector3, pole: 
     w.subVectors(target, A).normalize();
     q.setFromUnitVectors(AC, w);
     rotateAbout(world[leg.upper], q, A);
+    if (leg.shank !== undefined) rotateAbout(world[leg.shank], q, A);
     rotateAbout(world[leg.lower], q, A);
     rotateAbout(world[leg.foot], q, A);
     // 3. Roll about the hip-to-target line so the knee faces its pole.
@@ -97,6 +99,7 @@ export function solveLeg(leg: LocoLeg, world: Matrix4[], target: Vector3, pole: 
         const angle = Math.atan2(AB.crossVectors(u, p).dot(w), clamp(u.dot(p), -1, 1));
         q.setFromAxisAngle(w, angle);
         rotateAbout(world[leg.upper], q, A);
+        if (leg.shank !== undefined) rotateAbout(world[leg.shank], q, A);
         rotateAbout(world[leg.lower], q, A);
         rotateAbout(world[leg.foot], q, A);
     }

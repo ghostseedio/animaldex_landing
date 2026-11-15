@@ -85,6 +85,9 @@ export type LocoBone = {
 export type LocoLeg = {
     key: string;
     upper: number;
+    /** The stifle bone (ark-rig v4 lying rigs: thigh, shank, lower, foot), when the rig has one: it moves rigidly with
+     * `upper` in every walking clip, so the leg solver turns it with `upper`. */
+    shank?: number;
     lower: number;
     foot: number;
     /** 0 = the front pair, counting back. */
