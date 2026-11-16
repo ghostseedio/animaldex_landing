@@ -195,11 +195,19 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
             x1 = Math.max(x1, p.x + margin);
             z1 = Math.max(z1, p.z + margin);
         }
-        for (let x = Math.floor(x0); x <= x1; x += RASTER) {
-            for (let z = Math.floor(z0); z <= z1; z += RASTER) {
-                if (!inPoly(poly, x + 0.5, z + 0.5) && !(margin > 0 && polyEdgeDistance(poly, x + 0.5, z + 0.5) < margin)) continue;
-                const k = cellOf(x + 0.5, z + 0.5);
-                if (k >= 0) solid[k] = 1;
+        // (Each raster cell by its own middle. Lane kestrel: the cells start at the town's half (237.6 m), not on whole
+        // metres, and the old loop tested whole metres plus a half, 0.1 m into a cell that reached 0.9 m past it: strips
+        // up to 0.4 m inside a wall on a building's far sides were never marked.)
+        const i0 = Math.max(Math.floor((x0 + half) / RASTER), 0);
+        const i1 = Math.min(Math.floor((x1 + half) / RASTER), n - 1);
+        const j0 = Math.max(Math.floor((z0 + half) / RASTER), 0);
+        const j1 = Math.min(Math.floor((z1 + half) / RASTER), n - 1);
+        for (let i = i0; i <= i1; i++) {
+            const x = -half + (i + 0.5) * RASTER;
+            for (let j = j0; j <= j1; j++) {
+                const z = -half + (j + 0.5) * RASTER;
+                if (!inPoly(poly, x, z) && !(margin > 0 && polyEdgeDistance(poly, x, z) < margin)) continue;
+                solid[j * n + i] = 1;
             }
         }
     };
@@ -369,10 +377,16 @@ export function townWorldSampler(open: readonly string[], origin: {x: number; z:
             return out;
         },
         blocked: (x, z, clearance) => {
+            // (The square of `clearance` round the point, the point itself among it, sampled no further apart than the
+            // raster's cells, so no cell it overlaps goes unread. Lane kestrel: the old steps (one of `max(r, 0.5)`) read
+            // only the square's corner for a clearance under half a metre, never the point: the walk grid's cell middles
+            // (read at 0.2 m) stood 0.3 m inside a terrace's wall walkable, and a kestrel hover-hunted on its floor.)
             const r = Math.max(clearance, 0);
-            for (let dx = -r; dx <= r + 1e-9; dx += Math.max(r, 0.5)) {
-                for (let dz = -r; dz <= r + 1e-9; dz += Math.max(r, 0.5)) {
-                    const k = cellOf(x - ox + dx, z - oz + dz);
+            const n = r > 0 ? Math.max(2, Math.ceil((2 * r) / RASTER)) : 0;
+            for (let a = 0; a <= n; a++) {
+                const dx = n ? -r + (2 * r * a) / n : 0;
+                for (let b = 0; b <= n; b++) {
+                    const k = cellOf(x - ox + dx, z - oz + (n ? -r + (2 * r * b) / n : 0));
                     if (k >= 0 && solid[k]) return true;
                 }
             }

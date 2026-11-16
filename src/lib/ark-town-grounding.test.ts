@@ -16,6 +16,8 @@ import {townHeight} from "@/ark-scene/islands/town/ground";
 import {launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
 import {aquariumTankOf, aquariumTanks, homeKeeping, tankBox, tankPose, zooHouseFrame} from "@/ark-scene/islands/town/tanks";
 import {placeTownAnimals} from "@/ark-scene/islands/town/placement";
+import {townWorldSampler} from "@/ark-scene/islands/town/sampler";
+import {scheduleWorld} from "@/ark-scene/behaviour-schedule";
 import {townDayEpochs, townSurfacesFor, validateTownAnimals} from "@/ark-scene/islands/town/validate-animals";
 import {arkBody} from "@/ark-scene/stats";
 import {modelBase} from "@/ark-scene/grounding/base";
@@ -237,6 +239,37 @@ test("town birds never in a building: asleep on their roofs and ledges, never on
     assert.equal(check.inBuildingDrawn.moving, 0, JSON.stringify(housed.slice(0, 5)));
     assert.ok(check.inBuilding.rest <= 16, `${check.inBuilding.rest} at rest in a building: ${JSON.stringify(housed.slice(0, 5))}`);
     assert.equal(check.inBuilding.moving, 0, JSON.stringify(housed.slice(0, 5)));
+});
+
+test("no ground goal in a building, for any animal: the town's `blocked` reads the point itself, and the walk grid's nearest ground to a point in a building is outside it", () => {
+    // (Lane kestrel, 2026-11-16: `blocked` read only its square's corner under half a metre of clearance, so walk-grid cell
+    // middles 0.3 m inside a terrace's wall were walkable, and a kestrel's hover-hunt goal stood on the house's floor.)
+    const sampler = townWorldSampler([], {x: 0, z: 0});
+    const nav = scheduleWorld(sampler).nav;
+    const buildings = townPlan().buildings.map((b) => b.at);
+    const inAny = (x: number, z: number) => buildings.some((b) => inBox(b, x, z, -0.02));
+    let checked = 0;
+    const missed: string[] = [];
+    for (const b of buildings) {
+        // A lattice over its footprint, 0.15 m in from the walls (its walls' faces and its middle among it).
+        const c = Math.cos(b.rot);
+        const s = Math.sin(b.rot);
+        for (const fx of [-0.5, -0.25, 0, 0.25, 0.5]) {
+            for (const fz of [-0.5, -0.25, 0, 0.25, 0.5]) {
+                const lx = fx * (b.w - 0.3);
+                const lz = fz * (b.d - 0.3);
+                const x = b.x + lx * c - lz * s;
+                const z = b.z + lx * s + lz * c;
+                if (!inBox(b, x, z, -0.1)) continue;
+                checked++;
+                for (const clearance of [0, 0.1, 0.2, 0.3, 0.45, 0.8, 2.2]) if (!sampler.blocked(x, z, clearance)) missed.push(`blocked ${clearance} at (${x.toFixed(1)}, ${z.toFixed(1)})`);
+                const ground = nav.nearest(x, z, "walk");
+                if (ground && inAny(ground.x, ground.z)) missed.push(`walk goal (${ground.x.toFixed(1)}, ${ground.z.toFixed(1)}) in a building, from (${x.toFixed(1)}, ${z.toFixed(1)})`);
+            }
+        }
+    }
+    assert.ok(checked > buildings.length * 9, `${checked} points`);
+    assert.deepEqual(missed.slice(0, 10), []);
 });
 
 test("the real Ark's town birds (development only, read in place): none asleep or at rest in a building, night or day; flights over the houses", {skip: !existsSync(LIVE) || !existsSync(ROUTING)}, async () => {
