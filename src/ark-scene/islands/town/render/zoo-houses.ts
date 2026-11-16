@@ -57,13 +57,19 @@ function shell(geo: Geo, e: ZooEnclosure, ranges: Array<{from: number; to: numbe
     // The back and the two sides (the front is glass), a coloured band at their foot.
     geo.box(fr, 0, 0, -d / 2 + t / 2, w, h, t, wall);
     for (const side of [-1, 1]) geo.box(fr, side * (w / 2 - t / 2), 0, -d / 2 + inside / 2, t, h, inside, wall);
-    geo.box(fr, 0, 0, -d / 2 + t / 2 - 0.03, w + 0.06, 0.9, t + 0.06, band);
-    for (const side of [-1, 1]) geo.box(fr, side * (w / 2 - t / 2 + 0.03), 0, -d / 2 + inside / 2, t + 0.06, 0.9, inside + 0.06, band);
+    // 3.3 fix: the band stands 3 cm proud of the wall outside and stops 3 cm short of its inside face. It was t + 6 cm
+    // thick about a centre 3 cm out, so its inner face lay exactly on the wall's: the two colours fought in the depth
+    // buffer and the cut-down walls flashed (the owner, 2026-11-16, the nocturnal house: "the roof and walls are flashing").
+    geo.box(fr, 0, 0, -d / 2 + t / 2 - 0.03, w + 0.06, 0.9, t, band);
+    for (const side of [-1, 1]) geo.box(fr, side * (w / 2 - t / 2 + 0.03), 0, -d / 2 + inside / 2, t, 0.9, inside + 0.06, band);
     // The front: a low base under the glass, mullions, a lintel, the canopy over the porch and the sign.
-    geo.box(fr, 0, 0, front - t / 2, w, 0.3, t, band);
-    for (let u = -w / 2 + t; u <= w / 2 - t + 1e-6; u += (w - 2 * t) / Math.max(1, Math.round((w - 2 * t) / 2.4))) geo.box(fr, u, 0.3, front - t / 2, 0.12, h - 0.8, 0.14, tone("#2a2e30"));
+    // 3.3 fix: the base stands 1 cm proud of the side walls' ends and 1 cm inside their outer faces (it shared both planes).
+    geo.box(fr, 0, 0, front - t / 2 + 0.01, w - 0.02, 0.3, t + 0.02, band);
+    for (let u = -w / 2 + t; u <= w / 2 - t + 1e-6; u += (w - 2 * t) / Math.max(1, Math.round((w - 2 * t) / 2.4))) geo.box(fr, u, 0.3, front - t / 2, 0.12, h - 0.79, 0.14, tone("#2a2e30"));
     geo.box(fr, 0, h - 0.5, front - t / 2, w, 0.5, t, wall);
-    geo.box(fr, 0, h - 0.5, front + ZOO_HOUSE_PORCH / 2, w, 0.15, ZOO_HOUSE_PORCH + 0.4, roof);
+    // 3.3 fix: the mullions run 1 cm up into the lintel and the canopy's underside sits 1 cm over the lintel's, and the canopy
+    // 3 cm past the side walls, so no two colours share a plane at the porch (the shell is drawn double-sided).
+    geo.box(fr, 0, h - 0.49, front + ZOO_HOUSE_PORCH / 2, w + 0.06, 0.15, ZOO_HOUSE_PORCH + 0.4, roof);
     geo.box(fr, 0, h - 0.35, front + 0.02, Math.min(6, w * 0.5), 0.7, 0.08, tone("#e2c86a"));
     // The roof: a hip over the halls, flat with a glazed barrel over the primates' and the insects' (`glass` below).
     if (e.type === "primate_house" || e.type === "insect_house") geo.box(fr, 0, h, -ZOO_HOUSE_PORCH / 2, w + 0.6, 0.4, inside + 0.6, roof);

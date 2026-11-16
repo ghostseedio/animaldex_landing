@@ -25,12 +25,12 @@
 import {fetchOk, readUntilIn} from "@/ark-scene/model-files";
 import {BufferAttribute, BufferGeometry, Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, Object3D, Quaternion, Vector3, type Camera, type Material} from "three";
 import {hashText, local, polylineAt, polylineLength, polylineNearest, polylineWithin, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
-import {townHeight} from "@/ark-scene/islands/town/ground";
+import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_WIDTH, TOWN_LEVEL, townPlan, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {carAt, chance, weekday, type CarSpot, type TownClock} from "@/ark-scene/islands/town/people";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
 import {townColliderSet} from "@/ark-scene/islands/town/colliders";
-import {launchEnclosures} from "@/ark-scene/islands/town/areas";
+import {HARBOUR_BAYS, launchEnclosures} from "@/ark-scene/islands/town/areas";
 import {Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {townWeather} from "@/ark-scene/islands/town/render/materials";
 import {CROSSINGS} from "@/ark-scene/islands/town/render/streets";
@@ -1038,7 +1038,10 @@ export function townParking(plan: TownPlan = townPlan()): ParkingSpot[] {
         const s = local(f.yard, f.yard.w / 4, 0);
         out.push({id: `farm:${f.id}`, kind: "farm", x: s.x, z: s.z, turn: f.at.rot + Math.PI / 2});
     }
-    for (let i = 0; i < 8; i++) out.push({id: `harbour:${i}`, kind: "harbour", x: 31.5 + (i % 4) * 2.7, z: 109 + Math.floor(i / 4) * 6.2, turn: Math.floor(i / 4) ? Math.PI : 0});
+    // 3.3 fix: the harbour's car park on the dry strip between Harbour Road and the quay (`HARBOUR_BAYS`): its two rows
+    // stood at z 109 and 115, 4 to 10 m inside the harbour basin (from z 105), so its cars sat in the water by the
+    // lighthouse (the owner, 2026-11-16: "cars in the water in the dock area by the lighthouse").
+    HARBOUR_BAYS.forEach((bay, i) => out.push({id: `harbour:${i}`, kind: "harbour", x: bay.x, z: bay.z, turn: bay.turn}));
     // Every car clear of what stands round it (L5's colliders: a garden's tree, a front fence, a wall): slid along its
     // bay up to 0.6 m, else the spot is left empty.
     const set = townColliderSet(launchEnclosures(), {x: 0, z: 0});
@@ -1047,7 +1050,8 @@ export function townParking(plan: TownPlan = townPlan()): ParkingSpot[] {
         const dz = Math.cos(turn);
         const g = townHeight(x, z);
         for (const t of [-1.4, -0.47, 0.47, 1.4]) if (set.blocked(x + dx * t, z + dz * t, CAR_HALF_WIDTH - 0.05, g + 0.1, 1.4)) return false;
-        return true;
+        // 3.3 fix: never a bay with any of the car over the water (the sea, the harbour, the canal, a pond).
+        return !carOverWater(x, z, turn);
     };
     const spots: ParkingSpot[] = [];
     for (const s of raw) {
@@ -1062,6 +1066,17 @@ export function townParking(plan: TownPlan = townPlan()): ParkingSpot[] {
 }
 
 let parkingMemo: {plan: TownPlan; spots: ParkingSpot[]} | null = null;
+
+/** 3.3 fix: any of a car's footprint (its four corners and middle) over the town's water. */
+export function carOverWater(x: number, z: number, turn: number): boolean {
+    const dx = Math.sin(turn);
+    const dz = Math.cos(turn);
+    for (const [along, across] of [[0, 0], [CAR_HALF_LENGTH, CAR_HALF_WIDTH], [CAR_HALF_LENGTH, -CAR_HALF_WIDTH], [-CAR_HALF_LENGTH, CAR_HALF_WIDTH], [-CAR_HALF_LENGTH, -CAR_HALF_WIDTH]]) {
+        const surface = sampleTownGround(x + dx * along + dz * across, z + dz * along - dx * across).surface;
+        if (surface === "water" || surface === "sea") return true;
+    }
+    return false;
+}
 
 /** A parked car now: there or not, its kind and colour (by the spot and the day for kerbs, the month for drives). */
 export function parkedCar(spot: ParkingSpot, clock: TownClock, kinds: readonly CarKind[] = CAR_KINDS): {parked: boolean; kind: CarKind; paint: string} {

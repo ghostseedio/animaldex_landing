@@ -306,10 +306,14 @@ export function offsetShare(
     at: {x: number; z: number; base: number},
     dx: number,
     dz: number,
-    element: "land" | "water" | "free",
+    element: "land" | "water" | "free" | "perch",
     isWater: (x: number, z: number) => boolean,
     ground: (x: number, z: number) => number
 ): number {
+    // 3.3 fix: held up off the ground on a perch (a branch, a wall top, a roof) it reacts where it stands (turns, crouches,
+    // looks): a step off it was drawn at the perch's height past the branch's end, a bird walking on air (the owner,
+    // 2026-11-16). Leaving a perch is the shared schedule's flight, never the viewer-local layer's.
+    if (element === "perch") return 0;
     if (element === "free" || (!dx && !dz)) return 1;
     const fits = (k: number) => {
         const x = at.x + dx * k;
