@@ -141,7 +141,7 @@ import {attachVary, setVary} from "@/ark-scene/ark-variation";
 import {tideFit} from "@/lib/ark-liveliness";
 import {ARK_ENV as ARK_ENVIRONMENT, ARK_WIND as ARK_WIND_VECTOR} from "@/ark-scene/glsl";
 import {WATER_WIND} from "@/ark-scene/terrain";
-import {attachSway, groundNormal, setAttachHomePlots, type ArkEnvironment} from "@/ark-scene/sampler";
+import {allAttachPoints, attachSway, groundNormal, setAttachHomePlots, type ArkEnvironment} from "@/ark-scene/sampler";
 import {arkHatchNest, type ArkAct, type ArkEventAnimal} from "@/lib/ark-life";
 import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour";
 import {
@@ -201,7 +201,7 @@ import * as worldSampling from "@/ark-scene/world-sampler";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
-import {intelProfile} from "@/ark-scene/intelligence-profile";
+import {canEat, intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
 import {townWorldOrigin} from "@/ark-scene/islands";
@@ -215,6 +215,12 @@ import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {LiveBirths} from "@/ark-scene/live-births";
+// 3.3 batch (B): the birds' own moves (mobbing dive)
+import {Mobbing, mobFoeFits, type MobHost} from "@/ark-scene/mobbing";
+import {BrokenWing} from "@/ark-scene/broken-wing";
+import {LiveDuckDrops, type Hollow} from "@/ark-scene/duckling-drop";
+import birdMoves from "@/ark-scene/bird-moves.json";
+import {tailHabitOf} from "@/ark-scene/tail-habit";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 // 3.3 batch (A): defence moves.
 import {defenceMoveOf, defencePack, defenceSaid, holdsItsGround, newDefenceState, predatorBeside, stepDefence, type DefenceSpec, type DefenceState} from "@/ark-scene/defence-moves";
@@ -486,6 +492,8 @@ type Entry = {
     sleepClipped?: boolean;
     /** 0 out … 1 gone into its burrow or den to sleep or rest (its roost is the way in: `goesIntoRoost`), eased. */
     denIn?: number;
+    /** 3.3 batch (B): flying one of the birds' own moves (`mobbing.ts`): its rig flies while its act has it in the air. */
+    birdAloft?: boolean;
     /** Its sleep has been stepped once (its first frame is drawn as it is: no lying down on load). */
     sleepStarted?: boolean;
     /** Its sleeping posture's attitude (the recipes' act: a bat turned over), kept to ease it back as it wakes. */
@@ -2685,7 +2693,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 animated: level === "near" && !reducedMotion && !model.placeholder,
                 level,
                 look: model.placeholder ? null : speciesLook(model.slug, model.behaviour?.plan, model.facing, source.geometry),
-                bodyMotion: level === "near" && !model.placeholder ? l2BodyUniforms(model.slug, model.behaviour) : null
+                bodyMotion: level === "near" && !model.placeholder ? l2BodyUniforms(model.slug, model.behaviour) : null,
+                tailHabit: tailHabitOf(model.slug) // 3.3 batch (B): tail pump, cock and fan
             });
             if (level === "near" && !model.placeholder) look.track(model.slug, material);
             // The placeholder figure (A13): warm clay from its own vertex colours, a little softer.
@@ -4000,7 +4009,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (MA1: its air leg's stage on the schedule: a run to take off, the climb, level flight, the glide-in, a ski.)
         const stage = (pose && airLeg ? pose.air?.stage : null) ?? null;
         // Heading up from the start of an air leg (not the tail of a flight whose landing has played): only then does it take off.
-        const rising = (pose ? pose.aloft || (airLeg && (stage ? stage === "run" || stage === "climb" : state.climb > -0.01 && clockNow() - state.landedAt > 2)) : entry.state.airborne) || microAloft;
+        const rising = (pose ? pose.aloft || (airLeg && (stage ? stage === "run" || stage === "climb" : state.climb > -0.01 && clockNow() - state.landedAt > 2)) : entry.state.airborne) || microAloft || Boolean(entry.birdAloft && entry.act); // 3.3 batch (B): a bird's own move in the air
         // Coming down: the landing plays as it touches down (its wings folding away), once it is low and descending on
         // its schedule's leg, or its state's air has nearly eased out.
         // (Lane L2: within the landing clip's reach of the ground on the way down, so its touch-down meets the ground.)
@@ -4352,7 +4361,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 lookOff: rig.lookOff,
                 level: "near",
                 look: speciesLook(model.slug, model.behaviour?.plan, model.facing, model.near?.geometry ?? rig.geometry),
-                bodyMotion: l2BodyUniforms(model.slug, model.behaviour)
+                bodyMotion: l2BodyUniforms(model.slug, model.behaviour),
+                tailHabit: tailHabitOf(model.slug) // 3.3 batch (B): tail pump, cock and fan
             });
             look.track(model.slug, material);
             meshes.rigMaterial = material;
@@ -4668,6 +4678,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     ))
             );
             stepRecipeScene(candidates, now, epochNow);
+            // 3.3 batch (B): the birds' own moves
+            stepBirdMoves(candidates, epochNow);
             behaviourFrameMs += performance.now() - started;
         }
         behaviourTimes.push(behaviourFrameMs);
@@ -7043,6 +7055,150 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id))
     });
+    // 3.3 batch (B): mobbing dive. Birds whose own text says they mob (`bird-moves.json`) dive in turns at a predator
+    // of theirs standing near them, near the camera (`mobbing.ts`: viewer-local, visual only, back to their day after).
+    const BIRD_MOVES = birdMoves as unknown as {mob: Record<string, {line: string | null; foe: string | null}>; tail: Record<string, {line: string | null; while: string}>; lure: Record<string, {line: string | null}>};
+    // (Where it is drawn this frame, from the frame's own list; out of view, where its day has it.)
+    const birdPlaces = new Map<Entry, {x: number; z: number; base: number; yaw: number}>();
+    const drawnAt = (e: Entry) => {
+        if (e.held || e.act?.hidden || (e.denIn ?? 0) > 0.3) return null;
+        const p = birdPlaces.get(e);
+        if (p) return {x: p.x, y: p.base, z: p.z, yaw: p.yaw};
+        const at = e.sched?.pose;
+        return at ? {x: at.x, y: at.y, z: at.z, yaw: at.yaw} : null;
+    };
+    const birdHost: MobHost<Entry> = {
+        id: (e) => e.animal.id,
+        slug: (e) => e.animal.model_slug,
+        mobs: (e) => e.animal.model_slug in BIRD_MOVES.mob,
+        free: (e) => scheduled(e) && !e.held && e.awake && !e.state.asleep && !e.place.micro && !e.sched?.animal.young && !mealPins.has(e.animal.id),
+        place: drawnAt,
+        home: (e, epoch) => (e.sched && world ? schedulePose(e, epoch) : null),
+        length: (e) => e.length,
+        height: (e) => e.drawnHeight,
+        threatens: (t, b) =>
+            Boolean(t.sched && b.sched) && !t.visitor && !t.place.micro && !t.place.water && !atSeaOf(t) && t.air <= 0.5 && !t.sched!.pose?.aloft &&
+            canEat(intelProfile(t.animal.model_slug, null, t.stats.intelligence), intelProfile(b.animal.model_slug, null, b.stats.intelligence), t.sched!.profile.size, b.sched!.profile.size),
+        ground: (x, z) => Math.max(heightAt(x, z), 0),
+        act: (e) => e.act ?? null,
+        setAct: (e, pose, aloft) => {
+            e.act = pose;
+            e.birdAloft = Boolean(pose && aloft);
+            if (pose && aloft) e.air = 1;
+        }
+    };
+    const mobbing = new Mobbing<Entry>(birdHost);
+    // 3.3 batch (B): broken-wing display. A ground-nester whose own text says so leads a predator near it away from its
+    // nest along the ground, then flies back (`broken-wing.ts`); its nest is the record's (the props' site with eggs or chicks).
+    const brokenWing = new BrokenWing<Entry>({
+        ...birdHost,
+        mobs: (e) => e.animal.model_slug in BIRD_MOVES.lure,
+        free: (e) => birdHost.free(e) && e.air <= 0.001 && !e.sched?.pose?.aloft && !e.place.water,
+        nest: (e, epoch) => {
+            const nest = nestSourceOf(e.animal.id, epoch);
+            return nest && ((nest.eggs ?? 0) > 0 || (nest.chicks ?? 0) > 0) ? nest : null;
+        }
+    });
+    const birdNear: Entry[] = [];
+    const tailSeen: ArkSeenAct[] = [];
+    const stepBirdMoves = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: {x: number; z: number; base: number; yaw: number}}>, epoch: number) => {
+        if (!world || reducedMotion || !scheduleOn) {
+            brokenWing.clear();
+            return void mobbing.clear();
+        }
+        // 3.3 batch (B): tail pump, cock and fan. The shader moves the tail (`tail-habit.ts`); here only the log's sentence,
+        // for a bird close enough for it to be seen, once per bird and ten minutes (listed once a second).
+        if (mobbing.due(epoch)) {
+            tailSeen.length = 0;
+            for (const c of list) {
+                const e = c.entry;
+                const said = c.visible && c.distance < 18 ? BIRD_MOVES.tail[e.animal.model_slug] : undefined;
+                if (!said?.line || e.act || e.state.asleep || e.air > 0.001 || !library.get(e.animal.model_slug)?.behaviour?.tail) continue;
+                if (said.while !== "any" && (said.while === "walk") !== Boolean(e.sched?.pose?.moving)) continue;
+                const a = e.animal;
+                tailSeen.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: "tail_habit", episode: `tail:${a.id}:${Math.floor(epoch / 600)}`, block: "tail", fish: false, line: said.line});
+            }
+        }
+        for (const seen of tailSeen) seenActs.push(seen);
+        if (duckDrops.size) {
+            for (const j of duckDrops.jumping(epoch)) {
+                const e = entryById.get(j.id);
+                const line = e ? DROPS[e.animal.model_slug]?.line : null;
+                const a = e?.animal;
+                if (a && line && seenNear.has(a.id)) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: "hollow_drop", episode: j.episode, block: "jump", fish: false, line});
+            }
+        }
+        birdNear.length = 0;
+        birdPlaces.clear();
+        if (!mobbing.active && !brokenWing.active && !mobbing.due(epoch) && !brokenWing.due(epoch)) return;
+        for (const c of list) {
+            if (!c.visible || c.distance > 70) continue;
+            birdNear.push(c.entry);
+            birdPlaces.set(c.entry, c.pose);
+        }
+        mobbing.step(epoch, birdNear);
+        brokenWing.step(epoch, birdNear);
+        for (const l of brokenWing.seen(epoch)) {
+            const a = l.entry.animal;
+            const line = BIRD_MOVES.lure[a.model_slug]?.line;
+            // (A sentence that speaks of its nest only when the record has it one there.)
+            if (line && (l.nested || !/nest/.test(line))) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: "broken_wing", episode: l.episode, block: "lure", fish: false, line});
+        }
+        for (const m of mobbing.seen(epoch)) {
+            const a = m.entry.animal;
+            const said = BIRD_MOVES.mob[a.model_slug];
+            const line = said && mobFoeFits(said.foe, m.threat.animal.model_slug, library.get(m.threat.animal.model_slug)?.behaviour?.plan ?? null) ? said.line : null;
+            if (line) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: "mob_dive", episode: m.episode, block: "dive", fish: false, line});
+        }
+    };
+    // 3.3 batch (B): ducklings dropping from the tree hole. A hatching of the record, of a kind whose own text says its
+    // young leave a tree hole by jumping (`bird-moves.json` drop), acted from the hatch's time (`duckling-drop.ts`).
+    const DROPS = (birdMoves as unknown as {drop: Record<string, {line: string | null}>}).drop;
+    let hollowPoints: Array<{x: number; y: number; z: number; nx: number; nz: number; id: string; drawn: boolean}> | null = null;
+    const hollowNear = (x: number, z: number): Hollow | null => {
+        // (The scenery's holes: a drawn `tree_hollow`, else a sideways `bark` point more than 1.5 m up a tree; the same
+        // for every viewer. The nearest within 60 m, a drawn hole first.)
+        hollowPoints ??= allAttachPoints()
+            .filter((p) => p.tag === "tree_hollow" || (p.tag === "bark" && Math.abs(p.normal.y) < 0.35 && p.position.y - Math.max(heightAt(p.position.x, p.position.z), 0) > 1.5 && /broadleaf|rainforest|orchard|acacia|conifer|palm|canopy/.test(p.hostKind)))
+            .map((p) => {
+                const flat = Math.hypot(p.normal.x, p.normal.z) || 1;
+                return {x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x / flat, nz: p.normal.z / flat, id: p.id, drawn: p.tag === "tree_hollow"};
+            });
+        let best: (typeof hollowPoints)[number] | null = null;
+        let bestD = Infinity;
+        for (const p of hollowPoints) {
+            const d = Math.hypot(p.x - x, p.z - z) + (p.drawn ? 0 : 20);
+            if (d < bestD || (d === bestD && best && p.id < best.id)) {
+                best = p;
+                bestD = d;
+            }
+        }
+        return best && bestD <= 80 ? {x: best.x, y: best.y, z: best.z, nx: best.nx, nz: best.nz} : null;
+    };
+    const duckDrops = new LiveDuckDrops<Entry>({
+        find: (id) => {
+            const e = entryById.get(id);
+            return e && !e.held && !e.visitor ? e : null;
+        },
+        scheduleAt: (entry, epoch) => {
+            if (!entry.sched || !world || reducedMotion) return null;
+            const at = schedulePose(entry, epoch);
+            return {x: at.x, z: at.z, yaw: at.yaw};
+        },
+        drops: (entry) => entry.animal.model_slug in DROPS,
+        hollow: hollowNear,
+        ground: (x, z) => Math.max(heightAt(x, z), 0),
+        length: (entry) => entry.length,
+        walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
+        male: (entry) => {
+            const sex = sexLook(entry.animal.id, entry.animal.model_slug).sex;
+            return sex === "male" ? true : sex === "female" ? false : null;
+        },
+        setAct: (entry, pose) => {
+            entry.act = pose;
+        },
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id))
+    });
     /** The meals' traces this frame (feathers, fur, scales, pressed grass), and the pressed grass for the grass to bend. */
     let tracesNow: TraceDraw[] = [];
     /**
@@ -7185,12 +7341,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** The live world's meals, a frame (after the replay's acts): poses, and their pins for the herds. */
     const stepLiveMeals = () => {
-        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size) || reducedMotion) return;
+        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !duckDrops.size) || reducedMotion) return; // 3.3 batch (B): + duckDrops
         const epoch = worldMs() / 1000;
         if (liveMeals.size) liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
         if (liveMatings.size) liveMatings.step(epoch);
         if (liveBirths.size) liveBirths.step(epoch);
-        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins()]);
+        if (duckDrops.size) duckDrops.step(epoch); // 3.3 batch (B)
+        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins(), ...duckDrops.pins()]); // 3.3 batch (B): + duckDrops
         if (pins.size !== mealPins.size || Array.from(pins).some((id) => !mealPins.has(id))) {
             mealPins = pins;
             refreshLive();
@@ -7971,6 +8128,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const looked = selectedId ? findEntry(selectedId) : null;
         return looked?.middle ? blockers(camera.position.clone(), looked.middle, 0.35).map((hit) => ({kind: hit.mesh.userData.kind, distance: hit.distance})) : null;
     }};
+    // 3.3 batch (B): the birds' own moves, for the harness
+    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {mobbing: () => mobbing.debug(), mobStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && mobbing.begin(worldMs() / 1000, b, t, allEntries().filter((e) => e !== b && e !== t), new Set(), 1e9)); }, seenNow: () => seenActs.slice(), lures: () => brokenWing.debug(), drops: () => duckDrops.debug(), lureStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && brokenWing.begin(worldMs() / 1000, b, t)); }});
 
     return {
         ...runtime.handle,
@@ -8058,6 +8217,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         addBirths: (births) => {
             liveBirths.add(births, worldMs() / 1000);
+        },
+        // 3.3 batch (B): ducklings dropping from the tree hole
+        addHatchings: (hatchings) => {
+            duckDrops.add(hatchings, worldMs() / 1000);
         },
         setDormant: (kinds) => {
             dormantKinds = new Set(kinds);
