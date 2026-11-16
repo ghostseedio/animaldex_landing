@@ -44,6 +44,7 @@ import {lookCacheKey, lookDefines, lookUniforms, registerLookMaterial, type Spec
 import {LOOK_ALBEDO, LOOK_FINISH, LOOK_FRAGMENT_DECLARATIONS, LOOK_LIGHT, LOOK_NORMAL, LOOK_ROUGHNESS, LOOK_VERTEX, LOOK_VERTEX_DECLARATIONS, SHELL_VERTEX} from "@/ark-scene/animal-look-shader";
 import {varyShader} from "@/ark-scene/ark-variation";
 import {L2_BODY_NONE, type L2BodyUniforms} from "@/ark-scene/locomotion/swim";
+import {tailHabitUniform, type TailHabit} from "@/ark-scene/tail-habit";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};
@@ -150,6 +151,9 @@ uniform float motionMidZ;
 uniform float tailBaseX;
 uniform float tailBaseZ;
 uniform float tailLength;
+// 3.3 batch (B): a bird's own tail habit (tail-habit.ts): (pump, cock, fan, rate), and the tail base's height.
+uniform vec4 arkTailHabit;
+uniform float arkTailBaseY;
 uniform float motionHead;
 uniform float motionPower;
 uniform float motionTip;
@@ -282,6 +286,26 @@ transformed = (arkSkin * vec4(transformed, 1.0)).xyz;
         q.xz = vec2(q.x * cy + q.z * sy, -q.x * sy + q.z * cy);
         transformed = pivot + q;
     }
+    // 3.3 batch (B): a bird's own tail habit (tail-habit.ts): a wagtail's pump, a wren's cocked tail, a swamphen's flick,
+    // a fan. The model's marked tail turns up and down about its base (after the skin: a rigged bird's too), awake only.
+    if (arkTailHabit.w > 0.0 && tailLength > 0.0 && transformed.z < tailBaseZ) {
+        float habitGain = (1.0 - smoothstep(18.0, 25.0, distance(arkOrigin, cameraPosition))) * (1.0 - arkRest);
+        float habitClock = arkClock + arkInstance.x * 61.0;
+        float habitBeat = habitClock * arkTailHabit.w;
+        float habitPump = arkTailHabit.x >= 0.0 ? arkTailHabit.x * sin(habitBeat) : -arkTailHabit.x * pow(max(sin(habitBeat), 0.0), 8.0);
+        float habitInto = clamp((tailBaseZ - transformed.z) / tailLength, 0.0, 1.0);
+        float habitSide = 1.0 - smoothstep(0.5, 0.9, abs(transformed.x - tailBaseX) / tailLength);
+        float habitTurn = habitGain * (arkTailHabit.y + habitPump) * smoothstep(0.0, 0.3, habitInto) * habitSide;
+        float hy = transformed.y - arkTailBaseY;
+        float hz = transformed.z - tailBaseZ;
+        float hc = cos(habitTurn);
+        float hs = sin(habitTurn);
+        transformed.y = arkTailBaseY + hy * hc - hz * hs;
+        transformed.z = tailBaseZ + hy * hs + hz * hc;
+        // (The fan opens and closes on a slow beat of its own.)
+        float habitFan = habitGain * arkTailHabit.z * (0.5 + 0.5 * sin(habitClock * 1.1));
+        transformed.x = tailBaseX + (transformed.x - tailBaseX) * (1.0 + habitFan * habitInto * habitSide);
+    }
     if (motionGain > 0.0) {
         float awake = motionGain * (1.0 - 0.9 * arkRest);
         float motionClock = arkClock + arkInstance.x * 61.0;
@@ -365,6 +389,8 @@ export type AnimalMaterialOptions = {
     shellLength?: number;
     /** Lane L2's wave for this species (`locomotion/l2-scene.ts` l2BodyUniforms); absent: the talking model's own motion. */
     bodyMotion?: L2BodyUniforms | null;
+    /** 3.3 batch (B): the species' tail habit (`tail-habit.ts`), for a model with its tail marked; absent: none. */
+    tailHabit?: TailHabit | null;
 };
 
 export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMaterial {
@@ -391,6 +417,9 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
         arkRim: ARK_RIM,
         // How far the head goes down asleep: animals with a head and neck to lower.
         arkDroop: {value: droopOf(options.behaviour?.plan)},
+        // 3.3 batch (B): the tail habit and the height of the tail's base (the model's own `tail.base`).
+        arkTailHabit: {value: new Vector4(...tailHabitUniform(options.behaviour?.tail ? options.tailHabit : null))},
+        arkTailBaseY: {value: options.behaviour?.tail?.base?.[1] ?? 0},
         ...Object.fromEntries(Object.entries(motion).map(([key, value]) => [key, {value}])),
         ...Object.fromEntries(Object.entries(options.bodyMotion ?? L2_BODY_NONE).map(([key, value]) => [key, {value}]))
     };

@@ -93,7 +93,7 @@
    "foe": null
   },
   "red-winged-blackbird": {
-   "line": "{aAnimal} male is diving at an intruder as his neighbours join the mobbing",
+   "line": null,
    "behaviour": "males dive at intruders, neighbours join mobbing",
    "quote": "Territorial males dive at intruders, and neighbouring males often join in the mobbing.",
    "foe": null
@@ -164,7 +164,8 @@
    "quote": "White undertail flashed with each tail flick",
    "moves": [
     "flick"
-   ]
+   ],
+   "while": "any"
   },
   "carolina-wren": {
    "line": "{aAnimal} is perched with its tail cocked upward",
@@ -172,7 +173,8 @@
    "quote": "Tail often cocked upward",
    "moves": [
     "cock"
-   ]
+   ],
+   "while": "still"
   },
   "common-sandpiper": {
    "line": "{aAnimal} is walking with its rear end bobbing almost without pause",
@@ -180,7 +182,8 @@
    "quote": "The rear end bobs almost continuously as the bird walks, even when it pauses to pick prey.",
    "moves": [
     "bob"
-   ]
+   ],
+   "while": "walk"
   },
   "eastern-phoebe": {
    "line": "{aAnimal} is pumping its tail down and up on its perch",
@@ -188,15 +191,17 @@
    "quote": "Pumps its tail down and up repeatedly while perched",
    "moves": [
     "pump"
-   ]
+   ],
+   "while": "still"
   },
   "grey-wagtail": {
-   "line": "{aAnimal} is hopping from rock to rock in a fast stream, pumping its long tail",
+   "line": null,
    "behaviour": "hops rock to rock in fast streams pumping long tail",
    "quote": "hops from rock to rock in fast streams, pumping its long tail as it snaps up insects where water meets land",
    "moves": [
     "pump"
-   ]
+   ],
+   "while": "any"
   },
   "house-wren": {
    "line": "{aAnimal} is perched with its short tail cocked upward",
@@ -204,7 +209,8 @@
    "quote": "The short tail is often cocked upward",
    "moves": [
     "cock"
-   ]
+   ],
+   "while": "still"
   },
   "masked-water-tyrant": {
    "line": "{aAnimal} is fanning and flicking its tail",
@@ -213,7 +219,8 @@
    "moves": [
     "fan",
     "flick"
-   ]
+   ],
+   "while": "any"
   },
   "oriental-magpie-robin": {
    "line": "{aAnimal} is foraging with its tail raised",
@@ -221,7 +228,8 @@
    "quote": "Raised tail while foraging",
    "moves": [
     "cock"
-   ]
+   ],
+   "while": "any"
   },
   "pied-fantail": {
    "line": "{aAnimal} is swivelling restlessly and fanning its tail on a low perch",
@@ -230,7 +238,8 @@
    "moves": [
     "fan",
     "swivel"
-   ]
+   ],
+   "while": "still"
   },
   "western-yellow-wagtail": {
    "line": "{aAnimal} is wagging its tail without a pause",
@@ -238,7 +247,8 @@
    "quote": "Constantly wagging tail",
    "moves": [
     "pump"
-   ]
+   ],
+   "while": "any"
   },
   "white-rumped-shama": {
    "line": "{aAnimal} is cocking and fanning its tail",
@@ -247,7 +257,8 @@
    "moves": [
     "cock",
     "fan"
-   ]
+   ],
+   "while": "any"
   }
  },
  "drop": {

@@ -218,6 +218,7 @@ import {LiveBirths} from "@/ark-scene/live-births";
 // 3.3 batch (B): the birds' own moves (mobbing dive)
 import {Mobbing, mobFoeFits} from "@/ark-scene/mobbing";
 import birdMoves from "@/ark-scene/bird-moves.json";
+import {tailHabitOf} from "@/ark-scene/tail-habit";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
@@ -2682,7 +2683,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 animated: level === "near" && !reducedMotion && !model.placeholder,
                 level,
                 look: model.placeholder ? null : speciesLook(model.slug, model.behaviour?.plan, model.facing, source.geometry),
-                bodyMotion: level === "near" && !model.placeholder ? l2BodyUniforms(model.slug, model.behaviour) : null
+                bodyMotion: level === "near" && !model.placeholder ? l2BodyUniforms(model.slug, model.behaviour) : null,
+                tailHabit: tailHabitOf(model.slug) // 3.3 batch (B): tail pump, cock and fan
             });
             if (level === "near" && !model.placeholder) look.track(model.slug, material);
             // The placeholder figure (A13): warm clay from its own vertex colours, a little softer.
@@ -4337,7 +4339,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 lookOff: rig.lookOff,
                 level: "near",
                 look: speciesLook(model.slug, model.behaviour?.plan, model.facing, model.near?.geometry ?? rig.geometry),
-                bodyMotion: l2BodyUniforms(model.slug, model.behaviour)
+                bodyMotion: l2BodyUniforms(model.slug, model.behaviour),
+                tailHabit: tailHabitOf(model.slug) // 3.3 batch (B): tail pump, cock and fan
             });
             look.track(model.slug, material);
             meshes.rigMaterial = material;
@@ -7012,7 +7015,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     });
     // 3.3 batch (B): mobbing dive. Birds whose own text says they mob (`bird-moves.json`) dive in turns at a predator
     // of theirs standing near them, near the camera (`mobbing.ts`: viewer-local, visual only, back to their day after).
-    const BIRD_MOVES = birdMoves as unknown as {mob: Record<string, {line: string | null; foe: string | null}>};
+    const BIRD_MOVES = birdMoves as unknown as {mob: Record<string, {line: string | null; foe: string | null}>; tail: Record<string, {line: string | null; while: string}>};
     // (Where it is drawn this frame, from the frame's own list; out of view, where its day has it.)
     const birdPlaces = new Map<Entry, {x: number; z: number; base: number; yaw: number}>();
     const drawnAt = (e: Entry) => {
@@ -7043,8 +7046,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
     });
     const birdNear: Entry[] = [];
+    const tailSeen: ArkSeenAct[] = [];
     const stepBirdMoves = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: {x: number; z: number; base: number; yaw: number}}>, epoch: number) => {
         if (!world || reducedMotion || !scheduleOn) return void mobbing.clear();
+        // 3.3 batch (B): tail pump, cock and fan. The shader moves the tail (`tail-habit.ts`); here only the log's sentence,
+        // for a bird close enough for it to be seen, once per bird and ten minutes (listed once a second).
+        if (mobbing.due(epoch)) {
+            tailSeen.length = 0;
+            for (const c of list) {
+                const e = c.entry;
+                const said = c.visible && c.distance < 18 ? BIRD_MOVES.tail[e.animal.model_slug] : undefined;
+                if (!said?.line || e.act || e.state.asleep || e.air > 0.001 || !library.get(e.animal.model_slug)?.behaviour?.tail) continue;
+                if (said.while !== "any" && (said.while === "walk") !== Boolean(e.sched?.pose?.moving)) continue;
+                const a = e.animal;
+                tailSeen.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: "tail_habit", episode: `tail:${a.id}:${Math.floor(epoch / 600)}`, block: "tail", fish: false, line: said.line});
+            }
+        }
+        for (const seen of tailSeen) seenActs.push(seen);
         birdNear.length = 0;
         birdPlaces.clear();
         if (!mobbing.active && !mobbing.due(epoch)) return;

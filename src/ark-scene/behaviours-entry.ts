@@ -15,7 +15,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "mob"};
+type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "mob" | "look"};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -30,6 +30,8 @@ const SCENES: Record<string, Scene> = {
     dormant: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "alpine-marmot", name: "Alpine Marmot", n: 4}, {slug: "plains-zebra", name: "Plains Zebra", n: 3}]},
     // 3.3 batch (B): magpies mobbing a fox near them, in turns (`mobbing.ts`; started by hand here, the cast is placed apart).
     mob: {zone: "grassland", hours: 9, kind: "mob", cast: [{slug: "australian-magpie", name: "Australian Magpie", n: 4}, {slug: "red-fox", name: "Red Fox", n: 1}, {slug: "coyote", name: "Coyote", n: 1}, {slug: "bobcat", name: "Bobcat", n: 1}, {slug: "tawny-owl", name: "Tawny Owl", n: 1}, {slug: "red-tailed-hawk", name: "Red-tailed Hawk", n: 1}]},
+    // 3.3 batch (B): the tail habits (`tail-habit.ts`): a wagtail's pump, a wren's cocked tail, a swamphen's flick, a water tyrant's fan; a sparrow beside them has none.
+    tail: {zone: "wetland", hours: 9, kind: "look", cast: [{slug: "grey-wagtail", name: "Grey Wagtail", n: 2}, {slug: "house-wren", name: "House Wren", n: 1}, {slug: "australasian-swamphen", name: "Australasian Swamphen", n: 1}, {slug: "masked-water-tyrant", name: "Masked Water Tyrant", n: 1}, {slug: "common-sandpiper", name: "Common Sandpiper", n: 1}, {slug: "house-sparrow", name: "House Sparrow", n: 1}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -112,8 +114,9 @@ async function main() {
     if (!at0) throw new Error("cast not placed");
     const view = (distance: number, at: {x: number; z: number}, polar = 1.15, azimuth = 0.7): ArkCameraView => ({target: {x: at.x, y: Math.max(handle.heightAt(at.x, at.z), 0) + 0.5, z: at.z}, distance, polar, azimuth});
     handle.setView(view(12, at0));
+    let closeView: ArkCameraView | null = null;
     const api = {
-        info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a, b, c: foe, mobbing: debug.mobbing?.() ?? []}),
+        info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a, b, c: foe, ids: scene.cast.map((_, k) => castId(k, 0)), mobbing: debug.mobbing?.() ?? []}),
         dung: () => debug.traces().filter((t) => t.kind === "dung"),
         /** The first cast's kind dormant (or awake again), then what the scene shows of every animal. */
         dormant: async (on: boolean) => {
@@ -127,6 +130,34 @@ async function main() {
             if (!lines) return null;
             const p = lines.geometry.attributes.position.array;
             return {x: p[0], y: p[1], z: p[2], vertices: lines.geometry.attributes.position.count, seed: lines.geometry.attributes.aSeed.array[0], visible: lines.visible};
+        },
+        /** The clock a little on (s), the view kept: the next moment of the same picture. */
+        tick: async (seconds: number) => {
+            fake!.perf += seconds * 1000;
+            fake!.date += seconds * 1000;
+            await frames(2);
+            if (closeView) {
+                (debug as unknown as {controls: {minDistance: number}}).controls.minDistance = closeView.distance;
+                handle.setView(closeView);
+            }
+            await frames(1);
+            return `+${seconds.toFixed(2)} s ${(debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`).join(" / ")}`;
+        },
+        /** An animal found where it is drawn now (a wide look first, so it is drawn), then framed close from its side. */
+        find: async (id: string, distance: number) => {
+            const far = handle.locate(id);
+            if (far) handle.setView({target: {x: far.x, y: far.y, z: far.z}, distance: 40, polar: 0.9, azimuth: 0.7});
+            await frames(4);
+            const at = handle.locate(id);
+            // (Closer than the page lets a visitor come: a wagtail is 15 cm long.)
+            const rig = debug as unknown as {controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}};
+            rig.controls.minDistance = Math.min(rig.controls.minDistance, distance);
+            rig.camera.near = 0.03;
+            rig.camera.updateProjectionMatrix();
+            closeView = at ? {target: {x: at.x, y: at.y, z: at.z}, distance, polar: 1.45, azimuth: at.yaw + Math.PI / 2} : null;
+            if (closeView) handle.setView(closeView);
+            await frames(4);
+            return at ? `${id.slice(-3)} at ${at.x.toFixed(1)}, ${at.z.toFixed(1)} length ${at.length.toFixed(2)} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${(debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`).join(" / ")}` : "not found";
         },
         /** The view on an animal where it is now, in the air too (after a `shot`, the clock standing). */
         closeOn: async (id: string, distance: number, polar = 1.35) => {

@@ -41,7 +41,8 @@ for (const r of rows) {
         skipped.push(`mob ${r.name}: not a flying bird`);
         continue;
     }
-    mob[slugOf(r.name)] = {...said(r), foe: foeOf(r.line)};
+    // (A sentence that names a sex is held back: the log does not check the actor's, `signature-lines.json`'s own rule.)
+    mob[slugOf(r.name)] = {...said(r, /\b(male|female)\b/.test(r.line) ? null : r.line), foe: foeOf(r.line)};
 }
 
 // The row's sentence is said only where it says the display itself (a stilt's and a crane's rows say the charge and
@@ -61,7 +62,7 @@ const TAIL: Array<[RegExp, string[]]> = [
     [/tail_bob/, ["bob"]],
     [/tail_flick/, ["flick"]]
 ];
-const tail: Record<string, Said & {moves: string[]}> = {};
+const tail: Record<string, Said & {moves: string[]; while: string}> = {};
 for (const r of rows) {
     if (r.theme !== "signature" || r.how !== "procedural_pose" || !/tail/.test(r.uses ?? "")) continue;
     const hit = TAIL.find(([re]) => re.test(r.uses ?? ""));
@@ -69,7 +70,10 @@ for (const r of rows) {
         skipped.push(`tail ${r.name}: ${r.uses} (${bird(r) ? "no tail move of these" : "not a bird"})`);
         continue;
     }
-    tail[slugOf(r.name)] = {...said(r), moves: hit[1]};
+    // (Its sentence is said only where it says the tail's own movement: one that also has the bird hopping along a stream
+    // is held back; one that has it walking or perched is said while it walks or stands still: `while`.)
+    const line = /hopping|stream/.test(r.line) ? null : r.line;
+    tail[slugOf(r.name)] = {...said(r, line), moves: hit[1], while: /walking/.test(r.line) ? "walk" : /perch/.test(r.line) ? "still" : "any"};
 }
 
 const drop: Record<string, Said> = {};

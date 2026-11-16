@@ -3,6 +3,10 @@ import test from "node:test";
 import type {ActPose} from "@/ark-scene/acts";
 import moves from "@/ark-scene/bird-moves.json";
 import {canEat, hasIntelProfile, intelProfile} from "@/ark-scene/intelligence-profile";
+import {signatureItems, signatureText} from "@/ark-scene/live/signature-lines";
+import {ArkSeenMemory, arkSeenItems, type ArkLiveText} from "@/lib/ark-live-log";
+import {readFileSync} from "node:fs";
+import path from "node:path";
 import {MOB_APPROACH, MOB_REACH, MOB_REST, MOB_SECONDS, Mobbing, mobFlight, mobFoeFits, mobRing, mobSpot, type MobHost} from "@/ark-scene/mobbing";
 
 const fox = {length: 1.1, height: 0.5};
@@ -134,7 +138,8 @@ test("the data: every mobbing species is a real model with a predator in the sce
     assert.ok(Object.keys(table).length >= 17);
     for (const [slug, row] of Object.entries(table)) {
         assert.ok(hasIntelProfile(slug), slug);
-        assert.ok(row.quote.length > 10 && row.line && /^\{(aAnimal|animals)\}/.test(row.line), slug);
+        assert.ok(row.quote.length > 10 && (row.line === null || /^\{(aAnimal|animals)\} [^{}]+$/.test(row.line)), slug);
+        assert.ok(!/\b(male|female)\b/.test(row.line ?? ""), `${slug}: no sex named`);
         assert.ok(canEat(intelProfile("tawny-owl"), intelProfile(slug), 50, 20) || canEat(intelProfile("red-fox"), intelProfile(slug), 50, 20), `${slug} has a predator`);
     }
     assert.equal(mobFoeFits("owl", "tawny-owl", "bird"), true);
@@ -146,4 +151,16 @@ test("the data: every mobbing species is a real model with a predator in the sce
     assert.equal(mobFoeFits(null, "red-fox", "mammal"), true);
     assert.equal(table["american-crow"].foe, "owl");
     assert.equal(table["australian-magpie"].foe, null);
+});
+
+test("the live log: the species' own sentence once per mobbing, through the seen acts; no generic line for it", () => {
+    const english = JSON.parse(readFileSync(path.join(__dirname, "..", "data", "locales", "en.json"), "utf8")).ark as ArkLiveText;
+    const line = (moves.mob as Record<string, {line: string | null}>)["australian-magpie"].line!;
+    const seen = (id: string) => ({id, name: "Australian Magpie", speciesId: "magpie", zone: "grassland" as const, recipe: "mob_dive", episode: "mob:m1:1000", block: "dive", fish: false, line});
+    const memory = new ArkSeenMemory();
+    const items = signatureItems([seen("m1"), seen("m2"), seen("m3")], memory);
+    assert.equal(items.length, 1, "three birds, one episode: said once");
+    assert.equal(signatureText(items[0], english), "Australian Magpies are mobbing an intruder together, calling loudly");
+    assert.equal(signatureItems([seen("m1")], memory).length, 0);
+    assert.equal(arkSeenItems({acts: [seen("m1")], alarms: []}, new ArkSeenMemory()).length, 0, "the page's own lines have none for it");
 });
