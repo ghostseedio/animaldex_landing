@@ -120,6 +120,36 @@ for (const name of scenes) {
         await context.close();
         continue;
     }
+    if (name === "death") {
+        // 3.3 fix (log): [s after the death, which death, label, the tap from the overview]. Framed on where it lies.
+        const STEPS = [[-1, "death:harness", "before: alive"], [0.6, "death:harness", "falling onto its side"], [5, "death:harness", "lying where it died"], [600, "death:harness", "ten minutes on"], [1110, "death:harness", "fading"], [1230, "death:harness", "gone"], [5, "death:gone", "a hawk no longer in the roster, lying where it died"], [30, "death:harness", "the line's tap, from the overview", true], [30, "death:gone", "the hawk's line's tap", true]];
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const labels = [];
+        for (let i = 0; i < STEPS.length; i++) {
+            const [s, key, label, tap] = STEPS[i];
+            const note = await page.evaluate(async ([s, key, label, tap]) => {
+                const b = window.__behaviours;
+                let text = await b.shot(s, 6);
+                const death = b.deaths().find((d) => d.key === key);
+                if (tap) text = `tap: ${JSON.stringify(await b.tapDeath(key))}`;
+                else if (death?.spot) text = await b.shot(s, key === "death:gone" ? 3 : 6, undefined, death.spot);
+                text += `\n${JSON.stringify(death ?? null)}`;
+                document.getElementById("note").textContent = `${label}\n${text}`;
+                return text;
+            }, [s, key, label, tap ?? false]);
+            labels.push(`${String(i).padStart(2, "0")} ${label}: ${note.replace(/\n/g, " | ")}`);
+            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 85});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", "scale=640:-1,tile=3x3:padding=4:color=black", "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
     const info = await page.evaluate(() => window.__behaviours.info());
     console.log(name, JSON.stringify({births: info.births, matings: info.matings}));
     const plan = PLANS[name];
