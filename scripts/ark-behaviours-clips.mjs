@@ -120,6 +120,31 @@ for (const name of scenes) {
         await context.close();
         continue;
     }
+    if (name.startsWith("tap")) {
+        // 3.3 fix (mating tap): the line tapped at moments after the mating's time (the log's line reaches a viewer 5 to
+        // 55 s after it and stays 15 s), the old tap or the new; each frame is what the tap shows 3 s later.
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const labels = [];
+        const moments = [5, 20, 35, 50, 70, 100, 160, 260];
+        for (let i = 0; i < moments.length; i++) {
+            const note = await page.evaluate(async ([s, pair]) => {
+                const text = await window.__behaviours.tap(s, pair);
+                document.getElementById("note").textContent = text.split("; [")[0];
+                return text;
+            }, [moments[i], name.endsWith("pair")]);
+            labels.push(`${String(i).padStart(2, "0")} ${note}`);
+            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 85});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", "scale=640:-1,tile=4x2:padding=4:color=black", "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
     const info = await page.evaluate(() => window.__behaviours.info());
     console.log(name, JSON.stringify({births: info.births, matings: info.matings}));
     const plan = PLANS[name];

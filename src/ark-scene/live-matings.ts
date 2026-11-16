@@ -145,8 +145,14 @@ export function contestPose(c: ContestScript, isMale: boolean, s: number, ground
 
 /** Farther apart than this (m) at the start: not walked across the Ark. */
 export const MATING_MAX_APART = 160;
-/** The longest walk to each other (s): farther pairs hurry. */
-const WALK_MAX = 75;
+/**
+ * The longest walk to each other (s): farther pairs hurry. The log's line reaches a viewer from a few seconds to about a
+ * minute after the mating's time (the release each minute, then the page's read every 45 s) and stays 15 s: with a
+ * walk of up to 75 s a far pair was still apart when the line was tapped (owner 2026-11-16: "when i click a mating
+ * log, i don't see 2 of its kind next to each other"). Within half a minute they have met.
+ */
+export const MATING_WALK_MAX = 30;
+const WALK_MAX = MATING_WALK_MAX;
 export const COURT_SECONDS = 10;
 export const CHASE_SECONDS = 9;
 const TURN = 1.2;
@@ -155,7 +161,13 @@ const FOLLOW = 2.6;
 const RISE = 1.2;
 const FAILED_ON = 2.4;
 const OFF = 1.2;
-const AFTER = 8;
+/**
+ * How long the two rest together after the mount that takes (s). It was 8 s, and the whole act was over 30 to 110 s
+ * after its time: a near pair had parted before most viewers saw the line. Resting side by side for two minutes keeps
+ * them together while the line is read and tapped (same reason as `MATING_WALK_MAX`).
+ */
+export const MATING_AFTER_SECONDS = 120;
+const AFTER = MATING_AFTER_SECONDS;
 const RETURN_MIN = 4;
 const RETURN_MAX = 30;
 /** How long after its time a mating is still acted (s): the server's tick and the record's read come later. */
@@ -522,6 +534,21 @@ export class LiveMatings<E> {
         const out: string[] = [];
         for (const m of this.matings) if (m.acting.size) out.push(m.act.a, m.act.b, ...(m.contest ? [m.contest.rival] : []));
         return out;
+    }
+
+    /**
+     * The other of a mating under way now that names `id` (its two are being acted: walking to each other, courting,
+     * mounting, resting together or walking apart), for the log's tap to frame both; null when none is (over, not
+     * started, skipped). The newest such mating when there are several.
+     */
+    partnerOf(id: string): string | null {
+        for (let i = this.matings.length - 1; i >= 0; i--) {
+            const m = this.matings[i];
+            if (!m.acting.size || m.over || m.failed) continue;
+            if (m.act.a === id) return m.act.b;
+            if (m.act.b === id) return m.act.a;
+        }
+        return null;
     }
 
     private release(m: Live<E>): void {
