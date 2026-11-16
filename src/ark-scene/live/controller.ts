@@ -294,7 +294,7 @@ export class ArkLive {
         return this.log.push(noted.items, now) || this.log.lines.length !== before;
     }
 
-    /** 3.3 batch (B): the record's hatchings, for the scene's kinds that leave a tree hole by jumping (`addHatchings`). */
+    /** 3.3 batch (B, C): the record's hatchings, for the scene (`addHatchings`): a tree hole's jump, a mouth carry, the lineage. */
     private hatched(events: readonly ArkEvent[]) {
         const clutches = new Map<string, {key: string; parents: string[]; young: string[]; t0: number}>();
         for (const event of events) {

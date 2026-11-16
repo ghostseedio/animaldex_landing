@@ -1,0 +1,785 @@
+{
+ "about": "Young animals and seasonal looks (3.3 batch, lane C), built by scripts/ark-young-life.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. coats: the young of these species wear another coat (the look shader's young coat, young-coat.ts); colours are sRGB. mouthCarry: the parent that carries its hatchlings in its jaws to the water, or holds its fry in its mouth (mouth-carry.ts), after a hatching of the record; say = when the row's sentence is true of what is drawn. antlers: the antler cycle by the Ark year's months (antler-cycle.ts); cut = where the model's antlers start (y, zMin, zBase).",
+ "coats": {
+  "wild-boar": {
+   "name": "Wild Boar",
+   "id": "1ea15398-163c-4298-ba05-1fccfb4a6392",
+   "quote": "Their cream-and-brown stripes fade at around 3 to 4 months",
+   "line": "{aAnimal} has piglets still wearing cream-and-brown stripes",
+   "base": [
+    0.44,
+    0.31,
+    0.2
+   ],
+   "mix": 0.75,
+   "mark": "stripes",
+   "markColour": [
+    0.9,
+    0.82,
+    0.62
+   ],
+   "count": 4.5,
+   "width": 0.36,
+   "strength": 0.85,
+   "fade": [
+    90,
+    120
+   ]
+  },
+  "south-american-tapir": {
+   "name": "South American Tapir",
+   "id": "9976d695-bc30-48a3-854d-df3a8d171d4d",
+   "quote": "Its reddish-brown coat is marked with pale stripes and spots that fade over its first several months",
+   "line": "{aAnimal} has a reddish-brown calf marked with pale stripes and spots",
+   "base": [
+    0.42,
+    0.24,
+    0.15
+   ],
+   "mix": 0.8,
+   "mark": "stripes",
+   "markColour": [
+    0.9,
+    0.86,
+    0.74
+   ],
+   "count": 4,
+   "width": 0.3,
+   "broken": 0.6,
+   "strength": 0.9
+  },
+  "bairds-tapir": {
+   "name": "Baird's Tapir",
+   "id": "83dc7b12-48fa-4fd1-b12c-95a0e0c64b8e",
+   "quote": "Females usually bear a single striped calf that hides early, then follows the mother through forest and water routes.",
+   "line": "{aAnimal} has a striped calf following her through forest and water",
+   "mark": "stripes",
+   "markColour": [
+    0.9,
+    0.86,
+    0.74
+   ],
+   "count": 4,
+   "width": 0.3,
+   "broken": 0.4,
+   "strength": 0.85
+  },
+  "collared-peccary": {
+   "name": "Collared Peccary",
+   "id": "7749ac14-3e52-486b-aa55-35002a6c89fe",
+   "quote": "wear a reddish-brown coat with a dark stripe down the back until they grow the adult coat",
+   "line": "{aAnimal} has a young one in a reddish-brown coat with a dark back stripe",
+   "base": [
+    0.5,
+    0.3,
+    0.2
+   ],
+   "mix": 0.75,
+   "mark": "back",
+   "markColour": [
+    0.13,
+    0.11,
+    0.09
+   ],
+   "strength": 0.9
+  },
+  "african-lion": {
+   "name": "African Lion",
+   "id": "7e7080ec-9c17-4a75-9d85-5a4f6a38e430",
+   "quote": "Plain tawny coat; cubs are born faintly spotted",
+   "line": "{aAnimal} cub is showing the faint spots it was born with",
+   "mark": "spots",
+   "markColour": [
+    0.36,
+    0.26,
+    0.16
+   ],
+   "count": 3.2,
+   "strength": 0.32
+  },
+  "francois-langur": {
+   "name": "Francois' Langur",
+   "id": "99d41348-a2c4-4081-8f6c-83d2713f4f43",
+   "quote": "Infants are born bright orange, contrasting sharply with the darker adults.",
+   "line": "{aAnimal} infant is showing bright orange among the darker adults",
+   "base": [
+    0.93,
+    0.5,
+    0.12
+   ],
+   "mix": 0.88
+  },
+  "blue-wildebeest": {
+   "name": "Blue Wildebeest",
+   "id": "dcddd54a-4b25-4762-aa18-468236f6f901",
+   "quote": "Calves are born a pale tawny brown and take on the darker adult colouring within their first few months.",
+   "line": "{aAnimal} has a pale tawny calf that has not yet darkened",
+   "base": [
+    0.7,
+    0.55,
+    0.36
+   ],
+   "mix": 0.8
+  },
+  "black-spiny-tailed-iguana": {
+   "name": "Black Spiny-tailed Iguana",
+   "id": "fbefc70b-8232-4322-9d59-dde17a4ef5d6",
+   "quote": "Hatchlings are bright green and hunt insects, but as they grow they turn grey-brown",
+   "line": "{aAnimal} is a bright green hatchling hunting insects",
+   "base": [
+    0.3,
+    0.72,
+    0.2
+   ],
+   "mix": 0.8
+  },
+  "emerald-tree-boa": {
+   "name": "Emerald Tree Boa",
+   "id": "e5da0ccb-8fbc-4d2c-887f-98ed7df433c8",
+   "quote": "Newborns are usually brick-red or orange, not green, and change colour gradually over about their first year.",
+   "line": "{aAnimal} is a brick-red newborn, not yet green",
+   "base": [
+    0.7,
+    0.28,
+    0.15
+   ],
+   "mix": 0.8,
+   "fade": [
+    30,
+    365
+   ]
+  },
+  "leopard-gecko": {
+   "name": "Leopard Gecko",
+   "id": "c4e069d5-8807-427e-bf5c-655c2a845b55",
+   "quote": "Juveniles are banded dark and pale, not spotted.",
+   "line": "{aAnimal} is a youngster banded dark and pale, not yet spotted",
+   "base": [
+    0.85,
+    0.8,
+    0.64
+   ],
+   "mix": 0.85,
+   "mark": "bars",
+   "markColour": [
+    0.13,
+    0.11,
+    0.09
+   ],
+   "count": 3,
+   "width": 0.5,
+   "strength": 0.9
+  },
+  "red-tegu": {
+   "name": "Red Tegu",
+   "id": "4b06ae8d-f621-47c3-aaae-d189cdcb99a7",
+   "quote": "Juveniles brown with pale bands, reddening as they grow",
+   "line": "{aAnimal} is a brown youngster with pale bands, not yet red",
+   "base": [
+    0.4,
+    0.3,
+    0.2
+   ],
+   "mix": 0.8,
+   "mark": "bars",
+   "markColour": [
+    0.9,
+    0.86,
+    0.74
+   ],
+   "count": 4,
+   "width": 0.3,
+   "strength": 0.85
+  },
+  "saltwater-crocodile": {
+   "name": "Saltwater Crocodile",
+   "id": "13635c2e-6180-470a-b031-548352e637ed",
+   "quote": "Juveniles pale yellowish with dark bands and spots",
+   "line": "{aAnimal} is a pale yellowish youngster with dark bands and spots",
+   "base": [
+    0.82,
+    0.76,
+    0.48
+   ],
+   "mix": 0.75,
+   "mark": "bars",
+   "markColour": [
+    0.13,
+    0.11,
+    0.09
+   ],
+   "count": 3.5,
+   "width": 0.4,
+   "broken": 0.35,
+   "strength": 0.85
+  },
+  "spectacled-caiman": {
+   "name": "Spectacled Caiman",
+   "id": "9865a279-3945-458d-a407-b35f13d25c3d",
+   "quote": "Juveniles yellowish with bold black bands",
+   "line": "{aAnimal} is a yellowish youngster with bold black bands",
+   "base": [
+    0.8,
+    0.72,
+    0.4
+   ],
+   "mix": 0.75,
+   "mark": "bars",
+   "markColour": [
+    0.05,
+    0.05,
+    0.05
+   ],
+   "count": 3.5,
+   "width": 0.42,
+   "strength": 0.92
+  },
+  "eastern-rat-snake": {
+   "name": "Eastern Rat Snake",
+   "id": "35e18c62-8ba4-44bc-adf4-fdc6dbec5610",
+   "quote": "Juveniles are grey with dark blotches along the back",
+   "line": "{aAnimal} is a grey youngster with dark blotches along its back",
+   "base": [
+    0.56,
+    0.56,
+    0.56
+   ],
+   "mix": 0.8,
+   "mark": "spots",
+   "markColour": [
+    0.18,
+    0.16,
+    0.15
+   ],
+   "count": 2.4,
+   "strength": 0.85
+  },
+  "southeastern-five-lined-skink": {
+   "name": "Southeastern Five-lined Skink",
+   "id": "58f7c810-8f4e-4677-a415-0745041e4d15",
+   "quote": "Juveniles have a vivid blue tail",
+   "line": "{aAnimal} is a youngster showing off its vivid blue tail",
+   "base": [
+    0.1,
+    0.35,
+    0.95
+   ],
+   "mix": 0.9,
+   "tail": true
+  },
+  "gray-angelfish": {
+   "name": "Gray Angelfish",
+   "id": "eda0a9ec-c792-4a1d-8258-d6bfc2c84c3a",
+   "quote": "Juveniles black with yellow vertical bands",
+   "line": "{aAnimal} juvenile is black with yellow vertical bands",
+   "base": [
+    0.04,
+    0.04,
+    0.05
+   ],
+   "mix": 0.9,
+   "mark": "bars",
+   "markColour": [
+    0.95,
+    0.85,
+    0.15
+   ],
+   "count": 3.5,
+   "width": 0.22,
+   "strength": 0.95
+  },
+  "blue-tang": {
+   "name": "Blue Tang",
+   "id": "7001d9b0-8f87-4680-8fa8-a56e8a03f527",
+   "quote": "Juveniles shelter in branching cauliflower coral and only later move to open reef.",
+   "line": "{aAnimal} juvenile is sheltering in branching cauliflower coral",
+   "base": [
+    0.98,
+    0.85,
+    0.1
+   ],
+   "mix": 0.9
+  },
+  "goldfish": {
+   "name": "Goldfish",
+   "id": "e08b2d73-6ebf-4d45-af49-82d81917f050",
+   "quote": "Young goldfish are dark olive-bronze and turn gold over their first year",
+   "line": "{aAnimal} youngster is still dark olive-bronze, not yet gold",
+   "base": [
+    0.3,
+    0.3,
+    0.14
+   ],
+   "mix": 0.85,
+   "fade": [
+    200,
+    365
+   ]
+  },
+  "boesemans-rainbowfish": {
+   "name": "Boeseman's Rainbowfish",
+   "id": "5891927d-e9de-4ae2-889b-afe4e06d064e",
+   "quote": "Juveniles are plain silvery grey, and males take about a year to develop full adult colour.",
+   "line": "{aAnimal} juvenile is still plain silvery grey, its adult colour yet to come",
+   "base": [
+    0.66,
+    0.68,
+    0.7
+   ],
+   "mix": 0.85,
+   "fade": [
+    300,
+    365
+   ]
+  },
+  "zebra-shark": {
+   "name": "Zebra Shark",
+   "id": "d472b20c-e88d-4da7-96df-cb0ba4b67139",
+   "quote": "Young are dark brown with narrow yellowish stripes, while adults are pale with many small dark spots.",
+   "line": "{aAnimal} youngster is dark brown with narrow yellowish stripes",
+   "base": [
+    0.25,
+    0.17,
+    0.1
+   ],
+   "mix": 0.85,
+   "mark": "bars",
+   "markColour": [
+    0.9,
+    0.82,
+    0.5
+   ],
+   "count": 7,
+   "width": 0.18,
+   "strength": 0.9
+  },
+  "brownbanded-bamboo-shark": {
+   "name": "Brownbanded Bamboo Shark",
+   "id": "8cfb5520-5c82-4090-a659-88887f0e1808",
+   "quote": "Juveniles boldly banded; adults often plain brown",
+   "line": "{aAnimal} juvenile is showing the bold bands of its youth",
+   "mark": "bars",
+   "markColour": [
+    0.2,
+    0.14,
+    0.1
+   ],
+   "count": 5,
+   "width": 0.5,
+   "strength": 0.75
+  },
+  "greater-amberjack": {
+   "name": "Greater Amberjack",
+   "id": "25792a73-5ea6-463c-a057-d795bd5d101d",
+   "quote": "Juveniles under drifting weed have bold dark vertical bars, which fade as they grow.",
+   "line": "{aAnimal} juvenile is sheltering under drifting weed, bold dark bars on its sides",
+   "mark": "bars",
+   "markColour": [
+    0.13,
+    0.11,
+    0.09
+   ],
+   "count": 5,
+   "width": 0.4,
+   "strength": 0.7
+  },
+  "spotted-barb": {
+   "name": "Spotted Barb",
+   "id": "113e04b3-88bb-4c05-b37e-83a9448c4a1b",
+   "quote": "Young fish show extra dark bars or blotches along the flank",
+   "line": "{aAnimal} youngster is showing extra dark bars along its flank",
+   "mark": "bars",
+   "markColour": [
+    0.13,
+    0.11,
+    0.09
+   ],
+   "count": 5,
+   "width": 0.35,
+   "strength": 0.5
+  },
+  "iridescent-shark": {
+   "name": "Iridescent Shark",
+   "id": "7e2b6cdc-6357-4526-81a2-ede0459030bb",
+   "quote": "Young fish glossy, with two dark stripes along each side",
+   "line": "{aAnimal} youngster is glossy, with two dark stripes along each side",
+   "mark": "stripes",
+   "markColour": [
+    0.1,
+    0.1,
+    0.12
+   ],
+   "count": 2,
+   "width": 0.3,
+   "strength": 0.8
+  },
+  "bluestreak-cleaner-wrasse": {
+   "name": "Bluestreak Cleaner Wrasse",
+   "id": "859b176c-af30-42a7-ba64-be36b12ac853",
+   "quote": "Juveniles are black with a vivid blue line along the back",
+   "line": "{aAnimal} juvenile is black with a vivid blue line along its back",
+   "base": [
+    0.03,
+    0.03,
+    0.04
+   ],
+   "mix": 0.9,
+   "mark": "back",
+   "markColour": [
+    0.1,
+    0.5,
+    1
+   ],
+   "strength": 0.95
+  },
+  "blueface-angelfish": {
+   "name": "Blueface Angelfish",
+   "id": "d105795f-5076-465f-b15d-ecd315ce1bf8",
+   "quote": "Juveniles look quite different from adults, dark blue with pale curved bars.",
+   "line": "{aAnimal} juvenile is dark blue with pale curved bars",
+   "base": [
+    0.05,
+    0.08,
+    0.35
+   ],
+   "mix": 0.9,
+   "mark": "bars",
+   "markColour": [
+    0.85,
+    0.9,
+    1
+   ],
+   "count": 5,
+   "width": 0.2,
+   "strength": 0.9
+  },
+  "little-blue-heron": {
+   "name": "Little Blue Heron",
+   "id": "be03b0da-67af-46e4-9d72-f0a570ee1e5e",
+   "quote": "The Little Blue Heron is pure white for its first year, which lets the young bird wade among snowy egrets before it slowly turns slate blue.",
+   "line": "{aAnimal} youngster is wading, pure white, among snowy egrets",
+   "base": [
+    0.96,
+    0.96,
+    0.96
+   ],
+   "mix": 0.92,
+   "fade": [
+    330,
+    365
+   ]
+  },
+  "sun-conure": {
+   "name": "Sun Conure",
+   "id": "b3326a5c-5e61-4fb5-bcdc-52ce823557fc",
+   "quote": "Young birds are largely green and gain this yellow as they mature.",
+   "line": "{aAnimal} youngster is still largely green, its yellow yet to come",
+   "base": [
+    0.25,
+    0.6,
+    0.2
+   ],
+   "mix": 0.65
+  },
+  "scarlet-ibis": {
+   "name": "Scarlet Ibis",
+   "id": "293367cd-b064-44cf-9319-6576ea715d51",
+   "quote": "Young birds are duller and develop color as they mature and consume these foods.",
+   "line": "{aAnimal} youngster is still dull, its colour yet to come",
+   "dull": 0.7
+  },
+  "ring-billed-gull": {
+   "name": "Ring-billed Gull",
+   "id": "dedd1cd7-1d4a-4308-8bc2-d85bb70f0f2b",
+   "quote": "Young birds take three years to reach adult plumage, passing through mottled brown and grey stages on the way.",
+   "line": "{aAnimal} youngster is still wearing its mottled brown and grey feathers",
+   "base": [
+    0.45,
+    0.37,
+    0.3
+   ],
+   "mix": 0.6,
+   "mark": "spots",
+   "markColour": [
+    0.25,
+    0.2,
+    0.16
+   ],
+   "count": 4,
+   "strength": 0.5,
+   "fade": [
+    900,
+    1095
+   ]
+  },
+  "yellow-legged-gull": {
+   "name": "Yellow-legged Gull",
+   "id": "b60e8aa1-c262-487a-8339-becbb8e03c29",
+   "quote": "Young birds are mottled brown and take four years to gain the grey and white adult plumage.",
+   "line": "{aAnimal} youngster is showing its mottled brown feathers",
+   "base": [
+    0.45,
+    0.37,
+    0.3
+   ],
+   "mix": 0.6,
+   "mark": "spots",
+   "markColour": [
+    0.25,
+    0.2,
+    0.16
+   ],
+   "count": 4,
+   "strength": 0.5,
+   "fade": [
+    1200,
+    1460
+   ]
+  },
+  "southern-black-widow": {
+   "name": "Southern Black Widow",
+   "id": "741cb716-4a54-4752-9076-afe5af7da7d5",
+   "quote": "Young spiders are pale with white, yellow and orange markings and darken as they mature.",
+   "line": "{aAnimal} is young and pale, with white, yellow and orange markings",
+   "base": [
+    0.8,
+    0.76,
+    0.66
+   ],
+   "mix": 0.75
+  },
+  "leopard-slug": {
+   "name": "Leopard Slug",
+   "id": "4c0ea010-22f4-4784-9263-11dd8165af9d",
+   "quote": "Young slugs tend to be paler and less boldly marked, with the full pattern developing as they grow.",
+   "line": "{aAnimal} is young, still pale and less boldly marked",
+   "base": [
+    0.8,
+    0.76,
+    0.68
+   ],
+   "mix": 0.45
+  },
+  "variegated-meadowhawk": {
+   "name": "Variegated Meadowhawk",
+   "id": "4679c672-1e4b-4fc1-ac96-6875923e03ec",
+   "quote": "Colour changes with age: young adults are yellow-brown and mature males redden",
+   "line": "{aAnimal} is showing its age in colour, yellow-brown when young and reddening later",
+   "base": [
+    0.7,
+    0.55,
+    0.2
+   ],
+   "mix": 0.65
+  },
+  "ant-mimic-mantis": {
+   "name": "Ant Mimic Mantis",
+   "id": "d3469b62-56e1-43d0-b344-7ed483ddbcd8",
+   "quote": "The Ant Mimic Mantis hatches as a shiny black nymph that looks and scurries like an ant, then turns leaf green as it grows up.",
+   "line": "{aAnimal} nymph is scurrying about shiny and black, looking like an ant",
+   "base": [
+    0.03,
+    0.03,
+    0.03
+   ],
+   "mix": 0.9
+  },
+  "giant-malaysian-leaf-insect": {
+   "name": "Giant Malaysian Leaf Insect",
+   "id": "8c023b05-3caf-4c5c-89ff-9879e21eb4e5",
+   "quote": "Newly hatched nymphs are reddish-brown and active, and turn green once they start eating leaves.",
+   "line": "{aAnimal} nymph is newly hatched, reddish-brown and active, not yet green",
+   "base": [
+    0.48,
+    0.24,
+    0.14
+   ],
+   "mix": 0.85
+  },
+  "mantled-guereza": {
+   "name": "Mantled Guereza",
+   "id": "5a842b6e-c58f-4108-bcd6-1c182af21968",
+   "quote": "Infants are born mostly white before developing adult coloration.",
+   "line": "{aAnimal} infant is showing the white coat it was born with",
+   "base": [
+    0.95,
+    0.95,
+    0.93
+   ],
+   "mix": 0.85
+  }
+ },
+ "mouthCarry": {
+  "american-alligator": {
+   "name": "American Alligator",
+   "id": "d132160d-adda-45ac-8d0d-40f61cd0a807",
+   "quote": "sometimes carrying young gently in the mouth",
+   "line": "{aAnimal} is carrying her young gently in her mouth",
+   "kind": "jaws",
+   "carrier": "female",
+   "say": "carry"
+  },
+  "mugger-crocodile": {
+   "name": "Mugger Crocodile",
+   "id": "a80e7c27-6047-459a-9f9f-dd3d85426aba",
+   "quote": "She guards the nest, opens it when the young call, and carries hatchlings to water in her mouth.",
+   "line": "{aAnimal} is opening her nest at the hatchlings' calls and carrying them to water",
+   "kind": "jaws",
+   "carrier": "female",
+   "say": "carry"
+  },
+  "saltwater-crocodile": {
+   "name": "Saltwater Crocodile",
+   "id": "13635c2e-6180-470a-b031-548352e637ed",
+   "quote": "Hatchlings call from inside the egg, and the female opens the nest and carries them to water in her mouth.",
+   "line": "{aAnimal} is opening her nest and carrying the hatchlings to water in her mouth",
+   "kind": "jaws",
+   "carrier": "female",
+   "say": "carry"
+  },
+  "asian-arowana": {
+   "name": "Asian Arowana",
+   "id": "6c3ca716-734d-49bc-a2aa-0d49270186d4",
+   "quote": "After spawning he takes the few, large, yolky eggs into his mouth and carries eggs and then young for roughly two months",
+   "line": "{aAnimal} is carrying his large eggs in his mouth",
+   "kind": "brood",
+   "carrier": "male",
+   "say": null
+  },
+  "silver-arowana": {
+   "name": "Silver Arowana",
+   "id": "9c65cf08-99b5-49e9-84ee-998fe9375829",
+   "quote": "the male takes them into his mouth, carrying the eggs and then the young for around six to eight weeks",
+   "line": "{aAnimal} is carrying his eggs and young in his mouth",
+   "kind": "brood",
+   "carrier": "male",
+   "say": "hold"
+  },
+  "nile-tilapia": {
+   "name": "Nile Tilapia",
+   "id": "f17b4330-317e-46ae-9441-c1eb92048b05",
+   "quote": "Females carry the fertilised eggs and newly hatched fry in their mouths, and the young dart back inside when danger threatens.",
+   "line": "{aAnimal} is letting her fry dart back inside her mouth at danger",
+   "kind": "brood",
+   "carrier": "female",
+   "say": "danger"
+  }
+ },
+ "antlers": {
+  "eurasian-elk": {
+   "name": "Eurasian Elk",
+   "id": "0297c681-020a-4ce4-80c5-54193eb984d4",
+   "quote": "grow antlers each summer, shed in early winter",
+   "line": "{aAnimal} is growing this summer's antlers",
+   "males": true,
+   "velvet": [
+    6,
+    7,
+    8
+   ],
+   "bare": [
+    12,
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "say": "velvet",
+   "cut": [
+    0.205,
+    -0.05,
+    0.316
+   ],
+   "why": "bulls: summer growth, shed in early winter"
+  },
+  "reindeer": {
+   "name": "Reindeer",
+   "id": "3e2f4d77-f261-473d-9bcf-139083b20c5d",
+   "quote": "Both males and females often grow antlers, and females usually keep theirs through winter after males have shed.",
+   "line": "{aAnimal} is still wearing her antlers after the males have shed theirs",
+   "males": false,
+   "bareMales": [
+    12,
+    1,
+    2
+   ],
+   "say": "kept",
+   "cut": [
+    0.22,
+    -0.05,
+    0.308
+   ],
+   "why": "both sexes; males bare in winter"
+  },
+  "red-deer": {
+   "name": "Red Deer",
+   "id": "9e4c04ec-46ac-4019-b396-7b9e5afb2028",
+   "quote": "Growing antlers are among the fastest-growing tissues of any mammal, covered in velvet skin until they harden.",
+   "line": "{aAnimal} is growing new antlers covered in velvet skin",
+   "males": false,
+   "velvet": [
+    6,
+    7,
+    8
+   ],
+   "say": "velvet",
+   "cut": [
+    0.31,
+    -0.05,
+    0.322
+   ],
+   "why": "velvet the three months before the stored rut"
+  },
+  "chital": {
+   "name": "Chital",
+   "id": "213602bf-a066-4eeb-a93c-587ca661135c",
+   "quote": "Stags shed and regrow their antlers every year but not in step with one another, so some stags in hard antler can be seen in any month.",
+   "line": "{aAnimal} is carrying hard antlers, out of step with the other stags",
+   "males": true,
+   "unsynced": {
+    "bare": 1,
+    "velvet": 3
+   },
+   "say": "hard",
+   "cut": [
+    0.33,
+    -0.05,
+    0.325
+   ],
+   "why": "stags, each on his own year"
+  }
+ },
+ "antlersSkipped": {
+  "Fallow Deer": "its model is drawn without antlers: there are none to shed",
+  "White-tailed Deer": "its model's head and antlers cannot be told apart at one height (the cut takes the head); its row is the velvet rub on a sapling (a mark), not built",
+  "Javan Rusa Deer": "its row is a pose (grass ploughed onto the antlers), not a look: not built"
+ },
+ "coatsSkipped": {
+  "American Robin": "a breast only",
+  "Asian Fairy-bluebird": "young males like females: sex and age",
+  "African Grey Parrot": "the iris",
+  "Barn Owl": "sizes, not a coat",
+  "Black-headed Ibis": "head and neck only",
+  "Common Wood Pigeon": "a patch missing, not a coat",
+  "Eurasian Collared Dove": "a collar missing, not a coat",
+  "Eurasian Coot": "the head only",
+  "Green Peafowl": "the train (shape)",
+  "Magnificent Frigatebird": "head and breast only",
+  "Racket-tailed Roller": "tail feathers missing (shape)",
+  "Asian Swamp Eel": "fins (shape)",
+  "Bicolor Parrotfish": "three stages and a sex change",
+  "Giant Gourami": "the quote is the adult's hump",
+  "Red-bellied Pacu": "the belly only",
+  "Black Planthopper": "a fan of wax threads (shape)",
+  "Black Swallowtail": "the caterpillar (another body)",
+  "Desert Locust": "a phase, not an age",
+  "Red-spotted Purple": "the caterpillar (another body)",
+  "Spiny Leaf Insect": "the head only",
+  "Malayan Tapir": "the quote gives no young colour, and stripes over the adult's black-and-white would be wrong",
+  "Bold Jumper": "one spot",
+  "House Centipede": "legs (shape)",
+  "Long-spined Sea Urchin": "the spines only",
+  "Shore Crab": "patches of three colours, not placed by the text"
+ }
+}

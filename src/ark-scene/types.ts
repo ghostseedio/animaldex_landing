@@ -489,8 +489,10 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      */
     addBirths?: (births: Array<{key: string; parents: string[]; young: string[]; t0: number}>) => void;
     /**
-     * 3.3 batch (B): the record's hatchings (`birth` events with `from_egg`: a clutch's parents, its young, its time on the
-     * shared clock). The kinds whose young leave a tree hole by jumping (`duckling-drop.ts`) act it from that time.
+     * 3.3 batch (C): the record's hatchings (`birth` events with `from_egg`: the hatchlings, their parents, the time):
+     * a mouth-carrying species acts it out (`mouth-carry.ts`: a crocodile's hatchlings carried to the water at her jaw,
+     * a mouthbrooder's fry at its mouth), and the hatchlings keep to their recorded mother (`young-care.ts`); 3.3 batch
+     * (B): the kinds whose young leave a tree hole by jumping act it from that time (`duckling-drop.ts`).
      */
     addHatchings?: (hatchings: Array<{key: string; parents: string[]; young: string[]; t0: number}>) => void;
     /**

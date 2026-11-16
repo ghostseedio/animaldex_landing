@@ -78,7 +78,7 @@ import {goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, slee
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
-import {applyRecipeCoat, setRecipeArkDay, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, seasonFactor, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {applyRecipeCoat, seasonMonthAt, setRecipeArkDay, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, seasonFactor, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
 import {fishSchoolsNear} from "@/ark-scene/fish-schools";
 import {setFishChasers} from "@/ark-scene/fish-render";
@@ -230,6 +230,12 @@ import {defenceMoveOf, defencePack, defenceSaid, holdsItsGround, newDefenceState
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
 import {speciesCare} from "@/lib/ark-age";
+// 3.3 batch (C): young with their recorded mother
+import {Lineage, nurseTurn} from "@/ark-scene/young-care";
+import {applyYoungCoat, youngCoatOf, youngCoatStrength, youngSteps} from "@/ark-scene/young-coat";
+// 3.3 batch (C): the antler cycle.
+import {antlerOf, antlerState, applyAntler, type AntlerState} from "@/ark-scene/antler-cycle";
+import {MouthCarry} from "@/ark-scene/mouth-carry";
 import {mealOnStage, mealScript, DRINK_REACH, type MealCatch} from "@/ark-scene/meal-acts";
 import {MealTraces, type TraceDraw} from "@/ark-scene/meal-traces";
 import {bodyMassKg, isScavenger, mealPlan, type MealPlan, type MealSide, type ScavengerCandidate} from "@/ark-scene/meals";
@@ -471,6 +477,10 @@ type Entry = {
     defenceNear?: 0 | 1 | 2;
     /** A young one's parent for the reactive layer (its group's adult leader, `ark-age.ts` for whether it is young), and when that was worked out. */
     youngOf?: {parent: string | null; play: number; at: number};
+    /** 3.3 batch (C): how strongly it wears its species' young coat (`young-coat.ts`, 0-15), worked out again now and then. */
+    youngCoat?: {steps: number; at: number};
+    /** 3.3 batch (C): its antlers in this month of the Ark year (`antler-cycle.ts`), re-read every 30 s. */
+    antler?: AntlerState & {at: number};
     /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
     recipeAct?: RecipeAct | null;
     /** Ambient flock-mates round a small animal's spot (a swarm, a cluster). */
@@ -796,6 +806,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Liveliness (`liveliness-scene.ts`): the clock's weather, tide and ages through the animals, the rain and fog,
     // the traces they leave, and the sound (off until a tap). Its hooks read the scene below, when they are called.
     const soundBase = options.soundBase !== undefined ? options.soundBase : (/^(https?:\/\/[^/]+)\/storage\/v1\//.exec(options.modelBase)?.[1] ?? null);
+    // 3.3 batch (C): who the record says each young one's parents are (this visit's births, and earlier visits' on this device).
+    const lineage = new Lineage({
+        get: () => {
+            try {
+                return window.localStorage.getItem("ark-lineage-v1");
+            } catch {
+                return null;
+            }
+        },
+        set: (text) => window.localStorage.setItem("ark-lineage-v1", text)
+    });
     const liveliness = new ArkLiveliness({
         tier,
         fog,
@@ -805,6 +826,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         soundBase,
         onSoundCredits: options.onSoundCredits,
         hooks: {
+            // 3.3 batch (C): the young one's recorded mother (the parent drawn female, as the birth act has it).
+            recordedParents: (id) => lineage.parentsOf(id),
+            maleOf: (animal) => {
+                const sex = sexLook(animal.id, animal.model_slug).sex;
+                return sex === "male" ? true : sex === "female" ? false : null;
+            },
             planOf: (slug) => library.get(slug)?.behaviour?.plan,
             profileOf: (e) => (e as Entry).sched?.profile ?? null,
             poseAt: (e, epoch) => {
@@ -1783,7 +1810,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         asleep: pose.doing === "sleep",
         // (At its spot: it holds its place against one walking past, decision 204.)
         still: !pose.aloft && !pose.moving,
-        partner: (pose.act as (RecipeAct & {with?: string | null}) | null | undefined)?.with ?? null,
+        // 3.3 batch (C): a young one at its mother's flank to suckle touches her (`liveliness-scene.ts`, `young-care.ts`).
+        partner: (pose.act as (RecipeAct & {with?: string | null}) | null | undefined)?.with ?? (pose as {nurse?: string}).nurse ?? null,
         attached: entry.sched?.trip ? attachedOn(entry.sched.trip, epoch) : null,
         // (Perched up on a surface: held there, never eased off its branch into the air.)
         fixed: !pose.aloft && pose.y > Math.max(heightAt(pose.x, pose.z), 0) + 0.3 && Boolean(entry.sched?.trip && (tripPhase(entry.sched.trip, epoch) === "stay" || tripPhase(entry.sched.trip, epoch) === "pause") && attachedOn(entry.sched.trip, epoch))
@@ -3440,6 +3468,24 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         e.youngOf = {parent, play, at: nowS};
         return e.youngOf;
     };
+    /** 3.3 batch (C): a young one's coat steps (`young-coat.ts`): its species' young coat by its age from the record. Re-read every 30 s. */
+    const youngCoatSteps = (e: Entry): number => {
+        const nowS = worldMs() / 1000;
+        if (e.youngCoat && nowS - e.youngCoat.at < 30 && nowS >= e.youngCoat.at) return e.youngCoat.steps;
+        const coat = youngCoatOf(e.animal.model_slug);
+        const age = coat ? liveliness.ageOf(e) : null;
+        e.youngCoat = {steps: youngSteps(youngCoatStrength(coat, e.animal.origin === "born", age ? {ageDays: age.ageDays, growth: age.growth, young: age.stage === "young"} : null)), at: nowS};
+        return e.youngCoat.steps;
+    };
+    /** 3.3 batch (C): its antlers this month of the Ark year (`antler-cycle.ts`), or null for a species without the cycle. Re-read every 30 s. */
+    const antlerNow = (e: Entry): AntlerState | null => {
+        const spec = antlerOf(e.animal.model_slug);
+        if (!spec) return null;
+        const nowS = worldMs() / 1000;
+        if (e.antler && nowS - e.antler.at < 30 && nowS >= e.antler.at) return e.antler;
+        e.antler = {...antlerState(spec, seasonMonthAt(nowS), sexLook(e.animal.id, e.animal.model_slug).sex, e.animal.id), at: nowS};
+        return e.antler;
+    };
     const stepReactive = (list: Array<{entry: Entry; distance: number; pose: Pose; modelHeight: number}>, dt: number) => {
         const t0 = performance.now();
         const want = reactiveTier();
@@ -3532,18 +3578,28 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!c) return;
             c.entry.reactive = o;
             const pose = c.pose;
-            if (o.dx || o.dz) {
+            // 3.3 batch (C): a young one at its mother's flank to suckle moves as she does here (her step back from the
+            // camera, not its own), so the two stay together.
+            const nursed = (c.entry.sched?.pose as {nurse?: string} | null | undefined)?.nurse;
+            const led = nursed ? out.get(nursed) ?? null : null;
+            const dam = led ? byId.get(nursed!)?.entry.sched?.pose ?? null : null;
+            const own = c.entry.sched?.pose;
+            // (Her turn here too: its place beside her turned about her as she turns.)
+            const [rx, rz] = led && dam && own ? nurseTurn(own.x - dam.x, own.z - dam.z, led.bodyYaw) : [0, 0];
+            const odx = led ? led.dx + rx : o.dx;
+            const odz = led ? led.dz + rz : o.dz;
+            if (odx || odz) {
                 const ground = Math.max(heightAt(pose.x, pose.z), 0);
                 const onGround = !pose.afloat && Math.abs(pose.base - ground) < 0.08;
                 // In the water (swimming, walking the floor, floating): it stays in the water, at its depth.
                 const inWater = pose.afloat && !c.entry.sched?.pose?.aloft && pose.base < 0.02 && sampler.isWater(pose.x, pose.z);
                 // A land animal is never pushed into the water, nor a water animal onto a shore (`offsetShare`).
-                const k = offsetShare(pose, o.dx, o.dz, onGround ? "land" : inWater ? "water" : "free", (x, z) => sampler.isWater(x, z), heightAt);
-                pose.x += o.dx * k;
-                pose.z += o.dz * k;
+                const k = offsetShare(pose, odx, odz, onGround ? "land" : inWater ? "water" : "free", (x, z) => sampler.isWater(x, z), heightAt);
+                pose.x += odx * k;
+                pose.z += odz * k;
                 if (onGround) pose.base = Math.max(heightAt(pose.x, pose.z), 0);
             }
-            pose.yaw += o.bodyYaw;
+            pose.yaw += led ? led.bodyYaw : o.bodyYaw;
             pose.base -= o.crouch * c.modelHeight * 0.08;
         });
         reactiveMs = performance.now() - t0;
@@ -4489,6 +4545,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (act && act.since !== undefined && c.visible && !reducedMotion) dipRipples.note(c.entry.animal.id, `${act.episode}#${act.block}#${Math.round(epoch - act.since)}`, act.since, {x: c.pose.x, y: waterTopAt(c.pose.x, c.pose.z) + 0.012, z: c.pose.z}, c.entry.length, epoch);
             if (c.visible) {
                 seenNear.add(c.entry.animal.id);
+                // 3.3 batch (C): a parent carrying its young in its mouth (`mouth-carry.ts`), in the species' own sentence.
+                const carrying = mouthCarry.size ? mouthCarry.showing(c.entry.animal.id) : null;
+                if (carrying) {
+                    const p = c.entry.animal;
+                    seenActs.push({id: p.id, name: p.name, speciesId: p.kind_species_profile_id || p.species_profile_id || `slug:${p.model_slug}`, zone: p.zone, recipe: "mouth_carry", episode: carrying.key, block: "carry", fish: false, line: carrying.line});
+                }
+                // 3.3 batch (C): a young one in its species' young coat, close by: the species' own sentence for it.
+                if (c.distance < 40 && (c.entry.youngCoat?.steps ?? 0) > 7) {
+                    const y = c.entry.animal;
+                    seenActs.push({id: y.id, name: y.name, speciesId: y.kind_species_profile_id || y.species_profile_id || `slug:${y.model_slug}`, zone: y.zone, recipe: "young_coat", episode: `young_coat:${y.id}:${Math.floor(epoch / 900)}`, block: "look", fish: false, line: youngCoatOf(y.model_slug)!.line});
+                }
+                // 3.3 batch (C): its antlers this month, close by, when its species' own sentence is true of them.
+                if (c.distance < 40 && antlerNow(c.entry)?.say) {
+                    const d = c.entry.animal;
+                    seenActs.push({id: d.id, name: d.name, speciesId: d.kind_species_profile_id || d.species_profile_id || `slug:${d.model_slug}`, zone: d.zone, recipe: "antler_cycle", episode: `antler_cycle:${d.id}:${Math.floor(epoch / 900)}`, block: "look", fish: false, line: antlerOf(d.model_slug)!.line});
+                }
                 // (One of the log's kinds, or a recipe its species has its own sentence for: `live/signature-lines.ts`.)
                 const ownLine = act ? signatureLineOf(c.entry.animal.model_slug, act.recipe) : null;
                 if (act && (ownLine || arkSeenKind(act.recipe))) {
@@ -5191,6 +5263,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Wet or muddy or dusty from its recent acts (a wallow, a dust bath, a dive): after the look pass wrote `arkCoat`,
             // the larger of the two (`applyRecipeCoat`).
             applyRecipeCoat(mesh.geometry, index, recipeNear.get(entry.animal.id)?.coat);
+            // 3.3 batch (C): a young one's own coat (a striped piglet, a banded hatchling: `young-coat.ts`), by its age.
+            if (animal.origin === "born") applyYoungCoat(mesh.geometry, index, youngCoatSteps(entry));
+            // 3.3 batch (C): its antlers this month (growing in velvet, shed): `antler-cycle.ts`.
+            applyAntler(mesh.geometry, index, antlerNow(entry)?.code ?? 0);
 
             // Contact shadows (the animal-look pass): on a broad surface the animal really is on (a small one on a wall,
             // a leaf, a stone; a perch on bark, a rock face, a log), never on a limb, a post or a leap through the canopy,
@@ -7308,6 +7384,36 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id) || liveBirths.pins().includes(entry.animal.id))
     });
     escapeLimp = (id, epoch, moving, length, out) => liveEscapes.size > 0 && liveEscapes.limp(id, epoch, moving, length, out);
+    /**
+     * 3.3 batch (C): young carried in the mouth after a hatching of the record (`mouth-carry.ts`): a crocodilian mother
+     * takes her hatchlings from the nest to the water at her jaw; a mouthbrooding fish's fry come and go at its mouth.
+     */
+    const mouthCarry = new MouthCarry<Entry>({
+        find: (id) => {
+            const e = entryById.get(id);
+            return e && !e.held && !e.visitor ? e : null;
+        },
+        slug: (entry) => entry.animal.model_slug,
+        placeAt: (entry, epoch) => {
+            if (!entry.sched || !world || reducedMotion) return null;
+            const at = schedulePose(entry, epoch);
+            return at.aloft ? null : {x: at.x, y: at.y, z: at.z, yaw: at.yaw};
+        },
+        ground: (x, z) => Math.max(heightAt(x, z), -0.3),
+        waterNear: (x, z) => waterEdgeNear(x, z, 40),
+        walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
+        length: (entry) => entry.length,
+        height: (entry) => entry.drawnHeight,
+        male: (entry) => {
+            const sex = sexLook(entry.animal.id, entry.animal.model_slug).sex;
+            return sex === "male" ? true : sex === "female" ? false : null;
+        },
+        alarmed: (entry) => (entry.reactive?.alarmed ?? 0) > 0.25,
+        setAct: (entry, pose) => {
+            entry.act = pose;
+        },
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id) || liveBirths.pins().includes(entry.animal.id))
+    });
     /** The meals' traces this frame (feathers, fur, scales, pressed grass), and the pressed grass for the grass to bend. */
     let tracesNow: TraceDraw[] = [];
     /**
@@ -7450,14 +7556,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** The live world's meals, a frame (after the replay's acts): poses, and their pins for the herds. */
     const stepLiveMeals = () => {
-        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !duckDrops.size && !liveEscapes.size) || reducedMotion) return; // 3.3 batch (B, D): + duckDrops, liveEscapes
+        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !duckDrops.size && !liveEscapes.size && !mouthCarry.size) || reducedMotion) return; // 3.3 batch (B, C, D): + duckDrops, mouthCarry, liveEscapes
         const epoch = worldMs() / 1000;
         if (liveMeals.size) liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
         if (liveMatings.size) liveMatings.step(epoch);
         if (liveBirths.size) liveBirths.step(epoch);
         if (duckDrops.size) duckDrops.step(epoch); // 3.3 batch (B)
         if (liveEscapes.size) liveEscapes.step(epoch); // 3.3 batch (D)
-        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins(), ...duckDrops.pins(), ...liveEscapes.pins()]); // 3.3 batch (B, D)
+        if (mouthCarry.size) mouthCarry.step(epoch); // 3.3 batch (C)
+        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins(), ...duckDrops.pins(), ...liveEscapes.pins(), ...mouthCarry.pins()]); // 3.3 batch (B, C, D)
         if (pins.size !== mealPins.size || Array.from(pins).some((id) => !mealPins.has(id))) {
             mealPins = pins;
             refreshLive();
@@ -8206,7 +8313,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
@@ -8327,10 +8434,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         addBirths: (births) => {
             liveBirths.add(births, worldMs() / 1000);
+            // 3.3 batch (C): the young of the record's births follow (and suckle from) their recorded mother from now on.
+            if (births.map((b) => lineage.note(b.young, b.parents)).some(Boolean)) liveliness.lineageChanged();
         },
-        // 3.3 batch (B): ducklings dropping from the tree hole
+        // 3.3 batch (C): the record's hatchings: a mouth-carrying species acts it (`mouth-carry.ts`); the lineage as for a birth.
         addHatchings: (hatchings) => {
-            duckDrops.add(hatchings, worldMs() / 1000);
+            mouthCarry.add(hatchings, worldMs() / 1000);
+            duckDrops.add(hatchings, worldMs() / 1000); // 3.3 batch (B): ducklings dropping from the tree hole
+            if (hatchings.map((b) => lineage.note(b.young, b.parents)).some(Boolean)) liveliness.lineageChanged();
         },
         // 3.3 batch (D): the record's escapes, on the encounter's step where the server gives it.
         addEscapes: (escapes) => {
