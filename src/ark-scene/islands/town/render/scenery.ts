@@ -12,6 +12,7 @@ import {type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas"
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {buildingFrame} from "@/ark-scene/islands/town/render/buildings";
+import {clipStreets, keptPieces, onAnyStreet} from "@/ark-scene/islands/town/street-clip";
 import {streetSurfaces} from "@/ark-scene/islands/town/render/streets";
 import {streetFurniture, type FurnitureOut} from "@/ark-scene/islands/town/render/furniture";
 import {alongZ, SURF, tagged} from "@/ark-scene/islands/town/render/surface-tags";
@@ -78,7 +79,7 @@ function overCanal(x: number, z: number): boolean {
 }
 
 /** The street's surface height: the ground's, but held at the bank's level over the canal (a bridge deck). */
-function streetHeight(x: number, z: number): number {
+export function streetHeight(x: number, z: number): number {
     if (overCanal(x, z)) return TOWN_LEVEL;
     if (inBox(HARBOUR_BASIN, x, z, -0.2)) return TOWN_LEVEL;
     return H(x, z);
@@ -90,11 +91,18 @@ function streets(out: SceneryOut, plan: TownPlan) {
     // Carriageways, pavements, kerbs, markings, crossings and the iron in the road: `streets.ts` (lane GA).
     streetSurfaces(plan, {chunkAt: (x, z) => chunkFor(out, x, z), heightAt: streetHeight});
     // The towpaths either side of the canal (gravel), its walls and coping.
+    // (Graphics pass 1: a towpath stops at the street that crosses the canal on its bridge: drawn on, it was a pale band
+    // of gravel across the high street's asphalt, in one plane with it.)
+    const clip = clipStreets(plan.streets);
     for (const part of pieces(CANAL, 20)) {
         const mid = part[Math.floor(part.length / 2)];
         const c = chunkFor(out, mid.x, mid.z);
         for (const side of [-1, 1]) {
-            tagged(c.decal, SURF.gravel, Math.abs(part[part.length - 1].z - part[0].z) > Math.abs(part[part.length - 1].x - part[0].x), () => c.decal.ribbon(part, TOWPATH, (x, z) => (overCanal(x, z) ? TOWN_LEVEL : H(x, z)), 0.07, PATH, 2, side * (CANAL_WIDTH / 2 + 0.35 + TOWPATH / 2)));
+            const offset = side * (CANAL_WIDTH / 2 + 0.35 + TOWPATH / 2);
+            const rowsZ = Math.abs(part[part.length - 1].z - part[0].z) > Math.abs(part[part.length - 1].x - part[0].x);
+            for (const path of keptPieces(part, [offset - TOWPATH / 2, offset + TOWPATH / 2], (x, z) => onAnyStreet(clip, x, z))) {
+                tagged(c.decal, SURF.gravel, rowsZ, () => c.decal.ribbon(path, TOWPATH, (x, z) => (overCanal(x, z) ? TOWN_LEVEL : H(x, z)), 0.07, PATH, 2, offset));
+            }
             // (Lane GC: the face 0.15 m inside the channel's edge, the coping 0.55 m wide to the towpath: the bank's ground,
             // sloping down into the bed between the 1.1 m grid's vertices, poked up through the water along the walls.)
             wallAlong(c.solid, part, side * (CANAL_WIDTH / 2 - 0.15), CANAL_LEVEL - 1.8, TOWN_LEVEL + 0.18, 0.55, STONE, COPING);

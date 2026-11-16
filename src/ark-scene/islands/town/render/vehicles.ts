@@ -105,40 +105,159 @@ export function vehicleGeometry(level: VehicleLevel): BufferGeometry {
     return g;
 }
 
-/** A car seen from afar: its body, cabin, glass, wheels and lamps from its model's box and glass line (~90 triangles). */
+/**
+ * A car seen from afar (graphics pass 1; the owner, 2026-11-16: "cars look like several polygons"): drawn from its model's
+ * own box and glass line, so a saloon, an SUV and a city car still differ. It was a box with a box cabin and four box
+ * wheels: past the middle distance (the whole-town view, every phone past 36 m) every car in the town was that. Now a
+ * lofted body (rounded sills and shoulders, the boot and the bonnet falling to the bumpers), a cabin with raked screens
+ * and a narrower roof (glass round it, the roof in the paint), round wheels with their hubs, the lamps, the grille and
+ * the plate. About 300 triangles, one instanced draw per kind as before.
+ */
 export function proxyGeometry(model: Pick<VehicleModel, "size" | "glass">): BufferGeometry {
     const geo = new Geo();
     const [sw, h, l] = model.size;
     const w = sw * 0.92;
-    const [gy0, , gz0, gz1] = model.glass;
+    const hw = w / 2;
+    const [gy0, gy1, gz0, gz1] = model.glass;
     const belt = gy0 > 0 ? gy0 : h * 0.62;
-    const f: Frame = {x: 0, y: 0, z: 0, rot: 0};
+    const roof = Math.min(gy1 > belt ? gy1 + 0.04 : h, h);
     const paint = tone("#ffffff");
     const dark = tone(CLASS_COLOUR[1]);
+    const grey = tone(CLASS_COLOUR[2]);
     const glass = tone(CLASS_COLOUR[3]);
-    geo.tag = 1;
-    geo.box(f, 0, 0.2, 0, w, belt - 0.2, l, paint);
-    // The cabin: glass sides, the screens raked, a painted roof.
+    type V = [number, number, number];
+    const clearance = 0.2;
+    const radius = Math.min(0.34, h * 0.26);
+    // The body's stations, stern to nose: z, its shoulder's height, its sill's height (the ends fall to the bumpers).
+    const z0 = -l / 2;
+    const z1 = l / 2;
+    const body: Array<[number, number, number]> = [
+        [z0, belt - 0.2, clearance + 0.14],
+        [z0 + 0.12, belt - 0.06, clearance + 0.04],
+        [z0 + 0.42, belt, clearance],
+        [z1 - 0.95, belt - 0.02, clearance],
+        [z1 - 0.4, belt - 0.1, clearance],
+        [z1 - 0.1, belt - 0.2, clearance + 0.04],
+        [z1, belt - 0.28, clearance + 0.12]
+    ];
+    // Its section (the right half, sill to the shoulder's top; mirrored): a rounded sill and shoulder, a little
+    // tumblehome. `inset` m in at the ends, so the corners are rounded in plan too.
+    const section = (z: number, top: number, sill: number): V[] => {
+        const end = Math.min(z - z0, z1 - z);
+        const inset = end < 0.05 ? 0.12 : end < 0.2 ? 0.05 : 0;
+        const x = hw - inset;
+        return [
+            [x - 0.06, sill, z],
+            [x, sill + 0.1, z],
+            [x, top - 0.12, z],
+            [x - 0.1, top - 0.02, z],
+            [x - 0.22, top, z]
+        ];
+    };
+    const mirror = (p: V): V => [-p[0], p[1], p[2]];
+    // The sides (right then left, wound outward) and the top across the shoulders, station to station.
+    for (let i = 1; i < body.length; i++) {
+        const a = section(body[i - 1][0], body[i - 1][1], body[i - 1][2]);
+        const b = section(body[i][0], body[i][1], body[i][2]);
+        for (let k = 1; k < a.length; k++) {
+            const colour = k === 1 ? dark : paint;
+            geo.tag = k === 1 ? 0 : 1;
+            geo.quad(b[k - 1], a[k - 1], a[k], b[k], colour);
+            geo.quad(mirror(a[k - 1]), mirror(b[k - 1]), mirror(b[k]), mirror(a[k]), colour);
+        }
+        geo.tag = 1;
+        const at = a[a.length - 1];
+        const bt = b[b.length - 1];
+        geo.quad(mirror(at), mirror(bt), bt, at, paint);
+        // (The underside, dark: it shows from the side at a low sun.)
+        geo.tag = 0;
+        geo.quad(b[0], mirror(b[0]), mirror(a[0]), a[0], dark);
+    }
+    // The tail and the nose: the section's outline closed across.
+    for (const [station, facing] of [[body[0], -1], [body[body.length - 1], 1]] as const) {
+        const ring = section(station[0], station[1], station[2]);
+        const full = [...ring, ...ring.slice().reverse().map(mirror)];
+        geo.tag = 1;
+        for (let k = 1; k + 1 < full.length; k++) {
+            if (facing > 0) geo.tri(full[0], full[k], full[k + 1], paint);
+            else geo.tri(full[0], full[k + 1], full[k], paint);
+        }
+        const z = station[0] + facing * 0.012;
+        const y = (station[1] + station[2]) / 2;
+        const lampW = Math.min(0.36, hw * 0.4);
+        // (Each a little proud of the end, the bumper prouder still: none shares another's plane.)
+        const quad = (x0: number, x1: number, ya: number, yb: number, colour: [number, number, number], proud = 0) => {
+            const zz = z + facing * proud;
+            if (facing > 0) geo.quad([x0, ya, zz], [x1, ya, zz], [x1, yb, zz], [x0, yb, zz], colour);
+            else geo.quad([x1, ya, zz], [x0, ya, zz], [x0, yb, zz], [x1, yb, zz], colour);
+        };
+        // The lamps either side (headlamps at the nose, tail lamps at the tail), the grille or the plate between, the bumper.
+        geo.tag = facing > 0 ? 2 : 3;
+        for (const side of [-1, 1]) quad(side > 0 ? hw - 0.2 - lampW : -(hw - 0.2), side > 0 ? hw - 0.2 : -(hw - 0.2) + lampW, y + 0.02, y + 0.16, tone(CLASS_COLOUR[facing > 0 ? 4 : 5]));
+        geo.tag = 0;
+        quad(-0.32, 0.32, y - 0.08, y + (facing > 0 ? 0.1 : 0.06), facing > 0 ? dark : tone("#e8e4d4"));
+        quad(-(hw - 0.12), hw - 0.12, station[2] + 0.02, station[2] + 0.1, dark, 0.012);
+    }
+    // The cabin: the rear screen, the roof, the windscreen, glass down both sides; narrower at the roof.
+    const back = gz1 > gz0 ? gz0 : -l * 0.3;
     const front = gz1 > gz0 ? gz1 : l * 0.2;
-    const back = gz1 > gz0 ? gz0 : -l * 0.32;
-    const topFront = front - (front - back) * 0.3;
-    const topBack = back + (front - back) * 0.1;
-    const bw = w / 2 - 0.02;
-    const tw = w / 2 - 0.16;
-    const P = (x: number, y: number, z: number): [number, number, number] => [x, y, z];
-    const b = [P(-bw, belt, back), P(bw, belt, back), P(bw, belt, front), P(-bw, belt, front)];
-    const t = [P(-tw, h, topBack), P(tw, h, topBack), P(tw, h, topFront), P(-tw, h, topFront)];
-    geo.quad(b[3], b[2], t[2], t[3], glass);
-    geo.quad(b[1], b[0], t[0], t[1], glass);
-    geo.quad(b[2], b[1], t[1], t[2], glass);
-    geo.quad(b[0], b[3], t[3], t[0], glass);
-    geo.quad(t[3], t[2], t[1], t[0], paint);
+    const rearRake = Math.min(0.55, (front - back) * 0.22);
+    const frontRake = Math.min(0.8, (front - back) * 0.3);
+    const bw = hw - 0.1;
+    const tw = hw - 0.26;
+    const cabin: Array<[number, number, number]> = [
+        [back, bw, belt],
+        [back + rearRake, tw, roof],
+        [front - frontRake, tw, roof],
+        [front, bw, belt]
+    ];
+    for (let i = 1; i < cabin.length; i++) {
+        const [za, wa, ya] = cabin[i - 1];
+        const [zb, wb, yb] = cabin[i];
+        const roofTop = i === 2;
+        // (The sides: glass; at the ends the quarter lights are triangles from the screen's foot.)
+        geo.tag = 0;
+        const aLow: V = [bw, belt, za];
+        const bLow: V = [bw, belt, zb];
+        const aTop: V = [wa, ya, za];
+        const bTop: V = [wb, yb, zb];
+        geo.quad(bLow, aLow, aTop, bTop, glass);
+        geo.quad(mirror(aLow), mirror(bLow), mirror(bTop), mirror(aTop), glass);
+        geo.tag = roofTop ? 1 : 0;
+        geo.quad(mirror(aTop), mirror(bTop), bTop, aTop, roofTop ? paint : glass);
+    }
+    // The wheels: round (eight sides), the tyre's tread and its outer wall dark, the hub grey; wheel arches dark on the body.
     geo.tag = 0;
-    for (const [x, z] of [[-1, 1], [1, 1], [-1, -1], [1, -1]] as const) geo.box(f, x * (w / 2 - 0.1), 0, z * l * 0.32, 0.24, 0.64, 0.64, dark);
-    geo.tag = 2;
-    geo.box(f, 0, belt - 0.32, l / 2 - 0.01, w * 0.8, 0.14, 0.04, tone(CLASS_COLOUR[4]));
-    geo.tag = 3;
-    geo.box(f, 0, belt - 0.28, -l / 2 + 0.01, w * 0.8, 0.12, 0.04, tone(CLASS_COLOUR[5]));
+    const axle = l * 0.33;
+    for (const zc of [axle - l * 0.02, -axle]) {
+        for (const side of [-1, 1]) {
+            const outer = side * (hw + 0.01);
+            const inner = side * (hw - 0.22);
+            const ring: Array<[number, number]> = [];
+            for (let k = 0; k < 8; k++) {
+                const t = ((k + 0.5) / 8) * Math.PI * 2;
+                ring.push([radius + Math.sin(t) * radius, zc + Math.cos(t) * radius]);
+            }
+            for (let k = 0; k < 8; k++) {
+                const [ya, za] = ring[k];
+                const [yb, zb] = ring[(k + 1) % 8];
+                // (The tread, facing out from the axle.)
+                if (side > 0) geo.quad([inner, yb, zb], [inner, ya, za], [outer, ya, za], [outer, yb, zb], dark);
+                else geo.quad([inner, ya, za], [inner, yb, zb], [outer, yb, zb], [outer, ya, za], dark);
+                // (The outer wall: the tyre's ring, then the hub.)
+                const hubA: V = [outer + side * 0.005, radius + (ya - radius) * 0.6, zc + (za - zc) * 0.6];
+                const hubB: V = [outer + side * 0.005, radius + (yb - radius) * 0.6, zc + (zb - zc) * 0.6];
+                const centre: V = [outer + side * 0.005, radius, zc];
+                if (side > 0) {
+                    geo.quad([outer, yb, zb], [outer, ya, za], hubA, hubB, dark);
+                    geo.tri(hubB, hubA, centre, grey);
+                } else {
+                    geo.quad([outer, ya, za], [outer, yb, zb], hubB, hubA, dark);
+                    geo.tri(hubA, hubB, centre, grey);
+                }
+            }
+        }
+    }
     const g = geo.toGeometry(true);
     // (`aTag`: 1 the paint, 2 a headlamp, 3 a tail lamp.)
     const tag = g.getAttribute("aTag") as BufferAttribute;

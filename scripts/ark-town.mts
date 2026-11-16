@@ -136,6 +136,10 @@ if (command === "stills") {
             }
             // (Three frames, as before: the first re-sorts the trees for the levels just read.)
             window.__arkTown!.render(3);
+            // (The parked cars change level at most every 200 ms of a moving camera (`vehicles.ts`): a shot after a jump
+            // waits that out, so the cars near it are drawn at their near level, as a viewer who stops sees them.)
+            await new Promise((resolve) => setTimeout(resolve, 260));
+            window.__arkTown!.render(2);
         }, {shot: id, hours});
         const png = await page.screenshot({type: "png"});
         await sharp(png).jpeg({quality: 88}).toFile(path.join(out, `${id}.jpg`));

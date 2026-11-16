@@ -8,6 +8,7 @@
 
 import {bounds, corners, inBox, inPoly, polylineDistance, polylineWithin, type Box, type Poly} from "@/ark-scene/islands/town/geom";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, inland, MILLPOND, TOWN_LEVEL, townPlan, type GreenKind, type TownPlan} from "@/ark-scene/islands/town/plan";
+import {clipStreets, type ClipStreet} from "@/ark-scene/islands/town/street-clip";
 
 export type TownSurface =
     | "sea"
@@ -149,13 +150,36 @@ const SEA_FLOOR = -16;
 const BASIN_FLOOR = -3.6;
 const CANAL_BED = CANAL_LEVEL - 1.7;
 
-/** How much the ground rolls here: 0 in the town, 1 in the zoo, the park and the farmland. */
-export function roughness(x: number, z: number): number {
-    const zoo = x < -56 && z < 18 ? 1 : 0;
-    const park = Math.hypot((x - MILLPOND.x) / 52, (z - MILLPOND.z) / 34) < 1 ? 0.8 : 0;
+let gradedStreets: ClipStreet[] | null = null;
+
+/**
+ * How much a point is on a street's graded bed (graphics pass 1): 1 on the street and its pavements and half a metre
+ * round them, easing to 0 four metres beyond. A street is laid on level ground, not on the park's or the zoo's rolls.
+ */
+export function streetGrade(x: number, z: number): number {
+    gradedStreets ??= clipStreets(townPlan().streets);
+    let grade = 0;
+    for (const c of gradedStreets) {
+        if (x < c.box.x0 - 5 || x > c.box.x1 + 5 || z < c.box.z0 - 5 || z > c.box.z1 + 5) continue;
+        const reach = Math.max(c.band, c.half);
+        grade = Math.max(grade, smoothstep(reach + 4.5, reach + 0.5, polylineDistance(c.street.line, x, z)));
+        if (grade >= 1) break;
+    }
+    return grade;
+}
+
+/**
+ * How much the ground rolls here: 0 in the town, 1 in the zoo, the park and the farmland; 0 on a street's bed.
+ * (Graphics pass 1: the zoo's and the park's edges were hard, so the ground stepped up to 0.4 m at an invisible line,
+ * and the park's ran along the mill lane: the grass stood up through the middle of the road, the owner's "random glitch
+ * patch in the road". Each edge now eases over a few metres, and the streets are graded.)
+ */
+export function roughness(x: number, z: number, grade = streetGrade(x, z)): number {
+    const zoo = smoothstep(-52, -60, x) * smoothstep(22, 14, z);
+    const park = 0.8 * smoothstep(1.0, 0.9, Math.hypot((x - MILLPOND.x) / 52, (z - MILLPOND.z) / 34));
     const farm = smoothstep(-108, -122, z);
-    const west = x < -170 ? 0.6 : 0;
-    return Math.max(zoo, park, farm, west);
+    const west = 0.6 * smoothstep(-166, -174, x);
+    return Math.max(zoo, park, farm, west) * (1 - grade);
 }
 
 /** The base land height before the cuts (m). */
@@ -183,7 +207,8 @@ export function townBuildingFloor(b: Box): number {
 
 export function sampleTownGround(x: number, z: number): TownGroundSample {
     const inl = inland(x, z);
-    const rough = roughness(x, z);
+    const grade = streetGrade(x, z);
+    const rough = roughness(x, z, grade);
     // The shore: a beach in the south-east, a grassy bank elsewhere; the sea floor shelving out.
     const beach = smoothstep(40, 72, x) * smoothstep(92, 118, z);
     const land = landHeight(x, z, rough);
