@@ -7,6 +7,7 @@ import {speciesDepth} from "@/ark-scene/sea-depth";
 import {loopPoint, OCEAN_LOOPS, OCEAN_VIEW_MARGIN, OCEAN_WANDER, oceanFix, roamsOpenOcean} from "@/ark-scene/open-ocean";
 import {BOAT_ROUTES, boatFix} from "@/ark-scene/ocean-traffic";
 import {OPEN_CLARITY, openWaterClarity, underwaterLook} from "@/ark-scene/sea-look";
+import {SHADE_GONE, SHADE_MOST_ALPHA, shadeAlpha, shadeGeometry} from "@/ark-scene/ocean-shadows";
 
 setArkWorld("v2");
 const origin = townWorldOrigin();
@@ -129,4 +130,15 @@ test("open ocean: the blue water is clearer than the shelf (the haze only), unch
     const b = underwaterLook(5, 1, {r: 0, g: 0, b: 0, density: 0}, openWaterClarity(110));
     assert.equal(a.r, b.r);
     assert.ok(Math.abs(b.density - a.density * OPEN_CLARITY) < 1e-12);
+});
+
+test("open ocean: an animal's shape on the water is darkest just under the surface, gone by 7 m, every face up", () => {
+    assert.equal(shadeAlpha(0), SHADE_MOST_ALPHA);
+    assert.equal(shadeAlpha(SHADE_GONE), 0);
+    for (let d = 0; d < SHADE_GONE; d += 0.25) assert.ok(shadeAlpha(d + 0.25) <= shadeAlpha(d));
+    const position = shadeGeometry().getAttribute("position");
+    for (let i = 0; i < position.count; i += 3) {
+        const [ax, az, bx, bz, cx, cz] = [position.getX(i), position.getZ(i), position.getX(i + 1), position.getZ(i + 1), position.getX(i + 2), position.getZ(i + 2)];
+        assert.ok((bz - az) * (cx - ax) - (bx - ax) * (cz - az) > 0, `triangle ${i / 3} faces down`);
+    }
 });

@@ -5,7 +5,7 @@
  * (`islands/town/render/boats.ts` hull, its floating material: on the sea's tide, rocking a few centimetres in the vertex
  * shader); the wake is a Kelvin wedge (two arms at 19.5° and the propeller's churn between them), white foam fading aft.
  *
- * Triangles: speedboat 248, yacht 240, ferry 344, wake 216 (each drawn up to 5 times: about 2,200 triangles in all).
+ * Triangles: speedboat 248, yacht 240, ferry 344, wake 360 (three speedboats, one yacht, one ferry, five wakes: about 3,100 triangles in all).
  */
 
 import {BufferAttribute, BufferGeometry, Euler, Group, InstancedMesh, Matrix4, MeshLambertMaterial, Quaternion, Vector3, type MeshStandardMaterial} from "three";
@@ -134,7 +134,7 @@ export function wakeGeometry(): BufferGeometry {
     const pos: number[] = [];
     const col: number[] = [];
     const nor: number[] = [];
-    const steps = 12;
+    const steps = 20;
     // (Across a strip: its edge, two foam lines, its other edge; the foam's share of the alpha at each.)
     const across = [-1, -0.35, 0.35, 1];
     const soft = [0, 1, 1, 0];
@@ -142,8 +142,8 @@ export function wakeGeometry(): BufferGeometry {
         const vertex = (d: number, k: number, x: number) => {
             pos.push(x, 0, -d);
             // (Streaks: a fixed ripple of the foam along the strip, a different one on each foam line.)
-            const streak = 0.72 + 0.28 * Math.sin(d * 37 + seed * 5.1 + k * 2.3) * Math.sin(d * 11 + seed);
-            col.push(0.97, 0.98, 0.98, Math.max(0, alpha(d) * soft[k] * streak));
+            const streak = 0.6 + 0.4 * Math.sin(d * 61 + seed * 5.1 + k * 2.3) * Math.sin(d * 17 + seed + k);
+            col.push(1, 1, 1, Math.max(0, alpha(d) * soft[k] * streak));
             nor.push(0, 1, 0);
         };
         for (let i = 0; i < steps; i++) {
@@ -203,7 +203,7 @@ export class OceanTrafficView {
             this.hulls.set(kind, mesh);
             this.group.add(mesh);
         }
-        this.wakes = new InstancedMesh(wakeGeometry(), new MeshLambertMaterial({vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2}), BOAT_ROUTES.length);
+        this.wakes = new InstancedMesh(wakeGeometry(), new MeshLambertMaterial({vertexColors: true, emissive: 0x2a3034, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2}), BOAT_ROUTES.length);
         this.wakes.name = "ocean-wakes";
         this.wakes.frustumCulled = false;
         // (After the sea's surface, renderOrder 2: foam on the water.)

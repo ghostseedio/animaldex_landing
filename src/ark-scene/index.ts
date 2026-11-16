@@ -213,6 +213,7 @@ import {ARK_ISLANDS} from "@/ark-scene/islands"; // p2 (ocean)
 import {arkWorld} from "@/ark-scene/world"; // p2 (ocean)
 import {OCEAN_COLUMN, OCEAN_VIEW_MARGIN, oceanFix, roamsOpenOcean} from "@/ark-scene/open-ocean"; // p2 (ocean)
 import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (ocean)
+import {OceanShadows} from "@/ark-scene/ocean-shadows"; // p2 (ocean)
 import {TOWN_GRID, TOWN_NEAR_LIVE} from "@/ark-scene/islands/town/chunks";
 import type {CatWalls as CatWallsT} from "@/ark-scene/islands/town/cat-walls"; // gfx (fauna)
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
@@ -3872,7 +3873,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const oceanPose = (entry: Entry, depth: SpeciesDepth, modelHeight: number): Pose => {
         const clock = reducedMotion ? 0 : clockNow();
         const fix = oceanFix(entry.animal, entry.length, clock);
-        const breath = entry.state.breathing && !reducedMotion ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
+        // (Its breath as everywhere: awake on the schedule, its breathe trip's (every third slot); else the clock's cycle.)
+        const sched = entry.sched;
+        const breath = reducedMotion ? 0 : sched?.pose && scheduled(entry) ? scheduledBreath(sched) ?? breathAt(entry.seed, clock, true) : entry.state.breathing ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
         // (Its band in a working column of OCEAN_COLUMN m: 2–6 m under for an upper-water swimmer, not 13–35 m.)
         const floorY = Math.max(heightAt(fix.x, fix.z), -OCEAN_COLUMN);
         const spec = waterSpec(depth, floorY, entry.seed, clock, breath);
@@ -4722,6 +4725,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const streamDots: FindDot[] = [];
         streamSkipped = 0;
         const streaming = !streamer.allIn;
+        oceanShadows?.begin(); // p2 (ocean)
         const pinnedNow = (entry: Entry) => entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id || Boolean(entry.visitor || entry.act || entry.moment || entry.held);
         // Past the render distance: drawn only from the map view, and only when big on screen (a whale, an elephant: true
         // scale); otherwise skipped (a marker in the map view).
@@ -4841,6 +4845,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const modelHeight = model ? model.height * modelScale : entry.length * 0.6;
             if (model && entry.rig) stepWander(entry, modelScale, dt, now);
             const where = pose(entry, model, modelHeight, now);
+            // p2 (ocean): an open-ocean animal's shape on the water over it, seen from above (`ocean-shadows.ts`).
+            if (entry.ocean) {
+                const shadows = (oceanShadows ??= new OceanShadows(scene));
+                shadows.add(where.x, where.z, where.yaw, entry.length, bodyShape(slug, entry.length).radius * 2, where.base + modelHeight);
+                // (A whale's blow from its head as it breathes at the surface: cetaceans by their model's body plan.)
+                if (where.water?.breath && model?.behaviour?.plan === "cetacean") shadows.blow(where.x + Math.sin(where.yaw) * entry.length * 0.42, where.z + Math.cos(where.yaw) * entry.length * 0.42, entry.length, where.water.breath);
+            }
             // Part B: where it is now, for the render distance; past it, not drawn (a marker in the map view).
             if (streaming) {
                 const at = (entry.streamAt ??= {x: 0, y: 0, z: 0, t: 0});
@@ -4878,6 +4889,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             runtime.see(slug, distance, candidates[candidates.length - 1].visible);
         }
 
+        oceanShadows?.end(underwater); // p2 (ocean)
         // The page's tap card says what the selected animal is doing now, from the same state.
         tellState();
         perf.lap("animals");
@@ -5677,6 +5689,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let seaLookNow = 0;
     /** p2 (ocean): the open sea's boats, once the town is in (`attachIsland`). */
     let oceanTraffic: OceanTrafficView | null = null;
+    /** p2 (ocean): the open-ocean animals' shapes on the water, made with the first of them. */
+    let oceanShadows: OceanShadows | null = null;
     const stepLayers = (elapsed: number) => {
         const under = camera.position.y < -0.02 && heightAt(camera.position.x, camera.position.z) < -0.3;
         if (under !== underwater) {
@@ -9053,6 +9067,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // 3.3 batch (E)
             seaLook?.dispose();
             oceanTraffic?.dispose(); // p2 (ocean)
+            oceanShadows?.dispose(); // p2 (ocean)
             lighting.dispose();
             post.dispose();
             renderer.dispose();
