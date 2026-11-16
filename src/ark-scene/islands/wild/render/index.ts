@@ -137,7 +137,9 @@ export function buildWildIsland(options: {tier: WildTier; base?: string}): WildI
         const k = m ? Math.max(m.sum / m.n, 0.5) : 1;
         return {...info, lod_distances: info.lod_distances.map((d) => d * k) as [number, number, number], lods: info.lods.filter((l) => l.level !== "card")};
     };
-    const placements = (kinds: ReadonlyArray<WildItem["kind"]>, share = 1): AssetPlacement[] => items.filter((it) => it.asset && kinds.includes(it.kind)).filter((it, k) => share >= 1 || ((k * 0.618034) % 1) < share).map((it) => ({id: it.asset!, x: it.x, y: it.y, z: it.z, yaw: it.yaw, scale: it.scale, shade: it.shade, ...(it.up ? {up: it.up} : {})}));
+    // gfx (PLACE): every wildflower on every tier (319 of the island's 5,147 plants): the map stands small animals on
+    // their heads, and one on a flower the tier left out sat in the air ("grasshoppers seem to be floating next to flowers").
+    const placements = (kinds: ReadonlyArray<WildItem["kind"]>, share = 1): AssetPlacement[] => items.filter((it) => it.asset && kinds.includes(it.kind)).filter((it, k) => share >= 1 || it.asset!.startsWith("flower-") || ((k * 0.618034) % 1) < share).map((it) => ({id: it.asset!, x: it.x, y: it.y, z: it.z, yaw: it.yaw, scale: it.scale, shade: it.shade, ...(it.up ? {up: it.up} : {})}));
     const sets: AssetInstances[] = [];
     const treeMaterial = {front: plainMaterial(FrontSide, "tree"), double: plainMaterial(DoubleSide, "tree2")};
     sets.push(new AssetInstances(placements(["tree"]), infoFor, treeMaterial, assetBase, "wild-tree"));

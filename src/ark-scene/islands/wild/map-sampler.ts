@@ -10,6 +10,7 @@
  */
 
 import manifest from "@/ark-scene/assets-manifest.json";
+import flowerHeads from "@/ark-scene/flower-heads.json";
 import {arkWorld, noise} from "@/ark-scene/world";
 import {allAttachPoints} from "@/ark-scene/sampler";
 import {sceneryMapPoint} from "@/ark-scene/map/scenery-points";
@@ -371,7 +372,11 @@ class WildMapSampler implements ArkMapSampler {
                 points.push({id: `${item.kind}@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "leaf", x: item.x, y: item.y + item.height * 0.92, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.yaw), 0, Math.sin(item.yaw)], size: {min: TINY, max: SIZES.leaf.max}, zone: zoneAt(item.x, item.z)});
                 if (item.kind === "shrub") points.push({id: `${item.kind}b@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "branch", x: item.x, y: item.y + item.height * 0.6, z: item.z, normal: [0, 1, 0], tangent: [Math.sin(item.yaw), 0, Math.cos(item.yaw)], size: {min: TINY, max: 0.2}, zone: zoneAt(item.x, item.z)});
             } else if (item.kind === "plant" && item.asset?.startsWith("flower")) {
-                points.push({id: `flower@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "flower_head", x: item.x, y: item.y + item.height, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.yaw), 0, Math.sin(item.yaw)], size: {min: TINY, max: SIZES.flower_head.max}, zone: zoneAt(item.x, item.z)});
+                // gfx (PLACE): drawn on its top head (the asset's own point, turned and scaled as it is placed), not the
+                // plant's middle at its full height: in a clump that was air between the heads ("grasshoppers seem to be
+                // floating next to flowers"). The map's point stays where it was (its ground's tags, the homes hashed onto
+                // the lists, the server's positions atlas); only where its animal is drawn moves (`drawn`).
+                points.push({id: `flower@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "flower_head", x: item.x, y: item.y + item.height, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.yaw), 0, Math.sin(item.yaw)], size: {min: TINY, max: SIZES.flower_head.max}, zone: zoneAt(item.x, item.z), drawn: flowerHeadAt(item)});
             } else if (item.kind === "log" && item.asset) {
                 points.push({id: `log@${item.x.toFixed(1)},${item.z.toFixed(1)}`, tag: "bark", x: item.x, y: item.y + (ASSETS[item.asset]?.height ?? 0.5) * item.scale, z: item.z, normal: [0, 1, 0], tangent: [Math.cos(item.yaw), 0, -Math.sin(item.yaw)], size: {min: TINY, max: SIZES.bark.max}, zone: zoneAt(item.x, item.z)});
             }
@@ -398,6 +403,18 @@ class WildMapSampler implements ArkMapSampler {
 }
 
 const frac = (v: number) => v - Math.floor(v);
+
+/** gfx (PLACE): a placed wildflower's top head in the world (`flower-heads.json`); its middle at its height for an unknown asset. */
+export function flowerHeadAt(item: Pick<WildItem, "asset" | "x" | "y" | "z" | "yaw" | "scale" | "height">): {x: number; y: number; z: number} {
+    const head = item.asset ? (flowerHeads.heads as Record<string, number[]>)[item.asset] : undefined;
+    if (!head) return {x: item.x, y: item.y + item.height, z: item.z};
+    // (As the asset is drawn: turned by its yaw about +y, three's rotation, and scaled.)
+    const c = Math.cos(item.yaw);
+    const s = Math.sin(item.yaw);
+    const hx = head[0] * item.scale;
+    const hz = head[2] * item.scale;
+    return {x: item.x + hx * c + hz * s, y: item.y + head[1] * item.scale, z: item.z - hx * s + hz * c};
+}
 
 /** How many grounds the sampler keeps before it starts again (each a few hundred bytes). */
 const GROUND_KEEP = 120_000;

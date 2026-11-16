@@ -29,7 +29,8 @@ import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/to
 import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
-import {inBox, toLocal, type Box} from "@/ark-scene/islands/town/geom";
+import {inBox, sub, toLocal, type Box} from "@/ark-scene/islands/town/geom";
+import {townPlan} from "@/ark-scene/islands/town/plan";
 
 /** The town's facts about a placed animal: its area, the spot's kind, the home, farm or enclosure, and its bounds. */
 export type TownPlace = {
@@ -49,6 +50,14 @@ export type TownPlace = {
     display?: HomeDisplay;
     /** Lane TB: how a home's pet is kept (`tanks.ts` homeKeeping). */
     keeping?: HomeKeeping;
+    /**
+     * gfx (PLACE): the fenced ground a kept animal stays in (a farm's paddock, run or yard; a home's back garden, its
+     * terrace yard, its courtyard or front garden), and how far in from its sides its middle keeps (half its body and a
+     * hand): its spot and every pose of its day (`islands/scene.ts` bound) are inside it, never on the rails, over the
+     * fence in a neighbour's garden, or in the canal.
+     */
+    pen?: Box;
+    penMargin?: number;
 };
 
 export type TownPlacements = {places: Map<string, Placement>; town: Map<string, TownPlace>; open: string[]};
@@ -143,6 +152,7 @@ export function primeTownPlacements(key: string, result: TownPlacements, animals
         delete core.leader;
         delete core.rank;
         MEMO.set(`${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}`, {placement: core, info, rank});
+        if (info.pen) SPREAD.set(spreadKey(animal), {x: placement.x, z: placement.z, ground: placement.ground});
     }
 }
 
@@ -208,6 +218,8 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
         }
     }
     const clusterSpots = new Map<string, TownSpot | null>();
+    // gfx (PLACE): the animals placed fresh this call (not remembered), remembered after the spread below.
+    const fresh: Array<{animal: ArkAnimal; memoKey: string; placement: Placement; info: TownPlace; rank: number; length: number}> = [];
     const openKey = openNames.join(",");
     if (MEMO.size > 20000) MEMO.clear();
     for (const animal of animals) {
@@ -248,12 +260,16 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
             // Lane TB: how it is kept (`tanks.ts` homeKeeping). A pond is a house's; a long pet's vivarium or tank a house's
             // or a terrace home's (a flat's are small); a cage, a small vivarium or tank may be a flat's.
             const display = keeping === "tank" || keeping === "cage" || keeping === "vivarium" || keeping === "pond";
-            const flatOk = display && keeping !== "pond" && length < 0.55;
+            // gfx (PLACE): a tank fish longer than every home's tank (an arowana, 0.75 m: the tanks hold 0.48-0.73 m) is
+            // kept in a garden pond, the only home water that holds it, never left on the lawn ("a random asian arowana in
+            // the backyard of a house").
+            const pondFish = keeping === "tank" && !tankHolds(length);
+            const flatOk = display && keeping !== "pond" && !pondFish && length < 0.55;
             // (Its display at a home: the pond, else the tank; the cage or vivarium only where it fits in, body and all.)
             const displayAt = (h: Household): HomeDisplay | null => {
                 const site = homeSitesNow().get(h.id);
                 if (!site) return null;
-                const want = keeping === "pond" ? site.displays.pond ?? site.displays.tank : site.displays[keeping as "tank" | "cage" | "vivarium"];
+                const want = keeping === "pond" ? site.displays.pond ?? site.displays.tank : pondFish ? site.displays.pond : site.displays[keeping as "tank" | "cage" | "vivarium"];
                 return want && length + (want.form === "tank" || want.form === "pond" ? 0.12 : 0.04) <= want.w ? want : null;
             };
             // (The rendezvous order of homes, the first where its display holds it: the same for every viewer, never moved by others.)
@@ -268,9 +284,15 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
                 // Outdoors: the home's garden, yard, balcony or courtyard (never in its garden room's or pond's footprint).
                 const homeSpots = (byPlace.get(home.id) ?? []).concat(home.kind === "flat" ? byPlace.get(home.building) ?? [] : []).filter((s) => s.area === "house" && !inSite(s.x, s.z) && (s.where === "balcony" || !inBuilding(s.x, s.z, 0.3)));
                 const list = homeSpots.filter((s) => s.where !== "window");
-                spot = pick(list.length ? list : homeSpots, animal.id, (s, i) => `${s.where}${i}`);
+                // gfx (PLACE): a home whose every garden spot lies under its garden room has its own ground's open points
+                // (a terrace yard with a glass room across it); before, its pets fell back to the town's middle, in the
+                // canal ("the water canal in the town island has a dog in it").
+                const open = list.length ? list : openGround(home);
+                spot = pick(open.length ? open : homeSpots, animal.id, (s, i) => `${s.where}${i}`);
                 info = {area: "house", where: spot?.where ?? "lawn", place: home.id, enclosure: null, range: spot?.where === "balcony" ? 0.6 : spot?.where === "yard" ? 2.5 : 5, still: false, keeping: keeping ?? "outdoors"};
                 rank = (own >>> 9) % 3;
+                const pen = spot && spot.where !== "balcony" && spot.where !== "window" ? homePen(home, spot.x, spot.z) : null;
+                if (pen) info = penned(info, pen, length);
             }
         } else if (animal.area === "farm" || keeping === "livery") {
             const farm = farmOf(animal.id);
@@ -281,6 +303,10 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
             // (Lane TB: a horse, a cow, a donkey or a pig routed to a home is kept at a farm's paddock: livery.)
             info = {area: "farm", where: spot?.where ?? want, place: farm, enclosure: null, range: want === "paddock" ? 9 : want === "run" ? 3 : 5, still: false, ...(keeping === "livery" ? {keeping} : {})};
             rank = (own >>> 9) % 3;
+            // gfx (PLACE): its paddock's, run's or yard's rails are its bounds ("horses are in the middle of fences").
+            const plot = townPlan().farms.find((f) => f.id === farm);
+            const pen = plot ? (info.where === "paddock" ? plot.paddock : info.where === "run" ? plot.run : info.where === "farmyard" ? plot.yard : null) : null;
+            if (pen) info = penned(info, pen, length);
         } else if (animal.area === "zoo") {
             const type = enclosureTypeOf(animal);
             const named = animal.enclosure && enclosures.get(animal.enclosure);
@@ -329,12 +355,14 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
         let at = inside(bound, base.x + off.dx, base.z + off.dz, base.x, base.z);
         // (Lane TB: on the ground, its body clear of every building's wall and every garden room and pond.)
         if (!held && !HIGH_WHERE.has(base.where) && base.where !== "pool") at = inside(bound, ...clearOf(at.x, at.z, Math.min(Math.max(length * 0.45, 0.12), 1.6)), base.x, base.z);
+        // gfx (PLACE): inside its pen, its body clear of the rails (then clear of any building again, the pen's inside).
+        if (info.pen) at = inPen(info.pen, info.penMargin ?? 0, at.x, at.z, length);
         // (In the town every water is above the sea: a pool, the canal, a pond. The scene's water pose works from the sea's
         // level, so a swimmer here floats at its spot's surface, on its own ground: `water` stays false.)
         // (A raised pool's water is 0.45 m over the highest ground at its rim: a swimmer floats there, not under the rim.)
         const pool = base.where === "pool" && info.enclosure?.pool ? Math.max(...info.enclosure.pool.map((q) => townHeight(q.x, q.z))) + 0.45 : null;
         const placement: Placement = {x: at.x, z: at.z, ground: pool ?? base.y, yaw: held ? held.yaw : yaw, water: false, sea: false};
-        MEMO.set(memoKey, {placement: {...placement}, info, rank});
+        fresh.push({animal, memoKey, placement, info, rank, length});
         void WATER_WHERE;
         if (leader && leader !== animal.id) {
             placement.leader = leader;
@@ -346,7 +374,183 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
         places.set(animal.id, placement);
         town.set(animal.id, info);
     }
+    spreadPenned(animals, places, town, fresh);
+    for (const f of fresh) {
+        const core: Placement = {...f.placement};
+        delete core.leader;
+        delete core.rank;
+        MEMO.set(f.memoKey, {placement: core, info: f.info, rank: f.rank});
+    }
     return {places, town, open: openNames};
+}
+
+// MARK: - gfx (PLACE): pens, and kept animals apart
+
+/**
+ * Kept animals in one pen (a paddock, a run, a yard, a garden) stand apart: the owner's "half of a horse's body is half
+ * in a cow's". Each newcomer (placed fresh, in order of arrival) keeps clear of everyone already there (remembered or
+ * placed before it): its own spot if that is clear, else the nearest clear point on rings about it, inside its pen and
+ * clear of buildings. Nobody already placed ever moves, so an arrival or a departure moves no one in a session (the
+ * places are remembered); a fresh read lays the pen out as the arrivals came, the same for every viewer.
+ */
+function spreadPenned(animals: readonly ArkAnimal[], places: Map<string, Placement>, town: Map<string, TownPlace>, fresh: Array<{animal: ArkAnimal; placement: Placement; info: TownPlace; length: number}>): void {
+    // (Its place in its pen remembered whatever the zoo has open: a new enclosure redoes everyone's spots, not this.)
+    for (const f of fresh) {
+        const kept = f.info.pen ? SPREAD.get(spreadKey(f.animal)) : undefined;
+        if (!kept) continue;
+        f.placement.x = kept.x;
+        f.placement.z = kept.z;
+        f.placement.ground = kept.ground;
+    }
+    const newcomers = fresh.filter((f) => f.info.pen && !SPREAD.has(spreadKey(f.animal)));
+    if (!newcomers.length) return;
+    if (SPREAD.size > 20000) SPREAD.clear();
+    const isFresh = new Set(newcomers.map((f) => f.animal.id));
+    const groups = new Map<string, Array<{x: number; z: number; length: number}>>();
+    const groupOf = (info: TownPlace) => {
+        let g = groups.get(info.place);
+        if (!g) groups.set(info.place, (g = []));
+        return g;
+    };
+    // (Those already there: remembered from an earlier read.)
+    for (const animal of animals) {
+        const info = town.get(animal.id);
+        if (!info?.pen || isFresh.has(animal.id)) continue;
+        const p = places.get(animal.id);
+        if (p) groupOf(info).push({x: p.x, z: p.z, length: arkBody(animal).metres});
+    }
+    newcomers.sort((a, b) => (a.animal.arrived_at < b.animal.arrived_at ? -1 : a.animal.arrived_at > b.animal.arrived_at ? 1 : a.animal.id < b.animal.id ? -1 : 1));
+    for (const f of newcomers) {
+        const group = groupOf(f.info);
+        const at = clearSpot(f.animal.id, f.placement.x, f.placement.z, f.length, f.info, group);
+        if (at.x !== f.placement.x || at.z !== f.placement.z) {
+            f.placement.x = at.x;
+            f.placement.z = at.z;
+            f.placement.ground = townHeight(at.x, at.z);
+        }
+        group.push({x: f.placement.x, z: f.placement.z, length: f.length});
+        SPREAD.set(spreadKey(f.animal), {x: f.placement.x, z: f.placement.z, ground: f.placement.ground});
+    }
+}
+
+/** A penned animal's place in its pen, by its own fields (not the zoo's open enclosures). */
+const SPREAD = new Map<string, {x: number; z: number; ground: number}>();
+function spreadKey(animal: ArkAnimal): string {
+    return `${animal.id}|${animal.area ?? ""}|${animal.zone}|${animal.model_slug}`;
+}
+
+/** How far apart two kept bodies' middles stand at the least (m): nine tenths of their half lengths together. */
+export function keptGap(a: number, b: number): number {
+    return 0.45 * (a + b);
+}
+
+/** The nearest point to (x, z), on rings about it, inside the pen and clear of buildings, apart from everyone in `group`. */
+function clearSpot(id: string, x: number, z: number, length: number, info: TownPlace, group: ReadonlyArray<{x: number; z: number; length: number}>): {x: number; z: number} {
+    const room = (px: number, pz: number) => {
+        let worst = Infinity;
+        for (const o of group) worst = Math.min(worst, Math.hypot(px - o.x, pz - o.z) / keptGap(length, o.length));
+        return worst;
+    };
+    let best = {x, z, room: room(x, z)};
+    if (best.room >= 1) return best;
+    const step = Math.max(length * 0.5, 0.2);
+    const turn = (hashText(`${id}#spread`) % 6283) / 1000;
+    for (let ring = 1; ring <= 14; ring++) {
+        const n = 6 + ring * 2;
+        for (let k = 0; k < n; k++) {
+            const a = turn + (k / n) * Math.PI * 2;
+            const p = inPen(info.pen!, info.penMargin ?? 0, x + Math.cos(a) * step * ring, z + Math.sin(a) * step * ring, length);
+            const r = room(p.x, p.z);
+            if (r > best.room + 1e-6) best = {x: p.x, z: p.z, room: r};
+        }
+        if (best.room >= 1) return best;
+    }
+    return best;
+}
+
+/** The fenced ground a home's spot lies in: its back garden, terrace yard, courtyard or front garden. */
+function homePen(home: Household, x: number, z: number): Box | null {
+    const parcel = parcelOf(home.building);
+    if (!parcel) return null;
+    if (home.kind === "terrace_home" && parcel.back) {
+        const yard = sub(parcel.back, -parcel.back.w / 2 + (parcel.back.w * (home.index + 0.5)) / 4, 0, parcel.back.w / 4, parcel.back.d);
+        if (inBox(yard, x, z, 0.3)) return yard;
+    }
+    if (home.kind !== "terrace_home" && parcel.back && inBox(parcel.back, x, z, 0.3)) return parcel.back;
+    if (parcel.front && inBox(parcel.front, x, z, 0.3)) return parcel.front;
+    return null;
+}
+
+/** A home's own open ground (for a home whose every garden spot is under its garden room): its pen's clear points. */
+function openGround(home: Household): TownSpot[] {
+    const parcel = parcelOf(home.building);
+    const back = parcel?.back;
+    if (!back) return [];
+    const pen = home.kind === "terrace_home" ? sub(back, -back.w / 2 + (back.w * (home.index + 0.5)) / 4, 0, back.w / 4, back.d) : back;
+    const where: SpotWhere = home.kind === "terrace_home" ? "yard" : home.kind === "flat" ? "courtyard" : "lawn";
+    const out: TownSpot[] = [];
+    for (let lx = -pen.w / 2 + 0.6; lx <= pen.w / 2 - 0.6; lx += 0.8) {
+        for (let lz = -pen.d / 2 + 0.6; lz <= pen.d / 2 - 0.6; lz += 0.8) {
+            const c = Math.cos(pen.rot);
+            const s = Math.sin(pen.rot);
+            const x = pen.x + lx * c - lz * s;
+            const z = pen.z + lx * s + lz * c;
+            if (inSite(x, z) || inBuilding(x, z, 0.3)) continue;
+            out.push({x, y: townHeight(x, z), z, area: "house", where, place: home.id, sizes: ["small", "medium"], protected: true});
+        }
+    }
+    return out;
+}
+
+// (By the building: parcel ids repeat across streets, a building's is its own.)
+let parcels: Map<string, ReturnType<typeof townPlan>["parcels"][number]> | null = null;
+function parcelOf(building: string): ReturnType<typeof townPlan>["parcels"][number] | undefined {
+    parcels ??= new Map(townPlan().parcels.map((p) => [p.building, p]));
+    return parcels.get(building);
+}
+
+/** A place with its pen: the margin half its body and a hand, and a roam the pen holds (`rangeOf` takes 1.5 times it). */
+function penned(info: TownPlace, pen: Box, length: number): TownPlace {
+    const margin = Math.max(Math.min(length * 0.5 + 0.15, pen.w / 2 - 0.05, pen.d / 2 - 0.05), 0);
+    const reach = Math.max(Math.min(pen.w, pen.d) / 2 - margin, 0.4);
+    return {...info, pen, penMargin: margin, range: Math.min(info.range, Math.max(reach / 1.5, 0.4))};
+}
+
+/** A point inside its pen, `margin` in from the rails (the scene's hard bound for a penned animal's every pose). */
+/** (A world pose, the island at `ox`, `oz`: moved in place, nothing made, as it runs each frame for each animal.) */
+export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}, ox = 0, oz = 0): void {
+    const c = Math.cos(pen.rot);
+    const s = Math.sin(pen.rot);
+    const dx = pose.x - ox - pen.x;
+    const dz = pose.z - oz - pen.z;
+    const lx = dx * c + dz * s;
+    const lz = -dx * s + dz * c;
+    const hx = Math.max(pen.w / 2 - margin, 0);
+    const hz = Math.max(pen.d / 2 - margin, 0);
+    if (Math.abs(lx) <= hx && Math.abs(lz) <= hz) return;
+    const qx = Math.min(Math.max(lx, -hx), hx);
+    const qz = Math.min(Math.max(lz, -hz), hz);
+    pose.x = ox + pen.x + qx * c - qz * s;
+    pose.z = oz + pen.z + qx * s + qz * c;
+}
+
+/** A point inside its pen, `margin` in from the rails, clear of the buildings in it (the rails win). */
+export function inPen(pen: Box, margin: number, x: number, z: number, length: number): {x: number; z: number} {
+    const a = keepInside(pen, x, z, margin);
+    const [cx, cz] = clearOf(a.x, a.z, Math.min(Math.max(length * 0.45, 0.12), 1.6));
+    return cx === a.x && cz === a.z ? a : keepInside(pen, cx, cz, margin);
+}
+
+/** Whether some home's tank holds a fish this long (with its swim's room). */
+let widestTank = -1;
+function tankHolds(length: number): boolean {
+    if (widestTank < 0) {
+        widestTank = 0;
+        homeSitesNow().forEach((site) => {
+            if (site) widestTank = Math.max(widestTank, site.displays.tank.w);
+        });
+    }
+    return length + 0.12 <= widestTank;
 }
 
 function clusterKey(animal: ArkAnimal): string {

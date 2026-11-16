@@ -806,17 +806,37 @@ export function paceClip(speed: number, clips: readonly RigClipData[], current?:
  * reads as one pace). It picks which movers get a rig from the island view, and gives every mover without one a
  * cheap gait (`gaitPose`), so nothing slides along still.
  */
-export type Gait = {x: number; z: number; phase: number; speed: number};
+export type Gait = {x: number; z: number; phase: number; speed: number; yaw?: number};
 
-export function stepGait(gait: Gait | null | undefined, x: number, z: number, dt: number, length: number): Gait {
-    if (!gait) return {x, z, phase: 0, speed: 0};
+/**
+ * gfx (PLACE): how far its feet go as it turns on the spot (m): a turning body steps round, its feet on an arc about a
+ * third of its length out from its middle. The owner, 2026-11-16: "horses seem to spin around on one spot": a big
+ * walker's turn on the spot before it sets off (`behaviour-schedule.ts`, TURN_RATE 1.6 rad/s: a horse's half turn in
+ * 2 s) played with its feet still, the whole body pivoting like a turntable. Only a real turn steps (over a third of a
+ * radian a second); a cut in its heading (a new spot) is no step.
+ */
+export function turnSteps(dyaw: number, dt: number, length: number): number {
+    let d = dyaw;
+    while (d > Math.PI) d -= Math.PI * 2;
+    while (d < -Math.PI) d += Math.PI * 2;
+    const turn = Math.abs(d);
+    if (dt <= 0 || turn > Math.PI * 0.75 || turn / dt < 0.35) return 0;
+    return turn * 0.35 * length;
+}
+
+export function stepGait(gait: Gait | null | undefined, x: number, z: number, dt: number, length: number, yaw?: number): Gait {
+    if (!gait) return {x, z, phase: 0, speed: 0, ...(yaw === undefined ? {} : {yaw})};
     const moved = Math.hypot(x - gait.x, z - gait.z);
     // A jump (a new spot, an act's cut) is no step.
-    const step = moved > Math.max(length * 4, 2) ? 0 : moved;
+    const walked = moved > Math.max(length * 4, 2) ? 0 : moved;
+    // (Turning on the spot steps too: `turnSteps`.)
+    const turned = yaw !== undefined && gait.yaw !== undefined ? turnSteps(yaw - gait.yaw, dt, length) : 0;
+    const step = turned > 0 ? Math.hypot(walked, turned) : walked;
     gait.phase = (gait.phase + step / Math.max(0.6 * length, 0.02)) % 1000;
     if (dt > 0) gait.speed += (step / dt - gait.speed) * Math.min(dt * 3.5, 1);
     gait.x = x;
     gait.z = z;
+    if (yaw !== undefined) gait.yaw = yaw;
     return gait;
 }
 
