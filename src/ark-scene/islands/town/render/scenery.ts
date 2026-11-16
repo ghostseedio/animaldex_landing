@@ -8,6 +8,7 @@
 import {centroid, corners, hashText, inBox, local, toLocal, polylineAt, polylineLength, polylineNearest, polylineWithin, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townTileHeight} from "@/ark-scene/islands/town/drawn-ground";
+import {tractor} from "@/ark-scene/islands/town/render/farm-machines";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, MILLPOND, TOWN_LEVEL, TOWPATH, townPlan, type Hedge, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
@@ -490,7 +491,11 @@ function fields(out: SceneryOut, plan: TownPlan) {
     for (const p of townFarmProps(plan)) farmProp(chunkFor(out, p.at.x, p.at.z).solid, p);
     for (const farm of plan.farms) {
         const c = chunkFor(out, farm.at.x, farm.at.z);
-        if (farm.kind === "farmstead") tractor(c.solid, local(farm.yard, -farm.yard.w / 2 + 2.5, 0), farm.at.rot + 0.4);
+        if (farm.kind === "farmstead") {
+            // p2 (town2): the tractor made as one (`render/farm-machines.ts`; the owner: "the tractor looks awful").
+            const p = local(farm.yard, -farm.yard.w / 2 + 2.5, 0);
+            tractor(c.solid, c.glass, p.x, H(p.x, p.z), p.z, farm.at.rot + 0.4);
+        }
     }
 }
 
@@ -602,18 +607,6 @@ function allotmentBeds(c: SceneryChunk, area: Box, seed: number) {
 
 function shadeOf(c: [number, number, number], k: number): [number, number, number] {
     return [c[0] * k, c[1] * k, c[2] * k];
-}
-
-function tractor(geo: Geo, p: Pt, rot: number) {
-    const f: Frame = {x: p.x, y: H(p.x, p.z), z: p.z, rot};
-    const red = tone("#b7372c");
-    geo.box(f, 0, 0.7, 0.4, 1.2, 0.9, 2.2, red);
-    geo.box(f, 0, 1.2, -0.5, 1.3, 1.6, 1.2, red.map((v) => v * 0.9) as [number, number, number]);
-    geo.box(f, 0, 2.8, -0.5, 1.5, 0.08, 1.4, tone("#2a2a2a"));
-    for (const [lx, lz, r] of [[-0.75, -0.6, 0.75], [0.75, -0.6, 0.75], [-0.65, 1.1, 0.45], [0.65, 1.1, 0.45]] as const) {
-        const w: Frame = {...f, ...{x: at(f, lx, 0, lz)[0], z: at(f, lx, 0, lz)[2]}, y: f.y + r, rot: rot};
-        geo.box(w, 0, -r, 0, 0.35, r * 2, r * 2, tone("#232323"));
-    }
 }
 
 // MARK: - The zoo

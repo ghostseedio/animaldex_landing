@@ -24,6 +24,7 @@ import {MILLPOND, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {at, Geo, tone, type Frame, type V3} from "@/ark-scene/islands/town/render/kit";
 import {townWeather} from "@/ark-scene/islands/town/render/materials";
 import type {FarmGate, FarmProp} from "@/ark-scene/islands/town/farm";
+import {roundBale, squareBale} from "@/ark-scene/islands/town/render/farm-machines";
 import type {TownAssetPlacement} from "@/ark-scene/islands/town/render/assets";
 
 type RGB = [number, number, number];
@@ -413,34 +414,12 @@ export function cropRows(geo: Geo, field: Box, crop: string, seed: number) {
 // MARK: - Farm things
 
 const STRAW = tone("#d2b464");
-const WRAP = tone("#2c3a2a");
 const GALV = tone("#9aa0a2");
 const TIMBER = tone("#8a6a48");
 const STEEL = tone("#5a6066");
 const ROOF_TIN = tone("#7a3a2e");
 
 /** A cylinder lying along the frame's local x (a round bale), `r` radius, `len` long, its middle at (lx, ly, lz). */
-function lyingCylinder(geo: Geo, f: Frame, lx: number, ly: number, lz: number, r: number, len: number, side: RGB, end: RGB, sides = 10) {
-    const ring = (x: number) => Array.from({length: sides}, (_, i) => {
-        const a = (i / sides) * Math.PI * 2;
-        return at(f, lx + x, ly + Math.sin(a) * r, lz + Math.cos(a) * r);
-    });
-    const a = ring(-len / 2);
-    const b = ring(len / 2);
-    for (let i = 0; i < sides; i++) {
-        const j = (i + 1) % sides;
-        const k = 0.75 + 0.3 * (Math.sin((i / sides) * Math.PI * 2) * 0.5 + 0.5);
-        geo.quad(a[i], b[i], b[j], a[j], shade(side, k));
-    }
-    const ca = at(f, lx - len / 2, ly, lz);
-    const cb = at(f, lx + len / 2, ly, lz);
-    for (let i = 0; i < sides; i++) {
-        const j = (i + 1) % sides;
-        geo.tri(ca, a[j], a[i], shade(end, 0.92));
-        geo.tri(cb, b[i], b[j], end);
-    }
-}
-
 /** The farms' bales, troughs and hay shelters (`farm.ts` positions) into a chunk's solids. */
 export function farmProp(geo: Geo, p: FarmProp) {
     const g = H(p.at.x, p.at.z);
@@ -449,18 +428,20 @@ export function farmProp(geo: Geo, p: FarmProp) {
     switch (p.kind) {
         case "round_bales": {
             // Three round bales on their sides (1.2 m across, 1.2 m long), wrapped or straw; two more on top at a farmstead.
+            // (p2 (town2): rounded, wound outward, streaked and ringed: `render/farm-machines.ts` roundBale.)
             const wrapped = r() < 0.5;
-            for (let i = 0; i < 3; i++) lyingCylinder(geo, {...f, rot: f.rot + Math.PI / 2}, 0, 0.6, -1.3 + i * 1.3, 0.6, 1.2, wrapped ? WRAP : STRAW, wrapped ? shade(WRAP, 1.2) : shade(STRAW, 1.08));
-            if (p.top > 2) for (let i = 0; i < 2; i++) lyingCylinder(geo, {...f, rot: f.rot + Math.PI / 2}, 0, 1.68, -0.65 + i * 1.3, 0.6, 1.2, wrapped ? WRAP : STRAW, wrapped ? shade(WRAP, 1.2) : shade(STRAW, 1.08));
+            const bf: Frame = {...f, rot: f.rot + Math.PI / 2};
+            for (let i = 0; i < 3; i++) roundBale(geo, bf, 0, 0.6, -1.3 + i * 1.3, 0.6, 1.2, wrapped, p.seed + i);
+            if (p.top > 2) for (let i = 0; i < 2; i++) roundBale(geo, bf, 0, 1.68, -0.65 + i * 1.3, 0.6, 1.2, wrapped, p.seed + 7 + i);
             break;
         }
         case "square_bales": {
-            // Small square bales (0.9 × 0.45 × 0.35 m) stacked in courses, each course turned.
+            // Small square bales (0.9 × 0.45 × 0.35 m) stacked in courses, each course turned; twine round each.
             const courses = Math.round(p.top / 0.45);
             for (let c = 0; c < courses; c++) {
                 for (let i = 0; i < (c % 2 ? 2 : 3); i++) {
                     const lx = (c % 2 ? -0.45 + i * 0.9 : -0.9 + i * 0.9) * (p.at.w / 2.7);
-                    geo.box(f, lx, c * 0.45, 0, 0.88, 0.44, p.at.d - 0.05, shade(STRAW, 0.9 + r() * 0.15));
+                    squareBale(geo, f, lx, c * 0.45, 0, 0.88, 0.44, p.at.d - 0.05, p.seed + c * 5 + i);
                 }
             }
             break;
@@ -489,7 +470,7 @@ export function farmProp(geo: Geo, p: FarmProp) {
                 geo.quad(at(f, -w / 2 - 0.3, y0, z0), at(f, w / 2 + 0.3, y0, z0), at(f, w / 2 + 0.3, y1, z1), at(f, -w / 2 - 0.3, y1, z1), shade(ROOF_TIN, k));
                 geo.quad(at(f, -w / 2 - 0.3, y1 - 0.05, z1), at(f, w / 2 + 0.3, y1 - 0.05, z1), at(f, w / 2 + 0.3, y0 - 0.05, z0), at(f, -w / 2 - 0.3, y0 - 0.05, z0), shade(ROOF_TIN, 0.5));
             }
-            for (let row = 0; row < 2; row++) for (let i = 0; i < 5; i++) lyingCylinder(geo, f, -w / 2 + 0.9 + i * 1.5, 0.6 + row * 1.15, -d / 4 + row * 0.6, 0.6, 1.2, STRAW, shade(STRAW, 1.08));
+            for (let row = 0; row < 2; row++) for (let i = 0; i < 5; i++) roundBale(geo, f, -w / 2 + 0.9 + i * 1.5, 0.6 + row * 1.15, -d / 4 + row * 0.6, 0.6, 1.2, false, p.seed + row * 11 + i);
             break;
         }
     }

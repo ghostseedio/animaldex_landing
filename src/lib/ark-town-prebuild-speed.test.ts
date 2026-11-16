@@ -160,7 +160,7 @@ function digest(value: unknown): string {
 // fences, walls, railings and gates (`doors.ts`, `render/fences.ts`), the open porches, the benches (`render/bench.ts`;
 // the park's off the pond's water) (scenery and buildings).)
 const TOWN_DIGESTS = {
-    // (p2 (town2): the zoo's west path and three east road ends pulled ashore; bins and bikes off walls; allotment beds.)
+    // (p2 (town2): the zoo's west path and three east road ends pulled ashore; bins and bikes off walls; allotment beds; the tractor and bales rebuilt.)
     plan: "a4369079c962a394",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
@@ -176,7 +176,7 @@ const TOWN_DIGESTS = {
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "d4daa16d3457e788",
+    sceneryAndBuildings: "ec9afe6b82329ddf",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     zoo: "1b520265e67b59fd",
     places: "fba1268b733101f8"
