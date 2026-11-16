@@ -140,6 +140,16 @@ test("a big cat on a deer: the deer lies on its side where it fell, the cat feed
     // Then a drink at the water, then a rest a few lengths off.
     assert.ok(script.drink, "water 12 m off: it drinks");
     assert.equal(predatorAt(script, script.drink!.from + 1).doing, "drinking");
+    // (Owner, 2026-11-16: "drinking" only at the water. On its walk there it is heading to water.)
+    if (script.drink!.from - script.drink!.walkFrom > 0.5) {
+        const walking = predatorAt(script, (script.drink!.walkFrom + script.drink!.from) / 2);
+        assert.equal(walking.doing, "toWater");
+        assert.ok(Math.hypot(walking.x - script.drink!.at.x, walking.z - script.drink!.at.z) > 0.1, "still on its way");
+    }
+    for (let u = script.feedTo; u < script.drink!.to; u += 0.25) {
+        const p = predatorAt(script, u);
+        if (p.doing === "drinking") assert.ok(Math.hypot(p.x - script.drink!.at.x, p.z - script.drink!.at.z) < 1e-6, `drinking at the water's edge only (${u})`);
+    }
     const resting = predatorAt(script, script.rest.from + 5);
     assert.equal(resting.doing, "resting");
     assert.equal(resting.state, "rest");

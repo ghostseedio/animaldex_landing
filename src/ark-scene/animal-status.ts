@@ -388,7 +388,9 @@ export function momentOf(subject: MomentSubject, plan: SlotPlan, before: SlotPla
                 // (A young one's own line; an adult of a playful kind's, "A Bonobo is playing".)
                 return subject.young ? "playing" : "doing";
             case "drinking":
-                return subject.leads >= 3 ? "toWater" : "doing";
+                // (A group setting out is "going down to water", true from the slot's start. One animal's "is drinking" is
+                // said when it is at the water, at its trip's arrival: `midSlotMoments`.)
+                return subject.leads >= 3 ? "toWater" : null;
             case "home":
                 return subject.leads >= 3 ? "home" : "doing";
             case "flying":
@@ -415,9 +417,33 @@ export type ScheduleMoment = {id: string; kind: ScheduleMomentKind; activity: Ar
 /** A flight said in the live log lasts at least this long (s): a hop of a few seconds is over before its line is read. */
 export const FLIGHT_MOMENT_SECONDS = 8;
 
-/** Its moments that start inside a window but not at a slot's start: a flight's take-off, a pair's meeting (its first side's). */
+/** A drink said in the live log has at least this long left at the water (s). */
+export const DRINK_MOMENT_SECONDS = 6;
+
+/**
+ * When one animal's "is drinking" is said: when its trip arrives at the water's edge its drink slot goes to (the slot's
+ * goal is a drinking spot, `behaviour-schedule.ts` drink_edge, or the shallows), never at the slot's start while it is
+ * still walking or flying there (owner, 2026-11-16: "it said 'a roadside hawk is drinking' but it was nowhere near the
+ * water"; a hawk's flight to the water is half a slot). Null when it gets there too late in the slot to be seen
+ * drinking (`DRINK_MOMENT_SECONDS`), or never gets there.
+ */
+export function drinkArrival(plan: Pick<SlotPlan, "start" | "end">, trip: Pick<Trip, "arrive" | "start" | "end">): number | null {
+    const at = Math.max(trip.arrive, plan.start);
+    return at + DRINK_MOMENT_SECONDS <= Math.min(plan.end, trip.end) ? at : null;
+}
+
+/** Its moments that start inside a window but not at a slot's start: a flight's take-off, a pair's meeting (its first side's), one animal's arrival at the water to drink. */
 function midSlotMoments(subject: MomentSubject, from: number, to: number): Array<{kind: ScheduleMomentKind; activity: ArkActivityKey; at: number; recipe?: string | null}> {
     const out: Array<{kind: ScheduleMomentKind; activity: ArkActivityKey; at: number; recipe?: string | null}> = [];
+    if (subject.leads < 3) {
+        const first = planOf(subject, from);
+        const last = planOf(subject, to - 0.001);
+        for (const plan of last.slot !== first.slot ? [first, last] : [first]) {
+            if (keyOf(subject, plan) !== "drinking") continue;
+            const at = drinkArrival(plan, tripIn(subject, plan, null));
+            if (at !== null && at >= from && at < to) out.push({kind: "doing", activity: "drinking", at});
+        }
+    }
     if (subject.profile.move === "fly" || subject.profile.moves.includes("fly")) {
         const plans = [planOf(subject, from)];
         const last = planOf(subject, to - 0.001);
