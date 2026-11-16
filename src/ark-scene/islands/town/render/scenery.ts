@@ -74,7 +74,7 @@ function overCanal(x: number, z: number): boolean {
 }
 
 /** The street's surface height: the ground's, but held at the bank's level over the canal (a bridge deck). */
-function streetHeight(x: number, z: number): number {
+export function streetHeight(x: number, z: number): number {
     if (overCanal(x, z)) return TOWN_LEVEL;
     if (inBox(HARBOUR_BASIN, x, z, -0.2)) return TOWN_LEVEL;
     return H(x, z);

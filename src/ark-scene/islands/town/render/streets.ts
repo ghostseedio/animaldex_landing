@@ -197,21 +197,35 @@ export function strip(geo: Geo, line: Poly, width: number, heightAt: (x: number,
     const z = options.alongZ ?? runsAlongZ(line);
     const t0 = surfaceTag(surface, z, options.acrossFrom ?? -1);
     const t1 = surfaceTag(surface, z, options.acrossTo ?? 1);
-    const st = stations(line, step);
-    const left: V[] = [];
-    const right: V[] = [];
-    for (const s of st) {
-        const lx = s.x + s.nx * (offset + width / 2);
-        const lz = s.z + s.nz * (offset + width / 2);
-        const rx = s.x + s.nx * (offset - width / 2);
-        const rz = s.z + s.nz * (offset - width / 2);
-        left.push({x: lx, y: heightAt(lx, lz) + lift, z: lz});
-        right.push({x: rx, y: heightAt(rx, rz) + lift, z: rz});
-    }
-    // (Left is +across, right −across; wound to face up, as Geo.ribbon.)
+    let st = stations(line, step);
+    // Across the strip in `columns` (graphics pass 1): one where the ground under it is straight across, four (and its
+    // stations twice as close) where it bends (a shore's brow under a street's far half: one face edge to edge cut under
+    // the drawn ground by 20 cm there, and the grass showed through the road).
+    const at = (s: (typeof st)[number], f: number): V => {
+        const o = offset + width * (f - 0.5);
+        const x = s.x + s.nx * o;
+        const z = s.z + s.nz * o;
+        return {x, y: heightAt(x, z) + lift, z};
+    };
+    const bends = width > 1.5 && st.some((s) => {
+        const a = at(s, 0);
+        const b = at(s, 1);
+        return Math.abs(at(s, 0.5).y - (a.y + b.y) / 2) > 0.015;
+    });
+    const columns = bends ? 4 : 1;
+    if (bends) st = stations(line, step / 2);
+    const rows = st.map((s) => Array.from({length: columns + 1}, (_, k) => at(s, k / columns)));
+    const tag = (k: number) => (columns === 1 ? (k === 0 ? t0 : t1) : surfaceTag(surface, z, (options.acrossFrom ?? -1) + ((options.acrossTo ?? 1) - (options.acrossFrom ?? -1)) * (k / columns)));
+    // (Column 0 is the right (−across) edge, the last the left (+across); wound to face up, as Geo.ribbon.)
     for (let i = 1; i < st.length; i++) {
-        tri(geo, left[i - 1], left[i], right[i], t1, t1, t0, colour);
-        tri(geo, left[i - 1], right[i], right[i - 1], t1, t0, t0, colour);
+        for (let k = 1; k <= columns; k++) {
+            const l0 = rows[i - 1][k];
+            const l1 = rows[i][k];
+            const r0 = rows[i - 1][k - 1];
+            const r1 = rows[i][k - 1];
+            tri(geo, l0, l1, r1, tag(k), tag(k), tag(k - 1), colour);
+            tri(geo, l0, r1, r0, tag(k), tag(k - 1), tag(k - 1), colour);
+        }
     }
 }
 
@@ -252,12 +266,17 @@ function kerb(geo: Geo, line: Poly, offset: number, heightAt: (x: number, z: num
 }
 
 /** A flat quad (a cover, a crossing's stripe) centred at (x, z), `along` × `across` m, turned to the street. */
-function patch(geo: Geo, x: number, z: number, dir: {x: number; z: number}, along: number, across: number, y: number, colour: Colour, surface: SurfaceId, rowsAlongZ: boolean) {
+function patch(geo: Geo, x: number, z: number, dir: {x: number; z: number}, along: number, across: number, heightAt: (x: number, z: number) => number, lift: number, colour: Colour, surface: SurfaceId, rowsAlongZ: boolean) {
     const ax = dir.x * (along / 2);
     const az = dir.z * (along / 2);
     const cx = -dir.z * (across / 2);
     const cz = dir.x * (across / 2);
-    const p = (s: number, t: number): V => ({x: x + ax * s + cx * t, y, z: z + az * s + cz * t});
+    // (Each corner on the road under it: a cover laid level at its middle's height sank into a sloping road at one edge.)
+    const p = (s: number, t: number): V => {
+        const px = x + ax * s + cx * t;
+        const pz = z + az * s + cz * t;
+        return {x: px, y: heightAt(px, pz) + lift, z: pz};
+    };
     const lo = surfaceTag(surface, rowsAlongZ, -1);
     const hi = surfaceTag(surface, rowsAlongZ, 1);
     tri(geo, p(-1, 1), p(1, 1), p(1, -1), hi, hi, lo, colour);
@@ -285,7 +304,8 @@ export function streetSurfaces(plan: TownPlan, out: StreetSurfacesOut) {
     const {chunkAt, heightAt} = out;
     // Where streets meet, each surface is laid once (`street-clip.ts`): the cuts below.
     const clip = clipStreets(plan.streets);
-    for (const [index, s] of plan.streets.entries()) {
+    for (let index = 0; index < plan.streets.length; index++) {
+        const s = plan.streets[index];
         const own: ClipStreet = clip[index];
         const cut = (layer: "carriageway" | "pavement" | "kerb" | "paint") => (x: number, z: number) => cutAt(clip, own, layer, x, z);
         const {surface, colour} = streetSurface(s);
@@ -308,7 +328,7 @@ export function streetSurfaces(plan: TownPlan, out: StreetSurfacesOut) {
                 for (let a = 1; a < length - 3; a += 6) {
                     const p0 = polylineAt(part, a).point;
                     const p1 = polylineAt(part, a + 3).point;
-                    for (const dash of keptPieces([p0, p1], [-0.06, 0.06], cut("paint"))) strip(geo, dash, 0.12, heightAt, PAINT_LIFT, WHITE, SURF.paint, {step: 3, alongZ: z, acrossFrom: -0.02, acrossTo: 0.02});
+                    for (const dash of keptPieces([p0, p1], [-0.06, 0.06], cut("paint"))) strip(geo, dash, 0.12, heightAt, PAINT_LIFT, WHITE, SURF.paint, {step: 1, alongZ: z, acrossFrom: -0.02, acrossTo: 0.02});
                 }
                 if (s.kind === "high") {
                     for (const side of [-1, 1]) {
@@ -332,13 +352,13 @@ export function streetSurfaces(plan: TownPlan, out: StreetSurfacesOut) {
             for (let t = -s.width / 2 + 0.5; t <= s.width / 2 - 0.5; t += 1.0) {
                 const x = point.x - dir.z * t;
                 const zz = point.z + dir.x * t;
-                patch(geo, x, zz, dir, 2.4, 0.5, heightAt(x, zz) + PAINT_LIFT + 0.002, WHITE, SURF.paint, z);
+                patch(geo, x, zz, dir, 2.4, 0.5, heightAt, PAINT_LIFT + 0.002, WHITE, SURF.paint, z);
             }
             for (const end of [-1, 1]) {
                 for (let t = -s.width / 2 + 0.3; t <= s.width / 2 - 0.3; t += 0.6) {
                     const x = point.x + dir.x * end * 2.2 - dir.z * t;
                     const zz = point.z + dir.z * end * 2.2 + dir.x * t;
-                    patch(geo, x, zz, dir, 0.1, 0.3, heightAt(x, zz) + PAINT_LIFT, WHITE, SURF.paint, z);
+                    patch(geo, x, zz, dir, 0.1, 0.3, heightAt, PAINT_LIFT, WHITE, SURF.paint, z);
                 }
             }
         }
@@ -351,7 +371,7 @@ export function streetSurfaces(plan: TownPlan, out: StreetSurfacesOut) {
             const x = z ? point.x - dir.z * 0.9 : snapped;
             const zz = z ? snapped : point.z + dir.x * 0.9;
             if (cutAt(clip, own, "paint", x, zz)) continue;
-            patch(chunkAt(x, zz).decal, x, zz, z ? {x: 0, z: 1} : {x: 1, z: 0}, MANHOLE, MANHOLE, heightAt(x, zz) + ROAD_LIFT + 0.004, IRON, SURF.manhole, z);
+            patch(chunkAt(x, zz).decal, x, zz, z ? {x: 0, z: 1} : {x: 1, z: 0}, MANHOLE, MANHOLE, heightAt, ROAD_LIFT + 0.004, IRON, SURF.manhole, z);
         }
         for (let a = 6; a < length - 3; a += 24) {
             const {point, dir} = polylineAt(s.line, a);
@@ -363,7 +383,7 @@ export function streetSurfaces(plan: TownPlan, out: StreetSurfacesOut) {
                 const x = z ? point.x - dir.z * off : snapped;
                 const zz = z ? snapped : point.z + dir.x * off;
                 if (cutAt(clip, own, "paint", x, zz)) continue;
-                patch(chunkAt(x, zz).decal, x, zz, z ? {x: 0, z: 1} : {x: 1, z: 0}, GRATE.along, GRATE.across, heightAt(x, zz) + ROAD_LIFT + 0.004, IRON, SURF.grate, z);
+                patch(chunkAt(x, zz).decal, x, zz, z ? {x: 0, z: 1} : {x: 1, z: 0}, GRATE.along, GRATE.across, heightAt, ROAD_LIFT + 0.004, IRON, SURF.grate, z);
             }
         }
     }

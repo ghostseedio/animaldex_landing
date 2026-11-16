@@ -159,19 +159,24 @@ const TOWN_DIGESTS = {
     plan: "ad0b6e3a149e2362",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
-    areas: "86edfd2d76c9f6e9",
-    // (Lane GA: the ground's surface weights.)
-    ground: "9f6d9fa1b00ec782",
+    // (Graphics pass 1, lane WATER: the ground graded under the streets and the zoo's and park's edges eased, so the
+    // areas' heights move with it.)
+    areas: "1b8ae4557a713b4c",
+    // (Lane GA: the ground's surface weights. Graphics pass 1, lane WATER: the zoo's and the park's rolls eased in at
+    // their edges (they were hard steps of up to 0.4 m) and kept off the streets' beds, `ground.ts` streetGrade.)
+    ground: "a3b1b851bfe7128d",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour). Graphics pass 1 (lane WATER): each street surface laid once where streets
-    // meet, and the towpaths stopped at the bridges, `street-clip.ts`.)
-    sceneryAndBuildings: "915a127b0fb9fb55",
-    zoo: "3beecdb300adce0f",
-    places: "fb1159793f083105"
+    // meet, and the towpaths stopped at the bridges, `street-clip.ts`; strips cut across in four where the ground bends
+    // under them, the covers and crossings laid on the road at each corner; everything on the graded ground.)
+    sceneryAndBuildings: "92486961a4a165ab",
+    // (Graphics pass 1, lane WATER: on the graded ground.)
+    zoo: "7d76871a03509a1f",
+    places: "d310f8e0fdade597"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {
