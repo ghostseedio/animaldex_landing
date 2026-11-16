@@ -143,7 +143,7 @@
   "trees": {
    "attach": "trees/attach.json",
    "assets": 42,
-   "bytes": 7366300,
+   "bytes": 6753252,
    "lod0_tris_max": 9500
   }
  },
@@ -6305,25 +6305,25 @@
      "file": "trees/acacia-a.lod0.glb",
      "tris": 7499,
      "verts": 11837,
-     "bytes": 150612,
+     "bytes": 156116,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/acacia-a.lod1.glb",
-     "tris": 3300,
-     "verts": 4798,
-     "bytes": 63624,
+     "tris": 1788,
+     "verts": 2768,
+     "bytes": 39348,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/acacia-a.lod2.glb",
-     "tris": 999,
-     "verts": 1156,
-     "bytes": 17900,
+     "tris": 331,
+     "verts": 530,
+     "bytes": 9928,
      "doubleSided": true,
      "morph": false
     },
@@ -6375,25 +6375,25 @@
      "file": "trees/acacia-b.lod0.glb",
      "tris": 7499,
      "verts": 10895,
-     "bytes": 136136,
+     "bytes": 141036,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/acacia-b.lod1.glb",
-     "tris": 3300,
-     "verts": 4249,
-     "bytes": 55048,
+     "tris": 1458,
+     "verts": 1944,
+     "bytes": 28792,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/acacia-b.lod2.glb",
-     "tris": 1000,
-     "verts": 1119,
-     "bytes": 16824,
+     "tris": 324,
+     "verts": 527,
+     "bytes": 9892,
      "doubleSided": true,
      "morph": false
     },
@@ -6445,25 +6445,25 @@
      "file": "trees/acacia-c.lod0.glb",
      "tris": 5427,
      "verts": 8670,
-     "bytes": 110100,
+     "bytes": 114128,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/acacia-c.lod1.glb",
-     "tris": 3300,
-     "verts": 5386,
-     "bytes": 70504,
+     "tris": 2106,
+     "verts": 3621,
+     "bytes": 50296,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/acacia-c.lod2.glb",
-     "tris": 999,
-     "verts": 1439,
-     "bytes": 21360,
+     "tris": 443,
+     "verts": 772,
+     "bytes": 13112,
      "doubleSided": true,
      "morph": false
     },
@@ -6515,25 +6515,25 @@
      "file": "trees/apple-a.lod0.glb",
      "tris": 7499,
      "verts": 9213,
-     "bytes": 113532,
+     "bytes": 117156,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/apple-a.lod1.glb",
-     "tris": 3300,
-     "verts": 4557,
-     "bytes": 60164,
+     "tris": 2044,
+     "verts": 2790,
+     "bytes": 39456,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/apple-a.lod2.glb",
-     "tris": 1000,
-     "verts": 1076,
-     "bytes": 16312,
+     "tris": 396,
+     "verts": 538,
+     "bytes": 9768,
      "doubleSided": true,
      "morph": false
     },
@@ -6585,25 +6585,25 @@
      "file": "trees/apple-b.lod0.glb",
      "tris": 7499,
      "verts": 8860,
-     "bytes": 110412,
+     "bytes": 113860,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/apple-b.lod1.glb",
-     "tris": 3300,
-     "verts": 4045,
-     "bytes": 53492,
+     "tris": 1776,
+     "verts": 2133,
+     "bytes": 30532,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/apple-b.lod2.glb",
-     "tris": 1000,
-     "verts": 1086,
-     "bytes": 16364,
+     "tris": 380,
+     "verts": 536,
+     "bytes": 9804,
      "doubleSided": true,
      "morph": false
     },
@@ -6655,25 +6655,25 @@
      "file": "trees/apple-c.lod0.glb",
      "tris": 7251,
      "verts": 10481,
-     "bytes": 122700,
+     "bytes": 125580,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/apple-c.lod1.glb",
-     "tris": 3300,
-     "verts": 4712,
-     "bytes": 60100,
+     "tris": 1984,
+     "verts": 2900,
+     "bytes": 38452,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/apple-c.lod2.glb",
-     "tris": 997,
-     "verts": 1208,
-     "bytes": 17480,
+     "tris": 451,
+     "verts": 716,
+     "bytes": 11348,
      "doubleSided": true,
      "morph": false
     },
@@ -6725,25 +6725,25 @@
      "file": "trees/beech-a.lod0.glb",
      "tris": 7499,
      "verts": 8501,
-     "bytes": 109376,
+     "bytes": 113004,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/beech-a.lod1.glb",
-     "tris": 3300,
-     "verts": 3355,
-     "bytes": 45232,
+     "tris": 1880,
+     "verts": 2061,
+     "bytes": 29872,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/beech-a.lod2.glb",
-     "tris": 997,
-     "verts": 1046,
-     "bytes": 16420,
+     "tris": 407,
+     "verts": 521,
+     "bytes": 9672,
      "doubleSided": true,
      "morph": false
     },
@@ -6760,7 +6760,7 @@
    "attach": 40,
    "wood_tris": [
     2325,
-    1084,
+    946,
     211
    ],
    "leaves": 3832,
@@ -6795,25 +6795,25 @@
      "file": "trees/beech-b.lod0.glb",
      "tris": 7499,
      "verts": 8351,
-     "bytes": 106868,
+     "bytes": 109928,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/beech-b.lod1.glb",
-     "tris": 3300,
-     "verts": 3425,
-     "bytes": 46296,
+     "tris": 1896,
+     "verts": 2065,
+     "bytes": 29892,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/beech-b.lod2.glb",
-     "tris": 999,
-     "verts": 1048,
-     "bytes": 16684,
+     "tris": 411,
+     "verts": 522,
+     "bytes": 9700,
      "doubleSided": true,
      "morph": false
     },
@@ -6865,25 +6865,25 @@
      "file": "trees/beech-c.lod0.glb",
      "tris": 7499,
      "verts": 7908,
-     "bytes": 101572,
+     "bytes": 104712,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/beech-c.lod1.glb",
-     "tris": 3300,
-     "verts": 3410,
-     "bytes": 45452,
+     "tris": 1872,
+     "verts": 2032,
+     "bytes": 29516,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/beech-c.lod2.glb",
-     "tris": 995,
-     "verts": 1002,
-     "bytes": 15600,
+     "tris": 424,
+     "verts": 515,
+     "bytes": 9580,
      "doubleSided": true,
      "morph": false
     },
@@ -6901,7 +6901,7 @@
    "wood_tris": [
     3009,
     932,
-    281
+    236
    ],
    "leaves": 6976,
    "height": 14.55,
@@ -6935,25 +6935,25 @@
      "file": "trees/birch-a.lod0.glb",
      "tris": 7499,
      "verts": 9143,
-     "bytes": 116788,
+     "bytes": 120628,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/birch-a.lod1.glb",
-     "tris": 3300,
-     "verts": 3614,
-     "bytes": 47340,
+     "tris": 1748,
+     "verts": 2143,
+     "bytes": 31080,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/birch-a.lod2.glb",
-     "tris": 997,
-     "verts": 1074,
-     "bytes": 16308,
+     "tris": 379,
+     "verts": 528,
+     "bytes": 9788,
      "doubleSided": true,
      "morph": false
     },
@@ -7005,25 +7005,25 @@
      "file": "trees/birch-b.lod0.glb",
      "tris": 7499,
      "verts": 10172,
-     "bytes": 129280,
+     "bytes": 133444,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/birch-b.lod1.glb",
-     "tris": 3300,
-     "verts": 4520,
-     "bytes": 59568,
+     "tris": 1844,
+     "verts": 2603,
+     "bytes": 37536,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/birch-b.lod2.glb",
-     "tris": 999,
-     "verts": 1094,
-     "bytes": 16632,
+     "tris": 363,
+     "verts": 532,
+     "bytes": 9928,
      "doubleSided": true,
      "morph": false
     },
@@ -7075,25 +7075,25 @@
      "file": "trees/birch-c.lod0.glb",
      "tris": 7499,
      "verts": 8591,
-     "bytes": 109556,
+     "bytes": 113320,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/birch-c.lod1.glb",
-     "tris": 3300,
-     "verts": 3419,
-     "bytes": 44924,
+     "tris": 1884,
+     "verts": 2050,
+     "bytes": 29916,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/birch-c.lod2.glb",
-     "tris": 995,
-     "verts": 1039,
-     "bytes": 15916,
+     "tris": 417,
+     "verts": 523,
+     "bytes": 9780,
      "doubleSided": true,
      "morph": false
     },
@@ -7145,25 +7145,25 @@
      "file": "trees/cherry-a.lod0.glb",
      "tris": 7499,
      "verts": 10978,
-     "bytes": 138092,
+     "bytes": 142972,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/cherry-a.lod1.glb",
-     "tris": 3300,
-     "verts": 4427,
-     "bytes": 58620,
+     "tris": 1768,
+     "verts": 2453,
+     "bytes": 35232,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/cherry-a.lod2.glb",
-     "tris": 1000,
-     "verts": 1116,
-     "bytes": 17216,
+     "tris": 332,
+     "verts": 530,
+     "bytes": 9936,
      "doubleSided": true,
      "morph": false
     },
@@ -7215,25 +7215,25 @@
      "file": "trees/cherry-b.lod0.glb",
      "tris": 7499,
      "verts": 9396,
-     "bytes": 106284,
+     "bytes": 107932,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/cherry-b.lod1.glb",
-     "tris": 3300,
-     "verts": 3932,
-     "bytes": 49192,
+     "tris": 2040,
+     "verts": 2680,
+     "bytes": 34468,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/cherry-b.lod2.glb",
-     "tris": 998,
-     "verts": 1193,
-     "bytes": 17232,
+     "tris": 488,
+     "verts": 728,
+     "bytes": 11288,
      "doubleSided": true,
      "morph": false
     },
@@ -7285,25 +7285,25 @@
      "file": "trees/emergent-a.lod0.glb",
      "tris": 9500,
      "verts": 10085,
-     "bytes": 122860,
+     "bytes": 126712,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/emergent-a.lod1.glb",
-     "tris": 2800,
-     "verts": 2686,
-     "bytes": 34584,
+     "tris": 1996,
+     "verts": 1677,
+     "bytes": 22424,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/emergent-a.lod2.glb",
-     "tris": 799,
-     "verts": 911,
-     "bytes": 14076,
+     "tris": 527,
+     "verts": 572,
+     "bytes": 9812,
      "doubleSided": true,
      "morph": false
     },
@@ -7355,25 +7355,25 @@
      "file": "trees/emergent-b.lod0.glb",
      "tris": 9500,
      "verts": 10416,
-     "bytes": 126924,
+     "bytes": 130836,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/emergent-b.lod1.glb",
-     "tris": 2800,
-     "verts": 2953,
-     "bytes": 38480,
+     "tris": 1888,
+     "verts": 1947,
+     "bytes": 26736,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/emergent-b.lod2.glb",
-     "tris": 799,
-     "verts": 998,
-     "bytes": 15288,
+     "tris": 503,
+     "verts": 641,
+     "bytes": 10892,
      "doubleSided": true,
      "morph": false
     },
@@ -7390,7 +7390,7 @@
    "attach": 51,
    "wood_tris": [
     4090,
-    1166,
+    1064,
     225
    ],
    "leaves": 5040,
@@ -7425,25 +7425,25 @@
      "file": "trees/lime-a.lod0.glb",
      "tris": 7499,
      "verts": 7922,
-     "bytes": 101472,
+     "bytes": 104628,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/lime-a.lod1.glb",
-     "tris": 3300,
-     "verts": 3296,
-     "bytes": 43680,
+     "tris": 1776,
+     "verts": 2089,
+     "bytes": 30596,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/lime-a.lod2.glb",
-     "tris": 997,
-     "verts": 992,
-     "bytes": 15396,
+     "tris": 451,
+     "verts": 515,
+     "bytes": 9500,
      "doubleSided": true,
      "morph": false
     },
@@ -7460,8 +7460,8 @@
    "attach": 40,
    "wood_tris": [
     2989,
-    1142,
-    307
+    716,
+    277
    ],
    "leaves": 7664,
    "height": 13.52,
@@ -7495,25 +7495,25 @@
      "file": "trees/lime-b.lod0.glb",
      "tris": 7499,
      "verts": 8526,
-     "bytes": 109012,
+     "bytes": 112264,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/lime-b.lod1.glb",
-     "tris": 3300,
-     "verts": 3511,
-     "bytes": 47308,
+     "tris": 1844,
+     "verts": 2112,
+     "bytes": 30808,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/lime-b.lod2.glb",
-     "tris": 996,
-     "verts": 1053,
-     "bytes": 16640,
+     "tris": 406,
+     "verts": 528,
+     "bytes": 9756,
      "doubleSided": true,
      "morph": false
     },
@@ -7565,25 +7565,25 @@
      "file": "trees/lime-c.lod0.glb",
      "tris": 7499,
      "verts": 7864,
-     "bytes": 101648,
+     "bytes": 104792,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/lime-c.lod1.glb",
-     "tris": 3300,
-     "verts": 3460,
-     "bytes": 46088,
+     "tris": 1824,
+     "verts": 2053,
+     "bytes": 30068,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/lime-c.lod2.glb",
-     "tris": 995,
-     "verts": 986,
-     "bytes": 15388,
+     "tris": 469,
+     "verts": 509,
+     "bytes": 9336,
      "doubleSided": true,
      "morph": false
     },
@@ -7635,25 +7635,25 @@
      "file": "trees/mangrove-a.lod0.glb",
      "tris": 7499,
      "verts": 10043,
-     "bytes": 125244,
+     "bytes": 129444,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/mangrove-a.lod1.glb",
-     "tris": 3300,
-     "verts": 3982,
-     "bytes": 52492,
+     "tris": 1908,
+     "verts": 2113,
+     "bytes": 30048,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/mangrove-a.lod2.glb",
-     "tris": 997,
-     "verts": 986,
-     "bytes": 15152,
+     "tris": 487,
+     "verts": 521,
+     "bytes": 9328,
      "doubleSided": true,
      "morph": false
     },
@@ -7705,25 +7705,25 @@
      "file": "trees/mangrove-b.lod0.glb",
      "tris": 7499,
      "verts": 9833,
-     "bytes": 122196,
+     "bytes": 126264,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/mangrove-b.lod1.glb",
-     "tris": 3300,
-     "verts": 3902,
-     "bytes": 50960,
+     "tris": 1948,
+     "verts": 2267,
+     "bytes": 32020,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/mangrove-b.lod2.glb",
-     "tris": 997,
-     "verts": 955,
-     "bytes": 14572,
+     "tris": 523,
+     "verts": 517,
+     "bytes": 9152,
      "doubleSided": true,
      "morph": false
     },
@@ -7740,7 +7740,7 @@
    "attach": 50,
    "wood_tris": [
     2709,
-    1060,
+    898,
     385
    ],
    "leaves": 1884,
@@ -7775,25 +7775,25 @@
      "file": "trees/oak-a.lod0.glb",
      "tris": 7499,
      "verts": 8442,
-     "bytes": 105712,
+     "bytes": 108948,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/oak-a.lod1.glb",
-     "tris": 3300,
-     "verts": 3351,
-     "bytes": 43960,
+     "tris": 1876,
+     "verts": 2073,
+     "bytes": 29688,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/oak-a.lod2.glb",
-     "tris": 999,
-     "verts": 1047,
-     "bytes": 16040,
+     "tris": 411,
+     "verts": 521,
+     "bytes": 9636,
      "doubleSided": true,
      "morph": false
     },
@@ -7810,7 +7810,7 @@
    "attach": 41,
    "wood_tris": [
     2887,
-    1116,
+    936,
     219
    ],
    "leaves": 3345,
@@ -7845,25 +7845,25 @@
      "file": "trees/oak-b.lod0.glb",
      "tris": 6785,
      "verts": 9770,
-     "bytes": 124192,
+     "bytes": 128508,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/oak-b.lod1.glb",
-     "tris": 3300,
-     "verts": 4313,
-     "bytes": 57524,
+     "tris": 1868,
+     "verts": 2414,
+     "bytes": 34848,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/oak-b.lod2.glb",
-     "tris": 998,
-     "verts": 1087,
-     "bytes": 16600,
+     "tris": 364,
+     "verts": 529,
+     "bytes": 9880,
      "doubleSided": true,
      "morph": false
     },
@@ -7915,25 +7915,25 @@
      "file": "trees/oak-c.lod0.glb",
      "tris": 7499,
      "verts": 8918,
-     "bytes": 111324,
+     "bytes": 114888,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/oak-c.lod1.glb",
-     "tris": 3300,
-     "verts": 3394,
-     "bytes": 44276,
+     "tris": 1888,
+     "verts": 2058,
+     "bytes": 29308,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/oak-c.lod2.glb",
-     "tris": 999,
-     "verts": 1066,
-     "bytes": 16220,
+     "tris": 387,
+     "verts": 522,
+     "bytes": 9636,
      "doubleSided": true,
      "morph": false
     },
@@ -7950,7 +7950,7 @@
    "attach": 41,
    "wood_tris": [
     2619,
-    1022,
+    968,
     183
    ],
    "leaves": 3212,
@@ -7985,7 +7985,7 @@
      "file": "trees/palm-a.lod0.glb",
      "tris": 3390,
      "verts": 4569,
-     "bytes": 60172,
+     "bytes": 62024,
      "doubleSided": true,
      "morph": false
     },
@@ -7994,16 +7994,16 @@
      "file": "trees/palm-a.lod1.glb",
      "tris": 2466,
      "verts": 4073,
-     "bytes": 55128,
+     "bytes": 56800,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/palm-a.lod2.glb",
-     "tris": 999,
-     "verts": 1692,
-     "bytes": 24668,
+     "tris": 799,
+     "verts": 1292,
+     "bytes": 20032,
      "doubleSided": true,
      "morph": false
     },
@@ -8055,7 +8055,7 @@
      "file": "trees/palm-b.lod0.glb",
      "tris": 3518,
      "verts": 4639,
-     "bytes": 59476,
+     "bytes": 61336,
      "doubleSided": true,
      "morph": false
     },
@@ -8064,16 +8064,16 @@
      "file": "trees/palm-b.lod1.glb",
      "tris": 2494,
      "verts": 4093,
-     "bytes": 54012,
+     "bytes": 55868,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/palm-b.lod2.glb",
-     "tris": 999,
-     "verts": 1677,
-     "bytes": 23856,
+     "tris": 799,
+     "verts": 1277,
+     "bytes": 19260,
      "doubleSided": true,
      "morph": false
     },
@@ -8125,7 +8125,7 @@
      "file": "trees/palm-c.lod0.glb",
      "tris": 2902,
      "verts": 3881,
-     "bytes": 52456,
+     "bytes": 54024,
      "doubleSided": true,
      "morph": false
     },
@@ -8134,16 +8134,16 @@
      "file": "trees/palm-c.lod1.glb",
      "tris": 2090,
      "verts": 3445,
-     "bytes": 47856,
+     "bytes": 49268,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/palm-c.lod2.glb",
-     "tris": 999,
-     "verts": 1737,
-     "bytes": 25512,
+     "tris": 799,
+     "verts": 1337,
+     "bytes": 20776,
      "doubleSided": true,
      "morph": false
     },
@@ -8405,25 +8405,25 @@
      "file": "trees/plane-a.lod0.glb",
      "tris": 7500,
      "verts": 6749,
-     "bytes": 85208,
+     "bytes": 87336,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/plane-a.lod1.glb",
-     "tris": 3300,
-     "verts": 3162,
-     "bytes": 42272,
+     "tris": 1714,
+     "verts": 1936,
+     "bytes": 28484,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/plane-a.lod2.glb",
-     "tris": 1000,
-     "verts": 1007,
-     "bytes": 15796,
+     "tris": 464,
+     "verts": 520,
+     "bytes": 9548,
      "doubleSided": true,
      "morph": false
     },
@@ -8440,7 +8440,7 @@
    "attach": 49,
    "wood_tris": [
     4427,
-    1283,
+    782,
     298
    ],
    "leaves": 5354,
@@ -8475,25 +8475,25 @@
      "file": "trees/plane-b.lod0.glb",
      "tris": 7500,
      "verts": 7171,
-     "bytes": 90988,
+     "bytes": 93276,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/plane-b.lod1.glb",
-     "tris": 3300,
-     "verts": 3134,
-     "bytes": 42452,
+     "tris": 1865,
+     "verts": 1892,
+     "bytes": 27748,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/plane-b.lod2.glb",
-     "tris": 996,
-     "verts": 1006,
-     "bytes": 15856,
+     "tris": 466,
+     "verts": 526,
+     "bytes": 9592,
      "doubleSided": true,
      "morph": false
     },
@@ -8510,7 +8510,7 @@
    "attach": 49,
    "wood_tris": [
     4201,
-    1401,
+    1083,
     300
    ],
    "leaves": 2699,
@@ -8965,25 +8965,25 @@
      "file": "trees/willow-a.lod0.glb",
      "tris": 7499,
      "verts": 9007,
-     "bytes": 113064,
+     "bytes": 116032,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/willow-a.lod1.glb",
-     "tris": 3300,
-     "verts": 5340,
-     "bytes": 68448,
+     "tris": 2640,
+     "verts": 4020,
+     "bytes": 53744,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/willow-a.lod2.glb",
-     "tris": 999,
-     "verts": 1799,
-     "bytes": 25020,
+     "tris": 799,
+     "verts": 1399,
+     "bytes": 20856,
      "doubleSided": true,
      "morph": false
     },
@@ -9035,25 +9035,25 @@
      "file": "trees/willow-b.lod0.glb",
      "tris": 7499,
      "verts": 11194,
-     "bytes": 141748,
+     "bytes": 146328,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/willow-b.lod1.glb",
-     "tris": 3299,
-     "verts": 5658,
-     "bytes": 73552,
+     "tris": 2639,
+     "verts": 4338,
+     "bytes": 58964,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/willow-b.lod2.glb",
-     "tris": 999,
-     "verts": 1835,
-     "bytes": 26104,
+     "tris": 799,
+     "verts": 1435,
+     "bytes": 21652,
      "doubleSided": true,
      "morph": false
     },
@@ -9105,25 +9105,25 @@
      "file": "trees/yew-a.lod0.glb",
      "tris": 7499,
      "verts": 7854,
-     "bytes": 96160,
+     "bytes": 99268,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/yew-a.lod1.glb",
-     "tris": 3300,
-     "verts": 3480,
-     "bytes": 43792,
+     "tris": 1620,
+     "verts": 1841,
+     "bytes": 25664,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/yew-a.lod2.glb",
-     "tris": 998,
-     "verts": 983,
-     "bytes": 14712,
+     "tris": 488,
+     "verts": 518,
+     "bytes": 9176,
      "doubleSided": true,
      "morph": false
     },
@@ -9175,25 +9175,25 @@
      "file": "trees/yew-b.lod0.glb",
      "tris": 7499,
      "verts": 8209,
-     "bytes": 100340,
+     "bytes": 103392,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod1",
      "file": "trees/yew-b.lod1.glb",
-     "tris": 3300,
-     "verts": 3246,
-     "bytes": 42316,
+     "tris": 1764,
+     "verts": 1844,
+     "bytes": 25720,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "trees/yew-b.lod2.glb",
-     "tris": 1000,
-     "verts": 1027,
-     "bytes": 15704,
+     "tris": 440,
+     "verts": 522,
+     "bytes": 9388,
      "doubleSided": true,
      "morph": false
     },
@@ -9210,7 +9210,7 @@
    "attach": 38,
    "wood_tris": [
     3115,
-    1248,
+    1008,
     262
    ],
    "leaves": 5480,
@@ -9224,5 +9224,5 @@
    ]
   }
  },
- "totalBytes": 11070414
+ "totalBytes": 10457366
 }

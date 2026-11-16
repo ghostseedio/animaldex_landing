@@ -129,7 +129,9 @@ import {StreamCull} from "@/ark-scene/streaming/cull";
 import {sceneMemory} from "@/ark-scene/runtime/memory";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {NearDetail} from "@/ark-scene/near-detail";
-import {BugGround, bugClearPoints} from "@/ark-scene/bug-ground";
+import {BugGround, bugClearPoints, bugCoverAt} from "@/ark-scene/bug-ground";
+// p3 (trees): small ground insects climb a grass blade now and then.
+import {ClimbStems, climbAt, climbPoint, climbStem, climbsBlades, mixClimb, type ClimbPoint, type ClimbStem} from "@/ark-scene/bug-climb";
 import {AssetTrees} from "@/ark-scene/asset-trees";
 import {AssetFloor, AssetRocks} from "@/ark-scene/asset-rocks";
 import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
@@ -427,6 +429,8 @@ type Entry = {
     trueLength: number;
     /** A small animal at its microhabitat. */
     micro?: MicroSpecies | null;
+    /** p3 (trees): the grass blade it climbs now and then (null: it does not). */
+    climb?: ClimbStem | null;
     /** A moth: 0 resting on the wall, 1 circling the porch light (at night); eased. */
     toLight?: number;
     /** Its layer (`layers.ts`): the canopy, the ground, the underground, the reef, the open sea or the deep. */
@@ -940,6 +944,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // p2 (ground): the ground at bug scale round what the camera looks at (blades, crumbs, moss, twigs), only close up.
     const bugGround = new BugGround();
     scene.add(bugGround.group);
+    // p3 (trees): the blades the small ground insects climb (`bug-climb.ts`), near the camera only.
+    const climbStems = new ClimbStems();
+    scene.add(climbStems.mesh);
+    const climbGround: ClimbPoint = {x: 0, y: 0, z: 0, nx: 0, ny: 1, nz: 0, tx: 0, ty: 0, tz: 1};
+    const climbBlade: ClimbPoint = {x: 0, y: 0, z: 0, nx: 0, ny: 1, nz: 0, tx: 0, ty: 0, tz: 1};
     // The asset library's trees (graphics pass, batch 3): they replace the decor's tree shapes once loaded.
     const assetTrees = new AssetTrees(options.assetBase);
     if (assetTrees) scene.add(assetTrees.group);
@@ -3297,6 +3306,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             point.tx = point.tx * c + bx * sn;
             point.ty = point.ty * c + by * sn;
             point.tz = point.tz * c + bz * sn;
+        }
+        // p3 (trees): a small ground insect climbs its blade now and then (a pure rule in its id and the clock).
+        // (Decided once its model's behaviour has loaded: its body plan says whether it climbs.)
+        const plan = entry.climb === undefined ? library.get(entry.animal.model_slug)?.behaviour?.plan : undefined;
+        if (plan !== undefined) {
+            const home = surfacePoint(micro, entry.animal.zone, 0);
+            entry.climb = climbsBlades(entry.animal.model_slug, surface, plan, L, micro.attach?.tag) ? climbStem(entry.animal.id, home, bugCoverAt(home.x, home.z), L) : null;
+        }
+        if (entry.climb && !reducedMotion) {
+            climbStems.note(entry.climb);
+            const climb = climbAt(entry.animal.id, time);
+            if (climb.on > 0) {
+                Object.assign(climbGround, point);
+                const mixed = mixClimb(climbGround, climbPoint(entry.climb, climb.up, climb.turn, climbBlade), climb.on, climbBlade);
+                Object.assign(point, mixed);
+            }
         }
         const k = entry.toLight ?? 0;
         if (k > 0.001) {
@@ -8575,6 +8600,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const viewDistance = camera.position.distanceTo(controls.target);
         nearDetail?.update(controls.target, viewDistance);
         bugGround.update(controls.target, viewDistance); // p2 (ground)
+        climbStems.update(camera.position); // p3 (trees)
         assetTrees?.update(camera.position);
         assetRocks?.update(camera.position);
         assetFloor?.update(camera.position);
@@ -9226,6 +9252,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             nearDetail?.dispose();
             bugGround.dispose(); // p2 (ground)
             reflections.dispose(); // p3 (reflect)
+            climbStems.dispose(); // p3 (trees)
             assetTrees?.dispose();
             assetRocks?.dispose();
             assetFloor?.dispose();
