@@ -15,8 +15,9 @@ test("the vertical line through a solid: a flat roof slab's top and underside, n
     const solid = [...top, ...under];
     assert.deepEqual(surfacesAt(solid, 0.2, 0.3).map((h) => +h.toFixed(3)).sort(), [3, 3.2]);
     assert.deepEqual(surfacesAt(solid, 1.5, 0), []);
-    // A perch planned inside the slab is lifted onto it; one over open ground is left.
+    // A perch planned inside the slab is lifted onto it; one over open ground is left; one over the slab is never lowered.
     assert.equal(+perchOnSurface(solid, 0, 3.05, 0).toFixed(3), 3.21);
+    assert.equal(perchOnSurface(solid, 0, 3.4, 0), 3.4);
     assert.equal(perchOnSurface(solid, 5, 3.05, 5), 3.05);
 });
 

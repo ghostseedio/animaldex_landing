@@ -7,7 +7,7 @@
  * perch stood inside the overhang's slab (every one of 144 houses' eave perches checked), and a ridge perch a few cm
  * into the ridge (48 of 72 houses'), so a pigeon or a gull resting there was drawn inside the roof.
  *
- * Each such perch is now lifted onto the highest drawn surface over its point within reach (`ROOF_REACH` above it),
+ * Each such perch is now lifted onto the highest drawn surface over its point within reach (`ROOF_REACH` above it, never below),
  * found by a vertical line through the building's own solid triangles (`render/buildings.ts`, the same geometry the
  * town draws). Pure in the plan.
  */
@@ -17,8 +17,11 @@ import {buildBuilding, newBuildingChunk} from "@/ark-scene/islands/town/render/b
 
 /** How far above a planned perch a drawn surface is looked for (m): the roof's thickness and ridge, not a tower over it. */
 export const ROOF_REACH = 0.6;
-/** How far below a planned perch (m): a perch over a roof that falls away under it is set down onto it. */
-export const ROOF_DROP = 0.4;
+/**
+ * How far below a planned perch a surface may be (m): none. A perch is only ever lifted: the town's colliders stand to
+ * the plan's heights (a flat roof's top), and a perch set down under one is in the building for the walk and the flight.
+ */
+export const ROOF_DROP = 0;
 /** Its feet this far over the surface (m). */
 const ON = 0.01;
 
@@ -50,6 +53,7 @@ export function perchOnSurface(pos: ArrayLike<number>, x: number, y: number, z: 
     let best = Number.NEGATIVE_INFINITY;
     for (const h of heights) if (h >= y - ROOF_DROP && h <= y + ROOF_REACH && h > best) best = h;
     if (!Number.isFinite(best)) return y;
+    best = Math.max(best, y - ON);
     // (A step up just over the surface found, a ridge cap or a coping on the slab: onto it too, a small bird's height at a time.)
     for (let lifted = true; lifted; ) {
         lifted = false;
