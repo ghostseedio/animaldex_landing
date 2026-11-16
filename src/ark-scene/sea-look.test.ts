@@ -7,15 +7,17 @@ const look = (depth: number, daylight: number): UnderwaterLook => underwaterLook
 test("the water deepens going down: dimmer, bluer, thicker", () => {
     let last = look(0, 1);
     assert.equal(last.density, HAZE_SHALLOW);
-    for (const depth of [1, 2, 4, 8, 12, 20]) {
+    for (const depth of [1, 2, 4, 8, 12, 20, 40, 80]) {
         const now = look(depth, 1);
         assert.ok(now.density > last.density && now.density < HAZE_DEEP, `haze at ${depth} m`);
         assert.ok(now.r < last.r && now.g < last.g && now.b < last.b, `dimmer at ${depth} m`);
-        // The green goes faster than the blue.
-        assert.ok(now.b / now.g > last.b / last.g, `bluer at ${depth} m`);
+        // The green goes faster than the blue (until both are gone to the deep's own blue).
+        assert.ok(now.b / now.g >= last.b / last.g - 1e-9 && (depth > 20 || now.b / now.g > last.b / last.g), `bluer at ${depth} m`);
         last = now;
     }
     assert.ok(deepness(-3) === 0 && deepness(1000) <= 1);
+    // Far down it is nearly black, and the shelf (to 10 m) is not dimmed by the abyss at all.
+    assert.ok(look(100, 1).b < 0.08 && look(10, 1).b > 0.36);
 });
 
 test("night is darker than day at every depth, and daylight is clamped", () => {

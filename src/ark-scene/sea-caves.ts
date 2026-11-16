@@ -6,8 +6,8 @@
  * models): crags for its two walls, boulders closing its back, slabs laid across for its roof and a lintel over its
  * mouth, a boulder on top and one leaning on each wall, a few more and scree spilled at its feet. Its mouth looks down the bed's slope, out to the open water.
  *
- * Sites are one pure rule over the terrain (`seaCaves`), so every viewer has the same caves: points on a spiral out
- * from the island's middle, kept where the water is 3.5–9 m deep (the roof stays well under the surface at the
+ * Sites are one pure rule over the terrain (`seaCaves`), so every viewer has the same caves: points on a spiral about
+ * the coral reef's middle first (up to three there), then on one out from the island's middle, kept where the water is 3.5–9 m deep (the roof stays well under the surface at the
  * lowest tide), the bed is not steep, nothing of the reef grows in its footprint, no drawn rock or vent is in it,
  * and no other cave is near.
  *
@@ -20,7 +20,7 @@ import {reefGrowth, seaBedAt, REEF_HEIGHT} from "@/ark-scene/reef";
 import {ROCK_VARIANTS, type RockStyle} from "@/ark-scene/rock-shapes";
 import {seaVents} from "@/ark-scene/sea-bubbles";
 import {worldDecor} from "@/ark-scene/decor";
-import {TERRAIN_HALF, arkWorld, hashString, onArkWorld, sampleGround} from "@/ark-scene/world";
+import {TERRAIN_HALF, ZONE_SITES, arkWorld, hashString, onArkWorld, sampleGround} from "@/ark-scene/world";
 
 export type CaveRock = {
     style: RockStyle;
@@ -64,6 +64,9 @@ export const CAVE_MAX_DEPTH = 9;
 /** No two caves nearer than this (m). */
 export const CAVE_SPACING = 24;
 export const CAVE_LIMIT = 9;
+/** The caves looked for by the coral reef first (within about 57 m of its middle), and their own spacing (m). */
+export const CAVES_BY_REEF = 3;
+export const CAVE_SPACING_BY_REEF = 16;
 /** The roof's top is at least this far under the mean surface (m). */
 export const CAVE_ROOF_CLEAR = 0.9;
 const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
@@ -141,23 +144,16 @@ export function seaCaves(): SeaCave[] {
     const growth = reefGrowth();
     const rocks = worldDecor().filter((item) => item.kind === "rock" && item.y < 1);
     const vents = seaVents();
-    // (The spiral runs out to the drawn ground's edge, whichever world is in use: the bigger island's sea is further out.)
-    for (let k = 60; found.length < CAVE_LIMIT; k++) {
-        const radius = 2.6 * Math.sqrt(k + 0.37);
-        if (radius > TERRAIN_HALF * 1.05) break;
-        const angle = k * GOLDEN_ANGLE + 1.3;
-        const x = Math.cos(angle) * radius;
-        const z = Math.sin(angle) * radius;
+    /** One candidate point: a cave there if every rule holds. */
+    const tryAt = (key: string, x: number, z: number, spacing: number): void => {
         const height = sampleGround(x, z).height;
-        if (height > -CAVE_MIN_DEPTH || height < -CAVE_MAX_DEPTH) continue;
-        if (found.some((cave) => Math.hypot(cave.x - x, cave.z - z) < CAVE_SPACING)) continue;
-        if (hashString(`cave#${k}`) % 2) continue;
+        if (height > -CAVE_MIN_DEPTH || height < -CAVE_MAX_DEPTH) return;
+        if (found.some((cave) => Math.hypot(cave.x - x, cave.z - z) < spacing)) return;
         const bed = seaBedAt(x, z);
-        if (bed.slope > 0.4 || bed.substrate === "reef") continue;
-        const key = `cave#${k}`;
+        if (bed.slope > 0.4 || bed.substrate === "reef") return;
         const width = 2.4 + 1.2 * unit(`${key}#w`);
         const tall = Math.min(1.7 + 0.8 * unit(`${key}#h`), bed.depth - CAVE_ROOF_CLEAR - 1.6);
-        if (tall < 1.5) continue;
+        if (tall < 1.5) return;
         const length = 3 + 1.4 * unit(`${key}#l`);
         // Its mouth looks down the slope (out to the open water); on a level bed, away from the island.
         const e = 1.2;
@@ -172,11 +168,26 @@ export function seaCaves(): SeaCave[] {
             const h = sampleGround(middle.x + Math.cos(a * Math.PI / 4) * reach * 0.75, middle.z + Math.sin(a * Math.PI / 4) * reach * 0.75).height;
             fits = h < -(tall + CAVE_ROOF_CLEAR + 0.8) && Math.abs(h - height) < 2.2;
         }
-        if (!fits) continue;
-        if (growth.some((item) => item.kind !== "seagrass" && item.kind !== "encrusting" && Math.hypot(item.x - middle.x, item.z - middle.z) < reach + 0.6 * item.scale)) continue;
-        if (rocks.some((item) => Math.hypot(item.x - middle.x, item.z - middle.z) < reach + 1.2 * item.scale)) continue;
-        if (vents.some((vent) => Math.hypot(vent.x - middle.x, vent.z - middle.z) < reach + 0.5)) continue;
+        if (!fits) return;
+        if (growth.some((item) => item.kind !== "seagrass" && item.kind !== "encrusting" && Math.hypot(item.x - middle.x, item.z - middle.z) < reach + 0.6 * item.scale)) return;
+        if (rocks.some((item) => Math.hypot(item.x - middle.x, item.z - middle.z) < reach + 1.2 * item.scale)) return;
+        if (vents.some((vent) => Math.hypot(vent.x - middle.x, vent.z - middle.z) < reach + 0.5)) return;
         found.push({x, y: height, z, floor: floorOf(x, z, yaw, length), depth: bed.depth, yaw, width, height: tall, length, reach, rocks: rocksOf(key, x, z, yaw, width, tall, length)});
+    };
+    // First by the coral reef, where the sea's animals and its viewers are: up to three, in the sand between the corals.
+    const reef = ZONE_SITES.coral_reef;
+    for (let k = 1; k < 900 && found.length < CAVES_BY_REEF; k++) {
+        const radius = 1.9 * Math.sqrt(k);
+        tryAt(`cave#reef${k}`, reef.x + Math.cos(k * GOLDEN_ANGLE) * radius, reef.z + Math.sin(k * GOLDEN_ANGLE) * radius, CAVE_SPACING_BY_REEF);
+    }
+    // Then round the island. (The spiral runs out to the drawn ground's edge, whichever world is in use: the bigger
+    // island's sea is further out.)
+    for (let k = 60; found.length < CAVE_LIMIT; k++) {
+        const radius = 2.6 * Math.sqrt(k + 0.37);
+        if (radius > TERRAIN_HALF * 1.05) break;
+        if (hashString(`cave#${k}`) % 2) continue;
+        const angle = k * GOLDEN_ANGLE + 1.3;
+        tryAt(`cave#${k}`, Math.cos(angle) * radius, Math.sin(angle) * radius, CAVE_SPACING);
     }
     caves.set(world, found);
     return found;

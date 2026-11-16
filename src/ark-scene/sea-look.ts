@@ -4,7 +4,8 @@
  *
  * - **The water's colour and haze by depth** (`underwaterLook`): the old view was one blue-green at one density
  *   wherever the camera was. Now the shallows are bright turquoise and clear, and going down the water takes the
- *   green out and thickens: a deep, dim blue by ten metres. Night is the same curve from a dark start.
+ *   green out and thickens: a deep, dim blue by ten metres, and on toward black far below that. Night is the same
+ *   curve from a dark start.
  * - **Marine snow** (`snowPoint`): motes that sink and drift all round the camera wherever it is under the sea, a
  *   field that wraps about the camera so it never runs out. On the sea's shared clock, and every speed is a whole
  *   number of boxes per clock period, so the clock's wrap is never seen. `sea-look-render.ts` draws it (one draw
@@ -17,7 +18,7 @@ import type {QualityTier} from "@/ark-scene/post";
 
 export type UnderwaterLook = {r: number; g: number; b: number; density: number};
 
-/** The water's colours (linear-ish sRGB triples, 0…1): the shallows and the deep, by day and by night. */
+/** The water's colours (sRGB triples, 0…1): the shallows and the deep, by day and by night. */
 const DAY_SHALLOW = [0.2, 0.56, 0.6];
 const DAY_DEEP = [0.045, 0.2, 0.36];
 const NIGHT_SHALLOW = [0.043, 0.133, 0.16];
@@ -27,6 +28,11 @@ export const HAZE_SHALLOW = 0.046;
 export const HAZE_DEEP = 0.078;
 /** The depth (m) over which the shallows' look gives way to the deep's (1 − 1/e of the way at this depth). */
 export const LOOK_FALLOFF = 5;
+
+/** Below `ABYSS_FROM` metres the colour dims on toward black: by `ABYSS_DIM` of itself, 1 − 1/e of that `ABYSS_FALLOFF` further down. */
+const ABYSS_FROM = 10;
+const ABYSS_FALLOFF = 30;
+const ABYSS_DIM = 0.85;
 
 const clamp01 = (v: number): number => Math.min(Math.max(v, 0), 1);
 
@@ -42,10 +48,12 @@ export function deepness(depth: number): number {
 export function underwaterLook(depth: number, daylight: number, out: UnderwaterLook): UnderwaterLook {
     const k = deepness(depth);
     const day = clamp01(daylight);
+    // (Past the shelf the light itself runs out: the bigger island's sea falls away to a hundred metres.)
+    const dim = 1 - ABYSS_DIM * (1 - Math.exp(-Math.max(depth - ABYSS_FROM, 0) / ABYSS_FALLOFF));
     const channel = (i: number): number => {
         const night = NIGHT_SHALLOW[i] + (NIGHT_DEEP[i] - NIGHT_SHALLOW[i]) * k;
         const lit = DAY_SHALLOW[i] + (DAY_DEEP[i] - DAY_SHALLOW[i]) * k;
-        return night + (lit - night) * day;
+        return (night + (lit - night) * day) * dim;
     };
     out.r = channel(0);
     out.g = channel(1);

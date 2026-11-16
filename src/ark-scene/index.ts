@@ -5409,7 +5409,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (under) {
             // 3.3 batch (E): bright and clear in the shallows, a dim thick blue far down (sea-look.ts), not one colour everywhere.
             underwaterLook(-camera.position.y, lighting.daylight.daylight, underLook);
-            underFog.color.setRGB(underLook.r, underLook.g, underLook.b);
+            underFog.color.setRGB(underLook.r, underLook.g, underLook.b, "srgb");
             underFog.density = underLook.density;
             scene.background = underFog.color;
         } else if (scene.background) {

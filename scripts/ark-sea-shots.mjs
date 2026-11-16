@@ -4,7 +4,7 @@
  * its pinned light and sea clock), at the sea's own views: over the reef from above, under the surface near shore,
  * the deep, a vent's bubbles, a cave's mouth, each by day and by night.
  *
- *   node scripts/ark-sea-shots.mjs --label after [--out <dir>] [--views vent,cave] [--times day,night] [--quality low]
+ *   node scripts/ark-sea-shots.mjs --label after [--out <dir>] [--views vent,cave] [--times day,night] [--quality low] [--world v2]
  */
 
 import {createServer} from "node:http";
@@ -80,7 +80,9 @@ page.on("pageerror", (error) => errors.push(String(error)));
 page.on("console", (message) => {
     if (message.type() === "error" && !/Failed to load resource/.test(message.text())) errors.push(message.text());
 });
-await page.goto(`${base}/golden.html?${quality === "auto" ? "" : `quality=${quality}`}`, {waitUntil: "domcontentloaded", timeout: 180_000});
+// (--world v2: the bigger wild island's world, as the islands page mounts it; `world.ts` reads it from the URL.)
+const query = [quality === "auto" ? "" : `quality=${quality}`, arg("world", "") ? `world=${arg("world", "")}` : ""].filter(Boolean).join("&");
+await page.goto(`${base}/golden.html?${query}`, {waitUntil: "domcontentloaded", timeout: 180_000});
 await page.waitForFunction(() => window.__arkGolden || window.__arkGoldenError, null, {timeout: 120_000});
 await page.evaluate(() => window.__arkGolden.prepare());
 const results = [];

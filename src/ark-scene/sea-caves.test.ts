@@ -4,7 +4,7 @@ import {worldDecor} from "@/ark-scene/decor";
 import {reefGrowth, seaBedAt} from "@/ark-scene/reef";
 import {ROCK_VARIANTS} from "@/ark-scene/rock-shapes";
 import {seaVents} from "@/ark-scene/sea-bubbles";
-import {CAVE_LIMIT, CAVE_MAX_DEPTH, CAVE_MIN_DEPTH, CAVE_ROOF_CLEAR, CAVE_SPACING, caveMiddle, caveVents, seaCaves} from "@/ark-scene/sea-caves";
+import {CAVE_LIMIT, CAVE_MAX_DEPTH, CAVE_MIN_DEPTH, CAVE_ROOF_CLEAR, CAVE_SPACING_BY_REEF, caveMiddle, caveVents, seaCaves} from "@/ark-scene/sea-caves";
 import {heightAt} from "@/ark-scene/world";
 
 const caves = seaCaves();
@@ -18,7 +18,7 @@ test("caves: some, on the sea bed in 3.5–9 m of water, spaced, the same every 
         assert.ok(Math.abs(cave.y - heightAt(cave.x, cave.z)) < 1e-6);
         assert.notEqual(seaBedAt(cave.x, cave.z).substrate, "reef");
         assert.ok(cave.height >= 1.5 && cave.width >= 2.4 && cave.length >= 3);
-        for (const other of caves.slice(0, i)) assert.ok(Math.hypot(cave.x - other.x, cave.z - other.z) >= CAVE_SPACING);
+        for (const other of caves.slice(0, i)) assert.ok(Math.hypot(cave.x - other.x, cave.z - other.z) >= CAVE_SPACING_BY_REEF);
     }
 });
 
