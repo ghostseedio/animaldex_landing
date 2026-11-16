@@ -121,7 +121,7 @@ export type RigManifest = {flight?: boolean; species: Record<string, RigEntry | 
 /** Flight clips: played only when the set and the species' entry both say flight is approved. */
 export const FLIGHT_CLIPS: ReadonlySet<string> = new Set(["flap", "glide", "soar", "bank_l", "bank_r", "hover", "takeoff", "land"]);
 /** Clips that move the animal along (water clips included): held on a sitting rig, with the flight clips. */
-export const MOVING_CLIPS: ReadonlySet<string> = new Set(["walk", "run", "climb", "leap", "hop", "hang", "burrow", "emerge", "slither", "swim", "surface", "enter_water", "exit_water", "dive", "paddle"]);
+export const MOVING_CLIPS: ReadonlySet<string> = new Set(["walk", "trot", "run", "climb", "leap", "hop", "hang", "burrow", "emerge", "slither", "swim", "surface", "enter_water", "exit_water", "dive", "paddle"]);
 /** What the rig pipeline holds on a sitting rest pose (contract section 4: the moving clips and every flight clip). */
 const SIT_HELD: ReadonlySet<string> = new Set(Array.from(MOVING_CLIPS).concat(Array.from(FLIGHT_CLIPS)));
 
@@ -163,8 +163,10 @@ export function rigClip(manifest: RigManifest | null | undefined, slug: string, 
     if (FLIGHT_CLIPS.has(clip) && !flightApproved(manifest, slug)) return null;
     if (!entry.clips || Array.isArray(entry.clips) || typeof entry.clips !== "object") return null;
     if (entry.pose && SIT_HELD.has(clip)) return null;
-    if (RIG_CLIPS_HELD[slug]?.has(clip)) return null;
-    if (entry.plan === "quadruped" && QUADRUPED_LYING_HELD.has(clip)) return null;
+    // A pilot rig (`code` "pilot…", rig-pilot/: a neutral rest pose and hand-authored lying clips) is not held.
+    const pilot = typeof entry.code === "string" && entry.code.startsWith("pilot");
+    if (!pilot && RIG_CLIPS_HELD[slug]?.has(clip)) return null;
+    if (!pilot && entry.plan === "quadruped" && QUADRUPED_LYING_HELD.has(clip)) return null;
     const found = entry.clips[clip];
     if (!found || typeof found !== "object") return null;
     if (found.pass !== true) return null;

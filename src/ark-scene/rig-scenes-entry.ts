@@ -132,7 +132,9 @@ async function mountScenes(el: HTMLElement) {
         islandOptions = {island: town, wildAnimals: split(snapshot, "wild").animals, openIsland: "town"};
     }
     let ready = false;
-    const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, rigBase, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: 10, onReady: () => (ready = true), ...islandOptions});
+    // `?models=` (the harness's `--models`): a local model set (rig pilot); the close-up skins stay the live ones.
+    const modelBase = params.get("models") ? new URL(params.get("models")!, location.href).href.replace(/\/+$/, "") : MODELS;
+    const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase, closeUpBase: MODELS.replace(/\/ark$/, "/ark-closeup"), rigBase, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: 10, onReady: () => (ready = true), ...islandOptions});
     handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.2, storm: 0, windDirection: 0.4});
     const debug = () => (window as unknown as {__arkDebug: Debug}).__arkDebug;
     const ids: Record<string, string[]> = Object.fromEntries(CAST.map(([prefix, , n]) => [prefix, Array.from({length: n}, (_, i) => castId(prefix, i))]));
@@ -467,8 +469,56 @@ async function mountScenes(el: HTMLElement) {
         ])
     );
 
+    /**
+     * Rig pilot: one course animal standing at a spot playing a named list of its rig clips in turn (`?clips=idle,walk,..`,
+     * each `?clipsec=` seconds, default 4; forced through `__arkRigForce`, in time, in place), the camera from its side and
+     * a little in front at `?camd=` metres (default 1.6; ~12 for the island's default view distance).
+     */
+    const clipScenes: Record<string, () => {note: string; watch: string[]; go?: () => void}> = Object.fromEntries(
+        COURSE_CAST.map((c, i) => [
+            `clips_${c.slug}`,
+            () => {
+                const q = new URLSearchParams(location.search);
+                const id = ids[`c${i}`][0];
+                const list = (q.get("clips") ?? "idle,walk,run").split(",").filter(Boolean);
+                const each = Number(q.get("clipsec") ?? "4");
+                const from = site("grassland", Number(q.get("posx") ?? "-6"), Number(q.get("posz") ?? "6"));
+                const yaw = Math.PI / 2;
+                const force = ((globalThis as {__arkRigForce?: Record<string, string>}).__arkRigForce ??= {});
+                debug().setHome(id, from.x, from.z);
+                pinPose(id, () => ({x: from.x, z: from.z, y: ground(from.x, from.z), yaw, moving: false, aloft: false, doing: "watch", beat: "pause", nx: 0, ny: 1, nz: 0}));
+                let timer = 0;
+                const run = () => {
+                    const start = performance.now();
+                    clearInterval(timer);
+                    force[id] = list[0];
+                    timer = window.setInterval(() => {
+                        const k = Math.floor((performance.now() - start) / 1000 / each);
+                        if (k >= list.length) {
+                            delete force[id];
+                            clearInterval(timer);
+                        } else force[id] = list[k];
+                    }, 50);
+                };
+                const distance = Number(q.get("camd") ?? "1.6");
+                const polar = Number(q.get("polar") ?? "1.2");
+                const az = Number(q.get("az") ?? "-0.5");
+                const token = ++tracking;
+                const step = () => {
+                    if (token !== tracking) return;
+                    debug().controls.minDistance = 0.1;
+                    handle.setView({target: {x: from.x, y: ground(from.x, from.z) + Number(q.get("lift") ?? "0.15"), z: from.z}, distance, polar, azimuth: yaw + Math.PI / 2 + az});
+                    requestAnimationFrame(step);
+                };
+                requestAnimationFrame(step);
+                return {note: `${c.slug}: ${list.join(", ")}, ${each} s each, camera ${distance} m`, watch: [id], go: run};
+            }
+        ])
+    );
+
     const SCENES: Record<string, () => {note: string; watch: string[]; go?: () => void}> = {
         ...courseScenes,
+        ...clipScenes,
         ...postureScenes,
         ...wallScenes,
         /** The same flight seen from 36 m (past the near level's 25 m): a flying rig is still drawn near, flapping. */

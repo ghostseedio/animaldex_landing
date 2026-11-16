@@ -34,6 +34,28 @@ const out = path.resolve(arg("out", path.join(root, ".ark-golden", "rig-shots"))
 const set = arg("set", null) ? path.resolve(arg("set")) : null;
 const seconds = Number(arg("seconds", "22"));
 const deviceName = arg("device", "desktop");
+// `--models <dir>` (rig pilot): a local Ark model folder, <dir>/<slug>/near.glb, far.glb, ark.json. The page's model set
+// is then served from here as /tm/v1/ark: the live manifest with those slugs' versions swapped for local ones (the
+// first 12 hex of the near file's SHA-256), their files from the folder; everything else under /tm/ (other species'
+// models, the live rig sets beside them, the close-up skins) proxied read-only from the live public bucket.
+const modelsDir = arg("models", null) ? path.resolve(arg("models")) : null;
+const LIVE_TM = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models";
+const localModels = {};
+if (modelsDir) {
+    const {createHash} = await import("node:crypto");
+    for (const slug of readdirSync(modelsDir)) {
+        const near = path.join(modelsDir, slug, "near.glb");
+        if (/^[a-z0-9][a-z0-9-]{0,120}$/.test(slug) && existsSync(near)) localModels[slug] = createHash("sha256").update(readFileSync(near)).digest("hex").slice(0, 12);
+    }
+    console.log("local models", JSON.stringify(localModels));
+}
+const proxyCache = new Map();
+async function proxied(rest) {
+    if (!proxyCache.has(rest)) {
+        proxyCache.set(rest, fetch(`${LIVE_TM}/${rest}`).then(async (r) => ({status: r.status, type: r.headers.get("content-type") ?? "application/octet-stream", body: r.ok ? Buffer.from(await r.arrayBuffer()) : null})));
+    }
+    return proxyCache.get(rest);
+}
 mkdirSync(out, {recursive: true});
 
 const site = path.join(root, ".ark-golden", "rig");
@@ -59,9 +81,36 @@ writeFileSync(path.join(site, "rig.html"), `<!doctype html>
 `);
 
 const SLUG = /^[a-z0-9][a-z0-9-]{0,120}$/;
-const server = createServer((request, response) => {
+const server = createServer(async (request, response) => {
     const url = new URL(request.url, "http://localhost");
     const parts = url.pathname.split("/").filter(Boolean);
+    if (parts[0] === "tm" && modelsDir) {
+        const rest = parts.slice(1).join("/");
+        try {
+            if (rest === "v1/ark/manifest.json") {
+                const live = await proxied(rest);
+                const doc = JSON.parse(live.body.toString());
+                Object.assign(doc.models, localModels);
+                response.writeHead(200, {"Content-Type": "application/json", "Cache-Control": "no-store"}).end(JSON.stringify(doc));
+                return;
+            }
+            const m = /^v1\/ark\/([a-z0-9-]+)\/([0-9a-f]{12})\.(near\.glb|far\.glb|ark\.json)$/.exec(rest);
+            if (m && localModels[m[1]] === m[2]) {
+                const file = path.join(modelsDir, m[1], m[3]);
+                response.writeHead(200, {"Content-Type": m[3].endsWith(".json") ? "application/json" : "model/gltf-binary", "Cache-Control": "no-store"}).end(readFileSync(file));
+                return;
+            }
+            const live = await proxied(rest);
+            if (!live.body) {
+                response.writeHead(live.status || 404).end();
+                return;
+            }
+            response.writeHead(200, {"Content-Type": live.type, "Cache-Control": "no-store", "Access-Control-Allow-Origin": "*"}).end(live.body);
+        } catch (error) {
+            response.writeHead(502).end(String(error));
+        }
+        return;
+    }
     let file = null;
     let type = "application/octet-stream";
     if (parts[0] === "ark-rig" && /^v[0-9]+$/.test(parts[1] ?? "") && set) {
@@ -164,7 +213,7 @@ async function record(cdp, name) {
 
 // `--query`: more page parameters (the locomotion course's `cast=slug:plan,...`, `loco=0` for the before).
 // (Served under its own version, `--setv` (default v3): a manifest is read only under the folder its version names.)
-const query = [set ? `rig=/ark-rig/${arg("setv", "v3")}` : "", arg("query", "")].filter(Boolean).join("&");
+const query = [set ? `rig=/ark-rig/${arg("setv", "v3")}` : "", modelsDir ? "models=/tm/v1/ark" : "", arg("query", "")].filter(Boolean).join("&");
 const summary = [];
 const wanted = arg("scenes", flag("perf") || flag("island") ? "none" : "");
 for (const name of wanted ? wanted.split(",").filter((n) => n !== "none") : ["duck_flight", "deer_graze", "deer_look"]) {
@@ -194,6 +243,9 @@ for (const name of wanted ? wanted.split(",").filter((n) => n !== "none") : ["du
         const after = ["takeoff", "land", "enter_water", "exit_water", "shake_off"].includes(row.clip) ? [0.3, 0.6] : [0.5];
         for (const dt of after) picks.push({epoch: epoch0 + row.t + dt, file: `${name}-t${(row.t + dt).toFixed(2).padStart(5, "0")}-${row.clip}.jpg`});
     }
+    // `--every <s>`: a still every so many seconds as well (the clips scenes: several frames of each clip).
+    const every = Number(arg("every", "0"));
+    if (every > 0) for (let t = every; t < seconds; t += every) picks.push({epoch: epoch0 + t, file: `${name}-t${t.toFixed(2).padStart(5, "0")}-${(trace.filter((r) => r.t <= t).pop() ?? {clip: "x"}).clip}.jpg`});
     for (const extra of (arg("stills", "") || "").split(",").filter(Boolean)) picks.push({epoch: epoch0 + Number(extra), file: `${name}-t${Number(extra).toFixed(2).padStart(5, "0")}-at.jpg`});
     const video = await stop(picks);
     const stats = await page.evaluate(() => window.__arkRig.stats());
