@@ -78,7 +78,7 @@ import {goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, slee
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
-import {applyRecipeCoat, setRecipeArkDay, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {applyRecipeCoat, setRecipeArkDay, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, seasonFactor, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
 import {fishSchoolsNear} from "@/ark-scene/fish-schools";
 import {setFishChasers} from "@/ark-scene/fish-render";
@@ -216,6 +216,7 @@ import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {LiveBirths} from "@/ark-scene/live-births";
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
+import {DipRipples, microDipAt} from "@/ark-scene/egg-dip";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
@@ -1180,6 +1181,32 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // 3.3 batch (D): the limp of an animal that got away (`live-escapes.ts`), asked by the draw; null until the escapes' layer is up.
     let escapeLimp: ((id: string, epoch: number, moving: boolean, length: number, out: LimpOffsets) => boolean) | null = null;
     const limpNow: LimpOffsets = {drop: 0, roll: 0, pitch: 0};
+    // 3.3 batch (D): the rings a laying dragonfly's taps leave on the water (`egg-dip.ts`, recipe `dip_lay`), near the camera.
+    const dipRipples = new DipRipples();
+    /**
+     * 3.3 batch (D): a pond dragonfly laying (`egg-dip.ts`): a small animal on the water's surface whose species has the
+     * recipe `dip_lay` (the catalogue's rows, `data/ark/egg-dip.json`), a female, by day, in her breeding months: her
+     * flight round her spot and its act, or null. (Who lays is asked once per animal.)
+     */
+    const dipLayers = new Map<string, boolean>();
+    const dipTops = new Map<string, number>();
+    const microDipOf = (entry: Entry): {x: number; y: number; z: number; yaw: number; pitch: number; act: RecipeAct} | null => {
+        const id = entry.animal.id;
+        const slug = entry.animal.model_slug;
+        let lays = dipLayers.get(id);
+        if (lays === undefined) dipLayers.set(id, (lays = speciesRecipes(slug).recipes.some((r) => r.id === "dip_lay") && sexLook(id, slug).sex === "female"));
+        const hours = hoursNow();
+        if (!lays || hours <= 6.3 || hours >= 18.2 || entry.rest > 0.5) return null;
+        const epoch = worldMs() / 1000;
+        const place = entry.place;
+        const dip = microDipAt(id, {x: place.x, y: place.ground, z: place.z, yaw: place.yaw}, epoch, entry.trueLength, 0.6 * seasonFactor(speciesRecipes(slug), "mating", epoch), (x, z) => {
+            const top = waterTopAt(x, z);
+            return heightAt(x, z) < top - 0.03 ? top : null;
+        });
+        if (!dip) return null;
+        dipTops.set(id, dip.top);
+        return {x: dip.x, y: dip.y, z: dip.z, yaw: dip.yaw, pitch: dip.pitch, act: {episode: dip.episode, recipe: "dip_lay", block: dip.block, state: dip.block === "fly" ? "fly" : "hover", u: 0, pitch: dip.pitch, roll: 0, own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: "dip_lay", ...(dip.block === "dip_tail" ? {since: dip.since} : {})}};
+    };
     let placedFor: ArkSnapshot | null = null;
     let placedAll = new Map<string, Placement>();
     let disposed = false;
@@ -3725,6 +3752,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // A swarm round a small animal's spot (bees at the hive by day, mayflies at dusk), or a crawling cluster.
             entry.recipeFlock = scheduleOn && !reducedMotion && !flock ? swarmFlock(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow()) : null;
             if (flock) return {x: flock.x, z: flock.z, base: flock.y, yaw: flock.yaw, pitch: 0.95 + flock.pitch, roll: flock.roll, afloat: true};
+            // 3.3 batch (D): a pond dragonfly laying: low over the water round her spot, tapping her abdomen's tip to it.
+            const laying = scheduleOn && !reducedMotion && place.micro.surface === "water" ? microDipOf(entry) : null;
+            if (laying) {
+                entry.recipeAct = laying.act;
+                return {x: laying.x, z: laying.z, base: laying.y, yaw: laying.yaw, pitch: laying.pitch, roll: 0, afloat: true};
+            }
             return microPose(entry, reducedMotion ? 0 : time);
         }
         // Off its schedule (reduced motion): on its perch, its back to the perch's normal.
@@ -4402,9 +4435,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (flockNow) flocks.push(flockNow);
             // A house starling's murmuration (its flockmates are drawn round it, far as it may be).
             if (c.entry.recipeAct) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act: c.entry.recipeAct});
+            // 3.3 batch (D): a pond dragonfly laying (off the schedule): her rings, and her kind's own sentence in the log.
+            if (c.entry.recipeAct?.recipe === "dip_lay" && c.visible && c.distance < 60) {
+                const laid = c.entry.recipeAct;
+                const a = c.entry.animal;
+                if (laid.since !== undefined) dipRipples.note(a.id, `${laid.episode}#${Math.round(epoch - laid.since)}`, laid.since, {x: c.pose.x, y: (dipTops.get(a.id) ?? waterTopAt(c.pose.x, c.pose.z)) + 0.004, z: c.pose.z}, c.entry.trueLength, epoch);
+                const ownLine = signatureLineOf(a.model_slug, laid.recipe);
+                if (ownLine) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: laid.recipe, episode: laid.episode, block: laid.block, fish: false, line: ownLine});
+            }
             if (!own?.pose || c.distance > 90) continue;
             const act = (own.pose as RecipePose).act;
             if (act && c.visible) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act});
+            // 3.3 batch (D): a laying dragonfly's taps (`dip_tail`): a ring on the water where each touched.
+            if (act && act.since !== undefined && c.visible && !reducedMotion) dipRipples.note(c.entry.animal.id, `${act.episode}#${act.block}#${Math.round(epoch - act.since)}`, act.since, {x: c.pose.x, y: waterTopAt(c.pose.x, c.pose.z) + 0.012, z: c.pose.z}, c.entry.length, epoch);
             if (c.visible) {
                 seenNear.add(c.entry.animal.id);
                 // (One of the log's kinds, or a recipe its species has its own sentence for: `live/signature-lines.ts`.)
@@ -5207,6 +5250,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             ringList.push({x: ripples[i].x, y: 0.03, z: ripples[i].z, radius: 0.4 + age * 1.7, color: ARRIVAL, alpha: 0.9 * (1 - age / 2.4) ** 1.5});
         }
+        // 3.3 batch (D): and the rings of a laying dragonfly's taps.
+        if (dipRipples.size) dipRipples.each(epochNow, (x, y, z, radius, alpha) => ringList.push({x, y, z, radius, color: ARRIVAL, alpha}));
         // The animals that glow, at night: a soft glow on each.
         const glowing: Array<{x: number; y: number; z: number; strength: number}> = [];
         if (night > 0.3) {

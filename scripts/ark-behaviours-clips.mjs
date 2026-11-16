@@ -59,6 +59,8 @@ const PLANS = {
     // in view from above; then the one that got away from close by and low, a few beats of its limp.
     escape: {distance: 9, pair: true, shots: [[1, "the stalk"], ["miss-1.6", "the rush: it bolts"], ["miss-0.7", "closing"], ["miss-0.15", "the lunge"], ["miss+0.1", "a miss"], ["miss+0.6", "it jinks clear"], ["miss+1.8", "pulling up"], ["end-0.3", "it looks back"], ["end+5", "back to its day, limping", 5.5], ["end+5.12", "the limp: the dip", 5.5], ["end+5.24", "the limp: down on the leg", 5.5], ["end+5.5", "the limp: up again", 5.5], ["end+60", "limping still, on its day", 5.5], ["end+60.15", "(a beat on)", 5.5], ["end+60.3", "(a beat on)", 5.5], ["end+60.45", "(a beat on)", 5.5]]},
     stoop: {distance: 8, pair: true, polar: 1.2, shots: [[0.5, "up from its place"], ["miss-1.1", "the stoop"], ["miss-0.4", "the rabbit bolts"], ["miss-0.05", "feet at empty ground"], ["miss+0.4", "pulling out"], ["miss+1.8", "it climbs away"], ["end+3", "the rabbit, limping", 2.2], ["end+3.15", "the limp (a beat on)", 2.2]]},
+    // 3.3 batch (D): a dragonfly laying (moments from her first dip's hold, found on her schedule: `dip+s`).
+    dip: {distance: 0.7, pair: true, shots: [["dip-0.6", "low over the water"], ["dip+0.12", "hovering"], ["dip+0.34", "down"], ["dip+0.45", "the tip on the water"], ["dip+0.7", "up: a ring"], ["dip+1.36", "the next tap"], ["dip+1.8", "two rings"], ["dip+2.27", "again", 1.6], ["dip+2.5", "from further off", 3.5]]},
     dung: {distance: 5, shots: [[600, "the herd, ten minutes on"], [900, "a mark, close"], [1500, "marks fading"]]}
 };
 const summary = {};
@@ -91,8 +93,15 @@ for (const name of scenes) {
     const mating = info.matings[0];
     // (A contest's moments are from its own script: its walk is told by its end, 14–22 s of bouts and 5 s to run.)
     const end = mating?.contestEnd ?? 0;
-    const escape = info.escapes?.[0];
-    const at = (s) => (typeof s === "number" ? s : escape && s.startsWith("miss") ? escape.missAt + Number(s.slice(4)) : escape && s.startsWith("end") ? escape.seconds + Number(s.slice(3)) : s.startsWith("end") ? end + Number(s.slice(3)) : Math.max(end - 27, 2) + Number(s.slice(4)));
+    const dipper = name === "dip" ? await page.evaluate(() => window.__behaviours.dipper()) : null;
+    if (name === "dip") console.log(name, "dipper", JSON.stringify(dipper));
+    if (name === "dip" && !dipper) {
+        console.log(name, "no female laid in the hours searched");
+        await context.close();
+        continue;
+    }
+    const escape = dipper ? {missAt: dipper.s, seconds: dipper.s, prey: dipper.id, predator: dipper.id} : info.escapes?.[0];
+    const at = (s) => (typeof s === "number" ? s : dipper && s.startsWith("dip") ? dipper.s + Number(s.slice(3)) : escape && s.startsWith("miss") ? escape.missAt + Number(s.slice(4)) : escape && s.startsWith("end") ? escape.seconds + Number(s.slice(3)) : s.startsWith("end") ? end + Number(s.slice(3)) : Math.max(end - 27, 2) + Number(s.slice(4)));
     const dir = path.join(out, name);
     rmSync(dir, {recursive: true, force: true});
     mkdirSync(dir, {recursive: true});
@@ -103,7 +112,7 @@ for (const name of scenes) {
         const note = await page.evaluate(async ([s, d, label, name, rival, who, pair]) => {
             if (pair) {
                 // (Both from above while they chase; the one that got away alone, close and low, for its limp.)
-                const text = await window.__behaviours.pair(s, pair.close ? [pair.prey] : [pair.predator, pair.prey], d, pair.close ? 1.42 : pair.polar ?? 0.62, pair.close ? 1.9 : 0.7);
+                const text = await window.__behaviours.pair(s, pair.close ? [pair.prey] : [pair.predator, pair.prey], d, pair.close ? pair.closePolar ?? 1.42 : pair.polar ?? 0.62, pair.close ? 1.9 : 0.7);
                 document.getElementById("note").textContent = `${label}\n${text}`;
                 return text;
             }
@@ -113,10 +122,10 @@ for (const name of scenes) {
                 const marks = window.__behaviours.dung().sort((p, q) => q.alpha - p.alpha);
                 if (marks[0]) point = {x: marks[0].x, z: marks[0].z};
             }
-            const text = await window.__behaviours.shot(s, point ? 2.2 : d, name === "contest" && label.includes("runs") ? rival : who, point, name === "contest" ? 2.4 : 0.7, name === "contest" ? 0.85 : 1.15, name === "escape" || name === "stoop" ? 0 : 2100);
+            const text = await window.__behaviours.shot(s, point ? 2.2 : d, name === "contest" && label.includes("runs") ? rival : who, point, name === "contest" ? 2.4 : 0.7, name === "contest" ? 0.85 : 1.15, name === "escape" || name === "stoop" || name === "dip" ? 0 : 2100);
             document.getElementById("note").textContent = `${label}\n${text}`;
             return text;
-        }, [s, near ?? plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? (name === "contest" ? info.a : undefined), plan.pair && escape ? {predator: escape.predator, prey: escape.prey, close: Boolean(near), polar: plan.polar} : null]);
+        }, [s, near ?? plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? (name === "contest" ? info.a : undefined), plan.pair && escape ? {predator: escape.predator, prey: escape.prey, close: Boolean(near) || Boolean(dipper), polar: plan.polar, closePolar: dipper ? 1.12 : undefined} : null]);
         labels.push(`${String(i).padStart(2, "0")} ${label}: ${note.replace(/\n/g, " | ")}`);
         await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 85});
     }

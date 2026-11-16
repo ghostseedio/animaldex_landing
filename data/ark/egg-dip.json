@@ -1,0 +1,94 @@
+{
+ "about": "Dragonflies laying their eggs by dipping the abdomen's tip to the water: every catalogue row that says so (AnimalDex docs/ark/signature-behaviours.json, uses clip:dragonfly_dip_oviposit or clip:tandem_dip_oviposit), with the species' own sentence. drawn: the scene gives it the recipe dip_lay (the female alone); held: why not. Built by scripts/ark-egg-dip.mts.",
+ "version": "egg-dip-1",
+ "species": [
+  {
+   "slug": "broad-bodied-chaser",
+   "id": "276a8ccd-d7a4-4e7b-8e71-8a8a62c82314",
+   "name": "Broad-bodied Chaser",
+   "behaviour": "female hovers and flicks her abdomen tip into the water to lay while the male guards",
+   "quote": "The female then lays alone, hovering and flicking the tip of her abdomen into the water over submerged plants while the male guards nearby.",
+   "when": "at_water",
+   "uses": "clip:dragonfly_dip_oviposit",
+   "line": "{aAnimal} is hovering and flicking her abdomen tip into the water to lay",
+   "mode": "female",
+   "drawn": true
+  },
+  {
+   "slug": "common-darter",
+   "id": "9a7d1f87-c392-4e71-b14d-8a39e10b6a7d",
+   "name": "Common Darter",
+   "behaviour": "pairs lay in tandem, male holding the female while she dips her abdomen into shallow water",
+   "quote": "Pairs lay eggs in tandem, the male holding the female behind the head while she dips her abdomen into shallow water.",
+   "when": "at_water",
+   "uses": "clip:tandem_dip_oviposit",
+   "line": "{animals} are laying in tandem, the female dipping her abdomen into shallow water",
+   "mode": "tandem",
+   "drawn": false,
+   "held": "a pair in tandem is not drawn yet"
+  },
+  {
+   "slug": "common-flangetail",
+   "id": "071166e6-d8de-460f-8c0b-ab264257943b",
+   "name": "Common Flangetail",
+   "behaviour": "female flies low tapping her abdomen tip on open water to release eggs",
+   "quote": "Females lay eggs by flying low and tapping the abdomen tip on open water, releasing eggs that sink to the bottom.",
+   "when": "at_water",
+   "uses": "clip:dragonfly_dip_oviposit",
+   "line": "{aAnimal} is flying low and tapping her abdomen tip on open water to release eggs",
+   "mode": "female",
+   "drawn": true
+  },
+  {
+   "slug": "red-veined-darter",
+   "id": "8aaa7238-b7d5-4f5f-8a80-8bb180737a97",
+   "name": "Red-veined Darter",
+   "behaviour": "pairs fly in tandem while the female taps eggs onto open water",
+   "quote": "Pairs fly in tandem, the male holding the female, while she taps her abdomen on open water and releases eggs.",
+   "when": "at_water",
+   "uses": "clip:tandem_dip_oviposit",
+   "line": "{animals} are flying in tandem as the female taps her abdomen on open water",
+   "mode": "tandem",
+   "drawn": false,
+   "held": "a pair in tandem is not drawn yet"
+  },
+  {
+   "slug": "ruddy-darter",
+   "id": "d85361cc-e4d0-41f1-baf5-6c0081de30e9",
+   "name": "Ruddy Darter",
+   "behaviour": "pairs in tandem flick eggs over damp mud and shallow margins",
+   "quote": "Pairs lay eggs in tandem, the female flicking them over damp mud, dry vegetation or shallow water at the margin.",
+   "when": "at_water",
+   "uses": "clip:tandem_dip_oviposit",
+   "line": "{animals} are laying in tandem, the female flicking eggs over the damp margin",
+   "mode": "tandem",
+   "drawn": false,
+   "held": "a pair in tandem is not drawn yet"
+  },
+  {
+   "slug": "scarlet-skimmer",
+   "id": "115fa47f-c35c-4e8c-945a-7c55d747afed",
+   "name": "Scarlet Skimmer",
+   "behaviour": "female taps her abdomen on the water to wash off eggs with the male hovering close",
+   "quote": "the female flies low over open water and taps the tip of her abdomen on the surface to wash off eggs, often with the male hovering close by",
+   "when": "at_water",
+   "uses": "clip:dragonfly_dip_oviposit",
+   "line": "{aAnimal} is tapping her abdomen on the water to wash off eggs, the male close by",
+   "mode": "female",
+   "drawn": true
+  },
+  {
+   "slug": "wandering-glider",
+   "id": "ec063b33-b07c-448e-9fd8-2b1e1670e35c",
+   "name": "Wandering Glider",
+   "behaviour": "female taps eggs into temporary pools in flight, spreading the clutch across several",
+   "quote": "Eggs are dropped straight into temporary pools with the female tapping the water surface in flight, spreading a clutch across several pools rather than committing it all to one that might dry.",
+   "when": "rain",
+   "uses": "clip:dragonfly_dip_oviposit",
+   "line": "{aAnimal} is tapping the water in flight, dropping eggs into a temporary pool",
+   "mode": "female",
+   "drawn": true,
+   "lineHeld": "its sentence names a temporary rain pool; the scene's water is standing"
+  }
+ ]
+}

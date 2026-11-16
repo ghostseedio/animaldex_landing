@@ -1649,6 +1649,38 @@
    "behaviour": "herd lies down together at night",
    "field": "sleep",
    "quote": "At night the herd lies down together"
+  },
+  {
+   "slug": "broad-bodied-chaser",
+   "name": "Broad-bodied Chaser",
+   "recipe": "dip_lay",
+   "behaviour": "female hovers and flicks her abdomen tip into the water to lay while the male guards",
+   "field": "catalogue",
+   "quote": "The female then lays alone, hovering and flicking the tip of her abdomen into the water over submerged plants while the male guards nearby."
+  },
+  {
+   "slug": "common-flangetail",
+   "name": "Common Flangetail",
+   "recipe": "dip_lay",
+   "behaviour": "female flies low tapping her abdomen tip on open water to release eggs",
+   "field": "catalogue",
+   "quote": "Females lay eggs by flying low and tapping the abdomen tip on open water, releasing eggs that sink to the bottom."
+  },
+  {
+   "slug": "scarlet-skimmer",
+   "name": "Scarlet Skimmer",
+   "recipe": "dip_lay",
+   "behaviour": "female taps her abdomen on the water to wash off eggs with the male hovering close",
+   "field": "catalogue",
+   "quote": "the female flies low over open water and taps the tip of her abdomen on the surface to wash off eggs, often with the male hovering close by"
+  },
+  {
+   "slug": "wandering-glider",
+   "name": "Wandering Glider",
+   "recipe": "dip_lay",
+   "behaviour": "female taps eggs into temporary pools in flight, spreading the clutch across several",
+   "field": "catalogue",
+   "quote": "Eggs are dropped straight into temporary pools with the female tapping the water surface in flight, spreading a clutch across several pools rather than committing it all to one that might dry."
   }
  ]
 }

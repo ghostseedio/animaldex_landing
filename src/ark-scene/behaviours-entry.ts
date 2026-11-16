@@ -32,6 +32,9 @@ const SCENES: Record<string, Scene> = {
     // buzzard's stoop on a rabbit; then the limp.
     escape: {zone: "grassland", hours: 9, kind: "escape", cast: [{slug: "african-lion", name: "African Lion", n: 1}, {slug: "plains-zebra", name: "Plains Zebra", n: 3}]},
     stoop: {zone: "grassland", hours: 9, kind: "escape", cast: [{slug: "common-buzzard", name: "Common Buzzard", n: 1}, {slug: "european-rabbit", name: "European Rabbit", n: 2}]},
+    // 3.3 batch (D): dragonflies laying (`egg-dip.ts`, recipe `dip_lay`): flangetails by the water (no stored months: a
+    // little all year), the females tapping the abdomen's tip to the water.
+    dip: {zone: "river_lake", hours: 10, kind: "dung", cast: [{slug: "common-flangetail", name: "Common Flangetail", n: 16}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -90,7 +93,7 @@ async function main() {
     console.log("[behaviours] loaded", ready, handle.loading());
     await setAt(t0 - 2);
     await wait(800);
-    type Debug = {escapes: () => Array<Record<string, unknown>>; births: () => Array<Record<string, unknown>>; matings: () => Array<Record<string, unknown>>; traces: () => Array<{kind: string; x: number; z: number; alpha: number}>; entries: () => Array<{animal: {id: string; model_slug: string}; act: Record<string, unknown> | null}>};
+    type Debug = {escapes: () => Array<Record<string, unknown>>; births: () => Array<Record<string, unknown>>; matings: () => Array<Record<string, unknown>>; traces: () => Array<{kind: string; x: number; z: number; alpha: number}>; entries: () => Array<{animal: {id: string; model_slug: string}; act: Record<string, unknown> | null; recipeAct?: {recipe: string; block: string; since?: number} | null}>};
     const debug = (window as unknown as {__arkDebug: Debug}).__arkDebug;
     const a = castId(0, 0);
     const b = castId(0, 1);
@@ -155,6 +158,19 @@ async function main() {
                 .map((e) => `${e.animal.id.slice(-3)} ${e.animal.model_slug} ${String(e.act!.meal ?? "-")} ${String(e.act!.state ?? "")}${e.act!.hidden ? " hidden" : ""}${e.act!.lying ? ` lying ${Number(e.act!.lying).toFixed(2)}` : ""}${e.act!.role ? ` ${String(e.act!.role)} ${Number(e.act!.speed ?? 0).toFixed(1)} m/s` : ""}`);
             const status = (id: string) => handle.animalStatus?.(id)?.activity ?? "-";
             return `+${(s + settle / 1000).toFixed(1)} s   card a: ${status(a)}   card b: ${status(b)}   dung marks: ${api.dung().length}\n${acts.join("\n")}`;
+        },
+        /**
+         * 3.3 batch (D): the day searched for a pond female laying near the camera (`dip_lay`, `egg-dip.ts`): who, and when
+         * the hold she is in began (s after t0).
+         */
+        dipper: async () => {
+            console.log("[behaviours] cast", JSON.stringify((debug.entries() as unknown as Array<{place: {micro?: {surface?: string; spot?: string} | null; water?: unknown; x: number; z: number}; rest: number; sched?: unknown; trueLength: number}>).slice(0, 6).map((x) => ({micro: x.place.micro ? `${x.place.micro.spot}/${x.place.micro.surface}` : null, water: Boolean(x.place.water), rest: x.rest, sched: Boolean(x.sched), L: x.trueLength, x: Math.round(x.place.x), z: Math.round(x.place.z)}))), JSON.stringify(handle.locate(a)));
+            for (let s = 0; s < 4 * 3600; s += 9) {
+                await setAt(t0 + s);
+                const e = debug.entries().find((x) => x.recipeAct?.recipe === "dip_lay" && x.recipeAct.block === "dip_tail");
+                if (e) return {id: e.animal.id, s: s - (e.recipeAct!.since ?? 0)};
+            }
+            return null;
         },
         /**
          * 3.3 batch (D): the world at exactly `s` seconds after the event, framing the animals named (their drawn places,
