@@ -3581,7 +3581,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const c of list) {
             const e = c.entry;
             e.reactive = null;
-            if (!e.sched || e.micro || e.visitor || e.place.burrow || c.distance > reach) continue;
+            // p2 (ocean): not one out on its open-ocean loop (its way is the loop's: a body turn would swim it backwards).
+            if (!e.sched || e.micro || e.visitor || e.place.burrow || e.ocean || c.distance > reach) continue;
             const intel = intelProfile(e.animal.model_slug, null, e.stats.intelligence);
             const sp = e.sched.pose;
             const young = youngFor(e);
@@ -8786,6 +8787,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const entry = findEntry(id);
             if (!entry) return null;
             const ground = Math.max(entry.place.ground, 0);
+            // p2 (ocean): one out in the open ocean not drawn yet is where its loop has it now, not at its old place.
+            const sea = !entry.middle && entry.depth && oceanRoams(entry) ? oceanFix(entry.animal, entry.length, clockNow()) : null;
+            if (sea) return {x: sea.x, y: ARK_ENVIRONMENT.seaLevel.value - 4, z: sea.z, ground: 0, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: sea.yaw};
             const middle = entry.middle ?? new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z);
             return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0};
         },

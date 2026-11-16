@@ -13,7 +13,7 @@
  * most `SHADE_MOST` animals; written once a frame from the poses the scene worked out. Visual only.
  */
 
-import {BufferAttribute, BufferGeometry, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshBasicMaterial, Quaternion, Vector3, type Object3D} from "three";
+import {BufferAttribute, BufferGeometry, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshLambertMaterial, Quaternion, Vector3, type Object3D} from "three";
 import {ARK_ENV} from "@/ark-scene/glsl";
 
 /** The most open-ocean animals shaded at once. */
@@ -21,7 +21,7 @@ export const SHADE_MOST = 64;
 /** The depth (m, of the top of its body under the surface) by which its shape is gone. */
 export const SHADE_GONE = 7;
 /** Its shape's darkness just under the surface (alpha). */
-export const SHADE_MOST_ALPHA = 0.5;
+export const SHADE_MOST_ALPHA = 0.8;
 
 /** How dark an animal's shape is with the top of its body `topDepth` m under the surface (0…SHADE_MOST_ALPHA). */
 export function shadeAlpha(topDepth: number): number {
@@ -62,6 +62,8 @@ export function plumeGeometry(): BufferGeometry {
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
     geometry.setAttribute("color", new BufferAttribute(new Float32Array(col), 4));
+    // (Normals too: the scene's passes read every drawn mesh's normals; without them it drew solid black.)
+    geometry.setAttribute("normal", new BufferAttribute(new Float32Array(pos.length).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
     geometry.computeBoundingSphere();
     return geometry;
 }
@@ -79,7 +81,7 @@ export function shadeGeometry(): BufferGeometry {
     };
     const push = (p: [number, number], alpha: number) => {
         pos.push(p[0], 0, p[1]);
-        col.push(0.02, 0.07, 0.12, alpha);
+        col.push(0, 0.03, 0.06, alpha);
     };
     for (let i = 0; i < n; i++) {
         const a0 = (i / n) * Math.PI * 2;
@@ -98,6 +100,8 @@ export function shadeGeometry(): BufferGeometry {
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(pos), 3));
     geometry.setAttribute("color", new BufferAttribute(new Float32Array(col), 4));
+    // (Normals too: the scene's passes read every drawn mesh's normals; without them it drew solid black.)
+    geometry.setAttribute("normal", new BufferAttribute(new Float32Array(pos.length).map((_, i) => (i % 3 === 1 ? 1 : 0)), 3));
     geometry.computeBoundingSphere();
     return geometry;
 }
@@ -118,7 +122,7 @@ export class OceanShadows {
         const geometry = shadeGeometry();
         this.fade = new InstancedBufferAttribute(new Float32Array(SHADE_MOST), 1);
         geometry.setAttribute("aFade", this.fade);
-        const material = new MeshBasicMaterial({vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1});
+        const material = new MeshLambertMaterial({vertexColors: true, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1});
         material.onBeforeCompile = (shader) => {
             shader.vertexShader = shader.vertexShader.replace("#include <common>", "#include <common>\nattribute float aFade;\nvarying float vFade;").replace("#include <begin_vertex>", "#include <begin_vertex>\nvFade = aFade;");
             shader.fragmentShader = shader.fragmentShader.replace("#include <common>", "#include <common>\nvarying float vFade;").replace("#include <color_fragment>", "#include <color_fragment>\ndiffuseColor.a *= vFade;");
@@ -131,7 +135,7 @@ export class OceanShadows {
         // (After the sea's surface, renderOrder 2; before the wakes, 3.)
         this.mesh.renderOrder = 2.5;
         parent.add(this.mesh);
-        this.blows = new InstancedMesh(plumeGeometry(), new MeshBasicMaterial({vertexColors: true, transparent: true, depthWrite: false, fog: true}), 8);
+        this.blows = new InstancedMesh(plumeGeometry(), new MeshLambertMaterial({vertexColors: true, emissive: 0x6a7076, transparent: true, depthWrite: false}), 8);
         this.blows.name = "ocean-blows";
         this.blows.count = 0;
         this.blows.frustumCulled = false;
@@ -180,10 +184,10 @@ export class OceanShadows {
 
     dispose(): void {
         this.mesh.geometry.dispose();
-        (this.mesh.material as MeshBasicMaterial).dispose();
+        (this.mesh.material as MeshLambertMaterial).dispose();
         this.mesh.removeFromParent();
         this.blows.geometry.dispose();
-        (this.blows.material as MeshBasicMaterial).dispose();
+        (this.blows.material as MeshLambertMaterial).dispose();
         this.blows.removeFromParent();
     }
 }
