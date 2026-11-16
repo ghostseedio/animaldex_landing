@@ -158,3 +158,31 @@ export function onDoorWay(x: number, z: number, margin = 0, plan: TownPlan = tow
     }
     return false;
 }
+
+/**
+ * Where front paths cross a boundary line (a front wall, hedge or railings): each crossing's point, with half a gate's
+ * width (the path's and a little), for the boundary's gate (`render/fences.ts`).
+ */
+export function pathOpenings(line: readonly Pt[], plan: TownPlan = townPlan()): Array<{x: number; z: number; half: number}> {
+    const out: Array<{x: number; z: number; half: number}> = [];
+    for (const way of townDoorWays(plan)) {
+        if (!way.path) continue;
+        const p = way.path;
+        // The path's middle line, a little past both its ends.
+        const a = local(p, 0, -p.d / 2 - 0.2);
+        const b = local(p, 0, p.d / 2 + 0.6);
+        for (let i = 1; i < line.length; i++) {
+            const c = line[i - 1];
+            const d = line[i];
+            const r = {x: b.x - a.x, z: b.z - a.z};
+            const s = {x: d.x - c.x, z: d.z - c.z};
+            const den = r.x * s.z - r.z * s.x;
+            if (Math.abs(den) < 1e-9) continue;
+            const t = ((c.x - a.x) * s.z - (c.z - a.z) * s.x) / den;
+            const u = ((c.x - a.x) * r.z - (c.z - a.z) * r.x) / den;
+            if (t < 0 || t > 1 || u < 0 || u > 1) continue;
+            out.push({x: a.x + r.x * t, z: a.z + r.z * t, half: PATH_WIDTH / 2 + 0.08});
+        }
+    }
+    return out;
+}

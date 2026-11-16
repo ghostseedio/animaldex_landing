@@ -24,6 +24,7 @@ import {BufferAttribute, BufferGeometry, Group, Mesh, MeshStandardMaterial, type
 import {corners, rng, type Box} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {houseDoorU, terraceBackDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
+import {boundaryChunks, boundaryDetail} from "@/ark-scene/islands/town/render/fences";
 import type {Building, TownPlan} from "@/ark-scene/islands/town/plan";
 import {chance, darkness, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
 import {TOWN_CHUNK_COUNT, townChunkDistance, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
@@ -1328,6 +1329,8 @@ export class BuildingDetail {
             list.push(b);
             this.byChunk.set(key, list);
         }
+        // gfx (props): the gardens' boundaries' near detail is built with the chunk's (`fences.ts`), in chunks with none too.
+        for (const key of Array.from(boundaryChunks(plan))) if (!this.byChunk.has(key)) this.byChunk.set(key, []);
         this.distance = DETAIL_DISTANCE[tier];
     }
 
@@ -1375,6 +1378,7 @@ export class BuildingDetail {
             buildBuilding({solid: sink, glass: sink, windows: [], panes: sink, detail: job.geo}, job.list[job.next++]);
             if (started && performance.now() - started > 2) return;
         }
+        boundaryDetail(this.plan, job.key, job.geo);
         this.job = null;
         const group = this.groupOf(job.key);
         if (!group) return;

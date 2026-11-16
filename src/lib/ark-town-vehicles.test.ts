@@ -28,6 +28,7 @@ import {
 import {buildBuilding, curtainsDrawn, newBuildingChunk, paneSizeCode, paneStyle, windowState} from "@/ark-scene/islands/town/render/buildings";
 import {decodeColourTag, encodeColourTag, Geo, tone} from "@/ark-scene/islands/town/render/kit";
 import {buildScenery, buildZooScenery} from "@/ark-scene/islands/town/render/scenery";
+import {boundaryBodies} from "@/ark-scene/islands/town/render/fences";
 import {zooLayout} from "@/ark-scene/islands/town/areas";
 import {SURFACE} from "@/ark-scene/islands/town/render/buildings";
 
@@ -361,13 +362,22 @@ test("no other lane's plain colour reads as a building surface on the shared sol
         return out;
     };
     // The scenery alone (streets' kerbs and furniture, walls, hedges, the canal and lock, farm things and gates, the zoo's
-    // barriers and houses): not one tagged triangle.
+    // barriers and houses): not one tagged triangle, but for the gardens' boundaries (gfx pass 1, lane PROPS:
+    // `render/fences.ts` draws its brick, stone, timber, paint and iron as those surfaces on purpose). Each chunk's tagged
+    // triangles are exactly the boundaries' own, so no other plain colour reads as one.
     const scenery = buildScenery(plan);
+    const fenceTags = new Map<number, Geo>();
+    boundaryBodies(plan, (chunk) => fenceTags.get(chunk) ?? fenceTags.set(chunk, new Geo()).get(chunk)!);
     let plainTriangles = 0;
     scenery.chunks.forEach((chunk, key) => {
         const tags = tagsOf(chunk.solid);
+        const own = fenceTags.get(key);
+        const ownTags = own ? tagsOf(own) : new Map<number, number>();
         plainTriangles += tags.get(0) ?? 0;
-        assert.equal(tags.size <= 1 && (tags.size === 0 || tags.has(0)), true, `chunk ${key}'s scenery reads as a building surface: ${JSON.stringify(Array.from(tags.entries()))}`);
+        for (const [tag, n] of Array.from(tags.entries())) {
+            if (tag === 0) continue;
+            assert.equal(n, ownTags.get(tag) ?? 0, `chunk ${key}'s scenery reads as a building surface: ${JSON.stringify(Array.from(tags.entries()))}`);
+        }
     });
     const zoo = buildZooScenery(zooLayout(launchEnclosures(), plan));
     zoo.chunks.forEach((chunk, key) => {

@@ -92,3 +92,55 @@ test("the rule itself: a box on a door's step is caught, one clear of it is not"
     assert.ok(inBox(way.apron, way.apron.x, way.apron.z));
     assert.equal(clearOfDoors({x: way.apron.x + 400, z: way.apron.z + 400, w: 1, d: 1, rot: 0}, 0, plan), true);
 });
+
+// MARK: - The gardens' boundaries and their gates (`render/fences.ts`)
+
+test("where a front path meets a front wall, hedge or railing, the boundary has a gate in it", async () => {
+    const {boundaryPieces} = await import("@/ark-scene/islands/town/render/fences");
+    const {pathOpenings} = await import("@/ark-scene/islands/town/doors");
+    let crossings = 0;
+    for (const h of plan.hedges) {
+        if (!(h.id.endsWith("-front") || h.kind === "railing")) continue;
+        const open = pathOpenings(h.line, plan);
+        crossings += open.length;
+        // Every crossing is an opening its pieces know of.
+        for (const piece of boundaryPieces(plan).filter((p) => p.hedge.id === h.id)) assert.equal(piece.openings.length, open.length, h.id);
+    }
+    // (Every terrace on a street with railings opens at each of its four front doors.)
+    assert.ok(crossings >= plan.hedges.filter((h) => h.kind === "railing").length * 4, `${crossings}`);
+});
+
+test("a house's front wall or hedge runs along its lawn, never across its drive", () => {
+    for (const h of plan.hedges.filter((q) => q.id.endsWith("-front"))) {
+        const p = plan.parcels.find((q) => `${q.id}-front` === h.id)!;
+        if (!p.drive) continue;
+        for (let t = 0; t <= 1; t += 0.1) {
+            const x = h.line[0].x + (h.line[1].x - h.line[0].x) * t;
+            const z = h.line[0].z + (h.line[1].z - h.line[0].z) * t;
+            assert.ok(!inBox(p.drive, x, z, 0.1), `${h.id} crosses its drive`);
+        }
+    }
+});
+
+test("each boundary's far body and near detail are drawn, the near only on top (both deterministic)", async () => {
+    const {boundaryPieces, drawBoundary, FENCE_SURFACE} = await import("@/ark-scene/islands/town/render/fences");
+    const {SURFACE} = await import("@/ark-scene/islands/town/render/buildings");
+    const {Geo, NullGeo} = await import("@/ark-scene/islands/town/render/kit");
+    for (const k of Object.keys(FENCE_SURFACE) as Array<keyof typeof FENCE_SURFACE>) assert.equal(FENCE_SURFACE[k], SURFACE[k]);
+    let far = 0;
+    let near = 0;
+    for (const piece of boundaryPieces(plan)) {
+        const a = new Geo();
+        const b = new Geo();
+        drawBoundary({far: a, near: new NullGeo()}, piece);
+        drawBoundary({far: new NullGeo(), near: b}, piece);
+        const again = new Geo();
+        drawBoundary({far: again, near: new NullGeo()}, piece);
+        assert.deepEqual(again.pos, a.pos);
+        far += a.triangles;
+        near += b.triangles;
+    }
+    // The budget (graphics pass 1): the always-drawn bodies stay cheap; the near detail is built per chunk near the camera.
+    assert.ok(far < 70_000, `far ${far}`);
+    assert.ok(near < 90_000, `near ${near}`);
+});

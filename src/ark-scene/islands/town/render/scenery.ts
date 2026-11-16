@@ -21,7 +21,8 @@ import {surfaceTag} from "@/ark-scene/islands/town/render/surface-tags";
 import {townFarmGates, townFarmProps, type FarmGate} from "@/ark-scene/islands/town/farm";
 import {zooBarrier} from "@/ark-scene/islands/town/render/zoo-barriers";
 import {townTrees} from "@/ark-scene/islands/town/trees";
-import {clearOfDoors, PATH_WIDTH, townDoorWays} from "@/ark-scene/islands/town/doors";
+import {clearOfDoors, PATH_WIDTH, pathOpenings, townDoorWays} from "@/ark-scene/islands/town/doors";
+import {boundaryBodies, madeHere} from "@/ark-scene/islands/town/render/fences";
 
 /** A chunk's merged geometry by material; `foliage`: hedges, flower beds and crops (lane GC, `render/nature.ts`). */
 export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo; foliage: Geo};
@@ -327,6 +328,8 @@ function boundaries(out: SceneryOut, plan: TownPlan) {
     // The farms' gates stand in their hedges and rails (lane GC, `farm.ts`).
     const gates = townFarmGates(plan);
     for (const h of plan.hedges) boundary(out, h, gates);
+    // gfx (props): the gardens' fences, walls, railings and gates, their far bodies (the near detail: `BuildingDetail`).
+    boundaryBodies(plan, (_, mid) => chunkFor(out, mid.x, mid.z).solid);
     for (const g of gates) fiveBarGate(chunkFor(out, g.x, g.z).solid, g);
 }
 
@@ -337,17 +340,21 @@ function inGate(gates: readonly FarmGate[], x: number, z: number, margin = 0): b
 
 function boundary(out: SceneryOut, h: Hedge, gates: readonly FarmGate[] = []) {
     const r = rng(hashText(h.id));
+    // gfx (props): a front hedge opens where a home's front path crosses it (its gate: `render/fences.ts`).
+    const paths = h.kind === "hedge" && h.id.endsWith("-front") ? pathOpenings(h.line) : [];
     if (h.kind === "hedge") {
         // Leafy hedges (lane GC, `render/nature.ts`): a field's or a farm's boundary a shaggy hedgerow, a garden's
         // clipped; each ~24 m piece into the chunk it lies in; open where a gate stands.
         const hedgerow = h.id.startsWith("field") || h.id.includes("smallholding") || h.id.includes("farmstead");
-        const open = gates.map((g) => ({x: g.x, z: g.z, half: g.width / 2}));
+        const open = [...gates.map((g) => ({x: g.x, z: g.z, half: g.width / 2})), ...paths];
         for (const part of pieces(h.line, 24)) {
             const mid = part[Math.floor(part.length / 2)];
             hedgeAlong(chunkFor(out, mid.x, mid.z).foliage, part, h.height, hashText(h.id), hedgerow, open);
         }
         return;
     }
+    // gfx (props): the gardens' fences, walls and railings are `render/fences.ts` (drawn in `boundaries`).
+    if (madeHere(h)) return;
     for (let i = 1; i < h.line.length; i++) {
         const a = h.line[i - 1];
         const b = h.line[i];
