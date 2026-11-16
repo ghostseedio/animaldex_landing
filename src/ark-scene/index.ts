@@ -218,6 +218,7 @@ import {arkOutside} from "@/ark-scene/live-budget";
 import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
+import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating tap)
 import {LiveBirths} from "@/ark-scene/live-births";
 // 3.3 batch (D): the escapes and the dragonflies' dips
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
@@ -6026,7 +6027,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (options.recording) return;
         const entry = selectedId ? findEntry(selectedId) : null;
         const at = entry?.middle ?? null;
-        if (!entry || !at || entry.place.burrow || entry.place.canopy || entry.place.micro || (at.y - entry.drawnHeight / 2 < -0.3 && heightAt(at.x, at.z) < -0.3)) {
+        // (3.3 fix, mating tap: a pair framed together is kept by the pair's own tracking, not brought back to the one.)
+        if (!entry || !at || entry.place.burrow || entry.place.canopy || entry.place.micro || (at.y - entry.drawnHeight / 2 < -0.3 && heightAt(at.x, at.z) < -0.3) || pairAim(entry.animal.id)) {
             clearSearch = null;
             return;
         }
@@ -6149,6 +6151,24 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** A held arrival's flight is beginning (`arrive`): the selection is not told again. */
     let arrivalResumed = false;
+    // 3.3 fix (mating tap): the log's mating line frames the pair (owner 2026-11-16: "when i click a mating log, i don't
+    // see 2 of its kind next to each other"). While their mating is acted (`liveMatings.partnerOf`), the view's middle is
+    // between the two and far enough back for both (`pair-frame.ts`); once it is over, the first of them alone, as any
+    // line's tap. A touch on the view ends it.
+    let pairFramed: {a: string; b: string} | null = null;
+    const pairPoint = new Vector3();
+    const pairAim = (id: string) => {
+        if (!pairFramed || pairFramed.a !== id || selectedId !== id || liveMatings.partnerOf(id) !== pairFramed.b) return null;
+        const a = findEntry(id);
+        const b = findEntry(pairFramed.b);
+        if (!a?.middle || !b?.middle) return null;
+        const aspect = width / Math.max(height, 1);
+        const pair = framePair({x: a.middle.x, y: a.middle.y, z: a.middle.z, length: a.length}, {x: b.middle.x, y: b.middle.y, z: b.middle.z, length: b.length}, {fovDeg: FOV, aspect, single: meetDistance(Math.max(a.length, b.length), aspect, FOV), max: 60});
+        return pair ? {at: pairPoint.set(pair.x, pair.y, pair.z), distance: pair.distance} : null;
+    };
+    controls.addEventListener("start", () => {
+        pairFramed = null;
+    });
     const select = (id: string | null, flyTo: boolean, close = false) => {
         // A herd member that isn't one of its representatives comes forward to be met (A14); the last one goes back.
         const pin = id && ((!entryById.has(id) && aboard.has(id)) || id === selectionPin) ? id : null;
@@ -6179,6 +6199,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             controls.autoRotate = false;
             lastTouch = performance.now() / 1000;
             const distance = camera.position.distanceTo(controls.target);
+            // 3.3 fix (mating tap): a pair under way, both in the picture (they are on the ground while acted).
+            const pair = pairAim(entry.animal.id);
+            if (pair) {
+                const pairId = entry.animal.id;
+                fly(pair.at.clone(), pair.distance, distance > 30 ? 2 : 1.4, CLOSE_POLAR);
+                if (flight) flight.aim = () => pairAim(pairId)?.at ?? (selectedId === pairId ? entry.middle : null);
+                return;
+            }
             if (entry.place.micro) {
                 // A small animal: right up to it, from out along its surface (in front of a wall, beside a trunk, above a flower).
                 // The right distance for its size: about a fifth of the view's height.
@@ -8235,8 +8263,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             camera.position.y += dy;
             camera.position.z += dz;
         }
+        // 3.3 fix (mating tap): a pair framed together: the view's middle and distance ease to the two as they move.
+        const pairNow = selectedId && !followed && !flight && pointers === 0 ? pairAim(selectedId) : null;
+        if (pairNow) {
+            const dx = easeToward(controls.target.x, pairNow.at.x, frameDt) - controls.target.x;
+            const dy = easeToward(controls.target.y, pairNow.at.y, frameDt) - controls.target.y;
+            const dz = easeToward(controls.target.z, pairNow.at.z, frameDt) - controls.target.z;
+            controls.target.x += dx;
+            controls.target.y += dy;
+            controls.target.z += dz;
+            spherical.setFromVector3(offset.copy(camera.position).sub(controls.target).add(followAim.set(dx, dy, dz)));
+            spherical.radius = easeToward(spherical.radius, pairNow.distance, frameDt, 1.5);
+            camera.position.copy(controls.target).add(offset.setFromSpherical(spherical));
+            lastTracked = null;
+        }
         // Otherwise a selected animal that moves (a swimmer's loop) is kept in view.
-        const tracked = selectedId && !followed ? findEntry(selectedId)?.middle : null;
+        const tracked = selectedId && !followed && !pairNow ? findEntry(selectedId)?.middle : null;
         if (tracked && !flight && pointers === 0) {
             if (lastTracked) {
                 const dx = tracked.x - lastTracked.x;
@@ -8451,12 +8493,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             mineOnly = value;
         },
         select: whenAnimals((id: string | null, closeUp?: boolean) => {
+            pairFramed = null; // 3.3 fix (mating tap): a plain selection frames the one
             // (An animal a read just brought aboard, while that read is being placed: selected once it is laid out.)
             if (id && readPlacing && !aboard.has(id)) {
                 afterRead.push(() => arrive(id, Boolean(closeUp)));
                 return;
             }
             arrive(id, Boolean(closeUp));
+        }),
+        // 3.3 fix (mating tap): the first of a pair chosen, both framed while their mating is acted.
+        selectPair: whenAnimals((a: string, b: string) => {
+            pairFramed = {a, b};
+            arrive(a, false);
         }),
         // (Before the animals are in, a herd is not known yet: false, as for any unknown key.)
         selectHerd: (key) => (animalsIn ? selectHerd(key, true) : false),

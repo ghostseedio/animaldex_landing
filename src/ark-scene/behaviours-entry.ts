@@ -58,6 +58,13 @@ const SCENES: Record<string, Scene> = {
     lure: {zone: "grassland", hours: 9, kind: "lure", cast: [{slug: "killdeer", name: "Killdeer", n: 5}, {slug: "coyote", name: "Coyote", n: 1}, {slug: "red-fox", name: "Red Fox", n: 1}, {slug: "bobcat", name: "Bobcat", n: 1}]},
     // 3.3 batch (B): a Muscovy duck's brood jumping from the tree hole on the record's hatching (`duckling-drop.ts`).
     drop: {zone: "river_lake", hours: 9, kind: "hatch", cast: [{slug: "muscovy-duck", name: "Muscovy Duck", n: 2, young: 4}]},
+    // 3.3 fix (mating tap): a mating line's tap, the old way (the first animal alone) and the new (the pair framed);
+    // two Common Wall Lizards (a real pair of today's record; they start close), and two Australasian Swamphens (another),
+    // the farthest apart of eight.
+    tapone: {zone: "farm_garden", hours: 10, kind: "mating", cast: [{slug: "common-wall-lizard", name: "Common Wall Lizard", n: 4}]},
+    tappair: {zone: "farm_garden", hours: 10, kind: "mating", cast: [{slug: "common-wall-lizard", name: "Common Wall Lizard", n: 4}]},
+    tapfarone: {zone: "wetland", hours: 10, kind: "mating", cast: [{slug: "australasian-swamphen", name: "Australasian Swamphen", n: 8}]},
+    tapfarpair: {zone: "wetland", hours: 10, kind: "mating", cast: [{slug: "australasian-swamphen", name: "Australasian Swamphen", n: 8}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -119,8 +126,24 @@ async function main() {
     type Debug = {births: () => Array<Record<string, unknown>>; matings: () => Array<Record<string, unknown>>; traces: () => Array<{kind: string; x: number; z: number; alpha: number}>; entries: () => Array<{animal: {id: string; model_slug: string}; act: Record<string, unknown> | null}>; mobbing?: () => unknown[]; mobStart?: (bird: string, threat: string) => boolean; lureStart?: (bird: string, threat: string) => boolean; lures?: () => unknown[]; drops?: () => Array<{mother: string | null}>; seenNow?: () => Array<{name: string; line?: string; episode: string}>};
     const debug = (window as unknown as {__arkDebug: Debug}).__arkDebug;
     const a = castId(0, 0);
-    const b = castId(0, 1);
+    let b = castId(0, 1);
     if (scene.kind === "birth") handle.addBirths?.([{key: "birth:harness", parents: [a, b], young: youngIds, t0}]);
+    // 3.3 fix (mating tap): the pair apart at their mating's time, as most of the record's pairs are.
+    const tapScene = (params.get("scene") ?? "").startsWith("tap");
+    if (tapScene) {
+        // (The one of its kind farthest from the first, as the record's pairs are often apart.)
+        const at = handle.locate(a);
+        let far = 0;
+        for (let i = 1; i < scene.cast[0].n; i++) {
+            const p = handle.locate(castId(0, i));
+            const d = at && p ? Math.hypot(p.x - at.x, p.z - at.z) : 0;
+            if (d > far) {
+                far = d;
+                b = castId(0, i);
+            }
+        }
+        console.log("[behaviours] the pair", far.toFixed(1), "m apart");
+    }
     if (scene.kind === "mating") handle.addMatings?.([{key: "mated:harness", a, b, t0}]);
     if (scene.kind === "hatch") handle.addHatchings?.([{key: "hatch:harness", parents: [a, b], young: youngIds, t0}]);
     await setAt(t0 + 0.05);
@@ -270,6 +293,29 @@ async function main() {
             const micro = (debug.entries().find((e) => e.animal.id === a) as unknown as {place: {micro?: unknown}; defenceNear?: number; level?: string});
             const seen = handle.seen?.().acts.filter((act) => act.recipe.startsWith("defence_")).map((act) => act.line) ?? [];
             return `action: ${micro.place.micro ? `(at its microhabitat) predator beside it ${micro.defenceNear ?? 0}` : handle.reactive?.(a)?.action ?? "-"}   move: ${d ? `amount ${d.amount.toFixed(2)} tail ${d.tail.toFixed(2)} shed ${d.shed.toFixed(1)} episode ${d.episode}` : "-"}   seen: ${seen.join(" / ") || "-"}   drawn as: ${micro.level ?? "-"}`;
+        },
+        /**
+         * 3.3 fix (mating tap): the world run to `s` s after the mating's time, the line tapped there (`pair`: the new
+         * tap, `selectPair`; else the old one, `select` of the first animal), then 3 s for the flight and the follow.
+         */
+        tap: async (s: number, pair: boolean) => {
+            while (fake!.date / 1000 < t0 + s - 0.05) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            if (pair && handle.selectPair) handle.selectPair(a, b);
+            else handle.select(a);
+            for (let i = 0; i < 30; i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const pa = handle.locate(a);
+            const pb = handle.locate(b);
+            const v = handle.view();
+            const acts = debug.entries().filter((e) => e.animal.id === a || e.animal.id === b).map((e) => `${e.animal.id.slice(-3)} ${String(e.act?.state ?? "its day")}`);
+            return `+${s} s, ${pair ? "new tap (the pair)" : "old tap (the first)"}: apart ${pa && pb ? Math.hypot(pa.x - pb.x, pa.z - pb.z).toFixed(1) : "?"} m, view ${v.distance.toFixed(1)} m from ${v.target.x.toFixed(1)},${v.target.z.toFixed(1)}; a ${pa ? `${pa.x.toFixed(1)},${pa.z.toFixed(1)}` : "-"} b ${pb ? `${pb.x.toFixed(1)},${pb.z.toFixed(1)}` : "-"}; ${acts.join(", ")}; ${JSON.stringify(debug.matings())}`;
         },
         handle
     };

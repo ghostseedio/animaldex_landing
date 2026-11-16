@@ -484,6 +484,11 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      */
     addMatings?: (matings: Array<{key: string; a: string; b: string; t0: number}>) => void;
     /**
+     * A mating line's tap: `a` chosen (its card), and while the two's mating is acted the view frames both of them and
+     * follows them; once it is over, `a` alone, as `select`.
+     */
+    selectPair?: (a: string, b: string) => void;
+    /**
      * The record's live births (`birth` events that are not hatchings: a litter's parents, its young, its time on the
      * shared clock), acted out in the live world: the mother settles, the young are born, licked and suckle.
      */

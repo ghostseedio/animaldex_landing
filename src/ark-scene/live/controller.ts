@@ -102,6 +102,8 @@ export class ArkLive {
     private readonly outcomes = new HuntOutcomes();
     private readonly memory = new ArkSeenMemory();
     private readonly said = new Set<string>();
+    /** A mating line's animal (its focus: the record's first parent) to its partner, for the tap to frame both. */
+    private readonly mates = new Map<string, string>();
     private readonly view: ArkLiveLogView;
     private current: ArkSnapshot | null = null;
     private sig = "";
@@ -239,6 +241,14 @@ export class ArkLive {
             const b = event.other?.id ?? event.parents[1];
             const t0 = Date.parse(event.at) / 1000;
             if (a && b && a !== b && Number.isFinite(t0)) matings.push({key: `mated:${event.id}`, a, b, t0});
+            // (The line's focus is the first parent, `ark-live-log.ts`; its tap frames it with the other.)
+            const first = event.parents[0] ?? a;
+            const other = first === a ? b : first === b ? a : null;
+            if (first && other) {
+                this.mates.delete(first);
+                this.mates.set(first, other);
+                if (this.mates.size > 200) this.mates.delete(this.mates.keys().next().value as string);
+            }
         }
         if (!matings.length) return;
         try {
@@ -456,14 +466,19 @@ export class ArkLive {
         this.view.render(this.log.lines, performance.now());
     }
 
-    /** A line's tap: its animal when it is in the scene, else one of its kind (a herd's card for a herd), else its region. */
-    focus(line: Pick<ArkLiveLine, "focus">) {
+    /**
+     * A line's tap: its animal when it is in the scene, else one of its kind (a herd's card for a herd), else its region.
+     * A mating's: the pair, both framed while their mating is acted (the scene's `selectPair`), else the first alone.
+     */
+    focus(line: Pick<ArkLiveLine, "focus"> & {kind?: ArkLiveLine["kind"]}) {
         const scene = this.options.scene();
         if (!scene) return;
         const {animalId, speciesId, zone} = line.focus;
         const done = () => this.options.onFocused?.(line as ArkLiveLine);
         if (animalId && scene.locate(animalId)) {
-            scene.select(animalId);
+            const partner = line.kind === "mated" ? this.mates.get(animalId) : undefined;
+            if (partner && scene.selectPair) scene.selectPair(animalId, partner);
+            else scene.select(animalId);
             return done();
         }
         if (speciesId) {
