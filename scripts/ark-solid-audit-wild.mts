@@ -1,7 +1,7 @@
 /**
  * p3 (solid): the wild island (islands mode, world v2) over a stretch of the shared schedule with the collisions' layer:
- * how often a walker's body centre stands inside a shrub, a rock, a log, a trunk or a termite mound, per kind.
- * `--before`: with shrubs soft and no mounds, as they were. Prints JSON.
+ * how often a walker's body centre stands inside a shrub, a rock, a log or a trunk, per kind.
+ * `--before`: with shrubs soft, as they were. Prints JSON.
  */
 import base from "@/ark-scene/fixtures/snapshot-v2.json";
 import {withArkIslandsFixture} from "@/ark-scene/fixtures/islands";
@@ -26,9 +26,9 @@ const wild = {animals: list0};
 const sim = buildSim(wild.animals);
 const plots = hamletPlotsFor(wild.animals);
 const now = buildColliders(plots);
-const list = before ? now.filter((c) => !c.id.startsWith("mound:")).map((c) => (c.kind === "shrub" ? {...c, gap: 0, soft: true} : c)) : now;
+const list = before ? now.map((c) => (c.kind === "shrub" ? {...c, gap: 0, soft: true} : c)) : now;
 const set = new ColliderSet(list, `audit:${before}`);
-const check = new ColliderSet(now.filter((c) => c.kind === "shrub" || c.kind === "mound" || c.kind === "rock" || c.kind === "log" || c.kind === "trunk"), "check");
+const check = new ColliderSet(now.filter((c) => c.kind === "shrub" || c.kind === "rock" || c.kind === "log" || c.kind === "trunk"), "check");
 const poses = resolvedPosesAt(sim, set);
 const walkers = sim.animals.filter((s) => s.sched && s.profile.move !== "fly" && s.profile.move !== "swim" && s.profile.move !== "sessile");
 const from = Math.floor(Date.UTC(2026, 10, 12, 5, 0) / 1000);

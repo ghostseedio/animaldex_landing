@@ -121,7 +121,7 @@ export function townFlowerBeds(plan: TownPlan = townPlan()): Array<{kind: "round
 function plotSolids(out: TownSolid[], plot: Plot, id: string): void {
     plot.solids.forEach((s, k) => {
         const kind: SolidKind = s.kind;
-        const base = {id: `${id}:${s.kind}:${k}`, kind, base: s.base - 0.2, top: s.top, gap: 0};
+        const base = {id: `${id}/${s.kind}-${k}`, kind, base: s.base - 0.2, top: s.top, gap: 0};
         if (s.shape === "circle") out.push({...base, shape: "circle", x: s.x, z: s.z, r: s.r});
         else if (s.shape === "box") out.push({...base, shape: "box", x: s.x, z: s.z, hw: s.hw, hd: s.hd, rot: s.rot});
         else out.push({...base, shape: "segment", ax: s.ax, az: s.az, bx: s.bx, bz: s.bz, r: s.r});
@@ -129,7 +129,7 @@ function plotSolids(out: TownSolid[], plot: Plot, id: string): void {
     plot.footprints.forEach((f, k) => {
         if (f.what !== "plant") return;
         const p = plot.p(f.x, f.z, 0);
-        out.push({id: `${id}:bush:${k}`, kind: "bush", shape: "circle", x: p[0], z: p[2], r: f.r, base: p[1] - 0.2, top: p[1] + 1.2, gap: BUSH_GAP});
+        out.push({id: `${id}/bush-${k}`, kind: "bush", shape: "circle", x: p[0], z: p[2], r: f.r, base: p[1] - 0.2, top: p[1] + 1.2, gap: BUSH_GAP});
     });
 }
 

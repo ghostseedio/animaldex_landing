@@ -2,8 +2,8 @@
  * p3 (solid): the owner, 2026-11-16, on the live Ark: "I just saw a horse go through a bush." Every walker routes and
  * stands round the solid scenery: the zoo habitats' rockwork, logs, posts, climbing trees, shelters, racks, troughs,
  * mounds and waterholes, the halls' the same, the greens' dead wood and brambles, the flower beds, the garden rooms and
- * ponds, the shrubs (`islands/town/solids.ts`, `islands/town/colliders.ts`); on the wild island its shrubs and termite
- * mounds (`collide/colliders.ts`). A body narrower than a bush's gaps (a mouse, a lizard, a beetle) still goes in.
+ * ponds, the shrubs (`islands/town/solids.ts`, `islands/town/colliders.ts`); on the wild island its shrubs
+ * (`collide/colliders.ts`). A body narrower than a bush's gaps (a mouse, a lizard, a beetle) still goes in.
  */
 
 import assert from "node:assert/strict";
@@ -18,7 +18,6 @@ import {townSolids, solidDistance, BUSH_GAP, type SolidKind} from "@/ark-scene/i
 import {townWorldOrigin} from "@/ark-scene/islands";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {buildColliders} from "@/ark-scene/collide/colliders";
-import {savannaMounds} from "@/ark-scene/mounds";
 import {townSolidAudit} from "@/lib/ark-collide/solid-audit";
 
 const origin = townWorldOrigin();
@@ -86,9 +85,8 @@ test("over a day of the shared schedule, no town walker's body centre stands ins
     assert.ok(Object.values(before.byKind).reduce((a, b) => a + b, 0) > 100, "the old colliders let bodies into the props");
 });
 
-test("the wild island: its shrubs are solid with their gaps, its termite mounds are colliders", () => {
+test("the wild island: its shrubs are solid with their gaps", () => {
     const list = buildColliders(null);
     const shrubs = list.filter((c) => c.kind === "shrub");
     assert.ok(shrubs.length > 0 && shrubs.every((c) => !c.soft && c.gap === BUSH_GAP), "every shrub solid, a mouse's gap");
-    assert.equal(list.filter((c) => c.kind === "mound").length, savannaMounds().length, "every savanna mound");
 });

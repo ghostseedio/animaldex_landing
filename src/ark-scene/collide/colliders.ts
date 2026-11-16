@@ -28,14 +28,13 @@ import {assetTrunk} from "@/ark-scene/tree-assets";
 import {trunkOf} from "@/ark-scene/vegetation";
 import {canopyTree, COTTAGE, DECOR_SINK} from "@/ark-scene/micro-decor";
 import {drawnRocks} from "@/ark-scene/map/rocks";
-import {moundFoot, savannaMounds} from "@/ark-scene/mounds";
 import {floorObstacles} from "@/ark-scene/floor-assets";
 import {barnStyle, cottageStyle, defaultHomePlots, GARDEN, paddockFence, paddockRect, paddockSegments, PADDOCK_POST_TOP, picketRuns, PICKET_POST_TOP, plotFrame, plotKeepOuts, type HomePlot} from "@/ark-scene/props/home-layout";
 import {onArkWorld, sampleGround} from "@/ark-scene/world";
 import {GARDEN_POND} from "@/ark-scene/micro-decor";
 import {POND_STONES} from "@/ark-scene/world-sampler";
 
-export type ColliderKind = "fence" | "building" | "trunk" | "rock" | "log" | "hay" | "post" | "shrub" | "pond" | "mound";
+export type ColliderKind = "fence" | "building" | "trunk" | "rock" | "log" | "hay" | "post" | "shrub" | "pond";
 
 type ColliderBase = {
     kind: ColliderKind;
@@ -435,11 +434,6 @@ export function buildColliders(plots: HomePlot[] | null): Collider[] {
     drawnRocks().forEach((rock, n) => {
         const host = rockHosts.get(`${rock.x.toFixed(2)},${rock.z.toFixed(2)}`);
         out.push({shape: "box", kind: "rock", id: host ? `rock:${host}` : `rock:${n}`, cx: rock.x, cz: rock.z, cos: rock.cos, sin: rock.sin, hx0: rock.hx0, hx1: rock.hx1, hz0: rock.hz0, hz1: rock.hz1, y0: rock.y0, y1: rock.y1, reach: rock.reach, gap: 0});
-    });
-    // p3 (solid): the savanna's termite mounds (`mounds.ts`, always there), as drawn: a termite goes in; nothing larger.
-    savannaMounds().forEach((mound, n) => {
-        const r = moundFoot(mound);
-        out.push({shape: "circle", kind: "mound", id: `mound:${n}`, cx: mound.x, cz: mound.z, r, reach: r, y0: mound.y - 0.2, y1: mound.y + mound.h * mound.scale, gap: BUSH_GAP});
     });
     floorObstacles().forEach((log, n) => {
         const g = sampleGround(log.x, log.z).height;

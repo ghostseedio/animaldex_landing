@@ -89,7 +89,7 @@ export function townColliderList(open: readonly string[], origin: {x: number; z:
     return out;
 }
 
-const KIND: Record<SolidKind, Collider["kind"]> = {rock: "rock", mound: "mound", log: "log", stump: "log", post: "post", trunk: "trunk", pond: "pond", hay: "hay", trough: "building", shelter: "building", garden_room: "building", bush: "shrub", bramble: "shrub", bed: "shrub"};
+const KIND: Record<SolidKind, Collider["kind"]> = {rock: "rock", mound: "rock", log: "log", stump: "log", post: "post", trunk: "trunk", pond: "pond", hay: "hay", trough: "building", shelter: "building", garden_room: "building", bush: "shrub", bramble: "shrub", bed: "shrub"};
 
 /** A town solid as a collider at the island's origin. */
 function solidCollider(s: TownSolid, ox: number, oz: number): Collider {
