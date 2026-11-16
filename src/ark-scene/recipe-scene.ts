@@ -45,6 +45,9 @@ const MATERIAL_ITEM: Record<string, ItemKind> = {twigs: "twig", bark: "twig", re
 const MATERIAL_COLOURS: Record<string, string> = {twigs: "#6e5235", bark: "#6b4a2f", reeds: "#9c9a52", grass: "#c2ad62", mud: "#5c4630", moss: "#5d7040", leaves: "#6a7a3a", hair: "#7b6650", feathers: "#e6e0d4", seaweed: "#4c5a2e", lichen: "#a9b48c", saliva: "#d8cfb8", silk: "#e8e8e0", sand: "#cdb98a", pebbles: "#8d8a84", bubbles: "#e9f2f2"};
 const FX_COLOURS: Record<string, string> = {splash: "#eef6f8", spray: "#f2f8fa", bubbles: "#dff0f4", dirt: "#6b5236", dust: "#c9b08a", mud: "#4e3b28", chips: "#d8c49c", sand: "#d9c595"};
 
+/** p3 (shake): the shaken drops' colour (one, shared: the particles only read it). */
+const SHAKE_DROP = new Color(FX_COLOURS.spray);
+
 const MAX_ITEMS = 48;
 const MAX_FISH = 160;
 const MAX_MARKS = 96;
@@ -105,6 +108,8 @@ export class RecipeScene {
     private readonly colour = new Color();
     /** Where chasers are now (for the reef lane's schools to split round): position and reach. */
     chasers: Array<{x: number; y: number; z: number; r: number}> = [];
+    /** p3 (shake): the droplets an animal shakes off (off on the low tier and with reduced motion: the scene sets it). */
+    droplets = true;
 
     constructor() {
         this.root.name = "ark-recipes";
@@ -258,7 +263,14 @@ export class RecipeScene {
                 }
             }
             // Splashes, dirt and dust: once at a step's start or end, a stream while it lasts.
-            if (act.fx) {
+            // p3 (shake): water shaken off (`water-shake.ts`): a spray of drops flung out from its back and sides while it shakes.
+            if (act.fx?.kind === "shake") {
+                const last = this.emitted.get(act.fx.id);
+                if (this.droplets && (last === undefined || now - last > 0.05 || now < last)) {
+                    this.emitted.set(act.fx.id, now);
+                    this.shed(a, now, hashString(act.fx.id) + Math.round(now * 20));
+                }
+            } else if (act.fx) {
                 const f = act.fx;
                 const last = this.emitted.get(f.id);
                 const due = f.when === "during" ? last === undefined || now - last > 0.12 : last === undefined && (f.when === "start" || act.u > 0.9);
@@ -389,6 +401,36 @@ export class RecipeScene {
                     this.burst("spray", q.x, 0, q.z, Math.max(q.size * 3, 0.1), 6, now, hashString(id));
                 }
             }
+        }
+    }
+
+    /**
+     * p3 (shake): drops off a shaking body: from along its back at about two thirds of its height, flung out sideways
+     * (the way the body swings) and a little up, then falling; a few each twentieth of a second.
+     */
+    private shed(a: RecipeActor, now: number, seed: number) {
+        const length = Math.min(Math.max(a.length, 0.15), 2.5);
+        const height = Math.max(Math.min(a.height, length * 1.6), 0.08);
+        let s = seed >>> 0 || 1;
+        const random = () => {
+            s ^= s << 13;
+            s ^= s >>> 17;
+            s ^= s << 5;
+            return ((s >>> 0) % 10007) / 10007;
+        };
+        const fx = Math.sin(a.yaw);
+        const fz = Math.cos(a.yaw);
+        const count = length < 0.6 ? 3 : 5;
+        for (let i = 0; i < count; i++) {
+            if (this.particles.length >= MAX_PARTICLES) this.particles.shift();
+            const along = (random() - 0.6) * length * 0.8;
+            const side = random() < 0.5 ? -1 : 1;
+            const out = (0.9 + random() * 1.3) * Math.sqrt(length);
+            const sx = fz * side;
+            const sz = -fx * side;
+            const x = a.x + fx * along + sx * length * 0.12;
+            const z = a.z + fz * along + sz * length * 0.12;
+            this.particles.push({x, y: a.y + height * (0.5 + random() * 0.3), z, vx: sx * out + fx * (random() - 0.5) * 0.6, vy: 0.6 + random() * 1.1, vz: sz * out + fz * (random() - 0.5) * 0.6, born: now, life: 0.55 + random() * 0.25, colour: SHAKE_DROP, size: length});
         }
     }
 

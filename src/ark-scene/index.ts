@@ -241,6 +241,8 @@ import {tailHabitOf} from "@/ark-scene/tail-habit";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 // 3.3 batch (A): defence moves.
 import {defenceMoveOf, defencePack, defenceSaid, holdsItsGround, newDefenceState, predatorBeside, stepDefence, type DefenceSpec, type DefenceState} from "@/ark-scene/defence-moves";
+// p3 (shake): shaking off the water after a swim.
+import {SHAKE_LINE, shakePackOf} from "@/ark-scene/water-shake";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
 import {speciesCare} from "@/lib/ark-age";
@@ -4685,6 +4687,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: act.recipe, episode: act.episode, block: act.block, fish: Boolean((act.catch?.ok && act.catch.kind === "fish") || act.carry?.item === "fish"), ...(ownLine ? {line: ownLine} : {})});
                 }
             }
+            // p3 (shake): shaking off the water, in the log (English first: `water-shake.json`'s line).
+            if (act?.recipe === "water_shake" && c.visible && c.distance < 60) {
+                const a = c.entry.animal;
+                seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: act.recipe, episode: act.episode, block: act.block, fish: false, line: SHAKE_LINE});
+            }
             if (c.distance > 45) continue;
             const recipes = speciesRecipes(c.entry.animal.model_slug).recipes;
             let near = recipeNear.get(c.entry.animal.id);
@@ -4714,6 +4721,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             marks.push(...molehillsOf(entry.animal.id, entry.animal.model_slug, {x: entry.place.x, y: entry.place.ground, z: entry.place.z}, epoch, heightAt));
         }
         if (recipeNear.size > 300) recipeNear.clear();
+        recipeScene.droplets = !reducedMotion && !liteOn(); // p3 (shake): no shaken drops on the low tier
         recipeScene.update(actors, marks, nests, now, epoch, camera.position, flocks);
     };
 
@@ -5367,6 +5375,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const said = candidate.distance < 45 ? defenceSaid(moveState, defenceSpec, animal.id) : null;
                 if (said) defenceSeen.push({id: animal.id, name: animal.name, speciesId: animal.kind_species_profile_id || animal.species_profile_id || `slug:${animal.model_slug}`, zone: animal.zone, recipe: `defence_${defenceSpec.move}`, episode: said, block: "defend", fish: false, line: defenceSpec.line});
             }
+            // p3 (shake): shaking off the water (`water-shake.ts`), drawn from w as the moves are (a move or sleep wins).
+            if (!defended && !slept && !reducedMotion) defended = shakePackOf(((entry.sched?.pose ?? null) as RecipePose | null)?.act, animal.model_slug, entry.length, entry.rig?.now.name === "shake_off" && entry.rig.weight > 0.5);
             // (The duller sex a little greyer: `sexDim`, beside the per-instance variation `arkVary`.)
             entry.sexDim ??= sexDim(entry.animal.id, entry.animal.model_slug);
             // Its sleep for the shader in w (`packSleep`): eyes shut, the curl (near only), a tail flick, its breaths a second.
@@ -8632,6 +8642,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     }};
     // 3.3 batch (B): the birds' own moves, for the harness
     if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {mobbing: () => mobbing.debug(), mobStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && mobbing.begin(worldMs() / 1000, b, t, allEntries().filter((e) => e !== b && e !== t), new Set(), 1e9)); }, seenNow: () => seenActs.slice(), lures: () => brokenWing.debug(), drops: () => duckDrops.debug(), lureStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && brokenWing.begin(worldMs() / 1000, b, t)); }});
+    // p3 (shake): the harness's question: when an animal next climbs out of the water (its trips' arrivals after an exit leg).
+    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {waterOuts: (id: string, from: number, slots: number) => { const e = entryById.get(id); const own = e?.sched; if (!e || !own) return []; const out: Array<{arrive: number; x: number; z: number}> = []; let previous: Trip | null = null; for (let k = 0; k < slots && out.length < 6; k++) { const trip: Trip = tripAt(worldOf(own.animal), own.profile, own.animal, from + k * SLOT_SECONDS + 1, scheduleHours, e.animal.activity, previous); previous = trip; if (trip.legs.some((l) => l.mode === "exit")) out.push({arrive: trip.arrive, x: trip.to.x, z: trip.to.z}); } return out; }});
 
     return {
         ...runtime.handle,

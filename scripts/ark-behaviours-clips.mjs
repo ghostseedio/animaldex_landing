@@ -120,6 +120,36 @@ for (const name of scenes) {
         await context.close();
         continue;
     }
+    if (name.startsWith("shake")) {
+        // p3 (shake): the cast's first climb out of the water on its own schedule: [s from its arrival on the bank, label].
+        const STEPS = [[-2.2, "climbing out"], [0.05, "on the bank"], [0.35, "the shake starts"], [0.5, "shaking"], [0.62, "shaking"], [0.75, "shaking"], [0.9, "shaking"], [1.05, "shaking"], [1.25, "after the body shake"], [1.45, "the wings"], [1.6, "the wings"], [1.75, "the wings"], [2.0, "the wings"], [2.4, "settling"], [3.2, "back to its day"], [6, "on with its day"]];
+        const outs = await page.evaluate(() => window.__behaviours.outs());
+        console.log(name, "outs", JSON.stringify(outs.slice(0, 4)));
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const pick = outs[Number(arg("out", "0"))];
+        if (!pick) {
+            summary[name] = {errors: ["no climb out of the water in a day"]};
+            await context.close();
+            continue;
+        }
+        const labels = [];
+        for (let i = 0; i < STEPS.length; i++) {
+            const [s, label] = STEPS[i];
+            const note = await page.evaluate(async ([id, epoch, lengths, azimuth]) => window.__behaviours.shakeShot(id, epoch, lengths, azimuth === "" ? null : Number(azimuth)), [pick.id, pick.arrive + s, Number(arg("lengths", "3.2")), arg("azimuth", "")]);
+            await page.evaluate((t) => (document.getElementById("note").textContent = t), `${label} (+${s} s)\n${note}`);
+            labels.push(`${String(i).padStart(2, "0")} ${label} (+${s} s): ${note}`);
+            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", "scale=640:-1,tile=4x4:padding=4:color=black", "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
     if (name === "death") {
         // 3.3 fix (log): [s after the death, which death, label, the tap from the overview]. Framed on where it lies.
         const STEPS = [[-1, "death:harness", "before: alive"], [0.6, "death:harness", "falling onto its side"], [5, "death:harness", "lying where it died"], [600, "death:harness", "ten minutes on"], [1110, "death:harness", "fading"], [1230, "death:harness", "gone"], [5, "death:gone", "a hawk no longer in the roster, lying where it died"], [30, "death:harness", "the line's tap, from the overview", true], [30, "death:gone", "the hawk's line's tap", true]];

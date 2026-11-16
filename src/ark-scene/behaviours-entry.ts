@@ -15,7 +15,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death"};
+type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake"};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -68,6 +68,9 @@ const SCENES: Record<string, Scene> = {
     // 3.3 fix (log): a death of the record (old age): its body where it died, and its line's tap (`live-deaths.ts`). A
     // second death, a roadside hawk not in the roster (it has left it, as the dead have), placed from its event alone.
     death: {zone: "grassland", hours: 10, kind: "death", cast: [{slug: "red-deer", name: "Red Deer", n: 3}]},
+    // p3 (shake): out of the water and shaking it off (`water-shake.ts`): geese at the lake, a Labrador from the lake.
+    shakegoose: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "greylag-goose", name: "Greylag Goose", n: 3}]},
+    shakedog: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "labrador-retriever", name: "Labrador Retriever", n: 2}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -271,6 +274,36 @@ async function main() {
             const status = (id: string) => handle.animalStatus?.(id)?.activity ?? "-";
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
             return `+${s.toFixed(1)} s   card a: ${status(a)}   card b: ${status(b)}   dung marks: ${api.dung().length}\n${acts.concat(said).join("\n")}${scene.kind === "lure" ? `\n${JSON.stringify(debug.lures?.())}` : ""}${scene.kind === "hatch" ? `\n${JSON.stringify(debug.drops?.())}` : ""}${scene.kind === "mob" ? `\n${JSON.stringify(debug.mobbing?.())} rigs ${JSON.stringify(scene.cast[0] ? Array.from({length: scene.cast[0].n}, (_, i) => (debug as unknown as {rigState: (id: string) => unknown}).rigState(castId(0, i))).concat((debug as unknown as {rigState: (id: string) => unknown}).rigState(foe)) : [])}` : ""}`;
+        },
+        /** p3 (shake): the cast's next climbs out of the water (the scene's own schedule), the earliest first. */
+        outs: () => {
+            const ask = (debug as unknown as {waterOuts: (id: string, from: number, slots: number) => Array<{arrive: number; x: number; z: number}>}).waterOuts;
+            const all = scene.cast[0] ? Array.from({length: scene.cast[0].n}, (_, i) => ask(castId(0, i), t0, 1440).map((o) => ({...o, id: castId(0, i)}))).flat() : [];
+            return all.sort((p, q) => p.arrive - q.arrive);
+        },
+        /** p3 (shake): the world run up to an absolute time a tenth of a second a frame (the drops fly), then the animal framed from its side. */
+        shakeShot: async (id: string, epoch: number, lengths: number, azimuth: number | null = null, polar = 1.4) => {
+            await setAt(epoch - 1.5);
+            for (let i = 0; i < 15; i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const drawn = debug.entries().find((e) => e.animal.id === id) as unknown as {length: number; middle: {x: number; y: number; z: number} | null};
+            const at = handle.locate(id);
+            const target = drawn.middle ? {x: drawn.middle.x, y: drawn.middle.y, z: drawn.middle.z} : at ? {x: at.x, y: at.y + drawn.length * 0.3, z: at.z} : null;
+            const controls = (debug as unknown as {controls: {minDistance: number}}).controls;
+            if (target) {
+                for (let i = 0; i < 3; i++) {
+                    controls.minDistance = 0.08;
+                    handle.setView({target, distance: Math.max(lengths * drawn.length, 0.5), polar, azimuth: azimuth ?? (at ? at.yaw + Math.PI / 2 : 0.7)});
+                    await frames(1);
+                }
+            }
+            const pose = (debug.entries().find((e) => e.animal.id === id) as unknown as {sched?: {pose?: {beat?: string; act?: {recipe?: string; shake?: Record<string, number>} | null}}}).sched?.pose;
+            const shake = pose?.act?.shake ? JSON.stringify(Object.fromEntries(Object.entries(pose.act.shake).map(([k, v]) => [k, Number(v.toFixed(2))]))) : "";
+            const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`)));
+            return `beat ${pose?.beat ?? "-"} act ${pose?.act?.recipe ?? "-"} ${shake} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
         },
         /**
          * 3.3 batch (A): the predator (the second cast) stood `gap` body lengths of the first cast's animal from it, or

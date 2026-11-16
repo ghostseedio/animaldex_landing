@@ -1,0 +1,263 @@
+{
+ "about": "Shaking off the water (owner 2026-11-16): species that shake when they climb out of the water; w: a body shake, then the wings flapped with the head stretched up (waterfowl, family Anatidae), b: a body shake (a mammal whose crossing shakes off after and whose model's idle.shake is 2 or 3). Only species that go into the water in the Ark. Built by scripts/ark-water-shake.mts; never edited by hand.",
+ "version": "water-shake-1",
+ "line": "{aAnimal} is shaking off the water",
+ "species": {
+  "ancona-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "andean-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water goose; idle.shake 2"
+  ],
+  "asian-small-clawed-otter": [
+   "b",
+   "family Mustelidae (dives in from the bank); water otter; idle.shake 2"
+  ],
+  "australian-wood-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "bar-headed-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water goose; idle.shake 2"
+  ],
+  "barnacle-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water goose; idle.shake 0"
+  ],
+  "black-bellied-whistling-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "black-necked-swan": [
+   "w",
+   "family Anatidae (launches onto the water); water swan; idle.shake 2"
+  ],
+  "black-swan": [
+   "w",
+   "family Anatidae (launches onto the water); water swan; idle.shake 2"
+  ],
+  "bornean-bearded-pig": [
+   "b",
+   "class Mammalia: wades in, shakes off after; water mammal; idle.shake 2"
+  ],
+  "buff-orpington-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "bufflehead": [
+   "w",
+   "family Anatidae (launches onto the water); water diver; idle.shake 1"
+  ],
+  "bush-dog": [
+   "b",
+   "class Mammalia: wades in, shakes off after; water mammal; idle.shake 3"
+  ],
+  "call-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "canada-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water goose; idle.shake 2"
+  ],
+  "cape-teal": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 1"
+  ],
+  "cayuga-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "coscoroba-swan": [
+   "w",
+   "family Anatidae (launches onto the water); water swan; idle.shake 3"
+  ],
+  "cotton-pygmy-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 3"
+  ],
+  "domestic-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 3"
+  ],
+  "domestic-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water goose; idle.shake 3"
+  ],
+  "egyptian-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water goose; idle.shake 3"
+  ],
+  "emperor-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water goose; idle.shake 3"
+  ],
+  "european-otter": [
+   "b",
+   "family Mustelidae (dives in from the bank); water otter; idle.shake 3"
+  ],
+  "giant-otter": [
+   "b",
+   "family Mustelidae (dives in from the bank); water otter; idle.shake 2"
+  ],
+  "greylag-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water goose; idle.shake 2"
+  ],
+  "harlequin-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "hottentot-teal": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "indian-runner-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 3"
+  ],
+  "khaki-campbell-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "king-eider": [
+   "w",
+   "family Anatidae (launches onto the water); water diver; idle.shake 1"
+  ],
+  "labrador-retriever": [
+   "b",
+   "class Mammalia: wades in, shakes off after; water mammal; idle.shake 3"
+  ],
+  "lesser-whistling-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "madagascar-pochard": [
+   "w",
+   "family Anatidae (launches onto the water); water diver; idle.shake 2"
+  ],
+  "magpie-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "mallard": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "mandarin-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "mottled-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "muscovy-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "mute-swan": [
+   "w",
+   "family Anatidae (launches onto the water); water swan; idle.shake 2"
+  ],
+  "nene": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 1"
+  ],
+  "north-american-river-otter": [
+   "b",
+   "family Mustelidae (dives in from the bank); water otter; idle.shake 3"
+  ],
+  "northern-shoveler": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "pacific-black-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 3"
+  ],
+  "polar-bear": [
+   "b",
+   "class Mammalia: wades in, shakes off after; water mammal; idle.shake 3"
+  ],
+  "rakali": [
+   "b",
+   "class Mammalia: wades in, shakes off after; water mammal; idle.shake 3"
+  ],
+  "red-breasted-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water goose; idle.shake 2"
+  ],
+  "red-crested-pochard": [
+   "w",
+   "family Anatidae (launches onto the water); water diver; idle.shake 2"
+  ],
+  "rouen-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 3"
+  ],
+  "ruddy-shelduck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "saxony-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 3"
+  ],
+  "sea-otter": [
+   "b",
+   "family Mustelidae (dives in from the bank); water otter; idle.shake 2"
+  ],
+  "silver-appleyard-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 3"
+  ],
+  "smew": [
+   "w",
+   "family Anatidae (launches onto the water); water diver; idle.shake 2"
+  ],
+  "smooth-coated-otter": [
+   "b",
+   "family Mustelidae (dives in from the bank); water otter; idle.shake 3"
+  ],
+  "snow-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water goose; idle.shake 1"
+  ],
+  "swedish-blue-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "trumpeter-swan": [
+   "w",
+   "family Anatidae (launches onto the water); water swan; idle.shake 1"
+  ],
+  "upland-goose": [
+   "w",
+   "family Anatidae (launches onto the water); water goose; idle.shake 1"
+  ],
+  "wandering-whistling-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water diver; idle.shake 1"
+  ],
+  "welsh-harlequin-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ],
+  "white-faced-whistling-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 1"
+  ],
+  "whooper-swan": [
+   "w",
+   "family Anatidae (launches onto the water); water swan; idle.shake 1"
+  ],
+  "wood-duck": [
+   "w",
+   "family Anatidae (launches onto the water); water dabbler; idle.shake 2"
+  ]
+ }
+}

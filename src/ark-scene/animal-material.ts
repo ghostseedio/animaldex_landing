@@ -47,6 +47,8 @@ import {L2_BODY_NONE, type L2BodyUniforms} from "@/ark-scene/locomotion/swim";
 // 3.3 batch (A): defence moves (a ball, a shell, a swollen body, a shed tail, a wing flash).
 import {DEFENCE_FRAGMENT, DEFENCE_FRAGMENT_DECLARATIONS, DEFENCE_VERTEX, DEFENCE_VERTEX_DECLARATIONS} from "@/ark-scene/defence-moves";
 import {tailHabitUniform, type TailHabit} from "@/ark-scene/tail-habit";
+// p3 (shake): shaking off the water (the body from head to tail; a duck's wings).
+import {SHAKE_VERTEX} from "@/ark-scene/water-shake";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};
@@ -478,6 +480,7 @@ vec4 arkSleep = arkSleepOf(arkInstance.w);
 ${LOOK_VERTEX}
 ${IDLE}
 ${DEFENCE_VERTEX}
+${SHAKE_VERTEX}
 ${SHELL_VERTEX}`);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>

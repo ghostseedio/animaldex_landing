@@ -31,6 +31,8 @@ import type {AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import {hashString} from "@/ark-scene/world";
 import {arkRecipeActivity} from "@/lib/ark-animal-status";
 import {dipDepth} from "@/ark-scene/egg-dip";
+// p3 (shake): shaking off the water after a swim.
+import {shakeAt, shakeTotal, sinceOutOfWater, waterShakeOf, type ShakeNow} from "@/ark-scene/water-shake";
 import {buildQuarry, quarryAt, type QuarryLook, type QuarryNow, type QuarryTrack} from "@/ark-scene/recipe-hunt";
 
 // MARK: Species data
@@ -622,6 +624,8 @@ export type RecipeAct = {
     fx: {kind: NonNullable<BlockDef["fx"]>; at: P; id: string; during: boolean; when: "start" | "end" | "during"} | null;
     /** 3.3 batch (D): seconds into a dip's hold (`dip_tail`, `egg-dip.ts`): the scene's rings on the water. */
     since?: number;
+    /** p3 (shake): its shake off the water now (`water-shake.ts`): the body's swing, the wings' flap. */
+    shake?: ShakeNow;
     mark: {kind: NonNullable<BlockDef["mark"]>; at: P; id: string; from: number} | null;
     label: string;
     /** A murmuration's centre and seed (the scene draws its ambient flockmates from the same function). */
@@ -1727,6 +1731,12 @@ function onEpisode(world: ScheduleWorld, episode: Episode, base: TripPose, epoch
 
 const HERE_DOINGS = new Set(["rest", "groom", "perch", "bask", "watch", "idle"]);
 
+/** p3 (shake): the seconds after it arrives that its shake off the water takes (0: it did not just climb out, or does not shake). */
+function shakeFirst(owner: TripOwner, trip: Trip): number {
+    const shaker = waterShakeOf(owner.slug);
+    return shaker && trip.legs.some((leg) => leg.mode === "exit") && trip.stay[0]?.beat === "shake" ? shakeTotal(shaker, Math.max(owner.animal.length, 0.05)) : 0;
+}
+
 function stayEpisode(world: ScheduleWorld, trip: Trip, owner: TripOwner, kit: ScheduleKit): Episode | null {
     if (stayEpisodes.has(trip)) return stayEpisodes.get(trip)!;
     const species = speciesRecipes(owner.slug);
@@ -1739,7 +1749,8 @@ function stayEpisode(world: ScheduleWorld, trip: Trip, owner: TripOwner, kit: Sc
         // apart, and the last seconds are for turning on the spot to the way it sets off. (A recipe's stay has no steps of
         // its own: its schedule pose holds still there, so it can keep its own heading.)
         const holds = !trip.stay.length;
-        const t0 = trip.arrive + 0.5;
+        // (p3 (shake): just out of the water, a species that shakes does that first.)
+        const t0 = trip.arrive + Math.max(0.5, shakeFirst(owner, trip));
         const t1 = trip.end - (trip.end - trip.arrive >= 40 ? 10 : holds ? 5.5 : 2.5);
         if (t1 - t0 > 6) {
             const yaw0 = kit.basePose(world, trip, t0).yaw;
@@ -1760,7 +1771,7 @@ function stayEpisode(world: ScheduleWorld, trip: Trip, owner: TripOwner, kit: Sc
             if (!template || template.kind !== "stay" || template.goal !== "here") continue;
             if (!template.replaces.includes(trip.doing) || !hourOk(template, hours)) continue;
             if (random() >= weight * 0.6 * seasonFactor(species, template.season, trip.arrive)) continue;
-            const start = trip.arrive + 1 + random() * Math.max(trip.end - trip.arrive - 40, 0);
+            const start = trip.arrive + Math.max(1 + random() * Math.max(trip.end - trip.arrive - 40, 0), shakeFirst(owner, trip));
             episode = buildEpisode({world, kit, owner, species, template, anchor, t0: start, t1: Math.min(trip.end - 3, start + 60), seed: `${owner.animal.id}#here#${trip.slot}#${id}`, hours, yaw0: kit.basePose(world, trip, start).yaw});
             if (episode) break;
         }
@@ -2118,7 +2129,16 @@ function crossingPose(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: 
     }
     const u = Math.min(Math.max(t / Math.max(leg.seconds, 1e-3), 0), 1);
     if (base.beat === "shake") {
+        // p3 (shake): a species that shakes off the water (`water-shake.ts`) does, the moment it is out, then its own after.
+        const shaker = waterShakeOf(owner.slug);
+        const since = shaker ? sinceOutOfWater(trip, epoch) : null;
+        if (shaker && since !== null && since < shakeTotal(shaker, length)) {
+            const now = shakeAt(shaker, length, since);
+            return {...base, act: {episode: `shake#${trip.slot}`, recipe: "water_shake", block: "shake_off", state: "shake", u: since / shakeTotal(shaker, length), pitch: now.pitch, roll: 0, own: false, carry: null, prey: null, catch: null, fx: now.body > 0.05 || now.wings > 0.05 ? {kind: "shake", at: {x: base.x, y: base.y, z: base.z}, id: `shake#${owner.animal.id}#${trip.slot}`, during: true, when: "during"} : null, mark: null, label: "shake off the water", shake: now}};
+        }
         const block = AFTER_BLOCKS[species.after];
+        // (Shaken once: it stands for the rest of the beat, never a second shake from its clip.)
+        if (shaker && since !== null && block === "shake_off") return {...base, beat: "pause"};
         if (!block || block === "shake_off") return null;
         const b = BLOCKS[block];
         return {...base, beat: b.beat, act: {episode: `after#${trip.slot}`, recipe: "crossing", block: b.id, state: b.states[0], u: 0, pitch: b.pitch ?? 0, roll: b.roll ?? 0, own: false, carry: null, prey: null, catch: null, fx: null, mark: null, label: b.label}};
