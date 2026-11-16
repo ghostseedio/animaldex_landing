@@ -185,7 +185,8 @@ export class ArkNests {
         }
     }
 
-    private remove(id: string) {
+    /** One nest gone at once (a live clutch's time is up: `index.ts` stepLiveClutch). */
+    remove(id: string) {
         const nest = this.nests.get(id);
         if (!nest) return;
         this.root.remove(nest.group);

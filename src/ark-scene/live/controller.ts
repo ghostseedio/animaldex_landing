@@ -30,6 +30,7 @@ import {arkPickAnimal, arkSpeciesKey} from "@/lib/ark-population";
 import {hashString} from "@/ark-scene/world";
 import {ZONE_REGION, type ArkSceneHandle, type ArkSnapshot} from "@/ark-scene/types";
 import {ArkLiveLogView} from "@/ark-scene/live/log-view";
+import {breedFocus, isBreedKind, youngStillWanted, YOUNG_WAIT_MS} from "@/ark-scene/live/breed-focus";
 
 /** The words the log needs (the Ark's `live` and `replay`, and "Show me"), as the page or `/api/ark/words` has them. */
 export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null} | null;
@@ -104,6 +105,14 @@ export class ArkLive {
     private readonly said = new Set<string>();
     /** A mating line's animal (its focus: the record's first parent) to its partner, for the tap to frame both. */
     private readonly mates = new Map<string, string>();
+    /** 3.3 fix (breeding taps): a young's parents, and a clutch's egg count by its first parent, from the record. */
+    private readonly parentsOf = new Map<string, string[]>();
+    private readonly clutches = new Map<string, {key: string; parents: string[]; eggs: number | null}>();
+    /**
+     * A young its line's tap could not go to yet (not in the roster): chosen once a read brings it, while the view is
+     * still on the parent the tap chose (`youngStillWanted`), until when (ms).
+     */
+    private youngWait: {id: string; parent: string; since: number; until: number} | null = null;
     private readonly view: ArkLiveLogView;
     private current: ArkSnapshot | null = null;
     private sig = "";
@@ -196,6 +205,7 @@ export class ArkLive {
             if (next.as_of && Date.parse(next.as_of) > Date.parse(this.cursor) - 120_000) this.cursor = new Date(Math.min(Date.parse(next.as_of), Date.now())).toISOString();
             return;
         }
+        this.youngArrived(next); // 3.3 fix (breeding taps)
         const before = this.current;
         this.current = next;
         if (sig === this.sig) return;
@@ -213,6 +223,7 @@ export class ArkLive {
             if (event.animal && (event.kind === "arrival" || event.kind === "birth")) this.remember(`animal:${event.animal.id}`);
         }
         this.noteRecord(decoded);
+        this.noteKin(decoded); // 3.3 fix (breeding taps)
         this.revive(decoded);
         this.mate(decoded);
         this.died(decoded); // 3.3 fix (log)
@@ -336,6 +347,42 @@ export class ArkLive {
         }
     }
 
+    /** 3.3 fix (breeding taps): who a young's parents are, and a laid clutch's eggs, for their lines' taps. */
+    private noteKin(events: readonly ArkEvent[]) {
+        const keep = <V>(map: Map<string, V>, key: string, value: V) => {
+            map.delete(key);
+            map.set(key, value);
+            if (map.size > 200) map.delete(map.keys().next().value as string);
+        };
+        for (const event of events) {
+            if (event.kind === "birth" && event.animal && event.parents.length) keep(this.parentsOf, event.animal.id, [...event.parents]);
+            // (A laid line's focus is the record's first parent, `ark-live-log.ts`.)
+            const first = event.parents[0] ?? event.animal?.id;
+            if (event.kind === "laid" && first) keep(this.clutches, first, {key: `laid:${event.id}`, parents: event.parents.length ? [...event.parents] : [first], eggs: event.eggs});
+        }
+    }
+
+    /** A young waited for (its line was tapped before a read brought it): chosen once it is aboard. */
+    private youngArrived(next: ArkSnapshot) {
+        const wait = this.youngWait;
+        if (!wait) return;
+        if (!this.youngWanted()) return;
+        if (!next.animals.some((animal) => animal.id === wait.id)) return;
+        this.youngWait = null;
+        // (After the page hands the scene this read, `ark-view.tsx` apply: the scene then chooses it once it is laid out.)
+        setTimeout(() => {
+            if (!this.disposed) this.options.scene()?.select(wait.id);
+        }, 0);
+    }
+
+    /** The young waited for, still wanted (else forgotten): the viewer chose, followed or closed nothing since. */
+    private youngWanted(): boolean {
+        const scene = this.options.scene();
+        if (youngStillWanted(this.youngWait, Date.now(), scene?.selection?.() ?? null)) return true;
+        this.youngWait = null;
+        return false;
+    }
+
     /** Live young were born (not a hatching): the litter's birth is acted in the live world (the scene's `addBirths`). */
     private born(events: readonly ArkEvent[]) {
         const litters = new Map<string, {key: string; parents: string[]; young: string[]; t0: number}>();
@@ -415,6 +462,7 @@ export class ArkLive {
                 // A page at a time (the read's limit): the rest of a burst is read next, never left for the next change.
                 more = body.more === true && newest > from;
                 this.noteRecord(events);
+                this.noteKin(events); // 3.3 fix (breeding taps)
                 this.revive(events);
                 this.mate(events);
                 this.died(events); // 3.3 fix (log)
@@ -471,6 +519,7 @@ export class ArkLive {
             }
             if (this.nowSaid.size > 400) for (const [key, until] of Array.from(this.nowSaid)) if (until < Date.now()) this.nowSaid.delete(key);
         }
+        if (this.youngWait) this.youngWanted(); // 3.3 fix (breeding taps): forgotten the moment the viewer looks elsewhere
         this.log.step(now);
         this.render();
     }
@@ -488,6 +537,22 @@ export class ArkLive {
         if (!scene) return;
         const {animalId, speciesId, zone} = line.focus;
         const done = () => this.options.onFocused?.(line as ArkLiveLine);
+        this.youngWait = null;
+        // 3.3 fix (breeding taps): a pair, a clutch, a young: chosen when aboard, drawn now or not (`breed-focus.ts`).
+        if (isBreedKind(line.kind)) {
+            const aboard = new Set((this.current?.animals ?? []).map((animal) => animal.id));
+            const step = breedFocus(line.kind, animalId, {partner: animalId ? this.mates.get(animalId) : null, parents: animalId ? this.parentsOf.get(animalId) : null}, (id) => aboard.has(id) || Boolean(scene.locate(id)));
+            if (step) {
+                if (step.do === "pair") {
+                    if (scene.selectPair) scene.selectPair(step.a, step.b, line.kind !== "mated");
+                    else scene.select(step.a);
+                } else scene.select(step.id);
+                if (step.do === "parent") this.youngWait = {id: step.young, parent: step.id, since: Date.now(), until: Date.now() + YOUNG_WAIT_MS};
+                const clutch = line.kind === "laid" && animalId ? this.clutches.get(animalId) : undefined;
+                if (clutch) scene.showClutch?.(clutch.key, clutch.parents.filter((id) => aboard.has(id)), clutch.eggs);
+                return done();
+            }
+        }
         // 3.3 fix (log): a death's line goes to where it died (its body lies there a while), not to one of its kind.
         if ((line.kind === "death" || line.kind === "starved") && line.id && scene.focusDeath?.(`death:${line.id}`)) return done();
         if (animalId && scene.locate(animalId)) {
