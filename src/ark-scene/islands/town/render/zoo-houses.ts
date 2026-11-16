@@ -20,6 +20,8 @@ import type {ZooEnclosure} from "@/ark-scene/islands/town/areas";
 import {aquariumTanks, zooHouseFloors, zooHouseFrame, ZOO_HOUSE_PORCH, ZOO_HOUSE_TYPES, ZOO_HOUSE_WALL, type Tank} from "@/ark-scene/islands/town/tanks";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {cutAttribute, cutawayMaterial, cutEye, followEye, glassMaterial, glowMaterial, interiorMaterial, waterMaterial} from "@/ark-scene/islands/town/render/displays";
+import {aquariumHall, inAquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
+import {buildAquariumHall, hallWaterMaterial, underwaterMaterial} from "@/ark-scene/islands/town/render/aquarium-hall";
 
 type RGB = [number, number, number];
 
@@ -221,7 +223,16 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
     const parts = {inside: new Geo(), glow: new Geo(), glass: new Geo(), water: new Geo()};
     const tanks: Tank[] = [];
     const houses = enclosures.filter((e) => !e.shared && ZOO_HOUSE_TYPES.has(e.type));
+    // p2 (aqua): the two aquarium plots are one hall with its own tanks (`render/aquarium-hall.ts`).
+    const aquaHall = houses.some((e) => inAquariumHall(e)) ? aquariumHall() : null;
+    const under = new Geo();
+    const hallWater = new Geo();
+    if (aquaHall) {
+        buildAquariumHall(aquaHall, shellGeo, ranges, {...parts, under, water: hallWater});
+        for (const t of aquaHall.tanks) tanks.push(t.tank);
+    }
     for (const e of houses) {
+        if (aquaHall && inAquariumHall(e)) continue;
         shell(shellGeo, e, ranges);
         plinthAndFloor(parts.inside, e);
         // The glass front from the base to the lintel.
@@ -261,6 +272,8 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
         followEye(mesh, eye);
     }
     if (parts.inside.triangles) add(parts.inside.toGeometry(), interiorMaterial(), "zoo-houses:inside", true);
+    if (aquaHall && under.triangles) add(under.toGeometry(), underwaterMaterial(aquaHall.frame.floor + 8.1), "zoo-houses:under-water", true);
+    if (hallWater.triangles) add(hallWater.toGeometry(), hallWaterMaterial(), "zoo-houses:hall-water", false, 3);
     if (parts.glow.triangles) add(parts.glow.toGeometry(), glowMaterial(), "zoo-houses:glow", false);
     if (parts.water.triangles) add(parts.water.toGeometry(), waterMaterial(), "zoo-houses:water", false, 3);
     if (parts.glass.triangles) add(parts.glass.toGeometry(), glassMaterial(), "zoo-houses:glass", false, 4);
