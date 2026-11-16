@@ -5,7 +5,7 @@
  * land view never builds or holds any of it. What it holds while under: one `Points` of marine snow (one draw call,
  * no texture; 1,500 / 800 / 300 points by tier), its positions worked out in the vertex shader from the sea's shared
  * clock, wrapped about the camera; the bubbles (`sea-bubbles-render.ts`: one more `Points`); and the caves
- * (`sea-caves-render.ts`: two meshes). Reduced motion keeps
+ * (`sea-caves-render.ts`: two meshes); and the bed's shells, pebbles and broken coral (`sea-litter-render.ts`). Reduced motion keeps
  * the motes and the bubbles but holds them still.
  */
 
@@ -14,6 +14,7 @@ import type {QualityTier} from "@/ark-scene/post";
 import {SeaBubblesView} from "@/ark-scene/sea-bubbles-render";
 import {caveVents} from "@/ark-scene/sea-caves";
 import {SeaCavesView} from "@/ark-scene/sea-caves-render";
+import {SeaLitterView} from "@/ark-scene/sea-litter-render";
 import {SEA_LOOK_LINGER, SNOW_BOX, SNOW_CEILING, SNOW_COUNT, SNOW_PERIOD, snowSeed} from "@/ark-scene/sea-look";
 
 const SNOW_VERTEX = /* glsl */ `
@@ -63,6 +64,7 @@ export class SeaLookView {
     private heldTime = 0;
     private bubbles: SeaBubblesView | null = null;
     private caves: SeaCavesView | null = null;
+    private litter: SeaLitterView | null = null;
 
     constructor(private readonly parent: Object3D) {}
 
@@ -98,6 +100,7 @@ export class SeaLookView {
         this.parent.add(this.snow);
         // (The caves, and each cave's own thin stream of bubbles from under its roof.)
         this.caves = new SeaCavesView(this.parent, tier);
+        this.litter = new SeaLitterView(this.parent, tier);
         this.bubbles = new SeaBubblesView(this.parent, tier, caveVents());
         this.builtFor = tier;
     }
@@ -111,6 +114,8 @@ export class SeaLookView {
         this.bubbles = null;
         this.caves?.dispose();
         this.caves = null;
+        this.litter?.dispose();
+        this.litter = null;
         this.snow = null;
         this.material = null;
         this.builtFor = null;
@@ -131,6 +136,7 @@ export class SeaLookView {
         if (!this.snow || !this.material) return;
         this.snow.visible = under;
         this.caves?.setVisible(under);
+        this.litter?.step(under, camera);
         // (World size → pixels at 1 m: the canvas's height over the view's tangent.)
         const fov = (camera as Camera & {fov?: number}).fov ?? 50;
         const pixelsPerMetre = viewHeight / (2 * Math.tan(fov * Math.PI / 360));

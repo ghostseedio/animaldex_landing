@@ -1,7 +1,7 @@
 /**
  * Underwater caves, drawn (3.3 batch, lane E; sites and rocks in `sea-caves.ts`). Every cave's rocks are fitted from
- * the island's own rock kit (`rock-shapes.ts`) and merged into ONE mesh (one draw call; about 72,000 triangles for
- * nine caves on the high tier, 18,000 on the others), with a second small mesh for the dark of each cave's floor
+ * the island's own rock kit (`rock-shapes.ts`) and merged into ONE mesh (one draw call; 88,640 triangles for
+ * nine caves on the high tier, 22,160 on the others), with a second small mesh for the dark of each cave's floor
  * and three veils of dark across its cavern (one draw call, 54 triangles a cave). The dark inside is baked into the rocks' colours: what faces the cavern is
  * dimmed, more the further in. Owned by `SeaLookView`: built on the first dive, let go after surfacing.
  */
