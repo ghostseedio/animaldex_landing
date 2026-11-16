@@ -28,6 +28,7 @@ import {townWaterSurface} from "@/ark-scene/islands/town/drawn-ground";
 import {homeSiteFootprints, inTownSolid} from "@/ark-scene/islands/town/tanks";
 import {corners} from "@/ark-scene/islands/town/geom";
 import {townHouseholds} from "@/ark-scene/islands/town/areas";
+import {WALL_FACE} from "@/ark-scene/wall-climb";
 
 /** Lane TB: spots on raised things (roofs, eaves, ledges, a balcony, a lamp-lit wall); every other spot is on the ground. */
 const RAISED_WHERE = new Set<SpotWhere>(["roof", "eave", "ledge", "tall", "belfry", "balcony", "window", "lamp_wall"]);
@@ -257,7 +258,16 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
         const g = townHeight(s.x, s.z);
         const water = townWaterSurface(s.x, s.z);
         const y = RAISED_WHERE.has(s.where) || s.area === "zoo" ? s.y : water !== null && g < water ? water : Math.max(s.y, g);
-        for (const tag of tags) add(tag, `town:${s.where}:${i}:${tag}`, s.x, y, s.z, 0, 1, 0, yaw);
+        // (3.3 fix (wall): a lamp-lit wall's places, its house wall and its light, are on the wall's face with the wall's
+        // normal out of it: the schedule climbs the wall to them and the scene draws the body there belly to the wall, not
+        // upright as on flat ground. An eave keeps its place on the roof (the birds'), and has a second on the wall's face
+        // under it (WALL_FACE: the climbers'). Every other place as before, up.)
+        const onWall = s.wall && s.where === "lamp_wall" ? s.wall : null;
+        for (const tag of tags) {
+            if (onWall && (tag === "house_wall" || tag === "porch_light")) add(tag, `town:${s.where}:${i}:${tag}`, onWall.x, onWall.y, onWall.z, onWall.nx, 0, onWall.nz, yaw);
+            else add(tag, `town:${s.where}:${i}:${tag}`, s.x, y, s.z, 0, 1, 0, yaw);
+        }
+        if (s.wall && s.where === "eave") add("house_wall", `town:${s.where}:${i}:house_wall${WALL_FACE}`, s.wall.x, s.wall.y, s.wall.z, s.wall.nx, 0, s.wall.nz, yaw);
     });
     for (const e of zooLayout(open).enclosures) {
         if (e.shared) continue;

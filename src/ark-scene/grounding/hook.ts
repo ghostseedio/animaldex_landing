@@ -22,6 +22,7 @@ import {allAttachPoints, attachSway, type AttachPoint} from "@/ark-scene/sampler
 import {clipStandOffset, levelBase, meanDrop, modelBase, type ModelLevelName} from "@/ark-scene/grounding/base";
 import {drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
 import {scheduleSurface, standOnGround, type Stand, type SurfaceFrame} from "@/ark-scene/grounding/stand";
+import {STEEP_NY, wallHeading} from "@/ark-scene/wall-climb";
 
 /** The level's true base (model units); `minY` for a model the base file does not list. */
 export function groundedLevelBase(slug: string, level: ModelLevelName | "rig" | "token", minY: number): number {
@@ -105,7 +106,7 @@ const RAISED_BY = 0.05;
  * trunk), or between points on a climb (the schedule's interpolated normal).
  */
 export function scheduledPerch(
-    at: {x: number; y: number; z: number; yaw: number; nx: number; ny: number; nz: number; moving: boolean; aloft: boolean},
+    at: {x: number; y: number; z: number; yaw: number; nx: number; ny: number; nz: number; moving: boolean; aloft: boolean; down?: boolean},
     to: {point: string | null; x?: number; y?: number; z?: number; nx?: number; ny?: number; nz?: number} | null | undefined,
     arrived: boolean,
     time: number,
@@ -129,7 +130,8 @@ export function scheduledPerch(
     if (arrived && to?.point && to.x !== undefined && to.y !== undefined && to.z !== undefined && RAISED_POINT_TAGS.has(tagOf(to.point)) && Math.hypot(at.x - to.x, at.z - to.z) < 0.05 && to.y > Math.max(heightAt(to.x, to.z), ground(to.x, to.z)) + RAISED_BY) {
         return scheduleSurface({x: to.x, y: to.y, z: to.z, yaw: at.yaw, nx: to.nx ?? 0, ny: to.ny ?? 1, nz: to.nz ?? 0}, null);
     }
-    if (at.ny < 0.95) return scheduleSurface(at);
+    // (3.3 fix (wall): climbing down a wall or a trunk, head first: `wall-climb.ts`.)
+    if (at.ny < 0.95) return scheduleSurface(at, at.down && Math.abs(at.ny) < STEEP_NY ? wallHeading(true) : null);
     return null;
 }
 

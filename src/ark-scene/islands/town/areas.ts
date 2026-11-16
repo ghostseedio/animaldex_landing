@@ -23,13 +23,17 @@ import {CANAL, CANAL_LEVEL, CANAL_WIDTH, MILLPOND, townPlan, type Building, type
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import type {CarSpot} from "@/ark-scene/islands/town/people";
 import type {SpotWhere} from "@/ark-scene/islands/town/niche";
+import {WALL_SKIN, wallNormal} from "@/ark-scene/wall-climb";
 
 export type TownArea = "house" | "farm" | "garden_wildlife" | "urban_wildlife" | "zoo";
 export type SpotSize = "small" | "medium" | "large";
 
 export type {SpotWhere} from "@/ark-scene/islands/town/niche";
 
-export type TownSpot = {x: number; y: number; z: number; area: TownArea; where: SpotWhere; /** The parcel, farm, enclosure or habitat it belongs to. */ place: string; sizes: readonly SpotSize[]; protected: boolean};
+export type TownSpot = {x: number; y: number; z: number; area: TownArea; where: SpotWhere; /** The parcel, farm, enclosure or habitat it belongs to. */ place: string; sizes: readonly SpotSize[]; protected: boolean; /** 3.3 fix (wall): its place on a wall (on the face, `WALL_SKIN` out) and the wall's outward normal there (level), the body's up (`wall-climb.ts`); an eave's is a second place beside its own. */ wall?: {x: number; y: number; z: number; nx: number; nz: number}};
+
+/** 3.3 fix (wall): how far under the eaves' line the wall place under an eave is (m): clear of the roof's overhang slab. */
+const EAVE_BELOW = 0.4;
 
 const SMALL: readonly SpotSize[] = ["small"];
 const SMALL_MEDIUM: readonly SpotSize[] = ["small", "medium"];
@@ -256,15 +260,22 @@ function urbanSpots(plan: TownPlan): TownSpot[] {
         }
         for (const lz of [b.at.d / 2 + 0.2, -b.at.d / 2 - 0.2]) {
             const p = local(b.at, 0, lz);
-            out.push({...p, y: floor + b.eaves - 0.2, area: "urban_wildlife", where: "eave", place: b.id, sizes: SMALL, protected: false});
+            // (3.3 fix (wall): and its place on the wall's face under the eave, the wall's normal out of it, where a gecko
+            // climbs to and clings (`wall-climb.ts` WALL_FACE): the eave's own place, on the roof, stays the birds'.)
+            const face = local(b.at, 0, Math.sign(lz) * (b.at.d / 2 + WALL_SKIN));
+            const n = wallNormal(b.at.rot + (lz < 0 ? Math.PI : 0));
+            out.push({...p, y: floor + b.eaves - 0.2, area: "urban_wildlife", where: "eave", place: b.id, sizes: SMALL, protected: false, wall: {x: face.x, y: floor + b.eaves - EAVE_BELOW, z: face.z, nx: n.x, nz: n.z}});
         }
         // (A tower, a chimney: drawn up from the building's own floor too.)
         if (b.tall) out.push({x: b.tall.x, y: floor + b.tall.y, z: b.tall.z, area: "urban_wildlife", where: "tall", place: b.id, sizes: SMALL_MEDIUM, protected: false});
         if (b.kind === "church" && b.tall) out.push({x: b.tall.x, y: floor + 18.5, z: b.tall.z, area: "urban_wildlife", where: "belfry", place: b.id, sizes: SMALL, protected: false});
         // A lamp-lit wall by the door (house geckos hunt moths there at night).
+        // (3.3 fix (wall): on the wall's face, its normal out of the wall: a gecko there is drawn belly to the wall, not
+        // upright on flat ground 5 cm out from it in the air. The owner, 2026-11-16; `wall-climb.ts`.)
         if (b.households > 0) {
-            const p = local(b.at, -b.at.w / 4, b.at.d / 2 + 0.05);
-            out.push({...p, y: floor + 2.4, area: "urban_wildlife", where: "lamp_wall", place: b.id, sizes: SMALL, protected: false});
+            const p = local(b.at, -b.at.w / 4, b.at.d / 2 + WALL_SKIN);
+            const n = wallNormal(b.at.rot);
+            out.push({...p, y: floor + 2.4, area: "urban_wildlife", where: "lamp_wall", place: b.id, sizes: SMALL, protected: false, wall: {x: p.x, y: floor + 2.4, z: p.z, nx: n.x, nz: n.z}});
         }
         // 3.3 fix: its roof's, eaves' and ledge's perches on its drawn roof, not inside it (`roof-perch.ts`).
         const solid = buildingSolid(b);
