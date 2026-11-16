@@ -528,19 +528,59 @@ function flower(variant: number): BufferGeometry {
         boss.translate(0, stemHeight + head * FLOWER_SHAPE.squash * 0.55, 0);
         parts.push(finish(boss, () => 1, 0, new Color("#d9a82a")));
     } else {
-        // A cup (a tulip or poppy bud opening): six petals standing up round the middle.
-        for (let p = 0; p < 6; p++) {
-            const petal = new IcosahedronGeometry(head * 0.55, 1);
-            petal.scale(0.16, 1, 0.75);
-            petal.translate(head * 0.42, head * 0.55, 0);
-            petal.rotateZ(-0.32);
-            petal.rotateY(p / 6 * Math.PI * 2);
-            petal.translate(0, stemHeight, 0);
-            parts.push(finish(petal, (_, t) => 0.7 + 0.4 * t, 1));
+        // A poppy's cup (gfx pass 1, lane VEG; the owner: "floating round things around a poppy flower"): four broad
+        // petals grown out of the top of the stem, each a curved sheet from a narrow, dark-blotched base round the seed
+        // head up to a wide, rounded rim, overlapping their neighbours, so the cup is one flower. Before, six squashed
+        // balls stood a little out from the middle with nothing joining them to it: they read as round things floating
+        // round a dark ball. The rim still reaches the cup's top (`FLOWER_SHAPE.top`, where a small animal sits).
+        const petals = 4;
+        const across = 6;
+        const up = 5;
+        for (let p = 0; p < petals; p++) {
+            const petal = new BufferGeometry();
+            const points: number[] = [];
+            const index: number[] = [];
+            const middle = (p / petals) * Math.PI * 2 + (p % 2) * 0.12;
+            // Alternate petals a little inside the others, so the overlaps never share a surface.
+            const inner = p % 2 ? 0.93 : 1;
+            for (let r = 0; r <= up; r++) {
+                const v = r / up;
+                // From the stem's top, out and up into a cup, the rim turned a little outward.
+                const radius = head * inner * (0.1 + 0.62 * Math.sin(v * Math.PI * 0.5) + 0.12 * v * v);
+                const y = stemHeight + head * (0.04 + 0.92 * v);
+                // Narrow at the base, widest just under the rim, rounded over the top.
+                const spread = (Math.PI * 2 / petals) * 0.68 * (0.35 + 0.65 * Math.sin(Math.min(v * 1.25, 1) * Math.PI * 0.5)) * (1 - 0.35 * Math.max(v - 0.75, 0) / 0.25);
+                for (let c = 0; c <= across; c++) {
+                    const u = c / across - 0.5;
+                    const angle = middle + u * 2 * spread;
+                    // The rim's middle stands higher than its sides (a rounded petal, not a square one).
+                    const rim = v === 1 ? -head * 0.16 * (2 * u) * (2 * u) : 0;
+                    points.push(Math.cos(angle) * radius, y + rim, Math.sin(angle) * radius);
+                }
+            }
+            for (let r = 0; r < up; r++) {
+                for (let c = 0; c < across; c++) {
+                    const a = r * (across + 1) + c;
+                    index.push(a, a + across + 1, a + 1, a + 1, a + across + 1, a + across + 2);
+                }
+            }
+            petal.setAttribute("position", new BufferAttribute(new Float32Array(points), 3));
+            petal.setIndex(index);
+            petal.computeVertexNormals();
+            // Dark at the base (the poppy's blotch), the petal's own colour above, a little lighter toward the rim.
+            parts.push(finish(petal, (_, t) => (t < 0.16 ? 0.3 + 3.5 * t : 0.86 + 0.3 * t), 1));
         }
-        const heart = new IcosahedronGeometry(head * 0.22, 1);
-        heart.translate(0, stemHeight + head * 0.35, 0);
-        parts.push(finish(heart, () => 1, 0, new Color("#3a2a1a")));
+        // The seed head in the middle: a dark-green capsule under a flat, ribbed cap, ringed by dark stamens.
+        const capsule = new CylinderGeometry(head * 0.17, head * 0.12, head * 0.34, 8);
+        capsule.translate(0, stemHeight + head * 0.3, 0);
+        parts.push(finish(capsule, () => 1, 0, new Color("#5a6a3a")));
+        const cap = new CylinderGeometry(head * 0.21, head * 0.18, head * 0.06, 8);
+        cap.translate(0, stemHeight + head * 0.49, 0);
+        parts.push(finish(cap, () => 1, 0, new Color("#2c2f1c")));
+        const heart = new IcosahedronGeometry(head * 0.26, 1);
+        heart.scale(1, 0.45, 1);
+        heart.translate(0, stemHeight + head * 0.2, 0);
+        parts.push(finish(heart, () => 1, 0, new Color("#1f1a16")));
     }
     return mergeGeometries(parts)!;
 }
