@@ -95,7 +95,7 @@ import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {skipEmptyDraws} from "@/ark-scene/runtime/empty-draws";
 import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
-import {rigBasesFrom} from "@/ark-scene/rig-clips";
+import {climbClipName, rigBasesFrom} from "@/ark-scene/rig-clips";
 import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
@@ -4181,6 +4181,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (flat < 3) state.reverse = stepReverses(state.reverse, dx, dz, where.yaw);
             if (flat < 3) {
                 state.climb += (climbNow - state.climb) * ease;
+                state.sink = (state.sink ?? 0) + ((state.last.y - where.base) / dt - (state.sink ?? 0)) * ease;
                 state.turn += (dyaw / dt - state.turn) * ease;
             }
         }
@@ -4212,6 +4213,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let rate = 1;
         const place = entry.place;
         const up = where.surface ? where.surface.ny : 1;
+        // On a steep trunk or wall: head first down it plays climb_down where the rig has one (its schedule pose says
+        // `down`, or it is sinking faster than a tenth of its length a second), else its climb.
+        const climber = () => {
+            const name = climbClipName(up, Boolean((own?.pose as {down?: boolean} | null | undefined)?.down) || (state.sink ?? 0) > entry.length * 0.1, (n) => Boolean(clip(n)));
+            return name ? clip(name) : null;
+        };
         const own = entry.sched && scheduled(entry) ? entry.sched : null;
         // A behaviour recipe's act (`behaviour-recipes.ts`): on its schedule pose, or a house starling's own.
         const recipeAct = ((own?.pose ?? null) as RecipePose | null)?.act ?? entry.recipeAct ?? null;
@@ -4334,7 +4341,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (posture) want = posture;
         } else if (place.canopy && !entry.visitor) {
             const kind = place.canopy.mode;
-            const move = (up < 0.6 ? clip("climb") : null) ?? clip("walk") ?? clip("climb");
+            const move = climber() ?? clip("walk") ?? clip("climb");
             if (kind === "hang" && clip("hang")) want = "hang";
             else if (kind === "leap" && (entry.leapK ?? 0) > 0 && clip("leap")) {
                 want = "leap";
@@ -4346,7 +4353,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 mode = "distance";
             }
         } else if (place.micro && !entry.visitor) {
-            const move = (up < 0.6 ? clip("climb") : null) ?? clip("walk") ?? clip("climb") ?? clip("slither") ?? clip("hop");
+            const move = climber() ?? clip("walk") ?? clip("climb") ?? clip("slither") ?? clip("hop");
             if (moving(move)) {
                 want = move.name;
                 mode = "distance";

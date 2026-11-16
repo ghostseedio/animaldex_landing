@@ -121,7 +121,7 @@ export type RigManifest = {flight?: boolean; species: Record<string, RigEntry | 
 /** Flight clips: played only when the set and the species' entry both say flight is approved. */
 export const FLIGHT_CLIPS: ReadonlySet<string> = new Set(["flap", "glide", "soar", "bank_l", "bank_r", "hover", "takeoff", "land"]);
 /** Clips that move the animal along (water clips included): held on a sitting rig, with the flight clips. */
-export const MOVING_CLIPS: ReadonlySet<string> = new Set(["walk", "trot", "run", "climb", "leap", "hop", "hang", "burrow", "emerge", "slither", "swim", "surface", "enter_water", "exit_water", "dive", "paddle"]);
+export const MOVING_CLIPS: ReadonlySet<string> = new Set(["walk", "trot", "run", "climb", "climb_down", "leap", "hop", "hang", "burrow", "emerge", "slither", "swim", "surface", "enter_water", "exit_water", "dive", "paddle"]);
 /** What the rig pipeline holds on a sitting rest pose (contract section 4: the moving clips and every flight clip). */
 const SIT_HELD: ReadonlySet<string> = new Set(Array.from(MOVING_CLIPS).concat(Array.from(FLIGHT_CLIPS)));
 
@@ -172,6 +172,17 @@ export function rigClip(manifest: RigManifest | null | undefined, slug: string, 
     if (found.pass !== true) return null;
     if (!Number.isFinite(found.frames) || found.frames <= 0 || !Number.isFinite(found.seconds) || found.seconds <= 0) return null;
     return found;
+}
+
+/**
+ * The climbing clip on a steep surface (its normal's up part under 0.6): going down it, head first, its climb_down
+ * where the rig has one (a squirrel down a trunk, the hind feet turned back), else its climb. Null on gentler ground
+ * or with neither clip.
+ */
+export function climbClipName(up: number, descending: boolean, has: (name: string) => boolean): string | null {
+    if (up >= 0.6) return null;
+    if (descending && has("climb_down")) return "climb_down";
+    return has("climb") ? "climb" : null;
 }
 
 /** Whether a species has any clip the scene may play (a rig worth loading). */

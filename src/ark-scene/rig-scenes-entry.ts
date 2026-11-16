@@ -97,7 +97,7 @@ function castAnimals(): Raw[] {
 
 type RigSample = {now: {name: string; phase: number}; weight: number; flying: boolean; climb: number; turn: number} | null;
 type Debug = {
-    entries: () => Array<{animal: {id: string; model_slug: string}; rig?: RigSample; reactive?: {headYaw: number; headPitch: number; headWeight: number; action: string} | null; air: number}>;
+    entries: () => Array<{animal: {id: string; model_slug: string}; length?: number; rig?: RigSample; reactive?: {headYaw: number; headPitch: number; headWeight: number; action: string} | null; air: number}>;
     pinShared: (id: string, fn: ((epoch: number) => Record<string, unknown>) | null) => void;
     setHome: (id: string, x: number, z: number) => boolean;
     controls: {minDistance: number};
@@ -472,7 +472,8 @@ async function mountScenes(el: HTMLElement) {
     /**
      * Rig pilot: one course animal standing at a spot playing a named list of its rig clips in turn (`?clips=idle,walk,..`,
      * each `?clipsec=` seconds, default 4; forced through `__arkRigForce`, in time, in place), the camera from its side and
-     * a little in front at `?camd=` metres (default 1.6; ~12 for the island's default view distance).
+     * a little in front at `?camd=` metres (default 1.6; ~12 for the island's default view distance), or at `?camfit=` times
+     * its own drawn length, on its middle (tiny animals).
      */
     const clipScenes: Record<string, () => {note: string; watch: string[]; go?: () => void}> = Object.fromEntries(
         COURSE_CAST.map((c, i) => [
@@ -507,7 +508,14 @@ async function mountScenes(el: HTMLElement) {
                 const step = () => {
                     if (token !== tracking) return;
                     debug().controls.minDistance = 0.1;
-                    handle.setView({target: {x: from.x, y: ground(from.x, from.z) + Number(q.get("lift") ?? "0.15"), z: from.z}, distance, polar, azimuth: yaw + Math.PI / 2 + az});
+                    // `?camfit=k`: k times its own drawn length off, on its middle as drawn (an 11 cm gecko fills the frame).
+                    const fit = Number(q.get("camfit") ?? "0");
+                    const drawn = fit > 0 ? debug().entries().find((e) => e.animal.id === id) : null;
+                    const at = fit > 0 ? handle.locate(id) : null;
+                    if (drawn?.length && at) {
+                        debug().controls.minDistance = 0.01;
+                        handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance: fit * drawn.length, polar, azimuth: yaw + Math.PI / 2 + az});
+                    } else handle.setView({target: {x: from.x, y: ground(from.x, from.z) + Number(q.get("lift") ?? "0.15"), z: from.z}, distance, polar, azimuth: yaw + Math.PI / 2 + az});
                     requestAnimationFrame(step);
                 };
                 requestAnimationFrame(step);
