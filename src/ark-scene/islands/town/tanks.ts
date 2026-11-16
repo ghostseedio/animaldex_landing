@@ -280,7 +280,18 @@ export function tankPose(tank: Tank, animal: {id: string; model_slug: string; zo
 // MARK: - p2 (aqua): swimming in the hall's tanks
 
 /** A body's drawn length along its heading and its width across (m), as the validator boxes it (`validate-animals.ts`). */
+const bodies = new Map<string, {length: number; width: number}>();
 export function tankBody(slug: string, plan: string | null, display: number): {length: number; width: number} {
+    const key = `${slug}|${plan ?? ""}|${display}`;
+    let body = bodies.get(key);
+    if (!body) {
+        if (bodies.size > 5000) bodies.clear();
+        bodies.set(key, (body = measureBody(slug, plan, display)));
+    }
+    return body;
+}
+
+function measureBody(slug: string, plan: string | null, display: number): {length: number; width: number} {
     const found = modelBase(slug);
     if (!found) return {length: display, width: display * 0.4};
     const scale = display / Math.max(bodyAxisExtent(slug, plan ?? found.plan, found.size), 0.05);
@@ -306,8 +317,19 @@ const HIDERS = new Set(["fish", "eel", "cephalopod", "flatfish"]);
 const loopA: LoopAt = {lx: 0, lz: 0, tx: 0, tz: 1};
 const loopB: LoopAt = {lx: 0, lz: 0, tx: 0, tz: 1};
 
-/** Its cave in a hall tank (rendezvous among the caves its body fits, whichever way it turns), or none. */
+const caveMemo = new Map<string, TankCave | null>();
+/** Its cave in a hall tank (rendezvous among the caves its body fits, whichever way it turns), or none. (Remembered: asked every frame.) */
 function caveOf(tank: Tank, id: string, length: number, width: number, height: number): TankCave | null {
+    const key = `${tank.id}|${id}|${length}`;
+    const known = caveMemo.get(key);
+    if (known !== undefined) return known;
+    if (caveMemo.size > 20000) caveMemo.clear();
+    const found = pickCave(tank, id, length, width, height);
+    caveMemo.set(key, found);
+    return found;
+}
+
+function pickCave(tank: Tank, id: string, length: number, width: number, height: number): TankCave | null {
     let best: TankCave | null = null;
     let score = -1;
     for (const cave of tank.caves ?? []) {
