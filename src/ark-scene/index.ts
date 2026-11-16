@@ -227,6 +227,8 @@ import {selectAim, selectionPins, selectionSurvives} from "@/ark-scene/selection
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
 import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
 import {l2BodyChannel, l2BodyUniforms, l2ClipBake, l2FlightFrame, l2FlightGate, l2LandingNow, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
+// 3.3 fix: taps on the resting figures.
+import {pickFigure, preferTap, type Projector} from "@/ark-scene/tap-pick";
 
 export * from "@/ark-scene/types";
 export {arkThriveOf, arkThriveRank} from "@/ark-scene/thrive";
@@ -5511,7 +5513,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 bestScore = d / radius;
             }
         }
+        // 3.3 fix: the winner's score, for the drawn resting figures to be weighed against it (`tap-pick.ts`).
+        lastPickScore = bestScore;
         return best;
+    };
+    // 3.3 fix: the town's resting kept animals are tapped too (`tap-pick.ts`): the figure a tap lands on, and its score.
+    let lastPickScore = Infinity;
+    const tapProjected = {sx: 0, sy: 0, distance: 0};
+    const tapProject: Projector = (px, py, pz) => {
+        projected.set(px, py, pz);
+        tapProjected.distance = camera.position.distanceTo(projected);
+        projected.project(camera);
+        if (projected.z > 1) return null;
+        tapProjected.sx = (projected.x + 1) / 2 * width;
+        tapProjected.sy = (1 - projected.y) / 2 * height;
+        return tapProjected;
+    };
+    const pickRestingFigure = (clientX: number, clientY: number) => {
+        const rect = canvas.getBoundingClientRect();
+        return pickFigure(clientX - rect.left, clientY - rect.top, restingGroups, tapProject, 2 * Math.tan(FOV * Math.PI / 360) / height);
     };
 
     /** A tap on a herd's members (not on one of its representatives): the herd, for its species card. */
@@ -6139,6 +6159,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         down = null;
         if (moved > 8 || !quick) return;
         const hit = pick(event.clientX, event.clientY);
+        // 3.3 fix: a resting figure under the tap comes out to be met, as `?focus=` brings one (`tap-pick.ts`).
+        const chosen = preferTap(hit ? {hit, score: lastPickScore} : null, pickRestingFigure(event.clientX, event.clientY));
+        if (chosen && "figure" in chosen) {
+            if (selectedHerd) selectHerd(null, false);
+            arrive(chosen.figure, false);
+            return;
+        }
         if (!hit) {
             const herd = pickHerd(event.clientX, event.clientY);
             if (herd) {
