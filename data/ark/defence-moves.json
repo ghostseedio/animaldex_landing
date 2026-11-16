@@ -3,7 +3,7 @@
  "version": "defence-moves-1",
  "counts": {
   "puff": 7,
-  "flash": 4,
+  "flash": 3,
   "curl": 5,
   "coil": 4,
   "shell": 14
@@ -88,17 +88,6 @@
    "behaviour": "closes up fully inside hinged shell",
    "quote": "A closed-up adult resists most attacks",
    "uses": "pose:shell_close (box seal)"
-  },
-  {
-   "slug": "eastern-lubber-grasshopper",
-   "name": "Eastern Lubber Grasshopper",
-   "id": "26c379d6-720d-48ef-97b8-81c71b83396c",
-   "move": "flash",
-   "line": "{aAnimal} is lifting its short front wings to flash the rose-red wings beneath",
-   "behaviour": "lifts short front wings to flash rose-red wings beneath",
-   "quote": "When a bird or a hand closes in, the grasshopper lifts its short front wings to flash the rose-red wings folded beneath them.",
-   "uses": "pose:hindwing_flash",
-   "colour": "#d8436b"
   },
   {
    "slug": "european-hedgehog",
@@ -357,6 +346,7 @@
  "skipped": [
   "Eastern Red-backed Salamander (tail): the move is not drawn yet: \"{aAnimal} is dropping its tail to get away\"",
   "Warty Frogfish (puff): the sentence says it is grabbed or seized: \"{aAnimal} is swallowing water and swelling up after being seized\"",
+  "Eastern Lubber Grasshopper (flash): its wings lie between its hind legs on the model: the flash coloured the legs, not the wings: \"{aAnimal} is lifting its short front wings to flash the rose-red wings beneath\"",
   "Io Moth (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is opening its wings to reveal huge fake eyes\"",
   "Owl Butterfly (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is showing the eyespots on its wings to an attacker\"",
   "Peacock Butterfly (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is flicking its wings open and rubbing them together with a hiss\"",

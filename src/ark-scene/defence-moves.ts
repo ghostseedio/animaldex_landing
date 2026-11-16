@@ -332,8 +332,8 @@ export const DEFENCE_VERTEX = `
         float side = abs(position.x) / max(arkDefSpan, 0.001);
         float rear = 1.0 - smoothstep(0.02, 0.12, (position.z - dMid) / dLen);
         float onBack = smoothstep(0.45, 0.62, (position.y - dy0) / dHigh) * (1.0 - smoothstep(0.7, 0.9, side));
-        float flat = 1.0 - smoothstep(0.45, 0.7, dHigh / max(2.0 * arkDefSpan, 0.001));
-        vArkDefence = vec2(defA * rear * mix(onBack, smoothstep(0.16, 0.3, side), flat), arkDef.z);
+        float flatBody = 1.0 - smoothstep(0.45, 0.7, dHigh / max(2.0 * arkDefSpan, 0.001));
+        vArkDefence = vec2(defA * rear * mix(onBack, smoothstep(0.16, 0.3, side), flatBody), arkDef.z);
     }
 }
 `;
