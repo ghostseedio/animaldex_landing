@@ -231,6 +231,8 @@ import {l2BodyChannel, l2BodyUniforms, l2ClipBake, l2FlightFrame, l2FlightGate, 
 import {pickFigure, preferTap, type Projector} from "@/ark-scene/tap-pick";
 // 3.3 fix: the kept town animals near the look point move.
 import {nearestKept, nearKeptDue, NEAR_KEPT_VIEW, sameIds} from "@/ark-scene/near-kept";
+// 3.3 fix: a perched animal's reactions keep it on its perch (the schedule's own "raised": 0.4 m over the ground).
+const PERCH_ABOVE = 0.4;
 
 export * from "@/ark-scene/types";
 export {arkThriveOf, arkThriveRank} from "@/ark-scene/thrive";
@@ -3513,7 +3515,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // In the water (swimming, walking the floor, floating): it stays in the water, at its depth.
                 const inWater = pose.afloat && !c.entry.sched?.pose?.aloft && pose.base < 0.02 && sampler.isWater(pose.x, pose.z);
                 // A land animal is never pushed into the water, nor a water animal onto a shore (`offsetShare`).
-                const k = offsetShare(pose, o.dx, o.dz, onGround ? "land" : inWater ? "water" : "free", (x, z) => sampler.isWater(x, z), heightAt);
+                // 3.3 fix: on a perch well over the ground (not afloat, not flying) it keeps to it (`offsetShare` "perch").
+                const perched = !onGround && !inWater && !pose.afloat && !c.entry.sched?.pose?.aloft && pose.base - ground > PERCH_ABOVE;
+                const k = offsetShare(pose, o.dx, o.dz, onGround ? "land" : inWater ? "water" : perched ? "perch" : "free", (x, z) => sampler.isWater(x, z), heightAt);
                 pose.x += o.dx * k;
                 pose.z += o.dz * k;
                 if (onGround) pose.base = Math.max(heightAt(pose.x, pose.z), 0);
