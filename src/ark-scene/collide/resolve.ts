@@ -26,6 +26,11 @@ export type ResolveBody = {
     /** Its group (its leader's id) and whether its kind sleeps together (huddled, piled, clustered, in a row). */
     group?: string | null;
     huddles?: boolean;
+    /**
+     * The steepest ground a push may move it onto (rise over run; a walker's: twice what its walk takes, the cliff
+     * measure of `ark-collide/metrics.ts`). Absent: no limit (a flyer, a swimmer, a climber).
+     */
+    maxSlope?: number;
 };
 
 export type ResolvePose = {
@@ -329,7 +334,7 @@ export function inContact(a: ResolveBody, pa: ResolvePose, b: ResolveBody, pb: R
  * move clipped to (and slid along) anything solid. Members in id order; the same answer for every viewer that has the
  * same cluster. Returns each member's place, in the members' order.
  */
-export function separateCluster(set: ColliderSet | null, members: ReadonlyArray<{body: ResolveBody; pose: ResolvePose}>): Array<{x: number; z: number}> {
+export function separateCluster(set: ColliderSet | null, members: ReadonlyArray<{body: ResolveBody; pose: ResolvePose}>, slopeAt?: (x: number, z: number) => number): Array<{x: number; z: number}> {
     const order = members.map((_, i) => i).sort((i, j) => (members[i].body.id < members[j].body.id ? -1 : members[i].body.id > members[j].body.id ? 1 : 0));
     let at = members.map((m) => ({x: m.pose.x, z: m.pose.z}));
     if (members.length < 2) return at;
@@ -342,7 +347,16 @@ export function separateCluster(set: ColliderSet | null, members: ReadonlyArray<
             const sep = separation(now[i].body, now[i].pose, now.filter((_, j) => j !== i));
             if (!sep.dx && !sep.dz) continue;
             moved = true;
-            next[i] = set ? clipMove(set, now[i].body, at[i], {x: at[i].x + sep.dx, z: at[i].z + sep.dz}, now[i].pose) : {x: at[i].x + sep.dx, z: at[i].z + sep.dz};
+            const to = set ? clipMove(set, now[i].body, at[i], {x: at[i].x + sep.dx, z: at[i].z + sep.dz}, now[i].pose) : {x: at[i].x + sep.dx, z: at[i].z + sep.dz};
+            // Never pushed onto a cliff's face: a push that would put a walker on ground steeper than it can stand on
+            // (and steeper than where it is) is not made; the two stay touching instead (2026-11-16: two animals
+            // sharing a resting spot on a ridge were eased apart onto ground rising 2.3 in 1; round 351's cliffs).
+            const limit = now[i].body.maxSlope;
+            if (slopeAt && limit !== undefined && !now[i].pose.aloft) {
+                const steep = slopeAt(to.x, to.z);
+                if (steep > limit && steep > slopeAt(at[i].x, at[i].z)) continue;
+            }
+            next[i] = to;
         }
         at = next;
         if (!moved) break;

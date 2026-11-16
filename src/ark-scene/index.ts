@@ -172,7 +172,7 @@ import {CollideLayer} from "@/ark-scene/collide/layer";
 import {doorWalkAt} from "@/ark-scene/collide/routes";
 import type {ResolvePose} from "@/ark-scene/collide/resolve";
 import * as behaviourSchedule from "@/ark-scene/behaviour-schedule";
-import {awakeAt as scheduleAwakeAt, forgetSchedules, slotOffset, SLOT_SECONDS, groupSpread, homeRadius, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, waterEdgeAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
+import {awakeAt as scheduleAwakeAt, forgetSchedules, slotOffset, SLOT_SECONDS, groupSpread, homeRadius, maxSlopeOf, rangeReach, poseOnTrip, recipeCoat, recipeMarks, roostOf, recipeNest, ScheduleWorldBuild, tripAt, waterEdgeAt, wireThreats, withLazyRoost, type ArkDoing, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type Trip, type TripPose, spaceHomesTasks, type ScheduleGroup, type SpacedHome} from "@/ark-scene/behaviour-schedule";
 import {eats} from "@/ark-scene/food-links";
 import {dayCursor, MOMENT_WINDOW_SECONDS, pickMoment, scheduleFed, scheduleStatus, type DayCursor, type MomentSubject, type ScheduleSubject} from "@/ark-scene/animal-status";
 import {scheduleRhythm, type ArkRhythmStatus} from "@/ark-scene/rhythm-status";
@@ -1752,8 +1752,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         colliders: () => (collisionsOn && world ? sceneColliders(world, townWorld) : null),
         body: (entry) => {
             const shape = bodyShape(entry.animal.model_slug, entry.full);
-            return {id: entry.animal.id, radius: shape.radius, half: shape.half, height: shape.height, group: entry.place.leader ?? entry.animal.id, huddles: HUDDLED.has(sleepStyle(entry.animal.model_slug).social)};
+            // (A walker is never pushed onto ground twice as steep as its walk takes, `collide/resolve.ts`.)
+            const walker = entry.sched && entry.sched.profile.move !== "fly" && entry.sched.profile.move !== "swim";
+            return {id: entry.animal.id, radius: shape.radius, half: shape.half, height: shape.height, group: entry.place.leader ?? entry.animal.id, huddles: HUDDLED.has(sleepStyle(entry.animal.model_slug).social), ...(walker ? {maxSlope: maxSlopeOf(entry.sched!.animal) * 2} : {})};
         },
+        slope: (x, z) => Math.max(Math.abs(heightAt(x + 1, z) - heightAt(x - 1, z)), Math.abs(heightAt(x, z + 1) - heightAt(x, z - 1))) / 2,
         base: (entry, epoch) => (scheduled(entry) && entry.sched?.wired ? collideInput(entry, sharedBase(entry, epoch), epoch) : entry.place.hamlet ? residentBase(entry) : null),
         everyone: () => entries.filter((entry) => (scheduled(entry) && entry.sched!.wired && entry.sched!.pose) || (entry.place.hamlet && !entry.visitor && entry.residentAt)),
         last: (entry) => (entry.sched?.pose ? {x: entry.sched.pose.x, z: entry.sched.pose.z, at: entry.sched.at} : entry.residentAt ?? null),

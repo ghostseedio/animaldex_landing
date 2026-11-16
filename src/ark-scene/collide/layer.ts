@@ -24,6 +24,8 @@ export type CollideHooks<E> = {
     last(e: E): {x: number; z: number; at: number} | null;
     /** The fastest it can go (m/s). */
     speed(e: E): number;
+    /** The ground's rise over run at a point (over a metre each way), for the pushes' cliff guard; absent: no guard. */
+    slope?(x: number, z: number): number;
 };
 
 const CELL = 4;
@@ -218,7 +220,7 @@ export class CollideLayer<E> {
         }
         this.clusters++;
         const poses = members.map((m) => this.placed(m, q)!);
-        const at = separateCluster(set, members.map((m, k) => ({body: this.bodyOf(m), pose: poses[k]})));
+        const at = separateCluster(set, members.map((m, k) => ({body: this.bodyOf(m), pose: poses[k]})), this.hooks.slope ? (x, z) => this.hooks.slope!(x, z) : undefined);
         members.forEach((m, k) => pushes!.set(m, {dx: at[k].x - poses[k].x, dz: at[k].z - poses[k].z}));
         return pushes.get(e)!;
     }

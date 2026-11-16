@@ -99,7 +99,9 @@ const HUDDLES = new Set(["huddle", "pile", "cluster", "row"]);
 
 /** Its body as the collisions' layer reads it. */
 export function resolveBodyOf(s: SimAnimal): ResolveBody {
-    return {id: s.a.id, radius: s.body.radius, half: s.body.half, height: s.body.height, group: s.place.leader ?? s.a.id, huddles: HUDDLES.has(sleepStyle(s.a.model_slug).social)};
+    // (A walker is never pushed onto ground twice as steep as its walk takes: the cliffs' own measure, below.)
+    const walker = s.sched && s.profile.move !== "fly" && s.profile.move !== "swim";
+    return {id: s.a.id, radius: s.body.radius, half: s.body.half, height: s.body.height, group: s.place.leader ?? s.a.id, huddles: HUDDLES.has(sleepStyle(s.a.model_slug).social), ...(walker ? {maxSlope: maxSlopeOf(s.sched!) * 2} : {})};
 }
 
 /**
@@ -166,7 +168,7 @@ export function resolvedPosesAt(sim: Sim, set: ColliderSet): PosesAt {
         const out = new Map<SimAnimal, {dx: number; dz: number}>();
         for (const members of Array.from(clusters.values())) {
             if (members.length < 2) continue;
-            const at = separateCluster(set, members.map((i) => ({body: bodyOf(placed[i].s), pose: placed[i].p})));
+            const at = separateCluster(set, members.map((i) => ({body: bodyOf(placed[i].s), pose: placed[i].p})), (x, z) => groundSlope(sim, x, z));
             members.forEach((i, k) => out.set(placed[i].s, {dx: at[k].x - placed[i].p.x, dz: at[k].z - placed[i].p.z}));
         }
         // (The two moments round now are kept; the measure walks forward in time.)

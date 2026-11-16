@@ -1323,7 +1323,25 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     // an elephant watching a predator walked through a paddock's rails); it watches from where it is.
     if ((!retreat || world.nav.colliders) && !onItsGround(world, profile, animal, placed)) return false;
     const straight = Math.hypot(goal.x - from.x, goal.z - from.z);
-    if (straight < 0.5 || straight > 25 || home) return true;
+    if (straight < 0.5 || home) return true;
+    if (straight > 25) {
+        // A long way is its own (no test of its shape), but where the colliders are known it must be a way its body can
+        // walk: its trip ends a path that stops short with a straight run to the goal, through whatever is there
+        // (2026-11-16, round 351's fence crossing: an elephant 33 m from its resting place, with no way for its width,
+        // walked through a smallholding's paddock rails). The search its trip makes, further on its own ground.
+        if (!world.nav.colliders) return true;
+        const slope = maxSlopeOf(animal);
+        const bodyR = bodyRadiusOf(animal, profile.slug);
+        const onto = onSurface(goal.point);
+        const arrives = (nodes: number) => {
+            const way = world.nav.path(from, goal, "walk", 0.5, nodes, slope, bodyR, onto);
+            const last = way[way.length - 1];
+            return Boolean(last) && Math.hypot(last.x - goal.x, last.z - goal.z) < 0.01;
+        };
+        if (arrives(900)) return true;
+        const region = world.nav.region(from.x, from.z, slope, bodyR);
+        return region >= 0 && region === world.nav.region(goal.x, goal.z, slope, bodyR) && arrives(12000);
+    }
     // (The search its trip makes: `tripFor`'s ground.)
     const path = world.nav.path(from, goal, "walk", 0.5, 900, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug), onSurface(goal.point));
     const end = path[path.length - 1];
