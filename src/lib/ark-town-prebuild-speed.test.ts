@@ -163,20 +163,22 @@ const TOWN_DIGESTS = {
     plan: "5b90736d71cddf6d",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
+    // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
+    // lane's street grade and boats, the place lane's pens. Each lane changed these on purpose; recomputed on the merge.)
     // (3.3 fix (wall), wall-climb.ts: the lamp-lit walls' places on the wall's face with its normal; the eaves' wall faces.)
-    areas: "8b29320e78c4b536",
+    areas: "74187692853b49ce",
     // (Lane GA: the ground's surface weights.)
-    ground: "9f6d9fa1b00ec782",
+    ground: "a3b1b851bfe7128d",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "83c0f80238c817c7",
+    sceneryAndBuildings: "e1edddc474c8ed86",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
-    zoo: "41f5e69548442c67",
-    places: "b0df054096abe6f2"
+    zoo: "eab511fbdc012d17",
+    places: "fba1268b733101f8"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {
