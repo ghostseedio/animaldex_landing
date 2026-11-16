@@ -65,11 +65,11 @@ export type BugItem = {
 
 /** Expected items per m² of each surface (at a share of 1), and how tall its blades stand (m, min and max). */
 export const BUG_DENSITY: Record<BugSurface, {per: Partial<Record<BugKind, number>>; blade: [number, number]}> = {
-    meadow: {per: {blade: 520, grit: 30, rosette: 3, twig: 1.5, moss: 0.6, leaf: 1}, blade: [0.07, 0.26]},
-    lawn: {per: {blade: 760, grit: 14, rosette: 6, moss: 1.2, leaf: 0.6}, blade: [0.03, 0.075]},
+    meadow: {per: {blade: 1000, grit: 30, rosette: 3, twig: 1.5, moss: 0.6, leaf: 1}, blade: [0.07, 0.26]},
+    lawn: {per: {blade: 1700, grit: 14, rosette: 6, moss: 1.2, leaf: 0.6}, blade: [0.03, 0.075]},
     woods: {per: {blade: 40, grit: 70, moss: 9, twig: 9, leaf: 34, rosette: 0.6}, blade: [0.05, 0.16]},
     sand: {per: {grit: 150, shell: 7, blade: 3, twig: 0.4}, blade: [0.18, 0.4]},
-    soil: {per: {grit: 170, blade: 26, twig: 2, rosette: 1.2, leaf: 1}, blade: [0.04, 0.14]},
+    soil: {per: {grit: 220, blade: 26, twig: 2, rosette: 1.2, leaf: 1}, blade: [0.04, 0.14]},
     gravel: {per: {grit: 260, blade: 6, moss: 0.8}, blade: [0.03, 0.1]}
 };
 
@@ -493,6 +493,7 @@ export class BugGround {
     private tier: "high" | "medium" | "low" = "high";
     private dirty = false;
     private sinceWrite = 0;
+    private currentRadius = 1;
     private version = -1;
     private readonly materials: MeshStandardMaterial[];
     private readonly matrix = new Matrix4();
@@ -552,7 +553,7 @@ export class BugGround {
 
     /** How far round the point looked at the layer reaches now (m), for the scene's clear points. */
     get reach(): number {
-        return BUG_TIERS[this.tier].radius;
+        return this.currentRadius;
     }
 
     /** Whether it is drawn now (the camera close enough). */
@@ -570,12 +571,13 @@ export class BugGround {
             this.cells.clear();
             this.lastKey = "";
         }
-        const {radius} = BUG_TIERS[this.tier];
+        const radius = this.radiusFor(viewDistance);
         const cx = Math.floor(target.x / BUG_CELL);
         const cz = Math.floor(target.z / BUG_CELL);
-        const key = `${cx},${cz}`;
+        const key = `${cx},${cz},${radius}`;
         if (key !== this.lastKey) {
             this.lastKey = key;
+            this.currentRadius = radius;
             const reach = Math.ceil(radius / BUG_CELL);
             this.wanted.length = 0;
             for (let dz = -reach; dz <= reach; dz++) for (let dx = -reach; dx <= reach; dx++) if (dx * dx + dz * dz <= reach * reach) this.wanted.push([cx + dx, cz + dz]);
@@ -609,9 +611,19 @@ export class BugGround {
         }
     }
 
+    /**
+     * The patch's reach for a camera this far from its target: about the view's own distance (a beetle seen from 0.6 m
+     * needs a metre of sward round it, dense; from 5 m, the tier's whole reach), in half-metre steps, never past the tier's.
+     */
+    private radiusFor(viewDistance: number): number {
+        const tier = BUG_TIERS[this.tier].radius;
+        return Math.min(tier, Math.max(1, Math.ceil(viewDistance * 1.1 * 2) / 2));
+    }
+
     private write(cx: number, cz: number) {
         this.dirty = false;
-        const {radius, caps} = BUG_TIERS[this.tier];
+        const {caps} = BUG_TIERS[this.tier];
+        const radius = this.currentRadius;
         const reach2 = (radius / BUG_CELL + 0.5) ** 2;
         const counts: Record<BugKind, number> = {blade: 0, grit: 0, moss: 0, twig: 0, leaf: 0, rosette: 0, shell: 0};
         // Nearest cells first, so a cap trims the far edge, never the middle.

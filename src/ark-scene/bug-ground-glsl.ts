@@ -53,8 +53,8 @@ float arkBugGround(vec2 p, float pixel, float soil, float sand, float grass, flo
     // Crumbs and sand grains (1.3 cm cells), and stones (4.6 cm cells, turned off the crumbs' grid).
     float t1;
     float t2;
-    vec4 g1 = arkBugGrain(p / 0.013, clamp(soil * 0.62 + sand * 0.3 + forest * 0.45 + gravel * 0.9 + grass * 0.18, 0.0, 0.92), t1);
-    vec4 g2 = arkBugGrain(mat2(0.8, -0.6, 0.6, 0.8) * p / 0.046 + 17.3, clamp(soil * 0.14 + sand * 0.03 + forest * 0.07 + gravel * 0.62 + grass * 0.03, 0.0, 0.8), t2);
+    vec4 g1 = arkBugGrain(p / 0.013, clamp(soil * 0.62 + sand * 0.3 + forest * 0.45 + gravel * 0.9 + grass * 0.07, 0.0, 0.92), t1);
+    vec4 g2 = arkBugGrain(mat2(0.8, -0.6, 0.6, 0.8) * p / 0.046 + 17.3, clamp(soil * 0.14 + sand * 0.03 + forest * 0.07 + gravel * 0.62 + grass * 0.008, 0.0, 0.8), t2);
     float lum = dot(col, vec3(0.3333));
     // Crumbs: the ground's own colour, each its own shade (a few darker, a few paler); sand's grains pale with a few
     // dark ones; gravel's grey.
@@ -64,7 +64,7 @@ float arkBugGround(vec2 p, float pixel, float soil, float sand, float grass, flo
     col = mix(col, crumb, smoothstep(0.0, 0.25, g1.x) * crumbsOn * 0.8);
     col *= 1.0 - 0.18 * g1.w * crumbsOn;
     // Stones: the ground's tone greyed, darker or paler stone by stone, a dark crease at the foot.
-    vec3 stone = mix(vec3(lum), vec3(0.16, 0.15, 0.13), 0.35) * mix(0.65, 1.45, t2) * mix(vec3(1.0), vec3(1.05, 1.0, 0.92), t2) * (0.82 + 0.25 * g2.x);
+    vec3 stone = mix(vec3(lum), vec3(0.16, 0.15, 0.13), 0.35) * mix(0.65, 1.45, t2) * mix(vec3(1.1, 1.0, 0.86), vec3(1.16, 1.04, 0.84), t2) * (0.82 + 0.25 * g2.x);
     col = mix(col, stone, smoothstep(0.0, 0.2, g2.x) * on * 0.92);
     col *= 1.0 - 0.32 * g2.w * on;
     // The thatch: dead blades lying flat in the grass, straw-pale with a shadow along one side (2.4 cm cells).
@@ -79,8 +79,8 @@ float arkBugGround(vec2 p, float pixel, float soil, float sand, float grass, flo
         float across = dot(d, vec2(-dir.y, dir.x));
         float blade = smoothstep(0.075, 0.03, abs(across)) * smoothstep(0.62, 0.45, abs(along)) * step(0.45, h.z);
         float shade = smoothstep(0.16, 0.08, abs(across - 0.1)) * (1.0 - blade) * smoothstep(0.62, 0.45, abs(along)) * step(0.45, h.z);
-        col = mix(col, col * vec3(1.35, 1.28, 0.9) + vec3(0.03, 0.025, 0.0), blade * grass * crumbsOn * 0.75);
-        col *= 1.0 - 0.25 * shade * grass * crumbsOn;
+        col = mix(col, col * vec3(1.35, 1.28, 0.9) + vec3(0.03, 0.025, 0.0), blade * grass * crumbsOn * 0.45);
+        col *= 1.0 - 0.18 * shade * grass * crumbsOn;
     }
     nT = normalize(nT + vec3((g1.yz * 0.35 * crumbsOn + g2.yz * 0.6 * on), 0.0));
     return on;
