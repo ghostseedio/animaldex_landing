@@ -12,6 +12,7 @@ import {polylineAt, polylineLength, type Poly, type Pt} from "@/ark-scene/island
 import {type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {tone, type Geo} from "@/ark-scene/islands/town/render/kit";
 import {SURF, surfaceTag, type SurfaceId} from "@/ark-scene/islands/town/render/surface-tags";
+import {clipStreets, cutAt, keptPieces, keptRanges, subLine, type ClipStreet} from "@/ark-scene/islands/town/street-clip";
 
 type Colour = [number, number, number];
 
@@ -33,6 +34,38 @@ export const ROAD_LIFT = 0.06;
 export const PAVEMENT_LIFT = 0.16;
 export const KERB_TOP = 0.17;
 const PAINT_LIFT = 0.072;
+/**
+ * A carriageway that gives way at a junction is laid this much lower (graphics pass 1): it runs on until its last edge
+ * meets the other road (no gap), so where the two meet at a slant a sliver of it lies under the other road's asphalt,
+ * and there the other road is drawn over it, never in one plane with it.
+ */
+export const GIVE_WAY_DROP = 0.008;
+/** How far into its clear stretch a lowered run reaches (m): past the cuts' centimetre. */
+const GIVE_WAY_MARGIN = 0.3;
+
+/**
+ * A carriageway piece's runs ([from, to, lowered]): kept while one of its edges (or its middle) is clear of the roads it
+ * gives way to; lowered where any of them reaches into one (the sliver under the other road), and a little beyond.
+ */
+export function carriagewayRuns(part: Poly, width: number, cut: (x: number, z: number) => boolean): Array<[number, number, boolean]> {
+    const offsets = [-width / 2, 0, width / 2];
+    const clear = keptRanges(part, offsets, cut, "all");
+    const length = polylineLength(part);
+    const out: Array<[number, number, boolean]> = [];
+    for (const [a, b] of keptRanges(part, offsets, cut, "any")) {
+        let at = a;
+        for (const [c0, c1] of clear) {
+            const from = Math.max(c0 > 0.01 ? c0 + GIVE_WAY_MARGIN : c0, a);
+            const to = Math.min(c1 < length - 0.01 ? c1 - GIVE_WAY_MARGIN : c1, b);
+            if (to <= from) continue;
+            if (from > at + 0.01) out.push([at, from, true]);
+            out.push([from, to, false]);
+            at = to;
+        }
+        if (b > at + 0.01) out.push([at, b, true]);
+    }
+    return out;
+}
 
 /** What each kind of street is surfaced with, and its colour. */
 export function streetSurface(s: Pick<Street, "kind">): {surface: SurfaceId; colour: Colour} {
@@ -71,6 +104,34 @@ export function streetPieces(line: Poly, piece = 24): Poly[] {
         part.push(polylineAt(line, b).point);
         out.push(part);
     }
+    return out;
+}
+
+/**
+ * A line split at its sharp corners (over 60°: the quay's) into runs that meet square (graphics pass 1): one strip turned
+ * round a right angle folds its inside edge back over itself, two layers of flags in one plane. The run before a
+ * corner goes on half the width past it, the run after starts half the width after it, so the corner is laid once.
+ */
+export function cornerRuns(line: Poly, width: number): Poly[] {
+    const out: Poly[] = [];
+    let run: Poly = [line[0]];
+    for (let i = 1; i < line.length - 1; i++) {
+        const a = line[i - 1];
+        const b = line[i];
+        const c = line[i + 1];
+        const turn = Math.abs(Math.atan2((b.x - a.x) * (c.z - b.z) - (b.z - a.z) * (c.x - b.x), (b.x - a.x) * (c.x - b.x) + (b.z - a.z) * (c.z - b.z)));
+        if (turn <= Math.PI / 3) {
+            run.push(b);
+            continue;
+        }
+        const lin = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+        const lout = Math.hypot(c.x - b.x, c.z - b.z) || 1;
+        run.push({x: b.x + ((b.x - a.x) / lin) * (width / 2), z: b.z + ((b.z - a.z) / lin) * (width / 2)});
+        out.push(run);
+        run = [{x: b.x + ((c.x - b.x) / lout) * (width / 2), z: b.z + ((c.z - b.z) / lout) * (width / 2)}];
+    }
+    run.push(line[line.length - 1]);
+    out.push(run);
     return out;
 }
 
@@ -222,17 +283,23 @@ export type StreetSurfacesOut = {chunkAt: (x: number, z: number) => {decal: Geo}
 /** Every street's surfaces into the chunks' decal meshes. */
 export function streetSurfaces(plan: TownPlan, out: StreetSurfacesOut) {
     const {chunkAt, heightAt} = out;
-    for (const s of plan.streets) {
+    // Where streets meet, each surface is laid once (`street-clip.ts`): the cuts below.
+    const clip = clipStreets(plan.streets);
+    for (const [index, s] of plan.streets.entries()) {
+        const own: ClipStreet = clip[index];
+        const cut = (layer: "carriageway" | "pavement" | "kerb" | "paint") => (x: number, z: number) => cutAt(clip, own, layer, x, z);
         const {surface, colour} = streetSurface(s);
-        for (const part of streetPieces(s.line)) {
+        for (const part of cornerRuns(s.line, s.width).flatMap((run) => streetPieces(run))) {
             const mid = part[Math.floor(part.length / 2)];
             const geo = chunkAt(mid.x, mid.z).decal;
             const z = runsAlongZ(part);
-            strip(geo, part, s.width, heightAt, ROAD_LIFT, colour, surface, {alongZ: z});
+            for (const [a, b, lowered] of carriagewayRuns(part, s.width, cut("carriageway"))) strip(geo, subLine(part, a, b), s.width, heightAt, ROAD_LIFT - (lowered ? GIVE_WAY_DROP : 0), colour, surface, {alongZ: z});
             if (s.pavement > 0) {
                 for (const side of [-1, 1]) {
-                    strip(geo, part, s.pavement - 0.16, heightAt, PAVEMENT_LIFT, PAVEMENT, SURF.slabs, {offset: side * (s.width / 2 + 0.16 + (s.pavement - 0.16) / 2), alongZ: z, acrossFrom: side < 0 ? 1 : -1, acrossTo: side < 0 ? -1 : 1});
-                    kerb(geo, part, side * (s.width / 2), heightAt);
+                    for (const piece of keptPieces(part, [side * (s.width / 2 + 0.16), side * (s.width / 2 + s.pavement)], cut("pavement"))) {
+                        strip(geo, piece, s.pavement - 0.16, heightAt, PAVEMENT_LIFT, PAVEMENT, SURF.slabs, {offset: side * (s.width / 2 + 0.16 + (s.pavement - 0.16) / 2), alongZ: z, acrossFrom: side < 0 ? 1 : -1, acrossTo: side < 0 ? -1 : 1});
+                    }
+                    for (const piece of keptPieces(part, [side * (s.width / 2), side * (s.width / 2 + 0.16)], cut("kerb"))) kerb(geo, piece, side * (s.width / 2), heightAt);
                 }
             }
             // Markings: a dashed centre line on roads; double yellow lines along the high street's edges.
@@ -241,14 +308,14 @@ export function streetSurfaces(plan: TownPlan, out: StreetSurfacesOut) {
                 for (let a = 1; a < length - 3; a += 6) {
                     const p0 = polylineAt(part, a).point;
                     const p1 = polylineAt(part, a + 3).point;
-                    strip(geo, [p0, p1], 0.12, heightAt, PAINT_LIFT, WHITE, SURF.paint, {step: 3, alongZ: z, acrossFrom: -0.02, acrossTo: 0.02});
+                    for (const dash of keptPieces([p0, p1], [-0.06, 0.06], cut("paint"))) strip(geo, dash, 0.12, heightAt, PAINT_LIFT, WHITE, SURF.paint, {step: 3, alongZ: z, acrossFrom: -0.02, acrossTo: 0.02});
                 }
                 if (s.kind === "high") {
                     for (const side of [-1, 1]) {
                         for (const k of [0, 1]) {
                             const off = side * (s.width / 2 - 0.25 - k * 0.2);
                             const across = off / (s.width / 2);
-                            strip(geo, part, 0.1, heightAt, PAINT_LIFT, YELLOW, SURF.paint, {offset: off, alongZ: z, acrossFrom: across - 0.01, acrossTo: across + 0.01});
+                            for (const line of keptPieces(part, [off - 0.05, off + 0.05], cut("paint"))) strip(geo, line, 0.1, heightAt, PAINT_LIFT, YELLOW, SURF.paint, {offset: off, alongZ: z, acrossFrom: across - 0.01, acrossTo: across + 0.01});
                         }
                     }
                 }
@@ -283,6 +350,7 @@ export function streetSurfaces(plan: TownPlan, out: StreetSurfacesOut) {
             const snapped = (Math.round(along / MANHOLE - 0.5) + 0.5) * MANHOLE;
             const x = z ? point.x - dir.z * 0.9 : snapped;
             const zz = z ? snapped : point.z + dir.x * 0.9;
+            if (cutAt(clip, own, "paint", x, zz)) continue;
             patch(chunkAt(x, zz).decal, x, zz, z ? {x: 0, z: 1} : {x: 1, z: 0}, MANHOLE, MANHOLE, heightAt(x, zz) + ROAD_LIFT + 0.004, IRON, SURF.manhole, z);
         }
         for (let a = 6; a < length - 3; a += 24) {
@@ -294,6 +362,7 @@ export function streetSurfaces(plan: TownPlan, out: StreetSurfacesOut) {
                 const snapped = (Math.round(along / GRATE.along - 0.5) + 0.5) * GRATE.along;
                 const x = z ? point.x - dir.z * off : snapped;
                 const zz = z ? snapped : point.z + dir.x * off;
+                if (cutAt(clip, own, "paint", x, zz)) continue;
                 patch(chunkAt(x, zz).decal, x, zz, z ? {x: 0, z: 1} : {x: 1, z: 0}, GRATE.along, GRATE.across, heightAt(x, zz) + ROAD_LIFT + 0.004, IRON, SURF.grate, z);
             }
         }
