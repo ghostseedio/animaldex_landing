@@ -24,3 +24,17 @@ test("the record's dormancy events are said once, with their own words, the kind
     assert.equal(dormancyItems(rows, Date.parse("2026-11-21T00:00:00Z"), () => false).length, 1);
     assert.equal(items[0].focus.animalId, null, "a kind's line, never one animal's");
 });
+
+test("the record's escapes: the prey that got away is named first, the tap flies to it, said once", async () => {
+    const {escapeItems, escapeText} = await import("@/ark-scene/live/escape-lines");
+    const zebra = {id: "z1", name: "Plains Zebra", species_profile_id: "zebra", model_slug: "plains-zebra", zone: "grassland"};
+    const lion = {id: "l1", name: "African Lion", species_profile_id: "lion", model_slug: "african-lion", zone: "grassland"};
+    const raw = {events: [{id: 7, kind: "escaped", at: "2026-11-20T10:00:00Z", animal: zebra, other: lion}, {id: 8, kind: "meal", at: "2026-11-20T10:01:00Z", animal: lion, other: zebra}]};
+    const items = escapeItems(raw, -Infinity, () => false);
+    assert.equal(items.length, 1);
+    assert.equal(items[0].focus.animalId, "z1");
+    assert.equal(escapeText(items[0], english), "A Plains Zebra got away from an African Lion");
+    assert.equal(escapeItems(raw, -Infinity, (key) => key === "event:7").length, 0);
+    assert.equal(escapeText({animal: "x", other: null}, english), null);
+    assert.equal(dormancyText(items[0], english, "en"), null, "not a dormancy line");
+});

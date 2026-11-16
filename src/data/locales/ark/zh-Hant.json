@@ -326,6 +326,7 @@
             "caught": "{aPredator}抓住了{aPrey}",
             "dormant": "{animals}開始冬眠了",
             "woke": "{animals}又醒來了",
+            "escaped": "{aPrey}從{aPredator}身邊逃走了",
             "revived": "{animal}回來了",
             "revivedYoung": "{animal}回來了，又是年輕的成年個體",
             "gone": "{animal}離開了 Ark"

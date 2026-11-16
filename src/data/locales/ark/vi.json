@@ -326,6 +326,7 @@
             "caught": "{aPredator} đã bắt được {aPrey}",
             "dormant": "{animals} đã bắt đầu ngủ đông",
             "woke": "{animals} đã thức dậy trở lại",
+            "escaped": "{aPrey} đã thoát khỏi {aPredator}",
             "revived": "Con {animal} đã trở lại",
             "revivedYoung": "Con {animal} đã trở lại, lại là con trưởng thành trẻ",
             "gone": "Con {animal} đã rời Ark"

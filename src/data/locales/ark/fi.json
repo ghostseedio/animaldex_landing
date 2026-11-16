@@ -326,6 +326,7 @@
             "caught": "{aPredator} sai saaliin: {aPrey}",
             "dormant": "{animals}: talviuni alkoi",
             "woke": "{animals}: talviuni päättyi",
+            "escaped": "{aPrey} pääsi pakoon, saalistaja: {aPredator}",
             "revived": "{animal} on palannut",
             "revivedYoung": "{animal} on palannut, taas nuori aikuinen",
             "gone": "{animal} on poissa Arkista"

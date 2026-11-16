@@ -326,6 +326,7 @@
             "caught": "اصطاد {aPredator} {aPrey}",
             "dormant": "{animals}: بدأ السبات الشتوي",
             "woke": "{animals}: انتهى السبات الشتوي",
+            "escaped": "هرب {aPrey} من {aPredator}",
             "revived": "عاد {animal}",
             "revivedYoung": "عاد {animal} بالغًا شابًا من جديد",
             "gone": "رحل {animal} عن Ark"

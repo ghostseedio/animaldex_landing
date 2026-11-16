@@ -326,6 +326,7 @@
             "caught": "{aPredator} zsákmányt ejtett: {aPrey}",
             "dormant": "{animals}: elkezdődött a téli álom",
             "woke": "{animals}: véget ért a téli álom",
+            "escaped": "{aPrey} elmenekült, üldözője: {aPredator}",
             "revived": "{animal} visszatért",
             "revivedYoung": "{animal} visszatért, újra fiatal felnőttként",
             "gone": "{animal} elment az Arkból"

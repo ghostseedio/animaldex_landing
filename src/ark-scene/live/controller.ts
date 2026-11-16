@@ -22,6 +22,8 @@ import {decodeArkEvents, type ArkEvent} from "@/lib/ark-life";
 import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText, arkLiveServerItems, arkNowItems, arkSeenItems, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveLine, type ArkLiveText} from "@/lib/ark-live-log";
 import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt-outcome";
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
+import {escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
+import {isEnglish, signatureItems, signatureText} from "@/ark-scene/live/signature-lines";
 import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 import {ARK_ACTIVITY_ENGLISH, arkRecordNotesFromEvents, type ArkActivityWords} from "@/lib/ark-animal-status";
 import {arkPickAnimal, arkSpeciesKey} from "@/lib/ark-population";
@@ -135,7 +137,7 @@ export class ArkLive {
         }
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
-            text: (line) => dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
+            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
             onTap: (line) => this.focus(line),
             reducedMotion: Boolean(options.reducedMotion),
             serverLife: ARK_LIVE_LOG_DEFAULTS.serverLife,
@@ -248,8 +250,11 @@ export class ArkLive {
     /** The record's dormancy events in the rows (`dormancy-lines.ts`): said once, and the scene asked to look again. */
     private dormancy(raw: unknown, from: number) {
         const items = dormancyItems(raw, from, (key) => this.said.has(key));
+        // (And the record's escapes, `escape-lines.ts`: a prey animal that got away.)
+        const escapes = escapeItems(raw, from, (key) => this.said.has(key));
+        for (const item of items.concat(escapes)) this.remember(item.id);
+        if (escapes.length) this.push(escapes);
         if (!items.length) return;
-        for (const item of items) this.remember(item.id);
         this.push(items);
         this.readDormant();
     }
@@ -398,7 +403,10 @@ export class ArkLive {
             if (this.ticks % 2 === 0) {
                 const seen = scene?.seen?.();
                 if (seen && (seen.acts.length || seen.alarms.length)) {
-                    const items = arkSeenItems(seen, this.memory).filter((item) => (this.nowSaid.get(`${item.focus.animalId}:${item.kind}`) ?? 0) < Date.now());
+                    // In English a species' own sentence first; the generic line only for acts without one.
+                    const english = isEnglish(this.locale);
+                    const own = english ? signatureItems(seen.acts, this.memory) : [];
+                    const items = own.concat(arkSeenItems(english ? {acts: seen.acts.filter((act) => !act.line), alarms: seen.alarms} : seen, this.memory)).filter((item) => (this.nowSaid.get(`${item.focus.animalId}:${item.kind}`) ?? 0) < Date.now());
                     if (items.length) this.say(items, now);
                 }
             }

@@ -326,6 +326,7 @@
             "caught": "{aPredator} ਨੇ {aPrey} ਨੂੰ ਫੜ ਲਿਆ",
             "dormant": "{animals} ਦੀ ਸਰਦੀਆਂ ਦੀ ਨੀਂਦ ਸ਼ੁਰੂ ਹੋ ਗਈ",
             "woke": "{animals} ਦੀ ਸਰਦੀਆਂ ਦੀ ਨੀਂਦ ਪੂਰੀ ਹੋ ਗਈ",
+            "escaped": "{aPrey} ਨੇ {aPredator} ਤੋਂ ਜਾਨ ਬਚਾ ਲਈ",
             "revived": "{animal} ਵਾਪਸ ਆ ਗਿਆ",
             "revivedYoung": "{animal} ਮੁੜ ਜਵਾਨ ਬਾਲਗ ਬਣ ਕੇ ਵਾਪਸ ਆ ਗਿਆ",
             "gone": "{animal} Ark ਤੋਂ ਚਲਾ ਗਿਆ"

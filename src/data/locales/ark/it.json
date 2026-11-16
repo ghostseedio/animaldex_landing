@@ -326,6 +326,7 @@
             "caught": "{aPredator} ha catturato {aPrey}",
             "dormant": "{animals}: è iniziato il letargo",
             "woke": "{animals}: il letargo è finito",
+            "escaped": "{aPrey} è sfuggito a {aPredator}",
             "revived": "{animal} è tornato",
             "revivedYoung": "{animal} è tornato, di nuovo giovane adulto",
             "gone": "{animal} non è più nell'Ark"

@@ -326,6 +326,7 @@
             "caught": "{aPredator} ha atrapat {aPrey}",
             "dormant": "{animals}: ha començat el son d'hivern",
             "woke": "{animals}: s'ha acabat el son d'hivern",
+            "escaped": "{aPrey} s'ha escapat de {aPredator}",
             "revived": "{animal} ha tornat",
             "revivedYoung": "{animal} ha tornat, jove adult de nou",
             "gone": "{animal} ja no és a l'Ark"

@@ -326,6 +326,7 @@
             "caught": "{aPredator} heeft {aPrey} gevangen",
             "dormant": "{animals}: de winterslaap is begonnen",
             "woke": "{animals}: weer wakker",
+            "escaped": "{aPrey} is ontsnapt aan {aPredator}",
             "revived": "{animal} is terug",
             "revivedYoung": "{animal} is terug, weer jong volwassen",
             "gone": "{animal} is uit de Ark vertrokken"

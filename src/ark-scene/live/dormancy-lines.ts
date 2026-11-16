@@ -34,5 +34,6 @@ export function dormancyItems(raw: unknown, from: number, said: (key: string) =>
 export function dormancyText(line: Pick<ArkLiveItem, "animal"> & Partial<Pick<ArkLiveItem, "say">>, words: ArkLiveText, locale: string): string | null {
     if (!line.say) return null;
     const english = /^en(\b|[-_])/i.test(locale) || locale.toLowerCase() === "en";
+    if (line.say !== "dormant" && line.say !== "woke") return null;
     return fillArkWords(words.live[line.say] ?? ENGLISH[line.say], {animals: english ? pluralAnimalName(line.animal) : line.animal});
 }

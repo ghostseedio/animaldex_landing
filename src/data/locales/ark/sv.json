@@ -326,6 +326,7 @@
             "caught": "{aPredator} fångade {aPrey}",
             "dormant": "{animals}: vinterdvalan har börjat",
             "woke": "{animals}: vinterdvalan är över",
+            "escaped": "{aPrey} kom undan {aPredator}",
             "revived": "{animal} är tillbaka",
             "revivedYoung": "{animal} är tillbaka som ung vuxen igen",
             "gone": "{animal} har lämnat Ark"

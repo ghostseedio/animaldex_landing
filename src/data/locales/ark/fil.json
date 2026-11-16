@@ -326,6 +326,7 @@
             "caught": "Nahuli ng {aPredator} ang {aPrey}",
             "dormant": "Nagsimula na ang tulog-taglamig ng {animals}",
             "woke": "Gising na ulit ang {animals}",
+            "escaped": "Nakatakas ang {aPrey} mula sa {aPredator}",
             "revived": "Nakabalik na ang {animal}",
             "revivedYoung": "Nakabalik na ang {animal}, batang adulto ulit",
             "gone": "Wala na sa Ark ang {animal}"

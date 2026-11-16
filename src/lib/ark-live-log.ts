@@ -68,7 +68,9 @@ export type ArkLiveItem = {
     /** A meal that ends a hunt seen setting out (`src/ark-scene/live/hunt-outcome.ts`): said as "caught". */
     hunted?: boolean;
     /** A kind's dormant season beginning or ending (`src/ark-scene/live/dormancy-lines.ts`): said with its own words. */
-    say?: "dormant" | "woke";
+    say?: "dormant" | "woke" | "escaped";
+    /** A species' own sentence for what it is seen doing (`src/ark-scene/live/signature-lines.ts`): said as it is. */
+    line?: string;
     focus: ArkLiveFocus;
 };
 
@@ -180,7 +182,7 @@ export function arkLiveArrivalsFromSnapshot(animals: ReadonlyArray<{id: string; 
 // MARK: Seen
 
 /** What the scene reports near the camera (`ArkSceneHandle.seen`): visible animals running one of the logged recipes. */
-export type ArkSeenAct = {id: string; name: string; speciesId: string; zone: ArkZone; recipe: string; episode: string; block: string; /** It has a fish now (the catch came off, or it carries one). */ fish: boolean};
+export type ArkSeenAct = {id: string; name: string; speciesId: string; zone: ArkZone; recipe: string; episode: string; block: string; /** It has a fish now (the catch came off, or it carries one). */ fish: boolean; /** Its species' own sentence for this recipe (`src/ark-scene/live/signature-lines.ts`), when it has one. */ line?: string};
 /** An alarm call by a visible animal near the camera (the reactive layer), with what it called about when known. */
 export type ArkSeenAlarm = {id: string; name: string; speciesId: string; zone: ArkZone; at: number; threat: string | null};
 export type ArkSeenNow = {acts: ArkSeenAct[]; alarms: ArkSeenAlarm[]};

@@ -215,6 +215,7 @@ import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {LiveBirths} from "@/ark-scene/live-births";
+import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
 import {speciesCare} from "@/lib/ark-age";
@@ -4398,9 +4399,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (act && c.visible) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act});
             if (c.visible) {
                 seenNear.add(c.entry.animal.id);
-                if (act && arkSeenKind(act.recipe)) {
+                // (One of the log's kinds, or a recipe its species has its own sentence for: `live/signature-lines.ts`.)
+                const ownLine = act ? signatureLineOf(c.entry.animal.model_slug, act.recipe) : null;
+                if (act && (ownLine || arkSeenKind(act.recipe))) {
                     const a = c.entry.animal;
-                    seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: act.recipe, episode: act.episode, block: act.block, fish: Boolean((act.catch?.ok && act.catch.kind === "fish") || act.carry?.item === "fish")});
+                    seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: act.recipe, episode: act.episode, block: act.block, fish: Boolean((act.catch?.ok && act.catch.kind === "fish") || act.carry?.item === "fish"), ...(ownLine ? {line: ownLine} : {})});
                 }
             }
             if (c.distance > 45) continue;

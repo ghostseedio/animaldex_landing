@@ -43,6 +43,8 @@ export type ArkLiveWords = {
     /** A kind's dormant season (decision 370): "{animals} have gone into their winter sleep" / "{animals} are awake again". */
     dormant?: string;
     woke?: string;
+    /** A prey animal that got away from a predator's attempt (decision 373): "{aPrey} got away from {aPredator}". */
+    escaped?: string;
     /** A meal that ends a hunt seen setting out: "A Lion caught a Plains Zebra". */
     caught?: string;
     revived: string;
@@ -84,6 +86,7 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     caught: "{aPredator} caught {aPrey}",
     dormant: "{animals} have gone into their winter sleep",
     woke: "{animals} are awake again",
+    escaped: "{aPrey} got away from {aPredator}",
     revived: "{animal} is back",
     revivedYoung: "{animal} is back, a young adult again",
     gone: "{animal} is gone from the Ark"

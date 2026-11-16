@@ -326,6 +326,7 @@
             "caught": "{aPredator}, {aPrey} yakaladı",
             "dormant": "{animals} kış uykusuna yattı",
             "woke": "{animals} yeniden uyandı",
+            "escaped": "{aPrey} kaçıp kurtuldu, kovalayan: {aPredator}",
             "revived": "{animal} geri döndü",
             "revivedYoung": "{animal} yeniden genç bir yetişkin olarak döndü",
             "gone": "{animal} Ark'tan ayrıldı"

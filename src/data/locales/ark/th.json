@@ -326,6 +326,7 @@
             "caught": "{aPredator} จับ {aPrey} ได้",
             "dormant": "{animals} เริ่มจำศีลแล้ว",
             "woke": "{animals} ตื่นขึ้นมาอีกครั้งแล้ว",
+            "escaped": "{aPrey} หนีรอดจาก {aPredator} ได้",
             "revived": "{animal} กลับมาแล้ว",
             "revivedYoung": "{animal} กลับมาเป็นตัวเต็มวัยวัยหนุ่มสาวอีกครั้ง",
             "gone": "{animal} จากไปจาก Ark แล้ว"

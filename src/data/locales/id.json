@@ -4565,6 +4565,7 @@
       "caught": "{aPredator} menangkap {aPrey}",
       "dormant": "{animals} mulai tidur musim dingin",
       "woke": "{animals} sudah bangun lagi",
+      "escaped": "{aPrey} lolos dari {aPredator}",
       "revived": "{animal} sudah kembali",
       "revivedYoung": "{animal} sudah kembali, kembali menjadi dewasa muda",
       "gone": "{animal} sudah pergi dari Ark"

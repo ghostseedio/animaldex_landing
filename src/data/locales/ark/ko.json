@@ -326,6 +326,7 @@
             "caught": "{aPredator}이(가) {aPrey}을(를) 잡았어요",
             "dormant": "{animals}이(가) 겨울잠에 들었어요",
             "woke": "{animals}이(가) 다시 깨어났어요",
+            "escaped": "{aPrey}이(가) {aPredator}에게서 달아났어요",
             "revived": "{animal}이(가) 돌아왔어요",
             "revivedYoung": "{animal}이(가) 다시 어린 성체로 돌아왔어요",
             "gone": "{animal}이(가) Ark를 떠났어요"

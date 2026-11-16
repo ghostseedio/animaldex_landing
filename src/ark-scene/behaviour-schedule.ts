@@ -1325,22 +1325,32 @@ function walkable(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sc
     const straight = Math.hypot(goal.x - from.x, goal.z - from.z);
     if (straight < 0.5 || home) return true;
     if (straight > 25) {
-        // A long way is its own (no test of its shape), but where the colliders are known it must be a way its body can
-        // walk: its trip ends a path that stops short with a straight run to the goal, through whatever is there
-        // (2026-11-16, round 351's fence crossing: an elephant 33 m from its resting place, with no way for its width,
-        // walked through a smallholding's paddock rails). The search its trip makes, further on its own ground.
+        // A long way is its own (no test of its shape). But its trip ends a path that stops short with a straight run
+        // to the goal, and that run must not go through anything solid for its body (2026-11-16, round 351's fence
+        // crossing: an elephant 33 m from its resting place, with no way round for its width, walked straight
+        // through a smallholding's paddock rails). Only that: any other long way is taken as before (refusing every
+        // way the search gave up on, or every run that touches a trunk or a rock, left hunters standing: the behaviour
+        // audit's prey that flee a hunter fell from 74% to 52–59%).
         if (!world.nav.colliders) return true;
         const slope = maxSlopeOf(animal);
         const bodyR = bodyRadiusOf(animal, profile.slug);
         const onto = onSurface(goal.point);
-        const arrives = (nodes: number) => {
+        const stopsAt = (nodes: number) => {
             const way = world.nav.path(from, goal, "walk", 0.5, nodes, slope, bodyR, onto);
-            const last = way[way.length - 1];
-            return Boolean(last) && Math.hypot(last.x - goal.x, last.z - goal.z) < 0.01;
+            return way[way.length - 1] ?? from;
         };
-        if (arrives(900)) return true;
+        const arrived = (p: {x: number; z: number}) => Math.hypot(p.x - goal.x, p.z - goal.z) < 0.01;
+        let end = stopsAt(900);
+        if (arrived(end)) return true;
+        // (Further on its own ground, as its trip searches.)
         const region = world.nav.region(from.x, from.z, slope, bodyR);
-        return region >= 0 && region === world.nav.region(goal.x, goal.z, slope, bodyR) && arrives(12000);
+        if (region >= 0 && region === world.nav.region(goal.x, goal.z, slope, bodyR)) {
+            end = stopsAt(12000);
+            if (arrived(end)) return true;
+        }
+        // (A fence only: a trunk or a rock on that run it is eased round by the collisions' layer, as always; a fence's
+        // rails it would simply walk through.)
+        return world.nav.runClear(end, goal, bodyR, (c) => c.kind !== "fence");
     }
     // (The search its trip makes: `tripFor`'s ground.)
     const path = world.nav.path(from, goal, "walk", 0.5, 900, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug), onSurface(goal.point));

@@ -326,6 +326,7 @@
             "caught": "{aPredator} alimkamata {aPrey}",
             "dormant": "{animals} wameanza usingizi wa majira ya baridi",
             "woke": "{animals} wameamka tena",
+            "escaped": "{aPrey} alimtoroka {aPredator}",
             "revived": "{animal} amerudi",
             "revivedYoung": "{animal} amerudi, mtu mzima kijana tena",
             "gone": "{animal} ameondoka Ark"

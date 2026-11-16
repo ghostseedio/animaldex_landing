@@ -326,6 +326,7 @@
             "caught": "{aPredator} łapie zdobycz: {aPrey}",
             "dormant": "{animals}: zaczyna się zimowy sen",
             "woke": "{animals}: koniec zimowego snu",
+            "escaped": "{aPrey}: udało się uciec, łowca: {aPredator}",
             "revived": "{animal} wraca",
             "revivedYoung": "{animal} wraca, znów jako młody dorosły",
             "gone": "{animal} odchodzi z Ark"

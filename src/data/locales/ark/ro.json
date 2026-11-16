@@ -326,6 +326,7 @@
             "caught": "{aPredator} a prins {aPrey}",
             "dormant": "{animals}: a început somnul de iarnă",
             "woke": "{animals}: somnul de iarnă s-a încheiat",
+            "escaped": "{aPrey} a scăpat de {aPredator}",
             "revived": "{animal} s-a întors",
             "revivedYoung": "{animal} s-a întors, din nou adult tânăr",
             "gone": "{animal} a plecat din Ark"

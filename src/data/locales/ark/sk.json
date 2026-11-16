@@ -326,6 +326,7 @@
             "caught": "{aPredator} ulovil: {aPrey}",
             "dormant": "{animals}: začal sa zimný spánok",
             "woke": "{animals}: zimný spánok sa skončil",
+            "escaped": "{aPrey}: podarilo sa ujsť, lovil {aPredator}",
             "revived": "{animal} je späť",
             "revivedYoung": "{animal} je späť, znova mladý dospelý",
             "gone": "{animal} odchádza z Arku"

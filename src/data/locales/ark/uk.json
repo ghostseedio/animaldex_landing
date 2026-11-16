@@ -326,6 +326,7 @@
             "caught": "{aPredator} ловить здобич: {aPrey}",
             "dormant": "{animals}: почалася зимова сплячка",
             "woke": "{animals}: зимова сплячка закінчилася",
+            "escaped": "{aPrey}: вдалося втекти, мисливець — {aPredator}",
             "revived": "{animal} повернувся",
             "revivedYoung": "{animal} повернувся знову молодим дорослим",
             "gone": "{animal} покинув Ark"
