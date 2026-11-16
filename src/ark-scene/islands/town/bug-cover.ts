@@ -7,7 +7,7 @@
 
 import type {BugCover} from "@/ark-scene/bug-ground";
 import {sampleTownGround, streetEdgeDistance, type TownSurface} from "@/ark-scene/islands/town/ground";
-import {townDrawnHeight, townTileHeight} from "@/ark-scene/islands/town/drawn-ground";
+import {townDrawnHeight, townTileHeight, townWaterSurface} from "@/ark-scene/islands/town/drawn-ground";
 
 const COVER: Partial<Record<TownSurface, {surface: BugCover["surface"]; dry: number}>> = {
     sand: {surface: "sand", dry: 0.8},
@@ -33,6 +33,9 @@ export function townBugCover(x: number, z: number): BugCover | null {
     if (!cover) return null;
     if (streetEdgeDistance(x, z) < 0.15) return null;
     const tile = townTileHeight(x, z);
+    // Under the canal's, a pond's or the millpond's water (its 1 m cells reach a little past the bank).
+    const water = townWaterSurface(x, z);
+    if (water !== null && water > tile - 0.05) return null;
     // A decal or a floor over the tile here: paving, not ground.
     if (townDrawnHeight(x, z) > tile + 0.002) return null;
     return {surface: cover.surface, height: tile, dry: cover.dry};

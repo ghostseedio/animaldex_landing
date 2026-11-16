@@ -492,6 +492,7 @@ export class BugGround {
     private lastKey = "";
     private tier: "high" | "medium" | "low" = "high";
     private dirty = false;
+    private sinceWrite = 0;
     private version = -1;
     private readonly materials: MeshStandardMaterial[];
     private readonly matrix = new Matrix4();
@@ -587,15 +588,25 @@ export class BugGround {
         }
         // A few cells a frame (nearest first), so coming down never stalls a frame.
         let built = 0;
+        let pending = false;
         const perFrame = this.tier === "high" ? 14 : this.tier === "medium" ? 9 : 6;
         for (const [x, z] of this.wanted) {
             const cell = `${x},${z}`;
             if (this.cells.has(cell)) continue;
+            if (built >= perFrame) {
+                pending = true;
+                break;
+            }
             this.cells.set(cell, bugCellItems(x, z, this.coverAt, BUG_TIERS[this.tier].share));
             this.dirty = true;
-            if (++built >= perFrame) break;
+            built++;
         }
-        if (this.dirty) this.write(cx, cz);
+        // Rewriting the instances is the costly part: while cells are still coming in, every fourth frame only.
+        this.sinceWrite++;
+        if (this.dirty && (!pending || this.sinceWrite >= 4)) {
+            this.sinceWrite = 0;
+            this.write(cx, cz);
+        }
     }
 
     private write(cx: number, cz: number) {

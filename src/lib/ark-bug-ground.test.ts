@@ -77,3 +77,38 @@ test("ark-bug-ground: the wild island's and the town's covers follow their groun
     assert.ok(street);
     assert.equal(townBugCover(street[0], street[1]), null);
 });
+
+test("ark-bug-ground: by rule over both islands, nothing grows in water, on a street or a decal", async () => {
+    const {wildWaterSurface} = await import("@/ark-scene/islands/wild/map-v2");
+    const {townWaterSurface, townDrawnHeight, townTileHeight} = await import("@/ark-scene/islands/town/drawn-ground");
+    setArkWorld("v2");
+    try {
+        let grown = 0;
+        for (let x = -250; x <= 250; x += 7.3) {
+            for (let z = -250; z <= 250; z += 7.3) {
+                const cover = wildBugCover(x, z);
+                if (!cover) continue;
+                grown++;
+                const water = wildWaterSurface(x, z);
+                assert.ok(!(Number.isFinite(water) && water > sampleGround(x, z).height - 0.02), `wild cover in water at ${x},${z}`);
+                assert.ok(sampleGround(x, z).height >= 0.05, `wild cover in the sea at ${x},${z}`);
+            }
+        }
+        assert.ok(grown > 500, `${grown}`);
+    } finally {
+        setArkWorld("v1");
+    }
+    let grown = 0;
+    for (let x = -200; x <= 200; x += 3.7) {
+        for (let z = -200; z <= 200; z += 3.7) {
+            const cover = townBugCover(x, z);
+            if (!cover) continue;
+            grown++;
+            assert.ok(streetEdgeDistance(x, z) >= 0.15, `town cover on a street at ${x},${z}`);
+            const water = townWaterSurface(x, z);
+            assert.ok(water === null || water <= cover.height - 0.05, `town cover in water at ${x},${z}`);
+            assert.ok(townDrawnHeight(x, z) <= townTileHeight(x, z) + 0.002, `town cover on a decal at ${x},${z}`);
+        }
+    }
+    assert.ok(grown > 1000, `${grown}`);
+});
