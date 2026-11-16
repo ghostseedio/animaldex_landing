@@ -180,7 +180,8 @@ const TOWN_DIGESTS = {
     sceneryAndBuildings: "627a5bcb890cc9dd",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (town2): the paddocks' boulders and rockwork worn round and shaded smooth.)
-    zoo: "c1ad36aedb065f2f",
+    // (p2 (town2): the worn rock is the unworn fracture worn round, as drawn only; merged with ark-b33-fixes2.)
+    zoo: "f26cdea64ac560b0",
     places: "fba1268b733101f8"
 };
 
