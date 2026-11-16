@@ -37,6 +37,10 @@ const SCENES: Record<string, Scene> = {
     coats2: {zone: "wetland", hours: 10, kind: "look", young: "new", cast: ["Saltwater Crocodile", "Spectacled Caiman", "Leopard Gecko", "Red Tegu", "Black Spiny-tailed Iguana", "Emerald Tree Boa", "Eastern Rat Snake", "Southeastern Five-lined Skink", "Little Blue Heron", "Scarlet Ibis", "Sun Conure", "Ring-billed Gull"].map(lookCast)},
     coats4: {zone: "grassland", hours: 10, kind: "look", young: "new", cast: ["Saltwater Crocodile", "Spectacled Caiman", "Leopard Gecko", "Red Tegu", "Eastern Rat Snake", "Southeastern Five-lined Skink", "African Lion", "Collared Peccary", "Zebra Shark", "Gray Angelfish"].map(lookCast)},
     coats3: {zone: "coral_reef", hours: 10, kind: "look", young: "new", cast: ["Gray Angelfish", "Blue Tang", "Zebra Shark", "Brownbanded Bamboo Shark", "Bluestreak Cleaner Wrasse", "Blueface Angelfish", "Greater Amberjack", "Goldfish", "Iridescent Shark", "Boeseman's Rainbowfish"].map(lookCast)},
+    // 3.3 batch (C): a hatching of the record: a crocodile mother carries her hatchlings to the water at her jaw; a
+    // mouthbrooder's fry come and go at the parent's mouth (`mouth-carry.ts`).
+    carry: {zone: "wetland", hours: 10, kind: "carry", young: "new", bornAgo: 0, cast: [{slug: "saltwater-crocodile", name: "Saltwater Crocodile", n: 2, young: 4}]},
+    brood: {zone: "river_lake", hours: 10, kind: "carry", young: "new", bornAgo: 0, cast: [{slug: "nile-tilapia", name: "Nile Tilapia", n: 2, young: 6}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -103,6 +107,7 @@ async function main() {
     const b = castId(0, 1);
     if (scene.kind === "birth") handle.addBirths?.([{key: "birth:harness", parents: [a, b], young: youngIds, t0}]);
     if (scene.kind === "mating") handle.addMatings?.([{key: "mated:harness", a, b, t0}]);
+    if (scene.kind === "carry") handle.addHatchings?.([{key: "hatch:harness", parents: [a, b], young: youngIds, t0}]);
     // 3.3 batch (C): the record told this birth an hour ago (too old to act out): the young one's parents are the two
     // adults its seeded pick is NOT, so the frames show the record's mother, not the pick.
     const live = (debug as unknown as {liveliness: {parentOf: (id: string) => string | null; nursing: Map<string, {mother: string; key: string; at: number}>}}).liveliness;
@@ -128,6 +133,11 @@ async function main() {
     };
     /** 3.3 batch (C): what the frame should show of the young one and its mother (their distance in her lengths, its card). */
     const laneC = (): string => {
+        if (scene.kind === "carry") {
+            const h = (debug as unknown as {hatchings: () => Array<{carrier: string | null; kind: string | null; phase: string; said: string | null}>}).hatchings()[0];
+            const seen = handle.seen?.().acts.filter((x) => x.recipe === "mouth_carry").map((x) => x.line) ?? [];
+            return `\n${h ? `${h.kind} ${h.phase}, said: ${h.said ?? "-"}` : "no hatching"}   log: ${seen[0] ?? "-"}`;
+        }
         if (scene.kind !== "nurse" || !nurseInfo.mother) return "";
         const m = schedPoint(nurseInfo.mother);
         const y = schedPoint(youngIds[0]);
@@ -136,7 +146,7 @@ async function main() {
         return `\nyoung ${m && y ? (Math.hypot(m.x - y.x, m.z - y.z) / (sched(nurseInfo.mother)?.length || 1)).toFixed(2) : "?"} of her lengths from its mother   young: ${sched(youngIds[0])?.sched?.pose?.doing} card ${handle.animalStatus?.(youngIds[0])?.activity ?? "-"}   mother: ${sched(nurseInfo.mother)?.sched?.pose?.doing}${sched(nurseInfo.mother)?.sched?.pose?.moving ? " moving" : ""}   suckling ${fresh && Math.abs(fresh.at - Date.now()) < 1500 ? "yes" : "no"}`;
     };
     const api = {
-        info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a, b, nurse: nurseInfo, cast: scene.cast.map((c, k) => ({name: c.name, adult: castId(k, 0), young: castId(k, c.n)}))}),
+        info: () => ({births: debug.births(), matings: debug.matings(), hatchings: (debug as unknown as {hatchings: () => Array<Record<string, unknown>>}).hatchings(), young: youngIds, a, b, nurse: nurseInfo, cast: scene.cast.map((c, k) => ({name: c.name, adult: castId(k, 0), young: castId(k, c.n)}))}),
         /** 3.3 batch (C): a young one of the cast and its kind's adult side by side in the frame (the adult brought beside it for the picture). */
         pair: async (k: number) => {
             const young = castId(k, scene.cast[k].n);

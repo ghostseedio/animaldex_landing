@@ -489,6 +489,12 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      */
     addBirths?: (births: Array<{key: string; parents: string[]; young: string[]; t0: number}>) => void;
     /**
+     * 3.3 batch (C): the record's hatchings (`birth` events with `from_egg`: the hatchlings, their parents, the time):
+     * a mouth-carrying species acts it out (`mouth-carry.ts`: a crocodile's hatchlings carried to the water at her jaw,
+     * a mouthbrooder's fry at its mouth), and the hatchlings keep to their recorded mother (`young-care.ts`).
+     */
+    addHatchings?: (hatchings: Array<{key: string; parents: string[]; young: string[]; t0: number}>) => void;
+    /**
      * The kinds asleep through their dormant season now (the server's `voyage_dormant_v1`: species ids; AnimalDex
      * decision 370): their animals are in their dens, out of sight, and their cards say sleeping. An empty list ends it.
      */

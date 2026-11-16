@@ -1,5 +1,5 @@
 {
- "about": "Young animals and seasonal looks (3.3 batch, lane C), built by scripts/ark-young-life.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. coats: the young of these species wear another coat (the look shader's young coat, young-coat.ts); colours are sRGB.",
+ "about": "Young animals and seasonal looks (3.3 batch, lane C), built by scripts/ark-young-life.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. coats: the young of these species wear another coat (the look shader's young coat, young-coat.ts); colours are sRGB. mouthCarry: the parent that carries its hatchlings in its jaws to the water, or holds its fry in its mouth (mouth-carry.ts), after a hatching of the record; say = when the row's sentence is true of what is drawn.",
  "coats": {
   "wild-boar": {
    "name": "Wild Boar",
@@ -607,6 +607,62 @@
     0.93
    ],
    "mix": 0.85
+  }
+ },
+ "mouthCarry": {
+  "american-alligator": {
+   "name": "American Alligator",
+   "id": "d132160d-adda-45ac-8d0d-40f61cd0a807",
+   "quote": "sometimes carrying young gently in the mouth",
+   "line": "{aAnimal} is carrying her young gently in her mouth",
+   "kind": "jaws",
+   "carrier": "female",
+   "say": "carry"
+  },
+  "mugger-crocodile": {
+   "name": "Mugger Crocodile",
+   "id": "a80e7c27-6047-459a-9f9f-dd3d85426aba",
+   "quote": "She guards the nest, opens it when the young call, and carries hatchlings to water in her mouth.",
+   "line": "{aAnimal} is opening her nest at the hatchlings' calls and carrying them to water",
+   "kind": "jaws",
+   "carrier": "female",
+   "say": "carry"
+  },
+  "saltwater-crocodile": {
+   "name": "Saltwater Crocodile",
+   "id": "13635c2e-6180-470a-b031-548352e637ed",
+   "quote": "Hatchlings call from inside the egg, and the female opens the nest and carries them to water in her mouth.",
+   "line": "{aAnimal} is opening her nest and carrying the hatchlings to water in her mouth",
+   "kind": "jaws",
+   "carrier": "female",
+   "say": "carry"
+  },
+  "asian-arowana": {
+   "name": "Asian Arowana",
+   "id": "6c3ca716-734d-49bc-a2aa-0d49270186d4",
+   "quote": "After spawning he takes the few, large, yolky eggs into his mouth and carries eggs and then young for roughly two months",
+   "line": "{aAnimal} is carrying his large eggs in his mouth",
+   "kind": "brood",
+   "carrier": "male",
+   "say": null
+  },
+  "silver-arowana": {
+   "name": "Silver Arowana",
+   "id": "9c65cf08-99b5-49e9-84ee-998fe9375829",
+   "quote": "the male takes them into his mouth, carrying the eggs and then the young for around six to eight weeks",
+   "line": "{aAnimal} is carrying his eggs and young in his mouth",
+   "kind": "brood",
+   "carrier": "male",
+   "say": "hold"
+  },
+  "nile-tilapia": {
+   "name": "Nile Tilapia",
+   "id": "f17b4330-317e-46ae-9441-c1eb92048b05",
+   "quote": "Females carry the fertilised eggs and newly hatched fry in their mouths, and the young dart back inside when danger threatens.",
+   "line": "{aAnimal} is letting her fry dart back inside her mouth at danger",
+   "kind": "brood",
+   "carrier": "female",
+   "say": "danger"
   }
  },
  "coatsSkipped": {

@@ -57,6 +57,8 @@ const PLANS = {
     contest: {distance: 9, shots: [[1, "the rival comes"], [8, "closing"], ["walk+2.1", "a clash"], ["walk+4", "backing off"], ["walk+7.3", "another clash"], ["end-3", "the rival runs"], ["end+6", "the pair: courtship"], ["end+40", "the mating"]]},
     // 3.3 batch (C): the young one at its recorded mother's heel, then a nursing bout of the shared clock.
     nurse: {distance: 4, shots: [["bout-12", "at her heel"], ["bout+1.5", "coming to her flank"], ["bout+6", "suckling"], ["bout+16", "suckling, from the other side", 3.6], ["bout+24", "still suckling"], ["boutend+1", "back to her heel"], ["boutend+8", "at heel again"]]},
+    // 3.3 batch (C): a mouthbrooder's fry: held at first, out at the mouth, in again (the shared clock's cycle).
+    brood: {distance: 1.2, shots: [[4, "held in the mouth"], [22, "the fry come out"], [28, "out at the mouth"], [36, "out at the mouth"], [47, "in again"], [60, "out again"]]},
     dung: {distance: 5, shots: [[600, "the herd, ten minutes on"], [900, "a mark, close"], [1500, "marks fading"]]}
 };
 const summary = {};
@@ -109,6 +111,14 @@ for (const name of scenes) {
         await context.close();
         continue;
     }
+    // 3.3 batch (C): the carry's moments are its own script's (the walk to the nest and to the water are as long as they are far).
+    if (name === "carry" || name === "brood") {
+        await page.evaluate(() => window.__behaviours.shot(1, 6));
+        info.hatchings = (await page.evaluate(() => window.__behaviours.info())).hatchings;
+        console.log(name, JSON.stringify(info.hatchings));
+        const sc = info.hatchings[0]?.script;
+        PLANS.carry = {distance: 5, shots: sc ? [[1, "she sets off for the nest"], [sc.atNest + 0.5, "at the nest, head down"], [sc.taken - 0.5, "the hatchlings taken up"], [sc.taken + (sc.atWater - sc.taken) * 0.35, "carrying them to the water"], [sc.taken + (sc.atWater - sc.taken) * 0.8, "nearly there"], [sc.atWater + 1.5, "at the water's edge, letting them go"], [sc.atWater + 6, "the hatchlings in the water"], [sc.end + 10, "back to their day"]] : [[1, "no script"]]};
+    }
     const plan = PLANS[name];
     const mating = info.matings[0];
     // (A contest's moments are from its own script: its walk is told by its end, 14–22 s of bouts and 5 s to run.)
@@ -137,7 +147,7 @@ for (const name of scenes) {
             const text = await window.__behaviours.shot(s, point ? 2.2 : d, name === "contest" && label.includes("runs") ? rival : who, point, name === "contest" ? 2.4 : azimuth ?? 0.7, name === "contest" ? 0.85 : 1.15);
             document.getElementById("note").textContent = `${label}\n${text}`;
             return text;
-        }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? info.nurse?.mother ?? (name === "contest" ? info.a : undefined), azimuth]);
+        }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? info.nurse?.mother ?? info.hatchings?.[0]?.carrier ?? (name === "contest" ? info.a : undefined), azimuth]);
         labels.push(`${String(i).padStart(2, "0")} ${label}: ${note.replace(/\n/g, " | ")}`);
         await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 85});
     }

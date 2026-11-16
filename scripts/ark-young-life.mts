@@ -112,12 +112,30 @@ for (const {name, says, ...coat} of COATS) {
 const unread = youngLookRows.filter((r) => !COATS.some((c) => c.name === r.name) && !(r.name in COATS_SKIPPED)).map((r) => r.name);
 if (unread.length) throw new Error(`young look rows neither drawn nor skipped with a reason: ${unread.join(", ")}`);
 
+/** Young carried in the mouth (the catalogue's how = new_clip rows; drawn procedurally, `mouth-carry.ts`). */
+const MOUTH: Array<{name: string; says: RegExp; kind: "jaws" | "brood"; carrier: "female" | "male"; say: "carry" | "hold" | "danger" | null; why?: string}> = [
+    {name: "American Alligator", says: /sometimes carrying young gently in the mouth/, kind: "jaws", carrier: "female", say: "carry"},
+    {name: "Mugger Crocodile", says: /She guards the nest, opens it when the young call, and carries hatchlings to water in her mouth/, kind: "jaws", carrier: "female", say: "carry"},
+    {name: "Saltwater Crocodile", says: /the female opens the nest and carries them to water in her mouth/, kind: "jaws", carrier: "female", say: "carry"},
+    // (His sentence is about the eggs, which are in his mouth before the record's hatching and never drawn: not said.)
+    {name: "Asian Arowana", says: /he takes the few, large, yolky eggs into his mouth and carries eggs and then young/, kind: "brood", carrier: "male", say: null},
+    {name: "Silver Arowana", says: /the male takes them into his mouth, carrying the eggs and then the young/, kind: "brood", carrier: "male", say: "hold"},
+    {name: "Nile Tilapia", says: /Females carry the fertilised eggs and newly hatched fry in their mouths, and the young dart back inside when danger threatens/, kind: "brood", carrier: "female", say: "danger"}
+];
+const mouthRows = rows.filter((r) => r.showable && r.theme === "young_care" && /mouth/i.test([r.behaviour, r.uses].join(" ")));
+const mouthCarry: Record<string, unknown> = {};
+for (const {name, says, ...spec} of MOUTH) {
+    const {row, slug} = find(name, says, mouthRows);
+    mouthCarry[slug] = {name, id: row.id, quote: row.quote, line: row.line, ...spec};
+}
+
 const out = {
-    about: "Young animals and seasonal looks (3.3 batch, lane C), built by scripts/ark-young-life.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. coats: the young of these species wear another coat (the look shader's young coat, young-coat.ts); colours are sRGB.",
+    about: "Young animals and seasonal looks (3.3 batch, lane C), built by scripts/ark-young-life.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. coats: the young of these species wear another coat (the look shader's young coat, young-coat.ts); colours are sRGB. mouthCarry: the parent that carries its hatchlings in its jaws to the water, or holds its fry in its mouth (mouth-carry.ts), after a hatching of the record; say = when the row's sentence is true of what is drawn.",
     coats,
+    mouthCarry,
     coatsSkipped: Object.fromEntries(youngLookRows.filter((r) => r.name in COATS_SKIPPED).map((r) => [r.name, COATS_SKIPPED[r.name]]))
 };
-console.log(`coats ${Object.keys(coats).length} (skipped ${Object.keys(out.coatsSkipped).length})`);
+console.log(`coats ${Object.keys(coats).length} (skipped ${Object.keys(out.coatsSkipped).length}), mouth-carry ${Object.keys(mouthCarry).length}`);
 if (!process.argv.includes("--dry")) {
     fs.writeFileSync(path.join(root, "src/ark-scene/young-life.json"), JSON.stringify(out, null, 1) + "\n");
 }

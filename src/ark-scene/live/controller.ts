@@ -214,6 +214,7 @@ export class ArkLive {
         this.revive(decoded);
         this.mate(decoded);
         this.born(decoded);
+        this.hatched(decoded);
         this.push(arkLiveServerItems(decoded));
     }
 
@@ -304,6 +305,29 @@ export class ArkLive {
         }
     }
 
+    /**
+     * 3.3 batch (C): young hatched from eggs: handed to the scene (`addHatchings`), where a mouth-carrying species acts
+     * it (a crocodile's hatchlings carried to the water, a mouthbrooder's fry) and the young keep to their mother.
+     */
+    private hatched(events: readonly ArkEvent[]) {
+        const clutches = new Map<string, {key: string; parents: string[]; young: string[]; t0: number}>();
+        for (const event of events) {
+            if (event.kind !== "birth" || !event.from_egg || !event.animal || !event.parents.length) continue;
+            const t0 = Date.parse(event.at) / 1000;
+            if (!Number.isFinite(t0)) continue;
+            const key = `hatch:${event.at}:${[...event.parents].sort().join(",")}`;
+            const clutch = clutches.get(key);
+            if (clutch) clutch.young.push(event.animal.id);
+            else clutches.set(key, {key, parents: [...event.parents], young: [event.animal.id], t0});
+        }
+        if (!clutches.size) return;
+        try {
+            this.options.scene()?.addHatchings?.(Array.from(clutches.values()));
+        } catch {
+            // (A scene without it: the log says it all the same.)
+        }
+    }
+
     /** The record's lines for the animals they are about, for their own logs on the tap card. */
     private noteRecord(events: readonly ArkEvent[]) {
         if (!events.length) return;
@@ -366,6 +390,7 @@ export class ArkLive {
                 this.revive(events);
                 this.mate(events);
                 this.born(events);
+                this.hatched(events);
                 this.push(arkLiveServerItems(events));
             })
             .catch(() => {

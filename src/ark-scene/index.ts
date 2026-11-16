@@ -222,6 +222,7 @@ import {speciesCare} from "@/lib/ark-age";
 // 3.3 batch (C): young with their recorded mother
 import {Lineage, nurseTurn} from "@/ark-scene/young-care";
 import {applyYoungCoat, youngCoatOf, youngCoatStrength, youngSteps} from "@/ark-scene/young-coat";
+import {MouthCarry} from "@/ark-scene/mouth-carry";
 import {mealOnStage, mealScript, DRINK_REACH, type MealCatch} from "@/ark-scene/meal-acts";
 import {MealTraces, type TraceDraw} from "@/ark-scene/meal-traces";
 import {bodyMassKg, isScavenger, mealPlan, type MealPlan, type MealSide, type ScavengerCandidate} from "@/ark-scene/meals";
@@ -4445,6 +4446,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (act && c.visible) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act});
             if (c.visible) {
                 seenNear.add(c.entry.animal.id);
+                // 3.3 batch (C): a parent carrying its young in its mouth (`mouth-carry.ts`), in the species' own sentence.
+                const carrying = mouthCarry.size ? mouthCarry.showing(c.entry.animal.id) : null;
+                if (carrying) {
+                    const p = c.entry.animal;
+                    seenActs.push({id: p.id, name: p.name, speciesId: p.kind_species_profile_id || p.species_profile_id || `slug:${p.model_slug}`, zone: p.zone, recipe: "mouth_carry", episode: carrying.key, block: "carry", fish: false, line: carrying.line});
+                }
                 // 3.3 batch (C): a young one in its species' young coat, close by: the species' own sentence for it.
                 if (c.distance < 40 && (c.entry.youngCoat?.steps ?? 0) > 7) {
                     const y = c.entry.animal;
@@ -7052,6 +7059,36 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id))
     });
+    /**
+     * 3.3 batch (C): young carried in the mouth after a hatching of the record (`mouth-carry.ts`): a crocodilian mother
+     * takes her hatchlings from the nest to the water at her jaw; a mouthbrooding fish's fry come and go at its mouth.
+     */
+    const mouthCarry = new MouthCarry<Entry>({
+        find: (id) => {
+            const e = entryById.get(id);
+            return e && !e.held && !e.visitor ? e : null;
+        },
+        slug: (entry) => entry.animal.model_slug,
+        placeAt: (entry, epoch) => {
+            if (!entry.sched || !world || reducedMotion) return null;
+            const at = schedulePose(entry, epoch);
+            return at.aloft ? null : {x: at.x, y: at.y, z: at.z, yaw: at.yaw};
+        },
+        ground: (x, z) => Math.max(heightAt(x, z), -0.3),
+        waterNear: (x, z) => waterEdgeNear(x, z, 40),
+        walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
+        length: (entry) => entry.length,
+        height: (entry) => entry.drawnHeight,
+        male: (entry) => {
+            const sex = sexLook(entry.animal.id, entry.animal.model_slug).sex;
+            return sex === "male" ? true : sex === "female" ? false : null;
+        },
+        alarmed: (entry) => (entry.reactive?.alarmed ?? 0) > 0.25,
+        setAct: (entry, pose) => {
+            entry.act = pose;
+        },
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id) || liveBirths.pins().includes(entry.animal.id))
+    });
     /** The meals' traces this frame (feathers, fur, scales, pressed grass), and the pressed grass for the grass to bend. */
     let tracesNow: TraceDraw[] = [];
     /**
@@ -7194,12 +7231,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** The live world's meals, a frame (after the replay's acts): poses, and their pins for the herds. */
     const stepLiveMeals = () => {
-        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size) || reducedMotion) return;
+        // 3.3 batch (C): and the mouth-carrying after a hatching (`mouthCarry`), here and in the two lines below.
+        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !mouthCarry.size) || reducedMotion) return;
         const epoch = worldMs() / 1000;
         if (liveMeals.size) liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
         if (liveMatings.size) liveMatings.step(epoch);
         if (liveBirths.size) liveBirths.step(epoch);
-        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins()]);
+        if (mouthCarry.size) mouthCarry.step(epoch);
+        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins(), ...mouthCarry.pins()]);
         if (pins.size !== mealPins.size || Array.from(pins).some((id) => !mealPins.has(id))) {
             mealPins = pins;
             refreshLive();
@@ -7948,7 +7987,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), hatchings: () => mouthCarry.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
@@ -8067,6 +8106,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             liveBirths.add(births, worldMs() / 1000);
             // 3.3 batch (C): the young of the record's births follow (and suckle from) their recorded mother from now on.
             if (births.map((b) => lineage.note(b.young, b.parents)).some(Boolean)) liveliness.lineageChanged();
+        },
+        // 3.3 batch (C): the record's hatchings: a mouth-carrying species acts it (`mouth-carry.ts`); the lineage as for a birth.
+        addHatchings: (hatchings) => {
+            mouthCarry.add(hatchings, worldMs() / 1000);
+            if (hatchings.map((b) => lineage.note(b.young, b.parents)).some(Boolean)) liveliness.lineageChanged();
         },
         setDormant: (kinds) => {
             dormantKinds = new Set(kinds);
