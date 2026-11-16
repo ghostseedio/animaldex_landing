@@ -96,7 +96,7 @@ import {skipEmptyDraws} from "@/ark-scene/runtime/empty-draws";
 import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {rigBasesFrom} from "@/ark-scene/rig-clips";
-import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {waterLevelAt} from "@/ark-scene/water-level";
@@ -4101,6 +4101,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const peeking = (entry.peek ?? -1) >= 0;
         if (!peeking) state.weight = Math.min(Math.max(state.weight + Math.min(Math.max(target - state.weight, -dt / RIG_BLEND_SECONDS), dt / RIG_BLEND_SECONDS), 0), 1);
         rigHere.set(where.x, where.base, where.z);
+        const turnYaw = state.yaw; // gfx (PLACE): the heading it was drawn at last frame
         // Its path's climb and turn (for the flight clips), eased so a frame's jitter never flips flap and glide.
         if (state.last && dt > 0) {
             const dx = where.x - state.last.x;
@@ -4124,6 +4125,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let moved = state.last ? rigHere.distanceTo(state.last) / Math.max(modelScale, 1e-6) : 0;
         // A jump (a new spot, an act's cut): no stride for it.
         if (moved > 3) moved = 0;
+        // gfx (PLACE): a turn on the spot on the ground steps its feet round (`turnSteps`), never a pivot with its feet still.
+        if (grounded && !where.afloat && !where.water && state.last && turnYaw !== null) moved = Math.hypot(moved, turnSteps(where.yaw - turnYaw, dt, entry.length) / Math.max(modelScale, 1e-6));
         state.last = (state.last ?? new Vector3()).copy(rigHere);
         if (state.weight <= 0) {
             // Out of its rig: back on its feet (the near model's rest pose) for when it comes back.
@@ -4865,7 +4868,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         perf.lap("apart");
         // Every visible animal's gait (its pace by the distance it covers): which movers get a rig from far off, and
         // the cheap gait of those that don't.
-        for (const c of candidates) if (c.visible && !c.skip) c.entry.gait = stepGait(c.entry.gait, c.pose.x, c.pose.z, dt, c.entry.length);
+        for (const c of candidates) if (c.visible && !c.skip) c.entry.gait = stepGait(c.entry.gait, c.pose.x, c.pose.z, dt, c.entry.length, c.pose.afloat ? undefined : c.pose.yaw); // gfx (PLACE): a turn on the spot steps
         // A walker moving on the ground, seen from anywhere (the island view is ~190 m off): its rig, within the caps,
         // so the island's movers walk on their legs rather than glide (the owner, 2026-11-11). It is drawn near for that.
         const movingRig = (c: Candidate) =>
