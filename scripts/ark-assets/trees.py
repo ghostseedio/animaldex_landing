@@ -14,7 +14,18 @@ from arkgeo import (UP, Asset, Mesh, attach, fbm, hexc, icosphere, jitter, kmean
                     vertex_normals)
 
 # Triangle budgets per level of detail (mid-range phone, instanced): the leaves fill what the wood leaves.
-BUDGET = (7500, 2200, 600)
+# (Graphics pass 1, lane VEG, 2026-11-16: the owner, "leaves on trees seem to be polygons". The middle and far levels
+# had a third and a twelfth of the full tree's leaves, each grown up to 2.6x to cover the same crown: from the island
+# view and closer the crowns read as a few big flat polygons. Half as much again at lod1 and two thirds more at lod2,
+# and each leaf and clump grown less (`LEAF_GROW_MAX`, `CLUMP_GROW_MAX`), so the same crown is made of more, smaller
+# leaves. lod0 keeps its budget.)
+BUDGET = (7500, 3300, 1000)
+# The most a kept leaf blade, and a broadleaf's leaf clump, is grown at each level to cover for the ones left out.
+LEAF_GROW_MAX = (99.0, 1.6, 2.2)
+CLUMP_GROW_MAX = (99.0, 1.45, 2.0)
+# How far a leaf's and a clump's shading normal follows the crown's (out from its middle) rather than its own facet:
+# the crown shades as one leafy mass, not as many differently lit flat pieces (lane VEG).
+CROWN_NORMAL = 0.78
 
 # Per level of detail: tube sides by limb level, metres per segment, deepest limb level drawn,
 # leaf keep ratio and leaf scale.
@@ -319,7 +330,7 @@ def mesh_leaves(spec, tree, detail, out, rng, target=None):
     grow = D["grow"] * LV.get("grow_scale", [1, 1, 1])[detail]
     if target is not None:
         grow = max(1.0, math.sqrt(len(leaves) / keep) * 0.92) * LV.get("grow_scale", [1, 1, 1])[detail]
-        grow = min(grow, LV.get("grow_max", 99.0))
+        grow = min(grow, LV.get("grow_max", 99.0), LEAF_GROW_MAX[detail])
     segs = LV.get("segs", 0) if detail == 0 else 0
     kind = LV.get("kind", "blade")
     wpos = LV.get("wpos", 0.45)
@@ -341,7 +352,7 @@ def mesh_leaves(spec, tree, detail, out, rng, target=None):
         radial = norm(Pw - centre)
         facing = np.sign(radial @ y)[:, None]
         facing[facing == 0] = 1
-        Nw = norm(y * facing * 0.4 + radial * 0.6)
+        Nw = norm(y * facing * (1 - CROWN_NORMAL) + radial * CROWN_NORMAL)
         depth = np.clip(np.linalg.norm(Pw - centre, axis=1) / spread, 0, 1.15)
         ao = (0.5 + 0.5 * depth ** 0.9) * (0.82 + 0.18 * (Pw[:, 1] - ymin) / max(ymax - ymin, 1e-3))
         col = np.tile(leaf["color"], (len(P), 1))
@@ -427,7 +438,8 @@ def mesh_card(spec, tree, rng):
                 w = np.percentile(np.abs(band @ axis), 90) + 0.2 if len(band) > 3 else (1 - i / tiers) * 2
                 k = 5
                 base = [axis * (-w + 2 * w * j / (k - 1)) + UP * (y0 - (0.25 if j % 2 else 0.0)) for j in range(k)]
-                P = np.array(base + [UP * y1])
+                # Each tier a little in front of the one under it (they overlap: lane VEG, no two in one surface).
+                P = np.array(base + [UP * y1]) + nrm * 0.03 * (i + 1)
                 F = [[j, j + 1, k] for j in range(k - 1)]
                 C = np.tile(col, (len(P), 1))
                 C[:k, :3] *= 0.62
@@ -465,7 +477,8 @@ def mesh_card(spec, tree, rng):
                 ring += [axis * (mid + half * apex) + UP * (y1 - th * 0.3), axis * (mid + half * apex * 0.3) + UP * y1,
                          axis * (mid - half * apex * 0.4) + UP * (y1 - th * 0.08), axis * (mid - half * apex) + UP * (y1 - th * 0.35)]
                 c = axis * mid + UP * (y0 + (y1 - y0) * 0.45)
-                P = np.array([c] + ring)
+                # Each pad a little in front of the one under it (they overlap: lane VEG, no two in one surface).
+                P = np.array([c] + ring) + nrm * 0.03 * (i + 1)
                 m = len(ring)
                 F = [[0, 1 + j, 1 + (j + 1) % m] for j in range(m)]
                 C = np.tile(col, (len(P), 1))
@@ -480,9 +493,10 @@ def mesh_card(spec, tree, rng):
         fronds = getattr(tree, "fronds", [])[::2]
         col = np.median(np.array([l["color"] for l in tree.leaves]), 0)
         for axis, nrm in planes:
-            for limb in fronds:
+            for fi, limb in enumerate(fronds):
                 pts, (_,) = resample(limb.pts, [limb.rad], 4)
-                pts = pts - nrm * (pts @ nrm)[:, None]
+                # (Each frond at its own small depth: lane VEG, no two in one surface.)
+                pts = pts - nrm * (pts @ nrm)[:, None] + nrm * 0.02 * (fi + 1) * (1 if fi % 2 else -1)
                 T = norm(np.gradient(pts, axis=0))
                 side = norm(np.cross(T, nrm[None].repeat(len(T), 0)))
                 wd = np.array([0.1, 0.45, 0.4, 0.05]) * spec["leaves"]["length"] * 1.3
@@ -499,40 +513,56 @@ def mesh_card(spec, tree, rng):
     elif tree.leaves:
         X = np.array([l["p"] for l in tree.leaves])
         cols = np.array([l["color"] for l in tree.leaves])
-        k = min(spec.get("card_lobes", 7), 8)
+        # (Graphics pass 1, lane VEG: the owner, "trees seem to flicker zoomed out". Every lobe of a plane used to be
+        # pressed flat into that plane, so the lobes overlapped in one surface and fought in the depth buffer, worst far
+        # away where the depth is coarsest: the crowns from the island view sparkled from frame to frame. Each lobe now
+        # stands at its own depth in front of or behind the plane (where its leaves are, never closer to it than a
+        # step apart from the others), and its leaves flutter less (a far card's flutter only crawls its edges). More,
+        # smaller lobes with a scalloped rim of leaf tips, dark at the heart and lit at the tips, so a far crown reads as
+        # leaf clusters rather than a few flat polygons.)
+        k = min(spec.get("card_lobes", 7) + 3, 11)
         C, lab = kmeans(X, k, rng)
         centre = X.mean(0)
         ylo, yhi = X[:, 1].min(), X[:, 1].max()
-        sides = 8
+        sides = 12
         for axis, nrm in planes:
-            for i in range(len(C)):
+            # Nearest the plane first: each lobe at least a step further out than the one before, on its own side.
+            order = np.argsort(np.abs((C - centre) @ nrm))
+            for rank, i in enumerate(order):
                 pts = X[lab == i]
                 if len(pts) < 3:
                     continue
-                c = C[i] - nrm * (C[i] @ nrm)
+                raw = float((C[i] - centre) @ nrm)
+                sign = math.copysign(1.0, raw) if abs(raw) > 0.05 else (1.0 if rank % 2 == 0 else -1.0)
+                depth = sign * (abs(raw) * 0.6 + 0.04 + 0.035 * rank)
+                c = C[i] - nrm * (C[i] @ nrm) + nrm * depth
                 rel = pts - C[i]
                 rel -= nrm * (rel @ nrm)[:, None]
                 base_col = np.median(cols[lab == i], 0)
                 ang = np.linspace(0, 2 * math.pi, sides, endpoint=False) + rng.uniform(0, 1)
                 ring = []
+                tips = []
                 for j, a in enumerate(ang):
                     dirv = axis * math.cos(a) + UP * math.sin(a)
                     proj = rel @ dirv
-                    reach = np.percentile(proj, 85) + spec["leaves"]["length"] * 0.5
-                    # Scalloped: alternate points pulled in, so the outline reads as leaf clumps.
-                    ring.append(c + dirv * max(reach, 0.2) * (1.0 if j % 2 == 0 else 0.7) * rng.uniform(0.85, 1.1))
+                    reach = np.percentile(proj, 85) + spec["leaves"]["length"] * 0.4
+                    # Scalloped: leaf tips and the notches between them.
+                    tip = j % 2 == 0
+                    ring.append(c + dirv * max(reach, 0.2) * (1.0 if tip else 0.74) * rng.uniform(0.86, 1.08))
+                    tips.append(1.12 if tip else 0.94)
                 P = np.concatenate([[c], np.array(ring)])
                 F = [[0, 1 + (j + 1) % sides, 1 + j] for j in range(sides)]
                 inplane = P - centre
                 inplane -= nrm * (inplane @ nrm)[:, None]
-                N = norm(norm(inplane) * 0.55 + UP * 0.35 + nrm * 0.45)
+                N = norm(norm(inplane) * 0.6 + UP * 0.35 + nrm * 0.4)
                 h = np.clip((P[:, 1] - ylo) / max(yhi - ylo, 1e-3), 0, 1)
                 col = np.tile(base_col, (len(P), 1))
                 col[:, :3] *= (0.62 + 0.4 * h)[:, None]
-                col[1:, :3] *= 1.06
+                col[0, :3] *= 0.86
+                col[1:, :3] *= np.array(tips)[:, None]
                 W = np.zeros((len(P), 4))
                 W[:, 0] = 0.6
-                W[1:, 2] = 0.5
+                W[1:, 2] = 0.15
                 two_sided(out, P, F, N, np.clip(col, 0, 1), W, nrm)
     return out
 
@@ -859,6 +889,8 @@ def mesh_clump_group(spec, CL, clumps, tree, detail, out, rng, target_tris):
     order = np.random.default_rng(11).permutation(len(clumps))
     chosen = [clumps[i] for i in order[:keep]]
     grow = min(CL.get("grow_max", 2.6), max(1.0, math.sqrt(len(clumps) / keep) * 0.95))
+    if kind == "fan":
+        grow = min(grow, CLUMP_GROW_MAX[detail])
     allp = np.array([c["p"] for c in clumps])
     centre = getattr(tree, "crown_centre", None)
     if centre is None or kind not in ("bough", "sheet", "tuft", "cone", "bristle"):
@@ -919,7 +951,7 @@ def mesh_clump_group(spec, CL, clumps, tree, detail, out, rng, target_tris):
                                   CL.get("droop", 0.18))
             Pw, x, y, z = place_frame(P, c["p"], c["d"] - c["n"] * (c["d"] @ c["n"]), c["n"])
         radial = norm(Pw - centre)
-        Nw = norm(radial * 0.6 + y * 0.4)
+        Nw = norm(radial * 0.6 + y * 0.4) if kind != "fan" else norm(radial * CROWN_NORMAL + y * (1 - CROWN_NORMAL))
         depth = np.clip(np.linalg.norm(Pw - centre, axis=1) / spread, 0, 1.15)
         ao = (0.45 + 0.55 * depth ** 0.8) * (0.8 + 0.2 * (Pw[:, 1] - ymin) / max(ymax - ymin, 1e-3))
         if kind in ("bough", "sheet", "tuft", "cone", "bristle") or "under" in CL:
@@ -929,7 +961,13 @@ def mesh_clump_group(spec, CL, clumps, tree, detail, out, rng, target_tris):
         col = np.tile(c["color"], (len(Pw), 1))
         tipc = np.asarray(spec["leaves"].get("tip", c["color"] * np.array([1.12, 1.12, 0.9, 1])))
         col = mix(col, np.tile(tipc, (len(Pw), 1)), (tip - 0.6).clip(0) * CL.get("tip_mix", 0.6))
-        col[0, :3] *= 1.08
+        if kind == "fan":
+            # A broadleaf clump is a cluster of leaves, not a flat plate (lane VEG): its heart (vertex 0) in the shade of
+            # the leaves round it, the notches between them a little darker, the leaf tips catching the light.
+            col[0, :3] *= 0.8
+            col[1:, :3] *= np.where(tip[1:] > 0.8, 1.1, 0.93)[:, None]
+        else:
+            col[0, :3] *= 1.08
         col[:, :3] *= ao[:, None]
         sw = np.full(len(Pw), min(1.0, c["sway"] + 0.12)) if sway is None else np.minimum(1.0, sway + 0.12 * tip)
         W = np.stack([sw, np.full(len(Pw), c["phase"]), tip * 0.6, np.full(len(Pw), c["lphase"])], 1)

@@ -51,7 +51,7 @@ const CROWN_HOLD_HEIGHTS = 33;
 /** The trees' material; `near` adds the near-camera fade (only for the trees drawn round the camera). Also the town's. */
 export function windMaterial(doubleSided: boolean, near = false, conifer = false): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.85, metalness: 0, side: doubleSided ? DoubleSide : FrontSide});
-    material.customProgramCacheKey = () => `ark-asset-tree-b6-${doubleSided ? 2 : 1}${near ? "-near" : ""}${conifer ? "-conifer" : ""}`;
+    material.customProgramCacheKey = () => `ark-asset-tree-b7-${doubleSided ? 2 : 1}${near ? "-near" : ""}${conifer ? "-conifer" : ""}`;
     material.onBeforeCompile = (shader) => {
         shader.uniforms.arkTime = ARK_TIME;
         shader.uniforms.arkWind = ARK_WIND;
@@ -75,7 +75,17 @@ uniform vec2 arkWind;`)
     float bend = color_1.x * (0.25 + 0.06 * max(transformed.y, 0.0));
     transformed.xz += along * (0.35 + 0.65 * wave) * bend * 0.09 * gust;
     float leaf = color_1.w * 6.2831853;
-    transformed += vec3(sin(arkTime * 7.1 + leaf), 0.6 * sin(arkTime * 6.30413 + leaf * 1.3), cos(arkTime * 6.70206 + leaf)) * color_1.z * 0.025 * (0.4 + gust);
+    // (Graphics pass 1, lane VEG: the owner, "trees seem to flicker zoomed out". Every leaf shook on its own phase at
+    // about 7 Hz, even in still air: far away a leaf is a pixel or two, so the shaking turned each crown into a field of
+    // pixels changing every frame. The flutter now fades out from 25 m to 70 m from the camera, where it cannot be
+    // seen as movement, only as sparkle; the sway of the whole tree stays.)
+    #ifdef USE_INSTANCING
+    vec3 arkSeenFrom = (modelMatrix * instanceMatrix * vec4(position, 1.0)).xyz;
+    #else
+    vec3 arkSeenFrom = (modelMatrix * vec4(position, 1.0)).xyz;
+    #endif
+    float arkNearLeaf = 1.0 - smoothstep(25.0, 70.0, distance(arkSeenFrom, cameraPosition));
+    transformed += vec3(sin(arkTime * 7.1 + leaf), 0.6 * sin(arkTime * 6.30413 + leaf * 1.3), cos(arkTime * 6.70206 + leaf)) * color_1.z * 0.025 * (0.4 + gust) * arkNearLeaf;
     // Leaves flutter (broadleaf 0.36 and up, the conifers' boughs from about 0.05); wood does not (0).
     vArkLeafy = smoothstep(0.02, 0.1, color_1.z);
     vArkLocal = position;
@@ -245,6 +255,7 @@ export class AssetTrees {
                     mesh.castShadow = lod.level !== "card" && this.shadows;
                     mesh.receiveShadow = true;
                     mesh.userData.kind = "asset-tree";
+                    mesh.name = `asset-tree:${id}:${lod.level}`;
                     entry.meshes[lod.level] = mesh;
                     this.group.add(mesh);
                     if (lod.level === "lod0") {

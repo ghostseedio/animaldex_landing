@@ -130,7 +130,7 @@ export function treeAttachPoints(item: Placeable): TreeAttach[] {
  * `arkTime` and `arkWind` (`ARK_TIME.value`, `ARK_WIND.value` in glsl.ts) and an animal on a leaf moves with the leaf.
  * Visual only: the time is the viewer's scene clock.
  */
-export function treeSway(wind: TreeWind, time: number, windVector: {x: number; y: number}): Vec3 {
+export function treeSway(wind: TreeWind, time: number, windVector: {x: number; y: number}, cameraDistance = 0): Vec3 {
     const gust = Math.hypot(windVector.x, windVector.y);
     const ax = windVector.x / Math.max(gust, 1e-3);
     const az = windVector.y / Math.max(gust, 1e-3);
@@ -141,7 +141,9 @@ export function treeSway(wind: TreeWind, time: number, windVector: {x: number; y
     const bend = sway * (0.25 + 0.06 * Math.max(wind.local.y, 0));
     const k = (0.35 + 0.65 * wave) * bend * 0.09 * gust;
     const leaf = leafPhase * 6.2831853;
-    const f = flutter * 0.025 * (0.4 + gust);
+    // The leaves' flutter fades out 25-70 m from the camera, as the shader's (lane VEG; 0: near, full flutter).
+    const t = Math.min(Math.max((cameraDistance - 25) / 45, 0), 1);
+    const f = flutter * 0.025 * (0.4 + gust) * (1 - t * t * (3 - 2 * t));
     // In the asset's own space (the shader moves `transformed` before the instance matrix), then turned and scaled.
     const lx = ax * k + Math.sin(time * 7.1 + leaf) * f;
     const ly = 0.6 * Math.sin(time * 6.30413 + leaf * 1.3) * f;

@@ -85,7 +85,7 @@ function nearest(tree: Tree, p: Vector3, leafy: boolean): {d: number; t: Tri; po
 }
 
 /** The asset-tree vertex shader's wind, transcribed line for line (asset-trees.ts windMaterial), in asset space. */
-function shaderSway(local: Vector3, w: [number, number, number, number], rootAt: Vector3, time: number, wind: {x: number; y: number}): Vector3 {
+function shaderSway(local: Vector3, w: [number, number, number, number], rootAt: Vector3, time: number, wind: {x: number; y: number}, nearLeaf = 1): Vector3 {
     const gust = Math.hypot(wind.x, wind.y);
     const along = {x: wind.x / Math.max(gust, 1e-3), y: wind.y / Math.max(gust, 1e-3)};
     const phase = w[1] * 6.2831853;
@@ -93,7 +93,7 @@ function shaderSway(local: Vector3, w: [number, number, number, number], rootAt:
     const bend = w[0] * (0.25 + 0.06 * Math.max(local.y, 0));
     const out = new Vector3(along.x, 0, along.y).multiplyScalar((0.35 + 0.65 * wave) * bend * 0.09 * gust);
     const leaf = w[3] * 6.2831853;
-    out.add(new Vector3(Math.sin(time * 7.1 + leaf), 0.6 * Math.sin(time * 6.30413 + leaf * 1.3), Math.cos(time * 6.70206 + leaf)).multiplyScalar(w[2] * 0.025 * (0.4 + gust)));
+    out.add(new Vector3(Math.sin(time * 7.1 + leaf), 0.6 * Math.sin(time * 6.30413 + leaf * 1.3), Math.cos(time * 6.70206 + leaf)).multiplyScalar(w[2] * 0.025 * (0.4 + gust) * nearLeaf));
     return out;
 }
 
@@ -233,7 +233,8 @@ test("attach: an animal on a leaf moves with the leaf (the CPU sway is the shade
         "float bend = color_1.x * (0.25 + 0.06 * max(transformed.y, 0.0));",
         "transformed.xz += along * (0.35 + 0.65 * wave) * bend * 0.09 * gust;",
         "float leaf = color_1.w * 6.2831853;",
-        "transformed += vec3(sin(arkTime * 7.1 + leaf), 0.6 * sin(arkTime * 6.30413 + leaf * 1.3), cos(arkTime * 6.70206 + leaf)) * color_1.z * 0.025 * (0.4 + gust);"
+        "float arkNearLeaf = 1.0 - smoothstep(25.0, 70.0, distance(arkSeenFrom, cameraPosition));",
+        "transformed += vec3(sin(arkTime * 7.1 + leaf), 0.6 * sin(arkTime * 6.30413 + leaf * 1.3), cos(arkTime * 6.70206 + leaf)) * color_1.z * 0.025 * (0.4 + gust) * arkNearLeaf;"
     ]) assert.ok(shader.includes(line), `asset-trees.ts wind changed: ${line}`);
     // Still hosts hold still.
     const rock = allAttachPoints().find((point) => point.tag === "rock_face")!;

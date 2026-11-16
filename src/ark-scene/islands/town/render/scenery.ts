@@ -518,7 +518,7 @@ export function buildZooScenery(layout: ZooLayout): SceneryOut {
         const r = rng(hashText(`${plot.id}:shrubs`));
         for (let k = 0; k < 3; k++) {
             const p = local(plot.at, (r() - 0.5) * (plot.at.w - 2), (r() - 0.5) * (plot.at.d - 2));
-            c.solid.blob(p.x, H(p.x, p.z) + 0.5, p.z, 1.2, 0.8, 1.2, tone("#4f7a3a"), hashText(`${plot.id}s${k}`), 0);
+            c.solid.bush(p.x, H(p.x, p.z) + 0.5, p.z, 1.2, 0.8, 1.2, tone("#4f7a3a"), hashText(`${plot.id}s${k}`));
         }
         bench(c.solid, local(plot.at, 0, plot.at.d / 2 - 1.2), plot.at.rot + Math.PI);
     }
@@ -576,7 +576,13 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
         for (let i = 0; i < (e.type === "bears_wolves" || e.type === "penguin_seal_pools" ? 5 : 2); i++) {
             const p = local(s, (r() - 0.5) * (s.w - 4), (r() - 0.5) * (s.d - 4));
             if (e.pool && pointIn(e.pool, p)) continue;
-            c.solid.blob(p.x, H(p.x, p.z) + 0.3, p.z, 1.2 + r(), 0.9 + r() * 0.6, 1.1 + r(), tone("#8f877a"), hashText(`${e.slot.id}r${i}`), 0);
+            // (Lane VEG: a fractured boulder sat into the ground, not a 20-face ball floating 0.3 m up; same size and draws.)
+            const sx = 1.2 + r();
+            const sy = 0.9 + r() * 0.6;
+            const sz = 1.1 + r();
+            const seed = hashText(`${e.slot.id}r${i}`);
+            const low = Math.min(H(p.x - sx, p.z), H(p.x + sx, p.z), H(p.x, p.z - sz), H(p.x, p.z + sz), H(p.x, p.z));
+            c.solid.rock(p.x, low - 0.15, p.z, sx * 0.85, sy * 0.95, sz * 0.85, (seed % 628) / 100, tone(seed % 3 ? "#8f877a" : "#867d70"), seed);
         }
         const log = local(s, (r() - 0.5) * (s.w - 6), s.d / 2 - 3.5);
         const lf: Frame = {x: log.x, y: H(log.x, log.z) + 0.3, z: log.z, rot: s.rot + r()};
@@ -653,7 +659,7 @@ function zooHouse(out: SceneryOut, e: ZooEnclosure) {
     const q = rng(e.slot.seed + 3);
     for (let k = 0; k < 3; k++) {
         const p = at(f, -w / 2 + 0.6 + q() * (w - 1.2), 0, -d / 2 + 0.2);
-        c.solid.blob(p[0], f.y + 1.2 + q() * 1.5, p[2], 1.0, 1.6, 0.5, tone("#4f7a3a"), hashText(`${e.slot.id}c${k}`), 0);
+        c.solid.bush(p[0], f.y + 1.2 + q() * 1.5, p[2], 1.0, 1.6, 0.5, tone("#4f7a3a"), hashText(`${e.slot.id}c${k}`));
     }
     if (e.type === "primate_house" || e.type === "insect_house") {
         // A glazed barrel roof (the tropical hall).
@@ -684,7 +690,7 @@ function zooHouse(out: SceneryOut, e: ZooEnclosure) {
             for (const lx of [-1, 1]) c.solid.box(f, u + lx, 0, -0.5, 0.18, h - 0.4, 0.18, tone("#6a5038"));
             c.solid.box(f, u, h * 0.55, -0.5, 2.2, 0.12, 0.12, tone("#8a7050"));
         }
-        if (r() < 0.6) c.solid.blob(...at(f, u, 0.6, 0.8), 0.7, 0.6, 0.7, tone("#4f7a3a"), hashText(`${e.slot.id}p${k}`), 0);
+        if (r() < 0.6) c.solid.bush(...at(f, u, 0.6, 0.8), 0.7, 0.6, 0.7, tone("#4f7a3a"), hashText(`${e.slot.id}p${k}`));
     }
     if (e.type === "primate_house") {
         // The outdoor island: a climbing frame of poles and ropes behind the house (inside the fence line).

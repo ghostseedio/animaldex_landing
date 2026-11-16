@@ -115,7 +115,7 @@ function planter(c: Chunk, f: Frame, seed: number) {
     c.solid.box(f, 0, 0, 0, 1.5, 0.55, 0.7, CONCRETE);
     c.solid.box(f, 0, 0.55, 0, 1.56, 0.05, 0.76, tone("#bcb7ad"));
     const r = rng(seed);
-    for (let k = 0; k < 3; k++) c.solid.blob(f.x + Math.cos(f.rot) * (-0.45 + k * 0.45), f.y + 0.78, f.z + Math.sin(f.rot) * (-0.45 + k * 0.45), 0.36, 0.3, 0.3, SHRUB.map((v) => v * (0.85 + r() * 0.3)) as Colour, seed + k, 0);
+    for (let k = 0; k < 3; k++) c.solid.bush(f.x + Math.cos(f.rot) * (-0.45 + k * 0.45), f.y + 0.78, f.z + Math.sin(f.rot) * (-0.45 + k * 0.45), 0.36, 0.3, 0.3, SHRUB.map((v) => v * (0.85 + r() * 0.3)) as Colour, seed + k);
     for (let k = 0; k < 5; k++) {
         const lx = -0.6 + r() * 1.2;
         const lz = -0.25 + r() * 0.5;

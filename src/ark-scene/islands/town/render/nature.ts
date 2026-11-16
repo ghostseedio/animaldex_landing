@@ -194,9 +194,19 @@ const FLOWERS: RGB[][] = [
     [tone("#d84a6a"), tone("#f4c0cc"), tone("#ffffff")]
 ];
 const STEM = tone("#4a7a30");
+const LEAF_GREENS: RGB[] = [tone("#3f6e2a"), tone("#4d7d30"), tone("#36602a"), tone("#58853a")];
 const SOIL = tone("#4a3a2c");
+const EDGING: RGB[] = [tone("#9a8f80"), tone("#a89c8a"), tone("#8a8072"), tone("#b0a490")];
+const EYE: RGB[] = [tone("#e8b828"), tone("#3a2a1a"), tone("#f0d050")];
 
-/** A bed of low flowering plants on a patch (`frame`'s middle, w × d, its own turn, `frame.y` over the ground: a planter's): soil and plants about 25 cm apart. */
+/**
+ * A bed of bedding plants on a patch (`frame`'s middle, w × d, its own turn, `frame.y` over the ground: a planter's):
+ * dug soil inside a low stone edging, the plants about 25 cm apart, tall ones (spikes) toward the middle and low ones
+ * (cushions, open stars) toward the edge, each a leafy rosette under its flowers, in the bed's few colours.
+ *
+ * (Graphics pass 1, lane VEG: the owner, "the flower bed too" (horrendous). Each plant was two crossed green
+ * triangles under a flat coloured diamond on bare soil, with no edge to the bed: a field of little flags.)
+ */
 export function flowerBed(foliage: Geo, decal: Geo, frame: Frame, w: number, d: number, seed: number, round = false, soilTag = 0) {
     const r = rng(seed);
     const palette = FLOWERS[seed % FLOWERS.length];
@@ -218,28 +228,139 @@ export function flowerBed(foliage: Geo, decal: Geo, frame: Frame, w: number, d: 
         decal.drape(frame, w, d, (x, z) => H(x, z) + frame.y, 0.07, () => SOIL, 1);
     }
     decal.tag = before;
-    const spacing = 0.3;
-    for (let lx = -w / 2 + spacing / 2; lx < w / 2; lx += spacing) {
-        for (let lz = -d / 2 + spacing / 2; lz < d / 2; lz += spacing) {
-            if (round && (lx * lx) / ((w / 2) * (w / 2)) + (lz * lz) / ((d / 2) * (d / 2)) > 0.85) continue;
-            const p = at(frame, lx + (r() - 0.5) * 0.12, 0, lz + (r() - 0.5) * 0.12);
+    foliage.tag = 0;
+    // The edging: a ring of low, rounded-off stones round a round bed, a kerb of them along a long one (not in a
+    // planter, whose brick box is its edge).
+    if (frame.y < 0.2) bedEdging(foliage, frame, w, d, round, r);
+    const spacing = 0.25;
+    const inset = frame.y < 0.2 ? 0.1 : 0.02;
+    for (let lx = -w / 2 + inset + spacing / 2; lx < w / 2 - inset; lx += spacing) {
+        for (let lz = -d / 2 + inset + spacing / 2; lz < d / 2 - inset; lz += spacing) {
+            if (round && (lx * lx) / ((w / 2 - inset) * (w / 2 - inset)) + (lz * lz) / ((d / 2 - inset) * (d / 2 - inset)) > 0.8) continue;
+            const p = at(frame, lx + (r() - 0.5) * 0.1, 0, lz + (r() - 0.5) * 0.1);
             const g = H(p[0], p[2]) + frame.y + 0.06;
-            const tall = 0.22 + r() * 0.22;
-            const turn = r() * Math.PI;
-            const cx = Math.cos(turn) * 0.09;
-            const cz = Math.sin(turn) * 0.09;
-            // Two crossed leafy blades, then the flower head as a small upturned diamond.
-            foliage.tag = 0;
-            foliage.tri([p[0] - cx, g, p[2] - cz], [p[0] + cx, g, p[2] + cz], [p[0], g + tall, p[2]], STEM);
-            foliage.tri([p[0] + cz, g, p[2] - cx], [p[0] - cz, g, p[2] + cx], [p[0], g + tall * 0.9, p[2]], shade(STEM, 0.85));
+            // How far in from the bed's edge (0 at the edge, 1 in the middle): taller plants in the middle.
+            const middle = round ? 1 - Math.sqrt((lx * lx) / ((w / 2) * (w / 2)) + (lz * lz) / ((d / 2) * (d / 2))) : 1 - Math.abs(lz) / (d / 2);
+            const kind = middle > 0.55 && r() < 0.7 ? "spike" : r() < 0.5 ? "cushion" : "star";
             const head = palette[Math.floor(r() * palette.length)];
-            const s = 0.06 + r() * 0.04;
-            const top: V3 = [p[0], g + tall + 0.02, p[2]];
-            foliage.tag = 0.6;
-            foliage.quad([top[0] - s, top[1], top[2]], [top[0], top[1] - 0.01, top[2] + s], [top[0] + s, top[1], top[2]], [top[0], top[1] + 0.02, top[2] - s], head);
+            bedPlant(foliage, p[0], g, p[2], kind, head, r);
         }
     }
     foliage.tag = 0;
+}
+
+/** Low rounded stones round a bed's rim (in the foliage mesh, which sways only what is tagged). */
+function bedEdging(geo: Geo, frame: Frame, w: number, d: number, round: boolean, r: () => number) {
+    const stones: Array<[number, number, number]> = [];
+    if (round) {
+        const n = Math.max(12, Math.round((Math.PI * (w + d)) / 2 / 0.22));
+        for (let i = 0; i < n; i++) stones.push([Math.cos((i / n) * Math.PI * 2) * w / 2, Math.sin((i / n) * Math.PI * 2) * d / 2, (i / n) * Math.PI * 2 + Math.PI / 2]);
+    } else {
+        // Along the front (+z) and both ends: the back of a house's bed is its wall.
+        for (let x = -w / 2 + 0.11; x < w / 2; x += 0.22) stones.push([x, d / 2, 0]);
+        for (const side of [-1, 1]) for (let z = -d / 2 + 0.11; z < d / 2 - 0.05; z += 0.22) stones.push([side * w / 2, z, Math.PI / 2]);
+    }
+    for (const [lx, lz, turn] of stones) {
+        const c = at(frame, lx, 0, lz);
+        const y = H(c[0], c[2]) + frame.y;
+        const colour = shade(EDGING[Math.floor(r() * EDGING.length)], 0.85 + r() * 0.25);
+        const a = (frame.rot ?? 0) + turn;
+        const ux = Math.cos(a) * 0.1;
+        const uz = -Math.sin(a) * 0.1;
+        const vx = Math.sin(a) * 0.07;
+        const vz = Math.cos(a) * 0.07;
+        const h = 0.09 + r() * 0.04;
+        // A low rounded block: four sides leaning in to a smaller top.
+        const base: V3[] = [[c[0] - ux - vx, y, c[2] - uz - vz], [c[0] + ux - vx, y, c[2] + uz - vz], [c[0] + ux + vx, y, c[2] + uz + vz], [c[0] - ux + vx, y, c[2] - uz + vz]];
+        const top: V3[] = base.map(([x, , z]) => [c[0] + (x - c[0]) * 0.72, y + h, c[2] + (z - c[2]) * 0.72]);
+        for (let k = 0; k < 4; k++) geo.quad(base[k], base[(k + 1) % 4], top[(k + 1) % 4], top[k], shade(colour, 0.82));
+        geo.quad(top[0], top[1], top[2], top[3], colour);
+    }
+}
+
+/**
+ * One bedding plant at (x, g, z): a rosette of leaves and its flowers. `spike`: a stem of florets up to ~45 cm (a
+ * salvia, a lupin); `cushion`: a low mound with a few small heads (a begonia, an alyssum); `star`: open flowers with
+ * a dark or golden eye on short stems (a pansy, a daisy).
+ */
+function bedPlant(geo: Geo, x: number, g: number, z: number, kind: "spike" | "cushion" | "star", head: RGB, r: () => number) {
+    const green = LEAF_GREENS[Math.floor(r() * LEAF_GREENS.length)];
+    const turn = r() * Math.PI * 2;
+    // Leaves: four lying out and up from the crown, each a folded diamond.
+    const leaves = kind === "cushion" ? 5 : 4;
+    const reach = kind === "spike" ? 0.15 : 0.14;
+    for (let k = 0; k < leaves; k++) {
+        const a = turn + (k / leaves) * Math.PI * 2 + (r() - 0.5) * 0.4;
+        const ca = Math.cos(a);
+        const sa = Math.sin(a);
+        const len = reach * (0.8 + r() * 0.4);
+        const rise = kind === "cushion" ? 0.1 : 0.05 + r() * 0.05;
+        const tip: V3 = [x + ca * len, g + rise, z + sa * len];
+        const mid: V3 = [x + ca * len * 0.5, g + rise * 0.9 + 0.015, z + sa * len * 0.5];
+        const left: V3 = [mid[0] - sa * len * 0.32, mid[1] - 0.01, mid[2] + ca * len * 0.32];
+        const right: V3 = [mid[0] + sa * len * 0.32, mid[1] - 0.01, mid[2] - ca * len * 0.32];
+        const base: V3 = [x, g + 0.01, z];
+        geo.tag = 0.25;
+        geo.tri(base, left, mid, shade(green, 0.82));
+        geo.tri(base, mid, right, shade(green, 0.9));
+        geo.tri(left, tip, mid, green);
+        geo.tri(mid, tip, right, shade(green, 1.08));
+    }
+    if (kind === "spike") {
+        const tall = 0.36 + r() * 0.2;
+        const top: V3 = [x + (r() - 0.5) * 0.03, g + tall, z + (r() - 0.5) * 0.03];
+        geo.tag = 0.5;
+        geo.tri([x - 0.008, g, z], [x + 0.008, g, z], top, STEM);
+        // Florets up the top half of the stem, smaller toward the tip.
+        const florets = 5;
+        for (let k = 0; k < florets; k++) {
+            const t = 0.45 + (0.55 * k) / florets;
+            const cx = x + (top[0] - x) * t;
+            const cy = g + tall * t;
+            const cz = z + (top[2] - z) * t;
+            const s = 0.042 * (1.1 - 0.5 * (k / florets));
+            const a = turn + k * 2.4;
+            const ux = Math.cos(a) * s;
+            const uz = Math.sin(a) * s;
+            geo.tag = 0.6;
+            const c = shade(head, 0.85 + 0.25 * (k / florets));
+            geo.tri([cx - ux, cy, cz - uz], [cx - uz, cy - s * 0.6, cz + ux], [cx + ux, cy, cz + uz], shade(c, 0.85));
+            geo.tri([cx - ux, cy, cz - uz], [cx + ux, cy, cz + uz], [cx + uz, cy + s * 0.9, cz - ux], c);
+        }
+        return;
+    }
+    // Cushions: three small round heads sitting on the leaves; stars: two open flowers on short stems.
+    const heads = kind === "cushion" ? 3 : 2;
+    for (let k = 0; k < heads; k++) {
+        const a = turn + k * 2.3 + 0.5;
+        const out = kind === "cushion" ? 0.04 + r() * 0.03 : 0.02 + r() * 0.04;
+        const hx = x + Math.cos(a) * out;
+        const hz = z + Math.sin(a) * out;
+        const hy = g + (kind === "cushion" ? 0.11 + r() * 0.04 : 0.18 + r() * 0.1);
+        geo.tag = 0.5;
+        if (kind === "star") geo.tri([x - 0.006, g, z], [x + 0.006, g, z], [hx, hy, hz], STEM);
+        const s = kind === "cushion" ? 0.042 : 0.06;
+        const petals = 5;
+        const ring: V3[] = [];
+        for (let j = 0; j < petals * 2; j++) {
+            const b = a + (j / (petals * 2)) * Math.PI * 2;
+            const rr = j % 2 ? s * 0.45 : s;
+            ring.push([hx + Math.cos(b) * rr, hy + (j % 2 ? 0.004 : -0.006), hz + Math.sin(b) * rr]);
+        }
+        const eye: V3 = [hx, hy + 0.01, hz];
+        geo.tag = 0.6;
+        const eyeColour = kind === "star" ? EYE[Math.floor(r() * EYE.length)] : shade(head, 0.7);
+        for (let j = 0; j < petals; j++) {
+            // Each petal: the eye, its two notches and its tip (two triangles).
+            const n0 = ring[(2 * j + 9) % 10];
+            const tip = ring[2 * j];
+            const n1 = ring[2 * j + 1];
+            geo.tri(eye, n0, tip, shade(head, 0.92));
+            geo.tri(eye, tip, n1, head);
+        }
+        // The eye itself: a small raised dot.
+        geo.tri([hx - s * 0.2, hy + 0.012, hz], [hx + s * 0.1, hy + 0.012, hz + s * 0.18], [hx + s * 0.1, hy + 0.012, hz - s * 0.18], eyeColour);
+    }
 }
 
 // MARK: - Crops

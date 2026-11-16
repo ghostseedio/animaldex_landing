@@ -175,9 +175,9 @@ const TOWN_DIGESTS = {
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "e1edddc474c8ed86",
+    sceneryAndBuildings: "7a63b081ab02589e",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
-    zoo: "eab511fbdc012d17",
+    zoo: "1b520265e67b59fd",
     places: "fba1268b733101f8"
 };
 
