@@ -1092,7 +1092,6 @@ html[data-hero-played] [data-hero-opening] {
     visibility: hidden;
     opacity: 0;
 }
-html[data-hero-armed]:not([data-hero-played]) #top:is([data-step="real"], [data-step="card"]) [data-hero-middle] { opacity: 0; }
 html[data-hero-lite] .hero-real-drift { animation: none; }
 html[data-hero-lite] .hero-motion { transform: none !important; }
 @media (prefers-reduced-motion: reduce) {

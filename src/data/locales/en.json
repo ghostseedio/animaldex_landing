@@ -452,8 +452,7 @@
   "landing": {
     "hero": {
       "taglineLead": "Catch real animals.",
-      "taglineMiddle": "Meet them in a living world.",
-      "taglineRest": "Talk to them.",
+      "taglineRest": "Then talk to them.",
       "slogan": "Every animal has a lesson.",
       "explore": "Explore the live Ark",
       "seeLive": "See it live",
@@ -556,10 +555,16 @@
       "kind": "Its kind · a day",
       "step": "A step",
       "see": "See it live",
-      "by": "brought by {name}"
+      "by": "brought by {name}",
+      "whatTitle": "What is System Dynamics?",
+      "whatBody": "It is the natural rhythm of an animal's day: when its kind is busy, when it eats and when it rests. We research it for every species. The dotted line is that rhythm. The solid line is this animal's day in the Ark. The closer they match, the more it is living like its kind."
     },
     "foodChain": {
-      "eyebrow": "Who eats whom"
+      "eyebrow": "The food chain",
+      "title": "Who eats whom",
+      "eats": "eats",
+      "more": "See the whole food chain",
+      "seeInArk": "See the {animal} in the Ark"
     },
     "population": {
       "eyebrow": "Populations over time",

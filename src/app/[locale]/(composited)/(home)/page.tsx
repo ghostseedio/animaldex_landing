@@ -8,8 +8,10 @@ import HomeLoopVideo from "@/app/[locale]/(composited)/(home)/_components/home-l
 import HomeArkBand from "@/app/[locale]/(composited)/(home)/_components/home-ark-band";
 import HomeRhythm from "@/app/[locale]/(composited)/(home)/_components/home-rhythm";
 import {readHomeRhythmPick} from "@/data/ark-home-rhythm";
-import ArkFoodChainSection from "@/components/ark/ark-food-chain-section";
-import HomeFoodChainDev from "@/app/[locale]/(composited)/(home)/_components/home-food-chain-dev";
+import HomeFoodChains from "@/app/[locale]/(composited)/(home)/_components/home-food-chains";
+import {readArkFoodChainAboard, readArkFoodChainFeatured} from "@/data/ark-food-chain";
+import {homeFoodChainCandidates, homeFoodChains} from "@/lib/home-food-chains";
+import {arkIconUrl} from "@/ark-scene/placeholder-icon";
 import Anchor from "@/app/[locale]/(composited)/_components/anchor";
 import {ARK_HOW_IT_WORKS_HREF, HOW_IT_WORKS_HREF, TALK_HREF} from "@/data/public-navigation";
 import PlatformStoreBadges from "@/components/store/platform-store-badges";
@@ -228,11 +230,16 @@ export default async function Home({params}: HomePageProps) {
         const cardSizes = "(min-width: 1024px) 16rem, (min-width: 768px) 14rem, (min-width: 640px) 11rem, 8.75rem";
         const dayFrames = DAY_FRAMES.map((frame) => dayFrame(frame, t, locale));
         const plateSizes = "(min-width: 1024px) 28rem, (min-width: 640px) 45vw, 92vw";
-        const foodChainClass = "[&_h2]:font-display [&_h2]:text-[2.5rem] [&_h2]:font-bold [&_h2]:leading-[0.95] [&_h2]:tracking-tight md:[&_h2]:text-6xl";
-        // (Called, not mounted: an async server component as JSX fails this React's types. In development without keys
-        // S3's section has nothing to read, and the same pieces run over the local extraction instead.)
-        const foodChain = (await ArkFoodChainSection({locale, variant: "compact", limit: 6, headingLevel: 2, className: foodChainClass}))
-            ?? (await HomeFoodChainDev({locale, limit: 6, className: foodChainClass}));
+        // Who eats whom, as a picture (owner, 2026-11-16: the explorer was "too complex and too much text for a landing
+        // page, not visual at all"): three short chains of icons from the stored food links between the animals aboard.
+        // The explorer itself (diet phrases, every predator and prey) is /ark/food-chain. Nothing when it can't be read.
+        const foodRead = await readArkFoodChainAboard(3600).catch(() => null);
+        const foodEntries = foodRead ? await readArkFoodChainFeatured(foodRead, 12).catch(() => []) : [];
+        // (Only animals whose icon art exists: a generic figure in a picture of three reads as broken. One HEAD each, a day.)
+        const drawn = new Set((await Promise.all(homeFoodChainCandidates(foodEntries).map((slug) =>
+            fetch(arkIconUrl(slug), {method: "HEAD", next: {revalidate: 86_400}}).then((response) => (response.ok ? slug : null)).catch(() => null)
+        ))).filter((slug): slug is string => slug !== null));
+        const foodChains = homeFoodChains(foodEntries, 3, (species) => drawn.has(species.slug));
         // The Ark band's counts (CC 3): the public read's cached counts with the service role, once per ISR window.
         const arkCounts = await timeDevStep(timer, "ark-counts", () => readArkHomeCounts());
         // The rhythm section's animal (lane ark-sd-align): a named founder's animal aboard, by the day; none, no section.
@@ -307,15 +314,11 @@ export default async function Home({params}: HomePageProps) {
                 >
                     <h1 className="max-w-5xl text-white">
                         <span className="block font-display text-[3.1rem] font-extrabold uppercase leading-[0.86] tracking-[-0.005em] [text-wrap:balance] sm:text-7xl lg:text-[6.25rem]">{t("hero.taglineLead")}</span>
-                        {/* The middle line lands with the push into the Ark (shown at once without script, on a second visit or after it). */}
-                        <span data-hero-middle="" className="mt-2 block font-display-italic text-[1.85rem] font-semibold italic leading-[1.02] text-white/90 transition-opacity duration-700 [text-wrap:balance] sm:text-4xl lg:mt-3 lg:text-[3.1rem]">{t("hero.taglineMiddle")}</span>
-                        <span className="mt-1 block font-display-italic text-[1.85rem] font-semibold italic leading-[1.02] text-white/90 [text-wrap:balance] sm:text-4xl lg:mt-1.5 lg:text-[3.1rem]">{t("hero.taglineRest")}</span>
+                        {/* Seven words in two lines (owner, 2026-11-16: "too much text … much more eye catching and easy to understand
+                            for the simplest of people"): the one idea a newcomer needs, catch a real animal, then talk to it. The
+                            living world is the picture behind the words; the slogan stays in the title, the description and the footer. */}
+                        <span className="mt-3 block font-display-italic text-[2.1rem] font-semibold italic leading-[1.02] text-white/90 [text-wrap:balance] sm:text-5xl lg:mt-4 lg:text-[3.6rem]">{t("hero.taglineRest")}</span>
                     </h1>
-                    {/* The brand's slogan, the one line under the headline (owner, 2026-11-14). */}
-                    <p className="mt-6 flex items-center gap-3 font-display text-lg font-semibold leading-snug text-white/85 md:mt-7 md:text-2xl">
-                        <span aria-hidden="true" className="h-[2px] w-8 shrink-0 bg-primary-400" />
-                        {t("hero.slogan")}
-                    </p>
                     <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4">
                         <StoreBadges locale={locale} placement="home_hero" t={t} />
                         <Link href="/ark" className="inline-flex min-h-11 items-center gap-2 text-sm font-bold text-white underline decoration-white/40 underline-offset-[6px] transition-colors hover:decoration-primary-400">
@@ -435,6 +438,15 @@ export default async function Home({params}: HomePageProps) {
                                     words={{eyebrow: t("rhythm.eyebrow"), title: t("rhythm.title"), line: t("rhythm.line"), sd: t("rhythm.sd"), ark: t("rhythm.ark"), live: t("rhythm.live"), kind: t("rhythm.kind"), step: t("rhythm.step"), see: t("rhythm.see"), by: t("rhythm.by")}}
                                 />
                             </div>
+                            {/* What the dotted line is, for anyone who has never heard the term (owner, 2026-11-16): an "i", the
+                                question, and the plainest answer, opened by a tap (a native disclosure: no script, crawlable). */}
+                            <details className="group mt-3 max-w-2xl">
+                                <summary className="inline-flex min-h-11 cursor-pointer list-none items-center gap-2 text-sm font-semibold text-white/75 transition-colors hover:text-white [&::-webkit-details-marker]:hidden">
+                                    <span aria-hidden="true" className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-white/45 font-serif text-[12px] font-bold italic leading-none group-open:border-primary-400 group-open:text-primary-200">i</span>
+                                    <span className="underline decoration-white/25 underline-offset-4">{t("rhythm.whatTitle")}</span>
+                                </summary>
+                                <p className="pb-1 pl-7 text-sm leading-relaxed text-ink-200">{t("rhythm.whatBody")}</p>
+                            </details>
                         </section>
                     ) : null}
 
@@ -464,14 +476,18 @@ export default async function Home({params}: HomePageProps) {
 
                 <div className="mx-auto w-full max-w-[86rem] px-4 md:px-8">
                     {/* 5. Who eats whom (S3's compact explorer, its own heading set in this page's section style); nothing when it can't be read. */}
-                    {foodChain ? (
-                        <div className="pt-24 md:pt-32">
-                            <p className="mb-4 flex items-center gap-3 border-t border-line-200 pt-3 text-[11px] font-bold uppercase tracking-[0.18em] text-ink-300">
-                                <span className="text-primary-200">03</span>
-                                <span>{t("foodChain.eyebrow")}</span>
+                    {foodChains.length ? (
+                        <section aria-labelledby="home-food-chain-title" className="pt-24 md:pt-32">
+                            <SectionHead id="home-food-chain-title" index="03" eyebrow={t("foodChain.eyebrow")} title={t("foodChain.title")} />
+                            <div className="mt-10 md:mt-14">
+                                <HomeFoodChains chains={foodChains} locale={locale} arkHref={getLocalePath(locale, "/ark")} words={{eats: t("foodChain.eats"), seeInArk: (animal) => t("foodChain.seeInArk", {animal})}} />
+                            </div>
+                            <p className="mt-10">
+                                <Link href="/ark/food-chain" className="inline-flex min-h-11 items-center gap-2 rounded-full border border-primary-200/60 px-5 text-sm font-bold text-white transition-colors hover:border-primary-400 hover:bg-primary-400 hover:text-canvas-950">
+                                    {t("foodChain.more")} <span aria-hidden="true">→</span>
+                                </Link>
                             </p>
-                            {foodChain}
-                        </div>
+                        </section>
                     ) : null}
 
                     {/* 6. Populations over time. */}

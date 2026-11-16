@@ -452,8 +452,7 @@
   "landing": {
     "hero": {
       "taglineLead": "Tangkap hewan nyata.",
-      "taglineMiddle": "Temui mereka di dunia yang hidup.",
-      "taglineRest": "Ajak mereka bicara.",
+      "taglineRest": "Lalu ajak mereka bicara.",
       "slogan": "Setiap hewan punya pelajaran.",
       "explore": "Jelajahi Bahtera langsung",
       "seeLive": "Lihat langsung",
@@ -556,10 +555,16 @@
       "kind": "Jenisnya · sehari",
       "step": "Satu langkah",
       "see": "Lihat langsung",
-      "by": "dibawa oleh {name}"
+      "by": "dibawa oleh {name}",
+      "whatTitle": "Apa itu System Dynamics?",
+      "whatBody": "Itu adalah irama alami hari seekor hewan: kapan jenisnya sibuk, kapan makan, dan kapan beristirahat. Kami menelitinya untuk setiap spesies. Garis putus-putus adalah irama itu. Garis utuh adalah hari hewan ini di Bahtera. Makin mirip keduanya, makin hidup ia seperti jenisnya."
     },
     "foodChain": {
-      "eyebrow": "Siapa memakan siapa"
+      "eyebrow": "Rantai makanan",
+      "title": "Siapa memakan siapa",
+      "eats": "memakan",
+      "more": "Lihat seluruh rantai makanan",
+      "seeInArk": "Lihat {animal} di Bahtera"
     },
     "population": {
       "eyebrow": "Populasi dari waktu ke waktu",
