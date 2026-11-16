@@ -87,7 +87,7 @@ function plinthAndFloor(geo: Geo, e: ZooEnclosure) {
     const q = rng(e.slot.seed + 3);
     for (const side of [-1, 1]) {
         const p = at(fr, side * (f.box.w / 2 - 0.5), 0, f.box.d / 2 - ZOO_HOUSE_PORCH + 0.25);
-        geo.blob(p[0], f.floor + 1.0 + q() * 1.2, p[2], 0.6, 1.4, 0.35, tone("#4f7a3a"), hashText(`${e.slot.id}c${side}`), 0);
+        geo.bush(p[0], f.floor + 1.0 + q() * 1.2, p[2], 0.6, 1.4, 0.35, tone("#4f7a3a"), hashText(`${e.slot.id}c${side}`));
     }
 }
 
@@ -174,7 +174,7 @@ function hall(e: ZooEnclosure, parts: {inside: Geo; glow: Geo; glass: Geo}) {
         const lz = sz * (b.d / 2 - 0.45);
         const p = at(fr, lx, 0, lz);
         if (e.type === "reptile_house") parts.inside.blob(p[0], f.floor + 0.25, p[2], 0.6, 0.45, 0.55, tone(r() < 0.5 ? "#a8906a" : "#8a7a62"), hashText(`${e.id}r${lx}${lz}`), 0);
-        else if (e.type === "insect_house" || e.type === "primate_house") parts.inside.blob(p[0], f.floor + 0.6, p[2], 0.55, 0.9, 0.55, tone("#4f7a3a"), hashText(`${e.id}p${lx}${lz}`), 0);
+        else if (e.type === "insect_house" || e.type === "primate_house") parts.inside.bush(p[0], f.floor + 0.6, p[2], 0.55, 0.9, 0.55, tone("#4f7a3a"), hashText(`${e.id}p${lx}${lz}`));
         else parts.inside.blob(p[0], f.floor + 0.2, p[2], 0.5, 0.35, 0.5, tone("#3a3a34"), hashText(`${e.id}n${lx}${lz}`), 0);
     }
     // Logs along the back wall.

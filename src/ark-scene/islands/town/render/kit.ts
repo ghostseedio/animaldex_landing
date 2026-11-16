@@ -5,6 +5,7 @@
  */
 
 import {BufferAttribute, BufferGeometry, Color} from "three";
+import {cachedRock, ROCK_VARIANTS} from "@/ark-scene/rock-shapes";
 
 export type V3 = [number, number, number];
 
@@ -236,6 +237,72 @@ export class Geo {
             const up = (verts.points[a][1] + verts.points[b][1] + verts.points[c][1]) / 3;
             const k = 0.72 + 0.32 * (up * 0.5 + 0.5) + (rand() - 0.5) * 0.08;
             this.tri(p[a], p[b], p[c], [colour[0] * k, colour[1] * k, colour[2] * k]);
+        }
+    }
+
+    /**
+     * A natural rock (graphics pass 1, lane VEG: the owner, "the rocks in the barn areas are horrendous"; they were
+     * `blob`s, 20-face icosahedra): the wild island's own fractured boulder (`rock-shapes.ts`, detail 2: 320 faces),
+     * its base at `y` (set it a little into the ground), `sx` × `sy` × `sz` its half width, height and half depth,
+     * turned by `turn`, shaded by the rock's own crevices and joint faces in `colour`.
+     */
+    rock(x: number, y: number, z: number, sx: number, sy: number, sz: number, turn: number, colour: [number, number, number], variant: number) {
+        const m = cachedRock("boulder", variant % ROCK_VARIANTS.boulder, 2);
+        const [x0, , z0] = m.bounds.min;
+        const [x1, y1, z1] = m.bounds.max;
+        const kx = (2 * sx) / (x1 - x0);
+        const ky = sy / y1;
+        const kz = (2 * sz) / (z1 - z0);
+        const mx = (x0 + x1) / 2;
+        const mz = (z0 + z1) / 2;
+        const c = Math.cos(turn);
+        const si = Math.sin(turn);
+        let mean = 0;
+        for (let i = 0; i < m.colors.length; i++) mean += m.colors[i];
+        mean = mean / m.colors.length || 1;
+        const point = (i: number): V3 => {
+            const lx = (m.positions[i * 3] - mx) * kx;
+            const lz = (m.positions[i * 3 + 2] - mz) * kz;
+            return [x + lx * c - lz * si, y + m.positions[i * 3 + 1] * ky, z + lx * si + lz * c];
+        };
+        for (let f = 0; f < m.index.length; f += 3) {
+            const [a, b, d] = [m.index[f], m.index[f + 1], m.index[f + 2]];
+            let k = 0;
+            for (const v of [a, b, d]) k += (m.colors[v * 3] + m.colors[v * 3 + 1] + m.colors[v * 3 + 2]) / 3;
+            k = Math.min(Math.max(k / 3 / mean, 0.45), 1.35);
+            this.tri(point(a), point(b), point(d), [colour[0] * k, colour[1] * k, colour[2] * k]);
+        }
+    }
+
+    /**
+     * A leafy bush (graphics pass 1, lane VEG: the owner, "bushes look really bad"; they were one 20-face green ball):
+     * a dark heart under seven smaller clumps of leaves round its top and sides, each its own green (lighter on top,
+     * darker low), so it reads as a mass of leaf clusters. The same reach (`sx`, `sy`, `sz`, about its middle); 160
+     * faces, was 20.
+     */
+    bush(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number, colour: [number, number, number], seed: number) {
+        let s = (seed ^ 0x5bd1e995) >>> 0;
+        const rand = () => {
+            s = (s + 0x6d2b79f5) >>> 0;
+            let t = s;
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+        this.blob(cx, cy - sy * 0.1, cz, sx * 0.72, sy * 0.72, sz * 0.72, [colour[0] * 0.6, colour[1] * 0.6, colour[2] * 0.6], seed, 0);
+        const clumps = 7;
+        for (let k = 0; k < clumps; k++) {
+            const a = (k / clumps) * Math.PI * 2 + rand() * 0.6;
+            // Round the sides low down, over the top higher up.
+            const up = k === 0 ? 1 : 0.05 + rand() * 0.75;
+            const out = Math.sqrt(1 - up * up);
+            const x = cx + Math.cos(a) * out * sx * 0.55;
+            const y = cy + (up - 0.15) * sy * 0.55;
+            const z = cz + Math.sin(a) * out * sz * 0.55;
+            const r = 0.42 + rand() * 0.14;
+            const k2 = (0.86 + 0.28 * up) * (0.92 + rand() * 0.16);
+            const green: [number, number, number] = [colour[0] * k2 * (0.94 + rand() * 0.12), colour[1] * k2, colour[2] * k2 * (0.9 + rand() * 0.15)];
+            this.blob(x, y, z, sx * r, sy * r * 0.9, sz * r, green, seed + 97 * (k + 1), 0);
         }
     }
 

@@ -167,9 +167,10 @@ const TOWN_DIGESTS = {
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
-    // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "ba0d29043f1600e7",
-    zoo: "3beecdb300adce0f",
+    // a quarter step, `kit.ts` plainColour). Graphics pass 1, lane VEG: the flower beds edged and replanted, the
+    // bushes leafy clusters (`kit.ts` bush), the paddocks' rocks fractured boulders (`kit.ts` rock).)
+    sceneryAndBuildings: "aa2a3651dc604ef3",
+    zoo: "42b7997d9df130ef",
     places: "fb1159793f083105"
 };
 
