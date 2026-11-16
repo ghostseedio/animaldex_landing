@@ -97,12 +97,15 @@ function trunk(height: number, radius: number, lean = 0, colour = BARK): BufferG
 type Blob = {x: number; y: number; z: number; r: number; squash?: number};
 
 /** Soft canopy: blobs whose normals lean out from the canopy's middle, darker inside and below. */
-function canopy(blobs: Blob[], detail = 1, solid = true): BufferGeometry {
+/** A leafier canopy (lane VEG, the bushes): the core shrunk by `core` and shaded deep inside, `cards` × the leaf cards, each `size` × as big, out to `reach` × the blob's radius. */
+type Leafy = {core: number; cards: number; size: number; reach: number};
+
+function canopy(blobs: Blob[], detail = 1, solid = true, leafy: Leafy = {core: 1, cards: 1, size: 1, reach: 1}): BufferGeometry {
     const centre = new Vector3();
     for (const blob of blobs) centre.add(new Vector3(blob.x, blob.y, blob.z));
     centre.divideScalar(blobs.length);
     const parts = (solid ? blobs : []).map((blob, index) => {
-        const sphere = new IcosahedronGeometry(blob.r * 0.82, detail);
+        const sphere = new IcosahedronGeometry(blob.r * 0.82 * leafy.core, detail);
         sphere.scale(1, blob.squash ?? 0.82, 1);
         sphere.translate(blob.x, blob.y, blob.z);
         const position = sphere.getAttribute("position");
@@ -118,7 +121,7 @@ function canopy(blobs: Blob[], detail = 1, solid = true): BufferGeometry {
         const variation = 0.92 + ((index * 37) % 11) / 55;
         return finish(sphere, (y) => {
             const inside = Math.min(Math.max((y - (blob.y - blob.r)) / (blob.r * 2), 0), 1);
-            return variation * (0.5 + 0.5 * inside);
+            return variation * (0.5 + 0.5 * inside) * (leafy.core < 1 ? 0.62 : 1);
         }, 1);
     });
     // Batch 1: leaf cards round each blob (alpha-cut clusters of leaves), so crowns have ragged, leafy edges, not balls.
@@ -132,14 +135,14 @@ function canopy(blobs: Blob[], detail = 1, solid = true): BufferGeometry {
     const up = new Vector3();
     const facing = new Vector3();
     for (const blob of blobs) {
-        const count = 6 + Math.round(blob.r * 6);
+        const count = Math.round((6 + Math.round(blob.r * 6)) * leafy.cards);
         for (let c = 0; c < count; c++) {
             dir.set(random() * 2 - 1, random() * 1.6 - 0.5, random() * 2 - 1).normalize();
-            const reach = blob.r * (0.55 + 0.45 * random());
+            const reach = blob.r * (0.55 + 0.45 * random()) * leafy.reach;
             const cx = blob.x + dir.x * reach;
             const cy = blob.y + dir.y * reach * (blob.squash ?? 0.82);
             const cz = blob.z + dir.z * reach;
-            const size = blob.r * (0.75 + 0.45 * random());
+            const size = blob.r * (0.75 + 0.45 * random()) * leafy.size;
             facing.copy(dir).add(new Vector3(random() - 0.5, random() - 0.3, random() - 0.5)).normalize();
             side.set(0, 1, 0).cross(facing);
             if (side.lengthSq() < 1e-4) side.set(1, 0, 0);
@@ -153,7 +156,8 @@ function canopy(blobs: Blob[], detail = 1, solid = true): BufferGeometry {
                 const out = new Vector3(corners[k][0], corners[k][1], corners[k][2]).sub(centre).normalize();
                 cardNormal.push(out.x, out.y, out.z);
                 const inside = Math.min(Math.max((corners[k][1] - (blob.y - blob.r)) / (blob.r * 2), 0), 1);
-                cardShade.push(0.62 + 0.5 * inside);
+                // (Lane VEG: a leafy canopy's inner cards a little darker, so the bush has depth, not one flat green.)
+                cardShade.push((0.62 + 0.5 * inside) * (leafy.core < 1 ? 0.8 + 0.3 * Math.min(reach / blob.r, 1) : 1));
             }
         }
     }
@@ -328,9 +332,15 @@ function palm(): BufferGeometry {
     return mergeGeometries(parts)!;
 }
 
+/**
+ * A bush. (Graphics pass 1, lane VEG: the owner, "bushes look really bad". It was four 20-face balls with a few
+ * leaf cards on them: close up, big flat green facets. Now five lumps, shrunk to a dark heart that the leaves hide,
+ * under twice the leaf cards, smaller and reaching further out: a ragged, leafy mound, lighter at the top and the
+ * tips. About 270 triangles, was about 150: there are thousands of bushes and they have no far level.)
+ */
 function shrub(): BufferGeometry {
     const random = seeded(441);
-    return canopy(randomBlobs(random, 4, 0.45, 0.45, 0.42, 0.75), 0);
+    return canopy(randomBlobs(random, 5, 0.42, 0.48, 0.38, 0.72), 0, true, {core: 0.5, cards: 2.2, size: 0.62, reach: 1.12});
 }
 
 function cactus(): BufferGeometry {
