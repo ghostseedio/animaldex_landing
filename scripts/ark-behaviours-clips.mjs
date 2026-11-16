@@ -55,6 +55,8 @@ const PLANS = {
     birth: {distance: 6, shots: [[1, "she settles"], [9, "born"], [15, "licked"], [27, "getting up"], [31, "up on wobbly legs"], [38, "to her flank"], [50, "suckling"], [72, "back to their day"]]},
     den: {distance: 5, shots: [[1, "she settles"], [9, "the first cub"], [13, "both born"], [22, "licked"], [40, "suckling at her belly"], [70, "back to their day"]]},
     contest: {distance: 9, shots: [[1, "the rival comes"], [8, "closing"], ["walk+2.1", "a clash"], ["walk+4", "backing off"], ["walk+7.3", "another clash"], ["end-3", "the rival runs"], ["end+6", "the pair: courtship"], ["end+40", "the mating"]]},
+    // 3.3 batch (B)
+    mob: {distance: 13, shots: [[0.2, "going up (2.3 s)"], [1.8, "the first dive (3.9 s)"], [4.4, "past its head (6.5 s)"], [5.2, "climbing away (7.3 s)"], [7.0, "the next one's turn (9.1 s)"], [9.6, "and the next (11.7 s)"], [12.2, "again (14.3 s)"], [17.4, "still at it (19.5 s)"], [14.4, "one of them, close (16.5 s)"], [15.2, "close, on the ring (17.3 s)"], [24.4, "breaking off (26.5 s)"], [34, "back to their day"]]},
     dung: {distance: 5, shots: [[600, "the herd, ten minutes on"], [900, "a mark, close"], [1500, "marks fading"]]}
 };
 const summary = {};
@@ -102,10 +104,11 @@ for (const name of scenes) {
                 const marks = window.__behaviours.dung().sort((p, q) => q.alpha - p.alpha);
                 if (marks[0]) point = {x: marks[0].x, z: marks[0].z};
             }
-            const text = await window.__behaviours.shot(s, point ? 2.2 : d, name === "contest" && label.includes("runs") ? rival : who, point, name === "contest" ? 2.4 : 0.7, name === "contest" ? 0.85 : 1.15);
+            const text = await window.__behaviours.shot(s, point ? 2.2 : label.includes("close") && name !== "dung" ? 2.6 : d, name === "contest" && label.includes("runs") ? rival : label.includes("close") && name !== "dung" ? window.__behaviours.info().a : who, point, name === "contest" ? 2.4 : 0.7, name === "contest" ? 0.85 : 1.15);
+            if (label.includes("close") && name !== "dung") await window.__behaviours.closeOn(window.__behaviours.info().a, 2.4);
             document.getElementById("note").textContent = `${label}\n${text}`;
             return text;
-        }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? (name === "contest" ? info.a : undefined)]);
+        }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? (name === "contest" ? info.a : name === "mob" ? info.c : undefined)]);
         labels.push(`${String(i).padStart(2, "0")} ${label}: ${note.replace(/\n/g, " | ")}`);
         await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 85});
     }

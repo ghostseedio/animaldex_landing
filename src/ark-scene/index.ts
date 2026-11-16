@@ -201,7 +201,7 @@ import * as worldSampling from "@/ark-scene/world-sampler";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import {ReactiveLayer, offsetShare, type ReactiveInput, type ReactiveOut, type ReactiveTier} from "@/ark-scene/reactive";
 import {reactiveWorldQueries, type ReactiveWorldQueries} from "@/ark-scene/reactive-world";
-import {intelProfile} from "@/ark-scene/intelligence-profile";
+import {canEat, intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
 import {townWorldOrigin} from "@/ark-scene/islands";
@@ -215,6 +215,9 @@ import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {LiveBirths} from "@/ark-scene/live-births";
+// 3.3 batch (B): the birds' own moves (mobbing dive)
+import {Mobbing, mobFoeFits} from "@/ark-scene/mobbing";
+import birdMoves from "@/ark-scene/bird-moves.json";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
@@ -478,6 +481,8 @@ type Entry = {
     sleepClipped?: boolean;
     /** 0 out … 1 gone into its burrow or den to sleep or rest (its roost is the way in: `goesIntoRoost`), eased. */
     denIn?: number;
+    /** 3.3 batch (B): flying one of the birds' own moves (`mobbing.ts`): its rig flies while its act has it in the air. */
+    birdAloft?: boolean;
     /** Its sleep has been stepped once (its first frame is drawn as it is: no lying down on load). */
     sleepStarted?: boolean;
     /** Its sleeping posture's attitude (the recipes' act: a bat turned over), kept to ease it back as it wakes. */
@@ -3980,7 +3985,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (MA1: its air leg's stage on the schedule: a run to take off, the climb, level flight, the glide-in, a ski.)
         const stage = (pose && airLeg ? pose.air?.stage : null) ?? null;
         // Heading up from the start of an air leg (not the tail of a flight whose landing has played): only then does it take off.
-        const rising = (pose ? pose.aloft || (airLeg && (stage ? stage === "run" || stage === "climb" : state.climb > -0.01 && clockNow() - state.landedAt > 2)) : entry.state.airborne) || microAloft;
+        const rising = (pose ? pose.aloft || (airLeg && (stage ? stage === "run" || stage === "climb" : state.climb > -0.01 && clockNow() - state.landedAt > 2)) : entry.state.airborne) || microAloft || Boolean(entry.birdAloft && entry.act); // 3.3 batch (B): a bird's own move in the air
         // Coming down: the landing plays as it touches down (its wings folding away), once it is low and descending on
         // its schedule's leg, or its state's air has nearly eased out.
         // (Lane L2: within the landing clip's reach of the ground on the way down, so its touch-down meets the ground.)
@@ -4644,6 +4649,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     ))
             );
             stepRecipeScene(candidates, now, epochNow);
+            // 3.3 batch (B): the birds' own moves
+            stepBirdMoves(candidates, epochNow);
             behaviourFrameMs += performance.now() - started;
         }
         behaviourTimes.push(behaviourFrameMs);
@@ -7003,6 +7010,57 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id))
     });
+    // 3.3 batch (B): mobbing dive. Birds whose own text says they mob (`bird-moves.json`) dive in turns at a predator
+    // of theirs standing near them, near the camera (`mobbing.ts`: viewer-local, visual only, back to their day after).
+    const BIRD_MOVES = birdMoves as unknown as {mob: Record<string, {line: string | null; foe: string | null}>};
+    // (Where it is drawn this frame, from the frame's own list; out of view, where its day has it.)
+    const birdPlaces = new Map<Entry, {x: number; z: number; base: number; yaw: number}>();
+    const drawnAt = (e: Entry) => {
+        if (e.held || e.act?.hidden || (e.denIn ?? 0) > 0.3) return null;
+        const p = birdPlaces.get(e);
+        if (p) return {x: p.x, y: p.base, z: p.z, yaw: p.yaw};
+        const at = e.sched?.pose;
+        return at ? {x: at.x, y: at.y, z: at.z, yaw: at.yaw} : null;
+    };
+    const mobbing = new Mobbing<Entry>({
+        id: (e) => e.animal.id,
+        slug: (e) => e.animal.model_slug,
+        mobs: (e) => e.animal.model_slug in BIRD_MOVES.mob,
+        free: (e) => scheduled(e) && !e.held && e.awake && !e.state.asleep && !e.place.micro && !e.sched?.animal.young && !mealPins.has(e.animal.id),
+        place: drawnAt,
+        home: (e, epoch) => (e.sched && world ? schedulePose(e, epoch) : null),
+        length: (e) => e.length,
+        height: (e) => e.drawnHeight,
+        threatens: (t, b) =>
+            Boolean(t.sched && b.sched) && !t.visitor && !t.place.micro && !t.place.water && !atSeaOf(t) && t.air <= 0.5 && !t.sched!.pose?.aloft &&
+            canEat(intelProfile(t.animal.model_slug, null, t.stats.intelligence), intelProfile(b.animal.model_slug, null, b.stats.intelligence), t.sched!.profile.size, b.sched!.profile.size),
+        ground: (x, z) => Math.max(heightAt(x, z), 0),
+        act: (e) => e.act ?? null,
+        setAct: (e, pose, aloft) => {
+            e.act = pose;
+            e.birdAloft = Boolean(pose && aloft);
+            if (pose && aloft) e.air = 1;
+        }
+    });
+    const birdNear: Entry[] = [];
+    const stepBirdMoves = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: {x: number; z: number; base: number; yaw: number}}>, epoch: number) => {
+        if (!world || reducedMotion || !scheduleOn) return void mobbing.clear();
+        birdNear.length = 0;
+        birdPlaces.clear();
+        if (!mobbing.active && !mobbing.due(epoch)) return;
+        for (const c of list) {
+            if (!c.visible || c.distance > 70) continue;
+            birdNear.push(c.entry);
+            birdPlaces.set(c.entry, c.pose);
+        }
+        mobbing.step(epoch, birdNear);
+        for (const m of mobbing.seen(epoch)) {
+            const a = m.entry.animal;
+            const said = BIRD_MOVES.mob[a.model_slug];
+            const line = said && mobFoeFits(said.foe, m.threat.animal.model_slug, library.get(m.threat.animal.model_slug)?.behaviour?.plan ?? null) ? said.line : null;
+            if (line) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: "mob_dive", episode: m.episode, block: "dive", fish: false, line});
+        }
+    };
     /** The meals' traces this frame (feathers, fur, scales, pressed grass), and the pressed grass for the grass to bend. */
     let tracesNow: TraceDraw[] = [];
     /**
@@ -7929,6 +7987,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const looked = selectedId ? findEntry(selectedId) : null;
         return looked?.middle ? blockers(camera.position.clone(), looked.middle, 0.35).map((hit) => ({kind: hit.mesh.userData.kind, distance: hit.distance})) : null;
     }};
+    // 3.3 batch (B): the birds' own moves, for the harness
+    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {mobbing: () => mobbing.debug(), mobStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && mobbing.begin(worldMs() / 1000, b, t, allEntries().filter((e) => e !== b && e !== t), new Set(), 1e9)); }, seenNow: () => seenActs.slice()});
 
     return {
         ...runtime.handle,

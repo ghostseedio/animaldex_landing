@@ -1,0 +1,285 @@
+{
+ "about": "The birds' own moves (3.3 batch, lane B), built by scripts/ark-bird-moves.mts from AnimalDex docs/ark/signature-behaviours.json: a species has a move only where a row of its own stored text says it (the quote beside it), and its sentence for the live log is the row's line. mob: diving at a predator near them in turns. lure: the broken-wing display. tail: its constant tail movement. drop: its ducklings jump from the tree hole.",
+ "version": "bird-moves-1",
+ "mob": {
+  "american-crow": {
+   "line": "{animals} are mobbing an owl together",
+   "behaviour": "mobs owls and hawks",
+   "quote": "memory and mobbing make danger easier to track.",
+   "foe": "owl"
+  },
+  "australian-magpie": {
+   "line": "{animals} are mobbing an intruder together, calling loudly",
+   "behaviour": "group mobs intruders together",
+   "quote": "Group members mob intruders together, calling loudly",
+   "foe": null
+  },
+  "black-headed-gull": {
+   "line": "{animals} are rising together, screaming, and diving at an intruder",
+   "behaviour": "colony rises together screaming and dives at intruders",
+   "quote": "Colonies rise together, screaming, and dive at intruders, driving off many would-be raiders.",
+   "foe": null
+  },
+  "black-naped-oriole": {
+   "line": "{animals} are mobbing a crow that came near their nest",
+   "behaviour": "pairs mob crows and drongos near the nest",
+   "quote": "Pairs will mob crows and drongos that come near an active nest, well above their weight.",
+   "foe": "crow"
+  },
+  "carrion-crow": {
+   "line": "{animals} are gathering to mob a bird of prey noisily",
+   "behaviour": "mobs raptors and owls noisily",
+   "quote": "Crows gather to mob raptors and owls noisily.",
+   "foe": "raptor"
+  },
+  "common-green-magpie": {
+   "line": "{animals} are mobbing a danger with loud rasping calls",
+   "behaviour": "pairs and family groups mob danger",
+   "quote": "pairs and family groups are reported to mob danger with loud rasping calls.",
+   "foe": null
+  },
+  "common-myna": {
+   "line": "{animals} are gathering with loud alarm calls to mob a predator near the nest",
+   "behaviour": "gathers to mob predators near nest or roost",
+   "quote": "Mynas give loud alarm calls and gather to mob predators near the nest or roost.",
+   "foe": null
+  },
+  "eurasian-magpie": {
+   "line": "{animals} are mobbing an intruder as a group, chattering harshly",
+   "behaviour": "mobs intruders in groups",
+   "quote": "Magpies answer with harsh chattering alarm calls and mob intruders in groups.",
+   "foe": null
+  },
+  "great-tailed-grackle": {
+   "line": "{animals} are mobbing an intruder together with loud alarm calls",
+   "behaviour": "colonies mob an intruder together",
+   "quote": "birds mob an intruder together with loud alarm calls.",
+   "foe": null
+  },
+  "indian-pied-myna": {
+   "line": "{animals} are mobbing a predator with harsh alarm calls, then flying up together",
+   "behaviour": "flocks mob predators and fly up together",
+   "quote": "Flocks give harsh alarm calls, gather to mob a predator, and fly up together when one attacks.",
+   "foe": null
+  },
+  "northern-mockingbird": {
+   "line": "{aAnimal} is diving at an intruder near its nest and striking it",
+   "behaviour": "dives at and strikes intruders near the nest",
+   "quote": "Adults mob and dive at intruders near the nest, striking cats, dogs and sometimes people.",
+   "foe": null
+  },
+  "pied-butcherbird": {
+   "line": "{animals} are mobbing an intruder on their territory as a group",
+   "behaviour": "group mobbing in territorial defence",
+   "quote": "Territorial vigilance, mobbing and group defence can reduce those risks.",
+   "foe": null
+  },
+  "pied-crow": {
+   "line": "{animals} are mobbing a large raptor near their nest, diving at it again and again",
+   "behaviour": "pairs mob large raptors diving at them repeatedly",
+   "quote": "Pairs mob eagles, hawks and other large raptors that fly near the nest, diving at them repeatedly.",
+   "foe": "raptor"
+  },
+  "pied-fantail": {
+   "line": "{aAnimal} is scolding and diving at a far larger animal near its nest",
+   "behaviour": "parents dive at animals far larger near the nest",
+   "quote": "Parents defend the nest boldly, scolding and diving at animals far larger than themselves, people included.",
+   "foe": null
+  },
+  "red-vented-bulbul": {
+   "line": "{animals} are mobbing an intruder near their nest with harsh alarm calls",
+   "behaviour": "pairs mob intruders near nest, then dive into shrubs",
+   "quote": "Pairs give harsh alarm calls, mob intruders near the nest, and dive into dense shrubs.",
+   "foe": null
+  },
+  "red-winged-blackbird": {
+   "line": "{aAnimal} male is diving at an intruder as his neighbours join the mobbing",
+   "behaviour": "males dive at intruders, neighbours join mobbing",
+   "quote": "Territorial males dive at intruders, and neighbouring males often join in the mobbing.",
+   "foe": null
+  },
+  "ring-billed-gull": {
+   "line": "{animals} are mobbing and diving at an intruder together at the colony",
+   "behaviour": "colony mobs and dives at intruders together",
+   "quote": "Intruders at a colony are mobbed and dived at by many birds together.",
+   "foe": null
+  },
+  "rufous-bellied-thrush": {
+   "line": "{aAnimal} is mobbing a predator near its nest with sharp, repeated alarm calls",
+   "behaviour": "adults mob predators near the nest",
+   "quote": "Adults give sharp, repeated alarm calls, dive into cover, and mob predators near the nest.",
+   "foe": null
+  },
+  "sooty-headed-bulbul": {
+   "line": "{animals} are gathering with loud chattering calls to mob a perched predator",
+   "behaviour": "gathers to mob a perched predator",
+   "quote": "Birds give loud chattering alarm calls and gather to mob a perched predator.",
+   "foe": null
+  },
+  "white-crested-laughingthrush": {
+   "line": "{animals} are mobbing an intruder with loud alarm calls",
+   "behaviour": "flock mobs intruders or dives into cover",
+   "quote": "The flock answers danger with loud alarm calls, mobs the intruder, or dives into dense cover.",
+   "foe": null
+  },
+  "yellow-legged-gull": {
+   "line": "{animals} are diving again and again at an intruder, striking with their feet",
+   "behaviour": "colony dives repeatedly at intruders, striking with the feet",
+   "quote": "Colonies answer an intruder with alarm calls and repeated dives, striking with the feet, while chicks crouch in cover.",
+   "foe": null
+  },
+  "yellow-vented-bulbul": {
+   "line": "{animals} are scolding harshly and mobbing a snake near the nest",
+   "behaviour": "gathers to mob a snake or cat near the nest",
+   "quote": "Adults give harsh scolding calls and gather to mob a snake or cat near the nest.",
+   "foe": "snake"
+  }
+ },
+ "lure": {
+  "black-winged-stilt": {
+   "line": null,
+   "behaviour": "dives at intruders and feigns injury to lure danger from chicks",
+   "quote": "Adults fly out to meet intruders, calling loudly and diving at them, and may feign injury to draw danger away from the young."
+  },
+  "blue-crane": {
+   "line": null,
+   "behaviour": "parents charge intruders and perform distraction displays",
+   "quote": "Parents defend chicks by charging intruders and by distraction displays."
+  },
+  "killdeer": {
+   "line": "{aAnimal} is faking a broken wing to draw danger away from its nest",
+   "behaviour": "broken-wing distraction display leading predators away from the nest",
+   "quote": "The broken-wing bluff bird. A shorebird that protects ground nests by drawing danger away with loud distraction displays."
+  },
+  "southern-lapwing": {
+   "line": "{aAnimal} is fluttering on the ground, pretending to have a broken wing",
+   "behaviour": "pretends to have a broken wing or leg to lure predators from the nest",
+   "quote": "When a predator approaches its nest, the Southern Lapwing will often pretend to have a broken wing or leg, fluttering erratically on the ground a short distance away."
+  }
+ },
+ "tail": {
+  "australasian-swamphen": {
+   "line": "{aAnimal} is flicking its tail, flashing the white underneath",
+   "behaviour": "flicks its tail, flashing the white undertail",
+   "quote": "White undertail flashed with each tail flick",
+   "moves": [
+    "flick"
+   ]
+  },
+  "carolina-wren": {
+   "line": "{aAnimal} is perched with its tail cocked upward",
+   "behaviour": "tail cocked upward",
+   "quote": "Tail often cocked upward",
+   "moves": [
+    "cock"
+   ]
+  },
+  "common-sandpiper": {
+   "line": "{aAnimal} is walking with its rear end bobbing almost without pause",
+   "behaviour": "rear end bobs almost continuously as it walks",
+   "quote": "The rear end bobs almost continuously as the bird walks, even when it pauses to pick prey.",
+   "moves": [
+    "bob"
+   ]
+  },
+  "eastern-phoebe": {
+   "line": "{aAnimal} is pumping its tail down and up on its perch",
+   "behaviour": "pumps tail down and up while perched",
+   "quote": "Pumps its tail down and up repeatedly while perched",
+   "moves": [
+    "pump"
+   ]
+  },
+  "grey-wagtail": {
+   "line": "{aAnimal} is hopping from rock to rock in a fast stream, pumping its long tail",
+   "behaviour": "hops rock to rock in fast streams pumping long tail",
+   "quote": "hops from rock to rock in fast streams, pumping its long tail as it snaps up insects where water meets land",
+   "moves": [
+    "pump"
+   ]
+  },
+  "house-wren": {
+   "line": "{aAnimal} is perched with its short tail cocked upward",
+   "behaviour": "short tail cocked upward",
+   "quote": "The short tail is often cocked upward",
+   "moves": [
+    "cock"
+   ]
+  },
+  "masked-water-tyrant": {
+   "line": "{aAnimal} is fanning and flicking its tail",
+   "behaviour": "fans and flicks its tail",
+   "quote": "Frequently fans or flicks its tail",
+   "moves": [
+    "fan",
+    "flick"
+   ]
+  },
+  "oriental-magpie-robin": {
+   "line": "{aAnimal} is foraging with its tail raised",
+   "behaviour": "upright posture with raised tail while foraging",
+   "quote": "Raised tail while foraging",
+   "moves": [
+    "cock"
+   ]
+  },
+  "pied-fantail": {
+   "line": "{aAnimal} is swivelling restlessly and fanning its tail on a low perch",
+   "behaviour": "restless swivelling and tail-fanning on low perches",
+   "quote": "Restless swivelling and tail-fanning on low perches",
+   "moves": [
+    "fan",
+    "swivel"
+   ]
+  },
+  "western-yellow-wagtail": {
+   "line": "{aAnimal} is wagging its tail without a pause",
+   "behaviour": "constantly wagging tail",
+   "quote": "Constantly wagging tail",
+   "moves": [
+    "pump"
+   ]
+  },
+  "white-rumped-shama": {
+   "line": "{aAnimal} is cocking and fanning its tail",
+   "behaviour": "cocks and fans long tail",
+   "quote": "Habit of cocking and fanning the tail",
+   "moves": [
+    "cock",
+    "fan"
+   ]
+  }
+ },
+ "drop": {
+  "australian-wood-duck": {
+   "line": "{aAnimal} is leading ducklings that dropped from the tree hollow to water",
+   "behaviour": "ducklings drop from the tree hollow and are led to water by both parents",
+   "quote": "soon after hatching the ducklings drop from the hollow and are led to water and grass by both parents"
+  },
+  "bufflehead": {
+   "line": "{aAnimal} duckling is jumping from the tree hole to follow its mother",
+   "behaviour": "ducklings jump from the tree hole a day or two after hatching",
+   "quote": "Ducklings jump from the hole a day or two after hatching and follow her to water."
+  },
+  "cotton-pygmy-goose": {
+   "line": "{aAnimal} is leading its ducklings from the tree hole to the lily beds",
+   "behaviour": "ducklings jump down from a tree cavity and are led to the lily beds",
+   "quote": "Ducklings jump down and are led to the lily beds within a day of hatching."
+  },
+  "lesser-whistling-duck": {
+   "line": "{aAnimal} duckling is dropping from its tree nest to the ground below",
+   "behaviour": "ducklings drop from a tree nest to the ground or water",
+   "quote": "Ducklings hatched in a tree nest are reported to leave by dropping to the ground or water below."
+  },
+  "mandarin-duck": {
+   "line": "{aAnimal} duckling is jumping down from a high tree cavity",
+   "behaviour": "ducklings jump down from a high tree cavity soon after hatching",
+   "quote": "The species nests in tree cavities that may be ten metres or more above the ground, and the ducklings leave by jumping down shortly after hatching."
+  },
+  "muscovy-duck": {
+   "line": "{aAnimal} duckling is jumping from a tree cavity to follow its mother",
+   "behaviour": "day-old ducklings jump from a tree cavity to follow the mother",
+   "quote": "Wild Muscovies nest in tree cavities several metres up, and the day-old ducklings jump to the ground to follow their mother to water."
+  }
+ }
+}
