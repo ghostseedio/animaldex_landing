@@ -109,6 +109,8 @@ export type ReactiveInput = {
      * anything smaller close by, awake or not in the shared layer, noticed at once; they scatter (`SCATTER`).
      */
     chasing?: boolean;
+    /** 3.3 batch (A): its species' own defence is a move made on the spot (a ball, a shell, a swollen body, wings flashed: `defence-moves.ts`): with a predator close it stays and does it. */
+    holds?: boolean;
 };
 
 export type ReactiveWeather = {rain: number; wind: number; windDirection: number; fog: number; storm: number; lightning?: number};
@@ -191,6 +193,8 @@ export type ReactiveOut = {
     woke?: boolean;
     /** Woken this last moment: a startled get-up (the scene's quick one). */
     startled?: boolean;
+    /** 3.3 batch (A): the predator it reacts to is very close (inside 0.4 of its flight distance): a tail-dropper sheds its tail (`defence-moves.ts`). */
+    pressed?: boolean;
 };
 
 /** Asleep, how much of its sight it keeps (its eyes are shut: movement close by), and of its hearing. Smell is as awake. */
@@ -802,6 +806,8 @@ export class ReactiveLayer {
         // MARK: Danger
         let action: ReactiveAction = agent.choice;
         let called = false;
+        // 3.3 batch (A): defence moves (`defence-moves.ts`).
+        let pressed = false;
         let target: {x: number; z: number} = {x: 0, z: 0};
         let speed = 1.2 * Math.max(me.length, 0.3);
         let crouchWant = 0;
@@ -859,6 +865,8 @@ export class ReactiveLayer {
             const close = d < flightDistance;
             const veryClose = d < flightDistance * 0.4;
             const sinceReact = world.now - agent.reactedAt;
+            // 3.3 batch (A): defence moves.
+            pressed = Boolean(danger && veryClose);
             if (young.length && danger) {
                 // Shield: between the nearest young and the threat, a body length from the young.
                 const y = young.sort((a, b) => Math.hypot(a.shared.x - from.x, a.shared.z - from.z) - Math.hypot(b.shared.x - from.x, b.shared.z - from.z))[0];
@@ -882,6 +890,11 @@ export class ReactiveLayer {
                 // First it looks.
                 action = "alert";
                 target = {...agent.offset};
+            } else if (danger && me.holds && close) {
+                // 3.3 batch (A): its own text says what it does (it rolls up, pulls in, swells, flashes its wings): it stays put and does it.
+                action = "withdraw";
+                target = {...agent.offset};
+                crouchWant = 1;
             } else if (p.defence.includes("play_dead") && veryClose && danger) {
                 action = "play_dead";
                 target = {...agent.offset};
@@ -1053,7 +1066,10 @@ export class ReactiveLayer {
         const alarmed = agent.threat || heardNow ? 1 : action === "recover" ? alarmLevel((world.now - agent.reactedAt) * 1000) : 0;
         // Woken here: kept up while it reacts or recovers; calm, it goes back to sleep when its time is up.
         if (agent.woke && (REACTING.has(action) || action === "recover" || agent.threat || heardNow)) agent.woke.until = Math.max(agent.woke.until, world.now + 6);
-        return this.output(agent, me, action, called, alarmed, look ? lookLabel : null, true);
+        const result = this.output(agent, me, action, called, alarmed, look ? lookLabel : null, true);
+        // 3.3 batch (A): defence moves.
+        if (pressed) result.pressed = true;
+        return result;
     }
 
     /** Asleep in the shared layer and not woken here (a woken one counts as awake: a woken lion is a threat again). */

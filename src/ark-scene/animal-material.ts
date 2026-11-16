@@ -44,6 +44,8 @@ import {lookCacheKey, lookDefines, lookUniforms, registerLookMaterial, type Spec
 import {LOOK_ALBEDO, LOOK_FINISH, LOOK_FRAGMENT_DECLARATIONS, LOOK_LIGHT, LOOK_NORMAL, LOOK_ROUGHNESS, LOOK_VERTEX, LOOK_VERTEX_DECLARATIONS, SHELL_VERTEX} from "@/ark-scene/animal-look-shader";
 import {varyShader} from "@/ark-scene/ark-variation";
 import {L2_BODY_NONE, type L2BodyUniforms} from "@/ark-scene/locomotion/swim";
+// 3.3 batch (A): defence moves (a ball, a shell, a swollen body, a shed tail, a wing flash).
+import {DEFENCE_FRAGMENT, DEFENCE_FRAGMENT_DECLARATIONS, DEFENCE_VERTEX, DEFENCE_VERTEX_DECLARATIONS} from "@/ark-scene/defence-moves";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};
@@ -392,7 +394,10 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
         // How far the head goes down asleep: animals with a head and neck to lower.
         arkDroop: {value: droopOf(options.behaviour?.plan)},
         ...Object.fromEntries(Object.entries(motion).map(([key, value]) => [key, {value}])),
-        ...Object.fromEntries(Object.entries(options.bodyMotion ?? L2_BODY_NONE).map(([key, value]) => [key, {value}]))
+        ...Object.fromEntries(Object.entries(options.bodyMotion ?? L2_BODY_NONE).map(([key, value]) => [key, {value}])),
+        // 3.3 batch (A): the model's own box for its defence move (z from and to, y from and to; half its width).
+        arkDefBox: {value: new Vector4(options.behaviour?.extent?.min?.[2] ?? -0.5, options.behaviour?.extent?.max?.[2] ?? 0.5, options.behaviour?.extent?.min?.[1] ?? options.minY, options.behaviour?.extent?.max?.[1] ?? options.maxY)},
+        arkDefSpan: {value: Math.max(Math.abs(options.behaviour?.extent?.min?.[0] ?? 0.3), Math.abs(options.behaviour?.extent?.max?.[0] ?? 0.3))}
     };
     if (options.rig) {
         uniforms.arkBones = {value: options.rig};
@@ -418,6 +423,7 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
 attribute vec4 arkInstance;
 varying float vArkDim;
 ${MOTION_DECLARATIONS}
+${DEFENCE_VERTEX_DECLARATIONS}
 ${options.rig ? RIG_DECLARATIONS : ""}
 ${LOOK_VERTEX_DECLARATIONS}`)
             .replace("#include <beginnormal_vertex>", `#include <beginnormal_vertex>
@@ -427,15 +433,18 @@ vArkDim = arkInstance.y;
 vec4 arkSleep = arkSleepOf(arkInstance.w);
 ${LOOK_VERTEX}
 ${IDLE}
+${DEFENCE_VERTEX}
 ${SHELL_VERTEX}`);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>
 varying float vArkDim;
 uniform vec3 arkDimTint;
 uniform vec3 arkRim;
+${DEFENCE_FRAGMENT_DECLARATIONS}
 ${LOOK_FRAGMENT_DECLARATIONS}`)
             .replace("#include <map_fragment>", `#include <map_fragment>
-${LOOK_ALBEDO}`)
+${LOOK_ALBEDO}
+${DEFENCE_FRAGMENT}`)
             .replace("#include <roughnessmap_fragment>", `#include <roughnessmap_fragment>
 ${LOOK_ROUGHNESS}`)
             .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>

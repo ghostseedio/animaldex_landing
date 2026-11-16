@@ -216,6 +216,8 @@ import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {LiveBirths} from "@/ark-scene/live-births";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
+// 3.3 batch (A): defence moves.
+import {defenceMoveOf, defencePack, defenceSaid, holdsItsGround, newDefenceState, predatorBeside, stepDefence, type DefenceSpec, type DefenceState} from "@/ark-scene/defence-moves";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
 import {speciesCare} from "@/lib/ark-age";
@@ -452,6 +454,12 @@ type Entry = {
     glance?: number;
     /** The local reactive layer's output this frame (`reactive.ts`): its offset, head look, action; null outside its budget. */
     reactive?: ReactiveOut | null;
+    /** 3.3 batch (A): its species' defence move (`defence-moves.ts`; false: it has none) and where it is in it. */
+    defenceSpec?: DefenceSpec | false;
+    defence?: DefenceState;
+    defenceAt?: {x: number; z: number};
+    /** A small animal at its microhabitat (outside the reactive layer): a predator beside it now (`predatorBeside`: 0, 1 close, 2 very close). */
+    defenceNear?: 0 | 1 | 2;
     /** A young one's parent for the reactive layer (its group's adult leader, `ark-age.ts` for whether it is young), and when that was worked out. */
     youngOf?: {parent: string | null; play: number; at: number};
     /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
@@ -3393,6 +3401,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             reactiveTierNow = want;
         }
         if (want === "lite" || !scheduleOn) {
+            // 3.3 batch (A): (and no defence move for the small ones at their microhabitats.)
+            for (const c of list) c.entry.defenceNear = 0;
             for (const c of list) c.entry.reactive = null;
             reactiveMs = 0;
             return;
@@ -3434,10 +3444,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 sessile: e.sched.profile.move === "sessile" && intel.plan === "other",
                 // Looked at or followed: the camera coming to it never wakes it (looking never changes what it does).
                 watched: e.animal.id === selectedId || e.animal.id === followId,
+                // 3.3 batch (A): a species whose own defence is made on the spot stays and does it.
+                holds: holdsItsGround(e.animal.model_slug),
                 shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving) || (e.act?.speed ?? 0) > 0.3, aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
             });
         }
         reactiveInputs = inputs.length;
+        // 3.3 batch (A): a small animal at its microhabitat is outside the layer; its defence move (`defence-moves.ts`)
+        // still has to know when one of the layer's animals that could eat it is beside it.
+        for (const c of list) {
+            const e = c.entry;
+            if (!e.place.micro) continue;
+            const spec = (e.defenceSpec ??= defenceMoveOf(e.animal.model_slug) ?? false);
+            e.defenceNear = spec && c.distance < budget.radius ? predatorBeside(e.animal.model_slug, c.pose.x, c.pose.z, inputs) : 0;
+        }
         // Nothing near, or the world's sampler still being built a slice at a time (`worldSamplerReady` on the behaviour
         // lane's 67d6ddf3; asking for it now would finish the build in one stall): the layer waits a frame.
         const samplerReady = (worldSampling as unknown as {worldSamplerReady?: () => boolean}).worldSamplerReady;
@@ -4382,6 +4402,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const MARKING = new Set(["root_dig", "dig_burrow", "dust_bathe", "wallow", "bury_sand", "beach_nest", "cache_food", "pounce"]);
     // The live log's "seen" (`lib/ark-live-log.ts`): who is in view near the camera, and the logged recipes they run now.
     let seenActs: ArkSeenAct[] = [];
+    // 3.3 batch (A): the defence moves in view this frame (said in the log in the species' own sentence).
+    const defenceSeen: ArkSeenAct[] = [];
     const seenNear = new Set<string>();
     const stepRecipeScene = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: Pose; modelHeight: number}>, now: number, epoch: number) => {
         if (!world) return;
@@ -4448,6 +4470,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const dt = reducedMotion || !lastUpdate ? 0 : Math.min(now - lastUpdate, 0.1);
         frameDt = dt;
         lastUpdate = now;
+        // 3.3 batch (A): this frame's defence moves in view.
+        defenceSeen.length = 0;
         projection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
         frustum.setFromProjectionMatrix(projection);
         const cameraPosition = camera.position;
@@ -5039,10 +5063,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
             }
             mesh.setMatrixAt(index, matrix);
+            // 3.3 batch (A): its defence move (`defence-moves.ts`): stepped from the reactive layer's action, drawn by the
+            // shader from `arkInstance.w` in place of its sleep (a negative pack), said in the log in its species' words.
+            const defenceSpec = (entry.defenceSpec ??= defenceMoveOf(animal.model_slug) ?? false);
+            let defended = 0;
+            if (defenceSpec && !reducedMotion) {
+                const moveState = (entry.defence ??= newDefenceState());
+                const tail = model.behaviour?.tail?.length ?? 0;
+                const reacted = act ? null : entry.reactive;
+                const beside = act || !entry.place.micro ? 0 : entry.defenceNear ?? 0;
+                stepDefence(moveState, defenceSpec, {action: beside ? "withdraw" : reacted?.action ?? null, alarmed: beside ? 1 : reacted?.alarmed ?? 0, pressed: beside === 2 || Boolean(reacted?.pressed), moved: tail > 0 && moveState.shed >= 0 ? Math.hypot(where.x - (entry.defenceAt?.x ?? where.x), where.z - (entry.defenceAt?.z ?? where.z)) / (tail * s) : 0}, dt);
+                (entry.defenceAt ??= {x: 0, z: 0}).x = where.x;
+                entry.defenceAt.z = where.z;
+                if (!slept) defended = defencePack(moveState, defenceSpec, model.behaviour?.plan);
+                const said = candidate.distance < 45 ? defenceSaid(moveState, defenceSpec, animal.id) : null;
+                if (said) defenceSeen.push({id: animal.id, name: animal.name, speciesId: animal.kind_species_profile_id || animal.species_profile_id || `slug:${animal.model_slug}`, zone: animal.zone, recipe: `defence_${defenceSpec.move}`, episode: said, block: "defend", fish: false, line: defenceSpec.line});
+            }
             // (The duller sex a little greyer: `sexDim`, beside the per-instance variation `arkVary`.)
             entry.sexDim ??= sexDim(entry.animal.id, entry.animal.model_slug);
             // Its sleep for the shader in w (`packSleep`): eyes shut, the curl (near only), a tail flick, its breaths a second.
-            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZW(index, entry.phase, Math.min((act ? act.dim : dim) + entry.sexDim, 1), entry.rest, slept ? packSleep(eyesOpenForDev ? 0 : slept.eyes, level === "near" ? slept.curl : 0, slept.flick, slept.breath) : packSleep(0, 0, 0, 0));
+            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZW(index, entry.phase, Math.min((act ? act.dim : dim) + entry.sexDim, 1), entry.rest, defended || (slept ? packSleep(eyesOpenForDev ? 0 : slept.eyes, level === "near" ? slept.curl : 0, slept.flick, slept.breath) : packSleep(0, 0, 0, 0)));
             setVary(mesh.geometry, index, animal.id);
             // The head look (near only; it fades out as the animal falls asleep).
             const lookAttr = mesh.geometry.getAttribute("arkLook") as InstancedBufferAttribute | undefined;
@@ -7909,6 +7949,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         })),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
         forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
+        // 3.3 batch (A): an animal's defence move now (the harness).
+        defence: (id: string) => findEntry(id)?.defence ?? null,
         rigState: (id: string) => {
             const e = allEntries().find((x) => x.animal.id === id);
             return e ? {rigOn: Boolean(e.rigOn), weight: e.rig?.weight ?? 0, clip: e.rig?.now?.name ?? null, level: e.level ?? null} : null;
@@ -8118,7 +8160,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const caller = seenNear.has(call.caller) ? findEntry(call.caller)?.animal : null;
                 if (caller) alarms.push({id: caller.id, name: caller.name, speciesId: caller.kind_species_profile_id || caller.species_profile_id || `slug:${caller.model_slug}`, zone: caller.zone, at: call.at, threat: call.threat || null});
             }
-            return {acts: reducedMotion ? [] : seenActs.slice(), alarms: reducedMotion ? [] : alarms};
+            // 3.3 batch (A): with the defence moves in view.
+            return {acts: reducedMotion ? [] : seenActs.concat(defenceSeen), alarms: reducedMotion ? [] : alarms};
         },
         reactiveStats: () => ({tier: reactiveTierNow ?? reactiveTier(), agents: reactive.stats.agents, inputs: reactiveInputs, perceptions: reactive.stats.perceptions, sightChecks: reactive.stats.sightChecks, alarms: reactive.stats.alarms, ms: reactiveMs}),
         heightAt: (x, z) => Math.max(heightAt(x, z), 0),

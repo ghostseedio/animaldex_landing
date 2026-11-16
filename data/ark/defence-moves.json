@@ -1,0 +1,365 @@
+{
+ "about": "Defence moves (3.3 batch, lane A): the species whose own stored text says they curl into a ball, withdraw into a shell, puff up, drop the tail or flash hidden wing colour or eyespots when a predator is near, with the row's sentence for the live log. Built by scripts/ark-defence-moves.mts from AnimalDex docs/ark/signature-behaviours.json; never edited by hand.",
+ "version": "defence-moves-1",
+ "counts": {
+  "puff": 7,
+  "flash": 3,
+  "curl": 5,
+  "coil": 4,
+  "shell": 14
+ },
+ "species": [
+  {
+   "slug": "african-pygmy-hedgehog",
+   "name": "African Pygmy Hedgehog",
+   "id": "88596d0f-3609-4ed7-a737-a0aaedbd7ac6",
+   "move": "curl",
+   "line": "{aAnimal} is curling up to protect its softest parts",
+   "behaviour": "curls into a spiny ball",
+   "quote": "Curling behavior protects the softest parts first",
+   "uses": "pose:curl_ball"
+  },
+  {
+   "slug": "algerian-millipede",
+   "name": "Algerian Millipede",
+   "id": "4616e774-d1a4-486c-abfa-f382feec4765",
+   "move": "coil",
+   "line": "{aAnimal} is rolling into a flat spiral after a disturbance",
+   "behaviour": "rolls into a flat spiral when disturbed",
+   "quote": "Rolls into a flat spiral when disturbed",
+   "uses": "pose:coil_spiral"
+  },
+  {
+   "slug": "american-giant-millipede",
+   "name": "American Giant Millipede",
+   "id": "9974003a-57e3-4cde-b788-1537d0f1730f",
+   "move": "coil",
+   "line": "{aAnimal} is coiling into a tight spiral and lying still",
+   "behaviour": "coils into a tight spiral and lies still",
+   "quote": "Its first response is to coil into a tight spiral that shields the legs and soft underside, lying still until the danger passes.",
+   "uses": "pose:coil_spiral"
+  },
+  {
+   "slug": "asian-forest-tortoise",
+   "name": "Asian Forest Tortoise",
+   "id": "bd15c76f-7658-4014-a93f-b692f4955400",
+   "move": "shell",
+   "line": "{aAnimal} is drawing back into its shell",
+   "behaviour": "withdraws into shell",
+   "quote": "It withdraws into its shell when disturbed.",
+   "uses": "pose:shell_withdraw"
+  },
+  {
+   "slug": "asian-tramp-snail",
+   "name": "Asian Tramp Snail",
+   "id": "c5738eed-52ca-43b3-9397-3d40c7253ba2",
+   "move": "shell",
+   "line": "{aAnimal} is pulling back into its shell at a touch",
+   "behaviour": "pulls back into shell when touched",
+   "quote": "It pulls back into the shell when touched.",
+   "uses": "pose:shell_withdraw"
+  },
+  {
+   "slug": "ball-python",
+   "name": "Ball Python",
+   "id": "e19cee52-db4f-463a-9ab5-67358b555605",
+   "move": "coil",
+   "line": "{aAnimal} is curling into a tight ball with its head tucked inside the coils",
+   "behaviour": "curls into a tight ball with head tucked when threatened",
+   "quote": "When threatened or stressed, Ball Pythons curl into a tight, compact ball, tucking their head safely within the coils.",
+   "uses": "pose:snake_ball"
+  },
+  {
+   "slug": "danube-river-snail",
+   "name": "Danube River Snail",
+   "id": "d7e32876-c900-4914-b21c-22e4d1f0d68d",
+   "move": "shell",
+   "line": "{aAnimal} is pulling into its shell and shutting the opening with its hard lid",
+   "behaviour": "pulls into shell and shuts it with a hard lid",
+   "quote": "Threatened, the snail pulls its body into the shell and shuts the opening with its hard lid.",
+   "uses": "pose:shell_withdraw_operculum"
+  },
+  {
+   "slug": "eastern-box-turtle",
+   "name": "Eastern Box Turtle",
+   "id": "e4e5b493-2ffd-4836-9ec2-1bc93ad7ade1",
+   "move": "shell",
+   "line": "{aAnimal} is closed up tight inside its shell",
+   "behaviour": "closes up fully inside hinged shell",
+   "quote": "A closed-up adult resists most attacks",
+   "uses": "pose:shell_close (box seal)"
+  },
+  {
+   "slug": "european-hedgehog",
+   "name": "European Hedgehog",
+   "id": "8d84bc94-b135-4974-aee8-74faf3e239b0",
+   "move": "curl",
+   "line": "{aAnimal} is rolling into a spiny ball at a threat",
+   "behaviour": "rolls into a spiny ball when threatened",
+   "quote": "European Hedgehogs roll into a spiny ball when strongly threatened.",
+   "uses": "pose:curl_ball"
+  },
+  {
+   "slug": "european-pond-terrapin",
+   "name": "European Pond Terrapin",
+   "id": "4af8357c-a2a4-4d1d-a63e-2e726ee6847c",
+   "move": "shell",
+   "line": "{aAnimal} is pulling its head and limbs inside its hard shell",
+   "behaviour": "withdraws head and limbs into shell",
+   "quote": "can pull the head and limbs inside the hard shell",
+   "uses": "pose:shell_withdraw"
+  },
+  {
+   "slug": "flamed-tigersnail",
+   "name": "Flamed Tigersnail",
+   "id": "266b572a-523b-4b0b-903b-0490442259e7",
+   "move": "shell",
+   "line": "{aAnimal} is withdrawing into its shell",
+   "behaviour": "withdraws into shell, shelters in litter by day",
+   "quote": "It withdraws into its shell and shelters in damp leaf litter, logs and crevices by day.",
+   "uses": "pose:shell_withdraw"
+  },
+  {
+   "slug": "fowlers-toad",
+   "name": "Fowler's Toad",
+   "id": "271c4e7c-64eb-4f7f-b911-b6ec5bbee8ff",
+   "move": "puff",
+   "line": "{aAnimal} is puffing up and flattening itself at a threat",
+   "behaviour": "puffs up or flattens when threatened",
+   "quote": "a threatened toad may puff up, flatten or play dead",
+   "uses": "pose:puff_up / pose:flatten"
+  },
+  {
+   "slug": "giant-african-land-snail",
+   "name": "Giant African Land Snail",
+   "id": "9e2bc9bc-d124-4230-bacd-e5598448ad7d",
+   "move": "shell",
+   "line": "{aAnimal} is pulling deep into its shell after a disturbance",
+   "behaviour": "pulls deep into shell when disturbed",
+   "quote": "A disturbed snail pulls deep into its shell.",
+   "uses": "pose:shell_withdraw"
+  },
+  {
+   "slug": "giant-african-millipede",
+   "name": "Giant African Millipede",
+   "id": "3059c7ed-af58-4025-9077-3960895f524c",
+   "move": "coil",
+   "line": "{aAnimal} is coiling its body into a tight spiral at a threat",
+   "behaviour": "coils into a tight spiral when threatened",
+   "quote": "When threatened, the Giant African Millipede typically coils its body into a tight spiral, protecting its vulnerable underside and presenting its harder exoskeleton.",
+   "uses": "pose:coil_spiral"
+  },
+  {
+   "slug": "great-plains-toad",
+   "name": "Great Plains Toad",
+   "id": "eb922fdd-8ee6-45ed-b598-6aa2771ec92c",
+   "move": "puff",
+   "line": "{aAnimal} is puffing itself up with air at a threat",
+   "behaviour": "puffs up with air when threatened",
+   "quote": "a threatened toad puffs up with air",
+   "uses": "pose:puff_up"
+  },
+  {
+   "slug": "greek-tortoise",
+   "name": "Greek Tortoise",
+   "id": "6491305c-37d5-4586-809f-b00bf27f589c",
+   "move": "shell",
+   "line": "{aAnimal} is pulled into its shell with scaly forelimbs closing the front",
+   "behaviour": "pulls into shell and closes front with scaly forelimbs",
+   "quote": "Nosed by a fox or dog, it pulls head, legs and tail into the shell, closes the front with its scaly forelimbs and stays put.",
+   "uses": "pose:shell_withdraw (forelimb shield)"
+  },
+  {
+   "slug": "green-blotched-moth",
+   "name": "Green-blotched Moth",
+   "id": "f823aa7d-9879-4225-9261-acd9bd7176e1",
+   "move": "flash",
+   "line": "{aAnimal} is opening its leaf-like green forewings to reveal orange hindwings",
+   "behaviour": "opens its leaf-like forewings to flash orange hindwings when disturbed",
+   "quote": "At rest the green forewings resemble a leaf; if disturbed it opens them to reveal the orange hindwings, which may startle an attacker.",
+   "uses": "pose:hindwing_flash",
+   "colour": "#ee8a1f"
+  },
+  {
+   "slug": "grovesnail",
+   "name": "Grovesnail",
+   "id": "fc7ea048-2197-4946-865d-0a2b96c395d2",
+   "move": "shell",
+   "line": "{aAnimal} is rapidly pulling its soft body back into its hard shell",
+   "behaviour": "retracts instantly at a bird's shadow or touch",
+   "quote": "Upon sensing a threat, such as a bird's shadow, a sudden vibration, or a direct touch, the Grovesnail rapidly retracts its soft body into the safety of its hard, calcified shell.",
+   "uses": "pose:shell_withdraw"
+  },
+  {
+   "slug": "harnessed-moth",
+   "name": "Harnessed Moth",
+   "id": "164dc206-338e-409c-ae4c-73709edbbd9a",
+   "move": "flash",
+   "line": "{aAnimal} is flashing the scarlet hindwings it kept hidden underneath",
+   "behaviour": "sits camouflaged, then flashes scarlet hindwings when touched",
+   "quote": "The Harnessed Moth sits camouflaged until it is touched, then flashes scarlet hindwings kept hidden underneath.",
+   "uses": "pose:hindwing_flash",
+   "colour": "#e0261c"
+  },
+  {
+   "slug": "long-spined-porcupinefish",
+   "name": "Long-spined Porcupinefish",
+   "id": "6637a989-396f-401d-be52-b388f7a68661",
+   "move": "puff",
+   "line": "{aAnimal} is puffing up like a balloon, sharp spines standing out",
+   "behaviour": "puffs up like a balloon with spines standing out",
+   "quote": "The Long-spined Porcupinefish can puff up its body like a balloon and show off its sharp spines to scare away predators.",
+   "uses": "pose:puff_up (balloon + spines)"
+  },
+  {
+   "slug": "malayan-box-turtle",
+   "name": "Malayan Box Turtle",
+   "id": "b6366177-4777-4014-b24b-388e3303fb77",
+   "move": "shell",
+   "line": "{aAnimal} is clamping its lower shell shut, sealed into a hard box",
+   "behaviour": "seals itself into a hinged box",
+   "quote": "Grabbed or threatened, it pulls head, legs and tail inside and clamps its lower shell tight against the upper one, sealing itself into a hard box with no gap to bite into.",
+   "uses": "pose:shell_close (box seal)"
+  },
+  {
+   "slug": "mediterranean-hermit-crab",
+   "name": "Mediterranean Hermit Crab",
+   "id": "3864fbed-7317-4b38-ac5f-1d1e39dd8537",
+   "move": "shell",
+   "line": "{aAnimal} is deep in its shell, blocking the opening with its large right claw",
+   "behaviour": "withdraws and blocks opening with large right claw",
+   "quote": "It withdraws deep into its shell and blocks the opening with its large right claw",
+   "uses": "pose:hermit_withdraw_claw_plug"
+  },
+  {
+   "slug": "pill-millipede",
+   "name": "Pill Millipede",
+   "id": "747a91e4-7a5c-48f8-a4e0-ae6be1126dcc",
+   "move": "curl",
+   "line": "{aAnimal} is curling up tightly at a touch and staying closed",
+   "behaviour": "rolls into a tight ball within a second and stays closed",
+   "quote": "Touched on a woodland floor, it curls up within a second and stays tightly closed until the disturbance has passed.",
+   "uses": "pose:roll_ball"
+  },
+  {
+   "slug": "pointed-snail",
+   "name": "Pointed Snail",
+   "id": "d1aa76b6-2ba2-453c-9b48-d8e637867a4b",
+   "move": "shell",
+   "line": "{aAnimal} is withdrawing into its shell after a disturbance",
+   "behaviour": "withdraws into its shell when disturbed",
+   "quote": "When disturbed it withdraws into its shell.",
+   "uses": "pose:shell_withdraw"
+  },
+  {
+   "slug": "red-tegu",
+   "name": "Red Tegu",
+   "id": "4b06ae8d-f621-47c3-aaae-d189cdcb99a7",
+   "move": "puff",
+   "line": "{aAnimal} is cornered, hissing and puffing itself up",
+   "behaviour": "cornered: hisses, puffs up, tail lash",
+   "quote": "A threatened tegu runs for its burrow, and if cornered it hisses, puffs up and bites.",
+   "uses": "pose:puff_up"
+  },
+  {
+   "slug": "reeves-turtle",
+   "name": "Reeves' Turtle",
+   "id": "712f5dcf-2eaf-443a-9275-e26d3e5db23b",
+   "move": "shell",
+   "line": "{aAnimal} is withdrawing into its shell",
+   "behaviour": "withdraws into shell",
+   "quote": "Adults withdraw into the shell",
+   "uses": "pose:shell_withdraw"
+  },
+  {
+   "slug": "rugose-hermit-crab",
+   "name": "Rugose Hermit Crab",
+   "id": "7a82ad50-1d76-40a0-a81b-e3344c672123",
+   "move": "shell",
+   "line": "{aAnimal} is pulling back into its shell and blocking the opening with a claw",
+   "behaviour": "pulls into shell and blocks with claw, or lets go and drops",
+   "quote": "Its answer to a threat is to pull back into the shell and block the opening with a claw, or to let go of its foothold and drop.",
+   "uses": "pose:hermit_withdraw_claw_plug"
+  },
+  {
+   "slug": "savannah-monitor",
+   "name": "Savannah Monitor",
+   "id": "decda091-d63b-4af4-be0d-7407bed3115f",
+   "move": "puff",
+   "line": "{aAnimal} is cornered, hissing, puffing up and lashing its tail",
+   "behaviour": "cornered: hisses, puffs up, lashes tail",
+   "quote": "A cornered lizard hisses, puffs up its body, lashes its tail and bites.",
+   "uses": "pose:puff_up + tail swipe"
+  },
+  {
+   "slug": "scarlet-tiger-moth",
+   "name": "Scarlet Tiger Moth",
+   "id": "9994ddb3-69b0-44c4-a34a-2d25716a3a72",
+   "move": "flash",
+   "line": "{aAnimal} is opening its dark wings to show the bright red ones underneath",
+   "behaviour": "opens its dark wings to show bright red ones when bothered",
+   "quote": "When something bothers it, the Scarlet Tiger Moth opens its dark wings and shows bright red ones underneath.",
+   "uses": "pose:hindwing_flash",
+   "colour": "#d92a23"
+  },
+  {
+   "slug": "short-beaked-echidna",
+   "name": "Short-beaked Echidna",
+   "id": "bd675401-8a57-46d2-a271-7aa9931fa60c",
+   "move": "curl",
+   "line": "{aAnimal} is digging in and curling up",
+   "behaviour": "digs in and curls up against predators",
+   "quote": "Digging in and curling make defense portable.",
+   "uses": "pose:dig_in_wedge + pose:curl_ball"
+  },
+  {
+   "slug": "southern-toad",
+   "name": "Southern Toad",
+   "id": "def215b8-eb61-41dd-a5c2-dba454df97ab",
+   "move": "puff",
+   "line": "{aAnimal} is puffing its body up with air at a threat",
+   "behaviour": "puffs up its body with air when threatened",
+   "quote": "A threatened toad puffs up its body with air, making it harder to swallow.",
+   "uses": "pose:puff_up"
+  },
+  {
+   "slug": "stars-and-stripes-pufferfish",
+   "name": "Stars and Stripes Pufferfish",
+   "id": "cffad6cb-8e40-4a4d-828d-017b3d9370f6",
+   "move": "puff",
+   "line": "{aAnimal} is gulping water and swelling into a stiff, prickly ball",
+   "behaviour": "gulps water to swell into a stiff prickly ball when grabbed",
+   "quote": "When grabbed or cornered, it gulps water into an elastic stomach until its body swells into a stiff, prickly ball far too wide for most mouths.",
+   "uses": "pose:puff_up (water ball)"
+  },
+  {
+   "slug": "sunda-pangolin",
+   "name": "Sunda Pangolin",
+   "id": "05655a91-2b64-457f-adb6-c3a171cede6f",
+   "move": "curl",
+   "line": "{aAnimal} is curling up tight against a threat",
+   "behaviour": "rolls up into a scaly ball",
+   "quote": "Curling works against many predators",
+   "uses": "pose:curl_ball"
+  }
+ ],
+ "skipped": [
+  "Eastern Red-backed Salamander (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is dropping its tail to get away\"",
+  "Warty Frogfish (puff): the sentence says it is grabbed or seized: \"{aAnimal} is swallowing water and swelling up after being seized\"",
+  "Eastern Lubber Grasshopper (flash): its wings lie between its hind legs on the model: the flash coloured the legs, not the wings: \"{aAnimal} is lifting its short front wings to flash the rose-red wings beneath\"",
+  "Io Moth (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is opening its wings to reveal huge fake eyes\"",
+  "Owl Butterfly (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is showing the eyespots on its wings to an attacker\"",
+  "Peacock Butterfly (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is flicking its wings open and rubbing them together with a hiss\"",
+  "Polyphemus Moth (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is flashing open the hidden eyespots on its huge tan wings\"",
+  "White Underwing Moth (flash): the sentence says another action than the move: \"{aAnimal} is bolting in fast, erratic flight to resettle on another trunk\"",
+  "Long-eared Hedgehog (curl): the sentence says another action than the move: \"{aAnimal} is raising its spines, hissing and jumping at a threat\"",
+  "Bocage's Wall Lizard (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is shedding its tail as it is seized\"",
+  "Common House Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping while its shed tail keeps twitching\"",
+  "Common Sun Skink (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping while its broken-off tail wriggles\"",
+  "Common Wall Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is fleeing into a crack, leaving its shed tail wriggling\"",
+  "Common Wall Lizard (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping while its shed tail goes on twitching\"",
+  "Loggerhead Musk Turtle (shell): the sentence says it is grabbed or seized: \"{aAnimal} is biting hard and drawing into its shell as it is grabbed\"",
+  "Mediterranean House Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping into a crack while its shed tail keeps wriggling\"",
+  "Tropical House Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is leaving its broken-off tail twitching behind\""
+ ]
+}
