@@ -1,0 +1,215 @@
+{
+ "about": "Graphics pass 2 (lane town2): species in the catalogue export (data/ark/behaviour-profiles.json, plus the signature-behaviours catalogue quotes) whose stored text puts them in rotting wood (under logs or bark, eating decaying wood) or whose caterpillars live on leaves. Made by rule (scratchpad deadwood-list.py): small invertebrate body plans, land zones; deadwood = the stored phrase names rotting/dead/fallen wood, logs or bark; leaves = a flying insect whose stored phrase puts its caterpillar on leaves, twigs, nettles or its food plant (not in soil or litter). Read by hand; ambiguous ones left out. The town gives them the logs and stumps of townDeadwood and the leafy patches beside them. No animal is added: only where the ones aboard live.",
+ "deadwood": [
+  {
+   "slug": "agrarian-sac-spider",
+   "name": "Agrarian Sac Spider",
+   "text": "often overwintering in a thicker silk retreat under bark"
+  },
+  {
+   "slug": "amazonian-giant-centipede",
+   "name": "Amazonian Giant Centipede",
+   "text": "It shelters in leaf litter, under logs and stones, in rock crevices and in caves"
+  },
+  {
+   "slug": "american-giant-millipede",
+   "name": "American Giant Millipede",
+   "text": "under logs or in soil"
+  },
+  {
+   "slug": "atlas-beetle",
+   "name": "Atlas Beetle",
+   "text": "decaying wood and organic matter"
+  },
+  {
+   "slug": "bold-jumper",
+   "name": "Bold Jumper",
+   "text": "closed silk sac spun under bark"
+  },
+  {
+   "slug": "brazilian-wandering-spider",
+   "name": "Brazilian Wandering Spider",
+   "text": "It spends the day hidden in crevices, under logs and bark, in banana bunches or in dark corners of buildings, and comes out after dark to hunt."
+  },
+  {
+   "slug": "bronze-ground-beetle",
+   "name": "Bronze Ground Beetle",
+   "text": "It spends the day under logs, stones, bark or leaf litter and emerges after dusk"
+  },
+  {
+   "slug": "eciton-army-ant",
+   "name": "Eciton Army Ant",
+   "text": "At night workers cluster into a hanging bivouac of linked bodies under logs or among roots"
+  },
+  {
+   "slug": "giant-african-land-snail",
+   "name": "Giant African Land Snail",
+   "text": "stones or logs"
+  },
+  {
+   "slug": "giant-african-millipede",
+   "name": "Giant African Millipede",
+   "text": "Decaying leaves, rotting wood, soft fruit, and organic debris"
+  },
+  {
+   "slug": "giant-forest-scorpion",
+   "name": "Giant Forest Scorpion",
+   "text": "They are nocturnal and often hide under logs, bark, or burrows by day"
+  },
+  {
+   "slug": "golden-stag-beetle",
+   "name": "Golden Stag Beetle",
+   "text": "By day they hide under bark, in leaf litter or among foliage"
+  },
+  {
+   "slug": "harvestman",
+   "name": "Harvestman",
+   "text": "By day most hide under stones, logs, bark and leaves"
+  },
+  {
+   "slug": "hercules-beetle",
+   "name": "Hercules Beetle",
+   "text": "decaying wood"
+  },
+  {
+   "slug": "rainbow-stag-beetle",
+   "name": "Rainbow Stag Beetle",
+   "text": "in log cavities or in leaf litter"
+  },
+  {
+   "slug": "red-triangle-slug",
+   "name": "Red Triangle Slug",
+   "text": "In dry weather it shelters under logs"
+  },
+  {
+   "slug": "semi-slug",
+   "name": "Semi-slug",
+   "text": "Through dry daylight hours it rests under leaves, logs, stones and in crevices where the air stays moist."
+  },
+  {
+   "slug": "smooth-ground-beetle",
+   "name": "Smooth Ground Beetle",
+   "text": "Mostly nocturnal, resting by day under logs, stones, moss or bark"
+  },
+  {
+   "slug": "termite",
+   "name": "Termite",
+   "text": "Plant fiber, dead wood, grasses, and fungus gardens"
+  },
+  {
+   "slug": "trilobite-beetle",
+   "name": "Trilobite Beetle",
+   "text": "Females appear to feed on liquids and soft material from rotting wood"
+  },
+  {
+   "slug": "walnut-orb-weaver",
+   "name": "Walnut Orb-weaver",
+   "text": "Several individuals are sometimes found sheltering under the same piece of loose bark"
+  },
+  {
+   "slug": "woodlouse-hunter-spider",
+   "name": "Woodlouse Hunter Spider",
+   "text": "log or loose bark"
+  },
+  {
+   "slug": "yellow-banded-millipede",
+   "name": "Yellow-banded Millipede",
+   "text": "shelters by day under bark, stones, mulch and damp litter, emerging on humid nights"
+  }
+ ],
+ "leaves": [
+  {
+   "slug": "cabbage-cluster-moth",
+   "name": "Cabbage Cluster Moth",
+   "text": "The caterpillars shelter inside their webs and in the hearts of plants."
+  },
+  {
+   "slug": "common-marble",
+   "name": "Common Marble",
+   "text": "The caterpillar ties leaves or shoot tips together with silk and feeds hidden inside."
+  },
+  {
+   "slug": "emerald-moth",
+   "name": "Emerald Moth",
+   "text": "the caterpillar rests stretched stiffly along twigs, where it looks like a small shoot or bud"
+  },
+  {
+   "slug": "geometer-moth",
+   "name": "Geometer Moth",
+   "text": "Many caterpillars stand rigid like a twig or drop on a silk line when disturbed"
+  },
+  {
+   "slug": "giant-redeye",
+   "name": "Giant Redeye",
+   "text": "its caterpillar hides in a rolled palm leaf under a coat of fluffy white wax"
+  },
+  {
+   "slug": "hackberry-emperor",
+   "name": "Hackberry Emperor",
+   "text": "Late-season caterpillars spend the winter in groups inside curled dead leaves and resume feeding in spring."
+  },
+  {
+   "slug": "mourning-cloak",
+   "name": "Mourning Cloak",
+   "text": "lays eggs in a ring around a twig; caterpillars feed together under a shared silk web"
+  },
+  {
+   "slug": "pale-beauty-moth",
+   "name": "Pale Beauty Moth",
+   "text": "fringed looper caterpillar presses flat against a twig"
+  },
+  {
+   "slug": "peacock-butterfly",
+   "name": "Peacock Butterfly",
+   "text": "caterpillars live together in a silk web on nettles"
+  },
+  {
+   "slug": "red-admiral",
+   "name": "Red Admiral",
+   "text": "The Red Admiral caterpillar pulls the edges of a nettle leaf together with silk and feeds alone inside the tent it has made."
+  },
+  {
+   "slug": "red-spotted-purple",
+   "name": "Red-spotted Purple",
+   "text": "The caterpillar rests in plain view on a leaf, its lumpy, mottled brown and white body resembling a fresh bird dropping."
+  },
+  {
+   "slug": "tiger-moth",
+   "name": "Tiger Moth",
+   "text": "Larvae rest beneath Ficus leaves and feed in groups after eggs are laid in batches."
+  },
+  {
+   "slug": "two-tailed-pasha",
+   "name": "Two-tailed Pasha",
+   "text": "Caterpillars rest on a pad of silk spun on a leaf, returning to it between meals."
+  },
+  {
+   "slug": "white-peacock-butterfly",
+   "name": "White Peacock Butterfly",
+   "text": "Adults drink flower nectar, while caterpillars feed on host plant leaves"
+  },
+  {
+   "slug": "zebra-swallowtail",
+   "name": "Zebra Swallowtail",
+   "text": "Adults drink nectar from flowers, while caterpillars feed on pawpaw leaves"
+  }
+ ],
+ "left_out": [
+  {
+   "slug": "milk-snake",
+   "why": "a snake (legless plan), not a deadwood invertebrate"
+  },
+  {
+   "slug": "mound-building-termite",
+   "why": "builds grassland mounds; dead wood is only carried in"
+  },
+  {
+   "slug": "glasswing-butterfly",
+   "why": "host plants named only in general"
+  },
+  {
+   "slug": "picasso-moth",
+   "why": "its caterpillar food plants are undocumented"
+  }
+ ]
+}

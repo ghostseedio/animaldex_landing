@@ -516,17 +516,17 @@ export const TOWN_STREETS: Street[] = [
     road("high_street", "high", [[-166, 34], [-120, 33], [-76, 30], [-40, 31], [-4, 30], [24, 28], [52, 24]], 7, 2.2, "High Street"),
     road("high_street_east", "high", [[52, -1], [186, -1]], 7, 2.2, "High Street", 0),
     road("mill_lane", "road", [[-62, -38], [-30, -38], [20, -41], [52, -46]], 6, 1.8, "Mill Lane"),
-    road("mill_lane_east", "road", [[52, -54.5], [188, -54.5]], 6, 1.8, "Mill Lane", 0),
+    road("mill_lane_east", "road", [[52, -54.5], [180, -54.5]], 6, 1.8, "Mill Lane", 0),
     road("harbour_road", "road", [[-176, 86], [-120, 85], [-78, 84], [-40, 86], [0, 90], [30, 88], [52, 82]], 6, 1.8, "Harbour Road"),
     road("harbour_road_east", "road", [[52, 51.25], [188, 51.25]], 6, 1.8, "Harbour Road", 0),
     road("park_road", "road", [[52, -108.6], [52, 104]], 6, 1.8, "Park Road", 0),
     road("east_road", "road", [[118, -108.6], [118, 104]], 6, 1.8, "East Road", 0),
     road("west_street", "road", [[-76, 30], [-78, 84], [-80, 132]], 6, 1.8, "West Street", 0),
     road("sea_view", "road", [[-127, 33], [-127, 85], [-128, 124]], 6, 1.8, "Sea View", 0),
-    road("bay_road", "road", [[52, 104], [118, 104], [180, 104]], 6, 1.8, "Bay Road", 0),
+    road("bay_road", "road", [[52, 104], [118, 104], [167, 104]], 6, 1.8, "Bay Road", 0),
     road("square_walk", "path", [[-57, 24], [-57, -30]], 3, 0, "Market Walk", 0),
     road("church_walk", "path", [[-10, -10], [30, -12]], 3, 0, "Church Walk", 0),
-    road("country_lane", "lane", [[-62, -114], [-20, -116], [24, -114], [52, -111], [186, -111]], 5, 0, "Country Lane", 1),
+    road("country_lane", "lane", [[-62, -114], [-20, -116], [24, -114], [52, -111], [182, -111]], 5, 0, "Country Lane", 1),
     road("farm_road", "lane", [[-56, -153], [0, -154], [60, -153], [124, -153]], 4.5, 0, "Farm Road", 1),
     road("farm_track_w", "track", [[-6, -116], [-6, -154]], 3.2, 0, undefined, 0),
     road("farm_track_e", "track", [[124, -111], [124, -153]], 3.2, 0, undefined, 0),
@@ -718,12 +718,15 @@ function buildPlan(): TownPlan {
     field(box(134, -152, 14, 14, 0.02), "orchard");
 
     // MARK: The zoo: rows of enclosures back to back between three paths, the entrance plaza by the park.
+    // p2 (town2): the west path runs along the shore, never on the beach or in the sea (the owner: "the path on the
+    // coastline on the town island is going into the sea"; it bowed out to 5 m past the waterline): both its edges and
+    // every street's end stay 3 m+ inland (`src/lib/ark-town-bins-bikes.test.ts`).
     const zooPaths: Street[] = [
         road("zoo_a", "zoo_path", [[-70, -32], [-120, -32], [-186, -32]], 5, 0, undefined, 0),
-        road("zoo_b", "zoo_path", [[-70, -88], [-130, -88], [-194, -88]], 5, 0, undefined, 0),
+        road("zoo_b", "zoo_path", [[-70, -88], [-130, -88], [-182, -88]], 5, 0, undefined, 0),
         road("zoo_c", "zoo_path", [[-70, -144], [-120, -144], [-180, -144]], 5, 0, undefined, 0),
         road("zoo_spine", "zoo_path", [[-66, -26], [-66, -150]], 5, 0, undefined, 0),
-        road("zoo_west", "zoo_path", [[-186, -32], [-193, -60], [-194, -88], [-188, -118], [-180, -144]], 4, 0, undefined, 2)
+        road("zoo_west", "zoo_path", [[-186, -32], [-185.5, -46], [-183, -62], [-182, -88], [-181.5, -112], [-179.5, -130], [-180, -144]], 4, 0, undefined, 2)
     ];
     ctx.streets.push(...zooPaths);
     const rank: Record<string, number> = {};

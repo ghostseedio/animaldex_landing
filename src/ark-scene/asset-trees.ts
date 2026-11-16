@@ -51,7 +51,7 @@ const CROWN_HOLD_HEIGHTS = 33;
 /** The trees' material; `near` adds the near-camera fade (only for the trees drawn round the camera). Also the town's. */
 export function windMaterial(doubleSided: boolean, near = false, conifer = false): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.85, metalness: 0, side: doubleSided ? DoubleSide : FrontSide});
-    material.customProgramCacheKey = () => `ark-asset-tree-b7-${doubleSided ? 2 : 1}${near ? "-near" : ""}${conifer ? "-conifer" : ""}`;
+    material.customProgramCacheKey = () => `ark-asset-tree-b8-${doubleSided ? 2 : 1}${near ? "-near" : ""}${conifer ? "-conifer" : ""}`;
     material.onBeforeCompile = (shader) => {
         shader.uniforms.arkTime = ARK_TIME;
         shader.uniforms.arkWind = ARK_WIND;
@@ -95,6 +95,7 @@ uniform vec2 arkWind;`)
             .replace("#include <common>", `#include <common>
 varying float vArkLeafy;
 varying vec3 vArkLocal;
+float arkBarkRelief = 0.0;
 ${NOISE_GLSL}`)
             // Bark (batch 4): the assets' bark is dark and flat, so in shade a trunk read as a black cut-out. A little
             // lighter, with a grain of furrows running up the wood.
@@ -105,6 +106,29 @@ ${NOISE_GLSL}`)
     // Only dark bark is lifted (pale birch and emergent bark stays as it is, or far forests turn to white sticks).
     float arkLift = mix(1.55, 1.0, smoothstep(0.05, 0.14, dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11))));
     diffuseColor.rgb *= mix(1.0, arkLift * (0.78 + 0.44 * arkGrain), arkWood);
+    // p2 (town2): bark at every viewing distance (the owner: "tree trunks too render bad quality - no texture on them";
+    // the grain above is a soft mottle, and the close-up bark below only within 3 m of the lens). Dark bark: furrows
+    // running up the trunk between raised plates, cracks across them, read in colour and, within ~30 m, as relief on
+    // the shading normal. Pale bark (birch): dark lenticels across the trunk, and darker, rougher bark at the foot.
+    // Faded out with distance (by 120 m), where it would only shimmer. Seamless round the trunk (the angle's wrap blended).
+    {
+        float around = atan(vArkLocal.z, vArkLocal.x);
+        float wrap = smoothstep(-1.5707963, -3.1415927, around);
+        vec2 plates = vec2(around * 11.0, vArkLocal.y * 1.25);
+        vec2 platesW = vec2((around + 6.2831853) * 11.0, vArkLocal.y * 1.25);
+        float furrow = mix(arkNoise(plates), arkNoise(platesW), wrap);
+        float fineN = mix(arkNoise(plates * vec2(2.7, 3.4) + 7.1), arkNoise(platesW * vec2(2.7, 3.4) + 7.1), wrap);
+        float crack = smoothstep(0.78, 0.92, mix(arkNoise(vec2(around * 4.0, vArkLocal.y * 9.0)), arkNoise(vec2((around + 6.2831853) * 4.0, vArkLocal.y * 9.0)), wrap));
+        float ridge = smoothstep(0.28, 0.72, furrow * 0.72 + fineN * 0.28);
+        float pale = smoothstep(0.05, 0.14, dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11)));
+        float lenticel = smoothstep(0.66, 0.8, mix(arkNoise(vec2(around * 7.0, vArkLocal.y * 16.0)), arkNoise(vec2((around + 6.2831853) * 7.0, vArkLocal.y * 16.0)), wrap));
+        float foot = 1.0 - smoothstep(0.3, 1.6, vArkLocal.y);
+        float seen = arkWood * (1.0 - smoothstep(45.0, 120.0, length(vViewPosition)));
+        float darkBark = (0.42 + 0.82 * ridge) * (1.0 - crack * 0.5);
+        float paleBark = (1.0 - lenticel * 0.5) * mix(1.0, 0.45 + 0.4 * ridge, foot);
+        diffuseColor.rgb *= mix(1.0, mix(darkBark, paleBark, pale), seen);
+        arkBarkRelief = (mix(ridge - crack * 0.6, foot * ridge - lenticel * 0.3, pale)) * arkWood * (1.0 - smoothstep(14.0, 32.0, length(vViewPosition)));
+    }
     // Moss on the roots and the trunk's foot (batch 5), in patches.
     float arkMoss = arkWood * (1.0 - smoothstep(0.25, 1.1, vArkLocal.y)) * smoothstep(0.4, 0.68, arkNoise(vArkLocal.xz * 7.0 + vArkLocal.y * 4.0));
     diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.075, 0.115, 0.03) * (0.8 + 0.4 * arkGrain), arkMoss * 0.75);
@@ -120,6 +144,18 @@ ${conifer ? `    // Conifer needles (batch 6): the assets' deep teal read as hea
 normal *= faceDirection;
 nonPerturbedNormal *= faceDirection;
 #endif`)
+            // p2 (town2): the bark's relief (set with its colour above, in uniform control flow) as a bump on the
+            // shading normal: three's surface-gradient method, as the close-up bark below.
+            .replace("#include <normal_fragment_maps>", `#include <normal_fragment_maps>
+{
+    vec3 rdx = dFdx(-vViewPosition);
+    vec3 rdy = dFdy(-vViewPosition);
+    vec3 q1 = cross(rdy, normal);
+    vec3 q2 = cross(normal, rdx);
+    float qdet = dot(rdx, q1);
+    vec3 qgrad = sign(qdet) * (dFdx(arkBarkRelief) * q1 + dFdy(arkBarkRelief) * q2) * 0.03;
+    normal = normalize(abs(qdet) * normal - qgrad);
+}`)
             // Seen from below a crown is not black (batch 4): leaves are thin, so the sky's light comes through them
             // (most where they face the ground) and the sun glows through from behind; bark in shade keeps the sky's
             // bounce. Both come from the scene's own sky and sun lights, so they dim with the hour.

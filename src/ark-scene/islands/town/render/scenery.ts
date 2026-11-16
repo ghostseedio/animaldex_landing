@@ -7,6 +7,10 @@
 
 import {centroid, corners, hashText, inBox, local, toLocal, polylineAt, polylineLength, polylineNearest, polylineWithin, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
+import {townTileHeight} from "@/ark-scene/islands/town/drawn-ground";
+import {tractor} from "@/ark-scene/islands/town/render/farm-machines";
+import {townDeadwood} from "@/ark-scene/islands/town/deadwood";
+import {drawDeadwood, drawLeafPatch} from "@/ark-scene/islands/town/render/deadwood";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, MILLPOND, TOWN_LEVEL, TOWPATH, townPlan, type Hedge, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {zooSpotsOf, type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
@@ -466,7 +470,10 @@ function fields(out: SceneryOut, plan: TownPlan) {
         const f: Frame = {x: centre.x, y: 0, z: centre.z, rot};
         const c = chunkFor(out, centre.x, centre.z);
         if (g.kind === "allotments") {
-            tagged(c.decal, SURF.crop, alongZ(rot), () => c.decal.drape(f, w, d, H, 0.08, (lx) => (Math.floor((lx + w) / 1.4) % 3 === 0 ? tone("#6f9a4a") : Math.floor((lx + w) / 1.4) % 3 === 1 ? tone("#6a5238") : tone("#8fb25e")), 0.7));
+            // p2 (town2): the plots' beds are raised, timber-edged and planted (`allotmentBeds`), on mown grass paths;
+            // they were stripes of colour draped 8 cm over the ground (the owner: "the allotments / strips of soil have
+            // glitch patches in them").
+            allotmentBeds(c, {x: centre.x, z: centre.z, w, d, rot}, hashText(g.id));
             const r = rng(hashText(g.id));
             for (let k = 0; k < 3; k++) {
                 const p = local({x: centre.x, z: centre.z, w, d, rot}, -w / 2 + 2 + k * (w / 3), -d / 2 + 1.4);
@@ -488,20 +495,122 @@ function fields(out: SceneryOut, plan: TownPlan) {
     for (const p of townFarmProps(plan)) farmProp(chunkFor(out, p.at.x, p.at.z).solid, p);
     for (const farm of plan.farms) {
         const c = chunkFor(out, farm.at.x, farm.at.z);
-        if (farm.kind === "farmstead") tractor(c.solid, local(farm.yard, -farm.yard.w / 2 + 2.5, 0), farm.at.rot + 0.4);
+        if (farm.kind === "farmstead") {
+            // p2 (town2): the tractor made as one (`render/farm-machines.ts`; the owner: "the tractor looks awful").
+            const p = local(farm.yard, -farm.yard.w / 2 + 2.5, 0);
+            tractor(c.solid, c.glass, p.x, H(p.x, p.z), p.z, farm.at.rot + 0.4);
+        }
     }
 }
 
-function tractor(geo: Geo, p: Pt, rot: number) {
-    const f: Frame = {x: p.x, y: H(p.x, p.z), z: p.z, rot};
-    const red = tone("#b7372c");
-    geo.box(f, 0, 0.7, 0.4, 1.2, 0.9, 2.2, red);
-    geo.box(f, 0, 1.2, -0.5, 1.3, 1.6, 1.2, red.map((v) => v * 0.9) as [number, number, number]);
-    geo.box(f, 0, 2.8, -0.5, 1.5, 0.08, 1.4, tone("#2a2a2a"));
-    for (const [lx, lz, r] of [[-0.75, -0.6, 0.75], [0.75, -0.6, 0.75], [-0.65, 1.1, 0.45], [0.65, 1.1, 0.45]] as const) {
-        const w: Frame = {...f, ...{x: at(f, lx, 0, lz)[0], z: at(f, lx, 0, lz)[2]}, y: f.y + r, rot: rot};
-        geo.box(w, 0, -r, 0, 0.35, r * 2, r * 2, tone("#232323"));
+/** An allotment bed: its box (the area's frame), what grows in it. */
+export type AllotmentBed = {box: Box; crop: "cabbage" | "beans" | "potatoes" | "salad" | "onions" | "dug"; base: number; top: number};
+
+const BED_CROPS: AllotmentBed["crop"][] = ["cabbage", "beans", "potatoes", "salad", "onions", "dug", "potatoes", "cabbage"];
+
+/**
+ * The allotments' beds (p2, town2): columns of raised beds 1.2 m wide on 0.7 m grass paths, each column cut into beds
+ * of 2.5-3.5 m, clear of the sheds' strip at the back. Each bed is a box from 10 cm under the drawn ground's lowest point
+ * under it to 18 cm over its highest (`townTileHeight`), so the ground can never show through its soil.
+ */
+export function allotmentBedsOf(area: Box, seed: number): AllotmentBed[] {
+    const r = rng(seed ^ 0x51ed);
+    const out: AllotmentBed[] = [];
+    const pitch = 1.9;
+    const columns = Math.floor((area.w - 1.2) / pitch);
+    const x0 = -((columns - 1) * pitch) / 2;
+    const z0 = -area.d / 2 + 3.0;
+    const z1 = area.d / 2 - 0.9;
+    for (let i = 0; i < columns; i++) {
+        let lz = z0;
+        while (z1 - lz > 1.6) {
+            const len = Math.min(2.5 + r() * 1.0, z1 - lz);
+            const b = sub(area, x0 + i * pitch, lz + len / 2, 1.2, len);
+            let lo = Infinity;
+            let hi = -Infinity;
+            for (const q of [...corners(b), {x: b.x, z: b.z}, local(b, 0, -len / 4), local(b, 0, len / 4)]) {
+                const t = townTileHeight(q.x, q.z);
+                lo = Math.min(lo, t, H(q.x, q.z));
+                hi = Math.max(hi, t, H(q.x, q.z));
+            }
+            out.push({box: b, crop: BED_CROPS[Math.floor(r() * BED_CROPS.length)], base: lo - 0.1, top: hi + 0.18});
+            lz += len + 0.6;
+        }
     }
+    return out;
+}
+
+const BED_TIMBER = tone("#6e5236");
+const BED_SOIL = tone("#4e3a28");
+
+function allotmentBeds(c: SceneryChunk, area: Box, seed: number) {
+    for (const bed of allotmentBedsOf(area, seed)) {
+        const b = bed.box;
+        const f: Frame = {x: b.x, y: bed.base, z: b.z, rot: b.rot};
+        const h = bed.top - bed.base;
+        // The soil a little under the boards' top edge; the boards' tops a lighter, weathered timber.
+        c.solid.box(f, 0, 0, 0, b.w, h - 0.03, b.d, BED_TIMBER, 0, {top: shadeOf(BED_SOIL, bed.crop === "dug" ? 0.92 : 1)});
+        for (const side of [-1, 1]) c.solid.box(f, side * (b.w / 2 - 0.02), h - 0.06, 0, 0.05, 0.06, b.d, shadeOf(BED_TIMBER, 1.15));
+        const r = rng(hashText(`${seed}:${b.x.toFixed(1)}:${b.z.toFixed(1)}`));
+        const top = bed.top - 0.03;
+        c.foliage.tag = 0.25;
+        const plant = (lx: number, lz: number) => at({x: b.x, y: top, z: b.z, rot: b.rot}, lx, 0, lz);
+        switch (bed.crop) {
+            case "cabbage":
+                for (let lz = -b.d / 2 + 0.35; lz < b.d / 2 - 0.2; lz += 0.5) for (const lx of [-0.28, 0.28]) {
+                    const p = plant(lx, lz);
+                    c.foliage.blob(p[0], p[1] + 0.12, p[2], 0.2 + r() * 0.04, 0.15, 0.2 + r() * 0.04, shadeOf(tone("#7ea25a"), 0.9 + r() * 0.2), hashText(`${seed}c${lx}${lz.toFixed(2)}`), 0);
+                }
+                break;
+            case "beans": {
+                // A row of canes tied in pairs at the top, the beans climbing them.
+                for (let lz = -b.d / 2 + 0.3; lz < b.d / 2 - 0.2; lz += 0.6) {
+                    const foot = plant(0, lz);
+                    const ff: Frame = {x: foot[0], y: foot[1], z: foot[2], rot: b.rot};
+                    for (const lx of [-0.35, 0.35]) {
+                        const a = at(ff, lx, 0, 0);
+                        const t = at(ff, lx * 0.15, 1.9, 0);
+                        c.foliage.tag = 0;
+                        c.foliage.quad([a[0] - 0.015, a[1], a[2]], [a[0] + 0.015, a[1], a[2]], [t[0] + 0.015, t[1], t[2]], [t[0] - 0.015, t[1], t[2]], tone("#b59c6a"));
+                        c.foliage.quad([a[0], a[1], a[2] - 0.015], [a[0], a[1], a[2] + 0.015], [t[0], t[1], t[2] + 0.015], [t[0], t[1], t[2] - 0.015], tone("#a8905e"));
+                    }
+                    c.foliage.tag = 0.4;
+                    for (const y of [0.5, 1.0, 1.45]) {
+                        const q = at(ff, 0, y, 0);
+                        c.foliage.blob(q[0], q[1], q[2], 0.3 - y * 0.08, 0.28, 0.24, shadeOf(tone("#4f7f38"), 0.85 + r() * 0.25), hashText(`${seed}b${lz.toFixed(2)}${y}`), 0);
+                    }
+                }
+                break;
+            }
+            case "potatoes":
+                for (let lz = -b.d / 2 + 0.35; lz < b.d / 2 - 0.2; lz += 0.45) {
+                    const p = plant((r() - 0.5) * 0.1, lz);
+                    c.foliage.blob(p[0], p[1] + 0.2, p[2], 0.38, 0.26, 0.24, shadeOf(tone("#5c8a3e"), 0.85 + r() * 0.25), hashText(`${seed}p${lz.toFixed(2)}`), 0);
+                }
+                break;
+            case "salad":
+                for (let lz = -b.d / 2 + 0.25; lz < b.d / 2 - 0.15; lz += 0.3) for (const lx of [-0.36, 0, 0.36]) {
+                    const p = plant(lx, lz);
+                    c.foliage.blob(p[0], p[1] + 0.05, p[2], 0.12, 0.08, 0.12, shadeOf(r() < 0.3 ? tone("#8c3a48") : tone("#9cc46a"), 0.9 + r() * 0.2), hashText(`${seed}s${lx}${lz.toFixed(2)}`), 0);
+                }
+                break;
+            case "onions":
+                for (let lz = -b.d / 2 + 0.2; lz < b.d / 2 - 0.1; lz += 0.22) for (const lx of [-0.4, -0.13, 0.13, 0.4]) {
+                    const p = plant(lx, lz);
+                    const lean = (r() - 0.5) * 0.08;
+                    c.foliage.quad([p[0] - 0.03, p[1], p[2]], [p[0] + 0.03, p[1], p[2]], [p[0] + lean + 0.005, p[1] + 0.32, p[2] + lean], [p[0] + lean - 0.005, p[1] + 0.32, p[2] + lean], shadeOf(tone("#6f9a50"), 0.9 + r() * 0.2));
+                }
+                break;
+            case "dug":
+                // Turned earth in ridges: three low ridges along the bed.
+                for (const lx of [-0.36, 0, 0.36]) c.solid.box({x: b.x, y: top - 0.04, z: b.z, rot: b.rot}, lx, 0, 0, 0.22, 0.09, b.d - 0.2, shadeOf(BED_SOIL, 1.08));
+                break;
+        }
+    }
+}
+
+function shadeOf(c: [number, number, number], k: number): [number, number, number] {
+    return [c[0] * k, c[1] * k, c[2] * k];
 }
 
 // MARK: - The zoo
@@ -832,6 +941,10 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
     square(out, plan);
     boundaries(out, plan);
     fields(out, plan);
+    // p2 (town2): fallen logs, stumps and nettle patches in the wood, churchyard, wild corner, park and gardens (`deadwood.ts`).
+    const dead = townDeadwood(plan);
+    for (const item of dead.items) drawDeadwood(chunkFor(out, item.x, item.z).solid, item);
+    for (const patch of dead.patches) drawLeafPatch(chunkFor(out, patch.x, patch.z).foliage, patch);
     zooPlaza(out, plan);
     lamps(out, plan);
     beds(out, plan);

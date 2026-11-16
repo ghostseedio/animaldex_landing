@@ -341,7 +341,8 @@ export function surfaceWeights(surface: TownSurface): [number, number, number, n
         case "farmyard":
             return [1, 0, 0.35, 0, 0, 0, 0, 0];
         case "allotment":
-            return [0.8, 0, 0, 0, 0, 0, 0, 0];
+            // p2 (town2): mown grass paths between the raised beds (`render/scenery.ts` allotmentBeds), a little trodden.
+            return [0, 0, 0, 0, 0.6, 0.2, 0, 0];
         case "square":
             return [1, 0, 0, 0, 0, 0, 0, 0];
         case "bank":

@@ -19,7 +19,8 @@
 import {buildingSolid, perchOnSurface} from "@/ark-scene/islands/town/roof-perch";
 import {corners, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townBuildingFloor, townHeight} from "@/ark-scene/islands/town/ground";
-import {terraceDoorU} from "@/ark-scene/islands/town/doors";
+import {clearForItem, houseDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
+import {deadwoodFoot, townDeadwood} from "@/ark-scene/islands/town/deadwood";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, MILLPOND, townPlan, type Building, type Parcel, type TownPlan, type ZooSlot} from "@/ark-scene/islands/town/plan";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import type {CarSpot} from "@/ark-scene/islands/town/people";
@@ -206,6 +207,13 @@ function wildlifeSpots(plan: TownPlan): TownSpot[] {
         if (!where) continue;
         for (const s of scatter(g.poly, where === "garden" ? 4 : 5, hashText(g.id), (x, z) => sampleTownGround(x, z).surface !== "water")) out.push({...s, y: y(s.x, s.z), area: "garden_wildlife", where, place: g.id, sizes: where === "wood" || where === "park" ? ALL : SMALL_MEDIUM, protected: false});
     }
+    // p2 (town2): at the foot of each fallen log and stump, and at each nettle patch beside them (`deadwood.ts`).
+    const dead = townDeadwood(plan);
+    for (const item of dead.items) {
+        const foot = deadwoodFoot(item);
+        out.push({...foot, y: y(foot.x, foot.z), area: "garden_wildlife", where: "deadwood", place: item.id, sizes: SMALL, protected: false});
+    }
+    for (const p of dead.patches) out.push({x: p.x, y: y(p.x, p.z), z: p.z, area: "garden_wildlife", where: "leaves", place: p.id, sizes: SMALL, protected: false});
     // Back gardens: the hedges and borders at their edges (shared with the pets, who are protected).
     for (const p of plan.parcels) {
         if (p.kind !== "house" || !p.back) continue;
@@ -308,37 +316,78 @@ function urbanSpots(plan: TownPlan): TownSpot[] {
     return out;
 }
 
-/** Each home's bin: by the house (`home`) and at the kerb (`kerb`) when it is out (`people.ts` binsOut). */
+/**
+ * Each home's bin: by the house (`home`) and at the kerb (`kerb`) when it is out (`people.ts` binsOut).
+ * p2 (town2): each spot is the first of its candidates that stands clear of every wall, boundary, door way and bin
+ * already placed (`doors.ts` clearForItem; `src/lib/ark-town-bins-bikes.test.ts` over the whole island): a semi's bin
+ * goes on its free side, never into the neighbour it is joined to; a terrace's in its front garden, off its own wall.
+ * A home with no clear spot keeps its bin in (none drawn).
+ */
 export function binSpots(plan: TownPlan = townPlan()): Array<{id: string; street: string; home: Pt; kerb: Pt; turn: number}> {
+    const memo = binsMemo.get(plan);
+    if (memo) return memo;
     const out: Array<{id: string; street: string; home: Pt; kerb: Pt; turn: number}> = [];
+    const taken: Box[] = [];
+    const pick = (cands: Pt[], rot: number): Pt | null => {
+        for (const c of cands) {
+            const fp: Box = {x: c.x, z: c.z, w: BIN_SIZE, d: BIN_SIZE, rot};
+            if (clearForItem(fp, taken, plan)) return c;
+        }
+        return null;
+    };
+    const add = (id: string, street: string, homes: Pt[], kerbs: Pt[], rot: number, turn: number) => {
+        const home = pick(homes, rot);
+        if (!home) return;
+        taken.push({x: home.x, z: home.z, w: BIN_SIZE, d: BIN_SIZE, rot});
+        const kerb = pick(kerbs, rot);
+        if (!kerb) {
+            taken.pop();
+            return;
+        }
+        taken.push({x: kerb.x, z: kerb.z, w: BIN_SIZE, d: BIN_SIZE, rot});
+        out.push({id, street, home, kerb, turn});
+    };
     for (const p of plan.parcels) {
         const b = plan.buildings.find((q) => q.id === p.building);
         if (!b) continue;
         if (p.kind === "house") {
             const side = p.drive ? (local(p.at, 0, 0).x < p.drive.x ? -1 : 1) : 1;
-            const home = local(b.at, side * (b.at.w / 2 + 0.7), b.at.d / 2 - 1.2);
-            const kerb = local(p.at, side * (p.at.w / 2 - 1.2), p.at.d / 2 + 0.5);
-            out.push({id: `${b.id}#0`, street: p.street, home, kerb, turn: p.at.rot});
+            const door = houseDoorU(b);
+            const homes = [
+                local(b.at, side * (b.at.w / 2 + 0.7), b.at.d / 2 - 1.2),
+                local(b.at, -side * (b.at.w / 2 + 0.7), b.at.d / 2 - 1.2),
+                local(b.at, side * (b.at.w / 2 + 0.7), -b.at.d / 2 + 1.2),
+                local(b.at, -side * (b.at.w / 2 + 0.7), -b.at.d / 2 + 1.2),
+                // In the front garden, against the wall at the end away from the door.
+                local(b.at, (door > 0 ? -1 : 1) * (b.at.w / 2 - 0.6), b.at.d / 2 + 0.6)
+            ];
+            const kerbs = [side, -side].flatMap((s) => [local(p.at, s * (p.at.w / 2 - 1.2), p.at.d / 2 + 0.5), local(p.at, s * (p.at.w / 2 - 2.2), p.at.d / 2 + 0.5)]);
+            add(`${b.id}#0`, p.street, homes, kerbs, b.at.rot, p.at.rot);
         } else if (p.kind === "terrace_home") {
             for (let k = 0; k < 4; k++) {
                 const u = -b.at.w / 2 + b.at.w * (k + 0.5) / 4;
                 // (By the window, on the side away from its front door and the door's path: `doors.ts`, gfx (props).)
                 const away = terraceDoorU(b, k) > u ? -1 : 1;
-                const home = local(p.at, u + away * 1.3, p.at.d / 2 - (p.front ? 1.6 : 0.9));
-                const kerb = local(p.at, u + 1.3, p.at.d / 2 + 0.5);
-                out.push({id: `${b.id}#${k}`, street: p.street, home, kerb, turn: p.at.rot});
+                const homes = [0.6, 0.9].flatMap((out_) => [local(b.at, u + away * 1.3, b.at.d / 2 + out_), local(b.at, u + away * 0.8, b.at.d / 2 + out_)]);
+                const kerbs = [1.3, 0.3, -0.7].map((du) => local(p.at, u + du, p.at.d / 2 + 0.5));
+                add(`${b.id}#${k}`, p.street, homes, kerbs, b.at.rot, p.at.rot);
             }
         } else if (p.kind === "flats") {
-            // A bin store by the block: four big bins, out together.
+            // A bin store by the block: four big bins, out together (on whichever side of the block is free).
             for (let k = 0; k < 4; k++) {
-                const home = local(b.at, b.at.w / 2 + 1.0, b.at.d / 2 - 1.0 - k * 1.3);
-                const kerb = local(b.at, b.at.w / 2 + 1.0 + k * 1.3, b.at.d / 2 + 2.6);
-                out.push({id: `${b.id}#bin${k}`, street: p.street, home, kerb, turn: b.at.rot + Math.PI / 2});
+                const homes = [1, -1].flatMap((s) => [local(b.at, s * (b.at.w / 2 + 1.0), b.at.d / 2 - 1.0 - k * 1.3), local(b.at, s * (b.at.w / 2 + 1.0), -b.at.d / 2 + 1.0 + k * 1.3)]);
+                const kerbs = [1, -1].flatMap((s) => [local(b.at, s * (b.at.w / 2 + 1.0 + k * 1.3), b.at.d / 2 + 2.6), local(b.at, s * (b.at.w / 2 - 1.0 - k * 1.3), b.at.d / 2 + 2.6)]);
+                add(`${b.id}#bin${k}`, p.street, homes, kerbs, b.at.rot, b.at.rot + Math.PI / 2);
             }
         }
     }
+    binsMemo.set(plan, out);
     return out;
 }
+
+/** A wheelie bin's footprint, with a hand's room (m): `render/instanced.ts` binGeometry is 0.62 × 0.78. */
+export const BIN_SIZE = 0.85;
+const binsMemo = new WeakMap<TownPlan, Array<{id: string; street: string; home: Pt; kerb: Pt; turn: number}>>();
 
 /** Storm drains along the streets' kerbs (every ~24 m) and the canal's outfalls: the rats' way in and out. */
 export function drainSpots(plan: TownPlan = townPlan()): Pt[] {

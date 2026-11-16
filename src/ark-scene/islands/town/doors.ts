@@ -13,7 +13,7 @@
  *   apron or on a path: the rule `clearOfDoors`, and `src/lib/ark-town-doors.test.ts` over every home on the island.
  */
 
-import {corners, hashText, inBox, local, sub, toLocal, type Box, type Pt} from "@/ark-scene/islands/town/geom";
+import {corners, hashText, inBox, local, segmentDistance, sub, toLocal, type Box, type Pt} from "@/ark-scene/islands/town/geom";
 import {townPlan, type Building, type Parcel, type TownPlan} from "@/ark-scene/islands/town/plan";
 
 export type HomeDoor = {
@@ -185,4 +185,58 @@ export function pathOpenings(line: readonly Pt[], plan: TownPlan = townPlan()): 
         }
     }
     return out;
+}
+
+/**
+ * p2 (town2): a thing left by a home (a bin, a bicycle) stands clear of every building's walls (the owner: "some of
+ * the bins are rendering into the house walls": a semi's bin was put on the side its neighbour is joined on, a
+ * terrace's into its own front wall), of the garden boundaries (walls, hedges, fences: `margin` from their line), of
+ * the doors' aprons and paths, and of the others already placed (`taken`).
+ */
+export function clearForItem(item: Box, taken: readonly Box[], plan: TownPlan = townPlan(), margin = 0.12): boolean {
+    const reach = Math.hypot(item.w, item.d) / 2 + margin;
+    for (const b of plan.buildings) {
+        if (Math.abs(b.at.x - item.x) > reach + Math.max(b.at.w, b.at.d)) continue;
+        if (Math.abs(b.at.z - item.z) > reach + Math.max(b.at.w, b.at.d)) continue;
+        if (boxesOverlap(item, b.at, margin)) return false;
+    }
+    for (const h of plan.hedges) {
+        for (let i = 1; i < h.line.length; i++) {
+            const a = h.line[i - 1];
+            const c = h.line[i];
+            if (segmentDistance(item.x, item.z, a.x, a.z, c.x, c.z) < reach + 0.1) {
+                // The line's distance to the box itself, not its middle: sample the box's edges.
+                for (const q of [...corners(item), {x: item.x, z: item.z}]) if (segmentDistance(q.x, q.z, a.x, a.z, c.x, c.z) < margin + 0.15) return false;
+                if (segmentCrossesBox(a, c, item)) return false;
+            }
+        }
+    }
+    if (!clearOfDoors(item, 0, plan)) return false;
+    for (const t of taken) if (boxesOverlap(item, t, 0.08)) return false;
+    return true;
+}
+
+function segmentCrossesBox(a: Pt, c: Pt, b: Box): boolean {
+    const p = toLocal(b, a.x, a.z);
+    const q = toLocal(b, c.x, c.z);
+    for (let k = 0; k <= 8; k++) {
+        const x = p.x + ((q.x - p.x) * k) / 8;
+        const z = p.z + ((q.z - p.z) * k) / 8;
+        if (Math.abs(x) <= b.w / 2 && Math.abs(z) <= b.d / 2) return true;
+    }
+    return false;
+}
+
+/**
+ * A model's heading in three.js (`Object3D.rotation.y`, the instanced sets' `turn`: the model's +z goes to
+ * (sin t, cos t)) for a direction in a box's own frame (+lx along the front, +lz out of it): the plan's `rot` turns the
+ * other way (`geom.ts` local), so a box at `rot` has its +lz at three's `-rot`.
+ */
+export function headingAlong(b: Pick<Box, "rot">, axis: "front" | "out"): number {
+    return axis === "out" ? -b.rot : Math.PI / 2 - b.rot;
+}
+
+/** The footprint (a plan box) of a thing whose three.js heading is `turn`: `length` along its heading, `width` across. */
+export function headingBox(p: Pt, turn: number, length: number, width: number): Box {
+    return {x: p.x, z: p.z, w: width, d: length, rot: -turn};
 }

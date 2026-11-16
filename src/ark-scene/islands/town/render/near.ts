@@ -164,9 +164,9 @@ export function buildTownNear(plan: TownPlan, trees: ReadonlyArray<{x: number; z
             case "orchard":
             case "paddock":
             case "shore":
+            case "allotment":
                 return {at: "grass", y: g.height};
             case "farmyard":
-            case "allotment":
             case "field":
                 return {at: "soil", y: g.height};
             case "water":

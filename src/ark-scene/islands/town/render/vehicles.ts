@@ -25,13 +25,13 @@
 import {fetchOk, readUntilIn} from "@/ark-scene/model-files";
 import {BufferAttribute, BufferGeometry, Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, Object3D, Quaternion, Vector3, type Camera, type Material} from "three";
 import {hashText, local, polylineAt, polylineLength, polylineNearest, polylineWithin, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
-import {houseDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
+import {clearForItem, headingAlong, headingBox, houseDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
 import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_WIDTH, TOWN_LEVEL, townPlan, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {carAt, chance, weekday, type CarSpot, type TownClock} from "@/ark-scene/islands/town/people";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
 import {townColliderSet} from "@/ark-scene/islands/town/colliders";
-import {HARBOUR_BAYS, launchEnclosures} from "@/ark-scene/islands/town/areas";
+import {BIN_SIZE, binSpots, HARBOUR_BAYS, launchEnclosures} from "@/ark-scene/islands/town/areas";
 import {Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {townWeather} from "@/ark-scene/islands/town/render/materials";
 import {CROSSINGS} from "@/ark-scene/islands/town/render/streets";
@@ -1209,35 +1209,60 @@ export function parkedCar(spot: ParkingSpot, clock: TownClock, kinds: readonly C
 
 export type BikeSpot = {id: string; x: number; z: number; turn: number; lean: number; always: boolean};
 
-/** Bicycles left out: by some front doors and gates, by the flats' doors, at the shops and the pub. */
+/**
+ * Bicycles left out: by some front doors and gates, by the flats' doors, at the shops and the pub.
+ * p2 (town2): the owner's "bicycles are grouped together but appearing going into each other": the flats' three were
+ * laid along the wall 0.7 m apart, each 1.75 m long, so they ran through one another. A rack's bikes now stand side by
+ * side, nose to the wall, 0.75 m apart; a lone bike leans along the wall. Each spot is the first of its candidates clear
+ * of every wall, boundary, door way, bin and bike already placed (`doors.ts` clearForItem;
+ * `src/lib/ark-town-bins-bikes.test.ts`), and its heading is three.js's (`headingAlong`), so a bike on a turned house
+ * lies along that house's wall, not across it.
+ */
 export function townBikeSpots(plan: TownPlan = townPlan()): BikeSpot[] {
+    const memo = bikesMemo.get(plan);
+    if (memo) return memo;
     const out: BikeSpot[] = [];
+    const taken: Box[] = binSpots(plan).flatMap((bin) => [bin.home, bin.kerb].map((q) => ({x: q.x, z: q.z, w: BIN_SIZE, d: BIN_SIZE, rot: bin.turn})));
+    const put = (id: string, b: {at: Box}, cands: Array<[number, number]>, axis: "front" | "out", lean: number, always: boolean) => {
+        const turn = headingAlong(b.at, axis);
+        for (const [u, o] of cands) {
+            const p = local(b.at, u, b.at.d / 2 + o);
+            const fp = headingBox(p, turn, BIKE_LENGTH, BIKE_WIDTH);
+            if (!clearForItem(fp, taken, plan, 0.06)) continue;
+            taken.push(fp);
+            out.push({id, x: p.x, z: p.z, turn, lean, always});
+            return;
+        }
+    };
     for (const b of plan.buildings) {
         const r = chance(b.id, "bike");
-        const front = (u: number, out_: number): Pt => local(b.at, u, b.at.d / 2 + out_);
         if (b.kind === "house" && r < 0.32) {
             // (Against the front at the end away from the door: `doors.ts`, gfx (props).)
-            const p = front((houseDoorU(b) > 0 ? -1 : 1) * (b.at.w / 2 - 0.6), 0.5);
-            out.push({id: `bike:${b.id}`, x: p.x, z: p.z, turn: b.at.rot + Math.PI / 2, lean: -0.15, always: r < 0.08});
+            const end = houseDoorU(b) > 0 ? -1 : 1;
+            put(`bike:${b.id}`, b, [[end * (b.at.w / 2 - 1.0), 0.45], [end * (b.at.w / 2 - 1.4), 0.45], [end * (b.at.w / 2 - 1.0), 0.75]], "front", -0.15, r < 0.08);
         } else if (b.kind === "terrace" && r < 0.7) {
             const k = Math.floor(chance(b.id, "bike-home") * b.households);
             const mid = -b.at.w / 2 + (b.at.w / b.households) * (k + 0.5);
-            const u = mid + (terraceDoorU(b, k) > mid ? -1.4 : 1.4);
-            const p = front(u, 0.5);
-            out.push({id: `bike:${b.id}:${k}`, x: p.x, z: p.z, turn: b.at.rot + Math.PI / 2, lean: -0.15, always: r < 0.2});
+            const dir = terraceDoorU(b, k) > mid ? -1 : 1;
+            put(`bike:${b.id}:${k}`, b, [[mid + dir * 1.4, 0.45], [mid + dir * 0.6, 0.45], [mid + dir * 1.4, 1.3], [mid + dir * 0.6, 1.3]], "front", -0.15, r < 0.2);
         } else if (b.kind === "flats") {
             for (let k = 0; k < 3; k++) {
                 if (chance(b.id, "rack", k) < 0.35) continue;
-                const p = front(2.6 + k * 0.7, 0.5);
-                out.push({id: `bike:${b.id}:${k}`, x: p.x, z: p.z, turn: b.at.rot + Math.PI / 2, lean: -0.14, always: k === 0});
+                // A rack: side by side, the front wheel to the wall.
+                put(`bike:${b.id}:${k}`, b, [[2.6 + k * 0.75, 1.0], [-2.6 - k * 0.75, 1.0]], "out", -0.04, k === 0);
             }
         } else if ((b.kind === "shop" || b.kind === "pub" || b.shopfront) && r < 0.45) {
-            const p = front(b.at.w / 2 - 0.9, 0.55);
-            out.push({id: `bike:${b.id}`, x: p.x, z: p.z, turn: b.at.rot + Math.PI / 2, lean: -0.14, always: false});
+            put(`bike:${b.id}`, b, [[b.at.w / 2 - 1.1, 0.5], [-b.at.w / 2 + 1.1, 0.5]], "front", -0.14, false);
         }
     }
+    bikesMemo.set(plan, out);
     return out;
 }
+
+/** A parked bicycle's footprint (m): the model is 1.75 m long (`scripts/ark-town-vehicles.mts`), its bars ~0.5 m. */
+export const BIKE_LENGTH = 1.8;
+export const BIKE_WIDTH = 0.5;
+const bikesMemo = new WeakMap<TownPlan, BikeSpot[]>();
 
 /** A bike left out now: the always-out ones, plus daytime ones on dry days and evenings at the pub. */
 export function bikeOut(spot: BikeSpot, clock: TownClock): boolean {

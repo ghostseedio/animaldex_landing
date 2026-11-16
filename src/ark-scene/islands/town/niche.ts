@@ -11,6 +11,8 @@ export type SpotWhere =
     | "paddock" | "farmyard" | "run"
     // Town wildlife
     | "garden" | "park" | "allotment" | "churchyard" | "wood" | "wild_corner" | "hedgerow" | "field_margin" | "canal" | "millpond" | "farm_pond" | "beach"
+    // p2 (town2): the fallen logs and stumps, and the nettle patches beside them (`deadwood.ts`)
+    | "deadwood" | "leaves"
     // Urban
     | "roof" | "eave" | "ledge" | "tall" | "belfry" | "bin" | "drain" | "quay" | "square" | "lamp_wall"
     // Zoo
@@ -36,11 +38,31 @@ export const TOWN_HABITATS_BY_ZONE: Record<string, SpotWhere[]> = {
 };
 
 /**
+ * p2 (town2): the species aboard whose stored text puts them in rotting wood (under logs or bark, eating dead wood), and
+ * the moths and butterflies whose caterpillars live on leaves (data/ark/town-deadwood-species.json, by rule from the
+ * catalogue export; a test keeps these lists equal to it). They live at the town's dead wood and its nettle patches.
+ */
+export const DEADWOOD_SLUGS: ReadonlySet<string> = new Set([
+    "agrarian-sac-spider", "amazonian-giant-centipede", "american-giant-millipede", "atlas-beetle", "bold-jumper",
+    "brazilian-wandering-spider", "bronze-ground-beetle", "eciton-army-ant", "giant-african-land-snail",
+    "giant-african-millipede", "giant-forest-scorpion", "golden-stag-beetle", "harvestman", "hercules-beetle",
+    "rainbow-stag-beetle", "red-triangle-slug", "semi-slug", "smooth-ground-beetle", "termite", "trilobite-beetle",
+    "walnut-orb-weaver", "woodlouse-hunter-spider", "yellow-banded-millipede"
+]);
+export const LEAF_SLUGS: ReadonlySet<string> = new Set([
+    "cabbage-cluster-moth", "common-marble", "emerald-moth", "geometer-moth", "giant-redeye", "hackberry-emperor",
+    "mourning-cloak", "pale-beauty-moth", "peacock-butterfly", "red-admiral", "red-spotted-purple", "tiger-moth",
+    "two-tailed-pasha", "white-peacock-butterfly", "zebra-swallowtail"
+]);
+
+/**
  * An urban species' niche by its kind (the plan's Appendix A list; peregrines on tall buildings, rats at bins and
  * drains, gulls on roofs and the quay…). Matched on the model slug's words; anything else falls back to its zone.
  */
 export function urbanNiche(slug: string, zone: string): SpotWhere[] {
     const s = slug.toLowerCase();
+    if (DEADWOOD_SLUGS.has(s)) return ["deadwood", "wood", "churchyard"];
+    if (LEAF_SLUGS.has(s)) return ["leaves", "garden", "hedgerow"];
     if (/peregrine/.test(s)) return ["tall", "ledge"];
     if (/kestrel|hawk|sparrowhawk|vulture/.test(s)) return ["tall", "roof", "park"];
     if (/owl/.test(s)) return ["churchyard", "belfry", "wood"];

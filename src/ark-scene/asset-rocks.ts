@@ -169,7 +169,7 @@ export class AssetInstances {
                 const made = generatedRockFile(lod.file);
                 const read = (): Promise<BufferGeometry | null> =>
                     made
-                        ? Promise.resolve(rockGeometry(cachedRock(made.style, made.variant, made.detail)))
+                        ? Promise.resolve(rockGeometry(cachedRock(made.style, made.variant, made.detail, true)))
                         : loader.loadAsync(`${base}/${lod.file}`).then((gltf) => {
                               let found: BufferGeometry | null = null;
                               gltf.scene.traverse((object) => {

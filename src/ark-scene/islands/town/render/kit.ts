@@ -246,8 +246,11 @@ export class Geo {
      * its base at `y` (set it a little into the ground), `sx` × `sy` × `sz` its half width, height and half depth,
      * turned by `turn`, shaded by the rock's own crevices and joint faces in `colour`.
      */
-    rock(x: number, y: number, z: number, sx: number, sy: number, sz: number, turn: number, colour: [number, number, number], variant: number) {
-        const m = cachedRock("boulder", variant % ROCK_VARIANTS.boulder, 2);
+    rock(x: number, y: number, z: number, sx: number, sy: number, sz: number, turn: number, colour: [number, number, number], variant: number, detail = 2) {
+        // p2 (town2): shaded smooth from the rock's own normals and coloured per corner from its own weathering (lichen,
+        // streaks, moss), tinted to `colour` (the owner: "big rocks and boulders shouldn't have any sharp polygons"):
+        // it was drawn flat, one shade a face, so even a rounded rock showed every facet.
+        const m = cachedRock("boulder", variant % ROCK_VARIANTS.boulder, detail, true);
         const [x0, , z0] = m.bounds.min;
         const [x1, y1, z1] = m.bounds.max;
         const kx = (2 * sx) / (x1 - x0);
@@ -257,20 +260,38 @@ export class Geo {
         const mz = (z0 + z1) / 2;
         const c = Math.cos(turn);
         const si = Math.sin(turn);
-        let mean = 0;
-        for (let i = 0; i < m.colors.length; i++) mean += m.colors[i];
-        mean = mean / m.colors.length || 1;
+        const mean = [0, 0, 0];
+        for (let i = 0; i < m.colors.length; i++) mean[i % 3] += m.colors[i];
+        for (let k = 0; k < 3; k++) mean[k] = mean[k] / (m.colors.length / 3) || 1;
         const point = (i: number): V3 => {
             const lx = (m.positions[i * 3] - mx) * kx;
             const lz = (m.positions[i * 3 + 2] - mz) * kz;
             return [x + lx * c - lz * si, y + m.positions[i * 3 + 1] * ky, z + lx * si + lz * c];
         };
+        // (A normal under a stretch: divided by the stretch, then turned.)
+        const normal = (i: number): V3 => {
+            const nx = m.normals[i * 3] / kx;
+            const ny = m.normals[i * 3 + 1] / ky;
+            const nz = m.normals[i * 3 + 2] / kz;
+            const l = Math.hypot(nx, ny, nz) || 1;
+            return [(nx * c - nz * si) / l, ny / l, (nx * si + nz * c) / l];
+        };
+        const tint = (i: number): [number, number, number] => [0, 1, 2].map((k) => colour[k] * Math.min(Math.max(m.colors[i * 3 + k] / mean[k], 0.4), 1.5)) as [number, number, number];
         for (let f = 0; f < m.index.length; f += 3) {
             const [a, b, d] = [m.index[f], m.index[f + 1], m.index[f + 2]];
-            let k = 0;
-            for (const v of [a, b, d]) k += (m.colors[v * 3] + m.colors[v * 3 + 1] + m.colors[v * 3 + 2]) / 3;
-            k = Math.min(Math.max(k / 3 / mean, 0.45), 1.35);
-            this.tri(point(a), point(b), point(d), [colour[0] * k, colour[1] * k, colour[2] * k]);
+            this.triShaded(point(a), point(b), point(d), normal(a), normal(b), normal(d), tint(a), tint(b), tint(d));
+        }
+    }
+
+    /** A triangle with its own normal and colour at each corner (smooth shading), wound as `tri`. */
+    triShaded(a: V3, b: V3, c: V3, na: V3, nb: V3, nc: V3, ca: [number, number, number], cb: [number, number, number], cc: [number, number, number]) {
+        const corners: Array<[V3, V3, [number, number, number]]> = [[a, na, ca], [b, nb, cb], [c, nc, cc]];
+        for (const [p, n, colour] of corners) {
+            const col = this.surface ? encodeColourTag(colour, this.surface) : plainColour(colour);
+            this.pos.push(p[0], p[1], p[2]);
+            this.nor.push(n[0], n[1], n[2]);
+            this.col.push(col[0], col[1], col[2]);
+            this.extra.push(this.tag);
         }
     }
 
