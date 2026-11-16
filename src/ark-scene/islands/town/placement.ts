@@ -30,6 +30,8 @@ import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
 import {inBox, toLocal, type Box} from "@/ark-scene/islands/town/geom";
+// 3.3 fix: kept animals sharing a place stand apart.
+import {spreadApart, type SpreadMember} from "@/ark-scene/islands/town/spread";
 
 /** The town's facts about a placed animal: its area, the spot's kind, the home, farm or enclosure, and its bounds. */
 export type TownPlace = {
@@ -346,7 +348,48 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
         places.set(animal.id, placement);
         town.set(animal.id, info);
     }
+    // 3.3 fix: kept animals sharing a home, farm or enclosure pushed apart where they stood in one another (`spread.ts`).
+    spreadKept(animals, places, town);
     return {places, town, open: openNames};
+}
+
+/**
+ * 3.3 fix (`spread.ts`, the owner 2026-11-16: dogs and chickens "overlaying each other"): the kept animals on the ground
+ * (a home's garden, a farm's run or paddock, a zoo enclosure or house's floor) of one place stand at least their bodies
+ * apart, each kept in its own bounds. Displays, tanks, pools and high perches keep their own spots.
+ */
+function spreadKept(animals: readonly ArkAnimal[], places: Map<string, Placement>, town: Map<string, TownPlace>): void {
+    const groups = new Map<string, Array<SpreadMember & {from: {x: number; z: number}; info: TownPlace; length: number}>>();
+    for (const animal of animals) {
+        const info = town.get(animal.id);
+        const placement = places.get(animal.id);
+        if (!info || !placement || !animal.area || info.tank || info.display || HIGH_WHERE.has(info.where) || info.where === "pool") continue;
+        const houseFloor = info.where === "indoor" && info.enclosure && ZOO_HOUSE_TYPES.has(info.enclosure.type);
+        if (info.still && !houseFloor) continue;
+        const body = arkBody(animal);
+        const length = Math.max(body.metres, body.display);
+        const member = {id: animal.id, x: placement.x, z: placement.z, radius: Math.min(Math.max(length * 0.5, 0.12), 1.6), from: {x: placement.x, z: placement.z}, info, length};
+        const key = `${info.area}|${info.place}|${houseFloor ? "floor" : "ground"}`;
+        const list = groups.get(key);
+        if (list) list.push(member);
+        else groups.set(key, [member]);
+    }
+    groups.forEach((members) => {
+        spreadApart(members, (m, x, z) => {
+            const enclosure = m.info.enclosure;
+            if (m.info.where === "indoor" && enclosure) {
+                const f = zooHouseFrame(enclosure);
+                return keepInside(f.inner, x, z, Math.min(m.length * 0.5 + 0.15, Math.min(f.inner.w, f.inner.d) / 2 - 0.05));
+            }
+            const [cx, cz] = clearOf(x, z, Math.min(Math.max(m.length * 0.45, 0.12), 1.6));
+            return inside(enclosure?.mask ?? null, cx, cz, m.from.x, m.from.z);
+        });
+        for (const m of members) {
+            const placement = places.get(m.id)!;
+            placement.x = m.x;
+            placement.z = m.z;
+        }
+    });
 }
 
 function clusterKey(animal: ArkAnimal): string {
