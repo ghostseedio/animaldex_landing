@@ -218,6 +218,9 @@ async function main() {
             // 3.3 batch (C): lane C's scenes frame where its schedule has it now (`locate` is where it was last drawn).
             const who = point ?? (laneCScene ? schedPoint(follow ?? a) : null) ?? handle.locate(follow ?? a) ?? at0;
             handle.setView(view(distance, {x: who.x, z: who.z}, polar, azimuth));
+            // 3.3 batch (C): a fish is framed at its own depth (the view's target is otherwise just above the ground or water).
+            const deep = scene.kind === "carry" && !point ? handle.locate(follow ?? a) : null;
+            if (deep && deep.y < 0) handle.setView({target: {x: who.x, y: deep.y, z: who.z}, distance, polar, azimuth});
             await frames(3);
             // (The dung list is made every 2 s of the page's clock: a moment more for it.)
             fake!.perf += 2100;
