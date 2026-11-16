@@ -160,26 +160,27 @@ function digest(value: unknown): string {
 // fences, walls, railings and gates (`doors.ts`, `render/fences.ts`), the open porches, the benches (`render/bench.ts`;
 // the park's off the pond's water) (scenery and buildings).)
 const TOWN_DIGESTS = {
-    plan: "5b90736d71cddf6d",
+    plan: "10cdd1a0c63d1c1c",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
     // lane's street grade and boats, the place lane's pens. Each lane changed these on purpose; recomputed on the merge.)
     // (3.3 fix (wall), wall-climb.ts: the lamp-lit walls' places on the wall's face with its normal; the eaves' wall faces.)
-    // (Pass 2, lane LAND: the millpond's bank meets its water, its wetland spots, its stones; pond life at the wetland.)
-    areas: "9ede136a249f7816",
+    // (Pass 2, lane LAND: the millpond's bank meets its water, its wetland spots and stones, pond life at the wetland; the
+    // downtown headland: its streets, three towers, the plaza, billboards.)
+    areas: "08e211a459aad10a",
     // (Lane GA: the ground's surface weights.)
-    ground: "4855991d05181a83",
+    ground: "8e76822884f9d6cd",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "d8cb37cd6aa55e7f",
+    sceneryAndBuildings: "9c22e70c52d7eec1",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     zoo: "1b520265e67b59fd",
-    places: "6bcc782d6512d2ad"
+    places: "8b6676db00632df4"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {

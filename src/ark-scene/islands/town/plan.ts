@@ -63,7 +63,14 @@ export function coastWobble(theta: number): number {
     return 0.028 * Math.sin(3 * theta + 1.3) + 0.02 * Math.sin(7 * theta - 0.4) + 0.012 * Math.sin(13 * theta + 2.1) + 0.006 * Math.sin(23 * theta + 0.7);
 }
 
-export function coastNorm(x: number, z: number): number {
+/**
+ * p2 (land), the owner: "the island doesn't have to be round it can be an obscure shape if you need to add extra land":
+ * the downtown's headland, a rounded spur of land out to the south-west beyond Sea View and West Street (its own
+ * wobble), joined to the island's outline. The town's square (237.6 m) keeps sea round it.
+ */
+export const DOWNTOWN_LOBE = {x: -104, z: 170, a: 66, b: 44, power: 2.6};
+
+function mainNorm(x: number, z: number): number {
     const a = x < 0 ? COAST.west : COAST.east;
     const b = z < 0 ? COAST.north : COAST.south;
     const p = COAST.power;
@@ -71,11 +78,32 @@ export function coastNorm(x: number, z: number): number {
     return n - coastWobble(Math.atan2(z, x));
 }
 
+function lobeNorm(x: number, z: number): number {
+    const L = DOWNTOWN_LOBE;
+    const dx = x - L.x;
+    const dz = z - L.z;
+    const n = Math.pow(Math.pow(Math.abs(dx / L.a), L.power) + Math.pow(Math.abs(dz / L.b), L.power), 1 / L.power);
+    return n - 0.8 * coastWobble(Math.atan2(dz, dx) + 1.9);
+}
+
+export function coastNorm(x: number, z: number): number {
+    return Math.min(mainNorm(x, z), lobeNorm(x, z));
+}
+
 /** Metres inland (positive on land, negative at sea), near enough within ~40 m of the coast. */
 export function inland(x: number, z: number): number {
     const r = Math.hypot(x, z) || 1;
-    const n = coastNorm(x, z);
-    return (1 - n) * (r / Math.max(n, 0.05));
+    const n = mainNorm(x, z);
+    const main = (1 - n) * (r / Math.max(n, 0.05));
+    // (The headland in its own measure: from its own centre, so its shore is as wide as the island's.)
+    const L = DOWNTOWN_LOBE;
+    const rl = Math.hypot(x - L.x, z - L.z) || 1;
+    const nl = lobeNorm(x, z);
+    const lobe = (1 - nl) * (rl / Math.max(nl, 0.05));
+    // A smooth union, so the neck between them is a curved bay, not a crease.
+    const k = 10;
+    const h = Math.max(k - Math.abs(main - lobe), 0) / k;
+    return Math.max(main, lobe) + h * h * k * 0.25;
 }
 
 // MARK: - Plan types
@@ -104,7 +132,9 @@ export type BuildingKind =
     | "zoo_kiosk"
     | "zoo_gate"
     | "keepers_yard"
-    | "lock_house";
+    | "lock_house"
+    // p2 (land): the downtown's towers (offices, `render/buildings.ts` tower).
+    | "tower";
 
 export type RoofKind = "gable" | "hip" | "flat" | "lean" | "glass" | "none";
 
@@ -197,7 +227,13 @@ export type TownPlan = {
     /** Street furniture spots, for the people-implied props and the urban wildlife. */
     lamps: Pt[];
     drains: Pt[];
+    /** p2 (land): the downtown on its headland: its plaza, the Christmas tree's place in it, and the billboards. */
+    downtown: Downtown;
 };
+
+/** A billboard: its face's middle (`y` over the ground, or over the roof of `on`), its size, which way it faces, its art. */
+export type Billboard = {id: string; x: number; z: number; y: number; w: number; h: number; turn: number; design: number; on?: string};
+export type Downtown = {plaza: Box; tree: Pt; billboards: Billboard[]};
 
 export type TreeKind = "oak" | "lime" | "plane" | "birch" | "willow" | "poplar" | "pine" | "yew" | "apple" | "cherry" | "acacia" | "palm" | "hedge_shrub";
 
@@ -237,6 +273,8 @@ const HOUSE = {w: 7.4, d: 8.6, setback: 4.2, eaves: 5.3};
 const SHOP_STREETS = new Set(["high_street", "square_walk"]);
 const TERRACE_HOME = {w: 5.1, d: 8.8, setback: 2.4, eaves: 5.4};
 const FLATS = {w: 17, d: 10.5, eaves: 11.6};
+/** p2 (land): an office tower's storey (m). */
+export const TOWER_FLOOR = 3.5;
 
 function addBuilding(ctx: Ctx, building: Omit<Building, "seed">): Building {
     const full = {...building, seed: hashText(building.id)};
@@ -726,6 +764,9 @@ function buildPlan(): TownPlan {
     if (ctx.spares.length < 2) ctx.misses.push("zoo: spare plots");
     ctx.greens.push({id: "zoo_lawn", kind: "zoo_lawn", poly: [{x: -200, z: -190}, {x: -54, z: -190}, {x: -54, z: 16}, {x: -200, z: 16}]});
 
+    // p2 (land): the downtown, on its headland past Sea View and West Street.
+    const downtown = buildDowntown(ctx);
+
     plant(ctx);
 
     lastMisses = ctx.misses;
@@ -745,8 +786,47 @@ function buildPlan(): TownPlan {
         lock: box(14, 100, 10, 6),
         moorings: ctx.moorings,
         lamps: [],
-        drains: []
+        drains: [],
+        downtown
     };
+}
+
+/**
+ * The downtown (p2 (land), the owner, 2026-11-16: "could do with a couple very tall buildings in the town too and
+ * billboards with night lights and an area for a giant christmas tree with fairy lights"): Sea View and West Street run
+ * on south onto the headland and meet along Tower Row; between them two office towers (24 and 16 storeys) over a paved
+ * plaza with the Christmas tree's place in its middle, a third (12 storeys) across West Street; billboards on two posts
+ * at the plaza's corners and on the third tower's roof. Their art is AnimalDex's own (no brands: `render/downtown.ts`).
+ */
+function buildDowntown(ctx: Full): Downtown {
+    ctx.streets.push(
+        road("sea_view_south", "road", [[-128, 124], [-128, 194]], 6, 1.8, "Sea View", 0),
+        road("west_street_south", "road", [[-80, 132], [-80, 194]], 6, 1.8, "West Street", 0),
+        road("tower_row", "road", [[-128, 194], [-80, 194]], 6, 1.8, "Tower Row", 0)
+    );
+    const towers: Array<{id: string; at: Box; floors: number}> = [
+        {id: "tower-1", at: box(-113.5, 147.5, 17, 17), floors: 24},
+        {id: "tower-2", at: box(-94.5, 145.5, 15, 15), floors: 16},
+        {id: "tower-3", at: box(-61.5, 160, 18, 22), floors: 12}
+    ];
+    for (const t of towers) {
+        const eaves = t.floors * TOWER_FLOOR;
+        // (Its roof's felt at the eaves + 0.75 m, inside the parapet; a peregrine's ledge on the parapet's front corner.)
+        const corner = local(t.at, t.at.w / 2 - 0.4, t.at.d / 2 - 0.4);
+        addBuilding(ctx, {id: t.id, kind: "tower", at: t.at, floors: t.floors, eaves, roof: "flat", households: 0, top: eaves + 0.75, tall: {x: corner.x, z: corner.z, y: eaves + 0.76}});
+        ctx.keepOut.push(box(t.at.x, t.at.z, t.at.w + 3, t.at.d + 3, t.at.rot));
+    }
+    // The plaza and the towers' forecourts: one paved block between the streets.
+    const plaza = box(-104, 175.5, 36, 25);
+    ctx.keepOut.push(plaza);
+    ctx.greens.push({id: "downtown", kind: "verge", poly: corners(box(-104, 160.5, 38.4, 57))});
+    ctx.greens.push({id: "tower_3_forecourt", kind: "verge", poly: corners(box(-63, 160, 24, 28))});
+    const billboards: Billboard[] = [
+        {id: "billboard-plaza-w", x: -121, z: 166, y: 5.2, w: 7.2, h: 3.2, turn: -Math.PI / 2, design: 0},
+        {id: "billboard-plaza-s", x: -90, z: 186.5, y: 5.2, w: 7.2, h: 3.2, turn: 0, design: 1},
+        {id: "billboard-tower-3", x: -67, z: 160, y: 3.2, w: 12, h: 4.4, turn: -Math.PI / 2, design: 2, on: "tower-3"}
+    ];
+    return {plaza, tree: {x: plaza.x, z: plaza.z}, billboards};
 }
 
 /**

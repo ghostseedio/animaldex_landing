@@ -40,7 +40,7 @@ function within(hours: number, from: number, to: number): boolean {
     return from <= to ? hours >= from && hours < to : hours >= from || hours < to;
 }
 
-export type LitWindow = {building: string; owner: "home" | "shop" | "pub" | "civic" | "church" | "farm" | "zoo" | "mill" | "harbour"; household: number; floor: number; seed: number};
+export type LitWindow = {building: string; owner: "home" | "shop" | "pub" | "civic" | "church" | "farm" | "zoo" | "mill" | "harbour" | "office"; household: number; floor: number; seed: number};
 
 /**
  * How lit a window is (0–1) at this moment. Homes: a household's evening runs from its own time after dusk to its own
@@ -87,6 +87,16 @@ export function windowLit(w: LitWindow, clock: TownClock): number {
             return within(h, 6, 17) && r < 0.7 ? 0.6 : 0;
         case "zoo":
             return within(h, 9, 18) ? 0.6 : 0;
+        case "office": {
+            // p2 (land): the towers' offices: lit through the working day, many on into the evening (to 19:00-23:00 by
+            // the window), a few all night (cleaners, a late desk), weekends dimmer; brightest when it is dark out.
+            const until = 19 + r * 4;
+            const weekend = day === 0 || day === 6;
+            const on = weekend ? r < 0.25 && within(h, 10, 17) : within(h, 7.5, 18) ? r < 0.92 : within(h, 18, until) ? r < 0.7 : false;
+            const night = chance(w.building, w.household, w.floor, clock.day, "night") < 0.12;
+            // (By day an office's lights barely show through its glass; after dark it is a lit band.)
+            return on ? 0.25 + 0.75 * dark : night && dark > 0.2 ? 0.8 : 0;
+        }
         default:
             return 0;
     }

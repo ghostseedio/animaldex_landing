@@ -15,6 +15,7 @@ import {buildingFrame} from "@/ark-scene/islands/town/render/buildings";
 import {clipStreets, keptPieces, onAnyStreet} from "@/ark-scene/islands/town/street-clip";
 import {streetSurfaces} from "@/ark-scene/islands/town/render/streets";
 import {streetFurniture, type FurnitureOut} from "@/ark-scene/islands/town/render/furniture";
+import {downtownScenery} from "@/ark-scene/islands/town/render/downtown";
 import {alongZ, SURF, tagged} from "@/ark-scene/islands/town/render/surface-tags";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
 import {cropRows, farmProp, fiveBarGate, flowerBed, hedgeAlong} from "@/ark-scene/islands/town/render/nature";
@@ -822,6 +823,8 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
     beds(out, plan);
     // The lamps' and the street furniture's bodies into the chunks; their lights and the lamp map (lane GA).
     out.furniture = streetFurniture(plan, out.lamps, {chunkAt: (x, z) => chunkFor(out, x, z), heightAt: streetHeight});
+    // p2 (land): the downtown's billboards and the towers' aviation lights (their lights with the street lamps'), the tree's ring.
+    downtownScenery(plan, (x, z) => chunkFor(out, x, z), out.furniture.lights, H);
     // Drives: gravel or paving from the street to the house.
     for (const p of plan.parcels) {
         if (!p.drive) continue;

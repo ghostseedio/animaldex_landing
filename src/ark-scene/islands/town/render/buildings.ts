@@ -32,7 +32,7 @@ import {at, COLOUR_TAG_TOLERANCE, Geo, NullGeo, tone, type Frame} from "@/ark-sc
 import {TOWN_LIGHT, townWeather} from "@/ark-scene/islands/town/render/materials";
 import {ARK_TIME} from "@/ark-scene/glsl";
 
-export type WindowOwner = "home" | "shop" | "pub" | "civic" | "church" | "farm" | "zoo" | "mill" | "harbour";
+export type WindowOwner = "home" | "shop" | "pub" | "civic" | "church" | "farm" | "zoo" | "mill" | "harbour" | "office";
 
 export type WindowRecord = {
     building: string;
@@ -164,7 +164,7 @@ function windowAt(ctx: Ctx, side: Frame, u: number, y: number, w: number, h: num
     const seed = (ctx.seed + Math.round(u * 13) * 7 + floor * 131) >>> 0;
     // Curtains by household (its rooms share them; bedrooms upstairs another), blinds in about one window in five.
     const swatch = ctx.look.swatch ?? (owner === "home" ? Math.floor(chance(ctx.building.id, household, floor > 0 ? "up" : "down") * 16) : Math.floor(chance(ctx.building.id, seed) * 16));
-    const blinds = chance(ctx.building.id, seed, "blinds") < (owner === "home" ? 0.2 : owner === "civic" || owner === "harbour" ? 0.6 : 0);
+    const blinds = chance(ctx.building.id, seed, "blinds") < (owner === "home" ? 0.2 : owner === "civic" || owner === "harbour" ? 0.6 : owner === "office" ? 0.45 : 0);
     const start = chunk.panes.pos.length / 3;
     pane(chunk.panes, side, u, y, pw, ph, paneStyle(kind, swatch, blinds, seed));
     chunk.windows.push({building: ctx.building.id, owner, household, start, count: 6, floor, seed});
@@ -942,6 +942,77 @@ function farmBuilding(ctx: Ctx, b: Building) {
     solid.box(front.frame, 0, b.eaves * 0.9, 0.06, 1.4, 1.2, 0.1, wall.map((c) => c * 0.7) as [number, number, number]);
 }
 
+// MARK: - The downtown's towers (p2 (land))
+
+/** p2 (land): a tower's look by its id: its curtain wall's glass, its frame (the floor bands and corner piers), its podium. */
+const TOWER_LOOKS: Array<{glass: string; frame: string; podium: string}> = [
+    {glass: "#4c6575", frame: "#d9d5cc", podium: "#3d3f43"},
+    {glass: "#6b6a5e", frame: "#c8b597", podium: "#4a4038"},
+    {glass: "#5a7480", frame: "#9aa3a8", podium: "#34383c"}
+];
+
+/**
+ * An office tower (p2 (land), the owner's "a couple very tall buildings in the town"): a two-storey granite podium with
+ * shop windows, then a shaft of storeys, each a band of glass between the floor slabs' edges, the corners held by piers;
+ * a parapet round a felted roof with a plant room on it. Its office windows are lit on the island clock: through the
+ * working day, many into the evening, a few all night (`people.ts` "office").
+ */
+function tower(ctx: Ctx, b: Building) {
+    const r = rng(b.seed);
+    const f = buildingFrame(b.at);
+    const {solid} = ctx.chunk;
+    const look = TOWER_LOOKS[(Number(b.id.replace(/\D/g, "")) || 1) % TOWER_LOOKS.length];
+    const glass = tone(look.glass);
+    const frame = tone(look.frame);
+    const podiumColour = tone(look.podium);
+    const w = b.at.w;
+    const d = b.at.d;
+    const floorH = b.eaves / b.floors;
+    const podium = floorH * 2;
+    ctx.look = {pane: PANE.modern, surround: "none"};
+    plinth(solid, f, w + 1.6, d + 1.6, podiumColour);
+    solid.as(SURFACE.stone, () => solid.box(f, 0, 0, 0, w + 1.2, podium, d + 1.2, podiumColour, 0, {top: tone("#55585c")}));
+    solid.box(f, 0, podium, 0, w, b.eaves - podium, d, glass);
+    // The slabs' edges every storey, and the corner piers.
+    solid.as(SURFACE.concrete, () => {
+        for (let floor = 3; floor <= b.floors; floor++) solid.box(f, 0, floor * floorH - 0.32, 0, w + 0.14, 0.34, d + 0.14, frame);
+        for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) solid.box(f, sx * (w / 2 - 0.35), podium, sz * (d / 2 - 0.35), 0.9, b.eaves - podium, 0.9, frame);
+    });
+    // The parapet, its coping, the felt; a plant room toward the back, clear of the roof's middle and its ends (the birds').
+    solid.as(SURFACE.concrete, () => solid.box(f, 0, b.eaves, 0, w + 0.2, 0.7, d + 0.2, frame, 0, {top: tone("#6a6a66")}));
+    solid.as(SURFACE.felt, () => solid.box(f, 0, b.eaves + 0.05, 0, w - 0.3, 0.7, d - 0.3, tone("#45474a")));
+    solid.as(SURFACE.metal, () => solid.box(f, 0, b.eaves + 0.7, 0, w + 0.32, 0.06, d + 0.32, tone("#8a8c8e")));
+    if (b.id !== "tower-3") solid.as(SURFACE.concrete, () => solid.box(f, 0, b.eaves + 0.75, -d * 0.3, w * 0.42, 3.6, d * 0.24, shade(frame, 0.9)));
+    const sidesOf = sides(f, w, d);
+    // The office windows, a band per storey above the podium (a column a pier's width either side of each mullion).
+    for (const side of sidesOf) {
+        const columns = Math.max(2, Math.round((side.length - 1.8) / 2.7));
+        const span = side.length - 1.8;
+        for (let floor = 2; floor < b.floors; floor++) {
+            const y = floor * floorH + floorH * 0.48;
+            for (let k = 0; k < columns; k++) {
+                const u = -span / 2 + (span * (k + 0.5)) / columns;
+                windowAt(ctx, side.frame, u, y, span / columns - 0.28, floorH * 0.74, "office", floor * 32 + k, floor);
+            }
+        }
+    }
+    // The podium: shop windows round it, the entrance and its canopy on the front.
+    const podiumSides = sides(f, w + 1.2, d + 1.2);
+    podiumSides.forEach((side, i) => {
+        const n = Math.max(2, Math.round(side.length / 4.2));
+        for (let k = 0; k < n; k++) {
+            const u = -side.length / 2 + (side.length * (k + 0.5)) / n;
+            if (i === 0 && Math.abs(u) < 2.2) continue;
+            windowAt(ctx, side.frame, u, floorH * 0.5, side.length / n - 0.7, floorH * 0.66, "shop", 0, 0, TRIM, PANE.shop);
+            windowAt(ctx, side.frame, u, floorH * 1.5, side.length / n - 0.7, floorH * 0.6, "office", 1, 1);
+        }
+    });
+    const front = podiumSides[0];
+    door(solid, front.frame, 0, tone("#2b3a44"), 2.6, 2.6);
+    solid.as(SURFACE.metal, () => solid.box(front.frame, 0, 3.0, 1.2, 5.4, 0.22, 2.4, tone("#2c2f33")));
+    void r;
+}
+
 // MARK: - Building one
 
 export function buildBuilding(chunk: BuildingChunk, b: Building) {
@@ -977,6 +1048,8 @@ export function buildBuilding(chunk: BuildingChunk, b: Building) {
             case "coop":
             case "shed":
                 return farmBuilding(ctx, b);
+            case "tower":
+                return tower(ctx, b);
             default:
                 return;
         }
