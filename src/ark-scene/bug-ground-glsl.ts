@@ -22,27 +22,32 @@ vec3 arkBugHash3(vec2 p) {
     p3 += dot(p3, p3.yxz + 33.33);
     return fract((p3.xxy + p3.yzz) * p3.zyx);
 }
-// The grain of cell floor(q) (q in cells): x its dome's height (0 off it), yz its slope (the normal's tip), w the shade
-// ring round its foot; tone 0..1 its own colour. fill: the share of cells that hold one.
+// Value noise on the same hash (the grains' ragged edges).
+float arkBugNoise(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    f = f * f * (3.0 - 2.0 * f);
+    return mix(mix(arkBugHash3(i).x, arkBugHash3(i + vec2(1.0, 0.0)).x, f.x), mix(arkBugHash3(i + vec2(0.0, 1.0)).x, arkBugHash3(i + vec2(1.0, 1.0)).x, f.x), f.y);
+}
+// The grain of cell floor(q) (q in cells): x its height (0 off it), yz its slope (the normal's tip), w the shade ring
+// round its foot; tone 0..1 its own colour. fill: the share of cells that hold one. Mostly small, a few bigger.
 vec4 arkBugGrain(vec2 q, float fill, out float tone) {
     vec2 c = floor(q);
     vec3 h = arkBugHash3(c);
     tone = fract(h.x * 7.13 + h.y);
     if (h.z >= fill) return vec4(0.0);
-    float r = 0.2 + 0.24 * h.x;
-    vec2 centre = c + 0.5 + (h.yx - 0.5) * (1.0 - 2.0 * r);
+    float r = 0.13 + 0.3 * h.x * h.x;
+    vec2 centre = c + 0.5 + (h.yx - 0.5) * (1.0 - 2.0 * r) * 0.9;
     vec2 d = q - centre;
-    // A little oval, turned its own way.
+    // An oval turned its own way, its edge ragged (a crumb, a chip of stone: never a disc or a regular lobe).
     float a = h.y * 6.2832;
-    vec2 e = vec2(cos(a) * d.x + sin(a) * d.y, -sin(a) * d.x + cos(a) * d.y) * vec2(1.0, 1.0 + 0.6 * h.z / max(fill, 1e-3));
-    // Irregular, not a disc: its edge wanders with the angle (a crumb, a chip of stone).
-    float lobes = 1.0 + 0.22 * sin(atan(e.y, e.x) * 3.0 + h.x * 17.0) + 0.12 * sin(atan(e.y, e.x) * 5.0 + h.z * 23.0);
-    float t = length(e) / (r * lobes);
-    // Flat-topped (a crumb lies, it is not a bead), with a sharp shoulder.
-    float dome = sqrt(max(1.0 - t * t * t * t, 0.0));
-    float ring = smoothstep(1.4, 1.0, t) * step(1.0, t);
-    vec2 slope = t < 1.0 ? d / r * smoothstep(0.55, 1.0, t) * 1.6 : vec2(0.0);
-    return vec4(dome, slope, ring);
+    vec2 e = vec2(cos(a) * d.x + sin(a) * d.y, -sin(a) * d.x + cos(a) * d.y) * vec2(1.0, 1.25 + 0.5 * tone);
+    float t = length(e) / r + 0.55 * (arkBugNoise(q * 9.0 + h.xy * 50.0) - 0.5);
+    float body = 1.0 - smoothstep(0.88, 1.0, t);
+    float ring = smoothstep(1.3, 1.0, t) * (1.0 - body);
+    // Rounded over at its shoulder: the normal tips out there, so the sun lights one side and the other is in shade.
+    vec2 slope = d / max(length(d), 1e-4) * smoothstep(0.3, 1.0, t) * body * 1.3;
+    return vec4(body, slope, ring);
 }
 // The ground's colour and tangent normal (x along +x, y along +z) at bug scale. pixel: metres of ground per pixel here.
 // soil, sand, grass, forest, gravel: how much of each covers the point. Returns how much of it showed (0 from afar).
@@ -56,17 +61,17 @@ float arkBugGround(vec2 p, float pixel, float soil, float sand, float grass, flo
     vec4 g1 = arkBugGrain(p / 0.013, clamp(soil * 0.62 + sand * 0.3 + forest * 0.45 + gravel * 0.9 + grass * 0.07, 0.0, 0.92), t1);
     vec4 g2 = arkBugGrain(mat2(0.8, -0.6, 0.6, 0.8) * p / 0.046 + 17.3, clamp(soil * 0.14 + sand * 0.03 + forest * 0.07 + gravel * 0.62 + grass * 0.008, 0.0, 0.8), t2);
     float lum = dot(col, vec3(0.3333));
-    // Crumbs: the ground's own colour, each its own shade (a few darker, a few paler); sand's grains pale with a few
-    // dark ones; gravel's grey.
-    vec3 crumb = col * mix(0.62, 1.32, t1 * t1) * (0.88 + 0.16 * g1.x);
-    crumb = mix(crumb, vec3(lum) * mix(vec3(1.12, 1.08, 1.0), vec3(0.5, 0.47, 0.44), step(0.82, t1)), sand * 0.55);
-    crumb = mix(crumb, vec3(lum * mix(0.7, 1.3, t1)), gravel * 0.7);
-    col = mix(col, crumb, smoothstep(0.0, 0.25, g1.x) * crumbsOn * 0.8);
-    col *= 1.0 - 0.18 * g1.w * crumbsOn;
-    // Stones: the ground's tone greyed, darker or paler stone by stone, a dark crease at the foot.
-    vec3 stone = mix(vec3(lum), vec3(0.16, 0.15, 0.13), 0.35) * mix(0.65, 1.45, t2) * mix(vec3(1.1, 1.0, 0.86), vec3(1.16, 1.04, 0.84), t2) * (0.82 + 0.25 * g2.x);
-    col = mix(col, stone, smoothstep(0.0, 0.2, g2.x) * on * 0.92);
-    col *= 1.0 - 0.32 * g2.w * on;
+    // Crumbs: the ground's own colour, each a little darker or paler; sand's grains pale with a few dark ones; gravel's
+    // grey. Their shape shows mostly by the light on them (the normal), not by paint.
+    vec3 crumb = col * mix(0.78, 1.18, t1);
+    crumb = mix(crumb, vec3(lum) * mix(vec3(1.1, 1.06, 1.0), vec3(0.55, 0.52, 0.48), step(0.85, t1)), sand * 0.5);
+    crumb = mix(crumb, vec3(lum * mix(0.72, 1.28, t1)), gravel * 0.7);
+    col = mix(col, crumb, g1.x * crumbsOn * 0.75);
+    col *= 1.0 - 0.22 * g1.w * crumbsOn;
+    // Stones: the ground's own tone, greyed and darker or paler stone by stone, a dark crease at the foot.
+    vec3 stone = mix(col, vec3(lum), 0.55) * mix(0.62, 1.22, t2) * mix(vec3(1.04, 1.0, 0.92), vec3(1.1, 1.03, 0.9), t2);
+    col = mix(col, stone, g2.x * on * 0.9);
+    col *= 1.0 - 0.35 * g2.w * on;
     // The thatch: dead blades lying flat in the grass, straw-pale with a shadow along one side (2.4 cm cells).
     if (grass > 0.05) {
         vec2 q = p / 0.024;
@@ -82,7 +87,7 @@ float arkBugGround(vec2 p, float pixel, float soil, float sand, float grass, flo
         col = mix(col, col * vec3(1.35, 1.28, 0.9) + vec3(0.03, 0.025, 0.0), blade * grass * crumbsOn * 0.45);
         col *= 1.0 - 0.18 * shade * grass * crumbsOn;
     }
-    nT = normalize(nT + vec3((g1.yz * 0.35 * crumbsOn + g2.yz * 0.6 * on), 0.0));
+    nT = normalize(nT + vec3((g1.yz * 0.7 * crumbsOn + g2.yz * 0.9 * on), 0.0));
     return on;
 }
 `;

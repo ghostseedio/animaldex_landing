@@ -295,6 +295,8 @@ const PAVING_COLOUR = `
     float fade = 1.0 - smoothstep(90.0, 320.0, dist);
     float near = (1.0 - smoothstep(6.0, 22.0, dist)) * (1.0 - townLite);
     bool normals = townNormals > 0.5;
+    // p2 (ground): metres of ground a pixel covers here, taken in uniform control flow.
+    float pavePixel = dist * length(fwidth((vTownWorld - cameraPosition) / max(dist, 1e-3)));
     vec3 tint = diffuseColor.rgb;
     vec3 col = tint;
     float rough = 0.92;
@@ -435,6 +437,12 @@ const PAVING_COLOUR = `
         townMetal = mix(0.55, 0.0, rust * 0.6);
         soak = 0.05;
     }
+    // p2 (ground): the gravel's stones, the earth tracks' and the crops' crumbs, the sand's grains and the grass's thatch
+    // at bug scale (bug-ground-glsl.ts), in the decal's own row frame.
+    if (townLite < 0.5 && pavePixel < 0.0065 && (id == 5 || (id >= 7 && id <= 10))) {
+        float plantHere = id == 10 ? 1.0 : id == 9 ? smoothstep(0.0, 0.03, tint.g - tint.r) : 0.0;
+        arkBugGround(q, pavePixel, float(id == 7) + float(id == 9) * (1.0 - plantHere), float(id == 8), plantHere, 0.0, float(id == 5), col, nT);
+    }
 ${WET_GLSL}
     diffuseColor.rgb = col;
 }`;
@@ -454,8 +462,8 @@ export function townPavingMaterial(): MeshStandardMaterial {
             .replace("#include <metalnessmap_fragment>", METAL_GLSL)
             .replace("#include <normal_fragment_begin>", NORMAL_GLSL("(vTownRows > 0.5)"));
         patchTownShader(shader, {soak: 0, wetRoughness: 0.3, lamps: true, cloud: true, colour: false, roughness: false});
-        shader.fragmentShader = shader.fragmentShader.replace("    diffuseColor.rgb = col;\n}", "    diffuseColor.rgb = col * townCloudShade(vTownWorld);\n}").replace(/(float townCloudShade\(vec3 world\) \{[\s\S]*?\n\})/, `$1\n${PAVE_PARS}`);
+        shader.fragmentShader = shader.fragmentShader.replace("    diffuseColor.rgb = col;\n}", "    diffuseColor.rgb = col * townCloudShade(vTownWorld);\n}").replace(/(float townCloudShade\(vec3 world\) \{[\s\S]*?\n\})/, `$1\n${PAVE_PARS}\n${ARK_BUG_GROUND_GLSL}`);
     };
-    material.customProgramCacheKey = () => "town-paving-2";
+    material.customProgramCacheKey = () => "town-paving-3";
     return material;
 }

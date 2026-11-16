@@ -176,7 +176,7 @@ export function bugCellItems(cx: number, cz: number, coverAt: BugCoverAt, share:
                 case "grit": {
                     const tones = GRIT_TONES[cover.surface];
                     // Mostly crumbs, now and then a stone (gravel: mostly stones).
-                    const size = cover.surface === "gravel" ? 0.004 + a * a * 0.016 : cover.surface === "sand" ? 0.0015 + a * a * 0.006 : 0.002 + a * a * a * 0.014;
+                    const size = cover.surface === "gravel" ? 0.004 + a * a * 0.016 : cover.surface === "sand" ? 0.002 + a * a * 0.009 : 0.002 + a * a * a * 0.014;
                     item = {kind, x, y: y - size * 0.35, z, yaw, lean: (b - 0.5) * 1.2, sx: size * (0.8 + b * 0.6), sy: size * (0.45 + c * 0.35), sz: size * (0.7 + c * 0.5), colour: tones[Math.floor(c * tones.length) % tones.length]};
                     break;
                 }
@@ -202,7 +202,7 @@ export function bugCellItems(cx: number, cz: number, coverAt: BugCoverAt, share:
                     break;
                 }
                 case "shell": {
-                    const size = 0.4 + a * 0.9;
+                    const size = 0.6 + a * 1.1;
                     item = {kind, x, y: y - 0.001, z, yaw, lean: (b - 0.5) * 0.6, sx: size, sy: size, sz: size, colour: Math.floor(c * tints.length)};
                     break;
                 }
