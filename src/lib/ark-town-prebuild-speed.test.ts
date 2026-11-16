@@ -170,7 +170,8 @@ const TOWN_DIGESTS = {
     // a quarter step, `kit.ts` plainColour).)
     sceneryAndBuildings: "ba0d29043f1600e7",
     zoo: "3beecdb300adce0f",
-    places: "fb1159793f083105"
+    // (gfx PLACE: kept animals inside their pens off the rails and apart, a garden pond's arowana, yard-less pets in their yards.)
+    places: "6be7a434085b412b"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {
