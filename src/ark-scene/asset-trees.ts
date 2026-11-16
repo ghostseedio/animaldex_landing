@@ -16,13 +16,14 @@
  * trees carry the fade's cut-out, so the rest keep the early depth test.
  */
 
-import {Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type BufferGeometry, type Mesh} from "three";
+import {Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, MeshDepthMaterial, MeshStandardMaterial, Quaternion, RGBADepthPacking, Vector3, type BufferGeometry, type Mesh} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {readNowOrLater} from "@/ark-scene/model-files";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS, NEAR_FADE_MAX} from "@/ark-scene/near-fade";
 import {ASSETS, ASSET_BASE, TREE_CLOSE, assetTreePlacement, treeLodDistance} from "@/ark-scene/tree-assets";
+import {LEAF_CELLS, LEAF_CUT, leafAtlasTexture, leafCellUniform, releaseLeafAtlas} from "@/ark-scene/leaf-atlas";
 // The least share of the woods' fill every tier draws (batch 6), shared with the attach points (decision 33).
 import {WOODS_FILL} from "@/ark-scene/tree-pick";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
@@ -48,11 +49,59 @@ const CARD_REACH_MIN = 0.45;
  */
 const CROWN_HOLD_HEIGHTS = 33;
 
+/**
+ * Pass 3 (lane TREES): a leaf's picture in the atlas (`leaf-atlas.ts`), from the corner code in its vertex colour's alpha
+ * (trees.py `tex_code`: cell * 16 + cu + 3 * cv; 255 none). xy: the atlas position, z: 1 on a leaf picture, 0 elsewhere.
+ */
+const LEAF_TEX_VERTEX = `
+{
+    float arkCode = floor(color.a * 255.0 + 0.5);
+    float arkCell = floor(arkCode / 16.0);
+    float arkCorner = arkCode - arkCell * 16.0;
+    float arkCv = floor(arkCorner / 3.0);
+    vec4 arkRect = arkLeafCells[int(min(arkCell, ${LEAF_CELLS.length - 1}.0))];
+    vArkLeafTex = vec3(arkRect.xy + vec2(arkCorner - arkCv * 3.0, arkCv) * 0.5 * arkRect.zw, arkCode < 254.5 ? 1.0 : 0.0);
+}`;
+const LEAF_TEX_PARS_VERTEX = `
+uniform vec4 arkLeafCells[${LEAF_CELLS.length}];
+varying vec3 vArkLeafTex;`;
+const LEAF_UNIFORMS = () => ({arkLeafAtlas: {value: leafAtlasTexture()}, arkLeafCells: {value: leafCellUniform()}});
+
+/**
+ * The shadow of a tree with leaf pictures (pass 3): the default shadow pass draws every card whole (a square shadow per
+ * leaf mass); this one cuts it as the picture does.
+ */
+export function leafDepthMaterial(): MeshDepthMaterial {
+    const material = new MeshDepthMaterial({depthPacking: RGBADepthPacking});
+    material.customProgramCacheKey = () => "ark-asset-tree-depth-p3";
+    material.onBeforeCompile = (shader) => {
+        Object.assign(shader.uniforms, LEAF_UNIFORMS());
+        shader.vertexShader = shader.vertexShader
+            .replace("#include <common>", `#include <common>
+attribute vec4 color;${LEAF_TEX_PARS_VERTEX}`)
+            .replace("#include <begin_vertex>", `#include <begin_vertex>${LEAF_TEX_VERTEX}`);
+        shader.fragmentShader = shader.fragmentShader
+            .replace("#include <common>", `#include <common>
+uniform sampler2D arkLeafAtlas;
+varying vec3 vArkLeafTex;`)
+            .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
+if (vArkLeafTex.z > 0.5 && texture2D(arkLeafAtlas, vArkLeafTex.xy).a < ${LEAF_CUT.toFixed(2)}) discard;`);
+    };
+    return material;
+}
+
+let sharedDepth: MeshDepthMaterial | null = null;
+/** One shadow material for every tree mesh (wild and town); no picture (code 255): drawn whole, as before. */
+export function treeShadowMaterial(): MeshDepthMaterial {
+    return (sharedDepth ??= leafDepthMaterial());
+}
+
 /** The trees' material; `near` adds the near-camera fade (only for the trees drawn round the camera). Also the town's. */
 export function windMaterial(doubleSided: boolean, near = false, conifer = false): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.85, metalness: 0, side: doubleSided ? DoubleSide : FrontSide});
-    material.customProgramCacheKey = () => `ark-asset-tree-b8-${doubleSided ? 2 : 1}${near ? "-near" : ""}${conifer ? "-conifer" : ""}`;
+    material.customProgramCacheKey = () => `ark-asset-tree-p3-${doubleSided ? 2 : 1}${near ? "-near" : ""}${conifer ? "-conifer" : ""}`;
     material.onBeforeCompile = (shader) => {
+        Object.assign(shader.uniforms, LEAF_UNIFORMS());
         shader.uniforms.arkTime = ARK_TIME;
         shader.uniforms.arkWind = ARK_WIND;
         shader.uniforms.arkNearFade = ARK_NEAR_FADE;
@@ -62,7 +111,7 @@ attribute vec4 color_1;
 varying float vArkLeafy;
 varying vec3 vArkLocal;
 uniform float arkTime;
-uniform vec2 arkWind;`)
+uniform vec2 arkWind;${LEAF_TEX_PARS_VERTEX}`)
             .replace("#include <begin_vertex>", `#include <begin_vertex>
 {
     vec3 root = (instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
@@ -89,19 +138,38 @@ uniform vec2 arkWind;`)
     // Leaves flutter (broadleaf 0.36 and up, the conifers' boughs from about 0.05); wood does not (0).
     vArkLeafy = smoothstep(0.02, 0.1, color_1.z);
     vArkLocal = position;
-}`);
+}
+#ifdef USE_COLOR_ALPHA
+${LEAF_TEX_VERTEX}
+#else
+vArkLeafTex = vec3(0.0);
+#endif`);
         // Leaves are single sheets: lit from the side the light comes, never black on the back.
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>
 varying float vArkLeafy;
 varying vec3 vArkLocal;
+varying vec3 vArkLeafTex;
+uniform sampler2D arkLeafAtlas;
 float arkBarkRelief = 0.0;
+// Pass 3: the leaf picture under this fragment (its alpha cut), and whether it is one (then always leaf, never bark).
+vec4 arkLeafTexel = vec4(0.5, 0.5, 0.5, 1.0);
+float arkTexd = 0.0;
+float arkLeafyF = 0.0;
 ${NOISE_GLSL}`)
+            .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>
+arkTexd = step(0.5, vArkLeafTex.z);
+arkLeafTexel = texture2D(arkLeafAtlas, vArkLeafTex.xy);
+if (arkTexd > 0.5 && arkLeafTexel.a < ${LEAF_CUT.toFixed(2)}) discard;
+arkLeafyF = max(vArkLeafy, arkTexd);`)
             // Bark (batch 4): the assets' bark is dark and flat, so in shade a trunk read as a black cut-out. A little
             // lighter, with a grain of furrows running up the wood.
             .replace("#include <color_fragment>", `#include <color_fragment>
+// Pass 3: the code rode in the colour's alpha; every tree is opaque. The picture shades each leaf (0.5: as it is).
+diffuseColor.a = 1.0;
+diffuseColor.rgb *= mix(1.0, arkLeafTexel.r * 2.0, arkTexd);
 {
-    float arkWood = 1.0 - vArkLeafy;
+    float arkWood = 1.0 - arkLeafyF;
     float arkGrain = arkNoise(vec2(atan(vArkLocal.z, vArkLocal.x) * 5.0, vArkLocal.y * 1.6)) * 0.6 + arkNoise(vArkLocal.xz * 9.0 + vArkLocal.y * 2.0) * 0.4;
     // Only dark bark is lifted (pale birch and emergent bark stays as it is, or far forests turn to white sticks).
     float arkLift = mix(1.55, 1.0, smoothstep(0.05, 0.14, dot(diffuseColor.rgb, vec3(0.3, 0.59, 0.11))));
@@ -137,7 +205,7 @@ ${conifer ? `    // Conifer needles (batch 6): the assets' deep teal read as hea
     vec3 arkNeedle = diffuseColor.rgb;
     float arkGrey = dot(arkNeedle, vec3(0.3, 0.59, 0.11));
     arkNeedle = mix(vec3(arkGrey), arkNeedle, 0.55) * vec3(1.22, 1.1, 0.68);
-    diffuseColor.rgb = mix(diffuseColor.rgb, arkNeedle * 1.35, vArkLeafy);` : ""}
+    diffuseColor.rgb = mix(diffuseColor.rgb, arkNeedle * 1.35, arkLeafyF);` : ""}
 }`)
             .replace("#include <normal_fragment_begin>", `#include <normal_fragment_begin>
 #ifdef DOUBLE_SIDED
@@ -155,6 +223,24 @@ nonPerturbedNormal *= faceDirection;
     float qdet = dot(rdx, q1);
     vec3 qgrad = sign(qdet) * (dFdx(arkBarkRelief) * q1 + dFdy(arkBarkRelief) * q2) * 0.03;
     normal = normalize(abs(qdet) * normal - qgrad);
+}
+{
+    // Pass 3: each leaf's fold, curl and veins from its picture (three's perturbNormal2Arb, the frame from the screen
+    // derivatives of the atlas position: a mirrored card turns its frame with it).
+    vec3 lq0 = dFdx(-vViewPosition);
+    vec3 lq1 = dFdy(-vViewPosition);
+    vec2 lst0 = dFdx(vArkLeafTex.xy);
+    vec2 lst1 = dFdy(vArkLeafTex.xy);
+    vec3 lq1p = cross(lq1, normal);
+    vec3 lq0p = cross(normal, lq0);
+    vec3 lT = lq1p * lst0.x + lq0p * lst1.x;
+    vec3 lB = lq1p * lst0.y + lq0p * lst1.y;
+    float ldet = max(dot(lT, lT), dot(lB, lB));
+    float lscale = ldet == 0.0 ? 0.0 : inversesqrt(ldet);
+    vec2 lxy = (arkLeafTexel.gb * 2.0 - 1.0) * 0.9;
+    vec3 lmap = vec3(lxy, sqrt(max(0.0, 1.0 - dot(lxy, lxy))));
+    vec3 lbent = normalize(mat3(lT * lscale, lB * lscale, normal) * lmap);
+    normal = normalize(mix(normal, lbent, arkTexd * step(1e-8, ldet)));
 }`)
             // Seen from below a crown is not black (batch 4): leaves are thin, so the sky's light comes through them
             // (most where they face the ground) and the sun glows through from behind; bark in shade keeps the sky's
@@ -177,11 +263,11 @@ nonPerturbedNormal *= faceDirection;
     #if NUM_DIR_LIGHTS > 0
     arkThrough = directionalLights[0].color * clamp(dot(-arkSeen, directionalLights[0].direction), 0.0, 1.0) * 0.25;
     #endif
-    reflectedLight.indirectDiffuse += BRDF_Lambert(material.diffuseColor) * (arkSky * ((0.2 + 0.55 * arkDown) * vArkLeafy + 0.18 * (1.0 - vArkLeafy)) + arkThrough * vArkLeafy);
+    reflectedLight.indirectDiffuse += BRDF_Lambert(material.diffuseColor) * (arkSky * ((0.2 + 0.55 * arkDown) * arkLeafyF + 0.18 * (1.0 - arkLeafyF)) + arkThrough * arkLeafyF);
     ${conifer ? `// Needles are many and fine: more of the sky comes through a conifer's mass, most near the camera, where it read
     // as one dark shape (batch 6).
     float arkNear = 1.0 - smoothstep(6.0, 22.0, length(vViewPosition));
-    reflectedLight.indirectDiffuse += BRDF_Lambert(material.diffuseColor) * arkSky * vec3(0.95, 1.0, 0.78) * vArkLeafy * (0.3 + 0.6 * arkDown) * (0.55 + 0.45 * arkNear);` : ""}
+    reflectedLight.indirectDiffuse += BRDF_Lambert(material.diffuseColor) * arkSky * vec3(0.95, 1.0, 0.78) * arkLeafyF * (0.3 + 0.6 * arkDown) * (0.55 + 0.45 * arkNear);` : ""}
 }`);
         if (near) {
             shader.fragmentShader = shader.fragmentShader
@@ -201,7 +287,7 @@ float arkBarkH = 0.0;`)
                 .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>${ARK_NEAR_FADE_CLIP}`)
                 // Taken here, in uniform control flow, for the bump's screen derivatives below.
                 .replace("#include <color_fragment>", `{
-    arkBarkNear = (1.0 - vArkLeafy) * (1.0 - smoothstep(1.2, 3.2, length(vViewPosition)));
+    arkBarkNear = (1.0 - arkLeafyF) * (1.0 - smoothstep(1.2, 3.2, length(vViewPosition)));
     arkBarkH = arkBarkHeight(vArkLocal);
 }
 #include <color_fragment>`)
@@ -289,6 +375,8 @@ export class AssetTrees {
                     mesh.count = 0;
                     mesh.frustumCulled = false;
                     mesh.castShadow = lod.level !== "card" && this.shadows;
+                    // p3 (trees): the shadow cut as the leaf pictures are.
+                    if (lod.level !== "card") mesh.customDepthMaterial = treeShadowMaterial();
                     mesh.receiveShadow = true;
                     mesh.userData.kind = "asset-tree";
                     mesh.name = `asset-tree:${id}:${lod.level}`;
@@ -301,6 +389,7 @@ export class AssetTrees {
                         near.visible = false;
                         near.frustumCulled = false;
                         near.castShadow = this.shadows;
+                        near.customDepthMaterial = treeShadowMaterial();
                         near.receiveShadow = true;
                         near.userData.kind = "asset-tree";
                         entry.near = near;
@@ -418,5 +507,8 @@ export class AssetTrees {
         });
         Object.values(this.materials).forEach((material) => material.dispose());
         Object.values(this.coniferMaterials).forEach((material) => material.dispose());
+        sharedDepth?.dispose();
+        sharedDepth = null;
+        releaseLeafAtlas();
     }
 }

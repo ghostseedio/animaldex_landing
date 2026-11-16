@@ -27,6 +27,78 @@ CLUMP_GROW_MAX = (99.0, 1.45, 2.0)
 # the crown shades as one leafy mass, not as many differently lit flat pieces (lane VEG).
 CROWN_NORMAL = 0.78
 
+# Leaf textures (pass 3, lane TREES; the owner: "make leaves look like real foliage up close"). A broadleaf crown's
+# leaf masses are cards that carry a picture of a spray of real leaves (cut out by its alpha, as games draw foliage),
+# and its single leaves a picture of one leaf, from one atlas drawn in code at load (`src/ark-scene/leaf-atlas.ts`).
+# Which picture, and which corner of it, rides in the vertex colour's alpha (unused before: 1 everywhere): a byte
+# `cell * 16 + corner`, corner = cu + 3 * cv on a 3 x 3 grid of the cell (u across, v from the stalk to the tip);
+# 255 is no picture (wood, needles, the far cards, every other asset). Zero extra bytes per vertex.
+LEAF_CELLS = dict(lobed=0, ovate=1, pinnate=2)
+LEAF_SINGLE = dict(lobed=3, ovate=4, lance=5, palmate=6)
+# Each kind's (spray, single leaf): oak's lobed leaves; the plane's maple-like ones among lobed sprays; beech, birch,
+# lime, the fruit trees, the mangrove and the emergent's ovate ones; the acacia's and yew's fine leaflets and needles;
+# the willow's and palm's long narrow leaves (single leaves only: they have no leaf masses).
+LEAF_TEX = dict(oak=("lobed", "lobed"), plane=("lobed", "palmate"), beech=("ovate", "ovate"), birch=("ovate", "ovate"),
+                apple=("ovate", "ovate"), cherry=("ovate", "ovate"), mangrove=("ovate", "ovate"),
+                emergent=("ovate", "ovate"), lime=("ovate", "ovate"), willow=("ovate", "lance"), palm=("ovate", "lance"),
+                acacia=("pinnate", "lance"), yew=("pinnate", "lance"))
+# The middle and far levels of a textured tree need fewer triangles for the same crown (a card carries many leaves).
+TEX_BUDGET = (1.0, 0.8, 0.8)
+# A textured single leaf's diamond is drawn this much wider (the picture's outline sits inside the diamond).
+LEAF_TEX_WIDEN = 1.2
+ROOTS_ON = False
+# A leaf card's half-size against the fan it replaces, per level (its picture covers about half of it; the farther
+# levels' cards are seen where a crown should read as a mass), and more for the fine-leaved sprays.
+CARD_SIZE = (1.25, 1.4, 1.55)
+CARD_SIZE_FINE = 1.25
+
+
+# Trunk feet (pass 3, lane TREES; the plan given the owner: "flared trunks with roots"). A broadleaf's trunk spreads into
+# the ground in rounded root buttresses (fins, how far out at the ground, how high (m) they run up), and a few roots
+# run out over the ground from between them before they go under. Neither moves an attach point's choice (they are
+# meshed outside the wood's budget and kept out of the attach list and the far card).
+ROOT_FLARE = dict(oak=(6, 0.42, 0.45), beech=(5, 0.4, 0.4), lime=(6, 0.38, 0.4), plane=(6, 0.4, 0.45),
+                  willow=(6, 0.42, 0.4), yew=(7, 0.35, 0.4), birch=(4, 0.25, 0.25), apple=(4, 0.28, 0.25),
+                  cherry=(4, 0.28, 0.25), acacia=(4, 0.28, 0.25))
+# How many surface roots, and how far they reach out (in trunk radii).
+SURFACE_ROOTS = dict(oak=(6, 3.6), beech=(5, 3.4), lime=(5, 3.2), plane=(6, 3.6), willow=(6, 3.6), yew=(5, 3.0),
+                     birch=(3, 3.0), apple=(3, 2.8), cherry=(3, 2.8), acacia=(3, 3.0))
+FLARE_SIDES = (16, 8, 5)
+
+
+def surface_roots(tree, spec, rng):
+    """Roots running out over the ground from the trunk's foot, between its flare's fins, and down into the soil:
+    tapering wood (`limb.root`, never leafy, no attach points)."""
+    n, reach = spec["surface_roots"]
+    fins, _, _ = spec.get("root_flare", (n, 0, 0))
+    trunk = tree.limbs[0]
+    r0 = float(trunk.rad[0])
+    base = trunk.pts[0]
+    a0 = rng.uniform(0, 2 * math.pi)
+    for i in range(n):
+        a = a0 + 2 * math.pi * (i + rng.uniform(-0.12, 0.12)) / n
+        out = np.array([math.cos(a), 0.0, math.sin(a)])
+        length = r0 * reach * rng.uniform(0.75, 1.2)
+        k = 9
+        ts = np.linspace(0, 1, k)
+        # From inside the trunk's foot, out along the ground half buried (a ridge in the soil, not a pipe on it), sinking
+        # under toward its end.
+        rad = r0 * 0.2 * (1 - 0.75 * ts) ** 1.2 + 0.008
+        pts = np.array([base + out * (r0 * 0.6 + length * t) + UP * (r0 * 0.35 * (1 - t) ** 2 - rad[i] * (0.25 + 0.6 * t))
+                        for i, t in enumerate(ts)])
+        side = np.cross(UP, out)
+        pts += side * (rng.normal(0, 0.05, k) * length * ts)[:, None]
+        limb = Limb(pts, rad, 1, 0, 0, 0)
+        limb.sway = lambda tt: np.zeros_like(np.asarray(tt, float))
+        limb.root = True
+        limb.surface_root = True
+        tree.limbs.append(limb)
+
+
+def tex_code(cell, cu, cv):
+    return (cell * 16 + cu + 3 * cv) / 255.0
+
+
 # Per level of detail: tube sides by limb level, metres per segment, deepest limb level drawn,
 # leaf keep ratio and leaf scale.
 DETAIL = [
@@ -264,10 +336,11 @@ def mesh_wood(spec, tree, detail, out, min_r=0.0):
         count = max(2, int(math.ceil(limb.length / seg)) + 1)
         if limb.level == 0:
             count = max(count, spec.get("trunk_rings", [12, 6, 3])[detail])
-        buttress = limb.level == 0 and spec.get("buttress") and detail < 2
+        flare = limb.level == 0 and spec.get("root_flare") and not spec.get("buttress") and detail < 2
+        buttress = limb.level == 0 and (spec.get("buttress") or flare) and detail < 2
         if buttress:
             # Half the rings in the buttressed foot (where the fins change fast), the rest above.
-            B = spec["buttress"]
+            B = spec["buttress"] if not flare else dict(zip(("fins", "amount", "height"), spec["root_flare"]), offset=0.4, power=2)
             foot = min(0.9, B["height"] * 3.0 / max(limb.length, 1e-3))
             nf = max(3, count // 2)
             ts = np.concatenate([np.linspace(0, foot, nf, endpoint=False), np.linspace(foot, 1, count - nf)])
@@ -280,6 +353,9 @@ def mesh_wood(spec, tree, detail, out, min_r=0.0):
         sides = spec.get("sides", D["sides"])[lvl] if "sides" in spec and detail == 0 else D["sides"][lvl]
         if limb.level == 0 and "trunk_sides" in spec:
             sides = spec["trunk_sides"][detail]
+        plain_sides = sides
+        if flare:
+            sides = max(sides, FLARE_SIDES[detail])
         if limb.level == 0:
             sw = np.clip(0.2 * ((pts[:, 1] - pts[0, 1]) / max(tree.H, 1)) ** 2, 0, 0.2)
         else:
@@ -289,10 +365,13 @@ def mesh_wood(spec, tree, detail, out, min_r=0.0):
         if buttress:
             hts = pts[:, 1]
 
-            def ring_shape(i, a, B=B, hts=hts):
+            rough = spec["bark"].get("rough", 0.0) if flare else 0.0
+
+            def ring_shape(i, a, B=B, hts=hts, rough=rough, sides=sides):
                 h = max(hts[i], 0)
                 k = B["amount"] * math.exp(-h / B["height"])
-                return 1 + k * np.maximum(0, np.cos(B["fins"] * (a - B["offset"]))) ** B.get("power", 6)
+                shape = 1 + k * np.maximum(0, np.cos(B["fins"] * (a - B["offset"]))) ** B.get("power", 6)
+                return shape * (1 + rough * np.cos(a * 5 + i * 1.7)) if rough else shape
         elif spec["bark"].get("rough") and limb.level <= 1:
             rough = spec["bark"]["rough"]
 
@@ -300,6 +379,9 @@ def mesh_wood(spec, tree, detail, out, min_r=0.0):
                 return 1 + rough * np.cos(a * max(3, sides // 2) + i * 1.7)
         cap = not (limb.level == 0 and spec.get("open_top")) and rad[-1] > 0.012
         P, F, N, C, W2 = tube(pts, rad, sides, wind=W, color_fn=fn, ring_shape=ring_shape, cap_end=cap)
+        if flare:
+            # The flare's extra sides are outside the wood's budget (so the same twigs are drawn as before).
+            out.flare_extra = getattr(out, "flare_extra", 0) + len(F) - len(tube(pts, rad, plain_sides, cap_end=cap)[1])
         if buttress:
             # The fins' flanks face sideways, not out from the axis: normals from the surface itself
             # (radial normals lit the flanks as if they faced out, and screen-space AO read them as
@@ -308,6 +390,10 @@ def mesh_wood(spec, tree, detail, out, min_r=0.0):
             C = fn(P, N, None, None)
         if limb.broken and detail == 0:
             C[-1:] = hexc("#c9b48a")
+        if getattr(limb, "surface_root", False):
+            out.roots_tris = getattr(out, "roots_tris", 0) + len(F)
+            # A root's bark as the trunk's foot (its top is not a moss bed facing the sky).
+            C = fn(P, N * np.array([1.0, 0.25, 1.0]), None, None)
         out.add(P, F, N, C, W2)
 
 
@@ -338,8 +424,13 @@ def mesh_leaves(spec, tree, detail, out, rng, target=None):
         tree.drawn_leaves = []
     Ps, Fs, Ns, Cs, Ws = [], [], [], [], []
     off = 0
+    tex = spec.get("leaf_tex")
+    single = LEAF_SINGLE[tex[1]] if tex and kind != "needles" and segs <= 0 else None
     for leaf in chosen:
         L, Wd = leaf["length"] * grow, leaf["width"] * grow * (1.15 if detail else 1.0)
+        if single is not None and detail > 0:
+            # (Not at lod0: its blades are the attach points' leaves, pinned with the positions atlas.)
+            Wd *= LEAF_TEX_WIDEN
         if kind == "needles":
             P, F, fl = needle_tuft(L, Wd, LV.get("needles", 7) if detail == 0 else 4, rng, LV.get("spread", (0.45, 0.85)))
         else:
@@ -359,6 +450,9 @@ def mesh_leaves(spec, tree, detail, out, rng, target=None):
         tipc = mix(leaf["color"], np.asarray(LV.get("tip", leaf["color"] * np.array([1.12, 1.12, 0.9, 1]))), 0.6)
         col = mix(col, np.tile(tipc, (len(P), 1)), fl)
         col[:, :3] *= ao[:, None]
+        if single is not None:
+            # The diamond (base, left, tip, right) over the leaf's picture: stalk at the bottom middle, tip at the top.
+            col[:, 3] = [tex_code(single, 1, 0), tex_code(single, 0, 1), tex_code(single, 1, 2), tex_code(single, 2, 1)]
         Wv = np.stack([np.full(len(P), min(1.0, leaf["sway"] + 0.15)), np.full(len(P), leaf["phase"]), fl,
                        np.full(len(P), leaf["lphase"])], 1)
         Ps.append(Pw); Fs.append(F + off); Ns.append(Nw); Cs.append(np.clip(col, 0, 1)); Ws.append(Wv)
@@ -397,7 +491,7 @@ def mesh_card(spec, tree, rng):
     single sided (no normal flip on back faces)."""
     out = Mesh()
     planes = [(np.array([1.0, 0, 0]), np.array([0, 0, 1.0])), (np.array([0, 0, 1.0]), np.array([1.0, 0, 0]))]
-    woody = [l for l in tree.limbs if l.level <= spec.get("card_wood_level", 1) and l.rad[0] >= 0.04
+    woody = [l for l in tree.limbs if l.level <= spec.get("card_wood_level", 1) and l.rad[0] >= 0.04 and not getattr(l, "surface_root", False)
              and not getattr(l, "liana", False)]
     woody = sorted(woody, key=lambda l: -l.rad[0] * l.length)[:spec.get("card_ribbons", 4)]
     for limb in woody:
@@ -641,6 +735,22 @@ def clump_geo(R, n_pts, notch, aspect, cup, rng, droop=0.18):
     return np.array(P), np.array(F), np.array(tip)
 
 
+def leaf_card_geo(h, cup, droop, mirror, flat=False):
+    """A leaf card (pass 3, lane TREES): a 2 x 3 sheet, its long middle raised (`cup`) and its far edge dropping
+    (`droop`), 2h square; local frame +Y out of it, +Z from the stalk end (z = -h) to the far end. Returns P, F, tip
+    (0.35 at the stalk end, 0.6 at the far end: never wood to the shader) and the picture's corners (cu, cv)."""
+    P, tip, uv = [], [], []
+    cols = ((0, -h), (2, h)) if flat else ((0, -h), (1, 0.0), (2, h))
+    for cv, z in ((0, -h), (2, h)):
+        for cu, x in cols:
+            far = (z + h) / (2 * h)
+            P.append([x, cup * h * (1 - (x / h) ** 2) - droop * h * far * far, z])
+            tip.append(0.35 + 0.25 * far)
+            uv.append((2 - cu if mirror else cu, cv))
+    F = [[0, 2, 1], [1, 2, 3]] if flat else [[0, 3, 1], [1, 3, 4], [1, 4, 2], [2, 4, 5]]
+    return np.array(P, float), np.array(F), np.array(tip), uv
+
+
 def tuft_geo(R, n_pts, notch, cup, spikes, rng):
     """A pine needle tuft: a spiky, cupped star (needle tips round a raised centre) with a few
     needles standing out of its plane, so it reads as a brush from the side too. Local frame:
@@ -877,6 +987,8 @@ def mesh_clumps(spec, tree, detail, out, rng, target_tris):
 
 def mesh_clump_group(spec, CL, clumps, tree, detail, out, rng, target_tris):
     kind = CL.get("kind", "fan")
+    tex = spec.get("leaf_tex") if kind == "fan" else None
+    card_uv = None
     pts_n = group_tris(CL, detail)
     keep = max(6, min(len(clumps), int(target_tris / pts_n)))
     seg_scale = 1.0
@@ -949,6 +1061,20 @@ def mesh_clump_group(spec, CL, clumps, tree, detail, out, rng, target_tris):
         else:
             P, F, tip = clump_geo(c["R"] * grow, pts_n, CL.get("notch", 0.7), CL.get("aspect", 1.0), CL.get("cup", 0.3), rng,
                                   CL.get("droop", 0.18))
+            card_uv = None
+            fan_uv = None
+            if tex and detail == 0:
+                # lod0 keeps the fan itself (its shape is where the attach points and the positions atlas measure the
+                # crown): the spray's picture is spread over it from its heart (the picture's middle) to its rim (the
+                # picture's edge, the way each rim point lies: +z along the twig is the picture's top).
+                ring = [(2, 1), (2, 2), (1, 2), (0, 2), (0, 1), (0, 0), (1, 0), (2, 0)]
+                fan_uv = [(1, 1)] + [ring[int(round(math.atan2(q[2], q[0]) / (math.pi / 4))) % 8] for q in P[1:]]
+            elif tex:
+                # The same fan's place, turn and the same draws from the generator (so everything after it is as before),
+                # drawn as a card with a spray of leaves on it.
+                size = CARD_SIZE[detail] * (CARD_SIZE_FINE if tex[0] == "pinnate" else 1.0)
+                P, F, tip, card_uv = leaf_card_geo(c["R"] * grow * size, CL.get("cup", 0.3) * 0.5, CL.get("droop", 0.18),
+                                                   c["lphase"] < 0.5, flat=detail == 2)
             Pw, x, y, z = place_frame(P, c["p"], c["d"] - c["n"] * (c["d"] @ c["n"]), c["n"])
         radial = norm(Pw - centre)
         Nw = norm(radial * 0.6 + y * 0.4) if kind != "fan" else norm(radial * CROWN_NORMAL + y * (1 - CROWN_NORMAL))
@@ -961,7 +1087,13 @@ def mesh_clump_group(spec, CL, clumps, tree, detail, out, rng, target_tris):
         col = np.tile(c["color"], (len(Pw), 1))
         tipc = np.asarray(spec["leaves"].get("tip", c["color"] * np.array([1.12, 1.12, 0.9, 1])))
         col = mix(col, np.tile(tipc, (len(Pw), 1)), (tip - 0.6).clip(0) * CL.get("tip_mix", 0.6))
-        if kind == "fan":
+        if kind == "fan" and card_uv is not None:
+            # The picture shades each leaf; the card's stalk end sits a little deeper in the crown's shade.
+            col[:, :3] *= np.where(tip < 0.5, 0.9, 1.04)[:, None]
+            col[:, 3] = [tex_code(LEAF_CELLS[tex[0]], cu, cv) for cu, cv in card_uv]
+        elif kind == "fan":
+            if fan_uv is not None:
+                col[:, 3] = [tex_code(LEAF_CELLS[tex[0]], cu, cv) for cu, cv in fan_uv]
             # A broadleaf clump is a cluster of leaves, not a flat plate (lane VEG): its heart (vertex 0) in the shade of
             # the leaves round it, the notches between them a little darker, the leaf tips catching the light.
             col[0, :3] *= 0.8
@@ -973,6 +1105,10 @@ def mesh_clump_group(spec, CL, clumps, tree, detail, out, rng, target_tris):
         W = np.stack([sw, np.full(len(Pw), c["phase"]), tip * 0.6, np.full(len(Pw), c["lphase"])], 1)
         Ps.append(Pw); Fs.append(np.asarray(F) + off); Ns.append(Nw); Cs.append(np.clip(col, 0, 1)); Ws.append(W)
         off += len(Pw)
+        if card_uv is not None:
+            # The single leaves keep the share of the budget they had beside the fans (the same leaves, the same attach
+            # points): the triangles a card saves are saved.
+            tree.card_saved = getattr(tree, "card_saved", 0) + pts_n - len(F)
         if detail == 0 and CL.get("leaf_points"):
             drawn = tree.__dict__.setdefault("drawn_clumps", [])
             if kind == "bough":
@@ -993,7 +1129,7 @@ def tree_attach(spec, tree, rng):
     pts = []
     H = tree.H
     for limb in tree.limbs:
-        if limb.broken and limb.level > 1:
+        if limb.broken and limb.level > 1 or getattr(limb, "surface_root", False):
             continue
         if limb.level == 0:
             top = min(spec.get("bark_top", 0.75), 0.95)
@@ -1595,6 +1731,8 @@ def build_tree(kind, variant_index):
 def build_from_spec(kind, variant, spec, seed, set_="trees"):
     """Any branching plant from a spec (trees here; bushes in plants.py)."""
     rng = np.random.default_rng(seed)
+    if set_ == "trees" and kind in LEAF_TEX and "leaf_tex" not in spec:
+        spec = dict(spec, leaf_tex=LEAF_TEX[kind])
     if kind == "palm":
         tree = build_skeleton(dict(spec, leaves=None), rng)
         palm_crown(tree, spec, rng)
@@ -1613,15 +1751,25 @@ def build_from_spec(kind, variant, spec, seed, set_="trees"):
         add_fruits(tree, spec, rng, "fruit")
     if spec.get("blossom"):
         add_fruits(tree, spec, rng, "blossom")
+    # Flare and surface roots are built but not switched on (p3 trees): they change the lod0 wood the attach points and
+    # the positions atlas (pinned to the server) are measured on. ROOTS_ON = True with the atlas's next re-pin.
+    if ROOTS_ON and set_ == "trees" and kind in SURFACE_ROOTS and "surface_roots" not in spec:
+        spec = dict(spec, surface_roots=SURFACE_ROOTS[kind])
+    if ROOTS_ON and set_ == "trees" and kind in ROOT_FLARE and "root_flare" not in spec and "buttress" not in spec:
+        spec = dict(spec, root_flare=ROOT_FLARE[kind])
+    if spec.get("surface_roots"):
+        surface_roots(tree, spec, np.random.default_rng(seed + 300))
     lods = []
     budget = spec.get("budget", BUDGET)
+    if spec.get("leaf_tex"):
+        budget = tuple(int(b * k) for b, k in zip(budget, TEX_BUDGET))
     for detail in range(3):
         wood_share = (spec.get("wood_share", (0.42, 0.38, 0.32))[detail] if spec.get("clumps") else 0.62) \
             if tree.leaves else 0.95
         for min_r in (0.0, 0.006, 0.009, 0.012, 0.016, 0.022, 0.03, 0.045, 0.07):
             m = Mesh()
             mesh_wood(spec, tree, detail, m, min_r)
-            if m.tris <= budget[detail] * wood_share:
+            if m.tris - getattr(m, "flare_extra", 0) - getattr(m, "roots_tris", 0) <= budget[detail] * wood_share:
                 break
         mesh_holes(tree, m, detail)
         crown_core(spec, tree, detail, m)
@@ -1635,15 +1783,18 @@ def build_from_spec(kind, variant, spec, seed, set_="trees"):
             LV = spec["leaves"]
             per = (LV.get("needles", 7) if detail == 0 else 4) if LV.get("kind") == "needles" else \
                 {0: 2, 1: 4, 2: 8}[LV.get("segs", 0) if detail == 0 else 0]
-            avail = max(budget[detail] * 0.3, budget[detail] - wood)
+            # (The trunk's flare and surface roots are outside the budget: the same leaves as without them.)
+            feet = getattr(m, "flare_extra", 0) + getattr(m, "roots_tris", 0)
+            avail = max(budget[detail] * 0.3, budget[detail] - wood + feet)
             if spec.get("clumps"):
                 share = clump_groups(spec)[0].get("share", (0.72, 0.9, 1.0))[detail]
+                tree.card_saved = 0
                 mesh_clumps(spec, tree, detail, m, np.random.default_rng(seed + 50 + detail), avail * share)
-                avail = budget[detail] - m.tris
+                avail = budget[detail] - m.tris - tree.card_saved + feet
             avail *= spec.get("leaf_fill", (1, 1, 1))[detail]
             if avail >= per * 8:
                 mesh_leaves(spec, tree, detail, m, np.random.default_rng(seed + detail), target=avail / per)
-        if m.tris > budget[detail] * 1.02:
+        if m.tris - getattr(m, "flare_extra", 0) - getattr(m, "roots_tris", 0) > budget[detail] * 1.02:
             msg = f"{kind}-{variant} lod{detail}: {m.tris} triangles, budget {budget[detail]}"
             if set_ == "trees":
                 raise RuntimeError(msg)

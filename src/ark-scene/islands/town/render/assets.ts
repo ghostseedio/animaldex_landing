@@ -21,7 +21,7 @@ import {BufferAttribute, BufferGeometry, Color, Float32BufferAttribute, Group, I
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {readNowOrLater} from "@/ark-scene/model-files";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
-import {windMaterial} from "@/ark-scene/asset-trees";
+import {treeShadowMaterial, windMaterial} from "@/ark-scene/asset-trees";
 import {ASSETS, ASSET_BASE} from "@/ark-scene/tree-pick";
 import {NEAR_FADE_MAX} from "@/ark-scene/near-fade";
 import {townChunkOf} from "@/ark-scene/islands/town/chunks";
@@ -208,6 +208,8 @@ export class TownAssets {
         mesh.count = 0;
         mesh.frustumCulled = false;
         mesh.castShadow = level !== "card" && this.shadows;
+        // p3 (trees): the shadow cut as the leaf pictures are.
+        if (level !== "card") mesh.customDepthMaterial = treeShadowMaterial();
         mesh.receiveShadow = true;
         mesh.userData.kind = this.label;
         mesh.name = `${this.label}:${id}:${level}`;
@@ -220,6 +222,7 @@ export class TownAssets {
             near.visible = false;
             near.frustumCulled = false;
             near.castShadow = this.shadows;
+            near.customDepthMaterial = treeShadowMaterial();
             near.receiveShadow = true;
             near.userData.kind = this.label;
             near.name = `${this.label}:${id}:near`;
