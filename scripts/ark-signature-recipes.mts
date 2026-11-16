@@ -34,6 +34,13 @@ for (const [slug, row] of Object.entries(table.species)) {
         w.set(r.weight, (w.get(r.weight) ?? 0) + 1);
     }
 }
+// A template new with a signature wave has no users yet to learn its plans and weight from: stated here.
+// (3.3 batch (D): `dip_lay`, a dragonfly laying, `data/ark/egg-dip.json`.)
+const NEW: Record<string, {plans: string[]; weight: number}> = {dip_lay: {plans: ["flying_insect"], weight: 6}};
+for (const [id, seed] of Object.entries(NEW)) {
+    for (const plan of seed.plans) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
+    if (!weights.has(id)) weights.set(id, new Map([[seed.weight, 1]]));
+}
 const usual = (id: string) => [...(weights.get(id) ?? new Map([[3, 1]]))].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
 // (A nest needs the row's nest field, which only the generator writes.)
 const NEEDS_GENERATOR = new Set(["nest_build"]);

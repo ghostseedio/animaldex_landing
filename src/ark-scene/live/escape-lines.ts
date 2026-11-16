@@ -37,6 +37,24 @@ export function escapeItems(raw: unknown, from: number, said: (key: string) => b
     return items;
 }
 
+/**
+ * The rows' escapes for the scene to act (`live-escapes.ts`: the chase that ends in a miss, then the limp): who got
+ * away from whom, when, and the encounter's geometry as the server wrote it (the scene checks it). None older than `from`.
+ */
+export function escapeActs(raw: unknown, from: number): Array<{key: string; prey: string; predator: string; t0: number; encounter?: unknown}> {
+    const rows: Array<Row & {encounter?: unknown; payload?: {encounter?: unknown} | null}> = Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as {events?: unknown}).events) ? (raw as {events: Row[]}).events : [];
+    const acts: Array<{key: string; prey: string; predator: string; t0: number; encounter?: unknown}> = [];
+    for (const row of rows) {
+        if (!row || typeof row !== "object" || row.kind !== "escaped") continue;
+        const at = typeof row.at === "string" ? Date.parse(row.at) : NaN;
+        const prey = row.animal?.id;
+        const predator = row.other?.id;
+        if (typeof prey !== "string" || typeof predator !== "string" || !prey || !predator || !Number.isFinite(at) || at < from) continue;
+        acts.push({key: `escaped:${String(row.id)}`, prey, predator, t0: at / 1000, encounter: row.encounter ?? row.payload?.encounter});
+    }
+    return acts;
+}
+
 /** An escape line's words, or null for any other line. */
 export function escapeText(line: Pick<ArkLiveItem, "animal" | "other"> & Partial<Pick<ArkLiveItem, "say">>, words: ArkLiveText): string | null {
     if (line.say !== "escaped" || !line.other) return null;

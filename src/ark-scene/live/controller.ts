@@ -22,7 +22,7 @@ import {decodeArkEvents, type ArkEvent} from "@/lib/ark-life";
 import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText, arkLiveServerItems, arkNowItems, arkSeenItems, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveLine, type ArkLiveText} from "@/lib/ark-live-log";
 import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt-outcome";
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
-import {escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
+import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
 import {isEnglish, signatureItems, signatureText} from "@/ark-scene/live/signature-lines";
 import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 import {ARK_ACTIVITY_ENGLISH, arkRecordNotesFromEvents, type ArkActivityWords} from "@/lib/ark-animal-status";
@@ -254,6 +254,15 @@ export class ArkLive {
         // (And the record's escapes, `escape-lines.ts`: a prey animal that got away.)
         const escapes = escapeItems(raw, from, (key) => this.said.has(key));
         for (const item of items.concat(escapes)) this.remember(item.id);
+        // 3.3 batch (D): and acted in the live world (the scene's `addEscapes`: the chase that ends in a miss, the limp).
+        const acts = escapeActs(raw, from);
+        if (acts.length) {
+            try {
+                this.options.scene()?.addEscapes?.(acts);
+            } catch {
+                // (A scene without it: the log says it all the same.)
+            }
+        }
         if (escapes.length) this.push(escapes);
         if (!items.length) return;
         this.push(items);

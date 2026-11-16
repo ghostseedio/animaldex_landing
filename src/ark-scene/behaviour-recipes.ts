@@ -30,6 +30,7 @@ import type {ArkBeat, HoursAt, ScheduleAnimal, ScheduleWorld, Spot, Trip, TripMo
 import type {AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import {hashString} from "@/ark-scene/world";
 import {arkRecipeActivity} from "@/lib/ark-animal-status";
+import {dipDepth} from "@/ark-scene/egg-dip";
 import {buildQuarry, quarryAt, type QuarryLook, type QuarryNow, type QuarryTrack} from "@/ark-scene/recipe-hunt";
 
 // MARK: Species data
@@ -261,6 +262,7 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         if (!template.replaces.includes(input.behaviour) && !template.replaces.includes(input.doing)) continue;
         if (!hourOk(template, input.hours)) continue;
         if (template.sex === "male" && sex === "female") continue;
+        if (template.sex === "female" && sex !== "female") continue; // 3.3 batch (D): a female's alone (egg-laying)
         // With the props' nests wired, it builds while its nest is growing (their stage), whatever the months say; once
         // its nest stands (the props draw it only in its breeding season, or with eggs or chicks, whose sitter sits),
         // it keeps coming back to it with material now and then, tending it (`NEST_TEND`): the drawn nest is there
@@ -618,6 +620,8 @@ export type RecipeAct = {
     /** A catch at this step: where and whether it came off. */
     catch: Key["catch"];
     fx: {kind: NonNullable<BlockDef["fx"]>; at: P; id: string; during: boolean; when: "start" | "end" | "during"} | null;
+    /** 3.3 batch (D): seconds into a dip's hold (`dip_tail`, `egg-dip.ts`): the scene's rings on the water. */
+    since?: number;
     mark: {kind: NonNullable<BlockDef["mark"]>; at: P; id: string; from: number} | null;
     label: string;
     /** A murmuration's centre and seed (the scene draws its ambient flockmates from the same function). */
@@ -1555,6 +1559,9 @@ function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, 
             z = from.z + (to.z - from.z) * k;
         }
         y += heave;
+        // 3.3 batch (D): a dragonfly laying (`egg-dip.ts`): down from her hovering height until her abdomen's tip is on
+        // the water, and straight up again, a tap at a time.
+        if (b.id === "dip_tail") y += (waterSurfaceOf(world.sampler, x, z) + Math.max(length * 0.12, 0.06) - y) * dipDepth(epoch - key.t0);
     }
     const wave = Math.sin(phase);
     // The attitude eases in from the last block's over its first moment.
@@ -1586,6 +1593,7 @@ function actOf(episode: Episode, key: Key, index: number, at: ReturnType<typeof 
         prey: key.prey,
         catch: key.catch,
         fx,
+        ...(b.id === "dip_tail" ? {since: at.u * (key.t1 - key.t0)} : {}),
         mark: b.mark ? {kind: b.mark, at: key.from, id: `${episode.id}#${index}`, from: key.t0} : null,
         label: TEMPLATES[episode.recipe]?.label ?? episode.recipe,
         with: episode.other ?? null

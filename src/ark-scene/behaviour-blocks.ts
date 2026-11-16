@@ -85,6 +85,8 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         B({id: "scan", label: "look and scan", motion: "hold", states: ["scan"], beat: "scan"}),
         B({id: "ambush", label: "wait in ambush (still)", motion: "hold", states: ["crouch"], beat: "pause", pitch: 0.06}),
         B({id: "hover", label: "hover", motion: "hold", states: ["hover"], beat: "fly", aloft: true, pitch: -0.5, heave: 0.05, rate: 1.6}),
+        // 3.3 batch (D): a dragonfly laying (`egg-dip.ts`): hovering low, her abdomen's tip tapped to the water again and again.
+        B({id: "dip_tail", label: "hover low and dip the abdomen's tip to the water", motion: "hold", states: ["hover"], beat: "fly", aloft: true, pitch: -0.45, rate: 1.1}),
         B({id: "strike", label: "strike (a lunge of the head or bill)", motion: "hold", states: ["strike"], beat: "bite", pitch: 0.5, surge: 0.35, rate: 1.4}),
         B({id: "swipe", label: "swipe with a paw", motion: "hold", states: ["swipe"], beat: "bite", pitch: 0.25, surge: 0.15, sway: 0.15, rate: 1.1, fx: "splash", fxAt: "during"}),
         B({id: "scoop", label: "scoop with the bill", motion: "hold", states: ["scoop"], beat: "bite", pitch: 0.7, surge: 0.2, rate: 0.7, fx: "splash"}),

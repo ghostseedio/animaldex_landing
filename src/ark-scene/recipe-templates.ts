@@ -85,7 +85,7 @@ export type Template = {
     /** Its swims drift forward as a forager's steps do (a dabbling duck paddles on, it does not weave). */
     drift?: boolean;
     /** Only males (a display), or the pair's sexes (pair templates: "males" both male, "mixed" a male and a female, "any"). */
-    sex?: "male" | "males" | "mixed" | "any";
+    sex?: "male" | "female" | "males" | "mixed" | "any";
     steps: TemplateStep[];
     /** Steps from this index repeat while time allows. */
     loop?: number;
@@ -790,6 +790,27 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
                 {b: "fly", to: "air", r: 6, catch: "insect", p: 0.5}
             ],
             loop: 0
+        }),
+        // 3.3 batch (D): a dragonfly laying her eggs (`egg-dip.ts`; the catalogue's rows `clip:dragonfly_dip_oviposit`,
+        // `data/ark/egg-dip.json`): the female, from the water's edge, low out over the water, tapping her abdomen's tip
+        // to it, on a little and again. In its breeding months where the data has them (laying follows mating at once).
+        T({
+            id: "dip_lay",
+            label: "flies low over still water dipping her abdomen's tip to lay",
+            kind: "stay",
+            goal: "edge",
+            replaces: ["forage", "perch", "fly"],
+            doing: "fly",
+            hours: "day",
+            season: "mating",
+            sex: "female",
+            steps: [
+                {b: "fly", to: "over_water", h: 0.3},
+                {b: "dip_tail", s: [2.6, 4.4]},
+                {b: "fly", to: "over_water", h: 0.3, near: "here", r: 2.5},
+                {b: "dip_tail", s: [2.6, 4.4]}
+            ],
+            loop: 2
         }),
         T({
             id: "bat_trawl",
