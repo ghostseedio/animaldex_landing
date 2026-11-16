@@ -24,6 +24,7 @@ import {Color, DynamicDrawUsage, InstancedBufferAttribute, type BufferGeometry, 
 import table from "@/ark-scene/animal-look.json";
 import {LOOK_CLASSES, LOOK_FLAG, type LookClass} from "@/ark-scene/animal-look-rules";
 import {lookVectors} from "@/ark-scene/animal-look-shader";
+import {youngCoatUniforms} from "@/ark-scene/young-coat";
 import {ARK_DAYLIGHT} from "@/ark-scene/glsl";
 import {FurShells, SHELL_ANIMALS, SHELL_LAYERS} from "@/ark-scene/fur-shells";
 import {CloseUpTextures} from "@/ark-scene/closeup-textures";
@@ -42,6 +43,8 @@ export type SpeciesLook = {
     eyes: {left: [number, number, number]; right: [number, number, number]; radius: number} | null;
     /** Fur shells close by (a furred mammal). */
     shells: boolean;
+    /** 3.3 batch (C): the species' model slug (its young coat's uniforms, `young-coat.ts`). */
+    slug?: string;
 };
 
 /**
@@ -79,7 +82,7 @@ export function speciesLook(slug: string, plan: string | null | undefined, facin
         const r = onSkin(right);
         if (l || r) eyes = {left: l ? left : far, right: r ? right : far, radius};
     }
-    return {look, flags: row[1], eyes, shells: look === "fur" && plan === "mammal"};
+    return {look, flags: row[1], eyes, shells: look === "fur" && plan === "mammal", slug};
 }
 
 /** The pass's switch and tier, read by every animal material when it compiles. */
@@ -128,7 +131,9 @@ export function lookUniforms(look: SpeciesLook | null, level: "near" | "far", sh
         arkEye2: {value: eyes ? eyes.right : [0, 0, 0]},
         arkDustColour: ARK_DUST,
         arkDaylight: ARK_DAYLIGHT,
-        arkShellLength: {value: shellLength}
+        arkShellLength: {value: shellLength},
+        // 3.3 batch (C): the species' young coat (zeros for a species without one).
+        ...youngCoatUniforms(look?.slug)
     };
 }
 

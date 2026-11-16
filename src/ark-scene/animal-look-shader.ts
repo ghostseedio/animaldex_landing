@@ -64,6 +64,9 @@ varying vec3 vArkEyeL;
 varying vec3 vArkEyeR;
 varying float vArkScale;
 varying float vArkEyesShut;
+// 3.3 batch (C): where on the body (0 at the body's rear to 1 at its front; a tail runs on below 0), and across it in
+// half-widths, for a young one's coat.
+varying vec2 vArkBody;
 #endif
 #ifdef ARK_SHELL
 attribute vec2 arkShellLayer;
@@ -82,6 +85,7 @@ export const LOOK_VERTEX = `
     vArkEyesShut = arkSleep.x;
     vArkLookV = arkCoat;
     vArkHeight = clamp((position.y - motionBottom) / max(motionTop - motionBottom, 0.001), 0.0, 1.0);
+    vArkBody = vec2((position.z - motionRear) / max(motionStill - motionRear, 0.001), position.x / max(motionSpan, 0.001));
     mat4 arkModelView = modelViewMatrix;
 #ifdef USE_INSTANCING
     arkModelView = modelViewMatrix * instanceMatrix;
@@ -126,6 +130,14 @@ uniform float arkWetDark;
 uniform float arkWetTake;
 uniform vec3 arkDustColour;
 uniform float arkDaylight;
+// 3.3 batch (C): the species' young coat (young-coat.ts): A = its colour (rgb) and how much of the adult's it replaces;
+// B = the marks' colour and strength; C = (marks' kind, how many along or up the body, 1 for the tail only, duller);
+// D = (the marks' share of a period, how broken they are).
+uniform vec4 arkYoungA;
+uniform vec4 arkYoungB;
+uniform vec4 arkYoungC;
+uniform vec2 arkYoungD;
+varying vec2 vArkBody;
 varying vec3 vArkRest;
 varying vec3 vArkRestNormal;
 varying vec2 vArkLookV;
@@ -219,7 +231,9 @@ float arkEyeMask(vec3 offset) {
 export const LOOK_ALBEDO = `
 #ifdef ARK_LOOK
 float arkWet = clamp(vArkLookV.x, 0.0, 1.0) * arkWetTake;
-float arkDust = clamp(vArkLookV.y, 0.0, 1.0);
+// 3.3 batch (C): a young one's coat strength rides in arkCoat.y's twos (0-15, young-coat.ts packYoung); dust is the rest.
+float arkYoung = floor(vArkLookV.y * 0.5 + 0.001);
+float arkDust = clamp(vArkLookV.y - 2.0 * arkYoung, 0.0, 1.0);
 float arkEyeAmount = max(arkEyeMask(vArkEyeL), arkEyeMask(vArkEyeR));
 // Asleep: the lids shut over the eye (the skin round it, read blurred from a coarse mip of its texture), a darker line
 // where they meet; the eye's gloss, dome and catchlight go with it. The lids cover the painted eye, which is wider than
@@ -234,6 +248,43 @@ if (arkEyesShut > 0.001 && arkEye.w > 0.0) {
     arkLidSeam = 1.0 - smoothstep(0.25, 0.55, abs(arkLidD.y));
 }
 arkEyeAmount *= 1.0 - arkEyesShut;
+// 3.3 batch (C): the young of some species wear another coat (a striped piglet, a banded hatchling, a white young
+// heron): the species' own young colour over the adult's skin, and its marks drawn on the body's own coordinates
+// (bars across it, stripes along it, spots, a line down the back), by its age's strength. Never on the eyes.
+if (arkYoung > 0.5) {
+    float arkYk = clamp(arkYoung / 15.0, 0.0, 1.0) * (1.0 - arkEyeAmount);
+    if (arkYoungC.z > 0.5) arkYk *= 1.0 - smoothstep(0.36, 0.5, vArkBody.x);
+    vec3 arkYc = diffuseColor.rgb;
+    float arkYl = dot(arkYc, vec3(0.2126, 0.7152, 0.0722));
+    arkYc = mix(arkYc, vec3(arkYl), arkYoungC.w);
+    // (A little of the skin's own light and shade stays in the young colour, so the body's painted form still reads.)
+    arkYc = mix(arkYc, arkYoungA.rgb * (0.9 + 0.35 * arkYl), arkYoungA.w);
+    float arkYkind = arkYoungC.x;
+    if (arkYkind > 0.5) {
+        vec3 arkYp = vec3(vArkBody.y * 0.6, vArkHeight, vArkBody.x * 2.6);
+        float arkYn = arkLookNoise(arkYp * 7.0);
+        float arkYedge = 1.0 - 2.0 * arkYoungD.x;
+        float arkYm = 0.0;
+        if (arkYkind < 1.5) {
+            // Bars across the body, a little bowed and uneven.
+            float arkYbow = vArkHeight - 0.5;
+            arkYm = smoothstep(arkYedge - 0.12, arkYedge + 0.12, sin((vArkBody.x + arkYbow * arkYbow * 0.1 + (arkYn - 0.5) * 0.05) * arkYoungC.y * 6.28318));
+        } else if (arkYkind < 2.5) {
+            // Stripes along the body, one above another.
+            arkYm = smoothstep(arkYedge - 0.12, arkYedge + 0.12, sin((vArkHeight + (arkYn - 0.5) * 0.04) * arkYoungC.y * 6.28318 + 1.2));
+        } else if (arkYkind < 3.5) {
+            // Spots and blotches.
+            arkYm = smoothstep(0.6, 0.7, arkLookNoise(arkYp * arkYoungC.y * 2.2 + 3.7));
+        } else {
+            // One line down the back.
+            arkYm = smoothstep(0.78, 0.9, vArkHeight) * (1.0 - smoothstep(0.14, 0.3, abs(vArkBody.y))) * smoothstep(0.08, 0.2, vArkBody.x) * (1.0 - smoothstep(0.8, 0.92, vArkBody.x));
+        }
+        // Broken marks: gaps along them (a tapir calf's rows of dashes and spots).
+        arkYm *= 1.0 - arkYoungD.y * smoothstep(0.45, 0.6, arkLookNoise(arkYp * vec3(9.0, 9.0, 13.0) + 8.1));
+        arkYc = mix(arkYc, arkYoungB.rgb * (0.9 + 0.35 * arkYl), arkYm * arkYoungB.w);
+    }
+    diffuseColor.rgb = mix(diffuseColor.rgb, arkYc, arkYk);
+}
 #ifdef ARK_SHELL
 {
     // Strands: a jittered point in each small cell of the rest pose; a layer keeps the round patch round it, thinner outward.

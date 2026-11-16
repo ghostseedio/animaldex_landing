@@ -85,6 +85,30 @@ for (const name of scenes) {
     }
     const info = await page.evaluate(() => window.__behaviours.info());
     console.log(name, JSON.stringify({births: info.births, matings: info.matings}));
+    // 3.3 batch (C): the juvenile coats: one frame on each species' young one.
+    if (name.startsWith("coats")) {
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const labels = [];
+        for (let k = 0; k < info.cast.length; k++) {
+            const note = await page.evaluate(async (k) => {
+                const text = await window.__behaviours.pair(k);
+                document.getElementById("note").textContent = text;
+                return text;
+            }, k);
+            labels.push(`${String(k).padStart(2, "0")} ${note}`);
+            // (The camera keeps its least distance: the middle of the frame, where the young one is, is what is kept.)
+            await page.screenshot({path: path.join(dir, `${String(k).padStart(2, "0")}.jpg`), type: "jpeg", quality: 90, clip: {x: 320, y: 180, width: 640, height: 360}});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=4x${Math.ceil(info.cast.length / 4)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
     const plan = PLANS[name];
     const mating = info.matings[0];
     // (A contest's moments are from its own script: its walk is told by its end, 14–22 s of bouts and 5 s to run.)

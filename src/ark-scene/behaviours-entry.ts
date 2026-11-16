@@ -18,6 +18,7 @@ type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
 type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "nurse" | "look" | "carry"; /** 3.3 batch (C): the young born `bornAgo` Ark days before the scene's clock (default 2), not on the fixture's day. */ young?: "new"; bornAgo?: number};
 
+const lookCast = (name: string): Cast => ({slug: name.toLowerCase().replace(/'/g, "").replace(/[^a-z0-9]+/g, "-"), name, n: 1, young: 1});
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
     birth: {zone: "grassland", hours: 9, kind: "birth", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 3, young: 1}]},
@@ -31,6 +32,11 @@ const SCENES: Record<string, Scene> = {
     dormant: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "alpine-marmot", name: "Alpine Marmot", n: 4}, {slug: "plains-zebra", name: "Plains Zebra", n: 3}]},
     // 3.3 batch (C): a foal at its recorded mother's heel (a birth of an hour ago), coming to her flank to suckle.
     nurse: {zone: "grassland", hours: 9, kind: "nurse", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 3, young: 1}]},
+    // 3.3 batch (C): juvenile coats (`young-coat.ts`): one adult and one young of each, the young two Ark days old.
+    coats: {zone: "grassland", hours: 10, kind: "look", young: "new", cast: ["Wild Boar", "South American Tapir", "Baird's Tapir", "Collared Peccary", "African Lion", "Francois' Langur", "Blue Wildebeest", "Mantled Guereza"].map(lookCast)},
+    coats2: {zone: "wetland", hours: 10, kind: "look", young: "new", cast: ["Saltwater Crocodile", "Spectacled Caiman", "Leopard Gecko", "Red Tegu", "Black Spiny-tailed Iguana", "Emerald Tree Boa", "Eastern Rat Snake", "Southeastern Five-lined Skink", "Little Blue Heron", "Scarlet Ibis", "Sun Conure", "Ring-billed Gull"].map(lookCast)},
+    coats4: {zone: "grassland", hours: 10, kind: "look", young: "new", cast: ["Saltwater Crocodile", "Spectacled Caiman", "Leopard Gecko", "Red Tegu", "Eastern Rat Snake", "Southeastern Five-lined Skink", "African Lion", "Collared Peccary", "Zebra Shark", "Gray Angelfish"].map(lookCast)},
+    coats3: {zone: "coral_reef", hours: 10, kind: "look", young: "new", cast: ["Gray Angelfish", "Blue Tang", "Zebra Shark", "Brownbanded Bamboo Shark", "Bluestreak Cleaner Wrasse", "Blueface Angelfish", "Greater Amberjack", "Goldfish", "Iridescent Shark", "Boeseman's Rainbowfish"].map(lookCast)},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -130,7 +136,30 @@ async function main() {
         return `\nyoung ${m && y ? (Math.hypot(m.x - y.x, m.z - y.z) / (sched(nurseInfo.mother)?.length || 1)).toFixed(2) : "?"} of her lengths from its mother   young: ${sched(youngIds[0])?.sched?.pose?.doing} card ${handle.animalStatus?.(youngIds[0])?.activity ?? "-"}   mother: ${sched(nurseInfo.mother)?.sched?.pose?.doing}${sched(nurseInfo.mother)?.sched?.pose?.moving ? " moving" : ""}   suckling ${fresh && Math.abs(fresh.at - Date.now()) < 1500 ? "yes" : "no"}`;
     };
     const api = {
-        info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a, b, nurse: nurseInfo}),
+        info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a, b, nurse: nurseInfo, cast: scene.cast.map((c, k) => ({name: c.name, adult: castId(k, 0), young: castId(k, c.n)}))}),
+        /** 3.3 batch (C): a young one of the cast and its kind's adult side by side in the frame (the adult brought beside it for the picture). */
+        pair: async (k: number) => {
+            const young = castId(k, scene.cast[k].n);
+            type Drawn = {animal: {id: string}; youngCoat?: {steps: number}; level?: string; length: number; middle?: {x: number; y: number; z: number} | null; sched?: {pose?: {x: number; y: number; z: number} | null}};
+            const entry = () => (debug.entries() as unknown as Drawn[]).find((x) => x.animal.id === young);
+            let text = `${scene.cast[k].name}: not placed`;
+            // (Three passes: the camera to where its schedule has it, then to where it is drawn once it is in view.)
+            for (let pass = 0; pass < 3; pass++) {
+                const e = entry();
+                const p = e?.sched?.pose;
+                if (!e || !p) return text;
+                const near = e.middle && Math.hypot(e.middle.x - p.x, e.middle.z - p.z) < 3 ? e.middle : p;
+                handle.setView({target: {x: near.x, y: near.y, z: near.z}, distance: Math.max(e.length * 3, 0.3), polar: 0.95, azimuth: 0.7});
+                for (let i = 0; i < 12; i++) {
+                    fake!.perf += 100;
+                    fake!.date += 100;
+                    await frames(1);
+                }
+                text = `${scene.cast[k].name}: young coat steps ${e.youngCoat?.steps ?? "-"} (${e.level ?? "?"}, ${e.length.toFixed(2)} m)`;
+            }
+            await frames(4);
+            return text;
+        },
         /** 3.3 batch (C): the young one's first nursing bout after the scene's start (s after t0), from the shared clock. */
         nurseBout: () => {
             const id = youngIds[0];

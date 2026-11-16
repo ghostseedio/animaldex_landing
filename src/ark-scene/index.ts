@@ -221,6 +221,7 @@ import pouchTable from "@/ark-scene/pouch.json";
 import {speciesCare} from "@/lib/ark-age";
 // 3.3 batch (C): young with their recorded mother
 import {Lineage, nurseTurn} from "@/ark-scene/young-care";
+import {applyYoungCoat, youngCoatOf, youngCoatStrength, youngSteps} from "@/ark-scene/young-coat";
 import {mealOnStage, mealScript, DRINK_REACH, type MealCatch} from "@/ark-scene/meal-acts";
 import {MealTraces, type TraceDraw} from "@/ark-scene/meal-traces";
 import {bodyMassKg, isScavenger, mealPlan, type MealPlan, type MealSide, type ScavengerCandidate} from "@/ark-scene/meals";
@@ -456,6 +457,8 @@ type Entry = {
     reactive?: ReactiveOut | null;
     /** A young one's parent for the reactive layer (its group's adult leader, `ark-age.ts` for whether it is young), and when that was worked out. */
     youngOf?: {parent: string | null; play: number; at: number};
+    /** 3.3 batch (C): how strongly it wears its species' young coat (`young-coat.ts`, 0-15), worked out again now and then. */
+    youngCoat?: {steps: number; at: number};
     /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
     recipeAct?: RecipeAct | null;
     /** Ambient flock-mates round a small animal's spot (a swarm, a cluster). */
@@ -3405,6 +3408,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         e.youngOf = {parent, play, at: nowS};
         return e.youngOf;
     };
+    /** 3.3 batch (C): a young one's coat steps (`young-coat.ts`): its species' young coat by its age from the record. Re-read every 30 s. */
+    const youngCoatSteps = (e: Entry): number => {
+        const nowS = worldMs() / 1000;
+        if (e.youngCoat && nowS - e.youngCoat.at < 30 && nowS >= e.youngCoat.at) return e.youngCoat.steps;
+        const coat = youngCoatOf(e.animal.model_slug);
+        const age = coat ? liveliness.ageOf(e) : null;
+        e.youngCoat = {steps: youngSteps(youngCoatStrength(coat, e.animal.origin === "born", age ? {ageDays: age.ageDays, growth: age.growth, young: age.stage === "young"} : null)), at: nowS};
+        return e.youngCoat.steps;
+    };
     const stepReactive = (list: Array<{entry: Entry; distance: number; pose: Pose; modelHeight: number}>, dt: number) => {
         const t0 = performance.now();
         const want = reactiveTier();
@@ -4433,6 +4445,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (act && c.visible) actors.push({id: c.entry.animal.id, x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, pitch: c.pose.pitch, length: c.entry.length, height: c.modelHeight, act});
             if (c.visible) {
                 seenNear.add(c.entry.animal.id);
+                // 3.3 batch (C): a young one in its species' young coat, close by: the species' own sentence for it.
+                if (c.distance < 40 && (c.entry.youngCoat?.steps ?? 0) > 7) {
+                    const y = c.entry.animal;
+                    seenActs.push({id: y.id, name: y.name, speciesId: y.kind_species_profile_id || y.species_profile_id || `slug:${y.model_slug}`, zone: y.zone, recipe: "young_coat", episode: `young_coat:${y.id}:${Math.floor(epoch / 900)}`, block: "look", fish: false, line: youngCoatOf(y.model_slug)!.line});
+                }
                 // (One of the log's kinds, or a recipe its species has its own sentence for: `live/signature-lines.ts`.)
                 const ownLine = act ? signatureLineOf(c.entry.animal.model_slug, act.recipe) : null;
                 if (act && (ownLine || arkSeenKind(act.recipe))) {
@@ -5109,6 +5126,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Wet or muddy or dusty from its recent acts (a wallow, a dust bath, a dive): after the look pass wrote `arkCoat`,
             // the larger of the two (`applyRecipeCoat`).
             applyRecipeCoat(mesh.geometry, index, recipeNear.get(entry.animal.id)?.coat);
+            // 3.3 batch (C): a young one's own coat (a striped piglet, a banded hatchling: `young-coat.ts`), by its age.
+            if (animal.origin === "born") applyYoungCoat(mesh.geometry, index, youngCoatSteps(entry));
 
             // Contact shadows (the animal-look pass): on a broad surface the animal really is on (a small one on a wall,
             // a leaf, a stone; a perch on bark, a rock face, a log), never on a limb, a post or a leap through the canopy,
