@@ -128,7 +128,7 @@ for (const name of scenes) {
         const dir = path.join(out, name);
         rmSync(dir, {recursive: true, force: true});
         mkdirSync(dir, {recursive: true});
-        const pick = outs[Number(arg("out", "0"))];
+        const pick = outs[Number(arg("pick", "0"))];
         if (!pick) {
             summary[name] = {errors: ["no climb out of the water in a day"]};
             await context.close();

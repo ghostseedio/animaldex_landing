@@ -2134,7 +2134,8 @@ function crossingPose(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: 
         const since = shaker ? sinceOutOfWater(trip, epoch) : null;
         if (shaker && since !== null && since < shakeTotal(shaker, length)) {
             const now = shakeAt(shaker, length, since);
-            return {...base, act: {episode: `shake#${trip.slot}`, recipe: "water_shake", block: "shake_off", state: "shake", u: since / shakeTotal(shaker, length), pitch: now.pitch, roll: 0, own: false, carry: null, prey: null, catch: null, fx: now.body > 0.05 || now.wings > 0.05 ? {kind: "shake", at: {x: base.x, y: base.y, z: base.z}, id: `shake#${owner.animal.id}#${trip.slot}`, during: true, when: "during"} : null, mark: null, label: "shake off the water", shake: now}};
+            // (The wing flap is the shader's, on the rig's standing pose: no shake clip under it, which curls the head down.)
+            return {...base, beat: now.wings > 0 ? "pause" : base.beat, act: {episode: `shake#${trip.slot}`, recipe: "water_shake", block: "shake_off", state: now.wings > 0 ? "wing_shake" : "shake", u: since / shakeTotal(shaker, length), pitch: now.pitch, roll: 0, own: false, carry: null, prey: null, catch: null, fx: now.body > 0.05 || now.wings > 0.05 ? {kind: "shake", at: {x: base.x, y: base.y, z: base.z}, id: `shake#${owner.animal.id}#${trip.slot}`, during: true, when: "during"} : null, mark: null, label: "shake off the water", shake: now}};
         }
         const block = AFTER_BLOCKS[species.after];
         // (Shaken once: it stands for the rest of the beat, never a second shake from its clip.)

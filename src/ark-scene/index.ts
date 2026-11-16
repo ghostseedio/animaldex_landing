@@ -8407,7 +8407,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         dust.step(now);
         liveliness.step(elapsed, worldMs(), camera, controls.target, scene.fog === fog ? fog : null, lighting.horizon, width, height, hoursNow(), () => (world ? entries.filter((e) => Boolean(e.sched)) : []), routeOf);
         perf.lap("particles");
-        recipeScene.step(now);
+        // p3 (shake): on the clock its particles are born on (`updateInstances(elapsed)`); the page's clock made every one
+        // older than its life at birth, so no splash, dust or drop was ever drawn.
+        recipeScene.step(elapsed);
         nests.step(now);
         perf.lap("recipes");
         // Following: the camera keeps the animal in the middle of the view, at the height it is (a flyer in the air).

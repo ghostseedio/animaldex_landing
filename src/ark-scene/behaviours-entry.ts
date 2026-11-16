@@ -70,7 +70,9 @@ const SCENES: Record<string, Scene> = {
     death: {zone: "grassland", hours: 10, kind: "death", cast: [{slug: "red-deer", name: "Red Deer", n: 3}]},
     // p3 (shake): out of the water and shaking it off (`water-shake.ts`): geese at the lake, a Labrador from the lake.
     shakegoose: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "greylag-goose", name: "Greylag Goose", n: 3}]},
-    shakedog: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "labrador-retriever", name: "Labrador Retriever", n: 2}]},
+    shakedog: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "labrador-retriever", name: "Labrador Retriever", n: 4}]},
+    shakedog2: {zone: "wetland", hours: 10, kind: "shake", cast: [{slug: "labrador-retriever", name: "Labrador Retriever", n: 4}]},
+    shakeotter: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "european-otter", name: "European Otter", n: 2}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -281,7 +283,7 @@ async function main() {
             const all = scene.cast[0] ? Array.from({length: scene.cast[0].n}, (_, i) => ask(castId(0, i), t0, 1440).map((o) => ({...o, id: castId(0, i)}))).flat() : [];
             return all.sort((p, q) => p.arrive - q.arrive);
         },
-        /** p3 (shake): the world run up to an absolute time a tenth of a second a frame (the drops fly), then the animal framed from its side. */
+        /** p3 (shake): the world run up to an absolute time a tenth of a second a frame (the drops fly), then the animal framed from `azimuth` off its heading (its side by default). */
         shakeShot: async (id: string, epoch: number, lengths: number, azimuth: number | null = null, polar = 1.4) => {
             await setAt(epoch - 1.5);
             for (let i = 0; i < 15; i++) {
@@ -296,14 +298,16 @@ async function main() {
             if (target) {
                 for (let i = 0; i < 3; i++) {
                     controls.minDistance = 0.08;
-                    handle.setView({target, distance: Math.max(lengths * drawn.length, 0.5), polar, azimuth: azimuth ?? (at ? at.yaw + Math.PI / 2 : 0.7)});
+                    handle.setView({target, distance: Math.max(lengths * drawn.length, 0.5), polar, azimuth: (at ? at.yaw : 0) + (azimuth ?? Math.PI / 2)});
                     await frames(1);
                 }
             }
             const pose = (debug.entries().find((e) => e.animal.id === id) as unknown as {sched?: {pose?: {beat?: string; act?: {recipe?: string; shake?: Record<string, number>} | null}}}).sched?.pose;
             const shake = pose?.act?.shake ? JSON.stringify(Object.fromEntries(Object.entries(pose.act.shake).map(([k, v]) => [k, Number(v.toFixed(2))]))) : "";
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`)));
-            return `beat ${pose?.beat ?? "-"} act ${pose?.act?.recipe ?? "-"} ${shake} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
+            const recipes = (debug as unknown as {scene: {getObjectByName: (n: string) => {children: Array<{type: string; geometry: {drawRange: {count: number}}}>} | undefined}}).scene.getObjectByName("ark-recipes");
+            const drops = recipes?.children.find((c) => c.type === "Points")?.geometry.drawRange.count ?? -1;
+            return `drops ${drops} beat ${pose?.beat ?? "-"} act ${pose?.act?.recipe ?? "-"} ${shake} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
         },
         /**
          * 3.3 batch (A): the predator (the second cast) stood `gap` body lengths of the first cast's animal from it, or
