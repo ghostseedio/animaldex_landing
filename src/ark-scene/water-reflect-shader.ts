@@ -57,6 +57,11 @@ export const REFLECT_VERTEX = `
     gl_Position = projectionMatrix * mvPosition;
     // Its own parts in their mirrored order (the depth pass keeps the nearest), all at the water's depth.
     gl_Position.z += 5e-6 * length(arkM - arkQ) * gl_Position.w;
+    // (The mirror turns its triangles over: drawn back faces (\`BackSide\`), lit by the animal's own outward normals, not
+    // the inward ones three gives a flipped side.)
+    #if defined(FLIP_SIDED) && !defined(FLAT_SHADED)
+    vNormal = -vNormal;
+    #endif
     vArkReflect = arkPlane.yz;
     vArkReflectAt = arkQ;
 }
@@ -77,8 +82,9 @@ export const REFLECT_FRAGMENT = `
     arkTint *= 0.35 + 0.65 * arkReflectDaylight;
     vec3 arkEye = normalize(cameraPosition - vArkReflectAt);
     float arkFresnel = 0.02 + 0.98 * pow(1.0 - clamp(arkEye.y, 0.0, 1.0), 5.0);
-    float arkFade = 1.0 - 0.6 * smoothstep(0.0, 3.0, vArkReflectAbove);
-    gl_FragColor.rgb = mix(gl_FragColor.rgb * 0.8, arkTint, 0.28);
-    gl_FragColor.a = clamp(vArkReflect.x * arkFade * (0.55 + 0.45 * arkFresnel), 0.0, 1.0);
+    float arkFade = 1.0 - 0.55 * smoothstep(0.0, 3.0, vArkReflectAbove);
+    // (Still water mirrors an animal in nearly its own colours, a little darker: a pale wash read as a ghost.)
+    gl_FragColor.rgb = mix(gl_FragColor.rgb * 0.78, arkTint, 0.16);
+    gl_FragColor.a = clamp(vArkReflect.x * arkFade * (0.72 + 0.28 * arkFresnel), 0.0, 1.0);
 }
 `;

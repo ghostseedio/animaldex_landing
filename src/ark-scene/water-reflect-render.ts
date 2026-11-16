@@ -11,7 +11,7 @@
  * reflected species.
  */
 
-import {BufferGeometry, InstancedBufferAttribute, InstancedMesh, LessEqualDepth, type BufferAttribute, type InterleavedBufferAttribute, type MeshStandardMaterial, type Scene, type Vector3} from "three";
+import {BackSide, BufferGeometry, InstancedBufferAttribute, InstancedMesh, LessEqualDepth, type BufferAttribute, type InterleavedBufferAttribute, type MeshStandardMaterial, type Scene, type Vector3} from "three";
 import type {QualityTier} from "@/ark-scene/post";
 import {pickReflections, REFLECT_PER_MESH, REFLECT_TIERS, reflectPlane, reflectStrength, stillWaterAt, type ReflectCandidate, type StillWater} from "@/ark-scene/water-reflect";
 import {islandWaterNow, type IslandWater} from "@/ark-scene/water-level";
@@ -96,7 +96,9 @@ export class WaterReflections {
             this.water.clear();
         }
         if (!this.reduced) this.time.value = clock;
-        const budget = this.lite ? (this.tier === "high" ? REFLECT_TIERS.medium : null) : REFLECT_TIERS[this.tier];
+        // (`globalThis.__arkReflectOff`: a probe's before-and-after of the same moment.)
+        const off = (globalThis as {__arkReflectOff?: boolean}).__arkReflectOff === true;
+        const budget = off ? null : this.lite ? (this.tier === "high" ? REFLECT_TIERS.medium : null) : REFLECT_TIERS[this.tier];
         let length = 0;
         this.list.length = 0;
         this.sources.length = 0;
@@ -196,6 +198,7 @@ export class WaterReflections {
         for (const [mesh, material, order] of [[depth, depthMaterial, 3], [colour, colourMaterial, 4]] as const) {
             if (material) {
                 material.transparent = true;
+                material.side = BackSide;
                 material.depthFunc = LessEqualDepth;
                 material.depthWrite = mesh === depth;
                 material.colorWrite = mesh !== depth;
