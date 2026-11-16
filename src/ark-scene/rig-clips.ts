@@ -139,6 +139,18 @@ export const RIG_CLIPS_HELD: Readonly<Record<string, ReadonlySet<string>>> = {
     "domestic-cat": new Set(["lie_down", "lie", "sleep", "sleep_curl", "sleep_side", "side_down", "side_up", "get_up", "get_up_fast", "roll", "wallow"])
 };
 
+/**
+ * p2 (contact; the owner, 2026-11-16: "the lions and tigers are sinking into the ground same with bears etc. and sleeping
+ * poses look bad"): the v6 lying and sleeping clips of every four-legged rig (the rig's plan "quadruped"), held. The
+ * pipeline bends them all from the model's rest pose, and the Ark's models stand mid-stride (`rig-v3/<slug>/sheet.png`:
+ * the lion, the tiger, the bears, the dog, the cat), so they come out as the domestic cat's did (held above): "sleep" and
+ * "lie" a low creep on stiff legs, "sleep_side" a run tipped part way over, "sleep_curl" a hunched crouch (the lion's
+ * sleep_curl failed its own ground check, 6.1% in the ground). On screen the lion lay as a crumpled runner half in the sand.
+ * Held, the scene draws the posture itself (`sleep.ts`: on its chest, on its side, curled; the belly on the ground, the
+ * legs folded under or out along it). Their standing clips play.
+ */
+export const QUADRUPED_LYING_HELD: ReadonlySet<string> = new Set(["lie_down", "lie", "sleep", "sleep_curl", "sleep_side", "side_down", "side_up", "get_up", "get_up_fast"]);
+
 /** Whether a rig set and a species' entry both approve flight (contract 3.1, rule 4). */
 export function flightApproved(manifest: RigManifest | null | undefined, slug: string): boolean {
     return manifest?.flight === true && manifest.species?.[slug]?.flight_approved === true;
@@ -152,6 +164,7 @@ export function rigClip(manifest: RigManifest | null | undefined, slug: string, 
     if (!entry.clips || Array.isArray(entry.clips) || typeof entry.clips !== "object") return null;
     if (entry.pose && SIT_HELD.has(clip)) return null;
     if (RIG_CLIPS_HELD[slug]?.has(clip)) return null;
+    if (entry.plan === "quadruped" && QUADRUPED_LYING_HELD.has(clip)) return null;
     const found = entry.clips[clip];
     if (!found || typeof found !== "object") return null;
     if (found.pass !== true) return null;

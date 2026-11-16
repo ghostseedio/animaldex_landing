@@ -74,7 +74,7 @@ import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, REVIVE_SECONDS, chaseKind, clearBearing, deathPose, emergePose, encounterBodies, mealEncounter, mealStage, preyFleeStyle, setChasePaces, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
 import {headLimits} from "@/ark-scene/head-look";
-import {goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
+import {bellyOfGeometry, goesIntoRoost, lyingBody, lyingDrop, lyingTorso, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
@@ -195,6 +195,7 @@ import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {swimPaces} from "@/ark-scene/locomotion/swim";
 import {collideBlocked, collideSegmentClear, setIslandColliders, unionColliders, type ColliderSet} from "@/ark-scene/collide";
 import type {Stand} from "@/ark-scene/grounding/stand";
+import {lieOnGround} from "@/ark-scene/grounding/stand"; // p2 (contact): a sleeper lying on the drawn ground
 import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
 import {composedSampler, type ArkIslandScene} from "@/ark-scene/islands/scene";
 import {noHamlet, noHamletFor, setNoHamlet} from "@/ark-scene/no-hamlet";
@@ -5178,6 +5179,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // shader below. The same near and far (only the fine parts fade with distance), so a level change never pops.
             const sn = entry.sleepNow ?? null;
             const clipShare = sn && rig && entry.sleepClipped && entry.rig ? entry.rig.weight : 0;
+            // p2 (contact): the drawn ground a lying sleeper rests on (its contact shadow's), null otherwise.
+            let lyingOn: number | null = null;
             const slept = sn && !surface && !act ? sleepDraw(sn, {id: animal.id, slug: animal.model_slug, length: entry.length, epoch: epochNow, procedural: 1 - clipShare, reduced: reducedMotion}) : null;
             if (slept) {
                 // (Its stirred heading only while it keeps still: moving, a foal at its mother's heel say, it faces where
@@ -5187,12 +5190,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.stirShare = reducedMotion ? stirTarget : stirWas + (stirTarget - stirWas) * Math.min(dt * 3, 1);
                 where.yaw += slept.yaw * entry.stirShare;
                 where.pitch += slept.pitch;
-                where.roll += slept.roll;
-                const box = (level === "near" ? model.near ?? model.far : model.far ?? model.near)?.geometry.boundingBox ?? null;
+                const lyingGeometry = (level === "near" ? model.near ?? model.far : model.far ?? model.near)?.geometry ?? null;
+                const box = lyingGeometry?.boundingBox ?? null;
+                // p2 (contact): no deeper than its belly, a legless body flat (`sleep.ts` lyingBody), on the drawn ground.
+                const body = lyingBody(slept, sn!.spec.drop, lyingGeometry ? bellyOfGeometry(lyingGeometry) : 1);
+                where.roll += body.roll;
                 if (where.water) {
                     // On the bottom: down to the floor under it as it settles.
                     if (sn!.posture === "bottom") where.base += (where.water.floorY + modelHeight * 0.05 - where.base) * sleepStages(sn!.t).body;
-                } else if (box) where.base -= lyingDrop({minX: box.min.x, maxX: box.max.x, minY: box.min.y, maxY: box.max.y}, slept.legs, slept.roll) * s;
+                } else if (box && !surface && groundingRules() === "grounded" && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase))) {
+                    const lyingGround = standGround(where.x, where.z, poseBase);
+                    const lie = lieOnGround(where.x, where.z, where.yaw, s, lyingTorso(box, body.legs), where.pitch, where.roll, lyingGround, groundNormalAt(where.x, where.z, lyingGround));
+                    where.pitch += lie.pitch;
+                    where.roll += lie.roll;
+                    where.base = lie.rootY + groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s;
+                    lyingOn = lie.ground;
+                } else if (box) where.base -= lyingDrop({minX: box.min.x, maxX: box.max.x, minY: box.min.y, maxY: box.max.y}, body.legs, body.roll) * s;
             }
             if (entry.denIn) where.base -= entry.denIn * modelHeight * 1.1;
             // A catch lying on its side (`meal-acts.ts`): its body turned by the roll, lowered so its side meets the ground.
@@ -5361,8 +5374,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // nor under water; everything else is projected down onto the ground under it now, and fades as it leaves
             // the ground (a hop, a perch, flight), none where water covers the ground.
             const broadSurface = Boolean(surface) && !entry.toLight && !where.water && !entry.place.canopy && (Boolean(entry.place.micro) || Boolean(entry.place.perch && SHADOW_SURFACE_TAGS.has(entry.place.perch.tag)));
-            const contact = underFeet ? groundContact(where.base + lift, underFeet.height, underFeet.water, modelHeight) : null;
             const underFeet = broadSurface && look.on ? null : groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, level === "near", poseBase);
+            // (A sleeper lying on the ground touches it with its body, its legs folded into it: its shadow stays.)
+            const contact = underFeet ? groundContact(lyingOn !== null ? Math.max(lyingOn, underFeet.height) : where.base + lift, underFeet.height, underFeet.water, modelHeight) : null;
             if ((broadSurface && look.on) || contact) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
                 const width = (box.max.x - box.min.x) * candidate.modelScale * sizeUp * 1.15;

@@ -108,8 +108,9 @@ const P = (s: Partial<PostureSpec>): PostureSpec => Object.freeze({drop: 0, roll
 export const POSTURE_SPECS: Record<SleepPosture, PostureSpec> = {
     // On its chest, the legs folded under (they go under the body: into the ground, out of sight).
     sternal: P({drop: 0.4, roll: 0.06, headPitch: -0.12, lying: true}),
-    // Flat on its side, the legs out.
-    side: P({drop: 0.44, roll: 1.25, headPitch: -0.05, breath: 1.2, lying: true}),
+    // Flat on its side, the legs out. (p2 contact: nearly all the way over, 80 degrees, so the legs lie out along the
+    // ground, stacked; at 72 the lower ones stabbed down into it and the upper ones stuck up stiff.)
+    side: P({drop: 0.44, roll: 1.4, headPitch: -0.05, breath: 1.2, lying: true}),
     // Curled: low, leaning a little, the spine bent round and the head back to the flank.
     curl: P({drop: 0.46, roll: 0.22, headYaw: 1.1, headPitch: -0.35, curl: 1.05, lying: true}),
     // Standing: a little sag, the head low.
@@ -434,7 +435,84 @@ export function lyingDrop(box: {minX: number; maxX: number; minY: number; maxY: 
     const c = Math.cos(roll);
     let lowest = Infinity;
     for (const x of [cx - hw, cx + hw]) for (const y of [bottom, box.maxY]) lowest = Math.min(lowest, x * s + y * c);
-    return Math.max(lowest - box.minY, 0);
+    // (p2 contact: below 0 too: a body rolled onto its side is lifted until that side rests on the ground, never left
+    // half under it.)
+    return lowest - box.minY;
+}
+
+// MARK: Lying on the ground (p2 contact: "lions and tigers are sinking into the ground", "boa constrictor is sleeping half in the ground")
+
+/**
+ * Its belly's height as a share of its height: the lowest level at which the mesh runs most of the body's length (the
+ * torso's underside), above its lowest point. Legs (even mid-stride: the Ark's models stand mid-step, a leg under the
+ * middle) fill only a few short stretches of the length at the bottom; a snake's, a fish's or a slug's underside runs the
+ * whole length at its lowest, so 0. A posture's drop takes the legs' share of the height down so the belly meets the
+ * ground; more than the belly's own share sank the body into it (a lion's belly is about a quarter of its height up, the
+ * drop was 0.4; a snake has no legs at all and went 46% under). `count` vertices, `y(i)` and `z(i)` their model-space
+ * heights and positions along it (+z the head). 1 when the mesh is too thin to tell (the posture's drop then stands).
+ */
+export function bellyShare(count: number, y: (i: number) => number, z: (i: number) => number, box: {minY: number; maxY: number; minZ: number; maxZ: number}): number {
+    const height = box.maxY - box.minY;
+    const length = box.maxZ - box.minZ;
+    if (!(height > 0) || !(length > 0) || count < 32) return 1;
+    // A grid over the body's side: 40 levels up, 16 stretches along (its head and tail ends left out).
+    const LEVELS = 40;
+    const CELLS = 16;
+    const z0 = box.minZ + length * 0.1;
+    const span = length * 0.8;
+    const filled = new Uint8Array(LEVELS * CELLS);
+    for (let i = 0; i < count; i++) {
+        const c = Math.floor(((z(i) - z0) / span) * CELLS);
+        if (c < 0 || c >= CELLS) continue;
+        const l = Math.min(Math.max(Math.floor(((y(i) - box.minY) / height) * LEVELS), 0), LEVELS - 1);
+        filled[l * CELLS + c] = 1;
+    }
+    // (A level counts what reaches down to it: the body's underside over a stretch, at that level or one below.)
+    for (let l = 0; l < LEVELS; l++) {
+        let run = 0;
+        for (let c = 0; c < CELLS; c++) run += filled[l * CELLS + c] | (l > 0 ? filled[(l - 1) * CELLS + c] : 0);
+        if (run >= CELLS * 0.6) return l / LEVELS;
+    }
+    return 1;
+}
+
+type BellyGeometry = {getAttribute: (name: string) => {count: number; getY: (i: number) => number; getZ: (i: number) => number} | undefined; boundingBox: {min: {y: number; z: number}; max: {y: number; z: number}} | null};
+const BELLIES = new WeakMap<object, number>();
+/** `bellyShare` of a loaded model's mesh, worked out once per geometry. */
+export function bellyOfGeometry(geometry: BellyGeometry): number {
+    let share = BELLIES.get(geometry);
+    if (share === undefined) {
+        const position = geometry.getAttribute("position");
+        const box = geometry.boundingBox;
+        share = position && box ? bellyShare(position.count, (i) => position.getY(i), (i) => position.getZ(i), {minY: box.min.y, maxY: box.max.y, minZ: box.min.z, maxZ: box.max.z}) : 1;
+        BELLIES.set(geometry, share);
+    }
+    return share;
+}
+
+/**
+ * The torso a lying body rests on (model units, for `grounding/stand.ts` lieOnGround): a little inside its width, its
+ * length less the head and the tail's ends (a lowered head, a tail on the ground), from its folded legs' height up.
+ */
+export function lyingTorso(box: {min: {x: number; y: number; z: number}; max: {x: number; y: number; z: number}}, legs: number): {x0: number; x1: number; z0: number; z1: number; bottom: number; top: number} {
+    const cx = (box.min.x + box.max.x) / 2;
+    const hw = ((box.max.x - box.min.x) / 2) * 0.75;
+    const length = box.max.z - box.min.z;
+    return {x0: cx - hw, x1: cx + hw, z0: box.min.z + length * 0.15, z1: box.max.z - length * 0.15, bottom: box.min.y + legs * (box.max.y - box.min.y), top: box.max.y};
+}
+
+/** A belly this close to the ground (a share of the height) has no legs under it to fold: a snake, a slug, a fish. */
+export const LEGLESS_BELLY = 0.06;
+
+/**
+ * Its lying body as drawn: the drop (a share of its height) no more than its belly's height, so it lies ON the ground
+ * and goes no deeper, and its roll. A legless body (`LEGLESS_BELLY`: a snake, a slug, a fish) lies flat on its belly
+ * however it sleeps: no drop and no roll, the curl only bends it round on the ground.
+ */
+export function lyingBody(draw: {legs: number; roll: number}, specDrop: number, belly: number): {legs: number; roll: number} {
+    if (belly < LEGLESS_BELLY) return {legs: 0, roll: 0};
+    const cap = specDrop > 0 ? Math.min(1, belly / specDrop) : 1;
+    return {legs: draw.legs * cap, roll: draw.roll};
 }
 
 /**
