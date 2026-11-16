@@ -324,6 +324,8 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} کو {aPredator} نے کھا لیا",
             "caught": "{aPredator} نے {aPrey} کو پکڑ لیا",
+            "dormant": "{animals} کی سردیوں کی نیند شروع ہو گئی",
+            "woke": "{animals} کی سردیوں کی نیند پوری ہو گئی",
             "revived": "{animal} واپس آ گیا",
             "revivedYoung": "{animal} دوبارہ نوجوان بالغ بن کر واپس آ گیا",
             "gone": "{animal} Ark سے چلا گیا"

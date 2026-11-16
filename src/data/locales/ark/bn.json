@@ -324,6 +324,8 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}-কে {aPredator} খেয়ে ফেলেছে",
             "caught": "{aPredator} {aPrey}-কে ধরেছে",
+            "dormant": "{animals} শীতঘুমে গেছে",
+            "woke": "{animals} আবার জেগে উঠেছে",
             "revived": "{animal} ফিরে এসেছে",
             "revivedYoung": "{animal} আবার তরুণ প্রাপ্তবয়স্ক হয়ে ফিরে এসেছে",
             "gone": "{animal} Ark থেকে চলে গেছে"

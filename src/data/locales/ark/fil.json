@@ -324,6 +324,8 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "Kinain ng {aPredator} ang {animal}",
             "caught": "Nahuli ng {aPredator} ang {aPrey}",
+            "dormant": "Nagsimula na ang tulog-taglamig ng {animals}",
+            "woke": "Gising na ulit ang {animals}",
             "revived": "Nakabalik na ang {animal}",
             "revivedYoung": "Nakabalik na ang {animal}, batang adulto ulit",
             "gone": "Wala na sa Ark ang {animal}"

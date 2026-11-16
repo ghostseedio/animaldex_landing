@@ -324,6 +324,8 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}が{aPredator}に食べられました",
             "caught": "{aPredator}が{aPrey}を捕まえました",
+            "dormant": "{animals}が冬眠に入りました",
+            "woke": "{animals}が冬眠から目を覚ましました",
             "revived": "{animal}が戻ってきました",
             "revivedYoung": "{animal}が若い成体に戻って帰ってきました",
             "gone": "{animal}はArkからいなくなりました"

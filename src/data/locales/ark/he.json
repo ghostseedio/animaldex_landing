@@ -324,6 +324,8 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} נטרף על ידי {aPredator}",
             "caught": "{aPredator} תפס {aPrey}",
+            "dormant": "{animals}: שנת החורף התחילה",
+            "woke": "{animals}: שנת החורף נגמרה",
             "revived": "{animal} חזר",
             "revivedYoung": "{animal} חזר, שוב בוגר צעיר",
             "gone": "{animal} עזב את ה-Ark"

@@ -324,6 +324,8 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal}: pojeo ga je {aPredator}",
             "caught": "{aPredator} je ulovio: {aPrey}",
+            "dormant": "{animals}: počeo je zimski san",
+            "woke": "{animals}: zimski san je završio",
             "revived": "{animal} se vratio",
             "revivedYoung": "{animal} se vratio, opet mlada odrasla životinja",
             "gone": "{animal} je otišao iz Arka"

@@ -324,6 +324,8 @@
             "withHearts": "{line} · {hearts}",
             "eatenBy": "{animal} wurde von {aPredator} gefressen",
             "caught": "{aPredator} hat {aPrey} gefangen",
+            "dormant": "{animals}: der Winterschlaf hat begonnen",
+            "woke": "{animals}: wieder wach",
             "revived": "{animal} ist zurück",
             "revivedYoung": "{animal} ist zurück, wieder ein junges erwachsenes Tier",
             "gone": "{animal} hat die Ark verlassen"
