@@ -33,6 +33,7 @@ import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
 import {colliderDistance, type Collider} from "@/ark-scene/collide/colliders";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
 import {waterLevelAt} from "@/ark-scene/water-level";
+import {STEEP_NY, wallClimb, wallClimbAt, wallPlaceSuits} from "@/ark-scene/wall-climb";
 import {DEN_DRY, SURF_REACH} from "@/ark-scene/map/points";
 import {topOf, waterSurfaceOf} from "@/ark-scene/behaviour-water";
 import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
@@ -608,9 +609,10 @@ export function perchSuits(point: Pick<AttachPoint, "size" | "hidden" | "tag">, 
 }
 
 /** A seeded attach point of these tags within reach of a centre (and suiting its size), or null. */
-function placeNear(world: ScheduleWorld, centre: {x: number; z: number}, length: number, tags: AttachTag[], radius: number, roll: number): AttachPoint | null {
+function placeNear(world: ScheduleWorld, centre: {x: number; z: number}, length: number, tags: AttachTag[], radius: number, roll: number, climber = false): AttachPoint | null {
     for (const tag of tags) {
-        const near = world.sampler.attachPoints(tag, {x: centre.x, z: centre.z, r: radius});
+        // (3.3 fix (wall): an eave's two places, the roof's for a flyer, the wall's face under it for a climber: `wallPlaceSuits`.)
+        const near = world.sampler.attachPoints(tag, {x: centre.x, z: centre.z, r: radius}).filter((p) => wallPlaceSuits(p, climber));
         // (A place inside a tree's crown, on the bigger wild island: no body larger than its own small size; a heavy body
         // only on a limb that suits all of it: `perchSuits`.)
         const fits = near.filter((p) => perchSuits(p, length));
@@ -1183,7 +1185,9 @@ function workIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
 function standsAt(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, placed: Intent): boolean {
     const to = placed.to;
     // (A point above the walk grid's ground that is no surface, a shade spot on a steep face, is ground too.)
-    if (!to || !world.nav.colliders || !walksGoals(profile) || flies(profile) || placed.mode === "air" || onSurface(to.point) || (raised(world, to) && !to.point) || wet(world, to)) return true;
+    // (3.3 fix (wall): a place on a wall, its normal across, is its own surface too: the town's house walls, whose places
+    // are on the wall's face, where no body stands as on the ground.)
+    if (!to || !world.nav.colliders || !walksGoals(profile) || flies(profile) || placed.mode === "air" || onSurface(to.point) || (raised(world, to) && !to.point) || wet(world, to) || (raised(world, to) && Math.abs(to.ny) < STEEP_NY)) return true;
     return world.nav.fits(to.x, to.z, bodyRadiusOf(animal, profile.slug), maxSlopeOf(animal));
 }
 
@@ -1645,7 +1649,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             // swim at a duck's 0.3 m/s: a flock's member searched only its small share of the flock's spread, and its swim
             // reach is its walk clip's, and it never came ashore.)
             const bank = place === "shore" && aquatic(profile) && amphibious(profile) ? 20 : 0;
-            const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(Math.max(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), bank), cap), random());
+            const point = placeNear(world, far ? centre : own, animal.length, tags, Math.min(Math.max(far ? Math.min(45, reachOf(profile, animal) / 2, homeRadius(profile, animal) * 1.5) : radius * (group ? 0.5 : 1.4), bank), cap), random(), !flyer);
             if (point) {
                 const up = point.y > topAt(world, point.x, point.z) + 0.5;
                 // (Lane MA3: a bird that walks or swims first flies up to a perch, a branch, a ledge only as often as it flies:
@@ -2459,6 +2463,8 @@ export type TripPose = {
     nz: number;
     /** The beat now (bite, chew, scan, walk, swim, enter_water…). */
     beat: ArkBeat;
+    /** 3.3 fix (wall): climbing down a wall or a trunk: it heads down it, head first (`wall-climb.ts`). */
+    down?: boolean;
     /**
      * On an air leg (MA1): its stage (a run to take off, the climb, level flight, the glide-in, a ski to a stop on the
      * water), its speed over the ground (m/s), and the heights of the surfaces it took off from and lands on (a perch,
@@ -2865,6 +2871,13 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
             return {x: at.x, y, z: at.z, yaw: at.yaw, moving, aloft, ...up, beat: lift > 0.9 && leg.beat === "glide" ? "glide" : "fly", air};
         }
         case "surface": {
+            // 3.3 fix (wall): between the ground and a wall, a trunk or a rock face: along the ground to the wall's foot,
+            // then up it belly to it (`wall-climb.ts`), not a straight ramp through the air with the body half tilted.
+            if (wallClimb(from, to)) {
+                const steep = Math.abs(from.ny) < STEEP_NY ? from : to;
+                const c = wallClimbAt(from, to, u, topAt(world, steep.x, steep.z));
+                return {x: c.x, y: c.y, z: c.z, yaw: c.yaw, moving, aloft: false, nx: c.nx, ny: c.ny, nz: c.nz, beat: c.onWall || c.ny < 0.95 ? "climb" : "walk", ...(c.down ? {down: true} : {})};
+            }
             const x = from.x + (to.x - from.x) * u;
             const z = from.z + (to.z - from.z) * u;
             const y = from.y + (to.y - from.y) * u;

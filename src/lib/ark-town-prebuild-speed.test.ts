@@ -159,7 +159,8 @@ const TOWN_DIGESTS = {
     plan: "ad0b6e3a149e2362",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
-    areas: "86edfd2d76c9f6e9",
+    // (3.3 fix (wall), wall-climb.ts: the lamp-lit walls' places on the wall's face with its normal; the eaves' wall faces.)
+    areas: "8b29320e78c4b536",
     // (Lane GA: the ground's surface weights.)
     ground: "9f6d9fa1b00ec782",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
