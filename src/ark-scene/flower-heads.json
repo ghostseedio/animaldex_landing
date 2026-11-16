@@ -1,0 +1,125 @@
+{
+ "source": "f39e8b1761a988cf",
+ "heads": {
+  "flower-black-eyed-susan-a": [
+   0.017,
+   0.458,
+   0.008
+  ],
+  "flower-black-eyed-susan-b": [
+   -0.015,
+   0.474,
+   0.044
+  ],
+  "flower-bluebell-a": [
+   0.024,
+   0.271,
+   0.058
+  ],
+  "flower-bluebell-b": [
+   0.053,
+   0.262,
+   -0.045
+  ],
+  "flower-buttercup-a": [
+   -0.024,
+   0.292,
+   -0.004
+  ],
+  "flower-buttercup-b": [
+   -0.001,
+   0.321,
+   -0.028
+  ],
+  "flower-coneflower-a": [
+   -0.039,
+   0.6,
+   0.034
+  ],
+  "flower-coneflower-b": [
+   -0.046,
+   0.592,
+   0.012
+  ],
+  "flower-cornflower-a": [
+   0.005,
+   0.32,
+   -0.003
+  ],
+  "flower-cornflower-b": [
+   -0.054,
+   0.478,
+   -0.071
+  ],
+  "flower-cosmos-a": [
+   -0.023,
+   0.565,
+   0.003
+  ],
+  "flower-cosmos-b": [
+   0.004,
+   0.681,
+   -0.04
+  ],
+  "flower-daisy-a": [
+   0.027,
+   0.347,
+   -0.033
+  ],
+  "flower-daisy-b": [
+   -0.044,
+   0.415,
+   0
+  ],
+  "flower-foxglove-a": [
+   -0.004,
+   0.873,
+   -0.022
+  ],
+  "flower-foxglove-b": [
+   0.049,
+   0.875,
+   0.051
+  ],
+  "flower-iris-a": [
+   0.025,
+   0.712,
+   -0.045
+  ],
+  "flower-iris-b": [
+   -0.03,
+   0.712,
+   -0.083
+  ],
+  "flower-lupine-a": [
+   0.019,
+   0.7,
+   -0.067
+  ],
+  "flower-lupine-b": [
+   0.03,
+   0.739,
+   0.007
+  ],
+  "flower-poppy-a": [
+   -0.03,
+   0.366,
+   -0.054
+  ],
+  "flower-poppy-b": [
+   -0.053,
+   0.545,
+   0.091
+  ],
+  "flower-wild-rose-a": [
+   -0.004,
+   0.375,
+   0.02
+  ],
+  "flower-wild-rose-b": [
+   0.038,
+   0.432,
+   -0.06
+  ]
+ }
+}

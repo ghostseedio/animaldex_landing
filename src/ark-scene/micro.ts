@@ -453,7 +453,9 @@ function attachSurfacePoint(place: MicroPlace, point: AttachPoint, along: number
     const cx = ny * tz - nz * ty;
     const cy = nz * tx - nx * tz;
     const cz = nx * ty - ny * tx;
-    return {x: point.x + tx * u + cx * v, y: point.y + ty * u + cy * v, z: point.z + tz * u + cz * v, nx, ny, nz, tx, ty, tz};
+    // gfx (PLACE): where its host is drawn (a wildflower's head), when that is off the map's point.
+    const at = point.drawn ?? point;
+    return {x: at.x + tx * u + cx * v, y: at.y + ty * u + cy * v, z: at.z + tz * u + cz * v, nx, ny, nz, tx, ty, tz};
 }
 
 function hostCount(surface: MicroSurface, zone: ArkZone): number {

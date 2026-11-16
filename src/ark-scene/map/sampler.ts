@@ -48,6 +48,11 @@ export type AttachPoint = {
     size: {min: number; max: number};
     /** The zone it is in (for spreading a zone's animals over its own points). */
     zone: ArkZone;
+    /**
+     * gfx (PLACE): where its host is drawn, when that is off the point the map keys on (a wildflower's top head, off
+     * the plant's middle): the scene draws the animal there (`micro.ts`); the map's lists and homes keep x, y, z.
+     */
+    drawn?: {x: number; y: number; z: number};
     /** The scenery interface's own point, when it sways with its tree (a leaf, bark, a branch): the scene moves the animal with it (`attachSway`). */
     source?: SceneryPoint;
     /** On a limb or a hang point: the limb's radius there (m). */
