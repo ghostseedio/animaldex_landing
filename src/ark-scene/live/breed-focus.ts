@@ -57,6 +57,8 @@ export function kinFrameApart(length: number): number {
 
 /** How long (ms) a young not yet aboard is waited for after its line's tap: the page reads the Ark every 45 s. */
 export const YOUNG_WAIT_MS = 100_000;
+/** How long (ms) the tap's own choice of the parent may take to land before a view off it counts as the viewer's. */
+export const YOUNG_SETTLE_MS = 1500;
 /** How long (s) a clutch drawn for a laid line's tap stays beside its mother. */
 export const CLUTCH_SHOWN_SECONDS = 150;
 
@@ -76,4 +78,32 @@ export function clutchSize(length: number): number {
 export function seenAt(length: number, distance: number, fovDeg: number, share = 0.05): boolean {
     const height = 2 * Math.max(distance, 1e-6) * Math.tan((fovDeg * Math.PI) / 360);
     return length / height >= share;
+}
+
+/**
+ * A clutch tap's picture (coordinator, from the harness frames: the lizards were specks and the eggs lost in the
+ * grass): the mother and her eggs filling about half the view's height (a quarter of the picture), from above enough
+ * to look down past the blades. While she is still walking to her mate (more than four of her lengths off), the eggs
+ * and a body length round them. Never closer than two and a half of her lengths, nor than 12 cm.
+ */
+export const CLUTCH_FRAME_POLAR = 0.85;
+export function clutchFrame(mother: {x: number; y: number; z: number}, spot: {x: number; y: number; z: number}, length: number, fovDeg: number): {x: number; y: number; z: number; distance: number} {
+    const apart = Math.hypot(mother.x - spot.x, mother.z - spot.z);
+    const near = apart <= length * 4;
+    const span = near ? apart + length * 1.2 : length * 2;
+    const at = near ? {x: (mother.x + spot.x) / 2, y: (mother.y + spot.y) / 2, z: (mother.z + spot.z) / 2} : {...spot};
+    const distance = Math.max(span / (0.5 * 2 * Math.tan((fovDeg * Math.PI) / 360)), length * 2.5, 0.12);
+    return {...at, distance};
+}
+
+/**
+ * Whether a young waited for (its line was tapped before a read brought it) is still to be chosen: only while the view
+ * is still on the parent the tap chose (the viewer has not chosen, followed or closed anything since) and within
+ * `YOUNG_WAIT_MS`.
+ */
+export function youngStillWanted(wait: {parent: string; since: number; until: number} | null, now: number, view: {selected: string | null; followed: string | null} | null): boolean {
+    if (!wait || now > wait.until || !view) return false;
+    // (The tap's own choice takes a moment to land when the scene is placing a read: `select` waits for it.)
+    if (now - wait.since < YOUNG_SETTLE_MS && view.selected === null) return true;
+    return view.selected === wait.parent && (view.followed === null || view.followed === wait.parent);
 }

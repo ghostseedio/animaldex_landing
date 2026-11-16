@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import {breedFocus, clutchSize, isBreedKind, kinFrameApart, seenAt} from "@/ark-scene/live/breed-focus";
+import {breedFocus, clutchFrame, clutchSize, isBreedKind, kinFrameApart, seenAt, youngStillWanted, YOUNG_SETTLE_MS, YOUNG_WAIT_MS} from "@/ark-scene/live/breed-focus";
 import {clutchSpot, matingScript, type MatingBody} from "@/ark-scene/live-matings";
 
 // Owner 2026-11-16, on the live Ark: "some of the logs like '[animal] has mated' or 'laid a clutch of eggs' or
@@ -89,4 +89,40 @@ test("a pair's clutch is laid where she stood for the mating that took, at her s
         const toSide = {x: sc.side.x - took.spot.x, z: sc.side.z - took.spot.z};
         assert.ok((spot.x - took.spot.x) * toSide.x + (spot.z - took.spot.z) * toSide.z <= 1e-9);
     }
+});
+
+test("a young waited for is forgotten the moment the viewer chooses, follows or closes anything else", () => {
+    const wait = {parent: MOTHER, since: 0, until: YOUNG_WAIT_MS};
+    const on = {selected: MOTHER, followed: null};
+    assert.ok(youngStillWanted(wait, 5_000, on));
+    // Following the mother herself keeps it.
+    assert.ok(youngStillWanted(wait, 5_000, {selected: MOTHER, followed: MOTHER}));
+    // Another animal chosen, the card closed, another followed: gone.
+    assert.equal(youngStillWanted(wait, 5_000, {selected: FATHER, followed: null}), false);
+    assert.equal(youngStillWanted(wait, 5_000, {selected: null, followed: null}), false);
+    assert.equal(youngStillWanted(wait, 5_000, {selected: MOTHER, followed: FATHER}), false);
+    // Past the wait, or with no scene: gone.
+    assert.equal(youngStillWanted(wait, YOUNG_WAIT_MS + 1, on), false);
+    assert.equal(youngStillWanted(wait, 5_000, null), false);
+    assert.equal(youngStillWanted(null, 5_000, on), false);
+    // The tap's own choice still landing (the scene placing a read): nothing chosen yet is not the viewer's doing.
+    assert.ok(youngStillWanted(wait, YOUNG_SETTLE_MS - 1, {selected: null, followed: null}));
+    assert.equal(youngStillWanted(wait, YOUNG_SETTLE_MS - 1, {selected: FATHER, followed: null}), false);
+});
+
+test("a clutch tap frames the mother and her eggs at half the view's height, never too close", () => {
+    const FOV = 38;
+    const tan = Math.tan((FOV * Math.PI) / 360);
+    // A wall lizard (20 cm drawn) beside her eggs 16 cm off: about 1 m back, nearer than the pair's 1.45 m.
+    const lizard = clutchFrame({x: 0, y: 0.05, z: 0}, {x: 0.16, y: 0, z: 0}, 0.2, FOV);
+    assert.ok(Math.abs(lizard.x - 0.08) < 1e-9 && Math.abs(lizard.z) < 1e-9);
+    const share = (0.16 + 0.2 * 1.2) / (2 * lizard.distance * tan);
+    assert.ok(Math.abs(share - 0.5) < 1e-9, `fills ${share.toFixed(2)} of the height`);
+    assert.ok(lizard.distance < 1.45 && lizard.distance > 0.5);
+    // Still walking to her mate, metres off: the eggs and a body round them.
+    const walking = clutchFrame({x: 3, y: 0, z: 0}, {x: 0, y: 0, z: 0}, 0.2, FOV);
+    assert.deepEqual([walking.x, walking.z], [0, 0]);
+    assert.ok(walking.distance >= 0.5);
+    // A fly's: the floor.
+    assert.equal(clutchFrame({x: 0, y: 0, z: 0}, {x: 0.01, y: 0, z: 0}, 0.012, FOV).distance, 0.12);
 });

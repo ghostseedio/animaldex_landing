@@ -30,7 +30,7 @@ import {arkPickAnimal, arkSpeciesKey} from "@/lib/ark-population";
 import {hashString} from "@/ark-scene/world";
 import {ZONE_REGION, type ArkSceneHandle, type ArkSnapshot} from "@/ark-scene/types";
 import {ArkLiveLogView} from "@/ark-scene/live/log-view";
-import {breedFocus, isBreedKind, YOUNG_WAIT_MS} from "@/ark-scene/live/breed-focus";
+import {breedFocus, isBreedKind, youngStillWanted, YOUNG_WAIT_MS} from "@/ark-scene/live/breed-focus";
 
 /** The words the log needs (the Ark's `live` and `replay`, and "Show me"), as the page or `/api/ark/words` has them. */
 export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null} | null;
@@ -108,8 +108,11 @@ export class ArkLive {
     /** 3.3 fix (breeding taps): a young's parents, and a clutch's egg count by its first parent, from the record. */
     private readonly parentsOf = new Map<string, string[]>();
     private readonly clutches = new Map<string, {key: string; parents: string[]; eggs: number | null}>();
-    /** A young its line's tap could not go to yet (not in the roster): chosen once a read brings it, until when (ms). */
-    private youngWait: {id: string; until: number} | null = null;
+    /**
+     * A young its line's tap could not go to yet (not in the roster): chosen once a read brings it, while the view is
+     * still on the parent the tap chose (`youngStillWanted`), until when (ms).
+     */
+    private youngWait: {id: string; parent: string; since: number; until: number} | null = null;
     private readonly view: ArkLiveLogView;
     private current: ArkSnapshot | null = null;
     private sig = "";
@@ -363,16 +366,21 @@ export class ArkLive {
     private youngArrived(next: ArkSnapshot) {
         const wait = this.youngWait;
         if (!wait) return;
-        if (Date.now() > wait.until) {
-            this.youngWait = null;
-            return;
-        }
+        if (!this.youngWanted()) return;
         if (!next.animals.some((animal) => animal.id === wait.id)) return;
         this.youngWait = null;
         // (After the page hands the scene this read, `ark-view.tsx` apply: the scene then chooses it once it is laid out.)
         setTimeout(() => {
             if (!this.disposed) this.options.scene()?.select(wait.id);
         }, 0);
+    }
+
+    /** The young waited for, still wanted (else forgotten): the viewer chose, followed or closed nothing since. */
+    private youngWanted(): boolean {
+        const scene = this.options.scene();
+        if (youngStillWanted(this.youngWait, Date.now(), scene?.selection?.() ?? null)) return true;
+        this.youngWait = null;
+        return false;
     }
 
     /** Live young were born (not a hatching): the litter's birth is acted in the live world (the scene's `addBirths`). */
@@ -511,6 +519,7 @@ export class ArkLive {
             }
             if (this.nowSaid.size > 400) for (const [key, until] of Array.from(this.nowSaid)) if (until < Date.now()) this.nowSaid.delete(key);
         }
+        if (this.youngWait) this.youngWanted(); // 3.3 fix (breeding taps): forgotten the moment the viewer looks elsewhere
         this.log.step(now);
         this.render();
     }
@@ -538,7 +547,7 @@ export class ArkLive {
                     if (scene.selectPair) scene.selectPair(step.a, step.b, line.kind !== "mated");
                     else scene.select(step.a);
                 } else scene.select(step.id);
-                if (step.do === "parent") this.youngWait = {id: step.young, until: Date.now() + YOUNG_WAIT_MS};
+                if (step.do === "parent") this.youngWait = {id: step.young, parent: step.id, since: Date.now(), until: Date.now() + YOUNG_WAIT_MS};
                 const clutch = line.kind === "laid" && animalId ? this.clutches.get(animalId) : undefined;
                 if (clutch) scene.showClutch?.(clutch.key, clutch.parents.filter((id) => aboard.has(id)), clutch.eggs);
                 return done();

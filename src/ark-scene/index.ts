@@ -227,7 +227,7 @@ import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating tap)
-import {CLUTCH_SHOWN_SECONDS, clutchSize, kinFrameApart, seenAt} from "@/ark-scene/live/breed-focus"; // 3.3 fix (breeding taps)
+import {CLUTCH_FRAME_POLAR, CLUTCH_SHOWN_SECONDS, clutchFrame, clutchSize, kinFrameApart, seenAt} from "@/ark-scene/live/breed-focus"; // 3.3 fix (breeding taps)
 import {LiveBirths} from "@/ark-scene/live-births";
 import {LiveDeaths, type DeathRecord} from "@/ark-scene/live-deaths"; // 3.3 fix (log)
 // 3.3 batch (D): the escapes and the dragonflies' dips
@@ -4923,7 +4923,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const biting = (c: (typeof candidates)[number]) => c.entry.sched!.pose?.beat === "bite" || c.entry.sched!.pose?.beat === "chew";
             setGrassPress(
                 // (Where a meal pressed the grass flat, `meal-traces.ts`: nearest the camera first, like the rest.)
-                pressedByMeals(cameraPosition).concat(candidates
+                // 3.3 fix (breeding taps): and round a clutch a laid line's tap drew, first.
+                (liveClutch?.spot ? [liveClutch.spot] : []).concat(pressedByMeals(cameraPosition)).concat(candidates
                     .filter((c) => c.visible && c.distance < 40 && c.entry.sched && !c.entry.sched.pose?.aloft && !c.pose.afloat && (biting(c) || c.entry.sched.pose?.moving))
                     .sort((a, b) => a.distance - b.distance)
                     .map((c) =>
@@ -4938,7 +4939,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             behaviourFrameMs += performance.now() - started;
         }
         // p2 (ground): the blades at bug scale bow away round the animals in the patch the camera is down at.
-        if (bugGround.shown) bugGround.setClear(bugClearPoints(candidates, (c, out) => ((out.x = c.pose.x), (out.y = c.pose.base), (out.z = c.pose.z), (out.length = c.entry.length), c.visible), controls.target, bugGround.reach));
+        if (bugGround.shown) {
+            const clear: Array<{x: number; y: number; z: number; radius: number}> = bugClearPoints(candidates, (c, out) => ((out.x = c.pose.x), (out.y = c.pose.base), (out.z = c.pose.z), (out.length = c.entry.length), c.visible), controls.target, bugGround.reach);
+            // 3.3 fix (breeding taps): the blades bow away round a clutch a laid line's tap drew, first.
+            bugGround.setClear(liveClutch?.spot ? [liveClutch.spot, ...clear] : clear);
+        }
         behaviourTimes.push(behaviourFrameMs);
         if (behaviourTimes.length > 120) behaviourTimes.shift();
         perf.lap("apart");
@@ -6273,7 +6278,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     // 3.3 fix (breeding taps): a laid line's tap draws the record's clutch beside the mother (as a replay's `laid` does)
     // once she is drawn, for a while; one at a time. Only on a tap: no draw call otherwise.
-    let liveClutch: {key: string; parents: string[]; eggs: number | null; mother: string | null; until: number} | null = null;
+    // Framed once laid (and the tap's flight over): the mother and her eggs close, from above the blades, which part
+    // round the clutch (`clutchPress`, read by the grass and the bug-scale blades) while it is shown.
+    let liveClutch: {key: string; parents: string[]; eggs: number | null; mother: string | null; until: number; spot: {x: number; y: number; z: number; radius: number} | null; framed: boolean} | null = null;
+    const clutchFrameAt = new Vector3();
     const stepLiveClutch = (now: number) => {
         const clutch = liveClutch;
         if (!clutch) return;
@@ -6282,7 +6290,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             liveClutch = null;
             return;
         }
-        if (clutch.mother) return;
+        if (clutch.mother) {
+            const mother = findEntry(clutch.mother);
+            if (clutch.framed || !clutch.spot || flight || !mother?.middle) return;
+            clutch.framed = true;
+            // (Only while the view is still on the pair the tap chose: a viewer who moved on is left alone.)
+            if (!selectedId || !clutch.parents.includes(selectedId) || pointers > 0) return;
+            const frame = clutchFrame(mother.middle, clutch.spot, mother.length, FOV);
+            pairFramed = null;
+            spherical.setFromVector3(offset.copy(camera.position).sub(controls.target));
+            fly(clutchFrameAt.set(frame.x, frame.y, frame.z), frame.distance, 1.2, CLUTCH_FRAME_POLAR, spherical.theta);
+            return;
+        }
         const drawn = clutch.parents.map((id) => findEntry(id)).filter((e): e is Entry => Boolean(e?.middle));
         if (!drawn.length) return;
         const mother = drawn.find((e) => sexLook(e.animal.id, e.animal.model_slug).sex === "female") ?? drawn[0];
@@ -6303,6 +6322,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         else spot.y = Math.max(heightAt(spot.x, spot.z), 0) + (kind === "spawn" ? -0.05 : 0);
         nests.lay(clutch.key, spot, clutchSize(mother.length), kind, clutch.eggs, now);
         clutch.mother = mother.animal.id;
+        clutch.spot = {...spot, radius: Math.max(mother.length * 1.1, clutchSize(mother.length) * 1.5, 0.06)};
     };
     controls.addEventListener("start", () => {
         pairFramed = null;
@@ -8699,12 +8719,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             pairFramed = {a, b, kin: Boolean(kin)};
             arrive(a, false);
         }),
+        // 3.3 fix (breeding taps): what is selected and followed, for the log's wait on a young not aboard yet.
+        selection: () => ({selected: selectedId, followed: followId}),
         // 3.3 fix (breeding taps): a laid line's clutch beside the mother (`stepLiveClutch`).
         showClutch: (key, parents, eggs) => {
             if (reducedMotion || !parents.length) return;
             if (liveClutch && liveClutch.key !== key) nests.remove(liveClutch.key);
             if (liveClutch?.key === key) return;
-            liveClutch = {key, parents, eggs, mother: null, until: performance.now() / 1000 + CLUTCH_SHOWN_SECONDS};
+            liveClutch = {key, parents, eggs, mother: null, until: performance.now() / 1000 + CLUTCH_SHOWN_SECONDS, spot: null, framed: false};
         },
         // (Before the animals are in, a herd is not known yet: false, as for any unknown key.)
         selectHerd: (key) => (animalsIn ? selectHerd(key, true) : false),

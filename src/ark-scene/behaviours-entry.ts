@@ -357,7 +357,7 @@ async function main() {
             const young = youngIds[0];
             if (mode === "young") handle.selectPair?.(young, a, true);
             else handle.selectPair?.(a, b);
-            if (mode === "clutch") handle.showClutch?.("laid:harness", [a, b], 2);
+            if (mode === "clutch") handle.showClutch?.(`laid:harness:${s}`, [a, b], 2);
             for (let i = 0; i < 30; i++) {
                 fake!.perf += 100;
                 fake!.date += 100;

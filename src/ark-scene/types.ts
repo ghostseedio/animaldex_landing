@@ -494,6 +494,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * count) beside the mother (the drawn female of `parents`, else the first) for a while.
      */
     showClutch?: (key: string, parents: string[], eggs: number | null) => void;
+    /** The animal selected and the one followed now (null: none), for the log's waits on a tap. */
+    selection?: () => {selected: string | null; followed: string | null};
     /**
      * 3.3 fix (log): the record's deaths (`death_old`, `starved` events: the animal, its time on the shared clock). Its
      * body lies where its schedule had it at that time, on its side, for a while (`live-deaths.ts`). Keyed `death:<id>`.
