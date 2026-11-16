@@ -1127,12 +1127,12 @@ export function recipeClip(state: string | null | undefined, has: (name: string)
 }
 
 /** A rig's base pose (contract 8.3): standing (the rest pose), lying, on its side, or a sitting rig leaning forward. */
-export type RigBase = "stand" | "lying" | "side" | "leaning";
+export type RigBase = "stand" | "lying" | "side" | "leaning" | "sitting";
 
 /** The base pose a clip is held in: its `base`, else standing. */
 export function clipBase(clip: {base?: string} | null | undefined): RigBase {
     const base = clip?.base;
-    return base === "lying" || base === "side" || base === "leaning" ? base : "stand";
+    return base === "lying" || base === "side" || base === "leaning" || base === "sitting" ? base : "stand";
 }
 
 /**
@@ -1146,7 +1146,10 @@ export function baseStep(from: RigBase, to: RigBase, has: (name: string) => bool
     const step = (clip: string, ends: RigBase) => (has(clip) ? {clip, ends} : null);
     switch (from) {
         case "stand":
-            return to === "leaning" ? step("drop", "leaning") : step("lie_down", "lying");
+            return to === "leaning" ? step("drop", "leaning") : to === "sitting" ? step("sit_down", "sitting") : step("lie_down", "lying");
+        case "sitting":
+            // (A pilot rig's sit: back up to standing first, whatever comes next.)
+            return step("sit_up", "stand");
         case "lying":
             if (to === "side") return step("side_down", "side");
             return (urgent ? step("get_up_fast", "stand") : null) ?? step("get_up", "stand");
@@ -1199,8 +1202,10 @@ export function beatClip(beat: string | null | undefined, doing: string | null |
             // Head up to leaves while it browses, down to the ground otherwise: never the one for the other.
             if (doing === "browse") return has("browse") ? "browse" : null;
             return has("graze") ? "graze" : null;
-        case "peck":
         case "drink":
+            // A rig's own drink (lapping, the muzzle at the water), else its graze.
+            return has("drink") ? "drink" : has("graze") ? "graze" : null;
+        case "peck":
             return has("graze") ? "graze" : null;
         case "scan":
             return has("scan") ? "scan" : null;

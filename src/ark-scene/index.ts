@@ -4427,7 +4427,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // walk spun at the flight's speed.
         } else {
             // The ground clip whose own pace fits how fast it goes (a walk, a run, a hop for a hopping bird).
-            const gaits = ["walk", "run", "hop", "slither"].map((name) => clip(name)).filter((c): c is RigClipData => Boolean(c));
+            const gaits = ["walk", "trot", "run", "hop", "slither"].map((name) => clip(name)).filter((c): c is RigClipData => Boolean(c));
             const pick = paceClip(speed, gaits, state.now.name);
             if (moving(pick)) {
                 want = pick.name;
@@ -4460,7 +4460,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const reacted = Boolean(reacting && want === reacting.name);
         // (A meal's act, `meal-acts.ts`: head down feeding, a glance up, lying up to rest, on the rig's own clips.)
         const mealState = !recipeAct && entry.act?.meal && entry.act.state && MEAL_CLIP_STATES.has(entry.act.state) ? entry.act.state : null;
-        const fromRecipe = !state.flying && !reacted && (recipeAct || mealState) ? recipeClip(recipeAct?.state ?? mealState, (name) => Boolean(clip(name))) : null;
+        const recipeRaw = !state.flying && !reacted && (recipeAct || mealState) ? recipeClip(recipeAct?.state ?? mealState, (name) => Boolean(clip(name))) : null;
+        // A rig with a sit (a pilot cat's or dog's) rests sitting up rather than lying, about half of them (by its own phase).
+        const fromRecipe = recipeRaw?.name === "lie" && clip("sit") && entry.phase < 0.5 ? {...recipeRaw, name: "sit"} : recipeRaw;
         let byRecipe = false;
         if (fromRecipe && !(watching && headDown(fromRecipe.name))) {
             if (fromRecipe.play === "distance") {
@@ -4508,8 +4510,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             mode = "sync";
             sync = 0;
         }
-        // Its base pose (contract 8.3): into a lying, side or leaning clip, and out of it, only through the transitions.
-        if (state.toward && state.now.name === state.toward.clip && state.now.phase >= 1) {
+        // Development only (the rig harness's `clips_<slug>` scene): a clip forced on one animal by id, played in time,
+        // its base pose taken as the clip's own (no transitions). Never set by the site.
+        const forced = (globalThis as {__arkRigForce?: Record<string, string>}).__arkRigForce?.[entry.animal.id];
+        if (forced && rig.clips[forced]) {
+            want = forced;
+            mode = "time";
+            rate = 1;
+            state.base = clipBase(rig.clips[forced]);
+            state.toward = null;
+        } else if (state.toward && state.now.name === state.toward.clip && state.now.phase >= 1) {
             state.base = state.toward.ends;
             state.toward = null;
         }
