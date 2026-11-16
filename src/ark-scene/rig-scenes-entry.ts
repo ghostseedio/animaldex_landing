@@ -19,6 +19,11 @@ import {heightAt, LAKE, ZONE_SITES} from "@/ark-scene/world";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {hipShare} from "@/ark-scene/locomotion/flee";
 import {G} from "@/ark-scene/locomotion/gaits";
+import {townPlan} from "@/ark-scene/islands/town/plan";
+import {townColliderSet} from "@/ark-scene/islands/town/colliders";
+import {launchEnclosures, townAreas} from "@/ark-scene/islands/town/areas";
+import {townHeight} from "@/ark-scene/islands/town/ground";
+import {WallIndex, dryAt, townWater, wallPose, wallStretches, wallTrip, type SchedAt, type WallTrip} from "@/ark-scene/islands/town/cat-walls";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -110,11 +115,24 @@ async function mountScenes(el: HTMLElement) {
     const rigBase = params.get("norig") ? null : params.get("rig") ? new URL(params.get("rig")!, location.href).href.replace(/\/+$/, "") : undefined;
     const quality = params.get("quality");
     if (quality === "high" || quality === "medium" || quality === "low") (globalThis as {__arkQuality?: string}).__arkQuality = quality;
-    const cast = castAnimals();
-    const snapshot = decodeArkSnapshot({...fixture, animals: cast});
-    if (!snapshot) throw new Error("fixture did not decode");
+    // gfx (fauna): `?town=1`: the course cast lives in a town house's garden (both islands mounted, as the archipelago does).
+    const onTown = params.get("town") === "1";
+    const cast = castAnimals().map((a) => (onTown && a.id.startsWith("0000feed") && COURSE_CAST.length ? ({...a, island: "town", area: "house"} as unknown as Raw) : a));
+    const decoded = decodeArkSnapshot({...fixture, animals: cast});
+    if (!decoded) throw new Error("fixture did not decode");
+    let snapshot = decoded;
+    let islandOptions: Record<string, unknown> = {};
+    let townOrigin: {x: number; z: number} | null = null;
+    if (onTown) {
+        snapshot = {...snapshot, animals: snapshot.animals.map((a) => ({...a, island: (a as {island?: string | null}).island ?? "wild"}) as typeof a)};
+        const [{arkIslandSnapshot}, {loadTownScene}] = await Promise.all([import("@/lib/ark-islands"), import("@/ark-scene/islands/scene")]);
+        const split = arkIslandSnapshot as unknown as (s: typeof snapshot, island: "wild" | "town") => typeof snapshot;
+        const town = await loadTownScene({tier: "high", animals: split(snapshot, "town").animals});
+        townOrigin = town.origin;
+        islandOptions = {island: town, wildAnimals: split(snapshot, "wild").animals, openIsland: "town"};
+    }
     let ready = false;
-    const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, rigBase, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: 10, onReady: () => (ready = true)});
+    const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, rigBase, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: 10, onReady: () => (ready = true), ...islandOptions});
     handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.2, storm: 0, windDirection: 0.4});
     const debug = () => (window as unknown as {__arkDebug: Debug}).__arkDebug;
     const ids: Record<string, string[]> = Object.fromEntries(CAST.map(([prefix, , n]) => [prefix, Array.from({length: n}, (_, i) => castId(prefix, i))]));
@@ -346,8 +364,113 @@ async function mountScenes(el: HTMLElement) {
         ])
     );
 
+    /**
+     * gfx (fauna): a close look at one course animal's everyday postures at one spot: standing and looking about
+     * (0-4 s), a short walk (4-10 s), at rest (10-17 s), asleep (17-28 s), standing again. The camera from its side.
+     */
+    const postureScenes: Record<string, () => {note: string; watch: string[]; go?: () => void}> = Object.fromEntries(
+        COURSE_CAST.map((c, i) => [
+            `pose_${c.slug}`,
+            () => {
+                const id = ids[`c${i}`][0];
+                const from = site("grassland", Number(new URLSearchParams(location.search).get("posx") ?? "-6"), Number(new URLSearchParams(location.search).get("posz") ?? "6"));
+                const yaw = Math.PI / 2;
+                const posture = (start: number) => {
+                    debug().setHome(id, from.x, from.z);
+                    pinPose(id, (epoch: number) => {
+                        const k = Math.max(epoch - start, 0);
+                        const len = Math.max(handle.locate(id)?.length ?? 0.5, 0.05);
+                        const walked = Math.min(Math.max(k - 4, 0), 6) * len * 0.9;
+                        const x = from.x + Math.sin(yaw) * walked;
+                        const z = from.z + Math.cos(yaw) * walked;
+                        const moving = k >= 4 && k < 10;
+                        const doing = moving ? "wander" : k >= 17 && k < 28 ? "sleep" : k >= 10 && k < 28 ? "rest" : "watch";
+                        const beat = moving ? "walk" : doing === "sleep" ? "sleep" : doing === "rest" ? "rest" : "scan";
+                        courseYaw.set(id, yaw);
+                        return {x, z, y: ground(x, z), yaw, moving, aloft: false, doing, beat, nx: 0, ny: 1, nz: 0};
+                    });
+                };
+                posture(nowS() + 1e6);
+                // Close, from its side and a little in front (`?camd=` metres, default 1.6).
+                const distance = Number(new URLSearchParams(location.search).get("camd") ?? "1.6");
+                const token = ++tracking;
+                debug().controls.minDistance = 0.1;
+                const step = () => {
+                    if (token !== tracking) return;
+                    debug().controls.minDistance = 0.1;
+                    const a = handle.locate(id);
+                    const tx = a ? a.x : from.x, tz = a ? a.z : from.z;
+                    handle.setView({target: {x: tx, y: (a ? a.y : ground(tx, tz)) + 0.1, z: tz}, distance, polar: 1.2, azimuth: yaw + Math.PI / 2 - 0.5});
+                    (window as unknown as {__arkCatLoc?: unknown}).__arkCatLoc = a;
+                    requestAnimationFrame(step);
+                };
+                requestAnimationFrame(step);
+                return {note: `${c.slug}: stand and look, walk, rest, sleep, stand (30 s)`, watch: [id], go: () => posture(nowS())};
+            }
+        ])
+    );
+
+    /**
+     * gfx (fauna), with `?town=1`: a course cat's trip up a garden wall, the real module's (`islands/town/cat-walls.ts`
+     * `wallTrip`, `wallPose`) from a garden spot near a wall, started now; the camera beside it (`?camd=`, default 3).
+     */
+    const wallScenes: Record<string, () => {note: string; watch: string[]; go?: () => void}> = Object.fromEntries(
+        COURSE_CAST.map((c, i) => [
+            `wall_${c.slug}`,
+            () => {
+                const id = ids[`c${i}`][0];
+                const origin = townOrigin!;
+                const plan = townPlan();
+                const set = townColliderSet(launchEnclosures(), origin);
+                const water = townWater(plan);
+                const host = {index: new WallIndex(wallStretches(plan, origin, set, water)), set, groundAt: (x: number, z: number) => Math.max(townHeight(x - origin.x, z - origin.z), 0), dry: (x: number, z: number) => dryAt(water, x - origin.x, z - origin.z)};
+                const pick = Number(new URLSearchParams(location.search).get("pick") ?? "0");
+                let trip: WallTrip | null = null;
+                let at: SchedAt | null = null;
+                let found = 0;
+                for (const spot of townAreas().spots) {
+                    if (spot.area !== "house" || spot.where === "indoor" || spot.where === "window") continue;
+                    const here: SchedAt = {x: spot.x + origin.x, y: townHeight(spot.x, spot.z), z: spot.z + origin.z, yaw: 0, moving: false, aloft: false, doing: "rest"};
+                    for (let slot = 1000; slot < 1004 && !trip; slot++) {
+                        const t = wallTrip(id, slot, 0.6, () => here, host);
+                        if (t && found++ === pick) {
+                            trip = t;
+                            at = here;
+                        }
+                    }
+                    if (trip) break;
+                }
+                if (!trip || !at) throw new Error("no wall trip found");
+                const tripNow = trip;
+                const from = at;
+                const run = (start: number) => {
+                    debug().setHome(id, from.x, from.z);
+                    pinPose(id, (epoch: number) => wallPose(tripNow, Math.min(Math.max(epoch - start, 0) + tripNow.t0, tripNow.t1 - 1e-3)) as unknown as Record<string, unknown>);
+                };
+                run(nowS() + 1e6);
+                const distance = Number(new URLSearchParams(location.search).get("camd") ?? "3");
+                const token = ++tracking;
+                const wall = host.index.list.find((w) => w.id === tripNow.wall)!;
+                const step = () => {
+                    if (token !== tracking) return;
+                    debug().controls.minDistance = 0.1;
+                    const a = handle.locate(id);
+                    const tx = a ? a.x : from.x, tz = a ? a.z : from.z;
+                    // (From the side the cat starts on, square to the wall, a little above.)
+                    const side = (from.x - (wall.ax + wall.bx) / 2) * wall.nx + (from.z - (wall.az + wall.bz) / 2) * wall.nz >= 0 ? 1 : -1;
+                    handle.setView({target: {x: tx, y: (a ? a.y : from.y) + 0.2, z: tz}, distance, polar: 1.15, azimuth: Math.atan2(wall.nx * side, wall.nz * side) + 0.35});
+                    requestAnimationFrame(step);
+                };
+                requestAnimationFrame(step);
+                return {note: `${c.slug}: a trip up a garden wall (${tripNow.wall}, ${(tripNow.t1 - tripNow.t0).toFixed(0)} s); the scene's own cat walls ${(debug() as unknown as {catWalls?: () => unknown}).catWalls?.() ? "on" : "off"}`, watch: [id], go: () => run(nowS())};
+            }
+        ])
+    );
+
     const SCENES: Record<string, () => {note: string; watch: string[]; go?: () => void}> = {
         ...courseScenes,
+        ...postureScenes,
+        ...wallScenes,
         /** The same flight seen from 36 m (past the near level's 25 m): a flying rig is still drawn near, flapping. */
         duck_flight_far: () => {
             const at = site("grassland", 4, 2);

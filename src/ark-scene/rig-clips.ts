@@ -125,6 +125,20 @@ export const MOVING_CLIPS: ReadonlySet<string> = new Set(["walk", "run", "climb"
 /** What the rig pipeline holds on a sitting rest pose (contract section 4: the moving clips and every flight clip). */
 const SIT_HELD: ReadonlySet<string> = new Set(Array.from(MOVING_CLIPS).concat(Array.from(FLIGHT_CLIPS)));
 
+/**
+ * gfx (fauna): rig clips held back for a species whose clips passed the pipeline's numeric checks but read wrong on
+ * screen (the owner, 2026-11-16, of the domestic cat: "weird poses"). The domestic cat's Ark model stands mid-stride (a
+ * forepaw lifted, `rig-v3/domestic-cat/sheet.png`), and every lying clip the pipeline bends from that rest pose
+ * (`v6_sheet.png`) keeps the stride: its "sleep_curl" is a hunched crouch with the head down and the legs splayed, its
+ * "lie" and "sleep" a low creep, its "sleep_side" a run on its side. Held, the scene draws its own postures instead
+ * (`sleep.ts`: the catalogue's curl for a cat, `data/ark/sleep-styles.json`), as it does for every animal without a rig.
+ * Its standing clips (idle, walk, run, groom, call, strike, fight, display, dig) play. Remove a row when a re-rigged file
+ * with a true lying pose is published.
+ */
+export const RIG_CLIPS_HELD: Readonly<Record<string, ReadonlySet<string>>> = {
+    "domestic-cat": new Set(["lie_down", "lie", "sleep", "sleep_curl", "sleep_side", "side_down", "side_up", "get_up", "get_up_fast", "roll", "wallow"])
+};
+
 /** Whether a rig set and a species' entry both approve flight (contract 3.1, rule 4). */
 export function flightApproved(manifest: RigManifest | null | undefined, slug: string): boolean {
     return manifest?.flight === true && manifest.species?.[slug]?.flight_approved === true;
@@ -137,6 +151,7 @@ export function rigClip(manifest: RigManifest | null | undefined, slug: string, 
     if (FLIGHT_CLIPS.has(clip) && !flightApproved(manifest, slug)) return null;
     if (!entry.clips || Array.isArray(entry.clips) || typeof entry.clips !== "object") return null;
     if (entry.pose && SIT_HELD.has(clip)) return null;
+    if (RIG_CLIPS_HELD[slug]?.has(clip)) return null;
     const found = entry.clips[clip];
     if (!found || typeof found !== "object") return null;
     if (found.pass !== true) return null;

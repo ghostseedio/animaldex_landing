@@ -210,6 +210,7 @@ import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF,
 import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
 import {townWorldOrigin} from "@/ark-scene/islands";
 import {TOWN_GRID, TOWN_NEAR_LIVE} from "@/ark-scene/islands/town/chunks";
+import type {CatWalls as CatWallsT} from "@/ark-scene/islands/town/cat-walls"; // gfx (fauna)
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
 import {prepareGhostPlaces, prepareReadPlaces} from "@/ark-scene/runtime/prebuild";
 import {sameArkRead, sameJson} from "@/ark-scene/runtime/same";
@@ -1557,6 +1558,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (town) {
                 townWorld = town;
                 townBuild = null;
+                // gfx (fauna): the town's cat walls (its own chunk), from its plan and colliders.
+                const walls = island?.origin, wallSet = town.sampler.colliders;
+                if (walls && wallSet) void import("@/ark-scene/islands/town/cat-walls").then((m) => (catWalls = m.townCatWalls(walls, wallSet))).catch(() => undefined);
                 townWorldReady();
             }
             return;
@@ -1804,9 +1808,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return own && other ? unionColliders(own, other) : own ?? other;
     };
     /** Its shared pose before the collisions: its schedule's, then liveliness's (young at heel, shelter, the tide), a pin. */
+    // gfx (fauna): a town cat up on a garden wall now and then (`islands/town/cat-walls.ts`): shared, from its schedule's
+    // resting spot and back to it; loaded with the town's world.
+    let catWalls: CatWallsT | null = null;
     const sharedBase = (entry: Entry, epoch: number, pin = sharedPins.size ? sharedPins.get(entry.animal.id) : undefined) => {
         const fromTrip = liveliness.sharedPose(entry, schedulePose(entry, epoch), epoch);
-        return pin ? {...fromTrip, ...pin(epoch)} : fromTrip;
+        const walled = catWalls && entry.sched && townIds.has(entry.animal.id) ? catWalls.pose(entry.animal.model_slug, entry.animal.id, epoch, Math.max(entry.length, 0.2) * 1.3, (t) => schedulePose(entry, t)) : null; // gfx (fauna)
+        const base = walled ? {...fromTrip, ...walled} : fromTrip;
+        return pin ? {...base, ...pin(epoch)} : base;
     };
     /** Development only: `window.__arkCollideOff = true` before mounting draws the schedule's poses as they come. */
     const collisionsOn = (globalThis as {__arkCollideOff?: boolean}).__arkCollideOff !== true;
@@ -1824,7 +1833,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         partner: (pose.act as (RecipeAct & {with?: string | null}) | null | undefined)?.with ?? (pose as {nurse?: string}).nurse ?? null,
         attached: entry.sched?.trip ? attachedOn(entry.sched.trip, epoch) : null,
         // (Perched up on a surface: held there, never eased off its branch into the air.)
-        fixed: !pose.aloft && pose.y > Math.max(heightAt(pose.x, pose.z), 0) + 0.3 && Boolean(entry.sched?.trip && (tripPhase(entry.sched.trip, epoch) === "stay" || tripPhase(entry.sched.trip, epoch) === "pause") && attachedOn(entry.sched.trip, epoch))
+        fixed: (pose as {onWall?: boolean}).onWall === true /* gfx (fauna): a cat on a wall */ || !pose.aloft && pose.y > Math.max(heightAt(pose.x, pose.z), 0) + 0.3 && Boolean(entry.sched?.trip && (tripPhase(entry.sched.trip, epoch) === "stay" || tripPhase(entry.sched.trip, epoch) === "pause") && attachedOn(entry.sched.trip, epoch))
     });
     /** A hamlet resident out of doors (on its spot, or walking its door route), before the collisions; null indoors. */
     const residentBase = (entry: Entry): (ResolvePose & {yaw: number}) | null => {
@@ -8404,7 +8413,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), catWalls: () => catWalls /* gfx (fauna) */, hatchings: () => mouthCarry.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
