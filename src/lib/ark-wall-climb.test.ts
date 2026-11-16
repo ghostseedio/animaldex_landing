@@ -128,7 +128,8 @@ test("the town's wall places (a lamp-lit wall, under the eaves) are on their bui
         if (wallPlace) {
             onWalls++;
             assert.ok(Math.abs(p.ny) < STEEP_NY && Math.abs(Math.hypot(p.nx, p.ny, p.nz) - 1) < 1e-9, `${p.id}: not a wall's normal`);
-        } else if (!p.id.startsWith("town:tree:")) assert.deepEqual([p.nx, p.ny, p.nz], [0, 1, 0], `${p.id}: moved off up`);
+        // (A tree's and, p2 (town2), a fallen log's or stump's places are on the drawn wood: its bark faces out of it.)
+        } else if (!p.id.startsWith("town:tree:") && !p.id.startsWith("town:deadwood:")) assert.deepEqual([p.nx, p.ny, p.nz], [0, 1, 0], `${p.id}: moved off up`);
     }
     assert.ok(onWalls > 300, `${onWalls} wall points`);
 });
