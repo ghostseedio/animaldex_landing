@@ -90,7 +90,7 @@ export function townColliderList(open: readonly string[], origin: {x: number; z:
         for (const item of paddockItems(e, zooSpotsOf(e))) {
             const spec = HABITAT_ITEMS[item.what];
             const g = townHeight(item.x, item.z);
-            out.push({shape: "circle", kind: spec.kind, id: `town:zoo:${item.id}`, cx: item.x + ox, cz: item.z + oz, r: item.r, reach: item.r, y0: g - 0.2, y1: g + spec.height, gap: 0, ...(spec.soft ? {soft: true} : {})});
+            out.push({shape: "circle", kind: spec.kind, id: `town:habitat:${item.id}`, cx: item.x + ox, cz: item.z + oz, r: item.r, reach: item.r, y0: g - 0.2, y1: g + spec.height, gap: 0, ...(spec.soft ? {soft: true} : {})});
         }
     }
     return out;

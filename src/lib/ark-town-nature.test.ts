@@ -71,7 +71,8 @@ test("town trees: library trees at real heights, every level's file there", () =
 });
 
 test("town trees: trunks are colliders, shrubs soft ones", () => {
-    const colliders = townColliderList(launchEnclosures(), {x: 0, z: 0});
+    // (p3 zoofix: the zoo habitats' plants are soft colliders of their own, `town:habitat:`, tested in ark-zoo-grounding.)
+    const colliders = townColliderList(launchEnclosures(), {x: 0, z: 0}).filter((c) => !c.id.startsWith("town:habitat:"));
     const trunks = colliders.filter((c) => c.kind === "trunk").length;
     const shrubs = colliders.filter((c) => c.kind === "shrub").length;
     assert.equal(trunks, [...trees, ...zooTrees].filter((t) => !t.low).length);

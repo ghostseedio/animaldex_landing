@@ -658,6 +658,6 @@ export function paddockItems(e: {id: string; type: string; slot: {at: Box; seed:
     return plot.footprints.flatMap((f, i) => {
         if (!HABITAT_ITEMS[f.what]) return [];
         const q = at({x: s.x, y: 0, z: s.z, rot: s.rot}, f.x, 0, f.z);
-        return [{id: `${e.id}:${f.what}:${i}`, what: f.what, x: q[0], z: q[2], r: f.r}];
+        return [{id: `${e.id}/${f.what}-${i}`, what: f.what, x: q[0], z: q[2], r: f.r}];
     });
 }

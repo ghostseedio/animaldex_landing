@@ -144,7 +144,7 @@ test("the habitats' rocks, mounds, logs, hay racks and shelters are colliders wh
     let items = 0;
     for (const e of outdoor) {
         for (const it of paddockItems(e, zooSpotsOf(e))) {
-            const c = list.find((x) => x.id === `town:zoo:${it.id}`);
+            const c = list.find((x) => x.id === `town:habitat:${it.id}`);
             assert.ok(c && c.shape === "circle", `${it.id} is a collider`);
             assert.equal(c.kind, HABITAT_ITEMS[it.what].kind);
             // (Inside its enclosure, drawn where the dressing put it.)
