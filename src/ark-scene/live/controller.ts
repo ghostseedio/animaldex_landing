@@ -417,8 +417,8 @@ export class ArkLive {
         const now = performance.now();
         this.ticks++;
         if (now - this.dormantAt > 600_000) this.readDormant();
-        // Seen and now: only while the log is open and the world's foot is clear (a line said late is no longer happening).
-        const open = !this.view.isCollapsed && !this.view.isCovered && !this.options.reducedMotion;
+        // Seen and now: only while the log is open (above the card too, when one is up: a line said late is no longer happening).
+        const open = !this.view.isCollapsed && !this.options.reducedMotion;
         if (!open) this.momentWindow = null;
         if (open) {
             const scene = this.options.scene();

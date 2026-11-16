@@ -7,7 +7,8 @@
  * Lines of the Ark's record are solid; lines seen near the camera are lighter, dashed, with an eye and a "Seen"
  * tag; the behaviour schedule's moments anywhere on the Ark (decision 240) are as light, with a pulse and a "Now"
  * tag. The chip folds the lines away (remembered per reader when the host gives a storage key). While a card
- * covers the foot of the world, the whole log steps aside.
+ * covers the foot of the world, the whole log moves up above it (the host's `--ark-card-h`, the card's height; owner
+ * 2026-11-16: the card "hides the 'live' log … we should move the live logs up when the description container shows up").
  */
 
 import type {ArkLiveLine} from "@/lib/ark-live-log";
@@ -19,6 +20,9 @@ const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe U
  * (`--ark-inset-bottom`, the embed's `?insetBottom=`); both 0 on /ark.
  */
 export const ARK_BOTTOM_CLEAR = "calc(12px + env(safe-area-inset-bottom, 0px) + var(--ark-inset-bottom, 0px))";
+
+/** While a card is up, the log shows only its newest line (the list is oldest first). */
+const COVERED_RULE = "[data-ark-live=\"log\"][data-ark-live-covered] [role=\"log\"] > :not(:last-child) { display: none !important; }";
 
 /** A line's dot, by kind (the record), in the page's palette. */
 const DOT: Record<string, string> = {
@@ -88,7 +92,7 @@ export class ArkLiveLogView {
             maxWidth: "min(25rem, calc(100% - 80px))",
             pointerEvents: "none",
             font: `600 12.5px/1.3 ${FONT}`,
-            transition: options.reducedMotion ? "none" : "opacity 250ms ease",
+            transition: options.reducedMotion ? "none" : "opacity 250ms ease, bottom 250ms ease",
             WebkitTapHighlightColor: "transparent"
         });
         const list = document.createElement("div");
@@ -131,6 +135,12 @@ export class ArkLiveLogView {
         });
         root.append(list, chip);
         host.appendChild(root);
+        if (!host.ownerDocument.getElementById("ark-live-covered-rule")) {
+            const rule = host.ownerDocument.createElement("style");
+            rule.id = "ark-live-covered-rule";
+            rule.textContent = COVERED_RULE;
+            host.ownerDocument.head.appendChild(rule);
+        }
         this.root = root;
         this.list = list;
         this.chip = chip;
@@ -177,11 +187,14 @@ export class ArkLiveLogView {
         this.applyCollapsed();
     }
 
-    /** A card covers the foot of the world: the log steps aside until it closes. */
+    /** A card covers the foot of the world: the log moves up above it (by the host's `--ark-card-h`) until it closes. */
     setCovered(covered: boolean) {
         this.covered = covered;
-        this.root.style.opacity = covered ? "0" : "1";
-        this.root.style.visibility = covered ? "hidden" : "visible";
+        this.root.style.bottom = covered ? `calc(${ARK_BOTTOM_CLEAR} + var(--ark-card-h, 0px))` : ARK_BOTTOM_CLEAR;
+        // (Above a card the world left is short, a phone's most of all: only the newest line stays, by the chip; the
+        // others come back when the card closes. Never a line cut in half under the controls at the top.)
+        if (covered) this.root.dataset.arkLiveCovered = "";
+        else delete this.root.dataset.arkLiveCovered;
     }
 
     get isCollapsed(): boolean {
