@@ -18,6 +18,8 @@
  *
  * The scene never decides a birth: the young and their parents come only from the record (`voyage_events` kind `birth`,
  * not `from_egg`). Which parent is the mother is the scene's drawn sex (the engine has none), else the record's first.
+ * The card says "giving birth" while she does; mother and young then read "resting" (one new activity only: the Ark
+ * page's static JavaScript budget, `ark-page-weight.test.ts`, had 41 bytes left).
  * Like the live matings (`live-matings.ts`), the scene gives it its entries through a host and this layer only says,
  * per frame, which act pose each takes, so nothing here touches the renderer.
  */
@@ -156,7 +158,7 @@ function at(p: Point, yaw: number, ground: Ground, state: string, extra: Partial
 export function motherPose(sc: BirthScript, s: number, ground: Ground, youngId?: string): ActPose {
     const lying = !sc.standing && sc.style !== "beside" && sc.style !== "back";
     const state = lying ? "rest" : "scan";
-    const extra: Partial<ActPose> = {meal: s < sc.lickEnd ? "birthing" : "nursing", ...(youngId ? {with: youngId} : {})};
+    const extra: Partial<ActPose> = {meal: s < sc.lickEnd ? "birthing" : "resting", ...(youngId ? {with: youngId} : {})};
     if (s < sc.first) return at(sc.spot, sc.yaw, ground, state, extra);
     if (s < sc.lickEnd && sc.style !== "beside" && sc.style !== "pouch" && sc.style !== "back") {
         // She turns to the young and licks them (head down to them, a slow bob).
@@ -175,7 +177,7 @@ export function motherPose(sc: BirthScript, s: number, ground: Ground, youngId?:
 export function youngPose(sc: BirthScript, k: number, s: number, ground: Ground, motherId?: string): ActPose {
     const shown = Math.min(k, sc.born.length - 1);
     const bornAt = sc.first + EACH * shown;
-    const extra: Partial<ActPose> = {meal: "nursing", ...(motherId ? {with: motherId} : {})};
+    const extra: Partial<ActPose> = {meal: "resting", ...(motherId ? {with: motherId} : {})};
     const p = sc.born[shown];
     const faceMother = yawTo(p, sc.spot);
     if (s < bornAt || k >= sc.born.length || sc.style === "pouch") return {...at(p, faceMother, ground, "rest"), hidden: true};

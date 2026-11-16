@@ -20,6 +20,7 @@
 
 import {decodeArkEvents, type ArkEvent} from "@/lib/ark-life";
 import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText, arkLiveServerItems, arkNowItems, arkSeenItems, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveLine, type ArkLiveText} from "@/lib/ark-live-log";
+import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt-outcome";
 import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 import {ARK_ACTIVITY_ENGLISH, arkRecordNotesFromEvents, type ArkActivityWords} from "@/lib/ark-animal-status";
 import {arkPickAnimal, arkSpeciesKey} from "@/lib/ark-population";
@@ -95,6 +96,7 @@ function storage(): Storage | null {
 
 export class ArkLive {
     private readonly log = new ArkLiveLog();
+    private readonly outcomes = new HuntOutcomes();
     private readonly memory = new ArkSeenMemory();
     private readonly said = new Set<string>();
     private readonly view: ArkLiveLogView;
@@ -132,7 +134,7 @@ export class ArkLive {
         }
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
-            text: (line) => arkLiveLineText(line, this.text, this.locale),
+            text: (line) => caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
             onTap: (line) => this.focus(line),
             reducedMotion: Boolean(options.reducedMotion),
             serverLife: ARK_LIVE_LOG_DEFAULTS.serverLife,
@@ -241,6 +243,14 @@ export class ArkLive {
         }
     }
 
+    /** Into the log, a hunt's outcome marked on the way (`hunt-outcome.ts`). */
+    private say(items: readonly ArkLiveItem[], now: number): boolean {
+        const noted = this.outcomes.note(items, now);
+        const before = this.log.lines.length;
+        this.log.lines = withoutEndedHunts(this.log.lines, noted.ended);
+        return this.log.push(noted.items, now) || this.log.lines.length !== before;
+    }
+
     /** Live young were born (not a hatching): the litter's birth is acted in the live world (the scene's `addBirths`). */
     private born(events: readonly ArkEvent[]) {
         const litters = new Map<string, {key: string; parents: string[]; young: string[]; t0: number}>();
@@ -278,7 +288,7 @@ export class ArkLive {
 
     private push(items: ArkLiveItem[]) {
         if (!items.length) return;
-        this.log.push(items, performance.now());
+        this.say(items, performance.now());
         this.render();
     }
 
@@ -352,14 +362,14 @@ export class ArkLive {
                 this.momentWindow = got.window;
                 const items = arkNowItems(got.moments, this.memory);
                 for (const item of items) if (item.focus.animalId) this.nowSaid.set(`${item.focus.animalId}:${item.kind}`, Date.now() + NOW_SEEN_MS);
-                if (items.length) this.log.push(items, now);
+                if (items.length) this.say(items, now);
             }
             // Seen: about once a second; an act a moment already named is not said again.
             if (this.ticks % 2 === 0) {
                 const seen = scene?.seen?.();
                 if (seen && (seen.acts.length || seen.alarms.length)) {
                     const items = arkSeenItems(seen, this.memory).filter((item) => (this.nowSaid.get(`${item.focus.animalId}:${item.kind}`) ?? 0) < Date.now());
-                    if (items.length) this.log.push(items, now);
+                    if (items.length) this.say(items, now);
                 }
             }
             if (this.nowSaid.size > 400) for (const [key, until] of Array.from(this.nowSaid)) if (until < Date.now()) this.nowSaid.delete(key);

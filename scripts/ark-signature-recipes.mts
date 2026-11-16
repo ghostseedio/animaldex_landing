@@ -37,6 +37,9 @@ for (const [slug, row] of Object.entries(table.species)) {
 const usual = (id: string) => [...(weights.get(id) ?? new Map([[3, 1]]))].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
 // (A nest needs the row's nest field, which only the generator writes.)
 const NEEDS_GENERATOR = new Set(["nest_build"]);
+// The ways of hunting: a species that already has one keeps it (a second would halve the hunts its own text put first;
+// an osprey's talon grab is its plunge).
+const HUNTS = new Set(["perch_plunge", "air_plunge", "talon_grab", "wade_spear", "bill_sweep", "pouch_scoop", "surface_dive", "chase_fish", "river_fish", "pounce", "hawk_insects", "aerial_hawk", "hover_drop", "bat_hawk", "bat_trawl"]);
 
 let added = 0;
 const skipped: string[] = [];
@@ -50,6 +53,10 @@ for (const a of additions) {
     }
     if (recipesOf(row).some((r) => r.id === a.recipe)) {
         already.push(`${a.slug} ${a.recipe}`);
+        continue;
+    }
+    if (HUNTS.has(a.recipe) && recipesOf(row).some((r) => HUNTS.has(r.id))) {
+        skipped.push(`${a.slug} ${a.recipe}: it already hunts its own way`);
         continue;
     }
     if (NEEDS_GENERATOR.has(a.recipe) || !plans.get(a.recipe)?.has(plan)) {

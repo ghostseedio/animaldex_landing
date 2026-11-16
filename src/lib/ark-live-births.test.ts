@@ -29,8 +29,8 @@ test("an open birth: she lies, the young are hidden until born one by one, are l
     assert.ok(sc.riseEnd > sc.lickEnd, "calves get up");
     const nursing = youngPose(sc, 0, sc.end - 1, ground);
     assert.equal(nursing.state, "eat");
-    assert.equal(nursing.meal, "nursing");
-    assert.equal(motherPose(sc, sc.end - 1, ground).meal, "nursing");
+    assert.equal(nursing.meal, "resting");
+    assert.equal(motherPose(sc, sc.end - 1, ground).meal, "resting");
 });
 
 test("a tall hoofed mother (a giraffe) gives birth standing", () => {

@@ -65,11 +65,7 @@ export type ArkLiveItem = {
     hearts?: number | null;
     /** A return from old age: a young adult again. */
     young?: boolean;
-    /**
-     * A meal whose predator was seen setting out to hunt (the "now" hunting line, encounter hunting's foray) shortly
-     * before: the record's outcome of that hunt, said as "caught" (2026-11-16, handover §5: hunts never said whether
-     * they worked). A hunt with no meal in the record stays the seen line alone; an escape waits for the record's.
-     */
+    /** A meal that ends a hunt seen setting out (`src/ark-scene/live/hunt-outcome.ts`): said as "caught". */
     hunted?: boolean;
     focus: ArkLiveFocus;
 };
@@ -298,11 +294,9 @@ export type ArkLiveLogOptions = {
     alarmGap: number;
     /** Record items waiting at most; more fold into one "+N more" line. */
     maxQueue: number;
-    /** A record meal within this long (ms) of its predator's hunting line is that hunt's outcome (a foray lasts up to ~70 min). */
-    huntWindow: number;
 };
 
-export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, nowLife: 20_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6, huntWindow: 90 * 60_000};
+export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, nowLife: 20_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6};
 
 /** The kinds the record keeps first when a burst is bigger than the log: the rare and the sad before the many. */
 const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, meal: 1, starved: 2, death: 3, gone: 3, revived: 3, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, hunting: 7, eggs: 7, playing: 7, toWater: 7, home: 7, flock: 7, group: 7, doing: 7, breathing: 7, calling: 7, bathing: 7, feeding: 7, more: 8};
@@ -317,8 +311,6 @@ export class ArkLiveLog {
     private lastShown = -Infinity;
     private lastSeen = -Infinity;
     private lastAlarm = -Infinity;
-    /** Predators seen setting out to hunt: animal id -> when (ms). */
-    private hunts = new Map<string, number>();
     private readonly options: ArkLiveLogOptions;
 
     constructor(options: Partial<ArkLiveLogOptions> = {}) {
@@ -331,21 +323,7 @@ export class ArkLiveLog {
 
     push(items: readonly ArkLiveItem[], now: number): boolean {
         let changed = false;
-        this.hunts.forEach((at, id) => {
-            if (now - at > this.options.huntWindow) this.hunts.delete(id);
-        });
-        for (let item of items) {
-            const hunter = item.focus.animalId;
-            if (item.source === "now" && item.kind === "hunting" && hunter) this.hunts.set(hunter, now);
-            else if (item.source === "server" && item.kind === "meal" && hunter && this.hunts.has(hunter)) {
-                // The hunt's outcome: said as caught, and its hunting line (if still up, or still waiting) gives way to it.
-                this.hunts.delete(hunter);
-                item = {...item, hunted: true};
-                const up = this.lines.length;
-                this.lines = this.lines.filter((l) => !(l.kind === "hunting" && l.focus.animalId === hunter));
-                this.queue = this.queue.filter((q) => !(q.kind === "hunting" && q.focus.animalId === hunter));
-                if (this.lines.length !== up) changed = true;
-            }
+        for (const item of items) {
             // Folded into a line still on screen.
             const line = this.lines.find((l) => l.key === item.key && l.kind !== "more" && now - l.updatedAt < this.options.groupWindow);
             if (line) {
@@ -434,7 +412,7 @@ function isEnglish(locale: string): boolean {
 }
 
 /** A line as the reader reads it. `locale`: the words' language (English names take their plural). */
-export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young" | "hunted">>, words: ArkLiveText, locale: string): string {
+export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young">>, words: ArkLiveText, locale: string): string {
     const text = arkLiveLineBase(line, words, locale);
     const hearts = line.hearts;
     if (typeof hearts !== "number" || line.kind === "revived" || (line.kind !== "meal" && line.kind !== "death" && line.kind !== "starved")) return text;
@@ -452,8 +430,6 @@ const ARK_LIVE_HEARTS_ENGLISH = {
     gone: "{animal} is gone from the Ark"
 } as const;
 
-const ARK_LIVE_HUNT_ENGLISH = {caught: "{aPredator} caught {aPrey}"} as const;
-
 /** "2 ♥ left", "1 ♥ left", "no ♥ left". */
 export function arkHeartsLeftText(hearts: number, words: ArkLiveText, locale: string): string {
     const live = {...ARK_LIVE_HEARTS_ENGLISH, ...words.live};
@@ -461,7 +437,7 @@ export function arkHeartsLeftText(hearts: number, words: ArkLiveText, locale: st
     return n === 0 ? live.heartsLeftNone : n === 1 ? live.heartsLeftOne : fillArkWords(live.heartsLeftOther, {n: n.toLocaleString(locale)});
 }
 
-function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young" | "hunted">>, words: ArkLiveText, locale: string): string {
+function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young">>, words: ArkLiveText, locale: string): string {
     const live = words.live;
     const replay = words.replay;
     const many = line.count > 1;
@@ -520,7 +496,6 @@ function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "
         case "meal":
             // One it recovers from (hearts on): said from its side, so its hearts left read as its own.
             if (typeof line.hearts === "number" && line.other) return fillArkWords(live.eatenBy ?? ARK_LIVE_HEARTS_ENGLISH.eatenBy, {animal: line.other, aPredator: arkWithArticle(line.animal, words)});
-            if (line.hunted && !many) return capitalised(fillArkWords(live.caught ?? ARK_LIVE_HUNT_ENGLISH.caught, {aPredator: arkWithArticle(line.animal, words), aPrey: arkWithArticle(line.other ?? "", words)}));
             return times(fillArkWords(replay.meal, {predator: line.animal, aPrey: arkWithArticle(line.other ?? "", words)}));
         case "death":
             return many ? fillArkWords(live.deathOther, {count, animals}) : fillArkWords(replay.death, {animal: line.animal});
