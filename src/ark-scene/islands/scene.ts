@@ -213,7 +213,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const {townColliderSet} = await import("@/ark-scene/islands/town/colliders");
     const {primeTownDrawnGrid, setTownWalkSurfaces, townDrawnGround, townDrawnHeight, townWalkSurfaces, townWaterLevel, townWaterSurface} = await import("@/ark-scene/islands/town/drawn-ground");
     const {setIslandWater} = await import("@/ark-scene/water-level");
-    const {homeSites, tankPose} = await import("@/ark-scene/islands/town/tanks");
+    const {homeSites, tankPose, tankBody} = await import("@/ark-scene/islands/town/tanks");
+    const {clearOfHallRocks} = await import("@/ark-scene/islands/town/hall-rocks"); // p3 (solid)
     const {buildPetHomes} = await import("@/ark-scene/islands/town/render/pet-homes");
     const {townHouseholds} = await import("@/ark-scene/islands/town/areas");
     const {modelBase} = await import("@/ark-scene/grounding/base");
@@ -534,7 +535,10 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const tank = info?.tank;
             const animal = tank ? townAnimals.get(id) : undefined;
             if (!tank || !animal) return null;
-            const pose = tankPose(tank, animal, length, height, modelBase(animal.model_slug)?.plan ?? null, clock);
+            const plan = modelBase(animal.model_slug)?.plan ?? null;
+            // p3 (solid): off the aquarium hall's rocks but through its caves (`hall-rocks.ts`).
+            const body = tankBody(animal.model_slug, plan, length);
+            const pose = clearOfHallRocks(tank, tankPose(tank, animal, length, height, plan, clock), body.length, body.width, height);
             return {x: pose.x + origin.x, z: pose.z + origin.z, yaw: pose.yaw, pitch: pose.pitch, base: pose.base, spec: pose.spec};
         },
         figureBase: (id, x, z, ground, tall) => {

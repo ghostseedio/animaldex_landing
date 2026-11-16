@@ -28,17 +28,18 @@ import {displayLength} from "@/ark-scene/sizes";
 export type SolidAudit = {before: boolean; items: number; samples: number; props: number; kinds: string[]; byKind: Record<string, number>; byArea: Record<string, number>; pairs: Record<string, number>; examples: string[]; ms: number};
 
 /** `trace`: each walker's drawn pose at each sample (world frame), for the frames (`scripts/ark-solid-frames.mts`). */
-export function townSolidAudit(options: {hours: number; step: number; before?: boolean; trace?: (id: string, slug: string, x: number, z: number, radius: number) => void}): SolidAudit {
+export function townSolidAudit(options: {hours: number; step: number; before?: boolean; trace?: (id: string, slug: string, x: number, z: number, radius: number) => void; snapshot?: unknown; from?: number; hits?: (t: number, id: string, slug: string, prop: string, depth: number) => void}): SolidAudit {
     const before = options.before === true;
     const hoursArg = options.hours;
     const stepArg = options.step;
     const origin = townWorldOrigin();
-    const town = arkIslandSnapshot(decodeArkSnapshot(withArkIslandsFixture(base))!, "town");
+    // (`snapshot`: a saved read as it is, no clones: to pick the moments for the in-scene renders.)
+    const town = arkIslandSnapshot(decodeArkSnapshot(options.snapshot ?? withArkIslandsFixture(base))!, "town");
     // (The fixture's town has six goats and four dogs; a fuller farm and more gardens, cloned from them: horses, sheep, pigs,
     // donkeys, hens on the farms, dogs, cats and rabbits in the gardens. Test animals, never shown.)
     const EXTRA: Array<[string, string, number]> = [["farm", "domestic-horse", 8], ["farm", "domestic-sheep", 6], ["farm", "domestic-pig", 3], ["farm", "domestic-donkey", 3], ["farm", "domestic-chicken", 6], ["house", "domestic-dog", 12], ["house", "domestic-cat", 6], ["house", "domestic-rabbit", 3]];
     const animals = [...town.animals];
-    for (const [area, slug, n] of EXTRA) {
+    for (const [area, slug, n] of options.snapshot ? [] : EXTRA) {
         const like = town.animals.find((a) => a.area === area)!;
         for (let k = 0; k < n; k++) animals.push({...like, id: `00000000-0000-4000-8000-${(slug + k).split("").reduce((h, ch) => (h * 31 + ch.charCodeAt(0)) >>> 0, 7).toString(16).padStart(12, "0")}`, model_slug: slug, name: slug, slot: k, arrived_at: `2026-11-0${1 + (k % 9)}T0${k % 10}:00:00Z`});
     }
@@ -113,7 +114,7 @@ export function townSolidAudit(options: {hours: number; step: number; before?: b
         if (it) clearWithin(pose, it.body.radius + it.body.half, set, (x, z) => inPoly(mask, x - origin.x, z - origin.z));
     };
     const byId = new Map(items.map((it) => [it.id, it]));
-    const from = 1_763_000_000;
+    const from = options.from ?? 1_763_000_000;
     let samples = 0;
     const byKind: Record<string, number> = {};
     const byArea: Record<string, number> = {};
@@ -137,6 +138,7 @@ export function townSolidAudit(options: {hours: number; step: number; before?: b
                 byKind[p.kind] = (byKind[p.kind] ?? 0) + 1;
                 byArea[it.area] = (byArea[it.area] ?? 0) + 1;
                 const key = `${it.slug}#${it.id.slice(-4)} ${it.where} ${p.id}`;
+                options.hits?.(t, it.id, it.slug, p.id, -p.d(at.x, at.z));
                 pairs[key] = Math.max(pairs[key] ?? 0, -p.d(at.x, at.z));
                 if (examples.length < 40) examples.push(`${it.slug}(${it.area}/${it.where}) in ${p.id} by ${(-p.d(at.x, at.z)).toFixed(2)} at ${t}`);
                 break;
