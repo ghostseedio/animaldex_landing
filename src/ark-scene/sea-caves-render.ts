@@ -45,7 +45,7 @@ export class SeaCavesView {
         let indices = 0;
         for (const cave of caves) {
             for (const rock of cave.rocks) {
-                const mesh = cachedRock(rock.style, rock.variant, detail);
+                const mesh = cachedRock(rock.style, rock.variant, detail, true);
                 vertices += mesh.positions.length / 3;
                 indices += mesh.index.length;
             }
@@ -58,7 +58,7 @@ export class SeaCavesView {
         let i = 0;
         for (const cave of caves) {
             for (const rock of cave.rocks) {
-                const mesh = cachedRock(rock.style, rock.variant, detail);
+                const mesh = cachedRock(rock.style, rock.variant, detail, true);
                 const {min, max} = mesh.bounds;
                 const kx = rock.sx / Math.max(max[0] - min[0], 0.01);
                 const ky = rock.sy / Math.max(max[1] - min[1], 0.01);

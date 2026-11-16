@@ -250,7 +250,7 @@ export class Geo {
         // p2 (town2): shaded smooth from the rock's own normals and coloured per corner from its own weathering (lichen,
         // streaks, moss), tinted to `colour` (the owner: "big rocks and boulders shouldn't have any sharp polygons"):
         // it was drawn flat, one shade a face, so even a rounded rock showed every facet.
-        const m = cachedRock("boulder", variant % ROCK_VARIANTS.boulder, detail);
+        const m = cachedRock("boulder", variant % ROCK_VARIANTS.boulder, detail, true);
         const [x0, , z0] = m.bounds.min;
         const [x1, y1, z1] = m.bounds.max;
         const kx = (2 * sx) / (x1 - x0);

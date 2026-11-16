@@ -193,15 +193,26 @@ const RECIPES: Record<RockStyle, Recipe> = {
     // (p2, town2: the owner, "big rocks and boulders shouldn't have any sharp polygons, need to look more realistic". A
     // boulder is a block long tumbled and weathered: its faces still broadly flat, but every arris worn round, shaded
     // smooth, lichen on its upper faces, rain streaks down its sides, moss at its foot.)
-    boulder: {radii: (r) => [1, 0.55 + 0.25 * r(), 0.7 + 0.25 * r()], cuts: 8, reach: 0.86, spread: 0.3, joints: 2, beds: 0, step: 0, tilt: 0, lump: 0.12, grain: 0.03, base: 0.16, lobes: 1, round: 3, hard: 0.85, crease: Math.PI, weather: 1},
+    boulder: {radii: (r) => [1, 0.55 + 0.25 * r(), 0.7 + 0.25 * r()], cuts: 10, reach: 0.84, spread: 0.3, joints: 3, beds: 0, step: 0, tilt: 0, lump: 0.08, grain: 0.022, base: 0.16, lobes: 1},
     // (p2, town2: crags and slabs keep their beds and joints, their arrises worn by one round of smoothing, shaded
     // smooth across all but the sharpest folds, a little weathering.)
     // A crag: bedded rock standing out of the slope, its beds stepped and split by joints into a few blocks.
-    crag: {radii: (r) => [1, 1.05 + 0.45 * r(), 0.72 + 0.2 * r()], cuts: 8, reach: 0.86, spread: 0.28, joints: 4, beds: 2.6, step: 0.13, tilt: 0.25, lump: 0.07, grain: 0.02, base: 0.1, lobes: 4, round: 1, crease: 1.05, weather: 0.6},
+    crag: {radii: (r) => [1, 1.05 + 0.45 * r(), 0.72 + 0.2 * r()], cuts: 8, reach: 0.86, spread: 0.28, joints: 4, beds: 2.6, step: 0.13, tilt: 0.25, lump: 0.07, grain: 0.02, base: 0.1, lobes: 4},
     // A shelf of bedded rock barely out of the ground: low, wide, its beds stepped.
-    slab: {radii: (r) => [1.25 + 0.3 * r(), 0.45 + 0.12 * r(), 0.95 + 0.2 * r()], cuts: 8, reach: 0.86, spread: 0.3, joints: 3, beds: 4.2, step: 0.06, tilt: 0.14, lump: 0.06, grain: 0.018, base: 0.22, lobes: 2, round: 1, crease: 1.05, weather: 0.6},
+    slab: {radii: (r) => [1.25 + 0.3 * r(), 0.45 + 0.12 * r(), 0.95 + 0.2 * r()], cuts: 8, reach: 0.86, spread: 0.3, joints: 3, beds: 4.2, step: 0.06, tilt: 0.14, lump: 0.06, grain: 0.018, base: 0.22, lobes: 2},
     // A scree stone: a sharp fragment.
     scree: {radii: (r) => [1, 0.45 + 0.3 * r(), 0.6 + 0.3 * r()], cuts: 6, reach: 0.8, spread: 0.35, joints: 1, beds: 0, step: 0, tilt: 0, lump: 0.05, grain: 0, base: 0.2, lobes: 1}
+};
+
+/**
+ * The wear a DRAWN rock gets (p2, town2), on the same fracture: its arrises worn round, shaded smooth, weathered. Only
+ * what the scene draws (`worn`): every footprint, height, walk mask, collider and attach point is the unworn shape's,
+ * so the placement and the positions atlas are unchanged (coordinator's decision, 2026-11-16).
+ */
+const WEAR: Partial<Record<RockStyle, Pick<Recipe, "round" | "hard" | "crease" | "weather">>> = {
+    boulder: {round: 3, crease: Math.PI, weather: 1},
+    crag: {round: 1, crease: 1.05, weather: 0.6},
+    slab: {round: 1, crease: 1.05, weather: 0.6}
 };
 
 /** The stone's tones (linear-ish rgb before the material's lift): grey granite, warmer sandstone. */
@@ -257,8 +268,8 @@ function lobe(recipe: Recipe, random: () => number, detail: number, seed: number
  * A rock of a style: `variant` picks its shape (any integer: a different rock), `detail` its mesh (0 → 20
  * triangles a lobe, 1 → 80, 2 → 320, 3 → 1280). The same variant at every detail is the same rock, coarser.
  */
-export function rockMesh(style: RockStyle, variant: number, detail: number): RockMesh {
-    const recipe = RECIPES[style];
+export function rockMesh(style: RockStyle, variant: number, detail: number, worn = false): RockMesh {
+    const recipe: Recipe = worn ? {...RECIPES[style], ...WEAR[style]} : RECIPES[style];
     const seed = 7919 * (variant + 1) + style.length * 104729 + style.charCodeAt(0) * 31;
     const random = stream(seed);
     const lobes: Array<{p: number[]; index: number[]; cutDepth: number[]}> = [];
@@ -559,12 +570,12 @@ const CREASE = 0.62;
 
 const meshCache = new Map<string, RockMesh>();
 
-/** The rock's mesh, cached (one per style, variant and detail). */
-export function cachedRock(style: RockStyle, variant: number, detail: number): RockMesh {
-    const key = `${style}:${variant}:${detail}`;
+/** The rock's mesh, cached (one per style, variant and detail); `worn`: as drawn (`WEAR`), else the placement's shape. */
+export function cachedRock(style: RockStyle, variant: number, detail: number, worn = false): RockMesh {
+    const key = `${style}:${variant}:${detail}:${worn ? 1 : 0}`;
     let mesh = meshCache.get(key);
     if (!mesh) {
-        mesh = rockMesh(style, variant, detail);
+        mesh = rockMesh(style, variant, detail, worn);
         meshCache.set(key, mesh);
     }
     return mesh;

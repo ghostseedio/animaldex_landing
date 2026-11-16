@@ -414,7 +414,7 @@ function mergedRocks(pieces: RockPiece[], level: 0 | 2): BufferGeometry | null {
         // Far: only what an animal would walk round (small scree is not seen from there).
         if (level === 2 && piece.across < SOLID_ACROSS) continue;
         // A copy: the cached shape's own arrays stay as they are (every piece of the shape shares them).
-        const geometry = rockGeometry(cachedRock(piece.style, piece.variant, ROCK_DETAIL[piece.style][level])).clone();
+        const geometry = rockGeometry(cachedRock(piece.style, piece.variant, ROCK_DETAIL[piece.style][level], true)).clone();
         quaternion.setFromUnitVectors(up, new Vector3(...piece.up)).multiply(yawTurn.setFromAxisAngle(up, piece.yaw));
         geometry.applyMatrix4(matrix.compose(new Vector3(piece.x, piece.y, piece.z), quaternion, new Vector3(piece.scale, piece.scale, piece.scale)));
         const colours = geometry.getAttribute("color");
