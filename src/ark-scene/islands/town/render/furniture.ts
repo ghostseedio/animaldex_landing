@@ -20,6 +20,7 @@ import {Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {CROSSINGS, PAVEMENT_LIFT} from "@/ark-scene/islands/town/render/streets";
 import {TOWN_LAMP_HEIGHT, TOWN_LAMP_REACH, TOWN_LAMP_TEXELS, TOWN_LIGHT, TOWN_UNIFORMS} from "@/ark-scene/islands/town/render/materials";
 import {ARK_TIME} from "@/ark-scene/glsl";
+import {parkBench} from "@/ark-scene/islands/town/render/bench";
 
 type Colour = [number, number, number];
 type Chunk = {solid: Geo; glass: Geo};
@@ -106,13 +107,8 @@ function litterBin(c: Chunk, f: Frame) {
 }
 
 function bench(c: Chunk, f: Frame) {
-    for (const lx of [-0.8, 0.8]) {
-        c.solid.box(f, lx, 0, 0.05, 0.06, 0.44, 0.5, IRON);
-        c.solid.box(f, lx, 0.42, -0.2, 0.06, 0.48, 0.06, IRON);
-        c.solid.box(f, lx, 0.62, 0.05, 0.05, 0.05, 0.42, IRON);
-    }
-    for (let k = 0; k < 4; k++) c.solid.box(f, 0, 0.44, -0.12 + k * 0.12, 1.86, 0.035, 0.09, TIMBER.map((v) => v * (0.92 + 0.04 * k)) as Colour);
-    for (let k = 0; k < 3; k++) c.solid.box(f, 0, 0.55 + k * 0.13, -0.22, 1.86, 0.09, 0.03, TIMBER);
+    // gfx (props): a park bench made as one is (`bench.ts`): cast ends, armrests, slats.
+    parkBench(c.solid, f, IRON, TIMBER, 1.86);
 }
 
 function planter(c: Chunk, f: Frame, seed: number) {

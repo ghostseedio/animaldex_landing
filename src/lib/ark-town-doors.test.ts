@@ -144,3 +144,25 @@ test("each boundary's far body and near detail are drawn, the near only on top (
     assert.ok(far < 70_000, `far ${far}`);
     assert.ok(near < 90_000, `near ${near}`);
 });
+
+// MARK: - Benches (`render/bench.ts`)
+
+test("a bench is made of its parts within budget, and the park's benches stand on level dry land, clear of trees and lamps", async () => {
+    const {benchTriangles} = await import("@/ark-scene/islands/town/render/bench");
+    const {parkBenchSpots, buildScenery} = await import("@/ark-scene/islands/town/render/scenery");
+    const {townHeight} = await import("@/ark-scene/islands/town/ground");
+    const {inPoly, local} = await import("@/ark-scene/islands/town/geom");
+    const t = benchTriangles();
+    assert.ok(t > 120 && t < 260, `${t}`);
+    const lamps = buildScenery(plan).lamps;
+    const trees = townTrees(plan);
+    for (const b of parkBenchSpots()) {
+        const f = {x: b.x, z: b.z, w: 1, d: 1, rot: b.rot};
+        const feet = [[-0.85, 0.22], [0.85, 0.22], [-0.85, -0.26], [0.85, -0.26]].map(([lx, lz]) => local(f, lx, lz));
+        for (const q of feet) for (const w of plan.waters) assert.ok(!inPoly(w.poly, q.x, q.z), `bench at ${b.x.toFixed(1)},${b.z.toFixed(1)} in ${w.id}`);
+        const hs = feet.map((q) => townHeight(q.x, q.z));
+        assert.ok(Math.max(...hs) - Math.min(...hs) < 0.25, `bench at ${b.x.toFixed(1)},${b.z.toFixed(1)} on a slope`);
+        for (const lamp of lamps) assert.ok(Math.hypot(lamp.x - b.x, lamp.z - b.z) > 1.3, "a lamp in a bench");
+        for (const tree of trees) assert.ok(Math.hypot(tree.x - b.x, tree.z - b.z) > 1.4, `a tree in the bench at ${b.x.toFixed(1)},${b.z.toFixed(1)}`);
+    }
+});
