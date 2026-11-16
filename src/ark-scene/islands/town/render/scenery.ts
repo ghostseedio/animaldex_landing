@@ -735,6 +735,20 @@ function lamps(out: SceneryOut, plan: TownPlan) {
     }
     // (The street trees are the plan's own, `plan.ts` plant(): drawn by the asset library with their colliders, lane GC;
     // a second row drawn here had none.)
+    // p2 (land): stones at the millpond's edge, half in the water, where the reeds leave the margin open (the wild island's
+    // fractured boulder, small and mossy-grey, in runs of two or three).
+    for (let k = 0; k < 14; k++) {
+        const seed = hashText(`millpond-stone-${k}`);
+        const a = (k / 14) * Math.PI * 2 + ((seed % 100) / 100 - 0.5) * 0.25;
+        for (let j = 0; j < 1 + (seed % 3); j++) {
+            const s = seed + j * 977;
+            const rr = 0.985 + ((s >>> 3) % 40) / 1000;
+            const x = MILLPOND.x + Math.cos(a + j * 0.035) * MILLPOND.rx * rr;
+            const z = MILLPOND.z + Math.sin(a + j * 0.035) * MILLPOND.rz * rr;
+            const size = 0.35 + ((s >>> 6) % 50) / 100;
+            chunkFor(out, x, z).solid.rock(x, H(x, z) - 0.12, z, size, size * 0.6, size * 0.8, (s % 628) / 100, tone(s % 2 ? "#7d7a6c" : "#6f7465"), s);
+        }
+    }
     // A bandstand in the park.
     const bs = {x: -36, z: -56};
     const c = chunkFor(out, bs.x, bs.z);

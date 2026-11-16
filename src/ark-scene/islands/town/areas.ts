@@ -233,6 +233,15 @@ function wildlifeSpots(plan: TownPlan): TownSpot[] {
     for (let k = 0; k < 28; k++) {
         const a = (k / 28) * Math.PI * 2;
         const r = k % 2 ? 0.55 : 1.08;
+        const x = MILLPOND.x + Math.cos(a) * MILLPOND.rx * r;
+        const z = MILLPOND.z + Math.sin(a) * MILLPOND.rz * r;
+        // (p2 (land): a bank spot on the bank's ground, which now stands over the water's level.)
+        out.push({x, y: r > 1 ? y(x, z) : CANAL_LEVEL, z, area: "garden_wildlife", where: "millpond", place: "millpond", sizes: SMALL_MEDIUM, protected: false});
+    }
+    // p2 (land): the town's wetland: the open water in the middle (fish, ducks) and the reeds' shallow shelf (waders, frogs).
+    for (let k = 0; k < 12; k++) {
+        const a = ((k + 0.5) / 12) * Math.PI * 2;
+        const r = k % 2 ? 0.9 : 0.3;
         out.push({x: MILLPOND.x + Math.cos(a) * MILLPOND.rx * r, y: CANAL_LEVEL, z: MILLPOND.z + Math.sin(a) * MILLPOND.rz * r, area: "garden_wildlife", where: "millpond", place: "millpond", sizes: SMALL_MEDIUM, protected: false});
     }
     for (const w of plan.waters) {

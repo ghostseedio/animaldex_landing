@@ -31,6 +31,7 @@ import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
 import {inBox, sub, toLocal, type Box} from "@/ark-scene/islands/town/geom";
 import {townPlan} from "@/ark-scene/islands/town/plan";
+import {townWetlandOf} from "@/ark-scene/islands/town/wetland";
 
 /** The town's facts about a placed animal: its area, the spot's kind, the home, farm or enclosure, and its bounds. */
 export type TownPlace = {
@@ -123,6 +124,10 @@ function inradius(poly: Poly): number {
 }
 
 const WATER_WHERE = new Set<SpotWhere>(["canal", "millpond", "farm_pond", "pool"]);
+/** p2 (land): a wetland spot in the water itself (its surface at least 0.3 m over the bed), not on the bank. */
+function inTownWater(s: TownSpot): boolean {
+    return WATER_WHERE.has(s.where) && townHeight(s.x, s.z) < s.y - 0.3;
+}
 const HIGH_WHERE = new Set<SpotWhere>(["roof", "eave", "ledge", "tall", "belfry", "balcony", "window", "lamp_wall"]);
 
 /**
@@ -335,9 +340,11 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
             }
         } else {
             const key = clusterKey(animal);
-            const wheres = urbanNiche(slug, animal.zone);
+            // p2 (land): the town's pond life (its stored water kind or pond habitat) at the town's wetland, a swimmer in the water.
+            const wet = townWetlandOf(slug, animal.zone);
+            const wheres = wet ? wet.wheres : urbanNiche(slug, animal.zone);
             // (Lane TB: a spot on the ground never in a building's footprint: some gardens and bins lie under a block of flats.)
-            const onGround = (s: TownSpot) => HIGH_WHERE.has(s.where) || !inBuilding(s.x, s.z, 0.3);
+            const onGround = (s: TownSpot) => (HIGH_WHERE.has(s.where) || !inBuilding(s.x, s.z, 0.3)) && (!wet?.swims || inTownWater(s));
             const candidates = wheres.flatMap((w) => byWhere.get(w) ?? []).filter((s) => s.sizes.includes(size) && onGround(s));
             const list = candidates.length ? candidates : wheres.flatMap((w) => byWhere.get(w) ?? []).filter(onGround);
             // The cluster's members share their first one's spot (the server's slot): picked by the cluster's key.

@@ -148,6 +148,11 @@ export function streetEdgeDistance(x: number, z: number): number {
 
 const SEA_FLOOR = -16;
 const BASIN_FLOOR = -3.6;
+/** p2 (land): the millpond's bowl (m, in its ellipse's own measure: 1 at the water's edge): the bank reaches this far out, the ground at the rim just over the water, the reeds' shelf, the bed (over the sea's 0). */
+export const MILLPOND_BANK = 1.35;
+const MILLPOND_RIM = CANAL_LEVEL + 0.1;
+const MILLPOND_SHELF = CANAL_LEVEL - 0.35;
+const MILLPOND_BED = 0.2;
 const CANAL_BED = CANAL_LEVEL - 1.7;
 
 let gradedStreets: ClipStreet[] | null = null;
@@ -238,12 +243,20 @@ export function sampleTownGround(x: number, z: number): TownGroundSample {
         if (distance < CANAL_WIDTH / 2) surface = "water";
     }
     // The millpond: a natural bowl with soft banks.
+    // (p2 (land), the owner's "the sides and water of the pond are layered above the ground so there's a gap": the bowl
+    // fell to 0.3 m at the water's edge, under the water's 1.15 m, and its bed to −0.35 m, under the sea's level, so the
+    // water's sheet stood on air at its rim with the sea's plane showing through below it. The bank now comes down to
+    // just over the water at the rim (the sheet's edge tucked under it), a shallow shelf for the reeds, then the bed,
+    // which stays above the sea's level.)
     const pond = Math.hypot((x - MILLPOND.x) / MILLPOND.rx, (z - MILLPOND.z) / MILLPOND.rz);
-    if (pond < 1.35) {
-        const t = smoothstep(1.35, 0.85, pond);
-        height = height + (CANAL_LEVEL - 1.5 - height) * t;
-        if (pond < 1) surface = "water";
-        else surface = "bank";
+    if (pond < MILLPOND_BANK) {
+        if (pond >= 1) {
+            height = height + (MILLPOND_RIM - height) * smoothstep(MILLPOND_BANK, 1, pond);
+            surface = "bank";
+        } else {
+            height = MILLPOND_RIM - (MILLPOND_RIM - MILLPOND_SHELF) * smoothstep(1, 0.86, pond) - (MILLPOND_SHELF - MILLPOND_BED) * smoothstep(0.86, 0.5, pond);
+            surface = height < CANAL_LEVEL ? "water" : "bank";
+        }
     }
     const plan = townPlan();
     for (const w of plan.waters) {

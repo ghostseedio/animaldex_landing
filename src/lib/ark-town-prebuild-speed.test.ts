@@ -166,19 +166,20 @@ const TOWN_DIGESTS = {
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
     // lane's street grade and boats, the place lane's pens. Each lane changed these on purpose; recomputed on the merge.)
     // (3.3 fix (wall), wall-climb.ts: the lamp-lit walls' places on the wall's face with its normal; the eaves' wall faces.)
-    areas: "74187692853b49ce",
+    // (Pass 2, lane LAND: the millpond's bank meets its water, its wetland spots, its stones; pond life at the wetland.)
+    areas: "9ede136a249f7816",
     // (Lane GA: the ground's surface weights.)
-    ground: "a3b1b851bfe7128d",
+    ground: "4855991d05181a83",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "7a63b081ab02589e",
+    sceneryAndBuildings: "d8cb37cd6aa55e7f",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     zoo: "1b520265e67b59fd",
-    places: "fba1268b733101f8"
+    places: "6bcc782d6512d2ad"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {
