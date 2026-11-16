@@ -132,6 +132,10 @@ import {AssetFloor, AssetRocks} from "@/ark-scene/asset-rocks";
 import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
 import {buildVegetation} from "@/ark-scene/vegetation";
 import {seaEpochSeconds} from "@/ark-scene/fish-schools";
+// 3.3 batch (E): the sea's own look from under the surface (the water by depth, marine snow).
+import {seaClockSeconds} from "@/ark-scene/fish-schools";
+import {underwaterLook, type UnderwaterLook} from "@/ark-scene/sea-look";
+import {SeaLookView} from "@/ark-scene/sea-look-render";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake} from "@/lib/ark-daylight";
 import {arkAwakeAtHour, arkSleepOf, type Sleep} from "@/ark-scene/sleep-hours";
@@ -5383,8 +5387,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let cutawayAt: {target: Vector3; azimuth: number} | null = null;
     // Under water the view is absorbed exponentially (graphics pass): blue-green, half gone by about 12 m.
     const underFog = new FogExp2(new Color("#2b6f78"), 0.058);
-    const underDay = new Color("#2f7c85");
-    const underNight = new Color("#0b2229");
+    // 3.3 batch (E): the water's colour and haze by the camera's depth, and the marine snow (built on the first dive).
+    const underLook: UnderwaterLook = {r: 0, g: 0, b: 0, density: 0.058};
+    let seaLook: SeaLookView | null = null;
     const stepLayers = (elapsed: number) => {
         const under = camera.position.y < -0.02 && heightAt(camera.position.x, camera.position.z) < -0.3;
         if (under !== underwater) {
@@ -5396,12 +5401,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             ARK_CAUSTICS.value = under ? 0.9 : 0.3;
         }
         if (under) {
-            underFog.color.copy(underNight).lerp(underDay, Math.min(Math.max(lighting.daylight.daylight, 0), 1));
+            // 3.3 batch (E): bright and clear in the shallows, a dim thick blue far down (sea-look.ts), not one colour everywhere.
+            underwaterLook(-camera.position.y, lighting.daylight.daylight, underLook);
+            underFog.color.setRGB(underLook.r, underLook.g, underLook.b);
+            underFog.density = underLook.density;
             scene.background = underFog.color;
         } else if (scene.background) {
             scene.background = null;
         }
         layersScene.setUnderwater(under, camera.position, lighting.daylight.daylight);
+        // 3.3 batch (E): marine snow all round the camera under the sea; nothing is built until the first dive.
+        if (under && !seaLook) seaLook = new SeaLookView(scene);
+        seaLook?.step(under, camera, lighting.daylight.daylight, seaClockSeconds(seaEpochSeconds()), elapsed, tier, renderer.domElement.height, reducedMotion);
         // The cutaway: in front of what the camera looks at, rebuilt only when that moves on or the camera turns.
         const selected = selectedId ? findEntry(selectedId) : null;
         const want = cutawayWanted ?? Boolean(selected?.place.burrow && camera.position.distanceTo(controls.target) < 30);
@@ -8355,6 +8366,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             for (const sceneModule of modules) sceneModule.dispose();
             motes.dispose();
+            // 3.3 batch (E)
+            seaLook?.dispose();
             lighting.dispose();
             post.dispose();
             renderer.dispose();

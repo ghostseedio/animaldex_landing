@@ -304,7 +304,9 @@ export function buildLayersScene(): LayersScene {
         for (let y = 0; y < 128; y++) {
             for (let x = 0; x < 32; x++) {
                 const edge = Math.sin(Math.PI * x / 31);
-                sides.data[(y * 32 + x) * 4 + 3] *= edge * edge;
+                // (3.3 batch, lane E: a shaft is a sheaf of rays, brighter and darker across it, not one even slab.)
+                const rays = 0.62 + 0.38 * Math.sin(x * 0.9) * Math.sin(x * 2.3 + 1);
+                sides.data[(y * 32 + x) * 4 + 3] *= edge * edge * rays;
             }
         }
         context.putImageData(sides, 0, 0);
@@ -365,7 +367,7 @@ export function buildLayersScene(): LayersScene {
             // The light's shafts by day only.
             shafts.visible = under && daylight > 0.45;
             // Graphics pass: softer shafts, and the water's own underside (terrain.ts: Snell's window) shows through.
-            shaftMaterial.opacity = Math.min(Math.max((daylight - 0.45) / 0.4, 0), 1) * 0.32;
+            shaftMaterial.opacity = Math.min(Math.max((daylight - 0.45) / 0.4, 0), 1) * 0.42;
             undersideMaterial.opacity = 0.06 + 0.06 * Math.min(Math.max(daylight, 0), 1);
             cameraAt = cameraPosition;
             underside.position.x = cameraPosition.x;
