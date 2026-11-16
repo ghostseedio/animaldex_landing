@@ -516,13 +516,20 @@ export function lightsMaterial(): MeshStandardMaterial {
     else if (kind < 2.5) { on = step(26.0, t) * step(t, 29.0) + step(57.0, t); glow = vec3(1.0, 0.55, 0.05) * 4.0; }
     else if (kind < 3.5) { on = step(t, 26.0); glow = vec3(0.15, 1.0, 0.45) * 4.0; }
     else if (kind < 4.5) { on = step(0.5, fract(townClock)); glow = vec3(1.0, 0.62, 0.12) * 4.0; }
-    else { on = townLampOn; glow = vec3(0.9, 0.95, 1.0) * 3.0; }
+    else if (kind < 5.5) { on = townLampOn; glow = vec3(0.9, 0.95, 1.0) * 3.0; }
+    // p2 (land): a sign's face (shaded by day, lit from within as the lamps come on) and a fairy light (twinkling, its own phase).
+    else if (kind < 6.5) { on = 1.0; glow = diffuseColor.rgb * (0.08 + 1.5 * townLampOn); }
+    else {
+        float tw = 0.5 + 0.5 * sin(townClock * (1.1 + fract(phase * 0.618) * 2.2) + phase * 2.4);
+        on = townLampOn * (0.2 + 0.8 * smoothstep(0.25, 0.75, tw));
+        glow = diffuseColor.rgb * 5.0;
+    }
     totalEmissiveRadiance = glow * on;
     diffuseColor.rgb *= mix(0.25, 1.0, on);
 }`
             );
     };
-    material.customProgramCacheKey = () => "town-lights-1";
+    material.customProgramCacheKey = () => "town-lights-2";
     return material;
 }
 

@@ -20,6 +20,7 @@ import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/island
 import {binGeometry, ChunkedSet, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
 import {loadVehicles, TownVehicles, type TrafficAnimals, type VehicleModel} from "@/ark-scene/islands/town/render/vehicles";
 import {lampGlow, lampMapTexture, lightsGeometry, lightsMaterial} from "@/ark-scene/islands/town/render/furniture";
+import {christmasSeason, christmasTree} from "@/ark-scene/islands/town/render/downtown";
 import {buildTownNear} from "@/ark-scene/islands/town/render/near";
 // gfx (WATER): the boats' closed hulls, seated on their water with a bob (`render/boats.ts`).
 import {canalBerth, fishingBoatGeometry, floatingMaterial, narrowboatGeometry, NARROWBOAT_LENGTH, NARROWBOAT_LIVERIES} from "@/ark-scene/islands/town/render/boats";
@@ -657,6 +658,18 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     }
     const glow = furniture && furniture.heads.length ? lampGlow(furniture.heads) : null;
     if (glow) root.add(glow);
+    // p2 (land): the downtown's Christmas tree and its fairy lights, shown in their season only (`downtown.ts`).
+    const xmas = plan.downtown ? christmasTree(plan.downtown.tree, sampleTownGround(plan.downtown.tree.x, plan.downtown.tree.z).height) : null;
+    const xmasGroup = new Group();
+    xmasGroup.name = "town:christmas";
+    if (xmas) {
+        const tree = new Mesh(xmas.solid.toGeometry(), materials.solid);
+        tree.castShadow = true;
+        tree.receiveShadow = true;
+        xmasGroup.add(tree, new Mesh(lightsGeometry(xmas.lights), lightsMaterial()));
+        xmasGroup.visible = false;
+        root.add(xmasGroup);
+    }
     if (furniture) TOWN_LIGHT.lampMap.value = lampMapTexture(furniture.lampMap);
     // Close up: leaves, weeds, grit, daisies and the odd scrap round the camera when it comes down to the street.
     const near = buildTownNear(plan, scenery.trees);
@@ -690,6 +703,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         // The street lamps and the windows' night glow, warming up at dusk and fading before dawn (`people.ts` lampsLevel).
         const lamps = lampsLevel(clock);
         TOWN_LIGHT.lampOn.value = lamps;
+        if (xmas) xmasGroup.visible = christmasSeason(clock);
         if (glow) glow.visible = lamps > 0;
         const minute = Math.floor(clock.day * 1440 + clock.hours * 60);
         if (minute === lastMinute) return;
@@ -840,7 +854,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         instances.detail_chunks = detail.shown();
         instances.detail_triangles = detail.triangles;
         drawCalls += zooMeshes.filter(({key, mesh}) => key < 0 || mesh.visible).length;
-        return {chunks: chunks.filter(Boolean).length, drawnChunks, triangles, drawCalls: drawCalls + 4 + (lightsMesh ? 1 : 0) + (glow?.visible ? 1 : 0), instances, windows: windowCount, litWindows: litCount, zooOpen: zooOpenNow.length};
+        return {chunks: chunks.filter(Boolean).length, drawnChunks, triangles, drawCalls: drawCalls + 4 + (lightsMesh ? 1 : 0) + (glow?.visible ? 1 : 0) + (xmas && xmasGroup.visible ? 2 : 0), instances, windows: windowCount, litWindows: litCount, zooOpen: zooOpenNow.length};
     };
 
     yield;
@@ -884,6 +898,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             });
             near.dispose();
             (lightsMesh?.material as Material | undefined)?.dispose();
+            ((xmasGroup.children[1] as Mesh | undefined)?.material as Material | undefined)?.dispose();
             harbourBoatMaterial.dispose();
             canalBoatMaterial.dispose();
             (glow?.material as Material | undefined)?.dispose();
