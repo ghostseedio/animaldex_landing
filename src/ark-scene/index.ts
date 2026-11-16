@@ -219,6 +219,8 @@ import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
 import {speciesCare} from "@/lib/ark-age";
+// 3.3 batch (C): young with their recorded mother
+import {Lineage, nurseTurn} from "@/ark-scene/young-care";
 import {mealOnStage, mealScript, DRINK_REACH, type MealCatch} from "@/ark-scene/meal-acts";
 import {MealTraces, type TraceDraw} from "@/ark-scene/meal-traces";
 import {bodyMassKg, isScavenger, mealPlan, type MealPlan, type MealSide, type ScavengerCandidate} from "@/ark-scene/meals";
@@ -777,6 +779,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Liveliness (`liveliness-scene.ts`): the clock's weather, tide and ages through the animals, the rain and fog,
     // the traces they leave, and the sound (off until a tap). Its hooks read the scene below, when they are called.
     const soundBase = options.soundBase !== undefined ? options.soundBase : (/^(https?:\/\/[^/]+)\/storage\/v1\//.exec(options.modelBase)?.[1] ?? null);
+    // 3.3 batch (C): who the record says each young one's parents are (this visit's births, and earlier visits' on this device).
+    const lineage = new Lineage({
+        get: () => {
+            try {
+                return window.localStorage.getItem("ark-lineage-v1");
+            } catch {
+                return null;
+            }
+        },
+        set: (text) => window.localStorage.setItem("ark-lineage-v1", text)
+    });
     const liveliness = new ArkLiveliness({
         tier,
         fog,
@@ -786,6 +799,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         soundBase,
         onSoundCredits: options.onSoundCredits,
         hooks: {
+            // 3.3 batch (C): the young one's recorded mother (the parent drawn female, as the birth act has it).
+            recordedParents: (id) => lineage.parentsOf(id),
+            maleOf: (animal) => {
+                const sex = sexLook(animal.id, animal.model_slug).sex;
+                return sex === "male" ? true : sex === "female" ? false : null;
+            },
             planOf: (slug) => library.get(slug)?.behaviour?.plan,
             profileOf: (e) => (e as Entry).sched?.profile ?? null,
             poseAt: (e, epoch) => {
@@ -1729,7 +1748,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         asleep: pose.doing === "sleep",
         // (At its spot: it holds its place against one walking past, decision 204.)
         still: !pose.aloft && !pose.moving,
-        partner: (pose.act as (RecipeAct & {with?: string | null}) | null | undefined)?.with ?? null,
+        // 3.3 batch (C): a young one at its mother's flank to suckle touches her (`liveliness-scene.ts`, `young-care.ts`).
+        partner: (pose.act as (RecipeAct & {with?: string | null}) | null | undefined)?.with ?? (pose as {nurse?: string}).nurse ?? null,
         attached: entry.sched?.trip ? attachedOn(entry.sched.trip, epoch) : null,
         // (Perched up on a surface: held there, never eased off its branch into the air.)
         fixed: !pose.aloft && pose.y > Math.max(heightAt(pose.x, pose.z), 0) + 0.3 && Boolean(entry.sched?.trip && (tripPhase(entry.sched.trip, epoch) === "stay" || tripPhase(entry.sched.trip, epoch) === "pause") && attachedOn(entry.sched.trip, epoch))
@@ -3465,18 +3485,28 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!c) return;
             c.entry.reactive = o;
             const pose = c.pose;
-            if (o.dx || o.dz) {
+            // 3.3 batch (C): a young one at its mother's flank to suckle moves as she does here (her step back from the
+            // camera, not its own), so the two stay together.
+            const nursed = (c.entry.sched?.pose as {nurse?: string} | null | undefined)?.nurse;
+            const led = nursed ? out.get(nursed) ?? null : null;
+            const dam = led ? byId.get(nursed!)?.entry.sched?.pose ?? null : null;
+            const own = c.entry.sched?.pose;
+            // (Her turn here too: its place beside her turned about her as she turns.)
+            const [rx, rz] = led && dam && own ? nurseTurn(own.x - dam.x, own.z - dam.z, led.bodyYaw) : [0, 0];
+            const odx = led ? led.dx + rx : o.dx;
+            const odz = led ? led.dz + rz : o.dz;
+            if (odx || odz) {
                 const ground = Math.max(heightAt(pose.x, pose.z), 0);
                 const onGround = !pose.afloat && Math.abs(pose.base - ground) < 0.08;
                 // In the water (swimming, walking the floor, floating): it stays in the water, at its depth.
                 const inWater = pose.afloat && !c.entry.sched?.pose?.aloft && pose.base < 0.02 && sampler.isWater(pose.x, pose.z);
                 // A land animal is never pushed into the water, nor a water animal onto a shore (`offsetShare`).
-                const k = offsetShare(pose, o.dx, o.dz, onGround ? "land" : inWater ? "water" : "free", (x, z) => sampler.isWater(x, z), heightAt);
-                pose.x += o.dx * k;
-                pose.z += o.dz * k;
+                const k = offsetShare(pose, odx, odz, onGround ? "land" : inWater ? "water" : "free", (x, z) => sampler.isWater(x, z), heightAt);
+                pose.x += odx * k;
+                pose.z += odz * k;
                 if (onGround) pose.base = Math.max(heightAt(pose.x, pose.z), 0);
             }
-            pose.yaw += o.bodyYaw;
+            pose.yaw += led ? led.bodyYaw : o.bodyYaw;
             pose.base -= o.crouch * c.modelHeight * 0.08;
         });
         reactiveMs = performance.now() - t0;
@@ -8016,6 +8046,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         addBirths: (births) => {
             liveBirths.add(births, worldMs() / 1000);
+            // 3.3 batch (C): the young of the record's births follow (and suckle from) their recorded mother from now on.
+            if (births.map((b) => lineage.note(b.young, b.parents)).some(Boolean)) liveliness.lineageChanged();
         },
         setDormant: (kinds) => {
             dormantKinds = new Set(kinds);

@@ -45,6 +45,7 @@ function trunksNear(x: number, z: number, radius: number): Array<{x: number; z: 
 import {Traces, TRACE_WITHIN} from "@/ark-scene/traces";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {WeatherFx} from "@/ark-scene/weather-fx";
+import {motherAmong, nurseBlend, nursePlace, nurses, nursingBout} from "@/ark-scene/young-care";
 import {coastRadius, LAKE, RIVER, sampleGround} from "@/ark-scene/world";
 import {ageOf, speciesCare, type ArkAge} from "@/lib/ark-age";
 import {arkDayAt, lightningAt, seaLevelAt, shoreAt, tideAt, weatherAt, type ArkShore, type ArkTide, type ArkWeather} from "@/lib/ark-clock";
@@ -95,6 +96,10 @@ export type LiveHooks = {
     /** The scene's entry for an id. */
     entryOf: (id: string) => LiveAnimal | null;
     heightAt: (x: number, z: number) => number;
+    /** 3.3 batch (C): a young one's recorded parents (`young-care.ts` `Lineage`, the record's births), or null: the seeded pick. */
+    recordedParents?: (youngId: string) => readonly string[] | null;
+    /** 3.3 batch (C): an animal's drawn sex (the mother is the parent drawn female; the engine has no sexes). */
+    maleOf?: (animal: ArkAnimal) => boolean | null;
 };
 
 export type LiveOptions = {
@@ -142,6 +147,9 @@ export class ArkLiveliness {
     /** Parents' past positions (a young one's play reads where its parent was when its dash ended). */
     private readonly pastPoses = new Map<string, {x: number; z: number} | null>();
     private parents = new Map<string, string>();
+    /** 3.3 batch (C): the last snapshot's animals (the parents are worked out again when the record tells a birth), and who suckles now. */
+    private snapshotAnimals: ArkAnimal[] = [];
+    readonly nursing = new Map<string, {mother: string; key: string; at: number}>();
     private arkDayNow = 0;
     private reducedMotion = false;
     private tier: QualityTier;
@@ -243,6 +251,7 @@ export class ArkLiveliness {
     /** A newer snapshot: each young one's parent (one adult of its kind in its cluster, seeded). */
     setSnapshot(animals: ArkAnimal[], arkDay: number | null | undefined) {
         if (typeof arkDay === "number" && !this.options.voyageStartMs) this.arkDayNow = arkDay;
+        this.snapshotAnimals = animals;
         const adults = new Map<string, ArkAnimal[]>();
         for (const animal of animals) {
             if (animal.origin === "born") continue;
@@ -250,17 +259,26 @@ export class ArkLiveliness {
             adults.set(key, [...(adults.get(key) ?? []), animal]);
         }
         const parents = new Map<string, string>();
+        const byId = new Map(animals.map((animal) => [animal.id, animal]));
         for (const animal of animals) {
             if (animal.origin !== "born") continue;
             const key = animal.kind_species_profile_id || animal.species_profile_id || animal.model_slug;
-            const parent = pickParent({id: animal.id, slot: animal.slot, zone: animal.zone}, (adults.get(key) ?? []).map((a) => ({id: a.id, slot: a.slot, zone: a.zone})));
+            // 3.3 batch (C): its recorded mother when the record has said who its parents are; else the seeded pick.
+            const recorded = this.options.hooks.recordedParents?.(animal.id);
+            const mother = recorded ? motherAmong(recorded, (id) => (byId.has(id) ? this.options.hooks.maleOf?.(byId.get(id)!) ?? null : null), (id) => byId.has(id)) : null;
+            const parent = mother ?? pickParent({id: animal.id, slot: animal.slot, zone: animal.zone}, (adults.get(key) ?? []).map((a) => ({id: a.id, slot: a.slot, zone: a.zone})));
             if (parent) parents.set(animal.id, parent);
         }
         this.parents = parents;
         this.young.clear();
     }
 
-    /** A young one's parent (the scene's seeded pick), or null. */
+    /** 3.3 batch (C): the record told a birth (`Lineage.note`): who follows whom is worked out again. */
+    lineageChanged() {
+        this.setSnapshot(this.snapshotAnimals, undefined);
+    }
+
+    /** A young one's parent (its recorded mother, else the scene's seeded pick), or null. */
     parentOf(id: string): string | null {
         return this.parents.get(id) ?? null;
     }
@@ -435,6 +453,16 @@ export class ArkLiveliness {
             if (raw) {
                 const lead = this.sheltered(parent, raw, nowMs - HEEL_LAG_SECONDS * 1000);
                 const heel = heelPose(entry.animal.id, {x: lead.x, z: lead.z, yaw: lead.yaw, length: parent.length, height: parent.drawnHeight || parent.length * 0.6}, {distance: age.follow.distance, carried: age.carried}, age.play, nowMs, (ms) => this.parentAt(parent, ms));
+                // 3.3 batch (C): a mammal's young at heel comes to her flank to suckle in bouts of the shared clock
+                // (`young-care.ts`), while she stands still and it is neither carried nor at play.
+                const bout = !age.carried && !heel.playing && !lead.moving && !lead.aloft && lead.doing !== "sleep" && nurses(this.options.hooks.planOf(entry.animal.model_slug)) ? nursingBout(entry.animal.id, nowMs) : null;
+                if (bout) {
+                    const to = nurseBlend(heel, nursePlace(entry.animal.id, {x: lead.x, z: lead.z, yaw: lead.yaw, length: parent.length}, entry.length), bout.level);
+                    heel.x = to.x;
+                    heel.z = to.z;
+                    heel.yaw = to.yaw;
+                    if (bout.suckling) this.nursing.set(entry.animal.id, {mother: parent.animal.id, key: bout.key, at: nowMs});
+                }
                 const ground = this.groundOf(entry.animal.id, heel.x, heel.z);
                 this.counts.young++;
                 out = Object.assign({}, pose, {
@@ -442,10 +470,11 @@ export class ArkLiveliness {
                     z: heel.z,
                     y: (age.carried ? Math.max(lead.y, ground) : ground) + heel.lift,
                     yaw: heel.yaw,
-                    moving: lead.moving || heel.moving,
+                    moving: bout ? bout.level < 1 : lead.moving || heel.moving,
                     aloft: false,
-                    doing: heel.playing ? "play" : lead.doing
-                });
+                    // (Suckling it stands, head up under her: never her grazing or drinking with its head to the ground.)
+                    doing: heel.playing ? "play" : bout ? "watch" : lead.doing
+                }, bout ? {nurse: parent.animal.id, beat: undefined} : null);
                 return this.offTheTide(entry, out);
             }
         }

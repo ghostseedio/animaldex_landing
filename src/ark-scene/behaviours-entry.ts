@@ -8,6 +8,7 @@
 
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
+import {NURSE_SLOT_MS, nursingBout} from "@/ark-scene/young-care";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
@@ -15,7 +16,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung"};
+type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "nurse" | "look" | "carry"; /** 3.3 batch (C): the young born `bornAgo` Ark days before the scene's clock (default 2), not on the fixture's day. */ young?: "new"; bornAgo?: number};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -28,6 +29,8 @@ const SCENES: Record<string, Scene> = {
     web: {zone: "farm_garden", hours: 7, kind: "dung", cast: [{slug: "black-and-yellow-garden-spider", name: "Black-and-yellow Garden Spider", n: 3}]},
     // A dormant kind: in its dens while the server says so (the marmots), the others about (the zebras).
     dormant: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "alpine-marmot", name: "Alpine Marmot", n: 4}, {slug: "plains-zebra", name: "Plains Zebra", n: 3}]},
+    // 3.3 batch (C): a foal at its recorded mother's heel (a birth of an hour ago), coming to her flank to suckle.
+    nurse: {zone: "grassland", hours: 9, kind: "nurse", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 3, young: 1}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -54,13 +57,15 @@ async function main() {
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
     const template = fixture.animals[0];
     const day = fixture.voyage.ark_day;
+    // 3.3 batch (C): a young one born two Ark days before the scene's own clock (the fixture's day is weeks before it).
+    const bornDay = scene.kind === "nurse" || scene.young === "new" ? (Date.UTC(2026, 10, 20, scene.hours) - Date.parse(fixture.voyage.started_at)) / ((86_400_000 * 14) / 365) - (scene.bornAgo ?? 2) : day;
     const animals: Raw[] = [];
     const youngIds: string[] = [];
     scene.cast.forEach((c, k) => {
         for (let i = 0; i < c.n + (c.young ?? 0); i++) {
             const young = i >= c.n;
             if (young) youngIds.push(castId(k, i));
-            animals.push({...template, id: castId(k, i), species_profile_id: speciesId(k), name: c.name, scientific_name: c.name, model_slug: c.slug, zone: scene.zone, activity: "diurnal", sociality: "group", slot: 90 + k, slot_rank: i, origin: young ? "born" : "arrived", born_ark_day: young ? day : 0} as Raw);
+            animals.push({...template, id: castId(k, i), species_profile_id: speciesId(k), name: c.name, scientific_name: c.name, model_slug: c.slug, zone: scene.zone, activity: "diurnal", sociality: "group", slot: 90 + k, slot_rank: i, origin: young ? "born" : "arrived", born_ark_day: young ? bornDay : 0} as Raw);
         }
     });
     const snapshot = decodeArkSnapshot({...fixture, animals});
@@ -92,14 +97,57 @@ async function main() {
     const b = castId(0, 1);
     if (scene.kind === "birth") handle.addBirths?.([{key: "birth:harness", parents: [a, b], young: youngIds, t0}]);
     if (scene.kind === "mating") handle.addMatings?.([{key: "mated:harness", a, b, t0}]);
+    // 3.3 batch (C): the record told this birth an hour ago (too old to act out): the young one's parents are the two
+    // adults its seeded pick is NOT, so the frames show the record's mother, not the pick.
+    const live = (debug as unknown as {liveliness: {parentOf: (id: string) => string | null; nursing: Map<string, {mother: string; key: string; at: number}>}}).liveliness;
+    const nurseInfo: {picked: string | null; parents: string[]; mother: string | null; bout: number | null} = {picked: null, parents: [], mother: null, bout: null};
+    if (scene.kind === "nurse") {
+        const adults = [0, 1, 2].map((i) => castId(0, i));
+        nurseInfo.picked = live.parentOf(youngIds[0]);
+        nurseInfo.parents = adults.filter((id) => id !== nurseInfo.picked).slice(0, 2);
+        handle.addBirths?.([{key: "birth:harness-old", parents: nurseInfo.parents, young: youngIds, t0: t0 - 3600}]);
+        nurseInfo.mother = live.parentOf(youngIds[0]);
+    }
     await setAt(t0 + 0.05);
     await frames(4);
     const at0 = handle.locate(a);
     if (!at0) throw new Error("cast not placed");
     const view = (distance: number, at: {x: number; z: number}, polar = 1.15, azimuth = 0.7): ArkCameraView => ({target: {x: at.x, y: Math.max(handle.heightAt(at.x, at.z), 0) + 0.5, z: at.z}, distance, polar, azimuth});
     handle.setView(view(12, at0));
+    const laneCScene = scene.kind === "nurse" || scene.kind === "look" || scene.kind === "carry";
+    const schedPoint = (id: string): {x: number; z: number} | null => {
+        const e = (debug.entries() as unknown as Array<{animal: {id: string}; act?: {x: number; z: number} | null; sched?: {pose?: {x: number; z: number} | null}}>).find((x) => x.animal.id === id);
+        const p = e?.act ?? e?.sched?.pose;
+        return p ? {x: p.x, z: p.z} : null;
+    };
+    /** 3.3 batch (C): what the frame should show of the young one and its mother (their distance in her lengths, its card). */
+    const laneC = (): string => {
+        if (scene.kind !== "nurse" || !nurseInfo.mother) return "";
+        const m = schedPoint(nurseInfo.mother);
+        const y = schedPoint(youngIds[0]);
+        const sched = (id: string) => (debug.entries() as unknown as Array<{animal: {id: string}; length: number; sched?: {pose?: {doing?: string; moving?: boolean}}}>).find((e) => e.animal.id === id);
+        const fresh = live.nursing.get(youngIds[0]);
+        return `\nyoung ${m && y ? (Math.hypot(m.x - y.x, m.z - y.z) / (sched(nurseInfo.mother)?.length || 1)).toFixed(2) : "?"} of her lengths from its mother   young: ${sched(youngIds[0])?.sched?.pose?.doing} card ${handle.animalStatus?.(youngIds[0])?.activity ?? "-"}   mother: ${sched(nurseInfo.mother)?.sched?.pose?.doing}${sched(nurseInfo.mother)?.sched?.pose?.moving ? " moving" : ""}   suckling ${fresh && Math.abs(fresh.at - Date.now()) < 1500 ? "yes" : "no"}`;
+    };
     const api = {
-        info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a, b}),
+        info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a, b, nurse: nurseInfo}),
+        /** 3.3 batch (C): the young one's first nursing bout after the scene's start (s after t0), from the shared clock. */
+        nurseBout: () => {
+            const id = youngIds[0];
+            for (let slot = Math.floor((t0 * 1000) / NURSE_SLOT_MS), n = 0; n < 40; slot++, n++) {
+                let start = -1;
+                let end = -1;
+                for (let ms = slot * NURSE_SLOT_MS; ms < (slot + 1) * NURSE_SLOT_MS; ms += 250) {
+                    if (!nursingBout(id, ms)) continue;
+                    if (start < 0) start = ms;
+                    end = ms;
+                }
+                if (start / 1000 < t0 + 20) continue;
+                nurseInfo.bout = start / 1000 - t0;
+                return {start: nurseInfo.bout, length: (end - start) / 1000};
+            }
+            return null;
+        },
         dung: () => debug.traces().filter((t) => t.kind === "dung"),
         /** The first cast's kind dormant (or awake again), then what the scene shows of every animal. */
         dormant: async (on: boolean) => {
@@ -128,7 +176,8 @@ async function main() {
                 fake!.date += 100;
                 await frames(1);
             }
-            const who = point ?? handle.locate(follow ?? a) ?? at0;
+            // 3.3 batch (C): lane C's scenes frame where its schedule has it now (`locate` is where it was last drawn).
+            const who = point ?? (laneCScene ? schedPoint(follow ?? a) : null) ?? handle.locate(follow ?? a) ?? at0;
             handle.setView(view(distance, {x: who.x, z: who.z}, polar, azimuth));
             await frames(3);
             // (The dung list is made every 2 s of the page's clock: a moment more for it.)
@@ -140,7 +189,7 @@ async function main() {
                 .filter((e) => e.act)
                 .map((e) => `${e.animal.id.slice(-3)} ${e.animal.model_slug} ${String(e.act!.meal ?? "-")} ${String(e.act!.state ?? "")}${e.act!.hidden ? " hidden" : ""}${e.act!.lying ? ` lying ${Number(e.act!.lying).toFixed(2)}` : ""}`);
             const status = (id: string) => handle.animalStatus?.(id)?.activity ?? "-";
-            return `+${s.toFixed(1)} s   card a: ${status(a)}   card b: ${status(b)}   dung marks: ${api.dung().length}\n${acts.join("\n")}`;
+            return `+${s.toFixed(1)} s   card a: ${status(a)}   card b: ${status(b)}   dung marks: ${api.dung().length}\n${acts.join("\n")}${laneC()}`;
         },
         handle
     };

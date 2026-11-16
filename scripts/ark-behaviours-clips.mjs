@@ -55,6 +55,8 @@ const PLANS = {
     birth: {distance: 6, shots: [[1, "she settles"], [9, "born"], [15, "licked"], [27, "getting up"], [31, "up on wobbly legs"], [38, "to her flank"], [50, "suckling"], [72, "back to their day"]]},
     den: {distance: 5, shots: [[1, "she settles"], [9, "the first cub"], [13, "both born"], [22, "licked"], [40, "suckling at her belly"], [70, "back to their day"]]},
     contest: {distance: 9, shots: [[1, "the rival comes"], [8, "closing"], ["walk+2.1", "a clash"], ["walk+4", "backing off"], ["walk+7.3", "another clash"], ["end-3", "the rival runs"], ["end+6", "the pair: courtship"], ["end+40", "the mating"]]},
+    // 3.3 batch (C): the young one at its recorded mother's heel, then a nursing bout of the shared clock.
+    nurse: {distance: 4, shots: [["bout-12", "at her heel"], ["bout+1.5", "coming to her flank"], ["bout+6", "suckling"], ["bout+16", "suckling, from the other side", 3.6], ["bout+24", "still suckling"], ["boutend+1", "back to her heel"], ["boutend+8", "at heel again"]]},
     dung: {distance: 5, shots: [[600, "the herd, ten minutes on"], [900, "a mark, close"], [1500, "marks fading"]]}
 };
 const summary = {};
@@ -87,25 +89,31 @@ for (const name of scenes) {
     const mating = info.matings[0];
     // (A contest's moments are from its own script: its walk is told by its end, 14–22 s of bouts and 5 s to run.)
     const end = mating?.contestEnd ?? 0;
-    const at = (s) => (typeof s === "number" ? s : s.startsWith("end") ? end + Number(s.slice(3)) : Math.max(end - 27, 2) + Number(s.slice(4)));
+    const bout = name === "nurse" ? await page.evaluate(() => window.__behaviours.nurseBout()) : null;
+    if (name === "nurse") {
+        console.log(name, JSON.stringify({nurse: info.nurse, bout}));
+        // (The cast has walked on since the scene's start: the camera is brought to the mother before the first frame.)
+        await page.evaluate(([s, who]) => window.__behaviours.shot(s, 5, who), [(bout?.start ?? 0) - 20, info.nurse.mother]);
+    }
+    const at = (s) => (typeof s === "number" ? s : s.startsWith("boutend") ? (bout?.start ?? 0) + (bout?.length ?? 0) + Number(s.slice(7)) : s.startsWith("bout") ? (bout?.start ?? 0) + Number(s.slice(4)) : s.startsWith("end") ? end + Number(s.slice(3)) : Math.max(end - 27, 2) + Number(s.slice(4)));
     const dir = path.join(out, name);
     rmSync(dir, {recursive: true, force: true});
     mkdirSync(dir, {recursive: true});
     const labels = [];
     for (let i = 0; i < plan.shots.length; i++) {
-        const [when, label] = plan.shots[i];
+        const [when, label, azimuth] = plan.shots[i];
         const s = at(when);
-        const note = await page.evaluate(async ([s, d, label, name, rival, who]) => {
+        const note = await page.evaluate(async ([s, d, label, name, rival, who, azimuth]) => {
             let point;
             if (name === "dung" && label.includes("close")) {
                 await window.__behaviours.shot(s, d);
                 const marks = window.__behaviours.dung().sort((p, q) => q.alpha - p.alpha);
                 if (marks[0]) point = {x: marks[0].x, z: marks[0].z};
             }
-            const text = await window.__behaviours.shot(s, point ? 2.2 : d, name === "contest" && label.includes("runs") ? rival : who, point, name === "contest" ? 2.4 : 0.7, name === "contest" ? 0.85 : 1.15);
+            const text = await window.__behaviours.shot(s, point ? 2.2 : d, name === "contest" && label.includes("runs") ? rival : who, point, name === "contest" ? 2.4 : azimuth ?? 0.7, name === "contest" ? 0.85 : 1.15);
             document.getElementById("note").textContent = `${label}\n${text}`;
             return text;
-        }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? (name === "contest" ? info.a : undefined)]);
+        }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? info.nurse?.mother ?? (name === "contest" ? info.a : undefined), azimuth]);
         labels.push(`${String(i).padStart(2, "0")} ${label}: ${note.replace(/\n/g, " | ")}`);
         await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 85});
     }
