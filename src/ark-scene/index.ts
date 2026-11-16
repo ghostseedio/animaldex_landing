@@ -703,9 +703,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return isl && isl.contains(x, z) ? isl.drawnHeight(x, z, near) : drawnGroundHeight(x, z);
     };
     /** The ground and water under an animal for its contact shadow and ring, on its own island. */
-    const groundUnderAt = (x: number, z: number, seaLevel: number, exact: boolean) => {
+    // p2 (contact): `near`, the body's height, picks the floor it is on where floors are stacked (the town's perches, decks).
+    const groundUnderAt = (x: number, z: number, seaLevel: number, exact: boolean, near?: number) => {
         const isl = island;
-        return isl && isl.contains(x, z) ? isl.groundUnder(x, z, seaLevel) : look.groundUnder(x, z, seaLevel, exact);
+        return isl && isl.contains(x, z) ? isl.groundUnder(x, z, seaLevel, near) : look.groundUnder(x, z, seaLevel, exact);
+    };
+    /** p2 (contact): the drawn ground's normal under a point, on the island it is on (a contact shadow lies on it). */
+    // (`height`: the floor it is on, where floors are stacked: another floor's normal is none of its, so level.)
+    const groundNormalAt = (x: number, z: number, height?: number) => {
+        const isl = island;
+        if (isl && isl.contains(x, z)) {
+            const g = isl.drawnGround(x, z);
+            return height !== undefined && Math.abs(g.height - height) > 0.05 ? {x: 0, y: 1, z: 0, nx: 0, ny: 1, nz: 0} : {x: g.nx, y: g.ny, z: g.nz, nx: g.nx, ny: g.ny, nz: g.nz};
+        }
+        const n = look.groundNormal(x, z);
+        return {...n, nx: n.x, ny: n.y, nz: n.z};
     };
     applyLocoGround();
     const forced = forcedTier();
@@ -5050,7 +5062,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 continue;
             }
             entry.yawNow = where.yaw;
-            const lift = where.water ? 0 : entry.lift * modelHeight * 0.12;
+            // p2 (contact): no hover when it is chosen (it rose 12% of its height off the ground: a lion asleep on its side
+            // floated over its own shadow, the shadow "not on the surface"). The ring and the card mark the chosen one.
+            const lift = 0;
             // Near and awake: now and then it looks round, startles, shakes, bobs or dozes (the talking models' idles, as root motion).
             if (level === "near" && entry.awake && !entry.act && !entry.visitor && !entry.micro && model && !reducedMotion) {
                 // The sharper it is, the more different things it does (`arkIdleBehaviour`).
@@ -5129,7 +5143,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 actor.root.scale.setScalar(as);
                 actor.root.visible = true;
                 // Its shadow on the ground under it now (not its home spot's height), gone off the ground or in water.
-                const under = groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true);
+                const under = groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true, where.base);
                 const touch = groundContact(where.base + lift, under.height, under.water, entry.drawnHeight || entry.length * 0.6);
                 if (touch) shadowList.push({x: where.x, y: touch.y, z: where.z, width: Math.max(entry.length * sizeUp * 0.5, 0.4), length: entry.length * sizeUp, yaw: where.yaw, strength: touch.strength});
                 // (Afloat: on the water's surface there, the sea's 0, the v2 lake's 6 m: lane MA3 water 2, it was under the lake's bed.)
@@ -5347,8 +5361,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // nor under water; everything else is projected down onto the ground under it now, and fades as it leaves
             // the ground (a hop, a perch, flight), none where water covers the ground.
             const broadSurface = Boolean(surface) && !entry.toLight && !where.water && !entry.place.canopy && (Boolean(entry.place.micro) || Boolean(entry.place.perch && SHADOW_SURFACE_TAGS.has(entry.place.perch.tag)));
-            const underFeet = broadSurface && look.on ? null : groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, level === "near");
             const contact = underFeet ? groundContact(where.base + lift, underFeet.height, underFeet.water, modelHeight) : null;
+            const underFeet = broadSurface && look.on ? null : groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, level === "near", poseBase);
             if ((broadSurface && look.on) || contact) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
                 const width = (box.max.x - box.min.x) * candidate.modelScale * sizeUp * 1.15;
@@ -5360,7 +5374,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 } else if (contact) {
                     // On the ground under it: on its slope (near ones, with the pass on), under the body's middle (a
                     // model's origin is not always there: a seal's is at its chest), turned with it.
-                    const normal = look.on && level === "near" ? look.groundNormal(where.x, where.z) : null;
+                    const normal = look.on && level === "near" ? groundNormalAt(where.x, where.z) : null;
                     const midX = look.on ? ((box.min.x + box.max.x) / 2) * s : 0;
                     const midZ = look.on ? ((box.min.z + box.max.z) / 2) * s : 0;
                     shadowList.push({
@@ -5370,7 +5384,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                         width: Math.max(width, look.on && level === "near" ? 0.05 : 0.4),
                         length: Math.max(length, look.on && level === "near" ? 0.05 : 0),
                         yaw: where.yaw,
-                        strength: grow * (1 - entry.lift * 0.3) * contact.strength,
+                        strength: grow * contact.strength,
                         ...(normal ? {nx: normal.x, ny: normal.y, nz: normal.z} : {})
                     });
                 }
@@ -5379,7 +5393,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // On the ground under it now (its home spot's height floated the ring over one that had walked downhill); on the
                 // water's surface over a swimmer or a wader (lane MA3 water 2: the sea's 0 as before; the v2 lake's 6 m, where it
                 // was drawn at 0, under the lake's bed).
-                const ringY = where.afloat ? (island?.contains(where.x, where.z) ? where.base : waterTopAt(where.x, where.z)) : Math.max(underFeet?.height ?? groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true).height, island?.contains(where.x, where.z) ? 0 : waterTopAt(where.x, where.z));
+                const ringY = where.afloat ? (island?.contains(where.x, where.z) ? where.base : waterTopAt(where.x, where.z)) : Math.max(underFeet?.height ?? groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true, poseBase).height, island?.contains(where.x, where.z) ? 0 : waterTopAt(where.x, where.z));
                 ringList.push({x: where.x, y: ringY, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
             } else if (marked && surface && surface.ny > 0.8 && !entry.toLight) {
                 // A small one on level ground (the litter, a flower, the pond): a ring its own size.
