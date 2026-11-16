@@ -283,7 +283,11 @@ function houseRow(ctx: Ctx, id: string, block: Box, side: 1 | -1, street: string
         const left = local(parcel, -pitch / 2, depth / 2);
         const leftBack = local(parcel, -pitch / 2, -depth / 2);
         ctx.hedges.push({id: `${pid}-side`, line: [left, leftBack], height: 1.6, kind: "fence"});
-        if (r() < 0.55) ctx.hedges.push({id: `${pid}-front`, line: [local(parcel, -pitch / 2 + 0.3, depth / 2 - 0.4), local(parcel, driveX - driveSide * 1.6 - 0.2, depth / 2 - 0.4)], height: r() < 0.5 ? 0.8 : 1.1, kind: r() < 0.5 ? "hedge" : "wall"});
+        // (The front wall or hedge runs along the lawn's side of the front, from the drive's edge to the parcel's: gfx
+        // (props) found it laid across the drive on every house whose drive was on the parcel's left.)
+        const lawnFrom = driveSide > 0 ? -pitch / 2 + 0.3 : driveX + 1.6 + 0.2;
+        const lawnTo = driveSide > 0 ? driveX - 1.6 - 0.2 : pitch / 2 - 0.3;
+        if (r() < 0.55) ctx.hedges.push({id: `${pid}-front`, line: [local(parcel, lawnFrom, depth / 2 - 0.4), local(parcel, lawnTo, depth / 2 - 0.4)], height: r() < 0.5 ? 0.8 : 1.1, kind: r() < 0.5 ? "hedge" : "wall"});
         // A garden tree at the back now and then.
         if (r() < 0.5) {
             const t = local(parcel, (r() - 0.5) * (pitch - 3), -depth / 2 + 2 + r() * Math.max(backDepth - 4, 0.5));

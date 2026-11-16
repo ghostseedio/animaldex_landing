@@ -25,6 +25,7 @@
 import {fetchOk, readUntilIn} from "@/ark-scene/model-files";
 import {BufferAttribute, BufferGeometry, Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, Object3D, Quaternion, Vector3, type Camera, type Material} from "three";
 import {hashText, local, polylineAt, polylineLength, polylineNearest, polylineWithin, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
+import {houseDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
 import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_WIDTH, TOWN_LEVEL, townPlan, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {carAt, chance, weekday, type CarSpot, type TownClock} from "@/ark-scene/islands/town/people";
@@ -1096,11 +1097,13 @@ export function townBikeSpots(plan: TownPlan = townPlan()): BikeSpot[] {
         const r = chance(b.id, "bike");
         const front = (u: number, out_: number): Pt => local(b.at, u, b.at.d / 2 + out_);
         if (b.kind === "house" && r < 0.32) {
-            const p = front(-b.at.w / 2 + 0.6, 0.5);
+            // (Against the front at the end away from the door: `doors.ts`, gfx (props).)
+            const p = front((houseDoorU(b) > 0 ? -1 : 1) * (b.at.w / 2 - 0.6), 0.5);
             out.push({id: `bike:${b.id}`, x: p.x, z: p.z, turn: b.at.rot + Math.PI / 2, lean: -0.15, always: r < 0.08});
         } else if (b.kind === "terrace" && r < 0.7) {
             const k = Math.floor(chance(b.id, "bike-home") * b.households);
-            const u = -b.at.w / 2 + (b.at.w / b.households) * (k + 0.5) + 1.4;
+            const mid = -b.at.w / 2 + (b.at.w / b.households) * (k + 0.5);
+            const u = mid + (terraceDoorU(b, k) > mid ? -1.4 : 1.4);
             const p = front(u, 0.5);
             out.push({id: `bike:${b.id}:${k}`, x: p.x, z: p.z, turn: b.at.rot + Math.PI / 2, lean: -0.15, always: r < 0.2});
         } else if (b.kind === "flats") {

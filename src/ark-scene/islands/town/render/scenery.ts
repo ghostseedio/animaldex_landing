@@ -21,6 +21,9 @@ import {surfaceTag} from "@/ark-scene/islands/town/render/surface-tags";
 import {townFarmGates, townFarmProps, type FarmGate} from "@/ark-scene/islands/town/farm";
 import {zooBarrier} from "@/ark-scene/islands/town/render/zoo-barriers";
 import {townTrees} from "@/ark-scene/islands/town/trees";
+import {clearOfDoors, PATH_WIDTH, pathOpenings, townDoorWays} from "@/ark-scene/islands/town/doors";
+import {boundaryBodies, madeHere} from "@/ark-scene/islands/town/render/fences";
+import {parkBench} from "@/ark-scene/islands/town/render/bench";
 
 /** A chunk's merged geometry by material; `foliage`: hedges, flower beds and crops (lane GC, `render/nature.ts`). */
 export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo; foliage: Geo};
@@ -36,6 +39,8 @@ const FENCE = tone("#86684a");
 const IRON = tone("#2b2e31");
 const RAIL = tone("#e8e4da");
 const ZOO_GREEN = tone("#2f4a38");
+const BENCH_ENDS = tone("#26302a");
+const BENCH_WOOD = tone("#8a6644");
 
 function chunkFor(out: SceneryOut, x: number, z: number): SceneryChunk {
     const key = townChunkOf(x, z);
@@ -313,11 +318,31 @@ function square(out: SceneryOut, plan: TownPlan) {
     c.solid.cylinder({x: post.x, y: H(post.x, post.z) + 0.12, z: post.z, rot: 0}, 0, 0, 0, 0.3, 0.3, 1.5, tone("#b3201f"), 10);
 }
 
+/**
+ * The park's benches round the millpond, facing the water (gfx (props): one of the four stood in the pond). On a ring
+ * 7 m out from the water's edge (the pond's ellipse), just past the lamps' ring where the bank has levelled out (its
+ * four feet within 0.2 m), at four places round it (degrees from the pond's east), the north-west one clear of the
+ * bandstand's beds.
+ */
+export const PARK_BENCH_RING = 7;
+export function parkBenchSpots(): Array<{x: number; z: number; rot: number}> {
+    return [165, 70, 215, 298].map((deg) => {
+        const a = (deg * Math.PI) / 180;
+        const x = MILLPOND.x + Math.cos(a) * (MILLPOND.rx + PARK_BENCH_RING);
+        const z = MILLPOND.z + Math.sin(a) * (MILLPOND.rz + PARK_BENCH_RING);
+        return {x, z, rot: Math.atan2(MILLPOND.x - x, MILLPOND.z - z)};
+    });
+}
+
 function bench(geo: Geo, p: Pt, rot: number) {
-    const f: Frame = {x: p.x, y: H(p.x, p.z) + 0.1, z: p.z, rot};
-    geo.box(f, 0, 0.42, 0, 1.8, 0.07, 0.45, FENCE);
-    geo.box(f, 0, 0.5, -0.24, 1.8, 0.4, 0.06, FENCE);
-    for (const lx of [-0.75, 0.75]) geo.box(f, lx, 0, 0, 0.08, 0.45, 0.4, IRON);
+    // gfx (props): a park bench made as one is (`bench.ts`): cast ends, armrests, slats (it was a board, a back board and
+    // two blocks). Its feet on the lower of its ground's corners, so none floats.
+    let y = H(p.x, p.z);
+    for (const [lx, lz] of [[-0.85, 0.22], [0.85, 0.22], [-0.85, -0.26], [0.85, -0.26]]) {
+        const q = at({x: p.x, y: 0, z: p.z, rot}, lx, 0, lz);
+        y = Math.min(y, H(q[0], q[2]));
+    }
+    parkBench(geo, {x: p.x, y: y + 0.1, z: p.z, rot}, BENCH_ENDS, BENCH_WOOD);
 }
 
 // MARK: - Boundaries
@@ -326,6 +351,8 @@ function boundaries(out: SceneryOut, plan: TownPlan) {
     // The farms' gates stand in their hedges and rails (lane GC, `farm.ts`).
     const gates = townFarmGates(plan);
     for (const h of plan.hedges) boundary(out, h, gates);
+    // gfx (props): the gardens' fences, walls, railings and gates, their far bodies (the near detail: `BuildingDetail`).
+    boundaryBodies(plan, (_, mid) => chunkFor(out, mid.x, mid.z).solid);
     for (const g of gates) fiveBarGate(chunkFor(out, g.x, g.z).solid, g);
 }
 
@@ -336,17 +363,21 @@ function inGate(gates: readonly FarmGate[], x: number, z: number, margin = 0): b
 
 function boundary(out: SceneryOut, h: Hedge, gates: readonly FarmGate[] = []) {
     const r = rng(hashText(h.id));
+    // gfx (props): a front hedge opens where a home's front path crosses it (its gate: `render/fences.ts`).
+    const paths = h.kind === "hedge" && h.id.endsWith("-front") ? pathOpenings(h.line) : [];
     if (h.kind === "hedge") {
         // Leafy hedges (lane GC, `render/nature.ts`): a field's or a farm's boundary a shaggy hedgerow, a garden's
         // clipped; each ~24 m piece into the chunk it lies in; open where a gate stands.
         const hedgerow = h.id.startsWith("field") || h.id.includes("smallholding") || h.id.includes("farmstead");
-        const open = gates.map((g) => ({x: g.x, z: g.z, half: g.width / 2}));
+        const open = [...gates.map((g) => ({x: g.x, z: g.z, half: g.width / 2})), ...paths];
         for (const part of pieces(h.line, 24)) {
             const mid = part[Math.floor(part.length / 2)];
             hedgeAlong(chunkFor(out, mid.x, mid.z).foliage, part, h.height, hashText(h.id), hedgerow, open);
         }
         return;
     }
+    // gfx (props): the gardens' fences, walls and railings are `render/fences.ts` (drawn in `boundaries`).
+    if (madeHere(h)) return;
     for (let i = 1; i < h.line.length; i++) {
         const a = h.line[i - 1];
         const b = h.line[i];
@@ -697,7 +728,7 @@ function lamps(out: SceneryOut, plan: TownPlan) {
     c.solid.cylinder(f, 0, 0, 0, 4, 4, 0.7, STONE, 8);
     for (let k = 0; k < 8; k++) c.solid.cylinder(f, Math.cos((k / 8) * Math.PI * 2) * 3.6, 0.7, Math.sin((k / 8) * Math.PI * 2) * 3.6, 0.1, 0.1, 2.8, IRON, 6, false);
     c.solid.cylinder(f, 0, 3.5, 0, 4.4, 0.4, 1.8, tone("#2f5a48"), 8);
-    for (const p of [{x: -30, z: -64}, {x: -6, z: -54}, {x: -40, z: -82}, {x: 2, z: -88}]) bench(chunkFor(out, p.x, p.z).solid, p, Math.atan2(MILLPOND.x - p.x, MILLPOND.z - p.z));
+    for (const p of parkBenchSpots()) bench(chunkFor(out, p.x, p.z).solid, p, p.rot);
 }
 
 // MARK: - Flower beds (lane GC)
@@ -727,6 +758,8 @@ function beds(out: SceneryOut, plan: TownPlan) {
             const bed: Box = {x: centre.x, z: centre.z, w, d: 0.7, rot: b.at.rot};
             if (p.drive && corners(bed).some((q) => inBox(p.drive!, q.x, q.z, 0.2))) continue;
             if (!inBox(p.at, centre.x, centre.z, -0.2)) continue;
+            // gfx (props): never on the door's step or its path (`doors.ts`); the window's side keeps its bed.
+            if (!clearOfDoors(bed, 0.05, plan)) continue;
             const c = chunkFor(out, centre.x, centre.z);
             flowerBed(c.foliage, c.decal, {x: centre.x, y: 0, z: centre.z, rot: b.at.rot}, w, 0.7, hashText(`${p.id}-bed${side}`), false, soil);
         }
@@ -767,13 +800,16 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
         const c = chunkFor(out, p.drive.x, p.drive.z);
         const drive = p.drive;
         tagged(c.decal, p.seed % 2 ? SURF.blocks : SURF.gravel, alongZ(drive.rot), () => c.decal.drape({x: drive.x, y: 0, z: drive.z, rot: drive.rot}, drive.w, drive.d, H, 0.1, () => tone(p.seed % 2 ? "#a49e94" : "#b5ab96"), 2));
-        // A path from the pavement to the front door.
-        const b = plan.buildings.find((q) => q.id === p.building);
-        if (b) {
-            const door = local(b.at, 0, b.at.d / 2 + 0.5);
-            const gate = local(p.at, toLocal(p.at, door.x, door.z).x, p.at.d / 2);
-            tagged(c.decal, SURF.slabs, Math.abs(door.z - gate.z) > Math.abs(door.x - gate.x), () => c.decal.ribbon([gate, door], 1.1, H, 0.09, tone("#b9b2a4"), 2));
-        }
+    }
+    // gfx (props): a path from the pavement to every home's front door, the door's own (`doors.ts`: it led to the middle
+    // of the house, where a window or the porch's wall was, and only where there was a drive).
+    for (const way of townDoorWays(plan)) {
+        if (!way.path) continue;
+        const path = way.path;
+        const from = local(path, 0, -path.d / 2);
+        const to = local(path, 0, path.d / 2);
+        const c = chunkFor(out, path.x, path.z);
+        tagged(c.decal, SURF.slabs, Math.abs(to.z - from.z) > Math.abs(to.x - from.x), () => c.decal.ribbon([to, from], PATH_WIDTH, H, 0.09, tone("#b9b2a4"), 2));
     }
     void sub;
     return out;

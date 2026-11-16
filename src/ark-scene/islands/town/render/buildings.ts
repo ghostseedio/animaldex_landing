@@ -23,6 +23,8 @@
 import {BufferAttribute, BufferGeometry, Group, Mesh, MeshStandardMaterial, type Material, type Vector3} from "three";
 import {corners, rng, type Box} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
+import {houseDoorU, terraceBackDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
+import {boundaryChunks, boundaryDetail} from "@/ark-scene/islands/town/render/fences";
 import type {Building, TownPlan} from "@/ark-scene/islands/town/plan";
 import {chance, darkness, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
 import {TOWN_CHUNK_COUNT, townChunkDistance, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
@@ -346,14 +348,21 @@ function house(ctx: Ctx, b: Building) {
     gutters(solid, f, w, d, b.eaves);
     chimney(solid, f, (r() < 0.5 ? -1 : 1) * (w / 2 - 0.9), -0.4, b.eaves + rise * 0.5, rise * 0.75 + 0.6, shade(wall, 0.9), r() < 0.45);
     const [front, right, back, left] = sides(f, w, d);
-    const doorU = (r() < 0.5 ? -1 : 1) * (w / 2 - 1.4);
+    // (The door's end is the plan's (`doors.ts` houseDoorU), so the gardens keep clear of it; the draw is kept so the
+    // house's other choices stay as they were.)
+    r();
+    const doorU = houseDoorU(b);
     const tall = b.floors > 1;
     door(solid, front.frame, doorU, tone(pick(DOORS, r)), 1.0, 2.1, tall ? {panes: ctx.chunk.panes, style: paneStyle(PANE.plain, 0, false)} : undefined);
     // A porch: a hood over the door, a little gabled porch, or none.
     const porch = r();
     if (porch < 0.45) solid.as(roofSurface, () => solid.box(front.frame, doorU, 2.75, 0.45, 1.6, 0.12, 0.9, roof));
     else if (porch < 0.7) {
-        solid.as(wallSurface, () => solid.box(front.frame, doorU, 0, 0.75, 1.9, 2.5, 1.4, wall));
+        // gfx (props): an open porch, its two cheeks and the lintel over its mouth (it was one solid box, door and all).
+        solid.as(wallSurface, () => {
+            for (const side of [-1, 1]) solid.box(front.frame, doorU + side * 0.8, 0, 0.75, 0.3, 2.5, 1.4, wall);
+            solid.box(front.frame, doorU, 2.15, 1.32, 1.3, 0.35, 0.16, wall);
+        });
         solid.as(roofSurface, () => solid.gable(front.frame, doorU, 2.5, 0.75, 1.9, 1.4, 0.7, 0.15, roof, wall, Math.PI / 2, 0.1, wallSurface));
     }
     const floorH = b.eaves / b.floors;
@@ -409,7 +418,7 @@ function terrace(ctx: Ctx, b: Building) {
             // The downpipe between two homes.
             solid.as(SURFACE.metal, () => solid.box(front.frame, u0, 0.15, 0.09, 0.09, b.eaves - 0.3, 0.09, GUTTER));
         }
-        const doorU = mid + (k % 2 ? 1 : -1) * (homeW / 2 - 0.9);
+        const doorU = terraceDoorU(b, k);
         if (b.shopfront) {
             const swatch = Math.floor(r() * AWNINGS.length);
             shopfront(ctx, front.frame, mid, homeW - 0.2, swatch, doorU, "shop", k);
@@ -429,7 +438,8 @@ function terrace(ctx: Ctx, b: Building) {
         }
         // The back: a door to the yard, a window per floor; homes run the other way round from the back.
         const backU = -mid;
-        door(solid, back.frame, backU + 1.2, tone("#5a4a3a"), 0.9);
+        // (The back wall's frame runs the other way: the back door at building x `terraceBackDoorU`.)
+        door(solid, back.frame, -terraceBackDoorU(b, k), tone("#5a4a3a"), 0.9);
         for (let floor = 0; floor < b.floors; floor++) windowAt(ctx, back.frame, backU - 0.9, floor * floorH + floorH * 0.55, 1.0, 1.25, "home", k, floor);
         // A dormer on some homes' front slope.
         if (!b.shopfront && b.floors === 2 && r() < 0.25) dormer(ctx, f, mid, b.eaves, d, rise, roof, own, k, 2);
@@ -1319,6 +1329,8 @@ export class BuildingDetail {
             list.push(b);
             this.byChunk.set(key, list);
         }
+        // gfx (props): the gardens' boundaries' near detail is built with the chunk's (`fences.ts`), in chunks with none too.
+        for (const key of Array.from(boundaryChunks(plan))) if (!this.byChunk.has(key)) this.byChunk.set(key, []);
         this.distance = DETAIL_DISTANCE[tier];
     }
 
@@ -1366,6 +1378,7 @@ export class BuildingDetail {
             buildBuilding({solid: sink, glass: sink, windows: [], panes: sink, detail: job.geo}, job.list[job.next++]);
             if (started && performance.now() - started > 2) return;
         }
+        boundaryDetail(this.plan, job.key, job.geo);
         this.job = null;
         const group = this.groupOf(job.key);
         if (!group) return;
