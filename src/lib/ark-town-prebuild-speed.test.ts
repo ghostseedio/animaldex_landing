@@ -160,22 +160,23 @@ function digest(value: unknown): string {
 // fences, walls, railings and gates (`doors.ts`, `render/fences.ts`), the open porches, the benches (`render/bench.ts`;
 // the park's off the pond's water) (scenery and buildings).)
 const TOWN_DIGESTS = {
-    plan: "5b90736d71cddf6d",
+    // (p2 (town2): the zoo's west path and three east road ends pulled ashore; bins and bikes off walls; allotment beds.)
+    plan: "a4369079c962a394",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
     // lane's street grade and boats, the place lane's pens. Each lane changed these on purpose; recomputed on the merge.)
     // (3.3 fix (wall), wall-climb.ts: the lamp-lit walls' places on the wall's face with its normal; the eaves' wall faces.)
-    areas: "74187692853b49ce",
+    areas: "9e35116cf74ed612",
     // (Lane GA: the ground's surface weights.)
-    ground: "a3b1b851bfe7128d",
+    ground: "c2ce52537fa6ea7d",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "7a63b081ab02589e",
+    sceneryAndBuildings: "d4daa16d3457e788",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     zoo: "1b520265e67b59fd",
     places: "fba1268b733101f8"
