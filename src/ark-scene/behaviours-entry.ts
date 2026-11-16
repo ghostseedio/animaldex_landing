@@ -15,7 +15,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death"};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake"};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -75,6 +75,13 @@ const SCENES: Record<string, Scene> = {
     breedclutch: {zone: "farm_garden", hours: 10, kind: "mating", cast: [{slug: "common-wall-lizard", name: "Common Wall Lizard", n: 2}]},
     breedaphid: {zone: "farm_garden", hours: 10, kind: "birth", cast: [{slug: "pea-aphid", name: "Pea Aphid", n: 2, young: 1}]},
     breedbuzzard: {zone: "woodland", hours: 10, kind: "hatch", cast: [{slug: "common-buzzard", name: "Common Buzzard", n: 2, young: 1}]},
+    // p3 (shake): out of the water and shaking it off (`water-shake.ts`): geese at the lake, a Labrador from the lake.
+    shakegoose: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "greylag-goose", name: "Greylag Goose", n: 3}]},
+    shakedog: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "labrador-retriever", name: "Labrador Retriever", n: 4}]},
+    shakedog2: {zone: "wetland", hours: 10, kind: "shake", cast: [{slug: "labrador-retriever", name: "Labrador Retriever", n: 4}]},
+    shaketown: {zone: "garden_wildlife", hours: 10, kind: "shake", town: true, cast: [{slug: "mallard", name: "Mallard", n: 6}]},
+    shaketowngoose: {zone: "farm_garden", hours: 10, kind: "shake", town: true, cast: [{slug: "domestic-goose", name: "Domestic Goose", n: 6}]},
+    shakeotter: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "european-otter", name: "European Otter", n: 2}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -110,10 +117,21 @@ async function main() {
             animals.push({...template, id: castId(k, i), species_profile_id: speciesId(k), name: c.name, scientific_name: c.name, model_slug: c.slug, zone: scene.zone, activity: "diurnal", sociality: "group", slot: 90 + k, slot_rank: i, origin: young ? "born" : "arrived", born_ark_day: young ? day : 0} as Raw);
         }
     });
-    const snapshot = decodeArkSnapshot({...fixture, animals});
-    if (!snapshot) throw new Error("fixture did not decode");
+    const decoded = decodeArkSnapshot({...fixture, animals});
+    if (!decoded) throw new Error("fixture did not decode");
+    let snapshot = decoded;
+    // p3 (shake): a town scene: the cast on the town island, the town loaded beside the wild one (as rig-scenes-entry does).
+    let islandOptions: Record<string, unknown> = {};
+    if (scene.town) {
+        snapshot = {...snapshot, animals: snapshot.animals.map((a) => ({...a, island: "town"}) as typeof a)};
+        const [{arkIslandSnapshot}, {loadTownScene}] = await Promise.all([import("@/lib/ark-islands"), import("@/ark-scene/islands/scene")]);
+        const split = arkIslandSnapshot as unknown as (s: typeof snapshot, island: "wild" | "town") => typeof snapshot;
+        const town = await loadTownScene({tier: "high", animals: split(snapshot, "town").animals});
+        islandOptions = {island: town, wildAnimals: split(snapshot, "wild").animals, openIsland: "town"};
+        console.log("[behaviours] town origin", JSON.stringify(town.origin));
+    }
     let ready = false;
-    const handle: ArkSceneHandle = mountArk(document.getElementById("ark")!, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: scene.hours, onReady: () => (ready = true)});
+    const handle: ArkSceneHandle = mountArk(document.getElementById("ark")!, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: scene.hours, onReady: () => (ready = true), ...islandOptions});
     handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.15, storm: 0, windDirection: 0.4, rain: 0, fog: 0});
     const t0 = Date.UTC(2026, 10, 20, scene.hours) / 1000 + 60;
     const setAt = async (epoch: number) => {
@@ -278,6 +296,38 @@ async function main() {
             const status = (id: string) => handle.animalStatus?.(id)?.activity ?? "-";
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
             return `+${s.toFixed(1)} s   card a: ${status(a)}   card b: ${status(b)}   dung marks: ${api.dung().length}\n${acts.concat(said).join("\n")}${scene.kind === "lure" ? `\n${JSON.stringify(debug.lures?.())}` : ""}${scene.kind === "hatch" ? `\n${JSON.stringify(debug.drops?.())}` : ""}${scene.kind === "mob" ? `\n${JSON.stringify(debug.mobbing?.())} rigs ${JSON.stringify(scene.cast[0] ? Array.from({length: scene.cast[0].n}, (_, i) => (debug as unknown as {rigState: (id: string) => unknown}).rigState(castId(0, i))).concat((debug as unknown as {rigState: (id: string) => unknown}).rigState(foe)) : [])}` : ""}`;
+        },
+        /** p3 (shake): the cast's next climbs out of the water (the scene's own schedule), the earliest first. */
+        outs: () => {
+            const ask = (debug as unknown as {waterOuts: (id: string, from: number, slots: number) => Array<{arrive: number; x: number; z: number}>}).waterOuts;
+            const all = scene.cast[0] ? Array.from({length: scene.cast[0].n}, (_, i) => ask(castId(0, i), t0, 1440).map((o) => ({...o, id: castId(0, i)}))).flat() : [];
+            return all.sort((p, q) => p.arrive - q.arrive);
+        },
+        /** p3 (shake): the world run up to an absolute time a tenth of a second a frame (the drops fly), then the animal framed from `azimuth` off its heading (its side by default). */
+        shakeShot: async (id: string, epoch: number, lengths: number, azimuth: number | null = null, polar = 1.4) => {
+            await setAt(epoch - 1.5);
+            for (let i = 0; i < 15; i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const drawn = debug.entries().find((e) => e.animal.id === id) as unknown as {length: number; middle: {x: number; y: number; z: number} | null};
+            const at = handle.locate(id);
+            const target = drawn.middle ? {x: drawn.middle.x, y: drawn.middle.y, z: drawn.middle.z} : at ? {x: at.x, y: at.y + drawn.length * 0.3, z: at.z} : null;
+            const controls = (debug as unknown as {controls: {minDistance: number}}).controls;
+            if (target) {
+                for (let i = 0; i < 3; i++) {
+                    controls.minDistance = 0.08;
+                    handle.setView({target, distance: Math.max(lengths * drawn.length, 0.5), polar, azimuth: (at ? at.yaw : 0) + (azimuth ?? Math.PI / 2)});
+                    await frames(1);
+                }
+            }
+            const pose = (debug.entries().find((e) => e.animal.id === id) as unknown as {sched?: {pose?: {beat?: string; act?: {recipe?: string; shake?: Record<string, number>} | null}}}).sched?.pose;
+            const shake = pose?.act?.shake ? JSON.stringify(Object.fromEntries(Object.entries(pose.act.shake).map(([k, v]) => [k, Number(v.toFixed(2))]))) : "";
+            const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`)));
+            const recipes = (debug as unknown as {scene: {getObjectByName: (n: string) => {children: Array<{type: string; geometry: {drawRange: {count: number}}}>} | undefined}}).scene.getObjectByName("ark-recipes");
+            const drops = recipes?.children.find((c) => c.type === "Points")?.geometry.drawRange.count ?? -1;
+            return `drops ${drops} beat ${pose?.beat ?? "-"} act ${pose?.act?.recipe ?? "-"} ${shake} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
         },
         /**
          * 3.3 batch (A): the predator (the second cast) stood `gap` body lengths of the first cast's animal from it, or

@@ -324,7 +324,8 @@ export const DEFENCE_VERTEX = `
             transformed.x = tailBaseX + (transformed.x - tailBaseX) * taper;
             transformed.y = dy0 + (transformed.y - dy0) * taper;
         }
-    } else if (defK > 7.5) {
+    } else if (defK > 7.5 && defK < 8.5) {
+        // (p3 (shake): kinds 10 and 11 are the water shake's, water-shake.ts.)
         // A flash of hidden colour, on the hind wings as they lie at rest, by the rest pose (so it stays on the wings
         // as the body moves). A flat body (a moth with its wings spread or folded low: far wider than it is tall) has
         // them out at the sides behind its middle; a tall one (a grasshopper) along the top of its back, and what

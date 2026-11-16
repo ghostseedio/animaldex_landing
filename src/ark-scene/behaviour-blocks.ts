@@ -45,7 +45,7 @@ export type BlockDef = {
     /** In the water (its pose may go below the surface). */
     wet?: boolean;
     /** Near-only: particles (at the start of the step unless `fxAt` says the end), a mark left on the ground. */
-    fx?: "splash" | "dirt" | "dust" | "mud" | "chips" | "bubbles" | "sand" | "spray";
+    fx?: "splash" | "dirt" | "dust" | "mud" | "chips" | "bubbles" | "sand" | "spray" | "shake";
     fxAt?: "start" | "end" | "during";
     mark?: "hole" | "mound" | "hollow" | "pit";
 };

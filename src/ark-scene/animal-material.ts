@@ -49,6 +49,8 @@ import {DEFENCE_FRAGMENT, DEFENCE_FRAGMENT_DECLARATIONS, DEFENCE_VERTEX, DEFENCE
 import {tailHabitUniform, type TailHabit} from "@/ark-scene/tail-habit";
 // p3 (reflect): the reflection's draw of the same mesh (`water-reflect-render.ts`).
 import {REFLECT_FRAGMENT, REFLECT_FRAGMENT_DECLARATIONS, REFLECT_VERTEX, REFLECT_VERTEX_DECLARATIONS, type ReflectUniforms} from "@/ark-scene/water-reflect-shader";
+// p3 (shake): shaking off the water (the body from head to tail; a duck's wings).
+import {SHAKE_VERTEX} from "@/ark-scene/water-shake";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};
@@ -490,6 +492,7 @@ vec4 arkSleep = arkSleepOf(arkInstance.w);
 ${LOOK_VERTEX}
 ${IDLE}
 ${DEFENCE_VERTEX}
+${SHAKE_VERTEX}
 ${SHELL_VERTEX}`)
             .replace("#include <project_vertex>", `#include <project_vertex>
 ${options.reflect ? REFLECT_VERTEX : ""}`);
