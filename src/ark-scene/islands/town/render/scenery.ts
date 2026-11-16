@@ -575,7 +575,7 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const back = (lx: number) => local(s, lx, -s.d / 2 + 2.2);
     // p2 (zoo): each outdoor enclosure dressed as its habitat (`zoo-habitat.ts` dressPaddock), clear of the residents'
     // spots; the old scatter (two rocks, a box log, a cone mound, a table) only where a type is not dressed.
-    const dressed = spec.form === "paddock" ? dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H) !== null : false;
+    const dressed = spec.form === "paddock" || spec.form === "aviary" ? dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H) !== null : false;
     if ((spec.form === "paddock" || spec.form === "pool") && !dressed) {
         for (let i = 0; i < (e.type === "bears_wolves" || e.type === "penguin_seal_pools" ? 5 : 2); i++) {
             const p = local(s, (r() - 0.5) * (s.w - 4), (r() - 0.5) * (s.d - 4));

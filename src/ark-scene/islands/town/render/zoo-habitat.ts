@@ -414,6 +414,8 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
     }
     // (And the keepers' shed at the back and the feeding hatch, drawn by `scenery.ts` enclosure: kept clear too.)
     plot.footprints.push({x: s.w / 2 - 4, z: -s.d / 2 + 2.2, r: Math.min(6, s.w * 0.3) / 2 + 0.6, what: "keeper"}, {x: -s.w / 2 + 2, z: -s.d / 2 + 1.2, r: 1.0, what: "keeper"});
+    // (An aviary's perching tree, `scenery.ts` deadTree.)
+    if (e.type === "aviaries") plot.footprints.push({x: -s.w / 4, z: -s.d / 6, r: 1.6, what: "keeper"});
     const fixed = plot.footprints.slice();
     const clearOfPool = (lx: number, lz: number, r: number) => fixed.every((f) => Math.hypot(f.x - lx, f.z - lz) >= f.r + r + 0.4);
     // (Nor on another item: a log across the waterhole.)
@@ -487,7 +489,7 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
             const lx = side === 0 ? -W + 1 : side === 1 ? W - 1 : (r() - 0.5) * s.w * 0.9;
             const lz = side === 2 ? -D + 1 : side === 3 ? (r() - 0.5) * s.d * 0.5 : (r() - 0.5) * s.d * 0.9;
             const q = at2(lx, lz, 0.8, "plant", 1.5);
-            if (q) solid.bush(...plot.p(q.x, q.z, 0.55), 0.8 + r() * 0.4, 0.7 + r() * 0.3, 0.8 + r() * 0.4, tone(colour), hashText(`${e.id}b${k}`));
+            if (q) solid.bush(...plot.p(q.x, q.z, 0.38), 0.8 + r() * 0.4, 0.7 + r() * 0.3, 0.8 + r() * 0.4, tone(colour), hashText(`${e.id}b${k}`));
         }
     };
     switch (e.type) {
@@ -586,6 +588,19 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
                 if (q) fern(solid, plot, q.x, q.z, 0.9 + r() * 0.4, tone("#3f7a34"), hashText(`${e.id}f${k}`), 9);
             }
             grass(140, ["#6f8a44", "#5f7a3a", "#86984e"], 0.5);
+            return plot;
+        }
+        case "aviaries": {
+            // A planted flight: a shallow pool for the waders, shrubs and ferns round the netting, grass, perching logs.
+            patches(6, ["#5f7d3a", "#7a6a4a", "#6f8a42"], 1.8);
+            waterhole(W * 0.25, D * 0.25, 1.8, "#867d70");
+            shrubs(10, "#3f7a34");
+            for (let k = 0; k < 6; k++) {
+                const q = at2((k % 2 ? 1 : -1) * (W - 1.2), (r() - 0.5) * s.d * 0.8, 0.5, "plant", 2);
+                if (q) fern(solid, plot, q.x, q.z, 1.0 + r() * 0.6, tone("#4f8a3a"), hashText(`${e.id}f${k}`), 9, r() < 0.4 ? 0.8 : 0);
+            }
+            logs(2);
+            grass(90, ["#6f9a44", "#86a84e", "#5f8a3a"], 0.45);
             return plot;
         }
         default:
