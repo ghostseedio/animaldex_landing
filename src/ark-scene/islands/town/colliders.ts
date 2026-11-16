@@ -86,6 +86,7 @@ export function townColliderList(open: readonly string[], origin: {x: number; z:
             out.push({shape: "segment", kind: "fence", id: `town:${o.id}:${i}`, ax: a.x + ox, az: a.z + oz, bx: b.x + ox, bz: b.z + oz, r, cx, cz, reach: Math.hypot(b.x - a.x, b.z - a.z) / 2 + r, y0, y1: Math.max(ga, gb) + o.height, gap});
         }
     }
+    // p3 (merge): habitat plants follow solid's bush rule (solid to a big body, a small animal's gap: BUSH_GAP).
     // p3 (zoofix): what the open enclosures' habitats put on their ground (rockwork, termite mounds, logs, hay racks,
     // shelters, climbing trees; plants and waterholes soft), where `render/zoo-habitat.ts` draws them: the residents
     // walk round them, not through them.
@@ -94,7 +95,7 @@ export function townColliderList(open: readonly string[], origin: {x: number; z:
         for (const item of paddockItems(e, zooSpotsOf(e))) {
             const spec = HABITAT_ITEMS[item.what];
             const g = townHeight(item.x, item.z);
-            out.push({shape: "circle", kind: spec.kind, id: `town:habitat:${item.id}`, cx: item.x + ox, cz: item.z + oz, r: item.r, reach: item.r, y0: g - 0.2, y1: g + spec.height, gap: 0, ...(spec.soft ? {soft: true} : {})});
+            out.push({shape: "circle", kind: spec.kind, id: `town:habitat:${item.id}`, cx: item.x + ox, cz: item.z + oz, r: item.r, reach: item.r, y0: g - 0.2, y1: g + spec.height, ...(spec.kind === "shrub" ? {gap: BUSH_GAP} : {gap: 0, ...(spec.soft ? {soft: true} : {})})});
         }
     }
     // p3 (solid): the scenery drawn solid (rockwork, logs and stumps, posts, climbing trees, shelters, racks, troughs, mounds,
