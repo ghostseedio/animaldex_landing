@@ -150,6 +150,40 @@ for (const name of scenes) {
         await context.close();
         continue;
     }
+    if (name.startsWith("breed")) {
+        // 3.3 fix (breeding taps): the line's tap as it is now made, at moments after the event; each frame 3 s after the tap.
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const labels = [];
+        const mode = name === "breedclutch" ? "clutch" : name === "breedfly" ? "pair" : "young";
+        const moments = mode === "clutch" ? [5, 30, 90, 120] : [5, 30, 90, 160];
+        for (let i = 0; i < moments.length; i++) {
+            const note = await page.evaluate(async ([s, mode]) => {
+                const text = await window.__behaviours.breedTap(s, mode);
+                document.getElementById("note").textContent = text;
+                return text;
+            }, [moments[i], mode]);
+            labels.push(`${String(i).padStart(2, "0")} ${note}`);
+            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 85});
+        }
+        if (mode === "clutch") {
+            // And the clutch itself, close (the tap's frame is the pair's; the eggs are a lizard's, about a centimetre).
+            await page.evaluate(async () => {
+                const clutch = window.__arkDebug.liveClutch();
+                if (clutch?.at) window.__behaviours.handle.setView({target: {x: clutch.at.x, y: clutch.at.y + 0.02, z: clutch.at.z}, distance: 0.45, polar: 0.8, azimuth: 0.7});
+                await new Promise((r) => setTimeout(r, 400));
+            });
+            await page.screenshot({path: path.join(dir, "clutch-close.jpg"), type: "jpeg", quality: 85});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", "scale=640:-1,tile=2x2:padding=4:color=black", "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
     if (name.startsWith("tap")) {
         // 3.3 fix (mating tap): the line tapped at moments after the mating's time (the log's line reaches a viewer 5 to
         // 55 s after it and stays 15 s), the old tap or the new; each frame is what the tap shows 3 s later.

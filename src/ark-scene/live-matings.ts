@@ -305,6 +305,17 @@ function arcAt(c: Chase, u: number): {p: Point; yaw: number} {
 }
 
 /** The script of a mating from the two's places at its start, or null (too far apart). Pure. */
+/**
+ * 3.3 fix (breeding taps): the record writes a pair's `laid` with its `mated`; the clutch is laid where she stood for
+ * the try that took, on her left (he rests on her right), half a body length clear of her: in the picture the pair's
+ * tap frames, never where she happened to be before she walked to him.
+ */
+export function clutchSpot(sc: MatingScript): Point {
+    const took = sc.attempts.find((a) => a.took) ?? sc.attempts[sc.attempts.length - 1];
+    const at = took ? took.spot : sc.to.f;
+    return add(at, {x: -sc.dir.z, z: sc.dir.x}, sc.f.length * 0.9);
+}
+
 export function matingScript(a: MatingBody, b: MatingBody, key: string): MatingScript | null {
     const d = Math.hypot(b.x - a.x, b.z - a.z);
     if (!(d <= MATING_MAX_APART)) return null;
@@ -541,6 +552,16 @@ export class LiveMatings<E> {
      * mounting, resting together or walking apart), for the log's tap to frame both; null when none is (over, not
      * started, skipped). The newest such mating when there are several.
      */
+    /** 3.3 fix (breeding taps): where her clutch is laid while the pair's mating is acted (`clutchSpot`), or null. */
+    clutchSpotOf(id: string): Point | null {
+        for (let i = this.matings.length - 1; i >= 0; i--) {
+            const m = this.matings[i];
+            if (!m.acting.size || m.over || m.failed || !m.script) continue;
+            if (m.act.a === id || m.act.b === id) return clutchSpot(m.script);
+        }
+        return null;
+    }
+
     partnerOf(id: string): string | null {
         for (let i = this.matings.length - 1; i >= 0; i--) {
             const m = this.matings[i];

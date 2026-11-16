@@ -68,6 +68,13 @@ const SCENES: Record<string, Scene> = {
     // 3.3 fix (log): a death of the record (old age): its body where it died, and its line's tap (`live-deaths.ts`). A
     // second death, a roadside hawk not in the roster (it has left it, as the dead have), placed from its event alone.
     death: {zone: "grassland", hours: 10, kind: "death", cast: [{slug: "red-deer", name: "Red Deer", n: 3}]},
+    // 3.3 fix (breeding taps): real breeders of the 2026-11-16 record. Two Common Flesh Flies mated (the tap framed the
+    // pair from metres back: two specks); two Common Wall Lizards mated and laid two eggs (the clutch was never drawn);
+    // a Pea Aphid born (a 3 mm young with its mother); two Common Buzzards' young hatched.
+    breedfly: {zone: "farm_garden", hours: 10, kind: "mating", cast: [{slug: "common-flesh-fly", name: "Common Flesh Fly", n: 4}]},
+    breedclutch: {zone: "farm_garden", hours: 10, kind: "mating", cast: [{slug: "common-wall-lizard", name: "Common Wall Lizard", n: 2}]},
+    breedaphid: {zone: "farm_garden", hours: 10, kind: "birth", cast: [{slug: "pea-aphid", name: "Pea Aphid", n: 2, young: 1}]},
+    breedbuzzard: {zone: "woodland", hours: 10, kind: "hatch", cast: [{slug: "common-buzzard", name: "Common Buzzard", n: 2, young: 1}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -132,7 +139,7 @@ async function main() {
     let b = castId(0, 1);
     if (scene.kind === "birth") handle.addBirths?.([{key: "birth:harness", parents: [a, b], young: youngIds, t0}]);
     // 3.3 fix (mating tap): the pair apart at their mating's time, as most of the record's pairs are.
-    const tapScene = (params.get("scene") ?? "").startsWith("tap");
+    const tapScene = (params.get("scene") ?? "").startsWith("tap") || params.get("scene") === "breedfly";
     if (tapScene) {
         // (The one of its kind farthest from the first, as the record's pairs are often apart.)
         const at = handle.locate(a);
@@ -335,6 +342,34 @@ async function main() {
             const v = handle.view();
             const acts = debug.entries().filter((e) => e.animal.id === a || e.animal.id === b).map((e) => `${e.animal.id.slice(-3)} ${String(e.act?.state ?? "its day")}`);
             return `+${s} s, ${pair ? "new tap (the pair)" : "old tap (the first)"}: apart ${pa && pb ? Math.hypot(pa.x - pb.x, pa.z - pb.z).toFixed(1) : "?"} m, view ${v.distance.toFixed(1)} m from ${v.target.x.toFixed(1)},${v.target.z.toFixed(1)}; a ${pa ? `${pa.x.toFixed(1)},${pa.z.toFixed(1)}` : "-"} b ${pb ? `${pb.x.toFixed(1)},${pb.z.toFixed(1)}` : "-"}; ${acts.join(", ")}; ${JSON.stringify(debug.matings())}`;
+        },
+        /**
+         * 3.3 fix (breeding taps): the line's tap as the controller now makes it (`breed-focus.ts`), at `s` s after the
+         * event: "pair" a mating's two, "clutch" the pair and the clutch beside the mother, "young" the newborn with
+         * its mother (`kin`); then 3 s for the flight.
+         */
+        breedTap: async (s: number, mode: "pair" | "clutch" | "young") => {
+            while (fake!.date / 1000 < t0 + s - 0.05) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const young = youngIds[0];
+            if (mode === "young") handle.selectPair?.(young, a, true);
+            else handle.selectPair?.(a, b);
+            if (mode === "clutch") handle.showClutch?.("laid:harness", [a, b], 2);
+            for (let i = 0; i < 30; i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const v = handle.view();
+            const ids = mode === "young" ? [young, a] : [a, b];
+            const at = ids.map((id) => handle.locate(id));
+            const apart = at[0] && at[1] ? Math.hypot(at[0].x - at[1].x, at[0].z - at[1].z).toFixed(2) : "?";
+            const laid = mode === "clutch" ? (debug as unknown as {liveClutch: () => {eggs: number | null; at: {x: number; y: number; z: number; size: number} | null} | null}).liveClutch() : null;
+            const clutch = laid ? ` clutch of ${laid.eggs} at ${laid.at ? `${laid.at.x.toFixed(2)},${laid.at.z.toFixed(2)} ${laid.at.size.toFixed(3)} m` : "-"}; she at ${at[1] ? `${at[1].x.toFixed(2)},${at[1].z.toFixed(2)}` : "-"}` : "";
+            return `+${s} s ${mode}:${clutch} view ${v.distance.toFixed(2)} m; apart ${apart} m; lengths ${at.map((p) => p?.length.toFixed(3) ?? "-").join("/")}`;
         },
         handle
     };

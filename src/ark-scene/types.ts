@@ -487,7 +487,13 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * A mating line's tap: `a` chosen (its card), and while the two's mating is acted the view frames both of them and
      * follows them; once it is over, `a` alone, as `select`.
      */
-    selectPair?: (a: string, b: string) => void;
+    selectPair?: (a: string, b: string, kin?: boolean) => void;
+    /**
+     * 3.3 fix (breeding taps): `kin` (a newborn and its mother) frames the two while they are within a few of the
+     * mother's lengths of each other, mating or not. `showClutch`: a laid line's tap draws the clutch (the record's egg
+     * count) beside the mother (the drawn female of `parents`, else the first) for a while.
+     */
+    showClutch?: (key: string, parents: string[], eggs: number | null) => void;
     /**
      * 3.3 fix (log): the record's deaths (`death_old`, `starved` events: the animal, its time on the shared clock). Its
      * body lies where its schedule had it at that time, on its side, for a while (`live-deaths.ts`). Keyed `death:<id>`.
