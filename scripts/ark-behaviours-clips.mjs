@@ -60,6 +60,8 @@ const PLANS = {
     // 3.3 batch (B): each bird close from its side (the third value: which of the cast), a pump's four quarters 0.11 s apart.
     tail: {distance: 0.55, shots: [[5, "wagtail: the pump", 0], [0.11, "wagtail +0.11 s", 0, "tick"], [0.11, "wagtail +0.22 s", 0, "tick"], [0.11, "wagtail +0.33 s", 0, "tick"], [6, "wren: tail cocked", 1], [1.2, "wren +1.2 s", 1, "tick"], [7, "swamphen: the flick", 2], [0.5, "swamphen +0.5 s", 2, "tick"], [0.5, "swamphen +1.0 s", 2, "tick"], [0.5, "swamphen +1.5 s", 2, "tick"], [9, "water tyrant: the fan", 3], [1.4, "water tyrant +1.4 s", 3, "tick"], [1.4, "water tyrant +2.8 s", 3, "tick"], [11, "sandpiper: the bob", 4], [0.28, "sandpiper +0.28 s", 4, "tick"], [12, "a sparrow: no habit", 5], [0.2, "a sparrow +0.2 s", 5, "tick"]]},
     lure: {distance: 1.6, shots: [[-1.2, "close: the run off the nest (0.9 s)"], [-0.3, "close: a fluttering hop (1.8 s)"], [0.4, "close: dragging, looking back (2.5 s)"], [1.1, "close: the next hop (3.2 s)"], [1.8, "close: dragging (3.9 s)"], [5.3, "close: further on (7.4 s)"], [11.2, "close: still leading (13.3 s)"], [14.6, "close: it stands up whole (16.7 s)"], [17.3, "close: the flight back (19.4 s)"], [21.5, "close: back where its day has it"]]},
+    // (The shot adds 2.1 s after its time: the young jump at 7.8 s, 10.4 s, 13 s, 15.6 s after the hatch.)
+    drop: {distance: 6, shots: [[1, "she comes to the tree (3.1 s)"], [5.3, "the first at the mouth (7.4 s)"], [5.9, "it jumps (8.0 s)"], [6.3, "falling (8.4 s)"], [6.8, "the bounce (8.9 s)"], [8.6, "the second jumps (10.7 s)"], [11.1, "the third (13.2 s)"], [13.7, "the fourth (15.8 s)"], [18, "gathered at her (20.1 s)"], [26, "still gathered (28.1 s)"], [48, "back to their day"]]},
     dung: {distance: 5, shots: [[600, "the herd, ten minutes on"], [900, "a mark, close"], [1500, "marks fading"]]}
 };
 const summary = {};
@@ -118,11 +120,24 @@ for (const name of scenes) {
                 document.getElementById("note").textContent = `${label}\n${found}`;
                 return found;
             }
+            // (The drop: side on to the tree, between its hole and the foot, low, under the leaves.)
+            const hole = name === "drop" ? window.__behaviours.info().drops?.[0]?.hole : null;
+            if (hole) {
+                const text = await window.__behaviours.shot(s, 6.5, undefined, {x: hole.x + hole.nx * 1.1, z: hole.z + hole.nz * 1.1}, Math.atan2(hole.nx, hole.nz) + Math.PI / 2, 1.42);
+                const h = window.__behaviours.handle;
+                const fx = hole.x + hole.nx * 1.3;
+                const fz = hole.z + hole.nz * 1.3;
+                h.setView({target: {x: fx, y: (hole.y + h.heightAt(fx, fz)) / 2, z: fz}, distance: 9, polar: 1.3, azimuth: Math.atan2(hole.nx, hole.nz) + 0.5});
+                console.log("[behaviours] view", JSON.stringify(h.view()), h.heightAt(fx, fz));
+                await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+                document.getElementById("note").textContent = `${label}\n${text}`;
+                return text;
+            }
             const text = await window.__behaviours.shot(s, point ? 2.2 : label.includes("close") && name !== "dung" ? 2.6 : d, name === "contest" && label.includes("runs") ? rival : label.includes("close") && name !== "dung" ? window.__behaviours.info().a : who, point, name === "contest" ? 2.4 : 0.7, name === "contest" ? 0.85 : 1.15);
             if (label.includes("close") && name !== "dung") await window.__behaviours.closeOn(window.__behaviours.info().a, name === "lure" ? d : 2.4);
             document.getElementById("note").textContent = `${label}\n${text}`;
             return text;
-        }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? (name === "contest" ? info.a : name === "mob" ? info.c : undefined), castK === undefined ? null : info.ids[castK], tick ?? null]);
+        }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? info.drops?.[0]?.mother ?? (name === "contest" ? info.a : name === "mob" ? info.c : undefined), castK === undefined ? null : info.ids[castK], tick ?? null]);
         labels.push(`${String(i).padStart(2, "0")} ${label}: ${note.replace(/\n/g, " | ")}`);
         await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 85});
     }

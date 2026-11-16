@@ -489,6 +489,11 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      */
     addBirths?: (births: Array<{key: string; parents: string[]; young: string[]; t0: number}>) => void;
     /**
+     * 3.3 batch (B): the record's hatchings (`birth` events with `from_egg`: a clutch's parents, its young, its time on the
+     * shared clock). The kinds whose young leave a tree hole by jumping (`duckling-drop.ts`) act it from that time.
+     */
+    addHatchings?: (hatchings: Array<{key: string; parents: string[]; young: string[]; t0: number}>) => void;
+    /**
      * The kinds asleep through their dormant season now (the server's `voyage_dormant_v1`: species ids; AnimalDex
      * decision 370): their animals are in their dens, out of sight, and their cards say sleeping. An empty list ends it.
      */

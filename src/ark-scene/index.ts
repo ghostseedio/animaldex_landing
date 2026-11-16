@@ -141,7 +141,7 @@ import {attachVary, setVary} from "@/ark-scene/ark-variation";
 import {tideFit} from "@/lib/ark-liveliness";
 import {ARK_ENV as ARK_ENVIRONMENT, ARK_WIND as ARK_WIND_VECTOR} from "@/ark-scene/glsl";
 import {WATER_WIND} from "@/ark-scene/terrain";
-import {attachSway, groundNormal, setAttachHomePlots, type ArkEnvironment} from "@/ark-scene/sampler";
+import {allAttachPoints, attachSway, groundNormal, setAttachHomePlots, type ArkEnvironment} from "@/ark-scene/sampler";
 import {arkHatchNest, type ArkAct, type ArkEventAnimal} from "@/lib/ark-life";
 import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour";
 import {
@@ -218,6 +218,7 @@ import {LiveBirths} from "@/ark-scene/live-births";
 // 3.3 batch (B): the birds' own moves (mobbing dive)
 import {Mobbing, mobFoeFits, type MobHost} from "@/ark-scene/mobbing";
 import {BrokenWing} from "@/ark-scene/broken-wing";
+import {LiveDuckDrops, type Hollow} from "@/ark-scene/duckling-drop";
 import birdMoves from "@/ark-scene/bird-moves.json";
 import {tailHabitOf} from "@/ark-scene/tail-habit";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
@@ -7079,6 +7080,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
         }
         for (const seen of tailSeen) seenActs.push(seen);
+        if (duckDrops.size) {
+            for (const j of duckDrops.jumping(epoch)) {
+                const e = entryById.get(j.id);
+                const line = e ? DROPS[e.animal.model_slug]?.line : null;
+                const a = e?.animal;
+                if (a && line && seenNear.has(a.id)) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: "hollow_drop", episode: j.episode, block: "jump", fish: false, line});
+            }
+        }
         birdNear.length = 0;
         birdPlaces.clear();
         if (!mobbing.active && !brokenWing.active && !mobbing.due(epoch) && !brokenWing.due(epoch)) return;
@@ -7102,6 +7111,54 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (line) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: "mob_dive", episode: m.episode, block: "dive", fish: false, line});
         }
     };
+    // 3.3 batch (B): ducklings dropping from the tree hole. A hatching of the record, of a kind whose own text says its
+    // young leave a tree hole by jumping (`bird-moves.json` drop), acted from the hatch's time (`duckling-drop.ts`).
+    const DROPS = (birdMoves as unknown as {drop: Record<string, {line: string | null}>}).drop;
+    let hollowPoints: Array<{x: number; y: number; z: number; nx: number; nz: number; id: string; drawn: boolean}> | null = null;
+    const hollowNear = (x: number, z: number): Hollow | null => {
+        // (The scenery's holes: a drawn `tree_hollow`, else a sideways `bark` point more than 1.5 m up a tree; the same
+        // for every viewer. The nearest within 60 m, a drawn hole first.)
+        hollowPoints ??= allAttachPoints()
+            .filter((p) => p.tag === "tree_hollow" || (p.tag === "bark" && Math.abs(p.normal.y) < 0.35 && p.position.y - Math.max(heightAt(p.position.x, p.position.z), 0) > 1.5 && /broadleaf|rainforest|orchard|acacia|conifer|palm|canopy/.test(p.hostKind)))
+            .map((p) => {
+                const flat = Math.hypot(p.normal.x, p.normal.z) || 1;
+                return {x: p.position.x, y: p.position.y, z: p.position.z, nx: p.normal.x / flat, nz: p.normal.z / flat, id: p.id, drawn: p.tag === "tree_hollow"};
+            });
+        let best: (typeof hollowPoints)[number] | null = null;
+        let bestD = Infinity;
+        for (const p of hollowPoints) {
+            const d = Math.hypot(p.x - x, p.z - z) + (p.drawn ? 0 : 20);
+            if (d < bestD || (d === bestD && best && p.id < best.id)) {
+                best = p;
+                bestD = d;
+            }
+        }
+        return best && bestD <= 80 ? {x: best.x, y: best.y, z: best.z, nx: best.nx, nz: best.nz} : null;
+    };
+    const duckDrops = new LiveDuckDrops<Entry>({
+        find: (id) => {
+            const e = entryById.get(id);
+            return e && !e.held && !e.visitor ? e : null;
+        },
+        scheduleAt: (entry, epoch) => {
+            if (!entry.sched || !world || reducedMotion) return null;
+            const at = schedulePose(entry, epoch);
+            return {x: at.x, z: at.z, yaw: at.yaw};
+        },
+        drops: (entry) => entry.animal.model_slug in DROPS,
+        hollow: hollowNear,
+        ground: (x, z) => Math.max(heightAt(x, z), 0),
+        length: (entry) => entry.length,
+        walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
+        male: (entry) => {
+            const sex = sexLook(entry.animal.id, entry.animal.model_slug).sex;
+            return sex === "male" ? true : sex === "female" ? false : null;
+        },
+        setAct: (entry, pose) => {
+            entry.act = pose;
+        },
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id))
+    });
     /** The meals' traces this frame (feathers, fur, scales, pressed grass), and the pressed grass for the grass to bend. */
     let tracesNow: TraceDraw[] = [];
     /**
@@ -7244,12 +7301,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** The live world's meals, a frame (after the replay's acts): poses, and their pins for the herds. */
     const stepLiveMeals = () => {
-        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size) || reducedMotion) return;
+        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !duckDrops.size) || reducedMotion) return; // 3.3 batch (B): + duckDrops
         const epoch = worldMs() / 1000;
         if (liveMeals.size) liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
         if (liveMatings.size) liveMatings.step(epoch);
         if (liveBirths.size) liveBirths.step(epoch);
-        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins()]);
+        if (duckDrops.size) duckDrops.step(epoch); // 3.3 batch (B)
+        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins(), ...duckDrops.pins()]); // 3.3 batch (B): + duckDrops
         if (pins.size !== mealPins.size || Array.from(pins).some((id) => !mealPins.has(id))) {
             mealPins = pins;
             refreshLive();
@@ -8029,7 +8087,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return looked?.middle ? blockers(camera.position.clone(), looked.middle, 0.35).map((hit) => ({kind: hit.mesh.userData.kind, distance: hit.distance})) : null;
     }};
     // 3.3 batch (B): the birds' own moves, for the harness
-    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {mobbing: () => mobbing.debug(), mobStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && mobbing.begin(worldMs() / 1000, b, t, allEntries().filter((e) => e !== b && e !== t), new Set(), 1e9)); }, seenNow: () => seenActs.slice(), lures: () => brokenWing.debug(), lureStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && brokenWing.begin(worldMs() / 1000, b, t)); }});
+    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {mobbing: () => mobbing.debug(), mobStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && mobbing.begin(worldMs() / 1000, b, t, allEntries().filter((e) => e !== b && e !== t), new Set(), 1e9)); }, seenNow: () => seenActs.slice(), lures: () => brokenWing.debug(), drops: () => duckDrops.debug(), lureStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && brokenWing.begin(worldMs() / 1000, b, t)); }});
 
     return {
         ...runtime.handle,
@@ -8117,6 +8175,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         addBirths: (births) => {
             liveBirths.add(births, worldMs() / 1000);
+        },
+        // 3.3 batch (B): ducklings dropping from the tree hole
+        addHatchings: (hatchings) => {
+            duckDrops.add(hatchings, worldMs() / 1000);
         },
         setDormant: (kinds) => {
             dormantKinds = new Set(kinds);

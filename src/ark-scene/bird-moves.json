@@ -263,7 +263,7 @@
  },
  "drop": {
   "australian-wood-duck": {
-   "line": "{aAnimal} is leading ducklings that dropped from the tree hollow to water",
+   "line": null,
    "behaviour": "ducklings drop from the tree hollow and are led to water by both parents",
    "quote": "soon after hatching the ducklings drop from the hollow and are led to water and grass by both parents"
   },
@@ -271,11 +271,6 @@
    "line": "{aAnimal} duckling is jumping from the tree hole to follow its mother",
    "behaviour": "ducklings jump from the tree hole a day or two after hatching",
    "quote": "Ducklings jump from the hole a day or two after hatching and follow her to water."
-  },
-  "cotton-pygmy-goose": {
-   "line": "{aAnimal} is leading its ducklings from the tree hole to the lily beds",
-   "behaviour": "ducklings jump down from a tree cavity and are led to the lily beds",
-   "quote": "Ducklings jump down and are led to the lily beds within a day of hatching."
   },
   "lesser-whistling-duck": {
    "line": "{aAnimal} duckling is dropping from its tree nest to the ground below",

@@ -79,11 +79,14 @@ for (const r of rows) {
 const drop: Record<string, Said> = {};
 for (const r of rows) {
     if (r.uses !== "clip:duckling_hollow_drop") continue;
-    if (!/tree|hollow|cavity|hole/.test(r.behaviour) || /roof/.test(r.behaviour)) {
+    // (The quote itself must say the tree hole: the cotton pygmy goose's says only that they "jump down".)
+    if (!/tree|hollow|cavity|hole/.test(r.behaviour) || !/tree|hollow|cavity|hole/i.test(r.quote) || /roof/.test(r.behaviour)) {
         skipped.push(`drop ${r.name}: ${r.behaviour}`);
         continue;
     }
-    drop[slugOf(r.name)] = said(r);
+    // (The drop shows the jump and the gathering at her, not the walk to the water or the lily beds after: such a
+    // sentence is held back.)
+    drop[slugOf(r.name)] = said(r, /water|lily|leading/.test(r.line) ? null : r.line);
 }
 
 const sorted = <T,>(o: Record<string, T>) => Object.fromEntries(Object.entries(o).sort(([a], [b]) => a.localeCompare(b)));
