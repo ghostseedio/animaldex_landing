@@ -31,6 +31,7 @@ import {foliageMaterial, townPlantings} from "@/ark-scene/islands/town/render/na
 import {primeTownTrees, townTrees, townZooTrees, type TownTree} from "@/ark-scene/islands/town/trees";
 import {townGroundMaterial, townPavingMaterial} from "@/ark-scene/islands/town/render/surfaces";
 import {batchedVariant, disposeBatchedVariant, plainCopy, sidedCopy, TownBandParts, TownBatch, townBandOf, townBatchEnabled, type TownBatchPart} from "@/ark-scene/islands/town/render/batches";
+import {RockInstances} from "@/ark-scene/islands/town/render/rock-instances";
 import {townWeather, TOWN_LIGHT} from "@/ark-scene/islands/town/render/materials";
 import {loadTownTextures} from "@/ark-scene/islands/town/render/textures";
 
@@ -530,6 +531,9 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     const netSides = {back: sidedCopy(materials.net, BackSide), front: sidedCopy(materials.net, FrontSide)};
     let zooBatches: TownBatch[] = [];
     let zooMeshes: Array<{key: number; mesh: Mesh}> = [];
+    // p3 (zoofix): the zoo's boulders, instanced (`rock-instances.ts`), in the solids' look without the buildings' surfaces.
+    const zooRockMaterial = townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), {soak: 0.35});
+    let zooRocks: RockInstances | null = null;
     let zooOpenNow: readonly string[] = options.zooOpen ?? launchEnclosures();
     let assetsMade = false;
     const buildZoo = (open: readonly string[]) => {
@@ -540,8 +544,14 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             zooRoot.remove(mesh);
         }
         zooMeshes = [];
+        zooRocks?.dispose();
+        zooRocks = null;
         // (The prebuild's zoo scenery when it was worked out for these very enclosures.)
-        const zoo = built && built.zooOpen.join(",") === open.join(",") ? built.zoo : buildZooScenery(zooLayout(open, plan));
+        const fromBuilt = Boolean(built && built.zoo.chunks.size && built.zooOpen.join(",") === open.join(","));
+        const zoo = fromBuilt ? built!.zoo : buildZooScenery(zooLayout(open, plan));
+        // p3 (zoofix): the prebuild's zoo arrays let go once made into meshes (~11 MB of the phone's heap held for good):
+        // the zoo is worked out afresh if this set of enclosures opens again.
+        if (fromBuilt) built!.zoo = {chunks: new Map(), fresh: new Geo(), trees: [], lamps: [], bridges: []};
         if (assetsMade) assets.setPlacements([...planTrees, ...zooTreesFor(open)]);
         const parts = new TownBandParts();
         zoo.chunks.forEach((c, key) => {
@@ -553,16 +563,37 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
                 parts.add(name, key, geometry);
             }
         });
+        const rockRecords: number[] = [];
+        zoo.chunks.forEach((c) => {
+            if (c.solid.rocks) for (let i = 0; i < c.solid.rocks.length; i++) rockRecords.push(c.solid.rocks[i]);
+        });
+        if (rockRecords.length) {
+            zooRocks = new RockInstances(rockRecords, zooRockMaterial, "zoo:rocks", {castShadow: true, groupOf: townChunkOf});
+            for (const mesh of zooRocks.meshes) zooRoot.add(mesh);
+            zooRocks.setShown(drawn);
+        }
         const nets = parts.take("net");
         for (const [name, material, list] of [["decal", materials.decal], ["solid", materials.solid], ["glass", materials.glass], ["net", netSides.back, nets], ["net:front", netSides.front, nets], ["foliage", materials.foliage]] as Array<[string, Material, TownBatchPart[] | undefined]>) {
             const from = list ?? parts.take(name);
             if (!from.length) continue;
-            const batch = new TownBatch(from, material, `zoo:${name}`, {castShadow: name === "solid" || name === "foliage", receiveShadow: true});
+            // (p3 zoofix: the solids' and the foliage's page copies let go once on the GPU, as the town's foliage: nothing reads them.)
+            const batch = new TownBatch(from, material, `zoo:${name}`, {castShadow: name === "solid" || name === "foliage", receiveShadow: true, release: name === "solid" || name === "foliage"});
             // (The front faces' batch draws the back faces' geometry: one copy, as the two meshes of a split shared it.)
             if (name === "net:front") batch.shareGeometry(zooBatches[zooBatches.length - 1]);
             batch.setDrawn(drawn);
             zooRoot.add(batch.mesh);
             zooBatches.push(batch);
+        }
+        // p3 (zoofix): the habitats' ground cover (drawn in the solids), walked on: never drawn itself, its positions read
+        // for the walk surfaces by name (`islands/scene.ts` walkSurfacesNow).
+        if (zoo.cover?.triangles) {
+            const geometry = new BufferGeometry();
+            geometry.setAttribute("position", new BufferAttribute(new Float32Array(zoo.cover.pos), 3));
+            const mesh = new Mesh(geometry);
+            mesh.name = "zoo:cover";
+            mesh.visible = false;
+            zooRoot.add(mesh);
+            zooMeshes.push({key: -2, mesh});
         }
         if (zoo.fresh.triangles && water.fresh) {
             const mesh = new Mesh(zoo.fresh.toGeometry(), water.fresh.material as Material);
@@ -794,6 +825,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         });
         for (const {batch} of batches) batch.setDrawn(next);
         for (const batch of zooBatches) batch.setDrawn(next);
+        zooRocks?.setShown(next);
         for (const set of [...Array.from(treeSets.values()), binSet, washSet, boatSet, stallSet, ...narrowboatSets]) set.setDrawn(next);
         assets.setDrawn(next);
         vehicles.setDrawn(next);
@@ -832,6 +864,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         // (A batch is one call: one multi-draw of its chunks in view.)
         for (const {batch} of batches) if (batch.mesh.visible) drawCalls++;
         for (const batch of zooBatches) if (batch.mesh.visible) drawCalls++;
+        drawCalls += zooRocks?.meshes.length ?? 0;
         const instances: Record<string, number> = {};
         treeSets.forEach((set, kind) => {
             instances[`tree:${kind}`] = set.shown;
@@ -908,6 +941,8 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             }
             for (const {batch} of batches) batch.dispose();
             for (const batch of zooBatches) batch.dispose();
+            zooRocks?.dispose();
+            zooRockMaterial.dispose();
             for (const m of [...Object.values(materials), paneMat, netSides.back, netSides.front]) disposeBatchedVariant(m);
             netSides.back.dispose();
             netSides.front.dispose();

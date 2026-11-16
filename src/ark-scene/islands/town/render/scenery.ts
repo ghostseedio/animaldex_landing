@@ -34,7 +34,7 @@ import {parkBench} from "@/ark-scene/islands/town/render/bench";
 
 /** A chunk's merged geometry by material; `foliage`: hedges, flower beds and crops (lane GC, `render/nature.ts`). */
 export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo; foliage: Geo};
-export type SceneryOut = {chunks: Map<number, SceneryChunk>; fresh: Geo; trees: Array<{x: number; z: number; kind: string; scale: number; seed: number}>; lamps: Array<{x: number; y: number; z: number}>; bridges: Array<{street: string; at: Box}>; /** The street furniture and lamps (`furniture.ts`, lane GA): its lights, lamp heads and lamp map. */ furniture?: FurnitureOut};
+export type SceneryOut = {chunks: Map<number, SceneryChunk>; fresh: Geo; /** p3 (zoofix): the zoo habitats' ground cover, walked on (`drawn-ground.ts` walk surfaces; drawn in `solid`). */ cover?: Geo; trees: Array<{x: number; z: number; kind: string; scale: number; seed: number}>; lamps: Array<{x: number; y: number; z: number}>; bridges: Array<{street: string; at: Box}>; /** The street furniture and lamps (`furniture.ts`, lane GA): its lights, lamp heads and lamp map. */ furniture?: FurnitureOut};
 
 const H = (x: number, z: number) => townHeight(x, z);
 
@@ -54,6 +54,8 @@ function chunkFor(out: SceneryOut, x: number, z: number): SceneryChunk {
     let c = out.chunks.get(key);
     if (!c) {
         c = {decal: new Geo(), solid: new Geo(), glass: new Geo(), net: new Geo(), foliage: new Geo()};
+        // p3 (zoofix): the zoo's (the one with a ground cover) boulders drawn as instances (`rock-instances.ts`).
+        if (out.cover) c.solid.rocks = [];
         out.chunks.set(key, c);
     }
     return c;
@@ -621,7 +623,7 @@ function shadeOf(c: [number, number, number], k: number): [number, number, numbe
  * until an enclosure opens there"). Enclosure trees (acacias, pines, a birch in an aviary) are drawn into it.
  */
 export function buildZooScenery(layout: ZooLayout): SceneryOut {
-    const out: SceneryOut = {chunks: new Map(), fresh: new Geo(), trees: [], lamps: [], bridges: []};
+    const out: SceneryOut = {chunks: new Map(), fresh: new Geo(), cover: new Geo(), trees: [], lamps: [], bridges: []};
     for (const e of layout.enclosures) if (!e.shared) enclosure(out, e);
     for (const plot of layout.closed) {
         const c = chunkFor(out, plot.at.x, plot.at.z);
@@ -685,7 +687,7 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const back = (lx: number) => local(s, lx, -s.d / 2 + 2.2);
     // p2 (zoo): each outdoor enclosure dressed as its habitat (`zoo-habitat.ts` dressPaddock), clear of the residents'
     // spots; the old scatter (two rocks, a box log, a cone mound, a table) only where a type is not dressed.
-    const dressed = spec.form === "paddock" || spec.form === "aviary" ? dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H) !== null : false;
+    const dressed = spec.form === "paddock" || spec.form === "aviary" ? dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null) !== null : false;
     if ((spec.form === "paddock" || spec.form === "pool") && !dressed) {
         for (let i = 0; i < (e.type === "bears_wolves" || e.type === "penguin_seal_pools" ? 5 : 2); i++) {
             const p = local(s, (r() - 0.5) * (s.w - 4), (r() - 0.5) * (s.d - 4));

@@ -17,6 +17,9 @@ import {ColliderSet, PICKET_GAP, RAIL_CLEAR} from "@/ark-scene/collide/colliders
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townObstacles} from "@/ark-scene/islands/town/obstacles";
+import {zooLayout, zooSpotsOf} from "@/ark-scene/islands/town/areas";
+import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
+import {HABITAT_ITEMS, paddockItems} from "@/ark-scene/islands/town/render/zoo-habitat";
 
 /** The town's collider set at its world origin for these open enclosures (`list`: worked out already, the prebuild's). */
 export function townColliderSet(open: readonly string[], origin: {x: number; z: number}, list?: Collider[]): ColliderSet {
@@ -77,6 +80,17 @@ export function townColliderList(open: readonly string[], origin: {x: number; z:
             const cx = (a.x + b.x) / 2 + ox;
             const cz = (a.z + b.z) / 2 + oz;
             out.push({shape: "segment", kind: "fence", id: `town:${o.id}:${i}`, ax: a.x + ox, az: a.z + oz, bx: b.x + ox, bz: b.z + oz, r, cx, cz, reach: Math.hypot(b.x - a.x, b.z - a.z) / 2 + r, y0, y1: Math.max(ga, gb) + o.height, gap});
+        }
+    }
+    // p3 (zoofix): what the open enclosures' habitats put on their ground (rockwork, termite mounds, logs, hay racks,
+    // shelters, climbing trees; plants and waterholes soft), where `render/zoo-habitat.ts` draws them: the residents
+    // walk round them, not through them.
+    for (const e of zooLayout(open, plan).enclosures) {
+        if (e.shared || (ZOO_TYPES[e.type].form !== "paddock" && ZOO_TYPES[e.type].form !== "aviary")) continue;
+        for (const item of paddockItems(e, zooSpotsOf(e))) {
+            const spec = HABITAT_ITEMS[item.what];
+            const g = townHeight(item.x, item.z);
+            out.push({shape: "circle", kind: spec.kind, id: `town:zoo:${item.id}`, cx: item.x + ox, cz: item.z + oz, r: item.r, reach: item.r, y0: g - 0.2, y1: g + spec.height, gap: 0, ...(spec.soft ? {soft: true} : {})});
         }
     }
     return out;

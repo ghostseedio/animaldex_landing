@@ -98,6 +98,8 @@ export function townSurfacesFor(open: readonly string[], used: ReadonlyArray<{si
     const sources: ArrayLike<number>[] = [];
     scenery.chunks.forEach((c) => sources.push(c.decal.pos));
     zoo.chunks.forEach((c) => sources.push(c.decal.pos));
+    // p3 (zoofix): the habitats' ground cover, as the scene's (`zoo:cover`).
+    if (zoo.cover) sources.push(zoo.cover.pos);
     sources.push(zooHouseFloors(layout.enclosures));
     const ids = new Set<string>();
     for (const u of used) u.displays.forEach((id) => ids.add(id));

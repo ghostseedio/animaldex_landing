@@ -14,7 +14,7 @@
  * open): the cut shell, the interior, the lit panels, the glass, the water. Pure in the open enclosures.
  */
 
-import {Group, Mesh, type BufferGeometry, type InstancedMesh, type Material} from "three";
+import {Group, Mesh, type BufferAttribute, type BufferGeometry, type InstancedMesh, type Material} from "three";
 import {hashText, rng, type Box, type Pt} from "@/ark-scene/islands/town/geom";
 import {zooSpotsOf, type ZooEnclosure} from "@/ark-scene/islands/town/areas";
 import {aquariumTanks, zooHouseFloors, zooHouseFrame, ZOO_HOUSE_PORCH, ZOO_HOUSE_TYPES, ZOO_HOUSE_WALL, type Tank} from "@/ark-scene/islands/town/tanks";
@@ -22,6 +22,7 @@ import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {cactus, climbingFrame, climbingTree, fern, flowers, ledge, log, outcrop, patch, Plot, pool, rope, tuft} from "@/ark-scene/islands/town/render/zoo-habitat";
 import {cutAttribute, cutawayMaterial, cutEye, followEye, glassMaterial, glowMaterial, interiorMaterial, waterMaterial} from "@/ark-scene/islands/town/render/displays";
 import {aquariumHall, inAquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
+import {RockInstances} from "@/ark-scene/islands/town/render/rock-instances";
 import {buildAquariumHall, hallRocks, hallWaterMaterial, underwaterMaterial, type HallRock} from "@/ark-scene/islands/town/render/aquarium-hall";
 
 type RGB = [number, number, number];
@@ -357,6 +358,11 @@ function barrel(e: ZooEnclosure, glass: Geo) {
     }
 }
 
+/** `BufferAttribute.onUpload`: the page's copy let go once the GPU has it (`batches.ts`' own). */
+function releaseArray(this: {array: ArrayLike<number>}) {
+    this.array = new Float32Array(0);
+}
+
 /** Every open zoo house's shell, interior, tanks, lights, glass and water, and its floors for the drawn ground. */
 export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
     const group = new Group();
@@ -364,6 +370,8 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
     const shellGeo = new Geo();
     const ranges: Array<{from: number; to: number; x: number; y: number; z: number; h: number}> = [];
     const parts = {inside: new Geo(), glow: new Geo(), glass: new Geo(), water: new Geo()};
+    // p3 (zoofix): the halls' boulders (their rockwork, ledges, pools' rims) drawn as instances (`rock-instances.ts`).
+    parts.inside.rocks = [];
     const tanks: Tank[] = [];
     const habitats: Plot[] = [];
     const houses = enclosures.filter((e) => !e.shared && ZOO_HOUSE_TYPES.has(e.type));
@@ -419,7 +427,17 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
         materials.push(depth);
         followEye(mesh, eye);
     }
-    if (parts.inside.triangles) add(parts.inside.toGeometry(), interiorMaterial(), "zoo-houses:inside", true);
+    let boulders: RockInstances | null = null;
+    if (parts.inside.triangles) {
+        // (Its page copy let go once on the GPU: nothing reads it back; the floors are `zooHouseFloors`'.)
+        const geometry = parts.inside.toGeometry();
+        for (const name of Object.keys(geometry.attributes)) (geometry.attributes[name] as BufferAttribute).onUpload(releaseArray);
+        const mesh = add(geometry, interiorMaterial(), "zoo-houses:inside", true);
+        if (parts.inside.rocks?.length) {
+            boulders = new RockInstances(parts.inside.rocks, mesh.material as Material, "zoo-houses:rocks", {castShadow: true});
+            for (const m of boulders.meshes) group.add(m);
+        }
+    }
     if (aquaHall && under.triangles) {
         const material = underwaterMaterial(aquaHall.frame.floor + 8.1);
         add(under.toGeometry(), material, "zoo-houses:under-water", true);
@@ -440,6 +458,7 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
         tanks,
         habitats,
         dispose: () => {
+            boulders?.dispose();
             for (const mesh of meshes) {
                 mesh.geometry.dispose();
                 // (p2 (aqua): the hall's instanced boulders free their instance buffers too.)

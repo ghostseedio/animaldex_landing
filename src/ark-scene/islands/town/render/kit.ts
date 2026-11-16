@@ -73,6 +73,11 @@ export class Geo {
     tag = 0;
     /** A building surface's kind for the next triangles, in their colour (`encodeColourTag`; 0: none). */
     surface = 0;
+    /**
+     * p3 (zoofix): where given, the boulders `rock` would draw are recorded here instead, `ROCK_STRIDE` numbers
+     * each, to be drawn as instances (`rock-instances.ts`). (Declared only: a Geo without it has no such field.)
+     */
+    declare rocks?: number[];
 
     get triangles(): number {
         return this.pos.length / 9;
@@ -250,6 +255,10 @@ export class Geo {
         // p2 (town2): shaded smooth from the rock's own normals and coloured per corner from its own weathering (lichen,
         // streaks, moss), tinted to `colour` (the owner: "big rocks and boulders shouldn't have any sharp polygons"):
         // it was drawn flat, one shade a face, so even a rounded rock showed every facet.
+        if (this.rocks) {
+            this.rocks.push(x, y, z, sx, sy, sz, turn, colour[0], colour[1], colour[2], variant % ROCK_VARIANTS.boulder, detail);
+            return;
+        }
         const m = cachedRock("boulder", variant % ROCK_VARIANTS.boulder, detail, true);
         const [x0, , z0] = m.bounds.min;
         const [x1, y1, z1] = m.bounds.max;

@@ -257,7 +257,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         const sources: Float32Array[] = [houseFloors, petFloors];
         town.root.traverse((o) => {
             const mesh = o as Mesh;
-            if (mesh.isMesh && (mesh.name === "decal" || mesh.name === "zoo:decal")) sources.push(mesh.geometry.getAttribute("position").array as Float32Array);
+            if (mesh.isMesh && (mesh.name === "decal" || mesh.name === "zoo:decal" || mesh.name === "zoo:cover" /* p3 (zoofix) */)) sources.push(mesh.geometry.getAttribute("position").array as Float32Array);
         });
         setTownWalkSurfaces(townWalkSurfaces(sources));
     };

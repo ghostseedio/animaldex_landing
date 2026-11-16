@@ -396,7 +396,7 @@ export function hayRack(geo: Geo, plot: Plot, lx: number, lz: number, turn: numb
  * burrow mounds, grass), the bears' and wolves' forest floor (a den, logs, ferns, grass). Ground items keep clear of
  * the residents' spots. Returns the plot (its footprints), or null for a type it does not dress.
  */
-export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed: number}; pool: Pt[] | null}, spots: readonly Pt[], solid: Geo, water: Geo, heightAt: (x: number, z: number) => number): Plot | null {
+export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed: number}; pool: Pt[] | null}, spots: readonly Pt[], solid: Geo, water: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null): Plot | null {
     const s = e.slot.at;
     const fr: Frame = {x: s.x, y: 0, z: s.z, rot: s.rot};
     const floorAt = (lx: number, lz: number) => {
@@ -459,8 +459,17 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
         for (let k = 0; k < n; k++) {
             const lx = (r() - 0.5) * (s.w - 2);
             const lz = (r() - 0.5) * (s.d - 2);
-            if (clearOfPool(lx, lz, size)) patch(solid, plot, lx, lz, size * (0.6 + r() * 0.8), tone(colours[k % colours.length]), hashText(`${e.id}p${k}`), 0.12 + (k % 3) * 0.006);
+            if (!clearOfPool(lx, lz, size)) continue;
+            const radius = size * (0.6 + r() * 0.8);
+            ground(lx, lz, radius, tone(colours[k % colours.length]), hashText(`${e.id}p${k}`), 0.12 + (k % 3) * 0.006);
         }
+    };
+    // p3 (zoofix): a patch of ground cover is ground: drawn 12 cm up (over the enclosure's paving, 6 cm), its triangles go
+    // into `cover` too, the walk surfaces the residents stand on (`drawn-ground.ts`); the owner, 2026-11-17: "still seeing
+    // camel and ostrich sunk into the ground in the zoo": their hooves and toes were 6 cm under the patches.
+    const ground = (lx: number, lz: number, radius: number, colour: RGB, seed: number, lift: number) => {
+        patch(solid, plot, lx, lz, radius, colour, seed, lift);
+        if (cover) patch(cover, plot, lx, lz, radius, colour, seed, lift);
     };
     const logs = (n: number, colour = "#6f5236") => {
         for (let k = 0; k < n; k++) {
@@ -480,7 +489,7 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
     const waterhole = (lx: number, lz: number, radius: number, rim: string) => {
         const q = at2(lx, lz, radius + 0.3, "pool", 5, 30);
         if (!q) return;
-        patch(solid, plot, q.x, q.z, radius + 1.4, tone("#8a7454"), hashText(`${e.id}mud`), 0.14);
+        ground(q.x, q.z, radius + 1.4, tone("#8a7454"), hashText(`${e.id}mud`), 0.14);
         pool(solid, water, plot, q.x, q.z, radius, hashText(`${e.id}wh`), tone(rim), tone("#4f7f78"), 0.2);
     };
     const shrubs = (n: number, colour: string) => {
@@ -606,4 +615,49 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
         default:
             return null;
     }
+}
+
+/** A Geo that keeps nothing and does no geometry work (the dressing's footprints alone). */
+class SinkGeo extends Geo {
+    override tri() {}
+    override triShaded() {}
+    override rock() {}
+    override blob() {}
+    override bush() {}
+}
+
+/**
+ * What stands on an enclosure's ground and how tall (m), by its footprint's `what`: the residents walk round them (the
+ * town's colliders, `colliders.ts`), so none stands inside a rock, a termite mound, a log or a hay rack while it wanders
+ * (p3 zoofix: the owner's "ostrich sunk into the ground": it stood in a termite mound). Plants and pools are soft
+ * (paths go round, a body may brush in); the keepers' own corner and the enclosure's own pool are not here.
+ */
+export const HABITAT_ITEMS: Readonly<Record<string, {kind: "rock" | "log" | "hay" | "post" | "shrub" | "pond"; height: number; soft?: boolean}>> = {
+    rockwork: {kind: "rock", height: 2.6},
+    mound: {kind: "rock", height: 2.9},
+    tree: {kind: "post", height: 4.4},
+    shelter: {kind: "rock", height: 2.6},
+    log: {kind: "log", height: 0.6},
+    hay: {kind: "hay", height: 2.0},
+    trough: {kind: "hay", height: 0.6},
+    burrow: {kind: "rock", height: 0.3, soft: true},
+    plant: {kind: "shrub", height: 1.3, soft: true},
+    pool: {kind: "pond", height: 0.4, soft: true}
+};
+
+export type HabitatItem = {id: string; what: string; x: number; z: number; r: number};
+
+/**
+ * The ground items an outdoor enclosure's dressing puts down (town frame), exactly where `dressPaddock` draws them (the
+ * same run, drawing nothing).
+ */
+export function paddockItems(e: {id: string; type: string; slot: {at: Box; seed: number}; pool: Pt[] | null}, spots: readonly Pt[]): HabitatItem[] {
+    const plot = dressPaddock(e, spots, new SinkGeo(), new SinkGeo(), () => 0);
+    if (!plot) return [];
+    const s = e.slot.at;
+    return plot.footprints.flatMap((f, i) => {
+        if (!HABITAT_ITEMS[f.what]) return [];
+        const q = at({x: s.x, y: 0, z: s.z, rot: s.rot}, f.x, 0, f.z);
+        return [{id: `${e.id}:${f.what}:${i}`, what: f.what, x: q[0], z: q[2], r: f.r}];
+    });
 }

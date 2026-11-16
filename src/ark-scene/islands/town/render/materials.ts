@@ -102,11 +102,15 @@ export const TOWN_VERTEX_PARS = `
 varying vec3 vTownWorld;
 varying vec3 vTownNormal;`;
 
-/** After `worldpos_vertex`: the world position and normal (instancing included). */
+/** After `worldpos_vertex`: the world position and normal (instancing and batching included: p3 zoofix's batched rocks). */
 export const TOWN_VERTEX_BODY = `
 {
     vec4 townW = vec4(transformed, 1.0);
     vec3 townN = objectNormal;
+    #ifdef USE_BATCHING
+    townW = batchingMatrix * townW;
+    townN = mat3(batchingMatrix) * townN;
+    #endif
     #ifdef USE_INSTANCING
     townW = instanceMatrix * townW;
     townN = mat3(instanceMatrix) * townN;
