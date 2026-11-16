@@ -14,7 +14,8 @@
  * panels, the water, the glass, plus one for what lies under water. Pure in the plan.
  */
 
-import {Color, MeshStandardMaterial} from "three";
+import {BufferAttribute, BufferGeometry, Color, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type Material} from "three";
+import {cachedRock} from "@/ark-scene/rock-shapes";
 import {hashText, rng, type Box} from "@/ark-scene/islands/town/geom";
 import type {AquariumHall, HallTank} from "@/ark-scene/islands/town/aquarium-hall";
 import {at, Geo, tone, type Frame, type V3} from "@/ark-scene/islands/town/render/kit";
@@ -35,8 +36,8 @@ const JELLY = tone("#4a3a9a");
 const SAND = tone("#d6c08a");
 const GRAVEL = tone("#8a8276");
 const STAND = tone("#1e2428");
-const ROCK_SALT = ["#b9a48c", "#a8907a", "#c4b29a", "#8f7c6a"].map((h) => tone(h));
-const ROCK_FRESH = ["#6e6a5e", "#7c766a", "#5e5a50"].map((h) => tone(h));
+const ROCK_SALT = ["#c9a27a", "#b8865e", "#d4b48a", "#a0785a", "#c88a8a"].map((h) => tone(h));
+const ROCK_FRESH = ["#8a7a62", "#7c766a", "#6e604c"].map((h) => tone(h));
 const CORAL = ["#e8604a", "#f0a040", "#c058a8", "#e8d060", "#ff7f8a", "#7fd0c0", "#9a70d8"].map((h) => tone(h));
 const PORCH = 1.2;
 const WALL_T = 0.3;
@@ -70,6 +71,13 @@ export function hallShell(geo: Geo, hall: AquariumHall, ranges: Range[]) {
     for (const side of [-1, 1]) {
         const m = Math.max(2, Math.round(inside / 4.2));
         for (let k = 0; k <= m; k++) geo.box(fr, side * (w / 2 + 0.08), 1.12, -d / 2 + (k * inside) / m, 0.18, h - 1.74, 0.5, PILASTER);
+    }
+    // A clerestory of blue-tinted glazing between the pilasters, high on the back and the ends (lit blue from inside).
+    const pane = tone("#2a5a7a");
+    for (let k = 0; k < n; k++) geo.box(fr, -w / 2 + ((k + 0.5) * w) / n, 6.2, -d / 2 - 0.05, w / n - 0.7, 3.6, 0.04, pane);
+    for (const side of [-1, 1]) {
+        const m = Math.max(2, Math.round(inside / 4.2));
+        for (let k = 0; k < m; k++) geo.box(fr, side * (w / 2 + 0.05), 6.2, -d / 2 + ((k + 0.5) * inside) / m, 0.04, 3.6, inside / m - 0.7, pane);
     }
     // The front: a base under the glass, tall mullions, a transom at 4.5 m, the lintel, the canopy and the sign.
     geo.box(fr, 0, 0, front - t / 2 + 0.01, w - 0.02, 0.35, t + 0.02, BAND);
@@ -185,13 +193,96 @@ function boxGlassAndWater(t: HallTank, parts: HallParts, y0: number, tint: RGB) 
     }
     // (The small tanks' strip lights; the big ones are lit from above, through the vault.)
     const strips = t.look === "fresh" || t.look === "reef" ? Math.max(1, Math.round(g.d / 3)) : 0;
-    for (let k = 0; k < strips; k++) parts.glow.box(fr, 0, gt + 0.12, -hd + ((k + 0.5) * g.d) / strips, g.w * 0.85, 0.04, 0.12, tone("#f4f8ff"));
+    for (let k = 0; k < strips; k++) parts.glow.box(fr, 0, gt + 0.1, -hd + ((k + 0.5) * g.d) / strips, g.w * 0.8, 0.025, 0.05, tone("#f4f8ff"));
 }
 
-/** A rock in the tank's frame (lx, lz), its base at `y`. */
+/** The sand's (gravel's) top: metre tiles each its own shade, darker patches and pale ripples, so the floor never reads flat. */
+function sandTop(geo: Geo, t: HallTank) {
+    const fr = frameOf(t.glass, 0);
+    const base = t.look === "fresh" ? GRAVEL : SAND;
+    const nx = Math.max(1, Math.round(t.glass.w));
+    const nz = Math.max(1, Math.round(t.glass.d));
+    const sx = t.glass.w / nx;
+    const sz = t.glass.d / nz;
+    const y = t.sand;
+    for (let i = 0; i < nx; i++) {
+        for (let j = 0; j < nz; j++) {
+            const lx = -t.glass.w / 2 + i * sx;
+            const lz = -t.glass.d / 2 + j * sz;
+            const h = hashText(`${t.tank.id}|sand|${i}|${j}`);
+            const patch = Math.sin(i * 0.7 + j * 0.4) * Math.cos(j * 0.6 - i * 0.3);
+            const k = 0.94 + ((h % 1000) / 1000) * 0.04 + patch * 0.08;
+            const c: RGB = [base[0] * k, base[1] * k, base[2] * k * 0.98];
+            geo.quad(at(fr, lx, y, lz + sz), at(fr, lx + sx, y, lz + sz), at(fr, lx + sx, y, lz), at(fr, lx, y, lz), c);
+        }
+    }
+}
+
+/** A boulder of the hall's rockwork, drawn as an instance of the island's own boulder (`hallRocks`). */
+export type HallRock = {x: number; y: number; z: number; sx: number; sy: number; sz: number; turn: number; colour: RGB};
+const rockSinks = new WeakMap<Geo, HallRock[]>();
+
+/** A rock in the tank's frame (lx, lz), its base at `y`: an instance (`hallRocks`) where the geometry has a sink, else merged. */
 function rockAt(geo: Geo, fr: Frame, lx: number, y: number, lz: number, sx: number, sy: number, sz: number, colour: RGB, seed: number) {
     const p = at(fr, lx, 0, lz);
-    geo.rock(p[0], y - 0.05, p[2], sx, sy, sz, (seed % 628) / 100, colour, seed);
+    const sink = rockSinks.get(geo);
+    if (sink) sink.push({x: p[0], y: y - 0.05, z: p[2], sx, sy, sz, turn: (seed % 628) / 100, colour});
+    else geo.rock(p[0], y - 0.05, p[2], sx, sy, sz, (seed % 628) / 100, colour, seed);
+}
+
+/**
+ * The hall's boulders as instances of one of the island's own boulders (`rock-shapes.ts`, 320 faces near, 80 for the
+ * small ones): its unit shape (x and z −1…1, y 0…1, faces shaded by its crevices as `kit.ts` rock does), each placed,
+ * turned, sized and tinted by its instance: two draw calls for a few hundred rocks and almost no memory.
+ */
+export function hallRocks(rocks: readonly HallRock[], material: Material): InstancedMesh[] {
+    const out: InstancedMesh[] = [];
+    const big = rocks.filter((r) => Math.max(r.sx, r.sy, r.sz) >= 0.35);
+    const small = rocks.filter((r) => Math.max(r.sx, r.sy, r.sz) < 0.35);
+    const matrix = new Matrix4();
+    const turn = new Quaternion();
+    const up = new Vector3(0, 1, 0);
+    const colour = new Color();
+    for (const [list, detail, name] of [[big, 2, "zoo-houses:hall-rocks"], [small, 1, "zoo-houses:hall-pebbles"]] as const) {
+        if (!list.length) continue;
+        const m = cachedRock("boulder", 1, detail);
+        const [x0, , z0] = m.bounds.min;
+        const [x1, y1, z1] = m.bounds.max;
+        let mean = 0;
+        for (let i = 0; i < m.colors.length; i++) mean += m.colors[i];
+        mean = mean / m.colors.length || 1;
+        const positions = new Float32Array(m.index.length * 3);
+        const colours = new Float32Array(m.index.length * 3);
+        for (let f = 0; f < m.index.length; f += 3) {
+            let k = 0;
+            for (let j = 0; j < 3; j++) {
+                const v = m.index[f + j];
+                k += (m.colors[v * 3] + m.colors[v * 3 + 1] + m.colors[v * 3 + 2]) / 3;
+                positions.set([((m.positions[v * 3] - (x0 + x1) / 2) * 2) / (x1 - x0), m.positions[v * 3 + 1] / y1, ((m.positions[v * 3 + 2] - (z0 + z1) / 2) * 2) / (z1 - z0)], (f + j) * 3);
+            }
+            k = Math.min(Math.max(k / 3 / mean, 0.45), 1.35);
+            for (let j = 0; j < 3; j++) colours.set([k, k, k], (f + j) * 3);
+        }
+        const geometry = new BufferGeometry();
+        geometry.setAttribute("position", new BufferAttribute(positions, 3));
+        geometry.setAttribute("color", new BufferAttribute(colours, 3));
+        geometry.computeVertexNormals();
+        const mesh = new InstancedMesh(geometry, material, list.length);
+        list.forEach((r, i) => {
+            turn.setFromAxisAngle(up, -r.turn);
+            matrix.compose(new Vector3(r.x, r.y, r.z), turn, new Vector3(r.sx, r.sy, r.sz));
+            mesh.setMatrixAt(i, matrix);
+            mesh.setColorAt(i, colour.setRGB(r.colour[0], r.colour[1], r.colour[2]));
+        });
+        mesh.instanceMatrix.needsUpdate = true;
+        if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+        mesh.computeBoundingSphere();
+        mesh.name = name;
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        out.push(mesh);
+    }
+    return out;
 }
 
 /** A coral head: a cluster of rounded lobes and a few branches, in one colour, on a point (base `y`). */
@@ -277,9 +368,14 @@ function rockwork(t: HallTank, geo: Geo) {
                 rockAt(geo, fr, front.x, t.sand, front.z, size * 0.5, size * (0.5 + r() * 0.5), size * 0.4, colours[(k + 1) % colours.length], hashText(`${tank.id}f${k}`));
             }
             // Corals on the reef (salt) or plants (fresh) on and among the rocks.
-            if (salt && r() < 0.85) {
-                const on = edge(u + (r() - 0.5) * size, size * (0.3 + r() * 0.6));
-                coralAt(geo, fr, on.x, t.sand + Math.min(tall * (0.4 + r() * 0.6), water * 0.5), on.z, Math.min(0.25 + r() * 0.5, water * 0.15), CORAL[k % CORAL.length], hashText(`${tank.id}c${k}`));
+            if (salt) {
+                // On the boulder's crown (sunk a little into it), and one or two at its foot on the sand in front.
+                coralAt(geo, fr, back.x + (r() - 0.5) * size * 0.3, t.sand + tall * 0.86, back.z, Math.min(0.3 + r() * 0.45, water * 0.15), CORAL[k % CORAL.length], hashText(`${tank.id}c${k}`));
+                for (let j = 0; j < 2; j++) {
+                    if (r() < 0.35) continue;
+                    const foot = edge(u + (r() - 0.5) * size * 1.2, band.depth * (0.75 + r() * 0.3));
+                    coralAt(geo, fr, foot.x, t.sand, foot.z, Math.min(0.2 + r() * 0.4, water * 0.12), CORAL[(k + j + 3) % CORAL.length], hashText(`${tank.id}c${k}f${j}`));
+                }
             } else if (!salt && r() < 0.8) {
                 const on = edge(u + (r() - 0.5) * size, band.depth * (0.4 + r() * 0.5));
                 plant(geo, fr, on.x, t.sand, on.z, Math.min(water * (0.3 + r() * 0.4), 1.6), hashText(`${tank.id}pl${k}`));
@@ -317,9 +413,7 @@ function rockwork(t: HallTank, geo: Geo) {
         const lx = (r() - 0.5) * (t.glass.w - 0.4);
         const lz = (r() - 0.5) * (t.glass.d - 0.4);
         const size = Math.min(0.06 + r() * 0.14, water * 0.05);
-        const p = at(fr, lx, 0, lz);
-        if (salt && r() < 0.25) coralAt(geo, fr, lx, t.sand, lz, size * 2.2, CORAL[k % CORAL.length], hashText(`${tank.id}s${k}`) * 3 + 2);
-        else rockAt(geo, fr, lx, t.sand, lz, size * 1.4, size * 0.9, size * 1.1, colours[k % colours.length], hashText(`${tank.id}p${k}`));
+        rockAt(geo, fr, lx, t.sand, lz, size * 1.4, size * 0.9, size * 1.1, colours[k % colours.length], hashText(`${tank.id}p${k}`));
     }
 }
 
@@ -441,7 +535,8 @@ function hallTank(t: HallTank, parts: HallParts, floor: number) {
     }
     // The stand (a dark cabinet to the tank's bottom), the sand on it.
     if (t.sand - 0.12 - floor > 0.02) parts.inside.box(fr, 0, floor, 0, t.glass.w + 0.24, t.sand - 0.12 - floor, t.glass.d + 0.24, STAND);
-    parts.under.box(fr, 0, t.sand - 0.12, 0, t.glass.w, 0.12, t.glass.d, t.look === "fresh" ? GRAVEL : SAND);
+    parts.under.box(fr, 0, t.sand - 0.12, 0, t.glass.w, 0.115, t.glass.d, t.look === "fresh" ? GRAVEL : SAND);
+    sandTop(parts.under, t);
     rockwork(t, parts.under);
     if (t.look === "ocean") kelp(t, parts.under);
     // The back light (the far side from the visitors) of the small tanks; the big ones are lit from above.
@@ -450,7 +545,8 @@ function hallTank(t: HallTank, parts: HallParts, floor: number) {
 }
 
 /** The whole hall into the zoo houses' geometries (shell: cut; the rest: `parts`). */
-export function buildAquariumHall(hall: AquariumHall, shell: Geo, ranges: Range[], parts: HallParts) {
+export function buildAquariumHall(hall: AquariumHall, shell: Geo, ranges: Range[], parts: HallParts, rocks?: HallRock[]) {
+    if (rocks) rockSinks.set(parts.under, rocks);
     hallShell(shell, hall, ranges);
     hallFloor(parts.inside, hall);
     hallGlass(parts.glass, hall);
@@ -471,7 +567,16 @@ export function underwaterMaterial(surface: number): MeshStandardMaterial {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
             .replace("#include <common>", "#include <common>\nvarying vec3 vAquaWorld;\nvarying float vAquaUp;")
-            .replace("#include <worldpos_vertex>", "#include <worldpos_vertex>\nvAquaWorld = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvAquaUp = normalize(mat3(modelMatrix) * objectNormal).y;");
+            .replace(
+                "#include <worldpos_vertex>",
+                `#include <worldpos_vertex>
+vec4 aquaAt = vec4(transformed, 1.0);
+#ifdef USE_INSTANCING
+aquaAt = instanceMatrix * aquaAt;
+#endif
+vAquaWorld = (modelMatrix * aquaAt).xyz;
+vAquaUp = inverseTransformDirection(transformedNormal, viewMatrix).y;`
+            );
         shader.fragmentShader = shader.fragmentShader
             .replace(
                 "#include <common>",
@@ -496,7 +601,7 @@ float aquaCaustic(vec2 p, float t) {
                 `#include <emissivemap_fragment>
 {
     float deep = clamp((aquaSurface - vAquaWorld.y) / 9.0, 0.0, 1.0);
-    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * aquaTint * 1.5, 0.3 + 0.35 * deep);
+    diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * aquaTint * 1.5, 0.18 + 0.3 * deep);
     float up = clamp(vAquaUp, 0.0, 1.0);
     totalEmissiveRadiance += vec3(0.55, 0.85, 0.9) * min(aquaCaustic(vAquaWorld.xz, arkTime), 1.6) * up * 0.3 * (1.0 - 0.6 * deep);
 }`

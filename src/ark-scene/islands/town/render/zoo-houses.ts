@@ -14,14 +14,14 @@
  * open): the cut shell, the interior, the lit panels, the glass, the water. Pure in the open enclosures.
  */
 
-import {Group, Mesh, type BufferGeometry, type Material} from "three";
+import {Group, Mesh, type BufferGeometry, type InstancedMesh, type Material} from "three";
 import {hashText, rng, type Box} from "@/ark-scene/islands/town/geom";
 import type {ZooEnclosure} from "@/ark-scene/islands/town/areas";
 import {aquariumTanks, zooHouseFloors, zooHouseFrame, ZOO_HOUSE_PORCH, ZOO_HOUSE_TYPES, ZOO_HOUSE_WALL, type Tank} from "@/ark-scene/islands/town/tanks";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {cutAttribute, cutawayMaterial, cutEye, followEye, glassMaterial, glowMaterial, interiorMaterial, waterMaterial} from "@/ark-scene/islands/town/render/displays";
 import {aquariumHall, inAquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
-import {buildAquariumHall, hallWaterMaterial, underwaterMaterial} from "@/ark-scene/islands/town/render/aquarium-hall";
+import {buildAquariumHall, hallRocks, hallWaterMaterial, underwaterMaterial, type HallRock} from "@/ark-scene/islands/town/render/aquarium-hall";
 
 type RGB = [number, number, number];
 
@@ -227,8 +227,9 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
     const aquaHall = houses.some((e) => inAquariumHall(e)) ? aquariumHall() : null;
     const under = new Geo();
     const hallWater = new Geo();
+    const rocks: HallRock[] = [];
     if (aquaHall) {
-        buildAquariumHall(aquaHall, shellGeo, ranges, {...parts, under, water: hallWater});
+        buildAquariumHall(aquaHall, shellGeo, ranges, {...parts, under, water: hallWater}, rocks);
         for (const t of aquaHall.tanks) tanks.push(t.tank);
     }
     for (const e of houses) {
@@ -272,7 +273,15 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
         followEye(mesh, eye);
     }
     if (parts.inside.triangles) add(parts.inside.toGeometry(), interiorMaterial(), "zoo-houses:inside", true);
-    if (aquaHall && under.triangles) add(under.toGeometry(), underwaterMaterial(aquaHall.frame.floor + 8.1), "zoo-houses:under-water", true);
+    if (aquaHall && under.triangles) {
+        const material = underwaterMaterial(aquaHall.frame.floor + 8.1);
+        add(under.toGeometry(), material, "zoo-houses:under-water", true);
+        // (Its boulders as instances, the same material: `hallRocks`.)
+        for (const mesh of hallRocks(rocks, material)) {
+            group.add(mesh);
+            meshes.push(mesh);
+        }
+    }
     if (hallWater.triangles) add(hallWater.toGeometry(), hallWaterMaterial(), "zoo-houses:hall-water", false, 3);
     if (parts.glow.triangles) add(parts.glow.toGeometry(), glowMaterial(), "zoo-houses:glow", false);
     if (parts.water.triangles) add(parts.water.toGeometry(), waterMaterial(), "zoo-houses:water", false, 3);
@@ -282,7 +291,11 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
         floors: zooHouseFloors(houses),
         tanks,
         dispose: () => {
-            for (const mesh of meshes) mesh.geometry.dispose();
+            for (const mesh of meshes) {
+                mesh.geometry.dispose();
+                // (p2 (aqua): the hall's instanced boulders free their instance buffers too.)
+                if ((mesh as InstancedMesh).isInstancedMesh) (mesh as InstancedMesh).dispose();
+            }
             for (const material of materials) material.dispose();
         }
     };
