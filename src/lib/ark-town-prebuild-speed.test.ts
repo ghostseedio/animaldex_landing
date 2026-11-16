@@ -178,8 +178,8 @@ const TOWN_DIGESTS = {
     sceneryAndBuildings: "7a63b081ab02589e",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     zoo: "1b520265e67b59fd",
-    // (p2 (aqua): the aquarium's residents in the one hall's tanks, `aquarium-hall.ts`.)
-    places: "9b2b053fee45ca76"
+    // (p2 (aqua): the aquarium's residents in the one hall's tanks, `aquarium-hall.ts`, bounded by the plot their tank stands in.)
+    places: "895242fecb8a08d6"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {
