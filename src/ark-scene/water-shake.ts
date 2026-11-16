@@ -97,21 +97,46 @@ export function bathShakeAt(length: number, u: number, seconds: number): ShakeNo
     return {body: bump(u), bodyPhase: u * seconds * shakeRate(length) * Math.PI * 2, wings: 0, wingPhase: 0, pitch: 0};
 }
 
-type LegLike = {mode: string; seconds: number};
-type TripLike = {start: number; arrive: number; end: number; legs: readonly LegLike[]; stay: ReadonlyArray<{at: number; beat: string}>};
+type LegLike = {mode: string; seconds: number; beat?: string};
+type TripLike = {start: number; arrive?: number; legs: readonly LegLike[]; stay?: ReadonlyArray<{at: number; beat: string}>};
+
+/** The shortest stand on the edge a shake is drawn in there (a trip squeezed into its slot has less: it shakes on arrival). */
+const EDGE_LEAST = 0.8;
+
+/** Its stand on the bank's edge to shake (a pause after the climb out): its start and length, or null. */
+function edgeLeg(trip: TripLike): {t0: number; seconds: number} | null {
+    let t0 = trip.start;
+    for (let i = 0; i < trip.legs.length; i++) {
+        const leg = trip.legs[i];
+        if (leg.mode === "pause" && leg.beat === "shake" && trip.legs[i - 1]?.mode === "exit") return leg.seconds >= EDGE_LEAST ? {t0, seconds: leg.seconds} : null;
+        t0 += leg.seconds;
+    }
+    return null;
+}
 
 /**
- * Seconds since it came up out of the water onto the bank, while its after-beat lasts: only on a trip whose legs climb
- * out of the water (an "exit" leg) and whose stay begins with the shake the schedule puts after it. Null otherwise
- * (into the water, a walk, a swim, any other time).
+ * Seconds into its shake, just out of the water: on the first spot of land (the pause the schedule puts straight after
+ * a climb out for a species on the list; `total`: the shake's own length, fitted into a shorter stand), or else as it
+ * arrives (where the edge is still in the water, a canal's wall, or the stand was squeezed). Null at any other time.
  */
-export function sinceOutOfWater(trip: TripLike, epoch: number): number | null {
-    if (!trip.legs.some((leg) => leg.mode === "exit")) return null;
-    if (trip.stay[0]?.beat !== "shake") return null;
-    const t = epoch - trip.arrive;
-    if (t < 0 || epoch >= trip.end) return null;
-    const next = trip.stay[1]?.at ?? Infinity;
-    return t < next ? t : null;
+export function sinceOutOfWater(trip: TripLike, epoch: number, total = 0): number | null {
+    const edge = edgeLeg(trip);
+    if (edge) return epoch >= edge.t0 && epoch < edge.t0 + edge.seconds ? (epoch - edge.t0) * Math.max(total / edge.seconds, 1) : null;
+    const t0 = shakeStartOf(trip);
+    if (t0 === null || epoch < t0) return null;
+    return epoch < (trip.stay?.[1]?.at ?? Infinity) + (trip.arrive ?? 0) ? epoch - t0 : null;
+}
+
+/** When its shake begins (world seconds), or null on a trip that does not climb out of the water. */
+export function shakeStartOf(trip: TripLike): number | null {
+    const edge = edgeLeg(trip);
+    if (edge) return edge.t0;
+    return trip.arrive !== undefined && trip.legs.some((leg) => leg.mode === "exit") && trip.stay?.[0]?.beat === "shake" ? trip.arrive : null;
+}
+
+/** The seconds after it arrives that its shake takes, when it shakes on arrival (0 otherwise): its stay's episodes wait for it. */
+export function shakeOnArrival(trip: TripLike, spec: ShakeSpec | null, length: number): number {
+    return spec && !edgeLeg(trip) && shakeStartOf(trip) !== null ? shakeTotal(spec, length) : 0;
 }
 
 // MARK: The shader's side
@@ -171,7 +196,7 @@ export const SHAKE_VERTEX = `
             // the shoulder line; the beat from folded-up to high.
             float side = abs(position.x) / max(arkDefSpan, 0.001);
             float wing = smoothstep(0.3, 0.75, side) * smoothstep(0.3, 0.55, sUp) * smoothstep(0.08, 0.28, sAlong) * (1.0 - smoothstep(0.75, 0.95, sAlong));
-            float lift = sAmt * wing * (0.75 + 0.65 * sin(sPh));
+            float lift = sAmt * wing * (0.45 + 0.35 * sin(sPh));
             float hx = sign(transformed.x) * arkDefSpan * 0.25;
             float hy = sy0 + sHigh * 0.72;
             float dx = transformed.x - hx;

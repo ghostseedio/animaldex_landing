@@ -22,7 +22,7 @@ import {onBehaviourSchedule} from "@/ark-scene/schedule-water";
 import {arkBody} from "@/ark-scene/stats";
 import {setArkWorld, ZONE_SITES} from "@/ark-scene/world";
 import {worldSampler} from "@/ark-scene/world-sampler";
-import {bathShakeAt, SHAKE_KIND, SHAKE_NONE, shakeAt, shakePack, shakePackOf, shakeSeconds, shakeTotal, sinceOutOfWater, waterShakeOf, waterShakeSpecies} from "@/ark-scene/water-shake";
+import {bathShakeAt, SHAKE_KIND, SHAKE_NONE, shakeAt, shakePack, shakePackOf, shakeSeconds, shakeStartOf, shakeTotal, sinceOutOfWater, waterShakeOf, waterShakeSpecies} from "@/ark-scene/water-shake";
 
 setArkWorld("v2");
 
@@ -91,15 +91,19 @@ test("water shake: the shader's pack carries the kind, the swing and its phase, 
     assert.equal(shakePackOf({block: "shake_off", u: 0.5}, "mallard", 0.6, true), 0);
 });
 
-test("water shake: only on a trip that climbs out of the water, in its first moments on the bank", () => {
-    const legs = (modes: string[]) => modes.map((mode) => ({mode, seconds: 3}));
-    const trip = {start: 100, arrive: 109, end: 160, legs: legs(["water", "exit", "ground"]), stay: [{at: 0, beat: "shake"}, {at: 2.6, beat: "peck"}]};
-    assert.equal(sinceOutOfWater(trip, 108), null, "still walking up the bank");
-    assert.equal(sinceOutOfWater(trip, 110), 1);
-    assert.equal(sinceOutOfWater(trip, 112), null, "its next beat has begun");
-    assert.equal(sinceOutOfWater({...trip, legs: legs(["ground", "enter", "water"])}, 110), null, "into the water");
-    assert.equal(sinceOutOfWater({...trip, legs: legs(["ground"])}, 110), null, "a walk");
-    assert.equal(sinceOutOfWater({...trip, stay: [{at: 0, beat: "peck"}]}, 110), null);
+test("water shake: only on a trip that climbs out of the water, on the first spot of land", () => {
+    const legs = (modes: string[], pause = 3) => modes.map((mode) => ({mode, seconds: mode === "pause" ? pause : 3, beat: mode === "pause" ? "shake" : "walk"}));
+    const trip = {start: 100, legs: legs(["water", "exit", "pause", "ground"])};
+    assert.equal(sinceOutOfWater(trip, 105), null, "still climbing out");
+    assert.equal(sinceOutOfWater(trip, 107), 1);
+    assert.equal(shakeStartOf(trip), 106);
+    assert.equal(sinceOutOfWater(trip, 110), null, "walking on");
+    assert.equal(sinceOutOfWater({start: 100, legs: legs(["ground", "pause", "enter", "water"])}, 104), null, "a pause on the way into the water");
+    assert.equal(sinceOutOfWater({start: 100, legs: legs(["ground"])}, 101), null, "a walk");
+    assert.equal(shakeStartOf({start: 100, legs: legs(["ground", "pause"])}), null);
+    // A stand squeezed short: the shake fitted into it, or (shorter than the least) on arrival instead.
+    assert.equal(sinceOutOfWater({start: 100, legs: legs(["water", "exit", "pause", "ground"], 1)}, 106.5, 2), 1);
+    assert.equal(shakeStartOf({start: 100, arrive: 109.3, legs: legs(["water", "exit", "pause", "ground"], 0.3), stay: [{at: 0, beat: "shake"}]}), 109.3);
 });
 
 // The scene's wiring for the cast that matters here (the shakers and other amphibious kinds), as the waterbirds test does.
@@ -146,9 +150,12 @@ test("water shake: on the real schedule, a listed species shakes right after it 
             const trip: sched.Trip = sched.tripAt(world, s.profile, s.animal, DAY + slot * sched.SLOT_SECONDS + 1, hoursAt, s.activity, previous);
             previous = trip;
             const out = trip.legs.some((l) => l.mode === "exit");
+            const at = shakeStartOf(trip);
             if (out && listed) {
-                assert.ok(shakingAt(trip, trip.arrive + 0.5), `${s.slug} out of the water at slot ${slot} does not shake`);
-                assert.ok(!shakingAt(trip, trip.arrive + 2.7), `${s.slug} still shaking after its beat`);
+                assert.ok(at !== null, `${s.slug} climbs out at slot ${slot} with no shake on the bank`);
+                // (A trip that runs to its slot's end is cut there, and its last seconds turn it to set off: its shake with them.)
+                if (at! + 3 < trip.arrive || (at === trip.arrive && at + 3 < trip.end)) assert.ok(shakingAt(trip, at! + 0.5), `${s.slug} out of the water at slot ${slot} does not shake`);
+                assert.ok(!shakingAt(trip, at + shakeTotal(listed, s.animal.length) + 0.05), `${s.slug} still shaking after its time`);
                 shook++;
                 kinds.add(s.slug);
             } else if (out) {
@@ -157,9 +164,9 @@ test("water shake: on the real schedule, a listed species shakes right after it 
             }
             // Never on the way, nor any other moment of a trip that did not just climb out.
             if (slot % 7 === 0) {
-                for (const t of [trip.start + 0.5, (trip.start + trip.arrive) / 2, trip.arrive + 5, (trip.arrive + trip.end) / 2]) {
+                for (const t of [trip.start + 0.5, (trip.start + trip.arrive) / 2, trip.arrive + 0.5, trip.arrive + 5, (trip.arrive + trip.end) / 2]) {
                     if (t >= trip.end) continue;
-                    assert.ok(!shakingAt(trip, t) || (out && t >= trip.arrive && t < trip.arrive + 2.6), `${s.slug} shakes at ${(t - trip.start).toFixed(1)} s of slot ${slot} (out: ${out})`);
+                    assert.ok(!shakingAt(trip, t) || (listed !== null && at !== null && t >= at && t < at + shakeTotal(listed!, s.animal.length)), `${s.slug} shakes at ${(t - trip.start).toFixed(1)} s of slot ${slot} (out: ${out})`);
                     looked++;
                 }
             }
@@ -182,7 +189,7 @@ test("water shake: the same for every viewer (pure in the trip and the clock)", 
     }
     assert.ok(trips.length > 0, `${s.slug} never climbs out`);
     for (const trip of trips) {
-        const t = trip.arrive + 0.6;
+        const t = shakeStartOf(trip)! + 0.6;
         const first = (sched.poseOnTrip(world, trip, t) as RecipePose).act?.shake;
         // (Another viewer: the schedules worked out afresh, the trip again from the clock alone.)
         sched.forgetSchedules();

@@ -45,6 +45,8 @@ import {boutPhase, rhythmChoice} from "@/ark-scene/sd-rhythm";
 import type {ArkCondition, ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
+// p3 (shake): shaking off the water at the edge.
+import {shakeTotal, waterShakeOf} from "@/ark-scene/water-shake";
 import {coatOf, drawnRecipe, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, pairMeetings, recipeRoostTags, sexLook, sitterIntent, type DrawnRecipe, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
@@ -2195,6 +2197,10 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
                         water(from, offshore);
                         const climb = Math.hypot(offshore.x - edge.x, offshore.z - edge.z);
                         legs.push({mode: "exit", from: offshore, to: edge, path: [offshore, edge], length: climb, seconds: Math.min(Math.max(2.4, climb / pace), SLIDE_MOST), beat: "exit_water"});
+                        // p3 (shake): a species that shakes off the water does it on the first spot of land (`water-shake.ts`); where
+                        // the edge is still in the water (a canal's wall), on the spot it walks to, as it arrives.
+                        const shaker = waterShakeOf(profile.slug);
+                        if (shaker && !wet(world, edge)) legs.push({mode: "pause", from: edge, to: edge, path: null, length: 0, seconds: shakeTotal(shaker, Math.max(animal.length, 0.05)), beat: "shake", yaw: Math.atan2(edge.x - offshore.x, edge.z - offshore.z)});
                         ground(edge, to);
                         after = "shake";
                     }

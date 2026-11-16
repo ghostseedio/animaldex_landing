@@ -242,7 +242,7 @@ import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 // 3.3 batch (A): defence moves.
 import {defenceMoveOf, defencePack, defenceSaid, holdsItsGround, newDefenceState, predatorBeside, stepDefence, type DefenceSpec, type DefenceState} from "@/ark-scene/defence-moves";
 // p3 (shake): shaking off the water after a swim.
-import {SHAKE_LINE, shakePackOf} from "@/ark-scene/water-shake";
+import {SHAKE_LINE, shakePackOf, shakeStartOf} from "@/ark-scene/water-shake";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
 import {speciesCare} from "@/lib/ark-age";
@@ -8645,7 +8645,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // 3.3 batch (B): the birds' own moves, for the harness
     if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {mobbing: () => mobbing.debug(), mobStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && mobbing.begin(worldMs() / 1000, b, t, allEntries().filter((e) => e !== b && e !== t), new Set(), 1e9)); }, seenNow: () => seenActs.slice(), lures: () => brokenWing.debug(), drops: () => duckDrops.debug(), lureStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && brokenWing.begin(worldMs() / 1000, b, t)); }});
     // p3 (shake): the harness's question: when an animal next climbs out of the water (its trips' arrivals after an exit leg).
-    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {waterOuts: (id: string, from: number, slots: number) => { const e = entryById.get(id); const own = e?.sched; if (!e || !own) return []; const out: Array<{arrive: number; x: number; z: number}> = []; let previous: Trip | null = null; for (let k = 0; k < slots && out.length < 6; k++) { const trip: Trip = tripAt(worldOf(own.animal), own.profile, own.animal, from + k * SLOT_SECONDS + 1, scheduleHours, e.animal.activity, previous); previous = trip; if (trip.legs.some((l) => l.mode === "exit")) out.push({arrive: trip.arrive, x: trip.to.x, z: trip.to.z}); } return out; }});
+    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {waterOuts: (id: string, from: number, slots: number) => { const e = entryById.get(id); const own = e?.sched; if (!e || !own) return []; const out: Array<{arrive: number; x: number; z: number}> = []; let previous: Trip | null = null; for (let k = 0; k < slots && out.length < 6; k++) { const trip: Trip = tripAt(worldOf(own.animal), own.profile, own.animal, from + k * SLOT_SECONDS + 1, scheduleHours, e.animal.activity, previous); previous = trip; const at = shakeStartOf(trip); if (at !== null) out.push({arrive: at, x: trip.to.x, z: trip.to.z}); } return out; }});
 
     return {
         ...runtime.handle,
