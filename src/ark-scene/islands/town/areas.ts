@@ -15,6 +15,8 @@
  * Nothing here depends on who lives in the town: the town is complete from launch, so a spot never moves.
  */
 
+// 3.3 fix: perches on the drawn roofs.
+import {buildingSolid, perchOnSurface} from "@/ark-scene/islands/town/roof-perch";
 import {corners, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townBuildingFloor, townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, MILLPOND, townPlan, type Building, type Parcel, type TownPlan, type ZooSlot} from "@/ark-scene/islands/town/plan";
@@ -242,6 +244,7 @@ function urbanSpots(plan: TownPlan): TownSpot[] {
         // (The floor the building is drawn on, its highest ground: its roof's spots on its drawn roof, never in it.)
         const floor = townBuildingFloor(b.at);
         if (b.kind === "coop" || b.kind === "stable") continue;
+        const first = out.length;
         // The ridge (or a flat roof's middle), and the eaves front and back.
         const ridge = local(b.at, 0, 0);
         out.push({...ridge, y: floor + b.top, z: ridge.z, area: "urban_wildlife", where: b.roof === "flat" ? "ledge" : "roof", place: b.id, sizes: SMALL_MEDIUM, protected: false});
@@ -262,6 +265,12 @@ function urbanSpots(plan: TownPlan): TownSpot[] {
         if (b.households > 0) {
             const p = local(b.at, -b.at.w / 4, b.at.d / 2 + 0.05);
             out.push({...p, y: floor + 2.4, area: "urban_wildlife", where: "lamp_wall", place: b.id, sizes: SMALL, protected: false});
+        }
+        // 3.3 fix: its roof's, eaves' and ledge's perches on its drawn roof, not inside it (`roof-perch.ts`).
+        const solid = buildingSolid(b);
+        for (let i = first; i < out.length; i++) {
+            const s = out[i];
+            if (s.where === "roof" || s.where === "eave" || s.where === "ledge") s.y = perchOnSurface(solid, s.x, s.y, s.z);
         }
     }
     for (const bin of binSpots(plan)) out.push({x: bin.home.x, y: y(bin.home.x, bin.home.z), z: bin.home.z, area: "urban_wildlife", where: "bin", place: bin.id, sizes: SMALL, protected: false});
