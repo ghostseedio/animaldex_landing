@@ -15,7 +15,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung"};
+type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "escape"};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -28,6 +28,10 @@ const SCENES: Record<string, Scene> = {
     web: {zone: "farm_garden", hours: 7, kind: "dung", cast: [{slug: "black-and-yellow-garden-spider", name: "Black-and-yellow Garden Spider", n: 3}]},
     // A dormant kind: in its dens while the server says so (the marmots), the others about (the zebras).
     dormant: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "alpine-marmot", name: "Alpine Marmot", n: 4}, {slug: "plains-zebra", name: "Plains Zebra", n: 3}]},
+    // 3.3 batch (D): the record's escapes (the first cast hunts, the second gets away): a lion's miss on a zebra, a
+    // buzzard's stoop on a rabbit; then the limp.
+    escape: {zone: "grassland", hours: 9, kind: "escape", cast: [{slug: "african-lion", name: "African Lion", n: 1}, {slug: "plains-zebra", name: "Plains Zebra", n: 3}]},
+    stoop: {zone: "grassland", hours: 9, kind: "escape", cast: [{slug: "common-buzzard", name: "Common Buzzard", n: 1}, {slug: "european-rabbit", name: "European Rabbit", n: 2}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -86,12 +90,22 @@ async function main() {
     console.log("[behaviours] loaded", ready, handle.loading());
     await setAt(t0 - 2);
     await wait(800);
-    type Debug = {births: () => Array<Record<string, unknown>>; matings: () => Array<Record<string, unknown>>; traces: () => Array<{kind: string; x: number; z: number; alpha: number}>; entries: () => Array<{animal: {id: string; model_slug: string}; act: Record<string, unknown> | null}>};
+    type Debug = {escapes: () => Array<Record<string, unknown>>; births: () => Array<Record<string, unknown>>; matings: () => Array<Record<string, unknown>>; traces: () => Array<{kind: string; x: number; z: number; alpha: number}>; entries: () => Array<{animal: {id: string; model_slug: string}; act: Record<string, unknown> | null}>};
     const debug = (window as unknown as {__arkDebug: Debug}).__arkDebug;
     const a = castId(0, 0);
     const b = castId(0, 1);
     if (scene.kind === "birth") handle.addBirths?.([{key: "birth:harness", parents: [a, b], young: youngIds, t0}]);
     if (scene.kind === "mating") handle.addMatings?.([{key: "mated:harness", a, b, t0}]);
+    if (scene.kind === "escape") {
+        // The encounter as the server writes it: the hunter's waypoint (brought within 22 m, a foray's reach), the prey's disc.
+        const prey = castId(1, 0);
+        const hunter = handle.locate(a);
+        const quarry = handle.locate(prey);
+        if (!hunter || !quarry) throw new Error("cast not placed");
+        const d = Math.hypot(quarry.x - hunter.x, quarry.z - hunter.z);
+        const k = d > 22 ? 22 / d : 1;
+        handle.addEscapes?.([{key: "escaped:harness", prey, predator: a, t0, encounter: {t: t0, step: 1, predator: {x: quarry.x + (hunter.x - quarry.x) * k, z: quarry.z + (hunter.z - quarry.z) * k}, prey: {x: quarry.x, z: quarry.z, r: 0.5}}}]);
+    }
     await setAt(t0 + 0.05);
     await frames(4);
     const at0 = handle.locate(a);
@@ -99,7 +113,7 @@ async function main() {
     const view = (distance: number, at: {x: number; z: number}, polar = 1.15, azimuth = 0.7): ArkCameraView => ({target: {x: at.x, y: Math.max(handle.heightAt(at.x, at.z), 0) + 0.5, z: at.z}, distance, polar, azimuth});
     handle.setView(view(12, at0));
     const api = {
-        info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a, b}),
+        info: () => ({births: debug.births(), matings: debug.matings(), escapes: debug.escapes(), young: youngIds, a, b}),
         dung: () => debug.traces().filter((t) => t.kind === "dung"),
         /** The first cast's kind dormant (or awake again), then what the scene shows of every animal. */
         dormant: async (on: boolean) => {
@@ -121,7 +135,7 @@ async function main() {
             await frames(6);
         },
         /** The world at `s` seconds after the event, from `distance`, on an animal (`follow`) or a point. */
-        shot: async (s: number, distance: number, follow?: string, point?: {x: number; z: number}, azimuth = 0.7, polar = 1.15) => {
+        shot: async (s: number, distance: number, follow?: string, point?: {x: number; z: number}, azimuth = 0.7, polar = 1.15, settle = 2100) => {
             await setAt(t0 + s - 2.5);
             for (let i = 1; i <= 25; i++) {
                 fake!.perf += 100;
@@ -132,15 +146,41 @@ async function main() {
             handle.setView(view(distance, {x: who.x, z: who.z}, polar, azimuth));
             await frames(3);
             // (The dung list is made every 2 s of the page's clock: a moment more for it.)
-            fake!.perf += 2100;
-            fake!.date += 2100;
+            fake!.perf += settle;
+            fake!.date += settle;
             await frames(3);
             const acts = debug
                 .entries()
                 .filter((e) => e.act)
-                .map((e) => `${e.animal.id.slice(-3)} ${e.animal.model_slug} ${String(e.act!.meal ?? "-")} ${String(e.act!.state ?? "")}${e.act!.hidden ? " hidden" : ""}${e.act!.lying ? ` lying ${Number(e.act!.lying).toFixed(2)}` : ""}`);
+                .map((e) => `${e.animal.id.slice(-3)} ${e.animal.model_slug} ${String(e.act!.meal ?? "-")} ${String(e.act!.state ?? "")}${e.act!.hidden ? " hidden" : ""}${e.act!.lying ? ` lying ${Number(e.act!.lying).toFixed(2)}` : ""}${e.act!.role ? ` ${String(e.act!.role)} ${Number(e.act!.speed ?? 0).toFixed(1)} m/s` : ""}`);
             const status = (id: string) => handle.animalStatus?.(id)?.activity ?? "-";
-            return `+${s.toFixed(1)} s   card a: ${status(a)}   card b: ${status(b)}   dung marks: ${api.dung().length}\n${acts.join("\n")}`;
+            return `+${(s + settle / 1000).toFixed(1)} s   card a: ${status(a)}   card b: ${status(b)}   dung marks: ${api.dung().length}\n${acts.join("\n")}`;
+        },
+        /**
+         * 3.3 batch (D): the world at exactly `s` seconds after the event, framing the animals named (their drawn places,
+         * asked again once the camera is on them): two from above with both in view, one from close by and low.
+         */
+        pair: async (s: number, ids: string[], distance: number, polar: number, azimuth = 0.7) => {
+            await setAt(t0 + s - 1.5);
+            for (let i = 1; i <= 15; i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            let span = 0;
+            for (let pass = 0; pass < 3; pass++) {
+                const at = ids.map((id) => handle.locate(id)).filter((p): p is NonNullable<typeof p> => Boolean(p));
+                if (!at.length) break;
+                const mid = {x: at.reduce((n, p) => n + p.x, 0) / at.length, z: at.reduce((n, p) => n + p.z, 0) / at.length};
+                span = at.length > 1 ? Math.hypot(at[0].x - at[1].x, at[0].z - at[1].z) : 0;
+                handle.setView(view(Math.max(distance, span * 1.25 + 4), mid, polar, azimuth));
+                await frames(3);
+            }
+            const acts = debug
+                .entries()
+                .filter((e) => e.act && ids.includes(e.animal.id))
+                .map((e) => `${e.animal.model_slug} ${String(e.act!.state ?? "")} ${Number(e.act!.speed ?? 0).toFixed(1)} m/s${e.act!.role ? ` (${String(e.act!.role)})` : ""}`);
+            return `+${s.toFixed(2)} s   ${ids.length > 1 ? `apart ${span.toFixed(2)} m   ` : ""}${acts.join("   ")}`;
         },
         handle
     };

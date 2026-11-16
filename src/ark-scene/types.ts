@@ -489,6 +489,12 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      */
     addBirths?: (births: Array<{key: string; parents: string[]; young: string[]; t0: number}>) => void;
     /**
+     * The record's escapes (`escaped` events, AnimalDex decision 373: the prey that got away, the predator, the time on
+     * the shared clock, and the encounter's geometry as the server wrote it), acted out in the live world: the chase
+     * that ends in a miss, then the prey's limp for a while (`live-escapes.ts`).
+     */
+    addEscapes?: (escapes: Array<{key: string; prey: string; predator: string; t0: number; encounter?: unknown}>) => void;
+    /**
      * The kinds asleep through their dormant season now (the server's `voyage_dormant_v1`: species ids; AnimalDex
      * decision 370): their animals are in their dens, out of sight, and their cards say sleeping. An empty list ends it.
      */

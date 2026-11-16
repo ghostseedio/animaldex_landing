@@ -215,6 +215,7 @@ import {HuntingLayer, loadPositionsAtlas} from "@/ark-scene/hunting";
 import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {LiveBirths} from "@/ark-scene/live-births";
+import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
@@ -1176,6 +1177,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let replayPins = new Set<string>();
     /** Meal ids pinned (drawn one by one) while the live world acts them. */
     let mealPins = new Set<string>();
+    // 3.3 batch (D): the limp of an animal that got away (`live-escapes.ts`), asked by the draw; null until the escapes' layer is up.
+    let escapeLimp: ((id: string, epoch: number, moving: boolean, length: number, out: LimpOffsets) => boolean) | null = null;
+    const limpNow: LimpOffsets = {drop: 0, roll: 0, pitch: 0};
     let placedFor: ArkSnapshot | null = null;
     let placedAll = new Map<string, Placement>();
     let disposed = false;
@@ -4975,6 +4979,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 rotation.setFromEuler(euler);
                 const standY = stand ? stand.rootY + where.base - poseBase : where.base - groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s;
                 position.set(where.x, standY + lift - (1 - Math.min(grow, 1)) * modelHeight * 0.3, where.z);
+                // 3.3 batch (D): the limp after an escape: an uneven dip and roll onto the leg it favours, on its feet only.
+                // (On the drawn body alone: the pose itself, which a still clock hands back again, is left as it is.)
+                if (escapeLimp && !where.water && !where.afloat && !slept && !act?.role && entry.air < 0.5 && escapeLimp(animal.id, epochNow, act ? (act.speed ?? 0) > 0.05 : Boolean(entry.sched?.pose?.moving), entry.length, limpNow)) {
+                    position.y -= limpNow.drop;
+                    rotation.setFromEuler(euler.set(where.pitch + limpNow.pitch, where.yaw, where.roll + limpNow.roll));
+                }
             }
             const state = rig ? entry.rig : null;
             if (surface && rig && state && state.weight > 0.5 && rig.clips[state.now.name] && gripPoint(rig, clipRows(rig.clips[state.now.name], state.now.phase), rigGrip)) {
@@ -7003,6 +7013,53 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id))
     });
+    /**
+     * 3.3 batch (D): the record's escapes acted out (`live-escapes.ts`, decision 373; owner 2026-11-16): the chase that
+     * ends in a miss, from where the two's days have them at the encounter's step (the server's places where it gives
+     * them), then the prey's limp. A meal, a mating or a birth under way has the animal first.
+     */
+    // (Whoever's day has it on the wing, `profile.move`: the old `FLYERS` list is seven birds.)
+    const escapeFlies = (entry: Entry) => (entry.sched?.profile.move === "fly" || FLYERS.has(entry.animal.model_slug)) && ZONE_SITES[entry.animal.zone]?.kind !== "sea";
+    const liveEscapes = new LiveEscapes<Entry>({
+        find: (id) => {
+            const e = entryById.get(id);
+            return e && !e.held && !e.visitor ? e : null;
+        },
+        chase: (act, predator, prey) => {
+            if (!world || reducedMotion || !predator.sched || !prey.sched || worldOf(predator.animal) !== worldOf(prey.animal)) return null;
+            const predatorWater = Boolean(inWater(predator));
+            const preyWater = Boolean(inWater(prey));
+            const planOf = (e: Entry) => library.get(e.animal.model_slug)?.behaviour?.plan ?? null;
+            const kind = chaseKind({predatorSlug: predator.animal.model_slug, predatorPlan: planOf(predator), predatorWater, preyWater, predatorFlies: escapeFlies(predator)});
+            if (kind === "cutaway") return null;
+            const ground = (x: number, z: number) => Math.max(heightAt(x, z), -0.3);
+            const at = (e: Entry, water: boolean): ActBody & {aloft: boolean} => {
+                const p = schedulePose(e, act.t0);
+                return {x: p.x, z: p.z, base: water ? Math.min(p.y, -0.05) : p.y, yaw: p.yaw, length: e.length, height: e.drawnHeight, speed: moveSpeed(e.animal, e.length), speedStat: e.stats.speed, gait: e.sched?.profile.gait ?? null, slug: e.animal.model_slug, aloft: Boolean(p.aloft)};
+            };
+            const hunter = at(predator, predatorWater);
+            const quarry = at(prey, preyWater);
+            // (A bird on the wing is not run down on foot.)
+            if (quarry.aloft && kind !== "swoop") return null;
+            const e = act.encounter ?? null;
+            const bodies = e ? encounterBodies(hunter, quarry, e, ground) : {predator: hunter, prey: quarry};
+            const flee = preyFleeStyle({preySlug: prey.animal.model_slug, preyPlan: planOf(prey), preyWater, preyFlies: escapeFlies(prey), speedStat: prey.stats.speed});
+            return {kind, flee, predator: bodies.predator, prey: bodies.prey, seed: `${act.prey}#${act.t0}`, exact: Boolean(e), ground, clear: (x, z) => world!.nav.walkable(x, z) && !world!.sampler.blocked(x, z, 0.3) && !collideBlocked(x, z, 0.3), water: (x, z) => heightAt(x, z) < -0.05};
+        },
+        scheduleAt: (entry, epoch) => {
+            if (!entry.sched || !world || reducedMotion) return null;
+            const at = schedulePose(entry, epoch);
+            return {x: at.x, z: at.z, y: at.y, yaw: at.yaw, aloft: Boolean(at.aloft)};
+        },
+        ground: (x, z) => Math.max(heightAt(x, z), -0.3),
+        walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
+        flies: escapeFlies,
+        setAct: (entry, pose) => {
+            entry.act = pose;
+        },
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id) || liveBirths.pins().includes(entry.animal.id))
+    });
+    escapeLimp = (id, epoch, moving, length, out) => liveEscapes.size > 0 && liveEscapes.limp(id, epoch, moving, length, out);
     /** The meals' traces this frame (feathers, fur, scales, pressed grass), and the pressed grass for the grass to bend. */
     let tracesNow: TraceDraw[] = [];
     /**
@@ -7145,12 +7202,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     /** The live world's meals, a frame (after the replay's acts): poses, and their pins for the herds. */
     const stepLiveMeals = () => {
-        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size) || reducedMotion) return;
+        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !liveEscapes.size) || reducedMotion) return; // 3.3 batch (D): and the escapes
         const epoch = worldMs() / 1000;
         if (liveMeals.size) liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
         if (liveMatings.size) liveMatings.step(epoch);
         if (liveBirths.size) liveBirths.step(epoch);
-        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins()]);
+        if (liveEscapes.size) liveEscapes.step(epoch); // 3.3 batch (D)
+        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins(), ...liveEscapes.pins()]);
         if (pins.size !== mealPins.size || Array.from(pins).some((id) => !mealPins.has(id))) {
             mealPins = pins;
             refreshLive();
@@ -7899,7 +7957,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     const mean = (values: number[]) => (values.length ? values.reduce((sum, v) => sum + v, 0) / values.length : 0);
     if (typeof window !== "undefined") (window as unknown as {__arkTier?: () => QualityTier}).__arkTier = () => tier;
-    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
+    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkDebug?: unknown}).__arkDebug = {camera, controls, scene, library, rigs, liveliness, visitor: () => visitor, talking, lighting, entries: () => allEntries(), meals: () => liveMeals.debug(), matings: () => liveMatings.debug(), births: () => liveBirths.debug(), escapes: () => liveEscapes.debug(), traces: () => tracesNow, reactive: () => ({stats: reactive.stats, ms: reactiveMs, tier: reactiveTierNow}), collisions: () => ({ms: collisions.spentMs, pushed: collisions.pushed, eased: collisions.eased, clusters: collisions.clusters}),
         grounding: () => groundingCheck.report(), groundingReset: () => groundingCheck.reset(),
         clearView: () => ({...clearStats, rays: sight.tests, gathered: sight.gathered}),
         // (Lane TB: the resting kept town animals: each member's place and whether it is drawn this frame.)
@@ -8016,6 +8074,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         addBirths: (births) => {
             liveBirths.add(births, worldMs() / 1000);
+        },
+        // 3.3 batch (D): the record's escapes, on the encounter's step where the server gives it.
+        addEscapes: (escapes) => {
+            liveEscapes.add(escapes.map((e) => {
+                const encounter = mealEncounter({encounter: e.encounter});
+                return {key: e.key, prey: e.prey, predator: e.predator, t0: encounter?.t ?? e.t0, encounter};
+            }), worldMs() / 1000);
         },
         setDormant: (kinds) => {
             dormantKinds = new Set(kinds);
