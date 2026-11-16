@@ -15,7 +15,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch"};
+type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death"};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -65,6 +65,9 @@ const SCENES: Record<string, Scene> = {
     tappair: {zone: "farm_garden", hours: 10, kind: "mating", cast: [{slug: "common-wall-lizard", name: "Common Wall Lizard", n: 4}]},
     tapfarone: {zone: "wetland", hours: 10, kind: "mating", cast: [{slug: "australasian-swamphen", name: "Australasian Swamphen", n: 8}]},
     tapfarpair: {zone: "wetland", hours: 10, kind: "mating", cast: [{slug: "australasian-swamphen", name: "Australasian Swamphen", n: 8}]},
+    // 3.3 fix (log): a death of the record (old age): its body where it died, and its line's tap (`live-deaths.ts`). A
+    // second death, a roadside hawk not in the roster (it has left it, as the dead have), placed from its event alone.
+    death: {zone: "grassland", hours: 10, kind: "death", cast: [{slug: "red-deer", name: "Red Deer", n: 3}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -146,6 +149,10 @@ async function main() {
     }
     if (scene.kind === "mating") handle.addMatings?.([{key: "mated:harness", a, b, t0}]);
     if (scene.kind === "hatch") handle.addHatchings?.([{key: "hatch:harness", parents: [a, b], young: youngIds, t0}]);
+    if (scene.kind === "death") {
+        const of = (id: string, slug: string, name: string, slot: number) => ({id, species_profile_id: speciesId(9), name, model_slug: slug, zone: scene.zone as never, arrived_at: null, origin: "arrived" as const, generation: 0, slot, slot_rank: 0, activity: "diurnal" as const, sociality: null, status: null, area: null});
+        handle.addDeaths?.([{key: "death:harness", animal: of(a, "red-deer", "Red Deer", 90), t0}, {key: "death:gone", animal: of(castId(9, 0), "roadside-hawk", "Roadside Hawk", 91), t0}]);
+    }
     await setAt(t0 + 0.05);
     await frames(4);
     // (The first of the cast's predators that is out in the open now: not in its den, not on the wing.)
@@ -172,6 +179,18 @@ async function main() {
     handle.setView(view(12, at0));
     let closeView: ArkCameraView | null = null;
     const api = {
+        /** 3.3 fix (log): a death line's tap, from the island's overview: where the camera goes, after its flight. */
+        tapDeath: async (key: string) => {
+            handle.setView(view(150, at0, 0.9));
+            await frames(3);
+            const ok = handle.focusDeath?.(key) ?? false;
+            for (let i = 0; i < 30; i++) {
+                fake!.perf += 100;
+                await frames(1);
+            }
+            return {ok, view: handle.view()};
+        },
+        deaths: () => (debug as unknown as {deaths?: () => unknown[]}).deaths?.() ?? [],
         info: () => ({drops: debug.drops?.() ?? [], births: debug.births(), matings: debug.matings(), young: youngIds, a: star, b, c: foe, ids: scene.cast.map((_, k) => castId(k, 0)), mobbing: debug.mobbing?.() ?? []}),
         dung: () => debug.traces().filter((t) => t.kind === "dung"),
         /** The first cast's kind dormant (or awake again), then what the scene shows of every animal. */

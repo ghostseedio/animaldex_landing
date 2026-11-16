@@ -5,8 +5,8 @@ import test from "node:test";
 import fixtureV2 from "@/ark-scene/fixtures/snapshot-v2.json";
 import fixtureEvents from "@/ark-scene/fixtures/events.json";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
-import {drawnRecipeAt, flightSpan, forgetSchedules, groupSpread, pairMeetingsAt, rangeReach, slotPlanAt, spaceHomes, stayIsFeeding, tripAt, wireThreats, SLOT_SECONDS, type ArkDoing, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
-import {EATING, FLIGHT_MOMENT_SECONDS, MOMENT_WINDOW_SECONDS, momentKind, pickMoment, planOf, scheduleFed, scheduleStatus, slotStartIn, type MomentSubject} from "@/ark-scene/animal-status";
+import {drawnRecipeAt, flightSpan, forgetSchedules, groupSpread, pairMeetingsAt, poseOnTrip, rangeReach, slotPlanAt, spaceHomes, stayIsFeeding, tripAt, wireThreats, SLOT_SECONDS, type ArkDoing, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
+import {drinkArrival, DRINK_MOMENT_SECONDS, EATING, FLIGHT_MOMENT_SECONDS, MOMENT_WINDOW_SECONDS, momentKind, pickMoment, planOf, scheduleFed, scheduleStatus, slotStartIn, type MomentSubject} from "@/ark-scene/animal-status";
 import {eats} from "@/ark-scene/food-links";
 import {placeAnimals} from "@/ark-scene/placement";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
@@ -243,6 +243,13 @@ test("the live log's moments: the same on two runs, at most one a window, and ea
         }
         const meeting = pairMeetingsAt(world, subject.profile, subject.animalAt(moment.at), moment.at - 0.01, moment.at + 0.01, hoursAt, subject.activity).find((m) => m.role === "a" && arkRecipeActivity(m.recipe) === moment.activity);
         if (meeting) return;
+        if (moment.activity === "drinking" && moment.kind === "doing") {
+            // One animal drinking is said when it is at the water (owner, 2026-11-16), at its drink slot's arrival.
+            const trip = tripAt(world, subject.profile, subject.animalAt(moment.at), moment.at, hoursAt, subject.activity);
+            assert.equal(trip.doing, "drink");
+            assert.ok(moment.at >= trip.arrive - 1e-6 && drinkArrival(plan, trip) === moment.at, `${moment.animalId}: said at its arrival`);
+            return;
+        }
         // Else its slot starts in the window, and that slot's plan is the moment (not made up).
         assert.equal(slotStartIn(subject.id, from, from + MOMENT_WINDOW_SECONDS), moment.at);
         assert.equal(momentKind(subject, planOf(subject, moment.at + 0.5), planOf(subject, moment.at - 0.5)), moment.kind);
@@ -251,6 +258,38 @@ test("the live log's moments: the same on two runs, at most one a window, and ea
     });
     // A steady flow: most windows of a busy morning say something.
     assert.ok(said.length >= windows.length * 0.2, `${said.length} of ${windows.length} windows`);
+});
+
+test("drinking is said only at the water: at its trip's arrival, with time left there, never on its way", () => {
+    // (Owner, 2026-11-16: "it said 'a roadside hawk is drinking' but it was nowhere near the water". It was said at its
+    // drink slot's start, while it flew there.)
+    assert.equal(drinkArrival({start: 100, end: 180}, {start: 100, arrive: 140, end: 180}), 140, "said when it gets there");
+    assert.equal(drinkArrival({start: 100, end: 180}, {start: 100, arrive: 100, end: 180}), 100, "already there: at the slot's start");
+    assert.equal(drinkArrival({start: 100, end: 180}, {start: 100, arrive: 180 - DRINK_MOMENT_SECONDS + 1, end: 180}), null, "too late in the slot to be seen drinking");
+    let slots = 0;
+    let said = 0;
+    for (const i of items) {
+        const subject = i.subject;
+        if (subject.leads >= 3) continue;
+        for (let k = 0; k < 160 && slots < 60; k++) {
+            const plan = planOf(subject, DAY + 6 * 3600 + k * 80 + 0.5);
+            if (plan.doing !== "drink" || plan.recipe) continue;
+            slots++;
+            // Never at its slot's start (unless it is already at the water then).
+            assert.equal(momentKind(subject, planOf(subject, plan.start + 0.5), planOf(subject, plan.start - 0.5)), null, `${i.a.model_slug}: not at its slot's start`);
+            const trip = tripAt(world, subject.profile, subject.animalAt(plan.start + 0.5), plan.start + 0.5, hoursAt, subject.activity);
+            for (let w = Math.floor(plan.start / MOMENT_WINDOW_SECONDS); w * MOMENT_WINDOW_SECONDS < plan.end; w++) {
+                const m = pickMoment(w, [subject]);
+                if (!m || m.activity !== "drinking") continue;
+                said++;
+                assert.equal(m.kind, "doing");
+                assert.ok(m.at >= trip.arrive - 1e-6, `${i.a.model_slug}: said ${(m.at - plan.start).toFixed(1)} s in, it arrives ${(trip.arrive - plan.start).toFixed(1)} s in`);
+                const pose = poseOnTrip(world, trip, m.at + 0.01);
+                assert.ok(Math.hypot(pose.x - trip.to.x, pose.z - trip.to.z) < Math.max(i.animal.length, 0.5) * 2, `${i.a.model_slug}: at its drinking spot`);
+            }
+        }
+    }
+    assert.ok(slots > 0, `the fixture has drink slots (${slots}, said ${said})`);
 });
 
 // MARK: The log: only the record's and the schedule's lines

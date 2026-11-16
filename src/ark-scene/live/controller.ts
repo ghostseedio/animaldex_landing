@@ -215,6 +215,7 @@ export class ArkLive {
         this.noteRecord(decoded);
         this.revive(decoded);
         this.mate(decoded);
+        this.died(decoded); // 3.3 fix (log)
         this.born(decoded);
         this.hatched(decoded); // 3.3 batch (B): ducklings dropping from the tree hole
         this.push(arkLiveServerItems(decoded));
@@ -229,6 +230,17 @@ export class ArkLive {
             } catch {
                 // (A scene without it: the animal is simply there again.)
             }
+        }
+    }
+
+    /** 3.3 fix (log): the record's deaths, handed to the scene: its body lies where it died, and a tap on its line goes there. */
+    private died(events: readonly ArkEvent[]) {
+        const deaths = events.filter((event) => (event.kind === "death_old" || event.kind === "starved") && event.animal).map((event) => ({key: `death:${event.id}`, animal: event.animal!, t0: Date.parse(event.at) / 1000}));
+        if (!deaths.length) return;
+        try {
+            this.options.scene()?.addDeaths?.(deaths);
+        } catch {
+            // (A scene without it: the log says it all the same.)
         }
     }
 
@@ -405,6 +417,7 @@ export class ArkLive {
                 this.noteRecord(events);
                 this.revive(events);
                 this.mate(events);
+                this.died(events); // 3.3 fix (log)
                 this.born(events);
                 this.hatched(events); // 3.3 batch (B)
                 this.push(arkLiveServerItems(events));
@@ -470,11 +483,13 @@ export class ArkLive {
      * A line's tap: its animal when it is in the scene, else one of its kind (a herd's card for a herd), else its region.
      * A mating's: the pair, both framed while their mating is acted (the scene's `selectPair`), else the first alone.
      */
-    focus(line: Pick<ArkLiveLine, "focus"> & {kind?: ArkLiveLine["kind"]}) {
+    focus(line: Pick<ArkLiveLine, "focus"> & Partial<Pick<ArkLiveLine, "id" | "kind">>) {
         const scene = this.options.scene();
         if (!scene) return;
         const {animalId, speciesId, zone} = line.focus;
         const done = () => this.options.onFocused?.(line as ArkLiveLine);
+        // 3.3 fix (log): a death's line goes to where it died (its body lies there a while), not to one of its kind.
+        if ((line.kind === "death" || line.kind === "starved") && line.id && scene.focusDeath?.(`death:${line.id}`)) return done();
         if (animalId && scene.locate(animalId)) {
             const partner = line.kind === "mated" ? this.mates.get(animalId) : undefined;
             if (partner && scene.selectPair) scene.selectPair(animalId, partner);

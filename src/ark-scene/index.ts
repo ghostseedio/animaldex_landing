@@ -220,6 +220,7 @@ import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating tap)
 import {LiveBirths} from "@/ark-scene/live-births";
+import {LiveDeaths, type DeathRecord} from "@/ark-scene/live-deaths"; // 3.3 fix (log)
 // 3.3 batch (D): the escapes and the dragonflies' dips
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
 import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
@@ -1203,6 +1204,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let ghosts: Entry[] = [];
     /** The live world's stand-ins for animals eaten in a meal still being acted (`live-meals.ts`). */
     let mealGhosts: Entry[] = [];
+    // 3.3 fix (log): who left the roster lately (a death of the record): where it was, for where its body lies (`live-deaths.ts`).
+    const departed = new Map<string, Entry>();
     const allEntries = () => (visitor || ghosts.length || mealGhosts.length ? [...entries, ...ghosts, ...mealGhosts, ...(visitor ? [visitor] : [])] : entries);
     const findEntry = (id: string | null) => (id ? entryById.get(id) ?? (visitor?.animal.id === id ? visitor : null) : null);
     /** The animal the camera follows (until any drag). */
@@ -2731,6 +2734,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // slow 4G. A desktop and a recording ask for every icon at once, as before.)
             if (!pacer) tokens.ensure(animal.model_slug);
         }
+        // 3.3 fix (log): who left the roster, kept a while (a death read after the snapshot that dropped it).
+        entryById.forEach((gone, id) => {
+            if (nextById.has(id) || gone.ghost) return;
+            departed.set(id, gone);
+            if (departed.size > 64) departed.delete(departed.keys().next().value as string);
+        });
         entries = next;
         entryById = nextById;
         // (The collisions' bodies and speeds follow the entries' sizes: worked out again.)
@@ -7225,6 +7234,51 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             ghost.held = held;
         }
     });
+    // 3.3 fix (log): the record's deaths (owner 2026-11-16: "i should see its corpse"): where it died, its body there.
+    const deathEntryOf = (death: DeathRecord): Entry | null => {
+        const known = entryById.get(death.animal.id) ?? departed.get(death.animal.id);
+        if (known) return known;
+        const animal: ArkAnimal = {...ghostAnimalOf(death.animal), area: death.animal.area ?? null, thrive: death.animal.thrive ?? null};
+        const place = placeAll([animal], true).get(animal.id);
+        return place ? newEntry(animal, place, null) : null;
+    };
+    const liveDeaths = new LiveDeaths<Entry>({
+        spotOf: (death) => {
+            const e = deathEntryOf(death);
+            if (!e) return null;
+            // Where its schedule had it at the death's time (pure in the clock and its id); else where it lived.
+            const own = world ? e.sched ?? statusSchedOf(e) : null;
+            const at = own ? poseOnTrip(worldOf(own.animal), tripAt(worldOf(own.animal), own.profile, own.animal, death.t0, scheduleHours, e.animal.activity, null), death.t0) : null;
+            const x = at?.x ?? e.place.x;
+            const z = at?.z ?? e.place.z;
+            return {x, z, base: Math.max(standGround(x, z), -0.3), yaw: at?.yaw ?? e.place.yaw ?? 0};
+        },
+        ghost: (death) => {
+            const from = deathEntryOf(death);
+            if (!from) return null;
+            const ghost = Object.assign(newEntry(from.animal, from.place, null), {ghost: true});
+            ghost.leader = null;
+            mealGhosts = [...mealGhosts, ghost];
+            const alive = entryById.get(death.animal.id);
+            if (alive) alive.held = true;
+            void library.ready().then(() => {
+                if (!library.has(from.animal.model_slug)) return;
+                library.request(from.animal.model_slug, "far");
+                library.request(from.animal.model_slug, "near");
+                tokens.ensure(from.animal.model_slug);
+            });
+            return ghost;
+        },
+        drop: (ghost) => {
+            mealGhosts = mealGhosts.filter((g) => g !== ghost);
+            // (Still in the roster after its body has gone, a read not yet refreshed: drawn again.)
+            const alive = entryById.get(ghost.animal.id);
+            if (alive) alive.held = false;
+        },
+        setAct: (ghost, pose) => {
+            ghost.act = pose;
+        }
+    });
     /** The record's matings acted out (owner 2026-11-15): the two walk to each other, court, nuzzle and lie together. */
     const liveMatings = new LiveMatings<Entry>({
         find: (id) => {
@@ -8238,6 +8292,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         lighting.step(now);
         stepReplay(now);
         stepLiveMeals();
+        if (liveDeaths.size && !reducedMotion) liveDeaths.step(worldMs() / 1000); // 3.3 fix (log): the record's dead, lying where they died
         stepMealTraces();
         // Runtime: the resting rotation moved on (every 5 minutes on the shared clock): who is outside, again.
         perf.lap("scenery");
@@ -8458,6 +8513,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
         // 3.3 batch (A): an animal's defence move now (the harness).
         defence: (id: string) => findEntry(id)?.defence ?? null,
+        // 3.3 fix (log): the record's deaths, where each lies (the harness).
+        deaths: () => liveDeaths.debug(),
         rigState: (id: string) => {
             const e = allEntries().find((x) => x.animal.id === id);
             return e ? {rigOn: Boolean(e.rigOn), weight: e.rig?.weight ?? 0, clip: e.rig?.now?.name ?? null, level: e.level ?? null} : null;
@@ -8570,6 +8627,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         addMatings: (matings) => {
             liveMatings.add(matings, worldMs() / 1000);
+        },
+        // 3.3 fix (log): the record's deaths, and a death line's tap: the camera to where it died (its body there a while).
+        addDeaths: (deaths) => liveDeaths.add(deaths),
+        focusDeath: (key) => {
+            const spot = liveDeaths.spot(key);
+            const death = liveDeaths.record(key);
+            if (!spot || !death) return false;
+            select(null, false);
+            controls.autoRotate = false;
+            lastTouch = performance.now() / 1000;
+            const length = deathEntryOf(death)?.length ?? 1;
+            fly(new Vector3(spot.x, spot.base, spot.z), Math.min(Math.max(length * 7, 4), 40), 1.6);
+            return true;
         },
         addBirths: (births) => {
             liveBirths.add(births, worldMs() / 1000);

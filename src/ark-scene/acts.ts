@@ -72,8 +72,8 @@ export type ActPose = {
     role?: "hunter" | "quarry";
     /** Lying on its side after the catch (`meal-acts.ts`): the side (sign) and how far down (0–1), for the drawn roll. */
     lying?: number;
-    /** What the card says it is doing while drawn so (`ark.activity.*`): a meal's eating, drinking, resting, a scavenger. */
-    meal?: "hunting" | "eating" | "drinking" | "resting" | "scavenging" | "birthing" | "sleeping";
+    /** What the card says it is doing while drawn so (`ark.activity.*`): a meal's eating, on its way to water, drinking, resting, a scavenger. */
+    meal?: "hunting" | "eating" | "toWater" | "drinking" | "resting" | "scavenging" | "birthing" | "sleeping";
 };
 
 export type ActBody = {

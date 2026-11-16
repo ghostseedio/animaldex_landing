@@ -144,7 +144,9 @@ export function mealScript(plan: MealPlan, c: MealCatch): MealScript {
 }
 
 /** What the card says it is doing in each phase (`ark.activity.*`). */
-export type MealDoing = "eating" | "drinking" | "resting";
+// (On its walk to the water it is heading there, "drinking" only at the edge, head down: owner, 2026-11-16, a line said
+// "is drinking" of an animal nowhere near the water.)
+export type MealDoing = "eating" | "toWater" | "drinking" | "resting";
 
 export type MealPose = ActPose & {doing: MealDoing};
 
@@ -177,7 +179,7 @@ export function predatorAt(s: MealScript, u: number): MealPose {
     };
     const restFrom = s.drink ? s.drink.at : s.feed;
     if (s.drink && u < s.drink.to) {
-        if (u < s.drink.from) return walkTo(s.feed, s.drink.at, s.drink.walkFrom, s.drink.from, u, "drinking");
+        if (u < s.drink.from) return walkTo(s.feed, s.drink.at, s.drink.walkFrom, s.drink.from, u, "toWater");
         // Head down at the edge, lapping (a small bob), looking up now and then.
         const v = u - s.drink.from;
         const up = Math.sin(v * 0.9) > 0.92;
@@ -327,7 +329,7 @@ export function scavengerAt(v: ScavengeVisit, u: number): ActPose {
 // MARK: On the stage
 
 /** The doing a hunter's pose says (the card), from the chase into the meal. */
-const DOING_KEY: Record<MealDoing, NonNullable<ActPose["meal"]>> = {eating: "eating", drinking: "drinking", resting: "resting"};
+const DOING_KEY: Record<MealDoing, NonNullable<ActPose["meal"]>> = {eating: "eating", toWater: "toWater", drinking: "drinking", resting: "resting"};
 
 /**
  * The chase and the meal as one stage: the chase (`acts.ts` mealStage with `meal: true`) up to the catch, then the

@@ -1,6 +1,6 @@
 import type {ArkHunting} from "@/lib/ark-hunting";
 import type {ArkActivity} from "@/lib/ark-daylight";
-import type {ArkAct} from "@/lib/ark-life";
+import type {ArkAct, ArkEventAnimal} from "@/lib/ark-life";
 import type {ArkSeenNow} from "@/lib/ark-live-log";
 import type {ArkActivityKey, ArkAnimalDay, ArkAnimalStatus, ArkRecordNote} from "@/lib/ark-animal-status";
 import type {ScheduleMomentKind} from "@/ark-scene/animal-status";
@@ -488,6 +488,13 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * follows them; once it is over, `a` alone, as `select`.
      */
     selectPair?: (a: string, b: string) => void;
+    /**
+     * 3.3 fix (log): the record's deaths (`death_old`, `starved` events: the animal, its time on the shared clock). Its
+     * body lies where its schedule had it at that time, on its side, for a while (`live-deaths.ts`). Keyed `death:<id>`.
+     */
+    addDeaths?: (deaths: Array<{key: string; animal: ArkEventAnimal; t0: number}>) => void;
+    /** 3.3 fix (log): a death line's tap: the camera to where it died. False when the scene does not know the death. */
+    focusDeath?: (key: string) => boolean;
     /**
      * The record's live births (`birth` events that are not hatchings: a litter's parents, its young, its time on the
      * shared clock), acted out in the live world: the mother settles, the young are born, licked and suckle.

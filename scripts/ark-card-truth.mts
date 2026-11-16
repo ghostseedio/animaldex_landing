@@ -254,6 +254,21 @@ console.log(`  drawn but card says other: ${JSON.stringify(drawnUnnamed)}; card 
     const kinds: Record<string, number> = {};
     const acts: Record<string, number> = {};
     let flyLines = 0;
+    let drinkLines = 0;
+    let drinkMoving = 0;
+    const drinkAt = [0, 0, 0, 0];
+    const drinkBy: Record<string, [number, number]> = {};
+    let traceDrink = Number(value("--trace-drink") ?? "0");
+    // (Water within 2.5 m: a drinker stands at the edge, its head over the water.)
+    const waterFrom = (x: number, z: number): number => {
+        for (let r = 0; r <= 8; r += 0.5) for (let a = 0; a < (r ? 16 : 1); a++) {
+            const px = x + r * Math.cos((a * Math.PI) / 8);
+            const pz = z + r * Math.sin((a * Math.PI) / 8);
+            if ((sampler.waterDepth?.(px, pz) ?? (heightAt(px, pz) < 0 ? -heightAt(px, pz) : 0)) > 0.02) return r;
+        }
+        return Infinity;
+    };
+    const waterNear = (x: number, z: number): boolean => waterFrom(x, z) <= 2.5;
     const flyAloft = [0, 0, 0, 0];
     const LATER = [0, 5, 10, 20];
     const began = Date.now();
@@ -262,6 +277,28 @@ console.log(`  drawn but card says other: ${JSON.stringify(drawnUnnamed)}; card 
         if (!m) continue;
         kinds[m.kind] = (kinds[m.kind] ?? 0) + 1;
         acts[m.activity] = (acts[m.activity] ?? 0) + 1;
+        if (m.activity === "drinking" && m.kind === "doing") {
+            // (The owner, 2026-11-16: "it said 'a roadside hawk is drinking' but it was nowhere near the water".)
+            drinkLines++;
+            const subject = subjectOf.get(m.animalId)!;
+            const said = (Math.floor(m.at / MOMENT_WINDOW_SECONDS) + 1) * MOMENT_WINDOW_SECONDS;
+            const slug = subjects.find((s) => s.animal.id === m.animalId)!.animal.model_slug;
+            const by = (drinkBy[slug] ??= [0, 0]);
+            by[0]++;
+            LATER.forEach((d, i) => {
+                const t = said + d;
+                const trip = tripOf(subject, t);
+                const p = sched.poseOnTrip(world, trip, t);
+                const ok = t >= trip.arrive && !p.moving && waterNear(p.x, p.z);
+                if (ok) drinkAt[i]++;
+                if (i === 0 && ok) by[1]++;
+                if (i === 0 && !ok && traceDrink > 0) {
+                    traceDrink--;
+                    console.log(`DRINK ${slug} said ${(t - trip.start).toFixed(1)} s into its slot, arrives ${(trip.arrive - trip.start).toFixed(1)}, mode ${trip.mode}, way ${trip.length.toFixed(1)} m, moving ${p.moving} beat ${p.beat}, water from its goal ${waterFrom(trip.to.x, trip.to.z).toFixed(1)} m`);
+                }
+                if (i === 0 && t >= trip.arrive && p.moving && waterNear(p.x, p.z)) drinkMoving++;
+            });
+        }
         if (m.activity === "flying") {
             flyLines++;
             const subject = subjectOf.get(m.animalId)!;
@@ -278,6 +315,8 @@ console.log(`  drawn but card says other: ${JSON.stringify(drawnUnnamed)}; card 
     console.log(`  kinds ${JSON.stringify(Object.entries(kinds).sort((a, b) => b[1] - a[1]))}`);
     console.log(`  activities ${JSON.stringify(Object.entries(acts).sort((a, b) => b[1] - a[1]))}`);
     console.log(`  flying lines ${flyLines}: drawn flying when said ${flyAloft[0]}, +5 s ${flyAloft[1]}, +10 s ${flyAloft[2]}, +20 s ${flyAloft[3]}`);
+    console.log(`  one animal's drinking lines ${drinkLines} (a group's "heading to water" not counted): arrived and at water when said ${drinkAt[0]}, +5 s ${drinkAt[1]}, +10 s ${drinkAt[2]}, +20 s ${drinkAt[3]}; at water but drawn moving when said ${drinkMoving}`);
+    for (const [slug, v] of Object.entries(drinkBy).sort((a, b) => b[1][0] - a[1][0]).slice(0, 12)) console.log(`    ${slug}: ${v[0]} lines, ${v[1]} at water when said`);
 }
 const out = value("--json");
 if (out) writeFileSync(out, JSON.stringify({counts, awake, flyingSaid, flyingNotAloft, drawnUnnamed, saidUndrawn}, null, 1));
