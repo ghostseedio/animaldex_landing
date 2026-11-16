@@ -368,7 +368,7 @@ const EVERYDAY: ReadonlySet<ArkActivityKey> = new Set<ArkActivityKey>(["food", "
 const GROUP_EVERYDAY: ReadonlySet<ArkActivityKey> = new Set<ArkActivityKey>(["food", "grazing", "browsing", "swimming", "resting", "basking"]);
 
 /** The moment a slot starts, if it is one (its goal changed from the slot before to one worth saying), and its activity. */
-export function momentOf(subject: MomentSubject, plan: SlotPlan, before: SlotPlan): {kind: ScheduleMomentKind; activity: ArkActivityKey} | null {
+export function momentOf(subject: MomentSubject, plan: SlotPlan, before: SlotPlan): {kind: ScheduleMomentKind; activity: ArkActivityKey; recipe: string | null} | null {
     const now = keyOf(subject, plan);
     if (now === keyOf(subject, before)) return null;
     const kind = ((): ScheduleMomentKind | null => {
@@ -401,7 +401,8 @@ export function momentOf(subject: MomentSubject, plan: SlotPlan, before: SlotPla
                 return EVERYDAY.has(now) ? "doing" : null;
         }
     })();
-    return kind ? {kind, activity: now} : null;
+    // (Its slot's recipe, when it has one: the live log says the species' own sentence for it, `live/signature-lines.ts`.)
+    return kind ? {kind, activity: now, recipe: plan.recipe} : null;
 }
 
 /** The moment's kind alone (tests, and the checks of what a line says). */
@@ -409,14 +410,14 @@ export function momentKind(subject: MomentSubject, plan: SlotPlan, before: SlotP
     return momentOf(subject, plan, before)?.kind ?? null;
 }
 
-export type ScheduleMoment = {id: string; kind: ScheduleMomentKind; activity: ArkActivityKey; animalId: string; /** When it starts (epoch seconds). */ at: number; /** A group's size. */ count: number};
+export type ScheduleMoment = {id: string; kind: ScheduleMomentKind; activity: ArkActivityKey; animalId: string; /** When it starts (epoch seconds). */ at: number; /** A group's size. */ count: number; /** The recipe it starts, when it is one. */ recipe?: string | null};
 
 /** A flight said in the live log lasts at least this long (s): a hop of a few seconds is over before its line is read. */
 export const FLIGHT_MOMENT_SECONDS = 8;
 
 /** Its moments that start inside a window but not at a slot's start: a flight's take-off, a pair's meeting (its first side's). */
-function midSlotMoments(subject: MomentSubject, from: number, to: number): Array<{kind: ScheduleMomentKind; activity: ArkActivityKey; at: number}> {
-    const out: Array<{kind: ScheduleMomentKind; activity: ArkActivityKey; at: number}> = [];
+function midSlotMoments(subject: MomentSubject, from: number, to: number): Array<{kind: ScheduleMomentKind; activity: ArkActivityKey; at: number; recipe?: string | null}> {
+    const out: Array<{kind: ScheduleMomentKind; activity: ArkActivityKey; at: number; recipe?: string | null}> = [];
     if (subject.profile.move === "fly" || subject.profile.moves.includes("fly")) {
         const plans = [planOf(subject, from)];
         const last = planOf(subject, to - 0.001);
@@ -431,7 +432,7 @@ function midSlotMoments(subject: MomentSubject, from: number, to: number): Array
         if (meeting.role !== "a") continue;
         const key = arkRecipeActivity(meeting.recipe);
         const kind: ScheduleMomentKind | null = key === "courting" ? "courting" : key === "sparring" ? "contest" : key === "grooming" ? "doing" : null;
-        if (key && kind) out.push({kind, activity: key, at: meeting.t0});
+        if (key && kind) out.push({kind, activity: key, at: meeting.t0, recipe: meeting.recipe});
     }
     return out;
 }
@@ -481,7 +482,7 @@ export function pickMoment(window: number, subjects: readonly MomentSubject[], s
         for (const moment of moments) {
             if (MOMENT_TIER[moment.kind] >= bestTier || draw("ark-accept", window, subject.id) >= MOMENT_WEIGHTS[moment.kind]) continue;
             bestTier = MOMENT_TIER[moment.kind];
-            best = {id: `now:${subject.id}:${Math.round(moment.at)}`, kind: moment.kind, activity: moment.activity, animalId: subject.id, at: moment.at, count: moment.kind === "toWater" || moment.kind === "home" || moment.kind === "flock" || moment.kind === "group" ? subject.leads : 1};
+            best = {id: `now:${subject.id}:${Math.round(moment.at)}`, kind: moment.kind, activity: moment.activity, recipe: moment.recipe ?? null, animalId: subject.id, at: moment.at, count: moment.kind === "toWater" || moment.kind === "home" || moment.kind === "flock" || moment.kind === "group" ? subject.leads : 1};
         }
         if (bestTier === 0) break;
     }

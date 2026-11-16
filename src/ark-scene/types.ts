@@ -597,7 +597,7 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
 };
 
 /** A moment the schedule has an animal starting now, for the live log: who, what, and a group's size. */
-export type ArkHappening = {id: string; kind: ScheduleMomentKind; /** What it set about (`ark.activity`). */ activity: ArkActivityKey; animalId: string; name: string; speciesId: string; zone: ArkZone; count: number; /** Epoch seconds. */ at: number};
+export type ArkHappening = {id: string; kind: ScheduleMomentKind; /** What it set about (`ark.activity`). */ activity: ArkActivityKey; animalId: string; name: string; speciesId: string; zone: ArkZone; count: number; /** Epoch seconds. */ at: number; /** Its species' own sentence for the recipe it starts (`live/signature-lines.ts`), when it has one. */ line?: string};
 
 /** One animal's reactive state, as the page and the audit lane read it (`reactive.ts` ReactiveOut). */
 export type ArkReactiveSnapshot = {action: string; headYaw: number; headPitch: number; headWeight: number; dx: number; dz: number; bodyYaw: number; crouch: number; called: boolean; alarmed: number; looking: string | null};

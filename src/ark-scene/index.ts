@@ -2347,7 +2347,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const entry = moment ? findEntry(moment.animalId) : null;
             if (!moment || !entry) continue;
             const a = entry.animal;
-            moments.push({id: moment.id, kind: moment.kind, activity: moment.activity, animalId: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, count: moment.count, at: moment.at});
+            // (One animal starting a recipe its species has its own sentence for: said in those words.)
+            const sentence = moment.recipe && moment.count <= 1 ? signatureLineOf(a.model_slug, moment.recipe) : null;
+            // (A sentence about several of the kind only for a pair's moment: one animal setting out alone is not "they".)
+            const ownLine = sentence && (!sentence.startsWith("{animals}") || moment.kind === "courting" || moment.kind === "contest") ? sentence : null;
+            moments.push({id: moment.id, kind: moment.kind, activity: moment.activity, animalId: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, count: moment.count, at: moment.at, ...(ownLine ? {line: ownLine} : {})});
         }
         return {window: Math.max(done, after ?? done), moments};
     };

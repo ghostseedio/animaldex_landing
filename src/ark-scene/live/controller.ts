@@ -396,6 +396,11 @@ export class ArkLive {
             if (got) {
                 this.momentWindow = got.window;
                 const items = arkNowItems(got.moments, this.memory);
+                // In English a moment whose species has its own sentence for the recipe it starts is said in it.
+                if (isEnglish(this.locale)) {
+                    const own = new Map(got.moments.filter((m) => m.line).map((m) => [m.id, m.line!]));
+                    for (const item of items) if (own.has(item.id)) item.line = own.get(item.id);
+                }
                 for (const item of items) if (item.focus.animalId) this.nowSaid.set(`${item.focus.animalId}:${item.kind}`, Date.now() + NOW_SEEN_MS);
                 if (items.length) this.say(items, now);
             }
