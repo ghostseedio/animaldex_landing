@@ -20,6 +20,7 @@ import {buildingSolid, perchOnSurface} from "@/ark-scene/islands/town/roof-perch
 import {corners, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townBuildingFloor, townHeight} from "@/ark-scene/islands/town/ground";
 import {clearForItem, houseDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
+import {deadwoodFoot, townDeadwood} from "@/ark-scene/islands/town/deadwood";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, MILLPOND, townPlan, type Building, type Parcel, type TownPlan, type ZooSlot} from "@/ark-scene/islands/town/plan";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import type {CarSpot} from "@/ark-scene/islands/town/people";
@@ -206,6 +207,13 @@ function wildlifeSpots(plan: TownPlan): TownSpot[] {
         if (!where) continue;
         for (const s of scatter(g.poly, where === "garden" ? 4 : 5, hashText(g.id), (x, z) => sampleTownGround(x, z).surface !== "water")) out.push({...s, y: y(s.x, s.z), area: "garden_wildlife", where, place: g.id, sizes: where === "wood" || where === "park" ? ALL : SMALL_MEDIUM, protected: false});
     }
+    // p2 (town2): at the foot of each fallen log and stump, and at each nettle patch beside them (`deadwood.ts`).
+    const dead = townDeadwood(plan);
+    for (const item of dead.items) {
+        const foot = deadwoodFoot(item);
+        out.push({...foot, y: y(foot.x, foot.z), area: "garden_wildlife", where: "deadwood", place: item.id, sizes: SMALL, protected: false});
+    }
+    for (const p of dead.patches) out.push({x: p.x, y: y(p.x, p.z), z: p.z, area: "garden_wildlife", where: "leaves", place: p.id, sizes: SMALL, protected: false});
     // Back gardens: the hedges and borders at their edges (shared with the pets, who are protected).
     for (const p of plan.parcels) {
         if (p.kind !== "house" || !p.back) continue;

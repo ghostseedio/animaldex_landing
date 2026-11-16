@@ -29,6 +29,7 @@ import {homeSiteFootprints, inTownSolid} from "@/ark-scene/islands/town/tanks";
 import {corners} from "@/ark-scene/islands/town/geom";
 import {townHouseholds} from "@/ark-scene/islands/town/areas";
 import {WALL_FACE} from "@/ark-scene/wall-climb";
+import {deadwoodPlaces, leafPatchPlaces, townDeadwood} from "@/ark-scene/islands/town/deadwood";
 
 /** Lane TB: spots on raised things (roofs, eaves, ledges, a balcony, a lamp-lit wall); every other spot is on the ground. */
 const RAISED_WHERE = new Set<SpotWhere>(["roof", "eave", "ledge", "tall", "belfry", "balcony", "window", "lamp_wall"]);
@@ -49,6 +50,9 @@ const TAGS_BY_WHERE: Partial<Record<SpotWhere, AttachTag[]>> = {
     churchyard: ["grass", "leaf_litter"],
     wood: ["leaf_litter", "shade"],
     wild_corner: ["grass", "leaf_litter"],
+    // p2 (town2): the ground at a log's foot and in a nettle patch; the log's and patch's own places are added from `deadwood.ts`.
+    deadwood: ["leaf_litter", "shade"],
+    leaves: ["leaf_litter"],
     hedgerow: ["grass", "shade"],
     field_margin: ["grass", "flower"],
     canal: ["water_edge", "reeds"],
@@ -274,6 +278,11 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
         add("grass", `town:feed:${e.id}`, e.feeding.x, townHeight(e.feeding.x, e.feeding.z), e.feeding.z);
         e.enrichment.forEach((r, k) => add(r.what === "logs" ? "log_top" : "grass", `town:enrich:${e.id}:${k}`, r.at.x, townHeight(r.at.x, r.at.z) + (r.what === "logs" ? 0.5 : 0), r.at.z));
     }
+    // p2 (town2): on the dead wood (a log's top and bark, the litter and shade at its foot; a stump's top and side) and
+    // on the nettle patches' tops (leaf).
+    const dead = townDeadwood(plan);
+    dead.items.forEach((item) => deadwoodPlaces(item).forEach((p, k) => add(p.tag, `town:deadwood:${item.id}:${k}`, p.x, p.y, p.z, p.nx, p.ny, p.nz, p.yaw)));
+    dead.patches.forEach((patch) => leafPatchPlaces(patch).forEach((p, k) => add(p.tag, `town:leaves:${patch.id}:${k}`, p.x, p.y, p.z, p.nx, p.ny, p.nz, p.yaw)));
     // Each tree's places on the drawn tree itself (its asset's bark, branch tops and leaves: `trees.ts`, lane GC), and its shade.
     townTrees(plan).forEach((t, i) => {
         if (t.low) return;

@@ -167,7 +167,8 @@ const TOWN_DIGESTS = {
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
     // lane's street grade and boats, the place lane's pens. Each lane changed these on purpose; recomputed on the merge.)
     // (3.3 fix (wall), wall-climb.ts: the lamp-lit walls' places on the wall's face with its normal; the eaves' wall faces.)
-    areas: "9e35116cf74ed612",
+    // (p2 (town2): the deadwood and nettle-patch spots, `deadwood.ts`; the scenery draws the logs, stumps and patches.)
+    areas: "b170db98b42de523",
     // (Lane GA: the ground's surface weights.)
     ground: "c2ce52537fa6ea7d",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
@@ -176,7 +177,7 @@ const TOWN_DIGESTS = {
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "ec9afe6b82329ddf",
+    sceneryAndBuildings: "627a5bcb890cc9dd",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (town2): the paddocks' boulders and rockwork worn round and shaded smooth.)
     zoo: "c1ad36aedb065f2f",

@@ -9,6 +9,8 @@ import {centroid, corners, hashText, inBox, local, toLocal, polylineAt, polyline
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townTileHeight} from "@/ark-scene/islands/town/drawn-ground";
 import {tractor} from "@/ark-scene/islands/town/render/farm-machines";
+import {townDeadwood} from "@/ark-scene/islands/town/deadwood";
+import {drawDeadwood, drawLeafPatch} from "@/ark-scene/islands/town/render/deadwood";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, MILLPOND, TOWN_LEVEL, TOWPATH, townPlan, type Hedge, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
@@ -910,6 +912,10 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
     square(out, plan);
     boundaries(out, plan);
     fields(out, plan);
+    // p2 (town2): fallen logs, stumps and nettle patches in the wood, churchyard, wild corner, park and gardens (`deadwood.ts`).
+    const dead = townDeadwood(plan);
+    for (const item of dead.items) drawDeadwood(chunkFor(out, item.x, item.z).solid, item);
+    for (const patch of dead.patches) drawLeafPatch(chunkFor(out, patch.x, patch.z).foliage, patch);
     zooPlaza(out, plan);
     lamps(out, plan);
     beds(out, plan);
