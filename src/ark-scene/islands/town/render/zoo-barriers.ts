@@ -368,7 +368,9 @@ function aviary(parts: Parts, s: Box, seed: number, signPoint: Pt) {
             const t1 = (i + 1) / n;
             const e0: V3 = [rib[i][0], a[1] + (b[1] - a[1]) * t0, rib[i][2]];
             const e1: V3 = [rib[i + 1][0], a[1] + (b[1] - a[1]) * t1, rib[i + 1][2]];
-            parts.net.quad(e0, e1, rib[i + 1], rib[i], NETTING);
+            // (The first and last pieces are triangles: their eave point is the rib's foot. No zero-area triangle.)
+            if (i < n - 1) parts.net.tri(e0, e1, rib[i + 1], NETTING);
+            if (i > 0) parts.net.tri(e0, rib[i + 1], rib[i], NETTING);
         }
     }
     parts.net.tag = 0;

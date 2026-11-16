@@ -15,10 +15,11 @@
  */
 
 import {Group, Mesh, type BufferGeometry, type Material} from "three";
-import {hashText, rng, type Box} from "@/ark-scene/islands/town/geom";
-import type {ZooEnclosure} from "@/ark-scene/islands/town/areas";
+import {hashText, rng, type Box, type Pt} from "@/ark-scene/islands/town/geom";
+import {zooSpotsOf, type ZooEnclosure} from "@/ark-scene/islands/town/areas";
 import {aquariumTanks, zooHouseFloors, zooHouseFrame, ZOO_HOUSE_PORCH, ZOO_HOUSE_TYPES, ZOO_HOUSE_WALL, type Tank} from "@/ark-scene/islands/town/tanks";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
+import {cactus, climbingFrame, climbingTree, fern, flowers, ledge, log, outcrop, patch, Plot, pool, rope, tuft} from "@/ark-scene/islands/town/render/zoo-habitat";
 import {cutAttribute, cutawayMaterial, cutEye, followEye, glassMaterial, glowMaterial, interiorMaterial, waterMaterial} from "@/ark-scene/islands/town/render/displays";
 
 type RGB = [number, number, number];
@@ -26,14 +27,14 @@ type RGB = [number, number, number];
 /** Each house's walls and roof colours (the town lane's palette for its zoo houses). */
 const LOOK: Record<string, [string, string]> = {aquarium: ["#e9eef0", "#2f7f8f"], reptile_house: ["#e6d8b8", "#a8543a"], insect_house: ["#e8e4cc", "#6f8f3a"], nocturnal_house: ["#d8d2c4", "#2f3a5a"], primate_house: ["#e6dcc4", "#4f7a3a"]};
 /** The hall's floor by house. */
-const FLOOR: Record<string, string> = {aquarium: "#3c4a52", reptile_house: "#c9b083", insect_house: "#6f5a3a", nocturnal_house: "#2e2a26", primate_house: "#7a5a3a"};
+const FLOOR: Record<string, string> = {aquarium: "#3c4a52", reptile_house: "#c9b083", insect_house: "#6f5a3a", nocturnal_house: "#2e2a26", primate_house: "#5d7a38"};
 const SALT = tone("#2f7fbf");
 const FRESH = tone("#3f9a86");
 const SAND = tone("#d9c79a");
 const GRAVEL = tone("#8a8276");
 const STAND = tone("#262b30");
 
-export type ZooHouses = {group: Group; floors: Float32Array; tanks: Tank[]; dispose: () => void};
+export type ZooHouses = {group: Group; floors: Float32Array; tanks: Tank[]; /** p2 (zoo): each hall's dressing plan (its footprints), for the checks. */ habitats: Plot[]; dispose: () => void};
 
 /** Upright frame at a point (the house's own turn), its floor at `y`. */
 function frameAt(b: Box, y: number): Frame {
@@ -163,34 +164,176 @@ function tank(t: Tank, parts: {inside: Geo; glow: Geo; glass: Geo; water: Geo}, 
 }
 
 /** The hall of a house that is not the aquarium: its dressing in the corners and along the walls, the lights. */
-function hall(e: ZooEnclosure, parts: {inside: Geo; glow: Geo; glass: Geo}) {
+function hall(e: ZooEnclosure, parts: {inside: Geo; glow: Geo; glass: Geo; water?: Geo}): Plot | null {
     const f = zooHouseFrame(e);
     const b = f.inner;
     const fr = frameAt(b, f.floor);
     const r = rng(e.slot.seed + 11);
-    const corners: Array<[number, number]> = [[-1, -1], [1, -1], [-1, 1], [1, 1]];
-    for (const [sx, sz] of corners) {
-        const lx = sx * (b.w / 2 - 0.45);
-        const lz = sz * (b.d / 2 - 0.45);
-        const p = at(fr, lx, 0, lz);
-        if (e.type === "reptile_house") parts.inside.blob(p[0], f.floor + 0.25, p[2], 0.6, 0.45, 0.55, tone(r() < 0.5 ? "#a8906a" : "#8a7a62"), hashText(`${e.id}r${lx}${lz}`), 0);
-        else if (e.type === "insect_house" || e.type === "primate_house") parts.inside.bush(p[0], f.floor + 0.6, p[2], 0.55, 0.9, 0.55, tone("#4f7a3a"), hashText(`${e.id}p${lx}${lz}`));
-        else parts.inside.blob(p[0], f.floor + 0.2, p[2], 0.5, 0.35, 0.5, tone("#3a3a34"), hashText(`${e.id}n${lx}${lz}`), 0);
-    }
-    // Logs along the back wall.
-    parts.inside.box(fr, 0, 0, -b.d / 2 + 0.25, Math.min(3, b.w * 0.4), 0.28, 0.3, tone("#5e4630"));
+    // p2 (zoo): each hall dressed as its kind's habitat, clear of the residents' spots (`themedHall`, `primateHall`).
+    let plot: Plot | null = null;
     if (e.type === "primate_house") {
-        // A climbing frame against the back wall: poles, a beam, ropes, a platform (above the residents' heads).
-        for (const lx of [-b.w * 0.3, 0, b.w * 0.3]) parts.inside.cylinder(fr, lx, 0, -b.d / 2 + 0.35, 0.12, 0.1, f.height - 1.2, tone("#7a5a3e"), 6);
-        parts.inside.box(fr, 0, f.height - 1.4, -b.d / 2 + 0.35, b.w * 0.62, 0.14, 0.14, tone("#7a5a3e"));
-        parts.inside.box(fr, 0, f.height - 2.4, -b.d / 2 + 0.6, b.w * 0.5, 0.08, 0.5, tone("#8a6a48"));
-        // The glazed barrel over the hall (`shell`'s flat roof carries it).
+        // p2 (zoo): the great apes' forest hall (`primateHall`); the glazed barrel over it (`shell`'s flat roof carries it).
+        plot = primateHall(e, parts);
         barrel(e, parts.glass);
-    }
+    } else plot = themedHall(e, parts);
     if (e.type === "insect_house") barrel(e, parts.glass);
     // Lights: warm heat lamps (reptiles), blue night light (nocturnal), daylight panels (insects, primates): high on the back wall.
     const light: RGB = e.type === "reptile_house" ? tone("#ffb070") : e.type === "nocturnal_house" ? tone("#5a6ab8") : tone("#e8f0d8");
     for (const lx of [-b.w * 0.3, b.w * 0.3]) parts.glow.box(fr, lx, Math.min(2.4, f.height - 1), -b.d / 2 + 0.02, 1.2, 0.18, 0.04, light);
+    return plot;
+}
+
+/**
+ * The small halls' habitats (p2, lane ZOO; the owner, "check the other enclosures too": each was an empty floor with a
+ * blob in each corner): the reptile house a desert of sand, gravel and rockwork with basking ledges under the heat
+ * lamps, driftwood, cacti and a pool; the nocturnal house a night forest floor of leaf litter, logs, rocks, ferns and a
+ * dead tree; the insect house a garden of leaf litter, ferns, flowering plants and logs. Small residents: a smaller
+ * clearance from their spots.
+ */
+function themedHall(e: ZooEnclosure, parts: {inside: Geo; glow: Geo; glass: Geo; water?: Geo}): Plot {
+    const f = zooHouseFrame(e);
+    const b = f.inner;
+    const plot = new Plot(b, () => f.floor, zooSpotsOf(e), e.slot.seed, 0.45);
+    const g = parts.inside;
+    const r = rng(e.slot.seed + 41);
+    const W = b.w / 2;
+    const D = b.d / 2;
+    const desert = e.type === "reptile_house";
+    const night = e.type === "nocturnal_house";
+    const ROCK: RGB = tone(desert ? "#b08a62" : night ? "#5a5248" : "#7c6c5a");
+    const ground = desert ? ["#d2b07a", "#b89a70", "#a08a6a"] : night ? ["#3a3026", "#4a3a2a", "#2e3a26"] : ["#5a4430", "#4f6a2e", "#6a5236"];
+    for (let k = 0; k < 10; k++) patch(g, plot, (r() - 0.5) * b.w * 0.9, (r() - 0.5) * b.d * 0.9, 0.8 + r() * 1.3, tone(ground[k % 3]), hashText(`${e.id}g${k}`), 0.008 + (k % 3) * 0.003);
+    // Rockwork set into the back wall and the back corners.
+    for (let lx = -W + 0.5; lx <= W - 0.5; lx += 1.5) {
+        const size = 0.9 + r() * 0.7;
+        if (plot.take(lx, -D + 0.15, size * 0.6, "rockwork", -size)) outcrop(g, plot, lx, -D + 0.15, size, ROCK, hashText(`${e.id}bk${lx.toFixed(1)}`));
+    }
+    for (const sx of [-1, 1]) {
+        for (let lz = -D + 1.6; lz <= 0; lz += 1.7) {
+            const size = 0.6 + r() * 0.5;
+            if (plot.take(sx * (W - 0.15), lz, size * 0.6, "rockwork", -size)) outcrop(g, plot, sx * (W - 0.15), lz, size, ROCK, hashText(`${e.id}sd${sx}${lz.toFixed(1)}`));
+        }
+    }
+    // Basking ledges (under the lamps on the back wall), logs and driftwood.
+    for (const lx of [-b.w * 0.3, b.w * 0.3]) {
+        const q = plot.near(lx, -D + 1.3, 0.45, "ledge", 1.2, 14, -0.2);
+        if (q) ledge(g, plot, q.x, q.z, 0.45, ROCK, hashText(`${e.id}l${lx.toFixed(1)}`));
+    }
+    for (let k = 0; k < 4; k++) {
+        const q = plot.near((r() - 0.5) * b.w * 0.8, (r() - 0.5) * b.d * 0.7, 0.7, "log", 2);
+        if (!q) continue;
+        const a = r() * 3.14;
+        log(g, plot, q.x - Math.cos(a) * 0.7, q.z - Math.sin(a) * 0.7, q.x + Math.cos(a) * 0.7, q.z + Math.sin(a) * 0.7, 0.13 + r() * 0.06, tone(desert ? "#a08868" : "#5e4632"));
+    }
+    if (night || !desert) {
+        const t = plot.near(W * 0.4, -D * 0.4, 0.5, "tree", 2.5, 20);
+        if (t) climbingTree(g, plot, t.x, t.z, Math.min(f.height - 1.2, 3.6), hashText(`${e.id}t`));
+    }
+    if (desert && parts.water) {
+        const q = plot.near(-W * 0.35, D * 0.3, 0.9, "pool", 2.5, 24);
+        if (q) pool(g, parts.water, plot, q.x, q.z, 0.75, hashText(`${e.id}pool`), ROCK, tone("#4a8a80"));
+    }
+    // Planting round the walls (not along the glass), tufts between.
+    const beds: Array<[number, number]> = [];
+    for (let t = -W + 0.5; t <= W - 0.5; t += 1.3) beds.push([t, -D + 1.1]);
+    for (let t = -D + 0.5; t <= D - 1.6; t += 1.4) beds.push([-W + 0.45, t], [W - 0.45, t]);
+    beds.push([-W + 0.5, D - 0.5], [W - 0.5, D - 0.5]);
+    const leaf = night ? [tone("#2f5a34"), tone("#3a6a3a")] : [tone("#3f7a34"), tone("#5a9a40")];
+    const bloom = [tone("#e8a03a"), tone("#c84a6a"), tone("#e8d85a"), tone("#8a5ac8")];
+    beds.forEach(([lx, lz], k) => {
+        const q = plot.near(lx, lz, 0.35, "plant", 0.8, 10, -0.3);
+        if (!q) return;
+        if (desert) {
+            if (k % 3 === 0) cactus(g, plot, q.x, q.z, 0.9 + r() * 0.9, hashText(`${e.id}c${k}`));
+            else fern(g, plot, q.x, q.z, 0.45 + r() * 0.3, tone("#7a9a6a"), hashText(`${e.id}s${k}`), 11);
+        } else if (!night && k % 2 === 0) flowers(g, plot, q.x, q.z, 0.7 + r() * 0.4, bloom[k % 4], hashText(`${e.id}fl${k}`));
+        else fern(g, plot, q.x, q.z, 0.8 + r() * 0.7, leaf[k % 2], hashText(`${e.id}f${k}`), 9);
+    });
+    for (let k = 0; k < 40; k++) tuft(g, plot, (r() - 0.5) * b.w * 0.95, (r() - 0.5) * b.d * 0.95, 0.18 + r() * 0.2, tone(desert ? "#a8a060" : night ? "#3f5a34" : "#6f9a44"), hashText(`${e.id}u${k}`), 5);
+    return plot;
+}
+
+/**
+ * The great apes' hall (p2, lane ZOO; the owner: "the gorilla enclosure looks unbelievably basic"): a forest floor of
+ * bark with grass and leaf litter, a backdrop of rounded rockwork along the back and up the sides with ledges, a
+ * climbing frame of stripped logs with decks, swagged and hanging ropes and a fire-hose hammock, a dead climbing tree,
+ * a stream-fed pool with a stone rim, and broad-leaved planting in the corners and along the walls. Every ground item
+ * keeps clear of the residents' spots (`zoo-habitat.ts` Plot), where each ape is held.
+ */
+function primateHall(e: ZooEnclosure, parts: {inside: Geo; glow: Geo; glass: Geo; water?: Geo}): Plot {
+    const f = zooHouseFrame(e);
+    const b = f.inner;
+    const plot = new Plot(b, () => f.floor, zooSpotsOf(e), e.slot.seed);
+    const g = parts.inside;
+    const r = rng(e.slot.seed + 29);
+    const W = b.w / 2;
+    const D = b.d / 2;
+    const ROCK: RGB = tone("#7c6c5a");
+    // The ground: a grass floor with bark-chip and leaf-litter clearings and a sandy beach by the pool (flat, under
+    // everything; the residents walk on them).
+    for (let k = 0; k < 14; k++) patch(g, plot, (r() - 0.5) * b.w * 0.9, (r() - 0.5) * b.d * 0.9, 1.3 + r() * 1.8, tone(["#7a5a3a", "#6a4e30", "#4f6a2e", "#6f8a42"][k % 4]), hashText(`${e.id}g${k}`), 0.008 + (k % 4) * 0.003);
+    // Rockwork along the back wall and the back halves of the sides, set into the walls.
+    for (let lx = -W + 0.6; lx <= W - 0.6; lx += 1.9) {
+        const size = 1.6 + r() * 1.0;
+        if (plot.take(lx, -D + 0.2, size * 0.7, "rockwork", -size)) outcrop(g, plot, lx, -D + 0.2, size, ROCK, hashText(`${e.id}bk${lx.toFixed(1)}`));
+    }
+    for (const sx of [-1, 1]) {
+        for (let lz = -D + 2.2; lz <= -D + b.d * 0.5; lz += 2.1) {
+            const size = 0.9 + r() * 0.8;
+            if (plot.take(sx * (W - 0.2), lz, size * 0.7, "rockwork", -size)) outcrop(g, plot, sx * (W - 0.2), lz, size, ROCK, hashText(`${e.id}sd${sx}${lz.toFixed(1)}`));
+        }
+    }
+    // Basking and sitting ledges out in the hall.
+    for (let k = 0; k < 4; k++) {
+        const q = plot.near((r() - 0.5) * b.w * 0.7, (r() - 0.3) * b.d * 0.6, 0.9, "ledge", 3);
+        if (q) ledge(g, plot, q.x, q.z, 0.75 + r() * 0.3, ROCK, hashText(`${e.id}l${k}`));
+    }
+    // The climbing frame: a line of stripped logs across the back third, another up one side.
+    const back: Pt[] = [];
+    for (let lx = -W + 1.6; lx <= W - 1.6; lx += 2.9) back.push({x: lx + (r() - 0.5) * 0.6, z: -D + 3.2 + (r() - 0.5) * 0.8});
+    climbingFrame(g, plot, back, Math.min(f.height - 1.0, 5.8), hashText(`${e.id}cf`));
+    const side: Pt[] = [];
+    for (let lz = -D + 6.5; lz <= D - 5; lz += 3.0) side.push({x: -W + 1.4 + (r() - 0.5) * 0.4, z: lz});
+    climbingFrame(g, plot, side, Math.min(f.height - 1.5, 5.2), hashText(`${e.id}cs`));
+    // A fire-hose hammock slung high across the hall from the back frame to the side frame.
+    const h0 = plot.p(back[0].x, back[0].z, 4.1);
+    const h1 = plot.p(side[0].x, side[0].z, 4.1);
+    rope(g, h0, h1, 0.8, 0.22, tone("#b8462e"));
+    // A dead climbing tree in the open middle.
+    const tree = plot.near(W * 0.35, -D * 0.05, 0.8, "tree", 3.5, 24);
+    if (tree) climbingTree(g, plot, tree.x, tree.z, Math.min(f.height - 0.8, 5.6), hashText(`${e.id}t`));
+    // A pool with a stone rim toward the front, where the visitors see it.
+    if (parts.water) {
+        const q = plot.near(W * 0.4, D * 0.35, 1.7, "pool", 3, 30);
+        if (q) {
+            patch(g, plot, q.x, q.z, 2.3, tone("#c9b088"), hashText(`${e.id}beach`), 0.02);
+            pool(g, parts.water, plot, q.x, q.z, 1.45, hashText(`${e.id}pool`), ROCK, tone("#3f8a86"));
+        }
+    }
+    // Logs to sit on and turn over.
+    for (let k = 0; k < 3; k++) {
+        const q = plot.near((r() - 0.5) * b.w * 0.7, (r() - 0.5) * b.d * 0.6, 1.1, "log", 3);
+        if (!q) continue;
+        const a = r() * 3.14;
+        log(g, plot, q.x - Math.cos(a), q.z - Math.sin(a), q.x + Math.cos(a), q.z + Math.sin(a), 0.2 + r() * 0.08);
+    }
+    // Planting: broad leaves and bushes in the corners and along the walls, grass tufts wherever a foot does not land.
+    const green = [tone("#3f7a34"), tone("#4f8a3a"), tone("#2f6a30"), tone("#5a9a40")];
+    // (Beds every couple of metres round the walls, and by the rocks and the pool: whichever are clear of the apes.)
+    const beds: Array<[number, number]> = [];
+    // (Not along the glass: the visitors look in there. Its two corners only.)
+    for (let t = -W + 0.6; t <= W - 0.6; t += 1.7) beds.push([t, -D + 1.6]);
+    beds.push([-W + 0.6, D - 0.6], [W - 0.6, D - 0.6]);
+    for (let t = -D + 0.6; t <= D - 2.4; t += 1.8) beds.push([-W + 0.6, t], [W - 0.6, t]);
+    beds.forEach(([lx, lz], k) => {
+        const q = plot.near(lx, lz, 0.55, "plant", 1.0, 10, -0.4);
+        if (!q) return;
+        const c = green[k % 4];
+        if (k % 5 === 0) g.bush(...plot.p(q.x, q.z, 0.45), 0.6 + r() * 0.3, 0.6 + r() * 0.3, 0.6 + r() * 0.3, c, hashText(`${e.id}b${k}`));
+        else fern(g, plot, q.x, q.z, 1.2 + r() * 0.9, c, hashText(`${e.id}f${k}`), 9 + (k % 3), k % 4 === 1 ? 0.6 + r() * 1.2 : 0);
+    });
+    for (let k = 0; k < 90; k++) tuft(g, plot, (r() - 0.5) * b.w * 0.95, (r() - 0.5) * b.d * 0.95, 0.3 + r() * 0.35, tone(k % 2 ? "#6f9a44" : "#86a84e"), hashText(`${e.id}u${k}`));
+    return plot;
 }
 
 function barrel(e: ZooEnclosure, glass: Geo) {
@@ -220,6 +363,7 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
     const ranges: Array<{from: number; to: number; x: number; y: number; z: number; h: number}> = [];
     const parts = {inside: new Geo(), glow: new Geo(), glass: new Geo(), water: new Geo()};
     const tanks: Tank[] = [];
+    const habitats: Plot[] = [];
     const houses = enclosures.filter((e) => !e.shared && ZOO_HOUSE_TYPES.has(e.type));
     for (const e of houses) {
         shell(shellGeo, e, ranges);
@@ -235,7 +379,10 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
                 tank(t, parts, f.floor);
                 tanks.push(t);
             }
-        } else hall(e, parts);
+        } else {
+            const plot = hall(e, parts);
+            if (plot) habitats.push(plot);
+        }
     }
     const materials: Material[] = [];
     const meshes: Mesh[] = [];
@@ -268,6 +415,7 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
         group,
         floors: zooHouseFloors(houses),
         tanks,
+        habitats,
         dispose: () => {
             for (const mesh of meshes) mesh.geometry.dispose();
             for (const material of materials) material.dispose();
