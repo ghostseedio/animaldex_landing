@@ -4,11 +4,13 @@
  * Built only when the camera first goes under the sea, and let go again after `SEA_LOOK_LINGER` seconds above it: a
  * land view never builds or holds any of it. What it holds while under: one `Points` of marine snow (one draw call,
  * no texture; 1,500 / 800 / 300 points by tier), its positions worked out in the vertex shader from the sea's shared
- * clock, wrapped about the camera. Reduced motion keeps the motes but holds them still.
+ * clock, wrapped about the camera; and the bubbles (`sea-bubbles-render.ts`: one more `Points`). Reduced motion keeps
+ * the motes and the bubbles but holds them still.
  */
 
 import {BufferAttribute, BufferGeometry, Color, NormalBlending, Points, ShaderMaterial, type Camera, type Object3D} from "three";
 import type {QualityTier} from "@/ark-scene/post";
+import {SeaBubblesView} from "@/ark-scene/sea-bubbles-render";
 import {SEA_LOOK_LINGER, SNOW_BOX, SNOW_CEILING, SNOW_COUNT, SNOW_PERIOD, snowSeed} from "@/ark-scene/sea-look";
 
 const SNOW_VERTEX = /* glsl */ `
@@ -56,6 +58,7 @@ export class SeaLookView {
     /** The clock second the camera was last under the sea (for the linger). */
     private lastUnder = -Infinity;
     private heldTime = 0;
+    private bubbles: SeaBubblesView | null = null;
 
     constructor(private readonly parent: Object3D) {}
 
@@ -89,6 +92,7 @@ export class SeaLookView {
         this.snow.renderOrder = 4;
         this.snow.name = "sea-snow";
         this.parent.add(this.snow);
+        this.bubbles = new SeaBubblesView(this.parent, tier);
         this.builtFor = tier;
     }
 
@@ -97,6 +101,8 @@ export class SeaLookView {
         this.parent.remove(this.snow);
         this.snow.geometry.dispose();
         this.material?.dispose();
+        this.bubbles?.dispose();
+        this.bubbles = null;
         this.snow = null;
         this.material = null;
         this.builtFor = null;
@@ -107,7 +113,7 @@ export class SeaLookView {
      * its period (`seaClockSeconds`); `now` any running seconds (for the linger); `viewHeight` the canvas's height in
      * device pixels (a mote's size on screen).
      */
-    step(under: boolean, camera: Camera, daylight: number, clock: number, now: number, tier: QualityTier, viewHeight: number, reducedMotion: boolean): void {
+    step(under: boolean, camera: Camera, daylight: number, haze: number, clock: number, now: number, tier: QualityTier, viewHeight: number, reducedMotion: boolean): void {
         if (under) {
             this.lastUnder = now;
             if (!this.snow || this.builtFor !== tier) this.build(tier);
@@ -116,14 +122,24 @@ export class SeaLookView {
         }
         if (!this.snow || !this.material) return;
         this.snow.visible = under;
-        if (!under) return;
+        // (World size → pixels at 1 m: the canvas's height over the view's tangent.)
+        const fov = (camera as Camera & {fov?: number}).fov ?? 50;
+        const pixelsPerMetre = viewHeight / (2 * Math.tan(fov * Math.PI / 360));
         if (!reducedMotion) this.heldTime = clock;
+        this.bubbles?.step(under, camera, this.heldTime, now, daylight, haze, pixelsPerMetre, reducedMotion);
+        if (!under) return;
         const uniforms = this.material.uniforms;
         uniforms.uTime.value = this.heldTime;
         uniforms.uLight.value = Math.min(Math.max(daylight, 0), 1);
-        // (World size → pixels at 1 m: the canvas's height over the view's tangent.)
-        const fov = (camera as Camera & {fov?: number}).fov ?? 50;
-        uniforms.uPixel.value = viewHeight / (2 * Math.tan(fov * Math.PI / 360));
+        uniforms.uPixel.value = pixelsPerMetre;
+    }
+
+    /**
+     * An animal drawn in the water near the camera this frame: its place, how far up into a breath it is (0…1) and its
+     * length (`sea-bubbles.ts`: a diver's burst, a fast swimmer's trail). Nothing while the look is not built.
+     */
+    swimmer(id: string, x: number, y: number, z: number, breath: number, length: number, now: number): void {
+        this.bubbles?.swimmer(id, x, y, z, breath, length, now);
     }
 
     dispose(): void {

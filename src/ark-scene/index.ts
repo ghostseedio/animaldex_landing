@@ -4615,6 +4615,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (In the water at its own depth: a seabed animal is culled and loaded by where it is, not the surface over it.)
             position.set(where.x, where.water ? where.base : Math.max(where.base, 0), where.z);
             const distance = cameraPosition.distanceTo(position);
+            // 3.3 batch (E): bubbles from an air-breather's dive and a fast swimmer's wake, near the camera under the sea.
+            if (underwater && seaLook && where.water && distance < 28) seaLook.swimmer(entry.animal.id, where.x, where.base + modelHeight * 0.7, where.z, where.water.breath, entry.length, seaLookNow);
             // (Or large on screen at true size: a whale or an elephant across the bay, motion pass §3.)
             if ((distance < LOAD_NEAR_WITHIN || nearBySize(entry.length, distance, height, FOV)) && library.has(slug)) library.request(slug, "near");
             // A walker on the move with a rig: its near model too, from the island view (it is drawn rigged, near).
@@ -5390,6 +5392,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // 3.3 batch (E): the water's colour and haze by the camera's depth, and the marine snow (built on the first dive).
     const underLook: UnderwaterLook = {r: 0, g: 0, b: 0, density: 0.058};
     let seaLook: SeaLookView | null = null;
+    let seaLookNow = 0;
     const stepLayers = (elapsed: number) => {
         const under = camera.position.y < -0.02 && heightAt(camera.position.x, camera.position.z) < -0.3;
         if (under !== underwater) {
@@ -5398,6 +5401,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             scene.fog = under ? underFog : fog;
             if (vegetation) vegetation.grass.visible = !under && TIER_SETTINGS[tier].grass > 0;
             if (micro) micro.group.visible = !under;
+            // 3.3 batch (E): nor the land's trees (they stand above the sea: seen from under it they are not seen, but the
+            // ambient-occlusion pass still read their depth through the surface and drew dark shards on its underside).
+            if (assetTrees) assetTrees.group.visible = !under;
             ARK_CAUSTICS.value = under ? 0.9 : 0.3;
         }
         if (under) {
@@ -5412,7 +5418,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         layersScene.setUnderwater(under, camera.position, lighting.daylight.daylight);
         // 3.3 batch (E): marine snow all round the camera under the sea; nothing is built until the first dive.
         if (under && !seaLook) seaLook = new SeaLookView(scene);
-        seaLook?.step(under, camera, lighting.daylight.daylight, seaClockSeconds(seaEpochSeconds()), elapsed, tier, renderer.domElement.height, reducedMotion);
+        seaLookNow = elapsed;
+        seaLook?.step(under, camera, lighting.daylight.daylight, underFog.density, seaClockSeconds(seaEpochSeconds()), elapsed, tier, renderer.domElement.height, reducedMotion);
         // The cutaway: in front of what the camera looks at, rebuilt only when that moves on or the camera turns.
         const selected = selectedId ? findEntry(selectedId) : null;
         const want = cutawayWanted ?? Boolean(selected?.place.burrow && camera.position.distanceTo(controls.target) < 30);
