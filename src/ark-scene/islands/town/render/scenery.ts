@@ -8,9 +8,9 @@
 import {centroid, corners, hashText, inBox, local, toLocal, polylineAt, polylineLength, polylineNearest, polylineWithin, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, MILLPOND, TOWN_LEVEL, TOWPATH, townPlan, type Hedge, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
-import {type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas";
+import {zooSpotsOf, type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
-import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
+import {at, Geo, tone, type Frame, type V3} from "@/ark-scene/islands/town/render/kit";
 import {buildingFrame} from "@/ark-scene/islands/town/render/buildings";
 import {clipStreets, keptPieces, onAnyStreet} from "@/ark-scene/islands/town/street-clip";
 import {streetSurfaces} from "@/ark-scene/islands/town/render/streets";
@@ -20,7 +20,8 @@ import {townChunkOf} from "@/ark-scene/islands/town/chunks";
 import {cropRows, farmProp, fiveBarGate, flowerBed, hedgeAlong} from "@/ark-scene/islands/town/render/nature";
 import {surfaceTag} from "@/ark-scene/islands/town/render/surface-tags";
 import {townFarmGates, townFarmProps, type FarmGate} from "@/ark-scene/islands/town/farm";
-import {zooBarrier} from "@/ark-scene/islands/town/render/zoo-barriers";
+import {strut, zooBarrier} from "@/ark-scene/islands/town/render/zoo-barriers";
+import {dressPaddock} from "@/ark-scene/islands/town/render/zoo-habitat";
 import {townTrees} from "@/ark-scene/islands/town/trees";
 import {clearOfDoors, PATH_WIDTH, pathOpenings, townDoorWays} from "@/ark-scene/islands/town/doors";
 import {boundaryBodies, madeHere} from "@/ark-scene/islands/town/render/fences";
@@ -572,7 +573,10 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     }
     // Rocks, logs, a shelter at the back, the keepers' hatch; per type, a few things for enrichment.
     const back = (lx: number) => local(s, lx, -s.d / 2 + 2.2);
-    if (spec.form === "paddock" || spec.form === "pool") {
+    // p2 (zoo): each outdoor enclosure dressed as its habitat (`zoo-habitat.ts` dressPaddock), clear of the residents'
+    // spots; the old scatter (two rocks, a box log, a cone mound, a table) only where a type is not dressed.
+    const dressed = spec.form === "paddock" || spec.form === "aviary" ? dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H) !== null : false;
+    if ((spec.form === "paddock" || spec.form === "pool") && !dressed) {
         for (let i = 0; i < (e.type === "bears_wolves" || e.type === "penguin_seal_pools" ? 5 : 2); i++) {
             const p = local(s, (r() - 0.5) * (s.w - 4), (r() - 0.5) * (s.d - 4));
             if (e.pool && pointIn(e.pool, p)) continue;
@@ -587,6 +591,8 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
         const log = local(s, (r() - 0.5) * (s.w - 6), s.d / 2 - 3.5);
         const lf: Frame = {x: log.x, y: H(log.x, log.z) + 0.3, z: log.z, rot: s.rot + r()};
         c.solid.box(lf, 0, 0, 0, 3.4, 0.55, 0.55, tone("#6a5038"));
+    }
+    if (spec.form === "paddock" || spec.form === "pool") {
         if (e.type !== "penguin_seal_pools") {
             const shelter = back(s.w / 2 - 4);
             const sf: Frame = {x: shelter.x, y: H(shelter.x, shelter.z), z: shelter.z, rot: s.rot};
@@ -594,11 +600,11 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
             c.solid.box(sf, 0, 0, 0, sw, 2.6, 3.0, tone(e.type === "childrens_farm" ? "#9b4b36" : "#7a6a52"));
             c.solid.gable(sf, 0, 2.6, 0, sw, 3.0, 1.0, 0.3, tone("#4a4440"), tone("#7a6a52"));
         }
-        if (e.type === "savanna_paddocks") {
+        if (e.type === "savanna_paddocks" && !dressed) {
             const m = local(s, -s.w / 4, s.d / 6);
             c.solid.cylinder({x: m.x, y: H(m.x, m.z), z: m.z, rot: 0}, 0, 0, 0, 1.1, 0.3, 2.4, tone("#a9763e"), 7);
         }
-        if (e.type === "big_cats") {
+        if (e.type === "big_cats" && !dressed) {
             const d = local(s, s.w / 5, 0);
             const df: Frame = {x: d.x, y: H(d.x, d.z), z: d.z, rot: s.rot};
             for (const [lx, lz] of [[-1.5, -1.5], [1.5, -1.5], [1.5, 1.5], [-1.5, 1.5]] as const) df && c.solid.box(df, lx, 0, lz, 0.25, 2.4, 0.25, tone("#6a5038"));
@@ -624,10 +630,18 @@ function deadTree(geo: Geo, p: Pt, seed: number) {
     const f: Frame = {x: p.x, y: H(p.x, p.z), z: p.z, rot: (seed % 100) / 16};
     const bark = tone("#6b5a48");
     geo.cylinder(f, 0, 0, 0, 0.25, 0.14, 4.2, bark, 6);
-    for (let i = 0; i < 4; i++) {
-        const a = (i / 4) * Math.PI * 2 + (seed % 7);
-        const bf: Frame = {x: f.x + Math.cos(a) * 0.6, y: f.y + 1.6 + i * 0.6, z: f.z + Math.sin(a) * 0.6, rot: a};
-        geo.box(bf, 0, 0, 0, 0.12, 0.12, 1.6, bark);
+    // p2 (zoo): perching branches that leave the trunk and climb out from it (they were level sticks floating beside
+    // the trunk, more loose bars under the aviary's roof), each with a short side twig.
+    for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2 + (seed % 7);
+        const y = f.y + 1.4 + i * 0.55;
+        const reach = 1.5 - i * 0.12;
+        const from: V3 = [f.x + Math.cos(a) * 0.1, y, f.z + Math.sin(a) * 0.1];
+        const to: V3 = [f.x + Math.cos(a) * reach, y + reach * 0.55, f.z + Math.sin(a) * reach];
+        strut(geo, from, to, 0.11, bark);
+        const tw: V3 = [to[0] + Math.cos(a + 0.9) * 0.5, to[1] + 0.35, to[2] + Math.sin(a + 0.9) * 0.5];
+        const mid: V3 = [(from[0] + to[0] * 2) / 3, (from[1] + to[1] * 2) / 3, (from[2] + to[2] * 2) / 3];
+        strut(geo, mid, tw, 0.06, bark);
     }
 }
 

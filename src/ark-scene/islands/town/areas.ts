@@ -512,13 +512,21 @@ export function openZooSlots(arrived: Partial<Record<ZooEnclosureType, number>>,
 }
 
 /** Spots inside each open enclosure: outdoors on the ground, the pool's surface, indoors behind the glass. */
+/**
+ * The resident spots of one enclosure (where its animals are placed: an indoor resident is held there). p2 (zoo): the
+ * enclosures' dressing (`render/zoo-habitat.ts`) keeps its rocks, posts and pools clear of them, so no animal stands
+ * inside a rock or a climbing frame's post.
+ */
+export function zooSpotsOf(e: Pick<ZooEnclosure, "capacity" | "slot">): Pt[] {
+    const inner = sub(e.slot.at, 0, -0.6, e.slot.at.w - 2.2, e.slot.at.d - 2.6);
+    return spread(inner, Math.min(e.capacity, 40), e.slot.seed);
+}
+
 function zooSpots(plan: TownPlan, open?: readonly string[]): TownSpot[] {
     const out: TownSpot[] = [];
     for (const e of zooEnclosures(plan, open)) {
         if (e.shared) continue;
-        const count = Math.min(e.capacity, 40);
-        const inner = sub(e.slot.at, 0, -0.6, e.slot.at.w - 2.2, e.slot.at.d - 2.6);
-        for (const s of spread(inner, count, e.slot.seed)) {
+        for (const s of zooSpotsOf(e)) {
             const inPool = e.pool ? inPoly(e.pool, s.x, s.z) : false;
             out.push({...s, y: y(s.x, s.z), area: "zoo", where: e.indoor ? "indoor" : inPool ? "pool" : "enclosure", place: e.id, sizes: ALL, protected: true});
         }
