@@ -177,7 +177,8 @@ const TOWN_DIGESTS = {
     // a quarter step, `kit.ts` plainColour).)
     sceneryAndBuildings: "7a63b081ab02589e",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
-    zoo: "1b520265e67b59fd",
+    // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch, the aviary's perching tree.)
+    zoo: "b9256e543e007a31",
     places: "fba1268b733101f8"
 };
 

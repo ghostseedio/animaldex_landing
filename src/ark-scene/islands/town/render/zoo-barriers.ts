@@ -234,51 +234,168 @@ export function zooBarrier(parts: Parts, e: ZooEnclosure) {
     }
 }
 
-/** An aviary: green steel posts, a ring beam, an arched roof frame, fine netting on the walls and roof. */
-function aviary(parts: Parts, s: Box, seed: number, signPoint: Pt) {
-    const height = 6.5;
-    const rise = 1.8;
-    const k = corners(s);
-    const f: Frame = {x: s.x, y: H(s.x, s.z), z: s.z, rot: s.rot};
-    for (const [a, b] of [[k[3], k[2]], [k[2], k[1]], [k[1], k[0]], [k[0], k[3]]] as Array<[Pt, Pt]>) {
-        posts(parts.solid, a, b, 3.2, height, 0.14, STEEL_GREEN);
-        rail(parts.solid, a, b, height - 0.08, 0.12, 0.12, STEEL_GREEN);
-        rail(parts.solid, a, b, 0.05, 0.1, 0.1, STEEL_GREEN);
-        panel(parts.net, a, b, 0, height, NET_FINE, NETTING);
+/**
+ * A square steel tube from `a` to `b` (`size` across), any pitch: a member of a frame that follows a curve (an aviary's
+ * arch rib, a purlin between two ribs, a brace). Four faces, no caps (its ends meet other members).
+ */
+export function strut(geo: Geo, a: V3, b: V3, size: number, colour: RGB) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const dz = b[2] - a[2];
+    const l = Math.hypot(dx, dy, dz);
+    if (l < 1e-4) return;
+    const ux = dx / l;
+    const uy = dy / l;
+    const uz = dz / l;
+    // A side vector across the member (level), and the member's own up.
+    let sx = -uz;
+    let sz = ux;
+    let sy = 0;
+    const sl = Math.hypot(sx, sz);
+    if (sl < 1e-4) {
+        sx = 1;
+        sz = 0;
+    } else {
+        sx /= sl;
+        sz /= sl;
     }
-    // The arched roof: ribs across the short side every 3 m, the netting over them, the gable ends netted.
-    const n = 8;
-    const arch = (u: number) => height + Math.sin(Math.PI * u) * rise;
-    const ribs = Math.max(2, Math.round(s.w / 3));
-    for (let i = 0; i <= ribs; i++) {
-        const lx = -s.w / 2 + (s.w * i) / ribs;
-        for (let j = 0; j < n; j++) {
-            const z0 = -s.d / 2 + (s.d * j) / n;
-            const z1 = -s.d / 2 + (s.d * (j + 1)) / n;
-            const p0 = at(f, lx, arch(j / n), z0);
-            const p1 = at(f, lx, arch((j + 1) / n), z1);
-            parts.solid.box({x: (p0[0] + p1[0]) / 2, y: (p0[1] + p1[1]) / 2 - 0.05, z: (p0[2] + p1[2]) / 2, rot: s.rot}, 0, 0, 0, 0.09, 0.1, s.d / n + 0.05, STEEL_GREEN);
+    const vx = sy * uz - sz * uy;
+    const vy = sz * ux - sx * uz;
+    const vz = sx * uy - sy * ux;
+    const h = size / 2;
+    const ring = (p: V3): V3[] => [
+        [p[0] + (sx + vx) * h, p[1] + (sy + vy) * h, p[2] + (sz + vz) * h],
+        [p[0] + (-sx + vx) * h, p[1] + (-sy + vy) * h, p[2] + (-sz + vz) * h],
+        [p[0] + (-sx - vx) * h, p[1] + (-sy - vy) * h, p[2] + (-sz - vz) * h],
+        [p[0] + (sx - vx) * h, p[1] + (sy - vy) * h, p[2] + (sz - vz) * h]
+    ];
+    const r0 = ring(a);
+    const r1 = ring(b);
+    for (let i = 0; i < 4; i++) {
+        const j = (i + 1) % 4;
+        const k = i === 0 ? 1.06 : i === 2 ? 0.78 : 0.9;
+        geo.quad(r0[i], r0[j], r1[j], r1[i], [colour[0] * k, colour[1] * k, colour[2] * k]);
+    }
+}
+
+/** The aviary's frame, its shape for the checks (`ark-zoo-aviary.test.ts`): wall height, the roof's rise, bay spacing. */
+export const AVIARY = {height: 6.5, rise: 1.8, bay: 2.9, segments: 12} as const;
+
+/**
+ * The aviary's frame as points (pure, for the drawing and the tests). A barrel-vaulted flight aviary as zoos build
+ * them: green steel posts on every side at one bay spacing, a ring beam on their tops, arched ribs across the SHORT
+ * span springing from the post tops of the long sides (one rib per post pair, so every rib lands on a post), purlins
+ * along the vault joining the ribs, the netting on the walls and laid on the vault exactly over the ribs.
+ *
+ * (The owner, 2026-11-16: "the aviary roof needs fixing looks like random bars". The old roof's ribs were level boxes
+ * stepped along the arch, eight separate dashes per rib with gaps between, running down the long side at their own
+ * 3 m spacing that matched no post, and floating at the plot's middle ground height while the posts followed the
+ * ground: from above a field of loose bars.)
+ */
+export function aviaryFrame(s: Box) {
+    const {height, rise, bay, segments} = AVIARY;
+    // Span across the short side; stations along the long side.
+    const spanX = s.w <= s.d;
+    const span = spanX ? s.w : s.d;
+    const long = spanX ? s.d : s.w;
+    const f: Frame = {x: s.x, y: 0, z: s.z, rot: s.rot};
+    const ground = (u: number, v: number): V3 => {
+        const p = spanX ? at(f, u, 0, v) : at(f, v, 0, u);
+        return [p[0], H(p[0], p[2]), p[2]];
+    };
+    const lift = (p: V3, y: number): V3 => [p[0], p[1] + y, p[2]];
+    const bays = Math.max(2, Math.round(long / bay));
+    const spanBays = Math.max(2, Math.round(span / bay));
+    const stations = Array.from({length: bays + 1}, (_, j) => -long / 2 + (long * j) / bays);
+    // Each rib: from the left post's top to the right one's, the arch's rise over the straight line between them.
+    const ribs = stations.map((v) => {
+        const left = lift(ground(-span / 2, v), height);
+        const right = lift(ground(span / 2, v), height);
+        return Array.from({length: segments + 1}, (_, i) => {
+            const t = i / segments;
+            const p = spanX ? at(f, -span / 2 + span * t, 0, v) : at(f, v, 0, -span / 2 + span * t);
+            return [p[0], left[1] + (right[1] - left[1]) * t + Math.sin(Math.PI * t) * rise, p[2]] as V3;
+        });
+    });
+    // The posts round the walls: the long sides' at the stations, the short sides' at their own bays.
+    const longSide = (u: number) => stations.map((v) => ground(u, v));
+    const shortSide = (v: number) => Array.from({length: spanBays + 1}, (_, i) => ground(-span / 2 + (span * i) / spanBays, v));
+    // The walls as closed runs of post feet (in order round the plot).
+    const walls: V3[][] = [longSide(-span / 2), longSide(span / 2), shortSide(-long / 2), shortSide(long / 2)];
+    return {spanX, span, long, ribs, walls, stations, top: (p: V3) => lift(p, height)};
+}
+
+/**
+ * An aviary: a barrel-vaulted steel frame (`aviaryFrame`), fine stainless netting on the walls and over the vault, a
+ * low plinth round the foot, the keepers' netted double-door porch, the sign.
+ */
+function aviary(parts: Parts, s: Box, seed: number, signPoint: Pt) {
+    const frame = aviaryFrame(s);
+    const {ribs, walls} = frame;
+    const n = AVIARY.segments;
+    const post = 0.14;
+    // The walls: a post at every foot, the ring beam and a mid rail between their tops, a plinth, the netting per bay.
+    for (const feet of walls) {
+        for (let k = 0; k < feet.length; k++) {
+            const g = feet[k];
+            strut(parts.solid, [g[0], g[1] - 0.2, g[2]], frame.top(g), post, STEEL_GREEN);
+            if (k === 0) continue;
+            const a = feet[k - 1];
+            const ta = frame.top(a);
+            const tb = frame.top(g);
+            strut(parts.solid, [ta[0], ta[1] - 0.06, ta[2]], [tb[0], tb[1] - 0.06, tb[2]], 0.13, STEEL_GREEN);
+            strut(parts.solid, [a[0], a[1] + 2.4, a[2]], [g[0], g[1] + 2.4, g[2]], 0.07, STEEL_GREEN);
+            // The plinth: a low concrete kerb the netting is clamped to.
+            strut(parts.solid, [a[0], a[1] + 0.05, a[2]], [g[0], g[1] + 0.05, g[2]], 0.22, COPING);
+            parts.net.tag = NET_FINE;
+            parts.net.quad([a[0], a[1] - 0.1, a[2]], [g[0], g[1] - 0.1, g[2]], tb, ta, NETTING);
+            parts.net.tag = 0;
         }
     }
+    // The vault: each rib a run of tubes on the arch, purlins along it at the quarter points and the crown.
+    for (const rib of ribs) for (let i = 0; i < n; i++) strut(parts.solid, rib[i], rib[i + 1], 0.12, STEEL_GREEN);
+    const purlins = [Math.round(n / 4), Math.round(n / 2), Math.round((3 * n) / 4)];
+    for (let j = 1; j < ribs.length; j++) for (const i of purlins) strut(parts.solid, ribs[j - 1][i], ribs[j][i], 0.08, STEEL_GREEN);
+    // The netting laid over the vault (on the ribs, a hair above them) and the two gable ends under the end ribs.
     parts.net.tag = NET_FINE;
-    for (let j = 0; j < n; j++) {
-        const z0 = -s.d / 2 + (s.d * j) / n;
-        const z1 = -s.d / 2 + (s.d * (j + 1)) / n;
-        const a0: V3 = at(f, -s.w / 2, arch(j / n), z0);
-        const b0: V3 = at(f, s.w / 2, arch(j / n), z0);
-        const a1: V3 = at(f, -s.w / 2, arch((j + 1) / n), z1);
-        const b1: V3 = at(f, s.w / 2, arch((j + 1) / n), z1);
-        parts.net.quad(a0, b0, b1, a1, NETTING);
-        // The gable ends under the arch.
-        for (const lx of [-s.w / 2, s.w / 2]) parts.net.quad(at(f, lx, height, z0), at(f, lx, height, z1), at(f, lx, arch((j + 1) / n), z1), at(f, lx, arch(j / n), z0), NETTING);
+    const up = (p: V3): V3 => [p[0], p[1] + 0.07, p[2]];
+    for (let j = 1; j < ribs.length; j++) for (let i = 0; i < n; i++) parts.net.quad(up(ribs[j - 1][i]), up(ribs[j - 1][i + 1]), up(ribs[j][i + 1]), up(ribs[j][i]), NETTING);
+    for (const rib of [ribs[0], ribs[ribs.length - 1]]) {
+        const a = rib[0];
+        const b = rib[n];
+        for (let i = 0; i < n; i++) {
+            const t0 = i / n;
+            const t1 = (i + 1) / n;
+            const e0: V3 = [rib[i][0], a[1] + (b[1] - a[1]) * t0, rib[i][2]];
+            const e1: V3 = [rib[i + 1][0], a[1] + (b[1] - a[1]) * t1, rib[i + 1][2]];
+            parts.net.quad(e0, e1, rib[i + 1], rib[i], NETTING);
+        }
     }
     parts.net.tag = 0;
-    // The keepers' double-door porch on one side, and the sign.
-    const porch = at(f, s.w / 2 - 2.2, 0, s.d / 2 + 0.9);
-    const pf: Frame = {x: porch[0], y: porch[1], z: porch[2], rot: s.rot};
-    for (const [lx, lz] of [[-0.9, -0.9], [0.9, -0.9], [0.9, 0.9], [-0.9, 0.9]] as const) parts.solid.box(pf, lx, 0, lz, 0.1, 2.4, 0.1, STEEL_GREEN);
-    parts.solid.box(pf, 0, 2.4, 0, 1.9, 0.08, 1.9, STEEL_GREEN);
-    for (const [a, b] of [[at(pf, -0.9, 0, 0.9), at(pf, 0.9, 0, 0.9)], [at(pf, 0.9, 0, 0.9), at(pf, 0.9, 0, -0.9)], [at(pf, -0.9, 0, -0.9), at(pf, -0.9, 0, 0.9)]]) panel(parts.net, {x: a[0], z: a[2]}, {x: b[0], z: b[2]}, 0, 2.4, NET_FINE, NETTING);
+    // The keepers' double-door porch on the front, its own small netted frame with a netted top.
+    const f: Frame = {x: s.x, y: 0, z: s.z, rot: s.rot};
+    const pc = at(f, s.w / 2 - 2.2, 0, s.d / 2 + 0.95);
+    const pf: Frame = {x: pc[0], y: 0, z: pc[2], rot: s.rot};
+    const foot = (lx: number, lz: number): V3 => {
+        const p = at(pf, lx, 0, lz);
+        return [p[0], H(p[0], p[2]), p[2]];
+    };
+    const ring = [foot(-0.9, -0.95), foot(0.9, -0.95), foot(0.9, 0.95), foot(-0.9, 0.95)];
+    const roofY = Math.max(...ring.map((p) => p[1])) + 2.4;
+    const topOf = (p: V3): V3 => [p[0], roofY, p[2]];
+    for (const g of ring) strut(parts.solid, [g[0], g[1] - 0.2, g[2]], topOf(g), 0.1, STEEL_GREEN);
+    for (let i = 0; i < 4; i++) strut(parts.solid, topOf(ring[i]), topOf(ring[(i + 1) % 4]), 0.09, STEEL_GREEN);
+    parts.net.tag = NET_FINE;
+    for (const [i, j] of [[1, 2], [2, 3], [3, 0]] as const) parts.net.quad([ring[i][0], ring[i][1] - 0.1, ring[i][2]], [ring[j][0], ring[j][1] - 0.1, ring[j][2]], topOf(ring[j]), topOf(ring[i]), NETTING);
+    parts.net.quad(topOf(ring[0]), topOf(ring[1]), topOf(ring[2]), topOf(ring[3]), NETTING);
+    parts.net.tag = 0;
+    // The door in the porch's front: a frame and a kick plate.
+    const d0 = foot(-0.45, 0.95);
+    const d1 = foot(0.45, 0.95);
+    strut(parts.solid, [d0[0], d0[1], d0[2]], [d0[0], roofY - 0.25, d0[2]], 0.06, STEEL_GREEN);
+    strut(parts.solid, [d1[0], d1[1], d1[2]], [d1[0], roofY - 0.25, d1[2]], 0.06, STEEL_GREEN);
+    strut(parts.solid, [d0[0], roofY - 0.25, d0[2]], [d1[0], roofY - 0.25, d1[2]], 0.06, STEEL_GREEN);
+    strut(parts.solid, [d0[0], d0[1] + 0.25, d0[2]], [d1[0], d1[1] + 0.25, d1[2]], 0.4, STEEL_GREEN);
     void seed;
     sign(parts.solid, signPoint, s.rot, tone("#4a7a3a"));
 }

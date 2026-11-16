@@ -231,7 +231,7 @@ function glassMaterial(): MeshStandardMaterial {
  */
 function netMaterial(): MeshStandardMaterial {
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.55, metalness: 0.35, transparent: true, side: DoubleSide, depthWrite: false});
-    material.customProgramCacheKey = () => "town-net-2";
+    material.customProgramCacheKey = () => "town-net-3";
     material.onBeforeCompile = (shader) => {
         shader.vertexShader = shader.vertexShader
             .replace("#include <common>", "#include <common>\nattribute float aTag;\nvarying vec3 vNetWorld;\nvarying vec3 vNetNormal;\nvarying float vNetKind;")
@@ -260,6 +260,16 @@ function netMaterial(): MeshStandardMaterial {
         // Far away (a wire under a pixel): its coverage, a faint veil.
         float far = smoothstep(0.25, 0.7, max(w.x, w.y));
         diffuseColor.a = mix(near * 0.95, cover * 1.6 + 0.04, far);
+        if (vNetKind > 0.5) {
+            // p2 (zoo): the aviary netting's support cables, a 3 cm rope grid every 60 cm the netting is laced to: the
+            // net reads as a fine grid from the paths and from the default view, not as a pane of glass.
+            vec2 cuv = vec2(dot(vNetWorld, t), dot(vNetWorld, b)) / 0.6;
+            vec2 cd = abs(fract(cuv) - 0.5);
+            vec2 cw = max(fwidth(cuv), vec2(1e-4));
+            vec2 cable = 1.0 - smoothstep(vec2(0.025) - cw, vec2(0.025) + cw, 0.5 - cd);
+            float cfar = smoothstep(0.3, 0.8, max(cw.x, cw.y));
+            diffuseColor.a = max(diffuseColor.a, mix(max(cable.x, cable.y) * 0.9, 0.34, cfar));
+        }
     }
 }
 #include <alphatest_fragment>`
