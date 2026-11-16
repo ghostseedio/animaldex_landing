@@ -21,6 +21,7 @@
 import {decodeArkEvents, type ArkEvent} from "@/lib/ark-life";
 import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText, arkLiveServerItems, arkNowItems, arkSeenItems, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveLine, type ArkLiveText} from "@/lib/ark-live-log";
 import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt-outcome";
+import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 import {ARK_ACTIVITY_ENGLISH, arkRecordNotesFromEvents, type ArkActivityWords} from "@/lib/ark-animal-status";
 import {arkPickAnimal, arkSpeciesKey} from "@/lib/ark-population";
@@ -134,7 +135,7 @@ export class ArkLive {
         }
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
-            text: (line) => caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
+            text: (line) => dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
             onTap: (line) => this.focus(line),
             reducedMotion: Boolean(options.reducedMotion),
             serverLife: ARK_LIVE_LOG_DEFAULTS.serverLife,
@@ -201,6 +202,7 @@ export class ArkLive {
 
     /** Event rows in the server's shape (development's feed): said as the live ones are. */
     events(raw: unknown) {
+        this.dormancy(raw, -Infinity);
         const decoded = decodeArkEvents(raw, this.current).filter((event) => !this.said.has(`event:${event.id}`));
         for (const event of decoded) {
             this.remember(`event:${event.id}`);
@@ -241,6 +243,32 @@ export class ArkLive {
         } catch {
             // (A scene without it: the log says it all the same.)
         }
+    }
+
+    /** The record's dormancy events in the rows (`dormancy-lines.ts`): said once, and the scene asked to look again. */
+    private dormancy(raw: unknown, from: number) {
+        const items = dormancyItems(raw, from, (key) => this.said.has(key));
+        if (!items.length) return;
+        for (const item of items) this.remember(item.id);
+        this.push(items);
+        this.readDormant();
+    }
+
+    /** The kinds dormant now (`/api/ark/dormant`, beside the events' URL), handed to the scene; again every ten minutes. */
+    private dormantAt = -Infinity;
+    private readDormant() {
+        const url = this.options.eventsUrl?.replace(/\/events(\?.*)?$/, "/dormant");
+        if (!url || url === this.options.eventsUrl || this.disposed) return;
+        this.dormantAt = performance.now();
+        fetch(url)
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: {dormant?: unknown} | null) => {
+                if (this.disposed || !body || !Array.isArray(body.dormant)) return;
+                this.options.scene()?.setDormant?.(body.dormant.filter((id): id is string => typeof id === "string"));
+            })
+            .catch(() => {
+                // (No answer: nothing is dormant as far as the scene knows; asked again later.)
+            });
     }
 
     /** Into the log, a hunt's outcome marked on the way (`hunt-outcome.ts`). */
@@ -318,6 +346,7 @@ export class ArkLive {
                     return;
                 }
                 const from = Date.parse(since);
+                this.dormancy(body.events ?? [], from);
                 const events = decodeArkEvents(body.events ?? [], next).filter((event) => Date.parse(event.at) >= from && !this.said.has(`event:${event.id}`));
                 let newest = from;
                 for (const event of events) {
@@ -351,6 +380,7 @@ export class ArkLive {
         if (this.disposed || (typeof document !== "undefined" && document.visibilityState === "hidden")) return;
         const now = performance.now();
         this.ticks++;
+        if (now - this.dormantAt > 600_000) this.readDormant();
         // Seen and now: only while the log is open and the world's foot is clear (a line said late is no longer happening).
         const open = !this.view.isCollapsed && !this.view.isCovered && !this.options.reducedMotion;
         if (!open) this.momentWindow = null;

@@ -4530,6 +4530,8 @@
       "withHearts": "{line} · {hearts}",
       "eatenBy": "{animal} was eaten by {aPredator}",
       "caught": "{aPredator} caught {aPrey}",
+      "dormant": "{animals} have gone into their winter sleep",
+      "woke": "{animals} are awake again",
       "revived": "{animal} is back",
       "revivedYoung": "{animal} is back, a young adult again",
       "gone": "{animal} is gone from the Ark"

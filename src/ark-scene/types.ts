@@ -488,6 +488,11 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * shared clock), acted out in the live world: the mother settles, the young are born, licked and suckle.
      */
     addBirths?: (births: Array<{key: string; parents: string[]; young: string[]; t0: number}>) => void;
+    /**
+     * The kinds asleep through their dormant season now (the server's `voyage_dormant_v1`: species ids; AnimalDex
+     * decision 370): their animals are in their dens, out of sight, and their cards say sleeping. An empty list ends it.
+     */
+    setDormant?: (kinds: string[]) => void;
     /** The newest real hunt or meal under way on the island (the page's marker), or null. */
     liveHunt?: () => ArkLiveHunt | null;
     /**

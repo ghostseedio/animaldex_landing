@@ -67,6 +67,8 @@ export type ArkLiveItem = {
     young?: boolean;
     /** A meal that ends a hunt seen setting out (`src/ark-scene/live/hunt-outcome.ts`): said as "caught". */
     hunted?: boolean;
+    /** A kind's dormant season beginning or ending (`src/ark-scene/live/dormancy-lines.ts`): said with its own words. */
+    say?: "dormant" | "woke";
     focus: ArkLiveFocus;
 };
 

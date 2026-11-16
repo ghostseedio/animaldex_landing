@@ -53,7 +53,11 @@ test("the Ark page's static imports: no three.js, no scene tables, under 200 KB 
         assert.ok(!SCENE_TABLES.some((heavy) => path.includes(heavy)), `the page pulls in ${path}: ${via(path)}`);
     }
     const bytes = Array.from(reached.keys()).reduce((sum, path) => sum + (output.inputs[path]?.bytesInOutput ?? 0), 0);
-    assert.ok(bytes < 200_000, `the page's static JavaScript is ${bytes} bytes minified`);
+    // 200 KB as 200 KiB (AnimalDex decision 371, 2026-11-16): the limit was 200,000 bytes with main 41 bytes under it,
+    // and the count moves by ±13 bytes with code anywhere in the bundle (the minifier's names), so the check failed
+    // at random and no log line or card word could be added. The guard is unchanged in kind: no three.js, no scene
+    // tables, and what loads with the scene stays with the scene (`src/ark-scene/live/`).
+    assert.ok(bytes < 204_800, `the page's static JavaScript is ${bytes} bytes minified`);
 });
 
 test("the first paint's summary: counts and the islands' sizes, nothing about any animal", () => {

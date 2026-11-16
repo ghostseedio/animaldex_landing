@@ -7059,7 +7059,38 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         dungActing.clear();
         acting.forEach((e) => dungActing.add(e));
     };
+    /**
+     * Dormancy (AnimalDex decision 370): the animals of the kinds the server says are dormant now are in their dens,
+     * burrows or mud: held out of sight where their day has them, their cards saying sleeping, until the server says
+     * the kind is awake. The record decides it (`setDormant`); with an empty list nothing here does anything.
+     */
+    let dormantKinds = new Set<string>();
+    const dormantHeld = new Map<Entry, {x: number; z: number; yaw: number}>();
+    const stepDormant = () => {
+        if (!dormantKinds.size && !dormantHeld.size) return;
+        const epoch = worldMs() / 1000;
+        const still = new Set<Entry>();
+        if (dormantKinds.size && world) {
+            for (const e of allEntries()) {
+                if (!dormantKinds.has(e.animal.kind_species_profile_id || e.animal.species_profile_id || "") || e.visitor || e.held || !e.sched) continue;
+                if (e.act && !dormantHeld.has(e)) continue;
+                let at = dormantHeld.get(e);
+                if (!at) {
+                    const p = schedulePose(e, epoch);
+                    dormantHeld.set(e, (at = {x: p.x, z: p.z, yaw: p.yaw}));
+                }
+                e.act = {x: at.x, z: at.z, base: Math.max(heightAt(at.x, at.z), -0.3), yaw: at.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: true, state: "rest", speed: 0, meal: "sleeping"};
+                still.add(e);
+            }
+        }
+        dormantHeld.forEach((_, e) => {
+            if (still.has(e)) return;
+            if (e.act?.meal === "sleeping") e.act = null;
+            dormantHeld.delete(e);
+        });
+    };
     const stepMealTraces = () => {
+        stepDormant();
         stepDung();
         const next = (liveMeals.size ? (liveMeals.traces(worldMs() / 1000) as TraceDraw[]) : []).concat(dungMarks);
         if (!next.length && !tracesNow.length) return;
@@ -7975,6 +8006,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         addBirths: (births) => {
             liveBirths.add(births, worldMs() / 1000);
+        },
+        setDormant: (kinds) => {
+            dormantKinds = new Set(kinds);
         },
         liveHunt: () => liveHuntNow(),
         setSound: (on) => liveliness.setSound(on),
