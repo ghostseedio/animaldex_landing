@@ -11,16 +11,18 @@
 import {BackSide, BufferAttribute, BufferGeometry, Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, type Material, type WebGLRenderer} from "three";
 import {hashText, local, rng} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, TOWN_SURFACES, townSurfaceWeights, type TownSurface} from "@/ark-scene/islands/town/ground";
-import {TOWN_HALF, TOWN_SEGMENTS, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
+import {CANAL_LEVEL, TOWN_HALF, TOWN_SEGMENTS, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {TOWN_CHUNK_COUNT, TOWN_GRID, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
 import {binSpots, launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
 import {binsOut, boatIn, clockHands, lampsLevel, marketDay, washingOut, type TownClock} from "@/ark-scene/islands/town/people";
 import {BuildingDetail, buildBuilding, clockFaces, newBuildingChunk, paneGeometry, paneMaterial, patchBuildingSurfaces, windowState, type BuildingChunk, type WindowRecord} from "@/ark-scene/islands/town/render/buildings";
 import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/islands/town/render/scenery";
-import {binGeometry, boatGeometry, narrowboatGeometry, NARROWBOAT_LIVERIES, ChunkedSet, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
+import {binGeometry, ChunkedSet, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
 import {loadVehicles, TownVehicles, type TrafficAnimals, type VehicleModel} from "@/ark-scene/islands/town/render/vehicles";
 import {lampGlow, lampMapTexture, lightsGeometry, lightsMaterial} from "@/ark-scene/islands/town/render/furniture";
 import {buildTownNear} from "@/ark-scene/islands/town/render/near";
+// gfx (WATER): the boats' closed hulls, seated on their water with a bob (`render/boats.ts`).
+import {canalBerth, fishingBoatGeometry, floatingMaterial, narrowboatGeometry, NARROWBOAT_LENGTH, NARROWBOAT_LIVERIES} from "@/ark-scene/islands/town/render/boats";
 import {buildTownWater, seaDepthMap, type TownWater} from "@/ark-scene/islands/town/render/water";
 import {Geo, tone} from "@/ark-scene/islands/town/render/kit";
 import {TOWN_ASSET_REACH, TownAssets, type TownAssetPlacement} from "@/ark-scene/islands/town/render/assets";
@@ -621,8 +623,12 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     const binSet = new ChunkedSet(binGeometry(), materials.prop, bins.length, true);
     const washSet = new ChunkedSet(washingGeometry(), materials.prop, washingLines.length);
     // The harbour's fishing boats; the canal's narrowboats in four liveries (one set each: their colours are painted on, lane GC).
-    const boatSet = new ChunkedSet(boatGeometry(), materials.prop, plan.moorings.length, true);
-    const narrowboatSets = NARROWBOAT_LIVERIES.map((livery) => new ChunkedSet(narrowboatGeometry(livery), materials.prop, plan.moorings.length, true));
+    // gfx (WATER): each on its own floating material (the harbour's rides the tide), each narrowboat's berth fitted to the canal.
+    const harbourBoatMaterial = townWeather(floatingMaterial(propMaterial(), true), {soak: 0.1, wetRoughness: 0.2});
+    const canalBoatMaterial = townWeather(floatingMaterial(propMaterial(), false), {soak: 0.1, wetRoughness: 0.2});
+    const berths = plan.moorings.map((m) => (m.harbour ? null : canalBerth(m)));
+    const boatSet = new ChunkedSet(fishingBoatGeometry(), harbourBoatMaterial, plan.moorings.length, true);
+    const narrowboatSets = NARROWBOAT_LIVERIES.map((livery) => new ChunkedSet(narrowboatGeometry(livery), canalBoatMaterial, plan.moorings.length, true));
     const stallSet = new ChunkedSet(stallGeometry(), materials.prop, stallSpots.length, true);
     for (const [name, set] of [["bins", binSet], ["washing", washSet], ["boats", boatSet], ["stalls", stallSet], ...narrowboatSets.map((nb, k) => [`narrowboats${k}`, nb] as const)] as const) {
         set.mesh.name = `props:${name}`;
@@ -708,14 +714,16 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             const shown = boatIn(`${m.seed}`, m.harbour, clock);
             colour.set(1, 1, 1);
             if (m.harbour) {
-                // (A fishing boat at its true size: 6–10 m.)
-                boatSet.set(i, placeMatrix(m.x, 0.15, m.z, m.turn, m.length / 7), shown, colour);
-                narrowboatSets.forEach((set) => set.set(i, placeMatrix(m.x, 1.25, m.z, m.turn), false, colour));
+                // (A fishing boat at its true size: 6–10 m; its waterline at the sea's mean level, the material adds the tide.)
+                boatSet.set(i, placeMatrix(m.x, 0, m.z, m.turn, m.length / 7), shown, colour);
+                narrowboatSets.forEach((set) => set.set(i, placeMatrix(m.x, CANAL_LEVEL, m.z, m.turn), false, colour));
                 return;
             }
-            boatSet.set(i, placeMatrix(m.x, 1.25, m.z, m.turn), false, colour);
-            // A narrowboat at its true beam (2.08 m), its length the mooring's (12–18 m).
-            narrowboatSets.forEach((set, k) => set.set(i, placeMatrix(m.x, 1.25, m.z, m.turn, 1, undefined, m.length / 15), shown && m.seed % narrowboatSets.length === k, colour));
+            boatSet.set(i, placeMatrix(m.x, 0, m.z, m.turn), false, colour);
+            // A narrowboat at its true beam (2.08 m), its length the mooring's (12–18 m, shorter if the canal's bend will not
+            // take it), on the canal's water.
+            const b = berths[i]!;
+            narrowboatSets.forEach((set, k) => set.set(i, placeMatrix(b.x, CANAL_LEVEL, b.z, b.turn, 1, undefined, b.length / NARROWBOAT_LENGTH), shown && b.length > 0 && m.seed % narrowboatSets.length === k, colour));
         });
         boatSet.write();
         for (const set of narrowboatSets) set.write();
@@ -866,6 +874,8 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
             });
             near.dispose();
             (lightsMesh?.material as Material | undefined)?.dispose();
+            harbourBoatMaterial.dispose();
+            canalBoatMaterial.dispose();
             (glow?.material as Material | undefined)?.dispose();
             if (furniture && TOWN_LIGHT.lampMap.value) {
                 TOWN_LIGHT.lampMap.value.dispose();
