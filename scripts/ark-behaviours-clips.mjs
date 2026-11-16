@@ -59,6 +59,7 @@ const PLANS = {
     mob: {distance: 13, shots: [[0.2, "going up (2.3 s)"], [1.8, "the first dive (3.9 s)"], [4.4, "past its head (6.5 s)"], [5.2, "climbing away (7.3 s)"], [7.0, "the next one's turn (9.1 s)"], [9.6, "and the next (11.7 s)"], [12.2, "again (14.3 s)"], [17.4, "still at it (19.5 s)"], [14.4, "one of them, close (16.5 s)"], [15.2, "close, on the ring (17.3 s)"], [24.4, "breaking off (26.5 s)"], [34, "back to their day"]]},
     // 3.3 batch (B): each bird close from its side (the third value: which of the cast), a pump's four quarters 0.11 s apart.
     tail: {distance: 0.55, shots: [[5, "wagtail: the pump", 0], [0.11, "wagtail +0.11 s", 0, "tick"], [0.11, "wagtail +0.22 s", 0, "tick"], [0.11, "wagtail +0.33 s", 0, "tick"], [6, "wren: tail cocked", 1], [1.2, "wren +1.2 s", 1, "tick"], [7, "swamphen: the flick", 2], [0.5, "swamphen +0.5 s", 2, "tick"], [0.5, "swamphen +1.0 s", 2, "tick"], [0.5, "swamphen +1.5 s", 2, "tick"], [9, "water tyrant: the fan", 3], [1.4, "water tyrant +1.4 s", 3, "tick"], [1.4, "water tyrant +2.8 s", 3, "tick"], [11, "sandpiper: the bob", 4], [0.28, "sandpiper +0.28 s", 4, "tick"], [12, "a sparrow: no habit", 5], [0.2, "a sparrow +0.2 s", 5, "tick"]]},
+    lure: {distance: 1.6, shots: [[-1.2, "close: the run off the nest (0.9 s)"], [-0.3, "close: a fluttering hop (1.8 s)"], [0.4, "close: dragging, looking back (2.5 s)"], [1.1, "close: the next hop (3.2 s)"], [1.8, "close: dragging (3.9 s)"], [5.3, "close: further on (7.4 s)"], [11.2, "close: still leading (13.3 s)"], [14.6, "close: it stands up whole (16.7 s)"], [17.3, "close: the flight back (19.4 s)"], [21.5, "close: back where its day has it"]]},
     dung: {distance: 5, shots: [[600, "the herd, ten minutes on"], [900, "a mark, close"], [1500, "marks fading"]]}
 };
 const summary = {};
@@ -118,7 +119,7 @@ for (const name of scenes) {
                 return found;
             }
             const text = await window.__behaviours.shot(s, point ? 2.2 : label.includes("close") && name !== "dung" ? 2.6 : d, name === "contest" && label.includes("runs") ? rival : label.includes("close") && name !== "dung" ? window.__behaviours.info().a : who, point, name === "contest" ? 2.4 : 0.7, name === "contest" ? 0.85 : 1.15);
-            if (label.includes("close") && name !== "dung") await window.__behaviours.closeOn(window.__behaviours.info().a, 2.4);
+            if (label.includes("close") && name !== "dung") await window.__behaviours.closeOn(window.__behaviours.info().a, name === "lure" ? d : 2.4);
             document.getElementById("note").textContent = `${label}\n${text}`;
             return text;
         }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? (name === "contest" ? info.a : name === "mob" ? info.c : undefined), castK === undefined ? null : info.ids[castK], tick ?? null]);

@@ -15,7 +15,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "mob" | "look"};
+type Scene = {zone: string; hours: number; cast: Cast[]; kind: "birth" | "mating" | "dung" | "mob" | "look" | "lure"};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -32,6 +32,8 @@ const SCENES: Record<string, Scene> = {
     mob: {zone: "grassland", hours: 9, kind: "mob", cast: [{slug: "australian-magpie", name: "Australian Magpie", n: 4}, {slug: "red-fox", name: "Red Fox", n: 1}, {slug: "coyote", name: "Coyote", n: 1}, {slug: "bobcat", name: "Bobcat", n: 1}, {slug: "tawny-owl", name: "Tawny Owl", n: 1}, {slug: "red-tailed-hawk", name: "Red-tailed Hawk", n: 1}]},
     // 3.3 batch (B): the tail habits (`tail-habit.ts`): a wagtail's pump, a wren's cocked tail, a swamphen's flick, a water tyrant's fan; a sparrow beside them has none.
     tail: {zone: "wetland", hours: 9, kind: "look", cast: [{slug: "grey-wagtail", name: "Grey Wagtail", n: 2}, {slug: "house-wren", name: "House Wren", n: 1}, {slug: "australasian-swamphen", name: "Australasian Swamphen", n: 1}, {slug: "masked-water-tyrant", name: "Masked Water Tyrant", n: 1}, {slug: "common-sandpiper", name: "Common Sandpiper", n: 1}, {slug: "house-sparrow", name: "House Sparrow", n: 1}]},
+    // 3.3 batch (B): a killdeer's broken-wing display for a predator near it (`broken-wing.ts`; started by hand here).
+    lure: {zone: "grassland", hours: 9, kind: "lure", cast: [{slug: "killdeer", name: "Killdeer", n: 5}, {slug: "coyote", name: "Coyote", n: 1}, {slug: "red-fox", name: "Red Fox", n: 1}, {slug: "bobcat", name: "Bobcat", n: 1}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -90,7 +92,7 @@ async function main() {
     console.log("[behaviours] loaded", ready, handle.loading());
     await setAt(t0 - 2);
     await wait(800);
-    type Debug = {births: () => Array<Record<string, unknown>>; matings: () => Array<Record<string, unknown>>; traces: () => Array<{kind: string; x: number; z: number; alpha: number}>; entries: () => Array<{animal: {id: string; model_slug: string}; act: Record<string, unknown> | null}>; mobbing?: () => unknown[]; mobStart?: (bird: string, threat: string) => boolean; seenNow?: () => Array<{name: string; line?: string; episode: string}>};
+    type Debug = {births: () => Array<Record<string, unknown>>; matings: () => Array<Record<string, unknown>>; traces: () => Array<{kind: string; x: number; z: number; alpha: number}>; entries: () => Array<{animal: {id: string; model_slug: string}; act: Record<string, unknown> | null}>; mobbing?: () => unknown[]; mobStart?: (bird: string, threat: string) => boolean; lureStart?: (bird: string, threat: string) => boolean; lures?: () => unknown[]; seenNow?: () => Array<{name: string; line?: string; episode: string}>};
     const debug = (window as unknown as {__arkDebug: Debug}).__arkDebug;
     const a = castId(0, 0);
     const b = castId(0, 1);
@@ -100,10 +102,16 @@ async function main() {
     await frames(4);
     // (The first of the cast's predators that is out in the open now: not in its den, not on the wing.)
     let foe = castId(1, 0);
-    if (scene.kind === "mob") {
+    let star = a;
+    if (scene.kind === "mob" || scene.kind === "lure") {
+        console.log("[behaviours] the bird", JSON.stringify(handle.locate(a)));
         for (let k = 1; k < scene.cast.length; k++) {
             const at = handle.locate(castId(k, 0));
-            if (at && at.y > at.ground + 0.05 && at.y < at.ground + 6 && debug.mobStart?.(a, castId(k, 0))) {
+            console.log("[behaviours] foe?", scene.cast[k].slug, JSON.stringify(at));
+            // (A display needs a bird on dry ground: the first of the cast's birds that can.)
+            const bird = scene.kind === "lure" ? Array.from({length: scene.cast[0].n}, (_, i) => castId(0, i)).find((id) => debug.lureStart?.(id, castId(k, 0))) : undefined;
+            if (bird) star = bird;
+            if (at && (bird || (scene.kind === "mob" && at.y > at.ground + 0.05 && at.y < at.ground + 6 && debug.mobStart?.(a, castId(k, 0))))) {
                 foe = castId(k, 0);
                 console.log("[behaviours] mobbing", scene.cast[k].slug, JSON.stringify(at));
                 break;
@@ -116,7 +124,7 @@ async function main() {
     handle.setView(view(12, at0));
     let closeView: ArkCameraView | null = null;
     const api = {
-        info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a, b, c: foe, ids: scene.cast.map((_, k) => castId(k, 0)), mobbing: debug.mobbing?.() ?? []}),
+        info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a: star, b, c: foe, ids: scene.cast.map((_, k) => castId(k, 0)), mobbing: debug.mobbing?.() ?? []}),
         dung: () => debug.traces().filter((t) => t.kind === "dung"),
         /** The first cast's kind dormant (or awake again), then what the scene shows of every animal. */
         dormant: async (on: boolean) => {
@@ -163,6 +171,8 @@ async function main() {
         closeOn: async (id: string, distance: number, polar = 1.35) => {
             const act = debug.entries().find((e) => e.animal.id === id)?.act as {x: number; z: number; base: number} | null | undefined;
             const at = act ? {x: act.x, y: act.base + 0.15, z: act.z} : handle.locate(id);
+            const rig = debug as unknown as {controls: {minDistance: number}};
+            rig.controls.minDistance = Math.min(rig.controls.minDistance, distance);
             if (at) handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance, polar, azimuth: 0.7});
             await frames(3);
         },
@@ -193,7 +203,7 @@ async function main() {
                 .map((e) => `${e.animal.id.slice(-3)} ${e.animal.model_slug} ${String(e.act!.meal ?? "-")} ${String(e.act!.state ?? "")}${e.act!.hidden ? " hidden" : ""}${e.act!.lying ? ` lying ${Number(e.act!.lying).toFixed(2)}` : ""}`);
             const status = (id: string) => handle.animalStatus?.(id)?.activity ?? "-";
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
-            return `+${s.toFixed(1)} s   card a: ${status(a)}   card b: ${status(b)}   dung marks: ${api.dung().length}\n${acts.concat(said).join("\n")}${scene.kind === "mob" ? `\n${JSON.stringify(debug.mobbing?.())} rigs ${JSON.stringify(scene.cast[0] ? Array.from({length: scene.cast[0].n}, (_, i) => (debug as unknown as {rigState: (id: string) => unknown}).rigState(castId(0, i))).concat((debug as unknown as {rigState: (id: string) => unknown}).rigState(foe)) : [])}` : ""}`;
+            return `+${s.toFixed(1)} s   card a: ${status(a)}   card b: ${status(b)}   dung marks: ${api.dung().length}\n${acts.concat(said).join("\n")}${scene.kind === "lure" ? `\n${JSON.stringify(debug.lures?.())}` : ""}${scene.kind === "mob" ? `\n${JSON.stringify(debug.mobbing?.())} rigs ${JSON.stringify(scene.cast[0] ? Array.from({length: scene.cast[0].n}, (_, i) => (debug as unknown as {rigState: (id: string) => unknown}).rigState(castId(0, i))).concat((debug as unknown as {rigState: (id: string) => unknown}).rigState(foe)) : [])}` : ""}`;
         },
         handle
     };

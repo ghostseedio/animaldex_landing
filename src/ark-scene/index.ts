@@ -216,7 +216,8 @@ import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {LiveBirths} from "@/ark-scene/live-births";
 // 3.3 batch (B): the birds' own moves (mobbing dive)
-import {Mobbing, mobFoeFits} from "@/ark-scene/mobbing";
+import {Mobbing, mobFoeFits, type MobHost} from "@/ark-scene/mobbing";
+import {BrokenWing} from "@/ark-scene/broken-wing";
 import birdMoves from "@/ark-scene/bird-moves.json";
 import {tailHabitOf} from "@/ark-scene/tail-habit";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
@@ -7015,7 +7016,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     });
     // 3.3 batch (B): mobbing dive. Birds whose own text says they mob (`bird-moves.json`) dive in turns at a predator
     // of theirs standing near them, near the camera (`mobbing.ts`: viewer-local, visual only, back to their day after).
-    const BIRD_MOVES = birdMoves as unknown as {mob: Record<string, {line: string | null; foe: string | null}>; tail: Record<string, {line: string | null; while: string}>};
+    const BIRD_MOVES = birdMoves as unknown as {mob: Record<string, {line: string | null; foe: string | null}>; tail: Record<string, {line: string | null; while: string}>; lure: Record<string, {line: string | null}>};
     // (Where it is drawn this frame, from the frame's own list; out of view, where its day has it.)
     const birdPlaces = new Map<Entry, {x: number; z: number; base: number; yaw: number}>();
     const drawnAt = (e: Entry) => {
@@ -7025,7 +7026,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const at = e.sched?.pose;
         return at ? {x: at.x, y: at.y, z: at.z, yaw: at.yaw} : null;
     };
-    const mobbing = new Mobbing<Entry>({
+    const birdHost: MobHost<Entry> = {
         id: (e) => e.animal.id,
         slug: (e) => e.animal.model_slug,
         mobs: (e) => e.animal.model_slug in BIRD_MOVES.mob,
@@ -7044,11 +7045,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             e.birdAloft = Boolean(pose && aloft);
             if (pose && aloft) e.air = 1;
         }
+    };
+    const mobbing = new Mobbing<Entry>(birdHost);
+    // 3.3 batch (B): broken-wing display. A ground-nester whose own text says so leads a predator near it away from its
+    // nest along the ground, then flies back (`broken-wing.ts`); its nest is the record's (the props' site with eggs or chicks).
+    const brokenWing = new BrokenWing<Entry>({
+        ...birdHost,
+        mobs: (e) => e.animal.model_slug in BIRD_MOVES.lure,
+        free: (e) => birdHost.free(e) && e.air <= 0.001 && !e.sched?.pose?.aloft && !e.place.water,
+        nest: (e, epoch) => {
+            const nest = nestSourceOf(e.animal.id, epoch);
+            return nest && ((nest.eggs ?? 0) > 0 || (nest.chicks ?? 0) > 0) ? nest : null;
+        }
     });
     const birdNear: Entry[] = [];
     const tailSeen: ArkSeenAct[] = [];
     const stepBirdMoves = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: {x: number; z: number; base: number; yaw: number}}>, epoch: number) => {
-        if (!world || reducedMotion || !scheduleOn) return void mobbing.clear();
+        if (!world || reducedMotion || !scheduleOn) {
+            brokenWing.clear();
+            return void mobbing.clear();
+        }
         // 3.3 batch (B): tail pump, cock and fan. The shader moves the tail (`tail-habit.ts`); here only the log's sentence,
         // for a bird close enough for it to be seen, once per bird and ten minutes (listed once a second).
         if (mobbing.due(epoch)) {
@@ -7065,13 +7081,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const seen of tailSeen) seenActs.push(seen);
         birdNear.length = 0;
         birdPlaces.clear();
-        if (!mobbing.active && !mobbing.due(epoch)) return;
+        if (!mobbing.active && !brokenWing.active && !mobbing.due(epoch) && !brokenWing.due(epoch)) return;
         for (const c of list) {
             if (!c.visible || c.distance > 70) continue;
             birdNear.push(c.entry);
             birdPlaces.set(c.entry, c.pose);
         }
         mobbing.step(epoch, birdNear);
+        brokenWing.step(epoch, birdNear);
+        for (const l of brokenWing.seen(epoch)) {
+            const a = l.entry.animal;
+            const line = BIRD_MOVES.lure[a.model_slug]?.line;
+            // (A sentence that speaks of its nest only when the record has it one there.)
+            if (line && (l.nested || !/nest/.test(line))) seenActs.push({id: a.id, name: a.name, speciesId: a.kind_species_profile_id || a.species_profile_id || `slug:${a.model_slug}`, zone: a.zone, recipe: "broken_wing", episode: l.episode, block: "lure", fish: false, line});
+        }
         for (const m of mobbing.seen(epoch)) {
             const a = m.entry.animal;
             const said = BIRD_MOVES.mob[a.model_slug];
@@ -8006,7 +8029,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return looked?.middle ? blockers(camera.position.clone(), looked.middle, 0.35).map((hit) => ({kind: hit.mesh.userData.kind, distance: hit.distance})) : null;
     }};
     // 3.3 batch (B): the birds' own moves, for the harness
-    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {mobbing: () => mobbing.debug(), mobStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && mobbing.begin(worldMs() / 1000, b, t, allEntries().filter((e) => e !== b && e !== t), new Set(), 1e9)); }, seenNow: () => seenActs.slice()});
+    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {mobbing: () => mobbing.debug(), mobStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && mobbing.begin(worldMs() / 1000, b, t, allEntries().filter((e) => e !== b && e !== t), new Set(), 1e9)); }, seenNow: () => seenActs.slice(), lures: () => brokenWing.debug(), lureStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && brokenWing.begin(worldMs() / 1000, b, t)); }});
 
     return {
         ...runtime.handle,
