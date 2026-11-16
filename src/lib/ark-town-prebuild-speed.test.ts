@@ -181,7 +181,7 @@ const TOWN_DIGESTS = {
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     zoo: "efb148c4ab7c70ae",
-    places: "fba1268b733101f8"
+    places: "f00bd433d7307cc9"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {
