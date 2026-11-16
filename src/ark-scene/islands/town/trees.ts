@@ -24,6 +24,7 @@ import {assetAttachRows} from "@/ark-scene/tree-assets";
 import {footprintBody, TreeSpacing, type TreeBody} from "@/ark-scene/tree-spacing";
 import {boxDistance, centroid, hashText, inPoly, local, rng, type Box, type Poly} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
+import {clearOfDoors, spotBox} from "@/ark-scene/islands/town/doors";
 import {townPlan, type TownPlan, type TreeKind} from "@/ark-scene/islands/town/plan";
 import type {ZooLayout} from "@/ark-scene/islands/town/areas";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
@@ -197,6 +198,8 @@ function settlePlan(plan: TownPlan): Settled {
     const blockers = blockersOf(plan);
     const trees: TownTree[] = [];
     plan.trees.forEach((t, i) => {
+        // gfx (props): no tree or shrub on a home's door step or the path to its door (`doors.ts`).
+        if (!clearOfDoors(spotBox(t, 0.8), 0, plan)) return;
         const tree = settleOne(spacing, blockers, `town:${i}:${t.seed}`, t.kind, t.x, t.z, t.scale, t.seed);
         if (tree) trees.push(tree);
     });

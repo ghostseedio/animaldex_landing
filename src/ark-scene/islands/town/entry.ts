@@ -7,6 +7,7 @@
  *   ?hours=17                  the island clock's hour (pinned); ?day=<n> the day
  *   ?sky=0                     without the photographed day sky (the visual check: nothing loads after mount)
  *   ?wet=0..1&rain=0..1        the weather (lane GA: wet streets, puddles, ripples); `__arkTown.weather(wet, rain)`
+ *   ?homes=all                 every household's pet site drawn with all its displays (gfx (props): the gardens' frames)
  */
 
 import {ACESFilmicToneMapping, Fog, PCFSoftShadowMap, PerspectiveCamera, Scene, Vector3, WebGLRenderer} from "three";
@@ -24,6 +25,9 @@ import {local} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import type {TownClock} from "@/ark-scene/islands/town/people";
 import {loadVehicles} from "@/ark-scene/islands/town/render/vehicles";
+import {buildPetHomes} from "@/ark-scene/islands/town/render/pet-homes";
+import {homeSites} from "@/ark-scene/islands/town/tanks";
+import {townHouseholds} from "@/ark-scene/islands/town/areas";
 
 /** Part B's render distance and hysteresis per tier (`streaming/tiers.ts`); the map view from 150 m. */
 const STREAM = {high: {distance: 960, hysteresis: 40}, medium: {distance: 640, hysteresis: 32}, low: {distance: 440, hysteresis: 26}} as const;
@@ -140,6 +144,14 @@ export function mountTown(el: HTMLElement) {
     (window as unknown as {__arkTownRoot?: unknown}).__arkTownRoot = town.root;
     // (Lane TB: the zoo's houses, their tanks and halls, are drawn with the zoo's day, not the scenery.)
     town.root.add(buildZooHouses(zooLayout(launchEnclosures()).enclosures).group);
+    // gfx (props): every household's garden room, pond and balcony displays, as if each kept a pet of every kind.
+    if (params.get("homes") === "all") {
+        const used: Array<{site: NonNullable<ReturnType<ReturnType<typeof homeSites>["get"]>>; displays: Set<string>}> = [];
+        homeSites(townHouseholds()).forEach((site) => {
+            if (site) used.push({site, displays: new Set([site.displays.tank.id, site.displays.cage.id, site.displays.vivarium.id, ...(site.displays.pond ? [site.displays.pond.id] : [])])});
+        });
+        town.root.add(buildPetHomes(used).group);
+    }
     const post = new ArkPost(renderer, scene, camera, tier);
     let clock: TownClock = {hours: hours0, day: Number(params.get("day") ?? 20406)};
     const target = new Vector3();

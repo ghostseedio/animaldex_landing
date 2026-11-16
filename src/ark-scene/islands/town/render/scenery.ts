@@ -21,6 +21,7 @@ import {surfaceTag} from "@/ark-scene/islands/town/render/surface-tags";
 import {townFarmGates, townFarmProps, type FarmGate} from "@/ark-scene/islands/town/farm";
 import {zooBarrier} from "@/ark-scene/islands/town/render/zoo-barriers";
 import {townTrees} from "@/ark-scene/islands/town/trees";
+import {clearOfDoors, PATH_WIDTH, townDoorWays} from "@/ark-scene/islands/town/doors";
 
 /** A chunk's merged geometry by material; `foliage`: hedges, flower beds and crops (lane GC, `render/nature.ts`). */
 export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo; foliage: Geo};
@@ -727,6 +728,8 @@ function beds(out: SceneryOut, plan: TownPlan) {
             const bed: Box = {x: centre.x, z: centre.z, w, d: 0.7, rot: b.at.rot};
             if (p.drive && corners(bed).some((q) => inBox(p.drive!, q.x, q.z, 0.2))) continue;
             if (!inBox(p.at, centre.x, centre.z, -0.2)) continue;
+            // gfx (props): never on the door's step or its path (`doors.ts`); the window's side keeps its bed.
+            if (!clearOfDoors(bed, 0.05, plan)) continue;
             const c = chunkFor(out, centre.x, centre.z);
             flowerBed(c.foliage, c.decal, {x: centre.x, y: 0, z: centre.z, rot: b.at.rot}, w, 0.7, hashText(`${p.id}-bed${side}`), false, soil);
         }
@@ -767,13 +770,16 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
         const c = chunkFor(out, p.drive.x, p.drive.z);
         const drive = p.drive;
         tagged(c.decal, p.seed % 2 ? SURF.blocks : SURF.gravel, alongZ(drive.rot), () => c.decal.drape({x: drive.x, y: 0, z: drive.z, rot: drive.rot}, drive.w, drive.d, H, 0.1, () => tone(p.seed % 2 ? "#a49e94" : "#b5ab96"), 2));
-        // A path from the pavement to the front door.
-        const b = plan.buildings.find((q) => q.id === p.building);
-        if (b) {
-            const door = local(b.at, 0, b.at.d / 2 + 0.5);
-            const gate = local(p.at, toLocal(p.at, door.x, door.z).x, p.at.d / 2);
-            tagged(c.decal, SURF.slabs, Math.abs(door.z - gate.z) > Math.abs(door.x - gate.x), () => c.decal.ribbon([gate, door], 1.1, H, 0.09, tone("#b9b2a4"), 2));
-        }
+    }
+    // gfx (props): a path from the pavement to every home's front door, the door's own (`doors.ts`: it led to the middle
+    // of the house, where a window or the porch's wall was, and only where there was a drive).
+    for (const way of townDoorWays(plan)) {
+        if (!way.path) continue;
+        const path = way.path;
+        const from = local(path, 0, -path.d / 2);
+        const to = local(path, 0, path.d / 2);
+        const c = chunkFor(out, path.x, path.z);
+        tagged(c.decal, SURF.slabs, Math.abs(to.z - from.z) > Math.abs(to.x - from.x), () => c.decal.ribbon([to, from], PATH_WIDTH, H, 0.09, tone("#b9b2a4"), 2));
     }
     void sub;
     return out;

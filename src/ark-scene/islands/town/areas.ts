@@ -19,6 +19,7 @@
 import {buildingSolid, perchOnSurface} from "@/ark-scene/islands/town/roof-perch";
 import {corners, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townBuildingFloor, townHeight} from "@/ark-scene/islands/town/ground";
+import {terraceDoorU} from "@/ark-scene/islands/town/doors";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, MILLPOND, townPlan, type Building, type Parcel, type TownPlan, type ZooSlot} from "@/ark-scene/islands/town/plan";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import type {CarSpot} from "@/ark-scene/islands/town/people";
@@ -301,7 +302,9 @@ export function binSpots(plan: TownPlan = townPlan()): Array<{id: string; street
         } else if (p.kind === "terrace_home") {
             for (let k = 0; k < 4; k++) {
                 const u = -b.at.w / 2 + b.at.w * (k + 0.5) / 4;
-                const home = local(p.at, u + 1.3, p.at.d / 2 - (p.front ? 1.6 : 0.9));
+                // (By the window, on the side away from its front door and the door's path: `doors.ts`, gfx (props).)
+                const away = terraceDoorU(b, k) > u ? -1 : 1;
+                const home = local(p.at, u + away * 1.3, p.at.d / 2 - (p.front ? 1.6 : 0.9));
                 const kerb = local(p.at, u + 1.3, p.at.d / 2 + 0.5);
                 out.push({id: `${b.id}#${k}`, street: p.street, home, kerb, turn: p.at.rot});
             }

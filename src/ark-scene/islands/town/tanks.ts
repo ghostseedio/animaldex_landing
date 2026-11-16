@@ -22,7 +22,8 @@ import {corners, hashText, inBox, local, sub, toLocal, type Box, type Pt} from "
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townPlan, type Building, type Parcel, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {townHouseholds, type Household, type ZooEnclosure} from "@/ark-scene/islands/town/areas";
-import {fitInWater, speciesDepth, swimRange, bandCycle, breathAt, waterMotion, type DepthBand, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
+import {APRON, homeDoors} from "@/ark-scene/islands/town/doors";
+import {fitInWater,speciesDepth, swimRange, bandCycle, breathAt, waterMotion, type DepthBand, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 
 // MARK: - Tanks
 
@@ -349,6 +350,27 @@ export function homeSite(home: Household, plan: TownPlan = townPlan()): HomeSite
     return siteFor(home, b, parcel);
 }
 
+/**
+ * Where along the back wall a garden room stands (its middle, building local x) and how wide (gfx (props), the owner's
+ * "fishtanks outside houses are in front of the door blocking it": a terrace home's room stood on its back door). From
+ * its wanted middle, the nearest place where it keeps clear of every door's apron on that wall (`doors.ts`) and stays
+ * inside its own home's share (between the yard walls); narrower if it must, down to 1.6 m.
+ */
+function roomAlong(b: Building, home: Household, want: number, width: number): {u: number; w: number} {
+    const doors = homeDoors(b).filter((d) => d.side === "back");
+    const share = home.kind === "terrace_home" ? b.at.w / b.households : b.at.w;
+    const lo = home.kind === "terrace_home" ? -b.at.w / 2 + share * home.index + 0.2 : -b.at.w / 2 + 0.2;
+    const hi = lo + share - 0.4;
+    const gap = 0.1;
+    const clear = (u: number, w: number) => u - w / 2 >= lo - 1e-6 && u + w / 2 <= hi + 1e-6 && doors.every((d) => u + w / 2 + gap <= d.u - d.w / 2 - APRON.side || u - w / 2 - gap >= d.u + d.w / 2 + APRON.side);
+    for (let w = width; w >= 1.6 - 1e-6; w -= 0.2) {
+        for (let step = 0; step <= 60; step++) {
+            for (const u of step ? [want + step * 0.05, want - step * 0.05] : [want]) if (clear(u, w)) return {u, w};
+        }
+    }
+    return {u: want, w: width};
+}
+
 function siteFor(home: Household, b: Building, parcel: Parcel | null): HomeSite | null {
     const f = buildingFloor(b.at);
     if (home.kind === "house" || home.kind === "terrace_home") {
@@ -361,7 +383,8 @@ function siteFor(home: Household, b: Building, parcel: Parcel | null): HomeSite 
             const yard = local(back, -back.w / 2 + (back.w * (home.index + 0.5)) / 4, 0);
             ux = toLocal(b.at, yard.x, yard.z).x;
         }
-        const box = sub(b.at, ux, -b.at.d / 2 - size.d / 2, Math.min(size.w, b.at.w * (home.kind === "house" ? 0.6 : 0.24)), size.d);
+        const room = roomAlong(b, home, ux, Math.min(size.w, b.at.w * (home.kind === "house" ? 0.6 : 0.24)));
+        const box = sub(b.at, room.u, -b.at.d / 2 - size.d / 2, room.w, size.d);
         const floor = f;
         const displays = displaySlots(home.id, box, floor, box.w - 0.3, 0.5, 0.72, 1);
         let pond: Box | null = null;

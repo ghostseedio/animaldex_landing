@@ -115,7 +115,12 @@ if (command === "stills") {
     const out = path.resolve(arg("out", path.join(root, ".ark-golden", "town", "stills")));
     mkdirSync(out, {recursive: true});
     const phone = arg("device", "desktop") === "phone";
-    const {context, page} = await open(quality, phone ? {width: 360, height: 800, scale: 2, mobile: true} : {width, height, scale: 1, mobile: false});
+    // `--query homes=all`: extra page parameters (the props lane's gardens).
+    const {context, page} = await open(quality, phone ? {width: 360, height: 800, scale: 2, mobile: true} : {width, height, scale: 1, mobile: false}, arg("query", "") ? `&${arg("query", "")}` : "");
+    // `--views file.json`: extra shots ([{id, eye, target, hours, day?, fov?}]) added to the page's list, for a lane's
+    // before/after frames of its own views (the graphics pass).
+    const views = arg("views", "") ? JSON.parse(readFileSync(arg("views", ""), "utf8")) : [];
+    if (views.length) await page.evaluate((extra) => window.__arkTown!.shots.push(...extra), views);
     const ids = (await page.evaluate(() => window.__arkTown!.shots.map((s) => s.id))) as string[];
     const only = arg("only", "") ? new Set(arg("only", "").split(",")) : null;
     const hours = arg("hours", "") ? Number(arg("hours", "")) : null;
