@@ -8,11 +8,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type {BufferGeometry, Mesh} from "three";
-import {zooEnclosures, zooSpotsOf} from "@/ark-scene/islands/town/areas";
-import {toLocal} from "@/ark-scene/islands/town/geom";
+import {launchEnclosures, zooEnclosures, zooLayout, zooSpotsOf} from "@/ark-scene/islands/town/areas";
 import {buildZooHouses} from "@/ark-scene/islands/town/render/zoo-houses";
+import {dressPaddock} from "@/ark-scene/islands/town/render/zoo-habitat";
+import {Geo} from "@/ark-scene/islands/town/render/kit";
+import {townHeight} from "@/ark-scene/islands/town/ground";
 import {buildZooScenery} from "@/ark-scene/islands/town/render/scenery";
-import {zooLayout, launchEnclosures} from "@/ark-scene/islands/town/areas";
 
 const enclosures = zooEnclosures();
 
@@ -39,6 +40,27 @@ test("every zoo house but the aquarium is dressed, clear of its residents' spots
         assert.equal(apes.spots.length, zooSpotsOf(primate).length);
     } finally {
         houses.dispose();
+    }
+});
+
+test("every paddock is dressed for its habitat, clear of its residents' spots, its pool and its keepers' shed", () => {
+    const paddocks = enclosures.filter((e) => !e.shared && !e.indoor && e.type !== "aviaries" && e.type !== "penguin_seal_pools");
+    assert.ok(paddocks.length >= 8);
+    for (const e of paddocks) {
+        const solid = new Geo();
+        const water = new Geo();
+        const plot = dressPaddock(e, zooSpotsOf(e), solid, water, townHeight);
+        assert.ok(plot, e.id);
+        const items = plot.footprints.filter((f) => f.what !== "own_pool" && f.what !== "keeper");
+        assert.ok(items.length >= 4, `${e.id}: ${items.length} things`);
+        const fixed = plot.footprints.filter((f) => f.what === "own_pool" || f.what === "keeper");
+        for (const f of items) {
+            for (const s of plot.spots) assert.ok(Math.hypot(s.x - f.x, s.z - f.z) >= f.r + plot.clearance - 1e-9, `${e.id}: ${f.what} clear of a spot`);
+            for (const k of fixed) assert.ok(Math.hypot(k.x - f.x, k.z - f.z) >= k.r + f.r, `${e.id}: ${f.what} clear of the ${k.what}`);
+            assert.ok(Math.abs(f.x) + f.r <= e.slot.at.w / 2 && Math.abs(f.z) + f.r <= e.slot.at.d / 2, `${e.id}: ${f.what} inside the fence`);
+        }
+        assert.equal(degenerate(solid.toGeometry()), 0, `${e.id} solid`);
+        if (water.triangles) assert.equal(degenerate(water.toGeometry()), 0, `${e.id} water`);
     }
 });
 
@@ -76,5 +98,4 @@ test("no degenerate or non-finite triangle in the zoo's outdoor scenery", () => 
         }
     });
     assert.ok(checked > 0);
-    void toLocal;
 });

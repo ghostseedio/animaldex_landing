@@ -362,3 +362,233 @@ export function flowers(geo: Geo, plot: Plot, lx: number, lz: number, size: numb
         geo.blob(p[0], p[1], p[2], 0.09, 0.07, 0.09, colour, hashText(`${seed}fl${i}`), 0);
     }
 }
+
+/** A termite mound: a ribbed earth spire with buttresses (the savanna's). */
+export function termiteMound(geo: Geo, plot: Plot, lx: number, lz: number, height: number, seed: number) {
+    const r = rng(seed);
+    const c = tone("#a9763e");
+    const base = plot.p(lx, lz, -0.1);
+    geo.cylinder({x: base[0], y: base[1], z: base[2], rot: r() * 6}, 0, 0, 0, height * 0.42, 0.08, height, c, 9);
+    geo.blob(base[0], base[1] + 0.1, base[2], height * 0.5, height * 0.25, height * 0.5, [c[0] * 0.95, c[1] * 0.95, c[2] * 0.95], seed, 1);
+    for (let i = 0; i < 3; i++) {
+        const a = r() * 6.28;
+        const h = height * (0.4 + r() * 0.35);
+        geo.cylinder({x: base[0] + Math.cos(a) * height * 0.22, y: base[1], z: base[2] + Math.sin(a) * height * 0.22, rot: a}, 0, 0, 0, height * 0.16, 0.04, h, [c[0] * 0.92, c[1] * 0.92, c[2] * 0.92], 6);
+    }
+}
+
+/** A hay rack: a timber feeder on legs with a hay load, under a little roof (the grazers'). */
+export function hayRack(geo: Geo, plot: Plot, lx: number, lz: number, turn: number) {
+    const p = plot.p(lx, lz, 0);
+    const fr: Frame = {x: p[0], y: p[1], z: p[2], rot: plot.fr.rot + turn};
+    const wood = tone("#7a5a3e");
+    for (const [x, z] of [[-0.8, -0.35], [0.8, -0.35], [0.8, 0.35], [-0.8, 0.35]] as const) geo.box(fr, x, -0.1, z, 0.1, 1.9, 0.1, wood);
+    geo.box(fr, 0, 0.7, 0, 1.7, 0.5, 0.75, tone("#c9b26a"));
+    for (const z of [-0.36, 0.36]) for (let x = -0.75; x <= 0.76; x += 0.25) geo.box(fr, x, 0.6, z, 0.04, 0.7, 0.04, wood);
+    geo.gable(fr, 0, 1.8, 0, 1.9, 1.0, 0.35, 0.12, tone("#5a4a3a"), wood);
+}
+
+/**
+ * An outdoor enclosure's habitat (p2, lane ZOO), by type, onto the zoo chunk's solid mesh and the zoo's fresh water:
+ * the big cats' kopje (a rock outcrop with ledges, a dead tree with a deck, tall grass, a waterhole, a thatched shade),
+ * the savanna's grassland (a waterhole, termite mounds, a kopje, grass, logs), the hoofstock's meadow (a pond, hay
+ * racks, grass, shrubs and logs), the children's farm (hay racks, a trough, grass), the small mammals' (logs, rocks,
+ * burrow mounds, grass), the bears' and wolves' forest floor (a den, logs, ferns, grass). Ground items keep clear of
+ * the residents' spots. Returns the plot (its footprints), or null for a type it does not dress.
+ */
+export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed: number}; pool: Pt[] | null}, spots: readonly Pt[], solid: Geo, water: Geo, heightAt: (x: number, z: number) => number): Plot | null {
+    const s = e.slot.at;
+    const fr: Frame = {x: s.x, y: 0, z: s.z, rot: s.rot};
+    const floorAt = (lx: number, lz: number) => {
+        const q = at(fr, lx, 0, lz);
+        return heightAt(q[0], q[2]);
+    };
+    const plot = new Plot(s, floorAt, spots, e.slot.seed);
+    // (The enclosure's own pool, where it has one, is taken: nothing is put in it.)
+    if (e.pool) {
+        const local = e.pool.map((q) => toLocal(s, q.x, q.z));
+        const cx = local.reduce((t, q) => t + q.x, 0) / local.length;
+        const cz = local.reduce((t, q) => t + q.z, 0) / local.length;
+        const rr = Math.max(...local.map((q) => Math.hypot(q.x - cx, q.z - cz)));
+        plot.footprints.push({x: cx, z: cz, r: rr, what: "own_pool"});
+    }
+    // (And the keepers' shed at the back and the feeding hatch, drawn by `scenery.ts` enclosure: kept clear too.)
+    plot.footprints.push({x: s.w / 2 - 4, z: -s.d / 2 + 2.2, r: Math.min(6, s.w * 0.3) / 2 + 0.6, what: "keeper"}, {x: -s.w / 2 + 2, z: -s.d / 2 + 1.2, r: 1.0, what: "keeper"});
+    const fixed = plot.footprints.slice();
+    const clearOfPool = (lx: number, lz: number, r: number) => fixed.every((f) => Math.hypot(f.x - lx, f.z - lz) >= f.r + r + 0.4);
+    // (Nor on another item: a log across the waterhole.)
+    const clearOfOthers = (lx: number, lz: number, rad: number) => plot.footprints.every((f) => Math.hypot(f.x - lx, f.z - lz) >= (f.r + rad) * 0.8);
+    const r = rng(e.slot.seed + 53);
+    const W = s.w / 2;
+    const D = s.d / 2;
+    const at2 = (lx: number, lz: number, rad: number, what: string, spread = 2.5, tries = 18) => {
+        const q = rng(hashText(`${e.id}:${what}:${lx.toFixed(1)}:${lz.toFixed(1)}`));
+        for (let i = 0; i < tries; i++) {
+            const k = i === 0 ? 0 : spread * (0.3 + (i / tries) * 1.4);
+            const a = q() * 6.28;
+            const x = lx + Math.cos(a) * k;
+            const z = lz + Math.sin(a) * k;
+            if (clearOfPool(x, z, rad) && clearOfOthers(x, z, rad) && plot.take(x, z, rad, what, 0.5)) return {x, z};
+        }
+        // Else the nearest free place on a 1 m grid over the plot.
+        let best: Pt | null = null;
+        let bestD = Infinity;
+        for (let x = -W + rad + 0.5; x <= W - rad - 0.5; x += 1) {
+            for (let z = -D + rad + 0.5; z <= D - rad - 0.5; z += 1) {
+                const d = Math.hypot(x - lx, z - lz);
+                if (d < bestD && clearOfPool(x, z, rad) && plot.free(x, z, rad, 0.5) && clearOfOthers(x, z, rad)) {
+                    best = {x, z};
+                    bestD = d;
+                }
+            }
+        }
+        if (best && plot.take(best.x, best.z, rad, what, 0.5)) return best;
+        return null;
+    };
+    const grass = (n: number, colours: string[], height: number) => {
+        for (let k = 0; k < n; k++) {
+            const lx = (r() - 0.5) * (s.w - 1.2);
+            const lz = (r() - 0.5) * (s.d - 1.2);
+            if (!clearOfPool(lx, lz, 0.2)) continue;
+            tuft(solid, plot, lx, lz, height * (0.6 + r() * 0.6), tone(colours[k % colours.length]), hashText(`${e.id}u${k}`), 9);
+        }
+    };
+    const patches = (n: number, colours: string[], size: number) => {
+        for (let k = 0; k < n; k++) {
+            const lx = (r() - 0.5) * (s.w - 2);
+            const lz = (r() - 0.5) * (s.d - 2);
+            if (clearOfPool(lx, lz, size)) patch(solid, plot, lx, lz, size * (0.6 + r() * 0.8), tone(colours[k % colours.length]), hashText(`${e.id}p${k}`), 0.12 + (k % 3) * 0.006);
+        }
+    };
+    const logs = (n: number, colour = "#6f5236") => {
+        for (let k = 0; k < n; k++) {
+            const q = at2((r() - 0.5) * s.w * 0.7, (r() - 0.5) * s.d * 0.7, 1.3, "log", 4);
+            if (!q) continue;
+            const a = r() * 3.14;
+            const half = 1.0 + r() * 0.5;
+            log(solid, plot, q.x - Math.cos(a) * half, q.z - Math.sin(a) * half, q.x + Math.cos(a) * half, q.z + Math.sin(a) * half, 0.22 + r() * 0.1, tone(colour));
+        }
+    };
+    const rocks = (n: number, size: number, colour: string, spread = 0.7) => {
+        for (let k = 0; k < n; k++) {
+            const q = at2((r() - 0.5) * s.w * spread, (r() - 0.5) * s.d * spread, size * 0.8, "rockwork", 4);
+            if (q) outcrop(solid, plot, q.x, q.z, size * (0.7 + r() * 0.5), tone(colour), hashText(`${e.id}r${k}`));
+        }
+    };
+    const waterhole = (lx: number, lz: number, radius: number, rim: string) => {
+        const q = at2(lx, lz, radius + 0.3, "pool", 5, 30);
+        if (!q) return;
+        patch(solid, plot, q.x, q.z, radius + 1.4, tone("#8a7454"), hashText(`${e.id}mud`), 0.14);
+        pool(solid, water, plot, q.x, q.z, radius, hashText(`${e.id}wh`), tone(rim), tone("#4f7f78"), 0.2);
+    };
+    const shrubs = (n: number, colour: string) => {
+        for (let k = 0; k < n; k++) {
+            const side = k % 4;
+            const lx = side === 0 ? -W + 1 : side === 1 ? W - 1 : (r() - 0.5) * s.w * 0.9;
+            const lz = side === 2 ? -D + 1 : side === 3 ? (r() - 0.5) * s.d * 0.5 : (r() - 0.5) * s.d * 0.9;
+            const q = at2(lx, lz, 0.8, "plant", 1.5);
+            if (q) solid.bush(...plot.p(q.x, q.z, 0.55), 0.8 + r() * 0.4, 0.7 + r() * 0.3, 0.8 + r() * 0.4, tone(colour), hashText(`${e.id}b${k}`));
+        }
+    };
+    switch (e.type) {
+        case "big_cats": {
+            patches(8, ["#c2a46a", "#a99a5a", "#8f8a52"], 2.2);
+            // The kopje at the back: a big outcrop with ledges to lie on, a smaller one beside it.
+            const k1 = at2(-W * 0.45, -D * 0.55, 1.7, "rockwork", 4, 30);
+            if (k1) {
+                outcrop(solid, plot, k1.x, k1.z, 2.6, tone("#9a8a72"), hashText(`${e.id}kop`));
+                ledge(solid, plot, k1.x + 1.8, k1.z + 1.2, 1.1, tone("#a8987e"), hashText(`${e.id}kl`));
+            }
+            rocks(2, 1.4, "#968670", 0.6);
+            const t = at2(W * 0.4, -D * 0.4, 0.9, "tree", 4, 24);
+            if (t) {
+                climbingTree(solid, plot, t.x, t.z, 4.2, hashText(`${e.id}ct`));
+                deck(solid, plot, t.x, t.z + 0.1, 2.0, 1.6, 2.6);
+            }
+            const sh = at2(W * 0.55, D * 0.1, 1.9, "shelter", 3);
+            if (sh) shelter(solid, plot, sh.x, sh.z, 3.2, 2.4, 2.0, tone("#7a6248"), tone("#c2a45a"), 0);
+            waterhole(-W * 0.1, D * 0.35, 1.6, "#9a8a72");
+            logs(2);
+            grass(160, ["#c8b060", "#b0a050", "#d8c070"], 0.8);
+            return plot;
+        }
+        case "savanna_paddocks": {
+            patches(10, ["#b8a060", "#9a9a58", "#c8b080"], 3.2);
+            waterhole(W * 0.25, D * 0.2, 2.2, "#9a8a72");
+            for (let k = 0; k < 3; k++) {
+                const q = at2((r() - 0.5) * s.w * 0.7, (r() - 0.5) * s.d * 0.7, 1.0, "mound", 5);
+                if (q) termiteMound(solid, plot, q.x, q.z, 1.6 + r() * 1.2, hashText(`${e.id}tm${k}`));
+            }
+            const k1 = at2(-W * 0.5, -D * 0.5, 1.7, "rockwork", 5, 30);
+            if (k1) outcrop(solid, plot, k1.x, k1.z, 2.4, tone("#9a8a72"), hashText(`${e.id}kop`));
+            logs(3, "#8a7458");
+            shrubs(6, "#6f7a3a");
+            grass(260, ["#c8b060", "#b0a050", "#9aa050"], 1.0);
+            return plot;
+        }
+        case "hoofstock_paddocks": {
+            patches(10, ["#6f8a42", "#7a9a48", "#8a8a52"], 3);
+            waterhole(-W * 0.3, D * 0.2, 1.7, "#867d70");
+            for (let k = 0; k < 2; k++) {
+                const q = at2((k ? 1 : -1) * W * 0.4, -D * 0.45, 1.1, "hay", 3);
+                if (q) hayRack(solid, plot, q.x, q.z, r() * 0.5);
+            }
+            rocks(2, 1.1, "#8f877a");
+            shrubs(8, "#4f7a3a");
+            logs(2);
+            grass(160, ["#6f9a44", "#86a84e", "#5f8a3a"], 0.55);
+            return plot;
+        }
+        case "childrens_farm": {
+            patches(8, ["#7a9a48", "#8a7a52"], 2);
+            const q = at2(W * 0.2, -D * 0.3, 1.1, "hay", 3);
+            if (q) hayRack(solid, plot, q.x, q.z, 0);
+            const tr = at2(-W * 0.3, -D * 0.2, 0.9, "trough", 3);
+            if (tr) {
+                const p = plot.p(tr.x, tr.z, 0);
+                const tf: Frame = {x: p[0], y: p[1], z: p[2], rot: s.rot};
+                solid.box(tf, 0, 0, 0, 1.6, 0.5, 0.6, tone("#6a6a66"));
+                solid.box(tf, 0, 0.42, 0, 1.4, 0.06, 0.45, tone("#4f7f88"));
+            }
+            for (let k = 0; k < 4; k++) {
+                const b = at2((r() - 0.5) * s.w * 0.7, (r() - 0.5) * s.d * 0.6, 0.6, "hay", 3);
+                if (b) solid.cylinder({x: plot.p(b.x, b.z)[0], y: plot.p(b.x, b.z)[1], z: plot.p(b.x, b.z)[2], rot: r()}, 0, -0.02, 0, 0.5, 0.5, 0.7, tone("#c9b26a"), 10);
+            }
+            grass(120, ["#6f9a44", "#86a84e"], 0.4);
+            return plot;
+        }
+        case "small_mammals": {
+            patches(6, ["#8a7454", "#6f8a42", "#a08a6a"], 1.4);
+            rocks(3, 0.8, "#8f877a", 0.8);
+            logs(2);
+            for (let k = 0; k < 3; k++) {
+                const q = at2((r() - 0.5) * s.w * 0.7, (r() - 0.5) * s.d * 0.7, 0.5, "burrow", 3);
+                if (q) {
+                    const p = plot.p(q.x, q.z, -0.15);
+                    solid.blob(p[0], p[1], p[2], 0.55, 0.3, 0.5, tone("#8a6a48"), hashText(`${e.id}bur${k}`), 1);
+                    const h = plot.p(q.x + 0.35, q.z, 0.02);
+                    solid.cylinder({x: h[0], y: h[1], z: h[2], rot: 0}, 0, 0, 0, 0.13, 0.13, 0.02, tone("#2a2018"), 8);
+                }
+            }
+            grass(70, ["#6f9a44", "#86a84e"], 0.4);
+            return plot;
+        }
+        case "bears_wolves": {
+            patches(8, ["#5a6a3a", "#6a5a3a", "#4f6a34"], 2.2);
+            const den = at2(-W * 0.4, -D * 0.6, 1.8, "shelter", 3);
+            if (den) {
+                outcrop(solid, plot, den.x, den.z - 0.6, 2.0, tone("#857a6a"), hashText(`${e.id}den`));
+                shelter(solid, plot, den.x, den.z + 0.6, 2.4, 1.8, 1.5, tone("#5e4632"), tone("#4a4440"), 0, true);
+            }
+            logs(3);
+            for (let k = 0; k < 6; k++) {
+                const q = at2((r() - 0.5) * s.w * 0.85, (r() - 0.5) * s.d * 0.85, 0.5, "plant", 3);
+                if (q) fern(solid, plot, q.x, q.z, 0.9 + r() * 0.4, tone("#3f7a34"), hashText(`${e.id}f${k}`), 9);
+            }
+            grass(140, ["#6f8a44", "#5f7a3a", "#86984e"], 0.5);
+            return plot;
+        }
+        default:
+            return null;
+    }
+}
