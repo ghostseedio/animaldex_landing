@@ -129,13 +129,54 @@ for (const {name, says, ...spec} of MOUTH) {
     mouthCarry[slug] = {name, id: row.id, quote: row.quote, line: row.line, ...spec};
 }
 
+/**
+ * The antler cycle (the catalogue's look:antler_cycle rows): months are the Ark year's (northern, as the scene's
+ * seasons), read only from the row's own words or the species' stored mating months. `cut` is where its model's
+ * antlers start (model units, measured from its near.glb: the points above `y` and in front of `zMin` are the antlers;
+ * they fold to the skull at (0, y, zBase)). Models with no antlers to fold, or whose head cannot be cut cleanly at one
+ * height, are in `antlersSkipped`.
+ */
+const recipesRow = (slug: string) => ((JSON.parse(fs.readFileSync(path.join(root, "src/ark-scene/recipes.json"), "utf8")) as {species: Record<string, string>}).species[slug] ?? "").split("|");
+const storedMating = (slug: string) => (recipesRow(slug)[2] ?? "").split("").map((c) => "abcdefghijkl".indexOf(c) + 1).filter((m) => m > 0);
+type Antler = {name: string; says: RegExp; males: boolean; velvet?: number[]; bare?: number[]; bareMales?: number[]; unsynced?: {bare: number; velvet: number}; say: "velvet" | "hard" | "kept"; cut: [number, number, number]; why: string};
+const SUMMER = [6, 7, 8];
+const WINTER = [12, 1, 2];
+const ANTLERS: Antler[] = [
+    // "bulls grow antlers each summer, shed in early winter": velvet and growing in summer, hard after, gone from early winter until the next summer.
+    {name: "Eurasian Elk", says: /grow antlers each summer, shed in early winter/, males: true, velvet: SUMMER, bare: [12, 1, 2, 3, 4, 5], say: "velvet", cut: [0.205, -0.05, 0.316], why: "bulls: summer growth, shed in early winter"},
+    // "females usually keep theirs through winter after males have shed": both carry them; the males' are gone in winter.
+    {name: "Reindeer", says: /females usually keep theirs through winter after males have shed/, males: false, bareMales: WINTER, say: "kept", cut: [0.22, -0.05, 0.308], why: "both sexes; males bare in winter"},
+    // "covered in velvet skin until they harden": hard by the rut (its stored mating months, when the stags clash), in velvet the three months before.
+    {name: "Red Deer", says: /covered in velvet skin until they harden/, males: false, velvet: [], say: "velvet", cut: [0.31, -0.05, 0.322], why: "velvet the three months before the stored rut"},
+    // "Stags shed and regrow their antlers every year but not in step with one another": each stag on his own year.
+    {name: "Chital", says: /not in step with one another, so some stags in hard antler can be seen in any month/, males: true, unsynced: {bare: 1, velvet: 3}, say: "hard", cut: [0.33, -0.05, 0.325], why: "stags, each on his own year"}
+];
+const antlerRows = rows.filter((r) => r.showable && r.how === "look" && /antler/i.test(r.uses ?? ""));
+const antlers: Record<string, unknown> = {};
+for (const {name, says, ...spec} of ANTLERS) {
+    const {row, slug} = find(name, says, antlerRows);
+    if (name === "Red Deer") {
+        const rut = storedMating(slug);
+        if (!rut.length) throw new Error("Red Deer: no stored mating months");
+        spec.velvet = [3, 2, 1].map((k) => ((rut[0] - 1 - k + 12) % 12) + 1);
+    }
+    antlers[slug] = {name, id: row.id, quote: row.quote, line: row.line, ...spec};
+}
+const antlersSkipped: Record<string, string> = {
+    "Fallow Deer": "its model is drawn without antlers: there are none to shed",
+    "White-tailed Deer": "its model's head and antlers cannot be told apart at one height (the cut takes the head); its row is the velvet rub on a sapling (a mark), not built",
+    "Javan Rusa Deer": "its row is a pose (grass ploughed onto the antlers), not a look: not built"
+};
+
 const out = {
-    about: "Young animals and seasonal looks (3.3 batch, lane C), built by scripts/ark-young-life.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. coats: the young of these species wear another coat (the look shader's young coat, young-coat.ts); colours are sRGB. mouthCarry: the parent that carries its hatchlings in its jaws to the water, or holds its fry in its mouth (mouth-carry.ts), after a hatching of the record; say = when the row's sentence is true of what is drawn.",
+    about: "Young animals and seasonal looks (3.3 batch, lane C), built by scripts/ark-young-life.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. coats: the young of these species wear another coat (the look shader's young coat, young-coat.ts); colours are sRGB. mouthCarry: the parent that carries its hatchlings in its jaws to the water, or holds its fry in its mouth (mouth-carry.ts), after a hatching of the record; say = when the row's sentence is true of what is drawn. antlers: the antler cycle by the Ark year's months (antler-cycle.ts); cut = where the model's antlers start (y, zMin, zBase).",
     coats,
     mouthCarry,
+    antlers,
+    antlersSkipped,
     coatsSkipped: Object.fromEntries(youngLookRows.filter((r) => r.name in COATS_SKIPPED).map((r) => [r.name, COATS_SKIPPED[r.name]]))
 };
-console.log(`coats ${Object.keys(coats).length} (skipped ${Object.keys(out.coatsSkipped).length}), mouth-carry ${Object.keys(mouthCarry).length}`);
+console.log(`coats ${Object.keys(coats).length} (skipped ${Object.keys(out.coatsSkipped).length}), mouth-carry ${Object.keys(mouthCarry).length}, antlers ${Object.keys(antlers).length}`);
 if (!process.argv.includes("--dry")) {
     fs.writeFileSync(path.join(root, "src/ark-scene/young-life.json"), JSON.stringify(out, null, 1) + "\n");
 }

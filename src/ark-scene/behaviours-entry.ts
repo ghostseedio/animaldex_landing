@@ -9,6 +9,7 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import {NURSE_SLOT_MS, nursingBout} from "@/ark-scene/young-care";
+import {seasonMonthAt, sexLook} from "@/ark-scene/behaviour-recipes";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
@@ -39,6 +40,8 @@ const SCENES: Record<string, Scene> = {
     coats3: {zone: "coral_reef", hours: 10, kind: "look", young: "new", cast: ["Gray Angelfish", "Blue Tang", "Zebra Shark", "Brownbanded Bamboo Shark", "Bluestreak Cleaner Wrasse", "Blueface Angelfish", "Greater Amberjack", "Goldfish", "Iridescent Shark", "Boeseman's Rainbowfish"].map(lookCast)},
     // 3.3 batch (C): a hatching of the record: a crocodile mother carries her hatchlings to the water at her jaw; a
     // mouthbrooder's fry come and go at the parent's mouth (`mouth-carry.ts`).
+    // 3.3 batch (C): the antler cycle (`antler-cycle.ts`): three adults of each, seen in chosen months of the Ark year.
+    antlers: {zone: "grassland", hours: 10, kind: "look", cast: ["Red Deer", "Eurasian Elk", "Reindeer", "Chital"].map((name) => ({...lookCast(name), n: 3, young: 0}))},
     carry: {zone: "wetland", hours: 10, kind: "carry", young: "new", bornAgo: 0, cast: [{slug: "saltwater-crocodile", name: "Saltwater Crocodile", n: 2, young: 4}]},
     brood: {zone: "river_lake", hours: 10, kind: "carry", young: "new", bornAgo: 0, cast: [{slug: "nile-tilapia", name: "Nile Tilapia", n: 2, young: 6}]},
     // A herd's droppings along its day.
@@ -166,6 +169,34 @@ async function main() {
                     await frames(1);
                 }
                 text = `${scene.cast[k].name}: young coat steps ${e.youngCoat?.steps ?? "-"} (${e.level ?? "?"}, ${e.length.toFixed(2)} m)`;
+            }
+            await frames(4);
+            return text;
+        },
+        /** 3.3 batch (C): adult `j` of cast `k` in a month of the Ark year (the clock moved on to it), its antlers. */
+        antler: async (k: number, j: number, month: number) => {
+            let s = 0;
+            while (seasonMonthAt(t0 + s) !== month && s < 400 * 86_400) s += 3600 * 3;
+            // (Into the month a little: its first hours are the month before's at another viewer's clock.)
+            s += 3600 * 6;
+            await setAt(t0 + s);
+            const id = castId(k, j);
+            type Drawn = {animal: {id: string; model_slug: string}; antler?: {code: number; phase: string; say: boolean}; length: number; middle?: {x: number; y: number; z: number} | null; sched?: {pose?: {x: number; y: number; z: number} | null}};
+            const entry = () => (debug.entries() as unknown as Drawn[]).find((x) => x.animal.id === id);
+            let text = `${scene.cast[k].name} ${j}: not placed`;
+            for (let pass = 0; pass < 3; pass++) {
+                const e = entry();
+                const p = e?.sched?.pose;
+                if (!e || !p) return text;
+                const near = e.middle && Math.hypot(e.middle.x - p.x, e.middle.z - p.z) < 3 ? e.middle : p;
+                handle.setView({target: {x: near.x, y: near.y + e.length * 0.2, z: near.z}, distance: Math.max(e.length * 2.2, 0.5), polar: 1.3, azimuth: 0.7 + pass * 0.01});
+                for (let i = 0; i < 12; i++) {
+                    fake!.perf += 100;
+                    fake!.date += 100;
+                    await frames(1);
+                }
+                const seen = handle.seen?.().acts.filter((x) => x.recipe === "antler_cycle" && x.id === id).map((x) => x.line) ?? [];
+                text = `${scene.cast[k].name} ${j} (${sexLook(id, e.animal.model_slug).sex}) month ${seasonMonthAt(t0 + s)}: ${e.antler ? `${e.antler.phase} ${e.antler.code}` : "-"}   log: ${seen[0] ?? "-"}`;
             }
             await frames(4);
             return text;

@@ -78,7 +78,7 @@ import {goesIntoRoost, lyingDrop, packSleep, restStatus, sleepPostureClips, slee
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
-import {applyRecipeCoat, setRecipeArkDay, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {applyRecipeCoat, seasonMonthAt, setRecipeArkDay, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
 import {fishSchoolsNear} from "@/ark-scene/fish-schools";
 import {setFishChasers} from "@/ark-scene/fish-render";
@@ -222,6 +222,8 @@ import {speciesCare} from "@/lib/ark-age";
 // 3.3 batch (C): young with their recorded mother
 import {Lineage, nurseTurn} from "@/ark-scene/young-care";
 import {applyYoungCoat, youngCoatOf, youngCoatStrength, youngSteps} from "@/ark-scene/young-coat";
+// 3.3 batch (C): the antler cycle.
+import {antlerOf, antlerState, applyAntler, type AntlerState} from "@/ark-scene/antler-cycle";
 import {MouthCarry} from "@/ark-scene/mouth-carry";
 import {mealOnStage, mealScript, DRINK_REACH, type MealCatch} from "@/ark-scene/meal-acts";
 import {MealTraces, type TraceDraw} from "@/ark-scene/meal-traces";
@@ -460,6 +462,8 @@ type Entry = {
     youngOf?: {parent: string | null; play: number; at: number};
     /** 3.3 batch (C): how strongly it wears its species' young coat (`young-coat.ts`, 0-15), worked out again now and then. */
     youngCoat?: {steps: number; at: number};
+    /** 3.3 batch (C): its antlers in this month of the Ark year (`antler-cycle.ts`), re-read every 30 s. */
+    antler?: AntlerState & {at: number};
     /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
     recipeAct?: RecipeAct | null;
     /** Ambient flock-mates round a small animal's spot (a swarm, a cluster). */
@@ -3418,6 +3422,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         e.youngCoat = {steps: youngSteps(youngCoatStrength(coat, e.animal.origin === "born", age ? {ageDays: age.ageDays, growth: age.growth, young: age.stage === "young"} : null)), at: nowS};
         return e.youngCoat.steps;
     };
+    /** 3.3 batch (C): its antlers this month of the Ark year (`antler-cycle.ts`), or null for a species without the cycle. Re-read every 30 s. */
+    const antlerNow = (e: Entry): AntlerState | null => {
+        const spec = antlerOf(e.animal.model_slug);
+        if (!spec) return null;
+        const nowS = worldMs() / 1000;
+        if (e.antler && nowS - e.antler.at < 30 && nowS >= e.antler.at) return e.antler;
+        e.antler = {...antlerState(spec, seasonMonthAt(nowS), sexLook(e.animal.id, e.animal.model_slug).sex, e.animal.id), at: nowS};
+        return e.antler;
+    };
     const stepReactive = (list: Array<{entry: Entry; distance: number; pose: Pose; modelHeight: number}>, dt: number) => {
         const t0 = performance.now();
         const want = reactiveTier();
@@ -4457,6 +4470,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     const y = c.entry.animal;
                     seenActs.push({id: y.id, name: y.name, speciesId: y.kind_species_profile_id || y.species_profile_id || `slug:${y.model_slug}`, zone: y.zone, recipe: "young_coat", episode: `young_coat:${y.id}:${Math.floor(epoch / 900)}`, block: "look", fish: false, line: youngCoatOf(y.model_slug)!.line});
                 }
+                // 3.3 batch (C): its antlers this month, close by, when its species' own sentence is true of them.
+                if (c.distance < 40 && antlerNow(c.entry)?.say) {
+                    const d = c.entry.animal;
+                    seenActs.push({id: d.id, name: d.name, speciesId: d.kind_species_profile_id || d.species_profile_id || `slug:${d.model_slug}`, zone: d.zone, recipe: "antler_cycle", episode: `antler_cycle:${d.id}:${Math.floor(epoch / 900)}`, block: "look", fish: false, line: antlerOf(d.model_slug)!.line});
+                }
                 // (One of the log's kinds, or a recipe its species has its own sentence for: `live/signature-lines.ts`.)
                 const ownLine = act ? signatureLineOf(c.entry.animal.model_slug, act.recipe) : null;
                 if (act && (ownLine || arkSeenKind(act.recipe))) {
@@ -5135,6 +5153,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             applyRecipeCoat(mesh.geometry, index, recipeNear.get(entry.animal.id)?.coat);
             // 3.3 batch (C): a young one's own coat (a striped piglet, a banded hatchling: `young-coat.ts`), by its age.
             if (animal.origin === "born") applyYoungCoat(mesh.geometry, index, youngCoatSteps(entry));
+            // 3.3 batch (C): its antlers this month (growing in velvet, shed): `antler-cycle.ts`.
+            applyAntler(mesh.geometry, index, antlerNow(entry)?.code ?? 0);
 
             // Contact shadows (the animal-look pass): on a broad surface the animal really is on (a small one on a wall,
             // a leaf, a stone; a perch on bark, a rock face, a log), never on a limb, a post or a leap through the canopy,

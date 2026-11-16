@@ -67,6 +67,8 @@ varying float vArkEyesShut;
 // 3.3 batch (C): where on the body (0 at the body's rear to 1 at its front; a tail runs on below 0), and across it in
 // half-widths, for a young one's coat.
 varying vec2 vArkBody;
+// 3.3 batch (C): where its model's antlers start (y, zMin, zBase; antler-cycle.ts), folded to the skull as they grow or are shed.
+uniform vec4 arkAntler;
 #endif
 #ifdef ARK_SHELL
 attribute vec2 arkShellLayer;
@@ -101,6 +103,13 @@ export const LOOK_VERTEX = `
 #endif
     vArkEyeL = (arkModelView * vec4(arkToEyeL, 0.0)).xyz;
     vArkEyeR = (arkModelView * vec4(arkToEyeR, 0.0)).xyz;
+    // 3.3 batch (C): the antler cycle (antler-cycle.ts foldAntler): its code rides above the young coat in arkCoat.y's
+    // 32s (0 as drawn, 1-14 growing, 15 none); the antlers' points fold toward the skull, to nothing when shed.
+    float arkAntlerCode = floor(arkCoat.y / 32.0 + 0.00001);
+    if (arkAntlerCode > 0.5 && position.y > arkAntler.x && position.z > arkAntler.y) {
+        float arkAntlerK = arkAntlerCode > 14.5 ? 0.0 : 0.35 + 0.65 * (arkAntlerCode - 1.0) / 13.0;
+        transformed = vec3(position.x * arkAntlerK, arkAntler.x + (position.y - arkAntler.x) * arkAntlerK, arkAntler.z + (position.z - arkAntler.z) * arkAntlerK);
+    }
 }
 #endif
 `;
@@ -138,6 +147,7 @@ uniform vec4 arkYoungB;
 uniform vec4 arkYoungC;
 uniform vec2 arkYoungD;
 varying vec2 vArkBody;
+uniform vec4 arkAntler;
 varying vec3 vArkRest;
 varying vec3 vArkRestNormal;
 varying vec2 vArkLookV;
@@ -232,8 +242,10 @@ export const LOOK_ALBEDO = `
 #ifdef ARK_LOOK
 float arkWet = clamp(vArkLookV.x, 0.0, 1.0) * arkWetTake;
 // 3.3 batch (C): a young one's coat strength rides in arkCoat.y's twos (0-15, young-coat.ts packYoung); dust is the rest.
-float arkYoung = floor(vArkLookV.y * 0.5 + 0.001);
-float arkDust = clamp(vArkLookV.y - 2.0 * arkYoung, 0.0, 1.0);
+// (Above them, in its 32s, the antler cycle's code: antler-cycle.ts.)
+float arkYoungAll = floor(vArkLookV.y * 0.5 + 0.001);
+float arkYoung = mod(arkYoungAll, 16.0);
+float arkDust = clamp(vArkLookV.y - 2.0 * arkYoungAll, 0.0, 1.0);
 float arkEyeAmount = max(arkEyeMask(vArkEyeL), arkEyeMask(vArkEyeR));
 // Asleep: the lids shut over the eye (the skin round it, read blurred from a coarse mip of its texture), a darker line
 // where they meet; the eye's gloss, dome and catchlight go with it. The lids cover the painted eye, which is wider than
@@ -284,6 +296,14 @@ if (arkYoung > 0.5) {
         arkYc = mix(arkYc, arkYoungB.rgb * (0.9 + 0.35 * arkYl), arkYm * arkYoungB.w);
     }
     diffuseColor.rgb = mix(diffuseColor.rgb, arkYc, arkYk);
+}
+// 3.3 batch (C): growing antlers are in velvet (antler-cycle.ts): a soft grey-brown skin over them.
+{
+    float arkAntlerNow = floor(vArkLookV.y / 32.0 + 0.00001);
+    if (arkAntlerNow > 0.5 && arkAntlerNow < 14.5 && vArkRest.y > arkAntler.x && vArkRest.z > arkAntler.y) {
+        float arkVl = dot(diffuseColor.rgb, vec3(0.2126, 0.7152, 0.0722));
+        diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.19, 0.135, 0.095) * (0.8 + 0.6 * arkVl), 0.8);
+    }
 }
 #ifdef ARK_SHELL
 {

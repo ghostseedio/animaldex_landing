@@ -90,7 +90,8 @@ test("the look shader reads the young coat: declared both sides, dust taken from
     assert.ok(LOOK_VERTEX_DECLARATIONS.includes("varying vec2 vArkBody;") && LOOK_VERTEX.includes("vArkBody = vec2((position.z - motionRear)"));
     for (const name of ["arkYoungA", "arkYoungB", "arkYoungC"]) assert.ok(LOOK_FRAGMENT_DECLARATIONS.includes(`uniform vec4 ${name};`), name);
     assert.ok(LOOK_FRAGMENT_DECLARATIONS.includes("uniform vec2 arkYoungD;") && LOOK_FRAGMENT_DECLARATIONS.includes("varying vec2 vArkBody;"));
-    assert.ok(LOOK_ALBEDO.includes("float arkYoung = floor(vArkLookV.y * 0.5 + 0.001);"));
-    assert.ok(LOOK_ALBEDO.includes("clamp(vArkLookV.y - 2.0 * arkYoung, 0.0, 1.0)"));
+    // (The antler cycle's code rides above the steps, in the 32s: antler-cycle.ts.)
+    assert.ok(LOOK_ALBEDO.includes("float arkYoungAll = floor(vArkLookV.y * 0.5 + 0.001);") && LOOK_ALBEDO.includes("float arkYoung = mod(arkYoungAll, 16.0);"));
+    assert.ok(LOOK_ALBEDO.includes("clamp(vArkLookV.y - 2.0 * arkYoungAll, 0.0, 1.0)"));
     assert.ok(LOOK_ALBEDO.indexOf("if (arkYoung > 0.5)") < LOOK_ALBEDO.indexOf("diffuseColor.rgb *= mix(1.0, arkWetDark, arkWet);"), "under the wet and the dust");
 });

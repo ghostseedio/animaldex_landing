@@ -1,5 +1,5 @@
 {
- "about": "Young animals and seasonal looks (3.3 batch, lane C), built by scripts/ark-young-life.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. coats: the young of these species wear another coat (the look shader's young coat, young-coat.ts); colours are sRGB. mouthCarry: the parent that carries its hatchlings in its jaws to the water, or holds its fry in its mouth (mouth-carry.ts), after a hatching of the record; say = when the row's sentence is true of what is drawn.",
+ "about": "Young animals and seasonal looks (3.3 batch, lane C), built by scripts/ark-young-life.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. coats: the young of these species wear another coat (the look shader's young coat, young-coat.ts); colours are sRGB. mouthCarry: the parent that carries its hatchlings in its jaws to the water, or holds its fry in its mouth (mouth-carry.ts), after a hatching of the record; say = when the row's sentence is true of what is drawn. antlers: the antler cycle by the Ark year's months (antler-cycle.ts); cut = where the model's antlers start (y, zMin, zBase).",
  "coats": {
   "wild-boar": {
    "name": "Wild Boar",
@@ -664,6 +664,96 @@
    "carrier": "female",
    "say": "danger"
   }
+ },
+ "antlers": {
+  "eurasian-elk": {
+   "name": "Eurasian Elk",
+   "id": "0297c681-020a-4ce4-80c5-54193eb984d4",
+   "quote": "grow antlers each summer, shed in early winter",
+   "line": "{aAnimal} is growing this summer's antlers",
+   "males": true,
+   "velvet": [
+    6,
+    7,
+    8
+   ],
+   "bare": [
+    12,
+    1,
+    2,
+    3,
+    4,
+    5
+   ],
+   "say": "velvet",
+   "cut": [
+    0.205,
+    -0.05,
+    0.316
+   ],
+   "why": "bulls: summer growth, shed in early winter"
+  },
+  "reindeer": {
+   "name": "Reindeer",
+   "id": "3e2f4d77-f261-473d-9bcf-139083b20c5d",
+   "quote": "Both males and females often grow antlers, and females usually keep theirs through winter after males have shed.",
+   "line": "{aAnimal} is still wearing her antlers after the males have shed theirs",
+   "males": false,
+   "bareMales": [
+    12,
+    1,
+    2
+   ],
+   "say": "kept",
+   "cut": [
+    0.22,
+    -0.05,
+    0.308
+   ],
+   "why": "both sexes; males bare in winter"
+  },
+  "red-deer": {
+   "name": "Red Deer",
+   "id": "9e4c04ec-46ac-4019-b396-7b9e5afb2028",
+   "quote": "Growing antlers are among the fastest-growing tissues of any mammal, covered in velvet skin until they harden.",
+   "line": "{aAnimal} is growing new antlers covered in velvet skin",
+   "males": false,
+   "velvet": [
+    6,
+    7,
+    8
+   ],
+   "say": "velvet",
+   "cut": [
+    0.31,
+    -0.05,
+    0.322
+   ],
+   "why": "velvet the three months before the stored rut"
+  },
+  "chital": {
+   "name": "Chital",
+   "id": "213602bf-a066-4eeb-a93c-587ca661135c",
+   "quote": "Stags shed and regrow their antlers every year but not in step with one another, so some stags in hard antler can be seen in any month.",
+   "line": "{aAnimal} is carrying hard antlers, out of step with the other stags",
+   "males": true,
+   "unsynced": {
+    "bare": 1,
+    "velvet": 3
+   },
+   "say": "hard",
+   "cut": [
+    0.33,
+    -0.05,
+    0.325
+   ],
+   "why": "stags, each on his own year"
+  }
+ },
+ "antlersSkipped": {
+  "Fallow Deer": "its model is drawn without antlers: there are none to shed",
+  "White-tailed Deer": "its model's head and antlers cannot be told apart at one height (the cut takes the head); its row is the velvet rub on a sapling (a mark), not built",
+  "Javan Rusa Deer": "its row is a pose (grass ploughed onto the antlers), not a look: not built"
  },
  "coatsSkipped": {
   "American Robin": "a breast only",

@@ -111,6 +111,30 @@ for (const name of scenes) {
         await context.close();
         continue;
     }
+    // 3.3 batch (C): the antler cycle: each deer in the months its own text names.
+    if (name === "antlers") {
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const labels = [];
+        const plan = [[0, 0, 7], [1, 1, 1], [0, 0, 10], [1, 0, 1], [1, 0, 7], [1, 0, 10], [1, 1, 10], [1, 2, 10], [2, 0, 1], [2, 1, 1], [2, 2, 1], [2, 0, 10], [3, 0, 3], [3, 1, 3], [3, 2, 3], [3, 0, 9]];
+        for (let i = 0; i < plan.length; i++) {
+            const note = await page.evaluate(async ([k, j, m]) => {
+                const text = await window.__behaviours.antler(k, j, m);
+                document.getElementById("note").textContent = text;
+                return text;
+            }, plan[i]);
+            labels.push(`${String(i).padStart(2, "0")} ${note}`);
+            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 90, clip: {x: 320, y: 120, width: 640, height: 400}});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=4x${Math.ceil(plan.length / 4)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
     // 3.3 batch (C): the carry's moments are its own script's (the walk to the nest and to the water are as long as they are far).
     if (name === "carry" || name === "brood") {
         await page.evaluate(() => window.__behaviours.shot(1, 6));
