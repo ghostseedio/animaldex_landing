@@ -20,6 +20,7 @@
 
 import {Color, MeshStandardMaterial, Vector3, type WebGLProgramParametersWithUniforms} from "three";
 import {ARK_GROUND_TEXTURES, GROUND_MEANS} from "@/ark-scene/ground-textures";
+import {ARK_BUG_GROUND_GLSL} from "@/ark-scene/bug-ground-glsl";
 import {ARK_ENV} from "@/ark-scene/glsl";
 import {patchTownShader} from "@/ark-scene/islands/town/render/materials";
 import {TOWN_LAYER_MEANS, TOWN_LAYER_METRES, TOWN_TEXTURES} from "@/ark-scene/islands/town/render/textures";
@@ -230,6 +231,14 @@ const GROUND_COLOUR = `
         col = tint * mix(vec3(1.0), t, fade);
         nT = normalize(mix(vec3(0.0, 0.0, 1.0), n, fade * 0.85));
         if (mudPatch > 0.3) rough = mix(rough, 0.8, mudPatch);
+        // p2 (ground): at bug scale, crumbs, stones, sand grains and the lawn's thatch (bug-ground-glsl.ts).
+        vec3 townToEye = vTownWorld - cameraPosition;
+        float townPixel = dist * length(fwidth(townToEye / max(dist, 1e-3)));
+        if (townLite < 0.5 && townPixel < 0.0065) {
+            float bugSoil = clamp(max(wSoil, mudPatch * 0.7), 0.0, 1.0);
+            float bugSand = ws.y;
+            arkBugGround(local, townPixel, bugSoil * (1.0 - bugSand), bugSand, (1.0 - bugSoil) * (1.0 - bugSand) * (1.0 - ws.w), ws.w, 0.0, col, nT);
+        }
     } else {
         col *= 0.88 + 0.24 * (townNoise(local * 1.7) * 0.6 + townNoise(local * 0.23) * 0.4);
     }
@@ -256,9 +265,9 @@ export function townGroundMaterial(): MeshStandardMaterial {
         // The cloud shade (the kit's colour step is off here: the ground does its own wetting).
         shader.fragmentShader = shader.fragmentShader.replace("    diffuseColor.rgb = col;\n}", "    diffuseColor.rgb = col * townCloudShade(vTownWorld);\n}");
         // (The paving's functions read the kit's noise: after it.)
-        shader.fragmentShader = shader.fragmentShader.replace(/(float townCloudShade\(vec3 world\) \{[\s\S]*?\n\})/, `$1\n${PAVE_PARS}`);
+        shader.fragmentShader = shader.fragmentShader.replace(/(float townCloudShade\(vec3 world\) \{[\s\S]*?\n\})/, `$1\n${PAVE_PARS}\n${ARK_BUG_GROUND_GLSL}`);
     };
-    material.customProgramCacheKey = () => "town-ground-2";
+    material.customProgramCacheKey = () => "town-ground-3";
     return material;
 }
 

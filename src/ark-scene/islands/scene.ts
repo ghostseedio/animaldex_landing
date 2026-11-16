@@ -261,6 +261,9 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     // Lane TB: the town's water at its own level for the schedule and the depth bands (the canal's 1.15 m, not the sea's 0).
     const inside = (x: number, z: number) => Math.abs(x - origin.x) < def.half && Math.abs(z - origin.z) < def.half;
     setIslandWater({level: (x, z) => (inside(x, z) ? townWaterLevel(x - origin.x, z - origin.z) : null), surface: (x, z) => (inside(x, z) ? townWaterSurface(x - origin.x, z - origin.z) : null)});
+    // p2 (ground): what covers the town's ground at bug scale (bug-ground.ts), loaded with the town.
+    const [{townBugCover}, {setBugIslandCover}] = await Promise.all([import("@/ark-scene/islands/town/bug-cover"), import("@/ark-scene/bug-ground")]);
+    setBugIslandCover({inside, cover: (x, z) => townBugCover(x - origin.x, z - origin.z)});
     // What Part B's streamer draws, and how much of the town is shown yet as it joins (decision 153).
     let streamDrawn: ((chunk: number) => boolean) | null = null;
     let joinOpen: string[] | null = null;
@@ -570,6 +573,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         worldRadius: half * 0.92,
         dispose: () => {
             setIslandWater(null);
+            setBugIslandCover(null); // p2 (ground)
             setTownWalkSurfaces(null);
             petHomes?.dispose();
             zooLife.dispose();

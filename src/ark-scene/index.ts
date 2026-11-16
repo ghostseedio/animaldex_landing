@@ -127,6 +127,7 @@ import {StreamCull} from "@/ark-scene/streaming/cull";
 import {sceneMemory} from "@/ark-scene/runtime/memory";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {NearDetail} from "@/ark-scene/near-detail";
+import {BugGround, bugClearPoints} from "@/ark-scene/bug-ground";
 import {AssetTrees} from "@/ark-scene/asset-trees";
 import {AssetFloor, AssetRocks} from "@/ark-scene/asset-rocks";
 import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
@@ -911,6 +912,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
     const nearDetail = new NearDetail();
     if (nearDetail) scene.add(nearDetail.group);
+    // p2 (ground): the ground at bug scale round what the camera looks at (blades, crumbs, moss, twigs), only close up.
+    const bugGround = new BugGround();
+    scene.add(bugGround.group);
     // The asset library's trees (graphics pass, batch 3): they replace the decor's tree shapes once loaded.
     const assetTrees = new AssetTrees(options.assetBase);
     if (assetTrees) scene.add(assetTrees.group);
@@ -1088,6 +1092,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         vegetation?.setGrassCount(settings.grass);
         vegetation?.setFill(settings.fill);
         nearDetail?.setShare(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.35);
+        bugGround.setTier(tier); // p2 (ground)
         // Full trees only close in on phones: the medium tier keeps the near level within about 10 m.
         assetTrees?.setTier(tier === "high" ? 1 : tier === "medium" ? 0.45 : 0.3, settings.fill, settings.shadows > 0);
         assetRocks?.setTier(tier === "high" ? 1 : tier === "medium" ? 0.6 : 0.4, settings.shadows > 0);
@@ -4882,6 +4887,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             stepBirdMoves(candidates, epochNow);
             behaviourFrameMs += performance.now() - started;
         }
+        // p2 (ground): the blades at bug scale bow away round the animals in the patch the camera is down at.
+        if (bugGround.shown) bugGround.setClear(bugClearPoints(candidates, (c, out) => ((out.x = c.pose.x), (out.y = c.pose.base), (out.z = c.pose.z), (out.length = c.entry.length), c.visible), controls.target, bugGround.reach));
         behaviourTimes.push(behaviourFrameMs);
         if (behaviourTimes.length > 120) behaviourTimes.shift();
         perf.lap("apart");
@@ -8373,6 +8380,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         perf.lap("camera");
         const viewDistance = camera.position.distanceTo(controls.target);
         nearDetail?.update(controls.target, viewDistance);
+        bugGround.update(controls.target, viewDistance); // p2 (ground)
         assetTrees?.update(camera.position);
         assetRocks?.update(camera.position);
         assetFloor?.update(camera.position);
@@ -8998,6 +9006,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             rings.dispose();
             landscape?.dispose();
             nearDetail?.dispose();
+            bugGround.dispose(); // p2 (ground)
             assetTrees?.dispose();
             assetRocks?.dispose();
             assetFloor?.dispose();

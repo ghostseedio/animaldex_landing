@@ -85,7 +85,7 @@ export function buildWildIsland(options: {tier: WildTier; base?: string}): WildI
         base.call(material, shader, renderer);
         shader.fragmentShader = shader.fragmentShader.replace("float snowLine = 27.0 - 12.0 * envSnow;", `float snowLine = ${WILD_SNOW_LINE.toFixed(1)} - 12.0 * envSnow;`);
     };
-    material.customProgramCacheKey = () => "ark-ground-3-wild";
+    material.customProgramCacheKey = () => "ark-ground-4-wild";
     const tiles = new GroundTiles(ground, WILD_GRID, material, WILD_SEGMENTS);
     root.add(tiles.group);
     const water = landscape.water;
