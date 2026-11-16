@@ -273,11 +273,11 @@ test("Talk is the way in everywhere: the home hero, the article, How it works, t
     assert.match(id.meta.description, /^AnimalDex: setiap hewan punya pelajaran\./);
     assert.match(en.meta.description, /the Ark/);
     assert.equal(en.landing.hero.slogan, "Every animal has a lesson.");
-    // (2026-11-16: the hero itself is seven words, "Catch real animals. / Then talk to them."; the slogan is the
+    // (2026-11-16, the owner's words: the hero is "Catch real animals. / Monitor them in 3D."; the slogan is the
     // footer's, the title's and the description's.)
     assert.equal(en.nav.description, en.landing.hero.slogan, "the footer says the slogan");
     assert.equal(en.landing.hero.taglineLead, "Catch real animals.");
-    assert.equal(en.landing.hero.taglineRest, "Then talk to them.");
+    assert.equal(en.landing.hero.taglineRest, "Monitor them in 3D.");
     assert.equal(en.landing.hero.taglineMiddle, undefined);
     assert.match(en.home.intro, /one small step/);
     // The audience band, cut to four (CC 3).

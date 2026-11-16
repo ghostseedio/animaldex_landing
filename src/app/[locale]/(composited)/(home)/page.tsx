@@ -315,8 +315,8 @@ export default async function Home({params}: HomePageProps) {
                     <h1 className="max-w-5xl text-white">
                         <span className="block font-display text-[3.1rem] font-extrabold uppercase leading-[0.86] tracking-[-0.005em] [text-wrap:balance] sm:text-7xl lg:text-[6.25rem]">{t("hero.taglineLead")}</span>
                         {/* Seven words in two lines (owner, 2026-11-16: "too much text … much more eye catching and easy to understand
-                            for the simplest of people"): the one idea a newcomer needs, catch a real animal, then talk to it. The
-                            living world is the picture behind the words; the slogan stays in the title, the description and the footer. */}
+                            for the simplest of people"; then his own line, "Catch real animals - monitor them in 3D"). The slogan
+                            stays in the title, the description and the footer. */}
                         <span className="mt-3 block font-display-italic text-[2.1rem] font-semibold italic leading-[1.02] text-white/90 [text-wrap:balance] sm:text-5xl lg:mt-4 lg:text-[3.6rem]">{t("hero.taglineRest")}</span>
                     </h1>
                     <div className="mt-7 flex flex-wrap items-center gap-x-6 gap-y-4">
