@@ -26,6 +26,8 @@ const SCENES: Record<string, Scene> = {
     contest: {zone: "grassland", hours: 8, kind: "mating", cast: [{slug: "red-deer", name: "Red Deer", n: 6}]},
     // The webs of a garden's spiders, respun through the day.
     web: {zone: "farm_garden", hours: 7, kind: "dung", cast: [{slug: "black-and-yellow-garden-spider", name: "Black-and-yellow Garden Spider", n: 3}]},
+    // A dormant kind: in its dens while the server says so (the marmots), the others about (the zebras).
+    dormant: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "alpine-marmot", name: "Alpine Marmot", n: 4}, {slug: "plains-zebra", name: "Plains Zebra", n: 3}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -99,6 +101,12 @@ async function main() {
     const api = {
         info: () => ({births: debug.births(), matings: debug.matings(), young: youngIds, a, b}),
         dung: () => debug.traces().filter((t) => t.kind === "dung"),
+        /** The first cast's kind dormant (or awake again), then what the scene shows of every animal. */
+        dormant: async (on: boolean) => {
+            handle.setDormant?.(on ? [speciesId(0)] : []);
+            await frames(6);
+            return debug.entries().map((e) => `${e.animal.model_slug} ${e.act ? `${String(e.act.meal)}${e.act.hidden ? " hidden" : ""}` : "about"} card:${handle.animalStatus?.(e.animal.id)?.activity ?? "-"}`);
+        },
         /** The webs' mesh: where its first web is, how many threads, and the clock's place in the webs' cycle. */
         webs: () => {
             const lines = (debug as unknown as {scene: {getObjectByName: (n: string) => {geometry: {attributes: Record<string, {array: Float32Array; count: number}>}; visible: boolean} | undefined}}).scene.getObjectByName("props:webs");
