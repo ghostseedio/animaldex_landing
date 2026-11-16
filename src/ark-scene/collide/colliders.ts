@@ -28,13 +28,14 @@ import {assetTrunk} from "@/ark-scene/tree-assets";
 import {trunkOf} from "@/ark-scene/vegetation";
 import {canopyTree, COTTAGE, DECOR_SINK} from "@/ark-scene/micro-decor";
 import {drawnRocks} from "@/ark-scene/map/rocks";
+import {moundFoot, savannaMounds} from "@/ark-scene/mounds";
 import {floorObstacles} from "@/ark-scene/floor-assets";
 import {barnStyle, cottageStyle, defaultHomePlots, GARDEN, paddockFence, paddockRect, paddockSegments, PADDOCK_POST_TOP, picketRuns, PICKET_POST_TOP, plotFrame, plotKeepOuts, type HomePlot} from "@/ark-scene/props/home-layout";
 import {onArkWorld, sampleGround} from "@/ark-scene/world";
 import {GARDEN_POND} from "@/ark-scene/micro-decor";
 import {POND_STONES} from "@/ark-scene/world-sampler";
 
-export type ColliderKind = "fence" | "building" | "trunk" | "rock" | "log" | "hay" | "post" | "shrub" | "pond";
+export type ColliderKind = "fence" | "building" | "trunk" | "rock" | "log" | "hay" | "post" | "shrub" | "pond" | "mound";
 
 type ColliderBase = {
     kind: ColliderKind;
@@ -63,6 +64,11 @@ export type Collider = CircleCollider | BoxCollider | SegmentCollider;
 
 /** A picket fence's gaps (m): anything narrower slips between the pickets (a mouse, a beetle, a frog). */
 export const PICKET_GAP = 0.06;
+/**
+ * p3 (solid): how narrow a body goes into a bush, a bramble patch or a flower bed (m across): a mouse, a lizard, a beetle,
+ * a small bird; a cat, a dog, a fox, a hen or a horse goes round (the owner: "I just saw a horse go through a bush").
+ */
+export const BUSH_GAP = 0.16;
 /** A rail fence's lowest rail's underside over the ground (m): anything lower walks under the rails. */
 export const RAIL_CLEAR = 0.4;
 
@@ -409,9 +415,10 @@ export function buildColliders(plots: HomePlot[] | null): Collider[] {
         } else if (item.kind === "lamp") {
             out.push(post(`lamp:${n}`, item.x, item.z, 0.1, 2.6));
         } else if (item.kind === "shrub") {
-            // (The walk grid's own shrub: 0.5 m at its scale.)
+            // (The walk grid's own shrub: 0.5 m at its scale. p3 (solid): solid to a body wider than its stems' gaps, BUSH_GAP;
+            // it was soft, and a body pushed off its neighbours stood in it.)
             const r = 0.5 * item.scale;
-            out.push({shape: "circle", kind: "shrub", id: `shrub:${n}`, cx: item.x, cz: item.z, r, reach: r, y0: item.y - 0.2, y1: item.y + 1.2 * item.scale, gap: 0, soft: true});
+            out.push({shape: "circle", kind: "shrub", id: `shrub:${n}`, cx: item.x, cz: item.z, r, reach: r, y0: item.y - 0.2, y1: item.y + 1.2 * item.scale, gap: BUSH_GAP});
         }
     });
     // (Islands mode, `no-hamlet.ts`: no garden pond.)
@@ -428,6 +435,11 @@ export function buildColliders(plots: HomePlot[] | null): Collider[] {
     drawnRocks().forEach((rock, n) => {
         const host = rockHosts.get(`${rock.x.toFixed(2)},${rock.z.toFixed(2)}`);
         out.push({shape: "box", kind: "rock", id: host ? `rock:${host}` : `rock:${n}`, cx: rock.x, cz: rock.z, cos: rock.cos, sin: rock.sin, hx0: rock.hx0, hx1: rock.hx1, hz0: rock.hz0, hz1: rock.hz1, y0: rock.y0, y1: rock.y1, reach: rock.reach, gap: 0});
+    });
+    // p3 (solid): the savanna's termite mounds (`mounds.ts`, always there), as drawn: a termite goes in; nothing larger.
+    savannaMounds().forEach((mound, n) => {
+        const r = moundFoot(mound);
+        out.push({shape: "circle", kind: "mound", id: `mound:${n}`, cx: mound.x, cz: mound.z, r, reach: r, y0: mound.y - 0.2, y1: mound.y + mound.h * mound.scale, gap: BUSH_GAP});
     });
     floorObstacles().forEach((log, n) => {
         const g = sampleGround(log.x, log.z).height;

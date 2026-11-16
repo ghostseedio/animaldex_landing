@@ -17,6 +17,7 @@ import {ColliderSet, PICKET_GAP, RAIL_CLEAR} from "@/ark-scene/collide/colliders
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townObstacles} from "@/ark-scene/islands/town/obstacles";
+import {BUSH_GAP, townSolids, type SolidKind, type TownSolid} from "@/ark-scene/islands/town/solids";
 
 /** The town's collider set at its world origin for these open enclosures (`list`: worked out already, the prebuild's). */
 export function townColliderSet(open: readonly string[], origin: {x: number; z: number}, list?: Collider[]): ColliderSet {
@@ -48,7 +49,10 @@ export function townColliderList(open: readonly string[], origin: {x: number; z:
         if (o.kind === "tree") {
             const g = townHeight(o.x, o.z);
             // (A shrub is soft, as on the wild island: paths go round it, brushing it is not a pass-through; lane GC.)
-            out.push(o.soft ? {shape: "circle", kind: "shrub", id: `town:${o.id}`, cx: o.x + ox, cz: o.z + oz, r: o.r, reach: o.r, y0: g - 0.2, y1: g + 1.4, gap: 0, soft: true} : {shape: "circle", kind: "trunk", id: `town:${o.id}`, cx: o.x + ox, cz: o.z + oz, r: o.r, reach: o.r, y0: g - 0.2, y1: g + 3, gap: 0});
+            // (p3 (solid): a shrub is solid to anything wider than its stems' gaps, `BUSH_GAP`: the owner saw a horse walk
+            // through a bush. It was soft (paths went round it, but a body pushed by its neighbours or held in its pen stood in
+            // it); a mouse or a lizard still goes in under it.)
+            out.push(o.soft ? {shape: "circle", kind: "shrub", id: `town:${o.id}`, cx: o.x + ox, cz: o.z + oz, r: o.r, reach: o.r, y0: g - 0.2, y1: g + 1.4, gap: BUSH_GAP} : {shape: "circle", kind: "trunk", id: `town:${o.id}`, cx: o.x + ox, cz: o.z + oz, r: o.r, reach: o.r, y0: g - 0.2, y1: g + 3, gap: 0});
             continue;
         }
         if (o.kind === "prop") {
@@ -79,5 +83,18 @@ export function townColliderList(open: readonly string[], origin: {x: number; z:
             out.push({shape: "segment", kind: "fence", id: `town:${o.id}:${i}`, ax: a.x + ox, az: a.z + oz, bx: b.x + ox, bz: b.z + oz, r, cx, cz, reach: Math.hypot(b.x - a.x, b.z - a.z) / 2 + r, y0, y1: Math.max(ga, gb) + o.height, gap});
         }
     }
+    // p3 (solid): the scenery drawn solid (rockwork, logs and stumps, posts, climbing trees, shelters, racks, troughs, mounds,
+    // waterholes, bushes and brambles, flower beds, garden rooms): `solids.ts`.
+    for (const s of townSolids(open)) out.push(solidCollider(s, ox, oz));
     return out;
+}
+
+const KIND: Record<SolidKind, Collider["kind"]> = {rock: "rock", mound: "mound", log: "log", stump: "log", post: "post", trunk: "trunk", pond: "pond", hay: "hay", trough: "building", shelter: "building", garden_room: "building", bush: "shrub", bramble: "shrub", bed: "shrub"};
+
+/** A town solid as a collider at the island's origin. */
+function solidCollider(s: TownSolid, ox: number, oz: number): Collider {
+    const base = {kind: KIND[s.kind], id: `town:${s.id}`, y0: s.base, y1: s.top, gap: s.gap};
+    if (s.shape === "circle") return {...base, shape: "circle", cx: s.x + ox, cz: s.z + oz, r: s.r, reach: s.r};
+    if (s.shape === "box") return {...base, shape: "box", cx: s.x + ox, cz: s.z + oz, cos: Math.cos(-s.rot), sin: Math.sin(-s.rot), hx0: -s.hw, hx1: s.hw, hz0: -s.hd, hz1: s.hd, reach: Math.hypot(s.hw, s.hd)};
+    return {...base, shape: "segment", ax: s.ax + ox, az: s.az + oz, bx: s.bx + ox, bz: s.bz + oz, r: s.r, cx: (s.ax + s.bx) / 2 + ox, cz: (s.az + s.bz) / 2 + oz, reach: Math.hypot(s.bx - s.ax, s.bz - s.az) / 2 + s.r};
 }
