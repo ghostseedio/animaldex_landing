@@ -100,6 +100,7 @@ import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightC
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {waterLevelAt} from "@/ark-scene/water-level";
+import {floatOver} from "@/ark-scene/water-float"; // p3 (zoofix)
 import {breathAt, depthSeed, fitInWater, floatPitch, heldOffWater, safeLoopRadius, schoolFile, schoolOffset, speciesDepth, swimBodyPitch, swimDepth, swimPitch, waterLoopRadius, waterMotion, waterPace, waterSpec, waterSurfaceAt, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 import {tripBreath} from "@/ark-scene/breath-trip";
 import {canMoment, momentBeats, momentPose, MOMENT_SECONDS, type ArkMomentKind, type MomentBeat, type MomentFrom} from "@/ark-scene/moments";
@@ -3127,9 +3128,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     // (Lane TB: a town member on its own island's ground: its drawn ground, its tank's water, its cage's tray.)
                     const townBase = island && island.contains(member.x, member.z) ? island.figureBase(member.id, member.x, member.z, member.ground, tall) : null;
                     if (townBase !== null) base = townBase;
+                    // p3 (zoofix): a floater on the town's water at its float line (`water-float.ts`), not on the surface or the bed.
+                    const afloat = townBase !== null ? floatOver(swimDepth(herd.slug, herd.sample.zone), heightAt(member.x, member.z), waterTopAt(member.x, member.z), tall)?.base ?? null : null;
+                    if (afloat !== null) base = afloat;
                     // (Grounding: on land, the far level's true base on the drawn ground.)
                     const onLand = !herdDepth && !member.water && groundingRules() === "grounded";
-                    herdPosition.set(member.x, townBase !== null ? townBase - groundedLevelBase(herd.slug, "far", model.minY) * s : onLand ? drawnGroundHeight(member.x, member.z) - groundedLevelBase(herd.slug, "far", model.minY) * s : base - model.minY * s, member.z);
+                    herdPosition.set(member.x, afloat !== null ? afloat - model.minY * s : townBase !== null ? townBase - groundedLevelBase(herd.slug, "far", model.minY) * s : onLand ? drawnGroundHeight(member.x, member.z) - groundedLevelBase(herd.slug, "far", model.minY) * s : base - model.minY * s, member.z);
                     herdMatrix.compose(herdPosition, herdRotation, herdScale.set(s, s, s));
                     herdMatrix.toArray(herd.figureMatrices, i * 16);
                     // The speck: a generic figure the member's size (a four-legged one, or an oval on a bird or a swimmer's body).
@@ -4018,17 +4022,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let base = place.ground;
         if (place.water && place.ground < -0.45) base = -(SWIMMING_PLANS.has(plan) ? 0.5 : 0.28) * modelHeight;
         else if (place.water) base = Math.max(place.ground, -0.3);
+        // p3 (zoofix): a floater on water (the town's canal, ponds and pools) rides at its float line, never on the surface.
+        const floatBand = (entry.swim ??= entry.place.micro ? null : swimDepth(entry.animal.model_slug, entry.animal.zone));
+        const floatAt = (x: number, z: number) => (place.water ? null : floatOver(floatBand, heightAt(x, z), waterTopAt(x, z), modelHeight));
+        const floating = floatAt(place.x, place.z);
+        if (floating) base = floating.base;
         const wander = entry.wander;
         if (wander && (wander.x || wander.z) && !place.water) {
             // Walked off its spot (its rig's walk): on the ground where it is now.
             const x = place.x + wander.x;
             const z = place.z + wander.z;
+            const afloat = floatAt(x, z);
+            if (afloat) return {x, z, base: afloat.base, yaw: wander.heading, pitch: floatPitch(floatBand?.kind), roll: 0, afloat: true, water: afloat.water};
             const ground = Math.max(heightAt(x, z), 0);
             // A small one stands on the slope (the sampler's normal); a big one stays upright, as it always has.
             const surface = entry.trueLength < 0.5 ? onGround(x, ground, z, wander.heading) : undefined;
             return {x, z, base: ground, yaw: wander.heading, pitch: 0.05 * entry.rest, roll: 0, afloat: false, ...(surface ? {surface} : {})};
         }
         // Asleep: a little lower at the front, as the head goes down.
+        if (floating && !wander?.x && !wander?.z) return {x: place.x, z: place.z, base, yaw: place.yaw, pitch: floatPitch(floatBand?.kind), roll: 0, afloat: true, water: floating.water};
         return {x: place.x, z: place.z, base, yaw: wander ? wander.heading : place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
     };
 

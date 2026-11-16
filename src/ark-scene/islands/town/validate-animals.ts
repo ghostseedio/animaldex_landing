@@ -23,7 +23,8 @@ import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {poseOnTrip, scheduleWorld, tripAt, withLazyRoost, type Trip} from "@/ark-scene/behaviour-schedule";
 import {onSchedule} from "@/ark-scene/map/place";
 import {inDepthBand, onBehaviourSchedule} from "@/ark-scene/schedule-water";
-import {speciesDepth} from "@/ark-scene/sea-depth";
+import {speciesDepth, swimDepth, fitInWater, waterSpec} from "@/ark-scene/sea-depth";
+import {floatOver} from "@/ark-scene/water-float";
 import {setIslandWater} from "@/ark-scene/water-level";
 import {islandHours} from "@/lib/ark-clock";
 import {levelBase, modelBase} from "@/ark-scene/grounding/base";
@@ -45,7 +46,7 @@ import {homeDisplayFloors, homeSiteFootprints, homeSites, perchHeight, tankBox, 
 import {buildScenery, buildZooScenery} from "@/ark-scene/islands/town/render/scenery";
 
 export type TownAnimalKind = "tank" | "display" | "zoo_house" | "ground" | "raised" | "water" | "air";
-export type TownAnimalProblem = "floats" | "sinks" | "in_wall" | "in_building" | "out_of_tank" | "out_of_display" | "out_of_house";
+export type TownAnimalProblem = "floats" | "sinks" | "on_water" | "in_wall" | "in_building" | "out_of_tank" | "out_of_display" | "out_of_house";
 
 export type TownAnimalSample = {id: string; slug: string; area: string | null; where: string; kind: TownAnimalKind; epoch: number; gap: number; problems: TownAnimalProblem[]; detail: string};
 
@@ -286,7 +287,15 @@ export function validateTownAnimals(animals: readonly ArkAnimal[], options: Town
         }
         // (On a raised place, a roof, a ledge, a balcony: there; its schedule below as anyone's.)
         const high = HIGH.has(info.where);
-        if (high) sample(a, info, "raised", 0, 0, []);
+        // p3 (zoofix): a floater (a duck, a goose, a swan, a coot) placed on the canal or a pond: drawn at its float line
+        // (`water-float.ts`, the scene's place pose), its feet under the surface, never stood on the water (`on_water`).
+        const band = swimDepth(a.model_slug, a.zone);
+        const placedSurface = townWaterSurface(place.x, place.z);
+        const placedFloat = !high && placedSurface !== null ? floatOver(band, townHeight(place.x, place.z), placedSurface, height) : null;
+        if (placedFloat) {
+            const out = placedFloat.base > placedSurface! - 0.02;
+            sample(a, info, "water", 0, placedSurface! - placedFloat.base, out ? ["on_water"] : [], out ? `placed: feet ${(placedFloat.base - placedSurface!).toFixed(2)} m over the surface` : "");
+        } else if (high) sample(a, info, "raised", 0, 0, []);
         else {
             // On the ground at its place (as the scene stands it when it rests there, or before its schedule is in).
             const on = drawnAt(place.ground);
@@ -348,7 +357,18 @@ export function validateTownAnimals(animals: readonly ArkAnimal[], options: Town
             if (wet || inDepthBand(depth, at, ground, surface ?? 0)) {
                 // In the canal or a pond: within its water, never under its bed.
                 const problems: TownAnimalProblem[] = at.y < ground - 0.05 ? ["sinks"] : [];
-                sample(a, info, "water", epoch, at.y - ground, problems, problems.length ? `under the bed by ${(ground - at.y).toFixed(2)} m` : "");
+                // p3 (zoofix): a floater's feet under the surface, drawn as the scene does (`index.ts` fromSchedule: in its
+                // band at its float line; else where its schedule has it).
+                let detail = problems.length ? `under the bed by ${(ground - at.y).toFixed(2)} m` : "";
+                const top = surface ?? 0;
+                if (band && band.sink !== undefined && wet) {
+                    const drawnBase = inDepthBand(band, at, ground, top) ? fitInWater(waterSpec(band, ground, 0, 0, 0, top), height).base : at.y;
+                    if (drawnBase > top - 0.02) {
+                        problems.push("on_water");
+                        detail ||= `${trip.doing}: feet ${(drawnBase - top).toFixed(2)} m over the surface`;
+                    }
+                }
+                sample(a, info, "water", epoch, at.y - ground, problems, detail);
                 continue;
             }
             const top = drawnAt(at.y)(at.x, at.z);
@@ -370,7 +390,7 @@ export function validateTownAnimals(animals: readonly ArkAnimal[], options: Town
         }
     }
     setIslandWater(null);
-    const counts = {floats: 0, sinks: 0, in_wall: 0, in_building: 0, out_of_tank: 0, out_of_display: 0, out_of_house: 0} as Record<TownAnimalProblem, number>;
+    const counts = {floats: 0, sinks: 0, on_water: 0, in_wall: 0, in_building: 0, out_of_tank: 0, out_of_display: 0, out_of_house: 0} as Record<TownAnimalProblem, number>;
     const per = new Map<string, Set<TownAnimalProblem>>();
     for (const s of samples) for (const p of s.problems) (per.get(s.id) ?? per.set(s.id, new Set()).get(s.id)!).add(p);
     per.forEach((set) => set.forEach((p) => counts[p]++));

@@ -93,7 +93,6 @@ test("every outdoor enclosure's floor: the ground a resident stands on is never 
                 const p = local(s, lx, lz);
                 // (Inside an item's footprint a resident does not stand: they are colliders, below.)
                 if (items.some((it) => Math.hypot(it.x - p.x, it.z - p.z) < it.r)) continue;
-        if (e.pool && inPoly(e.pool, p.x, p.z)) continue;
                 // (Nor in its own pool: a raised one, swum in.)
                 if (e.pool && inPoly(e.pool, p.x, p.z)) continue;
                 const cover = coverAt(tris, p.x, p.z);
