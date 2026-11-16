@@ -102,7 +102,8 @@ export type ReactiveInput = {
     headHeight?: number;
     /** Fixed to its spot (a barnacle, a sponge, a limpet: the behaviour profile's move "sessile"): never moved. */
     sessile?: boolean;
-    /** The one the viewer has selected or follows: the camera coming to it never wakes it. */
+    /** The one the viewer has selected or follows: the camera coming to it never wakes it, and it never watches, comes to
+     *  look at or backs off from the camera (it goes about its own day, owner 2026-11-16). */
     watched?: boolean;
     /**
      * Running down its prey (a server meal's chase, `acts.ts`): a threat to everything it could eat and a fright to
@@ -1263,7 +1264,9 @@ export class ReactiveLayer {
         // The moment it first notices the camera (or the camera starts coming at it): head up and a look at it for a
         // second or two (one that pays a still camera no attention just carries on), then it decides again.
         const noticed = (near && !agent.camNear) || (near && agent.camApproach && agent.camHab > 0.5);
-        if (noticed && !REACTING.has(agent.mode) && (agent.camApproach || !ignoresCamera(me))) {
+        // (The one the viewer has selected or follows pays the camera no attention: it goes about its own business, the
+        // thing the viewer came to watch. Owner, 2026-11-16: "it distracts the animal from going about its event".)
+        if (noticed && !me.watched && !REACTING.has(agent.mode) && (agent.camApproach || !ignoresCamera(me))) {
             agent.choice = "watch_camera";
             agent.choiceUntil = world.now + 1 + 1.5 * unit(me.id, "cam-glance", Math.floor(world.now));
             agent.lookAt = null;
@@ -1311,7 +1314,7 @@ export class ReactiveLayer {
             // at it gets everyone's attention.
             const ignores = ignoresCamera(me);
             const fresh = 1 - agent.camHab;
-            if (d < within && (!ignores || agent.camApproach) && fresh > 0.05) {
+            if (d < within && !me.watched && (!ignores || agent.camApproach) && fresh > 0.05) {
                 const interest = n.curiosity * (0.3 + p.curiosity) * (0.6 + person.curiosity) * person.glanceRate;
                 add("watch_camera", (0.2 + interest * 0.6) * fresh, 4);
                 // Only a curious species' bold ones come closer to look; the rest watch from where they are.

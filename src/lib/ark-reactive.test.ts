@@ -400,6 +400,19 @@ test("a curious, sharp animal comes to look at the camera; a dull one does not",
     assert.ok(!dullFrames.some((f) => f.out.get("dull")!.action === "investigate_camera"));
 });
 
+test("the animal the viewer has selected or follows pays the camera no attention (owner 2026-11-16)", () => {
+    // The same curious chimpanzees as above, every one watched: none watches, comes to look at or backs off from the camera.
+    const camActions = new Set(["watch_camera", "investigate_camera", "back_off_camera"]);
+    const ids = Array.from({length: 8}, (_, i) => `chimp${i}`);
+    const chimps = ids.map((id, i) => ({...animal(id, "chimpanzee", -8 + i * 2.2, -12, {shared: {doing: "rest", yaw: Math.PI}}), watched: true}));
+    const frames = run(new ReactiveLayer({tier: "high"}), chimps, 40, {world: () => ({camera: {x: 0, y: 1.6, z: -18}})});
+    for (const c of chimps) assert.ok(!frames.some((f) => camActions.has(f.out.get(c.id)!.action) || f.out.get(c.id)!.looking === "camera"), `${c.id} ignores the camera`);
+    // Unwatched, at least one of them does (the rule above still holds for everyone else).
+    const free = chimps.map((c) => ({...c, watched: false}));
+    const freeFrames = run(new ReactiveLayer({tier: "high"}), free, 40, {world: () => ({camera: {x: 0, y: 1.6, z: -18}})});
+    assert.ok(free.some((c) => freeFrames.some((f) => camActions.has(f.out.get(c.id)!.action))));
+});
+
 test("near a still camera grazers get used to it in a few seconds and graze; a camera walking at them gets their attention", () => {
     const camActions = new Set(["watch_camera", "investigate_camera", "back_off_camera"]);
     const herd = Array.from({length: 8}, (_, i) => animal(`cam-deer${i}`, i % 2 ? "red-deer" : "plains-zebra", (i % 4) * 3, Math.floor(i / 4) * 3, {shared: {doing: "graze", yaw: i}}));
