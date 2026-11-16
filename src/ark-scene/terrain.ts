@@ -40,6 +40,7 @@ import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-sce
 import {arkWorld, fbm, LAKE, noise, onArkWorld, RIVER, sampleGround, smoothstep, TERRAIN_HALF, TERRAIN_SEGMENTS} from "@/ark-scene/world";
 import {freshWaterGeometry, wildGroundArrays, WILD_LAKE_COLOUR, WILD_SNOW_LINE} from "@/ark-scene/islands/wild/render/ground";
 import {ARK_GROUND_TEXTURES, GROUND_MEANS} from "@/ark-scene/ground-textures";
+import {ARK_BUG_GROUND_GLSL} from "@/ark-scene/bug-ground-glsl";
 import {fieldsGlsl, HEADLAND} from "@/ark-scene/fields";
 import {noHamlet} from "@/ark-scene/no-hamlet";
 import {FRESH_LEVEL, freshFrom} from "@/ark-scene/water-level";
@@ -414,7 +415,7 @@ function groundMaterial(): MeshStandardMaterial {
     // attribute (`GroundArrays.freshBed`) carries each one's surface. v1's shader text is unchanged.
     const freshBed = arkWorld() === "v2";
     const FRESH = freshBed ? "vArkFreshLevel" : FRESH_LEVEL.toFixed(2);
-    material.customProgramCacheKey = () => (snowLine === 27 ? "ark-ground-3" : `ark-ground-3-snow${snowLine}`) + (freshBed ? "-bed" : "");
+    material.customProgramCacheKey = () => (snowLine === 27 ? "ark-ground-4" : `ark-ground-4-snow${snowLine}`) + (freshBed ? "-bed" : "");
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
@@ -474,6 +475,7 @@ uniform vec3 hedgeTone;
 uniform vec3 dryGrass;
 ${NOISE_GLSL}
 ${CLOUD_GLSL}
+${ARK_BUG_GROUND_GLSL}
 // The texture layers (ground-textures.ts), sampled twice at turned scales and blended by noise, so no tile repeats.
 vec3 arkGroundTex(float layer, vec2 p, float scale) {
     vec2 a = p * scale;
@@ -819,6 +821,16 @@ float arkWet = 0.0;`)
         ground *= mix(1.0, rockMacro, 1.0 - smoothstep(300.0, 700.0, dist));
         // A little of the textures' own colour, so grass looks like grass and not tinted paper.
         arkGroundDetailN = normalize(mix(vec3(0.0, 0.0, 1.0), nor, fade * 0.9));
+        // p2 (ground): at bug scale (a pixel a few mm of ground), the dominant layer's grain again, 7 times finer and
+        // turned, then crumbs, stones, sand grains and the grass's thatch (bug-ground-glsl.ts). Off on the low tier.
+        if (groundLite < 0.5 && arkPixel < 0.0065) {
+            float wBugSoil = clamp(wSoil + wMud * 0.6 + wFarm * arkFieldSoil, 0.0, 1.0);
+            float bugLayer = wSand > 0.5 ? 3.0 : wForest > 0.5 ? 1.0 : wBugSoil > 0.5 ? 2.0 : 0.0;
+            vec3 fine_ = texture(groundAlbedo, vec3(mat2(0.6, -0.8, 0.8, 0.6) * p * 2.4 + 0.37, bugLayer)).rgb / groundMeans[int(bugLayer)];
+            float bugNear = 1.0 - smoothstep(0.0025, 0.0065, arkPixel);
+            ground *= mix(1.0, dot(fine_, vec3(0.3333)), 0.35 * bugNear);
+            arkBugGround(p, arkPixel, wBugSoil * (1.0 - wSnow), wSand * (1.0 - wWet * 0.5), grassy * (1.0 - wFarm), wForest, max(scree, wRock * 0.5), ground, arkGroundDetailN);
+        }
     }
     // The swash (graphics pass): each wave runs up the beach as a thin wet film with a lace of foam at its edge, then
     // slides back, leaving the sand dark and shiny; bigger in wind. Only on sand by the sea.
