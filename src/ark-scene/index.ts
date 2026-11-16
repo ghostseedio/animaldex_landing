@@ -134,7 +134,7 @@ import {buildVegetation} from "@/ark-scene/vegetation";
 import {seaEpochSeconds} from "@/ark-scene/fish-schools";
 // 3.3 batch (E): the sea's own look from under the surface (the water by depth, marine snow).
 import {seaClockSeconds} from "@/ark-scene/fish-schools";
-import {underwaterLook, type UnderwaterLook} from "@/ark-scene/sea-look";
+import {openWaterClarity, underwaterLook, type UnderwaterLook} from "@/ark-scene/sea-look";
 import {SeaLookView} from "@/ark-scene/sea-look-render";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake} from "@/lib/ark-daylight";
@@ -209,6 +209,10 @@ import {canEat, intelProfile} from "@/ark-scene/intelligence-profile";
 import {heightAt as wildHeightAt, regionCentre, regionLabelAnchor, TERRAIN_HALF, VISITOR_LANDING, WORLD_RADIUS, ZONE_SITES} from "@/ark-scene/world";
 import {wildFrame, wildHomeView} from "@/ark-scene/islands/views";
 import {townWorldOrigin} from "@/ark-scene/islands";
+import {ARK_ISLANDS} from "@/ark-scene/islands"; // p2 (ocean)
+import {arkWorld} from "@/ark-scene/world"; // p2 (ocean)
+import {OCEAN_COLUMN, OCEAN_VIEW_MARGIN, oceanFix, roamsOpenOcean} from "@/ark-scene/open-ocean"; // p2 (ocean)
+import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (ocean)
 import {TOWN_GRID, TOWN_NEAR_LIVE} from "@/ark-scene/islands/town/chunks";
 import type {CatWalls as CatWallsT} from "@/ark-scene/islands/town/cat-walls"; // gfx (fauna)
 import {arkGrassBuild, createArkRuntime, type ArkRuntime} from "@/ark-scene/runtime";
@@ -426,6 +430,8 @@ type Entry = {
      * kind's float line; any other swimmer's, a coot's, an otter's, a crocodile's), worked out once; null if it does not swim.
      */
     swim?: SpeciesDepth | null;
+    /** p2 (ocean): a wild animal of the open ocean, cruising its loop between and around the islands (`open-ocean.ts`); worked out once. */
+    ocean?: boolean;
     seed: number;
     /** Underground and in its tunnel or chamber now (drawn only in the cutaway). */
     buried?: boolean;
@@ -3860,6 +3866,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {x, z, base, yaw, pitch, roll: 0, afloat: true, water: spec, school: follower ? {x: lx, z: lz} : undefined, ...(surface ? {surface} : {})};
     };
 
+    // p2 (ocean): the open ocean's wild animals (`open-ocean.ts`): who goes out from the record (islands mode, the v2
+    // world), where on its loop from the shared clock; its depth, breath and pitch the sea's own, as `waterPose`'s.
+    const oceanRoams = (entry: Entry) => (entry.ocean ??= Boolean(options.wildAnimals) && arkWorld() === "v2" && !entry.visitor && !townIds.has(entry.animal.id) && roamsOpenOcean(entry.animal, entry.depth, entry.trueLength));
+    const oceanPose = (entry: Entry, depth: SpeciesDepth, modelHeight: number): Pose => {
+        const clock = reducedMotion ? 0 : clockNow();
+        const fix = oceanFix(entry.animal, entry.length, clock);
+        const breath = entry.state.breathing && !reducedMotion ? breathAt(entry.seed, clock, entry.state.asleep) : 0;
+        // (Its band in a working column of OCEAN_COLUMN m: 2–6 m under for an upper-water swimmer, not 13–35 m.)
+        const floorY = Math.max(heightAt(fix.x, fix.z), -OCEAN_COLUMN);
+        const spec = waterSpec(depth, floorY, entry.seed, clock, breath);
+        const pitch = reducedMotion ? 0 : swimPitch(depth, -floorY, entry.seed, clock, fix.speed);
+        const fitted = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
+        const base = spec.breath ? fitted : l2SurfaceGuard(l2Of(entry), fitted, modelHeight, entry.length, pitch, ARK_ENVIRONMENT.seaLevel.value);
+        return {x: fix.x, z: fix.z, base, yaw: fix.yaw, pitch, roll: 0, afloat: true, water: spec};
+    };
+
     const pose = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
         // An act's pose, from a replayed event.
         if (entry.act) {
@@ -3876,6 +3898,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Lane TB: a town tank's resident (the aquarium's, a home's tank, a garden pond) swims in its tank's own water.
         const tank = island && !entry.visitor ? island.tankPose(entry.animal.id, entry.length, modelHeight, reducedMotion ? 0 : clockNow()) : null;
         if (tank) return {x: tank.x, z: tank.z, base: tank.base, yaw: tank.yaw, pitch: tank.pitch, roll: 0, afloat: true, water: tank.spec};
+        if (entry.depth && oceanRoams(entry)) return oceanPose(entry, entry.depth, modelHeight); // p2 (ocean)
         if (place.hamlet && !entry.visitor) {
             // A hamlet resident: on its spot when out, walking out of its door or back in, else at its door (drawn only when it is yours).
             // Out of doors, the collisions have the last word (out of the props, eased off the others: `collide/`).
@@ -5540,12 +5563,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** Kept over either island or the strait between (a capsule from the wild island to the town): the move back in, or null. */
     const keepInCapsule = (x: number, z: number): {dx: number; dz: number} | null => {
-        const o = island!.origin;
+        // p2 (ocean): in islands mode from the start (the town's origin before it is in), out over the open ocean's loops too.
+        const o = island?.origin ?? townWorldOrigin();
         const l2 = o.x * o.x + o.z * o.z || 1;
         const t = Math.min(Math.max((x * o.x + z * o.z) / l2, 0), 1);
         const cx = o.x * t;
         const cz = o.z * t;
-        const radius = WORLD_RADIUS + (island!.worldRadius - WORLD_RADIUS) * t;
+        const radius = WORLD_RADIUS + ((island?.worldRadius ?? ARK_ISLANDS.town.half * 0.92) - WORLD_RADIUS) * t + (arkWorld() === "v2" ? OCEAN_VIEW_MARGIN : 0); // p2 (ocean)
         const d = Math.hypot(x - cx, z - cz);
         if (d <= radius) return null;
         const pull = 1 - radius / d;
@@ -5585,7 +5609,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const target = controls.target;
         const reach = Math.hypot(target.x, target.z);
         // (Part C: with two islands the view may be anywhere over either and the strait between: a capsule.)
-        const capsule = island ? keepInCapsule(target.x, target.z) : null;
+        const capsule = island || options.wildAnimals ? keepInCapsule(target.x, target.z) : null; // p2 (ocean)
         if (capsule) {
             target.x += capsule.dx;
             target.z += capsule.dz;
@@ -5651,6 +5675,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const underLook: UnderwaterLook = {r: 0, g: 0, b: 0, density: 0.058};
     let seaLook: SeaLookView | null = null;
     let seaLookNow = 0;
+    /** p2 (ocean): the open sea's boats, once the town is in (`attachIsland`). */
+    let oceanTraffic: OceanTrafficView | null = null;
     const stepLayers = (elapsed: number) => {
         const under = camera.position.y < -0.02 && heightAt(camera.position.x, camera.position.z) < -0.3;
         if (under !== underwater) {
@@ -5662,11 +5688,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // 3.3 batch (E): nor the land's trees (they stand above the sea: seen from under it they are not seen, but the
             // ambient-occlusion pass still read their depth through the surface and drew dark shards on its underside).
             if (assetTrees) assetTrees.group.visible = !under;
+            // p2 (ocean): nor the town's trees, seen across the open ocean from under it (the same dark shards on the surface's underside).
+            const townTrees = island?.root.getObjectByName("town:trees");
+            if (townTrees) townTrees.visible = !under;
             ARK_CAUSTICS.value = under ? 0.9 : 0.3;
         }
         if (under) {
             // 3.3 batch (E): bright and clear in the shallows, a dim thick blue far down (sea-look.ts), not one colour everywhere.
-            underwaterLook(-camera.position.y, lighting.daylight.daylight, underLook);
+            underwaterLook(-camera.position.y, lighting.daylight.daylight, underLook, openWaterClarity(-heightAt(camera.position.x, camera.position.z))); // p2 (ocean): blue water clearer
             underFog.color.setRGB(underLook.r, underLook.g, underLook.b, "srgb");
             underFog.density = underLook.density;
             scene.background = underFog.color;
@@ -6247,7 +6276,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const under = () => middleNow(entry).setY(Math.min(middleNow(entry).y, -0.8));
                 // A small one (a crab on the seabed) close, at about six of its lengths; the rest a few metres off.
                 // (A whale far enough back to be seen whole: true scale.)
-                const away = entry.trueLength < 0.3 ? Math.min(Math.max(entry.trueLength * 6, 0.15), 3) : Math.max(Math.min(3 + entry.length * 2.2, 14), fitWhole(entry.length, width / Math.max(height, 1), FOV));
+                const whole = Math.max(Math.min(3 + entry.length * 2.2, 14), fitWhole(entry.length, width / Math.max(height, 1), FOV));
+                // p2 (ocean): out in the open ocean, 24 m at most (side on, a whale still fills the frame; further, the water hides it).
+                const away = entry.trueLength < 0.3 ? Math.min(Math.max(entry.trueLength * 6, 0.15), 3) : entry.ocean ? Math.min(whole, 24) : whole;
                 if (entry.trueLength < 0.3) controls.minDistance = MICRO_MIN_DISTANCE;
                 fly(under(), away, distance > 30 ? 2 : 1.4, entry.trueLength < 0.3 ? 1.1 : 1.5, (entry.yawNow ?? entry.place.yaw) + Math.PI / 2);
                 if (flight) flight.aim = () => (selectedId === entry.animal.id ? under() : null);
@@ -8285,6 +8316,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         streamCull.step(now);
         perf.lap("stream");
         stepLayers(elapsed);
+        oceanTraffic?.step(reducedMotion ? 0 : clockNow(), true); // p2 (ocean)
         foldTrees(elapsed);
         micro?.step(camera.position);
         for (const sceneModule of modules) sceneModule.step(elapsed, camera, controls.target);
@@ -8840,6 +8872,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const reveal = () => (townRevealing = true);
             void warm.then(reveal, reveal);
             registerIslandStream(isl);
+            // p2 (ocean): the open sea's boats between the islands (`ocean-traffic-render.ts`), loaded with the town.
+            if (arkWorld() === "v2") {
+                void import("@/ark-scene/ocean-traffic-render").then(({OceanTrafficView}) => {
+                    if (disposed || island !== isl || oceanTraffic) return;
+                    oceanTraffic = new OceanTrafficView();
+                    scene.add(oceanTraffic.group);
+                });
+            }
             maxDistance = wildFrame().reachIslands;
             controls.maxDistance = maxDistance;
             reactiveQueries = null;
@@ -9012,6 +9052,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             motes.dispose();
             // 3.3 batch (E)
             seaLook?.dispose();
+            oceanTraffic?.dispose(); // p2 (ocean)
             lighting.dispose();
             post.dispose();
             renderer.dispose();

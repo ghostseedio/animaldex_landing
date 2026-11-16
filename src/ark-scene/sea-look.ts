@@ -43,9 +43,10 @@ export function deepness(depth: number): number {
 
 /**
  * The water's colour and haze round a camera `depth` metres under the surface at this daylight (0 night … 1 day).
- * Written into `out` (no allocation: the scene asks every frame).
+ * Written into `out` (no allocation: the scene asks every frame). `clarity` scales the haze (`openWaterClarity`: the
+ * open ocean's blue water is clearer than the island's shelf; 1 there, as before).
  */
-export function underwaterLook(depth: number, daylight: number, out: UnderwaterLook): UnderwaterLook {
+export function underwaterLook(depth: number, daylight: number, out: UnderwaterLook, clarity = 1): UnderwaterLook {
     const k = deepness(depth);
     const day = clamp01(daylight);
     // (Past the shelf the light itself runs out: the bigger island's sea falls away to a hundred metres.)
@@ -58,8 +59,20 @@ export function underwaterLook(depth: number, daylight: number, out: UnderwaterL
     out.r = channel(0);
     out.g = channel(1);
     out.b = channel(2);
-    out.density = HAZE_SHALLOW + (HAZE_DEEP - HAZE_SHALLOW) * k;
+    out.density = (HAZE_SHALLOW + (HAZE_DEEP - HAZE_SHALLOW) * k) * clarity;
     return out;
+}
+
+/**
+ * The open ocean's clarity (graphics pass 2, lane OCEAN): over a floor `floorDepth` m down. The island's shelf keeps its
+ * haze (1, the look above); past it, where the floor falls away beyond 30 m, the blue water clears to OPEN_CLARITY of
+ * that haze by 60 m: half the view gone by about 35 m instead of 15, so a whale cruising there is seen, as divers see
+ * them in blue water. Only the haze: the colour still darkens with the camera's own depth.
+ */
+export const OPEN_CLARITY = 0.42;
+export function openWaterClarity(floorDepth: number): number {
+    const t = clamp01((floorDepth - 30) / 30);
+    return 1 - (1 - OPEN_CLARITY) * t * t * (3 - 2 * t);
 }
 
 // MARK: - Marine snow
