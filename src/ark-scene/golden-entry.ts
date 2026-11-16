@@ -34,6 +34,7 @@ import {propsFixture, propsShot, type PropsShot} from "@/ark-scene/props/golden-
 import type {createPropsModule} from "@/ark-scene/props";
 import {goldenCropField, goldenObstacles} from "@/ark-scene/golden-world";
 import {seaVents} from "@/ark-scene/sea-bubbles";
+import {seaCaves} from "@/ark-scene/sea-caves";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -478,8 +479,8 @@ async function mountGolden(el: HTMLElement) {
         handle,
         places: GOLDEN_PLACES,
         times: GOLDEN_TIMES,
-        /** 3.3 batch (E): the sea's places for `scripts/ark-sea-shots.mjs` (the vents; the caves when they are in). */
-        sea: () => ({vents: seaVents(), reef: ZONE_SITES.coral_reef, ocean: ZONE_SITES.open_ocean, groundAt: (x: number, z: number) => heightAt(x, z)}),
+        /** 3.3 batch (E): the sea's places for `scripts/ark-sea-shots.mjs` (the vents, the caves). */
+        sea: () => ({vents: seaVents(), caves: seaCaves(), reef: ZONE_SITES.coral_reef, ocean: ZONE_SITES.open_ocean, groundAt: (x: number, z: number) => heightAt(x, z)}),
         /**
          * The attach points' build as the scene's mount pays for it (the decor already built): the synchronous build's
          * one long task, and (where the sampler offers it) the sliced build's longest slice. Each from a fresh start.

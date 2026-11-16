@@ -13,7 +13,7 @@
  *   it comes up to it; anything swimming fast leaves a thin trail (`SwimmerBubbles`). Visual only.
  */
 
-import {arkWorld, hashString, onArkWorld, sampleGround} from "@/ark-scene/world";
+import {TERRAIN_HALF, arkWorld, hashString, onArkWorld, sampleGround} from "@/ark-scene/world";
 import {seaBedAt} from "@/ark-scene/reef";
 
 // MARK: - Vents (shared)
@@ -47,8 +47,10 @@ export function seaVents(): SeaVent[] {
     const known = vents.get(world);
     if (known) return known;
     const found: SeaVent[] = [];
-    for (let k = 40; k < 5200 && found.length < VENT_LIMIT; k++) {
+    // (The spiral runs out to the drawn ground's edge, whichever world is in use: the bigger island's sea is further out.)
+    for (let k = 40; found.length < VENT_LIMIT; k++) {
         const radius = 2.6 * Math.sqrt(k);
+        if (radius > TERRAIN_HALF * 1.05) break;
         const x = Math.cos(k * GOLDEN_ANGLE) * radius;
         const z = Math.sin(k * GOLDEN_ANGLE) * radius;
         // (The cheap test first: most of the spiral is land.)
