@@ -244,7 +244,18 @@ export function rigOverKeep(caps: RigCaps, loaded: RigCaps, keep: number, room: 
     return loaded.species > Math.max(Math.min(keep, caps.species - room), 0) || loaded.bytes > Math.max(caps.bytes - room * RIG_FILE_BYTES, 0);
 }
 
-type RigExtras = {bufferView: number; bones: string[]; rows: number; rig?: unknown};
+/** `layout` "bone_major": the bone data per bone, then per row (24 bytes each), so a meshopt-compressed view packs a
+ * bone's frames side by side (rig-pilot/gaits: about half the bytes); absent, per row then per bone, as the texture reads it. */
+type RigExtras = {bufferView: number; bones: string[]; rows: number; rig?: unknown; layout?: string};
+
+/** Bone-major bone data (per bone, per row, 12 halves) to the texture's row-major order (per row, per bone). */
+export function boneMajorToRows(data: Uint16Array, boneCount: number, rows: number): Uint16Array {
+    const out = new Uint16Array(data.length);
+    for (let b = 0; b < boneCount; b++) {
+        for (let r = 0; r < rows; r++) out.set(data.subarray((b * rows + r) * 12, (b * rows + r + 1) * 12), (r * boneCount + b) * 12);
+    }
+    return out;
+}
 
 /**
  * Float16 (IEEE half) to float, for reading a bone matrix on the CPU (the
@@ -540,7 +551,7 @@ export class RigLibrary {
         const material = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         material.forEach((m) => m.dispose());
         mesh.geometry.dispose();
-        const data = new Uint16Array(view.slice(0));
+        const data = extras.layout === "bone_major" ? boneMajorToRows(new Uint16Array(view.slice(0)), boneCount, rows) : new Uint16Array(view.slice(0));
         const texture = new DataTexture(data, boneCount * 3, rows, RGBAFormat, HalfFloatType);
         texture.minFilter = NearestFilter;
         texture.magFilter = NearestFilter;
@@ -747,6 +758,8 @@ export type RigState = {
     flying: boolean;
     /** Its path's climb angle (radians, + up) and turn rate (radians a second, + left), eased; its last heading. */
     climb: number;
+    /** How fast it goes down (scene units a second, + down; eased): head first down a trunk plays climb_down. */
+    sink?: number;
     turn: number;
     yaw: number | null;
     /** When (the scene's clock, seconds) its last landing ended: no take-off on the tail of the same flight. */
@@ -1127,12 +1140,12 @@ export function recipeClip(state: string | null | undefined, has: (name: string)
 }
 
 /** A rig's base pose (contract 8.3): standing (the rest pose), lying, on its side, or a sitting rig leaning forward. */
-export type RigBase = "stand" | "lying" | "side" | "leaning";
+export type RigBase = "stand" | "lying" | "side" | "leaning" | "sitting";
 
 /** The base pose a clip is held in: its `base`, else standing. */
 export function clipBase(clip: {base?: string} | null | undefined): RigBase {
     const base = clip?.base;
-    return base === "lying" || base === "side" || base === "leaning" ? base : "stand";
+    return base === "lying" || base === "side" || base === "leaning" || base === "sitting" ? base : "stand";
 }
 
 /**
@@ -1146,7 +1159,10 @@ export function baseStep(from: RigBase, to: RigBase, has: (name: string) => bool
     const step = (clip: string, ends: RigBase) => (has(clip) ? {clip, ends} : null);
     switch (from) {
         case "stand":
-            return to === "leaning" ? step("drop", "leaning") : step("lie_down", "lying");
+            return to === "leaning" ? step("drop", "leaning") : to === "sitting" ? step("sit_down", "sitting") : step("lie_down", "lying");
+        case "sitting":
+            // (A pilot rig's sit: back up to standing first, whatever comes next.)
+            return step("sit_up", "stand");
         case "lying":
             if (to === "side") return step("side_down", "side");
             return (urgent ? step("get_up_fast", "stand") : null) ?? step("get_up", "stand");
@@ -1199,8 +1215,10 @@ export function beatClip(beat: string | null | undefined, doing: string | null |
             // Head up to leaves while it browses, down to the ground otherwise: never the one for the other.
             if (doing === "browse") return has("browse") ? "browse" : null;
             return has("graze") ? "graze" : null;
-        case "peck":
         case "drink":
+            // A rig's own drink (lapping, the muzzle at the water), else its graze.
+            return has("drink") ? "drink" : has("graze") ? "graze" : null;
+        case "peck":
             return has("graze") ? "graze" : null;
         case "scan":
             return has("scan") ? "scan" : null;

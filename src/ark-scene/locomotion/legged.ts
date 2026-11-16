@@ -47,7 +47,7 @@ export const restsOnClip = (slug: string): boolean => {
 export const LEVEL_ACTS: ReadonlySet<string> = new Set(["walk", "run", "stalk", "charge", "crawl", "carry", "push", "wade"]);
 
 /** Clips during which the legged driver walks the animal itself (its own gaits) or stands it (its own idle). */
-export const GAIT_CLIPS: ReadonlySet<string> = new Set(["walk", "run", "hop", "idle"]);
+export const GAIT_CLIPS: ReadonlySet<string> = new Set(["walk", "trot", "run", "hop", "idle"]);
 
 type Foot = {
     planted: boolean;
