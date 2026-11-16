@@ -23,12 +23,22 @@ import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townPlan, type Building, type Parcel, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {townHouseholds, type Household, type ZooEnclosure} from "@/ark-scene/islands/town/areas";
 import {APRON, homeDoors} from "@/ark-scene/islands/town/doors";
+import {aquariumHall, caveVisit, fitsSwim, hallLoop, hallTankOf, inAquariumHall, type LoopAt} from "@/ark-scene/islands/town/aquarium-hall";
+import {modelBase} from "@/ark-scene/grounding/base";
+import {bodyAxisExtent} from "@/ark-scene/stats";
 import {fitInWater,speciesDepth, swimRange, bandCycle, breathAt, waterMotion, type DepthBand, type SpeciesDepth, type WaterSpec} from "@/ark-scene/sea-depth";
 
 // MARK: - Tanks
 
 export type TankKind = "salt" | "fresh";
-export type TankForm = "ocean" | "river" | "reef" | "fresh" | "jelly" | "home" | "pond";
+export type TankForm = "ocean" | "river" | "reef" | "fresh" | "jelly" | "home" | "pond" | "reef_wall" | "tunnel";
+
+/**
+ * p2 (aqua): a cave in a hall tank's rockwork (`aquarium-hall.ts`): where a hiding resident rests (`x`, `z`, its floor
+ * `y`; tank-local `lx`, `lz`), the hollow's half width `r`, its distance to the nearest glass `room`, and the way its
+ * mouth opens into the tank (`mouth`, a heading: models face +z).
+ */
+export type TankCave = {x: number; z: number; y: number; r: number; room: number; mouth: number; lx: number; lz: number};
 
 /** A body of water a kept animal swims in: its inner box (the water's), turned `rot` like a town box. */
 export type Tank = {
@@ -44,6 +54,10 @@ export type Tank = {
     /** The sand's or gravel's top (m), and the water's surface. */
     floor: number;
     top: number;
+    /** p2 (aqua), the hall's tanks: the room swimmers keep to (tank-local, the glass less the rockwork), its caves, a round tank's radius. */
+    swim?: {x0: number; x1: number; z0: number; z1: number};
+    caves?: TankCave[];
+    round?: number;
 };
 
 export function tankBox(t: Tank): Box {
@@ -63,6 +77,8 @@ export const ZOO_HOUSE_PORCH = 1.2;
 export const ZOO_HOUSE_WALL = 0.3;
 
 export function zooHouseFrame(e: Pick<ZooEnclosure, "slot" | "type">): ZooHouseFrame {
+    // p2 (aqua): the two aquarium plots are one hall (`aquarium-hall.ts`).
+    if (inAquariumHall(e)) return aquariumHall()!.frame;
     const s = e.slot.at;
     const box: Box = {x: s.x, z: s.z, w: s.w - 0.4, d: s.d - 0.4, rot: s.rot};
     let high = townHeight(s.x, s.z);
@@ -76,6 +92,7 @@ export function zooHouseFrame(e: Pick<ZooEnclosure, "slot" | "type">): ZooHouseF
 
 /** The aquarium's tanks for one open aquarium enclosure (local frame of the town). */
 export function aquariumTanks(e: Pick<ZooEnclosure, "slot" | "type" | "id">): Tank[] {
+    if (inAquariumHall(e)) return aquariumHall()!.tanks.map((t) => t.tank);
     const f = zooHouseFrame(e);
     const b = f.inner;
     const w = b.w;
@@ -123,6 +140,15 @@ export function aquariumTankOf(animal: {id: string; model_slug: string; zone: st
     if (!tanks.length) return null;
     const slug = animal.model_slug;
     const kind = waterOf(slug, animal.zone);
+    if (tanks[0].swim) {
+        // p2 (aqua): the hall's tanks, by water and size; one too big for its tank goes to the biggest it fits (the ocean).
+        const found = modelBase(slug);
+        const width = found ? (found.size.x / Math.max(found.size.z, 0.05)) * length : length * 0.4;
+        const want = hallTankOf(slug, kind, length, found?.plan ?? null, tanks);
+        if (want && fitsSwim(want, length, width)) return want;
+        const roomy = tanks.filter((t) => fitsSwim(t, length, width) && t.form !== "jelly").sort((a, b) => b.w * b.d - a.w * a.d);
+        return roomy.find((t) => t.kind === kind) ?? roomy[0] ?? tanks.find((t) => t.form === "ocean") ?? want;
+    }
     const fits = (t: Tank) => length + 0.3 < Math.min(t.w, t.d) * 1.6 && length * 0.4 < t.top - t.floor;
     let list: Tank[];
     if (JELLY.test(slug)) list = tanks.filter((t) => t.form === "jelly");
@@ -185,6 +211,12 @@ export function tankPose(tank: Tank, animal: {id: string; model_slug: string; zo
     let motion: TankMotion = waterMotion(depth);
     // (A fish of the floor, a sturgeon or a sawfish, swims along the sand rather than walking it.)
     if (motion === "walk" && FISHLIKE.has(plan ?? "")) motion = "swim";
+    if (tank.swim) {
+        // p2 (aqua): a hall tank: its racetrack loop and cave visits; anyone else keeps to its swim room (off the rockwork).
+        const hall = hallPose(tank, animal, length, height, plan, depth, motion, clock);
+        if (hall) return hall;
+        tank = swimRoomOf(tank);
+    }
     const seed = unit(id, "seed");
     const c = Math.cos(tank.rot);
     const s = Math.sin(tank.rot);
@@ -243,6 +275,169 @@ export function tankPose(tank: Tank, animal: {id: string; model_slug: string; zo
     const fitted = fitInWater(spec, height);
     // (A gentle pitch only while it changes depth; level otherwise.)
     return {x: p.x, z: p.z, yaw, pitch: 0, base: fitted.base, spec, motion};
+}
+
+// MARK: - p2 (aqua): swimming in the hall's tanks
+
+/** A body's drawn length along its heading and its width across (m), as the validator boxes it (`validate-animals.ts`). */
+const bodies = new Map<string, {length: number; width: number}>();
+export function tankBody(slug: string, plan: string | null, display: number): {length: number; width: number} {
+    const key = `${slug}|${plan ?? ""}|${display}`;
+    let body = bodies.get(key);
+    if (!body) {
+        if (bodies.size > 5000) bodies.clear();
+        bodies.set(key, (body = measureBody(slug, plan, display)));
+    }
+    return body;
+}
+
+function measureBody(slug: string, plan: string | null, display: number): {length: number; width: number} {
+    const found = modelBase(slug);
+    if (!found) return {length: display, width: display * 0.4};
+    const scale = display / Math.max(bodyAxisExtent(slug, plan ?? found.plan, found.size), 0.05);
+    return {length: found.size.z * scale, width: found.size.x * scale};
+}
+
+const rooms = new Map<string, Tank>();
+/** A hall tank as its swim room alone (for the old loops: walkers on the sand, floaters), never in the rockwork. */
+function swimRoomOf(tank: Tank): Tank {
+    let room = rooms.get(tank.id);
+    if (!room) {
+        const r = tank.swim!;
+        const lx = (r.x0 + r.x1) / 2;
+        const lz = (r.z0 + r.z1) / 2;
+        const c = Math.cos(tank.rot);
+        const s = Math.sin(tank.rot);
+        rooms.set(tank.id, (room = {...tank, x: tank.x + lx * c - lz * s, z: tank.z + lx * s + lz * c, w: r.x1 - r.x0, d: r.z1 - r.z0, swim: undefined, caves: undefined}));
+    }
+    return room;
+}
+
+const HIDERS = new Set(["fish", "eel", "cephalopod", "flatfish"]);
+const loopA: LoopAt = {lx: 0, lz: 0, tx: 0, tz: 1};
+const loopB: LoopAt = {lx: 0, lz: 0, tx: 0, tz: 1};
+
+const caveMemo = new Map<string, TankCave | null>();
+/** Its cave in a hall tank (rendezvous among the caves its body fits, whichever way it turns), or none. (Remembered: asked every frame.) */
+function caveOf(tank: Tank, id: string, length: number, width: number, height: number): TankCave | null {
+    const key = `${tank.id}|${id}|${length}`;
+    const known = caveMemo.get(key);
+    if (known !== undefined) return known;
+    if (caveMemo.size > 20000) caveMemo.clear();
+    const found = pickCave(tank, id, length, width, height);
+    caveMemo.set(key, found);
+    return found;
+}
+
+function pickCave(tank: Tank, id: string, length: number, width: number, height: number): TankCave | null {
+    let best: TankCave | null = null;
+    let score = -1;
+    for (const cave of tank.caves ?? []) {
+        if (length > cave.r * 2.6 || height > cave.r * 1.5 || Math.hypot(length / 2, width / 2) + 0.04 > cave.room) continue;
+        const h = hashText(`${id}|cave|${cave.lx.toFixed(2)}|${cave.lz.toFixed(2)}`);
+        if (h > score) {
+            score = h;
+            best = cave;
+        }
+    }
+    return best;
+}
+
+const smooth = (t: number) => t * t * (3 - 2 * t);
+const turnTo = (a: number, b: number, t: number) => a + Math.atan2(Math.sin(b - a), Math.cos(b - a)) * t;
+
+/**
+ * A hall tank resident's pose (null: the old loops in its swim room). A swimmer runs its racetrack (`hallLoop`) at its
+ * band's depth; one that fits a cave leaves it for its cave for two fifths of each few minutes, swims in head first,
+ * turns to face out, and swims back to where its loop has got to. A hole-dweller stays in its cave's mouth.
+ */
+function hallPose(tank: Tank, animal: {id: string; model_slug: string; zone: string}, display: number, height: number, plan: string | null, depth: SpeciesDepth, motion: TankMotion, clock: number): TankPose | null {
+    const id = animal.id;
+    const {length, width} = tankBody(animal.model_slug, plan, display);
+    const c = Math.cos(tank.rot);
+    const s = Math.sin(tank.rot);
+    const seed = unit(id, "seed");
+    const water = Math.max(tank.top - tank.floor, 0.05);
+    const breath = depth.breathes ? breathAt(seed, clock) : 0;
+    const world = (lx: number, lz: number) => ({x: tank.x + lx * c - lz * s, z: tank.z + lx * s + lz * c});
+    const yawOf = (tx: number, tz: number) => Math.atan2(tx * c - tz * s, tx * s + tz * c);
+    const cave = HIDERS.has(plan ?? "") && (motion === "swim" || motion === "hole") ? caveOf(tank, id, length, width, height) : null;
+    const caveBase = cave ? Math.max(cave.y, tank.floor) + 0.03 : 0;
+    // The cave's inside and its mouth (tank-local), and the heading out of it.
+    let mx = 0;
+    let mz = 0;
+    let outYaw = 0;
+    if (cave) {
+        const dx = Math.sin(cave.mouth);
+        const dz = Math.cos(cave.mouth);
+        const ox = dx * c + dz * s;
+        const oz = -dx * s + dz * c;
+        const out = cave.r * 1.2 + length * 0.5;
+        mx = cave.lx + ox * out;
+        mz = cave.lz + oz * out;
+        outYaw = cave.mouth;
+    }
+    if (motion === "hole") {
+        if (!cave) return null;
+        // In its cave's mouth, its head out, turning slowly.
+        const p = world(cave.lx + (mx - cave.lx) * 0.15, cave.lz + (mz - cave.lz) * 0.15);
+        const spec: WaterSpec = {motion: "hole", floorY: caveBase, depth: 0, aboveFloor: false, breath, surface: tank.top};
+        return {x: p.x, z: p.z, yaw: outYaw + Math.sin(clock * 0.2 + seed * 9) * 0.35, pitch: 0, base: caveBase, spec, motion: "hole"};
+    }
+    if (motion !== "swim") return null;
+    const pace = Math.min(Math.max(0.08 + 0.28 * length, 0.05), 0.55) * (0.7 + 0.6 * unit(id, "pace"));
+    const u = {size: unit(id, "loop"), stretch: unit(id, "stretch"), ox: unit(id, "ox"), oz: unit(id, "oz"), dir: unit(id, "dir"), start: seed};
+    const range = depth.band === "seabed" || depth.band === "pond_bed" ? {from: 0.04, to: Math.min(0.25, water * 0.25), aboveFloor: true} : swimRange(depth.band, water);
+    const swimSpec = (at: number): WaterSpec => ({motion: "swim", floorY: tank.floor, depth: range.from + (range.to - range.from) * bandCycle(seed, at), aboveFloor: Boolean(range.aboveFloor), breath: at === clock ? breath : 0, surface: tank.top});
+    const room = tank.swim!;
+    if (!hallLoop(room, length, width, u, pace, clock, loopA)) return null;
+    const visit = cave ? caveVisit(cave, {period: unit(id, "cave-period"), share: unit(id, "cave-share"), offset: unit(id, "cave-offset")}, clock) : null;
+    if (!visit || !cave) {
+        const p = world(loopA.lx, loopA.lz);
+        const spec = swimSpec(clock);
+        return {x: p.x, z: p.z, yaw: yawOf(loopA.tx, loopA.tz), pitch: 0, base: fitInWater(spec, height).base, spec, motion: "swim"};
+    }
+    // On a cave visit: from (or back to) its loop where it left (rejoins) it, by the cave's mouth, into the hollow.
+    const edge = visit.phase === "out" ? visit.back : visit.left;
+    hallLoop(room, length, width, u, pace, edge, loopB);
+    const edgeSpec = swimSpec(edge);
+    const edgeBase = fitInWater(edgeSpec, height).base;
+    const loopYaw = yawOf(loopB.tx, loopB.tz);
+    const inYaw = Math.atan2(cave.lx - mx, cave.lz - mz);
+    const inWorld = yawOf(Math.sin(inYaw), Math.cos(inYaw));
+    let lx: number;
+    let lz: number;
+    let base: number;
+    let yaw: number;
+    if (visit.phase === "rest") {
+        // In the hollow: turned round to face out over its first moments, then still but for a slow sway.
+        lx = cave.lx;
+        lz = cave.lz;
+        base = caveBase;
+        yaw = turnTo(inWorld, outYaw, smooth(Math.min(visit.t * 6, 1))) + Math.sin(clock * 0.3 + seed * 7) * 0.12;
+    } else {
+        // `k`: 0 on the loop, 1 in the hollow (in: rising; out: falling), the mouth at 0.7.
+        const k = visit.phase === "in" ? visit.t : 1 - visit.t;
+        if (k < 0.7) {
+            const e = smooth(k / 0.7);
+            lx = loopB.lx + (mx - loopB.lx) * e;
+            lz = loopB.lz + (mz - loopB.lz) * e;
+            base = edgeBase + (caveBase - edgeBase) * e;
+            const travel = visit.phase === "in" ? Math.atan2(mx - loopB.lx, mz - loopB.lz) : Math.atan2(loopB.lx - mx, loopB.lz - mz);
+            const travelWorld = yawOf(Math.sin(travel), Math.cos(travel));
+            // (Its loop's heading by the loop, the way it travels between, the cave's way at the mouth: in, or out.)
+            yaw = turnTo(turnTo(loopYaw, travelWorld, smooth(Math.min(k / 0.15, 1))), visit.phase === "in" ? inWorld : outYaw, smooth(Math.max((k - 0.5) / 0.2, 0)));
+        } else {
+            const e = smooth((k - 0.7) / 0.3);
+            lx = mx + (cave.lx - mx) * e;
+            lz = mz + (cave.lz - mz) * e;
+            base = caveBase;
+            yaw = visit.phase === "in" ? inWorld : outYaw;
+        }
+    }
+    const p = world(lx, lz);
+    const spec: WaterSpec = {motion: "swim", floorY: tank.floor, depth: Math.max(base - tank.floor, 0), aboveFloor: true, breath: 0, surface: tank.top};
+    return {x: p.x, z: p.z, yaw, pitch: 0, base, spec, motion: "swim"};
 }
 
 // MARK: - Pets kept at home
@@ -484,9 +679,13 @@ export function floorTriangles(b: Box, y: number, out: number[] = []): number[] 
 /** The zoo houses' floors (every open house enclosure's inside, at its floor's height). */
 export function zooHouseFloors(enclosures: readonly ZooEnclosure[]): Float32Array {
     const out: number[] = [];
+    const seen = new Set<ZooHouseFrame>();
     for (const e of enclosures) {
         if (e.shared || !ZOO_HOUSE_TYPES.has(e.type)) continue;
         const f = zooHouseFrame(e);
+        // (p2 (aqua): the two aquarium enclosures share the hall's one floor.)
+        if (seen.has(f)) continue;
+        seen.add(f);
         floorTriangles(f.inner, f.floor, out);
     }
     return new Float32Array(out);

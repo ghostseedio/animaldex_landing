@@ -29,7 +29,8 @@ import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/to
 import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
-import {inBox, sub, toLocal, type Box} from "@/ark-scene/islands/town/geom";
+import {corners, inBox, sub, toLocal, type Box} from "@/ark-scene/islands/town/geom";
+import {aquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 
 /** The town's facts about a placed animal: its area, the spot's kind, the home, farm or enclosure, and its bounds. */
@@ -323,6 +324,13 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
                 // Lane TB: an aquarium resident swims in its tank (`tanks.ts`), never on the hall's floor.
                 const tank = aquariumTankOf(animal, length, tanksOf(host));
                 if (tank) {
+                    // (p2 (aqua): the one hall spans both aquarium plots (`aquarium-hall.ts`), whether or not the second is open: a
+                    // resident's bounds are the open plot its tank stands in, else its own enclosure widened to the hall's inside.)
+                    const hall = tank.id.startsWith("aquarium-hall:") ? aquariumHall() : null;
+                    if (hall) {
+                        const plot = layout.enclosures.find((e) => e.type === "aquarium" && !e.shared && inPoly(e.mask, tank.x, tank.z)) ?? {...host, mask: corners(hall.frame.inner)};
+                        info = {...info, enclosure: plot, range: inradius(plot.mask)};
+                    }
                     info = {...info, where: "indoor", still: true, tank};
                     held = {x: tank.x, z: tank.z, y: tank.floor, yaw};
                 }

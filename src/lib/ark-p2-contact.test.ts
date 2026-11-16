@@ -157,10 +157,10 @@ test("contact: lying bodies on the drawn ground across species, postures and slo
 
 test("contact: a four-legged rig's mid-stride lying clips are held (the scene's postures instead); its standing clips and other plans' sleep play", () => {
     const clip = {frames: 24, seconds: 1, loop: true, pass: true};
-    const names = ["idle", "walk", "run", "groom", ...QUADRUPED_LYING_HELD, "sleep_tuck", "sleep_one_leg", "sleep_hang", "sleep_stand"];
+    const names = ["idle", "walk", "run", "groom", ...Array.from(QUADRUPED_LYING_HELD), "sleep_tuck", "sleep_one_leg", "sleep_hang", "sleep_stand"];
     const clips = Object.fromEntries(names.map((n) => [n, clip]));
     const manifest = {flight: true, species: {"african-lion": {state: "passed", plan: "quadruped", clips}, "grey-heron": {state: "passed", plan: "walking_bird", clips}, "plains-zebra": {state: "passed", plan: "quadruped", clips}}};
-    for (const name of QUADRUPED_LYING_HELD) assert.equal(rigClip(manifest, "african-lion", name), null, `lion ${name} held`);
+    for (const name of Array.from(QUADRUPED_LYING_HELD)) assert.equal(rigClip(manifest, "african-lion", name), null, `lion ${name} held`);
     for (const name of ["idle", "walk", "run", "groom"]) assert.ok(rigClip(manifest, "african-lion", name), `lion ${name} plays`);
     assert.ok(rigClip(manifest, "plains-zebra", "sleep_stand"), "standing asleep is no lying clip");
     for (const name of ["sleep", "sleep_tuck", "sleep_one_leg"]) assert.ok(rigClip(manifest, "grey-heron", name), `a heron's ${name} plays`);

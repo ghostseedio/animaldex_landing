@@ -14,13 +14,15 @@
  * open): the cut shell, the interior, the lit panels, the glass, the water. Pure in the open enclosures.
  */
 
-import {Group, Mesh, type BufferGeometry, type Material} from "three";
+import {Group, Mesh, type BufferGeometry, type InstancedMesh, type Material} from "three";
 import {hashText, rng, type Box, type Pt} from "@/ark-scene/islands/town/geom";
 import {zooSpotsOf, type ZooEnclosure} from "@/ark-scene/islands/town/areas";
 import {aquariumTanks, zooHouseFloors, zooHouseFrame, ZOO_HOUSE_PORCH, ZOO_HOUSE_TYPES, ZOO_HOUSE_WALL, type Tank} from "@/ark-scene/islands/town/tanks";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {cactus, climbingFrame, climbingTree, fern, flowers, ledge, log, outcrop, patch, Plot, pool, rope, tuft} from "@/ark-scene/islands/town/render/zoo-habitat";
 import {cutAttribute, cutawayMaterial, cutEye, followEye, glassMaterial, glowMaterial, interiorMaterial, waterMaterial} from "@/ark-scene/islands/town/render/displays";
+import {aquariumHall, inAquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
+import {buildAquariumHall, hallRocks, hallWaterMaterial, underwaterMaterial, type HallRock} from "@/ark-scene/islands/town/render/aquarium-hall";
 
 type RGB = [number, number, number];
 
@@ -365,7 +367,17 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
     const tanks: Tank[] = [];
     const habitats: Plot[] = [];
     const houses = enclosures.filter((e) => !e.shared && ZOO_HOUSE_TYPES.has(e.type));
+    // p2 (aqua): the two aquarium plots are one hall with its own tanks (`render/aquarium-hall.ts`).
+    const aquaHall = houses.some((e) => inAquariumHall(e)) ? aquariumHall() : null;
+    const under = new Geo();
+    const hallWater = new Geo();
+    const rocks: HallRock[] = [];
+    if (aquaHall) {
+        buildAquariumHall(aquaHall, shellGeo, ranges, {...parts, under, water: hallWater}, rocks);
+        for (const t of aquaHall.tanks) tanks.push(t.tank);
+    }
     for (const e of houses) {
+        if (aquaHall && inAquariumHall(e)) continue;
         shell(shellGeo, e, ranges);
         plinthAndFloor(parts.inside, e);
         // The glass front from the base to the lintel.
@@ -408,6 +420,17 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
         followEye(mesh, eye);
     }
     if (parts.inside.triangles) add(parts.inside.toGeometry(), interiorMaterial(), "zoo-houses:inside", true);
+    if (aquaHall && under.triangles) {
+        const material = underwaterMaterial(aquaHall.frame.floor + 8.1);
+        add(under.toGeometry(), material, "zoo-houses:under-water", true);
+        // (Its boulders as instances, the same material: `hallRocks`.)
+        for (const mesh of hallRocks(rocks, material)) {
+            group.add(mesh);
+            meshes.push(mesh);
+        }
+    }
+    // (The hall's water takes no shadow: the vault's ribs and the tall tanks' rims fell on it as blocky shadow-map texels.)
+    if (hallWater.triangles) add(hallWater.toGeometry(), hallWaterMaterial(), "zoo-houses:hall-water", false, 3).receiveShadow = false;
     if (parts.glow.triangles) add(parts.glow.toGeometry(), glowMaterial(), "zoo-houses:glow", false);
     if (parts.water.triangles) add(parts.water.toGeometry(), waterMaterial(), "zoo-houses:water", false, 3);
     if (parts.glass.triangles) add(parts.glass.toGeometry(), glassMaterial(), "zoo-houses:glass", false, 4);
@@ -417,7 +440,11 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
         tanks,
         habitats,
         dispose: () => {
-            for (const mesh of meshes) mesh.geometry.dispose();
+            for (const mesh of meshes) {
+                mesh.geometry.dispose();
+                // (p2 (aqua): the hall's instanced boulders free their instance buffers too.)
+                if ((mesh as InstancedMesh).isInstancedMesh) (mesh as InstancedMesh).dispose();
+            }
             for (const material of materials) material.dispose();
         }
     };

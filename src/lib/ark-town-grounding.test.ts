@@ -122,14 +122,15 @@ test("how a home's pet is kept: tanks, ponds, cages, vivaria, outdoors, livery",
 
 test("the aquarium: every resident has a tank that holds it, and swims inside it all day", () => {
     const tanks = aquariumTanks(zooLayout(launchEnclosures()).enclosures.find((e) => e.type === "aquarium")!);
-    assert.equal(tanks.length, 9);
+    // (p2 (aqua): both aquarium plots are one hall with six tanks: `ark-aquarium-hall.test.ts`.)
+    assert.equal(tanks.length, 6);
     for (const slug of ["largetooth-sawfish", "dugong", "moon-jellyfish", "ocellaris-clownfish", "koi", "arapaima", "chocolate-chip-sea-star", "common-octopus"]) {
         const a = animal(1, slug, "zoo", "coral_reef", "aquarium-1");
         const body = arkBody(a, modelBase(slug)?.plan);
         const tank = aquariumTankOf(a, body.display, tanks)!;
         assert.ok(tank, `${slug} has a tank`);
         if (slug === "moon-jellyfish") assert.equal(tank.form, "jelly");
-        if (body.display >= 0.95) assert.ok(tank.form === "ocean" || tank.form === "river", `${slug} (${body.display} m) in a big tank`);
+        if (body.display >= 0.95) assert.ok(tank.form === "ocean" || tank.form === "tunnel", `${slug} (${body.display} m) in a big tank`);
         const size = modelBase(slug)?.size ?? {x: 0.3, y: 0.5, z: 1};
         const height = size.y * (body.display / Math.max(size.z, 0.05));
         for (let t = 0; t < 600; t += 7.3) {
