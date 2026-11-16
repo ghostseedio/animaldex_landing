@@ -229,6 +229,8 @@ import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
 import {l2BodyChannel, l2BodyUniforms, l2ClipBake, l2FlightFrame, l2FlightGate, l2LandingNow, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
 // 3.3 fix: taps on the resting figures.
 import {pickFigure, preferTap, type Projector} from "@/ark-scene/tap-pick";
+// 3.3 fix: the kept town animals near the look point move.
+import {nearestKept, nearKeptDue, NEAR_KEPT_VIEW, sameIds} from "@/ark-scene/near-kept";
 
 export * from "@/ark-scene/types";
 export {arkThriveOf, arkThriveRank} from "@/ark-scene/thrive";
@@ -2507,6 +2509,42 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         restingGroups = next;
     };
 
+    // 3.3 fix (`near-kept.ts`): the kept town animals nearest the look point, pinned outside on top of the budget, so a
+    // garden's or a farm's animals in view move instead of standing as resting figures. Asked about once a second.
+    let nearKept: string[] = [];
+    let nearKeptFrom: {x: number; z: number} | null = null;
+    let nearKeptAt = 0;
+    const keptAround = (): Array<{id: string; x: number; z: number}> => {
+        const isl = island;
+        const out: Array<{id: string; x: number; z: number}> = [];
+        if (!isl) return out;
+        for (const animal of current.animals) {
+            if (!isl.has(animal) || !isl.kept(animal.id)) continue;
+            const place = placedAll.get(animal.id);
+            if (place) out.push({id: animal.id, x: place.x, z: place.z});
+        }
+        return out;
+    };
+    const stepNearKept = (now: number) => {
+        if (now - nearKeptAt < 1) return;
+        nearKeptAt = now;
+        const target = controls.target;
+        const close = Boolean(island) && !reducedMotion && !flight && !opening && !replay && camera.position.distanceTo(target) < NEAR_KEPT_VIEW && island!.contains(target.x, target.z);
+        if (!close) {
+            nearKeptFrom = null;
+            if (!nearKept.length) return;
+            nearKept = [];
+            setSnapshot(current, false);
+            return;
+        }
+        if (!nearKeptDue(nearKeptFrom, target.x, target.z)) return;
+        nearKeptFrom = {x: target.x, z: target.z};
+        const ids = nearestKept(keptAround(), target.x, target.z);
+        if (sameIds(ids, nearKept)) return;
+        nearKept = ids;
+        setSnapshot(current, false);
+    };
+
     /** Again from the snapshot as it is: after a pin changed (a herd member selected, a replay's animals). */
     const refreshLive = () => {
         if (herds.length || replayPins.size || mealPins.size || selectionPin) setSnapshot(current, false);
@@ -2566,6 +2604,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A very popular species (A14): its representatives drawn one by one, the rest as the herd.
         // (The selected animal too, while aboard: it stays drawn one by one as the town joins or a new read comes.)
         const pins = selectionPins(aboard, {selected: selectedId, promoted: selectionPin, followed: followId, replay: mealPins.size ? Array.from(replayPins).concat(Array.from(mealPins)) : replayPins});
+        // 3.3 fix: the kept town animals nearest the look point are out to move (`near-kept.ts`).
+        for (const id of nearKept) if (aboard.has(id)) pins.add(id);
         // (Development: `window.__arkHerdOff = true` before mounting draws everyone one by one, to measure against.)
         const herdOff = (globalThis as {__arkHerdOff?: boolean}).__arkHerdOff === true;
         liveliness.setSnapshot(snapshot.animals, snapshot.ark_day);
@@ -7691,6 +7731,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepClearView(now);
         stepInset();
         stepIslandNear();
+        // 3.3 fix: the kept town animals around the look point out to move (`near-kept.ts`).
+        stepNearKept(now);
         // Idle: after a while untouched, the view drifts slowly round.
         if (!reducedMotion && !options.recording && !flight && !selectedId && !followId && !opening && !replay && now - lastTouch > IDLE_DRIFT_AFTER) {
             if (!controls.autoRotate) driftFrom = now;
