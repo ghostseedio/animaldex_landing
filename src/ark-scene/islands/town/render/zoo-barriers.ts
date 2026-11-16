@@ -100,7 +100,15 @@ function rockwork(solid: Geo, a: Pt, b: Pt, height: number, seed: number) {
     for (let t = 0.5; t < f.length; t += 0.9 + r() * 0.7) {
         const p = at(f, (r() - 0.5) * 0.3, 0, -f.length / 2 + t);
         // Weathered boulders, rounder at their tops, set into each other.
-        solid.blob(p[0], p[1] + height * (0.3 + r() * 0.3), p[2], 0.6 + r() * 0.35, height * (0.3 + r() * 0.2), 0.55 + r() * 0.3, shade(ROCK, 0.82 + r() * 0.3), hashText(`${seed}:${t.toFixed(1)}`), 1);
+        // (p2, town2: the island's weathered boulder, worn round and shaded smooth (`kit.ts` rock, 80 faces as the
+        // blob was), not a faceted ball; set 15 cm into the ground, its top where the ball's was.)
+        const mid = height * (0.3 + r() * 0.3);
+        const sx = 0.6 + r() * 0.35;
+        const sy = height * (0.3 + r() * 0.2);
+        const sz = 0.55 + r() * 0.3;
+        const tone = shade(ROCK, 0.82 + r() * 0.3);
+        const id = hashText(`${seed}:${t.toFixed(1)}`);
+        solid.rock(p[0], p[1] - 0.15, p[2], sx, mid + sy * 0.75 + 0.15, sz, (id % 628) / 100, tone, id, 1);
     }
 }
 

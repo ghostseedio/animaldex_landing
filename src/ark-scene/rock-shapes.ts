@@ -177,15 +177,29 @@ type Recipe = {
     base: number;
     /** A few lobes merged (a crag of blocks). */
     lobes: number;
+    /**
+     * Weathering (p2, town2): rounds of volume-keeping smoothing (Taubin λ|μ) after the fracture, so its arrises wear
+     * round; the cut planes' hardness (1: a flat joint face); the crease angle under which a corner keeps its own normal
+     * (π: none, the surface shades smooth); weathered colour (lichen, rain streaks, moss at the foot) 0-1.
+     */
+    round?: number;
+    hard?: number;
+    crease?: number;
+    weather?: number;
 };
 
 const RECIPES: Record<RockStyle, Recipe> = {
     // A boulder: a block broken out of the mountain and tumbled, edges worn but its joint faces still flat.
-    boulder: {radii: (r) => [1, 0.55 + 0.25 * r(), 0.7 + 0.25 * r()], cuts: 10, reach: 0.84, spread: 0.3, joints: 3, beds: 0, step: 0, tilt: 0, lump: 0.08, grain: 0.022, base: 0.16, lobes: 1},
+    // (p2, town2: the owner, "big rocks and boulders shouldn't have any sharp polygons, need to look more realistic". A
+    // boulder is a block long tumbled and weathered: its faces still broadly flat, but every arris worn round, shaded
+    // smooth, lichen on its upper faces, rain streaks down its sides, moss at its foot.)
+    boulder: {radii: (r) => [1, 0.55 + 0.25 * r(), 0.7 + 0.25 * r()], cuts: 8, reach: 0.86, spread: 0.3, joints: 2, beds: 0, step: 0, tilt: 0, lump: 0.12, grain: 0.03, base: 0.16, lobes: 1, round: 3, hard: 0.85, crease: Math.PI, weather: 1},
+    // (p2, town2: crags and slabs keep their beds and joints, their arrises worn by one round of smoothing, shaded
+    // smooth across all but the sharpest folds, a little weathering.)
     // A crag: bedded rock standing out of the slope, its beds stepped and split by joints into a few blocks.
-    crag: {radii: (r) => [1, 1.05 + 0.45 * r(), 0.72 + 0.2 * r()], cuts: 8, reach: 0.86, spread: 0.28, joints: 4, beds: 2.6, step: 0.13, tilt: 0.25, lump: 0.07, grain: 0.02, base: 0.1, lobes: 4},
+    crag: {radii: (r) => [1, 1.05 + 0.45 * r(), 0.72 + 0.2 * r()], cuts: 8, reach: 0.86, spread: 0.28, joints: 4, beds: 2.6, step: 0.13, tilt: 0.25, lump: 0.07, grain: 0.02, base: 0.1, lobes: 4, round: 1, crease: 1.05, weather: 0.6},
     // A shelf of bedded rock barely out of the ground: low, wide, its beds stepped.
-    slab: {radii: (r) => [1.25 + 0.3 * r(), 0.45 + 0.12 * r(), 0.95 + 0.2 * r()], cuts: 8, reach: 0.86, spread: 0.3, joints: 3, beds: 4.2, step: 0.06, tilt: 0.14, lump: 0.06, grain: 0.018, base: 0.22, lobes: 2},
+    slab: {radii: (r) => [1.25 + 0.3 * r(), 0.45 + 0.12 * r(), 0.95 + 0.2 * r()], cuts: 8, reach: 0.86, spread: 0.3, joints: 3, beds: 4.2, step: 0.06, tilt: 0.14, lump: 0.06, grain: 0.018, base: 0.22, lobes: 2, round: 1, crease: 1.05, weather: 0.6},
     // A scree stone: a sharp fragment.
     scree: {radii: (r) => [1, 0.45 + 0.3 * r(), 0.6 + 0.3 * r()], cuts: 6, reach: 0.8, spread: 0.35, joints: 1, beds: 0, step: 0, tilt: 0, lump: 0.05, grain: 0, base: 0.2, lobes: 1}
 };
@@ -227,11 +241,11 @@ function lobe(recipe: Recipe, random: () => number, detail: number, seed: number
         const nx = (plane.nx / h) * Math.cos(lean);
         const nz = (plane.nz / h) * Math.cos(lean);
         const ny = Math.sin(lean);
-        cut(p, {nx, ny, nz, d: support(nx, ny, nz, rx, ry, rz) * recipe.reach * (1 - recipe.spread * random()), hard: plane.hard});
+        cut(p, {nx, ny, nz, d: support(nx, ny, nz, rx, ry, rz) * recipe.reach * (1 - recipe.spread * random()), hard: plane.hard * (recipe.hard ?? 1)});
     }
     for (let c = 0; c < recipe.cuts; c++) {
         const plane = randomPlane(random, 1, recipe.spread, 0.9 + 0.1 * random());
-        cut(p, {...plane, d: support(plane.nx, plane.ny, plane.nz, rx, ry, rz) * recipe.reach * (1 - recipe.spread * random())});
+        cut(p, {...plane, hard: plane.hard * (recipe.hard ?? 1), d: support(plane.nx, plane.ny, plane.nz, rx, ry, rz) * recipe.reach * (1 - recipe.spread * random())});
     }
     const cutDepth: number[] = [];
     for (let i = 0; i < p.length; i += 3) cutDepth.push(Math.hypot(before[i] - p[i], before[i + 1] - p[i + 1], before[i + 2] - p[i + 2]));
@@ -317,6 +331,9 @@ export function rockMesh(style: RockStyle, variant: number, detail: number): Roc
             p[i + 2] += (p[i + 2] / l) * k;
         }
     }
+    // Weathering: the arrises worn round (Taubin smoothing: a shrinking step, then a swelling one, so the rock keeps its
+    // size). Over the shared vertices of the icosphere, so it rounds every edge the fracture left.
+    if (recipe.round && recipe.round > 0) taubin(p, index, recipe.round);
     // The base: cut flat, then everything set on y = 0.
     let minY = Infinity;
     let maxY = -Infinity;
@@ -390,6 +407,27 @@ export function rockMesh(style: RockStyle, variant: number, detail: number): Roc
         colors[i] = (r0 + fresh * 0.9) * shade;
         colors[i + 1] = (g0 + fresh) * shade;
         colors[i + 2] = (b0 + fresh * 1.15) * shade;
+        if (recipe.weather) {
+            const w = recipe.weather;
+            // Lichen: pale grey-green and ochre rosettes on the faces that see the sky.
+            const sky = Math.min(Math.max((normals[i + 1] - 0.15) / 0.6, 0), 1);
+            const patch = Math.min(Math.max((fbm3(p[i] * 2.3 + 11, p[i + 1] * 2.3, p[i + 2] * 2.3, toneSeed + 5, 3) - 0.52) / 0.12, 0), 1);
+            const lichen = sky * patch * 0.65 * w;
+            const ochre = hash3(Math.floor(p[i] * 3), Math.floor(p[i + 1] * 3), Math.floor(p[i + 2] * 3), toneSeed) < 0.35;
+            const lc: [number, number, number] = ochre ? [0.2, 0.17, 0.08] : [0.17, 0.18, 0.15];
+            // Rain streaks: darker runs down the steep sides (noise stretched along the height).
+            const steep = 1 - Math.abs(normals[i + 1]);
+            const streak = steep * Math.min(Math.max((fbm3(p[i] * 5.0, p[i + 1] * 0.7, p[i + 2] * 5.0, toneSeed + 9, 2) - 0.5) / 0.15, 0), 1) * 0.22 * w;
+            // Moss at the foot, on the shaded, damp side.
+            const foot = 1 - Math.min(p[i + 1] / (0.3 * height + 0.05), 1);
+            const moss = foot * Math.min(Math.max((fbm3(p[i] * 3.1, p[i + 1] * 3.1, p[i + 2] * 3.1, toneSeed + 13, 2) - 0.45) / 0.15, 0), 1) * 0.6 * w;
+            for (let k = 0; k < 3; k++) {
+                let c = colors[i + k] * (1 - streak);
+                c = c + (lc[k] * shade - c) * lichen;
+                c = c + ([0.05, 0.075, 0.03][k] * shade - c) * moss;
+                colors[i + k] = c;
+            }
+        }
     }
     // Crisp joint edges: each corner's normal averages only the faces round its vertex within the crease angle of its
     // own face, so a joint face stays flat to its edge and the arris between two faces shows.
@@ -420,7 +458,7 @@ export function rockMesh(style: RockStyle, variant: number, detail: number): Roc
         faceUnit[f * 3 + 2] = nz / l;
         for (let k = 0; k < 3; k++) around[fill[index[f * 3 + k]]++] = f;
     }
-    const crease = Math.cos(CREASE);
+    const crease = Math.cos(recipe.crease ?? CREASE);
     const outP = new Float32Array(faces * 9);
     const outN = new Float32Array(faces * 9);
     const outC = new Float32Array(faces * 9);
@@ -477,6 +515,41 @@ export function rockMesh(style: RockStyle, variant: number, detail: number): Roc
         index2[c] = id;
     }
     return {positions: new Float32Array(keepP), normals: new Float32Array(keepN), colors: new Float32Array(keepC), index: index2, bounds: {min, max}, triangles: faces};
+}
+
+/**
+ * Taubin smoothing (λ = 0.5, μ = -0.53) over a mesh's shared vertices: each round moves every vertex half way to its
+ * neighbours' middle, then a little back out, so edges round without the whole shrinking.
+ */
+function taubin(p: number[], index: number[], rounds: number) {
+    const n = p.length / 3;
+    const links: number[][] = Array.from({length: n}, () => []);
+    for (let i = 0; i < index.length; i += 3) {
+        for (let e = 0; e < 3; e++) {
+            const a = index[i + e];
+            const b = index[i + ((e + 1) % 3)];
+            if (!links[a].includes(b)) links[a].push(b);
+            if (!links[b].includes(a)) links[b].push(a);
+        }
+    }
+    const next = new Float64Array(p.length);
+    for (let r = 0; r < rounds * 2; r++) {
+        const k = r % 2 === 0 ? 0.5 : -0.53;
+        for (let v = 0; v < n; v++) {
+            const l = links[v];
+            let x = 0, y = 0, z = 0;
+            for (const u of l) {
+                x += p[u * 3];
+                y += p[u * 3 + 1];
+                z += p[u * 3 + 2];
+            }
+            const m = l.length || 1;
+            next[v * 3] = p[v * 3] + k * (x / m - p[v * 3]);
+            next[v * 3 + 1] = p[v * 3 + 1] + k * (y / m - p[v * 3 + 1]);
+            next[v * 3 + 2] = p[v * 3 + 2] + k * (z / m - p[v * 3 + 2]);
+        }
+        for (let i = 0; i < p.length; i++) p[i] = next[i];
+    }
 }
 
 /** Faces meeting at more than this (radians) keep their own normals: a joint's edge. */
