@@ -27,6 +27,7 @@ import {surfaceTag} from "@/ark-scene/islands/town/render/surface-tags";
 import {townFarmGates, townFarmProps, type FarmGate} from "@/ark-scene/islands/town/farm";
 import {strut, zooBarrier} from "@/ark-scene/islands/town/render/zoo-barriers";
 import {dressPaddock} from "@/ark-scene/islands/town/render/zoo-habitat";
+import {townFlowerBeds, zooScatter} from "@/ark-scene/islands/town/solids";
 import {townTrees} from "@/ark-scene/islands/town/trees";
 import {clearOfDoors, PATH_WIDTH, pathOpenings, townDoorWays} from "@/ark-scene/islands/town/doors";
 import {boundaryBodies, madeHere} from "@/ark-scene/islands/town/render/fences";
@@ -656,7 +657,6 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const s = e.slot.at;
     const c = chunkFor(out, s.x, s.z);
     const spec = ZOO_TYPES[e.type];
-    const r = rng(e.slot.seed);
     const ground = e.type === "savanna_paddocks" ? "#cdb07a" : e.type === "hoofstock_paddocks" || e.type === "childrens_farm" ? "#a99268" : e.type === "big_cats" ? "#b7a374" : e.type === "bears_wolves" ? "#7d7a52" : e.type === "small_mammals" ? "#9a8a62" : null;
     // (Lane GA: the 2 m cells' own shades were the "giant pixels"; the earth and sand textures carry the variety now.)
     if (ground) tagged(c.decal, e.type === "savanna_paddocks" || e.type === "big_cats" ? SURF.sand : SURF.earth, alongZ(s.rot), () => c.decal.drape({x: s.x, y: 0, z: s.z, rot: s.rot}, s.w - 0.4, s.d - 0.4, H, 0.06, () => tone(ground), 2));
@@ -689,19 +689,10 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     // spots; the old scatter (two rocks, a box log, a cone mound, a table) only where a type is not dressed.
     const dressed = spec.form === "paddock" || spec.form === "aviary" ? dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null) !== null : false;
     if ((spec.form === "paddock" || spec.form === "pool") && !dressed) {
-        for (let i = 0; i < (e.type === "bears_wolves" || e.type === "penguin_seal_pools" ? 5 : 2); i++) {
-            const p = local(s, (r() - 0.5) * (s.w - 4), (r() - 0.5) * (s.d - 4));
-            if (e.pool && pointIn(e.pool, p)) continue;
-            // (Lane VEG: a fractured boulder sat into the ground, not a 20-face ball floating 0.3 m up; same size and draws.)
-            const sx = 1.2 + r();
-            const sy = 0.9 + r() * 0.6;
-            const sz = 1.1 + r();
-            const seed = hashText(`${e.slot.id}r${i}`);
-            const low = Math.min(H(p.x - sx, p.z), H(p.x + sx, p.z), H(p.x, p.z - sz), H(p.x, p.z + sz), H(p.x, p.z));
-            c.solid.rock(p.x, low - 0.15, p.z, sx * 0.85, sy * 0.95, sz * 0.85, (seed % 628) / 100, tone(seed % 3 ? "#8f877a" : "#867d70"), seed);
-        }
-        const log = local(s, (r() - 0.5) * (s.w - 6), s.d / 2 - 3.5);
-        const lf: Frame = {x: log.x, y: H(log.x, log.z) + 0.3, z: log.z, rot: s.rot + r()};
+        // (p3 (solid): where, from `zooScatter`, which the colliders read too.)
+        const scatter = zooScatter(e);
+        for (const q of scatter.rocks) c.solid.rock(q.x, q.low - 0.15, q.z, q.sx * 0.85, q.sy * 0.95, q.sz * 0.85, (q.seed % 628) / 100, tone(q.seed % 3 ? "#8f877a" : "#867d70"), q.seed);
+        const lf: Frame = {x: scatter.log.x, y: H(scatter.log.x, scatter.log.z) + 0.3, z: scatter.log.z, rot: scatter.log.rot};
         c.solid.box(lf, 0, 0, 0, 3.4, 0.55, 0.55, tone("#6a5038"));
     }
     if (spec.form === "paddock" || spec.form === "pool") {
@@ -726,16 +717,6 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     // The feeding hatch on the back fence.
     const hatch = back(-s.w / 2 + 2);
     c.solid.box({x: hatch.x, y: H(hatch.x, hatch.z), z: hatch.z, rot: s.rot}, 0, 0, -1, 1.4, 1.2, 0.6, tone("#5a5a52"));
-}
-
-function pointIn(poly: Poly, p: Pt): boolean {
-    let inside = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-        const a = poly[i];
-        const b = poly[j];
-        if (a.z > p.z !== b.z > p.z && p.x < ((b.x - a.x) * (p.z - a.z)) / (b.z - a.z) + a.x) inside = !inside;
-    }
-    return inside;
 }
 
 function deadTree(geo: Geo, p: Pt, seed: number) {
@@ -890,42 +871,12 @@ function lamps(out: SceneryOut, plan: TownPlan) {
 /** Round beds round the park's bandstand, a bed either side of each front door's path (most houses), planters at the zoo's gate. */
 function beds(out: SceneryOut, plan: TownPlan) {
     const soil = surfaceTag(SURF.earth);
-    const bandstand = {x: -36, z: -56};
-    for (let k = 0; k < 4; k++) {
-        const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
-        const x = bandstand.x + Math.cos(a) * 7.5;
-        const z = bandstand.z + Math.sin(a) * 7.5;
-        const c = chunkFor(out, x, z);
-        flowerBed(c.foliage, c.decal, {x, y: 0, z, rot: 0}, 3.2, 3.2, hashText(`park-bed-${k}`), true, soil);
-    }
-    for (const p of plan.parcels) {
-        if (p.kind !== "house" || !p.front) continue;
-        const r = rng(p.seed + 11);
-        if (r() > 0.7) continue;
-        const b = plan.buildings.find((q) => q.id === p.building);
-        if (!b) continue;
-        const halfW = b.at.w / 2;
-        for (const side of [-1, 1]) {
-            const w = halfW - 1.0;
-            if (w < 0.8) continue;
-            const centre = local(b.at, side * (0.55 + w / 2), b.at.d / 2 + 0.5);
-            const bed: Box = {x: centre.x, z: centre.z, w, d: 0.7, rot: b.at.rot};
-            if (p.drive && corners(bed).some((q) => inBox(p.drive!, q.x, q.z, 0.2))) continue;
-            if (!inBox(p.at, centre.x, centre.z, -0.2)) continue;
-            // gfx (props): never on the door's step or its path (`doors.ts`); the window's side keeps its bed.
-            if (!clearOfDoors(bed, 0.05, plan)) continue;
-            const c = chunkFor(out, centre.x, centre.z);
-            flowerBed(c.foliage, c.decal, {x: centre.x, y: 0, z: centre.z, rot: b.at.rot}, w, 0.7, hashText(`${p.id}-bed${side}`), false, soil);
-        }
-    }
-    // Two raised planters either side of the zoo's gate.
-    const plaza = plan.zoo.plaza;
-    for (const side of [-1, 1]) {
-        const q = local(plaza, side * 5.2, -plaza.d / 2 + 2.4);
-        const c = chunkFor(out, q.x, q.z);
-        const f: Frame = {x: q.x, y: H(q.x, q.z) + 0.1, z: q.z, rot: plaza.rot};
-        c.solid.box(f, 0, 0, 0, 2.2, 0.5, 1.1, BRICK);
-        flowerBed(c.foliage, c.decal, {x: q.x, y: 0.5, z: q.z, rot: plaza.rot}, 2.0, 0.9, hashText(`zoo-planter-${side}`), false, soil);
+    // (p3 (solid): where each bed lies, from `townFlowerBeds`, which the colliders read too.)
+    for (const bed of townFlowerBeds(plan)) {
+        const b = bed.box;
+        const c = chunkFor(out, b.x, b.z);
+        if (bed.kind === "planter") c.solid.box({x: b.x, y: H(b.x, b.z) + 0.1, z: b.z, rot: b.rot}, 0, 0, 0, b.w + 0.2, 0.5, b.d + 0.2, BRICK);
+        flowerBed(c.foliage, c.decal, {x: b.x, y: bed.kind === "planter" ? 0.5 : 0, z: b.z, rot: b.rot}, b.w, b.d, hashText(bed.seed), bed.kind === "round", soil);
     }
 }
 

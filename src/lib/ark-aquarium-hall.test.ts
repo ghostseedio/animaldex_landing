@@ -18,6 +18,7 @@ import {validateTownAnimals} from "@/ark-scene/islands/town/validate-animals";
 import {boxesOverlap, corners, inBox, toLocal} from "@/ark-scene/islands/town/geom";
 import {arkBody} from "@/ark-scene/stats";
 import {modelBase} from "@/ark-scene/grounding/base";
+import {clearOfHallRocks, hallRockList, rockMeasure} from "@/ark-scene/islands/town/hall-rocks";
 
 /** Every species the real Ark keeps in its aquarium (the saved read of 2026-11-16: 66 species, 92 animals), with its zone. */
 const AQUARIUM: Array<[string, string]> = [
@@ -175,4 +176,49 @@ test("the town's validator: nobody in the hall's glass, its walls or out of its 
     const check = validateTownAnimals(residents(), {schedule: false});
     assert.equal(check.counts.out_of_tank, 0, JSON.stringify(check.problems.filter((p) => p.problems.includes("out_of_tank")).slice(0, 5)));
     assert.equal(check.kinds.tank, check.animals > 0 ? check.kinds.tank : 0);
+});
+
+// p3 (solid): the owner, "I just saw a horse go through a bush": the fish neither. Through a cave only where a cave is.
+test("the hall's residents swim and walk round its rocks (over a low one, never through one), into the rock only by a cave", () => {
+    const placed = placeTownAnimals(residents());
+    const {all} = hallRockList();
+    assert.ok(all.length > 100, `${all.length} rocks in the hall`);
+    let samples = 0;
+    let before = 0;
+    let inRock = 0;
+    let caved = 0;
+    const bad: string[] = [];
+    for (const a of residents()) {
+        const t = placed.town.get(a.id)!.tank!;
+        const rocks = hallRockList().byTank.get(t.id) ?? [];
+        const plan = modelBase(a.model_slug)?.plan ?? null;
+        const display = arkBody(a, plan).display;
+        const {length, width} = tankBody(a.model_slug, plan, display);
+        const found = modelBase(a.model_slug)!;
+        const height = (found.size.y / Math.max(found.size.z, 0.05)) * length;
+        const box = tankBox(t);
+        for (let k = 0; k < 480; k++) {
+            const clock = DAY + k * 180 + (k % 7) * 3.7;
+            const raw = tankPose(t, a, display, height, plan, clock);
+            const p = clearOfHallRocks(t, raw, length, width, height);
+            assert.deepEqual(clearOfHallRocks(t, raw, length, width, height), p, "the same for every viewer");
+            samples++;
+            if ((t.caves ?? []).some((c) => Math.hypot(c.x - p.x, c.z - p.z) < c.r * 1.3 + length * 0.6)) {
+                caved++;
+                continue;
+            }
+            const inside = (q: {x: number; z: number; base: number}) => rocks.some((r) => q.base < r.y + r.sy - 0.01 && q.base + height > r.y + 0.02 && rockMeasure(r, q.x, q.z, Math.max(width / 2, 0.02)) < 1);
+            if (inside(raw)) before++;
+            if (inside(p)) {
+                inRock++;
+                if (bad.length < 5) bad.push(`${a.model_slug} in ${t.id} at ${clock}`);
+            }
+            const l = toLocal(box, p.x, p.z);
+            assert.ok(Math.abs(l.x) <= t.w / 2 + 0.01 && Math.abs(l.z) <= t.d / 2 + 0.01, `${a.model_slug} kept in its glass`);
+            assert.ok(p.base + height <= t.top + 0.02 || p.spec.breath > 0 || p.motion === "float", `${a.model_slug} under the surface`);
+        }
+    }
+    console.log(`aquarium rocks: ${samples} samples, ${before} in a rock before, ${inRock} after, ${caved} at a cave`);
+    assert.equal(inRock, 0, `in a rock: ${bad.join("; ")}`);
+    assert.ok(caved > samples * 0.08, "the caves still used");
 });

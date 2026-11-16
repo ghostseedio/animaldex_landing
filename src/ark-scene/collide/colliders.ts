@@ -63,6 +63,11 @@ export type Collider = CircleCollider | BoxCollider | SegmentCollider;
 
 /** A picket fence's gaps (m): anything narrower slips between the pickets (a mouse, a beetle, a frog). */
 export const PICKET_GAP = 0.06;
+/**
+ * p3 (solid): how narrow a body goes into a bush, a bramble patch or a flower bed (m across): a mouse, a lizard, a beetle,
+ * a small bird; a cat, a dog, a fox, a hen or a horse goes round (the owner: "I just saw a horse go through a bush").
+ */
+export const BUSH_GAP = 0.16;
 /** A rail fence's lowest rail's underside over the ground (m): anything lower walks under the rails. */
 export const RAIL_CLEAR = 0.4;
 
@@ -409,9 +414,10 @@ export function buildColliders(plots: HomePlot[] | null): Collider[] {
         } else if (item.kind === "lamp") {
             out.push(post(`lamp:${n}`, item.x, item.z, 0.1, 2.6));
         } else if (item.kind === "shrub") {
-            // (The walk grid's own shrub: 0.5 m at its scale.)
+            // (The walk grid's own shrub: 0.5 m at its scale. p3 (solid): solid to a body wider than its stems' gaps, BUSH_GAP;
+            // it was soft, and a body pushed off its neighbours stood in it.)
             const r = 0.5 * item.scale;
-            out.push({shape: "circle", kind: "shrub", id: `shrub:${n}`, cx: item.x, cz: item.z, r, reach: r, y0: item.y - 0.2, y1: item.y + 1.2 * item.scale, gap: 0, soft: true});
+            out.push({shape: "circle", kind: "shrub", id: `shrub:${n}`, cx: item.x, cz: item.z, r, reach: r, y0: item.y - 0.2, y1: item.y + 1.2 * item.scale, gap: BUSH_GAP});
         }
     });
     // (Islands mode, `no-hamlet.ts`: no garden pond.)

@@ -32,12 +32,24 @@ export const HABITAT_HEADROOM = 2.9;
 export type Footprint = {x: number; z: number; r: number; what: string};
 
 /**
+ * p3 (solid): a solid thing as drawn, in the world frame (the town's), for the colliders (`islands/town/solids.ts`):
+ * each rock of an outcrop or a pool's rim, a log's axis, a post, a climbing tree's trunk, a shelter's or a rack's box,
+ * a mound. `base` and `top`: its foot and its top (m).
+ */
+export type PlotSolid =
+    | {kind: "rock" | "log" | "post" | "trunk" | "mound" | "pond" | "hay" | "trough" | "shelter"; shape: "circle"; x: number; z: number; r: number; base: number; top: number}
+    | {kind: "rock" | "log" | "post" | "trunk" | "mound" | "pond" | "hay" | "trough" | "shelter"; shape: "box"; x: number; z: number; hw: number; hd: number; rot: number; base: number; top: number}
+    | {kind: "rock" | "log" | "post" | "trunk" | "mound" | "pond" | "hay" | "trough" | "shelter"; shape: "segment"; ax: number; az: number; bx: number; bz: number; r: number; base: number; top: number};
+
+/**
  * A plot to dress: its box (local +z is its front, toward the visitors), the floor's height at a local point, and the
  * residents' spots in its local frame. Every ground item asks `free` first and records its footprint.
  */
 export class Plot {
     readonly spots: Pt[];
     readonly footprints: Footprint[] = [];
+    /** p3 (solid): what it drew that a body cannot pass through (`PlotSolid`). */
+    readonly solids: PlotSolid[] = [];
     readonly fr: Frame;
     constructor(readonly box: Box, readonly floorAt: (lx: number, lz: number) => number, worldSpots: readonly Pt[], readonly seed: number, readonly clearance = HABITAT_CLEARANCE) {
         this.spots = worldSpots.map((p) => toLocal(box, p.x, p.z));
@@ -97,7 +109,12 @@ export function outcrop(geo: Geo, plot: Plot, lx: number, lz: number, size: numb
         const s = size * (big ? 1 : 0.45 + r() * 0.3);
         const p = plot.p(x, z, 0);
         const k = 0.9 + r() * 0.2;
-        geo.rock(p[0], p[1] - s * 0.18, p[2], s * (0.9 + r() * 0.3), s * (big ? 0.75 + r() * 0.3 : 0.55 + r() * 0.3), s * (0.85 + r() * 0.3), r() * 6.28, [colour[0] * k, colour[1] * k, colour[2] * k], hashText(`${seed}:${i}`));
+        const sx = s * (0.9 + r() * 0.3);
+        const sy = s * (big ? 0.75 + r() * 0.3 : 0.55 + r() * 0.3);
+        const sz = s * (0.85 + r() * 0.3);
+        const turn = r() * 6.28;
+        geo.rock(p[0], p[1] - s * 0.18, p[2], sx, sy, sz, turn, [colour[0] * k, colour[1] * k, colour[2] * k], hashText(`${seed}:${i}`));
+        plot.solids.push({kind: "rock", shape: "box", x: p[0], z: p[2], hw: sx * 0.85, hd: sz * 0.85, rot: turn, base: p[1] - s * 0.18, top: p[1] - s * 0.18 + sy});
     }
 }
 
@@ -105,6 +122,7 @@ export function outcrop(geo: Geo, plot: Plot, lx: number, lz: number, size: numb
 export function ledge(geo: Geo, plot: Plot, lx: number, lz: number, size: number, colour: RGB, seed: number) {
     const p = plot.p(lx, lz, 0);
     geo.rock(p[0], p[1] - size * 0.1, p[2], size * 1.3, size * 0.38, size, (seed % 628) / 100, colour, seed);
+    plot.solids.push({kind: "rock", shape: "box", x: p[0], z: p[2], hw: size * 1.3 * 0.85, hd: size * 0.85, rot: (seed % 628) / 100, base: p[1] - size * 0.1, top: p[1] + size * 0.28});
 }
 
 /** An irregular flat patch of ground cover (grass, bark, sand, leaf litter) `lift` over the floor. */
@@ -186,6 +204,7 @@ export function rope(geo: Geo, a: V3, b: V3, sag: number, size = 0.05, colour: R
 export function log(geo: Geo, plot: Plot, lx0: number, lz0: number, lx1: number, lz1: number, radius: number, colour: RGB = LOG) {
     const a = plot.p(lx0, lz0, radius * 0.85);
     const b = plot.p(lx1, lz1, radius * 0.85);
+    plot.solids.push({kind: "log", shape: "segment", ax: a[0], az: a[2], bx: b[0], bz: b[2], r: radius, base: Math.min(a[1], b[1]) - radius, top: Math.max(a[1], b[1]) + radius});
     const sides = 7;
     const dx = b[0] - a[0];
     const dz = b[2] - a[2];
@@ -218,6 +237,7 @@ export function pole(geo: Geo, plot: Plot, lx: number, lz: number, height: numbe
     const lean = 0.1 + r() * 0.15;
     const a = r() * 6.28;
     strut(geo, p, [p[0] + Math.cos(a) * lean, p[1] + height, p[2] + Math.sin(a) * lean], radius * 2, BARK);
+    plot.solids.push({kind: "post", shape: "circle", x: p[0], z: p[2], r: radius + 0.04, base: p[1], top: p[1] + height});
     return [p[0] + Math.cos(a) * lean, p[1] + height, p[2] + Math.sin(a) * lean] as V3;
 }
 
@@ -227,6 +247,8 @@ export function climbingTree(geo: Geo, plot: Plot, lx: number, lz: number, heigh
     const base = plot.p(lx, lz, -0.1);
     const top: V3 = [base[0] + (r() - 0.5) * 0.4, base[1] + height, base[2] + (r() - 0.5) * 0.4];
     strut(geo, base, [base[0], base[1] + height * 0.5, base[2]], 0.5, BARK);
+    // (Its trunk and the root flares round its foot: 0.75 m out, low.)
+    plot.solids.push({kind: "trunk", shape: "circle", x: base[0], z: base[2], r: 0.45, base: base[1], top: base[1] + height});
     strut(geo, [base[0], base[1] + height * 0.45, base[2]], top, 0.34, BARK);
     // Root flares.
     for (let i = 0; i < 4; i++) {
@@ -295,6 +317,9 @@ export function pool(geo: Geo, water: Geo, plot: Plot, lx: number, lz: number, r
     const r = rng(seed);
     const n = 16;
     const radii = Array.from({length: n}, () => radius * (0.8 + r() * 0.3));
+    // (Water and its rim of stones: drunk at from its edge, never walked through.)
+    const mid = plot.p(lx, lz, 0);
+    plot.solids.push({kind: "pond", shape: "circle", x: mid[0], z: mid[2], r: radius * 1.1 + 0.25, base: mid[1] - 0.5, top: mid[1] + level + 0.35});
     // The bed (dark) just under the water, the water, then the rim stones on its edge.
     const bed = tone("#3a4a40");
     const centre = plot.p(lx, lz, level - 0.05);
@@ -321,6 +346,8 @@ export function pool(geo: Geo, water: Geo, plot: Plot, lx: number, lz: number, r
 export function shelter(geo: Geo, plot: Plot, lx: number, lz: number, w: number, d: number, h: number, wall: RGB, roof: RGB, turn = 0, green = false) {
     const p = plot.p(lx, lz, -0.1);
     const fr: Frame = {x: p[0], y: p[1], z: p[2], rot: plot.fr.rot + turn};
+    // (Open at the front, but a body stands in its shade at the opening, not inside its walls: the whole box.)
+    plot.solids.push({kind: "shelter", shape: "box", x: p[0], z: p[2], hw: w / 2, hd: d / 2, rot: fr.rot, base: p[1], top: p[1] + h});
     geo.box(fr, 0, 0, -d / 2 + 0.08, w, h + 0.1, 0.16, wall);
     for (const sx of [-1, 1]) geo.box(fr, sx * (w / 2 - 0.08), 0, 0, 0.16, h + 0.1, d, wall);
     // The roof: sloping down to the back, overhanging.
@@ -342,6 +369,7 @@ export function cactus(geo: Geo, plot: Plot, lx: number, lz: number, height: num
     const c = tone("#5a8a4a");
     const base = plot.p(lx, lz, -0.05);
     geo.cylinder({x: base[0], y: base[1], z: base[2], rot: 0}, 0, 0, 0, 0.16, 0.13, height, c, 8);
+    plot.solids.push({kind: "post", shape: "circle", x: base[0], z: base[2], r: 0.2, base: base[1], top: base[1] + height});
     for (let i = 0; i < 2; i++) {
         if (r() < 0.3) continue;
         const a = r() * 6.28;
@@ -368,6 +396,7 @@ export function termiteMound(geo: Geo, plot: Plot, lx: number, lz: number, heigh
     const r = rng(seed);
     const c = tone("#a9763e");
     const base = plot.p(lx, lz, -0.1);
+    plot.solids.push({kind: "mound", shape: "circle", x: base[0], z: base[2], r: height * 0.45, base: base[1], top: base[1] + height});
     geo.cylinder({x: base[0], y: base[1], z: base[2], rot: r() * 6}, 0, 0, 0, height * 0.42, 0.08, height, c, 9);
     geo.blob(base[0], base[1] + 0.1, base[2], height * 0.5, height * 0.25, height * 0.5, [c[0] * 0.95, c[1] * 0.95, c[2] * 0.95], seed, 1);
     for (let i = 0; i < 3; i++) {
@@ -381,6 +410,7 @@ export function termiteMound(geo: Geo, plot: Plot, lx: number, lz: number, heigh
 export function hayRack(geo: Geo, plot: Plot, lx: number, lz: number, turn: number) {
     const p = plot.p(lx, lz, 0);
     const fr: Frame = {x: p[0], y: p[1], z: p[2], rot: plot.fr.rot + turn};
+    plot.solids.push({kind: "hay", shape: "box", x: p[0], z: p[2], hw: 0.9, hd: 0.42, rot: fr.rot, base: p[1], top: p[1] + 2.1});
     const wood = tone("#7a5a3e");
     for (const [x, z] of [[-0.8, -0.35], [0.8, -0.35], [0.8, 0.35], [-0.8, 0.35]] as const) geo.box(fr, x, -0.1, z, 0.1, 1.9, 0.1, wood);
     geo.box(fr, 0, 0.7, 0, 1.7, 0.5, 0.75, tone("#c9b26a"));
@@ -558,12 +588,14 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
             if (tr) {
                 const p = plot.p(tr.x, tr.z, 0);
                 const tf: Frame = {x: p[0], y: p[1], z: p[2], rot: s.rot};
+                plot.solids.push({kind: "trough", shape: "box", x: p[0], z: p[2], hw: 0.8, hd: 0.3, rot: s.rot, base: p[1], top: p[1] + 0.5});
                 solid.box(tf, 0, 0, 0, 1.6, 0.5, 0.6, tone("#6a6a66"));
                 solid.box(tf, 0, 0.42, 0, 1.4, 0.06, 0.45, tone("#4f7f88"));
             }
             for (let k = 0; k < 4; k++) {
                 const b = at2((r() - 0.5) * s.w * 0.7, (r() - 0.5) * s.d * 0.6, 0.6, "hay", 3);
                 if (b) solid.cylinder({x: plot.p(b.x, b.z)[0], y: plot.p(b.x, b.z)[1], z: plot.p(b.x, b.z)[2], rot: r()}, 0, -0.02, 0, 0.5, 0.5, 0.7, tone("#c9b26a"), 10);
+                if (b) plot.solids.push({kind: "hay", shape: "circle", x: plot.p(b.x, b.z)[0], z: plot.p(b.x, b.z)[2], r: 0.5, base: plot.p(b.x, b.z)[1], top: plot.p(b.x, b.z)[1] + 0.7});
             }
             grass(120, ["#6f9a44", "#86a84e"], 0.4);
             return plot;

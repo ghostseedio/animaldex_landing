@@ -167,7 +167,7 @@ function tank(t: Tank, parts: {inside: Geo; glow: Geo; glass: Geo; water: Geo}, 
 }
 
 /** The hall of a house that is not the aquarium: its dressing in the corners and along the walls, the lights. */
-function hall(e: ZooEnclosure, parts: {inside: Geo; glow: Geo; glass: Geo; water?: Geo}): Plot | null {
+export function hall(e: ZooEnclosure, parts: {inside: Geo; glow: Geo; glass: Geo; water?: Geo}): Plot | null {
     const f = zooHouseFrame(e);
     const b = f.inner;
     const fr = frameAt(b, f.floor);

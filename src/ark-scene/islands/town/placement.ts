@@ -532,8 +532,13 @@ function penned(info: TownPlace, pen: Box, length: number): TownPlace {
 }
 
 /** A point inside its pen, `margin` in from the rails (the scene's hard bound for a penned animal's every pose). */
-/** (A world pose, the island at `ox`, `oz`: moved in place, nothing made, as it runs each frame for each animal.) */
-export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}, ox = 0, oz = 0): void {
+/** (A world pose, the island at `ox`, `oz`: moved in place, nothing made, as it runs each frame for each animal.)
+ *
+ * p3 (solid): with `solid` (the town's colliders, world frame), a pose the pen's rails pulled back onto something solid in
+ * the pen (a garden room, a trough, a bush by the rails) goes on to the nearest point in the pen a body of `margin`'s
+ * width stands clear at (rings a quarter metre apart, the same for every viewer); none within 3 m: where the rails put it.
+ */
+export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}, ox = 0, oz = 0, solid?: {blocked: (x: number, z: number, radius: number) => boolean} | null): void {
     const c = Math.cos(pen.rot);
     const s = Math.sin(pen.rot);
     const dx = pose.x - ox - pen.x;
@@ -547,6 +552,35 @@ export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}
     const qz = Math.min(Math.max(lz, -hz), hz);
     pose.x = ox + pen.x + qx * c - qz * s;
     pose.z = oz + pen.z + qx * s + qz * c;
+    if (!solid) return;
+    clearWithin(pose, Math.min(Math.max(margin - 0.15, 0.05), 1.2), solid, (x, z) => {
+        const ex = x - ox - pen.x;
+        const ez = z - oz - pen.z;
+        return Math.abs(ex * c + ez * s) <= hx + 1e-6 && Math.abs(-ex * s + ez * c) <= hz + 1e-6;
+    });
+}
+
+/**
+ * p3 (solid): a pose its hard bound (a pen's rails, an enclosure's mask) pulled back onto something solid inside it goes on
+ * to the nearest point inside (`inside`) a body of `radius` stands clear at: rings a quarter metre apart out to 3 m, the
+ * same for every viewer; none: left where the bound put it. Nothing made: it runs each frame for each bound animal.
+ */
+export function clearWithin(pose: {x: number; z: number}, radius: number, solid: {blocked: (x: number, z: number, radius: number) => boolean}, inside: (x: number, z: number) => boolean): void {
+    if (!solid.blocked(pose.x, pose.z, radius)) return;
+    const x0 = pose.x;
+    const z0 = pose.z;
+    for (let ring = 1; ring <= 12; ring++) {
+        const n = 8 + ring * 2;
+        for (let k = 0; k < n; k++) {
+            const a = (k / n) * Math.PI * 2;
+            const wx = x0 + Math.cos(a) * ring * 0.25;
+            const wz = z0 + Math.sin(a) * ring * 0.25;
+            if (!inside(wx, wz) || solid.blocked(wx, wz, radius)) continue;
+            pose.x = wx;
+            pose.z = wz;
+            return;
+        }
+    }
 }
 
 /** A point inside its pen, `margin` in from the rails, clear of the buildings in it (the rails win). */

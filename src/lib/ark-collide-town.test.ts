@@ -11,7 +11,7 @@ import base from "@/ark-scene/fixtures/snapshot-v2.json";
 import {withArkIslandsFixture} from "@/ark-scene/fixtures/islands";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {arkIslandSnapshot} from "@/lib/ark-islands";
-import {placeTownAnimals} from "@/ark-scene/islands/town/placement";
+import {clearWithin, placeTownAnimals} from "@/ark-scene/islands/town/placement";
 import {centroid, inPoly} from "@/ark-scene/islands/town/geom";
 import {townColliderSet} from "@/ark-scene/islands/town/colliders";
 import {townWorldSampler} from "@/ark-scene/islands/town/sampler";
@@ -124,6 +124,9 @@ test("a long run of the town: no town animal passes through a town building, wal
         }
         pose.x = origin.x + c.x + (lx - c.x) * lo;
         pose.z = origin.z + c.z + (lz - c.z) * lo;
+        // (p3 (solid): and off what stands inside the mask, as the scene's bound does.)
+        const it = items.find((i) => i.s.a.id === id);
+        if (it) clearWithin(pose, it.s.body.radius + it.s.body.half, townSet, (x, z) => inPoly(mask, x - origin.x, z - origin.z));
     };
     const from = 1_763_000_000;
     let samples = 0;

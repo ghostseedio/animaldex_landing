@@ -13,6 +13,7 @@ import {townTrees, townZooTrees} from "@/ark-scene/islands/town/trees";
 import {launchEnclosures, townAreas, zooLayout} from "@/ark-scene/islands/town/areas";
 import {townObstacles} from "@/ark-scene/islands/town/obstacles";
 import {townColliderList} from "@/ark-scene/islands/town/colliders";
+import {BUSH_GAP} from "@/ark-scene/collide/colliders";
 import {townFarmGates, townFarmProps} from "@/ark-scene/islands/town/farm";
 import {footprintBody, treesClash} from "@/ark-scene/tree-spacing";
 import {ASSETS, ASSET_BASE} from "@/ark-scene/tree-pick";
@@ -70,13 +71,16 @@ test("town trees: library trees at real heights, every level's file there", () =
     for (const t of zooTrees.filter((z) => z.id.startsWith("zoo:aviaries"))) assert.ok(t.height < 8, `${t.id} ${t.height}`);
 });
 
-test("town trees: trunks are colliders, shrubs soft ones", () => {
-    // (p3 zoofix: the zoo habitats' plants are soft colliders of their own, `town:habitat:`, tested in ark-zoo-grounding.)
-    const colliders = townColliderList(launchEnclosures(), {x: 0, z: 0}).filter((c) => !c.id.startsWith("town:habitat:"));
+// (p3 (solid): a shrub is solid now to a body wider than its stems' gaps, BUSH_GAP (the owner: "I just saw a horse go
+// through a bush"); it was soft. The other solid scenery's trunks and bushes, `solids.ts`, are counted by
+// `ark-solid-props.test.ts`: here the trees' own.)
+test("town trees: trunks are colliders, shrubs solid ones with a small animal's gap", () => {
+    const colliders = townColliderList(launchEnclosures(), {x: 0, z: 0}).filter((c) => c.id.startsWith("town:tree-"));
     const trunks = colliders.filter((c) => c.kind === "trunk").length;
-    const shrubs = colliders.filter((c) => c.kind === "shrub").length;
+    const shrubs = colliders.filter((c) => c.kind === "shrub");
     assert.equal(trunks, [...trees, ...zooTrees].filter((t) => !t.low).length);
-    assert.equal(shrubs, [...trees, ...zooTrees].filter((t) => t.low).length);
+    assert.equal(shrubs.length, [...trees, ...zooTrees].filter((t) => t.low).length);
+    assert.ok(shrubs.every((c) => !c.soft && c.gap === BUSH_GAP));
 });
 
 test("farm things: bales, troughs and hay shelters are colliders, clear of every animal's spot", () => {
