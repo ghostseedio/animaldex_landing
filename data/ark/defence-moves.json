@@ -2,6 +2,7 @@
  "about": "Defence moves (3.3 batch, lane A): the species whose own stored text says they curl into a ball, withdraw into a shell, puff up, drop the tail or flash hidden wing colour or eyespots when a predator is near, with the row's sentence for the live log. Built by scripts/ark-defence-moves.mts from AnimalDex docs/ark/signature-behaviours.json; never edited by hand.",
  "version": "defence-moves-1",
  "counts": {
+  "puff": 7,
   "curl": 5,
   "coil": 4,
   "shell": 14
@@ -118,6 +119,16 @@
    "uses": "pose:shell_withdraw"
   },
   {
+   "slug": "fowlers-toad",
+   "name": "Fowler's Toad",
+   "id": "271c4e7c-64eb-4f7f-b911-b6ec5bbee8ff",
+   "move": "puff",
+   "line": "{aAnimal} is puffing up and flattening itself at a threat",
+   "behaviour": "puffs up or flattens when threatened",
+   "quote": "a threatened toad may puff up, flatten or play dead",
+   "uses": "pose:puff_up / pose:flatten"
+  },
+  {
    "slug": "giant-african-land-snail",
    "name": "Giant African Land Snail",
    "id": "9e2bc9bc-d124-4230-bacd-e5598448ad7d",
@@ -138,6 +149,16 @@
    "uses": "pose:coil_spiral"
   },
   {
+   "slug": "great-plains-toad",
+   "name": "Great Plains Toad",
+   "id": "eb922fdd-8ee6-45ed-b598-6aa2771ec92c",
+   "move": "puff",
+   "line": "{aAnimal} is puffing itself up with air at a threat",
+   "behaviour": "puffs up with air when threatened",
+   "quote": "a threatened toad puffs up with air",
+   "uses": "pose:puff_up"
+  },
+  {
    "slug": "greek-tortoise",
    "name": "Greek Tortoise",
    "id": "6491305c-37d5-4586-809f-b00bf27f589c",
@@ -156,6 +177,16 @@
    "behaviour": "retracts instantly at a bird's shadow or touch",
    "quote": "Upon sensing a threat, such as a bird's shadow, a sudden vibration, or a direct touch, the Grovesnail rapidly retracts its soft body into the safety of its hard, calcified shell.",
    "uses": "pose:shell_withdraw"
+  },
+  {
+   "slug": "long-spined-porcupinefish",
+   "name": "Long-spined Porcupinefish",
+   "id": "6637a989-396f-401d-be52-b388f7a68661",
+   "move": "puff",
+   "line": "{aAnimal} is puffing up like a balloon, sharp spines standing out",
+   "behaviour": "puffs up like a balloon with spines standing out",
+   "quote": "The Long-spined Porcupinefish can puff up its body like a balloon and show off its sharp spines to scare away predators.",
+   "uses": "pose:puff_up (balloon + spines)"
   },
   {
    "slug": "malayan-box-turtle",
@@ -198,6 +229,16 @@
    "uses": "pose:shell_withdraw"
   },
   {
+   "slug": "red-tegu",
+   "name": "Red Tegu",
+   "id": "4b06ae8d-f621-47c3-aaae-d189cdcb99a7",
+   "move": "puff",
+   "line": "{aAnimal} is cornered, hissing and puffing itself up",
+   "behaviour": "cornered: hisses, puffs up, tail lash",
+   "quote": "A threatened tegu runs for its burrow, and if cornered it hisses, puffs up and bites.",
+   "uses": "pose:puff_up"
+  },
+  {
    "slug": "reeves-turtle",
    "name": "Reeves' Turtle",
    "id": "712f5dcf-2eaf-443a-9275-e26d3e5db23b",
@@ -218,6 +259,16 @@
    "uses": "pose:hermit_withdraw_claw_plug"
   },
   {
+   "slug": "savannah-monitor",
+   "name": "Savannah Monitor",
+   "id": "decda091-d63b-4af4-be0d-7407bed3115f",
+   "move": "puff",
+   "line": "{aAnimal} is cornered, hissing, puffing up and lashing its tail",
+   "behaviour": "cornered: hisses, puffs up, lashes tail",
+   "quote": "A cornered lizard hisses, puffs up its body, lashes its tail and bites.",
+   "uses": "pose:puff_up + tail swipe"
+  },
+  {
    "slug": "short-beaked-echidna",
    "name": "Short-beaked Echidna",
    "id": "bd675401-8a57-46d2-a271-7aa9931fa60c",
@@ -226,6 +277,26 @@
    "behaviour": "digs in and curls up against predators",
    "quote": "Digging in and curling make defense portable.",
    "uses": "pose:dig_in_wedge + pose:curl_ball"
+  },
+  {
+   "slug": "southern-toad",
+   "name": "Southern Toad",
+   "id": "def215b8-eb61-41dd-a5c2-dba454df97ab",
+   "move": "puff",
+   "line": "{aAnimal} is puffing its body up with air at a threat",
+   "behaviour": "puffs up its body with air when threatened",
+   "quote": "A threatened toad puffs up its body with air, making it harder to swallow.",
+   "uses": "pose:puff_up"
+  },
+  {
+   "slug": "stars-and-stripes-pufferfish",
+   "name": "Stars and Stripes Pufferfish",
+   "id": "cffad6cb-8e40-4a4d-828d-017b3d9370f6",
+   "move": "puff",
+   "line": "{aAnimal} is gulping water and swelling into a stiff, prickly ball",
+   "behaviour": "gulps water to swell into a stiff prickly ball when grabbed",
+   "quote": "When grabbed or cornered, it gulps water into an elastic stomach until its body swells into a stiff, prickly ball far too wide for most mouths.",
+   "uses": "pose:puff_up (water ball)"
   },
   {
    "slug": "sunda-pangolin",
@@ -240,12 +311,7 @@
  ],
  "skipped": [
   "Eastern Red-backed Salamander (tail): the move is not drawn yet: \"{aAnimal} is dropping its tail to get away\"",
-  "Fowler's Toad (puff): the move is not drawn yet: \"{aAnimal} is puffing up and flattening itself at a threat\"",
-  "Great Plains Toad (puff): the move is not drawn yet: \"{aAnimal} is puffing itself up with air at a threat\"",
-  "Long-spined Porcupinefish (puff): the move is not drawn yet: \"{aAnimal} is puffing up like a balloon, sharp spines standing out\"",
-  "Southern Toad (puff): the move is not drawn yet: \"{aAnimal} is puffing its body up with air at a threat\"",
-  "Stars and Stripes Pufferfish (puff): the move is not drawn yet: \"{aAnimal} is gulping water and swelling into a stiff, prickly ball\"",
-  "Warty Frogfish (puff): the move is not drawn yet: \"{aAnimal} is swallowing water and swelling up after being seized\"",
+  "Warty Frogfish (puff): the sentence says it is grabbed or seized: \"{aAnimal} is swallowing water and swelling up after being seized\"",
   "Eastern Lubber Grasshopper (flash): the move is not drawn yet: \"{aAnimal} is lifting its short front wings to flash the rose-red wings beneath\"",
   "Green-blotched Moth (flash): the move is not drawn yet: \"{aAnimal} is opening its leaf-like green forewings to reveal orange hindwings\"",
   "Harnessed Moth (flash): the move is not drawn yet: \"{aAnimal} is flashing the scarlet hindwings it kept hidden underneath\"",
@@ -263,8 +329,6 @@
   "Common Wall Lizard (tail): the move is not drawn yet: \"{aAnimal} is escaping while its shed tail goes on twitching\"",
   "Loggerhead Musk Turtle (shell): the sentence says it is grabbed or seized: \"{aAnimal} is biting hard and drawing into its shell as it is grabbed\"",
   "Mediterranean House Gecko (tail): the move is not drawn yet: \"{aAnimal} is escaping into a crack while its shed tail keeps wriggling\"",
-  "Red Tegu (puff): the move is not drawn yet: \"{aAnimal} is cornered, hissing and puffing itself up\"",
-  "Savannah Monitor (puff): the move is not drawn yet: \"{aAnimal} is cornered, hissing, puffing up and lashing its tail\"",
   "Tropical House Gecko (tail): the move is not drawn yet: \"{aAnimal} is leaving its broken-off tail twitching behind\""
  ]
 }

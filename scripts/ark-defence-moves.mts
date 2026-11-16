@@ -59,7 +59,7 @@ const COLOURS: Array<[RegExp, string]> = [
 ];
 
 /** The moves the scene draws today (each proven in the behaviours harness); a row of another move is listed in the full file's `skipped`. */
-const BUILT = new Set<Move>(["curl", "coil", "shell"]);
+const BUILT = new Set<Move>(["curl", "coil", "shell", "puff"]);
 
 const species: Record<string, [Move, string] | [Move, string, string]> = {};
 const full: Array<{slug: string; name: string; id: string; move: Move; line: string; behaviour: string; quote: string; uses: string; colour?: string}> = [];

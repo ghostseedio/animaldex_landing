@@ -33,6 +33,8 @@ test("the table: every species' move comes from its own catalogue row, with the 
     assert.equal(defenceMoveOf("ball-python")?.move, "coil");
     assert.equal(defenceMoveOf("greek-tortoise")?.move, "shell");
     assert.equal(defenceMoveOf("grovesnail")?.move, "shell");
+    assert.equal(defenceMoveOf("stars-and-stripes-pufferfish")?.move, "puff");
+    assert.equal(defenceMoveOf("southern-toad")?.move, "puff");
     // No row, no move: a courtship display is not a defence (the bullfrog's vocal sac), nor a caterpillar's curl an adult moth's.
     assert.equal(defenceMoveOf("american-bullfrog"), null);
     assert.equal(defenceMoveOf("isabella-tiger-moth"), null);
@@ -104,6 +106,9 @@ test("the pack per move and body: a turtle's shell over it, a snail's behind; by
     assert.deepEqual(kindOf("ball-python", "snake"), [DEFENCE_KIND.coil, 1, 0]);
     assert.deepEqual(kindOf("greek-tortoise", "turtle"), [DEFENCE_KIND.shell, 1, 0]);
     assert.deepEqual(kindOf("grovesnail", "arthropod"), [DEFENCE_KIND.shell, 1, 1]);
+    // A pufferfish swells all round in the water, a toad from the ground up.
+    assert.deepEqual(kindOf("stars-and-stripes-pufferfish", "fish"), [DEFENCE_KIND.puff, 1, 1]);
+    assert.deepEqual(kindOf("southern-toad", "frog"), [DEFENCE_KIND.puff, 1, 0]);
     assert.equal(defencePack(newDefenceState(), defenceMoveOf("greek-tortoise")!, "turtle"), 0, "about its day: nothing");
 });
 

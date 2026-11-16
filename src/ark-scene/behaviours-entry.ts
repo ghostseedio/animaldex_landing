@@ -181,12 +181,15 @@ async function main() {
                 await frames(1);
             }
             const who = handle.locate(a) ?? at0;
-            const length = (debug.entries().find((e) => e.animal.id === a) as unknown as {length: number}).length;
+            const drawn = debug.entries().find((e) => e.animal.id === a) as unknown as {length: number; middle: {x: number; y: number; z: number} | null};
+            const length = drawn.length;
+            // (Its drawn middle: a moth is on a wall, a pufferfish under the water, not on the ground at its place.)
+            const target = drawn.middle ? {x: drawn.middle.x, y: drawn.middle.y, z: drawn.middle.z} : {x: who.x, y: Math.max(handle.heightAt(who.x, who.z), 0) + length * 0.3, z: who.z};
             // (Closer than the page lets a visitor come: these are small animals, and the move is in the body's shape.)
             const controls = (debug as unknown as {controls: {minDistance: number}}).controls;
             for (let i = 0; i < 3; i++) {
                 controls.minDistance = 0.08;
-                handle.setView({target: {x: who.x, y: Math.max(handle.heightAt(who.x, who.z), 0) + length * 0.3, z: who.z}, distance: Math.max(lengths * length, 0.12), polar, azimuth});
+                handle.setView({target, distance: Math.max(lengths * length, 0.12), polar, azimuth});
                 await frames(1);
             }
             return `${api.defence()}   length ${length.toFixed(3)} m`;
@@ -194,9 +197,9 @@ async function main() {
         /** What the first cast's animal does now: the reactive layer's action, its move, and what the scene reports as seen. */
         defence: () => {
             const d = (debug as unknown as {defence: (id: string) => {amount: number; tail: number; shed: number; episode: number} | null}).defence(a);
-            const micro = (debug.entries().find((e) => e.animal.id === a) as unknown as {place: {micro?: unknown}; defenceNear?: number});
+            const micro = (debug.entries().find((e) => e.animal.id === a) as unknown as {place: {micro?: unknown}; defenceNear?: number; level?: string});
             const seen = handle.seen?.().acts.filter((act) => act.recipe.startsWith("defence_")).map((act) => act.line) ?? [];
-            return `action: ${micro.place.micro ? `(at its microhabitat) predator beside it ${micro.defenceNear ?? 0}` : handle.reactive?.(a)?.action ?? "-"}   move: ${d ? `amount ${d.amount.toFixed(2)} tail ${d.tail.toFixed(2)} shed ${d.shed.toFixed(1)} episode ${d.episode}` : "-"}   seen: ${seen.join(" / ") || "-"}`;
+            return `action: ${micro.place.micro ? `(at its microhabitat) predator beside it ${micro.defenceNear ?? 0}` : handle.reactive?.(a)?.action ?? "-"}   move: ${d ? `amount ${d.amount.toFixed(2)} tail ${d.tail.toFixed(2)} shed ${d.shed.toFixed(1)} episode ${d.episode}` : "-"}   seen: ${seen.join(" / ") || "-"}   drawn as: ${micro.level ?? "-"}`;
         },
         handle
     };

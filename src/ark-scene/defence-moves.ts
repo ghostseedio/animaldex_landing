@@ -294,6 +294,11 @@ export const DEFENCE_VERTEX = `
         float fromY = mix(dy0, (dy0 + dy1) * 0.5, water);
         transformed.x *= 1.0 + swell;
         transformed.y = fromY + (transformed.y - fromY) * (1.0 + swell * mix(0.7, 1.0, water));
+        // (On land, one with a tail lashes it: the two lizards that puff up are the two whose text says so.)
+        if (water < 0.5 && tailLength > 0.0 && transformed.z < tailBaseZ) {
+            float into = clamp((tailBaseZ - transformed.z) / tailLength, 0.0, 1.0);
+            transformed.x += defA * tailLength * 0.3 * into * into * sin(arkClock * 9.0 + arkInstance.x * 40.0);
+        }
     } else if (defK > 6.5 && defK < 7.5 && tailLength > 0.0 && transformed.z < tailBaseZ) {
         // The tail shed. While it lies where it fell (aux 1-255: its time), it stays behind as the animal goes
         // (amount: how far, of four tail lengths), twitching, and shrinks away at the end; then (aux 0) only a stump
