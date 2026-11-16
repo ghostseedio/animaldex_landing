@@ -430,16 +430,33 @@ vec4 mvPosition;
     float gust = 0.35 + 0.65 * envWind;
     vec2 sway = normalize(arkWind + vec2(1e-4)) * (sin(arkTime * 2.0944 + root.x * 3.1 + root.z * 2.3) * 0.6 + sin(arkTime * 3.6652 + root.z * 5.3) * 0.25);
     w.xz += sway * up * up * 2.2 * gust;
+    float bladeH = max(length(toWorld[1].xyz), 1e-3);
     for (int i = 0; i < ${BUG_CLEAR_MAX}; i++) {
         if (float(i) >= bugClearCount) break;
         vec4 c = bugClear[i];
         vec2 away = root.xz - c.xz;
         float d = length(away);
         float k = (1.0 - smoothstep(c.w * 0.7, c.w * 1.8, d)) * (1.0 - smoothstep(0.25, 0.6, abs(root.y - c.y)));
-        if (k <= 0.0) continue;
-        // Bowed down and out: the tip lies low beyond the body's edge.
-        w.y = root.y + (w.y - root.y) * (1.0 - 0.75 * k);
-        w.xz += away / max(d, 1e-3) * up * 0.9 * k;
+        if (k > 0.0) {
+            // Bowed down and out round the body: the tip lies low beyond its edge.
+            w.y = root.y + (w.y - root.y) * (1.0 - 0.75 * k);
+            w.xz += away / max(d, 1e-3) * up * 0.9 * k;
+        }
+        // And the sight line from the camera to it kept open: a blade standing in that corridor stoops under the line
+        // (the corridor a little wider toward the camera), so the sward never hides the animal the view came down to.
+        vec2 toEye = cameraPosition.xz - c.xz;
+        float run = length(toEye);
+        if (run < 0.02) continue;
+        vec2 dir = toEye / run;
+        float along = clamp(dot(root.xz - c.xz, dir), 0.0, run);
+        float side = abs(dot(root.xz - c.xz, vec2(-dir.y, dir.x)));
+        float width = c.w * (1.1 + 1.5 * along / max(run, 1e-3)) + 0.02;
+        float inCorridor = (1.0 - smoothstep(width, width * 1.6, side)) * step(0.0, dot(root.xz - c.xz, dir)) * (1.0 - smoothstep(0.25, 0.6, abs(root.y - c.y)));
+        if (inCorridor <= 0.0) continue;
+        float lineY = mix(c.y + 0.6 * c.w, cameraPosition.y, along / run);
+        float room = clamp((lineY - root.y - 0.004) / bladeH, 0.08, 1.0);
+        w.y = root.y + (w.y - root.y) * mix(1.0, room, inCorridor);
+        w.xz += vec2(-dir.y, dir.x) * sign(dot(root.xz - c.xz, vec2(-dir.y, dir.x)) + 1e-4) * up * (1.0 - room) * 0.6 * inCorridor;
     }
     mvPosition = viewMatrix * w;
     gl_Position = projectionMatrix * mvPosition;
