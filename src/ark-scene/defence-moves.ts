@@ -6,7 +6,7 @@
  *   - curl: a hedgehog, a pangolin, a pill millipede rolls into a ball; a millipede or a ball python coils flat;
  *   - shell: a tortoise, a terrapin, a snail, a hermit crab pulls its head and limbs into its shell;
  *   - puff: a pufferfish, a toad, a cornered monitor swells;
- *   - flash: a moth or a grasshopper shows the colour or the eyespots it kept hidden;
+ *   - flash: a moth or a grasshopper shows the colour it kept hidden on its wings;
  *   - tail: a lizard or a salamander drops its tail, runs, and the tail grows back.
  *
  * Viewer-local and visual only, like the reactive layer that sets it off (`reactive.ts`: the action `withdraw` for
@@ -29,7 +29,7 @@ import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {canEat, intelProfile, type ArkIntelProfile} from "@/ark-scene/intelligence-profile";
 
 export type DefenceMove = "curl" | "coil" | "shell" | "puff" | "tail" | "flash";
-export type DefenceSpec = {move: DefenceMove; /** The species' own sentence (the catalogue row's `line`). */ line: string; /** A flash's hidden colour (sRGB hex) or "eyes". */ colour: string | null};
+export type DefenceSpec = {move: DefenceMove; /** The species' own sentence (the catalogue row's `line`). */ line: string; /** A flash's hidden colour (sRGB hex), as its own text names it. */ colour: string | null};
 
 const SPECIES = (table as unknown as {species: Record<string, [DefenceMove, string, string?]>}).species;
 const SPECS = new Map<string, DefenceSpec>(Object.entries(SPECIES).map(([slug, [move, line, colour]]) => [slug, {move, line, colour: colour ?? null}]));
@@ -152,8 +152,8 @@ export function defenceSaid(state: DefenceState, spec: DefenceSpec, id: string):
 /** The shader's kinds. */
 export const DEFENCE_KIND = {curl: 1, coil: 2, shell: 3, puff: 5, tail: 7, flash: 8} as const;
 
-/** The flash colours the table names, in order (the shader's list; index 0 is the eyespots). */
-export const FLASH_COLOURS: string[] = Array.from(new Set(Array.from(SPECS.values(), (s) => s.colour).filter((c): c is string => Boolean(c) && c !== "eyes"))).sort();
+/** The flash colours the table names, in order (the shader's list, numbered from 1). */
+export const FLASH_COLOURS: string[] = Array.from(new Set(Array.from(SPECS.values(), (s) => s.colour).filter((c): c is string => Boolean(c)))).sort();
 
 /** A move for the shader in one float: -(kind·65536 + aux·256 + amount), amount and aux 0…255. Never positive (that is a sleep). */
 export function packDefence(kind: number, amount: number, aux: number): number {
@@ -191,7 +191,7 @@ export function defencePack(state: DefenceState, spec: DefenceSpec, plan: string
         case "puff":
             return packDefence(DEFENCE_KIND.puff, state.amount, PUFF_ALL_ROUND.has(plan ?? "") ? 1 : 0);
         case "flash":
-            return packDefence(DEFENCE_KIND.flash, state.amount, spec.colour === "eyes" ? 0 : FLASH_COLOURS.indexOf(spec.colour ?? "") + 1);
+            return packDefence(DEFENCE_KIND.flash, state.amount, FLASH_COLOURS.indexOf(spec.colour ?? "") + 1);
         case "tail": {
             if (state.tail <= 0.001) return 0;
             // (aux: the shed tail's time, 1…255 over TAIL_TWITCH while it lies there; 0 once it is gone. Amount: the stump.)
@@ -213,7 +213,8 @@ const hexVec = (hex: string) => {
 export const DEFENCE_VERTEX_DECLARATIONS = `
 uniform vec4 arkDefBox;
 uniform float arkDefSpan;
-varying vec4 vArkDefence;
+// (x: a flash's share here, on the wings; y: its colour's number, or the shed tail's side of the cut.)
+varying vec2 vArkDefence;
 // A defence move packed negative in arkInstance.w (defence-moves.ts packDefence): (kind, amount 0-1, aux 0-255).
 vec3 arkDefenceOf(float packed) {
     if (packed > -0.5) return vec3(0.0);
@@ -241,7 +242,7 @@ export const DEFENCE_VERTEX = `
     float dLen = max(dz1 - dz0, 0.001);
     float dHigh = max(dy1 - dy0, 0.001);
     float dMid = (dz0 + dz1) * 0.5;
-    vArkDefence = vec4(position.x / max(arkDefSpan, 0.001), (position.z - dMid) / dLen, 0.0, 0.0);
+    vArkDefence = vec2(0.0);
     if (defK > 0.5 && defK < 1.5) {
         // A ball: the spine bends round under it (head and tail come together at the belly), the legs fold into the
         // middle, and the whole draws in a little; lifted so the ball rests on the ground.
@@ -314,7 +315,7 @@ export const DEFENCE_VERTEX = `
             shed.x += tailLength * 0.16 * fade * sin(arkClock * 31.0 + into * 7.0) * into;
             vec3 stump = vec3(tailBaseX + (transformed.x - tailBaseX) * (1.0 - into / 0.12), dy0 + (transformed.y - dy0) * (1.0 - into / 0.12), transformed.z);
             transformed = mix(stump, shed, cut);
-            vArkDefence.w = cut;
+            vArkDefence.y = cut;
         } else {
             float gone = defA;
             float keep = 1.0 - 0.88 * gone;
@@ -324,35 +325,31 @@ export const DEFENCE_VERTEX = `
             transformed.y = dy0 + (transformed.y - dy0) * taper;
         }
     } else if (defK > 7.5) {
-        vArkDefence.z = defA;
-        vArkDefence.w = arkDef.z;
+        // A flash of hidden colour, on the hind wings as they lie at rest, by the rest pose (so it stays on the wings
+        // as the body moves). A flat body (a moth with its wings spread or folded low: far wider than it is tall) has
+        // them out at the sides behind its middle; a tall one (a grasshopper) along the top of its back, and what
+        // is out at its sides is legs.
+        float side = abs(position.x) / max(arkDefSpan, 0.001);
+        float rear = 1.0 - smoothstep(0.02, 0.12, (position.z - dMid) / dLen);
+        float onBack = smoothstep(0.45, 0.62, (position.y - dy0) / dHigh) * (1.0 - smoothstep(0.7, 0.9, side));
+        float flat = 1.0 - smoothstep(0.45, 0.7, dHigh / max(2.0 * arkDefSpan, 0.001));
+        vArkDefence = vec2(defA * rear * mix(onBack, smoothstep(0.16, 0.3, side), flat), arkDef.z);
     }
 }
 `;
 
 export const DEFENCE_FRAGMENT_DECLARATIONS = `
-varying vec4 vArkDefence;
+varying vec2 vArkDefence;
 `;
 
 /**
- * The flash on the skin (after the map): the hind part of each wing takes the hidden colour the species' text names,
- * or a pair of eyespots (a dark pupil, a pale ring, a dark rim) where it says eyes. And the shed tail's seam: the
- * skin between the stump and the tail left behind is not drawn.
+ * The flash on the skin (after the map): the wings take the hidden colour the species' text names. And the shed
+ * tail's seam: the skin between the stump and the tail left behind is not drawn.
  */
 export const DEFENCE_FRAGMENT = `
-if (vArkDefence.z > 0.003) {
-    float side = abs(vArkDefence.x);
-    if (vArkDefence.w < 0.5) {
-        vec2 eye = vec2(side - 0.5, vArkDefence.y + 0.12) / vec2(0.26, 0.2);
-        float d = length(eye);
-        float on = vArkDefence.z * (1.0 - smoothstep(0.92, 1.0, d));
-        vec3 spot = d < 0.34 ? vec3(0.012) : d < 0.62 ? vec3(0.83, 0.72, 0.36) : vec3(0.02, 0.02, 0.03);
-        diffuseColor.rgb = mix(diffuseColor.rgb, spot, on);
-    } else {
-        vec3 hid = vec3(0.6, 0.05, 0.05);
-${FLASH_COLOURS.map((hex, i) => `        if (abs(vArkDefence.w - ${(i + 1).toFixed(1)}) < 0.5) hid = ${hexVec(hex)};`).join("\n")}
-        float wing = smoothstep(0.16, 0.3, side) * (1.0 - smoothstep(0.02, 0.1, vArkDefence.y));
-        diffuseColor.rgb = mix(diffuseColor.rgb, hid, vArkDefence.z * wing * 0.92);
-    }
-} else if (vArkDefence.z < 0.003 && vArkDefence.w > 0.02 && vArkDefence.w < 0.98) discard;
+if (vArkDefence.x > 0.003) {
+    vec3 hid = vec3(0.6, 0.05, 0.05);
+${FLASH_COLOURS.map((hex, i) => `    if (abs(vArkDefence.y - ${(i + 1).toFixed(1)}) < 0.5) hid = ${hexVec(hex)};`).join("\n")}
+    diffuseColor.rgb = mix(diffuseColor.rgb, hid, min(vArkDefence.x, 1.0) * 0.92);
+} else if (vArkDefence.y > 0.02 && vArkDefence.y < 0.98) discard;
 `;

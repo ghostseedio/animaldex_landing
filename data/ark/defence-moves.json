@@ -3,6 +3,7 @@
  "version": "defence-moves-1",
  "counts": {
   "puff": 7,
+  "flash": 4,
   "curl": 5,
   "coil": 4,
   "shell": 14
@@ -89,6 +90,17 @@
    "uses": "pose:shell_close (box seal)"
   },
   {
+   "slug": "eastern-lubber-grasshopper",
+   "name": "Eastern Lubber Grasshopper",
+   "id": "26c379d6-720d-48ef-97b8-81c71b83396c",
+   "move": "flash",
+   "line": "{aAnimal} is lifting its short front wings to flash the rose-red wings beneath",
+   "behaviour": "lifts short front wings to flash rose-red wings beneath",
+   "quote": "When a bird or a hand closes in, the grasshopper lifts its short front wings to flash the rose-red wings folded beneath them.",
+   "uses": "pose:hindwing_flash",
+   "colour": "#d8436b"
+  },
+  {
    "slug": "european-hedgehog",
    "name": "European Hedgehog",
    "id": "8d84bc94-b135-4974-aee8-74faf3e239b0",
@@ -169,6 +181,17 @@
    "uses": "pose:shell_withdraw (forelimb shield)"
   },
   {
+   "slug": "green-blotched-moth",
+   "name": "Green-blotched Moth",
+   "id": "f823aa7d-9879-4225-9261-acd9bd7176e1",
+   "move": "flash",
+   "line": "{aAnimal} is opening its leaf-like green forewings to reveal orange hindwings",
+   "behaviour": "opens its leaf-like forewings to flash orange hindwings when disturbed",
+   "quote": "At rest the green forewings resemble a leaf; if disturbed it opens them to reveal the orange hindwings, which may startle an attacker.",
+   "uses": "pose:hindwing_flash",
+   "colour": "#ee8a1f"
+  },
+  {
    "slug": "grovesnail",
    "name": "Grovesnail",
    "id": "fc7ea048-2197-4946-865d-0a2b96c395d2",
@@ -177,6 +200,17 @@
    "behaviour": "retracts instantly at a bird's shadow or touch",
    "quote": "Upon sensing a threat, such as a bird's shadow, a sudden vibration, or a direct touch, the Grovesnail rapidly retracts its soft body into the safety of its hard, calcified shell.",
    "uses": "pose:shell_withdraw"
+  },
+  {
+   "slug": "harnessed-moth",
+   "name": "Harnessed Moth",
+   "id": "164dc206-338e-409c-ae4c-73709edbbd9a",
+   "move": "flash",
+   "line": "{aAnimal} is flashing the scarlet hindwings it kept hidden underneath",
+   "behaviour": "sits camouflaged, then flashes scarlet hindwings when touched",
+   "quote": "The Harnessed Moth sits camouflaged until it is touched, then flashes scarlet hindwings kept hidden underneath.",
+   "uses": "pose:hindwing_flash",
+   "colour": "#e0261c"
   },
   {
    "slug": "long-spined-porcupinefish",
@@ -269,6 +303,17 @@
    "uses": "pose:puff_up + tail swipe"
   },
   {
+   "slug": "scarlet-tiger-moth",
+   "name": "Scarlet Tiger Moth",
+   "id": "9994ddb3-69b0-44c4-a34a-2d25716a3a72",
+   "move": "flash",
+   "line": "{aAnimal} is opening its dark wings to show the bright red ones underneath",
+   "behaviour": "opens its dark wings to show bright red ones when bothered",
+   "quote": "When something bothers it, the Scarlet Tiger Moth opens its dark wings and shows bright red ones underneath.",
+   "uses": "pose:hindwing_flash",
+   "colour": "#d92a23"
+  },
+  {
    "slug": "short-beaked-echidna",
    "name": "Short-beaked Echidna",
    "id": "bd675401-8a57-46d2-a271-7aa9931fa60c",
@@ -312,15 +357,11 @@
  "skipped": [
   "Eastern Red-backed Salamander (tail): the move is not drawn yet: \"{aAnimal} is dropping its tail to get away\"",
   "Warty Frogfish (puff): the sentence says it is grabbed or seized: \"{aAnimal} is swallowing water and swelling up after being seized\"",
-  "Eastern Lubber Grasshopper (flash): the move is not drawn yet: \"{aAnimal} is lifting its short front wings to flash the rose-red wings beneath\"",
-  "Green-blotched Moth (flash): the move is not drawn yet: \"{aAnimal} is opening its leaf-like green forewings to reveal orange hindwings\"",
-  "Harnessed Moth (flash): the move is not drawn yet: \"{aAnimal} is flashing the scarlet hindwings it kept hidden underneath\"",
-  "Io Moth (flash): the move is not drawn yet: \"{aAnimal} is opening its wings to reveal huge fake eyes\"",
-  "Owl Butterfly (flash): the move is not drawn yet: \"{aAnimal} is showing the eyespots on its wings to an attacker\"",
-  "Peacock Butterfly (flash): the move is not drawn yet: \"{aAnimal} is flicking its wings open and rubbing them together with a hiss\"",
-  "Polyphemus Moth (flash): the move is not drawn yet: \"{aAnimal} is flashing open the hidden eyespots on its huge tan wings\"",
-  "Scarlet Tiger Moth (flash): the move is not drawn yet: \"{aAnimal} is opening its dark wings to show the bright red ones underneath\"",
-  "White Underwing Moth (flash): the move is not drawn yet: \"{aAnimal} is bolting in fast, erratic flight to resettle on another trunk\"",
+  "Io Moth (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is opening its wings to reveal huge fake eyes\"",
+  "Owl Butterfly (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is showing the eyespots on its wings to an attacker\"",
+  "Peacock Butterfly (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is flicking its wings open and rubbing them together with a hiss\"",
+  "Polyphemus Moth (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is flashing open the hidden eyespots on its huge tan wings\"",
+  "White Underwing Moth (flash): the sentence says another action than the move: \"{aAnimal} is bolting in fast, erratic flight to resettle on another trunk\"",
   "Long-eared Hedgehog (curl): the sentence says another action than the move: \"{aAnimal} is raising its spines, hissing and jumping at a threat\"",
   "Bocage's Wall Lizard (tail): the move is not drawn yet: \"{aAnimal} is shedding its tail as it is seized\"",
   "Common House Gecko (tail): the move is not drawn yet: \"{aAnimal} is escaping while its shed tail keeps twitching\"",

@@ -62,7 +62,7 @@ const PLANS = {
  * then taken away: [what the harness does, seconds the world runs on, label]. Each scene: how many body lengths away
  * it is framed from, and the camera's azimuth and polar angle when the default hides the move (a flat coil is seen from above).
  */
-const DEFENCE = {curl: [5], pangolin: [4], pill: [7, 2.4, 0.5], coil: [3, 2.4, 0.5], millipede: [4, 2.4, 0.5], shell: [5], snail: [7], hermit: [7], puff: [6], monitor: [3.5], puffer: [5], flash: [7, 2.4, 0.5], eyes: [7, 2.4, 0.5], lubber: [7, 2.4, 0.6], tail: [5, 2.4, 0.6], salamander: [5, 2.4, 0.6]};
+const DEFENCE = {curl: [5], pangolin: [4], pill: [7, 2.4, 0.5], coil: [3, 2.4, 0.5], millipede: [4, 2.4, 0.5], shell: [5], snail: [7], hermit: [7], puff: [6], monitor: [3.5], puffer: [5], flash: [7, 2.4, 0.5], eyes: [5, 2.4, 0.5], peacock: [6, 2.4, 0.5], owl: [5, 2.4, 0.5], harnessed: [7, 2.4, 0.5], blotched: [6, 2.4, 0.5], lubber: [6, 5.4, 0.7], tail: [5, 2.4, 0.6], salamander: [5, 2.4, 0.6]};
 const DEFENCE_STEPS = [["none", 2, "before: about its day"], ["near", 0.5, "a predator beside it, half a second"], ["hold", 0.5, "one second"], ["hold", 1, "two seconds"], ["hold", 3, "five seconds"], ["away", 4, "the predator gone, four seconds"], ["hold", 12, "sixteen seconds on"], ["hold", 30, "calm again"]];
 const summary = {};
 for (const name of scenes) {

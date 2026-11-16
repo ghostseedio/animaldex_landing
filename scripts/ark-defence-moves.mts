@@ -49,17 +49,20 @@ const NOT_SHOWN: Array<[RegExp, string]> = [
     [/\bbolting\b|\bjumping at\b/i, "the sentence says another action than the move"],
     [/\binto a crack\b|\bcrevice\b|\btrunk\b/i, "the sentence names a place the scene does not guarantee"]
 ];
-/** A flash's hidden colour, only where the row's own words name it (sRGB hex); eyespots where it says eyes or eyespots. */
+/**
+ * A flash's hidden colour, only where the row's own words name it (sRGB hex). A row of eyespots (the Io, Polyphemus,
+ * owl and peacock butterflies) is not built: the models rest with their wings shut and the scene cannot open them, and
+ * an eyespot painted on a shut wing would not be what the text says.
+ */
 const COLOURS: Array<[RegExp, string]> = [
     [/rose-red/i, "#d8436b"],
     [/scarlet/i, "#e0261c"],
     [/bright red/i, "#d92a23"],
-    [/orange/i, "#ee8a1f"],
-    [/eyespots?|fake eyes/i, "eyes"]
+    [/orange/i, "#ee8a1f"]
 ];
 
 /** The moves the scene draws today (each proven in the behaviours harness); a row of another move is listed in the full file's `skipped`. */
-const BUILT = new Set<Move>(["curl", "coil", "shell", "puff"]);
+const BUILT = new Set<Move>(["curl", "coil", "shell", "puff", "flash"]);
 
 const species: Record<string, [Move, string] | [Move, string, string]> = {};
 const full: Array<{slug: string; name: string; id: string; move: Move; line: string; behaviour: string; quote: string; uses: string; colour?: string}> = [];
@@ -70,9 +73,9 @@ for (const row of rows) {
     if (!move) continue;
     const slug = slugOf(row.name);
     const why = !BUILT.has(move) ? "the move is not drawn yet" : !known[slug] ? "no model in the scene's tables" : NOT_SHOWN.find(([re]) => re.test(row.line))?.[1] ?? (species[slug] ? `it already has ${species[slug][0]}` : null);
-    const colour = move === "flash" ? COLOURS.find(([re]) => re.test(`${row.behaviour} ${row.line}`))?.[1] : undefined;
+    const colour = move === "flash" && !/eyespots?|fake eyes/i.test(`${row.behaviour} ${row.line}`) ? COLOURS.find(([re]) => re.test(`${row.behaviour} ${row.line}`))?.[1] : undefined;
     if (why || (move === "flash" && !colour)) {
-        skipped.push(`${row.name} (${move}): ${why ?? "the row names no colour or eyespots"}: "${row.line}"`);
+        skipped.push(`${row.name} (${move}): ${why ?? "eyespots (or no colour named): the scene cannot open a wing to show them"}: "${row.line}"`);
         continue;
     }
     species[slug] = colour ? [move, row.line, colour] : [move, row.line];

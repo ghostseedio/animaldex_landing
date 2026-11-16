@@ -147,7 +147,7 @@ test("a tail-dropper: sheds once when the predator is very close, the shed tail 
 });
 
 test("the flash colours the shader lists are the ones the table names", () => {
-    const named = new Set(defenceSpecies().map(([, s]) => s.colour).filter((c) => c && c !== "eyes"));
+    const named = new Set(defenceSpecies().map(([, s]) => s.colour).filter(Boolean));
     assert.deepEqual(new Set(FLASH_COLOURS), named);
     for (const hex of FLASH_COLOURS) assert.ok(/^#[0-9a-f]{6}$/.test(hex));
 });
