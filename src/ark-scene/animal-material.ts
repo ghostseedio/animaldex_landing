@@ -47,6 +47,8 @@ import {L2_BODY_NONE, type L2BodyUniforms} from "@/ark-scene/locomotion/swim";
 // 3.3 batch (A): defence moves (a ball, a shell, a swollen body, a shed tail, a wing flash).
 import {DEFENCE_FRAGMENT, DEFENCE_FRAGMENT_DECLARATIONS, DEFENCE_VERTEX, DEFENCE_VERTEX_DECLARATIONS} from "@/ark-scene/defence-moves";
 import {tailHabitUniform, type TailHabit} from "@/ark-scene/tail-habit";
+// p3 (reflect): the reflection's draw of the same mesh (`water-reflect-render.ts`).
+import {REFLECT_FRAGMENT, REFLECT_FRAGMENT_DECLARATIONS, REFLECT_VERTEX, REFLECT_VERTEX_DECLARATIONS, type ReflectUniforms} from "@/ark-scene/water-reflect-shader";
 
 /** One clock for every animal, in seconds. */
 export const ARK_CLOCK = {value: 0};
@@ -407,6 +409,11 @@ export type AnimalMaterialOptions = {
     bodyMotion?: L2BodyUniforms | null;
     /** 3.3 batch (B): the species' tail habit (`tail-habit.ts`), for a model with its tail marked; absent: none. */
     tailHabit?: TailHabit | null;
+    /**
+     * p3 (reflect): this draws the reflection in still water (`water-reflect-render.ts`): mirrored about each instance's
+     * own water plane, slid onto it, tinted and faded. Its uniforms are shared with the mesh's depth pass.
+     */
+    reflect?: ReflectUniforms | null;
 };
 
 export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMaterial {
@@ -457,7 +464,11 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
     material.userData.arkLook = {look: options.look ?? null, level, shell: Boolean(options.shell)};
     material.userData.arkOptions = options;
     material.defines = {...(options.animated ? {ARK_MOTION: ""} : {}), ...(options.rig ? {ARK_RIG: ""} : {}), ...(options.rig && options.pose ? {ARK_RIG_LIVE: ""} : {}), ...lookDefines(material)};
-    const key = `${options.animated ? "ark-animal-near" : "ark-animal-far"}${options.rig ? (options.pose ? "-rig-live" : "-rig") : ""}`;
+    if (options.reflect) {
+        material.defines.ARK_REFLECT = "";
+        Object.assign(uniforms, options.reflect);
+    }
+    const key = `${options.animated ? "ark-animal-near" : "ark-animal-far"}${options.rig ? (options.pose ? "-rig-live" : "-rig") : ""}${options.reflect ? "-reflect" : ""}`;
     material.customProgramCacheKey = () => key + lookCacheKey(material);
     if (options.look) registerLookMaterial(material);
     material.onBeforeCompile = (shader) => {
@@ -469,7 +480,8 @@ varying float vArkDim;
 ${MOTION_DECLARATIONS}
 ${DEFENCE_VERTEX_DECLARATIONS}
 ${options.rig ? RIG_DECLARATIONS : ""}
-${LOOK_VERTEX_DECLARATIONS}`)
+${LOOK_VERTEX_DECLARATIONS}
+${options.reflect ? REFLECT_VERTEX_DECLARATIONS : ""}`)
             .replace("#include <beginnormal_vertex>", `#include <beginnormal_vertex>
 ${options.rig ? RIG_SKIN : ""}`)
             .replace("#include <begin_vertex>", `#include <begin_vertex>
@@ -478,14 +490,17 @@ vec4 arkSleep = arkSleepOf(arkInstance.w);
 ${LOOK_VERTEX}
 ${IDLE}
 ${DEFENCE_VERTEX}
-${SHELL_VERTEX}`);
+${SHELL_VERTEX}`)
+            .replace("#include <project_vertex>", `#include <project_vertex>
+${options.reflect ? REFLECT_VERTEX : ""}`);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", `#include <common>
 varying float vArkDim;
 uniform vec3 arkDimTint;
 uniform vec3 arkRim;
 ${DEFENCE_FRAGMENT_DECLARATIONS}
-${LOOK_FRAGMENT_DECLARATIONS}`)
+${LOOK_FRAGMENT_DECLARATIONS}
+${options.reflect ? REFLECT_FRAGMENT_DECLARATIONS : ""}`)
             .replace("#include <map_fragment>", `#include <map_fragment>
 ${LOOK_ALBEDO}
 ${DEFENCE_FRAGMENT}`)
@@ -500,7 +515,8 @@ ${LOOK_LIGHT}`)
 {
     float grey = dot(gl_FragColor.rgb, vec3(0.299, 0.587, 0.114));
     gl_FragColor.rgb = mix(gl_FragColor.rgb, mix(vec3(grey), arkDimTint, 0.5) * 0.75, vArkDim * 0.82);
-}`);
+}
+${options.reflect ? REFLECT_FRAGMENT : ""}`);
         // Each animal its own tint and mottling (`ark-variation.ts`, liveliness).
         varyShader(shader, options.maxY - options.minY);
     };
