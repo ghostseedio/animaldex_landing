@@ -207,3 +207,27 @@ test("at her pond (off the schedule): now and then she leaves her spot, taps the
     assert.ok(bouts / windows > 0.38 && bouts / windows < 0.62, `she lays in ${bouts} of ${windows} windows at chance 0.5`);
     assert.ok(MICRO_BOUT_SECONDS < MICRO_BOUT_EVERY / 4, "most of her time on her spot");
 });
+
+test("on a leaf by the shore (the map's spot): she flies out to the nearest open water and lays there, back to her leaf; none near: never", async () => {
+    const {microDipAt, waterNear, WATER_REACH, MICRO_BOUT_EVERY} = await import("@/ark-scene/egg-dip");
+    // Open water from x = 3 on (the shore line); her leaf 0.4 m up at x = 0.
+    const surface = (x: number) => (x > 3 ? 0 : null);
+    const leaf = {x: 0, y: 0.4, z: 0, yaw: 0};
+    const centre = waterNear(leaf, surface);
+    assert.ok(centre && centre.x > 3 && centre.x < 3 + WATER_REACH, `the water near: ${JSON.stringify(centre)}`);
+    assert.deepEqual(waterNear(leaf, surface), centre, "the same each time");
+    assert.equal(waterNear(leaf, () => null), null, "no water near");
+    assert.equal(waterNear({x: -10, z: 0}, surface), null, "water too far");
+    let dips = 0;
+    for (let t = 0; t < MICRO_BOUT_EVERY * 20; t += 0.25) {
+        const at = microDipAt("leaf-female", leaf, t, 0.045, 1, surface, centre!);
+        if (!at) continue;
+        if (at.block === "dip_tail") {
+            dips++;
+            assert.ok(at.x > 3, `over open water: x ${at.x}`);
+            assert.ok(at.y >= 0.005 && at.y < 0.2, `low over it: ${at.y}`);
+        }
+        assert.ok(at.y >= 0.005, "never under the water");
+    }
+    assert.ok(dips > 0, "she lays");
+});

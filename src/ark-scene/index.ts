@@ -216,7 +216,7 @@ import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {LiveBirths} from "@/ark-scene/live-births";
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
-import {DipRipples, microDipAt} from "@/ark-scene/egg-dip";
+import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
@@ -1190,6 +1190,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      */
     const dipLayers = new Map<string, boolean>();
     const dipTops = new Map<string, number>();
+    const dipCentres = new Map<string, {x: number; z: number} | null>();
     const microDipOf = (entry: Entry): {x: number; y: number; z: number; yaw: number; pitch: number; act: RecipeAct} | null => {
         const id = entry.animal.id;
         const slug = entry.animal.model_slug;
@@ -1199,10 +1200,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!lays || hours <= 6.3 || hours >= 18.2 || entry.rest > 0.5) return null;
         const epoch = worldMs() / 1000;
         const place = entry.place;
-        const dip = microDipAt(id, {x: place.x, y: place.ground, z: place.z, yaw: place.yaw}, epoch, entry.trueLength, 0.6 * seasonFactor(speciesRecipes(slug), "mating", epoch), (x, z) => {
+        const open = (x: number, z: number) => {
             const top = waterTopAt(x, z);
             return heightAt(x, z) < top - 0.03 ? top : null;
-        });
+        };
+        // (Her spot is usually a leaf or a reed by the shore: she lays over the nearest open water, none near: never.)
+        let centre = dipCentres.get(id);
+        if (centre === undefined) dipCentres.set(id, (centre = waterNear(place, open)));
+        if (!centre) return null;
+        const dip = microDipAt(id, {x: place.x, y: place.micro?.attach?.y ?? place.ground, z: place.z, yaw: place.yaw}, epoch, entry.trueLength, 0.6 * seasonFactor(speciesRecipes(slug), "mating", epoch), open, centre);
         if (!dip) return null;
         dipTops.set(id, dip.top);
         return {x: dip.x, y: dip.y, z: dip.z, yaw: dip.yaw, pitch: dip.pitch, act: {episode: dip.episode, recipe: "dip_lay", block: dip.block, state: dip.block === "fly" ? "fly" : "hover", u: 0, pitch: dip.pitch, roll: 0, own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: "dip_lay", ...(dip.block === "dip_tail" ? {since: dip.since} : {})}};
@@ -3752,8 +3758,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // A swarm round a small animal's spot (bees at the hive by day, mayflies at dusk), or a crawling cluster.
             entry.recipeFlock = scheduleOn && !reducedMotion && !flock ? swarmFlock(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow()) : null;
             if (flock) return {x: flock.x, z: flock.z, base: flock.y, yaw: flock.yaw, pitch: 0.95 + flock.pitch, roll: flock.roll, afloat: true};
-            // 3.3 batch (D): a pond dragonfly laying: low over the water round her spot, tapping her abdomen's tip to it.
-            const laying = scheduleOn && !reducedMotion && place.micro.surface === "water" ? microDipOf(entry) : null;
+            // 3.3 batch (D): a pond dragonfly laying: low over the water near her spot, tapping her abdomen's tip to it.
+            const laying = scheduleOn && !reducedMotion ? microDipOf(entry) : null;
             if (laying) {
                 entry.recipeAct = laying.act;
                 return {x: laying.x, z: laying.z, base: laying.y, yaw: laying.yaw, pitch: laying.pitch, roll: 0, afloat: true};

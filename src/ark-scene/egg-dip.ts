@@ -67,11 +67,36 @@ const ease = (u: number) => {
 };
 
 /**
+ * The open water she lays over: her spot itself when it is on the water, else the nearest water found round it within
+ * `WATER_REACH` m (the world's map sits a pond dragonfly on a leaf or a reed near the shore, not on the water), or null
+ * (no water near: she never lays there). Constant for a spot, so asked once per animal.
+ */
+export const WATER_REACH = 6;
+export function waterNear(spot: {x: number; z: number}, surface: (x: number, z: number) => number | null): {x: number; z: number} | null {
+    if (surface(spot.x, spot.z) !== null) return {x: spot.x, z: spot.z};
+    for (const r of [0.75, 1.5, 2.5, 3.75, 5, WATER_REACH]) {
+        for (let k = 0; k < 12; k++) {
+            const a = (k / 12) * Math.PI * 2;
+            // (A little way past the shore line, so her taps are not at its very edge.)
+            const x = spot.x + Math.sin(a) * r;
+            const z = spot.z + Math.cos(a) * r;
+            if (surface(x, z) !== null) {
+                const x2 = spot.x + Math.sin(a) * (r + 0.6);
+                const z2 = spot.z + Math.cos(a) * (r + 0.6);
+                return surface(x2, z2) !== null ? {x: x2, z: z2} : {x, z};
+            }
+        }
+    }
+    return null;
+}
+
+/**
  * Her laying flight at `epoch`, or null (on her spot, as ever). `spot`: where she sits; `surface(x, z)`: the water's
  * level there where it is open water, else null (she keeps over the water: a place that is not is not gone to).
- * `chance`: the share of windows she lays in (her season's factor; 0: never).
+ * `chance`: the share of windows she lays in (her season's factor; 0: never). `centre`: the water she lays round
+ * (`waterNear`; her spot when left out).
  */
-export function microDipAt(id: string, spot: {x: number; y: number; z: number; yaw: number}, epoch: number, length: number, chance: number, surface: (x: number, z: number) => number | null): MicroDip | null {
+export function microDipAt(id: string, spot: {x: number; y: number; z: number; yaw: number}, epoch: number, length: number, chance: number, surface: (x: number, z: number) => number | null, centre: {x: number; z: number} = spot): MicroDip | null {
     if (!(chance > 0) || !Number.isFinite(epoch)) return null;
     const offset = unit(`${id}#dip`) * MICRO_BOUT_EVERY;
     const window = Math.floor((epoch - offset) / MICRO_BOUT_EVERY);
@@ -87,12 +112,12 @@ export function microDipAt(id: string, spot: {x: number; y: number; z: number; y
         const a = unit(`${id}#dip#${window}#a${k}`) * Math.PI * 2;
         for (const share of [1, 0.55, 0.25]) {
             const r = reach * (0.45 + 0.55 * unit(`${id}#dip#${window}#r${k}`)) * share;
-            const x = spot.x + Math.sin(a) * r;
-            const z = spot.z + Math.cos(a) * r;
+            const x = centre.x + Math.sin(a) * r;
+            const z = centre.z + Math.cos(a) * r;
             const top = surface(x, z);
             if (top !== null) return {x, z, top};
         }
-        return {x: spot.x, z: spot.z, top: surface(spot.x, spot.z) ?? spot.y};
+        return {x: centre.x, z: centre.z, top: surface(centre.x, centre.z) ?? spot.y};
     };
     const episode = `dip:${id}:${window}`;
     const k = Math.min(Math.floor(s / (HOP + HOLD)), STATIONS);

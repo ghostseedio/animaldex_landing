@@ -164,7 +164,6 @@ async function main() {
          * the hold she is in began (s after t0).
          */
         dipper: async () => {
-            console.log("[behaviours] cast", JSON.stringify((debug.entries() as unknown as Array<{place: {micro?: {surface?: string; spot?: string} | null; water?: unknown; x: number; z: number}; rest: number; sched?: unknown; trueLength: number}>).slice(0, 6).map((x) => ({micro: x.place.micro ? `${x.place.micro.spot}/${x.place.micro.surface}` : null, water: Boolean(x.place.water), rest: x.rest, sched: Boolean(x.sched), L: x.trueLength, x: Math.round(x.place.x), z: Math.round(x.place.z)}))), JSON.stringify(handle.locate(a)));
             for (let s = 0; s < 4 * 3600; s += 9) {
                 await setAt(t0 + s);
                 const e = debug.entries().find((x) => x.recipeAct?.recipe === "dip_lay" && x.recipeAct.block === "dip_tail");
