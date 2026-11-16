@@ -329,6 +329,13 @@ export function drainSpots(plan: TownPlan = townPlan()): Pt[] {
     return out;
 }
 
+/**
+ * 3.3 fix: the harbour's car park, one row nose to the quay on the dry strip between Harbour Road (its pavement ends at
+ * about z 93) and the quay (from z 99), east of the shed at x 25 to 30. Its rows were at z 108 and 115, inside the
+ * harbour basin (z 105 to 157): the cars stood in the water by the lighthouse.
+ */
+export const HARBOUR_BAYS: ReadonlyArray<{x: number; z: number; turn: number}> = Array.from({length: 8}, (_, i) => ({x: 32 + i * 2.7, z: 97, turn: 0}));
+
 /** Car spots: every house's drive, kerbs along the residential streets, the farms' yards, the harbour. */
 export function carSpots(plan: TownPlan = townPlan()): CarSpot[] {
     const out: CarSpot[] = [];
@@ -356,7 +363,7 @@ export function carSpots(plan: TownPlan = townPlan()): CarSpot[] {
         const s = local(f.yard, f.yard.w / 4, 0);
         out.push({id: `farm:${f.id}`, kind: "farm", x: s.x, z: s.z, turn: f.at.rot + Math.PI / 2});
     }
-    for (let i = 0; i < 6; i++) out.push({id: `harbour:${i}`, kind: "harbour", x: 34 + (i % 3) * 3, z: 108 + Math.floor(i / 3) * 6, turn: 0});
+    HARBOUR_BAYS.forEach((bay, i) => out.push({id: `harbour:${i}`, kind: "harbour", x: bay.x, z: bay.z, turn: bay.turn}));
     return out;
 }
 
