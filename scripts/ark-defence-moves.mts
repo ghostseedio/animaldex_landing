@@ -62,6 +62,11 @@ const COLOURS: Array<[RegExp, string]> = [
 ];
 
 /** The moves the scene draws today (each proven in the behaviours harness); a row of another move is listed in the full file's `skipped`. */
+/**
+ * The tail drop is not given yet: the lizards' and the salamander's models carry no tail (`ark.json` behaviour.tail is
+ * missing, seen in the harness for the common wall lizard and the eastern red-backed salamander), so the shader has
+ * no tail to drop; `defence-moves.ts` has the move and its regrowth for when the models have one.
+ */
 const BUILT = new Set<Move>(["curl", "coil", "shell", "puff", "flash"]);
 
 /** Species whose model does not take the move honestly (looked at in the behaviours harness), with why. */
@@ -77,7 +82,7 @@ for (const row of rows) {
     const move = POSES.find(([, re]) => re.test(row.uses))?.[0];
     if (!move) continue;
     const slug = slugOf(row.name);
-    const why = !BUILT.has(move) ? "the move is not drawn yet" : NOT_ON_MODEL[slug] ? NOT_ON_MODEL[slug] : !known[slug] ? "no model in the scene's tables" : NOT_SHOWN.find(([re]) => re.test(row.line))?.[1] ?? (species[slug] ? `it already has ${species[slug][0]}` : null);
+    const why = !BUILT.has(move) ? "the move is not drawn yet (the tail drop: the models carry no tail to drop)" : NOT_ON_MODEL[slug] ? NOT_ON_MODEL[slug] : !known[slug] ? "no model in the scene's tables" : NOT_SHOWN.find(([re]) => re.test(row.line))?.[1] ?? (species[slug] ? `it already has ${species[slug][0]}` : null);
     const colour = move === "flash" && !/eyespots?|fake eyes/i.test(`${row.behaviour} ${row.line}`) ? COLOURS.find(([re]) => re.test(`${row.behaviour} ${row.line}`))?.[1] : undefined;
     if (why || (move === "flash" && !colour)) {
         skipped.push(`${row.name} (${move}): ${why ?? "eyespots (or no colour named): the scene cannot open a wing to show them"}: "${row.line}"`);

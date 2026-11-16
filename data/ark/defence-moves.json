@@ -344,7 +344,7 @@
   }
  ],
  "skipped": [
-  "Eastern Red-backed Salamander (tail): the move is not drawn yet: \"{aAnimal} is dropping its tail to get away\"",
+  "Eastern Red-backed Salamander (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is dropping its tail to get away\"",
   "Warty Frogfish (puff): the sentence says it is grabbed or seized: \"{aAnimal} is swallowing water and swelling up after being seized\"",
   "Eastern Lubber Grasshopper (flash): its wings lie between its hind legs on the model: the flash coloured the legs, not the wings: \"{aAnimal} is lifting its short front wings to flash the rose-red wings beneath\"",
   "Io Moth (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is opening its wings to reveal huge fake eyes\"",
@@ -353,13 +353,13 @@
   "Polyphemus Moth (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is flashing open the hidden eyespots on its huge tan wings\"",
   "White Underwing Moth (flash): the sentence says another action than the move: \"{aAnimal} is bolting in fast, erratic flight to resettle on another trunk\"",
   "Long-eared Hedgehog (curl): the sentence says another action than the move: \"{aAnimal} is raising its spines, hissing and jumping at a threat\"",
-  "Bocage's Wall Lizard (tail): the move is not drawn yet: \"{aAnimal} is shedding its tail as it is seized\"",
-  "Common House Gecko (tail): the move is not drawn yet: \"{aAnimal} is escaping while its shed tail keeps twitching\"",
-  "Common Sun Skink (tail): the move is not drawn yet: \"{aAnimal} is escaping while its broken-off tail wriggles\"",
-  "Common Wall Gecko (tail): the move is not drawn yet: \"{aAnimal} is fleeing into a crack, leaving its shed tail wriggling\"",
-  "Common Wall Lizard (tail): the move is not drawn yet: \"{aAnimal} is escaping while its shed tail goes on twitching\"",
+  "Bocage's Wall Lizard (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is shedding its tail as it is seized\"",
+  "Common House Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping while its shed tail keeps twitching\"",
+  "Common Sun Skink (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping while its broken-off tail wriggles\"",
+  "Common Wall Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is fleeing into a crack, leaving its shed tail wriggling\"",
+  "Common Wall Lizard (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping while its shed tail goes on twitching\"",
   "Loggerhead Musk Turtle (shell): the sentence says it is grabbed or seized: \"{aAnimal} is biting hard and drawing into its shell as it is grabbed\"",
-  "Mediterranean House Gecko (tail): the move is not drawn yet: \"{aAnimal} is escaping into a crack while its shed tail keeps wriggling\"",
-  "Tropical House Gecko (tail): the move is not drawn yet: \"{aAnimal} is leaving its broken-off tail twitching behind\""
+  "Mediterranean House Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping into a crack while its shed tail keeps wriggling\"",
+  "Tropical House Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is leaving its broken-off tail twitching behind\""
  ]
 }
