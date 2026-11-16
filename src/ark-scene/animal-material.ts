@@ -156,6 +156,8 @@ uniform float tailLength;
 // 3.3 batch (B): a bird's own tail habit (tail-habit.ts): (pump, cock, fan, rate), and the tail base's height.
 uniform vec4 arkTailHabit;
 uniform float arkTailBaseY;
+// p2 (contact): 1 a tail that wags side to side (a mammal's, a lizard's), 0 a bird's (its feathers move as one: tailWagOf).
+uniform float arkTailWag;
 uniform float motionHead;
 uniform float motionPower;
 uniform float motionTip;
@@ -314,6 +316,7 @@ transformed = (arkSkin * vec4(transformed, 1.0)).xyz;
         // A tail wags now and then, not all the time; asleep it flicks once as the animal stirs (sleep.ts sleepStir).
         float tailAngle = awake * 0.28 * sin(motionClock * 2.6) * smoothstep(0.4, 0.8, sin(motionClock * 0.23 + arkInstance.x * 9.0));
         tailAngle += motionGain * arkSleep.z * 0.5 * sin(motionClock * 8.0);
+        tailAngle *= arkTailWag;
         {
             float motionGain = awake;
             ${MOTION_BODY}
@@ -362,6 +365,17 @@ const DROOPING_PLANS = new Set(["mammal", "bird", "reptile", "frog", "turtle"]);
 export const ARK_DROOP = 0.32;
 export function droopOf(plan: string | null | undefined): number {
     return DROOPING_PLANS.has(plan ?? "") ? ARK_DROOP : 0;
+}
+
+/**
+ * p2 (contact; the owner, 2026-11-16: "the tails on birds are floppy"): whether the model's marked tail wags side to
+ * side. The idle wag swings the tail about its base by an angle growing along it, so the tail bends: right for a dog's
+ * or a lizard's, but a bird's tail is stiff feathers on a short stump, and on a macaw or a peacock that bend read as a
+ * rubber tail flopping about. A bird (the MODEL's plan, `ark.json`) keeps its tail straight: it moves only as its kind
+ * is known to move it (`tail-habit.ts`, a rigid hinge) and with its body.
+ */
+export function tailWagOf(plan: string | null | undefined): number {
+    return plan === "bird" ? 0 : 1;
 }
 
 export type AnimalMaterialOptions = {
@@ -422,6 +436,7 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
         // 3.3 batch (B): the tail habit and the height of the tail's base (the model's own `tail.base`).
         arkTailHabit: {value: new Vector4(...tailHabitUniform(options.behaviour?.tail ? options.tailHabit : null))},
         arkTailBaseY: {value: options.behaviour?.tail?.base?.[1] ?? 0},
+        arkTailWag: {value: tailWagOf(options.behaviour?.plan)},
         ...Object.fromEntries(Object.entries(motion).map(([key, value]) => [key, {value}])),
         ...Object.fromEntries(Object.entries(options.bodyMotion ?? L2_BODY_NONE).map(([key, value]) => [key, {value}])),
         // 3.3 batch (A): the model's own box for its defence move (z from and to, y from and to; half its width).

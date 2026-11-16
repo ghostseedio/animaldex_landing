@@ -29,7 +29,8 @@ import {antlerUniform} from "@/ark-scene/antler-cycle";
 import {ARK_DAYLIGHT} from "@/ark-scene/glsl";
 import {FurShells, SHELL_ANIMALS, SHELL_LAYERS} from "@/ark-scene/fur-shells";
 import {CloseUpTextures} from "@/ark-scene/closeup-textures";
-import {surfaceAt, groundNormal, type Vec3} from "@/ark-scene/sampler";
+import {surfaceAt, type Vec3} from "@/ark-scene/sampler";
+import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
 import {unit} from "@/lib/ark-clock";
 import {sampleGround} from "@/ark-scene/world";
 import {freshFrom, freshLevelFrom} from "@/ark-scene/water-level";
@@ -290,7 +291,6 @@ export class AnimalLook {
     private islandPin: number | null = null;
     private islandNow = 0;
     private readonly dryness = new Map<number, number>();
-    private readonly normals = new Map<number, Vec3>();
     private readonly grounds = new Map<number, {height: number; fresh: number | null}>();
     readonly shells: FurShells;
     readonly closeUps: CloseUpTextures;
@@ -449,19 +449,22 @@ export class AnimalLook {
                 this.grounds.set(key, cell);
             }
         }
+        // p2 (contact): the height is the DRAWN ground's (its triangles, exactly as the mesh has them: `drawn-ground.ts`), the
+        // one the feet and the grounding stand use; the analytic height the cell keeps differs from it by up to metres at
+        // the cliff bands, so a shadow drawn there floated up an animal's legs or sank out of sight under its feet.
+        const height = drawnGroundHeight(x, z);
         const level = cell.fresh ?? seaLevel;
-        return {height: cell.height, water: level > cell.height ? level : null};
+        return {height, water: level > height ? level : null};
     }
 
-    /** The ground's normal under an animal (cached on a 1 m grid): its contact shadow lies on the slope. */
+    /**
+     * The ground's normal under an animal: its contact shadow lies on the slope. p2 (contact): the drawn triangle's own
+     * (`drawn-ground.ts`), the surface the shadow is drawn on; the analytic normal on a 1 m grid tilted it out of the
+     * drawn slope, so one edge stood up through the animal.
+     */
     groundNormal(x: number, z: number): Vec3 {
-        const key = (Math.round(x) + 8192) * 16384 + Math.round(z) + 8192;
-        let normal = this.normals.get(key);
-        if (!normal) {
-            normal = groundNormal(Math.round(x), Math.round(z));
-            this.normals.set(key, normal);
-        }
-        return normal;
+        const g = drawnGround(x, z);
+        return {x: g.nx, y: g.ny, z: g.nz};
     }
 
     /** How dark the contact shadow's core is: the pass's own grounding, under the sun's shadow or without it. */

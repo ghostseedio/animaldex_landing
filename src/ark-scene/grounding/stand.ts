@@ -95,6 +95,76 @@ export function standOnGround(x: number, z: number, yaw: number, scale: number, 
     return {rootY, pitch, roll, ground: ground(x, z)};
 }
 
+/**
+ * p2 (contact; the owner, 2026-11-16: "the lions and tigers are sinking into the ground ... and sleeping poses look bad",
+ * "boa constrictor is sleeping half in the ground"): a lying body on the drawn ground. Its torso (a box in model units:
+ * across `x0..x1`, along `z0..z1`, from `bottom`, its belly once its legs are folded, up to `top`) turned by the pose's
+ * own lean (`extraPitch`, `extraRoll`: a sleeper's roll onto its side) and leaning to the ground's slope under its
+ * middle (`ground` there, `normal` its normal), its origin set so the lowest of the torso rests on that ground: nothing
+ * of the body under it, nothing floating. The ground is taken as the plane through its middle, not sampled under each
+ * corner: a body lying beside a rock or a kerb rests on the ground it lies on, not lifted onto the rock's top by one
+ * corner (a sleeper on its side is as wide as it is tall). (The scene lowered a sleeper from its pose's base, the
+ * analytic ground, a share of its height whatever its belly: on drawn floors over that ground, on slopes and for bodies
+ * with no legs to fold, that put the body into the ground.) Metres out.
+ */
+export function lieOnGround(x: number, z: number, yaw: number, scale: number, torso: LyingTorso, extraPitch: number, extraRoll: number, ground: number, normal: {nx: number; ny: number; nz: number}): Stand {
+    const cy = Math.cos(yaw);
+    const sy = Math.sin(yaw);
+    const ny = Math.max(normal.ny, 0.2);
+    // The plane's rise per metre along its heading (+z of the model) and across it (+x).
+    const along = -(normal.nx * sy + normal.nz * cy) / ny;
+    const across = -(normal.nx * cy - normal.nz * sy) / ny;
+    const pitch = Math.max(Math.min(Math.atan(-along), MAX_PITCH), -MAX_PITCH);
+    const roll = Math.max(Math.min(Math.atan(across), MAX_ROLL), -MAX_ROLL);
+    const p = pitch + extraPitch;
+    const r = roll + extraRoll;
+    const cp = Math.cos(p);
+    const sp = Math.sin(p);
+    const cr = Math.cos(r);
+    const sr = Math.sin(r);
+    let rootY = -Infinity;
+    const xc = (torso.x0 + torso.x1) / 2;
+    const zc = (torso.z0 + torso.z1) / 2;
+    for (const lx of [torso.x0, xc, torso.x1])
+        for (const lz of [torso.z0, zc, torso.z1])
+            for (const ly of [torso.bottom, torso.top]) {
+                const x1 = (lx * cr - ly * sr) * scale;
+                const y1 = (lx * sr + ly * cr) * scale;
+                const z1 = lz * scale;
+                const y2 = y1 * cp - z1 * sp;
+                const z2 = y1 * sp + z1 * cp;
+                // (The plane's height under this point: its offset from the middle along and across the heading.)
+                const dx = x1 * cy + z2 * sy;
+                const dz = -x1 * sy + z2 * cy;
+                const plane = ground + (dx * sy + dz * cy) * along + (dx * cy - dz * sy) * across;
+                rootY = Math.max(rootY, plane - y2);
+            }
+    return {rootY, pitch, roll, ground};
+}
+
+/** A lying torso, model units (`sleep.ts` lyingTorso). */
+export type LyingTorso = {x0: number; x1: number; z0: number; z1: number; bottom: number; top: number};
+
+/** The world points of a lying torso as `lieOnGround` turned it (for the tests: each against the ground under it). */
+export function lyingPoints(stand: Stand, x: number, z: number, yaw: number, scale: number, torso: LyingTorso, extraPitch: number, extraRoll: number): Array<{x: number; y: number; z: number}> {
+    const cy = Math.cos(yaw);
+    const sy = Math.sin(yaw);
+    const p = stand.pitch + extraPitch;
+    const r = stand.roll + extraRoll;
+    const out: Array<{x: number; y: number; z: number}> = [];
+    for (const lx of [torso.x0, (torso.x0 + torso.x1) / 2, torso.x1])
+        for (const lz of [torso.z0, (torso.z0 + torso.z1) / 2, torso.z1])
+            for (const ly of [torso.bottom, torso.top]) {
+                const x1 = (lx * Math.cos(r) - ly * Math.sin(r)) * scale;
+                const y1 = (lx * Math.sin(r) + ly * Math.cos(r)) * scale;
+                const z1 = lz * scale;
+                const y2 = y1 * Math.cos(p) - z1 * Math.sin(p);
+                const z2 = y1 * Math.sin(p) + z1 * Math.cos(p);
+                out.push({x: x + x1 * cy + z2 * sy, y: stand.rootY + y2, z: z - x1 * sy + z2 * cy});
+            }
+    return out;
+}
+
 export type SurfaceFrame = {
     x: number;
     y: number;

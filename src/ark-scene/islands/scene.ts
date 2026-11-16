@@ -55,8 +55,11 @@ export type ArkIslandScene = {
     /** `near`: the body's height (its pose's base): the floor it stands on where floors are stacked (balconies). */
     drawnHeight: (x: number, z: number, near?: number) => number;
     drawnGround: (x: number, z: number) => {height: number; nx: number; ny: number; nz: number};
-    /** The drawn ground under a point and the water's surface over it (null on dry land), for contact shadows and rings. */
-    groundUnder: (x: number, z: number, seaLevel: number) => {height: number; water: number | null};
+    /**
+     * The drawn ground under a point and the water's surface over it (null on dry land), for contact shadows and rings.
+     * `near`: the body's height (its pose's base), so where floors are stacked the one it is on is taken (p2 contact).
+     */
+    groundUnder: (x: number, z: number, seaLevel: number, near?: number) => {height: number; water: number | null};
     /** Lives on this island (the server's `island`, else a kept area). */
     has: (animal: Pick<ArkAnimal, "island" | "area">) => boolean;
     /** Part B (its chunks in its local frame, the streamer places them at `origin`). */
@@ -364,10 +367,12 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         heightAt: (x, z) => town.heightAt(x - origin.x, z - origin.z),
         drawnHeight: (x, z, near) => townDrawnHeight(x - origin.x, z - origin.z, undefined, near),
         drawnGround: (x, z) => townDrawnGround(x - origin.x, z - origin.z),
-        groundUnder: (x, z, seaLevel) => {
+        groundUnder: (x, z, seaLevel, near) => {
             const lx = x - origin.x;
             const lz = z - origin.z;
-            const height = townDrawnHeight(lx, lz);
+            // p2 (contact): the floor it is on (`near`), as its feet have it; without it the highest surface there (a
+            // cage's perch over its tray, a platform, a balcony) took the shadow, drawn across the animal's body.
+            const height = townDrawnHeight(lx, lz, undefined, near);
             // (The sea and the harbour at the sea's level; the canal, the millpond and the farm pond held by the lock.)
             const ground = sampleTownGround(lx, lz);
             const water = ground.height < seaLevel ? seaLevel : ground.surface === "water" ? Math.max(CANAL_LEVEL, ground.height + 0.05) : null;
