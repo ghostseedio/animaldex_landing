@@ -431,9 +431,9 @@ async function mountScenes(el: HTMLElement) {
                 for (const spot of townAreas().spots) {
                     if (spot.area !== "house" || spot.where === "indoor" || spot.where === "window") continue;
                     const here: SchedAt = {x: spot.x + origin.x, y: townHeight(spot.x, spot.z), z: spot.z + origin.z, yaw: 0, moving: false, aloft: false, doing: "rest"};
-                    for (let slot = 1000; slot < 1004 && !trip; slot++) {
+                    for (let slot = 1000; slot < 1040 && !trip; slot++) {
                         const t = wallTrip(id, slot, 0.6, () => here, host);
-                        if (t && found++ === pick) {
+                        if (t && t.wall.includes(new URLSearchParams(location.search).get("wall") ?? "") && (!new URLSearchParams(location.search).get("doze") || t.phases.some((p) => p.kind === "doze")) && found++ === pick) {
                             trip = t;
                             at = here;
                         }

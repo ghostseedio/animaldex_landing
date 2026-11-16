@@ -93,6 +93,7 @@ test("over the house gardens: every trip goes from its spot onto a coping and ba
     const spots = townAreas().spots.filter((s) => s.area === "house" && s.where !== "indoor" && s.where !== "window");
     assert.ok(spots.length > 100, `garden spots: ${spots.length}`);
     let trips = 0;
+    let dozes = 0;
     for (let i = 0; i < spots.length; i++) {
         const s = spots[i];
         const at: SchedAt = {x: s.x + origin.x, y: townHeight(s.x, s.z), z: s.z + origin.z, yaw: 0.3, moving: false, aloft: false, doing: "rest"};
@@ -100,13 +101,15 @@ test("over the house gardens: every trip goes from its spot onto a coping and ba
             const trip = wallTrip(`cat-${i}`, slot, 0.6, () => at, host);
             if (!trip) continue;
             trips++;
+            if (trip.phases.some((p) => p.kind === "doze")) dozes++;
             assert.ok(trip.t0 >= slot * WALL_SLOT && trip.t1 <= (slot + 1) * WALL_SLOT, "inside its slot");
             checkTrip(trip, at, `cat-${i} slot ${slot}`);
             assert.deepEqual(wallTrip(`cat-${i}`, slot, 0.6, () => at, host), trip, "pure: the same trip every time");
         }
     }
     assert.ok(trips > 100, `trips: ${trips}`);
-    console.log(`# gardens: ${trips} trips`);
+    console.log(`# gardens: ${trips} trips, ${dozes} with a doze`);
+    assert.ok(dozes > trips * 0.3 && dozes < trips * 0.7, "about half doze up there (the slot's hash, well mixed)");
 });
 
 test("on the real schedule: town cats go up walls from where their schedule rests them, and only then", () => {

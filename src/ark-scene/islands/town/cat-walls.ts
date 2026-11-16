@@ -152,12 +152,18 @@ export type SchedAt = {x: number; y: number; z: number; yaw: number; moving: boo
 /** The schedule states it may leave for a wall from (and must be back in, at the same spot). */
 const FROM: ReadonlySet<string> = new Set(["rest", "watch", "wander", "forage", "perch", "groom"]);
 
-type Phase = {t: number; kind: "walk" | "turn" | "crouch" | "jump" | "sit"; x0: number; y0: number; z0: number; x1: number; y1: number; z1: number; yaw0: number; yaw1: number; up: boolean};
+type Phase = {t: number; kind: "walk" | "turn" | "crouch" | "jump" | "sit" | "doze"; x0: number; y0: number; z0: number; x1: number; y1: number; z1: number; yaw0: number; yaw1: number; up: boolean};
 
 /** One cat's trip up a wall: its start (s, shared clock), its end, and its phases (each from the previous one's end). */
 export type WallTrip = {id: string; wall: string; t0: number; t1: number; phases: Phase[]};
 
-const unitOf = (key: string) => hashText(key) / 4294967296;
+/** A key's unit in [0, 1): FNV-1a with a final mix (FNV's high bits barely move with a key's last characters: the slot). */
+const unitOf = (key: string) => {
+    let h = hashText(key);
+    h = Math.imul(h ^ (h >>> 16), 0x85ebca6b);
+    h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35);
+    return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+};
 const headingTo = (x0: number, z0: number, x1: number, z1: number) => Math.atan2(x1 - x0, z1 - z0);
 
 /** Whether the straight ground leg from a to b is clear (every 0.2 m, its feet on the ground) and on dry land. */
@@ -248,6 +254,9 @@ function tripFrom(id: string, slot: number, t0: number, pace: number, schedule: 
             {kind: "turn", d: 0.6, x0: px, y0: w.y, z0: pz, x1: px, y1: w.y, z1: pz, yaw0: facing, yaw1: alongYaw, up: true},
             {kind: "walk", d: go / (pace * 0.7), x0: px, y0: w.y, z0: pz, x1: qx, y1: w.y, z1: qz, yaw0: alongYaw, yaw1: alongYaw, up: true},
             {kind: "sit", d: sitFor, x0: qx, y0: w.y, z0: qz, x1: qx, y1: w.y, z1: qz, yaw0: alongYaw, yaw1: alongYaw, up: true},
+            // (Half the time it settles into a loaf up there a while before it watches again: the catalogue's "deep asleep,
+            // as it is for much of the day", its curl, `sleep.ts`.)
+            ...(unitOf(`${id}:wall-doze:${slot}`) < 0.5 ? [{kind: "doze" as const, d: 14 + unitOf(`${id}:wall-doze-for:${slot}`) * 16, x0: qx, y0: w.y, z0: qz, x1: qx, y1: w.y, z1: qz, yaw0: alongYaw, yaw1: alongYaw, up: true}, {kind: "sit" as const, d: 4, x0: qx, y0: w.y, z0: qz, x1: qx, y1: w.y, z1: qz, yaw0: alongYaw, yaw1: alongYaw, up: true}] : []),
             {kind: "turn", d: 0.7, x0: qx, y0: w.y, z0: qz, x1: qx, y1: w.y, z1: qz, yaw0: alongYaw, yaw1: downYaw, up: true},
             {kind: "jump", d: 0.45, x0: qx, y0: w.y, z0: qz, x1: gx, y1: g(gx, gz), z1: gz, yaw0: downYaw, yaw1: downYaw, up: true},
             {kind: "turn", d: 0.5, x0: gx, y0: g(gx, gz), z0: gz, x1: gx, y1: g(gx, gz), z1: gz, yaw0: downYaw, yaw1: legOut, up: false},
@@ -271,7 +280,7 @@ function tripFrom(id: string, slot: number, t0: number, pace: number, schedule: 
 }
 
 /** Its pose on the trip now: the shared pose's fields, `onWall` while it is off the ground (held there by the collisions). */
-export type WallPose = {x: number; y: number; z: number; yaw: number; moving: boolean; aloft: false; doing: "wander" | "watch" | "perch"; beat: "walk" | "run" | "scan" | "pause"; nx: number; ny: number; nz: number; onWall: boolean};
+export type WallPose = {x: number; y: number; z: number; yaw: number; moving: boolean; aloft: false; doing: "wander" | "watch" | "perch" | "sleep"; beat: "walk" | "run" | "scan" | "pause" | "sleep"; nx: number; ny: number; nz: number; onWall: boolean};
 
 const smooth = (k: number) => k * k * (3 - 2 * k);
 const turnLerp = (a: number, b: number, k: number) => {
@@ -303,8 +312,8 @@ export function wallPose(trip: WallTrip, epoch: number): WallPose | null {
         y = p.y0 + (p.y1 - p.y0) * (p.y1 > p.y0 ? Math.sin((k * Math.PI) / 2) : k * k) + lift * 4 * k * (1 - k);
     }
     const moving = p.kind === "walk" || p.kind === "jump";
-    const beat = p.kind === "walk" ? "walk" : p.kind === "jump" ? "run" : p.kind === "sit" ? "scan" : "pause";
-    const doing = p.kind === "sit" ? "perch" : moving ? "wander" : "watch";
+    const beat = p.kind === "walk" ? "walk" : p.kind === "jump" ? "run" : p.kind === "sit" ? "scan" : p.kind === "doze" ? "sleep" : "pause";
+    const doing = p.kind === "sit" ? "perch" : p.kind === "doze" ? "sleep" : moving ? "wander" : "watch";
     return {x, y, z, yaw, moving, aloft: false, doing, beat, nx: 0, ny: 1, nz: 0, onWall: p.up};
 }
 

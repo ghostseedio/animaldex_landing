@@ -12,7 +12,7 @@
  *   node scripts/ark-rig-scenes.mjs --set <publish dir> --out <dir> [--scenes a,b] [--seconds 22] [--perf] [--device desktop|phone]
  *
  * `--set` is a local rig set's folder (publish_rig.py's output: manifest.json, <slug>/<v>.rig.glb), served as
- * /ark-rig/v2; every species it does not list falls back to the live v1 set beside the live model set (read only).
+ * /ark-rig/<--setv, default v3>; every species it does not list falls back to the live v1 set beside the live model set (read only).
  * Nothing is uploaded.
  */
 
@@ -64,7 +64,7 @@ const server = createServer((request, response) => {
     const parts = url.pathname.split("/").filter(Boolean);
     let file = null;
     let type = "application/octet-stream";
-    if (parts[0] === "ark-rig" && parts[1] === "v2" && set) {
+    if (parts[0] === "ark-rig" && /^v[0-9]+$/.test(parts[1] ?? "") && set) {
         if (parts.length === 3 && parts[2] === "manifest.json") {
             file = path.join(set, "manifest.json");
             type = "application/json";
@@ -163,7 +163,8 @@ async function record(cdp, name) {
 }
 
 // `--query`: more page parameters (the locomotion course's `cast=slug:plan,...`, `loco=0` for the before).
-const query = [set ? "rig=/ark-rig/v2" : "", arg("query", "")].filter(Boolean).join("&");
+// (Served under its own version, `--setv` (default v3): a manifest is read only under the folder its version names.)
+const query = [set ? `rig=/ark-rig/${arg("setv", "v3")}` : "", arg("query", "")].filter(Boolean).join("&");
 const summary = [];
 const wanted = arg("scenes", flag("perf") || flag("island") ? "none" : "");
 for (const name of wanted ? wanted.split(",").filter((n) => n !== "none") : ["duck_flight", "deer_graze", "deer_look"]) {
