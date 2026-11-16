@@ -282,7 +282,8 @@ export function buildZooHouses(enclosures: readonly ZooEnclosure[]): ZooHouses {
             meshes.push(mesh);
         }
     }
-    if (hallWater.triangles) add(hallWater.toGeometry(), hallWaterMaterial(), "zoo-houses:hall-water", false, 3);
+    // (The hall's water takes no shadow: the vault's ribs and the tall tanks' rims fell on it as blocky shadow-map texels.)
+    if (hallWater.triangles) add(hallWater.toGeometry(), hallWaterMaterial(), "zoo-houses:hall-water", false, 3).receiveShadow = false;
     if (parts.glow.triangles) add(parts.glow.toGeometry(), glowMaterial(), "zoo-houses:glow", false);
     if (parts.water.triangles) add(parts.water.toGeometry(), waterMaterial(), "zoo-houses:water", false, 3);
     if (parts.glass.triangles) add(parts.glass.toGeometry(), glassMaterial(), "zoo-houses:glass", false, 4);

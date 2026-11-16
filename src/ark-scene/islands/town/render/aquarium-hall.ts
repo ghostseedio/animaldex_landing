@@ -14,7 +14,7 @@
  * panels, the water, the glass, plus one for what lies under water. Pure in the plan.
  */
 
-import {BufferAttribute, BufferGeometry, Color, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type Material} from "three";
+import {BufferAttribute, BufferGeometry, Color, DoubleSide, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type Material} from "three";
 import {cachedRock} from "@/ark-scene/rock-shapes";
 import {hashText, rng, type Box} from "@/ark-scene/islands/town/geom";
 import type {AquariumHall, HallTank} from "@/ark-scene/islands/town/aquarium-hall";
@@ -32,7 +32,7 @@ const BAND = tone("#25606c");
 const STEEL = tone("#3a4448");
 const SALT = tone("#1f68b8");
 const FRESH = tone("#3a9480");
-const JELLY = tone("#4a3a9a");
+const JELLY = tone("#2a3a8a");
 const SAND = tone("#d6c08a");
 const GRAVEL = tone("#8a8276");
 const STAND = tone("#1e2428");
@@ -467,7 +467,10 @@ function tunnel(t: HallTank, parts: HallParts) {
         const n = Math.round(g.d / 0.9);
         for (let k = 0; k < n; k++) {
             const lz = -hd + ((k + 0.5) * g.d) / n;
-            rockAt(parts.under, fr, side * (walk / 2 + 0.15), t.sand, lz, 0.35, (floor - t.sand) * (0.75 + r() * 0.3), 0.5, ROCK_FRESH[k % 3], hashText(`${t.tank.id}bank${side}${k}`));
+            // (Two tiers of broad boulders on the bank's face, the upper set back, so it reads as a rock cutting.)
+            const bankH = floor - t.sand;
+            rockAt(parts.under, fr, side * (walk / 2 + 0.3), t.sand, lz, 0.7, bankH * (0.5 + r() * 0.15), 0.8, ROCK_FRESH[k % 3], hashText(`${t.tank.id}bank${side}${k}`));
+            rockAt(parts.under, fr, side * (walk / 2 + 0.45), t.sand + bankH * 0.45, lz + 0.4, 0.6, bankH * (0.45 + r() * 0.1), 0.7, ROCK_FRESH[(k + 1) % 3], hashText(`${t.tank.id}bank2${side}${k}`));
         }
         // On the bed: rocks, a sunken root or log, river plants.
         for (let k = 0; k < Math.round(g.d / 1.6); k++) {
@@ -504,7 +507,7 @@ function cylinder(t: HallTank, parts: HallParts) {
     const y1 = t.tank.top;
     const gt = t.glassTop;
     parts.inside.cylinder(fr, 0, t.sand - 0.5 - fr.y, 0, radius + 0.25, radius + 0.25, 0.5, STAND, sides);
-    parts.glow.cylinder(fr, 0, y0 - 0.02, 0, radius * 0.92, radius * 0.92, 0.02, tone("#b48ce8"), sides);
+    parts.glow.cylinder(fr, 0, y0 + 0.01, 0, radius * 0.92, radius * 0.92, 0.02, tone("#b48ce8"), sides);
     parts.inside.cylinder(fr, 0, gt, 0, radius + 0.12, radius + 0.12, 0.25, STAND, sides, false);
     parts.glow.cylinder(fr, 0, gt - 0.05, 0, radius * 0.95, radius * 0.95, 0.05, tone("#f4f8ff"), sides, false);
     for (let i = 0; i < sides; i++) {
@@ -614,5 +617,6 @@ float aquaCaustic(vec2 p, float t) {
 
 /** The hall's water: deeper than a small tank's (`displays.ts` waterMaterial), so its volume reads blue from the air and the path. */
 export function hallWaterMaterial(): MeshStandardMaterial {
-    return new MeshStandardMaterial({vertexColors: true, transparent: true, opacity: 0.46, roughness: 0.08, metalness: 0.1, depthWrite: false, emissive: new Color("#12466a"), emissiveIntensity: 0.4});
+    // (Both faces: from outside a tank its near and far sides tint what is behind them, as a volume of water does.)
+    return new MeshStandardMaterial({vertexColors: true, transparent: true, opacity: 0.36, roughness: 0.08, metalness: 0.1, depthWrite: false, side: DoubleSide, emissive: new Color("#12466a"), emissiveIntensity: 0.4});
 }
