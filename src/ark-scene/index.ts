@@ -73,6 +73,7 @@ import {
 import {OrbitControls} from "three/examples/jsm/controls/OrbitControls.js";
 import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, REVIVE_SECONDS, chaseKind, clearBearing, deathPose, emergePose, encounterBodies, mealEncounter, mealStage, preyFleeStyle, setChasePaces, type ActBody, type ActPose, type MealStage} from "@/ark-scene/acts";
 import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
+import {WaterReflections} from "@/ark-scene/water-reflect-render"; // p3 (reflect)
 import {headLimits} from "@/ark-scene/head-look";
 import {bellyOfGeometry, goesIntoRoost, lyingBody, lyingDrop, lyingTorso, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
@@ -4615,6 +4616,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         look.track(made.arkSlug, material);
         return material;
     };
+    // p3 (reflect): the animals' reflections in still water (`water-reflect-render.ts`): the same mesh, mirrored.
+    const reflections = new WaterReflections(scene, (source, uniforms) => {
+        const made = ((source.material as MeshStandardMaterial).userData as {arkOptions?: Parameters<typeof animalMaterial>[0]; arkSlug?: string});
+        if (!made.arkOptions) return null;
+        const material = animalMaterial({...made.arkOptions, reflect: uniforms});
+        // (The placeholder figure's own clay colours, as its mesh has them.)
+        material.vertexColors = (source.material as MeshStandardMaterial).vertexColors;
+        material.roughness = (source.material as MeshStandardMaterial).roughness;
+        if (made.arkSlug) look.track(made.arkSlug, material);
+        return material;
+    });
+    const reflectSources: Array<InstancedMesh | null> = [];
     rigs.onLoad = (slug) => {
         const rig = rigs.get(slug);
         if (rig) rig.usedAt = lastUpdate;
@@ -5516,6 +5529,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         });
         counts.rigged = rigged;
         look.end(now, shellMaterial);
+        // p3 (reflect): after every instance is written: the nearest animals over still water, mirrored in it.
+        reflections.setTier(tier, liteOn());
+        reflections.setReducedMotion(reducedMotion);
+        reflectSources.length = 0;
+        species.forEach((meshes) => reflectSources.push(meshes.rig ?? null, meshes.near, meshes.far));
+        reflections.update(reflectSources, camera.position, ARK_ENVIRONMENT.seaLevel.value, now, ARK_TIME.value);
         if (now - lastEvict > 5) {
             lastEvict = now;
             // (And room under the caps for as many species as may be rigged at once: the caps count what is held.)
@@ -9093,6 +9112,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             landscape?.dispose();
             nearDetail?.dispose();
             bugGround.dispose(); // p2 (ground)
+            reflections.dispose(); // p3 (reflect)
             assetTrees?.dispose();
             assetRocks?.dispose();
             assetFloor?.dispose();

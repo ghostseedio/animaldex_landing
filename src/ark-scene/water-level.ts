@@ -68,6 +68,12 @@ export type IslandWater = {
     level: (x: number, z: number) => number | null;
     /** Every frame (`sea-depth.ts` waterSurfaceAt): the water's level, or null (the sea's, and dry land's: no water over it). */
     surface: (x: number, z: number) => number | null;
+    /**
+     * p3 (reflect, `water-reflect.ts`): still water, where reflections are drawn: its level; NaN for a basin of the sea
+     * held still (the town's harbour: the sea's level now); null for dry land and the open sea; undefined outside the
+     * island (the wild island answers there).
+     */
+    still?: (x: number, z: number) => number | null | undefined;
 };
 
 let islandWater: IslandWater | null = null;

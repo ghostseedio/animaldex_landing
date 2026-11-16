@@ -259,6 +259,17 @@ export function townWaterSurface(x: number, z: number): number | null {
     return v >= 2 ? v - 2 : null;
 }
 
+/**
+ * p3 (reflect): the town's still water over a point (local frame), where an animal's reflection may be drawn
+ * (`water-reflect.ts`): the canal's, the millpond's, the farm pond's and the pools' own level; NaN in the harbour's
+ * basin (sea water, so its surface is the sea's level now, the tide's); null on dry land and on the open sea (waves).
+ */
+export function townStillWater(x: number, z: number): number | null {
+    const v = waterCell(x, z);
+    if (v >= 2) return v - 2;
+    return v === 1 && inBox(HARBOUR_BASIN, x, z, -1) ? Number.NaN : null;
+}
+
 /** For trip planning: the water's surface, the ground's own height on dry land, null at sea. */
 export function townWaterLevel(x: number, z: number): number | null {
     const v = waterCell(x, z);

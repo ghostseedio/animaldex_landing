@@ -209,7 +209,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         import("@/ark-scene/islands/town/ground")
     ]);
     const {townColliderSet} = await import("@/ark-scene/islands/town/colliders");
-    const {primeTownDrawnGrid, setTownWalkSurfaces, townDrawnGround, townDrawnHeight, townWalkSurfaces, townWaterLevel, townWaterSurface} = await import("@/ark-scene/islands/town/drawn-ground");
+    const {primeTownDrawnGrid, setTownWalkSurfaces, townDrawnGround, townDrawnHeight, townStillWater, townWalkSurfaces, townWaterLevel, townWaterSurface} = await import("@/ark-scene/islands/town/drawn-ground");
     const {setIslandWater} = await import("@/ark-scene/water-level");
     const {homeSites, tankPose} = await import("@/ark-scene/islands/town/tanks");
     const {buildPetHomes} = await import("@/ark-scene/islands/town/render/pet-homes");
@@ -263,7 +263,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     };
     // Lane TB: the town's water at its own level for the schedule and the depth bands (the canal's 1.15 m, not the sea's 0).
     const inside = (x: number, z: number) => Math.abs(x - origin.x) < def.half && Math.abs(z - origin.z) < def.half;
-    setIslandWater({level: (x, z) => (inside(x, z) ? townWaterLevel(x - origin.x, z - origin.z) : null), surface: (x, z) => (inside(x, z) ? townWaterSurface(x - origin.x, z - origin.z) : null)});
+    setIslandWater({level: (x, z) => (inside(x, z) ? townWaterLevel(x - origin.x, z - origin.z) : null), surface: (x, z) => (inside(x, z) ? townWaterSurface(x - origin.x, z - origin.z) : null), still: (x, z) => (inside(x, z) ? townStillWater(x - origin.x, z - origin.z) : undefined)}); // p3 (reflect): still water
     // p2 (ground): what covers the town's ground at bug scale (bug-ground.ts), loaded with the town.
     const [{townBugCover}, {setBugIslandCover}] = await Promise.all([import("@/ark-scene/islands/town/bug-cover"), import("@/ark-scene/bug-ground")]);
     setBugIslandCover({inside, cover: (x, z) => townBugCover(x - origin.x, z - origin.z)});
