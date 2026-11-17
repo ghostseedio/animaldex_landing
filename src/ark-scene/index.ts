@@ -192,7 +192,8 @@ import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
 import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
 import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
-import {modelBase} from "@/ark-scene/grounding/base";
+import {modelBase, uprightBody} from "@/ark-scene/grounding/base";
+import {canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
 import {setLocoGround} from "@/ark-scene/locomotion/ground";
 import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
 import {flightSpec} from "@/ark-scene/locomotion/flight";
@@ -3876,6 +3877,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // normal, up a trunk, swaying with its tree (`scheduledPerch`).
         const trip = own.trip;
         const perch = groundingRules() === "grounded" ? scheduledPerch(at, trip?.to, Boolean(trip) && own.at >= trip!.arrive && !at.moving, ARK_TIME.value, ARK_WIND_VECTOR.value, standGround) : null;
+        // p5 (monkeys): a primate staying up in its tree goes out through the crowns and back now and then: swinging arm
+        // over arm, leaping or running from hold to hold of the drawn trees (`canopy-scene.ts`, the shared clock's).
+        const canopy = trip && perch && !at.moving && !act && !reducedMotion ? canopyFrame(entry.animal, trip, own.at, entry.length, !entry.state.asleep, perch, heightAt) : null;
+        if (canopy) return {x: canopy.x, z: canopy.z, base: canopy.y, yaw: Math.atan2(canopy.tx, canopy.tz), pitch: 0, roll: 0, afloat: false, surface: canopy};
         if (perch) return {x: perch.x, z: perch.z, base: perch.y, yaw: at.yaw + glance, pitch: 0, roll: 0, afloat: false, surface: perch};
         return {
             x: at.x,
@@ -4317,7 +4322,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // On a steep trunk or wall: head first down it plays climb_down where the rig has one (its schedule pose says
         // `down`, or it is sinking faster than a tenth of its length a second), else its climb.
         const climber = () => {
-            const name = climbClipName(up, Boolean((own?.pose as {down?: boolean} | null | undefined)?.down) || (state.sink ?? 0) > entry.length * 0.1, (n) => Boolean(clip(n)));
+            // (p5 (monkeys): one backing down a trunk tail first plays its climb, not a head-first climb_down.)
+            const posed = own?.pose as {down?: boolean; backing?: boolean} | null | undefined;
+            const name = climbClipName(up, Boolean(posed?.down) || (!posed?.backing && (state.sink ?? 0) > entry.length * 0.1), (n) => Boolean(clip(n)));
             return name ? clip(name) : null;
         };
         const own = entry.sched && scheduled(entry) ? entry.sched : null;
@@ -5401,7 +5408,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (Lane L2: a sidewinder's body lies across its way while it moves, `l2Sidewind`.)
             if (entry.l2 && !where.water && !act) where.yaw += l2Sidewind(entry.l2, entry.phase);
             let stand: Stand | null = null;
-            if (surface) {
+            const uprightOn = surface && Math.abs(surface.ny) < 0.5 ? uprightBody(animal.model_slug) : null; // p5 (monkeys)
+            if (surface && uprightOn) {
+                // p5 (monkeys): an upright-bodied model (a gibbon, an ape: taller than long) on a trunk, a wall, or hanging
+                // from a hold: its spine along the climb's heading, its front to the surface, its front's depth off it.
+                basisY.set(surface.tx, surface.ty, surface.tz).normalize();
+                basisZ.set(-surface.nx, -surface.ny, -surface.nz);
+                basisZ.addScaledVector(basisY, -basisZ.dot(basisY)).normalize();
+                basisX.crossVectors(basisY, basisZ);
+                rotation.setFromRotationMatrix(basisMatrix.makeBasis(basisX, basisY, basisZ));
+                const along = -groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s;
+                const out = uprightOn.front * s;
+                position.set(where.x + surface.nx * out + basisY.x * along, where.base + surface.ny * out + basisY.y * along, where.z + surface.nz * out + basisY.z * along);
+            } else if (surface) {
                 // On its surface: its back to the surface's normal, heading the way it crawls; its underside on the surface.
                 basisY.set(surface.nx, surface.ny, surface.nz).normalize();
                 basisZ.set(surface.tx, surface.ty, surface.tz);
