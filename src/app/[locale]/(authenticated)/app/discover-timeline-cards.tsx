@@ -801,7 +801,7 @@ function CapturePostChipRow({item, isOwn = false}: {item: DiscoverCaptureItem; i
   return (
     <div className="flex flex-nowrap items-center gap-2">
       <CaptureChip tone="green">{levelLabel}</CaptureChip>
-      <CaptureGradeBadge grade={item.captureGrade} breakdown={item.gradeBreakdown} compact />
+      {item.captureGrade != null ? <CaptureGradeBadge grade={item.captureGrade} breakdown={item.gradeBreakdown} compact /> : null}
     </div>
   );
 }
@@ -1715,7 +1715,7 @@ export function PostInformation({item, locale, onClose, isOwn = false}: {
             <div className="flex items-center justify-between gap-3"><span className="rounded-full bg-primary-400/10 px-2.5 py-1 text-[11px] font-black text-primary-400">{item.animalDexNumber ? `#${String(item.animalDexNumber).padStart(3, "0")}` : "CAPTURE"}</span><span className="text-xs font-semibold text-white/35">{date}</span></div>
             <div className="flex items-center gap-3">{item.collector.avatarUrl ? <img src={item.collector.avatarUrl} alt="" className="h-9 w-9 rounded-full object-cover"/> : <span className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-xs font-bold text-white/50">{item.collector.name.slice(0,1)}</span>}<div><p className="text-sm font-semibold text-white">{item.collector.name}</p>{item.collector.username ? <p className="text-xs text-white/40">@{item.collector.username}</p> : null}</div></div>
             <div className="overflow-hidden"><MediaCarousel assets={item.mediaAssets} animalName={item.animalName} isUncertain={item.isUncertain} /></div>
-            <div><div className="flex items-start justify-between gap-3"><h3 className="text-2xl font-black text-white">{item.animalName}</h3><CaptureGradeBadge grade={item.captureGrade} breakdown={item.gradeBreakdown} /></div>{item.isUncertain ? <div className="mt-2"><UncertainBadge /></div> : null}{item.headlineSupportingName ? <p className="mt-1 text-sm text-white/55">{item.headlineSupportingName}</p> : null}{item.locationLabel ? <p className="mt-2 text-sm text-white/50">⌖ &nbsp;{item.locationLabel}</p> : null}</div>
+            <div><div className="flex items-start justify-between gap-3"><h3 className="text-2xl font-black text-white">{item.animalName}</h3>{item.captureGrade != null ? <CaptureGradeBadge grade={item.captureGrade} breakdown={item.gradeBreakdown} /> : null}</div>{item.isUncertain ? <div className="mt-2"><UncertainBadge /></div> : null}{item.headlineSupportingName ? <p className="mt-1 text-sm text-white/55">{item.headlineSupportingName}</p> : null}{item.locationLabel ? <p className="mt-2 text-sm text-white/50">⌖ &nbsp;{item.locationLabel}</p> : null}</div>
             <div className="flex flex-wrap gap-2 text-[11px] font-bold">
               {item.contextLabel ? <FeedPill>{item.contextLabel}</FeedPill> : null}
               {item.identityKindLabel ? (

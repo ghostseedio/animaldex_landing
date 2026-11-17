@@ -7,6 +7,7 @@
  */
 
 import type {CaptureWords} from "@/lib/capture-words";
+import {storedCaptureGrade} from "@/lib/stored-capture-grade";
 
 type StatsWords = CaptureWords["stats"];
 
@@ -100,8 +101,10 @@ export function statsClassificationChips(input: {
 }): {chips: StatsChip[]; settingIntro: string | null} {
     const {words} = input;
     const chips: StatsChip[] = [];
-    if (input.captureGrade != null) {
-        chips.push({kind: "grade", label: words.grade, value: String(input.captureGrade), title: String(input.captureGrade), tint: gradeChipTint(input.captureGrade), showsInfo: true});
+    // The stored grade as it is (1-10); a card with no stored grade shows no GRADE chip.
+    const grade = storedCaptureGrade(input.captureGrade);
+    if (grade != null) {
+        chips.push({kind: "grade", label: words.grade, value: String(grade), title: String(grade), tint: gradeChipTint(grade), showsInfo: true});
     }
     const setting = settingKey(input.settingTag);
     let settingIntro: string | null = null;

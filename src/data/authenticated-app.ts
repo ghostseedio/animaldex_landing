@@ -16,7 +16,8 @@ import {getAuthenticatedUserProfile, getUserCaptureSettingCounts, getUserCapture
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {discoverPostPath} from "@/lib/discover-post";
 import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
-import {computeCaptureGradeBreakdown, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
+import type {CaptureGradeBreakdown, CaptureGradeSource} from "@/lib/capture-grade";
+import {storedGradeFields} from "@/lib/stored-capture-grade";
 import {normalizeCaptureNickname} from "@/lib/capture-nickname";
 import {resolveCaptureVariantDisplay} from "@/lib/species-life-stage-policy";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
@@ -1293,7 +1294,7 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
     if (!user) return null;
     const [captureResult, comparisonResult, progressionResult] = await Promise.all([
         supabase.from("captures")
-            .select("id,status,title,created_at,location_display_label,location_lat,location_lng,challenge_health,challenge_stake,is_challenge_ready,is_discoverable,dominance_boost,speed_boost,intelligence_boost,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,analysis_results(animal_name,scientific_name,normalized_identity_key,breed_guess,breed_confidence,human_context,zoo_or_wild,conservation_tier,confidence,type_tags,game_stats,premium_details,signals,observed_market_modifiers,raw_json,error_message,completed_at)")
+            .select("id,status,title,created_at,location_display_label,location_lat,location_lng,challenge_health,challenge_stake,is_challenge_ready,is_discoverable,dominance_boost,speed_boost,intelligence_boost,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,analysis_results(animal_name,scientific_name,normalized_identity_key,breed_guess,breed_confidence,human_context,zoo_or_wild,conservation_tier,confidence,type_tags,game_stats,premium_details,signals,observed_market_modifiers,raw_json,capture_grade,error_message,completed_at)")
             .eq("id", id)
             .eq("user_id", user.id)
             .maybeSingle(),
@@ -1386,7 +1387,9 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
         && !isLikelyNonLiveSource
         && !hasUncertaintyFallback
         && !isZooComparisonBanned;
+    // The grade is the stored one (analysis_results.capture_grade); the breakdown only explains it.
     const gradeSource: CaptureGradeSource = {
+        capture_grade: analysis.capture_grade ?? null,
         raw_json: analysis.raw_json ?? null,
         animal_name: analysis.animal_name ?? null,
         scientific_name: analysis.scientific_name ?? null,
@@ -1397,14 +1400,9 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
         breed_confidence: analysis.breed_confidence ?? null,
         signals: analysis.signals ?? null,
         premium_details: analysis.premium_details ?? null,
-        observed_market_modifiers: analysis.observed_market_modifiers ?? null,
-        dominance_endorsements: row.dominance_endorsements ?? null,
-        speed_endorsements: row.speed_endorsements ?? null,
-        size_endorsements: row.size_endorsements ?? null,
-        intelligence_endorsements: row.intelligence_endorsements ?? null,
-        rarity_endorsements: row.rarity_endorsements ?? null
+        observed_market_modifiers: analysis.observed_market_modifiers ?? null
     };
-    const gradeBreakdown = computeCaptureGradeBreakdown(gradeSource);
+    const {captureGrade, gradeBreakdown} = storedGradeFields(gradeSource);
     return {
         id: row.id,
         status: row.status,
@@ -1435,7 +1433,7 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
         signals,
         premiumDetails: analysis.premium_details ?? null,
         imageSrc: species ? getSpeciesImageRoute(species.slug, id) : "/images/placeholders/species-no-image.svg",
-        captureGrade: gradeBreakdown?.grade ?? null,
+        captureGrade,
         gradeBreakdown,
         totalProgressionXP: Math.max(0, finiteInteger(progression.total_progression_xp)),
         challengeHealth: Math.min(3, Math.max(0, finiteInteger(row.challenge_health, 3))),

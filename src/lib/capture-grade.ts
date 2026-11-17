@@ -77,7 +77,11 @@ type CaptureGradeModel = {
 };
 
 export type CaptureGradeSource = {
-    image_grade?: string | null;
+    /**
+     * The one capture grade, stored by the server in analysis_results.capture_grade
+     * (integer 1-10). It is what every surface shows. This module only explains it.
+     */
+    capture_grade?: number | null;
     raw_json?: unknown;
     animal_name?: string | null;
     scientific_name?: string | null;
@@ -89,11 +93,6 @@ export type CaptureGradeSource = {
     signals?: CaptureAnalysisSignals | null;
     premium_details?: PremiumDetails | null;
     observed_market_modifiers?: ObservedMarketModifiers | null;
-    dominance_endorsements?: number | null;
-    speed_endorsements?: number | null;
-    size_endorsements?: number | null;
-    intelligence_endorsements?: number | null;
-    rarity_endorsements?: number | null;
 };
 
 export type CaptureGradeFactor = {
@@ -130,8 +129,6 @@ export type CaptureGradeBreakdown = {
     summary: string;
 };
 
-const ENDORSEMENT_PER_STAT_CAP = 30;
-const ENDORSEMENT_STAT_COUNT = 5;
 const WEAK_REFINED_IDENTITY_WORDS = new Set([
     "likely",
     "possible",
@@ -811,16 +808,14 @@ function mergeCaptureGradeSource(source: CaptureGradeSource | null | undefined) 
         market: (source?.observed_market_modifiers && typeof source.observed_market_modifiers === "object"
             ? source.observed_market_modifiers
             : {}) as ObservedMarketModifiers,
-        priceEstimate: model?.price_estimate ?? null,
-        totalEndorsements: asNumber(source?.dominance_endorsements)
-            + asNumber(source?.speed_endorsements)
-            + asNumber(source?.size_endorsements)
-            + asNumber(source?.intelligence_endorsements)
-            + asNumber(source?.rarity_endorsements)
+        priceEstimate: model?.price_estimate ?? null
     };
 }
 
-function computeCaptureGradeFromMergedSource(merged: ReturnType<typeof mergeCaptureGradeSource>): CaptureGradeBreakdown {
+function computeCaptureGradeFromMergedSource(
+    merged: ReturnType<typeof mergeCaptureGradeSource>,
+    storedGrade: number | null
+): CaptureGradeBreakdown {
     const confidence = merged.confidence == null ? null : clamp(merged.confidence, 0, 1);
     const breedConfidence = merged.breedConfidence == null ? null : clamp(merged.breedConfidence, 0, 1);
     const domesticBreedContext = isDomesticBreedContext({
@@ -1031,9 +1026,6 @@ function computeCaptureGradeFromMergedSource(merged: ReturnType<typeof mergeCapt
 
         return adjustment;
     })();
-    const maximumEndorsements = ENDORSEMENT_PER_STAT_CAP * ENDORSEMENT_STAT_COUNT;
-    const cappedEndorsements = clamp(merged.totalEndorsements, 0, maximumEndorsements);
-    const endorsementLift = Math.sqrt(cappedEndorsements / maximumEndorsements) * 0.18;
     const authenticityPenalty = merged.authenticityStatus === "likely_non_live_source" ? 0.22 : 0;
     const uncertaintyPenalty = shouldShowUncertaintyFallback ? 0.14 : 0;
     const confidencePercent = confidence == null ? null : `${Math.round(confidence * 100)}%`;
@@ -1140,17 +1132,9 @@ function computeCaptureGradeFromMergedSource(merged: ReturnType<typeof mergeCapt
                             : "Framing is weak — get closer, center the animal, and fill more of the frame."
         }
     ];
-    const weighted = factors.reduce((sum, factor) => sum + factor.score * factor.weight, 0) + endorsementLift;
+    // Community endorsements no longer lift the grade (they count in stats, score and XP).
+    const weighted = factors.reduce((sum, factor) => sum + factor.score * factor.weight, 0);
     const adjustments: CaptureGradeAdjustment[] = [];
-
-    if (endorsementLift > 0) {
-        adjustments.push({
-            id: "endorsements",
-            title: "Community endorsements",
-            value: endorsementLift,
-            detail: `${cappedEndorsements} endorsement points add a small lift.`
-        });
-    }
 
     if (dynamicGradeAdjustment !== 0) {
         adjustments.push({
@@ -1218,7 +1202,10 @@ function computeCaptureGradeFromMergedSource(merged: ReturnType<typeof mergeCapt
     const contrasted = adjusted >= 0.5
         ? Math.min(1, 0.5 + ((adjusted - 0.5) / 0.5) ** 0.82 * 0.5)
         : Math.max(0.05, 0.5 - ((0.5 - adjusted) / 0.5) ** 1.18 * 0.5);
-    const grade = Math.min(10, Math.max(1, Math.round(contrasted * 9)));
+    // The server's stored grade is the grade. The arithmetic above only explains it;
+    // the legacy figure is used when there is no stored grade, which only the admin
+    // what-if preview does (every display goes through stored-capture-grade.ts).
+    const grade = storedGrade ?? Math.min(10, Math.max(1, Math.round(contrasted * 9)));
     const features = merged.signals.visible_body_features;
     const checklist: CaptureGradeChecklistItem[] = [
         {
@@ -1350,39 +1337,23 @@ function bodyVisibilityDetail(features: VisibleBodyFeatures | null | undefined, 
     return "Important body detail is limited or inferred from the photo.";
 }
 
+/**
+ * Explains a capture's grade: the factors, bonuses and penalties behind it.
+ *
+ * The grade is the server's stored `capture_grade` carried on the source. This
+ * is never the place a displayed grade is decided: without a stored grade the
+ * figure falls back to the legacy local arithmetic, which only the admin
+ * what-if preview reads. User-facing code goes through `storedGradeFields`.
+ */
 export function computeCaptureGradeBreakdown(source: CaptureGradeSource | null | undefined): CaptureGradeBreakdown | null {
-    const directGrade = source?.image_grade?.trim();
     const merged = mergeCaptureGradeSource(source);
 
     if (!merged.animalName.trim()) {
         return null;
     }
 
-    const breakdown = computeCaptureGradeFromMergedSource(merged);
+    const stored = source?.capture_grade;
+    const storedGrade = typeof stored === "number" && Number.isInteger(stored) && stored >= 1 && stored <= 10 ? stored : null;
 
-    if (directGrade && /^\d+$/.test(directGrade)) {
-        return {
-            ...breakdown,
-            grade: Number(directGrade),
-            summary: `Grade ${Number(directGrade)} is the stored capture grade for this photo.`
-        };
-    }
-
-    return breakdown;
-}
-
-export function computeCaptureGrade(source: CaptureGradeSource | null | undefined): number | null {
-    return computeCaptureGradeBreakdown(source)?.grade ?? null;
-}
-
-export function resolveCaptureImageGrade(source: CaptureGradeSource | null | undefined): string | null {
-    const directGrade = source?.image_grade?.trim();
-
-    if (directGrade) {
-        return directGrade;
-    }
-
-    const computedGrade = computeCaptureGrade(source);
-
-    return computedGrade == null ? null : String(computedGrade);
+    return computeCaptureGradeFromMergedSource(merged, storedGrade);
 }

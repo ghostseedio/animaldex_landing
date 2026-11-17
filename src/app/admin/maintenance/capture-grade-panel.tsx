@@ -5,8 +5,7 @@ import {useEffect, useMemo, useState} from "react";
 import {
     CAPTURE_GRADE_INPUTS,
     applyCaptureGradeInputs,
-    gradeCaptureRow,
-    type CaptureGradeEndorsements,
+    previewCaptureRowGrade,
     type CaptureGradeInputs,
     type CaptureGradeRow
 } from "@/lib/capture-grade-inputs";
@@ -14,11 +13,13 @@ import type {CaptureGradeBreakdown} from "@/lib/capture-grade";
 import {Alert, Button, Card, fieldClass, Skeleton, TableSkeleton} from "@/components/admin/ui";
 
 /**
- * Fix a capture's grade by correcting the analysis it was graded from.
+ * Inspect a capture's grade and the analysis it was graded from (read-only).
  *
- * The preview runs the real grading engine in the browser against the row the
- * API returned, so what the operator sees before saving is what the site will
- * show afterwards — no second implementation to drift.
+ * The grade is the server's stored `capture_grade`. The factor table explains
+ * it. Editing an input shows what the website's legacy arithmetic would make of
+ * it, as a preview only: that figure is not the server's grade and cannot be
+ * saved from here, because a second grade authority would put two grades on
+ * one capture.
  */
 
 type Props = {
@@ -26,13 +27,15 @@ type Props = {
     animalName: string | null;
     imageUrl: string;
     onClose: () => void;
-    onSaved: (grade: number) => void;
+    /** Kept for callers; grades are no longer saved from here, so it is never called. */
+    onSaved?: (grade: number) => void;
 };
 
 type LoadedState = {
     row: CaptureGradeRow;
-    endorsements: CaptureGradeEndorsements;
     storedGrade: number | null;
+    /** The factors behind the stored grade. */
+    breakdown: CaptureGradeBreakdown | null;
     inputs: CaptureGradeInputs;
 };
 
@@ -81,13 +84,11 @@ function FactorRows({breakdown}: {breakdown: CaptureGradeBreakdown | null}) {
     );
 }
 
-export default function CaptureGradePanel({captureId, animalName, imageUrl, onClose, onSaved}: Props) {
+export default function CaptureGradePanel({captureId, animalName, imageUrl, onClose}: Props) {
     const [state, setState] = useState<LoadedState | null>(null);
     const [inputs, setInputs] = useState<CaptureGradeInputs>({});
     const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const [notice, setNotice] = useState<string | null>(null);
 
     useEffect(() => {
         let cancelled = false;
@@ -102,8 +103,8 @@ export default function CaptureGradePanel({captureId, animalName, imageUrl, onCl
                 if (!response.ok || !payload.ok) throw new Error(payload.error || "Unable to load this capture's grade");
                 setState({
                     row: payload.row ?? {},
-                    endorsements: payload.endorsements,
                     storedGrade: payload.storedGrade ?? null,
+                    breakdown: payload.breakdown ?? null,
                     inputs: payload.inputs
                 });
                 setInputs(payload.inputs);
@@ -117,11 +118,11 @@ export default function CaptureGradePanel({captureId, animalName, imageUrl, onCl
         return () => { cancelled = true; };
     }, [captureId]);
 
-    // Graded in the browser with the same engine the server saves with, so the
-    // number below the form is the number that will be stored.
+    // What the website's legacy arithmetic makes of the edited inputs. A preview
+    // only; the server's stored grade is the grade.
     const preview = useMemo(() => {
         if (!state) return null;
-        return gradeCaptureRow(applyCaptureGradeInputs(state.row, inputs), state.endorsements);
+        return previewCaptureRowGrade(applyCaptureGradeInputs(state.row, inputs));
     }, [state, inputs]);
 
     const dirty = useMemo(() => {
@@ -129,34 +130,12 @@ export default function CaptureGradePanel({captureId, animalName, imageUrl, onCl
         return CAPTURE_GRADE_INPUTS.some((field) => String(inputs[field.id] ?? "") !== String(state.inputs[field.id] ?? ""));
     }, [state, inputs]);
 
-    async function save() {
-        setSaving(true);
-        setError(null);
-        setNotice(null);
-        try {
-            const response = await fetch("/api/admin/maintenance/capture-grade", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({captureId, inputs})
-            });
-            const payload = await response.json();
-            if (!response.ok || !payload.ok) throw new Error(payload.error || "Unable to save this capture's grade");
-            setState((current) => current && {...current, storedGrade: payload.storedGrade, inputs: payload.inputs});
-            setInputs(payload.inputs);
-            setNotice(`Saved. Grade is now ${payload.storedGrade}.`);
-            onSaved(payload.storedGrade);
-        } catch (caught) {
-            setError(caught instanceof Error ? caught.message : "Unable to save this capture's grade");
-        } finally {
-            setSaving(false);
-        }
-    }
-
     const grouped = CAPTURE_GRADE_INPUTS.reduce<Record<string, typeof CAPTURE_GRADE_INPUTS>>((groups, field) => {
         groups[field.factor] = [...(groups[field.factor] ?? []), field];
         return groups;
     }, {});
-    const factorTitles = new Map((preview?.factors ?? []).map((factor) => [factor.id, factor.title]));
+    const shown = dirty ? preview : state?.breakdown ?? null;
+    const factorTitles = new Map((shown?.factors ?? []).map((factor) => [factor.id, factor.title]));
 
     return (
         <div role="dialog" aria-modal="true" aria-label={`Grade for ${animalName || captureId}`}
@@ -196,25 +175,28 @@ export default function CaptureGradePanel({captureId, animalName, imageUrl, onCl
                             <Image src={imageUrl} alt={animalName ? `${animalName} capture` : "Capture"} width={352} height={352}
                                    unoptimized className="aspect-square w-full border border-line-300 object-cover" />
                             <Card className="p-4">
-                                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Grade</p>
+                                <p className="text-[11px] font-black uppercase tracking-[.12em] text-ink-500">Stored grade</p>
                                 <div className="mt-1 flex items-end gap-3">
-                                    <p className={`font-display text-5xl tabular-nums ${preview ? gradeTone(preview.grade) : "text-ink-400"}`}>
-                                        {preview?.grade ?? "—"}
+                                    <p className={`font-display text-5xl tabular-nums ${state?.storedGrade != null ? gradeTone(state.storedGrade) : "text-ink-400"}`}>
+                                        {state?.storedGrade ?? "—"}
                                     </p>
-                                    {state?.storedGrade != null && preview && state.storedGrade !== preview.grade && (
-                                        <p className="pb-2 text-sm text-ink-400">was {state.storedGrade}</p>
+                                    {dirty && preview && (
+                                        <p className="pb-2 text-sm text-ink-400">preview {preview.grade}, not saved</p>
                                     )}
                                 </div>
-                                <p className="mt-2 text-xs leading-5 text-ink-400">{preview?.summary}</p>
+                                <p className="mt-2 text-xs leading-5 text-ink-400">
+                                    {state?.storedGrade == null
+                                        ? "This capture has no stored grade."
+                                        : (dirty ? preview : state?.breakdown)?.summary}
+                                </p>
                             </Card>
                             <Card className="p-4">
-                                <FactorRows breakdown={preview} />
+                                <FactorRows breakdown={shown} />
                             </Card>
                         </div>
 
                         <div className="space-y-4">
                             {error && <Alert tone="bad">{error}</Alert>}
-                            {notice && <Alert tone="good">{notice}</Alert>}
 
                             {Object.entries(grouped).map(([factor, fields]) => (
                                 <Card key={factor} className="p-4">
@@ -260,14 +242,12 @@ export default function CaptureGradePanel({captureId, animalName, imageUrl, onCl
                             ))}
 
                             <div className="flex flex-wrap items-center gap-3 border-t border-line-300 pt-4">
-                                <Button variant="primary" size="lg" onClick={() => void save()} disabled={!dirty || !preview} loading={saving}>
-                                    {saving ? "Saving…" : `Save grade ${preview?.grade ?? ""}`}
-                                </Button>
-                                <Button size="lg" onClick={() => state && setInputs(state.inputs)} disabled={!dirty || saving}>
+                                <Button size="lg" onClick={() => state && setInputs(state.inputs)} disabled={!dirty}>
                                     Reset
                                 </Button>
                                 <p className="text-xs text-ink-500">
-                                    Saving rewrites this capture&apos;s analysis fields and stores the recomputed grade.
+                                    Read-only. Capture grades are set by the server; the preview above is the
+                                    website&apos;s legacy arithmetic and cannot be saved.
                                 </p>
                             </div>
                         </div>

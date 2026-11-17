@@ -1,0 +1,105 @@
+import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
+import test from "node:test";
+import {fileURLToPath} from "node:url";
+import type {CaptureGradeSource} from "@/lib/capture-grade";
+import {storedCaptureGrade, storedGradeFields} from "@/lib/stored-capture-grade";
+
+// GRADING-1: one server-owned grade, analysis_results.capture_grade (integer 1-10).
+// The website shows that value as it is and never computes a grade of its own.
+
+/** A weak, uncertain analysis: the website's own arithmetic would grade this low. */
+const weakAnalysis: CaptureGradeSource = {
+    animal_name: "Mallard",
+    confidence: 0.2,
+    zoo_or_wild: "Unknown",
+    raw_json: {model: {image_quality: "weak", authenticity_status: "likely_non_live_source"}}
+};
+
+const read = (relative: string) => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
+
+test("a stored grade of 10 is 10, whatever the analysis would score locally", () => {
+    assert.equal(storedCaptureGrade(10), 10);
+    const fields = storedGradeFields({...weakAnalysis, capture_grade: 10});
+    assert.equal(fields.captureGrade, 10);
+    assert.equal(fields.gradeBreakdown?.grade, 10, "the breakdown's headline is the stored grade");
+    assert.match(fields.gradeBreakdown?.summary ?? "", /^Grade 10 /);
+});
+
+test("every stored grade from 1 to 10 displays as stored", () => {
+    for (let grade = 1; grade <= 10; grade += 1) {
+        assert.equal(storedGradeFields({...weakAnalysis, capture_grade: grade}).captureGrade, grade);
+        assert.equal(storedGradeFields({...weakAnalysis, capture_grade: grade}).gradeBreakdown?.grade, grade);
+    }
+});
+
+test("a payload with no stored grade shows no grade and no breakdown, never a computed one", () => {
+    for (const capture_grade of [null, undefined]) {
+        const fields = storedGradeFields({...weakAnalysis, capture_grade});
+        assert.equal(fields.captureGrade, null);
+        assert.equal(fields.gradeBreakdown, null);
+    }
+    assert.deepEqual(storedGradeFields(null), {captureGrade: null, gradeBreakdown: null});
+    assert.deepEqual(storedGradeFields(undefined), {captureGrade: null, gradeBreakdown: null});
+});
+
+test("only a 1-10 grade counts; anything else is no grade", () => {
+    for (const value of [null, undefined, "", "abc", Number.NaN, Number.POSITIVE_INFINITY, 0, -3, 11, 100, {}, []]) {
+        assert.equal(storedCaptureGrade(value), null, String(value));
+    }
+    assert.equal(storedCaptureGrade("7"), 7);
+    assert.equal(storedCaptureGrade(9.6), 10);
+    assert.equal(storedCaptureGrade(1), 1);
+});
+
+test("endorsements and stars do not lift a grade: the breakdown carries no endorsement adjustment", () => {
+    const fields = storedGradeFields({...weakAnalysis, capture_grade: 4});
+    assert.ok(fields.gradeBreakdown);
+    assert.ok(!fields.gradeBreakdown.adjustments.some((adjustment) => /endorse/i.test(adjustment.id + adjustment.title)));
+});
+
+test("the uncertain-badge check (grade 1) reads the stored grade", () => {
+    assert.equal(storedGradeFields({...weakAnalysis, capture_grade: 1}).captureGrade, 1);
+    assert.notEqual(storedGradeFields({...weakAnalysis, capture_grade: null}).captureGrade, 1);
+    const source = read("../data/discover-timeline.ts");
+    assert.match(source, /storedGradeFieldsForRow\(row\)\.captureGrade !== 1/);
+});
+
+test("every payload that builds a capture's analysis selects capture_grade", () => {
+    const discover = read("../data/discover-timeline.ts");
+    const blocks = [
+        discover.slice(discover.indexOf("const richFeedSelect"), discover.indexOf("const compatibilityFeedSelect")),
+        discover.slice(discover.indexOf("const compatibilityFeedSelect"), discover.indexOf("async function hydrateDiscoverFeedMediaRows"))
+    ];
+    for (const block of blocks) assert.match(block, /"capture_grade"/);
+
+    assert.match(read("../data/authenticated-app.ts"), /analysis_results\([^)]*raw_json,capture_grade,/);
+    assert.match(read("../data/species-rankings.ts"), /stat_total,capture_grade,/);
+
+    const images = read("../data/species-images.ts");
+    assert.match(images.slice(images.indexOf("const DISCOVER_FEED_IMAGE_SELECT"), images.indexOf("const ANALYSIS_CAPTURE_SELECT")), /"capture_grade"/);
+    assert.match(images.slice(images.indexOf("const ANALYSIS_CAPTURE_SELECT"), images.indexOf("const DIRECTORY_FEED_SELECT")), /"capture_grade"/);
+    assert.match(images, /observed_market_modifiers,capture_grade,raw_json/);
+});
+
+test("no display path computes a grade: the local engine is reached only through the stored-grade layer", () => {
+    const engineUsers = [
+        "../data/authenticated-app.ts",
+        "../data/discover-timeline.ts",
+        "../data/species-images.ts",
+        "../data/species-rankings.ts",
+        "./capture-card-chips.ts"
+    ];
+    for (const path of engineUsers) {
+        const source = read(path);
+        assert.doesNotMatch(source, /computeCaptureGradeBreakdown|computeCaptureGrade\(|resolveCaptureImageGrade|image_grade/, path);
+    }
+    assert.match(read("../data/species-rankings.ts"), /captureGrade: storedCaptureGrade\(row\.capture_grade\)/);
+});
+
+test("the admin route no longer writes a grade from the website's own arithmetic", () => {
+    const route = read("../app/api/admin/maintenance/capture-grade/route.ts");
+    assert.doesNotMatch(route, /method: "PATCH"/);
+    assert.doesNotMatch(route, /capture_grade: breakdown\.grade/);
+    assert.match(route, /status: 409/);
+});

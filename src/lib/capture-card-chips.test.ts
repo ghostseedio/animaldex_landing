@@ -38,3 +38,26 @@ test("grade tints, conservation and rarity bands as iOS draws them", () => {
     assert.equal(rarityKey(89), "legendary");
     assert.equal(rarityKey(90), "mythic");
 });
+
+test("the GRADE chip shows the stored grade as it is: 10 reads 10, and no stored grade means no chip (GRADING-1)", () => {
+    const ten = statsClassificationChips({captureGrade: 10, settingTag: "Wild", humanContext: null, conservationTier: null, rarity: null, words}).chips[0];
+    assert.equal(ten.kind, "grade");
+    assert.equal(ten.value, "10");
+    assert.equal(ten.title, "10");
+    assert.equal(ten.label, "GRADE");
+    assert.equal(ten.tint, gradeChipTint(10));
+    for (const grade of [1, 2, 5, 9]) {
+        assert.equal(statsClassificationChips({captureGrade: grade, settingTag: null, humanContext: null, conservationTier: null, rarity: null, words}).chips[0].value, String(grade));
+    }
+    const none = statsClassificationChips({captureGrade: null, settingTag: "Wild", humanContext: null, conservationTier: null, rarity: null, words}).chips;
+    assert.ok(none.every((chip) => chip.kind !== "grade"));
+    // Not a 1-10 grade: no chip rather than a made-up one.
+    const outOfRange = statsClassificationChips({captureGrade: 0, settingTag: "Wild", humanContext: null, conservationTier: null, rarity: null, words}).chips;
+    assert.ok(outOfRange.every((chip) => chip.kind !== "grade"));
+});
+
+test("the Legendary and Mythic rarity cutoff is 90, as on iOS", () => {
+    assert.equal(rarityKey(65), "legendary");
+    assert.equal(rarityKey(89.9), "legendary");
+    assert.equal(rarityKey(90), "mythic");
+});
