@@ -413,8 +413,8 @@ function ArkCapturePhotoThumb({photo, species, words}: {photo: ArkCapturePhoto; 
                 ref={openerRef}
                 type="button"
                 onClick={() => setOpen(true)}
-                aria-label={words.photo.open}
-                title={words.photo.open}
+                aria-label={fromLabel ? `${words.photo.open}: ${fromLabel}` : words.photo.open}
+                title={fromLabel ? `${words.photo.open}: ${fromLabel}` : words.photo.open}
                 data-testid="ark-card-photo"
                 data-photo-relation={photo.relation}
                 className="rows-in relative h-11 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-white/[0.06] shadow-[0_2px_10px_rgba(0,0,0,0.3)] transition-transform duration-200 hover:scale-[1.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none md:h-12"
