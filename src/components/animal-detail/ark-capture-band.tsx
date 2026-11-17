@@ -176,7 +176,10 @@ export default function ArkCaptureBand({speciesProfileId, slug, name, words, onT
     const brought = state.value?.animalId ? snapshot?.animals.find((animal) => animal.id === state.value?.animalId) ?? null : null;
     const newest = brought ?? aboard?.animals[0] ?? null;
     const focus = newest?.species_profile_id || newest?.model_slug || speciesProfileId || slug || "";
-    const seeHref = `/ark?focus=${encodeURIComponent(focus)}&from=capture`;
+    // The animal this capture brought is opened by its id and followed (See it in the Ark, `src/ark-scene/see-it.ts`); the kind otherwise.
+    const seeHref = state.value?.state === "aboard" && state.value.animalId
+        ? `/ark?focus=${encodeURIComponent(state.value.animalId)}&follow=1&from=capture`
+        : `/ark?focus=${encodeURIComponent(focus)}&from=capture`;
 
     if (view.kind !== "species") {
         const read = view.state;

@@ -21,6 +21,7 @@ import {fetchArkHunting} from "@/lib/ark-hunting";
 import {arkExtinctForHost, fetchArkExtinct} from "@/lib/ark-extinct";
 import {arkSyncMeals, mountArkHuntMarker} from "@/ark-scene/live-hunt-feed";
 import {mountArchipelago} from "@/ark-scene/islands/archipelago";
+import {arkSeeIt} from "@/ark-scene/see-it"; // See it in the Ark
 import {arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {mergeArkIslandsRouting} from "@/lib/ark-islands-local";
 import {arkDayForHost, arkStatusForHost} from "@/lib/ark-animal-status";
@@ -57,6 +58,8 @@ declare global {
              * flights between the islands; with one island it is `mountArk` exactly as before.
              */
             mountArchipelago: typeof mountArchipelago;
+            /** See it in the Ark: `ark:select`'s `follow` and `arrival` (the capture's button; `src/ark-scene/see-it.ts`). */
+            arkSeeIt: typeof arkSeeIt;
             /** Two islands in this read (the server's switch); the island to open on (decision 26). */
             arkTwoIslands: typeof arkTwoIslands;
             arkOpeningIsland: typeof arkOpeningIsland;
@@ -117,6 +120,7 @@ window.AnimalDexArk = {
     mountArkHuntMarker,
     ArkLiveFixtureFeed: process.env.NODE_ENV !== "production" ? ArkLiveFixtureFeed : undefined,
     mountArchipelago,
+    arkSeeIt,
     arkTwoIslands,
     arkOpeningIsland,
     mergeArkIslandsRouting: process.env.NODE_ENV !== "production" ? mergeArkIslandsRouting : undefined,
