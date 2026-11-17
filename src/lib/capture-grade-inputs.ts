@@ -1,15 +1,13 @@
 import {computeCaptureGradeBreakdown, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
 
 /**
- * The editable inputs behind a capture's grade.
+ * The editable inputs behind a capture's grade, for the admin inspector.
  *
- * The grade itself is derived: seven weighted factors, each scored from the
- * analysis the model produced. Those weights are constants shared with the iOS
- * app, so a grade is corrected by fixing the inputs the analysis got wrong, not
- * by overriding the arithmetic. This module names each input, says which factor
- * it moves, and knows where it is stored, so the admin panel can preview a
- * change with the same engine the site grades with and then persist exactly what
- * it previewed.
+ * The grade itself is the server's stored `capture_grade`; this module names the
+ * analysis inputs the grade is built from, which factor each one moves, and
+ * where it is stored, so the admin panel can show a what-if preview. That
+ * preview runs the legacy local arithmetic and is never saved: grades are
+ * owned by the server and are not written from the website.
  */
 
 /** The analysis_results columns a grade is built from. */
@@ -27,18 +25,6 @@ export type CaptureGradeRow = {
     observed_market_modifiers?: Record<string, unknown> | null;
     raw_json?: Record<string, unknown> | null;
     capture_grade?: number | null;
-};
-
-export type CaptureGradeEndorsements = {
-    dominance: number;
-    speed: number;
-    size: number;
-    intelligence: number;
-    rarity: number;
-};
-
-export const EMPTY_ENDORSEMENTS: CaptureGradeEndorsements = {
-    dominance: 0, speed: 0, size: 0, intelligence: 0, rarity: 0
 };
 
 export type CaptureGradeInputValue = string | number | boolean | null;
@@ -186,12 +172,10 @@ function asNumber(value: unknown, fallback = 0) {
     return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-/** Assembles the source exactly as the app does, so a preview matches production. */
-export function buildCaptureGradeSource(
-    row: CaptureGradeRow,
-    endorsements: CaptureGradeEndorsements = EMPTY_ENDORSEMENTS
-): CaptureGradeSource {
+/** Assembles the grade source from the analysis columns; endorsements do not lift the grade. */
+export function buildCaptureGradeSource(row: CaptureGradeRow): CaptureGradeSource {
     return {
+        capture_grade: row.capture_grade ?? null,
         raw_json: row.raw_json ?? null,
         animal_name: row.animal_name ?? null,
         scientific_name: row.scientific_name ?? null,
@@ -202,12 +186,7 @@ export function buildCaptureGradeSource(
         breed_confidence: row.breed_confidence ?? null,
         signals: (row.signals ?? null) as CaptureGradeSource["signals"],
         premium_details: (row.premium_details ?? null) as CaptureGradeSource["premium_details"],
-        observed_market_modifiers: (row.observed_market_modifiers ?? null) as CaptureGradeSource["observed_market_modifiers"],
-        dominance_endorsements: endorsements.dominance,
-        speed_endorsements: endorsements.speed,
-        size_endorsements: endorsements.size,
-        intelligence_endorsements: endorsements.intelligence,
-        rarity_endorsements: endorsements.rarity
+        observed_market_modifiers: (row.observed_market_modifiers ?? null) as CaptureGradeSource["observed_market_modifiers"]
     };
 }
 
@@ -306,9 +285,11 @@ export function applyCaptureGradeInputs(row: CaptureGradeRow, inputs: CaptureGra
     };
 }
 
-export function gradeCaptureRow(
-    row: CaptureGradeRow,
-    endorsements: CaptureGradeEndorsements = EMPTY_ENDORSEMENTS
-): CaptureGradeBreakdown | null {
-    return computeCaptureGradeBreakdown(buildCaptureGradeSource(row, endorsements));
+/**
+ * What-if preview for the admin inspector: the legacy local arithmetic over the
+ * inputs as edited, with no stored grade so it is not pinned to the saved one.
+ * Preview only, never shown to users and never written.
+ */
+export function previewCaptureRowGrade(row: CaptureGradeRow): CaptureGradeBreakdown | null {
+    return computeCaptureGradeBreakdown({...buildCaptureGradeSource(row), capture_grade: null});
 }

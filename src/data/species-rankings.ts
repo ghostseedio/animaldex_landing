@@ -4,7 +4,8 @@ import {
     primarySpeciesCaptureMatchCandidate,
     captureMatchesSpeciesEntry
 } from "@/lib/species-breed";
-import {computeCaptureGrade, type CaptureGradeSource} from "@/lib/capture-grade";
+import type {CaptureGradeSource} from "@/lib/capture-grade";
+import {storedCaptureGrade} from "@/lib/stored-capture-grade";
 import {SPECIES_RANKING_ORDER, compareSpeciesRankingRows} from "@/lib/species-ranking-order";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
@@ -44,7 +45,6 @@ type DiscoverFeedRankingRow = CaptureGradeSource & {
     /** Ranking keys (migration 20261011130000). */
     total_progression_xp?: number | null;
     stat_total?: number | null;
-    capture_grade?: number | null;
     capture_created_at?: string | null;
 };
 
@@ -160,7 +160,8 @@ function toRankingItems(rows: DiscoverFeedRankingRow[]): SpeciesRankingItem[] {
         imagePath: row.image_path ?? null,
         battleTier: getBattleTier(row.raw_json),
         endorsementCount: row.endorsement_count ?? 0,
-        captureGrade: computeCaptureGrade(row)
+        // The stored grade, the same value the rows were just ranked by.
+        captureGrade: storedCaptureGrade(row.capture_grade)
     })).filter((item) => item.captureId);
 }
 

@@ -21,3 +21,14 @@ test("missing sort keys count as zero and the id breaks a full tie", () => {
 test("the REST order names the same keys", () => {
     assert.equal(SPECIES_RANKING_ORDER, "total_progression_xp.desc,stat_total.desc,capture_grade.desc,capture_created_at.desc");
 });
+
+test("ranking sorts on the stored grade: 10 ranks ahead of 9, and a missing grade ranks last on a tie (GRADING-1)", () => {
+    const tied = {total_progression_xp: 10, stat_total: 300, capture_created_at: "2026-10-01T00:00:00Z"};
+    const rows = [
+        {capture_id: "none", ...tied, capture_grade: null},
+        {capture_id: "nine", ...tied, capture_grade: 9},
+        {capture_id: "ten", ...tied, capture_grade: 10},
+        {capture_id: "one", ...tied, capture_grade: 1}
+    ];
+    assert.deepEqual([...rows].sort(compareSpeciesRankingRows).map((row) => row.capture_id), ["ten", "nine", "one", "none"]);
+});

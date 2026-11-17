@@ -32,9 +32,10 @@ const giftSource = readFileSync(join(here, "capture-gifts.ts"), "utf8");
 const giftRouteSource = readFileSync(join(here, "../app/api/app/gifts/route.ts"), "utf8");
 const catalogRouteSource = readFileSync(join(here, "../app/api/app/gifts/catalog/route.ts"), "utf8");
 
-test("capture grade still lifts from endorsements, not gifts or credits", () => {
-    assert.match(gradeSource, /dominance_endorsements/);
-    assert.match(gradeSource, /Community endorsements/);
+test("capture grade does not lift from endorsements, gifts or credits (GRADING-1: the stored server grade is the grade)", () => {
+    assert.doesNotMatch(gradeSource, /dominance_endorsements/);
+    assert.doesNotMatch(gradeSource, /Community endorsements/);
+    assert.doesNotMatch(gradeSource, /endorsementLift/);
     assert.doesNotMatch(gradeSource, /gift_credit/);
     assert.doesNotMatch(gradeSource, /capture_gift/);
     assert.doesNotMatch(gradeSource, /earning_entr/);

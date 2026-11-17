@@ -16,7 +16,8 @@ import {coverFirstMediaOrder, timelineMediaOrder} from "@/lib/capture-media-orde
 import {toCaptureCardThumbnailRoute} from "@/lib/capture-card-thumbnail";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {resolveCaptureHeadlineDisplay, resolveChallengeAnalysisHeadlineDisplay} from "@/lib/capture-headline-display";
-import {computeCaptureGradeBreakdown, shouldSuppressGradeOneUncertainty, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
+import {shouldSuppressGradeOneUncertainty, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
+import {storedGradeFields} from "@/lib/stored-capture-grade";
 import {getCatalogLandingPageIndex} from "@/data/catalog-landing-pages";
 import {animalTrialEvidenceRoute} from "@/lib/discover-animal-trial";
 import {parseDiscoverPostId, type ParsedDiscoverPostId} from "@/lib/discover-post";
@@ -110,7 +111,8 @@ export type DiscoverCaptureItem = {
     isChallengeAnalysisEligible: boolean;
     hasChallengeGameStats: boolean;
     score: number;
-    captureGrade: number;
+    /** The server's stored capture grade (1-10); null when the payload carries none. */
+    captureGrade: number | null;
     gradeBreakdown: CaptureGradeBreakdown | null;
     isUncertain: boolean;
     endorsementCount: number;
@@ -562,7 +564,7 @@ function captureGradeSourceFromRow(row: QueryRow): CaptureGradeSource {
         : null;
 
     return {
-        image_grade: readString(row, "image_grade"),
+        capture_grade: readNullableNumber(row, "capture_grade"),
         raw_json: row.raw_json,
         animal_name: readString(row, "animal_name"),
         scientific_name: readString(row, "scientific_name"),
@@ -573,23 +575,20 @@ function captureGradeSourceFromRow(row: QueryRow): CaptureGradeSource {
         breed_confidence: readNullableNumber(row, "breed_confidence"),
         signals,
         premium_details: premiumDetails,
-        observed_market_modifiers: market,
-        dominance_endorsements: readNumber(row, "dominance_endorsements"),
-        speed_endorsements: readNumber(row, "speed_endorsements"),
-        size_endorsements: readNumber(row, "size_endorsements"),
-        intelligence_endorsements: readNumber(row, "intelligence_endorsements"),
-        rarity_endorsements: readNumber(row, "rarity_endorsements")
+        observed_market_modifiers: market
     };
 }
 
-function captureGradeBreakdownForRow(row: QueryRow) {
-    return computeCaptureGradeBreakdown(captureGradeSourceFromRow(row));
+/** The stored grade and what explains it; both null when the row carries no capture_grade. */
+function storedGradeFieldsForRow(row: QueryRow) {
+    return storedGradeFields(captureGradeSourceFromRow(row));
 }
 
 function shouldShowUncertaintyVisualWarning(row: QueryRow) {
     if (shouldShowUncertaintyFallback(row)) return true;
     if (showsBroadIdentityAtModerateConfidence(row)) return true;
-    if (captureGradeBreakdownForRow(row)?.grade !== 1) return false;
+    // Grade 1 is the server's "could not grade this as an animal" figure; a row with no stored grade is not one.
+    if (storedGradeFieldsForRow(row).captureGrade !== 1) return false;
 
     return !shouldSuppressGradeOneUncertainty({
         confidence: readNullableNumber(row, "confidence"),
@@ -1032,8 +1031,7 @@ function mapCaptureRow(
     const animalName = headline.animalName;
     const catalogBestFor = catalogPrinciple?.bestUseCases ?? [];
     const learnedTags = learnedBestForTags(row);
-    const gradeBreakdown = captureGradeBreakdownForRow(row);
-    const grade = gradeBreakdown?.grade ?? 1;
+    const {captureGrade: grade, gradeBreakdown} = storedGradeFieldsForRow(row);
     const boosts = statBoosts(row);
     const comparison = comparisonBoosts(row);
     const endorsements = endorsementBonuses(row);
@@ -1617,6 +1615,7 @@ const richFeedSelect = [
     "price_estimate",
     "premium_details",
     "place_or_habitat_label",
+    "capture_grade",
     "completed_at",
     "profile_display_name",
     "profile_username",
@@ -1658,6 +1657,7 @@ const compatibilityFeedSelect = [
     "breed_confidence",
     "premium_details",
     "place_or_habitat_label",
+    "capture_grade",
     "species_profile_id",
     "total_progression_xp",
     "recent_progression_source",

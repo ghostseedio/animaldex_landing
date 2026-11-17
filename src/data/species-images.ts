@@ -17,7 +17,8 @@ import {
     captureMatchesSpeciesEntry
 } from "@/lib/species-breed";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
-import {computeCaptureGradeBreakdown, resolveCaptureImageGrade, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
+import type {CaptureGradeBreakdown, CaptureGradeSource} from "@/lib/capture-grade";
+import {storedGradeFields} from "@/lib/stored-capture-grade";
 
 export {
     SPECIES_NO_IMAGE_SRC,
@@ -87,11 +88,7 @@ const DISCOVER_FEED_IMAGE_SELECT = [
     "signals",
     "premium_details",
     "observed_market_modifiers",
-    "dominance_endorsements",
-    "speed_endorsements",
-    "size_endorsements",
-    "intelligence_endorsements",
-    "rarity_endorsements",
+    "capture_grade",
     "raw_json"
 ].join(",");
 
@@ -109,6 +106,7 @@ const ANALYSIS_CAPTURE_SELECT = [
     "signals",
     "premium_details",
     "observed_market_modifiers",
+    "capture_grade",
     "raw_json",
     "captures!inner(created_at)"
 ].join(",");
@@ -695,10 +693,11 @@ function createSpeciesImageReference(input: {
     };
 }
 
+/** The stored capture grade (and what explains it); none when the row carries no capture_grade. */
 function gradeFieldsFromSource(source: CaptureGradeSource | null | undefined) {
-    const gradeBreakdown = computeCaptureGradeBreakdown(source);
+    const {captureGrade, gradeBreakdown} = storedGradeFields(source);
     return {
-        imageGrade: resolveCaptureImageGrade(source),
+        imageGrade: captureGrade == null ? null : String(captureGrade),
         gradeBreakdown
     };
 }
@@ -854,7 +853,7 @@ async function fetchDiscoverFeedCapture(captureId: string): Promise<DiscoverFeed
     if (!config) return null;
 
     const searchParams = new URLSearchParams({
-        select: "capture_id,animal_name,profile_username,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind,confidence,breed_confidence,signals,premium_details,observed_market_modifiers,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,raw_json",
+        select: "capture_id,animal_name,profile_username,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind,confidence,breed_confidence,signals,premium_details,observed_market_modifiers,capture_grade,raw_json",
         capture_id: `eq.${captureId}`,
         limit: "1"
     });
