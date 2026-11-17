@@ -42,6 +42,7 @@ import {bodyShape} from "@/ark-scene/collide/bodies";
 import {pushOut} from "@/ark-scene/collide/resolve";
 import {attachedOn, tripPhase} from "@/ark-scene/collide/attach";
 import {setTownWalkSurfaces, townDrawnHeight, townWalkSurfaces, townWaterLevel, townWaterSurface, type TownWalkSurfaces} from "@/ark-scene/islands/town/drawn-ground";
+import {roomCell, roomPose} from "@/ark-scene/islands/town/home-rooms";
 import {homeDisplayFloors, homeSiteFootprints, homeSites, perchHeight, tankBox, tankPose, zooHouseFloors, zooHouseFrame, type HomeSite} from "@/ark-scene/islands/town/tanks";
 import {buildScenery, buildZooScenery} from "@/ark-scene/islands/town/render/scenery";
 
@@ -270,6 +271,27 @@ export function validateTownAnimals(animals: readonly ArkAnimal[], options: Town
         }
         if (info.where === "pool") {
             sample(a, info, "water", 0, 0, []);
+            continue;
+        }
+        if (info.room) {
+            // p5 (homes): a pet indoors (its garden room, a tower apartment): its body in its cell of the room's floor at
+            // every moment of its walk about it, stood on that floor (`home-rooms.ts` roomPose).
+            const room = info.room;
+            const cell = roomCell(room);
+            const floor = () => room.room.floor;
+            const problems: TownAnimalProblem[] = [];
+            let worst = 0;
+            for (const epoch of epochs.length ? epochs : [0]) {
+                const pose = roomPose(room, a.id, length, epoch);
+                if (!within(cell, bodyCorners(pose.x, pose.z, pose.yaw, length * 0.6, width * 0.6), 0.01) && !problems.includes("out_of_house")) problems.push("out_of_house");
+                const stand = standOnGround(pose.x, pose.z, pose.yaw, scale, base, footprint, 0, 0, floor, 0.5 * tol);
+                const gap = contactGap(pose.x, pose.z, pose.yaw, stand.pitch, stand.roll, stand.rootY, scale, base, footprint, floor);
+                if (Math.abs(gap) > Math.abs(worst)) worst = gap;
+                if (Math.abs(pose.base - room.room.floor) > 1e-6 && !problems.includes("floats")) problems.push("floats");
+            }
+            if (worst > tol && !problems.includes("floats")) problems.push("floats");
+            if (worst < -tol) problems.push("sinks");
+            sample(a, info, "display", 0, worst, problems, problems.length ? `in ${room.room.id}: gap ${worst.toFixed(3)}` : "");
             continue;
         }
         const zooHouse = info.where === "indoor" && info.enclosure ? zooHouseFrame(info.enclosure) : null;

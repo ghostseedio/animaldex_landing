@@ -21,6 +21,7 @@ import {townPlan, TOWER_FLOOR} from "@/ark-scene/islands/town/plan";
 import {placeTownAnimals, type TownPlace} from "@/ark-scene/islands/town/placement";
 import {APARTMENT_FROM_STOREY, BAY_DEPTH, GARDEN_CAP, countsInGarden, indoorKind, roomCell, roomPose, towerApartments, towerFloor} from "@/ark-scene/islands/town/home-rooms";
 import {pickFigure, type Projector} from "@/ark-scene/tap-pick";
+import {townDayEpochs, validateTownAnimals} from "@/ark-scene/islands/town/validate-animals";
 
 function animal(i: number, slug: string, zone = "farm_garden"): ArkAnimal {
     return {id: `hr-${String(i).padStart(5, "0")}-${slug}`, species_profile_id: `sp-${slug}`, name: slug, scientific_name: null, model_slug: slug, zone: zone as ArkAnimal["zone"], arrived_at: `2026-10-${String(1 + (i % 28)).padStart(2, "0")}T10:00:00Z`, brought_by: {label: "x", named: false}, mine: false, area: "house", island: "town", enclosure: null} as ArkAnimal;
@@ -183,4 +184,14 @@ test("the same pets indoors whatever order they come in; each home turtle has it
         assert.equal(slugs.length, 1, `${id}: ${slugs.join(", ")}`);
     });
     assert.ok(turtles >= 3, `${turtles} turtles in tanks`);
+});
+
+test("the town's validator: every pet indoors in its cell, stood on its room's floor (not sunk, not floating) through a day", () => {
+    const list = homes();
+    const placed = placeTownAnimals(list);
+    const indoors = list.filter((a) => placed.town.get(a.id)?.room);
+    const check = validateTownAnimals(indoors, {schedule: false, epochs: townDayEpochs(12)});
+    assert.deepEqual(check.problems.slice(0, 10).map((s) => `${s.id}: ${s.problems.join(",")} ${s.detail}`), []);
+    assert.equal(check.counts.floats + check.counts.sinks + check.counts.out_of_house, 0);
+    assert.ok(check.animals >= indoors.length && indoors.length > 100);
 });
