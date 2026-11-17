@@ -188,7 +188,7 @@ async function main() {
                 {x: x0 + i * 0.95, y: h.y, z: z0, yaw: 0, pose: "stand", phase: i * 0.41, look: {...back, skin, child: false, height: 1.75, bald: 0}}
             ] as HumanInstance[];
         });
-        handle.setView({target: {x: h.x, y: h.y + 1, z: z0 + 0.6}, distance, polar: 1.36, azimuth: 0});
+        handle.setView({target: {x: h.x, y: h.y + 1, z: z0 + 0.6}, distance, polar: 1.42, azimuth: 0});
         await frames(10);
         await wait(1500);
         await frames(4);
