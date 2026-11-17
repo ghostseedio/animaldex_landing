@@ -8,6 +8,9 @@
  *   ?sky=0                     without the photographed day sky (the visual check: nothing loads after mount)
  *   ?wet=0..1&rain=0..1        the weather (lane GA: wet streets, puddles, ripples); `__arkTown.weather(wet, rain)`
  *   ?homes=all                 every household's pet site drawn with all its displays (gfx (props): the gardens' frames)
+ *   ?humans=112                p5 (humans): that many people (a fixture: the live record's count of human captures
+ *                              aboard), on their day by the pinned clock; `?boat=1` a speedboat with its helm's driver
+ *                              off the beach (the open sea's boats are the world's, not this page's)
  */
 
 import {ACESFilmicToneMapping, Fog, PCFSoftShadowMap, PerspectiveCamera, Scene, Vector3, WebGLRenderer} from "three";
@@ -28,6 +31,13 @@ import {loadVehicles} from "@/ark-scene/islands/town/render/vehicles";
 import {buildPetHomes} from "@/ark-scene/islands/town/render/pet-homes";
 import {homeSites} from "@/ark-scene/islands/town/tanks";
 import {townHouseholds} from "@/ark-scene/islands/town/areas";
+import {HumanFigures, humanLook} from "@/ark-scene/humans/figures";
+import {helmSeat, TownHumans, type HumanRoomHost} from "@/ark-scene/humans/town-humans";
+import {roadHeight} from "@/ark-scene/islands/town/render/vehicles";
+import {speedboatGeometry} from "@/ark-scene/ocean-traffic-render";
+import {propMaterial} from "@/ark-scene/islands/town/render/instanced";
+import {floatingMaterial} from "@/ark-scene/islands/town/render/boats";
+import {Mesh} from "three";
 
 /** Part B's render distance and hysteresis per tier (`streaming/tiers.ts`); the map view from 150 m. */
 const STREAM = {high: {distance: 960, hysteresis: 40}, medium: {distance: 640, hysteresis: 32}, low: {distance: 440, hysteresis: 26}} as const;
@@ -152,6 +162,23 @@ export function mountTown(el: HTMLElement) {
         });
         town.root.add(buildPetHomes(used).group);
     }
+    // p5 (humans): the town's people (a fixture of `?humans=N`; the live page takes the record's).
+    const humanCount = Number(params.get("humans") ?? 0);
+    const humans = humanCount > 0 ? new TownHumans({origin: {x: 0, z: 0}, roadHeight}) : null;
+    const figures = humans ? new HumanFigures() : null;
+    if (humans && figures) {
+        humans.setRoster(Array.from({length: humanCount}, (_, i) => ({id: `fixture-human-${String(i).padStart(3, "0")}`})));
+        const host = (window as unknown as {__arkHumanRooms?: HumanRoomHost}).__arkHumanRooms;
+        if (host) humans.setRoomHost(host);
+        scene.add(figures.group);
+    }
+    const boat = params.get("boat") === "1" ? {x: 120, z: 176, yaw: Math.PI / 2 + 0.3} : null;
+    if (boat) {
+        const hull = new Mesh(speedboatGeometry(), floatingMaterial(propMaterial(), true));
+        hull.position.set(boat.x, 0.12, boat.z);
+        hull.rotation.set(-0.09, boat.yaw, 0, "YXZ");
+        scene.add(hull);
+    }
     const post = new ArkPost(renderer, scene, camera, tier);
     let clock: TownClock = {hours: hours0, day: Number(params.get("day") ?? 20406)};
     const target = new Vector3();
@@ -186,6 +213,16 @@ export function mountTown(el: HTMLElement) {
         lighting.setHours(clock.hours, fog);
         lighting.fitShadow(target, camera.position.distanceTo(target));
         town.update(clock);
+        if (humans && figures) {
+            const epochMs = ((clock.day - 4) * 24 + clock.hours) * 3600 * 1000;
+            const list = humans.frame(epochMs, town.vehicles.movingCars(), town.vehicles.sim.traffic.cars.length);
+            if (boat) {
+                const look = humanLook("fixture-human-boat");
+                const seat = helmSeat(boat, 1, ARK_ENV.seaLevel.value, look.height / 1.75);
+                list.push({id: "boat", what: "boat", look, x: seat.x, y: seat.y, z: seat.z, yaw: seat.yaw, pose: "drive", phase: 0});
+            }
+            figures.setFrame(list, camera.position, epochMs / 1000);
+        }
         stream();
         renderer.info.reset();
         post.render();
