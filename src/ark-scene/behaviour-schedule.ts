@@ -32,8 +32,10 @@ import {bodyShape} from "@/ark-scene/collide/bodies";
 import {hostOf, onSurface, surfaceOf} from "@/ark-scene/collide/attach";
 import {colliderDistance, type Collider} from "@/ark-scene/collide/colliders";
 import {worldSampler, worldSamplerBuild, type ArkWorldSampler, type AttachPoint, type AttachTag} from "@/ark-scene/world-sampler";
+import {allAttachPoints, type AttachPoint as SceneryPoint} from "@/ark-scene/sampler";
 import {waterLevelAt} from "@/ark-scene/water-level";
 import {STEEP_NY, wallClimb, wallClimbAt, wallPlaceSuits} from "@/ark-scene/wall-climb";
+import {descendsHeadFirst, placedTrunk, treeClimb, treeClimbAt, treeHostOf, trunkFromBark, type Trunk} from "@/ark-scene/tree-climb";
 import {DEN_DRY, SURF_REACH} from "@/ark-scene/map/points";
 import {topOf, waterSurfaceOf} from "@/ark-scene/behaviour-water";
 import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
@@ -134,6 +136,8 @@ export type Leg = {
     pace?: number;
     /** A follower's leg that takes off with its leader (MA1): where it stood from its leader then, eased into its place. */
     lead0?: {x: number; y: number; z: number};
+    /** p5 (monkeys): a climb leg of a kind that comes down a trunk head first (`tree-climb.ts` descendsHeadFirst); else tail first. */
+    headFirst?: boolean;
 };
 
 /** One beat of its time at its destination: from `at` seconds after it arrives, it does `beat` at (x, z) facing yaw (a step walks there). */
@@ -2251,7 +2255,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         case "surface": {
             const climb = (a: Spot, b: Spot) => {
                 const length = Math.hypot(b.x - a.x, b.z - a.z) + Math.abs(b.y - a.y);
-                legs.push({mode: "surface", from: a, to: b, path: [a, b], length, seconds: length / (speed * 0.6), beat: "climb"});
+                legs.push({mode: "surface", from: a, to: b, path: [a, b], length, seconds: length / (speed * 0.6), beat: "climb", ...(profile.surface || descendsHeadFirst(profile.slug, null) ? {headFirst: true} : {})});
             };
             // (Collisions: up onto a rock or a tree from the ground it first walks to its foot, round whatever is in the
             // way, and climbs from there; down, the same the other way: never a straight line through a trunk, a fence or
@@ -2471,6 +2475,10 @@ export type TripPose = {
     beat: ArkBeat;
     /** 3.3 fix (wall): climbing down a wall or a trunk: it heads down it, head first (`wall-climb.ts`). */
     down?: boolean;
+    /** p5 (monkeys): coming down a trunk tail first (its body still heads up it: `tree-climb.ts`). */
+    backing?: boolean;
+    /** p5 (monkeys): on a climb through a tree, its body's heading along the surface (up the trunk, along the limb). */
+    forward?: {x: number; y: number; z: number};
     /**
      * On an air leg (MA1): its stage (a run to take off, the climb, level flight, the glide-in, a ski to a stop on the
      * water), its speed over the ground (m/s), and the heights of the surfaces it took off from and lands on (a perch,
@@ -2807,6 +2815,50 @@ function shadowPoint(world: ScheduleWorld, at: TripPose, shadow: NonNullable<Tri
     return {x, y: Math.min(Math.max(y, ground), ceiling), z, yaw: at.yaw + ease * 0.08 * Math.sin(epochSeconds * 0.15 + phase)};
 }
 
+/** The places in a tree (its trunk climbed to reach them): `tree-climb.ts`. */
+const TREE_TAGS: ReadonlySet<string> = new Set(["limb", "branch", "bark", "canopy_hang", "leaf", "tree_hollow", "canopy_perch", "canopy_climb"]);
+const trunks = new WeakMap<ArkWorldSampler, Map<string, Trunk | null>>();
+/** The scenery's tree places by id (they know their drawn tree: its asset and placement), built when first asked. */
+let sceneryById: Map<string, SceneryPoint> | null = null;
+let sceneryOf: SceneryPoint[] | null = null;
+
+/**
+ * p5 (monkeys): the trunk of the tree a spot is up in (its place's tree, by the place's id), or null on the ground, a
+ * rock, a wall. The drawn asset tree's trunk where the scenery's place knows its tree (`placedTrunk`); else (the
+ * town's trees) one upright behind the tree's bark place. Kept per tree.
+ */
+export function trunkOfSpot(world: ScheduleWorld, spot: Spot): Trunk | null {
+    const id = spot.point;
+    const host = treeHostOf(id);
+    if (!id || !host) return null;
+    const bare = id.startsWith("map:") ? id.slice(4) : id;
+    const town = bare.startsWith("town:");
+    if (!town && !TREE_TAGS.has(bare.split(":")[0])) return null;
+    let own = trunks.get(world.sampler);
+    if (!own) trunks.set(world.sampler, (own = new Map()));
+    if (own.has(host)) return own.get(host) ?? null;
+    let trunk: Trunk | null = null;
+    if (!town) {
+        // (The scenery's places are rebuilt on a world or islands switch: a new list, a new index.)
+        const all = allAttachPoints();
+        if (sceneryOf !== all) {
+            sceneryOf = all;
+            sceneryById = new Map(all.map((p) => [p.id, p]));
+        }
+        const point = sceneryById!.get(bare);
+        if (point?.asset && point.wind) trunk = placedTrunk(point.asset, point.wind);
+    }
+    if (!trunk) {
+        const bark = world.sampler.attachPoints("bark", {x: spot.x, z: spot.z, r: 24}).find((p) => treeHostOf(p.id) === host);
+        if (bark) {
+            const foot = world.sampler.heightAt(bark.x, bark.z);
+            trunk = trunkFromBark(bark, 0.22, foot, Math.max(spot.y - foot, 1) + 1);
+        }
+    }
+    own.set(host, trunk);
+    return trunk;
+}
+
 function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSeconds: number): TripPose {
     const {from, to} = leg;
     const moving = u < 1;
@@ -2877,6 +2929,17 @@ function legPose(world: ScheduleWorld, leg: Leg, u: number, trip: Trip, epochSec
             return {x: at.x, y, z: at.z, yaw: at.yaw, moving, aloft, ...up, beat: lift > 0.9 && leg.beat === "glide" ? "glide" : "fly", air};
         }
         case "surface": {
+            // p5 (monkeys): up into a tree or down out of one: through its trunk, belly to the bark, its body along the
+            // trunk and then along the limb (`tree-climb.ts`), not a level body on a straight ramp through the air.
+            const fromTrunk = trunkOfSpot(world, from);
+            const toTrunk = trunkOfSpot(world, to);
+            if (fromTrunk || toTrunk) {
+                const climb = treeClimb(from, to, fromTrunk, toTrunk, (x, z) => world.sampler.heightAt(x, z), Boolean(leg.headFirst));
+                if (climb) {
+                    const c = treeClimbAt(climb, u, (x, z) => world.sampler.heightAt(x, z));
+                    return {x: c.x, y: c.y, z: c.z, yaw: c.yaw, moving, aloft: false, nx: c.nx, ny: c.ny, nz: c.nz, beat: c.onTree ? "climb" : "walk", forward: {x: c.fx, y: c.fy, z: c.fz}, ...(c.down ? {down: true} : {}), ...(c.backing ? {backing: true} : {})};
+                }
+            }
             // 3.3 fix (wall): between the ground and a wall, a trunk or a rock face: along the ground to the wall's foot,
             // then up it belly to it (`wall-climb.ts`), not a straight ramp through the air with the body half tilted.
             if (wallClimb(from, to)) {
