@@ -159,8 +159,10 @@ function digest(value: unknown): string {
 // bins by the window, the garden rooms clear of the back doors (areas, places); the paths to the doors, the gardens'
 // fences, walls, railings and gates (`doors.ts`, `render/fences.ts`), the open porches, the benches (`render/bench.ts`;
 // the park's off the pond's water) (scenery and buildings).)
+// (Pass 4, lane TOWNFIX: the church's footprint holds its west tower (it was drawn on Park Road) and the yew on Church
+// Walk is gone: plan, areas, scenery and buildings; the places are unchanged.)
 const TOWN_DIGESTS = {
-    plan: "61b5d5a4ac129668",
+    plan: "18f371a39c013ae5",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
@@ -168,7 +170,7 @@ const TOWN_DIGESTS = {
     // (3.3 fix (wall), wall-climb.ts: the lamp-lit walls' places on the wall's face with its normal; the eaves' wall faces.)
     // (Pass 2, lane LAND: the millpond's bank meets its water, its wetland spots and stones, pond life at the wetland; the
     // downtown headland: its streets, three towers, the plaza, billboards.)
-    areas: "9da1fda7d7c9400a",
+    areas: "631994b9deda845c",
     // (Lane GA: the ground's surface weights.)
     ground: "db8be9238e67c5ae",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
@@ -177,7 +179,7 @@ const TOWN_DIGESTS = {
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "c89bb67d2c33705d",
+    sceneryAndBuildings: "4322804f0135fd7a",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
