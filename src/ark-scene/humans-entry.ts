@@ -28,14 +28,14 @@ async function main() {
     const template = fixture.animals[0];
     const dogs = Array.from({length: Number(params.get("dogs") ?? 60)}, (_, i) => ({...template, id: `0000d095-0000-4000-8000-${i.toString(16).padStart(12, "0")}`, species_profile_id: `5bec1e50-0000-4000-8000-00000000000${i % BREEDS.length}`, kind_species_profile_id: DOG_KIND_ID, kind_name: "Domestic Dog", name: BREEDS[i % BREEDS.length][1], scientific_name: "Canis lupus familiaris", model_slug: BREEDS[i % BREEDS.length][0], zone: "farm_garden", island: "town", area: "house", activity: "diurnal", sociality: "group", slot: 300 + i, slot_rank: 0, origin: "arrived"}));
     const people = Array.from({length: Number(params.get("humans") ?? 112)}, (_, i) => ({...template, id: `0000beef-0000-4000-8000-${i.toString(16).padStart(12, "0")}`, species_profile_id: "2fabfa9a-6ec9-4d71-8cf2-1933edaef6d2", name: "Human", scientific_name: "Homo sapiens", model_slug: "human", zone: "farm_garden", island: "town", area: "house", slot: 200, slot_rank: i, origin: "arrived"}));
-    let snapshot = decodeArkSnapshot({...fixture, animals: [...dogs, ...people]});
-    if (!snapshot) throw new Error("fixture did not decode");
-    snapshot = {...snapshot, animals: snapshot.animals.map((a) => ({...a, island: "town"}) as typeof a)};
+    const decoded = decodeArkSnapshot({...fixture, animals: [...dogs, ...people]});
+    if (!decoded) throw new Error("fixture did not decode");
+    const snapshot = {...decoded, animals: decoded.animals.map((a) => ({...a, island: "town"}) as typeof a)};
     const [{arkIslandSnapshot}, {loadTownScene}] = await Promise.all([import("@/lib/ark-islands"), import("@/ark-scene/islands/scene")]);
     const split = arkIslandSnapshot as unknown as (s: typeof snapshot, island: "wild" | "town") => typeof snapshot;
     const town = await loadTownScene({tier: "high", animals: split(snapshot, "town").animals});
     let ready = false;
-    const handle: ArkSceneHandle = mountArk(document.getElementById("ark")!, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: Number(params.get("hours") ?? 7.8), onReady: () => (ready = true), island: town, wildAnimals: split(snapshot, "wild").animals, openIsland: "town"} as never);
+    const handle: ArkSceneHandle = mountArk(document.getElementById("ark")!, {snapshot, modelBase: MODELS, iconUrl: (slug: string) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: Number(params.get("hours") ?? 7.8), onReady: () => (ready = true), island: town, wildAnimals: split(snapshot, "wild").animals, openIsland: "town"} as never);
     handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.15, storm: 0, windDirection: 0.4, rain: 0, fog: 0});
     const until = performance.now() + 150_000;
     while (performance.now() < until && (!ready || handle.loading())) await wait(200);

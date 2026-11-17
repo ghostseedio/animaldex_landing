@@ -50,7 +50,7 @@ test("the pairing: no dog twice, two leads at most, its own household first, els
     assert.equal(new Set(walked).size, walked.length, "a dog on two leads");
     assert.equal(walked.length + pairs.home.length, dogs.length);
     assert.equal(new Set([...walked, ...pairs.home]).size, dogs.length);
-    for (const [walker, mine] of pairs.dogsOf) {
+    for (const [walker, mine] of Array.from(pairs.dogsOf)) {
         assert.ok(mine.length >= 1 && mine.length <= LEADS, `${walker} holds ${mine.length} leads`);
         for (const d of mine) assert.equal(pairs.walkerOf.get(d.id), walker);
     }
