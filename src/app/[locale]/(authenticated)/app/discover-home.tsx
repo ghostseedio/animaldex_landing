@@ -21,7 +21,7 @@ import {getLocalePath} from "@/lib/site";
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type WheelEvent} from "react";
 import {useRouter} from "next/navigation";
 import DebatePost from "@/components/debates/debate-post";
-import {pinnedDebates, type Debate} from "@/lib/debates";
+import {debateFeedSlotId, debateFeedSlots, planDebateFeed, type Debate, type DebateFeedPlan, type DebateFeedSlot} from "@/lib/debates";
 import {ARK_COPY, type CompanionWords} from "@/lib/companion-bond";
 
 type DiscoverSegment = "discover" | "collectors";
@@ -371,29 +371,20 @@ export default function DiscoverHome({
     timelineVisibleRef.current = timelineVisible;
     const [timelineItems, setTimelineItems] = useState(timeline);
     /**
-     * The feed's slots: boosted debates the reader has not voted on first,
-     * then the posts with the other public debates among them by date.
+     * Which debates are pinned and in what order, decided from the first list
+     * this feed saw and kept: a vote (or a refreshed read of the same debates)
+     * changes what a debate says in its slot, never where the slot is.
      */
-    const feedSlots = useMemo(() => {
-        type Slot = {kind: "post"; item: DiscoverTimelineItem} | {kind: "debate"; debate: Debate; pinned: boolean};
-        if (!debateWords || debates.length === 0) return timelineItems.map((item): Slot => ({kind: "post", item}));
-        const pinned = pinnedDebates(debates);
-        const pinnedIds = new Set(pinned.map((debate) => debate.id));
-        const rest = debates
-            .filter((debate) => !pinnedIds.has(debate.id))
-            .sort((a, b) => Date.parse(b.createdAt ?? "") - Date.parse(a.createdAt ?? ""));
-        const slots: Slot[] = pinned.map((debate) => ({kind: "debate", debate, pinned: true}));
-        let next = 0;
-        for (const item of timelineItems) {
-            const at = Date.parse(item.date);
-            while (next < rest.length && Date.parse(rest[next].createdAt ?? "") >= at) {
-                slots.push({kind: "debate", debate: rest[next], pinned: false});
-                next += 1;
-            }
-            slots.push({kind: "post", item});
-        }
-        for (; next < rest.length; next += 1) slots.push({kind: "debate", debate: rest[next], pinned: false});
-        return slots;
+    const debatePlanRef = useRef<DebateFeedPlan | null>(null);
+    /**
+     * The feed's slots: the debates the server pinned first, then the posts
+     * with the other debates among them, in the server's order.
+     */
+    const feedSlots = useMemo<DebateFeedSlot<DiscoverTimelineItem>[]>(() => {
+        if (!debateWords || debates.length === 0) return timelineItems.map((item) => ({kind: "post" as const, item}));
+        const plan = planDebateFeed(debates, debatePlanRef.current);
+        debatePlanRef.current = plan;
+        return debateFeedSlots(timelineItems, debates, plan);
     }, [timelineItems, debates, debateWords]);
     const [nextTimelineCursor, setNextTimelineCursor] = useState<DiscoverTimelineCursor | null>(timelineCursor);
     const [featuredItems, setFeaturedItems] = useState(featured);
@@ -408,6 +399,11 @@ export default function DiscoverHome({
     const collectorSentinelRef = useRef<HTMLDivElement | null>(null);
     const timelineSnapLockUntilRef = useRef(0);
     const activePostIdRef = useRef<string | null>(initialFocusPostId ?? timeline[0]?.id ?? null);
+    /**
+     * The slot on screen (a post or a debate), so a feed that changes under the reader
+     * brings them back to the same slot. `activePostIdRef` stays the URL's post: a debate has no /p page.
+     */
+    const anchorSlotIdRef = useRef<string | null>(null);
     const didFocusScrollRef = useRef(false);
     const timelineRequestIdRef = useRef(0);
     const hasPaginatedTimelineRef = useRef(false);
@@ -438,7 +434,8 @@ export default function DiscoverHome({
      */
     const displayedPostIdsRef = useRef(new Set<string>());
     const timelineItemIdsRef = useRef<string[]>(timeline.map((item) => item.id));
-    timelineItemIdsRef.current = timelineItems.map((item) => item.id);
+    // Debates are slots too: one scrolled past counts as seen like any post.
+    timelineItemIdsRef.current = feedSlots.map(debateFeedSlotId);
 
     const markItemsSeen = useCallback((itemIds: string[], options: {keepalive?: boolean} = {}) => {
         if (!seenOutbox) return;
@@ -832,9 +829,9 @@ export default function DiscoverHome({
             return;
         }
 
-        const activeId = activePostIdRef.current;
+        const activeId = anchorSlotIdRef.current ?? activePostIdRef.current;
         if (!activeId) return;
-        const target = scroller.querySelector<HTMLElement>(`[data-post-id="${CSS.escape(activeId)}"]`);
+        const target = scroller.querySelector<HTMLElement>(`[data-slot-id="${CSS.escape(activeId)}"]`);
         if (!target) return;
         if (Math.abs(scroller.scrollTop - target.offsetTop) > 48) {
             scroller.scrollTo({top: target.offsetTop, behavior: "auto"});
@@ -846,32 +843,37 @@ export default function DiscoverHome({
         const scroller = timelineScrollerRef.current;
         if (!scroller) return undefined;
 
-        const items = Array.from(scroller.querySelectorAll<HTMLElement>("[data-post-id]"));
+        // Every slot, debates too: a debate has no /p page, so it never sets
+        // the URL, but it is on screen like a post (it anchors the feed and
+        // counts as seen).
+        const items = Array.from(scroller.querySelectorAll<HTMLElement>("[data-slot-id]"));
         if (!items.length) return undefined;
 
         const observer = new IntersectionObserver((entries) => {
             const visible = entries
                 .filter((entry) => entry.isIntersecting)
                 .sort((left, right) => right.intersectionRatio - left.intersectionRatio)[0];
+            const slotId = visible?.target.getAttribute("data-slot-id");
+            if (!slotId) return;
+            anchorSlotIdRef.current = slotId;
             const postId = visible?.target.getAttribute("data-post-id");
-            if (!postId) return;
-            syncUrlToPost(postId);
-            // The same post that owns the URL owns the screen, so it is the
-            // leading one for seen tracking too.
-            handleLeadingPost(postId);
+            if (postId) syncUrlToPost(postId);
+            // The same slot that owns the screen is the leading one for seen
+            // tracking (and, for a post, owns the URL).
+            handleLeadingPost(slotId);
         }, {
             root: scroller,
             threshold: [0.55, 0.7, 0.85]
         });
 
         for (const item of items) observer.observe(item);
-        if (!activePostIdRef.current && items[0]) {
-            const firstId = items[0].getAttribute("data-post-id");
+        if (!activePostIdRef.current) {
+            const firstId = items.find((item) => item.hasAttribute("data-post-id"))?.getAttribute("data-post-id");
             if (firstId) syncUrlToPost(firstId);
         }
 
         return () => observer.disconnect();
-    }, [timelineVisible, syncPostUrls, seenOutbox, timelineItems, syncUrlToPost, handleLeadingPost]);
+    }, [timelineVisible, syncPostUrls, seenOutbox, timelineItems, feedSlots, syncUrlToPost, handleLeadingPost]);
 
     /**
      * iOS `onLessonVideosTap`: back to the Discover segment and toggle. The
@@ -928,8 +930,9 @@ export default function DiscoverHome({
                                 {/* Flush stacking: iOS uses VStack(spacing: 0) so one
                                     swipe always lands on exactly one post. */}
                                 {feedSlots.map((slot) => slot.kind === "debate" ? (
-                                    // A debate has no /p page and no seen mark: no post id.
-                                    <div key={`debate-${slot.debate.id}`} data-timeline-snap-item className="h-full min-h-0 snap-start snap-always">
+                                    // A debate has no /p page: no post id (so it never sets the URL), but it is a
+                                    // slot like any post, and it is marked seen as one (`debate-<id>`).
+                                    <div key={`debate-${slot.debate.id}`} data-timeline-snap-item data-slot-id={`debate-${slot.debate.id}`} className="h-full min-h-0 snap-start snap-always">
                                         <DebatePost debate={slot.debate} words={debateWords as CompanionWords} signedIn={Boolean(viewerUserId)} pinned={slot.pinned} locale={locale} />
                                     </div>
                                 ) : (
@@ -937,6 +940,7 @@ export default function DiscoverHome({
                                         key={slot.item.id}
                                         data-timeline-snap-item
                                         data-post-id={slot.item.id}
+                                        data-slot-id={slot.item.id}
                                         className="h-full min-h-0 snap-start snap-always"
                                     >
                                         <DiscoverTimelineCard item={slot.item} locale={locale} viewerUserId={viewerUserId} />

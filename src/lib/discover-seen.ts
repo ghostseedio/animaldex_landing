@@ -13,7 +13,7 @@
  */
 
 /** The card types `mark_discover_timeline_seen` accepts. */
-export type DiscoverSeenPostType = "capture" | "challenge" | "trade" | "alignment" | "principle_fusion" | "animal_trial";
+export type DiscoverSeenPostType = "capture" | "challenge" | "trade" | "alignment" | "principle_fusion" | "animal_trial" | "debate";
 
 export type DiscoverSeenPost = {
     type: DiscoverSeenPostType;
@@ -21,7 +21,7 @@ export type DiscoverSeenPost = {
 };
 
 export const DISCOVER_SEEN_POST_TYPES: DiscoverSeenPostType[] = [
-    "capture", "challenge", "trade", "alignment", "principle_fusion", "animal_trial"
+    "capture", "challenge", "trade", "alignment", "principle_fusion", "animal_trial", "debate"
 ];
 
 /** How long a post has to be the leading one before it counts as seen. */
@@ -42,7 +42,9 @@ const ITEM_ID_PREFIXES: Array<[string, DiscoverSeenPostType]> = [
     ["trade-", "trade"],
     // The ledger id is the view's `post_id`, so the mark hides the same card
     // the phone would hide.
-    ["animal-trial-", "animal_trial"]
+    ["animal-trial-", "animal_trial"],
+    // A public debate (3.2) is a feed slot named `debate-<id>`; its ledger id is the debate's.
+    ["debate-", "debate"]
 ];
 
 /**
