@@ -182,8 +182,6 @@ export interface ForestHome {
   id: string;
   x: number;
   z: number;
-  /** Ark-born (no card): only these die of logging (decision 379: a card's hearts are never spent by it). */
-  born: boolean;
   /** The Ark day it was born or arrived (an animal that came after the logging began is not killed by it). */
   since: number;
 }
@@ -197,9 +195,10 @@ export interface ForestDeath {
 }
 
 /**
- * The deaths logging causes in (fromTick, toTick]: every Ark-born animal living before its stand's logging began
- * whose home the front reaches in the window. Sorted by day then id. The server records these; the scene only draws
- * what the server recorded.
+ * The deaths logging causes in (fromTick, toTick]: every animal living before its stand's logging began whose home
+ * the front reaches in the window, Ark-born or carded (owner decided 2026-11-17: a carded one loses a heart, exactly
+ * as at an old-age death; the server spends it and keeps the last of a kind and humans). Sorted by day then id. The
+ * server records these; the scene only draws what the server recorded.
  */
 export function forestDeaths(table: StandTable | null | undefined, fromDay: number, homes: ForestHome[], fromTick: number, toTick: number): ForestDeath[] {
   const out: ForestDeath[] = [];
@@ -211,7 +210,7 @@ export function forestDeaths(table: StandTable | null | undefined, fromDay: numb
     if (!g || g.start > toTick || g.start + FELL_DAYS <= fromTick) continue;
     for (let i = 0; i < homes.length; i++) {
       const h = homes[i];
-      if (!h.born || h.since >= g.start || !inStand(g, h.x, h.z)) continue;
+      if (h.since >= g.start || !inStand(g, h.x, h.z)) continue;
       const d = cutDay(g, h.x, h.z);
       if (d > fromTick && d <= toTick) out.push({ id: h.id, day: d, k: g.k, standId: g.stand.id });
     }

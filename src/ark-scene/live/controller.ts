@@ -150,7 +150,7 @@ export class ArkLive {
         }
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
-            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text) ?? humanText(line) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
+            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
             onTap: (line) => this.focus(line),
             reducedMotion: Boolean(options.reducedMotion),
             serverLife: ARK_LIVE_LOG_DEFAULTS.serverLife,
