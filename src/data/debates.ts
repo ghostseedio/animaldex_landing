@@ -3,6 +3,8 @@ import {createSupabaseServerClient, createSupabaseServiceClient} from "@/lib/sup
 import {
     decodeDebate,
     decodeDebates,
+    decodeDiscoverDebateFeed,
+    mergeDiscoverDebateViews,
     type Debate,
     type DebateCandidate
 } from "@/lib/debates";
@@ -185,6 +187,13 @@ export async function getDiscoverDebates(limit = 12): Promise<Debate[]> {
     const supabase = createSupabaseServerClient();
     if (!supabase) return [];
     try {
+        // The feed function (20261128190000) answers in feed order with the
+        // server's pins: at most 2, inside their 24 hours, settled debates
+        // gone after 72 hours, blocked people hidden, seen ones last.
+        const feed = await supabase.rpc("discover_debate_feed_v1", {p_limit: limit});
+        const served = feed.error ? null : decodeDiscoverDebateFeed(feed.data);
+        if (served) return withDebateSlugs(served);
+        // A server without it yet: the two views, as before.
         const [pinned, timeline] = await Promise.all([
             supabase.from("discover_debate_pinned_v1").select("*"),
             supabase.from("discover_debate_timeline_v1").select("*").order("created_at", {ascending: false}).limit(limit)
@@ -194,11 +203,7 @@ export async function getDiscoverDebates(limit = 12): Promise<Debate[]> {
             return [];
         }
         // The views hold public debates only (they carry no visibility column).
-        const asPost = (debate: Debate): Debate => ({...debate, visibility: "public"});
-        const pins = pinned.error ? [] : decodeDebates(pinned.data).map((debate) => ({...asPost(debate), boosted: true}));
-        const pinIds = new Set(pins.map((debate) => debate.id));
-        const rest = decodeDebates(timeline.data).filter((debate) => !pinIds.has(debate.id)).map(asPost);
-        return withDebateSlugs([...pins, ...rest]);
+        return withDebateSlugs(mergeDiscoverDebateViews(pinned.error ? [] : pinned.data, timeline.data));
     } catch {
         return [];
     }

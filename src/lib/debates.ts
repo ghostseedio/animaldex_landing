@@ -969,6 +969,111 @@ export function pinnedDebates(debates: Debate[], max = DEBATE_MAX_PINNED): Debat
         .slice(0, max);
 }
 
+/**
+ * `discover_debate_feed_v1` (20261128190000) in the server's order: the (at most
+ * two) pins first, then the rest. The row's `pinned` flag is the server's
+ * decision (voting, rollover 1 or 2, inside 24 hours of it, this reader can
+ * vote and has not), so it alone sets `boosted` here; a debate the server
+ * lists but does not pin is not boosted, whatever else the row says. Null when
+ * the answer is not a list, so the caller can fall back to the two views.
+ */
+export function decodeDiscoverDebateFeed(raw: unknown): Debate[] | null {
+    if (!Array.isArray(raw)) return null;
+    const seen = new Set<string>();
+    return raw.flatMap((item): Debate[] => {
+        const decoded = decodeDebate(item);
+        if (!decoded || seen.has(decoded.id)) return [];
+        seen.add(decoded.id);
+        return [{...decoded, visibility: "public", boosted: object(item)?.pinned === true}];
+    });
+}
+
+/**
+ * The older two-view read (`discover_debate_pinned_v1`, then the newest of
+ * `discover_debate_timeline_v1`), for a server that has no feed function yet:
+ * the pins first, boosted, then the rest, once each.
+ */
+export function mergeDiscoverDebateViews(pinnedRaw: unknown, timelineRaw: unknown): Debate[] {
+    const asPost = (debate: Debate): Debate => ({...debate, visibility: "public"});
+    const pins = decodeDebates(pinnedRaw).map((debate) => ({...asPost(debate), boosted: true}));
+    const pinIds = new Set(pins.map((debate) => debate.id));
+    const rest = decodeDebates(timelineRaw).filter((debate) => !pinIds.has(debate.id)).map(asPost);
+    return [...pins, ...rest];
+}
+
+/**
+ * Which debates are pinned and in what order, decided once for a feed session
+ * and kept: a later read of the same debates (a vote that changed `myVote` /
+ * `canVote`, a refreshed page, a re-render) changes what a debate says, never
+ * where it sits. Voting used to drop the debate out of `pinnedDebates` and the
+ * feed moved it from the head down to its date.
+ */
+export type DebateFeedPlan = {
+    /** Ids of the pinned debates, in order. */
+    pinned: string[];
+    /** Every debate id: the pins, then the rest, in the order they were first read. */
+    order: string[];
+};
+
+export function planDebateFeed(debates: Debate[], previous: DebateFeedPlan | null = null): DebateFeedPlan {
+    const publicOnes = debates.filter((debate) => debate.visibility === "public");
+    if (!previous || previous.order.length === 0) {
+        const pinned = pinnedDebates(publicOnes).map((debate) => debate.id);
+        const pinnedSet = new Set(pinned);
+        return {pinned, order: [...pinned, ...publicOnes.filter((debate) => !pinnedSet.has(debate.id)).map((debate) => debate.id)]};
+    }
+    const present = new Set(publicOnes.map((debate) => debate.id));
+    const known = new Set(previous.order);
+    return {
+        pinned: previous.pinned.filter((id) => present.has(id)),
+        // Anything new joins at the end, unpinned: a new pin would push the whole feed down.
+        order: [...previous.order.filter((id) => present.has(id)), ...publicOnes.filter((debate) => !known.has(debate.id)).map((debate) => debate.id)]
+    };
+}
+
+export type DebateFeedSlot<Post> = {kind: "post"; item: Post} | {kind: "debate"; debate: Debate; pinned: boolean};
+
+/** The id a slot is known by to the feed (its post id, or `debate-<id>`). */
+export function debateFeedSlotId(slot: DebateFeedSlot<{id: string}>): string {
+    return slot.kind === "debate" ? `debate-${slot.debate.id}` : slot.item.id;
+}
+
+/**
+ * The feed's slots: the pinned debates first, then the posts with the other
+ * debates among them by date. The debates keep the order of the plan (the
+ * server's: unseen first, then newest) however their dates fall: each takes
+ * the slot of its own date or of the debate before it, whichever is older.
+ */
+export function debateFeedSlots<Post extends {date: string}>(posts: Post[], debates: Debate[], plan: DebateFeedPlan): DebateFeedSlot<Post>[] {
+    const byId = new Map(debates.map((debate) => [debate.id, debate]));
+    const pinnedIds = new Set(plan.pinned);
+    const slots: DebateFeedSlot<Post>[] = plan.pinned.flatMap((id) => {
+        const debate = byId.get(id);
+        return debate ? [{kind: "debate" as const, debate, pinned: true}] : [];
+    });
+    let ceiling = Number.POSITIVE_INFINITY;
+    const rest = plan.order
+        .filter((id) => !pinnedIds.has(id))
+        .flatMap((id) => {
+            const debate = byId.get(id);
+            if (!debate) return [];
+            const at = Date.parse(debate.createdAt ?? "");
+            ceiling = Math.min(ceiling, Number.isFinite(at) ? at : Number.NEGATIVE_INFINITY);
+            return [{debate, at: ceiling}];
+        });
+    let next = 0;
+    for (const item of posts) {
+        const postAt = Date.parse(item.date);
+        while (next < rest.length && rest[next].at >= postAt) {
+            slots.push({kind: "debate", debate: rest[next].debate, pinned: false});
+            next += 1;
+        }
+        slots.push({kind: "post", item});
+    }
+    for (; next < rest.length; next += 1) slots.push({kind: "debate", debate: rest[next].debate, pinned: false});
+    return slots;
+}
+
 /** The reader is in it: they asked, or one of the animals is theirs. They never vote on it. */
 export function debateIsMine(debate: Pick<Debate, "askerIsMe" | "participants">): boolean {
     return debate.askerIsMe || debate.participants.some((participant) => participant.ownerIsMe);
