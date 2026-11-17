@@ -19,14 +19,17 @@
  * Everything here is in the town's frame (x east, z south), except the boats' helms, which are the world's.
  */
 
-import {humanLook, humanUnit, sitRootY, BASE_HEIGHT, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
+import {humanLook, humanUnit, sitRootY, BASE_HEIGHT, WALK_PACE, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
 import {darkness, townClockAt, weekday, type TownClock} from "@/ark-scene/islands/town/people";
 import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {MILLPOND, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
-import {inBox, inPoly, local, type Pt} from "@/ark-scene/islands/town/geom";
+import {inBox, inPoly, local, segmentDistance, type Pt} from "@/ark-scene/islands/town/geom";
 import {solidDistance, townSolids} from "@/ark-scene/islands/town/solids";
 import {PARK_BENCH_RING} from "@/ark-scene/islands/town/render/scenery";
 import {BOAT_ROUTES, boatFix} from "@/ark-scene/ocean-traffic";
+import {PavementWalks, type PaveKind} from "@/ark-scene/humans/pavements"; // p5 (humans, pavements)
+import {bridgeHeight} from "@/ark-scene/islands/town/canal-bridges"; // p5 (humans, pavements)
+import {PAVEMENT_LIFT, ROAD_LIFT} from "@/ark-scene/islands/town/render/streets"; // p5 (humans, pavements)
 
 /** The Homo sapiens species profile (AnimalDex 2fabfa9a…, #2068) and the stray "Human" profile without a name. */
 export const HUMAN_SPECIES_IDS: readonly string[] = ["2fabfa9a-6ec9-4d71-8cf2-1933edaef6d2", "0fd32bd2-669f-489d-8a1b-8e917aa5117d"];
@@ -61,6 +64,8 @@ export interface HumanRoomHost {
 /** Ten benches' seats: the park's round the millpond and the square's (two sitters each). */
 export type Seat = Spot & {bench: string};
 
+/** How far a sunbather's spot keeps from every beach walk's line (m). */
+export const SUN_CLEAR = 1.6;
 export type TownHumanSites = {seats: Seat[]; beach: Pt[]; walks: Array<[Pt, Pt]>};
 
 let sitesMemo: {plan: TownPlan; sites: TownHumanSites} | null = null;
@@ -122,17 +127,24 @@ export function townHumanSites(plan: TownPlan = townPlan()): TownHumanSites {
             }
         }
     }
-    // Walks: from one end of the dry sand to the other, along its seaward edge and its landward edge.
+    // Walks: along the dry sand's landward edge and along its seaward edge (a row of the grid each, end to end), the
+    // sunbathers between them.
     const walks: Array<[Pt, Pt]> = [];
-    if (beach.length > 4) {
-        const sorted = beach.slice().sort((a, b) => a.x - b.x || a.z - b.z);
-        const west = sorted[0];
-        const east = sorted[sorted.length - 1];
-        walks.push([west, east]);
-        const mid = sorted[Math.floor(sorted.length / 2)];
-        walks.push([west, mid], [mid, east]);
-    }
-    const sites = {seats, beach, walks: walks.filter(([a, b]) => walkOnSand(a, b, clear))};
+    const rows = Array.from(new Set(beach.map((p) => p.z))).sort((x, y) => x - y);
+    const rowLine = (z: number): [Pt, Pt] | null => {
+        const xs = beach.filter((p) => p.z === z).map((p) => p.x);
+        if (xs.length < 6) return null;
+        const line: [Pt, Pt] = [{x: Math.min(...xs), z}, {x: Math.max(...xs), z}];
+        return walkOnSand(line[0], line[1], clear) ? line : null;
+    };
+    const landward = rows.map(rowLine).find((line) => line) ?? null;
+    const seaward = rows.slice().reverse().map(rowLine).find((line) => line) ?? null;
+    if (landward) walks.push(landward);
+    if (seaward && landward && seaward[0].z - landward[0].z >= 7.5) walks.push(seaward);
+    const lines = walks.filter(([a, b]) => walkOnSand(a, b, clear));
+    // The sunbathers' spots keep clear of the walks (`SUN_CLEAR` from anywhere along a body lying feet to the sea):
+    // no one walks over someone lying down.
+    const sites = {seats, beach: beach.filter((p) => lines.every(([a, b]) => [0, 0.85, 1.7].every((up) => segmentDistance(p.x, p.z - up, a.x, a.z, b.x, b.z) >= SUN_CLEAR))), walks: lines};
     sitesMemo = {plan, sites};
     return sites;
 }
@@ -220,7 +232,9 @@ export function assignOut(out: readonly string[], clock: TownClock, sites: TownH
     const spots = new Set<number>();
     while (k < order.length) {
         const id = order[k++];
-        if (!sunny) {
+        // p5 (humans, pavements): the beach takes under half of those left on a sunny day; the others are about the
+        // town on foot (`pavements.ts`).
+        if (!sunny || humanUnit(`${id}#${clock.day}#${block}#beach`) >= 0.45) {
             result.set(id, {kind: "about"});
             continue;
         }
@@ -262,7 +276,16 @@ export type TownHumansOptions = {
     seaLevel?: () => number;
     /** The open sea's boats' clock (seconds: `OceanTrafficView.step`'s), when it is not the island clock's. */
     boatSeconds?: () => number;
+    /** p5 (humans, pavements): false: no one walks the pavements (the "about" people are not drawn, as before). */
+    pavements?: boolean;
+    /** p5 (humans, pavements): the drawn ground under a walker (town frame; `near`: about where it is), when the scene has it. */
+    walkHeight?: (x: number, z: number, near: number) => number;
 };
+
+/** p5 (humans, pavements): a walker's ground (town frame): the bridge's deck or the ground, and the pavement's or the road's lift. */
+export function walkGround(x: number, z: number, kind: PaveKind): number {
+    return (bridgeHeight(x, z, townHeight) ?? townHeight(x, z)) + (kind === "crossing" || kind === "zebra" ? ROAD_LIFT : kind === "path" ? 0.03 : PAVEMENT_LIFT);
+}
 
 /** A seated driver's lean back (rad) so the head clears the roof: more for the tallest. */
 function driverLean(look: HumanLook): number {
@@ -292,7 +315,7 @@ export function helmSeat(fix: {x: number; z: number; yaw: number}, pace: number,
     return {x: fix.x + lx * c + lz * s, y: sitRootY(sea + 0.12 * pace + 1.28 + lz * 0.09 * pace, scale), z: fix.z - lx * s + lz * c, yaw: fix.yaw};
 }
 
-export type DrawnHuman = HumanInstance & {id: string; what: HumanDay | OutWhat["kind"]};
+export type DrawnHuman = HumanInstance & {id: string; what: HumanDay | OutWhat["kind"] | /* p5 (humans, pavements) */ "pavement"};
 
 /**
  * The town's people now: `frame` fills `out` (reused, world frame) with everyone drawn at this moment: in a room at
@@ -312,8 +335,12 @@ export class TownHumans {
     readonly tvs: Array<Spot & {room: string}> = [];
     private tvPool: Array<Spot & {room: string}> = [];
 
+    /** p5 (humans, pavements): who walks the pavements now (`pavements.ts`). */
+    readonly walks: PavementWalks | null;
+
     constructor(private readonly options: TownHumansOptions, plan: TownPlan = townPlan()) {
         this.sites = townHumanSites(plan);
+        this.walks = options.pavements === false ? null : new PavementWalks(plan);
     }
 
     /** The record's humans (one per real human capture aboard, the server's). */
@@ -401,6 +428,17 @@ export class TownHumans {
             const scale = look.height / BASE_HEIGHT;
             const day = days.get(id)!;
             const phase = humanUnit(`${id}#phase`) * 100;
+            // p5 (humans, pavements): on foot along the pavements (to work and home again, an evening stroll, errands in
+            // place of "about": `pavements.ts`), instead of the day's own place while the walk lasts.
+            const about = day === "out" && this.assigned.get(id)?.kind === "about";
+            if (this.walks && day !== "sleep" && (day !== "out" || about) && !this.options.away?.(id, epochMs)) {
+                const fix = this.walks.at(id, clock.hours, clock.day, weekday(clock), day, about, rhythm(id));
+                if (fix) {
+                    const ground = walkGround(fix.x, fix.z, fix.kind);
+                    take(id, look, "pavement", ox + fix.x, this.options.walkHeight?.(fix.x, fix.z, ground) ?? ground, oz + fix.z, fix.yaw, fix.paused ? "stand" : "walk", phase);
+                    continue;
+                }
+            }
             if (day === "sleep" || day === "home") {
                 const home = this.homes.get(id);
                 const room = home ? rooms[home.room] : undefined;
@@ -450,7 +488,7 @@ export class TownHumans {
                 case "walk": {
                     const [a, b] = this.sites.walks[what.walk];
                     const length = Math.hypot(b.x - a.x, b.z - a.z) || 1;
-                    const pace = 1.15 * (0.9 + 0.2 * humanUnit(`${id}#pace`));
+                    const pace = WALK_PACE * (0.92 + 0.16 * humanUnit(`${id}#pace`));
                     const t = ((seconds * pace) / length + what.offset) % 2;
                     const back = t > 1;
                     const f = back ? 2 - t : t;

@@ -6,10 +6,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {HumanFigures, humanGeometry, humanLook, posePerson, sitRootY, HUMAN_MAX, type HumanPoseKind} from "@/ark-scene/humans/figures";
-import {assignOut, carSeat, helmSeat, humanDay, isHumanAnimal, TownHumans, townHumanSites, type HumanRoomHost} from "@/ark-scene/humans/town-humans";
+import {assignOut, carSeat, helmSeat, humanDay, isHumanAnimal, SUN_CLEAR, TownHumans, townHumanSites, type HumanRoomHost} from "@/ark-scene/humans/town-humans";
 import {apartmentHumanRoom, humanRoomHost, sofaOffset} from "@/ark-scene/humans/home-rooms-host";
 import {screenColour} from "@/ark-scene/humans/tvs";
-import {inBox, toLocal} from "@/ark-scene/islands/town/geom";
+import {bridgeAt} from "@/ark-scene/islands/town/canal-bridges";
+import {inBox, segmentDistance, toLocal} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround} from "@/ark-scene/islands/town/ground";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {solidDistance, townSolids} from "@/ark-scene/islands/town/solids";
@@ -148,7 +149,6 @@ test("no one in a wall or in the water (but the boats' drivers): benches, the be
     const solids = townSolids([]);
     const sites = townHumanSites();
     assert.equal(sites.seats.length, 14);
-    assert.ok(sites.beach.length >= 40);
     for (const hours of [10.2, 12, 14, 16.4, 17.9]) {
         for (const day of [SATURDAY, SATURDAY + 1, MONDAY]) {
             const ms = at(day, hours);
@@ -156,7 +156,8 @@ test("no one in a wall or in the water (but the boats' drivers): benches, the be
                 if (h.what === "boat" || h.what === "car") continue;
                 for (const b of plan.buildings) assert.ok(!inBox(b.at, h.x, h.z), `${h.what} in ${b.id}`);
                 const ground = sampleTownGround(h.x, h.z);
-                assert.ok(ground.height > 0.5, `${h.what} over water at ${h.x.toFixed(1)}, ${h.z.toFixed(1)}`);
+                // (A walker crossing the canal is on a bridge's deck: `ark-human-walks.test.ts`.)
+                assert.ok(ground.height > 0.5 || (h.what === "pavement" && bridgeAt(h.x, h.z)), `${h.what} over water at ${h.x.toFixed(1)}, ${h.z.toFixed(1)}`);
                 if (h.what === "sun" || h.what === "walk") {
                     assert.equal(ground.surface, "sand");
                     for (const s of solids) assert.ok(solidDistance(s, h.x, h.z) > 0.2, `${h.what} in a solid`);
@@ -165,6 +166,14 @@ test("no one in a wall or in the water (but the boats' drivers): benches, the be
                 }
             }
         }
+    }
+    // No one walks over a sunbather: every spot (the body lying from its feet inland) clear of every walk's line.
+    for (const p of sites.beach) for (const [a, b] of sites.walks) for (const up of [0, 0.85, 1.7]) assert.ok(segmentDistance(p.x, p.z - up, a.x, a.z, b.x, b.z) >= SUN_CLEAR);
+    assert.ok(sites.walks.length >= 2 && sites.beach.length >= 30, `${sites.walks.length} walks, ${sites.beach.length} spots`);
+    for (let t = 0; t < 600; t += 7) {
+        const list = town().frame(at(SATURDAY, 14) + t * 1000, null, 0);
+        const lying = list.filter((h) => h.what === "sun");
+        for (const w of list.filter((h) => h.what === "walk")) for (const l of lying) for (const up of [0, 0.85, 1.7]) assert.ok(Math.hypot(w.x - l.x, w.z - (l.z - up)) > 1.2, "a walker over a sunbather");
     }
     // Sunbathers keep apart.
     const sun = town().frame(at(SATURDAY, 14), null, 0).filter((h) => h.what === "sun");
