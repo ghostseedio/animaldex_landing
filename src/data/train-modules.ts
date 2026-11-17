@@ -6,6 +6,7 @@ import {getAppJournalEntries} from "@/data/authenticated-app";
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
+import {comparePackBuilderCaptures} from "@/lib/pack-guarantee";
 import {APP_MODULE_THUMBNAILS, ARENA_MODULE_ACCENTS} from "@/lib/app-module-thumbnails";
 import type {SupabaseClient} from "@supabase/supabase-js";
 
@@ -341,10 +342,6 @@ function battleTier(power: number) {
     return "S";
 }
 
-function tierRank(tier: string) {
-    return ({E: 0, D: 1, C: 2, B: 3, A: 4, S: 5} as Record<string, number>)[tier] ?? 0;
-}
-
 function toGameStats(row: QueryRow) {
     const stored = row.game_stats && typeof row.game_stats === "object" ? row.game_stats as QueryRow : {};
     const stats = {
@@ -446,13 +443,7 @@ export async function getTrainPackEligibleCaptures(limit = 160): Promise<TrainPa
         .map(toTrainPackCapture)
         .filter((capture): capture is TrainPackCapture => Boolean(capture))
         .filter((capture) => !locked.has(capture.captureId) && isEligiblePackCapture(capture))
-        .sort((left, right) => {
-            const tierDelta = tierRank(right.battleTier) - tierRank(left.battleTier);
-            if (tierDelta !== 0) return tierDelta;
-            const valueDelta = right.tradeValue - left.tradeValue;
-            if (valueDelta !== 0) return valueDelta;
-            return (right.capturedAt ?? "").localeCompare(left.capturedAt ?? "");
-        });
+        .sort(comparePackBuilderCaptures);
 }
 
 export async function getTrainDailyCompanionState(): Promise<TrainDailyCompanionState> {

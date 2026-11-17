@@ -1,4 +1,5 @@
 import {NextResponse} from "next/server";
+import {packRarityRequirementMessage} from "@/lib/pack-guarantee";
 import {
     getTrainAnimalPackById,
     getTrainPackCapturesByIds
@@ -24,7 +25,7 @@ function friendlyPackError(error: unknown) {
     if (normalized.includes("animal_pack_not_available") || normalized.includes("animal_pack_not_found")) return "That pack is no longer available.";
     if (normalized.includes("animal_pack_requires_ten_captures")) return "Select exactly 10 captures.";
     if (normalized.includes("animal_pack_duplicate_capture_ids")) return "Each selected capture must be unique.";
-    if (normalized.includes("animal_pack_requires_tier_b_or_higher")) return "Your pack needs at least 1 Tier B or higher animal.";
+    if (normalized.includes("animal_pack_requires_rarity_tier")) return packRarityRequirementMessage();
     if (normalized.includes("animal_pack_capture_locked")) return "One or more selected captures are already locked.";
     if (normalized.includes("animal_pack_capture_not_public")) return "Only public, discoverable captures can be packed right now.";
     if (

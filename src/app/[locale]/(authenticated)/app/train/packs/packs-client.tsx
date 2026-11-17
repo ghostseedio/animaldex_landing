@@ -1,5 +1,6 @@
 "use client";
 
+import {packBuilderPill, packGuaranteeBadge, rarityTierLabel} from "@/lib/pack-guarantee";
 import {useEffect, useMemo, useState, useTransition} from "react";
 import {useRouter} from "next/navigation";
 import type {TrainAnimalPack, TrainPackCapture} from "@/data/train-modules";
@@ -66,7 +67,7 @@ function packStatusTitle(pack: TrainAnimalPack) {
 function summaryBadges(pack: TrainAnimalPack) {
     return [
         `${pack.packSize || 10} animals`,
-        `Tier ${pack.guaranteedMinimumTier ?? "B"}+ guaranteed`,
+        packGuaranteeBadge(pack.guaranteedMinimumTier),
         `${pack.qualityBand ?? "Mixed"} power`,
         `${pack.rarityBand ?? "Mixed"} rarity`
     ];
@@ -533,7 +534,7 @@ function PackBuilderSheet({
                         </div>
 
                         <div className="mt-4 flex flex-wrap gap-2">
-                            {["Tier B+", "Hidden contents", "10 animals"].map((label) => (
+                            {[packBuilderPill(), "Hidden contents", "10 animals"].map((label) => (
                                 <span key={label} className="rounded-full bg-white/[0.06] px-3 py-1.5 text-[0.68rem] font-bold text-white/60">{label}</span>
                             ))}
                         </div>
@@ -548,7 +549,7 @@ function PackBuilderSheet({
 
                     <div>
                         <p className="text-[0.68rem] font-black uppercase tracking-[0.16em] text-white/45">Select 10 captures</p>
-                        <p className="mt-1 text-sm leading-6 text-white/35">Selections stay hidden. The server assigns the theme and verifies the Tier B+ guarantee.</p>
+                        <p className="mt-1 text-sm leading-6 text-white/35">Selections stay hidden. The server assigns the theme and verifies the rarity guarantee.</p>
                     </div>
 
                     <div className="space-y-3">
@@ -603,7 +604,7 @@ function BuilderCaptureRow({capture, selected, onToggle}: {capture: TrainPackCap
                 <h3 className="truncate text-base font-bold text-white">{capture.animalName}</h3>
                 <div className="mt-1 flex flex-wrap gap-1.5 text-[0.62rem] font-black uppercase tracking-[0.06em]">
                     <span className="rounded-full bg-white/[0.06] px-2 py-1 text-white/55">Level 1</span>
-                    {SHOWS_BATTLE_TIER_AND_POWER ? <span className="rounded-full bg-orange-400/15 px-2 py-1 text-orange-200">Tier {capture.battleTier}</span> : null}
+                    <span className="rounded-full bg-orange-400/15 px-2 py-1 text-orange-200">{rarityTierLabel(capture.rarity) ?? "Unknown"}</span>
                     {capture.contextLabel ? <span className="rounded-full bg-white/[0.06] px-2 py-1 text-white/55">{capture.contextLabel}</span> : null}
                 </div>
                 <div className="mt-1 flex gap-2 text-[0.68rem] font-semibold text-white/35">
