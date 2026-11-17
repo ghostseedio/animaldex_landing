@@ -1289,6 +1289,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Herds (A14): the snapshot as last given, every id aboard, and who must be drawn one by one.
     // p5 (humans): the town's people, one generic figure per human aboard (privacy: body and clothes from the id only,
     // never the capture's photo, a face or a name). (`away`: at work in the wild island's forest, `forest.away`.)
+    // TO WIRE after the homes / rural lanes merge (their see-into rooms): `townHumans.setRoomHost(humanRoomHost(rooms))`
+    // with the furnished rooms `buildPetHomes` draws, and a `HumanTVs` fed `townHumans.tvs` each frame (`humans/home-rooms-host.ts`,
+    // `humans/tvs.ts`). Until then people at home and asleep are indoors, unseen (the lit windows imply them, as before).
     const townHumans = new TownHumans({away: (id) => forest.away(id), origin: townWorldOrigin(), roadHeight: townRoadHeight, seaLevel: () => ARK_ENVIRONMENT.seaLevel.value, boatSeconds: () => clockNow()});
     const humanFigures = new HumanFigures();
     scene.add(humanFigures.group);
