@@ -21,7 +21,7 @@ import {getLocalePath} from "@/lib/site";
 import {useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode, type WheelEvent} from "react";
 import {useRouter} from "next/navigation";
 import DebatePost from "@/components/debates/debate-post";
-import {debateFeedSlotId, debateFeedSlots, planDebateFeed, type Debate, type DebateFeedPlan, type DebateFeedSlot} from "@/lib/debates";
+import {debateFeedSlotId, debateFeedSlots, initialFeedAnchor, planDebateFeed, type Debate, type DebateFeedPlan, type DebateFeedSlot} from "@/lib/debates";
 import {ARK_COPY, type CompanionWords} from "@/lib/companion-bond";
 
 type DiscoverSegment = "discover" | "collectors";
@@ -402,8 +402,9 @@ export default function DiscoverHome({
     /**
      * The slot on screen (a post or a debate), so a feed that changes under the reader
      * brings them back to the same slot. `activePostIdRef` stays the URL's post: a debate has no /p page.
+     * It starts on the feed's first slot, so a pinned debate above the first post is where the feed opens.
      */
-    const anchorSlotIdRef = useRef<string | null>(null);
+    const anchorSlotIdRef = useRef<string | null>(initialFeedAnchor(feedSlots, initialFocusPostId));
     const didFocusScrollRef = useRef(false);
     const timelineRequestIdRef = useRef(0);
     const hasPaginatedTimelineRef = useRef(false);

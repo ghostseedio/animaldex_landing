@@ -4,6 +4,7 @@ import {
     debateFeedSlotId,
     debateFeedSlots,
     decodeDiscoverDebateFeed,
+    initialFeedAnchor,
     mergeDiscoverDebateViews,
     pinnedDebates,
     planDebateFeed,
@@ -172,4 +173,29 @@ test("the outbox sends a debate mark once, with the type the ledger accepts", as
     await outbox.flush();
     assert.deepEqual(sent, [[{type: "debate", id: ID(1)}]]);
     assert.equal(outbox.has({type: "debate", id: ID(1)}), true);
+});
+
+test("the feed opens on its first slot: a pinned debate above the first post, not the first post", () => {
+    const posts = [post("capture-a", "2026-11-17T08:00:00Z"), post("capture-b", "2026-11-17T07:00:00Z")];
+    const debates = decodeDiscoverDebateFeed([feedRow(1, {pinned: true, boosted: true}), feedRow(2)])!;
+    const slots = debateFeedSlots(posts, debates, planDebateFeed(debates));
+    assert.equal(debateFeedSlotId(slots[0]), `debate-${ID(1)}`);
+    // The old fallback was the first post, which scrolled the feed past the pin on first load.
+    assert.equal(initialFeedAnchor(slots), `debate-${ID(1)}`);
+    assert.notEqual(initialFeedAnchor(slots), posts[0].id);
+});
+
+test("with no debates the feed opens on the first post, with no slots on nothing", () => {
+    const posts = [post("capture-a", "2026-11-17T08:00:00Z"), post("capture-b", "2026-11-17T07:00:00Z")];
+    const plain = debateFeedSlots(posts, [], planDebateFeed([]));
+    assert.equal(initialFeedAnchor(plain), "capture-a");
+    assert.equal(initialFeedAnchor([]), null);
+});
+
+test("a feed opened on one post (/p/<post>) leaves the opening to the focus scroll, even with a pinned debate", () => {
+    const posts = [post("capture-a", "2026-11-17T08:00:00Z"), post("capture-b", "2026-11-17T07:00:00Z")];
+    const debates = decodeDiscoverDebateFeed([feedRow(1, {pinned: true, boosted: true})])!;
+    const slots = debateFeedSlots(posts, debates, planDebateFeed(debates));
+    assert.equal(initialFeedAnchor(slots, "capture-b"), null);
+    assert.equal(initialFeedAnchor(slots, ""), `debate-${ID(1)}`);
 });

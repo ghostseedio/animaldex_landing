@@ -238,7 +238,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     const moves = (
         <>
                 {placeholder ? null : (
-                    <Link href={`/talk/${animal.model_slug}`} className={`${pill} h-10 min-w-0 flex-1 bg-primary-400 px-4 text-[13.5px] text-canvas-950 hover:bg-primary-100 sm:flex-none md:max-w-[17rem]`}>
+                    <Link href={`/talk/${animal.model_slug}`} className={`${pill} h-10 min-w-0 flex-1 bg-primary-400 px-3 text-[13.5px] sm:px-4 text-canvas-950 hover:bg-primary-100 sm:flex-none md:max-w-[17rem]`}>
                         <span className="truncate">{talk}</span>
                         <span aria-hidden="true">→</span>
                     </Link>
@@ -287,8 +287,8 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                     </span>
                     <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-baseline gap-2">
-                            <h2 id={`ark-card-${animal.id}`} ref={headingRef} tabIndex={-1} className="min-w-0 shrink truncate font-display text-base font-extrabold leading-tight text-white outline-none focus-visible:underline md:text-lg">{animal.name}</h2>
-                            <p className="min-w-0 truncate text-[12px] text-ink-400">
+                            <h2 id={`ark-card-${animal.id}`} ref={headingRef} tabIndex={-1} className="min-w-0 max-w-full shrink-0 truncate font-display text-base font-extrabold leading-tight text-white outline-none focus-visible:underline md:text-lg">{animal.name}</h2>
+                            <p className="min-w-0 flex-1 truncate text-[12px] text-ink-400">
                                 {animal.scientific_name ? <span className="italic">{animal.scientific_name}</span> : null}
                                 {animal.scientific_name ? " · " : null}
                                 <span title={words.lives}>{words.zones[animal.zone]}</span>
@@ -361,7 +361,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                 {rhythmNow && rhythmOpen && !storyOpen ? <ArkRhythmPanel rhythm={rhythmNow} speciesProfileId={animal.species_profile_id} talkHref={placeholder ? null : `/talk/${animal.model_slug}`} /> : null}
                 {storyOpen ? <ArkLifeStory animal={animal} life={life} state={state} facts={facts} words={words} locale={locale} rest={restWords} /> : null}
 
-                <div className="mt-2 flex items-center gap-2 md:hidden">{moves}</div>
+                <div className="mt-2 flex items-center gap-1.5 sm:gap-2 md:hidden">{moves}</div>
             </div>
         </div>
     );

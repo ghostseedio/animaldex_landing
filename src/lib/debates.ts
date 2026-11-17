@@ -1039,6 +1039,17 @@ export function debateFeedSlotId(slot: DebateFeedSlot<{id: string}>): string {
 }
 
 /**
+ * The slot the feed opens on. A page opened on one post (`/p/<post>`) opens on that post (the focus
+ * scroll does it, so no anchor yet). Any other feed opens on its first slot, which is a pinned debate
+ * when there is one: without this the feed fell back to the first post and scrolled past the pins.
+ */
+export function initialFeedAnchor(slots: readonly DebateFeedSlot<{id: string}>[], focusPostId?: string | null): string | null {
+    if (focusPostId) return null;
+    const first = slots[0];
+    return first ? debateFeedSlotId(first) : null;
+}
+
+/**
  * The feed's slots: the pinned debates first, then the posts with the other
  * debates among them by date. The debates keep the order of the plan (the
  * server's: unseen first, then newest) however their dates fall: each takes

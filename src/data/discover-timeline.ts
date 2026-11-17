@@ -74,7 +74,7 @@ export type DiscoverMediaAsset = {
     createdAt?: string | null;
 };
 
-/** People are never public (DECISIONS §11): a capture of a person never leaves the server's hands. */
+/** A capture post in the feed. A person is a capture like any animal (identified as Human); nothing here filters them out. */
 export type DiscoverCaptureItem = {
     kind: "capture";
     id: string;
