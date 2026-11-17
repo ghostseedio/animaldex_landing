@@ -2102,7 +2102,9 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
         // (A short way is walked only where its feet get there by about that way, in its time; else it flies it, if it
         // meant to or may fly this slot (MA3's `airAllowed`): a fish eagle's 9 m and 14 m across an inlet were 197 m and
         // 177 m walks round it, past a mallard's water.)
-        if (mode === "ground" && flatWay > 3 && (meant === "air" || airAllowed(profile, animal, slot))) {
+        // (Never a hop under six of its lengths, MA1's floor, decision 285: a fish eagle's 3.4 m stalk round a pool's edge
+        // walks it, 2026-11-17.)
+        if (mode === "ground" && flatWay > Math.max(3, animal.length * 6) && (meant === "air" || airAllowed(profile, animal, slot))) {
             const onFoot = world.nav.path(from, to, "walk", 0.5, 900, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug), onSurface(to.point));
             const end = onFoot[onFoot.length - 1];
             const way = pathLength(onFoot);

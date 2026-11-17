@@ -118,7 +118,12 @@ export function scheduledPerch(
     if (point && RAISED_POINT_TAGS.has(point.tag) && Math.hypot(at.x - point.position.x, at.z - point.position.z) < 0.05) {
         const sway = attachSway(point, time, wind);
         const steep = Math.abs(point.normal.y) < 0.5;
-        const frame = scheduleSurface({x: point.position.x + sway.x, y: point.position.y + sway.y, z: point.position.z + sway.z, yaw: at.yaw, nx: point.normal.x, ny: point.normal.y, nz: point.normal.z}, steep ? point.forward ?? null : null);
+        // (Where it stands on the place: a spot a few centimetres off the point's middle, a bird set along a tilted leaf,
+        // is on the place's own plane there, not at the middle's height: a house wren 1 cm under its spot, 2026-11-17.)
+        const dx = steep ? 0 : at.x - point.position.x;
+        const dz = steep ? 0 : at.z - point.position.z;
+        const dy = steep ? 0 : -(point.normal.x * dx + point.normal.z * dz) / point.normal.y;
+        const frame = scheduleSurface({x: point.position.x + dx + sway.x, y: point.position.y + dy + sway.y, z: point.position.z + dz + sway.z, yaw: at.yaw, nx: point.normal.x, ny: point.normal.y, nz: point.normal.z}, steep ? point.forward ?? null : null);
         return frame;
     }
     // A raised place the scenery's points do not hold it at: one the schedule's own world made (`world-sampler.ts`: a
