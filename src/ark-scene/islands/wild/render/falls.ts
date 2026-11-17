@@ -18,12 +18,12 @@
 import {AdditiveBlending, type PerspectiveCamera, Vector2, BufferAttribute, BufferGeometry, Color, DoubleSide, Group, IcosahedronGeometry, InstancedBufferAttribute, InstancedBufferGeometry, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, NormalBlending, Points, Quaternion, ShaderMaterial, Sphere, UniformsLib, UniformsUtils, Vector3} from "three";
 import {mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {ARK_DAYLIGHT, ARK_GLINT, ARK_SUN, ARK_TIME, NOISE_GLSL} from "@/ark-scene/glsl";
-import {cliffSkin, curtainPoint, FALLS_LIP, FALLS_X, impact, outflowPath, POOL, rimStones, CURTAIN_BOTTOM} from "@/ark-scene/islands/wild/falls";
+import {cliffSkin, curtainFoot, curtainPoint, FALLS_LIP, FALLS_X, impact, outflowPath, POOL, rimStones, CURTAIN_BOTTOM} from "@/ark-scene/islands/wild/falls";
 
 export type FallsTier = "high" | "medium" | "low";
 
-const MIST: Record<FallsTier, number> = {high: 96, medium: 56, low: 22};
-const SPRAY: Record<FallsTier, number> = {high: 520, medium: 240, low: 0};
+const MIST: Record<FallsTier, number> = {high: 150, medium: 90, low: 36};
+const SPRAY: Record<FallsTier, number> = {high: 900, medium: 420, low: 0};
 
 /** The shared clock's window (`shared-clock.ts` ARK_TIME_PERIOD): a pattern that scrolls by whole periods in it never jumps. */
 const WINDOW = 600;
@@ -271,9 +271,12 @@ function waterGeometry(): BufferGeometry {
     const fallTime = Math.sqrt((2 * drop) / 9.81);
     const sheet = (kind: number, nu: number, nv: number, inset: number, out: number) => {
         const base = positions.length / 3;
+        // (Each column to its own foot: the pool in the middle, the lower ledges at the broad sheet's ends.)
+        const feet: number[] = [];
+        for (let i = 0; i <= nu; i++) feet.push(curtainFoot(inset + (i / nu) * (1 - 2 * inset)));
         for (let j = 0; j <= nv; j++) {
-            const v = j / nv;
             for (let i = 0; i <= nu; i++) {
+                const v = (j / nv) * feet[i];
                 const u01 = inset + (i / nu) * (1 - 2 * inset);
                 const p = curtainPoint(u01, v);
                 positions.push(p.x, p.y, p.z + out * Math.min(v * 4, 1));
@@ -290,8 +293,8 @@ function waterGeometry(): BufferGeometry {
             }
         }
     };
-    sheet(0, 30, 46, 0, 0);
-    sheet(1, 22, 40, 0.06, 0.45);
+    sheet(0, 72, 46, 0, 0);
+    sheet(1, 54, 40, 0.04, 0.45);
     // The spill: a strip down the ground from the pool's rim to the spring.
     const path = outflowPath();
     const base = positions.length / 3;
@@ -373,14 +376,15 @@ function poolMaterial(time: {value: number}, strike: {x: number; z: number}): Me
                 {
                     // Foam churning out from where the sheet strikes: rings of it running outward, boils breaking through.
                     vec2 d = vPool - vec2(${strike.x.toFixed(3)}, ${strike.z.toFixed(3)});
-                    d.x *= ${(3.2 / CURTAIN_BOTTOM).toFixed(4)};
+                    // (From the line the broad sheet strikes along, not its middle.)
+                    d.x = max(abs(d.x) - ${(CURTAIN_BOTTOM * 0.42).toFixed(3)}, 0.0) * 0.6;
                     float r = length(d);
                     float angle = atan(d.y, d.x);
                     // (Rings outward at a whole number of turns in the clock's window.)
                     float out1 = r * 2.2 - uFallsTime * ${((2 * Math.PI * 40) / WINDOW / 2.2).toFixed(6)};
                     float churn = arkNoise(vec2(angle * 3.0, out1 * 1.3)) * 0.6 + arkNoise(vPool * 3.1 + vec2(sin(uFallsTime * ${((2 * Math.PI * 25) / WINDOW).toFixed(6)}), cos(uFallsTime * ${((2 * Math.PI * 19) / WINDOW).toFixed(6)})) * 1.7) * 0.4;
-                    float foamy = smoothstep(1.7, 0.1, r);
-                    float foam = smoothstep(0.55, 0.8, churn * (0.35 + foamy) + foamy * 0.5) + 0.35 * smoothstep(0.62, 0.7, arkNoise(vPool * 2.4 + vec2(out1 * 0.4, 0.0)));
+                    float foamy = smoothstep(2.6, 0.2, r);
+                    float foam = smoothstep(0.55, 0.8, churn * (0.35 + foamy) + foamy * 0.5) + 0.3 * smoothstep(0.58, 0.72, arkNoise(vPool * 1.3 + vec2(out1 * 0.4, 0.0))) * smoothstep(5.5, 1.0, r);
                     vec3 deep = vec3(0.03, 0.11, 0.10);
                     vec3 shallow = vec3(0.10, 0.25, 0.21);
                     vec2 e = (vPool - vec2(${POOL.x.toFixed(3)}, ${POOL.z.toFixed(3)})) / vec2(${POOL.rx.toFixed(3)}, ${POOL.rz.toFixed(3)});
@@ -440,13 +444,14 @@ void main() {
     float out1 = 0.4 + life * (2.5 + 4.5 * aSeed.z);
     // (A quarter of them rise high: the plume over the falls that marks them from across the island.)
     float high = step(0.75, aSeed.z);
-    vec3 centre = uStrike + vec3(across * (1.0 + 0.4 * life), 0.3 + life * (2.0 + 5.0 * aSeed.w + high * 16.0) + 0.6 * sin(life * 6.0 + aSeed.x * 20.0), out1 * (1.0 - 0.5 * high));
-    float size = 1.8 + life * (3.0 + 4.0 * aSeed.z + high * 5.0);
+    // (The plume climbs past the lip and over the trees, leaning out from the face: the falls' mark from the island view.)
+    vec3 centre = uStrike + vec3(across * (1.0 + 0.4 * life), 0.3 + life * (2.0 + 5.0 * aSeed.w + high * 36.0) + 0.6 * sin(life * 6.0 + aSeed.x * 20.0), out1 * (1.0 - 0.5 * high) + high * life * 6.0);
+    float size = 1.8 + life * (3.0 + 4.0 * aSeed.z + high * 11.0);
     vAlpha = smoothstep(0.0, 0.18, life) * (1.0 - smoothstep(0.55, 1.0, life)) * (0.5 + 0.5 * aSeed.w);
     // (From across the island the plume is a few pixels: it thickens with distance so the falls still read as a landmark.
     // Close by it thins as the camera comes into a puff, so the view is never a white-out.)
     float seen = distance(centre, cameraPosition);
-    vAlpha *= (1.0 + 1.6 * smoothstep(90.0, 420.0, seen)) * smoothstep(size * 0.5, size * 2.2, seen);
+    vAlpha *= (1.0 + 2.4 * smoothstep(90.0, 420.0, seen)) * smoothstep(size * 0.5, size * 2.2, seen);
     vCorner = position.xy;
     vec4 mvPosition = viewMatrix * vec4(centre, 1.0);
     mvPosition.xy += position.xy * size;
@@ -468,9 +473,9 @@ varying vec3 vWorld;
 varying float aSeedOf;
 #include <fog_pars_fragment>
 ${NOISE_GLSL}
-// A rainbow's colour at its angle from the antisolar point (degrees): violet inside at 40.5°, red outside at 42.3°.
+// A rainbow's colour at its angle from the antisolar point (degrees): violet inside at 40.2°, red outside at 42.8°.
 vec3 bow(float deg) {
-    float t = (deg - 40.4) / 2.0;
+    float t = (deg - 40.2) / 2.6;
     if (t < 0.0 || t > 1.0) return vec3(0.0);
     // Violet inside to red outside: the hue wheel from 0.75 down to 0, soft at both edges.
     float h = 0.75 * (1.0 - t);
@@ -490,9 +495,10 @@ void main() {
     vec3 view = normalize(vWorld - cameraPosition);
     float deg = degrees(acos(clamp(dot(view, -uSun), -1.0, 1.0)));
     vec3 rainbow = bow(deg) * smoothstep(0.55, 0.85, uDaylight) * step(0.05, uSun.y);
-    vec3 colour = mix(lit, rainbow * 1.3, 0.7 * dot(rainbow, vec3(0.5)));
-    // (The bow is the sunlight the droplets send back: it shows a little more than the mist it is in.)
-    a = min(a + dot(rainbow, vec3(0.33)) * soft * vAlpha * 0.35, 1.0);
+    float bowed = dot(rainbow, vec3(0.5));
+    vec3 colour = mix(lit, rainbow * 1.4, min(0.75 * bowed, 0.6));
+    // (The bow is the sunlight the droplets send back: it shows more than the thin mist it is in.)
+    a = min(a * (1.0 + 0.9 * bowed) + bowed * soft * vAlpha * 0.25, 1.0);
     gl_FragColor = vec4(colour, a);
     #include <colorspace_fragment>
     #include <fog_fragment>
@@ -602,7 +608,7 @@ export function buildWildFalls(tier: FallsTier): WildFalls {
         q.setFromAxisAngle(up, stone.yaw);
         m.compose(new Vector3(stone.x, stone.y, stone.z), q, new Vector3(stone.r * 1.15, stone.r * stone.squash, stone.r));
         stones.setMatrixAt(k, m);
-        stones.setColorAt(k, colour.set(k % 3 === 0 ? "#4a4a3e" : "#4d4840").multiplyScalar(0.8 + 0.35 * hash(k + 5)));
+        stones.setColorAt(k, colour.set(k % 3 === 0 ? "#78786a" : "#7c766c").multiplyScalar(0.8 + 0.35 * hash(k + 5)));
     });
     stones.name = "falls-rim";
     stones.receiveShadow = true;
@@ -635,7 +641,7 @@ export function buildWildFalls(tier: FallsTier): WildFalls {
     for (let i = 0; i < sprayCap * 4; i++) spraySeeds[i] = hash(i + 7000);
     sprayGeometry.setAttribute("aSeed", new BufferAttribute(spraySeeds, 4));
     sprayGeometry.setDrawRange(0, SPRAY[tier]);
-    sprayGeometry.boundingSphere = new Sphere(new Vector3(strike.x, strike.y + 4, strike.z + 3), 14);
+    sprayGeometry.boundingSphere = new Sphere(new Vector3(strike.x, strike.y + 4, strike.z + 3), 20);
     const sprayUniforms = {...UniformsUtils.clone(UniformsLib.fog), uStrike: {value: new Vector3(strike.x, strike.y, strike.z)}, uWidth: {value: CURTAIN_BOTTOM}, uPixel: {value: 900}, ...shared};
     const sprayMaterial = new ShaderMaterial({vertexShader: SPRAY_VERTEX, fragmentShader: SPRAY_FRAGMENT, uniforms: sprayUniforms, transparent: true, depthWrite: false, blending: AdditiveBlending, fog: true});
     const spray = new Points(sprayGeometry, sprayMaterial);

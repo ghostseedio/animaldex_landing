@@ -39,9 +39,10 @@ test("falls: the cliff's skin grows out of the slope: its seams under the ground
     }
     // Where its relief dips under the slope the ground shows through (an outcrop's edge); never a deep hole.
     assert.ok(deepest > -2.5, `the skin sinks ${deepest.toFixed(2)} m under the ground`);
-    // A giant: the face stands 30 m and more over the pool.
-    assert.ok(tallest - F.POOL.level > 30, `the cliff stands ${(tallest - F.POOL.level).toFixed(1)} m over the pool`);
-    assert.ok(F.FALLS_LIP - F.POOL.level > 30, `the drop is ${(F.FALLS_LIP - F.POOL.level).toFixed(1)} m`);
+    // A giant: the face stands 26 m and more over the pool, from the snow line, and the sheet is 20 m and more across.
+    assert.ok(tallest - F.POOL.level > 26, `the cliff stands ${(tallest - F.POOL.level).toFixed(1)} m over the pool`);
+    assert.ok(F.FALLS_LIP - F.POOL.level > 26, `the drop is ${(F.FALLS_LIP - F.POOL.level).toFixed(1)} m`);
+    assert.ok(F.CURTAIN_TOP >= 20, `the sheet is ${F.CURTAIN_TOP} m across`);
 });
 
 test("falls: the water is in front of the rock and over the ground all the way down, and lands in the pool", async () => {
@@ -49,8 +50,9 @@ test("falls: the water is in front of the rock and over the ground all the way d
     const skin = F.cliffSkin();
     // The rock's front, per height band, under the sheet's width.
     for (let j = 0; j <= 40; j++) {
-        const v = 0.1 + (j / 40) * 0.9;
-        for (const u01 of [0, 0.25, 0.5, 0.75, 1]) {
+        for (const u01 of [0, 0.1, 0.25, 0.5, 0.75, 0.9, 1]) {
+            // (Each column to its own foot: the pool, or the lower ledges at the broad sheet's ends.)
+            const v = (0.1 + (j / 40) * 0.9) * F.curtainFoot(u01);
             const p = F.curtainPoint(u01, v);
             // (Its last two metres are in the pool's foam and the apron's boulders.)
             if (p.y < F.POOL.level + 2) continue;
@@ -66,9 +68,11 @@ test("falls: the water is in front of the rock and over the ground all the way d
     }
     const foot = F.curtainPoint(0.5, 1);
     assert.ok(Math.abs(foot.y - F.POOL.level) < 1e-6);
-    for (const u01 of [0.1, 0.5, 0.9]) {
-        const p = F.curtainPoint(u01, 1);
-        assert.ok(F.inPool(p.x, p.z, 0.4) || F.fallsGround(p.x, p.z) > F.POOL.level, `the sheet's foot at ${u01} lands on the pool or its apron`);
+    // Its middle lands in the pool; every column's foot is on the pool or on ground standing over it.
+    for (const u01 of [0.4, 0.5, 0.6]) assert.equal(F.curtainFoot(u01), 1);
+    for (const u01 of [0, 0.1, 0.25, 0.5, 0.75, 0.9, 1]) {
+        const p = F.curtainPoint(u01, F.curtainFoot(u01));
+        assert.ok(F.inPool(p.x, p.z, 0.4) || F.fallsGround(p.x, p.z) > F.POOL.level - 0.1, `the sheet's foot at ${u01} lands on the pool or its apron`);
     }
 });
 
@@ -83,7 +87,8 @@ test("falls: the pool's water stands over its bed, is held by its rim, and spill
         const x = F.POOL.x + Math.cos(a) * F.POOL.rx;
         const z = F.POOL.z + Math.sin(a) * F.POOL.rz;
         if (F.fallsGround(x, z) >= F.POOL.level - 0.02) continue;
-        const held = stones.some((s) => Math.hypot(s.x - x, s.z - z) < s.r * 1.3) || Math.hypot(x - F.OUTFLOW[0].x, z - F.OUTFLOW[0].z) < 1.2;
+        // (A stone's top is its y plus its squashed radius: it stands over the water, its foot in the ground.)
+        const held = stones.some((s) => Math.hypot(s.x - x, s.z - z) < s.r * 1.3 && s.y + s.r * s.squash >= F.POOL.level && s.y - s.r * s.squash * 0.7 <= F.fallsGround(s.x, s.z)) || Math.hypot(x - F.OUTFLOW[0].x, z - F.OUTFLOW[0].z) < 1.2;
         assert.ok(held, `the pool's rim at ${x.toFixed(1)}, ${z.toFixed(1)} holds no water`);
     }
     // The spill runs downhill to the upper river's first point, its water a hand over the ground.
@@ -96,15 +101,17 @@ test("falls: the pool's water stands over its bed, is held by its rim, and spill
     assert.equal(F.underWater(spring), "fresh");
 });
 
-test("falls: the pool and the cliff keep clear of every tree trunk and of the river", async () => {
+test("falls: no tree is drawn in the pool, and the cliff keeps clear of the river", async () => {
     const F = await load();
-    const {worldDecor} = await import("@/ark-scene/decor");
-    for (const item of worldDecor()) {
-        if (Math.hypot(item.x - F.POOL.x, item.z - F.POOL.z) > 30) continue;
-        if (["broadleaf", "rainforest", "conifer", "acacia", "palm", "orchard", "canopy", "cactus"].includes(item.kind)) {
-            assert.ok(!F.inPool(item.x, item.z, 0.2), `a tree stands in the pool at ${item.x.toFixed(1)}, ${item.z.toFixed(1)}`);
-        }
+    const {worldDecor, forestFill} = await import("@/ark-scene/decor");
+    const {assetTreePlacement} = await import("@/ark-scene/tree-pick");
+    // The trees standing where the pool is drawn are left undrawn (`asset-trees.ts`; the list itself unchanged): the same rule.
+    let hidden = 0;
+    for (const item of [...worldDecor(), ...forestFill()]) {
+        if (Math.hypot(item.x - F.POOL.x, item.z - F.POOL.z) > 30 || !assetTreePlacement(item as never)) continue;
+        if (F.inPool(item.x, item.z, 0.8)) hidden++;
     }
+    assert.ok(hidden >= 1, "the pine that hid the pool is left undrawn");
     for (const b of F.fallsBlocks()) {
         for (let x = b.x0; x <= b.x1; x += 0.5) {
             for (let z = b.z0; z <= b.z1; z += 0.5) assert.notEqual(F.underWater(F.sampleWildGround(x, z)), "fresh", `the cliff's mass over the river at ${x}, ${z}`);

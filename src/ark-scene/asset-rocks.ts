@@ -19,11 +19,12 @@ import {ARK_ENV, NOISE_GLSL} from "@/ark-scene/glsl";
 import {readNowOrLater} from "@/ark-scene/model-files";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {ASSET_BASE} from "@/ark-scene/tree-assets";
-import {generatedRockFile, rockAssetFor, rockAssetInfo} from "@/ark-scene/rock-assets";
+import {generatedRockFile, generatedShape, rockAssetFor, rockAssetInfo, rockFoot} from "@/ark-scene/rock-assets";
 import {cachedRock} from "@/ark-scene/rock-shapes";
 import {floorAssetInfo, floorPlacements} from "@/ark-scene/floor-assets";
 import {worldDecor} from "@/ark-scene/decor";
 import {arkWorld} from "@/ark-scene/world";
+import {behindSheet} from "@/ark-scene/islands/wild/falls";
 
 const LEVELS = ["lod0", "lod1", "lod2"] as const;
 type Level = typeof LEVELS[number];
@@ -117,7 +118,7 @@ export function rockGeometry(mesh: RockMesh): BufferGeometry {
 }
 
 type AssetInfo = {lod_distances: [number, number, number]; lods: Array<{level: string; file: string; doubleSided: boolean}>};
-export type AssetPlacement = {id: string; x: number; y: number; z: number; yaw: number; scale: number; up?: [number, number, number]; shade?: number};
+export type AssetPlacement = {id: string; x: number; y: number; z: number; yaw: number; scale: number; up?: [number, number, number]; shade?: number; /** Drawn reached down to its ground (`rock-assets.ts` rockFoot): the stretch k and the shape's top (its own units). */ foot?: {k: number; top: number}};
 
 /**
  * Library assets placed many times: instanced per asset and detail level (lod0, lod1, lod2), re-sorted as the camera
@@ -141,6 +142,7 @@ export class AssetInstances {
         const upVector = new Vector3();
         const at = new Vector3();
         const size = new Vector3();
+        const lift = new Vector3();
         for (const placed of placements) {
             let entry = this.byAsset.get(placed.id);
             if (!entry) {
@@ -150,7 +152,10 @@ export class AssetInstances {
             }
             if (placed.up) rotation.setFromUnitVectors(yAxis, upVector.set(placed.up[0], placed.up[1], placed.up[2])).multiply(turn.setFromAxisAngle(yAxis, placed.yaw));
             else rotation.setFromAxisAngle(yAxis, placed.yaw);
-            const matrix = new Matrix4().compose(at.set(placed.x, placed.y, placed.z), rotation, size.setScalar(placed.scale));
+            // A rock reached down to its ground (p4): stretched along its up about its top, so its top stays where it is.
+            const foot = placed.foot && placed.foot.k > 1 ? placed.foot : null;
+            at.set(0, foot ? foot.top * placed.scale * (1 - foot.k) : 0, 0).applyQuaternion(rotation).add(lift.set(placed.x, placed.y, placed.z));
+            const matrix = new Matrix4().compose(at, rotation, size.set(placed.scale, placed.scale * (foot?.k ?? 1), placed.scale));
             const shade = placed.shade ?? 1;
             entry.instances.push({x: placed.x, y: placed.y, z: placed.z, matrix, tint: new Color(shade, shade, shade)});
         }
@@ -308,7 +313,12 @@ export class AssetRocks extends AssetInstances {
         for (const item of worldDecor()) {
             const placed = rockAssetFor(item);
             if (!placed) continue;
-            placements.push({...placed, shade: 0.92 + 0.16 * frac(item.x * 5.17 + item.z * 2.93)});
+            // p4 (waterfall): a rock behind the falls' sheet is left undrawn (it poked through the water); its lists keep it.
+            if (arkWorld() === "v2" && behindSheet(placed.x, placed.y + 0.5 * placed.scale, placed.z, 0.8 * placed.scale)) continue;
+            // p4: a rock made here on a steep face, reached down to its ground (the bigger wild island's mountain).
+            const shape = arkWorld() === "v2" ? generatedShape(placed.id) : null;
+            const foot = shape ? {k: rockFoot({...shape, x: placed.x, y: placed.y, z: placed.z, yaw: placed.yaw, up: placed.up ?? [0, 1, 0], scale: placed.scale}), top: rockAssetInfo(placed.id).bounds.max[1]} : undefined;
+            placements.push({...placed, shade: 0.92 + 0.16 * frac(item.x * 5.17 + item.z * 2.93), foot});
         }
         const material = rockMaterial();
         super(placements, rockAssetInfo, {front: material, double: material}, base, "asset-rock");

@@ -7,6 +7,9 @@
  * 57 m at z −98), the steepest face on the island that faces the opening camera, and the crest behind it stands higher
  * than the lip on both sides, so the water has a notch to come out of. The falls drop from that notch into a plunge
  * pool on the flat at the cliff's foot, and the pool spills down to the spring: the river now begins at the falls.
+ * Second pass (the coordinator: "GIANT; from the default view it's a small streak"): a sheet 21–24 m across (three times
+ * the first) from the snow line (52.4 m, the highest lip the crest holds across that width) down a wide horseshoe face,
+ * its ends breaking on the lower ledges; a pool 21 m across; a plume that climbs over the trees.
  *
  * Nothing here changes the island's ground (`ground.ts`), its scenery list (`scenery.ts`) or anything the map, the
  * server's positions atlas or the walk grid read: the cliff is drawn OVER the existing slope (a skin from the slope out to
@@ -25,28 +28,26 @@ import {WILD_HALF, WILD_SEGMENT} from "@/ark-scene/islands/wild/frame";
 
 /** The falls' axis (x), and the cliff's width either side of it (m): the rock face, its sides sinking into the slope. */
 export const FALLS_X = -101;
-const HALF_WIDTH = 24;
+const HALF_WIDTH = 27;
 /** The vertical face's line at the axis (z): the foot of the steep slope, so the drop is the slope's whole height. */
 const FACE_Z = -85.3;
 /** How far the face leans back as it rises (m a metre). */
 const LEAN = 0.1;
 /** The lip: where the water leaves the notch (m above the sea). */
-export const FALLS_LIP = 56.4;
+export const FALLS_LIP = 52.4;
 /** The water's width at the lip and where it meets the pool (m): it spreads as it falls. */
-export const CURTAIN_TOP = 7.2;
-export const CURTAIN_BOTTOM = 9.2;
+export const CURTAIN_TOP = 21;
+export const CURTAIN_BOTTOM = 24;
 /** How far the water is thrown clear of the lip (m/s across), and gravity. */
 const THROW = 2.5;
 const G = 9.81;
 
 /** The plunge pool at the cliff's foot: an ellipse on the flat, its water a hand above the ground's highest there. */
-export const POOL = {x: -100.4, z: -82.6, rx: 4.0, rz: 2.2, level: 24.8};
+export const POOL = {x: -99.6, z: -81.3, rx: 10.5, rz: 4.0, level: 24.9};
 /** Where the pool spills (its south-east rim) and the spring it feeds (the upper river's first point). */
 export const OUTFLOW: ReadonlyArray<{x: number; z: number}> = [
-    {x: -100.6, z: -80.4},
-    {x: -100.4, z: -79.2},
-    {x: -100.25, z: -78},
-    {x: -100.1, z: -76.9},
+    {x: -100.2, z: -77.4},
+    {x: -100.1, z: -76.7},
     {x: -100, z: -76}
 ];
 
@@ -100,7 +101,9 @@ export function faceLine(u: number): number {
     const x = FALLS_X + u;
     // (A plunge pool's amphitheatre: the face wraps round the pool and runs back into the slope either side, with bays
     // and buttresses of its own.)
-    return FACE_Z - 0.042 * u * u - 1.2 * bell(u / (CURTAIN_TOP * 0.55 + 1.2)) + 2.4 * (fbm(x * 0.11 + 3.7, 2.1) - 0.5) * smoothstep(2, 6, Math.abs(u));
+    // (A wide horseshoe behind the broad sheet, curving back harder past its ends.)
+    const past = Math.max(Math.abs(u) - CURTAIN_TOP * 0.5, 0);
+    return FACE_Z - 0.01 * u * u - Math.min(0.05 * past * past, 7) - 1.2 * bell(u / (CURTAIN_TOP * 0.55 + 1.2)) + 2.4 * (fbm(x * 0.11 + 3.7, 2.1) - 0.5) * smoothstep(CURTAIN_TOP * 0.5, CURTAIN_TOP * 0.5 + 4, Math.abs(u));
 }
 
 /** The face's top at `u` (m): the notch at the axis, buttresses either side rising to just under the crest behind them. */
@@ -209,6 +212,8 @@ export function cliffSkin(step = 0.5, rowStep = 0.45): CliffSkin {
             const plane = line - LEAN * Math.max(y - POOL.level, 0) - Math.max(y - shoulder, 0) * 5.5 - Math.max(y - shoulder + 0.8, 0) ** 2 * 0.6;
             raw.push([s + taper * Math.max(plane - s, 0), y]);
         }
+        // (A column whose foot is over its crest: a point, sunk.)
+        while (raw.length < 2) raw.push([-78, foot - 1 + raw.length * 0.1]);
         // Resampled by length along the profile.
         const length: number[] = [0];
         for (let i = 1; i < raw.length; i++) length.push(length[i - 1] + Math.hypot(raw[i][0] - raw[i - 1][0], raw[i][1] - raw[i - 1][1]));
@@ -284,10 +289,10 @@ export function faceFront(u: number, y: number): number {
 export function curtainPoint(u01: number, v: number): {x: number; y: number; z: number} {
     const drop = FALLS_LIP - POOL.level;
     const fall = Math.sqrt((2 * drop) / G);
-    // The first tenth: over the lip's edge, from a metre and a half back in the notch.
-    const lipZ = faceLine(0) - LEAN * (FALLS_LIP - POOL.level) + 0.15;
     const width = CURTAIN_TOP + (CURTAIN_BOTTOM - CURTAIN_TOP) * Math.sqrt(v);
     const across = (u01 - 0.5) * width;
+    // The first tenth: over the lip's edge, from a metre and a half back in the notch; the lip follows the horseshoe.
+    const lipZ = faceLine((u01 - 0.5) * CURTAIN_TOP) - LEAN * (FALLS_LIP - POOL.level) + 0.15;
     // A gentle concave sheet (its middle thrown a little further).
     const belly = 0.5 * (1 - (2 * u01 - 1) ** 2);
     if (v < 0.08) {
@@ -298,10 +303,48 @@ export function curtainPoint(u01: number, v: number): {x: number; y: number; z: 
     return {x: FALLS_X + across, y: FALLS_LIP - 0.5 * G * t * t, z: lipZ + (THROW + belly * 0.5) * t + belly * 0.2};
 }
 
+/**
+ * Where the sheet's column at `u01` ends (its `v`, 0 … 1): in the pool for the middle, and on the slope where the ground at
+ * its foot stands over the pool (the broad sheet's ends break on the lower ledges, west most).
+ */
+export function curtainFoot(u01: number): number {
+    let last = 1;
+    for (let k = 40; k >= 8; k--) {
+        const v = k / 40;
+        const p = curtainPoint(u01, v);
+        if (p.y < wildHeight(p.x, p.z) + 0.15) last = v;
+        else break;
+    }
+    if (last >= 1) return 1;
+    // (Refined between the last clear step and the first under the ground.)
+    let a = last - 1 / 40;
+    let b = last;
+    for (let k = 0; k < 12; k++) {
+        const m = (a + b) / 2;
+        const p = curtainPoint(u01, m);
+        if (p.y < wildHeight(p.x, p.z) + 0.15) b = m;
+        else a = m;
+    }
+    return b;
+}
+
 /** Where the water strikes the pool (its middle) and how far along the curtain's foot (m). */
 export function impact(): {x: number; z: number; y: number} {
     const p = curtainPoint(0.5, 1);
     return {x: p.x, z: p.z, y: POOL.level};
+}
+
+/**
+ * Does something at (x, y, z) of reach r stand behind or through the sheet (between the face and the water's front, the
+ * pool to the lip)? The scenery drawn there (a rock, a crag) would poke through the water: it is left undrawn
+ * (`asset-rocks.ts`, `props/areas.ts`; the lists, attach points and colliders keep it).
+ */
+export function behindSheet(x: number, y: number, z: number, r: number): boolean {
+    const u = x - FALLS_X;
+    if (Math.abs(u) > CURTAIN_BOTTOM * 0.5 + r || y < POOL.level - 1 - r || y > FALLS_LIP + 1 + r) return false;
+    const t = Math.sqrt((2 * Math.max(FALLS_LIP - y, 0)) / G);
+    const lipZ = faceLine(Math.max(Math.min(u, CURTAIN_TOP * 0.5), -CURTAIN_TOP * 0.5)) - LEAN * (FALLS_LIP - POOL.level) + 0.15;
+    return z < lipZ + THROW * t + r + 0.6 && z > faceLine(u) - 16;
 }
 
 /** Is a point inside the pool's water (its ellipse)? */
@@ -325,8 +368,12 @@ export function rimStones(): Array<{x: number; z: number; y: number; r: number; 
             // The spill's gap.
             if (Math.hypot(x - OUTFLOW[0].x, z - OUTFLOW[0].z) < 0.8) continue;
             const ground = wildHeight(x, z);
-            const r = size * (0.45 + 0.4 * hash1(seed + 7)) + (ring === 0 ? Math.max(POOL.level - ground, 0) * 0.55 : 0);
-            out.push({x, z, y: Math.min(ground, POOL.level) - r * 0.3, r, yaw: hash1(seed + 3) * 6.28, squash: 0.6 + 0.25 * hash1(seed + 9)});
+            const low = Math.max(POOL.level - ground, 0);
+            const r = size * (0.45 + 0.4 * hash1(seed + 7)) + (ring === 0 ? low * 0.9 : 0);
+            const squash = 0.6 + 0.25 * hash1(seed + 9);
+            // (Where the ground is under the water, the outer stones stand a hand over it: they hold it, its edge never shows.)
+            const y = ring === 0 && low > 0 ? POOL.level + 0.25 - r * squash : Math.min(ground, POOL.level) - r * 0.3;
+            out.push({x, z, y, r, yaw: hash1(seed + 3) * 6.28, squash});
         }
     }
     // Wet boulders fallen at the curtain's foot, either side of where it strikes.
