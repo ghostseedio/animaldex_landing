@@ -83,7 +83,7 @@ for (const shot of plan) {
         return "view";
     }, shot);
     await page.screenshot({path: path.join(out, `${shot.name}.jpg`), type: "jpeg", quality: 88});
-    const scan = await page.evaluate(() => JSON.stringify(window.__canopy.nanScan()));
+    const scan = await page.evaluate((id) => JSON.stringify({...window.__canopy.nanScan(), who: id ? window.__canopy.who(id) : null}), shot.id ?? null);
     notes.push(`${shot.name}: epoch ${shot.epoch} id ${shot.id ?? "-"} ${note} ${scan}`);
     console.log(shot.name, note, scan);
 }

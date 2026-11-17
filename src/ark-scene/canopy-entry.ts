@@ -61,6 +61,9 @@ async function main() {
     while (realPerfNow() < until && (!ready || handle.loading())) await wait(200);
     const debug = (window as unknown as {__arkDebug: {controls: {minDistance: number}}}).__arkDebug;
     if (debug?.controls) debug.controls.minDistance = 0.3;
+    // (The view held where it is put, up in the crowns: otherwise the camera eases its target down to the ground under it
+    // unless an animal is selected, as golden-entry.ts holds a golden shot's.)
+    (window as unknown as {__arkGoldenCamera?: {free?: boolean}}).__arkGoldenCamera = {free: true};
     const setAt = async (epoch: number) => {
         const ms = epoch * 1000;
         fake!.perf += ms - fake!.date;
@@ -141,6 +144,13 @@ async function main() {
                 if (o.matrixWorld.elements.some((v) => !Number.isFinite(v)) && bad.length < 12) bad.push(`${o.type} ${o.name} ${JSON.stringify(o.userData).slice(0, 80)}`);
             });
             return {bad, camera: dbg.camera.position};
+        },
+        /** One animal's schedule state now (why it is or is not out on its canopy route). */
+        who: (id: string) => {
+            const e = (window as unknown as {__arkDebug: {entries: () => Array<{animal: {id: string}; level?: string; state?: {asleep?: boolean}; sched?: {at?: number; trip?: {arrive: number; end: number; slot: number; to: {point: string | null}} | null; pose?: {moving?: boolean; beat?: string; act?: {episode?: string; own?: boolean} | null}} | null}>}}).__arkDebug.entries().find((x) => x.animal.id === id);
+            if (!e) return null;
+            const t = e.sched?.trip;
+            return {level: e.level, asleep: e.state?.asleep, at: e.sched?.at, trip: t ? {arrive: t.arrive, end: t.end, slot: t.slot, to: t.to.point} : null, moving: e.sched?.pose?.moving, beat: e.sched?.pose?.beat, act: e.sched?.pose?.act ? {episode: e.sched.pose.act.episode, own: e.sched.pose.act.own} : null, canopy: canopyPhases.get(id) ?? null};
         },
         view: () => handle.view(),
         homeView: () => handle.homeView()
