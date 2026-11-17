@@ -167,7 +167,10 @@ function digest(value: unknown): string {
 // logs bleached, the big rockwork as bedded crags: zoo.)
 const TOWN_DIGESTS = {
     // (p4 (safari): the safari park: its land, streets, areas as zoo slots, buildings and trees.)
-    plan: "e1e53c3c2c5f0406",
+    // (p5 (zoospace): the free-flight dome: its lobe's lawn, its walk, its plot as a zoo slot, palms round it.)
+    // (Merged origin/main (TOWNFIX: church, canal bridges, library dressing) into p5 (zoospace): both changes, plan, areas, scenery, zoo.)
+    // (p5 (rural): the countryside: its lobe's land, lane, fields, pond and buildings. p6 (zoo merge): both lobes, the dome's west and the fields' east.)
+    plan: "9c39db7e031fc376",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
@@ -179,7 +182,9 @@ const TOWN_DIGESTS = {
     areas: "c6c264ec4ce17c34",
     // (Lane GA: the ground's surface weights.)
     // (p4 (safari): the 12 × 12 grid, the safari's savanna, desert, mud, ditches and waterholes, the deeper strait.)
-    ground: "7afe995682426afe",
+    // (p5 (zoospace): the dome's lobe of land west of the zoo, its lagoon cut into the ground.)
+    // (p6 (zoo merge): the countryside's lobe east and the dome's lobe west, both in the one coast.)
+    ground: "03659935f1884b9f",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
@@ -189,12 +194,16 @@ const TOWN_DIGESTS = {
     // (p4 (safari): its paving, gate, waters, boardwalk, decks, boards, rails and buildings.)
     // (p5 (homes): the towers' fronts: open loggia apartments (front and back, railed, no glass so the rooms show) from the 4th storey, their windows homes'.)
     // (p5 (rural): the countryside's buildings, boundaries and props; then the homes merged in: both together.)
-    sceneryAndBuildings: "c4046d49d0a2154d",
+    // (p5 (zoospace): the dome's building: drum, lattice and netting, lobby, paths, boardwalk, lagoon, lamps, `render/dome.ts`.)
+    // (p6 (zoo merge): the countryside and the dome together.)
+    sceneryAndBuildings: "2cac6af8e34b1ab3",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
     // (p4 (safari): the safari areas dressed as their habitats, `render/safari-habitat.ts`.)
-    zoo: "761a15a4bdf49d98",
+    // (p5 (zoospace): the zoo's new homes on the freed plots dressed as their kinds' exhibits, `render/zoo-habitat.ts`.)
+    // (p5 (zoospace): the dome's birds out of the aviaries; the vulture aviary and the stork flight wider.)
+    zoo: "0d99007f9e989de6",
     // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
     // (p4 (safari): the herbivores, big cats, hyenas and crocodilians moved to the safari by the rule, `town/safari.ts`.)
     // (Pass 5 rural lane: pass 4 merged into the safari; these recomputed on that merge. Then p5 (rural): the countryside
@@ -202,7 +211,10 @@ const TOWN_DIGESTS = {
     // its fields, the farms' and the children's farm's kept few, a roof cluster spread along its roof (places). Then the
     // duck pond's bowl with its rim just over its water (ground; areas: the pond's spots on it). Then no
     // wildlife roof spots on the pig arks and mobile hen houses (areas), and a roof cluster along its ridge and faces (places).)
-    places: "3b961936b29a20a2"
+    // (p5 (zoospace): the crowded residents moved to new homes or spread over their type's plots, kept apart, `zoo-homes.ts`.)
+    // (p5 (zoospace): the waterbirds and the big kinds moved to the free-flight dome by the rule, each in its zone.)
+    // (p6 (zoo merge): both lobes' animals: the fields' livestock and poultry and the dome's birds, the zoo residents' new homes.)
+    places: "0949327a6da813e9"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {

@@ -41,8 +41,9 @@ export const OCEAN_LOOPS: readonly OceanLoop[] = [
     // The strait's southern mouth, between the wild island's east coast and the open sea.
     {id: "strait_south", x: 360, z: 120, rx: 80, rz: 50, turn: 0},
     // The strait's northern mouth, west of the town. (p4 (safari): 20 m south-west and a little smaller, clear of the
-    // safari park's land, `islands/town/safari.ts`; it was (290, −380), 60 × 50.)
-    {id: "strait_north", x: 270, z: -360, rx: 55, rz: 45, turn: 0},
+    // safari park's land, `islands/town/safari.ts`; it was (290, −380), 60 × 50.) p5 (zoospace): 55 m west, clear of the
+    // aviary dome's new land (`islands/town/dome.ts` DOME_LOBE, the town's west shore now near x 314); it was (270, −360).
+    {id: "strait_north", x: 215, z: -360, rx: 55, rz: 45, turn: 0},
     // Off the wild island's west coast.
     {id: "west", x: -350, z: 0, rx: 50, rz: 125, turn: 0},
     // Off its south coast (the opening view's foreground sea).
