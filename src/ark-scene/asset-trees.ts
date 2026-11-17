@@ -28,6 +28,7 @@ import {LEAF_CELLS, LEAF_CUT, leafAtlasTexture, leafCellUniform, releaseLeafAtla
 import {WOODS_FILL} from "@/ark-scene/tree-pick";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
 import {arkWorld, sampleGround, zoneAt} from "@/ark-scene/world";
+import {inPool} from "@/ark-scene/islands/wild/falls";
 
 const LEVELS = ["lod0", "lod1", "lod2", "card"] as const;
 type Level = typeof LEVELS[number];
@@ -338,6 +339,9 @@ export class AssetTrees {
             // Where the tree stands, shared with the attach points (none on bare rock faces high on the mountain).
             const asset = assetTreePlacement(item as never);
             if (!asset) return;
+            // p4 (waterfall): the trees standing in the falls' plunge pool are left undrawn (the pine that hid it); the
+            // scenery list, its attach points and colliders keep them, so nothing the map or the server reads changes.
+            if (arkWorld() === "v2" && inPool(item.x, item.z, 0.8)) return;
             let entry = this.byAsset.get(asset.id);
             if (!entry) {
                 const info = ASSETS[asset.id];

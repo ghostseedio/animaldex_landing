@@ -15,6 +15,7 @@ import type {Placement} from "@/ark-scene/placement";
 import type {QualityTier} from "@/ark-scene/post";
 import type {ArkSnapshot} from "@/ark-scene/types";
 import {createPropsModule} from "@/ark-scene/props";
+import {createFallsModule} from "@/ark-scene/islands/wild/render/falls-module";
 
 export type ArkSceneModuleContext = {
     scene: Scene;
@@ -56,4 +57,4 @@ export interface ArkSceneModule {
 export type ArkSceneModuleFactory = (context: ArkSceneModuleContext) => ArkSceneModule;
 
 /** The modules the scene builds, in order. */
-export const ARK_SCENE_MODULES: ArkSceneModuleFactory[] = [createPropsModule];
+export const ARK_SCENE_MODULES: ArkSceneModuleFactory[] = [createPropsModule, createFallsModule];
