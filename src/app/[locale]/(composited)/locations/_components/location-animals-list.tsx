@@ -2,6 +2,7 @@ import Link from "@/app/[locale]/_components/link";
 import SpeciesImage from "@/app/[locale]/(composited)/animals/species-image";
 import TierBadge from "@/app/[locale]/(composited)/rankings/_components/tier-badge";
 import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 
 type LocationAnimalsListProps = {
     title: string;
@@ -71,7 +72,7 @@ export default function LocationAnimalsList({
                                 <Link href={`/animals/${item.speciesSlug}`} className="hover:text-primary-100 transition-colors">
                                     {item.speciesName}
                                 </Link>
-                                {item.tier ? <TierBadge tier={item.tier} size="sm" /> : null}
+                                {SHOWS_BATTLE_TIER_AND_POWER && item.tier ? <TierBadge tier={item.tier} size="sm" /> : null}
                             </h3>
                             <p className="text-sm leading-6 text-ink-200 md:text-base">{item.whyItFits}</p>
                             {item.rarityHint ? (

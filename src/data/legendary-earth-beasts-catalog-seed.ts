@@ -1,3 +1,4 @@
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import type {SpeciesEntry} from "@/data/species";
 
 export type LegendaryEarthBeastCatalogSeed = {
@@ -970,7 +971,7 @@ export function mergeLegendaryEarthBeastSpeciesEntry(
             habitat: captureSite,
             nativeRange: captureSite,
             rarityScore: seed.canonicalGameStats.rarity,
-            rarityReason: `${seed.displayName} is an S-tier Legendary Earth Beast that can only be captured at ${captureSite}.`
+            rarityReason: `${seed.displayName} is ${SHOWS_BATTLE_TIER_AND_POWER ? "an S-tier" : "a"} Legendary Earth Beast that can only be captured at ${captureSite}.`
         },
         premiumDetails: {
             behaviorTraits: seed.signatureTraits,
