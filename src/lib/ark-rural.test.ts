@@ -31,6 +31,7 @@ import {inland, townPlan} from "@/ark-scene/islands/town/plan";
 import {farmOf} from "@/ark-scene/islands/town/areas";
 import {COOP_HOURS, coopPose, henHouseOf, FARM_KEEP, PETTING_KEEP, RURAL_BUILDINGS, RURAL_LANE, RURAL_LANE_WIDTH, RURAL_PENS, RURAL_TRACKS, ruralKindOf, ruralPenOf, ruralPondNorm, type RuralKind} from "@/ark-scene/islands/town/rural";
 import residents from "@/ark-scene/islands/town/rural-residents.json";
+import {pickFigure, type Projector} from "@/ark-scene/tap-pick";
 
 /** The live record's kept kinds (scratchpad snapshot, 2026-11-16) with their stored scientific names. */
 const KINDS: Array<[string, string, string]> = [
@@ -253,4 +254,45 @@ test("the hens range by day and are shut in their hen house from dusk to morning
         }
     }
     assert.equal(coopPose("rural-dairy-pasture", "cow-1", 23, 0, 0), null, "only the poultry");
+});
+
+test("a tap on an animal in the fields selects it: by day where it stands, a hen at night in her hen house", () => {
+    const list = animals();
+    const placed = placeTownAnimals(list);
+    const fields = ruralFields(list);
+    const moved = list.filter((a) => fields.has(a.id));
+    const poultry = moved.filter((a) => /free-range|orchard|farmyard-run/.test(fields.get(a.id)!.id));
+    assert.ok(moved.length > 20 && poultry.length > 3, `${moved.length} moved, ${poultry.length} poultry`);
+    // (Looking straight down from 30 m over each in turn, as the homes' tap test does.)
+    const tap = (at: {x: number; z: number; y: number}, where: Map<string, {x: number; z: number; y: number}>) => {
+        const project: Projector = (x, y, z) => ({sx: 500 + (x - at.x) * (100 / 30), sy: 500 + (z - at.z) * (100 / 30), distance: Math.max(at.y + 30 - y, 0.1)});
+        const middles: number[] = [];
+        for (const a of moved) {
+            const p = where.get(a.id)!;
+            middles.push(p.x, p.y + 0.2, p.z);
+        }
+        return pickFigure(500, 500, [{members: moved.map((a) => ({id: a.id})), middles, length: 0.5, height: 0.3}], project, 0.01);
+    };
+    const day = new Map(moved.map((a) => {
+        const p = placed.places.get(a.id)!;
+        return [a.id, {x: p.x, z: p.z, y: p.ground}];
+    }));
+    for (const target of moved.filter((_, i) => i % 7 === 0)) {
+        const hit = tap(day.get(target.id)!, day);
+        assert.equal(hit?.id, target.id, `a tap on ${target.model_slug} in ${fields.get(target.id)!.id}`);
+    }
+    // At night: the hens where the scene draws them (`coopPose`), in their houses; a tap there selects a hen of that house.
+    const night = new Map(day);
+    for (const a of poultry) {
+        const at = day.get(a.id)!;
+        const coop = coopPose(fields.get(a.id)!.id, a.id, 23, at.x, at.z)!;
+        night.set(a.id, {x: coop.x, z: coop.z, y: sampleTownGround(coop.x, coop.z).height + coop.floor});
+    }
+    for (const target of poultry.slice(0, 6)) {
+        const hit = tap(night.get(target.id)!, night);
+        assert.ok(hit, "a hit");
+        const got = night.get(hit.id)!;
+        const want = night.get(target.id)!;
+        assert.ok(Math.hypot(got.x - want.x, got.z - want.z) < 0.5 && henHouseOf(fields.get(hit.id)!.id, hit.id) === henHouseOf(fields.get(target.id)!.id, target.id), `${hit.id} for ${target.id}`);
+    }
 });
