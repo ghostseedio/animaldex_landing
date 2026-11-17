@@ -45,9 +45,20 @@ export function dressSafari(e: {id: string; slot: {at: Box; seed: number; safari
     const W = s.w / 2;
     const D = s.d / 2;
     // The waters: taken whole (nothing put in them), soft (a body may wade).
+    // (An ellipse as a row of circles along its long axis, each as wide as its short one: one circle round it all
+    // would take the land beside a long river too, and leave a body no clear ground to stand on.)
     for (const w of area.waters) {
-        const q = toLocal(s, w.x, w.z);
-        plot.footprints.push({x: q.x, z: q.z, r: Math.max(w.rx, w.rz) * 1.1, what: "pool"});
+        const long = Math.max(w.rx, w.rz);
+        const short = Math.min(w.rx, w.rz);
+        const ax = w.rx >= w.rz ? Math.cos(w.rot) : -Math.sin(w.rot);
+        const az = w.rx >= w.rz ? Math.sin(w.rot) : Math.cos(w.rot);
+        const n = Math.max(1, Math.ceil((long - short) / short) + 1);
+        for (let k = 0; k < n; k++) {
+            const t = n === 1 ? 0 : -1 + (2 * k) / (n - 1);
+            const off = t * (long - short);
+            const q = toLocal(s, w.x + ax * off, w.z + az * off);
+            plot.footprints.push({x: q.x, z: q.z, r: short * 1.1, what: "pool"});
+        }
     }
     // The kopjes and termite mounds inside it: fixed places (the spots keep clear of them).
     for (const k of SAFARI_KOPJES) {
