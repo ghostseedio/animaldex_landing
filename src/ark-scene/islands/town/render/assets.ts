@@ -31,7 +31,7 @@ const LEVELS = ["lod0", "lod1", "lod2", "card"] as const;
 type Level = (typeof LEVELS)[number];
 
 /** One placed asset: its foot (the town's frame), turn and scale; `cull`: past this many metres it is not drawn (small plants). */
-export type TownAssetPlacement = {asset: string; x: number; y: number; z: number; rotation: number; scale: number; shade?: number; cull?: number};
+export type TownAssetPlacement = {asset: string; x: number; y: number; z: number; rotation: number; scale: number; shade?: number; cull?: number; /** p4 (townfix): longer along the asset's own x (a zoo log to its length). */ stretch?: number};
 
 type Instance = {x: number; y: number; z: number; scale: number; height: number; radius: number; chunk: number; matrix: Matrix4; tint: Color; cull: number};
 type Entry = {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; near?: InstancedMesh; distances: [number, number, number]; crown: number; height: number; conifer: boolean; doubleSided: Record<string, boolean>};
@@ -100,8 +100,8 @@ export class TownAssets {
             }
             const shade = p.shade ?? 1;
             entry.instances.push({
-                x: p.x, y: p.y, z: p.z, scale: p.scale, height: info.height * p.scale, radius: info.crown_radius * p.scale, chunk: townChunkOf(p.x, p.z),
-                matrix: new Matrix4().compose(position.set(p.x, p.y, p.z), rotation.setFromAxisAngle(up, p.rotation), size.setScalar(p.scale)),
+                x: p.x, y: p.y, z: p.z, scale: p.scale, height: info.height * p.scale, radius: info.crown_radius * p.scale * Math.max(1, p.stretch ?? 1), chunk: townChunkOf(p.x, p.z),
+                matrix: new Matrix4().compose(position.set(p.x, p.y, p.z), rotation.setFromAxisAngle(up, p.rotation), size.set(p.scale * (p.stretch ?? 1), p.scale, p.scale)),
                 tint: new Color(shade, shade * (0.97 + 0.06 * frac(p.z * 5.3)), shade),
                 cull: p.cull ?? Infinity
             });

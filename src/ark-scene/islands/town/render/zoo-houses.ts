@@ -197,6 +197,7 @@ function themedHall(e: ZooEnclosure, parts: {inside: Geo; glow: Geo; glass: Geo;
     const f = zooHouseFrame(e);
     const b = f.inner;
     const plot = new Plot(b, () => f.floor, zooSpotsOf(e), e.slot.seed, 0.45);
+    plot.indoor = true; // p4 (townfix): its logs and trees in the hall's mesh
     const g = parts.inside;
     const r = rng(e.slot.seed + 41);
     const W = b.w / 2;
@@ -267,6 +268,7 @@ function primateHall(e: ZooEnclosure, parts: {inside: Geo; glow: Geo; glass: Geo
     const f = zooHouseFrame(e);
     const b = f.inner;
     const plot = new Plot(b, () => f.floor, zooSpotsOf(e), e.slot.seed);
+    plot.indoor = true; // p4 (townfix): its logs and trees in the hall's mesh
     const g = parts.inside;
     const r = rng(e.slot.seed + 29);
     const W = b.w / 2;
