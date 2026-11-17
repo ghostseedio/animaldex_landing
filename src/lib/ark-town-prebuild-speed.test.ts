@@ -166,7 +166,8 @@ function digest(value: unknown): string {
 // positions and colliders are unchanged. Then the waterholes' banks in the textured ground with hoof prints, the dry
 // logs bleached, the big rockwork as bedded crags: zoo.)
 const TOWN_DIGESTS = {
-    plan: "907a8cbbd8b958ac",
+    // (p4 (safari): the safari park: its land, streets, areas as zoo slots, buildings and trees.)
+    plan: "e1e53c3c2c5f0406",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
@@ -174,22 +175,34 @@ const TOWN_DIGESTS = {
     // (3.3 fix (wall), wall-climb.ts: the lamp-lit walls' places on the wall's face with its normal; the eaves' wall faces.)
     // (Pass 2, lane LAND: the millpond's bank meets its water, its wetland spots and stones, pond life at the wetland; the
     // downtown headland: its streets, three towers, the plaza, billboards.)
-    areas: "631994b9deda845c",
+    // (p4 (safari): the safari areas' spots, the car park's bays.)
+    areas: "c6c264ec4ce17c34",
     // (Lane GA: the ground's surface weights.)
-    ground: "db8be9238e67c5ae",
+    // (p4 (safari): the 12 × 12 grid, the safari's savanna, desert, mud, ditches and waterholes, the deeper strait.)
+    ground: "7afe995682426afe",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "56ee296d4dd8aedd",
+    // (p4 (safari): its paving, gate, waters, boardwalk, decks, boards, rails and buildings.)
+    // (p5 (homes): the towers' fronts: open loggia apartments (front and back, railed, no glass so the rooms show) from the 4th storey, their windows homes'.)
+    // (p5 (rural): the countryside's buildings, boundaries and props; then the homes merged in: both together.)
+    sceneryAndBuildings: "c4046d49d0a2154d",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
-    zoo: "da013de4eb631dce",
+    // (p4 (safari): the safari areas dressed as their habitats, `render/safari-habitat.ts`.)
+    zoo: "761a15a4bdf49d98",
     // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
-    places: "ab4725e321d03544"
+    // (p4 (safari): the herbivores, big cats, hyenas and crocodilians moved to the safari by the rule, `town/safari.ts`.)
+    // (Pass 5 rural lane: pass 4 merged into the safari; these recomputed on that merge. Then p5 (rural): the countryside
+    // lobe's land, lane, fields, pond and buildings (plan, ground, areas, scenery); the livestock and poultry moved to
+    // its fields, the farms' and the children's farm's kept few, a roof cluster spread along its roof (places). Then the
+    // duck pond's bowl with its rim just over its water (ground; areas: the pond's spots on it). Then no
+    // wildlife roof spots on the pig arks and mobile hen houses (areas), and a roof cluster along its ridge and faces (places).)
+    places: "3b961936b29a20a2"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {

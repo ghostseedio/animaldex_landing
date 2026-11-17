@@ -41,7 +41,11 @@ const PASS: Record<Hedge["kind"], {passable: Passer[]; thickness: number; hard: 
     paddock_rail: {passable: ["small", "flyer"], thickness: 0.14, hard: false},
     picket: {passable: ["small", "flyer"], thickness: 0.06, hard: false},
     zoo_fence: {passable: ["flyer"], thickness: 0.35, hard: true},
-    net: {passable: [], thickness: 0.05, hard: true}
+    net: {passable: [], thickness: 0.05, hard: true},
+    // p5 (rural): a dry-stone wall (lizards and climbers over it), low poultry netting, a pig's low wire.
+    drystone: {passable: ["climber", "flyer"], thickness: 0.6, hard: false},
+    poultry_net: {passable: ["flyer"], thickness: 0.05, hard: false},
+    pig_wire: {passable: ["small", "climber", "flyer"], thickness: 0.05, hard: false}
 };
 
 /** The canal as a water polygon (both banks of its centreline). */
@@ -121,7 +125,7 @@ export function townObstaclesJSON(plan: TownPlan = townPlan()): string {
             return found.map((p) => ({street: s.id, x: p.x, z: p.z, width: s.width + s.pavement * 2}));
         });
     const gates = plan.parcels.filter((p) => p.front).map((p) => ({parcel: p.id, x: p.front!.x + -Math.sin(p.at.rot) * (p.front!.d / 2), z: p.front!.z + Math.cos(p.at.rot) * (p.front!.d / 2)}));
-    return JSON.stringify(round({island: "town", units: "m", frame: "town local (x east, z south, y up)", bounds: {half: 237.6}, obstacles: townObstacles(plan), bridges, gates}));
+    return JSON.stringify(round({island: "town", units: "m", frame: "town local (x east, z south, y up)", bounds: {half: 316.8}, obstacles: townObstacles(plan), bridges, gates}));
 }
 
 function segDistance(x: number, z: number, a: Pt, b: Pt): number {

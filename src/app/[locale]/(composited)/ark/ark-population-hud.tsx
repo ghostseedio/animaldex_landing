@@ -12,6 +12,13 @@ import type {ArkSpeciesRow} from "@/lib/ark-population";
 import {arkLostWords} from "@/lib/ark-extinct";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
+import type {ArkHistory, ArkPeriod, ArkSeries, ArkSeriesStats} from "@/lib/ark-population-history";
+
+/** The graphs' module (`ark-population-graph.tsx`), loaded with a dynamic import: the page's first JavaScript is frozen (decision 371). */
+type GraphModule = typeof import("@/app/[locale]/(composited)/ark/ark-population-graph");
+type SortMode = "biggest" | "thriving" | "declining";
+/** `/api/ark/population` (owner, 2026-11-17: a population line per species over a time period). */
+const POPULATION_URL = "/api/ark/population";
 
 /**
  * Who is aboard, over the Ark (decision 239; owner, 2026-11-12: "much more minimal - and maybe overlaying the ark
@@ -65,6 +72,8 @@ type Props = {
     filters?: React.ReactNode;
     /** The page's own path ("/ark", "/id/ark"): where a share link points. */
     shareLocalePath?: string;
+    /** Each species' population over time; null (development's fixtures): no graphs. */
+    populationUrl?: string | null;
 };
 
 function counted(count: number, one: string, other: string, locale: string): string {
@@ -94,7 +103,7 @@ function Caret({up}: {up: boolean}) {
     );
 }
 
-export default function ArkPopulationHud({snapshot, counts, listed, scope, then, totalThen, words, locale, selectedKey, herdKeys, arrivalKey, onSpecies, filters = null, shareLocalePath = "/ark"}: Props) {
+export default function ArkPopulationHud({snapshot, counts, listed, scope, then, totalThen, words, locale, selectedKey, herdKeys, arrivalKey, onSpecies, filters = null, shareLocalePath = "/ark", populationUrl = POPULATION_URL}: Props) {
     arkPerfCountRender();
     const hud = words.hud;
     const lostWords = useMemo(() => arkLostWords(words.lost), [words.lost]);
@@ -132,11 +141,50 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
     const isOpen = () => open ?? !window.matchMedia(PHONE).matches;
 
     const rows = useMemo(() => arkRankedSpecies(listed), [listed]);
+
+    // Population over time: the graphs' module and the record's answer, once the Ark is read. Until the server's read
+    // exists (`available: false`) or when it fails, nothing of it shows.
+    const [graph, setGraph] = useState<GraphModule | null>(null);
+    const [histories, setHistories] = useState<{week: ArkHistory | null; all: ArkHistory | null}>({week: null, all: null});
+    const [period, setPeriod] = useState<ArkPeriod>("24h");
+    const [mode, setMode] = useState<SortMode>("biggest");
+    const [graphKey, setGraphKey] = useState<string | null>(null);
+    const hasListed = Boolean(listed);
+    useEffect(() => {
+        if (!hasListed || !populationUrl || graph) return;
+        let live = true;
+        void import("@/app/[locale]/(composited)/ark/ark-population-graph").then(async (module) => {
+            const week = await module.readArkHistory(populationUrl, "week", (url) => fetch(url));
+            if (!live || !week) return;
+            setHistories((now) => ({...now, week}));
+            setGraph(module);
+        }).catch(() => undefined);
+        return () => {
+            live = false;
+        };
+    }, [hasListed, populationUrl, graph]);
+    const span = graph ? graph.arkPeriodSpan(period) : "week";
+    useEffect(() => {
+        if (!graph || !populationUrl || span !== "all" || histories.all) return;
+        let live = true;
+        void graph.readArkHistory(populationUrl, "all", (url) => fetch(url)).then((all) => {
+            if (live && all) setHistories((now) => ({...now, all}));
+        });
+        return () => {
+            live = false;
+        };
+    }, [graph, populationUrl, span, histories.all]);
+    const history = graph ? (span === "all" ? histories.all : histories.week) : null;
+    // Each listed species' line over the period, and the Thriving / Declining order (the graphs' module works them out).
+    const {lines, ranked} = useMemo(() => (graph && history ? graph.arkHudLines(history, period, rows.map((row) => row.key), scope, mode) : {lines: new Map<string, {series: ArkSeries; stats: ArkSeriesStats}>(), ranked: null}), [graph, history, period, rows, scope, mode]);
+    const rowByKey = useMemo(() => new Map(rows.map((row) => [row.key, row])), [rows]);
     // Rows are rendered a step at a time (decision 246: never hundreds of buttons at once), more as the end scrolls in.
     const [limit, setLimit] = useState(ROWS_STEP);
     const moreRef = useRef<HTMLLIElement | null>(null);
-    const selectedIndex = selectedKey ? rows.findIndex((row) => row.key === selectedKey) : -1;
-    const shownRows = rows.slice(0, Math.max(limit, selectedIndex + 1));
+    // Thriving / Declining: the species that changed most in the period; a kind that died out has no row aboard.
+    const ordered = useMemo<Array<ArkSpeciesRow | {key: string; gone: {name: string; slug: string | null}}>>(() => (ranked ? ranked.map((key) => rowByKey.get(key) ?? {key, gone: history?.gone.get(key) ?? {name: key, slug: null}}) : rows), [ranked, rowByKey, rows, history]);
+    const selectedIndex = selectedKey ? ordered.findIndex((row) => row.key === selectedKey) : -1;
+    const shownRows = ordered.slice(0, Math.max(limit, selectedIndex + 1));
     useEffect(() => {
         const sentinel = moreRef.current;
         const list = listRef.current;
@@ -146,7 +194,7 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
         }, {root: list, rootMargin: "0px 0px 240px 0px"});
         observer.observe(sentinel);
         return () => observer.disconnect();
-    }, [shownRows.length, rows.length]);
+    }, [shownRows.length, ordered.length]);
     const ceiling = useMemo(() => arkBarCeiling(rows[0]?.count ?? 0), [rows]);
     const number = (value: number) => value.toLocaleString(locale);
     const total = snapshot ? arkTotalChange(snapshot.animals.length, totalThen, "both") : null;
@@ -245,8 +293,17 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
 
                 {filters ? <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">{filters}</div> : null}
 
+                {/* Population over time (once the record's read answers): the order and the period the lines cover. */}
+                {graph && history && !graphKey ? <graph.ArkHudControls mode={mode} onMode={(next) => { setMode(next); listRef.current?.scrollTo({top: 0}); }} period={period} onPeriod={setPeriod} /> : null}
+
+                {graph && history && graphKey && lines.get(graphKey) && (rowByKey.has(graphKey) || history.gone.has(graphKey)) ? (() => {
+                    const row = rowByKey.get(graphKey) ?? null;
+                    const gone = history.gone.get(graphKey);
+                    return <graph.ArkHudGraphPane history={history} name={row?.name ?? gone?.name ?? ""} slug={row?.slug ?? gone?.slug ?? ""} line={lines.get(graphKey)!} period={period} onPeriod={setPeriod} onBack={() => setGraphKey(null)} onFly={row ? () => { setGraphKey(null); pick(row); } : null} locale={locale} />;
+                })() : null}
+
                 {/* Every species, biggest first: about a dozen in view, the rest scroll inside the panel. */}
-                <ul ref={listRef} aria-label={hud.listLabel} className="relative max-h-[46svh] min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] py-1 [scrollbar-width:thin] md:max-h-[28rem]">
+                <ul ref={listRef} aria-label={hud.listLabel} hidden={Boolean(graph && history && graphKey)} className="relative max-h-[46svh] min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] py-1 [scrollbar-width:thin] md:max-h-[28rem]">
                     {listed ? null : Array.from({length: 8}, (_, i) => (
                         // Before the Ark is read: quiet placeholders at the rows' size (no shift when they come).
                         <li key={`wait-${i}`} aria-hidden="true" className="flex min-h-11 items-center gap-2.5 px-3.5 py-1 md:min-h-[2.375rem]">
@@ -258,7 +315,12 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                             <span className="h-2.5 w-6 rounded-full bg-white/[0.08]" />
                         </li>
                     ))}
-                    {shownRows.map((row, index) => {
+                    {graph && ranked && !ranked.length ? <graph.ArkHudNone mode={mode} /> : null}
+                    {shownRows.map((item, index) => {
+                        const line = lines.get(item.key) ?? null;
+                        const spark = graph && line ? <graph.ArkRowSpark name={"gone" in item ? item.gone.name : item.name} line={line} onOpen={() => setGraphKey(item.key)} /> : null;
+                        if ("gone" in item) return graph ? <graph.ArkGoneRow key={item.key} name={item.gone.name} slug={item.gone.slug} line={line} locale={locale} onOpen={() => setGraphKey(item.key)} setsize={ordered.length} posinset={index + 1} /> : null;
+                        const row = item;
                         const selected = row.key === selectedKey;
                         const fresh = row.key === arrivalKey;
                         const isHerd = herdKeys.has(row.key) || row.breeds.some((breed) => herdKeys.has(breed.key));
@@ -266,20 +328,20 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                         const said = arkChangeText(change, locale);
                         const label = [
                             fillArkWords(hud.rowCount, {animal: row.name, count: number(row.count)}),
-                            said ? fillArkWords(hud.change24h, {change: said.text}) : null,
+                            ranked && graph && line ? graph.arkPeriodLabel(line.stats, period, locale) : said ? fillArkWords(hud.change24h, {change: said.text}) : null,
                             row.mine ? hud.yours : null,
                             isHerd ? hud.herdTag : null,
                             row.breeds.length ? fillArkWords(hud.breeds, {breeds: row.breeds.map((breed) => `${breed.name} ${number(breed.count)}`).join(", ")}) : null
                         ].filter(Boolean).join(", ");
                         return (
                             // Its place in the whole list ("12 of 779"), though only the first rows are rendered yet.
-                            <li key={row.key} data-species={row.key} aria-setsize={rows.length} aria-posinset={index + 1}>
+                            <li key={row.key} data-species={row.key} aria-setsize={ordered.length} aria-posinset={index + 1} className={`flex items-stretch transition-colors duration-200 ${selected ? "bg-white/[0.10]" : fresh ? "bg-[#c8fa63]/[0.10]" : ""}`}>
                                 <button
                                     type="button"
                                     onClick={() => pick(row)}
                                     aria-current={selected ? "true" : undefined}
                                     aria-label={label}
-                                    className={`relative flex min-h-11 w-full items-center gap-2.5 px-3.5 py-1 text-left transition-colors duration-200 md:min-h-[2.375rem] ${FOCUS} ${selected ? "bg-white/[0.10]" : fresh ? "bg-[#c8fa63]/[0.10]" : "hover:bg-white/[0.06]"}`}
+                                    className={`relative flex min-h-11 min-w-0 flex-1 items-center gap-2.5 py-1 pl-3.5 text-left transition-colors duration-200 md:min-h-[2.375rem] ${spark ? "pr-1" : "pr-3.5"} ${FOCUS} ${selected || fresh ? "" : "hover:bg-white/[0.06]"}`}
                                 >
                                     {selected ? <span aria-hidden="true" className="absolute inset-y-1 left-0 w-[3px] rtl:left-auto rtl:right-0 rounded-full bg-[#c8fa63]" /> : null}
                                     <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]">
@@ -298,13 +360,15 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                                             />
                                         </span>
                                     </span>
-                                    <ArkChangeBadge change={change} words={words} locale={locale} />
+                                    {/* Thriving / Declining: the period's change; else the 24-hour change, as before. */}
+                                    {ranked && graph && line ? <graph.ArkPeriodChange stats={line.stats} locale={locale} /> : <ArkChangeBadge change={change} words={words} locale={locale} />}
                                     <span className="min-w-[2rem] text-right text-[13px] font-bold tabular-nums">{number(row.count)}</span>
                                 </button>
+                                {spark}
                             </li>
                         );
                     })}
-                    {shownRows.length < rows.length ? <li ref={moreRef} aria-hidden="true" className="h-px" /> : null}
+                    {shownRows.length < ordered.length ? <li ref={moreRef} aria-hidden="true" className="h-px" /> : null}
                 </ul>
                 {/* After the living: the species the server logged as gone (hidden until its read answers). */}
                 <ArkLostList words={lostWords} locale={locale} />

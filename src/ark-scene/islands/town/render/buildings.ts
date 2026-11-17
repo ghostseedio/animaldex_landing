@@ -31,6 +31,7 @@ import {TOWN_CHUNK_COUNT, townChunkDistance, townChunkOf, type TownChunkSpan} fr
 import {at, COLOUR_TAG_TOLERANCE, Geo, NullGeo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {TOWN_LIGHT, townWeather} from "@/ark-scene/islands/town/render/materials";
 import {ARK_TIME} from "@/ark-scene/glsl";
+import {apartmentStoreys, BAY_DEPTH} from "@/ark-scene/islands/town/home-rooms";
 
 export type WindowOwner = "home" | "shop" | "pub" | "civic" | "church" | "farm" | "zoo" | "mill" | "harbour" | "office";
 
@@ -957,6 +958,120 @@ function farmBuilding(ctx: Ctx, b: Building) {
     solid.box(front.frame, 0, b.eaves * 0.9, 0.06, 1.4, 1.2, 0.1, wall.map((c) => c * 0.7) as [number, number, number]);
 }
 
+// MARK: - p5 (rural): the countryside's own buildings
+
+const GALV_SHEET = tone("#9ea4a6");
+const RUST_SHEET = tone("#8a5a3a");
+const BLOCK_RENDER = tone("#cfcac0");
+const TIMBER_BOARD = tone("#7d5c3c");
+const GREEN_SHEET = tone("#4f6650");
+
+/**
+ * The countryside's buildings made as they are (`rural.ts`): a milking parlour (rendered blockwork, a green sheeted
+ * roof, a roller door to the collecting yard, high windows, the bulk milk tank in its lean-to at the back), an
+ * open-fronted field shelter (boarded back and sides, a sheeted lean-to roof), a pig ark (a corrugated half-barrel on
+ * the mud, a pophole in its front end) and a mobile hen house (a boarded house on a chassis with four wheels, nest
+ * boxes on its side, a ramp down from its pophole). Each inside its footprint (its collider).
+ */
+function ruralBuilding(ctx: Ctx, b: Building) {
+    const f = buildingFrame(b.at);
+    const {solid} = ctx.chunk;
+    const w = b.at.w;
+    const d = b.at.d;
+    const r = rng(b.seed);
+    if (b.kind === "milking_parlour") {
+        const main = d - 2.4;
+        const m: Frame = {...f, ...xz(at(f, 0, 0, d / 2 - main / 2))};
+        plinth(solid, m, w, main);
+        solid.as(SURFACE.stone, () => solid.box(m, 0, 0, 0, w, b.eaves, main, BLOCK_RENDER));
+        solid.gable(m, 0, b.eaves, 0, w, main, main * 0.3, 0.35, GREEN_SHEET, BLOCK_RENDER);
+        const [front, right, , left] = sides(m, w, main);
+        // The roller door (ribbed) and a pedestrian door.
+        solid.box(front.frame, -w * 0.18, 0, 0.04, 3.2, 2.9, 0.08, tone("#7d8486"));
+        for (let y = 0.25; y < 2.9; y += 0.22) solid.box(front.frame, -w * 0.18, y, 0.09, 3.2, 0.03, 0.03, tone("#6a7072"));
+        door(solid, front.frame, w * 0.3, tone("#3f5a48"));
+        windowRow(ctx, right, 1, b.eaves * 0.72, 3, "farm", () => 0, () => false, [1.4, 0.6]);
+        windowRow(ctx, left, 1, b.eaves * 0.72, 3, "farm", () => 0, () => false, [1.4, 0.6]);
+        // The tank room's lean-to and the stainless bulk tank beside it.
+        const back: Frame = {...f, ...xz(at(f, -w / 4, 0, -d / 2 + 1.2))};
+        solid.box(back, 0, -0.3, 0, w / 2, 2.6, 2.3, BLOCK_RENDER);
+        solid.box(back, 0, 2.3, 0, w / 2 + 0.3, 0.12, 2.6, GREEN_SHEET);
+        solid.cylinder(f, w / 4, 0, -d / 2 + 1.1, 0.95, 0.95, 2.5, tone("#c9cfd2"), 12);
+        solid.cylinder(f, w / 4, 2.5, -d / 2 + 1.1, 0.95, 0.2, 0.35, tone("#b6bcbf"), 12);
+        return;
+    }
+    if (b.kind === "field_shelter") {
+        // Back and sides boarded, the front open (the animals walk in), a lean-to roof falling to the back.
+        const [, right, back, left] = sides(f, w, d);
+        for (const side of [back, right, left]) {
+            solid.box(side.frame, 0, -0.2, -0.06, side.length, b.eaves + 0.2, 0.12, TIMBER_BOARD);
+            for (let u = -side.length / 2 + 0.3; u < side.length / 2; u += 0.3) solid.box(side.frame, u, 0, 0.005, 0.03, b.eaves, 0.03, tone("#5e442c"));
+        }
+        for (const lx of [-w / 2 + 0.1, w / 2 - 0.1]) solid.box(f, lx, -0.2, d / 2 - 0.1, 0.16, b.top + 0.1, 0.16, tone("#6a4e34"));
+        solid.box(f, 0, b.top - 0.12, d / 2 - 0.1, w, 0.16, 0.18, tone("#6a4e34"));
+        const a = at(f, -w / 2 - 0.25, b.top, d / 2 + 0.35);
+        const c = at(f, w / 2 + 0.25, b.top, d / 2 + 0.35);
+        const e = at(f, w / 2 + 0.25, b.eaves, -d / 2 - 0.3);
+        const g = at(f, -w / 2 - 0.25, b.eaves, -d / 2 - 0.3);
+        solid.quad(g, e, c, a, GREEN_SHEET);
+        solid.quad(a, c, e, g, tone("#3a4a3c"));
+        // Straw on its floor.
+        solid.box(f, 0, 0, -0.2, w - 0.4, 0.06, d - 0.8, tone("#cdb46a"));
+        return;
+    }
+    if (b.kind === "pig_ark") {
+        // A half-barrel of corrugated sheet along local z, its back end closed, its front end with a pophole.
+        const n = 9;
+        const rad = w / 2;
+        const sheet = r() < 0.5 ? GALV_SHEET : RUST_SHEET;
+        for (let i = 0; i < n; i++) {
+            const a0 = (i / n) * Math.PI;
+            const a1 = ((i + 1) / n) * Math.PI;
+            const p = (a: number, lz: number) => at(f, Math.cos(a) * rad, Math.sin(a) * rad * 0.9 - 0.15, lz);
+            const k = 0.78 + 0.22 * Math.sin((a0 + a1) / 2);
+            const col: [number, number, number] = [sheet[0] * k, sheet[1] * k, sheet[2] * k];
+            solid.quad(p(a1, -d / 2), p(a0, -d / 2), p(a0, d / 2), p(a1, d / 2), col);
+            solid.quad(p(a0, -d / 2), p(a1, -d / 2), p(a1, d / 2), p(a0, d / 2), shade(col, 0.5));
+            // The corrugations: a ridge every other strip.
+            if (i % 2 === 0) solid.quad(p(a1, -d / 2 + 0.02), p(a0, -d / 2 + 0.02), p(a0, d / 2 - 0.02), p(a1, d / 2 - 0.02), shade(col, 1.12));
+        }
+        for (const end of [-1, 1]) {
+            const lz = (end * d) / 2;
+            for (let i = 0; i < n; i++) {
+                const a0 = (i / n) * Math.PI;
+                const a1 = ((i + 1) / n) * Math.PI;
+                const p0 = at(f, Math.cos(a0) * rad, Math.sin(a0) * rad * 0.9 - 0.15, lz);
+                const p1 = at(f, Math.cos(a1) * rad, Math.sin(a1) * rad * 0.9 - 0.15, lz);
+                const mid = at(f, 0, -0.15, lz);
+                // (The front end's pophole: the middle third open at the bottom.)
+                if (end > 0 && i >= 3 && i <= 5) continue;
+                solid.tri(mid, p0, p1, tone("#6b5038"));
+                solid.tri(mid, p1, p0, tone("#6b5038"));
+            }
+        }
+        solid.box(f, 0, -0.1, d / 2 + 0.05, w * 0.36, 0.55, 0.06, tone("#3a2c1e"));
+        return;
+    }
+    // The mobile hen house: chassis, wheels, a boarded body, a gable roof, nest boxes, a ramp.
+    const body: Frame = {...f, y: f.y + 0.55};
+    for (const [lx, lz] of [[-w / 2 + 0.35, -d / 2 + 0.2], [w / 2 - 0.35, -d / 2 + 0.2], [w / 2 - 0.35, d / 2 - 0.2], [-w / 2 + 0.35, d / 2 - 0.2]]) {
+        solid.cylinder({...f, rot: f.rot}, lx, 0.38, lz, 0.38, 0.38, 0.1, tone("#2a2a2a"), 10);
+        solid.box(f, lx, 0, lz, 0.1, 0.55, 0.1, tone("#4a4a48"));
+    }
+    solid.box(f, 0, 0.4, 0, w - 0.1, 0.15, d - 0.3, tone("#4a4a48"));
+    const wall = tone(pick(["#6f8a5a", "#8a6a48", "#b9ad8a"], r));
+    solid.box(body, 0, 0, 0, w - 0.2, b.eaves - 0.55, d - 0.5, wall);
+    for (let u = -w / 2 + 0.3; u < w / 2 - 0.2; u += 0.25) solid.box(body, u, 0, d / 2 - 0.24, 0.02, b.eaves - 0.55, 0.02, shade(wall, 0.8));
+    solid.gable(body, 0, b.eaves - 0.55, 0, w - 0.2, d - 0.5, 0.6, 0.18, tone("#3e4a3e"), wall);
+    // Nest boxes along the back, a pophole and its ramp at the front.
+    solid.box(body, 0, 0.35, -d / 2 + 0.05, w * 0.7, 0.55, 0.42, shade(wall, 0.9));
+    solid.box(body, 0, 0.9, -d / 2 + 0.05, w * 0.74, 0.08, 0.5, tone("#3e4a3e"));
+    solid.box(body, w * 0.2, 0.05, d / 2 - 0.2, 0.4, 0.45, 0.04, tone("#2a1e14"));
+    const top = at(body, w * 0.2, 0.05, d / 2 - 0.2);
+    const foot = at(f, w * 0.2, 0, d / 2 + 0.1);
+    solid.quad([top[0] - 0.2, top[1], top[2]], [top[0] + 0.2, top[1], top[2]], [foot[0] + 0.2, foot[1] + 0.02, foot[2]], [foot[0] - 0.2, foot[1] + 0.02, foot[2]], tone("#8a6a48"));
+}
+
 // MARK: - The downtown's towers (p2 (land))
 
 /** p2 (land): a tower's look by its id: its curtain wall's glass, its frame (the floor bands and corner piers), its podium. */
@@ -999,18 +1114,24 @@ function tower(ctx: Ctx, b: Building) {
     solid.as(SURFACE.metal, () => solid.box(f, 0, b.eaves + 0.7, 0, w + 0.32, 0.06, d + 0.32, tone("#8a8c8e")));
     if (b.id !== "tower-3") solid.as(SURFACE.concrete, () => solid.box(f, 0, b.eaves + 0.75, -d * 0.3, w * 0.42, 3.6, d * 0.24, shade(frame, 0.9)));
     const sidesOf = sides(f, w, d);
+    // p5 (homes): flats on the front's and back's upper storeys (`home-rooms.ts` towerApartments): two a storey, each with a glazed
+    // winter garden standing out from the curtain wall; their windows are homes' (lit and curtained as homes are).
+    const homes = new Set(apartmentStoreys(b));
     // The office windows, a band per storey above the podium (a column a pier's width either side of each mullion).
-    for (const side of sidesOf) {
+    sidesOf.forEach((side, i) => {
         const columns = Math.max(2, Math.round((side.length - 1.8) / 2.7));
         const span = side.length - 1.8;
         for (let floor = 2; floor < b.floors; floor++) {
             const y = floor * floorH + floorH * 0.48;
+            const home = (i === 0 || i === 2) && homes.has(floor);
             for (let k = 0; k < columns; k++) {
                 const u = -span / 2 + (span * (k + 0.5)) / columns;
-                windowAt(ctx, side.frame, u, y, span / columns - 0.28, floorH * 0.74, "office", floor * 32 + k, floor);
+                if (home) windowAt(ctx, side.frame, u, y, span / columns - 0.28, floorH * 0.74, "home", floor * 4 + (i === 2 ? 2 : 0) + (u < 0 ? 0 : 1), floor);
+                else windowAt(ctx, side.frame, u, y, span / columns - 0.28, floorH * 0.74, "office", floor * 32 + k, floor);
             }
         }
-    }
+    });
+    towerBays(ctx, f, b, w, d, floorH, frame);
     // The podium: shop windows round it, the entrance and its canopy on the front.
     const podiumSides = sides(f, w + 1.2, d + 1.2);
     podiumSides.forEach((side, i) => {
@@ -1026,6 +1147,166 @@ function tower(ctx: Ctx, b: Building) {
     door(solid, front.frame, 0, tone("#2b3a44"), 2.6, 2.6);
     solid.as(SURFACE.metal, () => solid.box(front.frame, 0, 3.0, 1.2, 5.4, 0.22, 2.4, tone("#2c2f33")));
     void r;
+}
+
+/**
+ * p5 (homes): the apartments' winter gardens on a tower's front and back (`home-rooms.ts` towerApartments, the same boxes): each
+ * a slab on its storey's floor with a dark edge, posts at its corners and middle, a rail along the top and one at 1 m,
+ * open (no glass: the town's glass is mirror-dark and hid the rooms, so the rooms and their pets are seen as they are);
+ * the top one's roof slab. The rooms inside are drawn where pets live (`render/pet-homes.ts`).
+ */
+function towerBays(ctx: Ctx, front: Frame, b: Building, w: number, d: number, floorH: number, frame: [number, number, number]) {
+    for (const f of [front, {...front, rot: front.rot + Math.PI}]) towerBaysOn(ctx, f, b, w, d, floorH, frame);
+}
+
+/** One face's bays (`f`: the tower's frame turned so the face is its local +z). */
+function towerBaysOn(ctx: Ctx, f: Frame, b: Building, w: number, d: number, floorH: number, frame: [number, number, number]) {
+    const {solid} = ctx.chunk;
+    const storeys = apartmentStoreys(b);
+    if (!storeys.length) return;
+    const bw = w / 2 - 0.9;
+    for (const storey of storeys) {
+        for (const side of [-1, 1]) {
+            const cx = (side * w) / 4;
+            const cz = d / 2 + BAY_DEPTH / 2;
+            const y = storey * floorH;
+            const h = floorH - 0.36;
+            solid.as(SURFACE.concrete, () => solid.box(f, cx, y - 0.3, cz, bw + 0.2, 0.3, BAY_DEPTH + 0.1, frame));
+            if (storey === storeys[storeys.length - 1]) solid.as(SURFACE.concrete, () => solid.box(f, cx, y + floorH - 0.32, cz, bw + 0.2, 0.3, BAY_DEPTH + 0.1, frame));
+            solid.as(SURFACE.metal, () => {
+                for (const lx of [-bw / 2 + 0.05, 0, bw / 2 - 0.05]) solid.box(f, cx + lx, y, d / 2 + BAY_DEPTH - 0.06, 0.1, h, 0.1, tone("#3a3f44"));
+                for (const sx of [-1, 1]) solid.box(f, cx + sx * (bw / 2 - 0.05), y, d / 2 + 0.06, 0.1, h, 0.1, tone("#3a3f44"));
+                solid.box(f, cx, y + h - 0.08, d / 2 + BAY_DEPTH - 0.06, bw, 0.08, 0.1, tone("#3a3f44"));
+                solid.box(f, cx, y + 1.0, d / 2 + BAY_DEPTH - 0.06, bw, 0.05, 0.06, tone("#3a3f44"));
+                for (const sx of [-1, 1]) solid.box(f, cx + sx * (bw / 2 - 0.05), y + 1.0, cz, 0.06, 0.05, BAY_DEPTH - 0.1, tone("#3a3f44"));
+            });
+        }
+    }
+}
+
+// MARK: - p4 (safari): the safari park's buildings
+
+const THATCH = tone("#b39a62");
+const SAFARI_WALL = tone("#d9b98a");
+const SAFARI_TIMBER = tone("#6e5236");
+
+/** A thatched roof: a steep hip in straw colour, its eaves thick and low, a ridge cap. */
+function thatch(geo: Geo, f: Frame, y: number, w: number, d: number, rise: number) {
+    geo.hip(f, 0, y, 0, w, d, rise, 0.8, THATCH);
+    geo.hip(f, 0, y - 0.22, 0, w + 0.1, d + 0.1, rise * 0.92, 0.9, shade(THATCH, 0.78));
+}
+
+/**
+ * The safari's buildings in a lodge style that matches the town's own detail: ochre rendered walls on a stone plinth,
+ * timber posts and verandas, thatched hips; the depot a steel-clad shed, the tower a timber frame with a thatched deck.
+ */
+function safariBuilding(ctx: Ctx, b: Building) {
+    const f = buildingFrame(b.at);
+    const {solid} = ctx.chunk;
+    const w = b.at.w;
+    const d = b.at.d;
+    ctx.look = {pane: PANE.casement, surround: "render"};
+    if (b.kind === "safari_tower") {
+        // Four timber legs braced in X, a stair's landing every 4.5 m, a deck at the top under a thatched hip.
+        const top = b.eaves;
+        for (const [lx, lz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) solid.as(SURFACE.timber, () => solid.box(f, (lx * (w - 0.5)) / 2, -0.4, (lz * (d - 0.5)) / 2, 0.36, top + 0.4, 0.36, SAFARI_TIMBER));
+        for (let y = 2.5; y < top; y += 4.5) {
+            solid.as(SURFACE.timber, () => solid.box(f, 0, y, 0, w, 0.18, d, shade(SAFARI_TIMBER, 1.15)));
+            for (const [a, c] of [[[-1, -1], [1, -1]], [[1, -1], [1, 1]], [[1, 1], [-1, 1]], [[-1, 1], [-1, -1]]] as const) {
+                const p0 = at(f, (a[0] * (w - 0.5)) / 2, y - 2.3, (a[1] * (d - 0.5)) / 2);
+                const p1 = at(f, (c[0] * (w - 0.5)) / 2, y, (c[1] * (d - 0.5)) / 2);
+                solid.as(SURFACE.timber, () => strutLine(solid, p0, p1, 0.12, SAFARI_TIMBER));
+            }
+        }
+        solid.as(SURFACE.timber, () => {
+            solid.box(f, 0, top, 0, w + 1.4, 0.24, d + 1.4, shade(SAFARI_TIMBER, 1.2));
+            for (const [lx, lz, bw, bd] of [[0, (d + 1.4) / 2, w + 1.4, 0.1], [0, -(d + 1.4) / 2, w + 1.4, 0.1], [(w + 1.4) / 2, 0, 0.1, d + 1.4], [-(w + 1.4) / 2, 0, 0.1, d + 1.4]] as const) solid.box(f, lx, top + 0.24, lz, bw, 1.0, bd, SAFARI_TIMBER);
+            for (const [lx, lz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) solid.box(f, (lx * (w + 1.2)) / 2, top + 0.24, (lz * (d + 1.2)) / 2, 0.16, 2.2, 0.16, SAFARI_TIMBER);
+        });
+        thatch(solid, f, top + 2.45, w + 1.4, d + 1.4, 1.4);
+        return;
+    }
+    if (b.kind === "safari_depot") {
+        plinth(solid, f, w, d);
+        solid.as(SURFACE.metal, () => solid.box(f, 0, 0, 0, w, b.eaves, d, tone("#5f6f5a")));
+        solid.as(SURFACE.metal, () => solid.box(f, 0, b.eaves, 0, w + 0.6, 0.18, d + 0.8, tone("#4a524a")));
+        const [front] = sides(f, w, d);
+        // Three bays' roller doors facing the yard.
+        for (let k = -1; k <= 1; k++) solid.as(SURFACE.metal, () => solid.box(front.frame, k * (w / 3), 0, 0.05, w / 3 - 0.8, 3.4, 0.08, tone("#8a8f86")));
+        return;
+    }
+    // The rendered buildings: plinth, ochre walls, timber corner posts, a thatched hip.
+    plinth(solid, f, w, d);
+    solid.as(SURFACE.render, () => solid.box(f, 0, 0, 0, w, b.eaves, d, SAFARI_WALL));
+    for (const [lx, lz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) solid.as(SURFACE.timber, () => solid.box(f, (lx * w) / 2, 0, (lz * d) / 2, 0.3, b.eaves - 0.08, 0.3, SAFARI_TIMBER));
+    const [front, right, back, left] = sides(f, w, d);
+    if (b.kind === "safari_kiosk") {
+        // A serving hatch with its counter and a striped awning.
+        windowAt(ctx, front.frame, 0, 1.45, 1.5, 0.9, "zoo", 0, 0);
+        solid.as(SURFACE.timber, () => solid.box(front.frame, 0, 0.95, 0.25, 1.9, 0.08, 0.5, SAFARI_TIMBER));
+        solid.box(front.frame, 0, 2.15, 0.55, w + 0.3, 0.06, 1.1, tone("#2f6a4a"));
+        thatch(solid, f, b.eaves, w, d, 1.2);
+        return;
+    }
+    if (b.kind === "safari_lodge") {
+        // The restaurant: a long room with tall windows to the plains, a veranda on posts all along the front.
+        windowRow(ctx, front, 1, b.eaves, Math.max(3, Math.round(w / 2.6)), "zoo", () => 0, (u) => Math.abs(u) < 1.4, [1.6, 2.0]);
+        windowRow(ctx, back, 1, b.eaves, Math.max(3, Math.round(w / 3.2)), "zoo", () => 0, () => false, [1.2, 1.4]);
+        for (const side of [right, left]) windowRow(ctx, side, 1, b.eaves, 2, "zoo", () => 0, () => false, [1.2, 1.4]);
+        door(solid, front.frame, 0, tone("#6a4a2e"), 1.8, 2.4);
+        solid.as(SURFACE.timber, () => {
+            solid.box(front.frame, 0, -0.1, 1.6, w + 1.0, 0.18, 3.2, shade(SAFARI_TIMBER, 1.25));
+            for (let k = 0; k <= 5; k++) solid.box(front.frame, -w / 2 - 0.3 + (k * (w + 0.6)) / 5, 0, 3.0, 0.22, b.eaves - 0.2, 0.22, SAFARI_TIMBER);
+        });
+        thatch(solid, f, b.eaves, w + 0.2, d + 6.2, 3.6);
+        // Tables and chairs on the veranda (people implied).
+        for (let k = -2; k <= 2; k++) {
+            const t = at(front.frame, k * (w / 5.5), 0.08, 1.8);
+            solid.cylinder({x: t[0], y: t[1], z: t[2], rot: 0}, 0, 0, 0, 0.45, 0.45, 0.75, tone("#7a5a3c"), 8);
+            solid.box({x: t[0], y: t[1], z: t[2], rot: front.frame.rot}, 0.75, 0, 0, 0.45, 0.45, 0.45, SAFARI_TIMBER);
+            solid.box({x: t[0], y: t[1], z: t[2], rot: front.frame.rot}, -0.75, 0, 0, 0.45, 0.45, 0.45, SAFARI_TIMBER);
+        }
+        return;
+    }
+    // The gatehouse and the toilets: windows and doors, a thatched hip (the gatehouse's with a timber porch).
+    windowRow(ctx, front, 1, b.eaves, 2, "zoo", () => 0, (u) => Math.abs(u) < 1.0, [1.0, 1.1]);
+    door(solid, front.frame, 0, tone(b.kind === "safari_toilets" ? "#2e5a3a" : "#6a4a2e"), 1.0, 2.1);
+    if (b.kind === "safari_toilets") door(solid, back.frame, 0, tone("#2e5a3a"), 1.0, 2.1);
+    else {
+        windowRow(ctx, right, 1, b.eaves, 1, "zoo", () => 0);
+        solid.as(SURFACE.timber, () => {
+            for (const lx of [-1.4, 1.4]) solid.box(front.frame, lx, 0, 1.4, 0.22, b.eaves, 0.22, SAFARI_TIMBER);
+        });
+    }
+    thatch(solid, f, b.eaves, w + (b.kind === "safari_gate" ? 0 : 0), d + (b.kind === "safari_gate" ? 2.8 : 0), b.kind === "safari_toilets" ? 1.4 : 2.4);
+    void left;
+}
+
+/** A square timber member from a to b (a tower's brace). */
+function strutLine(geo: Geo, a: [number, number, number], b: [number, number, number], size: number, colour: [number, number, number]) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const dz = b[2] - a[2];
+    const len = Math.hypot(dx, dy, dz);
+    const yaw = Math.atan2(dx, dz);
+    const pitch = Math.atan2(Math.hypot(dx, dz), dy);
+    // (A box along +y, tipped by `pitch` toward its yaw: corners by hand, as the kit's box has no tilt.)
+    const ux = Math.sin(yaw) * Math.sin(pitch);
+    const uy = Math.cos(pitch);
+    const uz = Math.cos(yaw) * Math.sin(pitch);
+    const sx = Math.cos(yaw) * size;
+    const sz = -Math.sin(yaw) * size;
+    const tx = -Math.sin(yaw) * Math.cos(pitch) * size;
+    const ty = Math.sin(pitch) * size;
+    const tz = -Math.cos(yaw) * Math.cos(pitch) * size;
+    const c = (k: number, l: number, along: number): [number, number, number] => [a[0] + ux * len * along + sx * k + tx * l, a[1] + uy * len * along + ty * l, a[2] + uz * len * along + sz * k + tz * l];
+    const q = [c(-1, -1, 0), c(1, -1, 0), c(1, 1, 0), c(-1, 1, 0)];
+    const t = [c(-1, -1, 1), c(1, -1, 1), c(1, 1, 1), c(-1, 1, 1)];
+    for (let i = 0; i < 4; i++) {
+        const j = (i + 1) % 4;
+        geo.quad(q[i], q[j], t[j], t[i], shade(colour, 0.85 + 0.05 * i));
+        geo.quad(q[i], t[i], t[j], q[j], shade(colour, 0.85 + 0.05 * i));
+    }
 }
 
 // MARK: - Building one
@@ -1063,8 +1344,22 @@ export function buildBuilding(chunk: BuildingChunk, b: Building) {
             case "coop":
             case "shed":
                 return farmBuilding(ctx, b);
+            // p5 (rural): the countryside's milking parlour, field shelters, pig arks and mobile hen houses.
+            case "milking_parlour":
+            case "field_shelter":
+            case "pig_ark":
+            case "hen_house":
+                return ruralBuilding(ctx, b);
             case "tower":
                 return tower(ctx, b);
+            // p4 (safari): the safari park's buildings.
+            case "safari_gate":
+            case "safari_kiosk":
+            case "safari_lodge":
+            case "safari_toilets":
+            case "safari_depot":
+            case "safari_tower":
+                return safariBuilding(ctx, b);
             default:
                 return;
         }

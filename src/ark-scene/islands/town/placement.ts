@@ -23,9 +23,11 @@ import type {Placement} from "@/ark-scene/placement";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {hashText, hashTextOn, hashTextPrefix, inPoly, type Poly} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
-import {townHouseholds, farmOf, householdOf, urbanNiche, zooLayout, zooSpotsFor, townAreas, type Household, type SpotWhere, type TownSpot, type ZooEnclosure, type TownArea} from "@/ark-scene/islands/town/areas";
+import {spreadPerch, townHouseholds, farmOf, householdOf, urbanNiche, zooLayout, zooSpotsFor, townAreas, type Household, type SpotWhere, type TownSpot, type ZooEnclosure, type TownArea} from "@/ark-scene/islands/town/areas";
 import {launchEnclosures, enclosuresIn} from "@/ark-scene/islands/town/areas";
 import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
+import {safariEnclosureOf} from "@/ark-scene/islands/town/safari";
+import {stayingSet, ruralPenOf, ruralPondNorm, type RuralPen} from "@/ark-scene/islands/town/rural";
 import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
@@ -33,6 +35,7 @@ import {corners, inBox, sub, toLocal, type Box} from "@/ark-scene/islands/town/g
 import {aquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townWetlandOf} from "@/ark-scene/islands/town/wetland";
+import {gardenRoomOf, homeIndoors, roomCell, towerApartments, type IndoorPlace, type OutdoorPet} from "@/ark-scene/islands/town/home-rooms";
 
 /** The town's facts about a placed animal: its area, the spot's kind, the home, farm or enclosure, and its bounds. */
 export type TownPlace = {
@@ -67,6 +70,11 @@ export type TownPlace = {
      * half stood through the mesh ("a tapir stuck in the mesh fence").
      */
     enclosureMargin?: number;
+    /**
+     * p5 (homes): a pet over its garden's cap, indoors (`home-rooms.ts`): its home's glass garden room or a tower
+     * apartment, its cell of the room's floor. It walks about its cell on the shared clock (`roomPose`), held there.
+     */
+    room?: IndoorPlace;
 };
 
 export type TownPlacements = {places: Map<string, Placement>; town: Map<string, TownPlace>; open: string[]};
@@ -155,7 +163,10 @@ export function primeTownPlacements(key: string, result: TownPlacements, animals
     // Each animal's own spot remembered too, so any part of the list (the town's animals joining a few at a time) is free.
     if (!animals) return;
     const openKey = result.open.join(",");
-    for (const animal of animals) {
+    const all = safariAnimals(animals);
+    planIndoors(all);
+    const fieldOf = wholeFields(all);
+    for (const animal of all) {
         const placement = result.places.get(animal.id);
         const info = result.town.get(animal.id);
         if (!placement || !info) continue;
@@ -164,19 +175,42 @@ export function primeTownPlacements(key: string, result: TownPlacements, animals
         const core: Placement = {...placement};
         delete core.leader;
         delete core.rank;
-        MEMO.set(`${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}`, {placement: core, info, rank});
+        MEMO.set(`${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}|${fieldOf.get(animal.id)?.id ?? ""}${indoorTag(animal.id)}`, {placement: core, info, rank});
         if (info.pen) SPREAD.set(spreadKey(animal), {x: placement.x, z: placement.z, ground: placement.ground});
     }
 }
 
-export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonly string[]): TownPlacements {
+/** p4 (safari): each zoo resident with the enclosure the town draws it in (its safari area's, `safari.ts`, or the server's). */
+function safariAnimals(animals: readonly ArkAnimal[]): readonly ArkAnimal[] {
+    let out: ArkAnimal[] | null = null;
+    animals.forEach((a, i) => {
+        if (a.area !== "zoo") return;
+        const e = safariEnclosureOf(a);
+        if (e === (a.enclosure ?? null)) return;
+        out ??= animals.slice();
+        out[i] = {...a, enclosure: e};
+    });
+    return out ?? animals;
+}
+
+export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly string[]): TownPlacements {
     if (primed) {
-        const hit = primed.key === townPlacementKey(animals) ? primed.result : null;
+        const hit = primed.key === townPlacementKey(given) ? primed.result : null;
         if (hit) {
             primed = null;
             return hit;
         }
     }
+    const animals = safariAnimals(given);
+    // p5 (rural): who lives in the countryside's fields (the children's farm keeps a petting set, `rural.ts`). Like the
+    // homes' indoor plan below, from the whole list: while the town's animals join a few at a time (`openAs`), the last
+    // whole list's fields stand (a part would keep a different few on each farm, and animals would move as the rest
+    // came); a part with an animal the whole list never had is worked out on its own, and not kept.
+    const fieldOf = !openAs ? wholeFields(animals) : lastFields && animals.every((a) => lastFields!.ids.has(a.id)) ? lastFields.fields : ruralFields(animals);
+    // p5 (homes): which of the homes' outdoor pets live indoors (the garden cap), before anyone is placed. (While the
+    // town's animals join a few at a time, `openAs`, the whole list's plan stands: from the prebuild's prime or the last
+    // whole read; a part of the list would cap each garden by the part, and pets would move as the rest came.)
+    if (!openAs) planIndoors(animals);
     // (`openAs`: the enclosures open for the whole town while only some of its animals are laid out: they join a few at a time.)
     const open = openAs ? [...openAs] : enclosuresIn(animals);
     const openNames = open.length ? open : launchEnclosures();
@@ -221,7 +255,7 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
     // A zoo enclosure's kinds: the first of each kind leads the rest of its kind there.
     const zooLeads = new Map<string, {leader: string; at: string; count: number}>();
     for (const animal of animals) {
-        if (animal.area !== "zoo") continue;
+        if (animal.area !== "zoo" || fieldOf.has(animal.id)) continue;
         const key = `${animal.enclosure ?? ""}|${animal.kind_species_profile_id ?? animal.species_profile_id}`;
         const c = zooLeads.get(key);
         if (!c) zooLeads.set(key, {leader: animal.id, at: animal.arrived_at, count: 1});
@@ -239,14 +273,14 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
         // Who it keeps to (a zoo kind's first in its enclosure; a wildlife cluster's first): the only part that depends on
         // who else is aboard, worked out fresh. Its spot and its step off it are its own (remembered across snapshots).
         let leader: string | undefined;
-        if (animal.area === "zoo") {
+        if (animal.area === "zoo" && !fieldOf.has(animal.id)) {
             const lead = zooLeads.get(`${animal.enclosure ?? ""}|${animal.kind_species_profile_id ?? animal.species_profile_id}`);
             if (lead && lead.count > 1) leader = lead.leader;
         } else if (!animal.area) {
             const cluster = clusters.get(clusterKey(animal));
             if (cluster && cluster.count > 1) leader = cluster.leader;
         }
-        const memoKey = `${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}`;
+        const memoKey = `${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}|${fieldOf.get(animal.id)?.id ?? ""}${indoorTag(animal.id)}`;
         const hit = MEMO.get(memoKey);
         if (hit) {
             const placement: Placement = {...hit.placement};
@@ -269,7 +303,15 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
         let held: {x: number; z: number; y: number; yaw: number} | null = null;
         const plan = modelBase(slug)?.plan ?? null;
         const keeping: HomeKeeping | null = animal.area === "house" ? homeKeeping(slug, animal.zone, length, plan) : null;
-        if (animal.area === "house" && keeping !== "livery") {
+        // p5 (rural): livestock and poultry of the homes, the farms and the children's farm (past its petting set) in
+        // the countryside's fields, by their kind (`rural.ts` ruralPenOf).
+        const field = fieldOf.get(animal.id);
+        if (field) {
+            const where: SpotWhere = field.kinds.includes("poultry") ? "run" : field.kinds.length ? "paddock" : "farmyard";
+            spot = ruralSpot(field, animal.id, length);
+            info = penned({area: "farm", where, place: field.id, enclosure: null, range: 9, still: false}, field.at, length);
+            rank = (own >>> 9) % 3;
+        } else if (animal.area === "house" && keeping !== "livery") {
             // Lane TB: how it is kept (`tanks.ts` homeKeeping). A pond is a house's; a long pet's vivarium or tank a house's
             // or a terrace home's (a flat's are small); a cage, a small vivarium or tank may be a flat's.
             const display = keeping === "tank" || keeping === "cage" || keeping === "vivarium" || keeping === "pond";
@@ -279,16 +321,20 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
             const pondFish = keeping === "tank" && !tankHolds(length);
             const flatOk = display && keeping !== "pond" && !pondFish && length < 0.55;
             // (Its display at a home: the pond, else the tank; the cage or vivarium only where it fits in, body and all.)
-            const displayAt = (h: Household): HomeDisplay | null => {
-                const site = homeSitesNow().get(h.id);
-                if (!site) return null;
-                const want = keeping === "pond" ? site.displays.pond ?? site.displays.tank : pondFish ? site.displays.pond : site.displays[keeping as "tank" | "cage" | "vivarium"];
-                return want && length + (want.form === "tank" || want.form === "pond" ? 0.12 : 0.04) <= want.w ? want : null;
-            };
+            const displayAt = (h: Household): HomeDisplay | null => displayFor(h, keeping!, length, pondFish);
             // (The rendezvous order of homes, the first where its display holds it: the same for every viewer, never moved by others.)
-            const home = display ? homeInOrder(animal.id, flatOk, households, (h) => displayAt(h) !== null) : householdOf(animal.id, false, households);
+            // p5 (homes): a turtle or terrapin in a tank its own, never sharing the fish's (`planTurtleTanks`).
+            const turtleHome = TURTLE_HOME.get(animal.id);
+            const home = turtleHome ?? (display ? homeInOrder(animal.id, flatOk, households, (h) => displayAt(h) !== null) : householdOf(animal.id, false, households));
             const shown = display ? displayAt(home) : null;
-            if (shown) {
+            const indoors = INDOORS.get(animal.id);
+            if (indoors && !shown) {
+                // p5 (homes): over its garden's cap: indoors in its room, its own cell of the floor (`home-rooms.ts`).
+                const c = roomCell(indoors);
+                held = {x: c.x, z: c.z, y: indoors.room.floor, yaw};
+                info = {area: "house", where: "indoor", place: indoors.room.kind === "apartment" ? indoors.room.id : home.id, enclosure: null, range: 0, still: true, keeping: keeping ?? "outdoors", room: indoors};
+                rank = 0;
+            } else if (shown) {
                 const perched = shown.form === "cage" && perchesInCage(slug, plan);
                 held = shown.form === "tank" || shown.form === "pond" ? {x: shown.x, z: shown.z, y: shown.floor, yaw} : displaySpot(shown, animal, length, perched);
                 info = {area: "house", where: "window", place: home.id, enclosure: null, range: 0, still: true, display: shown, keeping: keeping!, ...(shown.form === "tank" || shown.form === "pond" ? {tank: displayTank(shown)} : {})};
@@ -370,6 +416,8 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
             spot = clusterSpots.get(memo)!;
             // (Its place in its cluster is the server's rank, whoever else is there.)
             rank = animal.slot_rank ?? 0;
+            // p5 (census): a roosting cluster side by side along its roof, not all on its first one's spot.
+            if (spot) spot = spreadPerch(spot, rank, length);
             const area: TownArea = spot?.area ?? "garden_wildlife";
             info = {area, where: spot?.where ?? "park", place: spot?.place ?? "park", enclosure: null, range: HIGH_WHERE.has(spot?.where ?? "park") ? 1.5 : 8, still: false};
         }
@@ -407,6 +455,58 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
         MEMO.set(f.memoKey, {placement: core, info: f.info, rank: f.rank});
     }
     return {places, town, open: openNames};
+}
+
+// MARK: - p5 (rural): a spot in a countryside field
+
+/** Each town animal the countryside takes, and its field (`rural.ts` ruralPenOf; the children's farm's petting set kept). */
+/** The last whole list's fields (p5 (rural)) and who was in it: they stand while a part of the list is laid out. */
+let lastFields: {fields: Map<string, RuralPen>; ids: Set<string>} | null = null;
+function wholeFields(animals: readonly ArkAnimal[]): Map<string, RuralPen> {
+    lastFields = {fields: ruralFields(animals), ids: new Set(animals.map((a) => a.id))};
+    return lastFields.fields;
+}
+
+export function ruralFields(animals: readonly ArkAnimal[]): Map<string, RuralPen> {
+    const plan = townPlan();
+    const staying = stayingSet(animals, (id) => {
+        const farm = farmOf(id);
+        return plan.farms.find((f) => f.id === farm) ?? null;
+    });
+    const kept = (a: {id: string}) => staying.has(a.id);
+    const out = new Map<string, RuralPen>();
+    for (const a of animals) {
+        const f = ruralPenOf(a, kept);
+        if (f) out.set(a.id, f);
+    }
+    return out;
+}
+
+/**
+ * A spot in a field: a rendezvous of the animal's id over a 1.5 m grid inside its boundary (half its body and a hand
+ * in), on dry ground (never in the duck pond's water: the waterfowl on its banks) and clear of the field's shelters,
+ * arks and hen houses. Its height is the ground's there.
+ */
+const RURAL_SPOTS = new Map<string, TownSpot[]>();
+function ruralSpot(field: RuralPen, id: string, length: number): TownSpot | null {
+    const m = Math.min(Math.max(length * 0.5 + 0.3, 0.5), Math.min(field.at.w, field.at.d) / 2 - 0.2);
+    const key = `${field.id}|${m.toFixed(1)}`;
+    let list = RURAL_SPOTS.get(key);
+    if (!list) {
+        list = [];
+        const c = Math.cos(field.at.rot);
+        const sn = Math.sin(field.at.rot);
+        for (let lx = -field.at.w / 2 + m; lx <= field.at.w / 2 - m; lx += 1.5) {
+            for (let lz = -field.at.d / 2 + m; lz <= field.at.d / 2 - m; lz += 1.5) {
+                const x = field.at.x + lx * c - lz * sn;
+                const z = field.at.z + lx * sn + lz * c;
+                if (ruralPondNorm(x, z) < 1.3 || inBuilding(x, z, m + 0.2)) continue;
+                list.push({x, z, y: townHeight(x, z), area: "farm", where: "paddock", place: field.id, sizes: ["small", "medium", "large"], protected: true});
+            }
+        }
+        RURAL_SPOTS.set(key, list);
+    }
+    return pick(list, id, (s, i) => `${field.id}${i}`);
 }
 
 // MARK: - gfx (PLACE): pens, and kept animals apart
@@ -708,4 +808,107 @@ function clearOf(x: number, z: number, radius: number): [number, number] {
         if (!moved) break;
     }
     return [px, pz];
+}
+
+// MARK: - p5 (homes): the garden cap
+
+/** Each pet indoors (over its garden's cap), from the last list planned. */
+const INDOORS = new Map<string, IndoorPlace>();
+
+function indoorTag(id: string): string {
+    const p = INDOORS.get(id);
+    const t = TURTLE_HOME.get(id);
+    return (p ? `|in:${p.room.id}:${p.cell}/${p.cells}` : "") + (t ? `|tank:${t.id}` : "");
+}
+
+/** A home's display for a pet kept this way and this long (null: it does not hold it). */
+function displayFor(h: Household, keeping: HomeKeeping, length: number, pondFish: boolean): HomeDisplay | null {
+    const site = homeSitesNow().get(h.id);
+    if (!site) return null;
+    const want = keeping === "pond" ? site.displays.pond ?? site.displays.tank : pondFish ? site.displays.pond : site.displays[keeping as "tank" | "cage" | "vivarium"];
+    return want && length + (want.form === "tank" || want.form === "pond" ? 0.12 : 0.04) <= want.w ? want : null;
+}
+
+/** p5 (homes): a turtle's or terrapin's home when its own rendezvous home's tank holds fish or another turtle. */
+const TURTLE_HOME = new Map<string, Household>();
+const TURTLE = /turtle|terrapin|(^|-)slider(-|$)|cooter/;
+
+/**
+ * Turtles and terrapins kept in a home's tank each have a tank to themselves (a turtle bites and fouls a fish's water;
+ * the census found an Annam pond turtle in a 99 L tank with three fish). The fish keep their rendezvous homes; each
+ * turtle, in the order of a hash of its id, keeps its own home if its tank is free, else takes the first home in its
+ * rendezvous order whose tank holds it and is unused. Pure in the set of the homes' tank animals.
+ */
+function planTurtleTanks(animals: readonly ArkAnimal[], households: Household[]): void {
+    TURTLE_HOME.clear();
+    const used = new Set<string>();
+    const turtles: Array<{animal: ArkAnimal; length: number; flatOk: boolean}> = [];
+    for (const animal of animals) {
+        if (animal.area !== "house") continue;
+        const length = arkBody(animal).metres;
+        const plan = modelBase(animal.model_slug)?.plan ?? null;
+        const keeping = homeKeeping(animal.model_slug, animal.zone, length, plan);
+        const turtle = TURTLE.test(animal.model_slug);
+        if (keeping === "pond" && turtle) {
+            // (A pond turtle at a home with no pond is kept in its tank: that tank must be its own too.)
+            const home = homeInOrder(animal.id, false, households, (h) => displayFor(h, "pond", length, false) !== null);
+            if (displayFor(home, "pond", length, false)?.form === "tank") turtles.push({animal, length, flatOk: false});
+            continue;
+        }
+        if (keeping !== "tank") continue;
+        const pondFish = !tankHolds(length);
+        if (pondFish) continue;
+        const flatOk = length < 0.55;
+        if (turtle) {
+            turtles.push({animal, length, flatOk});
+            continue;
+        }
+        const home = homeInOrder(animal.id, flatOk, households, (h) => displayFor(h, keeping, length, false) !== null);
+        const d = displayFor(home, keeping, length, false);
+        if (d) used.add(d.id);
+    }
+    turtles.sort((a, b) => hashText(`${a.animal.id}|tank`) - hashText(`${b.animal.id}|tank`) || (a.animal.id < b.animal.id ? -1 : 1));
+    for (const t of turtles) {
+        const home = homeInOrder(t.animal.id, t.flatOk, households, (h) => {
+            const d = displayFor(h, "tank", t.length, false);
+            return d !== null && !used.has(d.id);
+        });
+        const d = displayFor(home, "tank", t.length, false);
+        if (!d || used.has(d.id)) continue;
+        used.add(d.id);
+        TURTLE_HOME.set(t.animal.id, home);
+    }
+}
+
+/** The homes' outdoor pets (as the house branch places them) and which live indoors (`home-rooms.ts` homeIndoors). */
+function planIndoors(animals: readonly ArkAnimal[]): void {
+    INDOORS.clear();
+    const households = townHouseholds();
+    planTurtleTanks(animals, households);
+    const pets: OutdoorPet[] = [];
+    for (const animal of animals) {
+        if (animal.area !== "house") continue;
+        const length = arkBody(animal).metres;
+        const plan = modelBase(animal.model_slug)?.plan ?? null;
+        const keeping = homeKeeping(animal.model_slug, animal.zone, length, plan);
+        if (keeping === "livery") continue;
+        if (keeping !== "outdoors") {
+            // (A pet whose display no home holds lives outdoors at its first home, as the house branch places it: a
+            // boa too long for a vivarium. It counts in that garden.)
+            if (TURTLE_HOME.has(animal.id)) continue;
+            const pondFish = keeping === "tank" && !tankHolds(length);
+            const flatOk = keeping !== "pond" && !pondFish && length < 0.55;
+            const home = homeInOrder(animal.id, flatOk, households, (h) => displayFor(h, keeping, length, pondFish) !== null);
+            if (displayFor(home, keeping, length, pondFish)) continue;
+            pets.push({id: animal.id, slug: animal.model_slug, plan, length, home});
+            continue;
+        }
+        pets.push({id: animal.id, slug: animal.model_slug, plan, length, home: householdOf(animal.id, false, households)});
+    }
+    const sites = homeSitesNow();
+    const found = homeIndoors(pets, (home) => {
+        const site = sites.get(home.id);
+        return site ? gardenRoomOf(site, home.kind) : null;
+    }, towerApartments());
+    found.forEach((p, id) => INDOORS.set(id, p));
 }

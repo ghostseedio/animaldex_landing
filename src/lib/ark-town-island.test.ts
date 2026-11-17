@@ -54,7 +54,8 @@ test("the zoo: 13 enclosure types, the plan's launch openings, slots as declared
     assert.equal(ZOO_ENCLOSURE_TYPES.length, 13);
     assert.equal(ZOO_LAUNCH_TOTAL, 26);
     for (const type of ZOO_ENCLOSURE_TYPES) {
-        const slots = plan.zoo.slots.filter((s) => s.type === type);
+        // p4 (safari): the safari's areas are slots of the server's types too, but not the server's numbered ones (`town/safari.ts`).
+        const slots = plan.zoo.slots.filter((s) => s.type === type && !s.safari);
         assert.equal(slots.length, ZOO_TYPES[type].slots, type);
         assert.equal(enclosuresOpen(type, ZOO_TYPES[type].residents.today), ZOO_TYPES[type].launch, `${type} opens the plan's launch count`);
     }
@@ -63,7 +64,7 @@ test("the zoo: 13 enclosure types, the plan's launch openings, slots as declared
     const launch = zooLayout(launchEnclosures());
     assert.equal(launch.enclosures.length, 26);
     assert.equal(launch.closed.length, plan.zoo.slots.length - 26 + plan.zoo.spares.length);
-    assert.ok(plan.zoo.slots.every((s) => s.id === `${s.type}-${s.rank + 1}`));
+    assert.ok(plan.zoo.slots.every((s) => s.id === (s.safari ? `safari_${s.safari}-1` : `${s.type}-${s.rank + 1}`)));
     const busy = zooLayout([...launchEnclosures(), "penguin_seal_pools-2", "small_mammals-4", "bears_wolves-4", "aviaries-9"]);
     const where = (id: string) => busy.enclosures.find((e) => e.id === id)!;
     assert.equal(where("penguin_seal_pools-2").place, "spare-1", "the lowest number first");
@@ -77,20 +78,22 @@ test("the zoo: 13 enclosure types, the plan's launch openings, slots as declared
     assert.equal(enclosuresOpen("aviaries", 0), 0);
 });
 
-test("on Part B's grid: 9 × 9 chunks of 48 segments of 1.1 m", () => {
-    assert.equal(TOWN_SEGMENTS, 432);
-    assert.ok(Math.abs(TOWN_HALF - 237.6) < 1e-9);
+// p4 (safari): the square grew from 9 × 9 to 12 × 12 chunks (the safari park's land north-west of the zoo); the chunk itself is unchanged.
+test("on Part B's grid: 12 × 12 chunks of 48 segments of 1.1 m", () => {
+    assert.equal(TOWN_SEGMENTS, 576);
+    assert.ok(Math.abs(TOWN_HALF - 316.8) < 1e-9);
     assert.ok(Math.abs(TOWN_GRID.size - 52.8) < 1e-9);
     assert.equal(TOWN_GRID.segments, 48);
-    assert.equal(TOWN_CHUNK_COUNT, 81);
+    assert.equal(TOWN_CHUNK_COUNT, 144);
     assert.equal(townChunkOf(-TOWN_HALF + 1, -TOWN_HALF + 1), 0);
-    assert.equal(townChunkOf(TOWN_HALF - 1, TOWN_HALF - 1), 80);
+    assert.equal(townChunkOf(TOWN_HALF - 1, TOWN_HALF - 1), 143);
     assert.equal(townChunkOf(10_000, 0), townChunkOf(TOWN_HALF - 0.1, 0), "off the grid: the nearest edge chunk");
 });
 
-test("bounded land: about 12 ha, the sea all round inside the square", () => {
+// p4 (safari): about 12 ha before; the safari park adds about 2.5 ha. p5 (rural): the countryside's lobe about 2.5 ha more.
+test("bounded land: about 18 ha, the sea all round inside the square", () => {
     const land = landArea(2);
-    assert.ok(land > 110_000 && land < 135_000, `${(land / 10000).toFixed(2)} ha`);
+    assert.ok(land > 165_000 && land < 190_000, `${(land / 10000).toFixed(2)} ha`);
     for (const [x, z] of [[-TOWN_HALF + 2, 0], [TOWN_HALF - 2, 0], [0, -TOWN_HALF + 2], [0, TOWN_HALF - 2]]) assert.ok(coastNorm(x, z) > 1, "the square's edge is sea");
     assert.ok(townHeight(TOWN_HALF - 2, 0) < -8, "deep water at the square's edge");
     assert.ok(Math.abs(townHeight(90, 20) - 2.6) < 0.4, "the town is flat at its level");
@@ -193,5 +196,6 @@ test("the islands: which island an animal lives on, where the page opens, the ar
     const t = toArchipelago("town", 0, 0);
     assert.ok(Math.abs(Math.hypot(t.x, t.z) - (90.25 + 250 + 210.25)) < 0.2, "the town across the strait");
     assert.ok(t.x > 0 && t.z < 0, "east-north-east");
-    assert.equal(ARK_ISLANDS.town.chunks, 9);
+    // p4 (safari): 12 × 12 chunks (was 9), the safari park's land inside the square.
+    assert.equal(ARK_ISLANDS.town.chunks, 12);
 });

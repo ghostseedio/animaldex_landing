@@ -22,11 +22,12 @@
 import {ASSETS} from "@/ark-scene/tree-pick";
 import {assetAttachRows} from "@/ark-scene/tree-assets";
 import {footprintBody, TreeSpacing, type TreeBody} from "@/ark-scene/tree-spacing";
-import {boxDistance, centroid, hashText, inPoly, local, rng, type Box, type Poly} from "@/ark-scene/islands/town/geom";
+import {boxDistance, centroid, hashText, inPoly, local, rng, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {clearOfDoors, spotBox} from "@/ark-scene/islands/town/doors";
 import {townPlan, type TownPlan, type TreeKind} from "@/ark-scene/islands/town/plan";
-import type {ZooLayout} from "@/ark-scene/islands/town/areas";
+import {zooSpotsOf, type ZooLayout} from "@/ark-scene/islands/town/areas";
+import {SAFARI_KOPJES, SAFARI_TERMITES, SAFARI_WATERS, safariWaterNorm, type SafariHabitat} from "@/ark-scene/islands/town/safari";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 
 type Species = {assets: string[]; /** Real mean height at the plan's size 1 (m). */ height: number; low?: boolean};
@@ -236,6 +237,29 @@ export function primeTownTrees(plan: TownPlan, trees: TownTree[]): void {
 
 // MARK: - The zoo's trees
 
+/**
+ * p4 (safari): each habitat's trees from the asset library's leaf-atlas species: flat-topped acacias over the plains
+ * and the lions' and hyenas' grass, a few stunted ones in the desert; the forest edge's and the tigers' broadleaves and
+ * palms; willows and palms by the water.
+ */
+const SAFARI_TREES: Record<SafariHabitat, Array<{kind: TreeKind; height: number; n: number; margin: number}>> = {
+    plains: [{kind: "acacia", height: 8.5, n: 9, margin: 5}],
+    lions: [{kind: "acacia", height: 8, n: 3, margin: 4}],
+    hyenas: [{kind: "acacia", height: 7, n: 1, margin: 4}],
+    desert: [{kind: "acacia", height: 5, n: 3, margin: 5}, {kind: "palm", height: 8, n: 1, margin: 5}],
+    forest: [{kind: "oak", height: 13, n: 4, margin: 4}, {kind: "palm", height: 10, n: 3, margin: 4}, {kind: "lime", height: 11, n: 2, margin: 4}],
+    tigers: [{kind: "oak", height: 13, n: 3, margin: 4}, {kind: "palm", height: 10, n: 2, margin: 4}, {kind: "plane", height: 12, n: 2, margin: 4}],
+    wetland: [{kind: "willow", height: 10, n: 3, margin: 4}, {kind: "palm", height: 9, n: 1, margin: 4}],
+    river: [{kind: "willow", height: 9, n: 2, margin: 4}, {kind: "palm", height: 9, n: 2, margin: 4}]
+};
+
+function safariTreeClear(x: number, z: number, spots: readonly Pt[]): boolean {
+    if (spots.some((p) => Math.hypot(p.x - x, p.z - z) < 2.4)) return false;
+    if (SAFARI_WATERS.some((w) => safariWaterNorm(w, x, z) < 1.6)) return false;
+    if (SAFARI_KOPJES.some((k) => Math.hypot(k.x - x, k.z - z) < k.r + 1.5)) return false;
+    return SAFARI_TERMITES.every((t) => Math.hypot(t.x - x, t.z - z) > 2.5);
+}
+
 const zooMemo = new WeakMap<TownPlan, Map<string, TownTree[]>>();
 
 /**
@@ -259,15 +283,19 @@ export function townZooTrees(layout: ZooLayout, plan: TownPlan = townPlan()): To
         const s = e.slot.at;
         const r = rng(hashText(`${e.slot.id}:trees`));
         const wanted: Array<{kind: TreeKind; height: number; n: number; margin: number}> =
-            e.type === "savanna_paddocks" ? [{kind: "acacia", height: 8, n: 2, margin: 5}]
+            e.slot.safari ? SAFARI_TREES[e.slot.safari]
+            : e.type === "savanna_paddocks" ? [{kind: "acacia", height: 8, n: 2, margin: 5}]
                 : e.type === "bears_wolves" ? [{kind: "pine", height: 13, n: 2, margin: 4}]
                     : e.type === "hoofstock_paddocks" ? [{kind: "oak", height: 14, n: 1, margin: 6}]
                         : ZOO_TYPES[e.type].form === "aviary" ? [{kind: "birch", height: 6, n: 1, margin: 3}] : [];
         for (const w of wanted) {
             let placed = 0;
-            for (let attempt = 0; attempt < 12 && placed < w.n; attempt++) {
+            const spots = e.slot.safari ? zooSpotsOf(e) : [];
+            for (let attempt = 0; attempt < (e.slot.safari ? w.n * 6 : 12) && placed < w.n; attempt++) {
                 const p = local(s, (r() - 0.5) * Math.max(s.w - w.margin * 2, 1), (r() - 0.5) * Math.max(s.d - w.margin * 2, 1));
                 if (inPool(e.pool, p.x, p.z)) continue;
+                // p4 (safari): clear of the residents' spots, the waters, the kopjes and the mounds.
+                if (e.slot.safari && !safariTreeClear(p.x, p.z, spots)) continue;
                 const seed = hashText(`${e.slot.id}:tree:${attempt}`);
                 const height = w.height * (0.9 + r() * 0.25);
                 const tree = settleOne(spacing, blockers, `zoo:${e.slot.id}:${attempt}`, w.kind, p.x, p.z, 1, seed, e.slot.id, Math.min(height, ZOO_TYPES[e.type].form === "aviary" ? 6.5 : height));

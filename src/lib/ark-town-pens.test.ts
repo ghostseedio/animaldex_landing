@@ -20,6 +20,7 @@ import {townHouseholds} from "@/ark-scene/islands/town/areas";
 import {keepInPen, keptGap, placeTownAnimals, type TownPlace} from "@/ark-scene/islands/town/placement";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {inBox} from "@/ark-scene/islands/town/geom";
+import {roomCell} from "@/ark-scene/islands/town/home-rooms";
 
 function animal(i: number, slug: string, area: ArkAnimal["area"], zone = "farm_garden", extra: Partial<ArkAnimal> = {}): ArkAnimal {
     return {id: `pen-${String(i).padStart(5, "0")}-${slug}`, species_profile_id: `sp-${slug}`, name: slug, scientific_name: null, model_slug: slug, zone: zone as ArkAnimal["zone"], arrived_at: `2026-10-${String(1 + (i % 28)).padStart(2, "0")}T${String(i % 24).padStart(2, "0")}:00:00Z`, brought_by: {label: "x", named: false}, mine: false, area, island: "town", enclosure: null, ...extra} as ArkAnimal;
@@ -42,10 +43,10 @@ function inset(b: Box, x: number, z: number): number {
     return Math.min(b.w / 2 - Math.abs(l.x), b.d / 2 - Math.abs(l.z));
 }
 
-function checkTown(animals: readonly ArkAnimal[]): {penned: number; outOfPen: string[]; onRails: string[]; together: string[]; inWater: string[]; dryFish: string[]; inSolid: string[]} {
+function checkTown(animals: readonly ArkAnimal[]): {penned: number; indoor: number; outOfPen: string[]; onRails: string[]; together: string[]; inWater: string[]; dryFish: string[]; inSolid: string[]} {
     const placed = placeTownAnimals(animals);
     const rooms = homeSiteFootprints(townHouseholds());
-    const out = {penned: 0, outOfPen: [] as string[], onRails: [] as string[], together: [] as string[], inWater: [] as string[], dryFish: [] as string[], inSolid: [] as string[]};
+    const out = {penned: 0, indoor: 0, outOfPen: [] as string[], onRails: [] as string[], together: [] as string[], inWater: [] as string[], dryFish: [] as string[], inSolid: [] as string[]};
     const byPlace = new Map<string, Array<{a: ArkAnimal; x: number; z: number; length: number}>>();
     for (const a of animals) {
         const info = placed.town.get(a.id) as TownPlace;
@@ -53,6 +54,12 @@ function checkTown(animals: readonly ArkAnimal[]): {penned: number; outOfPen: st
         const length = arkBody(a).metres;
         const label = `${a.model_slug} ${info.where} ${info.place} (${p.x.toFixed(1)}, ${p.z.toFixed(1)})`;
         if (info.area === "house" && (info.keeping === "tank" || info.keeping === "pond") && !info.tank) out.dryFish.push(label);
+        // p5 (homes): a pet over its garden's cap lives indoors, its spot inside its cell of its room's floor.
+        if (info.room) {
+            out.indoor++;
+            if (inset(roomCell(info.room), p.x, p.z) < 0 || Math.abs(p.ground - info.room.room.floor) > 1e-6) out.outOfPen.push(`${label}: out of its room`);
+            continue;
+        }
         const ground = !info.still && !info.tank && !info.display && info.where !== "balcony" && info.where !== "window" && (info.area === "house" || info.area === "farm");
         if (!ground) continue;
         if (info.pen) {
@@ -76,7 +83,10 @@ test("the town's kept animals: in their pens off the rails, apart, out of the wa
     const animals = keptTown();
     const check = checkTown(animals);
     console.log(`kept town: ${animals.length} animals, ${check.penned} penned on the ground`);
-    assert.ok(check.penned > 600, `${check.penned} penned`);
+    // (p5 (homes): the gardens' cap sends the pets over it indoors, each checked in its room above: outdoors and in
+    // together they are the town's kept animals, as before.)
+    assert.ok(check.penned + check.indoor > 600, `${check.penned} penned, ${check.indoor} indoors`);
+    assert.ok(check.indoor > 50, `${check.indoor} indoors`);
     assert.deepEqual(check.outOfPen, [], "out of its pen");
     assert.deepEqual(check.onRails, [], "on its pen's rails");
     assert.deepEqual(check.inWater, [], "a land animal in water");

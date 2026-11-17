@@ -572,7 +572,7 @@ type HerdDraw = {
     slug: string;
     /** A member, for its size and stats (all of a species are drawn the same size). */
     sample: ArkAnimal;
-    members: Array<{id: string; x: number; z: number; ground: number; yaw: number; water: boolean; phase: number; mine: boolean; awake: boolean; activity: ArkAnimal["activity"]; sleep?: Sleep | null}>;
+    members: Array<{id: string; x: number; z: number; ground: number; yaw: number; water: boolean; phase: number; mine: boolean; awake: boolean; activity: ArkAnimal["activity"]; sleep?: Sleep | null; home?: {x: number; z: number; ground: number}}>;
     centre: {x: number; z: number};
     radius: number;
     /** The member nearest the middle: the badge stands over it. */
@@ -2647,6 +2647,44 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             });
         });
         restingGroups = next;
+        roostTickDrawn = Number.NaN;
+    };
+    // p5 (rural): the resting figures at their roosts by the clock (the hens shut in at dusk, `islands/town/rural.ts`):
+    // placed again only when the island's tick changes (never by day), their matrices made again by the scale's reset.
+    let roostTickDrawn = 0;
+    const roostFigures = () => {
+        const tick = island?.roostTick() ?? 0;
+        if (tick === roostTickDrawn || !island) return;
+        roostTickDrawn = tick;
+        for (const group of restingGroups) {
+            let moved = false;
+            for (const m of group.members) {
+                const home = m.home ?? {x: m.x, z: m.z, ground: m.ground};
+                const at = island.roostFigure(m.id, home.x, home.z) ?? (m.home ? home : null);
+                if (!at) continue;
+                m.home = home;
+                if (at.x === m.x && at.z === m.z && at.ground === m.ground) continue;
+                m.x = at.x;
+                m.z = at.z;
+                m.ground = at.ground;
+                moved = true;
+            }
+            if (!moved) continue;
+            let x0 = Infinity;
+            let x1 = -Infinity;
+            let z0 = Infinity;
+            let z1 = -Infinity;
+            for (const m of group.members) {
+                x0 = Math.min(x0, m.x);
+                x1 = Math.max(x1, m.x);
+                z0 = Math.min(z0, m.z);
+                z1 = Math.max(z1, m.z);
+            }
+            group.centre = {x: (x0 + x1) / 2, z: (z0 + z1) / 2};
+            group.radius = Math.hypot(x1 - x0, z1 - z0) / 2;
+            group.scale = 0;
+            group.sortedAt = 0;
+        }
     };
 
     // 3.3 fix (`near-kept.ts`): the kept town animals nearest the look point, pinned outside on top of the budget, so a
@@ -3966,6 +4004,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Lane TB: a town tank's resident (the aquarium's, a home's tank, a garden pond) swims in its tank's own water.
         const tank = island && !entry.visitor ? island.tankPose(entry.animal.id, entry.length, modelHeight, reducedMotion ? 0 : clockNow()) : null;
         if (tank) return {x: tank.x, z: tank.z, base: tank.base, yaw: tank.yaw, pitch: tank.pitch, roll: 0, afloat: true, water: tank.spec};
+        // p5 (homes): a pet indoors walks about its room's floor on the shared clock (`islands/town/home-rooms.ts`).
+        const room = island && !entry.visitor && !tank ? island.roomPose(entry.animal.id, entry.length, reducedMotion ? 0 : clockNow()) : null;
+        if (room) return {x: room.x, z: room.z, base: room.base, yaw: room.yaw, pitch: 0, roll: 0, afloat: false};
         if (entry.depth && oceanRoams(entry)) return oceanPose(entry, entry.depth, modelHeight); // p2 (ocean)
         if (place.hamlet && !entry.visitor) {
             // A hamlet resident: on its spot when out, walking out of its door or back in, else at its door (drawn only when it is yours).
@@ -4079,11 +4120,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const ground = Math.max(heightAt(x, z), 0);
             // A small one stands on the slope (the sampler's normal); a big one stays upright, as it always has.
             const surface = entry.trueLength < 0.5 ? onGround(x, ground, z, wander.heading) : undefined;
-            return {x, z, base: ground, yaw: wander.heading, pitch: 0.05 * entry.rest, roll: 0, afloat: false, ...(surface ? {surface} : {})};
+            const walked: Pose = {x, z, base: ground, yaw: wander.heading, pitch: 0.05 * entry.rest, roll: 0, afloat: false, ...(surface ? {surface} : {})};
+            // p5 (rural): bound where it has walked to as well (a hen off her spot at dusk still goes in to roost).
+            if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, walked);
+            return walked;
         }
         // Asleep: a little lower at the front, as the head goes down.
         if (floating && !wander?.x && !wander?.z) return {x: place.x, z: place.z, base, yaw: place.yaw, pitch: floatPitch(floatBand?.kind), roll: 0, afloat: true, water: floating.water};
-        return {x: place.x, z: place.z, base, yaw: wander ? wander.heading : place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
+        const still: Pose = {x: place.x, z: place.z, base, yaw: wander ? wander.heading : place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
+        // p5 (rural): off its schedule too (asleep, at rest), a town animal's bound: a hen shut in her hen house at night.
+        if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, still);
+        return still;
     };
 
     // MARK: Rigs
@@ -5144,6 +5191,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             needs.set(entry.animal.model_slug, need);
         }
         // The herds' members (A14): how many as the far model this frame, the rest as specks.
+        roostFigures(); // p5 (rural)
         const herdPlans = planHerds(cameraPosition, exaggerate, now);
         for (const herd of herdPlans) {
             if (!herd.figures) continue;

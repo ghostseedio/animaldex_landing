@@ -15,6 +15,7 @@ import type {ArkAnimal} from "@/ark-scene/types";
 import type {ChunkGrid, ChunkSpan} from "@/ark-scene/streaming/chunks";
 import type {TownPlace} from "@/ark-scene/islands/town/placement";
 import {ARK_ISLANDS, townWorldOrigin} from "@/ark-scene/islands";
+import {coopPose, coopTick} from "@/ark-scene/islands/town/rural";
 import {TOWN_CHUNK_COUNT, TOWN_GRID} from "@/ark-scene/islands/town/chunks";
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
 import type {ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
@@ -121,6 +122,11 @@ export type ArkIslandScene = {
      * world frame, at its drawn length and height and the shared clock (s); null for anyone else.
      */
     tankPose: (id: string, length: number, height: number, clock: number) => {x: number; z: number; yaw: number; pitch: number; base: number; spec: WaterSpec} | null;
+    /**
+     * p5 (homes): a pet indoors (its garden room, a tower apartment: `islands/town/home-rooms.ts`): its pose now on its
+     * room's floor at the shared clock (s), world frame; null for anyone else.
+     */
+    roomPose: (id: string, length: number, clock: number) => {x: number; z: number; yaw: number; base: number} | null;
     /** Lane TB: held at its place (in a cage, a vivarium, a tank, a zoo house): never walks off it. */
     held: (id: string) => boolean;
     /**
@@ -130,6 +136,12 @@ export type ArkIslandScene = {
     figureBase: (id: string, x: number, z: number, ground: number, tall: number) => number;
     /** Lane TB (decision 255): a tank resident's figure's point and heading (its loop at a fixed moment), world frame; null for others. */
     figurePose: (id: string, length: number) => {x: number; z: number; yaw: number} | null;
+    /**
+     * p5 (rural): where a resting figure stands now by the clock when not at its own place (a hen in her hen house from
+     * dusk, world frame; `ground` her floor), else null; `roostTick` changes whenever any of them must be placed again.
+     */
+    roostFigure: (id: string, x: number, z: number) => {x: number; z: number; ground: number} | null;
+    roostTick: () => number;
     /** The most its home range may reach (m): its garden, paddock or enclosure. */
     rangeOf: (id: string) => number | null;
     /** A kept animal (house, farm, zoo): its home is never moved away from prey. */
@@ -216,6 +228,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const {homeSites, tankPose, tankBody} = await import("@/ark-scene/islands/town/tanks");
     const {clearOfHallRocks} = await import("@/ark-scene/islands/town/hall-rocks"); // p3 (solid)
     const {buildPetHomes} = await import("@/ark-scene/islands/town/render/pet-homes");
+    const {roomPose} = await import("@/ark-scene/islands/town/home-rooms"); // p5 (homes)
     const {townHouseholds} = await import("@/ark-scene/islands/town/areas");
     const {modelBase} = await import("@/ark-scene/grounding/base");
     const {sampleTownGround} = await import("@/ark-scene/islands/town/ground");
@@ -318,13 +331,16 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     let petKey = "";
     const showPetHomes = (places: Map<string, TownPlace>) => {
         const byHousehold = new Map<string, Set<string>>();
+        // p5 (homes): the rooms with pets indoors (garden rooms drawn for them too; the apartments' interiors).
+        const rooms = new Map<string, NonNullable<TownPlace["room"]>["room"]>();
         places.forEach((info) => {
+            if (info.room) rooms.set(info.room.room.id, info.room.room);
             if (!info.display) return;
             let set = byHousehold.get(info.display.household);
             if (!set) byHousehold.set(info.display.household, (set = new Set()));
             set.add(info.display.id);
         });
-        const key = Array.from(byHousehold.values(), (set) => Array.from(set).sort().join("+")).sort().join(",");
+        const key = Array.from(byHousehold.values(), (set) => Array.from(set).sort().join("+")).sort().join(",") + "|" + Array.from(rooms.keys()).sort().join(",");
         if (key === petKey) return;
         petKey = key;
         const sites = homeSites(townHouseholds());
@@ -332,11 +348,17 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const site = sites.get(household);
             return site ? [{site, displays}] : [];
         });
+        // (A garden room with pets and no displays in use is drawn too, its displays' stand empty.)
+        rooms.forEach((room) => {
+            if (room.kind !== "garden_room" || byHousehold.has(room.building)) return;
+            const site = sites.get(room.building);
+            if (site) used.push({site, displays: new Set<string>()});
+        });
         if (petHomes) {
             town.root.remove(petHomes.group);
             petHomes.dispose();
         }
-        petHomes = buildPetHomes(used);
+        petHomes = buildPetHomes(used, Array.from(rooms.values()));
         town.root.add(petHomes.group);
         petFloors = petHomes.floors;
         walkSurfacesNow();
@@ -346,6 +368,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     buildStats.wallMs = performance.now() - wallStart;
     for (const key of ["workMs", "longestMs", "wallMs"] as const) buildStats[key] = Math.round(buildStats[key]);
     const clockAt = (ms: number) => townClockAt(ms, options.offsetHours ?? 0);
+    let hoursNow = 12;
     /** Each zoo resident's feeding variant (one object each: the schedule's memo is kept per animal). */
     const feeding = new WeakMap<ScheduleAnimal, ScheduleAnimal>();
     let towned = new Map<string, TownPlace>();
@@ -416,6 +439,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         },
         update: (epochMs) => {
             const clock = clockAt(epochMs);
+            hoursNow = clock.hours; // p5 (rural): the hens' shut-in by the clock.
             town.update(clock);
             zooLife.update(clock);
             // Mobile performance lane: its transparent double-sided meshes (the zoo's glass, cage bars and nets) as two
@@ -491,6 +515,13 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             if (pen) {
                 // p3 (solid): and off what stands in the pen (a garden room, a trough, a bush), the town's colliders.
                 keepInPen(pen, towned.get(id)!.penMargin ?? 0, pose, origin.x, origin.z, collidersMemo?.set);
+                // p5 (rural): a countryside hen to her hen house at dusk, shut in until the morning (`rural.ts` coopPose).
+                const coop = coopPose(towned.get(id)!.place, id, hoursNow, pose.x - origin.x, pose.z - origin.z);
+                if (coop) {
+                    pose.x = coop.x + origin.x;
+                    pose.z = coop.z + origin.z;
+                    if (pose.base !== undefined) pose.base = townHeight(coop.x, coop.z) + coop.floor;
+                }
                 return;
             }
             const mask = towned.get(id)?.enclosure?.mask;
@@ -547,8 +578,22 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const pose = clearOfHallRocks(tank, tankPose(tank, animal, length, height, plan, clock), body.length, body.width, height);
             return {x: pose.x + origin.x, z: pose.z + origin.z, yaw: pose.yaw, pitch: pose.pitch, base: pose.base, spec: pose.spec};
         },
+        roomPose: (id, length, clock) => {
+            const room = towned.get(id)?.room;
+            if (!room) return null;
+            const pose = roomPose(room, id, length, clock);
+            return {x: pose.x + origin.x, z: pose.z + origin.z, yaw: pose.yaw, base: pose.base};
+        },
+        roostFigure: (id, x, z) => {
+            const info = towned.get(id);
+            const coop = info?.pen ? coopPose(info.place, id, hoursNow, x - origin.x, z - origin.z) : null;
+            return coop ? {x: coop.x + origin.x, z: coop.z + origin.z, ground: townHeight(coop.x, coop.z) + coop.floor} : null;
+        },
+        roostTick: () => coopTick(hoursNow),
         figureBase: (id, x, z, ground, tall) => {
             const info = towned.get(id);
+            // p5 (rural): a hen shut in stands on her hen house's floor (`roostFigure`'s ground), not the grass under it.
+            if (info?.pen && coopPose(info.place, id, hoursNow, x - origin.x, z - origin.z)?.inside) return ground;
             if (info?.tank) return Math.max(info.tank.floor + 0.05, (info.tank.floor + info.tank.top) / 2 - tall / 2);
             if (info && (info.display || info.where === "indoor" || info.where === "window" || info.where === "pool")) return ground;
             return townDrawnHeight(x - origin.x, z - origin.z, undefined, ground);

@@ -17,12 +17,13 @@
 
 // 3.3 fix: perches on the drawn roofs.
 import {buildingSolid, perchOnSurface} from "@/ark-scene/islands/town/roof-perch";
-import {corners, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
+import {corners, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, toLocal, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townBuildingFloor, townHeight} from "@/ark-scene/islands/town/ground";
 import {clearForItem, houseDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
 import {deadwoodFoot, townDeadwood} from "@/ark-scene/islands/town/deadwood";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, MILLPOND, townPlan, type Building, type Parcel, type TownPlan, type ZooSlot} from "@/ark-scene/islands/town/plan";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
+import {SAFARI_KOPJES, SAFARI_TERMITES, SAFARI_WATERS, safariArea, safariEnclosureOf, safariWaterNorm} from "@/ark-scene/islands/town/safari";
 import type {CarSpot} from "@/ark-scene/islands/town/people";
 import type {SpotWhere} from "@/ark-scene/islands/town/niche";
 import {WALL_SKIN, wallNormal} from "@/ark-scene/wall-climb";
@@ -222,7 +223,7 @@ function wildlifeSpots(plan: TownPlan): TownSpot[] {
     }
     // Hedgerows and field margins.
     for (const h of plan.hedges) {
-        if (h.kind !== "hedge" || !(h.id.startsWith("field") || h.id.includes("smallholding") || h.id.includes("farmstead"))) continue;
+        if (h.kind !== "hedge" || !(h.id.startsWith("field") || h.id.startsWith("rural") || h.id.includes("smallholding") || h.id.includes("farmstead"))) continue;
         const length = polylineLength(h.line);
         for (let a = 3; a < length; a += 8) {
             const {point} = polylineAt(h.line, a);
@@ -265,7 +266,9 @@ function urbanSpots(plan: TownPlan): TownSpot[] {
     for (const b of plan.buildings) {
         // (The floor the building is drawn on, its highest ground: its roof's spots on its drawn roof, never in it.)
         const floor = townBuildingFloor(b.at);
-        if (b.kind === "coop" || b.kind === "stable") continue;
+        // (p5 (rural): nor a pig ark's half-barrel or a mobile hen house: low shelters, as a coop is; a bird's roof spot on
+        // the curve of a pig ark stood inside it.)
+        if (b.kind === "coop" || b.kind === "stable" || b.kind === "pig_ark" || b.kind === "hen_house") continue;
         const first = out.length;
         // The ridge (or a flat roof's middle), and the eaves front and back.
         const ridge = local(b.at, 0, 0);
@@ -493,13 +496,21 @@ export function launchEnclosures(): string[] {
 }
 
 /** The open enclosures named in a snapshot's zoo animals (`enclosure`), in name order. */
-export function enclosuresIn(animals: ReadonlyArray<{area?: string | null; enclosure?: string | null}>): string[] {
+export function enclosuresIn(animals: ReadonlyArray<{area?: string | null; enclosure?: string | null; model_slug?: string; scientific_name?: string | null}>): string[] {
     const names = new Set<string>();
-    for (const a of animals) if (a.area === "zoo" && a.enclosure) names.add(a.enclosure);
+    // p4 (safari): a resident moved to the safari opens its safari area, not the zoo enclosure it was named for.
+    for (const a of animals) {
+        if (a.area !== "zoo" || !a.enclosure) continue;
+        const e = a.model_slug ? safariEnclosureOf({...a, model_slug: a.model_slug}) : a.enclosure;
+        if (e) names.add(e);
+    }
     return Array.from(names).sort();
 }
 
 function parseEnclosure(id: string): {type: ZooEnclosureType; n: number} | null {
+    // p4 (safari): a safari area takes its plan slot's own spec type.
+    const area = safariArea(id);
+    if (area) return {type: area.type, n: 1};
     const match = /^([a-z_]+)-([0-9]{1,3})$/.exec(id);
     if (!match || !(ZOO_ENCLOSURE_TYPES as readonly string[]).includes(match[1])) return null;
     return {type: match[1] as ZooEnclosureType, n: Number(match[2])};
@@ -542,6 +553,7 @@ export function zooLayout(open: readonly string[] = launchEnclosures(), plan: To
 }
 
 function enclosureOn(id: string, slot: ZooSlot, place: string, shared: boolean): ZooEnclosure {
+    if (slot.safari) return safariEnclosureOn(id, slot, place, shared);
     const spec = ZOO_TYPES[slot.type];
     const inner = sub(slot.at, 0, 0, slot.at.w - 0.8, slot.at.d - 0.8);
     const indoor = spec.form === "house";
@@ -550,6 +562,14 @@ function enclosureOn(id: string, slot: ZooSlot, place: string, shared: boolean):
     const r = rng(hashText(id));
     const enrichment = spec.enrichment.map((what) => ({what, at: local(slot.at, (r() - 0.5) * (slot.at.w - 3), (r() - 0.5) * (slot.at.d - 3))}));
     return {id, slot, place, shared, type: slot.type, mask: corners(inner), capacity: spec.capacity, pool, indoor, feeding, enrichment, feedingTimes: spec.feeding};
+}
+
+/** p4 (safari): a safari area as an enclosure: its own capacity, no raised pool (its waters are in the ground), no enrichment props. */
+function safariEnclosureOn(id: string, slot: ZooSlot, place: string, shared: boolean): ZooEnclosure {
+    const spec = ZOO_TYPES[slot.type];
+    const inner = sub(slot.at, 0, 0, slot.at.w - 0.8, slot.at.d - 0.8);
+    const feeding = local(slot.at, slot.at.w * 0.3, slot.at.d / 2 - 2.2);
+    return {id, slot, place, shared, type: slot.type, mask: corners(inner), capacity: slot.capacity ?? spec.capacity, pool: null, indoor: false, feeding, enrichment: [], feedingTimes: spec.feeding};
 }
 
 /** The open enclosures (the launch set by default). */
@@ -561,6 +581,8 @@ export function zooEnclosures(plan: TownPlan = townPlan(), open?: readonly strin
 export function openZooSlots(arrived: Partial<Record<ZooEnclosureType, number>>, plan: TownPlan = townPlan()): ZooSlot[] {
     const out: ZooSlot[] = [];
     for (const slot of plan.zoo.slots) {
+        // p4 (safari): a safari area opens by its own residents (`enclosuresIn`), not by its type's count.
+        if (slot.safari) continue;
         const spec = ZOO_TYPES[slot.type];
         const residents = arrived[slot.type] ?? 0;
         const open = residents > 0 ? Math.min(spec.slots, Math.max(1, Math.ceil(residents / spec.capacity))) : 0;
@@ -576,8 +598,23 @@ export function openZooSlots(arrived: Partial<Record<ZooEnclosureType, number>>,
  * inside a rock or a climbing frame's post.
  */
 export function zooSpotsOf(e: Pick<ZooEnclosure, "capacity" | "slot">): Pt[] {
+    if (e.slot.safari) return safariSpotsOf(e);
     const inner = sub(e.slot.at, 0, -0.6, e.slot.at.w - 2.2, e.slot.at.d - 2.6);
     return spread(inner, Math.min(e.capacity, 40), e.slot.seed);
+}
+
+/**
+ * p4 (safari): a safari area's spots, clear of its ditch (3.4 m in from the sides), its kopjes and termite mounds and
+ * the deep middle of its waters (a hippo's or a crocodile's may be in the shallows; nobody else's is in the water).
+ */
+function safariSpotsOf(e: Pick<ZooEnclosure, "capacity" | "slot">): Pt[] {
+    const inner = sub(e.slot.at, 0, 0, e.slot.at.w - 6.8, e.slot.at.d - 6.8);
+    const wet = e.slot.safari === "wetland" || e.slot.safari === "river";
+    const ok = (p: Pt) => SAFARI_KOPJES.every((k) => Math.hypot(p.x - k.x, p.z - k.z) > k.r + 1.6) && SAFARI_TERMITES.every((t) => Math.hypot(p.x - t.x, p.z - t.z) > 2.2) && SAFARI_WATERS.every((w) => safariWaterNorm(w, p.x, p.z) > (wet ? 0.55 : 1.25));
+    const want = Math.min(e.capacity, 40);
+    const all = spread(inner, want * 2, e.slot.seed).filter(ok);
+    // (Evenly through the jittered grid, which runs row by row: the whole area, not its first rows.)
+    return Array.from({length: Math.min(want, all.length)}, (_, i) => all[Math.floor((i * all.length) / Math.min(want, all.length))]);
 }
 
 function zooSpots(plan: TownPlan, open?: readonly string[]): TownSpot[] {
@@ -621,3 +658,52 @@ export {TOWN_HABITATS_BY_ZONE, urbanNiche} from "@/ark-scene/islands/town/niche"
 
 export {inBox};
 export type {Parcel};
+
+/**
+ * p5 (census): a roosting cluster's members side by side along their roof (the coordinator's census, 2026-11-17: "urban
+ * roof clusters (flats-11: 16, house-5: 13 ... sparrows, jackdaws, gulls) get ONE identical spot each"). The cluster's
+ * first keeps its spot; the rest, by their place in the cluster (`rank`), take the next places along the ridge (a flat
+ * roof's: a grid over it), then halfway down the roof's faces, a body and a half apart, each lifted onto the drawn roof
+ * there (`perchOnSurface`). Pure in the spot, the rank and the body: the same for every viewer.
+ */
+export function spreadPerch(spot: TownSpot, rank: number, length: number, plan: TownPlan = townPlan()): TownSpot {
+    if (rank <= 0 || (spot.where !== "roof" && spot.where !== "eave" && spot.where !== "ledge")) return spot;
+    const b = plan.buildings.find((x) => x.id === spot.place);
+    if (!b) return spot;
+    const gap = Math.max(length * 1.5, 0.35);
+    const floor = townBuildingFloor(b.at);
+    const at = toLocal(b.at, spot.x, spot.z);
+    const lines: Array<{lz: number; y: number; half: number}> = [];
+    if (b.roof === "flat" || spot.where === "ledge") {
+        for (let lz = -b.at.d / 2 + 0.8; lz <= b.at.d / 2 - 0.8; lz += gap) lines.push({lz, y: spot.y, half: b.at.w / 2 - 0.6});
+    } else {
+        const ridgeHalf = b.roof === "hip" ? Math.max((b.at.w - b.at.d) / 2, 0.4) : b.at.w / 2 - 0.5;
+        lines.push({lz: 0, y: floor + b.top, half: ridgeHalf});
+        // (Then halfway down the roof's two faces, lifted onto them: not the eaves, under the roof's overhang, where a
+        // bird's flight out clipped the house.)
+        // (Only a small bird on a slope: a kestrel or a gull asleep across a pitched face lay into it; the bigger ones,
+        // past the ridge's places, share them in turn.)
+        if (length < 0.25) for (const lz of [b.at.d / 4, -b.at.d / 4]) lines.push({lz, y: floor + (b.eaves + b.top) / 2 - 0.3, half: (b.roof === "hip" ? b.at.w / 2 - b.at.d / 4 : b.at.w / 2) - 0.5});
+    }
+    // (The spot's own line first, then the rest; along each, the places out from the spot both ways.)
+    lines.sort((p, q) => Math.abs(p.lz - at.z) - Math.abs(q.lz - at.z));
+    const solid = buildingSolid(b);
+    let k = rank;
+    for (const line of lines) {
+        const from = Math.max(Math.min(at.x, line.half), -line.half);
+        const places: number[] = [];
+        for (let i = 1; i <= Math.ceil((2 * line.half) / gap) + 1; i++) {
+            for (const lx of [from + i * gap, from - i * gap]) if (Math.abs(lx) <= line.half) places.push(lx);
+        }
+        // (The spot's own line skips its own place, taken by the cluster's first.)
+        const own = Math.abs(line.lz - at.z) < 0.3 ? places : [from, ...places];
+        if (k <= own.length) {
+            const p = local(b.at, own[k - 1], line.lz);
+            return {...spot, x: p.x, z: p.z, y: perchOnSurface(solid, p.x, line.y, p.z)};
+        }
+        k -= own.length;
+    }
+    // (Past every place: round them again, the first line's first.)
+    const total = rank - k;
+    return total > 0 ? spreadPerch(spot, 1 + ((rank - 1) % total), length, plan) : spot;
+}
