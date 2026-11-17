@@ -122,6 +122,11 @@ export type ArkIslandScene = {
      * world frame, at its drawn length and height and the shared clock (s); null for anyone else.
      */
     tankPose: (id: string, length: number, height: number, clock: number) => {x: number; z: number; yaw: number; pitch: number; base: number; spec: WaterSpec} | null;
+    /**
+     * p5 (homes): a pet indoors (its garden room, a tower apartment: `islands/town/home-rooms.ts`): its pose now on its
+     * room's floor at the shared clock (s), world frame; null for anyone else.
+     */
+    roomPose: (id: string, length: number, clock: number) => {x: number; z: number; yaw: number; base: number} | null;
     /** Lane TB: held at its place (in a cage, a vivarium, a tank, a zoo house): never walks off it. */
     held: (id: string) => boolean;
     /**
@@ -217,6 +222,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const {homeSites, tankPose, tankBody} = await import("@/ark-scene/islands/town/tanks");
     const {clearOfHallRocks} = await import("@/ark-scene/islands/town/hall-rocks"); // p3 (solid)
     const {buildPetHomes} = await import("@/ark-scene/islands/town/render/pet-homes");
+    const {roomPose} = await import("@/ark-scene/islands/town/home-rooms"); // p5 (homes)
     const {townHouseholds} = await import("@/ark-scene/islands/town/areas");
     const {modelBase} = await import("@/ark-scene/grounding/base");
     const {sampleTownGround} = await import("@/ark-scene/islands/town/ground");
@@ -319,13 +325,16 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     let petKey = "";
     const showPetHomes = (places: Map<string, TownPlace>) => {
         const byHousehold = new Map<string, Set<string>>();
+        // p5 (homes): the rooms with pets indoors (garden rooms drawn for them too; the apartments' interiors).
+        const rooms = new Map<string, NonNullable<TownPlace["room"]>["room"]>();
         places.forEach((info) => {
+            if (info.room) rooms.set(info.room.room.id, info.room.room);
             if (!info.display) return;
             let set = byHousehold.get(info.display.household);
             if (!set) byHousehold.set(info.display.household, (set = new Set()));
             set.add(info.display.id);
         });
-        const key = Array.from(byHousehold.values(), (set) => Array.from(set).sort().join("+")).sort().join(",");
+        const key = Array.from(byHousehold.values(), (set) => Array.from(set).sort().join("+")).sort().join(",") + "|" + Array.from(rooms.keys()).sort().join(",");
         if (key === petKey) return;
         petKey = key;
         const sites = homeSites(townHouseholds());
@@ -333,11 +342,17 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const site = sites.get(household);
             return site ? [{site, displays}] : [];
         });
+        // (A garden room with pets and no displays in use is drawn too, its displays' stand empty.)
+        rooms.forEach((room) => {
+            if (room.kind !== "garden_room" || byHousehold.has(room.building)) return;
+            const site = sites.get(room.building);
+            if (site) used.push({site, displays: new Set<string>()});
+        });
         if (petHomes) {
             town.root.remove(petHomes.group);
             petHomes.dispose();
         }
-        petHomes = buildPetHomes(used);
+        petHomes = buildPetHomes(used, Array.from(rooms.values()));
         town.root.add(petHomes.group);
         petFloors = petHomes.floors;
         walkSurfacesNow();
@@ -556,6 +571,12 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const body = tankBody(animal.model_slug, plan, length);
             const pose = clearOfHallRocks(tank, tankPose(tank, animal, length, height, plan, clock), body.length, body.width, height);
             return {x: pose.x + origin.x, z: pose.z + origin.z, yaw: pose.yaw, pitch: pose.pitch, base: pose.base, spec: pose.spec};
+        },
+        roomPose: (id, length, clock) => {
+            const room = towned.get(id)?.room;
+            if (!room) return null;
+            const pose = roomPose(room, id, length, clock);
+            return {x: pose.x + origin.x, z: pose.z + origin.z, yaw: pose.yaw, base: pose.base};
         },
         figureBase: (id, x, z, ground, tall) => {
             const info = towned.get(id);

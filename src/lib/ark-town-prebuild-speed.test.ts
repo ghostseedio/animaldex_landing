@@ -176,10 +176,10 @@ const TOWN_DIGESTS = {
     // (Pass 2, lane LAND: the millpond's bank meets its water, its wetland spots and stones, pond life at the wetland; the
     // downtown headland: its streets, three towers, the plaza, billboards.)
     // (p4 (safari): the safari areas' spots, the car park's bays.)
-    areas: "cb39ea261edf6c91",
+    areas: "b37c10a5f570dc6e",
     // (Lane GA: the ground's surface weights.)
     // (p4 (safari): the 12 × 12 grid, the safari's savanna, desert, mud, ditches and waterholes, the deeper strait.)
-    ground: "a33ce06347e49be3",
+    ground: "7afe995682426afe",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
@@ -187,7 +187,9 @@ const TOWN_DIGESTS = {
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
     // (p4 (safari): its paving, gate, waters, boardwalk, decks, boards, rails and buildings.)
-    sceneryAndBuildings: "93e71f4ef983db0f",
+    // (p5 (homes): the towers' fronts: open loggia apartments (front and back, railed, no glass so the rooms show) from the 4th storey, their windows homes'.)
+    // (p5 (rural): the countryside's buildings, boundaries and props; then the homes merged in: both together.)
+    sceneryAndBuildings: "c4046d49d0a2154d",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
@@ -197,7 +199,8 @@ const TOWN_DIGESTS = {
     // (p4 (safari): the herbivores, big cats, hyenas and crocodilians moved to the safari by the rule, `town/safari.ts`.)
     // (Pass 5 rural lane: pass 4 merged into the safari; these recomputed on that merge. Then p5 (rural): the countryside
     // lobe's land, lane, fields, pond and buildings (plan, ground, areas, scenery); the livestock and poultry moved to
-    // its fields, the farms' and the children's farm's kept few, a roof cluster spread along its roof (places).)
+    // its fields, the farms' and the children's farm's kept few, a roof cluster spread along its roof (places). Then the
+    // duck pond's bowl with its rim just over its water (ground; areas: the pond's spots on it).)
     places: "842b883bf4781c52"
 };
 
