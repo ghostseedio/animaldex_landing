@@ -80,7 +80,6 @@ Pro is an optional subscription, monthly or yearly, that includes:
 - 30 spoken replies a day in each animal's own voice (free accounts get 3)
 - 100 messages a day in the app (free accounts get 30)
 - Narrated story videos of your own photos
-- Unlimited photo and video captures
 - 42 Credits every month on the monthly plan
 - The full field guide on every card, and camera sessions of up to 15 animals
 Eligible new subscribers to the yearly plan start with a free week.
@@ -140,7 +139,6 @@ Pro is an optional subscription, monthly or yearly, that includes:
 - 30 spoken replies a day in each animal's own voice (free accounts get 3)
 - 100 messages a day in the app (free accounts get 30)
 - Narrated story videos of your own photos
-- Unlimited photo and video captures
 - 42 Credits every month on the monthly plan
 - The full field guide on every card, and camera sessions of up to 15 animals
 Eligible new subscribers to the yearly plan start with a free week.

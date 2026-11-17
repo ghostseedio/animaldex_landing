@@ -52,7 +52,7 @@ export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = 
         credits: 0,
         label: "AnimalDex Pro",
         period: "month",
-        detail: "Unlimited captures, 100 messages a day with any animal, and 42 Credits every month.",
+        detail: "100 messages a day with any animal, and 42 Credits every month.",
         fallbackPrice: "$14.99/month",
         fallbackAmount: 14.99,
         fallbackCurrency: "USD"
@@ -63,7 +63,7 @@ export const WEB_STORE_PRODUCTS: Record<WebStoreProductCode, WebStoreProduct> = 
         credits: 0,
         label: "AnimalDex Pro (yearly)",
         period: "year",
-        detail: "Unlimited captures and 100 messages a day with any animal, billed once a year.",
+        detail: "100 messages a day with any animal, billed once a year.",
         fallbackPrice: "$79.99/year",
         fallbackAmount: 79.99,
         fallbackCurrency: "USD"
@@ -97,7 +97,6 @@ export type WebStoreBenefit = {title: string; detail?: string};
 export const WEB_STORE_PRO_BENEFITS: readonly WebStoreBenefit[] = [
     {title: "Hear every animal’s voice", detail: "30 spoken replies a day, in the app."},
     {title: "Story videos of your animals", detail: "Made from your own captures, in the app."},
-    {title: "Unlimited captures", detail: "Photo and video captures don’t use Credits."},
     {title: "100 messages a day with any animal"},
     {title: "42 Credits every month", detail: "Added each time Pro renews. Unused Credits carry over."}
 ];

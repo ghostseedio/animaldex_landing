@@ -99,3 +99,12 @@ test("Pro's benefits promise only what a buyer gets: no Instagram Import, and no
     assert.ok(!webStoreProBenefits("pro_annual").some((benefit) => /Credits every month/.test(benefit.title)));
     assert.doesNotMatch(WEB_STORE_PRODUCTS.pro_annual.detail, /42 Credits/);
 });
+
+test("no Pro line promises free or unlimited captures: captures cost Credits on every plan", () => {
+    const lines = [
+        ...WEB_STORE_PRO_BENEFITS.flatMap((benefit) => [benefit.title, benefit.detail ?? ""]),
+        WEB_STORE_PRODUCTS.pro_upgrade.detail,
+        WEB_STORE_PRODUCTS.pro_annual.detail
+    ];
+    for (const line of lines) assert.doesNotMatch(line, /unlimited|don.t use Credits|without Credits/i);
+});

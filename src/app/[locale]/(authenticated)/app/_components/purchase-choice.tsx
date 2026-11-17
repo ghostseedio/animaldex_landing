@@ -92,7 +92,7 @@ export function PurchaseChoice({
             )}
             {proOnSale ? (
                 <p className="text-xs leading-5 text-white/45">
-                    Pro includes unlimited captures and 100 messages a day with any animal.
+                    Pro includes 100 messages a day with any animal and 42 Credits each time it renews.
                 </p>
             ) : null}
             <div className="flex flex-wrap gap-3 text-sm font-bold">
