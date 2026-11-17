@@ -17,7 +17,7 @@ import {BufferGeometry, DataTexture, Group, HalfFloatType, InstancedBufferAttrib
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {HUMAN_FAR, HUMAN_MAX, HUMAN_NEAR, HumanFigures, type HumanInstance} from "@/ark-scene/humans/figures";
-import {bakePeople, LEAN_FIRST, LEAN_LAST, PEOPLE_BASE, PEOPLE_FILES, PERSON_IDS, peopleGrips, peopleMatrix, peoplePose, type BakedPeople, type PeoplePose, type PersonId} from "@/ark-scene/humans/people-rig";
+import {ARM_FIRST, ARM_LAST, bakePeople, LEAN_FIRST, LEAN_LAST, PEOPLE_BASE, PEOPLE_FILES, PERSON_IDS, peopleGrips, peopleMatrix, peoplePose, type BakedPeople, type PeoplePose, type PersonId} from "@/ark-scene/humans/people-rig";
 
 const PEOPLE_GLSL = /* glsl */ `
 uniform highp sampler2D peopleBones;
@@ -44,20 +44,28 @@ mat4 peopleBoneAt(float bone) {
     return peopleBone(iAnim.x, bone) * (1.0 - iAnim.z) + peopleBone(iAnim.y, bone) * iAnim.z;
 }
 float peopleUpper(float bone) {
-    return bone > ${LEAN_FIRST - 0.5} && bone < ${LEAN_LAST + 0.5} ? 1.0 : 0.0;
+    return bone > ${LEAN_FIRST - 0.5} && bone < ${LEAN_LAST + 0.5} && !(bone > ${ARM_FIRST - 0.5} && bone < ${ARM_LAST + 0.5}) ? 1.0 : 0.0;
 }
-// The skin this frame; a driver's lean (iMisc.y, forward +) turns the upper body about the hips (iMisc.z high).
+float peopleArm(float bone) {
+    return bone > ${ARM_FIRST - 0.5} && bone < ${ARM_LAST + 0.5} ? 1.0 : 0.0;
+}
+// The skin this frame. A driver's lean (iMisc.y, forward +) turns the trunk and head about the hips (iMisc.z high);
+// the arms go with the shoulders (iMisc.w high) without turning, so the hands stay out at the wheel.
 mat4 peopleSkinMatrix() {
     mat4 m = peopleBoneAt(arkJoints.x) * arkWeights.x + peopleBoneAt(arkJoints.y) * arkWeights.y
         + peopleBoneAt(arkJoints.z) * arkWeights.z + peopleBoneAt(arkJoints.w) * arkWeights.w;
     if (abs(iMisc.y) > 0.001) {
         float upper = peopleUpper(arkJoints.x) * arkWeights.x + peopleUpper(arkJoints.y) * arkWeights.y
             + peopleUpper(arkJoints.z) * arkWeights.z + peopleUpper(arkJoints.w) * arkWeights.w;
+        float arm = peopleArm(arkJoints.x) * arkWeights.x + peopleArm(arkJoints.y) * arkWeights.y
+            + peopleArm(arkJoints.z) * arkWeights.z + peopleArm(arkJoints.w) * arkWeights.w;
         float c = cos(iMisc.y);
         float s = sin(iMisc.y);
         float p = iMisc.z;
+        float up = iMisc.w - p;
         mat4 lean = mat4(1.0, 0.0, 0.0, 0.0, 0.0, c, s, 0.0, 0.0, -s, c, 0.0, 0.0, p * (1.0 - c), -p * s, 1.0);
-        m = (lean * m) * upper + m * (1.0 - upper);
+        mat4 follow = mat4(1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, up * (c - 1.0), up * s, 1.0);
+        m = (lean * m) * upper + (follow * m) * arm + m * (1.0 - upper - arm);
     }
     return m;
 }
@@ -357,7 +365,7 @@ export class PeopleFigures {
         const hair = look.bald ? look.skin : look.hair;
         l.hair.setXYZ(k, hair[0], hair[1], hair[2]);
         l.anim.setXYZW(k, pose.rowA, pose.rowB, pose.frac, pose.person.column);
-        l.misc.setXYZW(k, h.light ?? 0, h.lean ?? 0, pose.person.hip, 0);
+        l.misc.setXYZW(k, h.light ?? 0, h.lean ?? 0, pose.person.hip, pose.person.shoulder);
     }
 
     /** Triangles of a body at each level (the largest of the twelve), for the budget's test and the report. */

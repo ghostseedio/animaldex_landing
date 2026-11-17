@@ -33,8 +33,12 @@ const frames = (n: number) =>
 async function main() {
     const params = new URLSearchParams(location.search);
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
+    // p6 (people): `?people=procedural`: the p5 figures, for before/after frames.
+    if (params.get("people") === "procedural") (globalThis as {__arkPeople?: string}).__arkPeople = "procedural";
     const template = fixture.animals[0];
-    const humans = Array.from({length: 6}, (_, i) => ({...template, id: `0000beef-0000-4000-8000-${i.toString(16).padStart(12, "0")}`, species_profile_id: "2fabfa9a-6ec9-4d71-8cf2-1933edaef6d2", name: "Human", scientific_name: "Homo sapiens", model_slug: "human", zone: "farm_garden", island: "town", area: "house", slot: 200, slot_rank: i, origin: "arrived"}));
+    // (p6 people: `?humanbase=12`: another six of the fixture's humans, whose feller swings an axe.)
+    const humanBase = Number(params.get("humanbase") ?? 0);
+    const humans = Array.from({length: 6}, (_, i) => ({...template, id: `0000beef-0000-4000-8000-${(i + humanBase).toString(16).padStart(12, "0")}`, species_profile_id: "2fabfa9a-6ec9-4d71-8cf2-1933edaef6d2", name: "Human", scientific_name: "Homo sapiens", model_slug: "human", zone: "farm_garden", island: "town", area: "house", slot: 200, slot_rank: i, origin: "arrived"}));
     const snapshot = decodeArkSnapshot({...fixture, animals: [...fixture.animals, ...humans]});
     if (!snapshot) throw new Error("fixture did not decode");
     const hours = Number(params.get("hours") ?? 10);

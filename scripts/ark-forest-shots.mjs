@@ -79,8 +79,20 @@ if (which === "humans") {
     // `--page humans`: dog walks in the whole scene (the town beside the wild island): a morning walk on a pavement,
     // close and from a little back, and an evening one.
     page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 300)));
-    await page.goto(base + "?world=v2&hours=7.8");
+    await page.goto(base + "?world=v2&hours=7.8" + (arg("people", "") ? `&people=${arg("people", "")}` : ""));
     await page.waitForFunction(() => window.__humansReady === true, null, {timeout: 400000});
+    // p6 (people): `--shots people`: the town's people by kind, near and far (`window.__humans.people`), then stop.
+    if (arg("shots", "") === "people") {
+        const views = [["p1-beach-near", 13.6, "sun", 6, 1.05, 0.8, 0], ["p1-beach-near-b", 13.6, "sun", 6, 1.05, 2.4, 2], ["p2-beach-far", 13.6, "sun", 32, 1.0, 0.8, 0], ["p3-paddle-near", 13.6, "paddle", 6, 1.2, 0.9, 0], ["p4-bench-near", 14.4, "bench", 5, 1.2, 0.5, 0], ["p5-pavement-near", 8.4, "pavement", 6, 1.25, 0.9, 0], ["p6-pavement-far", 8.4, "pavement", 28, 1.05, 0.9, 1], ["p7-car-near", 14.4, "car", 5, 1.05, 1.2, 0], ["p8-boat-near", 14.4, "boat", 7, 1.1, 1.2, 0], ["p9-dogwalk-near", 7.8, "dogwalk", 5, 1.25, 0.9, 0]];
+        for (const [name, hours, kind, distance, polar, turn, nth] of views.filter(([n]) => !arg("only", "") || arg("only", "").split(",").some((o) => n.startsWith(o)))) {
+            const state = await page.evaluate(([h, k, d, p, t, n]) => window.__humans.people(h, k, d, p, t, n), [hours, kind, distance, polar, turn, nth]);
+            await page.screenshot({path: path.join(out, `${name}.png`)});
+            console.log(name, String(state).slice(0, 400));
+        }
+        await browser.close();
+        server.close();
+        process.exit(0);
+    }
     // (Quality pass: the beach walk: the first hour a walked dog is out on the sand.)
     const beach = await page.evaluate(() => window.__humans.beachHour());
     console.log("beach", JSON.stringify(beach));
@@ -97,7 +109,7 @@ if (which === "humans") {
 }
 page.on("console", (m) => (m.text().startsWith("[forest]") || m.type() === "error") && console.log(m.type(), m.text().slice(0, 300)));
 page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 300)));
-await page.goto(base + "?world=v2&hours=" + arg("hours", "10"));
+await page.goto(base + "?world=v2&hours=" + arg("hours", "10") + (arg("people", "") ? `&people=${arg("people", "")}` : "") + (arg("humanbase", "") ? `&humanbase=${arg("humanbase", "")}` : ""));
 await page.waitForFunction(() => window.__forestReady === true, null, {timeout: 240000});
 console.log("stand", JSON.stringify(await page.evaluate(() => window.__forest.stand())));
 const info = await page.evaluate(() => window.__forest.stand());

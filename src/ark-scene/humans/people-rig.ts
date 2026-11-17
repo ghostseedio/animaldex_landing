@@ -30,9 +30,11 @@ export const PEOPLE_BONES = ["Root", "pelvis", "spine_01", "spine_02", "spine_03
 const BONE = Object.fromEntries(PEOPLE_BONES.map((name, i) => [name, i])) as Record<(typeof PEOPLE_BONES)[number], number>;
 /** Texels a body's block takes (three per bone). */
 export const PERSON_TEXELS = PEOPLE_BONES.length * 3;
-/** The bones a driver's lean turns (spine up, arms and head): texture indices 2…14. */
+/** The bones a driver's lean turns (spine up, arms and head): texture indices 2…14; the arms (5…12) only follow. */
 export const LEAN_FIRST = BONE.spine_01;
 export const LEAN_LAST = BONE.head;
+export const ARM_FIRST = BONE.clavicle_l;
+export const ARM_LAST = BONE.hand_r;
 
 export type PeopleClipName = "walk" | "dog_walk" | "carry" | "stand" | "paddle" | "sit" | "drive" | "sunback" | "sunside" | "sleep" | "sunsit" | "chop" | "saw" | "plant";
 
@@ -122,9 +124,10 @@ export type BakedPerson = {
     far: BufferGeometry;
     /** The body's first texel column in the bone texture. */
     column: number;
-    /** Standing height and hip height (model units = m). */
+    /** Standing height, hip height and shoulder height (model units = m). */
     height: number;
     hip: number;
+    shoulder: number;
     clips: Record<PeopleClipName, BakedClip>;
     /** Per row: the left and the right hand's grip points (model space, rest root at the origin), 6 floats a row. */
     grips: Float32Array;
@@ -299,6 +302,7 @@ export function bakePeople(near: Gltf, far: Gltf, clips: Gltf): BakedPeople {
         const restInv = own.map((b) => new Matrix4().multiplyMatrices(toRoot, b.matrixWorld).invert());
         const hip = new Vector3().setFromMatrixPosition(own[BONE.pelvis].matrixWorld).applyMatrix4(toRoot).y;
         const ratio = hip / canonHip;
+        const shoulder = new Vector3().setFromMatrixPosition(own[BONE.upperarm_l].matrixWorld).applyMatrix4(toRoot).y;
         const height = geometry.boundingBox!.max.y;
         const column = p * PERSON_TEXELS;
         const grips = new Float32Array(rows * 6);
@@ -396,7 +400,7 @@ export function bakePeople(near: Gltf, far: Gltf, clips: Gltf): BakedPeople {
             bone.quaternion.copy(restQ[i]);
             bone.position.copy(restP[i]);
         });
-        persons.set(id, {id, near: geometry, far: farGeometry, column, height, hip, clips: baked, grips});
+        persons.set(id, {id, near: geometry, far: farGeometry, column, height, hip, shoulder, clips: baked, grips});
     });
     return {persons, bones, width, height: rows, rows};
 }

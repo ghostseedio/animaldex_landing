@@ -28,6 +28,8 @@ const frames = (n: number) =>
 async function main() {
     const params = new URLSearchParams(location.search);
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
+    // p6 (people): `?people=procedural`: the p5 figures, for before/after frames.
+    if (params.get("people") === "procedural") (globalThis as {__arkPeople?: string}).__arkPeople = "procedural";
     const template = fixture.animals[0];
     const dogs = Array.from({length: Number(params.get("dogs") ?? 60)}, (_, i) => ({...template, id: `0000d095-0000-4000-8000-${i.toString(16).padStart(12, "0")}`, species_profile_id: `5bec1e50-0000-4000-8000-00000000000${i % BREEDS.length}`, kind_species_profile_id: DOG_KIND_ID, kind_name: "Domestic Dog", name: BREEDS[i % BREEDS.length][1], scientific_name: "Canis lupus familiaris", model_slug: BREEDS[i % BREEDS.length][0], zone: "farm_garden", island: "town", area: "house", activity: "diurnal", sociality: "group", slot: 300 + i, slot_rank: 0, origin: "arrived"}));
     const people = Array.from({length: Number(params.get("humans") ?? 112)}, (_, i) => ({...template, id: `0000beef-0000-4000-8000-${i.toString(16).padStart(12, "0")}`, species_profile_id: "2fabfa9a-6ec9-4d71-8cf2-1933edaef6d2", name: "Human", scientific_name: "Homo sapiens", model_slug: "human", zone: "farm_garden", island: "town", area: "house", slot: 200, slot_rank: i, origin: "arrived"}));
@@ -108,6 +110,54 @@ async function main() {
         return null;
     };
     (api as unknown as {beachHour: typeof beachHour}).beachHour = beachHour;
+    /**
+     * p6 (people): the town's people of a kind (`what`: beach, paddle, bench, car, boat, pavement, dogwalk; or a pose)
+     * at a pinned hour, the `nth` framed from `distance` (a clear line of sight as `walk` finds it). Waits until the
+     * rigged bodies (or, with `?people=procedural`, the p5 figures) draw.
+     */
+    type Drawn = {id: string; what: string; pose: string; x: number; y: number; z: number; yaw: number};
+    const peopleDebug = () => (window as unknown as {__arkDebug: {people: () => {rigged: boolean; drawn: {near: number; far: number}; out: Drawn[]}}}).__arkDebug.people();
+    const framePeople = async (hours: number, kind: string, distance: number, polar = 1.2, turn = 0.6, nth = 0) => {
+        handle.setHours(hours);
+        for (let i = 0; i < 60; i++) {
+            await wait(250);
+            await frames(2);
+            const s = peopleDebug();
+            if ((s.rigged || params.get("people") === "procedural") && s.out.some((h) => h.what === kind || h.pose === kind)) break;
+        }
+        const s = peopleDebug();
+        const all = s.out.filter((h) => h.what === kind || h.pose === kind);
+        const h = all[Math.min(nth, all.length - 1)];
+        if (!h) return JSON.stringify({hours, kind, none: true, kinds: Array.from(new Set(s.out.map((o) => `${o.what}/${o.pose}`)))});
+        const rig = window as unknown as {__arkDebug: {controls: {minDistance: number}; scene: Object3D}};
+        rig.__arkDebug.controls.minDistance = Math.min(rig.__arkDebug.controls.minDistance, distance);
+        const target = new Vector3(h.x, h.y + 0.7, h.z);
+        const ray = new Raycaster();
+        const clear = (az: number, p: number) => {
+            const eye = new Vector3(Math.sin(p) * Math.sin(az), Math.cos(p), Math.sin(p) * Math.cos(az)).multiplyScalar(distance).add(target);
+            ray.set(target, eye.clone().sub(target).normalize());
+            ray.far = distance + 0.6;
+            ray.near = 1.2;
+            return ray.intersectObject(rig.__arkDebug.scene, true).filter((x) => x.object.visible && (x.object as {isMesh?: boolean}).isMesh && x.object.userData.kind !== "human" && !String(x.object.name).startsWith("humans")).length === 0;
+        };
+        let azimuth = h.yaw + turn;
+        let polarNow = polar;
+        search: for (const lift of [0, 0.15, 0.3, 0.45]) {
+            for (const k of [0, 1, -1, 2, -2, 3, -3, 4, -4, 5, 6]) {
+                if (clear(h.yaw + turn + k * 0.5, polar - lift)) {
+                    azimuth = h.yaw + turn + k * 0.5;
+                    polarNow = polar - lift;
+                    break search;
+                }
+            }
+        }
+        handle.setView({target: {x: target.x, y: target.y, z: target.z}, distance, polar: polarNow, azimuth});
+        await frames(10);
+        await wait(1500);
+        await frames(4);
+        return JSON.stringify({hours, kind, of: all.length, person: h, rigged: s.rigged, drawn: s.drawn});
+    };
+    (api as unknown as {people: typeof framePeople}).people = framePeople;
     (window as unknown as {__humans: typeof api}).__humans = api;
     (window as unknown as {__humansReady: boolean}).__humansReady = true;
 }
