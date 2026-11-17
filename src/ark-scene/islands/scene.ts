@@ -27,6 +27,7 @@ import {splitTwoSided} from "@/ark-scene/runtime/two-sided";
 import {bodyShape} from "@/ark-scene/collide/bodies"; // p3 (solid)
 import {displayLength} from "@/ark-scene/sizes"; // p3 (solid)
 import type {CameraObstacle} from "@/ark-scene/runtime/camera";
+import type {MovingCar} from "@/ark-scene/islands/town/render/vehicles"; // p5 (humans)
 
 export type ArkIslandScene = {
     id: "town";
@@ -80,6 +81,8 @@ export type ArkIslandScene = {
     joining: (on: boolean) => void;
     /** Every frame: the world's clock (epoch ms), for the people implied and the zoo's day. */
     update: (epochMs: number) => void;
+    /** p5 (humans): the moving cars now (town frame) and how many the traffic has: their drivers (`humans/town-humans.ts`). */
+    movingCars?: () => {cars: readonly MovingCar[] | null; count: number};
     /**
      * Lane GB: the scene's answer for the town's moving cars (world frame, epoch seconds): the animals near a point at a
      * moment (their shared poses and L5's body radius), null while the town's schedules are not wired yet.
@@ -441,6 +444,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         },
         setShadows: town.setShadows,
         setTier: town.setTier,
+        movingCars: () => ({cars: town.vehicles.movingCars(), count: town.vehicles.sim.traffic.cars.length}), // p5 (humans)
         place: (animals, activityOf) => {
             const placed = placeTownAnimals(animals, joinOpen ?? undefined);
             // The zoo's open enclosures follow the snapshot (an arrival opening the next plot).

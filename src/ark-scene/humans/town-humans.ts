@@ -20,10 +20,11 @@
  */
 
 import {humanLook, humanUnit, sitRootY, BASE_HEIGHT, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
-import {townClockAt, weekday, type TownClock} from "@/ark-scene/islands/town/people";
+import {darkness, townClockAt, weekday, type TownClock} from "@/ark-scene/islands/town/people";
 import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {MILLPOND, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
-import {inPoly, local, type Pt} from "@/ark-scene/islands/town/geom";
+import {inBox, inPoly, local, type Pt} from "@/ark-scene/islands/town/geom";
+import {solidDistance, townSolids} from "@/ark-scene/islands/town/solids";
 import {PARK_BENCH_RING} from "@/ark-scene/islands/town/render/scenery";
 import {BOAT_ROUTES, boatFix} from "@/ark-scene/ocean-traffic";
 
@@ -102,12 +103,15 @@ export function townHumanSites(plan: TownPlan = townPlan()): TownHumanSites {
     // The beach: dry sand from 5 m above the waterline's reach to where the sand ends, on a 2.5 m grid.
     const beachArea = plan.greens.find((g) => g.kind === "beach");
     const beach: Pt[] = [];
+    // (Clear of what stands on the sand: the fish shed, the huts, the boats pulled up, the hedges' ends.)
+    const solids = townSolids([], plan);
+    const clear = (x: number, z: number, margin: number) => plan.buildings.every((b) => !inBox(b.at, x, z, margin)) && solids.every((sd) => solidDistance(sd, x, z) > margin);
     if (beachArea) {
         for (let z = 110; z < 170; z += 2.5) {
             for (let x = 50; x < 200; x += 2.5) {
                 if (!inPoly(beachArea.poly, x, z)) continue;
                 const g = sampleTownGround(x, z);
-                if (g.surface !== "sand" || g.inland < 6 || g.height < 0.9) continue;
+                if (g.surface !== "sand" || g.inland < 6 || g.height < 0.9 || !clear(x, z, 1.6)) continue;
                 // (Its whole towel on sand: the corners round it too.)
                 let ok = true;
                 for (const [dx, dz] of [[-1.2, -1.2], [1.2, -1.2], [-1.2, 1.2], [1.2, 1.2]]) {
@@ -128,7 +132,7 @@ export function townHumanSites(plan: TownPlan = townPlan()): TownHumanSites {
         const mid = sorted[Math.floor(sorted.length / 2)];
         walks.push([west, mid], [mid, east]);
     }
-    const sites = {seats, beach, walks: walks.filter(([a, b]) => walkOnSand(a, b))};
+    const sites = {seats, beach, walks: walks.filter(([a, b]) => walkOnSand(a, b, clear))};
     sitesMemo = {plan, sites};
     return sites;
 }
@@ -142,12 +146,12 @@ function benchFloor(x: number, z: number, rot: number, ground: (x: number, z: nu
 }
 
 /** Whether a straight walk between two points stays on dry sand (every metre). */
-function walkOnSand(a: Pt, b: Pt): boolean {
+function walkOnSand(a: Pt, b: Pt, clear: (x: number, z: number, margin: number) => boolean): boolean {
     const n = Math.ceil(Math.hypot(b.x - a.x, b.z - a.z));
     for (let i = 0; i <= n; i++) {
         const t = n ? i / n : 0;
         const g = sampleTownGround(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t);
-        if (g.surface !== "sand" || g.inland < 5) return false;
+        if (g.surface !== "sand" || g.inland < 5 || !clear(a.x + (b.x - a.x) * t, a.z + (b.z - a.z) * t, 0.5)) return false;
     }
     return true;
 }
@@ -256,6 +260,8 @@ export type TownHumansOptions = {
     roadHeight?: (x: number, z: number) => number;
     /** The sea's level now (the boats float on it). */
     seaLevel?: () => number;
+    /** The open sea's boats' clock (seconds: `OceanTrafficView.step`'s), when it is not the island clock's. */
+    boatSeconds?: () => number;
 };
 
 /** A seated driver's lean back (rad) so the head clears the roof: more for the tallest. */
@@ -302,6 +308,9 @@ export class TownHumans {
     private homes = new Map<string, {room: number; slot: number}>();
     private pool: DrawnHuman[] = [];
     readonly out: DrawnHuman[] = [];
+    /** The TVs on now (a room's, while someone in it watches), world frame. */
+    readonly tvs: Array<Spot & {room: string}> = [];
+    private tvPool: Array<Spot & {room: string}> = [];
 
     constructor(private readonly options: TownHumansOptions, plan: TownPlan = townPlan()) {
         this.sites = townHumanSites(plan);
@@ -351,6 +360,7 @@ export class TownHumans {
     frame(epochMs: number, cars: readonly CarFix[] | null, carCount: number): DrawnHuman[] {
         const out = this.out;
         out.length = 0;
+        this.tvs.length = 0;
         if (!this.roster.length) return out;
         const clock = townClockAt(epochMs, this.options.offsetHours ?? 0);
         const block = Math.floor(clock.hours / BLOCK_HOURS);
@@ -365,6 +375,8 @@ export class TownHumans {
             this.assigned = assignOut(this.roster.filter((id) => days.get(id) === "out"), clock, this.sites, carCount);
         }
         const rooms = this.rooms?.rooms() ?? [];
+        // Indoors the room's lamp is on once it is dark out (the scene's sun and street lamps do not reach inside).
+        const lamp = Math.min(1, darkness(clock.hours) * 1.4);
         let n = 0;
         const take = (id: string, look: HumanLook, what: DrawnHuman["what"], x: number, y: number, z: number, yaw: number, pose: HumanPoseKind, phase: number) => {
             const h = this.pool[n] ?? (this.pool[n] = {id, look, what, x, y, z, yaw, pose, phase});
@@ -379,6 +391,8 @@ export class TownHumans {
             h.phase = phase;
             h.scale = 1;
             h.lean = what === "car" ? -driverLean(look) : 0;
+            h.light = what === "home" || what === "sleep" ? (what === "sleep" ? lamp * 0.25 : lamp) : 0;
+            h.tilt = 0;
             n++;
             out.push(h);
         };
@@ -402,6 +416,15 @@ export class TownHumans {
                 const chair = room.chairs[home!.slot % Math.max(room.chairs.length, 1)];
                 const seat = tv ? room.seats[home!.slot % room.seats.length] : chair ?? room.seats[home!.slot % Math.max(room.seats.length, 1)];
                 if (seat) take(id, look, "home", ox + seat.x, sitRootY(seat.y, scale), oz + seat.z, seat.yaw, "sit", phase);
+                if (seat && tv && room.tv && !this.tvs.some((t) => t.room === room.id)) {
+                    const t = this.tvPool[this.tvs.length] ?? (this.tvPool[this.tvs.length] = {room: "", x: 0, y: 0, z: 0, yaw: 0});
+                    t.room = room.id;
+                    t.x = ox + room.tv.x;
+                    t.y = room.tv.y;
+                    t.z = oz + room.tv.z;
+                    t.yaw = room.tv.yaw;
+                    this.tvs.push(t);
+                }
                 continue;
             }
             if (day === "work") continue;
@@ -415,9 +438,13 @@ export class TownHumans {
                 }
                 case "sun": {
                     const p = this.sites.beach[what.spot];
-                    // Lying on a towel, feet to the sea (the beach faces south-east here: +z), now and then sitting up.
-                    const yaw = Math.PI * 0.85 + humanUnit(`${id}#towel`) * 0.5;
-                    take(id, look, "sun", ox + p.x, townHeight(p.x, p.z), oz + p.z, yaw, "lie", phase);
+                    // Lying on the sand, feet to the sea (the beach faces +z here), each a little their own way.
+                    const yaw = (humanUnit(`${id}#towel`) - 0.5) * 0.7;
+                    const ground = townHeight(p.x, p.z);
+                    take(id, look, "sun", ox + p.x, ground, oz + p.z, yaw, "lie", phase);
+                    // (Laid along the sand's slope: the head's end as high as the sand under it.)
+                    const reach = 1.5 * scale;
+                    out[n - 1].tilt = Math.atan2(townHeight(p.x - Math.sin(yaw) * reach, p.z - Math.cos(yaw) * reach) - ground, reach);
                     break;
                 }
                 case "walk": {
@@ -444,7 +471,7 @@ export class TownHumans {
                 case "boat": {
                     const route = BOAT_ROUTES.filter((r) => r.kind === "speedboat")[what.boat];
                     if (!route) break;
-                    const fix = boatFix(route, seconds);
+                    const fix = boatFix(route, this.options.boatSeconds?.() ?? seconds);
                     const p = helmSeat(fix, Math.min(fix.speed / route.speed, 1), this.options.seaLevel?.() ?? 0, scale);
                     take(id, look, "boat", p.x, p.y, p.z, p.yaw, "drive", phase);
                     break;
