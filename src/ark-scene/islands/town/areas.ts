@@ -17,7 +17,7 @@
 
 // 3.3 fix: perches on the drawn roofs.
 import {buildingSolid, perchOnSurface} from "@/ark-scene/islands/town/roof-perch";
-import {corners, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
+import {corners, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, toLocal, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townBuildingFloor, townHeight} from "@/ark-scene/islands/town/ground";
 import {clearForItem, houseDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
 import {deadwoodFoot, townDeadwood} from "@/ark-scene/islands/town/deadwood";
@@ -656,3 +656,46 @@ export {TOWN_HABITATS_BY_ZONE, urbanNiche} from "@/ark-scene/islands/town/niche"
 
 export {inBox};
 export type {Parcel};
+
+/**
+ * p5 (census): a roosting cluster's members side by side along their roof (the coordinator's census, 2026-11-17: "urban
+ * roof clusters (flats-11: 16, house-5: 13 ... sparrows, jackdaws, gulls) get ONE identical spot each"). The cluster's
+ * first keeps its spot; the rest, by their place in the cluster (`rank`), take the next places along the ridge (a flat
+ * roof's: a grid over it), then along the eaves front and back, a body and a half apart, each lifted onto the drawn roof
+ * there (`perchOnSurface`). Pure in the spot, the rank and the body: the same for every viewer.
+ */
+export function spreadPerch(spot: TownSpot, rank: number, length: number, plan: TownPlan = townPlan()): TownSpot {
+    if (rank <= 0 || (spot.where !== "roof" && spot.where !== "eave" && spot.where !== "ledge")) return spot;
+    const b = plan.buildings.find((x) => x.id === spot.place);
+    if (!b) return spot;
+    const gap = Math.max(length * 1.5, 0.35);
+    const floor = townBuildingFloor(b.at);
+    const at = toLocal(b.at, spot.x, spot.z);
+    const lines: Array<{lz: number; y: number; half: number}> = [];
+    if (b.roof === "flat" || spot.where === "ledge") {
+        for (let lz = -b.at.d / 2 + 0.8; lz <= b.at.d / 2 - 0.8; lz += gap) lines.push({lz, y: spot.y, half: b.at.w / 2 - 0.6});
+    } else {
+        const ridgeHalf = b.roof === "hip" ? Math.max((b.at.w - b.at.d) / 2, 0.4) : b.at.w / 2 - 0.5;
+        lines.push({lz: 0, y: floor + b.top, half: ridgeHalf});
+        for (const lz of [b.at.d / 2 + 0.2, -b.at.d / 2 - 0.2]) lines.push({lz, y: floor + b.eaves - 0.2, half: b.at.w / 2 - 0.4});
+    }
+    // (The spot's own line first, then the rest; along each, the places out from the spot both ways.)
+    lines.sort((p, q) => Math.abs(p.lz - at.z) - Math.abs(q.lz - at.z));
+    let k = rank;
+    for (const line of lines) {
+        const from = Math.max(Math.min(at.x, line.half), -line.half);
+        const places: number[] = [];
+        for (let i = 1; i <= Math.ceil((2 * line.half) / gap) + 1; i++) {
+            for (const lx of [from + i * gap, from - i * gap]) if (Math.abs(lx) <= line.half) places.push(lx);
+        }
+        // (The spot's own line skips its own place, taken by the cluster's first.)
+        const own = Math.abs(line.lz - at.z) < 0.3 ? places : [from, ...places];
+        if (k <= own.length) {
+            const p = local(b.at, own[k - 1], line.lz);
+            const solid = buildingSolid(b);
+            return {...spot, x: p.x, z: p.z, y: perchOnSurface(solid, p.x, line.y, p.z)};
+        }
+        k -= own.length;
+    }
+    return spot;
+}

@@ -23,7 +23,7 @@ import type {Placement} from "@/ark-scene/placement";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {hashText, hashTextOn, hashTextPrefix, inPoly, type Poly} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
-import {townHouseholds, farmOf, householdOf, urbanNiche, zooLayout, zooSpotsFor, townAreas, type Household, type SpotWhere, type TownSpot, type ZooEnclosure, type TownArea} from "@/ark-scene/islands/town/areas";
+import {spreadPerch, townHouseholds, farmOf, householdOf, urbanNiche, zooLayout, zooSpotsFor, townAreas, type Household, type SpotWhere, type TownSpot, type ZooEnclosure, type TownArea} from "@/ark-scene/islands/town/areas";
 import {launchEnclosures, enclosuresIn} from "@/ark-scene/islands/town/areas";
 import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import {safariEnclosureOf} from "@/ark-scene/islands/town/safari";
@@ -398,6 +398,8 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
             spot = clusterSpots.get(memo)!;
             // (Its place in its cluster is the server's rank, whoever else is there.)
             rank = animal.slot_rank ?? 0;
+            // p5 (census): a roosting cluster side by side along its roof, not all on its first one's spot.
+            if (spot) spot = spreadPerch(spot, rank, length);
             const area: TownArea = spot?.area ?? "garden_wildlife";
             info = {area, where: spot?.where ?? "park", place: spot?.place ?? "park", enclosure: null, range: HIGH_WHERE.has(spot?.where ?? "park") ? 1.5 : 8, still: false};
         }
