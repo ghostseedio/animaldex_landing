@@ -182,7 +182,8 @@ const TOWN_DIGESTS = {
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
     zoo: "3ad8a0c98288b542",
-    places: "f00bd433d7307cc9"
+    // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
+    places: "ab4725e321d03544"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {
