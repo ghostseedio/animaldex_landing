@@ -62,6 +62,10 @@ const SHOTS = [
     ["0-before", -0.6, 38, 0.7, 1.05, 0, 0],
     ["1-felling", 0.45, 26, 0.7, 1.15, 0, 0],
     ["2-felling-close", 0.45, 8, 0.7, 1.3, "crew", 0],
+    ["2-saw-close", 0.45, 5, 1.2, 1.05, "crew", 0],
+    ["2-logs-down", 0.95, 16, 0.4, 1.0, 0, 0],
+    ["2-log-close", 0.95, 9, 2.6, 1.2, "log", 0],
+    ["3-pile", 2.2, 12, 0.5, 1.15, "pile", 0],
     ["3-body", "body", 9, 0.7, 1.2, "body", 0],
     ["3-body-wide", "body", 24, 2.2, 1.1, "body", 0],
     ["3-cleared", 1.35, 24, 0.7, 1.1, 0, 0],
@@ -97,7 +101,9 @@ await page.goto(base + "?world=v2&hours=" + arg("hours", "10"));
 await page.waitForFunction(() => window.__forestReady === true, null, {timeout: 240000});
 console.log("stand", JSON.stringify(await page.evaluate(() => window.__forest.stand())));
 const info = await page.evaluate(() => window.__forest.stand());
-for (const [name, when, distance, azimuth, polar, dx] of SHOTS) {
+// (`--only a,b`: just the shots whose names start with these.)
+const only = arg("only", "").split(",").filter(Boolean);
+for (const [name, when, distance, azimuth, polar, dx] of SHOTS.filter(([n]) => !only.length || only.some((o) => n.startsWith(o)))) {
     // (The body: a few minutes after the front reached its home, framed on it.)
     const offset = when === "body" ? info.dieDay - info.start + 0.04 : when;
     if (dx === "body") {
@@ -106,13 +112,16 @@ for (const [name, when, distance, azimuth, polar, dx] of SHOTS) {
         console.log(name, state.slice(0, 300), JSON.stringify(await page.evaluate(() => window.__arkDebug.deaths())));
         continue;
     }
-    let state = await page.evaluate(([o, d, a, p]) => window.__forest.at(o, d, a, p, 0, 0), [offset, distance, azimuth, polar]);
+    // (The pile: at the stand's edge on the crew's way in.)
+    // (A log: framed on the first felled tree's top end, where its limbs lie.)
+    const pile = dx === "log" ? [info.stand.r * 0.25, -info.stand.r * 0.1] : dx === "pile" ? [Math.cos(info.bearing) * Math.max(info.stand.r - 3, 2), Math.sin(info.bearing) * Math.max(info.stand.r - 3, 2)] : [0, 0];
+    let state = await page.evaluate(([o, d, a, p, x, z]) => window.__forest.at(o, d, a, p, x, z), [offset, distance, azimuth, polar, pile[0], pile[1]]);
     if (dx === "crew") {
         const st = JSON.parse(state);
         const m = st?.crew?.[0];
         const stand = (await page.evaluate(() => window.__forest.stand())).stand;
         // (From behind the feller's shoulder, away from the tree it faces: azimuth is the camera's bearing from the target.)
-        if (m) state = await page.evaluate(([o, d, a, p, x, z]) => window.__forest.at(o, d, a, p, x, z), [offset, distance, m.yaw + Math.PI + 0.7, polar, m.x - stand.x, m.z - stand.z]);
+        if (m) state = await page.evaluate(([o, d, a, p, x, z]) => window.__forest.at(o, d, a, p, x, z), [offset, distance, m.yaw + Math.PI + azimuth, polar, m.x - stand.x, m.z - stand.z]);
     }
     await page.screenshot({path: path.join(out, `${name}.png`)});
     console.log(name, state.slice(0, 600));

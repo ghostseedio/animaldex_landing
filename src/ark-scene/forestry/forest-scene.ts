@@ -13,7 +13,8 @@ import stands from "@/ark-scene/positions/forest-stands.json";
 import {FORESTRY_VERSION, type StandTable} from "@/ark-scene/positions/forestry";
 import {ForestTrees} from "@/ark-scene/forestry/forest-trees";
 import {ForestGround, type GroundAt} from "@/ark-scene/forestry/forest-render";
-import {awayInForest, crewAt, type CrewMember} from "@/ark-scene/forestry/forest-crews";
+import {awayInForest, crewAt, toolOf, type CrewMember} from "@/ark-scene/forestry/forest-crews";
+import {ForestTools, type ToolUser} from "@/ark-scene/forestry/forest-tools";
 import type {TreeOverride} from "@/ark-scene/asset-trees";
 
 /** The record's forestry, as the snapshot carries it (AnimalDex `voyage_config` forestry + forestry_from_day). */
@@ -48,11 +49,14 @@ export class ForestScene {
     private readonly figures = new HumanFigures();
     private readonly drawn: HumanInstance[] = [];
     private readonly looks = new Map<string, HumanLook>();
+    /** The fellers' chainsaws and axes, at their hands. */
+    private readonly tools = new ForestTools();
+    private readonly toolUsers: ToolUser[] = [];
     readonly group = new Group();
 
     constructor(private readonly host: ForestHost) {
         this.earth = new ForestGround(host.ground);
-        this.group.add(this.earth.group, this.figures.group);
+        this.group.add(this.earth.group, this.figures.group, this.tools.group);
     }
 
     /** The record's forestry (each new snapshot). */
@@ -92,14 +96,18 @@ export class ForestScene {
     /** Draw the crews (after `step`, with the camera): their figures at their places, posed by their work. */
     draw(camera: Vector3, seconds: number) {
         this.drawn.length = 0;
+        this.toolUsers.length = 0;
         for (const m of this.crew) {
             let look = this.looks.get(m.id);
             if (!look) {
                 look = humanLook(m.id);
                 this.looks.set(m.id, look);
             }
-            this.drawn.push({x: m.x, y: this.host.ground(m.x, m.z), z: m.z, yaw: m.yaw, pose: m.pose, phase: m.phase, look});
+            const human: HumanInstance = {x: m.x, y: this.host.ground(m.x, m.z), z: m.z, yaw: m.yaw, pose: m.pose, phase: m.phase, look};
+            this.drawn.push(human);
+            if (m.role === "feller") this.toolUsers.push({human, tool: toolOf(m.id)});
         }
+        this.tools.update(this.toolUsers, camera, seconds);
         if (this.drawn.length || this.figures.group.visible) this.figures.setFrame(this.drawn, camera, seconds);
         this.figures.group.visible = this.drawn.length > 0;
     }
@@ -124,5 +132,6 @@ export class ForestScene {
         this.host.setOverride?.(null);
         this.earth.dispose();
         this.figures.dispose();
+        this.tools.dispose();
     }
 }

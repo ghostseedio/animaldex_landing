@@ -33,7 +33,7 @@ import {inPool} from "@/ark-scene/islands/wild/falls";
 const LEVELS = ["lod0", "lod1", "lod2", "card"] as const;
 type Level = typeof LEVELS[number];
 
-type Instance = {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4; tint: Color; fill: boolean; rank: number; woods: boolean; /** p5 (humans): in a logging stand (`setOverride`). */ ov?: boolean};
+type Instance = {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4; tint: Color; fill: boolean; rank: number; woods: boolean; /** p5 (humans): in a logging stand (`setOverride`). */ ov?: boolean; /** p5 (humans): a buttressed rainforest emergent (its stump keeps its fins). */ buttress?: boolean};
 
 /**
  * p5 (humans): logging and replanting (`forestry/forest-trees.ts`). `covers` marks the trees a stand holds (asked once
@@ -41,7 +41,7 @@ type Instance = {x: number; y: number; z: number; scale: number; height: number;
  * falling, a sapling), or null (not drawn: hauled away). `moving` asks for a re-sort every frame (a tree mid-fall).
  */
 export type TreeOverride = {
-    covers: (tree: {x: number; y: number; z: number; height: number; radius: number; matrix: Matrix4}) => boolean;
+    covers: (tree: {x: number; y: number; z: number; height: number; radius: number; matrix: Matrix4; buttress?: boolean}) => boolean;
     matrix: (tree: {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4}, into: Matrix4) => Matrix4 | null;
     moving: () => boolean;
     /** The override's own state changed (a tree fell, a sapling grew a step): re-sort once. */
@@ -368,7 +368,7 @@ export class AssetTrees {
             const frac = (value: number) => value - Math.floor(value);
             const shade = 0.9 + 0.2 * frac(item.x * 7.13 + item.z * 3.71);
             const zone = fill ? zoneAt(sampleGround(item.x, item.z)) : null;
-            entry.instances.push({x: item.x, y: item.y, z: item.z, scale: asset.scale, height: asset.height, radius: asset.radius, matrix, tint: new Color(shade, shade * (0.97 + 0.06 * frac(item.z * 5.3)), shade), fill, rank, woods: zone === "rainforest" || zone === "woodland"});
+            entry.instances.push({x: item.x, y: item.y, z: item.z, scale: asset.scale, height: asset.height, radius: asset.radius, matrix, tint: new Color(shade, shade * (0.97 + 0.06 * frac(item.z * 5.3)), shade), fill, rank, woods: zone === "rainforest" || zone === "woodland", buttress: entry.holdCrown});
         };
         worldDecor().forEach((item) => add(item, false, 0));
         forestFill().forEach((item) => add(item, true, item.rank));

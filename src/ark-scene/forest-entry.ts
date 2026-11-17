@@ -70,7 +70,7 @@ async function main() {
     handle.addDeaths?.([{key: "death:forest", animal: {id: victim.id, species_profile_id: victim.species_profile_id, name: victim.name, model_slug: victim.model_slug, zone: victim.zone, arrived_at: null, origin: "born", generation: 1, slot: victim.slot ?? null, slot_rank: victim.slot_rank ?? null, activity: null, sociality: null, status: null, area: null}, t0: dieAt / 1000, at: spot}]);
     const debug = (window as unknown as {__arkDebug: {forest?: () => unknown}}).__arkDebug;
     const api = {
-        stand: () => ({stand: g.stand, start: g.start, fromDay, day0, dieDay, spot, victim: victim.name}),
+        stand: () => ({stand: g.stand, bearing: g.bearing, start: g.start, fromDay, day0, dieDay, spot, victim: victim.name}),
         /** The world at Ark day start + `offset`, the stand framed from `distance` (azimuth, polar). */
         at: async (offset: number, distance: number, azimuth = 0.7, polar = 1.1, dx = 0, dz = 0) => {
             const epoch = t0 + (g.start + offset - day0) * (ARK_DAY_MS / 1000);

@@ -18,11 +18,12 @@ export function trunkRadius(height: number): number {
 }
 
 /**
- * How far a tree's foot spreads (m): its trunk, and for the rainforest's giants (30 m and over) their buttresses, which
- * the library's trees flare to about three trunk widths. The stump left is this wide; the feller stands outside it.
+ * How far a tree's foot spreads (m): its trunk, the rainforest's giants' (30 m and over) wider root collar, and a
+ * buttressed emergent's fins, which the library's emergents flare to about five trunk radii at any size. The feller
+ * stands outside it (at a buttressed tree, at the fins' ends, sawing them off first as loggers do).
  */
-export function footRadius(height: number): number {
-    return trunkRadius(height) * (height >= 30 ? 2.4 : 1.25);
+export function footRadius(height: number, buttress = false): number {
+    return trunkRadius(height) * (buttress ? 5 : height >= 30 ? 2.4 : 1.25);
 }
 
 type Tree = {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4};
@@ -112,7 +113,7 @@ export class ForestTrees {
                     this.keptCount++;
                     return false;
                 }
-                this.trees.push({x: tree.x, y: tree.y, z: tree.z, radius: footRadius(tree.height)});
+                this.trees.push({x: tree.x, y: tree.y, z: tree.z, radius: footRadius(tree.height, tree.buttress === true), trunk: trunkRadius(tree.height), height: tree.height, buttress: tree.buttress === true});
                 this.byStand.clear();
                 return true;
             },
@@ -144,10 +145,9 @@ export class ForestTrees {
         switch (fate.state) {
             case "standing":
                 return tree.matrix;
-            case "falling":
-            case "log": {
+            case "falling": {
                 // Hinged at its foot: tipped about the horizontal axis square to its fall, its own turn kept.
-                const fall = fate.state === "log" ? 1 : fate.fall;
+                const fall = fate.fall;
                 axis.set(Math.sin(fate.dir), 0, -Math.cos(fate.dir));
                 hinge.setFromAxisAngle(axis, (Math.PI / 2) * 0.97 * fall);
                 tree.matrix.decompose(position, turn, scaleV);
@@ -156,6 +156,9 @@ export class ForestTrees {
                 position.y += trunkRadius(tree.height) * fall;
                 return into.compose(position, turn, scaleV);
             }
+            // Down: the tree's own mesh goes (its buttressed foot would lie as a sheet at the butt); the trunk above
+            // the cut is `forest-logs.ts`'s log, the stump `forest-render.ts`'s.
+            case "log":
             case "stump":
                 return null;
             case "sapling": {
