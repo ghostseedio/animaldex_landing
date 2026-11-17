@@ -82,14 +82,14 @@ test("habitat: cleared only between the cut and the regrowth threshold; back eve
     }
 });
 
-test("deaths: only Ark-born animals living there before the logging, inside the stand, once, never revived", () => {
+test("deaths: Ark-born and carded animals (owner 2026-11-17) living there before the logging, inside the stand, once", () => {
     const homes: ForestHome[] = [];
     for (let k = 0; k < 6; k++) {
         const g = loggingAt(table, FROM, k)!;
-        homes.push({id: `in-born-${k}`, x: g.stand.x + 2, z: g.stand.z - 3, born: true, since: FROM - 10});
-        homes.push({id: `in-card-${k}`, x: g.stand.x - 2, z: g.stand.z, born: false, since: FROM - 10});
-        homes.push({id: `in-late-${k}`, x: g.stand.x, z: g.stand.z + 1, born: true, since: g.start + 0.01});
-        homes.push({id: `edge-out-${k}`, x: g.stand.x + g.stand.r + 0.5, z: g.stand.z, born: true, since: FROM - 10});
+        homes.push({id: `in-born-${k}`, x: g.stand.x + 2, z: g.stand.z - 3, since: FROM - 10});
+        homes.push({id: `in-card-${k}`, x: g.stand.x - 2, z: g.stand.z, since: FROM - 10});
+        homes.push({id: `in-late-${k}`, x: g.stand.x, z: g.stand.z + 1, since: g.start + 0.01});
+        homes.push({id: `edge-out-${k}`, x: g.stand.x + g.stand.r + 0.5, z: g.stand.z, since: FROM - 10});
     }
     // Windows of a tick each (the server's), consecutive: every death once, in its window, by its cut.
     const seen = new Map<string, number>();
@@ -104,7 +104,7 @@ test("deaths: only Ark-born animals living there before the logging, inside the 
     }
     for (let k = 0; k < 6; k++) {
         assert.ok(seen.has(`in-born-${k}`), `in-born-${k} survived`);
-        assert.ok(!seen.has(`in-card-${k}`), "a carded animal died");
+        assert.ok(seen.has(`in-card-${k}`), `in-card-${k} survived (a carded animal loses a heart)`);
         assert.ok(!seen.has(`in-late-${k}`), "a newcomer died of an old logging");
         assert.ok(!seen.has(`edge-out-${k}`), "an animal outside the stand died");
         const g = loggingAt(table, FROM, k)!;
@@ -153,6 +153,14 @@ test("log + bodies: a deforested row is said in the owner's words and its body l
     assert.equal(forestDeathRecords(rows, null, Date.parse("2026-11-21T00:00:00Z")).length, 0);
     const text = forestText(items[0], {live: {}, replay: {a: "a {animal}", an: "an {animal}"}} as never);
     assert.match(String(text), /Sun Bear died: its forest was cut down/);
+    assert.ok(!/♥/.test(String(text)), "an Ark-born death has no hearts");
+    // A carded animal (owner 2026-11-17): it lost a heart and recovers; its line says the hearts left, as a death's does.
+    const carded = [{id: 9, kind: "deforested", at: "2026-11-20T10:00:00Z", forest: {standId: 3, k: 2, x: 1, z: 2, until: 250, lives: {heartsLeft: 1, returnsDay: 260, revive: 1}}, animal: {id: "a3", species_profile_id: "sp-bear", name: "Sun Bear", model_slug: "sun-bear", zone: "rainforest", origin: "arrived", status: "recovering"}}];
+    const [one] = forestItems(carded, null, 0, () => false);
+    assert.equal(one.hearts, 1);
+    assert.match(String(forestText(one, {live: {}, replay: {a: "a {animal}", an: "an {animal}"}} as never)), /Sun Bear died: its forest was cut down · 1 ♥ left/);
+    const final = [{...carded[0], id: 10, forest: {...carded[0].forest, lives: {heartsLeft: 0, final: true}}}];
+    assert.equal(forestItems(final, null, 0, () => false)[0].hearts, undefined);
 });
 
 test("pin: forestry.ts and forest-stands.json are the server's (AnimalDex _shared/ark-positions), byte for byte", async () => {
