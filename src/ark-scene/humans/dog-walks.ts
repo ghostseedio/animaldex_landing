@@ -116,17 +116,30 @@ export function townWalkers(ids: readonly string[], plan: TownPlan = townPlan())
 }
 
 /** Where a dog walk may head for: the middle of each of the town's parks, and the beach walks' ends (the sand's edge). */
-export function dogWalkPlaces(beachWalks: ReadonlyArray<readonly [{x: number; z: number}, {x: number; z: number}]>, plan: TownPlan = townPlan()): Array<{x: number; z: number}> {
-    const out: Array<{x: number; z: number}> = [];
+export function dogWalkPlaces(beachWalks: ReadonlyArray<readonly [{x: number; z: number}, {x: number; z: number}]>, plan: TownPlan = townPlan()): DogWalkPlace[] {
+    const out: DogWalkPlace[] = [];
     for (const green of plan.greens) {
         if (green.kind !== "park" || !green.poly.length) continue;
         out.push({x: green.poly.reduce((s, p) => s + p.x, 0) / green.poly.length, z: green.poly.reduce((s, p) => s + p.z, 0) / green.poly.length});
     }
-    for (const [a, b] of beachWalks) out.push({x: a.x, z: a.z}, {x: b.x, z: b.z});
+    for (const [a, b] of beachWalks) out.push({x: a.x, z: a.z, along: {x: b.x, z: b.z}}, {x: b.x, z: b.z, along: {x: a.x, z: a.z}});
     return out;
 }
 
-type Trip = {key: string; start: number; seconds: number; stops: number[]; pauses: number[]; on: Array<[number, number]>};
+/** A place a dog walk heads for; a beach walk's end has `along`: its other end (the walk goes on along the sand that way). */
+export type DogWalkPlace = {x: number; z: number; along?: {x: number; z: number}};
+
+/** Quality pass: how far along the sand a beach dog walk goes (m) before turning back. */
+export const BEACH_STRETCH = 30;
+
+/**
+ * Quality pass: a beach dog walk's leg on the sand: from the pavement's last node (`node`) out to the sand's end of the
+ * beach walk, along it `BEACH_STRETCH` m (or half its length), and back the same way; `arrive`: the trip's second at
+ * the node; `seconds`: the leg's length in time at the dog walk's pace.
+ */
+type BeachLeg = {arrive: number; seconds: number; points: Array<{x: number; z: number}>; lengths: number[]};
+
+type Trip = {key: string; start: number; seconds: number; stops: number[]; pauses: number[]; on: Array<[number, number]>; beach?: BeachLeg};
 
 /** A dog on its walk at a moment (town frame): where, which way, and whether it has stopped to sniff. */
 export type HeelPose = {x: number; z: number; yaw: number; sniffing: boolean; speed: number};
@@ -139,10 +152,10 @@ export class DogWalks {
     private readonly lead: Array<{dog: WalkDog; side: number}> = [];
 
     /** `graph`: the town's pavements (built when first asked); `places`: named places a walk may head for (the park, the beach's end). */
-    constructor(private readonly graph: () => PavementGraph, private readonly placesOf: () => ReadonlyArray<{x: number; z: number}> = () => NONE_PLACES) {}
+    constructor(private readonly graph: () => PavementGraph, private readonly placesOf: () => ReadonlyArray<DogWalkPlace> = () => NONE_PLACES) {}
 
-    private placesMemo: ReadonlyArray<{x: number; z: number}> | null = null;
-    private get places(): ReadonlyArray<{x: number; z: number}> {
+    private placesMemo: ReadonlyArray<DogWalkPlace> | null = null;
+    private get places(): ReadonlyArray<DogWalkPlace> {
         return this.placesMemo ?? (this.placesMemo = this.placesOf());
     }
 
@@ -184,9 +197,24 @@ export class DogWalks {
         const n = g.nodes.length;
         const door = this.door(dogs[0]);
         // Somewhere 150–420 m off: a named place when one is that far (the park, the beach's end), else a corner by the day.
-        const named = this.places.map((p) => nearestNode(g, p.x, p.z)).filter((node) => g.dist[door * n + node] >= 120 && g.dist[door * n + node] <= 520);
+        const named = this.places.map((p) => ({node: nearestNode(g, p.x, p.z), place: p})).filter(({node}) => g.dist[door * n + node] >= 120 && g.dist[door * n + node] <= 520);
         const pick = humanUnit(`${key}#to`);
-        const far = named.length && pick < 0.6 ? named[Math.min(Math.floor((pick / 0.6) * named.length), named.length - 1)] : nodeFor(g, `${key}#corner`, door, 150, 420);
+        const chosen = named.length && pick < 0.6 ? named[Math.min(Math.floor((pick / 0.6) * named.length), named.length - 1)] : null;
+        const far = chosen ? chosen.node : nodeFor(g, `${key}#corner`, door, 150, 420);
+        // Quality pass: a beach's end: the walk goes on off the pavement onto the sand and along it, and back.
+        let leg: Omit<BeachLeg, "arrive"> | null = null;
+        if (chosen?.place.along) {
+            const node = g.nodes[far];
+            const a = chosen.place;
+            const b = chosen.place.along;
+            const span = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+            const reach = Math.min(BEACH_STRETCH, span * 0.5);
+            const turn = {x: a.x + ((b.x - a.x) / span) * reach, z: a.z + ((b.z - a.z) / span) * reach};
+            const points = [{x: node.x, z: node.z}, {x: a.x, z: a.z}, turn, {x: a.x, z: a.z}, {x: node.x, z: node.z}];
+            const lengths = [0];
+            for (let k = 1; k < points.length; k++) lengths.push(lengths[k - 1] + Math.hypot(points[k].x - points[k - 1].x, points[k].z - points[k - 1].z));
+            leg = {seconds: lengths[lengths.length - 1] / DOG_WALK_PACE, points, lengths};
+        }
         // A stop to sniff on the way out and one on the way back, each a short way off the straight line.
         const out = nodeFor(g, `${key}#sniff1`, door, 50, 140);
         const back = nodeFor(g, `${key}#sniff2`, door, 40, 120);
@@ -201,14 +229,15 @@ export class DogWalks {
         // (No stop twice running: a sniff stop that is the place itself, or a neighbour's door on the way.)
         stops = stops.filter((node, k) => k === 0 || node !== stops[k - 1]);
         const last = stops.length - 1;
-        const pauses = stops.map((node, k) => (k === 0 || k === last ? 0 : node === other && (k === 1 || k === last - 1) ? 5 : node === far ? 25 + humanUnit(`${key}#stay`) * 40 : 12 + humanUnit(`${key}#sniff#${k}`) * 22));
+        const pauses = stops.map((node, k) => (k === 0 || k === last ? 0 : node === other && (k === 1 || k === last - 1) ? 5 : node === far ? (leg ? leg.seconds : 0) + 25 + humanUnit(`${key}#stay`) * 40 : 12 + humanUnit(`${key}#sniff#${k}`) * 22));
         const pause = (k: number) => pauses[k] ?? 0;
         const seconds = walkSeconds(g, stops, DOG_WALK_PACE, pause);
         const begin = half === 0 ? Math.max(6.67 + humanUnit(`${key}#at`) * 2.33, wake + 0.25) : 17.17 + humanUnit(`${key}#at`) * 2.5;
         // The first dog the whole walk; a second from another home between its door's two stops.
         const on: Array<[number, number]> = [[0, seconds]];
         if (dogs[1]) on.push(other >= 0 ? [walkSeconds(g, stops.slice(0, 2), DOG_WALK_PACE, pause), walkSeconds(g, stops.slice(0, last), DOG_WALK_PACE, pause) + pause(last - 1)] : [0, seconds]);
-        t = {key, start: begin, seconds, stops, pauses, on};
+        const farAt = stops.indexOf(far);
+        t = {key, start: begin, seconds, stops, pauses, on, beach: leg && farAt > 0 ? {...leg, arrive: walkSeconds(g, stops.slice(0, farAt + 1), DOG_WALK_PACE, pause)} : undefined};
         if (this.trips.size > 600) this.trips.clear();
         this.trips.set(key, t);
         return t;
@@ -227,7 +256,22 @@ export class DogWalks {
             const dogs = this.pairs.dogsOf.get(walker)!;
             this.lead.length = 0;
             for (let k = 0; k < dogs.length; k++) if (seconds >= t.on[k][0] && seconds < t.on[k][1]) this.lead.push({dog: dogs[k], side: k});
-            return walkFix(this.graph(), t.stops, seconds, DOG_WALK_PACE, (k) => t.pauses[k] ?? 0, this.fix);
+            const fix = walkFix(this.graph(), t.stops, seconds, DOG_WALK_PACE, (k) => t.pauses[k] ?? 0, this.fix);
+            // Quality pass: out on the sand of a beach walk (after it, standing at the pavement's end a while, as before).
+            const leg = t.beach;
+            if (leg && seconds >= leg.arrive && seconds < leg.arrive + leg.seconds) {
+                const s = (seconds - leg.arrive) * DOG_WALK_PACE;
+                let k = 1;
+                while (k < leg.lengths.length - 1 && leg.lengths[k] < s) k++;
+                const a = leg.points[k - 1], b = leg.points[k];
+                const f = Math.min(1, Math.max(0, (s - leg.lengths[k - 1]) / Math.max(leg.lengths[k] - leg.lengths[k - 1], 1e-6)));
+                fix.x = a.x + (b.x - a.x) * f;
+                fix.z = a.z + (b.z - a.z) * f;
+                fix.yaw = Math.atan2(b.x - a.x, b.z - a.z);
+                fix.paused = false;
+                fix.kind = "path";
+            }
+            return fix;
         }
         this.lead.length = 0;
         return null;
@@ -250,7 +294,7 @@ export class DogWalks {
 }
 
 const NONE: readonly WalkDog[] = [];
-const NONE_PLACES: ReadonlyArray<{x: number; z: number}> = [];
+const NONE_PLACES: ReadonlyArray<DogWalkPlace> = [];
 
 /**
  * A walker's k-th dog at heel: beside them (the first on one side, the second on the other), a little ahead, facing

@@ -68,7 +68,16 @@ export type Seat = Spot & {bench: string};
 
 /** How far a sunbather's spot keeps from every beach walk's line (m). */
 export const SUN_CLEAR = 1.6;
-export type TownHumanSites = {seats: Seat[]; beach: Pt[]; walks: Array<[Pt, Pt]>};
+export type TownHumanSites = {seats: Seat[]; beach: Pt[]; walks: Array<[Pt, Pt]>; /** Quality pass: the shallows off the beach (ankle to knee deep at mid tide), where some paddle. */ shallows: Pt[]};
+
+/** Quality pass: a towel or a parasol on the beach (world frame), drawn by `beach-props.ts`. */
+export type BeachProp = {kind: "towel" | "parasol"; x: number; y: number; z: number; yaw: number; /** The slope along it (rad). */ tilt: number; /** Its cloth's colour (0–1 sRGB). */ colour: [number, number, number]};
+
+/** Towels' and parasols' cloths: beach colours (stripes on white). */
+const BEACH_CLOTH: Array<[number, number, number]> = ["#d8443a", "#2f6fb5", "#f0b630", "#2f9a8a", "#e0708c", "#5a4aa0", "#f07a3a", "#3aa0d8", "#7ab04a"].map((v) => {
+    const n = parseInt(v.slice(1), 16);
+    return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
+});
 
 let sitesMemo: {plan: TownPlan; sites: TownHumanSites} | null = null;
 
@@ -146,7 +155,20 @@ export function townHumanSites(plan: TownPlan = townPlan()): TownHumanSites {
     const lines = walks.filter(([a, b]) => walkOnSand(a, b, clear));
     // The sunbathers' spots keep clear of the walks (`SUN_CLEAR` from anywhere along a body lying feet to the sea):
     // no one walks over someone lying down.
-    const sites = {seats, beach: beach.filter((p) => lines.every(([a, b]) => [0, 0.85, 1.7].every((up) => segmentDistance(p.x, p.z - up, a.x, a.z, b.x, b.z) >= SUN_CLEAR))), walks: lines};
+    // Quality pass: the shallows off the beach (the sand under 0.15–0.6 m of water at mid tide, 2–10 m out), clear of
+    // the boats and the jetty.
+    const shallows: Pt[] = [];
+    if (beach.length) {
+        const xs = beach.map((p) => p.x);
+        for (let z = 130; z < 200; z += 2.5) {
+            for (let x = Math.min(...xs) - 10; x <= Math.max(...xs) + 10; x += 2.5) {
+                const g = sampleTownGround(x, z);
+                if (g.inland > -2 || g.inland < -10 || g.height > -0.15 || g.height < -0.6 || !clear(x, z, 3)) continue;
+                shallows.push({x, z});
+            }
+        }
+    }
+    const sites = {seats, beach: beach.filter((p) => lines.every(([a, b]) => [0, 0.85, 1.7].every((up) => segmentDistance(p.x, p.z - up, a.x, a.z, b.x, b.z) >= SUN_CLEAR))), walks: lines, shallows};
     sitesMemo = {plan, sites};
     return sites;
 }
@@ -200,7 +222,7 @@ export function humanDay(id: string, clock: TownClock): HumanDay {
 }
 
 /** What a person is doing out: at a boat's helm, at a car's wheel or beside its driver, on a bench, on the beach, or about the town (not drawn). */
-export type OutWhat = {kind: "boat"; boat: number; seat: 0 | 1} | {kind: "car"; car: number; seat: 0 | 1} | {kind: "bench"; seat: number} | {kind: "sun"; spot: number} | {kind: "walk"; walk: number; offset: number} | {kind: "about"};
+export type OutWhat = {kind: "boat"; boat: number; seat: 0 | 1} | {kind: "car"; car: number; seat: 0 | 1} | {kind: "bench"; seat: number} | {kind: "sun"; spot: number} | {kind: "walk"; walk: number; offset: number} | {kind: "paddle"; spot: number} | {kind: "about"};
 
 /**
  * Who is out in a block goes where (pure in the block and the people out): in the order of a hash of (id, day, block),
@@ -232,6 +254,7 @@ export function assignOut(out: readonly string[], clock: TownClock, sites: TownH
     }
     const sunny = h >= 10 && h < 18 && sites.beach.length > 0;
     const spots = new Set<number>();
+    const wades = new Set<number>();
     while (k < order.length) {
         const id = order[k++];
         // p5 (humans, pavements): the beach takes under half of those left on a sunny day; the others are about the
@@ -239,6 +262,18 @@ export function assignOut(out: readonly string[], clock: TownClock, sites: TownH
         if (!sunny || humanUnit(`${id}#${clock.day}#${block}#beach`) >= 0.45) {
             result.set(id, {kind: "about"});
             continue;
+        }
+        // Quality pass: some stand paddling in the shallows.
+        if (humanUnit(`${id}#${clock.day}#${block}#walk`) < 0.14 && sites.shallows.length) {
+            // (Two paddlers 5 m apart at least.)
+            let w = Math.floor(humanUnit(`${id}#${clock.day}#${block}#wade`) * sites.shallows.length);
+            let tries = 0;
+            while (tries++ < sites.shallows.length && Array.from(wades).some((o) => Math.hypot(sites.shallows[o].x - sites.shallows[w].x, sites.shallows[o].z - sites.shallows[w].z) < 5)) w = (w + 7) % sites.shallows.length;
+            if (tries <= sites.shallows.length) {
+                wades.add(w);
+                result.set(id, {kind: "paddle", spot: w});
+                continue;
+            }
         }
         if (humanUnit(`${id}#${clock.day}#${block}#walk`) < 0.35 && sites.walks.length) {
             result.set(id, {kind: "walk", walk: Math.floor(humanUnit(`${id}#walkline`) * sites.walks.length), offset: humanUnit(`${id}#${block}#walkoff`)});
@@ -364,6 +399,30 @@ export class TownHumans {
     private dogPool: WalkedDog[] = [];
     private readonly heel: HeelPose = {x: 0, z: 0, yaw: 0, sniffing: false, speed: 0};
     private inArms = new Set<string>();
+    // Quality pass: the beach's towels and parasols now (world frame), and the beach's looks (swimwear: bare arms and legs).
+    readonly beach: BeachProp[] = [];
+    private propPool: BeachProp[] = [];
+    private beachLooks = new Map<string, HumanLook>();
+    private beachLook(id: string, look: HumanLook): HumanLook {
+        let b = this.beachLooks.get(id);
+        if (!b || b.child !== look.child) {
+            b = {...look, sleeves: 0, trousers: 0};
+            this.beachLooks.set(id, b);
+        }
+        return b;
+    }
+    private prop(kind: BeachProp["kind"], x: number, y: number, z: number, yaw: number, tilt: number, colour: [number, number, number]) {
+        const k = this.beach.length;
+        const p = this.propPool[k] ?? (this.propPool[k] = {kind, x, y, z, yaw, tilt, colour});
+        p.kind = kind;
+        p.x = x;
+        p.y = y;
+        p.z = z;
+        p.yaw = yaw;
+        p.tilt = tilt;
+        p.colour = colour;
+        this.beach.push(p);
+    }
 
     /** p5 (humans, pavements): who walks the pavements now (`pavements.ts`). */
     get walks(): PavementWalks | null {
@@ -497,6 +556,7 @@ export class TownHumans {
         this.tvs.length = 0;
         this.placed.clear();
         this.dogs.length = 0;
+        this.beach.length = 0;
         if (!this.roster.length) return out;
         const clock = townClockAt(epochMs, this.options.offsetHours ?? 0);
         const block = Math.floor(clock.hours / BLOCK_HOURS);
@@ -679,13 +739,43 @@ export class TownHumans {
                 }
                 case "sun": {
                     const p = this.sites.beach[what.spot];
-                    // Lying on the sand, feet to the sea (the beach faces +z here), each a little their own way.
-                    const yaw = (humanUnit(`${id}#towel`) - 0.5) * 0.7;
+                    // Quality pass: on a towel, facing the sea (the beach faces +z here), each a little their own way: on
+                    // the back with the hands behind the head, on a side, or sitting up reading; a parasol for about half.
+                    const yaw = (humanUnit(`${id}#towel`) - 0.5) * 0.6;
                     const ground = townHeight(p.x, p.z);
-                    take(id, look, "sun", ox + p.x, ground, oz + p.z, yaw, "lie", phase);
+                    const u = humanUnit(`${id}#${clock.day}#${block}#lie`);
+                    const pose: HumanPoseKind = u < 0.42 ? "sunback" : u < 0.66 ? "sunside" : "sunsit";
+                    const swim = this.beachLook(id, look);
+                    take(id, swim, "sun", ox + p.x, ground, oz + p.z, yaw, pose, phase);
+                    const fx = Math.sin(yaw), fz = Math.cos(yaw);
                     // (Laid along the sand's slope: the head's end as high as the sand under it.)
                     const reach = 1.5 * scale;
-                    out[n - 1].tilt = Math.atan2(townHeight(p.x - Math.sin(yaw) * reach, p.z - Math.cos(yaw) * reach) - ground, reach);
+                    const tilt = Math.atan2(townHeight(p.x - fx * reach, p.z - fz * reach) - ground, reach);
+                    if (pose !== "sunsit") out[n - 1].tilt = tilt;
+                    // The towel under the whole body: from the head to the feet lying, from behind the hips to the heels sitting.
+                    const mid = pose === "sunsit" ? 0.3 * scale : -0.85 * scale;
+                    const colour = BEACH_CLOTH[Math.floor(humanUnit(`${id}#cloth`) * BEACH_CLOTH.length)];
+                    const tx = p.x + fx * mid, tz = p.z + fz * mid;
+                    this.prop("towel", ox + tx, townHeight(tx, tz) + 0.012, oz + tz, yaw, pose === "sunsit" ? 0 : tilt, colour);
+                    if (humanUnit(`${id}#parasol`) < 0.55) {
+                        // Beside the head's end, leaning a little toward the midday sun (south: −z here is inland, so the canopy leans seaward).
+                        const side = humanUnit(`${id}#side`) < 0.5 ? -1 : 1;
+                        const back = pose === "sunsit" ? -0.35 : -1.3 * scale;
+                        const px = p.x + fx * back + fz * 0.85 * side, pz = p.z + fz * back - fx * 0.85 * side;
+                        this.prop("parasol", ox + px, townHeight(px, pz), oz + pz, yaw, 0.12, BEACH_CLOTH[Math.floor(humanUnit(`${id}#parasolcloth`) * BEACH_CLOTH.length)]);
+                    }
+                    break;
+                }
+                case "paddle": {
+                    // Quality pass: standing in the shallows looking out to sea, wandering a little along the shore; a step
+                    // further in or out as the tide comes and goes (never deeper than the knees).
+                    const p = this.sites.shallows[what.spot];
+                    const sea = this.options.seaLevel?.() ?? 0;
+                    const x = p.x + Math.sin(seconds * 0.021 + phase) * 2.5;
+                    let z = p.z;
+                    for (let k = 0; k < 24 && sea - townHeight(x, z) > 0.45 * scale; k++) z -= 1;
+                    for (let k = 0; k < 24 && sea - townHeight(x, z) < 0.12; k++) z += 1;
+                    take(id, this.beachLook(id, look), "paddle", ox + x, townHeight(x, z), oz + z, (humanUnit(`${id}#wadeyaw`) - 0.5) * 1.2, "paddle", phase);
                     break;
                 }
                 case "walk": {
@@ -737,7 +827,7 @@ export class TownHumans {
             const size = childScale(Number.isFinite(age) ? age : 0);
             const fx = Math.sin(parent.yaw), fz = Math.cos(parent.yaw);
             const phase = humanUnit(`${id}#phase`) * 100;
-            const lying = parent.pose === "lie" || parent.pose === "sleep";
+            const lying = parent.pose === "lie" || parent.pose === "sleep" || parent.pose === "sunback" || parent.pose === "sunside" || parent.pose === "sunsit";
             // (Brothers and sisters with the same parent: one each side, the next a step further out; one babe in arms.)
             const nth = this.beside.get(parent.id) ?? 0;
             const babe = carried(age) && !lying && !this.inArms.has(parent.id);

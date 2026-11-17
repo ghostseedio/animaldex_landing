@@ -220,6 +220,7 @@ import {arkWorld} from "@/ark-scene/world"; // p2 (ocean)
 import {OCEAN_COLUMN, OCEAN_VIEW_MARGIN, oceanFix, roamsOpenOcean} from "@/ark-scene/open-ocean"; // p2 (ocean)
 import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (ocean)
 import {HumanFigures} from "@/ark-scene/humans/figures"; // p5 (humans)
+import {BeachProps} from "@/ark-scene/humans/beach-props"; // p5 (humans, quality pass)
 import {isHumanAnimal, TownHumans} from "@/ark-scene/humans/town-humans"; // p5 (humans)
 import {decodeHumanBonds} from "@/ark-scene/humans/couples"; // p5 (humans, couples)
 import {DogWalks, dogWalkPlaces, isHouseDog, townWalkers} from "@/ark-scene/humans/dog-walks"; // p5 (humans, dogs)
@@ -1297,6 +1298,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const townHumans = new TownHumans({away: (id) => forest.away(id), origin: townWorldOrigin(), roadHeight: townRoadHeight, seaLevel: () => ARK_ENVIRONMENT.seaLevel.value, boatSeconds: () => clockNow()});
     const humanFigures = new HumanFigures();
     scene.add(humanFigures.group);
+    const beachProps = new BeachProps(); // p5 (humans, quality pass): the sunbathers' towels and parasols
+    scene.add(beachProps.group);
     // p5 (humans, dogs): the town's people walk the record's own dogs on a lead (`humans/dog-walks.ts`): a walked dog is
     // its own entry moved along the walk (its `act`), pinned outside while it walks; never a second dog.
     const dogWalks = new DogWalks(() => townHumans.walks!.graph, () => dogWalkPlaces(townHumans.beachWalks));
@@ -8665,8 +8668,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const traffic = island.movingCars?.();
             townHumans.setArkDay(arkDayNow(current, worldMs())); // p5 (humans, couples): a child's age
             humanFigures.setFrame(townHumans.frame(islandMs, traffic?.cars ?? null, traffic?.count ?? 0), camera.position, islandMs / 1000);
+            beachProps.setFrame(townHumans.beach); // p5 (humans, quality pass)
             stepDogWalks(now); // p5 (humans, dogs)
-        } else if (humanFigures.drawn.near + humanFigures.drawn.far) humanFigures.setFrame([], camera.position, 0);
+        } else if (humanFigures.drawn.near + humanFigures.drawn.far) {
+            humanFigures.setFrame([], camera.position, 0);
+            beachProps.setFrame([]); // p5 (humans, quality pass)
+        }
         perf.lap("town");
         stepArrival(now);
         stepFlight(now);
@@ -9403,6 +9410,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             disposed = true;
             cancelAnimationFrame(raf);
             humanFigures.dispose(); // p5 (humans)
+            beachProps.dispose(); // p5 (humans, quality pass)
             dogLeads.dispose(); // p5 (humans, dogs)
             runtime.dispose();
             perf.dispose();

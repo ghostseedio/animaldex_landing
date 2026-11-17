@@ -54,12 +54,12 @@ test("privacy: a look holds nothing but body and clothes (no photo, face or name
     assert.deepEqual(Object.keys(humanLook("x")).sort(), ["bald", "bottom", "build", "child", "hair", "height", "longHair", "skin", "sleeves", "top", "trousers"]);
 });
 
-test("the body is cheap: 300–600 triangles near, a far one about half of it, no textures", () => {
+test("the body's budget (quality pass: a smooth lofted body): 1,500–3,000 triangles near, a far one under a third of it, no textures", () => {
     const near = humanGeometry(false);
     const far = humanGeometry(true);
     const tris = (g: typeof near) => (g.index ? g.index.count : g.getAttribute("position").count) / 3;
-    assert.ok(tris(near) >= 300 && tris(near) <= 600, `near ${tris(near)}`);
-    assert.ok(tris(far) <= 240 && tris(far) <= tris(near) * 0.6, `far ${tris(far)} of ${tris(near)}`);
+    assert.ok(tris(near) >= 1500 && tris(near) <= 3000, `near ${tris(near)}`);
+    assert.ok(tris(far) <= 700 && tris(far) <= tris(near) * 0.3, `far ${tris(far)} of ${tris(near)}`);
     assert.equal(near.getAttribute("uv"), undefined);
     assert.deepEqual(HumanFigures.triangles(), {near: tris(near), far: tris(far)});
 });
@@ -132,7 +132,12 @@ test("a Saturday afternoon: benches, the beach, the cars' wheels and the boats' 
     const list = town().frame(ms, moving, townTraffic().cars.length);
     const by = (what: string) => list.filter((h) => h.what === what);
     assert.ok(by("bench").length >= 4 && by("bench").every((h) => h.pose === "sit"));
-    assert.ok(by("sun").length >= 5 && by("sun").every((h) => h.pose === "lie"));
+    // (Quality pass: on a towel, on the back or a side or sitting up reading; a towel under each, a parasol for some.)
+    assert.ok(by("sun").length >= 5 && by("sun").every((h) => h.pose === "sunback" || h.pose === "sunside" || h.pose === "sunsit"));
+    const props = town();
+    props.frame(ms, moving, townTraffic().cars.length);
+    assert.equal(props.beach.filter((p) => p.kind === "towel").length, by("sun").length - list.filter((h) => h.what === "sun" && h.scale !== undefined && h.scale < 1).length);
+    assert.ok(by("paddle").every((h) => h.pose === "paddle"));
     assert.ok(by("walk").length >= 2 && by("walk").every((h) => h.pose === "walk"));
     assert.equal(by("boat").length, 3);
     assert.ok(by("boat").every((h) => h.pose === "drive"));
@@ -156,6 +161,14 @@ test("no one in a wall or in the water (but the boats' drivers): benches, the be
                 if (h.what === "boat" || h.what === "car") continue;
                 for (const b of plan.buildings) assert.ok(!inBox(b.at, h.x, h.z), `${h.what} in ${b.id}`);
                 const ground = sampleTownGround(h.x, h.z);
+                // (Quality pass: a paddler stands on the sand under the shallows, never deeper than the knees.)
+                if (h.what === "paddle") {
+                    assert.ok(ground.surface === "sand" || ground.surface === "sea", ground.surface);
+                    const depth = 0 - ground.height;
+                    assert.ok(depth > 0 && depth <= 0.6, `paddling ${depth.toFixed(2)} m deep`);
+                    for (const s of solids) assert.ok(solidDistance(s, h.x, h.z) > 0.2, "paddling in a solid");
+                    continue;
+                }
                 // (A walker crossing the canal is on a bridge's deck: `ark-human-walks.test.ts`.)
                 assert.ok(ground.height > 0.5 || (h.what === "pavement" && bridgeAt(h.x, h.z)), `${h.what} over water at ${h.x.toFixed(1)}, ${h.z.toFixed(1)}`);
                 if (h.what === "sun" || h.what === "walk") {
