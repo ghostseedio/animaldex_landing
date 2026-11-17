@@ -1,10 +1,10 @@
 {
- "set": "ark-people v2 (polish pass 2026-11-17, not wired)",
+ "set": "ark-people v2 (polish pass 2026-11-17)",
  "licence": "MakeHuman/MPFB2 CC0 system assets + our own keyframes; see LICENCES.md",
  "files": {
   "people-near.glb": 603856,
   "people-far.glb": 160040,
-  "clips.glb": 109492
+  "clips.glb": 109752
  },
  "format": {
   "compression": "gltfpack 1.3.0 -cc (EXT_meshopt_compression, KHR_mesh_quantization): GLTFLoader + MeshoptDecoder",

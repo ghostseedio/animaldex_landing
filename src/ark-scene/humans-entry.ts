@@ -9,6 +9,8 @@ import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {DOG_KIND_ID} from "@/ark-scene/humans/dog-walks";
+import {HUMAN_SKIN_TONES, humanLook, type HumanInstance} from "@/ark-scene/humans/figures";
+import {PeopleFigures} from "@/ark-scene/humans/people-figures";
 import {townWorldOrigin} from "@/ark-scene/islands";
 import {sampleTownGround} from "@/ark-scene/islands/town/ground";
 import {Raycaster, Vector3, type Object3D} from "three";
@@ -24,6 +26,13 @@ const frames = (n: number) =>
         const tick = () => (--left <= 0 ? resolve() : requestAnimationFrame(tick));
         requestAnimationFrame(tick);
     });
+
+/** p6 (people, skin): people the harness adds to the town's (the skin-tone line-up). */
+let extra: HumanInstance[] = [];
+const ownSetFrame = PeopleFigures.prototype.setFrame;
+PeopleFigures.prototype.setFrame = function (list, camera, seconds) {
+    return ownSetFrame.call(this, extra.length ? [...list, ...extra] : list, camera, seconds);
+};
 
 async function main() {
     const params = new URLSearchParams(location.search);
@@ -158,6 +167,34 @@ async function main() {
         return JSON.stringify({hours, kind, of: all.length, person: h, rigged: s.rigged, drawn: s.drawn});
     };
     (api as unknown as {people: typeof framePeople}).people = framePeople;
+    /**
+     * p6 (people, skin): every skin tone lined up on the beach's sand at a pinned hour: a row of swimmers (paddling) in
+     * front, the same tones in day clothes behind, deep to light from the left, facing the camera. Harness only: the
+     * row is added to what the town's people renderer draws.
+     */
+    const lineup = async (hours: number, distance = 9.5) => {
+        await framePeople(hours, "sun", distance);
+        const s = peopleDebug();
+        const h = s.out.find((o) => o.what === "sun");
+        if (!h) return JSON.stringify({hours, none: true});
+        const n = HUMAN_SKIN_TONES.length;
+        const x0 = h.x - ((n - 1) * 0.95) / 2;
+        const z0 = h.z + 3.5;
+        extra = HUMAN_SKIN_TONES.flatMap((skin, i) => {
+            const front = humanLook(`lineup-front-${i}`);
+            const back = humanLook(`lineup-back-${i}`);
+            return [
+                {x: x0 + i * 0.95, y: h.y, z: z0 + 1.2, yaw: 0, pose: "paddle", phase: i * 0.37, look: {...front, skin, child: false, height: 1.7, swim: 1}},
+                {x: x0 + i * 0.95, y: h.y, z: z0, yaw: 0, pose: "stand", phase: i * 0.41, look: {...back, skin, child: false, height: 1.75, bald: 0}}
+            ] as HumanInstance[];
+        });
+        handle.setView({target: {x: h.x, y: h.y + 1, z: z0 + 0.6}, distance, polar: 1.36, azimuth: 0});
+        await frames(10);
+        await wait(1500);
+        await frames(4);
+        return JSON.stringify({hours, at: {x: h.x, z: z0}, rigged: s.rigged});
+    };
+    (api as unknown as {lineup: typeof lineup}).lineup = lineup;
     (window as unknown as {__humans: typeof api}).__humans = api;
     (window as unknown as {__humansReady: boolean}).__humansReady = true;
 }

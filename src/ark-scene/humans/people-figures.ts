@@ -16,8 +16,8 @@
 import {BufferGeometry, DataTexture, Group, HalfFloatType, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshDepthMaterial, MeshStandardMaterial, NearestFilter, RGBADepthPacking, RGBAFormat, Vector3, type WebGLProgramParametersWithUniforms} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
-import {HUMAN_FAR, HUMAN_MAX, HUMAN_NEAR, HumanFigures, type HumanInstance} from "@/ark-scene/humans/figures";
-import {ARM_FIRST, ARM_LAST, bakePeopleSteps, LEAN_FIRST, LEAN_LAST, PEOPLE_BASE, PEOPLE_FILES, PERSON_IDS, peopleGrips, peopleMatrix, peoplePose, type BakedPeople, type PeoplePose, type PersonId} from "@/ark-scene/humans/people-rig";
+import {HUMAN_FAR, HUMAN_LINEAR_GLSL, HUMAN_MAX, HUMAN_NEAR, HumanFigures, type HumanInstance} from "@/ark-scene/humans/figures";
+import {ARM_FIRST, ARM_LAST, bakePeopleSteps, LEAN_FIRST, LEAN_LAST, PEOPLE_BASE, PEOPLE_FILES, PERSON_IDS, peopleFileUrl, peopleGrips, peopleMatrix, peoplePose, type BakedPeople, type PeoplePose, type PersonId} from "@/ark-scene/humans/people-rig";
 
 const PEOPLE_GLSL = /* glsl */ `
 uniform highp sampler2D peopleBones;
@@ -69,8 +69,10 @@ mat4 peopleSkinMatrix() {
     }
     return m;
 }
+${HUMAN_LINEAR_GLSL}
 // Parts (people.manifest.json format.parts): 0 skin, 1 top, 2 bottom, 3 hair, 4 shoes, 5 fixed, 6 brow and lash,
-// 7 swimwear (the top's colour), 8 eye. The paint's rgb is the baked shade times the part's fixed colour.
+// 7 swimwear (the top's colour), 8 eye. The paint's rgb is the baked shade times the part's fixed colour. The look's
+// colours are sRGB (as picked by humanLook): into the renderer's linear light first (humanLinear).
 vec3 peopleColour() {
     float part = floor(peoplePaint.a * 16.0);
     vec3 c;
@@ -83,7 +85,7 @@ vec3 peopleColour() {
     else if (part < 6.5) c = iHair * 0.55;
     else if (part < 7.5) c = iTop;
     else c = vec3(1.0);
-    return c * peoplePaint.rgb;
+    return humanLinear(c) * peoplePaint.rgb;
 }
 `;
 
@@ -121,7 +123,7 @@ function loadPeople(base: string): Promise<Shared> {
     if (shared) return shared;
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
-    const get = (file: string) => loader.loadAsync(`${base}/${file}`);
+    const get = (file: string) => loader.loadAsync(peopleFileUrl(base, file));
     shared = Promise.all([get(PEOPLE_FILES.near), get(PEOPLE_FILES.far), get(PEOPLE_FILES.clips)]).then(async ([near, far, clips]) => {
         // A body a task (about 15 ms each on a desktop, 60 on a throttled phone).
         const steps = bakePeopleSteps(near, far, clips);

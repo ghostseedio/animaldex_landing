@@ -68,8 +68,21 @@ const hex = (value: string): [number, number, number] => {
     return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
 };
 
+/**
+ * The looks' colours are sRGB, as picked by eye (the hex values below), but the renderer lights linear colours. Used as
+ * they were, a light tone such as #f3d3bd lit as (0.95, 0.83, 0.74) instead of (0.90, 0.65, 0.51): a third too bright in
+ * the blue and green, so in the noon sun, through the tone mapping, light-skinned people read as near-white plaster
+ * (2026-11-17, the rigged people's beach). Both renderers turn the look's colour into linear light in the shader
+ * (the exact sRGB curve), as three.js does for every `Color` it is given; the seeded looks themselves stay as they are.
+ */
+export const HUMAN_LINEAR_GLSL = /* glsl */ `
+vec3 humanLinear(vec3 c) {
+    return mix(c * 0.0773993808, pow(c * 0.9478672986 + 0.0521327014, vec3(2.4)), step(vec3(0.04045), c));
+}
+`;
+
 /** Human skin tones across the range (deep to light). */
-const SKIN = ["#3b2219", "#4f2d1f", "#6b3e2a", "#87573a", "#a0694a", "#b47b57", "#c68e68", "#d9a582", "#e6b896", "#f0c9ab", "#f3d3bd"].map(hex);
+export const HUMAN_SKIN_TONES = ["#3b2219", "#4f2d1f", "#6b3e2a", "#87573a", "#a0694a", "#b47b57", "#c68e68", "#d9a582", "#e6b896", "#f0c9ab", "#f3d3bd"].map(hex);
 const HAIR = ["#141110", "#1f1712", "#2e2018", "#4a3020", "#6b4a2c", "#8c6a3e", "#b48c55", "#d2b57c", "#8a3b1e", "#9a9a96", "#d8d6d0"].map(hex);
 const TOPS = ["#c8352b", "#2f5aa8", "#2d7a4e", "#e2b33c", "#f2f0ea", "#1d1f24", "#7a4a8c", "#e07a3a", "#4ea0b8", "#a8a39a", "#d86c8e", "#3c4e66", "#3b6e8f", "#5c8a3a"].map(hex);
 const BOTTOMS = ["#24324a", "#2b2b2e", "#4a4f57", "#6b5a44", "#c9b998", "#3a4a2c", "#5a6a86", "#1d2533", "#7a2f2f", "#d9d4c8"].map(hex);
@@ -88,7 +101,7 @@ export function humanLook(seed: string, child = false): HumanLook {
     return {
         height,
         build: 0.86 + u("b") * 0.34,
-        skin: pick(SKIN, "skin"),
+        skin: pick(HUMAN_SKIN_TONES, "skin"),
         hair,
         top: pick(TOPS, "top"),
         bottom: pick(BOTTOMS, "bottom"),
@@ -487,6 +500,7 @@ void humanPose(inout vec3 p, inout vec3 n) {
     if (limb > 8.5) humanSwing(p, n, vec3(0.0, ${JOINTS.neckY.toFixed(3)}, 0.0), iBody.y);
     humanSwing(p, n, vec3(0.0, ${JOINTS.waistY.toFixed(3)}, 0.0), iBody.x);
 }
+${HUMAN_LINEAR_GLSL}
 vec3 humanPaint() {
     float part = aRig.x;
     vec3 shoes = iBottom * 0.3 + vec3(0.045, 0.04, 0.038);
@@ -502,7 +516,7 @@ vec3 humanPaint() {
     else if (part < 8.5) c = vec3(0.78, 0.76, 0.72);
     else if (part < 9.5) c = vec3(0.05, 0.045, 0.04);
     else c = mix(iHair * 0.8, iSkin * 0.6, iStyle.w * 0.6);
-    return c * aRig.z;
+    return humanLinear(c) * aRig.z;
 }
 `;
 

@@ -15,11 +15,25 @@
 
 import {DataUtils, Matrix4, Quaternion, Vector3, type AnimationClip, type Bone, type BufferGeometry, type Object3D, type SkinnedMesh} from "three";
 import {BufferAttribute, BufferGeometry as Geometry} from "three";
+import {arkCodeUrl} from "@/ark-scene/code-version";
 import {WALK_PACE, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
 
 /** Where the people's files ship (with the web deploy, beside the town's cars). A new set is a new folder. */
 export const PEOPLE_BASE = "/ark/assets/people-v1";
 export const PEOPLE_FILES = {near: "people-near.glb", far: "people-far.glb", clips: "clips.glb"} as const;
+/**
+ * The three files' version: the first 12 hex of the SHA-256 of near, far and clips, in that order (`ark-people.test.ts`
+ * holds it to the shipped bytes). Every file URL carries it as `?v=` (`peopleFileUrl`), so a redrawn body is a new
+ * address the day it deploys, never a day-old copy from a browser's or the CDN's cache (`/ark/assets` is cached a day
+ * with a month's stale-while-revalidate; a versioned people file `immutable`, next.config.js), while unchanged files keep
+ * their address, and their cache, across deploys. The same `?v=` as the Ark's scripts (`code-version.ts`).
+ */
+export const PEOPLE_FILES_V = "4bbe7c1a82c0";
+
+/** A people file's URL, versioned (`PEOPLE_FILES_V`). */
+export function peopleFileUrl(base: string, file: string): string {
+    return arkCodeUrl(`${base}/${file}?v=${PEOPLE_FILES_V}`);
+}
 
 /** The bodies, as the files name them (`people.manifest.json`). */
 export const PERSON_IDS = ["p01-older-man-coat", "p02-woman-swim", "p03-child", "p04-feller", "p05-teen-girl", "p06-man-casual", "p07-woman-casual", "p08-older-woman", "p09-man-swim", "p10-boy", "p11-feller-b", "p12-woman-bikini"] as const;

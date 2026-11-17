@@ -83,9 +83,10 @@ if (which === "humans") {
     await page.waitForFunction(() => window.__humansReady === true, null, {timeout: 400000});
     // p6 (people): `--shots people`: the town's people by kind, near and far (`window.__humans.people`), then stop.
     if (arg("shots", "") === "people") {
-        const views = [["p1-beach-near", 13.6, "sun", 6, 1.05, 0.8, 0], ["p1-beach-near-b", 13.6, "sun", 6, 1.05, 2.4, 2], ["p2-beach-far", 13.6, "sun", 32, 1.0, 0.8, 0], ["p3-paddle-near", 13.6, "paddle", 6, 1.2, 0.9, 0], ["p4-bench-near", 14.4, "bench", 5, 1.2, 0.5, 0], ["p5-pavement-near", 8.4, "pavement", 6, 1.25, 0.9, 0], ["p6-pavement-far", 8.4, "pavement", 28, 1.05, 0.9, 1], ["p7-car-near", 14.4, "car", 5, 1.05, 1.2, 0], ["p8-boat-near", 14.4, "boat", 7, 1.1, 1.2, 0], ["p9-dogwalk-near", 7.8, "dogwalk", 5, 1.25, 0.9, 0]];
+        const views = [["p1-beach-near", 13.6, "sun", 6, 1.05, 0.8, 0], ["p1-beach-near-b", 13.6, "sun", 6, 1.05, 2.4, 2], ["p2-beach-far", 13.6, "sun", 32, 1.0, 0.8, 0], ["p3-paddle-near", 13.6, "paddle", 6, 1.2, 0.9, 0], ["p4-bench-near", 14.4, "bench", 5, 1.2, 0.5, 0], ["p5-pavement-near", 8.4, "pavement", 6, 1.25, 0.9, 0], ["p6-pavement-far", 8.4, "pavement", 28, 1.05, 0.9, 1], ["p7-car-near", 14.4, "car", 5, 1.05, 1.2, 0], ["p8-boat-near", 14.4, "boat", 7, 1.1, 1.2, 0], ["p9-dogwalk-near", 7.8, "dogwalk", 5, 1.25, 0.9, 0], ["s1-beach-noon", 12.5, "sun", 6, 1.05, 0.8, 0], ["s2-beach-dusk", 17.9, "sun", 6, 1.05, 0.8, 0], ["s3-lineup-noon", 12.5, "lineup", 12.5], ["s4-lineup-dusk", 17.9, "lineup", 12.5]];
         for (const [name, hours, kind, distance, polar, turn, nth] of views.filter(([n]) => !arg("only", "") || arg("only", "").split(",").some((o) => n.startsWith(o)))) {
-            const state = await page.evaluate(([h, k, d, p, t, n]) => window.__humans.people(h, k, d, p, t, n), [hours, kind, distance, polar, turn, nth]);
+            // (p6 skin: `lineup`: every skin tone in a row on the beach at that hour.)
+            const state = kind === "lineup" ? await page.evaluate(([h, d]) => window.__humans.lineup(h, d), [hours, distance]) : await page.evaluate(([h, k, d, p, t, n]) => window.__humans.people(h, k, d, p, t, n), [hours, kind, distance, polar, turn, nth]);
             await page.screenshot({path: path.join(out, `${name}.png`)});
             console.log(name, String(state).slice(0, 400));
         }

@@ -4,7 +4,8 @@
  * them: twelve CC0 bodies, fourteen clips, one bone texture.
  */
 import assert from "node:assert/strict";
-import {readFileSync} from "node:fs";
+import {createHash} from "node:crypto";
+import {readFileSync, statSync} from "node:fs";
 import path from "node:path";
 import test from "node:test";
 import {Matrix4, Vector3} from "three";
@@ -12,7 +13,7 @@ import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {DOG_WALK_PACE} from "@/ark-scene/humans/dog-walks";
 import {humanLook, sitRootY, type HumanInstance, type HumanPoseKind} from "@/ark-scene/humans/figures";
-import {bakePeople, PEOPLE_BASE, PEOPLE_CLIPS, PEOPLE_FILES, PEOPLE_PACE, PERSON_IDS, peopleClip, peopleGrips, peopleMatrix, peoplePose, personFor, CANON_HIP, type BakedPeople, type PeoplePose} from "@/ark-scene/humans/people-rig";
+import {bakePeople, PEOPLE_BASE, PEOPLE_CLIPS, PEOPLE_FILES, PEOPLE_FILES_V, peopleFileUrl, PEOPLE_PACE, PERSON_IDS, peopleClip, peopleGrips, peopleMatrix, peoplePose, personFor, CANON_HIP, type BakedPeople, type PeoplePose} from "@/ark-scene/humans/people-rig";
 
 const DIR = path.join(process.cwd(), "public", PEOPLE_BASE);
 const POSES: HumanPoseKind[] = ["stand", "walk", "sit", "lie", "drive", "chop", "plant", "sleep", "carry", "saw", "sunback", "sunside", "sunsit", "paddle"];
@@ -177,4 +178,16 @@ test("the tools' hands: the axe's two hands on one haft, the chainsaw's at its h
             }
         }
     }
+});
+
+test("the manifest's byte sizes are the shipped files', and the files' version is their content hash", () => {
+    const manifest = JSON.parse(readFileSync(path.join(DIR, "people.manifest.json"), "utf8")) as {files: Record<string, number>};
+    const files = [PEOPLE_FILES.near, PEOPLE_FILES.far, PEOPLE_FILES.clips];
+    assert.deepEqual(Object.keys(manifest.files).sort(), [...files].sort());
+    for (const f of files) assert.equal(manifest.files[f], statSync(path.join(DIR, f)).size, f);
+    const hash = createHash("sha256");
+    for (const f of files) hash.update(readFileSync(path.join(DIR, f)));
+    assert.equal(PEOPLE_FILES_V, hash.digest("hex").slice(0, 12), "redrawn people files: set PEOPLE_FILES_V to the new hash");
+    // (Every URL carries it, with or without the build's code version.)
+    assert.equal(peopleFileUrl(PEOPLE_BASE, PEOPLE_FILES.clips), `${PEOPLE_BASE}/clips.glb?v=${PEOPLE_FILES_V}`);
 });
