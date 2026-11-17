@@ -1,6 +1,5 @@
 import {Metadata} from "next";
 import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
-import {isHumanSpecies} from "@/lib/people-are-never-public";
 import Image from "next/image";
 import {notFound, permanentRedirect} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
@@ -443,8 +442,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     const companionWords = await getCompanionWords(locale);
     const entry = await getSpeciesPageData(slug);
 
-    // People are never public (DECISIONS §11).
-    if (!entry || isHumanSpecies({slug: entry.slug, scientificName: entry.analysis.scientificName, identityKey: entry.normalizedIdentityKey})) {
+    if (!entry) {
         notFound();
     }
 

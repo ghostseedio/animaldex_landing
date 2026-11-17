@@ -1,5 +1,5 @@
 ## AnimalDex Privacy Policy
-#### Effective November 13, 2026
+#### Effective November 17, 2026
 
 AnimalDex ("AnimalDex," "we," "our," or "the app") is operated by GHOSTSEED LTD for the AnimalDex mobile app and related services. For privacy questions, contact `support@animaldex.app`.
 
@@ -46,6 +46,8 @@ AnimalDex uses third-party service providers to operate the app. These providers
 Some AnimalDex features are public or shared by design. Public captures, shared animal photos or videos, profile fields, usernames, avatars, bios, Instagram URLs, pack activity, trade activity, challenge activity, reactions, and related community activity may be visible to other users.
 
 Direct messages are intended for the participants in the conversation, but may be reviewed or retained when needed for reports, safety, abuse prevention, support, legal compliance, or service integrity.
+
+**People in captures.** A capture can show a person. AnimalDex analyses it like any capture and identifies the person as a Human; it does not identify who the person is, and does not use faces to recognise anyone. A capture that shows a person can be public like any other capture. Anyone shown in a capture, including someone who doesn't use AnimalDex, can ask for it to be removed by reporting it in the app or emailing `support@animaldex.app`; we review every request.
 
 ## The shared Ark
 When a user's capture identifies an animal, one of its kind can come aboard the shared Ark, which anyone can visit on the website and in the app. Each person can have up to two living animals of a species aboard, and only species with a 3D model can come aboard; a capture of a species whose model isn't ready yet waits until it is. Captures saved before the Ark opened brought animals aboard in the same way. When a small step a user worked on with an animal goes well, their animals of that kind on the Ark do better. The Ark shows how well each animal is doing (ordinary, good or prime), never what anyone talked about.

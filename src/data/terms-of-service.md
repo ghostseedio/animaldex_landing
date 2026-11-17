@@ -1,5 +1,5 @@
 ## AnimalDex Terms of Use
-#### Effective November 13, 2026
+#### Effective November 17, 2026
 
 These Terms of Use ("Terms") govern access to AnimalDex ("AnimalDex," "we," "our," or "the app"), operated by GHOSTSEED LTD. By creating an account, using the app, uploading content, buying credits, subscribing to AnimalDex Pro, or using community features, you accept these Terms. If you do not accept them, do not use AnimalDex.
 
@@ -33,6 +33,13 @@ By submitting content, you give AnimalDex permission to host, store, process, an
 
 When your capture brings an animal aboard the shared Ark, your username (linked to your profile), display name and avatar are shown on that animal by default, as described in the Privacy Policy, even if your profile is private. You can turn this off in Settings ("Show my name on my Ark animals"). Steps that work with an animal keep your animals of that kind thriving on the Ark. When you confirm "I'm 18 or over" to share a story, you confirm that this is true; AnimalDex may hide stories, or restrict features, where a confirmation appears to be false. A story you choose to share on the Ark is public: only share what you are comfortable with everyone reading, and do not include other people's private information.
 
+## Photos of People
+Captures can show people. AnimalDex identifies a person in a capture the same way it identifies an animal (as a Human, *Homo sapiens*), and a capture that shows a person is treated like any other capture: it gets a card, a grade and stats, it can be public, it can appear in Explore and on your profile, and it can be shared, gifted, traded, used in challenges and other community features, and talked to like any other animal.
+
+By capturing or uploading a photo or video that shows a person, you confirm that you have that person's permission, or otherwise have the right, to capture it and share it publicly on AnimalDex, and that sharing it does not break any law or anyone else's rights. If the person is under 18, you confirm that you are their parent or guardian or have their parent's or guardian's permission. Do not capture people in private places (such as bathrooms or changing rooms), people who have asked not to be photographed, or anyone in a way that harasses, sexualises, exposes or endangers them.
+
+Anyone shown in a capture can ask for it to be removed, whether or not they use AnimalDex: tap Report on the capture in the app, or email `support@animaldex.app` with a link to the capture or a description of it. We review every removal request and remove the capture when the request comes from the person shown (or their parent or guardian), or when the capture breaks these Terms.
+
 ## Zero-Tolerance UGC Policy
 AnimalDex has zero tolerance for objectionable user-generated content or abusive conduct. You may not submit, send, display, list, trade, challenge with, or otherwise share content that is objectionable, abusive, harassing, hateful, sexual, violent, illegal, infringing, exploitative, deceptive, threatening, or unsafe.
 
@@ -63,7 +70,7 @@ Users can initiate account deletion in the app through Profile -> Settings -> De
 Deleting an AnimalDex account does not automatically cancel Apple subscriptions. Users must cancel subscriptions through Apple ID subscription settings.
 
 ## App Availability and Changes
-AnimalDex may change, suspend, or discontinue features at any time. We may update these Terms as the app changes. Continued use after updated Terms are posted means you accept the updated Terms.
+AnimalDex may change, suspend, or discontinue features at any time. We may update these Terms as the app changes. When we make a material change, the app asks you to agree to the updated Terms before you can keep using it; you can't use AnimalDex without agreeing to the current Terms.
 
 ## Termination
 We may suspend or terminate access if you violate these Terms, create risk for the service, abuse other users, misuse animal or location features, infringe rights, evade moderation, or use AnimalDex in a way that harms users, animals, partners, or the product.

@@ -1,5 +1,4 @@
 import "server-only";
-import {isHumanSpecies} from "@/lib/people-are-never-public";
 
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {resolvePublicOverallScore} from "@/data/public-profiles";
@@ -7,7 +6,6 @@ import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {getCollectorScoreBand} from "@/lib/collector-score";
 import {readArkScore} from "@/lib/ark-world";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
-import {rowIsHomoSapiens} from "@/lib/people-never-public";
 
 type QueryRow = Record<string, unknown>;
 
@@ -188,7 +186,6 @@ async function loadAllDiscoverCollectors() {
     const profilesById = new Map(profileRows.map((row) => [readString(row, "id") ?? "", row]));
     // People are never public (DECISIONS §11): a person is never anyone's best find.
     const bestFindsById = new Map(bestFindRows
-        .filter((row) => !isHumanSpecies({identityKey: readString(row, "normalized_identity_key"), scientificName: readString(row, "scientific_name")}))
         .map((row) => [readString(row, "capture_id") ?? "", row]));
     const powerSetsByUser = new Map<string, Array<{reward_points: number | null}>>();
 
@@ -214,8 +211,7 @@ async function loadAllDiscoverCollectors() {
         );
         const bestFindId = readString(summary, "best_find_id");
         const found = bestFindId ? bestFindsById.get(bestFindId) : null;
-        // People are never public (DECISIONS section 11): a person is nobody's best find.
-        const bestFind = found && !rowIsHomoSapiens(found) ? found : null;
+        const bestFind = found ?? null;
         const indexedSpeciesCount = readNumber(summary, "indexed_species_count")
             || readNumber(summary, "unique_species");
 

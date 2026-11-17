@@ -9,7 +9,6 @@ import {getExpandedRankingEntries, getRankingPage} from "@/data/rankings";
 import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
 import {getPublishedSpeciesForContent} from "@/lib/static-species-overlay";
 import {isSpeciesPageIndexable} from "@/lib/species-indexability";
-import {isHumanSlug} from "@/lib/people-are-never-public";
 import {
     TALK_LANDING_DESCRIPTION_MAX,
     talkLandingAnswers,
@@ -36,7 +35,6 @@ test("the snapshot's 62 species all resolve to published, indexable species slug
         const slug = resolveTalkLandingSlug(entry.slug);
         assert.equal(slug, entry.slug, `${entry.slug} must be a published, indexable species slug (or be renamed in renamed-species-slugs.json)`);
         assert.ok(isPublishedAnimalSlug(slug), slug);
-        assert.ok(!isHumanSlug(slug), "people are never public");
         const species = getPublishedSpeciesForContent(slug);
         assert.ok(species && species.slug === slug, slug);
         assert.ok(isSpeciesPageIndexable(species, slug), `${slug}: its /animals page must be indexable`);
