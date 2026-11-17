@@ -28,7 +28,7 @@ const EARTH = tone("#a8946c");
 const MUD = tone("#6e5c44");
 
 /** A safari area's dressing; null where `e` is not a safari area. */
-export function dressSafari(e: {id: string; slot: {at: Box; seed: number; safari?: SafariHabitat}}, spots: readonly Pt[], solid: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null): Plot | null {
+export function dressSafari(e: {id: string; type: string; slot: {at: Box; seed: number; safari?: SafariHabitat}}, spots: readonly Pt[], solid: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null): Plot | null {
     const habitat = e.slot.safari;
     const area = safariArea(e.id);
     if (!habitat || !area) return null;
@@ -39,6 +39,8 @@ export function dressSafari(e: {id: string; slot: {at: Box; seed: number; safari
         return heightAt(q[0], q[2]);
     };
     const plot = new Plot(s, floorAt, spots, e.slot.seed);
+    // (Merged into p5 (zoospace) with main's p4 (townfix) logs: the deadwood bleached in the dry types, as `dressPaddock`.)
+    plot.dry = e.type === "savanna_paddocks" || e.type === "big_cats" || e.type === "small_mammals";
     // (Grass, reeds and ferns are drawn in `solid`; a patch of bare earth is ground: drawn, and in `cover`, the walk
     // surfaces the residents stand on, as the zoo's patches, `zoo-habitat.ts`.)
     const ground = solid;
