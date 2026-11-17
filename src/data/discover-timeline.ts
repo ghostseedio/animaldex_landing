@@ -30,6 +30,18 @@ import {devCacheTtlMs, withServerMemoryCache} from "@/lib/server-memory-cache";
 import {createSupabasePublicClient, createSupabaseServerClient} from "@/lib/supabase/server";
 import {animalLevel} from "@/lib/animal-level";
 import {isHomoSapiens, rowIsHomoSapiens} from "@/lib/people-never-public";
+import {
+    DISCOVER_ACTIVITY_MIN_NOVELTY,
+    RANKED_MISSING,
+    appendRenewedRankedPage,
+    callRankedFeedWithOneRetry,
+    composeRankedTimeline,
+    discoverRankedFeedArgs,
+    newDiscoverSessionAsOf,
+    planRankedPage,
+    rankedFeedHasMore
+} from "@/lib/discover-ranked-feed";
+import {getViewerUserId} from "@/lib/viewer";
 
 type DiscoverSupabaseClient = NonNullable<
     ReturnType<typeof createSupabaseServerClient> | ReturnType<typeof createSupabasePublicClient>
@@ -307,6 +319,11 @@ export type DiscoverTimelineCursor = {
      * of re-reading the newest ones and discarding them.
      */
     afterCaptureId?: string | null;
+    /**
+     * The feed session (`discover_feed_ranked_v1`'s `p_as_of`): every page of one session
+     * asks the server for the same ranked list. A first page starts a new session.
+     */
+    asOf?: string | null;
 };
 
 const PLACEHOLDER_IMAGE = "/images/placeholders/species-no-image.svg";
@@ -1420,6 +1437,17 @@ async function readUnseenActivity(
     orderColumn: string,
     limit: number
 ) {
+    // The `*_ranked_*` sibling keeps the seen rows too and adds a `novelty` column: unseen
+    // cards first, a seen card only once its novelty has recovered (14 days). Where the
+    // server does not have it yet, the unseen view is read as before.
+    const ranked = await supabase
+        .from(unseenView.replace("_unseen_", "_ranked_"))
+        .select(columns)
+        .gte("novelty", DISCOVER_ACTIVITY_MIN_NOVELTY)
+        .order("novelty", {ascending: false})
+        .order(orderColumn, {ascending: false})
+        .limit(limit);
+    if (!ranked.error) return ranked;
     const unseen = await supabase.from(unseenView).select(columns).order(orderColumn, {ascending: false}).limit(limit);
     if (!unseen.error) return unseen;
     return supabase.from(sourceView).select(columns).order(orderColumn, {ascending: false}).limit(limit);
@@ -1671,6 +1699,27 @@ async function hydrateDiscoverFeedMediaRows(supabase: DiscoverSupabaseClient, ro
     });
 }
 
+/**
+ * The session feed: `discover_feed_ranked_v1` ranks every post, the seen ones down-weighted (see
+ * `src/lib/discover-ranked-feed.ts`). RANKED_MISSING when the function is not on the server yet; any
+ * other failure is retried once and then thrown.
+ */
+async function fetchRankedDiscoverFeedRows(
+    supabase: DiscoverSupabaseClient,
+    limit: number,
+    afterCaptureId: string | null,
+    asOf: string
+): Promise<QueryRow[] | typeof RANKED_MISSING> {
+    const result = await callRankedFeedWithOneRetry(async () => {
+        const {data, error} = await supabase
+            .rpc("discover_feed_ranked_v1", discoverRankedFeedArgs({asOf, limit, afterCaptureId}))
+            .select(richFeedSelect);
+        return {data: (data ?? null) as unknown as QueryRow[] | null, error};
+    });
+    if (result === RANKED_MISSING) return RANKED_MISSING;
+    return await hydrateDiscoverFeedMediaRows(supabase, result);
+}
+
 /** `discover_feed_shuffled_v1` clamps its page to this. */
 const DISCOVER_FEED_RPC_MAX_LIMIT = 80;
 
@@ -1798,6 +1847,40 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
     const candidateLimit = cursor && !afterCaptureId ? Math.max(120, limit * 8) : Math.max(limit + 1, 24);
     const activityLimit = Math.max(12, Math.min(48, Math.ceil(Math.max(candidateLimit, cursor ? 96 : 0) / 2)));
 
+    // The ranked session feed is for signed-in readers (the RPC is not open to anon).
+    const viewerId = await getViewerUserId();
+    let rankedRows: QueryRow[] | null = null;
+    let rankedHasMore = false;
+    let sessionAsOf = "";
+    if (viewerId) {
+        const plan = planRankedPage(cursor);
+        sessionAsOf = plan.asOf;
+        try {
+            const first = await fetchRankedDiscoverFeedRows(supabase, limit, plan.afterCaptureId, plan.asOf);
+            if (first !== RANKED_MISSING) {
+                rankedRows = first;
+                rankedHasMore = rankedFeedHasMore(first.length, limit);
+                if (plan.afterCaptureId && !rankedHasMore) {
+                    // The session's list is exhausted: start one new session and append its first page.
+                    // Only when that has nothing either does the feed end ("You're caught up").
+                    const renewedAsOf = newDiscoverSessionAsOf();
+                    const renewed = await fetchRankedDiscoverFeedRows(supabase, limit, null, renewedAsOf);
+                    if (renewed !== RANKED_MISSING) {
+                        const merged = appendRenewedRankedPage(first, renewed, limit, (row) => readString(row, "capture_id"));
+                        rankedRows = merged.rows;
+                        rankedHasMore = merged.hasMore;
+                        sessionAsOf = renewedAsOf;
+                    }
+                }
+            }
+        } catch (error) {
+            // A failed ranked call (retried once) is an error, never a reason to continue a ranked
+            // cursor in the shipped feed. The first page cannot throw into the page render: an empty feed.
+            if (cursor) throw error;
+            return {timeline: [] as DiscoverTimelineItem[], featured: [] as DiscoverFeaturedItem[], nextCursor: null as DiscoverTimelineCursor | null};
+        }
+    }
+
     const [
         feedRows,
         alignmentResult,
@@ -1808,7 +1891,7 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
         behaviorPrinciples,
         speciesHref
     ] = await Promise.all([
-        fetchDiscoverFeedRows(supabase, candidateLimit, afterCaptureId),
+        rankedRows ? Promise.resolve(rankedRows) : fetchDiscoverFeedRows(supabase, candidateLimit, afterCaptureId),
         readUnseenActivity(supabase, "discover_alignment_timeline_unseen_v1", "discover_alignment_timeline_v1", "*", "completed_at", activityLimit),
         readUnseenActivity(supabase, "discover_principle_fusion_timeline_unseen_v1", "discover_principle_fusion_timeline_v1", "*", "created_at", activityLimit),
         readUnseenActivity(supabase, "discover_trade_history_unseen_v1", "discover_trade_history_v1", "id,completed_at,created_at,offerer_user_id,receiver_user_id,offerer_capture_id,receiver_capture_id,offerer_profile_display_name,offerer_profile_username,receiver_profile_display_name,receiver_profile_username,offerer_animal_name,receiver_animal_name,offerer_image_bucket,offerer_image_path,offerer_image_mime_type,offerer_image_media_kind,receiver_image_bucket,receiver_image_path,receiver_image_mime_type,receiver_image_media_kind", "completed_at", activityLimit),
@@ -1828,6 +1911,29 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
     const challenges: DiscoverChallengeItem[] = [];
     const trades = ((tradeResult.data ?? []) as unknown as QueryRow[]).map(mapTradeRow);
     const animalTrials = ((animalTrialResult.data ?? []) as unknown as QueryRow[]).map((row) => mapAnimalTrialRow(row, speciesHref));
+
+    if (rankedRows) {
+        // The server decided the order of the captures: keep it. Activity cards are slotted in
+        // between. The feed has ended when the server sent fewer captures than asked for.
+        const hasMore = rankedHasMore;
+        const excluded = excludedCaptureIds(captures, alignments, fusions);
+        const captureItems = captures
+            .filter((item) => !excluded.has(item.captureId) && !isHumanCapture(item))
+            .map((item) => item as DiscoverTimelineItem);
+        const activity: DiscoverTimelineItem[] = [...alignments, ...fusions, ...challenges, ...trades, ...animalTrials];
+        const page = composeRankedTimeline(captureItems, activity, {feedEnded: !hasMore});
+        const lastRow = rankedRows[rankedRows.length - 1];
+        const lastCaptureId = lastRow ? readString(lastRow, "capture_id") : null;
+        const lastItem = page[page.length - 1];
+        return {
+            timeline: page,
+            featured: buildDiscoverFeatured(captures),
+            nextCursor: hasMore && lastItem && lastCaptureId
+                ? {...timelineCursorForItem(lastItem, lastCaptureId), asOf: sessionAsOf}
+                : null
+        };
+    }
+
     // On a cursor page the activity lists are still read from the top, so the
     // merge has to be wide enough to hold the ones the cursor will discard;
     // otherwise they crowd the next captures out of the merged list.
