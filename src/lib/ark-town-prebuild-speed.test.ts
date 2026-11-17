@@ -186,10 +186,12 @@ const TOWN_DIGESTS = {
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
     // (p4 (safari): the safari areas dressed as their habitats, `render/safari-habitat.ts`.)
-    zoo: "0e77d703b25c6f4f",
+    // (p5 (zoospace): the zoo's new homes on the freed plots dressed as their kinds' exhibits, `render/zoo-habitat.ts`.)
+    zoo: "62923793d07fb952",
     // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
     // (p4 (safari): the herbivores, big cats, hyenas and crocodilians moved to the safari by the rule, `town/safari.ts`.)
-    places: "eba3c7031a32e377"
+    // (p5 (zoospace): the crowded residents moved to new homes or spread over their type's plots, kept apart, `zoo-homes.ts`.)
+    places: "8890fbd7ea8fb68a"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {

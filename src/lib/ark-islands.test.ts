@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {safariEnclosureOf} from "@/ark-scene/islands/town/safari";
+import {takenPlots, zooEnclosureOf} from "@/ark-scene/islands/town/zoo-homes";
 import {existsSync, readFileSync} from "node:fs";
 import test from "node:test";
 import base from "@/ark-scene/fixtures/snapshot-v2.json";
@@ -113,7 +113,8 @@ test("town placement: homes, farms, zoo masks and niches, deterministic and stab
             assert.equal(info.place, farmOf(animal.id));
         } else if (animal.area === "zoo") {
             // p4 (safari): a resident the rule moves to the safari lives in its safari area (`town/safari.ts`), not the record's paddock.
-            const kept = safariEnclosureOf(animal);
+            // p5 (zoospace): and one the rule moves to a new home or spreads over its type's plots, there (`town/zoo-homes.ts`).
+            const kept = zooEnclosureOf(animal, takenPlots(placed.open));
             const enclosure = layout.enclosures.find((e) => e.id === kept);
             assert.ok(enclosure, `${kept} is open`);
             assert.ok(info.enclosure && inPoly(info.enclosure.mask, place.x, place.z), `${animal.model_slug} inside ${kept}'s mask`);

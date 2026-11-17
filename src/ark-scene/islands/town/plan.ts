@@ -32,6 +32,7 @@ import {
     type Pt
 } from "@/ark-scene/islands/town/geom";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
+import type {ZooAnnexTheme} from "@/ark-scene/islands/town/zoo-homes";
 import {SAFARI, SAFARI_AREAS, SAFARI_GATE_ROAD, SAFARI_LOOP, SAFARI_LOOP_STREET, SAFARI_ROAD_WIDTH, type SafariHabitat} from "@/ark-scene/islands/town/safari";
 
 // MARK: - The square of terrain and sea
@@ -237,6 +238,8 @@ export type ZooSlot = {
     /** p4 (safari): a safari habitat (`safari.ts`): its own capacity, waters and dressing. */
     safari?: SafariHabitat;
     capacity?: number;
+    /** p5 (zoospace): one of the zoo's new homes (`zoo-homes.ts`), built on another type's free plot: its theme. */
+    annex?: ZooAnnexTheme;
 };
 
 /** A spare enclosure plot: landscaped until an enclosure a type opens past its own slots is drawn on it. */

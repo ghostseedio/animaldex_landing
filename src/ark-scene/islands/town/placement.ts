@@ -26,7 +26,7 @@ import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townHouseholds, farmOf, householdOf, urbanNiche, zooLayout, zooSpotsFor, townAreas, type Household, type SpotWhere, type TownSpot, type ZooEnclosure, type TownArea} from "@/ark-scene/islands/town/areas";
 import {launchEnclosures, enclosuresIn} from "@/ark-scene/islands/town/areas";
 import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
-import {safariEnclosureOf} from "@/ark-scene/islands/town/safari";
+import {zooResidents} from "@/ark-scene/islands/town/zoo-homes";
 import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
@@ -156,7 +156,7 @@ export function primeTownPlacements(key: string, result: TownPlacements, animals
     // Each animal's own spot remembered too, so any part of the list (the town's animals joining a few at a time) is free.
     if (!animals) return;
     const openKey = result.open.join(",");
-    for (const animal of safariAnimals(animals)) {
+    for (const animal of zooResidents(animals, result.open)) {
         const placement = result.places.get(animal.id);
         const info = result.town.get(animal.id);
         if (!placement || !info) continue;
@@ -170,19 +170,6 @@ export function primeTownPlacements(key: string, result: TownPlacements, animals
     }
 }
 
-/** p4 (safari): each zoo resident with the enclosure the town draws it in (its safari area's, `safari.ts`, or the server's). */
-function safariAnimals(animals: readonly ArkAnimal[]): readonly ArkAnimal[] {
-    let out: ArkAnimal[] | null = null;
-    animals.forEach((a, i) => {
-        if (a.area !== "zoo") return;
-        const e = safariEnclosureOf(a);
-        if (e === (a.enclosure ?? null)) return;
-        out ??= animals.slice();
-        out[i] = {...a, enclosure: e};
-    });
-    return out ?? animals;
-}
-
 export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly string[]): TownPlacements {
     if (primed) {
         const hit = primed.key === townPlacementKey(given) ? primed.result : null;
@@ -191,7 +178,9 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
             return hit;
         }
     }
-    const animals = safariAnimals(given);
+    // p4 (safari), p5 (zoospace): each zoo resident with the enclosure the town draws it in (its safari area, a new
+    // home or its type's spread: `zoo-homes.ts`), from its own fields and the open enclosures.
+    const animals = zooResidents(given, openAs);
     // (`openAs`: the enclosures open for the whole town while only some of its animals are laid out: they join a few at a time.)
     const open = openAs ? [...openAs] : enclosuresIn(animals);
     const openNames = open.length ? open : launchEnclosures();
@@ -415,6 +404,7 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         town.set(animal.id, info);
     }
     spreadPenned(animals, places, town, fresh);
+    spreadZoo(animals, places, town, fresh);
     for (const f of fresh) {
         const core: Placement = {...f.placement};
         delete core.leader;
@@ -470,6 +460,68 @@ function spreadPenned(animals: readonly ArkAnimal[], places: Map<string, Placeme
         }
         group.push({x: f.placement.x, z: f.placement.z, length: f.length});
         SPREAD.set(spreadKey(f.animal), {x: f.placement.x, z: f.placement.z, ground: f.placement.ground});
+    }
+}
+
+/**
+ * p5 (zoospace): a zoo enclosure's residents stand apart, as a pen's do (`spreadPenned`): the census of the real record
+ * found bodies on one another in the houses and flights (the reptile house's 17 pairs, the primates' 9: two residents
+ * of a kind took one spot, `pick` being each one's own draw). Each newcomer (placed fresh, in order of arrival) keeps
+ * clear of everyone already in its enclosure: its own spot if clear, else the nearest clear point on rings about it,
+ * inside the fence (its body's margin) or the house's walls. Tank swimmers and pool swimmers keep theirs (their tank's
+ * loop and the water place them). Nobody already placed moves; the same for every viewer.
+ */
+function spreadZoo(animals: readonly ArkAnimal[], places: Map<string, Placement>, town: Map<string, TownPlace>, fresh: Array<{animal: ArkAnimal; placement: Placement; info: TownPlace; length: number}>): void {
+    const movable = (info: TownPlace | undefined) => Boolean(info && info.area === "zoo" && info.enclosure && !info.tank && info.where !== "pool");
+    const newcomers = fresh.filter((f) => movable(f.info));
+    if (!newcomers.length) return;
+    const isFresh = new Set(newcomers.map((f) => f.animal.id));
+    const groups = new Map<string, Array<{x: number; z: number; length: number}>>();
+    const groupOf = (info: TownPlace) => {
+        let g = groups.get(info.enclosure!.id);
+        if (!g) groups.set(info.enclosure!.id, (g = []));
+        return g;
+    };
+    for (const animal of animals) {
+        const info = town.get(animal.id);
+        if (!movable(info) || isFresh.has(animal.id)) continue;
+        const p = places.get(animal.id);
+        if (p) groupOf(info!).push({x: p.x, z: p.z, length: arkBody(animal).metres});
+    }
+    newcomers.sort((a, b) => (a.animal.arrived_at < b.animal.arrived_at ? -1 : a.animal.arrived_at > b.animal.arrived_at ? 1 : a.animal.id < b.animal.id ? -1 : 1));
+    for (const f of newcomers) {
+        const host = f.info.enclosure!;
+        const group = groupOf(f.info);
+        const indoor = host.indoor && ZOO_HOUSE_TYPES.has(host.type);
+        const frame = indoor ? zooHouseFrame(host) : null;
+        const bound = frame ? frame.inner : maskBox(host.mask);
+        const margin = frame ? Math.min(f.length * 0.5 + 0.15, Math.min(bound.w, bound.d) / 2 - 0.05) : f.info.enclosureMargin ?? 0;
+        const room = (px: number, pz: number) => {
+            let worst = Infinity;
+            for (const o of group) worst = Math.min(worst, Math.hypot(px - o.x, pz - o.z) / keptGap(f.length, o.length));
+            return worst;
+        };
+        let best = {x: f.placement.x, z: f.placement.z, room: room(f.placement.x, f.placement.z)};
+        if (best.room < 1) {
+            const step = Math.max(f.length * 0.5, 0.2);
+            const turn = (hashText(`${f.animal.id}#zoo-spread`) % 6283) / 1000;
+            for (let ring = 1; ring <= 16 && best.room < 1; ring++) {
+                const n = 6 + ring * 2;
+                for (let k = 0; k < n; k++) {
+                    const a = turn + (k / n) * Math.PI * 2;
+                    const p = keepInside(bound, f.placement.x + Math.cos(a) * step * ring, f.placement.z + Math.sin(a) * step * ring, margin);
+                    const r = room(p.x, p.z);
+                    if (r > best.room + 1e-6) best = {x: p.x, z: p.z, room: r};
+                }
+            }
+            if (best.x !== f.placement.x || best.z !== f.placement.z) {
+                f.placement.x = best.x;
+                f.placement.z = best.z;
+                // (Indoors the house's floor; outdoors the ground there.)
+                if (!frame) f.placement.ground = townHeight(best.x, best.z);
+            }
+        }
+        group.push({x: f.placement.x, z: f.placement.z, length: f.length});
     }
 }
 

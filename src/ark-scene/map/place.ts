@@ -357,10 +357,26 @@ function toTheRocks(placed: MapPlacement, zone: ArkZone, slot: number, rank: num
     if (!feet.length) return null;
     const sampler = mapPoints().sampler;
     // The nearest rock's feet first; the slot picks among the nearest dozen, a member a few bearings on.
-    const pick = feet[(hashString(`${zone}#rocks#${slot}`) + rank * 5) % Math.min(feet.length, 12)];
+    const foot = feet[(hashString(`${zone}#rocks#${slot}`) + rank * 5) % Math.min(feet.length, 12)];
+    // p5 (zoospace): its own spot about that foot, a slot's and a rank's own bearing and a body or two out, on ground its
+    // text allows, clear of the rock and walkable (else the foot itself). Two slots near one rock picked the same foot (a
+    // twelfth of the time) and stood on one spot: the wild wetland's saltwater and American crocodiles, 2026-11-17.
+    const radius = Math.min(Math.max(length * 0.2, 0.1), 0.6);
+    const h = hashString(`${zone}#rock-foot#${slot}#${rank}`);
+    let pick: {x: number; z: number} = foot;
+    for (let k = 0; k < 8; k++) {
+        const a = ((h % 6283) / 1000) + k * 0.785;
+        const r = Math.max(length, 0.3) * (0.9 + (((h >>> 13) % 100) / 100) * 0.8);
+        const x = foot.x + Math.cos(a) * r;
+        const z = foot.z + Math.sin(a) * r;
+        const at = sampler.ground(x, z);
+        if (at.water !== null || !at.tags.some((t) => species.allowed.has(t)) || sampler.blocked(x, z, radius) || inRock(x, z, radius, at.height, Math.max(length * 0.5, 0.05))) continue;
+        if (sampler.walkable && !sampler.walkable(x, z, zone === "mountains" ? MOUNTAIN_SLOPE : MAX_SLOPE)) continue;
+        pick = {x, z};
+        break;
+    }
     const g = sampler.ground(pick.x, pick.z);
     const tag = g.tags.find((t) => species.allowed.has(t))!;
-    void length;
     const {perch: _perch, micro: _micro, burrow: _burrow, ...rest} = placed;
     void _perch;
     void _micro;

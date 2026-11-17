@@ -19,6 +19,8 @@ import {at, Geo, tone, type Frame, type V3} from "@/ark-scene/islands/town/rende
 import {strut} from "@/ark-scene/islands/town/render/zoo-barriers";
 import {dressSafari} from "@/ark-scene/islands/town/render/safari-habitat";
 import type {SafariHabitat} from "@/ark-scene/islands/town/safari";
+import type {ZooAnnexTheme} from "@/ark-scene/islands/town/zoo-homes";
+import {wetlandLagoon} from "@/ark-scene/islands/town/areas";
 
 type RGB = [number, number, number];
 
@@ -428,7 +430,7 @@ export function hayRack(geo: Geo, plot: Plot, lx: number, lz: number, turn: numb
  * burrow mounds, grass), the bears' and wolves' forest floor (a den, logs, ferns, grass). Ground items keep clear of
  * the residents' spots. Returns the plot (its footprints), or null for a type it does not dress.
  */
-export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed: number; safari?: SafariHabitat}; pool: Pt[] | null}, spots: readonly Pt[], solid: Geo, water: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null): Plot | null {
+export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed: number; safari?: SafariHabitat; annex?: ZooAnnexTheme}; pool: Pt[] | null}, spots: readonly Pt[], solid: Geo, water: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null): Plot | null {
     // p4 (safari): a safari area is dressed as its habitat (`safari-habitat.ts`).
     if (e.slot.safari) return dressSafari(e, spots, solid, heightAt, cover);
     const s = e.slot.at;
@@ -535,6 +537,162 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
             if (q) solid.bush(...plot.p(q.x, q.z, 0.38), 0.8 + r() * 0.4, 0.7 + r() * 0.3, 0.8 + r() * 0.4, tone(colour), hashText(`${e.id}b${k}`));
         }
     };
+    // p5 (zoospace): the zoo's new homes (`zoo-homes.ts`), each dressed as its kind's exhibit.
+    switch (e.slot.annex) {
+        case "wetland": {
+            // A walk-through lagoon: the big lagoon and a pond (`areas.ts` wetlandLagoon, kept free of the residents'
+            // spots), mud flats round them, reed beds, the flamingos' nest mounds, a log or two, shrubs along the netting.
+            for (const w of wetlandLagoon(s)) {
+                if (!plot.take(w.x, w.z, w.r, "pool", 0.5)) continue;
+                ground(w.x, w.z, w.r + 2.2, tone("#7d6a4a"), hashText(`${e.id}mud${w.x.toFixed(0)}`), 0.13);
+                ground(w.x + w.r * 0.3, w.z - w.r * 0.2, w.r + 1.2, tone("#8a7656"), hashText(`${e.id}mud2${w.x.toFixed(0)}`), 0.135);
+                ground(w.x, w.z, w.r + 0.7, tone("#5f7a3a"), hashText(`${e.id}shallows${w.x.toFixed(0)}`), 0.14);
+                pool(solid, water, plot, w.x, w.z, w.r, hashText(`${e.id}lagoon${w.x.toFixed(0)}`), tone("#7d7464"), tone("#5f8f86"), 0.2);
+                // Reeds in clumps round its edge (tall blades, on the bank).
+                // (Beds of three stems a clump round the water, on the shallows' green.)
+                const n = Math.round(w.r * 4.5);
+                for (let k = 0; k < n; k++) {
+                    const a = (k / n) * Math.PI * 2 + r() * 0.3;
+                    const rr = w.r * (1.0 + r() * 0.14);
+                    const q = at2(w.x + Math.cos(a) * rr, w.z + Math.sin(a) * rr, 0.35, "plant", 0.6, 6);
+                    if (!q) continue;
+                    for (let j = 0; j < 3; j++) tuft(solid, plot, q.x + (r() - 0.5) * 0.5, q.z + (r() - 0.5) * 0.5, 1.0 + r() * 0.8, tone((k + j) % 3 ? "#6f8a3a" : "#94963f"), hashText(`${e.id}reed${k}.${j}${w.x.toFixed(0)}`), 11);
+                }
+            }
+            for (let k = 0; k < 5; k++) {
+                const q = at2((r() - 0.5) * s.w * 0.7, (r() - 0.5) * s.d * 0.7, 0.45, "burrow", 4);
+                if (!q) continue;
+                // A flamingo's nest: a truncated mud cone with a dished top.
+                const pt = plot.p(q.x, q.z, -0.05);
+                solid.cylinder({x: pt[0], y: pt[1], z: pt[2], rot: 0}, 0, 0, 0, 0.42, 0.26, 0.32, tone("#8a7454"), 9);
+                solid.cylinder({x: pt[0], y: pt[1] + 0.3, z: pt[2], rot: 0}, 0, 0, 0, 0.22, 0.24, 0.02, tone("#6f5d42"), 9, true);
+            }
+            patches(18, ["#6f8a42", "#7d9a4a", "#6a8a3e", "#5f7a3a"], 3.2);
+            logs(3, "#6a5236");
+            shrubs(16, "#3f7a34");
+            grass(420, ["#6f9a44", "#86a84e", "#7a8a3e", "#9aa050"], 0.6);
+            return plot;
+        }
+        case "waders": {
+            // The storks' and pelicans' flight: a long shallow pool, reeds, a nest platform of sticks on a pole.
+            const q = at2(0, -D * 0.25, Math.min(W - 1, 1.9), "pool", 4, 30);
+            if (q) {
+                ground(q.x, q.z, Math.min(W - 0.6, 2.4), tone("#7d6a4a"), hashText(`${e.id}mud`), 0.13);
+                pool(solid, water, plot, q.x, q.z, Math.min(W - 1, 1.9), hashText(`${e.id}pool`), tone("#7d7464"), tone("#5f8f86"), 0.2);
+            }
+            const nest = at2(0, D * 0.3, 0.3, "post", 3);
+            if (nest) {
+                const top = pole(solid, plot, nest.x, nest.z, 3.0, 0.1, hashText(`${e.id}nest`));
+                solid.cylinder({x: top[0], y: top[1] - 0.1, z: top[2], rot: 0}, 0, 0, 0, 0.75, 0.6, 0.35, tone("#6a5236"), 9);
+            }
+            for (let k = 0; k < 8; k++) {
+                const t = at2((r() - 0.5) * s.w * 0.6, (r() - 0.5) * s.d * 0.85, 0.35, "plant", 2);
+                if (t) tuft(solid, plot, t.x, t.z, 1.0 + r() * 0.6, tone("#7a8a3e"), hashText(`${e.id}reed${k}`), 11);
+            }
+            patches(5, ["#6f8a42", "#8a7656"], 1.6);
+            grass(70, ["#6f9a44", "#86a84e"], 0.5);
+            return plot;
+        }
+        case "vultures": {
+            // A rocky ledge country: a cliff of rockwork at the back with ledges, boulders, a flat feeding rock, sand.
+            patches(6, ["#b39a6a", "#a08a5e", "#8f8a5a"], 1.8);
+            const k1 = at2(0, -D * 0.62, 1.6, "rockwork", 3, 30);
+            if (k1) {
+                outcrop(solid, plot, k1.x, k1.z, 2.4, tone("#9a8a72"), hashText(`${e.id}cliff`));
+                ledge(solid, plot, k1.x + 1.2, k1.z + 1.0, 1.0, tone("#a8987e"), hashText(`${e.id}l1`));
+            }
+            rocks(3, 1.0, "#968670", 0.6);
+            const slab = at2(0, D * 0.2, 0.9, "rockwork", 3);
+            if (slab) ledge(solid, plot, slab.x, slab.z, 0.9, tone("#b0a088"), hashText(`${e.id}slab`));
+            logs(2, "#7a6248");
+            grass(60, ["#b0a050", "#9aa050"], 0.5);
+            return plot;
+        }
+        case "raptors":
+        case "owls": {
+            // A long flight: perching poles down its length (the falconer's blocks and bow perches), a stump, logs,
+            // gravel and grass for the hawks; leaf litter, ferns and a nest box on a post for the owls.
+            const owls = e.slot.annex === "owls";
+            patches(5, owls ? ["#5a4a32", "#4f5a32", "#6a5a3a"] : ["#a09478", "#8a8a5a", "#9a8a6a"], 1.2);
+            for (let k = 0; k < 3; k++) {
+                const q = at2((k % 2 ? 0.3 : -0.3) * s.w, -D * 0.7 + (k * s.d * 0.7) / 2, 0.25, "post", 2);
+                if (q) pole(solid, plot, q.x, q.z, 1.6 + r() * 0.9, 0.08, hashText(`${e.id}perch${k}`));
+            }
+            const box = owls ? at2(0, -D * 0.4, 0.25, "post", 3) : null;
+            if (box) {
+                const top = pole(solid, plot, box.x, box.z, 2.6, 0.08, hashText(`${e.id}box`));
+                const bf: Frame = {x: top[0], y: top[1], z: top[2], rot: s.rot};
+                solid.box(bf, 0, 0, 0, 0.5, 0.6, 0.5, tone("#7a5a3e"));
+                solid.box(bf, 0, 0.6, 0, 0.62, 0.06, 0.62, tone("#5a4a3a"));
+                solid.cylinder({x: top[0], y: top[1] + 0.32, z: top[2], rot: 0}, 0, 0, 0, 0.09, 0.09, 0.02, tone("#1e1a16"), 8);
+            }
+            logs(1, owls ? "#5e4632" : "#6f5236");
+            if (owls) {
+                for (let k = 0; k < 6; k++) {
+                    const q = at2((k % 2 ? 1 : -1) * (W - 0.7), (r() - 0.5) * s.d * 0.85, 0.45, "plant", 2);
+                    if (q) fern(solid, plot, q.x, q.z, 0.8 + r() * 0.4, tone("#3f7a34"), hashText(`${e.id}f${k}`), 9);
+                }
+            } else rocks(1, 0.8, "#968670", 0.5);
+            grass(owls ? 40 : 60, owls ? ["#5f7a3a", "#4f6a34"] : ["#9aa050", "#b0a050", "#86a84e"], 0.4);
+            return plot;
+        }
+        case "flight":
+            // (The second big flight is planted as the zoo's aviaries are, below.)
+            break;
+        case "tortoises": {
+            // A dry paddock: sand and earth, a heated shelter (the keepers' shed), a mud wallow, rocks to climb, cactus and
+            // tussock grass, hay scattered by the shelter.
+            patches(8, ["#c9b083", "#b39a6a", "#a08a5e"], 1.4);
+            const wallow = at2(0, D * 0.25, 1.0, "pool", 3, 20);
+            if (wallow) {
+                ground(wallow.x, wallow.z, 1.5, tone("#7d6a4a"), hashText(`${e.id}mud`), 0.13);
+                pool(solid, water, plot, wallow.x, wallow.z, 0.95, hashText(`${e.id}wallow`), tone("#867d70"), tone("#6f7a5a"), 0.12);
+            }
+            rocks(2, 0.8, "#a8987e", 0.6);
+            for (let k = 0; k < 3; k++) {
+                const q = at2((r() - 0.5) * s.w * 0.6, (r() - 0.5) * s.d * 0.7, 0.25, "post", 3);
+                if (q) cactus(solid, plot, q.x, q.z, 0.9 + r() * 0.6, hashText(`${e.id}c${k}`));
+            }
+            for (let k = 0; k < 4; k++) {
+                const q = at2((r() - 0.5) * s.w * 0.5, -D * 0.5 + r() * 2, 0.35, "hay", 2);
+                if (q) {
+                    const p = plot.p(q.x, q.z, 0.02);
+                    solid.blob(p[0], p[1], p[2], 0.4, 0.08, 0.3, tone("#c9b26a"), hashText(`${e.id}hay${k}`), 0);
+                }
+            }
+            grass(50, ["#b0a050", "#c8b060"], 0.35);
+            return plot;
+        }
+        case "walkabout": {
+            // The walk-through: grass and gum-tree scrub, a pond for the capybaras, a hay rack, logs, a burrow mound.
+            patches(8, ["#7a9a48", "#8a8a52", "#a08a5e"], 1.8);
+            waterhole(0, D * 0.15, 1.6, "#867d70");
+            const q = at2(0, -D * 0.5, 1.1, "hay", 3);
+            if (q) hayRack(solid, plot, q.x, q.z, Math.PI / 2);
+            logs(2);
+            shrubs(6, "#5f7a3a");
+            grass(140, ["#8a9a48", "#a0a050", "#6f9a44"], 0.55);
+            return plot;
+        }
+        case "carnivores": {
+            // A cat's or a marten's run: a climbing tree with a deck, a log, a hollow log den, tall grass.
+            patches(4, ["#7a6a4a", "#6f8a42"], 1.2);
+            const t = at2(0, -D * 0.3, 0.5, "tree", 2, 24);
+            if (t) {
+                climbingTree(solid, plot, t.x, t.z, 3.6, hashText(`${e.id}ct`));
+                deck(solid, plot, t.x, t.z + 0.1, 1.4, 1.2, 2.4);
+            }
+            logs(2);
+            for (let k = 0; k < 3; k++) {
+                const f = at2((r() - 0.5) * s.w * 0.6, (r() - 0.5) * s.d * 0.8, 0.4, "plant", 2);
+                if (f) fern(solid, plot, f.x, f.z, 0.8, tone("#4f7a34"), hashText(`${e.id}f${k}`), 9);
+            }
+            grass(70, ["#8a9a48", "#a0a050"], 0.7);
+            return plot;
+        }
+        default:
+            break;
+    }
     switch (e.type) {
         case "big_cats": {
             patches(8, ["#c2a46a", "#a99a5a", "#8f8a52"], 2.2);
@@ -687,7 +845,7 @@ export type HabitatItem = {id: string; what: string; x: number; z: number; r: nu
  * The ground items an outdoor enclosure's dressing puts down (town frame), exactly where `dressPaddock` draws them (the
  * same run, drawing nothing).
  */
-export function paddockItems(e: {id: string; type: string; slot: {at: Box; seed: number; safari?: SafariHabitat}; pool: Pt[] | null}, spots: readonly Pt[]): HabitatItem[] {
+export function paddockItems(e: {id: string; type: string; slot: {at: Box; seed: number; safari?: SafariHabitat; annex?: ZooAnnexTheme}; pool: Pt[] | null}, spots: readonly Pt[]): HabitatItem[] {
     const plot = dressPaddock(e, spots, new SinkGeo(), new SinkGeo(), () => 0);
     if (!plot) return [];
     const s = e.slot.at;
