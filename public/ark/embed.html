@@ -92,7 +92,9 @@
   // The Ark's code by this page's deploy (decision 360): the CDN lets a phone keep ./ark-scene.js for 4 hours, and a
   // new page with the old code broke Ark Lite (2026-11-15: setFounders missing, an empty page). This page is never
   // cached and its Last-Modified is the image's build time, so each deploy asks for its own code and workers; the
-  // same deploy's stay cached. (No header: the time now, so fresh every load, never stale.)
+  // same deploy's stay cached. (No header: the time now, so fresh every load, never stale.) Since 2026-11-17 the versioned
+  // address is also what the server lets a browser keep for good (`immutable`, next.config.js) and a bare one is asked
+  // again every time; the scene reads this same `ARK_CODE_V` for the workers it starts itself (src/ark-scene/code-version.ts).
   window.ARK_CODE_V = "?v=" + (Date.parse(document.lastModified) || Date.now());
   (function () {
     var link = document.createElement("link");

@@ -43,6 +43,19 @@ function reversedComparisonRedirects() {
     return redirects;
 }
 
+/**
+ * The Ark's code version (src/ark-scene/code-version.ts): scripts/build-ark-bundle.mjs, which `npm run build` runs first
+ * (the `prebuild` hook), writes it beside the bundles; the pages are built with it inlined, so a page and the workers it
+ * asks for are one build's. Empty before the first bundle build (a test, `next dev` on a fresh checkout): the URLs stay bare.
+ */
+function arkCodeVersion() {
+    try {
+        return require("fs").readFileSync(path.join(__dirname, "public/ark/ark-version.txt"), "utf8").trim();
+    } catch {
+        return "";
+    }
+}
+
 if (process.env.NEXT_PHASE === "phase-production-build" || process.argv.includes("build")) {
     process.env.ADEX_SEO_SSG_NO_REMOTE = "1";
 }
@@ -51,6 +64,7 @@ module.exports = withNextIntl({
     output: 'standalone',
     // No X-Powered-By: Next.js on every response (WEB-22).
     poweredByHeader: false,
+    env: {NEXT_PUBLIC_ARK_CODE_V: arkCodeVersion()},
     // Stable SEO pages SSG from checked-in snapshots. Sitemap stays a
     // request-time route so it does not block static generation.
     staticPageGenerationTimeout: 600,
@@ -411,6 +425,26 @@ module.exports = withNextIntl({
                     {key: "Cache-Control", value: "public, max-age=86400, stale-while-revalidate=2592000"}
                 ]
             })),
+            // The Ark's scripts (the packed scene and the prebuild and town workers: /ark/*.js, built by
+            // scripts/build-ark-bundle.mjs, not content-hashed in their names). Next serves /public with `max-age=0` and the
+            // CDN turned that into `max-age=14400`, so a browser kept the old scene's worker beside the new scene for up to
+            // four hours after a deploy (2026-11-17: the zoo dome missing an hour after b2662ec6, hard refresh or not).
+            // Now every script URL the site and the apps' panel ask for carries the build's `?v=` (src/ark-scene/code-version.ts):
+            // that address is the same bytes for good, `immutable`. A bare address (an older panel, a bookmark) is asked
+            // again every time (`no-cache`: the etag makes that a 304). The second rule wins over the first where both match.
+            {
+                source: "/ark/:file([^/]+\\.js)",
+                headers: [
+                    {key: "Cache-Control", value: "public, no-cache"}
+                ]
+            },
+            {
+                source: "/ark/:file([^/]+\\.js)",
+                has: [{type: "query", key: "v"}],
+                headers: [
+                    {key: "Cache-Control", value: "public, max-age=31536000, immutable"}
+                ]
+            },
             {
                 // The positions atlas is asked for by its content hash (`?v=`, src/ark-scene/hunting.ts): the same
                 // address is the same bytes for good.
