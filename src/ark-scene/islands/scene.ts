@@ -15,7 +15,7 @@ import type {ArkAnimal} from "@/ark-scene/types";
 import type {ChunkGrid, ChunkSpan} from "@/ark-scene/streaming/chunks";
 import type {TownPlace} from "@/ark-scene/islands/town/placement";
 import {ARK_ISLANDS, townWorldOrigin} from "@/ark-scene/islands";
-import {coopPose} from "@/ark-scene/islands/town/rural";
+import {coopPose, coopTick} from "@/ark-scene/islands/town/rural";
 import {TOWN_CHUNK_COUNT, TOWN_GRID} from "@/ark-scene/islands/town/chunks";
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
 import type {ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
@@ -136,6 +136,12 @@ export type ArkIslandScene = {
     figureBase: (id: string, x: number, z: number, ground: number, tall: number) => number;
     /** Lane TB (decision 255): a tank resident's figure's point and heading (its loop at a fixed moment), world frame; null for others. */
     figurePose: (id: string, length: number) => {x: number; z: number; yaw: number} | null;
+    /**
+     * p5 (rural): where a resting figure stands now by the clock when not at its own place (a hen in her hen house from
+     * dusk, world frame; `ground` her floor), else null; `roostTick` changes whenever any of them must be placed again.
+     */
+    roostFigure: (id: string, x: number, z: number) => {x: number; z: number; ground: number} | null;
+    roostTick: () => number;
     /** The most its home range may reach (m): its garden, paddock or enclosure. */
     rangeOf: (id: string) => number | null;
     /** A kept animal (house, farm, zoo): its home is never moved away from prey. */
@@ -578,8 +584,16 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const pose = roomPose(room, id, length, clock);
             return {x: pose.x + origin.x, z: pose.z + origin.z, yaw: pose.yaw, base: pose.base};
         },
+        roostFigure: (id, x, z) => {
+            const info = towned.get(id);
+            const coop = info?.pen ? coopPose(info.place, id, hoursNow, x - origin.x, z - origin.z) : null;
+            return coop ? {x: coop.x + origin.x, z: coop.z + origin.z, ground: townHeight(coop.x, coop.z) + coop.floor} : null;
+        },
+        roostTick: () => coopTick(hoursNow),
         figureBase: (id, x, z, ground, tall) => {
             const info = towned.get(id);
+            // p5 (rural): a hen shut in stands on her hen house's floor (`roostFigure`'s ground), not the grass under it.
+            if (info?.pen && coopPose(info.place, id, hoursNow, x - origin.x, z - origin.z)?.inside) return ground;
             if (info?.tank) return Math.max(info.tank.floor + 0.05, (info.tank.floor + info.tank.top) / 2 - tall / 2);
             if (info && (info.display || info.where === "indoor" || info.where === "window" || info.where === "pool")) return ground;
             return townDrawnHeight(x - origin.x, z - origin.z, undefined, ground);

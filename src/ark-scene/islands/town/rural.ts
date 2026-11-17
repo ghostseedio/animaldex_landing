@@ -349,3 +349,17 @@ export function coopPose(fieldId: string, id: string, hours: number, x: number, 
     }
     return null;
 }
+
+/**
+ * A number that changes whenever the poultry's standing places change by the clock: 0 while they range, -1 shut in, and
+ * a step every half minute of the walks in and out. The town's resting figures (drawn still at their places, out of the
+ * live budget) are placed again when it changes, so the whole flock goes in, not only the animated few.
+ */
+export function coopTick(hours: number): number {
+    const {in: shut, out, walk} = COOP_HOURS;
+    const h = ((hours % 24) + 24) % 24;
+    if (h >= shut - walk && h < shut) return 1 + Math.floor(((h - (shut - walk)) / walk) * 60);
+    if (h >= shut || h < out) return -1;
+    if (h < out + walk) return 100 + Math.floor(((h - out) / walk) * 60);
+    return 0;
+}

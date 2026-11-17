@@ -29,7 +29,7 @@ import {islandHours} from "@/lib/ark-clock";
 import {sampleTownGround} from "@/ark-scene/islands/town/ground";
 import {inland, townPlan} from "@/ark-scene/islands/town/plan";
 import {farmOf} from "@/ark-scene/islands/town/areas";
-import {COOP_HOURS, coopPose, henHouseOf, FARM_KEEP, PETTING_KEEP, RURAL_BUILDINGS, RURAL_LANE, RURAL_LANE_WIDTH, RURAL_PENS, RURAL_TRACKS, ruralKindOf, ruralPenOf, ruralPondNorm, type RuralKind} from "@/ark-scene/islands/town/rural";
+import {COOP_HOURS, coopPose, coopTick, henHouseOf, FARM_KEEP, PETTING_KEEP, RURAL_BUILDINGS, RURAL_LANE, RURAL_LANE_WIDTH, RURAL_PENS, RURAL_TRACKS, ruralKindOf, ruralPenOf, ruralPondNorm, type RuralKind} from "@/ark-scene/islands/town/rural";
 import residents from "@/ark-scene/islands/town/rural-residents.json";
 import {pickFigure, type Projector} from "@/ark-scene/tap-pick";
 
@@ -254,6 +254,19 @@ test("the hens range by day and are shut in their hen house from dusk to morning
         }
     }
     assert.equal(coopPose("rural-dairy-pasture", "cow-1", 23, 0, 0), null, "only the poultry");
+    // The resting figures (still, out of the live budget) are placed again whenever the tick changes: never by day,
+    // once when shut in, every half minute of the walks; and it changes wherever a hen's place does.
+    assert.equal(coopTick(9), 0);
+    assert.equal(coopTick(12), coopTick(17.9));
+    assert.equal(coopTick(COOP_HOURS.in + 0.01), coopTick(3));
+    assert.notEqual(coopTick(COOP_HOURS.in - 0.3), coopTick(COOP_HOURS.in - 0.2));
+    assert.notEqual(coopTick(COOP_HOURS.out + 0.1), coopTick(COOP_HOURS.out + 0.2));
+    const range = RURAL_PENS.find((p) => p.id === "rural-free-range")!.at;
+    for (let h = 0; h < 24; h += 1 / 240) {
+        const a = coopPose("rural-free-range", "hen-x", h, range.x, range.z);
+        const b = coopPose("rural-free-range", "hen-x", h + 1 / 240, range.x, range.z);
+        if (coopTick(h) === coopTick(h + 1 / 240)) assert.ok((a === null && b === null) || (a !== null && b !== null && Math.hypot(a.x - b.x, a.z - b.z) < 0.9), `a hen moved within one tick at ${h.toFixed(3)} h`);
+    }
 });
 
 test("a tap on an animal in the fields selects it: by day where it stands, a hen at night in her hen house", () => {
