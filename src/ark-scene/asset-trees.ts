@@ -33,7 +33,20 @@ import {inPool} from "@/ark-scene/islands/wild/falls";
 const LEVELS = ["lod0", "lod1", "lod2", "card"] as const;
 type Level = typeof LEVELS[number];
 
-type Instance = {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4; tint: Color; fill: boolean; rank: number; woods: boolean};
+type Instance = {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4; tint: Color; fill: boolean; rank: number; woods: boolean; /** p5 (humans): in a logging stand (`setOverride`). */ ov?: boolean};
+
+/**
+ * p5 (humans): logging and replanting (`forestry/forest-trees.ts`). `covers` marks the trees a stand holds (asked once
+ * per tree when set); `matrix` answers a marked tree's drawn matrix now (`radius` is its crown's): `instance` as built, `into` written (felled,
+ * falling, a sapling), or null (not drawn: hauled away). `moving` asks for a re-sort every frame (a tree mid-fall).
+ */
+export type TreeOverride = {
+    covers: (tree: {x: number; y: number; z: number; height: number; radius: number; matrix: Matrix4}) => boolean;
+    matrix: (tree: {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4}, into: Matrix4) => Matrix4 | null;
+    moving: () => boolean;
+    /** The override's own state changed (a tree fell, a sapling grew a step): re-sort once. */
+    changed: () => boolean;
+};
 
 
 /** The least reach of the lod2 → card hand-over (the medium tier's), see `update`. */
@@ -329,6 +342,9 @@ export class AssetTrees {
     private lastAt = new Vector3(Infinity, 0, 0);
     private framesSince = 0;
     private shadows = true;
+    // p5 (humans): logging stands' trees (`setOverride`).
+    private override: TreeOverride | null = null;
+    private readonly overMatrix = new Matrix4();
 
     constructor(base = ASSET_BASE) {
         const position = new Vector3();
@@ -430,11 +446,21 @@ export class AssetTrees {
         this.lastAt.set(Infinity, 0, 0);
     }
 
+    /** p5 (humans): the logging stands' trees drawn by `override` (null: every tree as built). */
+    setOverride(override: TreeOverride | null) {
+        this.override = override;
+        this.byAsset.forEach((entry) => {
+            for (const instance of entry.instances) instance.ov = override ? override.covers(instance) : false;
+        });
+        this.lastAt.set(Infinity, 0, 0);
+    }
+
     /** Re-sort the levels when the camera has moved (or every half second). */
     update(camera: Vector3) {
         if (!this.ready) return;
         this.framesSince++;
-        if (camera.distanceToSquared(this.lastAt) < 2.25 && this.framesSince < 30) return;
+        const forced = this.override !== null && (this.override.moving() || this.override.changed()); // p5 (humans)
+        if (!forced && camera.distanceToSquared(this.lastAt) < 2.25 && this.framesSince < 30) return;
         this.framesSince = 0;
         this.lastAt.copy(camera);
         // A tree is "near" when the camera is inside (or within reach of) its crown's cylinder: drawn with the fade.
@@ -452,6 +478,9 @@ export class AssetTrees {
             for (const instance of entry.instances) {
                 if (instance.fill && instance.rank > (instance.woods ? Math.max(this.fill, WOODS_FILL) : this.fill)) continue;
                 if (this.drawnAt && !this.drawnAt(instance.x, instance.z)) continue;
+                // p5 (humans): a logging stand's tree: felled, falling, hauled away or a sapling.
+                const matrix = instance.ov && this.override ? this.override.matrix(instance, this.overMatrix) : instance.matrix;
+                if (!matrix) continue;
                 // A tree's levels hand over further for a bigger tree (decision 34: trees at their real heights, twice
                 // the library's and more), by the square root of its size: a 40 m emergent keeps its detail further, and
                 // each asset's trees stay in few levels (each level in use is a draw call).
@@ -460,7 +489,7 @@ export class AssetTrees {
                     const across = Math.hypot(instance.x - camera.x, instance.z - camera.z);
                     const above = camera.y - instance.y;
                     if (across < entry.crown * instance.scale + margin && above < entry.height * instance.scale + margin && above > -margin) {
-                        entry.near.setMatrixAt(nearCount, instance.matrix);
+                        entry.near.setMatrixAt(nearCount, matrix);
                         entry.near.setColorAt(nearCount, instance.tint);
                         nearCount++;
                         continue;
@@ -477,7 +506,7 @@ export class AssetTrees {
                 level = LEVELS[index];
                 const mesh = entry.meshes[level];
                 if (!mesh) continue;
-                mesh.setMatrixAt(counts[level], instance.matrix);
+                mesh.setMatrixAt(counts[level], matrix);
                 mesh.setColorAt(counts[level], instance.tint);
                 counts[level]++;
             }
