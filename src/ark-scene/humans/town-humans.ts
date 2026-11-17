@@ -28,6 +28,7 @@ import {solidDistance, townSolids} from "@/ark-scene/islands/town/solids";
 import {PARK_BENCH_RING} from "@/ark-scene/islands/town/render/scenery";
 import {BOAT_ROUTES, boatFix} from "@/ark-scene/ocean-traffic";
 import {PavementWalks, type PaveKind} from "@/ark-scene/humans/pavements"; // p5 (humans, pavements)
+import {heelPose, type DogWalks, type HeelPose} from "@/ark-scene/humans/dog-walks"; // p5 (humans, dogs)
 import {bridgeHeight} from "@/ark-scene/islands/town/canal-bridges"; // p5 (humans, pavements)
 import {PAVEMENT_LIFT, ROAD_LIFT} from "@/ark-scene/islands/town/render/streets"; // p5 (humans, pavements)
 import {carried, childScale, isGrown, parentNow, togetherNow, type HumanBond, type HumanBonds, type HumanChild, type Together} from "@/ark-scene/humans/couples"; // p5 (humans, couples)
@@ -317,7 +318,13 @@ export function helmSeat(fix: {x: number; z: number; yaw: number}, pace: number,
     return {x: fix.x + lx * c + lz * s, y: sitRootY(sea + 0.12 * pace + 1.28 + lz * 0.09 * pace, scale), z: fix.z - lx * s + lz * c, yaw: fix.yaw};
 }
 
-export type DrawnHuman = HumanInstance & {id: string; what: HumanDay | OutWhat["kind"] | /* p5 (humans, pavements) */ "pavement"};
+export type DrawnHuman = HumanInstance & {id: string; what: HumanDay | OutWhat["kind"] | /* p5 (humans, pavements) */ "pavement" | /* p5 (humans, dogs) */ "dogwalk"};
+
+/**
+ * p5 (humans, dogs): a dog on its walk now (world frame): the record's own dog (`id`), where it walks at heel, and its
+ * lead's hand end (the walker's hand). The scene moves that dog's own entry there (`index.ts`): never a second dog.
+ */
+export type WalkedDog = {id: string; walker: string; length: number; x: number; y: number; z: number; yaw: number; sniffing: boolean; speed: number; hand: {x: number; y: number; z: number}};
 
 /**
  * The town's people now: `frame` fills `out` (reused, world frame) with everyone drawn at this moment: in a room at
@@ -347,6 +354,11 @@ export class TownHumans {
     private claimedSeats = new Set<number>();
     private placed = new Map<string, DrawnHuman>();
     private beside = new Map<string, number>();
+    // p5 (humans, dogs): the dog walks (`dog-walks.ts`) and the dogs out on them now.
+    private dogWalks: DogWalks | null = null;
+    readonly dogs: WalkedDog[] = [];
+    private dogPool: WalkedDog[] = [];
+    private readonly heel: HeelPose = {x: 0, z: 0, yaw: 0, sniffing: false, speed: 0};
     private inArms = new Set<string>();
 
     /** p5 (humans, pavements): who walks the pavements now (`pavements.ts`). */
@@ -394,6 +406,21 @@ export class TownHumans {
         this.looks = new Map(this.everyone.map((h) => [h.id, grown(h) ? humanLook(h.id) : {...humanLook(h.id), child: true}]));
         this.blockKey = "";
         this.assignHomes();
+    }
+
+    /** p5 (humans, dogs): who walks which dog, when and where (`dog-walks.ts`; null: nobody walks a dog). */
+    setDogWalks(walks: DogWalks | null): void {
+        this.dogWalks = walks;
+    }
+
+    /** The beach's walks (their two ends, town frame): where a dog walk may head for. */
+    get beachWalks(): ReadonlyArray<[Pt, Pt]> {
+        return this.sites.walks;
+    }
+
+    /** The grown people (who keep the town's day: the dog walkers are of them). */
+    get grown(): readonly string[] {
+        return this.roster;
     }
 
     /** The bond a grown human is in (a living partner aboard), or null. */
@@ -456,6 +483,7 @@ export class TownHumans {
         out.length = 0;
         this.tvs.length = 0;
         this.placed.clear();
+        this.dogs.length = 0;
         if (!this.roster.length) return out;
         const clock = townClockAt(epochMs, this.options.offsetHours ?? 0);
         const block = Math.floor(clock.hours / BLOCK_HOURS);
@@ -503,6 +531,41 @@ export class TownHumans {
             t.yaw = room.tv.yaw;
             this.tvs.push(t);
         };
+        // p5 (humans, dogs): the dog walks first (a dog's walk is not put off for a date): the walker on the pavement,
+        // each dog on the lead at heel beside them (`dogs`: the scene moves the record's own dog there).
+        const walking = new Set<string>();
+        if (this.dogWalks) {
+            for (const id of this.roster) {
+                if (!this.dogWalks.dogsOf(id).length || days.get(id) === "sleep" || this.options.away?.(id, epochMs)) continue;
+                const fix = this.dogWalks.at(id, clock.hours, clock.day, rhythm(id).wake);
+                if (!fix) continue;
+                const look = this.looks.get(id)!;
+                const ground = walkGround(fix.x, fix.z, fix.kind);
+                const y = this.options.walkHeight?.(fix.x, fix.z, ground) ?? ground;
+                take(id, look, "dogwalk", ox + fix.x, y, oz + fix.z, fix.yaw, fix.paused ? "stand" : "walk", humanUnit(`${id}#phase`) * 100);
+                walking.add(id);
+                const size = look.height / BASE_HEIGHT;
+                for (const {dog, side} of this.dogWalks.onLead) {
+                    const at = heelPose(fix, side, this.heel);
+                    const d = this.dogPool[this.dogs.length] ?? (this.dogPool[this.dogs.length] = {id: "", walker: "", length: 0, x: 0, y: 0, z: 0, yaw: 0, sniffing: false, speed: 0, hand: {x: 0, y: 0, z: 0}});
+                    d.id = dog.id;
+                    d.walker = id;
+                    d.length = dog.length;
+                    d.x = ox + at.x;
+                    d.y = y;
+                    d.z = oz + at.z;
+                    d.yaw = at.yaw;
+                    d.sniffing = at.sniffing;
+                    d.speed = at.speed;
+                    // The hand on the dog's side, at the hip's height.
+                    const s = side % 2 ? -1 : 1;
+                    d.hand.x = ox + fix.x + Math.cos(fix.yaw) * 0.25 * s * size;
+                    d.hand.y = y + 0.84 * size;
+                    d.hand.z = oz + fix.z - Math.sin(fix.yaw) * 0.25 * s * size;
+                    this.dogs.push(d);
+                }
+            }
+        }
         // p5 (humans, couples): what each couple does together now (`couples.ts` togetherNow), when both are free of
         // sleep and work: a walk side by side, a bench shared, dinner at one's table, the sofa at home. Those two are
         // drawn here and skipped below; a bench seat or a table they take is not also another's.
@@ -512,7 +575,7 @@ export class TownHumans {
         for (const bond of this.bonds) {
             const da = days.get(bond.a);
             const db = days.get(bond.b);
-            if (!da || !db || da === "sleep" || db === "sleep" || da === "work" || db === "work") continue;
+            if (!da || !db || da === "sleep" || db === "sleep" || da === "work" || db === "work" || walking.has(bond.a) || walking.has(bond.b)) continue;
             const now: Together | null = togetherNow(bond, clock);
             if (!now) continue;
             const la = this.looks.get(bond.a)!;
@@ -556,7 +619,7 @@ export class TownHumans {
             together.add(bond.b);
         }
         for (const id of this.roster) {
-            if (together.has(id)) continue; // p5 (humans, couples)
+            if (together.has(id) || walking.has(id)) continue; // p5 (humans, couples), p5 (humans, dogs)
             const look = this.looks.get(id)!;
             const scale = look.height / BASE_HEIGHT;
             const day = days.get(id)!;

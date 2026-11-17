@@ -222,6 +222,8 @@ import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (o
 import {HumanFigures} from "@/ark-scene/humans/figures"; // p5 (humans)
 import {isHumanAnimal, TownHumans} from "@/ark-scene/humans/town-humans"; // p5 (humans)
 import {decodeHumanBonds} from "@/ark-scene/humans/couples"; // p5 (humans, couples)
+import {DogWalks, dogWalkPlaces, isHouseDog, townWalkers} from "@/ark-scene/humans/dog-walks"; // p5 (humans, dogs)
+import {DogLeads} from "@/ark-scene/humans/leads"; // p5 (humans, dogs)
 import {roadHeight as townRoadHeight} from "@/ark-scene/islands/town/render/vehicles"; // p5 (humans)
 import {OceanShadows} from "@/ark-scene/ocean-shadows"; // p2 (ocean)
 import {TOWN_GRID, TOWN_NEAR_LIVE} from "@/ark-scene/islands/town/chunks";
@@ -1295,6 +1297,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const townHumans = new TownHumans({away: (id) => forest.away(id), origin: townWorldOrigin(), roadHeight: townRoadHeight, seaLevel: () => ARK_ENVIRONMENT.seaLevel.value, boatSeconds: () => clockNow()});
     const humanFigures = new HumanFigures();
     scene.add(humanFigures.group);
+    // p5 (humans, dogs): the town's people walk the record's own dogs on a lead (`humans/dog-walks.ts`): a walked dog is
+    // its own entry moved along the walk (its `act`), pinned outside while it walks; never a second dog.
+    const dogWalks = new DogWalks(() => townHumans.walks!.graph, () => dogWalkPlaces(townHumans.beachWalks));
+    if (townHumans.walks) townHumans.setDogWalks(dogWalks);
+    const dogLeads = new DogLeads();
+    scene.add(dogLeads.mesh);
+    let dogRosterDirty = true;
+    let walkPins: string[] = [];
+    let walkPinsAt = 0;
+    let walkPinsFrom: {x: number; z: number} | null = null;
+    const dogActs = new Map<string, ActPose>();
+    const dogCollar = {x: 0, y: 0, z: 0};
     let humansAboard: ArkAnimal[] = [];
     const humanSplit = new WeakMap<ArkSnapshot, {rest: ArkSnapshot; humans: ArkAnimal[]}>();
     /**
@@ -2737,6 +2751,77 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setSnapshot(current, false);
     };
 
+    /**
+     * p5 (humans, dogs): the dogs on a walk now. Once a second: who is out (the pairing is redone when the roster
+     * changed; the walked dogs nearest the look point, at most 12 (6 on the light tiers), are pinned outside). Every
+     * frame: each walked dog's own entry is moved to its place at heel and its lead drawn; a dog whose walk has ended
+     * is given back to its home's own day.
+     */
+    const stepDogWalks = (now: number) => {
+        const isl = island;
+        if (!isl) return;
+        if (dogRosterDirty && placedFor === current) {
+            dogRosterDirty = false;
+            const o = townWorldOrigin();
+            const dogs = [];
+            for (const animal of current.animals) {
+                if (!isHouseDog(animal) || !isl.has(animal) || !isl.kept(animal.id)) continue;
+                const place = placedAll.get(animal.id);
+                const town = isl.townPlace(animal.id);
+                // (A dog kept still indoors, behind a window, is not walked: its home's rooms are another lane's.)
+                if (place && town && town.area === "house" && !town.still) dogs.push({id: animal.id, household: town.place, x: place.x - o.x, z: place.z - o.z, length: arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan).display});
+            }
+            dogWalks.setRoster(dogs, townWalkers(townHumans.grown));
+        }
+        const walked = townHumans.dogs;
+        if (now - walkPinsAt >= 1) {
+            walkPinsAt = now;
+            const cap = liteOn() || tier === "low" ? 6 : 12;
+            const target = controls.target;
+            let ids = walked.map((d) => d.id);
+            const moved = !walkPinsFrom || Math.hypot(target.x - walkPinsFrom.x, target.z - walkPinsFrom.z) >= 8;
+            if (ids.length > cap) {
+                // (Over the cap: the nearest the look point, picked anew only when it has moved, as `near-kept.ts`.)
+                if (!moved && walkPins.every((id) => ids.includes(id)) && walkPins.length === cap) ids = walkPins;
+                else ids = walked.slice().sort((a, b) => Math.hypot(a.x - target.x, a.z - target.z) - Math.hypot(b.x - target.x, b.z - target.z) || (a.id < b.id ? -1 : 1)).slice(0, cap).map((d) => d.id);
+            }
+            if (moved) walkPinsFrom = {x: target.x, z: target.z};
+            if (!sameIds(ids, walkPins)) {
+                walkPins = ids;
+                setSnapshot(current, false);
+            }
+        }
+        dogLeads.begin();
+        for (const d of walked) {
+            const e = entryById.get(d.id);
+            let pose = dogActs.get(d.id);
+            if (!e || e.held || e.ghost || (e.act && e.act !== pose)) continue;
+            if (!pose) dogActs.set(d.id, (pose = {x: 0, z: 0, base: 0, yaw: 0, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: "walk", speed: 0}));
+            pose.x = d.x;
+            pose.z = d.z;
+            pose.base = d.y;
+            pose.yaw = d.yaw;
+            pose.state = d.sniffing ? "eat" : "walk";
+            pose.speed = d.speed;
+            e.act = pose;
+            pose.with = d.walker;
+            // Its collar: at its neck, ahead of its middle.
+            dogCollar.x = d.x + Math.sin(d.yaw) * d.length * 0.36;
+            dogCollar.y = d.y + d.length * 0.58;
+            dogCollar.z = d.z + Math.cos(d.yaw) * d.length * 0.36;
+            dogLeads.add(d.hand, dogCollar);
+        }
+        dogLeads.end();
+        if (dogActs.size > walked.length || walked.length === 0) {
+            dogActs.forEach((pose, id) => {
+                if (walked.some((d) => d.id === id)) return;
+                const e = entryById.get(id);
+                if (e && e.act === pose) e.act = null;
+                dogActs.delete(id);
+            });
+        }
+    };
+
     /** Again from the snapshot as it is: after a pin changed (a herd member selected, a replay's animals). */
     const refreshLive = () => {
         if (herds.length || replayPins.size || mealPins.size || selectionPin) setSnapshot(current, false);
@@ -2776,6 +2861,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         current = snapshot;
         aboard = new Set(snapshot.animals.map((animal) => animal.id));
         forestHumans = people.humans.map((animal) => animal.id); // p5 (humans): the logging crews are of the humans aboard
+        dogRosterDirty = true; // p5 (humans, dogs)
         forest.rosterChanged(); // p5 (humans)
         // Everyone's place (the herds' members too): from the server's slots, the same for every viewer.
         if (placedFor !== snapshot) {
@@ -2805,6 +2891,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const pins = selectionPins(aboard, {selected: selectedId, promoted: selectionPin, followed: followId, replay: mealPins.size ? Array.from(replayPins).concat(Array.from(mealPins)) : replayPins});
         // 3.3 fix: the kept town animals nearest the look point are out to move (`near-kept.ts`).
         for (const id of nearKept) if (aboard.has(id)) pins.add(id);
+        for (const id of walkPins) if (aboard.has(id)) pins.add(id); // p5 (humans, dogs): the dogs out on a walk
         // (Development: `window.__arkHerdOff = true` before mounting draws everyone one by one, to measure against.)
         const herdOff = (globalThis as {__arkHerdOff?: boolean}).__arkHerdOff === true;
         liveliness.setSnapshot(snapshot.animals, snapshot.ark_day);
@@ -8578,6 +8665,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const traffic = island.movingCars?.();
             townHumans.setArkDay(arkDayNow(current, worldMs())); // p5 (humans, couples): a child's age
             humanFigures.setFrame(townHumans.frame(islandMs, traffic?.cars ?? null, traffic?.count ?? 0), camera.position, islandMs / 1000);
+            stepDogWalks(now); // p5 (humans, dogs)
         } else if (humanFigures.drawn.near + humanFigures.drawn.far) humanFigures.setFrame([], camera.position, 0);
         perf.lap("town");
         stepArrival(now);
@@ -9314,6 +9402,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             disposed = true;
             cancelAnimationFrame(raf);
             humanFigures.dispose(); // p5 (humans)
+            dogLeads.dispose(); // p5 (humans, dogs)
             runtime.dispose();
             perf.dispose();
             resizeObserver.disconnect();
