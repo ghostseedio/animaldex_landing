@@ -1,3 +1,5 @@
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
+
 type LegendaryEarthBeastBadgeProps = {
     formName?: string | null;
     compact?: boolean;
@@ -9,7 +11,9 @@ export default function LegendaryEarthBeastBadge({
     compact = false,
     className = ""
 }: LegendaryEarthBeastBadgeProps) {
-    const label = formName ? `S · ${formName}` : "S-tier Legendary";
+    const label = formName
+        ? (SHOWS_BATTLE_TIER_AND_POWER ? `S · ${formName}` : formName)
+        : (SHOWS_BATTLE_TIER_AND_POWER ? "S-tier Legendary" : "Legendary");
 
     return (
         <span

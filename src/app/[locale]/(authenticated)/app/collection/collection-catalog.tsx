@@ -1,6 +1,7 @@
 "use client";
 
 import {type ReactNode, useEffect, useMemo, useRef, useState} from "react";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import {useCompanions} from "@/components/companions/use-companions";
 import {ownCardLevel} from "@/lib/companion-bond";
 import Link from "@/app/[locale]/_components/link";
@@ -813,7 +814,7 @@ export default function CollectionCatalog({
                                     {item.hasIndexNumber ? <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black tabular-nums text-primary-200">{formatAnimalDexNumber(item.number)}</span> : <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 text-[0.62rem] font-black uppercase tracking-[0.12em] text-white/45">NEW</span>}
                                     {item.isLegendary ? (
                                         <span className="absolute bottom-2 left-2 right-2 truncate rounded-full border border-amber-400/35 bg-amber-400/90 px-2 py-1 text-center text-[0.58rem] font-black uppercase tracking-[0.08em] text-black">
-                                            S-tier Legendary
+                                            {SHOWS_BATTLE_TIER_AND_POWER ? "S-tier Legendary" : "Legendary"}
                                         </span>
                                     ) : null}
                                     {item.score !== null ? <span className="absolute right-2 top-2 rounded-full bg-primary-400 px-2 py-1 text-[0.62rem] font-black text-black">{item.score}</span> : null}

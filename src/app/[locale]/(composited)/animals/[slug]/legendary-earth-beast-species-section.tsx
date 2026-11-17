@@ -1,4 +1,5 @@
 import Link from "@/app/[locale]/_components/link";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import ContentImageFigure from "@/app/[locale]/(composited)/_components/content-image-figure";
 import LegendaryEarthBeastBadge from "@/app/[locale]/(composited)/animals/legendary-earth-beast-badge";
 import {
@@ -37,7 +38,7 @@ export default function LegendaryEarthBeastSpeciesSection({
                                 {beast.legendaryFormName}
                             </h2>
                             <p className="text-lg leading-8 text-ink-100 md:text-xl">
-                                {beast.legendaryFormName} is an S-tier Legendary Earth Beast captured only at {captureSite}. This species page includes flagship stats, field guide content, and the travel story behind the landmark.
+                                {beast.legendaryFormName} is {SHOWS_BATTLE_TIER_AND_POWER ? "an S-tier" : "a"} Legendary Earth Beast captured only at {captureSite}. This species page includes flagship stats, field guide content, and the travel story behind the landmark.
                             </p>
                         </div>
 

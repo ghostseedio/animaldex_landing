@@ -1,6 +1,7 @@
 "use client";
 
 import {type CSSProperties, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState} from "react";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import BattleTierChip from "@/app/[locale]/(composited)/animals/battle-tier-chip";
 import SystemWaveform from "@/components/animal-detail/system-dynamics/system-waveform";
 import {FrequencyStateChip} from "@/components/animal-detail/system-dynamics/frequency-chip";
@@ -494,6 +495,7 @@ function DexNumber({value}: {value: number}) {
 }
 
 function TierCorner({tier}: {tier: ReturnType<typeof getBattleTier>}) {
+    if (!SHOWS_BATTLE_TIER_AND_POWER) return null;
     return (
         <span className="pointer-events-none absolute right-2.5 top-2">
             <BattleTierChip tier={tier} compact />

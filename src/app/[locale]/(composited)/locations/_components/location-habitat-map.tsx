@@ -2,6 +2,7 @@ import Link from "@/app/[locale]/_components/link";
 import TierBadge from "@/app/[locale]/(composited)/rankings/_components/tier-badge";
 import type {GeoPoint, LocationMap} from "@/data/location-maps";
 import type {AnimalBattleTier} from "@/lib/battle-tier";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 
 export type HabitatMapSpecies = {
     slug: string;
@@ -361,7 +362,7 @@ export default function LocationHabitatMap({map, species, zoneLabel, speciesCoun
                                                 className="h-[22px] w-[22px] shrink-0 rounded-full bg-surface-800 object-contain ring-1 ring-white/15"
                                             />
                                             {pin.entry.name}
-                                            <TierBadge tier={pin.entry.tier} size="sm" />
+                                            {SHOWS_BATTLE_TIER_AND_POWER ? <TierBadge tier={pin.entry.tier} size="sm" /> : null}
                                         </Link>
                                     </li>
                                 ))}

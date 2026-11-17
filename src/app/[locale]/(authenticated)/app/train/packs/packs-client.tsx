@@ -4,6 +4,7 @@ import {useEffect, useMemo, useState, useTransition} from "react";
 import {useRouter} from "next/navigation";
 import type {TrainAnimalPack, TrainPackCapture} from "@/data/train-modules";
 import {CloseIconButton} from "@/components/ui/icon-buttons";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 
 type PackReveal = {
     pack: TrainAnimalPack;
@@ -602,13 +603,13 @@ function BuilderCaptureRow({capture, selected, onToggle}: {capture: TrainPackCap
                 <h3 className="truncate text-base font-bold text-white">{capture.animalName}</h3>
                 <div className="mt-1 flex flex-wrap gap-1.5 text-[0.62rem] font-black uppercase tracking-[0.06em]">
                     <span className="rounded-full bg-white/[0.06] px-2 py-1 text-white/55">Level 1</span>
-                    <span className="rounded-full bg-orange-400/15 px-2 py-1 text-orange-200">Tier {capture.battleTier}</span>
+                    {SHOWS_BATTLE_TIER_AND_POWER ? <span className="rounded-full bg-orange-400/15 px-2 py-1 text-orange-200">Tier {capture.battleTier}</span> : null}
                     {capture.contextLabel ? <span className="rounded-full bg-white/[0.06] px-2 py-1 text-white/55">{capture.contextLabel}</span> : null}
                 </div>
                 <div className="mt-1 flex gap-2 text-[0.68rem] font-semibold text-white/35">
                     <span className="text-primary-200">Value {capture.tradeValue}</span>
                     <span>Rarity {capture.rarity}%</span>
-                    <span>Power {capture.battlePower}</span>
+                    {SHOWS_BATTLE_TIER_AND_POWER ? <span>Power {capture.battlePower}</span> : null}
                 </div>
             </div>
         </button>
@@ -705,8 +706,8 @@ function RevealHero({capture, final}: {capture: TrainPackCapture; final: boolean
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
                 <Chip>Level 1</Chip>
-                <Chip>Tier {capture.battleTier}</Chip>
-                <Chip>Power {capture.battlePower}</Chip>
+                {SHOWS_BATTLE_TIER_AND_POWER ? <Chip>Tier {capture.battleTier}</Chip> : null}
+                {SHOWS_BATTLE_TIER_AND_POWER ? <Chip>Power {capture.battlePower}</Chip> : null}
                 {capture.speciesSlug ? <Chip>#{capture.speciesSlug.slice(0, 6).toUpperCase()}</Chip> : null}
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2">
@@ -724,7 +725,7 @@ function MiniRevealCard({capture, final}: {capture: TrainPackCapture; final: boo
             <img src={capture.imageSrc} alt="" className="aspect-square w-full object-cover" />
             <h4 className="mt-2 line-clamp-2 text-sm font-bold text-white">{capture.animalName}</h4>
             <div className="mt-2 flex flex-wrap gap-1">
-                <Chip small>Tier {capture.battleTier}</Chip>
+                {SHOWS_BATTLE_TIER_AND_POWER ? <Chip small>Tier {capture.battleTier}</Chip> : null}
                 <Chip small>{capture.rarity}%</Chip>
             </div>
         </article>
