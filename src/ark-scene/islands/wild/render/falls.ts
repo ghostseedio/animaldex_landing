@@ -17,6 +17,8 @@
 
 import {AdditiveBlending, type PerspectiveCamera, Vector2, BufferAttribute, BufferGeometry, Color, DoubleSide, Group, IcosahedronGeometry, InstancedBufferAttribute, InstancedBufferGeometry, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, NormalBlending, Points, Quaternion, ShaderMaterial, Sphere, UniformsLib, UniformsUtils, Vector3} from "three";
 import {mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
+import {wildHeight} from "@/ark-scene/islands/wild/ground";
+import {rillPaths, steamVents} from "@/ark-scene/islands/wild/crater";
 import {ARK_DAYLIGHT, ARK_GLINT, ARK_SUN, ARK_TIME, NOISE_GLSL} from "@/ark-scene/glsl";
 import {cliffSkin, curtainFoot, curtainPoint, FALLS_LIP, FALLS_X, impact, outflowPath, POOL, rimStones, CURTAIN_BOTTOM} from "@/ark-scene/islands/wild/falls";
 
@@ -35,10 +37,11 @@ function hash(n: number): number {
 
 // MARK: - The cliff
 
-const ROCK_DARK = new Color("#4f4a43");
-const ROCK_MID = new Color("#6e675d");
-const ROCK_PALE = new Color("#8e8676");
-const ROCK_WARM = new Color("#7a6852");
+// (p5: the falls come over the old volcano's breached rim: dark basalt, a rusty bed here and there.)
+const ROCK_DARK = new Color("#34323a");
+const ROCK_MID = new Color("#55525a");
+const ROCK_PALE = new Color("#77736f");
+const ROCK_WARM = new Color("#6e4c40");
 const MOSS = new Color("#4c6a2b");
 const MOSS_BRIGHT = new Color("#6f8f36");
 const LICHEN = new Color("#a3a083");
@@ -82,6 +85,13 @@ function cliffGeometry(): {geometry: BufferGeometry; ledges: Array<{x: number; y
         c.multiplyScalar(0.92 + 0.14 * streak);
         // The partings and joints in shade (the beds' rounded middles catch the light).
         c.lerp(ROCK_DARK, (1 - open) * 0.55);
+        // p5: columnar basalt either side of the water: a thick flow's columns, their joints dark, a metre across, in a
+        // band from over the pool to under the lip (their tops broken off at different heights).
+        const columnar = Math.min(Math.max((Math.abs(u) - CURTAIN_BOTTOM * 0.5 + 1) / 3, 0), 1) * Math.min(Math.max((y - POOL.level - 2.5) / 3, 0), 1) * Math.min(Math.max((FALLS_LIP - 5 - 4 * hash(Math.floor(x * 0.9) + 71) - y) / 2, 0), 1) * (ny < 0.55 ? 1 : 0);
+        if (columnar > 0) {
+            const joint = Math.abs(Math.sin(x * 2.9 + 1.3 * hash(Math.floor(y * 0.12) + 5)));
+            c.multiplyScalar(1 - columnar * (0.5 * (1 - Math.min(joint * 3.2, 1)) + 0.12 * hash(Math.floor((x * 2.9) / Math.PI) + 19)));
+        }
         // Wet: behind and beside the water, and everywhere the spray reaches near the pool.
         const sheet = Math.exp(-((u / (CURTAIN_BOTTOM * 0.5 + 2.2)) ** 2)) * (y < FALLS_LIP + 0.6 ? 1 : 0);
         const spray = Math.exp(-((Math.hypot(x - strike.x, (y - strike.y) * 0.55, z - strike.z) / 11) ** 2));
@@ -295,8 +305,9 @@ function waterGeometry(): BufferGeometry {
     };
     sheet(0, 72, 46, 0, 0);
     sheet(1, 54, 40, 0.04, 0.45);
-    // The spill: a strip down the ground from the pool's rim to the spring.
-    const path = outflowPath();
+    // The spill: a strip down the ground from the pool's rim to the spring; and (p5) the snowmelt rills down the
+    // caldera's inner walls to the crater lake.
+    for (const path of [outflowPath(), ...rillPaths(wildHeight)]) {
     const base = positions.length / 3;
     let run = 0;
     for (let k = 0; k < path.length; k++) {
@@ -320,6 +331,7 @@ function waterGeometry(): BufferGeometry {
             const a = base + k * 3 + s;
             index.push(a, a + 3, a + 1, a + 1, a + 3, a + 4);
         }
+    }
     }
     const geometry = new BufferGeometry();
     geometry.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
@@ -429,6 +441,7 @@ attribute vec4 aSeed;
 uniform float uFallsTime;
 uniform vec3 uStrike;
 uniform float uWidth;
+uniform float uVent;
 varying vec2 vCorner;
 varying float vAlpha;
 varying vec3 vWorld;
@@ -443,10 +456,13 @@ void main() {
     float across = (aSeed.y - 0.5) * uWidth * 1.15;
     float out1 = 0.4 + life * (2.5 + 4.5 * aSeed.z);
     // (A quarter of them rise high: the plume over the falls that marks them from across the island.)
-    float high = step(0.75, aSeed.z);
+    float high = step(0.75, aSeed.z) * (1.0 - uVent);
     // (The plume climbs past the lip and over the trees, leaning out from the face: the falls' mark from the island view.)
     vec3 centre = uStrike + vec3(across * (1.0 + 0.4 * life), 0.3 + life * (2.0 + 5.0 * aSeed.w + high * 36.0) + 0.6 * sin(life * 6.0 + aSeed.x * 20.0), out1 * (1.0 - 0.5 * high) + high * life * 6.0);
     float size = 1.8 + life * (3.0 + 4.0 * aSeed.z + high * 11.0);
+    // (p5: a vent's wisp of steam: small, straight up, gone in a few metres.)
+    centre = mix(centre, uStrike + vec3(across * 0.3 + 0.5 * life * sin(aSeed.x * 20.0), 0.2 + life * (3.5 + 5.0 * aSeed.w), 0.4 * life * cos(aSeed.z * 17.0)), uVent);
+    size = mix(size, 0.5 + life * 2.2, uVent);
     vAlpha = smoothstep(0.0, 0.18, life) * (1.0 - smoothstep(0.55, 1.0, life)) * (0.5 + 0.5 * aSeed.w);
     // (From across the island the plume is a few pixels: it thickens with distance so the falls still read as a landmark.
     // Close by it thins as the camera comes into a puff, so the view is never a white-out.)
@@ -624,7 +640,7 @@ export function buildWildFalls(tier: FallsTier): WildFalls {
     mistGeometry.setAttribute("aSeed", new InstancedBufferAttribute(mistSeeds, 4));
     mistGeometry.instanceCount = MIST[tier];
     const shared = {uFallsTime: time, uDaylight: ARK_DAYLIGHT, uSun: ARK_SUN, uGlint: ARK_GLINT};
-    const mistUniforms = {...UniformsUtils.clone(UniformsLib.fog), uStrike: {value: new Vector3(strike.x, strike.y, strike.z)}, uWidth: {value: CURTAIN_BOTTOM}, uDensity: {value: 0.24}, ...shared};
+    const mistUniforms = {...UniformsUtils.clone(UniformsLib.fog), uStrike: {value: new Vector3(strike.x, strike.y, strike.z)}, uWidth: {value: CURTAIN_BOTTOM}, uDensity: {value: 0.24}, uVent: {value: 0}, ...shared};
     const mistMaterial = new ShaderMaterial({vertexShader: MIST_VERTEX, fragmentShader: MIST_FRAGMENT, uniforms: mistUniforms, transparent: true, depthWrite: false, blending: NormalBlending, fog: true});
     const mist = new Mesh(mistGeometry, mistMaterial);
     mist.name = "falls-mist";
@@ -632,6 +648,25 @@ export function buildWildFalls(tier: FallsTier): WildFalls {
     mist.renderOrder = 5;
     mist.userData.gtaoSkip = true;
     group.add(mist);
+
+    // p5: the old volcano's steam vents (the same puffs, a few each, small and thin).
+    const vents = steamVents(wildHeight).map((vent, k) => {
+        const geometry = new InstancedBufferGeometry();
+        geometry.setAttribute("position", mistGeometry.getAttribute("position"));
+        geometry.setIndex(mistGeometry.getIndex());
+        const seeds = new Float32Array(9 * 4);
+        for (let i = 0; i < seeds.length; i++) seeds[i] = hash(i + 3100 + k * 97);
+        geometry.setAttribute("aSeed", new InstancedBufferAttribute(seeds, 4));
+        geometry.instanceCount = tier === "low" ? 4 : 9;
+        const material = new ShaderMaterial({vertexShader: MIST_VERTEX, fragmentShader: MIST_FRAGMENT, uniforms: {...UniformsUtils.clone(UniformsLib.fog), uStrike: {value: new Vector3(vent.x, vent.y, vent.z)}, uWidth: {value: 1.4}, uDensity: {value: 0.2}, uVent: {value: 1}, ...shared}, transparent: true, depthWrite: false, blending: NormalBlending, fog: true});
+        const mesh = new Mesh(geometry, material);
+        mesh.name = `crater-vent-${k}`;
+        mesh.frustumCulled = false;
+        mesh.renderOrder = 5;
+        mesh.userData.gtaoSkip = true;
+        group.add(mesh);
+        return mesh;
+    });
 
     // Spray: droplets (points, a few pixels each).
     const sprayCap = SPRAY.high;

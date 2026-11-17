@@ -14,6 +14,7 @@ import {tidalReach} from "@/ark-scene/water-level";
 import type {GroundArrays} from "@/ark-scene/terrain";
 import {sampleWildGround, type WildGroundSample} from "@/ark-scene/islands/wild/ground";
 import {LAKE, lakeEdge} from "@/ark-scene/islands/wild/fields";
+import {CRATER, lavaFlow} from "@/ark-scene/islands/wild/crater";
 import {WILD_HALF, WILD_SEGMENTS} from "@/ark-scene/islands/wild/frame";
 
 function srgb(hex: string): Color {
@@ -110,6 +111,12 @@ export function wildGroundArrays(): WildGround {
     const savannaGreen = srgb("#8f9a50");
     const straw = srgb("#b9aa68");
     const duneSand = srgb("#e2c48e");
+    const basalt = srgb("#3a393c");
+    const basaltPale = srgb("#5d5853");
+    const scoria = srgb("#70453a");
+    const lavaDark = srgb("#232226");
+    const shelfBed = srgb("#b9c9a8");
+    const deepBed = srgb("#0d2a30");
     const color = new Color();
     const mix = new Color();
     const tone = new Color();
@@ -139,10 +146,25 @@ export function wildGroundArrays(): WildGround {
         // The mountains' alpine meadows green above the tree line, the cove's tundra olive.
         color.lerp(alpine, w.mountains * smoothstep(26, 40, s.height) * (1 - smoothstep(44, 52, s.height)) * 0.45);
         color.lerp(tundra, w.polar * (1 - s.ice) * 0.4);
+        // p5 (crater): the old volcano's ground: dark basalt in layered bands (the cone's lava beds showing on its walls and
+        // flanks), rusty scoria in patches, the old flows darker still with paler levees; the caldera's warm bench meadow.
+        const volcanic = s.crater.volcanic;
+        const meadow = s.height > 0 ? smoothstep(-5.5, -9, s.crater.rim) * smoothstep(-0.5, 1.5, s.crater.shore) : 0;
+        if (volcanic > 0.01 && s.height > 0.3) {
+            const beds = 0.5 + 0.5 * Math.sin(s.height * 0.85 + 2.6 * fbm(x * 0.045 + 7, z * 0.045 - 3));
+            tone.copy(basalt).lerp(basaltPale, beds * 0.7);
+            tone.lerp(scoria, smoothstep(0.52, 0.74, fbm(x * 0.04 + 19, z * 0.04 + 4)) * 0.75);
+            const lava = lavaFlow(x, z);
+            tone.lerp(lavaDark, lava.flow * 0.85).lerp(basaltPale, lava.levee * 0.5);
+            color.lerp(tone, volcanic * (1 - meadow) * 0.86);
+        }
+        color.lerp(alpine, meadow * 0.7);
         const beach = (1 - smoothstep(0.45, 1, s.land)) * (1 - w.polar) * (1 - s.cliff);
         tone.copy(sand).lerp(warmSand, Math.min(w.grassland + w.desert + s.temperature * 0.3, 1) * 0.8);
         color.lerp(tone, beach * 0.85);
         if (s.height < 0) color.lerp(mix.copy(seaFloor).lerp(reefFloor, s.reef), smoothstep(0.2, 3, -s.height));
+        // p5: the crater lake's bed: pale shelves (turquoise through the shallow water), dark in its deep middle.
+        if (s.crater.shore < 0 && s.height < CRATER.level) color.copy(shelfBed).lerp(deepBed, smoothstep(1.2, 5, CRATER.level - s.height));
         colors[i * 3] = color.r;
         colors[i * 3 + 1] = color.g;
         colors[i * 3 + 2] = color.b;
@@ -157,9 +179,12 @@ export function wildGroundArrays(): WildGround {
         layers2[i * 4] = (w.rainforest + w.woodland + w.mountains * 0.35 * (1 - smoothstep(34, 44, s.height))) * land * (1 - snow);
         layers2[i * 4 + 1] = (w.grassland + w.desert * 0.2 + w.mountains * 0.3) * land;
         const lakeBank = smoothstep(lakeEdge(x, z) + 5, lakeEdge(x, z) + 0.5, Math.hypot(x - LAKE.x, z - LAKE.z));
-        layers2[i * 4 + 2] = Math.max(lakeBank, smoothstep(s.riverHit.width + 4, s.riverHit.width + 0.5, s.river) * (s.inland > 3 ? 1 : 0), w.wetland * 0.6) * (1 - snow);
+        const craterBank = Math.max(smoothstep(4.5, 0.5, s.crater.shore), s.outlet && s.outlet.beyond < 0.5 ? smoothstep(s.outlet.width + 3.5, s.outlet.width + 0.5, s.outlet.d) : 0);
+        layers2[i * 4 + 2] = Math.max(lakeBank, craterBank, smoothstep(s.riverHit.width + 4, s.riverHit.width + 0.5, s.river) * (s.inland > 3 ? 1 : 0), w.wetland * 0.6) * (1 - snow);
+        if (meadow > 0) layers2[i * 4 + 1] = Math.max(layers2[i * 4 + 1], meadow * land);
         layers2[i * 4 + 3] = s.cliff;
         rock[i * 3 + 1] = Math.min(1, w.mountains * smoothstep(14, 30, s.height) + smoothstep(34, 48, s.height)) * (1 - w.polar * (1 - smoothstep(20, 30, s.height)));
+        if (volcanic > 0.01) rock[i * 3 + 1] = Math.max(rock[i * 3 + 1] * (1 - meadow), volcanic * (1 - meadow) * 0.9);
         rock[i * 3 + 2] = s.fresh;
         // The water's depth map: depth (r, /12), reef (g), fresh (b), the river's flow (a: 0.5…1, its way downstream).
         const at = i * 4;
@@ -168,7 +193,12 @@ export function wildGroundArrays(): WildGround {
         depth[at + 1] = Math.round(s.reef * 255);
         depth[at + 2] = Math.round(s.fresh * 255);
         const inLake = Math.hypot(x - LAKE.x, z - LAKE.z) < lakeEdge(x, z) + 2;
-        if (s.fresh > 0.02 && !inLake && s.river < s.riverHit.width + 1.5) {
+        if (s.fresh > 0.02 && s.outlet && s.crater.shore > 1.5 && s.outlet.d < s.outlet.width + 1.5) {
+            // p5: the crater lake's outlet runs to the falls' lip (south, a little west).
+            let angle = Math.atan2(s.outlet.dz, s.outlet.dx);
+            if (angle < 0) angle += Math.PI * 2;
+            depth[at + 3] = angle <= Math.PI ? Math.round((0.5 + angle / (Math.PI * 2)) * 255) : 0;
+        } else if (s.fresh > 0.02 && !inLake && s.river < s.riverHit.width + 1.5) {
             let angle = Math.atan2(s.riverHit.dz, s.riverHit.dx);
             if (angle < 0) angle += Math.PI * 2;
             // (The water decodes 0.5…1 as a flow; the river runs south, so its angle is in 0…π.)

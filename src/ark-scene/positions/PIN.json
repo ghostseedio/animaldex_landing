@@ -2,15 +2,15 @@
   "about": "The web's copy of the Ark's shared position module and its data. positions.ts is byte-identical to AnimalDex's; atlas.json is generated here (scripts/ark-positions-atlas.mts) and copied there; contract.json is generated there (scripts/ark/positions-contract.ts). src/lib/ark-positions.test.ts checks these hashes and every contract case. sleep.json (version 4) is generated there (scripts/ark/generate_sleep_hours.py) and copied here. Change all four together, in both repos.",
   "source": {
     "repo": "lennybeadle/animaldex",
-    "branch": "ark-sleep-everyone",
-    "commit": "9e242da9",
+    "branch": "ark-p5-crater-server",
+    "commit": "ec91f4a14",
     "path": "supabase/functions/_shared/ark-positions/"
   },
   "positionsVersion": 4,
   "sha256": {
     "positions.ts": "11434cb158d6386fb2a18fca6f3db15a5d6e130648b2feb411466bb835ab6bb7",
-    "atlas.json": "72442b162a2aeaccba3e09d4b8e1b9c8744665d648df94a175ac2debfd906aca",
-    "contract.json": "1cd40f7359f8f4edf54a8fb8e14e2bcd2fc7f183a5bd3317b3bcc879a1bc08af",
+    "atlas.json": "5bcb7e4ed16b1f111b9279ee2a2e73e399fbb8001004136de915ea324d281122",
+    "contract.json": "9ab9c813860dce757587ae9a7ceaf6d527a22a150815b74b744a71e8c32a6609",
     "sleep.json": "991567d5ecb27559af0b5e563c2b3ff79a2bce0770239439f03a62283cf06807"
   }
 }

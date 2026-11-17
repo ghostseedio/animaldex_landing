@@ -16,6 +16,7 @@
  * changes is underneath (the terrain, the trees, the house).
  */
 
+import {CRATER_SNOW_LIFT} from "@/ark-scene/islands/wild/crater";
 import {COTTAGE, DECOR_SINK, FLOWER_SHAPE, GARDEN_POND, canopyTree, limbAt, microCorner, zoneLamp, LAMP} from "@/ark-scene/micro-decor";
 import {IcosahedronGeometry, Quaternion, Vector3, type BufferGeometry} from "three";
 import {mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
@@ -106,7 +107,9 @@ function surfaceFrom(sample: GroundSample, x: number, z: number, environment: Ar
     } else {
         // Snow as the terrain shader draws it (snow.ts): the ice's own layer, and the mountain's above its snow line
         // (27 m, lower with the weather's snow cover), held on all but the steepest faces.
-        cover = snowCover(height, slope, (w.polar ?? 0) * smoothstep(0.3, 1, sample.land), environment.snow);
+        // (p5: the old volcano's caldera is warm ground, its snow line higher: `crater.ts` craterWarmth, as the shader draws.)
+        const warm = arkWorld() === "v2" ? CRATER_SNOW_LIFT * ((sample as {warm?: number}).warm ?? 0) : 0;
+        cover = snowCover(height - warm, slope, (w.polar ?? 0) * smoothstep(0.3, 1, sample.land), environment.snow);
         const snow = cover.mean;
         const rock = smoothstep(0.22, 0.42, slope) * (1 - snow);
         const beach = (1 - smoothstep(0.45, 1, sample.land)) * (1 - (w.polar ?? 0)) * (1 - sample.cliff);

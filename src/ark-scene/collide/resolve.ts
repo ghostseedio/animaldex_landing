@@ -300,8 +300,12 @@ export function separation(a: ResolveBody, pa: ResolvePose, neighbours: Readonly
     return {dx, dz};
 }
 
-/** How many easing rounds a cluster of touching animals gets. */
-export const SEPARATION_ROUNDS = 4;
+/**
+ * How many easing rounds a cluster of touching animals gets. (8, 2026-11-17: with 4, a herd or a flock packed three or
+ * more deep on one patch stopped part way, each round's pushes undoing some of the last; two kinds homed on one patch
+ * then stood in each other all day, a third of the bigger island's overlaps.)
+ */
+export const SEPARATION_ROUNDS = 8;
 
 /**
  * How the push between touching animals follows time (decision 204): worked out at every SEPARATION_EASE seconds of the

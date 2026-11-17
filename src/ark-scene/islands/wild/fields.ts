@@ -13,6 +13,7 @@
  */
 
 import {fbm, noise, smoothstep} from "@/ark-scene/world";
+import {volcanoElevation} from "@/ark-scene/islands/wild/crater";
 
 const TAU = Math.PI * 2;
 const DEG = Math.PI / 180;
@@ -62,6 +63,8 @@ export function coastRadius(b: number): number {
         + 9 * bump(b, 48, 0.28)
         // The rocky headland in the north-west (the kelp's shore).
         + 9 * bump(b, 318, 0.2)
+        // p5 (crater): the old volcano's seaward flank (`crater.ts`): the land reaches further out behind its rim.
+        + 36 * bump(b, 327, 0.27)
         // The beach's bay in the south, the reef lagoon's in the south-west, the desert's straight east coast.
         - 9 * bump(b, 178, 0.22)
         - 13 * bump(b, 224, 0.2)
@@ -122,7 +125,7 @@ const CREST: readonly number[] = [10, 26, 34, 40, 36, 32, 40, 30, 12];
 /** The summits: horns above the crest. */
 export const SUMMITS: ReadonlyArray<{x: number; z: number; h: number; r: number; name: string}> = [
     {x: -116, z: -104, h: 46, r: 44, name: "west"},
-    {x: -58, z: -126, h: 70, r: 52, name: "high"},
+    // (p5, crater: the high summit that stood at −58, −126 is the old volcano now, `crater.ts`.)
     {x: -14, z: -134, h: 54, r: 36, name: "cove-west"},
     {x: 64, z: -124, h: 62, r: 46, name: "cove-east"},
     {x: 118, z: -98, h: 38, r: 40, name: "east"}
@@ -341,7 +344,8 @@ export function elevationOf(x: number, z: number, inland: number, regional = fal
     const hillAmp = 2.5 + 9 * west * (1 - smoothstep(60, 140, z) * 0.5);
     const hills = hillAmp * smoothstep(0.34, 0.8, fbm(x * 0.012 + 40, z * 0.012 - 12));
     const massif = massifHeight(x, z, regional) * smoothstep(0, 30, d);
-    let e = coastal + hills + massif;
+    // p5 (crater): the old volcano's cone and caldera (`crater.ts`).
+    let e = volcanoElevation(x, z, coastal + hills + massif, inland, regional);
     // The wetland lies low and flat.
     const basin = wetlandBasin(x, z);
     if (basin > 0) e = lerp(e, 0.85 + 0.6 * fbm(x * 0.06, z * 0.06), basin * 0.95);

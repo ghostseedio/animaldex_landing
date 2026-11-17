@@ -20,9 +20,10 @@ setArkWorld("v2");
 
 test("what the fixes added is at the end of the scenery and of the decor, in the ledger's order", () => {
     const scenery = wildScenery().map((item) => ledgerKey(item.kind, item.x, item.z));
-    assert.deepEqual(scenery.slice(-SCENERY_APPENDED.length), [...SCENERY_APPENDED]);
+    // (Folded, the ledger appends nothing: `slice(-0)` would be the whole list.)
+    assert.deepEqual(scenery.slice(scenery.length - SCENERY_APPENDED.length), [...SCENERY_APPENDED]);
     const decor = worldDecor().map((item) => ledgerKey(item.kind, item.x, item.z));
-    assert.deepEqual(decor.slice(-DECOR_APPENDED.length), [...DECOR_APPENDED]);
+    assert.deepEqual(decor.slice(decor.length - DECOR_APPENDED.length), [...DECOR_APPENDED]);
 });
 
 test("every row of the map's ledger still holds: added points are there, gone ones are not, changed ones differ", () => {
@@ -48,7 +49,8 @@ test("every row of the map's ledger still holds: added points are there, gone on
 test("a home on a cell a fix took away moves to the nearest cell of its zone where its tag holds today", () => {
     const all = mapPoints();
     const moved = Array.from(all.movedCells().entries());
-    assert.ok(moved.length > 0 && moved.length <= CELLS_WAS.length * 4, `${moved.length} cells moved`);
+    // (Folded, with no cell rows, nothing moves: the lists are today's.)
+    assert.ok(CELLS_WAS.length ? moved.length > 0 && moved.length <= CELLS_WAS.length * 4 : moved.length === 0, `${moved.length} cells moved`);
     for (const [from, to] of moved) {
         const d = Math.hypot(from.x - to.x, from.z - to.z);
         assert.ok(d < 30, `${from.tag} at ${from.x},${from.z} moved ${d.toFixed(1)} m`);

@@ -39,6 +39,7 @@ import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_SKY_HORIZON, ARK_SKY_ZENITH, ARK_S
 import {FIELD_TONES, ROCK, SNOW, WATER, WET_SAND, ZONE_PALETTES} from "@/ark-scene/palettes";
 import {arkWorld, fbm, LAKE, noise, onArkWorld, RIVER, sampleGround, smoothstep, TERRAIN_HALF, TERRAIN_SEGMENTS} from "@/ark-scene/world";
 import {freshWaterGeometry, wildGroundArrays, WILD_LAKE_COLOUR, WILD_SNOW_LINE} from "@/ark-scene/islands/wild/render/ground";
+import {CRATER, CRATER_SNOW_LIFT} from "@/ark-scene/islands/wild/crater";
 import {ARK_GROUND_TEXTURES, GROUND_MEANS} from "@/ark-scene/ground-textures";
 import {ARK_BUG_GROUND_GLSL} from "@/ark-scene/bug-ground-glsl";
 import {fieldsGlsl, HEADLAND} from "@/ark-scene/fields";
@@ -415,7 +416,7 @@ function groundMaterial(): MeshStandardMaterial {
     // attribute (`GroundArrays.freshBed`) carries each one's surface. v1's shader text is unchanged.
     const freshBed = arkWorld() === "v2";
     const FRESH = freshBed ? "vArkFreshLevel" : FRESH_LEVEL.toFixed(2);
-    material.customProgramCacheKey = () => (snowLine === 27 ? "ark-ground-4" : `ark-ground-4-snow${snowLine}`) + (freshBed ? "-bed" : "");
+    material.customProgramCacheKey = () => (snowLine === 27 ? "ark-ground-4" : `ark-ground-4-snow${snowLine}-crater`) + (freshBed ? "-bed" : "");
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);
         shader.vertexShader = shader.vertexShader
@@ -561,6 +562,8 @@ float arkWet = 0.0;`)
     // wind streaks. Batch 4: the upper third holds snow on all but the steepest hard faces, and below the line it lies
     // in lines along the ledges. The weather's snow cover brings the line down.
     float snowLine = ${snowLine.toFixed(1)} - 12.0 * envSnow;
+    ${snowLine === 27 ? "" : `// p5 (crater): the old volcano's caldera is warm ground: the snow line stands higher inside its rim (crater.ts craterWarmth).
+    snowLine += ${CRATER_SNOW_LIFT.toFixed(1)} * smoothstep(${(CRATER.rim + 1).toFixed(1)}, ${(CRATER.rim - 9).toFixed(1)}, distance(world.xz, vec2(${CRATER.x.toFixed(1)}, ${CRATER.z.toFixed(1)})));`}
     float snowAt = world.y + 5.0 * (arkFbm(p * 0.05) - 0.5) + 1.2 * (arkNoise(p * 0.6) - 0.5);
     float alpine = smoothstep(snowLine - 4.0, snowLine + 2.5, snowAt);
     // The upper reach, by a wandering line that runs down the gullies and back up the ribs (batch 6: a level line here
@@ -718,6 +721,9 @@ float arkWet = 0.0;`)
     // Batch 6: the beds blend into the faces (the ledges read as boxy slabs stuck on): a faint lip and underhang.
     rock *= 1.0 - beds * (0.3 * runs * hard + 0.1 * underhang + 0.1 * planes) + beds * 0.05 * ledge;
     rock *= 1.0 - 0.3 * gully + 0.12 * smoothstep(0.7, 0.95, rib) * massif;
+    ${snowLine === 27 ? "float arkVolcano = 0.0;" : `// p5 (crater): the old volcano's rock is dark basalt in its lava beds, a rusty scoria bed here and there (crater.ts).
+    float arkVolcano = smoothstep(${(CRATER.rim + 62).toFixed(1)}, ${(CRATER.rim + 28).toFixed(1)}, distance(world.xz, vec2(${CRATER.x.toFixed(1)}, ${CRATER.z.toFixed(1)})));
+    rock = mix(rock, rock * mix(vec3(0.5, 0.49, 0.53), vec3(0.68, 0.5, 0.44), step(0.84, arkHash(vec2(bed, 5.3)))), arkVolcano * 0.85);`}
     ground = mix(ground, rock, steep * step(0.3, world.y + 0.4));
     // The ledges and overhangs as shape, not just paint: the shading normal tips up at a ledge and down under a hang.
     {
@@ -733,7 +739,7 @@ float arkWet = 0.0;`)
     // Scree (batch 4): grey stone gathered at the foot of the faces, lighter than the rock it fell from.
     float scree = smoothstep(0.12, 0.55, vArkRock.x + (arkNoise(p * 0.9) - 0.5) * 0.3) * (1.0 - steep);
     // Lighter than the faces and fanning out below them, so the fans show from the far view too (batch 5).
-    vec3 screeTone = rockLight * (1.02 + 0.22 * arkNoise(p * 3.7)) * (0.84 + 0.26 * arkNoise(p * 11.0));
+    vec3 screeTone = rockLight * (1.02 + 0.22 * arkNoise(p * 3.7)) * (0.84 + 0.26 * arkNoise(p * 11.0)) * mix(1.0, 0.52, arkVolcano);
     ground = mix(ground, screeTone, scree * 0.95 * (1.0 - smoothstep(0.3, 0.7, snowW)));
 
     // Snow on the peaks and the ice, thinning on steep faces (less so up high), dimmer at night (batch 4: the moon's
@@ -1027,6 +1033,8 @@ void main() {
     body = mix(body, deep, smoothstep(4.0, 11.0, depth));
     body = mix(body, reef, reefy * (1.0 - smoothstep(2.0, 6.5, depth)) * 0.9);
     body = mix(body, lake * mix(1.0, 0.8, smoothstep(0.5, 3.0, depth)), fresh);
+    // p5 (crater): fresh water deeper than the lake's and the river's (the crater lake's middle, 9 m): a deep blue-green.
+    body = mix(body, vec3(0.012, 0.085, 0.13), 0.82 * smoothstep(4.0, 8.5, depth) * fresh);
     body *= arkCloudShade(vWorld) * mix(0.1, 1.0, daylight * daylight);
 
     // The sky in it (Fresnel), and the low sun's glint.

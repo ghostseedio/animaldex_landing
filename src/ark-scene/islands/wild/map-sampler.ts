@@ -31,6 +31,7 @@ import {gridSlope} from "@/ark-scene/islands/wild/terrain-cache";
 import {inRange} from "@/ark-scene/islands/wild/reserves";
 import {WildObstacles, wildScenery, type WildItem} from "@/ark-scene/islands/wild/scenery";
 import {LAKE, lakeEdge, WETLAND, ICE_FRONT_Z, coveDistance} from "@/ark-scene/islands/wild/fields";
+import {CRATER_SNOW_LIFT} from "@/ark-scene/islands/wild/crater";
 import {WILD_HALF} from "@/ark-scene/islands/wild/frame";
 
 type AssetInfo = {height: number; bounds?: {min: [number, number, number]; max: [number, number, number]}};
@@ -184,6 +185,17 @@ class WildMapSampler implements ArkMapSampler {
             const lakeD = Math.hypot(x - LAKE.x, z - LAKE.z);
             const inLake = lakeD < lakeEdge(x, z) + 0.6;
             const inRiver = s.river < s.riverHit.width + 0.6;
+            // p5 (crater): the crater lake is a lake (its shelves a pond's shallows, reeds along its shore); its outlet a
+            // mountain stream above the falls.
+            const inCrater = s.crater.shore < 0.6;
+            const inOutlet = !inCrater && s.outlet !== null && s.outlet.d < s.outlet.width + 0.6;
+            if (inCrater) {
+                add("lake");
+                if (depth < 1.6) add("pond");
+                if (s.crater.shore > -3.5) add("marsh_reeds");
+            }
+            if (inOutlet) add("stream_river", "waterfall_rapids");
+            if (inCrater || inOutlet) return {height: s.height, water: "fresh", depth, zone, tags};
             if (inLake) {
                 add("lake");
                 if (depth < 1.1) add("pond");
@@ -204,7 +216,9 @@ class WildMapSampler implements ArkMapSampler {
             if (depth > 0.6 && depth < 10) add("seabed");
             if (s.reef > 0.35 && depth > 0.5 && depth < 7) add("coral_reef");
             if (depth < 3.6 && ((s.reef > 0.3 && s.inland > -40) || (s.inland > -18 && s.cliff < 0.3 && s.temperature > 0.6))) add("seagrass");
-            if (s.kelp > 0.45 && depth > 2 && depth < 13 && s.inland > -55) add("kelp");
+            // (p5: to 10.4 m, not 13: the kelp's fish keep to its upper 2–9 m, and the old volcano's headland put deeper
+            // forest in their way.)
+            if (s.kelp > 0.45 && depth > 2 && depth < 10.4 && s.inland > -55) add("kelp");
             if (s.inland < -8 && depth > 3) add("open_ocean", "attached_to_large");
             if (depth > 2.5) add("sea_surface");
             if (depth > 7.5) add("deep_water");
@@ -225,7 +239,8 @@ class WildMapSampler implements ArkMapSampler {
             return {height: s.height, water: null, depth: 0, zone: "polar", tags};
         }
         if (w.grassland > 0.35) add("grassland", "on_grazers");
-        if ((w.grassland > 0.3 || (w.mountains > 0.3 && s.height < 48) || w.polar > 0.4) && noise(x * 0.09 + 31, z * 0.09 - 7) > 0.55) add("flower_meadow");
+        // (p5: the caldera's warm bench is meadow though it lies above the mountain's meadow line.)
+        if ((w.grassland > 0.3 || (w.mountains > 0.3 && (s.height < 48 || s.warm > 0.6)) || w.polar > 0.4) && noise(x * 0.09 + 31, z * 0.09 - 7) > 0.55) add("flower_meadow");
         if (top < 0.62 && forest + w.grassland + w.desert + w.mountains > 0.7) add("scrub");
         if (w.desert > 0.3 && noise(x * 0.12 - 5, z * 0.12) > 0.55) add("scrub");
         if (forest > 0.45) add("forest_floor");
@@ -237,7 +252,7 @@ class WildMapSampler implements ArkMapSampler {
         if (grade > 0.75 && (w.mountains > 0.3 || s.height > 12)) add("cliffs");
         if (this.near(x, z, "cave")) add("caves");
         if (w.mountains > 0.35) add("mountain_alpine");
-        if (s.height > 52 || w.polar > 0.5) add("snow_ice");
+        if (s.height > 52 + CRATER_SNOW_LIFT * s.warm || w.polar > 0.5) add("snow_ice");
         if (w.polar > 0.35 && s.height < 24) add("tundra");
         if (w.desert > 0.35) add("desert_sand");
         if (sandy) add("sandy_beach");
@@ -249,6 +264,9 @@ class WildMapSampler implements ArkMapSampler {
         if (s.river < s.riverHit.width + 4 && s.inland > 2) add("stream_river");
         if (s.river < s.riverHit.width + 4 && s.inland > 2 && s.riverAlong < 0.3) add("waterfall_rapids");
         if (Math.hypot(x - LAKE.x, z - LAKE.z) < lakeEdge(x, z) + 4) add("lake", "marsh_reeds");
+        // p5 (crater): the crater lake's shore, and its outlet's banks.
+        if (s.crater.shore < 4) add("lake", "marsh_reeds");
+        if (s.outlet !== null && s.outlet.beyond < 0.5 && s.outlet.d < s.outlet.width + 4 && s.crater.shore > 1) add("stream_river", "waterfall_rapids");
         if (w.wetland > 0.35) add("marsh_reeds");
         if (w.wetland > 0.35 && s.height < WETLAND.level + 0.3) add("pond");
         add("open_sky");

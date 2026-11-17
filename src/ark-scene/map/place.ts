@@ -496,6 +496,20 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
                 const off = list.filter((point) => point.tag !== "rock_face");
                 if (off.length) list = off;
             }
+            // (A point on the ground itself, a ledge or a hole, where the ground is twice as steep as it walks: never the home
+            // of anything but a flyer or a swimmer, which it would rest and walk on: a cat snake's on a crater's outer cone.)
+            if (sampler.walkable && species.move !== "fly" && species.move !== "swim") {
+                const steepest = (zone === "mountains" ? MOUNTAIN_SLOPE : MAX_SLOPE) * 2;
+                const gentle = list.filter((point) => point.y - sampler.ground(point.x, point.z).height > 0.1 || sampler.walkable!(point.x, point.z, steepest) || !sampler.walkable!(point.x, point.z, Infinity));
+                if (gentle.length) list = gentle;
+            }
+            // (v2: a tree's thick limbs are the big climbers' and perchers' homes, `limbsFor`, hashed on their own list: a
+            // small one homed on one too sat inside an eagle or a margay all day, 2026-11-17's overlaps. Where its list has
+            // other points it takes those.)
+            if (arkWorld() === "v2") {
+                const offLimbs = list.filter((point) => point.tag !== "limb");
+                if (offLimbs.length) list = offLimbs;
+            }
             const own = found.own;
             if (!list.length) continue;
             const {index, level} = pointIndex(own ? slot : borrowedKey(zone, slot), list.length);
@@ -614,8 +628,9 @@ function mapPlaceOn(animal: ArkAnimal, zone: ArkZone, slot: number, rank: number
     const radius = Math.min(Math.max(trueLength * 0.2, 0.1), 0.6);
     // The behaviour lane's walk grid: steep ground is a mountain animal's only (`behaviour-schedule.ts` maxSlopeOf).
     const maxSlope = zone === "mountains" ? MOUNTAIN_SLOPE : MAX_SLOPE;
-    // (Flyers, perchers and climbers may stand on a cliff's steep ground; walkers, crawlers, hoppers and diggers walk off their spot.)
-    const walker = ["walk", "crawl", "slither", "hop", "burrow"].includes(species.move);
+    // (Flyers and perchers may stand on a cliff's steep ground; walkers, crawlers, hoppers and diggers walk off their spot,
+    // and so does a climber on the ground (not on its tree): a tree kangaroo homed on a volcano's flank rested on it.)
+    const walker = ["walk", "crawl", "slither", "hop", "burrow", "climb"].includes(species.move);
     const okOn = (wet: boolean, holds: (tags: readonly MapTag[]) => boolean) => (x: number, z: number) => {
         const g = sampler.ground(x, z);
         if (!holds(g.tags) || (g.water !== null) !== wet) return false;

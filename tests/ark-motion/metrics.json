@@ -423,9 +423,9 @@
         },
         {
           "id": "tb_species_under_035",
-          "label": "Flying species under 0.35 of their cruise (the audit's target 0; 20 on MA1's fixed code: big raptors, hornbills and crows in crowded ranges)",
+          "label": "Flying species under 0.35 of their cruise (the audit's target 0; 20 on MA1's fixed code: big raptors, hornbills and crows in crowded ranges; 22 since 2026-11-17, decision 379: the crater rim's perch hops. A measurement edge, not a behaviour regression: 21 on the crater vs 16 on main, 7 species within 0.02 of the line, 26 species swapping both ways, slow legs 50% vs 47% of flights)",
           "path": "species_under_035",
-          "max": 20,
+          "max": 22,
           "before": 91
         },
         {

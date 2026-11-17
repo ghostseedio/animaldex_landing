@@ -29,7 +29,7 @@ import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {DecorObstacles, worldDecor} from "@/ark-scene/decor";
 import {burrowAt, canopyPlace, canopyPoint, speciesLayer, type Burrow, type CanopyPlace} from "@/ark-scene/layers";
 import {microPlace, surfacePoint, type MicroPlace} from "@/ark-scene/micro";
-import {mapPlace, mapPoints, settleRoosts, type MapPerch, type MapPlace} from "@/ark-scene/map/place";
+import {mapPlace, mapPoints, settleRoosts, wetOf, type MapPerch, type MapPlace} from "@/ark-scene/map/place";
 import {inRock} from "@/ark-scene/map/rocks";
 import {hamletPlotsFor, plotOf, plotSpots} from "@/ark-scene/map/hamlet";
 import type {HomePlot} from "@/ark-scene/props/home-layout";
@@ -558,14 +558,21 @@ function attachToHosts(animals: ArkAnimal[], placed: Map<string, Placement>) {
         if (role !== "rider" && !best.place.water) {
             const L = arkBody(animal).metres;
             const inside = (x: number, z: number) => inRock(x, z, Math.min(Math.max(L * 0.2, 0.05), 0.6), mapPoints().sampler.ground(x, z).height, Math.max(L * 0.5, 0.05));
-            if (inside(best.place.x + dx, best.place.z + dz)) {
-                for (const [s2, a2] of [[-side, along], [side, 0], [-side, 0], [side, -along], [-side, -along]]) {
-                    const tx = s2 * c + a2 * sn;
-                    const tz = -s2 * sn + a2 * c;
-                    if (inside(best.place.x + tx, best.place.z + tz)) continue;
-                    dx = tx;
-                    dz = tz;
-                    break;
+            // (p5, the old volcano's lake and pools moved every list: nor in water, if it is no water animal (a crane came
+            // up in the lake beside its buffalo); and where every spot beside it is taken (a leech's frog sat against a
+            // boulder), a step or two further out.)
+            const dry = place.map?.tag ? !wetOf(species, place.map.tag) : false;
+            const bad = (x: number, z: number) => inside(x, z) || (dry && mapPoints().sampler.ground(x, z).water !== null);
+            if (bad(best.place.x + dx, best.place.z + dz)) {
+                search: for (const k of [1, 2, 4, 8]) {
+                    for (const [s2, a2] of [[side, along], [-side, along], [side, 0], [-side, 0], [side, -along], [-side, -along]]) {
+                        const tx = (s2 * c + a2 * sn) * k;
+                        const tz = (-s2 * sn + a2 * c) * k;
+                        if (bad(best.place.x + tx, best.place.z + tz)) continue;
+                        dx = tx;
+                        dz = tz;
+                        break search;
+                    }
                 }
             }
         }
