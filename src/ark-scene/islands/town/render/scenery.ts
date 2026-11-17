@@ -26,12 +26,14 @@ import {cropRows, farmProp, fiveBarGate, flowerBed, hedgeAlong} from "@/ark-scen
 import {surfaceTag} from "@/ark-scene/islands/town/render/surface-tags";
 import {townFarmGates, townFarmProps, type FarmGate} from "@/ark-scene/islands/town/farm";
 import {strut, zooBarrier} from "@/ark-scene/islands/town/render/zoo-barriers";
-import {dressPaddock} from "@/ark-scene/islands/town/render/zoo-habitat";
+import {dressPaddock, zooFloor} from "@/ark-scene/islands/town/render/zoo-habitat";
 import {townFlowerBeds, zooScatter} from "@/ark-scene/islands/town/solids";
 import {townTrees} from "@/ark-scene/islands/town/trees";
 import {clearOfDoors, PATH_WIDTH, pathOpenings, townDoorWays} from "@/ark-scene/islands/town/doors";
 import {boundaryBodies, madeHere} from "@/ark-scene/islands/town/render/fences";
 import {parkBench} from "@/ark-scene/islands/town/render/bench";
+import {bridgeAt, bridgeHeight, canalBridges, PARAPET} from "@/ark-scene/islands/town/canal-bridges";
+import {drawCanalBridge} from "@/ark-scene/islands/town/render/canal-bridges";
 
 /** A chunk's merged geometry by material; `foliage`: hedges, flower beds and crops (lane GC, `render/nature.ts`). */
 export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo; foliage: Geo};
@@ -89,6 +91,9 @@ function overCanal(x: number, z: number): boolean {
 
 /** The street's surface height: the ground's, but held at the bank's level over the canal (a bridge deck). */
 export function streetHeight(x: number, z: number): number {
+    // p4 (townfix): the humpbacked canal bridges' deck (`canal-bridges.ts`): the street rises over the canal and back.
+    const deck = bridgeHeight(x, z, H);
+    if (deck !== null) return deck;
     if (overCanal(x, z)) return TOWN_LEVEL;
     if (inBox(HARBOUR_BASIN, x, z, -0.2)) return TOWN_LEVEL;
     return H(x, z);
@@ -171,64 +176,11 @@ function fan(geo: Geo, poly: Poly, centre: Pt, y: number) {
 // MARK: - Bridges, the harbour, the square
 
 function bridges(out: SceneryOut, plan: TownPlan) {
-    for (const s of plan.streets) {
-        if (s.kind === "zoo_path" || s.kind === "track" || s.kind === "lane" || s.kind === "quay") continue;
-        const length = polylineLength(s.line);
-        for (let a = 0; a < length; a += 0.5) {
-            const {point, dir} = polylineAt(s.line, a);
-            const near = polylineNearest(CANAL, point.x, point.z);
-            if (near.distance > 0.4) continue;
-            const across = s.width + s.pavement * 2 + 0.8;
-            const span = CANAL_WIDTH + 2.4;
-            const turn = Math.atan2(-dir.z, dir.x);
-            const deck = {x: point.x, y: TOWN_LEVEL, z: point.z, rot: Math.atan2(-dir.x, dir.z)};
-            void turn;
-            const c = chunkFor(out, point.x, point.z);
-            // The deck's edge stones, parapets and the arch faces on either side.
-            for (const side of [-1, 1]) {
-                c.solid.box(deck, side * (across / 2 + 0.2), 0, 0, 0.45, 1.05, span + 1.6, STONE);
-                c.solid.box(deck, side * (across / 2 + 0.2), 1.05, 0, 0.6, 0.14, span + 1.8, COPING);
-                archFace(c.solid, deck, side * (across / 2 - 0.05), span, CANAL_LEVEL - 0.4, TOWN_LEVEL);
-            }
-            out.bridges.push({street: s.id, at: {x: point.x, z: point.z, w: across, d: span, rot: deck.rot}});
-            a += span;
-        }
-    }
-}
-
-/** The arch's face: a stone wall with a semicircular opening over the water. */
-function archFace(geo: Geo, deck: Frame, lx: number, span: number, waterY: number, top: number) {
-    const r = Math.min(span / 2 - 0.3, top - waterY - 0.3);
-    const n = 10;
-    const face: Frame = {...deck, rot: deck.rot + (lx > 0 ? -Math.PI / 2 : Math.PI / 2)};
-    const off = lx > 0 ? 1 : -1;
-    for (let i = 0; i < n; i++) {
-        const a0 = (i / n) * Math.PI;
-        const a1 = ((i + 1) / n) * Math.PI;
-        const p = (a: number, rr: number, y: number) => at(face, -off * Math.cos(a) * rr, y - deck.y, Math.abs(lx) * 0 + 0);
-        void p;
-        const q0 = at(deck, lx, -0.0, -Math.cos(a0) * r);
-        const q1 = at(deck, lx, -0.0, -Math.cos(a1) * r);
-        const y0 = waterY + Math.sin(a0) * r + 0.6;
-        const y1 = waterY + Math.sin(a1) * r + 0.6;
-        const t0: [number, number, number] = [q0[0], top - 0.02, q0[2]];
-        const t1: [number, number, number] = [q1[0], top - 0.02, q1[2]];
-        const b0: [number, number, number] = [q0[0], y0, q0[2]];
-        const b1: [number, number, number] = [q1[0], y1, q1[2]];
-        if (off > 0) geo.quad(b0, b1, t1, t0, STONE);
-        else geo.quad(b1, b0, t0, t1, STONE);
-    }
-    // The piers down to the water at each end.
-    for (const end of [-1, 1]) {
-        const e = at(deck, lx, 0, end * (r + 0.6));
-        const e2 = at(deck, lx, 0, end * (span / 2 + 0.8));
-        const lo = waterY - 0.6;
-        const a: [number, number, number] = [e[0], lo, e[2]];
-        const b: [number, number, number] = [e2[0], lo, e2[2]];
-        const c: [number, number, number] = [e2[0], top, e2[2]];
-        const d: [number, number, number] = [e[0], top, e[2]];
-        if ((off > 0) === (end > 0)) geo.quad(a, b, c, d, STONE);
-        else geo.quad(b, a, d, c, STONE);
+    // p4 (townfix): humpbacked brick-and-stone arch bridges (`render/canal-bridges.ts`), replacing flat decks.
+    void plan;
+    for (const b of canalBridges()) {
+        drawCanalBridge(chunkFor(out, b.x, b.z).solid, b, H);
+        out.bridges.push({street: b.street, at: {x: b.x, z: b.z, w: 2 * (b.band + PARAPET.thick), d: 2 * b.reach, rot: Math.atan2(-b.dx, b.dz)}});
     }
 }
 
@@ -657,9 +609,10 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const s = e.slot.at;
     const c = chunkFor(out, s.x, s.z);
     const spec = ZOO_TYPES[e.type];
-    const ground = e.type === "savanna_paddocks" ? "#cdb07a" : e.type === "hoofstock_paddocks" || e.type === "childrens_farm" ? "#a99268" : e.type === "big_cats" ? "#b7a374" : e.type === "bears_wolves" ? "#7d7a52" : e.type === "small_mammals" ? "#9a8a62" : null;
     // (Lane GA: the 2 m cells' own shades were the "giant pixels"; the earth and sand textures carry the variety now.)
-    if (ground) tagged(c.decal, e.type === "savanna_paddocks" || e.type === "big_cats" ? SURF.sand : SURF.earth, alongZ(s.rot), () => c.decal.drape({x: s.x, y: 0, z: s.z, rot: s.rot}, s.w - 0.4, s.d - 0.4, H, 0.06, () => tone(ground), 2));
+    // p4 (townfix): the floor's surface and colour from `zooFloor` (a waterhole's bank blends into it).
+    const floor = zooFloor(e.type);
+    if (floor) tagged(c.decal, floor.surface, alongZ(s.rot), () => c.decal.drape({x: s.x, y: 0, z: s.z, rot: s.rot}, s.w - 0.4, s.d - 0.4, H, 0.06, () => tone(floor.colour), 2));
     // The barrier on the plot's boundary, each type as a real zoo builds it (lane GC, `render/zoo-barriers.ts`): the
     // boundary stays the hard collider; houses are their own bounds (lane TB's).
     if (spec.form !== "house") zooBarrier(c, e);
@@ -687,7 +640,7 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const back = (lx: number) => local(s, lx, -s.d / 2 + 2.2);
     // p2 (zoo): each outdoor enclosure dressed as its habitat (`zoo-habitat.ts` dressPaddock), clear of the residents'
     // spots; the old scatter (two rocks, a box log, a cone mound, a table) only where a type is not dressed.
-    const dressed = spec.form === "paddock" || spec.form === "aviary" ? dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null) !== null : false;
+    const dressed = spec.form === "paddock" || spec.form === "aviary" ? dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null, c.decal) !== null : false;
     if ((spec.form === "paddock" || spec.form === "pool") && !dressed) {
         // (p3 (solid): where, from `zooScatter`, which the colliders read too.)
         const scatter = zooScatter(e);
@@ -824,6 +777,8 @@ function lamps(out: SceneryOut, plan: TownPlan) {
             const off = side * (s.width / 2 + s.pavement - 0.4);
             const x = point.x - dir.z * off;
             const z = point.z + dir.x * off;
+            // p4 (townfix): none on a canal bridge's deck (a path's lamp stood in Church Walk's footbridge).
+            if (s.kind === "path" && bridgeAt(x, z)) continue;
             out.lamps.push({x, y: streetHeight(x, z) + 0.16, z});
         }
     }
@@ -832,6 +787,7 @@ function lamps(out: SceneryOut, plan: TownPlan) {
     for (let a = 10; a < canal; a += 26) {
         const {point, dir} = polylineAt(CANAL, a);
         const off = (Math.floor(a / 26) % 2 ? 1 : -1) * (CANAL_WIDTH / 2 + TOWPATH + 0.2);
+        if (bridgeAt(point.x - dir.z * off, point.z + dir.x * off)) continue;
         out.lamps.push({x: point.x - dir.z * off, y: TOWN_LEVEL + 0.1, z: point.z + dir.x * off});
     }
     for (let k = 0; k < 6; k++) {

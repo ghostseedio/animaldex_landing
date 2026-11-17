@@ -27,11 +27,12 @@ import {canalBerth, fishingBoatGeometry, floatingMaterial, narrowboatGeometry, N
 import {buildTownWater, seaDepthMap, type TownWater} from "@/ark-scene/islands/town/render/water";
 import {Geo, tone} from "@/ark-scene/islands/town/render/kit";
 import {TOWN_ASSET_REACH, TownAssets, type TownAssetPlacement} from "@/ark-scene/islands/town/render/assets";
+import {zooHabitatPlantings} from "@/ark-scene/islands/town/render/zoo-plantings";
 import {foliageMaterial, townPlantings} from "@/ark-scene/islands/town/render/nature";
 import {primeTownTrees, townTrees, townZooTrees, type TownTree} from "@/ark-scene/islands/town/trees";
 import {townGroundMaterial, townPavingMaterial} from "@/ark-scene/islands/town/render/surfaces";
 import {batchedVariant, disposeBatchedVariant, plainCopy, sidedCopy, TownBandParts, TownBatch, townBandOf, townBatchEnabled, type TownBatchPart} from "@/ark-scene/islands/town/render/batches";
-import {RockInstances} from "@/ark-scene/islands/town/render/rock-instances";
+import {RockInstances, strataRock} from "@/ark-scene/islands/town/render/rock-instances";
 import {townWeather, TOWN_LIGHT} from "@/ark-scene/islands/town/render/materials";
 import {loadTownTextures} from "@/ark-scene/islands/town/render/textures";
 
@@ -532,7 +533,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     let zooBatches: TownBatch[] = [];
     let zooMeshes: Array<{key: number; mesh: Mesh}> = [];
     // p3 (zoofix): the zoo's boulders, instanced (`rock-instances.ts`), in the solids' look without the buildings' surfaces.
-    const zooRockMaterial = townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), {soak: 0.35});
+    const zooRockMaterial = strataRock(townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), {soak: 0.35})); // p4 (townfix): strata, joints, grain
     let zooRocks: RockInstances | null = null;
     let zooOpenNow: readonly string[] = options.zooOpen ?? launchEnclosures();
     let assetsMade = false;
@@ -610,7 +611,11 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     const placementOf = (t: TownTree): TownAssetPlacement => ({asset: t.asset, x: t.x, y: t.y, z: t.z, rotation: t.rotation, scale: t.scale, shade: 0.9 + 0.2 * (((t.seed >>> 5) % 1000) / 1000)});
     // (With them, the millpond's and the farm pond's reeds and lily pads, `render/nature.ts`.)
     const planTrees = [...townTrees(plan).map(placementOf), ...townPlantings(plan)];
-    const zooTreesFor = (open: readonly string[]) => townZooTrees(zooLayout(open, plan), plan).map(placementOf);
+    // p4 (townfix): with the enclosures' library logs, dead trees, bushes, ferns and reeds (`render/zoo-plantings.ts`).
+    const zooTreesFor = (open: readonly string[]) => {
+        const layout = zooLayout(open, plan);
+        return [...townZooTrees(layout, plan).map(placementOf), ...zooHabitatPlantings(layout.enclosures)];
+    };
     const assets = new TownAssets([...planTrees, ...zooTreesFor(options.zooOpen ?? launchEnclosures())], options.assetBase, "town:trees");
     assets.setTier(TOWN_TIERS[tier].reach, TOWN_TIERS[tier].shadows > 0);
     root.add(assets.group);
