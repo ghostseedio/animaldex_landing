@@ -46,3 +46,58 @@ export function sameIds(a: readonly string[], b: readonly string[]): boolean {
     const set = new Set(a);
     return b.every((id) => set.has(id));
 }
+
+/**
+ * p4 (zoolive): a zoo enclosure in view comes out whole (the owner, 2026-11-17, on the live Ark: "why are all the
+ * animals in the elephant enclosure frozen and I can't click on them, maybe other enclosures too").
+ *
+ * The elephants' paddock holds 24 residents; on the high tier the live budget had 6 of them out, and the 12 nearest the
+ * look point (`nearestKept`, only with the camera within 45 m) left the rest of the paddock standing as resting figures:
+ * frozen, in the same view as the ones that walk. From the usual enclosure view (50 to 80 m out) none came out at all.
+ * So every resident of an enclosure with a resident near the look point (`NEAR_ZOO_WITHIN`) is brought out, while the
+ * camera is within `NEAR_ZOO_VIEW` m, nearest enclosure first, at most `cap` animals in all (a whole enclosure or none,
+ * unless the first alone is over the cap: its nearest then). Pure.
+ */
+
+/** The camera within this far of its look point (m) for a zoo enclosure to come out: the view of a paddock, not the map's. */
+export const NEAR_ZOO_VIEW = 90;
+/** An enclosure with a resident this near the look point (m) comes out. */
+export const NEAR_ZOO_WITHIN = 30;
+/** At most this many zoo residents brought out (the low tier and the lighter view: `NEAR_ZOO_MAX_LOW`). */
+export const NEAR_ZOO_MAX = 40;
+export const NEAR_ZOO_MAX_LOW = 20;
+
+/**
+ * The kept animals to bring out for a look point: the nearest kept ones (`nearestKept`, with the camera within
+ * `NEAR_KEPT_VIEW`), then the whole of each zoo enclosure (`group`) with a resident within `NEAR_ZOO_WITHIN`, nearest
+ * enclosure first, up to `zooCap` zoo residents (with the camera within `NEAR_ZOO_VIEW`). Nearest first; ids unique.
+ */
+export function keptToBringOut(candidates: ReadonlyArray<{id: string; x: number; z: number; group?: string | null}>, x: number, z: number, view: number, zooCap = NEAR_ZOO_MAX): string[] {
+    const out = view < NEAR_KEPT_VIEW ? nearestKept(candidates, x, z) : [];
+    if (view >= NEAR_ZOO_VIEW) return out;
+    const groups = new Map<string, Array<{id: string; d: number}>>();
+    for (const c of candidates) {
+        if (!c.group) continue;
+        const d = (c.x - x) ** 2 + (c.z - z) ** 2;
+        const list = groups.get(c.group);
+        if (list) list.push({id: c.id, d});
+        else groups.set(c.group, [{id: c.id, d}]);
+    }
+    const order = (a: {id: string; d: number}, b: {id: string; d: number}) => a.d - b.d || (a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
+    const near = Array.from(groups.entries()).map(([key, list]) => ({key, list: list.sort(order)})).filter((g) => g.list[0].d <= NEAR_ZOO_WITHIN ** 2);
+    near.sort((a, b) => a.list[0].d - b.list[0].d || (a.key < b.key ? -1 : 1));
+    const seen = new Set(out);
+    let zoo = 0;
+    for (let k = 0; k < near.length; k++) {
+        const g = near[k];
+        if (k > 0 && zoo + g.list.length > zooCap) continue;
+        for (const m of g.list) {
+            if (zoo >= zooCap) break;
+            zoo++;
+            if (seen.has(m.id)) continue;
+            seen.add(m.id);
+            out.push(m.id);
+        }
+    }
+    return out;
+}

@@ -60,6 +60,13 @@ export type TownPlace = {
      */
     pen?: Box;
     penMargin?: number;
+    /**
+     * p4 (zoolive): an outdoor zoo resident's body clear of its enclosure's fence: how far in from the mask (itself 0.4 m
+     * inside the fence) its middle keeps (half its drawn body, a male's size, and a hand); its spot and every pose of its day
+     * (`islands/scene.ts` bound) keep to it. Before, only its middle kept inside the mask: a tapir's or an elephant's front
+     * half stood through the mesh ("a tapir stuck in the mesh fence").
+     */
+    enclosureMargin?: number;
 };
 
 export type TownPlacements = {places: Map<string, Placement>; town: Map<string, TownPlace>; open: string[]};
@@ -346,6 +353,8 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
                 held = {x: at.x, z: at.z, y: f.floor, yaw};
                 info = {...info, where: "indoor", still: true};
             }
+            // p4 (zoolive): outdoors, its whole body inside the enclosure's fence (`enclosureMargin`).
+            if (!held && host && !host.indoor) info = {...info, enclosureMargin: zooMargin(host.mask, arkBody(animal).display)};
         } else {
             const key = clusterKey(animal);
             // p2 (land): the town's pond life (its stored water kind or pond habitat) at the town's wetland, a swimmer in the water.
@@ -372,6 +381,7 @@ export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonl
         if (!held && !HIGH_WHERE.has(base.where) && base.where !== "pool") at = inside(bound, ...clearOf(at.x, at.z, Math.min(Math.max(length * 0.45, 0.12), 1.6)), base.x, base.z);
         // gfx (PLACE): inside its pen, its body clear of the rails (then clear of any building again, the pen's inside).
         if (info.pen) at = inPen(info.pen, info.penMargin ?? 0, at.x, at.z, length);
+        else if (info.enclosureMargin !== undefined && info.enclosure) at = keepInside(maskBox(info.enclosure.mask), at.x, at.z, info.enclosureMargin);
         // (In the town every water is above the sea: a pool, the canal, a pond. The scene's water pose works from the sea's
         // level, so a swimmer here floats at its spot's surface, on its own ground: `water` stays false.)
         // (A raised pool's water is 0.45 m over the highest ground at its rim: a swimmer floats there, not under the rim.)
@@ -529,6 +539,24 @@ function penned(info: TownPlace, pen: Box, length: number): TownPlace {
     const margin = Math.max(Math.min(length * 0.5 + 0.15, pen.w / 2 - 0.05, pen.d / 2 - 0.05), 0);
     const reach = Math.max(Math.min(pen.w, pen.d) / 2 - margin, 0.4);
     return {...info, pen, penMargin: margin, range: Math.min(info.range, Math.max(reach / 1.5, 0.4))};
+}
+
+/** p4 (zoolive): an enclosure's mask (the corners of a turned box, `areas.ts` enclosureOn) as that box (memo by the mask). */
+const MASK_BOXES = new WeakMap<Poly, Box>();
+export function maskBox(mask: Poly): Box {
+    let b = MASK_BOXES.get(mask);
+    if (!b) {
+        const [p0, p1, p2] = mask;
+        b = {x: (mask[0].x + mask[2].x) / 2, z: (mask[0].z + mask[2].z) / 2, w: Math.hypot(p1.x - p0.x, p1.z - p0.z), d: Math.hypot(p2.x - p1.x, p2.z - p1.z), rot: Math.atan2(p1.z - p0.z, p1.x - p0.x)};
+        MASK_BOXES.set(mask, b);
+    }
+    return b;
+}
+
+/** p4 (zoolive): how far in from an enclosure's mask a resident's middle keeps: half its drawn body at a male's size (1.1) and a hand. */
+export function zooMargin(mask: Poly, length: number): number {
+    const b = maskBox(mask);
+    return Math.max(Math.min(length * 0.55 + 0.15, b.w / 2 - 0.05, b.d / 2 - 0.05), 0);
 }
 
 /** A point inside its pen, `margin` in from the rails (the scene's hard bound for a penned animal's every pose). */
