@@ -39,6 +39,9 @@ export function dressSafari(e: {id: string; slot: {at: Box; seed: number; safari
         return heightAt(q[0], q[2]);
     };
     const plot = new Plot(s, floorAt, spots, e.slot.seed);
+    // (Pass 4 merge: the plains', the desert's and the predators' dry country has sun-bleached deadwood, the forest edge,
+    // the tigers' forest, the wetland and the river mossy logs: townfix's `log` picks the library log by `plot.dry`.)
+    plot.dry = habitat === "plains" || habitat === "desert" || habitat === "lions" || habitat === "hyenas";
     // (Grass, reeds and ferns are drawn in `solid`; a patch of bare earth is ground: drawn, and in `cover`, the walk
     // surfaces the residents stand on, as the zoo's patches, `zoo-habitat.ts`.)
     const ground = solid;

@@ -31,7 +31,10 @@ test("every enclosure's library plantings are real assets inside it; the elephan
         for (const kind of ["log-", "bush-", "fern-", "snag-a"]) assert.ok(plantings.some((p) => p.asset.startsWith(kind)), `no ${kind}`);
         // Dry enclosures' deadwood sun-bleached (no moss); the mossy logs only in the damp ones.
         for (const e of layout.enclosures) {
-            const dry = e.type === "savanna_paddocks" || e.type === "big_cats" || e.type === "small_mammals";
+            // (A safari area is dry or damp by its habitat, not the server type whose spec it borrows: its forest edge,
+            // wetland, river and tiger forest are damp; pass 4 merged onto the safari.)
+            const safari = e.slot.safari;
+            const dry = safari ? safari === "plains" || safari === "desert" || safari === "lions" || safari === "hyenas" : e.type === "savanna_paddocks" || e.type === "big_cats" || e.type === "small_mammals";
             const logs = zooHabitatPlantings([e]).filter((p) => p.asset.startsWith("log-"));
             for (const p of logs) {
                 if (dry) assert.ok(p.asset === "log-fresh-a" && p.tint && p.tint[2] > p.tint[0], `${e.id}: ${p.asset}`);
