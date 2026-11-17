@@ -135,7 +135,7 @@ export type BakedPerson = {
 
 export type BakedPeople = {
     persons: Map<PersonId, BakedPerson>;
-    /** RGBA half floats, `width` × `height` texels. */
+    /** RGBA half floats, `width` × `height` texels (emptied once the texture is on the GPU). */
     bones: Uint16Array;
     width: number;
     height: number;

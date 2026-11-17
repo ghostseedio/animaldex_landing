@@ -109,12 +109,15 @@ type Level = {mesh: InstancedMesh; skin: InstancedBufferAttribute; top: Instance
 
 const noRaycast = () => {};
 
-/** A loaded set's GPU side: the bone texture and each body's two levels (made on first use). */
-type Loaded = {baked: BakedPeople; texture: DataTexture; levels: Map<string, Level>; list: Level[]};
+/** The bake and its one bone texture, shared by every renderer on the page (the town's and the forest's). */
+type Shared = {baked: BakedPeople; texture: DataTexture; users: number};
 
-/** One fetch of the three files for every renderer on the page (the town's and the forest's share them). */
-let shared: Promise<BakedPeople> | null = null;
-function loadPeople(base: string): Promise<BakedPeople> {
+/** A renderer's loaded side: the shared bake and each body's two levels (made on first use). */
+type Loaded = {shared: Shared; baked: BakedPeople; texture: DataTexture; levels: Map<string, Level>; list: Level[]};
+
+/** One fetch and one bake for every renderer on the page; let go when the last renderer is disposed. */
+let shared: Promise<Shared> | null = null;
+function loadPeople(base: string): Promise<Shared> {
     if (shared) return shared;
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
@@ -123,10 +126,31 @@ function loadPeople(base: string): Promise<BakedPeople> {
         const baked = bakePeople(near, far, clips);
         // (The files' own meshes are not drawn: only the bake's compact geometries are kept.)
         for (const g of [near, far, clips]) g.scene.traverse((o) => (o as {geometry?: {dispose(): void}}).geometry?.dispose());
-        return baked;
+        const texture = new DataTexture(baked.bones, baked.width, baked.height, RGBAFormat, HalfFloatType);
+        texture.minFilter = NearestFilter;
+        texture.magFilter = NearestFilter;
+        texture.generateMipmaps = false;
+        texture.flipY = false;
+        texture.needsUpdate = true;
+        // Once on the GPU, the 5 MB of matrices leave the JS heap (the phone's tightest budget; a new scene bakes again).
+        texture.onUpdate = () => {
+            (texture as unknown as {image: unknown}).image = {data: null, width: baked.width, height: baked.height};
+            baked.bones = new Uint16Array(0);
+        };
+        return {baked, texture, users: 0};
     });
     shared.catch(() => (shared = null));
     return shared;
+}
+
+function release(s: Shared) {
+    if (--s.users > 0) return;
+    s.texture.dispose();
+    s.baked.persons.forEach((p) => {
+        p.near.dispose();
+        p.far.dispose();
+    });
+    shared = null;
 }
 
 export class PeopleFigures {
@@ -263,16 +287,11 @@ export class PeopleFigures {
     private load() {
         this.loading = true;
         loadPeople(this.base).then(
-            (baked) => {
+            (s) => {
                 if (this.disposed) return;
-                const texture = new DataTexture(baked.bones, baked.width, baked.height, RGBAFormat, HalfFloatType);
-                texture.minFilter = NearestFilter;
-                texture.magFilter = NearestFilter;
-                texture.generateMipmaps = false;
-                texture.flipY = false;
-                texture.needsUpdate = true;
-                this.bones.value = texture;
-                this.loaded = {baked, texture, levels: new Map(), list: []};
+                s.users++;
+                this.bones.value = s.texture;
+                this.loaded = {shared: s, baked: s.baked, texture: s.texture, levels: new Map(), list: []};
                 // Hand over from the procedural figures on the next frame.
                 if (this.fallback) {
                     this.fallback.dispose();
@@ -388,7 +407,7 @@ export class PeopleFigures {
                 l.mesh.dispose();
                 l.geometry.dispose();
             }
-            this.loaded.texture.dispose();
+            release(this.loaded.shared);
         }
         this.material.dispose();
         this.depth.dispose();
