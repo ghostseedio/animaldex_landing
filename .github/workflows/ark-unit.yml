@@ -1,0 +1,31 @@
+# Unit tests, lint and types on GitHub's machines, so lanes don't run the full suite on the owner's Mac.
+# Run by hand on any branch: gh workflow run ark-unit.yml -R ghostseedio/animaldex_landing --ref <branch>
+name: Ark unit tests
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+jobs:
+  unit:
+    name: npm test, eslint, tsc
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Unit tests (src/lib/**/*.test.ts)
+        run: npm test 2>&1 | tee unit.log; test ${PIPESTATUS[0]} -eq 0
+      - name: Lint
+        run: npm run lint
+      - name: Types (the known .svg module error is ignored; anything else fails)
+        run: |
+          npx tsc --noEmit -p . 2>&1 | tee tsc.log || true
+          if grep -E "error TS" tsc.log | grep -v -E "\.svg" ; then exit 1; fi
+      - name: Summary
+        if: always()
+        run: grep -E "^# (pass|fail|skipped)" unit.log >> "$GITHUB_STEP_SUMMARY" || true
