@@ -3,14 +3,14 @@
   "source": {
     "repo": "lennybeadle/animaldex",
     "branch": "ark-p5-crater-server",
-    "commit": "a4bb58bd3",
+    "commit": "ec91f4a14",
     "path": "supabase/functions/_shared/ark-positions/"
   },
   "positionsVersion": 4,
   "sha256": {
     "positions.ts": "11434cb158d6386fb2a18fca6f3db15a5d6e130648b2feb411466bb835ab6bb7",
-    "atlas.json": "1324e975fc215e1365d49a03a29ee8121a3bcac1c150ecbee3bdd8097e5dff6e",
-    "contract.json": "1af7c051d00aeee376011117cb39a380107d1c61ccc5e85a7941cec0d986c71e",
+    "atlas.json": "5bcb7e4ed16b1f111b9279ee2a2e73e399fbb8001004136de915ea324d281122",
+    "contract.json": "9ab9c813860dce757587ae9a7ceaf6d527a22a150815b74b744a71e8c32a6609",
     "sleep.json": "991567d5ecb27559af0b5e563c2b3ff79a2bce0770239439f03a62283cf06807"
   }
 }
