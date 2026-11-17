@@ -17,6 +17,9 @@ import {arkPickAnimal, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-popula
 import {fillArkWords} from "@/lib/ark-words";
 import {ARK_LOST_WORDS_EN, arkExtinctHow, arkExtinctWhen, fetchArkExtinct, type ArkExtinction, type ArkLostWords} from "@/lib/ark-extinct";
 import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+// popgraph: population over time (owner, 2026-11-17), from the server's record.
+import {arkHistoryLines, arkPeriodSpan, readArkHistory, type ArkHistory, type ArkLine, type ArkPeriod} from "@/lib/ark-population-history";
+import {ARK_BARS_GRAPH_WORDS, buildGraphPane, drawControls, drawPeriodChange, drawSpark, makeSparkButton, type ArkSortMode} from "@/ark-scene/live/bars-graph";
 
 const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif)";
 const GLASS = {background: "rgba(14, 20, 14, 0.72)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.14)", color: "rgba(255, 252, 244, 0.96)"};
@@ -71,7 +74,7 @@ export type ArkBarsViewOptions = {
     onLostSpecies?: ((one: ArkExtinction) => void) | null;
 };
 
-type Row = {el: HTMLLIElement; button: HTMLButtonElement; icon: HTMLImageElement; name: HTMLSpanElement; mine: HTMLSpanElement; fill: HTMLSpanElement; change: HTMLSpanElement; count: HTMLSpanElement; slug: string};
+type Row = {el: HTMLLIElement; button: HTMLButtonElement; icon: HTMLImageElement; name: HTMLSpanElement; mine: HTMLSpanElement; fill: HTMLSpanElement; change: HTMLSpanElement; count: HTMLSpanElement; spark: HTMLButtonElement; slug: string};
 
 const CARET = `<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 7.5l5 5 5-5"/></svg>`;
 
@@ -122,6 +125,17 @@ export class ArkBarsView {
     private selectedId: string | null = null;
     private timer: ReturnType<typeof setTimeout> | null = null;
     private disposed = false;
+    // popgraph: the record's answers (week by the hour, all by the day), the order and period, the graph shown.
+    private histories: {week: ArkHistory | null; all: ArkHistory | null} = {week: null, all: null};
+    private historyAsked = {week: false, all: false};
+    private period: ArkPeriod = "24h";
+    private mode: ArkSortMode = "biggest";
+    private graphKey: string | null = null;
+    private lines = new Map<string, ArkLine>();
+    private order: string[] = [];
+    private readonly controls: HTMLDivElement;
+    private readonly none: HTMLParagraphElement;
+    private graphPane: HTMLDivElement | null = null;
 
     constructor(host: HTMLElement, private options: ArkBarsViewOptions) {
         this.collapsed = options.collapsed;
@@ -135,7 +149,8 @@ export class ArkBarsView {
             // embed's `?insetTop=`: the iOS panel's close button and title).
             top: "calc(10px + env(safe-area-inset-top, 0px) + var(--ark-inset-top, 0px))",
             zIndex: "2",
-            width: "min(18rem, calc(100% - 66px))",
+            // popgraph: a little wider for each row's line (was 18rem).
+            width: "min(20rem, calc(100% - 66px))",
             // Clear of the log at the foot of the world (its chip and a few lines).
             maxHeight: "calc(100% - 210px - env(safe-area-inset-top, 0px) - var(--ark-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - var(--ark-inset-bottom, 0px))",
             display: "flex",
@@ -186,7 +201,7 @@ export class ArkBarsView {
         const list = document.createElement("ul");
         // More rows as the end of the list comes into view.
         list.addEventListener("scroll", () => {
-            if (this.built >= this.ranked.length || list.scrollTop + list.clientHeight < list.scrollHeight - 240) return;
+            if (this.built >= Math.max(this.order.length, this.ranked.length) || list.scrollTop + list.clientHeight < list.scrollHeight - 240) return;
             this.built += ROWS_STEP;
             this.draw();
         }, {passive: true});
@@ -211,7 +226,12 @@ export class ArkBarsView {
         const lostBody = document.createElement("div");
         Object.assign(lostBody.style, {display: "none", maxHeight: "12rem", overflowY: "auto", overscrollBehavior: "contain", paddingBottom: "4px"});
         lost.append(lostToggle, lostBody);
-        panel.append(head, list, lost);
+        // popgraph: the order and period over the list (shown once the record's read answers), and "nothing changed".
+        const controls = document.createElement("div");
+        Object.assign(controls.style, {display: "none", flexWrap: "wrap", alignItems: "center", gap: "6px", padding: "0 14px 10px"});
+        const none = document.createElement("p");
+        Object.assign(none.style, {display: "none", margin: "0", padding: "12px 14px", font: `500 12px/1.3 ${FONT}`, opacity: "0.55", borderTop: "1px solid rgba(255, 255, 255, 0.08)"});
+        panel.append(head, controls, none, list, lost);
 
         root.append(chip, panel);
         host.appendChild(root);
@@ -231,6 +251,8 @@ export class ArkBarsView {
         this.lostTitle = lostTitle;
         this.lostCount = lostCount;
         this.lostBody = lostBody;
+        this.controls = controls;
+        this.none = none;
         this.applyCollapsed();
     }
 
@@ -390,6 +412,7 @@ export class ArkBarsView {
                 } catch {
                     storage = null;
                 }
+                this.askHistory("week");
                 void readArkPopulationThen(url, this.snapshot, {fetch: (asked) => fetch(asked), storage}).then((then) => {
                     if (this.disposed || !then) return;
                     this.then = then;
@@ -441,8 +464,13 @@ export class ArkBarsView {
         Object.assign(count.style, {flex: "0 0 auto", minWidth: "2em", textAlign: "end", font: `700 13px/1 ${FONT}`, fontVariantNumeric: "tabular-nums"});
         button.append(badge, middle, change, count);
         button.addEventListener("click", () => this.pick(key));
-        el.appendChild(button);
-        return {el, button, icon, name, mine, fill, change, count, slug: ""};
+        el.style.display = "flex";
+        button.style.flex = "1 1 auto";
+        button.style.minWidth = "0";
+        const spark = makeSparkButton(() => this.openGraph(key));
+        spark.style.display = "none";
+        el.append(button, spark);
+        return {el, button, icon, name, mine, fill, change, count, spark, slug: ""};
     }
 
     private draw() {
@@ -463,7 +491,39 @@ export class ArkBarsView {
         this.list.setAttribute("aria-label", words.list);
         const ceiling = arkBarCeiling(this.ranked[0]?.count ?? 0);
         const seen = new Set<string>();
-        for (const species of this.ranked.slice(0, this.built)) {
+        // popgraph: each row's line over the period, and Thriving / Declining's order (with kinds that died out).
+        const history = this.history();
+        const byKey = new Map(this.ranked.map((species) => [species.key, species]));
+        const drawn = history ? arkHistoryLines(history, this.period, this.ranked.map((species) => species.key), "both", this.mode) : null;
+        this.lines = drawn?.lines ?? new Map();
+        this.order = drawn?.ranked ?? this.ranked.map((species) => species.key);
+        this.drawControls(history, drawn?.ranked ?? null);
+        for (const key of this.order.slice(0, this.built)) {
+            const species = byKey.get(key);
+            const line = this.lines.get(key) ?? null;
+            if (!species) {
+                // A kind that died out in the period (Declining): its graph only.
+                const gone = history?.gone.get(key);
+                if (!gone) continue;
+                seen.add(key);
+                let row = this.rows.get(key);
+                if (!row) {
+                    row = this.makeRow(key);
+                    this.rows.set(key, row);
+                }
+                this.list.appendChild(row.el);
+                row.slug = gone.slug ?? "";
+                row.icon.src = this.options.iconUrl && gone.slug && !isArkPlaceholderSlug(gone.slug) ? this.options.iconUrl(gone.slug) : ARK_PLACEHOLDER_ICON;
+                row.name.textContent = gone.name;
+                row.name.style.opacity = "0.7";
+                row.mine.style.display = "none";
+                row.count.textContent = "0";
+                row.fill.style.width = "0%";
+                if (line) drawPeriodChange(row.change, line.stats, locale);
+                row.button.setAttribute("aria-label", `${gone.name}: 0, ${ARK_BARS_GRAPH_WORDS.goneNow}`);
+                this.drawRowSpark(row, line, gone.name);
+                continue;
+            }
             seen.add(species.key);
             let row = this.rows.get(species.key);
             if (!row) {
@@ -477,17 +537,21 @@ export class ArkBarsView {
                 row.icon.src = this.options.iconUrl && !isArkPlaceholderSlug(species.slug) ? this.options.iconUrl(species.slug) : ARK_PLACEHOLDER_ICON;
             }
             row.name.textContent = species.name;
+            row.name.style.opacity = "1";
             row.mine.style.display = species.mine ? "inline-block" : "none";
             row.count.textContent = number(species.count);
             row.fill.style.width = `${(arkBarShare(species.count, ceiling) * 100).toFixed(1)}%`;
             const change = arkChangeOf(species.count, this.then, species.key, "both");
-            drawChange(row.change, change, words, locale);
+            // Thriving / Declining: the period's change; else the 24-hour change, as before.
+            if (drawn?.ranked && line) drawPeriodChange(row.change, line.stats, locale);
+            else drawChange(row.change, change, words, locale);
             const said = arkChangeText(change, locale);
             row.button.setAttribute("aria-label", [
                 fillArkWords(words.rowCount, {animal: species.name, count: number(species.count)}),
-                said ? fillArkWords(words.change24h, {change: said.text}) : null,
+                drawn?.ranked && line ? `${row.change.textContent}, ${ARK_BARS_GRAPH_WORDS.periods[this.period]}` : said ? fillArkWords(words.change24h, {change: said.text}) : null,
                 species.mine ? words.yours : null
             ].filter(Boolean).join(", "));
+            this.drawRowSpark(row, line, species.name);
         }
         this.rows.forEach((row, key) => {
             if (seen.has(key)) return;
@@ -495,7 +559,89 @@ export class ArkBarsView {
             this.rows.delete(key);
         });
         this.drawSelected();
+        this.drawGraph();
         this.applyCollapsed();
+    }
+
+    // MARK: popgraph
+
+    private history(): ArkHistory | null {
+        return this.histories[arkPeriodSpan(this.period)];
+    }
+
+    /** The record's answer for a span, once; nothing shows until it answers (and nothing at all while it cannot). */
+    private askHistory(span: "week" | "all") {
+        const url = this.options.eventsUrl ? this.options.eventsUrl.replace(/events$/, "population") : null;
+        if (!url || this.historyAsked[span]) return;
+        this.historyAsked[span] = true;
+        void readArkHistory(url, span, (asked) => fetch(asked)).then((history) => {
+            if (this.disposed || !history) return;
+            this.histories[span] = history;
+            this.draw();
+        });
+    }
+
+    private drawRowSpark(row: Row, line: ArkLine | null, name: string) {
+        row.spark.style.display = line ? "flex" : "none";
+        if (line) drawSpark(row.spark, line.series, line.stats, name);
+    }
+
+    private drawControls(history: ArkHistory | null, ranked: string[] | null) {
+        const shown = Boolean(this.histories.week) && !this.graphKey;
+        this.controls.style.display = shown ? "flex" : "none";
+        if (shown) drawControls(this.controls, this.mode, (mode) => this.setGraphState({mode}), this.period, (period) => this.setGraphState({period}));
+        const empty = Boolean(history && ranked && !ranked.length) && !this.graphKey;
+        this.none.style.display = empty ? "block" : "none";
+        this.none.textContent = this.mode === "thriving" ? ARK_BARS_GRAPH_WORDS.noneThriving : ARK_BARS_GRAPH_WORDS.noneDeclining;
+    }
+
+    private setGraphState(next: {mode?: ArkSortMode; period?: ArkPeriod; graphKey?: string | null}) {
+        if (next.mode !== undefined) {
+            this.mode = next.mode;
+            this.list.scrollTop = 0;
+        }
+        if (next.period !== undefined) {
+            this.period = next.period;
+            this.askHistory(arkPeriodSpan(next.period));
+        }
+        if (next.graphKey !== undefined) this.graphKey = next.graphKey;
+        this.draw();
+    }
+
+    private openGraph(key: string) {
+        this.setGraphState({graphKey: key});
+    }
+
+    /** The graph pane in the list's place while a species' graph is open. */
+    private drawGraph() {
+        this.graphPane?.remove();
+        this.graphPane = null;
+        const history = this.history();
+        const key = this.graphKey;
+        const line = key ? this.lines.get(key) : null;
+        const species = key ? this.ranked.find((one) => one.key === key) ?? null : null;
+        const gone = key ? history?.gone.get(key) ?? null : null;
+        const open = Boolean(history && key && line && (species || gone));
+        this.list.style.display = open ? "none" : "";
+        if (!open || !history || !line || !key) return;
+        const slug = species?.slug ?? gone?.slug ?? "";
+        this.graphPane = buildGraphPane({
+            history,
+            name: species?.name ?? gone?.name ?? "",
+            iconSrc: this.options.iconUrl && slug && !isArkPlaceholderSlug(slug) ? this.options.iconUrl(slug) : ARK_PLACEHOLDER_ICON,
+            series: line.series,
+            stats: line.stats,
+            period: this.period,
+            locale: this.options.locale,
+            onPeriod: (period) => this.setGraphState({period}),
+            onBack: () => this.setGraphState({graphKey: null}),
+            onFly: species ? () => {
+                this.graphKey = null;
+                this.pick(key);
+                this.draw();
+            } : null
+        });
+        this.list.after(this.graphPane);
     }
 
     private drawSelected() {
@@ -512,8 +658,12 @@ export class ArkBarsView {
 
     private pick(key: string) {
         const row = this.ranked.find((species) => species.key === key);
+        if (!row) {
+            if (this.history()?.gone.has(key)) this.openGraph(key);
+            return;
+        }
         const scene = this.options.scene();
-        if (!row || !scene) return;
+        if (!scene) return;
         // On the apps' small panel the open list would cover the animal it flies to: it folds.
         this.setCollapsed(true);
         const herdKey = [row.key, ...row.breeds.map((breed) => breed.key)].find((k) => scene.selectHerd(k));

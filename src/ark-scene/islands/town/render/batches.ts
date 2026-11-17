@@ -23,8 +23,11 @@
 import {BatchedMesh, BufferGeometry, Material, type BufferAttribute, MeshDepthMaterial, RGBADepthPacking, type BackSide, type FrontSide, type WebGLProgramParametersWithUniforms, type WebGLRenderer} from "three";
 import {TOWN_CHUNK_COUNT, TOWN_GRID} from "@/ark-scene/islands/town/chunks";
 
-/** Rows of chunks a band holds (3 bands of 27 chunks: each band's ground fits 16-bit indices). */
-export const TOWN_BAND_ROWS = 3;
+/**
+ * Rows of chunks a band holds (each band's ground must fit 16-bit indices: at most 27 tiles). p4 (safari): 2 rows of 12
+ * (6 bands of 24 chunks) since the square grew to 12 × 12 for the safari park; it was 3 rows of 9.
+ */
+export const TOWN_BAND_ROWS = 2;
 export const TOWN_BANDS = Math.ceil(TOWN_GRID.rows / TOWN_BAND_ROWS);
 
 /** The band a chunk is in. */

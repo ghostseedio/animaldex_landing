@@ -43,7 +43,8 @@ export const WILD_REACH = 90.25;
 /** The town's land back toward the wild island (m, the same way). */
 export const TOWN_REACH = 210.25;
 const WILD_HALF = 132;
-const TOWN_HALF_M = 237.6;
+// p4 (safari): 12 chunks of 52.8 m (was 9, 237.6), for the safari park north-west of the zoo (`town/safari.ts`).
+const TOWN_HALF_M = 316.8;
 
 /**
  * The wild island's land toward the town in the world in use (P6, docs/ark/wild-island.md §6): today's `WILD_REACH`, or
@@ -79,7 +80,7 @@ export const ARK_ISLANDS: Record<ArkIslandId, ArkIslandDef> = {
     get town(): ArkIslandDef {
         const world = arkWorld();
         let def = townDefs.get(world);
-        if (!def) townDefs.set(world, (def = {id: "town", half: TOWN_HALF_M, chunks: 9, landHa: 12.4, archipelago: townWorldOrigin(), home: TOWN_HOME}));
+        if (!def) townDefs.set(world, (def = {id: "town", half: TOWN_HALF_M, chunks: 12, landHa: 18, archipelago: townWorldOrigin(), home: TOWN_HOME}));
         return def;
     }
 };

@@ -32,6 +32,10 @@ import {townTrees} from "@/ark-scene/islands/town/trees";
 import {clearOfDoors, PATH_WIDTH, pathOpenings, townDoorWays} from "@/ark-scene/islands/town/doors";
 import {boundaryBodies, madeHere} from "@/ark-scene/islands/town/render/fences";
 import {parkBench} from "@/ark-scene/islands/town/render/bench";
+import {safariBarrier, safariScenery} from "@/ark-scene/islands/town/render/safari";
+import {ruralEdge, ruralProps} from "@/ark-scene/islands/town/render/rural-edges";
+import {RURAL_PENS} from "@/ark-scene/islands/town/rural";
+import {safariArea} from "@/ark-scene/islands/town/safari";
 import {bridgeAt, bridgeHeight, canalBridges, PARAPET} from "@/ark-scene/islands/town/canal-bridges";
 import {drawCanalBridge} from "@/ark-scene/islands/town/render/canal-bridges";
 
@@ -127,7 +131,8 @@ function streets(out: SceneryOut, plan: TownPlan) {
     for (const w of plan.waters) {
         if (w.kind === "harbour") continue;
         const centre = centroid(w.poly);
-        const level = w.kind === "farm_pond" ? Math.min(...w.poly.map((p) => H(p.x, p.z))) - 0.25 : w.level;
+        // (p5 (rural): the duck pond's water at its own level, its bed's middle plus its depth, as `drawn-ground.ts` has it.)
+        const level = w.id === "rural_pond" ? H(centre.x, centre.z) + w.depth : w.kind === "farm_pond" ? Math.min(...w.poly.map((p) => H(p.x, p.z))) - 0.25 : w.level;
         fan(out.fresh, w.poly, centre, level);
     }
 }
@@ -337,7 +342,7 @@ function boundary(out: SceneryOut, h: Hedge, gates: readonly FarmGate[] = []) {
     if (h.kind === "hedge") {
         // Leafy hedges (lane GC, `render/nature.ts`): a field's or a farm's boundary a shaggy hedgerow, a garden's
         // clipped; each ~24 m piece into the chunk it lies in; open where a gate stands.
-        const hedgerow = h.id.startsWith("field") || h.id.includes("smallholding") || h.id.includes("farmstead");
+        const hedgerow = h.id.startsWith("field") || h.id.startsWith("rural") || h.id.includes("smallholding") || h.id.includes("farmstead");
         const open = [...gates.map((g) => ({x: g.x, z: g.z, half: g.width / 2})), ...paths];
         for (const part of pieces(h.line, 24)) {
             const mid = part[Math.floor(part.length / 2)];
@@ -347,6 +352,11 @@ function boundary(out: SceneryOut, h: Hedge, gates: readonly FarmGate[] = []) {
     }
     // gfx (props): the gardens' fences, walls and railings are `render/fences.ts` (drawn in `boundaries`).
     if (madeHere(h)) return;
+    // p5 (rural): the countryside's dry-stone walls, poultry netting and pig wire (`render/rural-edges.ts`).
+    if (h.kind === "drystone" || h.kind === "poultry_net" || h.kind === "pig_wire") {
+        ruralEdge(h, gates, (x, z) => chunkFor(out, x, z));
+        return;
+    }
     for (let i = 1; i < h.line.length; i++) {
         const a = h.line[i - 1];
         const b = h.line[i];
@@ -411,7 +421,9 @@ const CROP: Record<string, [string, string, number]> = {
     cabbage: ["#7fa158", "#5d4834", 0.6],
     tilled: ["#6c5438", "#5c4630", 0.5],
     sprouts: ["#8fb05e", "#5d4834", 0.55],
-    orchard: ["#7aa04e", "#86a957", 3]
+    orchard: ["#7aa04e", "#86a957", 3],
+    // p5 (rural): a hay meadow cut and baled: pale stubble in the mower's swathes.
+    stubble: ["#cdb978", "#b8a462", 1.6]
 };
 
 function fields(out: SceneryOut, plan: TownPlan) {
@@ -448,6 +460,8 @@ function fields(out: SceneryOut, plan: TownPlan) {
     }
     // The farms' bales, troughs and hay shelters (lane GC, `farm.ts`: they are colliders too); a tractor at each farmstead.
     for (const p of townFarmProps(plan)) farmProp(chunkFor(out, p.at.x, p.at.z).solid, p);
+    // p5 (rural): the poultry farm's dust baths, feeders and drinkers; the arena's jumps.
+    ruralProps(RURAL_PENS, (x, z) => chunkFor(out, x, z));
     for (const farm of plan.farms) {
         const c = chunkFor(out, farm.at.x, farm.at.z);
         if (farm.kind === "farmstead") {
@@ -609,6 +623,13 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const s = e.slot.at;
     const c = chunkFor(out, s.x, s.z);
     const spec = ZOO_TYPES[e.type];
+    // p4 (safari): a safari area: its edge (a ha-ha's rail, or a predator's fence) and its habitat (`render/safari*.ts`).
+    const safari = safariArea(e.id);
+    if (safari) {
+        safariBarrier(c, e, safari);
+        dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null, c.decal);
+        return;
+    }
     // (Lane GA: the 2 m cells' own shades were the "giant pixels"; the earth and sand textures carry the variety now.)
     // p4 (townfix): the floor's surface and colour from `zooFloor` (a waterhole's bank blends into it).
     const floor = zooFloor(e.type);
@@ -855,6 +876,8 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
     for (const item of dead.items) drawDeadwood(chunkFor(out, item.x, item.z).solid, item);
     for (const patch of dead.patches) drawLeafPatch(chunkFor(out, patch.x, patch.z).foliage, patch);
     zooPlaza(out, plan);
+    // p4 (safari): the safari park's paving, gate, waters, boardwalk and decks.
+    safariScenery((x, z) => chunkFor(out, x, z), out.fresh);
     lamps(out, plan);
     beds(out, plan);
     // The lamps' and the street furniture's bodies into the chunks; their lights and the lamp map (lane GA).

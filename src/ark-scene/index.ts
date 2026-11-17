@@ -192,7 +192,8 @@ import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
 import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
 import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
-import {modelBase} from "@/ark-scene/grounding/base";
+import {modelBase, uprightBody} from "@/ark-scene/grounding/base";
+import {canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
 import {setLocoGround} from "@/ark-scene/locomotion/ground";
 import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
 import {flightSpec} from "@/ark-scene/locomotion/flight";
@@ -580,7 +581,7 @@ type HerdDraw = {
     slug: string;
     /** A member, for its size and stats (all of a species are drawn the same size). */
     sample: ArkAnimal;
-    members: Array<{id: string; x: number; z: number; ground: number; yaw: number; water: boolean; phase: number; mine: boolean; awake: boolean; activity: ArkAnimal["activity"]; sleep?: Sleep | null}>;
+    members: Array<{id: string; x: number; z: number; ground: number; yaw: number; water: boolean; phase: number; mine: boolean; awake: boolean; activity: ArkAnimal["activity"]; sleep?: Sleep | null; home?: {x: number; z: number; ground: number}}>;
     centre: {x: number; z: number};
     radius: number;
     /** The member nearest the middle: the badge stands over it. */
@@ -2711,6 +2712,44 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             });
         });
         restingGroups = next;
+        roostTickDrawn = Number.NaN;
+    };
+    // p5 (rural): the resting figures at their roosts by the clock (the hens shut in at dusk, `islands/town/rural.ts`):
+    // placed again only when the island's tick changes (never by day), their matrices made again by the scale's reset.
+    let roostTickDrawn = 0;
+    const roostFigures = () => {
+        const tick = island?.roostTick() ?? 0;
+        if (tick === roostTickDrawn || !island) return;
+        roostTickDrawn = tick;
+        for (const group of restingGroups) {
+            let moved = false;
+            for (const m of group.members) {
+                const home = m.home ?? {x: m.x, z: m.z, ground: m.ground};
+                const at = island.roostFigure(m.id, home.x, home.z) ?? (m.home ? home : null);
+                if (!at) continue;
+                m.home = home;
+                if (at.x === m.x && at.z === m.z && at.ground === m.ground) continue;
+                m.x = at.x;
+                m.z = at.z;
+                m.ground = at.ground;
+                moved = true;
+            }
+            if (!moved) continue;
+            let x0 = Infinity;
+            let x1 = -Infinity;
+            let z0 = Infinity;
+            let z1 = -Infinity;
+            for (const m of group.members) {
+                x0 = Math.min(x0, m.x);
+                x1 = Math.max(x1, m.x);
+                z0 = Math.min(z0, m.z);
+                z1 = Math.max(z1, m.z);
+            }
+            group.centre = {x: (x0 + x1) / 2, z: (z0 + z1) / 2};
+            group.radius = Math.hypot(x1 - x0, z1 - z0) / 2;
+            group.scale = 0;
+            group.sortedAt = 0;
+        }
     };
 
     // 3.3 fix (`near-kept.ts`): the kept town animals nearest the look point, pinned outside on top of the budget, so a
@@ -3982,6 +4021,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // normal, up a trunk, swaying with its tree (`scheduledPerch`).
         const trip = own.trip;
         const perch = groundingRules() === "grounded" ? scheduledPerch(at, trip?.to, Boolean(trip) && own.at >= trip!.arrive && !at.moving, ARK_TIME.value, ARK_WIND_VECTOR.value, standGround) : null;
+        // p5 (monkeys): a primate staying up in its tree goes out through the crowns and back now and then: swinging arm
+        // over arm, leaping or running from hold to hold of the drawn trees (`canopy-scene.ts`, the shared clock's).
+        const canopy = trip && perch && !at.moving && !act && !reducedMotion ? canopyFrame(entry.animal, trip, own.at, entry.length, !entry.state.asleep, perch, heightAt) : null;
+        if (canopy) return {x: canopy.x, z: canopy.z, base: canopy.y, yaw: Math.atan2(canopy.tx, canopy.tz), pitch: 0, roll: 0, afloat: false, surface: canopy};
         if (perch) return {x: perch.x, z: perch.z, base: perch.y, yaw: at.yaw + glance, pitch: 0, roll: 0, afloat: false, surface: perch};
         return {
             x: at.x,
@@ -4110,6 +4153,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Lane TB: a town tank's resident (the aquarium's, a home's tank, a garden pond) swims in its tank's own water.
         const tank = island && !entry.visitor ? island.tankPose(entry.animal.id, entry.length, modelHeight, reducedMotion ? 0 : clockNow()) : null;
         if (tank) return {x: tank.x, z: tank.z, base: tank.base, yaw: tank.yaw, pitch: tank.pitch, roll: 0, afloat: true, water: tank.spec};
+        // p5 (homes): a pet indoors walks about its room's floor on the shared clock (`islands/town/home-rooms.ts`).
+        const room = island && !entry.visitor && !tank ? island.roomPose(entry.animal.id, entry.length, reducedMotion ? 0 : clockNow()) : null;
+        if (room) return {x: room.x, z: room.z, base: room.base, yaw: room.yaw, pitch: 0, roll: 0, afloat: false};
         if (entry.depth && oceanRoams(entry)) return oceanPose(entry, entry.depth, modelHeight); // p2 (ocean)
         if (place.hamlet && !entry.visitor) {
             // A hamlet resident: on its spot when out, walking out of its door or back in, else at its door (drawn only when it is yours).
@@ -4223,11 +4269,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const ground = Math.max(heightAt(x, z), 0);
             // A small one stands on the slope (the sampler's normal); a big one stays upright, as it always has.
             const surface = entry.trueLength < 0.5 ? onGround(x, ground, z, wander.heading) : undefined;
-            return {x, z, base: ground, yaw: wander.heading, pitch: 0.05 * entry.rest, roll: 0, afloat: false, ...(surface ? {surface} : {})};
+            const walked: Pose = {x, z, base: ground, yaw: wander.heading, pitch: 0.05 * entry.rest, roll: 0, afloat: false, ...(surface ? {surface} : {})};
+            // p5 (rural): bound where it has walked to as well (a hen off her spot at dusk still goes in to roost).
+            if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, walked);
+            return walked;
         }
         // Asleep: a little lower at the front, as the head goes down.
         if (floating && !wander?.x && !wander?.z) return {x: place.x, z: place.z, base, yaw: place.yaw, pitch: floatPitch(floatBand?.kind), roll: 0, afloat: true, water: floating.water};
-        return {x: place.x, z: place.z, base, yaw: wander ? wander.heading : place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
+        const still: Pose = {x: place.x, z: place.z, base, yaw: wander ? wander.heading : place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
+        // p5 (rural): off its schedule too (asleep, at rest), a town animal's bound: a hen shut in her hen house at night.
+        if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, still);
+        return still;
     };
 
     // MARK: Rigs
@@ -4414,7 +4466,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // On a steep trunk or wall: head first down it plays climb_down where the rig has one (its schedule pose says
         // `down`, or it is sinking faster than a tenth of its length a second), else its climb.
         const climber = () => {
-            const name = climbClipName(up, Boolean((own?.pose as {down?: boolean} | null | undefined)?.down) || (state.sink ?? 0) > entry.length * 0.1, (n) => Boolean(clip(n)));
+            // (p5 (monkeys): one backing down a trunk tail first plays its climb, not a head-first climb_down.)
+            const posed = own?.pose as {down?: boolean; backing?: boolean} | null | undefined;
+            const name = climbClipName(up, Boolean(posed?.down) || (!posed?.backing && (state.sink ?? 0) > entry.length * 0.1), (n) => Boolean(clip(n)));
             return name ? clip(name) : null;
         };
         const own = entry.sched && scheduled(entry) ? entry.sched : null;
@@ -5288,6 +5342,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             needs.set(entry.animal.model_slug, need);
         }
         // The herds' members (A14): how many as the far model this frame, the rest as specks.
+        roostFigures(); // p5 (rural)
         const herdPlans = planHerds(cameraPosition, exaggerate, now);
         for (const herd of herdPlans) {
             if (!herd.figures) continue;
@@ -5497,7 +5552,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (Lane L2: a sidewinder's body lies across its way while it moves, `l2Sidewind`.)
             if (entry.l2 && !where.water && !act) where.yaw += l2Sidewind(entry.l2, entry.phase);
             let stand: Stand | null = null;
-            if (surface) {
+            const uprightOn = surface && Math.abs(surface.ny) < 0.5 ? uprightBody(animal.model_slug) : null; // p5 (monkeys)
+            if (surface && uprightOn) {
+                // p5 (monkeys): an upright-bodied model (a gibbon, an ape: taller than long) on a trunk, a wall, or hanging
+                // from a hold: its spine along the climb's heading, its front to the surface, its front's depth off it.
+                basisY.set(surface.tx, surface.ty, surface.tz).normalize();
+                basisZ.set(-surface.nx, -surface.ny, -surface.nz);
+                basisZ.addScaledVector(basisY, -basisZ.dot(basisY)).normalize();
+                basisX.crossVectors(basisY, basisZ);
+                rotation.setFromRotationMatrix(basisMatrix.makeBasis(basisX, basisY, basisZ));
+                const along = -groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s;
+                const out = uprightOn.front * s;
+                position.set(where.x + surface.nx * out + basisY.x * along, where.base + surface.ny * out + basisY.y * along, where.z + surface.nz * out + basisY.z * along);
+            } else if (surface) {
                 // On its surface: its back to the surface's normal, heading the way it crawls; its underside on the surface.
                 basisY.set(surface.nx, surface.ny, surface.nz).normalize();
                 basisZ.set(surface.tx, surface.ty, surface.tz);

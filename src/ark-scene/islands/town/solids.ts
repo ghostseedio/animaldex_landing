@@ -152,14 +152,14 @@ export function townSolids(open: readonly string[], plan: TownPlan = townPlan())
         }
         if (form === "pool") scatterSolids(out, e);
         if (form === "paddock" || form === "pool") {
-            // The keepers' shed at the back (`render/scenery.ts` enclosure).
-            if (e.type !== "penguin_seal_pools") {
+            // The keepers' shed at the back (`render/scenery.ts` enclosure); p4 (safari): none in a safari area.
+            if (e.type !== "penguin_seal_pools" && !e.slot.safari) {
                 const c = local(s, s.w / 2 - 4, -s.d / 2 + 2.2);
                 const g = townHeight(c.x, c.z);
                 out.push({id: `zoo:${e.id}:shed`, kind: "shelter", shape: "box", x: c.x, z: c.z, hw: Math.min(6, s.w * 0.3) / 2, hd: 1.5, rot: s.rot, base: g - 0.2, top: g + 3.6, gap: 0});
             }
         }
-        if (form !== "house") {
+        if (form !== "house" && !e.slot.safari) {
             // The feeding hatch on the back fence.
             const h = local(s, -s.w / 2 + 2, -s.d / 2 + 1.2);
             const g = townHeight(h.x, h.z);

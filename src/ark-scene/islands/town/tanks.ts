@@ -462,7 +462,8 @@ export function homeKeeping(slug: string, zone: string, length: number, plan: st
     if (/tortoise/.test(slug)) return "outdoors";
     const watery = Boolean(speciesDepth(slug, zone)) || WATER_WORDS.test(slug) || plan === "fish" || plan === "eel" || plan === "ray" || plan === "jellyfish" || plan === "cephalopod";
     // (A box turtle, a land crab, a wading or swimming bird is not a tank animal.)
-    if (watery && plan !== "bird" && !/box-turtle|rainbow-crab|hermit|land-crab|vampire-crab/.test(slug)) return POND.test(slug) ? "pond" : "tank";
+    // (p5 (homes): a silverfish is an insect of the house, not a fish: it was kept in a tank with a terrapin.)
+    if (watery && plan !== "bird" && !/silverfish/.test(slug) && !/box-turtle|rainbow-crab|hermit|land-crab|vampire-crab/.test(slug)) return POND.test(slug) ? "pond" : "tank";
     if (POND.test(slug)) return "pond";
     if (CAGE.test(slug)) return "cage";
     if (VIVARIUM.test(slug) || plan === "snake" || (plan === "reptile" && length < 2) || plan === "frog") return "vivarium";

@@ -124,3 +124,16 @@ export function clipStandOffset(slug: string, clip: string | null | undefined): 
 export function groundedSlugs(): string[] {
     return Object.keys(MODELS);
 }
+
+/**
+ * p5 (monkeys): a model built upright (taller than it is long: a gibbon, a siamang, an orangutan, the apes), and how
+ * far its front stands out of its origin (model units). On a trunk or hanging from a hold such a body's spine runs along
+ * the climb, its front to the surface; a four-footed one's back is to the surface's normal. Null for every other model.
+ */
+// (The primates by name: a deer or a giraffe is taller than long too, by its antlers or its neck, and never climbs.)
+const PRIMATE_NAME = /gibbon|siamang|orangutan|chimpanzee|gorilla|bonobo|loris|monkey|lemur|macaque|langur|baboon|tamarin|marmoset|capuchin|colobus|guereza/;
+export function uprightBody(slug: string): {front: number} | null {
+    const found = modelBase(slug);
+    if (!found || found.plan !== "mammal" || found.size.y <= found.size.z * 1.02 || !PRIMATE_NAME.test(slug)) return null;
+    return {front: Math.max(found.footprint.z1, 0.05)};
+}

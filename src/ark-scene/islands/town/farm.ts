@@ -10,6 +10,7 @@
 
 import {boxesOverlap, corners, hashText, local, polylineNearest, toLocal, type Box, type Pt} from "@/ark-scene/islands/town/geom";
 import {townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
+import {RURAL_BALES, RURAL_PENS, RURAL_TROUGHS} from "@/ark-scene/islands/town/rural";
 
 export type FarmPropKind = "round_bales" | "square_bales" | "trough" | "hay_shelter";
 /** A farm prop's footprint (its box, `w` along its own x), its height (m), and the farm it is on. */
@@ -84,6 +85,18 @@ function build(plan: TownPlan): {props: FarmProp[]; gates: FarmGate[]} {
         }
         if (best) gates.push({id: `${h.id}:gate`, x: best.x, z: best.z, rot: best.rot, width: 3.6, kind: "field"});
     }
+    // p5 (rural): the countryside's gates (one in each field's boundary, on the side it opens to the lane or a track),
+    // its bales and its troughs (`rural.ts`).
+    for (const pen of RURAL_PENS) {
+        const b = pen.at;
+        const side = pen.gate;
+        const lx = side === "e" ? b.w / 2 : side === "w" ? -b.w / 2 : 0;
+        const lz = side === "s" ? b.d / 2 : side === "n" ? -b.d / 2 : 0;
+        const g = local(b, lx, lz);
+        gates.push({id: `${pen.id}:gate`, x: g.x, z: g.z, rot: b.rot + (side === "e" || side === "w" ? Math.PI / 2 : 0), width: 3.6, kind: pen.edge === "hedge" ? "field" : "paddock"});
+    }
+    for (const bale of RURAL_BALES) props.push({id: bale.id, kind: bale.kind, at: bale.at, top: bale.top, farm: "rural", seed: hashText(bale.id)});
+    RURAL_TROUGHS.forEach((t, i) => props.push({id: `rural:trough:${i}`, kind: "trough", at: t, top: 0.6, farm: "rural", seed: hashText(`rural:trough:${i}`)}));
     return {props, gates};
 }
 

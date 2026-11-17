@@ -18,6 +18,7 @@ import {binsOut, boatIn, clockHands, lampsLevel, marketDay, washingOut, type Tow
 import {BuildingDetail, buildBuilding, clockFaces, newBuildingChunk, paneGeometry, paneMaterial, patchBuildingSurfaces, windowState, type BuildingChunk, type WindowRecord} from "@/ark-scene/islands/town/render/buildings";
 import {buildScenery, buildZooScenery, type SceneryOut} from "@/ark-scene/islands/town/render/scenery";
 import {binGeometry, ChunkedSet, placeMatrix, propMaterial, stallGeometry, treeGeometry, washingGeometry} from "@/ark-scene/islands/town/render/instanced";
+import {SafariTrucks} from "@/ark-scene/islands/town/render/safari";
 import {loadVehicles, TownVehicles, type TrafficAnimals, type VehicleModel} from "@/ark-scene/islands/town/render/vehicles";
 import {lampGlow, lampMapTexture, lightsGeometry, lightsMaterial} from "@/ark-scene/islands/town/render/furniture";
 import {christmasSeason, christmasTree} from "@/ark-scene/islands/town/render/downtown";
@@ -110,7 +111,11 @@ const SURFACE_COLOUR: Record<TownSurface, string> = {
     churchyard: "#6a9448",
     square: "#a39a8b",
     bank: "#6c8a4c",
-    water: "#5a6446"
+    water: "#5a6446",
+    // p4 (safari): sun-bleached grass, red-gold sand, wet mud.
+    savanna: "#b3a45e",
+    desert: "#cfae78",
+    mud: "#6b5a40"
 };
 
 export type GroundGrid = {size: number; heights: Float32Array; colours: Float32Array; /** 8 bytes a vertex: what the ground shows of its texture layers (`ground.ts` townSurfaceWeights). */ surfaces: Uint8Array};
@@ -650,6 +655,9 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     // The cars and bicycles (lane GB: `render/vehicles.ts`), parked and moving, their models read once for the page.
     const vehicles = new TownVehicles(plan, tier);
     root.add(vehicles.group);
+    // p4 (safari): the safari trucks on the visitor loop (one instanced mesh).
+    const trucks = new SafariTrucks(materials.solid);
+    root.add(trucks.mesh);
     let disposed = false;
     if (options.vehicles !== undefined) vehicles.setModels(options.vehicles);
     // (Town performance lane: the models (`vehicles.bin`) are read only once the camera comes within `VEHICLES_FROM` of the
@@ -732,6 +740,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     const update = (clock: TownClock) => {
         // The cars every frame (the moving ones on the island clock's seconds; the parked once a minute inside).
         vehicles.update(clock, ((clock.day - 4) * 24 + clock.hours) * 3600);
+        trucks.update(((clock.day - 4) * 24 + clock.hours) * 3600, clock.hours);
         askVehicles();
         detail.update(vehicles.eye, typeof performance !== "undefined" ? performance.now() : 0, drawn);
         // The town's frame in the world, for the paving and the lamps (`materials.ts` TOWN_LIGHT.origin).
@@ -928,6 +937,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
         dispose: () => {
             disposed = true;
             vehicles.dispose();
+            trucks.dispose();
             detail.dispose();
             paneMat.dispose();
             root.traverse((o) => {

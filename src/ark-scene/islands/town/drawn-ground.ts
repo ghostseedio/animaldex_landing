@@ -15,7 +15,8 @@
  * through, the tile). `src/lib/ark-town-grounding.test.ts` holds the tile against the drawn mesh's own triangles.
  */
 
-import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
+import {safariWaterLevel, sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
+import {inSafari, safariWaterNorm, SAFARI_WATERS} from "@/ark-scene/islands/town/safari";
 import {bounds, inBox} from "@/ark-scene/islands/town/geom";
 import {CANAL_LEVEL, HARBOUR_BASIN, TOWN_HALF, TOWN_SEGMENTS, townPlan} from "@/ark-scene/islands/town/plan";
 
@@ -213,17 +214,19 @@ export function townDrawnGround(x: number, z: number, own: TownWalkSurfaces | nu
 /** Per 1 m cell: 0 dry land, 1 the sea's (the harbour and the sea round the island), else the fresh water's level + 2. */
 let waterCells: Float32Array | null = null;
 const WATER_CELLS = Math.ceil(TOWN_HALF * 2);
-let farmPond: {x0: number; x1: number; z0: number; z1: number; level: number} | null | undefined;
+type PondBox = {x0: number; x1: number; z0: number; z1: number; level: number};
+let farmPonds: PondBox[] | undefined;
 
-function farmPondLevel(): typeof farmPond {
-    if (farmPond !== undefined) return farmPond;
-    const w = townPlan().waters.find((q) => q.kind === "farm_pond");
-    if (!w) return (farmPond = null);
-    const b = bounds(w.poly);
-    // (Its bed in the middle is its level less its depth: `ground.ts`.)
-    const cx = (b.x0 + b.x1) / 2;
-    const cz = (b.z0 + b.z1) / 2;
-    return (farmPond = {x0: b.x0 - 4, x1: b.x1 + 4, z0: b.z0 - 4, z1: b.z1 + 4, level: townHeight(cx, cz) + w.depth});
+/** Each farm pond's bounds and level (p5 (rural): the countryside's duck pond is a second farm pond). */
+function farmPondLevels(): PondBox[] {
+    if (farmPonds) return farmPonds;
+    return (farmPonds = townPlan().waters.filter((q) => q.kind === "farm_pond").map((w) => {
+        const b = bounds(w.poly);
+        // (Its bed in the middle is its level less its depth: `ground.ts`.)
+        const cx = (b.x0 + b.x1) / 2;
+        const cz = (b.z0 + b.z1) / 2;
+        return {x0: b.x0 - 4, x1: b.x1 + 4, z0: b.z0 - 4, z1: b.z1 + 4, level: townHeight(cx, cz) + w.depth};
+    }));
 }
 
 function waterCell(x: number, z: number): number {
@@ -242,8 +245,10 @@ function waterCell(x: number, z: number): number {
         if (g.surface === "water" && inBox(HARBOUR_BASIN, cx, cz, 0.2)) v = 1;
         else if (g.surface !== "water") v = g.surface === "sea" || g.height < 0.02 ? 1 : 0;
         else {
-            const pond = farmPondLevel();
-            v = 2 + (pond && cx >= pond.x0 && cx <= pond.x1 && cz >= pond.z0 && cz <= pond.z1 ? pond.level : CANAL_LEVEL);
+            const pond = farmPondLevels().find((q) => cx >= q.x0 && cx <= q.x1 && cz >= q.z0 && cz <= q.z1);
+            // p4 (safari): a waterhole's or pool's own level.
+            const safari = inSafari(cx, cz) ? SAFARI_WATERS.find((w) => safariWaterNorm(w, cx, cz) < 1.05) : undefined;
+            v = 2 + (safari ? safariWaterLevel(safari) : pond ? pond.level : CANAL_LEVEL);
         }
         waterCells[k] = v;
     }

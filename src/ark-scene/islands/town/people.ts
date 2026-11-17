@@ -103,7 +103,7 @@ export function windowLit(w: LitWindow, clock: TownClock): number {
 }
 
 /** A car spot: a drive or a stretch of kerb. */
-export type CarSpot = {id: string; kind: "drive" | "kerb" | "farm" | "harbour"; x: number; z: number; turn: number};
+export type CarSpot = {id: string; kind: "drive" | "kerb" | "farm" | "harbour" | "car_park"; x: number; z: number; turn: number};
 
 /**
  * Whether a car stands in a spot now, and its colour index. Drives are full at night and emptier on weekday working
@@ -118,6 +118,8 @@ export function carAt(spot: CarSpot, clock: TownClock): {parked: boolean; colour
     if (spot.kind === "drive") p = working ? 0.32 : 0.82;
     else if (spot.kind === "kerb") p = working ? 0.28 : within(h, 18, 8) ? 0.55 : 0.4;
     else if (spot.kind === "farm") p = 0.7;
+    // p4 (safari): the safari's visitors, there while it is open.
+    else if (spot.kind === "car_park") p = within(h, 8.5, 19.2) ? 0.72 : 0.04;
     else p = within(h, 6, 18) ? 0.6 : 0.2;
     // The day decides which spots are taken (kerbs and harbour), the hour-band only how many.
     const band = working ? "w" : "h";

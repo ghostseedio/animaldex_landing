@@ -80,7 +80,9 @@ test("over a day of the shared schedule, no town walker's body centre stands ins
     assert.ok(after.items > 60 && after.samples > 60000, `${after.items} walkers, ${after.samples} samples`);
     assert.deepEqual(after.byKind, {}, `inside: ${JSON.stringify(after.pairs)} ${after.examples.join("; ")}`);
     // (And the run measures something: before, with the colliders as they were, bodies stood in them.)
-    const before = townSolidAudit({hours: 3, step: 60, before: true});
+    // (p4 (safari): over 12 hours, not 3: the residents the old colliders let into the zoo's rocks and shelters in the
+    // first 3 hours were the savanna's and the big cats', now in the safari; the same check, a longer run to find them.)
+    const before = townSolidAudit({hours: 12, step: 60, before: true});
     t.diagnostic(`before: ${JSON.stringify(before.byKind)}`);
     assert.ok(Object.values(before.byKind).reduce((a, b) => a + b, 0) > 100, "the old colliders let bodies into the props");
 });
