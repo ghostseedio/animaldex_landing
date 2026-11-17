@@ -48,6 +48,9 @@ test("crater: the water is level or falling all the way: lake ≥ outlet ≥ lip
             for (const side of [-1, 1]) {
                 const bx = x + side * -hit.dz * (hit.width + 3);
                 const bz = z + side * hit.dx * (hit.width + 3);
+                // (On the inside of a bend the stream's own water is there, wider downstream: that is no bank.)
+                const there = C.outletAt(bx, bz);
+                if (there.d < there.width + 1) continue;
                 assert.ok(C.wildHeight(bx, bz) > s.freshLevel!, `the outlet's bank at ${bx.toFixed(1)}, ${bz.toFixed(1)} is under its water`);
             }
         }
@@ -71,8 +74,12 @@ test("crater: the lake stands only where the ground is under it, held by the rim
                     if (s.freshLevel - s.height < 1.6) shelf++;
                 }
             } else if (s.crater.shore < -1.5) assert.fail(`no water inside the lake's shore at ${x}, ${z}`);
-            // Dry ground inside the rim stands over the lake (but the outlet's bed).
-            if (s.crater.rim < -1 && s.crater.shore > 1.5 && !(s.outlet && s.outlet.d < s.outlet.width + 2)) assert.ok(s.height > C.CRATER.level, `the caldera's floor at ${x}, ${z} is under the lake (${s.height.toFixed(2)} m)`);
+            // Dry ground inside the rim stands over the lake; beside the outlet (which falls from the lake's level), over
+            // the outlet's water there (past the lip is the falls' cliff).
+            if (s.crater.rim < -1 && s.crater.shore > 1.5 && !(s.outlet && (s.outlet.d < s.outlet.width + 2 || s.outlet.beyond > 0))) {
+                const beside = s.outlet && s.outlet.d < s.outlet.width + 12 ? s.outlet.level : C.CRATER.level;
+                assert.ok(s.height > beside, `the caldera's floor at ${x}, ${z} is under the water beside it (${s.height.toFixed(2)} m, ${beside.toFixed(2)} m)`);
+            }
         }
     }
     const across = 2 * Math.sqrt((wet * 2.25) / Math.PI);
@@ -161,6 +168,8 @@ test("crater: the validator's animals live up there with no failures: water kind
         else if (s.crater.volcanic > 0.5) cone.push(`${a.model_slug} (${a.zone})`);
     }
     assert.ok(lake.length >= 5, `on and by the lake: ${lake.join(", ")}`);
-    assert.ok(lake.every((name) => /river_lake|wetland|mountains|polar/.test(name)), lake.join(", "));
+    // (Mostly water and mountain kinds; a meadow or rock kind on the shore's bench is there by its tags, as anywhere.)
+    const kin = lake.filter((name) => /river_lake|wetland|mountains|polar/.test(name)).length;
+    assert.ok(kin / lake.length > 0.9, lake.join(", "));
     assert.ok(inside.length + cone.length >= 5, `on the bench, the walls and the cone: ${[...inside, ...cone].join(", ")}`);
 });

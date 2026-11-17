@@ -98,9 +98,11 @@ export function outletAt(x: number, z: number): OutletHit {
         const raw = ((x - a.x) * dx + (z - a.z) * dz) / (seg * seg);
         const t = Math.min(Math.max(raw, 0), 1);
         const d = Math.hypot(x - a.x - dx * t, z - a.z - dz * t);
-        if (d < best.d) {
+        // (Nearest by the water's edge, not its centre line: the stream widens to the lip, and its banks are its edges.)
+        const width = a.width + (b.width - a.width) * t;
+        if (d - width < best.d - best.width) {
             const beyond = i === 1 && raw < 0 ? -raw * seg : i === OUTLET.length - 1 && raw > 1 ? (raw - 1) * seg : 0;
-            best = {d, level: a.level + (b.level - a.level) * t, width: a.width + (b.width - a.width) * t, depth: a.depth + (b.depth - a.depth) * t, along: (before + t * seg) / total, dx: dx / seg, dz: dz / seg, beyond};
+            best = {d, level: a.level + (b.level - a.level) * t, width, depth: a.depth + (b.depth - a.depth) * t, along: (before + t * seg) / total, dx: dx / seg, dz: dz / seg, beyond};
         }
         before += seg;
     }
