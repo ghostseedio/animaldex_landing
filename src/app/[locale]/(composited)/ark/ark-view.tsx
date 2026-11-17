@@ -31,7 +31,7 @@ import {ARK_NO_FOUNDERS, decodeArkFounders, type ArkFounders} from "@/lib/ark-fo
 import {ArkBringerNames, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {arkSelectionExtras} from "@/lib/ark-selection-extras";
-import {decodeArkCapturePhoto, type ArkCapturePhoto} from "@/lib/ark-capture-photo";
+import {arkAsksForPhoto, decodeArkCapturePhoto, type ArkCapturePhoto} from "@/lib/ark-capture-photo";
 import {postArkOpenProfile} from "@/lib/ark-profile-link";
 import {useParams} from "next/navigation";
 import ArkAgeAsk from "@/components/ark/ark-age-ask";
@@ -695,7 +695,9 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     // born on the Ark asks too: the server answers its recorded ancestor's photo, of its species, and says whose it is.
 
     useEffect(() => {
-        if (!selected) return;
+        // A Human that arrived by capture shows its capture photo like any animal (owner decision 385b), through this same
+        // route and its gates; the server answers null for one born aboard, which asks nothing here (arkAsksForPhoto).
+        if (!selected || !arkAsksForPhoto(selected)) return;
         const id = selected.id;
         const known = photosRef.current;
         if (known.has(id)) {

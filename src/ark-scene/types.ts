@@ -500,7 +500,7 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * 3.3 fix (log): the record's deaths (`death_old`, `starved` events: the animal, its time on the shared clock). Its
      * body lies where its schedule had it at that time, on its side, for a while (`live-deaths.ts`). Keyed `death:<id>`.
      */
-    addDeaths?: (deaths: Array<{key: string; animal: ArkEventAnimal; t0: number}>) => void;
+    addDeaths?: (deaths: Array<{key: string; animal: ArkEventAnimal; t0: number; /** p5 (humans): where the server judged it died. */ at?: {x: number; z: number} | null}>) => void;
     /** 3.3 fix (log): a death line's tap: the camera to where it died. False when the scene does not know the death. */
     focusDeath?: (key: string) => boolean;
     /**
@@ -526,6 +526,10 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * decision 370): their animals are in their dens, out of sight, and their cards say sleeping. An empty list ends it.
      */
     setDormant?: (kinds: string[]) => void;
+    /** p5 (humans): the record's forestry (`/api/ark/forestry`: `{fromDay, v}`, or null when off). */
+    setForestry?: (record: {fromDay?: unknown; v?: unknown} | null) => void;
+    /** p5 (humans): the town's couples and children (`/api/ark/human-bonds`: the server's rows, decoded by the scene). */
+    setHumanBonds?: (raw: unknown) => void;
     /** The newest real hunt or meal under way on the island (the page's marker), or null. */
     liveHunt?: () => ArkLiveHunt | null;
     /**

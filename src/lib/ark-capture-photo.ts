@@ -37,6 +37,18 @@ export function arkPhotoIsAncestors(photo: Pick<ArkCapturePhoto, "relation">): b
     return photo.relation !== "self";
 }
 
+/**
+ * Whether the tap card asks the photo route for this animal. Every animal does, and a Human is no exception: one that
+ * arrived by capture shows its capture photo like any animal's, through the same route and the same gates (owner
+ * decision 385b). The one thing not asked is a Human born aboard: it has no capture of its own and a person's
+ * ancestor photo is never shown (the server answers null for it as well; this just asks nothing). Animals born on the
+ * Ark still ask: the server answers their recorded ancestor's photo.
+ */
+export function arkAsksForPhoto(animal: {origin?: "arrived" | "born" | null; model_slug?: string | null; scientific_name?: string | null}): boolean {
+    const human = animal.model_slug === "human" || /^homo\s+sapiens/i.test(animal.scientific_name ?? "");
+    return !(human && animal.origin === "born");
+}
+
 export const ARK_PHOTO_SIZES = ["thumb", "large"] as const;
 export type ArkPhotoSizeKey = (typeof ARK_PHOTO_SIZES)[number];
 

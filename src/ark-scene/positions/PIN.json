@@ -12,5 +12,12 @@
     "atlas.json": "5bcb7e4ed16b1f111b9279ee2a2e73e399fbb8001004136de915ea324d281122",
     "contract.json": "9ab9c813860dce757587ae9a7ceaf6d527a22a150815b74b744a71e8c32a6609",
     "sleep.json": "991567d5ecb27559af0b5e563c2b3ff79a2bce0770239439f03a62283cf06807"
+  },
+  "forestry": {
+    "about": "p5 humans (AnimalDex decision 379): forestry.ts and forest-stands.json are byte-identical to AnimalDex supabase/functions/_shared/ark-positions/ (branch ark-humans-decisions 543f6c02f). forest-stands.json is generated here (scripts/ark-forest-stands.mts) and copied there. Change both together, in both repos.",
+    "sha256": {
+      "forestry.ts": "ddaea3d356d37df895cf3b803e52c4219431b940fc6b4762b6508068b36c9fd2",
+      "forest-stands.json": "b6a0f884c567f5b99c3aa03e718d231f23be2179a8180c2282aede4a0c2c22f1"
+    }
   }
 }

@@ -24,7 +24,7 @@
 
 import {bridgeAt, bridgeHeight} from "@/ark-scene/islands/town/canal-bridges";
 import {fetchOk, readUntilIn} from "@/ark-scene/model-files";
-import {BufferAttribute, BufferGeometry, Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, Object3D, Quaternion, Vector3, type Camera, type Material} from "three";
+import {BufferAttribute, BufferGeometry, Color, DoubleSide, DynamicDrawUsage, FrontSide, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, Object3D, Quaternion, Vector3, type Camera, type Material} from "three";
 import {hashText, local, polylineAt, polylineLength, polylineNearest, polylineWithin, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {clearForItem, headingAlong, headingBox, houseDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
 import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
@@ -85,6 +85,8 @@ export function vehicleGeometry(level: VehicleLevel): BufferGeometry {
     const colours = new Float32Array(n * 3);
     const paint = new Float32Array(n);
     const lamp = new Float32Array(n);
+    // p5 (humans): the glass (class 3), which a moving car's material shows through (`vehicleMaterial`).
+    const glass = new Float32Array(n);
     const c = new Color();
     for (let i = 0; i < n; i++) {
         const k = level.classes[i];
@@ -94,12 +96,14 @@ export function vehicleGeometry(level: VehicleLevel): BufferGeometry {
         colours[i * 3 + 2] = c.b;
         paint[i] = k === 0 ? 1 : 0;
         lamp[i] = k === 4 ? 1 : k === 5 ? 2 : 0;
+        glass[i] = k === 3 ? 1 : 0;
     }
     const g = new BufferGeometry();
     g.setAttribute("position", new BufferAttribute(level.positions, 3));
     g.setAttribute("color", new BufferAttribute(colours, 3));
     g.setAttribute("aPaint", new BufferAttribute(paint, 1));
     g.setAttribute("aLamp", new BufferAttribute(lamp, 1));
+    g.setAttribute("aGlass", new BufferAttribute(glass, 1)); // p5 (humans)
     g.setIndex(new BufferAttribute(level.indices, 1));
     // (Flat shaded on screen; the normals are for the town's weather: how much a face turned up to the sky shines wet.)
     g.computeVertexNormals();
@@ -274,6 +278,8 @@ export function proxyGeometry(model: Pick<VehicleModel, "size" | "glass">): Buff
     g.deleteAttribute("aTag");
     g.setAttribute("aPaint", new BufferAttribute(paintAttr, 1));
     g.setAttribute("aLamp", new BufferAttribute(lampAttr, 1));
+    // p5 (humans): a proxy is seen from the middle distance on: its glass stays dark (no one is seen inside that far).
+    g.setAttribute("aGlass", new BufferAttribute(new Float32Array(n), 1));
     return g;
 }
 
@@ -292,17 +298,21 @@ export const CAR_BOXES: Record<CarKind, Pick<VehicleModel, "size" | "glass">> = 
  * by `aLights` (moving cars at night: headlamps on, the tail lamps brighter when braking). `lit`: with the lamps' attribute.
  */
 export function vehicleMaterial(lit: boolean): MeshStandardMaterial {
-    const material = new MeshStandardMaterial({vertexColors: true, flatShading: true, roughness: 0.42, metalness: 0.18});
+    // p5 (humans): a moving car's glass lets its driver and passenger be seen (an ordered half of the glass's pixels let
+    // through: tinted, unsorted, no transparency pass), its inside faces drawn dark behind them (the car is two-sided).
+    const material = new MeshStandardMaterial({vertexColors: true, flatShading: true, roughness: 0.42, metalness: 0.18, side: lit ? DoubleSide : FrontSide});
     material.customProgramCacheKey = () => `town-vehicle:${lit ? 1 : 0}`;
     material.onBeforeCompile = (shader) => {
         shader.vertexShader = shader.vertexShader
-            .replace("#include <common>", `#include <common>\nattribute float aPaint;\nattribute float aLamp;\nvarying float vCarLamp;\nvarying float vCarPaint;${lit ? "\nattribute vec2 aLights;\nvarying vec2 vCarLights;" : ""}`)
+            .replace("#include <common>", `#include <common>\nattribute float aPaint;\nattribute float aLamp;\nvarying float vCarLamp;\nvarying float vCarPaint;${lit ? "\nattribute vec2 aLights;\nvarying vec2 vCarLights;\nattribute float aGlass;\nvarying float vCarGlass;" : ""}`)
             .replace(
                 "#include <color_vertex>",
-                `vColor = vec3(1.0);\n#ifdef USE_COLOR\nvColor *= color;\n#endif\n#ifdef USE_INSTANCING_COLOR\nvColor = mix(vColor, vColor * instanceColor.xyz, aPaint);\n#endif\nvCarLamp = aLamp;\nvCarPaint = aPaint;${lit ? "\nvCarLights = aLights;" : ""}`
+                `vColor = vec3(1.0);\n#ifdef USE_COLOR\nvColor *= color;\n#endif\n#ifdef USE_INSTANCING_COLOR\nvColor = mix(vColor, vColor * instanceColor.xyz, aPaint);\n#endif\nvCarLamp = aLamp;\nvCarPaint = aPaint;${lit ? "\nvCarLights = aLights;\nvCarGlass = aGlass;" : ""}`
             );
         shader.fragmentShader = shader.fragmentShader
-            .replace("#include <common>", `#include <common>\nvarying float vCarLamp;\nvarying float vCarPaint;${lit ? "\nvarying vec2 vCarLights;" : ""}`)
+            .replace("#include <common>", `#include <common>\nvarying float vCarLamp;\nvarying float vCarPaint;${lit ? "\nvarying vec2 vCarLights;\nvarying float vCarGlass;" : ""}`)
+            .replace("#include <clipping_planes_fragment>", `#include <clipping_planes_fragment>${lit ? "\nif (vCarGlass > 0.5 && gl_FrontFacing && mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 1.0) discard;" : ""}`)
+            .replace("#include <color_fragment>", `#include <color_fragment>${lit ? "\nif (!gl_FrontFacing) diffuseColor.rgb *= 0.3;" : ""}`)
             .replace("#include <roughnessmap_fragment>", "#include <roughnessmap_fragment>\nroughnessFactor *= mix(1.48, 0.81, vCarPaint);")
             .replace(
                 "#include <emissivemap_fragment>",

@@ -446,6 +446,16 @@ module.exports = withNextIntl({
                 ]
             },
             {
+                // The rigged people's files (src/ark-scene/humans/people-rig.ts) are asked for by their content hash
+                // (`?v=`, PEOPLE_FILES_V, held to the bytes by a test): the same address is the same bytes for good. A
+                // redrawn body is a new address, so no browser keeps a day-old one after a deploy.
+                source: "/ark/assets/people-v1/:file",
+                has: [{type: "query", key: "v"}],
+                headers: [
+                    {key: "Cache-Control", value: "public, max-age=31536000, immutable"}
+                ]
+            },
+            {
                 // The positions atlas is asked for by its content hash (`?v=`, src/ark-scene/hunting.ts): the same
                 // address is the same bytes for good.
                 source: "/ark/positions-atlas.json",

@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {arkPhotoAspect, arkPhotoIsAncestors, arkPhotoObject, decodeArkCapturePhoto} from "./ark-capture-photo";
+import {readFileSync} from "node:fs";
+import path from "node:path";
+import {arkAsksForPhoto, arkPhotoAspect, arkPhotoIsAncestors, arkPhotoObject, decodeArkCapturePhoto} from "./ark-capture-photo";
 
 const id = "8c0e7a10-1b2c-4d3e-8f90-0a1b2c3d4e5f";
 const answer = {
@@ -94,4 +96,25 @@ test("a photo that cannot be labelled is no photo: no bringer, a gendered or unk
 test("nothing but this animal's own id and this site's paths: an ancestor's id in a path is no photo", () => {
     const other = "11111111-2222-4333-8444-555555555555";
     assert.equal(decodeArkCapturePhoto({...parent, thumb: {...parent.thumb, path: `/api/ark/photo/${other}/thumb`}}, id), null);
+});
+
+test("a Human that arrived by capture shows its capture photo like any animal; one born aboard asks nothing", () => {
+    const human = {origin: "arrived" as const, model_slug: "human", scientific_name: "Homo sapiens"};
+    assert.equal(arkAsksForPhoto(human), true, "a captured Human asks the route, which gates it as for any animal");
+    assert.equal(arkAsksForPhoto({...human, origin: undefined}), true, "an older snapshot without an origin is an arrival");
+    assert.equal(arkAsksForPhoto({model_slug: "human"}), true);
+    assert.equal(arkAsksForPhoto({scientific_name: "Homo sapiens"}), true);
+    assert.equal(arkAsksForPhoto({...human, origin: "born"}), false, "born aboard: no photo, no request");
+    assert.equal(arkAsksForPhoto({origin: "born", scientific_name: "Homo sapiens sapiens"}), false);
+    assert.equal(arkAsksForPhoto({origin: "born", model_slug: "zebra", scientific_name: "Equus quagga"}), true, "an animal born aboard still asks for its ancestor's photo");
+    assert.equal(arkAsksForPhoto({origin: "arrived", model_slug: "chimpanzee", scientific_name: "Pan troglodytes"}), true);
+    // The route's answer for a captured Human is the same decoded shape as for an animal: its own photo, this site's paths.
+    const body = {...answer, relation: "self", generation: 0, brought_by: null};
+    assert.equal(decodeArkCapturePhoto(body, id)?.relation, "self");
+});
+
+test("the tap card has no species exception: ark-view decides through arkAsksForPhoto, never a Human check of its own", () => {
+    const source = readFileSync(path.join(__dirname, "..", "app", "[locale]", "(composited)", "ark", "ark-view.tsx"), "utf8");
+    assert.ok(source.includes("arkAsksForPhoto(selected)"), "the photo effect asks the helper");
+    assert.ok(!/model_slug\s*===\s*["']human["']/.test(source), "no human skip in the view");
 });

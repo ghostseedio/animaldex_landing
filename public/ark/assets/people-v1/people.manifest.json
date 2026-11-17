@@ -1,0 +1,307 @@
+{
+ "set": "ark-people v2 (polish pass 2026-11-17)",
+ "licence": "MakeHuman/MPFB2 CC0 system assets + our own keyframes; see LICENCES.md",
+ "files": {
+  "people-near.glb": 603856,
+  "people-far.glb": 160040,
+  "clips.glb": 109752
+ },
+ "format": {
+  "compression": "gltfpack 1.3.0 -cc (EXT_meshopt_compression, KHR_mesh_quantization): GLTFLoader + MeshoptDecoder",
+  "skeleton": "23 bones, same names in every person (game_engine rig, fingers folded into hand_l/hand_r)",
+  "COLOR_0": "rgb = baked AO x fixed colour (hi-vis, helmet, eyes, eyelid shading on the skin; white elsewhere); a = part code (code+0.5)/16",
+  "parts": {
+   "0": "skin",
+   "1": "top",
+   "2": "bottom",
+   "3": "hair",
+   "4": "shoes",
+   "5": "fixed (no tint)",
+   "7": "swim (top colour)",
+   "8": "eye (fixed)",
+   "6": "brow/lash (hair colour x 0.55)"
+  },
+  "clips": "clips.glb: one skeleton + 14 clips (rotations; Root/pelvis translation authored on the canonical, scale by hip height)",
+  "lay": "lying/sitting-on-ground clips lay the body themselves: do not add bodyLay",
+  "v2": "skin = MakeHuman CC0 low-poly body proxy (male1591/female1605) with clothing delete groups mapped on; garments collapsed per garment with hems pinned and colour seams split; swimwear/vest cut as real edges; relaxed hand baked into the rest mesh; CC0 eyebrow001 + upper eyelashes01; solid smoothed hair shells; chop/saw grips from tools.py"
+ },
+ "people": [
+  {
+   "id": "p01-older-man-coat",
+   "role": "dog walker, older man in a coat",
+   "band": "older",
+   "near": {
+    "tris": 5798,
+    "verts": 3206
+   },
+   "far": {
+    "tris": 650,
+    "verts": 569
+   },
+   "height_m": 1.723
+  },
+  {
+   "id": "p02-woman-swim",
+   "role": "sunbather, woman in a swimsuit",
+   "band": "adult",
+   "near": {
+    "tris": 5461,
+    "verts": 2852
+   },
+   "far": {
+    "tris": 650,
+    "verts": 327
+   },
+   "height_m": 1.6545
+  },
+  {
+   "id": "p03-child",
+   "role": "child, about 8",
+   "band": "child",
+   "near": {
+    "tris": 5799,
+    "verts": 3255
+   },
+   "far": {
+    "tris": 650,
+    "verts": 327
+   },
+   "height_m": 1.0524
+  },
+  {
+   "id": "p04-feller",
+   "role": "feller in work clothes, hi-vis and helmet",
+   "band": "adult",
+   "near": {
+    "tris": 5800,
+    "verts": 4194
+   },
+   "far": {
+    "tris": 650,
+    "verts": 902
+   },
+   "height_m": 1.8113
+  },
+  {
+   "id": "p05-teen-girl",
+   "role": "teenage girl, casual",
+   "band": "teen",
+   "near": {
+    "tris": 5898,
+    "verts": 3349
+   },
+   "far": {
+    "tris": 650,
+    "verts": 327
+   },
+   "height_m": 1.3538
+  },
+  {
+   "id": "p06-man-casual",
+   "role": "adult man, casual, heavier build",
+   "band": "adult",
+   "near": {
+    "tris": 5800,
+    "verts": 3288
+   },
+   "far": {
+    "tris": 650,
+    "verts": 327
+   },
+   "height_m": 1.6104
+  },
+  {
+   "id": "p07-woman-casual",
+   "role": "adult woman, casual",
+   "band": "adult",
+   "near": {
+    "tris": 5892,
+    "verts": 3325
+   },
+   "far": {
+    "tris": 650,
+    "verts": 327
+   },
+   "height_m": 1.6776
+  },
+  {
+   "id": "p08-older-woman",
+   "role": "older woman in a coat",
+   "band": "older",
+   "near": {
+    "tris": 5798,
+    "verts": 3266
+   },
+   "far": {
+    "tris": 649,
+    "verts": 586
+   },
+   "height_m": 1.4929
+  },
+  {
+   "id": "p09-man-swim",
+   "role": "swimmer, man in trunks",
+   "band": "adult",
+   "near": {
+    "tris": 5186,
+    "verts": 2708
+   },
+   "far": {
+    "tris": 650,
+    "verts": 327
+   },
+   "height_m": 1.8394
+  },
+  {
+   "id": "p10-boy",
+   "role": "boy, about 10",
+   "band": "child",
+   "near": {
+    "tris": 5800,
+    "verts": 3314
+   },
+   "far": {
+    "tris": 650,
+    "verts": 327
+   },
+   "height_m": 1.3377
+  },
+  {
+   "id": "p11-feller-b",
+   "role": "forest worker, older, work clothes",
+   "band": "older",
+   "near": {
+    "tris": 5800,
+    "verts": 4221
+   },
+   "far": {
+    "tris": 650,
+    "verts": 895
+   },
+   "height_m": 1.7128
+  },
+  {
+   "id": "p12-woman-bikini",
+   "role": "beachgoer, young woman",
+   "band": "adult",
+   "near": {
+    "tris": 5499,
+    "verts": 2870
+   },
+   "far": {
+    "tris": 650,
+    "verts": 323
+   },
+   "height_m": 1.4463
+  }
+ ],
+ "clips": {
+  "canonical": "p06-man-casual",
+  "fps": 30,
+  "hip_z": 0.8418,
+  "clips": {
+   "walk": {
+    "frames": 30,
+    "fps": 30,
+    "seconds": 1.0,
+    "loop": true,
+    "ground_speed": 1.0581,
+    "stride": 1.0581,
+    "hip_z": 0.8418
+   },
+   "dog_walk": {
+    "frames": 30,
+    "fps": 30,
+    "seconds": 1.0,
+    "loop": true,
+    "ground_speed": 1.0581,
+    "lead_hand": "hand_r",
+    "hip_z": 0.8418
+   },
+   "carry": {
+    "frames": 30,
+    "fps": 30,
+    "seconds": 1.0,
+    "loop": true,
+    "ground_speed": 1.0581,
+    "hip_z": 0.8418
+   },
+   "stand": {
+    "frames": 60,
+    "fps": 10,
+    "seconds": 6.0,
+    "loop": true
+   },
+   "paddle": {
+    "frames": 60,
+    "fps": 10,
+    "seconds": 6.0,
+    "loop": true
+   },
+   "sit": {
+    "frames": 80,
+    "fps": 10,
+    "seconds": 8.0,
+    "loop": true,
+    "hips": "at the standing hip height: root = seatY - 0.86 * scale (sitRootY)"
+   },
+   "drive": {
+    "frames": 40,
+    "fps": 10,
+    "seconds": 4.0,
+    "loop": true
+   },
+   "sunback": {
+    "frames": 60,
+    "fps": 10,
+    "seconds": 6.0,
+    "loop": true,
+    "lay": "on the back; the clip lays the body (do not add bodyLay)"
+   },
+   "sunside": {
+    "frames": 60,
+    "fps": 10,
+    "seconds": 6.0,
+    "loop": true,
+    "lay": "on the right side, knees drawn up"
+   },
+   "sleep": {
+    "frames": 80,
+    "fps": 10,
+    "seconds": 8.0,
+    "loop": true,
+    "lay": "on the right side"
+   },
+   "sunsit": {
+    "frames": 60,
+    "fps": 10,
+    "seconds": 6.0,
+    "loop": true,
+    "hips": "on the ground at the root (do not add bodyLay)",
+    "book": "between the hands"
+   },
+   "chop": {
+    "frames": 48,
+    "fps": 30,
+    "seconds": 1.6,
+    "loop": true,
+    "tool": "axe between hand_r and hand_l",
+    "strike_at": 0.7
+   },
+   "saw": {
+    "frames": 60,
+    "fps": 30,
+    "seconds": 2.0,
+    "loop": true,
+    "tool": "chainsaw: rear handle hand_r, front handle hand_l"
+   },
+   "plant": {
+    "frames": 60,
+    "fps": 30,
+    "seconds": 2.0,
+    "loop": true,
+    "pose": "kneeling on the right knee, working the soil"
+   }
+  }
+ }
+}

@@ -68,7 +68,7 @@ export type ArkLiveItem = {
     /** A meal that ends a hunt seen setting out (`src/ark-scene/live/hunt-outcome.ts`): said as "caught". */
     hunted?: boolean;
     /** A kind's dormant season beginning or ending (`src/ark-scene/live/dormancy-lines.ts`): said with its own words. */
-    say?: "dormant" | "woke" | "escaped";
+    say?: "dormant" | "woke" | "escaped" | "deforested" | "dated" | "moved_in";
     /** A species' own sentence for what it is seen doing (`src/ark-scene/live/signature-lines.ts`): said as it is. */
     line?: string;
     focus: ArkLiveFocus;

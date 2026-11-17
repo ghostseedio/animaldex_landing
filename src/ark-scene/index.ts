@@ -220,6 +220,13 @@ import {ARK_ISLANDS} from "@/ark-scene/islands"; // p2 (ocean)
 import {arkWorld} from "@/ark-scene/world"; // p2 (ocean)
 import {OCEAN_COLUMN, OCEAN_VIEW_MARGIN, oceanFix, roamsOpenOcean} from "@/ark-scene/open-ocean"; // p2 (ocean)
 import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (ocean)
+import {PeopleFigures} from "@/ark-scene/humans/people-figures"; // p6 (people): the rigged bodies
+import {BeachProps} from "@/ark-scene/humans/beach-props"; // p5 (humans, quality pass)
+import {isHumanAnimal, TownHumans} from "@/ark-scene/humans/town-humans"; // p5 (humans)
+import {decodeHumanBonds} from "@/ark-scene/humans/couples"; // p5 (humans, couples)
+import {DogWalks, dogWalkPlaces, isHouseDog, townWalkers} from "@/ark-scene/humans/dog-walks"; // p5 (humans, dogs)
+import {DogLeads} from "@/ark-scene/humans/leads"; // p5 (humans, dogs)
+import {roadHeight as townRoadHeight} from "@/ark-scene/islands/town/render/vehicles"; // p5 (humans)
 import {OceanShadows} from "@/ark-scene/ocean-shadows"; // p2 (ocean)
 import {TOWN_GRID, TOWN_NEAR_LIVE} from "@/ark-scene/islands/town/chunks";
 import type {CatWalls as CatWallsT} from "@/ark-scene/islands/town/cat-walls"; // gfx (fauna)
@@ -235,6 +242,7 @@ import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating
 import {CLUTCH_FRAME_POLAR, CLUTCH_SHOWN_SECONDS, clutchFrame, clutchSize, kinFrameApart, seenAt} from "@/ark-scene/live/breed-focus"; // 3.3 fix (breeding taps)
 import {LiveBirths} from "@/ark-scene/live-births";
 import {LiveDeaths, type DeathRecord} from "@/ark-scene/live-deaths"; // 3.3 fix (log)
+import {ForestScene} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): logging and replanting
 // 3.3 batch (D): the escapes and the dragonflies' dips
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
 import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
@@ -954,6 +962,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const assetTrees = new AssetTrees(options.assetBase);
     if (assetTrees) scene.add(assetTrees.group);
     let assetTreesShown = false;
+    // p5 (humans): logging and replanting on the wild island (the record's forestry; humans aboard are the crews).
+    let forestHumans: string[] = [];
+    // (Its perches: every animal whose place, perch or roost is off the ground: its tree is left standing.)
+    const forestPerches = () => {
+        const out: Array<{x: number; z: number}> = [];
+        for (const e of entries) {
+            if (e.visitor) continue;
+            const p = e.place;
+            if (p.ground - heightAt(p.x, p.z) > 0.8) out.push({x: p.x, z: p.z});
+            if (p.perch && p.perch.y - heightAt(p.perch.x, p.perch.z) > 0.8) out.push({x: p.perch.x, z: p.perch.z});
+            const roost = p.map?.roost;
+            if (roost && roost.y - heightAt(roost.x, roost.z) > 0.8) out.push({x: roost.x, z: roost.z});
+        }
+        return out;
+    };
+    const forest = new ForestScene({setOverride: assetTrees ? (o) => assetTrees.setOverride(o) : null, ground: (x, z) => standGround(x, z), humans: () => forestHumans, perches: forestPerches});
+    scene.add(forest.group);
     // Graphics batch 5: the asset lane's rocks replace the procedural ones once loaded (asset-rocks.ts).
     const assetRocks = new AssetRocks(options.assetBase);
     if (assetRocks) scene.add(assetRocks.group);
@@ -1266,7 +1291,46 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let mineOnly = Boolean(options.mineOnly);
     let selectedId: string | null = null;
     // Herds (A14): the snapshot as last given, every id aboard, and who must be drawn one by one.
-    let current: ArkSnapshot = options.snapshot;
+    // p5 (humans): the town's people, one generic figure per human aboard (privacy: body and clothes from the id only,
+    // never the capture's photo, a face or a name). (`away`: at work in the wild island's forest, `forest.away`.)
+    // TO WIRE after the homes / rural lanes merge (their see-into rooms): `townHumans.setRoomHost(humanRoomHost(rooms))`
+    // with the furnished rooms `buildPetHomes` draws, and a `HumanTVs` fed `townHumans.tvs` each frame (`humans/home-rooms-host.ts`,
+    // `humans/tvs.ts`). Until then people at home and asleep are indoors, unseen (the lit windows imply them, as before).
+    const townHumans = new TownHumans({away: (id) => forest.away(id), origin: townWorldOrigin(), roadHeight: townRoadHeight, seaLevel: () => ARK_ENVIRONMENT.seaLevel.value, boatSeconds: () => clockNow()});
+    const humanFigures = new PeopleFigures(); // p6 (people): rigged bodies (the procedural figures while they load)
+    scene.add(humanFigures.group);
+    const beachProps = new BeachProps(); // p5 (humans, quality pass): the sunbathers' towels and parasols
+    scene.add(beachProps.group);
+    // p5 (humans, dogs): the town's people walk the record's own dogs on a lead (`humans/dog-walks.ts`): a walked dog is
+    // its own entry moved along the walk (its `act`), pinned outside while it walks; never a second dog.
+    const dogWalks = new DogWalks(() => townHumans.walks!.graph, () => dogWalkPlaces(townHumans.beachWalks));
+    townHumans.setDogWalks(dogWalks);
+    const dogLeads = new DogLeads();
+    scene.add(dogLeads.mesh);
+    let dogRosterDirty = true;
+    let walkPins: string[] = [];
+    let walkPinsAt = 0;
+    let walkPinsFrom: {x: number; z: number} | null = null;
+    const dogActs = new Map<string, ActPose>();
+    const dogCollar = {x: 0, y: 0, z: 0};
+    let humansAboard: ArkAnimal[] = [];
+    const humanSplit = new WeakMap<ArkSnapshot, {rest: ArkSnapshot; humans: ArkAnimal[]}>();
+    /**
+     * p5 (humans): the snapshot without its humans (the same object back when it has none; its own answer when asked
+     * again) and its humans: humans are never animal entries, figures, herds or placeholders.
+     */
+    const splitHumans = (whole: ArkSnapshot) => {
+        let split = humanSplit.get(whole);
+        if (!split) {
+            const humans = whole.animals.filter(isHumanAnimal);
+            split = {rest: humans.length ? {...whole, animals: whole.animals.filter((animal) => !isHumanAnimal(animal))} : whole, humans};
+            humanSplit.set(whole, split);
+            humanSplit.set(split.rest, split);
+        }
+        return split;
+    };
+    const withoutHumans = (whole: ArkSnapshot): ArkSnapshot => splitHumans(whole).rest;
+    let current: ArkSnapshot = withoutHumans(options.snapshot); // p5 (humans)
     let aboard = new Set<string>();
     let herds: HerdDraw[] = [];
     /** Lane TB: the town's resting kept animals as figures, by species (`FigureGroup`). */
@@ -2729,6 +2793,78 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setSnapshot(current, false);
     };
 
+    /**
+     * p5 (humans, dogs): the dogs on a walk now. Once a second: who is out (the pairing is redone when the roster
+     * changed; the walked dogs nearest the look point, at most 12 (6 on the light tiers), are pinned outside). Every
+     * frame: each walked dog's own entry is moved to its place at heel and its lead drawn; a dog whose walk has ended
+     * is given back to its home's own day.
+     */
+    const stepDogWalks = (now: number) => {
+        const isl = island;
+        if (!isl) return;
+        if (dogRosterDirty && placedFor === current) {
+            dogRosterDirty = false;
+            const o = townWorldOrigin();
+            const dogs = [];
+            for (const animal of current.animals) {
+                if (!isHouseDog(animal) || !isl.has(animal) || !isl.kept(animal.id)) continue;
+                const place = placedAll.get(animal.id);
+                const town = isl.townPlace(animal.id);
+                // (A dog kept still indoors, behind a window, is not walked: its home's rooms are another lane's.)
+                if (place && town && town.area === "house" && !town.still) dogs.push({id: animal.id, household: town.place, x: place.x - o.x, z: place.z - o.z, length: arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan).display});
+            }
+            dogWalks.setRoster(dogs, townWalkers(townHumans.grown));
+        }
+        const walked = townHumans.dogs;
+        if (now - walkPinsAt >= 1) {
+            walkPinsAt = now;
+            const cap = liteOn() || tier === "low" ? 6 : 12;
+            const target = controls.target;
+            let ids = walked.map((d) => d.id);
+            const moved = !walkPinsFrom || Math.hypot(target.x - walkPinsFrom.x, target.z - walkPinsFrom.z) >= 8;
+            if (ids.length > cap) {
+                // (Over the cap: the nearest the look point, picked anew only when it has moved, as `near-kept.ts`.)
+                if (!moved && walkPins.every((id) => ids.includes(id)) && walkPins.length === cap) ids = walkPins;
+                else ids = walked.slice().sort((a, b) => Math.hypot(a.x - target.x, a.z - target.z) - Math.hypot(b.x - target.x, b.z - target.z) || (a.id < b.id ? -1 : 1)).slice(0, cap).map((d) => d.id);
+            }
+            if (moved) walkPinsFrom = {x: target.x, z: target.z};
+            if (!sameIds(ids, walkPins)) {
+                walkPins = ids;
+                setSnapshot(current, false);
+            }
+        }
+        dogLeads.begin();
+        for (const d of walked) {
+            const e = entryById.get(d.id);
+            let pose = dogActs.get(d.id);
+            if (!e || e.held || e.ghost || (e.act && e.act !== pose)) continue;
+            if (!pose) dogActs.set(d.id, (pose = {x: 0, z: 0, base: 0, yaw: 0, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: "walk", speed: 0}));
+            pose.x = d.x;
+            pose.z = d.z;
+            pose.base = d.y;
+            pose.yaw = d.yaw;
+            pose.state = d.sniffing ? "eat" : "walk";
+            pose.speed = d.speed;
+            e.act = pose;
+            pose.with = d.walker;
+            // Its collar: at its neck, ahead of its middle.
+            dogCollar.x = d.x + Math.sin(d.yaw) * d.length * 0.36;
+            dogCollar.y = d.y + d.length * 0.58;
+            dogCollar.z = d.z + Math.cos(d.yaw) * d.length * 0.36;
+            humanFigures.leadHand(d.walker, d.hand); // p6 (people): the lead from the rigged walker's own hand
+            dogLeads.add(d.hand, dogCollar);
+        }
+        dogLeads.end();
+        if (dogActs.size > walked.length || walked.length === 0) {
+            dogActs.forEach((pose, id) => {
+                if (walked.some((d) => d.id === id)) return;
+                const e = entryById.get(id);
+                if (e && e.act === pose) e.act = null;
+                dogActs.delete(id);
+            });
+        }
+    };
+
     /** Again from the snapshot as it is: after a pin changed (a herd member selected, a replay's animals). */
     const refreshLive = () => {
         if (herds.length || replayPins.size || mealPins.size || selectionPin) setSnapshot(current, false);
@@ -2757,11 +2893,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (animalsIn) call(...args);
         else afterAnimals.push(() => call(...args));
     };
-    const setSnapshot = (snapshot: ArkSnapshot, entrances: boolean) => {
+    const setSnapshot = (whole: ArkSnapshot, entrances: boolean) => {
+        // p5 (humans): the record's humans are drawn as generic town people (`humans/`), never as animals.
+        const people = splitHumans(whole);
+        const snapshot = people.rest;
+        humansAboard = people.humans;
+        townHumans.setRoster(people.humans);
         // The entrance's clock is the frame's (seconds since the scene started).
         const now = (performance.now() - started) / 1000;
         current = snapshot;
         aboard = new Set(snapshot.animals.map((animal) => animal.id));
+        forestHumans = people.humans.map((animal) => animal.id); // p5 (humans): the logging crews are of the humans aboard
+        dogRosterDirty = true; // p5 (humans, dogs)
+        forest.rosterChanged(); // p5 (humans)
         // Everyone's place (the herds' members too): from the server's slots, the same for every viewer.
         if (placedFor !== snapshot) {
             // The hamlet's plots for these residents (`map/hamlet.ts`), set before anything reads the attach points.
@@ -2790,6 +2934,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const pins = selectionPins(aboard, {selected: selectedId, promoted: selectionPin, followed: followId, replay: mealPins.size ? Array.from(replayPins).concat(Array.from(mealPins)) : replayPins});
         // 3.3 fix: the kept town animals nearest the look point are out to move (`near-kept.ts`).
         for (const id of nearKept) if (aboard.has(id)) pins.add(id);
+        for (const id of walkPins) if (aboard.has(id)) pins.add(id); // p5 (humans, dogs): the dogs out on a walk
         // (Development: `window.__arkHerdOff = true` before mounting draws everyone one by one, to measure against.)
         const herdOff = (globalThis as {__arkHerdOff?: boolean}).__arkHerdOff === true;
         liveliness.setSnapshot(snapshot.animals, snapshot.ark_day);
@@ -6002,6 +6147,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // MARK: Picking
 
     const projected = new Vector3();
+    const humanPoint = new Vector3();
+    /** p5 (humans): the drawn person nearest a tap (within 28 px of their middle), as an animal for the card. */
+    const pickHuman = (clientX: number, clientY: number): ArkAnimal | null => {
+        const rect = canvas.getBoundingClientRect();
+        let best: string | null = null;
+        let bestD = 28;
+        for (const h of townHumans.out) {
+            humanPoint.set(h.x, h.y + 1, h.z).project(camera);
+            if (humanPoint.z > 1) continue;
+            const d = Math.hypot((humanPoint.x + 1) / 2 * width - (clientX - rect.left), (1 - humanPoint.y) / 2 * height - (clientY - rect.top));
+            if (d < bestD) {
+                bestD = d;
+                best = h.id;
+            }
+        }
+        const animal = best ? humansAboard.find((a) => a.id === best) : undefined;
+        // (`model_slug: "human"`: the card never fetches a human's photo, `ark-view.tsx`.)
+        return animal ? {...animal, model_slug: "human"} : null;
+    };
     const pick = (clientX: number, clientY: number): Entry | null => {
         const rect = canvas.getBoundingClientRect();
         const x = clientX - rect.left;
@@ -6770,6 +6934,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return;
         }
         if (!hit) {
+            // p5 (humans): a tapped person shows "Human" and the capturer, no photo.
+            const human = pickHuman(event.clientX, event.clientY);
+            if (human) {
+                select(null, false);
+                options.onSelect?.(human);
+                return;
+            }
             const herd = pickHerd(event.clientX, event.clientY);
             if (herd) {
                 selectHerd(herd.info.key, true);
@@ -6928,7 +7099,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             scene,
             renderer,
             tier,
-            snapshot: options.snapshot,
+            snapshot: withoutHumans(options.snapshot), // p5 (humans)
             hours: hoursNow(),
             placeOf: (id) => placedAll.get(id) ?? null,
             planOf: (slug) => library.get(slug)?.behaviour?.plan,
@@ -6974,7 +7145,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setSnapshot(options.snapshot, false);
         animalsIn = true;
     } else {
-        const first = options.snapshot;
+        const first = withoutHumans(options.snapshot); // p5 (humans)
         let attachDone = false;
         let roostQueue: ArkAnimal[] | null = null;
         runtime.mountLater([
@@ -7560,6 +7731,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         spotOf: (death) => {
             const e = deathEntryOf(death);
             if (!e) return null;
+            // p5 (humans): a logging death lies where the server judged its home (inside the cleared stand).
+            if (death.at) return {x: death.at.x, z: death.at.z, base: Math.max(standGround(death.at.x, death.at.z), -0.3), yaw: e.place.yaw ?? 0};
             // Where its schedule had it at the death's time (pure in the clock and its id); else where it lived.
             const own = world ? e.sched ?? statusSchedOf(e) : null;
             const at = own ? poseOnTrip(worldOf(own.animal), tripAt(worldOf(own.animal), own.profile, own.animal, death.t0, scheduleHours, e.animal.activity, null), death.t0) : null;
@@ -8557,6 +8730,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             trafficHooked = island;
         }
         island?.update(pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000);
+        // p5 (humans): the town's people on their day (none drawn without humans aboard or the town).
+        if (island && townHumans.count) {
+            const islandMs = pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000;
+            const traffic = island.movingCars?.();
+            townHumans.setArkDay(arkDayNow(current, worldMs())); // p5 (humans, couples): a child's age
+            humanFigures.setFrame(townHumans.frame(islandMs, traffic?.cars ?? null, traffic?.count ?? 0), camera.position, islandMs / 1000);
+            beachProps.setFrame(townHumans.beach); // p5 (humans, quality pass)
+            stepDogWalks(now); // p5 (humans, dogs)
+        } else if (humanFigures.drawn.near + humanFigures.drawn.far) {
+            humanFigures.setFrame([], camera.position, 0);
+            beachProps.setFrame([]); // p5 (humans, quality pass)
+        }
         perf.lap("town");
         stepArrival(now);
         stepFlight(now);
@@ -8681,6 +8866,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         nearDetail?.update(controls.target, viewDistance);
         bugGround.update(controls.target, viewDistance); // p2 (ground)
         climbStems.update(camera.position); // p3 (trees)
+        forest.step(arkDayNow(current, worldMs())); // p5 (humans): before the trees' re-sort
+        forest.draw(camera.position, worldMs() / 1000); // p5 (humans): the crews
         assetTrees?.update(camera.position);
         assetRocks?.update(camera.position);
         assetFloor?.update(camera.position);
@@ -8835,6 +9022,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         defence: (id: string) => findEntry(id)?.defence ?? null,
         // 3.3 fix (log): the record's deaths, where each lies (the harness).
         deaths: () => liveDeaths.debug(),
+        forest: () => forest.debug(), // p5 (humans)
+        people: () => ({rigged: humanFigures.rigged, drawn: {...humanFigures.drawn}, out: townHumans.out.map((h) => ({id: h.id, what: h.what, pose: h.pose, x: h.x, y: h.y, z: h.z, yaw: h.yaw}))}), // p6 (people)
+        dogWalks: () => ({walked: townHumans.dogs.map((d) => ({id: d.id, walker: d.walker, x: d.x, y: d.y, z: d.z, yaw: d.yaw, sniffing: d.sniffing})), pins: walkPins.slice(), live: Array.from(dogActs.keys()), pairs: dogWalks.pairing.walkerOf.size, home: dogWalks.pairing.home.length}), // p5 (humans, dogs)
         rigState: (id: string) => {
             const e = allEntries().find((x) => x.animal.id === id);
             return e ? {rigOn: Boolean(e.rigOn), weight: e.rig?.weight ?? 0, clip: e.rig?.now?.name ?? null, level: e.level ?? null} : null;
@@ -8994,6 +9184,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return {key: e.key, prey: e.prey, predator: e.predator, t0: encounter?.t ?? e.t0, encounter};
             }), worldMs() / 1000);
         },
+        setForestry: (record) => forest.setRecord(record), // p5 (humans)
+        setHumanBonds: (raw) => townHumans.setBonds(decodeHumanBonds(raw)), // p5 (humans, couples)
         setDormant: (kinds) => {
             dormantKinds = new Set(kinds);
         },
@@ -9286,6 +9478,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         dispose: () => {
             disposed = true;
             cancelAnimationFrame(raf);
+            humanFigures.dispose(); // p5 (humans)
+            beachProps.dispose(); // p5 (humans, quality pass)
+            dogLeads.dispose(); // p5 (humans, dogs)
             runtime.dispose();
             perf.dispose();
             resizeObserver.disconnect();
@@ -9335,6 +9530,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             bugGround.dispose(); // p2 (ground)
             reflections.dispose(); // p3 (reflect)
             climbStems.dispose(); // p3 (trees)
+            forest.dispose(); // p5 (humans)
             assetTrees?.dispose();
             assetRocks?.dispose();
             assetFloor?.dispose();
