@@ -26,7 +26,7 @@ import {cropRows, farmProp, fiveBarGate, flowerBed, hedgeAlong} from "@/ark-scen
 import {surfaceTag} from "@/ark-scene/islands/town/render/surface-tags";
 import {townFarmGates, townFarmProps, type FarmGate} from "@/ark-scene/islands/town/farm";
 import {strut, zooBarrier} from "@/ark-scene/islands/town/render/zoo-barriers";
-import {dressPaddock} from "@/ark-scene/islands/town/render/zoo-habitat";
+import {dressPaddock, zooFloor} from "@/ark-scene/islands/town/render/zoo-habitat";
 import {townFlowerBeds, zooScatter} from "@/ark-scene/islands/town/solids";
 import {townTrees} from "@/ark-scene/islands/town/trees";
 import {clearOfDoors, PATH_WIDTH, pathOpenings, townDoorWays} from "@/ark-scene/islands/town/doors";
@@ -609,9 +609,10 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const s = e.slot.at;
     const c = chunkFor(out, s.x, s.z);
     const spec = ZOO_TYPES[e.type];
-    const ground = e.type === "savanna_paddocks" ? "#cdb07a" : e.type === "hoofstock_paddocks" || e.type === "childrens_farm" ? "#a99268" : e.type === "big_cats" ? "#b7a374" : e.type === "bears_wolves" ? "#7d7a52" : e.type === "small_mammals" ? "#9a8a62" : null;
     // (Lane GA: the 2 m cells' own shades were the "giant pixels"; the earth and sand textures carry the variety now.)
-    if (ground) tagged(c.decal, e.type === "savanna_paddocks" || e.type === "big_cats" ? SURF.sand : SURF.earth, alongZ(s.rot), () => c.decal.drape({x: s.x, y: 0, z: s.z, rot: s.rot}, s.w - 0.4, s.d - 0.4, H, 0.06, () => tone(ground), 2));
+    // p4 (townfix): the floor's surface and colour from `zooFloor` (a waterhole's bank blends into it).
+    const floor = zooFloor(e.type);
+    if (floor) tagged(c.decal, floor.surface, alongZ(s.rot), () => c.decal.drape({x: s.x, y: 0, z: s.z, rot: s.rot}, s.w - 0.4, s.d - 0.4, H, 0.06, () => tone(floor.colour), 2));
     // The barrier on the plot's boundary, each type as a real zoo builds it (lane GC, `render/zoo-barriers.ts`): the
     // boundary stays the hard collider; houses are their own bounds (lane TB's).
     if (spec.form !== "house") zooBarrier(c, e);
@@ -639,7 +640,7 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const back = (lx: number) => local(s, lx, -s.d / 2 + 2.2);
     // p2 (zoo): each outdoor enclosure dressed as its habitat (`zoo-habitat.ts` dressPaddock), clear of the residents'
     // spots; the old scatter (two rocks, a box log, a cone mound, a table) only where a type is not dressed.
-    const dressed = spec.form === "paddock" || spec.form === "aviary" ? dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null) !== null : false;
+    const dressed = spec.form === "paddock" || spec.form === "aviary" ? dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null, c.decal) !== null : false;
     if ((spec.form === "paddock" || spec.form === "pool") && !dressed) {
         // (p3 (solid): where, from `zooScatter`, which the colliders read too.)
         const scatter = zooScatter(e);

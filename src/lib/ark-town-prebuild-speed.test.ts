@@ -163,7 +163,8 @@ function digest(value: unknown): string {
 // Walk is gone: plan, areas, scenery and buildings; the places are unchanged. Then the canal's humpbacked bridges and
 // the canal boats' berths off them: plan (moorings), scenery. Then the enclosures' dressing drawn anew (flush muddy
 // waterholes, eroded termite mounds; logs, dead trees, bushes, ferns and reeds now library assets): zoo; the dressing's
-// positions and colliders are unchanged.)
+// positions and colliders are unchanged. Then the waterholes' banks in the textured ground with hoof prints, the dry
+// logs bleached, the big rockwork as bedded crags: zoo.)
 const TOWN_DIGESTS = {
     plan: "907a8cbbd8b958ac",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
@@ -186,7 +187,7 @@ const TOWN_DIGESTS = {
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
-    zoo: "0e4c36a0d8c90215",
+    zoo: "da013de4eb631dce",
     places: "f00bd433d7307cc9"
 };
 

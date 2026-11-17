@@ -32,7 +32,7 @@ import {foliageMaterial, townPlantings} from "@/ark-scene/islands/town/render/na
 import {primeTownTrees, townTrees, townZooTrees, type TownTree} from "@/ark-scene/islands/town/trees";
 import {townGroundMaterial, townPavingMaterial} from "@/ark-scene/islands/town/render/surfaces";
 import {batchedVariant, disposeBatchedVariant, plainCopy, sidedCopy, TownBandParts, TownBatch, townBandOf, townBatchEnabled, type TownBatchPart} from "@/ark-scene/islands/town/render/batches";
-import {RockInstances} from "@/ark-scene/islands/town/render/rock-instances";
+import {RockInstances, strataRock} from "@/ark-scene/islands/town/render/rock-instances";
 import {townWeather, TOWN_LIGHT} from "@/ark-scene/islands/town/render/materials";
 import {loadTownTextures} from "@/ark-scene/islands/town/render/textures";
 
@@ -533,7 +533,7 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     let zooBatches: TownBatch[] = [];
     let zooMeshes: Array<{key: number; mesh: Mesh}> = [];
     // p3 (zoofix): the zoo's boulders, instanced (`rock-instances.ts`), in the solids' look without the buildings' surfaces.
-    const zooRockMaterial = townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), {soak: 0.35});
+    const zooRockMaterial = strataRock(townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.84, metalness: 0}), {soak: 0.35})); // p4 (townfix): strata, joints, grain
     let zooRocks: RockInstances | null = null;
     let zooOpenNow: readonly string[] = options.zooOpen ?? launchEnclosures();
     let assetsMade = false;

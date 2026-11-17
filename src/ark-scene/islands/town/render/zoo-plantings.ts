@@ -28,9 +28,9 @@ class Nothing extends Geo {
 /** Past this far (m) a small planting is not drawn (as the town's reeds: `render/nature.ts`); the dead trees always are. */
 function cullFor(asset: string): number {
     if (asset.startsWith("snag")) return Infinity;
-    if (asset.startsWith("bush")) return 220;
-    if (asset.startsWith("log")) return 160;
-    return 120;
+    if (asset.startsWith("bush")) return 160;
+    if (asset.startsWith("log")) return 110;
+    return 70;
 }
 
 /** Every open outdoor enclosure's library plantings, as the town's asset placements. */
@@ -43,7 +43,7 @@ export function zooHabitatPlantings(enclosures: readonly ZooEnclosure[]): TownAs
         if (form !== "paddock" && form !== "aviary") continue;
         const plot = dressPaddock(e, zooSpotsOf(e), sink, sink, townHeight, null);
         if (!plot) continue;
-        for (const p of plot.plantings) out.push({asset: p.asset, x: p.x, y: p.y, z: p.z, rotation: p.rotation, scale: p.scale, stretch: p.stretch, shade: p.shade, cull: cullFor(p.asset)});
+        for (const p of plot.plantings) out.push({asset: p.asset, x: p.x, y: p.y, z: p.z, rotation: p.rotation, scale: p.scale, stretch: p.stretch, shade: p.shade, cull: cullFor(p.asset), ...(p.tint ? {tint: p.tint} : {})});
     }
     return out;
 }

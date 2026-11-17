@@ -17,7 +17,7 @@
  * instance takes them (from across the strait, never). Until a level is in, its instances draw the next level out.
  */
 
-import {BufferAttribute, BufferGeometry, Color, Float32BufferAttribute, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, Quaternion, Vector3, type Camera, type Material} from "three";
+import {BufferAttribute, BufferGeometry, Color, DoubleSide, Float32BufferAttribute, FrontSide, Group, InstancedMesh, Matrix4, Mesh, MeshBasicMaterial, MeshStandardMaterial, Quaternion, Vector3, type Camera, type Material} from "three";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {readNowOrLater} from "@/ark-scene/model-files";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
@@ -31,10 +31,10 @@ const LEVELS = ["lod0", "lod1", "lod2", "card"] as const;
 type Level = (typeof LEVELS)[number];
 
 /** One placed asset: its foot (the town's frame), turn and scale; `cull`: past this many metres it is not drawn (small plants). */
-export type TownAssetPlacement = {asset: string; x: number; y: number; z: number; rotation: number; scale: number; shade?: number; cull?: number; /** p4 (townfix): longer along the asset's own x (a zoo log to its length). */ stretch?: number};
+export type TownAssetPlacement = {asset: string; x: number; y: number; z: number; rotation: number; scale: number; shade?: number; cull?: number; /** p4 (townfix): longer along the asset's own x (a zoo log to its length). */ stretch?: number; /** p4 (townfix): a colour over the asset's own (a bleached log). */ tint?: [number, number, number]};
 
 type Instance = {x: number; y: number; z: number; scale: number; height: number; radius: number; chunk: number; matrix: Matrix4; tint: Color; cull: number};
-type Entry = {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; near?: InstancedMesh; distances: [number, number, number]; crown: number; height: number; conifer: boolean; doubleSided: Record<string, boolean>};
+type Entry = {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; near?: InstancedMesh; distances: [number, number, number]; crown: number; height: number; conifer: boolean; doubleSided: Record<string, boolean>; /** p4 (townfix): a forest-floor asset (a log): its own colours, no wind (`floorMaterial`). */ floor?: boolean};
 
 /** The reach of each tier's hand-overs (the wild island's trees, `index.ts`). */
 export const TOWN_ASSET_REACH = {high: 1, medium: 0.45, low: 0.3} as const;
@@ -94,7 +94,7 @@ export class TownAssets {
             if (!info) continue;
             let entry = this.byAsset.get(p.asset);
             if (!entry) {
-                entry = {instances: [], meshes: {}, distances: info.lod_distances, crown: info.crown_radius, height: info.height, conifer: info.kind === "pine" || info.kind === "spruce" || info.kind === "yew", doubleSided: Object.fromEntries(info.lods.map((l) => [l.level, l.doubleSided]))};
+                entry = {instances: [], meshes: {}, distances: info.lod_distances, crown: info.crown_radius, height: info.height, conifer: info.kind === "pine" || info.kind === "spruce" || info.kind === "yew", floor: (info as {set?: string}).set === "floor", doubleSided: Object.fromEntries(info.lods.map((l) => [l.level, l.doubleSided]))};
                 this.byAsset.set(p.asset, entry);
                 if (this.loaded) void this.loadOne(p.asset, entry);
             }
@@ -102,7 +102,7 @@ export class TownAssets {
             entry.instances.push({
                 x: p.x, y: p.y, z: p.z, scale: p.scale, height: info.height * p.scale, radius: info.crown_radius * p.scale * Math.max(1, p.stretch ?? 1), chunk: townChunkOf(p.x, p.z),
                 matrix: new Matrix4().compose(position.set(p.x, p.y, p.z), rotation.setFromAxisAngle(up, p.rotation), size.set(p.scale * (p.stretch ?? 1), p.scale, p.scale)),
-                tint: new Color(shade, shade * (0.97 + 0.06 * frac(p.z * 5.3)), shade),
+                tint: p.tint ? new Color(shade * p.tint[0], shade * p.tint[1], shade * p.tint[2]) : new Color(shade, shade * (0.97 + 0.06 * frac(p.z * 5.3)), shade),
                 cull: p.cull ?? Infinity
             });
         }
@@ -202,27 +202,28 @@ export class TownAssets {
 
     private makeMeshes(entry: Entry, level: Level, geometry: BufferGeometry, doubleSided: boolean, id: string) {
         const capacity = Math.max(entry.instances.length, 1);
-        const mesh = new InstancedMesh(geometry, this.materialFor(doubleSided, false, entry.conifer), capacity);
+        // p4 (townfix): a log's second colour is not the trees' wind and leaf weights (read as leaves it drew green camouflage).
+        const mesh = new InstancedMesh(geometry, entry.floor ? floorMaterial(doubleSided) : this.materialFor(doubleSided, false, entry.conifer), capacity);
         // (The instance colours exist from the start, so the first program made for a mesh is the one it keeps.)
         mesh.setColorAt(0, WHITE);
         mesh.count = 0;
         mesh.frustumCulled = false;
         mesh.castShadow = level !== "card" && this.shadows;
         // p3 (trees): the shadow cut as the leaf pictures are.
-        if (level !== "card") mesh.customDepthMaterial = treeShadowMaterial();
+        if (level !== "card" && !entry.floor) mesh.customDepthMaterial = treeShadowMaterial();
         mesh.receiveShadow = true;
         mesh.userData.kind = this.label;
         mesh.name = `${this.label}:${id}:${level}`;
         entry.meshes[level] = mesh;
         this.group.add(mesh);
         if (level === "lod0") {
-            const near = new InstancedMesh(geometry, this.materialFor(doubleSided, true, entry.conifer), capacity);
+            const near = new InstancedMesh(geometry, entry.floor ? floorMaterial(doubleSided) : this.materialFor(doubleSided, true, entry.conifer), capacity);
             near.setColorAt(0, WHITE);
             near.count = 0;
             near.visible = false;
             near.frustumCulled = false;
             near.castShadow = this.shadows;
-            near.customDepthMaterial = treeShadowMaterial();
+            if (!entry.floor) near.customDepthMaterial = treeShadowMaterial();
             near.receiveShadow = true;
             near.userData.kind = this.label;
             near.name = `${this.label}:${id}:near`;
@@ -384,6 +385,14 @@ function releaseArray(this: {array: ArrayLike<number>}) {
 
 function frac(value: number): number {
     return value - Math.floor(value);
+}
+
+/** p4 (townfix): the forest floor's assets (the zoo's logs): their own vertex colours under the town's weather, no wind. */
+const floorCache = new Map<boolean, Material>();
+function floorMaterial(doubleSided: boolean): Material {
+    let m = floorCache.get(doubleSided);
+    if (!m) floorCache.set(doubleSided, (m = townWeather(new MeshStandardMaterial({vertexColors: true, roughness: 0.95, metalness: 0, side: doubleSided ? DoubleSide : FrontSide}), {soak: 0.3})));
+    return m;
 }
 
 /** The wind materials, one per kind of side, fade and needles, shared by every town asset set. */

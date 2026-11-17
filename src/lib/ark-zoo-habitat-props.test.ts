@@ -8,7 +8,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {Geo} from "@/ark-scene/islands/town/render/kit";
-import {Plot, pool, termiteMound} from "@/ark-scene/islands/town/render/zoo-habitat";
+import {Plot, pool, termiteMound, zooFloor} from "@/ark-scene/islands/town/render/zoo-habitat";
+import {readTag, SURF} from "@/ark-scene/islands/town/render/surface-tags";
 import {zooHabitatPlantings} from "@/ark-scene/islands/town/render/zoo-plantings";
 import {launchEnclosures, zooLayout} from "@/ark-scene/islands/town/areas";
 import {townPlan} from "@/ark-scene/islands/town/plan";
@@ -28,6 +29,15 @@ test("every enclosure's library plantings are real assets inside it; the elephan
             assert.ok(inside, `${p.asset} at ${p.x.toFixed(1)}, ${p.z.toFixed(1)} outside every enclosure`);
         }
         for (const kind of ["log-", "bush-", "fern-", "snag-a"]) assert.ok(plantings.some((p) => p.asset.startsWith(kind)), `no ${kind}`);
+        // Dry enclosures' deadwood sun-bleached (no moss); the mossy logs only in the damp ones.
+        for (const e of layout.enclosures) {
+            const dry = e.type === "savanna_paddocks" || e.type === "big_cats" || e.type === "small_mammals";
+            const logs = zooHabitatPlantings([e]).filter((p) => p.asset.startsWith("log-"));
+            for (const p of logs) {
+                if (dry) assert.ok(p.asset === "log-fresh-a" && p.tint && p.tint[2] > p.tint[0], `${e.id}: ${p.asset}`);
+                else assert.equal(p.asset, "log-mossy-a", e.id);
+            }
+        }
     }
 });
 
@@ -45,8 +55,10 @@ test("a waterhole is flush: its water and bank a hand over the ground, nothing r
     for (let i = 1; i < bankGeo.pos.length; i += 3) bank = Math.max(bank, bankGeo.pos[i]);
     assert.ok(bank <= 0.17, `bank at ${bank.toFixed(2)} m`);
     // The collider as before.
+    assert.ok(zooFloor("savanna_paddocks"));
     assert.equal(plot.solids.length, 1);
-    assert.ok(Math.abs(plot.solids[0].r - (2.2 * 1.1 + 0.25)) < 1e-9);
+    const solid0 = plot.solids[0];
+    assert.ok(solid0.shape === "circle" && Math.abs(solid0.r - (2.2 * 1.1 + 0.25)) < 1e-9);
 });
 
 test("a termite mound: one smooth body, under 1,000 triangles, normals facing out", () => {
@@ -61,4 +73,24 @@ test("a termite mound: one smooth body, under 1,000 triangles, normals facing ou
         if (geo.nor[i] * geo.pos[i] + geo.nor[i + 2] * geo.pos[i + 2] >= -1e-6) out++;
     }
     assert.ok(out / total > 0.9, `${out} of ${total} normals out`);
+});
+
+test("a waterhole's bank is the textured ground: the floor's own surface and colour at its edge, mud and hoof prints at the water", () => {
+    const solid = new Geo();
+    const decal = new Geo();
+    const plot = new Plot({x: 0, z: 0, w: 20, d: 20, rot: 0}, () => 0, [], 7);
+    plot.dry = true;
+    const floor = zooFloor("savanna_paddocks")!;
+    const colour: [number, number, number] = [0.6, 0.45, 0.25];
+    pool(solid, new Geo(), plot, 0, 0, 2.2, 99, [0.5, 0.5, 0.5], [0.3, 0.5, 0.5], 0.2, null, {decal, surface: floor.surface, floor: colour});
+    const surfaces = new Set<number>();
+    let edge = 0;
+    for (let i = 0; i < decal.extra.length; i++) {
+        surfaces.add(readTag(decal.extra[i]).surface);
+        if (decal.col[i * 3] === colour[0] && decal.col[i * 3 + 1] === colour[1]) edge++;
+    }
+    assert.deepEqual(Array.from(surfaces).sort(), [SURF.earth, SURF.sand].sort());
+    assert.ok(edge > 40, `${edge} vertices in the floor's colour`);
+    // The hoof prints: small dark slots, over and above the bank's rings.
+    assert.ok(decal.triangles >= 24 * 5 * 2 + 18 * 12, `${decal.triangles} decal triangles`);
 });

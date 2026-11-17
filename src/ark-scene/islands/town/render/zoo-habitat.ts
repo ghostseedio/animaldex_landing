@@ -17,6 +17,20 @@
 import {hashText, rng, toLocal, type Box, type Pt} from "@/ark-scene/islands/town/geom";
 import {at, Geo, tone, type Frame, type V3} from "@/ark-scene/islands/town/render/kit";
 import {strut} from "@/ark-scene/islands/town/render/zoo-barriers";
+import {SURF, surfaceTag, type SurfaceId} from "@/ark-scene/islands/town/render/surface-tags";
+
+/**
+ * An outdoor enclosure's floor (the textured ground under its dressing: `render/scenery.ts` draws it; a waterhole's bank
+ * is drawn in the same surface and colour where it meets it, p4 (townfix)), or null for a type without one.
+ */
+export function zooFloor(type: string): {surface: SurfaceId; colour: string} | null {
+    const colour = type === "savanna_paddocks" ? "#cdb07a" : type === "hoofstock_paddocks" || type === "childrens_farm" ? "#a99268" : type === "big_cats" ? "#b7a374" : type === "bears_wolves" ? "#7d7a52" : type === "small_mammals" ? "#9a8a62" : null;
+    if (!colour) return null;
+    return {surface: type === "savanna_paddocks" || type === "big_cats" ? SURF.sand : SURF.earth, colour};
+}
+
+/** Where a pool's bank is drawn in the textured ground (the zoo chunk's decal), and the floor it blends into. */
+export type PoolGround = {decal: Geo; surface: SurfaceId; floor: RGB};
 
 type RGB = [number, number, number];
 
@@ -29,7 +43,7 @@ export const HABITAT_CLEARANCE = 1.0;
 export const HABITAT_HEADROOM = 2.9;
 
 /** p4 (townfix): one library asset drawn on a plot (`Plot.plantings`), as `render/assets.ts` places it. */
-export type HabitatPlanting = {asset: string; x: number; y: number; z: number; rotation: number; scale: number; stretch: number; shade: number};
+export type HabitatPlanting = {asset: string; x: number; y: number; z: number; rotation: number; scale: number; stretch: number; shade: number; /** A colour over the asset's own (linear rgb multipliers; >1 lifts a channel). */ tint?: [number, number, number]};
 
 /** One ground item's footprint, for the clearance check (local x, z of the hall or plot, radius). */
 export type Footprint = {x: number; z: number; r: number; what: string};
@@ -84,9 +98,9 @@ export class Plot {
      * A library asset at a local point, its own +x along local direction `turn` (the kit's convention: (cos, sin) in the
      * plot's x, z), `stretch` along that +x. (three's turn about +y takes +x to (cos, -sin): hence the sign.)
      */
-    plant(asset: string, lx: number, lz: number, turn: number, scale: number, stretch = 1, ly = 0, shade = 1) {
+    plant(asset: string, lx: number, lz: number, turn: number, scale: number, stretch = 1, ly = 0, shade = 1, tint?: [number, number, number]) {
         const q = this.p(lx, lz, ly);
-        this.plantings.push({asset, x: q[0], y: q[1], z: q[2], rotation: -(turn + this.fr.rot), scale, stretch, shade});
+        this.plantings.push({asset, x: q[0], y: q[1], z: q[2], rotation: -(turn + this.fr.rot), scale, stretch, shade, ...(tint ? {tint} : {})});
     }
     /** A world point at a local one, `ly` over the floor there. */
     p(lx: number, lz: number, ly = 0): V3 {
@@ -226,8 +240,16 @@ export function rope(geo: Geo, a: V3, b: V3, sag: number, size = 0.05, colour: R
  * with its length along its own x, its radius (m, half its depth across) and its foot's lift: the asset is scaled to the
  * log's radius and stretched to its length (p4 (townfix); the owner, 2026-11-17: "tree trunks ... look so bad and cheap").
  */
+/** Sun-bleached deadwood over a brown bark's vertex colours: grey-brown. */
+const BLEACHED: [number, number, number] = [2.1, 2.55, 3.5];
+
+/**
+ * The logs (p4 (townfix)): mossy in the damp enclosures; in the dry ones (savanna, big cats, small mammals) the library's
+ * fresh barked log, its bark and split ends sun-bleached to a grey-brown (`BLEACHED`: the brown lifted in blue and green
+ * so it greys; no moss). The coordinator, 2026-11-17: "sun-bleached grey-brown deadwood with cracks, not mossy green".
+ */
 const LOG_ASSETS = {
-    dry: [{asset: "log-rotten-a", length: 3.25, radius: 0.37}],
+    dry: [{asset: "log-fresh-a", length: 4.07, radius: 0.3}],
     damp: [{asset: "log-mossy-a", length: 4.04, radius: 0.34}]
 } as const;
 
@@ -244,11 +266,11 @@ export function log(geo: Geo, plot: Plot, lx0: number, lz0: number, lx1: number,
     const scale = radius / kind.radius;
     // Either way along (the broken end at either end), a little shade of its own.
     const turn = Math.atan2(lz1 - lz0, lx1 - lx0) + ((h >>> 4) % 2 ? Math.PI : 0);
-    plot.plant(kind.asset, (lx0 + lx1) / 2, (lz0 + lz1) / 2, turn, scale, Math.min(Math.max(length / (kind.length * scale), 0.6), 1.8), -0.02, 0.92 + ((h >>> 6) % 10) / 60);
+    plot.plant(kind.asset, (lx0 + lx1) / 2, (lz0 + lz1) / 2, turn, scale, Math.min(Math.max(length / (kind.length * scale), 0.6), 1.8), -0.02, 0.92 + ((h >>> 6) % 10) / 60, plot.dry ? BLEACHED : undefined);
     // A root plate where the tree came down (on two logs in five), at the end it fell from.
     if ((h >>> 9) % 5 < 2) {
         const end = (h >>> 12) % 2 ? {x: lx0, z: lz0} : {x: lx1, z: lz1};
-        plot.plant("roots-a", end.x, end.z, turn + ((h >>> 14) % 2 ? 0.4 : -0.4), radius * 1.5, 1, -0.03);
+        plot.plant("roots-a", end.x, end.z, turn + ((h >>> 14) % 2 ? 0.4 : -0.4), radius * 1.5, 1, -0.03, 1, plot.dry ? BLEACHED : undefined);
     }
 }
 
@@ -269,7 +291,8 @@ export function climbingTree(geo: Geo, plot: Plot, lx: number, lz: number, heigh
     // (Its trunk and the root flares round its foot: 0.75 m out, low.)
     plot.solids.push({kind: "trunk", shape: "circle", x: base[0], z: base[2], r: 0.45, base: base[1], top: base[1] + height});
     if (plot.indoor) return climbingTreeMesh(geo, plot, lx, lz, height, seed);
-    plot.plant("snag-b", lx, lz, (seed % 628) / 100, height / 4.66, 1, -0.08);
+    // (The one dead tree asset for both: one more kind loaded is the phone's heap, p4 (townfix).)
+    plot.plant("snag-a", lx, lz, (seed % 628) / 100, height / 6.88, 1, -0.08);
 }
 
 /** A hall's log (lit by the hall's own lights, not the library's: `log` outdoors). */
@@ -386,7 +409,7 @@ export function climbingFrame(geo: Geo, plot: Plot, posts: Pt[], height: number,
  * reeds or sedge in the shallows (the asset library's, `Plot.plantings`; none in a dry waterhole). `level` is only the
  * collider's (the same as before). The bank goes into `cover` too: what the residents walk on to drink.
  */
-export function pool(geo: Geo, water: Geo, plot: Plot, lx: number, lz: number, radius: number, seed: number, rimColour: RGB, waterColour: RGB, level = 0.08, cover: Geo | null = null) {
+export function pool(geo: Geo, water: Geo, plot: Plot, lx: number, lz: number, radius: number, seed: number, rimColour: RGB, waterColour: RGB, level = 0.08, cover: Geo | null = null, ground: PoolGround | null = null) {
     const r = rng(seed);
     const n = 24;
     // A lobed outline (two or three bays), never a circle.
@@ -408,7 +431,7 @@ export function pool(geo: Geo, water: Geo, plot: Plot, lx: number, lz: number, r
         [1.18, 0.165, tone("#5f4d37")],
         [1.45, 0.14, tone("#7a6548")],
         [1.75, 0.1, tone("#8e7a5a")],
-        [2.0, 0.07, tone("#93805f")]
+        [2.0, ground ? 0.085 : 0.07, tone("#93805f")]
     ];
     const dry = plot.dry;
     const ringPoint = (k: number, i: number): V3 => {
@@ -420,6 +443,19 @@ export function pool(geo: Geo, water: Geo, plot: Plot, lx: number, lz: number, r
     const tint = (c: RGB, i: number, k: number): RGB => {
         const g = 0.92 + 0.14 * (((i * 7 + k * 3) % 5) / 5);
         return dry && k >= 4 ? [c[0] * g * 1.08, c[1] * g * 1.04, c[2] * g * 0.95] : [c[0] * g, c[1] * g, c[2] * g];
+    };
+    // p4 (townfix; the coordinator: "blend the mud into the ground texture (no flat-colour band), darker wet rim at the
+    // water, hoof-print/trampled detail"): over the waterline the bank is textured ground (the decal's earth, mud in its
+    // wet ruts: `render/surfaces.ts`), its outer ring the enclosure's own floor surface and colour, so the floor runs into
+    // the dry mud with no edge, darkening to a wet black-brown at the water.
+    const mix = (a: RGB, b: RGB, t: number): RGB => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+    const bankOf = (k: number, i: number): {colour: RGB; tag: number} | null => {
+        if (!ground || k < 3) return null;
+        const g = tint([1, 1, 1], i, k);
+        if (k === 7) return {colour: ground.floor, tag: surfaceTag(ground.surface, false, 1)};
+        if (k === 6) return {colour: mix(ground.floor, tone("#8a7656"), 0.45), tag: surfaceTag(ground.surface, false, 1)};
+        const mud = k === 5 ? tone("#7a6850") : k === 4 ? tone("#5c4c38") : tone("#3b3025");
+        return {colour: [mud[0] * g[0], mud[1] * g[1], mud[2] * g[2]], tag: surfaceTag(SURF.earth, false, k === 5 ? 1 : 0.45)};
     };
     const surfaces = cover ? [geo, cover] : [geo];
     for (const out of surfaces) {
@@ -436,9 +472,55 @@ export function pool(geo: Geo, water: Geo, plot: Plot, lx: number, lz: number, r
                 const a1 = ringPoint(k - 1, j);
                 const b0 = ringPoint(k, i);
                 const b1 = ringPoint(k, j);
-                out.quad(a0, a1, b1, b0, tint(rings[k][2], i, k));
+                const bank = out === geo ? bankOf(k, i) : null;
+                if (bank && ground) {
+                    const before = ground.decal.tag;
+                    ground.decal.tag = bank.tag;
+                    ground.decal.quad(a0, a1, b1, b0, bank.colour);
+                    ground.decal.tag = before;
+                } else out.quad(a0, a1, b1, b0, tint(rings[k][2], i, k));
             }
         }
+    }
+    // Trampled at the water: hoof prints in the wet mud (paired cloven slots), 1 cm proud of the bank.
+    if (ground) {
+        const rp = rng(seed + 5);
+        const offsets = rings.slice(3).map(([f]) => (f - 1) * 1.6);
+        const lifts = rings.slice(3).map(([, l]) => l);
+        const liftAt = (d: number) => {
+            for (let k = 1; k < offsets.length; k++) if (d <= offsets[k]) return lifts[k - 1] + ((lifts[k] - lifts[k - 1]) * (d - offsets[k - 1])) / (offsets[k] - offsets[k - 1]);
+            return lifts[lifts.length - 1];
+        };
+        const before = ground.decal.tag;
+        ground.decal.tag = surfaceTag(SURF.earth, false, 0.45);
+        const prints = plot.dry ? 18 : 12;
+        for (let k = 0; k < prints; k++) {
+            const i = Math.floor(rp() * n);
+            const a = (i / n) * Math.PI * 2 + (rp() - 0.5) * 0.2;
+            const d = 0.08 + rp() * 0.8;
+            const e = edge(i) + d;
+            const cx = lx + Math.cos(a) * e;
+            const cz = lz + Math.sin(a) * e;
+            const heading = a + Math.PI / 2 + (rp() - 0.5) * 1.2;
+            const lift = liftAt(d) + 0.01;
+            const dark = tone(rp() < 0.5 ? "#2f271d" : "#3a3024");
+            const size = plot.dry ? 0.11 : 0.08;
+            for (const side of [-1, 1]) {
+                // One slot of the hoof: a small pointed oval, 6 corners.
+                const ox = cx + Math.cos(heading + Math.PI / 2) * side * size * 0.32;
+                const oz = cz + Math.sin(heading + Math.PI / 2) * side * size * 0.32;
+                const ring: V3[] = [];
+                for (let m = 0; m < 6; m++) {
+                    const t = (m / 6) * Math.PI * 2;
+                    const along = Math.cos(t) * size * 0.55;
+                    const across = Math.sin(t) * size * 0.24 * (Math.cos(t) > 0 ? 0.7 : 1);
+                    ring.push(plot.p(ox + Math.cos(heading) * along - Math.sin(heading) * across, oz + Math.sin(heading) * along + Math.cos(heading) * across, lift));
+                }
+                const centre = plot.p(ox, oz, lift);
+                for (let m = 0; m < 6; m++) ground.decal.tri(centre, ring[(m + 1) % 6], ring[m], dark);
+            }
+        }
+        ground.decal.tag = before;
     }
     // The water: flush with the margin, its edge under the sloping bank (so its line is the bank's own, never a rim).
     const wc = plot.p(lx, lz, WATER);
@@ -466,8 +548,9 @@ export function pool(geo: Geo, water: Geo, plot: Plot, lx: number, lz: number, r
         const a = side + Math.PI + (k - clumps / 2) * 0.42 + (r() - 0.5) * 0.2;
         const i = Math.round(((((a % 6.2832) + 6.2832) % 6.2832) / (Math.PI * 2)) * n) % n;
         const e = edge(i) * (0.95 + r() * 0.12);
-        const asset = dry ? "sedge-b" : k % 3 === 0 ? "reeds-cattail-a" : k % 3 === 1 ? "reeds-phragmites-a" : "sedge-b";
-        plot.plant(asset, lx + Math.cos(a) * e, lz + Math.sin(a) * e, r() * 6.28, (dry ? 0.8 : Math.min(1, radius / 1.5)) * (0.75 + r() * 0.4), 1, 0.05);
+        // (The town's own reeds, already loaded for its ponds and canal: no new kind.)
+        const asset = dry ? "reeds-phragmites-a" : k % 2 === 0 ? "reeds-cattail-a" : "reeds-phragmites-a";
+        plot.plant(asset, lx + Math.cos(a) * e, lz + Math.sin(a) * e, r() * 6.28, (dry ? 0.45 : Math.min(1, radius / 1.5)) * (0.75 + r() * 0.4), 1, 0.05, dry ? 0.8 : 1);
     }
 }
 
@@ -640,7 +723,7 @@ export function hayRack(geo: Geo, plot: Plot, lx: number, lz: number, turn: numb
 /** p4 (townfix): the library's bushes for the planting, with their half widths (m) at scale 1. */
 const SHRUB_ASSETS = [{asset: "bush-hazel-a", radius: 1.4}, {asset: "bush-holly-a", radius: 1.2}, {asset: "bush-holly-b", radius: 1.15}] as const;
 /** And its ferns (sword, bracken, lady), half widths (m) at scale 1. */
-const FERN_ASSETS = [{asset: "fern-sword-a", radius: 0.74}, {asset: "fern-bracken-a", radius: 0.92}] as const;
+const FERN_ASSETS = [{asset: "fern-sword-a", radius: 0.74}] as const;
 
 /** A fern on the ground, `size` m across its fronds' reach (the library's, p4 (townfix)). */
 function groundFern(plot: Plot, lx: number, lz: number, size: number, seed: number) {
@@ -656,7 +739,7 @@ function groundFern(plot: Plot, lx: number, lz: number, size: number, seed: numb
  * burrow mounds, grass), the bears' and wolves' forest floor (a den, logs, ferns, grass). Ground items keep clear of
  * the residents' spots. Returns the plot (its footprints), or null for a type it does not dress.
  */
-export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed: number}; pool: Pt[] | null}, spots: readonly Pt[], solid: Geo, water: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null): Plot | null {
+export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed: number}; pool: Pt[] | null}, spots: readonly Pt[], solid: Geo, water: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null, decal: Geo | null = null): Plot | null {
     const s = e.slot.at;
     const fr: Frame = {x: s.x, y: 0, z: s.z, rot: s.rot};
     const floorAt = (lx: number, lz: number) => {
@@ -747,11 +830,14 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
             if (q) outcrop(solid, plot, q.x, q.z, size * (0.7 + r() * 0.5), tone(colour), hashText(`${e.id}r${k}`));
         }
     };
+    const floor = zooFloor(e.type);
     const waterhole = (lx: number, lz: number, radius: number, rim: string) => {
         const q = at2(lx, lz, radius + 0.3, "pool", 5, 30);
         if (!q) return;
-        // p4 (townfix): the pool's own muddy bank is its ground (and walked on: `cover`), no disc of mud under a raised pool.
-        pool(solid, water, plot, q.x, q.z, radius, hashText(`${e.id}wh`), tone(rim), tone(plot.dry ? "#5f7a62" : "#4f7f78"), 0.2, cover);
+        // p4 (townfix): the pool's own muddy bank is its ground (and walked on: `cover`), no disc of mud under a raised pool;
+        // drawn in the textured ground (`decal`) where the enclosure has a floor.
+        const bank = decal && floor ? {decal, surface: floor.surface, floor: tone(floor.colour)} : null;
+        pool(solid, water, plot, q.x, q.z, radius, hashText(`${e.id}wh`), tone(rim), tone(plot.dry ? "#5f7a62" : "#4f7f78"), 0.2, cover, bank);
     };
     const shrubs = (n: number, colour: string) => {
         for (let k = 0; k < n; k++) {
