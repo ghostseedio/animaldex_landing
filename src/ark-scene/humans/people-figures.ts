@@ -85,7 +85,7 @@ vec3 peopleColour() {
     else if (part < 6.5) c = iHair * 0.55;
     else if (part < 7.5) c = iTop;
     else c = vec3(1.0);
-    return humanLinear(c) * peoplePaint.rgb;
+    return (part < 0.5 ? humanSkinLinear(c) : humanLinear(c)) * peoplePaint.rgb;
 }
 `;
 

@@ -79,6 +79,11 @@ export const HUMAN_LINEAR_GLSL = /* glsl */ `
 vec3 humanLinear(vec3 c) {
     return mix(c * 0.0773993808, pow(c * 0.9478672986 + 0.0521327014, vec3(2.4)), step(vec3(0.04045), c));
 }
+// Skin a little short of the full curve: with no subsurface light on these bodies the two deepest tones went to
+// silhouettes at dusk (#3b2219 at 0.044 in the red); a third of the way back keeps them brown, and the light tones warm.
+vec3 humanSkinLinear(vec3 c) {
+    return mix(humanLinear(c), c, 0.35);
+}
 `;
 
 /** Human skin tones across the range (deep to light). */
@@ -516,7 +521,7 @@ vec3 humanPaint() {
     else if (part < 8.5) c = vec3(0.78, 0.76, 0.72);
     else if (part < 9.5) c = vec3(0.05, 0.045, 0.04);
     else c = mix(iHair * 0.8, iSkin * 0.6, iStyle.w * 0.6);
-    return humanLinear(c) * aRig.z;
+    return (part < 0.5 ? humanSkinLinear(c) : humanLinear(c)) * aRig.z;
 }
 `;
 
