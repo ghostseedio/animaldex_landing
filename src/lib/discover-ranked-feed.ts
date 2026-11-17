@@ -82,3 +82,77 @@ export function composeRankedTimeline<T extends {date: string}>(
     else if (captures.length === 0) merged.push(...queue);
     return merged;
 }
+
+/** PostgREST: the ranked function is not on the server yet (the migration is not applied). */
+export function isRankedFeedFunctionMissing(error: {code?: string | null; message?: string | null; status?: number | null} | null | undefined): boolean {
+    if (!error) return false;
+    return error.code === "PGRST202"
+        || error.code === "42883"
+        || error.status === 404
+        || /could not find the function/i.test(error.message ?? "");
+}
+
+export type RankedPagePlan = {
+    /** The session this page belongs to. */
+    asOf: string;
+    /** The cursor to ask the server for; null for a first page. */
+    afterCaptureId: string | null;
+    /** True when the page starts a new session (no cursor, or a cursor that carries no session). */
+    startsSession: boolean;
+};
+
+/**
+ * A page continues its session only when the cursor carries both the last capture and the session.
+ * A cursor without a session (an old page, a hand-built URL) belongs to no ranked list, so it is
+ * not sent as a cursor: the page is the first page of a new session.
+ */
+export function planRankedPage(
+    cursor: {afterCaptureId?: string | null; asOf?: string | null} | null,
+    now: number = Date.now()
+): RankedPagePlan {
+    const asOf = parseDiscoverSessionAsOf(cursor?.asOf, now);
+    const afterCaptureId = cursor?.afterCaptureId?.trim() || null;
+    if (cursor && asOf && afterCaptureId) return {asOf, afterCaptureId, startsSession: false};
+    return {asOf: newDiscoverSessionAsOf(now), afterCaptureId: null, startsSession: true};
+}
+
+export const RANKED_MISSING = Symbol("ranked-feed-function-missing");
+
+/**
+ * One ranked call. A missing function returns RANKED_MISSING (the caller uses the shipped feed);
+ * any other error is tried once more and then thrown (the error state): a ranked cursor must never be
+ * continued by the shipped feed.
+ */
+export async function callRankedFeedWithOneRetry<T>(
+    call: () => Promise<{data: T | null; error: {code?: string | null; message?: string | null; status?: number | null} | null}>,
+    options: {retryDelayMs?: number} = {}
+): Promise<T | typeof RANKED_MISSING> {
+    const delay = options.retryDelayMs ?? 400;
+    let lastError: {message?: string | null} | null = null;
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+        const {data, error} = await call();
+        if (!error) return (data ?? ([] as unknown as T));
+        if (isRankedFeedFunctionMissing(error)) return RANKED_MISSING;
+        lastError = error;
+        if (attempt === 0 && delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+    throw new Error(`discover_feed_ranked_v1 failed: ${lastError?.message ?? "unknown error"}`);
+}
+
+/**
+ * A cursor page that came back short means the session's list is exhausted. The feed then starts one
+ * new session and appends its first page after this one (rows already on this page are not repeated).
+ * The feed ends only when the new session has nothing either (`hasMore` false).
+ */
+export function appendRenewedRankedPage<T>(
+    first: T[],
+    renewed: T[],
+    limit: number,
+    idOf: (row: T) => string | null
+): {rows: T[]; hasMore: boolean} {
+    const have = new Set(first.map(idOf));
+    return {
+        rows: [...first, ...renewed.filter((row) => !have.has(idOf(row)))],
+        hasMore: rankedFeedHasMore(renewed.length, limit)
+    };
+}

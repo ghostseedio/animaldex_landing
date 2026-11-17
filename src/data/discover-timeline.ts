@@ -32,12 +32,16 @@ import {animalLevel} from "@/lib/animal-level";
 import {isHomoSapiens, rowIsHomoSapiens} from "@/lib/people-never-public";
 import {
     DISCOVER_ACTIVITY_MIN_NOVELTY,
+    RANKED_MISSING,
+    appendRenewedRankedPage,
+    callRankedFeedWithOneRetry,
     composeRankedTimeline,
     discoverRankedFeedArgs,
     newDiscoverSessionAsOf,
-    parseDiscoverSessionAsOf,
+    planRankedPage,
     rankedFeedHasMore
 } from "@/lib/discover-ranked-feed";
+import {getViewerUserId} from "@/lib/viewer";
 
 type DiscoverSupabaseClient = NonNullable<
     ReturnType<typeof createSupabaseServerClient> | ReturnType<typeof createSupabasePublicClient>
@@ -1696,26 +1700,24 @@ async function hydrateDiscoverFeedMediaRows(supabase: DiscoverSupabaseClient, ro
 }
 
 /**
- * The session feed: `discover_feed_ranked_v1` ranks the posts the reader has not seen
- * (see `src/lib/discover-ranked-feed.ts`). Null when the call fails (signed out, or the
- * migration is not applied yet): the caller falls back to the shipped feed.
+ * The session feed: `discover_feed_ranked_v1` ranks every post, the seen ones down-weighted (see
+ * `src/lib/discover-ranked-feed.ts`). RANKED_MISSING when the function is not on the server yet; any
+ * other failure is retried once and then thrown.
  */
 async function fetchRankedDiscoverFeedRows(
     supabase: DiscoverSupabaseClient,
     limit: number,
     afterCaptureId: string | null,
     asOf: string
-) {
-    const {data, error} = await supabase
-        .rpc("discover_feed_ranked_v1", discoverRankedFeedArgs({asOf, limit, afterCaptureId}))
-        .select(richFeedSelect);
-    if (error) {
-        if (process.env.NODE_ENV !== "production") {
-            logDevPerfEvent("discover.feed", "ranked rpc failed", {limit, error: error.message});
-        }
-        return null;
-    }
-    return await hydrateDiscoverFeedMediaRows(supabase, (data ?? []) as unknown as QueryRow[]);
+): Promise<QueryRow[] | typeof RANKED_MISSING> {
+    const result = await callRankedFeedWithOneRetry(async () => {
+        const {data, error} = await supabase
+            .rpc("discover_feed_ranked_v1", discoverRankedFeedArgs({asOf, limit, afterCaptureId}))
+            .select(richFeedSelect);
+        return {data: (data ?? null) as unknown as QueryRow[] | null, error};
+    });
+    if (result === RANKED_MISSING) return RANKED_MISSING;
+    return await hydrateDiscoverFeedMediaRows(supabase, result);
 }
 
 /** `discover_feed_shuffled_v1` clamps its page to this. */
@@ -1840,15 +1842,44 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
     }
 
     const afterCaptureId = cursor?.afterCaptureId?.trim() || null;
-    // A first page starts a feed session; a cursor page continues the one it carries.
-    const sessionAsOf = parseDiscoverSessionAsOf(cursor?.asOf) ?? newDiscoverSessionAsOf();
     // A keyset cursor reads the next captures directly. Without one, a cursor
     // page still has to over-read from the top and filter.
     const candidateLimit = cursor && !afterCaptureId ? Math.max(120, limit * 8) : Math.max(limit + 1, 24);
     const activityLimit = Math.max(12, Math.min(48, Math.ceil(Math.max(candidateLimit, cursor ? 96 : 0) / 2)));
-    // A cursor without a capture (an old client, a hand-built URL) cannot continue a ranked session.
-    const rankedPage = !cursor || Boolean(afterCaptureId);
-    const rankedRows = rankedPage ? await fetchRankedDiscoverFeedRows(supabase, limit, afterCaptureId, sessionAsOf) : null;
+
+    // The ranked session feed is for signed-in readers (the RPC is not open to anon).
+    const viewerId = await getViewerUserId();
+    let rankedRows: QueryRow[] | null = null;
+    let rankedHasMore = false;
+    let sessionAsOf = "";
+    if (viewerId) {
+        const plan = planRankedPage(cursor);
+        sessionAsOf = plan.asOf;
+        try {
+            const first = await fetchRankedDiscoverFeedRows(supabase, limit, plan.afterCaptureId, plan.asOf);
+            if (first !== RANKED_MISSING) {
+                rankedRows = first;
+                rankedHasMore = rankedFeedHasMore(first.length, limit);
+                if (plan.afterCaptureId && !rankedHasMore) {
+                    // The session's list is exhausted: start one new session and append its first page.
+                    // Only when that has nothing either does the feed end ("You're caught up").
+                    const renewedAsOf = newDiscoverSessionAsOf();
+                    const renewed = await fetchRankedDiscoverFeedRows(supabase, limit, null, renewedAsOf);
+                    if (renewed !== RANKED_MISSING) {
+                        const merged = appendRenewedRankedPage(first, renewed, limit, (row) => readString(row, "capture_id"));
+                        rankedRows = merged.rows;
+                        rankedHasMore = merged.hasMore;
+                        sessionAsOf = renewedAsOf;
+                    }
+                }
+            }
+        } catch (error) {
+            // A failed ranked call (retried once) is an error, never a reason to continue a ranked
+            // cursor in the shipped feed. The first page cannot throw into the page render: an empty feed.
+            if (cursor) throw error;
+            return {timeline: [] as DiscoverTimelineItem[], featured: [] as DiscoverFeaturedItem[], nextCursor: null as DiscoverTimelineCursor | null};
+        }
+    }
 
     const [
         feedRows,
@@ -1884,7 +1915,7 @@ export async function getDiscoverTimelineBundle(limit = 60, cursor: DiscoverTime
     if (rankedRows) {
         // The server decided the order of the captures: keep it. Activity cards are slotted in
         // between. The feed has ended when the server sent fewer captures than asked for.
-        const hasMore = rankedFeedHasMore(rankedRows.length, limit);
+        const hasMore = rankedHasMore;
         const excluded = excludedCaptureIds(captures, alignments, fusions);
         const captureItems = captures
             .filter((item) => !excluded.has(item.captureId) && !isHumanCapture(item))

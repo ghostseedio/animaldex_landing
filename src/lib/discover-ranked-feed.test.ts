@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
     DISCOVER_SESSION_CLOCK_MARGIN_MS,
+    RANKED_MISSING,
+    appendRenewedRankedPage,
+    callRankedFeedWithOneRetry,
+    isRankedFeedFunctionMissing,
+    planRankedPage,
     composeRankedTimeline,
     discoverRankedFeedArgs,
     newDiscoverSessionAsOf,
@@ -69,4 +74,60 @@ test("leftover activity is shown only once the feed has ended", () => {
     assert.deepEqual(composeRankedTimeline(captures, activity, {feedEnded: false}).map((entry) => entry.id), ["c0", "c1"]);
     assert.deepEqual(composeRankedTimeline(captures, activity, {feedEnded: true}).map((entry) => entry.id), ["c0", "c1", "a"]);
     assert.deepEqual(composeRankedTimeline([], activity, {feedEnded: false}).map((entry) => entry.id), ["a"], "no captures at all: the activity is the feed");
+});
+
+test("only a missing function is a reason to use the shipped feed", () => {
+    assert.equal(isRankedFeedFunctionMissing({code: "PGRST202", message: "x"}), true);
+    assert.equal(isRankedFeedFunctionMissing({status: 404}), true);
+    assert.equal(isRankedFeedFunctionMissing({message: "Could not find the function public.discover_feed_ranked_v1(...)"}), true);
+    assert.equal(isRankedFeedFunctionMissing({code: "57014", message: "canceling statement due to statement timeout"}), false);
+    assert.equal(isRankedFeedFunctionMissing({status: 500}), false);
+    assert.equal(isRankedFeedFunctionMissing(null), false);
+});
+
+test("a ranked call: a missing function is reported, other errors are retried once and then thrown", async () => {
+    let calls = 0;
+    assert.equal(await callRankedFeedWithOneRetry(async () => {
+        calls += 1;
+        return {data: null, error: {code: "PGRST202", message: "missing"}};
+    }, {retryDelayMs: 0}), RANKED_MISSING);
+    assert.equal(calls, 1, "a missing function is not retried");
+
+    calls = 0;
+    const healed = await callRankedFeedWithOneRetry(async () => {
+        calls += 1;
+        return calls === 1 ? {data: null, error: {code: "57014", message: "timeout"}} : {data: [1, 2, 3], error: null};
+    }, {retryDelayMs: 0});
+    assert.deepEqual(healed, [1, 2, 3]);
+    assert.equal(calls, 2);
+
+    calls = 0;
+    await assert.rejects(callRankedFeedWithOneRetry(async () => {
+        calls += 1;
+        return {data: null, error: {code: "XX000", message: "boom"}};
+    }, {retryDelayMs: 0}), /boom/);
+    assert.equal(calls, 2, "tried once more, then the error: the shipped feed is not used");
+});
+
+test("a cursor continues its session only with both the last capture and the session; otherwise a new session starts", () => {
+    const now = NOW;
+    const continued = planRankedPage({afterCaptureId: CURSOR, asOf: "2026-11-17T13:59:00.000Z"}, now);
+    assert.deepEqual(continued, {asOf: "2026-11-17T13:59:00.000Z", afterCaptureId: CURSOR, startsSession: false});
+    for (const cursor of [null, {afterCaptureId: CURSOR}, {afterCaptureId: CURSOR, asOf: "garbage"}, {asOf: "2026-11-17T13:59:00.000Z"}, {afterCaptureId: null, asOf: null}]) {
+        const plan = planRankedPage(cursor, now);
+        assert.equal(plan.startsSession, true);
+        assert.equal(plan.afterCaptureId, null, "no cursor call without a session");
+        assert.equal(plan.asOf, newDiscoverSessionAsOf(now));
+    }
+});
+
+test("an exhausted session starts one new session and appends its page; the feed ends when that is empty or short", () => {
+    const id = (row: {id: string}) => row.id;
+    const first = [{id: "a"}, {id: "b"}];
+    const renewed = Array.from({length: 8}, (_, i) => ({id: i === 0 ? "b" : `n${i}`}));
+    const merged = appendRenewedRankedPage(first, renewed, 8, id);
+    assert.deepEqual(merged.rows.map(id), ["a", "b", "n1", "n2", "n3", "n4", "n5", "n6", "n7"], "rows already on the page are not repeated");
+    assert.equal(merged.hasMore, true, "the new session has a full page: the feed goes on");
+    assert.equal(appendRenewedRankedPage(first, [], 8, id).hasMore, false, "a new session with nothing ends the feed");
+    assert.deepEqual(appendRenewedRankedPage(first, [], 8, id).rows.map(id), ["a", "b"]);
 });
