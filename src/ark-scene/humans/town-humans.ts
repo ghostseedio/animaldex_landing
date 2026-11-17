@@ -20,7 +20,7 @@
  */
 
 import {humanLook, humanUnit, sitRootY, BASE_HEIGHT, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
-import {townClockAt, weekday, type TownClock} from "@/ark-scene/islands/town/people";
+import {darkness, townClockAt, weekday, type TownClock} from "@/ark-scene/islands/town/people";
 import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {MILLPOND, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {inPoly, local, type Pt} from "@/ark-scene/islands/town/geom";
@@ -302,6 +302,9 @@ export class TownHumans {
     private homes = new Map<string, {room: number; slot: number}>();
     private pool: DrawnHuman[] = [];
     readonly out: DrawnHuman[] = [];
+    /** The TVs on now (a room's, while someone in it watches), world frame. */
+    readonly tvs: Array<Spot & {room: string}> = [];
+    private tvPool: Array<Spot & {room: string}> = [];
 
     constructor(private readonly options: TownHumansOptions, plan: TownPlan = townPlan()) {
         this.sites = townHumanSites(plan);
@@ -351,6 +354,7 @@ export class TownHumans {
     frame(epochMs: number, cars: readonly CarFix[] | null, carCount: number): DrawnHuman[] {
         const out = this.out;
         out.length = 0;
+        this.tvs.length = 0;
         if (!this.roster.length) return out;
         const clock = townClockAt(epochMs, this.options.offsetHours ?? 0);
         const block = Math.floor(clock.hours / BLOCK_HOURS);
@@ -365,6 +369,8 @@ export class TownHumans {
             this.assigned = assignOut(this.roster.filter((id) => days.get(id) === "out"), clock, this.sites, carCount);
         }
         const rooms = this.rooms?.rooms() ?? [];
+        // Indoors the room's lamp is on once it is dark out (the scene's sun and street lamps do not reach inside).
+        const lamp = Math.min(1, darkness(clock.hours) * 1.4);
         let n = 0;
         const take = (id: string, look: HumanLook, what: DrawnHuman["what"], x: number, y: number, z: number, yaw: number, pose: HumanPoseKind, phase: number) => {
             const h = this.pool[n] ?? (this.pool[n] = {id, look, what, x, y, z, yaw, pose, phase});
@@ -379,6 +385,7 @@ export class TownHumans {
             h.phase = phase;
             h.scale = 1;
             h.lean = what === "car" ? -driverLean(look) : 0;
+            h.light = what === "home" || what === "sleep" ? (what === "sleep" ? lamp * 0.25 : lamp) : 0;
             n++;
             out.push(h);
         };
@@ -402,6 +409,15 @@ export class TownHumans {
                 const chair = room.chairs[home!.slot % Math.max(room.chairs.length, 1)];
                 const seat = tv ? room.seats[home!.slot % room.seats.length] : chair ?? room.seats[home!.slot % Math.max(room.seats.length, 1)];
                 if (seat) take(id, look, "home", ox + seat.x, sitRootY(seat.y, scale), oz + seat.z, seat.yaw, "sit", phase);
+                if (seat && tv && room.tv && !this.tvs.some((t) => t.room === room.id)) {
+                    const t = this.tvPool[this.tvs.length] ?? (this.tvPool[this.tvs.length] = {room: "", x: 0, y: 0, z: 0, yaw: 0});
+                    t.room = room.id;
+                    t.x = ox + room.tv.x;
+                    t.y = room.tv.y;
+                    t.z = oz + room.tv.z;
+                    t.yaw = room.tv.yaw;
+                    this.tvs.push(t);
+                }
                 continue;
             }
             if (day === "work") continue;

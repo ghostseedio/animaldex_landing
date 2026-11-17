@@ -37,7 +37,7 @@ export type HumanLook = {
     child: boolean;
 };
 
-export type HumanInstance = {x: number; y: number; z: number; yaw: number; pose: HumanPoseKind; phase: number; look: HumanLook; scale?: number; /** Leaning back (negative) or forward from the pose's waist (rad): a driver under a car's roof. */ lean?: number};
+export type HumanInstance = {x: number; y: number; z: number; yaw: number; pose: HumanPoseKind; phase: number; look: HumanLook; scale?: number; /** Leaning back (negative) or forward from the pose's waist (rad): a driver under a car's roof. */ lean?: number; /** A room's lamp and screen on it (0–1): indoors at night, where the scene's sun and street lamps do not reach. */ light?: number};
 
 /** Near body within this distance (m), the coarse one to HUMAN_FAR, nothing beyond. */
 export const HUMAN_NEAR = 60;
@@ -331,6 +331,7 @@ attribute vec4 iLegs;
 attribute vec4 iArms;
 attribute vec4 iBody;
 varying vec3 vHumanColour;
+varying float vHumanLight;
 vec3 humanSwing(vec3 p, vec3 pivot, float a) {
     vec3 d = p - pivot;
     float c = cos(a), s = sin(a);
@@ -391,10 +392,12 @@ function rigShader(shader: WebGLProgramParametersWithUniforms, colour: boolean) 
         .replace("#include <begin_vertex>", "vec3 transformed = humanPose(position);")
         .replace("#include <beginnormal_vertex>", "vec3 objectNormal = normal;");
     if (colour) {
-        shader.vertexShader = shader.vertexShader.replace("#include <color_vertex>", "#include <color_vertex>\nvHumanColour = humanPaint();");
+        shader.vertexShader = shader.vertexShader.replace("#include <color_vertex>", "#include <color_vertex>\nvHumanColour = humanPaint();\nvHumanLight = iBody.w;");
         shader.fragmentShader = shader.fragmentShader
-            .replace("#include <common>", "#include <common>\nvarying vec3 vHumanColour;")
-            .replace("vec4 diffuseColor = vec4( diffuse, opacity );", "vec4 diffuseColor = vec4( diffuse * vHumanColour, opacity );");
+            .replace("#include <common>", "#include <common>\nvarying vec3 vHumanColour;\nvarying float vHumanLight;")
+            .replace("vec4 diffuseColor = vec4( diffuse, opacity );", "vec4 diffuseColor = vec4( diffuse * vHumanColour, opacity );")
+            // (Indoors at night: the room's lamp and the screen's glow on them, warm with a cool flicker.)
+            .replace("#include <emissivemap_fragment>", "#include <emissivemap_fragment>\ntotalEmissiveRadiance += vHumanColour * vHumanLight * vec3(0.5, 0.47, 0.44);");
     }
 }
 
@@ -526,7 +529,7 @@ export class HumanFigures {
         const j = posePerson(h.pose, h.phase + seconds, this.joints);
         l.legs.setXYZW(k, j.legs[0], j.legs[1], j.legs[2], j.legs[3]);
         l.arms.setXYZW(k, j.arms[0], j.arms[1], j.arms[2], j.arms[3]);
-        l.body.setXYZW(k, j.body[0] + (h.lean ?? 0), j.body[1], j.body[2], j.body[3]);
+        l.body.setXYZW(k, j.body[0] + (h.lean ?? 0), j.body[1], j.body[2], h.light ?? 0);
         void this.axisZ;
     }
 
