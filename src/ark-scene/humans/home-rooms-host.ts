@@ -37,7 +37,12 @@ export function apartmentHumanRoom(room: HomeRoomLike): HumanRoom | null {
     const {su, sw} = sofaOffset(room);
     const seatZ = -b.d / 2 + 0.5;
     const seats = [-1, 1].map((side) => at(b, su + side * sw * 0.22, seatZ + 0.05, room.floor + 0.42, 0));
-    const tv = at(b, su, b.d / 2 - 0.45, room.floor + 0.42, Math.PI);
+    // (The TV to the side of the sofa's line, toward the room's middle, turned to face it: not between the sitters and
+    // a passer-by at the glass.)
+    const side = su > 0 ? -1 : 1;
+    const tx = su + side * Math.min(1.5, sw / 2 + 0.5);
+    const tz = b.d / 2 - 0.5;
+    const tv = at(b, tx, tz, room.floor + 0.42, Math.atan2(su - tx, seatZ - tz));
     return {id: room.id, floor: room.floor, seats, tv, chairs: [], beds: []};
 }
 

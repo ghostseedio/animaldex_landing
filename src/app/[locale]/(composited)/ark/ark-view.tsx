@@ -681,7 +681,8 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     // MARK: The photo that brought it aboard (a named founder's public capture; the server decides, or null).
 
     useEffect(() => {
-        if (!selected || selected.origin === "born") return;
+        // p5 (humans): a human's card is "Human" and the capturer, never the photo (privacy rule).
+        if (!selected || selected.origin === "born" || selected.model_slug === "human") return;
         const id = selected.id;
         const known = photosRef.current;
         if (known.has(id)) {

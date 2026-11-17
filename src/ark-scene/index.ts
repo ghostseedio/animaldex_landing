@@ -219,6 +219,9 @@ import {ARK_ISLANDS} from "@/ark-scene/islands"; // p2 (ocean)
 import {arkWorld} from "@/ark-scene/world"; // p2 (ocean)
 import {OCEAN_COLUMN, OCEAN_VIEW_MARGIN, oceanFix, roamsOpenOcean} from "@/ark-scene/open-ocean"; // p2 (ocean)
 import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (ocean)
+import {HumanFigures} from "@/ark-scene/humans/figures"; // p5 (humans)
+import {isHumanAnimal, TownHumans} from "@/ark-scene/humans/town-humans"; // p5 (humans)
+import {roadHeight as townRoadHeight} from "@/ark-scene/islands/town/render/vehicles"; // p5 (humans)
 import {OceanShadows} from "@/ark-scene/ocean-shadows"; // p2 (ocean)
 import {TOWN_GRID, TOWN_NEAR_LIVE} from "@/ark-scene/islands/town/chunks";
 import type {CatWalls as CatWallsT} from "@/ark-scene/islands/town/cat-walls"; // gfx (fauna)
@@ -1265,7 +1268,29 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let mineOnly = Boolean(options.mineOnly);
     let selectedId: string | null = null;
     // Herds (A14): the snapshot as last given, every id aboard, and who must be drawn one by one.
-    let current: ArkSnapshot = options.snapshot;
+    // p5 (humans): the town's people, one generic figure per human aboard (privacy: body and clothes from the id only,
+    // never the capture's photo, a face or a name). (`away`: unset here; the forest lane passes its `forest.away`.)
+    const townHumans = new TownHumans({origin: townWorldOrigin(), roadHeight: townRoadHeight, seaLevel: () => ARK_ENVIRONMENT.seaLevel.value, boatSeconds: () => clockNow()});
+    const humanFigures = new HumanFigures();
+    scene.add(humanFigures.group);
+    let humansAboard: ArkAnimal[] = [];
+    const humanSplit = new WeakMap<ArkSnapshot, {rest: ArkSnapshot; humans: ArkAnimal[]}>();
+    /**
+     * p5 (humans): the snapshot without its humans (the same object back when it has none; its own answer when asked
+     * again) and its humans: humans are never animal entries, figures, herds or placeholders.
+     */
+    const splitHumans = (whole: ArkSnapshot) => {
+        let split = humanSplit.get(whole);
+        if (!split) {
+            const humans = whole.animals.filter(isHumanAnimal);
+            split = {rest: humans.length ? {...whole, animals: whole.animals.filter((animal) => !isHumanAnimal(animal))} : whole, humans};
+            humanSplit.set(whole, split);
+            humanSplit.set(split.rest, split);
+        }
+        return split;
+    };
+    const withoutHumans = (whole: ArkSnapshot): ArkSnapshot => splitHumans(whole).rest;
+    let current: ArkSnapshot = withoutHumans(options.snapshot); // p5 (humans)
     let aboard = new Set<string>();
     let herds: HerdDraw[] = [];
     /** Lane TB: the town's resting kept animals as figures, by species (`FigureGroup`). */
@@ -2718,7 +2743,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (animalsIn) call(...args);
         else afterAnimals.push(() => call(...args));
     };
-    const setSnapshot = (snapshot: ArkSnapshot, entrances: boolean) => {
+    const setSnapshot = (whole: ArkSnapshot, entrances: boolean) => {
+        // p5 (humans): the record's humans are drawn as generic town people (`humans/`), never as animals.
+        const people = splitHumans(whole);
+        const snapshot = people.rest;
+        humansAboard = people.humans;
+        townHumans.setRoster(people.humans);
         // The entrance's clock is the frame's (seconds since the scene started).
         const now = (performance.now() - started) / 1000;
         current = snapshot;
@@ -5935,6 +5965,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // MARK: Picking
 
     const projected = new Vector3();
+    const humanPoint = new Vector3();
+    /** p5 (humans): the drawn person nearest a tap (within 28 px of their middle), as an animal for the card. */
+    const pickHuman = (clientX: number, clientY: number): ArkAnimal | null => {
+        const rect = canvas.getBoundingClientRect();
+        let best: string | null = null;
+        let bestD = 28;
+        for (const h of townHumans.out) {
+            humanPoint.set(h.x, h.y + 1, h.z).project(camera);
+            if (humanPoint.z > 1) continue;
+            const d = Math.hypot((humanPoint.x + 1) / 2 * width - (clientX - rect.left), (1 - humanPoint.y) / 2 * height - (clientY - rect.top));
+            if (d < bestD) {
+                bestD = d;
+                best = h.id;
+            }
+        }
+        const animal = best ? humansAboard.find((a) => a.id === best) : undefined;
+        // (`model_slug: "human"`: the card never fetches a human's photo, `ark-view.tsx`.)
+        return animal ? {...animal, model_slug: "human"} : null;
+    };
     const pick = (clientX: number, clientY: number): Entry | null => {
         const rect = canvas.getBoundingClientRect();
         const x = clientX - rect.left;
@@ -6703,6 +6752,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return;
         }
         if (!hit) {
+            // p5 (humans): a tapped person shows "Human" and the capturer, no photo.
+            const human = pickHuman(event.clientX, event.clientY);
+            if (human) {
+                select(null, false);
+                options.onSelect?.(human);
+                return;
+            }
             const herd = pickHerd(event.clientX, event.clientY);
             if (herd) {
                 selectHerd(herd.info.key, true);
@@ -6861,7 +6917,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             scene,
             renderer,
             tier,
-            snapshot: options.snapshot,
+            snapshot: withoutHumans(options.snapshot), // p5 (humans)
             hours: hoursNow(),
             placeOf: (id) => placedAll.get(id) ?? null,
             planOf: (slug) => library.get(slug)?.behaviour?.plan,
@@ -6907,7 +6963,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setSnapshot(options.snapshot, false);
         animalsIn = true;
     } else {
-        const first = options.snapshot;
+        const first = withoutHumans(options.snapshot); // p5 (humans)
         let attachDone = false;
         let roostQueue: ArkAnimal[] | null = null;
         runtime.mountLater([
@@ -8490,6 +8546,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             trafficHooked = island;
         }
         island?.update(pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000);
+        // p5 (humans): the town's people on their day (none drawn without humans aboard or the town).
+        if (island && townHumans.count) {
+            const islandMs = pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000;
+            const traffic = island.movingCars?.();
+            humanFigures.setFrame(townHumans.frame(islandMs, traffic?.cars ?? null, traffic?.count ?? 0), camera.position, islandMs / 1000);
+        } else if (humanFigures.drawn.near + humanFigures.drawn.far) humanFigures.setFrame([], camera.position, 0);
         perf.lap("town");
         stepArrival(now);
         stepFlight(now);
@@ -9219,6 +9281,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         dispose: () => {
             disposed = true;
             cancelAnimationFrame(raf);
+            humanFigures.dispose(); // p5 (humans)
             runtime.dispose();
             perf.dispose();
             resizeObserver.disconnect();

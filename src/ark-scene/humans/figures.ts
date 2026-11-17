@@ -37,7 +37,7 @@ export type HumanLook = {
     child: boolean;
 };
 
-export type HumanInstance = {x: number; y: number; z: number; yaw: number; pose: HumanPoseKind; phase: number; look: HumanLook; scale?: number; /** Leaning back (negative) or forward from the pose's waist (rad): a driver under a car's roof. */ lean?: number; /** A room's lamp and screen on it (0–1): indoors at night, where the scene's sun and street lamps do not reach. */ light?: number};
+export type HumanInstance = {x: number; y: number; z: number; yaw: number; pose: HumanPoseKind; phase: number; look: HumanLook; scale?: number; /** Leaning back (negative) or forward from the pose's waist (rad): a driver under a car's roof. */ lean?: number; /** A room's lamp and screen on it (0–1): indoors at night, where the scene's sun and street lamps do not reach. */ light?: number; /** Lying on a slope: the head's end raised this much (rad). */ tilt?: number};
 
 /** Near body within this distance (m), the coarse one to HUMAN_FAR, nothing beyond. */
 export const HUMAN_NEAR = 60;
@@ -505,7 +505,8 @@ export class HumanFigures {
                 a.addUpdateRange(0, l.count * a.itemSize);
             }
         }
-        this.drawn = {near: this.near.count, far: this.far.count};
+        this.drawn.near = this.near.count;
+        this.drawn.far = this.far.count;
     }
 
     private write(l: Level, h: HumanInstance, seconds: number) {
@@ -514,7 +515,7 @@ export class HumanFigures {
         const scale = (h.scale ?? 1) * (look.height / BASE_HEIGHT);
         const lay = bodyLay(h.pose, h.phase + seconds);
         this.q.setFromAxisAngle(this.axisY, h.yaw);
-        if (lay.pitch) this.q.multiply(this.q2.setFromAxisAngle(this.axisX, lay.pitch));
+        if (lay.pitch) this.q.multiply(this.q2.setFromAxisAngle(this.axisX, lay.pitch + (h.tilt ?? 0)));
         if (lay.roll) this.q.multiply(this.q2.setFromAxisAngle(this.axisY, lay.roll));
         this.p.set(h.x, h.y + lay.lift * scale, h.z);
         // Children: a larger head for the body (the look's height scales the whole; the build widens it).
