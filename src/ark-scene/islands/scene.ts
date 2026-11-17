@@ -198,7 +198,7 @@ export function nextTask(): Promise<void> {
  */
 export async function loadTownScene(options: {tier: "high" | "medium" | "low"; animals: readonly ArkAnimal[]; offsetHours?: number; origin?: {x: number; z: number}; prepared?: TownPrepared | null; sliceMs?: number; between?: "idle" | "task"}): Promise<ArkIslandScene> {
     const pause = options.between === "task" ? nextTask : idle;
-    const [{townIslandSteps}, {townClockAt}, {placeTownAnimals, keepInPen, clearWithin}, {enclosuresIn, launchEnclosures, zooLayout}, {inPoly, centroid}, {townWorldSampler}, {buildZooLife}, {residentFeeding, zooRhythm, feedingHome}, {SLOT_SECONDS, slotOffset}, {townHeight}] = await Promise.all([
+    const [{townIslandSteps}, {townClockAt}, {placeTownAnimals, keepInPen, clearWithin, maskBox}, {enclosuresIn, launchEnclosures, zooLayout}, {inPoly, centroid}, {townWorldSampler}, {buildZooLife}, {residentFeeding, zooRhythm, feedingHome}, {SLOT_SECONDS, slotOffset}, {townHeight}] = await Promise.all([
         import("@/ark-scene/islands/town/render/index"),
         import("@/ark-scene/islands/town/people"),
         import("@/ark-scene/islands/town/placement"),
@@ -495,6 +495,12 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             }
             const mask = towned.get(id)?.enclosure?.mask;
             if (!mask) return;
+            // p4 (zoolive): an outdoor resident's whole body inside its enclosure's fence (a tapir stood through the mesh).
+            const margin = towned.get(id)!.enclosureMargin;
+            if (margin !== undefined) {
+                keepInPen(maskBox(mask), margin, pose, origin.x, origin.z, collidersMemo?.set);
+                return;
+            }
             const lx = pose.x - origin.x;
             const lz = pose.z - origin.z;
             if (inPoly(mask, lx, lz)) return;

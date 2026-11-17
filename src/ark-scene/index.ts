@@ -268,7 +268,7 @@ import {l2BodyChannel, l2BodyUniforms, l2ClipBake, l2FlightFrame, l2FlightGate, 
 // 3.3 fix: taps on the resting figures.
 import {pickFigure, preferTap, type Projector} from "@/ark-scene/tap-pick";
 // 3.3 fix: the kept town animals near the look point move.
-import {nearestKept, nearKeptDue, NEAR_KEPT_VIEW, sameIds} from "@/ark-scene/near-kept";
+import {keptToBringOut, nearKeptDue, NEAR_KEPT_VIEW, NEAR_ZOO_MAX, NEAR_ZOO_MAX_LOW, NEAR_ZOO_VIEW, sameIds} from "@/ark-scene/near-kept";
 // 3.3 fix: a perched animal's reactions keep it on its perch (the schedule's own "raised": 0.4 m over the ground).
 const PERCH_ABOVE = 0.4;
 
@@ -2654,14 +2654,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let nearKept: string[] = [];
     let nearKeptFrom: {x: number; z: number} | null = null;
     let nearKeptAt = 0;
-    const keptAround = (): Array<{id: string; x: number; z: number}> => {
+    let nearKeptClose = false;
+    const keptAround = (): Array<{id: string; x: number; z: number; group: string | null}> => {
         const isl = island;
-        const out: Array<{id: string; x: number; z: number}> = [];
+        const out: Array<{id: string; x: number; z: number; group: string | null}> = [];
         if (!isl) return out;
         for (const animal of current.animals) {
             if (!isl.has(animal) || !isl.kept(animal.id)) continue;
             const place = placedAll.get(animal.id);
-            if (place) out.push({id: animal.id, x: place.x, z: place.z});
+            // p4 (zoolive): a zoo resident by its enclosure, which comes out whole (`near-kept.ts` keptToBringOut).
+            if (place) out.push({id: animal.id, x: place.x, z: place.z, group: animal.area === "zoo" ? isl.townPlace(animal.id)?.place ?? animal.enclosure ?? null : null});
         }
         return out;
     };
@@ -2669,7 +2671,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (now - nearKeptAt < 1) return;
         nearKeptAt = now;
         const target = controls.target;
-        const close = Boolean(island) && !reducedMotion && !flight && !opening && !replay && camera.position.distanceTo(target) < NEAR_KEPT_VIEW && island!.contains(target.x, target.z);
+        const view = camera.position.distanceTo(target);
+        // p4 (zoolive): out to `NEAR_ZOO_VIEW` for a zoo enclosure in view; the gardens' and farms' nearest within `NEAR_KEPT_VIEW`.
+        const close = Boolean(island) && !reducedMotion && !flight && !opening && !replay && view < NEAR_ZOO_VIEW && island!.contains(target.x, target.z);
         if (!close) {
             nearKeptFrom = null;
             if (!nearKept.length) return;
@@ -2677,9 +2681,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             setSnapshot(current, false);
             return;
         }
-        if (!nearKeptDue(nearKeptFrom, target.x, target.z)) return;
+        if (!nearKeptDue(nearKeptFrom, target.x, target.z) && nearKeptClose === view < NEAR_KEPT_VIEW) return;
         nearKeptFrom = {x: target.x, z: target.z};
-        const ids = nearestKept(keptAround(), target.x, target.z);
+        nearKeptClose = view < NEAR_KEPT_VIEW;
+        const ids = keptToBringOut(keptAround(), target.x, target.z, view, liteOn() || tier === "low" ? NEAR_ZOO_MAX_LOW : NEAR_ZOO_MAX);
         if (sameIds(ids, nearKept)) return;
         nearKept = ids;
         setSnapshot(current, false);
@@ -8780,6 +8785,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // 3.3 batch (B): the birds' own moves, for the harness
     if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {mobbing: () => mobbing.debug(), mobStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && mobbing.begin(worldMs() / 1000, b, t, allEntries().filter((e) => e !== b && e !== t), new Set(), 1e9)); }, seenNow: () => seenActs.slice(), lures: () => brokenWing.debug(), drops: () => duckDrops.debug(), lureStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && brokenWing.begin(worldMs() / 1000, b, t)); }});
     // p3 (shake): the harness's question: when an animal next climbs out of the water (its trips' arrivals after an exit leg).
+    // p4 (zoolive): the resting figures and the near-kept pins, for the zoo probes.
+    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {resting: () => restingGroups, nearKept: () => nearKept.slice()});
     if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {waterOuts: (id: string, from: number, slots: number) => { const e = entryById.get(id); const own = e?.sched; if (!e || !own) return []; const out: Array<{arrive: number; x: number; z: number}> = []; let previous: Trip | null = null; for (let k = 0; k < slots && out.length < 6; k++) { const trip: Trip = tripAt(worldOf(own.animal), own.profile, own.animal, from + k * SLOT_SECONDS + 1, scheduleHours, e.animal.activity, previous); previous = trip; const at = shakeStartOf(trip); if (at !== null) out.push({arrive: at, x: trip.to.x, z: trip.to.z}); } return out; }});
 
     return {
