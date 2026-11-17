@@ -1,5 +1,13 @@
 # Ark people: what a replacement figure renderer must provide
 
+**p6 (2026-11-17): wired.** `people-figures.ts` (`PeopleFigures`) draws the rigged CC0 bodies (`people-rig.ts`, files in
+`public/ark/assets/people-v1/`, shipped with the web deploy) through this same interface; the procedural figures below
+draw while the files load, if they fail, or with `globalThis.__arkPeople = "procedural"` (`?people=procedural` in the
+harnesses). Bodies by the seeded look (`personFor`: child, elder, swimwear on the beach via `look.swim`, work clothes for
+the forest's crews); lying and ground clips lay the body themselves (no `bodyLay`); tools and dog leads take the bodies'
+own grips (`PeopleFigures.grips`, `leadHand`). Budget: at most 6,000 triangles a near body, 700 far
+(`src/lib/ark-people.test.ts`).
+
 The procedural figures in `figures.ts` (`HumanFigures`) are a stand-in. A rigged-model renderer (MakeHuman/MPFB2) can
 replace them without changing anything that decides where people are or what they do: the town (`town-humans.ts`,
 `pavements.ts`, `dog-walks.ts`, `couples.ts`), the beach props (`beach-props.ts`) and the forest crews
