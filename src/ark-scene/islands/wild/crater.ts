@@ -33,9 +33,10 @@ const WALL = 7.5;
 
 /** The lake's island and islets: middle, radius, how far its top stands over the water (m). */
 export const CRATER_ISLANDS: ReadonlyArray<{x: number; z: number; r: number; top: number}> = [
-    {x: CRATER.x + 8, z: CRATER.z - 6, r: 6, top: 2.8},
-    {x: CRATER.x - 13, z: CRATER.z + 7, r: 2.2, top: 1.0},
-    {x: CRATER.x + 2, z: CRATER.z + 15, r: 1.8, top: 0.8}
+    // (Broad and low, so their shores rise under 0.7 in 1: a turtle basks on them, not on a face.)
+    {x: CRATER.x + 8, z: CRATER.z - 6, r: 9, top: 2.4},
+    {x: CRATER.x - 13, z: CRATER.z + 7, r: 4.5, top: 0.7},
+    {x: CRATER.x + 2, z: CRATER.z + 15, r: 3.8, top: 0.6}
 ];
 
 /**
