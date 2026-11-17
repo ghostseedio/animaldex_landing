@@ -1300,7 +1300,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // p5 (humans, dogs): the town's people walk the record's own dogs on a lead (`humans/dog-walks.ts`): a walked dog is
     // its own entry moved along the walk (its `act`), pinned outside while it walks; never a second dog.
     const dogWalks = new DogWalks(() => townHumans.walks!.graph, () => dogWalkPlaces(townHumans.beachWalks));
-    if (townHumans.walks) townHumans.setDogWalks(dogWalks);
+    townHumans.setDogWalks(dogWalks);
     const dogLeads = new DogLeads();
     scene.add(dogLeads.mesh);
     let dogRosterDirty = true;

@@ -334,7 +334,11 @@ export class TownHumans {
     private roster: string[] = [];
     private looks = new Map<string, HumanLook>();
     private rooms: HumanRoomHost | null = null;
-    private sites: TownHumanSites;
+    // (Worked out when first needed: with nobody aboard the town's benches, sand and solids are never read.)
+    private sitesMemo: TownHumanSites | null = null;
+    private get sites(): TownHumanSites {
+        return this.sitesMemo ?? (this.sitesMemo = townHumanSites(this.plan));
+    }
     private blockKey = "";
     private assigned = new Map<string, OutWhat>();
     private homes = new Map<string, {room: number; slot: number}>();
@@ -362,11 +366,20 @@ export class TownHumans {
     private inArms = new Set<string>();
 
     /** p5 (humans, pavements): who walks the pavements now (`pavements.ts`). */
-    readonly walks: PavementWalks | null;
+    get walks(): PavementWalks | null {
+        if (this.walksMemo === undefined) this.walksMemo = this.options.pavements === false ? null : new PavementWalks(this.plan);
+        return this.walksMemo;
+    }
+    private walksMemo: PavementWalks | null | undefined;
 
-    constructor(private readonly options: TownHumansOptions, plan: TownPlan = townPlan()) {
-        this.sites = townHumanSites(plan);
-        this.walks = options.pavements === false ? null : new PavementWalks(plan);
+    /**
+     * (Nothing of the town is read here: the plan, the sites and the pavements are worked out when the first person is
+     * aboard, so a scene with nobody aboard pays nothing at its mount, and the town's own prebuild still makes the plan.)
+     */
+    constructor(private readonly options: TownHumansOptions, private readonly planGiven?: TownPlan) {}
+
+    private get plan(): TownPlan {
+        return this.planGiven ?? townPlan();
     }
 
     /** The record's humans (one per real human capture aboard, the server's). */
@@ -534,7 +547,7 @@ export class TownHumans {
         // p5 (humans, dogs): the dog walks first (a dog's walk is not put off for a date): the walker on the pavement,
         // each dog on the lead at heel beside them (`dogs`: the scene moves the record's own dog there).
         const walking = new Set<string>();
-        if (this.dogWalks) {
+        if (this.dogWalks && this.walks) {
             for (const id of this.roster) {
                 if (!this.dogWalks.dogsOf(id).length || days.get(id) === "sleep" || this.options.away?.(id, epochMs)) continue;
                 const fix = this.dogWalks.at(id, clock.hours, clock.day, rhythm(id).wake);
