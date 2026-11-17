@@ -131,7 +131,8 @@ function streets(out: SceneryOut, plan: TownPlan) {
     for (const w of plan.waters) {
         if (w.kind === "harbour") continue;
         const centre = centroid(w.poly);
-        const level = w.kind === "farm_pond" ? Math.min(...w.poly.map((p) => H(p.x, p.z))) - 0.25 : w.level;
+        // (p5 (rural): the duck pond's water at its own level, its bed's middle plus its depth, as `drawn-ground.ts` has it.)
+        const level = w.id === "rural_pond" ? H(centre.x, centre.z) + w.depth : w.kind === "farm_pond" ? Math.min(...w.poly.map((p) => H(p.x, p.z))) - 0.25 : w.level;
         fan(out.fresh, w.poly, centre, level);
     }
 }

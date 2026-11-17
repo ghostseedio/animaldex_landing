@@ -4083,7 +4083,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         // Asleep: a little lower at the front, as the head goes down.
         if (floating && !wander?.x && !wander?.z) return {x: place.x, z: place.z, base, yaw: place.yaw, pitch: floatPitch(floatBand?.kind), roll: 0, afloat: true, water: floating.water};
-        return {x: place.x, z: place.z, base, yaw: wander ? wander.heading : place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
+        const still: Pose = {x: place.x, z: place.z, base, yaw: wander ? wander.heading : place.yaw, pitch: 0.05 * entry.rest, roll: 0, afloat: base < Math.max(place.ground, 0) - 0.01 || place.ground < 0};
+        // p5 (rural): off its schedule too (asleep, at rest), a town animal's bound: a hen shut in her hen house at night.
+        if (island) island.bound(entry.animal.id, still);
+        return still;
     };
 
     // MARK: Rigs

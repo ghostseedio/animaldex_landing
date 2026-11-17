@@ -298,9 +298,11 @@ export function inRuralPen(x: number, z: number, margin = 0): RuralPen | null {
  * The poultry's day (the owner, 2026-11-17: "hens ranging out by day and shut in at dusk"): the free-range flocks, the
  * orchard's and the farmyard's go in to their hen house as the light fades and are shut in, let out in the morning, by
  * the shared clock (island hours): walking to the pophole over the half hour before `in`, inside until `out`, out over
- * the half hour after. The same for every viewer.
+ * the half hour after. The same for every viewer. (Hens go to roost as the sun goes: the island's sun is down at 18:00
+ * and its lamps on by about 18:20 (`people.ts` darkness), so they walk in from 18:00 and are shut in at 18:30; first
+ * frames at 19:15 showed the range full of hens in the dark.)
  */
-export const COOP_HOURS = {in: 19.25, out: 6.75, walk: 0.5};
+export const COOP_HOURS = {in: 18.5, out: 6.75, walk: 0.5};
 
 const POULTRY_HOUSES: Record<string, string[]> = {
     "rural-free-range": HEN_HOUSES.map((h) => h.id),

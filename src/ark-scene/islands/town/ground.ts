@@ -6,6 +6,7 @@
  * are cut into it (their walls and quays are meshes, `render/water.ts`).
  */
 
+import {ruralPondNorm} from "@/ark-scene/islands/town/rural";
 import {bounds, corners, inBox, inPoly, polylineDistance, polylineWithin, type Box, type Poly} from "@/ark-scene/islands/town/geom";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, inland, MILLPOND, TOWN_LEVEL, townPlan, type GreenKind, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {clipStreets, type ClipStreet} from "@/ark-scene/islands/town/street-clip";
@@ -275,6 +276,17 @@ export function sampleTownGround(x: number, z: number): TownGroundSample {
         const cx = (b.x0 + b.x1) / 2;
         const cz = (b.z0 + b.z1) / 2;
         const r = Math.hypot((x - cx) / ((b.x1 - b.x0) / 2), (z - cz) / ((b.z1 - b.z0) / 2));
+        // p5 (rural): the countryside's duck pond a bowl whose rim stands just over its water (the old pond's shape left
+        // the new one's bed above the sheet `render/scenery.ts` draws, a dry hollow): water from edge to edge.
+        if (w.id === "rural_pond" && r < 1.6) {
+            const level = landHeight(cx, cz, roughness(cx, cz)) - 0.45;
+            const n = ruralPondNorm(x, z);
+            if (n < 1.6) {
+                height = n < 1 ? level - 0.06 - (w.depth - 0.06) * smoothstep(1, 0.45, n) : level + 0.06 + (height - level - 0.06) * smoothstep(1, 1.6, n);
+                surface = n < 1 ? "water" : "bank";
+            }
+            continue;
+        }
         if (r < 1.5) {
             const level = landHeight(cx, cz, roughness(cx, cz)) - 0.45;
             const t = smoothstep(1.5, 0.8, r);
