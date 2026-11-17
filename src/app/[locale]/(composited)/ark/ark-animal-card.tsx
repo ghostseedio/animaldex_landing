@@ -10,12 +10,13 @@ import {arkIconUrl, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import {arkRestIsSleep, arkRestWords} from "@/lib/ark-rest-words";
 import {arkBringerLabel, arkJoinLabels, type ArkLife} from "@/lib/ark-life";
 import type {ArkAnimalFounders, ArkFounder, ArkFounderStory} from "@/lib/ark-founders";
-import {ArkBringerNames, ArkBroughtByFounder, ArkFounderLink, ArkFounderStoryBlock, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
+import {ArkBringerNames, ArkBroughtByFounder, ArkFounderLink, ArkFounderStoryBlock, arkTemplateParts, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {arkLineageHasAny, arkLineageLine, arkThriveWords} from "@/lib/ark-thrive";
 import {arkRecordNoteFromLife, arkStatusSignature, arkStatusText, type ArkAnimalStatus, type ArkRecordNote} from "@/lib/ark-animal-status";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 import {arkPhotoAspect, type ArkCapturePhoto} from "@/lib/ark-capture-photo";
+import {arkPhotoFromTemplate, arkPhotoLabel, arkPhotoShownOn} from "@/lib/ark-photo-label";
 import {ArkRhythmLine, ArkRhythmPanel, useAnimalRhythm} from "@/app/[locale]/(composited)/ark/ark-rhythm";
 import {ArkLivesRow} from "@/app/[locale]/(composited)/ark/ark-lives";
 import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
@@ -150,7 +151,10 @@ type CardProps = {
     life: ArkCardLife | null;
     /** This animal's founders from the snapshot (shown before its life story reads). */
     founders: ArkAnimalFounders | null;
-    /** The photo that brought it aboard (`/api/ark/photo/<id>`), or null: no block at all. */
+    /**
+     * The photo (`/api/ark/photo/<id>`), or null: no block at all. The animal's own (it arrived with that capture) or, for
+     * one born on the Ark, its recorded ancestor's, which the card always says is not this animal's (section 2.6).
+     */
     photo?: ArkCapturePhoto | null;
     arkDay: number | null;
     /** The voyage's start (the snapshot's), for the Ark day of a meal its life story names. */
@@ -183,6 +187,8 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.
     const placeholder = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug);
     const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager, named);
+    // An ancestor's photo only on an animal born on the Ark, its own only on one that arrived; never one unlabelled.
+    const shownPhoto = arkPhotoShownOn(photo, facts.born);
     const status = useAnimalStatus(scene, animal.id);
     const [dayOpen, setDayOpen] = useState<string | null>(null);
     const dayShown = dayOpen === animal.id;
@@ -293,12 +299,15 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             )}
                         </p>
                     </div>
-                    {photo ? <ArkCapturePhotoThumb key={animal.id} photo={photo} species={animal.name} words={words} /> : null}
+                    {shownPhoto ? <ArkCapturePhotoThumb key={animal.id} photo={shownPhoto} species={animal.name} words={words} /> : null}
                     <div className="hidden shrink-0 items-center gap-2 md:flex">{moves}</div>
                     <button type="button" onClick={onClose} aria-label={words.close} className="-mr-1 -mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
                         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                     </button>
                 </div>
+
+                {/* Whose photo, when it is not this animal's: "Born on the Ark · Photo of its parent, brought aboard by @ada". */}
+                {shownPhoto && shownPhoto.brought_by ? <ArkPhotoFromLine photo={shownPhoto} words={words} /> : null}
 
                 {/* Its status: chips, what it is doing now and next (left), its log (right on a desktop, under on a phone). */}
                 <div className={`mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] md:pl-[3.75rem] ${storyOpen || dayShown ? "hidden md:grid" : ""}`}>
@@ -351,6 +360,24 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
 }
 
 /**
+ * Whose photo it is when it is not this animal's own (docs/ark/CAPTURE-MEDIA-CONTRACT.md section 2.6): a line under who it
+ * is, wrapping on a phone: "Born on the Ark · Photo of its parent, brought aboard by @ada", the bringer linked to their
+ * profile like every @username on the card. The Ark records no sex: parent, grandparent, great-grandparent, never mother.
+ */
+function ArkPhotoFromLine({photo, words}: {photo: ArkCapturePhoto; words: ArkWords}) {
+    const template = arkPhotoFromTemplate(words, photo.relation);
+    if (!template || !photo.brought_by) return null;
+    const [before, after] = arkTemplateParts(template, "name");
+    return (
+        <p dir="auto" data-testid="ark-card-photo-from" data-photo-relation={photo.relation} className="mt-1.5 text-[12px] leading-snug text-ink-300 md:pl-[3.75rem]">
+            <span className="font-semibold text-ink-200">{words.life.bornAboard}</span>
+            <span aria-hidden="true"> · </span>
+            {before}<ArkFounderLink founder={photo.brought_by} />{after}
+        </p>
+    );
+}
+
+/**
  * The photo that brought it aboard (docs/ark/CAPTURE-MEDIA-CONTRACT.md section 2.4): a small 640 px derivative beside who
  * brought it, lazy-loaded; a tap opens the 1200 px one over the page (Escape, the close button or the backdrop closes
  * it). The server shows it only for a named founder's public capture. A photo that fails to load draws nothing.
@@ -360,7 +387,9 @@ function ArkCapturePhotoThumb({photo, species, words}: {photo: ArkCapturePhoto; 
     const [open, setOpen] = useState(false);
     const closeRef = useRef<HTMLButtonElement | null>(null);
     const openerRef = useRef<HTMLButtonElement | null>(null);
-    const alt = fillArkWords(words.photo.alt, {species});
+    // An ancestor's photo says so in its alt text and caption too: never "the photo that brought this animal aboard".
+    const fromLabel = arkPhotoLabel(words, photo);
+    const alt = fromLabel ?? fillArkWords(words.photo.alt, {species});
     useEffect(() => {
         if (!open) return;
         closeRef.current?.focus({preventScroll: true});
@@ -387,6 +416,7 @@ function ArkCapturePhotoThumb({photo, species, words}: {photo: ArkCapturePhoto; 
                 aria-label={words.photo.open}
                 title={words.photo.open}
                 data-testid="ark-card-photo"
+                data-photo-relation={photo.relation}
                 className="rows-in relative h-11 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-white/[0.06] shadow-[0_2px_10px_rgba(0,0,0,0.3)] transition-transform duration-200 hover:scale-[1.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none md:h-12"
                 style={{aspectRatio: String(aspect)}}
             >

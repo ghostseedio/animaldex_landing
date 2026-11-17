@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Fotografia care a adus acest {species} la bord",
             "open": "Vezi fotografia mai mare",
-            "close": "Închide fotografia"
+            "close": "Închide fotografia",
+            "fromParent": "Fotografia unuia dintre părinții săi, adus la bord de {name}",
+            "fromGrandparent": "Fotografia unuia dintre bunicii săi, adus la bord de {name}",
+            "fromGreatGrandparent": "Fotografia unuia dintre străbunicii săi, adus la bord de {name}"
         },
         "hearts": {
             "livesOne": "1 viață în Ark",

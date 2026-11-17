@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Fotka, ktorá priviedla toto zviera ({species}) na palubu",
             "open": "Zobraziť fotku väčšiu",
-            "close": "Zavrieť fotku"
+            "close": "Zavrieť fotku",
+            "fromParent": "Fotka jedného z jeho rodičov, ktorého na palubu priviedol(-la) {name}",
+            "fromGrandparent": "Fotka jedného z jeho starých rodičov, ktorého na palubu priviedol(-la) {name}",
+            "fromGreatGrandparent": "Fotka jedného z jeho prastarých rodičov, ktorého na palubu priviedol(-la) {name}"
         },
         "hearts": {
             "livesOne": "1 život v Arku",

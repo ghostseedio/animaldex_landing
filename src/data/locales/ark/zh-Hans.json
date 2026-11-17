@@ -571,7 +571,10 @@
         "photo": {
             "alt": "把这只{species}带上船的照片",
             "open": "查看大图",
-            "close": "关闭照片"
+            "close": "关闭照片",
+            "fromParent": "它的父母之一的照片，由{name}带上船",
+            "fromGrandparent": "它的祖辈之一的照片，由{name}带上船",
+            "fromGreatGrandparent": "它的曾祖辈之一的照片，由{name}带上船"
         },
         "hearts": {
             "livesOne": "在 Ark 中有 1 条命",

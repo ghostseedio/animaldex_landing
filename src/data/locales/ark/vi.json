@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Bức ảnh đã đưa {species} này lên tàu",
             "open": "Xem ảnh lớn hơn",
-            "close": "Đóng ảnh"
+            "close": "Đóng ảnh",
+            "fromParent": "Ảnh của bố hoặc mẹ nó, do {name} đưa lên tàu",
+            "fromGrandparent": "Ảnh của ông hoặc bà nó, do {name} đưa lên tàu",
+            "fromGreatGrandparent": "Ảnh của cụ của nó, do {name} đưa lên tàu"
         },
         "hearts": {
             "livesOne": "1 mạng trên Ark",

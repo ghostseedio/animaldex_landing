@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Fotografija koja je ovu životinju ({species}) dovela na brod",
             "open": "Pogledaj veću fotografiju",
-            "close": "Zatvori fotografiju"
+            "close": "Zatvori fotografiju",
+            "fromParent": "Fotografija jednog od njegovih roditelja; na brod ga je doveo/la {name}",
+            "fromGrandparent": "Fotografija jednog od njegovih djedova i baka; na brod ga je doveo/la {name}",
+            "fromGreatGrandparent": "Fotografija jednog od njegovih pradjedova i prabaka; na brod ga je doveo/la {name}"
         },
         "hearts": {
             "livesOne": "1 život u Arku",

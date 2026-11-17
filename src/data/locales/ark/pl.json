@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Zdjęcie, dzięki któremu to zwierzę ({species}) trafiło na pokład",
             "open": "Zobacz większe zdjęcie",
-            "close": "Zamknij zdjęcie"
+            "close": "Zamknij zdjęcie",
+            "fromParent": "Zdjęcie jednego z jego rodziców, przywiezionego na pokład przez {name}",
+            "fromGrandparent": "Zdjęcie jednego z jego dziadków, przywiezionego na pokład przez {name}",
+            "fromGreatGrandparent": "Zdjęcie jednego z jego pradziadków, przywiezionego na pokład przez {name}"
         },
         "hearts": {
             "livesOne": "1 życie w Ark",

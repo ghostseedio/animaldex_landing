@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Foto que trajo a este {species} a bordo",
             "open": "Ver la foto más grande",
-            "close": "Cerrar la foto"
+            "close": "Cerrar la foto",
+            "fromParent": "Foto de uno de sus progenitores, traído a bordo por {name}",
+            "fromGrandparent": "Foto de uno de sus abuelos, traído a bordo por {name}",
+            "fromGreatGrandparent": "Foto de uno de sus bisabuelos, traído a bordo por {name}"
         },
         "hearts": {
             "livesOne": "1 vida en el Ark",

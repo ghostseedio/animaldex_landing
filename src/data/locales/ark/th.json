@@ -571,7 +571,10 @@
         "photo": {
             "alt": "ภาพที่พา{species}ตัวนี้ขึ้นเรือ",
             "open": "ดูภาพขนาดใหญ่",
-            "close": "ปิดภาพ"
+            "close": "ปิดภาพ",
+            "fromParent": "ภาพพ่อหรือแม่ของมัน พามาโดย {name}",
+            "fromGrandparent": "ภาพปู่ ย่า ตา หรือยายของมัน พามาโดย {name}",
+            "fromGreatGrandparent": "ภาพทวดของมัน พามาโดย {name}"
         },
         "hearts": {
             "livesOne": "1 ชีวิตใน Ark",
