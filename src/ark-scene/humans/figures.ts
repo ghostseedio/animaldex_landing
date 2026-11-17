@@ -101,7 +101,7 @@ export function humanLook(seed: string, child = false): HumanLook {
 // MARK: - The body
 
 /** Parts (the vertex's paint): which colour it takes. */
-const PART = {skin: 0, top: 1, bottom: 2, hair: 3, shoes: 4, longHair: 5, forearm: 6, shin: 7, sole: 8} as const;
+const PART = {skin: 0, top: 1, bottom: 2, hair: 3, shoes: 4, longHair: 5, forearm: 6, shin: 7, sole: 8, eye: 9, brow: 10} as const;
 /** Limbs (which joints turn the vertex). */
 const LIMB = {core: 0, lThigh: 1, lShin: 2, rThigh: 3, rShin: 4, lUpper: 5, lFore: 6, rUpper: 7, rFore: 8, head: 9, hips: 10} as const;
 
@@ -223,7 +223,14 @@ export function humanGeometry(far: boolean): BufferGeometry {
     b.loft([[0, 1.45, -0.015, 0.05, 0.048, 0.75], [0, 1.5, -0.016, 0.046, 0.047], [0, 1.545, -0.012, 0.044, 0.046, 0.8]], 10, PART.skin, LIMB.head);
     // The head: jaw and chin forward, the cranium round; a nose's bump (no face).
     b.loft([[0, 1.5, 0.03, 0.025, 0.02, 0.8], [0, 1.52, 0.025, 0.055, 0.06, 0.85], [0, 1.56, 0.012, 0.072, 0.088], [0, 1.6, 0.004, 0.081, 0.099], [0, 1.645, 0, 0.086, 0.104], [0, 1.69, -0.004, 0.084, 0.102], [0, 1.725, -0.008, 0.066, 0.083], [0, 1.745, -0.01, 0.035, 0.045]], 14, PART.skin, LIMB.head);
-    if (!far) b.ellipsoid(0, 1.612, 0.1, 0.011, 0.02, 0.014, 6, 4, PART.skin, LIMB.head);
+    if (!far) {
+        b.ellipsoid(0, 1.612, 0.1, 0.011, 0.02, 0.014, 6, 4, PART.skin, LIMB.head);
+        // Generic eyes and brows only (dark dots and the hair's colour): the same for everyone of a look, no one's face.
+        for (const side of [-1, 1]) {
+            b.ellipsoid(side * 0.031, 1.636, 0.094, 0.009, 0.0065, 0.006, 6, 4, PART.eye, LIMB.head);
+            b.ellipsoid(side * 0.033, 1.655, 0.096, 0.017, 0.004, 0.007, 6, 3, PART.brow, LIMB.head);
+        }
+    }
     // The hair: a shell over the crown and the back of the head to the nape, its line above the forehead.
     b.loft([[0, 1.578, -0.048, 0.076, 0.066], [0, 1.625, -0.02, 0.089, 0.092], [0, 1.67, -0.005, 0.092, 0.11], [0, 1.715, -0.008, 0.088, 0.106], [0, 1.745, -0.01, 0.07, 0.086], [0, 1.765, -0.01, 0.035, 0.045]], 14, PART.hair, LIMB.head);
     // Long hair: its fall down the back to the shoulders (folded away when the look has none).
@@ -473,7 +480,9 @@ vec3 humanPaint() {
     else if (part < 5.5) c = iHair;
     else if (part < 6.5) c = mix(iSkin, iTop, iStyle.y);
     else if (part < 7.5) c = mix(iSkin, iBottom, iStyle.z);
-    else c = vec3(0.78, 0.76, 0.72);
+    else if (part < 8.5) c = vec3(0.78, 0.76, 0.72);
+    else if (part < 9.5) c = vec3(0.05, 0.045, 0.04);
+    else c = mix(iHair * 0.8, iSkin * 0.6, iStyle.w * 0.6);
     return c * aRig.z;
 }
 `;
