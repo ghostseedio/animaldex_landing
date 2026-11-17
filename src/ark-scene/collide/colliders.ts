@@ -31,7 +31,7 @@ import {drawnRocks} from "@/ark-scene/map/rocks";
 import {floorObstacles} from "@/ark-scene/floor-assets";
 import {barnStyle, cottageStyle, defaultHomePlots, GARDEN, paddockFence, paddockRect, paddockSegments, PADDOCK_POST_TOP, picketRuns, PICKET_POST_TOP, plotFrame, plotKeepOuts, type HomePlot} from "@/ark-scene/props/home-layout";
 import {arkWorld, onArkWorld, sampleGround} from "@/ark-scene/world";
-import {fallsBlocks, POOL as FALLS_POOL} from "@/ark-scene/islands/wild/falls";
+import {fallsBlocks} from "@/ark-scene/islands/wild/falls";
 import {GARDEN_POND} from "@/ark-scene/micro-decor";
 import {POND_STONES} from "@/ark-scene/world-sampler";
 
@@ -443,15 +443,14 @@ export function buildColliders(plots: HomePlot[] | null): Collider[] {
         out.push({shape: "circle", kind: "log", id: `log:${n}`, cx: log.x, cz: log.z, r, reach: r, y0: g - 0.2, y1: g + r * 1.6, gap: 0});
     });
     // p4 (waterfall): the bigger wild island's falls (`islands/wild/falls.ts`): the cliff's mass is solid, slice by
-    // slice; its plunge pool is drawn water over the flat, kept as the garden pond was (walkers drink at its edge).
+    // slice. (Its plunge pool is real water since p5, `islands/wild/crater.ts` PLUNGE_POOL: the map keeps walkers out of it
+    // and lets swimmers in, so it has no collider.)
     if (arkWorld() === "v2") {
         fallsBlocks().forEach((b, n) => {
             const hx = (b.x1 - b.x0) / 2;
             const hz = (b.z1 - b.z0) / 2;
             out.push({shape: "box", kind: "cliff", id: `cliff:falls:${n}`, cx: b.x0 + hx, cz: b.z0 + hz, cos: 1, sin: 0, hx0: -hx, hx1: hx, hz0: -hz, hz1: hz, y0: b.y0, y1: b.y1, reach: Math.hypot(hx, hz), gap: 0});
         });
-        const r = Math.max(FALLS_POOL.rx, FALLS_POOL.rz) * 0.8;
-        out.push({shape: "circle", kind: "pond", id: "pond:falls", cx: FALLS_POOL.x, cz: FALLS_POOL.z, r, reach: r, y0: FALLS_POOL.level - 2, y1: FALLS_POOL.level + 0.4, gap: 0});
     }
     plotColliders(out, plots ?? defaultHomePlots());
     return out;

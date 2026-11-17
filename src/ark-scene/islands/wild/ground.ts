@@ -10,6 +10,7 @@
 import {fbm, smoothstep} from "@/ark-scene/world";
 import {bearingOf, cliffAt, dropOffOf, elevationOf, iceShelf, ICE_HEIGHT, inlandOf, kelpOf, LAKE, lakeEdge, lagoonOf, moistureOf, riverAlong, riverAt, seaDepth, temperatureOf, wetlandBasin, WETLAND, MOUTH_BEARING, bearingDiff, type RiverHit} from "@/ark-scene/islands/wild/fields";
 import {topZone, zoneWeights, type WildLandZone, type ZoneWeights} from "@/ark-scene/islands/wild/biomes";
+import {CRATER, craterAt, craterWarmth, outletAt, PLUNGE_POOL, PLUNGE_SPILL, type CraterShape, type OutletHit} from "@/ark-scene/islands/wild/crater";
 
 export type WildGroundSample = {
     height: number;
@@ -45,6 +46,12 @@ export type WildGroundSample = {
     riverAlong: number;
     /** The river's surface, width and depth at its nearest point. */
     riverHit: RiverHit;
+    /** p5: where the point is on the old volcano (`crater.ts`): its lake's shore, its rim, how much it is the cone's. */
+    crater: CraterShape;
+    /** p5: the caldera's warm ground (0…1): the snow line stands higher there. */
+    warm: number;
+    /** p5: the crater lake's outlet stream at its nearest point (null far from the volcano). */
+    outlet: OutletHit | null;
 };
 
 export function sampleWildGround(x: number, z: number): WildGroundSample {
@@ -67,7 +74,17 @@ export function sampleWildGround(x: number, z: number): WildGroundSample {
     const bankReach = river.upper ? 9 : 14;
     const lakeBank = smoothstep(edge + 34, edge - 4, lakeD + 8 * (fbm(x * 0.05, z * 0.05) - 0.5));
     const riverBank = smoothstep(river.width + bankReach + 20, river.width + bankReach - 18, river.d + 8 * (fbm(x * 0.06 + 4, z * 0.06) - 0.5)) * smoothstep(-2, 6, inland);
-    const freshBank = Math.max(lakeBank, riverBank * (1 - estuary * 0.7));
+    // p5 (crater): the crater lake's water and shore, and its outlet's banks, are fresh water's too.
+    const crater = craterAt(x, z);
+    const outlet = crater.d < 90 ? outletAt(x, z) : null;
+    const plunge = Math.hypot((x - PLUNGE_POOL.x) / PLUNGE_POOL.rx, (z - PLUNGE_POOL.z) / PLUNGE_POOL.rz);
+    const craterBank = Math.max(
+        // (Eased over some 20 m, as every zone's edge is: never a hard line.)
+        smoothstep(15, -9, crater.shore + 5 * (fbm(x * 0.07 + 6, z * 0.07 - 3) - 0.5)),
+        smoothstep(16, -6, (plunge - 1) * PLUNGE_POOL.rz),
+        outlet ? smoothstep(outlet.width + 15, outlet.width - 7, Math.hypot(outlet.d, outlet.along >= 1 ? outlet.beyond : 0)) : 0
+    );
+    const freshBank = Math.max(lakeBank, riverBank * (1 - estuary * 0.7), craterBank);
     const basin = wetlandBasin(x, z, 1.32, 0.5);
     const weights = zoneWeights({temperature, moisture, elevation: regional, inland, freshBank, basin, cliff, estuary, ice, rag: fbm(x * 0.045 + 13, z * 0.045 - 2)});
 
@@ -147,6 +164,45 @@ export function sampleWildGround(x: number, z: number): WildGroundSample {
             fresh = Math.max(fresh, smoothstep(w + 0.5, w - 0.5, river.d) * smoothstep(1.5, 4, inland));
         }
     }
+    // p5 (crater): the outlet stream through the breach in the rim and over the sill to the falls' lip, then the lake.
+    if (outlet && outlet.d < outlet.width + 30) {
+        const w = outlet.width;
+        // (Past the lip the sill ends: the cliff. In the lake its line is the lake's.)
+        const side = outlet.along >= 1 ? smoothstep(1.2, 0, outlet.beyond) : 1;
+        // The breach: the rim cut down to the stream in a V.
+        const floor = outlet.level + 0.6 + 0.62 * Math.max(outlet.d - w, 0);
+        if (height > floor) height += (floor - height) * smoothstep(w + 24, w + 6, outlet.d) * side;
+        // The sill: the ground beside the stream stands up to its banks (the falls' lip is the valley's head).
+        const bank = outlet.level + 0.3 + 0.09 * Math.max(outlet.d - w, 0);
+        if (outlet.d > w && height < bank) height += (bank - height) * smoothstep(w + 10, w + 1, outlet.d) * side;
+        const bed = outlet.level - outlet.depth * (1 - Math.min(outlet.d / Math.max(w, 0.1), 1) ** 2) - 0.05;
+        height += (bed - height) * smoothstep(w + 1.3, w * 0.7, outlet.d) * side * smoothstep(-1.5, 1.5, crater.shore);
+        if (outlet.d < w + 0.5 && side > 0.5 && crater.shore > -0.6) {
+            freshLevel = Math.max(freshLevel ?? -Infinity, outlet.level);
+            fresh = Math.max(fresh, smoothstep(w + 0.5, w - 0.5, outlet.d));
+        }
+    }
+    // The crater lake: its bed and shore are the caldera's own (`crater.ts`); its water where the bed is under it.
+    if (crater.shore < 0.6) {
+        freshLevel = Math.max(freshLevel ?? -Infinity, CRATER.level);
+        fresh = Math.max(fresh, smoothstep(0.6, -0.6, crater.shore));
+    }
+    // The falls' plunge pool: a basin under its level, banks over it but where it spills to the spring.
+    if (plunge < 1.8) {
+        // (At the spill its bank is a notch a hand under the water: the pool runs over it to the spring.)
+        const notch = smoothstep(1.8, 1.0, Math.hypot((x - PLUNGE_SPILL.x) / 0.9, (z - PLUNGE_SPILL.z - 1.1) / 1.6));
+        const bank = PLUNGE_POOL.level + 0.35 - 0.47 * notch;
+        // (Full for a cell and a half round the water, so no drawn water's corner is dry ground under it.)
+        if (plunge >= 1 && height < bank) height += (bank - height) * smoothstep(1.75, 1.45, plunge);
+        if (plunge < 1.06) {
+            const bed = PLUNGE_POOL.level - 0.3 - 2.3 * (1 - Math.min(plunge, 1) ** 2);
+            height = Math.min(height, height + (bed - height) * smoothstep(1.06, 0.92, plunge));
+            if (plunge < 1.02) {
+                freshLevel = Math.max(freshLevel ?? -Infinity, PLUNGE_POOL.level);
+                fresh = Math.max(fresh, smoothstep(1.02, 0.94, plunge));
+            }
+        }
+    }
     // The wetland's pools: where its floor lies below its water.
     if (basin > 0.35 && height < WETLAND.level && inland > 4 && freshLevel === null) {
         freshLevel = WETLAND.level;
@@ -172,7 +228,10 @@ export function sampleWildGround(x: number, z: number): WildGroundSample {
         kelp: kelpOf(b),
         estuary,
         riverAlong: along,
-        riverHit: river
+        riverHit: river,
+        crater,
+        warm: crater.d < 60 ? craterWarmth(x, z) : 0,
+        outlet
     };
 }
 

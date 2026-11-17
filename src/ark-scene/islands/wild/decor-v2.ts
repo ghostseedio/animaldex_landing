@@ -319,7 +319,8 @@ export function wildGrassTufts(count: number): GrassTuft[] {
         const z = box.minZ + random() * (box.maxZ - box.minZ);
         const roll = random();
         const s = wild(x, z);
-        if (s.height < 0.35 || s.land < 0.85 || s.height > GRASS_CEILING || s.fresh >= 0.5 || s.ice > 0.3) continue;
+        // (p5: the old volcano's warm caldera is meadow, above the grass's ceiling though it lies.)
+        if (s.height < 0.35 || s.land < 0.85 || (s.height > GRASS_CEILING && s.warm < 0.6) || s.fresh >= 0.5 || s.ice > 0.3) continue;
         const zone = zoneAt(s) as ArkZone;
         // Fuller round the animals' own ground, where the camera comes close.
         const nearAnimals = sites.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + 6) ? 1.8 : 1;

@@ -38,7 +38,8 @@ test("falls: the cliff's skin grows out of the slope: its seams under the ground
         }
     }
     // Where its relief dips under the slope the ground shows through (an outcrop's edge); never a deep hole.
-    assert.ok(deepest > -2.5, `the skin sinks ${deepest.toFixed(2)} m under the ground`);
+    // (p5: but under the outlet's sill behind the lip, a step the height of the stream's banks: the skin's top is behind it.)
+    assert.ok(deepest > -5, `the skin sinks ${deepest.toFixed(2)} m under the ground`);
     // A giant: the face stands 26 m and more over the pool, from the snow line, and the sheet is 20 m and more across.
     assert.ok(tallest - F.POOL.level > 26, `the cliff stands ${(tallest - F.POOL.level).toFixed(1)} m over the pool`);
     assert.ok(F.FALLS_LIP - F.POOL.level > 26, `the drop is ${(F.FALLS_LIP - F.POOL.level).toFixed(1)} m`);
@@ -80,16 +81,17 @@ test("falls: the pool's water stands over its bed, is held by its rim, and spill
     const F = await load();
     const strike = F.impact();
     assert.ok(F.fallsGround(strike.x, strike.z) < F.POOL.level, "water stands where the sheet strikes");
-    const stones = F.rimStones();
-    // Round the rim: wherever the ground is lower than the water, a stone holds it (or the spill's gap is there).
+    assert.ok(F.rimStones().length > 20);
+    // The pool is real water (p5): fresh water over its whole basin, banks standing over it all round but at the spill.
     for (let k = 0; k < 120; k++) {
         const a = (k / 120) * Math.PI * 2;
-        const x = F.POOL.x + Math.cos(a) * F.POOL.rx;
-        const z = F.POOL.z + Math.sin(a) * F.POOL.rz;
-        if (F.fallsGround(x, z) >= F.POOL.level - 0.02) continue;
-        // (A stone's top is its y plus its squashed radius: it stands over the water, its foot in the ground.)
-        const held = stones.some((s) => Math.hypot(s.x - x, s.z - z) < s.r * 1.3 && s.y + s.r * s.squash >= F.POOL.level && s.y - s.r * s.squash * 0.7 <= F.fallsGround(s.x, s.z)) || Math.hypot(x - F.OUTFLOW[0].x, z - F.OUTFLOW[0].z) < 1.2;
-        assert.ok(held, `the pool's rim at ${x.toFixed(1)}, ${z.toFixed(1)} holds no water`);
+        const inside = F.sampleWildGround(F.POOL.x + Math.cos(a) * F.POOL.rx * 0.8, F.POOL.z + Math.sin(a) * F.POOL.rz * 0.8);
+        assert.equal(F.underWater(inside), "fresh");
+        assert.equal(inside.freshLevel, F.POOL.level);
+        const x = F.POOL.x + Math.cos(a) * F.POOL.rx * 1.12;
+        const z = F.POOL.z + Math.sin(a) * F.POOL.rz * 1.12;
+        if (Math.hypot(x - F.OUTFLOW[0].x, z - F.OUTFLOW[0].z) < 3.6) continue;
+        assert.ok(F.wildHeight(x, z) > F.POOL.level + 0.1, `the pool's bank at ${x.toFixed(1)}, ${z.toFixed(1)} is under its water`);
     }
     // The spill runs downhill to the upper river's first point, its water a hand over the ground.
     const path = F.outflowPath();
@@ -109,9 +111,10 @@ test("falls: no tree is drawn in the pool, and the cliff keeps clear of the rive
     let hidden = 0;
     for (const item of [...worldDecor(), ...forestFill()]) {
         if (Math.hypot(item.x - F.POOL.x, item.z - F.POOL.z) > 30 || !assetTreePlacement(item as never)) continue;
-        if (F.inPool(item.x, item.z, 0.8)) hidden++;
+        if (F.inPool(item.x, item.z, 0)) hidden++;
     }
-    assert.ok(hidden >= 1, "the pine that hid the pool is left undrawn");
+    // (p5: the pool is real water, so the scenery plants no tree in it; the rule in `asset-trees.ts` has nothing to hide.)
+    assert.equal(hidden, 0, "no tree stands in the pool");
     for (const b of F.fallsBlocks()) {
         for (let x = b.x0; x <= b.x1; x += 0.5) {
             for (let z = b.z0; z <= b.z1; z += 0.5) assert.notEqual(F.underWater(F.sampleWildGround(x, z)), "fresh", `the cliff's mass over the river at ${x}, ${z}`);
@@ -119,7 +122,7 @@ test("falls: no tree is drawn in the pool, and the cliff keeps clear of the rive
     }
 });
 
-test("falls: the cliff is solid to walkers and the pool kept as drawn water; the falls are heard", async () => {
+test("falls: the cliff is solid to walkers; the falls are heard", async () => {
     const F = await load();
     const {colliderSetFor, resetColliders} = await import("@/ark-scene/collide/colliders");
     resetColliders();
@@ -129,7 +132,6 @@ test("falls: the cliff is solid to walkers and the pool kept as drawn water; the
     // Inside the face at mid-height: solid. On the flat south of the pool: clear.
     const inside = {x: F.FALLS_X, z: -90};
     assert.ok(set.blocked(inside.x, inside.z, 0.3, F.wildHeight(inside.x, inside.z), 1), "a walker inside the cliff's mass is blocked");
-    assert.ok(set.blocked(F.POOL.x, F.POOL.z, 0.2, F.POOL.level - 0.3, 0.6), "the pool is kept");
     const fallsOnly = new Set(["cliff"] as const);
     assert.ok(!set.deepest(F.FALLS_X, -78, 0.3, F.wildHeight(F.FALLS_X, -78), 1, fallsOnly), "the flat by the spring is clear of the cliff");
     assert.ok(set.deepest(F.FALLS_X - 6, -90, 0.3, F.wildHeight(F.FALLS_X - 6, -90), 1, fallsOnly), "the face beside the water is solid");

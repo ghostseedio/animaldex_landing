@@ -25,6 +25,7 @@
 import {fbm, smoothstep} from "@/ark-scene/world";
 import {wildHeight as exactHeight} from "@/ark-scene/islands/wild/ground";
 import {WILD_HALF, WILD_SEGMENT} from "@/ark-scene/islands/wild/frame";
+import {OUTLET, PLUNGE_POOL, PLUNGE_SPILL} from "@/ark-scene/islands/wild/crater";
 
 /** The falls' axis (x), and the cliff's width either side of it (m): the rock face, its sides sinking into the slope. */
 export const FALLS_X = -101;
@@ -43,11 +44,12 @@ const THROW = 2.5;
 const G = 9.81;
 
 /** The plunge pool at the cliff's foot: an ellipse on the flat, its water a hand above the ground's highest there. */
-export const POOL = {x: -99.6, z: -81.3, rx: 10.5, rz: 4.0, level: 24.9};
+export const POOL = PLUNGE_POOL;
 /** Where the pool spills (its south-east rim) and the spring it feeds (the upper river's first point). */
 export const OUTFLOW: ReadonlyArray<{x: number; z: number}> = [
-    {x: -100.2, z: -77.4},
-    {x: -100.1, z: -76.7},
+    PLUNGE_SPILL,
+    {x: -100.15, z: -78.1},
+    {x: -100.1, z: -77},
     {x: -100, z: -76}
 ];
 
@@ -58,7 +60,7 @@ const clamp01 = (v: number) => Math.min(Math.max(v, 0), 1);
  * and read back bilinearly, so the cliff's skin meets the drawn slope (not the finer field between its vertices) and the
  * whole falls is laid out in a few milliseconds. Outside its box, the field itself.
  */
-const BOX = {x0: -128, x1: -74, z0: -120, z1: -70};
+const BOX = {x0: -134, x1: -68, z0: -120, z1: -70};
 let drawn: {i0: number; j0: number; ni: number; nj: number; h: Float32Array} | null = null;
 export function fallsGround(x: number, z: number): number {
     if (!drawn) {
@@ -262,7 +264,7 @@ export function cliffSkin(step = 0.5, rowStep = 0.45): CliffSkin {
             const halfSheet = (CURTAIN_TOP + (CURTAIN_BOTTOM - CURTAIN_TOP) * Math.sqrt(0.08 + 0.92 * Math.sqrt(fallen))) / 2;
             const band = smoothstep(halfSheet + 1.8, halfSheet + 0.5, Math.abs(u)) * smoothstep(POOL.level + 3, POOL.level + 6, y);
             const out = rel.d * (0.35 + 0.65 * taper) + 0.25;
-            const d = (out * (1 - band) + band * (Math.min(out, 0.3) * 0.4 - 0.2)) * edge - 0.45 * (1 - edge) - 0.35 * (1 - smoothstep(0, 0.35, taper));
+            const d = (out * (1 - band) + band * (Math.min(out, 0.3) * 0.4 - 0.2)) * edge - 0.8 * (1 - edge) - 0.35 * (1 - smoothstep(0, 0.35, taper));
             const k = (r * cols + c) * 3;
             positions[k] = x;
             positions[k + 1] = y + ny * d;
@@ -403,8 +405,9 @@ export function outflowPath(): Array<{x: number; y: number; z: number; width: nu
     }
     const last = OUTFLOW[OUTFLOW.length - 1];
     out.push({x: last.x, z: last.z, y: wildHeight(last.x, last.z) + 0.07, width: 1.5});
-    // Its first point at the pool's own level (the water leaves the pool flat, then falls).
+    // Its first point at the pool's own level (the water leaves the pool flat, then falls), and never climbing after.
     out[0].y = POOL.level;
+    for (let i = 1; i < out.length; i++) out[i].y = Math.min(out[i].y, out[i - 1].y);
     return out;
 }
 
@@ -426,7 +429,9 @@ export function fallsBlocks(): Array<{x0: number; x1: number; z0: number; z1: nu
         if (faceTaper(mid) < 0.25) continue;
         const x = FALLS_X + mid;
         const front = Math.max(faceFront(u, wildHeight(x, faceLine(u) + 0.5) + 1), faceFront(u + 2, wildHeight(x, faceLine(u + 2) + 0.5) + 1)) + 0.5;
-        const back = slopeZ(x, Math.min(shoulderAt(mid), crestOf(x)) - 0.5) ?? front - 6;
+        // (p5: never back over the outlet's sill behind the lip: the stream there is real water a dipper stands in.)
+        const sill = Math.abs(mid) < OUTLET[OUTLET.length - 1].width + 2 ? OUTLET[OUTLET.length - 1].z + 1.4 : -Infinity;
+        const back = Math.max(slopeZ(x, Math.min(shoulderAt(mid), crestOf(x)) - 0.5) ?? front - 6, sill);
         if (front - back < 0.8) continue;
         out.push({x0: FALLS_X + u, x1: FALLS_X + u + 2, z0: back, z1: front, y0: wildHeight(x, front) - 0.3, y1: shoulderAt(mid)});
     }

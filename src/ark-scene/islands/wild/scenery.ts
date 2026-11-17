@@ -160,6 +160,8 @@ function treeCandidate(i: number, j: number): Candidate {
     const s = sampleWildGround(x, z);
     if (s.height < 0.35 || s.inland < 3 || underWater(s) || s.ice > 0.01 || s.fresh > 0.05) return out;
     if (s.river < s.riverHit.width + 2.5) return out;
+    // (p5: no tree inside the old volcano's rim: its caldera is meadow, reeds and bare rock, above the tree line.)
+    if (s.crater.rim < 3) return out;
     if (gridSlope(x, z) > 0.85) return out;
     if (inRange(x, z, 2)) return out;
     const forest = s.weights.rainforest + s.weights.woodland;
@@ -277,13 +279,16 @@ function groundItem(x: number, z: number, s: WildGroundSample, roll: number, r2:
     }
     if (s.ice > 0.3 || s.height < 0.15) return null;
     // The marsh: reeds thick on the wetland's low ground and along the lake's and the river's margins.
-    const marsh = s.weights.wetland * (s.height < 1.5 ? 1 : 0.2) + (s.freshLevel === null && s.riverHit.d < s.riverHit.width + 2.5 && !s.riverHit.upper ? 0.5 : 0);
+    // (p5: and round the crater lake's shore, `crater.ts`.)
+    const marsh = s.weights.wetland * (s.height < 1.5 ? 1 : 0.2) + (s.freshLevel === null && s.riverHit.d < s.riverHit.width + 2.5 && !s.riverHit.upper ? 0.5 : 0) + (s.crater.shore < 2.2 ? 0.7 : 0);
     if (r < 0.3 * marsh) return at("reed", r2 < 0.5 ? "reeds-phragmites-a" : "reeds-cattail-a", 0.8 + 0.5 * frac(r2 * 3), 0);
     r -= 0.3 * marsh;
     if (r < 0) return null;
     // Rocks: the mountains' boulders and scree, the coast's barnacled stones and tide pools, kopjes on the plains.
     const rocky = w.mountains * (0.06 + 0.12 * Math.min(1, slope)) + w.desert * 0.025 + w.grassland * 0.006 + w.polar * 0.05 + (s.cliff > 0.3 && s.inland < 10 ? 0.12 : 0) + w.woodland * 0.008 + w.rainforest * 0.004;
     if (r < rocky) {
+        // (p5: none on the old volcano's rim crest or its inner wall: a boulder there hangs over the drop.)
+        if (s.crater.rim > -9.5 && s.crater.rim < 4) return null;
         if (s.inland < 8 && s.height < 2.2) return at("rock", r2 < 0.45 ? variant("tide-pool-rock", r2 * 3) : variant("boulder-cluster-barnacle", r2 * 3), 0.9 + 0.8 * frac(r2 * 5), 0.7);
         if (w.mountains > 0.5 && slope > 0.45 && r2 < 0.5) return at("rock", variant("scree", r2 * 3), 1.4 + 1.2 * frac(r2 * 5), 0);
         const mossy = w.woodland + w.rainforest + w.river_lake > 0.5;
