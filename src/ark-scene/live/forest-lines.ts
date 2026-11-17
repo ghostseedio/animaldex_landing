@@ -2,7 +2,7 @@
  * Logging's deaths in the live log and the live world (p5 humans; AnimalDex decision 379): the record's `deforested`
  * events, an Ark-born animal whose home the felling front reached ("A Sun Bear died: its forest was cut down"). The server
  * decides every one, from the shared forestry module and the animal's home; this only says it and lays its body where
- * the server judged it (the event's `payload.x`/`z`: inside the cleared stand). A tap flies to the body.
+ * the server judged it (the event's `forest.x`/`z`: inside the cleared stand). A tap flies to the body.
  *
  * Read here from the server's rows as they come, with their own words (as `escape-lines.ts`): with the scene, never in
  * the Ark page's static JavaScript. The rows' animals are decoded as a death's are (`decodeArkEvents` on the same row
@@ -16,7 +16,9 @@ import type {ArkSnapshot} from "@/ark-scene/types";
 
 const ENGLISH = "{aAnimal} died: its forest was cut down";
 
-type Row = {id?: unknown; kind?: unknown; at?: unknown; payload?: {x?: unknown; z?: unknown; standId?: unknown} | null};
+type Spot = {x?: unknown; z?: unknown; standId?: unknown; k?: unknown; until?: unknown};
+/** The server's row: the judged home in `forest` (`voyage_events_since_v1`), or in `payload` (the raw event). */
+type Row = {id?: unknown; kind?: unknown; at?: unknown; forest?: Spot | null; payload?: Spot | null};
 
 function rowsOf(raw: unknown): Row[] {
     return Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as {events?: unknown}).events) ? (raw as {events: Row[]}).events : [];
@@ -32,7 +34,8 @@ export function forestDeathRecords(raw: unknown, snapshot: ArkSnapshot | null, f
     for (const event of decoded) {
         const at = Date.parse(event.at);
         if (!event.animal || !Number.isFinite(at) || at < from) continue;
-        const p = byId.get(String(event.id))?.payload;
+        const row = byId.get(String(event.id));
+        const p = row?.forest ?? row?.payload;
         const x = Number(p?.x);
         const z = Number(p?.z);
         out.push({key: `death:${event.id}`, id: String(event.id), animal: event.animal, t0: at / 1000, spot: Number.isFinite(x) && Number.isFinite(z) ? {x, z} : null});

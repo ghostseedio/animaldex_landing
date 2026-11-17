@@ -234,7 +234,7 @@ import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating
 import {CLUTCH_FRAME_POLAR, CLUTCH_SHOWN_SECONDS, clutchFrame, clutchSize, kinFrameApart, seenAt} from "@/ark-scene/live/breed-focus"; // 3.3 fix (breeding taps)
 import {LiveBirths} from "@/ark-scene/live-births";
 import {LiveDeaths, type DeathRecord} from "@/ark-scene/live-deaths"; // 3.3 fix (log)
-import {ForestScene, type ForestryRecord} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): logging and replanting
+import {ForestScene} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): logging and replanting
 // 3.3 batch (D): the escapes and the dragonflies' dips
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
 import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
@@ -2729,7 +2729,6 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         current = snapshot;
         aboard = new Set(snapshot.animals.map((animal) => animal.id));
         humansAboard = snapshot.animals.filter((animal) => animal.model_slug === "human").map((animal) => animal.id); // p5 (humans)
-        forest.setRecord((snapshot as {forestry?: ForestryRecord}).forestry); // p5 (humans)
         // Everyone's place (the herds' members too): from the server's slots, the same for every viewer.
         if (placedFor !== snapshot) {
             // The hamlet's plots for these residents (`map/hamlet.ts`), set before anything reads the attach points.
@@ -8778,6 +8777,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         defence: (id: string) => findEntry(id)?.defence ?? null,
         // 3.3 fix (log): the record's deaths, where each lies (the harness).
         deaths: () => liveDeaths.debug(),
+        forest: () => forest.debug(), // p5 (humans)
         rigState: (id: string) => {
             const e = allEntries().find((x) => x.animal.id === id);
             return e ? {rigOn: Boolean(e.rigOn), weight: e.rig?.weight ?? 0, clip: e.rig?.now?.name ?? null, level: e.level ?? null} : null;
@@ -8937,6 +8937,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return {key: e.key, prey: e.prey, predator: e.predator, t0: encounter?.t ?? e.t0, encounter};
             }), worldMs() / 1000);
         },
+        setForestry: (record) => forest.setRecord(record), // p5 (humans)
         setDormant: (kinds) => {
             dormantKinds = new Set(kinds);
         },

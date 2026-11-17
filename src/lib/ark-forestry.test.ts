@@ -137,7 +137,7 @@ test("crews: from the humans aboard, inside or at the stand, felling then planti
 test("log + bodies: a deforested row is said in the owner's words and its body laid at the server's spot", async () => {
     const {forestDeathRecords, forestItems, forestText} = await import("@/ark-scene/live/forest-lines");
     const rows = [
-        {id: 7, kind: "deforested", at: "2026-11-20T10:00:00Z", payload: {standId: 3, k: 2, x: -160.25, z: -15.5}, animal: {id: "a1", species_profile_id: "sp-bear", name: "Sun Bear", model_slug: "sun-bear", zone: "rainforest", origin: "born", status: "deforested"}},
+        {id: 7, kind: "deforested", at: "2026-11-20T10:00:00Z", forest: {standId: 3, k: 2, x: -160.25, z: -15.5, until: 250}, animal: {id: "a1", species_profile_id: "sp-bear", name: "Sun Bear", model_slug: "sun-bear", zone: "rainforest", origin: "born", status: "deforested"}},
         {id: 8, kind: "death_old", at: "2026-11-20T10:00:00Z", animal: {id: "a2", species_profile_id: "sp-x", name: "Okapi", model_slug: "okapi", zone: "rainforest"}}
     ];
     const deaths = forestDeathRecords(rows, null, 0);

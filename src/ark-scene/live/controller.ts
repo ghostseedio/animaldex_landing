@@ -334,6 +334,15 @@ export class ArkLive {
             .catch(() => {
                 // (No answer: nothing is dormant as far as the scene knows; asked again later.)
             });
+        // p5 (humans): and the record's forestry (logging and replanting on the wild island), as often.
+        fetch(url.replace(/\/dormant$/, "/forestry"))
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: {forestry?: {fromDay?: unknown; v?: unknown} | null} | null) => {
+                if (!this.disposed && body) this.options.scene()?.setForestry?.(body.forestry ?? null);
+            })
+            .catch(() => {
+                // (No answer: no forestry drawn; asked again later.)
+            });
     }
 
     /** Into the log, a hunt's outcome marked on the way (`hunt-outcome.ts`). */
