@@ -107,22 +107,11 @@ test("side by side, not who would win, on the comparison page itself (WEB-9)", (
     assert.ok(!en.meta.keywords.some((keyword: string) => /Pokemon|Top Trumps|grading/i.test(keyword)));
 });
 
-test("people are never public: no human species page, side by side or catalog entry (DECISIONS §11)", async () => {
-    const {isHumanComparisonSlug, isHumanSpecies} = await import("@/lib/people-are-never-public");
+test("people are captures: the human species page and lesson are published like any animal (owner, 2026-11-17)", async () => {
     const {isPublishedAnimalSlug, isPublishedLessonSlug} = await import("@/lib/published-seo-slugs");
-    const {getPublishedEnglishAnimalStaticParams, getPublishedEnglishComparisonStaticParams, listSnapshotComparisons, listSnapshotSpecies} = await import("@/lib/published-seo-page-data");
+    const {getPublishedEnglishAnimalStaticParams} = await import("@/lib/published-seo-page-data");
 
-    assert.equal(isHumanSpecies({slug: "human"}), true);
-    assert.equal(isHumanSpecies({scientificName: "Homo sapiens"}), true);
-    assert.equal(isHumanSpecies({identityKey: "homo_sapiens"}), true);
-    assert.equal(isHumanSpecies({slug: "red-fox", scientificName: "Vulpes vulpes"}), false);
-    assert.equal(isHumanComparisonSlug("giant-malaysian-leaf-insect-vs-human"), true);
-    assert.equal(isHumanComparisonSlug("tiger-vs-lion"), false);
-
-    assert.equal(isPublishedAnimalSlug("human"), false);
-    assert.equal(isPublishedLessonSlug("human"), false);
-    assert.ok(!getPublishedEnglishAnimalStaticParams().some((param) => param.slug === "human"));
-    assert.ok(!getPublishedEnglishComparisonStaticParams().some((param) => isHumanComparisonSlug(param.slug)));
-    assert.ok(!listSnapshotComparisons().some((entry) => isHumanComparisonSlug(entry.slug)));
-    assert.ok(!listSnapshotSpecies().some((entry) => entry.slug === "human"));
+    assert.equal(isPublishedAnimalSlug("human"), true);
+    assert.equal(isPublishedLessonSlug("human"), true);
+    assert.ok(getPublishedEnglishAnimalStaticParams().some((param) => param.slug === "human"));
 });

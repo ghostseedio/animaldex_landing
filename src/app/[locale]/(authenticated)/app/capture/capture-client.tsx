@@ -929,7 +929,7 @@ export default function CaptureClient({
 
 /** iOS `TermsAgreementView`, in the capture's frame: the four rules, the legal links, I Agree. */
 function CommunityTermsPanel({words, onAgree}: {words: CaptureWords["terms"]; onAgree: () => void}) {
-    const rules = [words.ruleContent, words.ruleReport, words.ruleBlock, words.ruleRemoval];
+    const rules = [words.rulePeople, words.rulePermission, words.ruleRemovalRequest, words.ruleContent, words.ruleReport, words.ruleBlock, words.ruleRemoval];
     return (
         <div className="relative z-10 flex min-h-[34rem] flex-col justify-center gap-5 bg-[#090909] p-6 pt-16 sm:p-10 sm:pt-16" role="dialog" aria-modal="false" aria-labelledby="community-terms-title" data-testid="community-terms">
             <span className="text-primary-400"><AppIcon name="check" className="h-9 w-9"/></span>

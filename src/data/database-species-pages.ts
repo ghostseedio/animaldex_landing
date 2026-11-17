@@ -1,5 +1,4 @@
 import "server-only";
-import {isHumanSpecies} from "@/lib/people-are-never-public";
 
 import type {SpeciesEntry} from "@/data/species";
 import {speciesEntries} from "@/data/species";
@@ -1372,7 +1371,6 @@ export async function getUnifiedSpeciesEntries() {
         [
             ...enrichedStatic,
             ...databaseEntries.filter((entry) => !staticSlugs.has(entry.slug))
-        // People are never public (DECISIONS §11): the catalog lists animals only.
-        ].filter((entry) => !isHumanSpecies({slug: entry.slug, scientificName: entry.analysis?.scientificName, identityKey: entry.normalizedIdentityKey}))
+        ]
     ).sort((left, right) => left.name.localeCompare(right.name));
 }

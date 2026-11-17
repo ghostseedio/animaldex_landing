@@ -25,7 +25,6 @@ import {mergeServerThread, normalizeServerChatRows, serverThreadKey, type Server
 import {buildChatTranscript, chatMessageId, chatTranscriptSkip, isMissingRpc} from "@/lib/ask-animaldex/chat-history";
 import {createAskMessage, type AskMessage} from "@/lib/ask-animaldex/thread";
 import {AppRequestError, isHumanMessage, userFacingError} from "@/lib/user-facing-error";
-import {isHomoSapiens, rowIsHomoSapiens} from "@/lib/people-never-public";
 import {dictatedText, dictationClock} from "@/lib/ask-animaldex/dictation";
 import {ANIMAL_PUBLIC_CHAT_RULES, buildAskStreamingSystemPrompt} from "@/lib/ask-animaldex/prompt";
 import {ANIMAL_AUTO_MODE_RULES, ANIMAL_RELATIONSHIP_RULES} from "@/lib/ask-animaldex/companion";
@@ -325,20 +324,6 @@ test("errors: offline as offline, a route's own sentence as it is, anything else
     } finally {
         console.warn = quiet;
     }
-});
-
-// MARK: - People are never public
-
-test("a Homo sapiens item is never public: by scientific name, any case, or the human slug", () => {
-    assert.equal(isHomoSapiens({scientificName: "Homo sapiens"}), true);
-    assert.equal(isHomoSapiens({scientificName: "HOMO SAPIENS sapiens"}), true);
-    assert.equal(isHomoSapiens({slug: "human"}), true);
-    assert.equal(isHomoSapiens({identityKey: "homo_sapiens"}), true);
-    assert.equal(isHomoSapiens({animalName: "Human"}), true);
-    assert.equal(isHomoSapiens({scientificName: "Homo naledi"}), false);
-    assert.equal(isHomoSapiens({slug: "humpback-whale", animalName: "Humpback Whale"}), false);
-    assert.equal(rowIsHomoSapiens({scientific_name: "Homo sapiens", animal_name: "Person"}), true);
-    assert.equal(rowIsHomoSapiens({scientific_name: "Vulpes vulpes", animal_name: "Red Fox"}), false);
 });
 
 // MARK: - Dictation

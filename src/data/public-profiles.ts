@@ -1,6 +1,5 @@
 import "server-only";
 import {readArkScore, readArkWorldWeekChange, type ArkScoreRead} from "@/lib/ark-world";
-import {isHumanSpecies} from "@/lib/people-are-never-public";
 
 import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {speciesEntries as staticSpeciesEntries} from "@/data/species";
@@ -9,7 +8,6 @@ import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {countCaptureSettingLabels, getCaptureContextLabel} from "@/lib/capture-setting-label";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {animalLevel} from "@/lib/animal-level";
-import {isHomoSapiens} from "@/lib/people-never-public";
 import {parseCaptureGridSort, type ProfileCaptureGridSort} from "@/lib/profile-editor";
 
 const PUBLIC_PROFILE_REVALIDATE_SECONDS = 60;
@@ -707,8 +705,7 @@ async function fetchProfilePets(
         limit: String(PROFILE_PET_LIMIT)
     })).catch(() => []);
 
-    // People are never public (DECISIONS §11).
-    return rows.filter((row) => !isHumanSpecies({identityKey: row.normalized_identity_key})).map((row) => {
+    return rows.map((row) => {
         const capture = mapCaptureRow(row);
         return {
             captureId: capture.id,
@@ -842,10 +839,8 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         return toPublicCapture(row, slug, number);
     };
 
-    // People are never public (DECISIONS section 11).
-    const animalRow = (row: PublicCaptureRow) => !isHomoSapiens({identityKey: row.normalized_identity_key, animalName: row.animal_name});
-    const topCaptures = topRows.filter(animalRow).map(mapCaptureRow);
-    const recentCaptures = recentRows.filter(animalRow).map(mapCaptureRow);
+    const topCaptures = topRows.map(mapCaptureRow);
+    const recentCaptures = recentRows.map(mapCaptureRow);
     const pets = await fetchProfilePets(profile.id, captureSelect, mapCaptureRow);
     const allCaptures = recentCaptures.length > 0 ? recentCaptures : topCaptures;
 
@@ -863,7 +858,7 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
             capture_id: `in.(${missingInsightIds.join(",")})`,
             limit: String(missingInsightIds.length)
         });
-        for (const row of (await fetchRows<PublicCaptureRow>("discover_feed_v1", insightCaptureParams)).filter(animalRow)) {
+        for (const row of (await fetchRows<PublicCaptureRow>("discover_feed_v1", insightCaptureParams))) {
             const capture = mapCaptureRow(row);
             insightCapturesById.set(capture.id, capture);
         }

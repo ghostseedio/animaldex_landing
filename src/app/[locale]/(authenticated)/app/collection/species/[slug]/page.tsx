@@ -8,7 +8,6 @@ import {getSpeciesSubtitle} from "@/data/species-subtitles";
 import {resolveLocalSpeciesStats} from "@/data/species-stats";
 import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {buildCollectionDiscoveryIndex, latestCaptureForCatalogEntry} from "@/lib/collection-discovery";
-import {isHomoSapiens} from "@/lib/people-never-public";
 import {getCaptureWords} from "@/loaders/capture-words";
 import {getScopedTranslator} from "@/loaders/translation";
 
@@ -21,8 +20,7 @@ import {getScopedTranslator} from "@/loaders/translation";
  */
 export default async function CollectionSpeciesPage({params}: {params: {locale: string; slug: string}}) {
     const entry = await getResolvedSpeciesBySlug(params.slug);
-    // People are never public (DECISIONS section 11).
-    if (!entry || isHomoSapiens({slug: entry.slug, scientificName: entry.analysis.scientificName})) notFound();
+    if (!entry) notFound();
 
     const [captures, powerProfile, subtitle, binders, captureWords, t] = await Promise.all([
         getAppCaptures(),

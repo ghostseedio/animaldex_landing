@@ -18,7 +18,6 @@ import {
     isCatalogEntryDiscovered,
     latestCaptureForCatalogEntry
 } from "@/lib/collection-discovery";
-import {isHomoSapiens} from "@/lib/people-never-public";
 import {collectionShowsCount, collectionShowsProgress} from "@/lib/collection-states";
 import CollectionRetry from "@/app/[locale]/(authenticated)/app/collection/collection-retry";
 import {loadAppFeatureFlags} from "@/data/app-feature-flags";
@@ -34,8 +33,7 @@ export default async function CollectionPage({params}: {params: {locale: string}
     ]);
     const captures = library.captures;
     const discoveryIndex = buildCollectionDiscoveryIndex(captures);
-    // People are never public (DECISIONS section 11): no Homo sapiens entry in the catalog.
-    const species: CatalogSpecies[] = catalogEntries.filter((entry) => !isHomoSapiens({slug: entry.slug, scientificName: entry.analysis.scientificName})).map((entry) => {
+    const species: CatalogSpecies[] = catalogEntries.map((entry) => {
         const legendaryBeast = getLegendaryEarthBeast(entry.slug);
         const capture = latestCaptureForCatalogEntry({
             speciesProfileId: entry.speciesProfileId,

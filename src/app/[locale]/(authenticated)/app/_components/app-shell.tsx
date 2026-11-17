@@ -9,6 +9,7 @@ import {AppShellChromeContext, AppShellMenuOpenContext, isDiscoverShellRoute} fr
 import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {useUnreadAnimalMessages} from "@/components/companions/use-animal-conversations";
 import {APP_SHELL_WORDS_EN, type AppShellWords} from "@/lib/app-shell-words";
+import UpdatedTermsGate from "@/app/[locale]/(authenticated)/app/_components/updated-terms-gate";
 
 type AppShellProps = {
     children: React.ReactNode;
@@ -227,6 +228,8 @@ export default function AppShell({
                 <div className={`mx-auto w-full max-w-[92rem] ${isDiscoverRoute ? "h-full lg:px-10 lg:py-10" : "px-4 py-7 sm:px-7 lg:px-10 lg:py-10"}`}>{children}</div>
             </main>
             </div>
+            {/* The current Terms of Use must be agreed to use the app (20261130100000); above everything. */}
+            {resolvedAuthenticated ? <UpdatedTermsGate/> : null}
             {/* Outside the inert page (it holds the hamburger row and the main content), or the open menu could not be touched. */}
             {menuOpen ? (
                 <div className="fixed inset-0 z-50 lg:hidden" role="dialog" aria-modal="true" aria-label={words.openMenu}>
