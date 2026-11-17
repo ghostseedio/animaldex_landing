@@ -106,7 +106,7 @@ const RAISED_BY = 0.05;
  * trunk), or between points on a climb (the schedule's interpolated normal).
  */
 export function scheduledPerch(
-    at: {x: number; y: number; z: number; yaw: number; nx: number; ny: number; nz: number; moving: boolean; aloft: boolean; down?: boolean},
+    at: {x: number; y: number; z: number; yaw: number; nx: number; ny: number; nz: number; moving: boolean; aloft: boolean; down?: boolean; forward?: {x: number; y: number; z: number}},
     to: {point: string | null; x?: number; y?: number; z?: number; nx?: number; ny?: number; nz?: number} | null | undefined,
     arrived: boolean,
     time: number,
@@ -131,6 +131,8 @@ export function scheduledPerch(
         return scheduleSurface({x: to.x, y: to.y, z: to.z, yaw: at.yaw, nx: to.nx ?? 0, ny: to.ny ?? 1, nz: to.nz ?? 0}, null);
     }
     // (3.3 fix (wall): climbing down a wall or a trunk, head first: `wall-climb.ts`.)
+    // (p5 (monkeys): through a tree, its heading the climb's own: up or down the trunk's axis, along the limb: `tree-climb.ts`.)
+    if (at.forward && (at.ny < 0.95 || at.y > ground(at.x, at.z) + RAISED_BY)) return scheduleSurface(at, at.forward);
     if (at.ny < 0.95) return scheduleSurface(at, at.down && Math.abs(at.ny) < STEEP_NY ? wallHeading(true) : null);
     return null;
 }
