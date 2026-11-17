@@ -59,7 +59,8 @@ export function validateTown(plan: TownPlan = townPlan(), real?: {house?: number
     const land = landArea(1);
     metrics.landHa = Math.round(land / 100) / 100;
     // p4 (safari): the safari park's land (about 2.5 ha) on top of the town's 8–14.
-    if (land < 105000 || land > 165000) errors.push(`land: ${(land / 10000).toFixed(2)} ha, outside 10.5–16.5 ha`);
+    // (p5 (rural): the countryside's lobe adds about 2.5 ha: up to 19 ha.)
+    if (land < 105000 || land > 190000) errors.push(`land: ${(land / 10000).toFixed(2)} ha, outside 10.5–19 ha`);
 
     // Nothing overlaps.
     const solids: Array<{id: string; at: Box}> = [...plan.buildings.map((b) => ({id: b.id, at: b.at})), ...plan.zoo.slots.map((s) => ({id: `slot:${s.id}`, at: s.at}))];

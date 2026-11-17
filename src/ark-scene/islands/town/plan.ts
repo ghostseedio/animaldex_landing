@@ -32,6 +32,7 @@ import {
     type Pt
 } from "@/ark-scene/islands/town/geom";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
+import {RURAL_BUILDINGS, RURAL_LANE, RURAL_LANE_WIDTH, RURAL_PENS, RURAL_POND_POLY, RURAL_TRACKS, ruralOrchardTrees} from "@/ark-scene/islands/town/rural";
 import {SAFARI, SAFARI_AREAS, SAFARI_GATE_ROAD, SAFARI_LOOP, SAFARI_LOOP_STREET, SAFARI_ROAD_WIDTH, type SafariHabitat} from "@/ark-scene/islands/town/safari";
 
 // MARK: - The square of terrain and sea
@@ -91,6 +92,21 @@ function safariNorm(x: number, z: number): number {
     return n - 0.7 * coastWobble(Math.atan2(dz, dx) - 0.8);
 }
 
+/**
+ * p5 (rural), the owner, 2026-11-17: "somewhere to move the domestic animals ... Add more to the town island like a
+ * rural area with lots of fields": a long lobe of land to the east, past East Road's homes and the country lane's
+ * farms (`rural.ts`): about 2 ha of fields, joined to the island's outline as the safari's lobe is.
+ */
+export const RURAL_LOBE = {x: 236, z: -40, a: 58, b: 132, power: 3};
+
+function ruralNorm(x: number, z: number): number {
+    const L = RURAL_LOBE;
+    const dx = x - L.x;
+    const dz = z - L.z;
+    const n = Math.pow(Math.pow(Math.abs(dx / L.a), L.power) + Math.pow(Math.abs(dz / L.b), L.power), 1 / L.power);
+    return n - 0.7 * coastWobble(Math.atan2(dz, dx) + 2.1);
+}
+
 function mainNorm(x: number, z: number): number {
     const a = x < 0 ? COAST.west : COAST.east;
     const b = z < 0 ? COAST.north : COAST.south;
@@ -108,7 +124,7 @@ function lobeNorm(x: number, z: number): number {
 }
 
 export function coastNorm(x: number, z: number): number {
-    return Math.min(mainNorm(x, z), lobeNorm(x, z), safariNorm(x, z));
+    return Math.min(mainNorm(x, z), lobeNorm(x, z), safariNorm(x, z), ruralNorm(x, z));
 }
 
 /** Metres inland (positive on land, negative at sea), near enough within ~40 m of the coast. */
@@ -132,7 +148,14 @@ export function inland(x: number, z: number): number {
     const safari = (1 - ns) * (rs / Math.max(ns, 0.05));
     const k2 = 16;
     const h2 = Math.max(k2 - Math.abs(both - safari), 0) / k2;
-    return Math.max(both, safari) + h2 * h2 * k2 * 0.25;
+    const three = Math.max(both, safari) + h2 * h2 * k2 * 0.25;
+    // p5 (rural): the countryside's lobe the same way.
+    const R = RURAL_LOBE;
+    const rr = Math.hypot(x - R.x, z - R.z) || 1;
+    const nr = ruralNorm(x, z);
+    const rural = (1 - nr) * (rr / Math.max(nr, 0.05));
+    const h3 = Math.max(k2 - Math.abs(three - rural), 0) / k2;
+    return Math.max(three, rural) + h3 * h3 * k2 * 0.25;
 }
 
 // MARK: - Plan types
@@ -170,7 +193,12 @@ export type BuildingKind =
     | "safari_lodge"
     | "safari_toilets"
     | "safari_depot"
-    | "safari_tower";
+    | "safari_tower"
+    // p5 (rural): the countryside's own buildings (`render/rural.ts`).
+    | "milking_parlour"
+    | "field_shelter"
+    | "pig_ark"
+    | "hen_house";
 
 export type RoofKind = "gable" | "hip" | "flat" | "lean" | "glass" | "none";
 
@@ -216,7 +244,7 @@ export type Parcel = {
     seed: number;
 };
 
-export type GreenKind = "park" | "churchyard" | "allotments" | "wood" | "wild_corner" | "green" | "orchard" | "field" | "paddock" | "farmyard" | "zoo_lawn" | "beach" | "verge";
+export type GreenKind = "park" | "churchyard" | "allotments" | "wood" | "wild_corner" | "green" | "orchard" | "field" | "paddock" | "farmyard" | "zoo_lawn" | "beach" | "verge" | "arena" | "pig_field";
 export type Green = {id: string; kind: GreenKind; poly: Poly; crop?: string};
 
 export type WaterKind = "canal" | "millpond" | "harbour" | "farm_pond" | "fountain" | "zoo_pool" | "garden_pond";
@@ -242,7 +270,7 @@ export type ZooSlot = {
 /** A spare enclosure plot: landscaped until an enclosure a type opens past its own slots is drawn on it. */
 export type ZooSpare = {id: string; at: Box; path: string; seed: number};
 
-export type Hedge = {id: string; line: Poly; height: number; kind: "hedge" | "wall" | "fence" | "railing" | "picket" | "paddock_rail" | "zoo_fence" | "net"};
+export type Hedge = {id: string; line: Poly; height: number; kind: "hedge" | "wall" | "fence" | "railing" | "picket" | "paddock_rail" | "zoo_fence" | "net" | "drystone" | "poultry_net" | "pig_wire"};
 
 export type TownPlan = {
     streets: Street[];
@@ -838,6 +866,9 @@ function buildPlan(): TownPlan {
     // p4 (safari): the safari park on the north-west lobe.
     buildSafari(ctx);
 
+    // p5 (rural): the countryside on the east lobe.
+    buildRural(ctx);
+
     plant(ctx);
 
     lastMisses = ctx.misses;
@@ -860,6 +891,42 @@ function buildPlan(): TownPlan {
         drains: [],
         downtown
     };
+}
+
+/**
+ * p5 (rural): the countryside (`rural.ts`): Rural Lane and its farm tracks, the fields (greens with their crops or
+ * grass, their hedges, dry-stone walls, rails, netting or pig wire), the duck pond (a farm pond), the buildings, the
+ * orchard's apple trees and hedgerow oaks; each field kept clear of everything else.
+ */
+function buildRural(ctx: Full) {
+    ctx.streets.push({id: "rural_lane", kind: "lane", line: RURAL_LANE, width: RURAL_LANE_WIDTH, pavement: 0, name: "Rural Lane"});
+    for (const t of RURAL_TRACKS) ctx.streets.push({id: t.id, kind: "track", line: t.line, width: 3.2, pavement: 0});
+    for (const p of RURAL_PENS) {
+        const c = corners(p.at);
+        const kind: GreenKind = p.ground === "arena" ? "arena" : p.ground === "pig" ? "pig_field" : p.ground === "yard" ? "farmyard" : p.ground === "orchard" ? "orchard" : "field";
+        ctx.greens.push({id: p.id, kind, poly: c, ...(kind === "field" || kind === "orchard" ? {crop: p.crop ?? "pasture"} : {})});
+        const edge = p.edge === "hedge" ? "hedge" : p.edge;
+        ctx.hedges.push({id: `${p.id}-${p.edge === "hedge" ? "hedge" : "edge"}`, line: [c[0], c[1], c[2], c[3], c[0]], height: p.edge === "hedge" ? 1.6 : p.edge === "drystone" ? 1.15 : p.edge === "poultry_net" ? 1.1 : p.edge === "pig_wire" ? 0.75 : 1.3, kind: edge});
+        ctx.keepOut.push(p.at);
+    }
+    ctx.waters.push({id: "rural_pond", kind: "farm_pond", poly: RURAL_POND_POLY, level: 0, depth: 0.9});
+    for (const b of RURAL_BUILDINGS) {
+        addBuilding(ctx, {id: b.id, kind: b.kind, at: b.at, floors: b.kind === "farmhouse" ? 2 : 1, eaves: b.eaves, roof: b.roof, households: 0, top: b.top, parcel: "rural"});
+        ctx.keepOut.push(b.at);
+    }
+    ruralOrchardTrees().forEach((t, i) => ctx.trees.push({x: t.x, z: t.z, kind: "apple", scale: 0.72, seed: hashText(`rural-orchard-${i}`)}));
+    // Hedgerow oaks and ashes along the lane's verges and the fields' outer hedges; a willow by the duck pond.
+    const r = rng(hashText("rural-planting"));
+    const used = (x: number, z: number, m: number) => RURAL_PENS.some((p) => inBox(p.at, x, z, m)) || RURAL_BUILDINGS.some((b) => inBox(b.at, x, z, m + 1));
+    const onWay = (x: number, z: number) => ctx.streets.some((st) => (st.id.startsWith("rural") || st.id === "country_lane") && polylineWithin(st.line, x, z, st.width / 2 + 2.5));
+    for (let i = 0; i < 90; i++) {
+        const x = 186 + r() * 106;
+        const z = -160 + r() * 240;
+        if (inland(x, z) < 6 || used(x, z, 1.2) || onWay(x, z)) continue;
+        if (ctx.trees.some((t) => Math.hypot(t.x - x, t.z - z) < 7)) continue;
+        ctx.trees.push({x, z, kind: r() < 0.6 ? "oak" : r() < 0.5 ? "lime" : "poplar", scale: 0.75 + r() * 0.4, seed: hashText(`rural-tree-${i}`)});
+    }
+    ctx.trees.push({x: 207.5, z: 36, kind: "willow", scale: 0.85, seed: hashText("rural-willow")});
 }
 
 /**
@@ -1003,7 +1070,7 @@ function plant(ctx: Full) {
     }
     // Hedgerow trees along the farms' and fields' hedges; trees by the farmhouses.
     for (const h of ctx.hedges) {
-        if (h.kind !== "hedge" || !(h.id.startsWith("field") || h.id.includes("smallholding") || h.id.includes("farmstead"))) continue;
+        if (h.kind !== "hedge" || !(h.id.startsWith("field") || h.id.startsWith("rural") || h.id.includes("smallholding") || h.id.includes("farmstead"))) continue;
         const length = polylineLength(h.line);
         for (let a = 6; a < length; a += 19) {
             const {point} = polylineAt(h.line, a);

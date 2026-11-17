@@ -33,6 +33,7 @@ import {clearOfDoors, PATH_WIDTH, pathOpenings, townDoorWays} from "@/ark-scene/
 import {boundaryBodies, madeHere} from "@/ark-scene/islands/town/render/fences";
 import {parkBench} from "@/ark-scene/islands/town/render/bench";
 import {safariBarrier, safariScenery} from "@/ark-scene/islands/town/render/safari";
+import {ruralEdge} from "@/ark-scene/islands/town/render/rural-edges";
 import {safariArea} from "@/ark-scene/islands/town/safari";
 import {bridgeAt, bridgeHeight, canalBridges, PARAPET} from "@/ark-scene/islands/town/canal-bridges";
 import {drawCanalBridge} from "@/ark-scene/islands/town/render/canal-bridges";
@@ -339,7 +340,7 @@ function boundary(out: SceneryOut, h: Hedge, gates: readonly FarmGate[] = []) {
     if (h.kind === "hedge") {
         // Leafy hedges (lane GC, `render/nature.ts`): a field's or a farm's boundary a shaggy hedgerow, a garden's
         // clipped; each ~24 m piece into the chunk it lies in; open where a gate stands.
-        const hedgerow = h.id.startsWith("field") || h.id.includes("smallholding") || h.id.includes("farmstead");
+        const hedgerow = h.id.startsWith("field") || h.id.startsWith("rural") || h.id.includes("smallholding") || h.id.includes("farmstead");
         const open = [...gates.map((g) => ({x: g.x, z: g.z, half: g.width / 2})), ...paths];
         for (const part of pieces(h.line, 24)) {
             const mid = part[Math.floor(part.length / 2)];
@@ -349,6 +350,11 @@ function boundary(out: SceneryOut, h: Hedge, gates: readonly FarmGate[] = []) {
     }
     // gfx (props): the gardens' fences, walls and railings are `render/fences.ts` (drawn in `boundaries`).
     if (madeHere(h)) return;
+    // p5 (rural): the countryside's dry-stone walls, poultry netting and pig wire (`render/rural-edges.ts`).
+    if (h.kind === "drystone" || h.kind === "poultry_net" || h.kind === "pig_wire") {
+        ruralEdge(h, gates, (x, z) => chunkFor(out, x, z));
+        return;
+    }
     for (let i = 1; i < h.line.length; i++) {
         const a = h.line[i - 1];
         const b = h.line[i];
@@ -413,7 +419,9 @@ const CROP: Record<string, [string, string, number]> = {
     cabbage: ["#7fa158", "#5d4834", 0.6],
     tilled: ["#6c5438", "#5c4630", 0.5],
     sprouts: ["#8fb05e", "#5d4834", 0.55],
-    orchard: ["#7aa04e", "#86a957", 3]
+    orchard: ["#7aa04e", "#86a957", 3],
+    // p5 (rural): a hay meadow cut and baled: pale stubble in the mower's swathes.
+    stubble: ["#cdb978", "#b8a462", 1.6]
 };
 
 function fields(out: SceneryOut, plan: TownPlan) {

@@ -107,7 +107,7 @@ function groundIndex(): GroundIndex {
             }
         }
     };
-    const priority: Partial<Record<Indexed["kind"], number>> = {zoo_lawn: 0, park: 1, wood: 2, beach: 2, churchyard: 3, wild_corner: 3, allotments: 4, green: 5, field: 5, orchard: 5, paddock: 6, farmyard: 7, verge: 8, garden: 6, slot: 6, savanna: 7, farm: 4};
+    const priority: Partial<Record<Indexed["kind"], number>> = {zoo_lawn: 0, park: 1, wood: 2, beach: 2, churchyard: 3, wild_corner: 3, allotments: 4, green: 5, field: 5, orchard: 5, paddock: 6, farmyard: 7, verge: 8, arena: 7, pig_field: 7, garden: 6, slot: 6, savanna: 7, farm: 4};
     for (const g of plan.greens) add({kind: g.kind, poly: g.poly, priority: priority[g.kind] ?? 3});
     for (const p of plan.parcels) {
         for (const part of [p.front, p.back]) if (part) add({kind: "garden", poly: cornersOf(part), priority: 6});
@@ -358,7 +358,10 @@ const SURFACE_OF: Partial<Record<Indexed["kind"], TownSurface>> = {
     garden: "lawn",
     slot: "zoo",
     savanna: "farmyard",
-    farm: "meadow"
+    farm: "meadow",
+    // p5 (rural): the riding arena's sand school, the pig unit's mud.
+    arena: "sand",
+    pig_field: "mud"
 };
 
 /** The floor of a building standing on a footprint: the highest ground under its corners (plinths cover the rest). */

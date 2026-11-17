@@ -80,7 +80,7 @@ export const ARK_ISLANDS: Record<ArkIslandId, ArkIslandDef> = {
     get town(): ArkIslandDef {
         const world = arkWorld();
         let def = townDefs.get(world);
-        if (!def) townDefs.set(world, (def = {id: "town", half: TOWN_HALF_M, chunks: 12, landHa: 15.5, archipelago: townWorldOrigin(), home: TOWN_HOME}));
+        if (!def) townDefs.set(world, (def = {id: "town", half: TOWN_HALF_M, chunks: 12, landHa: 18, archipelago: townWorldOrigin(), home: TOWN_HOME}));
         return def;
     }
 };

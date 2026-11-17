@@ -223,7 +223,7 @@ function wildlifeSpots(plan: TownPlan): TownSpot[] {
     }
     // Hedgerows and field margins.
     for (const h of plan.hedges) {
-        if (h.kind !== "hedge" || !(h.id.startsWith("field") || h.id.includes("smallholding") || h.id.includes("farmstead"))) continue;
+        if (h.kind !== "hedge" || !(h.id.startsWith("field") || h.id.startsWith("rural") || h.id.includes("smallholding") || h.id.includes("farmstead"))) continue;
         const length = polylineLength(h.line);
         for (let a = 3; a < length; a += 8) {
             const {point} = polylineAt(h.line, a);

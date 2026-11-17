@@ -41,7 +41,11 @@ const PASS: Record<Hedge["kind"], {passable: Passer[]; thickness: number; hard: 
     paddock_rail: {passable: ["small", "flyer"], thickness: 0.14, hard: false},
     picket: {passable: ["small", "flyer"], thickness: 0.06, hard: false},
     zoo_fence: {passable: ["flyer"], thickness: 0.35, hard: true},
-    net: {passable: [], thickness: 0.05, hard: true}
+    net: {passable: [], thickness: 0.05, hard: true},
+    // p5 (rural): a dry-stone wall (lizards and climbers over it), low poultry netting, a pig's low wire.
+    drystone: {passable: ["climber", "flyer"], thickness: 0.6, hard: false},
+    poultry_net: {passable: ["flyer"], thickness: 0.05, hard: false},
+    pig_wire: {passable: ["small", "climber", "flyer"], thickness: 0.05, hard: false}
 };
 
 /** The canal as a water polygon (both banks of its centreline). */

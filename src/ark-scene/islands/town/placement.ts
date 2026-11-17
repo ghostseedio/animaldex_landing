@@ -27,6 +27,7 @@ import {townHouseholds, farmOf, householdOf, urbanNiche, zooLayout, zooSpotsFor,
 import {launchEnclosures, enclosuresIn} from "@/ark-scene/islands/town/areas";
 import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import {safariEnclosureOf} from "@/ark-scene/islands/town/safari";
+import {stayingSet, ruralPenOf, ruralPondNorm, type RuralPen} from "@/ark-scene/islands/town/rural";
 import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
@@ -156,7 +157,9 @@ export function primeTownPlacements(key: string, result: TownPlacements, animals
     // Each animal's own spot remembered too, so any part of the list (the town's animals joining a few at a time) is free.
     if (!animals) return;
     const openKey = result.open.join(",");
-    for (const animal of safariAnimals(animals)) {
+    const all = safariAnimals(animals);
+    const fieldOf = ruralFields(all);
+    for (const animal of all) {
         const placement = result.places.get(animal.id);
         const info = result.town.get(animal.id);
         if (!placement || !info) continue;
@@ -165,7 +168,7 @@ export function primeTownPlacements(key: string, result: TownPlacements, animals
         const core: Placement = {...placement};
         delete core.leader;
         delete core.rank;
-        MEMO.set(`${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}`, {placement: core, info, rank});
+        MEMO.set(`${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}|${fieldOf.get(animal.id)?.id ?? ""}`, {placement: core, info, rank});
         if (info.pen) SPREAD.set(spreadKey(animal), {x: placement.x, z: placement.z, ground: placement.ground});
     }
 }
@@ -192,6 +195,8 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         }
     }
     const animals = safariAnimals(given);
+    // p5 (rural): who lives in the countryside's fields (the children's farm keeps a petting set, `rural.ts`).
+    const fieldOf = ruralFields(animals);
     // (`openAs`: the enclosures open for the whole town while only some of its animals are laid out: they join a few at a time.)
     const open = openAs ? [...openAs] : enclosuresIn(animals);
     const openNames = open.length ? open : launchEnclosures();
@@ -236,7 +241,7 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
     // A zoo enclosure's kinds: the first of each kind leads the rest of its kind there.
     const zooLeads = new Map<string, {leader: string; at: string; count: number}>();
     for (const animal of animals) {
-        if (animal.area !== "zoo") continue;
+        if (animal.area !== "zoo" || fieldOf.has(animal.id)) continue;
         const key = `${animal.enclosure ?? ""}|${animal.kind_species_profile_id ?? animal.species_profile_id}`;
         const c = zooLeads.get(key);
         if (!c) zooLeads.set(key, {leader: animal.id, at: animal.arrived_at, count: 1});
@@ -254,14 +259,14 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         // Who it keeps to (a zoo kind's first in its enclosure; a wildlife cluster's first): the only part that depends on
         // who else is aboard, worked out fresh. Its spot and its step off it are its own (remembered across snapshots).
         let leader: string | undefined;
-        if (animal.area === "zoo") {
+        if (animal.area === "zoo" && !fieldOf.has(animal.id)) {
             const lead = zooLeads.get(`${animal.enclosure ?? ""}|${animal.kind_species_profile_id ?? animal.species_profile_id}`);
             if (lead && lead.count > 1) leader = lead.leader;
         } else if (!animal.area) {
             const cluster = clusters.get(clusterKey(animal));
             if (cluster && cluster.count > 1) leader = cluster.leader;
         }
-        const memoKey = `${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}`;
+        const memoKey = `${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}|${fieldOf.get(animal.id)?.id ?? ""}`;
         const hit = MEMO.get(memoKey);
         if (hit) {
             const placement: Placement = {...hit.placement};
@@ -284,7 +289,15 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         let held: {x: number; z: number; y: number; yaw: number} | null = null;
         const plan = modelBase(slug)?.plan ?? null;
         const keeping: HomeKeeping | null = animal.area === "house" ? homeKeeping(slug, animal.zone, length, plan) : null;
-        if (animal.area === "house" && keeping !== "livery") {
+        // p5 (rural): livestock and poultry of the homes, the farms and the children's farm (past its petting set) in
+        // the countryside's fields, by their kind (`rural.ts` ruralPenOf).
+        const field = fieldOf.get(animal.id);
+        if (field) {
+            const where: SpotWhere = field.kinds.includes("poultry") ? "run" : field.kinds.length ? "paddock" : "farmyard";
+            spot = ruralSpot(field, animal.id, length);
+            info = penned({area: "farm", where, place: field.id, enclosure: null, range: 9, still: false}, field.at, length);
+            rank = (own >>> 9) % 3;
+        } else if (animal.area === "house" && keeping !== "livery") {
             // Lane TB: how it is kept (`tanks.ts` homeKeeping). A pond is a house's; a long pet's vivarium or tank a house's
             // or a terrace home's (a flat's are small); a cage, a small vivarium or tank may be a flat's.
             const display = keeping === "tank" || keeping === "cage" || keeping === "vivarium" || keeping === "pond";
@@ -422,6 +435,51 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         MEMO.set(f.memoKey, {placement: core, info: f.info, rank: f.rank});
     }
     return {places, town, open: openNames};
+}
+
+// MARK: - p5 (rural): a spot in a countryside field
+
+/** Each town animal the countryside takes, and its field (`rural.ts` ruralPenOf; the children's farm's petting set kept). */
+export function ruralFields(animals: readonly ArkAnimal[]): Map<string, RuralPen> {
+    const plan = townPlan();
+    const staying = stayingSet(animals, (id) => {
+        const farm = farmOf(id);
+        return plan.farms.find((f) => f.id === farm) ?? null;
+    });
+    const kept = (a: {id: string}) => staying.has(a.id);
+    const out = new Map<string, RuralPen>();
+    for (const a of animals) {
+        const f = ruralPenOf(a, kept);
+        if (f) out.set(a.id, f);
+    }
+    return out;
+}
+
+/**
+ * A spot in a field: a rendezvous of the animal's id over a 1.5 m grid inside its boundary (half its body and a hand
+ * in), on dry ground (never in the duck pond's water: the waterfowl on its banks) and clear of the field's shelters,
+ * arks and hen houses. Its height is the ground's there.
+ */
+const RURAL_SPOTS = new Map<string, TownSpot[]>();
+function ruralSpot(field: RuralPen, id: string, length: number): TownSpot | null {
+    const m = Math.min(Math.max(length * 0.5 + 0.3, 0.5), Math.min(field.at.w, field.at.d) / 2 - 0.2);
+    const key = `${field.id}|${m.toFixed(1)}`;
+    let list = RURAL_SPOTS.get(key);
+    if (!list) {
+        list = [];
+        const c = Math.cos(field.at.rot);
+        const sn = Math.sin(field.at.rot);
+        for (let lx = -field.at.w / 2 + m; lx <= field.at.w / 2 - m; lx += 1.5) {
+            for (let lz = -field.at.d / 2 + m; lz <= field.at.d / 2 - m; lz += 1.5) {
+                const x = field.at.x + lx * c - lz * sn;
+                const z = field.at.z + lx * sn + lz * c;
+                if (ruralPondNorm(x, z) < 1.3 || inBuilding(x, z, m + 0.2)) continue;
+                list.push({x, z, y: townHeight(x, z), area: "farm", where: "paddock", place: field.id, sizes: ["small", "medium", "large"], protected: true});
+            }
+        }
+        RURAL_SPOTS.set(key, list);
+    }
+    return pick(list, id, (s, i) => `${field.id}${i}`);
 }
 
 // MARK: - gfx (PLACE): pens, and kept animals apart

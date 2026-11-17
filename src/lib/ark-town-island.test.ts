@@ -90,10 +90,10 @@ test("on Part B's grid: 12 × 12 chunks of 48 segments of 1.1 m", () => {
     assert.equal(townChunkOf(10_000, 0), townChunkOf(TOWN_HALF - 0.1, 0), "off the grid: the nearest edge chunk");
 });
 
-// p4 (safari): about 12 ha before; the safari park adds about 2.5 ha.
-test("bounded land: about 15.5 ha, the sea all round inside the square", () => {
+// p4 (safari): about 12 ha before; the safari park adds about 2.5 ha. p5 (rural): the countryside's lobe about 2.5 ha more.
+test("bounded land: about 18 ha, the sea all round inside the square", () => {
     const land = landArea(2);
-    assert.ok(land > 140_000 && land < 165_000, `${(land / 10000).toFixed(2)} ha`);
+    assert.ok(land > 165_000 && land < 190_000, `${(land / 10000).toFixed(2)} ha`);
     for (const [x, z] of [[-TOWN_HALF + 2, 0], [TOWN_HALF - 2, 0], [0, -TOWN_HALF + 2], [0, TOWN_HALF - 2]]) assert.ok(coastNorm(x, z) > 1, "the square's edge is sea");
     assert.ok(townHeight(TOWN_HALF - 2, 0) < -8, "deep water at the square's edge");
     assert.ok(Math.abs(townHeight(90, 20) - 2.6) < 0.4, "the town is flat at its level");
