@@ -165,10 +165,10 @@ export function strataRock<M extends Material>(material: M): M {
     float bed = floor(bedY);
     float f = fract(bedY);
     float tone = 0.76 + 0.4 * townHash(vec2(bed, 3.7));
-    float seam = (smoothstep(0.9, 0.97, f) + (1.0 - smoothstep(0.0, 0.035, f)) * 0.6) * (0.55 + 0.45 * townNoise(vec2(u * 2.7, bed)));
-    float under = smoothstep(0.55, 0.95, f) * 0.25;
     vec2 across = normalize(vec2(-sn.z, sn.x) + vec2(1e-4));
     float u = dot(sw.xz, across);
+    float seam = (smoothstep(0.9, 0.97, f) + (1.0 - smoothstep(0.0, 0.035, f)) * 0.6) * (0.55 + 0.45 * townNoise(vec2(u * 2.7, bed)));
+    float under = smoothstep(0.55, 0.95, f) * 0.25;
     float joint = (1.0 - smoothstep(0.0, 0.022, abs(townNoise(vec2(u * 1.3, bed * 0.37 + sw.y * 0.4)) - 0.5) - 0.006)) * step(0.35, townHash(vec2(floor(u * 0.9), bed)));
     float grain = 0.92 + 0.16 * townNoise(sw.xz * 9.0 + sw.y * 7.0);
     vec3 stone = diffuseColor.rgb * tone * grain;
