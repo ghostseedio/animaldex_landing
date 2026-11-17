@@ -165,6 +165,7 @@ export function strataRock<M extends Material>(material: M): M {
     float bed = floor(bedY);
     float f = fract(bedY);
     float tone = 0.76 + 0.4 * townHash(vec2(bed, 3.7));
+    // (u before the seam that reads it: declared after it, the program did not compile and the zoo's rockwork drew nothing.)
     vec2 across = normalize(vec2(-sn.z, sn.x) + vec2(1e-4));
     float u = dot(sw.xz, across);
     float seam = (smoothstep(0.9, 0.97, f) + (1.0 - smoothstep(0.0, 0.035, f)) * 0.6) * (0.55 + 0.45 * townNoise(vec2(u * 2.7, bed)));
