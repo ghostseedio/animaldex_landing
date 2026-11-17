@@ -187,7 +187,7 @@ const TOWN_DIGESTS = {
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
-    zoo: "3ad8a0c98288b542",
+    zoo: "da013de4eb631dce",
     // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
     places: "ab4725e321d03544"
 };
