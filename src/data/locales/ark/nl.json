@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Foto waarmee deze {species} aan boord kwam",
             "open": "Bekijk de foto groter",
-            "close": "Foto sluiten"
+            "close": "Foto sluiten",
+            "fromParent": "Foto van een van zijn ouders, aan boord gebracht door {name}",
+            "fromGrandparent": "Foto van een van zijn grootouders, aan boord gebracht door {name}",
+            "fromGreatGrandparent": "Foto van een van zijn overgrootouders, aan boord gebracht door {name}"
         },
         "hearts": {
             "livesOne": "1 leven in de Ark",

@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Bildet som brakte denne {species} om bord",
             "open": "Se bildet større",
-            "close": "Lukk bildet"
+            "close": "Lukk bildet",
+            "fromParent": "Bilde av en av foreldrene, tatt med om bord av {name}",
+            "fromGrandparent": "Bilde av en av besteforeldrene, tatt med om bord av {name}",
+            "fromGreatGrandparent": "Bilde av en av oldeforeldrene, tatt med om bord av {name}"
         },
         "hearts": {
             "livesOne": "1 liv i Ark",

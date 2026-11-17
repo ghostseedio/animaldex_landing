@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Larawang nagdala sa {species} na ito sa barko",
             "open": "Tingnan nang mas malaki ang larawan",
-            "close": "Isara ang larawan"
+            "close": "Isara ang larawan",
+            "fromParent": "Larawan ng isa sa mga magulang nito, na dinala ni {name} sa barko",
+            "fromGrandparent": "Larawan ng isa sa mga lolo't lola nito, na dinala ni {name} sa barko",
+            "fromGreatGrandparent": "Larawan ng isa sa mga lolo't lola sa tuhod nito, na dinala ni {name} sa barko"
         },
         "hearts": {
             "livesOne": "1 buhay sa Ark",

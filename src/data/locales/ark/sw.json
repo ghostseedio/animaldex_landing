@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Picha iliyomleta {species} huyu melini",
             "open": "Tazama picha kubwa zaidi",
-            "close": "Funga picha"
+            "close": "Funga picha",
+            "fromParent": "Picha ya mmoja wa wazazi wake, aliyeletwa melini na {name}",
+            "fromGrandparent": "Picha ya mmoja wa babu au bibi zake, aliyeletwa melini na {name}",
+            "fromGreatGrandparent": "Picha ya mmoja wa babu au bibi wa wazazi wake, aliyeletwa melini na {name}"
         },
         "hearts": {
             "livesOne": "Maisha 1 ndani ya Ark",

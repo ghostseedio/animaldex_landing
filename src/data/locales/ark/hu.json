@@ -571,7 +571,10 @@
         "photo": {
             "alt": "A fotó, amellyel ez az állat ({species}) a fedélzetre került",
             "open": "Fotó nagyobb méretben",
-            "close": "Fotó bezárása"
+            "close": "Fotó bezárása",
+            "fromParent": "Fotó az egyik szüleiről, akit {name} hozott a fedélzetre",
+            "fromGrandparent": "Fotó az egyik nagyszüleiről, akit {name} hozott a fedélzetre",
+            "fromGreatGrandparent": "Fotó az egyik dédszüleiről, akit {name} hozott a fedélzetre"
         },
         "hearts": {
             "livesOne": "1 élet az Arkban",

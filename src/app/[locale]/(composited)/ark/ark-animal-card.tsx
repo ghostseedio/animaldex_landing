@@ -1,7 +1,6 @@
 "use client";
 
 import React, {Suspense, lazy, useEffect, useMemo, useRef, useState} from "react";
-import {createPortal} from "react-dom";
 import Link from "@/app/[locale]/_components/link";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
@@ -15,7 +14,8 @@ import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {arkLineageHasAny, arkLineageLine, arkThriveWords} from "@/lib/ark-thrive";
 import {arkRecordNoteFromLife, arkStatusSignature, arkStatusText, type ArkAnimalStatus, type ArkRecordNote} from "@/lib/ark-animal-status";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
-import {arkPhotoAspect, type ArkCapturePhoto} from "@/lib/ark-capture-photo";
+import type {ArkCapturePhoto} from "@/lib/ark-capture-photo";
+import {arkPhotoShownOn} from "@/lib/ark-photo-label";
 import {ArkRhythmLine, ArkRhythmPanel, useAnimalRhythm} from "@/app/[locale]/(composited)/ark/ark-rhythm";
 import {ArkLivesRow} from "@/app/[locale]/(composited)/ark/ark-lives";
 import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
@@ -28,6 +28,12 @@ import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
  * next moves as a compact row. The life story in full opens inside it. On a phone it covers about a third of the
  * screen at most, the Ark above it.
  */
+
+/**
+ * The photo block (the thumb beside who it is, and for an ancestor's photo the line saying whose it is): lazy, so the
+ * Ark page's static JavaScript stays inside its budget (ark-page-weight.test.ts); it only matters once a card has a photo.
+ */
+const ArkCardPhoto = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card-photo"));
 
 /** Its day (lane ark-its-day): loaded only when opened. */
 const ArkItsDay = lazy(() => import("@/app/[locale]/(composited)/ark/ark-its-day"));
@@ -150,7 +156,10 @@ type CardProps = {
     life: ArkCardLife | null;
     /** This animal's founders from the snapshot (shown before its life story reads). */
     founders: ArkAnimalFounders | null;
-    /** The photo that brought it aboard (`/api/ark/photo/<id>`), or null: no block at all. */
+    /**
+     * The photo (`/api/ark/photo/<id>`), or null: no block at all. The animal's own (it arrived with that capture) or, for
+     * one born on the Ark, its recorded ancestor's, which the card always says is not this animal's (section 2.6).
+     */
     photo?: ArkCapturePhoto | null;
     arkDay: number | null;
     /** The voyage's start (the snapshot's), for the Ark day of a meal its life story names. */
@@ -183,6 +192,11 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.
     const placeholder = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug);
     const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager, named);
+    // An ancestor's photo only on an animal born on the Ark, its own only on one that arrived; never one unlabelled.
+    const shownPhoto = arkPhotoShownOn(photo, facts.born);
+    // The "whose photo" line only once the photo itself has loaded: the server's photo can be refused at the signing
+    // route (an original, a failed read), and a line about a photo that is not there would be wrong.
+    const [loadedPhoto, setLoadedPhoto] = useState<string | null>(null);
     const status = useAnimalStatus(scene, animal.id);
     const [dayOpen, setDayOpen] = useState<string | null>(null);
     const dayShown = dayOpen === animal.id;
@@ -293,12 +307,15 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             )}
                         </p>
                     </div>
-                    {photo ? <ArkCapturePhotoThumb key={animal.id} photo={photo} species={animal.name} words={words} /> : null}
+                    {shownPhoto ? <Suspense fallback={null}><ArkCardPhoto key={animal.id} part="thumb" photo={shownPhoto} species={animal.name} words={words} onLoaded={() => setLoadedPhoto(animal.id)} /></Suspense> : null}
                     <div className="hidden shrink-0 items-center gap-2 md:flex">{moves}</div>
                     <button type="button" onClick={onClose} aria-label={words.close} className="-mr-1 -mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
                         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                     </button>
                 </div>
+
+                {/* Whose photo, when it is not this animal's: "Born on the Ark · Photo of its parent, brought aboard by @ada". */}
+                {shownPhoto && shownPhoto.brought_by && loadedPhoto === animal.id ? <Suspense fallback={null}><ArkCardPhoto part="line" photo={shownPhoto} species={animal.name} words={words} /></Suspense> : null}
 
                 {/* Its status: chips, what it is doing now and next (left), its log (right on a desktop, under on a phone). */}
                 <div className={`mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] md:pl-[3.75rem] ${storyOpen || dayShown ? "hidden md:grid" : ""}`}>
@@ -347,67 +364,6 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                 <div className="mt-2 flex items-center gap-2 md:hidden">{moves}</div>
             </div>
         </div>
-    );
-}
-
-/**
- * The photo that brought it aboard (docs/ark/CAPTURE-MEDIA-CONTRACT.md section 2.4): a small 640 px derivative beside who
- * brought it, lazy-loaded; a tap opens the 1200 px one over the page (Escape, the close button or the backdrop closes
- * it). The server shows it only for a named founder's public capture. A photo that fails to load draws nothing.
- */
-function ArkCapturePhotoThumb({photo, species, words}: {photo: ArkCapturePhoto; species: string; words: ArkWords}) {
-    const [failed, setFailed] = useState(false);
-    const [open, setOpen] = useState(false);
-    const closeRef = useRef<HTMLButtonElement | null>(null);
-    const openerRef = useRef<HTMLButtonElement | null>(null);
-    const alt = fillArkWords(words.photo.alt, {species});
-    useEffect(() => {
-        if (!open) return;
-        closeRef.current?.focus({preventScroll: true});
-        const onKey = (event: KeyboardEvent) => {
-            if (event.key !== "Escape") return;
-            event.stopPropagation();
-            setOpen(false);
-        };
-        window.addEventListener("keydown", onKey, true);
-        return () => window.removeEventListener("keydown", onKey, true);
-    }, [open]);
-    const close = () => {
-        setOpen(false);
-        openerRef.current?.focus({preventScroll: true});
-    };
-    if (failed) return null;
-    const aspect = arkPhotoAspect(photo.thumb);
-    return (
-        <>
-            <button
-                ref={openerRef}
-                type="button"
-                onClick={() => setOpen(true)}
-                aria-label={words.photo.open}
-                title={words.photo.open}
-                data-testid="ark-card-photo"
-                className="rows-in relative h-11 shrink-0 overflow-hidden rounded-lg border border-white/15 bg-white/[0.06] shadow-[0_2px_10px_rgba(0,0,0,0.3)] transition-transform duration-200 hover:scale-[1.04] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none md:h-12"
-                style={{aspectRatio: String(aspect)}}
-            >
-                {/* eslint-disable-next-line @next/next/no-img-element -- a signed storage redirect, not an optimisable asset */}
-                <img src={photo.thumb.path} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(true)} className="h-full w-full object-cover" width={photo.thumb.width ?? undefined} height={photo.thumb.height ?? undefined} />
-            </button>
-            {/* (On the page's body: the card's backdrop blur would make it the overlay's box.) */}
-            {open && typeof document !== "undefined" ? createPortal(
-                <div role="dialog" aria-modal="true" aria-label={alt} data-testid="ark-card-photo-large" className="rows-in fixed inset-0 z-[80] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" onClick={close}>
-                    <figure className="relative max-h-full max-w-[min(64rem,100%)]" onClick={(event) => event.stopPropagation()}>
-                        {/* eslint-disable-next-line @next/next/no-img-element -- a signed storage redirect */}
-                        <img src={photo.large.path} alt={alt} decoding="async" className="max-h-[82svh] w-auto max-w-full rounded-xl object-contain shadow-2xl" width={photo.large.width ?? undefined} height={photo.large.height ?? undefined} />
-                        <figcaption className="mt-2 text-center text-[12.5px] text-ink-200">{alt}</figcaption>
-                        <button ref={closeRef} type="button" onClick={close} aria-label={words.photo.close} className="absolute -right-2 -top-2 flex h-9 w-9 items-center justify-center rounded-full bg-canvas-950/90 text-ink-100 ring-1 ring-white/20 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
-                            <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
-                        </button>
-                    </figure>
-                </div>,
-                document.body
-            ) : null}
-        </>
     );
 }
 

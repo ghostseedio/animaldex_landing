@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Kuva, joka toi tämän eläimen ({species}) laivaan",
             "open": "Näytä kuva suurempana",
-            "close": "Sulje kuva"
+            "close": "Sulje kuva",
+            "fromParent": "Kuva yhdestä sen vanhemmista, jonka laivaan toi {name}",
+            "fromGrandparent": "Kuva yhdestä sen isovanhemmista, jonka laivaan toi {name}",
+            "fromGreatGrandparent": "Kuva yhdestä sen isoisovanhemmista, jonka laivaan toi {name}"
         },
         "hearts": {
             "livesOne": "1 elämä Arkissa",

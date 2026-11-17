@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Bu {species} hayvanını gemiye getiren fotoğraf",
             "open": "Fotoğrafı büyük gör",
-            "close": "Fotoğrafı kapat"
+            "close": "Fotoğrafı kapat",
+            "fromParent": "Ebeveynlerinden birinin fotoğrafı, gemiye getiren: {name}",
+            "fromGrandparent": "Büyükanne veya büyükbabasından birinin fotoğrafı, gemiye getiren: {name}",
+            "fromGreatGrandparent": "Büyük büyükanne veya büyük büyükbabasından birinin fotoğrafı, gemiye getiren: {name}"
         },
         "hearts": {
             "livesOne": "Ark'ta 1 can",

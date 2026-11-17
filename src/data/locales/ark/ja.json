@@ -571,7 +571,10 @@
         "photo": {
             "alt": "この{species}を船に乗せた写真",
             "open": "写真を大きく見る",
-            "close": "写真を閉じる"
+            "close": "写真を閉じる",
+            "fromParent": "親の写真。連れてきた人：{name}",
+            "fromGrandparent": "祖父母の写真。連れてきた人：{name}",
+            "fromGreatGrandparent": "曽祖父母の写真。連れてきた人：{name}"
         },
         "hearts": {
             "livesOne": "Arkでの命 1つ",

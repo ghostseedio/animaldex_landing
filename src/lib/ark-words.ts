@@ -441,8 +441,14 @@ export type ArkWords = {
     age: ArkAgeAskWords;
     /** Lost from the Ark (`lib/ark-extinct.ts`, read through `arkLostWords`). Optional: an older bundle lacks them. */
     lost?: Partial<ArkLostWords>;
-    /** The photo that brought it aboard, on the tap card (docs/ark/CAPTURE-MEDIA-CONTRACT.md): its alt text ({species}), open and close. */
-    photo: {alt: string; open: string; close: string};
+    /**
+     * The photo that brought it aboard, on the tap card (docs/ark/CAPTURE-MEDIA-CONTRACT.md): its alt text ({species}),
+     * open and close. For an animal born on the Ark the photo is its recorded ancestor's (section 2.6), and the line
+     * beside it says so after "Born on the Ark ·": `fromParent` / `fromGrandparent` / `fromGreatGrandparent`, each with
+     * `{name}` = the ancestor's bringer ("Photo of its parent, brought aboard by @ada"). The Ark records no sex, so
+     * nothing here says mother or father. Optional: an older bundle lacks them (English is the fallback).
+     */
+    photo: {alt: string; open: string; close: string; fromParent?: string; fromGrandparent?: string; fromGreatGrandparent?: string};
     /** Hearts are lives (behind the server's `ark_hearts`): the card's lives row, recovering, the restore. */
     hearts?: Partial<ArkHeartsWords>;
 };

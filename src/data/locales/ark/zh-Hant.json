@@ -571,7 +571,10 @@
         "photo": {
             "alt": "把這隻{species}帶上船的照片",
             "open": "查看大圖",
-            "close": "關閉照片"
+            "close": "關閉照片",
+            "fromParent": "牠的父母之一的照片，由{name}帶上船",
+            "fromGrandparent": "牠的祖輩之一的照片，由{name}帶上船",
+            "fromGreatGrandparent": "牠的曾祖輩之一的照片，由{name}帶上船"
         },
         "hearts": {
             "livesOne": "在 Ark 中有 1 條命",

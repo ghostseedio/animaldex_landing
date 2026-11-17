@@ -691,10 +691,11 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
         return () => controller.abort();
     }, [selected, fixture, fixtureLife, publicStory]);
 
-    // MARK: The photo that brought it aboard (a named founder's public capture; the server decides, or null).
+    // MARK: The photo that brought it aboard (a named founder's public capture; the server decides, or null). An animal
+    // born on the Ark asks too: the server answers its recorded ancestor's photo, of its species, and says whose it is.
 
     useEffect(() => {
-        if (!selected || selected.origin === "born") return;
+        if (!selected) return;
         const id = selected.id;
         const known = photosRef.current;
         if (known.has(id)) {

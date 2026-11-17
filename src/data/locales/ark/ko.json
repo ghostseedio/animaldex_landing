@@ -571,7 +571,10 @@
         "photo": {
             "alt": "이 {species}을(를) 배에 태운 사진",
             "open": "사진 크게 보기",
-            "close": "사진 닫기"
+            "close": "사진 닫기",
+            "fromParent": "부모 중 한 마리의 사진, 데려온 사람: {name}",
+            "fromGrandparent": "조부모 중 한 마리의 사진, 데려온 사람: {name}",
+            "fromGreatGrandparent": "증조부모 중 한 마리의 사진, 데려온 사람: {name}"
         },
         "hearts": {
             "livesOne": "Ark에서 생명 1개",

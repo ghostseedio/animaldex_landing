@@ -4782,7 +4782,10 @@
     "photo": {
       "alt": "Photo that brought this {species} aboard",
       "open": "See the photo larger",
-      "close": "Close the photo"
+      "close": "Close the photo",
+      "fromParent": "Photo of its parent, brought aboard by {name}",
+      "fromGrandparent": "Photo of its grandparent, brought aboard by {name}",
+      "fromGreatGrandparent": "Photo of its great-grandparent, brought aboard by {name}"
     },
     "hearts": {
       "livesOne": "1 life in the Ark",

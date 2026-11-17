@@ -571,7 +571,10 @@
         "photo": {
             "alt": "Foto yang membawa {species} ini naik ke kapal",
             "open": "Lihat foto lebih besar",
-            "close": "Tutup foto"
+            "close": "Tutup foto",
+            "fromParent": "Foto salah satu induknya, dibawa naik ke kapal oleh {name}",
+            "fromGrandparent": "Foto salah satu datuk atau neneknya, dibawa naik ke kapal oleh {name}",
+            "fromGreatGrandparent": "Foto salah satu moyangnya, dibawa naik ke kapal oleh {name}"
         },
         "hearts": {
             "livesOne": "1 nyawa di Ark",
