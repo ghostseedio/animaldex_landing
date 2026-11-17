@@ -176,7 +176,7 @@ const TOWN_DIGESTS = {
     // (Pass 2, lane LAND: the millpond's bank meets its water, its wetland spots and stones, pond life at the wetland; the
     // downtown headland: its streets, three towers, the plaza, billboards.)
     // (p4 (safari): the safari areas' spots, the car park's bays.)
-    areas: "b37c10a5f570dc6e",
+    areas: "c6c264ec4ce17c34",
     // (Lane GA: the ground's surface weights.)
     // (p4 (safari): the 12 × 12 grid, the safari's savanna, desert, mud, ditches and waterholes, the deeper strait.)
     ground: "7afe995682426afe",
@@ -200,8 +200,9 @@ const TOWN_DIGESTS = {
     // (Pass 5 rural lane: pass 4 merged into the safari; these recomputed on that merge. Then p5 (rural): the countryside
     // lobe's land, lane, fields, pond and buildings (plan, ground, areas, scenery); the livestock and poultry moved to
     // its fields, the farms' and the children's farm's kept few, a roof cluster spread along its roof (places). Then the
-    // duck pond's bowl with its rim just over its water (ground; areas: the pond's spots on it).)
-    places: "842b883bf4781c52"
+    // duck pond's bowl with its rim just over its water (ground; areas: the pond's spots on it). Then no
+    // wildlife roof spots on the pig arks and mobile hen houses (areas), and a roof cluster along its ridge and faces (places).)
+    places: "3b961936b29a20a2"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {

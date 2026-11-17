@@ -266,7 +266,9 @@ function urbanSpots(plan: TownPlan): TownSpot[] {
     for (const b of plan.buildings) {
         // (The floor the building is drawn on, its highest ground: its roof's spots on its drawn roof, never in it.)
         const floor = townBuildingFloor(b.at);
-        if (b.kind === "coop" || b.kind === "stable") continue;
+        // (p5 (rural): nor a pig ark's half-barrel or a mobile hen house: low shelters, as a coop is; a bird's roof spot on
+        // the curve of a pig ark stood inside it.)
+        if (b.kind === "coop" || b.kind === "stable" || b.kind === "pig_ark" || b.kind === "hen_house") continue;
         const first = out.length;
         // The ridge (or a flat roof's middle), and the eaves front and back.
         const ridge = local(b.at, 0, 0);
@@ -661,7 +663,7 @@ export type {Parcel};
  * p5 (census): a roosting cluster's members side by side along their roof (the coordinator's census, 2026-11-17: "urban
  * roof clusters (flats-11: 16, house-5: 13 ... sparrows, jackdaws, gulls) get ONE identical spot each"). The cluster's
  * first keeps its spot; the rest, by their place in the cluster (`rank`), take the next places along the ridge (a flat
- * roof's: a grid over it), then along the eaves front and back, a body and a half apart, each lifted onto the drawn roof
+ * roof's: a grid over it), then halfway down the roof's faces, a body and a half apart, each lifted onto the drawn roof
  * there (`perchOnSurface`). Pure in the spot, the rank and the body: the same for every viewer.
  */
 export function spreadPerch(spot: TownSpot, rank: number, length: number, plan: TownPlan = townPlan()): TownSpot {
@@ -677,10 +679,15 @@ export function spreadPerch(spot: TownSpot, rank: number, length: number, plan: 
     } else {
         const ridgeHalf = b.roof === "hip" ? Math.max((b.at.w - b.at.d) / 2, 0.4) : b.at.w / 2 - 0.5;
         lines.push({lz: 0, y: floor + b.top, half: ridgeHalf});
-        for (const lz of [b.at.d / 2 + 0.2, -b.at.d / 2 - 0.2]) lines.push({lz, y: floor + b.eaves - 0.2, half: b.at.w / 2 - 0.4});
+        // (Then halfway down the roof's two faces, lifted onto them: not the eaves, under the roof's overhang, where a
+        // bird's flight out clipped the house.)
+        // (Only a small bird on a slope: a kestrel or a gull asleep across a pitched face lay into it; the bigger ones,
+        // past the ridge's places, share them in turn.)
+        if (length < 0.25) for (const lz of [b.at.d / 4, -b.at.d / 4]) lines.push({lz, y: floor + (b.eaves + b.top) / 2 - 0.3, half: (b.roof === "hip" ? b.at.w / 2 - b.at.d / 4 : b.at.w / 2) - 0.5});
     }
     // (The spot's own line first, then the rest; along each, the places out from the spot both ways.)
     lines.sort((p, q) => Math.abs(p.lz - at.z) - Math.abs(q.lz - at.z));
+    const solid = buildingSolid(b);
     let k = rank;
     for (const line of lines) {
         const from = Math.max(Math.min(at.x, line.half), -line.half);
@@ -692,10 +699,11 @@ export function spreadPerch(spot: TownSpot, rank: number, length: number, plan: 
         const own = Math.abs(line.lz - at.z) < 0.3 ? places : [from, ...places];
         if (k <= own.length) {
             const p = local(b.at, own[k - 1], line.lz);
-            const solid = buildingSolid(b);
             return {...spot, x: p.x, z: p.z, y: perchOnSurface(solid, p.x, line.y, p.z)};
         }
         k -= own.length;
     }
-    return spot;
+    // (Past every place: round them again, the first line's first.)
+    const total = rank - k;
+    return total > 0 ? spreadPerch(spot, 1 + ((rank - 1) % total), length, plan) : spot;
 }
