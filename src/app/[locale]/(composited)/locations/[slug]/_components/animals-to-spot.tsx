@@ -1,6 +1,7 @@
 import Link from "@/app/[locale]/_components/link";
 import TierBadge from "@/app/[locale]/(composited)/rankings/_components/tier-badge";
 import {getSpeciesArtworkUrl} from "@/data/species-artwork";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 
 export type PlaceSpecies = {
     slug: string;
@@ -44,7 +45,7 @@ export default function AnimalsToSpot({species, title, description, readSpecies,
                                 className="h-8 w-8 shrink-0 rounded-full bg-surface-800 object-contain ring-1 ring-white/15"
                             />
                             {entry.name}
-                            <TierBadge tier={entry.tier} size="sm" />
+                            {SHOWS_BATTLE_TIER_AND_POWER ? <TierBadge tier={entry.tier} size="sm" /> : null}
                         </p>
                         <p className="mt-1 text-sm italic text-ink-300">{entry.scientificName}</p>
                         <p className="mt-3 text-sm font-semibold text-primary-200">{readSpecies} →</p>

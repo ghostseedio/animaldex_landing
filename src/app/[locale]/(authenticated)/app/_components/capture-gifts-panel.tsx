@@ -8,6 +8,7 @@
  */
 
 import {useCallback, useEffect, useState} from "react";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import CaptureGiftSheet, {GiftGlyph, GiftImage} from "@/app/[locale]/(authenticated)/app/_components/capture-gift-sheet";
 import {
     giftStatTitle,
@@ -87,7 +88,7 @@ export default function CaptureGiftsPanel({captureId, canSend = false}: CaptureG
                     <GiftGlyph className="h-4 w-4 shrink-0 text-white/80" />
                     <span className="min-w-0 flex-1">
                         <span className="block text-sm font-semibold text-white">Send a Gift</span>
-                        <span className="mt-0.5 block text-xs text-white/55">Recognise a stat on this animal. Gifts do not change Grade or battle power.</span>
+                        <span className="mt-0.5 block text-xs text-white/55">Recognise a stat on this animal. Gifts do not change Grade{SHOWS_BATTLE_TIER_AND_POWER ? " or battle power" : ""}.</span>
                     </span>
                     <span className="flex shrink-0 -space-x-2" aria-hidden="true">
                         {catalog?.definitions.slice(0, 3).map((definition) => (

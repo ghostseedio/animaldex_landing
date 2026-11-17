@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import ContentImageFigure from "@/app/[locale]/(composited)/_components/content-image-figure";
@@ -134,7 +135,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
             <section className="grid grid-cols-1 lg:grid-cols-[1.1fr_0.9fr] gap-8 items-start">
                 <div className="flex flex-col gap-5">
                     <p className="text-primary-200 font-medium uppercase tracking-[0.2em] text-sm">
-                        {entry.legendaryType} · Tier {entry.tier}
+                        {SHOWS_BATTLE_TIER_AND_POWER ? `${entry.legendaryType} · Tier ${entry.tier}` : entry.legendaryType}
                     </p>
                     <h1 className="font-display font-bold text-5xl md:text-6xl lg:text-7xl text-white leading-[0.95]">
                         {entry.legendaryFormName}
@@ -158,7 +159,7 @@ export default async function LegendaryEarthBeastPage({params}: LegendaryEarthBe
             </section>
 
             <section className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-                <FactCard label="Tier" value={`${entry.tier} · ${entry.legendaryType}`} />
+                <FactCard label={SHOWS_BATTLE_TIER_AND_POWER ? "Tier" : "Type"} value={SHOWS_BATTLE_TIER_AND_POWER ? `${entry.tier} · ${entry.legendaryType}` : entry.legendaryType} />
                 <FactCard label="Scientific name" value={entry.scientificName} />
                 <FactCard label="Capture landmark" value={catalogSeed?.captureSite ?? entry.captureSite} />
                 <FactCard label="Legendary power" value={entry.power} />

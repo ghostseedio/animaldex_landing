@@ -24,13 +24,17 @@ import {primeWheatStands} from "@/ark-scene/near-detail";
 import {primeWildScenery} from "@/ark-scene/islands/wild/scenery";
 import type {ArkZone} from "@/ark-scene/types";
 import {arkWorld} from "@/ark-scene/world";
+import {arkCodeUrl} from "@/ark-scene/code-version";
 
 /**
  * A prebuild worker's URL for the world in use (docs/ark/wild-island.md §Integration): a v2 world's worker is told so in
  * its URL (`?world=v2`), which `world.ts` reads as it loads, before any of the worker's modules build from the world.
+ * Every worker URL also carries the code's version (`code-version.ts`: `?v=`), so a browser never keeps an old worker
+ * beside a new scene, and the CDN may keep a versioned one for good.
  */
-function forWorld(url: string): string {
-    return arkWorld() === "v2" ? `${url}${url.includes("?") ? "&" : "?"}world=v2` : url;
+export function forWorld(url: string): string {
+    const versioned = arkCodeUrl(url);
+    return arkWorld() === "v2" ? `${versioned}${versioned.includes("?") ? "&" : "?"}world=v2` : versioned;
 }
 import {tierFor, type QualityTier} from "@/ark-scene/post";
 import {GRASS_BUILD} from "@/ark-scene/runtime/budgets";

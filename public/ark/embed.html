@@ -92,7 +92,9 @@
   // The Ark's code by this page's deploy (decision 360): the CDN lets a phone keep ./ark-scene.js for 4 hours, and a
   // new page with the old code broke Ark Lite (2026-11-15: setFounders missing, an empty page). This page is never
   // cached and its Last-Modified is the image's build time, so each deploy asks for its own code and workers; the
-  // same deploy's stay cached. (No header: the time now, so fresh every load, never stale.)
+  // same deploy's stay cached. (No header: the time now, so fresh every load, never stale.) Since 2026-11-17 the versioned
+  // address is also what the server lets a browser keep for good (`immutable`, next.config.js) and a bare one is asked
+  // again every time; the scene reads this same `ARK_CODE_V` for the workers it starts itself (src/ark-scene/code-version.ts).
   window.ARK_CODE_V = "?v=" + (Date.parse(document.lastModified) || Date.now());
   (function () {
     var link = document.createElement("link");
@@ -443,7 +445,10 @@
  * for one of them, ?hud=0 none (default: none; with ?fixture=, both). ?feed=1 (a development build of the
  * bundle, with ?fixture= by default): development's live feed, made-up arrivals, births, meals and deaths.
  * From the host (postMessage or window.AnimalDexArkHost):
- *   {type: "ark:snapshot", snapshot}  {type: "ark:mine", value}  {type: "ark:select", id, closeUp?}  {type: "ark:region", region}
+ *   {type: "ark:snapshot", snapshot}  {type: "ark:mine", value}  {type: "ark:select", id, closeUp?, follow?, arrival?}  {type: "ark:region", region}
+ *      "See it in the Ark" (the capture's button, iOS, Android and the web's ?focus=<animal id>&follow=1&arrival=1): `follow` keeps the camera
+ *      on the animal as it goes about; `arrival` (the first time a person's animal comes aboard) acts the arrival out first, then comes close
+ *      and follows (src/ark-scene/see-it.ts). Neither changes a plain select.
  *   {type: "ark:visitor", visitor: {slug, name, label} | null}   the chat's animal visiting (not aboard): answered with
  *                                                                {type: "ark:visitor-id", id}, for select and talking
  *   {type: "ark:talking", talking: {slug, animalId, active}}     an animal starts or stops talking (its full talking model stands in)
@@ -924,14 +929,14 @@ window.AnimalDexArkStart = function () {
       try { mounting = Ark.mountArchipelago(document.getElementById("ark"), options); } catch (error) { failLoad(error); return; }
       // (A development build: the handle for probes, as the page's `__arkScene`.)
       if (devBuild) window.__arkScene = mounting;
-      if (selectHeld) mounting.select(selectHeld.id || null, Boolean(selectHeld.closeUp));
+      if (selectHeld) seeIt(mounting, selectHeld);
       selectHeld = null;
       mounting.mounted().then(function () { loadStep("prepared"); scene = mounting; mounted(shown || snapshot); }).catch(failLoad);
       return;
     }
     try { scene = Ark.mountArk(document.getElementById("ark"), options); } catch (error) { failLoad(error); return; }
     loadStep("prepared");
-    if (selectHeld) scene.select(selectHeld.id || null, Boolean(selectHeld.closeUp));
+    if (selectHeld) seeIt(scene, selectHeld);
     selectHeld = null;
     mounted(snapshot);
   }
@@ -1065,6 +1070,21 @@ window.AnimalDexArkStart = function () {
       .catch(function () {});
   }
 
+  // A selection from the host: the animal, close up when asked, followed when asked (and its arrival acted out first
+  // the first time it comes aboard): the scene's own select / follow / play, in the order src/ark-scene/see-it.ts keeps.
+  function seeIt(target, message) {
+    var id = message.id || null;
+    var animal = null;
+    if (id && shown && shown.animals) {
+      for (var i = 0; i < shown.animals.length; i++) if (shown.animals[i].id === id) { animal = shown.animals[i]; break; }
+    }
+    if ((message.follow || message.arrival) && Ark.arkSeeIt) {
+      Ark.arkSeeIt(target, {id: id, closeUp: Boolean(message.closeUp), follow: Boolean(message.follow), arrival: Boolean(message.arrival)}, animal, motion.matches);
+      return;
+    }
+    target.select(id, Boolean(message.closeUp));
+  }
+
   // The runtime's messages (ark:visible, ark:power) may come before the scene is up: the latest of each waits for it.
   var runtimeHeld = {};
   // (And whether the host shows the panel: while it says it is covered, the Ark is not read again either.)
@@ -1117,7 +1137,7 @@ window.AnimalDexArkStart = function () {
     }
     else if (live && message.type === "ark:mine") live.setMineOnly(Boolean(message.value));
     else if (message.type === "ark:select") {
-      if (live) live.select(message.id || null, Boolean(message.closeUp));
+      if (live) seeIt(live, message);
       else selectHeld = message;
     }
     else if (live && message.type === "ark:region") live.focusRegion(message.region || null);
