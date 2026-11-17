@@ -8948,6 +8948,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // 3.3 fix (log): the record's deaths, where each lies (the harness).
         deaths: () => liveDeaths.debug(),
         forest: () => forest.debug(), // p5 (humans)
+        dogWalks: () => ({walked: townHumans.dogs.map((d) => ({id: d.id, walker: d.walker, x: d.x, y: d.y, z: d.z, yaw: d.yaw, sniffing: d.sniffing})), pins: walkPins.slice(), live: Array.from(dogActs.keys()), pairs: dogWalks.pairing.walkerOf.size, home: dogWalks.pairing.home.length}), // p5 (humans, dogs)
         rigState: (id: string) => {
             const e = allEntries().find((x) => x.animal.id === id);
             return e ? {rigOn: Boolean(e.rigOn), weight: e.rig?.weight ?? 0, clip: e.rig?.now?.name ?? null, level: e.level ?? null} : null;

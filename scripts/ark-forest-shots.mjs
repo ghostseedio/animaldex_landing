@@ -32,7 +32,8 @@ const out = path.resolve(arg("out", path.join(root, ".ark-golden", "forest-shots
 mkdirSync(out, {recursive: true});
 const site = path.join(root, ".ark-golden", "forest");
 mkdirSync(site, {recursive: true});
-await build({entryPoints: [path.join(root, "src/ark-scene/forest-entry.ts")], outfile: path.join(site, "scene.js"), bundle: true, format: "iife", platform: "browser", target: ["es2020"], minify: true, tsconfig: path.join(root, "tsconfig.json"), define: {"process.env.NODE_ENV": JSON.stringify("development")}, logLevel: "warning"});
+const which = arg("page", "forest");
+await build({entryPoints: [path.join(root, which === "humans" ? "src/ark-scene/humans-entry.ts" : "src/ark-scene/forest-entry.ts")], outfile: path.join(site, "scene.js"), bundle: true, format: "iife", platform: "browser", target: ["es2020"], minify: true, tsconfig: path.join(root, "tsconfig.json"), define: {"process.env.NODE_ENV": JSON.stringify("development")}, logLevel: "warning"});
 writeFileSync(path.join(site, "index.html"), `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Ark forestry</title>
 <style>html,body{margin:0;height:100%;background:#0b1020;overflow:hidden}#ark{position:fixed;inset:0}#note{position:fixed;left:10px;top:8px;z-index:9;font:600 13px/1.35 ui-sans-serif,system-ui;color:#fff;text-shadow:0 1px 3px #000;white-space:pre}</style>
 </head><body><div id="ark"></div><div id="note"></div><script src="./scene.js"></script></body></html>`);
@@ -70,6 +71,21 @@ const SHOTS = [
     ["7-regrown", 42, 38, 0.7, 1.05, 0, 0]
 ];
 const page = await browser.newPage({viewport: {width: 1280, height: 800}});
+if (which === "humans") {
+    // `--page humans`: dog walks in the whole scene (the town beside the wild island): a morning walk on a pavement,
+    // close and from a little back, and an evening one.
+    page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 300)));
+    await page.goto(base + "?world=v2&hours=7.8");
+    await page.waitForFunction(() => window.__humansReady === true, null, {timeout: 400000});
+    for (const [name, hours, distance, polar, turn, nth] of [["d1-morning-walk", 7.8, 6, 1.3, 0.9, 0], ["d2-morning-walk-wide", 7.8, 16, 1.1, 2.2, 0], ["d3-another", 8.3, 7, 1.3, -0.9, 1], ["d4-evening-walk", 18.6, 7, 1.3, 0.9, 0], ["d5-evening-wide", 18.9, 22, 1.0, 2.4, 2]]) {
+        const state = await page.evaluate(([h, d, p, t, n]) => window.__humans.walk(h, d, p, t, n), [hours, distance, polar, turn, nth]);
+        await page.screenshot({path: path.join(out, `${name}.png`)});
+        console.log(name, String(state).slice(0, 400));
+    }
+    await browser.close();
+    server.close();
+    process.exit(0);
+}
 page.on("console", (m) => (m.text().startsWith("[forest]") || m.type() === "error") && console.log(m.type(), m.text().slice(0, 300)));
 page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 300)));
 await page.goto(base + "?world=v2&hours=" + arg("hours", "10"));

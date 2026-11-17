@@ -43,8 +43,8 @@ export type PavementGraph = {
 };
 
 const DRY: ReadonlyArray<[number, number]> = [[0, 0], [0.45, 0], [-0.45, 0], [0, 0.45], [0, -0.45]];
-const CARS: ReadonlySet<Street["kind"]> = new Set(["high", "road", "lane", "track"]);
-const WALKS: ReadonlySet<Street["kind"]> = new Set(["path", "towpath", "quay"]);
+const CARS: ReadonlySet<Street["kind"]> = new Set<Street["kind"]>(["high", "road", "lane", "track"]);
+const WALKS: ReadonlySet<Street["kind"]> = new Set<Street["kind"]>(["path", "towpath", "quay"]);
 
 type Vertex = Pt & {chain: number; links: Array<{to: number; kind: PaveKind}>; street: string; end: boolean};
 
