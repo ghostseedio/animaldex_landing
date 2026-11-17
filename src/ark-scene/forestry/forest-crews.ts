@@ -13,7 +13,14 @@
 import {cutDay, forestUnit, FELL_DAYS, HAUL_DAYS, PLANT_DAYS, PLANT_FROM, plantDay, type Logging} from "@/ark-scene/positions/forestry";
 import {fallHeading, saplingSpot} from "@/ark-scene/forestry/forest-state";
 
-export type CrewPoseKind = "stand" | "walk" | "chop" | "plant" | "carry";
+export type CrewPoseKind = "stand" | "walk" | "chop" | "saw" | "plant" | "carry";
+
+export type ForestTool = "saw" | "axe";
+
+/** Which tool a feller works with (by its id: about two in three a chainsaw, the rest an axe). */
+export function toolOf(id: string): ForestTool {
+    return forestUnit(`${id}#tool#${id.length}`) < 0.65 ? "saw" : "axe";
+}
 
 /** A crew member at a moment (the host draws it with the town's figures: the same person as in town). */
 export type CrewMember = {id: string; x: number; z: number; yaw: number; pose: CrewPoseKind; phase: number; role: "feller" | "spotter" | "planter"};
@@ -97,10 +104,11 @@ export function crewAt(g: Logging, trees: ReadonlyArray<{x: number; z: number; r
         } else {
             // The feller works on the side away from the tree's fall.
             const away = fallHeading(g, next.x, next.z) + Math.PI;
-            const off = (next.r ?? 0.4) + 0.7;
+            // (Outside the tree's foot: an arm and a chainsaw's bar, or an axe's haft, from its trunk.)
+            const off = (next.r ?? 0.4) + (toolOf(ids[0]) === "saw" ? 0.6 : 0.75);
             const foot = {x: next.x + Math.cos(away) * off, z: next.z + Math.sin(away) * off};
             const at = along(prev, foot, prev.at, next.at, day);
-            out.push({id: ids[0], x: at.x, z: at.z, yaw: at.walking ? yawTo(prev.x, prev.z, foot.x, foot.z) : yawTo(foot.x, foot.z, next.x, next.z), pose: at.walking ? "walk" : "chop", phase: phase(ids[0]), role: "feller"});
+            out.push({id: ids[0], x: at.x, z: at.z, yaw: at.walking ? yawTo(prev.x, prev.z, foot.x, foot.z) : yawTo(foot.x, foot.z, next.x, next.z), pose: at.walking ? "walk" : toolOf(ids[0]) === "saw" ? "saw" : "chop", phase: phase(ids[0]), role: "feller"});
         }
         if (ids[1]) {
             // The spotter: well back (two tree lengths would be the rule; the stand's edge on the crew's side here).

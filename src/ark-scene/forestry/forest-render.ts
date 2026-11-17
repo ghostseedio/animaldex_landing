@@ -3,19 +3,22 @@
  * planters grub them out) and the stand's
  * bared earth (churned soil and sawdust, greening back as the saplings grow). One instanced draw for every stump and one
  * small mesh per stand in play (at most two or three at a time), built when a stand comes into play and dropped after.
- * The trees themselves (falling, felled, saplings) are `forest-trees.ts`, through `AssetTrees.setOverride`.
+ * The trees themselves (falling, saplings) are `forest-trees.ts`, through `AssetTrees.setOverride`; once down, the
+ * trunk above the cut is a log of `forest-logs.ts` (the tree's own mesh, buttresses and all, goes: the stump keeps them).
  */
 
 import {BufferAttribute, BufferGeometry, Color, CylinderGeometry, DoubleSide, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, Quaternion, Vector3} from "three";
 import {inStand, type Logging} from "@/ark-scene/positions/forestry";
-import {bareness, treeFate} from "@/ark-scene/forestry/forest-state";
+import {bareness, fallHeading, treeFate} from "@/ark-scene/forestry/forest-state";
+import {ForestLogs} from "@/ark-scene/forestry/forest-logs";
 
 /** Stumps drawn at most (the stands in play hold a few dozen trees between them). */
 const MAX_STUMPS = 160;
 /** A stump's height (m). */
 const STUMP_H = 0.42;
 
-export type StandTree = {x: number; y: number; z: number; radius: number};
+/** A stand's tree: its foot, how far its foot spreads (`radius`, buttresses and all), its trunk's radius above them and its height (m). */
+export type StandTree = {x: number; y: number; z: number; radius: number; trunk: number; height: number; /** A buttressed emergent (its stump keeps its fins). */ buttress?: boolean};
 
 function stumpGeometry(): BufferGeometry {
     // A short tapered cylinder: bark on the side, the pale cut on top with its rings darker toward the bark.
@@ -34,6 +37,76 @@ function stumpGeometry(): BufferGeometry {
         colours.set([c.r, c.g, c.b], i * 3);
     }
     g.setAttribute("color", new BufferAttribute(colours, 3));
+    return g;
+}
+
+/** A buttressed stump's fins (in trunk radii) and its height (m): cut above the buttresses, as loggers cut them. */
+const FINS = 5;
+const FIN_REACH = 5;
+const BUTTRESS_STUMP_H = 1.3;
+
+/**
+ * A buttressed emergent's stump (unit trunk radius, unit height): the cut trunk and its fins, each a thin plank-like
+ * wall curving down from the cut to the ground `FIN_REACH` radii out. Fin k at angle k·2π/FINS.
+ */
+function buttressGeometry(): BufferGeometry {
+    const positions: number[] = [];
+    const colours: number[] = [];
+    const index: number[] = [];
+    const bark = new Color("#6f6252");
+    const barkDark = new Color("#4f4538");
+    const cut = new Color("#cfae7b");
+    const c = new Color();
+    const push = (x: number, y: number, z: number, col: Color) => {
+        positions.push(x, y, z);
+        colours.push(col.r, col.g, col.b);
+        return positions.length / 3 - 1;
+    };
+    // The trunk's drum (sides, then its cut top with the rings).
+    const sides = 14;
+    const base = positions.length / 3;
+    for (const y of [0, 1]) for (let s = 0; s <= sides; s++) {
+        const a = (s / sides) * Math.PI * 2;
+        c.copy(bark).lerp(barkDark, 0.5 + 0.5 * Math.sin(a * 9));
+        push(Math.cos(a) * (y ? 1 : 1.15), y, Math.sin(a) * (y ? 1 : 1.15), c);
+    }
+    for (let s = 0; s < sides; s++) index.push(base + s, base + sides + 1 + s, base + s + 1, base + s + 1, base + sides + 1 + s, base + sides + 2 + s);
+    const top = push(0, 1, 0, c.set("#a07a4a"));
+    const ring = positions.length / 3;
+    for (let s = 0; s < sides; s++) {
+        const a = (s / sides) * Math.PI * 2;
+        push(Math.cos(a) * 0.92, 1, Math.sin(a) * 0.92, cut);
+    }
+    for (let s = 0; s < sides; s++) index.push(top, ring + ((s + 1) % sides), ring + s);
+    // The fins.
+    const steps = 6;
+    for (let k = 0; k < FINS; k++) {
+        const a = (k / FINS) * Math.PI * 2 + 0.2 * Math.sin(k * 2.3);
+        const ca = Math.cos(a), sa = Math.sin(a);
+        const px = -sa, pz = ca;
+        const start = positions.length / 3;
+        for (let i = 0; i <= steps; i++) {
+            const f = i / steps;
+            const r = 0.7 + (FIN_REACH - 0.7) * f * (0.85 + 0.15 * Math.sin(k * 1.7));
+            const y = Math.max((1 - f) ** 1.8 * 0.98, 0.0);
+            const half = 0.17 * (1 - f) + 0.05;
+            c.copy(bark).lerp(barkDark, f * 0.5);
+            for (const side of [-1, 1]) push(ca * r + px * half * side, -0.05, sa * r + pz * half * side, c);
+            for (const side of [-1, 1]) push(ca * r + px * half * side * 0.6, y, sa * r + pz * half * side * 0.6, c);
+        }
+        for (let i = 0; i < steps; i++) {
+            const v = start + i * 4, w = v + 4;
+            // (Vertices per step: bottom −, bottom +, top −, top +.)
+            index.push(v, v + 2, w, w, v + 2, w + 2);
+            index.push(v + 1, w + 1, v + 3, w + 1, w + 3, v + 3);
+            index.push(v + 2, v + 3, w + 2, w + 2, v + 3, w + 3);
+        }
+    }
+    const g = new BufferGeometry();
+    g.setAttribute("position", new BufferAttribute(new Float32Array(positions), 3));
+    g.setAttribute("color", new BufferAttribute(new Float32Array(colours), 3));
+    g.setIndex(index);
+    g.computeVertexNormals();
     return g;
 }
 
@@ -94,8 +167,12 @@ const up = new Vector3(0, 1, 0);
 export class ForestGround {
     readonly group = new Group();
     private readonly stumps: InstancedMesh;
+    /** The buttressed emergents' stumps (their fins kept). */
+    private readonly buttresses: InstancedMesh;
     private readonly earthMaterial = new MeshStandardMaterial({vertexColors: true, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, side: DoubleSide});
     private readonly earths = new Map<number, Mesh>();
+    /** The felled trunks, their limbs, the sawdust and the stacked pile (`forest-logs.ts`). */
+    private readonly logs: ForestLogs;
 
     constructor(private readonly ground: GroundAt) {
         this.stumps = new InstancedMesh(stumpGeometry(), new MeshStandardMaterial({vertexColors: true, roughness: 0.9}), MAX_STUMPS);
@@ -104,7 +181,14 @@ export class ForestGround {
         this.stumps.castShadow = true;
         this.stumps.receiveShadow = true;
         this.stumps.name = "forest-stumps";
-        this.group.add(this.stumps);
+        this.buttresses = new InstancedMesh(buttressGeometry(), this.stumps.material, MAX_STUMPS);
+        this.buttresses.count = 0;
+        this.buttresses.frustumCulled = false;
+        this.buttresses.castShadow = true;
+        this.buttresses.receiveShadow = true;
+        this.buttresses.name = "forest-buttress-stumps";
+        this.logs = new ForestLogs(ground);
+        this.group.add(this.stumps, this.buttresses, this.logs.group);
     }
 
     /** A frame: the stands in play at `day` and the trees in them (their feet and trunk radii). */
@@ -134,15 +218,23 @@ export class ForestGround {
             this.earths.delete(k);
         });
         // The stumps: every tree past its cut whose sapling has not yet grown.
-        let n = 0;
+        let n = 0, nb = 0;
         for (const t of trees) {
-            if (n >= MAX_STUMPS) break;
+            if (n >= MAX_STUMPS || nb >= MAX_STUMPS) break;
             let g: Logging | null = null;
             for (const l of loggings) if (inStand(l, t.x, t.z)) g = l;
             if (!g) continue;
             const fate = treeFate(g, t.x, t.z, day);
             const stump = fate.state === "log" || fate.state === "stump" || (fate.state === "falling" && fate.fall > 0.02);
             if (!stump) continue;
+            if (t.buttress) {
+                // Fins turned so the feller's side (away from the fall) is a gap between two of them.
+                const away = fallHeading(g, t.x, t.z) + Math.PI;
+                turn.setFromAxisAngle(up, Math.PI / FINS - away);
+                matrix.compose(position.set(t.x, this.ground(t.x, t.z) - 0.05, t.z), turn, scale.set(t.trunk, BUTTRESS_STUMP_H, t.trunk));
+                this.buttresses.setMatrixAt(nb++, matrix);
+                continue;
+            }
             const r = Math.min(Math.max(t.radius, 0.15), 2.2);
             turn.setFromAxisAngle(up, (t.x * 7.1 + t.z * 3.3) % (Math.PI * 2));
             matrix.compose(position.set(t.x, this.ground(t.x, t.z) - 0.05, t.z), turn, scale.set(r, STUMP_H * (r > 1 ? 1.8 : 1), r));
@@ -151,15 +243,21 @@ export class ForestGround {
         this.stumps.count = n;
         this.stumps.visible = n > 0;
         this.stumps.instanceMatrix.needsUpdate = true;
+        this.buttresses.count = nb;
+        this.buttresses.visible = nb > 0;
+        this.buttresses.instanceMatrix.needsUpdate = true;
+        this.logs.update(loggings, trees, day);
     }
 
     dispose() {
         this.stumps.geometry.dispose();
+        this.buttresses.geometry.dispose();
         (this.stumps.material as MeshStandardMaterial).dispose();
         this.earths.forEach((earth) => {
             earth.geometry.dispose();
             (earth.material as MeshStandardMaterial).dispose();
         });
         this.earthMaterial.dispose();
+        this.logs.dispose();
     }
 }

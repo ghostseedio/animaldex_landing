@@ -14,7 +14,7 @@
 
 import {BufferAttribute, BufferGeometry, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshDepthMaterial, MeshStandardMaterial, Quaternion, RGBADepthPacking, Vector3, type WebGLProgramParametersWithUniforms} from "three";
 
-export type HumanPoseKind = "stand" | "walk" | "sit" | "lie" | "drive" | "chop" | "plant" | "sleep" | "carry";
+export type HumanPoseKind = "stand" | "walk" | "sit" | "lie" | "drive" | "chop" | "plant" | "sleep" | "carry" | "saw";
 
 /** A person's look (all from the seed). Colours are linear-ish sRGB triples 0–1. */
 export type HumanLook = {
@@ -285,16 +285,33 @@ export function posePerson(pose: HumanPoseKind, phase: number, out: HumanJoints)
             a[0] = a[2] = pose === "lie" ? 0 : 0.6;
             break;
         case "chop": {
-            // An axe's stroke a second and a half: wind up overhead, the strike down and across, a pause.
-            const t = ((phase / 1.5) % 1 + 1) % 1;
-            const up = t < 0.6 ? t / 0.6 : 1 - (t - 0.6) / 0.15;
-            const raise = Math.max(0, Math.min(1, up));
-            a[0] = a[2] = 0.9 + raise * 1.9;
-            a[1] = a[3] = 0.25 + raise * 0.4;
-            b[0] = 0.4 - raise * 0.35;
-            l[0] = 0.15;
-            l[2] = -0.15;
-            l[1] = l[3] = 0.2;
+            // An axe's stroke every 1.6 s: the swing back up over the shoulder (slow), the strike down and in to the
+            // trunk at hip height (fast), a beat at the cut, feet planted wide, knees soft.
+            const t = ((phase / 1.6) % 1 + 1) % 1;
+            const raise = t < 0.55 ? Math.sin((t / 0.55) * Math.PI * 0.5) : t < 0.7 ? 1 - ((t - 0.55) / 0.15) ** 2 : 0;
+            a[0] = a[2] = 0.75 + raise * 2.05;
+            a[1] = a[3] = 0.2 + raise * 0.55;
+            b[0] = 0.5 - raise * 0.45;
+            b[1] = 0.1 - raise * 0.15;
+            l[0] = 0.2;
+            l[2] = -0.18;
+            l[1] = 0.12;
+            l[3] = 0.22;
+            break;
+        }
+        case "saw": {
+            // A chainsaw at the trunk, held in both hands at waist height: bent to it, braced, the arms pushing the
+            // bar in with the saw's small buck.
+            const buck = Math.sin(phase * 2.1) * 0.05 + Math.sin(phase * 31) * 0.012;
+            a[0] = a[2] = 0.95 + buck;
+            a[1] = a[3] = 0.45 - buck;
+            b[0] = 0.55;
+            b[1] = -0.25;
+            b[2] = 0.12;
+            l[0] = 0.24;
+            l[2] = -0.16;
+            l[1] = 0.1;
+            l[3] = 0.2;
             break;
         }
         case "plant": {

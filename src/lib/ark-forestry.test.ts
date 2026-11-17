@@ -7,7 +7,7 @@ import assert from "node:assert/strict";
 import stands from "@/ark-scene/positions/forest-stands.json";
 import {clearedAt, cutDay, FELL_DAYS, forestDeaths, growthAt, habitatBackDay, HABITAT_GROWTH, inStand, loggingAt, loggingsAround, PERIOD_DAYS, REUSE_DAYS, type ForestHome, type StandTable} from "@/ark-scene/positions/forestry";
 import {bareness, FALL_DAYS, saplingSpot, treeFate} from "@/ark-scene/forestry/forest-state";
-import {awayInForest, crewAt, crewOf} from "@/ark-scene/forestry/forest-crews";
+import {awayInForest, crewAt, crewOf, toolOf} from "@/ark-scene/forestry/forest-crews";
 
 const table = stands as unknown as StandTable & {forestM2: number};
 const FROM = 220;
@@ -129,7 +129,9 @@ test("crews: from the humans aboard, inside or at the stand, felling then planti
             assert.ok(awayInForest([g], humans, m.id, day));
         }
     }
-    assert.ok(crewAt(g, trees, humans, g.start + 0.5).some((m) => m.pose === "chop"));
+    // (Felling with the feller's own tool: a chainsaw or an axe.)
+    const feller = crewAt(g, trees, humans, g.start + 0.5).find((m) => m.role === "feller" && m.pose !== "walk");
+    assert.ok(feller && feller.pose === (toolOf(feller.id) === "saw" ? "saw" : "chop"));
     assert.ok(crewAt(g, trees, humans, g.start + 4.5).some((m) => m.pose === "plant"));
     assert.deepEqual(crewAt(g, trees, humans, g.start + 3), []);
     assert.equal(awayInForest([g], humans, crewOf(humans, 2, "fell")[0], g.start + 3), false);
@@ -184,12 +186,15 @@ test("drawn trees: felled, hauled, sapling in its own place; a tree an animal li
         const cut = cutDay(g, t.x, t.z);
         forest.setDay(cut - 0.001);
         assert.equal(override.matrix(t, into), t.matrix, "standing: as built");
-        forest.setDay(cut + 0.1);
+        forest.setDay(cut + FALL_DAYS * 0.999);
         const lying = override.matrix(t, into)!;
         lying.decompose(pos, quat, scl);
-        // Lying: its up axis nearly level, its foot where it stood.
+        // At the end of its fall: its up axis nearly level, its foot where it stood.
         assert.ok(Math.abs(new Vector3(0, 1, 0).applyQuaternion(quat).y) < 0.1);
         assert.ok(Math.hypot(pos.x - t.x, pos.z - t.z) < 1e-6);
+        // Down: the tree's own mesh (its buttressed foot) goes; the trunk above the cut is forest-logs.ts's log.
+        forest.setDay(cut + 0.1);
+        assert.equal(override.matrix(t, into), null, "felled: the tree's mesh gives way to the log");
         forest.setDay(g.start + 2);
         assert.equal(override.matrix(t, into), null, "hauled away: a stump only");
         forest.setDay(g.start + 4 + 1 + 18);
