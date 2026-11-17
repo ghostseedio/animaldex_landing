@@ -13,7 +13,7 @@
  *   set of pets, so a newcomer whose hash ranks higher sends one indoors; no one else moves.)
  * - **Indoors**: the rest live in the home's glass garden room (`tanks.ts` homeSite, at most `ROOM_CAP`: 2 at a house,
  *   1 at a terrace home) and, past that, in a flat in the downtown's towers: glazed winter-garden apartments on their
- *   front faces (`towerApartments`), each taking up to 3 pets, assigned by the same hash order over a rendezvous of the
+ *   fronts and backs (`towerApartments`), each taking up to 4 pets (a 1.5 m cell each), assigned by the same hash order over a rendezvous of the
  *   apartments (stable as the set grows; a full apartment passes a pet to its next).
  * - **In its room** a pet has its own cell of the free floor (in front of the displays or the sofa), and walks about it
  *   on the shared clock (`roomPose`, pure in time and id): never through the glass, the furniture or another pet.
@@ -46,7 +46,7 @@ export type HomeRoom = {
 export const GARDEN_CAP = {house: 3, terrace_home: 2} as const;
 /** Pets a home's garden room holds at most (on the floor in front of its displays). */
 export const ROOM_CAP = {house: 2, terrace_home: 1} as const;
-export const APARTMENT_CAP = 3;
+export const APARTMENT_CAP = 4;
 
 /** The apartments' glazed bays: how far they stand out from the tower's front (m), the lowest storey with homes. */
 export const BAY_DEPTH = 2.8;
@@ -67,8 +67,8 @@ export function apartmentStoreys(b: Pick<Building, "floors">): number[] {
 }
 
 /**
- * The towers' apartments: two a storey on each tower's front (local +z), each a glazed bay standing `BAY_DEPTH` out from
- * the curtain wall, its floor on the storey's slab. Pure in the plan.
+ * The towers' apartments: two a storey on each tower's front (local +z) and back, each a glazed bay standing `BAY_DEPTH`
+ * out from the curtain wall, its floor on the storey's slab; a pet a 1.5 m cell of its floor, 4 at most. Pure in the plan.
  */
 export function towerApartments(plan: TownPlan = townPlan()): HomeRoom[] {
     const memo = memoRooms.get(plan);
@@ -78,13 +78,19 @@ export function towerApartments(plan: TownPlan = townPlan()): HomeRoom[] {
         if (b.kind !== "tower") continue;
         const ground = towerFloor(b.at);
         const width = b.at.w / 2 - 0.9;
-        for (const storey of apartmentStoreys(b)) {
-            for (const side of [-1, 1]) {
-                const shell = sub(b.at, (side * b.at.w) / 4, b.at.d / 2 + BAY_DEPTH / 2, width, BAY_DEPTH);
-                const floor = ground + storey * TOWER_FLOOR;
-                // (The free floor: in front of the sofa along the tower's wall, short of the glass, clear of the shelf and the plant.)
-                const free = sub(shell, 0, 0.45, width - 1.5, BAY_DEPTH - 1.5);
-                out.push({id: `${b.id}~${storey}${side < 0 ? "w" : "e"}`, kind: "apartment", building: b.id, shell, free, floor, height: TOWER_FLOOR - 0.36, capacity: APARTMENT_CAP, storey});
+        for (const face of [1, -1]) {
+            // (The front, local +z, and the back: a back bay is the front's turned half round, its glass facing out.)
+            const turned: Box = face > 0 ? b.at : {...b.at, rot: b.at.rot + Math.PI};
+            for (const storey of apartmentStoreys(b)) {
+                for (const side of [-1, 1]) {
+                    const shell = sub(turned, (side * b.at.w) / 4, b.at.d / 2 + BAY_DEPTH / 2, width, BAY_DEPTH);
+                    const floor = ground + storey * TOWER_FLOOR;
+                    // (The free floor: in front of the sofa along the tower's wall, short of the glass, clear of the shelf and the plant.)
+                    const free = sub(shell, 0, 0.45, width - 1.5, BAY_DEPTH - 1.5);
+                    // (A cell a pet, at least 1.5 m wide.)
+                    const capacity = Math.max(1, Math.min(APARTMENT_CAP, Math.floor(free.w / 1.5)));
+                    out.push({id: `${b.id}~${face > 0 ? "f" : "b"}${storey}${side < 0 ? "l" : "r"}`, kind: "apartment", building: b.id, shell, free, floor, height: TOWER_FLOOR - 0.36, capacity, storey});
+                }
             }
         }
     }

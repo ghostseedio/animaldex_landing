@@ -1000,7 +1000,7 @@ function tower(ctx: Ctx, b: Building) {
     solid.as(SURFACE.metal, () => solid.box(f, 0, b.eaves + 0.7, 0, w + 0.32, 0.06, d + 0.32, tone("#8a8c8e")));
     if (b.id !== "tower-3") solid.as(SURFACE.concrete, () => solid.box(f, 0, b.eaves + 0.75, -d * 0.3, w * 0.42, 3.6, d * 0.24, shade(frame, 0.9)));
     const sidesOf = sides(f, w, d);
-    // p5 (homes): flats on the front's upper storeys (`home-rooms.ts` towerApartments): two a storey, each with a glazed
+    // p5 (homes): flats on the front's and back's upper storeys (`home-rooms.ts` towerApartments): two a storey, each with a glazed
     // winter garden standing out from the curtain wall; their windows are homes' (lit and curtained as homes are).
     const homes = new Set(apartmentStoreys(b));
     // The office windows, a band per storey above the podium (a column a pier's width either side of each mullion).
@@ -1009,10 +1009,10 @@ function tower(ctx: Ctx, b: Building) {
         const span = side.length - 1.8;
         for (let floor = 2; floor < b.floors; floor++) {
             const y = floor * floorH + floorH * 0.48;
-            const home = i === 0 && homes.has(floor);
+            const home = (i === 0 || i === 2) && homes.has(floor);
             for (let k = 0; k < columns; k++) {
                 const u = -span / 2 + (span * (k + 0.5)) / columns;
-                if (home) windowAt(ctx, side.frame, u, y, span / columns - 0.28, floorH * 0.74, "home", floor * 2 + (u < 0 ? 0 : 1), floor);
+                if (home) windowAt(ctx, side.frame, u, y, span / columns - 0.28, floorH * 0.74, "home", floor * 4 + (i === 2 ? 2 : 0) + (u < 0 ? 0 : 1), floor);
                 else windowAt(ctx, side.frame, u, y, span / columns - 0.28, floorH * 0.74, "office", floor * 32 + k, floor);
             }
         }
@@ -1036,11 +1036,16 @@ function tower(ctx: Ctx, b: Building) {
 }
 
 /**
- * p5 (homes): the apartments' winter gardens on a tower's front (`home-rooms.ts` towerApartments, the same boxes): each
+ * p5 (homes): the apartments' winter gardens on a tower's front and back (`home-rooms.ts` towerApartments, the same boxes): each
  * a slab on its storey's floor with a dark edge, posts at its corners and middle, a rail along the top, clear glass on
  * its front and ends; the top one's roof slab. The rooms inside are drawn where pets live (`render/pet-homes.ts`).
  */
-function towerBays(ctx: Ctx, f: Frame, b: Building, w: number, d: number, floorH: number, frame: [number, number, number]) {
+function towerBays(ctx: Ctx, front: Frame, b: Building, w: number, d: number, floorH: number, frame: [number, number, number]) {
+    for (const f of [front, {...front, rot: front.rot + Math.PI}]) towerBaysOn(ctx, f, b, w, d, floorH, frame);
+}
+
+/** One face's bays (`f`: the tower's frame turned so the face is its local +z). */
+function towerBaysOn(ctx: Ctx, f: Frame, b: Building, w: number, d: number, floorH: number, frame: [number, number, number]) {
     const {solid, glass} = ctx.chunk;
     const storeys = apartmentStoreys(b);
     if (!storeys.length) return;

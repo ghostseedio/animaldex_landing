@@ -34,7 +34,7 @@ import {corners, inBox, sub, toLocal, type Box} from "@/ark-scene/islands/town/g
 import {aquariumHall} from "@/ark-scene/islands/town/aquarium-hall";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townWetlandOf} from "@/ark-scene/islands/town/wetland";
-import {gardenRoomOf, homeIndoors, towerApartments, type IndoorPlace, type OutdoorPet} from "@/ark-scene/islands/town/home-rooms";
+import {gardenRoomOf, homeIndoors, roomCell, towerApartments, type IndoorPlace, type OutdoorPet} from "@/ark-scene/islands/town/home-rooms";
 
 /** The town's facts about a placed animal: its area, the spot's kind, the home, farm or enclosure, and its bounds. */
 export type TownPlace = {
@@ -312,7 +312,7 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
             const indoors = INDOORS.get(animal.id);
             if (indoors && !shown) {
                 // p5 (homes): over its garden's cap: indoors in its room, its own cell of the floor (`home-rooms.ts`).
-                const c = indoors.room.free;
+                const c = roomCell(indoors);
                 held = {x: c.x, z: c.z, y: indoors.room.floor, yaw};
                 info = {area: "house", where: "indoor", place: indoors.room.kind === "apartment" ? indoors.room.id : home.id, enclosure: null, range: 0, still: true, keeping: keeping ?? "outdoors", room: indoors};
                 rank = 0;
@@ -819,7 +819,18 @@ function planIndoors(animals: readonly ArkAnimal[]): void {
         const length = arkBody(animal).metres;
         const plan = modelBase(animal.model_slug)?.plan ?? null;
         const keeping = homeKeeping(animal.model_slug, animal.zone, length, plan);
-        if (keeping !== "outdoors") continue;
+        if (keeping === "livery") continue;
+        if (keeping !== "outdoors") {
+            // (A pet whose display no home holds lives outdoors at its first home, as the house branch places it: a
+            // boa too long for a vivarium. It counts in that garden.)
+            if (TURTLE_HOME.has(animal.id)) continue;
+            const pondFish = keeping === "tank" && !tankHolds(length);
+            const flatOk = keeping !== "pond" && !pondFish && length < 0.55;
+            const home = homeInOrder(animal.id, flatOk, households, (h) => displayFor(h, keeping, length, pondFish) !== null);
+            if (displayFor(home, keeping, length, pondFish)) continue;
+            pets.push({id: animal.id, slug: animal.model_slug, plan, length, home});
+            continue;
+        }
         pets.push({id: animal.id, slug: animal.model_slug, plan, length, home: householdOf(animal.id, false, households)});
     }
     const sites = homeSitesNow();
