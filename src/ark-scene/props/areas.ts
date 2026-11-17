@@ -41,7 +41,9 @@ import {activeTermiteMounds, moundFoot, savannaMounds} from "@/ark-scene/mounds"
 import {rockGeometry, rockMaterial} from "@/ark-scene/asset-rocks";
 import {mountainRocks, SOLID_ACROSS, type RockPiece} from "@/ark-scene/rock-layout";
 import {cachedRock, ROCK_DETAIL} from "@/ark-scene/rock-shapes";
-import {riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
+import {arkWorld, riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
+import {rockFoot} from "@/ark-scene/rock-assets";
+import {behindSheet} from "@/ark-scene/islands/wild/falls";
 
 export type Areas = {
     group: Group;
@@ -413,10 +415,17 @@ function mergedRocks(pieces: RockPiece[], level: 0 | 2): BufferGeometry | null {
     for (const piece of pieces) {
         // Far: only what an animal would walk round (small scree is not seen from there).
         if (level === 2 && piece.across < SOLID_ACROSS) continue;
+        // p4 (waterfall): a piece behind the falls' sheet is left undrawn (it would poke through the water).
+        if (arkWorld() === "v2" && behindSheet(piece.x, piece.y, piece.z, piece.across * 0.6)) continue;
         // A copy: the cached shape's own arrays stay as they are (every piece of the shape shares them).
         const geometry = rockGeometry(cachedRock(piece.style, piece.variant, ROCK_DETAIL[piece.style][level], true)).clone();
         quaternion.setFromUnitVectors(up, new Vector3(...piece.up)).multiply(yawTurn.setFromAxisAngle(up, piece.yaw));
-        geometry.applyMatrix4(matrix.compose(new Vector3(piece.x, piece.y, piece.z), quaternion, new Vector3(piece.scale, piece.scale, piece.scale)));
+        // p4 (the boulders float): on the bigger wild island a piece on a steep face is drawn reached down to its ground,
+        // stretched along its up about its top (`rock-assets.ts` rockFoot; its place, and so its attach points, unchanged).
+        const k = arkWorld() === "v2" ? rockFoot(piece) : 1;
+        const top = cachedRock(piece.style, piece.variant, ROCK_DETAIL[piece.style][0]).bounds.max[1];
+        const at = new Vector3(0, top * piece.scale * (1 - k), 0).applyQuaternion(quaternion).add(new Vector3(piece.x, piece.y, piece.z));
+        geometry.applyMatrix4(matrix.compose(at, quaternion, new Vector3(piece.scale, piece.scale * k, piece.scale)));
         const colours = geometry.getAttribute("color");
         for (let i = 0; i < colours.count; i++) colours.setXYZ(i, colours.getX(i) * piece.shade, colours.getY(i) * piece.shade, colours.getZ(i) * piece.shade);
         parts.push(geometry);

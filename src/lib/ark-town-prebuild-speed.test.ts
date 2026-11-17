@@ -159,9 +159,15 @@ function digest(value: unknown): string {
 // bins by the window, the garden rooms clear of the back doors (areas, places); the paths to the doors, the gardens'
 // fences, walls, railings and gates (`doors.ts`, `render/fences.ts`), the open porches, the benches (`render/bench.ts`;
 // the park's off the pond's water) (scenery and buildings).)
+// (Pass 4, lane TOWNFIX: the church's footprint holds its west tower (it was drawn on Park Road) and the yew on Church
+// Walk is gone: plan, areas, scenery and buildings; the places are unchanged. Then the canal's humpbacked bridges and
+// the canal boats' berths off them: plan (moorings), scenery. Then the enclosures' dressing drawn anew (flush muddy
+// waterholes, eroded termite mounds; logs, dead trees, bushes, ferns and reeds now library assets): zoo; the dressing's
+// positions and colliders are unchanged. Then the waterholes' banks in the textured ground with hoof prints, the dry
+// logs bleached, the big rockwork as bedded crags: zoo.)
 const TOWN_DIGESTS = {
     // (p4 (safari): the safari park: its land, streets, areas as zoo slots, buildings and trees.)
-    plan: "9562f00430d73dfe",
+    plan: "b93e7800d887b477",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
@@ -170,7 +176,7 @@ const TOWN_DIGESTS = {
     // (Pass 2, lane LAND: the millpond's bank meets its water, its wetland spots and stones, pond life at the wetland; the
     // downtown headland: its streets, three towers, the plaza, billboards.)
     // (p4 (safari): the safari areas' spots, the car park's bays.)
-    areas: "43add67112cae90f",
+    areas: "e2ce488bfd9b7d44",
     // (Lane GA: the ground's surface weights.)
     // (p4 (safari): the 12 × 12 grid, the safari's savanna, desert, mud, ditches and waterholes, the deeper strait.)
     ground: "f8b1c707caaf1c88",
@@ -181,14 +187,15 @@ const TOWN_DIGESTS = {
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
     // (p4 (safari): its paving, gate, waters, boardwalk, decks, boards, rails and buildings.)
-    sceneryAndBuildings: "ef95104b303c7115",
+    sceneryAndBuildings: "2c5c1f112f3b47fb",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
     // (p4 (safari): the safari areas dressed as their habitats, `render/safari-habitat.ts`.)
-    zoo: "0e77d703b25c6f4f",
+    zoo: "761a15a4bdf49d98",
     // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
     // (p4 (safari): the herbivores, big cats, hyenas and crocodilians moved to the safari by the rule, `town/safari.ts`.)
+    // (Pass 5 rural lane: pass 4 merged into the safari; these recomputed on that merge.)
     places: "eba3c7031a32e377"
 };
 

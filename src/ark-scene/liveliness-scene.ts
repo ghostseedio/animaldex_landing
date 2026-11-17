@@ -46,7 +46,8 @@ import {Traces, TRACE_WITHIN} from "@/ark-scene/traces";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {WeatherFx} from "@/ark-scene/weather-fx";
 import {motherAmong, nurseBlend, nursePlace, nurses, nursingBout} from "@/ark-scene/young-care";
-import {coastRadius, LAKE, RIVER, sampleGround} from "@/ark-scene/world";
+import {arkWorld, coastRadius, LAKE, RIVER, sampleGround} from "@/ark-scene/world";
+import {fallsSoundAt} from "@/ark-scene/islands/wild/falls";
 import {ageOf, speciesCare, type ArkAge} from "@/lib/ark-age";
 import {arkDayAt, lightningAt, seaLevelAt, shoreAt, tideAt, weatherAt, type ArkShore, type ArkTide, type ArkWeather} from "@/lib/ark-clock";
 import {
@@ -679,7 +680,8 @@ function riverPoints(heightAt: (x: number, z: number) => number) {
 
 /**
  * Metres from (x, z) to the sea, the river, its white water, the lake and the garden pond (and where, for panning),
- * measured on the scene's own map (`world.ts`). There is no waterfall on the island (none is drawn).
+ * measured on the scene's own map (`world.ts`). The waterfall: the bigger wild island's (p4, `islands/wild/falls.ts`), heard
+ * from the foot of its sheet; today's island has none.
  */
 export function waterNear(x: number, z: number, seaLevel: number, heightAt: (x: number, z: number) => number = (px, pz) => sampleGround(px, pz).height): NonNullable<AmbientInput["nearWater"]> {
     const ground = sampleGround(x, z);
@@ -698,7 +700,11 @@ export function waterNear(x: number, z: number, seaLevel: number, heightAt: (x: 
     const pondD = Math.hypot(x - GARDEN_POND.x, z - GARDEN_POND.z);
     const pond = {distance: Math.max(pondD - GARDEN_POND.radius, 0), x: GARDEN_POND.x, z: GARDEN_POND.z};
     // (Islands mode, `no-hamlet.ts`: no garden pond to hear.)
-    return {sea, river: Number.isFinite(river.distance) ? river : null, rapids: Number.isFinite(rapids.distance) ? rapids : null, waterfall: null, lake, pond: noHamlet() ? null : pond};
+    // p4 (waterfall): the falls' roar, measured to the pool where the sheet strikes it; a 31 m drop carries further than
+    // the bed's own reach (made for a stream's cascade), so it counts as nearer by a third.
+    const falls = arkWorld() === "v2" ? fallsSoundAt() : null;
+    const waterfall = falls ? {distance: Math.max(Math.hypot(x - falls.x, z - falls.z) - 4, 0) * 0.67, x: falls.x, z: falls.z} : null;
+    return {sea, river: Number.isFinite(river.distance) ? river : null, rapids: Number.isFinite(rapids.distance) ? rapids : null, waterfall, lake, pond: noHamlet() ? null : pond};
 }
 
 /** The sound tier for a quality tier (the lighter view hears as the low tier). */
