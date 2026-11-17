@@ -1132,7 +1132,7 @@ function computeCaptureGradeFromMergedSource(
                             : "Framing is weak — get closer, center the animal, and fill more of the frame."
         }
     ];
-    // Community endorsements no longer lift the grade (they count in stats, score and XP).
+    // Endorsements no longer lift the grade (they count in stats, score and XP).
     const weighted = factors.reduce((sum, factor) => sum + factor.score * factor.weight, 0);
     const adjustments: CaptureGradeAdjustment[] = [];
 
