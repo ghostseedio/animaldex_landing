@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {ARK_SEE_IT_HOLD_MAX_MS, ARK_SEE_IT_LANDING_MS, arkArrivalActOf, arkSeeIt, arkSeeItPlan, type ArkSeeItScene} from "@/ark-scene/see-it";
+import {ARK_SEE_IT_FOLLOW_GIVE_UP_MS, ARK_SEE_IT_FOLLOW_RETRY_MS, ARK_SEE_IT_HOLD_MAX_MS, ARK_SEE_IT_LANDING_MS, arkArrivalActOf, arkSeeIt, arkSeeItPlan, type ArkSeeItScene} from "@/ark-scene/see-it";
 import type {ArkAnimal, ArkReplayRun} from "@/ark-scene/types";
 
 /**
@@ -201,4 +201,64 @@ test("an animal the scene never lets the camera reach still comes aboard after t
     assert.ok(!r.calls.includes(`arrive:${wolf.id}`));
     r.time.advance(2000);
     assert.ok(r.calls.includes(`arrive:${wolf.id}`), "never held out of sight for good");
+});
+
+test("a follow the scene drops (a town animal before the town has joined) is asked again until it takes, then left alone", () => {
+    const time = handClock();
+    const calls: string[] = [];
+    let held = false;
+    let followed: string | null = null;
+    const scene: ArkSeeItScene = {
+        select: (id) => void calls.push(`select:${id}`),
+        follow: (id) => {
+            calls.push(`follow:${id}`);
+            // The scene holds the animal only from 1.2 s on.
+            if (held) followed = id;
+        },
+        selection: () => ({selected: wolf.id, followed})
+    };
+    arkSeeIt(scene, {id: wolf.id, closeUp: true, follow: true}, wolf, false, time.clock);
+    time.advance(1_000);
+    assert.ok(calls.filter((call) => call.startsWith("follow")).length >= 2, "asked again while dropped");
+    held = true;
+    time.advance(ARK_SEE_IT_FOLLOW_RETRY_MS);
+    const taken = calls.filter((call) => call.startsWith("follow")).length;
+    time.advance(30_000);
+    assert.equal(calls.filter((call) => call.startsWith("follow")).length, taken, "never asked again once it took (a drag that ends it is respected)");
+});
+
+test("a follow the scene never takes is given up on, and another animal chosen meanwhile ends the asking", () => {
+    const time = handClock();
+    let follows = 0;
+    let selected: string | null = wolf.id;
+    const scene: ArkSeeItScene = {
+        select: () => undefined,
+        follow: () => void (follows += 1),
+        selection: () => ({selected, followed: null})
+    };
+    arkSeeIt(scene, {id: wolf.id, follow: true}, wolf, false, time.clock);
+    time.advance(ARK_SEE_IT_FOLLOW_GIVE_UP_MS + 5_000);
+    assert.ok(follows > 5 && follows <= ARK_SEE_IT_FOLLOW_GIVE_UP_MS / ARK_SEE_IT_FOLLOW_RETRY_MS + 2, `${follows}`);
+    follows = 0;
+    selected = "someone-else";
+    arkSeeIt(scene, {id: wolf.id, follow: true}, wolf, false, time.clock);
+    time.advance(5_000);
+    assert.equal(follows, 0, "the person chose another animal: no follow");
+});
+
+test("before the scene is up (it answers no selection) nothing is queued; the follow is asked once it is", () => {
+    const time = handClock();
+    let up = false;
+    const calls: string[] = [];
+    const scene: ArkSeeItScene = {
+        select: (id) => void calls.push(`select:${id}`),
+        follow: (id) => void calls.push(`follow:${id}`),
+        selection: () => (up ? {selected: wolf.id, followed: calls.includes(`follow:${wolf.id}`) ? wolf.id : null} : (undefined as unknown as {selected: string | null; followed: string | null}))
+    };
+    arkSeeIt(scene, {id: wolf.id, closeUp: true, follow: true}, wolf, false, time.clock);
+    time.advance(5_000);
+    assert.ok(!calls.some((call) => call.startsWith("follow")), "no follow queued for a scene that is not there");
+    up = true;
+    time.advance(1_000);
+    assert.equal(calls.filter((call) => call.startsWith("follow")).length, 1);
 });

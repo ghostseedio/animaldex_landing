@@ -38,6 +38,8 @@ export type ArkSeeItScene = {
     arrive?: (id: string) => void;
     /** A selection's flight being held until the animal can be seen; null when none is. */
     flightHeld?: () => {steps: number; done: number} | null;
+    /** The animal selected and the one followed now (null: none): a follow asked of an animal the scene does not hold yet is dropped, so it is asked again. */
+    selection?: () => {selected: string | null; followed: string | null};
     /** The archipelago's handle: resolves once the scene is built (before it, `play` is not there to run). */
     mounted?: () => Promise<void>;
 };
@@ -70,6 +72,10 @@ export function arkArrivalActOf(animal: ArkAnimal): ArkAct {
 
 /** How long the flight to the close look takes in the scene (`select`: 1.6 s), and a little over for the clear-view search. */
 export const ARK_SEE_IT_LANDING_MS = 1900;
+/** A follow the scene dropped (a town animal before the town has joined) is asked again this often, for this long. */
+export const ARK_SEE_IT_FOLLOW_RETRY_MS = 500;
+export const ARK_SEE_IT_FOLLOW_GIVE_UP_MS = 60_000;
+
 /** The longest the animal is kept out of sight waiting for the camera (a slow phone building its models): then it comes aboard anyway. */
 export const ARK_SEE_IT_HOLD_MAX_MS = 45_000;
 
@@ -102,9 +108,23 @@ export function arkSeeIt(
         return;
     }
     const plan = arkSeeItPlan(ask, animal, reducedMotion);
+    // Followed: asked now, and asked again while the scene has not taken it (an animal on the town island is not held by
+    // the scene until the town has joined: the selection waits for it, and so does the follow). Once taken it is left
+    // alone, so a drag that ends the follow is never undone; someone else chosen meanwhile ends the asking.
+    const followWhenHeld = () => {
+        const asked = clock.now();
+        const ask = () => {
+            const now = scene.selection?.();
+            if (now && (now.selected !== id || now.followed === id)) return;
+            // (The archipelago's handle answers nothing until its scene is up, and queues what it is told: ask once it does.)
+            if (!scene.selection || now) scene.follow(id);
+            if (scene.selection && clock.now() - asked < ARK_SEE_IT_FOLLOW_GIVE_UP_MS) clock.later(ask, ARK_SEE_IT_FOLLOW_RETRY_MS);
+        };
+        ask();
+    };
     const settle = () => {
         scene.select(id, plan.closeUp);
-        if (plan.follow) scene.follow(id);
+        if (plan.follow) followWhenHeld();
     };
     if (!plan.act) {
         settle();
