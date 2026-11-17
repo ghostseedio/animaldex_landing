@@ -23,6 +23,8 @@ import {useRouter} from "next/navigation";
 import DebatePost from "@/components/debates/debate-post";
 import {debateFeedSlotId, debateFeedSlots, initialFeedAnchor, planDebateFeed, type Debate, type DebateFeedPlan, type DebateFeedSlot} from "@/lib/debates";
 import {ARK_COPY, type CompanionWords} from "@/lib/companion-bond";
+import FeedbackPollPost from "@/components/feedback-polls/feedback-poll-post";
+import {parseFeedbackPoll, placeFeedbackPoll, type FeedbackPoll} from "@/lib/feedback-polls";
 
 type DiscoverSegment = "discover" | "collectors";
 
@@ -386,9 +388,32 @@ export default function DiscoverHome({
         debatePlanRef.current = plan;
         return debateFeedSlots(timelineItems, debates, plan);
     }, [timelineItems, debates, debateWords]);
+    /**
+     * The feedback poll for this feed session (AnimalDex 20261201100000): asked
+     * once when the page opens (the session moment), placed after `slot` posts.
+     * It is a card in the list only: the slots above (anchor, seen marks, URL)
+     * never see it, so it can neither move the feed's anchor nor count as seen.
+     */
+    const [feedbackPoll, setFeedbackPoll] = useState<FeedbackPoll | null>(null);
+    const feedbackPollAskedRef = useRef(false);
+    type RenderSlot = DebateFeedSlot<DiscoverTimelineItem> | {kind: "poll"; poll: FeedbackPoll};
+    const renderSlots = useMemo(
+        () => placeFeedbackPoll<RenderSlot>(feedSlots, feedbackPoll, (poll) => ({kind: "poll", poll})),
+        [feedSlots, feedbackPoll]
+    );
     const [nextTimelineCursor, setNextTimelineCursor] = useState<DiscoverTimelineCursor | null>(timelineCursor);
     const [featuredItems, setFeaturedItems] = useState(featured);
     const [viewerUserId, setViewerUserId] = useState(initialViewerUserId);
+    useEffect(() => {
+        if (!viewerUserId || feedbackPollAskedRef.current) return;
+        feedbackPollAskedRef.current = true;
+        const asOf = new Date().toISOString();
+        const query = new URLSearchParams({surface: "feed", seed: "web", asOf});
+        fetch(`/api/app/discover/poll?${query.toString()}`, {cache: "no-store"})
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: {poll?: unknown} | null) => setFeedbackPoll(parseFeedbackPoll(body?.poll, locale)))
+            .catch(() => undefined);
+    }, [viewerUserId, locale]);
     const [collectorItems, setCollectorItems] = useState(collectors);
     const [hasMoreTimeline, setHasMoreTimeline] = useState(Boolean(timelineCursor));
     const [hasMoreCollectors, setHasMoreCollectors] = useState(collectors.length >= COLLECTOR_PAGE_SIZE);
@@ -930,7 +955,13 @@ export default function DiscoverHome({
                             >
                                 {/* Flush stacking: iOS uses VStack(spacing: 0) so one
                                     swipe always lands on exactly one post. */}
-                                {feedSlots.map((slot) => slot.kind === "debate" ? (
+                                {renderSlots.map((slot) => slot.kind === "poll" ? (
+                                    // A poll has no /p page and no seen mark (the server counts its sessions); it has no
+                                    // slot id either, so the feed's anchor never lands on it.
+                                    <div key={`poll-${slot.poll.id}`} data-timeline-snap-item className="h-full min-h-0 snap-start snap-always">
+                                        <FeedbackPollPost poll={slot.poll} locale={locale} onDismiss={() => setFeedbackPoll(null)} />
+                                    </div>
+                                ) : slot.kind === "debate" ? (
                                     // A debate has no /p page: no post id (so it never sets the URL), but it is a
                                     // slot like any post, and it is marked seen as one (`debate-<id>`).
                                     <div key={`debate-${slot.debate.id}`} data-timeline-snap-item data-slot-id={`debate-${slot.debate.id}`} className="h-full min-h-0 snap-start snap-always">
