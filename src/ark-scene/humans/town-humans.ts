@@ -406,7 +406,7 @@ export class TownHumans {
     private beachLook(id: string, look: HumanLook): HumanLook {
         let b = this.beachLooks.get(id);
         if (!b || b.child !== look.child) {
-            b = {...look, sleeves: 0, trousers: 0};
+            b = {...look, sleeves: 0, trousers: 0, swim: 1}; // p6 (people): swimwear on the rigged bodies
             this.beachLooks.set(id, b);
         }
         return b;

@@ -37,6 +37,8 @@ export type HumanLook = {
     /** 1: no hair (the cap takes the skin's colour). */
     bald: number;
     child: boolean;
+    /** p6 (people): 1 on the beach (the town's beach look): the rigged bodies wear swimwear. Never from the capture. */
+    swim?: number;
 };
 
 export type HumanInstance = {x: number; y: number; z: number; yaw: number; pose: HumanPoseKind; phase: number; look: HumanLook; scale?: number; /** Leaning back (negative) or forward from the pose's waist (rad): a driver under a car's roof. */ lean?: number; /** A room's lamp and screen on it (0–1): indoors at night, where the scene's sun and street lamps do not reach. */ light?: number; /** Lying on a slope: the head's end raised this much (rad). */ tilt?: number};

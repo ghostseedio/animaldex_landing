@@ -84,6 +84,21 @@ export function posedArmPoint(p: Vector3, left: boolean, j: HumanJoints, forearm
 }
 
 const joints: HumanJoints = {legs: [0, 0, 0, 0], arms: [0, 0, 0, 0], body: [0, 0, 0, 0]};
+const basisR = new Vector3();
+const basisF = new Vector3();
+const edge = new Vector3();
+const ax = new Vector3();
+const ay = new Vector3();
+
+/** A tool's matrix: its +z along `z`, its +y as near `up` as can be, its origin at `at`. */
+function frameTo(z: Vector3, up: Vector3, out: Matrix4, at: Vector3): Matrix4 {
+    ax.crossVectors(up, z);
+    if (ax.lengthSq() < 1e-6) ax.set(1, 0, 0);
+    ax.normalize();
+    ay.crossVectors(z, ax).normalize();
+    out.makeBasis(ax, ay, z).setPosition(at);
+    return out;
+}
 const handL = new Vector3();
 const handR = new Vector3();
 const elbowR = new Vector3();
@@ -119,11 +134,50 @@ export class ForestTools {
         }
     }
 
-    /** This frame's tool users (their drawn instances: the same pose and phase as the figures). */
-    update(users: readonly ToolUser[], camera: Vector3, seconds: number) {
+    /**
+     * This frame's tool users (their drawn instances: the same pose and phase as the figures). p6 (people): `grips`,
+     * the rigged bodies' grip points (left, right; world) when they draw: the tools are placed in those hands as the
+     * clips hold them (`people/scripts/tools.py`: the axe's haft from the left hand up through the right, the saw's rear
+     * handle in the right with the bar ahead and a little down); without it, the procedural figures' mirror below.
+     */
+    update(users: readonly ToolUser[], camera: Vector3, seconds: number, grips?: (h: HumanInstance, seconds: number, left: Vector3, right: Vector3) => boolean) {
         let saws = 0, axes = 0;
         for (const {human: h, tool} of users) {
             if ((h.x - camera.x) ** 2 + (h.y - camera.y) ** 2 + (h.z - camera.z) ** 2 > TOOL_FAR * TOOL_FAR) continue;
+            if (grips && grips(h, seconds, handL, handR)) {
+                // p6 (people): the body's own hands.
+                const right = basisR.set(Math.cos(h.yaw), 0, -Math.sin(h.yaw)).negate();
+                const forward = basisF.set(Math.sin(h.yaw), 0, Math.cos(h.yaw));
+                if (tool === "saw" && saws < MAX_TOOLS) {
+                    if (h.pose === "saw") {
+                        // The rear handle in the right hand, the bar the clip's way: ahead, a little left and down.
+                        dir.copy(forward).addScaledVector(right, -0.12).addScaledVector(yAxis, -0.38).normalize();
+                        frameTo(dir, yAxis, toolM, handR);
+                    } else if (h.pose !== "carry") {
+                        // Carried by its top handle in the right hand, the bar pointing back.
+                        grip.copy(handR);
+                        grip.y -= 0.18;
+                        toolM.compose(grip, q.setFromAxisAngle(yAxis, h.yaw + Math.PI), one);
+                    } else continue;
+                    this.saws.setMatrixAt(saws++, toolM);
+                } else if (tool === "axe" && axes < MAX_TOOLS && (h.pose === "chop" || h.pose === "walk" || h.pose === "stand")) {
+                    if (h.pose === "chop") {
+                        // The haft from the left (lower) hand up through the right; the blade's edge leads the swing
+                        // (the swing turns about the body's left-right line).
+                        dir.copy(handR).sub(handL);
+                        if (dir.lengthSq() < 1e-4) dir.copy(forward);
+                        dir.normalize();
+                        edge.crossVectors(right, dir).negate();
+                        frameTo(dir, edge, toolM, handL);
+                    } else {
+                        // Carried in the right hand, head down by the leg.
+                        dir.set(Math.sin(h.yaw) * 0.25, -1, Math.cos(h.yaw) * 0.25).normalize();
+                        toolM.compose(handR, q.setFromUnitVectors(fwd, dir), one);
+                    }
+                    this.axes.setMatrixAt(axes++, toolM);
+                }
+                continue;
+            }
             posePerson(h.pose, h.phase + seconds, joints);
             joints.body[0] += h.lean ?? 0;
             // The hands (the fist's middle on the rest body) and the right forearm's line.

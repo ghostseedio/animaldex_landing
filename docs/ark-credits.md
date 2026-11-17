@@ -200,3 +200,18 @@ Low-poly models with material colours only (no textures, no logos), checked CC0 
 
 The cars' far proxies, their colours and lamps, and every shop sign's pictogram are made in code (`render/vehicles.ts`, `render/buildings.ts`). Kenney's Car Kit (CC0) was looked at and not used.
 
+
+## People (`public/ark/assets/people-v1`, p6 people, 2026-11-17)
+
+The town's and the forest's people (one generic body per human aboard; privacy: never the capture's photo, face or name)
+are twelve bodies built in Blender with MPFB2 from the MakeHuman **system assets** pack, every item of which is CC0
+(https://static.makehumancommunity.org/assets/assetpacks/makehuman_system_assets.html): the low-poly body proxies
+`male1591` / `female1605`, the system clothes, hair, `eyebrow001` and `eyelashes01` (their PNGs only sampled at build time
+to cut the shapes; no texture ships), and the game-engine skeleton. The fourteen clips are our own keyframes. No CC-BY
+pack, no Mixamo, no skin textures (photo-derived) are used. Full check: AnimalDex `rig-pilot/people/LICENCES.md`.
+
+| Asset | Source | Licence | Author | Committed file(s) |
+|---|---|---|---|---|
+| 12 people (near ~5,800 and far 650 triangles each, vertex-painted, meshopt), 14 clips on one 23-bone skeleton | MakeHuman / MPFB2 system assets + our keyframes | CC0 1.0 | MakeHuman community; AnimalDex (clips) | `public/ark/assets/people-v1/{people-near,people-far,clips}.glb`, `people.manifest.json` |
+
+Courtesy credit: "People bodies made with MakeHuman / MPFB2 (CC0 assets), makehumancommunity.org".

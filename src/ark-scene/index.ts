@@ -220,7 +220,7 @@ import {ARK_ISLANDS} from "@/ark-scene/islands"; // p2 (ocean)
 import {arkWorld} from "@/ark-scene/world"; // p2 (ocean)
 import {OCEAN_COLUMN, OCEAN_VIEW_MARGIN, oceanFix, roamsOpenOcean} from "@/ark-scene/open-ocean"; // p2 (ocean)
 import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (ocean)
-import {HumanFigures} from "@/ark-scene/humans/figures"; // p5 (humans)
+import {PeopleFigures} from "@/ark-scene/humans/people-figures"; // p6 (people): the rigged bodies
 import {BeachProps} from "@/ark-scene/humans/beach-props"; // p5 (humans, quality pass)
 import {isHumanAnimal, TownHumans} from "@/ark-scene/humans/town-humans"; // p5 (humans)
 import {decodeHumanBonds} from "@/ark-scene/humans/couples"; // p5 (humans, couples)
@@ -1297,7 +1297,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // with the furnished rooms `buildPetHomes` draws, and a `HumanTVs` fed `townHumans.tvs` each frame (`humans/home-rooms-host.ts`,
     // `humans/tvs.ts`). Until then people at home and asleep are indoors, unseen (the lit windows imply them, as before).
     const townHumans = new TownHumans({away: (id) => forest.away(id), origin: townWorldOrigin(), roadHeight: townRoadHeight, seaLevel: () => ARK_ENVIRONMENT.seaLevel.value, boatSeconds: () => clockNow()});
-    const humanFigures = new HumanFigures();
+    const humanFigures = new PeopleFigures(); // p6 (people): rigged bodies (the procedural figures while they load)
     scene.add(humanFigures.group);
     const beachProps = new BeachProps(); // p5 (humans, quality pass): the sunbathers' towels and parasols
     scene.add(beachProps.group);
@@ -2851,6 +2851,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             dogCollar.x = d.x + Math.sin(d.yaw) * d.length * 0.36;
             dogCollar.y = d.y + d.length * 0.58;
             dogCollar.z = d.z + Math.cos(d.yaw) * d.length * 0.36;
+            humanFigures.leadHand(d.walker, d.hand); // p6 (people): the lead from the rigged walker's own hand
             dogLeads.add(d.hand, dogCollar);
         }
         dogLeads.end();

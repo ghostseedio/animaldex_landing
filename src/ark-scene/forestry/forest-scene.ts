@@ -8,7 +8,8 @@
  */
 
 import {Group, type Vector3} from "three";
-import {HumanFigures, humanLook, type HumanInstance, type HumanLook} from "@/ark-scene/humans/figures";
+import {humanLook, type HumanInstance, type HumanLook} from "@/ark-scene/humans/figures";
+import {PeopleFigures} from "@/ark-scene/humans/people-figures"; // p6 (people)
 import stands from "@/ark-scene/positions/forest-stands.json";
 import {FORESTRY_VERSION, type StandTable} from "@/ark-scene/positions/forestry";
 import {ForestTrees} from "@/ark-scene/forestry/forest-trees";
@@ -46,12 +47,14 @@ export class ForestScene {
     private day = -Infinity;
     private remark = false;
     /** The crews' figures (the town's people: the same look by id), drawn only while a crew is on site. */
-    private readonly figures = new HumanFigures();
+    private readonly figures = new PeopleFigures({work: true}); // p6 (people): rigged, in work clothes
     private readonly drawn: HumanInstance[] = [];
     private readonly looks = new Map<string, HumanLook>();
     /** The fellers' chainsaws and axes, at their hands. */
     private readonly tools = new ForestTools();
     private readonly toolUsers: ToolUser[] = [];
+    /** p6 (people): the rigged bodies' grip points, where the tools are held. */
+    private readonly grips = (h: HumanInstance, s: number, l: Vector3, r: Vector3) => this.figures.grips(h, s, l, r);
     readonly group = new Group();
 
     constructor(private readonly host: ForestHost) {
@@ -107,7 +110,7 @@ export class ForestScene {
             this.drawn.push(human);
             if (m.role === "feller") this.toolUsers.push({human, tool: toolOf(m.id)});
         }
-        this.tools.update(this.toolUsers, camera, seconds);
+        this.tools.update(this.toolUsers, camera, seconds, this.grips);
         if (this.drawn.length || this.figures.group.visible) this.figures.setFrame(this.drawn, camera, seconds);
         this.figures.group.visible = this.drawn.length > 0;
     }

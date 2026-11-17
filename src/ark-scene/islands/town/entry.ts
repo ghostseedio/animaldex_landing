@@ -31,7 +31,8 @@ import {loadVehicles} from "@/ark-scene/islands/town/render/vehicles";
 import {buildPetHomes} from "@/ark-scene/islands/town/render/pet-homes";
 import {homeSites} from "@/ark-scene/islands/town/tanks";
 import {townHouseholds} from "@/ark-scene/islands/town/areas";
-import {HumanFigures, humanLook} from "@/ark-scene/humans/figures";
+import {humanLook} from "@/ark-scene/humans/figures";
+import {PeopleFigures} from "@/ark-scene/humans/people-figures"; // p6 (people)
 import {BeachProps} from "@/ark-scene/humans/beach-props";
 import {helmSeat, TownHumans, type HumanRoomHost} from "@/ark-scene/humans/town-humans";
 import {roadHeight} from "@/ark-scene/islands/town/render/vehicles";
@@ -166,7 +167,9 @@ export function mountTown(el: HTMLElement) {
     // p5 (humans): the town's people (a fixture of `?humans=N`; the live page takes the record's).
     const humanCount = Number(params.get("humans") ?? 0);
     const humans = humanCount > 0 ? new TownHumans({origin: {x: 0, z: 0}, roadHeight}) : null;
-    const figures = humans ? new HumanFigures() : null;
+    // p6 (people): the rigged bodies (`?people=procedural`: the p5 figures, for before/after frames).
+    if (params.get("people") === "procedural") (globalThis as {__arkPeople?: string}).__arkPeople = "procedural";
+    const figures = humans ? new PeopleFigures() : null;
     const beachProps = humans ? new BeachProps() : null;
     if (beachProps) scene.add(beachProps.group);
     if (humans && figures) {
