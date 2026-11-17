@@ -8,9 +8,15 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /**
- * GET /api/ark/photo/<animal id>/thumb|large: one size of the photo for an Ark animal, as a 307 to a signed URL of
- * the server-made derivative (640 or 1200 px, re-encoded without EXIF or GPS; never the original).
- * docs/ark/CAPTURE-MEDIA-CONTRACT.md sections 2 and 2.6.
+ * GET /api/ark/photo/<animal id>/thumb|large: one size of the photo for an Ark animal, as a 307 to a signed URL of a
+ * server-made derivative (card_640 / feed_1200, re-encoded by generate-capture-derivatives with image.strip(): no EXIF,
+ * no GPS). docs/ark/CAPTURE-MEDIA-CONTRACT.md sections 2 and 2.6.
+ *
+ * The original upload is never served: `arkPhotoObject` signs only a path under `derived/<image id>/`. The derivative
+ * function stores the ORIGINAL object as the "derivative" when no resize was needed (an original no larger than the size),
+ * and the server's read hands that path over like any other; such a size is refused here. A `large` that is only the
+ * original gives way to the 640 px derivative; with no derivative at all the answer is 404 (2026-11-17: 29 live `large`
+ * and 1 `thumb` were originals, served until this check).
  *
  * The capture buckets are private, so this route signs with the service role, and asks only
  * `voyage_animal_photo_media_v1` (the animal's own capture, or for one born on the Ark its recorded ancestor's), which

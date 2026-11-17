@@ -22,12 +22,40 @@ test("anything off the contract is no photo: another path, a storage URL, a miss
     assert.deepEqual(decodeArkCapturePhoto({...answer, thumb: {...answer.thumb, width: -3, height: "9"}}, id)?.thumb, {width: null, height: null, path: answer.thumb.path});
 });
 
-test("the signing route signs only a capture bucket and a plain path", () => {
-    const media = {thumb: {bucket: "captures", path: "u/c/derived/i/card_640.jpg"}, large: {bucket: "avatars", path: "x.jpg"}};
-    assert.deepEqual(arkPhotoObject(media, "thumb"), {bucket: "captures", path: "u/c/derived/i/card_640.jpg"});
-    assert.equal(arkPhotoObject(media, "large"), null);
-    assert.equal(arkPhotoObject({thumb: {bucket: "captures", path: "../secret"}}, "thumb"), null);
+const IMG = "3f848bf7-0268-4478-bac6-1a439018fb51";
+const dir = "9000f268-a0fe-43d8-895f-9c691cf58b25/73b77658-aa24-4ed1-b382-bda272dbf8e7";
+const derived = {
+    thumb: {bucket: "captures", path: `${dir}/derived/${IMG}/card_640.jpg`},
+    large: {bucket: "captures", path: `${dir}/derived/${IMG}/feed_1200.jpg`}
+};
+const original = {bucket: "captures", path: `${dir}/primary.jpg`};
+
+test("the signing route signs only a capture bucket and a server-made derivative's path", () => {
+    assert.deepEqual(arkPhotoObject(derived, "thumb"), derived.thumb);
+    assert.deepEqual(arkPhotoObject(derived, "large"), derived.large);
+    assert.equal(arkPhotoObject({...derived, large: {bucket: "avatars", path: derived.large.path}}, "large")?.path, derived.thumb.path, "a wrong bucket is not signed; the thumb stands in");
+    assert.equal(arkPhotoObject({thumb: {bucket: "captures", path: `${dir}/derived/../secret/card_640.jpg`}}, "thumb"), null);
+    assert.equal(arkPhotoObject({thumb: {bucket: "captures", path: `${dir}//derived/${IMG}/card_640.jpg`}}, "thumb"), null);
     assert.equal(arkPhotoObject(null, "thumb"), null);
+});
+
+test("an original is never signed: it carries whatever metadata its upload had", () => {
+    assert.equal(arkPhotoObject({thumb: original, large: original}, "thumb"), null);
+    assert.equal(arkPhotoObject({thumb: original, large: original}, "large"), null, "both originals: no photo");
+    assert.equal(arkPhotoObject({thumb: original, large: derived.large}, "thumb"), null);
+    // a derivative must be under derived/<image id>/ and named for its size
+    assert.equal(arkPhotoObject({thumb: {bucket: "captures", path: `${dir}/derived/${IMG}/feed_1200.jpg`}}, "thumb"), null, "the 1200 px file is not the thumb");
+    assert.equal(arkPhotoObject({thumb: {bucket: "captures", path: `${dir}/derived/not-an-id/card_640.jpg`}}, "thumb"), null);
+    assert.equal(arkPhotoObject({thumb: {bucket: "captures", path: `${dir}/card_640.jpg`}}, "thumb"), null);
+    assert.equal(arkPhotoObject({thumb: {bucket: "captures", path: `${dir}/derived/${IMG}/card_640.jpg.png`}}, "thumb"), null);
+    assert.equal(arkPhotoObject({thumb: {bucket: "captures", path: `${dir}/derived/${IMG}/card_640.jpg/x`}}, "thumb"), null);
+});
+
+test("a large that is only the original gives way to the 640 px derivative, never to the original", () => {
+    assert.deepEqual(arkPhotoObject({thumb: derived.thumb, large: original}, "large"), derived.thumb);
+    assert.deepEqual(arkPhotoObject({thumb: derived.thumb, large: original}, "thumb"), derived.thumb);
+    assert.equal(arkPhotoObject({thumb: derived.thumb, large: {bucket: "captures", path: "../x"}}, "large")?.path, derived.thumb.path);
+    assert.equal(arkPhotoObject({thumb: derived.thumb}, "large")?.path, derived.thumb.path, "no large at all");
 });
 
 test("its box: the photo's shape, 4:3 without dimensions, never extreme", () => {

@@ -87,13 +87,34 @@ export type ArkPhotoObject = {bucket: string; path: string};
 const CAPTURE_BUCKETS = new Set(["captures", "capture-media"]);
 const SAFE_PATH = /^[A-Za-z0-9][A-Za-z0-9._/-]{0,511}$/;
 
-/** `voyage_animal_capture_media_v1`'s object for `size`, checked (a capture bucket, a plain path), or null. */
-export function arkPhotoObject(raw: unknown, size: ArkPhotoSizeKey): ArkPhotoObject | null {
+/**
+ * Only a server-made derivative is ever signed: `<user>/<capture>/derived/<image id>/card_640.jpg` (thumb) or
+ * `.../feed_1200.jpg` (large), re-encoded by generate-capture-derivatives with image.strip() (no EXIF, no GPS). When an
+ * original is no larger than the size asked for, that function stores the ORIGINAL object as the "derivative" (no
+ * resize, no re-encode: `card_640_storage_path` = `storage_path`), and the server's read hands its path over like any
+ * other; such a path is not under `derived/`, so it is refused here (found 2026-11-17: 29 live `large` and 1 `thumb`).
+ */
+const IMAGE_ID = "[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+const DERIVED: Record<ArkPhotoSizeKey, RegExp> = {
+    thumb: new RegExp(`(^|/)derived/${IMAGE_ID}/card_640\\.jpg$`),
+    large: new RegExp(`(^|/)derived/${IMAGE_ID}/feed_1200\\.jpg$`)
+};
+
+function derivedObject(raw: unknown, size: ArkPhotoSizeKey): ArkPhotoObject | null {
     const object = record(record(raw)?.[size]);
     const bucket = typeof object?.bucket === "string" ? object.bucket : "";
     const path = typeof object?.path === "string" ? object.path : "";
-    if (!CAPTURE_BUCKETS.has(bucket) || !SAFE_PATH.test(path) || path.includes("..") || path.includes("//")) return null;
+    if (!CAPTURE_BUCKETS.has(bucket) || !SAFE_PATH.test(path) || path.includes("..") || path.includes("//") || !DERIVED[size].test(path)) return null;
     return {bucket, path};
+}
+
+/**
+ * The private read's storage object for `size`, checked: a capture bucket and a server-made derivative's path (never an
+ * original). A `large` that is only the original gives way to the 640 px derivative (`thumb`); a `thumb` that is the
+ * original, or neither size a derivative, is no photo (null: the route answers 404 and the card draws nothing).
+ */
+export function arkPhotoObject(raw: unknown, size: ArkPhotoSizeKey): ArkPhotoObject | null {
+    return derivedObject(raw, size) ?? (size === "large" ? derivedObject(raw, "thumb") : null);
 }
 
 /** Its box's aspect ratio (width / height), 4:3 when the server had no dimensions, clamped to 1:2 .. 2:1. */

@@ -194,6 +194,9 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager, named);
     // An ancestor's photo only on an animal born on the Ark, its own only on one that arrived; never one unlabelled.
     const shownPhoto = arkPhotoShownOn(photo, facts.born);
+    // The "whose photo" line only once the photo itself has loaded: the server's photo can be refused at the signing
+    // route (an original, a failed read), and a line about a photo that is not there would be wrong.
+    const [loadedPhoto, setLoadedPhoto] = useState<string | null>(null);
     const status = useAnimalStatus(scene, animal.id);
     const [dayOpen, setDayOpen] = useState<string | null>(null);
     const dayShown = dayOpen === animal.id;
@@ -304,7 +307,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             )}
                         </p>
                     </div>
-                    {shownPhoto ? <Suspense fallback={null}><ArkCardPhoto key={animal.id} part="thumb" photo={shownPhoto} species={animal.name} words={words} /></Suspense> : null}
+                    {shownPhoto ? <Suspense fallback={null}><ArkCardPhoto key={animal.id} part="thumb" photo={shownPhoto} species={animal.name} words={words} onLoaded={() => setLoadedPhoto(animal.id)} /></Suspense> : null}
                     <div className="hidden shrink-0 items-center gap-2 md:flex">{moves}</div>
                     <button type="button" onClick={onClose} aria-label={words.close} className="-mr-1 -mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
                         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
@@ -312,7 +315,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                 </div>
 
                 {/* Whose photo, when it is not this animal's: "Born on the Ark · Photo of its parent, brought aboard by @ada". */}
-                {shownPhoto && shownPhoto.brought_by ? <Suspense fallback={null}><ArkCardPhoto part="line" photo={shownPhoto} species={animal.name} words={words} /></Suspense> : null}
+                {shownPhoto && shownPhoto.brought_by && loadedPhoto === animal.id ? <Suspense fallback={null}><ArkCardPhoto part="line" photo={shownPhoto} species={animal.name} words={words} /></Suspense> : null}
 
                 {/* Its status: chips, what it is doing now and next (left), its log (right on a desktop, under on a phone). */}
                 <div className={`mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] md:pl-[3.75rem] ${storyOpen || dayShown ? "hidden md:grid" : ""}`}>

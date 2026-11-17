@@ -36,7 +36,7 @@ function ArkPhotoFromLine({photo, words}: {photo: ArkCapturePhoto; words: ArkWor
  * brought it, lazy-loaded; a tap opens the 1200 px one over the page (Escape, the close button or the backdrop closes
  * it). The server shows it only for a named founder's public capture. A photo that fails to load draws nothing.
  */
-function ArkCapturePhotoThumb({photo, species, words}: {photo: ArkCapturePhoto; species: string; words: ArkWords}) {
+function ArkCapturePhotoThumb({photo, species, words, onLoaded}: {photo: ArkCapturePhoto; species: string; words: ArkWords; onLoaded?: () => void}) {
     const [failed, setFailed] = useState(false);
     const [open, setOpen] = useState(false);
     const closeRef = useRef<HTMLButtonElement | null>(null);
@@ -75,7 +75,7 @@ function ArkCapturePhotoThumb({photo, species, words}: {photo: ArkCapturePhoto; 
                 style={{aspectRatio: String(aspect)}}
             >
                 {/* eslint-disable-next-line @next/next/no-img-element -- a signed storage redirect, not an optimisable asset */}
-                <img src={photo.thumb.path} alt={alt} loading="lazy" decoding="async" onError={() => setFailed(true)} className="h-full w-full object-cover" width={photo.thumb.width ?? undefined} height={photo.thumb.height ?? undefined} />
+                <img src={photo.thumb.path} alt={alt} loading="lazy" decoding="async" onLoad={onLoaded} onError={() => setFailed(true)} className="h-full w-full object-cover" width={photo.thumb.width ?? undefined} height={photo.thumb.height ?? undefined} />
             </button>
             {/* (On the page's body: the card's backdrop blur would make it the overlay's box.) */}
             {open && typeof document !== "undefined" ? createPortal(
@@ -95,6 +95,6 @@ function ArkCapturePhotoThumb({photo, species, words}: {photo: ArkCapturePhoto; 
     );
 }
 
-export default function ArkCardPhoto({part, photo, species, words}: {part: "thumb" | "line"; photo: ArkCapturePhoto; species: string; words: ArkWords}) {
-    return part === "line" ? <ArkPhotoFromLine photo={photo} words={words} /> : <ArkCapturePhotoThumb photo={photo} species={species} words={words} />;
+export default function ArkCardPhoto({part, photo, species, words, onLoaded}: {part: "thumb" | "line"; photo: ArkCapturePhoto; species: string; words: ArkWords; onLoaded?: () => void}) {
+    return part === "line" ? <ArkPhotoFromLine photo={photo} words={words} /> : <ArkCapturePhotoThumb photo={photo} species={species} words={words} onLoaded={onLoaded} />;
 }
