@@ -6,6 +6,7 @@ import {
     type DiscoverTimelineCursor
 } from "@/data/discover-timeline";
 import {parseDiscoverPostId} from "@/lib/discover-post";
+import {parseDiscoverSessionAsOf} from "@/lib/discover-ranked-feed";
 import {getViewerUserId} from "@/lib/viewer";
 
 const DEFAULT_LIMIT = 12;
@@ -24,13 +25,16 @@ function readCursor(request: NextRequest): DiscoverTimelineCursor | null {
 
     if (!date || !id || !Number.isFinite(rank)) return null;
     const afterCaptureId = request.nextUrl.searchParams.get("cursorCapture")?.trim() ?? "";
+    // The feed session the cursor belongs to; anything that is not a past date is dropped.
+    const asOf = parseDiscoverSessionAsOf(request.nextUrl.searchParams.get("cursorAsOf"));
     return {
         date,
         sortRank: rank,
         id,
         // Passed to a uuid parameter, so anything that is not one is dropped
         // here rather than failing the whole page in the database.
-        ...(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(afterCaptureId) ? {afterCaptureId} : {})
+        ...(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(afterCaptureId) ? {afterCaptureId} : {}),
+        ...(asOf ? {asOf} : {})
     };
 }
 

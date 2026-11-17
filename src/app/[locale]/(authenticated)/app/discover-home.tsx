@@ -668,6 +668,7 @@ export default function DiscoverHome({
                 params.set("cursorRank", String(cursor.sortRank));
                 params.set("cursorId", cursor.id);
                 if (cursor.afterCaptureId) params.set("cursorCapture", cursor.afterCaptureId);
+                if (cursor.asOf) params.set("cursorAsOf", cursor.asOf);
             }
             const response = await fetch(`/api/app/discover?${params.toString()}`, {
                 headers: {Accept: "application/json"}
