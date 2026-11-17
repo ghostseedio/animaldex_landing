@@ -35,6 +35,7 @@ import {parkBench} from "@/ark-scene/islands/town/render/bench";
 import {safariBarrier, safariScenery} from "@/ark-scene/islands/town/render/safari";
 import {ruralEdge, ruralProps} from "@/ark-scene/islands/town/render/rural-edges";
 import {RURAL_PENS} from "@/ark-scene/islands/town/rural";
+import {domeScenery} from "@/ark-scene/islands/town/render/dome";
 import {safariArea} from "@/ark-scene/islands/town/safari";
 import {bridgeAt, bridgeHeight, canalBridges, PARAPET} from "@/ark-scene/islands/town/canal-bridges";
 import {drawCanalBridge} from "@/ark-scene/islands/town/render/canal-bridges";
@@ -630,6 +631,12 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
         dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null, c.decal);
         return;
     }
+    // p5 (zoospace): the free-flight dome: its building is the town's (`render/dome.ts`); its planting, cliff, snags and
+    // feeding stations its dressing.
+    if (e.slot.annex === "dome") {
+        dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null);
+        return;
+    }
     // (Lane GA: the 2 m cells' own shades were the "giant pixels"; the earth and sand textures carry the variety now.)
     // p4 (townfix): the floor's surface and colour from `zooFloor` (a waterhole's bank blends into it).
     const floor = zooFloor(e.type);
@@ -878,6 +885,8 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
     zooPlaza(out, plan);
     // p4 (safari): the safari park's paving, gate, waters, boardwalk and decks.
     safariScenery((x, z) => chunkFor(out, x, z), out.fresh);
+    // p5 (zoospace): the free-flight dome's building, its paths, boardwalk and lagoon, its path lamps (`render/dome.ts`).
+    domeScenery((x, z) => chunkFor(out, x, z), out.fresh, out.lamps);
     lamps(out, plan);
     beds(out, plan);
     // The lamps' and the street furniture's bodies into the chunks; their lights and the lamp map (lane GA).

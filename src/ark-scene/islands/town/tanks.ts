@@ -18,6 +18,7 @@
  * - **Big livestock routed to a home** (horses, cattle, donkeys, pigs, llamas) is kept at a farm's paddock (livery).
  */
 
+import {riverHouseTank} from "@/ark-scene/islands/town/zoo-homes";
 import {corners, hashText, inBox, local, sub, toLocal, type Box, type Pt} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townPlan, type Building, type Parcel, type TownPlan} from "@/ark-scene/islands/town/plan";
@@ -102,6 +103,19 @@ export function aquariumTanks(e: Pick<ZooEnclosure, "slot" | "type" | "id">): Ta
         const p = local(b, lx, lz);
         out.push({id: `${e.id}:${id}`, kind, form, x: p.x, z: p.z, rot: b.rot, w: tw, d: td, floor: f.floor + floor, top: f.floor + top});
     };
+    // p5 (zoospace): the river house (`zoo-homes.ts`): one long river tank across the back for the river giants (arapaima,
+    // gar, sturgeon, catfish: 2 m and more, room to turn in its 7 m depth), and on stands in front a planted tank for
+    // the piranhas alone (fish eaters kept apart from every other fish, as aquariums keep them) and the rays' tank.
+    if (e.slot.annex === "river") {
+        const riverD = Math.min(8.4, d * 0.42);
+        const riverZ = -d / 2 + 0.25 + riverD / 2;
+        add("river", "fresh", "river", 0, riverZ, w - 0.5, riverD, 0.35, Math.min(f.height - 1.0, 4.0));
+        const frontZ = riverZ + riverD / 2 + 2.6 + 1.6;
+        add("piranhas", "fresh", "fresh", -w * 0.22, frontZ, Math.min(4.2, w * 0.36), 3.2, 0.75, 2.4);
+        // (The river rays' tank: low, wide and shallow over sand, looked down into; the giants eat rays their size.)
+        add("rays", "fresh", "reef", w * 0.22, frontZ, Math.min(4.6, w * 0.38), 3.4, 0.45, 1.5);
+        return out;
+    }
     // Across the back: the ocean tank and the river tank, deep and tall.
     const backD = Math.min(7.2, d * 0.36);
     const backZ = -d / 2 + 0.25 + backD / 2;
@@ -130,7 +144,10 @@ export function aquariumTanks(e: Pick<ZooEnclosure, "slot" | "type" | "id">): Ta
 export function waterOf(slug: string, zone: string): TankKind {
     const depth = speciesDepth(slug, zone);
     if (depth) return depth.water;
-    return /shark|ray|sawfish|dugong|manatee|sea-|reef|coral|horseshoe|octopus|squid|jelly|lobster|wrasse|tang|grouper|snapper|puffer|eel/.test(slug) ? "salt" : "fresh";
+    // p5 (zoospace): a river's or a lake's animal is fresh whatever its name holds (the Amazon's stingrays swam in the
+    // ocean tank with the sawfish), and "ray" is a word's end (a crayfish was a salt water animal on the reef).
+    if (zone === "river_lake") return "fresh";
+    return /shark|ray($|-)|sawfish|dugong|manatee|sea-|reef|coral|horseshoe|octopus|squid|jelly|lobster|wrasse|tang|grouper|snapper|puffer|eel/.test(slug) ? "salt" : "fresh";
 }
 
 const JELLY = /jelly|(^|-)medusa/;
@@ -148,6 +165,12 @@ export function aquariumTankOf(animal: {id: string; model_slug: string; zone: st
         if (want && fitsSwim(want, length, width)) return want;
         const roomy = tanks.filter((t) => fitsSwim(t, length, width) && t.form !== "jelly").sort((a, b) => b.w * b.d - a.w * a.d);
         return roomy.find((t) => t.kind === kind) ?? roomy[0] ?? tanks.find((t) => t.form === "ocean") ?? want;
+    }
+    // p5 (zoospace): the river house's two tanks by kind (`zoo-homes.ts`), whatever the body's length.
+    const piranhas = tanks.find((t) => t.id.endsWith(":piranhas"));
+    if (piranhas) {
+        const own = riverHouseTank(slug);
+        return (own === "river" ? tanks.find((t) => t.form === "river") : tanks.find((t) => t.id.endsWith(`:${own}`))) ?? piranhas;
     }
     const fits = (t: Tank) => length + 0.3 < Math.min(t.w, t.d) * 1.6 && length * 0.4 < t.top - t.floor;
     let list: Tank[];
