@@ -3026,6 +3026,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         group.figures = 0;
         group.specks = drawn - hidden;
         group.hidden = hidden;
+        // p4 (zoolive): a speck drawn is tapped like a figure (`tap-pick.ts`): its middle. They were left unset, so on a
+        // phone (8 kinds as models) most of a zoo's resting kinds stood as specks no tap could select.
+        for (let k = hidden; k < drawn; k++) {
+            const i = group.order[k];
+            group.middles[i * 3] = group.members[i].x;
+            group.middles[i * 3 + 1] = group.speckMatrices[i * 16 + 13] + tall * (shape === "oval" ? 0.3 : 0.5);
+            group.middles[i * 3 + 2] = group.members[i].z;
+        }
         const colour = RESTING_SPECK_COLOURS[measured.plan ?? ""] ?? RESTING_SPECK_COLOURS[""];
         return {slug: group.slug, order: group.order, members: group.members, figureMatrices: group.figureMatrices, speckMatrices: group.speckMatrices, colour, drawn, figures: 0, width, depth, herd: group, shape, hidden};
     };
