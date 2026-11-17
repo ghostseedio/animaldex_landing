@@ -31,6 +31,7 @@ import {TOWN_CHUNK_COUNT, townChunkDistance, townChunkOf, type TownChunkSpan} fr
 import {at, COLOUR_TAG_TOLERANCE, Geo, NullGeo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {TOWN_LIGHT, townWeather} from "@/ark-scene/islands/town/render/materials";
 import {ARK_TIME} from "@/ark-scene/glsl";
+import {apartmentStoreys, BAY_DEPTH} from "@/ark-scene/islands/town/home-rooms";
 
 export type WindowOwner = "home" | "shop" | "pub" | "civic" | "church" | "farm" | "zoo" | "mill" | "harbour" | "office";
 
@@ -999,18 +1000,24 @@ function tower(ctx: Ctx, b: Building) {
     solid.as(SURFACE.metal, () => solid.box(f, 0, b.eaves + 0.7, 0, w + 0.32, 0.06, d + 0.32, tone("#8a8c8e")));
     if (b.id !== "tower-3") solid.as(SURFACE.concrete, () => solid.box(f, 0, b.eaves + 0.75, -d * 0.3, w * 0.42, 3.6, d * 0.24, shade(frame, 0.9)));
     const sidesOf = sides(f, w, d);
+    // p5 (homes): flats on the front's upper storeys (`home-rooms.ts` towerApartments): two a storey, each with a glazed
+    // winter garden standing out from the curtain wall; their windows are homes' (lit and curtained as homes are).
+    const homes = new Set(apartmentStoreys(b));
     // The office windows, a band per storey above the podium (a column a pier's width either side of each mullion).
-    for (const side of sidesOf) {
+    sidesOf.forEach((side, i) => {
         const columns = Math.max(2, Math.round((side.length - 1.8) / 2.7));
         const span = side.length - 1.8;
         for (let floor = 2; floor < b.floors; floor++) {
             const y = floor * floorH + floorH * 0.48;
+            const home = i === 0 && homes.has(floor);
             for (let k = 0; k < columns; k++) {
                 const u = -span / 2 + (span * (k + 0.5)) / columns;
-                windowAt(ctx, side.frame, u, y, span / columns - 0.28, floorH * 0.74, "office", floor * 32 + k, floor);
+                if (home) windowAt(ctx, side.frame, u, y, span / columns - 0.28, floorH * 0.74, "home", floor * 2 + (u < 0 ? 0 : 1), floor);
+                else windowAt(ctx, side.frame, u, y, span / columns - 0.28, floorH * 0.74, "office", floor * 32 + k, floor);
             }
         }
-    }
+    });
+    towerBays(ctx, f, b, w, d, floorH, frame);
     // The podium: shop windows round it, the entrance and its canopy on the front.
     const podiumSides = sides(f, w + 1.2, d + 1.2);
     podiumSides.forEach((side, i) => {
@@ -1026,6 +1033,41 @@ function tower(ctx: Ctx, b: Building) {
     door(solid, front.frame, 0, tone("#2b3a44"), 2.6, 2.6);
     solid.as(SURFACE.metal, () => solid.box(front.frame, 0, 3.0, 1.2, 5.4, 0.22, 2.4, tone("#2c2f33")));
     void r;
+}
+
+/**
+ * p5 (homes): the apartments' winter gardens on a tower's front (`home-rooms.ts` towerApartments, the same boxes): each
+ * a slab on its storey's floor with a dark edge, posts at its corners and middle, a rail along the top, clear glass on
+ * its front and ends; the top one's roof slab. The rooms inside are drawn where pets live (`render/pet-homes.ts`).
+ */
+function towerBays(ctx: Ctx, f: Frame, b: Building, w: number, d: number, floorH: number, frame: [number, number, number]) {
+    const {solid, glass} = ctx.chunk;
+    const storeys = apartmentStoreys(b);
+    if (!storeys.length) return;
+    const bw = w / 2 - 0.9;
+    const pane = tone("#cfe0e4");
+    for (const storey of storeys) {
+        for (const side of [-1, 1]) {
+            const cx = (side * w) / 4;
+            const cz = d / 2 + BAY_DEPTH / 2;
+            const y = storey * floorH;
+            const h = floorH - 0.36;
+            solid.as(SURFACE.concrete, () => solid.box(f, cx, y - 0.3, cz, bw + 0.2, 0.3, BAY_DEPTH + 0.1, frame));
+            if (storey === storeys[storeys.length - 1]) solid.as(SURFACE.concrete, () => solid.box(f, cx, y + floorH - 0.32, cz, bw + 0.2, 0.3, BAY_DEPTH + 0.1, frame));
+            solid.as(SURFACE.metal, () => {
+                for (const lx of [-bw / 2 + 0.05, 0, bw / 2 - 0.05]) solid.box(f, cx + lx, y, d / 2 + BAY_DEPTH - 0.06, 0.1, h, 0.1, tone("#3a3f44"));
+                for (const sx of [-1, 1]) solid.box(f, cx + sx * (bw / 2 - 0.05), y, d / 2 + 0.06, 0.1, h, 0.1, tone("#3a3f44"));
+                solid.box(f, cx, y + h - 0.08, d / 2 + BAY_DEPTH - 0.06, bw, 0.08, 0.1, tone("#3a3f44"));
+                solid.box(f, cx, y + 1.0, d / 2 + BAY_DEPTH - 0.06, bw, 0.05, 0.06, tone("#3a3f44"));
+            });
+            const P = (lx: number, ly: number, lz: number) => at(f, cx + lx, y + ly, lz);
+            const fz = d / 2 + BAY_DEPTH - 0.06;
+            const bz = d / 2 + 0.02;
+            glass.quad(P(-bw / 2, 0, fz), P(bw / 2, 0, fz), P(bw / 2, h, fz), P(-bw / 2, h, fz), pane);
+            glass.quad(P(bw / 2, 0, fz), P(bw / 2, 0, bz), P(bw / 2, h, bz), P(bw / 2, h, fz), pane);
+            glass.quad(P(-bw / 2, 0, bz), P(-bw / 2, 0, fz), P(-bw / 2, h, fz), P(-bw / 2, h, bz), pane);
+        }
+    }
 }
 
 // MARK: - p4 (safari): the safari park's buildings

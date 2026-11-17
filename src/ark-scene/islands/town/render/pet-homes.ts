@@ -17,6 +17,7 @@ import {Group, Mesh, type BufferGeometry, type Material} from "three";
 import {hashText, rng} from "@/ark-scene/islands/town/geom";
 import {homeDisplayFloors, perchHeight, POND_SIZE, type HomeDisplay, type HomeSite} from "@/ark-scene/islands/town/tanks";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
+import type {HomeRoom} from "@/ark-scene/islands/town/home-rooms";
 import {barsMaterial, cutAttribute, cutawayMaterial, cutEye, followEye, glassMaterial, glowMaterial, interiorMaterial, outdoorMaterial, waterMaterial} from "@/ark-scene/islands/town/render/displays";
 
 type RGB = [number, number, number];
@@ -152,15 +153,73 @@ function pond(d: HomeDisplay, parts: Parts) {
     water(parts, fr, d.w / 2, d.d / 2, 0.06, d.top - ground, tone("#3f7a6a"));
 }
 
+// MARK: - p5 (homes): rooms the pets live in
+
+const RUGS: RGB[] = [tone("#8a3a3a"), tone("#3a5a7a"), tone("#b08a4a"), tone("#5a7a4a"), tone("#7a5a8a")];
+const SOFAS: RGB[] = [tone("#5a6a7a"), tone("#8a6a4a"), tone("#4a5a4a"), tone("#a8a090"), tone("#6a3a3a")];
+const WOOD = tone("#9a7a56");
+
+/** A garden room lived in: a rug on the tiles and a pet's basket in a corner. */
+function gardenRoomThings(room: HomeRoom, parts: Parts) {
+    const f = room.free;
+    const r = rng(hashText(room.id));
+    const fr: Frame = {x: f.x, y: room.floor, z: f.z, rot: f.rot};
+    parts.inside.box(fr, 0, 0, 0, f.w * 0.8, 0.015, f.d * 0.75, RUGS[Math.floor(r() * RUGS.length)]);
+    const corner = at(fr, (r() < 0.5 ? -1 : 1) * (f.w / 2 - 0.3), 0, -f.d / 2 + 0.3);
+    parts.inside.cylinder({x: corner[0], y: room.floor, z: corner[2], rot: 0}, 0, 0, 0, 0.26, 0.24, 0.12, tone("#b89a6a"), 10);
+    parts.inside.cylinder({x: corner[0], y: room.floor + 0.04, z: corner[2], rot: 0}, 0, 0, 0, 0.2, 0.2, 0.06, tone("#c86a5a"), 10);
+}
+
+/**
+ * A tower apartment's winter garden lived in (behind its glazed bay): a wooden floor, a ceiling, a sofa along the
+ * tower's wall, a rug, a bookshelf at one end and a plant at the other, a pendant lamp (lit: the glow), and
+ * the pets' basket. Local +z is the glass front.
+ */
+function apartment(room: HomeRoom, parts: Parts) {
+    const b = room.shell;
+    const r = rng(hashText(room.id));
+    const fr: Frame = {x: b.x, y: room.floor, z: b.z, rot: b.rot};
+    const w = b.w;
+    const d = b.d;
+    const h = room.height;
+    parts.inside.box(fr, 0, 0, 0, w - 0.1, 0.03, d - 0.1, tone("#b8925e"));
+    // The ceiling (the tower's wall behind is its home's windows, lit on the island clock: `render/buildings.ts`).
+    parts.inside.box(fr, 0, h - 0.04, 0, w - 0.1, 0.04, d - 0.1, tone("#f2efe8"));
+    // The sofa along the tower's wall: its seat, back and arms.
+    const sofa = SOFAS[Math.floor(r() * SOFAS.length)];
+    const sw = Math.min(2.4, w * 0.4);
+    const su = (r() - 0.5) * (w - sw - 1.6);
+    parts.inside.box(fr, su, 0, -d / 2 + 0.5, sw, 0.42, 0.8, sofa);
+    parts.inside.box(fr, su, 0.42, -d / 2 + 0.2, sw, 0.45, 0.2, sofa);
+    for (const side of [-1, 1]) parts.inside.box(fr, su + side * (sw / 2 - 0.1), 0.42, -d / 2 + 0.5, 0.2, 0.22, 0.8, sofa);
+    // The rug in front of it (the pets' floor: no table on it).
+    parts.inside.box(fr, su, 0.03, 0.3, sw + 0.6, 0.012, 1.3, RUGS[Math.floor(r() * RUGS.length)]);
+    // A bookshelf at one end, a plant at the other.
+    const end = r() < 0.5 ? -1 : 1;
+    parts.inside.box(fr, end * (w / 2 - 0.35), 0, -d / 2 + 0.6, 0.5, 1.9, 0.9, WOOD);
+    for (let k = 0; k < 4; k++) parts.inside.box(fr, end * (w / 2 - 0.25), 0.3 + k * 0.42, -d / 2 + 0.6, 0.32, 0.26, 0.8, [tone("#7a2a2a"), tone("#2a4a6a"), tone("#c8b070"), tone("#3a6a3a")][(k + Math.floor(r() * 4)) % 4]);
+    const pot = at(fr, -end * (w / 2 - 0.4), 0, -d / 2 + 0.4);
+    parts.inside.cylinder({x: pot[0], y: room.floor, z: pot[2], rot: 0}, 0, 0, 0, 0.18, 0.14, 0.38, tone("#b0623a"), 8);
+    parts.inside.blob(pot[0], room.floor + 0.75, pot[2], 0.34, 0.42, 0.34, tone("#3f7a34"), hashText(room.id), 0);
+    // The pendant lamp over the table, and the pets' basket by the sofa.
+    parts.inside.box(fr, su, h - 0.6, 0.25, 0.02, 0.56, 0.02, tone("#2a2a2a"));
+    parts.glow.cylinder({...fr, ...{x: at(fr, su, 0, 0.25)[0], z: at(fr, su, 0, 0.25)[2]}}, 0, h - 0.82, 0, 0.22, 0.12, 0.22, tone("#ffd9a0"), 10);
+    const basket = at(fr, su + (sw / 2 + 0.45) * (end > 0 ? -1 : 1), 0, -d / 2 + 0.45);
+    parts.inside.cylinder({x: basket[0], y: room.floor, z: basket[2], rot: 0}, 0, 0, 0, 0.3, 0.28, 0.14, tone("#b89a6a"), 10);
+}
+
 /** The sites in use (each with the ids of its displays in use) drawn, and their floors for the drawn ground. */
-export function buildPetHomes(used: ReadonlyArray<{site: HomeSite; displays: ReadonlySet<string>}>): PetHomes {
+export function buildPetHomes(used: ReadonlyArray<{site: HomeSite; displays: ReadonlySet<string>}>, rooms: readonly HomeRoom[] = []): PetHomes {
     const group = new Group();
     group.name = "town:pet-homes";
     const parts: Parts = {shell: new Geo(), inside: new Geo(), outdoor: new Geo(), glow: new Geo(), glass: new Geo(), water: new Geo(), bars: new Geo()};
     const ranges: Array<{from: number; to: number; x: number; y: number; z: number; h: number}> = [];
     const ids = new Set<string>();
     for (const {site, displays} of used) {
-        const indoors = ["tank", "cage", "vivarium"].some((form) => displays.has(site.displays[form as "tank"].id));
+        // (p5 (homes): a garden room with pets living in it is drawn too, with a basket and a rug for them.)
+        const lived = rooms.find((r) => r.kind === "garden_room" && r.building === site.household);
+        const indoors = Boolean(lived) || ["tank", "cage", "vivarium"].some((form) => displays.has(site.displays[form as "tank"].id));
+        if (lived && site.kind === "garden_room") gardenRoomThings(lived, parts);
         if (indoors && site.kind === "garden_room") room(site, parts, ranges);
         if (indoors && site.kind !== "garden_room") {
             // A flat's low cabinet on its balcony or patio.
@@ -178,6 +237,8 @@ export function buildPetHomes(used: ReadonlyArray<{site: HomeSite; displays: Rea
         }
         if (site.displays.pond && displays.has(site.displays.pond.id)) pond(site.displays.pond, parts);
     }
+    // p5 (homes): the tower apartments with pets living in them (their glazed bays are the tower's: `render/buildings.ts`).
+    for (const r of rooms) if (r.kind === "apartment") apartment(r, parts);
     const meshes: Mesh[] = [];
     const materials: Material[] = [];
     const add = (geometry: BufferGeometry, material: Material, name: string, shadows: boolean, order = 0) => {
