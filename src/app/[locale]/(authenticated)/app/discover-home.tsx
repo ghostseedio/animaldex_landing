@@ -23,6 +23,8 @@ import {useRouter} from "next/navigation";
 import DebatePost from "@/components/debates/debate-post";
 import {pinnedDebates, type Debate} from "@/lib/debates";
 import {ARK_COPY, type CompanionWords} from "@/lib/companion-bond";
+import FeedbackPollPost from "@/components/feedback-polls/feedback-poll-post";
+import {parseFeedbackPoll, placeFeedbackPoll, type FeedbackPoll} from "@/lib/feedback-polls";
 
 type DiscoverSegment = "discover" | "collectors";
 
@@ -374,7 +376,13 @@ export default function DiscoverHome({
      * The feed's slots: boosted debates the reader has not voted on first,
      * then the posts with the other public debates among them by date.
      */
-    const feedSlots = useMemo(() => {
+    /**
+     * The feedback poll for this feed session (AnimalDex 20261201100000): asked
+     * once when the page opens (the session moment), placed after `slot` posts.
+     */
+    const [feedbackPoll, setFeedbackPoll] = useState<FeedbackPoll | null>(null);
+    const feedbackPollAskedRef = useRef(false);
+    const postSlots = useMemo(() => {
         type Slot = {kind: "post"; item: DiscoverTimelineItem} | {kind: "debate"; debate: Debate; pinned: boolean};
         if (!debateWords || debates.length === 0) return timelineItems.map((item): Slot => ({kind: "post", item}));
         const pinned = pinnedDebates(debates);
@@ -395,9 +403,24 @@ export default function DiscoverHome({
         for (; next < rest.length; next += 1) slots.push({kind: "debate", debate: rest[next], pinned: false});
         return slots;
     }, [timelineItems, debates, debateWords]);
+    type FeedSlot = (typeof postSlots)[number] | {kind: "poll"; poll: FeedbackPoll};
+    const feedSlots = useMemo(
+        () => placeFeedbackPoll<FeedSlot>(postSlots, feedbackPoll, (poll) => ({kind: "poll", poll})),
+        [postSlots, feedbackPoll]
+    );
     const [nextTimelineCursor, setNextTimelineCursor] = useState<DiscoverTimelineCursor | null>(timelineCursor);
     const [featuredItems, setFeaturedItems] = useState(featured);
     const [viewerUserId, setViewerUserId] = useState(initialViewerUserId);
+    useEffect(() => {
+        if (!viewerUserId || feedbackPollAskedRef.current) return;
+        feedbackPollAskedRef.current = true;
+        const asOf = new Date().toISOString();
+        const query = new URLSearchParams({surface: "feed", seed: "web", asOf});
+        fetch(`/api/app/discover/poll?${query.toString()}`, {cache: "no-store"})
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: {poll?: unknown} | null) => setFeedbackPoll(parseFeedbackPoll(body?.poll, locale)))
+            .catch(() => undefined);
+    }, [viewerUserId, locale]);
     const [collectorItems, setCollectorItems] = useState(collectors);
     const [hasMoreTimeline, setHasMoreTimeline] = useState(Boolean(timelineCursor));
     const [hasMoreCollectors, setHasMoreCollectors] = useState(collectors.length >= COLLECTOR_PAGE_SIZE);
@@ -926,7 +949,12 @@ export default function DiscoverHome({
                             >
                                 {/* Flush stacking: iOS uses VStack(spacing: 0) so one
                                     swipe always lands on exactly one post. */}
-                                {feedSlots.map((slot) => slot.kind === "debate" ? (
+                                {feedSlots.map((slot) => slot.kind === "poll" ? (
+                                    // A poll has no /p page and no seen mark (the server counts its sessions).
+                                    <div key={`poll-${slot.poll.id}`} data-timeline-snap-item className="h-full min-h-0 snap-start snap-always">
+                                        <FeedbackPollPost poll={slot.poll} locale={locale} onDismiss={() => setFeedbackPoll(null)} />
+                                    </div>
+                                ) : slot.kind === "debate" ? (
                                     // A debate has no /p page and no seen mark: no post id.
                                     <div key={`debate-${slot.debate.id}`} data-timeline-snap-item className="h-full min-h-0 snap-start snap-always">
                                         <DebatePost debate={slot.debate} words={debateWords as CompanionWords} signedIn={Boolean(viewerUserId)} pinned={slot.pinned} locale={locale} />
