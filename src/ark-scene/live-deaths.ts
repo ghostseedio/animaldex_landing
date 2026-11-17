@@ -34,6 +34,8 @@ export type DeathRecord = {
     animal: ArkEventAnimal;
     /** The death's time on the shared clock (epoch s). */
     t0: number;
+    /** p5 (humans): where the server judged it died (a logging death: its home in the cleared stand), when it says. */
+    at?: {x: number; z: number} | null;
 };
 
 /** A seeded unit from a key (FNV-1a): the same for every viewer. */

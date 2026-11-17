@@ -23,6 +23,7 @@ import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText,
 import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt-outcome";
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
+import {forestDeathRecords, forestItems, forestText} from "@/ark-scene/live/forest-lines"; // p5 (humans)
 import {isEnglish, signatureItems, signatureText} from "@/ark-scene/live/signature-lines";
 import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 import {ARK_ACTIVITY_ENGLISH, arkRecordNotesFromEvents, type ArkActivityWords} from "@/lib/ark-animal-status";
@@ -148,7 +149,7 @@ export class ArkLive {
         }
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
-            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
+            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
             onTap: (line) => this.focus(line),
             reducedMotion: Boolean(options.reducedMotion),
             serverLife: ARK_LIVE_LOG_DEFAULTS.serverLife,
@@ -255,6 +256,21 @@ export class ArkLive {
         }
     }
 
+    /** p5 (humans): logging's deaths (`forest-lines.ts`): said once, and each body laid where the server judged it. */
+    private deforested(raw: unknown, from: number) {
+        const items = forestItems(raw, this.current, from, (key) => this.said.has(key));
+        const deaths = forestDeathRecords(raw, this.current, from).map((d) => ({key: d.key, animal: d.animal, t0: d.t0, at: d.spot}));
+        for (const item of items) this.remember(`event:${item.id}`);
+        if (deaths.length) {
+            try {
+                this.options.scene()?.addDeaths?.(deaths);
+            } catch {
+                // (A scene without it: the log says it all the same.)
+            }
+        }
+        if (items.length) this.push(items);
+    }
+
     /** A pair bred: the two walk to each other and pair in the live world (the scene's `addMatings`), at its time. */
     private mate(events: readonly ArkEvent[]) {
         const matings: Array<{key: string; a: string; b: string; t0: number}> = [];
@@ -287,6 +303,7 @@ export class ArkLive {
         // (And the record's escapes, `escape-lines.ts`: a prey animal that got away.)
         const escapes = escapeItems(raw, from, (key) => this.said.has(key));
         for (const item of items.concat(escapes)) this.remember(item.id);
+        this.deforested(raw, from); // p5 (humans)
         // 3.3 batch (D): and acted in the live world (the scene's `addEscapes`: the chase that ends in a miss, the limp).
         const acts = escapeActs(raw, from);
         if (acts.length) {
