@@ -213,6 +213,11 @@ export function humanGeometry(far: boolean): BufferGeometry {
 /** Joint angles (radians): legs (left hip, left knee, right hip, right knee), arms (left shoulder, left elbow, right shoulder, right elbow), body (waist, neck, arms out, -). */
 export type HumanJoints = {legs: [number, number, number, number]; arms: [number, number, number, number]; body: [number, number, number, number]};
 
+/** The walk: strides a second, the thigh's swing (rad), and the pace it covers (m/s at the base height). */
+export const WALK_CADENCE = 1;
+export const WALK_SWING = 0.33;
+export const WALK_PACE = 2 * WALK_CADENCE * 2 * 0.92 * Math.sin(WALK_SWING);
+
 /**
  * A pose's joint angles at a phase (seconds into it, for the moving ones). Hips and shoulders forward positive, knees
  * and elbows bent positive, the waist leaning forward positive.
@@ -234,15 +239,17 @@ export function posePerson(pose: HumanPoseKind, phase: number, out: HumanJoints)
         }
         case "walk":
         case "carry": {
-            const s = Math.sin(phase * Math.PI * 1.9);
-            l[0] = s * 0.42;
-            l[2] = -s * 0.42;
-            l[1] = Math.max(0, -s) * 0.7 + 0.08;
-            l[3] = Math.max(0, s) * 0.7 + 0.08;
+            // A stroll: the thighs swing ±19°, a stride (two steps) a second: 2 × 0.92 m × sin 19° = 0.6 m a step,
+            // `WALK_PACE` m/s over the ground (the walkers' paces are about it, so the feet do not slide).
+            const s = Math.sin(phase * Math.PI * 2 * WALK_CADENCE);
+            l[0] = s * WALK_SWING;
+            l[2] = -s * WALK_SWING;
+            l[1] = Math.max(0, -s) * 0.5 + 0.06;
+            l[3] = Math.max(0, s) * 0.5 + 0.06;
             if (pose === "walk") {
-                a[0] = -s * 0.38;
-                a[2] = s * 0.38;
-                a[1] = a[3] = 0.25;
+                a[0] = -s * 0.22;
+                a[2] = s * 0.22;
+                a[1] = a[3] = 0.18;
                 b[2] = 0.06;
             } else {
                 a[0] = a[2] = 1.0;
