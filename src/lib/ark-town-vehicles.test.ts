@@ -31,6 +31,9 @@ import {buildScenery, buildZooScenery} from "@/ark-scene/islands/town/render/sce
 import {boundaryBodies} from "@/ark-scene/islands/town/render/fences";
 import {zooLayout} from "@/ark-scene/islands/town/areas";
 import {SURFACE} from "@/ark-scene/islands/town/render/buildings";
+import {canalBridges} from "@/ark-scene/islands/town/canal-bridges";
+import {drawCanalBridge} from "@/ark-scene/islands/town/render/canal-bridges";
+import {townChunkOf} from "@/ark-scene/islands/town/chunks";
 
 /**
  * The town's vehicles and buildings (lane GB, docs/ark/town-island.md §13): true-size CC0 cars; parked cars in bays and
@@ -368,6 +371,11 @@ test("no other lane's plain colour reads as a building surface on the shared sol
     const scenery = buildScenery(plan);
     const fenceTags = new Map<number, Geo>();
     boundaryBodies(plan, (chunk) => fenceTags.get(chunk) ?? fenceTags.set(chunk, new Geo()).get(chunk)!);
+    // (Pass 4, lane TOWNFIX: the canal bridges' masonry is brick and stone on purpose too: `render/canal-bridges.ts`.)
+    for (const b of canalBridges()) {
+        const key = townChunkOf(b.x, b.z);
+        drawCanalBridge(fenceTags.get(key) ?? fenceTags.set(key, new Geo()).get(key)!, b, townHeight);
+    }
     let plainTriangles = 0;
     scenery.chunks.forEach((chunk, key) => {
         const tags = tagsOf(chunk.solid);

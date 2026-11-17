@@ -160,9 +160,10 @@ function digest(value: unknown): string {
 // fences, walls, railings and gates (`doors.ts`, `render/fences.ts`), the open porches, the benches (`render/bench.ts`;
 // the park's off the pond's water) (scenery and buildings).)
 // (Pass 4, lane TOWNFIX: the church's footprint holds its west tower (it was drawn on Park Road) and the yew on Church
-// Walk is gone: plan, areas, scenery and buildings; the places are unchanged.)
+// Walk is gone: plan, areas, scenery and buildings; the places are unchanged. Then the canal's humpbacked bridges and
+// the canal boats' berths off them: plan (moorings), scenery.)
 const TOWN_DIGESTS = {
-    plan: "18f371a39c013ae5",
+    plan: "907a8cbbd8b958ac",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
@@ -179,7 +180,7 @@ const TOWN_DIGESTS = {
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "4322804f0135fd7a",
+    sceneryAndBuildings: "56ee296d4dd8aedd",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)

@@ -678,8 +678,28 @@ function buildPlan(): TownPlan {
         const east = i % 2 === 1;
         ctx.moorings.push({x: east ? 46.5 : -14.5, z: 112 + Math.floor(i / 2) * 10, turn: (r() - 0.5) * 0.08, length: 6 + r() * 4, harbour: true, seed: hashText(`mooring-h${i}`)});
     }
+    // p4 (townfix): never moored under a bridge (four of six were: their cabins and poles stood through the deck).
+    const bridged = TOWN_STREETS.filter((s) => s.kind === "high" || s.kind === "road" || s.kind === "path");
+    const underBridge = (along: number, length: number) => {
+        for (let t = -length / 2 - 1; t <= length / 2 + 1; t += 0.5) {
+            const p = polylineAt(CANAL, along + t).point;
+            if (bridged.some((s) => polylineWithin(s.line, p.x, p.z, s.width / 2 + s.pavement + 1.2))) return true;
+        }
+        return false;
+    };
+    const canalLength = polylineLength(CANAL);
     for (let i = 0; i < 6; i++) {
-        const along = 30 + i * 24;
+        const length = 12 + (i % 3) * 3;
+        // The nearest clear berth to its own: off the bridges, in the canal short of the lock.
+        let along = 30 + i * 24;
+        for (let k = 0; k < 60; k++) {
+            const tryAt = 30 + i * 24 + (k % 2 ? -1 : 1) * Math.ceil(k / 2);
+            if (tryAt - length / 2 < 4 || tryAt + length / 2 > canalLength - 14) continue;
+            if (!underBridge(tryAt, length)) {
+                along = tryAt;
+                break;
+            }
+        }
         const {point, dir} = polylineAt(CANAL, along);
         const side = i % 2 ? 1 : -1;
         const nx = -dir.z * side;
