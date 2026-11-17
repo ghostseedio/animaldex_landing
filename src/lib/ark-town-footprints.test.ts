@@ -50,7 +50,7 @@ test("no building's drawn footprint is on a carriageway, a path or the canal, no
         }
         if (polylineWithin(CANAL, v.x, v.z, CANAL_WIDTH / 2 + 0.3)) worst.set(`${v.id} in the canal`, 1);
     }
-    const rows = [...worst].map(([k, m]) => `${k} (${m.toFixed(2)} m)`);
+    const rows = Array.from(worst.entries()).map(([k, m]) => `${k} (${m.toFixed(2)} m)`);
     assert.equal(rows.length, 0, rows.join("; "));
 });
 
