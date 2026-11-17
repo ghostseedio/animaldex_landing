@@ -26,6 +26,7 @@ import {townHeight} from "@/ark-scene/islands/town/ground";
 import {townHouseholds, farmOf, householdOf, urbanNiche, zooLayout, zooSpotsFor, townAreas, type Household, type SpotWhere, type TownSpot, type ZooEnclosure, type TownArea} from "@/ark-scene/islands/town/areas";
 import {launchEnclosures, enclosuresIn} from "@/ark-scene/islands/town/areas";
 import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
+import {safariEnclosureOf} from "@/ark-scene/islands/town/safari";
 import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
@@ -155,7 +156,7 @@ export function primeTownPlacements(key: string, result: TownPlacements, animals
     // Each animal's own spot remembered too, so any part of the list (the town's animals joining a few at a time) is free.
     if (!animals) return;
     const openKey = result.open.join(",");
-    for (const animal of animals) {
+    for (const animal of safariAnimals(animals)) {
         const placement = result.places.get(animal.id);
         const info = result.town.get(animal.id);
         if (!placement || !info) continue;
@@ -169,14 +170,28 @@ export function primeTownPlacements(key: string, result: TownPlacements, animals
     }
 }
 
-export function placeTownAnimals(animals: readonly ArkAnimal[], openAs?: readonly string[]): TownPlacements {
+/** p4 (safari): each zoo resident with the enclosure the town draws it in (its safari area's, `safari.ts`, or the server's). */
+function safariAnimals(animals: readonly ArkAnimal[]): readonly ArkAnimal[] {
+    let out: ArkAnimal[] | null = null;
+    animals.forEach((a, i) => {
+        if (a.area !== "zoo") return;
+        const e = safariEnclosureOf(a);
+        if (e === (a.enclosure ?? null)) return;
+        out ??= animals.slice();
+        out[i] = {...a, enclosure: e};
+    });
+    return out ?? animals;
+}
+
+export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly string[]): TownPlacements {
     if (primed) {
-        const hit = primed.key === townPlacementKey(animals) ? primed.result : null;
+        const hit = primed.key === townPlacementKey(given) ? primed.result : null;
         if (hit) {
             primed = null;
             return hit;
         }
     }
+    const animals = safariAnimals(given);
     // (`openAs`: the enclosures open for the whole town while only some of its animals are laid out: they join a few at a time.)
     const open = openAs ? [...openAs] : enclosuresIn(animals);
     const openNames = open.length ? open : launchEnclosures();

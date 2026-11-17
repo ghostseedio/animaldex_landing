@@ -17,6 +17,8 @@
 import {hashText, rng, toLocal, type Box, type Pt} from "@/ark-scene/islands/town/geom";
 import {at, Geo, tone, type Frame, type V3} from "@/ark-scene/islands/town/render/kit";
 import {strut} from "@/ark-scene/islands/town/render/zoo-barriers";
+import {dressSafari} from "@/ark-scene/islands/town/render/safari-habitat";
+import type {SafariHabitat} from "@/ark-scene/islands/town/safari";
 
 type RGB = [number, number, number];
 
@@ -426,7 +428,9 @@ export function hayRack(geo: Geo, plot: Plot, lx: number, lz: number, turn: numb
  * burrow mounds, grass), the bears' and wolves' forest floor (a den, logs, ferns, grass). Ground items keep clear of
  * the residents' spots. Returns the plot (its footprints), or null for a type it does not dress.
  */
-export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed: number}; pool: Pt[] | null}, spots: readonly Pt[], solid: Geo, water: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null): Plot | null {
+export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed: number; safari?: SafariHabitat}; pool: Pt[] | null}, spots: readonly Pt[], solid: Geo, water: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null): Plot | null {
+    // p4 (safari): a safari area is dressed as its habitat (`safari-habitat.ts`).
+    if (e.slot.safari) return dressSafari(e, spots, solid, heightAt, cover);
     const s = e.slot.at;
     const fr: Frame = {x: s.x, y: 0, z: s.z, rot: s.rot};
     const floorAt = (lx: number, lz: number) => {
@@ -683,7 +687,7 @@ export type HabitatItem = {id: string; what: string; x: number; z: number; r: nu
  * The ground items an outdoor enclosure's dressing puts down (town frame), exactly where `dressPaddock` draws them (the
  * same run, drawing nothing).
  */
-export function paddockItems(e: {id: string; type: string; slot: {at: Box; seed: number}; pool: Pt[] | null}, spots: readonly Pt[]): HabitatItem[] {
+export function paddockItems(e: {id: string; type: string; slot: {at: Box; seed: number; safari?: SafariHabitat}; pool: Pt[] | null}, spots: readonly Pt[]): HabitatItem[] {
     const plot = dressPaddock(e, spots, new SinkGeo(), new SinkGeo(), () => 0);
     if (!plot) return [];
     const s = e.slot.at;

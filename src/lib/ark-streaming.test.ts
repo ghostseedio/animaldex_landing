@@ -355,7 +355,8 @@ test("streaming islands: from the wild island's home view the wild island is who
             const stats = streamer.stats();
             assert.equal(stats.active, "wild");
             assert.deepEqual(stats.islands.wild, {in: 25, map: 0, out: 0}, `${tier} wild`);
-            assert.deepEqual(stats.islands.town, {in: 0, map: 81, out: 0}, `${tier} town`);
+            // (p4 (safari): 144 chunks since the square grew to 12 × 12; it was 81.)
+            assert.deepEqual(stats.islands.town, {in: 0, map: 144, out: 0}, `${tier} town`);
             assert.equal(stats.haze, 0);
         }
     }

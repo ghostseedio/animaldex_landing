@@ -58,7 +58,8 @@ export function validateTown(plan: TownPlan = townPlan(), real?: {house?: number
     if (plan.farms.filter((f) => f.kind === "farmstead").length !== 2) errors.push("farms: want 2 farmsteads and 8 smallholdings");
     const land = landArea(1);
     metrics.landHa = Math.round(land / 100) / 100;
-    if (land < 80000 || land > 140000) errors.push(`land: ${(land / 10000).toFixed(2)} ha, outside 8–14 ha`);
+    // p4 (safari): the safari park's land (about 2.5 ha) on top of the town's 8–14.
+    if (land < 105000 || land > 165000) errors.push(`land: ${(land / 10000).toFixed(2)} ha, outside 10.5–16.5 ha`);
 
     // Nothing overlaps.
     const solids: Array<{id: string; at: Box}> = [...plan.buildings.map((b) => ({id: b.id, at: b.at})), ...plan.zoo.slots.map((s) => ({id: `slot:${s.id}`, at: s.at}))];
@@ -92,14 +93,15 @@ export function validateTown(plan: TownPlan = townPlan(), real?: {house?: number
             }
         }
     }
-    if (Math.abs(TOWN_HALF - 237.6) > 1e-9) errors.push("grid: the town's square is not 9 chunks of 52.8 m");
+    if (Math.abs(TOWN_HALF - 316.8) > 1e-9) errors.push("grid: the town's square is not 12 chunks of 52.8 m");
 
     // The zoo: 13 types, slot counts as declared, launch openings, masks closed and disjoint, spots inside.
     for (const type of ZOO_ENCLOSURE_TYPES) {
-        const n = plan.zoo.slots.filter((s) => s.type === type).length;
+        // (p4 (safari): the safari's areas are not the server's numbered slots of their type.)
+        const n = plan.zoo.slots.filter((s) => s.type === type && !s.safari).length;
         if (n !== ZOO_TYPES[type].slots) errors.push(`zoo: ${type} has ${n} slots, the table says ${ZOO_TYPES[type].slots}`);
         if (ZOO_TYPES[type].launch > n) errors.push(`zoo: ${type} opens ${ZOO_TYPES[type].launch} at launch but has ${n} slots`);
-        const ranks = plan.zoo.slots.filter((s) => s.type === type).map((s) => s.rank).sort((a, b) => a - b);
+        const ranks = plan.zoo.slots.filter((s) => s.type === type && !s.safari).map((s) => s.rank).sort((a, b) => a - b);
         if (ranks.some((r, i) => r !== i)) errors.push(`zoo: ${type} ranks are not 0…${n - 1}`);
         const spec = ZOO_TYPES[type];
         if (spec.capacity * spec.launch < spec.residents.today) errors.push(`zoo: ${type} at launch holds ${spec.capacity * spec.launch} < ${spec.residents.today} today`);

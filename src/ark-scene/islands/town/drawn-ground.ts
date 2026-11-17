@@ -15,7 +15,8 @@
  * through, the tile). `src/lib/ark-town-grounding.test.ts` holds the tile against the drawn mesh's own triangles.
  */
 
-import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
+import {safariWaterLevel, sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
+import {inSafari, safariWaterNorm, SAFARI_WATERS} from "@/ark-scene/islands/town/safari";
 import {bounds, inBox} from "@/ark-scene/islands/town/geom";
 import {CANAL_LEVEL, HARBOUR_BASIN, TOWN_HALF, TOWN_SEGMENTS, townPlan} from "@/ark-scene/islands/town/plan";
 
@@ -243,7 +244,9 @@ function waterCell(x: number, z: number): number {
         else if (g.surface !== "water") v = g.surface === "sea" || g.height < 0.02 ? 1 : 0;
         else {
             const pond = farmPondLevel();
-            v = 2 + (pond && cx >= pond.x0 && cx <= pond.x1 && cz >= pond.z0 && cz <= pond.z1 ? pond.level : CANAL_LEVEL);
+            // p4 (safari): a waterhole's or pool's own level.
+            const safari = inSafari(cx, cz) ? SAFARI_WATERS.find((w) => safariWaterNorm(w, cx, cz) < 1.05) : undefined;
+            v = 2 + (safari ? safariWaterLevel(safari) : pond && cx >= pond.x0 && cx <= pond.x1 && cz >= pond.z0 && cz <= pond.z1 ? pond.level : CANAL_LEVEL);
         }
         waterCells[k] = v;
     }

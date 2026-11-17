@@ -1013,6 +1013,131 @@ function tower(ctx: Ctx, b: Building) {
     void r;
 }
 
+// MARK: - p4 (safari): the safari park's buildings
+
+const THATCH = tone("#b39a62");
+const SAFARI_WALL = tone("#d9b98a");
+const SAFARI_TIMBER = tone("#6e5236");
+
+/** A thatched roof: a steep hip in straw colour, its eaves thick and low, a ridge cap. */
+function thatch(geo: Geo, f: Frame, y: number, w: number, d: number, rise: number) {
+    geo.hip(f, 0, y, 0, w, d, rise, 0.8, THATCH);
+    geo.hip(f, 0, y - 0.22, 0, w + 0.1, d + 0.1, rise * 0.92, 0.9, shade(THATCH, 0.78));
+}
+
+/**
+ * The safari's buildings in a lodge style that matches the town's own detail: ochre rendered walls on a stone plinth,
+ * timber posts and verandas, thatched hips; the depot a steel-clad shed, the tower a timber frame with a thatched deck.
+ */
+function safariBuilding(ctx: Ctx, b: Building) {
+    const f = buildingFrame(b.at);
+    const {solid} = ctx.chunk;
+    const w = b.at.w;
+    const d = b.at.d;
+    ctx.look = {pane: PANE.casement, surround: "render"};
+    if (b.kind === "safari_tower") {
+        // Four timber legs braced in X, a stair's landing every 4.5 m, a deck at the top under a thatched hip.
+        const top = b.eaves;
+        for (const [lx, lz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) solid.as(SURFACE.timber, () => solid.box(f, (lx * (w - 0.5)) / 2, -0.4, (lz * (d - 0.5)) / 2, 0.36, top + 0.4, 0.36, SAFARI_TIMBER));
+        for (let y = 2.5; y < top; y += 4.5) {
+            solid.as(SURFACE.timber, () => solid.box(f, 0, y, 0, w, 0.18, d, shade(SAFARI_TIMBER, 1.15)));
+            for (const [a, c] of [[[-1, -1], [1, -1]], [[1, -1], [1, 1]], [[1, 1], [-1, 1]], [[-1, 1], [-1, -1]]] as const) {
+                const p0 = at(f, (a[0] * (w - 0.5)) / 2, y - 2.3, (a[1] * (d - 0.5)) / 2);
+                const p1 = at(f, (c[0] * (w - 0.5)) / 2, y, (c[1] * (d - 0.5)) / 2);
+                solid.as(SURFACE.timber, () => strutLine(solid, p0, p1, 0.12, SAFARI_TIMBER));
+            }
+        }
+        solid.as(SURFACE.timber, () => {
+            solid.box(f, 0, top, 0, w + 1.4, 0.24, d + 1.4, shade(SAFARI_TIMBER, 1.2));
+            for (const [lx, lz, bw, bd] of [[0, (d + 1.4) / 2, w + 1.4, 0.1], [0, -(d + 1.4) / 2, w + 1.4, 0.1], [(w + 1.4) / 2, 0, 0.1, d + 1.4], [-(w + 1.4) / 2, 0, 0.1, d + 1.4]] as const) solid.box(f, lx, top + 0.24, lz, bw, 1.0, bd, SAFARI_TIMBER);
+            for (const [lx, lz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) solid.box(f, (lx * (w + 1.2)) / 2, top + 0.24, (lz * (d + 1.2)) / 2, 0.16, 2.2, 0.16, SAFARI_TIMBER);
+        });
+        thatch(solid, f, top + 2.45, w + 1.4, d + 1.4, 1.4);
+        return;
+    }
+    if (b.kind === "safari_depot") {
+        plinth(solid, f, w, d);
+        solid.as(SURFACE.metal, () => solid.box(f, 0, 0, 0, w, b.eaves, d, tone("#5f6f5a")));
+        solid.as(SURFACE.metal, () => solid.box(f, 0, b.eaves, 0, w + 0.6, 0.18, d + 0.8, tone("#4a524a")));
+        const [front] = sides(f, w, d);
+        // Three bays' roller doors facing the yard.
+        for (let k = -1; k <= 1; k++) solid.as(SURFACE.metal, () => solid.box(front.frame, k * (w / 3), 0, 0.05, w / 3 - 0.8, 3.4, 0.08, tone("#8a8f86")));
+        return;
+    }
+    // The rendered buildings: plinth, ochre walls, timber corner posts, a thatched hip.
+    plinth(solid, f, w, d);
+    solid.as(SURFACE.render, () => solid.box(f, 0, 0, 0, w, b.eaves, d, SAFARI_WALL));
+    for (const [lx, lz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]] as const) solid.as(SURFACE.timber, () => solid.box(f, (lx * w) / 2, 0, (lz * d) / 2, 0.3, b.eaves - 0.08, 0.3, SAFARI_TIMBER));
+    const [front, right, back, left] = sides(f, w, d);
+    if (b.kind === "safari_kiosk") {
+        // A serving hatch with its counter and a striped awning.
+        windowAt(ctx, front.frame, 0, 1.45, 1.5, 0.9, "zoo", 0, 0);
+        solid.as(SURFACE.timber, () => solid.box(front.frame, 0, 0.95, 0.25, 1.9, 0.08, 0.5, SAFARI_TIMBER));
+        solid.box(front.frame, 0, 2.15, 0.55, w + 0.3, 0.06, 1.1, tone("#2f6a4a"));
+        thatch(solid, f, b.eaves, w, d, 1.2);
+        return;
+    }
+    if (b.kind === "safari_lodge") {
+        // The restaurant: a long room with tall windows to the plains, a veranda on posts all along the front.
+        windowRow(ctx, front, 1, b.eaves, Math.max(3, Math.round(w / 2.6)), "zoo", () => 0, (u) => Math.abs(u) < 1.4, [1.6, 2.0]);
+        windowRow(ctx, back, 1, b.eaves, Math.max(3, Math.round(w / 3.2)), "zoo", () => 0, () => false, [1.2, 1.4]);
+        for (const side of [right, left]) windowRow(ctx, side, 1, b.eaves, 2, "zoo", () => 0, () => false, [1.2, 1.4]);
+        door(solid, front.frame, 0, tone("#6a4a2e"), 1.8, 2.4);
+        solid.as(SURFACE.timber, () => {
+            solid.box(front.frame, 0, -0.1, 1.6, w + 1.0, 0.18, 3.2, shade(SAFARI_TIMBER, 1.25));
+            for (let k = 0; k <= 5; k++) solid.box(front.frame, -w / 2 - 0.3 + (k * (w + 0.6)) / 5, 0, 3.0, 0.22, b.eaves - 0.2, 0.22, SAFARI_TIMBER);
+        });
+        thatch(solid, f, b.eaves, w + 0.2, d + 6.2, 3.6);
+        // Tables and chairs on the veranda (people implied).
+        for (let k = -2; k <= 2; k++) {
+            const t = at(front.frame, k * (w / 5.5), 0.08, 1.8);
+            solid.cylinder({x: t[0], y: t[1], z: t[2], rot: 0}, 0, 0, 0, 0.45, 0.45, 0.75, tone("#7a5a3c"), 8);
+            solid.box({x: t[0], y: t[1], z: t[2], rot: front.frame.rot}, 0.75, 0, 0, 0.45, 0.45, 0.45, SAFARI_TIMBER);
+            solid.box({x: t[0], y: t[1], z: t[2], rot: front.frame.rot}, -0.75, 0, 0, 0.45, 0.45, 0.45, SAFARI_TIMBER);
+        }
+        return;
+    }
+    // The gatehouse and the toilets: windows and doors, a thatched hip (the gatehouse's with a timber porch).
+    windowRow(ctx, front, 1, b.eaves, 2, "zoo", () => 0, (u) => Math.abs(u) < 1.0, [1.0, 1.1]);
+    door(solid, front.frame, 0, tone(b.kind === "safari_toilets" ? "#2e5a3a" : "#6a4a2e"), 1.0, 2.1);
+    if (b.kind === "safari_toilets") door(solid, back.frame, 0, tone("#2e5a3a"), 1.0, 2.1);
+    else {
+        windowRow(ctx, right, 1, b.eaves, 1, "zoo", () => 0);
+        solid.as(SURFACE.timber, () => {
+            for (const lx of [-1.4, 1.4]) solid.box(front.frame, lx, 0, 1.4, 0.22, b.eaves, 0.22, SAFARI_TIMBER);
+        });
+    }
+    thatch(solid, f, b.eaves, w + (b.kind === "safari_gate" ? 0 : 0), d + (b.kind === "safari_gate" ? 2.8 : 0), b.kind === "safari_toilets" ? 1.4 : 2.4);
+    void left;
+}
+
+/** A square timber member from a to b (a tower's brace). */
+function strutLine(geo: Geo, a: [number, number, number], b: [number, number, number], size: number, colour: [number, number, number]) {
+    const dx = b[0] - a[0];
+    const dy = b[1] - a[1];
+    const dz = b[2] - a[2];
+    const len = Math.hypot(dx, dy, dz);
+    const yaw = Math.atan2(dx, dz);
+    const pitch = Math.atan2(Math.hypot(dx, dz), dy);
+    // (A box along +y, tipped by `pitch` toward its yaw: corners by hand, as the kit's box has no tilt.)
+    const ux = Math.sin(yaw) * Math.sin(pitch);
+    const uy = Math.cos(pitch);
+    const uz = Math.cos(yaw) * Math.sin(pitch);
+    const sx = Math.cos(yaw) * size;
+    const sz = -Math.sin(yaw) * size;
+    const tx = -Math.sin(yaw) * Math.cos(pitch) * size;
+    const ty = Math.sin(pitch) * size;
+    const tz = -Math.cos(yaw) * Math.cos(pitch) * size;
+    const c = (k: number, l: number, along: number): [number, number, number] => [a[0] + ux * len * along + sx * k + tx * l, a[1] + uy * len * along + ty * l, a[2] + uz * len * along + sz * k + tz * l];
+    const q = [c(-1, -1, 0), c(1, -1, 0), c(1, 1, 0), c(-1, 1, 0)];
+    const t = [c(-1, -1, 1), c(1, -1, 1), c(1, 1, 1), c(-1, 1, 1)];
+    for (let i = 0; i < 4; i++) {
+        const j = (i + 1) % 4;
+        geo.quad(q[i], q[j], t[j], t[i], shade(colour, 0.85 + 0.05 * i));
+        geo.quad(q[i], t[i], t[j], q[j], shade(colour, 0.85 + 0.05 * i));
+    }
+}
+
 // MARK: - Building one
 
 export function buildBuilding(chunk: BuildingChunk, b: Building) {
@@ -1050,6 +1175,14 @@ export function buildBuilding(chunk: BuildingChunk, b: Building) {
                 return farmBuilding(ctx, b);
             case "tower":
                 return tower(ctx, b);
+            // p4 (safari): the safari park's buildings.
+            case "safari_gate":
+            case "safari_kiosk":
+            case "safari_lodge":
+            case "safari_toilets":
+            case "safari_depot":
+            case "safari_tower":
+                return safariBuilding(ctx, b);
             default:
                 return;
         }

@@ -160,7 +160,8 @@ function digest(value: unknown): string {
 // fences, walls, railings and gates (`doors.ts`, `render/fences.ts`), the open porches, the benches (`render/bench.ts`;
 // the park's off the pond's water) (scenery and buildings).)
 const TOWN_DIGESTS = {
-    plan: "61b5d5a4ac129668",
+    // (p4 (safari): the safari park: its land, streets, areas as zoo slots, buildings and trees.)
+    plan: "9562f00430d73dfe",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
@@ -168,22 +169,27 @@ const TOWN_DIGESTS = {
     // (3.3 fix (wall), wall-climb.ts: the lamp-lit walls' places on the wall's face with its normal; the eaves' wall faces.)
     // (Pass 2, lane LAND: the millpond's bank meets its water, its wetland spots and stones, pond life at the wetland; the
     // downtown headland: its streets, three towers, the plaza, billboards.)
-    areas: "9da1fda7d7c9400a",
+    // (p4 (safari): the safari areas' spots, the car park's bays.)
+    areas: "43add67112cae90f",
     // (Lane GA: the ground's surface weights.)
-    ground: "db8be9238e67c5ae",
+    // (p4 (safari): the 12 × 12 grid, the safari's savanna, desert, mud, ditches and waterholes, the deeper strait.)
+    ground: "f8b1c707caaf1c88",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "c89bb67d2c33705d",
+    // (p4 (safari): its paving, gate, waters, boardwalk, decks, boards, rails and buildings.)
+    sceneryAndBuildings: "ef95104b303c7115",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
-    zoo: "3ad8a0c98288b542",
+    // (p4 (safari): the safari areas dressed as their habitats, `render/safari-habitat.ts`.)
+    zoo: "0e77d703b25c6f4f",
     // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
-    places: "ab4725e321d03544"
+    // (p4 (safari): the herbivores, big cats, hyenas and crocodilians moved to the safari by the rule, `town/safari.ts`.)
+    places: "eba3c7031a32e377"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {

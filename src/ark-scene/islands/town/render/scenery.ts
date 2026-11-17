@@ -32,6 +32,8 @@ import {townTrees} from "@/ark-scene/islands/town/trees";
 import {clearOfDoors, PATH_WIDTH, pathOpenings, townDoorWays} from "@/ark-scene/islands/town/doors";
 import {boundaryBodies, madeHere} from "@/ark-scene/islands/town/render/fences";
 import {parkBench} from "@/ark-scene/islands/town/render/bench";
+import {safariBarrier, safariScenery} from "@/ark-scene/islands/town/render/safari";
+import {safariArea} from "@/ark-scene/islands/town/safari";
 
 /** A chunk's merged geometry by material; `foliage`: hedges, flower beds and crops (lane GC, `render/nature.ts`). */
 export type SceneryChunk = {decal: Geo; solid: Geo; glass: Geo; net: Geo; foliage: Geo};
@@ -657,6 +659,13 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
     const s = e.slot.at;
     const c = chunkFor(out, s.x, s.z);
     const spec = ZOO_TYPES[e.type];
+    // p4 (safari): a safari area: its edge (a ha-ha's rail, or a predator's fence) and its habitat (`render/safari*.ts`).
+    const safari = safariArea(e.id);
+    if (safari) {
+        safariBarrier(c, e, safari);
+        dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null);
+        return;
+    }
     const ground = e.type === "savanna_paddocks" ? "#cdb07a" : e.type === "hoofstock_paddocks" || e.type === "childrens_farm" ? "#a99268" : e.type === "big_cats" ? "#b7a374" : e.type === "bears_wolves" ? "#7d7a52" : e.type === "small_mammals" ? "#9a8a62" : null;
     // (Lane GA: the 2 m cells' own shades were the "giant pixels"; the earth and sand textures carry the variety now.)
     if (ground) tagged(c.decal, e.type === "savanna_paddocks" || e.type === "big_cats" ? SURF.sand : SURF.earth, alongZ(s.rot), () => c.decal.drape({x: s.x, y: 0, z: s.z, rot: s.rot}, s.w - 0.4, s.d - 0.4, H, 0.06, () => tone(ground), 2));
@@ -899,6 +908,8 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
     for (const item of dead.items) drawDeadwood(chunkFor(out, item.x, item.z).solid, item);
     for (const patch of dead.patches) drawLeafPatch(chunkFor(out, patch.x, patch.z).foliage, patch);
     zooPlaza(out, plan);
+    // p4 (safari): the safari park's paving, gate, waters, boardwalk and decks.
+    safariScenery((x, z) => chunkFor(out, x, z), out.fresh);
     lamps(out, plan);
     beds(out, plan);
     // The lamps' and the street furniture's bodies into the chunks; their lights and the lamp map (lane GA).

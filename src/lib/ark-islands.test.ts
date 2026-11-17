@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {safariEnclosureOf} from "@/ark-scene/islands/town/safari";
 import {existsSync, readFileSync} from "node:fs";
 import test from "node:test";
 import base from "@/ark-scene/fixtures/snapshot-v2.json";
@@ -111,9 +112,11 @@ test("town placement: homes, farms, zoo masks and niches, deterministic and stab
         } else if (animal.area === "farm") {
             assert.equal(info.place, farmOf(animal.id));
         } else if (animal.area === "zoo") {
-            const enclosure = layout.enclosures.find((e) => e.id === animal.enclosure);
-            assert.ok(enclosure, `${animal.enclosure} is open`);
-            assert.ok(info.enclosure && inPoly(info.enclosure.mask, place.x, place.z), `${animal.model_slug} inside ${animal.enclosure}'s mask`);
+            // p4 (safari): a resident the rule moves to the safari lives in its safari area (`town/safari.ts`), not the record's paddock.
+            const kept = safariEnclosureOf(animal);
+            const enclosure = layout.enclosures.find((e) => e.id === kept);
+            assert.ok(enclosure, `${kept} is open`);
+            assert.ok(info.enclosure && inPoly(info.enclosure.mask, place.x, place.z), `${animal.model_slug} inside ${kept}'s mask`);
         } else {
             assert.ok(info.area === "garden_wildlife" || info.area === "urban_wildlife", `${animal.model_slug} as town wildlife`);
         }

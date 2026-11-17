@@ -9,6 +9,7 @@
 import {bounds, corners, inBox, inPoly, polylineDistance, polylineWithin, type Box, type Poly} from "@/ark-scene/islands/town/geom";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, inland, MILLPOND, TOWN_LEVEL, townPlan, type GreenKind, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {clipStreets, type ClipStreet} from "@/ark-scene/islands/town/street-clip";
+import {inSafari, safariDitch, safariWaterNorm, SAFARI_AREAS, SAFARI_WATERS, type SafariWater} from "@/ark-scene/islands/town/safari";
 
 export type TownSurface =
     | "sea"
@@ -28,7 +29,11 @@ export type TownSurface =
     | "churchyard"
     | "square"
     | "bank"
-    | "water";
+    | "water"
+    // p4 (safari): the plains' dry grass, the desert's sand and scrub, the waterholes' mud.
+    | "savanna"
+    | "desert"
+    | "mud";
 
 export type TownGroundSample = {height: number; surface: TownSurface; inland: number; /** 0 in the flat town, 1 where the ground rolls. */ rough: number};
 
@@ -224,6 +229,10 @@ export function sampleTownGround(x: number, z: number): TownGroundSample {
         height = 0.25 + (land - 0.25) * t;
     } else {
         height = Math.max(0.25 + inl * (0.3 - 0.18 * beach) - Math.max(-inl - 24, 0) * 0.35, SEA_FLOOR) + (fbm(x * 0.05, z * 0.05) - 0.5) * 0.8;
+        // p4 (safari): past the old square (237.6 m) the floor goes on down into the strait's deep water, as the sea's
+        // floor did there before the square grew; far enough off any coast that no shore steepens.
+        const past = Math.max(Math.abs(x), Math.abs(z)) - 237.6;
+        if (past > 0) height -= smoothstep(0, 12, past) * smoothstep(20, 45, -inl) * 30;
     }
     let surface: TownSurface = inl < -0.5 ? "sea" : inl < 3 + 23 * beach ? (beach > 0.5 ? "sand" : "shore") : "grass";
 
@@ -277,7 +286,59 @@ export function sampleTownGround(x: number, z: number): TownGroundSample {
         const kind = areaAt(x, z);
         if (kind) surface = SURFACE_OF[kind] ?? surface;
     }
+    // p4 (safari): the habitats' ground, their ha-ha ditches and their waterholes cut level with the ground.
+    if (inl > 0 && inSafari(x, z)) {
+        const s = safariGround(x, z, height, surface, inl, rough);
+        height = s.height;
+        surface = s.surface;
+    }
     return {height, surface, inland: inl, rough};
+}
+
+/** p4 (safari): a pool's or waterhole's water level (m): the land at its middle, a hand under it. */
+const safariLevels = new Map<SafariWater, number>();
+export function safariWaterLevel(w: SafariWater): number {
+    let level = safariLevels.get(w);
+    if (level === undefined) safariLevels.set(w, (level = landHeight(w.x, w.z, roughness(w.x, w.z)) - 0.12));
+    return level;
+}
+
+/** How far a waterhole's bank reaches (in its own measure), and where its mud ends. */
+const SAFARI_BANK = 1.45;
+const SAFARI_MUD = 1.22;
+
+function safariGround(x: number, z: number, height: number, surface: TownSurface, inl: number, rough: number): {height: number; surface: TownSurface} {
+    let h = height;
+    let s = surface;
+    if (s !== "sea" && s !== "water" && s !== "sand") {
+        for (const a of SAFARI_AREAS) {
+            if (!inBox(a.at, x, z, 2.5)) continue;
+            s = a.habitat === "desert" ? "desert" : a.habitat === "forest" || a.habitat === "tigers" ? "meadow" : a.habitat === "wetland" || a.habitat === "river" ? "meadow" : "savanna";
+            break;
+        }
+    }
+    // The ha-ha: a ditch inside the herbivores' sides (grass in its floor), so the road looks over open ground.
+    const ditch = safariDitch(x, z);
+    if (ditch > 0) {
+        h -= 0.9 * ditch * (1 - streetGrade(x, z));
+        if (ditch > 0.55 && s !== "desert") s = "bank";
+    }
+    for (const w of SAFARI_WATERS) {
+        const n = safariWaterNorm(w, x, z);
+        if (n >= SAFARI_BANK) continue;
+        const level = safariWaterLevel(w);
+        const rim = level + 0.12;
+        if (n >= 1) {
+            h = h + (rim - h) * smoothstep(SAFARI_BANK, 1, n);
+            if (n < SAFARI_MUD) s = "mud";
+        } else {
+            h = rim - 0.3 * smoothstep(1, 0.82, n) - (w.depth - 0.18) * smoothstep(0.82, 0.25, n);
+            s = h < level ? "water" : "mud";
+        }
+    }
+    void inl;
+    void rough;
+    return {height: h, surface: s};
 }
 
 const SURFACE_OF: Partial<Record<Indexed["kind"], TownSurface>> = {
@@ -310,7 +371,7 @@ export function floorUnder(corners: Array<{x: number; z: number}>): number {
 // MARK: - What the ground is made of, for its textures (lane GA)
 
 /** Every surface, in a fixed order (the ground grid's per-vertex index). */
-export const TOWN_SURFACES: readonly TownSurface[] = ["sea", "sand", "shore", "grass", "lawn", "park", "meadow", "wood", "field", "orchard", "paddock", "farmyard", "zoo", "allotment", "churchyard", "square", "bank", "water"];
+export const TOWN_SURFACES: readonly TownSurface[] = ["sea", "sand", "shore", "grass", "lawn", "park", "meadow", "wood", "field", "orchard", "paddock", "farmyard", "zoo", "allotment", "churchyard", "square", "bank", "water", "savanna", "desert", "mud"];
 
 /**
  * What a surface shows of the ground's texture layers (`render/surfaces.ts`): soil, sand, mud, leaf litter (the rest
@@ -349,6 +410,13 @@ export function surfaceWeights(surface: TownSurface): [number, number, number, n
             return [0, 0, 0.8, 0, 0, 0, 0, 0];
         case "water":
             return [0, 0, 0.6, 0, 0, 0, 1, 0];
+        // p4 (safari): dry grass over bare soil, game trails trodden in it; sand with a little soil; wet mud.
+        case "savanna":
+            return [0.1, 0.04, 0, 0, 0, 0.14, 0, 0];
+        case "desert":
+            return [0.3, 0.8, 0, 0, 0, 0.15, 0, 0];
+        case "mud":
+            return [0, 0, 1, 0, 0, 0, 0, 0];
         default:
             return [0, 0, 0, 0, 0, 0, 0, 0];
     }

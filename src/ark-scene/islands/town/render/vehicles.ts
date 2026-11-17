@@ -36,6 +36,7 @@ import {Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {townWeather} from "@/ark-scene/islands/town/render/materials";
 import {CROSSINGS} from "@/ark-scene/islands/town/render/streets";
 import {BUS_STOPS} from "@/ark-scene/islands/town/render/furniture";
+import {SAFARI} from "@/ark-scene/islands/town/safari";
 
 // MARK: - The models
 
@@ -1162,6 +1163,13 @@ export function townParking(plan: TownPlan = townPlan()): ParkingSpot[] {
     // stood at z 109 and 115, 4 to 10 m inside the harbour basin (from z 105), so its cars sat in the water by the
     // lighthouse (the owner, 2026-11-16: "cars in the water in the dock area by the lighthouse").
     HARBOUR_BAYS.forEach((bay, i) => out.push({id: `harbour:${i}`, kind: "harbour", x: bay.x, z: bay.z, turn: bay.turn}));
+    // p4 (safari): the safari's car park, two rows of bays nose-in to the walk down its middle (`safari.ts` SAFARI.carPark).
+    for (const side of [-1, 1]) {
+        for (let k = 0; k < 9; k++) {
+            const b = SAFARI.carPark;
+            out.push({id: `safari:${side}:${k}`, kind: "car_park", x: b.x + side * (b.w / 2 - 2.9), z: b.z - b.d / 2 + 2.975 + k * 2.75, turn: side < 0 ? Math.PI / 2 : -Math.PI / 2});
+        }
+    }
     // Every car clear of what stands round it (L5's colliders: a garden's tree, a front fence, a wall): slid along its
     // bay up to 0.6 m, else the spot is left empty.
     const set = townColliderSet(launchEnclosures(), {x: 0, z: 0});
@@ -1201,7 +1209,7 @@ export function carOverWater(x: number, z: number, turn: number): boolean {
 /** A parked car now: there or not, its kind and colour (by the spot and the day for kerbs, the month for drives). */
 export function parkedCar(spot: ParkingSpot, clock: TownClock, kinds: readonly CarKind[] = CAR_KINDS): {parked: boolean; kind: CarKind; paint: string} {
     const {parked} = carAt(spot, clock);
-    const era = spot.kind === "kerb" || spot.kind === "harbour" ? clock.day : Math.floor(clock.day / 30);
+    const era = spot.kind === "kerb" || spot.kind === "harbour" || spot.kind === "car_park" ? clock.day : Math.floor(clock.day / 30);
     return {parked, kind: carKind(chance(spot.id, era, "kind"), kinds), paint: carPaint(chance(spot.id, era, "paint"))};
 }
 

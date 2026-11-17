@@ -113,7 +113,10 @@ const ZONE_BY_SURFACE: Record<TownSurface, ArkZone> = {
     churchyard: "farm_garden",
     square: "farm_garden",
     bank: "river_lake",
-    water: "river_lake"
+    water: "river_lake",
+    savanna: "grassland",
+    desert: "desert",
+    mud: "wetland"
 };
 
 /** How far over a roof (or a tower's top) a flight keeps, and how far round its walls that holds (m). */
