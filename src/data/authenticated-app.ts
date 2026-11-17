@@ -17,6 +17,7 @@ import {getAnimalDexNumberFromEntry} from "@/lib/animaldex-number";
 import {discoverPostPath} from "@/lib/discover-post";
 import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
 import type {CaptureGradeBreakdown, CaptureGradeSource} from "@/lib/capture-grade";
+import {storedCaptureGrade} from "@/lib/capture-grade-value";
 import {storedGradeFields} from "@/lib/stored-capture-grade";
 import {normalizeCaptureNickname} from "@/lib/capture-nickname";
 import {resolveCaptureVariantDisplay} from "@/lib/species-life-stage-policy";
@@ -334,7 +335,8 @@ function buildAppCapture(
         coreLesson: null,
         gameStats: null,
         battleTier: null,
-        captureGrade: null,
+        // The stored grade from the owner's manifest; no breakdown on a list card.
+        captureGrade: capture.captureGrade ?? null,
         gradeBreakdown: null,
         indexNumber: getAnimalDexNumberFromEntry(species),
         href: species ? `/animals/${species.slug}` : "/animals",
@@ -378,6 +380,8 @@ export type AppDiscoverItem = {
     collectorName: string;
     collectorUsername: string | null;
     ownerUserId: string;
+    /** The server's stored capture grade (1-10); null when the row carries none. */
+    captureGrade?: number | null;
     likeCount: number;
     href: string;
     imageSrc: string;
@@ -749,7 +753,7 @@ export async function getAppTopCaptures(limit = 6) {
 
     const {data, error} = await session.supabase
         .from("discover_feed_v1")
-        .select("capture_id,animal_name,normalized_identity_key,species_profile_id,score,capture_created_at,human_context,zoo_or_wild,location_display_label")
+        .select("capture_id,animal_name,normalized_identity_key,species_profile_id,score,capture_created_at,human_context,zoo_or_wild,location_display_label,capture_grade")
         .eq("user_id", session.user.id)
         .order("score", {ascending: false})
         .order("capture_created_at", {ascending: false})
@@ -776,7 +780,8 @@ export async function getAppTopCaptures(limit = 6) {
         contextLabel: row.zoo_or_wild && row.zoo_or_wild !== "Unknown"
             ? row.zoo_or_wild
             : row.human_context ?? null,
-        locationDisplayLabel: row.location_display_label?.trim() ?? null
+        locationDisplayLabel: row.location_display_label?.trim() ?? null,
+        captureGrade: storedCaptureGrade(row.capture_grade)
     }));
 
     return enrichAppCaptures(captures);
@@ -1175,7 +1180,7 @@ export async function getAppDiscoverFeed(limit = 18): Promise<AppDiscoverItem[]>
     const supabase = createSupabaseServerClient();
     if (!supabase) return [];
     const {data} = await supabase.from("discover_feed_v1")
-        .select("capture_id,user_id,animal_name,normalized_identity_key,score,capture_created_at,human_context,zoo_or_wild,location_display_label,profile_display_name,profile_username")
+        .select("capture_id,user_id,animal_name,normalized_identity_key,score,capture_created_at,human_context,zoo_or_wild,location_display_label,profile_display_name,profile_username,capture_grade")
         .order("capture_created_at", {ascending: false}).limit(limit);
     return ((data ?? []) as QueryRow[]).map((row) => {
         const slug = row.normalized_identity_key?.trim() || null;
@@ -1191,6 +1196,7 @@ export async function getAppDiscoverFeed(limit = 18): Promise<AppDiscoverItem[]>
             collectorName: row.profile_display_name || (row.profile_username ? `@${row.profile_username}` : "AnimalDex collector"),
             collectorUsername: row.profile_username?.trim() ?? null,
             ownerUserId: row.user_id,
+            captureGrade: storedCaptureGrade(row.capture_grade),
             likeCount: 0,
             href: species ? `/animals/${species.slug}` : "/animals",
             imageSrc: species ? getSpeciesImageRoute(species.slug, row.capture_id) : "/images/placeholders/species-no-image.svg"

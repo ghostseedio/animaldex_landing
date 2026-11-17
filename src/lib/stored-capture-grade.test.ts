@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {readFileSync} from "node:fs";
+import {readdirSync, readFileSync} from "node:fs";
 import test from "node:test";
 import {fileURLToPath} from "node:url";
 import type {CaptureGradeSource} from "@/lib/capture-grade";
@@ -102,4 +102,46 @@ test("the admin route no longer writes a grade from the website's own arithmetic
     assert.doesNotMatch(route, /method: "PATCH"/);
     assert.doesNotMatch(route, /capture_grade: breakdown\.grade/);
     assert.match(route, /status: 409/);
+});
+
+test("the owner's library, top captures and Discover narrow selects carry capture_grade and map it through", () => {
+    const captures = read("../data/user-captures.ts");
+    // The manifest's grade is the view's last column (migration 20261129120000); a database
+    // without it falls back to the same read without the grade rather than failing the library.
+    assert.match(captures, /USER_CAPTURE_MANIFEST_SELECT = \[\.\.\.USER_CAPTURE_MANIFEST_SELECT_BASE, "capture_grade"\]/);
+    assert.match(captures, /USER_CAPTURE_MANIFEST_SELECT_NO_GRADE/);
+    assert.match(captures, /captureGrade: storedCaptureGrade\(row\.capture_grade\)/);
+
+    const app = read("../data/authenticated-app.ts");
+    assert.match(app, /\.select\("capture_id,animal_name,normalized_identity_key,species_profile_id,score,capture_created_at,human_context,zoo_or_wild,location_display_label,capture_grade"\)/);
+    assert.match(app, /\.select\("capture_id,user_id,animal_name,normalized_identity_key,score,capture_created_at,human_context,zoo_or_wild,location_display_label,profile_display_name,profile_username,capture_grade"\)/);
+    assert.equal((app.match(/captureGrade: storedCaptureGrade\(row\.capture_grade\)/g) ?? []).length, 2);
+    // A list card shows the owner's stored grade rather than none.
+    assert.match(app, /captureGrade: capture\.captureGrade \?\? null/);
+});
+
+test("any web read of the challenge and following feeds selects capture_grade (today none exists)", () => {
+    const sourceFiles = (readdirSync(fileURLToPath(new URL("..", import.meta.url)), {recursive: true}) as string[])
+        .filter((path) => /\.(ts|tsx)$/.test(path) && !/\.test\.tsx?$/.test(path));
+    const feeds = /["'`](challenge_feed_v1|following_discover_feed_v1|following_challenge_feed_v1)["'`]/;
+    for (const path of sourceFiles) {
+        const source = read(`../${path}`);
+        if (feeds.test(source)) assert.match(source, /capture_grade/, `${path} reads a feed that now carries capture_grade`);
+    }
+});
+
+test("the grade sheet explains how grades are built and shows no arithmetic total of its own", () => {
+    const sheet = read("../app/[locale]/(authenticated)/app/_components/capture-grade-badge.tsx");
+    assert.doesNotMatch(sheet, /weightedScore|adjustedScore|contrastedScore|breakdown\.factors|breakdown\.adjustments|breakdown\.summary/);
+    // The seven weighted factors of the shared server formula.
+    const weights = [...sheet.matchAll(/\{title: "[^"]+", weight: (\d+)\}/g)].map((match) => Number(match[1]));
+    assert.deepEqual(weights, [24, 20, 18, 16, 8, 8, 6]);
+    assert.equal(weights.reduce((sum, weight) => sum + weight, 0), 100);
+    assert.match(sheet, /endorsements and community star ratings never change a grade/);
+});
+
+test("no grade copy says endorsements or community stars lift a grade", () => {
+    const answers = read("../app/[locale]/(composited)/(answers)/best-animal-identification-app/page.tsx");
+    assert.doesNotMatch(answers, /Community endorsements add a small lift/);
+    assert.match(answers, /endorsements and community star ratings never change a grade/);
 });

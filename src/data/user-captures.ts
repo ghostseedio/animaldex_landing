@@ -2,6 +2,7 @@ import type {SpeciesEntry} from "@/data/species";
 import {catalogLookupToken} from "@/lib/collection-discovery";
 import {collectionIdentityMatchKeys} from "@/lib/collection-identity-aliases";
 import {resolveCanonicalIdentityKey} from "@/lib/species-life-stage-policy";
+import {storedCaptureGrade} from "@/lib/capture-grade-value";
 import {countCaptureSettingLabels, getCaptureContextLabel, type CaptureSettingRow} from "@/lib/capture-setting-label";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {hasAuthCookie} from "@/lib/viewer";
@@ -22,6 +23,8 @@ export type UserCaptureSummary = {
     imagePath: string | null;
     contextLabel: string | null;
     locationDisplayLabel: string | null;
+    /** The server's stored capture grade (1-10); null/absent when the payload carries none. */
+    captureGrade?: number | null;
 };
 
 export type UserCaptureStats = {
@@ -55,6 +58,8 @@ type OwnedCaptureManifestRow = {
     location_display_label?: string | null;
     learned_sub_principles?: unknown;
     raw_json?: unknown;
+    /** Appended to the view by migration 20261129120000 (GRADING-1). */
+    capture_grade?: number | null;
 };
 
 type DiscoverFeedStatsRow = Pick<OwnedCaptureManifestRow, "capture_id" | "animal_name" | "normalized_identity_key" | "total_progression_xp" | "human_context" | "zoo_or_wild">;
@@ -135,11 +140,12 @@ function toUserCaptureSummary(row: OwnedCaptureManifestRow): UserCaptureSummary 
         imageBucket: row.image_bucket ?? null,
         imagePath: row.image_path ?? null,
         contextLabel: getContextLabel(row),
-        locationDisplayLabel: row.location_display_label?.trim() ?? null
+        locationDisplayLabel: row.location_display_label?.trim() ?? null,
+        captureGrade: storedCaptureGrade(row.capture_grade)
     };
 }
 
-const USER_CAPTURE_MANIFEST_SELECT = [
+const USER_CAPTURE_MANIFEST_SELECT_BASE = [
     "capture_id",
     "animal_name",
     "scientific_name",
@@ -158,7 +164,17 @@ const USER_CAPTURE_MANIFEST_SELECT = [
     "location_display_label",
     "learned_sub_principles",
     "raw_json"
-].join(",");
+];
+
+/** The stored grade is the view's last column (migration 20261129120000). */
+export const USER_CAPTURE_MANIFEST_SELECT = [...USER_CAPTURE_MANIFEST_SELECT_BASE, "capture_grade"].join(",");
+
+/**
+ * The same read without the grade, for a database that has not had migration
+ * 20261129120000 yet: the library still loads, with no grade chips, instead of
+ * failing. Dropped as soon as the first page reads fine with the grade.
+ */
+const USER_CAPTURE_MANIFEST_SELECT_NO_GRADE = USER_CAPTURE_MANIFEST_SELECT_BASE.join(",");
 
 export async function getAuthenticatedUserId() {
     if (!hasAuthCookie()) {
@@ -209,15 +225,22 @@ export async function getUserCapturesChecked(limit = 2000): Promise<{captures: U
     const pageSize = 240;
     const rows: OwnedCaptureManifestRow[] = [];
     let failed = false;
+    let select = USER_CAPTURE_MANIFEST_SELECT;
 
     for (let offset = 0; offset < limit; offset += pageSize) {
-        const {data, error} = await supabase
+        const readPage = (columns: string) => supabase
             .from("owned_capture_manifest_v1")
-            .select(USER_CAPTURE_MANIFEST_SELECT)
+            .select(columns)
             .eq("user_id", user.id)
             .not("completed_at", "is", null)
             .order("capture_created_at", {ascending: false})
             .range(offset, offset + pageSize - 1);
+        let {data, error} = await readPage(select);
+
+        if (error && offset === 0 && select === USER_CAPTURE_MANIFEST_SELECT) {
+            select = USER_CAPTURE_MANIFEST_SELECT_NO_GRADE;
+            ({data, error} = await readPage(select));
+        }
 
         if (error) {
             failed = rows.length === 0;

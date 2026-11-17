@@ -12,18 +12,21 @@ function gradeTint(grade: number) {
   return {chip: "bg-red-500/90 text-white ring-red-300/40", bar: "bg-red-500", soft: "border-red-400/35"};
 }
 
-function percentText(value: number) {
-  return `${Math.round(Math.min(1, Math.max(0, value)) * 100)}%`;
-}
-
-function signedPercentText(value: number) {
-  const sign = value >= 0 ? "+" : "-";
-  return `${sign}${Math.round(Math.abs(value) * 100)}%`;
-}
-
-function weightText(value: number) {
-  return `${Math.round(value * 100)}% weight`;
-}
+/**
+ * What a grade is made of: the seven weighted factors of the server's grade
+ * (supabase/functions/_shared/capture-grade.ts, the same on iOS and Android).
+ * Static on purpose: the number on the card is the server's stored grade, so
+ * this sheet explains how grades are built and never shows a total of its own.
+ */
+const GRADE_FACTORS: Array<{title: string; weight: number}> = [
+  {title: "Identification confidence", weight: 24},
+  {title: "Clarity and focus", weight: 20},
+  {title: "Centering, proximity and framing", weight: 18},
+  {title: "Shot quality", weight: 16},
+  {title: "Body detail", weight: 8},
+  {title: "The animal's condition", weight: 8},
+  {title: "Habitat and setting", weight: 6},
+];
 
 export function CaptureGradeExplanationSheet({
   breakdown,
@@ -70,7 +73,9 @@ export function CaptureGradeExplanationSheet({
               <span className="font-display text-5xl font-black text-white">{breakdown.grade}</span>
               <span className="text-lg font-bold text-white/45">/10</span>
             </div>
-            <p className="mt-3 text-sm leading-6 text-white/60">{breakdown.summary}</p>
+            <p className="mt-3 text-sm leading-6 text-white/60">
+              The grade AnimalDex gave this photo. Only the photo and its analysis count: endorsements and community star ratings never change a grade.
+            </p>
           </div>
 
           {breakdown.checklist.length ? (
@@ -98,65 +103,23 @@ export function CaptureGradeExplanationSheet({
           ) : null}
 
           <section className="space-y-3">
-            <h3 className="text-sm font-bold text-white">Factors</h3>
+            <h3 className="text-sm font-bold text-white">What a grade is made of</h3>
             <div className="space-y-2">
-              {breakdown.factors.map((factor) => (
-                <div key={factor.id} className="bg-white/[0.04] p-3">
+              {GRADE_FACTORS.map((factor) => (
+                <div key={factor.title} className="bg-white/[0.04] p-3">
                   <div className="flex items-center justify-between gap-3">
                     <p className="text-sm font-semibold text-white">{factor.title}</p>
-                    <p className="shrink-0 text-[0.68rem] font-bold text-white/40">
-                      {percentText(factor.score)} · {weightText(factor.weight)}
-                    </p>
+                    <p className="shrink-0 text-[0.68rem] font-bold text-white/40">{factor.weight}% weight</p>
                   </div>
                   <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
-                    <div className={`h-full rounded-full ${tint.bar}`} style={{width: `${Math.min(100, Math.max(0, factor.score * 100))}%`}} />
+                    <div className={`h-full rounded-full ${tint.bar}`} style={{width: `${factor.weight * 4}%`}} />
                   </div>
-                  <p className="mt-2 text-xs leading-5 text-white/50">{factor.detail}</p>
                 </div>
               ))}
             </div>
-          </section>
-
-          {breakdown.adjustments.length ? (
-            <section className="space-y-3">
-              <h3 className="text-sm font-bold text-white">Bonuses & Penalties</h3>
-              <div className="space-y-2">
-                {breakdown.adjustments.map((adjustment) => (
-                  <div key={adjustment.id} className="bg-white/[0.04] p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className={`text-sm font-black ${adjustment.value >= 0 ? "text-primary-200" : "text-orange-300"}`}>
-                            {adjustment.value >= 0 ? "+" : "−"}
-                          </span>
-                          <p className="text-sm font-semibold text-white">{adjustment.title}</p>
-                        </div>
-                        <p className="mt-2 text-xs leading-5 text-white/50">{adjustment.detail}</p>
-                      </div>
-                      <p className="shrink-0 text-[0.68rem] font-bold text-white/40">{signedPercentText(adjustment.value)}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          <section className="space-y-2">
-            <h3 className="text-sm font-bold text-white">Score</h3>
-            <div className="space-y-2 bg-white/[0.04] p-3">
-              <div className="flex justify-between gap-3 text-sm">
-                <span className="text-white/45">Weighted base</span>
-                <span className="font-semibold text-white">{percentText(breakdown.weightedScore)}</span>
-              </div>
-              <div className="flex justify-between gap-3 text-sm">
-                <span className="text-white/45">After bonuses / penalties</span>
-                <span className="font-semibold text-white">{percentText(breakdown.adjustedScore)}</span>
-              </div>
-              <div className="flex justify-between gap-3 text-sm">
-                <span className="text-white/45">Final grade curve</span>
-                <span className="font-semibold text-white">{percentText(breakdown.contrastedScore)}</span>
-              </div>
-            </div>
+            <p className="text-xs leading-5 text-white/45">
+              Deductions apply for a likely photo of a screen, poster or print (capped at grade 2), for heavy obstruction, and for an animal that could not be identified. A photo with no animal in it is grade 1.
+            </p>
           </section>
         </div>
       </div>
