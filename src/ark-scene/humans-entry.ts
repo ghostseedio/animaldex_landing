@@ -9,6 +9,9 @@ import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {DOG_KIND_ID} from "@/ark-scene/humans/dog-walks";
+import {townWorldOrigin} from "@/ark-scene/islands";
+import {sampleTownGround} from "@/ark-scene/islands/town/ground";
+import {Raycaster, Vector3, type Object3D} from "three";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -56,15 +59,55 @@ async function main() {
             const out = s?.walked.filter((d) => s.live.includes(d.id)) ?? [];
             const d = out[Math.min(nth, out.length - 1)];
             if (!d) return JSON.stringify({hours, walked: s?.walked.length ?? 0, live: s?.live.length ?? 0, pairs: s?.pairs, home: s?.home});
-            const rig = window as unknown as {__arkDebug: {controls: {minDistance: number}}};
+            const rig = window as unknown as {__arkDebug: {controls: {minDistance: number}; scene: Object3D}};
             rig.__arkDebug.controls.minDistance = Math.min(rig.__arkDebug.controls.minDistance, distance);
-            handle.setView({target: {x: d.x, y: d.y + 0.8, z: d.z}, distance, polar, azimuth: d.yaw + Math.PI + turn});
+            // Quality pass: a view with nothing between the eye and the walker (no wall, awning or eave across it): the
+            // asked one first, then turned round and raised by steps until the line of sight is clear.
+            const target = new Vector3(d.x, d.y + 0.8, d.z);
+            const ray = new Raycaster();
+            const clear = (az: number, p: number) => {
+                const eye = new Vector3(Math.sin(p) * Math.sin(az), Math.cos(p), Math.sin(p) * Math.cos(az)).multiplyScalar(distance).add(target);
+                // (A margin round the eye too: the camera's near plane cuts through anything within half a metre.)
+                ray.set(target, eye.clone().sub(target).normalize());
+                ray.far = distance + 0.6;
+                ray.near = 1.2;
+                const hits = ray.intersectObject(rig.__arkDebug.scene, true).filter((h) => h.object.visible && (h.object as {isMesh?: boolean}).isMesh && !String(h.object.name).startsWith("humans") && h.object.userData.kind !== "human");
+                return hits.length === 0;
+            };
+            let azimuth = d.yaw + Math.PI + turn;
+            let polarNow = polar;
+            search: for (const lift of [0, 0.15, 0.3]) {
+                for (const k of [0, 1, -1, 2, -2, 3, -3, 4]) {
+                    if (clear(d.yaw + Math.PI + turn + k * 0.5, polar - lift)) {
+                        azimuth = d.yaw + Math.PI + turn + k * 0.5;
+                        polarNow = polar - lift;
+                        break search;
+                    }
+                }
+            }
+            handle.setView({target: {x: d.x, y: d.y + 0.8, z: d.z}, distance, polar: polarNow, azimuth});
             await frames(10);
             await wait(1500);
             await frames(4);
             return JSON.stringify({hours, dog: d, walked: s!.walked.length, live: s!.live.length, pairs: s!.pairs, home: s!.home});
         }
     };
+    /** Quality pass: the first hour (morning or evening walks, by 3 minutes) with a walked dog out on the beach's sand, or null. */
+    const beachHour = async (): Promise<{hours: number; nth: number} | null> => {
+        const o = townWorldOrigin();
+        for (const [from, to] of [[6.7, 9.6], [17.1, 20]]) {
+            for (let h = from; h < to; h += 0.05) {
+                handle.setHours(h);
+                await frames(3);
+                const s = debug.dogWalks?.();
+                const live = s?.walked.filter((w) => s.live.includes(w.id)) ?? [];
+                const k = live.findIndex((w) => sampleTownGround(w.x - o.x, w.z - o.z).surface === "sand" && w.z - o.z > 120);
+                if (k >= 0) return {hours: h, nth: k};
+            }
+        }
+        return null;
+    };
+    (api as unknown as {beachHour: typeof beachHour}).beachHour = beachHour;
     (window as unknown as {__humans: typeof api}).__humans = api;
     (window as unknown as {__humansReady: boolean}).__humansReady = true;
 }

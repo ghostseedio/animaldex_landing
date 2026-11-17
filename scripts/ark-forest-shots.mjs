@@ -77,7 +77,12 @@ if (which === "humans") {
     page.on("pageerror", (e) => console.log("pageerror", String(e).slice(0, 300)));
     await page.goto(base + "?world=v2&hours=7.8");
     await page.waitForFunction(() => window.__humansReady === true, null, {timeout: 400000});
-    for (const [name, hours, distance, polar, turn, nth] of [["d1-morning-walk", 7.8, 6, 1.3, 0.9, 0], ["d2-morning-walk-wide", 7.8, 16, 1.1, 2.2, 0], ["d3-another", 8.3, 7, 1.3, -0.9, 1], ["d4-evening-walk", 18.6, 7, 1.3, 0.9, 0], ["d5-evening-wide", 18.9, 22, 1.0, 2.4, 2]]) {
+    // (Quality pass: the beach walk: the first hour a walked dog is out on the sand.)
+    const beach = await page.evaluate(() => window.__humans.beachHour());
+    console.log("beach", JSON.stringify(beach));
+    const shots = [["d1-morning-walk", 7.8, 6, 1.25, 0.9, 0], ["d2-morning-walk-wide", 7.8, 16, 1.1, 2.2, 0], ["d3-another", 8.3, 6, 1.25, -0.9, 1], ["d4-evening-walk", 18.6, 6, 1.25, 0.9, 0], ["d5-evening-wide", 18.9, 22, 1.0, 2.4, 2]];
+    if (beach) shots.push(["d6-beach-walk", beach.hours, 7, 1.2, 1.2, beach.nth], ["d7-beach-walk-wide", beach.hours, 18, 1.05, 2.0, beach.nth]);
+    for (const [name, hours, distance, polar, turn, nth] of shots) {
         const state = await page.evaluate(([h, d, p, t, n]) => window.__humans.walk(h, d, p, t, n), [hours, distance, polar, turn, nth]);
         await page.screenshot({path: path.join(out, `${name}.png`)});
         console.log(name, String(state).slice(0, 400));

@@ -69,7 +69,7 @@ const hex = (value: string): [number, number, number] => {
 /** Human skin tones across the range (deep to light). */
 const SKIN = ["#3b2219", "#4f2d1f", "#6b3e2a", "#87573a", "#a0694a", "#b47b57", "#c68e68", "#d9a582", "#e6b896", "#f0c9ab", "#f3d3bd"].map(hex);
 const HAIR = ["#141110", "#1f1712", "#2e2018", "#4a3020", "#6b4a2c", "#8c6a3e", "#b48c55", "#d2b57c", "#8a3b1e", "#9a9a96", "#d8d6d0"].map(hex);
-const TOPS = ["#c8352b", "#2f5aa8", "#2d7a4e", "#e2b33c", "#f2f0ea", "#1d1f24", "#7a4a8c", "#e07a3a", "#4ea0b8", "#a8a39a", "#d86c8e", "#3c4e66", "#8a6a44", "#5c8a3a"].map(hex);
+const TOPS = ["#c8352b", "#2f5aa8", "#2d7a4e", "#e2b33c", "#f2f0ea", "#1d1f24", "#7a4a8c", "#e07a3a", "#4ea0b8", "#a8a39a", "#d86c8e", "#3c4e66", "#3b6e8f", "#5c8a3a"].map(hex);
 const BOTTOMS = ["#24324a", "#2b2b2e", "#4a4f57", "#6b5a44", "#c9b998", "#3a4a2c", "#5a6a86", "#1d2533", "#7a2f2f", "#d9d4c8"].map(hex);
 
 /**
