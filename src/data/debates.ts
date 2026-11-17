@@ -187,7 +187,7 @@ export async function getDiscoverDebates(limit = 12): Promise<Debate[]> {
     const supabase = createSupabaseServerClient();
     if (!supabase) return [];
     try {
-        // The feed function (20261128190000) answers in feed order with the
+        // The feed function (20261129140000) answers in feed order with the
         // server's pins: at most 2, inside their 24 hours, settled debates
         // gone after 72 hours, blocked people hidden, seen ones last.
         const feed = await supabase.rpc("discover_debate_feed_v1", {p_limit: limit});

@@ -970,7 +970,7 @@ export function pinnedDebates(debates: Debate[], max = DEBATE_MAX_PINNED): Debat
 }
 
 /**
- * `discover_debate_feed_v1` (20261128190000) in the server's order: the (at most
+ * `discover_debate_feed_v1` (20261129140000) in the server's order: the (at most
  * two) pins first, then the rest. The row's `pinned` flag is the server's
  * decision (voting, rollover 1 or 2, inside 24 hours of it, this reader can
  * vote and has not), so it alone sets `boosted` here; a debate the server
