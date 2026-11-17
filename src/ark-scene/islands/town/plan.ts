@@ -33,6 +33,8 @@ import {
 } from "@/ark-scene/islands/town/geom";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import {RURAL_BUILDINGS, RURAL_LANE, RURAL_LANE_WIDTH, RURAL_PENS, RURAL_POND_POLY, RURAL_TRACKS, ruralOrchardTrees} from "@/ark-scene/islands/town/rural";
+import type {ZooAnnexTheme} from "@/ark-scene/islands/town/zoo-homes";
+import {DOME, DOME_ID, DOME_LOBBY, DOME_LOBE, DOME_PLOT, DOME_WALK} from "@/ark-scene/islands/town/dome";
 import {SAFARI, SAFARI_AREAS, SAFARI_GATE_ROAD, SAFARI_LOOP, SAFARI_LOOP_STREET, SAFARI_ROAD_WIDTH, type SafariHabitat} from "@/ark-scene/islands/town/safari";
 
 // MARK: - The square of terrain and sea
@@ -123,8 +125,21 @@ function lobeNorm(x: number, z: number): number {
     return n - 0.8 * coastWobble(Math.atan2(dz, dx) + 1.9);
 }
 
+/**
+ * p5 (zoospace), the owner: "add more land area to the town island and add a giant dome for big aviary": a round lobe
+ * of land west of the zoo, past its west path, for the free-flight dome (`dome.ts` DOME_LOBE): about 0.75 ha, joined
+ * to the island's outline as the headland and the safari's lobe are.
+ */
+function domeNorm(x: number, z: number): number {
+    const L = DOME_LOBE;
+    const dx = x - L.x;
+    const dz = z - L.z;
+    const n = Math.pow(Math.pow(Math.abs(dx / L.a), L.power) + Math.pow(Math.abs(dz / L.b), L.power), 1 / L.power);
+    return n - 0.5 * coastWobble(Math.atan2(dz, dx) + 0.6);
+}
+
 export function coastNorm(x: number, z: number): number {
-    return Math.min(mainNorm(x, z), lobeNorm(x, z), safariNorm(x, z), ruralNorm(x, z));
+    return Math.min(mainNorm(x, z), lobeNorm(x, z), safariNorm(x, z), ruralNorm(x, z), domeNorm(x, z));
 }
 
 /** Metres inland (positive on land, negative at sea), near enough within ~40 m of the coast. */
@@ -155,7 +170,15 @@ export function inland(x: number, z: number): number {
     const nr = ruralNorm(x, z);
     const rural = (1 - nr) * (rr / Math.max(nr, 0.05));
     const h3 = Math.max(k2 - Math.abs(three - rural), 0) / k2;
-    return Math.max(three, rural) + h3 * h3 * k2 * 0.25;
+    const four = Math.max(three, rural) + h3 * h3 * k2 * 0.25;
+    // p5 (zoospace): the dome's lobe the same way, in its own measure.
+    const D = DOME_LOBE;
+    const rd = Math.hypot(x - D.x, z - D.z) || 1;
+    const nd = domeNorm(x, z);
+    const dome = (1 - nd) * (rd / Math.max(nd, 0.05));
+    const k3 = 12;
+    const h4 = Math.max(k3 - Math.abs(four - dome), 0) / k3;
+    return Math.max(four, dome) + h4 * h4 * k3 * 0.25;
 }
 
 // MARK: - Plan types
@@ -265,6 +288,8 @@ export type ZooSlot = {
     /** p4 (safari): a safari habitat (`safari.ts`): its own capacity, waters and dressing. */
     safari?: SafariHabitat;
     capacity?: number;
+    /** p5 (zoospace): one of the zoo's new homes (`zoo-homes.ts`), built on another type's free plot: its theme. */
+    annex?: ZooAnnexTheme;
 };
 
 /** A spare enclosure plot: landscaped until an enclosure a type opens past its own slots is drawn on it. */
@@ -868,6 +893,8 @@ function buildPlan(): TownPlan {
 
     // p5 (rural): the countryside on the east lobe.
     buildRural(ctx);
+    // p5 (zoospace): the free-flight dome on its lobe west of the zoo.
+    buildDome(ctx);
 
     plant(ctx);
 
@@ -927,6 +954,29 @@ function buildRural(ctx: Full) {
         ctx.trees.push({x, z, kind: r() < 0.6 ? "oak" : r() < 0.5 ? "lime" : "poplar", scale: 0.75 + r() * 0.4, seed: hashText(`rural-tree-${i}`)});
     }
     ctx.trees.push({x: 207.5, z: 36, kind: "willow", scale: 0.85, seed: hashText("rural-willow")});
+}
+
+/**
+ * p5 (zoospace): the free-flight dome (`dome.ts`): its plot as a zoo slot (an aviary of its own capacity), the walk to
+ * its lobby from the end of the zoo's middle path, the zoo's lawn carried onto its lobe, and its ground kept clear.
+ */
+function buildDome(ctx: Full) {
+    ctx.streets.push({id: "dome_walk", kind: "zoo_path", line: DOME_WALK, width: 4, pavement: 0});
+    ctx.slots.push({id: DOME_ID, type: "aviaries", rank: 0, at: DOME_PLOT, path: "dome_walk", seed: hashText(DOME_ID), annex: "dome", capacity: 200});
+    ctx.keepOut.push({...DOME_PLOT, w: DOME.r * 2 + 3, d: DOME.r * 2 + 3}, DOME_LOBBY);
+    ctx.greens.push({id: "dome_lawn", kind: "zoo_lawn", poly: [{x: DOME_LOBE.x - DOME_LOBE.a - 4, z: DOME_LOBE.z - DOME_LOBE.b - 4}, {x: -196, z: DOME_LOBE.z - DOME_LOBE.b - 4}, {x: -196, z: DOME_LOBE.z + DOME_LOBE.b + 4}, {x: DOME_LOBE.x - DOME_LOBE.a - 4, z: DOME_LOBE.z + DOME_LOBE.b + 4}]});
+    // Palms and shrubs on the lobe's lawn round the dome, clear of it, its walk and the shore.
+    const r = rng(hashText("dome-planting"));
+    for (let i = 0; i < 26; i++) {
+        const a = r() * Math.PI * 2;
+        const rho = DOME.r + 5 + r() * 14;
+        const x = DOME.x + Math.cos(a) * rho;
+        const z = DOME.z + Math.sin(a) * rho;
+        if (inland(x, z) < 6 || polylineWithin(DOME_WALK, x, z, 6) || inBox(DOME_LOBBY, x, z, 4) || x > -190) continue;
+        if (ctx.trees.some((t) => Math.hypot(t.x - x, t.z - z) < 5)) continue;
+        const kind: TreeKind = r() < 0.55 ? "palm" : "hedge_shrub";
+        ctx.trees.push({x, z, kind, scale: kind === "hedge_shrub" ? 1 : 0.8 + r() * 0.3, seed: hashText(`dome-tree-${i}`)});
+    }
 }
 
 /**

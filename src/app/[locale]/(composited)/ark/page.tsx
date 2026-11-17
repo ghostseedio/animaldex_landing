@@ -62,8 +62,10 @@ import {arkPageSummary} from "@/lib/ark-page-summary";
  * `?fixture=placeholder` (species with no Ark model, A13) and `?fixture=eggs`
  * (clutches laid and hatching, A9; add `&since=2026-11-08T00:00:00Z` to replay them).
  *
- * `?focus=<species_profile_id or slug>` flies to that species on load (the
- * capture page's "See it in the Ark"), the reader's own one first.
+ * `?focus=<animal id, species_profile_id or slug>` flies to that animal or species on load (the
+ * capture page's "See it in the Ark"), the reader's own one first. With an animal id, `&follow=1` keeps the camera on it
+ * and `&arrival=1` acts its arrival out first (the first time a person's animal comes aboard); the apps' "See it in
+ * the Ark" button sends the same through `ark:select` (`src/ark-scene/see-it.ts`).
  *
  * Life v2 in development: `?fixture=1` is the v2 fixture (born young,
  * condition, activity, sociality; and, captures + thrive, each animal's
@@ -100,7 +102,7 @@ import {arkPageSummary} from "@/lib/ark-page-summary";
  * The page stays dynamic for its query (`?focus=` cards, `?lang=`), but its render is cheap.
  */
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string; hearts?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; follow?: string; arrival?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string; hearts?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -562,6 +564,8 @@ export default async function ArkPage({params, searchParams}: Props) {
             modelBase={modelBase(searchParams)}
             rigBase={rigOverride(searchParams)}
             focus={typeof searchParams.focus === "string" ? searchParams.focus.slice(0, 120) : null}
+            follow={searchParams.follow === "1"}
+            arrival={searchParams.arrival === "1"}
             island={searchParams.island === "wild" || searchParams.island === "town" ? searchParams.island : null}
             fixtureLife={fixtureLife}
             hours={Number.isFinite(hour) ? Math.min(Math.max(hour, 0), 24) : null}

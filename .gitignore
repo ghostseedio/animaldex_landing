@@ -55,6 +55,7 @@ next-env.d.ts
 /public/ark/ark-prebuild-places-worker.js
 /public/ark/ark-town-worker.js
 /public/ark/positions-atlas.json
+/public/ark/ark-version.txt
 /.ark-golden
 /.ark-audit
 

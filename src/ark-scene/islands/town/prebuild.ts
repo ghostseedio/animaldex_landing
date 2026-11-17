@@ -9,6 +9,7 @@
  * same work runs on the main thread as before.
  */
 
+import {arkCodeUrl} from "@/ark-scene/code-version";
 import type {ArkAnimal} from "@/ark-scene/types";
 import type {Collider} from "@/ark-scene/collide";
 import type {TownPlan} from "@/ark-scene/islands/town/plan";
@@ -98,7 +99,7 @@ function ask(url: string, message: TownPrebuildRequest): {collect: (timeoutMs: n
         else if (early === undefined) early = data;
     };
     try {
-        worker = new Worker(url);
+        worker = new Worker(arkCodeUrl(url));
         worker.onmessage = (event: MessageEvent<TownPrebuild | {error: string} | {type: "ready"}>) => {
             if ("type" in event.data && event.data.type === "ready") return isReady(true);
             finish("error" in event.data ? null : (event.data as TownPrebuild));

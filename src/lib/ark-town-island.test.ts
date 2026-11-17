@@ -55,7 +55,8 @@ test("the zoo: 13 enclosure types, the plan's launch openings, slots as declared
     assert.equal(ZOO_LAUNCH_TOTAL, 26);
     for (const type of ZOO_ENCLOSURE_TYPES) {
         // p4 (safari): the safari's areas are slots of the server's types too, but not the server's numbered ones (`town/safari.ts`).
-        const slots = plan.zoo.slots.filter((s) => s.type === type && !s.safari);
+        // p5 (zoospace): nor is the free-flight dome (`town/dome.ts`), an aviary of its own.
+        const slots = plan.zoo.slots.filter((s) => s.type === type && !s.safari && !s.annex);
         assert.equal(slots.length, ZOO_TYPES[type].slots, type);
         assert.equal(enclosuresOpen(type, ZOO_TYPES[type].residents.today), ZOO_TYPES[type].launch, `${type} opens the plan's launch count`);
     }
@@ -63,8 +64,9 @@ test("the zoo: 13 enclosure types, the plan's launch openings, slots as declared
     // The server's names (`<type>-<n>`, n from 1) are the plan's slots; past a type's slots a spare, then sharing.
     const launch = zooLayout(launchEnclosures());
     assert.equal(launch.enclosures.length, 26);
-    assert.equal(launch.closed.length, plan.zoo.slots.length - 26 + plan.zoo.spares.length);
-    assert.ok(plan.zoo.slots.every((s) => s.id === (s.safari ? `safari_${s.safari}-1` : `${s.type}-${s.rank + 1}`)));
+    // (p5 (zoospace): the dome with no birds is its own building, not a closed lawn plot.)
+    assert.equal(launch.closed.length, plan.zoo.slots.filter((s) => !s.annex).length - 26 + plan.zoo.spares.length);
+    assert.ok(plan.zoo.slots.every((s) => s.id === (s.safari ? `safari_${s.safari}-1` : s.annex === "dome" ? "zoo_dome-1" : `${s.type}-${s.rank + 1}`)));
     const busy = zooLayout([...launchEnclosures(), "penguin_seal_pools-2", "small_mammals-4", "bears_wolves-4", "aviaries-9"]);
     const where = (id: string) => busy.enclosures.find((e) => e.id === id)!;
     assert.equal(where("penguin_seal_pools-2").place, "spare-1", "the lowest number first");
@@ -91,9 +93,10 @@ test("on Part B's grid: 12 × 12 chunks of 48 segments of 1.1 m", () => {
 });
 
 // p4 (safari): about 12 ha before; the safari park adds about 2.5 ha. p5 (rural): the countryside's lobe about 2.5 ha more.
-test("bounded land: about 18 ha, the sea all round inside the square", () => {
+// p5 (zoospace): the dome's lobe about 0.75 ha more. Both lobes together measure 18.9 ha (188,956 m² on the 2 m grid).
+test("bounded land: about 19 ha, the sea all round inside the square", () => {
     const land = landArea(2);
-    assert.ok(land > 165_000 && land < 190_000, `${(land / 10000).toFixed(2)} ha`);
+    assert.ok(land > 175_000 && land < 200_000, `${(land / 10000).toFixed(2)} ha`);
     for (const [x, z] of [[-TOWN_HALF + 2, 0], [TOWN_HALF - 2, 0], [0, -TOWN_HALF + 2], [0, TOWN_HALF - 2]]) assert.ok(coastNorm(x, z) > 1, "the square's edge is sea");
     assert.ok(townHeight(TOWN_HALF - 2, 0) < -8, "deep water at the square's edge");
     assert.ok(Math.abs(townHeight(90, 20) - 2.6) < 0.4, "the town is flat at its level");

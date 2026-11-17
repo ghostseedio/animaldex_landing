@@ -159,13 +159,13 @@ export function townSolids(open: readonly string[], plan: TownPlan = townPlan())
                 out.push({id: `zoo:${e.id}:shed`, kind: "shelter", shape: "box", x: c.x, z: c.z, hw: Math.min(6, s.w * 0.3) / 2, hd: 1.5, rot: s.rot, base: g - 0.2, top: g + 3.6, gap: 0});
             }
         }
-        if (form !== "house" && !e.slot.safari) {
+        if (form !== "house" && !e.slot.safari && e.slot.annex !== "dome") {
             // The feeding hatch on the back fence.
             const h = local(s, -s.w / 2 + 2, -s.d / 2 + 1.2);
             const g = townHeight(h.x, h.z);
             out.push({id: `zoo:${e.id}:hatch`, kind: "shelter", shape: "box", x: h.x, z: h.z, hw: 0.7, hd: 0.3, rot: s.rot, base: g - 0.2, top: g + 1.2, gap: 0});
         }
-        if (form === "aviary") {
+        if (form === "aviary" && e.slot.annex !== "dome") {
             // The perching tree (`render/scenery.ts` deadTree).
             const t = local(s, -s.w / 4, -s.d / 6);
             const g = townHeight(t.x, t.z);

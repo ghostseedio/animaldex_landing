@@ -16,6 +16,7 @@
  * the record's, never a list of animals. Pure: the same for every viewer.
  */
 
+import {DOME_LAGOON, inDome} from "@/ark-scene/islands/town/dome";
 import {box, corners, ellipse, inBox, smoothLine, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import type {ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import residents from "@/ark-scene/islands/town/safari-residents.json";
@@ -144,12 +145,13 @@ export const SAFARI_TERMITES: Pt[] = [
 /** The safari's whole footprint (for quick rejection): the lobe north of the zoo. */
 export const SAFARI_BOUNDS = {x0: -272, x1: -46, z0: -284, z1: -150};
 
+/** (p5 (zoospace): and the free-flight dome's footprint, whose lagoon is cut into the ground as the waterholes are.) */
 export function inSafari(x: number, z: number): boolean {
-    return x >= SAFARI_BOUNDS.x0 && x <= SAFARI_BOUNDS.x1 && z >= SAFARI_BOUNDS.z0 && z <= SAFARI_BOUNDS.z1;
+    return (x >= SAFARI_BOUNDS.x0 && x <= SAFARI_BOUNDS.x1 && z >= SAFARI_BOUNDS.z0 && z <= SAFARI_BOUNDS.z1) || inDome(x, z);
 }
 
-/** Every pool and waterhole. */
-export const SAFARI_WATERS: SafariWater[] = SAFARI_AREAS.flatMap((a) => a.waters);
+/** Every pool and waterhole (p5 (zoospace): and the dome's lagoon, `dome.ts`). */
+export const SAFARI_WATERS: SafariWater[] = [...SAFARI_AREAS.flatMap((a) => a.waters), DOME_LAGOON];
 
 /** A water's outline. */
 export function safariWaterPoly(w: SafariWater, scale = 1, n = 28): Poly {

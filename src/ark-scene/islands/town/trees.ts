@@ -19,6 +19,7 @@
  * colliders, the perches) asks `townTrees` / `townZooTrees`, so they agree on every tree.
  */
 
+import {DOME, DOME_TREES} from "@/ark-scene/islands/town/dome";
 import {ASSETS} from "@/ark-scene/tree-pick";
 import {assetAttachRows} from "@/ark-scene/tree-assets";
 import {footprintBody, TreeSpacing, type TreeBody} from "@/ark-scene/tree-spacing";
@@ -166,7 +167,9 @@ function plotTop(at: Box, type: string | null): number {
 function blockersOf(plan: TownPlan): Blocker[] {
     const out: Blocker[] = [];
     for (const b of plan.buildings) out.push({at: b.at, top: townHeight(b.at.x, b.at.z) + b.top + 0.3});
-    for (const s of plan.zoo.slots) out.push({at: s.at, top: plotTop(s.at, s.type), own: s.id, net: ZOO_TYPES[s.type].form === "aviary"});
+    // (p5 (zoospace): the free-flight dome's own trees stand under its shell, `dome.ts`: to its crown here, each tree's
+    // height chosen for where it stands.)
+    for (const s of plan.zoo.slots) out.push({at: s.at, top: s.annex === "dome" ? townHeight(s.at.x, s.at.z) + DOME.drum + DOME.rise : plotTop(s.at, s.type), own: s.id, net: ZOO_TYPES[s.type].form === "aviary"});
     // (A spare may take an aviary: kept clear to a net's height.)
     for (const s of plan.zoo.spares) out.push({at: s.at, top: townHeight(s.at.x, s.at.z) + 8.5, own: s.id, net: true});
     return out;
@@ -288,6 +291,14 @@ export function townZooTrees(layout: ZooLayout, plan: TownPlan = townPlan()): To
                 : e.type === "bears_wolves" ? [{kind: "pine", height: 13, n: 2, margin: 4}]
                     : e.type === "hoofstock_paddocks" ? [{kind: "oak", height: 14, n: 1, margin: 6}]
                         : ZOO_TYPES[e.type].form === "aviary" ? [{kind: "birch", height: 6, n: 1, margin: 3}] : [];
+        // p5 (zoospace): the dome's trees are its own list (`dome.ts` DOME_TREES: planes, oaks, a lime, palms, a willow).
+        if (e.slot.annex === "dome") {
+            DOME_TREES.forEach((t, i) => {
+                const tree = settleOne(spacing, blockers, `zoo:${e.slot.id}:${i}`, t.kind, t.x, t.z, 1, hashText(`${e.slot.id}:tree:${i}`), e.slot.id, t.height);
+                if (tree) out.push(tree);
+            });
+            continue;
+        }
         for (const w of wanted) {
             let placed = 0;
             const spots = e.slot.safari ? zooSpotsOf(e) : [];

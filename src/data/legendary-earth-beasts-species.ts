@@ -7,6 +7,7 @@ import {
     type LegendaryEarthBeast
 } from "@/data/legendary-earth-beasts";
 import type { SpeciesEntry } from "@/data/species";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 
 const LEGENDARY_RARITY_SCORE = 94;
 
@@ -58,7 +59,7 @@ export function buildLegendaryEarthBeastSpeciesInput(beast: LegendaryEarthBeast)
             scientificName: beast.scientificName,
             category: categoryForBeast(beast),
             identification: seed?.signatureTraits ?? [
-                "S-tier Legendary Earth Beast",
+                SHOWS_BATTLE_TIER_AND_POWER ? "S-tier Legendary Earth Beast" : "Legendary Earth Beast",
                 beast.power,
                 captureSite,
                 beast.legendaryType
@@ -66,7 +67,7 @@ export function buildLegendaryEarthBeastSpeciesInput(beast: LegendaryEarthBeast)
             habitat: captureSite,
             nativeRange: captureSite,
             rarityScore: seed?.canonicalGameStats.rarity ?? LEGENDARY_RARITY_SCORE,
-            rarityReason: `${beast.legendaryFormName} is an S-tier Legendary Earth Beast that can only be captured at ${captureSite}.`
+            rarityReason: `${beast.legendaryFormName} is ${SHOWS_BATTLE_TIER_AND_POWER ? "an S-tier" : "a"} Legendary Earth Beast that can only be captured at ${captureSite}.`
         },
 
         premiumDetails: {

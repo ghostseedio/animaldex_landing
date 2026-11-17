@@ -18,7 +18,7 @@ import {arkReloadForRestoredContext} from "@/lib/ark-context-restore";
 import {ArkAnimalCard, ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-animal-card";
 import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkLiveHunt, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkArchipelagoHandle} from "@/ark-scene/islands/archipelago";
-import {arkIslandCounts, arkIslandSnapshot, arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
+import {arkIslandCounts, arkIslandSnapshot, arkLooksLikeAnimalId, arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
 import {arkIconFallback, arkIconUrl, isArkPlaceholderSlug, noteArkIconless} from "@/ark-scene/placeholder-icon";
 import {arkFocusAnimals, arkLookKey, arkPairStatus, arkPickAnimal, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-population";
@@ -79,6 +79,9 @@ type Props = {
     rigBase?: string | null;
     /** `?focus=`: an animal's id, a species_profile_id or slug to fly to once the Ark is in view (on its island). */
     focus?: string | null;
+    /** See it in the Ark (`?follow=1`, `?arrival=1`): the camera follows the focused animal, and its arrival is acted out first (the first time). */
+    follow?: boolean;
+    arrival?: boolean;
     /** Part C, `?island=wild|town`: the island to open on (else decision 26: the one with most of the viewer's animals). */
     island?: string | null;
     fixtureLife?: ArkFixtureLife | null;
@@ -221,7 +224,7 @@ function sameAnimals(a: ArkSnapshot | null, b: ArkSnapshot | null): boolean {
     return a.animals.every((animal, i) => animal.id === b.animals[i].id && animal.mine === b.animals[i].mine);
 }
 
-export default function ArkView({locale, initial, summary: pageSummary = null, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false, newest: newestAboard = null, fixtureHearts = null}: Props) {
+export default function ArkView({locale, initial, summary: pageSummary = null, founders: initialFounders = ARK_NO_FOUNDERS, growFrom, fixture, local = false, signedIn, words, talkTitles, modelBase, rigBase, focus: focusOn = null, follow: followAsked = false, arrival: arrivalAsked = false, island: islandAsked = null, fixtureLife = null, hours = null, since = null, publicStory = false, shareLocalePath = "/ark", liveFeed = false, newest: newestAboard = null, fixtureHearts = null}: Props) {
     arkPerfCountRender();
     const {session} = useHeaderAuth();
     const mountRef = useRef<HTMLDivElement | null>(null);
@@ -520,7 +523,17 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                     if (focused) {
                         // The page's own flight to `?focus=` is not a tap.
                         autoSelecting.current = true;
-                        handle.select(focused.id);
+                        if ((followAsked || arrivalAsked) && focusOn && arkLooksLikeAnimalId(focusOn)) {
+                            // See it in the Ark: followed, and its arrival acted out first (loaded only when asked: `ark-scene/see-it.ts`).
+                            const animal = focused;
+                            void import("@/ark-scene/see-it").then(({arkSeeIt}) => {
+                                if (disposed) return;
+                                autoSelecting.current = true;
+                                arkSeeIt(handle as ArkArchipelagoHandle, {id: animal.id, closeUp: true, follow: true, arrival: arrivalAsked}, animal, reducedMotion);
+                                autoSelecting.current = false;
+                                setFollowing(true);
+                            });
+                        } else handle.select(focused.id);
                         autoSelecting.current = false;
                     }
                     if (process.env.NODE_ENV !== "production") {
