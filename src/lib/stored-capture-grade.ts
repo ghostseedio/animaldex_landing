@@ -1,4 +1,5 @@
 import {computeCaptureGradeBreakdown, type CaptureGradeBreakdown, type CaptureGradeSource} from "@/lib/capture-grade";
+import {storedCaptureGrade} from "@/lib/capture-grade-value";
 
 /**
  * The one capture grade (GRADING-1).
@@ -11,17 +12,7 @@ import {computeCaptureGradeBreakdown, type CaptureGradeBreakdown, type CaptureGr
  * a payload that carries no stored grade shows no grade.
  */
 
-export const MIN_CAPTURE_GRADE = 1;
-export const MAX_CAPTURE_GRADE = 10;
-
-/** A stored grade, or null when the payload carries none (or something that is not a 1-10 grade). */
-export function storedCaptureGrade(value: unknown): number | null {
-    if (value == null || value === "") return null;
-    const number = typeof value === "number" ? value : Number(value);
-    if (!Number.isFinite(number)) return null;
-    const grade = Math.round(number);
-    return grade >= MIN_CAPTURE_GRADE && grade <= MAX_CAPTURE_GRADE ? grade : null;
-}
+export {MIN_CAPTURE_GRADE, MAX_CAPTURE_GRADE, storedCaptureGrade} from "@/lib/capture-grade-value";
 
 export type StoredGradeFields = {
     /** The stored grade, null when the payload has none. */

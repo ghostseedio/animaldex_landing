@@ -7,7 +7,7 @@
  */
 
 import type {CaptureWords} from "@/lib/capture-words";
-import {storedCaptureGrade} from "@/lib/stored-capture-grade";
+import {storedCaptureGrade} from "@/lib/capture-grade-value";
 
 type StatsWords = CaptureWords["stats"];
 
