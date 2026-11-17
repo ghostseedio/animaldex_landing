@@ -80,10 +80,21 @@ describe("database privilege contract", {skip: configured ? false : "SUPABASE_UR
     });
 });
 
+// The one CI that has no database on purpose: `.github/workflows/ark-unit.yml` runs the unit suite on GitHub's machines
+// for every branch and holds no Supabase credentials (a service-role key does not belong in a workflow that any branch
+// can dispatch). It sets DATABASE_CONTRACT_OPTIONAL=1, and the wiring check below then SKIPS, its reason printed, instead
+// of failing. Any other CI (no flag) still fails below when the credentials are missing, and the contract above still
+// runs wherever SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY exist (a developer's shell, a database CI).
+const wiringSkip = process.env.CI && !configured && process.env.DATABASE_CONTRACT_OPTIONAL === "1"
+    ? "CI without database credentials (DATABASE_CONTRACT_OPTIONAL=1): the privilege contract above is skipped, not passed; run it with SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY set"
+    : false;
+if (wiringSkip) console.log(`  (${wiringSkip})`);
+
 describe("database privilege contract wiring", () => {
-    it("is actually running against a database in CI", () => {
+    it("is actually running against a database in CI", {skip: wiringSkip}, () => {
         // A skipped security test is indistinguishable from a passing one in a
-        // CI summary. In CI the credentials must be present.
+        // CI summary. In CI the credentials must be present (see wiringSkip above
+        // for the one declared exception).
         if (process.env.CI) {
             assert.ok(configured, "CI must provide SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY so the privilege contract is actually checked");
         } else {

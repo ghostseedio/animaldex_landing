@@ -113,11 +113,30 @@ test("a shared prefix hashed once hashes exactly as the whole text", () => {
     }
 });
 
-/** A digest of a value, typed arrays by their bytes and numbers by their bits. */
+/**
+ * The grid every float is rounded to before it is hashed: 1e-4 (a tenth of a millimetre in the town's metres).
+ * Why: the town's numbers come through Math.sin and Math.cos, and V8 returns last-bit different values for them on
+ * macOS arm64 and on Linux x64 (seen 2026-11-17: cos(pi/16) differs in the last bit, and geometry built on it differs
+ * by up to ~2e-12 in 51 of 58,885 scenery and building arrays, so the bit-exact digest passed on a Mac and failed on
+ * GitHub). Hashing the exact bits therefore tested the CPU, not the town. A tenth of a millimetre is far below
+ * anything drawn or walked on, far above that float noise, and a real change to the town moves things by far more.
+ */
+const DIGEST_GRID = 1e4;
+
+/** A float on the digest's grid, as the exact integer it rounds to (-0 and 0 alike); NaN and the infinities as they are. */
+function onDigestGrid(v: number): number {
+    return Number.isFinite(v) ? Math.round(v * DIGEST_GRID) + 0 : v;
+}
+
+/** A digest of a value: integer typed arrays by their bytes, floats (arrays or numbers) on the digest's grid. */
 function digest(value: unknown): string {
     const hash = createHash("sha256");
     const walk = (v: unknown): void => {
-        if (ArrayBuffer.isView(v)) {
+        if (v instanceof Float32Array || v instanceof Float64Array) {
+            hash.update(`<${v.constructor.name}:`);
+            hash.update(new Uint8Array(Float64Array.from(v, onDigestGrid).buffer));
+            hash.update(">");
+        } else if (ArrayBuffer.isView(v)) {
             hash.update(`<${v.constructor.name}:`);
             hash.update(new Uint8Array(v.buffer, v.byteOffset, v.byteLength));
             hash.update(">");
@@ -140,12 +159,30 @@ function digest(value: unknown): string {
             }
             hash.update("}");
         } else if (typeof v === "number") {
-            hash.update(new Uint8Array(new Float64Array([v]).buffer));
+            hash.update(new Uint8Array(new Float64Array([onDigestGrid(v)]).buffer));
         } else hash.update(`${typeof v}:${String(v)};`);
     };
     walk(value);
     return hash.digest("hex").slice(0, 16);
 }
+
+test("the digest ignores last-bit float noise (a Mac's and a Linux machine's trig) but sees a real change", () => {
+    const town = (x: number, y: number) => ({pos: [x, y, 3.25], nor: new Float32Array([x, y, 1]), ids: new Uint16Array([1, 2, 3]), seed: 7, tag: "a"});
+    const base = digest(town(14.01962850938253, -131.50123714687516));
+    // Differences of the size seen between the two machines (1e-16 to 2e-12) leave the digest alone.
+    assert.equal(digest(town(14.01962850938253 + 2e-12, -131.50123714687516 - 1.5e-13)), base);
+    assert.equal(digest(town(14.01962850938253 - 1.8e-15, -131.50123714687516 + 9e-13)), base);
+    // A tenth of a millimetre and more is a different town; so is an integer, a tag, a seed or the order of things.
+    assert.notEqual(digest(town(14.01962850938253 + 2e-4, -131.50123714687516)), base);
+    assert.notEqual(digest(town(14.01962850938253, -131.50123714687516 - 1e-3)), base);
+    assert.notEqual(digest({...town(14.01962850938253, -131.50123714687516), ids: new Uint16Array([1, 2, 4])}), base);
+    assert.notEqual(digest({...town(14.01962850938253, -131.50123714687516), seed: 8}), base);
+    assert.notEqual(digest({...town(14.01962850938253, -131.50123714687516), tag: "b"}), base);
+    assert.notEqual(digest({...town(14.01962850938253, -131.50123714687516), pos: [14.01962850938253, 3.25, -131.50123714687516]}), base);
+    assert.equal(digest([0]), digest([-0]));
+    assert.notEqual(digest([NaN]), digest([0]));
+    assert.notEqual(digest([Infinity]), digest([-Infinity]));
+});
 
 /**
  * The town's prebuild on the fixture, digested before the speed work (ark-next bcb5eca9, the plain scans): the same
@@ -165,8 +202,13 @@ function digest(value: unknown): string {
 // waterholes, eroded termite mounds; logs, dead trees, bushes, ferns and reeds now library assets): zoo; the dressing's
 // positions and colliders are unchanged. Then the waterholes' banks in the textured ground with hoof prints, the dry
 // logs bleached, the big rockwork as bedded crags: zoo.)
+// (2026-11-17, ci-unit-green: every digest was recomputed once, when the digest began rounding floats to `DIGEST_GRID`
+// instead of hashing their exact bits: a Mac's and a Linux machine's Math.sin/cos differ in the last bit, so the exact
+// digests passed locally and failed on GitHub. Nothing in the town changed: the same plan and scenery as the digests
+// before it. Branches that merge this: take main's TOWN_DIGESTS block whole, run this test, paste what it prints,
+// then re-apply your own comment lines.)
 const TOWN_DIGESTS = {
-    plan: "907a8cbbd8b958ac",
+    plan: "60b73a9f67bbc879",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
@@ -174,22 +216,22 @@ const TOWN_DIGESTS = {
     // (3.3 fix (wall), wall-climb.ts: the lamp-lit walls' places on the wall's face with its normal; the eaves' wall faces.)
     // (Pass 2, lane LAND: the millpond's bank meets its water, its wetland spots and stones, pond life at the wetland; the
     // downtown headland: its streets, three towers, the plaza, billboards.)
-    areas: "631994b9deda845c",
+    areas: "e29d57cd64b00c1f",
     // (Lane GA: the ground's surface weights.)
-    ground: "db8be9238e67c5ae",
+    ground: "7defe27bc186aab5",
     // (Lane GA's street surfaces; lane TB: the zoo houses drawn with the zoo's day, `render/zoo-houses.ts`; the pets
     // kept at home in their displays, the aquarium's in its tanks, the ground animals clear of buildings. Lane GC: the
     // leafy hedges, flower beds, crops, farm things and gates, the canal's walls and lock, the zoo's barriers and
     // aviaries, the zoo's trees drawn by the asset library, not merged. Lane GB: the buildings' facades, surfaces and
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
-    sceneryAndBuildings: "56ee296d4dd8aedd",
+    sceneryAndBuildings: "5098e2b3895a3aec",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
-    zoo: "da013de4eb631dce",
+    zoo: "b99368605e4232dd",
     // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
-    places: "ab4725e321d03544"
+    places: "cfd0796ddc24206d"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {
@@ -212,5 +254,9 @@ test("the town's prebuild on the fixture: the same plan, areas, ground, scenery,
         places: digest([Array.from(placed.places.entries()), Array.from(placed.town.entries()), placed.open])
     };
     assert.ok(animals.length > 0, "the fixture has town animals");
+    // (When the town is changed on purpose: run this test, check the failing area is the one meant, and paste these.)
+    if ((Object.keys(got) as Array<keyof typeof got>).some((k) => got[k] !== TOWN_DIGESTS[k])) {
+        console.log(`TOWN_DIGESTS as they are now:\n${Object.entries(got).map(([k, v]) => `    ${k}: "${v}"`).join(",\n")}`);
+    }
     assert.deepEqual(got, TOWN_DIGESTS);
 });
