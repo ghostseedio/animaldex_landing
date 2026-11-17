@@ -199,8 +199,10 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         }
     }
     const animals = safariAnimals(given);
-    // p5 (homes): which of the homes' outdoor pets live indoors (the garden cap), before anyone is placed.
-    planIndoors(animals);
+    // p5 (homes): which of the homes' outdoor pets live indoors (the garden cap), before anyone is placed. (While the
+    // town's animals join a few at a time, `openAs`, the whole list's plan stands: from the prebuild's prime or the last
+    // whole read; a part of the list would cap each garden by the part, and pets would move as the rest came.)
+    if (!openAs) planIndoors(animals);
     // (`openAs`: the enclosures open for the whole town while only some of its animals are laid out: they join a few at a time.)
     const open = openAs ? [...openAs] : enclosuresIn(animals);
     const openNames = open.length ? open : launchEnclosures();
