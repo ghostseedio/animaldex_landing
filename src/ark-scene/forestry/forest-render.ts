@@ -53,8 +53,9 @@ function buttressGeometry(): BufferGeometry {
     const positions: number[] = [];
     const colours: number[] = [];
     const index: number[] = [];
-    const bark = new Color("#6f6252");
-    const barkDark = new Color("#4f4538");
+    // (The emergents' pale grey bark.)
+    const bark = new Color("#a39b8d");
+    const barkDark = new Color("#7a7366");
     const cut = new Color("#cfae7b");
     const c = new Color();
     const push = (x: number, y: number, z: number, col: Color) => {

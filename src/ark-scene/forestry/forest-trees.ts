@@ -18,11 +18,12 @@ export function trunkRadius(height: number): number {
 }
 
 /**
- * How far a tree's foot spreads (m) where the feller works: its trunk, and for the rainforest's giants (30 m and over)
- * the wider root collar. The feller stands outside it.
+ * How far a tree's foot spreads (m): its trunk, the rainforest's giants' (30 m and over) wider root collar, and a
+ * buttressed emergent's fins, which the library's emergents flare to about five trunk radii at any size. The feller
+ * stands outside it (at a buttressed tree, at the fins' ends, sawing them off first as loggers do).
  */
-export function footRadius(height: number): number {
-    return trunkRadius(height) * (height >= 30 ? 2.4 : 1.25);
+export function footRadius(height: number, buttress = false): number {
+    return trunkRadius(height) * (buttress ? 5 : height >= 30 ? 2.4 : 1.25);
 }
 
 type Tree = {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4};
@@ -112,7 +113,7 @@ export class ForestTrees {
                     this.keptCount++;
                     return false;
                 }
-                this.trees.push({x: tree.x, y: tree.y, z: tree.z, radius: footRadius(tree.height), trunk: trunkRadius(tree.height), height: tree.height, buttress: tree.buttress === true});
+                this.trees.push({x: tree.x, y: tree.y, z: tree.z, radius: footRadius(tree.height, tree.buttress === true), trunk: trunkRadius(tree.height), height: tree.height, buttress: tree.buttress === true});
                 this.byStand.clear();
                 return true;
             },

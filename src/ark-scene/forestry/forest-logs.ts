@@ -233,7 +233,8 @@ export class ForestLogs {
             const cx = Math.cos(dir), cz = Math.sin(dir);
             const length = logLength(t.height);
             const r = Math.min(t.trunk, 1.1);
-            const butt = t.radius * 0.55 + 0.25;
+            // (Cut above a buttressed tree's fins, its trunk falls clear of them.)
+            const butt = t.buttress ? t.radius * 0.75 : t.trunk + 0.3;
             const x0 = t.x + cx * butt, z0 = t.z + cz * butt;
             const x1 = x0 + cx * length, z1 = z0 + cz * length;
             const y0 = this.ground(x0, z0) + r, y1 = this.ground(x1, z1) + r * TAPER;
