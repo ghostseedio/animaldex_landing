@@ -1037,8 +1037,9 @@ function tower(ctx: Ctx, b: Building) {
 
 /**
  * p5 (homes): the apartments' winter gardens on a tower's front and back (`home-rooms.ts` towerApartments, the same boxes): each
- * a slab on its storey's floor with a dark edge, posts at its corners and middle, a rail along the top, clear glass on
- * its front and ends; the top one's roof slab. The rooms inside are drawn where pets live (`render/pet-homes.ts`).
+ * a slab on its storey's floor with a dark edge, posts at its corners and middle, a rail along the top and one at 1 m,
+ * open (no glass: the town's glass is mirror-dark and hid the rooms, so the rooms and their pets are seen as they are);
+ * the top one's roof slab. The rooms inside are drawn where pets live (`render/pet-homes.ts`).
  */
 function towerBays(ctx: Ctx, front: Frame, b: Building, w: number, d: number, floorH: number, frame: [number, number, number]) {
     for (const f of [front, {...front, rot: front.rot + Math.PI}]) towerBaysOn(ctx, f, b, w, d, floorH, frame);
@@ -1046,11 +1047,10 @@ function towerBays(ctx: Ctx, front: Frame, b: Building, w: number, d: number, fl
 
 /** One face's bays (`f`: the tower's frame turned so the face is its local +z). */
 function towerBaysOn(ctx: Ctx, f: Frame, b: Building, w: number, d: number, floorH: number, frame: [number, number, number]) {
-    const {solid, glass} = ctx.chunk;
+    const {solid} = ctx.chunk;
     const storeys = apartmentStoreys(b);
     if (!storeys.length) return;
     const bw = w / 2 - 0.9;
-    const pane = tone("#cfe0e4");
     for (const storey of storeys) {
         for (const side of [-1, 1]) {
             const cx = (side * w) / 4;
@@ -1064,13 +1064,8 @@ function towerBaysOn(ctx: Ctx, f: Frame, b: Building, w: number, d: number, floo
                 for (const sx of [-1, 1]) solid.box(f, cx + sx * (bw / 2 - 0.05), y, d / 2 + 0.06, 0.1, h, 0.1, tone("#3a3f44"));
                 solid.box(f, cx, y + h - 0.08, d / 2 + BAY_DEPTH - 0.06, bw, 0.08, 0.1, tone("#3a3f44"));
                 solid.box(f, cx, y + 1.0, d / 2 + BAY_DEPTH - 0.06, bw, 0.05, 0.06, tone("#3a3f44"));
+                for (const sx of [-1, 1]) solid.box(f, cx + sx * (bw / 2 - 0.05), y + 1.0, cz, 0.06, 0.05, BAY_DEPTH - 0.1, tone("#3a3f44"));
             });
-            const P = (lx: number, ly: number, lz: number) => at(f, cx + lx, y + ly, lz);
-            const fz = d / 2 + BAY_DEPTH - 0.06;
-            const bz = d / 2 + 0.02;
-            glass.quad(P(-bw / 2, 0, fz), P(bw / 2, 0, fz), P(bw / 2, h, fz), P(-bw / 2, h, fz), pane);
-            glass.quad(P(bw / 2, 0, fz), P(bw / 2, 0, bz), P(bw / 2, h, bz), P(bw / 2, h, fz), pane);
-            glass.quad(P(-bw / 2, 0, bz), P(-bw / 2, 0, fz), P(-bw / 2, h, fz), P(-bw / 2, h, bz), pane);
         }
     }
 }

@@ -187,8 +187,8 @@ const TOWN_DIGESTS = {
     // panes, `render/buildings.ts`. Merged on ark-next; then GB's plain colours kept off the surface markers (a few blues
     // a quarter step, `kit.ts` plainColour).)
     // (p4 (safari): its paving, gate, waters, boardwalk, decks, boards, rails and buildings.)
-    // (p5 (homes): the towers' fronts: glazed winter-garden apartments (front and back) from the 4th storey, their windows homes'.)
-    sceneryAndBuildings: "859d1c72ea7bd9c8",
+    // (p5 (homes): the towers' fronts: open loggia apartments (front and back, railed, no glass so the rooms show) from the 4th storey, their windows homes'.)
+    sceneryAndBuildings: "99b2065d6bbffab9",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
