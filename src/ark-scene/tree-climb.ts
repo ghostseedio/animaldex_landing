@@ -383,17 +383,17 @@ export function treeClimbAt(climb: TreeClimb, u: number, groundAt: (x: number, z
 // MARK: - Who comes down head first
 
 /**
- * Coming down a trunk head first or tail first: head first for the kinds that do (a squirrel turns its hind feet back
- * and runs down; a nuthatch walks down; lizards, geckos, snakes, insects and spiders), tail first for everything else
- * that climbs (primates, bears, cats, koalas, sloths, martens, woodpeckers back down). Keyed by the model's body plan
- * (`ark.json`: "reptile", "snake", "arthropod", "frog" all head first) and, for mammals and birds, the few kinds by name
- * that are the exception (the squirrels, not the squirrel monkeys; the nuthatches; the margay, the one cat that does).
+ * Coming down a trunk head first or tail first: tail first for the kinds known to back down (the primates, the bears
+ * and pandas, the koalas, the sloths, the cats but the margay), head first for everything else that climbs (a squirrel
+ * turns its hind feet back and runs down; a goat walks down its tree or crag; a nuthatch walks down; lizards, geckos,
+ * snakes, insects and spiders). Keyed by name for mammals and birds; any other body plan (`ark.json`: "reptile",
+ * "snake", "arthropod", "frog") head first.
  */
+const TAIL_FIRST = /gibbon|siamang|orangutan|chimpanzee|gorilla|bonobo|loris|monkey|lemur|macaque|langur|baboon|tamarin|marmoset|capuchin|colobus|guereza|surili|howler|titi|saki|uakari|sifaka|indri|aye-aye|galago|bushbaby|tarsier|\bbear\b|-bear$|^bear|panda|koala|sloth|(^|-)cat$|wildcat|lion|leopard|jaguar|tiger|lynx|ocelot|serval|caracal|cougar|puma|bobcat|genet/;
 export function descendsHeadFirst(slug: string, plan: string | null | undefined): boolean {
     if (plan && plan !== "mammal" && plan !== "bird") return true;
-    if (/squirrel/.test(slug) && !/squirrel-monkey/.test(slug)) return true;
-    if (/chipmunk|nuthatch|margay/.test(slug)) return true;
-    return false;
+    if (/margay|squirrel(?!-monkey)|chipmunk/.test(slug)) return true;
+    return !TAIL_FIRST.test(slug);
 }
 
 /** The host tree of a place from its id: the scenery's `<tag>:<host>:<n>` (or `map:<tag>:<host>:<n>`), the town's `town:tree:<i>:…`. */

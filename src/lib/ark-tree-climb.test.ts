@@ -107,6 +107,11 @@ test("down a tree: a primate backs down tail first (its body still heads up the 
     assert.equal(descendsHeadFirst("eurasian-red-squirrel", "mammal"), true);
     assert.equal(descendsHeadFirst("tokay-gecko", "reptile"), true);
     assert.equal(descendsHeadFirst("koala", "mammal"), false);
+    assert.equal(descendsHeadFirst("domestic-cat", "mammal"), false);
+    assert.equal(descendsHeadFirst("asian-black-bear", "mammal"), false);
+    // (A goat walks down its tree head first; so does the margay, the one cat that does.)
+    assert.equal(descendsHeadFirst("domestic-goat", "mammal"), true);
+    assert.equal(descendsHeadFirst("margay", "mammal"), true);
 });
 
 test("from one tree to another: down the first trunk, across the ground, up the second", () => {

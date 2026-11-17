@@ -83,8 +83,9 @@ for (const shot of plan) {
         return "view";
     }, shot);
     await page.screenshot({path: path.join(out, `${shot.name}.jpg`), type: "jpeg", quality: 88});
-    notes.push(`${shot.name}: epoch ${shot.epoch} id ${shot.id ?? "-"} ${note}`);
-    console.log(shot.name, note);
+    const scan = await page.evaluate(() => JSON.stringify(window.__canopy.nanScan()));
+    notes.push(`${shot.name}: epoch ${shot.epoch} id ${shot.id ?? "-"} ${note} ${scan}`);
+    console.log(shot.name, note, scan);
 }
 writeFileSync(path.join(out, "notes.txt"), notes.concat(errors.map((e) => `error: ${e}`)).join("\n") + "\n");
 if (errors.length) console.log("page errors:", errors.slice(0, 5));

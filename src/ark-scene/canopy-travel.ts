@@ -91,8 +91,8 @@ export function gapOf(kind: CanopyKind, length: number): number {
 }
 
 /**
- * A route out from `home` through the crowns and back: up to `most` hops, each to a hold in another tree (or a run
- * along its own), outward, within its gap, never more than a rise of half the gap up or down, up in the crowns (three
+ * A route out from `home` through the crowns and back: up to `most` hops, each to a hold in another tree where one is
+ * in reach (else across its own crown, clear of its own trunk), outward, within its gap, never more than a rise of 0.6 of the gap (or 1.5 m) up or down, up in the crowns (three
  * metres and more over the ground), its line clear of every other trunk. Then back the same way. Null when no
  * neighbour is in reach. `seed`: the animal's and the route's own (its hash), so each animal goes its own way.
  */
@@ -109,8 +109,13 @@ export function planRoute(home: Anchor, anchors: readonly Anchor[], trunks: read
             if (kind.mode !== "brachiate" && b.under) return false;
             const d = Math.hypot(b.x - at.x, b.z - at.z);
             if (d < (b.tree === at.tree ? 1.2 : 0.8) || d > gap) return false;
-            if (kind.mode !== "run" && b.tree === at.tree) return false;
-            if (Math.abs(b.y - at.y) > Math.max(0.5 * d, 1)) return false;
+            // (Within its own crown too, from limb to limb, its line clear of its own trunk: a crown alone in its layer,
+            // its neighbours' crowns far over or under it, is still swung and leapt through.)
+            if (b.tree === at.tree) {
+                const own = trunks.find((t) => t.tree === at.tree);
+                if (own && segDistance(at.x, at.z, b.x, b.z, own.x, own.z) < own.r + 0.35) return false;
+            }
+            if (Math.abs(b.y - at.y) > Math.max(0.6 * d, 1.5)) return false;
             if (b.y < groundAt(b.x, b.z) + 3) return false;
             // Outward: further from home than where it is (the first hop: anywhere).
             if (k > 0 && Math.hypot(b.x - home.x, b.z - home.z) <= Math.hypot(at.x - home.x, at.z - home.z) + 0.3) return false;
@@ -124,7 +129,8 @@ export function planRoute(home: Anchor, anchors: readonly Anchor[], trunks: read
         });
         if (!ok.length) break;
         // Its own choice among them (seeded), the longer crossings a little more likely.
-        const scored = ok.map((b, i) => ({b, s: unit(seed, k * 31 + i) + 0.3 * Math.hypot(b.x - at.x, b.z - at.z) / gap})).sort((p, q) => q.s - p.s || p.b.id.localeCompare(q.b.id));
+        // (Another tree's crown first where one is in reach.)
+        const scored = ok.map((b, i) => ({b, s: unit(seed, k * 31 + i) + 0.3 * Math.hypot(b.x - at.x, b.z - at.z) / gap + (b.tree === at.tree ? 0 : 1.5)})).sort((p, q) => q.s - p.s || p.b.id.localeCompare(q.b.id));
         const next = scored[0].b;
         chain.push(next);
         used.add(next.id);
@@ -140,7 +146,14 @@ export function planRoute(home: Anchor, anchors: readonly Anchor[], trunks: read
         if (style === "swing") {
             // Half a pendulum's period on its hold (slower for a heavy slow swinger), then the flight across the rest.
             const swing = Math.PI * Math.sqrt(reach / G) * (kind.slow ? 2.2 : 1);
-            const across = Math.max(d - 2 * reach * Math.sin(SWING), 0);
+            // (The flight: from the release at the top of its swing to the catch behind the next hold, however short.)
+            const dx = to.x - from.x;
+            const dz = to.z - from.z;
+            const l = Math.hypot(dx, dz) || 1;
+            const h = {x: dx / l, y: 0, z: dz / l};
+            const r = hanging(pivotOf(from), h, SWING, reach).centre;
+            const c = hanging(pivotOf(to), h, -SWING, reach).centre;
+            const across = Math.hypot(c.x - r.x, c.y - r.y, c.z - r.z);
             seconds = swing + (kind.slow ? across / 0.8 : across / 4.5) + 0.05;
         } else if (style === "leap") seconds = 0.45 + d / 6;
         else seconds = 0.3 + d / 2.4;
@@ -332,7 +345,11 @@ function swingPose(route: CanopyRoute, p: Hop, k: number, h: Vec, from: Vec = h)
         // A pendulum: fastest at the bottom (its angle a cosine in time), from -SWING behind to +SWING ahead.
         const phi = -SWING * Math.cos(Math.PI * (k / share));
         const w = ease(k / share);
-        const turn = from.x * h.x + from.z * h.z > -0.95 ? norm({x: from.x + (h.x - from.x) * w, y: 0, z: from.z + (h.z - from.z) * w}) : h;
+        // (Turned about its hand: the swing's plane comes round through the angle between, even right round.)
+        const a0 = Math.atan2(from.x, from.z);
+        let da = Math.atan2(h.x, h.z) - a0;
+        da = Math.atan2(Math.sin(da), Math.cos(da));
+        const turn = {x: Math.sin(a0 + da * w), y: 0, z: Math.cos(a0 + da * w)};
         const hang = hanging(pa, turn, phi, reach);
         return {...hang, hand: pa, air: false, phase: "swing", blend: 1};
     }

@@ -133,6 +133,15 @@ async function main() {
             }
             return null;
         },
+        /** Objects drawn with a non-finite world matrix now (a NaN in a pose blooms white), and the camera. */
+        nanScan: () => {
+            const dbg = (window as unknown as {__arkDebug: {scene: {traverse: (f: (o: {name: string; type: string; visible: boolean; matrixWorld: {elements: number[]}; parent: unknown; userData: unknown}) => void) => void}; camera: {position: {x: number; y: number; z: number}}}}).__arkDebug;
+            const bad: string[] = [];
+            dbg.scene.traverse((o) => {
+                if (o.matrixWorld.elements.some((v) => !Number.isFinite(v)) && bad.length < 12) bad.push(`${o.type} ${o.name} ${JSON.stringify(o.userData).slice(0, 80)}`);
+            });
+            return {bad, camera: dbg.camera.position};
+        },
         view: () => handle.view(),
         homeView: () => handle.homeView()
     } as never;
