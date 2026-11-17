@@ -15,6 +15,7 @@ import type {ArkAnimal} from "@/ark-scene/types";
 import type {ChunkGrid, ChunkSpan} from "@/ark-scene/streaming/chunks";
 import type {TownPlace} from "@/ark-scene/islands/town/placement";
 import {ARK_ISLANDS, townWorldOrigin} from "@/ark-scene/islands";
+import {coopPose} from "@/ark-scene/islands/town/rural";
 import {TOWN_CHUNK_COUNT, TOWN_GRID} from "@/ark-scene/islands/town/chunks";
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
 import type {ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
@@ -346,6 +347,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     buildStats.wallMs = performance.now() - wallStart;
     for (const key of ["workMs", "longestMs", "wallMs"] as const) buildStats[key] = Math.round(buildStats[key]);
     const clockAt = (ms: number) => townClockAt(ms, options.offsetHours ?? 0);
+    let hoursNow = 12;
     /** Each zoo resident's feeding variant (one object each: the schedule's memo is kept per animal). */
     const feeding = new WeakMap<ScheduleAnimal, ScheduleAnimal>();
     let towned = new Map<string, TownPlace>();
@@ -416,6 +418,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         },
         update: (epochMs) => {
             const clock = clockAt(epochMs);
+            hoursNow = clock.hours; // p5 (rural): the hens' shut-in by the clock.
             town.update(clock);
             zooLife.update(clock);
             // Mobile performance lane: its transparent double-sided meshes (the zoo's glass, cage bars and nets) as two
@@ -491,6 +494,13 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             if (pen) {
                 // p3 (solid): and off what stands in the pen (a garden room, a trough, a bush), the town's colliders.
                 keepInPen(pen, towned.get(id)!.penMargin ?? 0, pose, origin.x, origin.z, collidersMemo?.set);
+                // p5 (rural): a countryside hen to her hen house at dusk, shut in until the morning (`rural.ts` coopPose).
+                const coop = coopPose(towned.get(id)!.place, id, hoursNow, pose.x - origin.x, pose.z - origin.z);
+                if (coop) {
+                    pose.x = coop.x + origin.x;
+                    pose.z = coop.z + origin.z;
+                    if (pose.base !== undefined) pose.base = townHeight(coop.x, coop.z) + coop.floor;
+                }
                 return;
             }
             const mask = towned.get(id)?.enclosure?.mask;

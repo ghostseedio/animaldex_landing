@@ -75,3 +75,86 @@ export function ruralEdge(h: Hedge, gates: readonly FarmGate[], chunkAt: (x: num
         }
     }
 }
+
+// MARK: - The poultry farm's and the arena's small things
+
+const EARTH = tone("#8a7458");
+const GALV = tone("#a7adb0");
+const RED_PLASTIC = tone("#b8352c");
+const POLE_WHITE = tone("#eeeae2");
+const POLE_RED = tone("#c0392b");
+const WING = tone("#e7e2d6");
+
+/** A low, ragged disc of bare earth where hens dust-bathe (a hand over the ground, its edge tucked in). */
+function dustBath(geo: Geo, x: number, z: number, radius: number, seed: number) {
+    const r = rng(seed);
+    const n = 12;
+    const g = (px: number, pz: number) => townHeight(px, pz) + 0.025;
+    const pts: Array<[number, number, number]> = [];
+    for (let i = 0; i < n; i++) {
+        const a = (i / n) * Math.PI * 2;
+        const rr = radius * (0.75 + r() * 0.4);
+        const px = x + Math.cos(a) * rr;
+        const pz = z + Math.sin(a) * rr;
+        pts.push([px, g(px, pz) - 0.012, pz]);
+    }
+    const c: [number, number, number] = [x, g(x, z), z];
+    for (let i = 0; i < n; i++) geo.tri(c, pts[(i + 1) % n], pts[i], shade(EARTH, 0.9 + r() * 0.15));
+}
+
+/** A galvanised feed hopper on its legs over a pan, and a red bell drinker beside it. */
+function feederAndDrinker(geo: Geo, x: number, z: number, rot: number) {
+    const f: Frame = {x, y: townHeight(x, z), z, rot};
+    for (const [lx, lz] of [[-0.18, -0.18], [0.18, -0.18], [0.18, 0.18], [-0.18, 0.18]]) geo.box(f, lx, 0, lz, 0.03, 0.32, 0.03, shade(GALV, 0.8));
+    geo.cylinder(f, 0, 0.12, 0, 0.32, 0.32, 0.06, shade(GALV, 0.9), 12);
+    geo.cylinder(f, 0, 0.3, 0, 0.17, 0.2, 0.45, GALV, 10);
+    geo.cylinder(f, 0, 0.75, 0, 0.21, 0.05, 0.08, shade(GALV, 1.05), 10);
+    const d: Frame = {...f, x: x + Math.cos(rot) * 0.9, z: z + Math.sin(rot) * 0.9, y: townHeight(x + Math.cos(rot) * 0.9, z + Math.sin(rot) * 0.9)};
+    geo.cylinder(d, 0, 0, 0, 0.26, 0.26, 0.07, RED_PLASTIC, 12);
+    geo.cylinder(d, 0, 0.07, 0, 0.17, 0.05, 0.36, RED_PLASTIC, 10);
+}
+
+/** A show jump: two wings and three poles in red and white. */
+function showJump(geo: Geo, x: number, z: number, rot: number, height: number) {
+    const f: Frame = {x, y: townHeight(x, z), z, rot};
+    for (const lx of [-1.9, 1.9]) {
+        geo.box(f, lx, 0, 0, 0.12, 1.5, 0.5, WING);
+        geo.box(f, lx, 0, 0, 0.5, 0.06, 0.6, shade(WING, 0.9));
+    }
+    for (let i = 0; i < 3; i++) {
+        const y = height * ((i + 1) / 3);
+        for (let s = 0; s < 6; s++) geo.box(f, -1.6 + (s + 0.5) * (3.2 / 6), y, 0, 3.2 / 6, 0.09, 0.09, s % 2 ? POLE_RED : POLE_WHITE);
+    }
+}
+
+/**
+ * The countryside's small things (p5 (rural), the owner's "add chicken farms too": dust-bathing patches, feeders and
+ * drinkers on the free range, in the orchard and the run; two show jumps in the riding arena). Drawn into the chunks'
+ * solid geometry; none stands where an animal is placed (the run's and the range's hen houses are the colliders).
+ */
+export function ruralProps(pens: ReadonlyArray<{id: string; at: {x: number; z: number; w: number; d: number; rot: number}}>, chunkAt: (x: number, z: number) => {solid: Geo}) {
+    for (const p of pens) {
+        const r = rng(hashText(`${p.id}:props`));
+        const c = Math.cos(p.at.rot);
+        const sn = Math.sin(p.at.rot);
+        const local = (lx: number, lz: number) => ({x: p.at.x + lx * c - lz * sn, z: p.at.z + lx * sn + lz * c});
+        if (p.id === "rural-free-range" || p.id === "rural-orchard" || p.id === "rural-farmyard-run") {
+            const baths = p.id === "rural-free-range" ? 6 : p.id === "rural-orchard" ? 3 : 1;
+            for (let i = 0; i < baths; i++) {
+                const q = local((r() - 0.5) * (p.at.w - 3), (r() - 0.5) * (p.at.d - 3));
+                dustBath(chunkAt(q.x, q.z).solid, q.x, q.z, 0.6 + r() * 0.5, hashText(`${p.id}:bath:${i}`));
+            }
+            const feeders = p.id === "rural-free-range" ? 3 : 1;
+            for (let i = 0; i < feeders; i++) {
+                const q = local(-p.at.w / 2 + 1.6 + i * ((p.at.w - 3.2) / Math.max(feeders - 1, 1)), p.at.d / 2 - 1.4);
+                feederAndDrinker(chunkAt(q.x, q.z).solid, q.x, q.z, p.at.rot);
+            }
+        }
+        if (p.id === "rural-arena") {
+            for (const [lx, lz, turn, h] of [[-6, 0, Math.PI / 2, 0.9], [6, 1.5, Math.PI / 2 + 0.3, 1.1]] as const) {
+                const q = local(lx, lz);
+                showJump(chunkAt(q.x, q.z).solid, q.x, q.z, p.at.rot + turn, h);
+            }
+        }
+    }
+}

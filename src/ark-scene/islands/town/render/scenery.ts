@@ -33,7 +33,8 @@ import {clearOfDoors, PATH_WIDTH, pathOpenings, townDoorWays} from "@/ark-scene/
 import {boundaryBodies, madeHere} from "@/ark-scene/islands/town/render/fences";
 import {parkBench} from "@/ark-scene/islands/town/render/bench";
 import {safariBarrier, safariScenery} from "@/ark-scene/islands/town/render/safari";
-import {ruralEdge} from "@/ark-scene/islands/town/render/rural-edges";
+import {ruralEdge, ruralProps} from "@/ark-scene/islands/town/render/rural-edges";
+import {RURAL_PENS} from "@/ark-scene/islands/town/rural";
 import {safariArea} from "@/ark-scene/islands/town/safari";
 import {bridgeAt, bridgeHeight, canalBridges, PARAPET} from "@/ark-scene/islands/town/canal-bridges";
 import {drawCanalBridge} from "@/ark-scene/islands/town/render/canal-bridges";
@@ -458,6 +459,8 @@ function fields(out: SceneryOut, plan: TownPlan) {
     }
     // The farms' bales, troughs and hay shelters (lane GC, `farm.ts`: they are colliders too); a tractor at each farmstead.
     for (const p of townFarmProps(plan)) farmProp(chunkFor(out, p.at.x, p.at.z).solid, p);
+    // p5 (rural): the poultry farm's dust baths, feeders and drinkers; the arena's jumps.
+    ruralProps(RURAL_PENS, (x, z) => chunkFor(out, x, z));
     for (const farm of plan.farms) {
         const c = chunkFor(out, farm.at.x, farm.at.z);
         if (farm.kind === "farmstead") {

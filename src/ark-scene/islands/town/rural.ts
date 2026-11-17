@@ -291,3 +291,59 @@ export function inRuralPen(x: number, z: number, margin = 0): RuralPen | null {
     for (const p of RURAL_PENS) if (inBox(p.at, x, z, margin)) return p;
     return null;
 }
+
+// MARK: - Shut in at dusk
+
+/**
+ * The poultry's day (the owner, 2026-11-17: "hens ranging out by day and shut in at dusk"): the free-range flocks, the
+ * orchard's and the farmyard's go in to their hen house as the light fades and are shut in, let out in the morning, by
+ * the shared clock (island hours): walking to the pophole over the half hour before `in`, inside until `out`, out over
+ * the half hour after. The same for every viewer.
+ */
+export const COOP_HOURS = {in: 19.25, out: 6.75, walk: 0.5};
+
+const POULTRY_HOUSES: Record<string, string[]> = {
+    "rural-free-range": HEN_HOUSES.map((h) => h.id),
+    "rural-orchard": ["rural-orchard-hen-house"],
+    "rural-farmyard-run": ["rural-farmyard-coop"]
+};
+
+/** The hen house a bird of this field goes in to (a hash of its id over the field's houses), or null for another field. */
+export function henHouseOf(fieldId: string, id: string): RuralBuilding | null {
+    const ids = POULTRY_HOUSES[fieldId];
+    if (!ids) return null;
+    const pickId = ids[hashText(`${id}|hen-house`) % ids.length];
+    return RURAL_BUILDINGS.find((b) => b.id === pickId) ?? null;
+}
+
+function houseLocal(b: RuralBuilding, lx: number, lz: number): Pt {
+    const c = Math.cos(b.at.rot);
+    const s = Math.sin(b.at.rot);
+    return {x: b.at.x + lx * c - lz * s, z: b.at.z + lx * s + lz * c};
+}
+
+/**
+ * Where a bird is now against its hen house (local frame): null while it ranges (its schedule's pose stands), else the
+ * point it walks to or rests at and whether it is inside (shut in: its floor is the house's, `floor` m over the ground).
+ */
+export function coopPose(fieldId: string, id: string, hours: number, x: number, z: number): {x: number; z: number; inside: boolean; floor: number} | null {
+    const house = henHouseOf(fieldId, id);
+    if (!house) return null;
+    const {in: shut, out, walk} = COOP_HOURS;
+    const h = ((hours % 24) + 24) % 24;
+    const door = houseLocal(house, (house.at.w * 0.2), house.at.d / 2 + 0.45);
+    const r = hashText(`${id}|perch`);
+    const spot = houseLocal(house, ((r % 100) / 100 - 0.5) * (house.at.w - 1), (((r >>> 8) % 100) / 100 - 0.5) * (house.at.d - 1));
+    const floor = house.kind === "hen_house" ? 0.75 : 0.5;
+    const ease = (t: number) => t * t * (3 - 2 * t);
+    if (h >= shut - walk && h < shut) {
+        const t = ease((h - (shut - walk)) / walk);
+        return {x: x + (door.x - x) * t, z: z + (door.z - z) * t, inside: false, floor: 0};
+    }
+    if (h >= shut || h < out) return {x: spot.x, z: spot.z, inside: true, floor};
+    if (h < out + walk) {
+        const t = ease((h - out) / walk);
+        return {x: door.x + (x - door.x) * t, z: door.z + (z - door.z) * t, inside: false, floor: 0};
+    }
+    return null;
+}

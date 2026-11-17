@@ -29,7 +29,7 @@ import {islandHours} from "@/lib/ark-clock";
 import {sampleTownGround} from "@/ark-scene/islands/town/ground";
 import {inland, townPlan} from "@/ark-scene/islands/town/plan";
 import {farmOf} from "@/ark-scene/islands/town/areas";
-import {FARM_KEEP, PETTING_KEEP, RURAL_BUILDINGS, RURAL_LANE, RURAL_LANE_WIDTH, RURAL_PENS, RURAL_TRACKS, ruralKindOf, ruralPenOf, ruralPondNorm, type RuralKind} from "@/ark-scene/islands/town/rural";
+import {COOP_HOURS, coopPose, henHouseOf, FARM_KEEP, PETTING_KEEP, RURAL_BUILDINGS, RURAL_LANE, RURAL_LANE_WIDTH, RURAL_PENS, RURAL_TRACKS, ruralKindOf, ruralPenOf, ruralPondNorm, type RuralKind} from "@/ark-scene/islands/town/rural";
 import residents from "@/ark-scene/islands/town/rural-residents.json";
 
 /** The live record's kept kinds (scratchpad snapshot, 2026-11-16) with their stored scientific names. */
@@ -232,4 +232,25 @@ test("the real record (when the local snapshot is here): gardens without livesto
     });
     console.log(`countryside on the live record: ${fields.size} animals in ${new Set(Array.from(fields.values()).map((f) => f.id)).size} fields`);
     assert.ok(fields.size > 150);
+});
+
+test("the hens range by day and are shut in their hen house from dusk to morning, by the shared clock", () => {
+    for (const field of ["rural-free-range", "rural-orchard", "rural-farmyard-run"]) {
+        for (let i = 0; i < 30; i++) {
+            const id = `hen-${field}-${i}`;
+            const house = henHouseOf(field, id)!;
+            assert.ok(house && RURAL_PENS.find((p) => p.id === field)!.at && corners(house.at).every((c) => inBox(RURAL_PENS.find((p) => p.id === field)!.at, c.x, c.z, 0)), `${id}'s house in its field`);
+            const at = RURAL_PENS.find((p) => p.id === field)!.at;
+            assert.equal(coopPose(field, id, 12, at.x, at.z), null, "out ranging at noon");
+            for (const h of [COOP_HOURS.in + 0.1, 23, 2, COOP_HOURS.out - 0.1]) {
+                const p = coopPose(field, id, h, at.x, at.z)!;
+                assert.ok(p.inside && inBox(house.at, p.x, p.z, -0.3), `${id} inside at ${h} h`);
+                assert.deepEqual(p, coopPose(field, id, h, at.x + 3, at.z - 2), "inside, wherever it was");
+            }
+            // Walking in and out: between its place and the pophole, never through the house.
+            const dusk = coopPose(field, id, COOP_HOURS.in - COOP_HOURS.walk / 2, at.x, at.z)!;
+            assert.ok(!dusk.inside && Number.isFinite(dusk.x));
+        }
+    }
+    assert.equal(coopPose("rural-dairy-pasture", "cow-1", 23, 0, 0), null, "only the poultry");
 });
