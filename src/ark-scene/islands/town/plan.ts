@@ -332,6 +332,8 @@ type Ctx = {
     keepOut: Box[];
 };
 
+/** The church: its nave's length and the west tower's side (m), both inside its footprint. */
+export const CHURCH = {nave: 23, tower: 7.4};
 const HOUSE = {w: 7.4, d: 8.6, setback: 4.2, eaves: 5.3};
 /** Terraces on these streets have shops on the ground floor. */
 const SHOP_STREETS = new Set(["high_street", "square_walk"]);
@@ -613,8 +615,10 @@ function buildPlan(): TownPlan {
     ctx.greens.push({id: "square", kind: "verge", poly: corners(square)});
     ctx.waters.push({id: "fountain", kind: "fountain", poly: ellipse(square.x, square.z, 2.6, 2.6, 16), level: TOWN_LEVEL + 0.55, depth: 0.5});
     addBuilding(ctx, {id: "town_hall", kind: "hall", at: box(-36, -8, 20, 12, Math.PI + 0.02), floors: 2, eaves: 8, roof: "hip", households: 0, top: 13, tall: {x: -36, z: -8, y: 16}});
-    // The church: the nave east–west, the tower at the west end by the canal.
-    addBuilding(ctx, {id: "church", kind: "church", at: box(32, -20, 11, 24, Math.PI / 2 + 0.05), floors: 1, eaves: 9, roof: "gable", households: 0, top: 15, tall: {x: 19, z: -20.6, y: 31}});
+    // The church: the nave east–west, the tower at the west end by the canal. The footprint holds the tower too (its
+    // front, local +z, is the west end): the tower used to be drawn 3.6 m past the footprint's other end, on Park
+    // Road (the owner, 2026-11-17: "fix the church, it's rendering on the road"). The belfry stays at `tall`.
+    addBuilding(ctx, {id: "church", kind: "church", at: box(30.5, -20, 11, CHURCH.nave + CHURCH.tower, Math.PI / 2 + 0.05), floors: 1, eaves: 9, roof: "gable", households: 0, top: 15, tall: {x: 19, z: -20.6, y: 31}});
     const churchyard: Poly = [{x: 13, z: -34}, {x: 46, z: -38}, {x: 46, z: 14}, {x: 14, z: 16}];
     ctx.greens.push({id: "churchyard", kind: "churchyard", poly: churchyard});
     ctx.keepOut.push(box(30, -11, 32, 48));
@@ -622,7 +626,9 @@ function buildPlan(): TownPlan {
         const r = rng(hashText(`churchyard-${i}`));
         const x = 16 + r() * 28;
         const z = -32 + r() * 44;
-        if (Math.abs(z + 20) < 8 && x > 18) continue;
+        if (Math.abs(z + 20) < 8 && x > 13) continue;
+        // (Off Church Walk: a yew stood on the path.)
+        if (polylineWithin(street("church_walk").line, x, z, 3)) continue;
         ctx.trees.push({x, z, kind: i % 3 === 0 ? "yew" : i % 3 === 1 ? "lime" : "oak", scale: 0.9 + r() * 0.5, seed: hashText(`churchyard-${i}`)});
     }
     // The mill on the canal by the millpond (its chimney: the town's other tall perch).
@@ -736,8 +742,28 @@ function buildPlan(): TownPlan {
         const east = i % 2 === 1;
         ctx.moorings.push({x: east ? 46.5 : -14.5, z: 112 + Math.floor(i / 2) * 10, turn: (r() - 0.5) * 0.08, length: 6 + r() * 4, harbour: true, seed: hashText(`mooring-h${i}`)});
     }
+    // p4 (townfix): never moored under a bridge (four of six were: their cabins and poles stood through the deck).
+    const bridged = TOWN_STREETS.filter((s) => s.kind === "high" || s.kind === "road" || s.kind === "path");
+    const underBridge = (along: number, length: number) => {
+        for (let t = -length / 2 - 1; t <= length / 2 + 1; t += 0.5) {
+            const p = polylineAt(CANAL, along + t).point;
+            if (bridged.some((s) => polylineWithin(s.line, p.x, p.z, s.width / 2 + s.pavement + 1.2))) return true;
+        }
+        return false;
+    };
+    const canalLength = polylineLength(CANAL);
     for (let i = 0; i < 6; i++) {
-        const along = 30 + i * 24;
+        const length = 12 + (i % 3) * 3;
+        // The nearest clear berth to its own: off the bridges, in the canal short of the lock.
+        let along = 30 + i * 24;
+        for (let k = 0; k < 60; k++) {
+            const tryAt = 30 + i * 24 + (k % 2 ? -1 : 1) * Math.ceil(k / 2);
+            if (tryAt - length / 2 < 4 || tryAt + length / 2 > canalLength - 14) continue;
+            if (!underBridge(tryAt, length)) {
+                along = tryAt;
+                break;
+            }
+        }
         const {point, dir} = polylineAt(CANAL, along);
         const side = i % 2 ? 1 : -1;
         const nx = -dir.z * side;

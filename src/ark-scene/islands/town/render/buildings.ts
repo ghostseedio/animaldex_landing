@@ -25,7 +25,7 @@ import {corners, rng, type Box} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {houseDoorU, terraceBackDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
 import {boundaryChunks, boundaryDetail} from "@/ark-scene/islands/town/render/fences";
-import type {Building, TownPlan} from "@/ark-scene/islands/town/plan";
+import {CHURCH, type Building, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {chance, darkness, windowLit, type TownClock} from "@/ark-scene/islands/town/people";
 import {TOWN_CHUNK_COUNT, townChunkDistance, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
 import {at, COLOUR_TAG_TOLERANCE, Geo, NullGeo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
@@ -714,21 +714,30 @@ function shopUpper(ctx: Ctx, b: Building) {
     }
 }
 
-function church(ctx: Ctx, b: Building) {
+/**
+ * The church's parts inside its footprint (plan `CHURCH`): the west tower at the front (local +z) end, the nave behind
+ * it. Nothing is drawn past the footprint but the north porch (clear of Church Walk, which ends at its door).
+ */
+function churchParts(b: Building): {nave: Frame; naveLength: number; tower: Frame} {
     const f = buildingFrame(b.at);
+    const naveLength = b.at.d - CHURCH.tower;
+    return {nave: {...f, ...pos(f, 0, -CHURCH.tower / 2)}, naveLength, tower: {...f, ...pos(f, 0, b.at.d / 2 - CHURCH.tower / 2)}};
+}
+
+function church(ctx: Ctx, b: Building) {
     const {solid} = ctx.chunk;
     const stone = tone("#b7ab94");
     const slate = tone("#4b5056");
     const w = b.at.w;
-    const d = b.at.d;
+    const {nave: f, naveLength: d, tower} = churchParts(b);
     ctx.look = {pane: PANE.church, surround: "stone"};
     plinth(solid, f, w, d, tone("#8a8070"));
-    // The nave along local z (the footprint is 11 wide, 24 long), its roof steep.
+    // The nave along local z (11 wide), its roof steep.
     solid.as(SURFACE.stone, () => solid.box(f, 0, 0, 0, w, b.eaves, d, stone));
     solid.as(SURFACE.slate, () => solid.gable(f, 0, b.eaves, 0, d, w, 6.5, 0.4, slate, stone, Math.PI / 2, 0.14, SURFACE.stone));
     ridge(solid, {...f, y: f.y + b.eaves + 6.5}, d, 0, slate, Math.PI / 2);
     // Buttresses and tall windows down both sides.
-    const [, right, , left] = sides(f, w, d);
+    const [, right, back, left] = sides(f, w, d);
     for (const side of [right, left]) {
         for (let k = 0; k < 5; k++) {
             const u = -d / 2 + (d * (k + 0.5)) / 5;
@@ -736,16 +745,17 @@ function church(ctx: Ctx, b: Building) {
             if (k < 4) solid.as(SURFACE.stone, () => solid.box(side.frame, u + d / 10, 0, 0.35, 0.7, b.eaves - 1.5, 0.7, shade(stone, 0.94)));
         }
     }
-    // The east window, the porch.
-    const [front, , back] = sides(f, w, d);
-    windowAt(ctx, front.frame, 0, 5.2, 3.0, 5.2, "church", 0, 0, tone("#d8ccb4"));
-    solid.as(SURFACE.stone, () => solid.box(right.frame, 3, 0, 1.8, 3.2, 3.2, 3.2, stone));
-    solid.as(SURFACE.slate, () => solid.gable(right.frame, 3, 3.2, 1.8, 3.2, 3.2, 1.6, 0.2, slate, stone, Math.PI / 2, 0.14, SURFACE.stone));
-    // The tower at the west end (the back of the footprint), and its spire.
-    const tower = {...f, ...pos(back.frame, 0, 3.6)};
+    // The east window (the back of the nave), and the north porch by the end of Church Walk, its door on the path.
+    windowAt(ctx, back.frame, 0, 5.2, 3.0, 5.2, "church", 0, 0, tone("#d8ccb4"));
+    const porch = {...right.frame, ...pos(right.frame, CHURCH_PORCH_U, 1.8)};
+    solid.as(SURFACE.stone, () => solid.box(porch, 0, 0, 0, 3.2, 3.2, 3.2, stone));
+    solid.as(SURFACE.slate, () => solid.gable(porch, 0, 3.2, 0, 3.2, 3.2, 1.6, 0.2, slate, stone, Math.PI / 2, 0.14, SURFACE.stone));
+    door(solid, sides(porch, 3.2, 3.2)[3].frame, 0, tone("#4a3222"), 1.2, 2.4);
+    // The tower at the west end, and its spire.
+    plinth(solid, tower, 7.4, 7.4, tone("#8a8070"));
     const th = 22;
     solid.as(SURFACE.stone, () => {
-        solid.box(tower, 0, -1.6, 0, 7.4, th + 1.6, 7.4, shade(stone, 0.97));
+        solid.box(tower, 0, 0, 0, 7.4, th, 7.4, shade(stone, 0.97));
         solid.box(tower, 0, th, 0, 8, 1.0, 8, shade(stone, 0.9));
         for (const [cx, cz] of [[-3.6, -3.6], [3.6, -3.6], [3.6, 3.6], [-3.6, 3.6]]) solid.pyramid(tower, cx, th + 1, cz, 0.8, 1.6, stone);
         // String courses up the tower.
@@ -753,14 +763,19 @@ function church(ctx: Ctx, b: Building) {
     });
     solid.as(SURFACE.slate, () => solid.pyramid(tower, 0, th + 1, 0, 6.2, 14, slate));
     solid.as(SURFACE.metal, () => solid.cylinder(tower, 0, th + 15, 0, 0.06, 0.06, 1.6, tone("#c9a23c"), 4));
-    // Belfry louvres and clock faces on all four sides.
-    for (const side of sides(tower, 7.4, 7.4)) {
+    // Belfry louvres on all four sides; clock faces and windows on the three clear of the nave's roof.
+    sides(tower, 7.4, 7.4).forEach((side, i) => {
         windowAt(ctx, side.frame, 0, 18.5, 1.6, 2.8, "church", 0, 1, tone("#a89c86"), PANE.works);
+        if (i === 2) return;
         clockFace(solid, side.frame, 0, 14.2);
         windowAt(ctx, side.frame, 0, 8, 1.0, 2.6, "church", 0, 0, tone("#a89c86"));
-    }
-    door(solid, sides(tower, 7.4, 7.4)[2].frame, 0, tone("#4a3222"), 1.6, 3.0);
+    });
+    // The west door, facing the canal.
+    door(solid, sides(tower, 7.4, 7.4)[0].frame, 0, tone("#4a3222"), 1.6, 3.0);
 }
+
+/** Where the church porch sits along the nave's north wall (m from its middle): its west door at Church Walk's end. */
+const CHURCH_PORCH_U = -1.3;
 
 /** A tower clock's face; its hands are drawn by `render/index.ts` (they turn with the island clock). */
 function clockFace(geo: Geo, side: Frame, u: number, y: number) {
@@ -1195,9 +1210,8 @@ export function buildBuilding(chunk: BuildingChunk, b: Building) {
 export function clockFaces(b: Building): Array<{x: number; y: number; z: number; nx: number; nz: number; r: number}> {
     const f = buildingFrame(b.at);
     if (b.kind === "church") {
-        const back = sides(f, b.at.w, b.at.d)[2];
-        const tower = {...f, ...pos(back.frame, 0, 3.6)};
-        return sides(tower, 7.4, 7.4).map((side) => {
+        const {tower} = churchParts(b);
+        return sides(tower, 7.4, 7.4).filter((_, i) => i !== 2).map((side) => {
             const p = at(side.frame, 0, 14.2, 0.1);
             return {x: p[0], y: p[1], z: p[2], nx: -Math.sin(side.frame.rot), nz: Math.cos(side.frame.rot), r: 1.25};
         });

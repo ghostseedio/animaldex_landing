@@ -15,8 +15,9 @@
 import manifest from "@/ark-scene/assets-manifest.json";
 import rockAttach from "../../public/ark/assets/v1/rocks/attach.json";
 import {DECOR_SINK} from "@/ark-scene/micro-decor";
-import {baseOutline, cachedRock, orient, ROCK_DETAIL, ROCK_VARIANTS, rockAttachRows, tiltedBox} from "@/ark-scene/rock-shapes";
+import {baseOutline, cachedRock, orient, ROCK_DETAIL, ROCK_VARIANTS, rockAttachRows, tiltedBox, type RockStyle} from "@/ark-scene/rock-shapes";
 import {arkWorld, heightAt, onArkWorld, sampleGround, zoneAt} from "@/ark-scene/world";
+import {WILD_HALF, WILD_SEGMENT} from "@/ark-scene/islands/wild/frame";
 
 type RockInfo = {kind: string; height: number; bounds: {min: [number, number, number]; max: [number, number, number]}; lod_distances: [number, number, number]; lods: Array<{level: "lod0" | "lod1" | "lod2"; file: string; tris: number; doubleSided: boolean}>};
 type Row = {tag: string; p: [number, number, number]; n: [number, number, number]; size: [number, number]; spot?: string};
@@ -202,6 +203,106 @@ function seat(item: RockItem, b: {min: [number, number, number]; max: [number, n
     const y = Math.min(item.y - DECOR_SINK, ground - need);
     return {y: Math.max(y, Math.min(item.y - DECOR_SINK, deepest)), seated: y >= deepest};
 }
+
+const undersides = new Map<string, Array<[number, number, number, number, number, number]>>();
+
+/**
+ * A rock shape's underside, in its own frame: the vertices of its lower half that face down or out (position, normal).
+ * Its base, and the bulge over it that hangs over a slope falling away below the rock.
+ */
+export function rockUnderside(style: RockStyle, variant: number): {points: Array<[number, number, number, number, number, number]>; top: number} {
+    const mesh = cachedRock(style, variant, ROCK_DETAIL[style][0]);
+    const key = `${style}:${variant}`;
+    let points = undersides.get(key);
+    if (!points) {
+        const top = mesh.bounds.max[1];
+        points = [];
+        const p = mesh.positions;
+        const n = mesh.normals;
+        for (let i = 0; i < p.length; i += 3) if (p[i + 1] < top * 0.5 && n[i + 1] < 0.35) points.push([p[i], p[i + 1], p[i + 2], n[i], n[i + 1], n[i + 2]]);
+        undersides.set(key, points);
+    }
+    return {points, top: mesh.bounds.max[1]};
+}
+
+/** The style and shape of a decor rock made here (null for an asset rock). */
+export function generatedShape(id: string): {style: "boulder" | "slab"; variant: number} | null {
+    return generated(id);
+}
+
+export type FootedRock = {style: RockStyle; variant: number; x: number; y: number; z: number; yaw: number; up: [number, number, number]; scale: number};
+
+/**
+ * How far a rock made here is drawn down to the ground (p4, the owner's coordinator: "the boulders float in the
+ * air off the slope"): on the steepest faces the placement's sink is capped (a rock keeps showing; `seat` above,
+ * `rock-layout.ts`), and the shape's broken underside reaches past the ring the sink is measured on, so its downhill
+ * edge hung up to two metres over the ground. Moving the rock would move its attach points and with them the homes the
+ * server's atlas pins, so instead the drawing stretches the rock down along its own up, its top held where it is
+ * (y' = top + (y - top)·k): the factor k (1 = as made) that puts every vertex of its underside into the ground.
+ * Pure: the same on every device. 1 for an asset rock or a rock already sitting in its ground.
+ */
+/**
+ * The ground as drawn on the bigger wild island: its vertices (every 1.1 m, `islands/wild/frame.ts`) read once each and
+ * kept, bilinear between them. The rocks' feet are measured on it: the surface that shows, and a few vertices a rock,
+ * not the field's full sampling at every point of every rock.
+ */
+const drawnVertex = new Map<number, number>();
+onArkWorld(() => drawnVertex.clear());
+export function drawnGround(x: number, z: number): number {
+    if (arkWorld() !== "v2") return heightAt(x, z);
+    const fi = (x + WILD_HALF) / WILD_SEGMENT;
+    const fj = (z + WILD_HALF) / WILD_SEGMENT;
+    const i = Math.floor(fi);
+    const j = Math.floor(fj);
+    const at = (a: number, b: number): number => {
+        const key = b * 100003 + a;
+        let h = drawnVertex.get(key);
+        if (h === undefined) {
+            h = heightAt(a * WILD_SEGMENT - WILD_HALF, b * WILD_SEGMENT - WILD_HALF);
+            drawnVertex.set(key, h);
+        }
+        return h;
+    };
+    const tx = fi - i;
+    const tz = fj - j;
+    const a = at(i, j);
+    const b = at(i + 1, j);
+    const d = at(i, j + 1);
+    const e = at(i + 1, j + 1);
+    return a + (b - a) * tx + (d - a) * tz + (a - b - d + e) * tx * tz;
+}
+
+export function rockFoot(rock: FootedRock): number {
+    const {points, top} = rockUnderside(rock.style, rock.variant);
+    const rotate = orient(rock.up, rock.yaw);
+    const s = rock.scale;
+    // The points that face down in the world as placed: the rock's underside over its slope.
+    const under = points.filter(([, , , nx, ny, nz]) => rotate(nx, ny, nz)[1] < -0.3 || ny < -0.5);
+    const worstAt = (k: number): number => {
+        let worst = -Infinity;
+        for (const [px, py, pz] of under) {
+            const [dx, dy, dz] = rotate(px * s, (top + (py - top) * k) * s, pz * s);
+            worst = Math.max(worst, rock.y + dy - drawnGround(rock.x + dx, rock.z + dz) + 0.03);
+        }
+        return worst;
+    };
+    // The least reach that puts it in its ground (a tenth at a time), else the reach that leaves the least gap.
+    let best = 1;
+    let least = worstAt(1);
+    if (least <= 0.02) return 1;
+    for (let k = 1.1; k <= FOOT_MOST + 1e-6; k += 0.1) {
+        const worst = worstAt(k);
+        if (worst < least) {
+            least = worst;
+            best = k;
+        }
+        if (worst <= 0.02) return k;
+    }
+    return best;
+}
+
+/** The most a rock is reached down (its height under its top, fourfold). */
+export const FOOT_MOST = 4;
 
 export type RockAttach = {tag: string; spot: string; position: {x: number; y: number; z: number}; normal: {x: number; y: number; z: number}; size: [number, number]};
 

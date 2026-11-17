@@ -153,6 +153,8 @@ void main() {
  */
 export function gtaoLeavesOut(object: Object3D): boolean {
     if ((object as Sprite).isSprite) return true;
+    // p4 (waterfall): see-through layers drawn in their own shaders (the falls' water and mist) mark themselves.
+    if (object.userData.gtaoSkip === true) return true;
     const material = (object as Mesh).material as Material | Material[] | undefined;
     if (!!material && !Array.isArray(material) && material.blending === AdditiveBlending && !material.depthWrite) return true;
     return Boolean((object as InstancedMesh).isInstancedMesh && (object as InstancedMesh).geometry?.getAttribute("arkRigA"));

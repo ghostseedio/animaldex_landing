@@ -9,11 +9,13 @@
  * The barriers' rockwork (pass 1, detail 1) goes the same way. A Geo given `rocks` (an array) records its boulders there (`ROCK_STRIDE` numbers each) instead of drawing them.
  */
 
-import {BatchedMesh, BufferAttribute, BufferGeometry, Color, Matrix4, Quaternion, Vector3, type Material} from "three";
+import {BatchedMesh, BufferAttribute, BufferGeometry, Color, Material, Matrix4, Quaternion, Vector3} from "three";
 import {cachedRock, ROCK_VARIANTS} from "@/ark-scene/rock-shapes";
 
 /** x, y, z, sx, sy, sz, turn, r, g, b, variant, detail: one boulder as `kit.ts` rock takes it (its base at y). */
 export const ROCK_STRIDE = 12;
+/** p4 (townfix): added to a boulder's detail, the crag's shape instead (the big rockwork, `kit.ts` rock). */
+export const CRAG = 4;
 
 const shapes = new Map<number, BufferGeometry>();
 
@@ -27,7 +29,10 @@ export function rockShape(variant: number, detail = 2): BufferGeometry {
     const key = v * 8 + detail;
     const found = shapes.get(key);
     if (found) return found;
-    const m = cachedRock("boulder", v, detail, true);
+    // p4 (townfix): a detail past `CRAG` is the wild island's bedded crag (stepped strata, split by joints) at its detail
+    // less CRAG: the zoo's big rockwork (`kit.ts` rock), no longer a smooth boulder blown up to a kopje.
+    // (The crag at detail 1 whatever the boulder's: 320 faces, a habitat boulder's own count; its detail 2 is 1,280.)
+    const m = detail >= CRAG ? cachedRock("crag", v, 1, true) : cachedRock("boulder", v, detail, true);
     const [x0, , z0] = m.bounds.min;
     const [x1, y1, z1] = m.bounds.max;
     const kx = 2 / (x1 - x0);
@@ -133,4 +138,48 @@ export class RockInstances {
             mesh.dispose();
         }
     }
+}
+
+/**
+ * p4 (townfix; the coordinator, 2026-11-17: "the big rockwork boulders behind enclosures still read as smooth blobs:
+ * give them strata, cracks and the rock shader detail"): over a town-weathered rock material (`townWeather`, which
+ * gives the world position and normal, batching included), the stone's beds in bands of tone along the world's height
+ * (warped, so they dip and pinch), a dark seam at each bed's parting and vertical joints splitting the steep faces, a
+ * fine grain, the tops a little paler with dust. Procedural (no texture, no memory).
+ */
+export function strataRock<M extends Material>(material: M): M {
+    const previous = material.onBeforeCompile;
+    const previousKey = material.customProgramCacheKey;
+    const defaultKey = previousKey === Material.prototype.customProgramCacheKey;
+    material.onBeforeCompile = (shader, renderer) => {
+        previous.call(material, shader, renderer);
+        shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <color_fragment>",
+            `#include <color_fragment>
+{
+    vec3 sw = vTownWorld;
+    vec3 sn = normalize(vTownNormal);
+    float steep = 1.0 - smoothstep(0.55, 0.9, abs(sn.y));
+    float warp = townNoise(sw.xz * 0.31) * 1.3 + townNoise(sw.xz * 1.9) * 0.18;
+    float bedY = sw.y * 2.3 + warp + dot(sw.xz, vec2(0.21, 0.13)) + townNoise(sw.xz * 4.1 + sw.y) * 0.12;
+    float bed = floor(bedY);
+    float f = fract(bedY);
+    float tone = 0.76 + 0.4 * townHash(vec2(bed, 3.7));
+    float seam = (smoothstep(0.9, 0.97, f) + (1.0 - smoothstep(0.0, 0.035, f)) * 0.6) * (0.55 + 0.45 * townNoise(vec2(u * 2.7, bed)));
+    float under = smoothstep(0.55, 0.95, f) * 0.25;
+    vec2 across = normalize(vec2(-sn.z, sn.x) + vec2(1e-4));
+    float u = dot(sw.xz, across);
+    float joint = (1.0 - smoothstep(0.0, 0.022, abs(townNoise(vec2(u * 1.3, bed * 0.37 + sw.y * 0.4)) - 0.5) - 0.006)) * step(0.35, townHash(vec2(floor(u * 0.9), bed)));
+    float grain = 0.92 + 0.16 * townNoise(sw.xz * 9.0 + sw.y * 7.0);
+    vec3 stone = diffuseColor.rgb * tone * grain;
+    stone *= 1.0 - (0.7 * min(seam, 1.0) + under) * steep;
+    stone *= 1.0 - 0.7 * joint * steep;
+    stone = mix(stone, stone * 1.14 + 0.01, smoothstep(0.65, 0.92, sn.y));
+    diffuseColor.rgb = stone;
+}`
+        );
+    };
+    material.customProgramCacheKey = () => `${defaultKey ? previous.toString() : previousKey.call(material)}|strata-rock-1`;
+    material.needsUpdate = true;
+    return material;
 }

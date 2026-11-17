@@ -22,6 +22,7 @@
  * Everything is in the town's own frame (x east, z south, metres).
  */
 
+import {bridgeAt, bridgeHeight} from "@/ark-scene/islands/town/canal-bridges";
 import {fetchOk, readUntilIn} from "@/ark-scene/model-files";
 import {BufferAttribute, BufferGeometry, Color, DynamicDrawUsage, Group, InstancedBufferAttribute, InstancedMesh, Matrix4, MeshStandardMaterial, Object3D, Quaternion, Vector3, type Camera, type Material} from "three";
 import {hashText, local, polylineAt, polylineLength, polylineNearest, polylineWithin, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
@@ -364,6 +365,9 @@ export function carKind(roll: number, kinds: readonly CarKind[] = CAR_KINDS): Ca
 
 /** The carriageway's height under a point: the ground's, held at the bank's level on a bridge over the canal. */
 export function roadHeight(x: number, z: number): number {
+    // p4 (townfix): over the humpbacked canal bridges, the deck's curve (`canal-bridges.ts`, as the street is drawn).
+    const deck = bridgeHeight(x, z, townHeight);
+    if (deck !== null) return deck;
     if (polylineWithin(CANAL, x, z, CANAL_WIDTH / 2 + 0.6)) return TOWN_LEVEL;
     return townHeight(x, z);
 }
@@ -1369,9 +1373,14 @@ const up = new Vector3(0, 1, 0);
 const pitchAxis = new Vector3(0, 0, 1);
 const qLean = new Quaternion();
 
-function place(x: number, y: number, z: number, turn: number, lean = 0): Matrix4 {
+const noseAxis = new Vector3(1, 0, 0);
+const qNose = new Quaternion();
+
+function place(x: number, y: number, z: number, turn: number, lean = 0, nose = 0): Matrix4 {
     q4.setFromAxisAngle(up, turn);
     if (lean) q4.multiply(qLean.setFromAxisAngle(pitchAxis, lean));
+    // (Nose up (+) on a bridge's slope: the models face local +z.)
+    if (nose) q4.multiply(qNose.setFromAxisAngle(noseAxis, -nose));
     return m4.compose(v4.set(x, y, z), q4, s4);
 }
 
@@ -1595,7 +1604,10 @@ export class TownVehicles {
                 const y = this.yAt(car.x, car.z);
                 const level = this.levelFor(this.distance(eye, car.x, y, car.z));
                 if (!level) continue;
-                this.moving.get(`${kind}:${level}`)?.push(place(car.x, y, car.z, Math.atan2(car.dx, car.dz)), this.colour, carLights(clock.hours, car.braking));
+                // p4 (townfix): on a humpbacked bridge the car follows the deck's slope (front and back wheels on it).
+                const dl = Math.hypot(car.dx, car.dz) || 1;
+                const nose = bridgeAt(car.x, car.z) ? Math.atan2(this.yAt(car.x + (car.dx / dl) * 1.3, car.z + (car.dz / dl) * 1.3) - this.yAt(car.x - (car.dx / dl) * 1.3, car.z - (car.dz / dl) * 1.3), 2.6) : 0;
+                this.moving.get(`${kind}:${level}`)?.push(place(car.x, y, car.z, Math.atan2(car.dx, car.dz), 0, nose), this.colour, carLights(clock.hours, car.braking));
             }
         }
         this.moving.forEach((set) => set.end());

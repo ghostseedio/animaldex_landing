@@ -133,7 +133,9 @@ test("v2: the rocks, the colliders and the grass come from the wild island's sce
         assert.equal(count("rock"), rocks.length);
         assert.equal(count("log"), floorObstacles().length);
         assert.equal(count("trunk"), [...decor, ...fill].filter((item) => TREE_KINDS.has(item.kind) || item.kind === "canopy").length);
-        for (const kind of ["building", "fence", "hay", "pond", "post"]) assert.equal(count(kind), 0, `a ${kind} collider`);
+        for (const kind of ["building", "fence", "hay", "post"]) assert.equal(count(kind), 0, `a ${kind} collider`);
+        // (No garden pond; the one pond is the waterfall's plunge pool, p4, `islands/wild/falls.ts`.)
+        assert.deepEqual(list.filter((c) => c.kind === "pond").map((c) => c.id), ["pond:falls"]);
         // The termite mounds are the generator's (and the termites' own while aboard).
         assert.ok(allMounds().length >= wildScenery().filter((item) => item.kind === "mound").length);
         // The floor: the woods' litter and logs, and the generator's ferns, flowers, sedge and grass clumps.

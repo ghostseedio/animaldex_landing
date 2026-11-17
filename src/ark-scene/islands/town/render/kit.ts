@@ -256,7 +256,8 @@ export class Geo {
         // streaks, moss), tinted to `colour` (the owner: "big rocks and boulders shouldn't have any sharp polygons"):
         // it was drawn flat, one shade a face, so even a rounded rock showed every facet.
         if (this.rocks) {
-            this.rocks.push(x, y, z, sx, sy, sz, turn, colour[0], colour[1], colour[2], variant % ROCK_VARIANTS.boulder, detail);
+            // p4 (townfix): the big rockwork (a metre tall and more) as bedded crags (`rock-instances.ts` CRAG).
+            this.rocks.push(x, y, z, sx, sy, sz, turn, colour[0], colour[1], colour[2], variant % ROCK_VARIANTS.boulder, detail + (sy >= 0.9 ? 4 : 0));
             return;
         }
         const m = cachedRock("boulder", variant % ROCK_VARIANTS.boulder, detail, true);
