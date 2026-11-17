@@ -309,3 +309,23 @@ test("a tap on an animal in the fields selects it: by day where it stands, a hen
         assert.ok(Math.hypot(got.x - want.x, got.z - want.z) < 0.5 && henHouseOf(fields.get(hit.id)!.id, hit.id) === henHouseOf(fields.get(target.id)!.id, target.id), `${hit.id} for ${target.id}`);
     }
 });
+
+test("while the town's animals join a few at a time, each stands in the field the whole list gives it", () => {
+    const list = animals();
+    const whole = placeTownAnimals(list);
+    const fields = ruralFields(list);
+    for (const n of [Math.floor(list.length / 3), Math.floor((list.length * 2) / 3)]) {
+        const part = placeTownAnimals(list.slice(0, n), whole.open);
+        for (const a of list.slice(0, n)) {
+            assert.equal(part.town.get(a.id)!.place, whole.town.get(a.id)!.place, `${a.model_slug} ${a.id} with ${n} aboard`);
+            if (!fields.has(a.id)) continue;
+            const p = part.places.get(a.id)!;
+            const w = whole.places.get(a.id)!;
+            assert.ok(Math.hypot(p.x - w.x, p.z - w.z) < 1e-9, `${a.id} where the whole list has it`);
+        }
+    }
+    // (A part with an animal the last whole list never had: worked out on its own, still by the rule.)
+    const stranger = {...list.find((a) => fields.has(a.id))!, id: "a-new-cow"};
+    const withNew = placeTownAnimals([...list.slice(0, 20), stranger], whole.open);
+    assert.match(withNew.town.get(stranger.id)!.place, /^rural-/);
+});

@@ -165,7 +165,7 @@ export function primeTownPlacements(key: string, result: TownPlacements, animals
     const openKey = result.open.join(",");
     const all = safariAnimals(animals);
     planIndoors(all);
-    const fieldOf = (lastFields = ruralFields(all));
+    const fieldOf = wholeFields(all);
     for (const animal of all) {
         const placement = result.places.get(animal.id);
         const info = result.town.get(animal.id);
@@ -204,8 +204,9 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
     const animals = safariAnimals(given);
     // p5 (rural): who lives in the countryside's fields (the children's farm keeps a petting set, `rural.ts`). Like the
     // homes' indoor plan below, from the whole list: while the town's animals join a few at a time (`openAs`), the last
-    // whole list's fields stand (a part would keep a different few on each farm, and animals would move as the rest came).
-    const fieldOf = openAs && lastFields ? lastFields : (lastFields = ruralFields(animals));
+    // whole list's fields stand (a part would keep a different few on each farm, and animals would move as the rest
+    // came); a part with an animal the whole list never had is worked out on its own, and not kept.
+    const fieldOf = !openAs ? wholeFields(animals) : lastFields && animals.every((a) => lastFields!.ids.has(a.id)) ? lastFields.fields : ruralFields(animals);
     // p5 (homes): which of the homes' outdoor pets live indoors (the garden cap), before anyone is placed. (While the
     // town's animals join a few at a time, `openAs`, the whole list's plan stands: from the prebuild's prime or the last
     // whole read; a part of the list would cap each garden by the part, and pets would move as the rest came.)
@@ -459,8 +460,12 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
 // MARK: - p5 (rural): a spot in a countryside field
 
 /** Each town animal the countryside takes, and its field (`rural.ts` ruralPenOf; the children's farm's petting set kept). */
-/** The last whole list's fields (p5 (rural)): they stand while a part of the list is laid out. */
-let lastFields: Map<string, RuralPen> | null = null;
+/** The last whole list's fields (p5 (rural)) and who was in it: they stand while a part of the list is laid out. */
+let lastFields: {fields: Map<string, RuralPen>; ids: Set<string>} | null = null;
+function wholeFields(animals: readonly ArkAnimal[]): Map<string, RuralPen> {
+    lastFields = {fields: ruralFields(animals), ids: new Set(animals.map((a) => a.id))};
+    return lastFields.fields;
+}
 
 export function ruralFields(animals: readonly ArkAnimal[]): Map<string, RuralPen> {
     const plan = townPlan();
