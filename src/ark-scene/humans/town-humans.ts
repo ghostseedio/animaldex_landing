@@ -27,6 +27,7 @@ import {inBox, inPoly, local, type Pt} from "@/ark-scene/islands/town/geom";
 import {solidDistance, townSolids} from "@/ark-scene/islands/town/solids";
 import {PARK_BENCH_RING} from "@/ark-scene/islands/town/render/scenery";
 import {BOAT_ROUTES, boatFix} from "@/ark-scene/ocean-traffic";
+import {carried, childScale, isGrown, parentNow, togetherNow, type HumanBond, type HumanBonds, type HumanChild, type Together} from "@/ark-scene/humans/couples"; // p5 (humans, couples)
 
 /** The Homo sapiens species profile (AnimalDex 2fabfa9a…, #2068) and the stray "Human" profile without a name. */
 export const HUMAN_SPECIES_IDS: readonly string[] = ["2fabfa9a-6ec9-4d71-8cf2-1933edaef6d2", "0fd32bd2-669f-489d-8a1b-8e917aa5117d"];
@@ -244,7 +245,8 @@ export function assignOut(out: readonly string[], clock: TownClock, sites: TownH
 
 // MARK: - The people drawn
 
-export type TownHumanRecord = {id: string};
+/** A human of the record (`born_ark_day`, `origin`: an Ark-born child is small until grown; p5 (humans, couples)). */
+export type TownHumanRecord = {id: string; origin?: string | null; born_ark_day?: number | null};
 
 /** A moving car as the traffic gives it (`vehicles.ts` MovingCar: its middle, heading, whether it drives now). */
 export type CarFix = {index: number; x: number; z: number; dx: number; dz: number; active: boolean};
@@ -311,6 +313,18 @@ export class TownHumans {
     /** The TVs on now (a room's, while someone in it watches), world frame. */
     readonly tvs: Array<Spot & {room: string}> = [];
     private tvPool: Array<Spot & {room: string}> = [];
+    // p5 (humans, couples): the record's couples and children (`couples.ts`); the grown (who keep the town's day) and
+    // the young (who are with a parent), by the Ark day.
+    private everyone: TownHumanRecord[] = [];
+    private bonds: HumanBond[] = [];
+    private children = new Map<string, HumanChild>();
+    private born = new Map<string, number>();
+    private young: string[] = [];
+    private arkDay = Infinity;
+    private claimedSeats = new Set<number>();
+    private placed = new Map<string, DrawnHuman>();
+    private beside = new Map<string, number>();
+    private inArms = new Set<string>();
 
     constructor(private readonly options: TownHumansOptions, plan: TownPlan = townPlan()) {
         this.sites = townHumanSites(plan);
@@ -318,16 +332,53 @@ export class TownHumans {
 
     /** The record's humans (one per real human capture aboard, the server's). */
     setRoster(humans: readonly TownHumanRecord[]): void {
-        const ids = humans.map((h) => h.id).sort();
-        if (ids.join(",") === this.roster.join(",")) return;
-        this.roster = ids;
-        this.looks = new Map(ids.map((id) => [id, humanLook(id)]));
+        const all = humans.map((h) => h.id).sort();
+        if (all.join(",") === this.everyone.map((h) => h.id).join(",")) return;
+        this.everyone = humans.slice().sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+        this.sortAges();
+    }
+
+    // p5 (humans, couples) ---------------------------------------------------------------------------------------
+    /** The record's couples and children (`/api/ark/human-bonds`, decoded): partners share a home, the young are with a parent. */
+    setBonds(bonds: HumanBonds): void {
+        this.bonds = bonds.bonds;
+        this.children = new Map(bonds.children.map((c) => [c.id, c]));
+        this.sortAges();
+    }
+
+    /** The shared Ark day (a child's age): the grown and the young are sorted again when a child comes of age. */
+    setArkDay(day: number | null): void {
+        const next = day ?? Infinity;
+        const was = this.arkDay;
+        this.arkDay = next;
+        if (this.young.some((id) => isGrown(this.born.get(id), "born", next)) || (was === Infinity) !== (next === Infinity)) this.sortAges();
+    }
+
+    /** Who keeps the town's day (the grown: `roster`) and who is with a parent (`young`), then everyone's home. */
+    private sortAges() {
+        this.born.clear();
+        for (const h of this.everyone) {
+            const born = this.children.get(h.id)?.born ?? (h.origin === "born" ? h.born_ark_day ?? null : null);
+            if (born !== null) this.born.set(h.id, born);
+        }
+        const grown = (h: TownHumanRecord) => !this.born.has(h.id) || isGrown(this.born.get(h.id), "born", this.arkDay);
+        this.roster = this.everyone.filter(grown).map((h) => h.id);
+        this.young = this.everyone.filter((h) => !grown(h)).map((h) => h.id);
+        this.looks = new Map(this.everyone.map((h) => [h.id, grown(h) ? humanLook(h.id) : {...humanLook(h.id), child: true}]));
         this.blockKey = "";
         this.assignHomes();
     }
 
+    /** The bond a grown human is in (a living partner aboard), or null. */
+    private bondOf(id: string): HumanBond | null {
+        for (const b of this.bonds) if ((b.a === id || b.b === id) && this.looks.has(b.a) && this.looks.has(b.b)) return b;
+        return null;
+    }
+    // ------------------------------------------------------------------------------------------------------------
+
+    /** Everyone aboard: the grown and the young. */
     get count(): number {
-        return this.roster.length;
+        return this.everyone.length;
     }
 
     setRoomHost(host: HumanRoomHost | null): void {
@@ -342,7 +393,23 @@ export class TownHumans {
         if (!rooms.length) return;
         const fill = new Map<number, number>();
         const capacity = (i: number) => Math.max(1, Math.min(2, rooms[i].seats.length, Math.max(rooms[i].beds.length, 1) * 2));
+        // p5 (humans, couples): a couple living together shares the host's room (the host first, the partner beside),
+        // before the singles take theirs.
+        const paired = new Set<string>();
+        const rendezvous = (id: string, room: (i: number) => boolean) => rooms.map((r, i) => ({i, u: humanUnit(`${id}|${r.id}`)})).sort((a, b) => b.u - a.u).find((r) => room(r.i));
+        for (const bond of this.bonds) {
+            if (bond.stage !== "together" || !this.roster.includes(bond.a) || !this.roster.includes(bond.b)) continue;
+            const host = bond.home === bond.b ? bond.b : bond.a;
+            const pick = rendezvous(host, (i) => (fill.get(i) ?? 0) === 0);
+            if (!pick) continue;
+            fill.set(pick.i, 2);
+            this.homes.set(host, {room: pick.i, slot: 0});
+            this.homes.set(host === bond.a ? bond.b : bond.a, {room: pick.i, slot: 1});
+            paired.add(bond.a);
+            paired.add(bond.b);
+        }
         for (const id of this.roster) {
+            if (paired.has(id)) continue;
             const ranked = rooms.map((room, i) => ({i, u: humanUnit(`${id}|${room.id}`)})).sort((a, b) => b.u - a.u);
             const pick = ranked.find((r) => (fill.get(r.i) ?? 0) < capacity(r.i));
             if (!pick) continue;
@@ -361,6 +428,7 @@ export class TownHumans {
         const out = this.out;
         out.length = 0;
         this.tvs.length = 0;
+        this.placed.clear();
         if (!this.roster.length) return out;
         const clock = townClockAt(epochMs, this.options.offsetHours ?? 0);
         const block = Math.floor(clock.hours / BLOCK_HOURS);
@@ -395,8 +463,73 @@ export class TownHumans {
             h.tilt = 0;
             n++;
             out.push(h);
+            this.placed.set(id, h);
+            return h;
         };
+        const tvOn = (room: HumanRoom) => {
+            if (!room.tv || this.tvs.some((t) => t.room === room.id)) return;
+            const t = this.tvPool[this.tvs.length] ?? (this.tvPool[this.tvs.length] = {room: "", x: 0, y: 0, z: 0, yaw: 0});
+            t.room = room.id;
+            t.x = ox + room.tv.x;
+            t.y = room.tv.y;
+            t.z = oz + room.tv.z;
+            t.yaw = room.tv.yaw;
+            this.tvs.push(t);
+        };
+        // p5 (humans, couples): what each couple does together now (`couples.ts` togetherNow), when both are free of
+        // sleep and work: a walk side by side, a bench shared, dinner at one's table, the sofa at home. Those two are
+        // drawn here and skipped below; a bench seat or a table they take is not also another's.
+        const together = new Set<string>();
+        const dinnerRooms = new Set<number>();
+        this.claimedSeats.clear();
+        for (const bond of this.bonds) {
+            const da = days.get(bond.a);
+            const db = days.get(bond.b);
+            if (!da || !db || da === "sleep" || db === "sleep" || da === "work" || db === "work") continue;
+            const now: Together | null = togetherNow(bond, clock);
+            if (!now) continue;
+            const la = this.looks.get(bond.a)!;
+            const lb = this.looks.get(bond.b)!;
+            const pa = humanUnit(`${bond.a}#phase`) * 100;
+            const pb = humanUnit(`${bond.b}#phase`) * 100;
+            if (now.kind === "walk" && this.sites.walks.length) {
+                // Side by side along a walk, there and back over the date (the same pace: the slower one's).
+                const [a, b] = this.sites.walks[Math.min(Math.floor(now.pick * this.sites.walks.length), this.sites.walks.length - 1)];
+                const length = Math.hypot(b.x - a.x, b.z - a.z) || 1;
+                const t = ((seconds * 0.95) / length + now.pick) % 2;
+                const back = t > 1;
+                const f = back ? 2 - t : t;
+                const ux = (b.x - a.x) / length, uz = (b.z - a.z) / length;
+                const x = a.x + (b.x - a.x) * f, z = a.z + (b.z - a.z) * f;
+                const yaw = Math.atan2(ux * (back ? -1 : 1), uz * (back ? -1 : 1));
+                // (0.32 m either side of the line: shoulder to shoulder, hands nearly touching.)
+                take(bond.a, la, "walk", ox + x - uz * 0.32, townHeight(x - uz * 0.32, z + ux * 0.32), oz + z + ux * 0.32, yaw, "walk", pa);
+                take(bond.b, lb, "walk", ox + x + uz * 0.32, townHeight(x + uz * 0.32, z - ux * 0.32), oz + z - ux * 0.32, yaw, "walk", pa + 0.5);
+            } else if (now.kind === "bench") {
+                // The two seats of one bench (by the pair and the day), whoever else the block had sent there.
+                const benches = Array.from(new Set(this.sites.seats.map((s) => s.bench))).filter((id) => this.sites.seats.filter((s) => s.bench === id).length >= 2);
+                if (!benches.length) continue;
+                const bench = benches[Math.min(Math.floor(now.pick * benches.length), benches.length - 1)];
+                const seats = this.sites.seats.map((s, i) => ({s, i})).filter((e) => e.s.bench === bench).slice(0, 2);
+                seats.forEach((e) => this.claimedSeats.add(e.i));
+                take(bond.a, la, "bench", ox + seats[0].s.x, sitRootY(seats[0].s.y, la.height / BASE_HEIGHT), oz + seats[0].s.z, seats[0].s.yaw, "sit", pa);
+                take(bond.b, lb, "bench", ox + seats[1].s.x, sitRootY(seats[1].s.y, lb.height / BASE_HEIGHT), oz + seats[1].s.z, seats[1].s.yaw, "sit", pb);
+            } else if (now.kind === "dinner" || now.kind === "sofa") {
+                const home = this.homes.get(now.home);
+                const room = home ? rooms[home.room] : undefined;
+                if (!home || !room) continue;
+                const spots = now.kind === "dinner" ? (room.chairs.length >= 2 ? room.chairs : room.seats) : room.seats;
+                if (spots.length < 2) continue;
+                if (now.kind === "dinner") dinnerRooms.add(home.room);
+                else tvOn(room);
+                take(bond.a, la, "home", ox + spots[0].x, sitRootY(spots[0].y, la.height / BASE_HEIGHT), oz + spots[0].z, spots[0].yaw, "sit", pa);
+                take(bond.b, lb, "home", ox + spots[1].x, sitRootY(spots[1].y, lb.height / BASE_HEIGHT), oz + spots[1].z, spots[1].yaw, "sit", pb);
+            } else continue;
+            together.add(bond.a);
+            together.add(bond.b);
+        }
         for (const id of this.roster) {
+            if (together.has(id)) continue; // p5 (humans, couples)
             const look = this.looks.get(id)!;
             const scale = look.height / BASE_HEIGHT;
             const day = days.get(id)!;
@@ -413,18 +546,11 @@ export class TownHumans {
                 // Dinner at the table, else the evening on the sofa in front of the TV (or at the table).
                 const dinner = clock.hours >= 18.5 && clock.hours < 19.5;
                 const tv = !dinner && room.tv && room.seats.length && humanUnit(`${id}#${clock.day}#tv`) < 0.7;
-                const chair = room.chairs[home!.slot % Math.max(room.chairs.length, 1)];
+                // (p5 (humans, couples): a couple's dinner has this room's table: its other resident keeps to the sofa.)
+                const chair = dinnerRooms.has(home!.room) ? undefined : room.chairs[home!.slot % Math.max(room.chairs.length, 1)];
                 const seat = tv ? room.seats[home!.slot % room.seats.length] : chair ?? room.seats[home!.slot % Math.max(room.seats.length, 1)];
                 if (seat) take(id, look, "home", ox + seat.x, sitRootY(seat.y, scale), oz + seat.z, seat.yaw, "sit", phase);
-                if (seat && tv && room.tv && !this.tvs.some((t) => t.room === room.id)) {
-                    const t = this.tvPool[this.tvs.length] ?? (this.tvPool[this.tvs.length] = {room: "", x: 0, y: 0, z: 0, yaw: 0});
-                    t.room = room.id;
-                    t.x = ox + room.tv.x;
-                    t.y = room.tv.y;
-                    t.z = oz + room.tv.z;
-                    t.yaw = room.tv.yaw;
-                    this.tvs.push(t);
-                }
+                if (seat && tv) tvOn(room);
                 continue;
             }
             if (day === "work") continue;
@@ -432,6 +558,7 @@ export class TownHumans {
             if (!what) continue;
             switch (what.kind) {
                 case "bench": {
+                    if (this.claimedSeats.has(what.seat)) break; // p5 (humans, couples): a couple has this bench
                     const seat = this.sites.seats[what.seat];
                     take(id, look, "bench", ox + seat.x, sitRootY(seat.y, scale), oz + seat.z, seat.yaw, "sit", phase);
                     break;
@@ -479,6 +606,44 @@ export class TownHumans {
                 default:
                     break;
             }
+        }
+        // p5 (humans, couples): the young, each with one of its parents wherever that parent is drawn (turn and turn
+        // about, `parentNow`): a babe in arms at the parent's chest, an older child beside them doing as they do.
+        // Not in a car or a boat (the child is then with nobody drawn: at home with the other, unseen).
+        this.beside.clear();
+        this.inArms.clear();
+        for (const id of this.young) {
+            const child = this.children.get(id);
+            const born = this.born.get(id);
+            if (!child || born === undefined) continue;
+            const parent = this.placed.get(parentNow(child, clock)) ?? this.placed.get(child.parents[0]) ?? this.placed.get(child.parents[1]);
+            if (!parent || parent.what === "car" || parent.what === "boat") continue;
+            const look = this.looks.get(id)!;
+            const age = Math.max(this.arkDay - born, 0);
+            const size = childScale(Number.isFinite(age) ? age : 0);
+            const fx = Math.sin(parent.yaw), fz = Math.cos(parent.yaw);
+            const phase = humanUnit(`${id}#phase`) * 100;
+            const lying = parent.pose === "lie" || parent.pose === "sleep";
+            // (Brothers and sisters with the same parent: one each side, the next a step further out; one babe in arms.)
+            const nth = this.beside.get(parent.id) ?? 0;
+            const babe = carried(age) && !lying && !this.inArms.has(parent.id);
+            if (babe) this.inArms.add(parent.id);
+            else this.beside.set(parent.id, nth + 1);
+            const side = (nth % 2 ? -1 : 1) * (1 + Math.floor(nth / 2));
+            let h: DrawnHuman;
+            if (lying) {
+                h = take(id, look, parent.what, parent.x + fz * 0.55 * side, parent.y, parent.z - fx * 0.55 * side, parent.yaw, parent.pose, phase);
+            } else if (babe) {
+                const up = (parent.pose === "sit" ? 1.02 : 1.08) * (parent.look.height / BASE_HEIGHT);
+                h = take(id, look, parent.what, parent.x + fx * 0.2, parent.y + up, parent.z + fz * 0.2, parent.yaw + Math.PI, "sit", phase);
+            } else {
+                const x = parent.x + fz * 0.45 * side, z = parent.z - fx * 0.45 * side;
+                // (Its feet on the ground its parent's are on: a sitter's root is below the seat by their own leg.)
+                const floor = parent.pose === "sit" ? parent.y + 0.86 * (parent.look.height / BASE_HEIGHT) - 0.45 : parent.y;
+                h = take(id, look, parent.what, x, floor, z, parent.yaw, parent.pose === "walk" ? "walk" : "stand", phase);
+            }
+            h.scale = size;
+            h.light = parent.light;
         }
         return out;
     }

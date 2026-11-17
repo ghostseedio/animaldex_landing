@@ -221,6 +221,7 @@ import {OCEAN_COLUMN, OCEAN_VIEW_MARGIN, oceanFix, roamsOpenOcean} from "@/ark-s
 import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (ocean)
 import {HumanFigures} from "@/ark-scene/humans/figures"; // p5 (humans)
 import {isHumanAnimal, TownHumans} from "@/ark-scene/humans/town-humans"; // p5 (humans)
+import {decodeHumanBonds} from "@/ark-scene/humans/couples"; // p5 (humans, couples)
 import {roadHeight as townRoadHeight} from "@/ark-scene/islands/town/render/vehicles"; // p5 (humans)
 import {OceanShadows} from "@/ark-scene/ocean-shadows"; // p2 (ocean)
 import {TOWN_GRID, TOWN_NEAR_LIVE} from "@/ark-scene/islands/town/chunks";
@@ -238,7 +239,6 @@ import {CLUTCH_FRAME_POLAR, CLUTCH_SHOWN_SECONDS, clutchFrame, clutchSize, kinFr
 import {LiveBirths} from "@/ark-scene/live-births";
 import {LiveDeaths, type DeathRecord} from "@/ark-scene/live-deaths"; // 3.3 fix (log)
 import {ForestScene} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): logging and replanting
-import {isHumanAnimal} from "@/ark-scene/humans/town-humans"; // p5 (humans)
 // 3.3 batch (D): the escapes and the dragonflies' dips
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
 import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
@@ -959,7 +959,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     if (assetTrees) scene.add(assetTrees.group);
     let assetTreesShown = false;
     // p5 (humans): logging and replanting on the wild island (the record's forestry; humans aboard are the crews).
-    let humansAboard: string[] = [];
+    let forestHumans: string[] = [];
     // (Its perches: every animal whose place, perch or roost is off the ground: its tree is left standing.)
     const forestPerches = () => {
         const out: Array<{x: number; z: number}> = [];
@@ -973,7 +973,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         return out;
     };
-    const forest = new ForestScene({setOverride: assetTrees ? (o) => assetTrees.setOverride(o) : null, ground: (x, z) => standGround(x, z), humans: () => humansAboard, perches: forestPerches});
+    const forest = new ForestScene({setOverride: assetTrees ? (o) => assetTrees.setOverride(o) : null, ground: (x, z) => standGround(x, z), humans: () => forestHumans, perches: forestPerches});
     scene.add(forest.group);
     // Graphics batch 5: the asset lane's rocks replace the procedural ones once loaded (asset-rocks.ts).
     const assetRocks = new AssetRocks(options.assetBase);
@@ -1288,8 +1288,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let selectedId: string | null = null;
     // Herds (A14): the snapshot as last given, every id aboard, and who must be drawn one by one.
     // p5 (humans): the town's people, one generic figure per human aboard (privacy: body and clothes from the id only,
-    // never the capture's photo, a face or a name). (`away`: unset here; the forest lane passes its `forest.away`.)
-    const townHumans = new TownHumans({origin: townWorldOrigin(), roadHeight: townRoadHeight, seaLevel: () => ARK_ENVIRONMENT.seaLevel.value, boatSeconds: () => clockNow()});
+    // never the capture's photo, a face or a name). (`away`: at work in the wild island's forest, `forest.away`.)
+    const townHumans = new TownHumans({away: (id) => forest.away(id), origin: townWorldOrigin(), roadHeight: townRoadHeight, seaLevel: () => ARK_ENVIRONMENT.seaLevel.value, boatSeconds: () => clockNow()});
     const humanFigures = new HumanFigures();
     scene.add(humanFigures.group);
     let humansAboard: ArkAnimal[] = [];
@@ -2772,7 +2772,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const now = (performance.now() - started) / 1000;
         current = snapshot;
         aboard = new Set(snapshot.animals.map((animal) => animal.id));
-        humansAboard = snapshot.animals.filter((animal) => isHumanAnimal(animal)).map((animal) => animal.id); // p5 (humans)
+        forestHumans = people.humans.map((animal) => animal.id); // p5 (humans): the logging crews are of the humans aboard
         forest.rosterChanged(); // p5 (humans)
         // Everyone's place (the herds' members too): from the server's slots, the same for every viewer.
         if (placedFor !== snapshot) {
@@ -8573,6 +8573,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (island && townHumans.count) {
             const islandMs = pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000;
             const traffic = island.movingCars?.();
+            townHumans.setArkDay(arkDayNow(current, worldMs())); // p5 (humans, couples): a child's age
             humanFigures.setFrame(townHumans.frame(islandMs, traffic?.cars ?? null, traffic?.count ?? 0), camera.position, islandMs / 1000);
         } else if (humanFigures.drawn.near + humanFigures.drawn.far) humanFigures.setFrame([], camera.position, 0);
         perf.lap("town");
@@ -9016,6 +9017,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }), worldMs() / 1000);
         },
         setForestry: (record) => forest.setRecord(record), // p5 (humans)
+        setHumanBonds: (raw) => townHumans.setBonds(decodeHumanBonds(raw)), // p5 (humans, couples)
         setDormant: (kinds) => {
             dormantKinds = new Set(kinds);
         },

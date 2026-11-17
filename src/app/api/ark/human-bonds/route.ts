@@ -22,5 +22,5 @@ export async function GET() {
         return NextResponse.json(EMPTY, {headers: {"Cache-Control": isMissingArkFunction(error) ? "public, s-maxage=300" : "no-store"}});
     }
     const row = data && typeof data === "object" ? (data as {bonds?: unknown; children?: unknown}) : null;
-    return NextResponse.json({bonds: Array.isArray(row?.bonds) ? row.bonds : [], children: Array.isArray(row?.children) ? row.children : []}, {headers: {"Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"}});
+    return NextResponse.json({bonds: row && Array.isArray(row.bonds) ? row.bonds : [], children: row && Array.isArray(row.children) ? row.children : []}, {headers: {"Cache-Control": "public, s-maxage=300, stale-while-revalidate=600"}});
 }

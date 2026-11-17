@@ -170,6 +170,17 @@ export function mountTown(el: HTMLElement) {
         humans.setRoster(Array.from({length: humanCount}, (_, i) => ({id: `fixture-human-${String(i).padStart(3, "0")}`})));
         const host = (window as unknown as {__arkHumanRooms?: HumanRoomHost}).__arkHumanRooms;
         if (host) humans.setRoomHost(host);
+        // p5 (humans, couples): `?couples=1`: a fixture of the record's couples (humans 0+1 dating, 2+3 living together
+        // with a babe in arms and a child of `?childage=` Ark days, default 2,500); `window.__arkHumans()` says who is
+        // drawn where, for a harness to frame them.
+        if (params.get("couples") === "1") {
+            const fid = (i: number) => `fixture-human-${String(i).padStart(3, "0")}`;
+            const age = Number(params.get("childage") ?? 2500);
+            humans.setRoster([...Array.from({length: humanCount}, (_, i) => ({id: fid(i)})), {id: "fixture-child-a", origin: "born", born_ark_day: 0}, {id: "fixture-child-b", origin: "born", born_ark_day: age - 60}]);
+            humans.setBonds({bonds: [{a: fid(0), b: fid(1), stage: "dating", since: 0, home: null, expectingUntil: null}, {a: fid(2), b: fid(3), stage: "together", since: 0, home: fid(2), expectingUntil: null}], children: [{id: "fixture-child-a", parents: [fid(2), fid(3)], born: 0}, {id: "fixture-child-b", parents: [fid(2), fid(3)], born: age - 60}]});
+            humans.setArkDay(age);
+        }
+        (window as unknown as {__arkHumans?: () => unknown}).__arkHumans = () => humans.out.map((h) => ({id: h.id, what: h.what, pose: h.pose, x: h.x, y: h.y, z: h.z}));
         scene.add(figures.group);
     }
     const boat = params.get("boat") === "1" ? {x: 120, z: 176, yaw: Math.PI / 2 + 0.3} : null;
