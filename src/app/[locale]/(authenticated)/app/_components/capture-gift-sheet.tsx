@@ -11,6 +11,7 @@
 import {useCallback, useEffect, useRef, useState, type CSSProperties} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useOptionalAppCredits} from "@/app/[locale]/(authenticated)/app/_components/app-credits";
+import {giftAttemptKeys} from "@/lib/gift-attempt-keys";
 import {
     giftAccent,
     giftErrorMessage,
@@ -100,11 +101,13 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
         if (sending) return;
         setSending(true);
         setError(null);
+        // Same key for every retry of this attempt, so a lost response can't charge twice.
+        const clientIdempotencyKey = giftAttemptKeys.key(captureId, definition.id);
         try {
             const response = await fetch("/api/app/gifts", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({captureId, definitionId: definition.id, clientIdempotencyKey: crypto.randomUUID()})
+                body: JSON.stringify({captureId, definitionId: definition.id, clientIdempotencyKey})
             });
             const json = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -112,6 +115,7 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
                 return;
             }
             const result = parseGiftSendResult(json, definition.creditCost);
+            giftAttemptKeys.succeeded(captureId, definition.id);
             if (credits) {
                 // The header chip flashes "−N" and counts down; the server's own balance wins if it differs.
                 const expected = Math.max(0, (credits.balance ?? 0) - result.creditCost);
