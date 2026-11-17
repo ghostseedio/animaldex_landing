@@ -1,5 +1,6 @@
 /**
- * What logging leaves on the ground (p5 humans; AnimalDex decision 379): the stumps of the felled trees and the stand's
+ * What logging leaves on the ground (p5 humans; AnimalDex decision 379): the stumps of the felled trees (until the
+ * planters grub them out) and the stand's
  * bared earth (churned soil and sawdust, greening back as the saplings grow). One instanced draw for every stump and one
  * small mesh per stand in play (at most two or three at a time), built when a stand comes into play and dropped after.
  * The trees themselves (falling, felled, saplings) are `forest-trees.ts`, through `AssetTrees.setOverride`.
@@ -47,8 +48,9 @@ function earthGeometry(g: Logging, ground: GroundAt): BufferGeometry {
     const positions: number[] = [];
     const colours: number[] = [];
     const index: number[] = [];
-    const soil = new Color("#6b5137");
-    const dust = new Color("#a88a5c");
+    // Churned forest soil with paler sawdust in it: darker than the beaches' sand, lighter than the leaf litter.
+    const soil = new Color("#4f3d2a");
+    const dust = new Color("#7a6243");
     const c = new Color();
     positions.push(g.stand.x, ground(g.stand.x, g.stand.z) + 0.05, g.stand.z);
     colours.push(soil.r, soil.g, soil.b, 1);
@@ -60,7 +62,7 @@ function earthGeometry(g: Logging, ground: GroundAt): BufferGeometry {
             const x = g.stand.x + Math.cos(a) * rr * wobble;
             const z = g.stand.z + Math.sin(a) * rr * wobble;
             positions.push(x, ground(x, z) + 0.05, z);
-            c.copy(soil).lerp(dust, 0.5 + 0.5 * Math.sin(a * 5 + ring * 2.3 + g.k));
+            c.copy(soil).lerp(dust, 0.35 + 0.35 * Math.sin(a * 5 + ring * 2.3 + g.k));
             const edge = ring / rings;
             colours.push(c.r, c.g, c.b, edge > 0.72 ? Math.max(0, 1 - (edge - 0.72) / 0.28) : 1);
         }
@@ -121,7 +123,7 @@ export class ForestGround {
                 this.group.add(earth);
             }
             const bare = bareness(g, day);
-            (earth.material as MeshStandardMaterial).opacity = 0.92 * bare;
+            (earth.material as MeshStandardMaterial).opacity = 0.8 * bare;
             earth.visible = bare > 0.01;
         }
         this.earths.forEach((earth, k) => {
@@ -139,11 +141,11 @@ export class ForestGround {
             for (const l of loggings) if (inStand(l, t.x, t.z)) g = l;
             if (!g) continue;
             const fate = treeFate(g, t.x, t.z, day);
-            const stump = fate.state === "log" || fate.state === "stump" || (fate.state === "falling" && fate.fall > 0.02) || (fate.state === "sapling" && fate.stump);
+            const stump = fate.state === "log" || fate.state === "stump" || (fate.state === "falling" && fate.fall > 0.02);
             if (!stump) continue;
-            const r = Math.min(Math.max(t.radius, 0.12), 0.9);
+            const r = Math.min(Math.max(t.radius, 0.15), 2.2);
             turn.setFromAxisAngle(up, (t.x * 7.1 + t.z * 3.3) % (Math.PI * 2));
-            matrix.compose(position.set(t.x, this.ground(t.x, t.z) - 0.05, t.z), turn, scale.set(r, STUMP_H, r));
+            matrix.compose(position.set(t.x, this.ground(t.x, t.z) - 0.05, t.z), turn, scale.set(r, STUMP_H * (r > 1 ? 1.8 : 1), r));
             this.stumps.setMatrixAt(n++, matrix);
         }
         this.stumps.count = n;

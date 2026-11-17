@@ -48,15 +48,15 @@ export function awayInForest(loggings: readonly Logging[], humans: readonly stri
     return false;
 }
 
-/** A place of work, its day, and (planting) the stump it grows beside. */
-type Spot = {x: number; z: number; at: number; sx?: number; sz?: number; r?: number};
+/** A place of work, its day, and (felling) how far the tree's foot spreads. */
+type Spot = {x: number; z: number; at: number; r?: number};
 
 const lerp = (a: number, b: number, k: number) => a + (b - a) * k;
 const yawTo = (fx: number, fz: number, tx: number, tz: number) => Math.atan2(tx - fx, tz - fz);
 
 /** The order of work: each tree's (or sapling's) place and its day, soonest first. */
 function workOrder(g: Logging, trees: ReadonlyArray<{x: number; z: number; radius?: number}>, job: "fell" | "plant"): Spot[] {
-    const out: Spot[] = trees.map((t) => (job === "fell" ? {x: t.x, z: t.z, at: cutDay(g, t.x, t.z), r: t.radius} : {...saplingSpot(g, t.x, t.z), at: plantDay(g, t.x, t.z), sx: t.x, sz: t.z}));
+    const out: Spot[] = trees.map((t) => (job === "fell" ? {x: t.x, z: t.z, at: cutDay(g, t.x, t.z), r: t.radius} : {...saplingSpot(g, t.x, t.z), at: plantDay(g, t.x, t.z)}));
     return out.sort((a, b) => a.at - b.at || a.x - b.x || a.z - b.z);
 }
 
@@ -97,7 +97,7 @@ export function crewAt(g: Logging, trees: ReadonlyArray<{x: number; z: number; r
         } else {
             // The feller works on the side away from the tree's fall.
             const away = fallHeading(g, next.x, next.z) + Math.PI;
-            const off = (next.r ?? 0.4) + 0.6;
+            const off = (next.r ?? 0.4) + 0.7;
             const foot = {x: next.x + Math.cos(away) * off, z: next.z + Math.sin(away) * off};
             const at = along(prev, foot, prev.at, next.at, day);
             out.push({id: ids[0], x: at.x, z: at.z, yaw: at.walking ? yawTo(prev.x, prev.z, foot.x, foot.z) : yawTo(foot.x, foot.z, next.x, next.z), pose: at.walking ? "walk" : "chop", phase: phase(ids[0]), role: "feller"});
@@ -122,10 +122,10 @@ export function crewAt(g: Logging, trees: ReadonlyArray<{x: number; z: number; r
             out.push({id, x: prev.x + 0.8, z: prev.z, yaw: yawTo(prev.x, prev.z, gate.x, gate.z), pose: "walk", phase: phase(id), role: "planter"});
             return;
         }
-        // Kneeling on the far side of the sapling from its stump (never in the stump).
-        const dx = next.x - (next.sx ?? next.x - 1), dz = next.z - (next.sz ?? next.z);
+        // Kneeling beside the sapling, on the side the work came from.
+        const dx = prev.x - next.x, dz = prev.z - next.z;
         const d = Math.max(Math.sqrt(dx * dx + dz * dz), 1e-6);
-        const spot = {x: next.x + (dx / d) * 0.55, z: next.z + (dz / d) * 0.55};
+        const spot = {x: next.x + (dx / d) * 0.6, z: next.z + (dz / d) * 0.6};
         const at = along(prev, spot, prev.at, next.at, day);
         out.push({id, x: at.x, z: at.z, yaw: at.walking ? yawTo(prev.x, prev.z, spot.x, spot.z) : yawTo(spot.x, spot.z, next.x, next.z), pose: at.walking ? "walk" : "plant", phase: phase(id), role: "planter"});
     });

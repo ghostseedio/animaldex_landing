@@ -528,6 +528,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     setDormant?: (kinds: string[]) => void;
     /** p5 (humans): the record's forestry (`/api/ark/forestry`: `{fromDay, v}`, or null when off). */
     setForestry?: (record: {fromDay?: unknown; v?: unknown} | null) => void;
+    /** p5 (humans): the town's couples and children (`/api/ark/human-bonds`: the server's rows, decoded by the scene). */
+    setHumanBonds?: (raw: unknown) => void;
     /** The newest real hunt or meal under way on the island (the page's marker), or null. */
     liveHunt?: () => ArkLiveHunt | null;
     /**

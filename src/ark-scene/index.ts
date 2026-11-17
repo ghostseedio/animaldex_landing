@@ -235,6 +235,7 @@ import {CLUTCH_FRAME_POLAR, CLUTCH_SHOWN_SECONDS, clutchFrame, clutchSize, kinFr
 import {LiveBirths} from "@/ark-scene/live-births";
 import {LiveDeaths, type DeathRecord} from "@/ark-scene/live-deaths"; // 3.3 fix (log)
 import {ForestScene} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): logging and replanting
+import {isHumanAnimal} from "@/ark-scene/humans/town-humans"; // p5 (humans)
 // 3.3 batch (D): the escapes and the dragonflies' dips
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
 import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
@@ -956,7 +957,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let assetTreesShown = false;
     // p5 (humans): logging and replanting on the wild island (the record's forestry; humans aboard are the crews).
     let humansAboard: string[] = [];
-    const forest = new ForestScene({setOverride: assetTrees ? (o) => assetTrees.setOverride(o) : null, ground: (x, z) => standGround(x, z), humans: () => humansAboard});
+    // (Its perches: every animal whose place, perch or roost is off the ground: its tree is left standing.)
+    const forestPerches = () => {
+        const out: Array<{x: number; z: number}> = [];
+        for (const e of entries) {
+            if (e.visitor) continue;
+            const p = e.place;
+            if (p.ground - heightAt(p.x, p.z) > 0.8) out.push({x: p.x, z: p.z});
+            if (p.perch && p.perch.y - heightAt(p.perch.x, p.perch.z) > 0.8) out.push({x: p.perch.x, z: p.perch.z});
+            const roost = p.map?.roost;
+            if (roost && roost.y - heightAt(roost.x, roost.z) > 0.8) out.push({x: roost.x, z: roost.z});
+        }
+        return out;
+    };
+    const forest = new ForestScene({setOverride: assetTrees ? (o) => assetTrees.setOverride(o) : null, ground: (x, z) => standGround(x, z), humans: () => humansAboard, perches: forestPerches});
     scene.add(forest.group);
     // Graphics batch 5: the asset lane's rocks replace the procedural ones once loaded (asset-rocks.ts).
     const assetRocks = new AssetRocks(options.assetBase);
@@ -2728,7 +2742,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const now = (performance.now() - started) / 1000;
         current = snapshot;
         aboard = new Set(snapshot.animals.map((animal) => animal.id));
-        humansAboard = snapshot.animals.filter((animal) => animal.model_slug === "human").map((animal) => animal.id); // p5 (humans)
+        humansAboard = snapshot.animals.filter((animal) => isHumanAnimal(animal)).map((animal) => animal.id); // p5 (humans)
+        forest.rosterChanged(); // p5 (humans)
         // Everyone's place (the herds' members too): from the server's slots, the same for every viewer.
         if (placedFor !== snapshot) {
             // The hamlet's plots for these residents (`map/hamlet.ts`), set before anything reads the attach points.
@@ -8623,6 +8638,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         bugGround.update(controls.target, viewDistance); // p2 (ground)
         climbStems.update(camera.position); // p3 (trees)
         forest.step(arkDayNow(current, worldMs())); // p5 (humans): before the trees' re-sort
+        forest.draw(camera.position, worldMs() / 1000); // p5 (humans): the crews
         assetTrees?.update(camera.position);
         assetRocks?.update(camera.position);
         assetFloor?.update(camera.position);

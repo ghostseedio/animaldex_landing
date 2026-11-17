@@ -24,6 +24,7 @@ import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
 import {forestDeathRecords, forestItems, forestText} from "@/ark-scene/live/forest-lines"; // p5 (humans)
+import {humanItems, humanText} from "@/ark-scene/live/human-lines"; // p5 (humans)
 import {isEnglish, signatureItems, signatureText} from "@/ark-scene/live/signature-lines";
 import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 import {ARK_ACTIVITY_ENGLISH, arkRecordNotesFromEvents, type ArkActivityWords} from "@/lib/ark-animal-status";
@@ -149,7 +150,7 @@ export class ArkLive {
         }
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
-            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
+            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text) ?? humanText(line) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
             onTap: (line) => this.focus(line),
             reducedMotion: Boolean(options.reducedMotion),
             serverLife: ARK_LIVE_LOG_DEFAULTS.serverLife,
@@ -304,6 +305,10 @@ export class ArkLive {
         const escapes = escapeItems(raw, from, (key) => this.said.has(key));
         for (const item of items.concat(escapes)) this.remember(item.id);
         this.deforested(raw, from); // p5 (humans)
+        // p5 (humans): the town's couples (`human-lines.ts`).
+        const couples = humanItems(raw, from, (key) => this.said.has(key));
+        for (const item of couples) this.remember(item.id);
+        if (couples.length) this.push(couples);
         // 3.3 batch (D): and acted in the live world (the scene's `addEscapes`: the chase that ends in a miss, the limp).
         const acts = escapeActs(raw, from);
         if (acts.length) {
@@ -342,6 +347,15 @@ export class ArkLive {
             })
             .catch(() => {
                 // (No answer: no forestry drawn; asked again later.)
+            });
+        // p5 (humans): and the town's couples and their children (the server's courtship), as often.
+        fetch(url.replace(/\/dormant$/, "/human-bonds"))
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: unknown) => {
+                if (!this.disposed && body) this.options.scene()?.setHumanBonds?.(body);
+            })
+            .catch(() => {
+                // (No answer: everyone goes about their own day; asked again later.)
             });
     }
 

@@ -1,7 +1,7 @@
 /**
  * Logging and replanting on the wild island, as drawn (owner 2026-11-17; AnimalDex decision 379). What every tree in a
  * logging's stand looks like at a moment: standing, falling (a few seconds as the felling front reaches it), lying felled
- * until it is hauled away, a stump, then a sapling growing back into the tree it replaces. A pure function of the shared
+ * until it is hauled away, a stump, then (the stump grubbed out) a sapling growing back in its place into the same tree. A pure function of the shared
  * Ark day and the shared forestry module (`positions/forestry.ts`, the server's own copy), so every viewer sees the same
  * tree fall at the same moment, and the server's deaths (the front reaching an animal's home) line up with it.
  *
@@ -17,8 +17,6 @@ export const FALL_SECONDS = 4;
 export const FALL_DAYS = (FALL_SECONDS * 1000) / ARK_DAY_MS;
 /** A sapling's size at planting, as a share of the grown tree. */
 export const SAPLING_SCALE = 0.1;
-/** The sapling stands this far (m) from its stump, toward the stand's middle, so the two never share a place. */
-export const SAPLING_ASIDE = 0.7;
 
 export type TreeFate =
     | {state: "standing"}
@@ -26,8 +24,8 @@ export type TreeFate =
     | {state: "falling"; fall: number; dir: number}
     | {state: "log"; dir: number}
     | {state: "stump"}
-    /** A sapling at `growth` (0 just planted … 1 grown); its stump still there until it is grown. */
-    | {state: "sapling"; growth: number; stump: boolean};
+    /** A sapling at `growth` (0 just planted … 1 grown), in its tree's own place (the planters grub the stump out). */
+    | {state: "sapling"; growth: number};
 
 /** The heading a tree at (x, z) falls toward: the way the front travels, a little either side by the tree. */
 export function fallHeading(g: Logging, x: number, z: number): number {
@@ -50,16 +48,15 @@ export function treeFate(g: Logging, x: number, z: number, day: number): TreeFat
     if (day < cut + HAUL_DAYS) return {state: "log", dir};
     const growth = growthAt(g, x, z, day);
     if (growth < 0) return {state: "stump"};
-    return {state: "sapling", growth, stump: growth < 1};
+    return {state: "sapling", growth};
 }
 
-/** Where a tree's sapling stands: beside its stump, toward the stand's middle. */
-export function saplingSpot(g: Logging, x: number, z: number): {x: number; z: number} {
-    const dx = g.stand.x - x;
-    const dz = g.stand.z - z;
-    const d = Math.sqrt(dx * dx + dz * dz);
-    if (d < 1e-3) return {x: x + SAPLING_ASIDE, z};
-    return {x: x + (dx / d) * SAPLING_ASIDE, z: z + (dz / d) * SAPLING_ASIDE};
+/**
+ * Where a tree's sapling stands: in the tree's own place (so the grown tree is exactly the one the island had: its
+ * perches, its trunk's collider and the server's atlas never move).
+ */
+export function saplingSpot(_g: Logging, x: number, z: number): {x: number; z: number} {
+    return {x, z};
 }
 
 /** A sapling's drawn size (share of the grown tree) at its growth. */

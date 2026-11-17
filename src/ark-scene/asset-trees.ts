@@ -41,7 +41,7 @@ type Instance = {x: number; y: number; z: number; scale: number; height: number;
  * falling, a sapling), or null (not drawn: hauled away). `moving` asks for a re-sort every frame (a tree mid-fall).
  */
 export type TreeOverride = {
-    covers: (tree: {x: number; y: number; z: number; height: number}) => boolean;
+    covers: (tree: {x: number; y: number; z: number; height: number; radius: number; matrix: Matrix4}) => boolean;
     matrix: (tree: {x: number; y: number; z: number; scale: number; height: number; radius: number; matrix: Matrix4}, into: Matrix4) => Matrix4 | null;
     moving: () => boolean;
     /** The override's own state changed (a tree fell, a sapling grew a step): re-sort once. */
