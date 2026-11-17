@@ -1,6 +1,7 @@
 "use client";
 
 import {useMemo, useState} from "react";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import Link from "@/app/[locale]/_components/link";
 import ContentImageFigure from "@/app/[locale]/(composited)/_components/content-image-figure";
 import {
@@ -80,9 +81,11 @@ export default function LegendaryEarthBeastsHubGrid({beasts}: LegendaryEarthBeas
                                 <span className="rounded-full border border-primary-500/25 bg-primary-500/5 px-3 py-1 text-primary-200 text-xs">
                                     {beast.legendaryType}
                                 </span>
-                                <span className="rounded-full border border-line-300 px-3 py-1 text-ink-300 text-xs">
-                                    Tier {beast.tier}
-                                </span>
+                                {SHOWS_BATTLE_TIER_AND_POWER ? (
+                                    <span className="rounded-full border border-line-300 px-3 py-1 text-ink-300 text-xs">
+                                        Tier {beast.tier}
+                                    </span>
+                                ) : null}
                                 {beast.respectfulCaptureNote ? (
                                     <span className="rounded-full border border-amber-400/30 bg-amber-500/10 px-3 py-1 text-amber-200 text-xs">
                                         Respectful capture

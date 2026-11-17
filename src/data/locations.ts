@@ -1,4 +1,5 @@
 import heroImages from "@/data/location-hero-images.json";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import {getLocationPlaceCollections} from "@/data/location-places";
 import type {LocationAnimalSpot, LocationPage, LocationPageInput} from "@/data/location-types";
 import {indonesiaIslandLocationPages} from "@/data/locations/indonesia-islands";
@@ -1004,7 +1005,9 @@ const locationPagesData: LocationPage[] = [
             {
                 speciesSlug: "house-fly",
                 whyItFits: "The other guaranteed capture: warungs, markets and anywhere food is prepared.",
-                rarityHint: "Guaranteed, and a reminder that tier E still counts."
+                rarityHint: SHOWS_BATTLE_TIER_AND_POWER
+                    ? "Guaranteed, and a reminder that tier E still counts."
+                    : "Guaranteed, and a reminder that the smallest animals count too."
             },
             {
                 speciesSlug: "termite",

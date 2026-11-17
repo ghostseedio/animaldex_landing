@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import Link from "@/app/[locale]/_components/link";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import LegendaryEarthBeastsHubGrid from "@/app/[locale]/(composited)/legendary-earth-beasts/_components/legendary-earth-beasts-hub-grid";
@@ -113,7 +114,7 @@ export default async function LegendaryEarthBeastsHubPage({params}: LegendaryEar
             </header>
 
             <section className="  border border-line-300 bg-surface-900/80 backdrop-blur px-6 py-8 md:px-10 md:py-10 flex flex-col gap-4 max-w-5xl mx-auto w-full">
-                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Real species. Mythic places. S-tier captures.</h2>
+                <h2 className="font-display font-bold text-3xl md:text-4xl text-white">Real species. Mythic places. {SHOWS_BATTLE_TIER_AND_POWER ? "S-tier" : "Legendary"} captures.</h2>
                 <p className="text-ink-200 text-lg md:text-xl leading-8">
                     Legendary Earth Beasts are not fantasy-only monsters. Each entry pairs a real scientific species with a real-world formation or cultural site—from Naka Cave and Dragon Head Mountain to Elephant Rock, Sigiriya, Devils Tower, and Hin Sam Wan.
                 </p>

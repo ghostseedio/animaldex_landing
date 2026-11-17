@@ -1,4 +1,5 @@
 import {Metadata} from "next";
+import {SHOWS_BATTLE_TIER_AND_POWER} from "@/lib/battle-visibility";
 import {isHumanSpecies} from "@/lib/people-are-never-public";
 import Image from "next/image";
 import {notFound, permanentRedirect} from "next/navigation";
@@ -1116,7 +1117,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
 
             {legendaryBeast ? (
                 <section className=" border border-amber-400/25 bg-amber-400/[0.06] p-6 md:p-8">
-                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">Legendary Earth Beast · Tier {legendaryBeast.tier}</p>
+                    <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">Legendary Earth Beast{SHOWS_BATTLE_TIER_AND_POWER ? ` · Tier ${legendaryBeast.tier}` : ""}</p>
                     <h2 className="mt-2 font-display text-3xl font-bold text-white">
                         {legendaryCatalogSeed?.captureSite ?? legendaryBeast.captureSite}
                     </h2>
