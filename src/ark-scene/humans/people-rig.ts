@@ -252,6 +252,18 @@ export function clipRows(clips: readonly AnimationClip[]): {name: PeopleClipName
  * bone texture. About 12 × 770 frames × 23 bones of matrix work, once at load.
  */
 export function bakePeople(near: Gltf, far: Gltf, clips: Gltf): BakedPeople {
+    const steps = bakePeopleSteps(near, far, clips);
+    for (;;) {
+        const step = steps.next();
+        if (step.done) return step.value;
+    }
+}
+
+/**
+ * The bake one body at a time (a generator: the page takes a body a task, so no single task holds the main thread for
+ * the whole bake on a phone).
+ */
+export function* bakePeopleSteps(near: Gltf, far: Gltf, clips: Gltf): Generator<void, BakedPeople, void> {
     near.scene.updateMatrixWorld(true);
     far.scene.updateMatrixWorld(true);
     clips.scene.updateMatrixWorld(true);
@@ -288,7 +300,8 @@ export function bakePeople(near: Gltf, far: Gltf, clips: Gltf): BakedPeople {
     const m = new Matrix4();
     const at = new Vector3();
     const axis = new Vector3();
-    PERSON_IDS.forEach((id, p) => {
+    for (let p = 0; p < PERSON_IDS.length; p++) {
+        const id = PERSON_IDS[p];
         const root = people.find((c) => c.name === id)!;
         const farRoot = far.scene.children.find((c) => c.name === id);
         if (!farRoot) throw new Error(`no far ${id}`);
@@ -401,7 +414,8 @@ export function bakePeople(near: Gltf, far: Gltf, clips: Gltf): BakedPeople {
             bone.position.copy(restP[i]);
         });
         persons.set(id, {id, near: geometry, far: farGeometry, column, height, hip, shoulder, clips: baked, grips});
-    });
+        yield;
+    }
     return {persons, bones, width, height: rows, rows};
 }
 

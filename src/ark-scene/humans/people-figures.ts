@@ -17,7 +17,7 @@ import {BufferGeometry, DataTexture, Group, HalfFloatType, InstancedBufferAttrib
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {HUMAN_FAR, HUMAN_MAX, HUMAN_NEAR, HumanFigures, type HumanInstance} from "@/ark-scene/humans/figures";
-import {ARM_FIRST, ARM_LAST, bakePeople, LEAN_FIRST, LEAN_LAST, PEOPLE_BASE, PEOPLE_FILES, PERSON_IDS, peopleGrips, peopleMatrix, peoplePose, type BakedPeople, type PeoplePose, type PersonId} from "@/ark-scene/humans/people-rig";
+import {ARM_FIRST, ARM_LAST, bakePeopleSteps, LEAN_FIRST, LEAN_LAST, PEOPLE_BASE, PEOPLE_FILES, PERSON_IDS, peopleGrips, peopleMatrix, peoplePose, type BakedPeople, type PeoplePose, type PersonId} from "@/ark-scene/humans/people-rig";
 
 const PEOPLE_GLSL = /* glsl */ `
 uniform highp sampler2D peopleBones;
@@ -122,8 +122,15 @@ function loadPeople(base: string): Promise<Shared> {
     const loader = new GLTFLoader();
     loader.setMeshoptDecoder(MeshoptDecoder);
     const get = (file: string) => loader.loadAsync(`${base}/${file}`);
-    shared = Promise.all([get(PEOPLE_FILES.near), get(PEOPLE_FILES.far), get(PEOPLE_FILES.clips)]).then(([near, far, clips]) => {
-        const baked = bakePeople(near, far, clips);
+    shared = Promise.all([get(PEOPLE_FILES.near), get(PEOPLE_FILES.far), get(PEOPLE_FILES.clips)]).then(async ([near, far, clips]) => {
+        // A body a task (about 15 ms each on a desktop, 60 on a throttled phone).
+        const steps = bakePeopleSteps(near, far, clips);
+        let step = steps.next();
+        while (!step.done) {
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            step = steps.next();
+        }
+        const baked = step.value;
         // (The files' own meshes are not drawn: only the bake's compact geometries are kept.)
         for (const g of [near, far, clips]) g.scene.traverse((o) => (o as {geometry?: {dispose(): void}}).geometry?.dispose());
         const texture = new DataTexture(baked.bones, baked.width, baked.height, RGBAFormat, HalfFloatType);
