@@ -22,11 +22,13 @@ import {arkBody} from "@/ark-scene/stats";
 import type {Placement} from "@/ark-scene/placement";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {hashText, hashTextOn, hashTextPrefix, inPoly, type Poly} from "@/ark-scene/islands/town/geom";
-import {townHeight} from "@/ark-scene/islands/town/ground";
+import {safariWaterLevel, townHeight} from "@/ark-scene/islands/town/ground";
 import {townHouseholds, farmOf, householdOf, urbanNiche, zooLayout, zooSpotsFor, townAreas, type Household, type SpotWhere, type TownSpot, type ZooEnclosure, type TownArea} from "@/ark-scene/islands/town/areas";
 import {launchEnclosures, enclosuresIn} from "@/ark-scene/islands/town/areas";
 import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
-import {zooResidents} from "@/ark-scene/islands/town/zoo-homes";
+import {domeZoneOf, zooResidents} from "@/ark-scene/islands/town/zoo-homes";
+import {DOME, DOME_FLOATERS, DOME_LAGOON, domeKeep, domeZoneAt, intoLagoon} from "@/ark-scene/islands/town/dome";
+import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
@@ -331,7 +333,13 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
             const host = enclosure ? (enclosure.shared ? layout.enclosures.find((e) => !e.shared && e.slot.id === enclosure.slot.id) ?? enclosure : enclosure) : null;
             const inner = host ? zooSpots.get(host.id) ?? [] : [];
             const swims = SWIMMER.test(slug);
-            const list = inner.filter((s) => (swims && host?.pool ? s.where === "pool" : s.where !== "pool" || !host?.pool));
+            // p5 (zoospace): in the free-flight dome, the spots of its zone by the homes rule (`zoo-homes.ts` domeZoneOf: the
+            // lagoon's banks, the canopy's trees and snags, the open floor, the cliff's foot); the waterbirds that live on the
+            // water (a stored role) on the lagoon itself.
+            const dome = host?.slot.annex === "dome";
+            const domeZone = dome ? (domeZoneOf(slug) === "lagoon" && DOME_FLOATERS.has(behaviourProfile(slug).water ?? "") ? "pool" : domeZoneOf(slug) ?? "floor") : null;
+            const zoned = domeZone ? inner.filter((s) => domeZoneAt(s.x, s.z) === domeZone) : [];
+            const list = zoned.length ? zoned : inner.filter((s) => (swims && host?.pool && !dome ? s.where === "pool" : s.where !== "pool" || !host?.pool));
             spot = pick(list.length ? list : inner, animal.id, (s, i) => `${s.where}${i}`);
             // (Its step off the spot never depends on who leads: a leader leaving moves nobody.)
             rank = 1 + ((own >>> 7) % 4);
@@ -389,7 +397,14 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         // (In the town every water is above the sea: a pool, the canal, a pond. The scene's water pose works from the sea's
         // level, so a swimmer here floats at its spot's surface, on its own ground: `water` stays false.)
         // (A raised pool's water is 0.45 m over the highest ground at its rim: a swimmer floats there, not under the rim.)
-        const pool = base.where === "pool" && info.enclosure?.pool ? Math.max(...info.enclosure.pool.map((q) => townHeight(q.x, q.z))) + 0.45 : null;
+        // p5 (zoospace): the dome's residents inside its circle (its plot is the square round it); its swimmers on the
+        // lagoon's open water, at the lagoon's own level (cut into the ground, `dome.ts`).
+        const inDomeHost = info.enclosure?.slot.annex === "dome" && !held;
+        if (inDomeHost) {
+            const kept = domeKeep(at.x, at.z, 0, 0, Math.min(length * 0.5, 2));
+            at = base.where === "pool" ? intoLagoon(kept.x, kept.z) : {x: kept.x, z: kept.z};
+        }
+        const pool = base.where === "pool" && info.enclosure?.pool ? (inDomeHost ? safariWaterLevel(DOME_LAGOON) : Math.max(...info.enclosure.pool.map((q) => townHeight(q.x, q.z))) + 0.45) : null;
         const placement: Placement = {x: at.x, z: at.z, ground: pool ?? base.y, yaw: held ? held.yaw : yaw, water: false, sea: false};
         fresh.push({animal, memoKey, placement, info, rank, length});
         void WATER_WHERE;
@@ -514,6 +529,10 @@ function spreadZoo(animals: readonly ArkAnimal[], places: Map<string, Placement>
                     if (r > best.room + 1e-6) best = {x: p.x, z: p.z, room: r};
                 }
             }
+            if (host.slot.annex === "dome") {
+                const kept = domeKeep(best.x, best.z, 0, 0, Math.min(f.length * 0.5, 2));
+                best = {x: kept.x, z: kept.z, room: best.room};
+            }
             if (best.x !== f.placement.x || best.z !== f.placement.z) {
                 f.placement.x = best.x;
                 f.placement.z = best.z;
@@ -523,6 +542,26 @@ function spreadZoo(animals: readonly ArkAnimal[], places: Map<string, Placement>
         }
         group.push({x: f.placement.x, z: f.placement.z, length: f.length});
     }
+}
+
+let domeFloorMemo: number | null = null;
+/** The dome's floor level (m): the ground at its middle; the shell's heights are over it (`dome.ts` domeShell). */
+export function domeFloor(): number {
+    return (domeFloorMemo ??= townHeight(DOME.x, DOME.z));
+}
+
+/**
+ * p5 (zoospace): a free-flight dome resident's pose kept inside the dome's volume (`dome.ts` domeKeep): on the ground
+ * inside its circle, in the air under the shell where it is (its body `length` m: its half length in from the mesh,
+ * six tenths of it for its height and wings). The scene's hard bound for the dome's birds (`islands/scene.ts`), and
+ * the tests': a 3D bound, not the plot's square.
+ */
+export function keepInDome(length: number, pose: {x: number; z: number; base?: number}, ox = 0, oz = 0): void {
+    const floor = domeFloor();
+    const kept = domeKeep(pose.x - ox, pose.z - oz, (pose.base ?? floor) - floor, length * 0.6, Math.min(length * 0.5, 3));
+    pose.x = kept.x + ox;
+    pose.z = kept.z + oz;
+    if (pose.base !== undefined && pose.base - floor > kept.y) pose.base = floor + kept.y;
 }
 
 /** A penned animal's place in its pen, by its own fields (not the zoo's open enclosures). */

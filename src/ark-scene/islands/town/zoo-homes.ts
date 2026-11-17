@@ -8,14 +8,17 @@
  * Real zoos split those by kind, so does the town, on the plots the safari freed (the two big-cat pens and the savanna
  * paddocks, whose residents went to the safari) and the types' own unopened plots:
  *
- * - **the wetland lagoon** (the second savanna plot): the waterbirds (a stored water role: flamingos, cranes, storks,
- *   ibises, ducks, geese, swans, pelicans) round a big shallow lagoon under a walk-through net;
+ * - **the free-flight dome** (`dome.ts`, on its own lobe of new land; the owner the same day: "add a giant dome for big
+ *   aviary and we can move some birds from the smaller aviaries"): the waterbirds but the geese (flamingos, cranes,
+ *   ibises, ducks, swans, pelicans: its lagoon), the big kinds that eat no meat or fish (macaws, hornbills, cockatoos,
+ *   toucans: its canopy; peafowl, curassows, pheasants: its floor; the mountain kinds its cliff); no bird hunter and
+ *   no carrion eater; the small kinds keep the five small aviaries;
+ * - **the wetland lagoon** (the second savanna plot): the geese (they graze ashore) on an open lagoon's lawns under a net;
  * - **the raptor row** (the two big-cat plots): long narrow flights, one per size band, the birds of prey by day and
- *   the owls apart; **the vulture aviary, the stork flight and a second big flight** for the rest of the birds (the
- *   third savanna plot);
+ *   the owls apart; **the vulture aviary and the stork flight** (the third savanna plot);
  * - **the tortoise paddock, the walkabout and the small carnivores' row** (the third hoofstock plot);
  * - **a snake house and a river house** (the third and fourth primate plots): the river giants (arapaima, gar,
- *   sturgeon) in one long tank and the piranhas in their own;
+ *   sturgeon) in one long tank, the river rays and the piranhas each in their own;
  * - the reptile house's kinds over its three houses (lizards, turtles and amphibians, the large hunters), and the
  *   rest of each crowded type spread over its own plots by species.
  *
@@ -29,10 +32,11 @@
 import {hashText, rng, sub, type Box} from "@/ark-scene/islands/town/geom";
 import {ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import {safariEnclosureOf} from "@/ark-scene/islands/town/safari";
+import {DOME_ID} from "@/ark-scene/islands/town/dome";
 import table from "@/ark-scene/islands/town/zoo-homes.json";
 
 /** How a new home is dressed (`render/zoo-habitat.ts`, `tanks.ts`): its theme over its type's own build. */
-export type ZooAnnexTheme = "wetland" | "raptors" | "owls" | "vultures" | "waders" | "flight" | "tortoises" | "walkabout" | "carnivores" | "snakes" | "river";
+export type ZooAnnexTheme = "wetland" | "raptors" | "owls" | "vultures" | "waders" | "tortoises" | "walkabout" | "carnivores" | "snakes" | "river" | "dome";
 
 export type ZooAnnex = {
     /** The enclosure's name (`<home>-<n>`): what a moved resident's enclosure becomes. */
@@ -57,9 +61,8 @@ export const ANNEX_GAP = 0.8;
  */
 export const ZOO_ANNEXES: readonly ZooAnnex[] = [
     {id: "zoo_wetland-1", type: "aviaries", theme: "wetland", plot: "savanna_paddocks-2", from: 0, width: 27.7, capacity: 60, label: "Wetland lagoon"},
-    {id: "zoo_vultures-1", type: "aviaries", theme: "vultures", plot: "savanna_paddocks-3", from: 0, width: 7.2, capacity: 12, label: "Vulture aviary"},
-    {id: "zoo_waders-1", type: "aviaries", theme: "waders", plot: "savanna_paddocks-3", from: 8.0, width: 5.4, capacity: 10, label: "Stork and pelican flight"},
-    {id: "zoo_flight-1", type: "aviaries", theme: "flight", plot: "savanna_paddocks-3", from: 14.2, width: 13.5, capacity: 40, label: "Rainforest flight"},
+    {id: "zoo_vultures-1", type: "aviaries", theme: "vultures", plot: "savanna_paddocks-3", from: 0, width: 13.4, capacity: 16, label: "Vulture aviary"},
+    {id: "zoo_waders-1", type: "aviaries", theme: "waders", plot: "savanna_paddocks-3", from: 14.2, width: 13.5, capacity: 14, label: "Stork and pelican flight"},
     {id: "zoo_raptors-1", type: "aviaries", theme: "raptors", plot: "big_cats-1", from: 0, width: 3.6, capacity: 6, label: "Falcons"},
     {id: "zoo_raptors-2", type: "aviaries", theme: "raptors", plot: "big_cats-1", from: 4.4, width: 8.4, capacity: 12, label: "Hawks and kites"},
     {id: "zoo_raptors-3", type: "aviaries", theme: "raptors", plot: "big_cats-1", from: 13.6, width: 4.4, capacity: 6, label: "Sea eagles"},
@@ -101,9 +104,8 @@ export function annexBox(annex: ZooAnnex, plot: Box): Box {
  */
 export const ZOO_SPREAD: Partial<Record<ZooEnclosureType, ReadonlyArray<{id: string; weight: number}>>> = {
     aviaries: [
-        ...[1, 2, 3, 4, 5].map((n) => ({id: `aviaries-${n}`, weight: 288})),
-        {id: "aviaries-6", weight: 159},
-        {id: "zoo_flight-1", weight: 547}
+        // (The small kinds the dome leaves: the zoo's own five aviaries.)
+        ...[1, 2, 3, 4, 5].map((n) => ({id: `aviaries-${n}`, weight: 288}))
     ],
     nocturnal_house: [{id: "nocturnal_house-1", weight: 140}, {id: "nocturnal_house-2", weight: 140}],
     primate_house: [{id: "primate_house-1", weight: 383}, {id: "primate_house-2", weight: 383}],
@@ -166,6 +168,12 @@ export function riverHouseTank(slug: string): "piranhas" | "rays" | "river" {
     return home === "piranhas" || home === "rays" ? home : "river";
 }
 
+/** In the free-flight dome, its zone by the rule (`dome:<zone>` in the table): the lagoon, the canopy, the floor, the cliff. */
+export function domeZoneOf(slug: string): "lagoon" | "canopy" | "floor" | "cliff" | null {
+    const home = HOMES[slug]?.aviaries;
+    return home?.startsWith("dome:") ? (home.slice(5) as "lagoon" | "canopy" | "floor" | "cliff") : null;
+}
+
 type Resident = {model_slug: string; scientific_name?: string | null; enclosure?: string | null; area?: string | null};
 
 /** The server type and number of an enclosure name (`<type>-<n>`). */
@@ -185,6 +193,8 @@ export function zooHomeOf(animal: Resident): string | null {
     if (!server) return animal.enclosure ?? null;
     const home = HOMES[animal.model_slug]?.[server.type];
     if (home) {
+        // (The free-flight dome, `dome.ts`: its zone inside is `domeZoneOf`.)
+        if (home.startsWith("dome:")) return DOME_ID;
         const colon = home.indexOf(":");
         if (colon > 0) return bay(home.slice(0, colon), Number(home.slice(colon + 1)));
         if (NAMED[home]) return NAMED[home];

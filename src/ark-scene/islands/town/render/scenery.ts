@@ -33,6 +33,7 @@ import {clearOfDoors, PATH_WIDTH, pathOpenings, townDoorWays} from "@/ark-scene/
 import {boundaryBodies, madeHere} from "@/ark-scene/islands/town/render/fences";
 import {parkBench} from "@/ark-scene/islands/town/render/bench";
 import {safariBarrier, safariScenery} from "@/ark-scene/islands/town/render/safari";
+import {domeScenery} from "@/ark-scene/islands/town/render/dome";
 import {safariArea} from "@/ark-scene/islands/town/safari";
 
 /** A chunk's merged geometry by material; `foliage`: hedges, flower beds and crops (lane GC, `render/nature.ts`). */
@@ -666,6 +667,12 @@ function enclosure(out: SceneryOut, e: ZooEnclosure) {
         dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null);
         return;
     }
+    // p5 (zoospace): the free-flight dome: its building is the town's (`render/dome.ts`); its planting, cliff, snags and
+    // feeding stations its dressing.
+    if (e.slot.annex === "dome") {
+        dressPaddock(e, zooSpotsOf(e), c.solid, out.fresh, H, out.cover ?? null);
+        return;
+    }
     const ground = e.type === "savanna_paddocks" ? "#cdb07a" : e.type === "hoofstock_paddocks" || e.type === "childrens_farm" ? "#a99268" : e.type === "big_cats" ? "#b7a374" : e.type === "bears_wolves" ? "#7d7a52" : e.type === "small_mammals" ? "#9a8a62" : null;
     // (Lane GA: the 2 m cells' own shades were the "giant pixels"; the earth and sand textures carry the variety now.)
     if (ground) tagged(c.decal, e.type === "savanna_paddocks" || e.type === "big_cats" ? SURF.sand : SURF.earth, alongZ(s.rot), () => c.decal.drape({x: s.x, y: 0, z: s.z, rot: s.rot}, s.w - 0.4, s.d - 0.4, H, 0.06, () => tone(ground), 2));
@@ -910,6 +917,8 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
     zooPlaza(out, plan);
     // p4 (safari): the safari park's paving, gate, waters, boardwalk and decks.
     safariScenery((x, z) => chunkFor(out, x, z), out.fresh);
+    // p5 (zoospace): the free-flight dome's building, its paths, boardwalk and lagoon, its path lamps (`render/dome.ts`).
+    domeScenery((x, z) => chunkFor(out, x, z), out.fresh, out.lamps);
     lamps(out, plan);
     beds(out, plan);
     // The lamps' and the street furniture's bodies into the chunks; their lights and the lamp map (lane GA).

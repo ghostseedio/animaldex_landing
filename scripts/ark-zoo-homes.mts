@@ -12,7 +12,10 @@
  *   their row; the reptile house's big ones (band 17 and up) in the large reptile house, its water hunters with the
  *   turtles, the rest in the snake house;
  * - aviaries: the carrion eaters of the land (vultures, condors) in the vulture aviary (first: they are no birds'
- *   hunters); the waterbirds (a stored water role: waders, ducks, geese, swans, pelicans) in the wetland lagoon;
+ *   hunters); the geese (a stored water role "goose": they graze ashore) on the open wetland lagoon's lawns; into the
+ *   free-flight dome (`dome.ts`), no hunter and no carrion eater: every other waterbird (waders, ducks, swans,
+ *   pelicans: its lagoon), and the big kinds that eat no meat or fish (size 20 or more: the flyers its canopy, the
+ *   ground birds its floor, the mountain, shore and polar kinds its cliff); the small kinds keep the small aviaries;
  * - reptile house: the big land tortoises (a turtle body, grazer or browser, size 30 or more) in the tortoise paddock;
  *   the snakes in the snake house; the turtles and amphibians in the second house; the lizards stay in the first;
  * - small mammals: the big grazers (size 28 or more: capybara, wallabies, maras) in the walkabout;
@@ -53,7 +56,8 @@ for (const p of profiles) {
     if (BIRDS.has(p.plan)) {
         if (p.diet === "carrion" && !p.water) own.aviaries = "vultures";
         else if (huntsAmong(p, BIRDS)) own.aviaries = p.activity === "nocturnal" ? `owls:${b}` : p.water ? `waders:${b}` : `raptors:${b}`;
-        else if (p.water) own.aviaries = "wetland";
+        else if (p.water) own.aviaries = p.water === "goose" ? "wetland" : "dome:lagoon";
+        else if (p.size >= 20 && p.diet !== "meat" && p.diet !== "fish") own.aviaries = p.zone === "mountains" || p.zone === "seashore" || p.zone === "polar" ? "dome:cliff" : p.plan === "flying_bird" ? "dome:canopy" : "dome:floor";
     }
     if (MAMMALS.has(p.plan)) {
         if (huntsAmong(p, MAMMALS)) own.small_mammals = `carnivores:${b}`;

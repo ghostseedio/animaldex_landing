@@ -15,6 +15,7 @@
  * Pure in the plan and the open enclosures: the same for every viewer.
  */
 
+import {DOME, domePerches} from "@/ark-scene/islands/town/dome";
 import type {ArkZone} from "@/ark-scene/types";
 import type {ArkWorldSampler, AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import type {ColliderSet} from "@/ark-scene/collide/colliders";
@@ -288,6 +289,12 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
         if (e.shared) continue;
         add("grass", `town:feed:${e.id}`, e.feeding.x, townHeight(e.feeding.x, e.feeding.z), e.feeding.z);
         e.enrichment.forEach((r, k) => add(r.what === "logs" ? "log_top" : "grass", `town:enrich:${e.id}:${k}`, r.at.x, townHeight(r.at.x, r.at.z) + (r.what === "logs" ? 0.5 : 0), r.at.z));
+    }
+    // p5 (zoospace): the free-flight dome's perches (`dome.ts`: the snags' limbs and tops, the cliff's nest ledges, the
+    // feeding trays), at their drawn heights over its floor: its birds' places off the ground, to the canopy's height.
+    if (zooLayout(open).enclosures.some((e) => e.slot.annex === "dome")) {
+        const floor = townHeight(DOME.x, DOME.z);
+        for (const p of domePerches()) add(p.kind === "ledge" ? "rock_top" : "branch", `town:dome:${p.id}`, p.x, floor + p.y, p.z);
     }
     // p2 (town2): on the dead wood (a log's top and bark, the litter and shade at its foot; a stump's top and side) and
     // on the nettle patches' tops (leaf).

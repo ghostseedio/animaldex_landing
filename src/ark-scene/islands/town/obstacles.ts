@@ -16,6 +16,7 @@
  *   player control).
  */
 
+import {DOME} from "@/ark-scene/islands/town/dome";
 import {corners, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, townPlan, type Hedge, type TownPlan} from "@/ark-scene/islands/town/plan";
@@ -78,6 +79,13 @@ export function townObstacles(plan: TownPlan = townPlan(), open?: readonly strin
     const layout = zooLayout(open ?? launchEnclosures(), plan);
     for (const e of layout.enclosures) {
         if (e.shared) continue;
+        // p5 (zoospace): the free-flight dome's barrier is its drum's ring, its lagoon the ground's own water.
+        if (e.slot.annex === "dome") {
+            const ring = Array.from({length: 25}, (_, i) => ({x: DOME.x + Math.cos((i / 24) * Math.PI * 2) * DOME.r, z: DOME.z + Math.sin((i / 24) * Math.PI * 2) * DOME.r}));
+            out.push({id: `${e.slot.id}-fence`, kind: "barrier", line: ring, height: DOME.drum, thickness: PASS.net.thickness, barrier: "net", passable: PASS.net.passable, hard: true});
+            out.push({id: e.id, kind: "enclosure", poly: e.mask, type: e.type, hard: true});
+            continue;
+        }
         const k = corners(e.slot.at);
         const aviary = e.type === "aviaries";
         const p = PASS[aviary ? "net" : "zoo_fence"];

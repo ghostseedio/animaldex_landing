@@ -17,13 +17,14 @@
 
 // 3.3 fix: perches on the drawn roofs.
 import {buildingSolid, perchOnSurface} from "@/ark-scene/islands/town/roof-perch";
-import {corners, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, toLocal, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
+import {corners, ellipse, hashText, hashTextOn, hashTextPrefix, inBox, inPoly, local, polylineAt, polylineLength, rng, sub, toLocal, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround, townBuildingFloor, townHeight} from "@/ark-scene/islands/town/ground";
 import {clearForItem, houseDoorU, terraceDoorU} from "@/ark-scene/islands/town/doors";
 import {deadwoodFoot, townDeadwood} from "@/ark-scene/islands/town/deadwood";
 import {CANAL, CANAL_LEVEL, CANAL_WIDTH, MILLPOND, townPlan, type Building, type Parcel, type TownPlan, type ZooSlot} from "@/ark-scene/islands/town/plan";
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import {SAFARI_KOPJES, SAFARI_TERMITES, SAFARI_WATERS, safariArea, safariWaterNorm} from "@/ark-scene/islands/town/safari";
+import {DOME_FEEDERS, DOME_ID, DOME_LAGOON, domeSpots} from "@/ark-scene/islands/town/dome";
 import {annexBox, takenPlots, zooAnnex, zooEnclosureOf, zooHomeOf} from "@/ark-scene/islands/town/zoo-homes";
 import type {CarSpot} from "@/ark-scene/islands/town/people";
 import type {SpotWhere} from "@/ark-scene/islands/town/niche";
@@ -513,7 +514,8 @@ function parseEnclosure(id: string): {type: ZooEnclosureType; n: number} | null 
     // p4 (safari): a safari area takes its plan slot's own spec type.
     const area = safariArea(id);
     if (area) return {type: area.type, n: 1};
-    // p5 (zoospace): a new home takes its own spec type.
+    // p5 (zoospace): the free-flight dome is an aviary; a new home takes its own spec type.
+    if (id === DOME_ID) return {type: "aviaries", n: 1};
     const annex = zooAnnex(id);
     if (annex) return {type: annex.type, n: 1};
     const match = /^([a-z_]+)-([0-9]{1,3})$/.exec(id);
@@ -561,12 +563,13 @@ export function zooLayout(open: readonly string[] = launchEnclosures(), plan: To
             placed.push({id: x.id, type: x.p.type, n: x.p.n, slot: {id: x.id, type: x.p.type, rank: x.p.n - 1, at: spare.at, path: spare.path, seed: hashText(x.id)}, place: spare.id, shared: false});
             continue;
         }
-        const own = plan.zoo.slots.filter((s) => s.type === x.p.type).sort((a, b) => b.rank - a.rank)[0];
+        const own = plan.zoo.slots.filter((s) => s.type === x.p.type && !s.annex).sort((a, b) => b.rank - a.rank)[0];
         if (own) placed.push({id: x.id, type: x.p.type, n: x.p.n, slot: own, place: own.id, shared: true});
     }
     const enclosures = placed.filter((x) => !x.shared).map((x) => enclosureOn(x.id, x.slot, x.place, false));
     for (const x of placed.filter((y) => y.shared)) enclosures.push(enclosureOn(x.id, x.slot, x.place, true));
-    const closed = [...plan.zoo.slots.filter((s) => !used.has(s.id)).map((s) => ({id: s.id, at: s.at})), ...plan.zoo.spares.filter((s) => !used.has(s.id)).map((s) => ({id: s.id, at: s.at}))];
+    // (p5 (zoospace): the free-flight dome with no birds is its own building, not a lawn plot.)
+    const closed = [...plan.zoo.slots.filter((s) => !used.has(s.id) && !s.annex).map((s) => ({id: s.id, at: s.at})), ...plan.zoo.spares.filter((s) => !used.has(s.id)).map((s) => ({id: s.id, at: s.at}))];
     return {enclosures, closed};
 }
 
@@ -579,6 +582,8 @@ function enclosureOn(id: string, slot: ZooSlot, place: string, shared: boolean):
     const feeding = local(slot.at, slot.at.w * 0.3, -slot.at.d / 2 + 1.4);
     const r = rng(hashText(id));
     const enrichment = spec.enrichment.map((what) => ({what, at: local(slot.at, (r() - 0.5) * (slot.at.w - 3), (r() - 0.5) * (slot.at.d - 3))}));
+    // p5 (zoospace): the dome: its lagoon (cut into the ground, `dome.ts`) is its swimmers' pool; fed at its stations.
+    if (slot.annex === "dome") return {id, slot, place, shared, type: slot.type, mask: corners(inner), capacity: slot.capacity ?? spec.capacity, pool: ellipse(DOME_LAGOON.x, DOME_LAGOON.z, DOME_LAGOON.rx * 0.74, DOME_LAGOON.rz * 0.74, 20, DOME_LAGOON.rot), indoor, feeding: DOME_FEEDERS[0], enrichment: [], feedingTimes: spec.feeding};
     // p5 (zoospace): a new home's own capacity; its waters are its dressing's (`zoo-habitat.ts`), no raised pool.
     if (slot.annex) return {id, slot, place, shared, type: slot.type, mask: corners(inner), capacity: slot.capacity ?? spec.capacity, pool: null, indoor, feeding, enrichment, feedingTimes: spec.feeding};
     return {id, slot, place, shared, type: slot.type, mask: corners(inner), capacity: spec.capacity, pool, indoor, feeding, enrichment, feedingTimes: spec.feeding};
@@ -602,7 +607,7 @@ export function openZooSlots(arrived: Partial<Record<ZooEnclosureType, number>>,
     const out: ZooSlot[] = [];
     for (const slot of plan.zoo.slots) {
         // p4 (safari): a safari area opens by its own residents (`enclosuresIn`), not by its type's count.
-        if (slot.safari) continue;
+        if (slot.safari || slot.annex) continue;
         const spec = ZOO_TYPES[slot.type];
         const residents = arrived[slot.type] ?? 0;
         const open = residents > 0 ? Math.min(spec.slots, Math.max(1, Math.ceil(residents / spec.capacity))) : 0;
@@ -620,6 +625,7 @@ export function openZooSlots(arrived: Partial<Record<ZooEnclosureType, number>>,
 export function zooSpotsOf(e: Pick<ZooEnclosure, "capacity" | "slot">): Pt[] {
     if (e.slot.safari) return safariSpotsOf(e);
     if (e.slot.annex === "wetland") return wetlandSpotsOf(e);
+    if (e.slot.annex === "dome") return domeSpots(e.slot.seed);
     const inner = sub(e.slot.at, 0, -0.6, e.slot.at.w - 2.2, e.slot.at.d - 2.6);
     return spread(inner, Math.min(e.capacity, 40), e.slot.seed);
 }

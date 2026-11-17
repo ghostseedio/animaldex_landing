@@ -51,7 +51,8 @@ test("the zoo's homes table is the rule over the stored profiles and the food li
         if (BIRDS.has(p.plan)) {
             if (p.diet === "carrion" && !p.water) own.aviaries = "vultures";
             else if (hunts(p, BIRDS)) own.aviaries = p.activity === "nocturnal" ? `owls:${b}` : p.water ? `waders:${b}` : `raptors:${b}`;
-            else if (p.water) own.aviaries = "wetland";
+            else if (p.water) own.aviaries = p.water === "goose" ? "wetland" : "dome:lagoon";
+            else if (p.size >= 20 && p.diet !== "meat" && p.diet !== "fish") own.aviaries = p.zone === "mountains" || p.zone === "seashore" || p.zone === "polar" ? "dome:cliff" : p.plan === "flying_bird" ? "dome:canopy" : "dome:floor";
         }
         if (MAMMALS.has(p.plan)) {
             if (hunts(p, MAMMALS)) own.small_mammals = `carnivores:${b}`;
@@ -82,7 +83,10 @@ test("the zoo's homes table is the rule over the stored profiles and the food li
     const home = (slug: string, type = zooTypeOfSlug(slug)) => zooHomeOf({model_slug: slug, area: "zoo", enclosure: `${type}-1`});
     assert.equal(home("arapaima", "aquarium"), "zoo_river-1");
     assert.equal(home("red-bellied-piranha", "aquarium"), "zoo_river-1");
-    assert.equal(home("greater-flamingo", "aviaries"), "zoo_wetland-1");
+    assert.equal(home("barnacle-goose", "aviaries"), "zoo_wetland-1");
+    assert.equal(home("greater-flamingo", "aviaries"), "zoo_dome-1");
+    assert.equal(home("scarlet-macaw", "aviaries"), "zoo_dome-1");
+    assert.equal(home("budgerigar", "aviaries")?.startsWith("aviaries-"), true);
     assert.equal(home("capybara", "small_mammals"), "zoo_walkabout-1");
     assert.equal(home("leopoldi-stingray", "aquarium"), "zoo_river-1");
     // A river's or a lake's animal is a fresh water one whatever its name holds (a stingray of the Amazon, a crayfish).
@@ -100,7 +104,7 @@ function resident(i: number, slug: string, enclosure: string): ArkAnimal {
 /** The live record's crowded kinds (scratchpad snapshot, 2026-11-17), as the server held them: two of each. */
 const KINDS: Array<[string, string]> = [
     // aviaries: waterbirds, raptors, owls, vultures, storks, songbirds and parrots
-    ["greater-flamingo", "aviaries-1"], ["mute-swan", "aviaries-1"], ["mandarin-duck", "aviaries-2"], ["eurasian-coot", "aviaries-3"],
+    ["greater-flamingo", "aviaries-1"], ["mute-swan", "aviaries-1"], ["mandarin-duck", "aviaries-2"], ["eurasian-coot", "aviaries-3"], ["barnacle-goose", "aviaries-3"], ["greylag-goose", "aviaries-4"],
     ["harriss-hawk", "aviaries-1"], ["peregrine-falcon", "aviaries-2"], ["barn-owl", "aviaries-2"], ["eurasian-eagle-owl", "aviaries-3"],
     ["lappet-faced-vulture", "aviaries-1"], ["marabou-stork", "aviaries-4"], ["scarlet-macaw", "aviaries-1"], ["budgerigar", "aviaries-2"],
     // reptile house: lizards, snakes, turtles, a tortoise, a python, frogs
@@ -124,7 +128,7 @@ function animals(): ArkAnimal[] {
 /** Residents per 100 m² of an enclosure's ground, at most, by its kind (the census's numbers after the move, and room). */
 const CAP: Record<string, number> = {
     // (A new home by its theme: the walkabout's capybaras, maras and wallabies are small mammals on a hoofstock plot.)
-    walkabout: 5, tortoises: 7, carnivores: 4, raptors: 6, owls: 6, wetland: 6, vultures: 6, waders: 6, flight: 6, snakes: 6,
+    walkabout: 5, tortoises: 7, carnivores: 4, raptors: 6, owls: 6, wetland: 6, vultures: 6, waders: 6, dome: 6, snakes: 6,
     aviaries: 6, reptile_house: 6, nocturnal_house: 7, primate_house: 5, small_mammals: 7, hoofstock_paddocks: 2, savanna_paddocks: 2, big_cats: 4, insect_house: 12};
 
 /** The pairs in one enclosure where one hunts the other (a food link) and the other is under `ratio` of its size. */
@@ -183,9 +187,11 @@ test("the crowded kinds in their new homes: under each kind's cap, nobody on ano
     assert.ok(list.length >= 60, `${list.length} residents`);
     const {placed, by, problems} = audit(list);
     assert.deepEqual(problems, []);
-    // They moved: the waterbirds to the lagoon, the raptors and owls to their row, the river giants to the river house.
+    // They moved: the waterbirds and the big flyers to the dome, the geese to the open lagoon, the raptors and owls to their row, the river giants to the river house.
     const at = (slug: string) => placed.town.get(list.find((a) => a.model_slug === slug)!.id)!.enclosure!.id;
-    assert.equal(at("greater-flamingo"), "zoo_wetland-1");
+    assert.equal(at("greater-flamingo"), "zoo_dome-1");
+    assert.equal(at("scarlet-macaw"), "zoo_dome-1");
+    assert.equal(at("barnacle-goose"), "zoo_wetland-1");
     assert.match(at("harriss-hawk"), /^zoo_raptors-\d$/);
     assert.match(at("barn-owl"), /^zoo_owls-\d$/);
     assert.equal(at("lappet-faced-vulture"), "zoo_vultures-1");
