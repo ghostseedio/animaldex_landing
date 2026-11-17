@@ -120,11 +120,20 @@ test("the owner's library, top captures and Discover narrow selects carry captur
     assert.match(app, /captureGrade: capture\.captureGrade \?\? null/);
 });
 
+/** Every non-test .ts/.tsx path under src, relative to it. */
+function sourceFilePaths(directory = "", found: string[] = []): string[] {
+    const root = fileURLToPath(new URL("..", import.meta.url));
+    for (const entry of readdirSync(`${root}${directory}`, {withFileTypes: true})) {
+        const path = `${directory}${entry.name}`;
+        if (entry.isDirectory()) sourceFilePaths(`${path}/`, found);
+        else if (/\.(ts|tsx)$/.test(entry.name) && !/\.test\.tsx?$/.test(entry.name)) found.push(path);
+    }
+    return found;
+}
+
 test("any web read of the challenge and following feeds selects capture_grade (today none exists)", () => {
-    const sourceFiles = (readdirSync(fileURLToPath(new URL("..", import.meta.url)), {recursive: true}) as string[])
-        .filter((path) => /\.(ts|tsx)$/.test(path) && !/\.test\.tsx?$/.test(path));
     const feeds = /["'`](challenge_feed_v1|following_discover_feed_v1|following_challenge_feed_v1)["'`]/;
-    for (const path of sourceFiles) {
+    for (const path of sourceFilePaths()) {
         const source = read(`../${path}`);
         if (feeds.test(source)) assert.match(source, /capture_grade/, `${path} reads a feed that now carries capture_grade`);
     }
@@ -134,7 +143,9 @@ test("the grade sheet explains how grades are built and shows no arithmetic tota
     const sheet = read("../app/[locale]/(authenticated)/app/_components/capture-grade-badge.tsx");
     assert.doesNotMatch(sheet, /weightedScore|adjustedScore|contrastedScore|breakdown\.factors|breakdown\.adjustments|breakdown\.summary/);
     // The seven weighted factors of the shared server formula.
-    const weights = [...sheet.matchAll(/\{title: "[^"]+", weight: (\d+)\}/g)].map((match) => Number(match[1]));
+    const weights: number[] = [];
+    const weightPattern = /\{title: "[^"]+", weight: (\d+)\}/g;
+    for (let match = weightPattern.exec(sheet); match; match = weightPattern.exec(sheet)) weights.push(Number(match[1]));
     assert.deepEqual(weights, [24, 20, 18, 16, 8, 8, 6]);
     assert.equal(weights.reduce((sum, weight) => sum + weight, 0), 100);
     assert.match(sheet, /endorsements and community star ratings never change a grade/);
