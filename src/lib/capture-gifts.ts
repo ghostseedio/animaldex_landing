@@ -135,7 +135,7 @@ export function parseGiftCatalog(json: unknown): GiftCatalog {
         enabled: body.enabled,
         source,
         definitions: rows
-            .map((item) => {
+            .map((item): GiftDefinition => {
                 const slug = String(item.slug ?? "");
                 const care = item.care_kind;
                 return {
