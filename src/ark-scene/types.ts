@@ -606,6 +606,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * its lines begin there. `closest`: the nearest the shot asks to stand (the camera's least distance follows it).
      */
     setNearCut?: (metres: number | null, closest?: number | null) => void;
+    /** V2 replay: the trees and leaf cards dissolve inside a cone round the view's axis (`tan`: its half angle's tangent) as far as `end` metres from the camera; null: none. */
+    setNearCone?: (cone: {tan: number; end: number} | null) => void;
     /** V2 replay: the ground's standing plants (ferns, saplings, crops) drawn smaller round these spots, to nothing within `r` of one; null: as the Ark is. */
     setGroundClear?: (spots: Array<{x: number; z: number; r: number}> | null) => void;
     /** V2 replay: whether the scene is flying its own camera now (a replay's flight to its act). */

@@ -16,7 +16,7 @@
  * - a clear view: the scene's own lines of sight (`sightOf`: `runtime/sight.ts`, as a chosen animal's close-up asks
  *   them) from the camera to each of the cast, the views round the asked one tried until one sees them all (inside
  *   a zoo house's shell, over a rock, under the water with a swimmer); and what leaves stand between dissolve
- *   (`near-fade.ts` setNearCone: a cone round the view's axis, as far as the subject and the plant it stands in);
+ *   (`setNearCone`, `near-fade.ts`: a cone round the view's axis, as far as the subject and the plant it stands in);
  * - the night: the recorder's exposure and a fill of the sky's own light (`setExposure`), eased in with the dark;
  *   the hour, the moon and the night's colours are the event's;
  * - an editorial default (the audit, §2.4): at a mating's mount the camera pulls up and away and the clip goes on
@@ -26,7 +26,6 @@
  */
 
 import {arkEpochSeconds, pinArkClock} from "@/ark-scene/shared-clock";
-import {setNearCone} from "@/ark-scene/near-fade";
 import {easeToward} from "@/ark-scene/pair-frame";
 import {attachArkCast, type ArkCast} from "@/ark-scene/replay/cast";
 import {DEATH_BODY_SECONDS, DEATH_FADE_SECONDS} from "@/ark-scene/live-deaths";
@@ -838,7 +837,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         end: () => {
             if (!ended) Object.assign(report, cast.report());
             ended = true;
-            setNearCone(null);
+            handle.setNearCone?.(null);
             handle.setNearCut?.(null);
             handle.setGroundClear?.(null);
             handle.setExposure?.(1, 1);
@@ -855,7 +854,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         if (!at) {
             handle.setNearCut?.(null);
             handle.setGroundClear?.(null);
-            return setNearCone(null);
+            handle.setNearCone?.(null);
+            return;
         }
         const sinP = Math.sin(at.polar);
         const eye = {x: at.target.x + at.distance * sinP * Math.sin(at.azimuth), y: at.target.y + at.distance * Math.cos(at.polar), z: at.target.z + at.distance * sinP * Math.cos(at.azimuth)};
@@ -880,7 +880,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             end = Math.max(end, along + Math.max(p.length, p.height) * 0.8);
             cut = Math.min(cut, cutAt(at.distance, at.polar, at.distance - along + Math.max(p.length, p.height) * 0.6 + 0.02));
         }
-        setNearCone(held && end > 0.05 ? {tan: wide, end} : null);
+        handle.setNearCone?.(held && end > 0.05 ? {tan: wide, end} : null);
         handle.setNearCut?.(held && cut > 0 && Number.isFinite(cut) ? cut : null, held ? at.distance * 0.9 : null);
         handle.setGroundClear?.(spots.length ? spots : null);
     }

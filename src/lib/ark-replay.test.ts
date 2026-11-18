@@ -3,7 +3,6 @@ import test from "node:test";
 import {ArkCast, standInAnimal, type ArkCastRecord} from "@/ark-scene/replay/cast";
 import {ArkReplayUnavailable, arkReplayableEvents, arkReplayModels, planArkEventReplay} from "@/ark-scene/replay/event-replay";
 import {readArkEventLog} from "@/ark-scene/replay/event-log";
-import {ARK_NEAR_CONE} from "@/ark-scene/near-fade";
 import {createArkReplayShot, REPLAY_SETTLE_SECONDS} from "@/ark-scene/replay/shot";
 import {arkReplayText} from "@/ark-scene/replay/text";
 import {arkEpochSeconds, arkPinnedMs, pinArkClock} from "@/ark-scene/shared-clock";
@@ -434,14 +433,16 @@ function sightScene(clear: (view: {distance: number; polar: number; azimuth: num
     const scene = fakeScene(acts);
     const asked: Array<{distance: number; polar: number; azimuth: number; cut: number; points: number}> = [];
     const cuts: Array<number | null> = [];
+    const cones: Array<{tan: number; end: number} | null> = [];
     Object.assign(scene.handle, {
+        setNearCone: (cone: {tan: number; end: number} | null) => void cones.push(cone),
         sightOf: (_target: unknown, view: {distance: number; polar: number; azimuth: number}, points: unknown[], _fresh?: boolean, cut = 0) => {
             asked.push({...view, cut, points: points.length});
             return clear(view) ? 0 : points.length;
         },
         setNearCut: (metres: number | null) => void cuts.push(metres)
     });
-    return {...scene, asked, cuts};
+    return {...scene, asked, cuts, cones};
 }
 const turned = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
 
@@ -465,7 +466,8 @@ test("a clear view by the scene's lines of sight: the views round the asked one 
         assert.ok(scene.asked[0].cut > view.distance * 0.3 && scene.asked[0].cut < view.distance - 1, "the lines begin at the near cut, short of its body");
         const cut = scene.cuts[scene.cuts.length - 1]!;
         assert.ok(cut > view.distance * 0.3 && cut < view.distance - 1, "the cutaway: the near plane out toward it");
-        assert.ok(ARK_NEAR_CONE.value.x > 0 && ARK_NEAR_CONE.value.z > view.distance && ARK_NEAR_CONE.value.z < view.distance + 3, "the leaves between dissolve, and those its body stands in");
+        const cone = scene.cones[scene.cones.length - 1]!;
+        assert.ok(cone.tan > 0 && cone.end > view.distance && cone.end < view.distance + 3, "the leaves between dissolve, and those its body stands in");
         assert.equal(shot.report().sight!.searches, 1);
         // Kept while it sees it; blocked twice running, the search again.
         const asked = scene.asked.length;
@@ -474,7 +476,7 @@ test("a clear view by the scene's lines of sight: the views round the asked one 
     } finally {
         shot.end();
     }
-    assert.equal(ARK_NEAR_CONE.value.x, 0, "the Ark's own fade again");
+    assert.equal(scene.cones[scene.cones.length - 1], null, "the Ark's own fade again");
     assert.equal(scene.cuts[scene.cuts.length - 1], null, "and its own near plane");
 });
 

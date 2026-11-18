@@ -130,6 +130,7 @@ import {StreamCull} from "@/ark-scene/streaming/cull";
 import {sceneMemory} from "@/ark-scene/runtime/memory";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {NearDetail} from "@/ark-scene/near-detail";
+import {setNearCone} from "@/ark-scene/near-fade";
 import {BugGround, bugClearPoints, bugCoverAt} from "@/ark-scene/bug-ground";
 // p3 (trees): small ground insects climb a grass blade now and then.
 import {ClimbStems, climbAt, climbPoint, climbStem, climbsBlades, mixClimb, type ClimbPoint, type ClimbStem} from "@/ark-scene/bug-climb";
@@ -9415,6 +9416,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             nearCut = metres !== null && metres > 0 ? metres : null;
             shotClosest = closest !== null && closest > 0 ? closest : null;
         },
+        // V2 replay: the trees and leaf cards dissolve inside a cone round the view's axis, as far as `end` metres from
+        // the camera (`near-fade.ts`); null: the Ark's own near fade only. (On the handle so that nothing a shot loads
+        // lazily imports a module of the scene's own chunk.)
+        setNearCone: (cone) => setNearCone(cone),
         // V2 replay: the ground's standing plants drawn smaller round these spots, to nothing at them (`near-detail.ts`).
         setGroundClear: (spots) => nearDetail?.setClear(spots),
         // V2 replay: the scene is flying its own camera (a replay's flight to its act): a shot leaves the view alone until it lands.

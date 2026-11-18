@@ -52,7 +52,7 @@ Elsewhere: `director.ts` (runs a shot's frames), `src/lib/ark-clips/replay-shots
 | `setNearCut(metres \| null, closest?)` | The cutaway: the near plane out toward a shot's subject; and the nearest the shot asks to stand. |
 | `flying()` | Whether the scene is flying its own camera (a hatching's flight to the clutch). |
 | `setGroundClear(spots \| null)` | The ground's standing plants drawn smaller round the cast, to nothing at their feet. |
-| `near-fade.ts` `setNearCone({tan, end} \| null)` | Leaves dissolve inside a cone to the subject (a module function, not on the handle). |
+| `setNearCone({tan, end} \| null)` | Trees and leaf cards dissolve inside a cone to the subject (`near-fade.ts`). |
 | `locate(id)` | Now also where an act poses an animal that is out of the picture, and an acted stand-in first; `shown`: drawn this frame. |
 
 The scene's world clock (`worldMs`: schedules, the live layers, the island's light, the weather) follows `pinArkClock`.
@@ -155,7 +155,7 @@ how many of the act's frames each of the cast was drawn in.
      where the ground enters the picture. A roof, a fern, the top of a bush in the first part of the way is not
      drawn, whatever it is made of. This is what shows an animal in a zoo shelter (the town's meshes keep no
      geometry on the page, so no ray can ask them).
-  3. *The cone* (`near-fade.ts` `setNearCone`): the trees and leaf cards between the camera and the subject, and those
+  3. *The cone* (`setNearCone`, `near-fade.ts`): the trees and leaf cards between the camera and the subject, and those
      the subject stands in, dissolve inside a cone round the view's axis; the picture's sides keep their wood. (The
      trees draw from one pool with no bounds a ray can ask, so this, not a ray, is what clears them.)
   4. *The clearing* (`setGroundClear`, `near-detail.ts` `setClear`): the ferns, saplings and crops standing round each
