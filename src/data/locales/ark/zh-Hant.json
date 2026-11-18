@@ -330,7 +330,11 @@
             "revived": "{animal}回來了",
             "revivedYoung": "{animal}回來了，又是年輕的成年個體",
             "released": "{aAnimal}被野放了",
-            "gone": "{animal}離開了 Ark"
+            "gone": "{animal}離開了 Ark",
+            "crisis": "{animal}：野外只剩下少數",
+            "saved": "{animal}：在野外已脫離危險",
+            "wildGone": "{animal}：野外已經沒有了",
+            "toCare": "{animal}：現在在動物園接受照料"
         },
         "card": {
             "now": "現在：{activity}",

@@ -4575,7 +4575,11 @@
       "revived": "{animal} sudah kembali",
       "revivedYoung": "{animal} sudah kembali, kembali menjadi dewasa muda",
       "released": "{aAnimal} dilepas ke alam liar",
-      "gone": "{animal} sudah pergi dari Ark"
+      "gone": "{animal} sudah pergi dari Ark",
+      "crisis": "{animal}: tinggal sedikit di alam liar",
+      "saved": "{animal}: tidak lagi terancam di alam liar",
+      "wildGone": "{animal}: sudah tidak ada lagi di alam liar",
+      "toCare": "{animal}: kini dirawat di kebun binatang"
     },
     "card": {
       "now": "Sekarang: {activity}",

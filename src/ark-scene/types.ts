@@ -405,7 +405,21 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
 export type ArkCameraView = {target: {x: number; y: number; z: number}; distance: number; polar: number; azimuth: number};
 
 /** Where an animal is drawn now (its middle), the ground under it, its length and height, whether it is awake, and its heading. */
-export type ArkLocated = {x: number; y: number; z: number; ground: number; length: number; height: number; awake: boolean; /** Which way it faces (radians about up; 0 = +z). */ yaw: number};
+export type ArkLocated = {x: number; y: number; z: number; ground: number; length: number; height: number; awake: boolean; /** Which way it faces (radians about up; 0 = +z). */ yaw: number; /** The act it is posed by now (a live layer's or a replay's state: walk, display, mount, lie…), or null: its own day. */ act?: string | null; /** Drawn this frame (not held back, hidden, or outside the drawn set). */ shown?: boolean; /** How far under the water its middle is (m; 0 on land and at the surface). */ under?: number};
+
+/**
+ * V2 replay (`replay/cast.ts`, `replay/README.md`): what the scene reads of the cast each time it lays the roster out.
+ * The cast itself is never loaded by the scene: the recorder (and V1's live acts) load it and hand it in (`setCast`).
+ */
+export type ArkCastLayer = {
+    /** The roster to lay out for a read: the read itself, plus a stand-in for each cast animal that is not in it (dead,
+     *  eaten, left), and, as of a time, without who came aboard later. The same object for the same read and cast. */
+    roster: (snapshot: ArkSnapshot) => ArkSnapshot;
+    /** Ids always drawn one by one and never dropped: past the herds, the live budget and the render distance. */
+    pins: ReadonlySet<string>;
+    /** Ids with the soft ring under them (the last of its kind). */
+    marks: ReadonlySet<string>;
+};
 
 /** A replay running (`play`): skip it to jump to the Ark as it is now. */
 export type ArkReplayRun = {skip: () => void; done: Promise<void>};
@@ -560,6 +574,48 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * decides anything: the acts come from the event log.
      */
     play: (acts: ArkAct[], callbacks?: {onAct?: (index: number) => void}) => ArkReplayRun;
+    /**
+     * V2 replay: the live layers' acts under way, with their times in seconds after each act's `t0` (the layers' own
+     * `debug()`): a shot reads when a chase ends, when a pair meets, to place its cuts. Never decides anything.
+     */
+    liveActs?: () => ArkLiveActs;
+    /**
+     * V2 replay: the view an act is clear from (the scene's own replay's rule): the polar that sees `focus` over the
+     * hills and the bearing nearest `azimuth` with the fewest tree trunks between the camera and `places` (the bearing
+     * asked for, when nothing is in the way).
+     */
+    clearView?: (focus: {x: number; y: number; z: number}, distance: number, polar: number, azimuth: number, places?: Array<{x: number; y: number; z: number}>) => {polar: number; azimuth: number};
+    /**
+     * V2 replay: let go of every act the live layers hold (before a replay and after it): their animals are their own
+     * again, the stand-ins are dropped, and a cast animal a stand-in hid is shown again. The live page's log feeds the
+     * layers again as it reads.
+     */
+    clearLiveActs?: () => void;
+    /** V2 replay: the recorder's exposure, as a gain on the Ark's own (1). The world, its hour and its animals are untouched. */
+    setExposure?: (gain: number, fill?: number) => void;
+    /**
+     * V2 replay: how many of `points` (the cast's bodies; `slack`, the last metres of a line that are the body's own) a
+     * view of `target` cannot see, by the ground and by what is drawn solid, leaving out the trees and leaves a shot's
+     * cone dissolves (`near-fade.ts`). One more than the points: no place for the camera. `fresh`: gather the world again.
+     * `leaves`: count those trees and leaves too (a view with nothing at all between is the better one).
+     */
+    sightOf?: (target: {x: number; y: number; z: number}, view: {distance: number; polar: number; azimuth: number}, points: Array<{x: number; y: number; z: number; slack: number}>, fresh?: boolean, cut?: number, leaves?: boolean) => number;
+    /**
+     * V2 replay: the camera's near plane pushed out to `metres` (a cutaway: what stands in the first part of the way to
+     * a shot's subject is not drawn, whatever it is), or null: the scene's own. `sightOf`'s `cut` is the same distance:
+     * its lines begin there. `closest`: the nearest the shot asks to stand (the camera's least distance follows it).
+     */
+    setNearCut?: (metres: number | null, closest?: number | null) => void;
+    /** V2 replay: the trees and leaf cards dissolve inside a cone round the view's axis (`tan`: its half angle's tangent) as far as `end` metres from the camera; null: none. */
+    setNearCone?: (cone: {tan: number; end: number} | null) => void;
+    /** V2 replay: the ground's standing plants (ferns, saplings, crops) drawn smaller round these spots, to nothing within `r` of one; null: as the Ark is. */
+    setGroundClear?: (spots: Array<{x: number; z: number; r: number}> | null) => void;
+    /** V2 replay: whether the scene is flying its own camera now (a replay's flight to its act). */
+    flying?: () => boolean;
+    /** V2 replay (the probes): what the last `sightOf` line met first. */
+    sightMet?: () => string;
+    /** V2 replay: hand the scene a cast (stand-ins and pins, `replay/cast.ts`), or null to take it away; the roster is laid out again. */
+    setCast?: (cast: ArkCastLayer | null) => void;
     /** Place a replay's departed animals off the main thread ahead of `play` (runtime lane). */
     prepareReplay?: (acts: ArkAct[]) => Promise<void>;
     /** The visual CI: forget the reactive layer's and the rigs' state carried from earlier frames. */
@@ -655,3 +711,12 @@ export type ArkHappening = {id: string; kind: ScheduleMomentKind; /** What it se
 /** One animal's reactive state, as the page and the audit lane read it (`reactive.ts` ReactiveOut). */
 export type ArkReactiveSnapshot = {action: string; headYaw: number; headPitch: number; headWeight: number; dx: number; dz: number; bodyYaw: number; crouch: number; called: boolean; alarmed: number; looking: string | null};
 export type ArkReactiveStats = {tier: string; agents: number; inputs: number; perceptions: number; sightChecks: number; alarms: number; ms: number};
+
+/** `ArkSceneHandle.liveActs`: each live layer's acts as its `debug()` says them (times in seconds after the act's `t0`). */
+export type ArkLiveActs = {
+    meals: Array<{key: string; t0: number; catchAt: number; feedTo: number; carcassEnd: number; carcass: {x: number; z: number} | null; style: string}>;
+    matings: Array<{key: string; t0: number; phase: string; meet?: number; courted?: number; mounted?: number; end?: number; contestEnd?: number; rival?: string}>;
+    births: Array<{key: string; t0: number; mother: string | null; end: number | null; phase: string}>;
+    escapes: Array<{key: string; t0: number; phase: string; missAt: number | null; seconds: number | null}>;
+    deaths: Array<{key: string; id: string; t0: number; spot: {x: number; z: number; base: number; yaw: number} | null; drawn: boolean}>;
+};

@@ -330,7 +330,11 @@
             "revived": "{animal} è tornato",
             "revivedYoung": "{animal} è tornato, di nuovo giovane adulto",
             "released": "Liberazione in natura: {aAnimal}",
-            "gone": "{animal} non è più nell'Ark"
+            "gone": "{animal} non è più nell'Ark",
+            "crisis": "{animal}: ne restano pochi esemplari in natura",
+            "saved": "{animal}: fuori pericolo in natura",
+            "wildGone": "{animal}: non ne resta nessun esemplare in natura",
+            "toCare": "{animal}: ora sotto le cure dello zoo"
         },
         "card": {
             "now": "Ora: {activity}",

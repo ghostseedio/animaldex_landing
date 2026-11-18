@@ -83,7 +83,8 @@ import {arkPageSummary} from "@/lib/ark-page-summary";
  * `?record=1` (development, or a server with `ARK_RECORD_ENABLED=1`): the
  * Ark alone for the marketing clip recorder (`scripts/ark-clips.mts`), its
  * camera and clock driven by `window.__arkDirector`. With `?fixture=1` it is
- * the fixture (samples only); otherwise the live Ark.
+ * the fixture (samples only); otherwise the live Ark. `&replay=<event id>`: the recorder films that recorded event at
+ * its own time (`src/ark-scene/replay/README.md`); `&lite=1` with it: the replay in words, as Ark Lite shows it.
  *
  * The live log and bars in development: `&feed=1` (or `?fixture=live`) runs a made-up feed over the fixture,
  * what a running tick would send (arrivals, births, clutches, meals, deaths), a beat every 8 s
@@ -102,7 +103,7 @@ import {arkPageSummary} from "@/lib/ark-page-summary";
  * The page stays dynamic for its query (`?focus=` cards, `?lang=`), but its render is cheap.
  */
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; follow?: string; arrival?: string; hour?: string; since?: string; publicStory?: string; record?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string; hearts?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; follow?: string; arrival?: string; hour?: string; since?: string; publicStory?: string; record?: string; replay?: string; lite?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string; hearts?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -525,7 +526,7 @@ export default async function ArkPage({params, searchParams}: Props) {
     const handed = heartsFixture?.snapshot ?? handedRead;
     const fixtureLife = mode ? await loadFixtureLife(mode, fixtureFounders) : null;
     const founders = local?.founders ?? data.fixture?.founders ?? (data.read?.available ? data.read.founders : ARK_NO_FOUNDERS);
-    if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase(searchParams)} events={fixtureLife?.events ?? null} />;
+    if (record && snapshot) return <ArkRecordView initial={snapshot} fixture={Boolean(mode)} modelBase={modelBase(searchParams)} events={fixtureLife?.events ?? null} replay={searchParams.replay && /^[\w-]{1,40}$/.test(searchParams.replay) ? searchParams.replay : null} lite={searchParams.lite === "1"} />;
     const otherLanguage = langOf(searchParams) !== null && language !== locale;
     const wordsLocale = otherLanguage ? language : locale;
     // The words under the world: the snapshot the page drew (the same Ark for everyone; `mine` is never said there).

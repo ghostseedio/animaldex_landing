@@ -330,7 +330,11 @@
             "revived": "{animal} se vratio",
             "revivedYoung": "{animal} se vratio, opet mlada odrasla životinja",
             "released": "Puštanje u divljinu: {aAnimal}",
-            "gone": "{animal} je otišao iz Arka"
+            "gone": "{animal} je otišao iz Arka",
+            "crisis": "{animal}: u divljini je ostalo tek nekoliko jedinki",
+            "saved": "{animal}: izvan opasnosti u divljini",
+            "wildGone": "{animal}: u divljini više nema nijedne jedinke",
+            "toCare": "{animal}: sada u skrbi zoološkog vrta"
         },
         "card": {
             "now": "Sada: {activity}",

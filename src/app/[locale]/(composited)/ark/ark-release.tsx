@@ -2,7 +2,7 @@
 
 import React, {useEffect, useMemo, useRef, useState} from "react";
 import {createPortal} from "react-dom";
-import Link from "@/app/[locale]/_components/link";
+import type SiteLink from "@/app/[locale]/_components/link";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import {
@@ -36,14 +36,14 @@ import {fillArkWords, type ArkWords} from "@/lib/ark-words";
  * The price shown is the server's quote and the release sends only the animal and a retry key (`/api/ark/release`):
  * nothing here can set what is charged. Out of Credits: a link to the site's Credits page.
  */
-export default function ArkRelease({animal, words: all, locale, day: arkDay}: {animal: ArkAnimal; words: ArkWords; locale: string; /** The snapshot's Ark day. */ day: number | null}) {
+export default function ArkRelease({animal, words: all, locale, day: arkDay, link: Link}: {animal: ArkAnimal; words: ArkWords; locale: string; /** The snapshot's Ark day. */ day: number | null; link: ArkLink}) {
     const released = useArkReleased();
     const words = useMemo(() => arkReleaseWords((all as unknown as {release?: unknown}).release), [all]);
     // Off (or unread), or an animal born on the Ark (nobody's to release): nothing.
     if (released === null || animal.origin === "born") return null;
     const talkHref = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug) ? null : `/talk/${animal.model_slug}`;
     const entry = arkReleasedEntry(animal, released);
-    if (entry) return <ArkWildSkillRow skill={entry.wildSkill} words={words} mine={animal.mine} talkHref={talkHref} />;
+    if (entry) return <ArkWildSkillRow skill={entry.wildSkill} words={words} mine={animal.mine} talkHref={talkHref} Link={Link} />;
     // The offer: only the reader's own zoo animal (the server checks it again, and their card, at the quote and at the spend).
     if (!animal.mine || animal.area !== "zoo") return null;
     return (
@@ -53,12 +53,18 @@ export default function ArkRelease({animal, words: all, locale, day: arkDay}: {a
             words={words}
             locale={locale}
             talkHref={talkHref}
+            Link={Link}
             onReleased={(release) => noteArkReleased({animalId: release.animalId, releasedArkDay: arkDay ?? 0, wildSkill: release.wildSkill})}
         />
     );
 }
 
-type SkillProps = {skill: number; words: ArkReleaseWords; mine: boolean; talkHref: string | null};
+/**
+ * The site's link component, handed in by the card (which has it already): imported here it would be shared between
+ * this lazy chunk and the Ark page's static JavaScript, and the page's budgeted first load would pay for the sharing.
+ */
+type ArkLink = typeof SiteLink;
+type SkillProps = {skill: number; words: ArkReleaseWords; mine: boolean; talkHref: string | null; Link: ArkLink};
 type OfferProps = {
     animal: ArkAnimal;
     /** Its zone in the reader's words ("Woodland"). */
@@ -67,11 +73,12 @@ type OfferProps = {
     locale: string;
     /** Its Talk page (where its step is), or null for a kind with none. */
     talkHref: string | null;
+    Link: ArkLink;
     onReleased: (release: ArkReleaseResult) => void;
 };
 
 /** The wild skill as a bar with plain words; on the owner's own, the step that raises it. */
-function ArkWildSkillRow({skill, words, mine, talkHref}: SkillProps) {
+function ArkWildSkillRow({skill, words, mine, talkHref, Link}: SkillProps) {
     const band = arkWildSkillBand(skill);
     const percent = Math.round(Math.min(Math.max(skill, 0), 1) * 100);
     return (
@@ -90,7 +97,7 @@ function ArkWildSkillRow({skill, words, mine, talkHref}: SkillProps) {
     );
 }
 
-function ArkReleaseOffer({animal, zoneName, words, locale, talkHref, onReleased}: OfferProps) {
+function ArkReleaseOffer({animal, zoneName, words, locale, talkHref, Link, onReleased}: OfferProps) {
     const [quote, setQuote] = useState<ArkReleaseQuote | null>(null);
     const [open, setOpen] = useState(false);
     const [busy, setBusy] = useState(false);
@@ -177,6 +184,7 @@ function ArkReleaseOffer({animal, zoneName, words, locale, talkHref, onReleased}
                     words={words}
                     locale={locale}
                     talkHref={talkHref}
+                    Link={Link}
                     busy={busy}
                     problem={problem}
                     done={done}
@@ -199,6 +207,7 @@ type SheetProps = {
     words: ArkReleaseWords;
     locale: string;
     talkHref: string | null;
+    Link: ArkLink;
     busy: boolean;
     problem: ArkReleaseProblem | null;
     done: ArkReleaseResult | null;
@@ -207,7 +216,7 @@ type SheetProps = {
 };
 
 /** The confirm sheet: a bottom sheet on a phone, a dialog in the middle on a desktop. Escape and the backdrop close it. */
-function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, busy, problem, done, onConfirm, onClose}: SheetProps) {
+function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, Link, busy, problem, done, onConfirm, onClose}: SheetProps) {
     const [mounted, setMounted] = useState(false);
     const firstRef = useRef<HTMLButtonElement | null>(null);
     const panelRef = useRef<HTMLDivElement | null>(null);

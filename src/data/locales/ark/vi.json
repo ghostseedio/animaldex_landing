@@ -330,7 +330,11 @@
             "revived": "Con {animal} đã trở lại",
             "revivedYoung": "Con {animal} đã trở lại, lại là con trưởng thành trẻ",
             "released": "{aAnimal} đã được thả về tự nhiên",
-            "gone": "Con {animal} đã rời Ark"
+            "gone": "Con {animal} đã rời Ark",
+            "crisis": "{animal}: ngoài tự nhiên chỉ còn rất ít",
+            "saved": "{animal}: không còn gặp nguy hiểm ngoài tự nhiên",
+            "wildGone": "{animal}: ngoài tự nhiên không còn cá thể nào",
+            "toCare": "{animal}: nay được chăm sóc ở sở thú"
         },
         "card": {
             "now": "Lúc này: đang {activity}",

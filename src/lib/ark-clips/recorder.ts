@@ -12,6 +12,8 @@ import {readArkFieldGuide} from "@/lib/ark-clips/field-guide";
 import {CLIP_FPS, CLIP_HEIGHT, CLIP_WIDTH, END_SECONDS, MAX_CLIP_SECONDS, MIN_CLIP_SECONDS, pickArkSubject, planArkShot, type ArkMarks, type ArkShotKind, type ArkShotPlan} from "@/lib/ark-clips/shots";
 import {pickMusicTrack, musicTrackPath, type MusicMood} from "@/lib/content-video/music";
 import {decodeArkEvents} from "@/lib/ark-life";
+import {planArkReplayShot} from "@/lib/ark-clips/replay-shots";
+import type {ArkReplayShotReport} from "@/ark-scene/replay/shot";
 
 /**
  * The Ark clip recorder (Node, on a machine with a GPU): opens `/ark?record=1`
@@ -24,7 +26,19 @@ import {decodeArkEvents} from "@/lib/ark-life";
  */
 
 export type RecordOptions = {
-    shot: ArkShotKind;
+    /** The scripted shot; null with `replay`. */
+    shot: ArkShotKind | null;
+    /**
+     * A recorded event's id (`voyage_events.id`): the clip is that event at its own time (`replay-shots.ts`), the shot its
+     * kind. Only an event already in the public log is replayed (nothing ahead of now).
+     */
+    replay?: string | null;
+    /** A replayed mating's mount: the camera pulls away (default), or films it. */
+    mount?: "cutaway" | "show";
+    /** A replay's light pinned to this hour instead of the island's own at the event's time. */
+    hour?: number | null;
+    /** A replay at night: the scale of the camera's lift of the dark (default 1; 0: the night as the Ark shows it). */
+    nightGain?: number | null;
     /** The site that serves `/ark?record=1` (a local `next dev`, or `next start` with ARK_RECORD_ENABLED=1). */
     baseUrl: string;
     fixture: boolean;
@@ -44,6 +58,8 @@ export type RecordedClip = {
     posterPath: string;
     seconds: number;
     probe: ClipProbe;
+    /** A replay's own account: who stood in, the cuts, whether the scene's layer acted it. */
+    replay: ArkReplayShotReport | null;
 };
 
 export type ClipProbe = {width: number; height: number; fps: number; seconds: number; videoCodec: string; audioCodec: string | null; bytes: number};
@@ -149,7 +165,8 @@ export async function recordArkClip(options: RecordOptions): Promise<RecordedCli
         // WebGL on the machine's GPU (ANGLE on Metal on a Mac); SwiftShader is far too slow at 1080×1920.
         args: ["--headless=new", "--enable-gpu", "--ignore-gpu-blocklist", ...(process.platform === "darwin" ? ["--use-angle=metal"] : []), "--autoplay-policy=no-user-gesture-required"]
     });
-    const work = path.join(options.outDir, `.work-${options.shot}-${Date.now().toString(36)}`);
+    if (!options.shot && !options.replay) throw new Error("A shot or a replay's event id is needed");
+    const work = path.join(options.outDir, `.work-${options.replay ? `replay-${options.replay}` : options.shot}-${Date.now().toString(36)}`);
     await mkdir(work, {recursive: true});
     try {
         const page = await browser.newPage({viewport: {width: CLIP_WIDTH, height: CLIP_HEIGHT}, deviceScaleFactor: 1});
@@ -159,6 +176,7 @@ export async function recordArkClip(options: RecordOptions): Promise<RecordedCli
         const url = new URL("/ark", options.baseUrl);
         url.searchParams.set("record", "1");
         if (options.fixture) url.searchParams.set("fixture", "1");
+        if (options.replay) url.searchParams.set("replay", options.replay);
         log(`opening ${url.toString()}`);
         await page.goto(url.toString(), {waitUntil: "domcontentloaded", timeout: 240_000});
         await page.waitForFunction(() => Boolean((window as unknown as {__arkDirector?: unknown}).__arkDirector), undefined, {timeout: 240_000, polling: 250});
@@ -170,14 +188,21 @@ export async function recordArkClip(options: RecordOptions): Promise<RecordedCli
         const events = decodeArkEvents(info.events, snapshot);
 
         let fieldGuide = null;
-        if (options.shot === "meet") {
+        if (!options.replay && options.shot === "meet") {
             const subject = pickArkSubject(snapshot, "meet", options.species);
             if (subject) {
                 fieldGuide = await readArkFieldGuide(subject.species_profile_id);
                 log(`field guide for ${subject.name}: ${fieldGuide ? "found" : "none"}`);
             }
         }
-        const plan = planArkShot(options.shot, {snapshot, events, fieldGuide, fixture: info.fixture, now: new Date(), species: options.species});
+        const plan = options.replay
+            ? planArkReplayShot(options.replay, {snapshot, rawEvents: info.events, fixture: info.fixture, now: new Date(), mount: options.mount, hour: options.hour ?? null, nightGain: options.nightGain ?? null})
+            : planArkShot(options.shot!, {snapshot, events, fieldGuide, fixture: info.fixture, now: new Date(), species: options.species});
+        if (plan.direction.replay) {
+            const replay = plan.direction.replay;
+            log(`replay: event ${replay.eventId} (${replay.eventKind}) at ${replay.at}, cast ${replay.cast.map((member) => `${member.role} ${member.record.name}${member.aboard ? "" : " (stand-in)"}`).join(", ")}`);
+            for (const note of replay.notes) log(`  note: ${note}`);
+        }
         log(`plan: ${plan.slug} (${plan.dataSource}), ${plan.cues.length} captions`);
 
         const prepared = await page.evaluate((direction) => (window as unknown as {__arkDirector: {prepare: (d: unknown) => Promise<{models: number}>}}).__arkDirector.prepare(direction), plan.direction);
@@ -207,6 +232,8 @@ export async function recordArkClip(options: RecordOptions): Promise<RecordedCli
         encoder.stdin.end();
         await encoded;
         const marks = await page.evaluate(() => (window as unknown as {__arkDirector: {marks: () => ArkMarks}}).__arkDirector.marks());
+        const replayReport = await page.evaluate(() => (window as unknown as {__arkDirector: {replayReport?: () => ArkReplayShotReport | null}}).__arkDirector.replayReport?.() ?? null);
+        if (replayReport) log(`replay: ${replayReport.acted ? "acted by the scene" : `NOT acted: ${replayReport.reason}`}; stand-ins ${replayReport.standIns.length}, cuts ${replayReport.cuts.map((cut) => `${cut.why} (+${cut.skipped} s)`).join("; ") || "none"}`);
         log(`filmed ${frames} frames in ${((Date.now() - started) / 1000).toFixed(0)} s; act ${marks.act.toFixed(2)}–${marks.actEnd.toFixed(2)} s, end card at ${marks.end.toFixed(2)} s`);
 
         // The words (one transparent PNG per caption), the logo, the end card's dimming and the music bed.
@@ -256,9 +283,9 @@ export async function recordArkClip(options: RecordOptions): Promise<RecordedCli
         const probe = await probeClip(videoPath);
         const problems = clipProblems(probe);
         if (problems.length) throw new Error(`The clip is off-brief: ${problems.join("; ")}`);
-        await writeFile(path.join(options.outDir, `${stem}.json`), JSON.stringify({plan, marks, probe, music: track?.id ?? null, timeline: arkClipTimeline(plan, marks)}, null, 2));
+        await writeFile(path.join(options.outDir, `${stem}.json`), JSON.stringify({plan, marks, probe, music: track?.id ?? null, timeline: arkClipTimeline(plan, marks), replay: replayReport}, null, 2));
         await rm(work, {recursive: true, force: true});
-        return {plan, marks, videoPath, posterPath, seconds: total, probe};
+        return {plan, marks, videoPath, posterPath, seconds: total, probe, replay: replayReport};
     } finally {
         await browser.close().catch(() => undefined);
     }

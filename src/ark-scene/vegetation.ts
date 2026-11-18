@@ -38,7 +38,7 @@ import {forestFill, grassTufts, rockRadius, rockSquash, worldDecor, type DecorKi
 import {ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {withGrassPress} from "@/ark-scene/grass-press";
-import {ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS} from "@/ark-scene/near-fade";
+import {ARK_NEAR_CONE, ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS} from "@/ark-scene/near-fade";
 import {canopyTree, DECOR_SINK, FLOWER_SHAPE, LEAF_LIFT, limbAt} from "@/ark-scene/micro-decor";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {seeded} from "@/ark-scene/world";
@@ -709,7 +709,9 @@ function foliageMaterial(windAmount: number, windHeight: number, doubleSide = fa
     const material = new MeshStandardMaterial({vertexColors: true, roughness: 0.88, metalness: 0, map: leafTexture()});
     if (doubleSide || cards) material.side = DoubleSide;
     if (cards) material.alphaTest = 0.45;
-    const uniforms = {arkTime: ARK_TIME, arkWind: ARK_WIND, windAmount: {value: windAmount}, windHeight: {value: windHeight}, arkNearFade: ARK_NEAR_FADE};
+    const uniforms = {arkTime: ARK_TIME, arkWind: ARK_WIND, windAmount: {value: windAmount}, windHeight: {value: windHeight}, arkNearFade: ARK_NEAR_FADE, arkNearCone: ARK_NEAR_CONE};
+    // (What the near fade dissolves is not in a shot's way: `runtime/sight.ts`, the replay's own lines.)
+    if (cards) material.userData.arkNearFade = true;
     material.customProgramCacheKey = () => `ark-foliage-${doubleSide ? 2 : 1}-${cards ? "c" : "s"}-b4`;
     material.onBeforeCompile = (shader) => {
         Object.assign(shader.uniforms, uniforms);

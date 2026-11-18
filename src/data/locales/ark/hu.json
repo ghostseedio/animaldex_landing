@@ -330,7 +330,11 @@
             "revived": "{animal} visszatért",
             "revivedYoung": "{animal} visszatért, újra fiatal felnőttként",
             "released": "Szabadon engedték a vadonba: {aAnimal}",
-            "gone": "{animal} elment az Arkból"
+            "gone": "{animal} elment az Arkból",
+            "crisis": "{animal}: a vadonban már csak néhány maradt",
+            "saved": "{animal}: a vadonban már nincs veszélyben",
+            "wildGone": "{animal}: a vadonban már egy sem maradt",
+            "toCare": "{animal}: most az állatkert gondozásában"
         },
         "card": {
             "now": "Most: {activity}",

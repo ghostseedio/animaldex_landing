@@ -67,6 +67,7 @@ import {
     Group,
     Mesh,
     MeshStandardMaterial,
+    type Material,
     type ShaderMaterial,
     type BufferGeometry
 } from "three";
@@ -129,6 +130,7 @@ import {StreamCull} from "@/ark-scene/streaming/cull";
 import {sceneMemory} from "@/ark-scene/runtime/memory";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {NearDetail} from "@/ark-scene/near-detail";
+import {setNearCone} from "@/ark-scene/near-fade";
 import {BugGround, bugClearPoints, bugCoverAt} from "@/ark-scene/bug-ground";
 // p3 (trees): small ground insects climb a grass blade now and then.
 import {ClimbStems, climbAt, climbPoint, climbStem, climbsBlades, mixClimb, type ClimbPoint, type ClimbStem} from "@/ark-scene/bug-climb";
@@ -162,6 +164,7 @@ import {
     type ArkLiveHunt,
     type ArkReplayRun,
     type ArkRegion,
+    type ArkCastLayer,
     type ArkSceneHandle,
     type ArkSceneOptions,
     type ArkSelectionExtras,
@@ -276,6 +279,7 @@ import {MealTraces, type TraceDraw} from "@/ark-scene/meal-traces";
 import {bodyMassKg, isScavenger, mealPlan, type MealPlan, type MealSide, type ScavengerCandidate} from "@/ark-scene/meals";
 import * as liveBudget from "@/ark-scene/live-budget";
 import {selectAim, selectionPins, selectionSurvives} from "@/ark-scene/selection";
+import {arkPinnedMs} from "@/ark-scene/shared-clock";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
 import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
 import {l2BodyChannel, l2BodyUniforms, l2ClipBake, l2FlightFrame, l2FlightGate, l2LandingNow, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
@@ -624,6 +628,8 @@ type FigureGroup = Omit<HerdDraw, "badge" | "info"> & {resting: true};
 const MINE = new Color("#b9f75a");
 const SELECTED = new Color("#fff4dc");
 const ARRIVAL = new Color("#fff3d6");
+/** V2 replay: the soft ring under an animal the cast marks (the last of its kind). */
+const LAST_OF_KIND = new Color("#ffb347");
 
 function easeOutBack(t: number): number {
     const c = 1.4;
@@ -825,7 +831,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let clockScale = 1;
     let clockAnchor = Date.now();
     let clockAnchorReal = clockAnchor;
-    const worldMs = () => clockAnchor + (Date.now() - clockAnchorReal) * clockScale;
+    // (A pinned shared clock, `pinArkClock`: a recorded event replayed at its own time, `replay/README.md`.)
+    const worldMs = () => arkPinnedMs() ?? clockAnchor + (Date.now() - clockAnchorReal) * clockScale;
     const hoursNow = () => pinnedHours ?? islandHours(worldMs(), ISLAND_OFFSET_HOURS);
     // The weather and tide, from the same clock unless pinned (`setEnvironment`).
     let pinnedEnvironment: LivePin | null = null;
@@ -1362,6 +1369,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** Pinned representatives: the one selected (a herd member promoted), and a replay's animals. */
     let selectionPin: string | null = null;
     let replayPins = new Set<string>();
+    /**
+     * V2 replay (`replay/cast.ts`, never loaded by the scene itself: whoever needs it hands it in through `setCast`): the
+     * stand-ins for animals an act names that are gone now, and the ids pinned so they are always drawn one by one.
+     */
+    let cast: ArkCastLayer | null = null;
+    /** V2 replay: the camera's near plane pushed out toward a shot's subject (m), or null: the scene's own. */
+    let nearCut: number | null = null;
+    /**
+     * V2 replay: the nearest a shot asks to stand to its subject (m), whatever is chosen or near; null: no shot is
+     * filming, the scene's own rules. While one films, the camera is kept over the ground as it is drawn (a lake's bed
+     * lies under the analytic one) and may come within millimetres of it.
+     */
+    let shotClosest: number | null = null;
     /** Meal ids pinned (drawn one by one) while the live world acts them. */
     let mealPins = new Set<string>();
     // 3.3 batch (D): the limp of an animal that got away (`live-escapes.ts`), asked by the draw; null until the escapes' layer is up.
@@ -2890,7 +2910,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** Again from the snapshot as it is: after a pin changed (a herd member selected, a replay's animals). */
     const refreshLive = () => {
-        if (herds.length || replayPins.size || mealPins.size || selectionPin) setSnapshot(current, false);
+        if (herds.length || replayPins.size || mealPins.size || selectionPin || cast) setSnapshot(current, false);
     };
 
     // The hamlet (`map/hamlet.ts`): its plots' key, its residents, and who is out now (worked out once a second), on the
@@ -2919,21 +2939,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const setSnapshot = (whole: ArkSnapshot, entrances: boolean) => {
         // p5 (humans): the record's humans are drawn as generic town people (`humans/`), never as animals.
         const people = splitHumans(whole);
-        const snapshot = people.rest;
+        const base = people.rest;
+        // V2 replay: the roster with the cast's stand-ins (and, as of a time, without who came later); else the read itself.
+        const snapshot = cast ? cast.roster(base) : base;
         humansAboard = people.humans;
         townHumans.setRoster(people.humans);
         // The entrance's clock is the frame's (seconds since the scene started).
         const now = (performance.now() - started) / 1000;
-        current = snapshot;
+        current = base;
         aboard = new Set(snapshot.animals.map((animal) => animal.id));
         forestHumans = people.humans.map((animal) => animal.id); // p5 (humans): the logging crews are of the humans aboard
         dogRosterDirty = true; // p5 (humans, dogs)
         forest.rosterChanged(); // p5 (humans)
         // Everyone's place (the herds' members too): from the server's slots, the same for every viewer.
-        if (placedFor !== snapshot) {
+        if (placedFor !== base) {
             // The hamlet's plots for these residents (`map/hamlet.ts`), set before anything reads the attach points.
             // (Part C: the wild island's residents only; with two islands the kept animals live in the town.)
-            const plots = hamletPlotsFor(wildOnly(snapshot.animals));
+            const plots = hamletPlotsFor(wildOnly(base.animals));
             const plotsKey = plots.map((plot) => plot.id).join(",");
             if (plotsKey !== hamletPlotsKey) {
                 hamletPlotsKey = plotsKey;
@@ -2942,19 +2964,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (setBehaviourHomePlots(plots)) restartBehaviourWorld();
                 for (const sceneModule of modules) (sceneModule as Partial<{setHomePlots: (list: HomePlot[]) => void}>).setHomePlots?.(plots);
             }
-            placedAll = placeAll(snapshot.animals);
-            placedFor = snapshot;
-            hamletResidents = snapshot.animals.flatMap((animal) => {
+            placedAll = placeAll(base.animals);
+            placedFor = base;
+            hamletResidents = base.animals.flatMap((animal) => {
                 const plot = placedAll.get(animal.id)?.hamlet?.plot;
                 return plot ? [{id: animal.id, slug: animal.model_slug, length: arkBody(animal).metres, plot}] : [];
             });
         }
-        const places = placedAll;
+        let places = placedAll;
+        // (The cast's stand-ins, placed as a replay's departed are: from the server's record of each, where it stood.)
+        const standIns = snapshot === base ? [] : snapshot.animals.filter((animal) => !placedAll.has(animal.id));
+        if (standIns.length) {
+            places = new Map(placedAll);
+            placeAll(standIns, true).forEach((place, id) => places.set(id, place));
+        }
         // Part B: the chunks the animals live in hold content (the haze is on only while such a chunk lies beyond).
         places.forEach((place) => streamer.markContent(place.x, place.z));
         // A very popular species (A14): its representatives drawn one by one, the rest as the herd.
         // (The selected animal too, while aboard: it stays drawn one by one as the town joins or a new read comes.)
-        const pins = selectionPins(aboard, {selected: selectedId, promoted: selectionPin, followed: followId, replay: mealPins.size ? Array.from(replayPins).concat(Array.from(mealPins)) : replayPins});
+        const pins = selectionPins(aboard, {selected: selectedId, promoted: selectionPin, followed: followId, replay: mealPins.size || cast ? Array.from(replayPins).concat(Array.from(mealPins), Array.from(cast?.pins ?? [])) : replayPins});
         // 3.3 fix: the kept town animals nearest the look point are out to move (`near-kept.ts`).
         for (const id of nearKept) if (aboard.has(id)) pins.add(id);
         for (const id of walkPins) if (aboard.has(id)) pins.add(id); // p5 (humans, dogs): the dogs out on a walk
@@ -2974,7 +3002,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const livePins = isl && !liteOn() && tier !== "low" ? new Set([...Array.from(pins), ...snapshot.animals.filter((animal) => isl.has(animal) && isl.held(animal.id)).map((animal) => animal.id)]) : pins;
         const outside = runtime.outside(candidates, representatives.live, livePins, liteOn(), restingFor(snapshot, places));
         // (For the resting warm-up: what the next step's rotation will be asked about, `runtime.restingAsks`.)
-        lastRotation = {snapshot, candidates, live: representatives.live, pins: livePins, lite: liteOn()};
+        // (Kept by the read, not the roster: the warm-up asks only what the rotation will, with a cast too.)
+        lastRotation = {snapshot: base, candidates, live: representatives.live, pins: livePins, lite: liteOn()};
         // (Lane TB, decision 255: the town's kept animals the budget rests, as figures where they live.)
         buildRestingGroups(isl ? snapshot.animals.filter((animal) => isl.has(animal) && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo") && representatives.live.has(animal.id) && !outside.has(animal.id)) : [], places);
         const next: Entry[] = [];
@@ -2982,6 +3011,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const animal of snapshot.animals) {
             if (!representatives.live.has(animal.id) || !outside.has(animal.id)) continue;
             const place = places.get(animal.id)!;
+            // (A stand-in whose record gives it no place: left out rather than drawn nowhere.)
+            if (!place) continue;
             const before = entryById.get(animal.id);
             const body = before ? arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan) : null;
             const entry: Entry = before && body
@@ -5056,7 +5087,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         streamSkipped = 0;
         const streaming = !streamer.allIn;
         oceanShadows?.begin(); // p2 (ocean)
-        const pinnedNow = (entry: Entry) => entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id || Boolean(entry.visitor || entry.act || entry.moment || entry.held);
+        const pinnedNow = (entry: Entry) => entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id || Boolean(entry.visitor || entry.act || entry.moment || entry.held || cast?.pins.has(entry.animal.id));
         // Past the render distance: drawn only from the map view, and only when big on screen (a whale, an elephant: true
         // scale); otherwise skipped (a marker in the map view).
         const streamedOut = (entry: Entry, at: {x: number; y: number; z: number}) => {
@@ -5465,7 +5496,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 );
             }
             const rest = Math.max(entry.place.ground, 0);
-            const marked = selectedId === animal.id ? 2 : mineOnly && animal.mine ? 1 : 0;
+            const marked = selectedId === animal.id ? 2 : mineOnly && animal.mine ? 1 : cast?.marks.has(animal.id) ? 3 : 0;
             // Too small to find on its own (a few pixels across: from far, or a beetle a few metres off): a soft dot over it,
             // and its icon once tapped. Close by it is drawn true to size, and found by looking. (True scale, motion pass §3.)
             const fromAfar = !entry.micro || entry.length >= entry.full * 0.999;
@@ -5508,7 +5539,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const touch = groundContact(where.base + lift, under.height, under.water, entry.drawnHeight || entry.length * 0.6);
                 if (touch) shadowList.push({x: where.x, y: touch.y, z: where.z, width: Math.max(entry.length * sizeUp * 0.5, 0.4), length: entry.length * sizeUp, yaw: where.yaw, strength: touch.strength});
                 // (Afloat: on the water's surface there, the sea's 0, the v2 lake's 6 m: lane MA3 water 2, it was under the lake's bed.)
-                if (marked) ringList.push({x: where.x, y: where.afloat ? waterTopAt(where.x, where.z) : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
+                if (marked) ringList.push({x: where.x, y: where.afloat ? waterTopAt(where.x, where.z) : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : marked === 3 ? LAST_OF_KIND : MINE, alpha: 1});
                 counts.near++;
                 continue;
             }
@@ -5782,10 +5813,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // water's surface over a swimmer or a wader (lane MA3 water 2: the sea's 0 as before; the v2 lake's 6 m, where it
                 // was drawn at 0, under the lake's bed).
                 const ringY = where.afloat ? (island?.contains(where.x, where.z) ? where.base : waterTopAt(where.x, where.z)) : Math.max(underFeet?.height ?? groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true, poseBase).height, island?.contains(where.x, where.z) ? 0 : waterTopAt(where.x, where.z));
-                ringList.push({x: where.x, y: ringY, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
+                ringList.push({x: where.x, y: ringY, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : marked === 3 ? LAST_OF_KIND : MINE, alpha: 1});
             } else if (marked && surface && surface.ny > 0.8 && !entry.toLight) {
                 // A small one on level ground (the litter, a flower, the pond): a ring its own size.
-                ringList.push({x: where.x, y: where.base + 0.004, z: where.z, radius: Math.max(entry.length * 1.3, 0.025), color: marked === 2 ? SELECTED : MINE, alpha: 1});
+                ringList.push({x: where.x, y: where.base + 0.004, z: where.z, radius: Math.max(entry.length * 1.3, 0.025), color: marked === 2 ? SELECTED : marked === 3 ? LAST_OF_KIND : MINE, alpha: 1});
             }
         }
 
@@ -6009,7 +6040,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             camera.position.x += dx;
             camera.position.z += dz;
         }
-        const seabed = heightAt(target.x, target.z);
+        // (V2 replay: under a shot's cast the bed as it is drawn, where that lies under the analytic one: a lake's.)
+        const seabed = shotClosest !== null ? Math.min(heightAt(target.x, target.z), standGround(target.x, target.z)) : heightAt(target.x, target.z);
         // Under the sea (a swimmer looked at, the director's dive) the target stays down there, above the sea floor.
         const diving = seabed < -0.4 && target.y < -0.15;
         // (Diving, it is only kept off the floor: it used to be pulled down onto it, which sank the view below a swimmer in its band.)
@@ -6021,7 +6053,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // the whole views pay nothing.)
         const viewDistance = camera.position.distanceTo(target);
         const freshTop = !diving && viewDistance < 80 ? waterLevelAt(target.x, target.z, 0) : 0;
-        const underFresh = Boolean(selectedId || followId) && freshTop - seabed > 0.4 && target.y < freshTop - 0.15;
+        // (V2 replay: or a shot's cast in it, `replay/shot.ts`.)
+        const underFresh = Boolean(selectedId || followId || shotClosest !== null) && freshTop - seabed > 0.4 && target.y < freshTop - 0.15;
         const groundUnderTarget = diving ? seabed + 0.3 : underFresh ? Math.max(seabed, 0) : Math.max(seabed, freshTop, 0);
         // Close up (a gecko on a wall, a beetle on a trunk), or looking at an animal up a tree or on a wall, the target
         // may stand above the ground: only kept out of it.
@@ -6043,8 +6076,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             camera.position.y += lift;
         }
         // Close to the ground only when close to what it looks at (a small animal), else well above it.
-        const below = heightAt(camera.position.x, camera.position.z);
-        const floor = (diving && below < -0.4 ? below + 0.5 : Math.max(below, underFresh || camera.position.y > below + 6 ? 0 : waterLevelAt(camera.position.x, camera.position.z, 0), 0)) + (diving ? 0 : Math.min(Math.max(viewDistance * 0.25, 0.03), 1.2));
+        // (V2 replay: a shot's camera is kept over the ground as it is drawn, where that lies under the analytic one: a lake's bed.)
+        const below = shotClosest !== null ? Math.min(heightAt(camera.position.x, camera.position.z), standGround(camera.position.x, camera.position.z)) : heightAt(camera.position.x, camera.position.z);
+        const floor = (diving && below < -0.4 ? below + 0.5 : Math.max(below, underFresh || camera.position.y > below + 6 ? 0 : waterLevelAt(camera.position.x, camera.position.z, 0), 0)) + (diving ? 0 : Math.min(Math.max(viewDistance * 0.25, shotClosest !== null ? 0.003 : 0.03), 1.2));
         if (camera.position.y < floor) camera.position.y = floor;
         // Looking up at the surface is allowed only under it; up at a canopy animal only while it is looked at.
         controls.maxPolarAngle = golden?.maxPolar ?? (diving ? 1.62 : looked?.place.canopy ? 2.7 : 1.36);
@@ -6126,21 +6160,26 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const selected = selectedId ? findEntry(selectedId) : null;
         // Looking at a small animal (flying to it, too: at its microhabitat, or a crab on the seabed), or with one close in front.
         let close = Boolean(selected?.micro) || Boolean(selected && selected.trueLength < 0.3);
+        /** V2 replay: an animal of the cast under about 5 cm that the view is on (an aphid, a water flea): the camera comes as near as its size asks. */
+        let castTiny: Entry | null = null;
         if (!close) {
-            for (const entry of entries) {
-                if (!entry.micro) continue;
-                const dx = entry.place.x - target.x;
-                const dz = entry.place.z - target.z;
-                if (dx * dx + dz * dz < MICRO_CLOSE_WITHIN * MICRO_CLOSE_WITHIN && Math.abs(entry.place.ground - target.y) < MICRO_CLOSE_WITHIN) {
+            // (V2 replay: and a small animal of the cast, wherever it is drawn now, its body after its death too.)
+            for (const entry of cast ? allEntries() : entries) {
+                const pinned = !entry.micro && Boolean(cast?.pins.has(entry.animal.id)) && entry.trueLength < 0.3 ? entry.middle : null;
+                if (!entry.micro && !pinned) continue;
+                const dx = (pinned?.x ?? entry.place.x) - target.x;
+                const dz = (pinned?.z ?? entry.place.z) - target.z;
+                if (dx * dx + dz * dz < MICRO_CLOSE_WITHIN * MICRO_CLOSE_WITHIN && Math.abs((pinned?.y ?? entry.place.ground) - target.y) < MICRO_CLOSE_WITHIN) {
                     close = true;
-                    break;
+                    if (pinned && entry.trueLength < 0.05 && dx * dx + dz * dz < 0.25 && (!castTiny || entry.trueLength < castTiny.trueLength)) castTiny = entry;
+                    if (!cast) break;
                 }
             }
         }
         // A scenery module's close-up (a nest, a web, the cave): the camera may come nearer than usual.
         let moduleWant = 4;
         if (!close) for (const sceneModule of modules) moduleWant = Math.min(moduleWant, sceneModule.closeUp?.(target.x, target.y, target.z) ?? 4);
-        const want = close ? MICRO_MIN_DISTANCE : moduleWant;
+        const want = Math.min(shotClosest ?? Infinity, castTiny ? Math.min(MICRO_MIN_DISTANCE, Math.max(castTiny.trueLength * 4, 0.008)) : close ? MICRO_MIN_DISTANCE : moduleWant);
         // Down at once; back up gently (the camera eases out rather than jumping).
         controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
         let distance = camera.position.distanceTo(target);
@@ -6153,10 +6192,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Close up to an animal under about 5 cm (an ant, a gecko's hatchling, a spider): the scenery around it is huge at
         // its scale. The camera keeps above the ground it is on, and the near plane comes out to just short of the animal,
         // so a grass blade or a leaf the camera is in is cut away instead of filling the view.
-        const tiny = selected && selected.trueLength < 0.05 && selected.middle ? selected : null;
+        const tiny = selected && selected.trueLength < 0.05 && selected.middle ? selected : castTiny;
         if (tiny && distance < Math.max(tiny.trueLength * 40, 0.6) && !flight) {
             const floor = heightAt(camera.position.x, camera.position.z);
-            const clear = floor + Math.max(distance * 0.3, 0.02);
+            // (V2 replay: one of a shot's cast is filmed from as near as its size asks, millimetres over its leaf.)
+            const clear = floor + Math.max(distance * 0.3, tiny === castTiny ? 0.002 : 0.02);
             // (On land; under water the floor is the seabed, and the camera keeps above it the same way.)
             if (camera.position.y < clear && tiny.middle!.y < floor + 0.5) {
                 camera.position.y = clear;
@@ -6164,7 +6204,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             near = Math.min(Math.max(distance * 0.4, 0.002), Math.max(distance - tiny.trueLength * 1.5, 0.002));
         }
-        if (Math.abs(near - camera.near) > camera.near * 0.08) {
+        // (V2 replay: a shot's cut, `setNearCut`: what stands in the first part of the way to its subject is not drawn.)
+        if (nearCut !== null) near = Math.max(near, Math.min(nearCut, distance * 0.98));
+        if (Math.abs(near - camera.near) > camera.near * (nearCut !== null ? 0.005 : 0.08)) {
             camera.near = near;
             camera.updateProjectionMatrix();
         }
@@ -6448,6 +6490,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * Nothing here moves an animal or the scenery.
      */
     const sight = new Sight(scene);
+    /** V2 replay: the cast's own lines (`sightOf`), made at a shot's first asking. */
+    let castSight: Sight | null = null;
+    let castLeaves: Sight | null = null;
+    let castSightLast = "";
     let clearSearch: {views: CloseView[]; next: number; best: CloseView | null; bestBlocked: number; asked: CloseView | null} | null = null;
     let clearedFlight: Flight | null = null;
     let clearCheckAt = 0;
@@ -6461,6 +6507,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const clearStats = {searches: 0, views: 0, ms: 0, worstMs: 0, moved: 0};
     const sightEye = new Vector3();
     const sightPoint = new Vector3();
+    const sightFrom = new Vector3();
     const sightLook = new Spherical();
     /**
      * How many of the four lines from a view's eye to the animal are blocked (5: the eye is no place to stand); counted
@@ -9294,6 +9341,101 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             shadows.setStrength(look.contactStrength(TIER_SETTINGS[tier].shadows > 0));
         },
         play,
+        // V2 replay: every act of the live layers let go (their animals their own again, the stand-ins dropped, whoever a
+        // stand-in hid shown again): before a replay and after it. The live page's log feeds the layers again as it reads.
+        clearLiveActs: () => {
+            liveMeals.clear();
+            liveMatings.clear();
+            liveBirths.clear();
+            liveEscapes.clear();
+            liveDeaths.clear();
+            for (const entry of entries) if (cast?.pins.has(entry.animal.id)) entry.held = false;
+            if (mealPins.size) {
+                mealPins = new Set();
+                refreshLive();
+            }
+        },
+        // V2 replay: the live layers' acts under way and their times (what `__arkDebug` shows in development), for a shot's cuts.
+        liveActs: () => ({meals: liveMeals.debug(), matings: liveMatings.debug(), births: liveBirths.debug(), escapes: liveEscapes.debug(), deaths: liveDeaths.debug()}),
+        // V2 replay: the recorder's exposure (1: as the Ark is; more for a night's act, a camera's own choice: nothing of the
+        // world, its hour or its animals changes).
+        setExposure: (gain, fill = 1) => {
+            renderer.toneMappingExposure = 0.66 * Math.min(Math.max(Number.isFinite(gain) ? gain : 1, 0.25), 8);
+            // (And the recorder's fill: more of the sky's own light, in the night's own colours, `lighting.ts` lift.)
+            const lift = Math.min(Math.max(Number.isFinite(fill) ? fill : 1, 1), 12);
+            if (Math.abs(lift - lighting.lift) > 0.01) {
+                lighting.lift = lift;
+                setLight();
+            }
+        },
+        // V2 replay: how many of these points (the cast's bodies) a view of `target` cannot see: the ground, then what is
+        // drawn solid (`runtime/sight.ts`, as a chosen animal's close-up asks it), leaving out what a shot's cone
+        // dissolves (`near-fade.ts`: the trees and the leaf cards). One more than the points: the eye is no place to
+        // stand (under the ground, inside a trunk, a rock or a wall). `fresh`: the world may have changed (a cut).
+        sightOf: (target, view, points, fresh, cut = 0, leaves = false) => {
+            if (!castSight) {
+                castSight = new Sight(scene);
+                castSight.skip = (mesh) => mesh.userData.kind === "asset-tree" || Boolean(((Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as Material | undefined)?.userData.arkNearFade);
+                castLeaves = new Sight(scene);
+            }
+            if (fresh) {
+                castSight.reset();
+                castLeaves!.reset();
+            }
+            const lines = leaves ? castLeaves! : castSight;
+            const at = sightPoint.set(target.x, target.y, target.z).clone();
+            sightEye.setFromSphericalCoords(view.distance, view.polar, view.azimuth).add(at);
+            // (Over the ground as it is drawn, where that lies under the analytic one: a lake's bed.)
+            if (Math.min(heightAt(sightEye.x, sightEye.z), standGround(sightEye.x, sightEye.z)) > sightEye.y - Math.min(0.2, view.distance * 0.2) || runtime.eyeBlocked(sightEye, at)) return points.length + 1;
+            lines.near(at, view.distance + 4);
+            let blocked = 0;
+            castSightLast = "";
+            for (const point of points) {
+                sightPoint.set(point.x, point.y, point.z);
+                // (From within a metre no hill stands between: the heights asked are the analytic ground's, not the drawn bed's.)
+                if (view.distance > 1 && runtime.sightBlocked(sightEye, sightPoint, point.slack)) {
+                    blocked++;
+                    castSightLast ||= "ground";
+                    continue;
+                }
+                // (What the shot's near cut takes away is not in the way: the line begins where the picture does.)
+                const span = sightEye.distanceTo(sightPoint);
+                const from = cut > 0 && cut < span - point.slack ? sightFrom.copy(sightPoint).sub(sightEye).multiplyScalar(cut / span).add(sightEye) : sightEye;
+                // (A leaf counts nearer the body than a wall does: the bush an animal stands in hides it.)
+                if (lines.blocked(from, sightPoint, leaves ? point.slack * 0.6 : point.slack)) {
+                    blocked++;
+                    castSightLast ||= lines.last || "a wall";
+                }
+            }
+            return blocked;
+        },
+        sightMet: () => castSightLast,
+        // V2 replay: the camera's near plane out to `metres` from it (a cutaway: the roof, the fern or the bush in the
+        // first part of the way to a shot's subject is not drawn), or null: the scene's own again.
+        setNearCut: (metres, closest = null) => {
+            nearCut = metres !== null && metres > 0 ? metres : null;
+            shotClosest = closest !== null && closest > 0 ? closest : null;
+        },
+        // V2 replay: the trees and leaf cards dissolve inside a cone round the view's axis, as far as `end` metres from
+        // the camera (`near-fade.ts`); null: the Ark's own near fade only. (On the handle so that nothing a shot loads
+        // lazily imports a module of the scene's own chunk.)
+        setNearCone: (cone) => setNearCone(cone),
+        // V2 replay: the ground's standing plants drawn smaller round these spots, to nothing at them (`near-detail.ts`).
+        setGroundClear: (spots) => nearDetail?.setClear(spots),
+        // V2 replay: the scene is flying its own camera (a replay's flight to its act): a shot leaves the view alone until it lands.
+        flying: () => Boolean(flight),
+        // V2 replay: the view an act is clear from, as the scene's own replay finds it: the polar that sees the focus over
+        // the hills (`clearPolar`), then the bearing nearest `azimuth` with the fewest trunks between the camera and the
+        // places (`clearBearing`: the bearing itself when nothing is in the way).
+        clearView: (focus, distance, polar, azimuth, places) => {
+            const phi = clearPolar(focus, distance, polar, azimuth);
+            return {polar: phi, azimuth: clearBearing(focus, distance, phi, azimuth, (x, z, clearance) => Boolean((townWorld && island?.contains(x, z) ? townWorld : world)?.sampler.blocked(x, z, clearance)), undefined, places)};
+        },
+        // V2 replay (`replay/cast.ts`): the cast handed in (or taken away, null); the roster is laid out again with it.
+        setCast: whenAnimals((layer: ArkCastLayer | null) => {
+            cast = layer;
+            setSnapshot(current, false);
+        }),
         // Runtime (the visual CI): drop what earlier real-time frames carried (the reactive layer, rig blends, glances).
         resetTransients: () => {
             reactive.resetAll();
@@ -9342,14 +9484,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             controls.update();
         },
         locate: (id) => {
-            const entry = findEntry(id);
+            // (A stand-in being acted first: an eaten prey's, a dead one's body, while the one in the roster is held back.)
+            const entry = (mealGhosts.length ? mealGhosts.find((ghost) => ghost.animal.id === id && !ghost.held) : null) ?? findEntry(id);
             if (!entry) return null;
             const ground = Math.max(entry.place.ground, 0);
             // p2 (ocean): one out in the open ocean not drawn yet is where its loop has it now, not at its old place.
             const sea = !entry.middle && entry.depth && oceanRoams(entry) ? oceanFix(entry.animal, entry.length, clockNow()) : null;
             if (sea) return {x: sea.x, y: ARK_ENVIRONMENT.seaLevel.value - 4, z: sea.z, ground: 0, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: sea.yaw};
-            const middle = entry.middle ?? new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z);
-            return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0};
+            // (Out of the picture, it is not drawn: where its act poses it, else where its day last had it, else its place.)
+            const posed = entry.act && !entry.act.hidden ? {x: entry.act.x, y: entry.act.base, z: entry.act.z} : entry.sched?.pose ?? null;
+            const middle = entry.middle ?? (posed ? new Vector3(posed.x, posed.y + entry.drawnHeight * 0.5, posed.z) : new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z));
+            // (V2 replay: how far under the water its middle is, where it swims: a shot films it from under the surface.)
+            const top = waterTopAt(middle.x, middle.z);
+            const under = heightAt(middle.x, middle.z) < top - 0.15 ? Math.max(top - middle.y, 0) : 0;
+            return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.ghost ? Math.min(entry.drawnHeight, entry.length * 0.6) : entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0, act: entry.act?.state ?? null, shown: Boolean(entry.middle) && !entry.held && !entry.act?.hidden, under};
         },
         behaviour: (id) => findEntry(id)?.state ?? null,
         rest: (id) => {

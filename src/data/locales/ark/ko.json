@@ -330,7 +330,11 @@
             "revived": "{animal}이(가) 돌아왔어요",
             "revivedYoung": "{animal}이(가) 다시 어린 성체로 돌아왔어요",
             "released": "{aAnimal}이(가) 야생에 풀려났어요",
-            "gone": "{animal}이(가) Ark를 떠났어요"
+            "gone": "{animal}이(가) Ark를 떠났어요",
+            "crisis": "{animal}: 야생에 몇 마리만 남았어요",
+            "saved": "{animal}: 야생에서 위기를 벗어났어요",
+            "wildGone": "{animal}: 야생에는 한 마리도 남지 않았어요",
+            "toCare": "{animal}: 지금은 동물원에서 보살핌을 받고 있어요"
         },
         "card": {
             "now": "지금: {activity}",

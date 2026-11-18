@@ -2,6 +2,7 @@ import type {RecordClock} from "@/ark-scene/record-clock";
 import type {ArkCameraView, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkDirection, ArkMarks} from "@/lib/ark-clips/shots";
 import {MOMENT_SECONDS} from "@/ark-scene/moments";
+import type {ArkReplayShot, ArkReplayShotReport} from "@/ark-scene/replay/shot";
 
 /**
  * The clip recorder's director (`/ark?record=1`, `window.__arkDirector`):
@@ -15,6 +16,9 @@ import {MOMENT_SECONDS} from "@/ark-scene/moments";
  *
  * Camera moves only: what happens (an arrival, a meal) comes from the data,
  * through the scene's own entrance and replay.
+ *
+ * A replay shot (`direction.replay`, `--replay <event id>`): one recorded event at its own time. Its part is in
+ * `replay/shot.ts`, loaded only then (the clock's pin, the cast, the layers' feed, the framing); here only its frames.
  */
 
 export const DIRECTOR_FPS = 30;
@@ -27,8 +31,11 @@ export type ArkDirectorFrame = {index: number; t: number; done: boolean; image: 
 export type ArkDirector = {
     info: () => ArkDirectorInfo;
     prepare: (direction: ArkDirection) => Promise<{models: number}>;
-    frame: (quality?: number) => ArkDirectorFrame;
+    /** `quality` 0: no picture (the frame is only drawn). `step`: video frames moved on at once (a harness's quicker look; 1 for a clip). */
+    frame: (quality?: number, step?: number) => ArkDirectorFrame;
     marks: () => ArkMarks;
+    /** A replay shot's own account (who stood in, the cuts, whether the scene's layer acted it); null for any other shot. */
+    replayReport: () => ArkReplayShotReport | null;
 };
 
 type Point = {x: number; y: number; z: number};
@@ -66,6 +73,8 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
     let anchor: ArkCameraView = home;
     /** Which way the subject faced as the shot began (a moment heads that way). */
     let anchorYaw = 0;
+    /** A replay shot under way (`replay/shot.ts`). */
+    let shot: ArkReplayShot | null = null;
 
     const subjectPoint = (): Point | null => {
         if (!direction?.subject) return null;
@@ -162,11 +171,21 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
                 const bearing = actView?.azimuth ?? outward(at);
                 return {target: {x: at.x, y: Math.max(at.y, 0), z: at.z}, distance: 38, polar: 0.98, azimuth: bearing + 0.06 * since};
             }
+            default:
+                // (A replay shot: its own framing, `replay/shot.ts`.)
+                return null;
         }
     };
 
     const total = () => {
         if (!direction) return 0;
+        if (shot) {
+            // The act's length is the record's: known once the scene's layer has played it out.
+            const over = shot.doneAt();
+            if (over === null) return Infinity;
+            marks.actEnd = over;
+            return Math.max(over + direction.linger + direction.end, direction.minSeconds);
+        }
         if (direction.act && direction.kind === "meal_chase") {
             if (!played) return Infinity;
             return Math.max(marks.actEnd + direction.linger + direction.end, direction.minSeconds);
@@ -192,11 +211,26 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
             actView = null;
             tracked = null;
             Object.assign(marks, {start: 0, act: next.lead, actEnd: next.lead, end: 0, total: 0});
-            handle.setHours(next.hours.from);
+            shot?.end();
+            shot = null;
             home = handle.homeView();
-            // Every species aboard, near and far, so nothing pops in during the shot.
-            const slugs = Array.from(new Set([...next.preload, ...options.info.snapshot.animals.map((animal) => animal.model_slug)]));
-            await handle.preload(slugs);
+            if (next.replay) {
+                // A recorded event at its own time: the island's own light then (unless pinned), the cast's models first
+                // (everyone else's come as they do for a viewer), then the clock's pin, the cast and the layers' feed.
+                handle.setHours(next.replayHour ?? null);
+                const {createArkReplayShot} = await import("@/ark-scene/replay/shot");
+                await handle.preload(next.preload);
+                shot = createArkReplayShot({handle, replay: next.replay, aspect: () => {
+                    const canvas = options.canvas();
+                    return canvas && canvas.height ? canvas.width / canvas.height : 9 / 16;
+                }, lead: next.lead, mount: next.mount, nightGain: next.nightGain, hour: next.replayHour ?? null});
+                shot.begin();
+            } else {
+                handle.setHours(next.hours.from);
+                // Every species aboard, near and far, so nothing pops in during the shot.
+                const slugs = Array.from(new Set([...next.preload, ...options.info.snapshot.animals.map((animal) => animal.model_slug)]));
+                await handle.preload(slugs);
+            }
             if (next.kind === "arrival" && next.subject) handle.hold(next.subject);
             // The scene's own follow too: it keeps the view at the animal's height (a flyer in the air) instead of easing it to the ground.
             if ((next.kind === "follow" || next.kind === "meet") && next.subject) handle.follow(next.subject);
@@ -211,7 +245,7 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
                     anchor = {...home, target: {x: first.x, y: first.y, z: first.z}, azimuth: next.kind === "meet" ? first.yaw + 0.55 : outward(first)};
                     anchorYaw = first.yaw;
                 }
-                const view = viewAt(next, 0, plannedTotal(next));
+                const view = shot ? shot.step(0, 0) : viewAt(next, 0, plannedTotal(next));
                 if (view) handle.setView(view);
                 clock.tick(0);
                 if (handle.loading()) quietSince = 0;
@@ -220,12 +254,27 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
                 await new Promise((resolve) => setTimeout(resolve, 60));
             }
             tracked = null;
+            if (shot) {
+                // The scene settles on the pinned moment (the light eases to that hour, everyone takes the first step of its
+                // day there): a few seconds of frames nobody sees (`REPLAY_SETTLE_SECONDS`, all before the shot's start),
+                // then the clock exactly at the shot's start.
+                for (let i = 0; i < 45; i++) {
+                    const view = shot.step(0, 0);
+                    if (view) handle.setView(view);
+                    clock.tick(100);
+                }
+                shot.settle();
+                const view = shot.step(0, 0);
+                if (view) handle.setView(view);
+                clock.tick(0);
+            }
             return {models: handle.stats().modelsLoaded};
         },
-        frame: (quality = 0.92) => {
+        frame: (quality = 0.92, step = 1) => {
             const d = direction;
             if (!d) throw new Error("prepare() first");
             const t = index / DIRECTOR_FPS;
+            const frames = Math.max(Math.round(step), 1);
             // The act: an arrival is the scene's own entrance, a meal its replay (which flies the camera itself).
             if (d.kind === "arrival" && d.subject && index === Math.round(d.lead * DIRECTOR_FPS)) {
                 handle.arrive(d.subject);
@@ -250,28 +299,34 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
                 marks.act = t;
                 marks.actEnd = t + MOMENT_SECONDS[d.kind];
             }
+            // A replay shot: its framing (null while the scene's own replay flies the camera), its act's start.
+            const replayView = shot ? shot.step(t, index ? frames / DIRECTOR_FPS : 0) : null;
+            if (shot) marks.act = shot.actAt();
             const length = total();
-            if (!playing) {
+            if (shot) {
+                if (replayView) handle.setView(replayView);
+            } else if (!playing) {
                 const view = viewAt(d, t, Number.isFinite(length) ? length : plannedTotal(d));
                 if (view) handle.setView(view);
             }
-            if (d.hours.from !== d.hours.to || index === 0) handle.setHours(hoursAt(d, t, Number.isFinite(length) ? length : plannedTotal(d)));
-            clock.tick(1000 / DIRECTOR_FPS);
-            const image = capture(quality);
-            index += 1;
+            if (!shot && (d.hours.from !== d.hours.to || index === 0)) handle.setHours(hoursAt(d, t, Number.isFinite(length) ? length : plannedTotal(d)));
+            clock.tick((1000 / DIRECTOR_FPS) * frames);
+            const image = quality > 0 ? capture(quality) : "";
+            index += frames;
             const now = index / DIRECTOR_FPS;
             const finished = Number.isFinite(length) && now >= length;
             if (finished) {
                 marks.total = now;
                 marks.end = Math.max(now - d.end, 0);
-                if (!d.act && d.kind !== "arrival" && !(d.kind in MOMENT_SECONDS)) {
+                if (!shot && !d.act && d.kind !== "arrival" && !(d.kind in MOMENT_SECONDS)) {
                     marks.act = marks.end;
                     marks.actEnd = marks.end;
                 }
             }
             // A runaway act (models that never came) still ends: a minute is the most any clip runs.
-            return {index: index - 1, t, done: finished || now >= 60, image};
+            return {index: index - frames, t, done: finished || now >= 60, image};
         },
+        replayReport: () => shot?.report() ?? null,
         marks: () => ({...marks, total: marks.total || index / DIRECTOR_FPS, end: marks.end || Math.max(index / DIRECTOR_FPS - (direction?.end ?? 0), 0)})
     };
 }

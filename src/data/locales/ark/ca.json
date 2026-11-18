@@ -330,7 +330,11 @@
             "revived": "{animal} ha tornat",
             "revivedYoung": "{animal} ha tornat, jove adult de nou",
             "released": "Alliberament a la natura: {aAnimal}",
-            "gone": "{animal} ja no és a l'Ark"
+            "gone": "{animal} ja no és a l'Ark",
+            "crisis": "{animal}: en queden pocs exemplars en llibertat",
+            "saved": "{animal}: fora de perill en llibertat",
+            "wildGone": "{animal}: no en queda cap exemplar en llibertat",
+            "toCare": "{animal}: ara sota la cura del zoo"
         },
         "card": {
             "now": "Ara: {activity}",

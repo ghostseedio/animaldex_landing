@@ -330,7 +330,11 @@
             "revived": "عاد {animal}",
             "revivedYoung": "عاد {animal} بالغًا شابًا من جديد",
             "released": "أُطلق {aAnimal} إلى البرية",
-            "gone": "رحل {animal} عن Ark"
+            "gone": "رحل {animal} عن Ark",
+            "crisis": "{animal}: أعداد قليلة جدًا في البرية",
+            "saved": "{animal}: خارج دائرة الخطر في البرية",
+            "wildGone": "{animal}: لم يتبقَّ أي فرد في البرية",
+            "toCare": "{animal}: في رعاية حديقة الحيوان الآن"
         },
         "card": {
             "now": "الآن: {activity}",

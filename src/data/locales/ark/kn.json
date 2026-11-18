@@ -330,7 +330,11 @@
             "revived": "{animal} ಮರಳಿ ಬಂದಿದೆ",
             "revivedYoung": "{animal} ಮತ್ತೆ ಯುವ ವಯಸ್ಕವಾಗಿ ಮರಳಿ ಬಂದಿದೆ",
             "released": "{aAnimal} ಅನ್ನು ಕಾಡಿಗೆ ಬಿಡಲಾಯಿತು",
-            "gone": "{animal} Ark ನಿಂದ ಹೋಗಿದೆ"
+            "gone": "{animal} Ark ನಿಂದ ಹೋಗಿದೆ",
+            "crisis": "{animal}: ಕಾಡಿನಲ್ಲಿ ಉಳಿದಿರುವುದು ಕೆಲವೇ",
+            "saved": "{animal}: ಕಾಡಿನಲ್ಲಿ ಈಗ ಅಪಾಯದಿಂದ ಹೊರಗೆ",
+            "wildGone": "{animal}: ಕಾಡಿನಲ್ಲಿ ಒಂದೂ ಉಳಿದಿಲ್ಲ",
+            "toCare": "{animal}: ಈಗ ಮೃಗಾಲಯದ ಆರೈಕೆಯಲ್ಲಿ"
         },
         "card": {
             "now": "ಈಗ: {activity}",

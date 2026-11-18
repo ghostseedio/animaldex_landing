@@ -50,6 +50,9 @@ const CROP_PLANTS: Partial<Record<Crop, {kind: DetailKind; perM2: number}>> = {
 };
 
 /** `up`: lie along the ground's own slope (the litter mats), instead of standing upright with a small tilt. */
+/** What stands up from the ground and can hide a small animal (a shot's clearing, `setClear`). */
+const STANDING = new Set<DetailKind>(["fern", "sapling", "mushroom", "maize", "wheat", "cabbage", "sprout"]);
+
 type Item = {kind: DetailKind; x: number; y: number; z: number; yaw: number; tilt: number; scale: number; colour: number; up?: [number, number, number]};
 
 const CELL = 2;
@@ -702,6 +705,18 @@ export class NearDetail {
         this.lastCell = "";
     }
 
+    /**
+     * V2 replay (`replay/shot.ts`): the standing plants (ferns, saplings, crops) round these spots are drawn smaller the
+     * nearer they stand, down to nothing within `r` of one: a shot's subject is not filmed through a fern. Null: all of
+     * them, as the Ark is. Only what is drawn changes: every viewer's ground is the same.
+     */
+    setClear(spots: Array<{x: number; z: number; r: number}> | null) {
+        if (!spots?.length && !this.clear.length) return;
+        this.clear = spots ?? [];
+        this.dirty = true;
+    }
+    private clear: Array<{x: number; z: number; r: number}> = [];
+
     /** Call each frame with what the camera looks at and how far it is. */
     update(target: {x: number; z: number}, viewDistance: number) {
         // The near-camera fade's reach follows the view (near-fade.ts): a close-up keeps its subject.
@@ -764,7 +779,12 @@ export class NearDetail {
                     this.tilt.setFromAxisAngle(this.axis.set(1, 0, 0), item.tilt * (item.kind === "fern" || item.kind === "mushroom" || item.kind === "sapling" ? 0.3 : 1));
                     this.rotation.multiply(this.tilt);
                 }
-                this.matrix.compose(this.position.set(item.x, item.y, item.z), this.rotation, this.size.setScalar(item.scale));
+                let scale = item.scale;
+                if (this.clear.length && STANDING.has(item.kind)) {
+                    for (const spot of this.clear) scale = Math.min(scale, item.scale * smoothstep(spot.r, spot.r * 1.6 + 0.2, Math.hypot(item.x - spot.x, item.z - spot.z)));
+                    if (scale < item.scale * 0.04) continue;
+                }
+                this.matrix.compose(this.position.set(item.x, item.y, item.z), this.rotation, this.size.setScalar(scale));
                 mesh.setMatrixAt(n, this.matrix);
                 mesh.setColorAt(n, this.colour.set(TINTS[item.kind][item.colour]));
                 counts.set(item.kind, n + 1);

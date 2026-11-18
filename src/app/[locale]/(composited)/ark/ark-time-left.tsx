@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useEffect, useMemo, useState} from "react";
+import React, {lazy, useEffect, useMemo, useState} from "react";
 import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkWords} from "@/lib/ark-words";
 import {ARK_TIME_LEFT_HOOKS, arkNeedsFacts, arkTimeLeft, arkTimeLeftText, arkTimeLeftWordsFrom, arkTimeLeftWorldOf, type ArkTimeLeftFacts} from "@/lib/ark-time-left";
@@ -9,12 +9,41 @@ import {arkReleasedEntry, useArkReleased} from "@/lib/ark-release-read";
 import {arkReleaseTimeLeftHook} from "@/lib/ark-release-time-left";
 
 /**
+ * Release to the Wild (AnimalDex P1-8, behind the server's `release_to_wild`): a released animal's wild skill, and on the
+ * reader's own zoo animal the button and its sheet. Its own chunk, fetched only when a card asks for that part: neither
+ * the page's static JavaScript nor the estimate's chunk holds the sheet.
+ */
+const ArkRelease = lazy(() => import("@/app/[locale]/(composited)/ark/ark-release"));
+
+type Props = {
+    animal: ArkAnimal;
+    /** The estimate reads it; the release block does not. */
+    snapshot?: ArkSnapshot | null;
+    words: ArkWords;
+    locale: string;
+    fetchJson?: ArkTimeLeftFetch;
+    /** Release to the Wild's block instead of the estimate: the site's link component (the card has it; see `ark-release.tsx`). */
+    release?: React.ComponentProps<typeof ArkRelease>["link"];
+    /** The snapshot's Ark day (the release block). */
+    day?: number | null;
+};
+
+/**
+ * The card's lazily loaded blocks, behind the card's one dynamic import (each further `lazy()` in the card costs the Ark
+ * page's static JavaScript, which is budgeted): the estimate, or with `release` the Release to the Wild block. The card
+ * wraps each in its own Suspense.
+ */
+export default function ArkTimeLeft({release, day, snapshot = null, ...rest}: Props) {
+    return release ? <ArkRelease animal={rest.animal} words={rest.words} locale={rest.locale} day={day ?? null} link={release} /> : <ArkTimeLeftPanel snapshot={snapshot} {...rest} />;
+}
+
+/**
  * "Estimated time left" on the tapped animal's card (owner decision 389; `lib/ark-time-left.ts` says what it is made of
  * and who is at risk): a range of Ark days or years and the reasons behind it, only for an animal at risk. Loaded lazily
  * (`ark-animal-card.tsx`), so the Ark page's static JavaScript stays inside its budget, and it reads its species facts
  * (`/api/ark/food-chain`) only when the animal's risk could depend on them. Nothing here is a promise: it says so.
  */
-export default function ArkTimeLeft({animal, snapshot, words, locale, fetchJson = arkTimeLeftFetch}: {animal: ArkAnimal; snapshot: ArkSnapshot | null; words: ArkWords; locale: string; fetchJson?: ArkTimeLeftFetch}) {
+function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeLeftFetch}: {animal: ArkAnimal; snapshot: ArkSnapshot | null; words: ArkWords; locale: string; fetchJson?: ArkTimeLeftFetch}) {
     const world = useMemo(() => arkTimeLeftWorldOf(snapshot), [snapshot]);
     const needs = world ? arkNeedsFacts(animal, world) : false;
     const [read, setRead] = useState<{id: string; facts: ArkTimeLeftFacts | null} | null>(null);

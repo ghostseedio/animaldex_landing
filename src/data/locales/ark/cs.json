@@ -330,7 +330,11 @@
             "revived": "{animal} je zpět",
             "revivedYoung": "{animal} je zpět, znovu mladý dospělý",
             "released": "Vypuštění do volné přírody: {aAnimal}",
-            "gone": "{animal} odchází z Arku"
+            "gone": "{animal} odchází z Arku",
+            "crisis": "{animal}: ve volné přírodě zbývá jen pár jedinců",
+            "saved": "{animal}: ve volné přírodě mimo ohrožení",
+            "wildGone": "{animal}: ve volné přírodě už nezbyl žádný jedinec",
+            "toCare": "{animal}: nyní v péči zoo"
         },
         "card": {
             "now": "Teď: {activity}",

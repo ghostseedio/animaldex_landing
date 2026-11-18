@@ -21,7 +21,7 @@ import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {readNowOrLater} from "@/ark-scene/model-files";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
-import {ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS, NEAR_FADE_MAX} from "@/ark-scene/near-fade";
+import {ARK_NEAR_CONE, ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS, nearFadeReach} from "@/ark-scene/near-fade";
 import {ASSETS, ASSET_BASE, TREE_CLOSE, assetTreePlacement, treeLodDistance} from "@/ark-scene/tree-assets";
 import {LEAF_CELLS, LEAF_CUT, leafAtlasTexture, leafCellUniform, releaseLeafAtlas} from "@/ark-scene/leaf-atlas";
 // The least share of the woods' fill every tier draws (batch 6), shared with the attach points (decision 33).
@@ -119,6 +119,7 @@ export function windMaterial(doubleSided: boolean, near = false, conifer = false
         shader.uniforms.arkTime = ARK_TIME;
         shader.uniforms.arkWind = ARK_WIND;
         shader.uniforms.arkNearFade = ARK_NEAR_FADE;
+        shader.uniforms.arkNearCone = ARK_NEAR_CONE;
         shader.vertexShader = shader.vertexShader
             .replace("#include <common>", `#include <common>
 attribute vec4 color_1;
@@ -465,7 +466,8 @@ export class AssetTrees {
         this.lastAt.copy(camera);
         // A tree is "near" when the camera is inside (or within reach of) its crown's cylinder: drawn with the fade.
         // The margin covers the 1.5 m the camera may move before the next re-sort.
-        const margin = NEAR_FADE_MAX + 1.6;
+        // (V2 replay: as far as a shot's cone reaches, `near-fade.ts`: what stands between the camera and its subject.)
+        const margin = nearFadeReach() + 1.6;
         this.byAsset.forEach((entry) => {
             const counts: Record<Level, number> = {lod0: 0, lod1: 0, lod2: 0, card: 0};
             let nearCount = 0;

@@ -330,7 +330,11 @@
             "revived": "{animal} вернулся",
             "revivedYoung": "{animal} вернулся снова молодым взрослым",
             "released": "Выпуск на волю: {aAnimal}",
-            "gone": "{animal} покинул Ark"
+            "gone": "{animal} покинул Ark",
+            "crisis": "{animal}: в дикой природе осталось совсем немного",
+            "saved": "{animal}: в дикой природе вне опасности",
+            "wildGone": "{animal}: в дикой природе не осталось ни одной особи",
+            "toCare": "{animal}: теперь под опекой зоопарка"
         },
         "card": {
             "now": "Сейчас: {activity}",

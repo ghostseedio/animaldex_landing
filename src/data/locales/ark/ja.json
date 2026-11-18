@@ -330,7 +330,11 @@
             "revived": "{animal}が戻ってきました",
             "revivedYoung": "{animal}が若い成体に戻って帰ってきました",
             "released": "{aAnimal}が野生に放されました",
-            "gone": "{animal}はArkからいなくなりました"
+            "gone": "{animal}はArkからいなくなりました",
+            "crisis": "{animal}：野生に残るのはわずか",
+            "saved": "{animal}：野生で危機を脱しました",
+            "wildGone": "{animal}：野生には残っていません",
+            "toCare": "{animal}：今は動物園で世話を受けています"
         },
         "card": {
             "now": "いま：{activity}",

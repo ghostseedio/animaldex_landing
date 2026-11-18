@@ -5,6 +5,7 @@ import type {ArkAct, ArkEvent} from "@/lib/ark-life";
 import {planArkReplay} from "@/lib/ark-life";
 import {pickArkFacts, type ArkFact, type ArkFieldGuide} from "@/lib/ark-clips/facts";
 import {ARK_MOMENTS, canMoment, MOMENT_SECONDS, type ArkMomentKind} from "@/ark-scene/moments";
+import type {ArkEventReplay, ArkReplayKind} from "@/ark-scene/replay/event-replay";
 
 /**
  * Ark marketing clips (docs/ark-next.md, Part 4b): what each scripted shot
@@ -21,6 +22,13 @@ export const ARK_SHOTS = ["day_to_night", "arrival", "meal_chase", "follow", "fl
 /** The cross-layer moments (`ark-scene/moments.ts`): cosmetic, never a meal; available when the Ark has an animal that can act one out. */
 export const ARK_MOMENT_SHOTS: readonly ArkShotKind[] = ARK_MOMENTS;
 export type ArkShotKind = (typeof ARK_SHOTS)[number];
+
+/**
+ * A recorded event replayed at its own time (`replay-shots.ts`, `--replay <event id>`): the shot is the event's kind
+ * (`mated`, `birth`, `death`, `extinct`, `meal`, `escaped`, `last_stand`, `released`). Not in `ARK_SHOTS`: a replay is
+ * asked for by its event, never picked from the list.
+ */
+export type ArkAnyShotKind = ArkShotKind | ArkReplayKind;
 
 export function isArkShot(value: unknown): value is ArkShotKind {
     return typeof value === "string" && (ARK_SHOTS as readonly string[]).includes(value);
@@ -63,7 +71,7 @@ export type ArkCue = {
 
 /** What the browser director runs (JSON across Playwright). */
 export type ArkDirection = {
-    kind: ArkShotKind;
+    kind: ArkAnyShotKind;
     /** The light's hour at the first and the last frame (eased between). */
     hours: {from: number; to: number};
     /** Camera seconds before the act; the whole camera move when there is no act. */
@@ -80,10 +88,21 @@ export type ArkDirection = {
     act: ArkAct | null;
     /** Model slugs to load before the first frame. */
     preload: string[];
+    /**
+     * A recorded event replayed at its own time (`ark-scene/replay/`): the clock is pinned `lead` seconds before the
+     * event, everyone it names is brought in and pinned, and the scene's own layers act it. The light is the island's
+     * at that moment unless `replayHour` pins it (a night event filmed by day: the animals' day is then that hour's).
+     */
+    replay?: ArkEventReplay | null;
+    replayHour?: number | null;
+    /** A mating's mount: the camera pulls away (default), or films it. */
+    mount?: "cutaway" | "show";
+    /** A replay at night: the scale of the camera's lift of the dark (1, the default; 0: the night as the Ark shows it). */
+    nightGain?: number;
 };
 
 export type ArkShotPlan = {
-    kind: ArkShotKind;
+    kind: ArkAnyShotKind;
     /** `admin_content_videos.source_slug`: one live clip per slug. Samples from fixtures start `sample-`. */
     slug: string;
     title: string;
