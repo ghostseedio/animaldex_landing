@@ -70,7 +70,7 @@ const CSS = `
 .arkl-bg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.55}
 .arkl-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,20,14,.25) 0,rgba(14,20,14,.82) 38%,rgba(14,20,14,.94) 100%)}
 .arkl-scroll{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-.arkl-col{box-sizing:border-box;max-width:34rem;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px) + var(--ark-inset-bottom,0px))}
+.arkl-col{box-sizing:border-box;max-width:34rem;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px) + var(--ark-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px) + var(--ark-inset-bottom,0px))}
 .arkl-head{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
 .arkl-title{margin:0;font:700 22px/1.15 ${FONT};letter-spacing:-.01em}
 .arkl-sub{margin:0;color:rgba(255,252,244,.66);font-size:12.5px}
