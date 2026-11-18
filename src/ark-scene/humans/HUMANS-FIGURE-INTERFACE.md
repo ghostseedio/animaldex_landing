@@ -60,7 +60,7 @@ carries:
 | `sunsit` | Sitting on a towel, reading. |
 | `lie` | Legacy lying pose. |
 | `paddle` | Standing in the shallows. |
-| `sleep` | In bed, on a side: the root at the bed's foot on its top, the body laid back toward the head (`yaw` from the head to the foot). |
+| `sleep` | In bed, straight on the back along the bed with the arms and legs as in standing (the rigged clip is `sunback`'s spine and head with `stand`'s limbs, `people-rig.ts` `CLIP_MIX`): the root at the feet, the body laid back toward the head (`yaw` from the head to the foot). The town puts the root so the head is on the pillow (`HumanRoom.beds` is the head's spot; `town-humans.ts` `sleeperRoot`), a little into the mattress under the duvet's top, and draws no sleeper taller than 1.78 m. The rigged sleepers are barefoot (`people-figures.ts` `BAREFOOT`: the shoes take the skin's colour). |
 | `chop` | Axe swing. |
 | `saw` | Chainsaw held at waist height. |
 | `plant` | Kneeling and bent to the soil. |
@@ -74,7 +74,11 @@ carries:
 ## Levels of detail and budget
 
 - Near body within `HUMAN_NEAR` (40 m), casting shadows.
-- Coarse body out to `HUMAN_FAR` (250 m); nothing beyond.
+- Coarse body out to `HUMAN_FAR` (250 m).
+- Beyond it, out of doors (not in a flat, a car or a boat), one small standing figure each (`people-dots.ts`: legs, a top and a
+  head in the seeded look's colours, 36 triangles, one instanced draw call for the lot), grown with the distance from its true
+  size at 250 m to about 15 px tall (`dotGrowth`) so the whole-island overview shows them; out to 5,000 m. The same
+  `setFrame` feeds it (`PeopleFigures` draws it in every state); `drawn.dots` counts them.
 - At most `HUMAN_MAX` drawn, the nearest first.
 - The live record has 112 humans. Today's budget is about 2,700 triangles near and 570 far.
 - Phone heap budget is +8 MB for the whole humans lane.

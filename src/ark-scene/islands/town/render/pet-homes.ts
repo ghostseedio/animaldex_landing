@@ -197,13 +197,14 @@ function apartment(room: HomeRoom, parts: Parts) {
     for (const side of [-1, 1]) parts.inside.box(fr, su + side * (sw / 2 - 0.1), 0.42, -d / 2 + 0.5, 0.2, 0.22, 0.8, sofa);
     // The rug in front of it (the pets' floor: no table on it).
     parts.inside.box(fr, su, 0.03, 0.3, sw + 0.6, 0.012, 1.3, RUGS[Math.floor(L.rugColour * RUGS.length)]);
-    // The bed: its frame, the mattress, the duvet over the foot two-thirds, two pillows at the head, a headboard.
+    // The bed: its frame, the mattress, the duvet over the foot to the waist (humans polish, 2026-11-18: the sleepers lie
+    // in it, the lower half of their bodies sunk into the covers), two pillows at the head, a headboard.
     const bed = L.bed;
     const head = L.bedSide;
     parts.inside.box(fr, bed.x, 0, bed.z, bed.length, 0.3, bed.width, WOOD);
-    parts.inside.box(fr, bed.x, 0.3, bed.z, bed.length - 0.04, 0.16, bed.width - 0.04, tone("#f4f1ea"));
-    parts.inside.box(fr, bed.x - head * 0.3, 0.46, bed.z, bed.length - 0.64, 0.06, bed.width + 0.02, DUVETS[Math.floor(L.duvetColour * DUVETS.length)]);
-    for (const side of [-1, 1]) parts.inside.box(fr, bed.x + head * (bed.length / 2 - 0.26), 0.46, bed.z + side * bed.width * 0.24, 0.36, 0.1, bed.width * 0.42, tone("#fbfaf6"));
+    parts.inside.box(fr, bed.x, 0.3, bed.z, bed.length - 0.04, bed.top - 0.3, bed.width - 0.04, tone("#f4f1ea"));
+    parts.inside.box(fr, bed.x - head * 0.415, bed.top, bed.z, bed.length - 0.83, bed.duvet, bed.width + 0.02, DUVETS[Math.floor(L.duvetColour * DUVETS.length)]);
+    for (const side of [-1, 1]) parts.inside.box(fr, bed.x + head * (bed.length / 2 - 0.26), bed.top, bed.z + side * bed.width * 0.25, 0.36, 0.1, bed.width * 0.42, tone("#fbfaf6"));
     parts.inside.box(fr, bed.x + head * (bed.length / 2 + 0.02), 0, bed.z, 0.06, 1.0, bed.width + 0.06, tone("#6e5236"));
     // The bedside table at the bed's head and its lamp (lit: the glow; a sleeper is seen by it at night).
     const ns = L.nightstand;

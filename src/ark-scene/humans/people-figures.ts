@@ -9,7 +9,8 @@
  * figures, for comparisons.
  *
  * Drawn instanced: per body, a near mesh (within `HUMAN_NEAR`, casting shadows) and a far one (to `HUMAN_FAR`), only
- * the bodies someone wears now. Each person carries its colours and two rows of the bone texture with the blend
+ * the bodies someone wears now; beyond `HUMAN_FAR` the people out of doors are small standing figures in one more draw
+ * call (`people-dots.ts`: the whole-island overview). Each person carries its colours and two rows of the bone texture with the blend
  * between them; the vertex shader skins the body from the texture. Written into preallocated arrays each frame.
  */
 
@@ -17,7 +18,20 @@ import {BufferGeometry, DataTexture, Group, HalfFloatType, InstancedBufferAttrib
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {HUMAN_FAR, HUMAN_LINEAR_GLSL, HUMAN_MAX, HUMAN_NEAR, HumanFigures, type HumanInstance} from "@/ark-scene/humans/figures";
+import {PeopleDots} from "@/ark-scene/humans/people-dots";
 import {ARM_FIRST, ARM_LAST, bakePeopleSteps, LEAN_FIRST, LEAN_LAST, PEOPLE_BASE, PEOPLE_FILES, PERSON_IDS, peopleFileUrl, peopleGrips, peopleMatrix, peoplePose, type BakedPeople, type PeoplePose, type PersonId} from "@/ark-scene/humans/people-rig";
+
+/**
+ * Asleep, barefoot (humans polish, 2026-11-18): nobody sleeps in shoes, and a toe's tip through the duvet showed as a black
+ * spike. The sleeper's `iMisc.x` (the room's light, 0–1) carries this much more; the shader takes it off again and paints
+ * the shoes in the skin's colour. No new attribute.
+ */
+export const BAREFOOT = 8;
+const BAREFOOT_FROM = 4;
+/** The word a person's `iMisc.x` carries: the light, and `BAREFOOT` more asleep. */
+export function peopleLightWord(h: Pick<HumanInstance, "pose" | "light">): number {
+    return (h.light ?? 0) + (h.pose === "sleep" ? BAREFOOT : 0);
+}
 
 const PEOPLE_GLSL = /* glsl */ `
 uniform highp sampler2D peopleBones;
@@ -75,17 +89,19 @@ ${HUMAN_LINEAR_GLSL}
 // colours are sRGB (as picked by humanLook): into the renderer's linear light first (humanLinear).
 vec3 peopleColour() {
     float part = floor(peoplePaint.a * 16.0);
+    // Asleep (iMisc.x carries ${BAREFOOT} more than the light): the shoes in the skin's colour.
+    bool bare = iMisc.x >= ${BAREFOOT_FROM}.0 && part > 3.5 && part < 4.5;
     vec3 c;
     if (part < 0.5) c = iSkin;
     else if (part < 1.5) c = iTop;
     else if (part < 2.5) c = iBottom;
     else if (part < 3.5) c = iHair;
-    else if (part < 4.5) c = iBottom * 0.3 + vec3(0.045, 0.04, 0.038);
+    else if (part < 4.5) c = bare ? iSkin : iBottom * 0.3 + vec3(0.045, 0.04, 0.038);
     else if (part < 5.5) c = vec3(1.0);
     else if (part < 6.5) c = iHair * 0.55;
     else if (part < 7.5) c = iTop;
     else c = vec3(1.0);
-    return (part < 0.5 ? humanSkinLinear(c) : humanLinear(c)) * peoplePaint.rgb;
+    return (part < 0.5 || bare ? humanSkinLinear(c) : humanLinear(c)) * peoplePaint.rgb;
 }
 `;
 
@@ -96,7 +112,7 @@ function peopleShader(shader: WebGLProgramParametersWithUniforms, bones: {value:
         shader.vertexShader = shader.vertexShader
             .replace("#include <beginnormal_vertex>", "mat4 peopleSkin = peopleSkinMatrix();\nvec3 objectNormal = normalize(mat3(peopleSkin) * normal);")
             .replace("#include <begin_vertex>", "vec3 transformed = (peopleSkin * vec4(position, 1.0)).xyz;")
-            .replace("#include <color_vertex>", "#include <color_vertex>\nvPeopleColour = peopleColour();\nvPeopleLight = iMisc.x;");
+            .replace("#include <color_vertex>", `#include <color_vertex>\nvPeopleColour = peopleColour();\nvPeopleLight = iMisc.x - ${BAREFOOT}.0 * step(${BAREFOOT_FROM}.0, iMisc.x);`);
         shader.fragmentShader = shader.fragmentShader
             .replace("#include <common>", "#include <common>\nvarying vec3 vPeopleColour;\nvarying float vPeopleLight;")
             .replace("vec4 diffuseColor = vec4( diffuse, opacity );", "vec4 diffuseColor = vec4( diffuse * vPeopleColour, opacity );")
@@ -164,8 +180,9 @@ function release(s: Shared) {
 
 export class PeopleFigures {
     readonly group = new Group();
-    /** How many were drawn at the last frame (near, far). */
-    drawn = {near: 0, far: 0};
+    /** How many were drawn at the last frame (near, far, and the far figures beyond `HUMAN_FAR`: `people-dots.ts`). */
+    drawn = {near: 0, far: 0, dots: 0};
+    private readonly dots = new PeopleDots();
     private fallback: HumanFigures | null = null;
     private loaded: Loaded | null = null;
     private loading = false;
@@ -186,6 +203,7 @@ export class PeopleFigures {
     /** `work`: the forest's crews (work clothes, hi-vis and helmets). */
     constructor(options: {work?: boolean; base?: string} = {}) {
         this.group.name = "humans";
+        this.group.add(this.dots.group);
         this.work = options.work === true;
         this.base = options.base ?? PEOPLE_BASE;
         this.material = new MeshStandardMaterial({color: 0xffffff, roughness: 0.8, metalness: 0});
@@ -205,6 +223,8 @@ export class PeopleFigures {
     setFrame(list: readonly HumanInstance[], camera: Vector3, seconds: number): void {
         this.last = list;
         this.lastSeconds = seconds;
+        // Humans polish: beyond HUMAN_FAR, out of doors, a small figure each (the whole-island overview), in one draw call.
+        this.drawn.dots = this.dots.setFrame(list, camera);
         if (!this.loaded) {
             if (list.length && !this.loading && !this.failed) this.load();
             if (!list.length && !this.fallback) return;
@@ -393,7 +413,7 @@ export class PeopleFigures {
         const hair = look.bald ? look.skin : look.hair;
         l.hair.setXYZ(k, hair[0], hair[1], hair[2]);
         l.anim.setXYZW(k, pose.rowA, pose.rowB, pose.frac, pose.person.column);
-        l.misc.setXYZW(k, h.light ?? 0, h.lean ?? 0, pose.person.hip, pose.person.shoulder);
+        l.misc.setXYZW(k, peopleLightWord(h), h.lean ?? 0, pose.person.hip, pose.person.shoulder);
     }
 
     /** Triangles of a body at each level (the largest of the twelve), for the budget's test and the report. */
@@ -411,6 +431,7 @@ export class PeopleFigures {
         this.disposed = true;
         this.fallback?.dispose();
         this.fallback = null;
+        this.dots.dispose();
         if (this.loaded) {
             for (const l of this.loaded.list) {
                 l.mesh.dispose();

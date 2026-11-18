@@ -50,6 +50,15 @@ export const HUMAN_FAR = 250;
 export const HUMAN_MAX = 400;
 /** The body's own height (m) before the look's scale. */
 export const BASE_HEIGHT = 1.75;
+/**
+ * Humans polish (2026-11-18): how far a sleeper's head lies from their feet (the root) over their height (the rigged
+ * bodies' lying clip, pinned by `ark-humans-polish.test.ts`), the most it is (m: the feet stay off the footboard), the
+ * tallest a sleeper is drawn (m: the head stays off the headboard), and how far the back sinks into the mattress (m).
+ */
+export const SLEEP_REACH = 0.89;
+export const SLEEP_REACH_MAX = 1.47;
+export const SLEEP_HEIGHT_MAX = 1.78;
+export const SLEEP_SINK = 0.06;
 
 // MARK: - Looks
 

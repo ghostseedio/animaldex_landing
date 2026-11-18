@@ -19,7 +19,7 @@
  * Everything here is in the town's frame (x east, z south), except the boats' helms, which are the world's.
  */
 
-import {humanLook, humanUnit, sitRootY, BASE_HEIGHT, WALK_PACE, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
+import {humanLook, humanUnit, sitRootY, BASE_HEIGHT, SLEEP_HEIGHT_MAX, SLEEP_REACH, SLEEP_REACH_MAX, SLEEP_SINK, WALK_PACE, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
 import {darkness, townClockAt, weekday, type TownClock} from "@/ark-scene/islands/town/people";
 import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {MILLPOND, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
@@ -81,6 +81,20 @@ export function chosenHuman<A extends {id: string}>(id: string | null, aboard: r
 
 export type Spot = {x: number; y: number; z: number; /** Facing (three's yaw: forward (sin, cos)). */ yaw: number};
 
+/**
+ * Humans polish (2026-11-18): a sleeper lies straight on the back along the bed, the head on the pillow, the covers to
+ * the waist. The body's feet are the root and it lies back from them, so its root is the head's spot moved from the head
+ * toward the foot (`bed.yaw`, from the head to the foot) by the head's reach (`SLEEP_REACH`, a share of the height),
+ * kept off the footboard (`SLEEP_REACH_MAX`: the taller are a little further on the pillow, drawn no taller than
+ * `SLEEP_HEIGHT_MAX` so the head stays off the headboard), and a little into the mattress (`SLEEP_SINK`: lying in the
+ * bed, not on its covers). `scale`: the sleeper's growth factor.
+ */
+export function sleeperRoot(bed: Spot, look: {height: number}): {x: number; y: number; z: number; scale: number} {
+    const scale = Math.min(1, SLEEP_HEIGHT_MAX / look.height);
+    const reach = Math.min(SLEEP_REACH * look.height * scale, SLEEP_REACH_MAX);
+    return {x: bed.x + Math.sin(bed.yaw) * reach, y: bed.y - SLEEP_SINK, z: bed.z + Math.cos(bed.yaw) * reach, scale};
+}
+
 /** A room people live in (the homes lane's see-into rooms): its floor's height and its furniture's spots, town frame. */
 export type HumanRoom = {
     id: string;
@@ -92,7 +106,7 @@ export type HumanRoom = {
     tv: Spot | null;
     /** Chairs at the table (the seat's top), facing the table. */
     chairs: Spot[];
-    /** Where people sleep (a sleeper's root at the bed's foot, on its top; `yaw` from the head to the foot). */
+    /** Where people sleep: where the head rests (on the pillow, at the mattress's top); `yaw` from the head to the foot (humans polish: the body lies from there toward the foot, `sleeperRoot`). */
     beds: Spot[];
     /** Humans visible: the way out through the room's open front (yaw): the way a person indoors is seen from. */
     front?: number;
@@ -925,7 +939,12 @@ export class TownHumans {
                 if (!room) continue;
                 if (day === "sleep") {
                     const bed = room.beds[home!.slot % Math.max(room.beds.length, 1)];
-                    if (bed) take(id, look, "sleep", ox + bed.x, bed.y, oz + bed.z, bed.yaw, "sleep", phase).face = room.front;
+                    if (bed) {
+                        const root = sleeperRoot(bed, look);
+                        const sleeper = take(id, look, "sleep", ox + root.x, root.y, oz + root.z, bed.yaw, "sleep", phase);
+                        sleeper.face = room.front;
+                        sleeper.scale = root.scale;
+                    }
                     continue;
                 }
                 // Dinner at the table, else the evening on the sofa in front of the TV (or at the table).

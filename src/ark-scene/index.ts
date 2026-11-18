@@ -8822,7 +8822,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             stepPendingHuman(); // humans visible
             beachProps.setFrame(townHumans.beach); // p5 (humans, quality pass)
             stepDogWalks(now); // p5 (humans, dogs)
-        } else if (humanFigures.drawn.near + humanFigures.drawn.far) {
+        } else if (humanFigures.drawn.near + humanFigures.drawn.far + humanFigures.drawn.dots) {
             humanFigures.setFrame([], camera.position, 0);
             humanTVs.setFrame([], 0); // humans visible
             beachProps.setFrame([]); // p5 (humans, quality pass)
