@@ -68,11 +68,10 @@ const STAT_PRESET_CHIPS: Record<UniversalSearchStatPreset, {
     label: string;
     key: keyof UniversalSearchSpeciesHit;
     tint: string;
-    suffix?: string;
 }> = {
     fastest: {label: "Speed", key: "speed", tint: "#A7F432"},
     slowest: {label: "Speed", key: "speed", tint: "#A7F432"},
-    rarest: {label: "Rarity", key: "rarity", tint: "rgba(251, 146, 60, 0.92)", suffix: "%"},
+    rarest: {label: "Rarity", key: "rarity", tint: "rgba(251, 146, 60, 0.92)"},
     strongest: {label: "Dominance", key: "dominance", tint: "rgba(239, 68, 68, 0.92)"},
     smartest: {label: "Intelligence", key: "intelligence", tint: "rgba(34, 211, 238, 0.92)"},
     biggest: {label: "Size", key: "size", tint: "#a78bfa"},
@@ -110,7 +109,7 @@ function getStatChips(hit: UniversalSearchSpeciesHit, presets: UniversalSearchSt
         if (raw == null || raw === "") return [];
 
         const value = typeof raw === "number"
-            ? `${Number.isInteger(raw) ? raw : raw.toFixed(1)}${meta.suffix ?? ""}`
+            ? `${Number.isInteger(raw) ? raw : raw.toFixed(1)}`
             : String(raw);
 
         return [{key: `${preset}-${meta.label}`, label: meta.label, value, tint: meta.tint}];

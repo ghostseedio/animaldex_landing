@@ -324,7 +324,6 @@ function getCanonicalSortStatValue(entry: SpeciesEntry, sort: SortStatKey): numb
 function SortStatChip({sort, value}: {sort: SortStatKey; value: number}) {
     const meta = SORT_OPTION_ICONS[sort];
     const displayValue = Number.isInteger(value) ? String(value) : value.toFixed(1);
-    const suffix = sort === "rarity" ? "%" : "";
 
     return (
         <span
@@ -333,14 +332,14 @@ function SortStatChip({sort, value}: {sort: SortStatKey; value: number}) {
                 color: meta.tint,
                 borderColor: `color-mix(in srgb, ${meta.tint} 45%, transparent)`
             }}
-            title={`${meta.badge} ${displayValue}${suffix}`}
+            title={`${meta.badge} ${displayValue}`}
         >
             <span aria-hidden="true" className="[&>svg]:h-2.5 [&>svg]:w-2.5">
                 {meta.icon}
             </span>
             <span className="hidden sm:inline">{meta.badge}</span>
             <span className="font-black tabular-nums normal-case tracking-normal text-white/95">
-                {displayValue}{suffix}
+                {displayValue}
             </span>
         </span>
     );

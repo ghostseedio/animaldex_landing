@@ -2,6 +2,7 @@
 
 import {useEffect, useRef, useState} from "react";
 import type {SpeciesStats} from "@/data/species-stats";
+import {countsTowardStatTotal} from "@/lib/stat-total";
 
 export type SpeciesRadarMetric = {
     id: keyof SpeciesStats | "total";
@@ -9,7 +10,6 @@ export type SpeciesRadarMetric = {
     shortTitle: string;
     value: number;
     tint: string;
-    valueSuffix?: string;
     delta: number;
 };
 
@@ -17,13 +17,12 @@ const STAT_ORDER: Array<{
     key: keyof SpeciesStats;
     shortTitle: string;
     tint: string;
-    valueSuffix?: string;
 }> = [
     {key: "dominance", shortTitle: "DOM", tint: "rgba(239, 68, 68, 0.92)"},
     {key: "speed", shortTitle: "SPD", tint: "#A7F432"},
     {key: "size", shortTitle: "SIZE", tint: "#9454fa"},
     {key: "intelligence", shortTitle: "INT", tint: "rgba(34, 211, 238, 0.92)"},
-    {key: "rarity", shortTitle: "RAR", tint: "rgba(251, 146, 60, 0.92)", valueSuffix: "%"}
+    {key: "rarity", shortTitle: "RAR", tint: "rgba(251, 146, 60, 0.92)"}
 ];
 
 const RING_LEVELS = 5;
@@ -84,12 +83,14 @@ function buildMetrics(
         shortTitle: stat.shortTitle,
         value: stats[stat.key],
         tint: stat.tint,
-        valueSuffix: stat.valueSuffix,
         delta: Math.max(0, stats[stat.key] - (baseStats?.[stat.key] ?? stats[stat.key]))
     }));
 
-    const totalValue = statMetrics.reduce((sum, metric) => sum + metric.value, 0);
-    const totalDelta = statMetrics.reduce((sum, metric) => sum + metric.delta, 0);
+    // Total = dominance + speed + size + intelligence. Rarity is a fact about the species, not a skill
+    // (owner decision 388), so it stays on the chart and in the legend but is never summed.
+    const totalMetrics = statMetrics.filter((metric) => countsTowardStatTotal(metric.id));
+    const totalValue = totalMetrics.reduce((sum, metric) => sum + metric.value, 0);
+    const totalDelta = totalMetrics.reduce((sum, metric) => sum + metric.delta, 0);
 
     return [
         ...statMetrics,
@@ -113,7 +114,6 @@ function SpeciesRadarLegendChip({metric}: {metric: SpeciesRadarMetric}) {
                 <div className="flex items-baseline gap-1">
                     <p className="text-[15px] font-extrabold leading-tight text-white tabular-nums">
                         {metric.value}
-                        {metric.valueSuffix ?? ""}
                     </p>
                     {metric.delta > 0 ? <span className="text-[10px] font-bold text-primary-400">+{metric.delta}</span> : null}
                 </div>
@@ -280,7 +280,7 @@ export default function SpeciesRadarStats({
                                 <span className="truncate text-[10px] font-semibold text-white/[0.62]">{metric.title}</span>
                             </span>
                             <span className="flex items-baseline gap-[3px]">
-                                <span className="text-base font-extrabold tabular-nums text-white">{metric.value}{metric.valueSuffix ?? ""}</span>
+                                <span className="text-base font-extrabold tabular-nums text-white">{metric.value}</span>
                                 {metric.delta > 0 ? <span className="text-[10px] font-bold text-primary-400">+{metric.delta}</span> : null}
                             </span>
                         </div>
