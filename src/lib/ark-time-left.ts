@@ -40,9 +40,9 @@
  *   The range is the 25th percentile of the time to the first of these under the harsher bounds to the 75th percentile
  *   under the kinder ones (the middle half of the likely outcomes).
  *
- * Hooks, built but not faked (decision 389; no engine behaviour exists for them yet, so they add nothing today):
- * `wounds` (E5) and `skill` (P1-8, wild skill) are `ArkTimeLeftHook`s: a hook returns an extra survival curve and a
- * reason, or null. `safe` for decision 389 D4 (the 26-Ark-day window of the last wild animal of a kind) is the same
+ * Hooks (decision 389): an `ArkTimeLeftHook` returns an extra survival curve and a reason, or null. `skill` (P1-8, wild
+ * skill: a released animal still learning to find food) is built, in `ark-release-time-left.ts`; `wounds` (E5) is not
+ * yet (no engine behaviour exists for it, and it is not faked). `safe` for decision 389 D4 (the 26-Ark-day window of the last wild animal of a kind) is the same
  * hook once the server publishes it (`safe_until_ark_day`).
  */
 
@@ -411,12 +411,13 @@ export function arkTimeLeft(
     hooks: readonly ArkTimeLeftHook[] = []
 ): ArkTimeLeft | null {
     const atRisk = arkAtRisk(animal, world, facts);
-    if (!atRisk.length) return null;
+    // A hook's own risk (a released animal still learning to find food) is a risk too.
+    const extra = hooks.map((hook) => hook(animal, world)).filter((x): x is NonNullable<typeof x> => x !== null);
+    if (!atRisk.length && !extra.length) return null;
     const age = ageFactor(animal, world.arkDay);
     const hunt = facts ? hunters(animal, world, facts) : null;
     const starving = atRisk.includes("starving");
     const starveSpan = starving ? arkStarveDays(massOf(animal)) : 0;
-    const extra = hooks.map((hook) => hook(animal, world)).filter((x): x is NonNullable<typeof x> => x !== null);
     if (!age && !hunt && !starving && !extra.length) return null;
 
     const starveCurve: Curve = starving ? (t) => Math.max(0, 1 - t / starveSpan) : () => 1;
@@ -475,6 +476,8 @@ export type ArkTimeLeftWords = {
     reasonHunted: string;
     reasonHunger: string;
     reasonSafe: string;
+    /** A released animal still learning to find food (Release to the Wild); English until the locale files carry it. */
+    reasonSkill?: string;
 };
 
 /** What `ark.life` and the locale give for units: "{days} Ark days", "1 Ark day", "{years} Ark years", "1 Ark year". */
@@ -533,6 +536,8 @@ export function arkTimeLeftText(result: ArkTimeLeft, words: ArkTimeLeftWords, un
                 return [fill(words.reasonHunted, {predators: listOf(reason.predators.map((p) => p.name), locale)})];
             case "safe":
                 return [fill(words.reasonSafe, {day: reason.untilArkDay.toLocaleString(locale)})];
+            case "skill":
+                return [words.reasonSkill ?? ARK_TIME_LEFT_SKILL_ENGLISH];
             default:
                 return [];
         }
@@ -552,6 +557,9 @@ export const ARK_TIME_LEFT_ENGLISH: ArkTimeLeftWords = {
     reasonSafe: "Hunting protection until Ark day {day}"
 };
 
+/** The one line that is not in the locale files yet (Release to the Wild, behind the server's switch). */
+export const ARK_TIME_LEFT_SKILL_ENGLISH = "Released: still learning to find food";
+
 /** The panel's words from a bundle (`ark.timeLeft`, `ark.life`), English key by key where one is missing. */
 export function arkTimeLeftWordsFrom(timeLeft: unknown, life: unknown): {words: ArkTimeLeftWords; units: ArkTimeLeftUnitWords} {
     const pick = <T extends Record<string, string>>(english: T, source: unknown): T => {
@@ -563,8 +571,9 @@ export function arkTimeLeftWordsFrom(timeLeft: unknown, life: unknown): {words: 
         }
         return out as T;
     };
+    const own = timeLeft && typeof timeLeft === "object" ? (timeLeft as Record<string, unknown>).reasonSkill : null;
     return {
-        words: pick(ARK_TIME_LEFT_ENGLISH, timeLeft),
+        words: {...pick(ARK_TIME_LEFT_ENGLISH, timeLeft), ...(typeof own === "string" && own.trim() ? {reasonSkill: own} : {})},
         units: pick({ageDays: "{days} Ark days", ageDay: "1 Ark day", ageYears: "{years} Ark years", ageYear: "1 Ark year"}, life)
     };
 }
@@ -572,7 +581,9 @@ export function arkTimeLeftWordsFrom(timeLeft: unknown, life: unknown): {words: 
 // MARK: Hooks (decision 389: leave them, do not fake them)
 
 /**
- * Wounds (E5) and wild skill (P1-8) will each add a survival curve and a reason, once the engine has them and the read
- * publishes what they need. Today both are absent, so the list is empty.
+ * Wild skill (P1-8, Release to the Wild) is built: `ark-release-time-left.ts` makes the hook for one released animal
+ * from the public read of its release (`/api/ark/release`: the day and its skill), and the card's panel adds it for
+ * that animal only (`ark-time-left.tsx`). Wounds (E5) will add a survival curve and a reason once the engine has them
+ * and the read publishes what they need. Nothing applies to every animal, so this list is empty.
  */
 export const ARK_TIME_LEFT_HOOKS: readonly ArkTimeLeftHook[] = [];

@@ -41,6 +41,12 @@ const ArkCardPhoto = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card
  */
 const ArkTimeLeft = lazy(() => import("@/app/[locale]/(composited)/ark/ark-time-left"));
 
+/**
+ * Release to the Wild (AnimalDex P1-8, behind the server's `release_to_wild`): a released animal's wild skill, and on
+ * the reader's own zoo animal the button and its sheet. Lazy, as the photo block is; it draws nothing while the switch is off.
+ */
+const ArkRelease = lazy(() => import("@/app/[locale]/(composited)/ark/ark-release"));
+
 /** Its day (lane ark-its-day): loaded only when opened. */
 const ArkItsDay = lazy(() => import("@/app/[locale]/(composited)/ark/ark-its-day"));
 
@@ -344,6 +350,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         ) : null}
                         {rhythmNow ? <ArkRhythmLine rhythm={rhythmNow} open={rhythmOpen} onToggle={() => setRhythmOpen((v) => !v)} /> : null}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} /> : null}
+                        <Suspense fallback={null}><ArkRelease animal={animal} words={words} locale={locale} day={arkDay} /></Suspense>
                         {placeholder ? <p className="mt-1 text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
                         {/* The last of its kind aboard (the server's last_of_kind): it ages out honestly unless another is caught. */}
                         {animal.last_of_kind ? <p data-testid="ark-card-last-of-kind" className="mt-1 text-[12px] font-semibold leading-snug text-[#ffe2a8]">{words.life.lastOfKind}</p> : null}

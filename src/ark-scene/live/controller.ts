@@ -25,6 +25,7 @@ import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
 import {forestDeathRecords, forestItems, forestText} from "@/ark-scene/live/forest-lines"; // p5 (humans)
 import {humanItems, humanText} from "@/ark-scene/live/human-lines"; // p5 (humans)
+import {releaseItems, releaseText} from "@/ark-scene/live/release-lines"; // Release to the Wild (P1-8)
 import {isEnglish, signatureItems, signatureText} from "@/ark-scene/live/signature-lines";
 import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 import {ARK_ACTIVITY_ENGLISH, arkRecordNotesFromEvents, type ArkActivityWords} from "@/lib/ark-animal-status";
@@ -150,7 +151,7 @@ export class ArkLive {
         }
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
-            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
+            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? releaseText(line, this.text) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
             onTap: (line) => this.focus(line),
             reducedMotion: Boolean(options.reducedMotion),
             serverLife: ARK_LIVE_LOG_DEFAULTS.serverLife,
@@ -309,6 +310,10 @@ export class ArkLive {
         const couples = humanItems(raw, from, (key) => this.said.has(key));
         for (const item of couples) this.remember(item.id);
         if (couples.length) this.push(couples);
+        // Release to the Wild (P1-8): a zoo animal that now lives free (`release-lines.ts`).
+        const freed = releaseItems(raw, from, (key) => this.said.has(key));
+        for (const item of freed) this.remember(item.id);
+        if (freed.length) this.push(freed);
         // 3.3 batch (D): and acted in the live world (the scene's `addEscapes`: the chase that ends in a miss, the limp).
         const acts = escapeActs(raw, from);
         if (acts.length) {

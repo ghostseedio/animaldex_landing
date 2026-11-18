@@ -294,7 +294,7 @@ test("monotone: a surer catch is never better for the prey", () => {
     assertNoBetter(withPredator(sure, "a"), withPredator("kind-sure", "b"), "a predator that always catches");
 });
 
-test("a hook adds an extra curve and a reason; none is built in today (wounds E5, wild skill P1-8)", () => {
+test("a hook adds an extra curve and a reason; none applies to every animal (wild skill, P1-8, is added per released animal; wounds, E5, is not built)", () => {
     assert.equal(ARK_TIME_LEFT_HOOKS.length, 0);
     const old = hedge({condition: "old", born_ark_day: 100});
     const w = worldOf([old]);

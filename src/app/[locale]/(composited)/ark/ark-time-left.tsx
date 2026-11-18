@@ -5,6 +5,8 @@ import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkWords} from "@/lib/ark-words";
 import {ARK_TIME_LEFT_HOOKS, arkNeedsFacts, arkTimeLeft, arkTimeLeftText, arkTimeLeftWordsFrom, arkTimeLeftWorldOf, type ArkTimeLeftFacts} from "@/lib/ark-time-left";
 import {arkTimeLeftFetch, readArkTimeLeftFacts, type ArkTimeLeftFetch} from "@/lib/ark-time-left-facts";
+import {arkReleasedEntry, useArkReleased} from "@/lib/ark-release-read";
+import {arkReleaseTimeLeftHook} from "@/lib/ark-release-time-left";
 
 /**
  * "Estimated time left" on the tapped animal's card (owner decision 389; `lib/ark-time-left.ts` says what it is made of
@@ -31,7 +33,10 @@ export default function ArkTimeLeft({animal, snapshot, words, locale, fetchJson 
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [animal.id, needs, fetchJson]);
     const facts = read?.id === animal.id ? read.facts : null;
-    const result = useMemo(() => (world ? arkTimeLeft(animal, world, facts, ARK_TIME_LEFT_HOOKS) : null), [animal, world, facts]);
+    // Release to the Wild: a released animal still learning to find food is at risk too (its public release: the day, its skill).
+    const released = useArkReleased();
+    const release = useMemo(() => arkReleasedEntry(animal, released), [animal, released]);
+    const result = useMemo(() => (world ? arkTimeLeft(animal, world, facts, release ? [...ARK_TIME_LEFT_HOOKS, arkReleaseTimeLeftHook(release)] : ARK_TIME_LEFT_HOOKS) : null), [animal, world, facts, release]);
     const text = useMemo(() => {
         if (!result) return null;
         const {words: w, units} = arkTimeLeftWordsFrom(words.timeLeft, words.life);

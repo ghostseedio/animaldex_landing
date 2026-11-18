@@ -47,6 +47,8 @@ export type ArkLiveWords = {
     escaped?: string;
     /** A meal that ends a hunt seen setting out: "A Lion caught a Plains Zebra". */
     caught?: string;
+    /** Release to the Wild (AnimalDex P1-8): "{aAnimal} was released into the wild" (`release-lines.ts`). */
+    released?: string;
     revived: string;
     revivedYoung: string;
     gone: string;
