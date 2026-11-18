@@ -5099,7 +5099,7 @@
         "listLabel": "The Ark's year seeds",
         "yearLabel": "Ark year {year}",
         "published": "Fingerprint published {date}",
-        "publishedLate": "Fingerprint published {date}, on Ark day {day}, part-way through the year: chances rolled before then were rolled the old way",
+        "publishedLate": "Fingerprint published {date}, on Ark day {day}, after the year had begun (any chance rolled before then was rolled the old way)",
         "fingerprint": "Fingerprint",
         "number": "Revealed number",
         "secret": "Secret until the year is over and the world has finished it",

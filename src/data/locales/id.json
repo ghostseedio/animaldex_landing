@@ -5084,7 +5084,7 @@
         "listLabel": "Angka rahasia tahun Ark",
         "yearLabel": "Tahun Ark {year}",
         "published": "Sidik jari diumumkan {date}",
-        "publishedLate": "Sidik jari diumumkan {date}, pada hari Ark {day}, di tengah tahun itu: peluang yang diundi sebelumnya diundi dengan cara lama",
+        "publishedLate": "Sidik jari diumumkan {date}, pada hari Ark {day}, setelah tahun itu dimulai (peluang apa pun yang diundi sebelumnya diundi dengan cara lama)",
         "fingerprint": "Sidik jari",
         "number": "Angka yang dibuka",
         "secret": "Rahasia sampai tahun selesai dan dunia sudah menyelesaikannya",
