@@ -429,7 +429,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         const id = ids[0];
         if (state === "lead" && s >= 0) enter("fall");
         if (state === "lead" || state === "fall") {
-            if (state === "fall" && s > 3) tell();
+            // (An extinction's still is the ring round the last one as the camera draws back, below.)
+            if (state === "fall" && s > 3 && !last) tell();
             if (state === "fall" && s > 6.5) {
                 const act = handle.liveActs?.().deaths.find((d) => d.id === id);
                 if (!last) {
@@ -450,6 +451,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         if (state === "lapse") {
             // 4 s of video for the fade's 3 minutes: the pin moved on every frame.
             const k = clamp01((clip - stateAt) / 4);
+            if (k > 0.3) tell();
             pinArkClock(lapseFrom! + ease(k) * (DEATH_FADE_SECONDS + 8));
             const frame = frameOf([id]);
             if (k >= 1) enter("empty");
