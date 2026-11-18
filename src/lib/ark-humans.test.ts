@@ -224,7 +224,10 @@ test("at home only in a room the homes give: with none no one is drawn indoors; 
     const list = humans.frame(night, null, 0);
     const home = list.filter((h) => h.what === "home");
     // (Humans visible: an early riser may be in bed by nine; everyone else is home.)
-    assert.equal(home.length + list.filter((h) => h.what === "sleep").length, ROSTER.length, "everyone home at 21:00, two a flat at most");
+    // (Humans visible: and the night's few out, `nightRota`: 2.5% of them.)
+    const outside = list.filter((h) => h.what !== "home" && h.what !== "sleep");
+    assert.ok(outside.length >= 2 && outside.length <= 4, `${outside.length} out`);
+    assert.equal(home.length + list.filter((h) => h.what === "sleep").length + outside.length, ROSTER.length, "everyone home at 21:00 but the few out, two a flat at most");
     assert.ok(home.length > ROSTER.length * 0.9);
     assert.ok(humans.tvs.length > 10 && humans.tvs.length <= flats.length);
     const seen = new Map<string, number>();
@@ -315,7 +318,10 @@ test("a human chosen by id: the card's animal and the drawn person's spot, or nu
     const out = [{id: "h2", x: 4, y: 2, z: -3}];
     assert.equal(chosenHuman("cat-1", aboard, out), null);
     assert.equal(chosenHuman(null, aboard, out), null);
-    assert.deepEqual(chosenHuman("h1", aboard, out), {human: aboard[0], at: null});
+    // Humans visible: one not drawn now gives way to one who is (never the whole town's view while anyone is drawn).
+    assert.deepEqual(chosenHuman("h1", aboard, out), {human: aboard[1], at: {x: 4, y: 3, z: -3}});
+    assert.deepEqual(chosenHuman("h1", aboard, []), {human: aboard[0], at: null});
+    assert.deepEqual(chosenHuman("h1", aboard, [{id: "h2", x: 1, y: 20, z: 2, face: 0.5}]), {human: aboard[1], at: {x: 1, y: 20.6, z: 2, face: 0.5}});
     assert.deepEqual(chosenHuman("h2", aboard, out), {human: aboard[1], at: {x: 4, y: 3, z: -3}});
 });
 
@@ -326,7 +332,7 @@ test("the scene's select and arrive look for a chosen human before its own entri
         const at = source.indexOf(head);
         assert.ok(at > 0, head);
         const body = source.slice(at, at + 600);
-        assert.ok(body.indexOf("chosenHuman(id, humansAboard, townHumans.out)") > 0 && body.indexOf("chosenHuman(") < (body.indexOf("findEntry(") < 0 ? Infinity : body.indexOf("findEntry(")), head);
+        assert.ok(body.indexOf("chosenHuman(id, humansAboard, townHumans.out") > 0 && body.indexOf("chosenHuman(") < (body.indexOf("findEntry(") < 0 ? Infinity : body.indexOf("findEntry(")), head);
     }
 });
 
@@ -359,6 +365,18 @@ test("humans visible: people are seen at every hour (indoors in the towers' flat
         }
     }
     assert.ok(out3 / 7 >= 1.5, `${(out3 / 7).toFixed(1)} out at 3 a night`);
+    // Owner, 2026-11-18: "a few people outside at night, just not as many": at every night hour, fewer than by day.
+    const day = outside(humans.frame(at(SATURDAY, 13), null, 6)).length;
+    for (const hours of [18.5, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7]) {
+        for (const d of [MONDAY, SATURDAY]) {
+            const n = outside(humans.frame(at(d + (hours < 12 ? 1 : 0), hours), null, 6)).length;
+            assert.ok(n >= 2 && n < day, `${hours}:00 ${n} out (day ${day})`);
+        }
+    }
+    // A Human chosen at night is one of them.
+    const night = humans.frame(at(MONDAY + 1, 3), null, 6);
+    const chosen = chosenHuman(ROSTER[0].id, ROSTER, night, true)!;
+    assert.ok(chosen.at && chosen.at.face === undefined && outside(night).some((h) => h.id === chosen.human.id));
 });
 
 test("humans visible: a night person's outing is theirs alone, before their bed, and the same every time", () => {

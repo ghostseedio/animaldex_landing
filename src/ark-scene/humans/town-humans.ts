@@ -48,11 +48,33 @@ export function isHumanAnimal(a: {species_profile_id?: string | null; model_slug
  * Humans are never scene entries, so before this a chosen human found nothing and the card closed (live, 2026-11-18).
  */
 export type ChosenHuman<A> = {human: A; at: {x: number; y: number; z: number; /** Humans visible: seen from this way (yaw), through their room's open front. */ face?: number} | null};
-export function chosenHuman<A extends {id: string}>(id: string | null, aboard: readonly A[], out: ReadonlyArray<{id: string; x: number; y: number; z: number; face?: number}>): ChosenHuman<A> | null {
+export function chosenHuman<A extends {id: string}>(id: string | null, aboard: readonly A[], out: ReadonlyArray<{id: string; x: number; y: number; z: number; face?: number; what?: string}>, outdoorsFirst = false): ChosenHuman<A> | null {
     if (!id) return null;
-    const human = aboard.find((a) => a.id === id);
-    if (!human) return null;
-    const drawn = out.find((h) => h.id === id);
+    const asked = aboard.find((a) => a.id === id);
+    if (!asked) return null;
+    let human = asked;
+    let drawn = out.find((h) => h.id === id);
+    // Humans visible (owner, 2026-11-18): at night a chosen human is one of the few out under the lamps, where one is.
+    const outdoors = (h: {what?: string; face?: number}) => h.face === undefined && h.what !== "home" && h.what !== "sleep" && h.what !== "car" && h.what !== "boat";
+    if (outdoorsFirst && !(drawn && outdoors(drawn))) {
+        const pool = out.filter((h) => outdoors(h) && aboard.some((a) => a.id === h.id));
+        if (pool.length) {
+            drawn = pool.slice().sort((a, b) => humanUnit(`${id}|${a.id}`) - humanUnit(`${id}|${b.id}`))[0];
+            human = aboard.find((a) => a.id === drawn!.id)!;
+        }
+    }
+    if (!drawn) {
+        // Humans visible (owner, 2026-11-18: "it just zooms out"): the one asked for is not drawn now (at work, away, or
+        // not yet in): another real person who is, the same one for every viewer at this moment (by a hash on the id
+        // asked), still or at home before one in a car or a boat; their card, so the card is who is seen. Null only
+        // when no one is drawn.
+        const still = out.filter((h) => !("what" in h) || (h.what !== "car" && h.what !== "boat"));
+        const pool = (still.length ? still : out).filter((h) => aboard.some((a) => a.id === h.id));
+        if (pool.length) {
+            drawn = pool.slice().sort((a, b) => humanUnit(`${id}|${a.id}`) - humanUnit(`${id}|${b.id}`))[0];
+            human = aboard.find((a) => a.id === drawn!.id)!;
+        }
+    }
     if (!drawn) return {human, at: null};
     return {human, at: drawn.face === undefined ? {x: drawn.x, y: drawn.y + 1, z: drawn.z} : {x: drawn.x, y: drawn.y + 0.6, z: drawn.z, face: drawn.face}};
 }
@@ -374,6 +396,25 @@ export function assignOut(out: readonly string[], clock: TownClock, sites: TownH
     return result;
 }
 
+/**
+ * Humans visible (owner, 2026-11-18: "we should still have a few people outside at night, just not as many"): from
+ * 17:30 to 08:30, in each 20-minute slot, a few of the grown (2.5%, at least 2) step out, chosen by a hash on the
+ * night and the slot: those up at home first, then any not at work (up early, can't sleep). Pure in the clock and ids.
+ */
+export const NIGHT_ROTA_SHARE = 0.025;
+export function nightRota(ids: readonly string[], clock: TownClock, dayOf: (id: string) => HumanDay | undefined, busy: ReadonlySet<string>): string[] {
+    const h = clock.hours;
+    if (!(h >= 17.5 || h < 8.5)) return [];
+    const key = h < 12 ? clock.day - 1 : clock.day;
+    const slot = Math.floor((h < 12 ? h + 24 : h) * 3);
+    const want = Math.max(2, Math.round(ids.length * NIGHT_ROTA_SHARE));
+    const rank = (id: string) => humanUnit(`${id}#${key}#${slot}#rota`);
+    const free = ids.filter((id) => !busy.has(id) && dayOf(id) !== "work");
+    const up = free.filter((id) => dayOf(id) === "home").sort((a, b) => rank(a) - rank(b));
+    const rest = free.filter((id) => dayOf(id) !== "home").sort((a, b) => rank(a) - rank(b));
+    return up.concat(rest).slice(0, want);
+}
+
 // MARK: - The people drawn
 
 /** A human of the record (`born_ark_day`, `origin`: an Ark-born child is small until grown; p5 (humans, couples)). */
@@ -641,6 +682,48 @@ export class TownHumans {
         return this.looks.get(id);
     }
 
+    /** Humans visible: whether the last frame was at night (18:00–07:00): a chosen human is then one of the few out. */
+    nightNow = false;
+
+    /** Humans visible: one of the night's few out (`nightRota`) drawn: at their door, on a bench or walking; false: not placed. */
+    private stepOut(id: string, clock: TownClock, take: (id: string, look: HumanLook, what: DrawnHuman["what"], x: number, y: number, z: number, yaw: number, pose: HumanPoseKind, phase: number) => DrawnHuman, lampLit: number, epochMs: number): boolean {
+        const look = this.looks.get(id)!;
+        const scale = look.height / BASE_HEIGHT;
+        const phase = humanUnit(`${id}#phase`) * 100;
+        const ox = this.options.origin.x;
+        const oz = this.options.origin.z;
+        const h = clock.hours;
+        const key = h < 12 ? clock.day - 1 : clock.day;
+        const hours = h < 12 ? h + 24 : h;
+        const slot = Math.floor(hours * 3);
+        const mode = humanUnit(`${id}#${key}#${slot}#mode`);
+        if (mode >= 0.7 && this.walks) {
+            const fix = this.walks.night(id, "owl", key * 128 + slot, slot / 3 + 0.02, hours);
+            if (fix) {
+                const ground = walkGround(fix.x, fix.z, fix.kind);
+                take(id, look, "pavement", ox + fix.x, this.options.walkHeight?.(fix.x, fix.z, ground) ?? ground, oz + fix.z, fix.yaw, fix.paused ? "stand" : "walk", phase).light = lampLit;
+                return true;
+            }
+        }
+        if (mode >= 0.4 && this.sites.seats.length) {
+            let k = Math.floor(humanUnit(`${id}#${key}#${slot}#seat`) * this.sites.seats.length);
+            for (let tries = 0; tries < this.sites.seats.length && this.claimedSeats.has(k); tries++) k = (k + 1) % this.sites.seats.length;
+            if (!this.claimedSeats.has(k)) {
+                this.claimedSeats.add(k);
+                const seat = this.sites.seats[k];
+                take(id, look, "bench", ox + seat.x, sitRootY(seat.y, scale), oz + seat.z, seat.yaw, "sit", phase).light = lampLit;
+                return true;
+            }
+        }
+        // At their own door on the pavement, turned a little to the street (a breath of air, a call, a look at the night).
+        const door = this.walks?.door(id);
+        if (!door) return false;
+        const ground = walkGround(door.x, door.z, "pavement");
+        const yaw = humanUnit(`${id}#doorway`) * Math.PI * 2 + Math.sin(epochMs / 40_000 + phase) * 0.4;
+        take(id, look, "pavement", ox + door.x, this.options.walkHeight?.(door.x, door.z, ground) ?? ground, oz + door.z, yaw, "stand", phase).light = lampLit;
+        return true;
+    }
+
     /** Everyone drawn at `epochMs` (the shared clock); `cars`: the town's moving cars now (null: none drawn). */
     frame(epochMs: number, cars: readonly CarFix[] | null, carCount: number): DrawnHuman[] {
         const out = this.out;
@@ -790,8 +873,14 @@ export class TownHumans {
             together.add(bond.a);
             together.add(bond.b);
         }
+        // Humans visible: the night's few out (`nightRota`): by their own door under the lamps, on a lamp-lit bench, or a
+        // walk round the block; lit a little by the street lamps.
+        const busy = new Set<string>([...together, ...walking]);
+        const rota = new Set(nightRota(this.roster, clock, (id) => (this.options.away?.(id, epochMs) ? "work" : days.get(id)), busy));
+        this.nightNow = clock.hours >= 18 || clock.hours < 7;
         for (const id of this.roster) {
             if (together.has(id) || walking.has(id)) continue; // p5 (humans, couples), p5 (humans, dogs)
+            if (rota.has(id) && this.stepOut(id, clock, take, lampLit, epochMs)) continue;
             const look = this.looks.get(id)!;
             const scale = look.height / BASE_HEIGHT;
             const day = days.get(id)!;

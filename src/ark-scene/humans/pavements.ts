@@ -508,6 +508,13 @@ export class PavementWalks {
         return walkFix(this.graph, t.stops, seconds, kind === "owl" ? w.pace * 0.85 : w.pace, (k) => t.pauses[k] ?? 0, this.fix);
     }
 
+    /** Humans visible: a person's own door on the pavements (town frame), where they step out to at night. */
+    door(id: string): {x: number; z: number} | null {
+        if (!this.graph.main.length) return null;
+        const node = this.graph.nodes[this.walker(id).home];
+        return node ? {x: node.x, z: node.z} : null;
+    }
+
     /** Where a person walks now (the town's frame), or null: indoors, at work, or somewhere else. */
     at(id: string, hours: number, day: number, weekday: number, state: "home" | "work" | "out" | "sleep", about: boolean, rhythm: WalkerRhythm): WalkFix | null {
         if (state === "sleep" || !this.graph.main.length) return null;

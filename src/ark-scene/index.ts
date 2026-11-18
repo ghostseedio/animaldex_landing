@@ -6683,7 +6683,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * capturer, as a tapped person's) and, asked to fly, the camera on that person where they are drawn now, else over
      * the town where the people live (indoors or at work they are not drawn: the card still opens).
      */
-    const selectHuman = (chosen: ChosenHuman<ArkAnimal>, flyTo: boolean) => {
+    const selectHuman = (chosen: ChosenHuman<ArkAnimal>, flyTo: boolean, wait = true) => {
         select(null, false);
         heldHuman = chosen.at?.face !== undefined ? chosen.human.id : null; // humans visible: looked at up in their flat
         options.onSelect?.({...chosen.human, model_slug: "human"});
@@ -6698,14 +6698,35 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             else fly(new Vector3(chosen.at.x, chosen.at.y, chosen.at.z), 9, reducedMotion ? 0 : 1.6, CLOSE_POLAR);
             return;
         }
+        // Humans visible: no one drawn yet (the town still joining): the flight waits for the first person drawn
+        // (`stepPendingHuman`), and only past that the whole town's view.
+        if (wait && townHumans.count) {
+            pendingHuman = {id: chosen.human.id, until: performance.now() + 30_000};
+            return;
+        }
+        pendingHuman = null;
         const view = islandView("town");
         fly(view.target, view.distance, reducedMotion ? 0 : 2.4, view.polar, view.azimuth);
     };
     /** Humans visible: a person chosen at home or asleep up in a tower's flat: the view stays up there with them. */
     let heldHuman: string | null = null;
+    /** Humans visible: a human chosen before anyone was drawn: flown to once someone is (or the town's view at `until`). */
+    let pendingHuman: {id: string; until: number} | null = null;
+    const stepPendingHuman = () => {
+        if (!pendingHuman) return;
+        const chosen = chosenHuman(pendingHuman.id, humansAboard, townHumans.out, townHumans.nightNow);
+        if (!chosen) {
+            pendingHuman = null;
+            return;
+        }
+        if (!chosen.at && performance.now() < pendingHuman.until) return;
+        pendingHuman = null;
+        selectHuman(chosen, true, false);
+    };
     const select = (id: string | null, flyTo: boolean, close = false) => {
         heldHuman = null;
-        const human = chosenHuman(id, humansAboard, townHumans.out);
+        if (id !== null) pendingHuman = null;
+        const human = chosenHuman(id, humansAboard, townHumans.out, townHumans.nightNow);
         if (human) {
             selectHuman(human, flyTo);
             return;
@@ -6942,7 +6963,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const arrive = (id: string | null, close: boolean) => {
         arriving = null;
         arrived = null;
-        const human = chosenHuman(id, humansAboard, townHumans.out);
+        const human = chosenHuman(id, humansAboard, townHumans.out, townHumans.nightNow);
         if (human) {
             selectHuman(human, true);
             return;
@@ -8798,6 +8819,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             syncHumanRooms(island); // humans visible
             humanFigures.setFrame(townHumans.frame(islandMs, traffic?.cars ?? null, traffic?.count ?? 0), camera.position, islandMs / 1000);
             humanTVs.setFrame(townHumans.tvs, islandMs / 1000); // humans visible
+            stepPendingHuman(); // humans visible
             beachProps.setFrame(townHumans.beach); // p5 (humans, quality pass)
             stepDogWalks(now); // p5 (humans, dogs)
         } else if (humanFigures.drawn.near + humanFigures.drawn.far) {
