@@ -45,6 +45,8 @@ export type ArkLiteOptions = {
     eventsUrl?: string | null;
     /** A bringer's @handle tapped; true when the host handled it (the link then does not navigate). */
     onProfile?: ((handle: string) => boolean) | null;
+    /** "Endangered now" (`/ark/endangered`, with the site locale's prefix) on the header, or null: no link (the apps' embed has its own native entry). */
+    endangeredUrl?: string | null;
 };
 
 export type ArkLiteHandle = {
@@ -106,6 +108,7 @@ const CSS = `
 button.arkl-kind{border:0;color:inherit;font:inherit;cursor:pointer;text-align:left}
 button.arkl-kind.open{background:rgba(200,250,99,.22)}
 button.arkl-more{border:0;background:none;padding:6px 4px;font:600 11.5px/1.2 ${FONT};cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.arkl-endangered{display:inline-flex;align-items:center;min-height:44px;margin-top:4px;color:#c8fa63;font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .arkl-hint{margin:-2px 0 8px;color:rgba(255,252,244,.55);font-size:11.5px}
 .arkl-who{list-style:none;margin:10px 0 0;padding:8px 0 0;border-top:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:6px}
 .arkl-who li{display:flex;justify-content:space-between;gap:10px;font-size:12px;line-height:1.3}
@@ -316,6 +319,11 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
         open.appendChild(button);
         if (!ready) open.appendChild(el("p", "arkl-note", lite.slowNote));
         head.appendChild(open);
+        if (options.endangeredUrl) {
+            const link = el("a", "arkl-endangered", str(sub(words, "endangered").title, "Endangered now"));
+            link.href = options.endangeredUrl;
+            head.appendChild(link);
+        }
         return head;
     }
 

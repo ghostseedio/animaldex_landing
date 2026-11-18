@@ -568,6 +568,24 @@
             "bringBack": "Ulovte jedno a vraťte ho",
             "listLabel": "Druhy ztracené z Ark, nejnovější první"
         },
+        "endangered": {
+            "title": "Ohrožené teď",
+            "intro": "Druhy, kterých zbyl ve volné přírodě jen jeden nebo dva.",
+            "empty": "Právě teď žádný druh není v ohrožení",
+            "emptyHint": "Pokud počet druhu ve volné přírodě klesne na dva nebo jeden, objeví se tady.",
+            "critical": "Kritický",
+            "last": "Poslední",
+            "wildCount": "Ve volné přírodě: {count}",
+            "openFor": "Doba ohrožení: {duration}",
+            "habitat": "Prostředí",
+            "foundIn": "Rozšíření",
+            "saved": "Zachráněno: tento druh už není v ohrožení",
+            "lost": "Vymizel z volné přírody",
+            "listLabel": "Ohrožené druhy ve volné přírodě, nejnovější první",
+            "unavailable": "Teď to nejde zkontrolovat. Zkuste to za chvíli znovu.",
+            "seeInArk": "Zobrazit v Ark",
+            "retry": "Zkusit znovu"
+        },
         "photo": {
             "alt": "Fotka, která přivedla tohoto tvora ({species}) na palubu",
             "open": "Zobrazit fotku větší",

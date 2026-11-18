@@ -568,6 +568,24 @@
             "bringBack": "Catturane uno per riportarlo",
             "listLabel": "Specie perse dall'Ark, le più recenti prima"
         },
+        "endangered": {
+            "title": "In pericolo ora",
+            "intro": "Specie di cui in natura restano solo uno o due esemplari.",
+            "empty": "In questo momento nessuna specie è in pericolo",
+            "emptyHint": "Se una specie scende a due o a uno in natura, comparirà qui.",
+            "critical": "Critica",
+            "last": "Ultimo esemplare",
+            "wildCount": "In natura: {count}",
+            "openFor": "In pericolo da {duration}",
+            "habitat": "Habitat",
+            "foundIn": "Distribuzione",
+            "saved": "Salvata: questa specie non è più in pericolo",
+            "lost": "Scomparsa dalla natura",
+            "listLabel": "Specie in pericolo in natura, dalle più recenti",
+            "unavailable": "Impossibile verificare ora. Riprova tra un momento.",
+            "seeInArk": "Guardalo nell'Ark",
+            "retry": "Riprova"
+        },
         "photo": {
             "alt": "Foto che ha portato questo {species} a bordo",
             "open": "Vedi la foto più grande",

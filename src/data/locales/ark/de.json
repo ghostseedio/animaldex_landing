@@ -568,6 +568,24 @@
             "bringBack": "Fang eins, um es zurückzuholen",
             "listLabel": "Aus der Ark verschwundene Arten, neueste zuerst"
         },
+        "endangered": {
+            "title": "Jetzt gefährdet",
+            "intro": "Arten, von denen in der Wildnis nur noch eines oder zwei übrig sind.",
+            "empty": "Zurzeit ist keine Art in Gefahr",
+            "emptyHint": "Fällt eine Art in der Wildnis auf zwei oder eines, erscheint sie hier.",
+            "critical": "Kritisch",
+            "last": "Das letzte Tier",
+            "wildCount": "In der Wildnis: {count}",
+            "openFor": "In Gefahr seit {duration}",
+            "habitat": "Lebensraum",
+            "foundIn": "Verbreitung",
+            "saved": "Gerettet: Diese Art ist nicht mehr in Gefahr",
+            "lost": "In der Wildnis verloren",
+            "listLabel": "Gefährdete Arten in der Wildnis, neueste zuerst",
+            "unavailable": "Prüfung gerade nicht möglich. Versuche es gleich noch einmal.",
+            "seeInArk": "In der Ark ansehen",
+            "retry": "Erneut versuchen"
+        },
         "photo": {
             "alt": "Foto, mit dem dieses Tier ({species}) an Bord kam",
             "open": "Foto größer ansehen",

@@ -2,6 +2,7 @@ import type {ArkSnapshot} from "@/ark-scene/types";
 import {arkRankedSpecies} from "@/lib/ark-population-change";
 import {localeConfig} from "@/i18n";
 import {getLocalePath} from "@/lib/site";
+import {arkEndangeredWords, ARK_ENDANGERED_PATH} from "@/lib/ark-crises";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 
 /**
@@ -58,6 +59,13 @@ export default function ArkAbout({snapshot, words, locale, speciesPages}: Props)
                         <h2 id="ark-about" className="mt-2 font-display text-2xl font-extrabold tracking-tight text-white md:text-3xl">{seo.aboutTitle}</h2>
                         <p className="mt-3 text-base leading-relaxed text-ink-200">{seo.aboutBody}</p>
                         <p className="mt-3 text-base font-semibold leading-relaxed text-white">{live}</p>
+                        {/* Endangered now: a plain link (no script), its own lazily loaded route. */}
+                        <p className="mt-3">
+                            <a href={getLocalePath(siteLocale, ARK_ENDANGERED_PATH)} className="inline-flex min-h-11 items-center gap-2 text-base font-bold text-primary-300 underline-offset-4 hover:underline">
+                                {arkEndangeredWords(words.endangered).title}
+                                <span aria-hidden="true">→</span>
+                            </a>
+                        </p>
                     </div>
                     <div>
                         <h3 className="font-display text-xl font-extrabold text-white">{seo.arriveTitle}</h3>

@@ -568,6 +568,24 @@
             "bringBack": "Ulovite jednu da je vratite",
             "listLabel": "Vrste nestale s Arka, najnovije prve"
         },
+        "endangered": {
+            "title": "Ugroženo sada",
+            "intro": "Vrste kojih je u divljini ostala samo jedna ili dvije jedinke.",
+            "empty": "Trenutačno nijedna vrsta nije ugrožena",
+            "emptyHint": "Ako se broj jedinki vrste u divljini spusti na dvije ili jednu, pojavit će se ovdje.",
+            "critical": "Kritično",
+            "last": "Posljednja jedinka",
+            "wildCount": "U divljini: {count}",
+            "openFor": "Vrijeme u opasnosti: {duration}",
+            "habitat": "Stanište",
+            "foundIn": "Rasprostranjenost",
+            "saved": "Spašeno: ova vrsta više nije ugrožena",
+            "lost": "Nestala iz divljine",
+            "listLabel": "Ugrožene vrste u divljini, najnovije prve",
+            "unavailable": "Trenutačno nije moguće provjeriti. Pokušaj ponovno za trenutak.",
+            "seeInArk": "Pogledaj ga u Arku",
+            "retry": "Pokušaj ponovno"
+        },
         "photo": {
             "alt": "Fotografija koja je ovu životinju ({species}) dovela na brod",
             "open": "Pogledaj veću fotografiju",

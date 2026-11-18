@@ -4768,6 +4768,24 @@
       "bringBack": "Tangkap satu untuk membawanya kembali",
       "listLabel": "Spesies yang hilang dari Ark, terbaru dulu"
     },
+    "endangered": {
+      "title": "Terancam saat ini",
+      "intro": "Spesies yang hanya tersisa satu atau dua di alam liar.",
+      "empty": "Tidak ada spesies yang terancam saat ini",
+      "emptyHint": "Jika sebuah spesies tinggal dua atau satu di alam liar, spesies itu akan tercantum di sini.",
+      "critical": "Kritis",
+      "last": "Yang terakhir",
+      "wildCount": "Di alam liar: {count}",
+      "openFor": "Terancam selama {duration}",
+      "habitat": "Habitat",
+      "foundIn": "Ditemukan di",
+      "saved": "Selamat: spesies ini sudah tidak terancam",
+      "lost": "Hilang dari alam liar",
+      "listLabel": "Spesies yang terancam di alam liar, terbaru dulu",
+      "unavailable": "Belum bisa memeriksa sekarang. Coba lagi sebentar lagi.",
+      "seeInArk": "Lihat di Ark",
+      "retry": "Coba lagi"
+    },
     "photo": {
       "alt": "Foto yang membawa {species} ini naik ke kapal",
       "open": "Lihat foto lebih besar",

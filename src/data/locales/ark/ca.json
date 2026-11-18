@@ -568,6 +568,24 @@
             "bringBack": "Captura'n un per fer-lo tornar",
             "listLabel": "Espècies perdudes de l'Ark, les més recents primer"
         },
+        "endangered": {
+            "title": "En perill ara",
+            "intro": "Espècies a les quals només en queden un o dos exemplars en llibertat.",
+            "empty": "Cap espècie no està en perill ara mateix",
+            "emptyHint": "Si una espècie baixa a dos o a un en llibertat, apareixerà aquí.",
+            "critical": "Crítica",
+            "last": "Últim exemplar",
+            "wildCount": "En llibertat: {count}",
+            "openFor": "En perill des de fa {duration}",
+            "habitat": "Hàbitat",
+            "foundIn": "Distribució",
+            "saved": "Salvada: aquesta espècie ja no està en perill",
+            "lost": "Perduda en llibertat",
+            "listLabel": "Espècies en perill en llibertat, les més recents primer",
+            "unavailable": "Ara no es pot comprovar. Torna-ho a provar d'aquí a un moment.",
+            "seeInArk": "Veure'l a l'Ark",
+            "retry": "Torna-ho a provar"
+        },
         "photo": {
             "alt": "Foto que va portar aquest {species} a bord",
             "open": "Mira la foto més gran",

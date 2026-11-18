@@ -568,6 +568,24 @@
             "bringBack": "Manghuli ng isa para ibalik ito",
             "listLabel": "Mga uring nawala sa Ark, pinakabago muna"
         },
+        "endangered": {
+            "title": "Nanganganib ngayon",
+            "intro": "Mga uri na isa o dalawa na lang ang natitira sa kalikasan.",
+            "empty": "Walang uring nasa panganib ngayon",
+            "emptyHint": "Kapag naging dalawa o isa na lang ang isang uri sa kalikasan, mapapabilang ito rito.",
+            "critical": "Kritikal",
+            "last": "Ang huli",
+            "wildCount": "Sa kalikasan: {count}",
+            "openFor": "Nasa panganib nang {duration}",
+            "habitat": "Tirahan",
+            "foundIn": "Saklaw",
+            "saved": "Nailigtas: wala na sa panganib ang uring ito",
+            "lost": "Nawala sa kalikasan",
+            "listLabel": "Mga uring nasa panganib sa kalikasan, pinakabago muna",
+            "unavailable": "Hindi ma-check ngayon. Subukan ulit sa ilang sandali.",
+            "seeInArk": "Tingnan sa Ark",
+            "retry": "Subukan Ulit"
+        },
         "photo": {
             "alt": "Larawang nagdala sa {species} na ito sa barko",
             "open": "Tingnan nang mas malaki ang larawan",
