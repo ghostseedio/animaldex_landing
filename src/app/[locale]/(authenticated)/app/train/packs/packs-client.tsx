@@ -609,7 +609,7 @@ function BuilderCaptureRow({capture, selected, onToggle}: {capture: TrainPackCap
                 </div>
                 <div className="mt-1 flex gap-2 text-[0.68rem] font-semibold text-white/35">
                     <span className="text-primary-200">Value {capture.tradeValue}</span>
-                    <span>Rarity {capture.rarity}%</span>
+                    <span>Rarity {capture.rarity}</span>
                     {SHOWS_BATTLE_TIER_AND_POWER ? <span>Power {capture.battlePower}</span> : null}
                 </div>
             </div>
@@ -713,7 +713,7 @@ function RevealHero({capture, final}: {capture: TrainPackCapture; final: boolean
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2">
                 <RevealMetric title="Value" value={capture.tradeValue} />
-                <RevealMetric title="Rarity" value={`${capture.rarity}%`} />
+                <RevealMetric title="Rarity" value={`${capture.rarity}`} />
                 <RevealMetric title="Setting" value={capture.contextLabel ?? "Unknown"} />
             </div>
         </article>
@@ -727,7 +727,7 @@ function MiniRevealCard({capture, final}: {capture: TrainPackCapture; final: boo
             <h4 className="mt-2 line-clamp-2 text-sm font-bold text-white">{capture.animalName}</h4>
             <div className="mt-2 flex flex-wrap gap-1">
                 {SHOWS_BATTLE_TIER_AND_POWER ? <Chip small>Tier {capture.battleTier}</Chip> : null}
-                <Chip small>{capture.rarity}%</Chip>
+                <Chip small>Rarity {capture.rarity}</Chip>
             </div>
         </article>
     );
