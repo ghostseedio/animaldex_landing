@@ -221,13 +221,16 @@ const film = async (kind, id, made, n) => {
     }
     const [marks, report, layer] = await page.evaluate(() => [window.__replay.marks(), window.__replay.report(), window.__replay.acting()]);
     const seen = Object.fromEntries(Object.entries(report?.seen ?? {}).map(([castId, s]) => [castId, {role: s.role, shown: s.frames ? Math.round((s.shown / s.frames) * 100) : null}]));
-    Object.assign(entry, {layer, frames, seconds: times[times.length - 1] ?? 0, wall: Math.round((Date.now() - started) / 1000), marks, report: report ? {acted: report.acted, reason: report.reason, notes: report.notes, hour: report.hour, night: report.night, gain: report.gain, standIns: report.standIns, pins: report.pins.length, dropped: report.dropped, cuts: report.cuts, seen} : null, name});
+    Object.assign(entry, {layer, frames, seconds: times[times.length - 1] ?? 0, wall: Math.round((Date.now() - started) / 1000), marks, report: report ? {acted: report.acted, reason: report.reason, notes: report.notes, keyAt: report.keyAt, hour: report.hour, night: report.night, gain: report.gain, standIns: report.standIns, pins: report.pins.length, dropped: report.dropped, cuts: report.cuts, seen} : null, name});
     // The key still: the middle of the act (after the lead, before the linger); a strip of eight across the clip; the clip.
     const fps = 30 / step;
     const at = (seconds) => Math.min(Math.max(Math.round(seconds * fps), 0), frames - 1);
-    const key = at(marks.act + (marks.actEnd - marks.act) * (kind === "death" || kind === "extinct" ? 0.45 : kind === "released" ? 0.5 : 0.6));
+    // (The key still: the shot's own telling moment, `report.keyAt`; without one, the middle of the act.)
+    const key = at(typeof report?.keyAt === "number" ? report.keyAt : marks.act + (marks.actEnd - marks.act) * 0.55);
     execFileSync("cp", [path.join(dir, `${String(key).padStart(4, "0")}.jpg`), path.join(out, `${name}.jpg`)]);
-    const picks = Array.from({length: 8}, (_, i) => at(marks.act - 1 + ((Math.max(marks.actEnd, marks.act + 2) + 1.5 - (marks.act - 1)) * i) / 7));
+    // (A release's strip from the clip's start: the zoo it left is the shot's first part.)
+    const from = kind === "released" ? 0 : marks.act - 1;
+    const picks = Array.from({length: 8}, (_, i) => at(from + ((Math.max(marks.actEnd, marks.act + 2) + 1.5 - from) * i) / 7));
     const strip = path.join(dir, "strip");
     mkdirSync(strip, {recursive: true});
     picks.forEach((frame, i) => execFileSync("cp", [path.join(dir, `${String(frame).padStart(4, "0")}.jpg`), path.join(strip, `${String(i).padStart(2, "0")}.jpg`)]));
@@ -243,6 +246,15 @@ for (const kind of kinds) {
     log(`${kind}: ${events.length} event(s): ${events.map((e) => e.id).join(", ") || "none"}`);
     let n = 0;
     for (const event of events) await film(only.length ? await page.evaluate((id) => window.__replay.plan(id).kind, event.id).catch(() => kind) : kind, event.id, event.made, ++n);
+    // A mating the layer acts, again with its second animal gone from the read (as if it had died since): it must
+    // stand in from the event's record and the mating be acted the same. (The record's own matings with a stand-in are
+    // all insects so far, which the mating layer does not walk.)
+    const acted = kind === "mated" && !only.length ? summary.find((e) => e.kind === "mated" && e.ok && !e.made) : null;
+    if (acted) {
+        const who = await page.evaluate((id) => window.__replay.gone(id, 1), acted.id);
+        log(`mated: ${acted.id} again with ${who} out of the read (a stand-in)`);
+        await film("mated", acted.id, false, "standin");
+    }
     // The kind in words, as Ark Lite shows it: its first event's card.
     if (events[0]) {
         const text = await page.evaluate((id) => {

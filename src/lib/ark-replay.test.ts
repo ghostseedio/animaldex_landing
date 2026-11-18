@@ -251,6 +251,7 @@ function fakeScene(acts: Partial<ArkLiveActs> = {}) {
         addEscapes: note("addEscapes"),
         setMeals: note("setMeals"),
         hold: note("hold"),
+        setHours: note("setHours"),
         arrive: note("arrive"),
         locate: (animalId: string) => places[animalId] ?? null,
         liveActs: () => ({meals: [], matings: [], births: [], escapes: [], deaths: [], ...acts}),
@@ -265,7 +266,7 @@ test("a replay shot: the clock pinned before the event, the cast brought in and 
     const replay = plan(10);
     const scene = fakeScene();
     scene.put(id(1), 0, 0);
-    scene.put(id(3), 12, 0);
+    scene.put(id(3), 6, 0);
     const shot = createArkReplayShot({handle: scene.handle, replay, aspect: () => 9 / 16, lead: 2.5});
     try {
         shot.begin();
@@ -277,8 +278,14 @@ test("a replay shot: the clock pinned before the event, the cast brought in and 
         assert.deepEqual(cast.roster(snapshot).animals.map((animal) => animal.id), [id(1), id(2), id(8), id(3)], "the one that died stands in; who was born later is left out");
         assert.deepEqual(scene.calls.find(([name]) => name === "addMatings")![1], replay.feed.matings);
         const view = shot.step(0, 0)!;
-        assert.ok(Math.abs(view.target.x - 6) < 0.01 && Math.abs(view.target.z) < 0.01, "the two framed together: the point between them");
+        assert.ok(Math.abs(view.target.x - 3) < 0.01 && Math.abs(view.target.z) < 0.01, "the two framed together: the point between them");
         assert.ok(view.distance > 12, "far enough back for both");
+        // Still far from each other (a long walk to come): the first of them alone, near.
+        scene.put(id(3), 60, 0);
+        shot.settle();
+        const alone = shot.step(0, 0)!;
+        assert.ok(Math.abs(alone.target.x) < 0.01 && alone.distance < view.distance);
+        scene.put(id(3), 6, 0);
         assert.deepEqual(shot.report().standIns, [id(3)]);
         assert.equal(shot.doneAt(), null);
     } finally {
@@ -314,6 +321,7 @@ test("a mating's shot cuts to the end of a long walk, pulls away at the mount, a
         assert.deepEqual(report.cuts.map((cut) => cut.why), ["to the end of the walk to each other", "past the mount"]);
         assert.ok(report.cuts[0].skipped > 15 && report.cuts[1].skipped > 15);
         assert.ok(shot.doneAt()! < 45, "a clip's length");
+        assert.ok(report.keyAt !== null && report.keyAt > report.cuts[0].at && report.keyAt < report.cuts[1].at, "the still's moment: the courtship, between the two cuts");
     } finally {
         shot.end();
     }
@@ -334,7 +342,7 @@ test("a mating's shot cuts to the end of a long walk, pulls away at the mount, a
     }
 });
 
-test("a chase's shot: the hunter first, then the one the chase comes to; a long stalk is cut to its end", () => {
+test("a chase's shot: the hunter as it comes, the two together once it is close; a long stalk is cut to its end", () => {
     const replay = plan(15);
     const key = replay.feed.escapes![0].key;
     const scene = fakeScene({escapes: [{key, t0: replay.t0, phase: "acting", missAt: 30, seconds: 38}]});
@@ -348,12 +356,12 @@ test("a chase's shot: the hunter first, then the one the chase comes to; a long 
         assert.ok(Math.abs(before.target.x) < 0.01, "before its time, the hunter alone");
         pinArkClock(replay.t0 + 1);
         const after = shot.step(2, 1 / 30)!;
-        assert.ok(Math.abs(after.target.x - 30) < 0.01, "then its quarry, where the chase comes: too far apart for one picture");
+        assert.ok(Math.abs(after.target.x) < 0.01, "still the hunter as it comes: too far apart for one picture");
         assert.deepEqual(shot.report().cuts.map((cut) => cut.why), ["to the end of the stalk"]);
         // Close enough: both in the picture.
-        scene.put(id(9), 22, 0);
+        scene.put(id(9), 24, 0);
         const both = shot.step(2.1, 1 / 30)!;
-        assert.ok(both.target.x < 30 && both.target.x > 22);
+        assert.ok(both.target.x > 0.5, "easing to the point between the two");
         let world = arkEpochSeconds();
         for (let t = 2.2; shot.doneAt() === null && t < 60; t += 0.5) {
             pinArkClock((world += 0.5));
@@ -396,7 +404,7 @@ test("the camera keeps a bearing clear of the trees: the scene's own rule, held 
 
 test("a night's exposure is the camera's only: a gain eased in with the night, none by day or with the hour pinned", () => {
     const night = planArkEventReplay(13, {events: log.events.map((event) => (event.id === 13 ? {...event, at: "2026-11-13T00:30:00Z"} : event))}, snapshot, {now: NOW});
-    const gains = (replay: typeof night, options: {nightGain?: number; hourPinned?: boolean}) => {
+    const gains = (replay: typeof night, options: {nightGain?: number; hour?: number}) => {
         const scene = fakeScene();
         scene.put(id(3), 0, 0);
         const set: number[] = [];
@@ -413,7 +421,7 @@ test("a night's exposure is the camera's only: a gain eased in with the night, n
     assert.ok(lifted.report.night > 0.9 && lifted.set[0] > 2.8 && lifted.set[0] <= 3, `full night, lifted (${lifted.set[0]})`);
     assert.equal(lifted.set[lifted.set.length - 1], 1, "the Ark's own exposure again when the shot ends");
     assert.deepEqual(gains(night, {}).set, [1], "no gain asked: only the reset");
-    assert.deepEqual(gains(night, {nightGain: 3, hourPinned: true}).set, [1]);
+    assert.deepEqual(gains(night, {nightGain: 3, hour: 11}).set, [1]);
     const day = gains(plan(13), {nightGain: 3});
     assert.ok(day.report.night < 0.05 && Math.abs(day.set[0] - 1) < 0.1, "by day nothing changes");
 });

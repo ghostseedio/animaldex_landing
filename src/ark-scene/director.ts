@@ -223,7 +223,7 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
                 shot = createArkReplayShot({handle, replay: next.replay, aspect: () => {
                     const canvas = options.canvas();
                     return canvas && canvas.height ? canvas.width / canvas.height : 9 / 16;
-                }, lead: next.lead, mount: next.mount, nightGain: next.nightGain, hourPinned: typeof next.replayHour === "number"});
+                }, lead: next.lead, mount: next.mount, nightGain: next.nightGain, hour: next.replayHour ?? null});
                 shot.begin();
             } else {
                 handle.setHours(next.hours.from);

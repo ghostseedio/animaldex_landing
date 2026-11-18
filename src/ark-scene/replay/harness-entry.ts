@@ -10,6 +10,9 @@
  *   __replay.prepare(id, options)    plan it (`planArkReplayShot`) and have the director prepare it
  *   __replay.frame(quality, step)    the director's next frame
  *   __replay.report()                the shot's own account, and where each of the cast is now
+ *   __replay.gone(id, index)         film a recorded event as if one of its animals had left the Ark since (it is taken
+ *                                    out of the read, so it must stand in from the event's own record): the record's
+ *                                    own events with a stand-in are all insects so far
  *   __replay.card(id)                the event as Ark Lite shows it (words), drawn over the page
  *
  * The world is chosen by the page before this script (`__ARK_WORLD__ = "v2"`, as `runtime/measure-world.ts` does).
@@ -86,10 +89,15 @@ async function main() {
                 if (a && b) pairs.push({hunter, prey, d: Math.hypot(a.x - b.x, a.z - b.z)});
             }
             pairs.sort((x, y) => x.d - y.d || x.hunter.id.localeCompare(y.hunter.id));
-            for (const pair of pairs) {
+            // (A species once while there are pairs for it; then an animal once: the wild island has few filmable pairs yet.)
+            const order = [...pairs.filter((pair) => pair.d <= 120), ...pairs.filter((pair) => pair.d <= 120)];
+            let pass = 0;
+            for (const [index, pair] of order.entries()) {
+                if (index === order.length / 2) pass = 1;
                 if (ids.length >= n) break;
-                if (used.has(pair.hunter.model_slug) || used.has(pair.prey.model_slug)) continue;
-                used.add(pair.hunter.model_slug).add(pair.prey.model_slug);
+                if (used.has(pair.hunter.id) || used.has(pair.prey.id)) continue;
+                if (pass === 0 && (used.has(pair.hunter.model_slug) || used.has(pair.prey.model_slug))) continue;
+                used.add(pair.hunter.model_slug).add(pair.prey.model_slug).add(pair.hunter.id).add(pair.prey.id);
                 // The encounter as the server writes it: the hunter's waypoint within a foray's reach (22 m) of the prey's home disc.
                 const a = handle.locate(pair.hunter.id)!;
                 const b = handle.locate(pair.prey.id)!;
@@ -167,6 +175,12 @@ async function main() {
         report: () => {
             const report = director.replayReport();
             return report ? {...report, where: Object.fromEntries(Object.keys(report.seen).map((id) => [id, handle.locate(id)])), acts: handle.liveActs?.() ?? null, view: handle.view(), stats: handle.stats()} : null;
+        },
+        /** A recorded event filmed as if one of its cast had left the Ark since: that animal is out of the read for it. */
+        gone: (id: string, index = 1) => {
+            const who = planArkEventReplay(id, rows, real, {now}).cast[index]?.record.id;
+            if (who) made.set(id, {remove: [who], move: null, sample: false});
+            return who ?? null;
         },
         /** The scene's own layers' account of the event being replayed (by its keys), and whether one has taken it up. */
         acting: () => {

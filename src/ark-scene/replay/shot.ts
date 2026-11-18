@@ -29,8 +29,23 @@ import {islandHours} from "@/lib/ark-clock";
 import {daylightAt} from "@/lib/ark-daylight";
 
 const FOV = 38;
-/** A clip stands nearer than a tap's meeting distance (`meetDistance` shows an animal in its surroundings). */
+/**
+ * A clip stands nearer than a tap's meeting distance (`meetDistance` shows an animal in its surroundings): this share of
+ * it, or where the animal is a third of the picture's narrower side, whichever is nearer; never nearer than half a
+ * metre (a mantis's body from nearer is lost among the leaves it lies in).
+ */
 const CLOSE = 0.62;
+const CLOSE_SHARE = 0.34;
+const CLOSE_MIN = 0.5;
+/**
+ * How high the camera stands (the polar angle, from straight above): a little over the ground's plants for an animal a
+ * person could see across a clearing; from well above for a small one (the plants round it are as tall as the camera
+ * is far) and for a body lying on the ground. Raised further while something still stands between (`RAISE`).
+ */
+const POLAR = 1.05;
+const POLAR_SMALL = 0.72;
+const RAISE = 0.16;
+const RAISE_MOST = 0.48;
 /** Two farther apart than this (m) are not held in one picture after their act (from that far back neither reads). */
 const TOGETHER = 40;
 /**
@@ -38,7 +53,7 @@ const TOGETHER = 40;
  * upright picture is narrow, and from far enough back for more the camera is over the treetops. Until then, the one
  * the act comes to.
  */
-const CLOSING = 16;
+const CLOSING = 8;
 /**
  * The frames nobody sees before the shot's first (the director's, `settle`): the clock is pinned this long before the
  * shot's start, so they end before it, never past the event (a layer that has begun its act is not walked back).
@@ -62,8 +77,8 @@ export type ArkReplayShotOptions = {
      * only: the hour, the light's colour and what the animals do are the event's.
      */
     nightGain?: number;
-    /** The light's hour is pinned (`--hour`): no night gain then. */
-    hourPinned?: boolean;
+    /** The light's hour pinned (`--hour`, 0–24) instead of the island's own at the event's time: no night gain then. */
+    hour?: number | null;
 };
 
 export type ArkReplayShotReport = {
@@ -84,6 +99,8 @@ export type ArkReplayShotReport = {
     hour: number;
     night: number;
     gain: number;
+    /** The clip second of the act's telling moment (the courtship, the catch, the miss, the body lying, the coming ashore): a still's frame. Null until it has come. */
+    keyAt: number | null;
     /** The cuts made: clip seconds, and how far the clock was moved on (s). */
     cuts: Array<{at: number; skipped: number; why: string}>;
     /** Per cast id: the share of the act's frames it was drawn in, and its role. */
@@ -128,7 +145,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
     const cast: ArkCast = attachArkCast(handle);
     const ids = replay.cast.map((member) => member.record.id);
     const byRole = (role: string) => replay.cast.filter((member) => member.role === role).map((member) => member.record.id);
-    const report: ArkReplayShotReport = {eventId: replay.eventId, kind: replay.kind, t0, standIns: [], pins: [], dropped: 0, acted: false, reason: null, notes: [], hour: Math.round(islandHours(replay.t0 * 1000) * 100) / 100, night: Math.round(daylightAt(islandHours(replay.t0 * 1000)).night * 100) / 100, gain: 1, cuts: [], seen: Object.fromEntries(replay.cast.map((member) => [member.record.id, {role: member.role, frames: 0, shown: 0}]))};
+    const report: ArkReplayShotReport = {eventId: replay.eventId, kind: replay.kind, t0, standIns: [], pins: [], dropped: 0, acted: false, reason: null, notes: [], hour: Math.round(islandHours(replay.t0 * 1000) * 100) / 100, night: Math.round(daylightAt(islandHours(replay.t0 * 1000)).night * 100) / 100, gain: 1, keyAt: null, cuts: [], seen: Object.fromEntries(replay.cast.map((member) => [member.record.id, {role: member.role, frames: 0, shown: 0}]))};
 
     let done: number | null = null;
     let ended = false;
@@ -139,6 +156,14 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
     /** The bearing the camera keeps (chosen clear of the trees, kept until something comes between), and for how many frames it has been blocked. */
     let bearing: number | null = null;
     let blocked = 0;
+    /** Who the picture held last (when that changes, one alone to the two together, the bearing is chosen again: side on to both). */
+    let framed = "";
+    /** How much higher than its framing asks the camera stands, having found no clear bearing (rocks, a thicket). */
+    let raised = 0;
+    /** The act's telling moment has come (once). */
+    const tell = (offset = 0) => {
+        if (report.keyAt === null) report.keyAt = Math.round((clip + offset) * 100) / 100;
+    };
     const cutOnce = new Set<string>();
     let playing: {over: boolean} | null = null;
     let arrived = false;
@@ -151,6 +176,9 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         stateAt = clip;
     };
     const since = () => arkEpochSeconds() - t0;
+    const hourPinned = typeof options.hour === "number";
+    /** The light at the clock's moment, now (the scene looks at its clock for the light only every few seconds, and not during its own replay). */
+    const relight = () => handle.setHours(hourPinned ? options.hour! : null);
 
     /** Move the clock on to `s` seconds after the event: a cut. The camera snaps (no easing across a cut). */
     const cut = (s: number, why: string) => {
@@ -158,9 +186,11 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         if (cutOnce.has(why) || s <= now + 0.5) return;
         cutOnce.add(why);
         pinArkClock(t0 + s);
+        relight();
         report.cuts.push({at: Math.round(clip * 100) / 100, skipped: Math.round((s - now) * 10) / 10, why});
         view = null;
         bearing = null;
+        raised = 0;
     };
     type Frame = {target: Point; distance: number; azimuth: number; polar: number; /** Who must be seen from the camera (the sight lines kept clear). */ places: Point[]};
 
@@ -190,18 +220,24 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             }
         }
         const length = Math.max(...who.map((p) => p.length), 0.01);
-        const single = meetDistance(length, aspect, FOV) * CLOSE;
+        const narrow = Math.tan((FOV * Math.PI) / 360) * Math.min(Math.max(aspect, 0.3), 1);
+        const single = Math.max(Math.min(meetDistance(length, aspect, FOV) * CLOSE, length / (2 * CLOSE_SHARE * narrow)), CLOSE_MIN);
         const max = style.max ?? 150;
         const pair = a === b ? null : framePair({x: a.x, y: a.y, z: a.z, length: a.length}, {x: b.x, y: b.y, z: b.z, length: b.length}, {fovDeg: FOV, aspect, single, max});
         const centre = pair ?? {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2};
         // (Farther apart than the pair framing takes: the same fit, as far back as it needs, up to `max`.)
-        const narrow = Math.tan((FOV * Math.PI) / 360) * Math.min(Math.max(aspect, 0.3), 1);
         const fit = (far / 2 + length * 0.6) / (0.7 * narrow);
         const distance = Math.min(Math.max(pair?.distance ?? Math.max(single, fit), single), max) * (style.widen ?? 1);
         const across = far > Math.max(length * 0.5, 0.2) ? Math.atan2(b.z - a.z, -(b.x - a.x)) : outward(centre);
         const out = outward(centre);
         const side = Math.cos(across - out) >= 0 ? across : across + Math.PI;
-        return {target: {x: centre.x, y: centre.y, z: centre.z}, distance, azimuth: side, polar: style.polar ?? 1.12, places: who.map((p) => ({x: p.x, y: p.y, z: p.z}))};
+        const held = who.map((p) => p.id).sort().join(",");
+        if (held !== framed) {
+            framed = held;
+            bearing = null;
+            raised = 0;
+        }
+        return {target: {x: centre.x, y: centre.y, z: centre.z}, distance, azimuth: side, polar: (style.polar ?? (length < 0.3 ? POLAR_SMALL : POLAR)) - raised, places: who.map((p) => ({x: p.x, y: p.y, z: p.z}))};
     };
     const apart = (a: string, b: string): number | null => {
         const [p, q] = [handle.locate(a), handle.locate(b)];
@@ -235,6 +271,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                 next = bearing + off;
                 break;
             }
+            // (Nothing clear nearby, and the far side's best is not clear either: from higher up, over what is in the way.)
+            if (next === now.azimuth && !sameBearing(ask(next).azimuth, next)) raised = Math.min(raised + RAISE, RAISE_MOST);
             bearing = next;
         }
         return {...want, polar: now.polar, azimuth: bearing};
@@ -244,6 +282,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
     const toward = (asked: Frame | null, dt: number, rate = 2.4, turn = 0.6): ArkCameraView | null => {
         if (!asked) return view;
         if (!view) bearing = null;
+        // (A bearing chosen again while the camera is up: nearest the side it is on, so it swings the short way.)
+        if (bearing === null && view && Math.cos(asked.azimuth - view.azimuth) < 0) asked = {...asked, azimuth: asked.azimuth + Math.PI};
         const want = clearOf(asked);
         if (!view) {
             view = {target: {...want.target}, distance: want.distance, polar: want.polar, azimuth: want.azimuth};
@@ -310,6 +350,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         // The walk's last seconds.
         if (meet - s > 7.5) cut(meet - 7, "to the end of the walk to each other");
         const now = since();
+        if (now > Math.max(meet, courted - 5)) tell();
         if (now < courted - 0.2) {
             enter("court");
             return toward(frameOf(ids, {widen: 1.1, first: ids[0]}), dt);
@@ -325,7 +366,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                     enter("rest");
                     return toward(frameOf(ids, {widen: 1.2}), dt);
                 }
-                return toward(frame ? {...frame, distance: frame.distance * lerp(1.1, 3.2, k), polar: lerp(1.12, 0.72, k)} : null, dt, 3.5);
+                return toward(frame ? {...frame, distance: frame.distance * lerp(1.1, 3.2, k), polar: lerp(POLAR, 0.72, k)} : null, dt, 3.5);
             }
         } else if (now < mounted + 2.4) {
             enter("mount");
@@ -351,6 +392,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             if (playing && !playing.over) return null;
             if (playing?.over && state === "hatch") {
                 enter("after");
+                tell(-1.5);
                 view = handle.view();
             }
             if (state === "after") {
@@ -371,6 +413,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             return drift(frameOf(ids, {widen: 1.2, first: byRole("parent")[0] ?? ids[0]}), dt);
         }
         enter("birth");
+        if (s > 13) tell();
         // (Settling, the young born one by one, the first licks: the first 24 s; then the nursing goes on for minutes.)
         if (s > Math.min(act.end ?? 24, 24)) finish(true);
         return toward(frameOf(who, {widen: 1.15}), dt);
@@ -381,6 +424,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         const id = ids[0];
         if (state === "lead" && s >= 0) enter("fall");
         if (state === "lead" || state === "fall") {
+            if (state === "fall" && s > 3) tell();
             if (state === "fall" && s > 6.5) {
                 const act = handle.liveActs?.().deaths.find((d) => d.id === id);
                 if (!last) {
@@ -395,7 +439,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                 lapseFrom = arkEpochSeconds();
                 return toward(frameOf([id]), dt);
             }
-            return toward(frameOf([id], {widen: s < 0 ? 1.15 : 1}), dt);
+            // (Its body from well above: it lies among the ground's plants.)
+            return toward(frameOf([id], {widen: s < 0 ? 1.15 : 1, ...(s > 1.2 ? {polar: POLAR_SMALL} : {})}), dt);
         }
         if (state === "lapse") {
             // 4 s of video for the fade's 3 minutes: the pin moved on every frame.
@@ -403,7 +448,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             pinArkClock(lapseFrom! + ease(k) * (DEATH_FADE_SECONDS + 8));
             const frame = frameOf([id]);
             if (k >= 1) enter("empty");
-            return toward(frame ? {...frame, distance: lerp(frame.distance, Math.max(frame.distance * 5, 60), ease(k)), polar: lerp(1.12, 0.88, ease(k))} : null, dt, 3);
+            return toward(frame ? {...frame, distance: lerp(frame.distance, Math.max(frame.distance * 5, 60), ease(k)), polar: lerp(POLAR_SMALL, 0.88, ease(k))} : null, dt, 3);
         }
         // Its home range, empty.
         if (clip - stateAt > 4) {
@@ -430,23 +475,23 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                 enter("still");
                 if (clip - stateAt > 7) finish(false, kind === "meal" ? "the meal layer did not act it (the hunter is not drawn, or the pair is one the scene cuts away from)" : "the escape layer did not act a chase (a pair the scene cuts away from, or the prey on the wing): only its limp");
             }
-            return drift(frameOf([hunter, quarry], {widen: 1.2, first: quarry}), dt);
+            return drift(frameOf([hunter, quarry], {widen: 1.2, first: hunter}), dt);
         }
         if (end - s > 14) cut(end - 12, "to the end of the stalk");
         const now = since();
-        if (state !== "chase") {
-            // From the hunter to its quarry, where the chase comes: an edit, not a pan.
-            view = null;
-            enter("chase");
-        }
+        enter("chase");
         if (kind === "meal") {
             // (The catch, then the meal's first seconds: the feeding goes on for minutes.)
+            if (now > end + 1.2) tell();
             if (now > end + 7) finish(true);
-            return toward(frameOf([hunter, quarry], {widen: now > end ? 1.05 : 1.2, first: quarry}), dt, 3);
+            // (The hunter as it comes; the two together once it is close: the catch, then the meal where the prey fell.)
+            return toward(frameOf([hunter, quarry], {widen: now > end ? 1.05 : 1.2, first: now > end ? quarry : hunter}), dt, 3);
         }
+        if (now > end - 0.25) tell();
         if (now > Math.min(escape?.seconds ?? end + 6, end + 8)) finish(true);
         // (Once it is away, the one that got away: the two are soon too far apart for one picture.)
-        return toward(frameOf([hunter, quarry], {widen: 1.25, first: quarry}), dt, 3);
+        // (The hunter as it comes, the two together at the miss; then the one that got away.)
+        return toward(frameOf([hunter, quarry], {widen: 1.25, first: now > end + 1 ? quarry : hunter}), dt, 3);
     };
 
     const stepLastStand = (dt: number) => {
@@ -457,16 +502,18 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         if (clip < 6) {
             // From over its home range, in to the last one.
             const k = ease(clip / 6);
-            return toward(alone ? {...alone, distance: lerp(Math.max(alone.distance * 6, 55), alone.distance * 1.1, k), polar: lerp(0.86, 1.12, k)} : null, dt, 4);
+            return toward(alone ? {...alone, distance: lerp(Math.max(alone.distance * 6, 55), alone.distance * 1.1, k), polar: lerp(0.86, alone.polar, k)} : null, dt, 4);
         }
         // And the one that hunts it, in the same picture, when it is near enough for one.
         const off = predator.length ? apart(last[0], predator[0]) : null;
         const near = off !== null && off <= TOGETHER * 2;
         if (predator.length && !near && !report.notes.length) report.notes.push(`the hunter is ${off === null ? "not in the scene" : `${Math.round(off)} m away`}: not in the same picture`);
         if (clip < 11 || !near) {
+            if (clip > 9) tell();
             if (!near && clip > 13) finish(true);
             return drift(alone, dt);
         }
+        if (clip > 15 && clip < 15.2) report.keyAt = Math.round(clip * 100) / 100;
         if (clip > 18) finish(true);
         return toward(frameOf(last.concat(predator), {polar: 1.02, max: 220}), dt, 1.6, 0.35);
     };
@@ -489,9 +536,10 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             actAt = clip;
             handle.arrive(id);
         }
+        if (arrived && clip > actAt + 2.5) tell();
         if (clip > 15) finish(true);
         const k = ease((clip - 3.6) / 3);
-        return toward(here ? {...here, distance: here.distance * lerp(2.6, 1.15, k), polar: lerp(0.95, 1.12, k)} : null, dt, 3);
+        return toward(here ? {...here, distance: here.distance * lerp(2.6, 1.15, k), polar: lerp(0.95, here.polar, k)} : null, dt, 3);
     };
 
     return {
@@ -499,6 +547,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             // (Nothing of an earlier replay, or of the live log, is still being acted when this one starts.)
             handle.clearLiveActs?.();
             pinArkClock(t0 - lead - REPLAY_SETTLE_SECONDS);
+            relight();
             if (options.asOf !== false) cast.setAsOf(t0, replay.arkDay);
             cast.bring(key, replay.cast.map((member) => member.record), {marks: replay.marks}).apply();
             const feed = replay.feed;
@@ -511,11 +560,12 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         },
         settle: () => {
             pinArkClock(t0 - lead);
+            relight();
             view = null;
         },
         step: (t, dt) => {
             clip = t;
-            if (!options.hourPinned && (options.nightGain ?? 1) !== 1) {
+            if (!hourPinned && (options.nightGain ?? 1) !== 1) {
                 // The camera's exposure follows the night (the island's hour on the pinned clock).
                 const gain = 1 + ((options.nightGain ?? 1) - 1) * daylightAt(islandHours(arkEpochSeconds() * 1000)).night;
                 handle.setExposure?.(gain);
@@ -574,6 +624,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             // (While the cast is still in: whoever a meal's or a death's stand-in hid is shown again.)
             handle.clearLiveActs?.();
             pinArkClock(null);
+            handle.setHours(hourPinned ? options.hour! : null);
             cast.detach();
         }
     };
