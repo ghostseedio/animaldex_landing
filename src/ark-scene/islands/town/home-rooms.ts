@@ -19,7 +19,7 @@
  *   on the shared clock (`roomPose`, pure in time and id): never through the glass, the furniture or another pet.
  */
 
-import {corners, hashText, hashTextOn, hashTextPrefix, local, sub, toLocal, type Box} from "@/ark-scene/islands/town/geom";
+import {corners, hashText, hashTextOn, hashTextPrefix, local, rng, sub, toLocal, type Box} from "@/ark-scene/islands/town/geom";
 import {townHeight} from "@/ark-scene/islands/town/ground";
 import {TOWER_FLOOR, townPlan, type Building, type TownPlan} from "@/ark-scene/islands/town/plan";
 import type {Household} from "@/ark-scene/islands/town/areas";
@@ -233,6 +233,53 @@ export function roomPose(place: IndoorPlace, id: string, length: number, clock: 
     const moving = s > 0 && s < 1 && Math.hypot(b.x - a.x, b.z - a.z) > 0.05;
     const yaw = moving ? Math.atan2(b.x - a.x, b.z - a.z) : place.room.shell.rot + u01(id, `yaw${k}`) * Math.PI * 2;
     return {x: a.x + (b.x - a.x) * e, z: a.z + (b.z - a.z) * e, base: place.room.floor, yaw, moving};
+}
+
+/**
+ * Humans visible (2026-11-18): a tower apartment's furniture, in its room's frame (x along the tower's wall, +z the open
+ * front, y from its floor), pure in the room's id. The same layout is drawn (`render/pet-homes.ts` apartment) and lived
+ * in (`humans/home-rooms-host.ts`: the sofa's seats, the bed's two sides, the TV), so a sitter is on the sofa drawn and a
+ * sleeper in the bed drawn. Laid out round the pets' free floor (`towerApartments`: the middle of the room in front of
+ * the sofa): the bed and the bookshelf stand at the room's two ends against the wall, the bed short of the free floor.
+ */
+export type ApartmentLayout = {
+    /** The sofa's middle along the wall and its width (its first two draws: the colour, then this). */
+    su: number;
+    sw: number;
+    sofaColour: number;
+    rugColour: number;
+    /** Which end the bed is at (-1 or 1: away from the sofa's offset), and its box (middle, length along x, width along z). */
+    bedSide: -1 | 1;
+    bed: {x: number; z: number; length: number; width: number; top: number};
+    duvetColour: number;
+    /** The bookshelf at the other end; the bedside table at the bed's head (by the front). */
+    shelfX: number;
+    nightstand: {x: number; z: number};
+    /** The pets' basket between the sofa and the bed (null: no room for it there). */
+    basket: {x: number; z: number} | null;
+};
+
+export function apartmentLayout(room: Pick<HomeRoom, "id" | "shell">): ApartmentLayout {
+    const r = rng(hashText(room.id)); // (the draws `render/pet-homes.ts` made before: the sofa is where it was)
+    const w = room.shell.w;
+    const d = room.shell.d;
+    const sofaColour = r();
+    const sw = Math.min(2.4, w * 0.4);
+    const su = (r() - 0.5) * (w - sw - 1.6);
+    const rugColour = r();
+    const duvetColour = r();
+    const bedSide: -1 | 1 = su > 0 ? -1 : 1;
+    // (Against the tower's wall, its head at the room's end; 1.15 m wide so its side stays behind the pets' free floor.)
+    const length = 1.95;
+    const width = 1.15;
+    const bed = {x: bedSide * (w / 2 - 0.05 - length / 2), z: -d / 2 + 0.05 + width / 2, length, width, top: 0.5};
+    const shelfX = -bedSide * (w / 2 - 0.35);
+    const nightstand = {x: bedSide * (w / 2 - 0.27), z: bed.z + width / 2 + 0.3};
+    const inner = bedSide * (w / 2 - 0.05 - length);
+    const sofaEdge = su + bedSide * (sw / 2);
+    const gap = (inner - sofaEdge) * bedSide;
+    const basket = gap >= 0.7 ? {x: (inner + sofaEdge) / 2, z: -d / 2 + 0.45} : null;
+    return {su, sw, sofaColour, rugColour, bedSide, bed, duvetColour, shelfX, nightstand, basket};
 }
 
 /** Whether a point is inside a box (with `margin` m in from its sides). */

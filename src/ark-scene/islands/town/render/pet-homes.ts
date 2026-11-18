@@ -17,7 +17,7 @@ import {Group, Mesh, type BufferGeometry, type Material} from "three";
 import {hashText, rng} from "@/ark-scene/islands/town/geom";
 import {homeDisplayFloors, perchHeight, POND_SIZE, type HomeDisplay, type HomeSite} from "@/ark-scene/islands/town/tanks";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
-import type {HomeRoom} from "@/ark-scene/islands/town/home-rooms";
+import {apartmentLayout, type HomeRoom} from "@/ark-scene/islands/town/home-rooms";
 import {barsMaterial, cutAttribute, cutawayMaterial, cutEye, followEye, glassMaterial, glowMaterial, interiorMaterial, outdoorMaterial, waterMaterial} from "@/ark-scene/islands/town/render/displays";
 
 type RGB = [number, number, number];
@@ -170,42 +170,60 @@ function gardenRoomThings(room: HomeRoom, parts: Parts) {
     parts.inside.cylinder({x: corner[0], y: room.floor + 0.04, z: corner[2], rot: 0}, 0, 0, 0, 0.2, 0.2, 0.06, tone("#c86a5a"), 10);
 }
 
+const DUVETS: RGB[] = [tone("#e8e2d6"), tone("#9fb8d0"), tone("#d8b0a0"), tone("#b8c8a0"), tone("#c8b8d8"), tone("#e0c890")];
+
 /**
- * A tower apartment's winter garden lived in (behind its glazed bay): a wooden floor, a ceiling, a sofa along the
- * tower's wall, a rug, a bookshelf at one end and a plant at the other, a pendant lamp (lit: the glow), and
- * the pets' basket. Local +z is the glass front.
+ * A tower apartment's winter garden lived in (behind its open bay): a wooden floor, a ceiling, a sofa along the tower's
+ * wall with a rug before it, a bed at one end (humans visible, 2026-11-18: people sleep in it; `home-rooms.ts`
+ * apartmentLayout, the same layout people are placed by) with its bedside lamp, a bookshelf at the other end, a plant, a
+ * pendant lamp (lit: the glow), and the pets' basket. Local +z is the open front.
  */
 function apartment(room: HomeRoom, parts: Parts) {
     const b = room.shell;
-    const r = rng(hashText(room.id));
+    const L = apartmentLayout(room);
     const fr: Frame = {x: b.x, y: room.floor, z: b.z, rot: b.rot};
     const w = b.w;
     const d = b.d;
     const h = room.height;
+    const r = rng(hashText(`${room.id}|things`));
     parts.inside.box(fr, 0, 0, 0, w - 0.1, 0.03, d - 0.1, tone("#b8925e"));
     // The ceiling (the tower's wall behind is its home's windows, lit on the island clock: `render/buildings.ts`).
     parts.inside.box(fr, 0, h - 0.04, 0, w - 0.1, 0.04, d - 0.1, tone("#f2efe8"));
     // The sofa along the tower's wall: its seat, back and arms.
-    const sofa = SOFAS[Math.floor(r() * SOFAS.length)];
-    const sw = Math.min(2.4, w * 0.4);
-    const su = (r() - 0.5) * (w - sw - 1.6);
+    const sofa = SOFAS[Math.floor(L.sofaColour * SOFAS.length)];
+    const {su, sw} = L;
     parts.inside.box(fr, su, 0, -d / 2 + 0.5, sw, 0.42, 0.8, sofa);
     parts.inside.box(fr, su, 0.42, -d / 2 + 0.2, sw, 0.45, 0.2, sofa);
     for (const side of [-1, 1]) parts.inside.box(fr, su + side * (sw / 2 - 0.1), 0.42, -d / 2 + 0.5, 0.2, 0.22, 0.8, sofa);
     // The rug in front of it (the pets' floor: no table on it).
-    parts.inside.box(fr, su, 0.03, 0.3, sw + 0.6, 0.012, 1.3, RUGS[Math.floor(r() * RUGS.length)]);
-    // A bookshelf at one end, a plant at the other.
-    const end = r() < 0.5 ? -1 : 1;
-    parts.inside.box(fr, end * (w / 2 - 0.35), 0, -d / 2 + 0.6, 0.5, 1.9, 0.9, WOOD);
-    for (let k = 0; k < 4; k++) parts.inside.box(fr, end * (w / 2 - 0.25), 0.3 + k * 0.42, -d / 2 + 0.6, 0.32, 0.26, 0.8, [tone("#7a2a2a"), tone("#2a4a6a"), tone("#c8b070"), tone("#3a6a3a")][(k + Math.floor(r() * 4)) % 4]);
-    const pot = at(fr, -end * (w / 2 - 0.4), 0, -d / 2 + 0.4);
+    parts.inside.box(fr, su, 0.03, 0.3, sw + 0.6, 0.012, 1.3, RUGS[Math.floor(L.rugColour * RUGS.length)]);
+    // The bed: its frame, the mattress, the duvet over the foot two-thirds, two pillows at the head, a headboard.
+    const bed = L.bed;
+    const head = L.bedSide;
+    parts.inside.box(fr, bed.x, 0, bed.z, bed.length, 0.3, bed.width, WOOD);
+    parts.inside.box(fr, bed.x, 0.3, bed.z, bed.length - 0.04, 0.16, bed.width - 0.04, tone("#f4f1ea"));
+    parts.inside.box(fr, bed.x - head * 0.3, 0.46, bed.z, bed.length - 0.64, 0.06, bed.width + 0.02, DUVETS[Math.floor(L.duvetColour * DUVETS.length)]);
+    for (const side of [-1, 1]) parts.inside.box(fr, bed.x + head * (bed.length / 2 - 0.26), 0.46, bed.z + side * bed.width * 0.24, 0.36, 0.1, bed.width * 0.42, tone("#fbfaf6"));
+    parts.inside.box(fr, bed.x + head * (bed.length / 2 + 0.02), 0, bed.z, 0.06, 1.0, bed.width + 0.06, tone("#6e5236"));
+    // The bedside table at the bed's head and its lamp (lit: the glow; a sleeper is seen by it at night).
+    const ns = L.nightstand;
+    parts.inside.box(fr, ns.x, 0, ns.z, 0.4, 0.5, 0.4, WOOD);
+    parts.inside.box(fr, ns.x, 0.5, ns.z, 0.05, 0.22, 0.05, tone("#2a2a2a"));
+    parts.glow.cylinder({...fr, ...{x: at(fr, ns.x, 0, ns.z)[0], z: at(fr, ns.x, 0, ns.z)[2]}}, 0, 0.68, 0, 0.15, 0.1, 0.18, tone("#ffd29a"), 8);
+    // A bookshelf at the other end, a plant by the front at that end.
+    parts.inside.box(fr, L.shelfX, 0, -d / 2 + 0.6, 0.5, 1.9, 0.9, WOOD);
+    const spine = Math.floor(r() * 4);
+    for (let k = 0; k < 4; k++) parts.inside.box(fr, L.shelfX + Math.sign(L.shelfX) * 0.1, 0.3 + k * 0.42, -d / 2 + 0.6, 0.32, 0.26, 0.8, [tone("#7a2a2a"), tone("#2a4a6a"), tone("#c8b070"), tone("#3a6a3a")][(k + spine) % 4]);
+    const pot = at(fr, Math.sign(L.shelfX) * (w / 2 - 0.35), 0, d / 2 - 0.45);
     parts.inside.cylinder({x: pot[0], y: room.floor, z: pot[2], rot: 0}, 0, 0, 0, 0.18, 0.14, 0.38, tone("#b0623a"), 8);
-    parts.inside.blob(pot[0], room.floor + 0.75, pot[2], 0.34, 0.42, 0.34, tone("#3f7a34"), hashText(room.id), 0);
-    // The pendant lamp over the table, and the pets' basket by the sofa.
+    parts.inside.blob(pot[0], room.floor + 0.7, pot[2], 0.3, 0.38, 0.3, tone("#3f7a34"), hashText(room.id), 0);
+    // The pendant lamp over the rug, and the pets' basket between the sofa and the bed.
     parts.inside.box(fr, su, h - 0.6, 0.25, 0.02, 0.56, 0.02, tone("#2a2a2a"));
     parts.glow.cylinder({...fr, ...{x: at(fr, su, 0, 0.25)[0], z: at(fr, su, 0, 0.25)[2]}}, 0, h - 0.82, 0, 0.22, 0.12, 0.22, tone("#ffd9a0"), 10);
-    const basket = at(fr, su + (sw / 2 + 0.45) * (end > 0 ? -1 : 1), 0, -d / 2 + 0.45);
-    parts.inside.cylinder({x: basket[0], y: room.floor, z: basket[2], rot: 0}, 0, 0, 0, 0.3, 0.28, 0.14, tone("#b89a6a"), 10);
+    if (L.basket) {
+        const basket = at(fr, L.basket.x, 0, L.basket.z);
+        parts.inside.cylinder({x: basket[0], y: room.floor, z: basket[2], rot: 0}, 0, 0, 0, 0.3, 0.28, 0.14, tone("#b89a6a"), 10);
+    }
 }
 
 /** The sites in use (each with the ids of its displays in use) drawn, and their floors for the drawn ground. */
