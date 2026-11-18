@@ -634,6 +634,16 @@
             "arkDay": "Ark दिन {day}",
             "broughtBy": "सवार कराने वाले: {name}",
             "fromLine": "{name} के वंश से"
+        },
+        "timeLeft": {
+            "title": "अनुमानित बचा समय",
+            "about": "लगभग {value}",
+            "hint": "संभावनाओं पर आधारित एक संभावित सीमा, वादा नहीं। 1 Ark दिन लगभग 55 असली मिनट के बराबर है।",
+            "reasonAge": "सामान्य आयु: {span}",
+            "reasonAgeEstimate": "सामान्य आयु, अनुमानित: {span}",
+            "reasonHunted": "यहाँ के शिकारी: {predators}",
+            "reasonHunger": "भूख: हाल में कोई भोजन नहीं",
+            "reasonSafe": "Ark दिन {day} तक शिकार से सुरक्षा"
         }
     },
     "talkPage": {

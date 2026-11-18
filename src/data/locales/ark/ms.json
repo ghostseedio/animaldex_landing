@@ -634,6 +634,16 @@
             "arkDay": "Hari Ark ke-{day}",
             "broughtBy": "Dibawa naik oleh {name}",
             "fromLine": "Daripada keturunan {name}"
+        },
+        "timeLeft": {
+            "title": "Anggaran masa berbaki",
+            "about": "Kira-kira {value}",
+            "hint": "Julat yang berkemungkinan berdasarkan peluang, bukan janji. 1 hari Ark ialah kira-kira 55 minit sebenar.",
+            "reasonAge": "Jangka hayat lazim: {span}",
+            "reasonAgeEstimate": "Jangka hayat lazim, anggaran: {span}",
+            "reasonHunted": "Pemangsa di sini: {predators}",
+            "reasonHunger": "Lapar: tiada makanan baru-baru ini",
+            "reasonSafe": "Perlindungan daripada pemburuan sehingga hari Ark ke-{day}"
         }
     },
     "talkPage": {

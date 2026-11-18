@@ -89,6 +89,14 @@ const CSS = `
 .arkl-meta{color:rgba(255,252,244,.66);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .arkl-hearts{color:#ff6b7a;font-size:12px;letter-spacing:1px}
 .arkl-hearts .off{color:rgba(255,255,255,.25)}
+.arkl-tl{margin-top:6px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.06)}
+.arkl-tl .hd{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.arkl-tl .tt{font:700 10.5px/1.2 ${FONT};letter-spacing:.08em;text-transform:uppercase;color:rgba(255,252,244,.55)}
+.arkl-tl .vv{font:700 13.5px/1.3 ${FONT};color:rgba(255,252,244,.98)}
+.arkl-tl ul{list-style:none;margin:4px 0 0;padding:0}
+.arkl-tl li{position:relative;padding-left:10px;color:rgba(255,252,244,.72);font-size:11.5px;line-height:1.35}
+.arkl-tl li::before{content:"";position:absolute;left:0;top:.55em;width:4px;height:4px;border-radius:2px;background:rgba(255,252,244,.4)}
+.arkl-tl .nn{margin:4px 0 0;color:rgba(255,252,244,.5);font-size:11px;font-style:italic;line-height:1.35}
 .arkl-talk{align-self:flex-start;margin-top:6px;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;min-height:32px;padding:6px 12px;border-radius:999px;background:#c8fa63;color:#14200c;font:700 12px/1 ${FONT};text-decoration:none;white-space:nowrap}
 .arkl-region{padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(14,20,14,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .arkl-rtop{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:700}
@@ -342,6 +350,13 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
         main.appendChild(el("span", "arkl-meta", origin));
         if (animal.hearts !== null) main.appendChild(heartsRow(animal.hearts));
         item.appendChild(main);
+        // "Estimated time left" (decision 389) for an animal that could be at risk: drawn by a lazily loaded module, nothing otherwise.
+        const full = snapshot?.animals.find((candidate) => candidate.id === animal.id);
+        if (full && (full.condition === "old" || full.condition === "hungry" || snapshot?.hunt_grace)) {
+            const slot = el("div", "arkl-tlslot");
+            main.appendChild(slot);
+            void import("@/lib/ark-time-left-dom").then(({fillArkTimeLeft}) => fillArkTimeLeft(slot, full, snapshot, words, locale, () => slot.isConnected && !disposed));
+        }
         // (Talk under its words, never beside: "Talk to an Oriental Latrine Fly" would leave the name no room.)
         const extras = arkSelectionExtras({
             animal: {name: animal.name, model_slug: animal.slug, placeholder: animal.placeholder, origin: animal.origin},

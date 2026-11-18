@@ -634,6 +634,16 @@
             "arkDay": "Arkin päivä {day}",
             "broughtBy": "Kyytiin toi {name}",
             "fromLine": "Suvusta, jonka toi {name}"
+        },
+        "timeLeft": {
+            "title": "Arvioitu jäljellä oleva aika",
+            "about": "Noin {value}",
+            "hint": "Todennäköinen vaihteluväli todennäköisyyksistä, ei lupaus. 1 Ark-päivä on noin 55 oikeaa minuuttia.",
+            "reasonAge": "Tyypillinen elinikä: {span}",
+            "reasonAgeEstimate": "Tyypillinen elinikä, arvio: {span}",
+            "reasonHunted": "Petoeläimet täällä: {predators}",
+            "reasonHunger": "Nälkä: ei ateriaa viime aikoina",
+            "reasonSafe": "Metsästyssuoja Ark-päivään {day} asti"
         }
     },
     "talkPage": {

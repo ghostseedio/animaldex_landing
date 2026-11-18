@@ -634,6 +634,16 @@
             "arkDay": "Ark ਦਿਨ {day}",
             "broughtBy": "ਸਵਾਰ ਕਰਾਉਣ ਵਾਲੇ: {name}",
             "fromLine": "{name} ਦੀ ਵੰਸ਼ ਵਿੱਚੋਂ"
+        },
+        "timeLeft": {
+            "title": "ਅੰਦਾਜ਼ਨ ਬਚਿਆ ਸਮਾਂ",
+            "about": "ਲਗਭਗ {value}",
+            "hint": "ਸੰਭਾਵਨਾਵਾਂ ਤੋਂ ਇੱਕ ਸੰਭਵ ਦਾਇਰਾ, ਵਾਅਦਾ ਨਹੀਂ। 1 Ark ਦਿਨ ਲਗਭਗ 55 ਅਸਲੀ ਮਿੰਟ ਹੁੰਦਾ ਹੈ।",
+            "reasonAge": "ਆਮ ਉਮਰ: {span}",
+            "reasonAgeEstimate": "ਆਮ ਉਮਰ, ਅੰਦਾਜ਼ਨ: {span}",
+            "reasonHunted": "ਇੱਥੇ ਦੇ ਸ਼ਿਕਾਰੀ ਜਾਨਵਰ: {predators}",
+            "reasonHunger": "ਭੁੱਖ: ਹਾਲ ਵਿੱਚ ਕੋਈ ਖਾਣਾ ਨਹੀਂ",
+            "reasonSafe": "Ark ਦਿਨ {day} ਤੱਕ ਸ਼ਿਕਾਰ ਤੋਂ ਸੁਰੱਖਿਆ"
         }
     },
     "talkPage": {

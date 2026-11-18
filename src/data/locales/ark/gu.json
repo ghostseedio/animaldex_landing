@@ -634,6 +634,16 @@
             "arkDay": "Ark દિવસ {day}",
             "broughtBy": "સવાર કરાવનાર: {name}",
             "fromLine": "{name} ના વંશમાંથી"
+        },
+        "timeLeft": {
+            "title": "અંદાજિત બાકી સમય",
+            "about": "આશરે {value}",
+            "hint": "સંભાવનાઓ પરથી શક્ય શ્રેણી, વચન નથી. 1 Ark દિવસ લગભગ 55 વાસ્તવિક મિનિટ બરાબર છે.",
+            "reasonAge": "સામાન્ય આયુષ્ય: {span}",
+            "reasonAgeEstimate": "સામાન્ય આયુષ્ય, અંદાજ: {span}",
+            "reasonHunted": "અહીંના શિકારી પ્રાણીઓ: {predators}",
+            "reasonHunger": "ભૂખ: તાજેતરમાં કોઈ ભોજન નથી",
+            "reasonSafe": "Ark દિવસ {day} સુધી શિકારથી રક્ષણ"
         }
     },
     "talkPage": {

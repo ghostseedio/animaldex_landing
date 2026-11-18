@@ -634,6 +634,16 @@
             "arkDay": "Dan Arka {day}",
             "broughtBy": "Ukrcao/la: {name}",
             "fromLine": "Iz loze koju je doveo/la: {name}"
+        },
+        "timeLeft": {
+            "title": "Procijenjeno preostalo vrijeme",
+            "about": "Oko {value}",
+            "hint": "Vjerojatan raspon iz vjerojatnosti, ne obećanje. 1 dan u Arku je oko 55 stvarnih minuta.",
+            "reasonAge": "Tipičan životni vijek: {span}",
+            "reasonAgeEstimate": "Tipičan životni vijek, procjena: {span}",
+            "reasonHunted": "Grabežljivci ovdje: {predators}",
+            "reasonHunger": "Glad: nema nedavnog obroka",
+            "reasonSafe": "Zaštita od lova do dana {day} u Arku"
         }
     },
     "talkPage": {

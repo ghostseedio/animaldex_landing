@@ -634,6 +634,16 @@
             "arkDay": "Ark {day}일째",
             "broughtBy": "탑승시킨 사람: {name}",
             "fromLine": "{name} 님의 혈통에서"
+        },
+        "timeLeft": {
+            "title": "예상 남은 시간",
+            "about": "약 {value}",
+            "hint": "확률로 본 가능성 높은 범위이며 약속이 아닙니다. Ark의 1일은 실제 약 55분입니다.",
+            "reasonAge": "일반적인 수명: {span}",
+            "reasonAgeEstimate": "일반적인 수명(추정): {span}",
+            "reasonHunted": "이곳의 포식자: {predators}",
+            "reasonHunger": "배고픔: 최근 식사 없음",
+            "reasonSafe": "Ark {day}일째까지 사냥 보호"
         }
     },
     "talkPage": {

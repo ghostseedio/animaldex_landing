@@ -634,6 +634,16 @@
             "arkDay": "روز {day} در Ark",
             "broughtBy": "سوارش کرد: {name}",
             "fromLine": "از تبار {name}"
+        },
+        "timeLeft": {
+            "title": "زمان باقی‌مانده (برآورد)",
+            "about": "حدود {value}",
+            "hint": "بازه‌ای محتمل بر پایهٔ احتمال‌ها، نه یک وعده. هر روز Ark حدود ۵۵ دقیقهٔ واقعی است.",
+            "reasonAge": "طول عمر معمول: {span}",
+            "reasonAgeEstimate": "طول عمر معمول، برآوردی: {span}",
+            "reasonHunted": "شکارچیان اینجا: {predators}",
+            "reasonHunger": "گرسنگی: وعدهٔ غذایی اخیر نبوده",
+            "reasonSafe": "حفاظت در برابر شکار تا روز Ark {day}"
         }
     },
     "talkPage": {

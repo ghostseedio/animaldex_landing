@@ -634,6 +634,16 @@
             "arkDay": "Ark 第 {day} 天",
             "broughtBy": "由 {name} 帶上船",
             "fromLine": "來自 {name} 的血統"
+        },
+        "timeLeft": {
+            "title": "預計剩餘時間",
+            "about": "約 {value}",
+            "hint": "根據機率得出的可能範圍，並非承諾。Ark 的 1 天約合現實中的 55 分鐘。",
+            "reasonAge": "常見壽命：{span}",
+            "reasonAgeEstimate": "常見壽命（估計）：{span}",
+            "reasonHunted": "這裡的掠食者：{predators}",
+            "reasonHunger": "飢餓：近期沒有進食",
+            "reasonSafe": "受狩獵保護，直至 Ark 第 {day} 天"
         }
     },
     "talkPage": {

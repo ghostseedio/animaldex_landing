@@ -634,6 +634,16 @@
             "arkDay": "Giorno {day} dell'Ark",
             "broughtBy": "Portato a bordo da {name}",
             "fromLine": "Dalla discendenza di {name}"
+        },
+        "timeLeft": {
+            "title": "Tempo rimasto stimato",
+            "about": "Circa {value}",
+            "hint": "Un intervallo probabile ricavato da probabilità, non una promessa. 1 giorno dell'Ark equivale a circa 55 minuti reali.",
+            "reasonAge": "Durata di vita tipica: {span}",
+            "reasonAgeEstimate": "Durata di vita tipica, stimata: {span}",
+            "reasonHunted": "Predatori qui: {predators}",
+            "reasonHunger": "Fame: nessun pasto recente",
+            "reasonSafe": "Protezione dalla caccia fino al giorno {day} dell'Ark"
         }
     },
     "talkPage": {

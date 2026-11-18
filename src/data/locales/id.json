@@ -4834,6 +4834,16 @@
       "arkDay": "Hari Ark ke-{day}",
       "broughtBy": "Dibawa naik oleh {name}",
       "fromLine": "Dari garis keturunan {name}"
+    },
+    "timeLeft": {
+      "title": "Perkiraan waktu tersisa",
+      "about": "Sekitar {value}",
+      "hint": "Kisaran yang mungkin berdasarkan peluang, bukan janji. 1 hari Ark sekitar 55 menit waktu nyata.",
+      "reasonAge": "Umur khas: {span}",
+      "reasonAgeEstimate": "Umur khas, perkiraan: {span}",
+      "reasonHunted": "Pemangsa di sini: {predators}",
+      "reasonHunger": "Lapar: belum makan baru-baru ini",
+      "reasonSafe": "Terlindung dari perburuan sampai hari Ark ke-{day}"
     }
   },
   "seo": {
