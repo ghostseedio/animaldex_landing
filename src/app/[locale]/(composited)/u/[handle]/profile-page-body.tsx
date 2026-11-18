@@ -85,7 +85,9 @@ async function getOwnerHistoryCaptures(): Promise<PublicProfileCapture[] | null>
         speciesProfileId: capture.speciesProfileId?.toLowerCase() ?? null,
         isMovingMedia: false,
         // `owned_capture_manifest_v1.total_progression_xp` arrives as the summary's score.
-        level: animalLevel(capture.score)
+        level: animalLevel(capture.score),
+        starScore: capture.starScore ?? null,
+        captureGrade: capture.captureGrade ?? null
     }));
 }
 

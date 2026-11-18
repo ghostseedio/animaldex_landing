@@ -108,7 +108,9 @@ test("the owner's library, top captures and Discover narrow selects carry captur
     const captures = read("../data/user-captures.ts");
     // The manifest's grade is the view's last column (migration 20261129120000); a database
     // without it falls back to the same read without the grade rather than failing the library.
-    assert.match(captures, /USER_CAPTURE_MANIFEST_SELECT = \[\.\.\.USER_CAPTURE_MANIFEST_SELECT_BASE, "capture_grade"\]/);
+    assert.match(captures, /USER_CAPTURE_MANIFEST_SELECT = \[\.\.\.USER_CAPTURE_MANIFEST_SELECT_BASE, "capture_grade", "capture_stars", "star_score"\]/);
+    // GRADING-4: without the star columns (before 20261202100000) the grade still loads.
+    assert.match(captures, /USER_CAPTURE_MANIFEST_SELECT_NO_STARS = \[\.\.\.USER_CAPTURE_MANIFEST_SELECT_BASE, "capture_grade"\]/);
     assert.match(captures, /USER_CAPTURE_MANIFEST_SELECT_NO_GRADE/);
     assert.match(captures, /captureGrade: storedCaptureGrade\(row\.capture_grade\)/);
 

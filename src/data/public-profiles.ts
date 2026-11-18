@@ -9,6 +9,8 @@ import {countCaptureSettingLabels, getCaptureContextLabel} from "@/lib/capture-s
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 import {animalLevel} from "@/lib/animal-level";
 import {parseCaptureGridSort, type ProfileCaptureGridSort} from "@/lib/profile-editor";
+import {captureStarScore} from "@/lib/capture-star-rating";
+import {storedCaptureGrade} from "@/lib/capture-grade-value";
 
 const PUBLIC_PROFILE_REVALIDATE_SECONDS = 60;
 const HANDLE_PATTERN = /^[a-z0-9](?:[a-z0-9._-]{0,28}[a-z0-9])?$/;
@@ -32,6 +34,9 @@ type ProfileRow = {
 
 type PublicCaptureRow = {
     capture_id: string;
+    capture_grade?: number | null;
+    capture_stars?: number | null;
+    star_score?: number | string | null;
     animal_name: string | null;
     normalized_identity_key: string | null;
     species_profile_id?: string | null;
@@ -179,6 +184,9 @@ export type PublicProfileCapture = {
     isMovingMedia: boolean;
     /** Animal level (iOS `AnimalCapture.level`) for the grid's Lv chip; absent when unknown. */
     level?: number;
+    /** The server's stored star score (GRADING-4) and grade, for the grid's star order. */
+    starScore?: number | null;
+    captureGrade?: number | null;
 };
 
 export type ProfileBestForTag = {
@@ -336,15 +344,26 @@ function getConfig() {
     return url && key ? {url, key} : null;
 }
 
+const STAR_COLUMNS = ",capture_stars,star_score";
+
 async function fetchRows<T>(table: string, params: URLSearchParams) {
     const config = getConfig();
     if (!config) return [] as T[];
 
     try {
-        const response = await fetch(`${config.url}/rest/v1/${table}?${params}`, {
+        const read = (query: URLSearchParams) => fetch(`${config.url}/rest/v1/${table}?${query}`, {
             headers: getSupabaseHeaders(config.key),
             next: {revalidate: PUBLIC_PROFILE_REVALIDATE_SECONDS}
         });
+        let response = await read(params);
+        // A database without migration 20261202100000 (GRADING-4) has no star columns:
+        // read the same rows without them (no star order) rather than an empty profile.
+        const select = params.get("select") ?? "";
+        if (!response.ok && select.includes(STAR_COLUMNS)) {
+            const withoutStars = new URLSearchParams(params);
+            withoutStars.set("select", select.replace(STAR_COLUMNS, ""));
+            response = await read(withoutStars);
+        }
         if (!response.ok) return [] as T[];
         const rows = await response.json();
         return Array.isArray(rows) ? rows as T[] : [] as T[];
@@ -449,7 +468,9 @@ function toPublicCapture(
         animalDexNumber: animalDexNumber != null && animalDexNumber >= 1 ? animalDexNumber : null,
         speciesProfileId: row.species_profile_id?.trim().toLowerCase() || null,
         isMovingMedia: Boolean(row.image_media_kind && row.image_media_kind !== "photo"),
-        level: animalLevel(Number(row.total_progression_xp ?? 0))
+        level: animalLevel(Number(row.total_progression_xp ?? 0)),
+        starScore: captureStarScore(row.star_score),
+        captureGrade: storedCaptureGrade(row.capture_grade)
     };
 }
 
@@ -746,7 +767,10 @@ export async function getPublicProfileCard(rawHandle: string): Promise<PublicPro
         "intelligence_boost",
         "identity_kind",
         "image_media_kind",
-        "total_progression_xp"
+        "total_progression_xp",
+        "capture_grade",
+        "capture_stars",
+        "star_score"
     ].join(",");
 
     const topCaptureParams = new URLSearchParams({

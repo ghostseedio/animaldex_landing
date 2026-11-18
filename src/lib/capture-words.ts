@@ -237,6 +237,7 @@ export const CAPTURE_WORDS_EN = {
         talkToIt: "Talk to it",
         share: "Share",
         starsOf: "{n} of {max} stars",
+        starsHelp: "Stars show how special the find is: how rare the species is, the photo grade, wild or zoo, and community votes once a few people have rated.",
         addedTo: "Added to",
         viewBinder: "View Binder",
         newSpeciesDiscovered: "New species discovered",

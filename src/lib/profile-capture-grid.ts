@@ -14,6 +14,10 @@ export type ProfileGridCapture = {
     animalDexNumber: number | null;
     isMovingMedia: boolean;
     level?: number;
+    /** The server's stored star score (GRADING-4); null/absent sorts after every scored card. */
+    starScore?: number | null;
+    /** The stored grade (GRADING-1): the tie-break within a star score. */
+    captureGrade?: number | null;
 };
 
 export type ProfileGridItem<T extends ProfileGridCapture = ProfileGridCapture> = {
@@ -36,8 +40,9 @@ export function formatAnimalDexNumber(value: number) {
 /**
  * The grid in the owner's order. Recent and index group by AnimalDex index;
  * custom (iOS `customOrderedSnapshot`) is one cell per chosen capture, in the
- * order they were tapped, and nothing else. Star order needs each card's star
- * rating, which the web does not read yet: it shows newest first.
+ * order they were tapped, and nothing else. Star order is the stored star
+ * score (highest first), then the stored grade, then newest; cards with no
+ * stored score come last.
  */
 export function buildProfileGridItems<T extends ProfileGridCapture>(
     captures: T[],
@@ -85,6 +90,13 @@ export function buildProfileGridItems<T extends ProfileGridCapture>(
     });
 
     return items.sort((a, b) => {
+        if (sort === "stars") {
+            const left = a.representative.starScore ?? Number.NEGATIVE_INFINITY;
+            const right = b.representative.starScore ?? Number.NEGATIVE_INFINITY;
+            if (left !== right) return right - left;
+            const byGrade = (b.representative.captureGrade ?? 0) - (a.representative.captureGrade ?? 0);
+            if (byGrade) return byGrade;
+        }
         if (sort === "index") {
             const left = a.animalDexNumber ?? Number.POSITIVE_INFINITY;
             const right = b.animalDexNumber ?? Number.POSITIVE_INFINITY;
