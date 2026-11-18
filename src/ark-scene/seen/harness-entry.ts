@@ -194,7 +194,8 @@ async function main() {
         ready: true,
         now,
         counts: () => ({animals: real.animals.length, wild: wild().length, events: rows.length, loading: handle.loading()}),
-        lines: (kind: string, n: number): string[] => (kind === "meal" || kind === "escaped" ? make(kind, n) : kind === "mated" || kind === "birth" || kind === "death" || kind === "extinct" ? own(kind, n) : []),
+        // (A mating's lines with a few to spare: the ones the layer itself skips are counted and passed over.)
+        lines: (kind: string, n: number): string[] => (kind === "meal" || kind === "escaped" ? make(kind, n) : kind === "mated" ? own(kind, n + 12) : kind === "birth" || kind === "death" || kind === "extinct" ? own(kind, n) : []),
         plan: (id: string) => planArkEventReplay(id, rows, worldFor(id), {now}),
         /** The record arrives, the clock runs on to a little before the act's telling part, the line is tapped. */
         prepare: async (id: string) => {
@@ -237,6 +238,9 @@ async function main() {
             const mating = plan.feed.matings ? acts?.matings.find((m) => m.key === plan.feed.matings![0].key) : null;
             const tapAt = plan.kind === "mated" ? (mating && typeof mating.meet === "number" ? Math.max(mating.meet - 8, 24) : 24) : plan.kind === "birth" ? (plan.feed.play ? 24 : -8) : plan.kind === "death" || plan.kind === "extinct" ? -6 : -11;
             if (tapAt > since()) run(tapAt - since(), 0.5);
+            // (A pair the mating layer itself does not walk, housed in a tank or a cage, or more than 160 m apart: said, not filmed.)
+            const taken = plan.feed.matings ? handle.liveActs?.().matings.find((m) => m.key === plan.feed.matings![0].key) : null;
+            if (plan.feed.matings && (!taken || taken.phase === "skipped")) return {kind: plan.kind, at: plan.at, t0: plan.t0, tapAt: Math.round(since() * 10) / 10, line: null, lines: live.lines.length, watching: false, skipped: true, seen: null, cast: []};
             // (A real half second for the log's own beat: a line whose time is up has gone, as on a viewer's page.)
             await pause(700);
             const line = lineNow();
@@ -246,7 +250,7 @@ async function main() {
                 live.focus(line);
                 current.tapped = Boolean(live.seenNow?.watching());
             }
-            return {kind: plan.kind, at: plan.at, t0: plan.t0, tapAt: Math.round(since() * 10) / 10, line: line ? {id: line.id, kind: line.kind} : null, lines: live.lines.length, watching: current.tapped, seen: before, cast: plan.cast.map((member) => ({id: member.record.id, role: member.role, name: member.record.name, slug: member.record.model_slug, aboard: member.aboard, zone: member.record.zone, island: member.record.island ?? null, length: displayLength(member.record.model_slug, null), located: Boolean(handle.locate(member.record.id))}))};
+            return {kind: plan.kind, at: plan.at, t0: plan.t0, tapAt: Math.round(since() * 10) / 10, line: line ? {id: line.id, kind: line.kind} : null, lines: live.lines.length, watching: current.tapped, skipped: false, seen: before, cast: plan.cast.map((member) => ({id: member.record.id, role: member.role, name: member.record.name, slug: member.record.model_slug, aboard: member.aboard, zone: member.record.zone, island: member.record.island ?? null, length: displayLength(member.record.model_slug, null), located: Boolean(handle.locate(member.record.id))}))};
         },
         frame: (quality = 0.86, step = 1) => {
             const frames = Math.max(Math.round(step), 1);
