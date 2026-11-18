@@ -875,7 +875,7 @@ export class TownHumans {
         }
         // Humans visible: the night's few out (`nightRota`): by their own door under the lamps, on a lamp-lit bench, or a
         // walk round the block; lit a little by the street lamps.
-        const busy = new Set<string>([...together, ...walking]);
+        const busy = new Set<string>(Array.from(together).concat(Array.from(walking)));
         const rota = new Set(nightRota(this.roster, clock, (id) => (this.options.away?.(id, epochMs) ? "work" : days.get(id)), busy));
         this.nightNow = clock.hours >= 18 || clock.hours < 7;
         for (const id of this.roster) {
