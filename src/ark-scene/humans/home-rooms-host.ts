@@ -6,9 +6,13 @@
  * the scene draws the flats people live in as it draws those pets live in, so a person at home or asleep is seen.
  */
 
-import {apartmentLayout, type HomeRoom} from "@/ark-scene/islands/town/home-rooms";
+import {Color} from "three";
+import {apartmentLayout, DUVET_HEX, type HomeRoom} from "@/ark-scene/islands/town/home-rooms";
 import {hashText, type Box} from "@/ark-scene/islands/town/geom";
 import type {HumanRoom, HumanRoomHost, Spot} from "@/ark-scene/humans/town-humans";
+
+/** A sleeper's head rests this far toward the foot of the pillow's middle (m): the crown clear of the headboard. */
+export const SLEEP_HEAD_SHORT = 0.07;
 
 /** The homes lane's `HomeRoom`, as much of it as people need. */
 export type HomeRoomLike = Pick<HomeRoom, "id" | "shell" | "floor"> & {kind: string};
@@ -40,13 +44,15 @@ export function apartmentHumanRoom(room: HomeRoomLike): HumanRoom | null {
     const tx = su + side * Math.min(1.5, sw / 2 + 0.5);
     const tz = b.d / 2 - 0.5;
     const tv = at(b, tx, tz, room.floor + 0.42, Math.atan2(su - tx, seatZ - tz));
-    // The bed: a sleeper's root at the foot end, lying toward the head (the rigged lying clips lay the body back from the
-    // root: `sunback`'s towel runs from the feet backward), one each side of its middle. Facing: from the head to the foot.
+    // The bed (humans polish, 2026-11-18): where each sleeper's head rests, on their pillow, one each side of the bed's
+    // middle, at the mattress's top; the town lays the body from there toward the foot (`sleeperRoot`), straight along
+    // the bed. Facing: from the head to the foot.
     const bed = L.bed;
-    const foot = bed.x - L.bedSide * (bed.length / 2 - 0.12);
+    const pillow = bed.x + L.bedSide * (bed.length / 2 - 0.26 - SLEEP_HEAD_SHORT);
     const toFoot = L.bedSide > 0 ? -Math.PI / 2 : Math.PI / 2;
-    const beds = [-1, 1].map((k) => at(b, foot, bed.z + k * bed.width * 0.24, room.floor + bed.top - 0.02, toFoot));
-    return {id: room.id, floor: room.floor, seats, tv, chairs: [], beds, front: Math.atan2(-Math.sin(b.rot), Math.cos(b.rot))};
+    const beds = [-1, 1].map((k) => at(b, pillow, bed.z + k * bed.width * 0.25, room.floor + bed.top, toFoot));
+    const duvet = new Color(DUVET_HEX[Math.floor(L.duvetColour * DUVET_HEX.length)]);
+    return {id: room.id, floor: room.floor, seats, tv, chairs: [], beds, duvet: [duvet.r, duvet.g, duvet.b], front: Math.atan2(-Math.sin(b.rot), Math.cos(b.rot))};
 }
 
 /**
