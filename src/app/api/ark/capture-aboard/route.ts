@@ -22,7 +22,7 @@ const HEADERS = {"Cache-Control": "private, no-store"} as const;
 export async function GET(request: Request) {
     if (!requestHasSupabaseAuthCookie(cookies().getAll())) return NextResponse.json({aboard: {}}, {headers: HEADERS});
     const raw = new URL(request.url).searchParams.get("captures") ?? "";
-    const ids = [...new Set(raw.split(",").map((id) => id.trim().toLowerCase()).filter(Boolean))];
+    const ids = Array.from(new Set(raw.split(",").map((id) => id.trim().toLowerCase()).filter(Boolean)));
     if (!ids.length) return NextResponse.json({aboard: {}}, {headers: HEADERS});
     if (ids.length > ARK_ABOARD_SERVER_MAX || !ids.every(isArkAboardId)) return NextResponse.json({aboard: {}}, {status: 400, headers: HEADERS});
     const supabase = createSupabaseServerClient();

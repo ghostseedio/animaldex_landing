@@ -84,7 +84,7 @@ export function createArkAboardStore(options: StoreOptions): ArkAboardStore {
     let running: Promise<void> | null = null;
 
     function emit() {
-        for (const listener of listeners) listener();
+        listeners.forEach((listener) => listener());
     }
 
     async function drain(): Promise<void> {

@@ -8,15 +8,19 @@ import type {DiscoverCaptureItem} from "@/data/discover-timeline";
 const ABOARD_CAPTURE = "0a0a0a0a-0000-4000-8000-000000000001";
 const ABOARD_ANIMAL = "5b0f2a9e-0f6e-4c1a-9a43-3a2d4f1b7c11";
 
+function jsonResponse(body: unknown): Response {
+    return new Response(JSON.stringify(body), {headers: {"content-type": "application/json"}});
+}
+
 if (typeof window !== "undefined") {
     const original = window.fetch.bind(window);
     window.fetch = (input, init) => {
         const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
         if (url.startsWith("/api/ark/capture-aboard")) {
-            return Promise.resolve(Response.json({aboard: {[ABOARD_CAPTURE]: ABOARD_ANIMAL}}));
+            return Promise.resolve(jsonResponse({aboard: {[ABOARD_CAPTURE]: ABOARD_ANIMAL}}));
         }
         if (url.startsWith("/api/app/discover/ranking-siblings")) {
-            return Promise.resolve(Response.json({items: [], hasMore: false, nextOffset: null}));
+            return Promise.resolve(jsonResponse({items: [], hasMore: false, nextOffset: null}));
         }
         return original(input, init);
     };
