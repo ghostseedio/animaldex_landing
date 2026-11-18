@@ -16,6 +16,7 @@ import type {ArkFounders} from "@/lib/ark-founders";
 import {decodeArkEvents} from "@/lib/ark-life";
 import {arkLiveLineText} from "@/lib/ark-live-log";
 import {crisisText} from "@/ark-scene/live/crisis-lines";
+import {escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
 import {arkLiveTextOf, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
 import {ARK_LITE_FEED_BACK_MS, ARK_LITE_FEED_LONG, ARK_LITE_FEED_POLL_MS, ARK_LITE_FEED_SHORT, arkLiteFeedFromEvents, arkLiteFeedLines, arkLiteFeedMerge, arkLiteFeedSeed, type ArkLiteFeedEntry} from "@/lib/ark-lite-feed";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
@@ -248,7 +249,8 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
             const fresh = !first && !drawn.has(line.id);
             const item = el("li", `arkl-ev${fresh ? " new" : ""}`);
             item.appendChild(icon("i", line.slug, options.iconUrl));
-            item.appendChild(el("span", "t", crisisText(line.item, text) ?? arkLiveLineText(line.item, text, locale)));
+            // (V1: an escape's own words, both animals named, as the 3D log says it; E4: the crisis layer's.)
+            item.appendChild(el("span", "t", crisisText(line.item, text) ?? escapeText(line.item, text) ?? arkLiveLineText(line.item, text, locale)));
             item.appendChild(el("span", "ago", arkAgoText(line.at, now, locale)));
             list.appendChild(item);
         }
@@ -287,6 +289,17 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
                 more = body.more === true && newest > cursor;
                 cursor = newest;
                 feed = arkLiteFeedMerge(feed, arkLiteFeedFromEvents(events));
+                // V1: the record's escapes too (the 3D log reads them from the rows, `escape-lines.ts`): "A Plains Zebra got
+                // away from an African Lion". Words only here: Ark Lite has no world to act them in.
+                const rows = Array.isArray(body.events) ? body.events as Array<{id?: unknown; kind?: unknown; at?: unknown; animal?: {model_slug?: unknown} | null}> : [];
+                const escapes = escapeItems(rows, -Infinity, () => false).flatMap((item) => {
+                    const row = rows.find((candidate) => candidate && candidate.kind === "escaped" && `event:${String(candidate.id)}` === item.id);
+                    return row && typeof row.at === "string" ? [{id: String(item.id), at: row.at, item, slug: typeof row.animal?.model_slug === "string" ? row.animal.model_slug : null}] : [];
+                });
+                if (escapes.length) {
+                    for (const entry of escapes) cursor = Math.max(cursor, Date.parse(entry.at) || 0);
+                    feed = arkLiteFeedMerge(feed, escapes);
+                }
             })
             .catch(() => {
                 feedOk = false;
@@ -424,6 +437,8 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
                 who.appendChild(by);
             }
             if (animal.mine) who.appendChild(el("span", "you", lite.you));
+            // V1 (E3's `lone`, only while the last-animal rules are on): a lone founder, said in words.
+            if (animal.lone) who.appendChild(el("span", "you", (lite as {lone?: string}).lone ?? "Lone"));
             row.appendChild(who);
             row.appendChild(el("span", "ago", arkAgoText(animal.arrivedAt, now, locale)));
             list.appendChild(row);

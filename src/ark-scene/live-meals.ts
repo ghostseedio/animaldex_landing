@@ -5,8 +5,12 @@
  *
  * The scene never decides a kill: a meal comes from the hunting read (`voyage_hunting_v1`'s recent meals with their
  * geometry) and the event log's records of the two animals. The server works the world out on its tick (every 10
- * minutes), so a meal is known up to that long after its step: the layer draws whatever part of it is still going on
- * (a long feed, the rest, the scavengers, the traces), and nothing of one already over.
+ * minutes), so a meal is known up to that long after its step. V1 (the audit's §2.4 "hold the live chase until the
+ * record arrives"): the act is HELD until the record is out (`ark-act-hold.ts` `arkActStart`: the row's own time and a
+ * page's refresh), so the chase is seen by whoever is watching, not only the feeding after it. Until then the two go
+ * on with their day (the eaten one stands in, `replay/cast.ts`); in the last `APPROACH_SECONDS` each walks from where
+ * its day has it to where the record's encounter starts the chase, when that is near enough to walk (else it is
+ * simply there at the start, as before). A viewer who comes later sees whatever part of it is still going on.
  *
  * The scene (`index.ts`) gives it its entries through `LiveMealsHost`; this layer only says, per frame, which act pose
  * each of them takes (the replay's own `entry.act`), so nothing here touches the renderer.
@@ -16,6 +20,7 @@ import type {ActPose, ChaseKind, MealStage} from "@/ark-scene/acts";
 import {mealScript, predatorAt, preyAt, scavengeVisit, scavengerAt, type MealCatch, type MealScript, type ScavengeVisit} from "@/ark-scene/meal-acts";
 import {pickScavengers, scavengeSeconds, type MealPlan, type ScavengerCandidate, type TraceKind} from "@/ark-scene/meals";
 import type {ArkAct} from "@/lib/ark-life";
+import {arkActStartOf} from "@/lib/ark-act-hold";
 
 export type MealAct = Extract<ArkAct, {kind: "meal"}>;
 
@@ -70,6 +75,10 @@ type Live<E> = {
     ghost: E | null;
     /** Everyone the layer is acting now (to hand back when it stops). */
     acting: Set<E>;
+    /** Where each one's day had it when its walk to the chase's start began (`approachPose`); null: not walked. */
+    lead?: {predator: From | null; prey: From | null};
+    /** V1: added from the event log (`add`), kept whatever the hunting read lists. */
+    logged?: boolean;
 };
 
 export type LiveTrace = {key: string; x: number; y: number; z: number; kind: TraceKind; flattened: boolean; size: number; amount: number; alpha: number; seed: string};
@@ -95,19 +104,72 @@ function backTo(from: ActPose, to: {x: number; z: number; y: number; yaw: number
 
 const RETURN_MIN = 3;
 const RETURN_MAX = 25;
+/** The walk to where the chase starts: this long before it (s), only from within this many times its walk over that time. */
+export const APPROACH_SECONDS = 14;
+/** A meal the log added is kept this long after its start (s): the hunting read's own window. */
+const LOGGED_SECONDS = 7200;
+const APPROACH_REACH = 2.5;
+
+type From = {x: number; z: number; y: number; yaw: number};
+
+/**
+ * On its way to where the record's chase starts (pure in its day's place when the walk began, the start and `k`): a
+ * walk over the ground (or straight through the air or the water for one that is off it), turned to the start's own
+ * heading as it gets there. Null when the start is too far to walk in the time.
+ */
+export function approachPose(from: From, to: ActPose, k: number, walk: number, ground: (x: number, z: number) => number): ActPose | null {
+    const d = Math.hypot(to.x - from.x, to.z - from.z);
+    if (d > Math.max(walk, 0.3) * APPROACH_SECONDS * APPROACH_REACH) return null;
+    const e = ease(k);
+    const x = from.x + (to.x - from.x) * e;
+    const z = from.z + (to.z - from.z) * e;
+    const onGround = Math.abs(from.y - ground(from.x, from.z)) < 0.3 && Math.abs(to.base - ground(to.x, to.z)) < 0.3;
+    const base = onGround ? ground(x, z) : from.y + (to.base - from.y) * e;
+    const along = d > 0.05 ? Math.atan2(to.x - from.x, to.z - from.z) : to.yaw;
+    const turn = ease((k - 0.8) / 0.2);
+    const yaw = along + Math.atan2(Math.sin(to.yaw - along), Math.cos(to.yaw - along)) * turn;
+    // (Its pace eases in and out with the way: the derivative of the ease.)
+    const speed = (d / APPROACH_SECONDS) * 6 * Math.min(Math.max(k, 0), 1) * (1 - Math.min(Math.max(k, 0), 1));
+    return {x, z, base, yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: onGround ? (d < 0.05 ? "scan" : "walk") : to.base < -0.02 ? "swim" : "fly", speed};
+}
 
 export class LiveMeals<E> {
     private meals: Live<E>[] = [];
 
     constructor(private readonly host: LiveMealsHost<E>) {}
 
+    /**
+     * V1: meals straight from the event log as it is read (the hunting read comes up to a refresh later, and by then
+     * the held chase may have begun): added to the set, never replacing it. One the set already has (the same hunter
+     * and prey) is left as it is; one added here stays until it is long over, whatever the hunting read then lists.
+     */
+    add(acts: MealAct[], epoch: number): void {
+        // (Kept while its traces may still show: the hunting read's own window.)
+        this.meals = this.meals.filter((m) => !m.logged || epoch - m.t0 < LOGGED_SECONDS || (this.stop(m), false));
+        for (const act of acts) {
+            const t0 = arkActStartOf(act.at, act.encounter?.t);
+            if (!Number.isFinite(t0) || epoch - t0 > LOGGED_SECONDS) continue;
+            if (this.meals.some((m) => m.act.predator.id === act.predator.id && m.act.prey.id === act.prey.id && Math.abs(m.t0 - t0) < LOGGED_SECONDS)) continue;
+            this.meals.push({key: `${act.predator.id}>${act.prey.id}@${act.encounter?.t ?? act.at}`, act, t0, built: null, failed: false, over: false, ghost: null, acting: new Set(), logged: true});
+        }
+        this.meals.sort((a, b) => a.t0 - b.t0);
+    }
+
     /** The meals to act (from the hunting read and the event log); one no longer named stops (its animals let go). */
     set(acts: MealAct[]): void {
         const keyOf = (act: MealAct) => `${act.predator.id}>${act.prey.id}@${act.encounter?.t ?? act.at}`;
         const keep = new Map(this.meals.map((m) => [m.key, m]));
         const next: Live<E>[] = [];
+        // (V1: what the log added stays, and is not doubled by the read's row of the same meal.)
+        for (const m of this.meals) {
+            if (!m.logged) continue;
+            next.push(m);
+            keep.delete(m.key);
+        }
         for (const act of acts) {
-            const t0 = act.encounter?.t ?? Date.parse(act.at) / 1000;
+            if (next.some((m) => m.logged && m.act.predator.id === act.predator.id && m.act.prey.id === act.prey.id)) continue;
+            // (Held until the record is out, `ark-act-hold.ts`; never before the encounter's own step.)
+            const t0 = arkActStartOf(act.at, act.encounter?.t);
             if (!Number.isFinite(t0)) continue;
             const key = keyOf(act);
             next.push(keep.get(key) ?? {key, act, t0, built: null, failed: false, over: false, ghost: null, acting: new Set()});
@@ -190,7 +252,11 @@ export class LiveMeals<E> {
         const h = this.host;
         for (const m of this.meals) {
             const s = epoch - m.t0;
-            if (s < 0 || m.failed) continue;
+            if (m.failed) continue;
+            if (s < 0) {
+                if (s >= -APPROACH_SECONDS && !replaying(m.act.predator.id) && !replaying(m.act.prey.id)) this.approach(m, s, epoch);
+                continue;
+            }
             if (!m.built) {
                 m.built = this.build(m);
                 if (!m.built) {
@@ -255,6 +321,48 @@ export class LiveMeals<E> {
             });
             m.acting = acting;
         }
+    }
+
+    /**
+     * The last seconds before the chase: each of the two on its way from where its day had it to where the record's
+     * encounter starts them (the eaten one's stand-in takes over from the one in the roster here, where that one stood).
+     */
+    private approach(m: Live<E>, s: number, epoch: number): void {
+        const h = this.host;
+        const predator = h.find(m.act.predator.id);
+        if (!predator || h.busy(predator)) return;
+        if (!m.lead) {
+            // (Where the prey's day has it, asked before its stand-in hides the one in the roster.)
+            const living = h.find(m.act.prey.id);
+            const start = m.t0 - APPROACH_SECONDS;
+            const preyFrom = living ? h.scheduleAt(living, start) : null;
+            const predatorFrom = h.scheduleAt(predator, start);
+            m.built ??= this.build(m);
+            if (!m.built) return;
+            m.lead = {predator: predatorFrom, prey: preyFrom};
+        }
+        const b = m.built;
+        if (!b) return;
+        const k = (s + APPROACH_SECONDS) / APPROACH_SECONDS;
+        const acting = new Set<E>();
+        const p0 = b.stage.predator(0);
+        const walked = p0 && m.lead.predator ? approachPose(m.lead.predator, p0, k, h.walk(predator), h.ground) : null;
+        if (walked) {
+            h.setAct(predator, {...walked, with: m.act.prey.id});
+            acting.add(predator);
+        }
+        if (m.ghost) {
+            h.hold(m.ghost, false);
+            const q0 = b.stage.prey(0);
+            const own = m.lead.prey ? approachPose(m.lead.prey, q0, k, h.walk(m.ghost), h.ground) : null;
+            // (Too far to walk, or its day unknown: it is at the start, as it always was.)
+            h.setAct(m.ghost, own ?? {...q0, with: m.act.predator.id});
+            acting.add(m.ghost);
+        }
+        m.acting.forEach((e) => {
+            if (!acting.has(e)) h.setAct(e, null);
+        });
+        m.acting = acting;
     }
 
     /** Walking (or flying) back to where its schedule has it, from `since`; null once there (its schedule's again). */

@@ -76,6 +76,11 @@ export type ArkLiveItem = {
     say?: "dormant" | "woke" | "escaped" | "deforested" | "dated" | "moved_in";
     /** A species' own sentence for what it is seen doing (`src/ark-scene/live/signature-lines.ts`): said as it is. */
     line?: string;
+    /**
+     * V1: how long the line stays once shown (ms), when longer than its kind's own: a line whose act is still to be
+     * watched (a held chase begins a minute after its record, `ark-act-hold.ts`) is there to be tapped until it has begun.
+     */
+    stay?: number;
     focus: ArkLiveFocus;
 };
 
@@ -370,7 +375,7 @@ export class ArkLiveLog {
     step(now: number): boolean {
         let changed = false;
         const before = this.lines.length;
-        this.lines = this.lines.filter((line) => now - line.updatedAt < (line.source === "server" ? this.options.serverLife : line.source === "now" ? this.options.nowLife : this.options.seenLife));
+        this.lines = this.lines.filter((line) => now - line.updatedAt < Math.max(line.source === "server" ? this.options.serverLife : line.source === "now" ? this.options.nowLife : this.options.seenLife, line.stay ?? 0));
         if (this.lines.length !== before) changed = true;
         // Seen items that waited too long are no longer happening.
         const queued = this.queue.length;

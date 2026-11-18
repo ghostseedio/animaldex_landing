@@ -335,6 +335,10 @@ const STREAM_RECHECK_SECONDS = 2;
 const FOV = 38;
 // (True scale, motion pass §3: the camera's reach is `runtime/camera.ts` CAMERA_RANGE, per world in `islands/views.ts` wildFrame.)
 const ENTRANCE_SECONDS = 1.6;
+/** V1: the departure fade (see `departing`): how long one that left the Ark stays as it stood, its fade, and how many at once. */
+const DEPART_HOLD_SECONDS = 0.9;
+const DEPART_FADE_SECONDS = 2.6;
+const DEPART_MOST = 12;
 const RIPPLE_SECONDS = 2.6;
 /** A clutch being laid, in a replay. */
 const LAID_SECONDS = 2.6;
@@ -1384,6 +1388,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let shotClosest: number | null = null;
     /** Meal ids pinned (drawn one by one) while the live world acts them. */
     let mealPins = new Set<string>();
+    /**
+     * V1 (the audit's §2.4 "departure fade instead of the instant vanish"): an animal that has left the Ark between two
+     * reads (recovering, moved to the other island, its record not read yet) stays where it stood for
+     * `DEPART_HOLD_SECONDS` (the record that says why, read just after, takes it over meanwhile: a death's act, a
+     * meal's, the cast's stand-in), then fades into the haze over `DEPART_FADE_SECONDS`. Only the drawing.
+     */
+    let departing: Array<{ghost: Entry; from: number; pose: ActPose}> = [];
     // 3.3 batch (D): the limp of an animal that got away (`live-escapes.ts`), asked by the draw; null until the escapes' layer is up.
     let escapeLimp: ((id: string, epoch: number, moving: boolean, length: number, out: LimpOffsets) => boolean) | null = null;
     const limpNow: LimpOffsets = {drop: 0, roll: 0, pitch: 0};
@@ -2531,7 +2542,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (Its hearts, the owner's own, in the signature: a heart restored shows at once.)
         const signature = `${arkStatusSignature(selectedStatus)}|h${heartsOf(entry.animal.id) ?? ""}`;
         // Who brought it and its Talk link (the host's, from its founders read, which can land after the selection).
-        const extras = selectionExtrasOf(entry.animal);
+        const hostExtras = selectionExtrasOf(entry.animal);
+        // V1: its mark, from the cast when one is in (`seen/`: the last of its kind in the wild, a lone founder).
+        const mark = cast?.label?.(entry.animal.id) ?? null;
+        const extras = mark ? {byline: hostExtras?.byline ?? null, talk: hostExtras?.talk ?? null, mark} : hostExtras;
         const extrasSignature = extras ? JSON.stringify(extras) : "";
         // (Its rhythm's dot, lane ark-sd-align: a few milliseconds a second until it is whole, then remembered.)
         const rhythm = rhythmOf(entry, 4, false);
@@ -3030,7 +3044,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (nextById.has(id) || gone.ghost) return;
             departed.set(id, gone);
             if (departed.size > 64) departed.delete(departed.keys().next().value as string);
+            // V1: gone from the Ark (not merely from the live set) while it was drawn: it fades where it stood.
+            if (!aboard.has(id) && animalsIn && gone.middle && !gone.held && !gone.visitor && !gone.act?.hidden && !reducedMotion && departing.length < DEPART_MOST) {
+                const ghost = Object.assign(newEntry(gone.animal, gone.place, null), {ghost: true});
+                ghost.leader = null;
+                const pose: ActPose = {x: gone.middle.x, z: gone.middle.z, base: gone.middle.y - gone.drawnHeight * 0.5, yaw: gone.yawNow ?? gone.place.yaw ?? 0, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, speed: 0};
+                ghost.act = pose;
+                mealGhosts = [...mealGhosts, ghost];
+                departing.push({ghost, from: performance.now() / 1000, pose});
+            }
         });
+        // (One the roster has again, a stand-in brought for its act: its fade gives way at once.)
+        if (departing.length) stepDeparting(performance.now() / 1000, nextById);
         entries = next;
         entryById = nextById;
         // (The collisions' bodies and speeds follow the entries' sizes: worked out again.)
@@ -7869,7 +7894,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const at = own ? poseOnTrip(worldOf(own.animal), tripAt(worldOf(own.animal), own.profile, own.animal, death.t0, scheduleHours, e.animal.activity, null), death.t0) : null;
             const x = at?.x ?? e.place.x;
             const z = at?.z ?? e.place.z;
-            return {x, z, base: Math.max(standGround(x, z), -0.3), yaw: at?.yaw ?? e.place.yaw ?? 0};
+            // (V1: how high it was then, a flyer on the wing: the dying act brings it down.)
+            return {x, z, base: Math.max(standGround(x, z), -0.3), yaw: at?.yaw ?? e.place.yaw ?? 0, from: at ? at.y : null};
         },
         ghost: (death) => {
             const from = deathEntryOf(death);
@@ -8342,6 +8368,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         huntAsked = {at: now, hunt};
         return hunt;
+    };
+    /** V1: the departed fading where they stood (`departing`); one an act has taken up (its death, its meal, a stand-in) gives way. */
+    const stepDeparting = (now: number, roster: Map<string, Entry> = entryById) => {
+        const epoch = worldMs() / 1000;
+        departing = departing.filter((d) => {
+            const id = d.ghost.animal.id;
+            const k = (now - d.from - DEPART_HOLD_SECONDS) / DEPART_FADE_SECONDS;
+            const taken = roster.has(id) || liveDeaths.has(id, epoch) || mealGhosts.some((g) => g !== d.ghost && g.animal.id === id);
+            if (!taken && k < 1) {
+                const c = Math.min(Math.max(k, 0), 1);
+                const e = c * c * (3 - 2 * c);
+                d.ghost.act = {...d.pose, dim: e, scale: 1 - 0.1 * e};
+                return true;
+            }
+            mealGhosts = mealGhosts.filter((g) => g !== d.ghost);
+            return false;
+        });
     };
     /** The live world's meals, a frame (after the replay's acts): poses, and their pins for the herds. */
     const stepLiveMeals = () => {
@@ -8930,6 +8973,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepReplay(now);
         stepLiveMeals();
         if (liveDeaths.size && !reducedMotion) liveDeaths.step(worldMs() / 1000); // 3.3 fix (log): the record's dead, lying where they died
+        if (departing.length) stepDeparting(performance.now() / 1000); // V1: the departed, fading
         stepMealTraces();
         // Runtime: the resting rotation moved on (every 5 minutes on the shared clock): who is outside, again.
         perf.lap("scenery");
@@ -9287,6 +9331,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 refreshLive();
             }
         },
+        // V1: meals from the event log as it is read (added; the hunting read's set comes later and does not double them).
+        addMeals: (meals) => liveMeals.add(meals.filter((meal) => meal.kind === "meal"), worldMs() / 1000),
+        // V1 hook (E5, not sent yet): who the server says is wounded limps (`live-escapes.ts` setWounded).
+        setWounded: (list) => liveEscapes.setWounded(list),
         addMatings: (matings) => {
             liveMatings.add(matings, worldMs() / 1000);
         },
@@ -9318,7 +9366,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         addEscapes: (escapes) => {
             liveEscapes.add(escapes.map((e) => {
                 const encounter = mealEncounter({encounter: e.encounter});
-                return {key: e.key, prey: e.prey, predator: e.predator, t0: encounter?.t ?? e.t0, encounter};
+                // (V1: the feeder's time is the act's start, held until the record is out; never before the encounter's step.)
+                return {key: e.key, prey: e.prey, predator: e.predator, t0: Math.max(encounter?.t ?? -Infinity, e.t0), encounter};
             }), worldMs() / 1000);
         },
         setForestry: (record) => forest.setRecord(record), // p5 (humans)
