@@ -16,10 +16,11 @@ import {eats} from "@/ark-scene/food-links";
 import {ZONE_REGION, type ArkAnimal, type ArkSnapshot, type ArkZone} from "@/ark-scene/types";
 import {hashString} from "@/ark-scene/world";
 
-type Beat = "pair" | "birth" | "meal" | "laid" | "group" | "death" | "newKind" | "hatch" | "starved";
+type Beat = "pair" | "birth" | "meal" | "laid" | "group" | "death" | "newKind" | "hatch" | "starved" | "crisis" | "saved" | "wildGone" | "toCare";
 
 /** The order the beats come in (about four minutes at the page's pace before it goes round again). */
-const BEATS: Beat[] = ["pair", "birth", "meal", "laid", "group", "death", "newKind", "birth", "hatch", "meal", "pair", "starved", "birth", "laid", "group", "meal", "newKind", "hatch", "death", "birth", "pair", "meal", "group", "hatch"];
+// (The crisis layer's four records (AnimalDex E4: crisis, saved, extinct_wild, returned_to_care) come early, a few seconds in: they change no snapshot, they only say what the record says.)
+const BEATS: Beat[] = ["pair", "birth", "meal", "crisis", "saved", "wildGone", "toCare", "laid", "group", "death", "newKind", "birth", "hatch", "meal", "pair", "starved", "birth", "laid", "group", "meal", "newKind", "hatch", "death", "birth", "pair", "meal", "group", "hatch"];
 
 /** Egg-layers of the fixtures (the server knows from traits; this only needs believable ones). */
 const EGG_LAYERS = new Set([
@@ -242,6 +243,15 @@ export class ArkLiveFixtureFeed {
                     {...this.row("meal", at, predator), other: eventAnimal(prey, "eaten")},
                     {...this.row("eaten", at, prey), animal: eventAnimal(prey, "eaten"), other: eventAnimal(predator)}
                 ]);
+            }
+            case "crisis":
+            case "saved":
+            case "wildGone":
+            case "toCare": {
+                // The record only: a kind down to a few in the wild, out of danger, none left in the wild, a recovering one in the zoo.
+                const target = this.pick(kinds.filter((list) => !list[0].placeholder), beat);
+                if (!target) return null;
+                return done(animals, [this.row(beat === "wildGone" ? "extinct_wild" : beat === "toCare" ? "returned_to_care" : beat, at, target[0])]);
             }
             case "death":
             case "starved": {

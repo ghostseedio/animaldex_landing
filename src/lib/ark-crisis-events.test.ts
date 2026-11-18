@@ -5,6 +5,7 @@ import test from "node:test";
 import {ArkLiveLog, arkLiveLineText, arkLiveServerItems, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveText} from "./ark-live-log";
 import {crisisItems, crisisText, recordItems} from "@/ark-scene/live/crisis-lines";
 import {ARK_LIVE_ENGLISH} from "./ark-live-words";
+import {ArkLiveFixtureFeed} from "./ark-live-fixture";
 import {ARK_EVENT_KINDS, decodeArkEvents, isQuietArkReplay, planArkReplay} from "./ark-life";
 import {arkLiteFeedFromEvents, arkLiteFeedLines, arkLiteFeedMerge} from "./ark-lite-feed";
 import {arkEventsNet, arkPopulationThen} from "./ark-population-change";
@@ -182,4 +183,24 @@ test("the counts: none of the four changes who is aboard, a population's change,
     assert.deepEqual(arkHappeningsSince(withThem, 0), arkHappeningsSince(base, 0));
     const times = ["2026-10-30T00:00:00Z", "2026-11-18T00:00:00Z"];
     assert.deepEqual(arkPopulationSeries(snapshot, withThem, {times, top: 3}), arkPopulationSeries(snapshot, base, {times, top: 3}));
+});
+
+test("the development feed (?fixture=live) says the four early, in the server's shape, and changes no snapshot for them", () => {
+    const feed = new ArkLiveFixtureFeed(snapshot);
+    let current = snapshot;
+    const seen: string[] = [];
+    for (let step = 0; step < 8; step++) {
+        const made = feed.next(new Date(Date.parse("2026-11-18T09:00:00Z") + step * 8000), current);
+        if (!made) continue;
+        const decoded = decodeArkEvents(made.events, made.snapshot);
+        assert.equal(decoded.length, (made.events as unknown[]).length, `${made.beat}: every row decodes`);
+        if (NEW_KINDS.some((kind) => decoded[0]?.kind === kind)) {
+            assert.equal(made.snapshot.animals.length, current.animals.length, `${made.beat}: nobody comes or goes`);
+            const line = recordItems(decoded).map((item) => say(item)).join("");
+            assert.ok(line.includes(": ") && !FORBIDDEN.test(line), line);
+        }
+        for (const event of decoded) seen.push(event.kind);
+        current = made.snapshot;
+    }
+    for (const kind of NEW_KINDS) assert.ok(seen.includes(kind), `the feed makes ${kind}`);
 });
