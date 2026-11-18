@@ -59,7 +59,7 @@ if (typeof window !== "undefined") {
         const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {status, headers: {"content-type": "application/json"}});
         const method = (init?.method ?? "GET").toUpperCase();
         calls.push({method, url, body: typeof init?.body === "string" ? JSON.parse(init.body) : null});
-        if (method === "POST") return new Promise((resolve) => window.setTimeout(() => resolve(json(current!.post.body, current!.post.status)), 500));
+        if (method === "POST") return new Promise<Response>((resolve) => window.setTimeout(() => resolve(json(current!.post.body, current!.post.status)), 500));
         return Promise.resolve(new URL(url, window.location.origin).searchParams.has("animal") ? json({quote: current.quote}) : json({released: current.released}));
     };
 }

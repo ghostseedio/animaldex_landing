@@ -333,5 +333,5 @@ engineTest("the ladder and the reasons are the migration's", () => {
     assert.ok(ladder, "the price function is not the ladder this page words");
     assert.deepEqual(ARK_RELEASE_LADDER.map((step) => step.credits), [10, 15, 25, 35, 50, 60]);
     const reasons = Array.from(sql.matchAll(/array_append\(v_reasons, '([a-z_0-9]+)'\)/g), (m) => m[1]);
-    assert.deepEqual([...new Set([...reasons, "unavailable", "not_owner"])].sort(), [...ARK_RELEASE_REASONS].sort());
+    assert.deepEqual(Array.from(new Set(reasons.concat(["unavailable", "not_owner"]))).sort(), Array.from(ARK_RELEASE_REASONS).sort());
 });

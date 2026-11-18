@@ -51,14 +51,14 @@ export function arkReleaseSurvival(input: {skill: number; sinceDays: number; bou
     const bout = input.boutDays;
     const k = rule.boutsToStarve;
     // The chance of each missed run so far is not published: start from "it found food in its last bout".
-    let runs = Array.from({length: k}, (_, i) => (i === 0 ? 1 : 0));
+    let runs: number[] = Array.from({length: k}, (_, i) => (i === 0 ? 1 : 0));
     let dead = 0;
     const steps: Array<{at: number; alive: number}> = [];
     for (let end = (Math.floor(since / bout + 1e-9) + 1) * bout; end <= learn + 1e-9; end += bout) {
         const ahead = end - since;
         const skill = clamp(input.skill + rule.dailyGain * ahead / ARK_DAYS_PER_REAL_DAY, 0, 1);
         const find = clamp(rule.findBase + rule.findSlope * skill, 0, 1);
-        const next = Array.from({length: k}, () => 0);
+        const next: number[] = Array.from({length: k}, () => 0);
         const alive = runs.reduce((sum, p) => sum + p, 0);
         next[0] = find * alive;
         for (let r = 0; r + 1 < k; r++) next[r + 1] = (1 - find) * runs[r];

@@ -37,7 +37,7 @@ import {fillArkWords, type ArkWords} from "@/lib/ark-words";
  */
 export default function ArkRelease({animal, words: all, locale, day: arkDay}: {animal: ArkAnimal; words: ArkWords; locale: string; /** The snapshot's Ark day. */ day: number | null}) {
     const released = useArkReleased();
-    const words = useMemo(() => arkReleaseWords((all as {release?: unknown}).release), [all]);
+    const words = useMemo(() => arkReleaseWords((all as unknown as {release?: unknown}).release), [all]);
     // Off (or unread), or an animal born on the Ark (nobody's to release): nothing.
     if (released === null || animal.origin === "born") return null;
     const talkHref = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug) ? null : `/talk/${animal.model_slug}`;
