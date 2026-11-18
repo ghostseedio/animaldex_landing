@@ -633,7 +633,7 @@ function rimCramped(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     return profile.move === "fly" && onCraterRim(world, centre) && rangeCap(profile, animal) < flightWorth(profile, animal);
 }
 /** The places a flyer goes up to perch on. */
-const PERCH_PLACES: ReadonlySet<ArkInteraction> = new Set(["perch_branch", "perch_rock", "cliff_ledge"]);
+const PERCH_PLACES: ReadonlySet<ArkInteraction> = new Set<ArkInteraction>(["perch_branch", "perch_rock", "cliff_ledge"]);
 
 /** A seeded attach point of these tags within reach of a centre (and suiting its size), or null. */
 function placeNear(world: ScheduleWorld, centre: {x: number; z: number}, length: number, tags: AttachTag[], radius: number, roll: number, climber = false): AttachPoint | null {
