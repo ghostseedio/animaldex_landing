@@ -48,6 +48,7 @@ Elsewhere: `director.ts` (runs a shot's frames), `src/lib/ark-clips/replay-shots
 | `clearLiveActs()` | Every live act let go: before a replay and after it. |
 | `clearView(focus, distance, polar, azimuth, places)` | The scene's own rule for a view clear of hills and trunks (its replay's). |
 | `setExposure(gain)` | The recorder's exposure. Nothing of the world changes. |
+| `near-fade.ts` `setNearFadeReach(times)` | The near-camera fade reaching further (a module function, not on the handle). |
 | `locate(id)` | Now also where an act poses an animal that is out of the picture, and an acted stand-in first; `shown`: drawn this frame. |
 
 The scene's world clock (`worldMs`: schedules, the live layers, the island's light, the weather) follows `pinArkClock`.
@@ -166,7 +167,11 @@ in the Ark's 44 languages.
   insect of 10 cm or less: their stand-ins stand, but the mating is not walked. (`__replay.gone` in the harness
   films a mating the layer does act with one of the two taken out of the read: the stand-in is walked and mounted.)
 - **Water.** The camera does not go under the surface for a fish: an aquatic birth or mating is a picture of water.
-- **Leaves and rocks.** `clearView` knows hills and tree trunks, not bushes, crowns over the animal or boulders.
+- **Leaves and rocks.** `clearView` knows hills and tree trunks, not bushes or boulders. A shot stretches the scene's
+  near-camera fade (`near-fade.ts` `setNearFadeReach`), so a crown the camera is in and the leaves before it dissolve;
+  a bush the animal stands in still hides it.
+- **An escape is a quarter of a second.** The lunge and the miss read in the clip more than in any one still, and
+  least of all in the woods.
 - **Night.** A forest floor at night stays dark at any exposure; `--hour` films the event by day.
 - **A release** films the zoo, then the entrance at its wild home. The keeper's gate and the shore crate are P1-8.
 - **The recorder's world.** The recording page now mounts the live wild island (v2), as `/ark` does. Before this, every

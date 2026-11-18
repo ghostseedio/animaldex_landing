@@ -24,9 +24,20 @@ export const ARK_NEAR_FADE = {value: new Vector2(0.6, 2.2)};
 export const NEAR_FADE_SHARE = 0.45;
 export const NEAR_FADE_MAX = 2.2;
 
+/**
+ * V2 replay (`replay/shot.ts`): the recorder's shot reaches further. A clip is filmed through the wood, and what
+ * dissolves is whatever stands between the camera and its subject (a crown the camera is in, the ferns before it),
+ * not only what brushes the lens: up to this many times the reach, and at most four fifths of the way to the subject.
+ * 1: as the Ark is.
+ */
+let reach = 1;
+export function setNearFadeReach(times: number): void {
+    reach = Math.min(Math.max(Number.isFinite(times) ? times : 1, 1), 6);
+}
+
 /** Where the fade ends (m) for a camera this far from what it looks at. */
 export function nearFadeEnd(viewDistance: number): number {
-    return Math.min(NEAR_FADE_MAX, Math.max(0, viewDistance) * NEAR_FADE_SHARE);
+    return Math.min(NEAR_FADE_MAX * reach, Math.max(0, viewDistance) * Math.min(NEAR_FADE_SHARE * reach, 0.8));
 }
 
 /** Call each frame with the camera's distance to its target. */

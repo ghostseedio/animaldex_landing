@@ -20,6 +20,7 @@
  */
 
 import {arkEpochSeconds, pinArkClock} from "@/ark-scene/shared-clock";
+import {setNearFadeReach} from "@/ark-scene/near-fade";
 import {easeToward} from "@/ark-scene/pair-frame";
 import {meetDistance} from "@/ark-scene/runtime/camera";
 import {attachArkCast, type ArkCast} from "@/ark-scene/replay/cast";
@@ -30,6 +31,8 @@ import {islandHours} from "@/lib/ark-clock";
 import {daylightAt} from "@/lib/ark-daylight";
 
 const FOV = 38;
+/** The scene's near-camera fade (`near-fade.ts`: what stands right beside the camera dissolves), reaching this much further for a clip filmed through the wood. */
+const FADE_REACH = 4;
 /**
  * A clip stands nearer than a tap's meeting distance (`meetDistance` shows an animal in its surroundings): this share of
  * it, or where the animal is a third of the picture's narrower side, whichever is nearer; never nearer than half a
@@ -45,6 +48,8 @@ const CLOSE_MIN = 0.5;
  */
 const POLAR = 0.9;
 const POLAR_SMALL = 0.72;
+/** A chase from higher still: over the ferns and between the trunks, under the crowns (most chases are in the woods). */
+const POLAR_CHASE = 0.6;
 const RAISE = 0.16;
 const RAISE_MOST = 0.48;
 /** Two farther apart than this (m) are not held in one picture after their act (from that far back neither reads). */
@@ -484,7 +489,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         if (state === "lapse") {
             // 4 s of video for the fade's 3 minutes: the pin moved on every frame.
             const k = clamp01((clip - stateAt) / 4);
-            if (k > 0.3) tell();
+            if (k > 0.6) tell();
             pinArkClock(lapseFrom! + ease(k) * (DEATH_FADE_SECONDS + 8));
             const frame = frameOf([id]);
             if (k >= 1) enter("empty");
@@ -529,14 +534,14 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             if (now > end + 1.2) tell();
             if (now > end + 7) finish(true);
             // (The quarry, and the hunter once it is on it: the catch, then the meal where the prey fell.)
-            return toward(frameOf([hunter, quarry], {widen: now > end ? 1.05 : 1.3, first: quarry, closing: now > end ? CLOSING : CLOSING_CHASE}), dt, 6);
+            return toward(frameOf([hunter, quarry], {widen: now > end ? 1.05 : 1.3, first: quarry, closing: now > end ? CLOSING : CLOSING_CHASE, polar: POLAR_CHASE}), dt, 6);
         }
         // (The still: the lunge as it meets empty air, the two at their nearest.)
         if (now > end + 0.08) tell();
         if (now > Math.min(escape?.seconds ?? end + 6, end + 8)) finish(true);
         // (Once it is away, the one that got away: the two are soon too far apart for one picture.)
         // (The quarry, and the hunter once it is on it: the lunge and the miss; then the one that got away.)
-        return toward(frameOf([hunter, quarry], {widen: 1.3, first: quarry, closing: CLOSING_CHASE}), dt, 6);
+        return toward(frameOf([hunter, quarry], {widen: 1.3, first: quarry, closing: CLOSING_CHASE, polar: POLAR_CHASE}), dt, 6);
     };
 
     const stepLastStand = (dt: number) => {
@@ -591,6 +596,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         begin: () => {
             // (Nothing of an earlier replay, or of the live log, is still being acted when this one starts.)
             handle.clearLiveActs?.();
+            setNearFadeReach(FADE_REACH);
             pinArkClock(t0 - lead - REPLAY_SETTLE_SECONDS);
             relight();
             if (options.asOf !== false) cast.setAsOf(t0, replay.arkDay);
@@ -665,6 +671,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         end: () => {
             if (!ended) Object.assign(report, cast.report());
             ended = true;
+            setNearFadeReach(1);
             handle.setExposure?.(1);
             // (While the cast is still in: whoever a meal's or a death's stand-in hid is shown again.)
             handle.clearLiveActs?.();
