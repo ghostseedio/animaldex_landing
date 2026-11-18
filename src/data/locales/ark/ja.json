@@ -568,6 +568,24 @@
             "bringBack": "捕まえて連れ戻そう",
             "listLabel": "Arkから消えた種、新しい順"
         },
+        "endangered": {
+            "title": "いま危機にある種",
+            "intro": "野生に1頭か2頭しか残っていない種です。",
+            "empty": "いま危機にある種はありません",
+            "emptyHint": "野生で2頭または1頭まで減った種は、ここに表示されます。",
+            "critical": "深刻",
+            "last": "最後の1頭",
+            "wildCount": "野生：{count}",
+            "openFor": "{duration}前から危機",
+            "habitat": "生息地",
+            "foundIn": "分布",
+            "saved": "救われました：この種はもう危機にありません",
+            "lost": "野生から姿を消した",
+            "listLabel": "野生で危機にある種（新しい順）",
+            "unavailable": "いまは確認できません。しばらくしてからもう一度お試しください。",
+            "seeInArk": "Arkで見る",
+            "retry": "もう一度試す"
+        },
         "photo": {
             "alt": "この{species}を船に乗せた写真",
             "open": "写真を大きく見る",
@@ -634,6 +652,16 @@
             "arkDay": "Ark {day}日目",
             "broughtBy": "乗せた人：{name}",
             "fromLine": "{name}さんの系統から"
+        },
+        "timeLeft": {
+            "title": "残り時間の目安",
+            "about": "{value}ほど",
+            "hint": "確率から見た可能性の高い範囲で、約束ではありません。Arkの1日は現実の約55分です。",
+            "reasonAge": "一般的な寿命：{span}",
+            "reasonAgeEstimate": "一般的な寿命（推定）：{span}",
+            "reasonHunted": "ここにいる捕食者：{predators}",
+            "reasonHunger": "空腹：最近の食事なし",
+            "reasonSafe": "Ark {day}日目まで狩りから保護"
         }
     },
     "talkPage": {

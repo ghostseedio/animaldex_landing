@@ -1,6 +1,7 @@
 "use client";
 
 import React, {useCallback, useEffect, useId, useMemo, useRef, useState} from "react";
+import Link from "@/app/[locale]/_components/link";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import ArkLostList from "@/app/[locale]/(composited)/ark/ark-lost-list";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
@@ -372,6 +373,16 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                 </ul>
                 {/* After the living: the species the server logged as gone (hidden until its read answers). */}
                 <ArkLostList words={lostWords} locale={locale} />
+                {/* Endangered now: its own lazily loaded route (a plain link; no code of its own in this page). */}
+                <Link
+                    href="/ark/endangered"
+                    data-ark-endangered-link=""
+                    className={`flex min-h-11 w-full items-center gap-2 border-t border-white/[0.08] px-3.5 text-left text-[12px] font-bold text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white md:min-h-9 ${FOCUS}`}
+                >
+                    <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#f2c14e]" />
+                    <span className="flex-1">{words.endangered?.title || "Endangered now"}</span>
+                    <span aria-hidden="true" className="opacity-75 rtl:rotate-180">→</span>
+                </Link>
             </div>
         </section>
     );

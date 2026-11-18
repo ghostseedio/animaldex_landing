@@ -568,6 +568,24 @@
             "bringBack": "捉一只把它带回来",
             "listLabel": "从 Ark 消失的物种，最新的在前"
         },
+        "endangered": {
+            "title": "当前濒危",
+            "intro": "野外只剩一只或两只的物种。",
+            "empty": "目前没有物种处于危险之中",
+            "emptyHint": "如果某个物种在野外减少到两只或一只，就会列在这里。",
+            "critical": "危急",
+            "last": "最后一只",
+            "wildCount": "野外现存：{count}",
+            "openFor": "危险已持续 {duration}",
+            "habitat": "栖息地",
+            "foundIn": "分布",
+            "saved": "已获救：该物种已脱离危险",
+            "lost": "已从野外消失",
+            "listLabel": "野外濒危物种，最新的在前",
+            "unavailable": "暂时无法检查，请稍后再试。",
+            "seeInArk": "在 Ark 中查看",
+            "retry": "重试"
+        },
         "photo": {
             "alt": "把这只{species}带上船的照片",
             "open": "查看大图",
@@ -634,6 +652,16 @@
             "arkDay": "Ark 第 {day} 天",
             "broughtBy": "由 {name} 带上船",
             "fromLine": "来自 {name} 的血统"
+        },
+        "timeLeft": {
+            "title": "预计剩余时间",
+            "about": "约 {value}",
+            "hint": "根据概率得出的可能范围，并非承诺。Ark 的 1 天约合现实中的 55 分钟。",
+            "reasonAge": "常见寿命：{span}",
+            "reasonAgeEstimate": "常见寿命（估计）：{span}",
+            "reasonHunted": "这里的捕食者：{predators}",
+            "reasonHunger": "饥饿：近期没有进食",
+            "reasonSafe": "受狩猎保护，直至 Ark 第 {day} 天"
         }
     },
     "talkPage": {

@@ -568,6 +568,24 @@
             "bringBack": "Prinde unul ca să-l aduci înapoi",
             "listLabel": "Specii pierdute din Ark, cele mai noi întâi"
         },
+        "endangered": {
+            "title": "În pericol acum",
+            "intro": "Specii din care au mai rămas în sălbăticie doar unul sau doi indivizi.",
+            "empty": "Nicio specie nu este în pericol acum",
+            "emptyHint": "Dacă o specie ajunge la doi sau la unul în sălbăticie, va apărea aici.",
+            "critical": "Critică",
+            "last": "Ultimul individ",
+            "wildCount": "În sălbăticie: {count}",
+            "openFor": "În pericol de {duration}",
+            "habitat": "Habitat",
+            "foundIn": "Răspândire",
+            "saved": "Salvată: această specie nu mai este în pericol",
+            "lost": "Dispărută din sălbăticie",
+            "listLabel": "Specii în pericol în sălbăticie, cele mai noi primele",
+            "unavailable": "Nu se poate verifica acum. Încearcă din nou peste puțin timp.",
+            "seeInArk": "Vezi-l în Ark",
+            "retry": "Încearcă din nou"
+        },
         "photo": {
             "alt": "Fotografia care a adus acest {species} la bord",
             "open": "Vezi fotografia mai mare",
@@ -634,6 +652,16 @@
             "arkDay": "Ziua {day} în Ark",
             "broughtBy": "Adus la bord de {name}",
             "fromLine": "Din descendența lui {name}"
+        },
+        "timeLeft": {
+            "title": "Timp rămas estimat",
+            "about": "Aproximativ {value}",
+            "hint": "Un interval probabil, din probabilități, nu o promisiune. O zi în Ark înseamnă aproximativ 55 de minute reale.",
+            "reasonAge": "Durata de viață tipică: {span}",
+            "reasonAgeEstimate": "Durata de viață tipică, estimată: {span}",
+            "reasonHunted": "Prădători aici: {predators}",
+            "reasonHunger": "Foame: nicio masă recentă",
+            "reasonSafe": "Protecție împotriva vânătorii până în ziua {day} din Ark"
         }
     },
     "talkPage": {

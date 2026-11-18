@@ -568,6 +568,24 @@
             "bringBack": "Ulovte jedno a vráťte ho",
             "listLabel": "Druhy stratené z Ark, najnovšie prvé"
         },
+        "endangered": {
+            "title": "Ohrozené teraz",
+            "intro": "Druhy, ktorých zostal vo voľnej prírode len jeden alebo dva.",
+            "empty": "Práve teraz nie je ohrozený žiadny druh",
+            "emptyHint": "Ak počet druhu vo voľnej prírode klesne na dva alebo jeden, zobrazí sa tu.",
+            "critical": "Kritický",
+            "last": "Posledný",
+            "wildCount": "Vo voľnej prírode: {count}",
+            "openFor": "Doba ohrozenia: {duration}",
+            "habitat": "Prostredie",
+            "foundIn": "Rozšírenie",
+            "saved": "Zachránené: tento druh už nie je ohrozený",
+            "lost": "Vymizol z voľnej prírody",
+            "listLabel": "Ohrozené druhy vo voľnej prírode, najnovšie prvé",
+            "unavailable": "Teraz sa to nedá skontrolovať. Skúste to o chvíľu znova.",
+            "seeInArk": "Zobraziť v Ark",
+            "retry": "Skúsiť znova"
+        },
         "photo": {
             "alt": "Fotka, ktorá priviedla toto zviera ({species}) na palubu",
             "open": "Zobraziť fotku väčšiu",
@@ -634,6 +652,16 @@
             "arkDay": "Deň Ark {day}",
             "broughtBy": "Na palubu priviedol/priviedla: {name}",
             "fromLine": "Z línie, ktorú priviedol/priviedla: {name}"
+        },
+        "timeLeft": {
+            "title": "Odhadovaný zostávajúci čas",
+            "about": "Asi {value}",
+            "hint": "Pravdepodobný rozsah podľa šancí, nie sľub. 1 deň v Ark je asi 55 skutočných minút.",
+            "reasonAge": "Typická dĺžka života: {span}",
+            "reasonAgeEstimate": "Typická dĺžka života, odhad: {span}",
+            "reasonHunted": "Predátori tu: {predators}",
+            "reasonHunger": "Hlad: žiadne nedávne jedlo",
+            "reasonSafe": "Ochrana pred lovom do dňa {day} v Ark"
         }
     },
     "talkPage": {

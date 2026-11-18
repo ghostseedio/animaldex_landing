@@ -568,6 +568,24 @@
             "bringBack": "Mkamate mmoja umrudishe",
             "listLabel": "Spishi zilizopotea kutoka Ark, mpya kwanza"
         },
+        "endangered": {
+            "title": "Zilizo hatarini sasa",
+            "intro": "Spishi zilizobaki moja au mbili tu porini.",
+            "empty": "Hakuna spishi iliyo hatarini kwa sasa",
+            "emptyHint": "Spishi ikishuka hadi mbili au moja porini, itaorodheshwa hapa.",
+            "critical": "Hatari kubwa",
+            "last": "Ya mwisho",
+            "wildCount": "Porini: {count}",
+            "openFor": "Iko hatarini kwa {duration}",
+            "habitat": "Makazi",
+            "foundIn": "Mahali inapopatikana",
+            "saved": "Imeokolewa: spishi hii haiko hatarini tena",
+            "lost": "Imetoweka porini",
+            "listLabel": "Spishi zilizo hatarini porini, mpya kwanza",
+            "unavailable": "Haiwezi kukagua sasa. Jaribu tena baada ya muda mfupi.",
+            "seeInArk": "Mwone kwenye Ark",
+            "retry": "Jaribu tena"
+        },
         "photo": {
             "alt": "Picha iliyomleta {species} huyu melini",
             "open": "Tazama picha kubwa zaidi",
@@ -634,6 +652,16 @@
             "arkDay": "Siku ya Ark {day}",
             "broughtBy": "Alipandishwa na {name}",
             "fromLine": "Kutoka ukoo wa {name}"
+        },
+        "timeLeft": {
+            "title": "Muda unaokadiriwa uliobaki",
+            "about": "Takriban {value}",
+            "hint": "Kiwango kinachowezekana kutokana na uwezekano, si ahadi. Siku 1 ya Ark ni takriban dakika 55 halisi.",
+            "reasonAge": "Muda wa kawaida wa maisha: {span}",
+            "reasonAgeEstimate": "Muda wa kawaida wa maisha, makadirio: {span}",
+            "reasonHunted": "Wanyama wawindaji hapa: {predators}",
+            "reasonHunger": "Njaa: hakuna mlo wa hivi karibuni",
+            "reasonSafe": "Ulinzi dhidi ya uwindaji hadi siku {day} ya Ark"
         }
     },
     "talkPage": {

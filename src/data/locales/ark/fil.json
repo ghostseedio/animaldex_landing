@@ -568,6 +568,24 @@
             "bringBack": "Manghuli ng isa para ibalik ito",
             "listLabel": "Mga uring nawala sa Ark, pinakabago muna"
         },
+        "endangered": {
+            "title": "Nanganganib ngayon",
+            "intro": "Mga uri na isa o dalawa na lang ang natitira sa kalikasan.",
+            "empty": "Walang uring nasa panganib ngayon",
+            "emptyHint": "Kapag naging dalawa o isa na lang ang isang uri sa kalikasan, mapapabilang ito rito.",
+            "critical": "Kritikal",
+            "last": "Ang huli",
+            "wildCount": "Sa kalikasan: {count}",
+            "openFor": "Nasa panganib nang {duration}",
+            "habitat": "Tirahan",
+            "foundIn": "Saklaw",
+            "saved": "Nailigtas: wala na sa panganib ang uring ito",
+            "lost": "Nawala sa kalikasan",
+            "listLabel": "Mga uring nasa panganib sa kalikasan, pinakabago muna",
+            "unavailable": "Hindi ma-check ngayon. Subukan ulit sa ilang sandali.",
+            "seeInArk": "Tingnan sa Ark",
+            "retry": "Subukan Ulit"
+        },
         "photo": {
             "alt": "Larawang nagdala sa {species} na ito sa barko",
             "open": "Tingnan nang mas malaki ang larawan",
@@ -634,6 +652,16 @@
             "arkDay": "Araw {day} ng Ark",
             "broughtBy": "Isinakay ni {name}",
             "fromLine": "Mula sa lahi ni {name}"
+        },
+        "timeLeft": {
+            "title": "Tinatayang natitirang oras",
+            "about": "Mga {value}",
+            "hint": "Isang malamang na saklaw mula sa tsansa, hindi pangako. Ang 1 araw sa Ark ay mga 55 totoong minuto.",
+            "reasonAge": "Karaniwang haba ng buhay: {span}",
+            "reasonAgeEstimate": "Karaniwang haba ng buhay, tantiya: {span}",
+            "reasonHunted": "Mga maninila rito: {predators}",
+            "reasonHunger": "Gutom: walang kamakailang kain",
+            "reasonSafe": "Proteksyon laban sa pangangaso hanggang araw {day} sa Ark"
         }
     },
     "talkPage": {

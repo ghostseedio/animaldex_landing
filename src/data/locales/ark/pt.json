@@ -568,6 +568,24 @@
             "bringBack": "Capture um para trazê-lo de volta",
             "listLabel": "Espécies perdidas da Ark, as mais recentes primeiro"
         },
+        "endangered": {
+            "title": "Em perigo agora",
+            "intro": "Espécies com apenas um ou dois exemplares restantes na natureza.",
+            "empty": "Nenhuma espécie está em perigo neste momento",
+            "emptyHint": "Se uma espécie chegar a dois ou um na natureza, ela aparecerá aqui.",
+            "critical": "Crítica",
+            "last": "Último exemplar",
+            "wildCount": "Na natureza: {count}",
+            "openFor": "Em perigo há {duration}",
+            "habitat": "Habitat",
+            "foundIn": "Ocorre em",
+            "saved": "Salva: esta espécie já não está em perigo",
+            "lost": "Perdida na natureza",
+            "listLabel": "Espécies em perigo na natureza, as mais recentes primeiro",
+            "unavailable": "Não é possível verificar agora. Tente de novo daqui a pouco.",
+            "seeInArk": "Ver na Ark",
+            "retry": "Tentar novamente"
+        },
         "photo": {
             "alt": "Foto que trouxe este {species} a bordo",
             "open": "Ver a foto maior",
@@ -634,6 +652,16 @@
             "arkDay": "Dia {day} da Ark",
             "broughtBy": "Trazido a bordo por {name}",
             "fromLine": "Da linhagem de {name}"
+        },
+        "timeLeft": {
+            "title": "Tempo restante estimado",
+            "about": "Cerca de {value}",
+            "hint": "Um intervalo provável a partir de probabilidades, não uma promessa. 1 dia da Ark equivale a cerca de 55 minutos reais.",
+            "reasonAge": "Esperança de vida típica: {span}",
+            "reasonAgeEstimate": "Esperança de vida típica, estimada: {span}",
+            "reasonHunted": "Predadores aqui: {predators}",
+            "reasonHunger": "Fome: sem refeição recente",
+            "reasonSafe": "Proteção contra a caça até o dia {day} da Ark"
         }
     },
     "talkPage": {

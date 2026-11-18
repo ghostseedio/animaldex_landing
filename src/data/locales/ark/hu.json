@@ -568,6 +568,24 @@
             "bringBack": "Fogj egyet, hogy visszahozd",
             "listLabel": "Az Arkról eltűnt fajok, a legújabb elöl"
         },
+        "endangered": {
+            "title": "Most veszélyben",
+            "intro": "Fajok, amelyekből a vadonban csak egy vagy kettő maradt.",
+            "empty": "Jelenleg egyetlen faj sincs veszélyben",
+            "emptyHint": "Ha egy faj a vadonban kettőre vagy egyre csökken, itt jelenik meg.",
+            "critical": "Kritikus",
+            "last": "Az utolsó",
+            "wildCount": "A vadonban: {count}",
+            "openFor": "Veszélyben töltött idő: {duration}",
+            "habitat": "Élőhely",
+            "foundIn": "Elterjedés",
+            "saved": "Megmentve: ez a faj már nincs veszélyben",
+            "lost": "Kipusztult a vadonból",
+            "listLabel": "Veszélyeztetett fajok a vadonban, legújabb elöl",
+            "unavailable": "Most nem sikerült ellenőrizni. Próbáld újra egy pillanat múlva.",
+            "seeInArk": "Nézd meg az Arkban",
+            "retry": "Próbáld újra"
+        },
         "photo": {
             "alt": "A fotó, amellyel ez az állat ({species}) a fedélzetre került",
             "open": "Fotó nagyobb méretben",
@@ -634,6 +652,16 @@
             "arkDay": "Az Ark {day}. napja",
             "broughtBy": "Felhozta: {name}",
             "fromLine": "{name} vonalából"
+        },
+        "timeLeft": {
+            "title": "Becsült hátralévő idő",
+            "about": "Körülbelül {value}",
+            "hint": "Valószínűségekből adódó, valószínű tartomány, nem ígéret. 1 Ark-nap nagyjából 55 valódi perc.",
+            "reasonAge": "Jellemző élettartam: {span}",
+            "reasonAgeEstimate": "Jellemző élettartam, becslés: {span}",
+            "reasonHunted": "Ragadozók itt: {predators}",
+            "reasonHunger": "Éhség: nincs friss étkezés",
+            "reasonSafe": "Vadászat elleni védelem a {day}. Ark-napig"
         }
     },
     "talkPage": {

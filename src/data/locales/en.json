@@ -4780,6 +4780,24 @@
       "bringBack": "Catch one to bring it back",
       "listLabel": "Species lost from the Ark, newest first"
     },
+    "endangered": {
+      "title": "Endangered now",
+      "intro": "Kinds with only one or two left in the wild.",
+      "empty": "No kind is in danger right now",
+      "emptyHint": "If a kind falls to two or one in the wild, it will be listed here.",
+      "critical": "Critical",
+      "last": "Last one",
+      "wildCount": "In the wild: {count}",
+      "openFor": "In danger for {duration}",
+      "habitat": "Habitat",
+      "foundIn": "Found in",
+      "saved": "Saved: this kind is out of danger",
+      "lost": "Lost from the wild",
+      "listLabel": "Kinds in danger in the wild, newest first",
+      "unavailable": "Can't check right now. Try again in a moment.",
+      "seeInArk": "See it in the Ark",
+      "retry": "Try again"
+    },
     "photo": {
       "alt": "Photo that brought this {species} aboard",
       "open": "See the photo larger",
@@ -4846,6 +4864,16 @@
       "arkDay": "Ark day {day}",
       "broughtBy": "Brought aboard by {name}",
       "fromLine": "From {name}'s line"
+    },
+    "timeLeft": {
+      "title": "Estimated time left",
+      "about": "About {value}",
+      "hint": "A likely range from odds, not a promise. 1 Ark day is about 55 real minutes.",
+      "reasonAge": "Typical lifespan: {span}",
+      "reasonAgeEstimate": "Typical lifespan, estimated: {span}",
+      "reasonHunted": "Predators here: {predators}",
+      "reasonHunger": "Hunger: no recent meal",
+      "reasonSafe": "Hunting protection until Ark day {day}"
     }
   },
   "seo": {

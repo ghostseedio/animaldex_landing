@@ -568,6 +568,24 @@
             "bringBack": "Fang en for å bringe den tilbake",
             "listLabel": "Arter borte fra Ark, nyeste først"
         },
+        "endangered": {
+            "title": "Truet nå",
+            "intro": "Arter som bare har ett eller to individer igjen i naturen.",
+            "empty": "Ingen art er truet akkurat nå",
+            "emptyHint": "Hvis en art går ned til to eller ett i naturen, vises den her.",
+            "critical": "Kritisk",
+            "last": "Det siste",
+            "wildCount": "I naturen: {count}",
+            "openFor": "Truet i {duration}",
+            "habitat": "Leveområde",
+            "foundIn": "Utbredelse",
+            "saved": "Reddet: arten er ikke lenger truet",
+            "lost": "Forsvunnet fra naturen",
+            "listLabel": "Truede arter i naturen, nyeste først",
+            "unavailable": "Kan ikke sjekke akkurat nå. Prøv igjen om litt.",
+            "seeInArk": "Se den i Ark",
+            "retry": "Prøv igjen"
+        },
         "photo": {
             "alt": "Bildet som brakte denne {species} om bord",
             "open": "Se bildet større",
@@ -634,6 +652,16 @@
             "arkDay": "Ark-dag {day}",
             "broughtBy": "Tatt om bord av {name}",
             "fromLine": "Fra slekten til {name}"
+        },
+        "timeLeft": {
+            "title": "Anslått tid igjen",
+            "about": "Omtrent {value}",
+            "hint": "Et sannsynlig intervall ut fra sannsynligheter, ikke et løfte. 1 Ark-dag er omtrent 55 virkelige minutter.",
+            "reasonAge": "Typisk levetid: {span}",
+            "reasonAgeEstimate": "Typisk levetid, anslått: {span}",
+            "reasonHunted": "Rovdyr her: {predators}",
+            "reasonHunger": "Sult: ikke noe nylig måltid",
+            "reasonSafe": "Jaktvern til Ark-dag {day}"
         }
     },
     "talkPage": {

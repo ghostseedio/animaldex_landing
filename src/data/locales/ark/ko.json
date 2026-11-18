@@ -568,6 +568,24 @@
             "bringBack": "한 마리를 잡아 다시 데려오세요",
             "listLabel": "Ark에서 사라진 종, 최신순"
         },
+        "endangered": {
+            "title": "지금 위기에 처한 종",
+            "intro": "야생에 한두 마리밖에 남지 않은 종입니다.",
+            "empty": "지금 위기에 처한 종이 없습니다",
+            "emptyHint": "야생에서 두 마리 또는 한 마리로 줄어든 종은 여기에 표시됩니다.",
+            "critical": "심각",
+            "last": "마지막 한 마리",
+            "wildCount": "야생: {count}",
+            "openFor": "{duration} 전부터 위기",
+            "habitat": "서식지",
+            "foundIn": "분포",
+            "saved": "구조됨: 이 종은 더 이상 위기에 처해 있지 않습니다",
+            "lost": "야생에서 사라짐",
+            "listLabel": "야생에서 위기에 처한 종, 최신순",
+            "unavailable": "지금은 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.",
+            "seeInArk": "Ark에서 보기",
+            "retry": "다시 시도"
+        },
         "photo": {
             "alt": "이 {species}을(를) 배에 태운 사진",
             "open": "사진 크게 보기",
@@ -634,6 +652,16 @@
             "arkDay": "Ark {day}일째",
             "broughtBy": "탑승시킨 사람: {name}",
             "fromLine": "{name} 님의 혈통에서"
+        },
+        "timeLeft": {
+            "title": "예상 남은 시간",
+            "about": "약 {value}",
+            "hint": "확률로 본 가능성 높은 범위이며 약속이 아닙니다. Ark의 1일은 실제 약 55분입니다.",
+            "reasonAge": "일반적인 수명: {span}",
+            "reasonAgeEstimate": "일반적인 수명(추정): {span}",
+            "reasonHunted": "이곳의 포식자: {predators}",
+            "reasonHunger": "배고픔: 최근 식사 없음",
+            "reasonSafe": "Ark {day}일째까지 사냥 보호"
         }
     },
     "talkPage": {

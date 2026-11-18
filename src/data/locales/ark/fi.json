@@ -568,6 +568,24 @@
             "bringBack": "Nappaa yksi ja tuo se takaisin",
             "listLabel": "Arkista kadonneet lajit, uusimmat ensin"
         },
+        "endangered": {
+            "title": "Uhanalaiset nyt",
+            "intro": "Lajit, joista on luonnossa jäljellä vain yksi tai kaksi.",
+            "empty": "Mikään laji ei ole juuri nyt vaarassa",
+            "emptyHint": "Jos lajin määrä putoaa luonnossa kahteen tai yhteen, se näkyy täällä.",
+            "critical": "Kriittinen",
+            "last": "Viimeinen",
+            "wildCount": "Luonnossa: {count}",
+            "openFor": "Vaarassa {duration}",
+            "habitat": "Elinympäristö",
+            "foundIn": "Levinneisyys",
+            "saved": "Pelastettu: laji ei ole enää vaarassa",
+            "lost": "Kadonnut luonnosta",
+            "listLabel": "Luonnossa uhanalaiset lajit, uusimmat ensin",
+            "unavailable": "Tarkistus ei onnistu juuri nyt. Yritä hetken kuluttua uudelleen.",
+            "seeInArk": "Katso se Arkissa",
+            "retry": "Yritä uudelleen"
+        },
         "photo": {
             "alt": "Kuva, joka toi tämän eläimen ({species}) laivaan",
             "open": "Näytä kuva suurempana",
@@ -634,6 +652,16 @@
             "arkDay": "Arkin päivä {day}",
             "broughtBy": "Kyytiin toi {name}",
             "fromLine": "Suvusta, jonka toi {name}"
+        },
+        "timeLeft": {
+            "title": "Arvioitu jäljellä oleva aika",
+            "about": "Noin {value}",
+            "hint": "Todennäköinen vaihteluväli todennäköisyyksistä, ei lupaus. 1 Ark-päivä on noin 55 oikeaa minuuttia.",
+            "reasonAge": "Tyypillinen elinikä: {span}",
+            "reasonAgeEstimate": "Tyypillinen elinikä, arvio: {span}",
+            "reasonHunted": "Petoeläimet täällä: {predators}",
+            "reasonHunger": "Nälkä: ei ateriaa viime aikoina",
+            "reasonSafe": "Metsästyssuoja Ark-päivään {day} asti"
         }
     },
     "talkPage": {

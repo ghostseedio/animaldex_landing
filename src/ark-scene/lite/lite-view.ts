@@ -45,6 +45,8 @@ export type ArkLiteOptions = {
     eventsUrl?: string | null;
     /** A bringer's @handle tapped; true when the host handled it (the link then does not navigate). */
     onProfile?: ((handle: string) => boolean) | null;
+    /** "Endangered now" (`/ark/endangered`, with the site locale's prefix) on the header, or null: no link (the apps' embed has its own native entry). */
+    endangeredUrl?: string | null;
 };
 
 export type ArkLiteHandle = {
@@ -68,7 +70,7 @@ const CSS = `
 .arkl-bg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:.55}
 .arkl-bg::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(14,20,14,.25) 0,rgba(14,20,14,.82) 38%,rgba(14,20,14,.94) 100%)}
 .arkl-scroll{position:absolute;inset:0;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
-.arkl-col{box-sizing:border-box;max-width:34rem;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px) + var(--ark-inset-bottom,0px))}
+.arkl-col{box-sizing:border-box;max-width:34rem;margin:0 auto;padding:calc(16px + env(safe-area-inset-top,0px) + var(--ark-inset-top,0px)) 16px calc(40px + env(safe-area-inset-bottom,0px) + var(--ark-inset-bottom,0px))}
 .arkl-head{display:flex;flex-direction:column;gap:6px;margin-bottom:18px}
 .arkl-title{margin:0;font:700 22px/1.15 ${FONT};letter-spacing:-.01em}
 .arkl-sub{margin:0;color:rgba(255,252,244,.66);font-size:12.5px}
@@ -89,6 +91,14 @@ const CSS = `
 .arkl-meta{color:rgba(255,252,244,.66);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .arkl-hearts{color:#ff6b7a;font-size:12px;letter-spacing:1px}
 .arkl-hearts .off{color:rgba(255,255,255,.25)}
+.arkl-tl{margin-top:6px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.06)}
+.arkl-tl .hd{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px}
+.arkl-tl .tt{font:700 10.5px/1.2 ${FONT};letter-spacing:.08em;text-transform:uppercase;color:rgba(255,252,244,.55)}
+.arkl-tl .vv{font:700 13.5px/1.3 ${FONT};color:rgba(255,252,244,.98)}
+.arkl-tl ul{list-style:none;margin:4px 0 0;padding:0}
+.arkl-tl li{position:relative;padding-left:10px;color:rgba(255,252,244,.72);font-size:11.5px;line-height:1.35}
+.arkl-tl li::before{content:"";position:absolute;left:0;top:.55em;width:4px;height:4px;border-radius:2px;background:rgba(255,252,244,.4)}
+.arkl-tl .nn{margin:4px 0 0;color:rgba(255,252,244,.5);font-size:11px;font-style:italic;line-height:1.35}
 .arkl-talk{align-self:flex-start;margin-top:6px;max-width:100%;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;min-height:32px;padding:6px 12px;border-radius:999px;background:#c8fa63;color:#14200c;font:700 12px/1 ${FONT};text-decoration:none;white-space:nowrap}
 .arkl-region{padding:12px;border-radius:14px;border:1px solid rgba(255,255,255,.1);background:rgba(14,20,14,.72);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
 .arkl-rtop{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-weight:700}
@@ -106,6 +116,7 @@ const CSS = `
 button.arkl-kind{border:0;color:inherit;font:inherit;cursor:pointer;text-align:left}
 button.arkl-kind.open{background:rgba(200,250,99,.22)}
 button.arkl-more{border:0;background:none;padding:6px 4px;font:600 11.5px/1.2 ${FONT};cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+.arkl-endangered{display:inline-flex;align-items:center;min-height:44px;margin-top:4px;color:#c8fa63;font-weight:700;text-decoration:underline;text-underline-offset:3px}
 .arkl-hint{margin:-2px 0 8px;color:rgba(255,252,244,.55);font-size:11.5px}
 .arkl-who{list-style:none;margin:10px 0 0;padding:8px 0 0;border-top:1px solid rgba(255,255,255,.1);display:flex;flex-direction:column;gap:6px}
 .arkl-who li{display:flex;justify-content:space-between;gap:10px;font-size:12px;line-height:1.3}
@@ -316,6 +327,11 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
         open.appendChild(button);
         if (!ready) open.appendChild(el("p", "arkl-note", lite.slowNote));
         head.appendChild(open);
+        if (options.endangeredUrl) {
+            const link = el("a", "arkl-endangered", str(sub(words, "endangered").title, "Endangered now"));
+            link.href = options.endangeredUrl;
+            head.appendChild(link);
+        }
         return head;
     }
 
@@ -342,6 +358,13 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
         main.appendChild(el("span", "arkl-meta", origin));
         if (animal.hearts !== null) main.appendChild(heartsRow(animal.hearts));
         item.appendChild(main);
+        // "Estimated time left" (decision 389) for an animal that could be at risk: drawn by a lazily loaded module, nothing otherwise.
+        const full = snapshot?.animals.find((candidate) => candidate.id === animal.id);
+        if (full && (full.condition === "old" || full.condition === "hungry" || snapshot?.hunt_grace)) {
+            const slot = el("div", "arkl-tlslot");
+            main.appendChild(slot);
+            void import("@/lib/ark-time-left-dom").then(({fillArkTimeLeft}) => fillArkTimeLeft(slot, full, snapshot, words, locale, () => slot.isConnected && !disposed));
+        }
         // (Talk under its words, never beside: "Talk to an Oriental Latrine Fly" would leave the name no room.)
         const extras = arkSelectionExtras({
             animal: {name: animal.name, model_slug: animal.slug, placeholder: animal.placeholder, origin: animal.origin},

@@ -4,7 +4,7 @@ import React, {Suspense, lazy, useEffect, useMemo, useRef, useState} from "react
 import Link from "@/app/[locale]/_components/link";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
-import type {ArkAnimal, ArkSceneHandle} from "@/ark-scene/types";
+import type {ArkAnimal, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import {arkIconUrl, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import {arkRestIsSleep, arkRestWords} from "@/lib/ark-rest-words";
 import {arkBringerLabel, arkJoinLabels, type ArkLife} from "@/lib/ark-life";
@@ -34,6 +34,12 @@ import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
  * Ark page's static JavaScript stays inside its budget (ark-page-weight.test.ts); it only matters once a card has a photo.
  */
 const ArkCardPhoto = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card-photo"));
+
+/**
+ * "Estimated time left" (decision 389, `lib/ark-time-left.ts`): lazy, as the photo block is, and only asked for an animal that
+ * could be at risk (old, hungry, or any wild animal once the server publishes the hunting protection).
+ */
+const ArkTimeLeft = lazy(() => import("@/app/[locale]/(composited)/ark/ark-time-left"));
 
 /** Its day (lane ark-its-day): loaded only when opened. */
 const ArkItsDay = lazy(() => import("@/app/[locale]/(composited)/ark/ark-its-day"));
@@ -183,9 +189,11 @@ type CardProps = {
      * (someone else's animal, hearts off, the read absent): the card is as it was.
      */
     lives?: {entry: ArkAnimalHearts; words: ArkHeartsWords; cost: number; onRestored: (captureId: string, hearts: number) => void} | null;
+    /** The public snapshot, for "Estimated time left" (the animals around it, the Ark day): read only, never changed. */
+    snapshot?: ArkSnapshot | null;
 };
 
-export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, photo = null, arkDay, voyageStart, scene, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share, lives = null}: CardProps) {
+export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, photo = null, arkDay, voyageStart, scene, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share, lives = null, snapshot = null}: CardProps) {
     arkPerfCountRender();
     const life = state?.life ?? null;
     const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
@@ -331,6 +339,9 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             {nowLine ? <p data-testid="ark-card-now" data-activity={status?.activity ?? undefined} className={`mt-1.5 text-[14px] font-semibold italic leading-snug md:text-[15px] ${asleepNow ? "text-[#c9d6ff]" : "text-white"}`}>{nowLine}</p> : null}
                             {text?.next ? <p data-testid="ark-card-next" className="mt-0.5 text-[12.5px] italic leading-snug text-ink-300">{text.next}</p> : null}
                         </div>
+                        {animal.condition === "old" || animal.condition === "hungry" || snapshot?.hunt_grace ? (
+                            <Suspense fallback={null}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense>
+                        ) : null}
                         {rhythmNow ? <ArkRhythmLine rhythm={rhythmNow} open={rhythmOpen} onToggle={() => setRhythmOpen((v) => !v)} /> : null}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} /> : null}
                         {placeholder ? <p className="mt-1 text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}

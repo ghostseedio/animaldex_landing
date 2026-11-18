@@ -10,8 +10,10 @@ import type {ArkLiveWords} from "@/lib/ark-live-words";
 import type {ArkActivityWords, ArkCardWords} from "@/lib/ark-animal-status";
 import type {ArkLoaderWords} from "@/lib/ark-loading";
 import type {ArkLostWords} from "@/lib/ark-extinct";
+import type {ArkEndangeredWords} from "@/lib/ark-crises";
 import type {ArkHuntWords} from "@/lib/ark-live-hunt";
 import type {ArkHeartsWords} from "@/lib/ark-hearts";
+import type {ArkTimeLeftWords} from "@/lib/ark-time-left";
 
 export type ArkHudWords = {
     label: string;
@@ -441,6 +443,8 @@ export type ArkWords = {
     age: ArkAgeAskWords;
     /** Lost from the Ark (`lib/ark-extinct.ts`, read through `arkLostWords`). Optional: an older bundle lacks them. */
     lost?: Partial<ArkLostWords>;
+    /** Endangered now (`lib/ark-crises.ts`, `/ark/endangered`; read through `arkEndangeredWords`). Optional: an older bundle lacks them. */
+    endangered?: Partial<ArkEndangeredWords>;
     /**
      * The photo that brought it aboard, on the tap card (docs/ark/CAPTURE-MEDIA-CONTRACT.md): its alt text ({species}),
      * open and close. For an animal born on the Ark the photo is its recorded ancestor's (section 2.6), and the line
@@ -451,6 +455,8 @@ export type ArkWords = {
     photo: {alt: string; open: string; close: string; fromParent?: string; fromGrandparent?: string; fromGreatGrandparent?: string};
     /** Hearts are lives (behind the server's `ark_hearts`): the card's lives row, recovering, the restore. */
     hearts?: Partial<ArkHeartsWords>;
+    /** "Estimated time left" on an animal at risk (`lib/ark-time-left.ts`); English fills any key a bundle lacks. */
+    timeLeft?: Partial<ArkTimeLeftWords>;
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */
