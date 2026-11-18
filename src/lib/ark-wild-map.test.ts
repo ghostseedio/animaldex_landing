@@ -20,7 +20,7 @@ import {worldSampler as mapWorldSampler} from "@/ark-scene/map/world-sampler";
 import {validateMap, validatorAnimals, failuresBySpecies} from "@/ark-scene/map/validate";
 import {mapSpecies} from "@/ark-scene/map/species";
 import {maskWalkable, setWalkMaskEnabled, WALK_MASK_V2_VERSION} from "@/ark-scene/map/walk-mask";
-import {MAX_SLOPE, MOUNTAIN_SLOPE, navGrid} from "@/ark-scene/behaviour-nav";
+import {MAX_SLOPE, navGrid, WALK_MASK_SLOPES} from "@/ark-scene/behaviour-nav";
 import {worldSampler as behaviourWorldSampler} from "@/ark-scene/world-sampler";
 import {arkBody} from "@/ark-scene/stats";
 import {displayLength} from "@/ark-scene/sizes";
@@ -99,7 +99,7 @@ test("v2: placement never builds the behaviour world: the prebuilt walk mask is 
     const grid = navGrid(sampler);
     const {size} = grid.cells;
     const wrong: string[] = [];
-    for (const slope of [MAX_SLOPE, MOUNTAIN_SLOPE]) {
+    for (const slope of WALK_MASK_SLOPES) {
         for (let j = 0; j < size; j++) {
             for (let i = 0; i < size; i++) {
                 const x = -TERRAIN_HALF + (i + 0.5) * 2;

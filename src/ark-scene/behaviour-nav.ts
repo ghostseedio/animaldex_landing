@@ -39,6 +39,12 @@ export const MAX_SLOPE = 0.9;
 /** A mountain animal's (goats, ibex, snow leopards): steep ground is theirs. */
 export const MOUNTAIN_SLOPE = 2.4;
 /**
+ * The slopes placement asks the walk grid at (`map/walk-mask.ts` holds each prebuilt): a walker's and a mountain
+ * animal's, twice each (`map/place.ts`: no home on ground twice as steep as it walks, p5 crater) and any slope (dry and
+ * clear). A slope the mask lacks builds the whole behaviour world inside placement (2.5 s in the places worker).
+ */
+export const WALK_MASK_SLOPES: readonly number[] = [MAX_SLOPE, MOUNTAIN_SLOPE, MAX_SLOPE * 2, MOUNTAIN_SLOPE * 2, Infinity];
+/**
  * The body radii paths are worked out for (m): a body is planned as the smallest class at least its radius (the
  * widest as the widest). A path's default (callers that give none): the walk grid's old clearance.
  */

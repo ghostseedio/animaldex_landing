@@ -423,9 +423,9 @@
         },
         {
           "id": "tb_species_under_035",
-          "label": "Flying species under 0.35 of their cruise (the audit's target 0; 20 on MA1's fixed code: big raptors, hornbills and crows in crowded ranges; 22 since 2026-11-17, decision 379: the crater rim's perch hops. A measurement edge, not a behaviour regression: 21 on the crater vs 16 on main, 7 species within 0.02 of the line, 26 species swapping both ways, slow legs 50% vs 47% of flights)",
+          "label": "Flying species under 0.35 of their cruise (the audit's target 0; 20 on MA1's fixed code: big raptors, hornbills and crows in crowded ranges; 22 for a day after the crater, decision 379; back to 20 with volcano-followups 2026-11-18: a flyer cramped on the crater's rim, its range shorter than a flight worth its take-off, no longer hops between its perch and its patch all day (bald eagle 0.31 -> 0.74, the rim's vultures, condors and ravens faster too))",
           "path": "species_under_035",
-          "max": 22,
+          "max": 20,
           "before": 91
         },
         {
