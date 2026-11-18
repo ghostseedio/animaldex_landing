@@ -32,6 +32,7 @@ import { getAbsoluteUrl } from "@/lib/site";
 import { formatAppShortDate } from "@/lib/app-dates";
 import IdentityKindChip from "@/app/[locale]/(composited)/animals/identity-kind-chip";
 import {CloseIconButton} from "@/components/ui/icon-buttons";
+import ArkAboardChip from "@/components/ark/ark-aboard-chip";
 import {useOwnCardLevel} from "@/components/companions/use-companions";
 import {useAppFeatureFlag} from "@/components/use-app-feature-flag";
 
@@ -955,10 +956,19 @@ function FeedBottomOverlay({item, isOwn = false, titleHref}: {item: DiscoverCapt
       {item.isUncertain ? <span className="pointer-events-auto self-start"><UncertainBadge /></span> : null}
       {/* iOS `onOpenCapture`: the title block opens the capture detail, not the species
           page. Signed out (a shared post) it opens the species page: the capture is behind sign-in. */}
-      <Link href={titleHref} className="pointer-events-auto flex flex-col gap-1.5">
-        <h3 className="line-clamp-2 text-[17px] font-semibold leading-tight text-white">{item.animalName}</h3>
-        <CapturePostChipRow item={item} isOwn={isOwn} />
-      </Link>
+      <div className="flex flex-col gap-1.5">
+        <Link href={titleHref} className="pointer-events-auto flex flex-col">
+          <h3 className="line-clamp-2 text-[17px] font-semibold leading-tight text-white">{item.animalName}</h3>
+        </Link>
+        {/* The "Aboard the Ark" chip (lib/ark-aboard.ts) sits beside the chips when it fits and under them when it does
+            not: its own link, never inside the chips' (a tap opens the Ark on the animal, the chips open the post). */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          <Link href={titleHref} className="pointer-events-auto">
+            <CapturePostChipRow item={item} isOwn={isOwn} />
+          </Link>
+          <ArkAboardChip captureId={item.captureId} />
+        </div>
+      </div>
       {item.learnedPrinciple ? (
         <p className="flex items-center gap-1.5 text-xs font-medium text-white/90">
           <AppIcon name="spark" className="h-3.5 w-3.5" />
