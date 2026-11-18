@@ -7,7 +7,15 @@
  *   npm run ark:clip -- --shot meet [--species plains-zebra] [--out clips/] [--upload]
  *   (= npx tsx --tsconfig scripts/tsconfig.scripts.json --env-file=.env.local scripts/ark-clips.mts …)
  *
+ *   npm run ark:clip -- --replay <event id> [--mount show] [--hour 11]   # one recorded event at its own time
+ *
  *   --shot      day_to_night | arrival | meal_chase | follow | flyover | meet
+ *   --replay    a recorded event's id (`voyage_events.id`, as /api/ark/events gives it): the clip is that event at
+ *               its own time, everyone it names brought in (docs: src/ark-scene/replay/README.md). mated, birth,
+ *               death_old, starved, extinction, meal and escaped events; only events already in the public log
+ *               (nothing ahead of now). `--replay list` prints the newest replayable events.
+ *   --mount     a replayed mating's mount: cutaway (default: the camera pulls away) or show
+ *   --hour      a replay's light pinned to this hour (0–24) instead of the island's own at the event's time
  *   --species   meet / follow: a species slug, model slug or species_profile_id aboard
  *   --fixture   the development fixture Ark instead of the live one: a sample (`sample-*`), never uploaded
  *   --base      the site serving /ark?record=1 (default http://localhost:3000)
@@ -34,9 +42,38 @@ const {values} = parseArgs({
         out: {type: "string", default: "ark-clips"},
         name: {type: "string"},
         upload: {type: "boolean", default: false},
-        list: {type: "boolean", default: false}
+        list: {type: "boolean", default: false},
+        replay: {type: "string"},
+        mount: {type: "string"},
+        hour: {type: "string"}
     }
 });
+
+if (values.replay === "list") {
+    // The newest replayable events of the public log, as the page will read it.
+    const {arkReplayableEvents} = await import("@/ark-scene/replay/event-replay");
+    const since = new Date(Date.now() - 3 * 86_400_000).toISOString();
+    const body = await (await fetch(new URL(`/api/ark/events?since=${encodeURIComponent(since)}`, values.base))).json() as {events?: unknown};
+    for (const event of arkReplayableEvents(body.events ?? [], Date.now()).slice(0, 60)) console.log(`${event.id.padEnd(8)} ${event.kind.padEnd(10)} ${event.at.slice(0, 19)}Z  ${event.species}`);
+    process.exit(0);
+}
+if (values.replay) {
+    const clip = await recordArkClip({
+        shot: null,
+        replay: values.replay,
+        mount: values.mount === "show" ? "show" : "cutaway",
+        hour: values.hour !== undefined && Number.isFinite(Number(values.hour)) ? Number(values.hour) : null,
+        baseUrl: values.base!,
+        fixture: Boolean(values.fixture),
+        outDir: path.resolve(values.out!),
+        name: values.name ?? null,
+        log: (line) => console.log(line)
+    });
+    console.log(`\n${clip.videoPath}\n  ${clip.probe.width}×${clip.probe.height} ${clip.probe.videoCodec}/${clip.probe.audioCodec} ${clip.probe.fps} fps, ${clip.probe.seconds.toFixed(2)} s`);
+    console.log(`  "${clip.plan.title}"`);
+    for (const cue of clip.plan.cues) console.log(`  · ${cue.label ? `${cue.label}: ` : ""}${cue.text}`);
+    process.exit(clip.replay && !clip.replay.acted ? 2 : 0);
+}
 
 if (values.list || !values.shot) {
     for (const shot of ARK_SHOTS) console.log(`${shot.padEnd(14)} ${ARK_SHOT_LABELS[shot]}`);

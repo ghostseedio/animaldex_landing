@@ -35,9 +35,18 @@ export function arkEpochSeconds(): number {
     return pinned ? pinned.epoch + (monotonicMs() - pinned.at) / 1000 : Date.now() / 1000;
 }
 
-/** Development (golden shots, recordings): run the shared clock from this epoch second, or (null) the real clock again. */
+/**
+ * Run the shared clock from this epoch second, or (null) the real clock again: golden shots, recordings, and a recorded
+ * event replayed at its own time (`replay/README.md`): the scene's world clock (schedules, the live layers, the light)
+ * follows the pin too.
+ */
 export function pinArkClock(epochSeconds: number | null): void {
     pinned = epochSeconds === null || !Number.isFinite(epochSeconds) ? null : {epoch: epochSeconds, at: monotonicMs()};
+}
+
+/** The pinned clock's time now (ms since 1970), or null on the real clock: the scene's world clock follows a pin (a replay at an event's own time). */
+export function arkPinnedMs(): number | null {
+    return pinned ? pinned.epoch * 1000 + (monotonicMs() - pinned.at) : null;
 }
 
 /** The nearest angular frequency (rad/s) that makes a whole number of cycles in the window: the same phase for everyone. */

@@ -1,0 +1,351 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import {ArkCast, standInAnimal, type ArkCastRecord} from "@/ark-scene/replay/cast";
+import {ArkReplayUnavailable, arkReplayableEvents, arkReplayModels, planArkEventReplay} from "@/ark-scene/replay/event-replay";
+import {readArkEventLog} from "@/ark-scene/replay/event-log";
+import {createArkReplayShot} from "@/ark-scene/replay/shot";
+import {arkReplayText} from "@/ark-scene/replay/text";
+import {arkEpochSeconds, arkPinnedMs, pinArkClock} from "@/ark-scene/shared-clock";
+import type {ArkAnimal, ArkCastLayer, ArkLiveActs, ArkLocated, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import {planArkReplayShot} from "@/lib/ark-clips/replay-shots";
+
+/**
+ * V2 replay (`src/ark-scene/replay/`): a recorded event at its own time. The record decides (never the plan), nothing
+ * ahead of now is replayed, everyone an event names is in the scene (a stand-in for whoever is gone) and pinned, and
+ * the words name species only.
+ */
+
+const SPECIES = {zebra: "5bec1e50-0000-4000-8000-000000000001", lion: "5bec1e50-0000-4000-8000-000000000002", flea: "5bec1e50-0000-4000-8000-000000000003"};
+const id = (n: number) => `0000feed-0000-4000-8000-${n.toString(16).padStart(12, "0")}`;
+
+function aboard(n: number, name: string, slug: string, species: string, over: Partial<ArkAnimal> = {}): ArkAnimal {
+    return {id: id(n), species_profile_id: species, name, scientific_name: null, model_slug: slug, zone: "grassland", arrived_at: "2026-11-01T00:00:00Z", brought_by: {label: "@someone", named: true}, mine: false, origin: "arrived", generation: 0, slot: n, slot_rank: 0, island: "wild", area: null, ...over};
+}
+function rowAnimal(n: number, name: string, slug: string, species: string, over: Record<string, unknown> = {}) {
+    return {id: id(n), species_profile_id: species, name, model_slug: slug, zone: "grassland", island: "wild", area: null, enclosure: null, slot: n, slot_rank: 0, origin: "arrived", generation: 0, activity: "diurnal", sociality: null, arrived_at: "2026-11-01T00:00:00Z", status: "present", thrive: "ordinary", placeholder: false, ...over};
+}
+const zebra = (n: number, over: Record<string, unknown> = {}) => rowAnimal(n, "Plains Zebra", "plains-zebra", SPECIES.zebra, over);
+const lion = (n: number, over: Record<string, unknown> = {}) => rowAnimal(n, "African Lion", "african-lion", SPECIES.lion, over);
+const row = (serial: number, kind: string, at: string, more: Record<string, unknown> = {}) => ({id: serial, kind, at, ark_day: 100, animal: null, other: null, parents: [], bringers: [{label: "@someone", named: true}], from_egg: false, clutch: null, phrase: null, source: null, thrive: null, species: "Plains Zebra", species_profile_id: SPECIES.zebra, ...more});
+
+/** Zebras 1 and 2 are aboard; zebra 3 (a parent) and lion 9 are gone; flea 20 was the last of its kind. */
+const snapshot: ArkSnapshot = {
+    voyage: {slug: "first", name: "Ark", started_at: null},
+    counts: {animals: 3, species: 2, founders: 1},
+    zones: [],
+    animals: [aboard(1, "Plains Zebra", "plains-zebra", SPECIES.zebra), aboard(2, "Plains Zebra", "plains-zebra", SPECIES.zebra), aboard(8, "African Lion", "african-lion", SPECIES.lion), aboard(30, "Plains Zebra", "plains-zebra", SPECIES.zebra, {arrived_at: "2026-11-16T00:00:00Z", origin: "born"})],
+    as_of: "2026-11-18T00:00:00Z",
+    ark_day: 240
+};
+const NOW = Date.parse("2026-11-18T00:00:00Z");
+const encounter = {t: Date.parse("2026-11-14T10:00:00Z") / 1000 - 30, step: 4, island: "wild", predator: {x: 10, z: 20}, prey: {x: 14, z: 26, r: 3}, d: 7.2};
+const log = {
+    events: [
+        row(1, "arrival", "2026-11-01T00:00:00Z", {animal: zebra(3)}),
+        row(10, "mated", "2026-11-10T10:00:00Z", {animal: zebra(1), other: zebra(3), parents: [id(1), id(3)]}),
+        row(11, "birth", "2026-11-12T10:00:00Z", {animal: zebra(4, {origin: "born", arrived_at: "2026-11-12T10:00:00Z"}), parents: [id(1), id(3)]}),
+        row(12, "birth", "2026-11-12T10:00:00Z", {animal: zebra(5, {origin: "born", arrived_at: "2026-11-12T10:00:00Z"}), parents: [id(1), id(3)]}),
+        row(13, "death_old", "2026-11-13T10:00:00Z", {animal: zebra(3, {status: "died_old", zone: "desert"})}),
+        row(14, "meal", "2026-11-14T10:00:00Z", {animal: lion(9), other: zebra(4, {status: "eaten"}), phrase: "zebras", species: "African Lion", species_profile_id: SPECIES.lion, encounter}),
+        row(15, "escaped", "2026-11-14T11:00:00Z", {animal: zebra(2), other: lion(9), payload: {encounter, rate: [0.2, 0.3]}}),
+        row(16, "birth", "2026-11-15T10:00:00Z", {animal: zebra(6, {origin: "born"}), parents: [id(2)], from_egg: true}),
+        row(20, "death_old", "2026-11-15T12:00:00Z", {animal: rowAnimal(20, "Common Water Flea", "common-water-flea", SPECIES.flea, {status: "died_old", zone: "river_lake"}), species: "Common Water Flea", species_profile_id: SPECIES.flea}),
+        row(21, "extinction", "2026-11-15T12:00:00Z", {species: "Common Water Flea", species_profile_id: SPECIES.flea}),
+        row(22, "extinction", "2026-11-16T12:00:00Z", {species: "Dodo", species_profile_id: "5bec1e50-0000-4000-8000-0000000000dd"}),
+        row(30, "last_stand", "2026-11-17T12:00:00Z", {animal: zebra(1), other: lion(8)}),
+        row(31, "released", "2026-11-17T13:00:00Z", {animal: lion(8), species: "African Lion", species_profile_id: SPECIES.lion, payload: {from: lion(8, {area: "zoo", island: "town", enclosure: "savanna", slot: 3})}}),
+        row(40, "mated", "2026-11-18T06:00:00Z", {animal: zebra(1), other: zebra(2), parents: [id(1), id(2)]})
+    ]
+};
+const plan = (eventId: number) => planArkEventReplay(eventId, log, snapshot, {now: NOW});
+const unavailable = (eventId: number | string, code: string) => assert.throws(() => planArkEventReplay(eventId, log, snapshot, {now: NOW}), (error: unknown) => error instanceof ArkReplayUnavailable && error.code === code);
+
+// MARK: The plan
+
+test("a mating: its two animals from the row, the live log's key, the one that has died since as a stand-in", () => {
+    const replay = plan(10);
+    assert.equal(replay.kind, "mated");
+    assert.equal(replay.t0, Date.parse("2026-11-10T10:00:00Z") / 1000);
+    assert.deepEqual(replay.cast.map((member) => [member.role, member.record.id, member.aboard]), [["pair", id(1), true], ["pair", id(3), false]]);
+    assert.deepEqual(replay.feed, {matings: [{key: "mated:10", a: id(1), b: id(3), t0: replay.t0}]});
+    assert.equal(replay.provisional, false);
+    assert.deepEqual(arkReplayModels(replay), ["plains-zebra"]);
+});
+
+test("no look-ahead: an event after now, an unknown event and a kind that is not acted are refused", () => {
+    unavailable(40, "not_released");
+    unavailable(999, "unknown_event");
+    unavailable("", "unknown_event");
+    unavailable(1, "not_replayable");
+    assert.deepEqual(arkReplayableEvents(log, NOW).map((event) => event.id), ["31", "30", "22", "21", "20", "16", "15", "14", "13", "12", "11", "10"], "newest first, nothing after now, only the kinds replayed");
+});
+
+test("a live birth: the whole litter as one act, its parents from their newest record at or before it", () => {
+    const replay = plan(12);
+    assert.equal(replay.kind, "birth");
+    assert.deepEqual(replay.cast.map((member) => [member.role, member.record.id, member.aboard]), [["parent", id(1), true], ["parent", id(3), false], ["young", id(4), false], ["young", id(5), false]]);
+    assert.deepEqual(replay.feed.births, [{key: `birth:2026-11-12T10:00:00Z:${[id(1), id(3)].sort().join(",")}`, parents: [id(1), id(3)], young: [id(4), id(5)], t0: replay.t0}]);
+    // Zebra 3 died later, in the desert by its death row: the birth's replay reads only what was written by then.
+    const parent = replay.cast.find((member) => member.record.id === id(3))!.record;
+    assert.equal(parent.zone, "grassland");
+    assert.equal(parent.status, "present");
+});
+
+test("a hatching: the scene's own replay act, and a parent with no record is said, never invented", () => {
+    const replay = plan(16);
+    assert.equal(replay.feed.play?.length, 1);
+    const act = replay.feed.play![0];
+    assert.ok(act.kind === "birth" && act.fromEgg && act.young[0].id === id(6));
+    assert.deepEqual(replay.cast.map((member) => member.role), ["parent", "young"]);
+    const orphan = planArkEventReplay(16, {events: log.events.map((event) => (event.id === 16 ? {...event, parents: ["0000feed-0000-4000-8000-00000000dead"]} : event))}, snapshot, {now: NOW});
+    assert.equal(orphan.cast.length, 1);
+    assert.match(orphan.notes[0], /no record/);
+});
+
+test("a death, a meal and an escape: the row's animals, a meal's and an escape's time the encounter's step", () => {
+    const death = plan(13);
+    assert.deepEqual([death.kind, death.eventKind, death.cast[0].role, death.cast[0].aboard], ["death", "death_old", "subject", false]);
+    assert.equal(death.feed.deaths![0].key, "death:13");
+    const meal = plan(14);
+    assert.equal(meal.t0, encounter.t);
+    assert.deepEqual(meal.cast.map((member) => [member.role, member.record.name]), [["predator", "African Lion"], ["prey", "Plains Zebra"]]);
+    assert.deepEqual(meal.feed.meals![0].encounter?.prey, encounter.prey);
+    const escaped = plan(15);
+    assert.deepEqual(escaped.cast.map((member) => [member.role, member.record.id]), [["prey", id(2)], ["predator", id(9)]]);
+    assert.deepEqual(escaped.feed.escapes, [{key: "escaped:15", prey: id(2), predator: id(9), t0: encounter.t, encounter: {t: encounter.t, step: 4, island: "wild", predator: encounter.predator, prey: encounter.prey, d: 7.2}}]);
+});
+
+test("an extinction: the death that ended the kind is the act, its animal marked the last; none in the log: refused", () => {
+    const replay = plan(21);
+    assert.equal(replay.kind, "extinct");
+    assert.equal(replay.causeEventId, "20");
+    assert.deepEqual(replay.cast.map((member) => [member.role, member.record.name, member.aboard]), [["last", "Common Water Flea", false]]);
+    assert.deepEqual(replay.marks, [id(20)]);
+    assert.equal(replay.feed.deaths![0].key, "death:20", "the same key the live log gave that death");
+    unavailable(22, "no_animals");
+});
+
+test("the kinds the server does not write yet are marked provisional", () => {
+    const last = plan(30);
+    assert.deepEqual([last.provisional, last.marks, last.cast.map((member) => member.role)], [true, [id(1)], ["last", "predator"]]);
+    assert.deepEqual(last.feed, {});
+    const released = plan(31);
+    assert.equal(released.provisional, true);
+    assert.equal(released.feed.release?.id, id(8));
+    assert.deepEqual([released.feed.release?.from?.area, released.feed.release?.from?.island, released.feed.release?.from?.enclosure], ["zoo", "town", "savanna"]);
+});
+
+// MARK: The words (Ark Lite's fallback)
+
+test("the replay in words: the live log's own sentence and its time, species only", () => {
+    const say = (eventId: number) => arkReplayText(plan(eventId), null, "en-GB");
+    assert.equal(say(10).headline, "Two Plains Zebras mated");
+    assert.equal(say(10).when, "10 November 2026 at 10:00 UTC · Ark day 100");
+    assert.deepEqual(say(10).lines, ["The Plains Zebra is no longer aboard"]);
+    assert.equal(say(12).headline, "2 Plains Zebra young were born");
+    assert.equal(say(16).headline, "A Plains Zebra hatched");
+    assert.equal(say(13).headline, "The Plains Zebra died of old age");
+    assert.equal(say(14).headline, "The African Lion ate a Plains Zebra");
+    assert.equal(say(15).headline, "A Plains Zebra got away from an African Lion");
+    assert.deepEqual([say(21).headline, say(21).lines], ["The last Common Water Flea is gone", ["The Common Water Flea died of old age", "It was the last of its kind on the Ark"]]);
+    assert.equal(say(30).headline, "The last Plains Zebra in the wild, an African Lion close by");
+    assert.equal(say(31).headline, "An African Lion was released into the wild");
+    for (const eventId of [10, 12, 13, 14, 15, 16, 21, 30, 31]) assert.ok(!JSON.stringify(say(eventId)).includes("someone"), "never a bringer");
+    assert.equal(arkReplayText(plan(30), {replayEvent: {lastStandWith: "Le dernier {animal}, {aPredator} tout près"}}, "fr").headline, "Le dernier Plains Zebra, an African Lion tout près");
+});
+
+test("the replay clip's plan: the event's kind as its shot, the record's words, a sample when it is not the record's", () => {
+    const shot = planArkReplayShot(10, {snapshot, rawEvents: log, fixture: false, now: new Date(NOW)});
+    assert.equal(shot.kind, "mated");
+    assert.equal(shot.direction.replay?.eventId, "10");
+    assert.equal(shot.slug, "replay-mated-plains-zebra-10");
+    assert.equal(shot.hookText, "TWO PLAINS ZEBRAS MATED");
+    assert.equal(shot.dataSource, "live");
+    assert.deepEqual(shot.direction.preload, ["plains-zebra"]);
+    assert.ok(!JSON.stringify(shot.cues).includes("@"), "no user is named");
+    assert.ok(planArkReplayShot(30, {snapshot, rawEvents: log, fixture: false, now: new Date(NOW)}).slug.startsWith("sample-replay-last-stand-"));
+    assert.throws(() => planArkReplayShot(40, {snapshot, rawEvents: log, fixture: false, now: new Date(NOW)}), ArkReplayUnavailable);
+});
+
+// MARK: The cast
+
+const record = (n: number, over: Partial<ArkCastRecord> = {}): ArkCastRecord => ({id: id(n), species_profile_id: SPECIES.zebra, name: "Plains Zebra", model_slug: "plains-zebra", zone: "grassland", arrived_at: "2026-11-01T00:00:00Z", origin: "arrived", generation: 0, slot: n, slot_rank: 0, activity: "diurnal", sociality: null, status: "died_old", ...over});
+
+test("the cast: a stand-in for whoever is not in the read, everyone pinned, the read itself when there is no cast", () => {
+    const cast = new ArkCast();
+    assert.equal(cast.roster(snapshot), snapshot);
+    cast.bring("mated:10", [record(1), record(3)], {marks: [id(3), id(77)]});
+    const roster = cast.roster(snapshot);
+    assert.notEqual(roster, snapshot);
+    assert.equal(cast.roster(snapshot), roster, "the same roster for the same read and cast");
+    assert.equal(cast.roster(roster), roster, "a roster handed back is its own read's");
+    assert.deepEqual(roster.animals.map((animal) => animal.id), [id(1), id(2), id(8), id(30), id(3)]);
+    assert.deepEqual(roster.counts, snapshot.counts, "a stand-in is never counted");
+    assert.deepEqual(Array.from(cast.pins), [id(1), id(3)]);
+    assert.deepEqual(Array.from(cast.marks), [id(3)], "a mark only on someone in the group");
+    assert.deepEqual(cast.report(), {pins: [id(1), id(3)], standIns: [id(3)], dropped: 0});
+    const standIn = roster.animals[4];
+    assert.deepEqual([standIn.mine, standIn.brought_by, standIn.slot], [false, {label: "", named: false}, 3]);
+});
+
+test("the cast: released groups take their stand-ins and pins with them; an id two groups name stays", () => {
+    const cast = new ArkCast().bring("a", [record(1), record(3)]).bring("b", [record(3), record(9)]);
+    assert.deepEqual(cast.roster(snapshot).animals.slice(4).map((animal) => animal.id), [id(3), id(9)]);
+    cast.release("a");
+    assert.deepEqual(Array.from(cast.pins), [id(3), id(9)]);
+    cast.release("b");
+    assert.equal(cast.roster(snapshot), snapshot);
+    assert.equal(cast.pins.size, 0);
+});
+
+test("the cast as of a moment: whoever came aboard later is left out unless the cast names them, and the day is the event's", () => {
+    const cast = new ArkCast().setAsOf(Date.parse("2026-11-12T10:00:00Z") / 1000, 100);
+    assert.deepEqual(cast.roster(snapshot).animals.map((animal) => animal.id), [id(1), id(2), id(8)]);
+    assert.equal(cast.roster(snapshot).ark_day, 100);
+    assert.equal(cast.report().dropped, 1);
+    cast.bring("birth", [record(30)]);
+    assert.deepEqual(cast.roster(snapshot).animals.map((animal) => animal.id), [id(1), id(2), id(8), id(30)]);
+    cast.clear();
+    assert.equal(cast.roster(snapshot), snapshot);
+});
+
+test("a stand-in is the server's record of it: its place, its island from its area, never anyone's", () => {
+    assert.equal(standInAnimal(record(3, {area: "zoo"})).island, "town");
+    assert.equal(standInAnimal(record(3, {area: null, island: "town"})).island, "town");
+    assert.equal(standInAnimal(record(3)).island, null);
+    assert.equal(standInAnimal(record(3, {enclosure: "savanna", area: "zoo"})).enclosure, "savanna");
+});
+
+test("the cast hands itself to the scene on apply, and takes itself away", () => {
+    const given: Array<ArkCastLayer | null> = [];
+    const cast = new ArkCast({setCast: (layer) => given.push(layer)});
+    cast.bring("a", [record(3)]).setAsOf(1, null);
+    assert.equal(given.length, 0, "nothing is laid out until apply");
+    cast.apply();
+    cast.detach();
+    assert.deepEqual(given, [cast, null]);
+    assert.equal(cast.pins.size, 0);
+});
+
+// MARK: The clock, and the shot
+
+test("the pinned clock gives the world's time (ms), and none unpinned", () => {
+    assert.equal(arkPinnedMs(), null);
+    pinArkClock(1_000_000);
+    const at = arkPinnedMs()!;
+    assert.ok(at >= 1_000_000_000 && at < 1_000_000_000 + 2_000);
+    pinArkClock(null);
+    assert.equal(arkPinnedMs(), null);
+});
+
+/** A scene that only remembers what it was given, with a mating whose times are known. */
+function fakeScene(acts: Partial<ArkLiveActs> = {}) {
+    const calls: Array<[string, unknown]> = [];
+    const places: Record<string, ArkLocated> = {};
+    const note = (name: string) => (value: unknown) => void calls.push([name, value]);
+    const handle = {
+        setCast: note("setCast"),
+        addMatings: note("addMatings"),
+        addDeaths: note("addDeaths"),
+        addBirths: note("addBirths"),
+        addEscapes: note("addEscapes"),
+        setMeals: note("setMeals"),
+        hold: note("hold"),
+        arrive: note("arrive"),
+        locate: (animalId: string) => places[animalId] ?? null,
+        liveActs: () => ({meals: [], matings: [], births: [], escapes: [], deaths: [], ...acts}),
+        view: () => ({target: {x: 0, y: 0, z: 0}, distance: 10, polar: 1, azimuth: 0}),
+        islandView: () => ({target: {x: 500, y: 0, z: 0}, distance: 300, polar: 1, azimuth: 0})
+    } as unknown as ArkSceneHandle;
+    const put = (animalId: string, x: number, z: number, shown = true) => (places[animalId] = {x, y: 1, z, ground: 0, length: 2, height: 1.4, awake: true, yaw: 0, act: null, shown});
+    return {handle, calls, put};
+}
+
+test("a replay shot: the clock pinned before the event, the cast brought in and pinned, the layer fed the record", () => {
+    const replay = plan(10);
+    const scene = fakeScene();
+    scene.put(id(1), 0, 0);
+    scene.put(id(3), 12, 0);
+    const shot = createArkReplayShot({handle: scene.handle, replay, aspect: () => 9 / 16, lead: 2.5});
+    try {
+        shot.begin();
+        assert.ok(Math.abs(arkEpochSeconds() - (replay.t0 - 2.5)) < 0.5, "the world's clock is the event's, less the lead");
+        const cast = scene.calls.find(([name]) => name === "setCast")![1] as ArkCastLayer;
+        assert.deepEqual(Array.from(cast.pins), [id(1), id(3)]);
+        assert.deepEqual(cast.roster(snapshot).animals.map((animal) => animal.id), [id(1), id(2), id(8), id(3)], "the one that died stands in; who was born later is left out");
+        assert.deepEqual(scene.calls.find(([name]) => name === "addMatings")![1], replay.feed.matings);
+        const view = shot.step(0, 0)!;
+        assert.ok(Math.abs(view.target.x - 6) < 0.01 && Math.abs(view.target.z) < 0.01, "the two framed together: the point between them");
+        assert.ok(view.distance > 12, "far enough back for both");
+        assert.deepEqual(shot.report().standIns, [id(3)]);
+        assert.equal(shot.doneAt(), null);
+    } finally {
+        shot.end();
+    }
+    assert.equal(arkPinnedMs(), null, "the real clock again");
+    assert.equal(scene.calls[scene.calls.length - 1][0], "setCast");
+    assert.equal(scene.calls[scene.calls.length - 1][1], null);
+});
+
+test("a mating's shot cuts to the end of a long walk, pulls away at the mount, and says when the layer skipped it", () => {
+    const replay = plan(10);
+    const key = replay.feed.matings![0].key;
+    const acted = fakeScene({matings: [{key, t0: replay.t0, phase: "acting", meet: 28, courted: 39, mounted: 60, end: 180}]});
+    acted.put(id(1), 0, 0);
+    acted.put(id(3), 3, 0);
+    const shot = createArkReplayShot({handle: acted.handle, replay, aspect: () => 9 / 16, lead: 1});
+    try {
+        shot.begin();
+        // (The harness's clock: the pin moves on with each frame, as the recorder's clock moves `performance.now`.)
+        let world = replay.t0 - 1;
+        const frame = (t: number) => {
+            pinArkClock(world);
+            const before = arkEpochSeconds();
+            const view = shot.step(t, 0.5);
+            world = arkEpochSeconds() + 0.5 + (arkEpochSeconds() - before > 1 ? 0 : 0);
+            return view;
+        };
+        let t = 0;
+        while (shot.doneAt() === null && t < 120) frame((t += 0.5));
+        const report = shot.report();
+        assert.equal(report.acted, true);
+        assert.deepEqual(report.cuts.map((cut) => cut.why), ["to the end of the walk to each other", "past the mount"]);
+        assert.ok(report.cuts[0].skipped > 15 && report.cuts[1].skipped > 15);
+        assert.ok(shot.doneAt()! < 45, "a clip's length");
+    } finally {
+        shot.end();
+    }
+    const skipped = fakeScene({matings: [{key, t0: replay.t0, phase: "skipped"}]});
+    skipped.put(id(1), 0, 0);
+    const still = createArkReplayShot({handle: skipped.handle, replay, aspect: () => 9 / 16, lead: 1});
+    try {
+        still.begin();
+        let world = replay.t0 - 1;
+        for (let t = 0; still.doneAt() === null && t < 60; t += 0.5) {
+            pinArkClock((world += 0.5));
+            still.step(t, 0.5);
+        }
+        assert.equal(still.report().acted, false);
+        assert.match(still.report().reason ?? "", /skipped/);
+    } finally {
+        still.end();
+    }
+});
+
+test("the event log is read through to its end: `more` followed from the last row, a stuck minute stepped over", async () => {
+    const asked: string[] = [];
+    const pages: Record<string, {events: Array<{id: number; at: string}>; more: boolean}> = {
+        "2026-11-01T00:00:00.000Z": {events: [{id: 1, at: "2026-11-02T00:00:10Z"}, {id: 2, at: "2026-11-02T00:00:20Z"}], more: true},
+        "2026-11-02T00:00:20Z": {events: [{id: 1, at: "2026-11-02T00:00:10Z"}, {id: 2, at: "2026-11-02T00:00:20Z"}], more: true},
+        "2026-11-02T00:01:00.000Z": {events: [{id: 3, at: "2026-11-03T00:00:00Z"}], more: false}
+    };
+    const fetcher = (async (url: string) => {
+        const since = decodeURIComponent(url.split("since=")[1]);
+        asked.push(since);
+        return {ok: true, json: async () => pages[since] ?? {events: [], more: false}};
+    }) as unknown as typeof fetch;
+    const read = await readArkEventLog("", {sinceMs: Date.parse("2026-11-01T00:00:00Z"), fetcher});
+    assert.deepEqual(asked, ["2026-11-01T00:00:00.000Z", "2026-11-02T00:00:20Z", "2026-11-02T00:01:00.000Z"]);
+    assert.deepEqual((read.events as Array<{id: number}>).map((event) => event.id), [1, 2, 3]);
+    assert.deepEqual([read.whole, read.skipped], [true, ["2026-11-02T00:00:20Z"]]);
+});

@@ -389,7 +389,21 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
 export type ArkCameraView = {target: {x: number; y: number; z: number}; distance: number; polar: number; azimuth: number};
 
 /** Where an animal is drawn now (its middle), the ground under it, its length and height, whether it is awake, and its heading. */
-export type ArkLocated = {x: number; y: number; z: number; ground: number; length: number; height: number; awake: boolean; /** Which way it faces (radians about up; 0 = +z). */ yaw: number};
+export type ArkLocated = {x: number; y: number; z: number; ground: number; length: number; height: number; awake: boolean; /** Which way it faces (radians about up; 0 = +z). */ yaw: number; /** The act it is posed by now (a live layer's or a replay's state: walk, display, mount, lie…), or null: its own day. */ act?: string | null; /** Drawn this frame (not held back, hidden, or outside the drawn set). */ shown?: boolean};
+
+/**
+ * V2 replay (`replay/cast.ts`, `replay/README.md`): what the scene reads of the cast each time it lays the roster out.
+ * The cast itself is never loaded by the scene: the recorder (and V1's live acts) load it and hand it in (`setCast`).
+ */
+export type ArkCastLayer = {
+    /** The roster to lay out for a read: the read itself, plus a stand-in for each cast animal that is not in it (dead,
+     *  eaten, left), and, as of a time, without who came aboard later. The same object for the same read and cast. */
+    roster: (snapshot: ArkSnapshot) => ArkSnapshot;
+    /** Ids always drawn one by one and never dropped: past the herds, the live budget and the render distance. */
+    pins: ReadonlySet<string>;
+    /** Ids with the soft ring under them (the last of its kind). */
+    marks: ReadonlySet<string>;
+};
 
 /** A replay running (`play`): skip it to jump to the Ark as it is now. */
 export type ArkReplayRun = {skip: () => void; done: Promise<void>};
@@ -544,6 +558,13 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * decides anything: the acts come from the event log.
      */
     play: (acts: ArkAct[], callbacks?: {onAct?: (index: number) => void}) => ArkReplayRun;
+    /**
+     * V2 replay: the live layers' acts under way, with their times in seconds after each act's `t0` (the layers' own
+     * `debug()`): a shot reads when a chase ends, when a pair meets, to place its cuts. Never decides anything.
+     */
+    liveActs?: () => ArkLiveActs;
+    /** V2 replay: hand the scene a cast (stand-ins and pins, `replay/cast.ts`), or null to take it away; the roster is laid out again. */
+    setCast?: (cast: ArkCastLayer | null) => void;
     /** Place a replay's departed animals off the main thread ahead of `play` (runtime lane). */
     prepareReplay?: (acts: ArkAct[]) => Promise<void>;
     /** The visual CI: forget the reactive layer's and the rigs' state carried from earlier frames. */
@@ -639,3 +660,12 @@ export type ArkHappening = {id: string; kind: ScheduleMomentKind; /** What it se
 /** One animal's reactive state, as the page and the audit lane read it (`reactive.ts` ReactiveOut). */
 export type ArkReactiveSnapshot = {action: string; headYaw: number; headPitch: number; headWeight: number; dx: number; dz: number; bodyYaw: number; crouch: number; called: boolean; alarmed: number; looking: string | null};
 export type ArkReactiveStats = {tier: string; agents: number; inputs: number; perceptions: number; sightChecks: number; alarms: number; ms: number};
+
+/** `ArkSceneHandle.liveActs`: each live layer's acts as its `debug()` says them (times in seconds after the act's `t0`). */
+export type ArkLiveActs = {
+    meals: Array<{key: string; t0: number; catchAt: number; feedTo: number; carcassEnd: number; carcass: {x: number; z: number} | null; style: string}>;
+    matings: Array<{key: string; t0: number; phase: string; meet?: number; courted?: number; mounted?: number; end?: number; contestEnd?: number}>;
+    births: Array<{key: string; t0: number; mother: string | null; end: number | null; phase: string}>;
+    escapes: Array<{key: string; t0: number; phase: string; missAt: number | null; seconds: number | null}>;
+    deaths: Array<{key: string; id: string; t0: number; spot: {x: number; z: number; base: number; yaw: number} | null; drawn: boolean}>;
+};

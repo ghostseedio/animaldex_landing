@@ -162,6 +162,7 @@ import {
     type ArkLiveHunt,
     type ArkReplayRun,
     type ArkRegion,
+    type ArkCastLayer,
     type ArkSceneHandle,
     type ArkSceneOptions,
     type ArkSelectionExtras,
@@ -275,6 +276,7 @@ import {MealTraces, type TraceDraw} from "@/ark-scene/meal-traces";
 import {bodyMassKg, isScavenger, mealPlan, type MealPlan, type MealSide, type ScavengerCandidate} from "@/ark-scene/meals";
 import * as liveBudget from "@/ark-scene/live-budget";
 import {selectAim, selectionPins, selectionSurvives} from "@/ark-scene/selection";
+import {arkPinnedMs} from "@/ark-scene/shared-clock";
 import {wireZoneCapacity} from "@/ark-scene/map/capacity";
 import {arkSeenKind, type ArkSeenAct} from "@/lib/ark-live-log";
 import {l2BodyChannel, l2BodyUniforms, l2ClipBake, l2FlightFrame, l2FlightGate, l2LandingNow, l2Sidewind, l2SurfaceGuard, l2SwimRate, newL2Motion, type L2Motion} from "@/ark-scene/locomotion/l2-scene";
@@ -623,6 +625,8 @@ type FigureGroup = Omit<HerdDraw, "badge" | "info"> & {resting: true};
 const MINE = new Color("#b9f75a");
 const SELECTED = new Color("#fff4dc");
 const ARRIVAL = new Color("#fff3d6");
+/** V2 replay: the soft ring under an animal the cast marks (the last of its kind). */
+const LAST_OF_KIND = new Color("#ffb347");
 
 function easeOutBack(t: number): number {
     const c = 1.4;
@@ -824,7 +828,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let clockScale = 1;
     let clockAnchor = Date.now();
     let clockAnchorReal = clockAnchor;
-    const worldMs = () => clockAnchor + (Date.now() - clockAnchorReal) * clockScale;
+    // (A pinned shared clock, `pinArkClock`: a recorded event replayed at its own time, `replay/README.md`.)
+    const worldMs = () => arkPinnedMs() ?? clockAnchor + (Date.now() - clockAnchorReal) * clockScale;
     const hoursNow = () => pinnedHours ?? islandHours(worldMs(), ISLAND_OFFSET_HOURS);
     // The weather and tide, from the same clock unless pinned (`setEnvironment`).
     let pinnedEnvironment: LivePin | null = null;
@@ -1359,6 +1364,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** Pinned representatives: the one selected (a herd member promoted), and a replay's animals. */
     let selectionPin: string | null = null;
     let replayPins = new Set<string>();
+    /**
+     * V2 replay (`replay/cast.ts`, never loaded by the scene itself: whoever needs it hands it in through `setCast`): the
+     * stand-ins for animals an act names that are gone now, and the ids pinned so they are always drawn one by one.
+     */
+    let cast: ArkCastLayer | null = null;
     /** Meal ids pinned (drawn one by one) while the live world acts them. */
     let mealPins = new Set<string>();
     // 3.3 batch (D): the limp of an animal that got away (`live-escapes.ts`), asked by the draw; null until the escapes' layer is up.
@@ -2887,7 +2897,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** Again from the snapshot as it is: after a pin changed (a herd member selected, a replay's animals). */
     const refreshLive = () => {
-        if (herds.length || replayPins.size || mealPins.size || selectionPin) setSnapshot(current, false);
+        if (herds.length || replayPins.size || mealPins.size || selectionPin || cast) setSnapshot(current, false);
     };
 
     // The hamlet (`map/hamlet.ts`): its plots' key, its residents, and who is out now (worked out once a second), on the
@@ -2916,21 +2926,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const setSnapshot = (whole: ArkSnapshot, entrances: boolean) => {
         // p5 (humans): the record's humans are drawn as generic town people (`humans/`), never as animals.
         const people = splitHumans(whole);
-        const snapshot = people.rest;
+        const base = people.rest;
+        // V2 replay: the roster with the cast's stand-ins (and, as of a time, without who came later); else the read itself.
+        const snapshot = cast ? cast.roster(base) : base;
         humansAboard = people.humans;
         townHumans.setRoster(people.humans);
         // The entrance's clock is the frame's (seconds since the scene started).
         const now = (performance.now() - started) / 1000;
-        current = snapshot;
+        current = base;
         aboard = new Set(snapshot.animals.map((animal) => animal.id));
         forestHumans = people.humans.map((animal) => animal.id); // p5 (humans): the logging crews are of the humans aboard
         dogRosterDirty = true; // p5 (humans, dogs)
         forest.rosterChanged(); // p5 (humans)
         // Everyone's place (the herds' members too): from the server's slots, the same for every viewer.
-        if (placedFor !== snapshot) {
+        if (placedFor !== base) {
             // The hamlet's plots for these residents (`map/hamlet.ts`), set before anything reads the attach points.
             // (Part C: the wild island's residents only; with two islands the kept animals live in the town.)
-            const plots = hamletPlotsFor(wildOnly(snapshot.animals));
+            const plots = hamletPlotsFor(wildOnly(base.animals));
             const plotsKey = plots.map((plot) => plot.id).join(",");
             if (plotsKey !== hamletPlotsKey) {
                 hamletPlotsKey = plotsKey;
@@ -2939,19 +2951,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (setBehaviourHomePlots(plots)) restartBehaviourWorld();
                 for (const sceneModule of modules) (sceneModule as Partial<{setHomePlots: (list: HomePlot[]) => void}>).setHomePlots?.(plots);
             }
-            placedAll = placeAll(snapshot.animals);
-            placedFor = snapshot;
-            hamletResidents = snapshot.animals.flatMap((animal) => {
+            placedAll = placeAll(base.animals);
+            placedFor = base;
+            hamletResidents = base.animals.flatMap((animal) => {
                 const plot = placedAll.get(animal.id)?.hamlet?.plot;
                 return plot ? [{id: animal.id, slug: animal.model_slug, length: arkBody(animal).metres, plot}] : [];
             });
         }
-        const places = placedAll;
+        let places = placedAll;
+        // (The cast's stand-ins, placed as a replay's departed are: from the server's record of each, where it stood.)
+        const standIns = snapshot === base ? [] : snapshot.animals.filter((animal) => !placedAll.has(animal.id));
+        if (standIns.length) {
+            places = new Map(placedAll);
+            placeAll(standIns, true).forEach((place, id) => places.set(id, place));
+        }
         // Part B: the chunks the animals live in hold content (the haze is on only while such a chunk lies beyond).
         places.forEach((place) => streamer.markContent(place.x, place.z));
         // A very popular species (A14): its representatives drawn one by one, the rest as the herd.
         // (The selected animal too, while aboard: it stays drawn one by one as the town joins or a new read comes.)
-        const pins = selectionPins(aboard, {selected: selectedId, promoted: selectionPin, followed: followId, replay: mealPins.size ? Array.from(replayPins).concat(Array.from(mealPins)) : replayPins});
+        const pins = selectionPins(aboard, {selected: selectedId, promoted: selectionPin, followed: followId, replay: mealPins.size || cast ? Array.from(replayPins).concat(Array.from(mealPins), Array.from(cast?.pins ?? [])) : replayPins});
         // 3.3 fix: the kept town animals nearest the look point are out to move (`near-kept.ts`).
         for (const id of nearKept) if (aboard.has(id)) pins.add(id);
         for (const id of walkPins) if (aboard.has(id)) pins.add(id); // p5 (humans, dogs): the dogs out on a walk
@@ -5053,7 +5071,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         streamSkipped = 0;
         const streaming = !streamer.allIn;
         oceanShadows?.begin(); // p2 (ocean)
-        const pinnedNow = (entry: Entry) => entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id || Boolean(entry.visitor || entry.act || entry.moment || entry.held);
+        const pinnedNow = (entry: Entry) => entry.animal.mine || selectedId === entry.animal.id || followId === entry.animal.id || Boolean(entry.visitor || entry.act || entry.moment || entry.held || cast?.pins.has(entry.animal.id));
         // Past the render distance: drawn only from the map view, and only when big on screen (a whale, an elephant: true
         // scale); otherwise skipped (a marker in the map view).
         const streamedOut = (entry: Entry, at: {x: number; y: number; z: number}) => {
@@ -5462,7 +5480,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 );
             }
             const rest = Math.max(entry.place.ground, 0);
-            const marked = selectedId === animal.id ? 2 : mineOnly && animal.mine ? 1 : 0;
+            const marked = selectedId === animal.id ? 2 : mineOnly && animal.mine ? 1 : cast?.marks.has(animal.id) ? 3 : 0;
             // Too small to find on its own (a few pixels across: from far, or a beetle a few metres off): a soft dot over it,
             // and its icon once tapped. Close by it is drawn true to size, and found by looking. (True scale, motion pass §3.)
             const fromAfar = !entry.micro || entry.length >= entry.full * 0.999;
@@ -5505,7 +5523,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const touch = groundContact(where.base + lift, under.height, under.water, entry.drawnHeight || entry.length * 0.6);
                 if (touch) shadowList.push({x: where.x, y: touch.y, z: where.z, width: Math.max(entry.length * sizeUp * 0.5, 0.4), length: entry.length * sizeUp, yaw: where.yaw, strength: touch.strength});
                 // (Afloat: on the water's surface there, the sea's 0, the v2 lake's 6 m: lane MA3 water 2, it was under the lake's bed.)
-                if (marked) ringList.push({x: where.x, y: where.afloat ? waterTopAt(where.x, where.z) : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
+                if (marked) ringList.push({x: where.x, y: where.afloat ? waterTopAt(where.x, where.z) : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : marked === 3 ? LAST_OF_KIND : MINE, alpha: 1});
                 counts.near++;
                 continue;
             }
@@ -5779,10 +5797,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // water's surface over a swimmer or a wader (lane MA3 water 2: the sea's 0 as before; the v2 lake's 6 m, where it
                 // was drawn at 0, under the lake's bed).
                 const ringY = where.afloat ? (island?.contains(where.x, where.z) ? where.base : waterTopAt(where.x, where.z)) : Math.max(underFeet?.height ?? groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true, poseBase).height, island?.contains(where.x, where.z) ? 0 : waterTopAt(where.x, where.z));
-                ringList.push({x: where.x, y: ringY, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : MINE, alpha: 1});
+                ringList.push({x: where.x, y: ringY, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : marked === 3 ? LAST_OF_KIND : MINE, alpha: 1});
             } else if (marked && surface && surface.ny > 0.8 && !entry.toLight) {
                 // A small one on level ground (the litter, a flower, the pond): a ring its own size.
-                ringList.push({x: where.x, y: where.base + 0.004, z: where.z, radius: Math.max(entry.length * 1.3, 0.025), color: marked === 2 ? SELECTED : MINE, alpha: 1});
+                ringList.push({x: where.x, y: where.base + 0.004, z: where.z, radius: Math.max(entry.length * 1.3, 0.025), color: marked === 2 ? SELECTED : marked === 3 ? LAST_OF_KIND : MINE, alpha: 1});
             }
         }
 
@@ -9289,6 +9307,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             shadows.setStrength(look.contactStrength(TIER_SETTINGS[tier].shadows > 0));
         },
         play,
+        // V2 replay: the live layers' acts under way and their times (what `__arkDebug` shows in development), for a shot's cuts.
+        liveActs: () => ({meals: liveMeals.debug(), matings: liveMatings.debug(), births: liveBirths.debug(), escapes: liveEscapes.debug(), deaths: liveDeaths.debug()}),
+        // V2 replay (`replay/cast.ts`): the cast handed in (or taken away, null); the roster is laid out again with it.
+        setCast: whenAnimals((layer: ArkCastLayer | null) => {
+            cast = layer;
+            setSnapshot(current, false);
+        }),
         // Runtime (the visual CI): drop what earlier real-time frames carried (the reactive layer, rig blends, glances).
         resetTransients: () => {
             reactive.resetAll();
@@ -9337,14 +9362,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             controls.update();
         },
         locate: (id) => {
-            const entry = findEntry(id);
+            // (A stand-in being acted first: an eaten prey's, a dead one's body, while the one in the roster is held back.)
+            const entry = (mealGhosts.length ? mealGhosts.find((ghost) => ghost.animal.id === id && !ghost.held) : null) ?? findEntry(id);
             if (!entry) return null;
             const ground = Math.max(entry.place.ground, 0);
             // p2 (ocean): one out in the open ocean not drawn yet is where its loop has it now, not at its old place.
             const sea = !entry.middle && entry.depth && oceanRoams(entry) ? oceanFix(entry.animal, entry.length, clockNow()) : null;
             if (sea) return {x: sea.x, y: ARK_ENVIRONMENT.seaLevel.value - 4, z: sea.z, ground: 0, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: sea.yaw};
             const middle = entry.middle ?? new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z);
-            return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0};
+            return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0, act: entry.act?.state ?? null, shown: Boolean(entry.middle) && !entry.held && !entry.act?.hidden};
         },
         behaviour: (id) => findEntry(id)?.state ?? null,
         rest: (id) => {
