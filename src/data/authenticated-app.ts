@@ -1218,6 +1218,18 @@ function gameStatsFromRecord(record: Record<string, number> | null | undefined):
     };
 }
 
+/** GRADING-4: the stored stars for any capture the viewer may see; errors (no table yet, RLS) mean none. */
+async function getStoredCaptureStars(id: string): Promise<{captureStars: number | null; captureStarScore: number | null}> {
+    const supabase = createSupabaseServerClient();
+    if (!supabase) return {captureStars: null, captureStarScore: null};
+    const {data} = await supabase.from("capture_star_ratings")
+        .select("stars,star_score")
+        .eq("capture_id", id)
+        .maybeSingle();
+    const row = data as QueryRow | null;
+    return {captureStars: captureStars(row?.stars), captureStarScore: captureStarScore(row?.star_score)};
+}
+
 /**
  * Any discoverable capture, read through the public Discover view, shaped
  * like an owned `AppCaptureDetail` so the detail screen renders either. iOS
@@ -1225,7 +1237,7 @@ function gameStatsFromRecord(record: Record<string, number> | null | undefined):
  * was owner-only, which 404'd Discover, binder and notification taps.
  */
 export async function getPublicCaptureDetail(id: string): Promise<PublicCaptureDetail | null> {
-    const item = await getDiscoverCaptureById(id);
+    const [item, stored] = await Promise.all([getDiscoverCaptureById(id), getStoredCaptureStars(id)]);
     if (!item) return null;
 
     const baseGameStats = gameStatsFromRecord(item.gameStats);
@@ -1284,7 +1296,9 @@ export async function getPublicCaptureDetail(id: string): Promise<PublicCaptureD
             isZooComparisonBanned: item.isZooComparisonBanned,
             isChallengeAnalysisEligible: item.isChallengeAnalysisEligible,
             isEligibleCapture: item.isEligibleCapture,
-            hasUncertaintyFallback: item.hasUncertaintyFallback
+            hasUncertaintyFallback: item.hasUncertaintyFallback,
+            captureStars: stored.captureStars,
+            captureStarScore: stored.captureStarScore
         },
         collector: item.collector,
         // The detail carousel keeps the persisted cover as its first page; only
