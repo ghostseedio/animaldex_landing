@@ -637,7 +637,7 @@
         },
         "timeLeft": {
             "title": "残り時間の目安",
-            "about": "約{value}",
+            "about": "{value}ほど",
             "hint": "確率から見た可能性の高い範囲で、約束ではありません。Arkの1日は現実の約55分です。",
             "reasonAge": "一般的な寿命：{span}",
             "reasonAgeEstimate": "一般的な寿命（推定）：{span}",

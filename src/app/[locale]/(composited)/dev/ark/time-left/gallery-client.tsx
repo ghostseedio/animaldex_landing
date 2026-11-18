@@ -5,6 +5,7 @@ import {ArkAnimalCard} from "@/app/[locale]/(composited)/ark/ark-animal-card";
 import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkWords} from "@/lib/ark-words";
 import {arkIconUrl} from "@/ark-scene/placeholder-icon";
+import {arkDirection} from "@/lib/ark-languages";
 
 /** Fixture kinds (ids are made up; the slugs are real species). */
 const KIND = {
@@ -87,10 +88,11 @@ if (typeof window !== "undefined") {
 }
 
 export default function ArkTimeLeftGallery({words, talk, language}: {words: ArkWords; talk: {a: string; an: string}; language: string}) {
-    const [query, setQuery] = useState<{animal: string; view: string; grace: boolean} | null>(null);
+    const [query, setQuery] = useState<{animal: string; view: string; grace: "over" | "ahead" | "none"} | null>(null);
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
-        setQuery({animal: params.get("animal") ?? "old", view: params.get("view") ?? "card", grace: params.get("grace") !== "0"});
+        const grace = params.get("grace");
+        setQuery({animal: params.get("animal") ?? "old", view: params.get("view") ?? "card", grace: grace === "0" ? "none" : grace === "ahead" ? "ahead" : "over"});
     }, []);
     const selectedId = CASES[query?.animal ?? "old"] ?? "v1";
     const snapshot = useMemo<ArkSnapshot | null>(() => {
@@ -103,13 +105,13 @@ export default function ArkTimeLeftGallery({words, talk, language}: {words: ArkW
             animals,
             as_of: "2026-11-18T09:00:00Z",
             ark_day: ARK_DAY,
-            ...(query.grace ? {hunt_grace: {ends_ark_day: 120, ramp_ark_days: 40}} : {})
+            ...(query.grace !== "none" ? {hunt_grace: {ends_ark_day: query.grace === "ahead" ? 300 : 120, ramp_ark_days: 40}} : {})
         };
     }, [query, selectedId]);
     const selected = snapshot?.animals.find((animal) => animal.id === selectedId) ?? null;
     if (!query || !snapshot || !selected) return null;
     return query.view === "lite" ? <LiteStage snapshot={snapshot} words={words} talk={talk} language={language} /> : (
-        <div className="relative h-screen overflow-hidden bg-[#0e140e]" data-testid="stage">
+        <div dir={arkDirection(language)} className="fixed inset-0 z-[100] overflow-hidden bg-[#0e140e]" data-testid="stage">
             <ArkAnimalCard
                 bandRef={() => undefined}
                 animal={selected}
@@ -155,5 +157,5 @@ function LiteStage({snapshot, words, talk, language}: {snapshot: ArkSnapshot; wo
             dispose?.();
         };
     }, [snapshot, words, language, talk]);
-    return <div ref={host} className="relative h-screen overflow-hidden bg-[#0e140e]" data-testid="stage" />;
+    return <div ref={host} dir={arkDirection(language)} className="fixed inset-0 z-[100] overflow-hidden bg-[#0e140e]" data-testid="stage" />;
 }
