@@ -120,7 +120,8 @@ A parent with no record in the log given and not aboard is left out and said in 
 
 `createArkReplayShot({handle, replay, aspect, lead, mount?, asOf?})` → `begin()`, `settle()`, `step(t, dt)`,
 `doneAt()`, `actAt()`, `report()`, `end()`. The director calls them; `report()` says who stood in, the cuts, whether
-the scene's layer acted it (and why not), and how many of the act's frames each of the cast was drawn in.
+the scene's layer acted it (and why not), the clip second of the act's telling moment (`keyAt`: a still's frame), and
+how many of the act's frames each of the cast was drawn in.
 
 - **The clock.** `pinArkClock(t0 - lead)`: the scene's world time (schedules, the layers, the island's light) follows
   the pin. A cut is the pin moved on. Before the first frame the scene settles for a few seconds of frames nobody
@@ -129,9 +130,11 @@ the scene's layer acted it (and why not), and how many of the act's frames each 
   nearly black: `--night-gain 3` raises the camera's exposure with the night (only the camera: the hour and what the
   animals do stay the event's). `--hour` pins the hour instead (then the animals' day is that hour's too).
 - **The frame.** The two farthest of the cast that are drawn, together (`pair-frame.ts`), nearer than a tap's meeting
-  distance. While two are still coming together and more than 16 m apart, the one the act comes to (a narrow upright
-  picture cannot hold both from under the treetops). The bearing is the scene's own clear one (`clearView`), kept
-  until a tree has stood between for a few frames, then eased round to the nearest clear one.
+  distance. While two are still coming together and more than 8 m apart, one of them alone: the first of a pair, the
+  hunter of a chase (a narrow upright picture cannot hold both from under the treetops). The bearing is the scene's
+  own clear one (`clearView`), side on to the two, kept until a tree has stood between for a few frames, then eased
+  round to the nearest clear one; with none, the camera goes higher. A small animal and a body on the ground are
+  filmed from well above (the plants round them are as tall as the camera is far).
 - **Cuts.** A long walk to a mate and a long stalk are cut to their last seconds; a contest before a mating to its
   last bouts. An extinction's shot runs the body's last three minutes in four seconds while the camera pulls back.
 - **The mount** is not filmed by default (the audit's editorial judgement): the camera pulls up and away, then the two
@@ -155,9 +158,25 @@ in the Ark's 44 languages.
 - **The world then.** `setAsOf` leaves out later arrivals; it does not bring back every animal that has died since
   (only the cast). Homes are spaced from predators as today's roster has them.
 - **A dying act** does not exist yet (P1-3): a death is the fall onto its side (1.2 s), then the body.
+- **What the layers do not act, a replay cannot either.** `live-matings` and `live-births` skip an animal with no day
+  to walk from: an insect at its microhabitat, a flyer on the wing, a fish in a tank, a zoo animal held in its house.
+  On 2026-11-18 every recorded event that names an animal gone since (375 deaths, 143 matings, 317 births) is an
+  insect of 10 cm or less: their stand-ins stand, but the mating is not walked. (`__replay.gone` in the harness
+  films a mating the layer does act with one of the two taken out of the read: the stand-in is walked and mounted.)
+- **Water.** The camera does not go under the surface for a fish: an aquatic birth or mating is a picture of water.
+- **Leaves and rocks.** `clearView` knows hills and tree trunks, not bushes, crowns over the animal or boulders.
+- **Night.** A forest floor at night stays dark at any exposure; `--hour` films the event by day.
 - **A release** films the zoo, then the entrance at its wild home. The keeper's gate and the shore crate are P1-8.
 - **The recorder's world.** The recording page now mounts the live wild island (v2), as `/ark` does. Before this, every
-  recorder shot filmed the old island.
+  recorder shot filmed the old island, and read only the oldest thousand rows of the last 30 days' log.
+
+Found on the way, not fixed here (the scene's, for whoever builds on this):
+- An animal kept across two reads keeps the day of its old home when its place changes (`setSnapshot` reuses the
+  entry and its schedule): a released animal would go on living its zoo day until the page is loaded again (P1-8).
+- `live-meals` hides the living animal behind its stand-in and never shows it again; a prey that a heart brought back
+  stays hidden after its meal is acted. A replay's end calls `clearLiveActs`, which shows the cast again.
+- The scene looks at its clock for the light every five seconds, and not at all during its own replay (`play`); a
+  shot sets the light itself after each move of the clock.
 
 ## Testing
 
@@ -168,4 +187,6 @@ node scripts/ark-replay-shots.mjs --data <dir with voyage.json + events.json> --
 
 The harness films recorded events from a saved read of the real Ark and its real public log (both hold usernames:
 keep them out of the repository). `meal`, `escaped`, `last_stand` and `released` events are made by the page from
-animals really aboard while production has none.
+animals really aboard while production has none. Per event it saves a clip, a strip of eight frames, the still at the
+shot's telling moment and, in `summary.json`, the shot's own account and the layer's. `--quality low` runs the low
+tier (the 200-animal live budget, the 440 m render distance): the cast must still be drawn.

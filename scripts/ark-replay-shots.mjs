@@ -238,7 +238,7 @@ const film = async (kind, id, made, n) => {
     if (clips) execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(fps), "-i", path.join(dir, "%04d.jpg"), "-c:v", "libx264", "-preset", "veryfast", "-crf", "24", "-pix_fmt", "yuv420p", "-r", "30", path.join(out, `${name}.mp4`)]);
     rmSync(dir, {recursive: true, force: true});
     entry.ok = Boolean(report?.acted);
-    log(`${name}: ${frames} frames (${entry.seconds.toFixed(1)} s) in ${entry.wall} s; ${report?.acted ? "acted" : `NOT acted: ${report?.reason}`}; stand-ins ${report?.standIns.length ?? 0}; seen ${Object.values(seen).map((s) => `${s.role} ${s.shown}%`).join(", ")}; cuts ${report?.cuts.length ?? 0}`);
+    log(`${name}: ${frames} frames (${entry.seconds.toFixed(1)} s) in ${entry.wall} s; ${report?.acted ? "acted" : `NOT acted: ${report?.reason}`}; stand-ins ${report?.standIns.length ?? 0}; seen ${Object.values(seen).map((s) => `${s.role} ${s.shown}%`).join(", ")}; cuts ${report?.cuts.length ?? 0}; brought in by the cast ${prepared.cast.filter((c) => !c.inSceneBefore).length}/${prepared.cast.length}`);
 };
 
 for (const kind of kinds) {

@@ -42,18 +42,17 @@ const CLOSE_MIN = 0.5;
  * person could see across a clearing; from well above for a small one (the plants round it are as tall as the camera
  * is far) and for a body lying on the ground. Raised further while something still stands between (`RAISE`).
  */
-const POLAR = 1.05;
+const POLAR = 0.9;
 const POLAR_SMALL = 0.72;
 const RAISE = 0.16;
 const RAISE_MOST = 0.48;
 /** Two farther apart than this (m) are not held in one picture after their act (from that far back neither reads). */
 const TOGETHER = 40;
 /**
- * While two are still coming together (a walk to a mate, a stalk), one picture holds both only within this (m): an
- * upright picture is narrow, and from far enough back for more the camera is over the treetops. Until then, the one
- * the act comes to.
+ * While two are still coming together (a walk to a mate, a stalk), one picture holds both only within this (m): from
+ * far enough back for more the camera is over the treetops. Until then, one of them alone.
  */
-const CLOSING = 8;
+const CLOSING = 14;
 /**
  * The frames nobody sees before the shot's first (the director's, `settle`): the clock is pinned this long before the
  * shot's start, so they end before it, never past the event (a layer that has begun its act is not walked back).
@@ -223,12 +222,18 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         const narrow = Math.tan((FOV * Math.PI) / 360) * Math.min(Math.max(aspect, 0.3), 1);
         const single = Math.max(Math.min(meetDistance(length, aspect, FOV) * CLOSE, length / (2 * CLOSE_SHARE * narrow)), CLOSE_MIN);
         const max = style.max ?? 150;
-        const pair = a === b ? null : framePair({x: a.x, y: a.y, z: a.z, length: a.length}, {x: b.x, y: b.y, z: b.z, length: b.length}, {fovDeg: FOV, aspect, single, max});
+        const polar = style.polar ?? (length < 0.3 ? POLAR_SMALL : POLAR);
+        const apartNow = far > Math.max(length * 0.5, 0.2);
+        // An upright picture (a phone's clip) holds two along its tall side: the camera looks along the line between them,
+        // one nearer and one farther, and the line is foreshortened by the camera's height. A wide picture holds them
+        // side on (the selection's pair framing).
+        const upright = aspect < 0.9 && apartNow && far > length * 1.2;
+        const pair = a === b || upright ? null : framePair({x: a.x, y: a.y, z: a.z, length: a.length}, {x: b.x, y: b.y, z: b.z, length: b.length}, {fovDeg: FOV, aspect, single, max});
         const centre = pair ?? {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2};
         // (Farther apart than the pair framing takes: the same fit, as far back as it needs, up to `max`.)
-        const fit = (far / 2 + length * 0.6) / (0.7 * narrow);
+        const fit = upright ? ((far * Math.cos(polar)) / 2 + length * 0.7) / (0.62 * Math.tan((FOV * Math.PI) / 360)) : (far / 2 + length * 0.6) / (0.7 * narrow);
         const distance = Math.min(Math.max(pair?.distance ?? Math.max(single, fit), single), max) * (style.widen ?? 1);
-        const across = far > Math.max(length * 0.5, 0.2) ? Math.atan2(b.z - a.z, -(b.x - a.x)) : outward(centre);
+        const across = !apartNow ? outward(centre) : upright ? Math.atan2(a.x - b.x, a.z - b.z) : Math.atan2(b.z - a.z, -(b.x - a.x));
         const out = outward(centre);
         const side = Math.cos(across - out) >= 0 ? across : across + Math.PI;
         const held = who.map((p) => p.id).sort().join(",");
@@ -237,7 +242,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             bearing = null;
             raised = 0;
         }
-        return {target: {x: centre.x, y: centre.y, z: centre.z}, distance, azimuth: side, polar: (style.polar ?? (length < 0.3 ? POLAR_SMALL : POLAR)) - raised, places: who.map((p) => ({x: p.x, y: p.y, z: p.z}))};
+        return {target: {x: centre.x, y: centre.y, z: centre.z}, distance, azimuth: side, polar: polar - raised, places: who.map((p) => ({x: p.x, y: p.y, z: p.z}))};
     };
     const apart = (a: string, b: string): number | null => {
         const [p, q] = [handle.locate(a), handle.locate(b)];

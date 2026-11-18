@@ -79,7 +79,7 @@ async function main() {
         };
         if (kind === "meal" || kind === "escaped") {
             // Real pairs of the food chain on the wild island, nearest first: a hunter and one of its own prey kinds aboard.
-            const land = wild().filter((animal) => filmable(animal, 0.5));
+            const land = wild().filter((animal) => filmable(animal, 0.3));
             const used = new Set<string>();
             const pairs: Array<{hunter: ArkAnimal; prey: ArkAnimal; d: number}> = [];
             for (const hunter of land) for (const prey of land) {
@@ -89,11 +89,12 @@ async function main() {
                 if (a && b) pairs.push({hunter, prey, d: Math.hypot(a.x - b.x, a.z - b.z)});
             }
             pairs.sort((x, y) => x.d - y.d || x.hunter.id.localeCompare(y.hunter.id));
-            // (A species once while there are pairs for it; then an animal once: the wild island has few filmable pairs yet.)
-            const order = [...pairs.filter((pair) => pair.d <= 120), ...pairs.filter((pair) => pair.d <= 120)];
-            let pass = 0;
-            for (const [index, pair] of order.entries()) {
-                if (index === order.length / 2) pass = 1;
+            // (A species once while there are pairs for it; then an animal once: the wild island has few filmable pairs yet.
+            // The nearest pairs first: the hunter's foray is put within reach of its prey's home, as the server's are.)
+            const order = [...pairs, ...pairs];
+            for (let index = 0; index < order.length; index++) {
+                const pair = order[index];
+                const pass = index < order.length / 2 ? 0 : 1;
                 if (ids.length >= n) break;
                 if (used.has(pair.hunter.id) || used.has(pair.prey.id)) continue;
                 if (pass === 0 && (used.has(pair.hunter.model_slug) || used.has(pair.prey.model_slug))) continue;
@@ -165,10 +166,12 @@ async function main() {
                 director = createArkDirector({handle, clock, canvas, info: {snapshot, fixture: false, events: rows}});
             }
             const plan = planArkReplayShot(id, {snapshot, rawEvents: rows, fixture: Boolean(made.get(id)?.sample), now: new Date(now), mount: options.mount, hour: options.hour ?? null, nightGain: options.nightGain ?? null});
+            // (Who of the cast the scene had before it was brought in: the rest were outside the live budget, or gone.)
+            const before = Object.fromEntries(plan.direction.replay!.cast.map((member) => [member.record.id, Boolean(handle.locate(member.record.id))]));
             const prepared = await director.prepare(plan.direction);
             const replay = plan.direction.replay!;
             current = replay;
-            return {models: prepared.models, kind: replay.kind, at: replay.at, t0: replay.t0, hook: plan.hookText, cues: plan.cues.map((cue) => cue.text), cast: replay.cast.map((member) => ({id: member.record.id, role: member.role, name: member.record.name, slug: member.record.model_slug, aboard: member.aboard, zone: member.record.zone, island: member.record.island ?? null})), notes: replay.notes};
+            return {models: prepared.models, kind: replay.kind, at: replay.at, t0: replay.t0, hook: plan.hookText, cues: plan.cues.map((cue) => cue.text), cast: replay.cast.map((member) => ({id: member.record.id, role: member.role, name: member.record.name, slug: member.record.model_slug, aboard: member.aboard, inSceneBefore: before[member.record.id], zone: member.record.zone, island: member.record.island ?? null})), notes: replay.notes};
         },
         frame: (quality = 0.85, step = 1) => director.frame(quality, step),
         marks: () => director.marks(),
