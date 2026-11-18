@@ -13,7 +13,7 @@
  * meshes for the whole town, rebuilt when the set in use changes.
  */
 
-import {Group, Mesh, type BufferGeometry, type Material} from "three";
+import {Group, Mesh, type BufferAttribute, type BufferGeometry, type Material} from "three";
 import {hashText, rng} from "@/ark-scene/islands/town/geom";
 import {homeDisplayFloors, perchHeight, POND_SIZE, type HomeDisplay, type HomeSite} from "@/ark-scene/islands/town/tanks";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
@@ -23,6 +23,16 @@ import {barsMaterial, cutAttribute, cutawayMaterial, cutEye, followEye, glassMat
 type RGB = [number, number, number];
 
 export type PetHomes = {group: Group; floors: Float32Array; dispose: () => void};
+
+/**
+ * `BufferAttribute.onUpload`: the page's copy of a layer's arrays let go once the GPU has it, as `zoo-houses.ts` does for its
+ * interiors. The rooms, tanks, beds and furniture of the record's ~600 indoor pets were ~50 MB of typed arrays on the phone's
+ * heap (measured 2026-11-18: 32 of the 49 MB the Ark's heap gained since pass 4); nothing reads them back: the bounds
+ * are taken at build (`toGeometry`), the floors are `homeDisplayFloors`', and no raycast runs on the town.
+ */
+function releaseArray(this: {array: ArrayLike<number>}) {
+    this.array = new Float32Array(0);
+}
 
 type Parts = {shell: Geo; inside: Geo; outdoor: Geo; glow: Geo; glass: Geo; water: Geo; bars: Geo};
 
@@ -261,6 +271,8 @@ export function buildPetHomes(used: ReadonlyArray<{site: HomeSite; displays: Rea
     const meshes: Mesh[] = [];
     const materials: Material[] = [];
     const add = (geometry: BufferGeometry, material: Material, name: string, shadows: boolean, order = 0) => {
+        for (const key of Object.keys(geometry.attributes)) (geometry.attributes[key] as BufferAttribute).onUpload(releaseArray);
+        geometry.index?.onUpload(releaseArray);
         const mesh = new Mesh(geometry, material);
         mesh.name = name;
         mesh.castShadow = shadows;
