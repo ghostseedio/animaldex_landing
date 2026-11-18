@@ -1390,7 +1390,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let mealPins = new Set<string>();
     /**
      * V1 (the audit's §2.4 "departure fade instead of the instant vanish"): an animal that has left the Ark between two
-     * reads (recovering, moved to the other island, its record not read yet) stays where it stood for
+     * reads (recovering on a heart, taken off the Ark, its record not read yet) stays where it stood for
      * `DEPART_HOLD_SECONDS` (the record that says why, read just after, takes it over meanwhile: a death's act, a
      * meal's, the cast's stand-in), then fades into the haze over `DEPART_FADE_SECONDS`. Only the drawing.
      */

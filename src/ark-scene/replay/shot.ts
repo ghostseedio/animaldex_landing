@@ -106,9 +106,10 @@ const CLOSING_CHASE = 4;
 /** The lunge: from this long before the miss to this long after (s), the picture is on the quarry from at least this far back (m): room for the hunter. */
 const LUNGE_BEFORE = 2.2;
 const LUNGE_AFTER = 1.0;
-const LUNGE_ROOM = 6.5;
-const LUNGE_WITHIN = 11;
-const LUNGE_MOST = 1.5;
+/** The lunge's picture: this many times the quarry's own close-up distance back, never nearer than this (m), from this height (the angle from straight above). */
+const LUNGE_ROOM = 2.6;
+const LUNGE_LEAST = 3.2;
+const POLAR_LUNGE = 0.82;
 /** V1: two that share the picture are kept inside this share of its half width and half height (`holdIn`). */
 const HOLD_IN = 0.84;
 /** V1: a stalking hunter and its quarry share the picture from this near (m); farther, the hunter alone. */
@@ -811,25 +812,17 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             enter("chase");
         }
         if (sight && now < end + (kind === "meal" ? 0.4 : LUNGE_AFTER)) {
-            // The lunge: the picture already on the quarry, with room for the hunter that is about to be on it (the
-            // camera is there before the hunter is: a sprint outruns any easing); once it is within a few strides, the
-            // two of them, HELD in the picture (V1, `holdIn`: at once as far back as holds both, so a stoop from over
-            // the picture's top is in it too) and in its middle (the aim follows fast). An escape's still: the frame at
-            // which both were well inside the picture and nearest each other.
-            if (kind === "escaped" && gap !== null && now > end - 1.2 && gap < lungeGap && allInPicture(view, [hunter, quarry], 0.8)) {
+            // V1, the lunge: the picture is on the quarry and stays on it, near (a few of its own lengths' room round
+            // it, from lower than the chase: side on to the two), and the hunter comes INTO it: the camera is there
+            // before the hunter is (a sprint and a stoop outrun any easing, and a picture that holds both from the
+            // start is far enough back that neither reads). An escape's still: the frame at which both were well
+            // inside the picture and nearest each other (through the air: a hawk straight over its quarry is not on it yet).
+            if (kind === "escaped" && gap !== null && now > end - 1.2 && gap < lungeGap && allInPicture(view, [hunter, quarry], 0.86)) {
                 lungeGap = gap;
                 report.keyAt = Math.round(clip * 100) / 100;
             }
-            const near = gap !== null && gap < LUNGE_WITHIN;
-            const on = near ? null : frameOf([quarry], {polar: POLAR_CHASE});
-            const both = near ? frameOf([hunter, quarry], {widen: 1.15, polar: POLAR_CHASE}) : null;
-            const alone = frameOf([quarry], {polar: POLAR_CHASE});
-            const room = Math.max((on ?? alone)?.distance ?? 0, 0) * 1.7;
-            const least = Math.max(room, LUNGE_ROOM);
-            // (From a little more than that room at most by its own choice: from where both are specks neither reads;
-            // `holdIn` still takes it farther back when one of them would otherwise leave the picture.)
-            if (both) return toward(held(both, Math.min(Math.max(both.distance, least), least * LUNGE_MOST), POLAR_CHASE), dt, 6, 3, 16);
-            return toward(on ? held(on, least, POLAR_CHASE) : null, dt, 6, 3, 10);
+            const on = frameOf([quarry], {polar: POLAR_LUNGE});
+            return toward(on ? held(on, Math.max(on.distance * LUNGE_ROOM, LUNGE_LEAST), POLAR_LUNGE) : null, dt, 6, 3, 12);
         }
         if (kind === "meal") {
             // (The quarry, and the hunter once it is on it: the catch, then the meal where the prey fell.)

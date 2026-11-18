@@ -11,6 +11,9 @@
  *   __seen.frame(quality, step) the next frame; `done` once the watch has ended
  *   __seen.report()            the watch's own account, the layers', the cast's
  *   __seen.lite(id)            the line in words, as Ark Lite's feed says it
+ *   __seen.depart(n)           an animal leaves the Ark between two reads (it is taken out of the read): its fade
+ *   __seen.mark(what)          the marks on a real animal, from a FIXTURE of the reads that are not live yet: "last" (an
+ *                              open crisis of the crises read's shape, E4) and "lone" (E3's field): the ring, the box's line
  *
  * The world is chosen by the page before this script (`__ARK_WORLD__ = "v2"`, as `runtime/measure-world.ts` does).
  */
@@ -70,6 +73,7 @@ async function main() {
     let epoch = now / 1000;
     let clip = 0;
     let index = 0;
+    let departing: {until: number; id: string} | null = null;
     let current: {id: string; kind: string; plan: ReturnType<typeof planArkEventReplay>; tapped: boolean; text: string; ended: string | null} | null = null;
 
     /** Harness events of the kinds production has none of yet, from animals really aboard (never a made-up animal). */
@@ -195,6 +199,7 @@ async function main() {
         /** The record arrives, the clock runs on to a little before the act's telling part, the line is tapped. */
         prepare: async (id: string) => {
             live?.dispose();
+            departing = null;
             handle.clearLiveActs?.();
             handle.select(null);
             const world = worldFor(id);
@@ -230,7 +235,7 @@ async function main() {
             // can be minutes); a birth as it starts.
             const acts = handle.liveActs?.();
             const mating = plan.feed.matings ? acts?.matings.find((m) => m.key === plan.feed.matings![0].key) : null;
-            const tapAt = plan.kind === "mated" ? (mating && typeof mating.meet === "number" ? Math.max(mating.meet - 8, 24) : 24) : plan.kind === "birth" ? 24 : plan.kind === "death" || plan.kind === "extinct" ? -6 : -11;
+            const tapAt = plan.kind === "mated" ? (mating && typeof mating.meet === "number" ? Math.max(mating.meet - 8, 24) : 24) : plan.kind === "birth" ? (plan.feed.play ? 24 : -8) : plan.kind === "death" || plan.kind === "extinct" ? -6 : -11;
             if (tapAt > since()) run(tapAt - since(), 0.5);
             // (A real half second for the log's own beat: a line whose time is up has gone, as on a viewer's page.)
             await pause(700);
@@ -251,6 +256,7 @@ async function main() {
             clock.tick(dt * 1000);
             const t = clip;
             clip += dt;
+            if (departing) return {index: index++, t, done: clip > departing.until, image: quality > 0 ? canvas()?.toDataURL("image/jpeg", quality) ?? "" : ""};
             const watching = Boolean(live?.seenNow?.watching());
             if (current && current.tapped && !watching && !current.ended) current.ended = "ended";
             const image = quality > 0 ? canvas()?.toDataURL("image/jpeg", quality) ?? "" : "";
@@ -266,6 +272,65 @@ async function main() {
             const watch = live?.seenNow?.current();
             if (watch?.running()) lastReport = watch.report();
             return lastReport;
+        },
+        /** An animal that leaves the Ark between two reads: framed where it stands, then taken out of the read. Frames follow (`frame`), five seconds. */
+        depart: async (n: number) => {
+            live?.dispose();
+            live = null;
+            current = null;
+            handle.clearLiveActs?.();
+            handle.select(null);
+            if (snapshot !== real) handle.update(real);
+            pinArkClock(null);
+            handle.setHours(11);
+            const pick = wild().filter((animal) => filmable(animal, 0.6) && handle.locate(animal.id)?.shown).sort((a, b) => a.id.localeCompare(b.id))[n * 7] ?? null;
+            if (!pick) return null;
+            const frameIt = () => {
+                const at = handle.locate(pick.id);
+                if (at) handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance: Math.max(at.length * 4.5, 3), polar: 0.95, azimuth: at.yaw + 1.2});
+            };
+            frameIt();
+            for (let i = 0; i < 40; i++) {
+                await pause(50);
+                clock.tick(100);
+                frameIt();
+                if (!handle.loading() && handle.locate(pick.id)?.shown && i > 12) break;
+            }
+            snapshot = {...real, animals: real.animals.filter((animal) => animal.id !== pick.id)};
+            departing = {until: 5.5, id: pick.id};
+            clip = 0;
+            index = 0;
+            // (One frame of it as it stood, then the read without it.)
+            clock.tick(1000 / FPS);
+            handle.update(snapshot);
+            return {id: pick.id, name: pick.name, slug: pick.model_slug};
+        },
+        /** The marks from a fixture of the reads that are not live yet, on a real animal of the wild island: chosen, so its box shows. */
+        mark: async (what: "last" | "lone") => {
+            live?.dispose();
+            current = null;
+            departing = null;
+            handle.clearLiveActs?.();
+            pinArkClock(null);
+            handle.setHours(11);
+            const pick = wild().filter((animal) => filmable(animal, 0.8) && handle.locate(animal.id)).sort((a, b) => a.id.localeCompare(b.id))[what === "last" ? 3 : 11] ?? null;
+            if (!pick) return null;
+            const world: ArkSnapshot = what === "lone" ? {...real, animals: real.animals.map((animal) => (animal.id === pick.id ? {...animal, lone: true} : animal))} : real;
+            snapshot = world;
+            handle.update(world);
+            live = new ArkLive({host, scene: () => handle, words: null, locale: "en", eventsUrl: null, storageKey: null});
+            live.snapshot(world);
+            // (`seen/` is loaded for a lone founder in the read, or for an open crisis: here asked for both ways.)
+            const seen = await live.seenReady();
+            if (!seen) return null;
+            seen.snapshot(world);
+            if (what === "last") seen.setCrises({available: true, crises: [{id: "0000c715-0000-4000-8000-000000000001", status: "open", band: "last", species_profile_id: pick.species_profile_id, wild_count: 1, last_animal_ids: [pick.id]}]});
+            handle.select(pick.id, true);
+            for (let i = 0; i < 90; i++) {
+                await pause(40);
+                clock.tick(1000 / FPS);
+            }
+            return {id: pick.id, name: pick.name, label: document.querySelector("[data-ark-bars-mark]")?.textContent ?? null, seen: seen.report()};
         },
         /** The line in words, as Ark Lite's feed says it (its own sentence; both animals named). */
         lite: (id: string) => liteOf(id),

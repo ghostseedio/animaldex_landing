@@ -274,7 +274,7 @@ export class ArkLive {
             const t = at(String(item.id));
             if (!Number.isFinite(t) || item.source !== "server") continue;
             const held = item.kind === "meal" || item.kind === "death" || item.kind === "starved" || item.kind === "extinction" || item.say === "escaped";
-            const until = held ? (arkActStart(t / 1000) + 20) * 1000 : item.kind === "mated" ? t + 100_000 : item.kind === "birth" || item.kind === "hatched" ? t + 50_000 : NaN;
+            const until = held || item.kind === "birth" ? (arkActStart(t / 1000) + 20) * 1000 : item.kind === "mated" ? t + 100_000 : item.kind === "hatched" ? t + 50_000 : NaN;
             if (until > now) item.stay = until - now;
         }
         return items;
@@ -323,6 +323,11 @@ export class ArkLive {
     /** V1: `seen/` once it is in (the harness, tests). */
     get seenNow(): ArkSeen | null {
         return this.seen;
+    }
+
+    /** V1: `seen/` asked for now (the harness: before any record has come). */
+    seenReady(): Promise<ArkSeen | null> {
+        return this.loadSeen();
     }
 
     /** The lines on screen now (tests, the recorder). */
@@ -579,7 +584,8 @@ export class ArkLive {
         const litters = new Map<string, {key: string; parents: string[]; young: string[]; t0: number}>();
         for (const event of events) {
             if (event.kind !== "birth" || event.from_egg || !event.animal || !event.parents.length) continue;
-            const t0 = Date.parse(event.at) / 1000;
+            // (V1: held until the record is out, `ark-act-hold.ts`: the birth is seen, not only the nursing after it.)
+            const t0 = arkActStartOf(event.at);
             if (!Number.isFinite(t0)) continue;
             const key = `birth:${event.at}:${[...event.parents].sort().join(",")}`;
             const litter = litters.get(key);

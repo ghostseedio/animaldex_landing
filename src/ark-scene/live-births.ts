@@ -1,7 +1,9 @@
 /**
  * The record's live births acted out in the live world (handover §5, owner 2026-11-15: "could do a 'giving birth' one").
  * Each `birth` of the record that is not a hatching (a live-bearer's young, born on its due day since gestation,
- * decision 363) is acted on the shared clock from the event's time, the same for every viewer:
+ * decision 363) is acted on the shared clock, the same for every viewer, from the act's start: V1 holds it until the
+ * record is out (`ark-act-hold.ts`: before, the birth was over before a page had read of it), the young out of sight
+ * until then:
  *
  *   settle   the mother settles where her day has her: she lies down, or stands (tall hoofed animals, a giraffe or
  *            an elephant, give birth standing);
@@ -254,11 +256,24 @@ export class LiveBirths<E> {
         for (const b of this.births) {
             if (b.over || b.failed) continue;
             const s = epoch - b.act.t0;
-            if (s < 0) continue;
+            if (s < 0) {
+                // V1 (held until the record is out, `ark-act-hold.ts`): the young are in the read already and are not
+                // born yet: out of sight until they are (their mother goes on with her day).
+                for (const id of b.act.young) {
+                    const young = h.find(id);
+                    const at = young && !h.busy(young) ? h.scheduleAt(young, epoch) : null;
+                    if (!young || !at) continue;
+                    h.setAct(young, {x: at.x, z: at.z, base: h.ground(at.x, at.z), yaw: at.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: true, speed: 0});
+                    b.acting.add(young);
+                }
+                continue;
+            }
             if (!b.script) {
                 const mother = this.mother(b.act);
                 const place = mother ? h.scheduleAt(mother.entry, b.act.t0) : null;
                 if (!mother || !place) {
+                    // (The young it kept out of sight while it was held are shown again.)
+                    this.release(b);
                     b.failed = true;
                     continue;
                 }
