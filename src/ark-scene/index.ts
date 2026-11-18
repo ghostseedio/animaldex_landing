@@ -222,7 +222,7 @@ import {OCEAN_COLUMN, OCEAN_VIEW_MARGIN, oceanFix, roamsOpenOcean} from "@/ark-s
 import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (ocean)
 import {PeopleFigures} from "@/ark-scene/humans/people-figures"; // p6 (people): the rigged bodies
 import {BeachProps} from "@/ark-scene/humans/beach-props"; // p5 (humans, quality pass)
-import {isHumanAnimal, TownHumans} from "@/ark-scene/humans/town-humans"; // p5 (humans)
+import {chosenHuman, isHumanAnimal, TownHumans, type ChosenHuman} from "@/ark-scene/humans/town-humans"; // p5 (humans)
 import {decodeHumanBonds} from "@/ark-scene/humans/couples"; // p5 (humans, couples)
 import {DogWalks, dogWalkPlaces, isHouseDog, townWalkers} from "@/ark-scene/humans/dog-walks"; // p5 (humans, dogs)
 import {DogLeads} from "@/ark-scene/humans/leads"; // p5 (humans, dogs)
@@ -6654,7 +6654,33 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.addEventListener("start", () => {
         pairFramed = null;
     });
+    /**
+     * A human chosen from the page (the species list's "Human" row, search, `?focus=`): humans are never entries, so
+     * `select` found nothing and the card closed again (the live bug of 2026-11-18). Now its card ("Human" and the
+     * capturer, as a tapped person's) and, asked to fly, the camera on that person where they are drawn now, else over
+     * the town where the people live (indoors or at work they are not drawn: the card still opens).
+     */
+    const selectHuman = (chosen: ChosenHuman<ArkAnimal>, flyTo: boolean) => {
+        select(null, false);
+        options.onSelect?.({...chosen.human, model_slug: "human"});
+        if (!flyTo) return;
+        opening = false;
+        controls.autoRotate = false;
+        lastTouch = performance.now() / 1000;
+        endFollow();
+        if (chosen.at) {
+            fly(new Vector3(chosen.at.x, chosen.at.y, chosen.at.z), 9, reducedMotion ? 0 : 1.6, CLOSE_POLAR);
+            return;
+        }
+        const view = islandView("town");
+        fly(view.target, view.distance, reducedMotion ? 0 : 2.4, view.polar, view.azimuth);
+    };
     const select = (id: string | null, flyTo: boolean, close = false) => {
+        const human = chosenHuman(id, humansAboard, townHumans.out);
+        if (human) {
+            selectHuman(human, flyTo);
+            return;
+        }
         // A herd member that isn't one of its representatives comes forward to be met (A14); the last one goes back.
         const pin = id && ((!entryById.has(id) && aboard.has(id)) || id === selectionPin) ? id : null;
         if (pin !== selectionPin) {
@@ -6887,6 +6913,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const arrive = (id: string | null, close: boolean) => {
         arriving = null;
         arrived = null;
+        const human = chosenHuman(id, humansAboard, townHumans.out);
+        if (human) {
+            selectHuman(human, true);
+            return;
+        }
         if (!id || reducedMotion || options.recording) {
             select(id, true, close);
             return;

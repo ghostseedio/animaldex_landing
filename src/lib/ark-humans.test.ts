@@ -6,7 +6,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {HumanFigures, humanGeometry, humanLook, posePerson, sitRootY, HUMAN_MAX, type HumanPoseKind} from "@/ark-scene/humans/figures";
-import {assignOut, carSeat, helmSeat, humanDay, isHumanAnimal, SUN_CLEAR, TownHumans, townHumanSites, type HumanRoomHost} from "@/ark-scene/humans/town-humans";
+import {assignOut, carSeat, chosenHuman, helmSeat, humanDay, isHumanAnimal, SUN_CLEAR, TownHumans, townHumanSites, type HumanRoomHost} from "@/ark-scene/humans/town-humans";
 import {apartmentHumanRoom, humanRoomHost, sofaOffset} from "@/ark-scene/humans/home-rooms-host";
 import {screenColour} from "@/ark-scene/humans/tvs";
 import {bridgeAt} from "@/ark-scene/islands/town/canal-bridges";
@@ -280,4 +280,26 @@ test("a TV's picture is the shared clock's and the room's (the same flicker for 
     const b = screenColour("tower-2~f6r", 1234.5, new Color());
     assert.deepEqual(a.toArray(), b.toArray());
     assert.notDeepEqual(a.toArray(), screenColour("tower-2~f6l", 1234.5, new Color()).toArray());
+});
+
+// Live bug 2026-11-18: "Human" chosen from the species list (or search, `?focus=`) did nothing: humans are not scene
+// entries, so `select` found none and the card closed again. `chosenHuman` is the human's card and where to look.
+test("a human chosen by id: the card's animal and the drawn person's spot, or null where not drawn", () => {
+    const aboard = [{id: "h1", model_slug: "human"}, {id: "h2", model_slug: "human"}];
+    const out = [{id: "h2", x: 4, y: 2, z: -3}];
+    assert.equal(chosenHuman("cat-1", aboard, out), null);
+    assert.equal(chosenHuman(null, aboard, out), null);
+    assert.deepEqual(chosenHuman("h1", aboard, out), {human: aboard[0], at: null});
+    assert.deepEqual(chosenHuman("h2", aboard, out), {human: aboard[1], at: {x: 4, y: 3, z: -3}});
+});
+
+test("the scene's select and arrive look for a chosen human before its own entries", async () => {
+    const {readFile} = await import("node:fs/promises");
+    const source = await readFile(new URL("../ark-scene/index.ts", import.meta.url), "utf8");
+    for (const head of ["const select = (id: string | null, flyTo: boolean, close = false) => {", "const arrive = (id: string | null, close: boolean) => {"]) {
+        const at = source.indexOf(head);
+        assert.ok(at > 0, head);
+        const body = source.slice(at, at + 600);
+        assert.ok(body.indexOf("chosenHuman(id, humansAboard, townHumans.out)") > 0 && body.indexOf("chosenHuman(") < (body.indexOf("findEntry(") < 0 ? Infinity : body.indexOf("findEntry(")), head);
+    }
 });
