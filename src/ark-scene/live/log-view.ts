@@ -35,6 +35,12 @@ const DOT: Record<string, string> = {
     death: "#b9b4a7",
     starved: "#b9b4a7",
     extinction: "#8a8579",
+    // The crisis layer (AnimalDex E4): a calm amber for a kind down to a few, the arrival's green once it is out of danger,
+    // the extinction's grey for none left in the wild, a soft blue for a recovering animal in the zoo's care.
+    crisis: "#e3c27a",
+    saved: "#8fd694",
+    wildGone: "#8a8579",
+    toCare: "#9cc4e4",
     more: "#d8d2c2"
 };
 

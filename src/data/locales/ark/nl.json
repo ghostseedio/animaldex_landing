@@ -329,7 +329,11 @@
             "escaped": "{aPrey} is ontsnapt aan {aPredator}",
             "revived": "{animal} is terug",
             "revivedYoung": "{animal} is terug, weer jong volwassen",
-            "gone": "{animal} is uit de Ark vertrokken"
+            "gone": "{animal} is uit de Ark vertrokken",
+            "crisis": "{animal}: nog maar een paar in het wild",
+            "saved": "{animal}: uit de gevarenzone in het wild",
+            "wildGone": "{animal}: geen meer over in het wild",
+            "toCare": "{animal}: nu in de dierentuin verzorgd"
         },
         "card": {
             "now": "Nu: {activity}",

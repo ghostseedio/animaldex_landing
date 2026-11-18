@@ -31,7 +31,12 @@ import {ARK_ACTIVITY_ENGLISH, type ArkActivityKey, type ArkActivityWords} from "
 import {pluralAnimalName} from "@/lib/ark-population";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 
-export type ArkLiveServerKind = "arrival" | "mated" | "birth" | "hatched" | "laid" | "meal" | "death" | "starved" | "extinction" | "revived" | "gone";
+/**
+ * (`crisis`, `saved`, `wildGone`, `toCare`: the crisis layer's records (AnimalDex E4), said by `ark-scene/live/crisis-lines.ts`
+ * with the scene, never in the Ark page's static JavaScript: a kind down to a few in the wild, out of danger again, none
+ * left in the wild, and a recovering animal now in the zoo's care.)
+ */
+export type ArkLiveServerKind = "arrival" | "mated" | "birth" | "hatched" | "laid" | "meal" | "death" | "starved" | "extinction" | "revived" | "gone" | "crisis" | "saved" | "wildGone" | "toCare";
 export type ArkLiveSeenKind = "courting" | "contest" | "fishing" | "nest" | "alarm";
 export type ArkLiveKind = ArkLiveServerKind | ArkLiveSeenKind | ScheduleMomentKind | "more";
 export type ArkLiveSource = "server" | "seen" | "now";
@@ -303,7 +308,7 @@ export type ArkLiveLogOptions = {
 export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, nowLife: 20_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6};
 
 /** The kinds the record keeps first when a burst is bigger than the log: the rare and the sad before the many. */
-const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, meal: 1, starved: 2, death: 3, gone: 3, revived: 3, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, hunting: 7, eggs: 7, playing: 7, toWater: 7, home: 7, flock: 7, group: 7, doing: 7, breathing: 7, calling: 7, bathing: 7, feeding: 7, more: 8};
+const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, wildGone: 1, meal: 1, crisis: 2, starved: 2, death: 3, gone: 3, revived: 3, saved: 3, toCare: 4, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, hunting: 7, eggs: 7, playing: 7, toWater: 7, home: 7, flock: 7, group: 7, doing: 7, breathing: 7, calling: 7, bathing: 7, feeding: 7, more: 8};
 
 /**
  * The log's state: the lines on screen and the items waiting. `push` takes new items, `step` lets the next one

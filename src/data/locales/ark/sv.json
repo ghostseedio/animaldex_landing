@@ -329,7 +329,11 @@
             "escaped": "{aPrey} kom undan {aPredator}",
             "revived": "{animal} är tillbaka",
             "revivedYoung": "{animal} är tillbaka som ung vuxen igen",
-            "gone": "{animal} har lämnat Ark"
+            "gone": "{animal} har lämnat Ark",
+            "crisis": "{animal}: bara ett fåtal kvar i det fria",
+            "saved": "{animal}: utom fara i det fria",
+            "wildGone": "{animal}: inga kvar i det fria",
+            "toCare": "{animal}: nu i djurparkens vård"
         },
         "card": {
             "now": "Nu: {activity}",

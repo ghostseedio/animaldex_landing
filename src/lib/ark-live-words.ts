@@ -50,6 +50,16 @@ export type ArkLiveWords = {
     revived: string;
     revivedYoung: string;
     gone: string;
+    /**
+     * The crisis layer's lines (AnimalDex E4): the kind, a colon, then what happened, each with no verb that agrees with
+     * the animal's sex or number (so they hold in every language, whether or not the language has a plural for a name).
+     * `crisis`: only a few left in the wild; `saved`: out of danger; `wildGone`: none left in the wild; `toCare`: a
+     * recovering animal now in the zoo's care.
+     */
+    crisis?: string;
+    saved?: string;
+    wildGone?: string;
+    toCare?: string;
 };
 
 /** English, as `en.json` has it: the fallback when a reader's words lack `live`. */
@@ -89,5 +99,9 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     escaped: "{aPrey} got away from {aPredator}",
     revived: "{animal} is back",
     revivedYoung: "{animal} is back, a young adult again",
-    gone: "{animal} is gone from the Ark"
+    gone: "{animal} is gone from the Ark",
+    crisis: "{animal}: only a few left in the wild",
+    saved: "{animal}: out of danger in the wild",
+    wildGone: "{animal}: none left in the wild",
+    toCare: "{animal}: now cared for in the zoo"
 };

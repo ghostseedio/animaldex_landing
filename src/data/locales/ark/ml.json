@@ -329,7 +329,11 @@
             "escaped": "{aPrey} {aPredator}-ൽ നിന്ന് രക്ഷപ്പെട്ടു",
             "revived": "{animal} തിരിച്ചെത്തി",
             "revivedYoung": "{animal} വീണ്ടും യുവ മുതിർന്നതായി തിരിച്ചെത്തി",
-            "gone": "{animal} Ark വിട്ടുപോയി"
+            "gone": "{animal} Ark വിട്ടുപോയി",
+            "crisis": "{animal}: കാട്ടിൽ ഇനി കുറച്ചേ ബാക്കിയുള്ളൂ",
+            "saved": "{animal}: കാട്ടിൽ ഇനി അപകടത്തിലല്ല",
+            "wildGone": "{animal}: കാട്ടിൽ ഒന്നും ബാക്കിയില്ല",
+            "toCare": "{animal}: ഇപ്പോൾ മൃഗശാലയുടെ പരിചരണത്തിൽ"
         },
         "card": {
             "now": "ഇപ്പോൾ: {activity}",

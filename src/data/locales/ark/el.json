@@ -329,7 +329,11 @@
             "escaped": "{aPrey}: ξέφυγε, το κυνηγούσε {aPredator}",
             "revived": "{animal} επέστρεψε",
             "revivedYoung": "{animal} επέστρεψε, ξανά νεαρό ενήλικο",
-            "gone": "{animal} έφυγε από την Ark"
+            "gone": "{animal} έφυγε από την Ark",
+            "crisis": "{animal}: έχουν απομείνει μόνο λίγα στην άγρια φύση",
+            "saved": "{animal}: εκτός κινδύνου στην άγρια φύση",
+            "wildGone": "{animal}: δεν έχει απομείνει κανένα στην άγρια φύση",
+            "toCare": "{animal}: τώρα στη φροντίδα του ζωολογικού κήπου"
         },
         "card": {
             "now": "Τώρα: {activity}",
