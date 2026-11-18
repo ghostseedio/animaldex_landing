@@ -17,7 +17,7 @@ import {Group, Mesh, type BufferGeometry, type Material} from "three";
 import {hashText, rng} from "@/ark-scene/islands/town/geom";
 import {homeDisplayFloors, perchHeight, POND_SIZE, type HomeDisplay, type HomeSite} from "@/ark-scene/islands/town/tanks";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
-import {apartmentLayout, type HomeRoom} from "@/ark-scene/islands/town/home-rooms";
+import {apartmentLayout, DUVET_HEX, type HomeRoom} from "@/ark-scene/islands/town/home-rooms";
 import {barsMaterial, cutAttribute, cutawayMaterial, cutEye, followEye, glassMaterial, glowMaterial, interiorMaterial, outdoorMaterial, waterMaterial} from "@/ark-scene/islands/town/render/displays";
 
 type RGB = [number, number, number];
@@ -170,7 +170,7 @@ function gardenRoomThings(room: HomeRoom, parts: Parts) {
     parts.inside.cylinder({x: corner[0], y: room.floor + 0.04, z: corner[2], rot: 0}, 0, 0, 0, 0.2, 0.2, 0.06, tone("#c86a5a"), 10);
 }
 
-const DUVETS: RGB[] = [tone("#e8e2d6"), tone("#9fb8d0"), tone("#d8b0a0"), tone("#b8c8a0"), tone("#c8b8d8"), tone("#e0c890")];
+const DUVETS: RGB[] = DUVET_HEX.map((hex) => tone(hex));
 
 /**
  * A tower apartment's winter garden lived in (behind its open bay): a wooden floor, a ceiling, a sofa along the tower's
@@ -197,14 +197,14 @@ function apartment(room: HomeRoom, parts: Parts) {
     for (const side of [-1, 1]) parts.inside.box(fr, su + side * (sw / 2 - 0.1), 0.42, -d / 2 + 0.5, 0.2, 0.22, 0.8, sofa);
     // The rug in front of it (the pets' floor: no table on it).
     parts.inside.box(fr, su, 0.03, 0.3, sw + 0.6, 0.012, 1.3, RUGS[Math.floor(L.rugColour * RUGS.length)]);
-    // The bed: its frame, the mattress, the duvet over the foot to the waist (humans polish, 2026-11-18: the sleepers lie
-    // in it, the lower half of their bodies sunk into the covers), two pillows at the head, a headboard.
+    // The bed: its frame, the mattress, a duvet over the foot to the waist (made: a sleeper's own cover lies over them,
+    // `humans/sleep-covers.ts`), one long pillow at the head for one or two, a headboard (humans polish, 2026-11-18).
     const bed = L.bed;
     const head = L.bedSide;
     parts.inside.box(fr, bed.x, 0, bed.z, bed.length, 0.3, bed.width, WOOD);
     parts.inside.box(fr, bed.x, 0.3, bed.z, bed.length - 0.04, bed.top - 0.3, bed.width - 0.04, tone("#f4f1ea"));
     parts.inside.box(fr, bed.x - head * 0.415, bed.top, bed.z, bed.length - 0.83, bed.duvet, bed.width + 0.02, DUVETS[Math.floor(L.duvetColour * DUVETS.length)]);
-    for (const side of [-1, 1]) parts.inside.box(fr, bed.x + head * (bed.length / 2 - 0.26), bed.top, bed.z + side * bed.width * 0.25, 0.36, 0.1, bed.width * 0.42, tone("#fbfaf6"));
+    parts.inside.box(fr, bed.x + head * (bed.length / 2 - 0.26), bed.top, bed.z, 0.38, 0.1, bed.width - 0.12, tone("#fbfaf6"));
     parts.inside.box(fr, bed.x + head * (bed.length / 2 + 0.02), 0, bed.z, 0.06, 1.0, bed.width + 0.06, tone("#6e5236"));
     // The bedside table at the bed's head and its lamp (lit: the glow; a sleeper is seen by it at night).
     const ns = L.nightstand;

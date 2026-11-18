@@ -60,7 +60,7 @@ carries:
 | `sunsit` | Sitting on a towel, reading. |
 | `lie` | Legacy lying pose. |
 | `paddle` | Standing in the shallows. |
-| `sleep` | In bed, straight on the back along the bed with the arms and legs as in standing (the rigged clip is `sunback`'s spine and head with `stand`'s limbs, `people-rig.ts` `CLIP_MIX`): the root at the feet, the body laid back toward the head (`yaw` from the head to the foot). The town puts the root so the head is on the pillow (`HumanRoom.beds` is the head's spot; `town-humans.ts` `sleeperRoot`), a little into the mattress under the duvet's top, and draws no sleeper taller than 1.78 m. The rigged sleepers are barefoot (`people-figures.ts` `BAREFOOT`: the shoes take the skin's colour). |
+| `sleep` | In bed, straight on the back along the bed with the arms and legs as in standing (the rigged clip is `sunback`'s spine and head with `stand`'s limbs, `people-rig.ts` `CLIP_MIX`), drawn `SLEEP_SQUEEZE` (0.8) as wide so two fit the 1.15 m bed with a gap: the root at the feet, the body laid back toward the head (`yaw` from the head to the foot). The town puts the root so the head is on the pillow (`HumanRoom.beds` is the head's spot, one each side; `town-humans.ts` `sleeperRoot`), `SLEEP_SINK` into the mattress, draws no sleeper taller than 1.78 m, and lies one asleep alone in a bed in its middle. Each lies under their own cover from past the feet to the chest (`TownHumans.covers`, drawn by `sleep-covers.ts`, in the bed's duvet colour). The rigged sleepers are barefoot (`people-figures.ts` `BAREFOOT`). |
 | `chop` | Axe swing. |
 | `saw` | Chainsaw held at waist height. |
 | `plant` | Kneeling and bent to the soil. |

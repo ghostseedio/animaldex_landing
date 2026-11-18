@@ -19,7 +19,7 @@
  * Everything here is in the town's frame (x east, z south), except the boats' helms, which are the world's.
  */
 
-import {humanLook, humanUnit, sitRootY, BASE_HEIGHT, SLEEP_HEIGHT_MAX, SLEEP_REACH, SLEEP_REACH_MAX, SLEEP_SINK, WALK_PACE, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
+import {humanLook, humanUnit, sitRootY, BASE_HEIGHT, COVER_PAST_FEET, COVER_REACH, SLEEP_HEIGHT_MAX, SLEEP_REACH, SLEEP_REACH_MAX, SLEEP_SINK, WALK_PACE, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
 import {darkness, townClockAt, weekday, type TownClock} from "@/ark-scene/islands/town/people";
 import {sampleTownGround, townHeight} from "@/ark-scene/islands/town/ground";
 import {MILLPOND, townPlan, type TownPlan} from "@/ark-scene/islands/town/plan";
@@ -79,6 +79,11 @@ export function chosenHuman<A extends {id: string}>(id: string | null, aboard: r
     return {human, at: drawn.face === undefined ? {x: drawn.x, y: drawn.y + 1, z: drawn.z} : {x: drawn.x, y: drawn.y + 0.6, z: drawn.z, face: drawn.face}};
 }
 
+/** The spot halfway between two (the yaw of the first). */
+function midpoint(a: Spot, b: Spot): Spot {
+    return {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2, yaw: a.yaw};
+}
+
 export type Spot = {x: number; y: number; z: number; /** Facing (three's yaw: forward (sin, cos)). */ yaw: number};
 
 /**
@@ -110,6 +115,8 @@ export type HumanRoom = {
     beds: Spot[];
     /** Humans visible: the way out through the room's open front (yaw): the way a person indoors is seen from. */
     front?: number;
+    /** Humans polish: the duvet's colour (linear, 0–1): a sleeper's cover is the bed's. */
+    duvet?: [number, number, number];
 };
 
 /** Who gives the rooms (wired after the homes / rural lanes merge: their `home-rooms.ts` rooms and furniture). */
@@ -123,6 +130,9 @@ export type Seat = Spot & {bench: string};
 /** How far a sunbather's spot keeps from every beach walk's line (m). */
 export const SUN_CLEAR = 1.6;
 export type TownHumanSites = {seats: Seat[]; beach: Pt[]; walks: Array<[Pt, Pt]>; /** Quality pass: the shallows off the beach (ankle to knee deep at mid tide), where some paddle. */ shallows: Pt[]};
+
+/** Humans polish: a sleeper's cover (world frame), drawn by `sleep-covers.ts`: its foot end on the mattress, turned to `yaw` (the way the feet point), `length` m to the chest. */
+export type SleepCover = {x: number; y: number; z: number; yaw: number; length: number; colour: [number, number, number]};
 
 /** Quality pass: a towel or a parasol on the beach (world frame), drawn by `beach-props.ts`. */
 export type BeachProp = {kind: "towel" | "parasol"; x: number; y: number; z: number; yaw: number; /** The slope along it (rad). */ tilt: number; /** Its cloth's colour (0–1 sRGB). */ colour: [number, number, number]};
@@ -535,6 +545,13 @@ export class TownHumans {
     private dogPool: WalkedDog[] = [];
     private readonly heel: HeelPose = {x: 0, z: 0, yaw: 0, sniffing: false, speed: 0};
     private inArms = new Set<string>();
+    // Humans polish: the covers over those asleep now (world frame), and who is asleep in which room (one alone in a bed is moved to its middle once everyone is placed).
+    readonly covers: SleepCover[] = [];
+    private coverPool: SleepCover[] = [];
+    private roomFill = new Map<number, number>();
+    private sleepList: Array<{room: number; h: DrawnHuman; cover: SleepCover; look: HumanLook}> = [];
+    private sleepCount = 0;
+    private sleepTally = new Map<number, number>();
     // Quality pass: the beach's towels and parasols now (world frame), and the beach's looks (swimwear: bare arms and legs).
     readonly beach: BeachProp[] = [];
     private propPool: BeachProp[] = [];
@@ -546,6 +563,19 @@ export class TownHumans {
             this.beachLooks.set(id, b);
         }
         return b;
+    }
+    /** Humans polish: the cover over a sleeper whose feet (the root) are at (x, z) turned to `yaw`: from past the feet to their chest, on the mattress (`mattressY`). */
+    private cover(x: number, z: number, yaw: number, height: number, mattressY: number, colour: [number, number, number] | undefined): SleepCover {
+        const k = this.covers.length;
+        const c = this.coverPool[k] ?? (this.coverPool[k] = {x: 0, y: 0, z: 0, yaw: 0, length: 0, colour: [1, 1, 1]});
+        c.x = x + Math.sin(yaw) * COVER_PAST_FEET;
+        c.y = mattressY - 0.02;
+        c.z = z + Math.cos(yaw) * COVER_PAST_FEET;
+        c.yaw = yaw;
+        c.length = COVER_REACH * height + COVER_PAST_FEET;
+        c.colour = colour ?? c.colour;
+        this.covers.push(c);
+        return c;
     }
     private prop(kind: BeachProp["kind"], x: number, y: number, z: number, yaw: number, tilt: number, colour: [number, number, number]) {
         const k = this.beach.length;
@@ -651,9 +681,11 @@ export class TownHumans {
     /** Each person's room: two to a room, by a rendezvous of the rooms on the id (stable as people come and go). */
     private assignHomes() {
         this.homes.clear();
+        this.roomFill.clear();
         const rooms = this.rooms?.rooms() ?? [];
         if (!rooms.length) return;
-        const fill = new Map<number, number>();
+        const fill = this.roomFill;
+        fill.clear();
         const capacity = (i: number) => Math.max(1, Math.min(2, rooms[i].seats.length, Math.max(rooms[i].beds.length, 1) * 2));
         // p5 (humans, couples): a couple living together shares the host's room (the host first, the partner beside),
         // before the singles take theirs.
@@ -746,6 +778,8 @@ export class TownHumans {
         this.placed.clear();
         this.dogs.length = 0;
         this.beach.length = 0;
+        this.covers.length = 0;
+        this.sleepCount = 0;
         if (!this.roster.length) return out;
         const clock = townClockAt(epochMs, this.options.offsetHours ?? 0);
         const block = Math.floor(clock.hours / BLOCK_HOURS);
@@ -944,6 +978,13 @@ export class TownHumans {
                         const sleeper = take(id, look, "sleep", ox + root.x, root.y, oz + root.z, bed.yaw, "sleep", phase);
                         sleeper.face = room.front;
                         sleeper.scale = root.scale;
+                        const cover = this.cover(ox + root.x, oz + root.z, bed.yaw, look.height * root.scale, bed.y, room.duvet);
+                        const k = this.sleepCount++;
+                        const entry = this.sleepList[k] ?? (this.sleepList[k] = {room: 0, h: sleeper, cover, look});
+                        entry.room = home!.room;
+                        entry.h = sleeper;
+                        entry.cover = cover;
+                        entry.look = look;
                     }
                     continue;
                 }
@@ -1041,6 +1082,20 @@ export class TownHumans {
                     break;
             }
         }
+        // Humans polish: one asleep alone in a bed lies in its middle (living alone, or their partner up or out), two each on their side.
+        this.sleepTally.clear();
+        for (let k = 0; k < this.sleepCount; k++) this.sleepTally.set(this.sleepList[k].room, (this.sleepTally.get(this.sleepList[k].room) ?? 0) + 1);
+        for (let k = 0; k < this.sleepCount; k++) {
+            const e = this.sleepList[k];
+            const beds = rooms[e.room]?.beds;
+            if (this.sleepTally.get(e.room) !== 1 || !beds || beds.length < 2) continue;
+            const mid = midpoint(beds[0], beds[1]);
+            const root = sleeperRoot(mid, e.look);
+            e.h.x = ox + root.x;
+            e.h.z = oz + root.z;
+            e.cover.x = ox + root.x + Math.sin(mid.yaw) * COVER_PAST_FEET;
+            e.cover.z = oz + root.z + Math.cos(mid.yaw) * COVER_PAST_FEET;
+        }
         // p5 (humans, couples): the young, each with one of its parents wherever that parent is drawn (turn and turn
         // about, `parentNow`): a babe in arms at the parent's chest, an older child beside them doing as they do.
         // Not in a car or a boat (the child is then with nobody drawn: at home with the other, unseen).
@@ -1051,7 +1106,8 @@ export class TownHumans {
             const born = this.born.get(id);
             if (!child || born === undefined) continue;
             const parent = this.placed.get(parentNow(child, clock)) ?? this.placed.get(child.parents[0]) ?? this.placed.get(child.parents[1]);
-            if (!parent || parent.what === "car" || parent.what === "boat") continue;
+            // (Humans polish: not in a bed beside a sleeping parent: the beds are two sleepers wide, and one lies in the middle.)
+            if (!parent || parent.what === "car" || parent.what === "boat" || parent.what === "sleep") continue;
             const look = this.looks.get(id)!;
             const age = Math.max(this.arkDay - born, 0);
             const size = childScale(Number.isFinite(age) ? age : 0);

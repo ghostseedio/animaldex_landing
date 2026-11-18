@@ -6,7 +6,8 @@
  * the scene draws the flats people live in as it draws those pets live in, so a person at home or asleep is seen.
  */
 
-import {apartmentLayout, type HomeRoom} from "@/ark-scene/islands/town/home-rooms";
+import {Color} from "three";
+import {apartmentLayout, DUVET_HEX, type HomeRoom} from "@/ark-scene/islands/town/home-rooms";
 import {hashText, type Box} from "@/ark-scene/islands/town/geom";
 import type {HumanRoom, HumanRoomHost, Spot} from "@/ark-scene/humans/town-humans";
 
@@ -50,7 +51,8 @@ export function apartmentHumanRoom(room: HomeRoomLike): HumanRoom | null {
     const pillow = bed.x + L.bedSide * (bed.length / 2 - 0.26 - SLEEP_HEAD_SHORT);
     const toFoot = L.bedSide > 0 ? -Math.PI / 2 : Math.PI / 2;
     const beds = [-1, 1].map((k) => at(b, pillow, bed.z + k * bed.width * 0.25, room.floor + bed.top, toFoot));
-    return {id: room.id, floor: room.floor, seats, tv, chairs: [], beds, front: Math.atan2(-Math.sin(b.rot), Math.cos(b.rot))};
+    const duvet = new Color(DUVET_HEX[Math.floor(L.duvetColour * DUVET_HEX.length)]);
+    return {id: room.id, floor: room.floor, seats, tv, chairs: [], beds, duvet: [duvet.r, duvet.g, duvet.b], front: Math.atan2(-Math.sin(b.rot), Math.cos(b.rot))};
 }
 
 /**

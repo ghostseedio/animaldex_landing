@@ -53,12 +53,18 @@ export const BASE_HEIGHT = 1.75;
 /**
  * Humans polish (2026-11-18): how far a sleeper's head lies from their feet (the root) over their height (the rigged
  * bodies' lying clip, pinned by `ark-humans-polish.test.ts`), the most it is (m: the feet stay off the footboard), the
- * tallest a sleeper is drawn (m: the head stays off the headboard), and how far the back sinks into the mattress (m).
+ * tallest a sleeper is drawn (m: the head stays off the headboard), how far the back sinks into the mattress (m), and how
+ * much narrower a sleeper is drawn across the bed (the beds are 1.15 m wide for two: arms at the sides, the broadest
+ * body is 0.64 m across, 0.51 m at this).
  */
 export const SLEEP_REACH = 0.89;
 export const SLEEP_REACH_MAX = 1.47;
 export const SLEEP_HEIGHT_MAX = 1.78;
-export const SLEEP_SINK = 0.06;
+export const SLEEP_SINK = 0.14;
+export const SLEEP_SQUEEZE = 0.8;
+/** A sleeper's cover (`sleep-covers.ts`) comes up to their chest: this share of their height from the feet, and this far (m) past the feet. */
+export const COVER_REACH = 0.64;
+export const COVER_PAST_FEET = 0.12;
 
 // MARK: - Looks
 

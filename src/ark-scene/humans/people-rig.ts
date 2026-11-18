@@ -16,7 +16,7 @@
 import {DataUtils, Matrix4, Quaternion, Vector3, type AnimationClip, type Bone, type BufferGeometry, type Object3D, type SkinnedMesh} from "three";
 import {BufferAttribute, BufferGeometry as Geometry} from "three";
 import {arkCodeUrl} from "@/ark-scene/code-version";
-import {WALK_PACE, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
+import {SLEEP_SQUEEZE, WALK_PACE, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
 
 /** Where the people's files ship (with the web deploy, beside the town's cars). A new set is a new folder. */
 export const PEOPLE_BASE = "/ark/assets/people-v1";
@@ -511,7 +511,8 @@ export function peopleMatrix(h: HumanInstance, pose: PeoplePose, out: Matrix4): 
     qa.setFromAxisAngle(yAxis, h.yaw);
     if (spec.lying && h.tilt) qa.multiply(qb.setFromAxisAngle(xAxis, h.tilt));
     const build = 1 + (h.look.build - 1) * 0.6;
-    out.compose(move.set(h.x, h.y + lift, h.z), qa, size.set(scale * build, scale, scale * (0.96 + 0.04 * h.look.build)));
+    // (A sleeper is drawn a little narrower across the bed: `SLEEP_SQUEEZE`.)
+    out.compose(move.set(h.x, h.y + lift, h.z), qa, size.set(scale * build * (h.pose === "sleep" ? SLEEP_SQUEEZE : 1), scale, scale * (0.96 + 0.04 * h.look.build)));
     if (clip.fixYaw || clip.fixX || clip.fixZ) {
         inner.makeRotationY(clip.fixYaw).setPosition(clip.fixX, 0, clip.fixZ);
         out.multiply(inner);
