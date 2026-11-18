@@ -12,7 +12,7 @@ const BOAR = "22222222-2222-4222-8222-000000000002";
 const FREE = "22222222-2222-4222-8222-000000000003";
 const ARK_DAY = 260;
 
-const LOOKS = ["offer", "rescue", "short", "wait", "full", "refused", "skill", "off"] as const;
+const LOOKS = ["offer", "rescue", "last", "short", "wait", "full", "refused", "skill", "off"] as const;
 type Look = (typeof LOOKS)[number];
 
 function animal(id: string, name: string, slug: string, over: Partial<ArkAnimal>): ArkAnimal {
@@ -25,7 +25,7 @@ function animal(id: string, name: string, slug: string, over: Partial<ArkAnimal>
 
 /** `/api/ark/release`'s answers for a look, in the route's own shapes (what `release_quote_v1` and `release_to_wild_v1` give). */
 function answers(look: Look) {
-    const rescue = look === "rescue";
+    const rescue = look === "rescue" || look === "last";
     const subject = rescue ? BOAR : LYNX;
     const credits = rescue ? 50 : 25;
     const balance = look === "short" ? 12 : rescue ? 120 : 40;
@@ -33,7 +33,7 @@ function answers(look: Look) {
     const quote = {
         available: true, eligible: refusal === null, reasons: refusal ? [refusal] : [], animalId: subject, name: rescue ? "Wild Boar" : "Eurasian Lynx",
         tier: rescue ? "Legendary" : "Rare", credits, balance, island: "wild", zone: "woodland", wildSkill: rescue ? 0.3 : 0.2, hasPower: rescue,
-        rescue: rescue ? {band: "last", wildCount: 1} : null, goneFromWild: false, nextAt: look === "wait" ? new Date(Date.now() + 20 * 3_600_000).toISOString() : null
+        rescue: look === "rescue" ? {band: "last", wildCount: 1} : null, goneFromWild: look === "last", nextAt: look === "wait" ? new Date(Date.now() + 20 * 3_600_000).toISOString() : null
     };
     const release = {releaseId: "fixture-release", animalId: subject, creditsSpent: credits, balance: balance - credits, island: "wild", wildSkill: quote.wildSkill, rescue};
     return {
@@ -77,7 +77,7 @@ export default function ArkReleaseGallery({words, talk, language}: {words: ArkWo
         const zoo = {island: "town" as const, area: "zoo" as const, mine: true};
         const animals = [
             animal(LYNX, "Eurasian Lynx", "eurasian-lynx", {...zoo, enclosure: "big_cats-1"}),
-            animal(BOAR, "Wild Boar", "wild-boar", {...zoo, enclosure: "hoofstock_paddocks-1"}),
+            animal(BOAR, "Wild Boar", "wild-boar", {...zoo, enclosure: "hoofstock_paddocks-1", last_of_kind: look === "last"}),
             animal(FREE, "Roe Deer", "roe-deer", {brought_by: {label: "Voyager 3", named: false}})
         ];
         return {
@@ -90,7 +90,7 @@ export default function ArkReleaseGallery({words, talk, language}: {words: ArkWo
             hunt_grace: {ends_ark_day: 120, ramp_ark_days: 40}
         };
     }, [look]);
-    const selected = snapshot?.animals.find((a) => a.id === (look === "skill" ? FREE : look === "rescue" ? BOAR : LYNX)) ?? null;
+    const selected = snapshot?.animals.find((a) => a.id === (look === "skill" ? FREE : look === "rescue" || look === "last" ? BOAR : LYNX)) ?? null;
     if (!look || !snapshot || !selected) return null;
     return (
         <div dir={arkDirection(language)} className="fixed inset-0 z-[60] overflow-hidden bg-[#0e140e]" data-testid="stage" data-look={look}>

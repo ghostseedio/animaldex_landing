@@ -291,6 +291,7 @@ function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, busy, p
                         <SkillLine skill={skill} band={band} words={words} />
                         {quote.hasPower ? <p className="mt-1 text-[11.5px] leading-snug text-ink-400">{words.skillPower}</p> : null}
                         <p data-testid="ark-release-warn" className="mt-2 text-[13px] font-semibold leading-snug text-[#ffc9b8]">{words.warn}</p>
+                        {animal.last_of_kind ? <p data-testid="ark-release-last-of-kind" className="mt-1.5 text-[12.5px] font-semibold leading-snug text-[#ffe2a8]">{words.lastOfKind}</p> : null}
                         <p className="mt-1.5 text-[12px] leading-snug text-ink-300">{words.hearts}</p>
                         <p className="mt-1 text-[12px] leading-snug text-ink-300">{words.rules}</p>
                         <p className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 border-t border-line-300/60 pt-3">

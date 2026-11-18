@@ -221,6 +221,8 @@ export type ArkReleaseWords = {
     skillHome: string;
     skillPower: string;
     warn: string;
+    /** The snapshot's `last_of_kind`: no other living animal or egg of its kind is aboard. */
+    lastOfKind: string;
     hearts: string;
     rules: string;
     price: string;
@@ -255,6 +257,7 @@ export const ARK_RELEASE_ENGLISH: ArkReleaseWords = {
     skillHome: "At home in the wild",
     skillPower: "You hold its Power: it starts a little ahead.",
     warn: "Zoo-raised animals struggle at first. Do its step to help it survive.",
+    lastOfKind: "It is the last of its kind aboard. If it dies with no heart left, its kind is gone from the Ark.",
     hearts: "It keeps its hearts. If it fails with a heart left, it comes back into the zoo and waits 30 days.",
     rules: "No refund once it is released. One release a day.",
     price: "{credits} Credits",
