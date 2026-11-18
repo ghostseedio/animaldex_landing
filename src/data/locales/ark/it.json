@@ -612,6 +612,28 @@
             "tapKind": "Tocca una specie per vedere chi ha portato ciascun animale",
             "animalsMore": "+{count} altri",
             "you": "Tu"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Non ora",
+            "seeInArk": "Vedilo nell'Ark",
+            "openArk": "Apri l'Ark",
+            "yourYoung": "{species}: il tuo animale ha avuto dei piccoli",
+            "yourFirstAboard": "{species}: il tuo animale è il primo della sua specie nell'Ark",
+            "yourLine": "{species}: la discendenza del tuo animale ha raggiunto la generazione {generation}",
+            "firstYoungHatched": "{species}: primi piccoli schiusi nell'Ark",
+            "firstYoungBorn": "{species}: primi piccoli nati nell'Ark",
+            "firstAboard": "{species}: il primo della sua specie è salito a bordo dell'Ark",
+            "newGeneration": "La generazione {generation} è nata nell'Ark",
+            "speciesMilestone": "{species}: ora {count} a bordo dell'Ark",
+            "arkMilestone": "Ora {count} animali a bordo dell'Ark",
+            "extinction": "{species}: l'ultimo della sua specie nell'Ark è morto",
+            "youngHatched": "Piccoli schiusi: {count}",
+            "youngBorn": "Piccoli nati: {count}",
+            "cameAboardOnDay": "Era salito a bordo il giorno {day}.",
+            "arkDay": "Giorno {day} dell'Ark",
+            "broughtBy": "Portato a bordo da {name}",
+            "fromLine": "Dalla discendenza di {name}"
         }
     },
     "talkPage": {

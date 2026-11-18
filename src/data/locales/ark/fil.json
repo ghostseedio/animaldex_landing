@@ -612,6 +612,28 @@
             "tapKind": "I-tap ang isang uri para makita kung sino ang nagdala sa bawat isa",
             "animalsMore": "+{count} pa",
             "you": "Ikaw"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Huwag muna",
+            "seeInArk": "Tingnan sa Ark",
+            "openArk": "Buksan ang Ark",
+            "yourYoung": "{species}: nagkaanak na ang hayop mo",
+            "yourFirstAboard": "{species}: ang hayop mo ang una sa uri nito sa Ark",
+            "yourLine": "{species}: umabot na sa henerasyon {generation} ang lahi ng hayop mo",
+            "firstYoungHatched": "{species}: napisa ang mga unang anak sa Ark",
+            "firstYoungBorn": "{species}: ipinanganak ang mga unang anak sa Ark",
+            "firstAboard": "{species}: sumakay sa Ark ang una sa uri nito",
+            "newGeneration": "Ipinanganak sa Ark ang henerasyon {generation}",
+            "speciesMilestone": "{species}: {count} na ang sakay ng Ark",
+            "arkMilestone": "{count} hayop na ang sakay ng Ark",
+            "extinction": "{species}: namatay ang huli sa uri nito sa Ark",
+            "youngHatched": "Mga napisang anak: {count}",
+            "youngBorn": "Mga ipinanganak na anak: {count}",
+            "cameAboardOnDay": "Sumakay ito noong araw {day}.",
+            "arkDay": "Araw {day} ng Ark",
+            "broughtBy": "Isinakay ni {name}",
+            "fromLine": "Mula sa lahi ni {name}"
         }
     },
     "talkPage": {

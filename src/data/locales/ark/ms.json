@@ -612,6 +612,28 @@
             "tapKind": "Ketik satu jenis untuk melihat siapa yang membawa setiap satu",
             "animalsMore": "+{count} lagi",
             "you": "Anda"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Bukan sekarang",
+            "seeInArk": "Lihat di Ark",
+            "openArk": "Buka Ark",
+            "yourYoung": "{species} anda kini menjadi induk",
+            "yourFirstAboard": "{species} anda yang pertama daripada jenisnya di Ark",
+            "yourLine": "Keturunan {species} anda mencapai generasi {generation}",
+            "firstYoungHatched": "Anak {species} pertama menetas di Ark",
+            "firstYoungBorn": "Anak {species} pertama lahir di Ark",
+            "firstAboard": "{species} pertama naik ke Ark",
+            "newGeneration": "Generasi {generation} lahir di Ark",
+            "speciesMilestone": "{species}: kini {count} di Ark",
+            "arkMilestone": "Kini {count} haiwan di Ark",
+            "extinction": "{species} terakhir di Ark telah mati",
+            "youngHatched": "{count} anak menetas",
+            "youngBorn": "{count} anak lahir",
+            "cameAboardOnDay": "Ia naik ke Ark pada hari ke-{day}.",
+            "arkDay": "Hari Ark ke-{day}",
+            "broughtBy": "Dibawa naik oleh {name}",
+            "fromLine": "Daripada keturunan {name}"
         }
     },
     "talkPage": {

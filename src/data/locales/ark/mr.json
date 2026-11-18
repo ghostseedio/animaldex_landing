@@ -612,6 +612,28 @@
             "tapKind": "कोणता प्राणी कोणी आणला ते पाहण्यासाठी प्रजातीवर टॅप करा",
             "animalsMore": "+{count} आणखी",
             "you": "तुम्ही"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "आता नाही",
+            "seeInArk": "Ark मध्ये पाहा",
+            "openArk": "Ark उघडा",
+            "yourYoung": "{species}: तुमच्या प्राण्याला पिल्ले झाली",
+            "yourFirstAboard": "{species}: तुमचा प्राणी Ark वर त्याच्या प्रजातीतला पहिला आहे",
+            "yourLine": "{species}: तुमच्या प्राण्याचा वंश पिढी {generation} पर्यंत पोहोचला",
+            "firstYoungHatched": "{species}: Ark मध्ये पहिली पिल्ले अंड्यातून बाहेर आली",
+            "firstYoungBorn": "{species}: Ark मध्ये पहिली पिल्ले जन्मली",
+            "firstAboard": "{species}: या प्रजातीचा पहिला प्राणी Ark वर चढला",
+            "newGeneration": "Ark मध्ये पिढी {generation} जन्मली",
+            "speciesMilestone": "{species}: आता Ark वर {count}",
+            "arkMilestone": "आता Ark वर {count} प्राणी",
+            "extinction": "{species}: Ark वरील या प्रजातीचा शेवटचा प्राणी मरण पावला",
+            "youngHatched": "अंड्यातून बाहेर आलेली पिल्ले: {count}",
+            "youngBorn": "जन्मलेली पिल्ले: {count}",
+            "cameAboardOnDay": "तो दिवस {day} ला जहाजावर चढला होता.",
+            "arkDay": "Ark दिवस {day}",
+            "broughtBy": "जहाजावर आणणारे: {name}",
+            "fromLine": "{name} यांच्या वंशातून"
         }
     },
     "talkPage": {

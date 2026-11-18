@@ -612,6 +612,28 @@
             "tapKind": "Koppints egy fajra, hogy lásd, ki melyik állatot hozta",
             "animalsMore": "+{count} további",
             "you": "Te"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Most nem",
+            "seeInArk": "Nézd meg az Arkon",
+            "openArk": "Az Ark megnyitása",
+            "yourYoung": "{species}: az állatodnak utódai születtek",
+            "yourFirstAboard": "{species}: az állatod a faja első példánya az Arkon",
+            "yourLine": "{species}: az állatod vonala elérte a(z) {generation}. nemzedéket",
+            "firstYoungHatched": "{species}: kikeltek az első utódok az Arkon",
+            "firstYoungBorn": "{species}: megszülettek az első utódok az Arkon",
+            "firstAboard": "{species}: a faj első példánya felszállt az Arkra",
+            "newGeneration": "Megszületett a(z) {generation}. nemzedék az Arkon",
+            "speciesMilestone": "{species}: már {count} van az Arkon",
+            "arkMilestone": "Már {count} állat van az Arkon",
+            "extinction": "{species}: elpusztult a faj utolsó példánya az Arkon",
+            "youngHatched": "Kikelt utódok: {count}",
+            "youngBorn": "Született utódok: {count}",
+            "cameAboardOnDay": "A(z) {day}. napon szállt fel.",
+            "arkDay": "Az Ark {day}. napja",
+            "broughtBy": "Felhozta: {name}",
+            "fromLine": "{name} vonalából"
         }
     },
     "talkPage": {

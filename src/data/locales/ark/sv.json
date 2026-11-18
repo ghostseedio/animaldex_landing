@@ -612,6 +612,28 @@
             "tapKind": "Tryck på en art för att se vem som tog med varje djur",
             "animalsMore": "+{count} till",
             "you": "Du"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Inte nu",
+            "seeInArk": "Se den i Ark",
+            "openArk": "Öppna Ark",
+            "yourYoung": "{species}: Ditt djur har fått ungar",
+            "yourFirstAboard": "{species}: Ditt djur är det första av sin art i Ark",
+            "yourLine": "{species}: Ditt djurs släktlinje har nått generation {generation}",
+            "firstYoungHatched": "{species}: De första ungarna har kläckts i Ark",
+            "firstYoungBorn": "{species}: De första ungarna har fötts i Ark",
+            "firstAboard": "{species}: Den första av sin art har kommit ombord i Ark",
+            "newGeneration": "Generation {generation} föds i Ark",
+            "speciesMilestone": "{species}: Nu {count} ombord i Ark",
+            "arkMilestone": "Nu {count} djur ombord i Ark",
+            "extinction": "{species}: Den sista av sin art i Ark har dött",
+            "youngHatched": "Ungar kläckta: {count}",
+            "youngBorn": "Ungar födda: {count}",
+            "cameAboardOnDay": "Den kom ombord dag {day}.",
+            "arkDay": "Ark-dag {day}",
+            "broughtBy": "Tagen ombord av {name}",
+            "fromLine": "Från {name}s släktlinje"
         }
     },
     "talkPage": {

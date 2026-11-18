@@ -612,6 +612,28 @@
             "tapKind": "Toca una espècie per veure qui ha portat cada animal",
             "animalsMore": "+{count} més",
             "you": "Tu"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Ara no",
+            "seeInArk": "Mira'l a l'Ark",
+            "openArk": "Obre l'Ark",
+            "yourYoung": "{species}: el teu animal ha tingut cries",
+            "yourFirstAboard": "{species}: el teu animal és el primer de la seva espècie a l'Ark",
+            "yourLine": "{species}: el llinatge del teu animal ha arribat a la generació {generation}",
+            "firstYoungHatched": "{species}: primeres cries sortides de l'ou a l'Ark",
+            "firstYoungBorn": "{species}: primeres cries nascudes a l'Ark",
+            "firstAboard": "{species}: el primer de la seva espècie ha pujat a bord de l'Ark",
+            "newGeneration": "La generació {generation} neix a l'Ark",
+            "speciesMilestone": "{species}: ja n'hi ha {count} a bord de l'Ark",
+            "arkMilestone": "Ja hi ha {count} animals a bord de l'Ark",
+            "extinction": "{species}: l'últim de la seva espècie a l'Ark ha mort",
+            "youngHatched": "Cries sortides de l'ou: {count}",
+            "youngBorn": "Cries nascudes: {count}",
+            "cameAboardOnDay": "Va pujar a bord el dia {day}.",
+            "arkDay": "Dia {day} de l'Ark",
+            "broughtBy": "Pujat a bord per {name}",
+            "fromLine": "Del llinatge de {name}"
         }
     },
     "talkPage": {

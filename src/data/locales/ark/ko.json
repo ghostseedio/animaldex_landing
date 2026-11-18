@@ -612,6 +612,28 @@
             "tapKind": "종류를 탭하면 누가 각 동물을 데려왔는지 볼 수 있어요",
             "animalsMore": "+{count}개 더",
             "you": "나"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "나중에",
+            "seeInArk": "Ark에서 보기",
+            "openArk": "Ark 열기",
+            "yourYoung": "{species}: 내 동물에게 새끼가 생겼어요",
+            "yourFirstAboard": "{species}: 내 동물이 Ark에서 이 종의 첫 번째예요",
+            "yourLine": "{species}: 내 동물의 혈통이 {generation}세대에 이르렀어요",
+            "firstYoungHatched": "{species}: Ark에서 첫 새끼들이 부화했어요",
+            "firstYoungBorn": "{species}: Ark에서 첫 새끼들이 태어났어요",
+            "firstAboard": "{species}: 이 종의 첫 동물이 Ark에 탑승했어요",
+            "newGeneration": "Ark에서 {generation}세대가 태어났어요",
+            "speciesMilestone": "{species}: 이제 Ark에 {count}마리",
+            "arkMilestone": "이제 Ark에 동물 {count}마리",
+            "extinction": "{species}: Ark에 남은 이 종의 마지막 동물이 죽었어요",
+            "youngHatched": "부화한 새끼: {count}",
+            "youngBorn": "태어난 새끼: {count}",
+            "cameAboardOnDay": "{day}일째에 탑승했어요.",
+            "arkDay": "Ark {day}일째",
+            "broughtBy": "탑승시킨 사람: {name}",
+            "fromLine": "{name} 님의 혈통에서"
         }
     },
     "talkPage": {

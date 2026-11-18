@@ -612,6 +612,28 @@
             "tapKind": "Napauta lajia nähdäksesi, kuka toi minkäkin eläimen",
             "animalsMore": "+{count} lisää",
             "you": "Sinä"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Ei nyt",
+            "seeInArk": "Katso se Arkissa",
+            "openArk": "Avaa Ark",
+            "yourYoung": "{species}: eläimesi sai poikasia",
+            "yourFirstAboard": "{species}: eläimesi on lajinsa ensimmäinen Arkissa",
+            "yourLine": "{species}: eläimesi suku on edennyt sukupolveen {generation}",
+            "firstYoungHatched": "{species}: ensimmäiset poikaset kuoriutuivat Arkissa",
+            "firstYoungBorn": "{species}: ensimmäiset poikaset syntyivät Arkissa",
+            "firstAboard": "{species}: lajin ensimmäinen nousi Arkin kyytiin",
+            "newGeneration": "Sukupolvi {generation} syntyy Arkissa",
+            "speciesMilestone": "{species}: nyt {count} Arkin kyydissä",
+            "arkMilestone": "Nyt {count} eläintä Arkin kyydissä",
+            "extinction": "{species}: lajin viimeinen Arkissa on kuollut",
+            "youngHatched": "Kuoriutuneita poikasia: {count}",
+            "youngBorn": "Syntyneitä poikasia: {count}",
+            "cameAboardOnDay": "Se tuli kyytiin päivänä {day}.",
+            "arkDay": "Arkin päivä {day}",
+            "broughtBy": "Kyytiin toi {name}",
+            "fromLine": "Suvusta, jonka toi {name}"
         }
     },
     "talkPage": {

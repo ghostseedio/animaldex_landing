@@ -612,6 +612,28 @@
             "tapKind": "Trykk på en art for å se hvem som tok med hvert dyr",
             "animalsMore": "+{count} til",
             "you": "Deg"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Ikke nå",
+            "seeInArk": "Se den i Ark",
+            "openArk": "Åpne Ark",
+            "yourYoung": "{species}: Dyret ditt har fått unger",
+            "yourFirstAboard": "{species}: Dyret ditt er det første av sin art i Ark",
+            "yourLine": "{species}: Slekten til dyret ditt har nådd generasjon {generation}",
+            "firstYoungHatched": "{species}: De første ungene er klekket i Ark",
+            "firstYoungBorn": "{species}: De første ungene er født i Ark",
+            "firstAboard": "{species}: Den første av sin art har kommet om bord i Ark",
+            "newGeneration": "Generasjon {generation} er født i Ark",
+            "speciesMilestone": "{species}: Nå {count} om bord i Ark",
+            "arkMilestone": "Nå {count} dyr om bord i Ark",
+            "extinction": "{species}: Den siste av sin art i Ark er død",
+            "youngHatched": "Unger klekket: {count}",
+            "youngBorn": "Unger født: {count}",
+            "cameAboardOnDay": "Den kom om bord på dag {day}.",
+            "arkDay": "Ark-dag {day}",
+            "broughtBy": "Tatt om bord av {name}",
+            "fromLine": "Fra slekten til {name}"
         }
     },
     "talkPage": {

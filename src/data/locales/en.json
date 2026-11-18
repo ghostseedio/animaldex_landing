@@ -4827,6 +4827,28 @@
       "tapKind": "Tap a kind to see who brought each one",
       "animalsMore": "+{count} more",
       "you": "You"
+    },
+    "moments": {
+      "label": "Ark",
+      "notNow": "Not now",
+      "seeInArk": "See it in the Ark",
+      "openArk": "Open the Ark",
+      "yourYoung": "Your {species} is a parent",
+      "yourFirstAboard": "Your {species} is the first of its kind on the Ark",
+      "yourLine": "Your {species}'s line reached generation {generation}",
+      "firstYoungHatched": "First {species} young hatched on the Ark",
+      "firstYoungBorn": "First {species} young born on the Ark",
+      "firstAboard": "The first {species} came aboard the Ark",
+      "newGeneration": "Generation {generation} is born on the Ark",
+      "speciesMilestone": "{species}: {count} now aboard the Ark",
+      "arkMilestone": "{count} animals now aboard the Ark",
+      "extinction": "The last {species} on the Ark has died",
+      "youngHatched": "{count} young hatched",
+      "youngBorn": "{count} young born",
+      "cameAboardOnDay": "It came aboard on day {day}.",
+      "arkDay": "Ark day {day}",
+      "broughtBy": "Brought aboard by {name}",
+      "fromLine": "From {name}'s line"
     }
   },
   "seo": {

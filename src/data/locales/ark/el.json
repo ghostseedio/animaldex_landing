@@ -612,6 +612,28 @@
             "tapKind": "Πατήστε ένα είδος για να δείτε ποιος έφερε το καθένα",
             "animalsMore": "+{count} ακόμα",
             "you": "Εσύ"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Όχι τώρα",
+            "seeInArk": "Δες το στην Ark",
+            "openArk": "Άνοιξε την Ark",
+            "yourYoung": "{species}: το ζώο σου έκανε μικρά",
+            "yourFirstAboard": "{species}: το ζώο σου είναι το πρώτο του είδους του στην Ark",
+            "yourLine": "{species}: η γενιά του ζώου σου έφτασε στη γενιά {generation}",
+            "firstYoungHatched": "{species}: τα πρώτα μικρά εκκολάφθηκαν στην Ark",
+            "firstYoungBorn": "{species}: τα πρώτα μικρά γεννήθηκαν στην Ark",
+            "firstAboard": "{species}: το πρώτο ζώο του είδους ανέβηκε στην Ark",
+            "newGeneration": "Η γενιά {generation} γεννιέται στην Ark",
+            "speciesMilestone": "{species}: τώρα {count} στην Ark",
+            "arkMilestone": "Τώρα {count} ζώα στην Ark",
+            "extinction": "{species}: το τελευταίο ζώο του είδους στην Ark πέθανε",
+            "youngHatched": "Μικρά που εκκολάφθηκαν: {count}",
+            "youngBorn": "Μικρά που γεννήθηκαν: {count}",
+            "cameAboardOnDay": "Είχε ανέβει στο σκάφος την ημέρα {day}.",
+            "arkDay": "Ημέρα Ark {day}",
+            "broughtBy": "Το ανέβασε στο σκάφος: {name}",
+            "fromLine": "Από τη γενιά του ζώου του χρήστη {name}"
         }
     },
     "talkPage": {

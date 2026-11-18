@@ -612,6 +612,28 @@
             "tapKind": "แตะชนิดสัตว์เพื่อดูว่าใครพาแต่ละตัวมา",
             "animalsMore": "+อีก {count}",
             "you": "คุณ"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "ไว้ทีหลัง",
+            "seeInArk": "ดูใน Ark",
+            "openArk": "เปิด Ark",
+            "yourYoung": "{species}: สัตว์ของคุณมีลูกแล้ว",
+            "yourFirstAboard": "{species}: สัตว์ของคุณเป็นตัวแรกของชนิดนี้ใน Ark",
+            "yourLine": "{species}: สายตระกูลของสัตว์ของคุณถึงรุ่นที่ {generation} แล้ว",
+            "firstYoungHatched": "{species}: ลูกรุ่นแรกฟักออกมาใน Ark",
+            "firstYoungBorn": "{species}: ลูกรุ่นแรกเกิดใน Ark",
+            "firstAboard": "{species}: ตัวแรกของชนิดนี้ขึ้นเรือ Ark แล้ว",
+            "newGeneration": "รุ่นที่ {generation} เกิดใน Ark",
+            "speciesMilestone": "{species}: ตอนนี้มี {count} ตัวใน Ark",
+            "arkMilestone": "ตอนนี้มีสัตว์ {count} ตัวใน Ark",
+            "extinction": "{species}: ตัวสุดท้ายของชนิดนี้ใน Ark ตายแล้ว",
+            "youngHatched": "ลูกที่ฟักออกมา: {count}",
+            "youngBorn": "ลูกที่เกิด: {count}",
+            "cameAboardOnDay": "มันขึ้นเรือมาในวันที่ {day}",
+            "arkDay": "วันที่ {day} ของ Ark",
+            "broughtBy": "พาขึ้นเรือโดย {name}",
+            "fromLine": "จากสายตระกูลของ {name}"
         }
     },
     "talkPage": {

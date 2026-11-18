@@ -612,6 +612,28 @@
             "tapKind": "ਕੌਣ ਕਿਹੜਾ ਜਾਨਵਰ ਲਿਆਇਆ ਦੇਖਣ ਲਈ ਕਿਸੇ ਪ੍ਰਜਾਤੀ 'ਤੇ ਟੈਪ ਕਰੋ",
             "animalsMore": "+{count} ਹੋਰ",
             "you": "ਤੁਸੀਂ"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "ਹੁਣੇ ਨਹੀਂ",
+            "seeInArk": "ਇਸਨੂੰ Ark ਵਿੱਚ ਵੇਖੋ",
+            "openArk": "Ark ਖੋਲ੍ਹੋ",
+            "yourYoung": "{species}: ਤੁਹਾਡੇ ਜਾਨਵਰ ਦੇ ਬੱਚੇ ਹੋਏ",
+            "yourFirstAboard": "{species}: ਤੁਹਾਡਾ ਜਾਨਵਰ Ark 'ਤੇ ਆਪਣੀ ਕਿਸਮ ਦਾ ਪਹਿਲਾ ਹੈ",
+            "yourLine": "{species}: ਤੁਹਾਡੇ ਜਾਨਵਰ ਦੀ ਵੰਸ਼ ਪੀੜ੍ਹੀ {generation} ਤੱਕ ਪਹੁੰਚੀ",
+            "firstYoungHatched": "{species}: Ark ਵਿੱਚ ਪਹਿਲੇ ਬੱਚੇ ਆਂਡਿਆਂ ਵਿੱਚੋਂ ਨਿਕਲੇ",
+            "firstYoungBorn": "{species}: Ark ਵਿੱਚ ਪਹਿਲੇ ਬੱਚੇ ਜੰਮੇ",
+            "firstAboard": "{species}: ਇਸ ਪ੍ਰਜਾਤੀ ਦਾ ਪਹਿਲਾ ਜਾਨਵਰ Ark 'ਤੇ ਸਵਾਰ ਹੋਇਆ",
+            "newGeneration": "Ark ਵਿੱਚ ਪੀੜ੍ਹੀ {generation} ਦਾ ਜਨਮ",
+            "speciesMilestone": "{species}: ਹੁਣ Ark 'ਤੇ {count}",
+            "arkMilestone": "ਹੁਣ Ark 'ਤੇ {count} ਜਾਨਵਰ",
+            "extinction": "{species}: Ark 'ਤੇ ਇਸ ਪ੍ਰਜਾਤੀ ਦਾ ਆਖ਼ਰੀ ਜਾਨਵਰ ਮਰ ਗਿਆ",
+            "youngHatched": "ਆਂਡਿਆਂ ਵਿੱਚੋਂ ਨਿਕਲੇ ਬੱਚੇ: {count}",
+            "youngBorn": "ਜੰਮੇ ਬੱਚੇ: {count}",
+            "cameAboardOnDay": "ਇਹ ਦਿਨ {day} ਨੂੰ ਸਵਾਰ ਹੋਇਆ ਸੀ।",
+            "arkDay": "Ark ਦਿਨ {day}",
+            "broughtBy": "ਸਵਾਰ ਕਰਾਉਣ ਵਾਲੇ: {name}",
+            "fromLine": "{name} ਦੀ ਵੰਸ਼ ਵਿੱਚੋਂ"
         }
     },
     "talkPage": {

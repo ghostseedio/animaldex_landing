@@ -612,6 +612,28 @@
             "tapKind": "Ťuknite na druh a uvidíte, kto ktoré zviera priviezol",
             "animalsMore": "+{count} ďalších",
             "you": "Vy"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Teraz nie",
+            "seeInArk": "Pozrieť v Ark",
+            "openArk": "Otvoriť Ark",
+            "yourYoung": "{species}: tvoje zviera má mláďatá",
+            "yourFirstAboard": "{species}: tvoje zviera je prvé svojho druhu v Ark",
+            "yourLine": "{species}: línia tvojho zvieraťa dosiahla generáciu {generation}",
+            "firstYoungHatched": "{species}: prvé mláďatá sa vyliahli v Ark",
+            "firstYoungBorn": "{species}: prvé mláďatá sa narodili v Ark",
+            "firstAboard": "{species}: prvé zviera tohto druhu nastúpilo na palubu Ark",
+            "newGeneration": "V Ark sa rodí generácia {generation}",
+            "speciesMilestone": "{species}: teraz {count} na palube Ark",
+            "arkMilestone": "Zvierat na palube Ark: {count}",
+            "extinction": "{species}: posledné zviera tohto druhu v Ark uhynulo",
+            "youngHatched": "Vyliahnuté mláďatá: {count}",
+            "youngBorn": "Narodené mláďatá: {count}",
+            "cameAboardOnDay": "Na palubu nastúpilo v deň {day}.",
+            "arkDay": "Deň Ark {day}",
+            "broughtBy": "Na palubu priviedol/priviedla: {name}",
+            "fromLine": "Z línie, ktorú priviedol/priviedla: {name}"
         }
     },
     "talkPage": {

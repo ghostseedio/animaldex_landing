@@ -612,6 +612,28 @@
             "tapKind": "種類をタップすると、それぞれを連れてきた人が見られます",
             "animalsMore": "+{count}件",
             "you": "あなた"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "今はしない",
+            "seeInArk": "Arkで見る",
+            "openArk": "Arkを開く",
+            "yourYoung": "{species}：あなたの動物に子どもが生まれました",
+            "yourFirstAboard": "{species}：あなたの動物がArkで最初の1匹です",
+            "yourLine": "{species}：あなたの動物の系統が第{generation}世代に達しました",
+            "firstYoungHatched": "{species}：Arkで初めての子どもがふ化しました",
+            "firstYoungBorn": "{species}：Arkで初めての子どもが生まれました",
+            "firstAboard": "{species}：この種の最初の1匹がArkに乗り込みました",
+            "newGeneration": "Arkで第{generation}世代が誕生",
+            "speciesMilestone": "{species}：Arkに{count}匹になりました",
+            "arkMilestone": "Arkの動物が{count}匹になりました",
+            "extinction": "{species}：Arkで最後の1匹が死にました",
+            "youngHatched": "ふ化した子ども：{count}",
+            "youngBorn": "生まれた子ども：{count}",
+            "cameAboardOnDay": "{day}日目に乗り込みました。",
+            "arkDay": "Ark {day}日目",
+            "broughtBy": "乗せた人：{name}",
+            "fromLine": "{name}さんの系統から"
         }
     },
     "talkPage": {

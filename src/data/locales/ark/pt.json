@@ -612,6 +612,28 @@
             "tapKind": "Toque numa espécie para ver quem trouxe cada animal",
             "animalsMore": "+{count} mais",
             "you": "Você"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Agora não",
+            "seeInArk": "Ver na Ark",
+            "openArk": "Abrir a Ark",
+            "yourYoung": "{species}: seu animal teve filhotes",
+            "yourFirstAboard": "{species}: seu animal é o primeiro da espécie na Ark",
+            "yourLine": "{species}: a linhagem do seu animal chegou à geração {generation}",
+            "firstYoungHatched": "{species}: primeiros filhotes saídos do ovo na Ark",
+            "firstYoungBorn": "{species}: primeiros filhotes nascidos na Ark",
+            "firstAboard": "{species}: o primeiro da espécie embarcou na Ark",
+            "newGeneration": "A geração {generation} nasce na Ark",
+            "speciesMilestone": "{species}: agora {count} a bordo da Ark",
+            "arkMilestone": "Agora {count} animais a bordo da Ark",
+            "extinction": "{species}: o último da espécie na Ark morreu",
+            "youngHatched": "Filhotes saídos do ovo: {count}",
+            "youngBorn": "Filhotes nascidos: {count}",
+            "cameAboardOnDay": "Embarcou no dia {day}.",
+            "arkDay": "Dia {day} da Ark",
+            "broughtBy": "Trazido a bordo por {name}",
+            "fromLine": "Da linhagem de {name}"
         }
     },
     "talkPage": {

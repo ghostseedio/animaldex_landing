@@ -612,6 +612,28 @@
             "tapKind": "Tippe auf eine Art, um zu sehen, wer welches Tier mitgebracht hat",
             "animalsMore": "+{count} weitere",
             "you": "Du"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Jetzt nicht",
+            "seeInArk": "In der Ark ansehen",
+            "openArk": "Die Ark öffnen",
+            "yourYoung": "{species}: Dein Tier hat Nachwuchs",
+            "yourFirstAboard": "{species}: Dein Tier ist das erste seiner Art in der Ark",
+            "yourLine": "{species}: Die Linie deines Tieres hat Generation {generation} erreicht",
+            "firstYoungHatched": "Erster {species}-Nachwuchs in der Ark geschlüpft",
+            "firstYoungBorn": "Erster {species}-Nachwuchs in der Ark geboren",
+            "firstAboard": "{species}: Das erste Tier dieser Art ist an Bord der Ark",
+            "newGeneration": "Generation {generation} ist in der Ark geboren",
+            "speciesMilestone": "{species}: jetzt {count} an Bord der Ark",
+            "arkMilestone": "Jetzt {count} Tiere an Bord der Ark",
+            "extinction": "{species}: Das letzte Tier dieser Art in der Ark ist gestorben",
+            "youngHatched": "Jungtiere geschlüpft: {count}",
+            "youngBorn": "Jungtiere geboren: {count}",
+            "cameAboardOnDay": "Es kam an Tag {day} an Bord.",
+            "arkDay": "Ark-Tag {day}",
+            "broughtBy": "An Bord gebracht von {name}",
+            "fromLine": "Aus der Linie von {name}"
         }
     },
     "talkPage": {
