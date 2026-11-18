@@ -145,6 +145,7 @@ test("the replay in words: the live log's own sentence and its time, species onl
     assert.equal(say(12).headline, "2 Plains Zebra young were born");
     assert.equal(say(16).headline, "A Plains Zebra hatched");
     assert.equal(say(13).headline, "The Plains Zebra died of old age");
+    assert.deepEqual(say(13).lines, [], "a death needs no second line");
     assert.equal(say(14).headline, "The African Lion ate a Plains Zebra");
     assert.equal(say(15).headline, "A Plains Zebra got away from an African Lion");
     assert.deepEqual([say(21).headline, say(21).lines], ["The last Common Water Flea is gone", ["The Common Water Flea died of old age", "It was the last of its kind on the Ark"]]);
@@ -400,6 +401,30 @@ test("the camera keeps a bearing clear of the trees: the scene's own rule, held 
     } finally {
         shot.end();
     }
+});
+
+test("an upright picture holds two along its tall side, and from a bearing the trees force, from farther back", () => {
+    const replay = plan(10);
+    const framing = (clearView?: ArkSceneHandle["clearView"]) => {
+        const scene = fakeScene();
+        scene.put(id(1), 0, 0);
+        scene.put(id(3), 10, 0);
+        if (clearView) (scene.handle as unknown as {clearView: ArkSceneHandle["clearView"]}).clearView = clearView;
+        const shot = createArkReplayShot({handle: scene.handle, replay, aspect: () => 9 / 16, lead: 1});
+        shot.begin();
+        shot.settle();
+        const view = shot.step(0, 0)!;
+        shot.end();
+        return view;
+    };
+    const free = framing();
+    // The two lie along x: the camera looks along x (a bearing of a quarter turn, either way), both up the picture.
+    assert.ok(Math.abs(Math.abs(Math.sin(free.azimuth)) - 1) < 1e-6, "along the line between them");
+    const forced = framing((_focus, _distance, polar, azimuth) => ({polar, azimuth: azimuth + 0.9}));
+    assert.ok(forced.distance > free.distance * 1.5, `across the picture they need more room (${free.distance.toFixed(1)} m, then ${forced.distance.toFixed(1)} m)`);
+    // Across the narrow side from that bearing: half the 10 m between them times sin(0.9), with room, inside the half width.
+    const halfWidth = forced.distance * Math.tan((38 * Math.PI) / 360) * (9 / 16);
+    assert.ok(5 * Math.sin(0.9) < halfWidth, "both still in the picture");
 });
 
 test("a night's exposure is the camera's only: a gain eased in with the night, none by day or with the hour pinned", () => {

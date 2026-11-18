@@ -11,7 +11,8 @@
  *   a CUT is the pin moved on (a long walk to a mate, a long stalk: the clip shows its end), and the extinction's
  *   last minutes are run fast while the camera pulls back (the body's fade is the death layer's, 3 minutes long);
  * - the frame: the point between the two farthest of the cast that are drawn and the least distance that holds them
- *   (`pair-frame.ts` framePair, `runtime/camera.ts` meetDistance: the selection's own framing), eased;
+ *   from where the camera is (the selection's pair fit, `pair-frame.ts` framePair, taken to any bearing: an upright
+ *   picture holds two along its tall side; one alone at `runtime/camera.ts` meetDistance, nearer), eased;
  * - an editorial default (the audit, §2.4): at a mating's mount the camera pulls up and away and the clip goes on
  *   with the two resting together; `mount: "show"` films it.
  *
@@ -19,7 +20,7 @@
  */
 
 import {arkEpochSeconds, pinArkClock} from "@/ark-scene/shared-clock";
-import {easeToward, framePair} from "@/ark-scene/pair-frame";
+import {easeToward} from "@/ark-scene/pair-frame";
 import {meetDistance} from "@/ark-scene/runtime/camera";
 import {attachArkCast, type ArkCast} from "@/ark-scene/replay/cast";
 import {DEATH_BODY_SECONDS, DEATH_FADE_SECONDS} from "@/ark-scene/live-deaths";
@@ -191,7 +192,19 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         bearing = null;
         raised = 0;
     };
-    type Frame = {target: Point; distance: number; azimuth: number; polar: number; /** Who must be seen from the camera (the sight lines kept clear). */ places: Point[]};
+    type Frame = {
+        target: Point;
+        /** From its own bearing (`azimuth`). */
+        distance: number;
+        azimuth: number;
+        polar: number;
+        /** Who must be seen from the camera (the sight lines kept clear). */
+        places: Point[];
+        /** The least distance that holds everyone from another bearing and height (the camera is rarely on the bearing asked for: a tree, a swing under way). Absent: `distance` whatever the bearing. */
+        fit?: (azimuth: number, polar: number) => number;
+    };
+    /** A framing at a distance and height of the shot's own (a pull back, a push in): no fitting. */
+    const held = (frame: Frame, distance: number, polar: number): Frame => ({...frame, distance, polar, fit: undefined});
 
     const located = (list: string[]): Array<ArkLocated & {id: string}> => list.map((id) => ({id, at: handle.locate(id)})).filter((item): item is {id: string; at: ArkLocated} => Boolean(item.at)).map((item) => ({...item.at, id: item.id}));
 
@@ -224,25 +237,33 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         const max = style.max ?? 150;
         const polar = style.polar ?? (length < 0.3 ? POLAR_SMALL : POLAR);
         const apartNow = far > Math.max(length * 0.5, 0.2);
-        // An upright picture (a phone's clip) holds two along its tall side: the camera looks along the line between them,
-        // one nearer and one farther, and the line is foreshortened by the camera's height. A wide picture holds them
-        // side on (the selection's pair framing).
-        const upright = aspect < 0.9 && apartNow && far > length * 1.2;
-        const pair = a === b || upright ? null : framePair({x: a.x, y: a.y, z: a.z, length: a.length}, {x: b.x, y: b.y, z: b.z, length: b.length}, {fovDeg: FOV, aspect, single, max});
-        const centre = pair ?? {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2};
-        // (Farther apart than the pair framing takes: the same fit, as far back as it needs, up to `max`.)
-        const fit = upright ? ((far * Math.cos(polar)) / 2 + length * 0.7) / (0.62 * Math.tan((FOV * Math.PI) / 360)) : (far / 2 + length * 0.6) / (0.7 * narrow);
-        const distance = Math.min(Math.max(pair?.distance ?? Math.max(single, fit), single), max) * (style.widen ?? 1);
-        const across = !apartNow ? outward(centre) : upright ? Math.atan2(a.x - b.x, a.z - b.z) : Math.atan2(b.z - a.z, -(b.x - a.x));
+        const centre = {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2};
+        // The least distance that holds the two from a bearing and a height: across the picture, the part of the line
+        // between them that lies across the view; up the picture, the part along the view, foreshortened by the
+        // camera's height. (Side on in a wide picture is the selection's pair framing, `pair-frame.ts`; an upright
+        // picture, a phone's clip, holds two far better along its tall side, one nearer and one farther.)
+        const half = Math.tan((FOV * Math.PI) / 360);
+        const line = Math.atan2(b.x - a.x, b.z - a.z);
+        const widen = style.widen ?? 1;
+        const fit = (azimuth: number, height: number) => {
+            if (!apartNow) return single * widen;
+            const across = (far * Math.abs(Math.sin(azimuth - line))) / 2 + length * 0.6;
+            const along = (far * Math.abs(Math.cos(azimuth - line)) * Math.cos(height)) / 2 + length * 0.7;
+            return Math.min(Math.max(single, across / (0.7 * half * Math.max(aspect, 0.3)), along / (0.62 * half)), max) * widen;
+        };
+        const sideOn = Math.atan2(b.z - a.z, -(b.x - a.x));
+        const upright = apartNow && fit(line, polar) < fit(sideOn, polar);
+        const across = !apartNow ? outward(centre) : upright ? line + Math.PI : sideOn;
         const out = outward(centre);
         const side = Math.cos(across - out) >= 0 ? across : across + Math.PI;
-        const held = who.map((p) => p.id).sort().join(",");
-        if (held !== framed) {
-            framed = held;
+        const distance = fit(side, polar);
+        const holds = who.map((p) => p.id).sort().join(",");
+        if (holds !== framed) {
+            framed = holds;
             bearing = null;
             raised = 0;
         }
-        return {target: {x: centre.x, y: centre.y, z: centre.z}, distance, azimuth: side, polar: polar - raised, places: who.map((p) => ({x: p.x, y: p.y, z: p.z}))};
+        return {target: {x: centre.x, y: centre.y, z: centre.z}, distance, azimuth: side, polar: polar - raised, places: who.map((p) => ({x: p.x, y: p.y, z: p.z})), fit};
     };
     const apart = (a: string, b: string): number | null => {
         const [p, q] = [handle.locate(a), handle.locate(b)];
@@ -291,15 +312,19 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         if (bearing === null && view && Math.cos(asked.azimuth - view.azimuth) < 0) asked = {...asked, azimuth: asked.azimuth + Math.PI};
         const want = clearOf(asked);
         if (!view) {
-            view = {target: {...want.target}, distance: want.distance, polar: want.polar, azimuth: want.azimuth};
+            view = {target: {...want.target}, distance: want.fit?.(want.azimuth, want.polar) ?? want.distance, polar: want.polar, azimuth: want.azimuth};
             return view;
         }
-        const azimuth = nearer(view.azimuth, want.azimuth);
+        const azimuth = easeToward(view.azimuth, nearer(view.azimuth, want.azimuth), dt, turn);
+        const polar = easeToward(view.polar, want.polar, dt, rate * 0.6);
+        // (Far enough back for everyone from where the camera is now, not from where it is going.)
+        const distance = want.fit?.(azimuth, polar) ?? want.distance;
         view = {
             target: {x: easeToward(view.target.x, want.target.x, dt, rate), y: easeToward(view.target.y, want.target.y, dt, rate), z: easeToward(view.target.z, want.target.z, dt, rate)},
-            distance: easeToward(view.distance, want.distance, dt, rate * 0.8),
-            polar: easeToward(view.polar, want.polar, dt, rate * 0.6),
-            azimuth: easeToward(view.azimuth, azimuth, dt, turn)
+            // (Out at once when they would leave the picture; in gently.)
+            distance: distance > view.distance ? easeToward(view.distance, distance, dt, rate * 3) : easeToward(view.distance, distance, dt, rate * 0.8),
+            polar,
+            azimuth
         };
         return view;
     };
@@ -371,7 +396,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                     enter("rest");
                     return toward(frameOf(ids, {widen: 1.2}), dt);
                 }
-                return toward(frame ? {...frame, distance: frame.distance * lerp(1.1, 3.2, k), polar: lerp(POLAR, 0.72, k)} : null, dt, 3.5);
+                return toward(frame ? held(frame, frame.distance * lerp(1.1, 3.2, k), lerp(POLAR, 0.72, k)) : null, dt, 3.5);
             }
         } else if (now < mounted + 2.4) {
             enter("mount");
@@ -455,7 +480,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             pinArkClock(lapseFrom! + ease(k) * (DEATH_FADE_SECONDS + 8));
             const frame = frameOf([id]);
             if (k >= 1) enter("empty");
-            return toward(frame ? {...frame, distance: lerp(frame.distance, Math.max(frame.distance * 5, 60), ease(k)), polar: lerp(POLAR_SMALL, 0.88, ease(k))} : null, dt, 3);
+            return toward(frame ? held(frame, lerp(frame.distance, Math.max(frame.distance * 5, 60), ease(k)), lerp(POLAR_SMALL, 0.88, ease(k))) : null, dt, 3);
         }
         // Its home range, empty.
         if (clip - stateAt > 4) {
@@ -509,7 +534,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         if (clip < 6) {
             // From over its home range, in to the last one.
             const k = ease(clip / 6);
-            return toward(alone ? {...alone, distance: lerp(Math.max(alone.distance * 6, 55), alone.distance * 1.1, k), polar: lerp(0.86, alone.polar, k)} : null, dt, 4);
+            return toward(alone ? held(alone, lerp(Math.max(alone.distance * 6, 55), alone.distance * 1.1, k), lerp(0.86, alone.polar, k)) : null, dt, 4);
         }
         // And the one that hunts it, in the same picture, when it is near enough for one.
         const off = predator.length ? apart(last[0], predator[0]) : null;
@@ -546,7 +571,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         if (arrived && clip > actAt + 2.5) tell();
         if (clip > 15) finish(true);
         const k = ease((clip - 3.6) / 3);
-        return toward(here ? {...here, distance: here.distance * lerp(2.6, 1.15, k), polar: lerp(0.95, here.polar, k)} : null, dt, 3);
+        return toward(here ? held(here, here.distance * lerp(2.6, 1.15, k), lerp(0.95, here.polar, k)) : null, dt, 3);
     };
 
     return {

@@ -89,8 +89,8 @@ export function arkReplayText(replay: ArkEventReplay, wordsIn: (ArkLiveWordsIn &
         const predator = replay.cast.find((member) => member.role === "predator")?.record;
         if (last) lines.push(arkLiveLineText(predator ? {kind: "meal", animal: predator.name, other: last.name, count: 1, eggs: null, source: "server"} : {kind: "death", animal: last.name, other: null, count: 1, eggs: null, source: "server"}, text, locale));
         lines.push(words.last);
-    } else {
-        // Who has gone since (a replay shows them as they were): never who brought them.
+    } else if (replay.kind !== "death") {
+        // Who has gone since (a replay shows them as they were): never who brought them. (A death says so itself.)
         const gone = replay.cast.filter((member) => !member.aboard && member.role !== "young");
         if (gone.length === 1) lines.push(fillArkWords(words.gone, {animal: gone[0].record.name}));
         else if (gone.length > 1) lines.push(fillArkWords(words.goneOther, {count: gone.length.toLocaleString(locale)}));
