@@ -25,12 +25,16 @@ function serverAnswer() {
     };
 }
 
-test("habitat: one sentence, without the range-keys line, cut at a word when it is long", () => {
+test("habitat: one sentence, without the range-keys line, cut at a clause or a word when it is long", () => {
     assert.equal(arkCrisisHabitat("Native range keys: europe. Open farmland and grassland with hedges. It rests in a shallow form."), "Open farmland and grassland with hedges.");
     const long = arkCrisisHabitat(BOAR)!;
     assert.ok(long.length <= 160, `${long.length}`);
     assert.ok(long.startsWith("Broadleaf and mixed forest, especially oak and beech woods"));
     assert.ok(long.endsWith("…") && !/[,\s]…$/.test(long));
+    assert.equal(
+        arkCrisisHabitat("Native range keys: europe. Open woodland, woodland rides and edges, scrub, hedgerows, fens and gardens, wherever its buckthorn foodplants grow; in the north-west, buckthorn favours chalk and limestone and alder buckthorn damp, acid soils."),
+        "Open woodland, woodland rides and edges, scrub, hedgerows, fens and gardens, wherever its buckthorn foodplants grow."
+    );
     assert.equal(arkCrisisHabitat("Dry <b>tropical</b> islands"), "Dry tropical islands");
     assert.equal(arkCrisisHabitat("Native range keys: europe."), null);
     assert.equal(arkCrisisHabitat(null), null);

@@ -30,14 +30,18 @@ function habitatProse(raw: unknown): string {
         .trim();
 }
 
-/** One short habitat sentence: the text's first sentence, cut at a word when it is longer than 160 characters. */
+/** One short habitat sentence: the text's first sentence, cut at a clause or a word when it is longer than 160 characters. */
 export function arkCrisisHabitat(raw: unknown, max = 160): string | null {
     const prose = habitatProse(raw);
     if (!prose) return null;
     const end = prose.search(/[.!?](\s|$)/);
     const sentence = end >= 0 ? prose.slice(0, end + 1) : prose;
     if (sentence.length <= max) return sentence;
+    // Too long: its first clause when a semicolon or a colon ends one in reach (a whole statement, with a full stop),
+    // else as many whole words as fit.
     const cut = sentence.slice(0, max - 1);
+    const clause = Math.max(cut.lastIndexOf("; "), cut.lastIndexOf(": "));
+    if (clause > max * 0.4) return `${cut.slice(0, clause)}.`;
     const space = cut.lastIndexOf(" ");
     return `${(space > max * 0.5 ? cut.slice(0, space) : cut).replace(/[,;:\s]+$/, "")}…`;
 }
