@@ -41,6 +41,21 @@ export function isHumanAnimal(a: {species_profile_id?: string | null; model_slug
     return HUMAN_SPECIES_IDS.indexOf(a.species_profile_id ?? "") >= 0 || a.model_slug === "human" || /^homo\s+sapiens/i.test(a.scientific_name ?? "");
 }
 
+/**
+ * A human chosen by id from the page (the species list's "Human" row, search, `?focus=`), not by a tap on a figure:
+ * the human aboard (null: not a human, so the scene's own entries), with where the camera looks at them if they are
+ * drawn now (`out`: `TownHumans.out`), else null (indoors, asleep or at work: the card still opens, over the town).
+ * Humans are never scene entries, so before this a chosen human found nothing and the card closed (live, 2026-11-18).
+ */
+export type ChosenHuman<A> = {human: A; at: {x: number; y: number; z: number} | null};
+export function chosenHuman<A extends {id: string}>(id: string | null, aboard: readonly A[], out: ReadonlyArray<{id: string; x: number; y: number; z: number}>): ChosenHuman<A> | null {
+    if (!id) return null;
+    const human = aboard.find((a) => a.id === id);
+    if (!human) return null;
+    const drawn = out.find((h) => h.id === id);
+    return {human, at: drawn ? {x: drawn.x, y: drawn.y + 1, z: drawn.z} : null};
+}
+
 export type Spot = {x: number; y: number; z: number; /** Facing (three's yaw: forward (sin, cos)). */ yaw: number};
 
 /** A room people live in (the homes lane's see-into rooms): its floor's height and its furniture's spots, town frame. */
