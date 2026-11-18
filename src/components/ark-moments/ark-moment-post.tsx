@@ -10,6 +10,7 @@
 
 import {useEffect, useRef, useState, type CSSProperties} from "react";
 import Link from "@/app/[locale]/_components/link";
+import {getSpeciesArtworkUrl} from "@/lib/species-artwork";
 import {arkMomentAgo, arkMomentCaption, arkMomentHref, type ArkMoment, type ArkMomentWords} from "@/lib/ark-moments";
 
 /** The sailboat the Ark's bands use. */
@@ -62,7 +63,8 @@ export default function ArkMomentPost({
 }) {
     const ref = useRef<HTMLElement | null>(null);
     const seenRef = useRef(false);
-    const [iconFailed, setIconFailed] = useState(false);
+    /** The icon: the exact `animals/<slug>.webp` first (as chat avatars), then the artwork resolver's relatives, then the Ark mark. */
+    const [iconStage, setIconStage] = useState<"exact" | "resolved" | "none">("exact");
     const caption = arkMomentCaption(moment, words, locale);
     const ago = arkMomentAgo(moment.happenedAt, locale);
     const extinct = moment.kind === "extinction";
@@ -107,14 +109,16 @@ export default function ArkMomentPost({
             </div>
 
             <div className="relative flex min-h-[11rem] w-full flex-1 items-center justify-center overflow-hidden lg:max-h-[30rem]" style={zoneTint(moment)}>
-                {slug && !iconFailed ? (
-                    // The species' hand-made icon (exact slug, then the artwork resolver's relatives), not a photo.
+                {slug && iconStage !== "none" ? (
+                    // The species' hand-made icon, not a photo.
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
-                        src={`/api/species-artwork/${encodeURIComponent(slug)}?size=640`}
+                        src={iconStage === "exact" ? getSpeciesArtworkUrl(slug) : `/api/species-artwork/${encodeURIComponent(slug)}?size=640`}
                         alt={moment.speciesName ?? ""}
                         className={`aspect-square w-[45%] max-w-[18rem] object-contain drop-shadow-[0_12px_20px_rgba(0,0,0,0.45)] ${extinct ? "opacity-70" : ""}`}
-                        onError={() => setIconFailed(true)}
+                        onError={() => setIconStage((stage) => (stage === "exact" ? "resolved" : "none"))}
+                        // The resolver answers its "no image" placeholder when nothing matches: the Ark mark instead.
+                        onLoad={(event) => { if (event.currentTarget.currentSrc.includes("species-no-image")) setIconStage("none"); }}
                         data-testid="ark-moment-icon"
                     />
                 ) : (

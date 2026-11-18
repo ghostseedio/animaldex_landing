@@ -180,10 +180,10 @@ test("words: every locale file has every key, the same placeholders, and nothing
     const dir = new URL("../data/locales/ark/", import.meta.url);
     for (const file of readdirSync(dir).filter((f) => f.endsWith(".json"))) files[file] = JSON.parse(readFileSync(new URL(file, dir), "utf8"));
     for (const [name, messages] of Object.entries(files)) {
-        const raw = (messages as {ark?: {moments?: Record<string, unknown>}}).ark?.moments;
+        const raw: Record<string, unknown> | undefined = (messages as {ark?: {moments?: Record<string, unknown>}}).ark?.moments;
         assert.ok(raw, `${name}: ark.moments`);
         for (const key of keys) {
-            const text = raw[key];
+            const text: unknown = raw[key];
             assert.equal(typeof text, "string", `${name}: ${key}`);
             assert.equal(holes(text as string), holes(ARK_MOMENT_ENGLISH[key]), `${name}: ${key} placeholders`);
             if (name !== "en" && key !== "label") assert.notEqual(text, ARK_MOMENT_ENGLISH[key], `${name}: ${key} untranslated`);
