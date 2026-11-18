@@ -679,7 +679,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                     pick = null;
                 }
                 const young = located(byRole("young")).filter((at) => at.shown !== false).map((at) => at.id);
-                if (young.length) tell();
+                // (Watching live the young are in the read already: the still is the clutch hatched, at the act's end.)
+                if (young.length && !live) tell();
                 return toward(frameOf(young.length ? young : byRole("parent").slice(0, 1), {widen: young.length ? 2.4 : 1.5}), dt, 1.6) ?? null;
             }
             if (playing?.over && state === "hatch") {
@@ -831,9 +832,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             // side, a tiger and the monkey it lunges at both whole.)
             const reach = h && q ? (h.length + q.length) * 0.5 + Math.max(Math.min(h.length, q.length) * 0.25, 0.08) : 0;
             const flat = h && q ? Math.hypot(h.x - q.x, h.z - q.z) : 0;
-            const [ux, uz] = h && q && flat > 1e-3 ? [(h.x - q.x) / flat, (h.z - q.z) / flat] : [0, 0];
-            // (And a little room on the quarry's far side: the hunter runs on past where its quarry was, and the quarry breaks away.)
-            const there = h && q && flat > 1e-3 ? [{...h, id: `${hunter}@lunge`, x: q.x + ux * reach, y: q.y + Math.min(Math.max(h.y - q.y, -reach), reach) * Math.min(reach / Math.max(gap ?? reach, reach), 1), z: q.z + uz * reach, shown: true}, {...q, id: `${quarry}@past`, x: q.x - ux * reach * 0.55, z: q.z - uz * reach * 0.55, shown: true}] : [];
+            const there = h && q && flat > 1e-3 ? [{...h, id: `${hunter}@lunge`, x: q.x + ((h.x - q.x) / flat) * reach, y: q.y + Math.min(Math.max(h.y - q.y, -reach), reach) * Math.min(reach / Math.max(gap ?? reach, reach), 1), z: q.z + ((h.z - q.z) / flat) * reach, shown: true}] : [];
             const on = frameOf([quarry], {polar: POLAR_LUNGE, also: there});
             // (Its aim is all but at once: the quarry is at a run, and a picture that trails it has the two at its edge.)
             return toward(on && !there.length ? held(on, Math.max(on.distance * LUNGE_ROOM, LUNGE_LEAST), POLAR_LUNGE) : on, dt, 6, 3, 40);
