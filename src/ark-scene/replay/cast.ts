@@ -90,6 +90,8 @@ export class ArkCast implements ArkCastLayer {
 
     readonly pins: ReadonlySet<string> = this.pinned;
     readonly marks: ReadonlySet<string> = this.marked;
+    /** V1: a short line for a marked or pinned animal's selection box ("Last one in the wild", "Lone"); null: none. */
+    label: ((id: string) => string | null) | undefined = undefined;
 
     /**
      * Bring a group in under a key (an act's key, `mated:17873`): everyone it names is pinned, and whoever is not in

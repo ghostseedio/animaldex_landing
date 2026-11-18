@@ -10,6 +10,7 @@
 
 import {arkWithArticle, type ArkLiveItem, type ArkLiveText} from "@/lib/ark-live-log";
 import {fillArkWords} from "@/lib/ark-words";
+import {arkActStart} from "@/lib/ark-act-hold";
 
 const ENGLISH = "{aPrey} got away from {aPredator}";
 
@@ -50,7 +51,10 @@ export function escapeActs(raw: unknown, from: number): Array<{key: string; prey
         const prey = row.animal?.id;
         const predator = row.other?.id;
         if (typeof prey !== "string" || typeof predator !== "string" || !prey || !predator || !Number.isFinite(at) || at < from) continue;
-        acts.push({key: `escaped:${String(row.id)}`, prey, predator, t0: at / 1000, encounter: row.encounter ?? row.payload?.encounter});
+        // (Acted once the record is out, `ark-act-hold.ts`: the chase is seen, not only the limp after it.)
+        const encounter = row.encounter ?? row.payload?.encounter;
+        const step = (encounter as {t?: unknown} | null | undefined)?.t;
+        acts.push({key: `escaped:${String(row.id)}`, prey, predator, t0: arkActStart(at / 1000, typeof step === "number" ? step : null), encounter});
     }
     return acts;
 }

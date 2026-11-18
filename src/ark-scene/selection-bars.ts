@@ -54,7 +54,7 @@ export type ArkSelectionByline =
     | {kind: "text"; text: string};
 
 /** What the host adds to the selected animal's box: who brought it, and its Talk link (null: not talkable). */
-export type ArkSelectionExtras = {byline: ArkSelectionByline | null; talk: {label: string; href: string} | null};
+export type ArkSelectionExtras = {byline: ArkSelectionByline | null; talk: {label: string; href: string} | null; /** V1: one short line of its own (the scene's: "Last one in the wild", "Lone"); absent: none. */ mark?: string | null};
 
 /** A tap on one of the box's links; the host answers true when it handled it (the link then does not navigate). */
 export type ArkSelectionLink = {kind: "profile"; handle: string} | {kind: "talk"; slug: string; animalId: string};
@@ -106,6 +106,7 @@ export class ArkSelectionBars {
     private readonly nameText: HTMLSpanElement;
     private readonly talk: HTMLAnchorElement;
     private readonly byline: HTMLDivElement;
+    private readonly mark: HTMLDivElement;
     private links: {talk: ArkSelectionLink | null; profile: ArkSelectionLink | null} = {talk: null, profile: null};
     private readonly head: HTMLDivElement;
     private readonly dot: HTMLSpanElement;
@@ -202,6 +203,13 @@ export class ArkSelectionBars {
         Object.assign(byline.style, {...line, display: "none", font: `500 ${ICON_PX}px/1.2 ${FONT}`, color: "rgba(255, 252, 244, 0.78)", marginTop: "-2px", paddingBottom: "1px"});
         el.appendChild(byline);
         this.byline = byline;
+        // V1: its mark, when it has one (the last of its kind in the wild, a lone founder): one amber line, as the ring's.
+        const mark = document.createElement("div");
+        mark.dataset.arkBarsMark = "";
+        mark.dir = "auto";
+        Object.assign(mark.style, {...line, display: "none", font: `700 ${ICON_PX}px/1.2 ${FONT}`, color: "#ffe2a8", paddingBottom: "1px"});
+        el.appendChild(mark);
+        this.mark = mark;
         for (const link of [talk]) this.guard(link, "talk");
         for (const key of KEYS) {
             const row = document.createElement("div");
@@ -309,6 +317,9 @@ export class ArkSelectionBars {
             this.talk.title = talk.label;
         }
         this.setByline(extras?.byline ?? null);
+        const mark = label ? extras?.mark?.trim() || "" : "";
+        if (this.mark.textContent !== mark) this.mark.textContent = mark;
+        this.mark.style.display = mark ? "block" : "none";
         for (const key of KEYS) {
             const bar = bars?.[key] ?? null;
             const {row, fill} = this.rows.get(key)!;

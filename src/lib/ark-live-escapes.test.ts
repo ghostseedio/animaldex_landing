@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import type {ActBody, ActPose, ChaseKind, FleeStyle} from "@/ark-scene/acts";
+import {ARK_ACT_HOLD_SECONDS} from "@/lib/ark-act-hold";
 import {LIMP_PACE, LIMP_SECONDS, LiveEscapes, escapePose, escapeScript, limpAmount, limpOffsets, missGap, type EscapeChase, type LiveEscapesHost} from "@/ark-scene/live-escapes";
 
 const body = (x: number, z: number, length: number, speedStat: number, base = 0): ActBody => ({x, z, base, yaw: 0, length, height: length * 0.6, speedStat});
@@ -168,9 +169,13 @@ test("the record's escape on the stage: the chase, the walk back at a limping pa
     live.add([{key: "escaped:1", prey: "zebra", predator: "lion", t0}], t0 - 5);
     live.add([{key: "escaped:1", prey: "zebra", predator: "lion", t0}], t0 - 5);
     assert.equal(live.size, 1);
-    live.step(t0 - 1);
-    assert.equal(actOf(lion), null);
+    live.step(t0 - 60);
+    assert.equal(actOf(lion), null, "held until the record is out: its day meanwhile");
     assert.deepEqual(live.pins(), []);
+    // (V1: in the last seconds before the chase each is on its way to where the record starts it.)
+    live.step(t0 - 1);
+    assert.equal(actOf(lion)?.role, undefined, "not hunting yet");
+    assert.equal(actOf(lion)?.with, "zebra");
     live.step(t0 + 0.5);
     assert.equal(actOf(lion)?.role, "hunter");
     assert.equal(actOf(lion)?.meal, "hunting");
@@ -247,7 +252,7 @@ test("the rows' escapes for the scene: who got away from whom, when, and the ser
         {id: 9, kind: "escaped", at: "2026-11-20T10:02:00Z", animal: {id: "hare"}, other: null},
         {id: 10, kind: "escaped", at: "2026-11-20T09:00:00Z", animal: {id: "vole"}, other: {id: "owl"}, payload: {encounter}}
     ]};
-    assert.deepEqual(escapeActs(raw, Date.parse("2026-11-20T09:30:00Z")), [{key: "escaped:7", prey: "zebra", predator: "lion", t0: Date.parse("2026-11-20T10:00:00Z") / 1000, encounter}]);
+    assert.deepEqual(escapeActs(raw, Date.parse("2026-11-20T09:30:00Z")), [{key: "escaped:7", prey: "zebra", predator: "lion", t0: Date.parse("2026-11-20T10:00:00Z") / 1000 + ARK_ACT_HOLD_SECONDS, encounter}]);
     assert.deepEqual(escapeActs(raw, -Infinity).map((a) => a.key), ["escaped:7", "escaped:10"]);
     assert.equal(escapeActs(raw, -Infinity)[1].encounter, encounter);
     assert.deepEqual(escapeActs(null, -Infinity), []);

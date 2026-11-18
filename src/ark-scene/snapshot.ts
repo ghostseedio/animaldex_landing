@@ -92,6 +92,8 @@ function animal(raw: unknown): ArkAnimal | null {
     if (placeholder) life.placeholder = true;
     // The last of its kind aboard (sent only when true): no mate, it will age out; the card says so.
     if (row.last_of_kind === true) life.last_of_kind = true;
+    // V1 (E3's read, flag off today): a lone founder, sent only when true.
+    if (row.lone === true) life.lone = true;
     const kind = text(row.kind_species_profile_id);
     if (kind && kind !== text(row.species_profile_id)) {
         life.kind_species_profile_id = kind;

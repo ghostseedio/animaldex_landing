@@ -15,10 +15,18 @@
  *
  * The record's lines also go to the scene's animal logs (`noteRecord`): a meal, young, a clutch, a pair bred.
  *
+ * V1 ("hunting and mating you can see", `seen/`, loaded lazily the first time there is something for it): every
+ * record that is acted brings its animals into the scene before its layer is fed (pinned; a stand-in for whoever has
+ * left the read), a meal is handed to the scene as its row is read (the held chase is then seen, `ark-act-hold.ts`),
+ * and a tap on a line whose act is under way or about to begin WATCHES it: everyone it names held in one picture.
+ *
  * Nothing here decides anything about the Ark: it says what the server wrote and what the shared layers draw.
  */
 
-import {decodeArkEvents, type ArkEvent} from "@/lib/ark-life";
+import {decodeArkEvents, planArkReplay, type ArkAct, type ArkEvent} from "@/lib/ark-life";
+import {arkActStart, arkActStartOf} from "@/lib/ark-act-hold";
+import {arkPinnedMs} from "@/ark-scene/shared-clock";
+import type {ArkSeen, ArkSeenWords} from "@/ark-scene/seen";
 import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText, arkLiveServerItems, arkNowItems, arkSeenItems, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveLine, type ArkLiveText} from "@/lib/ark-live-log";
 import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt-outcome";
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
@@ -35,7 +43,21 @@ import {ArkLiveLogView} from "@/ark-scene/live/log-view";
 import {breedFocus, isBreedKind, youngStillWanted, YOUNG_WAIT_MS} from "@/ark-scene/live/breed-focus";
 
 /** The words the log needs (the Ark's `live` and `replay`, and "Show me"), as the page or `/api/ark/words` has them. */
-export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null} | null;
+export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null; /** V1: the marks' words (`ark.endangered`'s "Last one" and "Critical"; "Lone" is English until the Ark's words carry it). */ endangered?: {last?: string | null; critical?: string | null} | null} | null;
+
+/** V1: the server's kinds that are acted with a cast (`seen/live-cast.ts` ARK_SEEN_KINDS; here so nothing of `seen/` loads until one comes). */
+const SEEN_KINDS: ReadonlySet<string> = new Set(["mated", "birth", "death_old", "starved", "meal", "escaped", "extinction"]);
+/** V1: the crises read (`/api/ark/crises`, E4): asked a little after the log starts, then this often; rarely while it is not there. */
+const CRISES_FIRST_MS = 12_000;
+const CRISES_EVERY_MS = 3 * 60_000;
+const CRISES_ABSENT_MS = 30 * 60_000;
+
+function seenWords(input: ArkLiveWordsIn): ArkSeenWords {
+    const out: ArkSeenWords = {};
+    if (input?.endangered?.last) out.last = input.endangered.last;
+    if (input?.endangered?.critical) out.critical = input.endangered.critical;
+    return out;
+}
 
 /** The replay's words the log borrows, in English: until (or unless) the reader's words come. */
 const REPLAY_ENGLISH: ArkLiveText["replay"] = {
@@ -66,6 +88,10 @@ export type ArkLiveOptions = {
     collapsed?: boolean;
     /** After a line's tap flew the camera (the page brings the world into view on a phone). */
     onFocused?: (line: ArkLiveLine) => void;
+    /** V1 (`seen/`): false leaves the casts, the watch and the marks out (a test's log). Default on. */
+    seen?: boolean;
+    /** The frame clock, the next frame and the acts' clock for `seen/` (the harness steps them itself). */
+    seenClock?: {now?: () => number; frame?: (step: () => void) => void; epochMs?: () => number};
 };
 
 function words(input: ArkLiveWordsIn): {text: ArkLiveText; showMe: string} {
@@ -131,6 +157,12 @@ export class ArkLive {
     private showMe: string;
     private locale: string;
     private disposed = false;
+    /** V1 (`seen/`): the casts, the watch and the marks; loaded the first time there is something for them. */
+    private seen: ArkSeen | null = null;
+    private seenLoading: Promise<ArkSeen | null> | null = null;
+    private crisesAt = -Infinity;
+    private crisesEvery = CRISES_FIRST_MS;
+    private readonly lineText: (line: ArkLiveLine) => string;
 
     constructor(private readonly options: ArkLiveOptions) {
         const read = words(options.words);
@@ -148,9 +180,11 @@ export class ArkLive {
             })();
             if (stored === "1" || stored === "0") collapsed = stored === "1";
         }
+        this.lineText = (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale);
+        this.crisesAt = performance.now();
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
-            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
+            text: this.lineText,
             onTap: (line) => this.focus(line),
             reducedMotion: Boolean(options.reducedMotion),
             serverLife: ARK_LIVE_LOG_DEFAULTS.serverLife,
@@ -183,6 +217,98 @@ export class ArkLive {
         this.showMe = read.showMe;
         if (locale) this.locale = locale;
         this.view.setLabels(this.labels());
+        this.options.words = input;
+        this.seen?.setWords(seenWords(input));
+    }
+
+    // MARK: V1 (`seen/`)
+
+    /** `seen/`, loaded once (null: no scene yet, a scene without the cast's hook, or the load failed: the log goes on without it). */
+    private loadSeen(): Promise<ArkSeen | null> {
+        if (this.seen) return Promise.resolve(this.seen);
+        if (this.options.seen === false) return Promise.resolve(null);
+        return (this.seenLoading ??= import("@/ark-scene/seen")
+            .then(({attachArkSeen}) => {
+                const scene = this.options.scene();
+                if (this.disposed || !scene?.setCast) {
+                    this.seenLoading = null;
+                    return null;
+                }
+                const host = this.options.host;
+                this.seen = attachArkSeen({handle: scene, host, aspect: () => host.clientWidth / Math.max(host.clientHeight, 1) || 1, words: seenWords(this.options.words), reducedMotion: () => Boolean(this.options.reducedMotion), ...(this.options.seenClock ?? {})});
+                if (this.current) this.seen.snapshot(this.current);
+                return this.seen;
+            })
+            .catch(() => {
+                this.seenLoading = null;
+                return null;
+            }));
+    }
+
+    /**
+     * Before the layers are fed rows: everyone their acts name brought into the scene (`seen/live-cast.ts`). Null:
+     * nothing to wait for (no row that is acted, or `seen/` is in already and has them).
+     */
+    private casting(raw: unknown): Promise<void> | null {
+        const list: unknown[] = Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as {events?: unknown}).events) ? (raw as {events: unknown[]}).events : [];
+        const rows = list.filter((row) => row && typeof row === "object" && SEEN_KINDS.has(String((row as {kind?: unknown}).kind)));
+        if (!rows.length || this.options.seen === false || !this.options.scene()?.setCast) return null;
+        if (this.seen) {
+            this.seen.note(rows, this.current);
+            return null;
+        }
+        return this.loadSeen().then((seen) => {
+            seen?.note(rows, this.current);
+        });
+    }
+
+    /**
+     * A line whose act can still be watched from its start stays until it has begun (`ArkLiveItem.stay`): a held chase
+     * or dying act begins a minute after its record (`ark-act-hold.ts`), a mating's walk and a birth take their time.
+     * `at`: the row's own time (ms) by the item's id.
+     */
+    private staying(items: ArkLiveItem[], at: (id: string) => number): ArkLiveItem[] {
+        const now = this.options.seenClock?.epochMs?.() ?? arkPinnedMs() ?? Date.now();
+        for (const item of items) {
+            const t = at(String(item.id));
+            if (!Number.isFinite(t) || item.source !== "server") continue;
+            const held = item.kind === "meal" || item.kind === "death" || item.kind === "starved" || item.kind === "extinction" || item.say === "escaped";
+            const until = held ? (arkActStart(t / 1000) + 20) * 1000 : item.kind === "mated" ? t + 100_000 : item.kind === "birth" || item.kind === "hatched" ? t + 50_000 : NaN;
+            if (until > now) item.stay = until - now;
+        }
+        return items;
+    }
+
+    /** The record's meals, handed to the scene as they are read (`addMeals`): the hunting read's own set comes up to a refresh later. */
+    private ate(events: readonly ArkEvent[]) {
+        const meals = events.filter((event) => event.kind === "meal" && event.animal && event.other).flatMap((event) => planArkReplay([event], 1).acts.filter((act): act is Extract<ArkAct, {kind: "meal"}> => act.kind === "meal"));
+        if (!meals.length) return;
+        try {
+            this.options.scene()?.addMeals?.(meals);
+        } catch {
+            // (A scene without it: the hunting read's meals still come.)
+        }
+    }
+
+    /** The open crises (`/api/ark/crises` beside the events' URL, E4; not there yet: asked rarely): their animals pinned, the last one ringed. */
+    private readCrises() {
+        const url = this.options.eventsUrl?.replace(/\/events(\?.*)?$/, "/crises");
+        this.crisesAt = performance.now();
+        if (!url || url === this.options.eventsUrl || this.disposed || this.options.seen === false) return;
+        fetch(url)
+            .then((response) => {
+                this.crisesEvery = response.ok ? CRISES_EVERY_MS : CRISES_ABSENT_MS;
+                return response.ok ? response.json() : null;
+            })
+            .then((body: {available?: boolean; crises?: unknown} | null) => {
+                if (this.disposed || !body || body.available === false || !Array.isArray(body.crises)) return;
+                // (`seen/` is loaded for an open crisis only; once in, an empty answer clears the rings.)
+                if (!body.crises.length && !this.seen) return;
+                void this.loadSeen().then((seen) => seen?.setCrises(body));
+            })
+            .catch(() => {
+                this.crisesEvery = CRISES_ABSENT_MS;
+            });
     }
 
     setCovered(covered: boolean) {
@@ -191,6 +317,11 @@ export class ArkLive {
 
     setReducedMotion(reduced: boolean) {
         this.options.reducedMotion = reduced;
+    }
+
+    /** V1: `seen/` once it is in (the harness, tests). */
+    get seenNow(): ArkSeen | null {
+        return this.seen;
     }
 
     /** The lines on screen now (tests, the recorder). */
@@ -203,6 +334,7 @@ export class ArkLive {
         const sig = signature(next);
         if (!this.current) {
             this.current = next;
+            this.seenSnapshot(next);
             this.sig = sig;
             if (next.as_of && Date.parse(next.as_of) > Date.parse(this.cursor) - 120_000) this.cursor = new Date(Math.min(Date.parse(next.as_of), Date.now())).toISOString();
             return;
@@ -210,14 +342,29 @@ export class ArkLive {
         this.youngArrived(next); // 3.3 fix (breeding taps)
         const before = this.current;
         this.current = next;
+        this.seenSnapshot(next);
         if (sig === this.sig) return;
         this.sig = sig;
         if (this.options.eventsUrl) this.readEvents(before, next);
         else this.newcomers(before, next);
     }
 
+    /** V1: every read to `seen/` (the lone marks, the crisis animals still aboard), loaded for a read with a lone founder in it. */
+    private seenSnapshot(next: ArkSnapshot) {
+        if (this.seen) this.seen.snapshot(next);
+        else if (!this.seenLoading && this.options.seen !== false && next.animals.some((animal) => animal.lone === true)) void this.loadSeen();
+    }
+
     /** Event rows in the server's shape (development's feed): said as the live ones are. */
     events(raw: unknown) {
+        // (V1: everyone the rows' acts name is brought into the scene first; the first time, once `seen/` has loaded.)
+        const casting = this.casting(raw);
+        if (casting) void casting.then(() => this.eventsNow(raw));
+        else this.eventsNow(raw);
+    }
+
+    private eventsNow(raw: unknown) {
+        if (this.disposed) return;
         this.dormancy(raw, -Infinity);
         const decoded = decodeArkEvents(raw, this.current).filter((event) => !this.said.has(`event:${event.id}`));
         for (const event of decoded) {
@@ -227,11 +374,12 @@ export class ArkLive {
         this.noteRecord(decoded);
         this.noteKin(decoded); // 3.3 fix (breeding taps)
         this.revive(decoded);
+        this.ate(decoded); // V1
         this.mate(decoded);
         this.died(decoded); // 3.3 fix (log)
         this.born(decoded);
         this.hatched(decoded); // 3.3 batch (B): ducklings dropping from the tree hole
-        this.push(arkLiveServerItems(decoded));
+        this.push(this.staying(arkLiveServerItems(decoded), (id) => Date.parse(decoded.find((event) => String(event.id) === id)?.at ?? "")));
     }
 
     /** Hearts are lives: an animal back from recovering walks out of its home (the scene's `revive`), once. */
@@ -248,7 +396,8 @@ export class ArkLive {
 
     /** 3.3 fix (log): the record's deaths, handed to the scene: its body lies where it died, and a tap on its line goes there. */
     private died(events: readonly ArkEvent[]) {
-        const deaths = events.filter((event) => (event.kind === "death_old" || event.kind === "starved") && event.animal).map((event) => ({key: `death:${event.id}`, animal: event.animal!, t0: Date.parse(event.at) / 1000}));
+        // (V1: the dying act begins once the record is out, `ark-act-hold.ts`; until then its stand-in goes on with its day.)
+        const deaths = events.filter((event) => (event.kind === "death_old" || event.kind === "starved") && event.animal).map((event) => ({key: `death:${event.id}`, animal: event.animal!, t0: arkActStartOf(event.at), ...(event.kind === "starved" ? {cause: "starved" as const} : {})}));
         if (!deaths.length) return;
         try {
             this.options.scene()?.addDeaths?.(deaths);
@@ -302,7 +451,8 @@ export class ArkLive {
     private dormancy(raw: unknown, from: number) {
         const items = dormancyItems(raw, from, (key) => this.said.has(key));
         // (And the record's escapes, `escape-lines.ts`: a prey animal that got away.)
-        const escapes = escapeItems(raw, from, (key) => this.said.has(key));
+        const rowsIn: Array<{id?: unknown; at?: unknown}> = Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as {events?: unknown}).events) ? (raw as {events: Array<{id?: unknown; at?: unknown}>}).events : [];
+        const escapes = this.staying(escapeItems(raw, from, (key) => this.said.has(key)), (id) => Date.parse(String(rowsIn.find((row) => row && `event:${String(row.id)}` === id)?.at ?? "")));
         for (const item of items.concat(escapes)) this.remember(item.id);
         this.deforested(raw, from); // p5 (humans)
         // p5 (humans): the town's couples (`human-lines.ts`).
@@ -483,12 +633,15 @@ export class ArkLive {
         let more = false;
         fetch(`${this.options.eventsUrl}?since=${encodeURIComponent(since)}`, {cache: "no-store"})
             .then((response) => (response.ok ? response.json() : null))
-            .then((body: {events?: unknown; available?: boolean; more?: boolean} | null) => {
+            .then(async (body: {events?: unknown; available?: boolean; more?: boolean} | null) => {
                 if (this.disposed) return;
                 if (!body || body.available === false) {
                     this.newcomers(before, next);
                     return;
                 }
+                // (V1: everyone the rows' acts name is brought into the scene before the layers are fed.)
+                await this.casting(body.events ?? []);
+                if (this.disposed) return;
                 const from = Date.parse(since);
                 this.dormancy(body.events ?? [], from);
                 const events = decodeArkEvents(body.events ?? [], next).filter((event) => Date.parse(event.at) >= from && !this.said.has(`event:${event.id}`));
@@ -504,11 +657,12 @@ export class ArkLive {
                 this.noteRecord(events);
                 this.noteKin(events); // 3.3 fix (breeding taps)
                 this.revive(events);
+                this.ate(events); // V1
                 this.mate(events);
                 this.died(events); // 3.3 fix (log)
                 this.born(events);
                 this.hatched(events); // 3.3 batch (B)
-                this.push(arkLiveServerItems(events));
+                this.push(this.staying(arkLiveServerItems(events), (id) => Date.parse(events.find((event) => String(event.id) === id)?.at ?? "")));
             })
             .catch(() => {
                 if (!this.disposed) this.newcomers(before, next);
@@ -528,6 +682,8 @@ export class ArkLive {
         const now = performance.now();
         this.ticks++;
         if (now - this.dormantAt > 600_000) this.readDormant();
+        if (now - this.crisesAt > this.crisesEvery) this.readCrises(); // V1
+        this.seen?.tick(); // V1: the casts whose act is over let go
         // Seen and now: only while the log is open (above the card too, when one is up: a line said late is no longer happening).
         const open = !this.view.isCollapsed && !this.options.reducedMotion;
         if (!open) this.momentWindow = null;
@@ -572,12 +728,28 @@ export class ArkLive {
      * A line's tap: its animal when it is in the scene, else one of its kind (a herd's card for a herd), else its region.
      * A mating's: the pair, both framed while their mating is acted (the scene's `selectPair`), else the first alone.
      */
-    focus(line: Pick<ArkLiveLine, "focus"> & Partial<Pick<ArkLiveLine, "id" | "kind">>) {
+    focus(line: Pick<ArkLiveLine, "focus"> & Partial<Pick<ArkLiveLine, "id" | "kind">>, watched = false) {
         const scene = this.options.scene();
         if (!scene) return;
         const {animalId, speciesId, zone} = line.focus;
         const done = () => this.options.onFocused?.(line as ArkLiveLine);
         this.youngWait = null;
+        // V1: a line whose act is under way or about to begin is watched (`seen/watch.ts`): everyone it names held in one
+        // picture. When the watch ends on its own, the line's own focus, as its tap always was.
+        if (!watched && this.seen && line.id && (line.kind === "meal" || line.kind === "mated" || line.kind === "birth" || line.kind === "hatched" || line.kind === "death" || line.kind === "starved" || line.kind === "extinction" || (line as Partial<ArkLiveLine>).say === "escaped")) {
+            const eventId = String(line.id).replace(/^event:/, "");
+            const text = (() => {
+                try {
+                    return this.lineText(line as ArkLiveLine);
+                } catch {
+                    return "";
+                }
+            })();
+            if (this.seen.watch(eventId, text, (why) => {
+                if (why === "done" && !this.disposed) this.focus(line, true);
+            })) return done();
+        }
+        this.seen?.stop();
         // 3.3 fix (breeding taps): a pair, a clutch, a young: chosen when aboard, drawn now or not (`breed-focus.ts`).
         if (isBreedKind(line.kind)) {
             const aboard = new Set((this.current?.animals ?? []).map((animal) => animal.id));
@@ -623,6 +795,8 @@ export class ArkLive {
         this.disposed = true;
         if (this.timer) clearInterval(this.timer);
         this.timer = null;
+        this.seen?.dispose();
+        this.seen = null;
         this.view.dispose();
     }
 }
