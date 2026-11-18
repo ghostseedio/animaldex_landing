@@ -27,7 +27,7 @@ export const ARK_RELEASE_LADDER = [
 
 /** Why an animal cannot be released now (`voyage_release_check`), plus what the spend can answer. */
 export const ARK_RELEASE_REASONS = [
-    "unavailable", "not_owner", "no_card", "under_13", "recovering", "not_in_zoo", "lives_with_people", "unpriced", "care_wait",
+    "unavailable", "not_owner", "no_card", "card_in_trade", "under_13", "recovering", "not_in_zoo", "lives_with_people", "unpriced", "care_wait",
     "dormant", "carrying", "not_now", "pair_full", "kind_full", "predators_full", "cooldown_day", "cooldown_kind"
 ] as const;
 export type ArkReleaseReason = (typeof ARK_RELEASE_REASONS)[number];
@@ -257,6 +257,7 @@ export const ARK_RELEASE_ENGLISH: ArkReleaseWords = {
         unavailable: "Releases are not open right now.",
         not_owner: "Only the person who brought it can release it.",
         no_card: "Only the person who holds its card can release it.",
+        card_in_trade: "Its card is in a trade right now. Try when the trade is settled.",
         under_13: "Releases are not open on this account.",
         recovering: "It is away recovering.",
         not_in_zoo: "It already lives free.",
