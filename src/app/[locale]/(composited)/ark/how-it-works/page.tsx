@@ -3,6 +3,8 @@ import Link from "@/app/[locale]/_components/link";
 import StoreLinks from "@/app/[locale]/(composited)/_components/store-links";
 import TextPage, {LinkRow, Paragraphs, TextSection} from "@/components/seo/text-page";
 import {readPublicArk} from "@/data/ark-public";
+import {readArkSeeds} from "@/data/ark-seeds";
+import ArkFairSeeds from "@/app/[locale]/(composited)/ark/how-it-works/ark-fair-seeds";
 import {localeConfig} from "@/i18n";
 import {ARK_HOW_IT_WORKS_PATH, ARK_PAGES_UPDATED, arkCountsLine, arkPageImage} from "@/lib/seo/ark-pages";
 import {getArkWords} from "@/loaders/ark-words";
@@ -16,6 +18,11 @@ import {getPageWords, word} from "@/loaders/page-words";
  * captures + thrive design and the islands rules in the AnimalDex repo):
  * captures, the two islands, condition from steps, food chains, breeding,
  * seasons and lifespans, and what the Ark is not. English and Indonesian.
+ *
+ * "How the Ark is kept fair" (P1-6, anti-staging; AnimalDex docs/ark/anti-staging-p1-6.md) is shown only once the Ark
+ * publishes its year seeds (`/api/ark/seeds`, `voyage_year_seeds_public_v1`): the rules it describes are the ones the
+ * server enforces from the moment the first year's fingerprint exists, so the page never describes a rule that is not
+ * running. Until then the page is exactly what it was.
  */
 
 export const revalidate = 3600;
@@ -31,6 +38,11 @@ function pageLocale(locale: string) {
 }
 
 const SECTIONS = ["captures", "islands", "condition", "food", "breeding", "seasons", "honesty"] as const;
+
+/** The page's sections: the fairness one goes before "what the Ark isn't" while the year seeds are published. */
+function sectionsFor(fair: boolean): readonly string[] {
+    return fair ? [...SECTIONS.slice(0, -1), "fair", SECTIONS[SECTIONS.length - 1]] : SECTIONS;
+}
 
 export async function generateMetadata({params}: Props): Promise<Metadata> {
     const locale = pageLocale(params.locale);
@@ -49,7 +61,9 @@ export async function generateMetadata({params}: Props): Promise<Metadata> {
 
 export default async function ArkHowItWorksPage({params}: Props) {
     const locale = pageLocale(params.locale);
-    const [page, seo, snapshot, {words: ark}] = await Promise.all([getPageWords(locale, "pages.howItWorks"), getPageWords(locale, "seo"), readPublicArk(revalidate), getArkWords(locale)]);
+    const [page, seo, snapshot, {words: ark}, seeds] = await Promise.all([getPageWords(locale, "pages.howItWorks"), getPageWords(locale, "seo"), readPublicArk(revalidate), getArkWords(locale), readArkSeeds(revalidate)]);
+    const fair = seeds?.available === true;
+    const sections = sectionsFor(fair);
     const crumbs = [
         {name: word(seo, "breadcrumbHome"), href: "/"},
         {name: word(seo, "breadcrumbArk"), href: "/ark"},
@@ -64,7 +78,7 @@ export default async function ArkHowItWorksPage({params}: Props) {
             description: word(page, "metaDescription"),
             image: arkPageImage(),
             dateModified: ARK_PAGES_UPDATED,
-            about: SECTIONS.map((id) => ({"@type": "Thing", name: word(page, `${id}.title`)}))
+            about: sections.map((id) => ({"@type": "Thing", name: word(page, `${id}.title`)}))
         }),
         breadcrumbJsonLd(locale, crumbs.map((crumb) => ({name: crumb.name, path: crumb.href})))
     ];
@@ -75,7 +89,7 @@ export default async function ArkHowItWorksPage({params}: Props) {
             <nav aria-labelledby="ark-how-contents" className="flex flex-col gap-3">
                 <h2 id="ark-how-contents" className="text-[11px] font-bold uppercase tracking-[0.16em] text-ink-300">{word(page, "contents")}</h2>
                 <ol className="flex flex-col gap-1.5 text-base">
-                    {SECTIONS.map((id, index) => (
+                    {sections.map((id, index) => (
                         <li key={id} className="flex gap-3">
                             <span aria-hidden="true" className="w-6 font-mono text-sm tabular-nums text-primary-300">{index + 1}.</span>
                             <a href={`#${id}`} className="font-semibold text-white underline-offset-4 hover:text-primary-200 hover:underline">{word(page, `${id}.title`)}</a>
@@ -84,7 +98,7 @@ export default async function ArkHowItWorksPage({params}: Props) {
                 </ol>
             </nav>
 
-            {SECTIONS.map((id) => (
+            {sections.map((id) => (
                 <TextSection key={id} id={id} title={word(page, `${id}.title`)}>
                     <Paragraphs items={paragraphs(id)} />
                     {id === "food" ? (
@@ -94,6 +108,7 @@ export default async function ArkHowItWorksPage({params}: Props) {
                             </Link>
                         </p>
                     ) : null}
+                    {id === "fair" && seeds ? <ArkFairSeeds seeds={seeds} page={page} locale={locale} /> : null}
                 </TextSection>
             ))}
 
