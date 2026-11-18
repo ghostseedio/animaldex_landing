@@ -3,7 +3,7 @@ import test from "node:test";
 import {ArkCast, standInAnimal, type ArkCastRecord} from "@/ark-scene/replay/cast";
 import {ArkReplayUnavailable, arkReplayableEvents, arkReplayModels, planArkEventReplay} from "@/ark-scene/replay/event-replay";
 import {readArkEventLog} from "@/ark-scene/replay/event-log";
-import {createArkReplayShot} from "@/ark-scene/replay/shot";
+import {createArkReplayShot, REPLAY_SETTLE_SECONDS} from "@/ark-scene/replay/shot";
 import {arkReplayText} from "@/ark-scene/replay/text";
 import {arkEpochSeconds, arkPinnedMs, pinArkClock} from "@/ark-scene/shared-clock";
 import type {ArkAnimal, ArkCastLayer, ArkLiveActs, ArkLocated, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
@@ -269,7 +269,9 @@ test("a replay shot: the clock pinned before the event, the cast brought in and 
     const shot = createArkReplayShot({handle: scene.handle, replay, aspect: () => 9 / 16, lead: 2.5});
     try {
         shot.begin();
-        assert.ok(Math.abs(arkEpochSeconds() - (replay.t0 - 2.5)) < 0.5, "the world's clock is the event's, less the lead");
+        assert.ok(Math.abs(arkEpochSeconds() - (replay.t0 - 2.5 - REPLAY_SETTLE_SECONDS)) < 0.5, "the world's clock is the event's, less the lead and the frames nobody sees");
+        shot.settle();
+        assert.ok(Math.abs(arkEpochSeconds() - (replay.t0 - 2.5)) < 0.5, "the shot starts the lead before the event");
         const cast = scene.calls.find(([name]) => name === "setCast")![1] as ArkCastLayer;
         assert.deepEqual(Array.from(cast.pins), [id(1), id(3)]);
         assert.deepEqual(cast.roster(snapshot).animals.map((animal) => animal.id), [id(1), id(2), id(8), id(3)], "the one that died stands in; who was born later is left out");
@@ -330,6 +332,90 @@ test("a mating's shot cuts to the end of a long walk, pulls away at the mount, a
     } finally {
         still.end();
     }
+});
+
+test("a chase's shot: the hunter first, then the one the chase comes to; a long stalk is cut to its end", () => {
+    const replay = plan(15);
+    const key = replay.feed.escapes![0].key;
+    const scene = fakeScene({escapes: [{key, t0: replay.t0, phase: "acting", missAt: 30, seconds: 38}]});
+    scene.put(id(9), 0, 0);
+    scene.put(id(2), 30, 0);
+    const shot = createArkReplayShot({handle: scene.handle, replay, aspect: () => 9 / 16, lead: 1});
+    try {
+        shot.begin();
+        shot.settle();
+        const before = shot.step(0, 0)!;
+        assert.ok(Math.abs(before.target.x) < 0.01, "before its time, the hunter alone");
+        pinArkClock(replay.t0 + 1);
+        const after = shot.step(2, 1 / 30)!;
+        assert.ok(Math.abs(after.target.x - 30) < 0.01, "then its quarry, where the chase comes: too far apart for one picture");
+        assert.deepEqual(shot.report().cuts.map((cut) => cut.why), ["to the end of the stalk"]);
+        // Close enough: both in the picture.
+        scene.put(id(9), 22, 0);
+        const both = shot.step(2.1, 1 / 30)!;
+        assert.ok(both.target.x < 30 && both.target.x > 22);
+        let world = arkEpochSeconds();
+        for (let t = 2.2; shot.doneAt() === null && t < 60; t += 0.5) {
+            pinArkClock((world += 0.5));
+            shot.step(t, 0.5);
+        }
+        assert.equal(shot.report().acted, true);
+    } finally {
+        shot.end();
+    }
+});
+
+test("the camera keeps a bearing clear of the trees: the scene's own rule, held until something stands between", () => {
+    const replay = plan(13);
+    const scene = fakeScene();
+    scene.put(id(3), 0, 0);
+    // The scene's answer: a tree to the south-east (bearings 0.3 to 1.0); round it, the nearest clear bearing.
+    let tree = false;
+    (scene.handle as unknown as {clearView: ArkSceneHandle["clearView"]}).clearView = (_focus, _distance, polar, azimuth) => {
+        const a = Math.atan2(Math.sin(azimuth), Math.cos(azimuth));
+        return {polar, azimuth: tree && a > 0.3 && a < 1.0 ? azimuth + Math.PI : azimuth};
+    };
+    const shot = createArkReplayShot({handle: scene.handle, replay, aspect: () => 9 / 16, lead: 4});
+    try {
+        shot.begin();
+        shot.settle();
+        const first = shot.step(0, 0)!.azimuth;
+        scene.put(id(3), 0.5, 0);
+        assert.equal(shot.step(0.1, 1 / 30)!.azimuth, first, "clear: the bearing is kept");
+        tree = true;
+        // (The death's lone animal is framed from the island's outer side: bearing 0 here; put the tree across it.)
+        (scene.handle as unknown as {clearView: ArkSceneHandle["clearView"]}).clearView = (_focus, _distance, polar, azimuth) => ({polar, azimuth: Math.abs(Math.atan2(Math.sin(azimuth - first), Math.cos(azimuth - first))) < 0.3 ? azimuth + Math.PI : azimuth});
+        let view = shot.step(0.2, 1 / 30)!;
+        for (let i = 0; i < 90; i++) view = shot.step(0.2 + (i + 1) / 30, 1 / 30)!;
+        const turned = Math.abs(Math.atan2(Math.sin(view.azimuth - first), Math.cos(view.azimuth - first)));
+        assert.ok(turned > 0.3 && turned < 0.6, `eased round to the nearest clear bearing (${turned.toFixed(2)} rad), not across to the far side`);
+    } finally {
+        shot.end();
+    }
+});
+
+test("a night's exposure is the camera's only: a gain eased in with the night, none by day or with the hour pinned", () => {
+    const night = planArkEventReplay(13, {events: log.events.map((event) => (event.id === 13 ? {...event, at: "2026-11-13T00:30:00Z"} : event))}, snapshot, {now: NOW});
+    const gains = (replay: typeof night, options: {nightGain?: number; hourPinned?: boolean}) => {
+        const scene = fakeScene();
+        scene.put(id(3), 0, 0);
+        const set: number[] = [];
+        (scene.handle as unknown as {setExposure: (gain: number) => void}).setExposure = (gain) => void set.push(gain);
+        const shot = createArkReplayShot({handle: scene.handle, replay, aspect: () => 9 / 16, lead: 1, ...options});
+        shot.begin();
+        shot.settle();
+        shot.step(0, 0);
+        const report = shot.report();
+        shot.end();
+        return {set, report};
+    };
+    const lifted = gains(night, {nightGain: 3});
+    assert.ok(lifted.report.night > 0.9 && lifted.set[0] > 2.8 && lifted.set[0] <= 3, `full night, lifted (${lifted.set[0]})`);
+    assert.equal(lifted.set[lifted.set.length - 1], 1, "the Ark's own exposure again when the shot ends");
+    assert.deepEqual(gains(night, {}).set, [1], "no gain asked: only the reset");
+    assert.deepEqual(gains(night, {nightGain: 3, hourPinned: true}).set, [1]);
+    const day = gains(plan(13), {nightGain: 3});
+    assert.ok(day.report.night < 0.05 && Math.abs(day.set[0] - 1) < 0.1, "by day nothing changes");
 });
 
 test("the event log is read through to its end: `more` followed from the last row, a stuck minute stepped over", async () => {

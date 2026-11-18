@@ -7,7 +7,7 @@ The recorder can film one event of the Ark's record at the moment it happened:
 ```
 npm run ark:clip -- --replay list            # the newest replayable events (id, kind, time, species)
 npm run ark:clip -- --replay 17873           # that event: /ark?record=1&replay=17873
-npm run ark:clip -- --replay 17873 --mount show --hour 11
+npm run ark:clip -- --replay 17873 --mount show --night-gain 3
 ```
 
 It pins the Ark's clock to the event's time, brings in everyone the event names (a stand-in for whoever is gone now),
@@ -39,7 +39,18 @@ this folder is loaded by whoever asks for it (the recording page, the harness, l
 | `harness-entry.ts` | Development's page for `scripts/ark-replay-shots.mjs`. |
 
 Elsewhere: `director.ts` (runs a shot's frames), `src/lib/ark-clips/replay-shots.ts` (the clip's plan and captions),
-`shared-clock.ts` (`pinArkClock`, `arkPinnedMs`), `index.ts` (`setCast`, `liveActs`, the world clock on the pin).
+`shared-clock.ts` (`pinArkClock`, `arkPinnedMs`), and the scene's hooks in `index.ts`:
+
+| `ArkSceneHandle` | What |
+|---|---|
+| `setCast(cast \| null)` | The cast handed in or taken away; the roster is laid out again. |
+| `liveActs()` | The live layers' acts and their times (their own `debug()`): when a pair meets, when a chase ends. |
+| `clearLiveActs()` | Every live act let go: before a replay and after it. |
+| `clearView(focus, distance, polar, azimuth, places)` | The scene's own rule for a view clear of hills and trunks (its replay's). |
+| `setExposure(gain)` | The recorder's exposure. Nothing of the world changes. |
+| `locate(id)` | Now also where an act poses an animal that is out of the picture, and an acted stand-in first; `shown`: drawn this frame. |
+
+The scene's world clock (`worldMs`: schedules, the live layers, the island's light, the weather) follows `pinArkClock`.
 
 ## The cast: stand-ins and pins (for V1)
 
@@ -112,13 +123,22 @@ A parent with no record in the log given and not aboard is left out and said in 
 the scene's layer acted it (and why not), and how many of the act's frames each of the cast was drawn in.
 
 - **The clock.** `pinArkClock(t0 - lead)`: the scene's world time (schedules, the layers, the island's light) follows
-  the pin. A cut is the pin moved on. The light is the island's at that moment; `--hour` pins it instead (then the
-  animals' day is that hour's too).
+  the pin. A cut is the pin moved on. Before the first frame the scene settles for a few seconds of frames nobody
+  sees, all before the shot's start (`REPLAY_SETTLE_SECONDS`).
+- **The light** is the island's at that moment. Half the record happens at night, and a forest floor at night is
+  nearly black: `--night-gain 3` raises the camera's exposure with the night (only the camera: the hour and what the
+  animals do stay the event's). `--hour` pins the hour instead (then the animals' day is that hour's too).
+- **The frame.** The two farthest of the cast that are drawn, together (`pair-frame.ts`), nearer than a tap's meeting
+  distance. While two are still coming together and more than 16 m apart, the one the act comes to (a narrow upright
+  picture cannot hold both from under the treetops). The bearing is the scene's own clear one (`clearView`), kept
+  until a tree has stood between for a few frames, then eased round to the nearest clear one.
 - **Cuts.** A long walk to a mate and a long stalk are cut to their last seconds; a contest before a mating to its
   last bouts. An extinction's shot runs the body's last three minutes in four seconds while the camera pulls back.
 - **The mount** is not filmed by default (the audit's editorial judgement): the camera pulls up and away, then the two
   resting together. `--mount show` films it.
 - **Reads `handle.liveActs()`** (the layers' own `debug()`): when a pair meets, when a chase ends.
+- **When the layer does not act it** (a pair in a tank or on two islands, a mother on the wing, a pair the scene cuts
+  away from) the shot holds on the cast where they are and `report().acted` is false with the reason.
 
 ## Ark Lite
 

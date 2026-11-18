@@ -223,7 +223,7 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
                 shot = createArkReplayShot({handle, replay: next.replay, aspect: () => {
                     const canvas = options.canvas();
                     return canvas && canvas.height ? canvas.width / canvas.height : 9 / 16;
-                }, lead: next.lead, mount: next.mount});
+                }, lead: next.lead, mount: next.mount, nightGain: next.nightGain, hourPinned: typeof next.replayHour === "number"});
                 shot.begin();
             } else {
                 handle.setHours(next.hours.from);
@@ -256,7 +256,8 @@ export function createArkDirector(options: {handle: ArkSceneHandle; clock: Recor
             tracked = null;
             if (shot) {
                 // The scene settles on the pinned moment (the light eases to that hour, everyone takes the first step of its
-                // day there): a few seconds of frames nobody sees, then the clock back to the shot's start.
+                // day there): a few seconds of frames nobody sees (`REPLAY_SETTLE_SECONDS`, all before the shot's start),
+                // then the clock exactly at the shot's start.
                 for (let i = 0; i < 45; i++) {
                     const view = shot.step(0, 0);
                     if (view) handle.setView(view);

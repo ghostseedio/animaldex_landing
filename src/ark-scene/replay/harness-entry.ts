@@ -61,6 +61,7 @@ async function main() {
     /** Big enough to read in a picture, on land, awake by day or at any hour. */
     const filmable = (animal: ArkAnimal, min = 0.5) => displayLength(animal.model_slug, null) >= min && !["open_ocean", "coral_reef", "river_lake", "seashore", "wetland"].includes(animal.zone);
     let serial = 900_000;
+    let current: ReturnType<typeof planArkEventReplay> | null = null;
     const made = new Map<string, {remove: string[]; move: ArkAnimal | null; sample: boolean}>();
 
     /** Harness events of the kinds production has none of yet, from animals really aboard (never a made-up animal). */
@@ -75,7 +76,7 @@ async function main() {
         };
         if (kind === "meal" || kind === "escaped") {
             // Real pairs of the food chain on the wild island, nearest first: a hunter and one of its own prey kinds aboard.
-            const land = wild().filter((animal) => filmable(animal, kind === "meal" ? 0.6 : 0.5));
+            const land = wild().filter((animal) => filmable(animal, 0.5));
             const used = new Set<string>();
             const pairs: Array<{hunter: ArkAnimal; prey: ArkAnimal; d: number}> = [];
             for (const hunter of land) for (const prey of land) {
@@ -104,7 +105,8 @@ async function main() {
             const lone = wild().filter((animal) => counts.get(animal.species_profile_id) === 1 && filmable(animal, 0.6)).sort((a, b) => displayLength(b.model_slug, null) - displayLength(a.model_slug, null) || a.id.localeCompare(b.id));
             const withHunter = lone.map((animal) => {
                 const at2 = handle.locate(animal.id);
-                const hunters = wild().filter((other) => other.id !== animal.id && filmable(other) && eats(other.model_slug, animal.model_slug)).map((other) => ({other, where: handle.locate(other.id)})).filter((item) => item.where && at2).sort((x, y) => Math.hypot(x.where!.x - at2!.x, x.where!.z - at2!.z) - Math.hypot(y.where!.x - at2!.x, y.where!.z - at2!.z));
+                // (A hunter of its kind in its own region, D8's "a predator of it present": within 80 m of it.)
+                const hunters = wild().filter((other) => other.id !== animal.id && filmable(other) && eats(other.model_slug, animal.model_slug)).map((other) => ({other, where: handle.locate(other.id)})).filter((item) => item.where && at2).map((item) => ({other: item.other, d: Math.hypot(item.where!.x - at2!.x, item.where!.z - at2!.z)})).filter((item) => item.d <= 80).sort((x, y) => x.d - y.d);
                 return {animal, hunter: hunters[0]?.other ?? null};
             });
             for (const item of [...withHunter.filter((x) => x.hunter), ...withHunter.filter((x) => !x.hunter)].slice(0, n)) push({kind: "last_stand", animal: rowAnimal(item.animal), other: item.hunter ? rowAnimal(item.hunter) : null});
@@ -144,16 +146,20 @@ async function main() {
         }),
         make,
         plan: (id: string) => planArkEventReplay(id, rows, worldFor(id), {now}),
-        prepare: async (id: string, options: {mount?: "cutaway" | "show"; hour?: number | null} = {}) => {
+        prepare: async (id: string, options: {mount?: "cutaway" | "show"; hour?: number | null; nightGain?: number | null} = {}) => {
             const world = worldFor(id);
             if (world !== snapshot) {
+                // (A moved animal leaves the roster first: an entry kept across reads keeps the day of its old home.)
+                const moved = made.get(id)?.move;
+                if (moved) handle.update({...world, animals: world.animals.filter((animal) => animal.id !== moved.id)});
                 snapshot = world;
                 handle.update(world);
                 director = createArkDirector({handle, clock, canvas, info: {snapshot, fixture: false, events: rows}});
             }
-            const plan = planArkReplayShot(id, {snapshot, rawEvents: rows, fixture: Boolean(made.get(id)?.sample), now: new Date(now), mount: options.mount, hour: options.hour ?? null});
+            const plan = planArkReplayShot(id, {snapshot, rawEvents: rows, fixture: Boolean(made.get(id)?.sample), now: new Date(now), mount: options.mount, hour: options.hour ?? null, nightGain: options.nightGain ?? null});
             const prepared = await director.prepare(plan.direction);
             const replay = plan.direction.replay!;
+            current = replay;
             return {models: prepared.models, kind: replay.kind, at: replay.at, t0: replay.t0, hook: plan.hookText, cues: plan.cues.map((cue) => cue.text), cast: replay.cast.map((member) => ({id: member.record.id, role: member.role, name: member.record.name, slug: member.record.model_slug, aboard: member.aboard, zone: member.record.zone, island: member.record.island ?? null})), notes: replay.notes};
         },
         frame: (quality = 0.85, step = 1) => director.frame(quality, step),
@@ -161,6 +167,19 @@ async function main() {
         report: () => {
             const report = director.replayReport();
             return report ? {...report, where: Object.fromEntries(Object.keys(report.seen).map((id) => [id, handle.locate(id)])), acts: handle.liveActs?.() ?? null, view: handle.view(), stats: handle.stats()} : null;
+        },
+        /** The scene's own layers' account of the event being replayed (by its keys), and whether one has taken it up. */
+        acting: () => {
+            const live = handle.liveActs?.();
+            const feed = current?.feed;
+            if (!live || !feed) return null;
+            const mating = feed.matings ? live.matings.find((m) => m.key === feed.matings![0].key) ?? null : undefined;
+            const birth = feed.births ? live.births.find((b) => b.key === feed.births![0].key) ?? null : undefined;
+            const death = feed.deaths ? live.deaths.find((d) => d.key === feed.deaths![0].key) ?? null : undefined;
+            const meal = feed.meals ? live.meals[0] ?? null : undefined;
+            const escape = feed.escapes ? live.escapes.find((e) => e.key === feed.escapes![0].key) ?? null : undefined;
+            const up = Boolean(mating?.phase === "acting" || birth?.phase === "acting" || death?.drawn || (meal && meal.catchAt > 0) || (escape && escape.missAt !== null));
+            return {up, mating, birth, death, meal: meal ? {key: meal.key, catchAt: meal.catchAt, style: meal.style} : meal, escape};
         },
         /** The event in words, as Ark Lite shows it (over the page; removed by the next call). */
         card: (id: string) => {

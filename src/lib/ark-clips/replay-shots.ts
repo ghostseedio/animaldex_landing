@@ -23,6 +23,8 @@ export type ArkReplayShotInput = Pick<ArkClipInput, "snapshot" | "fixture" | "no
     mount?: "cutaway" | "show";
     /** Pin the light to this hour instead of the island's own at the event's time. */
     hour?: number | null;
+    /** The camera's exposure gain at full night (1: the night as the Ark shows it; about 3 reads a forest floor by moonlight). */
+    nightGain?: number | null;
 };
 
 /** The replay clip's plan. Throws `ArkReplayUnavailable` (unknown event, not released yet, a kind that is not replayed). */
@@ -60,7 +62,8 @@ export function planArkReplayShot(eventId: string | number, input: ArkReplayShot
             preload: arkReplayModels(replay),
             replay,
             replayHour: input.hour ?? null,
-            ...(input.mount ? {mount: input.mount} : {})
+            ...(input.mount ? {mount: input.mount} : {}),
+            ...(input.nightGain && input.nightGain !== 1 ? {nightGain: input.nightGain} : {})
         },
         cues,
         facts: [],

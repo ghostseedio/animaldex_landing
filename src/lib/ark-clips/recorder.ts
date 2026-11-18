@@ -37,6 +37,8 @@ export type RecordOptions = {
     mount?: "cutaway" | "show";
     /** A replay's light pinned to this hour instead of the island's own at the event's time. */
     hour?: number | null;
+    /** A replay at night: the camera's exposure gain at full night (default 1: the night as the Ark shows it). */
+    nightGain?: number | null;
     /** The site that serves `/ark?record=1` (a local `next dev`, or `next start` with ARK_RECORD_ENABLED=1). */
     baseUrl: string;
     fixture: boolean;
@@ -194,7 +196,7 @@ export async function recordArkClip(options: RecordOptions): Promise<RecordedCli
             }
         }
         const plan = options.replay
-            ? planArkReplayShot(options.replay, {snapshot, rawEvents: info.events, fixture: info.fixture, now: new Date(), mount: options.mount, hour: options.hour ?? null})
+            ? planArkReplayShot(options.replay, {snapshot, rawEvents: info.events, fixture: info.fixture, now: new Date(), mount: options.mount, hour: options.hour ?? null, nightGain: options.nightGain ?? null})
             : planArkShot(options.shot!, {snapshot, events, fieldGuide, fixture: info.fixture, now: new Date(), species: options.species});
         if (plan.direction.replay) {
             const replay = plan.direction.replay;

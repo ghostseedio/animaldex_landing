@@ -2989,7 +2989,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const livePins = isl && !liteOn() && tier !== "low" ? new Set([...Array.from(pins), ...snapshot.animals.filter((animal) => isl.has(animal) && isl.held(animal.id)).map((animal) => animal.id)]) : pins;
         const outside = runtime.outside(candidates, representatives.live, livePins, liteOn(), restingFor(snapshot, places));
         // (For the resting warm-up: what the next step's rotation will be asked about, `runtime.restingAsks`.)
-        lastRotation = {snapshot, candidates, live: representatives.live, pins: livePins, lite: liteOn()};
+        // (Kept by the read, not the roster: the warm-up asks only what the rotation will, with a cast too.)
+        lastRotation = {snapshot: base, candidates, live: representatives.live, pins: livePins, lite: liteOn()};
         // (Lane TB, decision 255: the town's kept animals the budget rests, as figures where they live.)
         buildRestingGroups(isl ? snapshot.animals.filter((animal) => isl.has(animal) && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo") && representatives.live.has(animal.id) && !outside.has(animal.id)) : [], places);
         const next: Entry[] = [];
@@ -2997,6 +2998,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         for (const animal of snapshot.animals) {
             if (!representatives.live.has(animal.id) || !outside.has(animal.id)) continue;
             const place = places.get(animal.id)!;
+            // (A stand-in whose record gives it no place: left out rather than drawn nowhere.)
+            if (!place) continue;
             const before = entryById.get(animal.id);
             const body = before ? arkBody(animal, library.get(animal.model_slug)?.behaviour?.plan) : null;
             const entry: Entry = before && body
@@ -6142,11 +6145,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Looking at a small animal (flying to it, too: at its microhabitat, or a crab on the seabed), or with one close in front.
         let close = Boolean(selected?.micro) || Boolean(selected && selected.trueLength < 0.3);
         if (!close) {
-            for (const entry of entries) {
-                if (!entry.micro) continue;
-                const dx = entry.place.x - target.x;
-                const dz = entry.place.z - target.z;
-                if (dx * dx + dz * dz < MICRO_CLOSE_WITHIN * MICRO_CLOSE_WITHIN && Math.abs(entry.place.ground - target.y) < MICRO_CLOSE_WITHIN) {
+            // (V2 replay: and a small animal of the cast, wherever it is drawn now, its body after its death too.)
+            for (const entry of cast ? allEntries() : entries) {
+                const pinned = !entry.micro && Boolean(cast?.pins.has(entry.animal.id)) && entry.trueLength < 0.3 ? entry.middle : null;
+                if (!entry.micro && !pinned) continue;
+                const dx = (pinned?.x ?? entry.place.x) - target.x;
+                const dz = (pinned?.z ?? entry.place.z) - target.z;
+                if (dx * dx + dz * dz < MICRO_CLOSE_WITHIN * MICRO_CLOSE_WITHIN && Math.abs((pinned?.y ?? entry.place.ground) - target.y) < MICRO_CLOSE_WITHIN) {
                     close = true;
                     break;
                 }
@@ -9307,8 +9312,34 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             shadows.setStrength(look.contactStrength(TIER_SETTINGS[tier].shadows > 0));
         },
         play,
+        // V2 replay: every act of the live layers let go (their animals their own again, the stand-ins dropped, whoever a
+        // stand-in hid shown again): before a replay and after it. The live page's log feeds the layers again as it reads.
+        clearLiveActs: () => {
+            liveMeals.clear();
+            liveMatings.clear();
+            liveBirths.clear();
+            liveEscapes.clear();
+            liveDeaths.clear();
+            for (const entry of entries) if (cast?.pins.has(entry.animal.id)) entry.held = false;
+            if (mealPins.size) {
+                mealPins = new Set();
+                refreshLive();
+            }
+        },
         // V2 replay: the live layers' acts under way and their times (what `__arkDebug` shows in development), for a shot's cuts.
         liveActs: () => ({meals: liveMeals.debug(), matings: liveMatings.debug(), births: liveBirths.debug(), escapes: liveEscapes.debug(), deaths: liveDeaths.debug()}),
+        // V2 replay: the recorder's exposure (1: as the Ark is; more for a night's act, a camera's own choice: nothing of the
+        // world, its hour or its animals changes).
+        setExposure: (gain) => {
+            renderer.toneMappingExposure = 0.66 * Math.min(Math.max(Number.isFinite(gain) ? gain : 1, 0.25), 8);
+        },
+        // V2 replay: the view an act is clear from, as the scene's own replay finds it: the polar that sees the focus over
+        // the hills (`clearPolar`), then the bearing nearest `azimuth` with the fewest trunks between the camera and the
+        // places (`clearBearing`: the bearing itself when nothing is in the way).
+        clearView: (focus, distance, polar, azimuth, places) => {
+            const phi = clearPolar(focus, distance, polar, azimuth);
+            return {polar: phi, azimuth: clearBearing(focus, distance, phi, azimuth, (x, z, clearance) => Boolean((townWorld && island?.contains(x, z) ? townWorld : world)?.sampler.blocked(x, z, clearance)), undefined, places)};
+        },
         // V2 replay (`replay/cast.ts`): the cast handed in (or taken away, null); the roster is laid out again with it.
         setCast: whenAnimals((layer: ArkCastLayer | null) => {
             cast = layer;
@@ -9369,7 +9400,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // p2 (ocean): one out in the open ocean not drawn yet is where its loop has it now, not at its old place.
             const sea = !entry.middle && entry.depth && oceanRoams(entry) ? oceanFix(entry.animal, entry.length, clockNow()) : null;
             if (sea) return {x: sea.x, y: ARK_ENVIRONMENT.seaLevel.value - 4, z: sea.z, ground: 0, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: sea.yaw};
-            const middle = entry.middle ?? new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z);
+            // (Out of the picture, it is not drawn: where its act poses it, else where its day last had it, else its place.)
+            const posed = entry.act && !entry.act.hidden ? {x: entry.act.x, y: entry.act.base, z: entry.act.z} : entry.sched?.pose ?? null;
+            const middle = entry.middle ?? (posed ? new Vector3(posed.x, posed.y + entry.drawnHeight * 0.5, posed.z) : new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z));
             return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0, act: entry.act?.state ?? null, shown: Boolean(entry.middle) && !entry.held && !entry.act?.hidden};
         },
         behaviour: (id) => findEntry(id)?.state ?? null,

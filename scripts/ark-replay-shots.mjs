@@ -8,7 +8,7 @@
  *
  *   node scripts/ark-replay-shots.mjs --data <dir with voyage.json + events.json> --out <dir>
  *        [--kinds mated,birth,death,extinct,meal,escaped,last_stand,released] [--count 5] [--events <id,id,…>]
- *        [--width 720 --height 1280] [--quality high|medium|low] [--step 3] [--hour <0-24>] [--mount show] [--no-clips]
+ *        [--width 720 --height 1280] [--quality high|medium|low] [--step 3] [--hour <0-24>] [--night-gain <k>] [--mount show] [--no-clips]
  *
  * `voyage.json`: `/api/ark/voyage`'s answer; `events.json`: `{events: [...]}`, the rows of `/api/ark/events` (both public
  * reads; they hold usernames, so they stay out of the repository). mated, birth, death and extinct are the record's
@@ -40,6 +40,7 @@ const quality = arg("quality", "high");
 const step = Number(arg("step", "3"));
 const hour = arg("hour", null);
 const mount = arg("mount", "cutaway");
+const nightGain = Number(arg("night-gain", "1"));
 const clips = !process.argv.includes("--no-clips");
 const MADE = new Set(["meal", "escaped", "last_stand", "released"]);
 mkdirSync(out, {recursive: true});
@@ -112,12 +113,9 @@ log("mounted:", JSON.stringify(await page.evaluate(() => window.__replay.counts(
 /** Whether the scene's layer takes an event up (a few seconds past its time, no pictures): a pair in a tank or on two islands is skipped by the layer itself. */
 async function acts(id) {
     try {
-        await page.evaluate(([id, o]) => window.__replay.prepare(id, o), [id, {mount, hour: hour === null ? null : Number(hour)}]);
+        await page.evaluate(([id, o]) => window.__replay.prepare(id, o), [id, {mount, hour: hour === null ? null : Number(hour), nightGain}]);
         for (let i = 0; i < 14; i++) await page.evaluate(() => window.__replay.frame(0, 12));
-        const report = await page.evaluate(() => window.__replay.report());
-        const live = report?.acts;
-        if (!live) return false;
-        return live.matings.some((m) => m.phase === "acting") || live.births.some((b) => b.phase === "acting") || live.deaths.some((d) => d.drawn) || live.meals.some((m) => m.catchAt > 0) || live.escapes.some((e) => e.missAt !== null);
+        return Boolean((await page.evaluate(() => window.__replay.acting()))?.up);
     } catch {
         return false;
     }
@@ -137,7 +135,10 @@ async function pick(kind) {
     // (Half of a birth's picks are hatchings when there are any: the two are acted by different layers.)
     const plans = [];
     const rank = (e) => (e.island === "wild" ? 2 : 0) + (SEA.has(e.zone) ? 0 : 1);
-    for (const event of all.sort((a, b) => rank(b) - rank(a) || b.length - a.length || Date.parse(b.at) - Date.parse(a.at)).slice(0, 80)) {
+    const ranked = all.sort((a, b) => rank(b) - rank(a) || b.length - a.length || Date.parse(b.at) - Date.parse(a.at));
+    // (A birth's picks are looked for among the biggest as well: the first eighty by place may all be insects.)
+    const pool = kind === "birth" ? Array.from(new Set([...ranked.slice(0, 60), ...[...all].sort((a, b) => b.length - a.length).slice(0, 60)])) : ranked.slice(0, 80);
+    for (const event of pool) {
         const plan = await page.evaluate((id) => {
             try {
                 const p = window.__replay.plan(id);
@@ -164,7 +165,8 @@ async function pick(kind) {
     };
     let held = null;
     if (kind === "birth") {
-        const live = plans.filter((p) => !p.hatch);
+        // (Live births: the biggest first wherever they live; most of the record's are insects, the town's rats the only mammals.)
+        const live = plans.filter((p) => !p.hatch).sort((a, b) => b.length - a.length);
         const hatch = plans.filter((p) => p.hatch);
         const room = count;
         count = Math.min(room, hatch.length ? Math.ceil(room / 2) : room);
@@ -193,7 +195,7 @@ const film = async (kind, id, made, n) => {
     summary.push(entry);
     let prepared;
     try {
-        prepared = await page.evaluate(([id, o]) => window.__replay.prepare(id, o), [id, {mount, hour: hour === null ? null : Number(hour)}]);
+        prepared = await page.evaluate(([id, o]) => window.__replay.prepare(id, o), [id, {mount, hour: hour === null ? null : Number(hour), nightGain}]);
     } catch (error) {
         entry.error = String(error?.message ?? error).split("\n")[0];
         log(kind, id, "could not be prepared:", entry.error);
@@ -217,9 +219,9 @@ const film = async (kind, id, made, n) => {
         }
         if (frame.done || frames > 900) break;
     }
-    const [marks, report] = await page.evaluate(() => [window.__replay.marks(), window.__replay.report()]);
+    const [marks, report, layer] = await page.evaluate(() => [window.__replay.marks(), window.__replay.report(), window.__replay.acting()]);
     const seen = Object.fromEntries(Object.entries(report?.seen ?? {}).map(([castId, s]) => [castId, {role: s.role, shown: s.frames ? Math.round((s.shown / s.frames) * 100) : null}]));
-    Object.assign(entry, {frames, seconds: times[times.length - 1] ?? 0, wall: Math.round((Date.now() - started) / 1000), marks, report: report ? {acted: report.acted, reason: report.reason, standIns: report.standIns, pins: report.pins.length, dropped: report.dropped, cuts: report.cuts, seen} : null, name});
+    Object.assign(entry, {layer, frames, seconds: times[times.length - 1] ?? 0, wall: Math.round((Date.now() - started) / 1000), marks, report: report ? {acted: report.acted, reason: report.reason, notes: report.notes, hour: report.hour, night: report.night, gain: report.gain, standIns: report.standIns, pins: report.pins.length, dropped: report.dropped, cuts: report.cuts, seen} : null, name});
     // The key still: the middle of the act (after the lead, before the linger); a strip of eight across the clip; the clip.
     const fps = 30 / step;
     const at = (seconds) => Math.min(Math.max(Math.round(seconds * fps), 0), frames - 1);

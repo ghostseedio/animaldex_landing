@@ -563,6 +563,20 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * `debug()`): a shot reads when a chase ends, when a pair meets, to place its cuts. Never decides anything.
      */
     liveActs?: () => ArkLiveActs;
+    /**
+     * V2 replay: the view an act is clear from (the scene's own replay's rule): the polar that sees `focus` over the
+     * hills and the bearing nearest `azimuth` with the fewest tree trunks between the camera and `places` (the bearing
+     * asked for, when nothing is in the way).
+     */
+    clearView?: (focus: {x: number; y: number; z: number}, distance: number, polar: number, azimuth: number, places?: Array<{x: number; y: number; z: number}>) => {polar: number; azimuth: number};
+    /**
+     * V2 replay: let go of every act the live layers hold (before a replay and after it): their animals are their own
+     * again, the stand-ins are dropped, and a cast animal a stand-in hid is shown again. The live page's log feeds the
+     * layers again as it reads.
+     */
+    clearLiveActs?: () => void;
+    /** V2 replay: the recorder's exposure, as a gain on the Ark's own (1). The world, its hour and its animals are untouched. */
+    setExposure?: (gain: number) => void;
     /** V2 replay: hand the scene a cast (stand-ins and pins, `replay/cast.ts`), or null to take it away; the roster is laid out again. */
     setCast?: (cast: ArkCastLayer | null) => void;
     /** Place a replay's departed animals off the main thread ahead of `play` (runtime lane). */
@@ -664,7 +678,7 @@ export type ArkReactiveStats = {tier: string; agents: number; inputs: number; pe
 /** `ArkSceneHandle.liveActs`: each live layer's acts as its `debug()` says them (times in seconds after the act's `t0`). */
 export type ArkLiveActs = {
     meals: Array<{key: string; t0: number; catchAt: number; feedTo: number; carcassEnd: number; carcass: {x: number; z: number} | null; style: string}>;
-    matings: Array<{key: string; t0: number; phase: string; meet?: number; courted?: number; mounted?: number; end?: number; contestEnd?: number}>;
+    matings: Array<{key: string; t0: number; phase: string; meet?: number; courted?: number; mounted?: number; end?: number; contestEnd?: number; rival?: string}>;
     births: Array<{key: string; t0: number; mother: string | null; end: number | null; phase: string}>;
     escapes: Array<{key: string; t0: number; phase: string; missAt: number | null; seconds: number | null}>;
     deaths: Array<{key: string; id: string; t0: number; spot: {x: number; z: number; base: number; yaw: number} | null; drawn: boolean}>;
