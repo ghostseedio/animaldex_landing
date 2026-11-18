@@ -42,7 +42,8 @@ it has something for it: a record that is acted, a lone founder in the read, an 
 | A live birth | `live/controller.ts` `born`, `replay/event-replay.ts`; the young (in the read already) are out of sight until born (`live-births.ts`) |
 
 Matings start at their row's time, as before: the walk is up to 30 s and the pair stay together two minutes. A hatching
-is the nests' own.
+is not held either: its young are in the read at once, and a tap on its line shows the clutch hatch again (the scene's
+own replay act, as "while you were away" plays it, on the viewer's own time).
 
 Until its act begins, an animal the record has already taken from the read (the eaten one, the dead one) goes on with
 its day as a stand-in. In the last 14 s before a chase each of the two walks from where its day has it to where the
@@ -112,6 +113,8 @@ it comes into view.
   quarry (from far enough back for both, neither reads); the **lunge** on the quarry, near and side on, where it stays
   while the hunter comes into the picture (a picture that holds both from the start is too far back to read, and one
   that zooms as they close pumps); then the meal where the prey fell, or the one that got away;
+- a hatching's line plays the scene's own hatching act (`play`), which flies to the clutch itself; once it has landed
+  the shot takes the camera for its clear view of the young;
 - on the low tier the lines of sight are not asked (each search is a burst of rays): the cheap clear bearing instead.
 
 It ends when the act is over and the camera has lingered 6 s, when the viewer touches the view, or at another tap.
