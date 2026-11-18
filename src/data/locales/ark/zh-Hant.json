@@ -446,8 +446,8 @@
             "metaTitle": "{name}在 Ark 中的動物",
             "title": "{name}在 Ark 中的動物",
             "titleSelf": "我在 Ark 中的動物",
-            "scoreAbout": "來自其奏效的每一步，Ark 越需要的動物，得分越多。分數永遠不會下降。",
-            "scoreAboutSelf": "來自你奏效的每一步，Ark 越需要的動物，得分越多。分數永遠不會下降。",
+            "scoreAbout": "對方幫助登船的物種過得好時，對方的 Ark 分數就會上升。",
+            "scoreAboutSelf": "你幫助登船的物種過得好時，你的 Ark 分數就會上升。",
             "outOf": "/ {max}",
             "summary": "船上共有{species}、{animals}",
             "anonymousTitle": "匿名登船",
@@ -689,14 +689,14 @@
             "score": "Ark 分數",
             "scoreShort": "Ark {n}",
             "outOf": "/ {max}",
-            "scoreAbout": "來自你奏效的每一步，Ark 越需要的動物，得分越多。分數永遠不會下降。",
+            "scoreAbout": "你幫助登船的物種過得好時，你的 Ark 分數就會上升。",
             "scoreWeek": "本週 {delta}",
             "myAnimals": "我在 Ark 的動物",
             "theirAnimals": "對方在 Ark 的動物",
             "notInArk": "尚未登上 Ark",
             "life": "生活",
             "explainTitle": "你的 Ark 分數如何增加",
-            "explainBody": "和動物一起的每一步奏效時，都能獲得分數：Ark 越需要這種動物（孤單一隻，或數量正在減少、面臨危險的物種），得分越多；船上已經有很多時，得分較少。捕獲會帶動物登船，但絕不會降低你的分數，其他任何人也無法降低它。它只會上升。你的生命條和以前一樣在下方。",
+            "explainBody": "你幫助登船的物種過得好時，你的 Ark 分數就會上升。和動物一起的每一步奏效時，都能獲得分數：Ark 越需要這種動物（孤單一隻，或數量正在減少、面臨危險的物種），得分越多；船上已經有很多時，得分較少。你的生命條和以前一樣在下方。",
             "explainThrive": "奏效的步驟讓你的動物茁壯成長：幼崽更多，最後才被捕食。",
             "explainDismiss": "了解",
             "arrival": "{species}登上了 Ark",
@@ -775,7 +775,7 @@
                     "needsAdult": "請先確認你已滿 18 歲。"
                 }
             },
-            "scoreHint": "Ark 分數：來自奏效步驟的分數，Ark 越需要的動物，得分越多。分數永遠不會下降。",
+            "scoreHint": "Ark 分數：每個人幫助登船的物種過得好時，分數就會上升。",
             "offerThrive": "如果成功，你在 Ark 的{species}將茁壯成長",
             "offerLater": "如果成功，你的{species}登船後將茁壯成長",
             "resultOther": "成功了。你的{species}正在茁壯成長：幼崽更多，最後才被捕食。",
@@ -785,7 +785,7 @@
             "thrivePrime": "狀態極佳",
             "thriveGood": "狀態良好",
             "thriveOrdinary": "普通",
-            "scoreAboutTheirs": "來自其奏效的每一步，Ark 越需要的動物，得分越多。分數永遠不會下降。"
+            "scoreAboutTheirs": "對方幫助登船的物種過得好時，對方的 Ark 分數就會上升。"
         }
     },
     "home": {

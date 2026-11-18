@@ -446,8 +446,8 @@
             "metaTitle": "Dyrene til {name} i Ark",
             "title": "Dyrene til {name} i Ark",
             "titleSelf": "Dyrene mine i Ark",
-            "scoreAbout": "Fra stegene deres som fungerte, mer for dyr Ark trenger. Den går aldri ned.",
-            "scoreAboutSelf": "Fra stegene dine som fungerte, mer for dyr Ark trenger. Den går aldri ned.",
+            "scoreAbout": "Ark poengsummen deres vokser når artene de har hjulpet om bord, har det bra.",
+            "scoreAboutSelf": "Ark poengsummen din vokser når artene du har hjulpet om bord, har det bra.",
             "outOf": "av {max}",
             "summary": "{animals} om bord, {species}",
             "anonymousTitle": "Anonym om bord",
@@ -689,14 +689,14 @@
             "score": "Ark poengsum",
             "scoreShort": "Ark {n}",
             "outOf": "av {max}",
-            "scoreAbout": "Fra stegene dine som fungerte, mer for dyr Ark trenger. Den går aldri ned.",
+            "scoreAbout": "Ark poengsummen din vokser når artene du har hjulpet om bord, har det bra.",
             "scoreWeek": "{delta} denne uken",
             "myAnimals": "Dyrene mine i Ark",
             "theirAnimals": "Dyrene deres i Ark",
             "notInArk": "Ikke i Ark ennå",
             "life": "Liv",
             "explainTitle": "Slik vokser Ark poengsummen din",
-            "explainBody": "Hvert steg med et dyr som fungerer, gir poeng: flere når Ark trenger det dyret (et som er alene, eller en art som går tilbake eller er truet), færre når mange er om bord. Fangster tar dyr om bord, men senker aldri poengsummen din, og ingen andre kan senke den. Den går bare opp. Livsstolpene dine står nedenfor, som før.",
+            "explainBody": "Ark poengsummen din vokser når artene du har hjulpet om bord, har det bra. Hvert steg med et dyr som fungerer, gir poeng: flere når Ark trenger det dyret (et som er alene, eller en art som går tilbake eller er truet), færre når mange er om bord. Livsstolpene dine står nedenfor, som før.",
             "explainThrive": "Steg som fungerer, får dyrene dine til å trives: flere unger, og de blir jaktet sist.",
             "explainDismiss": "Skjønner",
             "arrival": "{species} kom om bord i Ark",
@@ -775,7 +775,7 @@
                     "needsAdult": "Bekreft først at du har fylt 18."
                 }
             },
-            "scoreHint": "Ark poengsum: poeng fra steg som fungerte, flere for dyr Ark trenger. Den går aldri ned.",
+            "scoreHint": "Ark poengsum: vokser når artene hver enkelt har hjulpet om bord, har det bra.",
             "offerThrive": "Hvis dette fungerer, kommer dyrene dine av arten {species} i Ark til å trives",
             "offerLater": "Hvis dette fungerer, kommer dyret ditt av arten {species} til å trives når ett er om bord",
             "resultOther": "Det fungerte. Dyrene dine av arten {species} trives: flere unger, og de blir jaktet sist.",
@@ -785,7 +785,7 @@
             "thrivePrime": "I toppform",
             "thriveGood": "I god form",
             "thriveOrdinary": "Vanlig",
-            "scoreAboutTheirs": "Fra stegene deres som fungerte, mer for dyr Ark trenger. Den går aldri ned."
+            "scoreAboutTheirs": "Ark poengsummen deres vokser når artene de har hjulpet om bord, har det bra."
         }
     },
     "home": {

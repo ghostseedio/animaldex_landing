@@ -446,8 +446,8 @@
             "metaTitle": "Zvířata uživatele {name} v Ark",
             "title": "Zvířata uživatele {name} v Ark",
             "titleSelf": "Moje zvířata v Ark",
-            "scoreAbout": "Body za kroky, které tomuto člověku fungovaly, víc za zvířata, která Ark potřebuje. Nikdy neklesá.",
-            "scoreAboutSelf": "Body za tvé kroky, které fungovaly, víc za zvířata, která Ark potřebuje. Nikdy neklesá.",
+            "scoreAbout": "Skóre Ark tohoto člověka roste, když se daří druhům, které se díky tomuto člověku dostaly na palubu.",
+            "scoreAboutSelf": "Tvé skóre Ark roste, když se daří druhům, které se díky tobě dostaly na palubu.",
             "outOf": "z {max}",
             "summary": "Na palubě: {animals}, {species}",
             "anonymousTitle": "Anonymně na palubě",
@@ -689,14 +689,14 @@
             "score": "Skóre Ark",
             "scoreShort": "Ark {n}",
             "outOf": "z {max}",
-            "scoreAbout": "Body za tvé kroky, které fungovaly, víc za zvířata, která Ark potřebuje. Nikdy neklesá.",
+            "scoreAbout": "Tvé skóre Ark roste, když se daří druhům, které se díky tobě dostaly na palubu.",
             "scoreWeek": "{delta} tento týden",
             "myAnimals": "Moje zvířata v Ark",
             "theirAnimals": "Zvířata tohoto uživatele v Ark",
             "notInArk": "Zatím není v Ark",
             "life": "Život",
             "explainTitle": "Jak roste tvé Skóre Ark",
-            "explainBody": "Každý krok se zvířetem, který funguje, přináší body: víc, když Ark to zvíře potřebuje (osamělé, nebo druh, který ubývá či je ohrožený), méně, když je jich na palubě hodně. Úlovky přivádějí zvířata na palubu, ale tvé skóre nikdy nesníží a nikdo jiný ho snížit nemůže. Jen roste. Tvé ukazatele života jsou níže, jako dřív.",
+            "explainBody": "Tvé skóre Ark roste, když se daří druhům, které se díky tobě dostaly na palubu. Každý krok se zvířetem, který funguje, přináší body: víc, když Ark to zvíře potřebuje (osamělé, nebo druh, který ubývá či je ohrožený), méně, když je jich na palubě hodně. Tvé ukazatele života jsou níže, jako dřív.",
             "explainThrive": "Kroky, které fungují, pomáhají tvým zvířatům prosperovat: víc mláďat a loví je až naposled.",
             "explainDismiss": "Rozumím",
             "arrival": "{species} nastoupil na palubu Ark",
@@ -775,7 +775,7 @@
                     "needsAdult": "Nejdřív potvrď, že ti je 18 nebo víc."
                 }
             },
-            "scoreHint": "Skóre Ark: body za kroky, které fungovaly, víc za zvířata, která Ark potřebuje. Nikdy neklesá.",
+            "scoreHint": "Skóre Ark: roste, když se daří druhům, které se díky každému z nich dostaly na palubu.",
             "offerThrive": "Pokud to vyjde, tvoje zvířata {species} v Arku budou prosperovat",
             "offerLater": "Pokud to vyjde, tvoje zvíře {species} bude prosperovat, jakmile jedno nastoupí na palubu",
             "resultOther": "Vyšlo to. Tvoje zvířata {species} prosperují: víc mláďat a loví je až naposled.",
@@ -785,7 +785,7 @@
             "thrivePrime": "V nejlepší kondici",
             "thriveGood": "V dobré kondici",
             "thriveOrdinary": "Běžná kondice",
-            "scoreAboutTheirs": "Body za kroky, které tomuto člověku fungovaly, víc za zvířata, která Ark potřebuje. Nikdy neklesá."
+            "scoreAboutTheirs": "Skóre Ark tohoto člověka roste, když se daří druhům, které se díky tomuto člověku dostaly na palubu."
         }
     },
     "home": {

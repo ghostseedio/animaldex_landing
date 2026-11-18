@@ -335,13 +335,14 @@ export const ARK_COPY = {
     /**
      * Ark Score v3 (captures + thrive, 2026-11-11; `ark_points`): the sum of
      * the points each worked step earned, more for animals the Ark needs.
-     * Captures never lower it; nothing anyone else does can. It never goes down.
+     * Words true with `ark_score_v4` off or on (v4 can also lower it, so no
+     * line says it never goes down).
      */
-    scoreAbout: "From your steps that worked, more for animals the Ark needs. It never goes down.",
+    scoreAbout: "Your Ark Score grows when the kinds you helped bring aboard do well.",
     /** The same on someone else's profile. */
-    scoreAboutTheirs: "From their steps that worked, more for animals the Ark needs. It never goes down.",
+    scoreAboutTheirs: "Their Ark Score grows when the kinds they helped bring aboard do well.",
     /** The same, in one line, where the score is only a number (a tooltip: the weekly stats, a collector's card). */
-    scoreHint: "Ark Score: points from steps that worked, more for animals the Ark needs. It never goes down.",
+    scoreHint: "Ark Score: grows when the kinds each person helped bring aboard do well.",
     scoreWeek: "{delta} this week",
     myAnimals: "My animals in the Ark",
     theirAnimals: "Their animals in the Ark",
@@ -351,7 +352,7 @@ export const ARK_COPY = {
     life: "Life",
     /** The one-time explanation band over the score (dismissed for good, per browser). */
     explainTitle: "How your Ark Score grows",
-    explainBody: "Each step with an animal that works earns points: more when the Ark needs that animal (a lone one, or a kind in decline or at risk), fewer when plenty are aboard. Captures bring animals aboard but never lower your score, and nobody else can lower it. It only ever goes up. Your life bars are below, as before.",
+    explainBody: "Your Ark Score grows when the kinds you helped bring aboard do well. Each step with an animal that works earns points: more when the Ark needs that animal (a lone one, or a kind in decline or at risk), fewer when plenty are aboard. Your life bars are below, as before.",
     /** What a step that works does, in one line (owner, 2026-11-15: "make clear what completing steps does"). */
     explainThrive: "Steps that work make your animals thrive: more young, hunted last.",
     explainDismiss: "Got it",

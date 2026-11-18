@@ -446,8 +446,8 @@
             "metaTitle": "{name}在 Ark 中的动物",
             "title": "{name}在 Ark 中的动物",
             "titleSelf": "我在 Ark 中的动物",
-            "scoreAbout": "来自其奏效的每一步，Ark 越需要的动物，得分越多。分数永远不会下降。",
-            "scoreAboutSelf": "来自你奏效的每一步，Ark 越需要的动物，得分越多。分数永远不会下降。",
+            "scoreAbout": "对方帮助登船的物种过得好时，对方的 Ark 评分就会上升。",
+            "scoreAboutSelf": "你帮助登船的物种过得好时，你的 Ark 评分就会上升。",
             "outOf": "/ {max}",
             "summary": "船上共有{species}、{animals}",
             "anonymousTitle": "匿名登船",
@@ -689,14 +689,14 @@
             "score": "Ark 评分",
             "scoreShort": "Ark {n}",
             "outOf": "/ {max}",
-            "scoreAbout": "来自你奏效的每一步，Ark 越需要的动物，得分越多。分数永远不会下降。",
+            "scoreAbout": "你帮助登船的物种过得好时，你的 Ark 评分就会上升。",
             "scoreWeek": "本周 {delta}",
             "myAnimals": "我在 Ark 的动物",
             "theirAnimals": "对方在 Ark 的动物",
             "notInArk": "尚未登上 Ark",
             "life": "生活",
             "explainTitle": "你的 Ark 评分如何增长",
-            "explainBody": "和动物一起的每一步奏效时，都能获得分数：Ark 越需要这种动物（孤身一只，或数量在减少、处于危险中的物种），得分越多；船上已经有很多时，得分较少。拍摄会带动物登船，但绝不会降低你的评分，其他任何人也无法降低它。它只会上升。你的生命条和以前一样在下方。",
+            "explainBody": "你帮助登船的物种过得好时，你的 Ark 评分就会上升。和动物一起的每一步奏效时，都能获得分数：Ark 越需要这种动物（孤身一只，或数量在减少、处于危险中的物种），得分越多；船上已经有很多时，得分较少。你的生命条和以前一样在下方。",
             "explainThrive": "奏效的步骤让你的动物茁壮成长：幼崽更多，最后才被捕食。",
             "explainDismiss": "知道了",
             "arrival": "{species}登上了 Ark",
@@ -775,7 +775,7 @@
                     "needsAdult": "请先确认你已年满 18 岁。"
                 }
             },
-            "scoreHint": "Ark 评分：来自奏效步骤的分数，Ark 越需要的动物，得分越多。分数永远不会下降。",
+            "scoreHint": "Ark 评分：每个人帮助登船的物种过得好时，评分就会上升。",
             "offerThrive": "如果成功，你在 Ark 的{species}将茁壮成长",
             "offerLater": "如果成功，你的{species}登船后将茁壮成长",
             "resultOther": "成功了。你的{species}正在茁壮成长：幼崽更多，最后才被捕食。",
@@ -785,7 +785,7 @@
             "thrivePrime": "状态极佳",
             "thriveGood": "状态良好",
             "thriveOrdinary": "普通",
-            "scoreAboutTheirs": "来自其奏效的每一步，Ark 越需要的动物，得分越多。分数永远不会下降。"
+            "scoreAboutTheirs": "对方帮助登船的物种过得好时，对方的 Ark 评分就会上升。"
         }
     },
     "home": {

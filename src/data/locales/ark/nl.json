@@ -446,8 +446,8 @@
             "metaTitle": "De dieren van {name} in de Ark",
             "title": "De dieren van {name} in de Ark",
             "titleSelf": "Mijn dieren in de Ark",
-            "scoreAbout": "Uit hun stappen die werkten, meer voor dieren die de Ark nodig heeft. De score gaat nooit omlaag.",
-            "scoreAboutSelf": "Uit je stappen die werkten, meer voor dieren die de Ark nodig heeft. De score gaat nooit omlaag.",
+            "scoreAbout": "Hun Ark-score groeit als het goed gaat met de soorten die zij aan boord hebben helpen brengen.",
+            "scoreAboutSelf": "Je Ark-score groeit als het goed gaat met de soorten die je aan boord hebt helpen brengen.",
             "outOf": "van {max}",
             "summary": "{animals} aan boord, {species}",
             "anonymousTitle": "Anoniem aan boord",
@@ -689,14 +689,14 @@
             "score": "Ark-score",
             "scoreShort": "Ark {n}",
             "outOf": "van {max}",
-            "scoreAbout": "Uit je stappen die werkten, meer voor dieren die de Ark nodig heeft. De score gaat nooit omlaag.",
+            "scoreAbout": "Je Ark-score groeit als het goed gaat met de soorten die je aan boord hebt helpen brengen.",
             "scoreWeek": "{delta} deze week",
             "myAnimals": "Mijn dieren in de Ark",
             "theirAnimals": "Hun dieren in de Ark",
             "notInArk": "Nog niet in de Ark",
             "life": "Leven",
             "explainTitle": "Hoe je Ark-score groeit",
-            "explainBody": "Elke stap met een dier die werkt, levert punten op: meer als de Ark dat dier nodig heeft (een dier dat alleen is, of een soort die achteruitgaat of bedreigd is), minder als er al veel aan boord zijn. Waarnemingen brengen dieren aan boord, maar verlagen je score nooit, en niemand anders kan hem verlagen. Hij gaat alleen omhoog. Je levensbalken staan zoals eerder hieronder.",
+            "explainBody": "Je Ark-score groeit als het goed gaat met de soorten die je aan boord hebt helpen brengen. Elke stap met een dier die werkt, levert punten op: meer als de Ark dat dier nodig heeft (een dier dat alleen is, of een soort die achteruitgaat of bedreigd is), minder als er al veel aan boord zijn. Je levensbalken staan zoals eerder hieronder.",
             "explainThrive": "Stappen die werken laten je dieren floreren: meer jongen, als laatste bejaagd.",
             "explainDismiss": "Begrepen",
             "arrival": "{species} is aan boord van de Ark gekomen",
@@ -775,7 +775,7 @@
                     "needsAdult": "Bevestig eerst dat je 18 of ouder bent."
                 }
             },
-            "scoreHint": "Ark-score: punten uit stappen die werkten, meer voor dieren die de Ark nodig heeft. Hij gaat nooit omlaag.",
+            "scoreHint": "Ark-score: groeit als het goed gaat met de soorten die ieder aan boord heeft helpen brengen.",
             "offerThrive": "Als dit werkt, gaan je {species} in de Ark floreren",
             "offerLater": "Als dit werkt, gaat je {species} floreren zodra er een aan boord is",
             "resultOther": "Het werkte. Je {species} floreren: meer jongen, als laatste bejaagd.",
@@ -785,7 +785,7 @@
             "thrivePrime": "In topconditie",
             "thriveGood": "In goede conditie",
             "thriveOrdinary": "Normaal",
-            "scoreAboutTheirs": "Uit hun stappen die werkten, meer voor dieren die de Ark nodig heeft. De score gaat nooit omlaag."
+            "scoreAboutTheirs": "Hun Ark-score groeit als het goed gaat met de soorten die zij aan boord hebben helpen brengen."
         }
     },
     "home": {

@@ -446,8 +446,8 @@
             "metaTitle": "{name}s dyr i Ark",
             "title": "{name}s dyr i Ark",
             "titleSelf": "Mine dyr i Ark",
-            "scoreAbout": "Fra deres skridt, der virkede, mere for dyr, som Ark har brug for. Den falder aldrig.",
-            "scoreAboutSelf": "Fra dine skridt, der virkede, mere for dyr, som Ark har brug for. Den falder aldrig.",
+            "scoreAbout": "Personens Ark score vokser, når de arter, personen har hjulpet om bord, har det godt.",
+            "scoreAboutSelf": "Din Ark score vokser, når de arter, du har hjulpet om bord, har det godt.",
             "outOf": "af {max}",
             "summary": "{animals} om bord, {species}",
             "anonymousTitle": "Anonym om bord",
@@ -689,14 +689,14 @@
             "score": "Ark score",
             "scoreShort": "Ark {n}",
             "outOf": "af {max}",
-            "scoreAbout": "Fra dine skridt, der virkede, mere for dyr, som Ark har brug for. Den falder aldrig.",
+            "scoreAbout": "Din Ark score vokser, når de arter, du har hjulpet om bord, har det godt.",
             "scoreWeek": "{delta} denne uge",
             "myAnimals": "Mine dyr i Ark",
             "theirAnimals": "Deres dyr i Ark",
             "notInArk": "Ikke i Ark endnu",
             "life": "Liv",
             "explainTitle": "Sådan vokser din Ark score",
-            "explainBody": "Hvert skridt med et dyr, der virker, giver point: flere, når Ark har brug for det dyr (et, der er alene, eller en art i tilbagegang eller i fare), færre, når der er mange om bord. Fangster bringer dyr om bord, men sænker aldrig din score, og ingen andre kan sænke den. Den går kun op. Dine livsbjælker står nedenfor som før.",
+            "explainBody": "Din Ark score vokser, når de arter, du har hjulpet om bord, har det godt. Hvert skridt med et dyr, der virker, giver point: flere, når Ark har brug for det dyr (et, der er alene, eller en art i tilbagegang eller i fare), færre, når der er mange om bord. Dine livsbjælker står nedenfor som før.",
             "explainThrive": "Skridt, der virker, får dine dyr til at trives: flere unger, og de bliver jaget sidst.",
             "explainDismiss": "Forstået",
             "arrival": "{species} kom om bord i Ark",
@@ -775,7 +775,7 @@
                     "needsAdult": "Bekræft først, at du er fyldt 18."
                 }
             },
-            "scoreHint": "Ark score: point fra skridt, der virkede, flere for dyr, som Ark har brug for. Den falder aldrig.",
+            "scoreHint": "Ark score: vokser, når de arter, hver person har hjulpet om bord, har det godt.",
             "offerThrive": "Hvis det virker, kommer dine dyr af arten {species} i Ark til at trives",
             "offerLater": "Hvis det virker, kommer dit dyr af arten {species} til at trives, når et er om bord",
             "resultOther": "Det virkede. Dine dyr af arten {species} trives: flere unger, og de bliver jaget sidst.",
@@ -785,7 +785,7 @@
             "thrivePrime": "I topform",
             "thriveGood": "I god form",
             "thriveOrdinary": "Almindelig",
-            "scoreAboutTheirs": "Fra deres skridt, der virkede, mere for dyr, som Ark har brug for. Den falder aldrig."
+            "scoreAboutTheirs": "Personens Ark score vokser, når de arter, personen har hjulpet om bord, har det godt."
         }
     },
     "home": {

@@ -446,8 +446,8 @@
             "metaTitle": "Os animais de {name} na Ark",
             "title": "Os animais de {name} na Ark",
             "titleSelf": "Meus animais na Ark",
-            "scoreAbout": "Pontos pelos passos dessa pessoa que funcionaram, mais para animais de que a Ark precisa. Nunca diminui.",
-            "scoreAboutSelf": "Pontos pelos seus passos que funcionaram, mais para animais de que a Ark precisa. Nunca diminui.",
+            "scoreAbout": "A pontuação Ark dessa pessoa cresce quando as espécies que ela ajudou a trazer a bordo vão bem.",
+            "scoreAboutSelf": "Sua pontuação Ark cresce quando as espécies que você ajudou a trazer a bordo vão bem.",
             "outOf": "de {max}",
             "summary": "{animals} a bordo, {species}",
             "anonymousTitle": "Anônimo a bordo",
@@ -689,14 +689,14 @@
             "score": "Pontuação Ark",
             "scoreShort": "Ark {n}",
             "outOf": "de {max}",
-            "scoreAbout": "Pontos pelos seus passos que funcionaram, mais para animais de que a Ark precisa. Nunca diminui.",
+            "scoreAbout": "Sua pontuação Ark cresce quando as espécies que você ajudou a trazer a bordo vão bem.",
             "scoreWeek": "{delta} esta semana",
             "myAnimals": "Meus animais na Ark",
             "theirAnimals": "Os animais dessa pessoa na Ark",
             "notInArk": "Ainda não está na Ark",
             "life": "Vida",
             "explainTitle": "Como sua Pontuação Ark cresce",
-            "explainBody": "Cada passo com um animal que funciona rende pontos: mais quando a Ark precisa desse animal (um sozinho, ou uma espécie em declínio ou em risco), menos quando há muitos a bordo. As capturas trazem animais a bordo, mas nunca diminuem sua pontuação, e ninguém mais pode diminuí-la. Ela só sobe. Suas barras de vida estão abaixo, como antes.",
+            "explainBody": "Sua pontuação Ark cresce quando as espécies que você ajudou a trazer a bordo vão bem. Cada passo com um animal que funciona rende pontos: mais quando a Ark precisa desse animal (um sozinho, ou uma espécie em declínio ou em risco), menos quando há muitos a bordo. Suas barras de vida estão abaixo, como antes.",
             "explainThrive": "Passos que funcionam fazem seus animais prosperar: mais filhotes, e são os últimos a ser caçados.",
             "explainDismiss": "Entendi",
             "arrival": "{species} embarcou na Ark",
@@ -775,7 +775,7 @@
                     "needsAdult": "Primeiro confirme que você tem 18 anos ou mais."
                 }
             },
-            "scoreHint": "Pontuação Ark: pontos pelos passos que funcionaram, mais para animais de que a Ark precisa. Nunca diminui.",
+            "scoreHint": "Pontuação Ark: cresce quando as espécies que cada pessoa ajudou a trazer a bordo vão bem.",
             "offerThrive": "Se funcionar, seus {species} na Ark vão prosperar",
             "offerLater": "Se funcionar, seu {species} vai prosperar quando houver um a bordo",
             "resultOther": "Funcionou. Seus {species} estão prosperando: mais filhotes, e são os últimos a ser caçados.",
@@ -785,7 +785,7 @@
             "thrivePrime": "Em ótima condição",
             "thriveGood": "Em boa condição",
             "thriveOrdinary": "Normal",
-            "scoreAboutTheirs": "Pontos pelos passos dessa pessoa que funcionaram, mais para animais de que a Ark precisa. Nunca diminui."
+            "scoreAboutTheirs": "A pontuação Ark dessa pessoa cresce quando as espécies que ela ajudou a trazer a bordo vão bem."
         }
     },
     "home": {

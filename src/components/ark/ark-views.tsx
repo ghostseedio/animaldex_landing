@@ -22,8 +22,8 @@
  *
  * Captures + thrive (2026-11-11; docs/ark-spec.md and the Ark Score v3
  * proposal): the Ark Score is the points your steps that worked locked in,
- * more for animals the Ark needs, with no top; captures never lower it,
- * nobody else can, and it never goes down. The reveal and the Diary no longer
+ * more for animals the Ark needs, with no top (`ark_score_v4` can also lower it
+ * a little, so no word here says it never goes down). The reveal and the Diary no longer
  * show a score line; the five bars are their own "Life" card, with no total;
  * a one-time band over your own score explains it (dismissed for good, per browser).
  *

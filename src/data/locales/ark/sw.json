@@ -446,8 +446,8 @@
             "metaTitle": "Wanyama wa {name} ndani ya Ark",
             "title": "Wanyama wa {name} ndani ya Ark",
             "titleSelf": "Wanyama wangu ndani ya Ark",
-            "scoreAbout": "Kutokana na hatua zake zilizofanikiwa, zaidi kwa wanyama ambao Ark inawahitaji. Hazipungui kamwe.",
-            "scoreAboutSelf": "Kutokana na hatua zako zilizofanikiwa, zaidi kwa wanyama ambao Ark inawahitaji. Hazipungui kamwe.",
+            "scoreAbout": "Alama za Ark za mtu huyu huongezeka pale aina za wanyama alizosaidia kuingia ndani zinapofanya vizuri.",
+            "scoreAboutSelf": "Alama zako za Ark huongezeka pale aina za wanyama ulizosaidia kuingia ndani zinapofanya vizuri.",
             "outOf": "kati ya {max}",
             "summary": "{animals} ndani, {species}",
             "anonymousTitle": "Ndani bila jina",
@@ -689,14 +689,14 @@
             "score": "Alama za Ark",
             "scoreShort": "Ark {n}",
             "outOf": "kati ya {max}",
-            "scoreAbout": "Kutokana na hatua zako zilizofanikiwa, zaidi kwa wanyama ambao Ark inawahitaji. Hazipungui kamwe.",
+            "scoreAbout": "Alama zako za Ark huongezeka pale aina za wanyama ulizosaidia kuingia ndani zinapofanya vizuri.",
             "scoreWeek": "{delta} wiki hii",
             "myAnimals": "Wanyama wangu kwenye Ark",
             "theirAnimals": "Wanyama wake kwenye Ark",
             "notInArk": "Bado hayupo kwenye Ark",
             "life": "Maisha",
             "explainTitle": "Jinsi Alama zako za Ark zinavyoongezeka",
-            "explainBody": "Kila hatua na mnyama inayofanikiwa inakupa alama: zaidi Ark inapomhitaji mnyama huyo (aliye peke yake, au aina inayopungua au iliyo hatarini), na chache zaidi wakiwa wengi ndani. Picha huwaleta wanyama ndani lakini hazipunguzi alama zako kamwe, na hakuna mtu mwingine anayeweza kuzipunguza. Zinaongezeka tu. Pau zako za maisha ziko hapa chini, kama awali.",
+            "explainBody": "Alama zako za Ark huongezeka pale aina za wanyama ulizosaidia kuingia ndani zinapofanya vizuri. Kila hatua na mnyama inayofanikiwa inakupa alama: zaidi Ark inapomhitaji mnyama huyo (aliye peke yake, au aina inayopungua au iliyo hatarini), na chache zaidi wakiwa wengi ndani. Pau zako za maisha ziko hapa chini, kama awali.",
             "explainThrive": "Hatua zinazofanikiwa huwafanya wanyama wako wastawi: watoto wengi zaidi, na wanawindwa mwisho.",
             "explainDismiss": "Nimeelewa",
             "arrival": "{species} amepanda Ark",
@@ -775,7 +775,7 @@
                     "needsAdult": "Thibitisha kwanza kuwa una umri wa miaka 18 au zaidi."
                 }
             },
-            "scoreHint": "Alama za Ark: alama kutokana na hatua zilizofanikiwa, zaidi kwa wanyama ambao Ark inawahitaji. Hazipungui kamwe.",
+            "scoreHint": "Alama za Ark: huongezeka pale aina za wanyama ambazo kila mtu alisaidia kuingia ndani zinapofanya vizuri.",
             "offerThrive": "Hili likifanikiwa, {species} wako katika Ark watastawi",
             "offerLater": "Hili likifanikiwa, {species} wako atastawi mmoja akishapanda Ark",
             "resultOther": "Imefanikiwa. {species} wako wanastawi: watoto wengi zaidi, na wanawindwa mwisho.",
@@ -785,7 +785,7 @@
             "thrivePrime": "Katika hali bora kabisa",
             "thriveGood": "Katika hali nzuri",
             "thriveOrdinary": "Kawaida",
-            "scoreAboutTheirs": "Kutokana na hatua zake zilizofanikiwa, zaidi kwa wanyama ambao Ark inawahitaji. Hazipungui kamwe."
+            "scoreAboutTheirs": "Alama za Ark za mtu huyu huongezeka pale aina za wanyama alizosaidia kuingia ndani zinapofanya vizuri."
         }
     },
     "home": {
