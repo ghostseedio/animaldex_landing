@@ -536,13 +536,14 @@ test("an escape with the lines of sight: the stalking hunter alone while it is f
         pinArkClock(replay.t0 + 7);
         let lunge = shot.step(6, 1 / 30)!;
         for (let i = 0; i < 60; i++) lunge = shot.step(6 + (i + 1) / 30, 1 / 30)!;
-        // (Composed for the lunge's end: the quarry at 30 and the place beside it, 2.5 m toward the hunter, where the hunter will be.)
-        assert.ok(Math.abs(lunge.target.x - 28.75) < 0.5 && lunge.distance >= 3.2 && lunge.distance < 25, "on the quarry and the place beside it, near, before the hunter is there");
+        // (Composed for the lunge's end: the quarry at 30, the place beside it, 2.5 m toward the hunter, where the hunter
+        // will be, and a little room on its far side: the picture's middle is between the two ends, at 29.4.)
+        assert.ok(Math.abs(lunge.target.x - 29.44) < 0.5 && lunge.distance >= 3.2 && lunge.distance < 25, "on the quarry and the place beside it, near, before the hunter is there");
         assert.equal(shot.report().keyAt, null, "no still while the hunter is out of the picture");
         scene.put(id(9), 28, 0);
         pinArkClock(replay.t0 + 7.9);
         for (let i = 0; i < 30; i++) lunge = shot.step(8 + (i + 1) / 30, 1 / 30)!;
-        assert.ok(Math.abs(lunge.target.x - 28.75) < 0.5, "the same picture: it does not pump as they close");
+        assert.ok(Math.abs(lunge.target.x - 29.44) < 0.5, "the same picture: it does not pump as they close");
         assert.ok(shot.report().keyAt !== null && shot.report().keyAt! > 8, "the still: both in the picture, at their nearest");
     } finally {
         shot.end();

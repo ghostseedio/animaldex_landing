@@ -125,6 +125,11 @@ const film = async (kind, id, n) => {
         return;
     }
     Object.assign(entry, {plan: prepared, text: await page.evaluate((id) => window.__seen.lite(id), id)});
+    if (prepared.skipped) {
+        entry.skipped = true;
+        log(`${kind} ${id}: the layer does not act it (a housed pair, or too far apart): passed over; "${entry.text?.[0] ?? ""}"`);
+        return;
+    }
     const name = `${kind}-${String(n).padStart(2, "0")}-${id}-${slugOf(prepared.cast[0]?.name ?? kind)}`;
     entry.name = name;
     if (!prepared.watching) {
@@ -158,7 +163,9 @@ const film = async (kind, id, n) => {
     const fps = 30 / step;
     const at = (seconds) => Math.min(Math.max(Math.round(seconds * fps), 0), frames - 1);
     // The still: the watch's own telling moment; without one, two thirds of the way through.
-    const key = at(typeof report?.keyAt === "number" ? report.keyAt : (times[times.length - 1] ?? 0) * 0.66);
+    // (Never during the camera's way in from where the viewer was: the watch's first second and a half.)
+    // (A line tapped when its telling moment had passed: once the camera is in and has settled on what is still going on.)
+    const key = at(typeof report?.keyAt === "number" ? (report.keyAt < 2.6 ? 5.5 : report.keyAt) : Math.max((times[times.length - 1] ?? 0) * 0.66, 2.6));
     execFileSync("cp", [path.join(dir, `${String(key).padStart(4, "0")}.jpg`), path.join(out, `${name}.jpg`)]);
     const last = times[times.length - 1] ?? 0;
     const picks = Array.from({length: 8}, (_, i) => at(1.5 + ((last - 2.5) * i) / 7));
@@ -176,7 +183,11 @@ for (const kind of kinds) {
     const ids = only.length ? only : await page.evaluate(([k, n]) => window.__seen.lines(k, n), [kind, count]);
     log(`${kind}: ${ids.length} line(s): ${ids.join(", ") || "none"}`);
     let n = 0;
-    for (const id of ids) await film(only.length ? await page.evaluate((id) => window.__seen.plan(id).kind, id).catch(() => kind) : kind, id, ++n);
+    for (const id of ids) {
+        if (!only.length && summary.filter((e) => e.kind === kind && !e.skipped).length >= count) break;
+        await film(only.length ? await page.evaluate((id) => window.__seen.plan(id).kind, id).catch(() => kind) : kind, id, n + 1);
+        if (!summary[summary.length - 1].skipped) n++;
+    }
     // The kind's contact sheet: its stills, five to a row.
     const stills = summary.filter((e) => e.kind === kind && e.name && existsSync(path.join(out, `${e.name}.jpg`))).map((e) => path.join(out, `${e.name}.jpg`));
     if (stills.length && !only.length) {
