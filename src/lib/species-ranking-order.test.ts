@@ -13,9 +13,9 @@ test("ranked captures order by XP, then stats, then grade, then newest (iOS a989
     assert.deepEqual([...rows].sort(compareSpeciesRankingRows).map((row) => row.capture_id), ["b", "d", "e", "a", "c"]);
 });
 
-test("missing sort keys count as zero and the id breaks a full tie", () => {
-    const rows = [{capture_id: "z"}, {capture_id: "y", total_progression_xp: 1}, {capture_id: "x"}];
-    assert.deepEqual([...rows].sort(compareSpeciesRankingRows).map((row) => row.capture_id), ["y", "x", "z"]);
+test("missing sort keys count as zero and the id breaks a full tie, descending like the server (GRADING-5)", () => {
+    const rows = [{capture_id: "x"}, {capture_id: "y", total_progression_xp: 1}, {capture_id: "z"}];
+    assert.deepEqual([...rows].sort(compareSpeciesRankingRows).map((row) => row.capture_id), ["y", "z", "x"]);
 });
 
 test("the REST order names the same keys", () => {
