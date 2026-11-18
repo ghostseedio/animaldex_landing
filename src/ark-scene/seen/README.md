@@ -39,9 +39,10 @@ it has something for it: a record that is acted, a lone founder in the read, an 
 | A meal's chase | `live-meals.ts` (`set`, `add`), `replay/event-replay.ts` |
 | An escape's chase | `live/escape-lines.ts` `escapeActs`, `replay/event-replay.ts` |
 | A dying act | `live/controller.ts` `died`, `replay/event-replay.ts` |
+| A live birth | `live/controller.ts` `born`, `replay/event-replay.ts`; the young (in the read already) are out of sight until born (`live-births.ts`) |
 
-Matings and live births start at their row's time, as before: a mating's walk is up to 30 s and the pair stay together
-two minutes; a birth takes 24 s.
+Matings start at their row's time, as before: the walk is up to 30 s and the pair stay together two minutes. A hatching
+is the nests' own.
 
 Until its act begins, an animal the record has already taken from the read (the eaten one, the dead one) goes on with
 its day as a stand-in. In the last 14 s before a chase each of the two walks from where its day has it to where the
@@ -87,7 +88,7 @@ seen.tick();                   // twice a second: the groups whose act is over a
 | Row | Group | Kept |
 |---|---|---|
 | `mated` | the pair | 90 s (the layer's own pins then hold them); with a stand-in, the whole 20 min |
-| `birth` | parents and litter | 90 s; with a stand-in parent 5 min |
+| `birth` (live) | parents and litter | 90 s from the birth's start; with a stand-in parent 5 min |
 | `death_old`, `starved` | the animal (a stand-in, alive, until its act) | until 4 s into the dying act (its body is the act's own) |
 | `meal` | hunter and prey | until 20 s into the chase; with a stand-in hunter 15 min |
 | `escaped` | prey and hunter | 70 s from the chase's start |
@@ -108,9 +109,9 @@ it comes into view.
   holds both, whatever the target's easing is doing. A sprint and a stoop no longer leave the frame (V2's escapes
   scored 3 of 5 for that), and a chase's still is the frame at which both were in the picture and nearest each other;
 - a chase is told in three pictures: the **stalk** on the hunter alone, large, while it is more than 9 m from its
-  quarry (from far enough back for both, neither reads); the **lunge** on the quarry with room, then the two of them in
-  the picture's middle (its aim follows fast) once the hunter is within 11 m; then the meal where the prey fell, or
-  the one that got away;
+  quarry (from far enough back for both, neither reads); the **lunge** on the quarry, near and side on, where it stays
+  while the hunter comes into the picture (a picture that holds both from the start is too far back to read, and one
+  that zooms as they close pumps); then the meal where the prey fell, or the one that got away;
 - on the low tier the lines of sight are not asked (each search is a burst of rays): the cheap clear bearing instead.
 
 It ends when the act is over and the camera has lingered 6 s, when the viewer touches the view, or at another tap.

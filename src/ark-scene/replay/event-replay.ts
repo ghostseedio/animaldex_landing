@@ -196,7 +196,9 @@ export function planArkEventReplay(eventId: string | number, raw: unknown, snaps
                 return {...base, t0, cast, marks: [], feed: {play: acts}};
             }
             if (!parents.length) return none("names no parent the log given has a record of: a live birth is acted by its mother");
-            return {...base, t0, cast, marks: [], feed: {births: [{key: `birth:${event.at}:${parentsKey}`, parents: [...event.parents], young: young.map((record) => record.id), t0}]}};
+            // (V1: a live birth begins once the record is out, `ark-act-hold.ts`, as the live world acts it.)
+            const from = arkActStart(t0);
+            return {...base, t0: from, cast, marks: [], feed: {births: [{key: `birth:${event.at}:${parentsKey}`, parents: [...event.parents], young: young.map((record) => record.id), t0: from}]}};
         }
         case "death": {
             if (!own.animal) return none("does not name its animal");

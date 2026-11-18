@@ -438,7 +438,8 @@ export class LiveMeals<E> {
             const b = m.built;
             if (!b) continue;
             const s = epoch - m.t0;
-            if (s < 0) continue;
+            // (V1: from the hunter's walk to where the chase starts: the marker is up before the first stride.)
+            if (s < -APPROACH_SECONDS) continue;
             const phase = s < b.catchAt ? "hunting" : s < b.catchAt + b.script.feedTo ? "eating" : null;
             if (phase && (!best || m.t0 > best.t0)) best = {predator: m.act.predator.id, prey: m.act.prey.id, phase, t0: m.t0};
         }

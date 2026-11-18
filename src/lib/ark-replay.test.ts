@@ -531,17 +531,18 @@ test("an escape with the lines of sight: the stalking hunter alone while it is f
         let near = shot.step(2.1, 1 / 30)!;
         for (let i = 0; i < 90; i++) near = shot.step(2.1 + (i + 1) / 30, 1 / 30)!;
         assert.ok(near.target.x > 26 && near.target.x < 28, "the two in one picture once it is near");
-        // The lunge: the picture is on the quarry before the hunter is, with room for it; the still is the two at their nearest.
+        // The lunge: the picture is on the quarry before the hunter is, near, and stays on it; the hunter comes into it.
         scene.put(id(9), 0, 0);
         pinArkClock(replay.t0 + 7);
         let lunge = shot.step(6, 1 / 30)!;
         for (let i = 0; i < 60; i++) lunge = shot.step(6 + (i + 1) / 30, 1 / 30)!;
-        assert.ok(Math.abs(lunge.target.x - 30) < 0.5 && lunge.distance >= 6.5, "on the quarry, from far enough back for the hunter that is coming");
+        assert.ok(Math.abs(lunge.target.x - 30) < 0.5 && lunge.distance >= 3.2 && lunge.distance < 25, "on the quarry, near, with room for the hunter that is coming");
+        assert.equal(shot.report().keyAt, null, "no still while the hunter is out of the picture");
         scene.put(id(9), 28, 0);
         pinArkClock(replay.t0 + 7.9);
         for (let i = 0; i < 30; i++) lunge = shot.step(8 + (i + 1) / 30, 1 / 30)!;
-        assert.ok(lunge.target.x > 28.5 && lunge.target.x < 29.5 && lunge.distance >= 6.5, "then the two of them");
-        assert.ok(shot.report().keyAt !== null && shot.report().keyAt! > 8, "the still: the two at their nearest");
+        assert.ok(Math.abs(lunge.target.x - 30) < 0.5, "still on the quarry: the picture does not pump as they close");
+        assert.ok(shot.report().keyAt !== null && shot.report().keyAt! > 8, "the still: both in the picture, at their nearest");
     } finally {
         shot.end();
     }

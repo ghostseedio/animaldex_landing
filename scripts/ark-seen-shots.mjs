@@ -191,6 +191,41 @@ for (const kind of kinds) {
     }
     if (only.length) break;
 }
+// The departure fade: animals that leave the Ark between two reads (taken out of the read), a strip each.
+const departs = Number(arg("departs", only.length ? "0" : "2"));
+for (let n = 0; n < departs; n++) {
+    const who = await page.evaluate((n) => window.__seen.depart(n), n);
+    if (!who) continue;
+    const dir = path.join(out, `.frames-depart-${n}`);
+    rmSync(dir, {recursive: true, force: true});
+    mkdirSync(dir, {recursive: true});
+    let frames = 0;
+    for (;;) {
+        const frame = await page.evaluate(() => window.__seen.frame(0.86, 3));
+        const comma = frame.image.indexOf(",");
+        if (comma > 0) writeFileSync(path.join(dir, `${String(frames++).padStart(4, "0")}.jpg`), Buffer.from(frame.image.slice(comma + 1), "base64"));
+        if (frame.done || frames > 120) break;
+    }
+    const name = `depart-${n + 1}-${slugOf(who.name)}`;
+    // (As it stood, then every half second: the hold, the fade, gone.)
+    const picks = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45].filter((i) => i < frames);
+    const strip = path.join(dir, "strip");
+    mkdirSync(strip, {recursive: true});
+    picks.forEach((frame, i) => execFileSync("cp", [path.join(dir, `${String(frame).padStart(4, "0")}.jpg`), path.join(strip, `${String(i).padStart(2, "0")}.jpg`)]));
+    execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(strip, "%02d.jpg"), "-vf", "scale=240:-1,tile=10x1:padding=4:color=black", "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+    rmSync(dir, {recursive: true, force: true});
+    summary.push({kind: "depart", name, who, frames});
+    log(`${name}: ${frames} frames`);
+}
+// The marks, from a fixture of the reads that are not live yet (E4's crises read, E3's `lone`), on a real animal: the page as a viewer sees it.
+if (!only.length && !process.argv.includes("--no-marks")) {
+    for (const what of ["last", "lone"]) {
+        const got = await page.evaluate((what) => window.__seen.mark(what), what).catch((error) => ({error: String(error?.message ?? error)}));
+        await page.screenshot({path: path.join(out, `mark-${what}.jpg`), type: "jpeg", quality: 88});
+        summary.push({kind: "mark", what, got});
+        log(`mark ${what}:`, JSON.stringify(got).slice(0, 300));
+    }
+}
 writeFileSync(path.join(out, `summary${only.length ? `-${only.join("-")}` : ""}.json`), JSON.stringify({at: new Date().toISOString(), width, height, quality, step, errors: errors.slice(0, 40), events: summary}, null, 1));
 if (errors.length) log("page errors:", errors.slice(0, 8));
 await browser.close();
