@@ -612,6 +612,28 @@
             "tapKind": "Dodirnite vrstu da vidite tko je koju životinju doveo",
             "animalsMore": "+{count} više",
             "you": "Vi"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Ne sada",
+            "seeInArk": "Pogledaj u Arku",
+            "openArk": "Otvori Ark",
+            "yourYoung": "{species}: tvoja životinja ima mladunčad",
+            "yourFirstAboard": "{species}: tvoja životinja prva je svoje vrste u Arku",
+            "yourLine": "{species}: loza tvoje životinje dosegla je generaciju {generation}",
+            "firstYoungHatched": "{species}: prva mladunčad izlegla se u Arku",
+            "firstYoungBorn": "{species}: prva mladunčad rođena je u Arku",
+            "firstAboard": "{species}: prva životinja te vrste ukrcala se u Ark",
+            "newGeneration": "U Arku se rađa generacija {generation}",
+            "speciesMilestone": "{species}: sada {count} na Arku",
+            "arkMilestone": "Životinja na Arku: {count}",
+            "extinction": "{species}: posljednja životinja te vrste u Arku uginula je",
+            "youngHatched": "Izlegnuta mladunčad: {count}",
+            "youngBorn": "Rođena mladunčad: {count}",
+            "cameAboardOnDay": "Ukrcala se na dan {day}.",
+            "arkDay": "Dan Arka {day}",
+            "broughtBy": "Ukrcao/la: {name}",
+            "fromLine": "Iz loze koju je doveo/la: {name}"
         }
     },
     "talkPage": {

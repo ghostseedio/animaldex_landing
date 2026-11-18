@@ -612,6 +612,28 @@
             "tapKind": "ഓരോന്നിനെയും ആരാണ് കൊണ്ടുവന്നതെന്ന് കാണാൻ ഒരു ഇനത്തിൽ ടാപ്പ് ചെയ്യുക",
             "animalsMore": "+{count} കൂടി",
             "you": "നിങ്ങൾ"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "ഇപ്പോൾ വേണ്ട",
+            "seeInArk": "അതിനെ Ark-ൽ കാണുക",
+            "openArk": "Ark തുറക്കുക",
+            "yourYoung": "{species}: നിങ്ങളുടെ മൃഗത്തിന് കുഞ്ഞുങ്ങളുണ്ടായി",
+            "yourFirstAboard": "{species}: നിങ്ങളുടെ മൃഗം Ark-ൽ അതിന്റെ ഇനത്തിലെ ആദ്യത്തേതാണ്",
+            "yourLine": "{species}: നിങ്ങളുടെ മൃഗത്തിന്റെ വംശം തലമുറ {generation}-ൽ എത്തി",
+            "firstYoungHatched": "{species}: Ark-ൽ ആദ്യ കുഞ്ഞുങ്ങൾ വിരിഞ്ഞു",
+            "firstYoungBorn": "{species}: Ark-ൽ ആദ്യ കുഞ്ഞുങ്ങൾ ജനിച്ചു",
+            "firstAboard": "{species}: ഈ ഇനത്തിലെ ആദ്യ മൃഗം Ark-ൽ കയറി",
+            "newGeneration": "Ark-ൽ തലമുറ {generation} ജനിച്ചു",
+            "speciesMilestone": "{species}: ഇപ്പോൾ Ark-ൽ {count}",
+            "arkMilestone": "ഇപ്പോൾ Ark-ൽ {count} മൃഗങ്ങൾ",
+            "extinction": "{species}: Ark-ലെ ഈ ഇനത്തിലെ അവസാന മൃഗം ചത്തു",
+            "youngHatched": "വിരിഞ്ഞ കുഞ്ഞുങ്ങൾ: {count}",
+            "youngBorn": "ജനിച്ച കുഞ്ഞുങ്ങൾ: {count}",
+            "cameAboardOnDay": "ദിവസം {day}-ന് അത് Ark-ൽ കയറി.",
+            "arkDay": "Ark ദിവസം {day}",
+            "broughtBy": "Ark-ൽ കയറ്റിയത്: {name}",
+            "fromLine": "{name}-ന്റെ വംശത്തിൽ നിന്ന്"
         }
     },
     "talkPage": {

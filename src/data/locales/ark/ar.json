@@ -612,6 +612,28 @@
             "tapKind": "اضغط على نوع لترى من أحضر كل واحد",
             "animalsMore": "+{count} أخرى",
             "you": "أنت"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "ليس الآن",
+            "seeInArk": "شاهده في Ark",
+            "openArk": "افتح Ark",
+            "yourYoung": "{species}: صار لحيوانك صغار",
+            "yourFirstAboard": "{species}: حيوانك هو الأول من نوعه في Ark",
+            "yourLine": "{species}: بلغت سلالة حيوانك الجيل {generation}",
+            "firstYoungHatched": "{species}: فقست أولى الصغار في Ark",
+            "firstYoungBorn": "{species}: وُلدت أولى الصغار في Ark",
+            "firstAboard": "{species}: صعد أول حيوان من هذا النوع على متن Ark",
+            "newGeneration": "وُلد الجيل {generation} في Ark",
+            "speciesMilestone": "{species}: صار عددها {count} على متن Ark",
+            "arkMilestone": "صار على متن Ark {count} حيوانًا",
+            "extinction": "{species}: مات آخر حيوان من هذا النوع في Ark",
+            "youngHatched": "صغار فقست: {count}",
+            "youngBorn": "صغار وُلدت: {count}",
+            "cameAboardOnDay": "صعد على المتن في اليوم {day}.",
+            "arkDay": "يوم Ark {day}",
+            "broughtBy": "أصعده على المتن: {name}",
+            "fromLine": "من سلالة {name}"
         }
     },
     "talkPage": {

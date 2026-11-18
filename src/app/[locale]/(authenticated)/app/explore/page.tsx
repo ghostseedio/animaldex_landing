@@ -4,6 +4,8 @@ import {getDiscoverCollectors} from "@/data/discover-collectors";
 import {getDiscoverTimelineBundle} from "@/data/discover-timeline";
 import {getDiscoverDebates, loadDebatesEnabled} from "@/data/debates";
 import {getCompanionWords} from "@/loaders/companion-words";
+import {loadLocaleMessages} from "@/loaders/locale";
+import {arkMomentWords} from "@/lib/ark-moments";
 
 const INITIAL_DISCOVER_TIMELINE_LIMIT = 8;
 const INITIAL_COLLECTOR_LIMIT = 24;
@@ -22,13 +24,14 @@ export default async function ExplorePage({
     params: {locale: string};
 }) {
     const initialSegment = searchParams?.view === "collectors" ? "collectors" : "discover";
-    const [{timeline, featured, nextCursor}, collectors, context, debatesEnabled, debates, words] = await Promise.all([
+    const [{timeline, featured, nextCursor}, collectors, context, debatesEnabled, debates, words, messages] = await Promise.all([
         getDiscoverTimelineBundle(INITIAL_DISCOVER_TIMELINE_LIMIT),
         getDiscoverCollectors(INITIAL_COLLECTOR_LIMIT),
         getAuthenticatedAppContext(),
         loadDebatesEnabled(),
         getDiscoverDebates(12),
-        getCompanionWords(params.locale)
+        getCompanionWords(params.locale),
+        loadLocaleMessages(params.locale).catch(() => null)
     ]);
 
     return (
@@ -43,6 +46,7 @@ export default async function ExplorePage({
             viewerUserId={context?.profile.id ?? null}
             debates={debatesEnabled ? debates : []}
             debateWords={debatesEnabled ? words : null}
+            arkMomentWords={arkMomentWords(messages)}
         />
     );
 }

@@ -612,6 +612,28 @@
             "tapKind": "Touchez une espèce pour voir qui a amené chaque animal",
             "animalsMore": "+{count} de plus",
             "you": "Vous"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Pas maintenant",
+            "seeInArk": "Le voir dans l'Ark",
+            "openArk": "Ouvrir l'Ark",
+            "yourYoung": "{species} : votre animal a eu des petits",
+            "yourFirstAboard": "{species} : votre animal est le premier de son espèce dans l'Ark",
+            "yourLine": "{species} : la lignée de votre animal a atteint la génération {generation}",
+            "firstYoungHatched": "{species} : premiers petits éclos dans l'Ark",
+            "firstYoungBorn": "{species} : premiers petits nés dans l'Ark",
+            "firstAboard": "{species} : le premier de son espèce est monté à bord de l'Ark",
+            "newGeneration": "La génération {generation} est née dans l'Ark",
+            "speciesMilestone": "{species} : {count} à bord de l'Ark désormais",
+            "arkMilestone": "{count} animaux à bord de l'Ark désormais",
+            "extinction": "{species} : le dernier de son espèce dans l'Ark est mort",
+            "youngHatched": "Petits éclos : {count}",
+            "youngBorn": "Petits nés : {count}",
+            "cameAboardOnDay": "Il était monté à bord le jour {day}.",
+            "arkDay": "Jour {day} de l'Ark",
+            "broughtBy": "Amené à bord par {name}",
+            "fromLine": "De la lignée de {name}"
         }
     },
     "talkPage": {

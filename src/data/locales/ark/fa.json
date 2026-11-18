@@ -612,6 +612,28 @@
             "tapKind": "روی یک گونه بزنید تا ببینید هر کدام را چه کسی آورده",
             "animalsMore": "+{count} دیگر",
             "you": "شما"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "اکنون نه",
+            "seeInArk": "دیدنش در Ark",
+            "openArk": "باز کردن Ark",
+            "yourYoung": "{species}: جانور شما بچه‌دار شد",
+            "yourFirstAboard": "{species}: جانور شما نخستین از گونهٔ خود در Ark است",
+            "yourLine": "{species}: تبار جانور شما به نسل {generation} رسید",
+            "firstYoungHatched": "{species}: نخستین بچه‌ها در Ark از تخم درآمدند",
+            "firstYoungBorn": "{species}: نخستین بچه‌ها در Ark به دنیا آمدند",
+            "firstAboard": "{species}: نخستین جانور این گونه سوار Ark شد",
+            "newGeneration": "نسل {generation} در Ark به دنیا آمد",
+            "speciesMilestone": "{species}: اکنون {count} در Ark",
+            "arkMilestone": "اکنون {count} جانور در Ark",
+            "extinction": "{species}: آخرین جانور این گونه در Ark مرد",
+            "youngHatched": "بچه‌های از تخم درآمده: {count}",
+            "youngBorn": "بچه‌های به دنیا آمده: {count}",
+            "cameAboardOnDay": "در روز {day} سوار شده بود.",
+            "arkDay": "روز {day} در Ark",
+            "broughtBy": "سوارش کرد: {name}",
+            "fromLine": "از تبار {name}"
         }
     },
     "talkPage": {

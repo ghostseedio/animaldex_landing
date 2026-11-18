@@ -612,6 +612,28 @@
             "tapKind": "Chạm vào một loài để xem ai đã mang từng con",
             "animalsMore": "+{count} nữa",
             "you": "Bạn"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Để sau",
+            "seeInArk": "Xem trên Ark",
+            "openArk": "Mở Ark",
+            "yourYoung": "{species}: con vật của bạn đã có con",
+            "yourFirstAboard": "{species}: con vật của bạn là con đầu tiên của loài này trên Ark",
+            "yourLine": "{species}: dòng dõi con vật của bạn đã đến thế hệ {generation}",
+            "firstYoungHatched": "{species}: những con non đầu tiên đã nở trên Ark",
+            "firstYoungBorn": "{species}: những con non đầu tiên đã ra đời trên Ark",
+            "firstAboard": "{species}: con đầu tiên của loài này đã lên Ark",
+            "newGeneration": "Thế hệ {generation} ra đời trên Ark",
+            "speciesMilestone": "{species}: nay có {count} con trên Ark",
+            "arkMilestone": "Nay có {count} con vật trên Ark",
+            "extinction": "{species}: con cuối cùng của loài này trên Ark đã chết",
+            "youngHatched": "Con non đã nở: {count}",
+            "youngBorn": "Con non đã ra đời: {count}",
+            "cameAboardOnDay": "Nó lên Ark vào ngày {day}.",
+            "arkDay": "Ngày {day} trên Ark",
+            "broughtBy": "Được {name} đưa lên tàu",
+            "fromLine": "Từ dòng dõi của {name}"
         }
     },
     "talkPage": {

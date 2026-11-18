@@ -612,6 +612,28 @@
             "tapKind": "ஒவ்வொன்றையும் யார் கொண்டு வந்தார்கள் என்று பார்க்க ஓர் இனத்தைத் தட்டவும்",
             "animalsMore": "+{count} மேலும்",
             "you": "நீங்கள்"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "இப்போது வேண்டாம்",
+            "seeInArk": "அதை Ark-இல் பார்",
+            "openArk": "Ark-ஐத் திற",
+            "yourYoung": "{species}: உங்கள் விலங்குக்குக் குட்டிகள் பிறந்தன",
+            "yourFirstAboard": "{species}: உங்கள் விலங்கு Ark-இல் தன் இனத்தின் முதலாவது",
+            "yourLine": "{species}: உங்கள் விலங்கின் வம்சம் தலைமுறை {generation}-ஐ எட்டியது",
+            "firstYoungHatched": "{species}: Ark-இல் முதல் குட்டிகள் முட்டையிலிருந்து பொரித்தன",
+            "firstYoungBorn": "{species}: Ark-இல் முதல் குட்டிகள் பிறந்தன",
+            "firstAboard": "{species}: இந்த இனத்தின் முதல் விலங்கு Ark-இல் ஏறியது",
+            "newGeneration": "Ark-இல் தலைமுறை {generation} பிறந்தது",
+            "speciesMilestone": "{species}: இப்போது Ark-இல் {count}",
+            "arkMilestone": "இப்போது Ark-இல் {count} விலங்குகள்",
+            "extinction": "{species}: Ark-இல் இந்த இனத்தின் கடைசி விலங்கு இறந்தது",
+            "youngHatched": "பொரித்த குட்டிகள்: {count}",
+            "youngBorn": "பிறந்த குட்டிகள்: {count}",
+            "cameAboardOnDay": "அது நாள் {day} அன்று Ark-இல் ஏறியது.",
+            "arkDay": "Ark நாள் {day}",
+            "broughtBy": "Ark-இல் ஏற்றியவர்: {name}",
+            "fromLine": "{name} அவர்களின் வம்சத்திலிருந்து"
         }
     },
     "talkPage": {

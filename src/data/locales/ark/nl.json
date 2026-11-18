@@ -612,6 +612,28 @@
             "tapKind": "Tik op een soort om te zien wie elk dier meebracht",
             "animalsMore": "+{count} meer",
             "you": "Jij"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Niet nu",
+            "seeInArk": "Bekijk het in de Ark",
+            "openArk": "Open de Ark",
+            "yourYoung": "{species}: je dier heeft jongen gekregen",
+            "yourFirstAboard": "{species}: je dier is het eerste van zijn soort in de Ark",
+            "yourLine": "{species}: de lijn van je dier heeft generatie {generation} bereikt",
+            "firstYoungHatched": "{species}: eerste jongen uitgekomen in de Ark",
+            "firstYoungBorn": "{species}: eerste jongen geboren in de Ark",
+            "firstAboard": "{species}: het eerste van zijn soort is aan boord van de Ark gekomen",
+            "newGeneration": "Generatie {generation} is geboren in de Ark",
+            "speciesMilestone": "{species}: nu {count} aan boord van de Ark",
+            "arkMilestone": "Nu {count} dieren aan boord van de Ark",
+            "extinction": "{species}: het laatste van zijn soort in de Ark is gestorven",
+            "youngHatched": "Jongen uitgekomen: {count}",
+            "youngBorn": "Jongen geboren: {count}",
+            "cameAboardOnDay": "Het kwam aan boord op dag {day}.",
+            "arkDay": "Ark-dag {day}",
+            "broughtBy": "Aan boord gebracht door {name}",
+            "fromLine": "Uit de lijn van {name}"
         }
     },
     "talkPage": {

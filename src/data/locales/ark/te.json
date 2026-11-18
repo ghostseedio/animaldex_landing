@@ -612,6 +612,28 @@
             "tapKind": "ఎవరు ఏ జంతువును తెచ్చారో చూడటానికి ఒక జాతిని తట్టండి",
             "animalsMore": "+{count} మరిన్ని",
             "you": "మీరు"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "ఇప్పుడు వద్దు",
+            "seeInArk": "దాన్ని Ark లో చూడండి",
+            "openArk": "Ark తెరవండి",
+            "yourYoung": "{species}: మీ జంతువుకు పిల్లలు పుట్టాయి",
+            "yourFirstAboard": "{species}: మీ జంతువు Ark లో తన రకంలో మొదటిది",
+            "yourLine": "{species}: మీ జంతువు వంశం తరం {generation} కి చేరింది",
+            "firstYoungHatched": "{species}: Ark లో మొదటి పిల్లలు పొదిగాయి",
+            "firstYoungBorn": "{species}: Ark లో మొదటి పిల్లలు పుట్టాయి",
+            "firstAboard": "{species}: ఈ రకపు మొదటి జంతువు Ark ఎక్కింది",
+            "newGeneration": "Ark లో తరం {generation} పుట్టింది",
+            "speciesMilestone": "{species}: ఇప్పుడు Ark లో {count}",
+            "arkMilestone": "ఇప్పుడు Ark లో {count} జంతువులు",
+            "extinction": "{species}: Ark లో ఈ రకపు చివరి జంతువు చనిపోయింది",
+            "youngHatched": "పొదిగిన పిల్లలు: {count}",
+            "youngBorn": "పుట్టిన పిల్లలు: {count}",
+            "cameAboardOnDay": "అది రోజు {day} న Ark ఎక్కింది.",
+            "arkDay": "Ark రోజు {day}",
+            "broughtBy": "Ark ఎక్కించినవారు: {name}",
+            "fromLine": "{name} వంశం నుండి"
         }
     },
     "talkPage": {

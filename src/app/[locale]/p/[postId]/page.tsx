@@ -17,6 +17,8 @@ import {
 } from "@/lib/discover-post";
 import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
+import {loadLocaleMessages} from "@/loaders/locale";
+import {arkMomentWords} from "@/lib/ark-moments";
 
 export const revalidate = 86400;
 export const dynamicParams = true;
@@ -102,10 +104,11 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
 
     // Somebody who opened a shared link: the app, and the animal's own page and voice.
     const animal = discoverPostAnimal(post);
-    const [t, askT, animalsT] = await Promise.all([
+    const [t, askT, animalsT, messages] = await Promise.all([
         getScopedTranslator(params.locale, "post"),
         getScopedTranslator(params.locale, "askAnimalDex"),
-        getScopedTranslator(params.locale, "animals")
+        getScopedTranslator(params.locale, "animals"),
+        loadLocaleMessages(params.locale).catch(() => null)
     ]);
     const shareLabels: PostShareLabels = {
         sharedFrom: t("sharedFrom"),
@@ -152,6 +155,7 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
                     syncPostUrls
                     viewerUserId={null}
                     hydrateSignedInFeed
+                    arkMomentWords={arkMomentWords(messages)}
                     shareBand={<PostShareBand labels={shareLabels} animal={shareAnimal} />}
                     sharePanel={<PostSharePanel labels={shareLabels} animal={shareAnimal} />}
                 />

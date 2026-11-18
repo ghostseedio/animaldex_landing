@@ -612,6 +612,28 @@
             "tapKind": "Her birini kimin getirdiğini görmek için bir türe dokun",
             "animalsMore": "+{count} daha",
             "you": "Sen"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Şimdi değil",
+            "seeInArk": "Ark'ta gör",
+            "openArk": "Ark'ı aç",
+            "yourYoung": "{species}: hayvanının yavruları oldu",
+            "yourFirstAboard": "{species}: hayvanın, türünün Ark'taki ilk örneği",
+            "yourLine": "{species}: hayvanının soyu {generation}. nesle ulaştı",
+            "firstYoungHatched": "{species}: ilk yavrular Ark'ta yumurtadan çıktı",
+            "firstYoungBorn": "{species}: ilk yavrular Ark'ta doğdu",
+            "firstAboard": "{species}: türünün ilk örneği Ark'a bindi",
+            "newGeneration": "Ark'ta {generation}. nesil doğdu",
+            "speciesMilestone": "{species}: artık Ark'ta {count} tane",
+            "arkMilestone": "Artık Ark'ta {count} hayvan var",
+            "extinction": "{species}: türünün Ark'taki son örneği öldü",
+            "youngHatched": "Yumurtadan çıkan yavru: {count}",
+            "youngBorn": "Doğan yavru: {count}",
+            "cameAboardOnDay": "{day}. günde gemiye binmişti.",
+            "arkDay": "Ark günü {day}",
+            "broughtBy": "Gemiye getiren: {name}",
+            "fromLine": "{name} adlı kişinin soyundan"
         }
     },
     "talkPage": {

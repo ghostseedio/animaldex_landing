@@ -612,6 +612,28 @@
             "tapKind": "Нажмите на вид, чтобы увидеть, кто привёз каждое животное",
             "animalsMore": "+{count} ещё",
             "you": "Вы"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Не сейчас",
+            "seeInArk": "Посмотреть в Ark",
+            "openArk": "Открыть Ark",
+            "yourYoung": "{species}: у вашего животного появились детёныши",
+            "yourFirstAboard": "{species}: ваше животное — первое своего вида в Ark",
+            "yourLine": "{species}: род вашего животного дошёл до поколения {generation}",
+            "firstYoungHatched": "{species}: в Ark вылупились первые детёныши",
+            "firstYoungBorn": "{species}: в Ark родились первые детёныши",
+            "firstAboard": "{species}: первое животное этого вида поднялось на борт Ark",
+            "newGeneration": "В Ark родилось поколение {generation}",
+            "speciesMilestone": "{species}: теперь на борту Ark {count}",
+            "arkMilestone": "Животных на борту Ark: {count}",
+            "extinction": "{species}: последнее животное этого вида в Ark умерло",
+            "youngHatched": "Вылупилось детёнышей: {count}",
+            "youngBorn": "Родилось детёнышей: {count}",
+            "cameAboardOnDay": "Оно поднялось на борт в день {day}.",
+            "arkDay": "День Ark {day}",
+            "broughtBy": "На борт привёл(а): {name}",
+            "fromLine": "Из рода, начатого: {name}"
         }
     },
     "talkPage": {

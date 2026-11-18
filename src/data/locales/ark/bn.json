@@ -612,6 +612,28 @@
             "tapKind": "কে কোনটি এনেছে দেখতে একটি প্রজাতিতে ট্যাপ করুন",
             "animalsMore": "+আরও {count}",
             "you": "আপনি"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "এখন নয়",
+            "seeInArk": "Ark-এ এটি দেখুন",
+            "openArk": "Ark খুলুন",
+            "yourYoung": "{species}: আপনার প্রাণীর ছানা হয়েছে",
+            "yourFirstAboard": "{species}: আপনার প্রাণীটি Ark-এ নিজের প্রজাতির প্রথম",
+            "yourLine": "{species}: আপনার প্রাণীর বংশধারা প্রজন্ম {generation}-এ পৌঁছেছে",
+            "firstYoungHatched": "{species}: Ark-এ প্রথম ছানারা ডিম ফুটে বেরিয়েছে",
+            "firstYoungBorn": "{species}: Ark-এ প্রথম ছানারা জন্মেছে",
+            "firstAboard": "{species}: এই প্রজাতির প্রথম প্রাণী Ark-এ উঠেছে",
+            "newGeneration": "Ark-এ প্রজন্ম {generation}-এর জন্ম",
+            "speciesMilestone": "{species}: এখন Ark-এ {count}টি",
+            "arkMilestone": "এখন Ark-এ {count}টি প্রাণী",
+            "extinction": "{species}: Ark-এ এই প্রজাতির শেষ প্রাণীটি মারা গেছে",
+            "youngHatched": "ডিম ফুটে বেরোনো ছানা: {count}",
+            "youngBorn": "জন্মানো ছানা: {count}",
+            "cameAboardOnDay": "এটি দিন {day}-এ জাহাজে উঠেছিল।",
+            "arkDay": "Ark দিন {day}",
+            "broughtBy": "জাহাজে এনেছেন: {name}",
+            "fromLine": "{name}-এর বংশধারা থেকে"
         }
     },
     "talkPage": {

@@ -25,6 +25,8 @@ import {debateFeedSlotId, debateFeedSlots, initialFeedAnchor, planDebateFeed, ty
 import {ARK_COPY, type CompanionWords} from "@/lib/companion-bond";
 import FeedbackPollPost from "@/components/feedback-polls/feedback-poll-post";
 import {parseFeedbackPoll, placeFeedbackPoll, type FeedbackPoll} from "@/lib/feedback-polls";
+import ArkMomentPost from "@/components/ark-moments/ark-moment-post";
+import {ARK_MOMENT_ENGLISH, parseArkMoments, placeArkMoments, planArkMomentSlots, type ArkMoment, type ArkMomentWords} from "@/lib/ark-moments";
 
 type DiscoverSegment = "discover" | "collectors";
 
@@ -326,7 +328,9 @@ export default function DiscoverHome({
     shareBand = null,
     sharePanel = null,
     debates = [],
-    debateWords = null
+    debateWords = null,
+    arkMomentWords = ARK_MOMENT_ENGLISH,
+    initialArkMoments = null
 }: {
     locale: string;
     timeline: DiscoverTimelineItem[];
@@ -360,6 +364,10 @@ export default function DiscoverHome({
     debates?: Debate[];
     /** Their words; null hides Explore's Debates everywhere on this page. */
     debateWords?: CompanionWords | null;
+    /** Ark moments' words (`ark.moments` in the locale file). */
+    arkMomentWords?: ArkMomentWords;
+    /** DEV fixtures only (/dev/discover-ark-moments): moments given instead of asked for. */
+    initialArkMoments?: ArkMoment[] | null;
 }) {
     const router = useRouter();
     const [segment, setSegment] = useState<DiscoverSegment>(initialSegment);
@@ -396,23 +404,74 @@ export default function DiscoverHome({
      */
     const [feedbackPoll, setFeedbackPoll] = useState<FeedbackPoll | null>(null);
     const feedbackPollAskedRef = useRef(false);
-    type RenderSlot = DebateFeedSlot<DiscoverTimelineItem> | {kind: "poll"; poll: FeedbackPoll};
+    /** The poll's slot as served, kept after "Not now" so the moments planned around it never move. */
+    const [feedbackPollSlot, setFeedbackPollSlot] = useState<number | null>(null);
+    /**
+     * Ark moments for this feed session (AnimalDex 20261202110000, lib/ark-moments.ts): asked once with the poll, at
+     * the same session moment; planned around the poll (at least 8 apart), each shown once the feed has loaded its
+     * slot. Like the poll, a card in the list only: the slots above never see it. Marked seen once on screen.
+     */
+    const [arkMoments, setArkMoments] = useState<ArkMoment[]>(initialArkMoments ?? []);
+    const [dismissedArkMoments, setDismissedArkMoments] = useState<ReadonlySet<string>>(() => new Set());
+    const arkMomentsAskedRef = useRef(initialArkMoments !== null);
+    const arkMomentsSeenRef = useRef(new Set<string>());
+    const arkMomentPlan = useMemo(() => planArkMomentSlots(arkMoments, feedbackPollSlot), [arkMoments, feedbackPollSlot]);
+    type RenderSlot = DebateFeedSlot<DiscoverTimelineItem> | {kind: "poll"; poll: FeedbackPoll} | {kind: "arkMoment"; moment: ArkMoment};
     const renderSlots = useMemo(
-        () => placeFeedbackPoll<RenderSlot>(feedSlots, feedbackPoll, (poll) => ({kind: "poll", poll})),
-        [feedSlots, feedbackPoll]
+        () => placeArkMoments<RenderSlot>(
+            placeFeedbackPoll<RenderSlot>(feedSlots, feedbackPoll, (poll) => ({kind: "poll", poll})),
+            arkMomentPlan.filter(({moment}) => !dismissedArkMoments.has(moment.id)),
+            (moment) => ({kind: "arkMoment", moment})
+        ),
+        [feedSlots, feedbackPoll, arkMomentPlan, dismissedArkMoments]
     );
+    const markArkMomentSeen = useCallback((moment: ArkMoment) => {
+        if (arkMomentsSeenRef.current.has(moment.id)) return;
+        arkMomentsSeenRef.current.add(moment.id);
+        if (initialArkMoments) return;
+        void fetch("/api/app/discover/ark-moments", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({action: "seen", momentIds: [moment.id]})
+        }).catch(() => undefined);
+    }, [initialArkMoments]);
+    const dismissArkMoment = useCallback((moment: ArkMoment) => {
+        setDismissedArkMoments((current) => new Set(current).add(moment.id));
+        if (initialArkMoments) return;
+        void fetch("/api/app/discover/ark-moments", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({action: "dismiss", momentId: moment.id})
+        }).catch(() => undefined);
+    }, [initialArkMoments]);
     const [nextTimelineCursor, setNextTimelineCursor] = useState<DiscoverTimelineCursor | null>(timelineCursor);
     const [featuredItems, setFeaturedItems] = useState(featured);
     const [viewerUserId, setViewerUserId] = useState(initialViewerUserId);
+    /** The feed session's moment, shared by the poll and the Ark moments (same seed, same as_of). */
+    const feedSessionAsOfRef = useRef<string | null>(null);
     useEffect(() => {
-        if (!viewerUserId || feedbackPollAskedRef.current) return;
-        feedbackPollAskedRef.current = true;
-        const asOf = new Date().toISOString();
-        const query = new URLSearchParams({surface: "feed", seed: "web", asOf});
-        fetch(`/api/app/discover/poll?${query.toString()}`, {cache: "no-store"})
-            .then((response) => (response.ok ? response.json() : null))
-            .then((body: {poll?: unknown} | null) => setFeedbackPoll(parseFeedbackPoll(body?.poll, locale)))
-            .catch(() => undefined);
+        if (!viewerUserId) return;
+        feedSessionAsOfRef.current ??= new Date().toISOString();
+        const query = new URLSearchParams({surface: "feed", seed: "web", asOf: feedSessionAsOfRef.current});
+        if (!feedbackPollAskedRef.current) {
+            feedbackPollAskedRef.current = true;
+            fetch(`/api/app/discover/poll?${query.toString()}`, {cache: "no-store"})
+                .then((response) => (response.ok ? response.json() : null))
+                .then((body: {poll?: unknown} | null) => {
+                    const poll = parseFeedbackPoll(body?.poll, locale);
+                    setFeedbackPoll(poll);
+                    setFeedbackPollSlot(poll?.slot ?? null);
+                })
+                .catch(() => undefined);
+        }
+        if (!arkMomentsAskedRef.current) {
+            arkMomentsAskedRef.current = true;
+            // Missing RPC, an error or no moments: the route answers [] and nothing is drawn.
+            fetch(`/api/app/discover/ark-moments?${new URLSearchParams({seed: "web", asOf: feedSessionAsOfRef.current}).toString()}`, {cache: "no-store"})
+                .then((response) => (response.ok ? response.json() : null))
+                .then((body: {moments?: unknown} | null) => setArkMoments(parseArkMoments(body?.moments)))
+                .catch(() => undefined);
+        }
     }, [viewerUserId, locale]);
     const [collectorItems, setCollectorItems] = useState(collectors);
     const [hasMoreTimeline, setHasMoreTimeline] = useState(Boolean(timelineCursor));
@@ -955,7 +1014,12 @@ export default function DiscoverHome({
                             >
                                 {/* Flush stacking: iOS uses VStack(spacing: 0) so one
                                     swipe always lands on exactly one post. */}
-                                {renderSlots.map((slot) => slot.kind === "poll" ? (
+                                {renderSlots.map((slot) => slot.kind === "arkMoment" ? (
+                                    // Like the poll: no /p page and no slot id, so the feed's anchor and URL never land on it.
+                                    <div key={`ark-moment-${slot.moment.id}`} data-timeline-snap-item className="h-full min-h-0 snap-start snap-always">
+                                        <ArkMomentPost moment={slot.moment} words={arkMomentWords} locale={locale} onSeen={markArkMomentSeen} onDismiss={dismissArkMoment} />
+                                    </div>
+                                ) : slot.kind === "poll" ? (
                                     // A poll has no /p page and no seen mark (the server counts its sessions); it has no
                                     // slot id either, so the feed's anchor never lands on it.
                                     <div key={`poll-${slot.poll.id}`} data-timeline-snap-item className="h-full min-h-0 snap-start snap-always">

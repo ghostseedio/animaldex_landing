@@ -612,6 +612,28 @@
             "tapKind": "点按一个物种，看看每只是谁带来的",
             "animalsMore": "+{count} 只",
             "you": "你"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "暂不",
+            "seeInArk": "在 Ark 中查看",
+            "openArk": "打开 Ark",
+            "yourYoung": "{species}：你的动物有了幼崽",
+            "yourFirstAboard": "{species}：你的动物是 Ark 上这一物种的第一只",
+            "yourLine": "{species}：你的动物的血统已到第 {generation} 代",
+            "firstYoungHatched": "{species}：Ark 上首批幼崽孵化了",
+            "firstYoungBorn": "{species}：Ark 上首批幼崽出生了",
+            "firstAboard": "{species}：这一物种的第一只登上了 Ark",
+            "newGeneration": "第 {generation} 代在 Ark 上出生",
+            "speciesMilestone": "{species}：Ark 上现有 {count} 只",
+            "arkMilestone": "Ark 上现有 {count} 只动物",
+            "extinction": "{species}：Ark 上这一物种的最后一只已经死去",
+            "youngHatched": "孵化的幼崽：{count}",
+            "youngBorn": "出生的幼崽：{count}",
+            "cameAboardOnDay": "它在第 {day} 天登船。",
+            "arkDay": "Ark 第 {day} 天",
+            "broughtBy": "由 {name} 带上船",
+            "fromLine": "来自 {name} 的血统"
         }
     },
     "talkPage": {

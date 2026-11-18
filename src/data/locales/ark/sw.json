@@ -612,6 +612,28 @@
             "tapKind": "Gusa aina moja kuona nani alileta kila mmoja",
             "animalsMore": "+{count} zaidi",
             "you": "Wewe"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Si sasa",
+            "seeInArk": "Mwone ndani ya Ark",
+            "openArk": "Fungua Ark",
+            "yourYoung": "{species}: mnyama wako amepata watoto",
+            "yourFirstAboard": "{species}: mnyama wako ni wa kwanza wa aina yake kwenye Ark",
+            "yourLine": "{species}: ukoo wa mnyama wako umefikia kizazi cha {generation}",
+            "firstYoungHatched": "{species}: watoto wa kwanza wameanguliwa kwenye Ark",
+            "firstYoungBorn": "{species}: watoto wa kwanza wamezaliwa kwenye Ark",
+            "firstAboard": "{species}: wa kwanza wa aina yake amepanda Ark",
+            "newGeneration": "Kizazi cha {generation} kimezaliwa kwenye Ark",
+            "speciesMilestone": "{species}: sasa {count} kwenye Ark",
+            "arkMilestone": "Sasa wanyama {count} kwenye Ark",
+            "extinction": "{species}: wa mwisho wa aina yake kwenye Ark amekufa",
+            "youngHatched": "Watoto walioanguliwa: {count}",
+            "youngBorn": "Watoto waliozaliwa: {count}",
+            "cameAboardOnDay": "Alipanda siku ya {day}.",
+            "arkDay": "Siku ya Ark {day}",
+            "broughtBy": "Alipandishwa na {name}",
+            "fromLine": "Kutoka ukoo wa {name}"
         }
     },
     "talkPage": {

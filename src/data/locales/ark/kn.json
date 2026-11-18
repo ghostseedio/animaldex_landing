@@ -612,6 +612,28 @@
             "tapKind": "ಯಾರು ಯಾವುದನ್ನು ತಂದರು ಎಂದು ನೋಡಲು ಒಂದು ಪ್ರಭೇದವನ್ನು ಟ್ಯಾಪ್ ಮಾಡಿ",
             "animalsMore": "+{count} ಇನ್ನಷ್ಟು",
             "you": "ನೀವು"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "ಈಗ ಬೇಡ",
+            "seeInArk": "ಅದನ್ನು Ark ನಲ್ಲಿ ನೋಡಿ",
+            "openArk": "Ark ತೆರೆಯಿರಿ",
+            "yourYoung": "{species}: ನಿಮ್ಮ ಪ್ರಾಣಿಗೆ ಮರಿಗಳಾಗಿವೆ",
+            "yourFirstAboard": "{species}: ನಿಮ್ಮ ಪ್ರಾಣಿ Ark ನಲ್ಲಿ ತನ್ನ ಬಗೆಯ ಮೊದಲನೆಯದು",
+            "yourLine": "{species}: ನಿಮ್ಮ ಪ್ರಾಣಿಯ ವಂಶ ತಲೆಮಾರು {generation} ತಲುಪಿದೆ",
+            "firstYoungHatched": "{species}: Ark ನಲ್ಲಿ ಮೊದಲ ಮರಿಗಳು ಮೊಟ್ಟೆಯೊಡೆದು ಬಂದಿವೆ",
+            "firstYoungBorn": "{species}: Ark ನಲ್ಲಿ ಮೊದಲ ಮರಿಗಳು ಹುಟ್ಟಿವೆ",
+            "firstAboard": "{species}: ಈ ಬಗೆಯ ಮೊದಲ ಪ್ರಾಣಿ Ark ಹತ್ತಿತು",
+            "newGeneration": "Ark ನಲ್ಲಿ ತಲೆಮಾರು {generation} ಹುಟ್ಟಿದೆ",
+            "speciesMilestone": "{species}: ಈಗ Ark ನಲ್ಲಿ {count}",
+            "arkMilestone": "ಈಗ Ark ನಲ್ಲಿ {count} ಪ್ರಾಣಿಗಳು",
+            "extinction": "{species}: Ark ನಲ್ಲಿ ಈ ಬಗೆಯ ಕೊನೆಯ ಪ್ರಾಣಿ ಸತ್ತಿತು",
+            "youngHatched": "ಮೊಟ್ಟೆಯೊಡೆದ ಮರಿಗಳು: {count}",
+            "youngBorn": "ಹುಟ್ಟಿದ ಮರಿಗಳು: {count}",
+            "cameAboardOnDay": "ಅದು ದಿನ {day} ರಂದು Ark ಹತ್ತಿತ್ತು.",
+            "arkDay": "Ark ದಿನ {day}",
+            "broughtBy": "Ark ಗೆ ತಂದವರು: {name}",
+            "fromLine": "{name} ಅವರ ವಂಶದಿಂದ"
         }
     },
     "talkPage": {

@@ -612,6 +612,28 @@
             "tapKind": "Atinge o specie ca să vezi cine a adus fiecare animal",
             "animalsMore": "+{count} în plus",
             "you": "Tu"
+        },
+        "moments": {
+            "label": "Ark",
+            "notNow": "Nu acum",
+            "seeInArk": "Vezi-l în Ark",
+            "openArk": "Deschide Ark",
+            "yourYoung": "{species}: animalul tău a avut pui",
+            "yourFirstAboard": "{species}: animalul tău este primul de felul lui în Ark",
+            "yourLine": "{species}: descendența animalului tău a ajuns la generația {generation}",
+            "firstYoungHatched": "{species}: primii pui ieșiți din ou în Ark",
+            "firstYoungBorn": "{species}: primii pui născuți în Ark",
+            "firstAboard": "{species}: primul de felul lui a urcat la bordul Ark",
+            "newGeneration": "Generația {generation} se naște în Ark",
+            "speciesMilestone": "{species}: acum {count} la bordul Ark",
+            "arkMilestone": "Acum {count} animale la bordul Ark",
+            "extinction": "{species}: ultimul de felul lui din Ark a murit",
+            "youngHatched": "Pui ieșiți din ou: {count}",
+            "youngBorn": "Pui născuți: {count}",
+            "cameAboardOnDay": "A urcat la bord în ziua {day}.",
+            "arkDay": "Ziua {day} în Ark",
+            "broughtBy": "Adus la bord de {name}",
+            "fromLine": "Din descendența lui {name}"
         }
     },
     "talkPage": {
