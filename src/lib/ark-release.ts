@@ -134,6 +134,27 @@ export function decodeArkReleaseResult(raw: unknown): ArkReleaseResult | null {
     return {releaseId, animalId: animalId.toLowerCase(), creditsSpent: Math.round(spent), balance: Math.max(Math.round(balance), 0), island, wildSkill: clamp01(num(row.wild_skill) ?? 0.2), rescue: row.rescue === true};
 }
 
+/**
+ * `/api/ark/release`'s `quote` and `release` (this module's own shapes, as the route sends them), checked again on the
+ * page: the same checks as on the server's answer, so the page never trusts a shape it did not read.
+ */
+export function arkReleaseQuoteFromApi(raw: unknown): ArkReleaseQuote | null {
+    const q = record(raw);
+    if (!q) return null;
+    const rescue = record(q.rescue);
+    return decodeArkReleaseQuote({
+        available: q.available, eligible: q.eligible, reasons: q.reasons, animal_id: q.animalId, name: q.name, tier: q.tier,
+        credits: q.credits ?? undefined, balance: q.balance ?? undefined, to: {island: q.island, zone: q.zone}, wild_skill: q.wildSkill, has_power: q.hasPower,
+        rescue: rescue ? {band: rescue.band, wild_count: rescue.wildCount} : undefined, gone_from_wild: q.goneFromWild, next_at: q.nextAt ?? undefined
+    });
+}
+
+export function arkReleaseResultFromApi(raw: unknown): ArkReleaseResult | null {
+    const r = record(raw);
+    if (!r) return null;
+    return decodeArkReleaseResult({released: true, release_id: r.releaseId, animal_id: r.animalId, credits_spent: r.creditsSpent, balance: r.balance, to: {island: r.island}, wild_skill: r.wildSkill, rescue: r.rescue});
+}
+
 /** The server's error message as a code the page has words for (`release_<reason>`, `insufficient_credits`). */
 export function arkReleaseProblem(message: string | null | undefined): ArkReleaseProblem {
     const m = (message ?? "").toLowerCase();

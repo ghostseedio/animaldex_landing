@@ -12,8 +12,8 @@ import {
     arkReleaseWords,
     arkWildSkillBand,
     arkWildSkillText,
-    decodeArkReleaseQuote,
-    decodeArkReleaseResult,
+    arkReleaseQuoteFromApi,
+    arkReleaseResultFromApi,
     type ArkReleaseProblem,
     type ArkReleaseQuote,
     type ArkReleaseResult,
@@ -117,7 +117,7 @@ function ArkReleaseOffer({animal, zoneName, words, locale, talkHref, onReleased}
         void fetch(`/api/ark/release?animal=${encodeURIComponent(animal.id)}`, {cache: "no-store"})
             .then((response) => (response.ok ? response.json() : null))
             .then((body: {quote?: unknown} | null) => {
-                if (!off) setQuote(decodeArkReleaseQuote(body?.quote));
+                if (!off) setQuote(arkReleaseQuoteFromApi(body?.quote));
             })
             .catch(() => undefined);
         return () => {
@@ -139,7 +139,7 @@ function ArkReleaseOffer({animal, zoneName, words, locale, talkHref, onReleased}
         void fetch("/api/ark/release", {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({animalId: animal.id, clientKey: key})})
             .then(async (response) => {
                 const body = await response.json().catch(() => null) as {ok?: boolean; release?: unknown; code?: unknown} | null;
-                const made = body?.ok === true ? decodeArkReleaseResult({released: true, ...flat(body.release)}) : null;
+                const made = body?.ok === true ? arkReleaseResultFromApi(body.release) : null;
                 settle(made ? {ok: true, release: made} : {ok: false, code: typeof body?.code === "string" ? body.code as ArkReleaseProblem : "failed"});
             })
             .catch(() => settle({ok: false, code: "failed"}));
@@ -189,12 +189,6 @@ function ArkReleaseOffer({animal, zoneName, words, locale, talkHref, onReleased}
             ) : null}
         </div>
     );
-}
-
-/** The API's `release` object in the server answer's keys, for the one decoder. */
-function flat(release: unknown): Record<string, unknown> {
-    const r = release && typeof release === "object" ? release as Record<string, unknown> : {};
-    return {release_id: r.releaseId, animal_id: r.animalId, credits_spent: r.creditsSpent, balance: r.balance, to: {island: r.island}, wild_skill: r.wildSkill, rescue: r.rescue};
 }
 
 type SheetProps = {
@@ -274,13 +268,13 @@ function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, busy, p
                 onClick={(event) => event.stopPropagation()}
                 className="rows-in max-h-[88svh] w-full overflow-y-auto overscroll-contain rounded-t-2xl border border-line-200 bg-canvas-950 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 text-ink-100 shadow-2xl md:max-w-md md:rounded-2xl md:px-6 md:pb-6 md:pt-5"
             >
-                <h2 id={titleId} className="font-display text-lg font-extrabold leading-tight text-white md:text-xl">{fillArkWords(words.title, {animal: animal.name})}</h2>
                 {done ? (
                     <>
-                        <p data-testid="ark-release-done" className="mt-3 flex items-start gap-2 text-[14px] font-semibold leading-snug text-primary-100">
-                            <svg viewBox="0 0 16 16" className="mt-[3px] h-3.5 w-3.5 shrink-0 text-primary-300" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" /></svg>
+                        {/* Released: the heading is no longer a question. */}
+                        <h2 id={titleId} data-testid="ark-release-done" aria-live="polite" className="flex items-start gap-2 font-display text-lg font-extrabold leading-tight text-white md:text-xl">
+                            <svg viewBox="0 0 16 16" className="mt-[5px] h-4 w-4 shrink-0 text-primary-300" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 8.5l3.2 3L13 4.5" /></svg>
                             <span>{fillArkWords(done.rescue ? words.doneRescue : words.done, {animal: animal.name})}</span>
-                        </p>
+                        </h2>
                         <SkillLine skill={skill} band={band} words={words} />
                         <p className="mt-2 text-[13px] leading-snug text-ink-200">{words.warn}</p>
                         <p className="mt-1 text-[11.5px] leading-snug text-ink-400">{words.stepHint}</p>
@@ -291,6 +285,7 @@ function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, busy, p
                     </>
                 ) : (
                     <>
+                        <h2 id={titleId} className="font-display text-lg font-extrabold leading-tight text-white md:text-xl">{fillArkWords(words.title, {animal: animal.name})}</h2>
                         {rescue ? <p data-testid="ark-release-rescue" className="mt-3 rounded-lg bg-[#5a461e] px-3 py-2 text-[13px] font-semibold leading-snug text-[#ffe2a8]">{rescue}</p> : null}
                         <p className="mt-3 text-[13.5px] leading-snug text-ink-100">{quote.island === "town" ? words.toTown : fillArkWords(words.toWild, {zone: zoneName})}</p>
                         <SkillLine skill={skill} band={band} words={words} />

@@ -14,6 +14,8 @@ import {
     ARK_RELEASE_UNAVAILABLE,
     arkReleaseKey,
     arkReleaseProblem,
+    arkReleaseQuoteFromApi,
+    arkReleaseResultFromApi,
     arkReleaseReasonText,
     arkReleaseRescueText,
     arkReleaseWords,
@@ -81,6 +83,22 @@ test("the answer of a release, and the server's refusals as codes the page has w
     assert.equal(arkReleaseProblem("deadlock detected"), "failed");
     assert.equal(arkReleaseProblem(null), "failed");
     for (const reason of ARK_RELEASE_REASONS) assert.equal(arkReleaseProblem(`release_${reason}`), reason);
+});
+
+test("the route's answers, read again on the page, are the same quote and the same release (nothing is lost on the way)", () => {
+    const full = {...QUOTE, eligible: false, reasons: ["cooldown_day"], next_at: "2026-12-04T10:00:00Z", rescue: {crisis_id: "c", band: "last", wild_count: 1}, gone_from_wild: true, has_power: true, wild_skill: 0.3, to: {island: "town", zone: "farm_garden"}};
+    for (const server of [QUOTE, full, {available: false}, {available: true, eligible: false, reasons: ["not_owner"], balance: 20}]) {
+        const atRoute = decodeArkReleaseQuote(server)!;
+        assert.deepEqual(arkReleaseQuoteFromApi(JSON.parse(JSON.stringify(atRoute))), atRoute);
+    }
+    assert.equal(arkReleaseQuoteFromApi(null), null);
+    assert.equal(arkReleaseQuoteFromApi({eligible: true, credits: 1}), null);
+    // A page can only ever be told a price by a quote the server made: a bare "eligible" is not an offer.
+    assert.equal(arkReleaseQuoteFromApi({available: true, eligible: true, reasons: []})!.eligible, false);
+    const made = decodeArkReleaseResult({released: true, release_id: "r-1", animal_id: ANIMAL, credits_spent: 35, balance: 65, to: {island: "wild", zone: "woodland"}, wild_skill: 0.2, rescue: true})!;
+    assert.deepEqual(arkReleaseResultFromApi(JSON.parse(JSON.stringify(made))), made);
+    assert.equal(arkReleaseResultFromApi({releaseId: "r"}), null);
+    assert.equal(arkReleaseResultFromApi(null), null);
 });
 
 test("the released animals: animal ids, days and a number, nothing else; null while the switch is off", () => {
