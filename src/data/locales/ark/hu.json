@@ -580,6 +580,8 @@
             "habitat": "Élőhely",
             "foundIn": "Elterjedés",
             "saved": "Megmentve: ez a faj már nincs veszélyben",
+            "savedBy": "Megmentette: {name}",
+            "savedByCollector": "Megmentette egy gyűjtő",
             "lost": "Kipusztult a vadonból",
             "listLabel": "Veszélyeztetett fajok a vadonban, legújabb elöl",
             "unavailable": "Most nem sikerült ellenőrizni. Próbáld újra egy pillanat múlva.",

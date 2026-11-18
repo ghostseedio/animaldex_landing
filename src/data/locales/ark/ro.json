@@ -580,6 +580,8 @@
             "habitat": "Habitat",
             "foundIn": "Răspândire",
             "saved": "Salvată: această specie nu mai este în pericol",
+            "savedBy": "Datorită lui {name}",
+            "savedByCollector": "Datorită unei persoane care colecționează animale",
             "lost": "Dispărută din sălbăticie",
             "listLabel": "Specii în pericol în sălbăticie, cele mai noi primele",
             "unavailable": "Nu se poate verifica acum. Încearcă din nou peste puțin timp.",

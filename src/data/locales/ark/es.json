@@ -580,6 +580,8 @@
             "habitat": "Hábitat",
             "foundIn": "Distribución",
             "saved": "A salvo: esta especie ya no está en peligro",
+            "savedBy": "Gracias a {name}",
+            "savedByCollector": "Gracias a una persona coleccionista",
             "lost": "Perdida en libertad",
             "listLabel": "Especies en peligro en libertad, las más recientes primero",
             "unavailable": "No se puede comprobar ahora. Inténtalo de nuevo en un momento.",

@@ -580,6 +580,8 @@
             "habitat": "Elinympäristö",
             "foundIn": "Levinneisyys",
             "saved": "Pelastettu: laji ei ole enää vaarassa",
+            "savedBy": "Pelastanut {name}",
+            "savedByCollector": "Pelastanut keräilijä",
             "lost": "Kadonnut luonnosta",
             "listLabel": "Luonnossa uhanalaiset lajit, uusimmat ensin",
             "unavailable": "Tarkistus ei onnistu juuri nyt. Yritä hetken kuluttua uudelleen.",

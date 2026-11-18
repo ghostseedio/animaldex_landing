@@ -580,6 +580,8 @@
             "habitat": "Habitat",
             "foundIn": "Répartition",
             "saved": "Sauvée : cette espèce n'est plus en danger",
+            "savedBy": "Grâce à {name}",
+            "savedByCollector": "Grâce à une personne qui collectionne les animaux",
             "lost": "Disparue de la nature",
             "listLabel": "Espèces en danger à l'état sauvage, les plus récentes d'abord",
             "unavailable": "Vérification impossible pour le moment. Réessayez dans un instant.",

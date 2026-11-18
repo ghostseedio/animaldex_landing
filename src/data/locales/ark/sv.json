@@ -580,6 +580,8 @@
             "habitat": "Livsmiljö",
             "foundIn": "Utbredning",
             "saved": "Räddad: arten är inte längre hotad",
+            "savedBy": "Räddad av {name}",
+            "savedByCollector": "Räddad av en samlare",
             "lost": "Försvunnen från det fria",
             "listLabel": "Hotade arter i det fria, de nyaste först",
             "unavailable": "Det går inte att kontrollera just nu. Försök igen om en stund.",

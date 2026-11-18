@@ -580,6 +580,8 @@
             "habitat": "Stanište",
             "foundIn": "Rasprostranjenost",
             "saved": "Spašeno: ova vrsta više nije ugrožena",
+            "savedBy": "Zahvaljujući {name}",
+            "savedByCollector": "Zahvaljujući osobi koja skuplja životinje",
             "lost": "Nestala iz divljine",
             "listLabel": "Ugrožene vrste u divljini, najnovije prve",
             "unavailable": "Trenutačno nije moguće provjeriti. Pokušaj ponovno za trenutak.",

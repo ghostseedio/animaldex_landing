@@ -580,6 +580,8 @@
             "habitat": "Prostredie",
             "foundIn": "Rozšírenie",
             "saved": "Zachránené: tento druh už nie je ohrozený",
+            "savedBy": "Vďaka {name}",
+            "savedByCollector": "Vďaka človeku, ktorý zbiera zvieratá",
             "lost": "Vymizol z voľnej prírody",
             "listLabel": "Ohrozené druhy vo voľnej prírode, najnovšie prvé",
             "unavailable": "Teraz sa to nedá skontrolovať. Skúste to o chvíľu znova.",

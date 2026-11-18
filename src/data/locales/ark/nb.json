@@ -580,6 +580,8 @@
             "habitat": "Leveområde",
             "foundIn": "Utbredelse",
             "saved": "Reddet: arten er ikke lenger truet",
+            "savedBy": "Reddet av {name}",
+            "savedByCollector": "Reddet av en samler",
             "lost": "Forsvunnet fra naturen",
             "listLabel": "Truede arter i naturen, nyeste først",
             "unavailable": "Kan ikke sjekke akkurat nå. Prøv igjen om litt.",

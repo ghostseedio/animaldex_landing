@@ -8,9 +8,12 @@
  *              (owner decision 389): nothing from a person's sightings, no region, no place. A kind whose text names
  *              no country has none.
  *
- * Nothing here predicts and nothing here knows a person: the rows hold kinds, counts, days and animal ids only.
+ * Nothing here predicts and nothing here knows a person: the rows hold kinds, counts, days and animal ids only, and (contract
+ * 1.1) on a saved crisis an arrival ended, `saved_by`: a display name or null for "a collector", decided by the database.
  * Plain functions, no I/O: the route and its tests share them.
  */
+
+import {arkCrisisSaverName} from "./ark-crises";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -158,6 +161,20 @@ export function arkCrisisCountriesFrom(raw: unknown, max = 8): string[] {
 export type ArkCrisesBody = {available: boolean; ark_day?: number; as_of?: string; crises: Array<Record<string, unknown>>};
 
 /**
+ * `saved_by` (contract 1.1, P1-2) as the route sends it: only on a saved crisis, only `[{name}]` (at most 3), and a name is a
+ * display name of at most 40 characters or null ("a collector"). Whatever else the read might one day carry in an entry (an id,
+ * a handle, a link) is dropped here, so the public answer can only ever hold a name.
+ */
+export function arkCrisisSavedByFrom(status: unknown, raw: unknown): Array<{name: string | null}> | null {
+    if (status !== "saved" || !Array.isArray(raw)) return null;
+    const out = raw
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+        .slice(0, 3)
+        .map((item) => ({name: arkCrisisSaverName(item.name)}));
+    return out.length ? out : null;
+}
+
+/**
  * `voyage_crises_v1`'s answer as the route sends it: each row with its one habitat sentence and its countries, a page
  * slug only for a species page that exists, and nothing the contract does not name. Null when it is not an answer.
  */
@@ -187,7 +204,9 @@ export function shapeArkCrises(raw: unknown, pageExists: (slug: string) => boole
             ended_at: row.ended_at ?? null,
             last_animal_ids: Array.isArray(row.last_animal_ids) ? row.last_animal_ids.slice(0, 2) : [],
             habitat: arkCrisisHabitat(row.habitat),
-            countries: arkCrisisCountriesFrom(row.habitat)
+            countries: arkCrisisCountriesFrom(row.habitat),
+            // Contract 1.1: on a saved row only, and only when the read named a saver (no key otherwise).
+            ...(arkCrisisSavedByFrom(row.status, row.saved_by) ? {saved_by: arkCrisisSavedByFrom(row.status, row.saved_by)} : {})
         });
     }
     return {

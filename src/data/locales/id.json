@@ -4777,6 +4777,8 @@
       "habitat": "Habitat",
       "foundIn": "Ditemukan di",
       "saved": "Selamat: spesies ini sudah tidak terancam",
+      "savedBy": "Diselamatkan oleh {name}",
+      "savedByCollector": "Diselamatkan oleh seorang kolektor",
       "lost": "Hilang dari alam liar",
       "listLabel": "Spesies yang terancam di alam liar, terbaru dulu",
       "unavailable": "Belum bisa memeriksa sekarang. Coba lagi sebentar lagi.",

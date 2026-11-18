@@ -580,6 +580,8 @@
             "habitat": "Hàbitat",
             "foundIn": "Distribució",
             "saved": "Salvada: aquesta espècie ja no està en perill",
+            "savedBy": "Gràcies a {name}",
+            "savedByCollector": "Gràcies a una persona col·leccionista",
             "lost": "Perduda en llibertat",
             "listLabel": "Espècies en perill en llibertat, les més recents primer",
             "unavailable": "Ara no es pot comprovar. Torna-ho a provar d'aquí a un moment.",
