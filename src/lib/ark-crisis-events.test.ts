@@ -110,7 +110,7 @@ test("words: every locale has the four lines, one {animal} each, none left in En
         // The four lines of one language are four different sentences.
         assert.equal(new Set(["crisis", "saved", "wildGone", "toCare"].map((key) => live[key])).size, 4, file);
     }
-    for (const key of ["crisis", "saved", "wildGone", "toCare"] as const) assert.doesNotMatch(en[key], FORBIDDEN);
+    for (const key of ["crisis", "saved", "wildGone", "toCare"] as const) assert.doesNotMatch(en[key] as string, FORBIDDEN);
 });
 
 test("the log on screen: the four are shown in turn; a burst keeps them over arrivals and never hides the rest", () => {
