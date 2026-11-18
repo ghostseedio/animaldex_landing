@@ -568,6 +568,24 @@
             "bringBack": "Mkamate mmoja umrudishe",
             "listLabel": "Spishi zilizopotea kutoka Ark, mpya kwanza"
         },
+        "endangered": {
+            "title": "Zilizo hatarini sasa",
+            "intro": "Spishi zilizobaki moja au mbili tu porini.",
+            "empty": "Hakuna spishi iliyo hatarini kwa sasa",
+            "emptyHint": "Spishi ikishuka hadi mbili au moja porini, itaorodheshwa hapa.",
+            "critical": "Hatari kubwa",
+            "last": "Ya mwisho",
+            "wildCount": "Porini: {count}",
+            "openFor": "Iko hatarini kwa {duration}",
+            "habitat": "Makazi",
+            "foundIn": "Mahali inapopatikana",
+            "saved": "Imeokolewa: spishi hii haiko hatarini tena",
+            "lost": "Imetoweka porini",
+            "listLabel": "Spishi zilizo hatarini porini, mpya kwanza",
+            "unavailable": "Haiwezi kukagua sasa. Jaribu tena baada ya muda mfupi.",
+            "seeInArk": "Mwone kwenye Ark",
+            "retry": "Jaribu tena"
+        },
         "photo": {
             "alt": "Picha iliyomleta {species} huyu melini",
             "open": "Tazama picha kubwa zaidi",

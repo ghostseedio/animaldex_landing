@@ -568,6 +568,24 @@
             "bringBack": "Capturez-en un pour le faire revenir",
             "listLabel": "Espèces disparues de l'Ark, les plus récentes d'abord"
         },
+        "endangered": {
+            "title": "En danger maintenant",
+            "intro": "Espèces dont il ne reste qu'un ou deux individus à l'état sauvage.",
+            "empty": "Aucune espèce n'est en danger pour le moment",
+            "emptyHint": "Si une espèce tombe à deux ou un individu à l'état sauvage, elle sera listée ici.",
+            "critical": "Critique",
+            "last": "Dernier individu",
+            "wildCount": "À l'état sauvage : {count}",
+            "openFor": "En danger depuis {duration}",
+            "habitat": "Habitat",
+            "foundIn": "Répartition",
+            "saved": "Sauvée : cette espèce n'est plus en danger",
+            "lost": "Disparue de la nature",
+            "listLabel": "Espèces en danger à l'état sauvage, les plus récentes d'abord",
+            "unavailable": "Vérification impossible pour le moment. Réessayez dans un instant.",
+            "seeInArk": "Le voir dans l'Ark",
+            "retry": "Réessayer"
+        },
         "photo": {
             "alt": "Photo qui a fait monter ce {species} à bord",
             "open": "Voir la photo en plus grand",

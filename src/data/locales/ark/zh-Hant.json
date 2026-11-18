@@ -568,6 +568,24 @@
             "bringBack": "捉一隻把牠帶回來",
             "listLabel": "從 Ark 消失的物種，最新的在前"
         },
+        "endangered": {
+            "title": "目前瀕危",
+            "intro": "野外只剩一隻或兩隻的物種。",
+            "empty": "目前沒有物種處於危險之中",
+            "emptyHint": "如果某個物種在野外減少到兩隻或一隻，就會列在這裡。",
+            "critical": "危急",
+            "last": "最後一隻",
+            "wildCount": "野外現存：{count}",
+            "openFor": "危險已持續 {duration}",
+            "habitat": "棲息地",
+            "foundIn": "分佈",
+            "saved": "已獲救：該物種已脫離危險",
+            "lost": "已從野外消失",
+            "listLabel": "野外瀕危物種，最新的在前",
+            "unavailable": "暫時無法檢查，請稍後再試。",
+            "seeInArk": "在 Ark 中查看",
+            "retry": "再試一次"
+        },
         "photo": {
             "alt": "把這隻{species}帶上船的照片",
             "open": "查看大圖",

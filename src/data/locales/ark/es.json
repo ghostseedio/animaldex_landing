@@ -568,6 +568,24 @@
             "bringBack": "Captura uno para traerlo de vuelta",
             "listLabel": "Especies perdidas del Ark, las más recientes primero"
         },
+        "endangered": {
+            "title": "En peligro ahora",
+            "intro": "Especies a las que solo les quedan uno o dos ejemplares en libertad.",
+            "empty": "Ninguna especie está en peligro ahora mismo",
+            "emptyHint": "Si una especie baja a dos o uno en libertad, aparecerá aquí.",
+            "critical": "Crítica",
+            "last": "Último ejemplar",
+            "wildCount": "En libertad: {count}",
+            "openFor": "En peligro desde hace {duration}",
+            "habitat": "Hábitat",
+            "foundIn": "Distribución",
+            "saved": "A salvo: esta especie ya no está en peligro",
+            "lost": "Perdida en libertad",
+            "listLabel": "Especies en peligro en libertad, las más recientes primero",
+            "unavailable": "No se puede comprobar ahora. Inténtalo de nuevo en un momento.",
+            "seeInArk": "Verlo en el Ark",
+            "retry": "Intentar de nuevo"
+        },
         "photo": {
             "alt": "Foto que trajo a este {species} a bordo",
             "open": "Ver la foto más grande",

@@ -45,6 +45,7 @@ export default function ArkLiteLayer({snapshot, hearts, words, locale, linkLocal
                 linkLocale,
                 talk,
                 eventsUrl,
+                endangeredUrl: linkLocale && linkLocale !== "en" ? `/${linkLocale}/ark/endangered` : "/ark/endangered",
                 onOpen3d: () => latest.current.onOpen3d()
             });
             liteRef.current = lite;

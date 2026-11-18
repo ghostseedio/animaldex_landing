@@ -568,6 +568,24 @@
             "bringBack": "Złap jednego, by go przywrócić",
             "listLabel": "Gatunki utracone z Ark, najnowsze najpierw"
         },
+        "endangered": {
+            "title": "Zagrożone teraz",
+            "intro": "Gatunki, których na wolności zostały tylko jeden lub dwa osobniki.",
+            "empty": "Obecnie żaden gatunek nie jest zagrożony",
+            "emptyHint": "Jeśli liczba osobników gatunku na wolności spadnie do dwóch lub jednego, pojawi się tutaj.",
+            "critical": "Krytyczne",
+            "last": "Ostatni osobnik",
+            "wildCount": "Na wolności: {count}",
+            "openFor": "Czas w zagrożeniu: {duration}",
+            "habitat": "Siedlisko",
+            "foundIn": "Zasięg",
+            "saved": "Uratowano: ten gatunek nie jest już zagrożony",
+            "lost": "Utracony na wolności",
+            "listLabel": "Gatunki zagrożone na wolności, od najnowszych",
+            "unavailable": "Nie można teraz sprawdzić. Spróbuj ponownie za chwilę.",
+            "seeInArk": "Zobacz go w Ark",
+            "retry": "Spróbuj ponownie"
+        },
         "photo": {
             "alt": "Zdjęcie, dzięki któremu to zwierzę ({species}) trafiło na pokład",
             "open": "Zobacz większe zdjęcie",

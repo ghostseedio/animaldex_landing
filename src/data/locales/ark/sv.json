@@ -568,6 +568,24 @@
             "bringBack": "Fånga en för att ta tillbaka den",
             "listLabel": "Arter förlorade från Ark, nyaste först"
         },
+        "endangered": {
+            "title": "Hotade nu",
+            "intro": "Arter som bara har en eller två kvar i det fria.",
+            "empty": "Ingen art är hotad just nu",
+            "emptyHint": "Om en art sjunker till två eller en i det fria visas den här.",
+            "critical": "Kritisk",
+            "last": "Den sista",
+            "wildCount": "I det fria: {count}",
+            "openFor": "Hotad i {duration}",
+            "habitat": "Livsmiljö",
+            "foundIn": "Utbredning",
+            "saved": "Räddad: arten är inte längre hotad",
+            "lost": "Försvunnen från det fria",
+            "listLabel": "Hotade arter i det fria, de nyaste först",
+            "unavailable": "Det går inte att kontrollera just nu. Försök igen om en stund.",
+            "seeInArk": "Se den i Ark",
+            "retry": "Försök igen"
+        },
         "photo": {
             "alt": "Fotot som tog den här {species} ombord",
             "open": "Se fotot större",

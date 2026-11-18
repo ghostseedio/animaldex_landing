@@ -568,6 +568,24 @@
             "bringBack": "Vang er één om hem terug te brengen",
             "listLabel": "Soorten verdwenen uit de Ark, nieuwste eerst"
         },
+        "endangered": {
+            "title": "Nu bedreigd",
+            "intro": "Soorten waarvan er in het wild nog maar één of twee over zijn.",
+            "empty": "Op dit moment is geen enkele soort in gevaar",
+            "emptyHint": "Als een soort in het wild terugvalt tot twee of één, verschijnt die hier.",
+            "critical": "Kritiek",
+            "last": "De laatste",
+            "wildCount": "In het wild: {count}",
+            "openFor": "In gevaar sinds {duration}",
+            "habitat": "Leefgebied",
+            "foundIn": "Verspreiding",
+            "saved": "Gered: deze soort is niet meer in gevaar",
+            "lost": "Verloren uit het wild",
+            "listLabel": "Bedreigde soorten in het wild, nieuwste eerst",
+            "unavailable": "Controleren lukt nu niet. Probeer het zo meteen opnieuw.",
+            "seeInArk": "Bekijk in de Ark",
+            "retry": "Probeer opnieuw"
+        },
         "photo": {
             "alt": "Foto waarmee deze {species} aan boord kwam",
             "open": "Bekijk de foto groter",

@@ -568,6 +568,24 @@
             "bringBack": "Geri getirmek için birini yakala",
             "listLabel": "Ark'tan kaybolan türler, en yeni önce"
         },
+        "endangered": {
+            "title": "Şu an tehlikede",
+            "intro": "Doğada yalnızca bir ya da iki bireyi kalmış türler.",
+            "empty": "Şu anda tehlikede olan bir tür yok",
+            "emptyHint": "Bir türün doğadaki sayısı ikiye ya da bire düşerse burada listelenir.",
+            "critical": "Kritik",
+            "last": "Son birey",
+            "wildCount": "Doğada: {count}",
+            "openFor": "{duration} süredir tehlikede",
+            "habitat": "Yaşam alanı",
+            "foundIn": "Yayılış",
+            "saved": "Kurtarıldı: bu tür artık tehlikede değil",
+            "lost": "Doğadan yok oldu",
+            "listLabel": "Doğada tehlikedeki türler, en yeniler önce",
+            "unavailable": "Şu anda kontrol edilemiyor. Birazdan tekrar dene.",
+            "seeInArk": "Ark'ta gör",
+            "retry": "Tekrar dene"
+        },
         "photo": {
             "alt": "Bu {species} hayvanını gemiye getiren fotoğraf",
             "open": "Fotoğrafı büyük gör",
