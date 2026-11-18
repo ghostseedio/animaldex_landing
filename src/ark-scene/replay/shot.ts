@@ -55,6 +55,11 @@ const TOGETHER = 40;
  */
 const CLOSING = 14;
 /**
+ * A chase is too fast for that: the picture stays on the quarry, where the chase comes, and holds the hunter too only
+ * once it is this near (m): the lunge, the catch or the miss.
+ */
+const CLOSING_CHASE = 4;
+/**
  * The frames nobody sees before the shot's first (the director's, `settle`): the clock is pinned this long before the
  * shot's start, so they end before it, never past the event (a layer that has begun its act is not walked back).
  */
@@ -212,13 +217,13 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
      * The view that holds these animals: the two farthest apart framed together (the selection's pair framing), or the
      * one alone at its meeting distance; side on to the line between them, from the island's outer side.
      */
-    const frameOf = (list: string[], style: {polar?: number; widen?: number; max?: number; /** Alone in the picture while the rest are farther than `CLOSING` from it. */ first?: string} = {}): Frame | null => {
+    const frameOf = (list: string[], style: {polar?: number; widen?: number; max?: number; /** Alone in the picture while the rest are farther than `closing` (default `CLOSING`) from it. */ first?: string; closing?: number} = {}): Frame | null => {
         const all = located(list);
         const drawn = all.filter((at) => at.shown !== false);
         let who = drawn.length ? drawn : all;
         if (!who.length) return null;
         const first = style.first ? all.find((at) => at.id === style.first) : null;
-        if (first && all.some((at) => Math.hypot(at.x - first.x, at.z - first.z) > CLOSING)) who = [first];
+        if (first && all.some((at) => Math.hypot(at.x - first.x, at.z - first.z) > (style.closing ?? CLOSING))) who = [first];
         const aspect = options.aspect();
         let a = who[0];
         let b = who[0];
@@ -308,6 +313,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
     /** Toward a framing, eased (snapped after a cut or on the first frame); the bearing never swings more than it must. */
     const toward = (asked: Frame | null, dt: number, rate = 2.4, turn = 0.6): ArkCameraView | null => {
         if (!asked) return view;
+        // (Its subject is suddenly somewhere else, a hunter at its foray's waypoint: an edit, not a pan across the island.)
+        if (view && Math.hypot(asked.target.x - view.target.x, asked.target.z - view.target.z) > Math.max(12, view.distance)) view = null;
         if (!view) bearing = null;
         // (A bearing chosen again while the camera is up: nearest the side it is on, so it swings the short way.)
         if (bearing === null && view && Math.cos(asked.azimuth - view.azimuth) < 0) asked = {...asked, azimuth: asked.azimuth + Math.PI};
@@ -508,23 +515,28 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                 enter("still");
                 if (clip - stateAt > 7) finish(false, kind === "meal" ? "the meal layer did not act it (the hunter is not drawn, or the pair is one the scene cuts away from)" : "the escape layer did not act a chase (a pair the scene cuts away from, or the prey on the wing): only its limp");
             }
-            return drift(frameOf([hunter, quarry], {widen: 1.2, first: hunter}), dt);
+            return drift(frameOf([hunter, quarry], {widen: 1.2, first: quarry}), dt);
         }
         if (end - s > 14) cut(end - 12, "to the end of the stalk");
         const now = since();
-        enter("chase");
+        if (state !== "chase") {
+            // From the hunter to its quarry, where the chase comes: an edit.
+            view = null;
+            enter("chase");
+        }
         if (kind === "meal") {
             // (The catch, then the meal's first seconds: the feeding goes on for minutes.)
             if (now > end + 1.2) tell();
             if (now > end + 7) finish(true);
-            // (The hunter as it comes; the two together once it is close: the catch, then the meal where the prey fell.)
-            return toward(frameOf([hunter, quarry], {widen: now > end ? 1.05 : 1.2, first: now > end ? quarry : hunter}), dt, 3);
+            // (The quarry, and the hunter once it is on it: the catch, then the meal where the prey fell.)
+            return toward(frameOf([hunter, quarry], {widen: now > end ? 1.05 : 1.3, first: quarry, closing: now > end ? CLOSING : CLOSING_CHASE}), dt, 6);
         }
-        if (now > end - 0.25) tell();
+        // (The still: the lunge as it meets empty air, the two at their nearest.)
+        if (now > end + 0.08) tell();
         if (now > Math.min(escape?.seconds ?? end + 6, end + 8)) finish(true);
         // (Once it is away, the one that got away: the two are soon too far apart for one picture.)
-        // (The hunter as it comes, the two together at the miss; then the one that got away.)
-        return toward(frameOf([hunter, quarry], {widen: 1.25, first: now > end + 1 ? quarry : hunter}), dt, 3);
+        // (The quarry, and the hunter once it is on it: the lunge and the miss; then the one that got away.)
+        return toward(frameOf([hunter, quarry], {widen: 1.3, first: quarry, closing: CLOSING_CHASE}), dt, 6);
     };
 
     const stepLastStand = (dt: number) => {

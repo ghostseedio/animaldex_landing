@@ -343,7 +343,7 @@ test("a mating's shot cuts to the end of a long walk, pulls away at the mount, a
     }
 });
 
-test("a chase's shot: the hunter as it comes, the two together once it is close; a long stalk is cut to its end", () => {
+test("a chase's shot: the hunter first, then its quarry, and the two together when the hunter is on it; a long stalk is cut to its end", () => {
     const replay = plan(15);
     const key = replay.feed.escapes![0].key;
     const scene = fakeScene({escapes: [{key, t0: replay.t0, phase: "acting", missAt: 30, seconds: 38}]});
@@ -357,12 +357,13 @@ test("a chase's shot: the hunter as it comes, the two together once it is close;
         assert.ok(Math.abs(before.target.x) < 0.01, "before its time, the hunter alone");
         pinArkClock(replay.t0 + 1);
         const after = shot.step(2, 1 / 30)!;
-        assert.ok(Math.abs(after.target.x) < 0.01, "still the hunter as it comes: too far apart for one picture");
+        assert.ok(Math.abs(after.target.x - 30) < 0.01, "then its quarry, where the chase comes (an edit: the two are far apart)");
         assert.deepEqual(shot.report().cuts.map((cut) => cut.why), ["to the end of the stalk"]);
-        // Close enough: both in the picture.
-        scene.put(id(9), 24, 0);
-        const both = shot.step(2.1, 1 / 30)!;
-        assert.ok(both.target.x > 0.5, "easing to the point between the two");
+        // The hunter on it: both in the picture.
+        scene.put(id(9), 27, 0);
+        let both = shot.step(2.1, 1 / 30)!;
+        for (let i = 0; i < 30; i++) both = shot.step(2.1 + (i + 1) / 30, 1 / 30)!;
+        assert.ok(both.target.x < 29.5 && both.target.x > 28, "the point between the two");
         let world = arkEpochSeconds();
         for (let t = 2.2; shot.doneAt() === null && t < 60; t += 0.5) {
             pinArkClock((world += 0.5));

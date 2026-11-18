@@ -99,7 +99,7 @@ page.on("console", (m) => {
     if (m.text().startsWith("[replay]")) log(m.text().slice(0, 800));
 });
 log(`opening ${base}?quality=${quality} at ${width}×${height}`);
-await page.goto(`${base}?quality=${quality}`, {waitUntil: "domcontentloaded", timeout: 180000});
+await page.goto(`${base}?quality=${quality}${process.argv.includes("--trace") ? "&trace=1" : ""}`, {waitUntil: "domcontentloaded", timeout: 180000});
 await page.waitForFunction(() => window.__replay?.ready || window.__replayError, null, {timeout: 600000, polling: 500});
 const failed = await page.evaluate(() => window.__replayError ?? null);
 if (failed) {
@@ -219,7 +219,8 @@ const film = async (kind, id, made, n) => {
         }
         if (frame.done || frames > 900) break;
     }
-    const [marks, report, layer] = await page.evaluate(() => [window.__replay.marks(), window.__replay.report(), window.__replay.acting()]);
+    const [marks, report, layer, trace] = await page.evaluate(() => [window.__replay.marks(), window.__replay.report(), window.__replay.acting(), window.__replay.trace()]);
+    if (trace.length) entry.trace = trace;
     const seen = Object.fromEntries(Object.entries(report?.seen ?? {}).map(([castId, s]) => [castId, {role: s.role, shown: s.frames ? Math.round((s.shown / s.frames) * 100) : null}]));
     Object.assign(entry, {layer, frames, seconds: times[times.length - 1] ?? 0, wall: Math.round((Date.now() - started) / 1000), marks, report: report ? {acted: report.acted, reason: report.reason, notes: report.notes, keyAt: report.keyAt, hour: report.hour, night: report.night, gain: report.gain, standIns: report.standIns, pins: report.pins.length, dropped: report.dropped, cuts: report.cuts, seen} : null, name});
     // The key still: the middle of the act (after the lead, before the linger); a strip of eight across the clip; the clip.

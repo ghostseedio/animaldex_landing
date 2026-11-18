@@ -65,6 +65,8 @@ async function main() {
     const filmable = (animal: ArkAnimal, min = 0.5) => displayLength(animal.model_slug, null) >= min && !["open_ocean", "coral_reef", "river_lake", "seashore", "wetland"].includes(animal.zone);
     let serial = 900_000;
     let current: ReturnType<typeof planArkEventReplay> | null = null;
+    const tracing = params.get("trace") === "1";
+    const traced: Array<{t: number; view: number[]; cast: Array<Array<number | string> | null>}> = [];
     const made = new Map<string, {remove: string[]; move: ArkAnimal | null; sample: boolean}>();
 
     /** Harness events of the kinds production has none of yet, from animals really aboard (never a made-up animal). */
@@ -173,7 +175,19 @@ async function main() {
             current = replay;
             return {models: prepared.models, kind: replay.kind, at: replay.at, t0: replay.t0, hook: plan.hookText, cues: plan.cues.map((cue) => cue.text), cast: replay.cast.map((member) => ({id: member.record.id, role: member.role, name: member.record.name, slug: member.record.model_slug, aboard: member.aboard, inSceneBefore: before[member.record.id], zone: member.record.zone, island: member.record.island ?? null})), notes: replay.notes};
         },
-        frame: (quality = 0.85, step = 1) => director.frame(quality, step),
+        frame: (quality = 0.85, step = 1) => {
+            const frame = director.frame(quality, step);
+            // (`?trace=1`: where the camera and each of the cast were at every frame, for the summary.)
+            if (tracing && current) {
+                const view = handle.view();
+                traced.push({t: Math.round(frame.t * 100) / 100, view: [view.target.x, view.target.y, view.target.z, view.distance, view.polar, view.azimuth].map((n) => Math.round(n * 100) / 100), cast: current.cast.map((member) => {
+                    const at = handle.locate(member.record.id);
+                    return at ? [Math.round(at.x * 100) / 100, Math.round(at.y * 100) / 100, Math.round(at.z * 100) / 100, at.shown ? 1 : 0, at.act ?? ""] : null;
+                })});
+            }
+            return frame;
+        },
+        trace: () => traced.splice(0),
         marks: () => director.marks(),
         report: () => {
             const report = director.replayReport();
