@@ -25,10 +25,18 @@ export const ARK_RELEASE_LADDER = [
     {tier: "Mythic", credits: 60}
 ] as const;
 
-/** Why an animal cannot be released now (`voyage_release_check`), plus what the spend can answer. */
+/** The server's tier keys, lower case: the tier's WORD is the reader's (`ark.release.tier`), never the server's English. */
+export const ARK_RELEASE_TIERS = ["common", "uncommon", "rare", "epic", "legendary", "mythic"] as const;
+export type ArkReleaseTier = (typeof ARK_RELEASE_TIERS)[number];
+
+/**
+ * Why an animal cannot be released now (`voyage_release_check`), plus what the spend can answer. `not_now` is ONE
+ * answer for every "not now" cause (asleep for the season, carrying young, a piece of its day still to come: decision
+ * 404), and what any reason this page does not know is read as: one generic line, never a hint of what is coming.
+ */
 export const ARK_RELEASE_REASONS = [
     "unavailable", "not_owner", "no_card", "card_in_trade", "under_13", "recovering", "not_in_zoo", "lives_with_people", "unpriced", "care_wait",
-    "dormant", "carrying", "not_now", "pair_full", "kind_full", "predators_full", "cooldown_day", "cooldown_kind"
+    "not_now", "pair_full", "kind_full", "predators_full", "cooldown_day", "cooldown_kind"
 ] as const;
 export type ArkReleaseReason = (typeof ARK_RELEASE_REASONS)[number];
 /** What a release call can come back with when it did not go through. */
@@ -209,7 +217,7 @@ export function arkWildSkillBand(skill: number): ArkWildSkillBand {
 
 // MARK: Words
 
-/** The card's and the sheet's words (`ark.release` in the locale files). */
+/** The card's and the sheet's words (`ark.release` in the locale files, all 45 Ark languages). */
 export type ArkReleaseWords = {
     button: string;
     title: string;
@@ -241,11 +249,12 @@ export type ArkReleaseWords = {
     step: string;
     stepHint: string;
     close: string;
-    live: string;
-    reason: Record<ArkReleaseReason, string>;
     until: string;
+    reason: Record<ArkReleaseReason, string>;
+    tier: Record<ArkReleaseTier, string>;
 };
 
+/** English, the fallback under any language's own words: the same lines as `ark.release` in `en.json` (a test holds them equal). */
 export const ARK_RELEASE_ENGLISH: ArkReleaseWords = {
     button: "Release to the wild · {credits} Credits",
     title: "Release {animal} to the wild?",
@@ -276,7 +285,7 @@ export const ARK_RELEASE_ENGLISH: ArkReleaseWords = {
     step: "Do its step",
     stepHint: "A step that works raises its wild skill.",
     close: "Close",
-    live: "{aAnimal} was released into the wild",
+    until: "on {date}",
     reason: {
         unavailable: "Releases are not open right now.",
         not_owner: "Only the person who brought it can release it.",
@@ -288,25 +297,24 @@ export const ARK_RELEASE_ENGLISH: ArkReleaseWords = {
         lives_with_people: "Its kind lives with people, so it stays.",
         unpriced: "It cannot be released yet.",
         care_wait: "It came back into care. It can go again {when}.",
-        dormant: "It is asleep for the season. Try when it wakes.",
-        carrying: "It is expecting young. Try after they are born.",
-        not_now: "It cannot be moved right now. Try again in an hour.",
+        not_now: "It cannot be released right now. Try again in a little while.",
         pair_full: "Two of yours already live free. That is the pair.",
         kind_full: "The wild has all of its kind it can hold right now.",
         predators_full: "There are too many hunters of its prey there right now.",
         cooldown_day: "One release a day. You can release again {when}.",
         cooldown_kind: "One of a kind a week. You can release this kind again {when}."
     },
-    until: "on {date}"
+    tier: {common: "Common", uncommon: "Uncommon", rare: "Rare", epic: "Epic", legendary: "Legendary", mythic: "Mythic"}
 };
 
 /** The reader's `ark.release` over English, key by key. */
 export function arkReleaseWords(raw: unknown): ArkReleaseWords {
     const own = record(raw) ?? {};
     const reasonOwn = record(own.reason) ?? {};
-    const out: ArkReleaseWords = {...ARK_RELEASE_ENGLISH, reason: {...ARK_RELEASE_ENGLISH.reason}};
+    const tierOwn = record(own.tier) ?? {};
+    const out: ArkReleaseWords = {...ARK_RELEASE_ENGLISH, reason: {...ARK_RELEASE_ENGLISH.reason}, tier: {...ARK_RELEASE_ENGLISH.tier}};
     for (const key of Object.keys(ARK_RELEASE_ENGLISH) as Array<keyof ArkReleaseWords>) {
-        if (key === "reason") continue;
+        if (key === "reason" || key === "tier") continue;
         const value = own[key];
         if (typeof value === "string" && value.trim()) (out[key] as string) = value;
     }
@@ -314,7 +322,17 @@ export function arkReleaseWords(raw: unknown): ArkReleaseWords {
         const value = reasonOwn[key];
         if (typeof value === "string" && value.trim()) out.reason[key] = value;
     }
+    for (const key of ARK_RELEASE_TIERS) {
+        const value = tierOwn[key];
+        if (typeof value === "string" && value.trim()) out.tier[key] = value;
+    }
     return out;
+}
+
+/** The tier's word in the reader's language, from the server's tier KEY ("Epic" → `tier.epic`); null for a key this page does not know (nothing of the server's English is shown). */
+export function arkReleaseTierText(tier: string | null | undefined, words: ArkReleaseWords): string | null {
+    const key = (tier ?? "").trim().toLowerCase();
+    return (ARK_RELEASE_TIERS as readonly string[]).includes(key) ? words.tier[key as ArkReleaseTier] : null;
 }
 
 export function arkWildSkillText(skill: number, words: ArkReleaseWords): string {

@@ -5,12 +5,14 @@ import path from "node:path";
 import {pathToFileURL} from "node:url";
 import test from "node:test";
 import {releaseItems, releaseText} from "@/ark-scene/live/release-lines";
+import {ARK_LANGUAGES} from "@/lib/ark-languages";
 import type {ArkLiveText} from "@/lib/ark-live-log";
 import {
     ARK_RELEASE_ENGLISH,
     ARK_RELEASE_KEY,
     ARK_RELEASE_LADDER,
     ARK_RELEASE_REASONS,
+    ARK_RELEASE_TIERS,
     ARK_RELEASE_UNAVAILABLE,
     arkReleaseKey,
     arkReleaseProblem,
@@ -18,6 +20,7 @@ import {
     arkReleaseResultFromApi,
     arkReleaseReasonText,
     arkReleaseRescueText,
+    arkReleaseTierText,
     arkReleaseWords,
     arkReleasedFromApi,
     arkWildSkillBand,
@@ -146,8 +149,77 @@ test("words: English for every line and every reason; a reader's words go over i
     const all = [...Object.values(words).filter((v): v is string => typeof v === "string"), ...Object.values(words.reason)];
     for (const line of all) assert.ok(!/[—–]| - /.test(line) && !/\b(he|she|his|her|him)\b/i.test(line), line);
     assert.ok(words.button.includes("{credits}") && words.confirm.includes("{credits}") && words.noCredits.includes("{credits}"));
-    // The site's English file may carry `ark.release` later (the 44 Ark locales): until then every line is this module's.
-    assert.ok(english.ark.release === undefined || typeof english.ark.release === "object");
+});
+
+/** Every line of a words object, flat ("reason.not_now"). */
+function flat(words: unknown): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const [key, value] of Object.entries(words as Record<string, unknown>)) {
+        if (typeof value === "string") out[key] = value;
+        else for (const [inner, line] of Object.entries(value as Record<string, string>)) out[`${key}.${inner}`] = line;
+    }
+    return out;
+}
+
+test("words: every one of the 45 Ark languages has every line, reason and tier word, filled the same way as English (decision 404)", () => {
+    const locales = path.join(__dirname, "..", "data", "locales");
+    const read = (language: string) => JSON.parse(readFileSync(language === "en" || language === "id" ? path.join(locales, `${language}.json`) : path.join(locales, "ark", `${language}.json`), "utf8")).ark as {
+        release: unknown; close: string; hearts: {getCredits: string}; live: {released?: string; arrivalOne: string}; timeLeft: {reasonSkill?: string};
+    };
+    // The site's English file IS this module's English: the fallback and the file cannot drift.
+    assert.deepEqual(read("en").release, ARK_RELEASE_ENGLISH);
+    const expected = flat(ARK_RELEASE_ENGLISH);
+    const holes = (line: string) => (line.match(/\{\w+\}/g) ?? []).sort();
+    // What a language may leave as English: the price where "Credits" stays the product's word, and a tier word.
+    const sameAllowed = (key: string) => key === "price" || key.startsWith("tier.");
+    assert.equal(ARK_LANGUAGES.length, 45);
+    assert.equal(Object.keys(expected).length, 30 + ARK_RELEASE_REASONS.length + ARK_RELEASE_TIERS.length);
+    for (const language of ARK_LANGUAGES) {
+        const ark = read(language);
+        const own = flat(ark.release);
+        assert.deepEqual(Object.keys(own).sort(), Object.keys(expected).sort(), language);
+        for (const key of Object.keys(expected)) {
+            assert.ok(own[key]?.trim(), `${language}.${key} is empty`);
+            assert.deepEqual(holes(own[key]), holes(expected[key]), `${language}.${key}: placeholders differ`);
+            assert.ok(!/[—–]/.test(own[key]), `${language}.${key}: a dash as punctuation`);
+            if (language !== "en" && !sameAllowed(key)) assert.notEqual(own[key], expected[key], `${language}.${key} is still English`);
+        }
+        // One word for one thing: the sheet's Close and Get Credits are the language's own, as on the rest of the Ark.
+        assert.equal(own.close, ark.close, `${language}.close`);
+        assert.equal(own.getCredits, ark.hearts.getCredits, `${language}.getCredits`);
+        assert.equal(new Set(ARK_RELEASE_TIERS.map((tier) => own[`tier.${tier}`])).size, ARK_RELEASE_TIERS.length, `${language}: tier words repeat`);
+        // The live log's line and the estimate's reason, in the same 45.
+        assert.deepEqual(holes(ark.live.released ?? ""), ["{aAnimal}"], `${language}.live.released`);
+        assert.ok(ark.timeLeft.reasonSkill?.trim() && !ark.timeLeft.reasonSkill.includes("{"), `${language}.timeLeft.reasonSkill`);
+        if (language !== "en") {
+            assert.notEqual(ark.live.released, read("en").live.released, `${language}.live.released is still English`);
+            assert.notEqual(ark.timeLeft.reasonSkill, ARK_TIME_LEFT_SKILL_ENGLISH, `${language}.timeLeft.reasonSkill is still English`);
+        }
+    }
+    assert.equal(read("en").timeLeft.reasonSkill, ARK_TIME_LEFT_SKILL_ENGLISH);
+});
+
+test("words: the tier's word is the reader's, from the server's tier key; nothing of the server's English is shown (decision 404)", () => {
+    const french = arkReleaseWords({tier: {epic: "Épique", rare: "Rare"}});
+    assert.equal(arkReleaseTierText("Epic", french), "Épique");
+    assert.equal(arkReleaseTierText("epic", french), "Épique");
+    assert.equal(arkReleaseTierText(" LEGENDARY ", french), "Legendary", "a tier the language lacks falls back to the page's own English, key by key");
+    for (const step of ARK_RELEASE_LADDER) assert.equal(arkReleaseTierText(step.tier, arkReleaseWords(null)), step.tier);
+    // A key the page does not know (a new tier, 'Unknown', anything else from the server): no chip at all.
+    for (const odd of ["Unknown", "Fabled", "", null, undefined]) assert.equal(arkReleaseTierText(odd, french), null);
+});
+
+test("words: every \"not now\" cause reads as the one generic line, with no hint of what is coming (decision 404)", () => {
+    const words = arkReleaseWords(null);
+    // Reasons an older or newer server may send, and the one it sends now: all the same line.
+    const lines = ["not_now", "dormant", "carrying", "pending_piece", "something_new"].map((reason) => {
+        const quote = decodeArkReleaseQuote({available: true, eligible: false, reasons: [reason], animal_id: ANIMAL, tier: "Rare", credits: 25});
+        assert.deepEqual(quote?.reasons, ["not_now"], reason);
+        return arkReleaseReasonText(quote!.reasons[0], quote!, words, "en");
+    });
+    assert.deepEqual(Array.from(new Set(lines)), ["It cannot be released right now. Try again in a little while."]);
+    assert.ok(!/hour|piece|pending|asleep|season|young|heart|status/i.test(words.reason.not_now));
+    assert.ok(!(ARK_RELEASE_REASONS as readonly string[]).includes("dormant") && !(ARK_RELEASE_REASONS as readonly string[]).includes("carrying"));
 });
 
 test("words: a wait says until when; a reason with no date reads cleanly; the rescue line", () => {

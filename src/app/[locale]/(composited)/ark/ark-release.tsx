@@ -9,6 +9,7 @@ import {
     arkReleaseKey,
     arkReleaseReasonText,
     arkReleaseRescueText,
+    arkReleaseTierText,
     arkReleaseWords,
     arkWildSkillBand,
     arkWildSkillText,
@@ -238,6 +239,7 @@ function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, busy, p
     if (!mounted) return null;
     const credits = quote.credits ?? 0;
     const short = quote.balance !== null && quote.balance < credits;
+    const tierText = arkReleaseTierText(quote.tier, words);
     const rescue = arkReleaseRescueText(quote, words, locale);
     const skill = done?.wildSkill ?? quote.wildSkill;
     const band = arkWildSkillBand(skill);
@@ -296,7 +298,7 @@ function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, busy, p
                         <p className="mt-1 text-[12px] leading-snug text-ink-300">{words.rules}</p>
                         <p className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-0.5 border-t border-line-300/60 pt-3">
                             <span data-testid="ark-release-price" className="font-display text-xl font-extrabold text-white">{fillArkWords(words.price, {credits: credits.toLocaleString(locale)})}</span>
-                            {quote.tier ? <span className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[11.5px] font-semibold text-ink-100">{quote.tier}</span> : null}
+                            {tierText ? <span data-testid="ark-release-tier" className="rounded-full bg-white/[0.08] px-2 py-0.5 text-[11.5px] font-semibold text-ink-100">{tierText}</span> : null}
                             {quote.balance !== null ? <span data-testid="ark-release-balance" className={`text-[12.5px] ${short ? "font-semibold text-[#ffc9b8]" : "text-ink-300"}`}>{fillArkWords(words.balance, {credits: quote.balance.toLocaleString(locale)})}</span> : null}
                         </p>
                         {short || problem === "insufficient_credits" ? (

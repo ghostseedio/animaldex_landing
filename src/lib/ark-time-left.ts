@@ -476,7 +476,7 @@ export type ArkTimeLeftWords = {
     reasonHunted: string;
     reasonHunger: string;
     reasonSafe: string;
-    /** A released animal still learning to find food (Release to the Wild); English until the locale files carry it. */
+    /** A released animal still learning to find food (Release to the Wild). */
     reasonSkill?: string;
 };
 
@@ -554,10 +554,11 @@ export const ARK_TIME_LEFT_ENGLISH: ArkTimeLeftWords = {
     reasonAgeEstimate: "Typical lifespan, estimated: {span}",
     reasonHunted: "Predators here: {predators}",
     reasonHunger: "Hunger: no recent meal",
+    reasonSkill: "Released: still learning to find food",
     reasonSafe: "Hunting protection until Ark day {day}"
 };
 
-/** The one line that is not in the locale files yet (Release to the Wild, behind the server's switch). */
+/** The skill line's English (Release to the Wild), for a words object built without it. */
 export const ARK_TIME_LEFT_SKILL_ENGLISH = "Released: still learning to find food";
 
 /** The panel's words from a bundle (`ark.timeLeft`, `ark.life`), English key by key where one is missing. */

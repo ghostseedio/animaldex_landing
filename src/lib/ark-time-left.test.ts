@@ -530,7 +530,7 @@ test("the words: units are the panel's own (`life.ageDays`), a range is one stri
     assert.equal(arkTimeLeftText(result(3, 9), mixed.words, mixed.units, "de").value, "About 3–9 Tage");
 });
 
-test("the words: every one of the 45 Ark languages has the eight keys, filled the same way as English", () => {
+test("the words: every one of the 45 Ark languages has the nine keys (the ninth is Release to the Wild's skill line), filled the same way as English", () => {
     const locales = path.join(__dirname, "..", "data", "locales");
     const english = JSON.parse(readFileSync(path.join(locales, "en.json"), "utf8")).ark.timeLeft as Record<string, string>;
     const expected: Record<string, string> = {...ARK_TIME_LEFT_ENGLISH};
