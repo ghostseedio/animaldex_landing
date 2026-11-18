@@ -120,7 +120,7 @@ function countryLexicon(): Array<[RegExp, string]> {
         // No region names in this runtime: the everyday names above still read.
     }
     const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-    lexicon = [...names.entries()]
+    lexicon = Array.from(names.entries())
         .sort((x, y) => y[0].length - x[0].length || x[0].localeCompare(y[0]))
         .map(([name, code]) => [new RegExp(`(?<![\\p{L}-])${escape(name)}(?![\\p{L}-])`, "u"), code]);
     return lexicon;
