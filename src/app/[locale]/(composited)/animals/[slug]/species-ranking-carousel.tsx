@@ -76,7 +76,8 @@ export default function SpeciesRankingCarousel({
         ? items.find((item) => item.captureId === currentCaptureId)
         : null;
     const pinsPrivateCapture = Boolean(currentCaptureId && !currentItem && currentCaptureIsPrivate);
-    const rankedCount = items.length;
+    // The server's cohort size when the list came from server ranks (GRADING-5); otherwise the list.
+    const rankedCount = items.reduce((total, item) => Math.max(total, item.totalCount ?? 0), 0) || items.length;
     const summary = currentItem
         ? `You’re #${currentItem.rank} of ${rankedCount}`
         : rankedCount > 0

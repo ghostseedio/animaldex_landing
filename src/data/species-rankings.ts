@@ -7,6 +7,7 @@ import {
 import type {CaptureGradeSource} from "@/lib/capture-grade";
 import {storedCaptureGrade} from "@/lib/stored-capture-grade";
 import {SPECIES_RANKING_ORDER, compareSpeciesRankingRows} from "@/lib/species-ranking-order";
+import {fetchServerSpeciesRankingRows, isLikelyNonLiveRankingRow} from "@/lib/species-server-rankings";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 export type SpeciesRankingItem = {
@@ -23,7 +24,16 @@ export type SpeciesRankingItem = {
     battleTier: string | null;
     endorsementCount: number;
     captureGrade: number | null;
+    /**
+     * Ranked collectors in the whole cohort, from the server (discover_ranking_page_v1, GRADING-5).
+     * Absent on the fallback path, where only the loaded list is known.
+     */
+    totalCount?: number;
 };
+
+const RANKING_SELECT =
+    "capture_id,animal_name,breed_guess,normalized_identity_key,species_profile_id,profile_username,profile_display_name,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind,score,endorsement_count,total_progression_xp,stat_total,capture_grade,capture_created_at,confidence,breed_confidence,signals,premium_details,observed_market_modifiers,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,raw_json";
+
 
 type DiscoverFeedRankingRow = CaptureGradeSource & {
     capture_id?: string;
@@ -73,7 +83,7 @@ function filterRankingRowsForEntry(entry: SpeciesEntry, rows: DiscoverFeedRankin
 }
 
 function isRankableRow(row: DiscoverFeedRankingRow) {
-    return Boolean(row.capture_id?.trim());
+    return Boolean(row.capture_id?.trim()) && !isLikelyNonLiveRankingRow(row);
 }
 
 function prepareRankingRows(rows: DiscoverFeedRankingRow[]) {
@@ -143,13 +153,10 @@ function dedupeRows(rows: DiscoverFeedRankingRow[]) {
     return deduped;
 }
 
-function toRankingItems(rows: DiscoverFeedRankingRow[]): SpeciesRankingItem[] {
-    // XP, then stats, then grade, then newest — the order iOS ranks by.
-    const sorted = [...rows].sort(compareSpeciesRankingRows);
-
-    return sorted.map((row, index) => ({
+function toRankingItem(row: DiscoverFeedRankingRow, rank: number): SpeciesRankingItem {
+    return {
         captureId: row.capture_id ?? "",
-        rank: index + 1,
+        rank,
         score: row.score ?? 0,
         animalName: row.animal_name?.trim() ?? "Animal",
         username: row.profile_username?.trim() ?? null,
@@ -162,7 +169,22 @@ function toRankingItems(rows: DiscoverFeedRankingRow[]): SpeciesRankingItem[] {
         endorsementCount: row.endorsement_count ?? 0,
         // The stored grade, the same value the rows were just ranked by.
         captureGrade: storedCaptureGrade(row.capture_grade)
-    })).filter((item) => item.captureId);
+    };
+}
+
+function toRankingItems(rows: DiscoverFeedRankingRow[]): SpeciesRankingItem[] {
+    // XP, then stats, then grade, then newest, then capture id — the order iOS ranks by.
+    const sorted = [...rows].sort(compareSpeciesRankingRows);
+
+    return sorted.map((row, index) => toRankingItem(row, index + 1)).filter((item) => item.captureId);
+}
+
+/** Server ranks (GRADING-5) as ranking items; null when the RPC is not deployed or fails. */
+async function fetchServerRankingItems(entry: SpeciesEntry, limit: number): Promise<SpeciesRankingItem[] | null> {
+    const config = getSupabaseConfig();
+    if (!config) return null;
+    const ranked = await fetchServerSpeciesRankingRows<DiscoverFeedRankingRow>(config, entry, limit, RANKING_SELECT);
+    return ranked?.map(({row, rank, totalCount}) => ({...toRankingItem(row, rank), totalCount})) ?? null;
 }
 
 async function fetchDiscoverFeedRankings(searchParams: URLSearchParams): Promise<DiscoverFeedRankingRow[]> {
@@ -172,10 +194,7 @@ async function fetchDiscoverFeedRankings(searchParams: URLSearchParams): Promise
         return [];
     }
 
-    searchParams.set(
-        "select",
-        "capture_id,animal_name,breed_guess,normalized_identity_key,species_profile_id,profile_username,profile_display_name,location_display_label,human_context,zoo_or_wild,image_bucket,image_path,image_mime_type,image_media_kind,score,endorsement_count,total_progression_xp,stat_total,capture_grade,capture_created_at,confidence,breed_confidence,signals,premium_details,observed_market_modifiers,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,raw_json"
-    );
+    searchParams.set("select", RANKING_SELECT);
     searchParams.set("order", SPECIES_RANKING_ORDER);
 
     try {
@@ -196,6 +215,12 @@ async function fetchDiscoverFeedRankings(searchParams: URLSearchParams): Promise
 
 export async function getSpeciesRankings(entry: SpeciesEntry, limit = 24): Promise<SpeciesRankingItem[]> {
     const resolvedEntry = await resolveSpeciesEntryForRankings(entry);
+    const serverItems = await fetchServerRankingItems(resolvedEntry, limit);
+
+    if (serverItems) {
+        return serverItems.slice(0, limit);
+    }
+
     const primary = primarySpeciesCaptureMatchCandidate(resolvedEntry);
 
     if (primary) {
