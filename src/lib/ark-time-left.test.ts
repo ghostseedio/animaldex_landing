@@ -565,7 +565,16 @@ test("lazy: the card and Ark Lite reach the estimate only through a dynamic impo
 
 // MARK: The engine's own numbers
 
-const ENGINE_ROOT = [process.env.ARK_ENGINE_DIR, path.join(os.homedir(), "AnimalDex")].find((dir): dir is string => Boolean(dir) && existsSync(path.join(dir!, "supabase/functions/_shared/ark-ecology/rules.ts")));
+/** An AnimalDex checkout new enough to have every file the checks read (`ARK_ENGINE_DIR`, else `~/AnimalDex`); none: they skip. */
+const ENGINE_FILES = [
+    "supabase/functions/_shared/ark-ecology/rules.ts",
+    "supabase/functions/_shared/ark-ecology/test-helpers.ts",
+    "supabase/functions/_shared/ark-positions/positions.ts",
+    "supabase/migrations/20261115130000_voyage_thrive_schema.sql",
+    "docs/ark/hunt-success.json",
+    "scripts/ark/data/lifespan_fill_2026-11-15.json"
+];
+const ENGINE_ROOT = [process.env.ARK_ENGINE_DIR, path.join(os.homedir(), "AnimalDex")].find((dir): dir is string => Boolean(dir) && ENGINE_FILES.every((file) => existsSync(path.join(dir!, file))));
 const ENGINE = ENGINE_ROOT ? path.join(ENGINE_ROOT, "supabase/functions/_shared/ark-ecology") : null;
 const engineTest = (name: string, run: () => Promise<void> | void) => test(`engine: ${name}${ENGINE ? "" : " (skipped: set ARK_ENGINE_DIR to an AnimalDex checkout)"}`, {skip: !ENGINE}, run);
 
