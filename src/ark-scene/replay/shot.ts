@@ -252,12 +252,13 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             return Math.min(Math.max(single, across / (0.7 * half * Math.max(aspect, 0.3)), along / (0.62 * half)), max) * widen;
         };
         const sideOn = Math.atan2(b.z - a.z, -(b.x - a.x));
-        const upright = apartNow && fit(line, polar) < fit(sideOn, polar);
+        // (Close together, side on: along the line the nearer one would stand in front of the other.)
+        const upright = apartNow && far > length * 3 && fit(line, polar) < fit(sideOn, polar) * 0.85;
         const across = !apartNow ? outward(centre) : upright ? line + Math.PI : sideOn;
         const out = outward(centre);
         const side = Math.cos(across - out) >= 0 ? across : across + Math.PI;
         const distance = fit(side, polar);
-        const holds = who.map((p) => p.id).sort().join(",");
+        const holds = `${who.map((p) => p.id).sort().join(",")}${upright ? "|along" : ""}`;
         if (holds !== framed) {
             framed = holds;
             bearing = null;

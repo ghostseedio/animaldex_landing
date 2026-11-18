@@ -129,12 +129,14 @@ how many of the act's frames each of the cast was drawn in.
 - **The light** is the island's at that moment. Half the record happens at night, and a forest floor at night is
   nearly black: `--night-gain 3` raises the camera's exposure with the night (only the camera: the hour and what the
   animals do stay the event's). `--hour` pins the hour instead (then the animals' day is that hour's too).
-- **The frame.** The two farthest of the cast that are drawn, together (`pair-frame.ts`), nearer than a tap's meeting
-  distance. While two are still coming together and more than 8 m apart, one of them alone: the first of a pair, the
-  hunter of a chase (a narrow upright picture cannot hold both from under the treetops). The bearing is the scene's
-  own clear one (`clearView`), side on to the two, kept until a tree has stood between for a few frames, then eased
-  round to the nearest clear one; with none, the camera goes higher. A small animal and a body on the ground are
-  filmed from well above (the plants round them are as tall as the camera is far).
+- **The frame.** The two farthest of the cast that are drawn, together, nearer than a tap's meeting distance, from
+  as far back as holds them from where the camera is now (the selection's pair fit, `pair-frame.ts`, taken to any
+  bearing). An upright picture (a phone's clip) holds two along its tall side, one nearer and one farther; a wide one,
+  or two close together, side on. While two are still coming together and more than 14 m apart, one of them alone:
+  the first of a pair, the hunter of a chase. The bearing is the scene's own clear one (`clearView`), kept until a
+  tree has stood between for a few frames, then eased round to the nearest clear one; with none, the camera goes
+  higher. A small animal and a body on the ground are filmed from well above (the plants round them are as tall as
+  the camera is far).
 - **Cuts.** A long walk to a mate and a long stalk are cut to their last seconds; a contest before a mating to its
   last bouts. An extinction's shot runs the body's last three minutes in four seconds while the camera pulls back.
 - **The mount** is not filmed by default (the audit's editorial judgement): the camera pulls up and away, then the two
