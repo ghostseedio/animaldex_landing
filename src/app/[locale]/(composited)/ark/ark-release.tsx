@@ -153,6 +153,8 @@ function ArkReleaseOffer({animal, zoneName, words, locale, talkHref, Link, onRel
             .catch(() => settle({ok: false, code: "failed"}));
     };
 
+    // Where the offer sits on the page: the sheet is drawn at the end of the document and takes this place's language and direction.
+    const rootRef = useRef<HTMLDivElement | null>(null);
     // Nothing while unread, off, signed out, or not theirs: the card is as it was.
     if (!quote || !quote.available || quote.reasons.includes("not_owner") || quote.reasons.includes("unavailable")) return null;
     if (!done && (!quote.eligible || quote.credits === null)) {
@@ -161,7 +163,7 @@ function ArkReleaseOffer({animal, zoneName, words, locale, talkHref, Link, onRel
     }
     // (One place for the sheet, before and after the release: it stays up while its words change to "done".)
     return (
-        <div className="mt-1.5">
+        <div className="mt-1.5" ref={rootRef}>
             {done ? (
                 <p data-testid="ark-card-released" className="text-[12.5px] font-semibold leading-snug text-primary-200">{fillArkWords(done.rescue ? words.doneRescue : words.done, {animal: animal.name})}</p>
             ) : (
@@ -185,6 +187,7 @@ function ArkReleaseOffer({animal, zoneName, words, locale, talkHref, Link, onRel
                     locale={locale}
                     talkHref={talkHref}
                     Link={Link}
+                    anchor={rootRef}
                     busy={busy}
                     problem={problem}
                     done={done}
@@ -208,6 +211,8 @@ type SheetProps = {
     locale: string;
     talkHref: string | null;
     Link: ArkLink;
+    /** The offer's place on the page (its language and direction). */
+    anchor: React.RefObject<HTMLElement>;
     busy: boolean;
     problem: ArkReleaseProblem | null;
     done: ArkReleaseResult | null;
@@ -216,19 +221,22 @@ type SheetProps = {
 };
 
 /** The confirm sheet: a bottom sheet on a phone, a dialog in the middle on a desktop. Escape and the backdrop close it. */
-function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, Link, busy, problem, done, onConfirm, onClose}: SheetProps) {
+function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, Link, anchor, busy, problem, done, onConfirm, onClose}: SheetProps) {
     const [mounted, setMounted] = useState(false);
+    // The page gives the Ark its language and direction on a wrapper (`/ark?lang=ar` reads right to left); a portal leaves it.
+    const [place, setPlace] = useState<{dir?: string; lang?: string}>({});
     const firstRef = useRef<HTMLButtonElement | null>(null);
     const panelRef = useRef<HTMLDivElement | null>(null);
     useEffect(() => {
         setMounted(true);
+        setPlace({dir: anchor.current?.closest("[dir]")?.getAttribute("dir") ?? undefined, lang: anchor.current?.closest("[lang]")?.getAttribute("lang") ?? undefined});
         const before = document.activeElement as HTMLElement | null;
         const frame = window.requestAnimationFrame(() => firstRef.current?.focus({preventScroll: true}));
         return () => {
             window.cancelAnimationFrame(frame);
             before?.focus?.({preventScroll: true});
         };
-    }, []);
+    }, [anchor]);
     // Once it is released the button that had the focus is gone: the focus goes to "Close".
     useEffect(() => {
         if (done) firstRef.current?.focus({preventScroll: true});
@@ -270,7 +278,7 @@ function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, Link, b
         }
     };
     return createPortal(
-        <div className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 md:items-center" data-testid="ark-release-sheet" onClick={onClose} onKeyDown={onKeyDown}>
+        <div dir={place.dir} lang={place.lang} className="fixed inset-0 z-[80] flex items-end justify-center bg-black/60 md:items-center" data-testid="ark-release-sheet" onClick={onClose} onKeyDown={onKeyDown}>
             <div
                 ref={panelRef}
                 role="dialog"
