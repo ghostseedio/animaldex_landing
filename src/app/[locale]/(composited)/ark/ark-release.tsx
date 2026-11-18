@@ -147,34 +147,46 @@ function ArkReleaseOffer({animal, zoneName, words, locale, talkHref, onReleased}
 
     // Nothing while unread, off, signed out, or not theirs: the card is as it was.
     if (!quote || !quote.available || quote.reasons.includes("not_owner") || quote.reasons.includes("unavailable")) return null;
-    if (done) {
-        return (
-            <>
-                <p data-testid="ark-card-released" className="mt-1.5 text-[12.5px] font-semibold leading-snug text-primary-200">{fillArkWords(done.rescue ? words.doneRescue : words.done, {animal: animal.name})}</p>
-                {open ? <ReleaseSheet animal={animal} zoneName={zoneName} quote={quote} words={words} locale={locale} talkHref={talkHref} busy={false} problem={null} done={done} onConfirm={release} onClose={() => {
-                    setOpen(false);
-                    handOver();
-                }} /> : null}
-            </>
-        );
-    }
-    if (!quote.eligible || quote.credits === null) {
+    if (!done && (!quote.eligible || quote.credits === null)) {
         const reason = quote.reasons[0];
         return reason ? <p data-testid="ark-card-release-wait" data-reason={reason} className="mt-1.5 text-[11.5px] leading-snug text-ink-400">{arkReleaseReasonText(reason, quote, words, locale)}</p> : null;
     }
+    // (One place for the sheet, before and after the release: it stays up while its words change to "done".)
     return (
         <div className="mt-1.5">
-            <button
-                type="button"
-                onClick={() => setOpen(true)}
-                aria-haspopup="dialog"
-                data-testid="ark-card-release"
-                className="inline-flex h-8 items-center gap-1.5 rounded-full border border-primary-400/60 bg-primary-400/10 px-3 text-[12px] font-bold text-primary-100 transition-colors hover:bg-primary-400/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
-            >
-                <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 17V6.5L10 3l7 3.5V17" /><path d="M8 17v-5h4v5" /><path d="M12.5 8.5l3 0M14 7l1.5 1.5L14 10" /></svg>
-                {fillArkWords(words.button, {credits: quote.credits})}
-            </button>
-            {open ? <ReleaseSheet animal={animal} zoneName={zoneName} quote={quote} words={words} locale={locale} talkHref={talkHref} busy={busy} problem={problem} done={null} onConfirm={release} onClose={() => (busy ? undefined : setOpen(false))} /> : null}
+            {done ? (
+                <p data-testid="ark-card-released" className="text-[12.5px] font-semibold leading-snug text-primary-200">{fillArkWords(done.rescue ? words.doneRescue : words.done, {animal: animal.name})}</p>
+            ) : (
+                <button
+                    type="button"
+                    onClick={() => setOpen(true)}
+                    aria-haspopup="dialog"
+                    data-testid="ark-card-release"
+                    className="inline-flex h-8 items-center gap-1.5 rounded-full border border-primary-400/60 bg-primary-400/10 px-3 text-[12px] font-bold text-primary-100 transition-colors hover:bg-primary-400/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none"
+                >
+                    <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 17V6.5L10 3l7 3.5V17" /><path d="M8 17v-5h4v5" /><path d="M12.5 8.5l3 0M14 7l1.5 1.5L14 10" /></svg>
+                    {fillArkWords(words.button, {credits: quote.credits ?? 0})}
+                </button>
+            )}
+            {open ? (
+                <ReleaseSheet
+                    animal={animal}
+                    zoneName={zoneName}
+                    quote={quote}
+                    words={words}
+                    locale={locale}
+                    talkHref={talkHref}
+                    busy={busy}
+                    problem={problem}
+                    done={done}
+                    onConfirm={release}
+                    onClose={() => {
+                        if (busy) return;
+                        setOpen(false);
+                        handOver();
+                    }}
+                />
+            ) : null}
         </div>
     );
 }
@@ -213,6 +225,22 @@ function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, busy, p
             before?.focus?.({preventScroll: true});
         };
     }, []);
+    // Once it is released the button that had the focus is gone: the focus goes to "Close".
+    useEffect(() => {
+        if (done) firstRef.current?.focus({preventScroll: true});
+    }, [done]);
+    // Escape closes the sheet wherever the focus is, and only the sheet (never the card under it).
+    const closeRef = useRef(onClose);
+    closeRef.current = onClose;
+    useEffect(() => {
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key !== "Escape") return;
+            event.stopPropagation();
+            closeRef.current();
+        };
+        document.addEventListener("keydown", onKey, true);
+        return () => document.removeEventListener("keydown", onKey, true);
+    }, []);
     if (!mounted) return null;
     const credits = quote.credits ?? 0;
     const short = quote.balance !== null && quote.balance < credits;
@@ -221,11 +249,8 @@ function ReleaseSheet({animal, zoneName, quote, words, locale, talkHref, busy, p
     const band = arkWildSkillBand(skill);
     const titleId = `ark-release-title-${animal.id}`;
     const onKeyDown = (event: React.KeyboardEvent) => {
-        if (event.key === "Escape") {
-            event.stopPropagation();
-            onClose();
-            return;
-        }
+        // (A key pressed in the sheet is the sheet's: the card under it does not hear it.)
+        event.stopPropagation();
         if (event.key !== "Tab") return;
         // Keep the focus inside the sheet while it is open.
         const focusable = panelRef.current?.querySelectorAll<HTMLElement>("button:not([disabled]), a[href]");
