@@ -71,7 +71,10 @@ function post(n: number, captureId: string, animalName: string): DiscoverCapture
         typeTags: [],
         collector: {userId: `0a0a0a0a-1111-4000-8000-00000000000${n}`, name: n === 1 ? "Mara Okafor" : "Theo Lindqvist", username: n === 1 ? "maraok" : "theowild", avatarUrl: null, href: null},
         imageSrc: "/images/blog/what-if-every-animal-is-a-lesson/eurasian-wolf.webp",
-        mediaAssets: [],
+        mediaAssets: [{
+            id: `media-${n}`, kind: "photo", url: "/images/blog/what-if-every-animal-is-a-lesson/eurasian-wolf.webp", posterUrl: null,
+            mimeType: "image/webp", durationMs: null, sortOrder: 0
+        }],
         href: `/app/capture/${captureId}`,
         scientificName: "Canis lupus",
         breedGuess: null,
