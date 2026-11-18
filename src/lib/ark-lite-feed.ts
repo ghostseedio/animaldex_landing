@@ -15,7 +15,8 @@
 
 import type {ArkSnapshot} from "@/ark-scene/types";
 import type {ArkEvent} from "@/lib/ark-life";
-import {arkLiveArrivalsFromSnapshot, arkLiveServerItems, type ArkLiveItem} from "@/lib/ark-live-log";
+import {arkLiveArrivalsFromSnapshot, type ArkLiveItem} from "@/lib/ark-live-log";
+import {recordItems} from "@/ark-scene/live/crisis-lines";
 
 /** A line read: what happened, when, and its species' icon. */
 export type ArkLiteFeedEntry = {id: string; at: string; item: ArkLiveItem; slug: string | null};
@@ -63,7 +64,7 @@ export function arkLiteFeedSeed(snapshot: ArkSnapshot | null, limit = ARK_LITE_F
 /** The record's events as entries (a litter is one, at its first young's time). */
 export function arkLiteFeedFromEvents(events: readonly ArkEvent[]): ArkLiteFeedEntry[] {
     const byId = new Map(events.map((event) => [String(event.id), event]));
-    return arkLiveServerItems(events).map((item) => {
+    return recordItems(events).map((item) => {
         const event = byId.get(String(item.id));
         const slug = event?.animal?.model_slug || event?.other?.model_slug || null;
         return {id: String(item.id), at: event?.at ?? new Date(0).toISOString(), item, slug};

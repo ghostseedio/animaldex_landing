@@ -329,7 +329,11 @@
             "escaped": "{aPrey} pääsi pakoon, saalistaja: {aPredator}",
             "revived": "{animal} on palannut",
             "revivedYoung": "{animal} on palannut, taas nuori aikuinen",
-            "gone": "{animal} on poissa Arkista"
+            "gone": "{animal} on poissa Arkista",
+            "crisis": "{animal}: luonnossa on jäljellä vain muutama",
+            "saved": "{animal}: ei enää vaarassa luonnossa",
+            "wildGone": "{animal}: luonnossa ei ole enää yhtään",
+            "toCare": "{animal}: nyt eläintarhan hoidossa"
         },
         "card": {
             "now": "Nyt: {activity}",

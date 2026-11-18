@@ -329,7 +329,11 @@
             "escaped": "{aPrey} konnte vor {aPredator} fliehen",
             "revived": "{animal} ist zurück",
             "revivedYoung": "{animal} ist zurück, wieder ein junges erwachsenes Tier",
-            "gone": "{animal} hat die Ark verlassen"
+            "gone": "{animal} hat die Ark verlassen",
+            "crisis": "{animal}: nur noch wenige in der Wildnis",
+            "saved": "{animal}: in der Wildnis außer Gefahr",
+            "wildGone": "{animal}: keine mehr in der Wildnis",
+            "toCare": "{animal}: jetzt im Zoo betreut"
         },
         "card": {
             "now": "Jetzt: {activity}",

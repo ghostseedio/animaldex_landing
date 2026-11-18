@@ -329,7 +329,11 @@
             "escaped": "{aPrey}: вдалося втекти, мисливець — {aPredator}",
             "revived": "{animal} повернувся",
             "revivedYoung": "{animal} повернувся знову молодим дорослим",
-            "gone": "{animal} покинув Ark"
+            "gone": "{animal} покинув Ark",
+            "crisis": "{animal}: у дикій природі лишилося зовсім мало",
+            "saved": "{animal}: у дикій природі поза небезпекою",
+            "wildGone": "{animal}: у дикій природі не лишилося жодної особини",
+            "toCare": "{animal}: тепер під опікою зоопарку"
         },
         "card": {
             "now": "Зараз: {activity}",

@@ -19,8 +19,9 @@
  */
 
 import {decodeArkEvents, type ArkEvent} from "@/lib/ark-life";
-import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText, arkLiveServerItems, arkNowItems, arkSeenItems, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveLine, type ArkLiveText} from "@/lib/ark-live-log";
+import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText, arkNowItems, arkSeenItems, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveLine, type ArkLiveText} from "@/lib/ark-live-log";
 import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt-outcome";
+import {crisisText, recordItems} from "@/ark-scene/live/crisis-lines"; // E4 (the crisis layer)
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
 import {forestDeathRecords, forestItems, forestText} from "@/ark-scene/live/forest-lines"; // p5 (humans)
@@ -150,7 +151,7 @@ export class ArkLive {
         }
         this.view = new ArkLiveLogView(options.host, {
             labels: this.labels(),
-            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? dormancyText(line, this.text, this.locale) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
+            text: (line) => signatureText(line, this.text) ?? escapeText(line, this.text) ?? forestText(line, this.text, this.locale) ?? humanText(line) ?? dormancyText(line, this.text, this.locale) ?? crisisText(line, this.text) ?? caughtText(line, this.text) ?? arkLiveLineText(line, this.text, this.locale),
             onTap: (line) => this.focus(line),
             reducedMotion: Boolean(options.reducedMotion),
             serverLife: ARK_LIVE_LOG_DEFAULTS.serverLife,
@@ -231,7 +232,7 @@ export class ArkLive {
         this.died(decoded); // 3.3 fix (log)
         this.born(decoded);
         this.hatched(decoded); // 3.3 batch (B): ducklings dropping from the tree hole
-        this.push(arkLiveServerItems(decoded));
+        this.push(recordItems(decoded));
     }
 
     /** Hearts are lives: an animal back from recovering walks out of its home (the scene's `revive`), once. */
@@ -508,7 +509,7 @@ export class ArkLive {
                 this.died(events); // 3.3 fix (log)
                 this.born(events);
                 this.hatched(events); // 3.3 batch (B)
-                this.push(arkLiveServerItems(events));
+                this.push(recordItems(events));
             })
             .catch(() => {
                 if (!this.disposed) this.newcomers(before, next);

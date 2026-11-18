@@ -329,7 +329,11 @@
             "escaped": "{aPrey}: podarilo sa ujsť, lovil {aPredator}",
             "revived": "{animal} je späť",
             "revivedYoung": "{animal} je späť, znova mladý dospelý",
-            "gone": "{animal} odchádza z Arku"
+            "gone": "{animal} odchádza z Arku",
+            "crisis": "{animal}: vo voľnej prírode zostalo už len málo",
+            "saved": "{animal}: vo voľnej prírode mimo ohrozenia",
+            "wildGone": "{animal}: vo voľnej prírode už nezostal žiadny jedinec",
+            "toCare": "{animal}: teraz v starostlivosti zoo"
         },
         "card": {
             "now": "Teraz: {activity}",

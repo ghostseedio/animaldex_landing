@@ -329,7 +329,11 @@
             "escaped": "{aPrey} a scăpat de {aPredator}",
             "revived": "{animal} s-a întors",
             "revivedYoung": "{animal} s-a întors, din nou adult tânăr",
-            "gone": "{animal} a plecat din Ark"
+            "gone": "{animal} a plecat din Ark",
+            "crisis": "{animal}: în sălbăticie au mai rămas doar câțiva indivizi",
+            "saved": "{animal}: în afara pericolului în sălbăticie",
+            "wildGone": "{animal}: nu a mai rămas niciun individ în sălbăticie",
+            "toCare": "{animal}: acum în grija grădinii zoologice"
         },
         "card": {
             "now": "Acum: {activity}",

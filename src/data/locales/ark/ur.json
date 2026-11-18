@@ -329,7 +329,11 @@
             "escaped": "{aPrey} نے {aPredator} سے جان بچا لی",
             "revived": "{animal} واپس آ گیا",
             "revivedYoung": "{animal} دوبارہ نوجوان بالغ بن کر واپس آ گیا",
-            "gone": "{animal} Ark سے چلا گیا"
+            "gone": "{animal} Ark سے چلا گیا",
+            "crisis": "{animal}: جنگل میں اب بہت تھوڑی تعداد",
+            "saved": "{animal}: جنگل میں اب خطرے سے باہر",
+            "wildGone": "{animal}: جنگل میں اب ایک بھی نہیں",
+            "toCare": "{animal}: اب چڑیا گھر کی دیکھ بھال میں"
         },
         "card": {
             "now": "ابھی: {activity}",

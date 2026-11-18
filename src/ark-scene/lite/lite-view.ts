@@ -15,6 +15,7 @@ import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkFounders} from "@/lib/ark-founders";
 import {decodeArkEvents} from "@/lib/ark-life";
 import {arkLiveLineText} from "@/lib/ark-live-log";
+import {crisisText} from "@/ark-scene/live/crisis-lines";
 import {arkLiveTextOf, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
 import {ARK_LITE_FEED_BACK_MS, ARK_LITE_FEED_LONG, ARK_LITE_FEED_POLL_MS, ARK_LITE_FEED_SHORT, arkLiteFeedFromEvents, arkLiteFeedLines, arkLiteFeedMerge, arkLiteFeedSeed, type ArkLiteFeedEntry} from "@/lib/ark-lite-feed";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
@@ -247,7 +248,7 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
             const fresh = !first && !drawn.has(line.id);
             const item = el("li", `arkl-ev${fresh ? " new" : ""}`);
             item.appendChild(icon("i", line.slug, options.iconUrl));
-            item.appendChild(el("span", "t", arkLiveLineText(line.item, text, locale)));
+            item.appendChild(el("span", "t", crisisText(line.item, text) ?? arkLiveLineText(line.item, text, locale)));
             item.appendChild(el("span", "ago", arkAgoText(line.at, now, locale)));
             list.appendChild(item);
         }

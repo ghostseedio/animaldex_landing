@@ -329,7 +329,11 @@
             "escaped": "{aPrey} alimtoroka {aPredator}",
             "revived": "{animal} amerudi",
             "revivedYoung": "{animal} amerudi, mtu mzima kijana tena",
-            "gone": "{animal} ameondoka Ark"
+            "gone": "{animal} ameondoka Ark",
+            "crisis": "{animal}: wamebaki wachache tu porini",
+            "saved": "{animal}: hawako hatarini tena porini",
+            "wildGone": "{animal}: hakuna hata mmoja porini",
+            "toCare": "{animal}: sasa anatunzwa katika bustani ya wanyama"
         },
         "card": {
             "now": "Sasa: {activity}",

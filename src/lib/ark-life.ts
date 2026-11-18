@@ -29,10 +29,16 @@ import {arkLabelHasFounderKey, arkLabelText, decodeArkFounder, decodeArkFounderS
  * (A3): the step that brought an animal was revised after it arrived; the
  * animal stays. Counted in its life story, never acted out.
  */
-export const ARK_EVENT_KINDS = ["arrival", "milestone", "meal", "birth", "laid", "death_old", "starved", "eaten", "extinction", "hungry", "fed", "revised", "mated", "revived", "revive_failed"] as const;
+export const ARK_EVENT_KINDS = ["arrival", "milestone", "meal", "birth", "laid", "death_old", "starved", "eaten", "extinction", "hungry", "fed", "revised", "mated", "revived", "revive_failed", "crisis", "saved", "extinct_wild", "returned_to_care"] as const;
 /* `revived` / `revive_failed` (hearts are lives, AnimalDex docs/ark/HEARTS-LIVES-DESIGN.md section 6): an animal back
  * from recovering at its home spot (`payload {cause, heartsLeft, ageReset, revive}`), or one whose revive could not
  * happen (`{reason, cause}`): said in the live log; the scene walks a revived one out of its home. */
+/* The crisis layer (AnimalDex E4, `docs/ark/crises-e4.md`, behind `voyage_config.crises`): `crisis` (a kind fell to two
+ * or one in the wild, or moved between the two), `saved` (that crisis ended: the kind is out of danger), `extinct_wild`
+ * (the last wild animal of a kind is gone: it may live on in the zoo) and `returned_to_care` (a recovering animal came
+ * back into the zoo's care, not the wild). The public read sends none of their payload (no band, no count, no cause):
+ * a line says only the kind and what happened, in the live log and Ark Lite's "Latest on the Ark"; the replay does not
+ * act them. Never a person, never a place, never a sex. */
 /* `mated` (owner, 2026-11-11, the live log): a pair bred, `parents: [id, id]`, written just before its litter's
  * `birth` rows or its clutch's `laid` row. Said in the live log; not acted out in the replay. */
 export type ArkEventKind = typeof ARK_EVENT_KINDS[number];

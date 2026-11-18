@@ -117,6 +117,13 @@ Lighthouse 12.6.1, default simulated throttling, median of 3, on local productio
 - Rate: 4 lines at most, record lines 15 s, seen 9 s; repeats within 10 s fold ("3 House Sparrows came aboard",
   "×2"); a burst bigger than 6 keeps the rare kinds and ends in "+N more"; seen lines at most every 3.5 s, alarm
   lines at most every 20 s, a seen line that waited 7 s is dropped.
+- **The crisis layer** (AnimalDex E4, behind `voyage_config.crises`; `live/crisis-lines.ts`, with the scene and Ark Lite,
+  never in the page's static JavaScript): the record's `crisis`, `saved`, `extinct_wild` and `returned_to_care` rows,
+  each one line by species, "European Rabbit: only a few left in the wild", "...: out of danger in the wild",
+  "...: none left in the wild", "...: now cared for in the zoo" (`ark.live.crisis`, `saved`, `wildGone`, `toCare`, in all
+  45 languages, each worded with no verb that agrees with an animal's sex or number). The public read sends none of
+  their payload, so a line never says a count, a cause or a band. Not acted in the replay and not counted in "While you
+  were away" or the 24-hour change. A kind this page does not know yet is dropped; the lines around it stay.
 - Tap a line: its animal (`select`), else one of its kind (or its herd), else its region. The chip folds the log
   (remembered in `ark.live.folded`). While a card covers the foot of the world the log steps aside.
 - Privacy: species names only. No bringer label, no person, no place.
