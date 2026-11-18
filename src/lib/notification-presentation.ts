@@ -63,29 +63,17 @@ function statTitle(stat: string | null | undefined, words: NotificationWords): s
     }
 }
 
-/** `GiftPresentation.displayName(forSlug:)`. */
+/**
+ * A Gift's name from its slug alone (a notification row carries no display name). Only the Ark care gifts have
+ * names of their own here; any other slug (the retired stat gifts too) reads as the plain word "Gift", so no
+ * legacy name is hardcoded anywhere (GIFTS-M1).
+ */
 export function giftDisplayName(slug: string | null | undefined, words: NotificationWords): string {
-    const value = slug?.trim() ?? "";
-    switch (value) {
-        case "big_brain": return words.giftBigBrain;
-        case "great_capture": return words.giftAbsoluteUnit;
-        case "electric_find": return words.giftLightningBolt;
-        case "wild": return words.giftPowerhouse;
-        case "legendary_capture": return words.giftLegendary;
-        case "": return words.gift;
-        default: return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
-    }
-}
-
-/** `GiftPresentation.endorsedStat(forSlug:)`. */
-function giftStat(slug: string | null | undefined): string | null {
-    switch (slug?.trim()) {
-        case "big_brain": return "intelligence";
-        case "electric_find": return "speed";
-        case "great_capture": return "size";
-        case "wild": return "dominance";
-        case "legendary_capture": return "rarity";
-        default: return null;
+    switch (slug?.trim() ?? "") {
+        case "ark_meal": return words.giftMeal;
+        case "ark_shelter": return words.giftShelter;
+        case "ark_nest": return words.giftNest;
+        default: return words.gift;
     }
 }
 
@@ -129,13 +117,11 @@ export function notificationText(item: Row, words: NotificationWords, animalName
             return stat
                 ? {title: fill(words.endorsedStat, {subject, stat}), detail: fill(words.endorsedStatDetail, {stat})}
                 : {title: fill(words.endorsed, {subject}), detail: words.endorsedDetail};
-        case "capture_gift_received": {
-            const recognised = statTitle(giftStat(item.giftSlug), words);
+        case "capture_gift_received":
             return {
                 title: fill(words.giftSent, {actor, gift: giftDisplayName(item.giftSlug, words), subject}),
-                detail: recognised ? fill(words.giftStatDetail, {stat: recognised}) : words.giftDetail
+                detail: words.giftDetail
             };
-        }
         case "trade_offer_received": return {title: words.tradeReceived, detail: words.tradeReceivedDetail};
         case "trade_offer_accepted": return {title: words.tradeAccepted, detail: words.tradeAcceptedDetail};
         case "trade_offer_rejected": return {title: words.tradeRejected, detail: words.tradeRejectedDetail};

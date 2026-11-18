@@ -3,14 +3,7 @@ import {readFileSync} from "node:fs";
 import {dirname, join} from "node:path";
 import test from "node:test";
 import {fileURLToPath} from "node:url";
-import {
-    communityStatPoints,
-    communitySupportScore,
-    communitySupportSenderPoints,
-    endorsedStatForSlug,
-    giftDisplayName,
-    LAUNCH_GIFT_CATALOG
-} from "./capture-gifts";
+import {giftDisplayName} from "./capture-gifts";
 import {
     EARNINGS_ALLOWED_SOURCE_TYPES,
     EARNINGS_FORBIDDEN_SOURCE_TYPES,
@@ -41,50 +34,18 @@ test("capture grade does not lift from endorsements, gifts or credits (GRADING-1
     assert.doesNotMatch(gradeSource, /earning_entr/);
 });
 
-test("launch gift catalog is diminishing and never encodes cash", () => {
-    const rates = LAUNCH_GIFT_CATALOG.map((item: (typeof LAUNCH_GIFT_CATALOG)[number]) => item.captureXpGrant / item.creditCost);
-    for (let index = 1; index < rates.length; index += 1) {
-        assert.ok(rates[index] < rates[index - 1]);
-    }
-    assert.ok(LAUNCH_GIFT_CATALOG[4].captureXpGrant < 20 * LAUNCH_GIFT_CATALOG[0].captureXpGrant);
+test("gifts never encode cash or a score (GIFTS-M1)", () => {
     assert.doesNotMatch(giftSource, /usd/i);
     assert.doesNotMatch(giftSource, /earning/i);
     assert.doesNotMatch(giftSource, /payout/i);
+    assert.doesNotMatch(giftSource, /communitySupport|Boosted|captureXpGrant/);
 });
 
-test("community support scoring favors broad support over whales and never uses credit cost", () => {
-    assert.equal(communitySupportSenderPoints(20, 1), 10);
-    assert.equal(communitySupportSenderPoints(2, 1), 9);
-    assert.equal(communitySupportSenderPoints(1, 1), 8);
-    assert.equal(communityStatPoints(20), 8);
-
-    const whale = communitySupportScore([{giftCount: 20, captureCount: 1}]);
-    const tenSupporters = communitySupportScore(
-        Array.from({length: 10}, () => ({giftCount: 2, captureCount: 1}))
-    );
-    const twentySupporters = communitySupportScore(
-        Array.from({length: 20}, () => ({giftCount: 1, captureCount: 1}))
-    );
-    assert.equal(whale, 10);
-    assert.equal(tenSupporters, 90);
-    assert.equal(twentySupporters, 160);
-    assert.ok(tenSupporters > whale);
-    assert.ok(twentySupporters > tenSupporters);
-    assert.equal(communitySupportSenderPoints(5, 1), 10);
-    assert.doesNotMatch(giftSource, /SUM\(.*credit/i);
-});
-
-test("gift slug mapping is Phase 1B canonical", () => {
-    assert.equal(giftDisplayName("big_brain"), "Big Brain");
-    assert.equal(giftDisplayName("electric_find"), "Lightning Bolt");
-    assert.equal(giftDisplayName("great_capture"), "Absolute Unit");
-    assert.equal(giftDisplayName("wild"), "Powerhouse");
-    assert.equal(giftDisplayName("legendary_capture"), "Legendary");
-    assert.equal(endorsedStatForSlug("big_brain"), "intelligence");
-    assert.equal(endorsedStatForSlug("electric_find"), "speed");
-    assert.equal(endorsedStatForSlug("great_capture"), "size");
-    assert.equal(endorsedStatForSlug("wild"), "dominance");
-    assert.equal(endorsedStatForSlug("legendary_capture"), "rarity");
+test("gift names come from the server, the Ark care slugs from their own words (GIFTS-M1)", () => {
+    assert.equal(giftDisplayName("big_brain", "Big Brain"), "Big Brain");
+    assert.equal(giftDisplayName("big_brain"), "Gift");
+    assert.equal(giftDisplayName("ark_meal", "Meal"), "A meal");
+    assert.doesNotMatch(giftSource, /Absolute Unit|Lightning Bolt|Powerhouse/);
 });
 
 test("gift API routes use user session client and fail closed", () => {

@@ -3,7 +3,7 @@
 import Link from "@/app/[locale]/_components/link";
 import {useEffect, useState} from "react";
 import CaptureGiftSheet, {GiftGlyph} from "@/app/[locale]/(authenticated)/app/_components/capture-gift-sheet";
-import {parseGiftCatalog, type GiftCatalog} from "@/lib/capture-gifts";
+import {parseGiftCatalog, showsGiftButton, type GiftCatalog} from "@/lib/capture-gifts";
 import {useAppFeatureFlag} from "@/components/use-app-feature-flag";
 
 /** Mirrors `FEED_RAIL_BUTTON_CLASS` in discover-timeline-cards (kept local to avoid an import cycle). */
@@ -102,7 +102,9 @@ export default function DiscoverCaptureActions({
 
     if (isOwnPost) return null;
 
-    const giftsEnabled = catalog?.enabled === true && (catalog.definitions.length ?? 0) > 0;
+    // GIFTS-M1: the Gift button shows while the switch is on, even with nothing to offer (the drawer then says
+    // gifts are coming to the Ark); it opens this card's own catalog.
+    const giftsEnabled = showsGiftButton(catalog);
     const showsGift = giftsEnabled;
     const showsEndorse = !giftsEnabled;
     const showsOffer = canOffer && tradesOn;
