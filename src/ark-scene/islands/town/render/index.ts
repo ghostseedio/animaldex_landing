@@ -395,7 +395,10 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     const layers: Array<{name: ChunkLayer; material: Material; castShadow: boolean; receiveShadow: boolean; release?: boolean}> = [
         {name: "ground", material: materials.ground, castShadow: false, receiveShadow: true},
         {name: "decal", material: materials.decal, castShadow: false, receiveShadow: true},
-        {name: "solid", material: materials.solid, castShadow: true, receiveShadow: true},
+        // (The walls' arrays: nothing reads them back (the walk surfaces read the decals' alone, `islands/scene.ts`; the lit windows
+        // write the glass's and the panes' `aLit`), so the page's copy goes once on the GPU: ~28 MB of the phone's heap with the real
+        // Ark, measured 2026-11-19. The ground's own stay: a ground with its copy let go draws white.)
+        {name: "solid", material: materials.solid, castShadow: true, receiveShadow: true, release: true},
         {name: "glass", material: materials.glass, castShadow: false, receiveShadow: false},
         // (Hedges, flower beds and crops: nothing reads their arrays back, so the page's copies go once on the GPU, phone heap.)
         {name: "foliage", material: materials.foliage, castShadow: true, receiveShadow: true, release: true},
