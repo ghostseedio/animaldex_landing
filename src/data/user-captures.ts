@@ -6,6 +6,7 @@ import {storedCaptureGrade} from "@/lib/capture-grade-value";
 import {countCaptureSettingLabels, getCaptureContextLabel, type CaptureSettingRow} from "@/lib/capture-setting-label";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {hasAuthCookie} from "@/lib/viewer";
+import {captureStarScore, captureStars} from "@/lib/capture-star-rating";
 
 export type UserCaptureSummary = {
     captureId: string;
@@ -25,6 +26,9 @@ export type UserCaptureSummary = {
     locationDisplayLabel: string | null;
     /** The server's stored capture grade (1-10); null/absent when the payload carries none. */
     captureGrade?: number | null;
+    /** The server's stored stars (GRADING-4, 1-5) and score; null/absent shows no stars. */
+    captureStars?: number | null;
+    starScore?: number | null;
 };
 
 export type UserCaptureStats = {
@@ -60,6 +64,9 @@ type OwnedCaptureManifestRow = {
     raw_json?: unknown;
     /** Appended to the view by migration 20261129120000 (GRADING-1). */
     capture_grade?: number | null;
+    /** Appended by migration 20261202100000 (GRADING-4). */
+    capture_stars?: number | null;
+    star_score?: number | string | null;
 };
 
 type DiscoverFeedStatsRow = Pick<OwnedCaptureManifestRow, "capture_id" | "animal_name" | "normalized_identity_key" | "total_progression_xp" | "human_context" | "zoo_or_wild">;
@@ -141,7 +148,9 @@ function toUserCaptureSummary(row: OwnedCaptureManifestRow): UserCaptureSummary 
         imagePath: row.image_path ?? null,
         contextLabel: getContextLabel(row),
         locationDisplayLabel: row.location_display_label?.trim() ?? null,
-        captureGrade: storedCaptureGrade(row.capture_grade)
+        captureGrade: storedCaptureGrade(row.capture_grade),
+        captureStars: captureStars(row.capture_stars),
+        starScore: captureStarScore(row.star_score)
     };
 }
 
@@ -166,8 +175,11 @@ const USER_CAPTURE_MANIFEST_SELECT_BASE = [
     "raw_json"
 ];
 
-/** The stored grade is the view's last column (migration 20261129120000). */
-export const USER_CAPTURE_MANIFEST_SELECT = [...USER_CAPTURE_MANIFEST_SELECT_BASE, "capture_grade"].join(",");
+/** The stored grade (migration 20261129120000) and stars (20261202100000) are the view's last columns. */
+export const USER_CAPTURE_MANIFEST_SELECT = [...USER_CAPTURE_MANIFEST_SELECT_BASE, "capture_grade", "capture_stars", "star_score"].join(",");
+
+/** Before migration 20261202100000: the grade without the stars (no star chips, no star order). */
+const USER_CAPTURE_MANIFEST_SELECT_NO_STARS = [...USER_CAPTURE_MANIFEST_SELECT_BASE, "capture_grade"].join(",");
 
 /**
  * The same read without the grade, for a database that has not had migration
@@ -238,6 +250,10 @@ export async function getUserCapturesChecked(limit = 2000): Promise<{captures: U
         let {data, error} = await readPage(select);
 
         if (error && offset === 0 && select === USER_CAPTURE_MANIFEST_SELECT) {
+            select = USER_CAPTURE_MANIFEST_SELECT_NO_STARS;
+            ({data, error} = await readPage(select));
+        }
+        if (error && offset === 0 && select === USER_CAPTURE_MANIFEST_SELECT_NO_STARS) {
             select = USER_CAPTURE_MANIFEST_SELECT_NO_GRADE;
             ({data, error} = await readPage(select));
         }

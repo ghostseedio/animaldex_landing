@@ -122,7 +122,7 @@ function RevealStars({stars, words, reduceMotion}: {stars: number; words: Reveal
         return () => timers.forEach((timer) => window.clearTimeout(timer));
     }, [reduceMotion, stars]);
     return (
-        <span className="flex items-center gap-0.5 text-[13px]" role="img" aria-label={fillCaptureWords(words.starsOf, {n: stars, max: MAX_STARS})}>
+        <span className="flex items-center gap-0.5 text-[13px]" role="img" title={words.starsHelp} aria-label={`${fillCaptureWords(words.starsOf, {n: stars, max: MAX_STARS})}. ${words.starsHelp}`}>
             {Array.from({length: MAX_STARS}, (_, index) => (
                 <span key={index} aria-hidden="true" className="transition-opacity duration-200" style={{color: index < shown ? NEON : "rgba(255,255,255,0.18)", opacity: shown === 0 ? 0 : 1}}>★</span>
             ))}

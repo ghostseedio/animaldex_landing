@@ -1,4 +1,5 @@
 import "server-only";
+import {captureStarScore, captureStars} from "@/lib/capture-star-rating";
 import {missionIsLocked, missionUnlockCollectionPoints} from "@/lib/ark-world";
 
 import {decodeArkStats} from "@/lib/ark";
@@ -430,6 +431,9 @@ export type AppCaptureDetail = {
     premiumDetails: Record<string, any> | null;
     imageSrc: string;
     captureGrade: number | null;
+    /** The stored stars (capture_star_ratings, GRADING-4); null shows none. */
+    captureStars: number | null;
+    captureStarScore: number | null;
     gradeBreakdown: CaptureGradeBreakdown | null;
     totalProgressionXP: number;
     challengeHealth: number;
@@ -1298,7 +1302,7 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
     if (!supabase) return null;
     const {data: {user}} = await supabase.auth.getUser();
     if (!user) return null;
-    const [captureResult, comparisonResult, progressionResult] = await Promise.all([
+    const [captureResult, comparisonResult, progressionResult, starResult] = await Promise.all([
         supabase.from("captures")
             .select("id,status,title,created_at,location_display_label,location_lat,location_lng,challenge_health,challenge_stake,is_challenge_ready,is_discoverable,dominance_boost,speed_boost,intelligence_boost,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,analysis_results(animal_name,scientific_name,normalized_identity_key,breed_guess,breed_confidence,human_context,zoo_or_wild,conservation_tier,confidence,type_tags,game_stats,premium_details,signals,observed_market_modifiers,raw_json,capture_grade,error_message,completed_at)")
             .eq("id", id)
@@ -1310,6 +1314,11 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
             .maybeSingle(),
         supabase.from("capture_progression_totals_v1")
             .select("capture_id,total_progression_xp,recent_progression_source")
+            .eq("capture_id", id)
+            .maybeSingle(),
+        // GRADING-4: an error here (a server without the table yet) only means no stars.
+        supabase.from("capture_star_ratings")
+            .select("stars,star_score")
             .eq("capture_id", id)
             .maybeSingle()
     ]);
@@ -1441,6 +1450,8 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
         imageSrc: species ? getSpeciesImageRoute(species.slug, id) : "/images/placeholders/species-no-image.svg",
         captureGrade,
         gradeBreakdown,
+        captureStars: captureStars((starResult.data as QueryRow | null)?.stars),
+        captureStarScore: captureStarScore((starResult.data as QueryRow | null)?.star_score),
         totalProgressionXP: Math.max(0, finiteInteger(progression.total_progression_xp)),
         challengeHealth: Math.min(3, Math.max(0, finiteInteger(row.challenge_health, 3))),
         challengeStake: Math.min(25, Math.max(5, finiteInteger(row.challenge_stake, 5))),

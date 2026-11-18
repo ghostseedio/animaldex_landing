@@ -30,7 +30,6 @@ import {CaptureCardOptions, CaptureModerationMenu, CaptureShareButton, shareCapt
 import {AppearsInBinders, CaptureValidityBand} from "@/components/animal-detail/capture-card-bands";
 import type {SpeciesBinderLink} from "@/data/collection-binder-types";
 import {captureValidityNotice} from "@/lib/capture-validity-notice";
-import {captureStarCount} from "@/lib/capture-star-rating";
 import {CAPTURE_WORDS_EN, type CaptureWords} from "@/lib/capture-words";
 import CaptureMetadataBand from "@/components/animal-detail/capture-metadata-band";
 import ArkCaptureBand from "@/components/animal-detail/ark-capture-band";
@@ -479,14 +478,8 @@ export default function CaptureDetailClient({
         captureGrade: capture.captureGrade,
         words: cardWords
     });
-    // The card's stars, as the reveal pulls them (none for an uncertain capture).
-    const revealStars = isUncertain ? null : captureStarCount({
-        grade: capture.captureGrade,
-        settingTag: capture.settingTag,
-        humanContext: capture.humanContext,
-        totalProgressionXP: capture.totalProgressionXP,
-        stats: capture.effectiveGameStats
-    });
+    // The card's stored stars, as the reveal pulls them (none for an uncertain capture or when none are stored).
+    const revealStars = isUncertain ? null : capture.captureStars;
     const revealPowerName = resolvedPowerProfile?.principleName?.trim() || null;
     const shareCard = useCallback(() => {
         void shareCaptureCard({animalName: capture.animalName, speciesSlug: resolvedSpeciesSlug, imageSrc: capture.imageSrc, words: captureWords});
