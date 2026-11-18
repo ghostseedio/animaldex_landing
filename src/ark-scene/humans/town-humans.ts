@@ -47,13 +47,36 @@ export function isHumanAnimal(a: {species_profile_id?: string | null; model_slug
  * drawn now (`out`: `TownHumans.out`), else null (indoors, asleep or at work: the card still opens, over the town).
  * Humans are never scene entries, so before this a chosen human found nothing and the card closed (live, 2026-11-18).
  */
-export type ChosenHuman<A> = {human: A; at: {x: number; y: number; z: number} | null};
-export function chosenHuman<A extends {id: string}>(id: string | null, aboard: readonly A[], out: ReadonlyArray<{id: string; x: number; y: number; z: number}>): ChosenHuman<A> | null {
+export type ChosenHuman<A> = {human: A; at: {x: number; y: number; z: number; /** Humans visible: seen from this way (yaw), through their room's open front. */ face?: number} | null};
+export function chosenHuman<A extends {id: string}>(id: string | null, aboard: readonly A[], out: ReadonlyArray<{id: string; x: number; y: number; z: number; face?: number; what?: string}>, outdoorsFirst = false): ChosenHuman<A> | null {
     if (!id) return null;
-    const human = aboard.find((a) => a.id === id);
-    if (!human) return null;
-    const drawn = out.find((h) => h.id === id);
-    return {human, at: drawn ? {x: drawn.x, y: drawn.y + 1, z: drawn.z} : null};
+    const asked = aboard.find((a) => a.id === id);
+    if (!asked) return null;
+    let human = asked;
+    let drawn = out.find((h) => h.id === id);
+    // Humans visible (owner, 2026-11-18): at night a chosen human is one of the few out under the lamps, where one is.
+    const outdoors = (h: {what?: string; face?: number}) => h.face === undefined && h.what !== "home" && h.what !== "sleep" && h.what !== "car" && h.what !== "boat";
+    if (outdoorsFirst && !(drawn && outdoors(drawn))) {
+        const pool = out.filter((h) => outdoors(h) && aboard.some((a) => a.id === h.id));
+        if (pool.length) {
+            drawn = pool.slice().sort((a, b) => humanUnit(`${id}|${a.id}`) - humanUnit(`${id}|${b.id}`))[0];
+            human = aboard.find((a) => a.id === drawn!.id)!;
+        }
+    }
+    if (!drawn) {
+        // Humans visible (owner, 2026-11-18: "it just zooms out"): the one asked for is not drawn now (at work, away, or
+        // not yet in): another real person who is, the same one for every viewer at this moment (by a hash on the id
+        // asked), still or at home before one in a car or a boat; their card, so the card is who is seen. Null only
+        // when no one is drawn.
+        const still = out.filter((h) => !("what" in h) || (h.what !== "car" && h.what !== "boat"));
+        const pool = (still.length ? still : out).filter((h) => aboard.some((a) => a.id === h.id));
+        if (pool.length) {
+            drawn = pool.slice().sort((a, b) => humanUnit(`${id}|${a.id}`) - humanUnit(`${id}|${b.id}`))[0];
+            human = aboard.find((a) => a.id === drawn!.id)!;
+        }
+    }
+    if (!drawn) return {human, at: null};
+    return {human, at: drawn.face === undefined ? {x: drawn.x, y: drawn.y + 1, z: drawn.z} : {x: drawn.x, y: drawn.y + 0.6, z: drawn.z, face: drawn.face}};
 }
 
 export type Spot = {x: number; y: number; z: number; /** Facing (three's yaw: forward (sin, cos)). */ yaw: number};
@@ -69,8 +92,10 @@ export type HumanRoom = {
     tv: Spot | null;
     /** Chairs at the table (the seat's top), facing the table. */
     chairs: Spot[];
-    /** Where people sleep (a bed's top, head toward `yaw`). */
+    /** Where people sleep (a sleeper's root at the bed's foot, on its top; `yaw` from the head to the foot). */
     beds: Spot[];
+    /** Humans visible: the way out through the room's open front (yaw): the way a person indoors is seen from. */
+    front?: number;
 };
 
 /** Who gives the rooms (wired after the homes / rural lanes merge: their `home-rooms.ts` rooms and furniture). */
@@ -213,11 +238,43 @@ export type HumanDay = "sleep" | "home" | "work" | "out";
 
 const BLOCK_HOURS = 1.5;
 
-/** A person's own rhythm (pure in the id). */
-function rhythm(id: string) {
+/**
+ * Humans visible (2026-11-18): who keeps the town's late hours, by the id (`#night`), so a few are about at any hour:
+ * - "owl" (14%): to bed between 00:45 and 04:45, up from 08:18; a last walk or a sit on a lamp-lit bench before bed;
+ * - "late" (6%): a late shift on weekday evenings (from 17:00–17:30 to 01:30–03:30), the walk home after it;
+ * - "early" (5%): up at 03:40–04:35 for an early shift (to 13:30–14:30), the walk to work before five.
+ */
+export type NightKind = "usual" | "owl" | "late" | "early";
+
+/** A person's own rhythm (pure in the id). Hours past 24 are after midnight (a bedtime of 25.5 is 01:30). */
+export function rhythm(id: string) {
     const r = humanUnit(`${id}#rhythm`);
-    return {wake: 6.15 + r * 1.65, bed: 22 + humanUnit(`${id}#bed`) * 2.5, worker: humanUnit(`${id}#works`) < 0.6, back: 17 + humanUnit(`${id}#back`) * 1.5, homebody: humanUnit(`${id}#home`)};
+    const night = humanUnit(`${id}#night`);
+    const kind: NightKind = night < 0.14 ? "owl" : night < 0.2 ? "late" : night < 0.25 ? "early" : "usual";
+    const out = {wake: 6.15 + r * 1.65, bed: 22 + humanUnit(`${id}#bed`) * 2.5, worker: humanUnit(`${id}#works`) < 0.6, back: 17 + humanUnit(`${id}#back`) * 1.5, homebody: humanUnit(`${id}#home`), kind, start: 9, leave: undefined as number | undefined};
+    if (kind === "owl") {
+        out.bed = 24.75 + humanUnit(`${id}#bed`) * 4;
+        // (Up before half past nine: a dog's morning walk is over by ten, `dog-walks.ts`.)
+        out.wake = 8.3 + r * 1.0;
+    } else if (kind === "late") {
+        out.worker = true;
+        out.start = 17 + humanUnit(`${id}#start`) * 0.5;
+        out.leave = out.start - 0.25;
+        out.back = 25.5 + humanUnit(`${id}#back`) * 2;
+        out.bed = out.back + 0.5;
+        out.wake = 10 + r * 1.5;
+    } else if (kind === "early") {
+        out.worker = true;
+        out.wake = 3.7 + r * 0.9;
+        out.leave = out.wake + 0.55;
+        out.back = 13.5 + humanUnit(`${id}#back`);
+        out.bed = 20.6 + humanUnit(`${id}#bed`) * 0.9;
+    }
+    return out;
 }
+
+/** Whether a weekday (`weekday`: 0 is Sunday) is a working day. */
+const workday = (day: number) => day >= 1 && day <= 5;
 
 /** Where a person's day has them at a moment of the island clock (pure in the clock and the id). */
 export function humanDay(id: string, clock: TownClock): HumanDay {
@@ -227,13 +284,44 @@ export function humanDay(id: string, clock: TownClock): HumanDay {
     const asleep = bed < 12 ? h >= bed && h < r.wake : h >= r.bed || h < r.wake;
     if (asleep) return "sleep";
     const day = weekday(clock);
+    if (r.kind === "late") {
+        // A weekday evening's shift, on into the small hours (the day before's, after midnight).
+        if (workday(day) && h >= r.start) return "work";
+        if (workday((day + 6) % 7) && h < r.back - 24) return "work";
+    }
     if (h < r.wake + 1) return "home";
-    if (r.worker && day >= 1 && day <= 5 && h < r.back) return "work";
+    if (r.worker && r.kind !== "late" && workday(day) && h < r.back) return "work";
     // Dinner at home, then the evening in.
     if (h >= 18.5) return "home";
     if (h < 9) return "home";
     const block = Math.floor(h / BLOCK_HOURS);
     return humanUnit(`${id}#${clock.day}#${block}#in`) < 0.25 + r.homebody * 0.25 ? "home" : "out";
+}
+
+/**
+ * Humans visible: a night person's walk or sit now (the night's `key`: the day its evening began; `late`: hours past 24
+ * after midnight), or null. An owl's last outing before bed (half the nights a walk, else a lamp-lit bench); a late
+ * shift's walk to work and home. Pure in the id and the clock.
+ */
+export type NightOuting = {kind: "owl" | "late" | "home"; key: number; at: number; hours: number; bench: boolean};
+export function nightOuting(id: string, clock: TownClock): NightOuting | null {
+    const r = rhythm(id);
+    if (r.kind !== "owl" && r.kind !== "late") return null;
+    const after = clock.hours < 12;
+    const key = after ? clock.day - 1 : clock.day;
+    const hours = after ? clock.hours + 24 : clock.hours;
+    if (r.kind === "owl") {
+        // Out for 35–60 minutes, home 20–50 minutes before bed.
+        const length = 0.6 + humanUnit(`${id}#${key}#owl#len`) * 0.4;
+        const at = r.bed - 0.33 - humanUnit(`${id}#${key}#owl#at`) * 0.5 - length;
+        if (hours < at || hours >= at + length) return null;
+        return {kind: "owl", key, at, hours, bench: humanUnit(`${id}#${key}#owl#bench`) < 0.5};
+    }
+    // The late shift: a weekday evening's walk to work (leaving at `leave`) and its walk home (arriving at `back`).
+    if (!workday(((key % 7) + 7) % 7)) return null;
+    if (!after && r.leave !== undefined && hours >= r.leave && hours < r.start) return {kind: "late", key, at: r.leave, hours, bench: false};
+    if (hours >= r.back - 0.6 && hours < r.back) return {kind: "home", key, at: r.back, hours, bench: false};
+    return null;
 }
 
 /** What a person is doing out: at a boat's helm, at a car's wheel or beside its driver, on a bench, on the beach, or about the town (not drawn). */
@@ -308,6 +396,25 @@ export function assignOut(out: readonly string[], clock: TownClock, sites: TownH
     return result;
 }
 
+/**
+ * Humans visible (owner, 2026-11-18: "we should still have a few people outside at night, just not as many"): from
+ * 17:30 to 08:30, in each 20-minute slot, a few of the grown (2.5%, at least 2) step out, chosen by a hash on the
+ * night and the slot: those up at home first, then any not at work (up early, can't sleep). Pure in the clock and ids.
+ */
+export const NIGHT_ROTA_SHARE = 0.025;
+export function nightRota(ids: readonly string[], clock: TownClock, dayOf: (id: string) => HumanDay | undefined, busy: ReadonlySet<string>): string[] {
+    const h = clock.hours;
+    if (!(h >= 17.5 || h < 8.5)) return [];
+    const key = h < 12 ? clock.day - 1 : clock.day;
+    const slot = Math.floor((h < 12 ? h + 24 : h) * 3);
+    const want = Math.max(2, Math.round(ids.length * NIGHT_ROTA_SHARE));
+    const rank = (id: string) => humanUnit(`${id}#${key}#${slot}#rota`);
+    const free = ids.filter((id) => !busy.has(id) && dayOf(id) !== "work");
+    const up = free.filter((id) => dayOf(id) === "home").sort((a, b) => rank(a) - rank(b));
+    const rest = free.filter((id) => dayOf(id) !== "home").sort((a, b) => rank(a) - rank(b));
+    return up.concat(rest).slice(0, want);
+}
+
 // MARK: - The people drawn
 
 /** A human of the record (`born_ark_day`, `origin`: an Ark-born child is small until grown; p5 (humans, couples)). */
@@ -368,7 +475,7 @@ export function helmSeat(fix: {x: number; z: number; yaw: number}, pace: number,
     return {x: fix.x + lx * c + lz * s, y: sitRootY(sea + 0.12 * pace + 1.28 + lz * 0.09 * pace, scale), z: fix.z - lx * s + lz * c, yaw: fix.yaw};
 }
 
-export type DrawnHuman = HumanInstance & {id: string; what: HumanDay | OutWhat["kind"] | /* p5 (humans, pavements) */ "pavement" | /* p5 (humans, dogs) */ "dogwalk"};
+export type DrawnHuman = HumanInstance & {id: string; what: HumanDay | OutWhat["kind"] | /* p5 (humans, pavements) */ "pavement" | /* p5 (humans, dogs) */ "dogwalk"; /** Humans visible: indoors, the way they are seen from (their room's front). */ face?: number};
 
 /**
  * p5 (humans, dogs): a dog on its walk now (world frame): the record's own dog (`id`), where it walks at heel, and its
@@ -560,8 +667,61 @@ export class TownHumans {
         }
     }
 
+    /** Humans visible: the rooms someone lives in (their ids), for the scene to draw them furnished. */
+    homeRooms(): string[] {
+        const rooms = this.rooms?.rooms() ?? [];
+        const ids = new Set<string>();
+        this.homes.forEach((home) => {
+            const room = rooms[home.room];
+            if (room) ids.add(room.id);
+        });
+        return Array.from(ids).sort();
+    }
+
     lookOf(id: string): HumanLook | undefined {
         return this.looks.get(id);
+    }
+
+    /** Humans visible: whether the last frame was at night (18:00–07:00): a chosen human is then one of the few out. */
+    nightNow = false;
+
+    /** Humans visible: one of the night's few out (`nightRota`) drawn: at their door, on a bench or walking; false: not placed. */
+    private stepOut(id: string, clock: TownClock, take: (id: string, look: HumanLook, what: DrawnHuman["what"], x: number, y: number, z: number, yaw: number, pose: HumanPoseKind, phase: number) => DrawnHuman, lampLit: number, epochMs: number): boolean {
+        const look = this.looks.get(id)!;
+        const scale = look.height / BASE_HEIGHT;
+        const phase = humanUnit(`${id}#phase`) * 100;
+        const ox = this.options.origin.x;
+        const oz = this.options.origin.z;
+        const h = clock.hours;
+        const key = h < 12 ? clock.day - 1 : clock.day;
+        const hours = h < 12 ? h + 24 : h;
+        const slot = Math.floor(hours * 3);
+        const mode = humanUnit(`${id}#${key}#${slot}#mode`);
+        if (mode >= 0.7 && this.walks) {
+            const fix = this.walks.night(id, "owl", key * 128 + slot, slot / 3 + 0.02, hours);
+            if (fix) {
+                const ground = walkGround(fix.x, fix.z, fix.kind);
+                take(id, look, "pavement", ox + fix.x, this.options.walkHeight?.(fix.x, fix.z, ground) ?? ground, oz + fix.z, fix.yaw, fix.paused ? "stand" : "walk", phase).light = lampLit;
+                return true;
+            }
+        }
+        if (mode >= 0.4 && this.sites.seats.length) {
+            let k = Math.floor(humanUnit(`${id}#${key}#${slot}#seat`) * this.sites.seats.length);
+            for (let tries = 0; tries < this.sites.seats.length && this.claimedSeats.has(k); tries++) k = (k + 1) % this.sites.seats.length;
+            if (!this.claimedSeats.has(k)) {
+                this.claimedSeats.add(k);
+                const seat = this.sites.seats[k];
+                take(id, look, "bench", ox + seat.x, sitRootY(seat.y, scale), oz + seat.z, seat.yaw, "sit", phase).light = lampLit;
+                return true;
+            }
+        }
+        // At their own door on the pavement, turned a little to the street (a breath of air, a call, a look at the night).
+        const door = this.walks?.door(id);
+        if (!door) return false;
+        const ground = walkGround(door.x, door.z, "pavement");
+        const yaw = humanUnit(`${id}#doorway`) * Math.PI * 2 + Math.sin(epochMs / 40_000 + phase) * 0.4;
+        take(id, look, "pavement", ox + door.x, this.options.walkHeight?.(door.x, door.z, ground) ?? ground, oz + door.z, yaw, "stand", phase).light = lampLit;
+        return true;
     }
 
     /** Everyone drawn at `epochMs` (the shared clock); `cars`: the town's moving cars now (null: none drawn). */
@@ -588,6 +748,8 @@ export class TownHumans {
         const rooms = this.rooms?.rooms() ?? [];
         // Indoors the room's lamp is on once it is dark out (the scene's sun and street lamps do not reach inside).
         const lamp = Math.min(1, darkness(clock.hours) * 1.4);
+        // Humans visible: out after dark, a walker or a sitter is seen by the street lamps (their figure a little lit).
+        const lampLit = darkness(clock.hours) * 0.45;
         let n = 0;
         const take = (id: string, look: HumanLook, what: DrawnHuman["what"], x: number, y: number, z: number, yaw: number, pose: HumanPoseKind, phase: number) => {
             const h = this.pool[n] ?? (this.pool[n] = {id, look, what, x, y, z, yaw, pose, phase});
@@ -602,8 +764,11 @@ export class TownHumans {
             h.phase = phase;
             h.scale = 1;
             h.lean = what === "car" ? -driverLean(look) : 0;
-            h.light = what === "home" || what === "sleep" ? (what === "sleep" ? lamp * 0.25 : lamp) : 0;
+            // (Humans visible: indoors by day the daylight through the open front, under the room's ceiling; a sleeper by the
+            // bedside lamp's low light, `render/pet-homes.ts`, so they are seen at night.)
+            h.light = what === "home" ? Math.max(lamp, 0.3) : what === "sleep" ? Math.max(lamp * 0.45, 0.2) : 0;
             h.tilt = 0;
+            h.face = undefined;
             n++;
             out.push(h);
             this.placed.set(id, h);
@@ -624,8 +789,10 @@ export class TownHumans {
         const walking = new Set<string>();
         if (this.dogWalks && this.walks) {
             for (const id of this.roster) {
-                if (!this.dogWalks.dogsOf(id).length || days.get(id) === "sleep" || this.options.away?.(id, epochMs)) continue;
-                const fix = this.dogWalks.at(id, clock.hours, clock.day, rhythm(id).wake);
+                // (Humans visible: a late shift's dog is not walked while they work, nor in the morning while they sleep.)
+                const r = rhythm(id);
+                if (!this.dogWalks.dogsOf(id).length || days.get(id) === "sleep" || (r.kind === "late" && days.get(id) === "work") || this.options.away?.(id, epochMs)) continue;
+                const fix = this.dogWalks.at(id, clock.hours, clock.day, r.kind === "late" ? 9.3 : r.wake);
                 if (!fix) continue;
                 const look = this.looks.get(id)!;
                 const ground = walkGround(fix.x, fix.z, fix.kind);
@@ -700,14 +867,20 @@ export class TownHumans {
                 if (spots.length < 2) continue;
                 if (now.kind === "dinner") dinnerRooms.add(home.room);
                 else tvOn(room);
-                take(bond.a, la, "home", ox + spots[0].x, sitRootY(spots[0].y, la.height / BASE_HEIGHT), oz + spots[0].z, spots[0].yaw, "sit", pa);
-                take(bond.b, lb, "home", ox + spots[1].x, sitRootY(spots[1].y, lb.height / BASE_HEIGHT), oz + spots[1].z, spots[1].yaw, "sit", pb);
+                take(bond.a, la, "home", ox + spots[0].x, sitRootY(spots[0].y, la.height / BASE_HEIGHT), oz + spots[0].z, spots[0].yaw, "sit", pa).face = room.front;
+                take(bond.b, lb, "home", ox + spots[1].x, sitRootY(spots[1].y, lb.height / BASE_HEIGHT), oz + spots[1].z, spots[1].yaw, "sit", pb).face = room.front;
             } else continue;
             together.add(bond.a);
             together.add(bond.b);
         }
+        // Humans visible: the night's few out (`nightRota`): by their own door under the lamps, on a lamp-lit bench, or a
+        // walk round the block; lit a little by the street lamps.
+        const busy = new Set<string>(Array.from(together).concat(Array.from(walking)));
+        const rota = new Set(nightRota(this.roster, clock, (id) => (this.options.away?.(id, epochMs) ? "work" : days.get(id)), busy));
+        this.nightNow = clock.hours >= 18 || clock.hours < 7;
         for (const id of this.roster) {
             if (together.has(id) || walking.has(id)) continue; // p5 (humans, couples), p5 (humans, dogs)
+            if (rota.has(id) && this.stepOut(id, clock, take, lampLit, epochMs)) continue;
             const look = this.looks.get(id)!;
             const scale = look.height / BASE_HEIGHT;
             const day = days.get(id)!;
@@ -715,11 +888,34 @@ export class TownHumans {
             // p5 (humans, pavements): on foot along the pavements (to work and home again, an evening stroll, errands in
             // place of "about": `pavements.ts`), instead of the day's own place while the walk lasts.
             const about = day === "out" && this.assigned.get(id)?.kind === "about";
+            // Humans visible: the night's people out (an owl's last walk or sit on a lamp-lit bench, a late shift's way
+            // to work and home), lit a little by the street lamps.
+            if (day !== "sleep" && !this.options.away?.(id, epochMs)) {
+                const night = nightOuting(id, clock);
+                if (night) {
+                    if (night.bench && this.sites.seats.length) {
+                        let k = Math.floor(humanUnit(`${id}#${night.key}#owl#seat`) * this.sites.seats.length);
+                        for (let tries = 0; tries < this.sites.seats.length && this.claimedSeats.has(k); tries++) k = (k + 1) % this.sites.seats.length;
+                        if (!this.claimedSeats.has(k)) {
+                            this.claimedSeats.add(k);
+                            const seat = this.sites.seats[k];
+                            take(id, look, "bench", ox + seat.x, sitRootY(seat.y, scale), oz + seat.z, seat.yaw, "sit", phase).light = lampLit;
+                            continue;
+                        }
+                    }
+                    const fix = this.walks?.night(id, night.kind, night.key, night.at, night.hours);
+                    if (fix) {
+                        const ground = walkGround(fix.x, fix.z, fix.kind);
+                        take(id, look, "pavement", ox + fix.x, this.options.walkHeight?.(fix.x, fix.z, ground) ?? ground, oz + fix.z, fix.yaw, fix.paused ? "stand" : "walk", phase).light = lampLit;
+                        continue;
+                    }
+                }
+            }
             if (this.walks && day !== "sleep" && (day !== "out" || about) && !this.options.away?.(id, epochMs)) {
                 const fix = this.walks.at(id, clock.hours, clock.day, weekday(clock), day, about, rhythm(id));
                 if (fix) {
                     const ground = walkGround(fix.x, fix.z, fix.kind);
-                    take(id, look, "pavement", ox + fix.x, this.options.walkHeight?.(fix.x, fix.z, ground) ?? ground, oz + fix.z, fix.yaw, fix.paused ? "stand" : "walk", phase);
+                    take(id, look, "pavement", ox + fix.x, this.options.walkHeight?.(fix.x, fix.z, ground) ?? ground, oz + fix.z, fix.yaw, fix.paused ? "stand" : "walk", phase).light = lampLit;
                     continue;
                 }
             }
@@ -729,7 +925,7 @@ export class TownHumans {
                 if (!room) continue;
                 if (day === "sleep") {
                     const bed = room.beds[home!.slot % Math.max(room.beds.length, 1)];
-                    if (bed) take(id, look, "sleep", ox + bed.x, bed.y, oz + bed.z, bed.yaw, "sleep", phase);
+                    if (bed) take(id, look, "sleep", ox + bed.x, bed.y, oz + bed.z, bed.yaw, "sleep", phase).face = room.front;
                     continue;
                 }
                 // Dinner at the table, else the evening on the sofa in front of the TV (or at the table).
@@ -738,7 +934,7 @@ export class TownHumans {
                 // (p5 (humans, couples): a couple's dinner has this room's table: its other resident keeps to the sofa.)
                 const chair = dinnerRooms.has(home!.room) ? undefined : room.chairs[home!.slot % Math.max(room.chairs.length, 1)];
                 const seat = tv ? room.seats[home!.slot % room.seats.length] : chair ?? room.seats[home!.slot % Math.max(room.seats.length, 1)];
-                if (seat) take(id, look, "home", ox + seat.x, sitRootY(seat.y, scale), oz + seat.z, seat.yaw, "sit", phase);
+                if (seat) take(id, look, "home", ox + seat.x, sitRootY(seat.y, scale), oz + seat.z, seat.yaw, "sit", phase).face = room.front;
                 if (seat && tv) tvOn(room);
                 continue;
             }

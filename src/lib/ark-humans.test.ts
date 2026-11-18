@@ -6,8 +6,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {HumanFigures, humanGeometry, humanLook, posePerson, sitRootY, HUMAN_MAX, type HumanPoseKind} from "@/ark-scene/humans/figures";
-import {assignOut, carSeat, chosenHuman, helmSeat, humanDay, isHumanAnimal, SUN_CLEAR, TownHumans, townHumanSites, type HumanRoomHost} from "@/ark-scene/humans/town-humans";
+import {assignOut, carSeat, chosenHuman, helmSeat, humanDay, isHumanAnimal, nightOuting, rhythm, SUN_CLEAR, TownHumans, townHumanSites, type HumanRoomHost} from "@/ark-scene/humans/town-humans";
 import {apartmentHumanRoom, humanRoomHost, sofaOffset} from "@/ark-scene/humans/home-rooms-host";
+import {apartmentLayout, towerApartments} from "@/ark-scene/islands/town/home-rooms";
+const room = (flat: Parameters<typeof apartmentHumanRoom>[0]) => apartmentHumanRoom(flat)!;
 import {screenColour} from "@/ark-scene/humans/tvs";
 import {bridgeAt} from "@/ark-scene/islands/town/canal-bridges";
 import {inBox, segmentDistance, toLocal} from "@/ark-scene/islands/town/geom";
@@ -90,9 +92,15 @@ test("the day: asleep at night, home in the evening, out or at work by day, the 
         for (const {id} of ROSTER) by[humanDay(id, {hours, day})]++;
         return by;
     };
-    assert.equal(count(SATURDAY, 3).sleep, ROSTER.length, "everyone asleep at 3");
+    // Humans visible (2026-11-18): asleep at 3 but the night's people (the owls up late, Friday's late shift at work).
+    const night = count(SATURDAY, 3);
+    assert.ok(night.sleep >= ROSTER.length * 0.75 && night.sleep < ROSTER.length, `asleep at 3: ${night.sleep}`);
+    for (const {id} of ROSTER) if (humanDay(id, {hours: 3, day: SATURDAY}) !== "sleep") assert.ok(["owl", "late"].includes(rhythm(id).kind), id);
     const evening = count(SATURDAY, 20.5);
-    assert.equal(evening.home, ROSTER.length, "everyone home at 20:30");
+    assert.equal(evening.home, ROSTER.length, "everyone home at 20:30 on a Saturday");
+    // A weekday evening: the late shift at work.
+    const weekdayEvening = count(MONDAY, 20.5);
+    assert.ok(weekdayEvening.work > 0 && weekdayEvening.work < ROSTER.length * 0.15 && weekdayEvening.home + weekdayEvening.work === ROSTER.length, JSON.stringify(weekdayEvening));
     const workday = count(MONDAY, 11);
     assert.ok(workday.work > ROSTER.length * 0.4 && workday.work < ROSTER.length * 0.8, `at work ${workday.work}`);
     const weekend = count(SATURDAY, 14);
@@ -215,7 +223,12 @@ test("at home only in a room the homes give: with none no one is drawn indoors; 
     const humans = town(host);
     const list = humans.frame(night, null, 0);
     const home = list.filter((h) => h.what === "home");
-    assert.equal(home.length, ROSTER.length, "everyone home at 21:00, two a flat at most");
+    // (Humans visible: an early riser may be in bed by nine; everyone else is home.)
+    // (Humans visible: and the night's few out, `nightRota`: 2.5% of them.)
+    const outside = list.filter((h) => h.what !== "home" && h.what !== "sleep");
+    assert.ok(outside.length >= 2 && outside.length <= 4, `${outside.length} out`);
+    assert.equal(home.length + list.filter((h) => h.what === "sleep").length + outside.length, ROSTER.length, "everyone home at 21:00 but the few out, two a flat at most");
+    assert.ok(home.length > ROSTER.length * 0.9);
     assert.ok(humans.tvs.length > 10 && humans.tvs.length <= flats.length);
     const seen = new Map<string, number>();
     for (const h of home) {
@@ -239,7 +252,23 @@ test("at home only in a room the homes give: with none no one is drawn indoors; 
         const to = {x: (room.seats[0].x + room.seats[1].x) / 2 - tv.x, z: (room.seats[0].z + room.seats[1].z) / 2 - tv.z};
         assert.ok((Math.sin(tv.yaw) * to.x + Math.cos(tv.yaw) * to.z) / Math.hypot(to.x, to.z) > 0.95);
     }
-    assert.equal(humans.frame(at(SATURDAY, 3), null, 0).length, 0, "asleep: no beds in the apartments yet, no one drawn");
+    // Humans visible: asleep in the flat's bed (`apartmentLayout`), lying from its foot toward its head, and seen by the
+    // bedside lamp; those still up at 3 at home on the sofa or out.
+    const late = humans.frame(at(SATURDAY, 3), null, 0);
+    const sleepers = late.filter((h) => h.what === "sleep");
+    assert.ok(sleepers.length >= ROSTER.length * 0.75, `${sleepers.length} asleep in bed`);
+    for (const h of sleepers) {
+        assert.equal(h.pose, "sleep");
+        const flat = flats.find((f) => inBox(f.shell, h.x, h.z))!;
+        assert.ok(flat, "in a flat");
+        const bed = apartmentLayout(flat).bed;
+        const p = toLocal(flat.shell, h.x, h.z);
+        assert.ok(Math.abs(p.x - bed.x) <= bed.length / 2 && Math.abs(p.z - bed.z) <= bed.width / 2, "on the bed");
+        assert.ok(Math.abs(h.y - (flat.floor + bed.top - 0.02)) < 1e-6, "on its top");
+        assert.ok((h.light ?? 0) > 0.3, "seen by the bedside lamp");
+        assert.equal(h.face, room(flat).front, "seen through the flat's open front");
+    }
+    assert.ok(late.some((h) => h.what === "home"), "someone still up at 3");
     assert.equal(apartmentHumanRoom({...flats[0], kind: "garden_room"}), null);
 });
 
@@ -289,7 +318,10 @@ test("a human chosen by id: the card's animal and the drawn person's spot, or nu
     const out = [{id: "h2", x: 4, y: 2, z: -3}];
     assert.equal(chosenHuman("cat-1", aboard, out), null);
     assert.equal(chosenHuman(null, aboard, out), null);
-    assert.deepEqual(chosenHuman("h1", aboard, out), {human: aboard[0], at: null});
+    // Humans visible: one not drawn now gives way to one who is (never the whole town's view while anyone is drawn).
+    assert.deepEqual(chosenHuman("h1", aboard, out), {human: aboard[1], at: {x: 4, y: 3, z: -3}});
+    assert.deepEqual(chosenHuman("h1", aboard, []), {human: aboard[0], at: null});
+    assert.deepEqual(chosenHuman("h1", aboard, [{id: "h2", x: 1, y: 20, z: 2, face: 0.5}]), {human: aboard[1], at: {x: 1, y: 20.6, z: 2, face: 0.5}});
     assert.deepEqual(chosenHuman("h2", aboard, out), {human: aboard[1], at: {x: 4, y: 3, z: -3}});
 });
 
@@ -300,6 +332,104 @@ test("the scene's select and arrive look for a chosen human before its own entri
         const at = source.indexOf(head);
         assert.ok(at > 0, head);
         const body = source.slice(at, at + 600);
-        assert.ok(body.indexOf("chosenHuman(id, humansAboard, townHumans.out)") > 0 && body.indexOf("chosenHuman(") < (body.indexOf("findEntry(") < 0 ? Infinity : body.indexOf("findEntry(")), head);
+        assert.ok(body.indexOf("chosenHuman(id, humansAboard, townHumans.out") > 0 && body.indexOf("chosenHuman(") < (body.indexOf("findEntry(") < 0 ? Infinity : body.indexOf("findEntry(")), head);
     }
+});
+
+// Humans visible (2026-11-18): the live Ark showed no one between 18:00 and 08:00 UTC (people at home and asleep were
+// never drawn: no room host on the live page), and by day only those outside.
+test("humans visible: people are seen at every hour (indoors in the towers' flats, a few out at night)", () => {
+    const flats = towerApartments();
+    const humans = town(humanRoomHost(flats, ROSTER.length));
+    const lived = humans.homeRooms();
+    assert.ok(lived.length >= ROSTER.length / 2 && lived.length <= ROSTER.length / 2 + 4, `${lived.length} flats lived in`);
+    const outside = (list: ReturnType<TownHumans["frame"]>) => list.filter((h) => h.what !== "home" && h.what !== "sleep");
+    for (const day of [MONDAY, MONDAY + 2, SATURDAY]) {
+        for (const hours of [0, 3, 8, 13, 20]) {
+            const list = humans.frame(at(day, hours), null, 6);
+            // (A weekday at one: the workers are at work, unseen; everyone else is.)
+            assert.ok(list.length >= ROSTER.length * 0.22, `${day} ${hours}:00 drawn ${list.length}`);
+            for (const h of list.filter((x) => x.what === "home" || x.what === "sleep")) assert.ok(flats.some((f) => inBox(f.shell, h.x, h.z)), "indoors in a flat");
+        }
+    }
+    // A believable few out in the small hours, over a week of nights (never a crowd): walking under the lamps or on a
+    // lamp-lit bench, lit a little by the street lamps.
+    let out3 = 0;
+    for (let d = 0; d < 7; d++) {
+        const list = outside(humans.frame(at(MONDAY + d, 3), null, 6));
+        out3 += list.length;
+        assert.ok(list.length <= ROSTER.length * 0.1, `${list.length} out at 3`);
+        for (const h of list) {
+            assert.ok(h.what === "pavement" || h.what === "bench", h.what);
+            assert.ok((h.light ?? 0) > 0.3, "lamp-lit");
+        }
+    }
+    assert.ok(out3 / 7 >= 1.5, `${(out3 / 7).toFixed(1)} out at 3 a night`);
+    // Owner, 2026-11-18: "a few people outside at night, just not as many": at every night hour, fewer than by day.
+    const day = outside(humans.frame(at(SATURDAY, 13), null, 6)).length;
+    for (const hours of [18.5, 19, 20, 21, 22, 23, 0, 1, 2, 3, 4, 5, 6, 7]) {
+        for (const d of [MONDAY, SATURDAY]) {
+            const n = outside(humans.frame(at(d + (hours < 12 ? 1 : 0), hours), null, 6)).length;
+            assert.ok(n >= 2 && n < day, `${hours}:00 ${n} out (day ${day})`);
+        }
+    }
+    // A Human chosen at night is one of them.
+    const night = humans.frame(at(MONDAY + 1, 3), null, 6);
+    const chosen = chosenHuman(ROSTER[0].id, ROSTER, night, true)!;
+    assert.ok(chosen.at && chosen.at.face === undefined && outside(night).some((h) => h.id === chosen.human.id));
+});
+
+test("humans visible: a night person's outing is theirs alone, before their bed, and the same every time", () => {
+    for (const {id} of ROSTER) {
+        const r = rhythm(id);
+        for (let h = 18; h < 30; h += 0.25) {
+            const clock = {hours: h % 24, day: MONDAY + (h >= 24 ? 1 : 0)};
+            const o = nightOuting(id, clock);
+            if (!o) continue;
+            assert.ok(r.kind === "owl" || r.kind === "late", r.kind);
+            assert.notEqual(humanDay(id, clock), "sleep", "out while asleep");
+            assert.deepEqual(nightOuting(id, clock), o);
+        }
+    }
+});
+
+test("humans visible: a flat's furniture (the bed, the sofa, the shelf) stands apart, inside the room, the bed behind the pets' floor", () => {
+    for (const flat of towerApartments()) {
+        const L = apartmentLayout(flat);
+        const w = flat.shell.w;
+        const d = flat.shell.d;
+        // The sofa where the pets' rooms always had it (`render/pet-homes.ts`: its second draw).
+        assert.equal(sofaOffset({...flat, kind: "apartment"}).su, L.su);
+        const sofa = {x0: L.su - L.sw / 2, x1: L.su + L.sw / 2};
+        const bed = {x0: L.bed.x - L.bed.length / 2, x1: L.bed.x + L.bed.length / 2, z0: L.bed.z - L.bed.width / 2, z1: L.bed.z + L.bed.width / 2};
+        const shelf = {x0: L.shelfX - 0.25, x1: L.shelfX + 0.25};
+        assert.ok(bed.x0 >= -w / 2 && bed.x1 <= w / 2 && bed.z0 >= -d / 2 && bed.z1 <= d / 2, `${flat.id}: the bed in the room`);
+        assert.ok(sofa.x1 <= bed.x0 || sofa.x0 >= bed.x1, `${flat.id}: the sofa clear of the bed`);
+        assert.ok(shelf.x1 <= bed.x0 || shelf.x0 >= bed.x1, `${flat.id}: the shelf clear of the bed`);
+        assert.ok(shelf.x1 <= sofa.x0 || shelf.x0 >= sofa.x1, `${flat.id}: the shelf clear of the sofa`);
+        // The pets' free floor starts in front of the bed's foot side (a pet's body never in the bed).
+        const free = toLocal(flat.shell, flat.free.x, flat.free.z).z - flat.free.d / 2;
+        assert.ok(bed.z1 <= free + 0.05, `${flat.id}: the bed ${bed.z1.toFixed(2)} into the pets' floor ${free.toFixed(2)}`);
+        if (L.basket) assert.ok(Math.abs(L.basket.x - L.su) >= L.sw / 2 + 0.3 && (L.basket.x - bed.x0) * (L.basket.x - bed.x1) > 0, `${flat.id}: the basket clear`);
+        // Two sleepers each side of the bed's middle, on it.
+        const r = room({...flat, kind: "apartment"});
+        assert.equal(r.beds.length, 2);
+        for (const b of r.beds) {
+            const p = toLocal(flat.shell, b.x, b.z);
+            assert.ok(p.x >= bed.x0 && p.x <= bed.x1 && p.z >= bed.z0 && p.z <= bed.z1);
+        }
+    }
+});
+
+test("humans visible: the flats offered to people: those with pets first, two to a flat, as many as needed", () => {
+    const flats = towerApartments();
+    const pets = new Set([flats[40].id, flats[90].id]);
+    const host = humanRoomHost(flats, 20, pets);
+    const rooms = host.rooms();
+    assert.equal(rooms.length, 14);
+    assert.deepEqual(new Set(rooms.slice(0, 2).map((r) => r.id)), pets);
+    const humans = new TownHumans({origin: {x: 0, z: 0}});
+    humans.setRoster(ROSTER.slice(0, 20));
+    humans.setRoomHost(host);
+    assert.ok(humans.homeRooms().length >= 10 && humans.homeRooms().length <= 14);
 });

@@ -21,6 +21,15 @@ replace them without changing anything that decides where people are or what the
 - There is one figure per real human capture, and no invented crowds.
 - Model faces must be generic: the same few presets for everyone, picked by the seed.
 
+## Where people are seen (humans visible, 2026-11-18)
+
+- At home and asleep: in the towers' apartments (`home-rooms-host.ts`, the live page wires it), on the sofa, at the TV and
+  in bed, seen through the open bays; the flats people live in are drawn furnished (`render/pet-homes.ts` apartment, the
+  same `apartmentLayout` they are placed by), those with the record's pets offered first. `DrawnHuman.face` is the way an
+  indoor person is seen from (their flat's front); choosing them flies there.
+- At night a few are out by their own rhythm (`town-humans.ts` rhythm/nightOuting: owls' last walk or lamp-lit bench,
+  a late shift's walk to work and home, an early shift's walk before five), lit a little by the street lamps (`light`).
+
 ## Input per frame
 
 `HumanFigures.setFrame(list: HumanInstance[], camera: Vector3, seconds: number)`. Keep this signature. Each instance
@@ -51,7 +60,7 @@ carries:
 | `sunsit` | Sitting on a towel, reading. |
 | `lie` | Legacy lying pose. |
 | `paddle` | Standing in the shallows. |
-| `sleep` | In bed, on a side. |
+| `sleep` | In bed, on a side: the root at the bed's foot on its top, the body laid back toward the head (`yaw` from the head to the foot). |
 | `chop` | Axe swing. |
 | `saw` | Chainsaw held at waist height. |
 | `plant` | Kneeling and bent to the soil. |

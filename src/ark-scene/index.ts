@@ -223,6 +223,10 @@ import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (o
 import {PeopleFigures} from "@/ark-scene/humans/people-figures"; // p6 (people): the rigged bodies
 import {BeachProps} from "@/ark-scene/humans/beach-props"; // p5 (humans, quality pass)
 import {chosenHuman, isHumanAnimal, TownHumans, type ChosenHuman} from "@/ark-scene/humans/town-humans"; // p5 (humans)
+import {humanRoomHost} from "@/ark-scene/humans/home-rooms-host"; // humans visible
+import {HumanTVs} from "@/ark-scene/humans/tvs"; // humans visible
+import {towerApartments} from "@/ark-scene/islands/town/home-rooms"; // humans visible
+import {townPlan} from "@/ark-scene/islands/town/plan"; // humans visible
 import {decodeHumanBonds} from "@/ark-scene/humans/couples"; // p5 (humans, couples)
 import {DogWalks, dogWalkPlaces, isHouseDog, townWalkers} from "@/ark-scene/humans/dog-walks"; // p5 (humans, dogs)
 import {DogLeads} from "@/ark-scene/humans/leads"; // p5 (humans, dogs)
@@ -1293,12 +1297,28 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // Herds (A14): the snapshot as last given, every id aboard, and who must be drawn one by one.
     // p5 (humans): the town's people, one generic figure per human aboard (privacy: body and clothes from the id only,
     // never the capture's photo, a face or a name). (`away`: at work in the wild island's forest, `forest.away`.)
-    // TO WIRE after the homes / rural lanes merge (their see-into rooms): `townHumans.setRoomHost(humanRoomHost(rooms))`
-    // with the furnished rooms `buildPetHomes` draws, and a `HumanTVs` fed `townHumans.tvs` each frame (`humans/home-rooms-host.ts`,
-    // `humans/tvs.ts`). Until then people at home and asleep are indoors, unseen (the lit windows imply them, as before).
+    // Humans visible (2026-11-18): people at home and asleep live in the towers' apartments (`humans/home-rooms-host.ts`),
+    // seen through their open bays on the sofa, at the TV (`humans/tvs.ts`) and in bed; the scene draws the flats they live
+    // in furnished (`island.setPeopleRooms`). Before this they were never drawn (no room host), so at night no one was seen.
     const townHumans = new TownHumans({away: (id) => forest.away(id), origin: townWorldOrigin(), roadHeight: townRoadHeight, seaLevel: () => ARK_ENVIRONMENT.seaLevel.value, boatSeconds: () => clockNow()});
     const humanFigures = new PeopleFigures(); // p6 (people): rigged bodies (the procedural figures while they load)
     scene.add(humanFigures.group);
+    const humanTVs = new HumanTVs(); // humans visible: the TVs people at home watch
+    scene.add(humanTVs.group);
+    /** Humans visible: the homes as the grown and the pets' flats are now (rebuilt only when either changes). */
+    let humanRoomsFor: {island: unknown; grown: number; pets: readonly string[] | null} = {island: null, grown: -1, pets: null};
+    const syncHumanRooms = (isl: NonNullable<typeof island>) => {
+        const pets = isl.petRooms?.() ?? null;
+        const grown = townHumans.grown.length;
+        const was = humanRoomsFor;
+        if (was.island === isl && was.grown === grown && (was.pets === pets || (was.pets !== null && pets !== null && was.pets.join(",") === pets.join(",")))) {
+            humanRoomsFor.pets = pets;
+            return;
+        }
+        humanRoomsFor = {island: isl, grown, pets};
+        townHumans.setRoomHost(humanRoomHost(towerApartments(townPlan()), grown, new Set(pets ?? [])));
+        isl.setPeopleRooms?.(townHumans.homeRooms());
+    };
     const beachProps = new BeachProps(); // p5 (humans, quality pass): the sunbathers' towels and parasols
     scene.add(beachProps.group);
     // p5 (humans, dogs): the town's people walk the record's own dogs on a lead (`humans/dog-walks.ts`): a walked dog is
@@ -6007,7 +6027,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // house's floor. The target was pulled down to the ground under it from 6 m and further, and the animal left
         // the top of the picture: graphics pass 2026-11-14.)
         const raised = Boolean(looked?.middle && looked.middle.y - looked.drawnHeight / 2 > groundUnderTarget + 0.3 && Math.hypot(target.x - looked.middle.x, target.z - looked.middle.z) < looked.length + 2);
-        const aloft = diving || viewDistance < 6 || raised || Boolean(looked && (looked.place.canopy || looked.place.micro || looked.air > 0.001));
+        // (Humans visible: or at a person chosen at home up in a tower's flat.)
+        const person = heldHuman ? townHumans.out.find((h) => h.id === heldHuman) : undefined;
+        const raisedPerson = Boolean(person && person.y > groundUnderTarget + 0.3 && Math.hypot(target.x - person.x, target.z - person.z) < 4);
+        const aloft = diving || viewDistance < 6 || raised || raisedPerson || Boolean(looked && (looked.place.canopy || looked.place.micro || looked.air > 0.001));
         const lift = (aloft ? Math.max(groundUnderTarget - target.y, 0) : groundUnderTarget - target.y) * 0.15;
         // A golden shot may hold a view the user cannot (development only: golden-entry.ts sets it for one shot).
         const golden = process.env.NODE_ENV !== "production" ? (window as unknown as {__arkGoldenCamera?: {maxPolar?: number; free?: boolean}}).__arkGoldenCamera : undefined;
@@ -6660,8 +6683,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * capturer, as a tapped person's) and, asked to fly, the camera on that person where they are drawn now, else over
      * the town where the people live (indoors or at work they are not drawn: the card still opens).
      */
-    const selectHuman = (chosen: ChosenHuman<ArkAnimal>, flyTo: boolean) => {
+    const selectHuman = (chosen: ChosenHuman<ArkAnimal>, flyTo: boolean, wait = true) => {
         select(null, false);
+        heldHuman = chosen.at?.face !== undefined ? chosen.human.id : null; // humans visible: looked at up in their flat
         options.onSelect?.({...chosen.human, model_slug: "human"});
         if (!flyTo) return;
         opening = false;
@@ -6669,14 +6693,40 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         lastTouch = performance.now() / 1000;
         endFollow();
         if (chosen.at) {
-            fly(new Vector3(chosen.at.x, chosen.at.y, chosen.at.z), 9, reducedMotion ? 0 : 1.6, CLOSE_POLAR);
+            // (Humans visible: someone at home or asleep is seen from outside their flat's open front, near level with it.)
+            if (chosen.at.face !== undefined) fly(new Vector3(chosen.at.x, chosen.at.y, chosen.at.z), 8, reducedMotion ? 0 : 1.6, 1.42, chosen.at.face);
+            else fly(new Vector3(chosen.at.x, chosen.at.y, chosen.at.z), 9, reducedMotion ? 0 : 1.6, CLOSE_POLAR);
             return;
         }
+        // Humans visible: no one drawn yet (the town still joining): the flight waits for the first person drawn
+        // (`stepPendingHuman`), and only past that the whole town's view.
+        if (wait && townHumans.count) {
+            pendingHuman = {id: chosen.human.id, until: performance.now() + 30_000};
+            return;
+        }
+        pendingHuman = null;
         const view = islandView("town");
         fly(view.target, view.distance, reducedMotion ? 0 : 2.4, view.polar, view.azimuth);
     };
+    /** Humans visible: a person chosen at home or asleep up in a tower's flat: the view stays up there with them. */
+    let heldHuman: string | null = null;
+    /** Humans visible: a human chosen before anyone was drawn: flown to once someone is (or the town's view at `until`). */
+    let pendingHuman: {id: string; until: number} | null = null;
+    const stepPendingHuman = () => {
+        if (!pendingHuman) return;
+        const chosen = chosenHuman(pendingHuman.id, humansAboard, townHumans.out, townHumans.nightNow);
+        if (!chosen) {
+            pendingHuman = null;
+            return;
+        }
+        if (!chosen.at && performance.now() < pendingHuman.until) return;
+        pendingHuman = null;
+        selectHuman(chosen, true, false);
+    };
     const select = (id: string | null, flyTo: boolean, close = false) => {
-        const human = chosenHuman(id, humansAboard, townHumans.out);
+        heldHuman = null;
+        if (id !== null) pendingHuman = null;
+        const human = chosenHuman(id, humansAboard, townHumans.out, townHumans.nightNow);
         if (human) {
             selectHuman(human, flyTo);
             return;
@@ -6913,7 +6963,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const arrive = (id: string | null, close: boolean) => {
         arriving = null;
         arrived = null;
-        const human = chosenHuman(id, humansAboard, townHumans.out);
+        const human = chosenHuman(id, humansAboard, townHumans.out, townHumans.nightNow);
         if (human) {
             selectHuman(human, true);
             return;
@@ -8766,11 +8816,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const islandMs = pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000;
             const traffic = island.movingCars?.();
             townHumans.setArkDay(arkDayNow(current, worldMs())); // p5 (humans, couples): a child's age
+            syncHumanRooms(island); // humans visible
             humanFigures.setFrame(townHumans.frame(islandMs, traffic?.cars ?? null, traffic?.count ?? 0), camera.position, islandMs / 1000);
+            humanTVs.setFrame(townHumans.tvs, islandMs / 1000); // humans visible
+            stepPendingHuman(); // humans visible
             beachProps.setFrame(townHumans.beach); // p5 (humans, quality pass)
             stepDogWalks(now); // p5 (humans, dogs)
         } else if (humanFigures.drawn.near + humanFigures.drawn.far) {
             humanFigures.setFrame([], camera.position, 0);
+            humanTVs.setFrame([], 0); // humans visible
             beachProps.setFrame([]); // p5 (humans, quality pass)
         }
         perf.lap("town");
@@ -9054,7 +9108,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // 3.3 fix (log): the record's deaths, where each lies (the harness).
         deaths: () => liveDeaths.debug(),
         forest: () => forest.debug(), // p5 (humans)
-        people: () => ({rigged: humanFigures.rigged, drawn: {...humanFigures.drawn}, out: townHumans.out.map((h) => ({id: h.id, what: h.what, pose: h.pose, x: h.x, y: h.y, z: h.z, yaw: h.yaw}))}), // p6 (people)
+        people: () => ({rigged: humanFigures.rigged, drawn: {...humanFigures.drawn}, out: townHumans.out.map((h) => ({id: h.id, what: h.what, pose: h.pose, x: h.x, y: h.y, z: h.z, yaw: h.yaw, face: h.face}))}), // p6 (people)
         dogWalks: () => ({walked: townHumans.dogs.map((d) => ({id: d.id, walker: d.walker, x: d.x, y: d.y, z: d.z, yaw: d.yaw, sniffing: d.sniffing})), pins: walkPins.slice(), live: Array.from(dogActs.keys()), pairs: dogWalks.pairing.walkerOf.size, home: dogWalks.pairing.home.length}), // p5 (humans, dogs)
         rigState: (id: string) => {
             const e = allEntries().find((x) => x.animal.id === id);
@@ -9510,6 +9564,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             disposed = true;
             cancelAnimationFrame(raf);
             humanFigures.dispose(); // p5 (humans)
+            humanTVs.dispose(); // humans visible
             beachProps.dispose(); // p5 (humans, quality pass)
             dogLeads.dispose(); // p5 (humans, dogs)
             runtime.dispose();

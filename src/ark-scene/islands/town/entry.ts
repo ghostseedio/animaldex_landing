@@ -35,6 +35,9 @@ import {humanLook} from "@/ark-scene/humans/figures";
 import {PeopleFigures} from "@/ark-scene/humans/people-figures"; // p6 (people)
 import {BeachProps} from "@/ark-scene/humans/beach-props";
 import {helmSeat, TownHumans, type HumanRoomHost} from "@/ark-scene/humans/town-humans";
+import {humanRoomHost} from "@/ark-scene/humans/home-rooms-host"; // humans visible
+import {HumanTVs} from "@/ark-scene/humans/tvs"; // humans visible
+import {towerApartments} from "@/ark-scene/islands/town/home-rooms"; // humans visible
 import {roadHeight} from "@/ark-scene/islands/town/render/vehicles";
 import {speedboatGeometry} from "@/ark-scene/ocean-traffic-render";
 import {propMaterial} from "@/ark-scene/islands/town/render/instanced";
@@ -171,11 +174,16 @@ export function mountTown(el: HTMLElement) {
     if (params.get("people") === "procedural") (globalThis as {__arkPeople?: string}).__arkPeople = "procedural";
     const figures = humans ? new PeopleFigures() : null;
     const beachProps = humans ? new BeachProps() : null;
+    const tvs = new HumanTVs(); // humans visible
     if (beachProps) scene.add(beachProps.group);
     if (humans && figures) {
         humans.setRoster(Array.from({length: humanCount}, (_, i) => ({id: `fixture-human-${String(i).padStart(3, "0")}`})));
-        const host = (window as unknown as {__arkHumanRooms?: HumanRoomHost}).__arkHumanRooms;
-        if (host) humans.setRoomHost(host);
+        // Humans visible: the towers' apartments as the live page gives them (a harness's own host first), drawn furnished.
+        const host = (window as unknown as {__arkHumanRooms?: HumanRoomHost}).__arkHumanRooms ?? humanRoomHost(towerApartments(), humanCount);
+        humans.setRoomHost(host);
+        const lived = new Set(humans.homeRooms());
+        town.root.add(buildPetHomes([], towerApartments().filter((room) => lived.has(room.id))).group);
+        scene.add(tvs.group);
         // p5 (humans, couples): `?couples=1`: a fixture of the record's couples (humans 0+1 dating, 2+3 living together
         // with a babe in arms and a child of `?childage=` Ark days, default 2,500); `window.__arkHumans()` says who is
         // drawn where, for a harness to frame them.
@@ -248,6 +256,7 @@ export function mountTown(el: HTMLElement) {
                 });
             }
             figures.setFrame(list, camera.position, epochMs / 1000);
+            tvs.setFrame(humans.tvs, epochMs / 1000); // humans visible
             beachProps?.setFrame(humans.beach);
         }
         stream();

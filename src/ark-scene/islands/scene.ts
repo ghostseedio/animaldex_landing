@@ -84,6 +84,10 @@ export type ArkIslandScene = {
     update: (epochMs: number) => void;
     /** p5 (humans): the moving cars now (town frame) and how many the traffic has: their drivers (`humans/town-humans.ts`). */
     movingCars?: () => {cars: readonly MovingCar[] | null; count: number};
+    /** Humans visible (2026-11-18): the tower apartments the record's pets live in now (their ids). */
+    petRooms?: () => readonly string[];
+    /** Humans visible: the apartments people live in (`TownHumans.homeRooms`): drawn furnished, as the pets' are. */
+    setPeopleRooms?: (ids: readonly string[]) => void;
     /**
      * Lane GB: the scene's answer for the town's moving cars (world frame, epoch seconds): the animals near a point at a
      * moment (their shared poses and L5's body radius), null while the town's schedules are not wired yet.
@@ -231,7 +235,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const {homeSites, tankPose, tankBody} = await import("@/ark-scene/islands/town/tanks");
     const {clearOfHallRocks} = await import("@/ark-scene/islands/town/hall-rocks"); // p3 (solid)
     const {buildPetHomes} = await import("@/ark-scene/islands/town/render/pet-homes");
-    const {roomPose} = await import("@/ark-scene/islands/town/home-rooms"); // p5 (homes)
+    const {roomPose, towerApartments} = await import("@/ark-scene/islands/town/home-rooms"); // p5 (homes)
     const {townHouseholds} = await import("@/ark-scene/islands/town/areas");
     const {modelBase} = await import("@/ark-scene/grounding/base");
     const {sampleTownGround} = await import("@/ark-scene/islands/town/ground");
@@ -332,7 +336,13 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     // Lane TB: the pets kept at home, in their garden rooms, on their balconies, in their ponds (`render/pet-homes.ts`).
     let petHomes: PetHomes | null = null;
     let petKey = "";
+    // Humans visible (2026-11-18): the apartments people live in (`TownHumans.homeRooms`), drawn furnished as those pets
+    // live in are; and the apartments pets live in (for people's homes: a pet beside them).
+    let peopleRooms: string[] = [];
+    let petRoomIds: string[] = [];
+    let lastPlaces: Map<string, TownPlace> = new Map();
     const showPetHomes = (places: Map<string, TownPlace>) => {
+        lastPlaces = places;
         const byHousehold = new Map<string, Set<string>>();
         // p5 (homes): the rooms with pets indoors (garden rooms drawn for them too; the apartments' interiors).
         const rooms = new Map<string, NonNullable<TownPlace["room"]>["room"]>();
@@ -343,6 +353,11 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             if (!set) byHousehold.set(info.display.household, (set = new Set()));
             set.add(info.display.id);
         });
+        petRoomIds = Array.from(rooms.values()).filter((room) => room.kind === "apartment").map((room) => room.id).sort();
+        if (peopleRooms.length) {
+            const wanted = new Set(peopleRooms);
+            for (const flat of towerApartments(townPlan())) if (wanted.has(flat.id) && !rooms.has(flat.id)) rooms.set(flat.id, flat);
+        }
         const key = Array.from(byHousehold.values(), (set) => Array.from(set).sort().join("+")).sort().join(",") + "|" + Array.from(rooms.keys()).sort().join(",");
         if (key === petKey) return;
         petKey = key;
@@ -502,6 +517,13 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             return world;
         },
         townPlace: (id) => towned.get(id),
+        petRooms: () => petRoomIds, // humans visible
+        setPeopleRooms: (ids) => {
+            const next = ids.slice().sort();
+            if (next.join(",") === peopleRooms.join(",")) return;
+            peopleRooms = next;
+            showPetHomes(lastPlaces);
+        },
         bound: (id, pose) => {
             if (pose.base !== undefined && !pose.water && !pose.surface) {
                 const lx = pose.x - origin.x;

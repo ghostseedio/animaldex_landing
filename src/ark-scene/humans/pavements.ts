@@ -436,10 +436,10 @@ export function onWalkedGround(plan: TownPlan, x: number, z: number): {street: s
 // MARK: - Who walks when
 
 /** What `TownHumans` knows of a person's day that the walks need (`town-humans.ts` rhythm). */
-export type WalkerRhythm = {wake: number; back: number; worker: boolean};
-export type WalkWhy = "commute" | "stroll" | "errands";
+export type WalkerRhythm = {wake: number; back: number; worker: boolean; /** Humans visible: when an early shift leaves (else after waking, between 8:05 and 9). */ leave?: number; /** Humans visible: a late shift's walks are `night`'s, not the day's commute. */ kind?: string};
+export type WalkWhy = "commute" | "stroll" | "errands" | "night";
 type Trip = {key: number; start: number; stops: number[]; pauses: number[]; seconds: number};
-type Walker = {home: number; work: number; pace: number; leave: number; commute: Trip; back: Trip; stroll: Trip; errands: Trip};
+type Walker = {home: number; work: number; pace: number; leave: number; commute: Trip; back: Trip; stroll: Trip; errands: Trip; night: Trip};
 
 const BLOCK_HOURS = 1.5;
 const emptyTrip = (): Trip => ({key: -1, start: 0, stops: [], pauses: [], seconds: 0});
@@ -471,7 +471,7 @@ export class PavementWalks {
         if (!w) {
             const g = this.graph;
             const home = nodeFor(g, `${id}#door`);
-            w = {home, work: nodeFor(g, `${id}#workplace`, home, 150, 650), pace: WALK_PACE * (0.94 + humanUnit(`${id}#pace`) * 0.16), leave: humanUnit(`${id}#leave`), commute: emptyTrip(), back: emptyTrip(), stroll: emptyTrip(), errands: emptyTrip()};
+            w = {home, work: nodeFor(g, `${id}#workplace`, home, 150, 650), pace: WALK_PACE * (0.94 + humanUnit(`${id}#pace`) * 0.16), leave: humanUnit(`${id}#leave`), commute: emptyTrip(), back: emptyTrip(), stroll: emptyTrip(), errands: emptyTrip(), night: emptyTrip()};
             this.walkers.set(id, w);
         }
         return w;
@@ -482,6 +482,37 @@ export class PavementWalks {
         t.start = start;
         t.seconds = walkSeconds(this.graph, t.stops, pace, (k) => t.pauses[k] ?? 0);
         return t;
+    }
+
+    /**
+     * Humans visible (2026-11-18): a night walk (`town-humans.ts` nightOuting), pure in the id and the night's `key`;
+     * `hours` and `at` on the night's scale (past 24 after midnight): "owl", a last walk from the door to somewhere
+     * 250–600 m off and home, starting at `at`; "late", a late shift's way to work, leaving at `at`; "home", its way
+     * home, arriving at `at`.
+     */
+    night(id: string, kind: "owl" | "late" | "home", key: number, at: number, hours: number): WalkFix | null {
+        if (!this.graph.main.length) return null;
+        const w = this.walker(id);
+        const t = w.night;
+        const tag = key * 4 + (kind === "owl" ? 0 : kind === "late" ? 1 : 2);
+        if (t.key !== tag) {
+            const g = this.graph;
+            t.stops = kind === "owl" ? [w.home, nodeFor(g, `${id}#${key}#night#to`, w.home, 250, 600), w.home] : kind === "late" ? [w.home, w.work] : [w.work, w.home];
+            t.pauses = kind === "owl" ? [0, 30 + humanUnit(`${id}#${key}#night#look`) * 60] : [];
+            this.trip(t, tag, 0, kind === "owl" ? w.pace * 0.85 : w.pace);
+            t.start = kind === "home" ? at - t.seconds / 3600 : at;
+        }
+        const seconds = (hours - t.start) * 3600;
+        if (seconds < 0 || seconds >= t.seconds) return null;
+        this.why = "night";
+        return walkFix(this.graph, t.stops, seconds, kind === "owl" ? w.pace * 0.85 : w.pace, (k) => t.pauses[k] ?? 0, this.fix);
+    }
+
+    /** Humans visible: a person's own door on the pavements (town frame), where they step out to at night. */
+    door(id: string): {x: number; z: number} | null {
+        if (!this.graph.main.length) return null;
+        const node = this.graph.nodes[this.walker(id).home];
+        return node ? {x: node.x, z: node.z} : null;
     }
 
     /** Where a person walks now (the town's frame), or null: indoors, at work, or somewhere else. */
@@ -495,12 +526,14 @@ export class PavementWalks {
             this.why = why;
             return walkFix(g, t.stops, seconds, w.pace, (k) => t.pauses[k] ?? 0, this.fix);
         };
-        if (rhythm.worker && weekday < 5 && (state === "home" || state === "work")) {
+        // (`weekday`: 0 is Sunday, `people.ts` weekday: Monday to Friday are 1–5. A late shift's walks are `night`'s.)
+        if (rhythm.worker && rhythm.kind !== "late" && weekday >= 1 && weekday <= 5 && (state === "home" || state === "work")) {
             // To work: leaving between a little after waking and nine; home: arriving at `back`.
             if (w.commute.key !== day) {
                 w.commute.stops = [w.home, w.work];
                 this.trip(w.commute, day, 0, w.pace);
-                w.commute.start = Math.min(Math.max(8.05 + w.leave * 0.9, rhythm.wake + 0.6), 9);
+                // (Humans visible: from 7:30, so a few are on their way at eight.)
+                w.commute.start = rhythm.leave ?? Math.min(Math.max(7.5 + w.leave * 1.45, rhythm.wake + 0.6), 9);
                 w.back.stops = [w.work, w.home];
                 this.trip(w.back, day, 0, w.pace);
                 w.back.start = rhythm.back - w.back.seconds / 3600;
