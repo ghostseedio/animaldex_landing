@@ -1689,11 +1689,6 @@ export function chunkDetail(plan: TownPlan, buildings: readonly Building[]): Geo
  * chunk (the nearest first, one a frame), hidden past it, its geometry freed after 20 s unseen. So the facades' small
  * parts cost memory only round the camera.
  */
-/** `BufferAttribute.onUpload`: drop the CPU copy once the GPU has it (`batches.ts`' own pattern). */
-function releaseArray(this: {array: ArrayLike<number>}) {
-    this.array = new Float32Array(0);
-}
-
 export class BuildingDetail {
     private readonly byChunk = new Map<number, Building[]>();
     private readonly made = new Map<number, {mesh: Mesh; hiddenAt: number}>();
@@ -1769,11 +1764,7 @@ export class BuildingDetail {
         this.job = null;
         const group = this.groupOf(job.key);
         if (!group) return;
-        // (The page's copy of the arrays let go once on the GPU: nothing reads them back, the chunk's detail is built again from
-        // the plan when it is wanted again, and its bounds are taken here; ~12 MB of the close view's heap on a phone.)
-        const geometry = job.geo.toGeometry();
-        for (const key of Object.keys(geometry.attributes)) (geometry.attributes[key] as BufferAttribute).onUpload(releaseArray);
-        const mesh = new Mesh(geometry, this.material);
+        const mesh = new Mesh(job.geo.toGeometry(), this.material);
         mesh.name = "buildings:detail";
         mesh.castShadow = true;
         mesh.receiveShadow = true;
