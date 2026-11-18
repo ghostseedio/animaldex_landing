@@ -623,9 +623,6 @@
             "searching": "Zoekt prooi",
             "stalking": "Besluipt {aPrey}",
             "stalkingNoTarget": "Besluipt prooi",
-            "chasing": "Achtervolgt {aPrey}",
-            "chasingNoTarget": "Achtervolgt prooi",
-            "wary": "Waakzaam: er is een roofdier in de buurt",
             "mateSeeking": "Zoekt een partner",
             "wounded": "Gewond"
         },

@@ -10,7 +10,7 @@
 import {attachArkCast, type ArkCast} from "@/ark-scene/replay/cast";
 import {planArkEventReplay, recordOfAboard, type ArkEventReplay} from "@/ark-scene/replay/event-replay";
 import {ARK_SEEN_KINDS, ARK_SEEN_WATCH_BEFORE, ArkSeenCast, type ArkSeenCrisis, type ArkSeenGroup} from "@/ark-scene/seen/live-cast";
-import {ARK_SEEN_ENGLISH, arkSeenStateText, arkSeenStates, type ArkSeenState, type ArkSeenWords} from "@/ark-scene/seen/hooks";
+import {ARK_SEEN_ENGLISH, arkSeenStateText, arkSeenStates, arkSeenStatesToPin, type ArkSeenState, type ArkSeenWords} from "@/ark-scene/seen/hooks";
 import {startArkWatch, type ArkWatch, type ArkWatchEnd} from "@/ark-scene/seen/watch";
 import {arkPinnedMs} from "@/ark-scene/shared-clock";
 import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
@@ -25,6 +25,9 @@ const ROWS_KEPT = 300;
 /** Act groups' animals pinned at once: the low tier's live budget is 200, and each pin is one more drawn one by one. */
 const PINS_LOW = 16;
 const PINS = 48;
+/** Animals kept drawn for what the read says they are doing (a dozen hunters search at a time; 47 at most in the engine's simulation). */
+const STATES_LOW = 12;
+const STATES = 40;
 /** How long after its start each kind can still be watched (s): while the layer has something to show. */
 const WATCH_FOR: Record<string, number> = {mated: 20 * 60, birth: 4 * 60, death: 18 * 60, extinct: 18 * 60, meal: 12 * 60, escaped: 45};
 
@@ -97,7 +100,8 @@ export function attachArkSeen(options: ArkSeenOptions): ArkSeen {
         const band = seen.band(id);
         if (band) return words[band];
         const state = states.get(id);
-        if (state) return arkSeenStateText(state, state.target ? read?.animals.find((animal) => animal.id === state.target)?.name ?? null : null, words);
+        // (A stalker names its quarry; a wounded one's `target` is its biter, which its line does not name.)
+        if (state) return arkSeenStateText(state, state.kind === "stalking" && state.target ? read?.animals.find((animal) => animal.id === state.target)?.name ?? null : null, words);
         return lone.has(id) ? words.lone : null;
     };
     // (The label is asked whether or not anything is pinned: the cast is in the scene from the start.)
@@ -128,7 +132,8 @@ export function attachArkSeen(options: ArkSeenOptions): ArkSeen {
         states = new Map(list.map((state) => [state.id, state]));
         const aboard = new Map(read.animals.map((animal) => [animal.id, animal]));
         const ids = new Set<string>();
-        for (const state of list.slice(0, 40)) {
+        // (The wounded, the stalking, the searching, in that order; the mate-seeking only have their line.)
+        for (const state of arkSeenStatesToPin(list, low ? STATES_LOW : STATES)) {
             ids.add(state.id);
             if (state.target && aboard.has(state.target)) ids.add(state.target);
         }

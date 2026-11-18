@@ -623,9 +623,6 @@
             "searching": "Szuka zdobyczy",
             "stalking": "Podkrada się: {aPrey}",
             "stalkingNoTarget": "Podkrada się",
-            "chasing": "Ściga: {aPrey}",
-            "chasingNoTarget": "Ściga zdobycz",
-            "wary": "Czujność: drapieżnik jest blisko",
             "mateSeeking": "Szuka pary",
             "wounded": "Z raną"
         },

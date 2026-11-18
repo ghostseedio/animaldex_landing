@@ -94,6 +94,9 @@ function animal(raw: unknown): ArkAnimal | null {
     if (row.last_of_kind === true) life.last_of_kind = true;
     // V1 (E3's read, flag off today): a lone founder, sent only when true.
     if (row.lone === true) life.lone = true;
+    // E6's read (flag off today): what it is doing now, as sent. Its fields are checked where they are read
+    // (`seen/hooks.ts` `arkSeenStates`: this file is in the page's first JavaScript, that one is not).
+    if (row.state && typeof row.state === "object") life.state = row.state as ArkAnimal["state"];
     const kind = text(row.kind_species_profile_id);
     if (kind && kind !== text(row.species_profile_id)) {
         life.kind_species_profile_id = kind;

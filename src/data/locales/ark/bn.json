@@ -623,9 +623,6 @@
             "searching": "শিকার খুঁজছে",
             "stalking": "ওত পেতে আছে: {aPrey}",
             "stalkingNoTarget": "ওত পেতে আছে",
-            "chasing": "তাড়া করছে: {aPrey}",
-            "chasingNoTarget": "তাড়া করছে",
-            "wary": "সতর্ক: কাছেই শিকারি",
             "mateSeeking": "সঙ্গী খুঁজছে",
             "wounded": "আহত"
         },

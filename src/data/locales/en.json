@@ -4835,9 +4835,6 @@
       "searching": "Searching for prey",
       "stalking": "Stalking {aPrey}",
       "stalkingNoTarget": "Stalking",
-      "chasing": "Chasing {aPrey}",
-      "chasingNoTarget": "Chasing",
-      "wary": "Wary: a hunter is near",
       "mateSeeking": "Looking for a mate",
       "wounded": "Wounded"
     },

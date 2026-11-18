@@ -623,9 +623,6 @@
             "searching": "શિકારની શોધમાં",
             "stalking": "ઘાતમાં: {aPrey}",
             "stalkingNoTarget": "ઘાતમાં",
-            "chasing": "પીછો: {aPrey}",
-            "chasingNoTarget": "પીછો",
-            "wary": "સાવધ: શિકારી નજીક છે",
             "mateSeeking": "સાથીની શોધમાં",
             "wounded": "ઘાયલ"
         },

@@ -61,7 +61,7 @@ shorter than the hold.
 | `live-cast.ts` | Who is in the cast, until when, how many at once. Pure, tested in Node. |
 | `watch.ts` | A tapped line's act watched: V2's shot run live (`createArkReplayShot({live: true})`). |
 | `index.ts` | `attachArkSeen`: the cast on a scene, the rows remembered, the watch and its caption, the marks' labels. |
-| `hooks.ts` | What E5 and E6 will publish, and what already takes it. No fakes. |
+| `hooks.ts` | What an animal is doing now, as the read says it (E6's `animal.state`), and the marks' words. No fakes. |
 | `harness-entry.ts` | Development's page for `scripts/ark-seen-shots.mjs`. |
 
 In the scene (`../index.ts`), only hooks:
@@ -142,14 +142,16 @@ Lite has no world; everything here reads in its text:
 - a lone founder is tagged in a kind's list;
 - a replayed event's card is V2's (`../replay/text.ts`).
 
-## Hooks left for the engine
+## What the engine publishes
 
-| Needs | Hook | Today |
+| From | What | Here |
 |---|---|---|
-| **E6** searching, stalking, chasing, wary, mate-seeking | `hooks.ts` `arkSeenStates` (proposed field `animal.state`), `ArkSeen.snapshot` | read, pinned (with the target), worded for the box and Lite; the acting needs the read's own geometry, then `live-meals.ts` `approachPose` is where a stalk goes |
+| **E6** `animal.state` (AnimalDex `docs/ark/audits/ecosystem/seen-states-api-contract.md`; behind `visible_searching`, off today) | `searching`, `mate_seeking`; with `hunt_styles` also `stalking` and `wounded` (`target`, `since`) | `snapshot.ts` passes it through; `hooks.ts` `arkSeenStates` (an unknown kind is dropped); `attachArkSeen` keeps the wounded, the stalking and the searching drawn (40 at most, 12 on the low tier; never the few hundred mate-seeking), words the selection box, and Ark Lite's list says the same. A searching hunter's walk is its foray, which the scene computes already. No read with a state: the Ark exactly as it was. |
 | **E5** wounded | the same state; `ArkSceneHandle.setWounded`; `live-deaths.ts` `cause: "wounds"` | the limp and the collapse's look are built and tested; nothing is drawn until the read says so |
 | **E4** crises | `ArkSeen.setCrises` | reads `/api/ark/crises` (E4's read, `voyage_crises_v1`; empty while `voyage_config.crises` is off) |
 | Words | `ark.seen.*` (the states), `ark.life.lone` | in all 45 languages; `ARK_SEEN_ENGLISH` is the fallback. `{aPrey}` is filled with `ark.replay.a` / `.an`, as the log's lines |
+
+Never sent, so never said: a chase in progress (the chase is the record's act, held and acted above) and wariness.
 
 ## Limits (flagged, not hidden)
 
@@ -157,7 +159,7 @@ Lite has no world; everything here reads in its text:
   counts are the server's and move at once.
 - **A viewer who arrives late** sees what is still going on (the feeding, the body, the pair together), as before.
 - **The walk to the start** is the client's (continuity only): a hunter far from its record's waypoint is simply there.
-  E6's real searching replaces it.
+  (E6 publishes that a hunter is searching, never its quarry: the engine finds and attempts in one step.)
 - **What the layers do not act, a watch cannot either** (a pair in a tank or on two islands, an insect at its
   microhabitat): the watch holds on the cast where they are, then gives way to the line's own focus.
 - **The dying act is poses** (head down, a sway, over onto its side): there is no dying clip (P2-4).

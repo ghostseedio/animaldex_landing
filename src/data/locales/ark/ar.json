@@ -623,9 +623,6 @@
             "searching": "بحث عن فريسة",
             "stalking": "تربُّص: {aPrey}",
             "stalkingNoTarget": "تربُّص",
-            "chasing": "مطاردة: {aPrey}",
-            "chasingNoTarget": "مطاردة",
-            "wary": "حذر: مفترس قريب",
             "mateSeeking": "بحث عن شريك",
             "wounded": "إصابة بجرح"
         },

@@ -17,7 +17,8 @@ import {decodeArkEvents} from "@/lib/ark-life";
 import {arkLiveLineText} from "@/lib/ark-live-log";
 import {crisisText} from "@/ark-scene/live/crisis-lines";
 import {escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
-import {arkLiveTextOf, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
+import {arkLiveTextOf, arkSeenWordsOf, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
+import {arkSeenStateText, arkSeenStates} from "@/ark-scene/seen/hooks";
 import {ARK_LITE_FEED_BACK_MS, ARK_LITE_FEED_LONG, ARK_LITE_FEED_POLL_MS, ARK_LITE_FEED_SHORT, arkLiteFeedFromEvents, arkLiteFeedLines, arkLiteFeedMerge, arkLiteFeedSeed, type ArkLiteFeedEntry} from "@/lib/ark-lite-feed";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import {arkLiteKindAnimals, arkLiteModel, arkLiteWords, type ArkLiteKind, type ArkLiteMine, type ArkLiteModel, type ArkLiteViewWords} from "@/lib/ark-lite";
@@ -427,6 +428,8 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
         const list = el("ul", "arkl-who");
         const {animals, more} = arkLiteKindAnimals(snapshot, founders, region, kind.key);
         const now = new Date();
+        // E6's read (`animal.state`, none while its flag is off): what one is doing now, said in words as the 3D box says it.
+        const states = new Map(arkSeenStates(snapshot).map((state) => [state.id, state]));
         for (const animal of animals) {
             const row = el("li");
             const who = el("span", "w");
@@ -439,6 +442,8 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
             if (animal.mine) who.appendChild(el("span", "you", lite.you));
             // V1 (E3's `lone`, only while the last-animal rules are on): a lone founder, said in words (the card's, `ark.life.lone`).
             if (animal.lone) who.appendChild(el("span", "you", String(sub(words, "life").lone || "Lone founder")));
+            const state = states.get(animal.id);
+            if (state) who.appendChild(el("span", "you", arkSeenStateText(state, state.kind === "stalking" && state.target ? snapshot?.animals.find((other) => other.id === state.target)?.name ?? null : null, arkSeenWordsOf(words as ArkLiveWordsIn))));
             row.appendChild(who);
             row.appendChild(el("span", "ago", arkAgoText(animal.arrivedAt, now, locale)));
             list.appendChild(row);

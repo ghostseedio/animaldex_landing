@@ -623,9 +623,6 @@
             "searching": "ഇരയെ തേടുന്നു",
             "stalking": "പതുങ്ങി സമീപിക്കുന്നു: {aPrey}",
             "stalkingNoTarget": "പതുങ്ങി സമീപിക്കുന്നു",
-            "chasing": "പിന്തുടരുന്നു: {aPrey}",
-            "chasingNoTarget": "പിന്തുടരുന്നു",
-            "wary": "ജാഗ്രത: ഇരപിടിയൻ അടുത്തുണ്ട്",
             "mateSeeking": "ഇണയെ തേടുന്നു",
             "wounded": "പരിക്കേറ്റു"
         },

@@ -623,9 +623,6 @@
             "searching": "Leder efter bytte",
             "stalking": "Lister sig ind på {aPrey}",
             "stalkingNoTarget": "Lister sig ind på bytte",
-            "chasing": "Forfølger {aPrey}",
-            "chasingNoTarget": "Forfølger bytte",
-            "wary": "På vagt: et rovdyr er i nærheden",
             "mateSeeking": "Leder efter en mage",
             "wounded": "Såret"
         },

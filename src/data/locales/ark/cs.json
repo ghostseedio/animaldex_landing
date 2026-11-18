@@ -623,9 +623,6 @@
             "searching": "Hledá kořist",
             "stalking": "Plíží se ke kořisti: {aPrey}",
             "stalkingNoTarget": "Plíží se ke kořisti",
-            "chasing": "Pronásleduje kořist: {aPrey}",
-            "chasingNoTarget": "Pronásleduje kořist",
-            "wary": "Ve střehu: poblíž je predátor",
             "mateSeeking": "Hledá partnera",
             "wounded": "Má zranění"
         },

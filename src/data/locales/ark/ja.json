@@ -623,9 +623,6 @@
             "searching": "獲物を探しています",
             "stalking": "{aPrey}に忍び寄っています",
             "stalkingNoTarget": "忍び寄っています",
-            "chasing": "{aPrey}を追っています",
-            "chasingNoTarget": "追いかけています",
-            "wary": "警戒中：近くに捕食者がいます",
             "mateSeeking": "相手を探しています",
             "wounded": "けがをしています"
         },

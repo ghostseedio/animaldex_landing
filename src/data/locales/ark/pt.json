@@ -623,9 +623,6 @@
             "searching": "Procura uma presa",
             "stalking": "Espreita {aPrey}",
             "stalkingNoTarget": "À espreita",
-            "chasing": "Persegue {aPrey}",
-            "chasingNoTarget": "Em perseguição",
-            "wary": "Em alerta: há um predador por perto",
             "mateSeeking": "Procura um par",
             "wounded": "Com um ferimento"
         },

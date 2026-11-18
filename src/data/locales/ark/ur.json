@@ -623,9 +623,6 @@
             "searching": "شکار کی تلاش میں",
             "stalking": "گھات میں: {aPrey}",
             "stalkingNoTarget": "گھات میں",
-            "chasing": "تعاقب: {aPrey}",
-            "chasingNoTarget": "تعاقب",
-            "wary": "چوکس: شکاری قریب ہے",
             "mateSeeking": "ساتھی کی تلاش میں",
             "wounded": "زخمی"
         },

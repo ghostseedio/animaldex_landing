@@ -623,9 +623,6 @@
             "searching": "Đang tìm con mồi",
             "stalking": "Đang rình {aPrey}",
             "stalkingNoTarget": "Đang rình mồi",
-            "chasing": "Đang đuổi theo {aPrey}",
-            "chasingNoTarget": "Đang đuổi theo con mồi",
-            "wary": "Cảnh giác: có kẻ săn mồi ở gần",
             "mateSeeking": "Đang tìm bạn đời",
             "wounded": "Bị thương"
         },

@@ -623,9 +623,6 @@
             "searching": "शिकारच्या शोधात",
             "stalking": "दबा धरून: {aPrey}",
             "stalkingNoTarget": "दबा धरून",
-            "chasing": "पाठलाग: {aPrey}",
-            "chasingNoTarget": "पाठलाग",
-            "wary": "सावध: शिकारी जवळ आहे",
             "mateSeeking": "जोडीदाराच्या शोधात",
             "wounded": "जखमी"
         },

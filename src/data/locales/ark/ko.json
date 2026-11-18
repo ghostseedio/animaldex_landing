@@ -623,9 +623,6 @@
             "searching": "먹잇감을 찾는 중",
             "stalking": "{aPrey}에게 몰래 다가가는 중",
             "stalkingNoTarget": "몰래 다가가는 중",
-            "chasing": "{aPrey} 추격 중",
-            "chasingNoTarget": "추격 중",
-            "wary": "경계 중: 포식자가 가까이 있어요",
             "mateSeeking": "짝을 찾는 중",
             "wounded": "다쳤어요"
         },

@@ -9,7 +9,8 @@ import {escapeActs} from "@/ark-scene/live/escape-lines";
 import {ArkCast} from "@/ark-scene/replay/cast";
 import {planArkEventReplay} from "@/ark-scene/replay/event-replay";
 import {createArkReplayShot} from "@/ark-scene/replay/shot";
-import {ARK_SEEN_ENGLISH, arkSeenStateText, arkSeenStates} from "@/ark-scene/seen/hooks";
+import {arkSeenWordsOf} from "@/ark-scene/live/controller";
+import {ARK_SEEN_ENGLISH, arkSeenStateText, arkSeenStates, arkSeenStatesToPin, type ArkSeenState} from "@/ark-scene/seen/hooks";
 import {ARK_SEEN_KINDS, ArkSeenCast, arkSeenGroup} from "@/ark-scene/seen/live-cast";
 import {mixArkViews, startArkWatch} from "@/ark-scene/seen/watch";
 import {arkEpochSeconds, arkPinnedMs, pinArkClock} from "@/ark-scene/shared-clock";
@@ -167,17 +168,31 @@ test("the crises read: an open crisis's living animals are pinned, the last one 
 
 // MARK: The hooks (E5, E6)
 
-test("the public states are a hook: none today, an unknown kind dropped, and words for the selection and Ark Lite", () => {
-    assert.deepEqual(arkSeenStates(snapshot), [], "neither E5 nor E6 sends the field yet: nothing is said, pinned or drawn");
-    const withStates = {...snapshot, animals: [{...snapshot.animals[2], state: {kind: "stalking", target: id(1), since: AT}}, {...snapshot.animals[0], state: {kind: "wary", target: id(8)}}, {...snapshot.animals[1], state: {kind: "plotting"}}]} as unknown as ArkSnapshot;
-    assert.deepEqual(arkSeenStates(withStates), [{id: id(8), kind: "stalking", target: id(1), since: at}, {id: id(1), kind: "wary", target: id(8), since: null}]);
+test("the public states (E6's read): none while its flag is off, an unknown kind dropped, the snapshot carries them, and their words", () => {
+    assert.deepEqual(arkSeenStates(snapshot), [], "no state in the read: nothing is said, pinned or drawn");
+    const withStates = {...snapshot, animals: [{...snapshot.animals[2], state: {kind: "stalking", target: id(1), since: AT}}, {...snapshot.animals[0], state: {kind: "wounded", target: id(8), since: AT}}, {...snapshot.animals[1], state: {kind: "chasing"}}]} as unknown as ArkSnapshot;
+    assert.deepEqual(arkSeenStates(withStates), [{id: id(8), kind: "stalking", target: id(1), since: at}, {id: id(1), kind: "wounded", target: id(8), since: at}], "a kind the engine never sends (a chase is the record's act) is dropped");
+    // The read's decoder passes the field through as sent (and nothing when it is absent or not an object).
+    const raw = (n: number, state: unknown) => ({...aboard(n, "Plains Zebra", "plains-zebra", SPECIES.zebra), ...(state === undefined ? {} : {state})});
+    const read = decodeArkSnapshot({voyage: {slug: "first", name: "Ark"}, counts: {animals: 6, species: 1, founders: 1}, zones: [], animals: [raw(1, {kind: "searching"}), raw(2, {kind: "wounded", target: id(1), since: AT}), raw(3, undefined), raw(4, "searching"), raw(5, {kind: "mate_seeking"}), raw(6, {kind: 7, target: 3})], as_of: AT});
+    assert.deepEqual(read?.animals.map((animal) => animal.state ?? null), [{kind: "searching"}, {kind: "wounded", target: id(1), since: AT}, null, null, {kind: "mate_seeking"}, {kind: 7, target: 3}]);
+    assert.deepEqual(arkSeenStates(read).map((state) => [state.kind, state.target, state.since]), [["searching", null, null], ["wounded", id(1), at], ["mate_seeking", null, null]], "what is not a state of the contract's shape is dropped where it is read");
+    assert.ok(!("state" in read!.animals[2]), "absent stays absent: the read is what it was");
+    // Kept drawn: the wounded, the stalking, the searching, in that order; never the mate-seeking (a few hundred).
+    const many: ArkSeenState[] = [{id: "m1", kind: "mate_seeking", target: null, since: null}, {id: "s1", kind: "searching", target: null, since: null}, {id: "s2", kind: "searching", target: null, since: null}, {id: "k1", kind: "stalking", target: "w1", since: at}, {id: "w1", kind: "wounded", target: "k1", since: at}];
+    assert.deepEqual(arkSeenStatesToPin(many, 40).map((state) => state.id), ["w1", "k1", "s1", "s2"]);
+    assert.deepEqual(arkSeenStatesToPin(many, 3).map((state) => state.id), ["w1", "k1", "s1"]);
     assert.equal(arkSeenStateText({kind: "stalking"}, "Plains Zebra"), "Stalking a Plains Zebra");
-    assert.equal(arkSeenStateText({kind: "chasing"}, "Impala"), "Chasing an Impala");
+    assert.equal(arkSeenStateText({kind: "stalking"}, "Impala"), "Stalking an Impala");
     assert.equal(arkSeenStateText({kind: "stalking"}, null), "Stalking");
-    assert.equal(arkSeenStateText({kind: "wounded"}, null, {wounded: "Blessé"}), "Blessé");
+    assert.equal(arkSeenStateText({kind: "wounded"}, null, {wounded: "Avec une blessure"}), "Avec une blessure");
+    assert.equal(arkSeenStateText({kind: "searching"}, null), "Searching for prey");
     assert.equal(arkSeenStateText({kind: "mate_seeking"}, null), ARK_SEEN_ENGLISH.mate_seeking);
     // (A language's own article words, `ark.replay.a`: most say the name alone.)
-    assert.equal(arkSeenStateText({kind: "chasing"}, "Impala", {chasing: "Poursuit {aPrey}", a: "{animal}", an: "{animal}"}), "Poursuit Impala");
+    assert.equal(arkSeenStateText({kind: "stalking"}, "Impala", {stalking: "À l'affût : {aPrey}", a: "{animal}", an: "{animal}"}), "À l'affût : Impala");
+    // The Ark's words to V1's (the log's and Ark Lite's): `ark.seen`, the lone mark, the crisis bands, the articles.
+    assert.deepEqual(arkSeenWordsOf({seen: {searching: "Cherche une proie", mateSeeking: "Cherche un partenaire", chasing: "x"}, life: {lone: "Seul individu"}, endangered: {last: "Dernier individu"}, replay: {a: "{animal}", an: "{animal}"}}), {searching: "Cherche une proie", mate_seeking: "Cherche un partenaire", lone: "Seul individu", last: "Dernier individu", a: "{animal}", an: "{animal}"});
+    assert.deepEqual(arkSeenWordsOf(null), {});
 });
 
 test("words: every one of the 45 languages has the lone mark and the states' lines, none left in English", () => {
@@ -186,7 +201,7 @@ test("words: every one of the 45 languages has the lone mark and the states' lin
     assert.equal(files.length, 45);
     const read = (file: string) => (JSON.parse(readFileSync(path.join(dir, file), "utf8")) as {ark: {life: Record<string, string>; seen: Record<string, string>}}).ark;
     const en = read("en.json");
-    const keys = ["searching", "stalking", "stalkingNoTarget", "chasing", "chasingNoTarget", "wary", "mateSeeking", "wounded"] as const;
+    const keys = ["searching", "stalking", "stalkingNoTarget", "mateSeeking", "wounded"] as const;
     assert.equal(en.life.lone, ARK_SEEN_ENGLISH.lone);
     for (const key of keys) assert.equal(en.seen[key], ARK_SEEN_ENGLISH[key === "mateSeeking" ? "mate_seeking" : key], `en: ${key} is the fallback's`);
     for (const file of files) {
@@ -194,10 +209,10 @@ test("words: every one of the 45 languages has the lone mark and the states' lin
         assert.deepEqual(Object.keys(words.seen), [...keys], `${file}: ark.seen's keys`);
         for (const [key, text] of [["lone", words.life.lone] as const, ...keys.map((key) => [key, words.seen[key]] as const)]) {
             assert.ok(typeof text === "string" && text.trim() === text && text.length > 0 && text.length <= 48, `${file}: ${key} is one short line`);
-            assert.equal((text.match(/\{[A-Za-z]+\}/g) ?? []).join(","), key === "stalking" || key === "chasing" ? "{aPrey}" : "", `${file}: ${key} placeholders`);
+            assert.equal((text.match(/\{[A-Za-z]+\}/g) ?? []).join(","), key === "stalking" ? "{aPrey}" : "", `${file}: ${key} placeholders`);
             if (file !== "en.json") assert.notEqual(text, key === "lone" ? en.life.lone : en.seen[key], `${file}: ${key} untranslated`);
         }
-        assert.equal(new Set(keys.map((key) => words.seen[key])).size, keys.length, `${file}: eight different lines`);
+        assert.equal(new Set(keys.map((key) => words.seen[key])).size, keys.length, `${file}: five different lines`);
     }
 });
 

@@ -623,9 +623,6 @@
             "searching": "Busca presa",
             "stalking": "Sotja {aPrey}",
             "stalkingNoTarget": "Sotja",
-            "chasing": "Persegueix {aPrey}",
-            "chasingNoTarget": "Persegueix",
-            "wary": "Alerta: hi ha un depredador a prop",
             "mateSeeking": "Busca parella",
             "wounded": "Amb una ferida"
         },

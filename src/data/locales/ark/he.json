@@ -623,9 +623,6 @@
             "searching": "בחיפוש אחר טרף",
             "stalking": "במארב: {aPrey}",
             "stalkingNoTarget": "במארב",
-            "chasing": "במרדף: {aPrey}",
-            "chasingNoTarget": "במרדף",
-            "wary": "בכוננות: טורף בקרבת מקום",
             "mateSeeking": "בחיפוש אחר בן זוג",
             "wounded": "עם פציעה"
         },

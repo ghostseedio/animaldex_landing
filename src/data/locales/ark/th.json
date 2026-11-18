@@ -623,9 +623,6 @@
             "searching": "กำลังหาเหยื่อ",
             "stalking": "กำลังย่องเข้าหา {aPrey}",
             "stalkingNoTarget": "กำลังย่องเข้าหาเหยื่อ",
-            "chasing": "กำลังไล่ล่า {aPrey}",
-            "chasingNoTarget": "กำลังไล่ล่า",
-            "wary": "ระวังตัว: มีนักล่าอยู่ใกล้ ๆ",
             "mateSeeking": "กำลังหาคู่",
             "wounded": "บาดเจ็บ"
         },

@@ -623,9 +623,6 @@
             "searching": "Hľadá korisť",
             "stalking": "Zakráda sa ku koristi: {aPrey}",
             "stalkingNoTarget": "Zakráda sa ku koristi",
-            "chasing": "Prenasleduje korisť: {aPrey}",
-            "chasingNoTarget": "Prenasleduje korisť",
-            "wary": "V strehu: nablízku je predátor",
             "mateSeeking": "Hľadá partnera",
             "wounded": "Má zranenie"
         },

@@ -623,9 +623,6 @@
             "searching": "Letar efter byte",
             "stalking": "Smyger sig på {aPrey}",
             "stalkingNoTarget": "Smyger sig på byte",
-            "chasing": "Förföljer {aPrey}",
-            "chasingNoTarget": "Förföljer byte",
-            "wary": "På sin vakt: ett rovdjur är nära",
             "mateSeeking": "Letar efter en partner",
             "wounded": "Skadad"
         },

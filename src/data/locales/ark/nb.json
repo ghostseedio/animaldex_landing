@@ -623,9 +623,6 @@
             "searching": "Leter etter bytte",
             "stalking": "Sniker seg innpå {aPrey}",
             "stalkingNoTarget": "Sniker seg innpå bytte",
-            "chasing": "Forfølger {aPrey}",
-            "chasingNoTarget": "Forfølger bytte",
-            "wary": "På vakt: et rovdyr er i nærheten",
             "mateSeeking": "Leter etter en make",
             "wounded": "Såret"
         },

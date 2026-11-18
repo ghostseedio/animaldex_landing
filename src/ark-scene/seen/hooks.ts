@@ -1,52 +1,53 @@
 /**
- * V1's hooks for what the engine does not publish yet (decision 389: "engine pieces not built yet get clean hooks
- * only, no fakes"). Nothing here is drawn, said or pinned until the public read sends it; each hook says which engine
- * item sends what, and where V1 already takes it.
+ * What an animal is doing now, as the public read says it (decision 389: real, released state only; no look-ahead).
+ * Nothing here is drawn, said or pinned until the read sends it.
  *
- * E6 "visible searching from real state" (snapshot fields; no look-ahead: only what a due hunter is doing NOW):
- *   searching     a hunter out on its foray, no quarry yet
- *   stalking      it has found one and is closing on it (`target`: the quarry's id)
- *   chasing       the rush (`target`)
- *   wary          a prey animal that has noticed a hunter near it (`target`: the hunter, when the read names it)
- *   mate_seeking  one in season looking for a mate
- * E5 "hunt styles" (bite-and-wait first):
- *   wounded       bitten and weakening (`since`); ends in its collapse (`death_old`/`starved`-like row with a wound's
- *                 cause, acted by `live-deaths.ts` `cause: "wounds"`) or in its recovery (off the list)
+ * The read: `animal.state = {kind, target?, since?}` (E6, AnimalDex `docs/ark/audits/ecosystem/seen-states-api-contract.md`;
+ * behind `voyage_config.visible_searching`, and `hunt_styles` for the two of a bite). At most one state an animal:
+ *   searching     a hunter out on its foray now: due, awake, no quarry yet (what it finds is the record's)
+ *   stalking      a bite-and-wait hunter following the prey it has bitten (`target`: the bitten one, `since`: the bite)
+ *   wounded       an animal a bite-and-wait hunter has bitten (`target`: its biter, `since`: the bite); ends in its
+ *                 collapse (the record's, acted by `live-deaths.ts` `cause: "wounds"`) or its healing (off the list)
+ *   mate_seeking  an adult in season that the breeding rule leaves without a partner in its place
+ * Never sent, so never said: a chase in progress (the engine decides an attempt inside one step: the chase is the
+ * record's act, which V1 holds and acts) and wariness (the engine's prey notices nothing).
  *
- * WHAT V1 DOES WITH A STATE TODAY (all real, none made up):
- *   - `arkSeenStates(snapshot)` reads them from the read (the proposed field is `animal.state`, see below) and gives
- *     them to `ArkSeen.setStates`, which (1) pins the animal and its target so both are drawn (`live-cast.ts`), (2)
- *     gives the selection its line (`arkSeenStateText`, also Ark Lite's), and (3) hands the wounded to the scene's limp
+ * WHAT V1 DOES WITH A STATE (all real, none made up):
+ *   - `arkSeenStates(snapshot)` reads them (an unknown kind is dropped: a later kind must not break a reader);
+ *   - `attachArkSeen` (1) keeps the wounded, the stalking and the searching drawn, with a stalker's or a wounded one's
+ *     other (`arkSeenStatesToPin`: never the mate-seeking, there are a few hundred), (2) gives the selection its line
+ *     (`arkSeenStateText`; Ark Lite's list says the same), and (3) hands the wounded to the scene's limp
  *     (`ArkSceneHandle.setWounded`, `live-escapes.ts`).
- * WHAT IS LEFT FOR E6/E5:
- *   - the acting itself: a searching hunter's foray is its schedule's already; a stalk and a chase need the read's
- *     own geometry (as `encounter` gives a meal's), then `live-meals.ts` `approachPose` is where the stalk goes;
- *   - wariness: `reactive.ts` already has `alarmed`/`watch_prey`; a `wary` state would only bias it;
- *   (The words are in all 45 languages already: `ark.seen.*`, `ark.life.lone`; English here is the fallback.)
- *
- * PROPOSED WIRE SHAPE (to be matched to the server's when E5/E6 write it): on a snapshot animal,
- *   `state: {kind: "stalking", target: "<animal id>", since: "<ISO>"}` (one state; absent: none).
+ *   - A searching hunter's walk is its foray, which the scene computes already; a sleeping one looks asleep (the
+ *     scene's own sleep rule wins for the look: a state is the engine's word as of its last step).
  */
 
-import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkSnapshot} from "@/ark-scene/types";
 
-export const ARK_SEEN_STATE_KINDS = ["searching", "stalking", "chasing", "wary", "mate_seeking", "wounded"] as const;
+/** The kinds the read sends, in the order two would apply (what is happening to it now before what it waits for). */
+export const ARK_SEEN_STATE_KINDS = ["wounded", "stalking", "searching", "mate_seeking"] as const;
 export type ArkSeenStateKind = (typeof ARK_SEEN_STATE_KINDS)[number];
 export type ArkSeenState = {id: string; kind: ArkSeenStateKind; target: string | null; /** Epoch seconds, when the read says. */ since: number | null};
 
-/** The proposed field on an animal of the read (not sent yet). */
-type WithState = ArkAnimal & {state?: {kind?: unknown; target?: unknown; since?: unknown} | null};
-
-/** The states the read carries (none today: neither E5 nor E6 sends the field). Checked: an unknown kind is dropped. */
+/** The states the read carries (none while the server's flag is off), in the read's order. An unknown kind is dropped. */
 export function arkSeenStates(snapshot: ArkSnapshot | null): ArkSeenState[] {
     const out: ArkSeenState[] = [];
-    for (const animal of (snapshot?.animals ?? []) as WithState[]) {
+    for (const animal of snapshot?.animals ?? []) {
         const raw = animal.state;
         if (!raw || typeof raw !== "object" || typeof raw.kind !== "string" || !(ARK_SEEN_STATE_KINDS as readonly string[]).includes(raw.kind)) continue;
         const since = typeof raw.since === "string" ? Date.parse(raw.since) / 1000 : NaN;
         out.push({id: animal.id, kind: raw.kind as ArkSeenStateKind, target: typeof raw.target === "string" && raw.target ? raw.target : null, since: Number.isFinite(since) ? since : null});
     }
     return out;
+}
+
+/**
+ * The states whose animals are kept drawn, at most `most`: the wounded, then the stalking, then the searching (the
+ * contract's order). Never the mate-seeking: they are a few hundred, and their line needs nothing drawn.
+ */
+export function arkSeenStatesToPin(states: readonly ArkSeenState[], most: number): ArkSeenState[] {
+    const rank = (state: ArkSeenState) => ARK_SEEN_STATE_KINDS.indexOf(state.kind);
+    return states.filter((state) => state.kind !== "mate_seeking").map((state, index) => ({state, index})).sort((a, b) => rank(a.state) - rank(b.state) || a.index - b.index).slice(0, Math.max(0, most)).map((entry) => entry.state);
 }
 
 /**
@@ -57,9 +58,6 @@ export const ARK_SEEN_ENGLISH = {
     searching: "Searching for prey",
     stalking: "Stalking {aPrey}",
     stalkingNoTarget: "Stalking",
-    chasing: "Chasing {aPrey}",
-    chasingNoTarget: "Chasing",
-    wary: "Wary: a hunter is near",
     mate_seeking: "Looking for a mate",
     wounded: "Wounded",
     // (Short: the selection's box is two bar rows wide. A lone founder: the only wild one of a kind that arrived alone.)
@@ -71,11 +69,11 @@ export const ARK_SEEN_ENGLISH = {
 } as const;
 export type ArkSeenWords = Partial<Record<keyof typeof ARK_SEEN_ENGLISH, string>>;
 
-/** A state's line for the selection and for Ark Lite. `targetName`: the target's species, when it is in the read. */
+/** A state's line for the selection and for Ark Lite. `targetName`: the stalked one's species, when it is in the read. */
 export function arkSeenStateText(state: Pick<ArkSeenState, "kind">, targetName: string | null, words: ArkSeenWords | null = null): string {
     const w = {...ARK_SEEN_ENGLISH, ...(words ?? {})};
     // (As the live log's `arkWithArticle`: most languages' `a` and `an` are the name alone.)
     const article = (name: string) => (/^[aeiou]/i.test(name) && !/^(uni|eu|one|use|usu|ura)/i.test(name) ? w.an : w.a).replace("{animal}", name);
-    if (state.kind === "stalking" || state.kind === "chasing") return targetName ? w[state.kind].replace("{aPrey}", article(targetName)) : w[`${state.kind}NoTarget`];
+    if (state.kind === "stalking") return targetName ? w.stalking.replace("{aPrey}", article(targetName)) : w.stalkingNoTarget;
     return w[state.kind];
 }

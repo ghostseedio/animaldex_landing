@@ -623,9 +623,6 @@
             "searching": "Cherche une proie",
             "stalking": "À l'affût : {aPrey}",
             "stalkingNoTarget": "À l'affût",
-            "chasing": "Poursuit {aPrey}",
-            "chasingNoTarget": "En poursuite",
-            "wary": "En alerte : un prédateur est proche",
             "mateSeeking": "Cherche un partenaire",
             "wounded": "Avec une blessure"
         },

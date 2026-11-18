@@ -623,9 +623,6 @@
             "searching": "Etsii saalista",
             "stalking": "Vaanii saalista: {aPrey}",
             "stalkingNoTarget": "Vaanii saalista",
-            "chasing": "Ajaa takaa: {aPrey}",
-            "chasingNoTarget": "Ajaa takaa saalista",
-            "wary": "Varuillaan: saalistaja on lähellä",
             "mateSeeking": "Etsii paria",
             "wounded": "Haavoittunut"
         },

@@ -623,9 +623,6 @@
             "searching": "Mencari mangsa",
             "stalking": "Mengintai {aPrey}",
             "stalkingNoTarget": "Mengintai",
-            "chasing": "Mengejar {aPrey}",
-            "chasingNoTarget": "Mengejar",
-            "wary": "Berwaspada: ada pemangsa berdekatan",
             "mateSeeking": "Mencari pasangan",
             "wounded": "Cedera"
         },

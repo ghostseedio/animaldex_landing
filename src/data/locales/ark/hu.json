@@ -623,9 +623,6 @@
             "searching": "Zsákmányt keres",
             "stalking": "Becserkészi: {aPrey}",
             "stalkingNoTarget": "Cserkészik",
-            "chasing": "Üldözi: {aPrey}",
-            "chasingNoTarget": "Üldöz",
-            "wary": "Éber: ragadozó van a közelben",
             "mateSeeking": "Párt keres",
             "wounded": "Sebesült"
         },

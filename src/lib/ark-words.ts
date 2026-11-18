@@ -462,10 +462,10 @@ export type ArkWords = {
     hearts?: Partial<ArkHeartsWords>;
     /**
      * V1 (`src/ark-scene/seen/hooks.ts`): what the public read says an animal is doing now, one short line in its
-     * selection box (E5's and E6's states; said only once the read sends one). `{aPrey}` is filled as the live log's.
+     * selection box and Ark Lite's list (E6's read, `animal.state`; said only when the read sends one). `{aPrey}` is filled as the live log's.
      * Optional: an older bundle lacks them (English is the fallback).
      */
-    seen?: Partial<Record<"searching" | "stalking" | "stalkingNoTarget" | "chasing" | "chasingNoTarget" | "wary" | "mateSeeking" | "wounded", string>>;
+    seen?: Partial<Record<"searching" | "stalking" | "stalkingNoTarget" | "mateSeeking" | "wounded", string>>;
     /** "Estimated time left" on an animal at risk (`lib/ark-time-left.ts`); English fills any key a bundle lacks. */
     timeLeft?: Partial<ArkTimeLeftWords>;
 };

@@ -623,9 +623,6 @@
             "searching": "Sucht Beute",
             "stalking": "Auf der Pirsch: {aPrey}",
             "stalkingNoTarget": "Auf der Pirsch",
-            "chasing": "Verfolgt {aPrey}",
-            "chasingNoTarget": "Bei der Verfolgung",
-            "wary": "Wachsam: Ein Fressfeind ist in der Nähe",
             "mateSeeking": "Sucht einen Partner",
             "wounded": "Verletzt"
         },

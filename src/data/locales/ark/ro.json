@@ -623,9 +623,6 @@
             "searching": "Caută pradă",
             "stalking": "Pândește: {aPrey}",
             "stalkingNoTarget": "La pândă",
-            "chasing": "Urmărește: {aPrey}",
-            "chasingNoTarget": "În urmărire",
-            "wary": "În alertă: un prădător e aproape",
             "mateSeeking": "Caută pereche",
             "wounded": "Cu o rană"
         },

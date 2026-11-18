@@ -623,9 +623,6 @@
             "searching": "Шукає здобич",
             "stalking": "Підкрадається до здобичі: {aPrey}",
             "stalkingNoTarget": "Підкрадається до здобичі",
-            "chasing": "Переслідує здобич: {aPrey}",
-            "chasingNoTarget": "Переслідує здобич",
-            "wary": "Насторожі: поруч хижак",
             "mateSeeking": "Шукає пару",
             "wounded": "З раною"
         },

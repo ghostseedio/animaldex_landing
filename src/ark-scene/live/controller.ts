@@ -53,7 +53,8 @@ const CRISES_FIRST_MS = 12_000;
 const CRISES_EVERY_MS = 3 * 60_000;
 const CRISES_ABSENT_MS = 30 * 60_000;
 
-function seenWords(input: ArkLiveWordsIn): ArkSeenWords {
+/** V1's words out of the Ark's (`ark.endangered`, `ark.life.lone`, `ark.seen`, `ark.replay.a` / `.an`); also Ark Lite's. */
+export function arkSeenWordsOf(input: ArkLiveWordsIn): ArkSeenWords {
     const out: ArkSeenWords = {};
     if (input?.endangered?.last) out.last = input.endangered.last;
     if (input?.endangered?.critical) out.critical = input.endangered.critical;
@@ -62,7 +63,7 @@ function seenWords(input: ArkLiveWordsIn): ArkSeenWords {
     if (input?.replay?.a) out.a = input.replay.a;
     if (input?.replay?.an) out.an = input.replay.an;
     const seen = input?.seen;
-    for (const key of ["searching", "stalking", "stalkingNoTarget", "chasing", "chasingNoTarget", "wary", "wounded"] as const) {
+    for (const key of ["searching", "stalking", "stalkingNoTarget", "wounded"] as const) {
         const value = seen?.[key];
         if (typeof value === "string" && value.trim()) out[key] = value;
     }
@@ -229,7 +230,7 @@ export class ArkLive {
         if (locale) this.locale = locale;
         this.view.setLabels(this.labels());
         this.options.words = input;
-        this.seen?.setWords(seenWords(input));
+        this.seen?.setWords(arkSeenWordsOf(input));
     }
 
     // MARK: V1 (`seen/`)
@@ -246,7 +247,7 @@ export class ArkLive {
                     return null;
                 }
                 const host = this.options.host;
-                this.seen = attachArkSeen({handle: scene, host, aspect: () => host.clientWidth / Math.max(host.clientHeight, 1) || 1, words: seenWords(this.options.words), reducedMotion: () => Boolean(this.options.reducedMotion), ...(this.options.seenClock ?? {})});
+                this.seen = attachArkSeen({handle: scene, host, aspect: () => host.clientWidth / Math.max(host.clientHeight, 1) || 1, words: arkSeenWordsOf(this.options.words), reducedMotion: () => Boolean(this.options.reducedMotion), ...(this.options.seenClock ?? {})});
                 if (this.current) this.seen.snapshot(this.current);
                 return this.seen;
             })
@@ -365,10 +366,10 @@ export class ArkLive {
         else this.newcomers(before, next);
     }
 
-    /** V1: every read to `seen/` (the lone marks, the crisis animals still aboard), loaded for a read with a lone founder in it. */
+    /** V1: every read to `seen/` (the lone marks, the crisis animals still aboard), loaded for a read with a lone founder or a state (E6) in it. */
     private seenSnapshot(next: ArkSnapshot) {
         if (this.seen) this.seen.snapshot(next);
-        else if (!this.seenLoading && this.options.seen !== false && next.animals.some((animal) => animal.lone === true)) void this.loadSeen();
+        else if (!this.seenLoading && this.options.seen !== false && next.animals.some((animal) => animal.lone === true || animal.state)) void this.loadSeen();
     }
 
     /** Event rows in the server's shape (development's feed): said as the live ones are. */

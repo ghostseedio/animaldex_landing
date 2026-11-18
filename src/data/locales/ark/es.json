@@ -623,9 +623,6 @@
             "searching": "Busca presa",
             "stalking": "Acecha a {aPrey}",
             "stalkingNoTarget": "Acecha",
-            "chasing": "Persigue a {aPrey}",
-            "chasingNoTarget": "Persigue",
-            "wary": "Alerta: hay un depredador cerca",
             "mateSeeking": "Busca pareja",
             "wounded": "Con una herida"
         },

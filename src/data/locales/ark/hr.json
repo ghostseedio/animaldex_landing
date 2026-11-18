@@ -623,9 +623,6 @@
             "searching": "Traži plijen",
             "stalking": "Prikrada se plijenu: {aPrey}",
             "stalkingNoTarget": "Prikrada se plijenu",
-            "chasing": "Goni plijen: {aPrey}",
-            "chasingNoTarget": "Goni plijen",
-            "wary": "Na oprezu: grabežljivac je blizu",
             "mateSeeking": "Traži partnera",
             "wounded": "S ranom"
         },

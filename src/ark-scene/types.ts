@@ -109,6 +109,14 @@ export type ArkAnimal = {
      */
     lone?: boolean;
     /**
+     * What it is doing now, as the engine committed and released it (E6's read, AnimalDex
+     * `docs/ark/audits/ecosystem/seen-states-api-contract.md`; sent only while `voyage_config.visible_searching` is on, and
+     * then for about one animal in ten). At most one. `kind`: `searching`, `mate_seeking`, and with hunt styles `stalking`
+     * and `wounded` (`target`: the bitten animal or the biter; `since`: the bite, ISO). Read through `seen/hooks.ts`
+     * `arkSeenStates`, which drops a kind it does not know.
+     */
+    state?: {kind: string; target?: string; since?: string};
+    /**
      * Its kind (A1): a breed's parent species (a Labrador's Domestic Dog),
      * whose pairs, breeding and cap apply. Breeds of one kind are one row in
      * the population panel. Absent: its own kind.

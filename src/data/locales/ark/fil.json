@@ -623,9 +623,6 @@
             "searching": "Naghahanap ng mabibiktima",
             "stalking": "Minamanmanan ang {aPrey}",
             "stalkingNoTarget": "Nagmamanman",
-            "chasing": "Hinahabol ang {aPrey}",
-            "chasingNoTarget": "Humahabol",
-            "wary": "Alisto: may maninila sa malapit",
             "mateSeeking": "Naghahanap ng kapares",
             "wounded": "Sugatan"
         },

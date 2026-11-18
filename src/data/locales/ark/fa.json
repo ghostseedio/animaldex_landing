@@ -623,9 +623,6 @@
             "searching": "در جست‌وجوی شکار",
             "stalking": "در کمین {aPrey}",
             "stalkingNoTarget": "در کمین",
-            "chasing": "در تعقیب {aPrey}",
-            "chasingNoTarget": "در تعقیب",
-            "wary": "هوشیار: شکارچی نزدیک است",
             "mateSeeking": "در جست‌وجوی جفت",
             "wounded": "زخمی"
         },

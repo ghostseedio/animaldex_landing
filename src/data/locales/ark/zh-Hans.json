@@ -623,9 +623,6 @@
             "searching": "正在寻找猎物",
             "stalking": "正在悄悄接近{aPrey}",
             "stalkingNoTarget": "正在悄悄接近猎物",
-            "chasing": "正在追赶{aPrey}",
-            "chasingNoTarget": "正在追赶猎物",
-            "wary": "警觉：附近有捕食者",
             "mateSeeking": "正在寻找配偶",
             "wounded": "受伤了"
         },

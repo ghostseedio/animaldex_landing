@@ -623,9 +623,6 @@
             "searching": "Ищет добычу",
             "stalking": "Подкрадывается к добыче: {aPrey}",
             "stalkingNoTarget": "Подкрадывается к добыче",
-            "chasing": "Преследует добычу: {aPrey}",
-            "chasingNoTarget": "Преследует добычу",
-            "wary": "Настороже: рядом хищник",
             "mateSeeking": "Ищет пару",
             "wounded": "С раной"
         },

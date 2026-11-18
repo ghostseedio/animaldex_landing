@@ -623,9 +623,6 @@
             "searching": "Av arıyor",
             "stalking": "Sinsice yaklaşıyor: {aPrey}",
             "stalkingNoTarget": "Sinsice yaklaşıyor",
-            "chasing": "Kovalıyor: {aPrey}",
-            "chasingNoTarget": "Kovalıyor",
-            "wary": "Tetikte: yakında bir avcı var",
             "mateSeeking": "Eş arıyor",
             "wounded": "Yaralı"
         },

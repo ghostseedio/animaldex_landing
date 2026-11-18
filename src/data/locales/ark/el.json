@@ -623,9 +623,6 @@
             "searching": "Ψάχνει για θήραμα",
             "stalking": "Παραμονεύει: {aPrey}",
             "stalkingNoTarget": "Παραμονεύει",
-            "chasing": "Καταδιώκει: {aPrey}",
-            "chasingNoTarget": "Καταδιώκει",
-            "wary": "Σε επιφυλακή: ένας θηρευτής είναι κοντά",
             "mateSeeking": "Ψάχνει ταίρι",
             "wounded": "Με τραύμα"
         },

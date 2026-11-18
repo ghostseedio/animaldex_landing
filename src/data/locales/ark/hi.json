@@ -623,9 +623,6 @@
             "searching": "शिकार की तलाश में",
             "stalking": "घात में: {aPrey}",
             "stalkingNoTarget": "घात में",
-            "chasing": "पीछा: {aPrey}",
-            "chasingNoTarget": "पीछा",
-            "wary": "सतर्क: शिकारी पास है",
             "mateSeeking": "साथी की तलाश में",
             "wounded": "घायल"
         },
