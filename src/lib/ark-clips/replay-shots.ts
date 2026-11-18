@@ -23,7 +23,7 @@ export type ArkReplayShotInput = Pick<ArkClipInput, "snapshot" | "fixture" | "no
     mount?: "cutaway" | "show";
     /** Pin the light to this hour instead of the island's own at the event's time. */
     hour?: number | null;
-    /** The camera's exposure gain at full night (1: the night as the Ark shows it; about 3 reads a forest floor by moonlight). */
+    /** The night's lift as a scale on the shot's own (1, the default; 0: the night as the Ark shows it). */
     nightGain?: number | null;
 };
 
@@ -63,7 +63,7 @@ export function planArkReplayShot(eventId: string | number, input: ArkReplayShot
             replay,
             replayHour: input.hour ?? null,
             ...(input.mount ? {mount: input.mount} : {}),
-            ...(input.nightGain && input.nightGain !== 1 ? {nightGain: input.nightGain} : {})
+            ...(typeof input.nightGain === "number" && input.nightGain !== 1 ? {nightGain: input.nightGain} : {})
         },
         cues,
         facts: [],

@@ -26,6 +26,7 @@ import {arkReplayableEvents, planArkEventReplay} from "@/ark-scene/replay/event-
 import {arkReplayText, renderArkReplayCard} from "@/ark-scene/replay/text";
 import {displayLength} from "@/ark-scene/sizes";
 import type {ArkAnimal, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
+import {Raycaster, Vector3, type Material, type Mesh, type Object3D} from "three";
 import {planArkReplayShot} from "@/lib/ark-clips/replay-shots";
 import {arkIslandSnapshot, arkTwoIslands} from "@/lib/ark-islands";
 
@@ -188,6 +189,26 @@ async function main() {
             return frame;
         },
         trace: () => traced.splice(0),
+        /** What the camera's line to each of the cast meets first, whatever it is (a probe: why is it not seen?). */
+        probe: () => {
+            const debug = (window as unknown as {__arkDebug?: {scene: Object3D; camera: {position: Vector3}}}).__arkDebug;
+            if (!debug || !current) return [];
+            const ray = new Raycaster();
+            return current.cast.map((member) => {
+                const at = handle.locate(member.record.id);
+                if (!at) return {role: member.role, hits: []};
+                const to = new Vector3(at.x, at.y, at.z);
+                const span = debug.camera.position.distanceTo(to);
+                ray.set(debug.camera.position, to.clone().sub(debug.camera.position).normalize());
+                ray.far = span;
+                const hits = ray.intersectObject(debug.scene, true).slice(0, 8).map((hit) => {
+                    const mesh = hit.object as Mesh;
+                    const material = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as Material | undefined;
+                    return `${hit.distance.toFixed(2)}/${span.toFixed(2)} ${mesh.name || "-"}|${String(mesh.userData.kind ?? "-")}|${mesh.parent?.name || "-"} t${material?.transparent ? 1 : 0} o${material?.opacity ?? "?"} dw${material?.depthWrite ? 1 : 0} s${material?.side ?? "?"} i${(mesh as unknown as {count?: number}).count ?? "-"} a${mesh.userData.arkAnimal ? 1 : 0}`;
+                });
+                return {role: member.role, at: [at.x, at.y, at.z].map((n) => Math.round(n * 100) / 100), shown: at.shown, under: at.under, met: handle.sightMet?.(), hits};
+            });
+        },
         marks: () => director.marks(),
         report: () => {
             const report = director.replayReport();

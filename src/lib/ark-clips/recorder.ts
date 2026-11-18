@@ -37,7 +37,7 @@ export type RecordOptions = {
     mount?: "cutaway" | "show";
     /** A replay's light pinned to this hour instead of the island's own at the event's time. */
     hour?: number | null;
-    /** A replay at night: the camera's exposure gain at full night (default 1: the night as the Ark shows it). */
+    /** A replay at night: the scale of the camera's lift of the dark (default 1; 0: the night as the Ark shows it). */
     nightGain?: number | null;
     /** The site that serves `/ark?record=1` (a local `next dev`, or `next start` with ARK_RECORD_ENABLED=1). */
     baseUrl: string;

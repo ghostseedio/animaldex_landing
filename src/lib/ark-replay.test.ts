@@ -3,6 +3,7 @@ import test from "node:test";
 import {ArkCast, standInAnimal, type ArkCastRecord} from "@/ark-scene/replay/cast";
 import {ArkReplayUnavailable, arkReplayableEvents, arkReplayModels, planArkEventReplay} from "@/ark-scene/replay/event-replay";
 import {readArkEventLog} from "@/ark-scene/replay/event-log";
+import {ARK_NEAR_CONE} from "@/ark-scene/near-fade";
 import {createArkReplayShot, REPLAY_SETTLE_SECONDS} from "@/ark-scene/replay/shot";
 import {arkReplayText} from "@/ark-scene/replay/text";
 import {arkEpochSeconds, arkPinnedMs, pinArkClock} from "@/ark-scene/shared-clock";
@@ -428,28 +429,146 @@ test("an upright picture holds two along its tall side, and from a bearing the t
     assert.ok(5 * Math.sin(0.9) < halfWidth, "both still in the picture");
 });
 
-test("a night's exposure is the camera's only: a gain eased in with the night, none by day or with the hour pinned", () => {
+/** A fake scene with the lines of sight: `clear(view)` says whether a view sees the cast. */
+function sightScene(clear: (view: {distance: number; polar: number; azimuth: number}) => boolean, acts: Partial<ArkLiveActs> = {}) {
+    const scene = fakeScene(acts);
+    const asked: Array<{distance: number; polar: number; azimuth: number; cut: number; points: number}> = [];
+    const cuts: Array<number | null> = [];
+    Object.assign(scene.handle, {
+        sightOf: (_target: unknown, view: {distance: number; polar: number; azimuth: number}, points: unknown[], _fresh?: boolean, cut = 0) => {
+            asked.push({...view, cut, points: points.length});
+            return clear(view) ? 0 : points.length;
+        },
+        setNearCut: (metres: number | null) => void cuts.push(metres)
+    });
+    return {...scene, asked, cuts};
+}
+const turned = (a: number, b: number) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+
+test("a clear view by the scene's lines of sight: the views round the asked one tried, the first that sees the cast taken, the way to it cut away and its leaves dissolved", () => {
+    let first: number | null = null;
+    const scene = sightScene((view) => {
+        first ??= view.azimuth;
+        return turned(view.azimuth, first) > 0.9;
+    });
+    scene.put(id(3), 0, 0);
+    const shot = createArkReplayShot({handle: scene.handle, replay: plan(13), aspect: () => 9 / 16, lead: 1});
+    try {
+        shot.begin();
+        shot.settle();
+        const view = shot.step(0, 0)!;
+        assert.ok(Math.abs(turned(view.azimuth, first!) - 1) < 0.01, "the nearest bearing that sees it");
+        assert.equal(scene.asked[0].points, 3, "its middle, its head and its tail");
+        // One alone fills the picture: a body of 2 m across three quarters of an upright picture's width (and a little room while it still walks).
+        const wide = 2 / (2 * 0.74 * Math.tan((38 * Math.PI) / 360) * (9 / 16));
+        assert.ok(view.distance > wide && view.distance < wide * 1.3, `as large as the picture holds it (${view.distance.toFixed(2)} m)`);
+        assert.ok(scene.asked[0].cut > view.distance * 0.3 && scene.asked[0].cut < view.distance - 1, "the lines begin at the near cut, short of its body");
+        const cut = scene.cuts[scene.cuts.length - 1]!;
+        assert.ok(cut > view.distance * 0.3 && cut < view.distance - 1, "the cutaway: the near plane out toward it");
+        assert.ok(ARK_NEAR_CONE.value.x > 0 && ARK_NEAR_CONE.value.z > view.distance && ARK_NEAR_CONE.value.z < view.distance + 3, "the leaves between dissolve, and those its body stands in");
+        assert.equal(shot.report().sight!.searches, 1);
+        // Kept while it sees it; blocked twice running, the search again.
+        const asked = scene.asked.length;
+        shot.step(0.3, 0.3);
+        assert.ok(scene.asked.length - asked <= 4, "a look along the view kept (and along the way round it), no search");
+    } finally {
+        shot.end();
+    }
+    assert.equal(ARK_NEAR_CONE.value.x, 0, "the Ark's own fade again");
+    assert.equal(scene.cuts[scene.cuts.length - 1], null, "and its own near plane");
+});
+
+test("a small animal is filmed from as near as its size asks; a swimmer from under the water with it", () => {
+    const tiny = sightScene(() => true);
+    Object.assign(tiny.put(id(3), 0, 0), {length: 0.002, height: 0.001});
+    const close = createArkReplayShot({handle: tiny.handle, replay: plan(13), aspect: () => 9 / 16, lead: 1});
+    try {
+        close.begin();
+        close.settle();
+        const view = close.step(0, 0)!;
+        assert.ok(view.distance >= 0.01 && view.distance < 0.02, `an aphid from a centimetre (${view.distance})`);
+        assert.ok(view.polar < 0.6, "from well above: the plants round it are taller than it is");
+    } finally {
+        close.end();
+    }
+    const wet = sightScene(() => true);
+    Object.assign(wet.put(id(3), 0, 0), {under: 2.5});
+    const dive = createArkReplayShot({handle: wet.handle, replay: plan(13), aspect: () => 9 / 16, lead: 1});
+    try {
+        dive.begin();
+        dive.settle();
+        const view = dive.step(0, 0)!;
+        assert.ok(view.polar > 1.3, "level with it");
+        assert.ok(Math.cos(view.polar) * view.distance < 2.5 - 0.7, "the camera under the surface too");
+        assert.ok(wet.asked.every((look) => Math.cos(look.polar) * look.distance <= 2.5 - 0.7 + 0.01), "no view from over the water is tried");
+    } finally {
+        dive.end();
+    }
+});
+
+test("an escape with the lines of sight: the hunter and its quarry in one picture all the way, drawn in as it closes", () => {
+    const replay = plan(15);
+    const key = replay.feed.escapes![0].key;
+    const scene = sightScene(() => true, {escapes: [{key, t0: replay.t0, phase: "acting", missAt: 8, seconds: 16}]});
+    scene.put(id(9), 0, 0);
+    scene.put(id(2), 30, 0);
+    const shot = createArkReplayShot({handle: scene.handle, replay, aspect: () => 9 / 16, lead: 1});
+    try {
+        shot.begin();
+        shot.settle();
+        shot.step(0, 0);
+        pinArkClock(replay.t0 + 1);
+        const far = shot.step(2, 1 / 30)!;
+        assert.ok(Math.abs(far.target.x - 15) < 0.01, "the point between the two, 30 m apart");
+        assert.ok(far.distance > 30, "from far enough back for both");
+        scene.put(id(9), 27, 0);
+        let near = shot.step(2.1, 1 / 30)!;
+        for (let i = 0; i < 90; i++) near = shot.step(2.1 + (i + 1) / 30, 1 / 30)!;
+        assert.ok(near.target.x > 28 && near.distance < far.distance * 0.5, "drawn in as the hunter closes");
+        // The lunge: the picture is on the quarry before the hunter is, with room for it; the still is the two at their nearest.
+        scene.put(id(9), 0, 0);
+        pinArkClock(replay.t0 + 7);
+        let lunge = shot.step(6, 1 / 30)!;
+        for (let i = 0; i < 60; i++) lunge = shot.step(6 + (i + 1) / 30, 1 / 30)!;
+        assert.ok(Math.abs(lunge.target.x - 30) < 0.5 && lunge.distance >= 6.5, "on the quarry, from far enough back for the hunter that is coming");
+        scene.put(id(9), 28, 0);
+        pinArkClock(replay.t0 + 7.9);
+        for (let i = 0; i < 30; i++) lunge = shot.step(8 + (i + 1) / 30, 1 / 30)!;
+        assert.ok(lunge.target.x > 28.5 && lunge.target.x < 29.5 && lunge.distance >= 6.5, "then the two of them");
+        assert.ok(shot.report().keyAt !== null && shot.report().keyAt! > 8, "the still: the two at their nearest");
+    } finally {
+        shot.end();
+    }
+});
+
+test("a night's lift is the camera's only: an exposure gain and a fill eased in with the dark, none by day, with the hour pinned or when turned off", () => {
     const night = planArkEventReplay(13, {events: log.events.map((event) => (event.id === 13 ? {...event, at: "2026-11-13T00:30:00Z"} : event))}, snapshot, {now: NOW});
     const gains = (replay: typeof night, options: {nightGain?: number; hour?: number}) => {
         const scene = fakeScene();
         scene.put(id(3), 0, 0);
         const set: number[] = [];
-        (scene.handle as unknown as {setExposure: (gain: number) => void}).setExposure = (gain) => void set.push(gain);
+        const fills: number[] = [];
+        (scene.handle as unknown as {setExposure: (gain: number, fill?: number) => void}).setExposure = (gain, fill) => {
+            set.push(gain);
+            fills.push(fill ?? 1);
+        };
         const shot = createArkReplayShot({handle: scene.handle, replay, aspect: () => 9 / 16, lead: 1, ...options});
         shot.begin();
         shot.settle();
         shot.step(0, 0);
         const report = shot.report();
         shot.end();
-        return {set, report};
+        return {set, fills, report};
     };
-    const lifted = gains(night, {nightGain: 3});
-    assert.ok(lifted.report.night > 0.9 && lifted.set[0] > 2.8 && lifted.set[0] <= 3, `full night, lifted (${lifted.set[0]})`);
+    const lifted = gains(night, {});
+    assert.ok(lifted.report.night > 0.9 && lifted.set[0] > 2 && lifted.set[0] <= 3 && lifted.fills[0] > 2.5, `full night, lifted (${lifted.set[0]}, fill ${lifted.fills[0]})`);
     assert.equal(lifted.set[lifted.set.length - 1], 1, "the Ark's own exposure again when the shot ends");
-    assert.deepEqual(gains(night, {}).set, [1], "no gain asked: only the reset");
-    assert.deepEqual(gains(night, {nightGain: 3, hour: 11}).set, [1]);
-    const day = gains(plan(13), {nightGain: 3});
-    assert.ok(day.report.night < 0.05 && Math.abs(day.set[0] - 1) < 0.1, "by day nothing changes");
+    assert.equal(lifted.fills[lifted.fills.length - 1], 1, "and its own light");
+    assert.ok(gains(night, {nightGain: 2}).set[0] > lifted.set[0] * 1.6, "`nightGain` scales the lift");
+    assert.deepEqual(gains(night, {nightGain: 0}).set, [1], "turned off: only the reset");
+    assert.deepEqual(gains(night, {hour: 11}).set, [1]);
+    const day = gains(plan(13), {});
+    assert.ok(day.report.night < 0.05 && Math.abs(day.set[0] - 1) < 0.1 && Math.abs(day.fills[0] - 1) < 0.2, "by day nothing changes");
 });
 
 test("the event log is read through to its end: `more` followed from the last row, a stuck minute stepped over", async () => {

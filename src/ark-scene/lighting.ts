@@ -145,6 +145,12 @@ export class ArkLighting {
     readonly sky: Sky;
     readonly sun: DirectionalLight;
     readonly fill: HemisphereLight;
+    /**
+     * V2 replay (`replay/shot.ts`): the recorder's own fill, as a gain on the light that falls from the sky (the
+     * hemisphere's and the sky picture's), so a night's act reads; 1, the Ark as it is. The night's colours, its moon and
+     * its stars are not touched. Takes hold at the next `setHours`.
+     */
+    lift = 1;
     environment: Texture;
     /** The haze at the horizon, for the fog. */
     readonly horizon = new Color("#d9c9b4");
@@ -363,7 +369,7 @@ export class ArkLighting {
         this.sun.shadow.intensity = 1 - 0.5 * day.night;
         this.fill.color.set(day.fill.sky);
         this.fill.groundColor.set(day.fill.ground);
-        this.fill.intensity = day.fill.intensity;
+        this.fill.intensity = day.fill.intensity * this.lift;
         this.horizon.set(day.fog);
         if (fog) fog.color.copy(this.horizon);
 
@@ -409,7 +415,7 @@ export class ArkLighting {
             }
             this.skyStrength = day.environment * MathUtils.clamp(light / this.builtLight, 0.4, 2.5);
         }
-        this.scene.environmentIntensity = this.skyStrength;
+        this.scene.environmentIntensity = this.skyStrength * this.lift;
     }
 
     /** Soft shadows from a map this many texels wide; 0 for none. */

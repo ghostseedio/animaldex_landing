@@ -97,7 +97,7 @@ export type ArkDirection = {
     replayHour?: number | null;
     /** A mating's mount: the camera pulls away (default), or films it. */
     mount?: "cutaway" | "show";
-    /** A replay at night: the camera's exposure gain at full night (1: the night as the Ark shows it). */
+    /** A replay at night: the scale of the camera's lift of the dark (1, the default; 0: the night as the Ark shows it). */
     nightGain?: number;
 };
 

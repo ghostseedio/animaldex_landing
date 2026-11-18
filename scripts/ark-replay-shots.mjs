@@ -41,6 +41,7 @@ const step = Number(arg("step", "3"));
 const hour = arg("hour", null);
 const mount = arg("mount", "cutaway");
 const nightGain = Number(arg("night-gain", "1"));
+// (1: the shot's own lift of the night; 0: the night as the Ark shows it.)
 const clips = !process.argv.includes("--no-clips");
 const MADE = new Set(["meal", "escaped", "last_stand", "released"]);
 mkdirSync(out, {recursive: true});
@@ -207,6 +208,7 @@ const film = async (kind, id, made, n) => {
     rmSync(dir, {recursive: true, force: true});
     mkdirSync(dir, {recursive: true});
     const started = Date.now();
+    const probeAt = arg("probe", "").split(",").filter(Boolean).map(Number);
     let frames = 0;
     const times = [];
     for (;;) {
@@ -216,6 +218,10 @@ const film = async (kind, id, made, n) => {
             writeFileSync(path.join(dir, `${String(frames).padStart(4, "0")}.jpg`), Buffer.from(frame.image.slice(comma + 1), "base64"));
             times.push(frame.t);
             frames++;
+        }
+        if (probeAt.length && frame.t >= probeAt[0]) {
+            probeAt.shift();
+            log(`probe at ${frame.t.toFixed(1)} s:`, JSON.stringify(await page.evaluate(() => [window.__replay.report()?.view, window.__replay.probe()])));
         }
         if (frame.done || frames > 900) break;
     }
@@ -239,7 +245,7 @@ const film = async (kind, id, made, n) => {
     if (clips) execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(fps), "-i", path.join(dir, "%04d.jpg"), "-c:v", "libx264", "-preset", "veryfast", "-crf", "24", "-pix_fmt", "yuv420p", "-r", "30", path.join(out, `${name}.mp4`)]);
     rmSync(dir, {recursive: true, force: true});
     entry.ok = Boolean(report?.acted);
-    log(`${name}: ${frames} frames (${entry.seconds.toFixed(1)} s) in ${entry.wall} s; ${report?.acted ? "acted" : `NOT acted: ${report?.reason}`}; stand-ins ${report?.standIns.length ?? 0}; seen ${Object.values(seen).map((s) => `${s.role} ${s.shown}%`).join(", ")}; cuts ${report?.cuts.length ?? 0}; brought in by the cast ${prepared.cast.filter((c) => !c.inSceneBefore).length}/${prepared.cast.length}`);
+    log(`${name}: ${frames} frames (${entry.seconds.toFixed(1)} s) in ${entry.wall} s; ${report?.acted ? "acted" : `NOT acted: ${report?.reason}`}; stand-ins ${report?.standIns.length ?? 0}; seen ${Object.values(seen).map((s) => `${s.role} ${s.shown}%`).join(", ")}; cuts ${report?.cuts.length ?? 0}; sight ${report?.sight ? `${report.sight.searches} searches, ${report.sight.moved} moved, ${report.sight.blocked} not clear ${JSON.stringify(report.sight.met)}` : "-"}; gain ${report?.gain ?? 1}; brought in by the cast ${prepared.cast.filter((c) => !c.inSceneBefore).length}/${prepared.cast.length}`);
 };
 
 for (const kind of kinds) {

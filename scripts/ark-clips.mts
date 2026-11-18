@@ -17,8 +17,9 @@
  *   --mount     a replayed mating's mount: cutaway (default: the camera pulls away) or show
  *   --hour      a replay's light pinned to this hour (0–24) instead of the island's own at the event's time
  *               (the animals' day is then that hour's too)
- *   --night-gain  a replay at night: the camera's exposure gain at full night (default 1: the night as the Ark shows it;
- *               3 reads a forest floor by moonlight). Only the camera: the hour and what the animals do are the event's
+ *   --night-gain  a replay at night: the scale of the camera's lift of the dark (its exposure and a fill of the sky's
+ *               own light; default 1; 0: the night as the Ark shows it). Only the camera: the hour, the night's colours
+ *               and what the animals do are the event's
  *   --species   meet / follow: a species slug, model slug or species_profile_id aboard
  *   --fixture   the development fixture Ark instead of the live one: a sample (`sample-*`), never uploaded
  *   --base      the site serving /ark?record=1 (default http://localhost:3000)

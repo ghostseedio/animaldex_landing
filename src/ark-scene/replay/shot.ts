@@ -12,7 +12,13 @@
  *   last minutes are run fast while the camera pulls back (the body's fade is the death layer's, 3 minutes long);
  * - the frame: the point between the two farthest of the cast that are drawn and the least distance that holds them
  *   from where the camera is (the selection's pair fit, `pair-frame.ts` framePair, taken to any bearing: an upright
- *   picture holds two along its tall side; one alone at `runtime/camera.ts` meetDistance, nearer), eased;
+ *   picture holds two along its tall side; one alone as large as the picture holds it, `FILL_WIDE`), eased;
+ * - a clear view: the scene's own lines of sight (`sightOf`: `runtime/sight.ts`, as a chosen animal's close-up asks
+ *   them) from the camera to each of the cast, the views round the asked one tried until one sees them all (inside
+ *   a zoo house's shell, over a rock, under the water with a swimmer); and what leaves stand between dissolve
+ *   (`near-fade.ts` setNearCone: a cone round the view's axis, as far as the subject and the plant it stands in);
+ * - the night: the recorder's exposure and a fill of the sky's own light (`setExposure`), eased in with the dark;
+ *   the hour, the moon and the night's colours are the event's;
  * - an editorial default (the audit, §2.4): at a mating's mount the camera pulls up and away and the clip goes on
  *   with the two resting together; `mount: "show"` films it.
  *
@@ -20,9 +26,8 @@
  */
 
 import {arkEpochSeconds, pinArkClock} from "@/ark-scene/shared-clock";
-import {setNearFadeReach} from "@/ark-scene/near-fade";
+import {setNearCone} from "@/ark-scene/near-fade";
 import {easeToward} from "@/ark-scene/pair-frame";
-import {meetDistance} from "@/ark-scene/runtime/camera";
 import {attachArkCast, type ArkCast} from "@/ark-scene/replay/cast";
 import {DEATH_BODY_SECONDS, DEATH_FADE_SECONDS} from "@/ark-scene/live-deaths";
 import type {ArkEventReplay} from "@/ark-scene/replay/event-replay";
@@ -31,23 +36,52 @@ import {islandHours} from "@/lib/ark-clock";
 import {daylightAt} from "@/lib/ark-daylight";
 
 const FOV = 38;
-/** The scene's near-camera fade (`near-fade.ts`: what stands right beside the camera dissolves), reaching this much further for a clip filmed through the wood. */
-const FADE_REACH = 4;
 /**
- * A clip stands nearer than a tap's meeting distance (`meetDistance` shows an animal in its surroundings): this share of
- * it, or where the animal is a third of the picture's narrower side, whichever is nearer; never nearer than half a
- * metre (a mantis's body from nearer is lost among the leaves it lies in).
+ * One alone fills the picture: its length this share of the picture's width, or its height this share of the
+ * picture's height, whichever asks for more room (an upright phone's clip: a long body by its width, a tall one by its
+ * height); never nearer than a few of its own lengths (`NEAREST_LENGTHS`: nearer, the lens is inside the animal's own
+ * leaf) nor than `NEAREST` metres. So an aphid of 2 mm is filmed from a centimetre, an elephant from 13 m.
  */
-const CLOSE = 0.62;
-const CLOSE_SHARE = 0.34;
-const CLOSE_MIN = 0.5;
+const FILL_WIDE = 0.74;
+const FILL_TALL = 0.44;
+const NEAREST_LENGTHS = 2.4;
+const NEAREST = 0.01;
+/**
+ * The cone the leaves dissolve in (`near-fade.ts`), as the tangent of its half angle: the picture's width for one in
+ * the middle of it, wider for two (never the whole picture: its corners keep their trees).
+ */
+const CONE = 0.2;
+const CONE_MOST = 0.4;
+/** A swimmer under the surface is filmed level with it, from under the water (the angle from straight above). */
+const POLAR_UNDER = 1.33;
+/**
+ * The night's lift at its darkest, as gains on the Ark's own (the camera's exposure, and the sky's own light as a
+ * fill): an act on a forest floor at midnight reads, still blue and dim. `nightGain` scales both.
+ */
+const NIGHT_EXPOSURE = 2.6;
+const NIGHT_FILL = 3.2;
 /**
  * How high the camera stands (the polar angle, from straight above): a little over the ground's plants for an animal a
  * person could see across a clearing; from well above for a small one (the plants round it are as tall as the camera
  * is far) and for a body lying on the ground. Raised further while something still stands between (`RAISE`).
  */
 const POLAR = 0.9;
-const POLAR_SMALL = 0.72;
+const POLAR_SMALL = 0.55;
+/** A small body lying on the ground: from nearly straight above (the near cut then takes away every leaf over it). */
+const POLAR_BODY = 0.26;
+/**
+ * The cutaway (`setNearCut`): the camera's near plane out toward the subject, so the roof, the fern or the bush in the
+ * first part of the way is not drawn, whatever it is made of. As far as the nearest of the cast less its own body, but
+ * never past this share of the depth at which the ground enters the picture's lower edge (the ground under the
+ * picture is never cut open); and not at all from far back (a wide view keeps its wood).
+ */
+const CUT_GROUND = 0.78;
+const CUT_WITHIN = 45;
+const HALF_TALL = (FOV * Math.PI) / 360;
+const cutAt = (distance: number, polar: number, body: number) => {
+    const ground = (CUT_GROUND * Math.cos(Math.min(polar, 1.5)) * Math.cos(HALF_TALL)) / Math.cos(Math.max(polar - HALF_TALL, 0));
+    return Math.max(Math.min(distance - body, distance * ground), 0) * Math.min(Math.max((CUT_WITHIN - distance) / (CUT_WITHIN * 0.4), 0), 1);
+};
 /** A chase from higher still: over the ferns and between the trunks, under the crowns (most chases are in the woods). */
 const POLAR_CHASE = 0.6;
 const RAISE = 0.16;
@@ -64,6 +98,14 @@ const CLOSING = 14;
  * once it is this near (m): the lunge, the catch or the miss.
  */
 const CLOSING_CHASE = 4;
+/** An escape is the two of them: one picture holds both from this far apart (m), drawn in as the hunter closes. */
+const CLOSING_ESCAPE = 70;
+/** The lunge: from this long before the miss to this long after (s), the picture is on the quarry from at least this far back (m): room for the hunter. */
+const LUNGE_BEFORE = 2.2;
+const LUNGE_AFTER = 1.0;
+const LUNGE_ROOM = 6.5;
+const LUNGE_WITHIN = 9;
+const LUNGE_MOST = 1.5;
 /**
  * The frames nobody sees before the shot's first (the director's, `settle`): the clock is pinned this long before the
  * shot's start, so they end before it, never past the event (a layer that has begun its act is not walked back).
@@ -82,9 +124,9 @@ export type ArkReplayShotOptions = {
     /** Keep the roster as it was at the event's time (who came aboard later is left out). Default true. */
     asOf?: boolean;
     /**
-     * The camera's exposure at full night, as a gain on the Ark's own (1, the default: the night as the Ark shows it; 3
-     * reads a forest floor by moonlight). Eased in with the night itself; by day nothing changes. A camera's choice
-     * only: the hour, the light's colour and what the animals do are the event's.
+     * The night's lift, as a scale on the shot's own (`NIGHT_EXPOSURE`, `NIGHT_FILL`; 1, the default: an act at
+     * midnight reads; 0: the night as the Ark shows it). Eased in with the dark; by day nothing changes. A camera's
+     * choice only: the hour, the light's colour and what the animals do are the event's.
      */
     nightGain?: number;
     /** The light's hour pinned (`--hour`, 0–24) instead of the island's own at the event's time: no night gain then. */
@@ -115,6 +157,8 @@ export type ArkReplayShotReport = {
     cuts: Array<{at: number; skipped: number; why: string}>;
     /** Per cast id: the share of the act's frames it was drawn in, and its role. */
     seen: Record<string, {role: string; frames: number; shown: number}>;
+    /** The lines of sight: view searches made, how many moved the camera, how many found no wholly clear view (and what stood in the way). */
+    sight?: {searches: number; moved: number; blocked: number; checks: number; met: Record<string, number>};
 };
 
 export type ArkReplayShot = {
@@ -166,6 +210,16 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
     /** The bearing the camera keeps (chosen clear of the trees, kept until something comes between), and for how many frames it has been blocked. */
     let bearing: number | null = null;
     let blocked = 0;
+    /**
+     * With the scene's lines of sight (`sightOf`): the view chosen clear of what is drawn, as how far round from the
+     * bearing the framing asks (so it turns with two that turn about each other: a lunge, a pass), how much steeper or
+     * lower, and how much nearer; kept until the lines are blocked twice running.
+     */
+    let pick: {turn: number; tilt: number; near: number; clear: boolean} | null = null;
+    let checkedAt = -1;
+    let searchedAt = -9;
+    let driftClear = false;
+    const sights = {searches: 0, moved: 0, blocked: 0, checks: 0, met: {} as Record<string, number>};
     /** Who the picture held last (when that changes, one alone to the two together, the bearing is chosen again: side on to both). */
     let framed = "";
     /** How much higher than its framing asks the camera stands, having found no clear bearing (rocks, a thicket). */
@@ -176,6 +230,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
     };
     const cutOnce = new Set<string>();
     let playing: {over: boolean} | null = null;
+    let lungeGap = Infinity;
+    let hatchView = false;
     let arrived = false;
     let lapseFrom: number | null = null;
     let state = "lead";
@@ -200,8 +256,10 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         report.cuts.push({at: Math.round(clip * 100) / 100, skipped: Math.round((s - now) * 10) / 10, why});
         view = null;
         bearing = null;
+        pick = null;
         raised = 0;
     };
+    type Sight = {x: number; y: number; z: number; slack: number};
     type Frame = {
         target: Point;
         /** From its own bearing (`azimuth`). */
@@ -210,6 +268,12 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         polar: number;
         /** Who must be seen from the camera (the sight lines kept clear). */
         places: Point[];
+        /** The lines kept clear (`sightOf`): each one's middle, and the head and tail of a long one. */
+        sight: Sight[];
+        /** How far under the water the shallowest of them is (m; 0: on land): the camera keeps under the surface with them. */
+        under: number;
+        /** From the view's target toward the camera, how much of the way is the cast's own bodies (m): the near cut stops short of it. */
+        body: number;
         /** The least distance that holds everyone from another bearing and height (the camera is rarely on the bearing asked for: a tree, a swing under way). Absent: `distance` whatever the bearing. */
         fit?: (azimuth: number, polar: number) => number;
     };
@@ -241,11 +305,14 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                 b = q;
             }
         }
-        const length = Math.max(...who.map((p) => p.length), 0.01);
-        const narrow = Math.tan((FOV * Math.PI) / 360) * Math.min(Math.max(aspect, 0.3), 1);
-        const single = Math.max(Math.min(meetDistance(length, aspect, FOV) * CLOSE, length / (2 * CLOSE_SHARE * narrow)), CLOSE_MIN);
+        const length = Math.max(...who.map((p) => p.length), 0.001);
+        const tall = Math.max(...who.map((p) => p.height), 0.0005);
+        const tangent = Math.tan((FOV * Math.PI) / 360);
+        const single = Math.max(length / (2 * FILL_WIDE * tangent * Math.max(aspect, 0.3)), tall / (2 * FILL_TALL * tangent), length * NEAREST_LENGTHS, NEAREST);
         const max = style.max ?? 150;
-        const polar = style.polar ?? (length < 0.3 ? POLAR_SMALL : POLAR);
+        // (Swimmers under the surface: level with them, the camera in the water too.)
+        const under = Math.min(...who.map((p) => (p.under ?? 0) - p.height / 2));
+        const polar = under > 0.12 ? POLAR_UNDER : style.polar ?? (length < 0.3 ? POLAR_SMALL : POLAR);
         const apartNow = far > Math.max(length * 0.5, 0.2);
         const centre = {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2};
         // The least distance that holds the two from a bearing and a height: across the picture, the part of the line
@@ -268,13 +335,22 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         const out = outward(centre);
         const side = Math.cos(across - out) >= 0 ? across : across + Math.PI;
         const distance = fit(side, polar);
-        const holds = `${who.map((p) => p.id).sort().join(",")}${upright ? "|along" : ""}`;
+        const holds = `${who.map((p) => p.id).sort().join(",")}${upright ? "|along" : ""}${under > 0.12 ? "|under" : ""}`;
         if (holds !== framed) {
             framed = holds;
             bearing = null;
+            pick = null;
             raised = 0;
         }
-        return {target: {x: centre.x, y: centre.y, z: centre.z}, distance, azimuth: side, polar: polar - raised, places: who.map((p) => ({x: p.x, y: p.y, z: p.z})), fit};
+        const sight: Sight[] = [];
+        for (const p of who) {
+            // (The last of a line that is the body's own: by its height for a long low one, a python among its rocks.)
+            const slack = Math.min(Math.max(p.length, p.height) * 0.6, p.height * 0.8 + 0.15) + Math.min(0.08, p.length);
+            sight.push({x: p.x, y: p.y, z: p.z, slack});
+            if (p.length < 0.3) continue;
+            for (const end of [1, -1]) sight.push({x: p.x + Math.sin(p.yaw) * p.length * 0.3 * end, y: p.y, z: p.z + Math.cos(p.yaw) * p.length * 0.3 * end, slack});
+        }
+        return {target: {x: centre.x, y: centre.y, z: centre.z}, distance, azimuth: side, polar: polar - raised, places: who.map((p) => ({x: p.x, y: p.y, z: p.z})), sight, under: Math.max(under, 0), body: Math.max(length, tall) * 0.6 + 0.02 + (apartNow ? far / 2 : 0), fit};
     };
     const apart = (a: string, b: string): number | null => {
         const [p, q] = [handle.locate(a), handle.locate(b)];
@@ -315,15 +391,97 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         return {...want, polar: now.polar, azimuth: bearing};
     };
 
+    /**
+     * The framing from a view the scene's own lines of sight are clear from (`sightOf`). The asked view first, then
+     * round it at the same height (nearest bearings first), then steeper (over a wall, a rock, a bush), lower (under
+     * a roof's edge, level with a swimmer), from nearly overhead, and nearer (inside the house or the pen it is in):
+     * the first that sees every line, else the one that sees most. Kept while it sees two lines in three; blocked
+     * twice running, the search again from where the camera is.
+     */
+    const tilted = (polar: number, tilt: number) => Math.min(Math.max(polar + tilt, 0.12), 1.5);
+    const sightOf = (want: Frame, snapFar: boolean): Frame => {
+        const ask = handle.sightOf!;
+        const reach = (azimuth: number, polar: number, near: number) => (want.fit?.(azimuth, polar) ?? want.distance) * near;
+        // (What is solid counts whole; a leaf the cone would dissolve counts a hundredth: a view with nothing at all between first.)
+        const lines = (azimuth: number, polar: number, near: number, fresh = false) => {
+            const distance = reach(azimuth, polar, near);
+            const cut = cutAt(distance, polar, want.body);
+            const solid = ask(want.target, {distance, polar, azimuth}, want.sight, fresh, cut);
+            return solid > 0 ? solid : ask(want.target, {distance, polar, azimuth}, want.sight, false, cut, true) / 100;
+        };
+        // (Under the water with a swimmer: no view from over the surface.)
+        const wet = (polar: number, near: number) => want.under > 0.12 && Math.cos(polar) * reach(want.azimuth, polar, near) > want.under - 0.05;
+        const search = (from: number) => {
+            searchedAt = clip;
+            sights.searches++;
+            const tilts = [0, -0.3, -0.6, 0.14 - want.polar, 0.3, 0.52].filter((tilt, index, all) => all.findIndex((other) => Math.abs(tilted(want.polar, other) - tilted(want.polar, tilt)) < 0.08) === index);
+            let best: {turn: number; tilt: number; near: number; clear: boolean} | null = null;
+            let least = Infinity;
+            let fresh = true;
+            for (const near of [1, 0.72, 0.5]) {
+                for (const tilt of tilts) {
+                    const polar = tilted(want.polar, tilt);
+                    if (wet(polar, near)) continue;
+                    for (const turn of [0, 0.5, -0.5, 1, -1, Math.PI / 2, -Math.PI / 2, 2.3, -2.3, Math.PI]) {
+                        const n = lines(from + turn, polar, near, fresh);
+                        fresh = false;
+                        if (n < least) {
+                            least = n;
+                            best = {turn: from + turn - want.azimuth, tilt, near, clear: n === 0};
+                        }
+                        if (n === 0) return best!;
+                    }
+                }
+            }
+            if (least > 0) {
+                sights.blocked++;
+                const met = handle.sightMet?.() || "?";
+                sights.met[met] = (sights.met[met] ?? 0) + 1;
+            }
+            return best ?? {turn: from - want.azimuth, tilt: 0, near: 1, clear: false};
+        };
+        if (!pick) {
+            pick = search(want.azimuth);
+            checkedAt = clip;
+            blocked = 0;
+            driftClear = false;
+        } else if (clip - checkedAt >= 0.2) {
+            checkedAt = clip;
+            sights.checks++;
+            const polar = tilted(want.polar, pick.tilt);
+            const n = lines(want.azimuth + pick.turn, polar, pick.near);
+            // (The way round, for the linger's drift: only where the next of it is clear too.)
+            driftClear = n === 0 && lines(want.azimuth + pick.turn + 0.12, polar, pick.near) === 0;
+            // (Kept while it sees two lines in three; a view that had nothing at all between, while leaves hide no more than that.)
+            if (n < 1 ? !pick.clear || n * 300 <= want.sight.length : n * 3 <= want.sight.length) blocked = 0;
+            else if (++blocked >= 2 && clip - searchedAt > 1.2) {
+                blocked = 0;
+                const before = pick;
+                pick = search(want.azimuth + pick.turn);
+                // (Somewhere else altogether: an edit, not a swing through what was in the way.)
+                if (snapFar && (Math.abs(Math.atan2(Math.sin(pick.turn - before.turn), Math.cos(pick.turn - before.turn))) > 0.75 || Math.abs(pick.tilt - before.tilt) > 0.4)) view = null;
+                if (Math.abs(pick.turn - before.turn) > 1e-6 || pick.tilt !== before.tilt || pick.near !== before.near) sights.moved++;
+            }
+        }
+        const chosen = pick;
+        const polar = tilted(want.polar, chosen.tilt);
+        return {...want, azimuth: want.azimuth + chosen.turn, polar, distance: want.distance * chosen.near, ...(want.fit ? {fit: (azimuth: number, height: number) => want.fit!(azimuth, height) * chosen.near} : {})};
+    };
+
     /** Toward a framing, eased (snapped after a cut or on the first frame); the bearing never swings more than it must. */
     const toward = (asked: Frame | null, dt: number, rate = 2.4, turn = 0.6): ArkCameraView | null => {
         if (!asked) return view;
         // (Its subject is suddenly somewhere else, a hunter at its foray's waypoint: an edit, not a pan across the island.)
         if (view && Math.hypot(asked.target.x - view.target.x, asked.target.z - view.target.z) > Math.max(12, view.distance)) view = null;
-        if (!view) bearing = null;
+        if (!view) {
+            bearing = null;
+            pick = null;
+        }
         // (A bearing chosen again while the camera is up: nearest the side it is on, so it swings the short way.)
-        if (bearing === null && view && Math.cos(asked.azimuth - view.azimuth) < 0) asked = {...asked, azimuth: asked.azimuth + Math.PI};
-        const want = clearOf(asked);
+        // (With the lines of sight the chosen view is so far round from the asked bearing, which may be either side of
+        // the two: always the side the camera is on.)
+        if ((handle.sightOf ? true : bearing === null) && view && Math.cos(asked.azimuth + (handle.sightOf ? pick?.turn ?? 0 : 0) - view.azimuth) < 0) asked = {...asked, azimuth: asked.azimuth + Math.PI};
+        const want = handle.sightOf ? sightOf(asked, true) : clearOf(asked);
         if (!view) {
             view = {target: {...want.target}, distance: want.fit?.(want.azimuth, want.polar) ?? want.distance, polar: want.polar, azimuth: want.azimuth};
             return view;
@@ -343,7 +501,9 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
     };
     /** Holding on a framing with a slow drift round it, where the way round is clear (the linger after the act, a shot with nothing to wait for). */
     const drift = (want: Frame | null, dt: number, per = 0.05) => {
-        if (want && bearing !== null) {
+        if (want && handle.sightOf) {
+            if (pick && driftClear) pick.turn += per * dt;
+        } else if (want && bearing !== null) {
             const on = bearing + per * dt * 6;
             if (sameBearing((handle.clearView?.(want.target, want.distance, want.polar, on, want.places) ?? {azimuth: on}).azimuth, on)) bearing += per * dt;
         }
@@ -432,7 +592,22 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                     running.over = true;
                 });
             }
-            if (playing && !playing.over) return null;
+            if (playing && !playing.over) {
+                // The scene flies to the clutch itself; once it has landed, the shot's own clear view of the hatching
+                // (the young as they come, the parent beside them), until the scene flies on.
+                if (!handle.flying || handle.flying() || !handle.sightOf) {
+                    hatchView = false;
+                    return null;
+                }
+                if (!hatchView) {
+                    hatchView = true;
+                    view = handle.view();
+                    pick = null;
+                }
+                const young = located(byRole("young")).filter((at) => at.shown !== false).map((at) => at.id);
+                if (young.length) tell();
+                return toward(frameOf(young.length ? young : byRole("parent").slice(0, 1), {widen: young.length ? 2.4 : 1.5}), dt, 1.6) ?? null;
+            }
             if (playing?.over && state === "hatch") {
                 enter("after");
                 tell(-1.5);
@@ -468,7 +643,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         if (state === "lead" && s >= 0) enter("fall");
         if (state === "lead" || state === "fall") {
             // (An extinction's still is the ring round the last one as the camera draws back, below.)
-            if (state === "fall" && s > 3 && !last) tell();
+            if (state === "fall" && s > 3 && (!last || handle.sightOf)) tell();
             if (state === "fall" && s > 6.5) {
                 const act = handle.liveActs?.().deaths.find((d) => d.id === id);
                 if (!last) {
@@ -484,7 +659,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                 return toward(frameOf([id]), dt);
             }
             // (Its body from well above: it lies among the ground's plants.)
-            return toward(frameOf([id], {widen: s < 0 ? 1.15 : 1, ...(s > 1.2 ? {polar: POLAR_SMALL} : {})}), dt);
+            const body = handle.locate(id);
+            return toward(frameOf([id], {widen: s < 0 ? 1.15 : 1, ...(s > 1.2 ? {polar: body && body.length < 0.3 && handle.setNearCut ? POLAR_BODY : POLAR_SMALL} : {})}), dt);
         }
         if (state === "lapse") {
             // 4 s of video for the fade's 3 minutes: the pin moved on every frame.
@@ -536,12 +712,36 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             // (The quarry, and the hunter once it is on it: the catch, then the meal where the prey fell.)
             return toward(frameOf([hunter, quarry], {widen: now > end ? 1.05 : 1.3, first: quarry, closing: now > end ? CLOSING : CLOSING_CHASE, polar: POLAR_CHASE}), dt, 6);
         }
+        if (now > Math.min(escape?.seconds ?? end + 6, end + 8)) finish(true);
+        if (handle.sightOf && now > end - LUNGE_BEFORE && now < end + LUNGE_AFTER) {
+            // The lunge: the picture already on the quarry, with room for the hunter that is about to be on it (the
+            // camera is there before the hunter is: a sprint outruns any easing). The still: the two at their nearest.
+            // (Their distance through the air: a hawk straight over its quarry is not on it yet.)
+            const [h, q] = [handle.locate(hunter), handle.locate(quarry)];
+            const gap = h && q ? Math.hypot(h.x - q.x, h.y - q.y, h.z - q.z) : null;
+            if (gap !== null && now > end - 1.2 && gap < lungeGap) {
+                lungeGap = gap;
+                report.keyAt = Math.round(clip * 100) / 100;
+            }
+            // (Once the hunter is within a few strides, the two of them, from never nearer than that room.)
+            const near = gap !== null && gap < LUNGE_WITHIN;
+            const on = near ? null : frameOf([quarry], {polar: POLAR_CHASE});
+            const both = near ? frameOf([hunter, quarry], {widen: 1.15, polar: POLAR_CHASE}) : null;
+            const alone = frameOf([quarry], {polar: POLAR_CHASE});
+            const room = Math.max((on ?? alone)?.distance ?? 0, 0) * 1.7;
+            const least = Math.max(room, LUNGE_ROOM);
+            // (Never from farther than a little more than that room either: from where both are specks, neither reads.
+            // The hunter is in the picture by the time it matters.)
+            if (both) return toward(held(both, Math.min(Math.max(both.distance, least), least * LUNGE_MOST), POLAR_CHASE), dt, 6, 3);
+            return toward(on ? held(on, least, POLAR_CHASE) : null, dt, 6, 3);
+        }
         // (The still: the lunge as it meets empty air, the two at their nearest.)
         if (now > end + 0.08) tell();
-        if (now > Math.min(escape?.seconds ?? end + 6, end + 8)) finish(true);
         // (Once it is away, the one that got away: the two are soon too far apart for one picture.)
         // (The quarry, and the hunter once it is on it: the lunge and the miss; then the one that got away.)
-        return toward(frameOf([hunter, quarry], {widen: 1.3, first: quarry, closing: CLOSING_CHASE, polar: POLAR_CHASE}), dt, 6);
+        // (With the scene's lines of sight, the two of them in one picture all the way: the hunter coming, the lunge, the
+        // miss, drawn in as it closes; once the quarry is well away, the one that got away.)
+        return toward(frameOf([hunter, quarry], {widen: 1.2, first: quarry, closing: !handle.sightOf ? CLOSING_CHASE : now > end + 2.5 ? TOGETHER * 0.6 : CLOSING_ESCAPE, polar: POLAR_CHASE, max: 110}), dt, 6, handle.sightOf ? 3 : 0.6);
     };
 
     const stepLastStand = (dt: number) => {
@@ -596,7 +796,6 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         begin: () => {
             // (Nothing of an earlier replay, or of the live log, is still being acted when this one starts.)
             handle.clearLiveActs?.();
-            setNearFadeReach(FADE_REACH);
             pinArkClock(t0 - lead - REPLAY_SETTLE_SECONDS);
             relight();
             if (options.asOf !== false) cast.setAsOf(t0, replay.arkDay);
@@ -616,12 +815,77 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         },
         step: (t, dt) => {
             clip = t;
-            if (!hourPinned && (options.nightGain ?? 1) !== 1) {
-                // The camera's exposure follows the night (the island's hour on the pinned clock).
-                const gain = 1 + ((options.nightGain ?? 1) - 1) * daylightAt(islandHours(arkEpochSeconds() * 1000)).night;
-                handle.setExposure?.(gain);
+            if (!hourPinned && (options.nightGain ?? 1) > 0) {
+                // The camera's exposure and its fill follow the dark (the island's hour on the pinned clock): dusk is
+                // dark on a forest floor well before the stars are out, so by the daylight, not by the night sky.
+                const dark = clamp01((1 - daylightAt(islandHours(arkEpochSeconds() * 1000)).daylight) / 0.75);
+                const scale = options.nightGain ?? 1;
+                const gain = 1 + (NIGHT_EXPOSURE * scale - 1) * dark;
+                handle.setExposure?.(Math.max(gain, 1), Math.max(1 + (NIGHT_FILL * scale - 1) * dark, 1));
                 report.gain = Math.max(report.gain, Math.round(gain * 100) / 100);
             }
+            const next = stepKind(dt);
+            cone(next ?? handle.view());
+            return next;
+        },
+        doneAt: () => done,
+        actAt: () => actAt,
+        report: () => {
+            // (Who stands in is the roster's, as the scene last laid it out; kept once the cast is gone.)
+            if (!ended) Object.assign(report, cast.report());
+            return {...report, notes: [...report.notes], cuts: [...report.cuts], seen: {...report.seen}, sight: {...sights, met: {...sights.met}}};
+        },
+        end: () => {
+            if (!ended) Object.assign(report, cast.report());
+            ended = true;
+            setNearCone(null);
+            handle.setNearCut?.(null);
+            handle.setGroundClear?.(null);
+            handle.setExposure?.(1, 1);
+            // (While the cast is still in: whoever a meal's or a death's stand-in hid is shown again.)
+            handle.clearLiveActs?.();
+            pinArkClock(null);
+            handle.setHours(hourPinned ? options.hour! : null);
+            cast.detach();
+        }
+    };
+
+    /** The leaves between the camera and whoever of the cast is in the picture dissolve (`near-fade.ts`). */
+    function cone(at: ArkCameraView | null) {
+        if (!at) {
+            handle.setNearCut?.(null);
+            handle.setGroundClear?.(null);
+            return setNearCone(null);
+        }
+        const sinP = Math.sin(at.polar);
+        const eye = {x: at.target.x + at.distance * sinP * Math.sin(at.azimuth), y: at.target.y + at.distance * Math.cos(at.polar), z: at.target.z + at.distance * sinP * Math.cos(at.azimuth)};
+        const axis = {x: (at.target.x - eye.x) / at.distance, y: (at.target.y - eye.y) / at.distance, z: (at.target.z - eye.z) / at.distance};
+        let end = 0;
+        let wide = CONE;
+        let held = 0;
+        let cut = Infinity;
+        const spots: Array<{x: number; z: number; r: number}> = [];
+        for (const p of located(ids)) {
+            if (p.shown === false) continue;
+            const v = {x: p.x - eye.x, y: p.y - eye.y, z: p.z - eye.z};
+            const along = v.x * axis.x + v.y * axis.y + v.z * axis.z;
+            if (along <= 0) continue;
+            const off = Math.hypot(v.x - axis.x * along, v.y - axis.y * along, v.z - axis.z * along) / along;
+            if (off > 0.5) continue;
+            held++;
+            spots.push({x: p.x, z: p.z, r: Math.min(Math.max(p.length, 0.25) * 0.9 + 0.25, 2.5)});
+            wide = Math.max(wide, Math.min(off + 0.1, CONE_MOST));
+            // (As far as the farthest of them and its own body's depth again: the plant an animal stands in dissolves
+            // round it too. The animals themselves never fade.)
+            end = Math.max(end, along + Math.max(p.length, p.height) * 0.8);
+            cut = Math.min(cut, cutAt(at.distance, at.polar, at.distance - along + Math.max(p.length, p.height) * 0.6 + 0.02));
+        }
+        setNearCone(held && end > 0.05 ? {tan: wide, end} : null);
+        handle.setNearCut?.(held && cut > 0 && Number.isFinite(cut) ? cut : null, held ? at.distance * 0.9 : null);
+        handle.setGroundClear?.(spots.length ? spots : null);
+    }
+
+    function stepKind(dt: number): ArkCameraView | null {
             if (done !== null) {
                 // The linger: the same picture, drifting.
                 if (playing && !playing.over) return null;
@@ -660,24 +924,5 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             if (state === "lead" && since() >= 0 && replay.kind !== "last_stand" && replay.kind !== "released") enter("act");
             count();
             return next;
-        },
-        doneAt: () => done,
-        actAt: () => actAt,
-        report: () => {
-            // (Who stands in is the roster's, as the scene last laid it out; kept once the cast is gone.)
-            if (!ended) Object.assign(report, cast.report());
-            return {...report, notes: [...report.notes], cuts: [...report.cuts], seen: {...report.seen}};
-        },
-        end: () => {
-            if (!ended) Object.assign(report, cast.report());
-            ended = true;
-            setNearFadeReach(1);
-            handle.setExposure?.(1);
-            // (While the cast is still in: whoever a meal's or a death's stand-in hid is shown again.)
-            handle.clearLiveActs?.();
-            pinArkClock(null);
-            handle.setHours(hourPinned ? options.hour! : null);
-            cast.detach();
-        }
-    };
+    }
 }

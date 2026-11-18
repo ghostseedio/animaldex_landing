@@ -405,7 +405,7 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
 export type ArkCameraView = {target: {x: number; y: number; z: number}; distance: number; polar: number; azimuth: number};
 
 /** Where an animal is drawn now (its middle), the ground under it, its length and height, whether it is awake, and its heading. */
-export type ArkLocated = {x: number; y: number; z: number; ground: number; length: number; height: number; awake: boolean; /** Which way it faces (radians about up; 0 = +z). */ yaw: number; /** The act it is posed by now (a live layer's or a replay's state: walk, display, mount, lie…), or null: its own day. */ act?: string | null; /** Drawn this frame (not held back, hidden, or outside the drawn set). */ shown?: boolean};
+export type ArkLocated = {x: number; y: number; z: number; ground: number; length: number; height: number; awake: boolean; /** Which way it faces (radians about up; 0 = +z). */ yaw: number; /** The act it is posed by now (a live layer's or a replay's state: walk, display, mount, lie…), or null: its own day. */ act?: string | null; /** Drawn this frame (not held back, hidden, or outside the drawn set). */ shown?: boolean; /** How far under the water its middle is (m; 0 on land and at the surface). */ under?: number};
 
 /**
  * V2 replay (`replay/cast.ts`, `replay/README.md`): what the scene reads of the cast each time it lays the roster out.
@@ -592,7 +592,26 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      */
     clearLiveActs?: () => void;
     /** V2 replay: the recorder's exposure, as a gain on the Ark's own (1). The world, its hour and its animals are untouched. */
-    setExposure?: (gain: number) => void;
+    setExposure?: (gain: number, fill?: number) => void;
+    /**
+     * V2 replay: how many of `points` (the cast's bodies; `slack`, the last metres of a line that are the body's own) a
+     * view of `target` cannot see, by the ground and by what is drawn solid, leaving out the trees and leaves a shot's
+     * cone dissolves (`near-fade.ts`). One more than the points: no place for the camera. `fresh`: gather the world again.
+     * `leaves`: count those trees and leaves too (a view with nothing at all between is the better one).
+     */
+    sightOf?: (target: {x: number; y: number; z: number}, view: {distance: number; polar: number; azimuth: number}, points: Array<{x: number; y: number; z: number; slack: number}>, fresh?: boolean, cut?: number, leaves?: boolean) => number;
+    /**
+     * V2 replay: the camera's near plane pushed out to `metres` (a cutaway: what stands in the first part of the way to
+     * a shot's subject is not drawn, whatever it is), or null: the scene's own. `sightOf`'s `cut` is the same distance:
+     * its lines begin there. `closest`: the nearest the shot asks to stand (the camera's least distance follows it).
+     */
+    setNearCut?: (metres: number | null, closest?: number | null) => void;
+    /** V2 replay: the ground's standing plants (ferns, saplings, crops) drawn smaller round these spots, to nothing within `r` of one; null: as the Ark is. */
+    setGroundClear?: (spots: Array<{x: number; z: number; r: number}> | null) => void;
+    /** V2 replay: whether the scene is flying its own camera now (a replay's flight to its act). */
+    flying?: () => boolean;
+    /** V2 replay (the probes): what the last `sightOf` line met first. */
+    sightMet?: () => string;
     /** V2 replay: hand the scene a cast (stand-ins and pins, `replay/cast.ts`), or null to take it away; the roster is laid out again. */
     setCast?: (cast: ArkCastLayer | null) => void;
     /** Place a replay's departed animals off the main thread ahead of `play` (runtime lane). */

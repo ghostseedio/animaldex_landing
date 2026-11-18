@@ -67,6 +67,7 @@ import {
     Group,
     Mesh,
     MeshStandardMaterial,
+    type Material,
     type ShaderMaterial,
     type BufferGeometry
 } from "three";
@@ -1372,6 +1373,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * stand-ins for animals an act names that are gone now, and the ids pinned so they are always drawn one by one.
      */
     let cast: ArkCastLayer | null = null;
+    /** V2 replay: the camera's near plane pushed out toward a shot's subject (m), or null: the scene's own. */
+    let nearCut: number | null = null;
+    /**
+     * V2 replay: the nearest a shot asks to stand to its subject (m), whatever is chosen or near; null: no shot is
+     * filming, the scene's own rules. While one films, the camera is kept over the ground as it is drawn (a lake's bed
+     * lies under the analytic one) and may come within millimetres of it.
+     */
+    let shotClosest: number | null = null;
     /** Meal ids pinned (drawn one by one) while the live world acts them. */
     let mealPins = new Set<string>();
     // 3.3 batch (D): the limp of an animal that got away (`live-escapes.ts`), asked by the draw; null until the escapes' layer is up.
@@ -6030,7 +6039,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             camera.position.x += dx;
             camera.position.z += dz;
         }
-        const seabed = heightAt(target.x, target.z);
+        // (V2 replay: under a shot's cast the bed as it is drawn, where that lies under the analytic one: a lake's.)
+        const seabed = shotClosest !== null ? Math.min(heightAt(target.x, target.z), standGround(target.x, target.z)) : heightAt(target.x, target.z);
         // Under the sea (a swimmer looked at, the director's dive) the target stays down there, above the sea floor.
         const diving = seabed < -0.4 && target.y < -0.15;
         // (Diving, it is only kept off the floor: it used to be pulled down onto it, which sank the view below a swimmer in its band.)
@@ -6042,7 +6052,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // the whole views pay nothing.)
         const viewDistance = camera.position.distanceTo(target);
         const freshTop = !diving && viewDistance < 80 ? waterLevelAt(target.x, target.z, 0) : 0;
-        const underFresh = Boolean(selectedId || followId) && freshTop - seabed > 0.4 && target.y < freshTop - 0.15;
+        // (V2 replay: or a shot's cast in it, `replay/shot.ts`.)
+        const underFresh = Boolean(selectedId || followId || shotClosest !== null) && freshTop - seabed > 0.4 && target.y < freshTop - 0.15;
         const groundUnderTarget = diving ? seabed + 0.3 : underFresh ? Math.max(seabed, 0) : Math.max(seabed, freshTop, 0);
         // Close up (a gecko on a wall, a beetle on a trunk), or looking at an animal up a tree or on a wall, the target
         // may stand above the ground: only kept out of it.
@@ -6064,8 +6075,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             camera.position.y += lift;
         }
         // Close to the ground only when close to what it looks at (a small animal), else well above it.
-        const below = heightAt(camera.position.x, camera.position.z);
-        const floor = (diving && below < -0.4 ? below + 0.5 : Math.max(below, underFresh || camera.position.y > below + 6 ? 0 : waterLevelAt(camera.position.x, camera.position.z, 0), 0)) + (diving ? 0 : Math.min(Math.max(viewDistance * 0.25, 0.03), 1.2));
+        // (V2 replay: a shot's camera is kept over the ground as it is drawn, where that lies under the analytic one: a lake's bed.)
+        const below = shotClosest !== null ? Math.min(heightAt(camera.position.x, camera.position.z), standGround(camera.position.x, camera.position.z)) : heightAt(camera.position.x, camera.position.z);
+        const floor = (diving && below < -0.4 ? below + 0.5 : Math.max(below, underFresh || camera.position.y > below + 6 ? 0 : waterLevelAt(camera.position.x, camera.position.z, 0), 0)) + (diving ? 0 : Math.min(Math.max(viewDistance * 0.25, shotClosest !== null ? 0.003 : 0.03), 1.2));
         if (camera.position.y < floor) camera.position.y = floor;
         // Looking up at the surface is allowed only under it; up at a canopy animal only while it is looked at.
         controls.maxPolarAngle = golden?.maxPolar ?? (diving ? 1.62 : looked?.place.canopy ? 2.7 : 1.36);
@@ -6147,6 +6159,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const selected = selectedId ? findEntry(selectedId) : null;
         // Looking at a small animal (flying to it, too: at its microhabitat, or a crab on the seabed), or with one close in front.
         let close = Boolean(selected?.micro) || Boolean(selected && selected.trueLength < 0.3);
+        /** V2 replay: an animal of the cast under about 5 cm that the view is on (an aphid, a water flea): the camera comes as near as its size asks. */
+        let castTiny: Entry | null = null;
         if (!close) {
             // (V2 replay: and a small animal of the cast, wherever it is drawn now, its body after its death too.)
             for (const entry of cast ? allEntries() : entries) {
@@ -6156,14 +6170,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const dz = (pinned?.z ?? entry.place.z) - target.z;
                 if (dx * dx + dz * dz < MICRO_CLOSE_WITHIN * MICRO_CLOSE_WITHIN && Math.abs((pinned?.y ?? entry.place.ground) - target.y) < MICRO_CLOSE_WITHIN) {
                     close = true;
-                    break;
+                    if (pinned && entry.trueLength < 0.05 && dx * dx + dz * dz < 0.25 && (!castTiny || entry.trueLength < castTiny.trueLength)) castTiny = entry;
+                    if (!cast) break;
                 }
             }
         }
         // A scenery module's close-up (a nest, a web, the cave): the camera may come nearer than usual.
         let moduleWant = 4;
         if (!close) for (const sceneModule of modules) moduleWant = Math.min(moduleWant, sceneModule.closeUp?.(target.x, target.y, target.z) ?? 4);
-        const want = close ? MICRO_MIN_DISTANCE : moduleWant;
+        const want = Math.min(shotClosest ?? Infinity, castTiny ? Math.min(MICRO_MIN_DISTANCE, Math.max(castTiny.trueLength * 4, 0.008)) : close ? MICRO_MIN_DISTANCE : moduleWant);
         // Down at once; back up gently (the camera eases out rather than jumping).
         controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
         let distance = camera.position.distanceTo(target);
@@ -6176,10 +6191,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Close up to an animal under about 5 cm (an ant, a gecko's hatchling, a spider): the scenery around it is huge at
         // its scale. The camera keeps above the ground it is on, and the near plane comes out to just short of the animal,
         // so a grass blade or a leaf the camera is in is cut away instead of filling the view.
-        const tiny = selected && selected.trueLength < 0.05 && selected.middle ? selected : null;
+        const tiny = selected && selected.trueLength < 0.05 && selected.middle ? selected : castTiny;
         if (tiny && distance < Math.max(tiny.trueLength * 40, 0.6) && !flight) {
             const floor = heightAt(camera.position.x, camera.position.z);
-            const clear = floor + Math.max(distance * 0.3, 0.02);
+            // (V2 replay: one of a shot's cast is filmed from as near as its size asks, millimetres over its leaf.)
+            const clear = floor + Math.max(distance * 0.3, tiny === castTiny ? 0.002 : 0.02);
             // (On land; under water the floor is the seabed, and the camera keeps above it the same way.)
             if (camera.position.y < clear && tiny.middle!.y < floor + 0.5) {
                 camera.position.y = clear;
@@ -6187,7 +6203,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             near = Math.min(Math.max(distance * 0.4, 0.002), Math.max(distance - tiny.trueLength * 1.5, 0.002));
         }
-        if (Math.abs(near - camera.near) > camera.near * 0.08) {
+        // (V2 replay: a shot's cut, `setNearCut`: what stands in the first part of the way to its subject is not drawn.)
+        if (nearCut !== null) near = Math.max(near, Math.min(nearCut, distance * 0.98));
+        if (Math.abs(near - camera.near) > camera.near * (nearCut !== null ? 0.005 : 0.08)) {
             camera.near = near;
             camera.updateProjectionMatrix();
         }
@@ -6471,6 +6489,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * Nothing here moves an animal or the scenery.
      */
     const sight = new Sight(scene);
+    /** V2 replay: the cast's own lines (`sightOf`), made at a shot's first asking. */
+    let castSight: Sight | null = null;
+    let castLeaves: Sight | null = null;
+    let castSightLast = "";
     let clearSearch: {views: CloseView[]; next: number; best: CloseView | null; bestBlocked: number; asked: CloseView | null} | null = null;
     let clearedFlight: Flight | null = null;
     let clearCheckAt = 0;
@@ -6484,6 +6506,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const clearStats = {searches: 0, views: 0, ms: 0, worstMs: 0, moved: 0};
     const sightEye = new Vector3();
     const sightPoint = new Vector3();
+    const sightFrom = new Vector3();
     const sightLook = new Spherical();
     /**
      * How many of the four lines from a view's eye to the animal are blocked (5: the eye is no place to stand); counted
@@ -9335,9 +9358,67 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         liveActs: () => ({meals: liveMeals.debug(), matings: liveMatings.debug(), births: liveBirths.debug(), escapes: liveEscapes.debug(), deaths: liveDeaths.debug()}),
         // V2 replay: the recorder's exposure (1: as the Ark is; more for a night's act, a camera's own choice: nothing of the
         // world, its hour or its animals changes).
-        setExposure: (gain) => {
+        setExposure: (gain, fill = 1) => {
             renderer.toneMappingExposure = 0.66 * Math.min(Math.max(Number.isFinite(gain) ? gain : 1, 0.25), 8);
+            // (And the recorder's fill: more of the sky's own light, in the night's own colours, `lighting.ts` lift.)
+            const lift = Math.min(Math.max(Number.isFinite(fill) ? fill : 1, 1), 12);
+            if (Math.abs(lift - lighting.lift) > 0.01) {
+                lighting.lift = lift;
+                setLight();
+            }
         },
+        // V2 replay: how many of these points (the cast's bodies) a view of `target` cannot see: the ground, then what is
+        // drawn solid (`runtime/sight.ts`, as a chosen animal's close-up asks it), leaving out what a shot's cone
+        // dissolves (`near-fade.ts`: the trees and the leaf cards). One more than the points: the eye is no place to
+        // stand (under the ground, inside a trunk, a rock or a wall). `fresh`: the world may have changed (a cut).
+        sightOf: (target, view, points, fresh, cut = 0, leaves = false) => {
+            if (!castSight) {
+                castSight = new Sight(scene);
+                castSight.skip = (mesh) => mesh.userData.kind === "asset-tree" || Boolean(((Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as Material | undefined)?.userData.arkNearFade);
+                castLeaves = new Sight(scene);
+            }
+            if (fresh) {
+                castSight.reset();
+                castLeaves!.reset();
+            }
+            const lines = leaves ? castLeaves! : castSight;
+            const at = sightPoint.set(target.x, target.y, target.z).clone();
+            sightEye.setFromSphericalCoords(view.distance, view.polar, view.azimuth).add(at);
+            // (Over the ground as it is drawn, where that lies under the analytic one: a lake's bed.)
+            if (Math.min(heightAt(sightEye.x, sightEye.z), standGround(sightEye.x, sightEye.z)) > sightEye.y - Math.min(0.2, view.distance * 0.2) || runtime.eyeBlocked(sightEye, at)) return points.length + 1;
+            lines.near(at, view.distance + 4);
+            let blocked = 0;
+            castSightLast = "";
+            for (const point of points) {
+                sightPoint.set(point.x, point.y, point.z);
+                // (From within a metre no hill stands between: the heights asked are the analytic ground's, not the drawn bed's.)
+                if (view.distance > 1 && runtime.sightBlocked(sightEye, sightPoint, point.slack)) {
+                    blocked++;
+                    castSightLast ||= "ground";
+                    continue;
+                }
+                // (What the shot's near cut takes away is not in the way: the line begins where the picture does.)
+                const span = sightEye.distanceTo(sightPoint);
+                const from = cut > 0 && cut < span - point.slack ? sightFrom.copy(sightPoint).sub(sightEye).multiplyScalar(cut / span).add(sightEye) : sightEye;
+                // (A leaf counts nearer the body than a wall does: the bush an animal stands in hides it.)
+                if (lines.blocked(from, sightPoint, leaves ? point.slack * 0.6 : point.slack)) {
+                    blocked++;
+                    castSightLast ||= lines.last || "a wall";
+                }
+            }
+            return blocked;
+        },
+        sightMet: () => castSightLast,
+        // V2 replay: the camera's near plane out to `metres` from it (a cutaway: the roof, the fern or the bush in the
+        // first part of the way to a shot's subject is not drawn), or null: the scene's own again.
+        setNearCut: (metres, closest = null) => {
+            nearCut = metres !== null && metres > 0 ? metres : null;
+            shotClosest = closest !== null && closest > 0 ? closest : null;
+        },
+        // V2 replay: the ground's standing plants drawn smaller round these spots, to nothing at them (`near-detail.ts`).
+        setGroundClear: (spots) => nearDetail?.setClear(spots),
+        // V2 replay: the scene is flying its own camera (a replay's flight to its act): a shot leaves the view alone until it lands.
+        flying: () => Boolean(flight),
         // V2 replay: the view an act is clear from, as the scene's own replay finds it: the polar that sees the focus over
         // the hills (`clearPolar`), then the bearing nearest `azimuth` with the fewest trunks between the camera and the
         // places (`clearBearing`: the bearing itself when nothing is in the way).
@@ -9408,7 +9489,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (Out of the picture, it is not drawn: where its act poses it, else where its day last had it, else its place.)
             const posed = entry.act && !entry.act.hidden ? {x: entry.act.x, y: entry.act.base, z: entry.act.z} : entry.sched?.pose ?? null;
             const middle = entry.middle ?? (posed ? new Vector3(posed.x, posed.y + entry.drawnHeight * 0.5, posed.z) : new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z));
-            return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0, act: entry.act?.state ?? null, shown: Boolean(entry.middle) && !entry.held && !entry.act?.hidden};
+            // (V2 replay: how far under the water its middle is, where it swims: a shot films it from under the surface.)
+            const top = waterTopAt(middle.x, middle.z);
+            const under = heightAt(middle.x, middle.z) < top - 0.15 ? Math.max(top - middle.y, 0) : 0;
+            return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.ghost ? Math.min(entry.drawnHeight, entry.length * 0.6) : entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0, act: entry.act?.state ?? null, shown: Boolean(entry.middle) && !entry.held && !entry.act?.hidden, under};
         },
         behaviour: (id) => findEntry(id)?.state ?? null,
         rest: (id) => {

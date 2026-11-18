@@ -40,6 +40,10 @@ export class Sight {
     /** Ray tests made, and gatherings (the page's profiler and the tests read them). */
     tests = 0;
     gathered = 0;
+    /** Meshes left out of this one's lines (V2 replay: what a shot's cone dissolves, `near-fade.ts`). Set before the first line. */
+    skip: ((mesh: Mesh) => boolean) | null = null;
+    /** What the last blocked line met (its mesh's name or kind; "" for a gathered triangle): the probes read it. */
+    last = "";
 
     constructor(private readonly root: Object3D) {}
 
@@ -72,17 +76,23 @@ export class Sight {
         this.rays.far = far;
         this.tests++;
         const covered = this.reach >= 0 && from.distanceTo(this.centre) <= this.reach && to.distanceTo(this.centre) <= this.reach;
-        if (covered && (hitsAny(this.front, this.frontCount, from, direction, far, true) || hitsAny(this.both, this.bothCount, from, direction, far, false))) return true;
+        if (covered && (hitsAny(this.front, this.frontCount, from, direction, far, true) || hitsAny(this.both, this.bothCount, from, direction, far, false))) {
+            this.last = "";
+            return true;
+        }
         return this.walk(this.root, covered);
     }
 
     private walk(object: Object3D, covered: boolean): boolean {
         if (!object.visible) return false;
         const mesh = object as Mesh;
-        if (mesh.isMesh && solid(mesh) && !(covered && big(mesh))) {
+        if (mesh.isMesh && solid(mesh) && !(covered && big(mesh)) && !this.skip?.(mesh)) {
             this.hits.length = 0;
             object.raycast(this.rays, this.hits);
-            if (this.hits.length > 0) return true;
+            if (this.hits.length > 0) {
+                this.last = mesh.name || (mesh.userData.kind as string | undefined) || mesh.parent?.name || "mesh";
+                return true;
+            }
         }
         const children = object.children;
         for (let i = 0; i < children.length; i++) if (this.walk(children[i], covered)) return true;
@@ -92,7 +102,7 @@ export class Sight {
     private gather(object: Object3D): void {
         if (!object.visible) return;
         const mesh = object as Mesh;
-        if (mesh.isMesh && solid(mesh) && big(mesh)) this.take(mesh);
+        if (mesh.isMesh && solid(mesh) && big(mesh) && !this.skip?.(mesh)) this.take(mesh);
         const children = object.children;
         for (let i = 0; i < children.length; i++) this.gather(children[i]);
     }
