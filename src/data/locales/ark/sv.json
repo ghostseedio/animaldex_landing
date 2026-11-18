@@ -696,7 +696,7 @@
             "notInArk": "Inte i Ark än",
             "life": "Liv",
             "explainTitle": "Så växer din Ark poäng",
-            "explainBody": "Dina Ark poäng ökar när det går bra för de arter du har hjälpt ombord. Varje steg med ett djur som fungerar ger poäng: fler när Ark behöver det djuret (ett som är ensamt, eller en art som minskar eller är hotad), färre när många är ombord. Dina livsmätare finns nedanför, som förut.",
+            "explainBody": "Varje steg med ett djur som fungerar ger poäng: fler när Ark behöver det djuret (ett som är ensamt, eller en art som minskar eller är hotad), färre när många är ombord. Dina livsmätare finns nedanför, som förut.",
             "explainThrive": "Steg som fungerar får dina djur att trivas: fler ungar, och de jagas sist.",
             "explainDismiss": "Jag förstår",
             "arrival": "{species} kom ombord på Ark",

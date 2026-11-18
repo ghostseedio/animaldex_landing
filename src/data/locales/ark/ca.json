@@ -696,7 +696,7 @@
             "notInArk": "Encara no és a l'Ark",
             "life": "Vida",
             "explainTitle": "Com creix la teva Puntuació Ark",
-            "explainBody": "La teva puntuació Ark creix quan van bé les espècies que has ajudat a portar a bord. Cada pas amb un animal que funciona dona punts: més quan l'Ark necessita aquell animal (un que està sol, o una espècie en declivi o en perill), menys quan n'hi ha molts a bord. Les teves barres de vida són a sota, com abans.",
+            "explainBody": "Cada pas amb un animal que funciona dona punts: més quan l'Ark necessita aquell animal (un que està sol, o una espècie en declivi o en perill), menys quan n'hi ha molts a bord. Les teves barres de vida són a sota, com abans.",
             "explainThrive": "Els passos que funcionen fan prosperar els teus animals: més cries, i són els últims a ser caçats.",
             "explainDismiss": "Entesos",
             "arrival": "{species} ha pujat a bord de l'Ark",

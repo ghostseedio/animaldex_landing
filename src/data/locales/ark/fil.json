@@ -696,7 +696,7 @@
             "notInArk": "Wala pa sa Ark",
             "life": "Buhay",
             "explainTitle": "Paano lumalaki ang Ark Score mo",
-            "explainBody": "Tumataas ang Ark Score mo kapag maayos ang kalagayan ng mga uring tinulungan mong maisakay. Bawat hakbang kasama ang isang hayop na gumana ay may puntos: mas marami kapag kailangan ng Ark ang hayop na iyon (nag-iisa, o isang uring kumakaunti o nanganganib), mas kaunti kapag marami nang nakasakay. Nasa ibaba ang iyong life bars, gaya ng dati.",
+            "explainBody": "Bawat hakbang kasama ang isang hayop na gumana ay may puntos: mas marami kapag kailangan ng Ark ang hayop na iyon (nag-iisa, o isang uring kumakaunti o nanganganib), mas kaunti kapag marami nang nakasakay. Nasa ibaba ang iyong life bars, gaya ng dati.",
             "explainThrive": "Ang mga hakbang na gumagana ay nagpapasigla sa iyong mga hayop: mas maraming anak, at huling hinuhuli.",
             "explainDismiss": "Nakuha ko",
             "arrival": "Sumakay sa Ark ang isang {species}",

@@ -696,7 +696,7 @@
             "notInArk": "Pas encore dans l'Ark",
             "life": "Vie",
             "explainTitle": "Comment votre Score Ark augmente",
-            "explainBody": "Votre score Ark augmente quand les espèces que vous avez aidé à faire monter à bord vont bien. Chaque étape avec un animal qui marche rapporte des points : davantage quand l'Ark a besoin de cet animal (un animal seul, ou une espèce en déclin ou menacée), moins quand il y en a beaucoup à bord. Vos jauges de vie sont en dessous, comme avant.",
+            "explainBody": "Chaque étape avec un animal qui marche rapporte des points : davantage quand l'Ark a besoin de cet animal (un animal seul, ou une espèce en déclin ou menacée), moins quand il y en a beaucoup à bord. Vos jauges de vie sont en dessous, comme avant.",
             "explainThrive": "Les étapes qui marchent font s'épanouir vos animaux : plus de petits, chassés en dernier.",
             "explainDismiss": "Compris",
             "arrival": "{species} est monté à bord de l'Ark",

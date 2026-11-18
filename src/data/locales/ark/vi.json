@@ -696,7 +696,7 @@
             "notInArk": "Chưa có trên Ark",
             "life": "Cuộc sống",
             "explainTitle": "Điểm Ark của bạn tăng thế nào",
-            "explainBody": "Điểm Ark của bạn tăng khi những loài bạn đã giúp đưa lên tàu sống tốt. Mỗi bước thành công với một con vật đều mang lại điểm: nhiều hơn khi Ark cần con vật đó (một con đơn lẻ, hoặc một loài đang suy giảm hay gặp nguy), ít hơn khi đã có nhiều con trên tàu. Các thanh sự sống của bạn ở bên dưới, như trước.",
+            "explainBody": "Mỗi bước thành công với một con vật đều mang lại điểm: nhiều hơn khi Ark cần con vật đó (một con đơn lẻ, hoặc một loài đang suy giảm hay gặp nguy), ít hơn khi đã có nhiều con trên tàu. Các thanh sự sống của bạn ở bên dưới, như trước.",
             "explainThrive": "Những bước thành công giúp các con vật của bạn phát triển tốt: đẻ nhiều con hơn, và bị săn sau cùng.",
             "explainDismiss": "Đã hiểu",
             "arrival": "Một con {species} đã lên Ark",

@@ -352,7 +352,7 @@ export const ARK_COPY = {
     life: "Life",
     /** The one-time explanation band over the score (dismissed for good, per browser). */
     explainTitle: "How your Ark Score grows",
-    explainBody: "Your Ark Score grows when the kinds you helped bring aboard do well. Each step with an animal that works earns points: more when the Ark needs that animal (a lone one, or a kind in decline or at risk), fewer when plenty are aboard. Your life bars are below, as before.",
+    explainBody: "Each step with an animal that works earns points: more when the Ark needs that animal (a lone one, or a kind in decline or at risk), fewer when plenty are aboard. Your life bars are below, as before.",
     /** What a step that works does, in one line (owner, 2026-11-15: "make clear what completing steps does"). */
     explainThrive: "Steps that work make your animals thrive: more young, hunted last.",
     explainDismiss: "Got it",

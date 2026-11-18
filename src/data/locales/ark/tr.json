@@ -696,7 +696,7 @@
             "notInArk": "Henüz Ark'ta değil",
             "life": "Yaşam",
             "explainTitle": "Ark Puanın nasıl artar",
-            "explainBody": "Ark Puanın, gemiye çıkmasına yardım ettiğin türler iyi durumdayken artar. Bir hayvanla atılan ve işe yarayan her adım puan kazandırır: Ark o hayvana ihtiyaç duyduğunda (yalnız bir hayvan ya da azalan veya risk altındaki bir tür) daha fazla, gemide bolca olduğunda daha az. Yaşam çubukların, önceden olduğu gibi, aşağıda.",
+            "explainBody": "Bir hayvanla atılan ve işe yarayan her adım puan kazandırır: Ark o hayvana ihtiyaç duyduğunda (yalnız bir hayvan ya da azalan veya risk altındaki bir tür) daha fazla, gemide bolca olduğunda daha az. Yaşam çubukların, önceden olduğu gibi, aşağıda.",
             "explainThrive": "İşe yarayan adımlar hayvanlarını serpiltir: daha çok yavru, en son avlanırlar.",
             "explainDismiss": "Anladım",
             "arrival": "{species} Ark'a bindi",

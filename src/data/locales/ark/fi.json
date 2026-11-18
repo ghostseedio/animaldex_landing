@@ -696,7 +696,7 @@
             "notInArk": "Ei vielä Arkissa",
             "life": "Elämä",
             "explainTitle": "Miten Ark pisteesi kasvavat",
-            "explainBody": "Ark pisteesi nousevat, kun lajeilla, jotka autoit kyytiin, menee hyvin. Jokainen toimiva askel eläimen kanssa tuo pisteitä: enemmän, kun Ark tarvitsee sitä eläintä (yksinäistä tai lajia, joka vähenee tai on uhattuna), vähemmän, kun niitä on kyydissä paljon. Elämäpalkkisi ovat alla, kuten ennenkin.",
+            "explainBody": "Jokainen toimiva askel eläimen kanssa tuo pisteitä: enemmän, kun Ark tarvitsee sitä eläintä (yksinäistä tai lajia, joka vähenee tai on uhattuna), vähemmän, kun niitä on kyydissä paljon. Elämäpalkkisi ovat alla, kuten ennenkin.",
             "explainThrive": "Toimivat askeleet saavat eläimesi voimaan hyvin: enemmän poikasia, ja ne saalistetaan viimeisinä.",
             "explainDismiss": "Selvä",
             "arrival": "{species} nousi Arkin kyytiin",

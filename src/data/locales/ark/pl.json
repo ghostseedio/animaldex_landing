@@ -696,7 +696,7 @@
             "notInArk": "Jeszcze nie w Ark",
             "life": "Życie",
             "explainTitle": "Jak rośnie Twój Wynik Ark",
-            "explainBody": "Twój wynik Ark rośnie, gdy dobrze mają się gatunki, które dzięki Tobie trafiły na pokład. Każdy krok ze zwierzęciem, który zadziała, daje punkty: więcej, gdy Ark potrzebuje tego zwierzęcia (samotnego albo gatunku, który zanika lub jest zagrożony), mniej, gdy na pokładzie jest ich dużo. Twoje paski życia są niżej, jak wcześniej.",
+            "explainBody": "Każdy krok ze zwierzęciem, który zadziała, daje punkty: więcej, gdy Ark potrzebuje tego zwierzęcia (samotnego albo gatunku, który zanika lub jest zagrożony), mniej, gdy na pokładzie jest ich dużo. Twoje paski życia są niżej, jak wcześniej.",
             "explainThrive": "Kroki, które działają, sprawiają, że Twoje zwierzęta rozkwitają: więcej młodych i są łowione jako ostatnie.",
             "explainDismiss": "Rozumiem",
             "arrival": "{species} wszedł na pokład Ark",

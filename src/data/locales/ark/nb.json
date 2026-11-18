@@ -696,7 +696,7 @@
             "notInArk": "Ikke i Ark ennå",
             "life": "Liv",
             "explainTitle": "Slik vokser Ark poengsummen din",
-            "explainBody": "Ark poengsummen din vokser når artene du har hjulpet om bord, har det bra. Hvert steg med et dyr som fungerer, gir poeng: flere når Ark trenger det dyret (et som er alene, eller en art som går tilbake eller er truet), færre når mange er om bord. Livsstolpene dine står nedenfor, som før.",
+            "explainBody": "Hvert steg med et dyr som fungerer, gir poeng: flere når Ark trenger det dyret (et som er alene, eller en art som går tilbake eller er truet), færre når mange er om bord. Livsstolpene dine står nedenfor, som før.",
             "explainThrive": "Steg som fungerer, får dyrene dine til å trives: flere unger, og de blir jaktet sist.",
             "explainDismiss": "Skjønner",
             "arrival": "{species} kom om bord i Ark",

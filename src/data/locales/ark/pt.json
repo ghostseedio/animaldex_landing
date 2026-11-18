@@ -696,7 +696,7 @@
             "notInArk": "Ainda não está na Ark",
             "life": "Vida",
             "explainTitle": "Como sua Pontuação Ark cresce",
-            "explainBody": "Sua pontuação Ark cresce quando as espécies que você ajudou a trazer a bordo vão bem. Cada passo com um animal que funciona rende pontos: mais quando a Ark precisa desse animal (um sozinho, ou uma espécie em declínio ou em risco), menos quando há muitos a bordo. Suas barras de vida estão abaixo, como antes.",
+            "explainBody": "Cada passo com um animal que funciona rende pontos: mais quando a Ark precisa desse animal (um sozinho, ou uma espécie em declínio ou em risco), menos quando há muitos a bordo. Suas barras de vida estão abaixo, como antes.",
             "explainThrive": "Passos que funcionam fazem seus animais prosperar: mais filhotes, e são os últimos a ser caçados.",
             "explainDismiss": "Entendi",
             "arrival": "{species} embarcou na Ark",

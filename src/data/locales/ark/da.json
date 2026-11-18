@@ -696,7 +696,7 @@
             "notInArk": "Ikke i Ark endnu",
             "life": "Liv",
             "explainTitle": "Sådan vokser din Ark score",
-            "explainBody": "Din Ark score vokser, når de arter, du har hjulpet om bord, har det godt. Hvert skridt med et dyr, der virker, giver point: flere, når Ark har brug for det dyr (et, der er alene, eller en art i tilbagegang eller i fare), færre, når der er mange om bord. Dine livsbjælker står nedenfor som før.",
+            "explainBody": "Hvert skridt med et dyr, der virker, giver point: flere, når Ark har brug for det dyr (et, der er alene, eller en art i tilbagegang eller i fare), færre, når der er mange om bord. Dine livsbjælker står nedenfor som før.",
             "explainThrive": "Skridt, der virker, får dine dyr til at trives: flere unger, og de bliver jaget sidst.",
             "explainDismiss": "Forstået",
             "arrival": "{species} kom om bord i Ark",

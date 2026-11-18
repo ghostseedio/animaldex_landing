@@ -696,7 +696,7 @@
             "notInArk": "Zatiaľ nie je v Ark",
             "life": "Život",
             "explainTitle": "Ako rastie tvoje Skóre Ark",
-            "explainBody": "Tvoje skóre Ark rastie, keď sa darí druhom, ktoré sa vďaka tebe dostali na palubu. Každý krok so zvieraťom, ktorý funguje, prináša body: viac, keď to zviera Ark potrebuje (je tam samo alebo jeho druh ubúda či je ohrozený), menej, keď je ich na palube veľa. Tvoje ukazovatele života sú nižšie, ako predtým.",
+            "explainBody": "Každý krok so zvieraťom, ktorý funguje, prináša body: viac, keď to zviera Ark potrebuje (je tam samo alebo jeho druh ubúda či je ohrozený), menej, keď je ich na palube veľa. Tvoje ukazovatele života sú nižšie, ako predtým.",
             "explainThrive": "Kroky, ktoré fungujú, pomáhajú tvojim zvieratám prospievať: viac mláďat a lovia ich až nakoniec.",
             "explainDismiss": "Rozumiem",
             "arrival": "{species} je teraz na palube Ark",

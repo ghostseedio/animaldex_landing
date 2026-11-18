@@ -696,7 +696,7 @@
             "notInArk": "Încă nu e în Ark",
             "life": "Viață",
             "explainTitle": "Cum crește Scorul tău Ark",
-            "explainBody": "Scorul tău Ark crește atunci când le merge bine speciilor pe care le-ai ajutat să urce la bord. Fiecare pas cu un animal care merge aduce puncte: mai multe când Ark are nevoie de acel animal (unul singur sau un fel aflat în declin ori în pericol), mai puține când sunt multe la bord. Barele tale de viață sunt mai jos, ca înainte.",
+            "explainBody": "Fiecare pas cu un animal care merge aduce puncte: mai multe când Ark are nevoie de acel animal (unul singur sau un fel aflat în declin ori în pericol), mai puține când sunt multe la bord. Barele tale de viață sunt mai jos, ca înainte.",
             "explainThrive": "Pașii care merg îți fac animalele să prospere: mai mulți pui, vânate ultimele.",
             "explainDismiss": "Am înțeles",
             "arrival": "{species} a urcat la bordul Ark",

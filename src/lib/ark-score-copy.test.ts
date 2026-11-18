@@ -38,10 +38,10 @@ test("English: no Ark Score line promises it never goes down, and the app's defa
     assert.equal(english.personAboutSelf, english.scoreAbout);
     assert.equal(english.personAbout, english.scoreAboutTheirs);
     assert.equal(english.scoreAbout, "Your Ark Score grows when the kinds you helped bring aboard do well.");
-    assert.ok(english.explainBody.startsWith(english.scoreAbout));
+    assert.ok(english.explainBody.startsWith("Each step with an animal that works earns points"));
 });
 
-test("every language has the new lines, in its own words, with the explainer opening on the first", () => {
+test("every language has the new lines, in its own words", () => {
     const english = lines(en as Words);
     const files = ["id.json", ...readdirSync(join(LOCALES, "ark")).map((file) => join("ark", file))];
     assert.equal(files.length, 44);
@@ -52,7 +52,6 @@ test("every language has the new lines, in its own words, with the explainer ope
             assert.equal(typeof text, "string", `${file} ${name}`);
             assert.notEqual(text, (english as Record<string, string>)[name], `${file} ${name} is still English`);
         }
-        assert.ok(own.explainBody.startsWith(own.scoreAbout), `${file}: the explainer opens on the first line`);
         assert.equal(own.personAboutSelf, own.scoreAbout, file);
         assert.equal(own.personAbout, own.scoreAboutTheirs, file);
     }

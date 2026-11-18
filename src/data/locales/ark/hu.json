@@ -696,7 +696,7 @@
             "notInArk": "Még nincs az Arkban",
             "life": "Élet",
             "explainTitle": "Hogyan nő az Ark pontszámod",
-            "explainBody": "Az Ark pontszámod nő, ha jól boldogulnak azok a fajok, amelyeket segítettél a fedélzetre hozni. Minden bevált lépés egy állattal pontot ér: többet, ha az Arknak szüksége van arra az állatra (ha egyedül van, vagy a faja fogy vagy veszélyben van), kevesebbet, ha sok van belőle a fedélzeten. Az életsávjaid lent vannak, mint eddig.",
+            "explainBody": "Minden bevált lépés egy állattal pontot ér: többet, ha az Arknak szüksége van arra az állatra (ha egyedül van, vagy a faja fogy vagy veszélyben van), kevesebbet, ha sok van belőle a fedélzeten. Az életsávjaid lent vannak, mint eddig.",
             "explainThrive": "A bevált lépésektől jó formába kerülnek az állataid: több kölyök, és őket vadásszák utoljára.",
             "explainDismiss": "Értem",
             "arrival": "{species} felszállt az Arkra",

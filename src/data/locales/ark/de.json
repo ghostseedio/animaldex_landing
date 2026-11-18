@@ -696,7 +696,7 @@
             "notInArk": "Noch nicht in der Ark",
             "life": "Leben",
             "explainTitle": "Wie deine Ark-Punktzahl wächst",
-            "explainBody": "Deine Ark-Punktzahl wächst, wenn es den Arten gut geht, die du mit an Bord gebracht hast. Jeder Schritt mit einem Tier, der klappt, bringt Punkte: mehr, wenn die Ark dieses Tier braucht (ein einzelnes oder eine Art, die abnimmt oder gefährdet ist), weniger, wenn viele an Bord sind. Deine Lebensbalken stehen wie bisher darunter.",
+            "explainBody": "Jeder Schritt mit einem Tier, der klappt, bringt Punkte: mehr, wenn die Ark dieses Tier braucht (ein einzelnes oder eine Art, die abnimmt oder gefährdet ist), weniger, wenn viele an Bord sind. Deine Lebensbalken stehen wie bisher darunter.",
             "explainThrive": "Schritte, die klappen, lassen deine Tiere gedeihen: mehr Junge, zuletzt gejagt.",
             "explainDismiss": "Verstanden",
             "arrival": "{species} ist an Bord der Ark gekommen",

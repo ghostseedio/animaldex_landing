@@ -696,7 +696,7 @@
             "notInArk": "Još nije u Arku",
             "life": "Život",
             "explainTitle": "Kako raste tvoj Rezultat Ark",
-            "explainBody": "Tvoj rezultat Ark raste kad dobro prolaze vrste koje su zahvaljujući tebi došle na brod. Svaki korak sa životinjom koji uspije donosi bodove: više kad Arku ta životinja treba (kad je sama ili joj vrsta opada ili je ugrožena), manje kad ih je na brodu mnogo. Tvoje trake života su ispod, kao i prije.",
+            "explainBody": "Svaki korak sa životinjom koji uspije donosi bodove: više kad Arku ta životinja treba (kad je sama ili joj vrsta opada ili je ugrožena), manje kad ih je na brodu mnogo. Tvoje trake života su ispod, kao i prije.",
             "explainThrive": "Koraci koji uspiju pomažu tvojim životinjama da napreduju: više mladunaca, i love ih posljednje.",
             "explainDismiss": "Razumijem",
             "arrival": "Na Ark se ukrcala nova životinja: {species}",
