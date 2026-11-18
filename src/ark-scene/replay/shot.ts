@@ -307,13 +307,14 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
      * The view that holds these animals: the two farthest apart framed together (the selection's pair framing), or the
      * one alone at its meeting distance; side on to the line between them, from the island's outer side.
      */
-    const frameOf = (list: string[], style: {polar?: number; widen?: number; max?: number; /** Alone in the picture while the rest are farther than `closing` (default `CLOSING`) from it. */ first?: string; closing?: number} = {}): Frame | null => {
+    const frameOf = (list: string[], style: {polar?: number; widen?: number; max?: number; /** Alone in the picture while the rest are farther than `closing` (default `CLOSING`) from it. */ first?: string; closing?: number; /** V1: places held in the picture as well, with nobody at them yet (where a hunter will be at its lunge's end). */ also?: Array<ArkLocated & {id: string}>} = {}): Frame | null => {
         const all = located(list);
         const drawn = all.filter((at) => at.shown !== false);
         let who = drawn.length ? drawn : all;
         if (!who.length) return null;
         const first = style.first ? all.find((at) => at.id === style.first) : null;
         if (first && all.some((at) => Math.hypot(at.x - first.x, at.z - first.z) > (style.closing ?? CLOSING))) who = [first];
+        if (style.also?.length) who = who.concat(style.also);
         const aspect = options.aspect();
         let a = who[0];
         let b = who[0];
@@ -817,12 +818,27 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             // before the hunter is (a sprint and a stoop outrun any easing, and a picture that holds both from the
             // start is far enough back that neither reads). An escape's still: the frame at which both were well
             // inside the picture and nearest each other (through the air: a hawk straight over its quarry is not on it yet).
-            if (kind === "escaped" && gap !== null && now > end - 1.2 && gap < lungeGap && allInPicture(view, [hunter, quarry], 0.86)) {
-                lungeGap = gap;
-                report.keyAt = Math.round(clip * 100) / 100;
+            if (kind === "escaped" && view && h && q && h.shown !== false && q.shown !== false && now > end - 1.2) {
+                // (How far the worse placed of the two is from the picture's middle, 1 at its edge; a little for how far apart they are.)
+                const [ph, pq] = [inPicture(view, h, h.length * 0.3), inPicture(view, q, q.length * 0.3)];
+                const off = ph && pq ? Math.max(ph.x, ph.y, pq.x, pq.y) : Infinity;
+                const score = off + Math.min((gap ?? 0) / Math.max(view.distance, 1e-3), 1) * 0.5;
+                if (off < 0.9 && score < lungeGap) {
+                    lungeGap = score;
+                    report.keyAt = Math.round(clip * 100) / 100;
+                }
             }
-            const on = frameOf([quarry], {polar: POLAR_LUNGE});
-            return toward(on ? held(on, Math.max(on.distance * LUNGE_ROOM, LUNGE_LEAST), POLAR_LUNGE) : null, dt, 6, 3, 12);
+            // (No frame of both in the picture: the miss itself, the quarry breaking away.)
+            if (kind === "escaped" && now > end + 0.15 && lungeGap === Infinity) tell();
+            // (Composed for the lunge's end from its start: the quarry, and the place beside it where the hunter will be
+            // when it is on it, toward where it is coming from: an upright picture then holds the two along its tall
+            // side, a tiger and the monkey it lunges at both whole.)
+            const reach = h && q ? (h.length + q.length) * 0.5 + Math.max(Math.min(h.length, q.length) * 0.25, 0.08) : 0;
+            const flat = h && q ? Math.hypot(h.x - q.x, h.z - q.z) : 0;
+            const there = h && q && flat > 1e-3 ? [{...h, id: `${hunter}@lunge`, x: q.x + ((h.x - q.x) / flat) * reach, y: q.y + Math.min(Math.max(h.y - q.y, -reach), reach) * Math.min(reach / Math.max(gap ?? reach, reach), 1), z: q.z + ((h.z - q.z) / flat) * reach, shown: true}] : [];
+            const on = frameOf([quarry], {polar: POLAR_LUNGE, also: there});
+            // (Its aim is all but at once: the quarry is at a run, and a picture that trails it has the two at its edge.)
+            return toward(on && !there.length ? held(on, Math.max(on.distance * LUNGE_ROOM, LUNGE_LEAST), POLAR_LUNGE) : on, dt, 6, 3, 40);
         }
         if (kind === "meal") {
             // (The quarry, and the hunter once it is on it: the catch, then the meal where the prey fell.)
