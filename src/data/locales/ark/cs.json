@@ -190,6 +190,7 @@
             "hatchedAboard": "Vylíhnut v Ark",
             "hatched": "Vylíhnutí",
             "placeholder": "Jeho 3D postava se ještě připravuje: zatím ji zastupuje náhradní.",
+            "lone": "Jediný jedinec",
             "lastOfKind": "Poslední svého druhu na palubě: chyť dalšího, ať má partnera",
             "revised": "Jeho krok",
             "revisedWorked": "upraveno: znovu fungoval",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 se zotavuje",
             "recoveringOther": "Zotavuje se: {count}",
             "away": "Je pryč, dokud se zotavuje, pak znovu vyjde ze svého domova."
+        },
+        "seen": {
+            "searching": "Hledá kořist",
+            "stalking": "Plíží se ke kořisti: {aPrey}",
+            "stalkingNoTarget": "Plíží se ke kořisti",
+            "chasing": "Pronásleduje kořist: {aPrey}",
+            "chasingNoTarget": "Pronásleduje kořist",
+            "wary": "Ve střehu: poblíž je predátor",
+            "mateSeeking": "Hledá partnera",
+            "wounded": "Má zranění"
         },
         "liteView": {
             "title": "Ark Lite",

@@ -190,6 +190,7 @@
             "hatchedAboard": "Ark ਵਿੱਚ ਆਂਡੇ ਵਿੱਚੋਂ ਨਿਕਲਿਆ",
             "hatched": "ਆਂਡੇ ਵਿੱਚੋਂ ਨਿਕਲਿਆ",
             "placeholder": "ਇਸਦੀ 3D ਸ਼ਕਲ ਅਜੇ ਬਣ ਰਹੀ ਹੈ: ਫ਼ਿਲਹਾਲ ਇੱਕ ਆਰਜ਼ੀ ਸ਼ਕਲ ਇਸਨੂੰ ਦਿਖਾ ਰਹੀ ਹੈ।",
+            "lone": "ਇੱਕੋ-ਇੱਕ",
             "lastOfKind": "ਜਹਾਜ਼ 'ਤੇ ਆਪਣੀ ਕਿਸਮ ਦਾ ਆਖਰੀ: ਇੱਕ ਹੋਰ ਫੜੋ, ਤਾਂ ਜੋ ਉਸਨੂੰ ਸਾਥੀ ਮਿਲੇ",
             "revised": "ਇਸਦਾ ਕਦਮ",
             "revisedWorked": "ਸੋਧਿਆ: ਇਹ ਫਿਰ ਕੰਮ ਕਰ ਗਿਆ",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 ਠੀਕ ਹੋ ਰਿਹਾ ਹੈ",
             "recoveringOther": "{count} ਠੀਕ ਹੋ ਰਹੇ ਹਨ",
             "away": "ਠੀਕ ਹੋਣ ਤੱਕ ਇਹ ਦੂਰ ਰਹਿੰਦਾ ਹੈ, ਫਿਰ ਮੁੜ ਆਪਣੇ ਘਰ ਤੋਂ ਬਾਹਰ ਆਉਂਦਾ ਹੈ।"
+        },
+        "seen": {
+            "searching": "ਸ਼ਿਕਾਰ ਦੀ ਭਾਲ ਵਿੱਚ",
+            "stalking": "ਘਾਤ ਵਿੱਚ: {aPrey}",
+            "stalkingNoTarget": "ਘਾਤ ਵਿੱਚ",
+            "chasing": "ਪਿੱਛਾ: {aPrey}",
+            "chasingNoTarget": "ਪਿੱਛਾ",
+            "wary": "ਚੌਕਸ: ਸ਼ਿਕਾਰੀ ਨੇੜੇ ਹੈ",
+            "mateSeeking": "ਸਾਥੀ ਦੀ ਭਾਲ ਵਿੱਚ",
+            "wounded": "ਜ਼ਖ਼ਮੀ"
         },
         "liteView": {
             "title": "Ark Lite",

@@ -129,6 +129,11 @@ export type ArkLifeWords = {
     placeholder: string;
     /** The last of its kind aboard (`last_of_kind`): it has no mate and will age out ("catch another to give it a mate"). */
     lastOfKind: string;
+    /**
+     * V1 (the read's `lone`): the only one of its kind in the wild, which came aboard alone ("Lone founder"). A noun
+     * phrase in every language (no adjective that agrees with the animal's sex). Optional: an older bundle lacks it.
+     */
+    lone?: string;
     /** A3: the step that brought it was revised after it arrived (it stays aboard). */
     revised: string;
     revisedWorked: string;
@@ -455,6 +460,12 @@ export type ArkWords = {
     photo: {alt: string; open: string; close: string; fromParent?: string; fromGrandparent?: string; fromGreatGrandparent?: string};
     /** Hearts are lives (behind the server's `ark_hearts`): the card's lives row, recovering, the restore. */
     hearts?: Partial<ArkHeartsWords>;
+    /**
+     * V1 (`src/ark-scene/seen/hooks.ts`): what the public read says an animal is doing now, one short line in its
+     * selection box (E5's and E6's states; said only once the read sends one). `{aPrey}` is filled as the live log's.
+     * Optional: an older bundle lacks them (English is the fallback).
+     */
+    seen?: Partial<Record<"searching" | "stalking" | "stalkingNoTarget" | "chasing" | "chasingNoTarget" | "wary" | "mateSeeking" | "wounded", string>>;
     /** "Estimated time left" on an animal at risk (`lib/ark-time-left.ts`); English fills any key a bundle lacks. */
     timeLeft?: Partial<ArkTimeLeftWords>;
 };

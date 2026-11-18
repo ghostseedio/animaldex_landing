@@ -190,6 +190,7 @@
             "hatchedAboard": "Klækket i Ark",
             "hatched": "Klækket",
             "placeholder": "Dens 3D-figur er stadig undervejs: en midlertidig figur viser den indtil videre.",
+            "lone": "Den eneste",
             "lastOfKind": "Den sidste af sin art om bord: fang en til, så den får en mage",
             "revised": "Dens skridt",
             "revisedWorked": "ændret: det virkede igen",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 kommer sig",
             "recoveringOther": "{count} kommer sig",
             "away": "Det er væk, mens det kommer sig, og går så ud af sit hjem igen."
+        },
+        "seen": {
+            "searching": "Leder efter bytte",
+            "stalking": "Lister sig ind på {aPrey}",
+            "stalkingNoTarget": "Lister sig ind på bytte",
+            "chasing": "Forfølger {aPrey}",
+            "chasingNoTarget": "Forfølger bytte",
+            "wary": "På vagt: et rovdyr er i nærheden",
+            "mateSeeking": "Leder efter en mage",
+            "wounded": "Såret"
         },
         "liteView": {
             "title": "Ark Lite",

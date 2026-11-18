@@ -190,6 +190,7 @@
             "hatchedAboard": "Ark-এ ডিম ফুটে জন্ম",
             "hatched": "ডিম ফুটে বেরিয়েছে",
             "placeholder": "এর 3D মডেল এখনও তৈরি হচ্ছে: আপাতত একটি বিকল্প মডেল দেখানো হচ্ছে।",
+            "lone": "একমাত্রটি",
             "lastOfKind": "জাহাজে নিজের প্রজাতির শেষটি: আরেকটি ধরুন, যাতে ও সঙ্গী পায়",
             "revised": "এর পদক্ষেপ",
             "revisedWorked": "সংশোধিত: আবারও কাজ করেছে",
@@ -617,6 +618,16 @@
             "recoveringOne": "১টি সেরে উঠছে",
             "recoveringOther": "{count}টি সেরে উঠছে",
             "away": "সেরে ওঠার সময় এটি দূরে থাকে, তারপর আবার নিজের ঘর থেকে বেরিয়ে আসে।"
+        },
+        "seen": {
+            "searching": "শিকার খুঁজছে",
+            "stalking": "ওত পেতে আছে: {aPrey}",
+            "stalkingNoTarget": "ওত পেতে আছে",
+            "chasing": "তাড়া করছে: {aPrey}",
+            "chasingNoTarget": "তাড়া করছে",
+            "wary": "সতর্ক: কাছেই শিকারি",
+            "mateSeeking": "সঙ্গী খুঁজছে",
+            "wounded": "আহত"
         },
         "liteView": {
             "title": "Ark Lite",

@@ -190,6 +190,7 @@
             "hatchedAboard": "در Ark از تخم درآمد",
             "hatched": "از تخم درآمد",
             "placeholder": "پیکرهٔ 3D آن هنوز در حال ساخت است: فعلاً یک جایگزین نشان داده می‌شود.",
+            "lone": "تنها نمونه",
             "lastOfKind": "آخرین هم‌نوعش در کشتی: یکی دیگر بگیرید تا جفتی پیدا کند",
             "revised": "قدمش",
             "revisedWorked": "بازبینی شد: دوباره جواب داد",
@@ -617,6 +618,16 @@
             "recoveringOne": "۱ در حال بهبود",
             "recoveringOther": "{count} در حال بهبود",
             "away": "تا بهبود پیدا کند دور است، بعد دوباره از خانه‌اش بیرون می‌آید."
+        },
+        "seen": {
+            "searching": "در جست‌وجوی شکار",
+            "stalking": "در کمین {aPrey}",
+            "stalkingNoTarget": "در کمین",
+            "chasing": "در تعقیب {aPrey}",
+            "chasingNoTarget": "در تعقیب",
+            "wary": "هوشیار: شکارچی نزدیک است",
+            "mateSeeking": "در جست‌وجوی جفت",
+            "wounded": "زخمی"
         },
         "liteView": {
             "title": "Ark Lite",

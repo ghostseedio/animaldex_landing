@@ -22,7 +22,7 @@
  *   - the acting itself: a searching hunter's foray is its schedule's already; a stalk and a chase need the read's
  *     own geometry (as `encounter` gives a meal's), then `live-meals.ts` `approachPose` is where the stalk goes;
  *   - wariness: `reactive.ts` already has `alarmed`/`watch_prey`; a `wary` state would only bias it;
- *   - the words in 44 languages (`ark.seen.*`; English here until then).
+ *   (The words are in all 45 languages already: `ark.seen.*`, `ark.life.lone`; English here is the fallback.)
  *
  * PROPOSED WIRE SHAPE (to be matched to the server's when E5/E6 write it): on a snapshot animal,
  *   `state: {kind: "stalking", target: "<animal id>", since: "<ISO>"}` (one state; absent: none).
@@ -49,7 +49,10 @@ export function arkSeenStates(snapshot: ArkSnapshot | null): ArkSeenState[] {
     return out;
 }
 
-/** The states' and marks' words, English until the Ark's words carry them (`ark.seen`). */
+/**
+ * The states' and marks' words in English: the fallback under the Ark's own (`ark.seen.*`, `ark.life.lone`,
+ * `ark.endangered.last` and `.critical`, and `ark.replay.a` / `.an` for a name with its article), 45 languages.
+ */
 export const ARK_SEEN_ENGLISH = {
     searching: "Searching for prey",
     stalking: "Stalking {aPrey}",
@@ -62,14 +65,17 @@ export const ARK_SEEN_ENGLISH = {
     // (Short: the selection's box is two bar rows wide. A lone founder: the only wild one of a kind that arrived alone.)
     lone: "Lone founder",
     last: "Last one in the wild",
-    critical: "Critical: one of two left in the wild"
+    critical: "Critical: one of two left in the wild",
+    a: "a {animal}",
+    an: "an {animal}"
 } as const;
 export type ArkSeenWords = Partial<Record<keyof typeof ARK_SEEN_ENGLISH, string>>;
 
 /** A state's line for the selection and for Ark Lite. `targetName`: the target's species, when it is in the read. */
 export function arkSeenStateText(state: Pick<ArkSeenState, "kind">, targetName: string | null, words: ArkSeenWords | null = null): string {
     const w = {...ARK_SEEN_ENGLISH, ...(words ?? {})};
-    const article = (name: string) => `${/^[aeiou]/i.test(name) ? "an" : "a"} ${name}`;
+    // (As the live log's `arkWithArticle`: most languages' `a` and `an` are the name alone.)
+    const article = (name: string) => (/^[aeiou]/i.test(name) && !/^(uni|eu|one|use|usu|ura)/i.test(name) ? w.an : w.a).replace("{animal}", name);
     if (state.kind === "stalking" || state.kind === "chasing") return targetName ? w[state.kind].replace("{aPrey}", article(targetName)) : w[`${state.kind}NoTarget`];
     return w[state.kind];
 }

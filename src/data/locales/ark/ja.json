@@ -190,6 +190,7 @@
             "hatchedAboard": "Arkでふ化",
             "hatched": "ふ化",
             "placeholder": "3Dの姿はまだ制作中です。今は代わりの姿で表示しています。",
+            "lone": "ただ1頭",
             "lastOfKind": "船上で最後の一匹: もう一匹つかまえて、つがいの相手をつくろう",
             "revised": "この動物のステップ",
             "revisedWorked": "更新：またうまくいきました",
@@ -617,6 +618,16 @@
             "recoveringOne": "1匹が回復中",
             "recoveringOther": "{count}匹が回復中",
             "away": "回復するあいだは姿を消し、その後また自分のすみかから出てきます。"
+        },
+        "seen": {
+            "searching": "獲物を探しています",
+            "stalking": "{aPrey}に忍び寄っています",
+            "stalkingNoTarget": "忍び寄っています",
+            "chasing": "{aPrey}を追っています",
+            "chasingNoTarget": "追いかけています",
+            "wary": "警戒中：近くに捕食者がいます",
+            "mateSeeking": "相手を探しています",
+            "wounded": "けがをしています"
         },
         "liteView": {
             "title": "Ark Lite",

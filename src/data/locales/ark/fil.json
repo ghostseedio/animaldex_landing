@@ -190,6 +190,7 @@
             "hatchedAboard": "Napisa sa Ark",
             "hatched": "Napisa",
             "placeholder": "Ginagawa pa ang 3D na anyo nito: may pansamantalang kapalit muna.",
+            "lone": "Ang nag-iisa",
             "lastOfKind": "Huli sa kauri nito sa barko: humuli ng isa pa para magkaroon ito ng kapareha",
             "revised": "Ang hakbang nito",
             "revisedWorked": "binago: gumana ulit",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 nagpapagaling",
             "recoveringOther": "{count} nagpapagaling",
             "away": "Wala muna ito habang nagpapagaling, saka lalabas ulit mula sa tahanan nito."
+        },
+        "seen": {
+            "searching": "Naghahanap ng mabibiktima",
+            "stalking": "Minamanmanan ang {aPrey}",
+            "stalkingNoTarget": "Nagmamanman",
+            "chasing": "Hinahabol ang {aPrey}",
+            "chasingNoTarget": "Humahabol",
+            "wary": "Alisto: may maninila sa malapit",
+            "mateSeeking": "Naghahanap ng kapares",
+            "wounded": "Sugatan"
         },
         "liteView": {
             "title": "Ark Lite",

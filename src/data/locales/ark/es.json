@@ -190,6 +190,7 @@
             "hatchedAboard": "Eclosionó en el Ark",
             "hatched": "Eclosión",
             "placeholder": "Su figura 3D aún se está creando: por ahora lo representa una figura provisional.",
+            "lone": "Único ejemplar",
             "lastOfKind": "El último de su especie a bordo: captura otro para que tenga pareja",
             "revised": "Su paso",
             "revisedWorked": "revisado: volvió a funcionar",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 recuperándose",
             "recoveringOther": "{count} recuperándose",
             "away": "Está fuera mientras se recupera y luego vuelve a salir de su hogar."
+        },
+        "seen": {
+            "searching": "Busca presa",
+            "stalking": "Acecha a {aPrey}",
+            "stalkingNoTarget": "Acecha",
+            "chasing": "Persigue a {aPrey}",
+            "chasingNoTarget": "Persigue",
+            "wary": "Alerta: hay un depredador cerca",
+            "mateSeeking": "Busca pareja",
+            "wounded": "Con una herida"
         },
         "liteView": {
             "title": "Ark Lite",

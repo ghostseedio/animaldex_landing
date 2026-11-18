@@ -190,6 +190,7 @@
             "hatchedAboard": "Ark에서 부화함",
             "hatched": "부화",
             "placeholder": "3D 모습을 아직 만드는 중이에요. 지금은 임시 모습으로 보여 드려요.",
+            "lone": "단 한 마리",
             "lastOfKind": "배에 남은 마지막 한 마리예요: 한 마리 더 잡으면 짝이 생겨요",
             "revised": "이 동물의 할 일",
             "revisedWorked": "수정됨: 다시 효과가 있었어요",
@@ -617,6 +618,16 @@
             "recoveringOne": "1마리 회복 중",
             "recoveringOther": "{count}마리 회복 중",
             "away": "회복하는 동안 자리를 비우고, 그다음 다시 집에서 걸어 나와요."
+        },
+        "seen": {
+            "searching": "먹잇감을 찾는 중",
+            "stalking": "{aPrey}에게 몰래 다가가는 중",
+            "stalkingNoTarget": "몰래 다가가는 중",
+            "chasing": "{aPrey} 추격 중",
+            "chasingNoTarget": "추격 중",
+            "wary": "경계 중: 포식자가 가까이 있어요",
+            "mateSeeking": "짝을 찾는 중",
+            "wounded": "다쳤어요"
         },
         "liteView": {
             "title": "Ark Lite",

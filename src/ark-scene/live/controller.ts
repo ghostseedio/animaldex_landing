@@ -44,7 +44,7 @@ import {ArkLiveLogView} from "@/ark-scene/live/log-view";
 import {breedFocus, isBreedKind, youngStillWanted, YOUNG_WAIT_MS} from "@/ark-scene/live/breed-focus";
 
 /** The words the log needs (the Ark's `live` and `replay`, and "Show me"), as the page or `/api/ark/words` has them. */
-export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null; /** V1: the marks' words (`ark.endangered`'s "Last one" and "Critical"; "Lone" is English until the Ark's words carry it). */ endangered?: {last?: string | null; critical?: string | null} | null} | null;
+export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null; /** V1: the marks' words (`ark.endangered`'s "Last one" and "Critical", `ark.life.lone`) and the states' (`ark.seen`). */ endangered?: {last?: string | null; critical?: string | null} | null; life?: {lone?: string | null} | null; seen?: Partial<Record<string, string | null>> | null} | null;
 
 /** V1: the server's kinds that are acted with a cast (`seen/live-cast.ts` ARK_SEEN_KINDS; here so nothing of `seen/` loads until one comes). */
 const SEEN_KINDS: ReadonlySet<string> = new Set(["mated", "birth", "death_old", "starved", "meal", "escaped", "extinction"]);
@@ -57,6 +57,16 @@ function seenWords(input: ArkLiveWordsIn): ArkSeenWords {
     const out: ArkSeenWords = {};
     if (input?.endangered?.last) out.last = input.endangered.last;
     if (input?.endangered?.critical) out.critical = input.endangered.critical;
+    if (input?.life?.lone) out.lone = input.life.lone;
+    // (A name with its article, as the log's own lines fill `{aPrey}`: `ark.replay.a` and `.an`.)
+    if (input?.replay?.a) out.a = input.replay.a;
+    if (input?.replay?.an) out.an = input.replay.an;
+    const seen = input?.seen;
+    for (const key of ["searching", "stalking", "stalkingNoTarget", "chasing", "chasingNoTarget", "wary", "wounded"] as const) {
+        const value = seen?.[key];
+        if (typeof value === "string" && value.trim()) out[key] = value;
+    }
+    if (typeof seen?.mateSeeking === "string" && seen.mateSeeking.trim()) out.mate_seeking = seen.mateSeeking;
     return out;
 }
 
@@ -291,7 +301,7 @@ export class ArkLive {
         }
     }
 
-    /** The open crises (`/api/ark/crises` beside the events' URL, E4; not there yet: asked rarely): their animals pinned, the last one ringed. */
+    /** The open crises (`/api/ark/crises` beside the events' URL, E4; asked rarely while it fails): their animals pinned, the last one ringed. */
     private readCrises() {
         const url = this.options.eventsUrl?.replace(/\/events(\?.*)?$/, "/crises");
         this.crisesAt = performance.now();

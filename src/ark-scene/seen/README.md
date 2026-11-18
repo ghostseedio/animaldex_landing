@@ -128,10 +128,10 @@ an escape 45 s, a mating 20 min, a birth 4 min, a death or an extinction 18 min 
 - **Lone** (`animal.lone`, E3's read: sent only when true and only while `voyage_config.last_animal` is on): its card
   and its selection box say so; Ark Lite's list tags it. No ring, no crisis (decision 389).
 - **Crises** (`/api/ark/crises`, E4; the contract is `docs/ark/audits/ecosystem/crises-api-contract.md`): the log asks
-  12 s after it starts and every 3 minutes; while the read is not there (404), every 30. An open crisis's
+  12 s after it starts and every 3 minutes; while the read fails, every 30. An open crisis's
   `last_animal_ids` are pinned; a `last` band's animal has the soft amber ring (`marks.ts`) and "Last one" in its box,
-  a `critical` band's "Critical". Words: `ark.endangered.last` and `.critical` (45 languages); "Lone" is English until
-  `ark.seen` carries it.
+  a `critical` band's "Critical". Words: `ark.endangered.last` and `.critical`, and the lone mark's `ark.life.lone` (45 languages:
+  "the only one", a noun phrase that agrees with no animal's sex; English says "Lone founder").
 
 ## Ark Lite
 
@@ -148,8 +148,8 @@ Lite has no world; everything here reads in its text:
 |---|---|---|
 | **E6** searching, stalking, chasing, wary, mate-seeking | `hooks.ts` `arkSeenStates` (proposed field `animal.state`), `ArkSeen.snapshot` | read, pinned (with the target), worded for the box and Lite; the acting needs the read's own geometry, then `live-meals.ts` `approachPose` is where a stalk goes |
 | **E5** wounded | the same state; `ArkSceneHandle.setWounded`; `live-deaths.ts` `cause: "wounds"` | the limp and the collapse's look are built and tested; nothing is drawn until the read says so |
-| **E4** crises | `ArkSeen.setCrises` | reads the contract's shape; the route is not on this branch |
-| Words | `ark.seen.*` | English (`ARK_SEEN_ENGLISH`) |
+| **E4** crises | `ArkSeen.setCrises` | reads `/api/ark/crises` (E4's read, `voyage_crises_v1`; empty while `voyage_config.crises` is off) |
+| Words | `ark.seen.*` (the states), `ark.life.lone` | in all 45 languages; `ARK_SEEN_ENGLISH` is the fallback. `{aPrey}` is filled with `ark.replay.a` / `.an`, as the log's lines |
 
 ## Limits (flagged, not hidden)
 

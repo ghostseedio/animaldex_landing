@@ -190,6 +190,7 @@
             "hatchedAboard": "Izlegnut u Arku",
             "hatched": "Izlijeganje",
             "placeholder": "Njezin 3D lik još se izrađuje: zasad je prikazuje zamjenski.",
+            "lone": "Jedina jedinka",
             "lastOfKind": "Posljednji svoje vrste na brodu: ulovi još jednog da dobije partnera",
             "revised": "Njezin korak",
             "revisedWorked": "izmijenjeno: opet je uspio",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 se oporavlja",
             "recoveringOther": "Oporavlja se: {count}",
             "away": "Odsutna je dok se oporavlja, a onda opet izlazi iz svog doma."
+        },
+        "seen": {
+            "searching": "Traži plijen",
+            "stalking": "Prikrada se plijenu: {aPrey}",
+            "stalkingNoTarget": "Prikrada se plijenu",
+            "chasing": "Goni plijen: {aPrey}",
+            "chasingNoTarget": "Goni plijen",
+            "wary": "Na oprezu: grabežljivac je blizu",
+            "mateSeeking": "Traži partnera",
+            "wounded": "S ranom"
         },
         "liteView": {
             "title": "Ark Lite",

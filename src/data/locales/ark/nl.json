@@ -190,6 +190,7 @@
             "hatchedAboard": "Uitgekomen in de Ark",
             "hatched": "Uitgekomen",
             "placeholder": "Zijn 3D-figuur wordt nog gemaakt: voorlopig staat er een tijdelijke figuur.",
+            "lone": "De enige",
             "lastOfKind": "De laatste van zijn soort aan boord: vang er nog een, zodat hij een partner krijgt",
             "revised": "Zijn stap",
             "revisedWorked": "herzien: het werkte opnieuw",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 herstelt",
             "recoveringOther": "{count} herstellen",
             "away": "Het is weg zolang het herstelt en komt daarna weer uit zijn thuis."
+        },
+        "seen": {
+            "searching": "Zoekt prooi",
+            "stalking": "Besluipt {aPrey}",
+            "stalkingNoTarget": "Besluipt prooi",
+            "chasing": "Achtervolgt {aPrey}",
+            "chasingNoTarget": "Achtervolgt prooi",
+            "wary": "Waakzaam: er is een roofdier in de buurt",
+            "mateSeeking": "Zoekt een partner",
+            "wounded": "Gewond"
         },
         "liteView": {
             "title": "Ark Lite",

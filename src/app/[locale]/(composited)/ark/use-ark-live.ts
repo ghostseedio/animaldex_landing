@@ -40,7 +40,8 @@ export function useArkLive({sceneRef, snapshotRef, setSnapshot, ready, words, lo
     const liveRef = useRef<ArkLive | null>(null);
     const coveredRef = useRef(covered);
     coveredRef.current = covered;
-    const wordsIn = useCallback(() => ({live: words.live, replay: words.replay, showMe: words.showMe, activity: words.activity, endangered: words.endangered}), [words]);
+    // (The Ark's words whole: the log takes its own, and V1's marks and states theirs: `endangered`, `life.lone`, `seen`.)
+    const wordsIn = useCallback(() => words, [words]);
     const wordsRef = useRef(wordsIn);
     wordsRef.current = wordsIn;
 

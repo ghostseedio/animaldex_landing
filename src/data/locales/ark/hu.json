@@ -190,6 +190,7 @@
             "hatchedAboard": "Az Arkon kelt ki",
             "hatched": "Kikelt",
             "placeholder": "A 3D-alakja még készül: addig egy helyettesítő mutatja.",
+            "lone": "Az egyetlen",
             "lastOfKind": "Fajtája utolsó példánya a fedélzeten: fogj még egyet, hogy legyen párja",
             "revised": "A lépése",
             "revisedWorked": "módosítva: újra bevált",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 lábadozik",
             "recoveringOther": "{count} lábadozik",
             "away": "Távol van, amíg felépül, aztán újra kijön az otthonából."
+        },
+        "seen": {
+            "searching": "Zsákmányt keres",
+            "stalking": "Becserkészi: {aPrey}",
+            "stalkingNoTarget": "Cserkészik",
+            "chasing": "Üldözi: {aPrey}",
+            "chasingNoTarget": "Üldöz",
+            "wary": "Éber: ragadozó van a közelben",
+            "mateSeeking": "Párt keres",
+            "wounded": "Sebesült"
         },
         "liteView": {
             "title": "Ark Lite",

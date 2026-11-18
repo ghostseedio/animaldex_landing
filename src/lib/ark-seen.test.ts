@@ -1,4 +1,6 @@
 import assert from "node:assert/strict";
+import {readFileSync, readdirSync} from "node:fs";
+import path from "node:path";
 import test from "node:test";
 import type {ActPose} from "@/ark-scene/acts";
 import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
@@ -174,6 +176,29 @@ test("the public states are a hook: none today, an unknown kind dropped, and wor
     assert.equal(arkSeenStateText({kind: "stalking"}, null), "Stalking");
     assert.equal(arkSeenStateText({kind: "wounded"}, null, {wounded: "Blessé"}), "Blessé");
     assert.equal(arkSeenStateText({kind: "mate_seeking"}, null), ARK_SEEN_ENGLISH.mate_seeking);
+    // (A language's own article words, `ark.replay.a`: most say the name alone.)
+    assert.equal(arkSeenStateText({kind: "chasing"}, "Impala", {chasing: "Poursuit {aPrey}", a: "{animal}", an: "{animal}"}), "Poursuit Impala");
+});
+
+test("words: every one of the 45 languages has the lone mark and the states' lines, none left in English", () => {
+    const dir = path.join(__dirname, "..", "data", "locales");
+    const files = ["en.json", "id.json", ...readdirSync(path.join(dir, "ark")).filter((file) => file.endsWith(".json")).map((file) => path.join("ark", file))];
+    assert.equal(files.length, 45);
+    const read = (file: string) => (JSON.parse(readFileSync(path.join(dir, file), "utf8")) as {ark: {life: Record<string, string>; seen: Record<string, string>}}).ark;
+    const en = read("en.json");
+    const keys = ["searching", "stalking", "stalkingNoTarget", "chasing", "chasingNoTarget", "wary", "mateSeeking", "wounded"] as const;
+    assert.equal(en.life.lone, ARK_SEEN_ENGLISH.lone);
+    for (const key of keys) assert.equal(en.seen[key], ARK_SEEN_ENGLISH[key === "mateSeeking" ? "mate_seeking" : key], `en: ${key} is the fallback's`);
+    for (const file of files) {
+        const words = read(file);
+        assert.deepEqual(Object.keys(words.seen), [...keys], `${file}: ark.seen's keys`);
+        for (const [key, text] of [["lone", words.life.lone] as const, ...keys.map((key) => [key, words.seen[key]] as const)]) {
+            assert.ok(typeof text === "string" && text.trim() === text && text.length > 0 && text.length <= 48, `${file}: ${key} is one short line`);
+            assert.equal((text.match(/\{[A-Za-z]+\}/g) ?? []).join(","), key === "stalking" || key === "chasing" ? "{aPrey}" : "", `${file}: ${key} placeholders`);
+            if (file !== "en.json") assert.notEqual(text, key === "lone" ? en.life.lone : en.seen[key], `${file}: ${key} untranslated`);
+        }
+        assert.equal(new Set(keys.map((key) => words.seen[key])).size, keys.length, `${file}: eight different lines`);
+    }
 });
 
 test("the wounded hook: an animal the read says is wounded limps as one that got away does, until it is off the list", () => {

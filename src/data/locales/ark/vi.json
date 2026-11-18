@@ -190,6 +190,7 @@
             "hatchedAboard": "Nở trên Ark",
             "hatched": "Nở",
             "placeholder": "Hình 3D của nó vẫn đang được làm: tạm thời có một hình thay thế.",
+            "lone": "Cá thể duy nhất",
             "lastOfKind": "Con cuối cùng của loài này trên tàu: bắt thêm một con để nó có bạn đời",
             "revised": "Bước của nó",
             "revisedWorked": "đã cập nhật: lại thành công",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 con đang hồi phục",
             "recoveringOther": "{count} con đang hồi phục",
             "away": "Nó vắng mặt trong lúc hồi phục, rồi lại bước ra từ nơi ở của mình."
+        },
+        "seen": {
+            "searching": "Đang tìm con mồi",
+            "stalking": "Đang rình {aPrey}",
+            "stalkingNoTarget": "Đang rình mồi",
+            "chasing": "Đang đuổi theo {aPrey}",
+            "chasingNoTarget": "Đang đuổi theo con mồi",
+            "wary": "Cảnh giác: có kẻ săn mồi ở gần",
+            "mateSeeking": "Đang tìm bạn đời",
+            "wounded": "Bị thương"
         },
         "liteView": {
             "title": "Ark Lite",

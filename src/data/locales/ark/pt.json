@@ -190,6 +190,7 @@
             "hatchedAboard": "Saiu do ovo na Ark",
             "hatched": "Saiu do ovo",
             "placeholder": "A figura 3D dele ainda está sendo feita: por enquanto, uma figura provisória o representa.",
+            "lone": "Único exemplar",
             "lastOfKind": "O último da sua espécie a bordo: capture outro para que tenha um par",
             "revised": "Seu passo",
             "revisedWorked": "revisado: funcionou de novo",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 se recuperando",
             "recoveringOther": "{count} se recuperando",
             "away": "Ele fica fora enquanto se recupera e depois sai de novo da sua toca."
+        },
+        "seen": {
+            "searching": "Procura uma presa",
+            "stalking": "Espreita {aPrey}",
+            "stalkingNoTarget": "À espreita",
+            "chasing": "Persegue {aPrey}",
+            "chasingNoTarget": "Em perseguição",
+            "wary": "Em alerta: há um predador por perto",
+            "mateSeeking": "Procura um par",
+            "wounded": "Com um ferimento"
         },
         "liteView": {
             "title": "Ark Lite",

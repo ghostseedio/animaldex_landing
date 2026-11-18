@@ -190,6 +190,7 @@
             "hatchedAboard": "Schiuso nell'Ark",
             "hatched": "Schiusa",
             "placeholder": "La sua figura 3D è ancora in lavorazione: per ora la sostituisce una figura provvisoria.",
+            "lone": "Unico esemplare",
             "lastOfKind": "L'ultimo della sua specie a bordo: catturane un altro per dargli un compagno",
             "revised": "Il suo passo",
             "revisedWorked": "rivisto: ha funzionato di nuovo",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 in convalescenza",
             "recoveringOther": "{count} in convalescenza",
             "away": "È via mentre si riprende, poi esce di nuovo dalla sua tana."
+        },
+        "seen": {
+            "searching": "Cerca una preda",
+            "stalking": "In agguato: {aPrey}",
+            "stalkingNoTarget": "In agguato",
+            "chasing": "Insegue {aPrey}",
+            "chasingNoTarget": "All'inseguimento",
+            "wary": "In allerta: un predatore è vicino",
+            "mateSeeking": "Cerca un compagno",
+            "wounded": "Con una ferita"
         },
         "liteView": {
             "title": "Ark Lite",

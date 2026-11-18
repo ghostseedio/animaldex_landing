@@ -190,6 +190,7 @@
             "hatchedAboard": "In der Ark geschlüpft",
             "hatched": "Geschlüpft",
             "placeholder": "Seine 3D-Figur entsteht noch: Bis dahin zeigt es ein Platzhalter.",
+            "lone": "Das einzige Tier",
             "lastOfKind": "Der Letzte seiner Art an Bord: Fang ein weiteres, damit es einen Partner bekommt",
             "revised": "Sein Schritt",
             "revisedWorked": "korrigiert: hat wieder geklappt",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 erholt sich",
             "recoveringOther": "{count} erholen sich",
             "away": "Es ist fort, während es sich erholt, und kommt dann wieder aus seinem Zuhause."
+        },
+        "seen": {
+            "searching": "Sucht Beute",
+            "stalking": "Auf der Pirsch: {aPrey}",
+            "stalkingNoTarget": "Auf der Pirsch",
+            "chasing": "Verfolgt {aPrey}",
+            "chasingNoTarget": "Bei der Verfolgung",
+            "wary": "Wachsam: Ein Fressfeind ist in der Nähe",
+            "mateSeeking": "Sucht einen Partner",
+            "wounded": "Verletzt"
         },
         "liteView": {
             "title": "Ark Lite",

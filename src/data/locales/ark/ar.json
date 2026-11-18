@@ -190,6 +190,7 @@
             "hatchedAboard": "فقس في Ark",
             "hatched": "الفقس",
             "placeholder": "مجسّمه 3D قيد الإنشاء: يظهر بديل مؤقت مكانه الآن.",
+            "lone": "الفرد الوحيد",
             "lastOfKind": "آخر من نوعه على متن السفينة: التقط واحدًا آخر ليجد شريكًا",
             "revised": "خطوته",
             "revisedWorked": "مُراجَعة: نجحت مرة أخرى",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 يتعافى",
             "recoveringOther": "{count} يتعافون",
             "away": "إنه غائب ريثما يتعافى، ثم يخرج من بيته من جديد."
+        },
+        "seen": {
+            "searching": "بحث عن فريسة",
+            "stalking": "تربُّص: {aPrey}",
+            "stalkingNoTarget": "تربُّص",
+            "chasing": "مطاردة: {aPrey}",
+            "chasingNoTarget": "مطاردة",
+            "wary": "حذر: مفترس قريب",
+            "mateSeeking": "بحث عن شريك",
+            "wounded": "إصابة بجرح"
         },
         "liteView": {
             "title": "Ark Lite",

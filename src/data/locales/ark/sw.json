@@ -190,6 +190,7 @@
             "hatchedAboard": "Alianguliwa ndani ya Ark",
             "hatched": "Alianguliwa",
             "placeholder": "Umbo lake la 3D bado linatengenezwa: kwa sasa kibadala kinaonyeshwa.",
+            "lone": "Wa pekee",
             "lastOfKind": "Wa mwisho wa aina yake melini: kamata mwingine ili apate mwenzi",
             "revised": "Hatua yake",
             "revisedWorked": "imesahihishwa: ilifanikiwa tena",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 inapona",
             "recoveringOther": "{count} zinapona",
             "away": "Iko mbali inapopona, kisha inatoka tena nyumbani kwake."
+        },
+        "seen": {
+            "searching": "Anatafuta windo",
+            "stalking": "Anamnyemelea {aPrey}",
+            "stalkingNoTarget": "Ananyemelea",
+            "chasing": "Anamfukuza {aPrey}",
+            "chasingNoTarget": "Anafukuza",
+            "wary": "Yuko macho: mwindaji yuko karibu",
+            "mateSeeking": "Anatafuta mwenzi",
+            "wounded": "Amejeruhiwa"
         },
         "liteView": {
             "title": "Ark Lite",

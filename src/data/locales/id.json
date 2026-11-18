@@ -4387,6 +4387,7 @@
       "hatchedAboard": "Menetas di Ark",
       "hatched": "Menetas",
       "placeholder": "Figur 3D-nya masih dibuat: untuk sementara ditampilkan dengan figur pengganti.",
+      "lone": "Satu-satunya",
       "lastOfKind": "Satu-satunya jenisnya di kapal: tangkap satu lagi agar ia punya pasangan",
       "revised": "Langkahnya",
       "revisedWorked": "direvisi: berhasil lagi",
@@ -4814,6 +4815,16 @@
       "recoveringOne": "1 sedang pulih",
       "recoveringOther": "{count} sedang pulih",
       "away": "Ia pergi sementara untuk pulih, lalu keluar lagi dari rumahnya."
+    },
+    "seen": {
+      "searching": "Mencari mangsa",
+      "stalking": "Mengintai {aPrey}",
+      "stalkingNoTarget": "Mengintai",
+      "chasing": "Mengejar {aPrey}",
+      "chasingNoTarget": "Mengejar",
+      "wary": "Waspada: ada pemangsa di dekatnya",
+      "mateSeeking": "Mencari pasangan",
+      "wounded": "Terluka"
     },
     "liteView": {
       "title": "Ark Lite",

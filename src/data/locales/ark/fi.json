@@ -190,6 +190,7 @@
             "hatchedAboard": "Kuoriutunut Arkissa",
             "hatched": "Kuoriutui",
             "placeholder": "Sen 3D-hahmoa tehdään vielä: toistaiseksi näkyy sijaishahmo.",
+            "lone": "Ainoa",
             "lastOfKind": "Lajinsa viimeinen aluksella: nappaa toinen, niin se saa parin",
             "revised": "Sen askel",
             "revisedWorked": "päivitetty: se toimi taas",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 toipuu",
             "recoveringOther": "{count} toipuu",
             "away": "Se on poissa toipuessaan ja tulee sitten taas ulos kodistaan."
+        },
+        "seen": {
+            "searching": "Etsii saalista",
+            "stalking": "Vaanii saalista: {aPrey}",
+            "stalkingNoTarget": "Vaanii saalista",
+            "chasing": "Ajaa takaa: {aPrey}",
+            "chasingNoTarget": "Ajaa takaa saalista",
+            "wary": "Varuillaan: saalistaja on lähellä",
+            "mateSeeking": "Etsii paria",
+            "wounded": "Haavoittunut"
         },
         "liteView": {
             "title": "Ark Lite",

@@ -190,6 +190,7 @@
             "hatchedAboard": "Ark'ta yumurtadan çıktı",
             "hatched": "Yumurtadan çıkış",
             "placeholder": "3D figürü hâlâ hazırlanıyor: şimdilik yerine geçici bir model gösteriliyor.",
+            "lone": "Tek birey",
             "lastOfKind": "Gemideki türünün son örneği: Ona eş bulmak için bir tane daha yakala",
             "revised": "Adımı",
             "revisedWorked": "güncellendi: yine işe yaradı",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 iyileşiyor",
             "recoveringOther": "{count} iyileşiyor",
             "away": "İyileşene kadar ortada yok, sonra yine evinden çıkıp geliyor."
+        },
+        "seen": {
+            "searching": "Av arıyor",
+            "stalking": "Sinsice yaklaşıyor: {aPrey}",
+            "stalkingNoTarget": "Sinsice yaklaşıyor",
+            "chasing": "Kovalıyor: {aPrey}",
+            "chasingNoTarget": "Kovalıyor",
+            "wary": "Tetikte: yakında bir avcı var",
+            "mateSeeking": "Eş arıyor",
+            "wounded": "Yaralı"
         },
         "liteView": {
             "title": "Ark Lite",

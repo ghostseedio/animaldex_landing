@@ -437,8 +437,8 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
                 who.appendChild(by);
             }
             if (animal.mine) who.appendChild(el("span", "you", lite.you));
-            // V1 (E3's `lone`, only while the last-animal rules are on): a lone founder, said in words.
-            if (animal.lone) who.appendChild(el("span", "you", (lite as {lone?: string}).lone ?? "Lone"));
+            // V1 (E3's `lone`, only while the last-animal rules are on): a lone founder, said in words (the card's, `ark.life.lone`).
+            if (animal.lone) who.appendChild(el("span", "you", String(sub(words, "life").lone || "Lone founder")));
             row.appendChild(who);
             row.appendChild(el("span", "ago", arkAgoText(animal.arrivedAt, now, locale)));
             list.appendChild(row);

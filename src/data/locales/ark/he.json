@@ -190,6 +190,7 @@
             "hatchedAboard": "בקע ב-Ark",
             "hatched": "בקע",
             "placeholder": "דמות ה-3D שלו עדיין בהכנה: בינתיים מוצג ממלא מקום.",
+            "lone": "הפרט היחיד",
             "lastOfKind": "האחרון מסוגו על הסיפון: תפוס עוד אחד כדי שיהיה לו בן זוג",
             "revised": "הצעד שלו",
             "revisedWorked": "עודכן: זה הצליח שוב",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 מחלים",
             "recoveringOther": "{count} מחלימים",
             "away": "הוא לא כאן בזמן שהוא מחלים, ואז יוצא שוב מביתו."
+        },
+        "seen": {
+            "searching": "בחיפוש אחר טרף",
+            "stalking": "במארב: {aPrey}",
+            "stalkingNoTarget": "במארב",
+            "chasing": "במרדף: {aPrey}",
+            "chasingNoTarget": "במרדף",
+            "wary": "בכוננות: טורף בקרבת מקום",
+            "mateSeeking": "בחיפוש אחר בן זוג",
+            "wounded": "עם פציעה"
         },
         "liteView": {
             "title": "Ark Lite",

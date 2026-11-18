@@ -4402,6 +4402,7 @@
       "hatchedAboard": "Hatched on the Ark",
       "hatched": "Hatched",
       "placeholder": "Its 3D figure is still being made: a stand-in shows it for now.",
+      "lone": "Lone founder",
       "lastOfKind": "Last of its kind aboard: catch another to give it a mate",
       "revised": "Its step",
       "revisedWorked": "revised: it worked again",
@@ -4829,6 +4830,16 @@
       "recoveringOne": "1 recovering",
       "recoveringOther": "{count} recovering",
       "away": "It's away while it recovers, then walks out of its home again."
+    },
+    "seen": {
+      "searching": "Searching for prey",
+      "stalking": "Stalking {aPrey}",
+      "stalkingNoTarget": "Stalking",
+      "chasing": "Chasing {aPrey}",
+      "chasingNoTarget": "Chasing",
+      "wary": "Wary: a hunter is near",
+      "mateSeeking": "Looking for a mate",
+      "wounded": "Wounded"
     },
     "liteView": {
       "title": "Ark Lite",

@@ -190,6 +190,7 @@
             "hatchedAboard": "Sortit de l'ou a l'Ark",
             "hatched": "Eclosió",
             "placeholder": "La seva figura 3D encara s'està fent: de moment la substitueix una figura provisional.",
+            "lone": "Únic exemplar",
             "lastOfKind": "L'últim de la seva espècie a bord: captura'n un altre perquè tingui parella",
             "revised": "El seu pas",
             "revisedWorked": "revisat: ha tornat a funcionar",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 es recupera",
             "recoveringOther": "{count} es recuperen",
             "away": "És fora mentre es recupera, i després torna a sortir del seu cau."
+        },
+        "seen": {
+            "searching": "Busca presa",
+            "stalking": "Sotja {aPrey}",
+            "stalkingNoTarget": "Sotja",
+            "chasing": "Persegueix {aPrey}",
+            "chasingNoTarget": "Persegueix",
+            "wary": "Alerta: hi ha un depredador a prop",
+            "mateSeeking": "Busca parella",
+            "wounded": "Amb una ferida"
         },
         "liteView": {
             "title": "Ark Lite",

@@ -190,6 +190,7 @@
             "hatchedAboard": "Ieșit din ou în Ark",
             "hatched": "Ieșit din ou",
             "placeholder": "Figura lui 3D e încă în lucru: deocamdată îl arată un înlocuitor.",
+            "lone": "Singurul individ",
             "lastOfKind": "Ultimul de felul lui la bord: prinde încă unul ca să aibă pereche",
             "revised": "Pasul lui",
             "revisedWorked": "revizuit: a mers din nou",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 se reface",
             "recoveringOther": "{count} se refac",
             "away": "E plecat cât se reface, apoi iese din nou din casa lui."
+        },
+        "seen": {
+            "searching": "Caută pradă",
+            "stalking": "Pândește: {aPrey}",
+            "stalkingNoTarget": "La pândă",
+            "chasing": "Urmărește: {aPrey}",
+            "chasingNoTarget": "În urmărire",
+            "wary": "În alertă: un prădător e aproape",
+            "mateSeeking": "Caută pereche",
+            "wounded": "Cu o rană"
         },
         "liteView": {
             "title": "Ark Lite",

@@ -190,6 +190,7 @@
             "hatchedAboard": "Ark میں انڈے سے نکلا",
             "hatched": "انڈے سے نکلا",
             "placeholder": "اس کا 3D ماڈل ابھی بن رہا ہے: فی الحال ایک متبادل دکھایا جا رہا ہے۔",
+            "lone": "واحد فرد",
             "lastOfKind": "جہاز پر اپنی نوع کا آخری: ایک اور پکڑیں تاکہ اسے ساتھی ملے",
             "revised": "اس کا قدم",
             "revisedWorked": "نظرثانی: یہ پھر کام کر گیا",
@@ -617,6 +618,16 @@
             "recoveringOne": "1 صحت یاب ہو رہا ہے",
             "recoveringOther": "{count} صحت یاب ہو رہے ہیں",
             "away": "صحت یاب ہونے تک یہ دور رہتا ہے، پھر دوبارہ اپنے گھر سے باہر آتا ہے۔"
+        },
+        "seen": {
+            "searching": "شکار کی تلاش میں",
+            "stalking": "گھات میں: {aPrey}",
+            "stalkingNoTarget": "گھات میں",
+            "chasing": "تعاقب: {aPrey}",
+            "chasingNoTarget": "تعاقب",
+            "wary": "چوکس: شکاری قریب ہے",
+            "mateSeeking": "ساتھی کی تلاش میں",
+            "wounded": "زخمی"
         },
         "liteView": {
             "title": "Ark Lite",
