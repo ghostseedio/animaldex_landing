@@ -271,7 +271,7 @@ function fakeScene(acts: Partial<ArkLiveActs> = {}) {
 
 test("watching live: the Ark's own clock (nothing pinned, cut or fed again), the shared cast's group brought and released, never detached", () => {
     const replay = planArkEventReplay(15, log, snapshot, {now: NOW});
-    const scene = fakeScene({escapes: [{key: "escaped:15", t0: replay.t0, prey: id(2), predator: id(9), phase: "acting", kind: "sprint", missAt: 8, seconds: 16, closest: 1, gap: 1}]});
+    const scene = fakeScene({escapes: [{key: "escaped:15", t0: replay.t0, prey: id(2), predator: id(9), phase: "acting", kind: "sprint", missAt: 8, seconds: 16, closest: 1, gap: 1}] as unknown as ArkLiveActs["escapes"]});
     scene.put(id(9), 0, 0);
     scene.put(id(2), 12, 0);
     const cast = new ArkCast(scene.handle);
@@ -298,7 +298,7 @@ test("watching live: the Ark's own clock (nothing pinned, cut or fed again), the
 
 test("two that share the picture are held in it: at once as far back as holds both, however fast one comes", () => {
     const replay = planArkEventReplay(11, log, snapshot, {now: NOW});
-    const scene = fakeScene({matings: [{key: "mated:11", phase: "acting", meet: 1, courted: 4000, mounted: 4100} as unknown as ArkLiveActs["matings"][number]]});
+    const scene = fakeScene({matings: [{key: "mated:11", phase: "acting", meet: 1, courted: 4000, mounted: 4100}] as unknown as ArkLiveActs["matings"]});
     scene.put(id(1), 0, 0);
     scene.put(id(2), 4, 0);
     const cast = new ArkCast(scene.handle);
@@ -328,7 +328,7 @@ test("two that share the picture are held in it: at once as far back as holds bo
 
 test("a watch: nothing selected while it runs, the camera eased in from where the viewer was, ended by its act or by the viewer", () => {
     const replay = planArkEventReplay(13, log, snapshot, {now: NOW});
-    const scene = fakeScene({deaths: [{key: "death:13", id: id(3), t0: replay.t0, spot: {x: 5, z: 5, base: 0, yaw: 0}, drawn: true}]});
+    const scene = fakeScene({deaths: [{key: "death:13", id: id(3), t0: replay.t0, spot: {x: 5, z: 5, base: 0, yaw: 0}, drawn: true}] as unknown as ArkLiveActs["deaths"]});
     scene.put(id(3), 5, 5);
     let clock = 100;
     const queue: Array<() => void> = [];

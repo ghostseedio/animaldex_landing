@@ -59,7 +59,8 @@ export const ARK_SEEN_ENGLISH = {
     wary: "Wary: a hunter is near",
     mate_seeking: "Looking for a mate",
     wounded: "Wounded",
-    lone: "Lone: the only one of its kind in the wild, and it came alone",
+    // (Short: the selection's box is two bar rows wide. A lone founder: the only wild one of a kind that arrived alone.)
+    lone: "Lone founder",
     last: "Last one in the wild",
     critical: "Critical: one of two left in the wild"
 } as const;

@@ -134,7 +134,7 @@ async function main() {
             const zone = String(animal?.zone ?? "");
             const held = animal?.area === "house" && WATER.includes(zone);
             // (A live birth is the acted one: before a hatching of the same size class.)
-            return {event, row, length, born: kind === "birth" && row.from_egg !== true ? 1 : 0, rank: (animal?.island === "wild" ? 2 : 0) + (WATER.includes(zone) ? 0 : 1) - (held ? 4 : 0)};
+            return {event, row, length, born: kind === "birth" && row.from_egg !== true ? 1 : 0, rank: (animal?.island === "wild" ? 1 : 0) + (WATER.includes(zone) ? 0 : 3) - (held ? 4 : 0)};
         }).sort((a, b) => Number(b.length >= 0.25) - Number(a.length >= 0.25) || b.born - a.born || b.rank - a.rank || b.length - a.length || Date.parse(b.event.at) - Date.parse(a.event.at));
         const ids: string[] = [];
         for (const item of ranked) {
@@ -283,20 +283,23 @@ async function main() {
             if (snapshot !== real) handle.update(real);
             pinArkClock(null);
             handle.setHours(11);
-            const pick = wild().filter((animal) => filmable(animal, 0.6) && handle.locate(animal.id)?.shown).sort((a, b) => a.id.localeCompare(b.id))[n * 7] ?? null;
-            if (!pick) return null;
-            const frameIt = () => {
-                const at = handle.locate(pick.id);
-                if (at) handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance: Math.max(at.length * 4.5, 3), polar: 0.95, azimuth: at.yaw + 1.2});
-            };
-            frameIt();
-            for (let i = 0; i < 40; i++) {
-                await pause(50);
-                clock.tick(100);
-                frameIt();
-                if (!handle.loading() && handle.locate(pick.id)?.shown && i > 12) break;
+            // (One that is drawn: chosen as a viewer would choose it, the scene's own close-up; the next when it is not out now.)
+            const candidates = wild().filter((animal) => filmable(animal, 0.6) && handle.locate(animal.id)).sort((a, b) => a.id.localeCompare(b.id)).slice(n * 9 + 2);
+            let pick: ArkAnimal | null = null;
+            for (const candidate of candidates.slice(0, 6)) {
+                handle.select(candidate.id, true);
+                for (let i = 0; i < 70; i++) {
+                    await pause(30);
+                    clock.tick(1000 / FPS);
+                }
+                if (handle.locate(candidate.id)?.shown && !handle.loading()) {
+                    pick = candidate;
+                    break;
+                }
             }
-            snapshot = {...real, animals: real.animals.filter((animal) => animal.id !== pick.id)};
+            if (!pick) return null;
+            const gone = pick.id;
+            snapshot = {...real, animals: real.animals.filter((animal) => animal.id !== gone)};
             departing = {until: 5.5, id: pick.id};
             clip = 0;
             index = 0;
