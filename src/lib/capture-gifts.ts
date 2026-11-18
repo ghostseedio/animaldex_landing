@@ -1,20 +1,29 @@
-export type EndorsedStat = "intelligence" | "speed" | "size" | "dominance" | "rarity";
+/** Ark care (GIFTS M2): what a care gift does for the living animal the card brought aboard. */
+export type GiftCareKind = "meal" | "shelter" | "nest";
+
+/** Which catalog the definitions came from: v1 `get_gift_catalog()`, or v2 `get_gift_catalog_v2(p_capture_id)`. */
+export type GiftCatalogSource = "v1" | "v2";
 
 export type GiftDefinition = {
     id: string;
     slug: string;
+    /** The name to show: localised for the Ark care slugs, else the server's `display_name` (never a hardcoded name). */
     displayName: string;
+    /** The line to show: localised for the Ark care slugs, else the server's `description`. */
     description: string;
     creditCost: number;
-    captureXpGrant: number;
     iconKey: string;
-    endorsedStat?: EndorsedStat;
     sortOrder: number;
+    careKind: GiftCareKind | null;
+    /** v2: false when this gift would do nothing for this animal right now. v1 rows are always offered. */
+    available: boolean;
+    reason: string | null;
 };
 
 export type GiftCatalog = {
     enabled: boolean;
     definitions: GiftDefinition[];
+    source: GiftCatalogSource;
 };
 
 export type CaptureGiftItem = {
@@ -23,89 +32,56 @@ export type CaptureGiftItem = {
     slug: string;
     displayName: string;
     iconKey: string;
-    endorsedStat?: EndorsedStat;
     senderUserId: string;
     senderDisplayName: string | null;
-    xpGranted: number;
 };
 
-export type CommunityStatTotals = {
-    intelligence: number;
-    speed: number;
-    size: number;
-    dominance: number;
-    rarity: number;
+/** The three Ark care gifts' own words (DESIGN §0). Everything else comes from the server, as sent. */
+const ARK_CARE_GIFTS: Record<string, {name: string; description: string}> = {
+    ark_meal: {name: "A meal", description: "A meal for this animal on the Ark today."},
+    ark_shelter: {name: "Shelter", description: "Keeps this animal safe from one hunt, for one day."},
+    ark_nest: {name: "Nesting help", description: "Helps this animal's pair raise their young."}
 };
 
-/** Fallback display names. Backend catalog remains authoritative when present. */
-export function giftDisplayName(slug: string | null | undefined): string {
-    switch (slug?.trim()) {
-        case "big_brain":
-            return "Big Brain";
-        case "great_capture":
-            return "Absolute Unit";
-        case "electric_find":
-            return "Lightning Bolt";
-        case "wild":
-            return "Powerhouse";
-        case "legendary_capture":
-            return "Legendary";
-        default:
-            return slug?.replaceAll("_", " ").replace(/\b\w/g, (ch) => ch.toUpperCase()) || "Gift";
-    }
+/** The empty catalog's calm state: shown when there is no gift to offer (gifts are dark from M1 until Ark care). */
+export const GIFTS_COMING_TITLE = "Gifts are coming to the Ark";
+export const GIFTS_COMING_BODY = "Soon, gifts will bring food, shelter and nesting help to animals living on the Ark.";
+
+/**
+ * A Gift's name: the Ark care slugs by their own words, any other slug by the server's `display_name`, else the
+ * plain word "Gift". No legacy name is written here (GIFTS-M1: names come from the server).
+ */
+export function giftDisplayName(slug: string | null | undefined, serverName?: string | null): string {
+    const care = ARK_CARE_GIFTS[slug?.trim() ?? ""];
+    if (care) return care.name;
+    const name = serverName?.trim();
+    return name || "Gift";
 }
 
-export function endorsedStatForSlug(slug: string | null | undefined): EndorsedStat | null {
-    switch (slug?.trim()) {
-        case "big_brain":
-            return "intelligence";
-        case "electric_find":
-            return "speed";
-        case "great_capture":
-            return "size";
-        case "wild":
-            return "dominance";
-        case "legendary_capture":
-            return "rarity";
-        default:
-            return null;
-    }
+/** A Gift's one line: the Ark care slugs by their own words, else the server's `description`. */
+export function giftDescription(slug: string | null | undefined, serverDescription?: string | null): string {
+    const care = ARK_CARE_GIFTS[slug?.trim() ?? ""];
+    if (care) return care.description;
+    return serverDescription?.trim() ?? "";
 }
 
-export function communityStatPoints(uniqueSenders: number): number {
-    return Math.max(0, Math.min(8, Math.trunc(uniqueSenders)));
+/** The gifts the sheet offers: only those that would work now (`available !== false`), cheapest order kept. */
+export function offeredGifts(catalog: GiftCatalog | null | undefined): GiftDefinition[] {
+    if (!catalog?.enabled) return [];
+    return catalog.definitions.filter((definition) => definition.available);
 }
 
-export function communitySupportSenderPoints(giftCount: number, captureCount: number): number {
-    if (giftCount <= 0) return 0;
-    const diversity = 2 * Math.min(2, Math.max(0, captureCount - 1));
-    const repeats = Math.min(2, Math.max(0, giftCount - 1));
-    return Math.min(12, 8 + diversity + repeats);
+/** Whether the Gift button shows: the switch is on, even with nothing to offer (the sheet then says gifts are coming). */
+export function showsGiftButton(catalog: GiftCatalog | null | undefined): boolean {
+    return catalog?.enabled === true;
 }
 
-export function communitySupportScore(
-    senders: Array<{giftCount: number; captureCount: number}>
-): number {
-    const total = senders.reduce(
-        (sum, sender) => sum + communitySupportSenderPoints(sender.giftCount, sender.captureCount),
-        0
-    );
-    return Math.min(2000, total);
-}
-
-/** Fixture only — never use for live pricing. */
-export const LAUNCH_GIFT_CATALOG = [
-    {slug: "big_brain", creditCost: 5, captureXpGrant: 5},
-    {slug: "great_capture", creditCost: 10, captureXpGrant: 8},
-    {slug: "electric_find", creditCost: 25, captureXpGrant: 16},
-    {slug: "wild", creditCost: 50, captureXpGrant: 28},
-    {slug: "legendary_capture", creditCost: 100, captureXpGrant: 45}
-] as const;
-
-
-/** "Intelligence", "Size", …: a stat's title (iOS `CaptureEndorsementStat.title`). */
-export function giftStatTitle(stat: EndorsedStat | null | undefined): string {
-    return stat ? stat.charAt(0).toUpperCase() + stat.slice(1) : "this animal";
+/** PostgREST's "no such function" (v2 not deployed yet): PGRST202, or a 404. */
+export function isMissingFunctionError(error: {code?: string | null; message?: string | null; status?: number | null} | null | undefined): boolean {
+    if (!error) return false;
+    if (error.code === "PGRST202" || error.code === "42883") return true;
+    if (error.status === 404) return true;
+    return /could not find the function/i.test(error.message ?? "");
 }
 
 const GIFT_IMAGE_SLUGS = new Set(["big_brain", "great_capture", "electric_find", "wild", "legendary_capture"]);
@@ -145,38 +121,48 @@ export function giftErrorMessage(raw: string | null | undefined): string {
     if (text.includes("self_gift_blocked")) return "You cannot send a Gift to your own capture.";
     if (text.includes("gift_rate_limited")) return "You have sent the maximum Gifts for now. Try again later.";
     if (text.includes("users_blocked")) return "Gifts are not available between these accounts.";
+    if (text.includes("gift_not_available")) return "This Gift isn't available right now.";
     return "Unable to send this Gift right now.";
 }
 
-/** `/api/app/gifts/catalog`'s body, read. */
+/** `/api/app/gifts/catalog`'s body, read (v1 or v2 shape; v2's extra fields are optional). */
 export function parseGiftCatalog(json: unknown): GiftCatalog {
-    const body = json as {enabled?: unknown; definitions?: unknown} | null;
-    if (!body || typeof body.enabled !== "boolean") return {enabled: false, definitions: []};
+    const body = json as {enabled?: unknown; definitions?: unknown; source?: unknown} | null;
+    const source: GiftCatalogSource = body?.source === "v2" ? "v2" : "v1";
+    if (!body || typeof body.enabled !== "boolean") return {enabled: false, definitions: [], source};
     const rows = Array.isArray(body.definitions) ? (body.definitions as Array<Record<string, unknown>>) : [];
     return {
         enabled: body.enabled,
+        source,
         definitions: rows
             .map((item) => {
                 const slug = String(item.slug ?? "");
+                const care = item.care_kind;
                 return {
                     id: String(item.id ?? ""),
                     slug,
-                    displayName: String(item.display_name ?? giftDisplayName(slug)),
-                    description: String(item.description ?? ""),
+                    displayName: giftDisplayName(slug, typeof item.display_name === "string" ? item.display_name : null),
+                    description: giftDescription(slug, typeof item.description === "string" ? item.description : null),
                     creditCost: Number(item.credit_cost ?? 0),
-                    captureXpGrant: Number(item.capture_xp_grant ?? 0),
                     iconKey: String(item.icon_key ?? "gift"),
-                    endorsedStat: (item.endorsed_stat as EndorsedStat | undefined) ?? endorsedStatForSlug(slug) ?? undefined,
-                    sortOrder: Number(item.sort_order ?? 0)
+                    sortOrder: Number(item.sort_order ?? 0),
+                    careKind: care === "meal" || care === "shelter" || care === "nest" ? care : null,
+                    available: item.available !== false,
+                    reason: typeof item.reason === "string" ? item.reason : null
                 };
             })
+            .filter((definition) => definition.id)
             .sort((a, b) => a.sortOrder - b.sortOrder || a.creditCost - b.creditCost)
     };
 }
 
-/** `GET /api/app/gifts`'s body, read: the Gifts on a capture and its community support. */
-export function parseGiftList(json: unknown): {gifts: CaptureGiftItem[]; communityStats: CommunityStatTotals | null} {
-    const body = json as {gifts?: unknown; community_stats?: unknown} | null;
+/**
+ * `GET /api/app/gifts`'s body, read: the Gifts on a capture. After M1 the server sends the rows only to the owner
+ * (and a sender their own); anyone else gets `gifts: []` and a `gift_count`. `community_stats` is ignored: the
+ * display-only stat bonus is gone.
+ */
+export function parseGiftList(json: unknown): {gifts: CaptureGiftItem[]; giftCount: number} {
+    const body = json as {gifts?: unknown; gift_count?: unknown} | null;
     const rows = Array.isArray(body?.gifts) ? (body?.gifts as Array<Record<string, unknown>>) : [];
     const gifts = rows.map((item) => {
         const slug = String(item.slug ?? "");
@@ -184,37 +170,25 @@ export function parseGiftList(json: unknown): {gifts: CaptureGiftItem[]; communi
             id: String(item.id ?? ""),
             definitionId: String(item.definition_id ?? ""),
             slug,
-            displayName: String(item.display_name ?? giftDisplayName(slug)),
+            displayName: giftDisplayName(slug, typeof item.display_name === "string" ? item.display_name : null),
             iconKey: String(item.icon_key ?? "gift"),
-            endorsedStat: (item.endorsed_stat as EndorsedStat | undefined) ?? endorsedStatForSlug(slug) ?? undefined,
             senderUserId: String(item.sender_user_id ?? ""),
-            senderDisplayName: (item.sender_display_name as string | null) ?? null,
-            xpGranted: Number(item.xp_granted ?? 0)
+            senderDisplayName: (item.sender_display_name as string | null) ?? null
         };
     });
-    const stats = body?.community_stats as Record<string, unknown> | null | undefined;
-    const communityStats = stats && typeof stats === "object"
-        ? {
-            intelligence: communityStatPoints(Number(stats.intelligence ?? 0)),
-            speed: communityStatPoints(Number(stats.speed ?? 0)),
-            size: communityStatPoints(Number(stats.size ?? 0)),
-            dominance: communityStatPoints(Number(stats.dominance ?? 0)),
-            rarity: communityStatPoints(Number(stats.rarity ?? 0))
-        }
-        : null;
-    return {gifts, communityStats};
+    const counted = Number(body?.gift_count);
+    return {gifts, giftCount: Math.max(gifts.length, Number.isFinite(counted) ? Math.trunc(counted) : 0)};
 }
 
-export type GiftSendResult = {giftId: string; creditCost: number; senderBalance: number | null; xpGranted: number};
+export type GiftSendResult = {giftId: string; creditCost: number; senderBalance: number | null};
 
-/** `POST /api/app/gifts`'s body, read (iOS `CaptureGiftSendResult`). */
+/** `POST /api/app/gifts`'s body, read leniently: only `gift_id` is needed (v1 and v2 send results). */
 export function parseGiftSendResult(json: unknown, fallbackCost: number): GiftSendResult {
     const body = (json ?? {}) as Record<string, unknown>;
     const balance = Number(body.sender_balance);
     return {
         giftId: String(body.gift_id ?? ""),
-        creditCost: Number.isFinite(Number(body.credit_cost)) ? Number(body.credit_cost) : fallbackCost,
-        senderBalance: Number.isFinite(balance) && body.sender_balance != null ? balance : null,
-        xpGranted: Number(body.xp_granted ?? 0)
+        creditCost: body.credit_cost != null && Number.isFinite(Number(body.credit_cost)) ? Number(body.credit_cost) : fallbackCost,
+        senderBalance: Number.isFinite(balance) && body.sender_balance != null ? balance : null
     };
 }

@@ -6,6 +6,10 @@
  * celebrates: the Gift bursts, "−N Credits" rises, and the balance (here and
  * in the app's header chip) counts down to what the server says is left.
  * A Gift you cannot afford offers Credits instead.
+ *
+ * GIFTS-M1 (2026-11-18): the sheet reloads the card's own catalog (`?captureId=`: v2 Ark care when the server has
+ * it, else v1) and shows only the gifts that would work now. With nothing to offer it shows a calm "Gifts are
+ * coming to the Ark" state. No stat is "boosted" any more: gifts never touch a card's stats.
  */
 
 import {useCallback, useEffect, useRef, useState, type CSSProperties} from "react";
@@ -16,7 +20,10 @@ import {
     giftAccent,
     giftErrorMessage,
     giftImageSrc,
-    giftStatTitle,
+    GIFTS_COMING_BODY,
+    GIFTS_COMING_TITLE,
+    offeredGifts,
+    parseGiftCatalog,
     parseGiftSendResult,
     type GiftCatalog,
     type GiftDefinition,
@@ -67,12 +74,29 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
 }) {
     const credits = useOptionalAppCredits();
     const balance = credits?.balance ?? null;
-    const [selectedId, setSelectedId] = useState<string | null>(catalog.definitions[0]?.id ?? null);
+    const [liveCatalog, setLiveCatalog] = useState<GiftCatalog>(catalog);
+    const offered = offeredGifts(liveCatalog);
+    const [selectedId, setSelectedId] = useState<string | null>(offeredGifts(catalog)[0]?.id ?? null);
     const [sending, setSending] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [phase, setPhase] = useState<Phase>({kind: "pick"});
 
-    const selected = catalog.definitions.find((definition) => definition.id === selectedId) ?? null;
+    const selected = offered.find((definition) => definition.id === selectedId) ?? offered[0] ?? null;
+
+    const reloadCatalog = useCallback(async () => {
+        try {
+            const response = await fetch(`/api/app/gifts/catalog?captureId=${encodeURIComponent(captureId)}`, {cache: "no-store"});
+            if (!response.ok) return;
+            setLiveCatalog(parseGiftCatalog(await response.json().catch(() => null)));
+        } catch {
+            // Keep what the caller handed over.
+        }
+    }, [captureId]);
+
+    // This card's own catalog: v2 says which care gifts would work for its animal right now.
+    useEffect(() => {
+        void reloadCatalog();
+    }, [reloadCatalog]);
     const celebrating = phase.kind === "celebrating";
     // The caller's onClose may be a new function each render (it re-renders when a Gift lands).
     const onCloseRef = useRef(onClose);
@@ -107,11 +131,13 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
             const response = await fetch("/api/app/gifts", {
                 method: "POST",
                 headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({captureId, definitionId: definition.id, clientIdempotencyKey})
+                body: JSON.stringify({captureId, definitionId: definition.id, clientIdempotencyKey, catalogSource: liveCatalog.source})
             });
             const json = await response.json().catch(() => ({}));
             if (!response.ok) {
-                setError(giftErrorMessage(typeof json.error === "string" ? json.error : null));
+                const raw = typeof json.error === "string" ? json.error : null;
+                setError(giftErrorMessage(raw));
+                if (raw?.toLowerCase().includes("gift_not_available")) void reloadCatalog();
                 return;
             }
             const result = parseGiftSendResult(json, definition.creditCost);
@@ -148,14 +174,14 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
                     <>
                         {/* What the picked Gift recognises, in one line (the TikTok drawer's strip). */}
                         <div className="flex items-center gap-2 px-4 pb-2 pt-3">
-                            <GiftGlyph className="h-3.5 w-3.5 shrink-0 text-primary-300" />
+                            {selected ? <GiftGlyph className="h-3.5 w-3.5 shrink-0 text-primary-300" /> : null}
                             {selected ? (
                                 <p className="min-w-0 flex-1 truncate text-xs">
-                                    <span className="font-semibold text-white/90">{giftStatTitle(selected.endorsedStat)}</span>
+                                    <span className="font-semibold text-white/90">{selected.displayName}</span>
                                     {selected.description ? <span className="ml-2 text-white/55">{selected.description}</span> : null}
                                 </p>
                             ) : (
-                                <p className="min-w-0 flex-1 truncate text-xs text-white/55">Pick a Gift to recognise a stat on this animal.</p>
+                                <span className="flex-1" />
                             )}
                             <button
                                 type="button"
@@ -172,9 +198,11 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
 
                         {error ? <p className="px-4 pb-2 text-xs font-medium text-red-300" role="alert">{error}</p> : null}
 
-                        <div className="grid min-h-0 flex-1 grid-cols-4 gap-1.5 overflow-y-auto px-2.5 pb-3">
-                            {catalog.definitions.map((definition) => {
-                                const isSelected = definition.id === selectedId;
+                        {offered.length === 0 ? <GiftsComing /> : null}
+
+                        <div className={`grid min-h-0 flex-1 grid-cols-4 gap-1.5 overflow-y-auto px-2.5 pb-3 ${offered.length === 0 ? "hidden" : ""}`}>
+                            {offered.map((definition) => {
+                                const isSelected = definition.id === selected?.id;
                                 const unaffordable = balance != null && balance < definition.creditCost;
                                 const accent = giftAccent(definition.iconKey);
 
@@ -237,7 +265,7 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
                         <div className="flex items-center gap-3 border-t border-white/[0.06] bg-[#141416] px-4 pb-[max(0.875rem,env(safe-area-inset-bottom))] pt-2.5">
                             <span className="text-[15px] font-semibold text-white">Gifts</span>
                             <span className="flex-1" />
-                            {balance != null ? (
+                            {balance != null && offered.length > 0 ? (
                                 <Link
                                     href="/app/credits"
                                     aria-label={`Credits, ${balance} available`}
@@ -255,6 +283,19 @@ export default function CaptureGiftSheet({captureId, catalog, onClose, onSent}: 
                     <GiftCelebration definition={phase.definition} result={phase.result} balance={shownBalance} />
                 )}
             </div>
+        </div>
+    );
+}
+
+/** Nothing to offer (gifts are dark until Ark care): a calm line, never an upsell. */
+function GiftsComing() {
+    return (
+        <div className="flex flex-col items-center gap-3 px-8 pb-8 pt-5 text-center" role="status">
+            <span className="grid h-14 w-14 place-items-center rounded-full bg-white/[0.06] text-primary-300" aria-hidden="true">
+                <GiftGlyph className="h-6 w-6" />
+            </span>
+            <p className="text-base font-semibold text-white">{GIFTS_COMING_TITLE}</p>
+            <p className="max-w-xs text-sm leading-relaxed text-white/60">{GIFTS_COMING_BODY}</p>
         </div>
     );
 }
@@ -300,7 +341,7 @@ function GiftCelebration({definition, result, balance}: {definition: GiftDefinit
             <div className="flex flex-col gap-1.5">
                 <p className="font-display text-3xl font-bold text-white">Gift sent!</p>
                 <p className="text-sm font-semibold" style={{color: accent}}>{definition.displayName}</p>
-                <p className="text-xs text-white/60">Boosted {giftStatTitle(definition.endorsedStat)}</p>
+                {definition.description ? <p className="max-w-xs text-xs text-white/60">{definition.description}</p> : null}
             </div>
             <div className="flex flex-col items-center gap-2.5">
                 <p className="font-display text-3xl font-bold text-orange-400 motion-safe:animate-[giftRise_350ms_ease-out_120ms_both]">

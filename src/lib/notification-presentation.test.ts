@@ -61,10 +61,13 @@ test("rows read as iOS writes them: the reader's animal, the person, the Gift an
         title: "Your cheetah got a Speed endorsement",
         detail: "A collector added +1 to Speed on this animal."
     });
+    // GIFTS-M1: no hardcoded legacy names or stat lines; a retired slug reads as "Gift", the Ark care gifts by name.
     assert.deepEqual(notificationText(row({eventType: "capture_gift_received", actorDisplayName: "Ana", giftSlug: "big_brain"}), EN, "Koala"), {
-        title: "Ana sent Big Brain to your koala capture",
-        detail: "A collector recognised Intelligence on this animal."
+        title: "Ana sent Gift to your koala capture",
+        detail: "Open this capture to see the Gift."
     });
+    assert.equal(notificationText(row({eventType: "capture_gift_received", actorDisplayName: "Ana", giftSlug: "ark_shelter"}), EN, "Koala").title,
+        "Ana sent Shelter to your koala capture");
     assert.equal(notificationText(row({eventType: "user_followed", actorUsername: "ana_r"}), EN).title, "@ana_r followed you");
     assert.equal(notificationText(row({eventType: "friend_connected"}), EN).title, "You and A collector are now friends");
     assert.deepEqual(notificationText(row({eventType: "following_new_capture", actorDisplayName: "Ana", subjectAnimalName: "Gray Wolf", subjectAnimalDexNumber: 7}), EN), {
