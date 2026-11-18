@@ -5,7 +5,7 @@
  */
 import assert from "node:assert/strict";
 import test from "node:test";
-import {HumanFigures, humanGeometry, humanLook, posePerson, sitRootY, HUMAN_MAX, type HumanPoseKind} from "@/ark-scene/humans/figures";
+import {HumanFigures, humanGeometry, humanLook, posePerson, sitRootY, HUMAN_MAX, SLEEP_SINK, type HumanPoseKind} from "@/ark-scene/humans/figures";
 import {assignOut, carSeat, chosenHuman, helmSeat, humanDay, isHumanAnimal, nightOuting, rhythm, SUN_CLEAR, TownHumans, townHumanSites, type HumanRoomHost} from "@/ark-scene/humans/town-humans";
 import {apartmentHumanRoom, humanRoomHost, sofaOffset} from "@/ark-scene/humans/home-rooms-host";
 import {apartmentLayout, towerApartments} from "@/ark-scene/islands/town/home-rooms";
@@ -264,7 +264,7 @@ test("at home only in a room the homes give: with none no one is drawn indoors; 
         const bed = apartmentLayout(flat).bed;
         const p = toLocal(flat.shell, h.x, h.z);
         assert.ok(Math.abs(p.x - bed.x) <= bed.length / 2 && Math.abs(p.z - bed.z) <= bed.width / 2, "on the bed");
-        assert.ok(Math.abs(h.y - (flat.floor + bed.top - 0.02)) < 1e-6, "on its top");
+        assert.ok(Math.abs(h.y - (flat.floor + bed.top - SLEEP_SINK)) < 1e-6, "in the mattress's top (humans polish: lying in the bed, not on its covers)");
         assert.ok((h.light ?? 0) > 0.3, "seen by the bedside lamp");
         assert.equal(h.face, room(flat).front, "seen through the flat's open front");
     }

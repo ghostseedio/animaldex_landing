@@ -225,6 +225,7 @@ import {BeachProps} from "@/ark-scene/humans/beach-props"; // p5 (humans, qualit
 import {chosenHuman, isHumanAnimal, TownHumans, type ChosenHuman} from "@/ark-scene/humans/town-humans"; // p5 (humans)
 import {humanRoomHost} from "@/ark-scene/humans/home-rooms-host"; // humans visible
 import {HumanTVs} from "@/ark-scene/humans/tvs"; // humans visible
+import {SleepCovers} from "@/ark-scene/humans/sleep-covers"; // humans polish
 import {towerApartments} from "@/ark-scene/islands/town/home-rooms"; // humans visible
 import {townPlan} from "@/ark-scene/islands/town/plan"; // humans visible
 import {decodeHumanBonds} from "@/ark-scene/humans/couples"; // p5 (humans, couples)
@@ -1305,6 +1306,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     scene.add(humanFigures.group);
     const humanTVs = new HumanTVs(); // humans visible: the TVs people at home watch
     scene.add(humanTVs.group);
+    const sleepCovers = new SleepCovers(); // humans polish: the covers over those asleep
+    scene.add(sleepCovers.group);
     /** Humans visible: the homes as the grown and the pets' flats are now (rebuilt only when either changes). */
     let humanRoomsFor: {island: unknown; grown: number; pets: readonly string[] | null} = {island: null, grown: -1, pets: null};
     const syncHumanRooms = (isl: NonNullable<typeof island>) => {
@@ -8819,12 +8822,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             syncHumanRooms(island); // humans visible
             humanFigures.setFrame(townHumans.frame(islandMs, traffic?.cars ?? null, traffic?.count ?? 0), camera.position, islandMs / 1000);
             humanTVs.setFrame(townHumans.tvs, islandMs / 1000); // humans visible
+            sleepCovers.setFrame(townHumans.covers, camera.position); // humans polish
             stepPendingHuman(); // humans visible
             beachProps.setFrame(townHumans.beach); // p5 (humans, quality pass)
             stepDogWalks(now); // p5 (humans, dogs)
-        } else if (humanFigures.drawn.near + humanFigures.drawn.far) {
+        } else if (humanFigures.drawn.near + humanFigures.drawn.far + humanFigures.drawn.dots + sleepCovers.drawn) {
             humanFigures.setFrame([], camera.position, 0);
             humanTVs.setFrame([], 0); // humans visible
+            sleepCovers.setFrame([], camera.position); // humans polish
             beachProps.setFrame([]); // p5 (humans, quality pass)
         }
         perf.lap("town");
@@ -9565,6 +9570,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             cancelAnimationFrame(raf);
             humanFigures.dispose(); // p5 (humans)
             humanTVs.dispose(); // humans visible
+            sleepCovers.dispose(); // humans polish
             beachProps.dispose(); // p5 (humans, quality pass)
             dogLeads.dispose(); // p5 (humans, dogs)
             runtime.dispose();

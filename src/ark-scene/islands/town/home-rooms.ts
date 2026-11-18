@@ -250,7 +250,7 @@ export type ApartmentLayout = {
     rugColour: number;
     /** Which end the bed is at (-1 or 1: away from the sofa's offset), and its box (middle, length along x, width along z). */
     bedSide: -1 | 1;
-    bed: {x: number; z: number; length: number; width: number; top: number};
+    bed: {x: number; z: number; length: number; width: number; /** The mattress's top, from the floor (m): what a sleeper lies on. */ top: number; /** The made bed's duvet thickness (m), over the foot of the bed (a sleeper has their own cover over them: `humans/sleep-covers.ts`). */ duvet: number};
     duvetColour: number;
     /** The bookshelf at the other end; the bedside table at the bed's head (by the front). */
     shelfX: number;
@@ -258,6 +258,9 @@ export type ApartmentLayout = {
     /** The pets' basket between the sofa and the bed (null: no room for it there). */
     basket: {x: number; z: number} | null;
 };
+
+/** The duvets' colours (sRGB hex), by `ApartmentLayout.duvetColour` (0–1): the bed's and a sleeper's cover over them. */
+export const DUVET_HEX = ["#e8e2d6", "#9fb8d0", "#d8b0a0", "#b8c8a0", "#c8b8d8", "#e0c890"];
 
 export function apartmentLayout(room: Pick<HomeRoom, "id" | "shell">): ApartmentLayout {
     const r = rng(hashText(room.id)); // (the draws `render/pet-homes.ts` made before: the sofa is where it was)
@@ -272,7 +275,7 @@ export function apartmentLayout(room: Pick<HomeRoom, "id" | "shell">): Apartment
     // (Against the tower's wall, its head at the room's end; 1.15 m wide so its side stays behind the pets' free floor.)
     const length = 1.95;
     const width = 1.15;
-    const bed = {x: bedSide * (w / 2 - 0.05 - length / 2), z: -d / 2 + 0.05 + width / 2, length, width, top: 0.5};
+    const bed = {x: bedSide * (w / 2 - 0.05 - length / 2), z: -d / 2 + 0.05 + width / 2, length, width, top: 0.46, duvet: 0.06};
     const shelfX = -bedSide * (w / 2 - 0.35);
     const nightstand = {x: bedSide * (w / 2 - 0.27), z: bed.z + width / 2 + 0.3};
     const inner = bedSide * (w / 2 - 0.05 - length);

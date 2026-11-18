@@ -16,7 +16,7 @@
 import {DataUtils, Matrix4, Quaternion, Vector3, type AnimationClip, type Bone, type BufferGeometry, type Object3D, type SkinnedMesh} from "three";
 import {BufferAttribute, BufferGeometry as Geometry} from "three";
 import {arkCodeUrl} from "@/ark-scene/code-version";
-import {WALK_PACE, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
+import {SLEEP_SQUEEZE, WALK_PACE, type HumanInstance, type HumanLook, type HumanPoseKind} from "@/ark-scene/humans/figures";
 
 /** Where the people's files ship (with the web deploy, beside the town's cars). A new set is a new folder. */
 export const PEOPLE_BASE = "/ark/assets/people-v1";
@@ -79,6 +79,18 @@ export const PEOPLE_CLIPS: Record<PeopleClipName, {fps: number; ground?: number;
 export const CANON_HIP = 0.8418;
 /** How far past the hand bone a grip is (m at the canonical body): the palm inside the curled fingers (`tools.py`). */
 const GRIP_REACH = 0.11;
+
+/**
+ * A clip made of two others' tracks (humans polish, 2026-11-18). The authored "sleep" clip curls on a side, the hips
+ * drawn out, so the body runs at an angle (the torso 35° off the line from head to feet) and two sleepers overlap in
+ * a bed; "sunback" lies straight but with a knee up and the hands behind the head. The sleeper lies as the sunbather
+ * does, straight on the back along the bed, the limbs as in standing (`limbs`'s tracks on the arm and leg bones, `body`'s
+ * on the rest: the spine, the head and the lying turn).
+ */
+export const CLIP_MIX: Partial<Record<PeopleClipName, {body: PeopleClipName; limbs: PeopleClipName}>> = {sleep: {body: "sunback", limbs: "stand"}};
+
+/** The bones a mixed clip takes from its limbs' clip: the arms (clavicle to hand) and the legs (thigh to ball). */
+const isLimb = (bone: number) => (bone >= ARM_FIRST && bone <= ARM_LAST) || bone >= BONE.thigh_l;
 
 const POSE_CLIP: Record<HumanPoseKind, PeopleClipName> = {walk: "walk", stand: "stand", sit: "sit", lie: "sunback", drive: "drive", chop: "chop", plant: "plant", sleep: "sleep", carry: "carry", saw: "saw", sunback: "sunback", sunside: "sunside", sunsit: "sunsit", paddle: "paddle"};
 const BEACH_POSES: ReadonlySet<HumanPoseKind> = new Set<HumanPoseKind>(["sunback", "sunside", "sunsit", "paddle"]);
@@ -252,8 +264,9 @@ export function clipRows(clips: readonly AnimationClip[]): {name: PeopleClipName
     const out: {name: PeopleClipName; frames: number; seconds: number; row: number}[] = [];
     let row = 0;
     for (const name of Object.keys(PEOPLE_CLIPS) as PeopleClipName[]) {
-        const clip = clips.find((c) => c.name === name);
-        if (!clip) throw new Error(`no clip ${name}`);
+        const mix = CLIP_MIX[name];
+        const clip = clips.find((c) => c.name === (mix ? mix.body : name));
+        if (!clip || (mix && !clips.some((c) => c.name === mix.limbs))) throw new Error(`no clip ${name}`);
         const frames = Math.max(1, Math.round(clip.duration * PEOPLE_CLIPS[name].fps));
         out.push({name, frames, seconds: clip.duration, row});
         row += frames + 1;
@@ -295,17 +308,22 @@ export function* bakePeopleSteps(near: Gltf, far: Gltf, clips: Gltf): Generator<
     const persons = new Map<PersonId, BakedPerson>();
     // Per clip: each track's sampler (three's interpolants), by bone and kind.
     const samplers = plan.map(({name}) => {
-        const clip = clips.animations.find((c) => c.name === name)!;
+        const mix = CLIP_MIX[name];
         const rot: ({evaluate(t: number): ArrayLike<number>} | null)[] = PEOPLE_BONES.map(() => null);
         const pos: ({evaluate(t: number): ArrayLike<number>} | null)[] = PEOPLE_BONES.map(() => null);
-        for (const track of clip.tracks) {
-            const dot = track.name.lastIndexOf(".");
-            const bone = PEOPLE_BONES.indexOf(track.name.slice(0, dot) as (typeof PEOPLE_BONES)[number]);
-            if (bone < 0) continue;
-            const kind = track.name.slice(dot + 1);
-            const interpolant = track.createInterpolant() as unknown as {evaluate(t: number): ArrayLike<number>};
-            if (kind === "quaternion") rot[bone] = interpolant;
-            else if (kind === "position") pos[bone] = interpolant;
+        // (A mixed clip: the body's clip on every bone, then the limbs' clip on the arm and leg bones alone.)
+        for (const [source, limbs] of mix ? ([[mix.body, false], [mix.limbs, true]] as const) : ([[name, false]] as const)) {
+            const clip = clips.animations.find((c) => c.name === source)!;
+            for (const track of clip.tracks) {
+                const dot = track.name.lastIndexOf(".");
+                const bone = PEOPLE_BONES.indexOf(track.name.slice(0, dot) as (typeof PEOPLE_BONES)[number]);
+                if (bone < 0 || (limbs && !isLimb(bone))) continue;
+                const kind = track.name.slice(dot + 1);
+                const interpolant = track.createInterpolant() as unknown as {evaluate(t: number): ArrayLike<number>};
+                if (kind === "quaternion") rot[bone] = interpolant;
+                else if (kind === "position") pos[bone] = interpolant;
+            }
+            if (limbs) for (let bone = 0; bone < PEOPLE_BONES.length; bone++) if (isLimb(bone) && !clip.tracks.some((t) => t.name === `${PEOPLE_BONES[bone]}.quaternion`)) rot[bone] = null;
         }
         return {rot, pos};
     });
@@ -493,7 +511,8 @@ export function peopleMatrix(h: HumanInstance, pose: PeoplePose, out: Matrix4): 
     qa.setFromAxisAngle(yAxis, h.yaw);
     if (spec.lying && h.tilt) qa.multiply(qb.setFromAxisAngle(xAxis, h.tilt));
     const build = 1 + (h.look.build - 1) * 0.6;
-    out.compose(move.set(h.x, h.y + lift, h.z), qa, size.set(scale * build, scale, scale * (0.96 + 0.04 * h.look.build)));
+    // (A sleeper is drawn a little narrower across the bed: `SLEEP_SQUEEZE`.)
+    out.compose(move.set(h.x, h.y + lift, h.z), qa, size.set(scale * build * (h.pose === "sleep" ? SLEEP_SQUEEZE : 1), scale, scale * (0.96 + 0.04 * h.look.build)));
     if (clip.fixYaw || clip.fixX || clip.fixZ) {
         inner.makeRotationY(clip.fixYaw).setPosition(clip.fixX, 0, clip.fixZ);
         out.multiply(inner);
