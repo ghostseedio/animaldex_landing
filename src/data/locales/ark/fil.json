@@ -652,6 +652,16 @@
             "arkDay": "Araw {day} ng Ark",
             "broughtBy": "Isinakay ni {name}",
             "fromLine": "Mula sa lahi ni {name}"
+        },
+        "timeLeft": {
+            "title": "Tinatayang natitirang oras",
+            "about": "Mga {value}",
+            "hint": "Isang malamang na saklaw mula sa tsansa, hindi pangako. Ang 1 araw sa Ark ay mga 55 totoong minuto.",
+            "reasonAge": "Karaniwang haba ng buhay: {span}",
+            "reasonAgeEstimate": "Karaniwang haba ng buhay, tantiya: {span}",
+            "reasonHunted": "Mga maninila rito: {predators}",
+            "reasonHunger": "Gutom: walang kamakailang kain",
+            "reasonSafe": "Proteksyon laban sa pangangaso hanggang araw {day} sa Ark"
         }
     },
     "talkPage": {

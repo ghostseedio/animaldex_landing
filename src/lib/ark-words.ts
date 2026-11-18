@@ -13,6 +13,7 @@ import type {ArkLostWords} from "@/lib/ark-extinct";
 import type {ArkEndangeredWords} from "@/lib/ark-crises";
 import type {ArkHuntWords} from "@/lib/ark-live-hunt";
 import type {ArkHeartsWords} from "@/lib/ark-hearts";
+import type {ArkTimeLeftWords} from "@/lib/ark-time-left";
 
 export type ArkHudWords = {
     label: string;
@@ -454,6 +455,8 @@ export type ArkWords = {
     photo: {alt: string; open: string; close: string; fromParent?: string; fromGrandparent?: string; fromGreatGrandparent?: string};
     /** Hearts are lives (behind the server's `ark_hearts`): the card's lives row, recovering, the restore. */
     hearts?: Partial<ArkHeartsWords>;
+    /** "Estimated time left" on an animal at risk (`lib/ark-time-left.ts`); English fills any key a bundle lacks. */
+    timeLeft?: Partial<ArkTimeLeftWords>;
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */

@@ -652,6 +652,16 @@
             "arkDay": "Dzień Ark {day}",
             "broughtBy": "Na pokład wprowadził: {name}",
             "fromLine": "Z linii, którą wprowadził: {name}"
+        },
+        "timeLeft": {
+            "title": "Szacowany pozostały czas",
+            "about": "Około {value}",
+            "hint": "Prawdopodobny zakres z szans, nie obietnica. 1 dzień w Ark to około 55 prawdziwych minut.",
+            "reasonAge": "Typowa długość życia: {span}",
+            "reasonAgeEstimate": "Typowa długość życia, szacunek: {span}",
+            "reasonHunted": "Drapieżniki tutaj: {predators}",
+            "reasonHunger": "Głód: brak niedawnego posiłku",
+            "reasonSafe": "Ochrona przed polowaniem do dnia {day} w Ark"
         }
     },
     "talkPage": {

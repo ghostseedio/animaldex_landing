@@ -652,6 +652,16 @@
             "arkDay": "Dia {day} de l'Ark",
             "broughtBy": "Pujat a bord per {name}",
             "fromLine": "Del llinatge de {name}"
+        },
+        "timeLeft": {
+            "title": "Temps restant estimat",
+            "about": "Uns {value}",
+            "hint": "Un marge probable a partir de probabilitats, no una promesa. 1 dia de l'Ark són uns 55 minuts reals.",
+            "reasonAge": "Esperança de vida habitual: {span}",
+            "reasonAgeEstimate": "Esperança de vida habitual, estimada: {span}",
+            "reasonHunted": "Depredadors aquí: {predators}",
+            "reasonHunger": "Fam: cap àpat recent",
+            "reasonSafe": "Protecció davant la caça fins al dia {day} de l'Ark"
         }
     },
     "talkPage": {

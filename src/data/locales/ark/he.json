@@ -652,6 +652,16 @@
             "arkDay": "יום {day} ב-Ark",
             "broughtBy": "הועלתה לסיפון על ידי {name}",
             "fromLine": "מהשושלת של {name}"
+        },
+        "timeLeft": {
+            "title": "הזמן המשוער שנותר",
+            "about": "בערך {value}",
+            "hint": "טווח סביר לפי הסתברויות, לא הבטחה. יום Ark אחד הוא כ־55 דקות אמיתיות.",
+            "reasonAge": "תוחלת חיים אופיינית: {span}",
+            "reasonAgeEstimate": "תוחלת חיים אופיינית, בהערכה: {span}",
+            "reasonHunted": "טורפים כאן: {predators}",
+            "reasonHunger": "רעב: אין ארוחה לאחרונה",
+            "reasonSafe": "הגנה מפני ציד עד יום Ark {day}"
         }
     },
     "talkPage": {

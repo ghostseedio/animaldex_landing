@@ -652,6 +652,16 @@
             "arkDay": "Ark-dag {day}",
             "broughtBy": "Tagen ombord av {name}",
             "fromLine": "Från {name}s släktlinje"
+        },
+        "timeLeft": {
+            "title": "Beräknad tid kvar",
+            "about": "Omkring {value}",
+            "hint": "Ett sannolikt intervall utifrån odds, inget löfte. 1 Ark-dag är ungefär 55 verkliga minuter.",
+            "reasonAge": "Typisk livslängd: {span}",
+            "reasonAgeEstimate": "Typisk livslängd, uppskattad: {span}",
+            "reasonHunted": "Rovdjur här: {predators}",
+            "reasonHunger": "Hunger: ingen måltid på sistone",
+            "reasonSafe": "Jaktskydd till Ark-dag {day}"
         }
     },
     "talkPage": {

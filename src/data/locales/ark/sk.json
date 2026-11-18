@@ -652,6 +652,16 @@
             "arkDay": "Deň Ark {day}",
             "broughtBy": "Na palubu priviedol/priviedla: {name}",
             "fromLine": "Z línie, ktorú priviedol/priviedla: {name}"
+        },
+        "timeLeft": {
+            "title": "Odhadovaný zostávajúci čas",
+            "about": "Asi {value}",
+            "hint": "Pravdepodobný rozsah podľa šancí, nie sľub. 1 deň v Ark je asi 55 skutočných minút.",
+            "reasonAge": "Typická dĺžka života: {span}",
+            "reasonAgeEstimate": "Typická dĺžka života, odhad: {span}",
+            "reasonHunted": "Predátori tu: {predators}",
+            "reasonHunger": "Hlad: žiadne nedávne jedlo",
+            "reasonSafe": "Ochrana pred lovom do dňa {day} v Ark"
         }
     },
     "talkPage": {

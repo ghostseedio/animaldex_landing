@@ -652,6 +652,16 @@
             "arkDay": "Ark-dag {day}",
             "broughtBy": "Tatt om bord av {name}",
             "fromLine": "Fra slekten til {name}"
+        },
+        "timeLeft": {
+            "title": "Anslått tid igjen",
+            "about": "Omtrent {value}",
+            "hint": "Et sannsynlig intervall ut fra sannsynligheter, ikke et løfte. 1 Ark-dag er omtrent 55 virkelige minutter.",
+            "reasonAge": "Typisk levetid: {span}",
+            "reasonAgeEstimate": "Typisk levetid, anslått: {span}",
+            "reasonHunted": "Rovdyr her: {predators}",
+            "reasonHunger": "Sult: ikke noe nylig måltid",
+            "reasonSafe": "Jaktvern til Ark-dag {day}"
         }
     },
     "talkPage": {

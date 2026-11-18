@@ -652,6 +652,16 @@
             "arkDay": "Ark کا دن {day}",
             "broughtBy": "سوار کرانے والے: {name}",
             "fromLine": "{name} کے شجرے سے"
+        },
+        "timeLeft": {
+            "title": "اندازاً باقی وقت",
+            "about": "تقریباً {value}",
+            "hint": "امکانات کی بنیاد پر ایک ممکنہ دائرہ، وعدہ نہیں۔ 1 Ark دن تقریباً 55 حقیقی منٹ کے برابر ہے۔",
+            "reasonAge": "عام عمر: {span}",
+            "reasonAgeEstimate": "عام عمر، اندازاً: {span}",
+            "reasonHunted": "یہاں کے شکاری جانور: {predators}",
+            "reasonHunger": "بھوک: حال میں کوئی کھانا نہیں",
+            "reasonSafe": "Ark دن {day} تک شکار سے تحفظ"
         }
     },
     "talkPage": {

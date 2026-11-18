@@ -652,6 +652,16 @@
             "arkDay": "Ngày {day} trên Ark",
             "broughtBy": "Được {name} đưa lên tàu",
             "fromLine": "Từ dòng dõi của {name}"
+        },
+        "timeLeft": {
+            "title": "Thời gian còn lại ước tính",
+            "about": "Khoảng {value}",
+            "hint": "Một khoảng có khả năng cao dựa trên xác suất, không phải lời hứa. 1 ngày Ark xấp xỉ 55 phút thực.",
+            "reasonAge": "Tuổi thọ điển hình: {span}",
+            "reasonAgeEstimate": "Tuổi thọ điển hình, ước tính: {span}",
+            "reasonHunted": "Thú săn mồi ở đây: {predators}",
+            "reasonHunger": "Đói: chưa có bữa ăn gần đây",
+            "reasonSafe": "Được bảo vệ khỏi bị săn đến ngày Ark {day}"
         }
     },
     "talkPage": {

@@ -652,6 +652,16 @@
             "arkDay": "Ark দিন {day}",
             "broughtBy": "জাহাজে এনেছেন: {name}",
             "fromLine": "{name}-এর বংশধারা থেকে"
+        },
+        "timeLeft": {
+            "title": "আনুমানিক অবশিষ্ট সময়",
+            "about": "প্রায় {value}",
+            "hint": "সম্ভাবনার ভিত্তিতে একটি সম্ভাব্য পরিসর, প্রতিশ্রুতি নয়। ১ Ark দিন মোটামুটি ৫৫ বাস্তব মিনিটের সমান।",
+            "reasonAge": "সাধারণ আয়ু: {span}",
+            "reasonAgeEstimate": "সাধারণ আয়ু, আনুমানিক: {span}",
+            "reasonHunted": "এখানকার শিকারি প্রাণী: {predators}",
+            "reasonHunger": "ক্ষুধা: সাম্প্রতিক কোনো খাবার নেই",
+            "reasonSafe": "Ark দিন {day} পর্যন্ত শিকার থেকে সুরক্ষা"
         }
     },
     "talkPage": {

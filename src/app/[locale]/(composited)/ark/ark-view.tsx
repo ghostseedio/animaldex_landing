@@ -1382,6 +1382,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                             text: fillArkWords(words.share.textAnimal, {animal: selected.name, count: (snapshot?.animals.filter((animal) => arkSpeciesKey(animal) === arkSpeciesKey(selected)).length ?? 1).toLocaleString(locale)})
                         }}
                         lives={selectedLives && ownerHearts ? {entry: selectedLives, words: heartsWords, cost: ownerHearts.healCost, onRestored: onHeartRestored} : null}
+                        snapshot={snapshot}
                     />
                 ) : null}
 

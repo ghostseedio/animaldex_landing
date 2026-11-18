@@ -652,6 +652,16 @@
             "arkDay": "Ark ದಿನ {day}",
             "broughtBy": "Ark ಗೆ ತಂದವರು: {name}",
             "fromLine": "{name} ಅವರ ವಂಶದಿಂದ"
+        },
+        "timeLeft": {
+            "title": "ಅಂದಾಜು ಉಳಿದ ಸಮಯ",
+            "about": "ಸುಮಾರು {value}",
+            "hint": "ಸಂಭವನೀಯತೆಗಳ ಆಧಾರದ ಮೇಲೆ ಸಂಭಾವ್ಯ ಶ್ರೇಣಿ, ಭರವಸೆ ಅಲ್ಲ. 1 Ark ದಿನ ಸುಮಾರು 55 ನಿಜ ನಿಮಿಷಗಳು.",
+            "reasonAge": "ಸಾಮಾನ್ಯ ಆಯುಷ್ಯ: {span}",
+            "reasonAgeEstimate": "ಸಾಮಾನ್ಯ ಆಯುಷ್ಯ, ಅಂದಾಜು: {span}",
+            "reasonHunted": "ಇಲ್ಲಿನ ಬೇಟೆಗಾರ ಪ್ರಾಣಿಗಳು: {predators}",
+            "reasonHunger": "ಹಸಿವು: ಇತ್ತೀಚೆಗೆ ಆಹಾರ ಇಲ್ಲ",
+            "reasonSafe": "Ark ದಿನ {day} ವರೆಗೆ ಬೇಟೆಯಿಂದ ರಕ್ಷಣೆ"
         }
     },
     "talkPage": {

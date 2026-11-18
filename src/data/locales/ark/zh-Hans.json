@@ -652,6 +652,16 @@
             "arkDay": "Ark 第 {day} 天",
             "broughtBy": "由 {name} 带上船",
             "fromLine": "来自 {name} 的血统"
+        },
+        "timeLeft": {
+            "title": "预计剩余时间",
+            "about": "约 {value}",
+            "hint": "根据概率得出的可能范围，并非承诺。Ark 的 1 天约合现实中的 55 分钟。",
+            "reasonAge": "常见寿命：{span}",
+            "reasonAgeEstimate": "常见寿命（估计）：{span}",
+            "reasonHunted": "这里的捕食者：{predators}",
+            "reasonHunger": "饥饿：近期没有进食",
+            "reasonSafe": "受狩猎保护，直至 Ark 第 {day} 天"
         }
     },
     "talkPage": {

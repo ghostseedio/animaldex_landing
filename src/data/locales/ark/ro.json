@@ -652,6 +652,16 @@
             "arkDay": "Ziua {day} în Ark",
             "broughtBy": "Adus la bord de {name}",
             "fromLine": "Din descendența lui {name}"
+        },
+        "timeLeft": {
+            "title": "Timp rămas estimat",
+            "about": "Aproximativ {value}",
+            "hint": "Un interval probabil, din probabilități, nu o promisiune. O zi în Ark înseamnă aproximativ 55 de minute reale.",
+            "reasonAge": "Durata de viață tipică: {span}",
+            "reasonAgeEstimate": "Durata de viață tipică, estimată: {span}",
+            "reasonHunted": "Prădători aici: {predators}",
+            "reasonHunger": "Foame: nicio masă recentă",
+            "reasonSafe": "Protecție împotriva vânătorii până în ziua {day} din Ark"
         }
     },
     "talkPage": {

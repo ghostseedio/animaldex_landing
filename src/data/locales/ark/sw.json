@@ -652,6 +652,16 @@
             "arkDay": "Siku ya Ark {day}",
             "broughtBy": "Alipandishwa na {name}",
             "fromLine": "Kutoka ukoo wa {name}"
+        },
+        "timeLeft": {
+            "title": "Muda unaokadiriwa uliobaki",
+            "about": "Takriban {value}",
+            "hint": "Kiwango kinachowezekana kutokana na uwezekano, si ahadi. Siku 1 ya Ark ni takriban dakika 55 halisi.",
+            "reasonAge": "Muda wa kawaida wa maisha: {span}",
+            "reasonAgeEstimate": "Muda wa kawaida wa maisha, makadirio: {span}",
+            "reasonHunted": "Wanyama wawindaji hapa: {predators}",
+            "reasonHunger": "Njaa: hakuna mlo wa hivi karibuni",
+            "reasonSafe": "Ulinzi dhidi ya uwindaji hadi siku {day} ya Ark"
         }
     },
     "talkPage": {

@@ -652,6 +652,16 @@
             "arkDay": "Jour {day} de l'Ark",
             "broughtBy": "Amené à bord par {name}",
             "fromLine": "De la lignée de {name}"
+        },
+        "timeLeft": {
+            "title": "Temps restant estimé",
+            "about": "Environ {value}",
+            "hint": "Une fourchette probable tirée des probabilités, pas une promesse. 1 jour d'Ark vaut environ 55 minutes réelles.",
+            "reasonAge": "Durée de vie habituelle : {span}",
+            "reasonAgeEstimate": "Durée de vie habituelle, estimée : {span}",
+            "reasonHunted": "Prédateurs ici : {predators}",
+            "reasonHunger": "Faim : aucun repas récent",
+            "reasonSafe": "Protection contre la chasse jusqu'au jour {day} de l'Ark"
         }
     },
     "talkPage": {

@@ -652,6 +652,16 @@
             "arkDay": "Ark-dag {day}",
             "broughtBy": "Aan boord gebracht door {name}",
             "fromLine": "Uit de lijn van {name}"
+        },
+        "timeLeft": {
+            "title": "Geschatte resterende tijd",
+            "about": "Ongeveer {value}",
+            "hint": "Een waarschijnlijk bereik uit kansen, geen belofte. 1 Ark-dag is ongeveer 55 echte minuten.",
+            "reasonAge": "Typische levensduur: {span}",
+            "reasonAgeEstimate": "Typische levensduur, geschat: {span}",
+            "reasonHunted": "Roofdieren hier: {predators}",
+            "reasonHunger": "Honger: geen recente maaltijd",
+            "reasonSafe": "Bescherming tegen jacht tot Ark-dag {day}"
         }
     },
     "talkPage": {

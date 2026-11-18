@@ -4864,6 +4864,16 @@
       "arkDay": "Ark day {day}",
       "broughtBy": "Brought aboard by {name}",
       "fromLine": "From {name}'s line"
+    },
+    "timeLeft": {
+      "title": "Estimated time left",
+      "about": "About {value}",
+      "hint": "A likely range from odds, not a promise. 1 Ark day is about 55 real minutes.",
+      "reasonAge": "Typical lifespan: {span}",
+      "reasonAgeEstimate": "Typical lifespan, estimated: {span}",
+      "reasonHunted": "Predators here: {predators}",
+      "reasonHunger": "Hunger: no recent meal",
+      "reasonSafe": "Hunting protection until Ark day {day}"
     }
   },
   "seo": {

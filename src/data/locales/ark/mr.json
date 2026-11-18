@@ -652,6 +652,16 @@
             "arkDay": "Ark दिवस {day}",
             "broughtBy": "जहाजावर आणणारे: {name}",
             "fromLine": "{name} यांच्या वंशातून"
+        },
+        "timeLeft": {
+            "title": "अंदाजे उरलेला वेळ",
+            "about": "सुमारे {value}",
+            "hint": "शक्यतांवर आधारित संभाव्य श्रेणी, आश्वासन नाही. 1 Ark दिवस म्हणजे सुमारे 55 खरे मिनिटे.",
+            "reasonAge": "सामान्य आयुष्य: {span}",
+            "reasonAgeEstimate": "सामान्य आयुष्य, अंदाजे: {span}",
+            "reasonHunted": "येथील शिकारी प्राणी: {predators}",
+            "reasonHunger": "भूक: अलीकडे जेवण नाही",
+            "reasonSafe": "Ark दिवस {day} पर्यंत शिकारीपासून संरक्षण"
         }
     },
     "talkPage": {

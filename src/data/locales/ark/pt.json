@@ -652,6 +652,16 @@
             "arkDay": "Dia {day} da Ark",
             "broughtBy": "Trazido a bordo por {name}",
             "fromLine": "Da linhagem de {name}"
+        },
+        "timeLeft": {
+            "title": "Tempo restante estimado",
+            "about": "Cerca de {value}",
+            "hint": "Um intervalo provável a partir de probabilidades, não uma promessa. 1 dia da Ark equivale a cerca de 55 minutos reais.",
+            "reasonAge": "Esperança de vida típica: {span}",
+            "reasonAgeEstimate": "Esperança de vida típica, estimada: {span}",
+            "reasonHunted": "Predadores aqui: {predators}",
+            "reasonHunger": "Fome: sem refeição recente",
+            "reasonSafe": "Proteção contra a caça até o dia {day} da Ark"
         }
     },
     "talkPage": {

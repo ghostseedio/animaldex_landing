@@ -652,6 +652,16 @@
             "arkDay": "يوم Ark {day}",
             "broughtBy": "أصعده على المتن: {name}",
             "fromLine": "من سلالة {name}"
+        },
+        "timeLeft": {
+            "title": "الوقت المتبقي المقدّر",
+            "about": "نحو {value}",
+            "hint": "نطاق محتمل مبني على الاحتمالات، وليس وعدًا. يوم Ark الواحد يساوي نحو 55 دقيقة حقيقية.",
+            "reasonAge": "العمر المعتاد: {span}",
+            "reasonAgeEstimate": "العمر المعتاد، تقديريًا: {span}",
+            "reasonHunted": "المفترسات هنا: {predators}",
+            "reasonHunger": "الجوع: لا وجبة حديثة",
+            "reasonSafe": "حماية من الصيد حتى يوم Ark {day}"
         }
     },
     "talkPage": {

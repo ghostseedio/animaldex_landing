@@ -142,6 +142,16 @@ export type ArkAnimal = {
      */
     lifespan_days?: number | null;
     lifespan_estimate?: boolean;
+    /**
+     * PROPOSED (not sent yet; "Estimated time left", lane ark-v3-timeleft): the upper end of the kind's wild lifespan in days
+     * (`upper(lifespan_days_wild)`; `lifespan_days` is the lower end). Absent: the model assumes the engine's usual spread.
+     */
+    lifespan_days_hi?: number | null;
+    /**
+     * PROPOSED (not sent yet): a predator kind's meal interval in Ark days, the engine's own (`mealInterval`: stored, else
+     * from class and mass). Absent: the model works it out from body mass and tries both metabolism classes.
+     */
+    hunt_interval_days?: number | null;
     /** The species' stored activity: when it sleeps (the scene's day and night). */
     activity?: ArkActivity | null;
     sociality?: ArkSociality | null;
@@ -195,6 +205,12 @@ export type ArkSnapshot = {
     island?: ArkIsland;
     /** Part C: both islands' living counts (`voyage_public_v3`'s `islands`). */
     islands?: ArkIslandCounts;
+    /**
+     * PROPOSED (not sent yet): the launch grace's hunting protection (`voyage_config` launch_grace_real_days and
+     * launch_ramp_real_days from `voyages.clock_started_ark_day`): no animal is hunted before `ends_ark_day`, and each
+     * animal's own start is inside the next `ramp_ark_days`. Absent: unknown, and "Estimated time left" leaves hunting out.
+     */
+    hunt_grace?: {ends_ark_day: number; ramp_ark_days: number};
 };
 
 /** A real hunt under way (`liveHunt`): the hunter, its species, and whether it is still hunting or eating its catch. */

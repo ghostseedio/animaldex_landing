@@ -652,6 +652,16 @@
             "arkDay": "Ark-Tag {day}",
             "broughtBy": "An Bord gebracht von {name}",
             "fromLine": "Aus der Linie von {name}"
+        },
+        "timeLeft": {
+            "title": "Geschätzte Restzeit",
+            "about": "Etwa {value}",
+            "hint": "Eine wahrscheinliche Spanne aus Wahrscheinlichkeiten, kein Versprechen. 1 Ark-Tag entspricht etwa 55 echten Minuten.",
+            "reasonAge": "Typische Lebensdauer: {span}",
+            "reasonAgeEstimate": "Typische Lebensdauer, geschätzt: {span}",
+            "reasonHunted": "Raubtiere hier: {predators}",
+            "reasonHunger": "Hunger: keine Mahlzeit in letzter Zeit",
+            "reasonSafe": "Jagdschutz bis Ark-Tag {day}"
         }
     },
     "talkPage": {

@@ -652,6 +652,16 @@
             "arkDay": "Ark రోజు {day}",
             "broughtBy": "Ark ఎక్కించినవారు: {name}",
             "fromLine": "{name} వంశం నుండి"
+        },
+        "timeLeft": {
+            "title": "అంచనా వేసిన మిగిలిన సమయం",
+            "about": "సుమారు {value}",
+            "hint": "సంభావ్యతల ఆధారంగా సాధ్యమైన పరిధి, హామీ కాదు. 1 Ark రోజు సుమారు 55 నిజమైన నిమిషాలు.",
+            "reasonAge": "సాధారణ ఆయుష్షు: {span}",
+            "reasonAgeEstimate": "సాధారణ ఆయుష్షు, అంచనా: {span}",
+            "reasonHunted": "ఇక్కడి వేటాడే జంతువులు: {predators}",
+            "reasonHunger": "ఆకలి: ఇటీవల ఆహారం లేదు",
+            "reasonSafe": "Ark రోజు {day} వరకు వేట నుండి రక్షణ"
         }
     },
     "talkPage": {

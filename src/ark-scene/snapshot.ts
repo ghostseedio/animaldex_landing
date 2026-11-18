@@ -66,7 +66,10 @@ function animal(raw: unknown): ArkAnimal | null {
     if (typeof row.lifespan_days === "number" && Number.isFinite(row.lifespan_days) && row.lifespan_days > 0) {
         life.lifespan_days = row.lifespan_days;
         life.lifespan_estimate = row.lifespan_estimate === true;
+        // PROPOSED (not sent yet): the upper end of that lifespan, and a predator kind's meal interval.
+        if (typeof row.lifespan_days_hi === "number" && Number.isFinite(row.lifespan_days_hi) && row.lifespan_days_hi >= row.lifespan_days) life.lifespan_days_hi = row.lifespan_days_hi;
     }
+    if (typeof row.hunt_interval_days === "number" && Number.isFinite(row.hunt_interval_days) && row.hunt_interval_days > 0) life.hunt_interval_days = row.hunt_interval_days;
     if ("activity" in row) life.activity = arkActivity(row.activity);
     if (row.sociality === "solitary" || row.sociality === "pair" || row.sociality === "group") life.sociality = row.sociality;
     if (bringers.length) life.bringers = bringers;
@@ -121,6 +124,15 @@ function islandCounts(value: unknown): {wild: number; town: number; zoo: number}
     return {wild: count(row.wild), town: count(row.town), zoo: count(row.zoo)};
 }
 
+/** The launch grace's end (an Ark day) and its ramp (Ark days), or null. */
+function huntGrace(value: unknown): {ends_ark_day: number; ramp_ark_days: number} | null {
+    if (!value || typeof value !== "object") return null;
+    const row = value as Record<string, unknown>;
+    const ends = finite(row.ends_ark_day);
+    const ramp = finite(row.ramp_ark_days);
+    return ends !== null && ends >= 0 && ramp !== null && ramp >= 0 ? {ends_ark_day: ends, ramp_ark_days: ramp} : null;
+}
+
 function finite(value: unknown): number | null {
     return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
@@ -169,6 +181,8 @@ export function decodeArkSnapshot(raw: unknown): ArkSnapshot | null {
         ...(Array.isArray(row.nests) ? {nests: row.nests.map(nestRow).filter((nest): nest is ArkNestRow => nest !== null)} : {}),
         // Part C: one island's read (`voyage_public_v3`): which island, and both islands' counts.
         ...(row.island === "wild" || row.island === "town" ? {island: row.island} : {}),
-        ...(islandCounts(row.islands) ? {islands: islandCounts(row.islands)!} : {})
+        ...(islandCounts(row.islands) ? {islands: islandCounts(row.islands)!} : {}),
+        // PROPOSED (not sent yet): the hunting protection of the launch grace.
+        ...(huntGrace(voyage.hunt_grace ?? row.hunt_grace) ? {hunt_grace: huntGrace(voyage.hunt_grace ?? row.hunt_grace)!} : {})
     };
 }
