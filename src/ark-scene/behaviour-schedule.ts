@@ -42,7 +42,8 @@ import {once, SlicedBuild, type BuildTask} from "@/ark-scene/behaviour-build";
 import {isAwake} from "@/lib/ark-daylight";
 import {arkAwakeAtHour, type Sleep} from "@/ark-scene/sleep-hours";
 import {animalPersonality} from "@/lib/ark-clock";
-import {hashString} from "@/ark-scene/world";
+import {arkWorld, hashString} from "@/ark-scene/world";
+import {craterAt} from "@/ark-scene/islands/wild/crater";
 import {boutPhase, rhythmChoice} from "@/ark-scene/sd-rhythm";
 import type {ArkCondition, ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
@@ -613,6 +614,26 @@ export function perchSuits(point: Pick<AttachPoint, "size" | "hidden" | "tag">, 
     if (branch && length >= HEAVY_PERCH_LENGTH) return !point.hidden && length <= point.size[1];
     return length <= point.size[1] * (point.hidden ? 1.05 : 1.5);
 }
+
+/** Near the old volcano's rim (v2's wild island, `islands/wild/crater.ts`): within RIM_REACH m of its crest either side. */
+const RIM_REACH = 20;
+function onCraterRim(world: ScheduleWorld, centre: {x: number; z: number}): boolean {
+    // (The wild island's own frame: the town's sampler is centred across the strait.)
+    const middle = world.sampler.centre;
+    if (arkWorld() !== "v2" || (middle && (middle.x !== 0 || middle.z !== 0))) return false;
+    return Math.abs(craterAt(centre.x, centre.z).rim) < RIM_REACH;
+}
+/**
+ * A flyer cramped on the rim: its range (squeezed by its neighbours on the crest, `spaceHomes`) is shorter than a flight
+ * worth its take-off. Its perches there are a rock top or a ledge a few metres from where it stands, and it hopped between
+ * them and its patch of ground all day: a bald eagle's 12 m at a third of its cruise, the pair on the same two spots
+ * (decision 379). It stays on its patch instead and flies only to fly or soar.
+ */
+function rimCramped(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, centre: {x: number; z: number}): boolean {
+    return profile.move === "fly" && onCraterRim(world, centre) && rangeCap(profile, animal) < flightWorth(profile, animal);
+}
+/** The places a flyer goes up to perch on. */
+const PERCH_PLACES: ReadonlySet<ArkInteraction> = new Set<ArkInteraction>(["perch_branch", "perch_rock", "cliff_ledge"]);
 
 /** A seeded attach point of these tags within reach of a centre (and suiting its size), or null. */
 function placeNear(world: ScheduleWorld, centre: {x: number; z: number}, length: number, tags: AttachTag[], radius: number, roll: number, climber = false): AttachPoint | null {
@@ -1647,6 +1668,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         for (const place of placeKinds) {
             // Anyone may rest in the shade; every other place is the animal's own (a seal's shore, a lizard's rock).
             if (!profile.interactions.includes(place) && !(behaviour === "rest" && place === "shade") && doing !== "browse") continue;
+            if (flyer && PERCH_PLACES.has(place) && rimCramped(world, profile, animal, own)) continue;
             const tags = INTERACTION_TAGS[place] ?? [];
             const far = place === "drink_edge" || place === "porch_light";
             const cap = Math.min(rangeCap(profile, animal), group ? rangeCap(group.profile, group.leader) / 2 : Infinity);
@@ -1710,7 +1732,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
             }
             // (Lane MA3: one that walks first flies across its ground and comes down on it, never up to a perch: else it
             // would fly twice, up and down again.)
-            const perch = roll < 0.5 && profile.move === "fly" ? placeNear(world, own, animal.length, perchTags(profile), radius * (group ? 0.5 : 1), random()) : null;
+            const perch = roll < 0.5 && profile.move === "fly" && !rimCramped(world, profile, animal, own) ? placeNear(world, own, animal.length, perchTags(profile), radius * (group ? 0.5 : 1), random()) : null;
             if (perch) return {doing: behaviour, to: spotOf(perch), mode: "air", stay: stayBeats("perch", random, null)};
             if (roll > 0.88 && floats(profile)) {
                 // (Down on water only where there is water: with none near, `waterSpot` is the ground there, a roof gull's

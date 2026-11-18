@@ -84,31 +84,72 @@ export function rimHeight(a: number): number {
 
 export type OutletHit = {d: number; level: number; width: number; depth: number; /** 0 at the lake … 1 at the lip. */ along: number; dx: number; dz: number; /** Past its ends (m along its line beyond the lake's end or the lip): 0 beside it. */ beyond: number};
 
-/** The nearest point of the outlet stream's line. */
-export function outletAt(x: number, z: number): OutletHit {
-    let best: OutletHit = {d: Infinity, level: CRATER.level, width: 2, depth: 0.5, along: 0, dx: 0, dz: 1, beyond: 0};
+/** The outlet's segments, worked out once (each sample asks for its nearest point up to three times). */
+const OUTLET_SEGMENTS = (() => {
     let total = 0;
     for (let i = 1; i < OUTLET.length; i++) total += Math.hypot(OUTLET[i].x - OUTLET[i - 1].x, OUTLET[i].z - OUTLET[i - 1].z);
     let before = 0;
+    const out: Array<{a: (typeof OUTLET)[number]; b: (typeof OUTLET)[number]; dx: number; dz: number; seg: number; before: number}> = [];
     for (let i = 1; i < OUTLET.length; i++) {
         const a = OUTLET[i - 1];
         const b = OUTLET[i];
         const dx = b.x - a.x;
         const dz = b.z - a.z;
         const seg = Math.hypot(dx, dz);
+        out.push({a, b, dx, dz, seg, before});
+        before += seg;
+    }
+    return {list: out, total};
+})();
+/** The box round the outlet's line: no point of the line is nearer than the box. */
+const OUTLET_BOX = {
+    x0: Math.min(...OUTLET.map((p) => p.x)),
+    x1: Math.max(...OUTLET.map((p) => p.x)),
+    z0: Math.min(...OUTLET.map((p) => p.z)),
+    z1: Math.max(...OUTLET.map((p) => p.z))
+};
+
+/** A lower bound of `outletAt(x, z).d`: the distance to the outlet's box (m). */
+export function outletFloor(x: number, z: number): number {
+    return Math.hypot(Math.max(OUTLET_BOX.x0 - x, 0, x - OUTLET_BOX.x1), Math.max(OUTLET_BOX.z0 - z, 0, z - OUTLET_BOX.z1));
+}
+
+/** The nearest point of the outlet stream's line. */
+export function outletAt(x: number, z: number): OutletHit {
+    const {list, total} = OUTLET_SEGMENTS;
+    let bestD = Infinity;
+    let bestWidth = 2;
+    let best = -1;
+    let bestT = 0;
+    let bestRaw = 0;
+    for (let i = 0; i < list.length; i++) {
+        const {a, b, dx, dz, seg} = list[i];
         const raw = ((x - a.x) * dx + (z - a.z) * dz) / (seg * seg);
         const t = Math.min(Math.max(raw, 0), 1);
         const d = Math.hypot(x - a.x - dx * t, z - a.z - dz * t);
         // (Nearest by the water's edge, not its centre line: the stream widens to the lip, and its banks are its edges.)
         const width = a.width + (b.width - a.width) * t;
-        if (d - width < best.d - best.width) {
-            const beyond = i === 1 && raw < 0 ? -raw * seg : i === OUTLET.length - 1 && raw > 1 ? (raw - 1) * seg : 0;
-            best = {d, level: a.level + (b.level - a.level) * t, width, depth: a.depth + (b.depth - a.depth) * t, along: (before + t * seg) / total, dx: dx / seg, dz: dz / seg, beyond};
+        if (d - width < bestD - bestWidth) {
+            bestD = d;
+            bestWidth = width;
+            best = i;
+            bestT = t;
+            bestRaw = raw;
         }
-        before += seg;
     }
-    return best;
+    if (best < 0) return {d: Infinity, level: CRATER.level, width: 2, depth: 0.5, along: 0, dx: 0, dz: 1, beyond: 0};
+    const {a, b, dx, dz, seg, before} = list[best];
+    const t = bestT;
+    const beyond = best === 0 && bestRaw < 0 ? -bestRaw * seg : best === list.length - 1 && bestRaw > 1 ? (bestRaw - 1) * seg : 0;
+    return {d: bestD, level: a.level + (b.level - a.level) * t, width: bestWidth, depth: a.depth + (b.depth - a.depth) * t, along: (before + t * seg) / total, dx: dx / seg, dz: dz / seg, beyond};
 }
+
+/**
+ * The lava tongues: the bearing of each one's axis (rad), its half-width there (rad) and how far it runs (of the flank).
+ * `reachOff`: past this angle from its axis a tongue is nothing (its axis wanders ≤0.245 rad, its width ≤1.495×, its
+ * levee ends at 1.15 widths), so it is not worked out.
+ */
+const LAVA_TONGUES = ([[0.92, 0.2, 0.9], [0.1, 0.16, 0.78], [2.55, 0.14, 0.6]] as const).map(([axis, wide, reach]) => ({axis, wide, reach, reachOff: 0.25 + 1.75 * wide}));
 
 /** How much a point is the lava flows' (0…1): two old tongues down the south-east and the east flanks, levees at their edges. */
 export function lavaFlow(x: number, z: number): {flow: number; levee: number} {
@@ -118,7 +159,13 @@ export function lavaFlow(x: number, z: number): {flow: number; levee: number} {
     if (out < -2 || out > FLANK * 0.95) return {flow: 0, levee: 0};
     let flow = 0;
     let levee = 0;
-    for (const [axis, wide, reach] of [[0.92, 0.2, 0.9], [0.1, 0.16, 0.78], [2.55, 0.14, 0.6]] as const) {
+    for (const {axis, wide, reach, reachOff} of LAVA_TONGUES) {
+        // (Nothing of it here: past its end, or too far round from its axis.)
+        if (out >= FLANK * reach) continue;
+        let from = a - axis;
+        while (from > Math.PI) from -= TAU;
+        while (from < -Math.PI) from += TAU;
+        if (Math.abs(from) >= reachOff) continue;
         // (The tongue wanders as it runs out, and widens.)
         const centre = axis + 0.12 * Math.sin(out * 0.07 + axis * 5) + 0.25 * (fbm(out * 0.03 + axis * 3, axis) - 0.5);
         let off = a - centre;
@@ -190,8 +237,8 @@ export function volcanoElevation(x: number, z: number, land: number, inland: num
     let flank = 0;
     if (out > -4) {
         // (Toward the falls the cone is cut back to a headwall: the valley's own steep face is its flank there.)
-        const outlet = outletAt(x, z);
-        const cut = smoothstep(36, 17, outlet.d) * smoothstep(-8, 10, out);
+        // (Further than 36 m from it the cut is nothing: the outlet's box says so without its nearest point.)
+        const cut = outletFloor(x, z) >= 36 ? 0 : smoothstep(36, 17, outletAt(x, z).d) * smoothstep(-8, 10, out);
         const run = FLANK * (1 + 0.16 * Math.sin(3 * a + 0.4)) * (1 - 0.86 * cut);
         const t = Math.min(Math.max(out, 0) / run, 1);
         flank = crest * Math.pow(1 - t, 1.55);

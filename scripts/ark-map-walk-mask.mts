@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 /**
  * Writes src/ark-scene/map/walk-mask.json: the behaviour lane's walk grid (`behaviour-nav.ts`, from its scenery
- * sampler) as two bits a cell, at the two slopes placement asks (MAX_SLOPE, MOUNTAIN_SLOPE), so placement never builds
+ * sampler) as two bits a cell, at the slopes placement asks (WALK_MASK_SLOPES), so placement never builds
  * the behaviour world at mount (`map/walk-mask.ts`). Run it again when the terrain or the scenery changes (the map
  * test fails until it is).
  *
@@ -13,7 +13,7 @@
 import {writeFileSync} from "node:fs";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
-import {MAX_SLOPE, MOUNTAIN_SLOPE, navGrid} from "@/ark-scene/behaviour-nav";
+import {navGrid, WALK_MASK_SLOPES} from "@/ark-scene/behaviour-nav";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import {encodeMask} from "@/ark-scene/map/walk-mask";
 import {arkWorld, TERRAIN_HALF} from "@/ark-scene/world";
@@ -29,7 +29,7 @@ const sampler = worldSampler();
 const grid = navGrid(sampler);
 const {size, walk, steep} = grid.cells;
 const slopes: Record<string, string> = {};
-for (const slope of [MAX_SLOPE, MOUNTAIN_SLOPE]) slopes[String(slope)] = encodeMask(size, (k) => walk[k] === 1 && steep[k] <= slope);
+for (const slope of WALK_MASK_SLOPES) slopes[String(slope)] = encodeMask(size, (k) => walk[k] === 1 && steep[k] <= slope);
 const file = {cell: (TERRAIN_HALF * 2) / size === 2 ? 2 : (TERRAIN_HALF * 2) / size, size, half: TERRAIN_HALF, version: sampler.version, slopes};
 writeFileSync(path.join(root, v2 ? "src/ark-scene/map/walk-mask-v2.json" : wild ? "src/ark-scene/map/walk-mask-no-hamlet.json" : "src/ark-scene/map/walk-mask.json"), JSON.stringify(file) + "\n");
 console.log(`walk mask: ${size}x${size} cells, ${Object.keys(slopes).length} slopes, from ${sampler.version}`);

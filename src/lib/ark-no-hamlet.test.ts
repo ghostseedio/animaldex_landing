@@ -19,7 +19,7 @@ import {hamletLandAt} from "@/ark-scene/props/hamlet-land";
 import {hamletPlotsFor, homePlots, reservedAt, reservedPlots} from "@/ark-scene/map/hamlet";
 import {laneDistance, sampleGround, villageLaneDistance, zoneAt, HAMLET_LANES} from "@/ark-scene/world";
 import {worldSampler as behaviourWorldSampler} from "@/ark-scene/world-sampler";
-import {MAX_SLOPE, MOUNTAIN_SLOPE, navGrid} from "@/ark-scene/behaviour-nav";
+import {navGrid, WALK_MASK_SLOPES} from "@/ark-scene/behaviour-nav";
 import {maskWalkable, WALK_MASK_NO_HAMLET_VERSION} from "@/ark-scene/map/walk-mask";
 import {mapPoints} from "@/ark-scene/map/place";
 import {validateMap} from "@/ark-scene/map/validate";
@@ -144,7 +144,7 @@ test("islands mode: the walk mask is the live grid's, cell for cell (scripts/ark
         const grid = navGrid(sampler);
         const {size} = grid.cells;
         const wrong: string[] = [];
-        for (const slope of [MAX_SLOPE, MOUNTAIN_SLOPE]) {
+        for (const slope of WALK_MASK_SLOPES) {
             for (let j = 0; j < size; j++) {
                 for (let i = 0; i < size; i++) {
                     const x = -132 + (i + 0.5) * 2;

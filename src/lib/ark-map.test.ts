@@ -29,7 +29,7 @@ import type {ArkAnimal} from "@/ark-scene/types";
 import {placeAnimals} from "@/ark-scene/placement";
 import {drawnRocks, inRock, ROCK_CELL, touchesRock} from "@/ark-scene/map/rocks";
 import {maskWalkable, setWalkMaskEnabled, WALK_MASK_VERSION} from "@/ark-scene/map/walk-mask";
-import {MAX_SLOPE, MOUNTAIN_SLOPE, navGrid} from "@/ark-scene/behaviour-nav";
+import {MAX_SLOPE, navGrid, WALK_MASK_SLOPES} from "@/ark-scene/behaviour-nav";
 import {worldSampler as behaviourWorldSampler} from "@/ark-scene/world-sampler";
 
 const TABLE = table as unknown as {points: Record<string, Record<string, number>>; species: Record<string, unknown[]>};
@@ -413,7 +413,7 @@ test("placement never builds the behaviour world: its walk grid's prebuilt mask 
     const grid = navGrid(sampler);
     const {size} = grid.cells;
     const wrong: string[] = [];
-    for (const slope of [MAX_SLOPE, MOUNTAIN_SLOPE]) {
+    for (const slope of WALK_MASK_SLOPES) {
         for (let j = 0; j < size; j++) {
             for (let i = 0; i < size; i++) {
                 const x = -132 + (i + 0.5) * 2;
