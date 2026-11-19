@@ -29,7 +29,7 @@ import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/to
 import {domeZoneOf, zooResidents} from "@/ark-scene/islands/town/zoo-homes";
 import {DOME, DOME_FLOATERS, DOME_LAGOON, domeKeep, domeZoneAt, intoLagoon} from "@/ark-scene/islands/town/dome";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
-import {stayingSet, ruralPenOf, ruralPondNorm, type RuralPen} from "@/ark-scene/islands/town/rural";
+import {stayingSet, ruralPenOf, ruralPondNorm, RURAL_POND_DEEP, RURAL_POND_RANGE, type RuralPen} from "@/ark-scene/islands/town/rural";
 import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
@@ -300,7 +300,8 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         if (field) {
             const where: SpotWhere = field.kinds.includes("poultry") ? "run" : field.kinds.length ? "paddock" : "farmyard";
             spot = ruralSpot(field, animal.id, length);
-            info = penned({area: "farm", where, place: field.id, enclosure: null, range: 9, still: false}, field.at, length);
+            // (Ark ducks: a pond's waterfowl keep to the pond, their range its own, so their swims cross the water.)
+            info = penned({area: "farm", where, place: field.id, enclosure: null, range: field.kinds.includes("waterfowl") ? RURAL_POND_RANGE : 9, still: false}, field.at, length);
             rank = (own >>> 9) % 3;
         } else if (animal.area === "house" && keeping !== "livery") {
             // Lane TB: how it is kept (`tanks.ts` homeKeeping). A pond is a house's; a long pet's vivarium or tank a house's
@@ -489,8 +490,9 @@ export function ruralFields(animals: readonly ArkAnimal[]): Map<string, RuralPen
 
 /**
  * A spot in a field: a rendezvous of the animal's id over a 1.5 m grid inside its boundary (half its body and a hand
- * in), on dry ground (never in the duck pond's water: the waterfowl on its banks) and clear of the field's shelters,
- * arks and hen houses. Its height is the ground's there.
+ * in), on dry ground (never in the duck pond's water) and clear of the field's shelters, arks and hen houses; the
+ * waterfowl's field (Ark ducks) the other way: its spots are the pond's own water, where they float. Its height is the
+ * ground's there (a floater's the bed's: the scene draws it at its float line over it, `water-float.ts`).
  */
 const RURAL_SPOTS = new Map<string, TownSpot[]>();
 function ruralSpot(field: RuralPen, id: string, length: number): TownSpot | null {
@@ -499,13 +501,15 @@ function ruralSpot(field: RuralPen, id: string, length: number): TownSpot | null
     let list = RURAL_SPOTS.get(key);
     if (!list) {
         list = [];
+        const afloat = field.kinds.includes("waterfowl");
         const c = Math.cos(field.at.rot);
         const sn = Math.sin(field.at.rot);
         for (let lx = -field.at.w / 2 + m; lx <= field.at.w / 2 - m; lx += 1.5) {
             for (let lz = -field.at.d / 2 + m; lz <= field.at.d / 2 - m; lz += 1.5) {
                 const x = field.at.x + lx * c - lz * sn;
                 const z = field.at.z + lx * sn + lz * c;
-                if (ruralPondNorm(x, z) < 1.3 || inBuilding(x, z, m + 0.2)) continue;
+                if (afloat ? ruralPondNorm(x, z) > RURAL_POND_DEEP : ruralPondNorm(x, z) < 1.3) continue;
+                if (inBuilding(x, z, m + 0.2)) continue;
                 list.push({x, z, y: townHeight(x, z), area: "farm", where: "paddock", place: field.id, sizes: ["small", "medium", "large"], protected: true});
             }
         }
