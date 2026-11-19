@@ -8,6 +8,7 @@ import {
     breathAt,
     depthSeed,
     depthTable,
+    FLOAT_BOB,
     FLOAT_SINK,
     FLOOR_CLEAR,
     fitInWater,
@@ -109,6 +110,7 @@ test("through 24 hours each water species stays in its band, under the surface b
         const seed = depthSeed(animal.id);
         const body = arkBody(animal);
         let surfaced = false;
+        let bobbed = false;
         for (let t = 0; t < DAY; t += 7 * 60 + 13) {
             const clock = START + t;
             // Its loop about its spot, as the scene swims it (kept in the lake's open water there).
@@ -132,7 +134,10 @@ test("through 24 hours each water species stays in its band, under the surface b
                 const top = base + height;
                 samples++;
                 if (motion === "float") {
-                    assert.ok(Math.abs(base - surface + FLOAT_SINK * height) < 1e-9, `${animal.model_slug} floats`);
+                    // (Ark ducks: at its float line, rocked by at most FLOAT_BOB of its height; level at clock 0, in still water.)
+                    assert.ok(Math.abs(base - surface + FLOAT_SINK * height) <= FLOAT_BOB * height + 1e-9, `${animal.model_slug} floats`);
+                    bobbed ||= Math.abs(base - surface + FLOAT_SINK * height) > 0.2 * FLOAT_BOB * height;
+                    assert.equal(fitInWater(waterSpec(depth, floorY, seed, 0, breath, surface), height).base, surface - FLOAT_SINK * height, `${animal.model_slug} level at clock 0`);
                     continue;
                 }
                 if (breath > 0) {
@@ -164,6 +169,7 @@ test("through 24 hours each water species stays in its band, under the surface b
                 assert.ok(inBand || atEdge, `${animal.model_slug} (${depth.band}) at ${middle.toFixed(2)} outside ${lo.toFixed(2)}…${hi.toFixed(2)}`);
             }
         }
+        if (motion === "float") assert.ok(bobbed, `${animal.model_slug} rocks on the water`);
         // An air-breather comes up for air within its cycle (at most 140 s awake): its back breaks the surface.
         if (depth.breathes && motion !== "float") {
             for (let t = 0; t < 300 && !surfaced; t += 0.5) {
