@@ -157,6 +157,16 @@ async function main() {
             }
             return null;
         },
+        /** A young one's age, its parent and the parent's state (to see why it is or is not carried). */
+        young: (id: string) => {
+            const dbg = (window as unknown as {__arkDebug: {liveliness: {ageOf: (e: unknown) => unknown; parentOf: (id: string) => string | null}; entries: () => Array<{animal: {id: string}; act?: unknown; sched?: unknown}>}}).__arkDebug;
+            const all = dbg.entries();
+            const e = all.find((x) => x.animal.id === id);
+            if (!e) return {missing: true, count: all.length};
+            const parent = dbg.liveliness.parentOf(id);
+            const m = parent ? all.find((x) => x.animal.id === parent) : null;
+            return {age: dbg.liveliness.ageOf(e), parent, mother: m ? {act: Boolean(m.act), sched: Boolean(m.sched), at: handle.locate(parent!)} : null, at: handle.locate(id)};
+        },
         /** Scan forward from `from` (s) for the first moment an animal of these kinds is on a rock climb in this phase. */
         findLedge: async (pattern: string, phases: string[], from: number, seconds: number, step = 1, zoo = false) => {
             const seen = zoo ? zooSeen : ledgeSeen;

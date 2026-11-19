@@ -74,6 +74,15 @@ for (const shot of plan) {
         shot.epoch = found.epoch + (shot.find.after ?? 1);
         shot.id = found.id;
     }
+    if (shot.young) {
+        const at = await page.evaluate(async (s) => {
+            await window.__canopy.at(s.epoch, s.run ?? 2);
+            return s.young.map((id) => window.__canopy.young(id));
+        }, shot);
+        notes.push(`${shot.name}: ${JSON.stringify(at)}`);
+        console.log(shot.name, JSON.stringify(at));
+        continue;
+    }
     if (shot.where) {
         // (Where the animals of these kinds are at that moment: no picture.)
         const at = await page.evaluate(async (s) => {

@@ -4143,7 +4143,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (perch) return {x: perch.x, z: perch.z, base: perch.y, yaw: at.yaw + glance, pitch: 0, roll: 0, afloat: false, surface: perch};
         // ARK-JUNGLE: a langur of the rocks resting on the ground goes up a rock near it now and then, ledge by ledge, sits
         // on its top a while and comes down (`rock-ledge.ts`, the shared clock's).
-        const ledge = trip && !at.moving && !at.aloft && !act && !reducedMotion && own.at >= trip.arrive ? ledgeFrame(entry.animal, trip, own.at, !entry.state.asleep, {x: at.x, y: Math.max(at.y, ground), z: at.z}, heightAt) : null;
+        const ledge = trip && !at.moving && !at.aloft && !act && !reducedMotion && own.at >= trip.arrive && (entry.denIn ?? 0) <= 0.001 && Math.abs(at.y - ground) < 0.4 ? ledgeFrame(entry.animal, trip, own.at, !entry.state.asleep, {x: at.x, y: Math.max(at.y, ground), z: at.z}, heightAt) : null;
         if (ledge) return {x: ledge.x, z: ledge.z, base: ledge.y, yaw: Math.atan2(ledge.tx, ledge.tz), pitch: 0, roll: 0, afloat: false, surface: ledge};
         return {
             x: at.x,

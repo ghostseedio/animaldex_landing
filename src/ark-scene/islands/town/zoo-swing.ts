@@ -86,8 +86,9 @@ function plan(id: string, slug: string, scientific: string | null | undefined, l
             if (route) {
                 // (Off the post's side toward the spot: its body against the post, not in it.)
                 const postOut = norm({x: spot.x - best.foot.x, y: 0, z: spot.z - best.foot.z});
-                const foot = {x: best.foot.x + postOut.x * 0.25, y: floor, z: best.foot.z + postOut.z * 0.25};
-                const top = {x: best.top.x + postOut.x * 0.25, y: home.y - length * 0.5, z: best.top.z + postOut.z * 0.25};
+                const off = 0.3 + length * 0.15;
+                const foot = {x: best.foot.x + postOut.x * off, y: floor, z: best.foot.z + postOut.z * off};
+                const top = {x: best.top.x + postOut.x * off, y: home.y - length * 0.5, z: best.top.z + postOut.z * off};
                 const walk = Math.max(Math.hypot(foot.x - spot.x, foot.z - spot.z) / WALK, 0.5);
                 const climb = Math.max((top.y - foot.y) / CLIMB, 1);
                 out = {route, foot, top, spot, walk, climb, total: 2 * (walk + climb) + route.seconds, postOut};
