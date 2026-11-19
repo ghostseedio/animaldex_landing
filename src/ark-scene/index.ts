@@ -198,6 +198,7 @@ import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground
 import {modelBase, uprightBody} from "@/ark-scene/grounding/base";
 import {canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
 import {ledgeFrame} from "@/ark-scene/rock-ledge"; // ARK-JUNGLE
+import {keepCarriedWithMothers} from "@/ark-scene/carry-cull"; // ARK-JUNGLE
 import {setLocoGround} from "@/ark-scene/locomotion/ground";
 import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
 import {flightSpec} from "@/ark-scene/locomotion/flight";
@@ -3020,6 +3021,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // schedule. On the low tier and the lighter view they take their turn in the budget like everyone.)
         const livePins = isl && !liteOn() && tier !== "low" ? new Set([...Array.from(pins), ...snapshot.animals.filter((animal) => isl.has(animal) && isl.held(animal.id)).map((animal) => animal.id)]) : pins;
         const outside = runtime.outside(candidates, representatives.live, livePins, liteOn(), restingFor(snapshot, places));
+        // ARK-JUNGLE: a carried young rests with its mother: never drawn alone while she is out of sight.
+        const bornById = new Map(snapshot.animals.filter((animal) => animal.origin === "born").map((animal) => [animal.id, animal]));
+        if (bornById.size) keepCarriedWithMothers(outside, (id) => (bornById.has(id) ? liveliness.carriedBy(bornById.get(id)!) : null));
         // (For the resting warm-up: what the next step's rotation will be asked about, `runtime.restingAsks`.)
         // (Kept by the read, not the roster: the warm-up asks only what the rotation will, with a cast too.)
         lastRotation = {snapshot: base, candidates, live: representatives.live, pins: livePins, lite: liteOn()};

@@ -284,6 +284,16 @@ export class ArkLiveliness {
         return this.parents.get(id) ?? null;
     }
 
+    /** ARK-JUNGLE: the mother that carries it now (a young one in its carried time), or null. */
+    carriedBy(animal: ArkAnimal): string | null {
+        if (animal.origin !== "born" || animal.born_ark_day == null || !this.arkDayNow) return null;
+        const parent = this.parents.get(animal.id) ?? null;
+        if (!parent) return null;
+        const plan = this.options.hooks.planOf(animal.model_slug) ?? null;
+        const age = ageOf({id: animal.id, origin: animal.origin, born_ark_day: animal.born_ark_day, condition: animal.condition ?? null, parents: [parent]}, this.arkDayNow, plan, speciesCare(animal.model_slug, plan));
+        return age.stage === "young" && age.carried ? parent : null;
+    }
+
     /** Its age now (young, adult, old), worked out again now and then. */
     ageOf(entry: LiveAnimal): ArkAge | null {
         const animal = entry.animal;

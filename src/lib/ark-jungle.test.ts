@@ -112,3 +112,14 @@ test("the primate house: a swinger up a post, along the frame's beams the way it
     for (let e = 0; e < 3000; e += 1) assert.equal(zooSwingFrame(gibbon, 0.6, spot, climbs, e, false), null);
     for (let e = 0; e < 3000; e += 1) assert.equal(zooSwingFrame({id: "g", model_slug: "western-lowland-gorilla", scientific_name: "Gorilla gorilla"}, 1.6, spot, climbs, e, true), null);
 });
+
+test("a carried young is never drawn alone: rested out of sight with its mother, drawn with her", async () => {
+    const {keepCarriedWithMothers} = await import("@/ark-scene/carry-cull");
+    const carriedBy = (id: string) => ({baby: "mum", baby2: "mum2"} as Record<string, string>)[id] ?? null;
+    // Mother drawn: her young drawn too.
+    assert.deepEqual(Array.from(keepCarriedWithMothers(new Set(["mum", "baby", "other"]), carriedBy)).sort(), ["baby", "mum", "other"]);
+    // Mother rested out of sight: her young rests with her; nobody else is touched.
+    assert.deepEqual(Array.from(keepCarriedWithMothers(new Set(["baby", "other", "mum2", "baby2"]), carriedBy)).sort(), ["baby2", "mum2", "other"]);
+    // A young no longer carried (walking at heel or grown) is drawn on its own.
+    assert.deepEqual(Array.from(keepCarriedWithMothers(new Set(["walker"]), () => null)), ["walker"]);
+});
