@@ -248,7 +248,7 @@ import {LiveMeals, type MealAct} from "@/ark-scene/live-meals";
 import {CONTEST_MAX_APART, LiveMatings} from "@/ark-scene/live-matings";
 import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating tap)
 import {CLUTCH_FRAME_POLAR, CLUTCH_SHOWN_SECONDS, clutchFrame, clutchSize, kinFrameApart, seenAt} from "@/ark-scene/live/breed-focus"; // 3.3 fix (breeding taps)
-import {LiveBirths} from "@/ark-scene/live-births";
+import {LiveBirths, newbornScale} from "@/ark-scene/live-births";
 import {LiveDeaths, type DeathRecord} from "@/ark-scene/live-deaths"; // 3.3 fix (log)
 import {ForestScene} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): logging and replanting
 // 3.3 batch (D): the escapes and the dragonflies' dips
@@ -342,6 +342,8 @@ const DEPART_MOST = 12;
 const RIPPLE_SECONDS = 2.6;
 /** A clutch being laid, in a replay. */
 const LAID_SECONDS = 2.6;
+/** V1: how long a replayed hatching shows its young in the nest, once the eggs have split (s; it was `BIRTH_SECONDS`, 2.8: gone before they read). */
+const HATCHLINGS_SECONDS = 6;
 /** Close to an animal the camera looks more across the ground than down on it (radians from straight down). */
 const CLOSE_POLAR = 1.13;
 /** Seconds without a touch before the view starts to drift. */
@@ -5857,7 +5859,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     });
                 }
             }
-            if (marked && !entry.micro) {
+            if (marked === 3 && entry.length < 0.05) {
+                // V1: the last of a kind's ring round a speck is its own size, where it lies (a 0.7 m ring round an aphid or
+                // a water flea filmed from a centimetre is nowhere in the picture; the rings are drawn 8 cm up, `marks.ts`).
+                ringList.push({x: where.x, y: where.base + 0.0008 - 0.08, z: where.z, radius: Math.max(entry.length * 1.6, 0.004), color: LAST_OF_KIND, alpha: 1});
+            } else if (marked && !entry.micro) {
                 // On the ground under it now (its home spot's height floated the ring over one that had walked downhill); on the
                 // water's surface over a swimmer or a wader (lane MA3 water 2: the sea's 0 as before; the v2 lake's 6 m, where it
                 // was drawn at 0, under the lake's bed).
@@ -6103,7 +6109,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const viewDistance = camera.position.distanceTo(target);
         const freshTop = !diving && viewDistance < 80 ? waterLevelAt(target.x, target.z, 0) : 0;
         // (V2 replay: or a shot's cast in it, `replay/shot.ts`.)
-        const underFresh = Boolean(selectedId || followId || shotClosest !== null) && freshTop - seabed > 0.4 && target.y < freshTop - 0.15;
+        // (V1: a shot of a speck, a water flea in a pool a hand deep: under its surface too, however shallow. From over
+        // the water the camera was a pool's depth from an animal filmed from a centimetre.)
+        const shotSpeck = shotClosest !== null && shotClosest < 0.25;
+        const underFresh = Boolean(selectedId || followId || shotClosest !== null) && (freshTop - seabed > 0.4 || shotSpeck) && target.y < freshTop - (shotSpeck ? 0.005 : 0.15);
         const groundUnderTarget = diving ? seabed + 0.3 : underFresh ? Math.max(seabed, 0) : Math.max(seabed, freshTop, 0);
         // Close up (a gecko on a wall, a beetle on a trunk), or looking at an animal up a tree or on a wall, the target
         // may stand above the ground: only kept out of it.
@@ -6211,10 +6220,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         let close = Boolean(selected?.micro) || Boolean(selected && selected.trueLength < 0.3);
         /** V2 replay: an animal of the cast under about 5 cm that the view is on (an aphid, a water flea): the camera comes as near as its size asks. */
         let castTiny: Entry | null = null;
-        if (!close) {
+        // (V1: with a cast, looked for whatever is chosen: a watched line's own animal is chosen too, and it is its stand-in
+        // that is drawn, a dead water flea's body. Without this the near plane stayed a centimetre out, at the body itself.)
+        if (!close || cast) {
             // (V2 replay: and a small animal of the cast, wherever it is drawn now, its body after its death too.)
             for (const entry of cast ? allEntries() : entries) {
-                const pinned = !entry.micro && Boolean(cast?.pins.has(entry.animal.id)) && entry.trueLength < 0.3 ? entry.middle : null;
+                // (V1: a micro animal of the cast too, a water flea's body: the near plane then stops short of it, below.)
+                const pinned = Boolean(cast?.pins.has(entry.animal.id)) && entry.trueLength < 0.3 && (!entry.micro || Boolean(entry.act)) ? entry.middle : null;
                 if (!entry.micro && !pinned) continue;
                 const dx = (pinned?.x ?? entry.place.x) - target.x;
                 const dz = (pinned?.z ?? entry.place.z) - target.z;
@@ -6243,7 +6255,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // so a grass blade or a leaf the camera is in is cut away instead of filling the view.
         const tiny = selected && selected.trueLength < 0.05 && selected.middle ? selected : castTiny;
         if (tiny && distance < Math.max(tiny.trueLength * 40, 0.6) && !flight) {
-            const floor = heightAt(camera.position.x, camera.position.z);
+            // (V1: under a shot's cast the bed as it is drawn, as the view's own floor above: a lake's analytic bed
+            // stands centimetres over the drawn one, and the camera, lifted onto it after it had been aimed, looked
+            // over a water flea's body from a centimetre away: the body was under the picture's lower edge.)
+            const floor = shotClosest !== null ? Math.min(heightAt(camera.position.x, camera.position.z), standGround(camera.position.x, camera.position.z)) : heightAt(camera.position.x, camera.position.z);
             // (V2 replay: one of a shot's cast is filmed from as near as its size asks, millimetres over its leaf.)
             const clear = floor + Math.max(distance * 0.3, tiny === castTiny ? 0.002 : 0.02);
             // (On land; under water the floor is the seabed, and the camera keeps above it the same way.)
@@ -7648,6 +7663,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         lastT: number;
         /** The current act, each frame: t is seconds since the acting began. */
         step: ((t: number, last: number, now: number) => void) | null;
+        /** V1: the current act's own letting go at its end (a hatching's young out of the nest). */
+        release?: (() => void) | null;
         onAct?: (index: number) => void;
         resolve: () => void;
         home: {target: Vector3; distance: number; polar: number; azimuth: number};
@@ -7918,6 +7935,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const at = own ? poseOnTrip(worldOf(own.animal), tripAt(worldOf(own.animal), own.profile, own.animal, death.t0, scheduleHours, e.animal.activity, null), death.t0) : null;
             const x = at?.x ?? e.place.x;
             const z = at?.z ?? e.place.z;
+            // (V1: a speck in the water, a water flea: it dies where it drifts. Brought down to the bed it lay under the
+            // bed as it is drawn, which stands a few millimetres to centimetres off the analytic one: nothing to see.)
+            if (at && e.trueLength < 0.05 && at.y < waterTopAt(x, z) - 0.01 && at.y > standGround(x, z)) return {x, z, base: at.y, yaw: at.yaw ?? e.place.yaw ?? 0, from: null};
             // (V1: how high it was then, a flyer on the wing: the dying act brings it down.)
             return {x, z, base: Math.max(standGround(x, z), -0.3), yaw: at?.yaw ?? e.place.yaw ?? 0, from: at ? at.y : null};
         },
@@ -7947,6 +7967,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             ghost.act = pose;
         }
     });
+    /**
+     * V1: where one of the town's held animals is now (a tank's, a cage's, a room's or a zoo house's resident: it has no
+     * day to walk from), for an act there; null for anyone else. The same for every viewer: a swimmer's and a room's
+     * walker's place are the shared clock's (`tankPose`, `roomPose`); one kept on a display's tray is at its place, by
+     * its place's own heading (its idle turning about is each viewer's own).
+     */
+    const housedPlace = (entry: Entry): {x: number; z: number; yaw: number; base: number} | null => {
+        if (entry.sched || reducedMotion || !island?.held(entry.animal.id)) return null;
+        const at = bodyOf(entry);
+        const id = entry.animal.id;
+        const moves = Boolean(island.tankPose(id, entry.length, entry.drawnHeight || entry.length * 0.3, clockNow()) ?? island.roomPose(id, entry.length, clockNow()));
+        return moves ? {x: at.x, z: at.z, yaw: at.yaw, base: at.base} : {x: entry.place.x, z: entry.place.z, yaw: entry.place.yaw ?? at.yaw, base: at.base};
+    };
     /** The record's matings acted out (owner 2026-11-15): the two walk to each other, court, nuzzle and lie together. */
     const liveMatings = new LiveMatings<Entry>({
         find: (id) => {
@@ -7998,7 +8031,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (d <= CONTEST_MAX_APART && (!best || d < best.d || (d === best.d && e.animal.id < best.entry.animal.id))) best = {entry: e, d};
             }
             return best?.entry ?? null;
-        }
+        },
+        // V1: one with no day to walk from (the town's held: a zoo house's, a tank's, a cage's or a room's resident) is where the scene draws it now.
+        placeOf: (entry) => housedPlace(entry)
     }, (entry) => entry.animal.id);
     /**
      * The record's live births acted out (handover §5): the mother settles, the young are born, licked, get up and
@@ -8030,7 +8065,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setAct: (entry, pose) => {
             entry.act = pose;
         },
-        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id))
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id)),
+        // V1: one with no day (the town's held: a tank's, a cage's, a room's or a zoo house's resident) is where the scene
+        // draws it now; after a birth there each young comes in where it lives with the scene's own entrance.
+        placeOf: (entry) => housedPlace(entry),
+        appear: (entry) => {
+            entry.arrivedAt = elapsedNow();
+        }
     });
     // 3.3 batch (B): mobbing dive. Birds whose own text says they mob (`bird-moves.json`) dive in turns at a predator
     // of theirs standing near them, near the camera (`mobbing.ts`: viewer-local, visual only, back to their day after).
@@ -8481,6 +8522,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         run.step = null;
         run.lastT = 0;
         run.onAct?.(run.index);
+        run.release = null;
         const toFrame = (focus: {x: number; y: number; z: number}, distance: number, polar: number, azimuth: number | undefined, seconds: number, then: () => void) => {
             spherical.setFromVector3(offset.copy(camera.position).sub(controls.target));
             const bearing = azimuth ?? spherical.theta;
@@ -8524,14 +8566,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const plan = library.get((parent ?? first).animal.model_slug)?.behaviour?.plan;
             const kind = nestKind({plan, slug: (parent ?? first).animal.model_slug, water: inWater(parent ?? first)});
             const at = nests.where(nestId) ?? {x: first.place.x, y: Math.max(first.place.ground, 0) + (kind === "spawn" ? -0.05 : 0), z: first.place.z, size: Math.min(Math.max((parent ?? first).length * 0.55, 0.25), 1.6)};
-            toFrame({x: at.x, y: at.y + 0.3, z: at.z}, 5 + first.length * 3, 1.1, undefined, BIRTH_SECONDS + ArkNests.YOUNG_AFTER, () => {
+            // V1 (a tapped hatching line showed a nest and no young: they were where their day had them, a roost's hole at
+            // night, a branch across the wood): the young are IN THE NEST as the eggs split, each in from small, and stay in
+            // it while the act lasts (`HATCHLINGS_SECONDS`, the nest with them); then each is where its day has it, as before.
+            const mine = new Map<Entry, ActPose>();
+            toFrame({x: at.x, y: at.y + 0.3, z: at.z}, 5 + first.length * 3, 1.1, undefined, HATCHLINGS_SECONDS + ArkNests.YOUNG_AFTER, () => {
                 let hatched = false;
                 run.step = (t, _last, now) => {
                     if (!hatched) {
                         hatched = true;
                         // A clutch laid before the last visit: it is there already, its eggs about to hatch.
                         if (!nests.has(nestId)) nests.lay(nestId, at, at.size, kind, young.length, now - 3);
-                        nests.hatch(nestId, now);
+                        nests.hatch(nestId, now, HATCHLINGS_SECONDS + ArkNests.YOUNG_AFTER + 1.1);
                     }
                     young.forEach((entry, i) => {
                         if (entry.held && t >= ArkNests.YOUNG_AFTER + i * 0.25) {
@@ -8539,9 +8585,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                             entry.air = 0;
                             entry.arrivedAt = elapsedNow();
                         }
+                        // (Another layer's act, a duckling's drop or a mother's mouth, has it: left alone.)
+                        if (reducedMotion || (entry.act && mine.get(entry) !== entry.act)) return;
+                        const since = t - (ArkNests.YOUNG_AFTER + i * 0.25);
+                        const shown = Math.min(young.length, 6);
+                        const ring = shown === 1 ? 0 : Math.max(at.size * 0.3, entry.length * 0.7, (parent ?? entry).length * 0.3);
+                        const bearing = (i % shown) * ((Math.PI * 2) / shown) + (hash32(nestId) % 628) / 100;
+                        const x = at.x + Math.cos(bearing) * ring;
+                        const z = at.z + Math.sin(bearing) * ring;
+                        // (One much smaller than its parent, larger than it is for these moments, as a newborn: `newbornScale`.)
+                        const pop = Math.min(Math.max(((parent ?? entry).length * 0.42) / Math.max(entry.length, 1e-4), 1), 3);
+                        const pose: ActPose = {x, z, base: at.y + (kind === "nest" ? at.size * 0.06 : 0), yaw: Math.atan2(Math.cos(bearing), Math.sin(bearing)), pitch: 0, roll: since > 0 ? Math.sin(since * 2.3 + i) * 0.06 : 0, scale: newbornScale(pop, since), dim: 0, hidden: since < 0 || i >= 6, state: "rest", speed: 0, meal: "resting"};
+                        mine.set(entry, pose);
+                        entry.act = pose;
                     });
                 };
             });
+            run.release = () => {
+                for (const entry of young) if (entry.act && mine.get(entry) === entry.act) entry.act = null;
+            };
             return;
         }
         if (act.kind === "arrival" || act.kind === "birth") {
@@ -8681,6 +8743,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         run.lastT = t;
         if (t >= run.seconds) {
             // The act's end: whoever moved goes back to its own place (the camera is moving on).
+            run.release?.();
+            run.release = null;
             const act = run.acts[run.index];
             if (act.kind === "meal") {
                 const predator = entryFor(act.predator);

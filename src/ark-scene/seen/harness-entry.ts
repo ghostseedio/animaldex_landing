@@ -47,6 +47,7 @@ function rowAnimal(animal: ArkAnimal, over: Partial<Row> = {}): Row {
 async function main() {
     const params = new URLSearchParams(location.search);
     const quality = params.get("quality") ?? "high";
+    const trace = params.get("trace") === "1";
     (globalThis as {__arkQuality?: string}).__arkQuality = quality;
     const [read, log] = await Promise.all([fetch("/data/voyage.json").then((r) => r.json()), fetch("/data/events.json").then((r) => r.json())]) as [{snapshot?: unknown}, {events: Row[]}];
     const real = decodeArkSnapshot(read.snapshot ?? read);
@@ -194,8 +195,8 @@ async function main() {
         ready: true,
         now,
         counts: () => ({animals: real.animals.length, wild: wild().length, events: rows.length, loading: handle.loading()}),
-        // (A mating's lines with a few to spare: the ones the layer itself skips are counted and passed over.)
-        lines: (kind: string, n: number): string[] => (kind === "meal" || kind === "escaped" ? make(kind, n) : kind === "mated" ? own(kind, n + 12) : kind === "birth" || kind === "death" || kind === "extinct" ? own(kind, n) : []),
+        // (A mating's lines with a few to spare: one the layer itself skips, one of the two on the wing, is counted and passed over.)
+        lines: (kind: string, n: number): string[] => (kind === "meal" || kind === "escaped" ? make(kind, n) : kind === "mated" ? own(kind, n + 4) : kind === "birth" || kind === "death" || kind === "extinct" ? own(kind, n) : []),
         plan: (id: string) => planArkEventReplay(id, rows, worldFor(id), {now}),
         /** The record arrives, the clock runs on to a little before the act's telling part, the line is tapped. */
         prepare: async (id: string) => {
@@ -238,7 +239,7 @@ async function main() {
             const mating = plan.feed.matings ? acts?.matings.find((m) => m.key === plan.feed.matings![0].key) : null;
             const tapAt = plan.kind === "mated" ? (mating && typeof mating.meet === "number" ? Math.max(mating.meet - 8, 24) : 24) : plan.kind === "birth" ? (plan.feed.play ? 24 : -8) : plan.kind === "death" || plan.kind === "extinct" ? -6 : -11;
             if (tapAt > since()) run(tapAt - since(), 0.5);
-            // (A pair the mating layer itself does not walk, housed in a tank or a cage, or more than 160 m apart: said, not filmed.)
+            // (A pair the mating layer itself does not act, one of the two on the wing at that moment: said, not filmed.)
             const taken = plan.feed.matings ? handle.liveActs?.().matings.find((m) => m.key === plan.feed.matings![0].key) : null;
             if (plan.feed.matings && (!taken || taken.phase === "skipped")) return {kind: plan.kind, at: plan.at, t0: plan.t0, tapAt: Math.round(since() * 10) / 10, line: null, lines: live.lines.length, watching: false, skipped: true, seen: null, cast: []};
             // (A real half second for the log's own beat: a line whose time is up has gone, as on a viewer's page.)
@@ -260,6 +261,18 @@ async function main() {
             clock.tick(dt * 1000);
             const t = clip;
             clip += dt;
+            // (`?trace=1`: where each of the cast is, once a second, to the console: the script prints it.)
+            if (trace && current && Math.floor(clip) !== Math.floor(t)) {
+                const acts = handle.liveActs?.();
+                console.log(`[seen] ${current.kind} ${current.id} clip ${clip.toFixed(1)} since ${since().toFixed(1)} ${current.plan.cast.map((member) => { const at = handle.locate(member.record.id); return `${member.role}:${at ? `${at.x.toFixed(2)},${at.y.toFixed(2)},${at.z.toFixed(2)} L${at.length.toFixed(2)} ${at.shown ? "shown" : "hid"} ${at.act ?? "-"}` : "none"}`; }).join(" | ")} view d${handle.view().distance.toFixed(2)} ${JSON.stringify((current.kind === "mated" ? acts?.matings : acts?.births) ?? [])}`);
+                // (And, for a death or an extinction, how the scene has each of them: its level, its stand-in, the camera.)
+                const debug = (window as unknown as {__arkDebug?: {entries: () => Array<{animal: {id: string}; level?: string; ghost?: boolean; held?: boolean; micro?: unknown; act?: {state?: string; hidden?: boolean; base?: number} | null; length: number; trueLength: number; middle?: {x: number; y: number; z: number} | null}>; camera: {position: {x: number; y: number; z: number}; near: number}}}).__arkDebug;
+                if (debug && (current.kind === "death" || current.kind === "extinct")) {
+                    const ids = new Set(current.plan.cast.map((member) => member.record.id));
+                    const c = debug.camera;
+                    console.log(`[seen] entries ${JSON.stringify(debug.entries().filter((entry) => ids.has(entry.animal.id)).map((entry) => ({level: entry.level, ghost: Boolean(entry.ghost), held: Boolean(entry.held), micro: Boolean(entry.micro), act: entry.act ? `${entry.act.state}${entry.act.hidden ? " hidden" : ""} base ${entry.act.base?.toFixed(4)}` : null, length: entry.length, metres: entry.trueLength, middle: entry.middle ? [entry.middle.x, entry.middle.y, entry.middle.z].map((v) => Number(v.toFixed(4))) : null})))} camera ${[c.position.x, c.position.y, c.position.z].map((v) => v.toFixed(4)).join(",")} near ${c.near.toFixed(4)} target ${JSON.stringify(handle.view().target)}`);
+                }
+            }
             if (departing) return {index: index++, t, done: clip > departing.until, image: quality > 0 ? canvas()?.toDataURL("image/jpeg", quality) ?? "" : ""};
             const watching = Boolean(live?.seenNow?.watching());
             if (current && current.tapped && !watching && !current.ended) current.ended = "ended";

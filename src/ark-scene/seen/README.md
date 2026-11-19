@@ -41,7 +41,8 @@ it has something for it: a record that is acted, a lone founder in the read, an 
 | A dying act | `live/controller.ts` `died`, `replay/event-replay.ts` |
 | A live birth | `live/controller.ts` `born`, `replay/event-replay.ts`; the young (in the read already) are out of sight until born (`live-births.ts`) |
 
-Matings start at their row's time, as before: the walk is up to 30 s and the pair stay together two minutes. A hatching
+Matings start at their row's time, as before: the walk is up to 30 s (a housed pair's coming together at least 22 s)
+and the pair stay together two minutes (a housed pair 40 s). A hatching
 is not held either: its young are in the read at once, and a tap on its line shows the clutch hatch again (the scene's
 own replay act, as "while you were away" plays it, on the viewer's own time).
 
@@ -76,6 +77,27 @@ And in the scene itself: the departure fade (`departing`: 0.9 s as it stood, the
 left the Ark, not the live set, and never when its act has taken it up), the dying act (`live-deaths.ts`
 `deathBodyPose`: `DEATH_WEAKEN_SECONDS` 6.4, `DEATH_FALL_SECONDS` 2.6; a flyer comes down first), and `lone` decoded
 from the read (`snapshot.ts`).
+
+## Births and matings you can read (step 2)
+
+20 live lines of each kind were filmed again (`scripts/ark-seen-shots.mjs`): births read 18 of 20 (they were 8), matings
+18 of 20 counting the pairs the layer used to skip (14 of the 20 it acted before), the extinctions 2 of 2 (1). What did
+not read, and what now does:
+
+| Line | Was | Now |
+|---|---|---|
+| A den birth (a rat, a rabbit, a prairie dog) | the young tucked at her belly, under her own body | each crawls out clear of her flank and lies there while she licks it, then goes back to suckle (`live-births.ts` `out`); the picture closes on them once one is out |
+| A fish's brood, any young far smaller than its mother | a speck a metre from her | the brood stays by her while it is acted, each drawn larger for its first moments (`newbornScale`) |
+| A birth in a tank, a cage or a room (the mother has no day to settle from) | not acted: the young were simply there | the same act where the scene draws her, on her own floor or in her own water (`housed`), filmed from above through its top; then each young comes in where it lives |
+| A hatching | the nest, and the young wherever their day had them (a roost's hole at night) | the young are in the nest as the eggs split and stay in it while it is shown (6 s), the nest with them; the picture stays on the clutch |
+| A mating of a housed pair (a zoo house's, two tanks', two vivariums') | not acted | acted where she is. One enclosure: the two come together between their places, slowly, a courtship in place, one mount, the two together, all at close spacing (`live-matings.ts` `housed`). Two enclosures: he is brought to her side and the two lie side by side, he displaying, then both at rest (`brought`: no walk, no mount). Filmed from above, the cut through the roof over them |
+| A mating of a pair more than 160 m apart | not acted | he starts 60 m from her, on the line from where his day had him, and walks to her (`far`) |
+| The last of a kind that is a speck (a water flea, an aphid) | the camera drew back 45 m: nothing of it in the picture; a water flea's body was never in it at all | the picture stays on it and its ring, which is its own size. A speck in the water dies where it drifts (on the bed it lay under the bed as drawn); the camera goes under a pool's surface however shallow, keeps over the drawn bed, and its near plane stops short of the body |
+
+And one fault found on the way (`index.ts` `placeAll`): placing a stand-in (an eaten prey's, a dead one's, the cast's)
+gave the town's planner the stand-ins alone, so the town's plan was of nobody until the next read (no tank, no room,
+no schedule made, the zoo's enclosures closed). A stand-in of the wild island now leaves the town alone; one of the
+town is planned with everyone who lives there.
 
 ## The live cast
 
@@ -160,8 +182,16 @@ Never sent, so never said: a chase in progress (the chase is the record's act, h
 - **A viewer who arrives late** sees what is still going on (the feeding, the body, the pair together), as before.
 - **The walk to the start** is the client's (continuity only): a hunter far from its record's waypoint is simply there.
   (E6 publishes that a hunter is searching, never its quarry: the engine finds and attempts in one step.)
-- **What the layers do not act, a watch cannot either** (a pair in a tank or on two islands, an insect at its
-  microhabitat): the watch holds on the cast where they are, then gives way to the line's own focus.
+- **What the layers do not act, a watch cannot either** (a pair on two islands, one of the two on the wing): the watch
+  holds on the cast where they are, then gives way to the line's own focus.
+- **A marsupial's birth shows no young**: the newborn goes straight into the pouch (`live-births.ts`), so its line's
+  picture is the mother resting (the 2 births of 20 that do not read). Nothing is drawn that is not so.
+- **Two matings of 20 do not read**: a pair of iguanas under a bridge's dark water, and a corn snake's: a snake longer
+  than its vivarium is wide lies across it, through the glass, as the town already draws it unacted, and its mate
+  beside it does the same.
+- **A newborn is drawn larger than it is for its first moments** when it is far smaller than its mother (up to two
+  fifths of her length, three times its size at most), then eases to its own size: a visibility aid, as the scene's own
+  for small animals seen from afar. A housed pair's or a far pair's coming together is the client's (continuity only).
 - **The dying act is poses** (head down, a sway, over onto its side): there is no dying clip (P2-4).
 - **A swoop's rush** is seen from where the quarry is; the raptor is in the picture for its last strides only.
 

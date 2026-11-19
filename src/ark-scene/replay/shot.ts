@@ -83,8 +83,10 @@ const POLAR_BODY = 0.26;
 const CUT_GROUND = 0.78;
 const CUT_WITHIN = 45;
 const HALF_TALL = (FOV * Math.PI) / 360;
-const cutAt = (distance: number, polar: number, body: number) => {
-    const ground = (CUT_GROUND * Math.cos(Math.min(polar, 1.5)) * Math.cos(HALF_TALL)) / Math.cos(Math.max(polar - HALF_TALL, 0));
+/** V1: in a tank, a cage or a room the cut goes this share of the way to the floor: through the roof or the ceiling over them. */
+const CUT_GROUND_HOUSED = 0.93;
+const cutAt = (distance: number, polar: number, body: number, share = CUT_GROUND) => {
+    const ground = (share * Math.cos(Math.min(polar, 1.5)) * Math.cos(HALF_TALL)) / Math.cos(Math.max(polar - HALF_TALL, 0));
     return Math.max(Math.min(distance - body, distance * ground), 0) * Math.min(Math.max((CUT_WITHIN - distance) / (CUT_WITHIN * 0.4), 0), 1);
 };
 /** A chase from higher still: over the ferns and between the trunks, under the crowns (most chases are in the woods). */
@@ -112,6 +114,10 @@ const LUNGE_LEAST = 3.2;
 const POLAR_LUNGE = 0.82;
 /** V1: two that share the picture are kept inside this share of its half width and half height (`holdIn`). */
 const HOLD_IN = 0.84;
+/** V1: an act in a tank, a cage or a room is filmed from this high (the angle from straight above): down through its top. */
+const POLAR_HOUSED = 0.34;
+/** V1: a birth's picture once a young is out, as a share of the pair framing's distance. */
+const BIRTH_CLOSE = 0.66;
 /** V1: a stalking hunter and its quarry share the picture from this near (m); farther, the hunter alone. */
 const STALK_TOGETHER = 9;
 /**
@@ -236,6 +242,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
     let searchedAt = -9;
     let driftClear = false;
     const sights = {searches: 0, moved: 0, blocked: 0, checks: 0, met: {} as Record<string, number>};
+    /** V1: how far toward the ground under the picture the near cut may go (`CUT_GROUND`; more for an act under a roof). */
+    let cutShare = CUT_GROUND;
     /** Who the picture held last (when that changes, one alone to the two together, the bearing is chosen again: side on to both). */
     let framed = "";
     /** How much higher than its framing asks the camera stands, having found no clear bearing (rocks, a thicket). */
@@ -471,7 +479,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         // (What is solid counts whole; a leaf the cone would dissolve counts a hundredth: a view with nothing at all between first.)
         const lines = (azimuth: number, polar: number, near: number, fresh = false) => {
             const distance = reach(azimuth, polar, near);
-            const cut = cutAt(distance, polar, want.body);
+            const cut = cutAt(distance, polar, want.body, cutShare);
             const solid = ask(want.target, {distance, polar, azimuth}, want.sight, fresh, cut);
             return solid > 0 ? solid : ask(want.target, {distance, polar, azimuth}, want.sight, false, cut, true) / 100;
         };
@@ -624,12 +632,18 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         // The walk's last seconds.
         if (meet - s > 7.5) cut(meet - 7, "to the end of the walk to each other");
         const now = since();
-        if (now > Math.max(meet, courted - 5)) tell();
+        // (The still: the courtship. A line tapped later, with the mount under way: the two resting together after it,
+        // never the camera's pull up and away.)
+        if (now > Math.max(meet, courted - 5) && (now < courted - 0.2 || state === "court")) tell();
+        // (V1: a housed pair, in its tank, cage or room: from above, through its top.)
+        const high = act.how === "housed" || act.how === "brought" ? {polar: POLAR_HOUSED} : {};
+        if (high.polar) cutShare = CUT_GROUND_HOUSED;
         if (now < courted - 0.2) {
             enter("court");
-            return toward(frameOf(ids, {widen: 1.1, first: ids[0]}), dt);
+            return toward(frameOf(ids, {widen: 1.1, first: ids[0], ...high}), dt);
         }
-        if (options.mount !== "show") {
+        // (V1: a pair brought side by side does not mount, `live-matings.ts` beside: nothing to look away from.)
+        if (options.mount !== "show" && act.how !== "brought") {
             if (state !== "away" && state !== "rest" && state !== "over") enter("away");
             if (state === "away") {
                 // Up and away as it begins; then on to the two resting together.
@@ -639,16 +653,17 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                 if (clip - stateAt > 2.6 && (!live || now >= mounted + 2.4)) {
                     cut(mounted + 2.4, "past the mount");
                     enter("rest");
-                    return toward(frameOf(ids, {widen: 1.2}), dt);
+                    return toward(frameOf(ids, {widen: 1.2, ...high}), dt);
                 }
-                return toward(frame ? held(frame, frame.distance * lerp(1.1, 3.2, k), lerp(POLAR, 0.72, k)) : null, dt, 3.5);
+                return toward(frame ? held(frame, frame.distance * lerp(1.1, 3.2, k), lerp(high.polar ?? POLAR, high.polar ?? 0.72, k)) : null, dt, 3.5);
             }
         } else if (now < mounted + 2.4) {
             enter("mount");
-            return toward(frameOf(ids, {widen: 1.1}), dt);
+            return toward(frameOf(ids, {widen: 1.1, ...high}), dt);
         } else enter("rest");
+        if (state === "rest" && clip - stateAt > 2.5) tell();
         if (state === "rest" && clip - stateAt > 5) finish(true);
-        return drift(frameOf(ids, {widen: 1.2}), dt);
+        return drift(frameOf(ids, {widen: 1.2, ...high}), dt);
     };
 
     const stepBirth = (dt: number) => {
@@ -681,7 +696,10 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                 const young = located(byRole("young")).filter((at) => at.shown !== false).map((at) => at.id);
                 // (Watching live the young are in the read already: the still is the clutch hatched, at the act's end.)
                 if (young.length && !live) tell();
-                return toward(frameOf(young.length ? young : byRole("parent").slice(0, 1), {widen: young.length ? 2.4 : 1.5}), dt, 1.6) ?? null;
+                // (V1: until a young is out the picture stays where the scene landed, on the clutch: it went to a parent,
+                // which may be across the wood, and the young then hatched out of the picture.)
+                if (!young.length) return view;
+                return toward(frameOf(young, {widen: 1.3}), dt, 1.6) ?? null;
             }
             if (playing?.over && state === "hatch") {
                 enter("after");
@@ -690,7 +708,10 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             }
             if (state === "after") {
                 if (clip - stateAt > 3) finish(true);
-                const frame = frameOf(byRole("young").concat(byRole("parent")), {widen: 1.2});
+                // (The young where their day has them now, when they are out; else a parent: never a picture as wide as
+                // the wood between a chick in its nest hole and a parent out feeding.)
+                const out = located(byRole("young")).filter((at) => at.shown !== false).map((at) => at.id);
+                const frame = frameOf(out.length ? out : byRole("parent").slice(0, 1), {widen: out.length ? 2 : 1.3});
                 return frame ? drift(frame, dt) : view;
             }
             return toward(frameOf(byRole("parent").length ? byRole("parent") : ids, {widen: 1.3, first: byRole("parent")[0] ?? ids[0]}), dt);
@@ -706,10 +727,17 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             return drift(frameOf(ids, {widen: 1.2, first: byRole("parent")[0] ?? ids[0]}), dt);
         }
         enter("birth");
-        if (s > 13) tell();
-        // (Settling, the young born one by one, the first licks: the first 24 s; then the nursing goes on for minutes.)
-        if (s > Math.min(act.end ?? 24, 24)) finish(true);
-        return toward(frameOf(who, {widen: 1.15}), dt);
+        // (The still: every young that is shown can be seen, `live-births.ts` seenBy: a den's have crawled out from under her.)
+        const seenBy = Math.min(act.seenBy ?? 12, 26);
+        if (s > seenBy + 1) tell();
+        // (Settling, the young born one by one, the first licks: the first 24 s or so; then the nursing goes on for minutes.)
+        if (s > Math.min(act.end ?? 24, Math.max(24, seenBy + 5))) finish(true);
+        // (V1: once a young is out, close on the mother and the young at her side: the pair framing's room for two
+        // walking animals left a litter a tenth of the picture wide. `holdIn` keeps every one of them in.)
+        const born = located(byRole("young")).some((at) => at.shown !== false);
+        if (act.housed) cutShare = CUT_GROUND_HOUSED;
+        // (A tank's, a cage's or a room's: from above, through its open or glass top; from the side there is a wall.)
+        return toward(frameOf(who, {widen: born ? BIRTH_CLOSE : 1.15, ...(act.housed ? {polar: POLAR_HOUSED} : {})}), dt);
     };
 
     const stepDeath = (dt: number, last: boolean) => {
@@ -748,7 +776,10 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             if (k > 0.45) tell();
             const frame = frameOf([id]);
             if (k >= 1) enter("empty");
-            return toward(frame ? held(frame, lerp(frame.distance, Math.max(frame.distance * 4, 45), ease(k)), lerp(POLAR_SMALL, 0.88, ease(k))) : null, dt, 3);
+            // (V1: a speck, an aphid or a water flea: from 45 m back there is nothing of it to see. The camera draws back
+            // only as far as still shows it, with its ring, which is its own size.)
+            const speck = (handle.locate(id)?.length ?? 1) < 0.05;
+            return toward(frame ? held(frame, lerp(frame.distance, speck ? frame.distance * 3.2 : Math.max(frame.distance * 4, 45), ease(k)), speck ? frame.polar : lerp(POLAR_SMALL, 0.88, ease(k))) : null, dt, 3);
         }
         if (state === "lapse") {
             // 4 s of video for the fade's 3 minutes: the pin moved on every frame.
@@ -759,7 +790,11 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             if (k >= 1) enter("empty");
             return toward(frame ? held(frame, lerp(frame.distance, Math.max(frame.distance * 5, 60), ease(k)), lerp(POLAR_SMALL, 0.88, ease(k))) : null, dt, 3);
         }
-        // Its home range, empty.
+        // Its home range, empty. (V1: watching a speck live, the picture stays on it and its ring: its body lies for minutes yet.)
+        if (live && (handle.locate(id)?.length ?? 1) < 0.05) {
+            if (clip - stateAt > 4) finish(report.acted, report.reason);
+            return drift(frameOf([id], {widen: 3.2}), dt);
+        }
         if (clip - stateAt > 4) {
             const acted = report.acted;
             const reason = report.reason;
@@ -993,7 +1028,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             // (As far as the farthest of them and its own body's depth again: the plant an animal stands in dissolves
             // round it too. The animals themselves never fade.)
             end = Math.max(end, along + Math.max(p.length, p.height) * 0.8);
-            cut = Math.min(cut, cutAt(at.distance, at.polar, at.distance - along + Math.max(p.length, p.height) * 0.6 + 0.02));
+            cut = Math.min(cut, cutAt(at.distance, at.polar, at.distance - along + Math.max(p.length, p.height) * 0.6 + 0.02, cutShare));
         }
         handle.setNearCone?.(held && end > 0.05 ? {tan: wide, end} : null);
         handle.setNearCut?.(held && cut > 0 && Number.isFinite(cut) ? cut : null, held ? at.distance * 0.9 : null);
@@ -1004,7 +1039,19 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             if (done !== null) {
                 // The linger: the same picture, drifting.
                 if (playing && !playing.over) return null;
-                if (replay.kind === "extinct") return view ? (view = {...view, azimuth: view.azimuth + 0.05 * dt, distance: view.distance + 1.2 * dt}) : null;
+                if (replay.kind === "extinct") {
+                    // (V1: watching a speck's end live, the linger stays on it and its ring.)
+                    const last = byRole("last")[0] ?? ids[0];
+                    if (live && !replay.feed.meals && (handle.locate(last)?.length ?? 1) < 0.05) return drift(frameOf([last], {widen: 3.2}), dt, 0.06);
+                    return view ? (view = {...view, azimuth: view.azimuth + 0.05 * dt, distance: view.distance + 1.2 * dt}) : null;
+                }
+                if (replay.kind === "birth" && !replay.feed.play) {
+                    // (V1: the linger on the mother and the young still by her: never out to the other parent across the lake.)
+                    const act = handle.liveActs?.().births.find((b) => b.key === replay.feed.births![0].key);
+                    const mother = act?.mother ? handle.locate(act.mother) : null;
+                    const by = mother ? located(byRole("young")).filter((at) => at.shown !== false && Math.hypot(at.x - mother.x, at.z - mother.z) <= Math.max(mother.length * 2.5, 0.5)).map((at) => at.id) : [];
+                    if (mother) return drift(frameOf([act!.mother!, ...by], {widen: by.length ? BIRTH_CLOSE : 1.2}), dt, 0.06);
+                }
                 const all = located(ids);
                 const near = all.length < 2 || all.every((p) => all.every((q) => Math.hypot(p.x - q.x, p.z - q.z) <= TOGETHER * 2));
                 return drift(frameOf(near ? ids : ids.slice(0, 1), {widen: 1.2}), dt, 0.06);

@@ -20,6 +20,17 @@
  *
  * Like the live meals (`live-meals.ts`), the scene gives it its entries through a host and this layer only says, per
  * frame, which act pose each of them takes (`entry.act`), so nothing here touches the renderer.
+ *
+ * V1, matings you can read (a tapped mating line of a pair the layer skipped showed one animal, or two far apart):
+ *   - a pair farther apart than `MATING_MAX_APART` is no longer skipped: the one that mounts is simply nearer when
+ *     the act starts (`MATING_FAR_FROM` from her, on the line from where his day had him) and walks to her from there;
+ *   - a pair with no day to walk from (a zoo house's, a tank's, a cage's or a room's residents: the scene draws each
+ *     where it lives) is acted where she is (`housed`): the two come together between their places when those are near
+ *     (one enclosure), a courtship without a chase (nothing leaves the enclosure), one mount, the two together; when
+ *     they live apart (two homes' tanks, two vivariums: each little longer than its animal) he is brought to her side
+ *     (in from small, as an arrival) and the two lie side by side where she is, he displaying, then both at rest:
+ *     no walk and no mount, which would take one of them out through the glass; then each is back where it lives.
+ * Still skipped: two in different worlds (the town and the wild), and one of them in the air.
  */
 
 import type {ActPose} from "@/ark-scene/acts";
@@ -58,6 +69,8 @@ export type LiveMatingsHost<E> = {
     contest?: (entry: E) => ContestKind | null;
     /** A rival for the male before this mating: a real male of his kind near him at the time (not the female), or null. */
     rival?: (male: E, female: E, epoch: number) => E | null;
+    /** V1: where it is drawn now when it has no day (a zoo house's, a tank's, a cage's or a room's resident), or null. */
+    placeOf?: (entry: E) => {x: number; z: number; yaw: number; base: number} | null;
 };
 
 /**
@@ -143,8 +156,27 @@ export function contestPose(c: ContestScript, isMale: boolean, s: number, ground
     return mk(lerpP(locked, c.away, ease(f)), c.yaw, "run", d / CONTEST_FLEE);
 }
 
-/** Farther apart than this (m) at the start: not walked across the Ark. */
+/** Farther apart than this (m) at the start: not walked across the Ark (V1: the one that mounts starts `MATING_FAR_FROM` from her). */
 export const MATING_MAX_APART = 160;
+export const MATING_FAR_FROM = 60;
+/**
+ * V1: a housed pair's places within this (m) are one enclosure: the two come together between them. Farther (two
+ * homes' tanks, two vivariums): he is brought to her side, this share of their two lengths from her middle, heading
+ * as she does, and the two stay so (`beside`).
+ */
+export const HOUSED_NEAR = 9;
+const HOUSED_BEHIND = 0.2;
+const HOUSED_BESIDE = 0.07;
+/**
+ * V1: a housed pair is acted close: its spacings (how far apart they meet, where he comes up behind her, where he
+ * rests beside her) are worked out for bodies this share of their length. A vivarium is little longer than its snake
+ * and a cage than its bird; at full spacing he was out through the glass. They overlap, as two in one box do.
+ */
+const HOUSED_COMPACT = 0.4;
+/** V1: a housed pair's coming together lasts at least this long (s). */
+const HOUSED_WALK_LEAST = 22;
+/** V1: a housed pair rests together this long (s): an enclosure's two are near each other anyway. */
+const HOUSED_AFTER = 40;
 /**
  * The longest walk to each other (s): farther pairs hurry. The log's line reaches a viewer from a few seconds to about a
  * minute after the mating's time (the release each minute, then the page's read every 45 s) and stays 15 s: with a
@@ -214,7 +246,7 @@ export type MatingScript = {
     f: {length: number; height: number; pace: number};
 };
 
-type Live<E> = {act: MatingAct; script: MatingScript | null; failed: boolean; over: boolean; acting: Set<E>; contest?: {script: ContestScript; rival: string; maleFirst: boolean} | null};
+type Live<E> = {act: MatingAct; script: MatingScript | null; failed: boolean; over: boolean; acting: Set<E>; contest?: {script: ContestScript; rival: string; maleFirst: boolean} | null; /** V1: how it was brought about (`far`: he started nearer; `housed`: in their enclosure; `brought`: he was brought beside her), the floor a housed pair stands on, and who was brought. */ how?: "far" | "housed" | "brought"; floor?: (x: number, z: number) => number; brought?: "a" | "b" | null; /** V1 (brought): where she lives and where he lies beside her, both heading as she does. */ beside?: {she: Point; he: Point; yaw: number}};
 
 const ease = (u: number) => {
     const c = Math.min(Math.max(u, 0), 1);
@@ -316,7 +348,7 @@ export function clutchSpot(sc: MatingScript): Point {
     return add(at, {x: -sc.dir.z, z: sc.dir.x}, sc.f.length * 0.9);
 }
 
-export function matingScript(a: MatingBody, b: MatingBody, key: string): MatingScript | null {
+export function matingScript(a: MatingBody, b: MatingBody, key: string, options: {/** V1: in an enclosure: a courtship in place (no chase), one mount, a shorter rest. */ housed?: boolean} = {}): MatingScript | null {
     const d = Math.hypot(b.x - a.x, b.z - a.z);
     if (!(d <= MATING_MAX_APART)) return null;
     // He mounts her: the male when the look says only one is; else the record's first.
@@ -328,12 +360,16 @@ export function matingScript(a: MatingBody, b: MatingBody, key: string): MatingS
     const half = (M.length + F.length) / 2;
     // They meet nose to nose (a little under touching: the collision lane closes them to contact).
     const contact = Math.min(half * 0.45, d / 2);
-    const toM = add(mid, dir, -contact);
-    const toF = add(mid, dir, contact);
+    // (V1, housed: side by side a little, so two of one pattern in one box read as two: head on they lay one over the other.)
+    const aside = options.housed ? half * 0.25 : 0;
+    const toM = add(add(mid, dir, -contact), {x: dir.z, z: -dir.x}, aside);
+    const toF = add(add(mid, dir, contact), {x: dir.z, z: -dir.x}, -aside);
     const pace = Math.max(Math.min(M.pace, F.pace), 0.3);
-    const walk = clamp(Math.max(Math.hypot(toM.x - M.x, toM.z - M.z), Math.hypot(toF.x - F.x, toF.z - F.z)) / pace, 2, WALK_MAX);
+    // (V1: a housed pair comes together slowly: its line reaches a viewer from twenty seconds to a minute after its time,
+    // and a walk of two seconds across a tank had the courtship over before anyone could have tapped it.)
+    const walk = clamp(Math.max(Math.hypot(toM.x - M.x, toM.z - M.z), Math.hypot(toF.x - F.x, toF.z - F.z)) / pace, options.housed ? HOUSED_WALK_LEAST : 2, WALK_MAX);
     const mount = mountKind(M.plan ?? F.plan);
-    const court: Courtship = M.courtship ?? F.courtship ?? (mount === "perch" ? "display" : "chase");
+    const court: Courtship = options.housed ? (M.courtship === "dance" || F.courtship === "dance" ? "dance" : "display") : M.courtship ?? F.courtship ?? (mount === "perch" ? "display" : "chase");
     // After the courtship: where she stands and which way, with him behind her.
     let spot = toF;
     let heading = yawOf(dir);
@@ -348,7 +384,7 @@ export function matingScript(a: MatingBody, b: MatingBody, key: string): MatingS
     }
     const hd = {x: Math.sin(heading), z: Math.cos(heading)};
     const attempts: MatingAttempt[] = [];
-    const tries = failedTries(key) + 1;
+    const tries = options.housed ? 1 : failedTries(key) + 1;
     let t = courted;
     let at = spot;
     for (let k = 0; k < tries; k++) {
@@ -380,7 +416,7 @@ export function matingScript(a: MatingBody, b: MatingBody, key: string): MatingS
         attempts,
         side,
         mounted: last.end,
-        paired: last.end + AFTER,
+        paired: last.end + (options.housed ? HOUSED_AFTER : AFTER),
         m: {length: M.length, height: M.height, pace: M.pace},
         f: {length: F.length, height: F.height, pace: F.pace}
     };
@@ -641,9 +677,59 @@ export class LiveMatings<E> {
                     if (c && first === c.maleFirst) return c.script.mEnd;
                     return h.scheduleAt(entry, m.act.t0 + lead);
                 };
-                const pa = at(a, true);
-                const pb = at(b, false);
-                const script = pa && pb ? matingScript(this.body(a, pa), this.body(b, pb), m.act.key) : null;
+                let pa: Point | null = at(a, true);
+                let pb: Point | null = at(b, false);
+                // V1: one with no day to walk from (a zoo house's, a tank's, a cage's resident) is where the scene draws it.
+                const ha = pa ? null : h.placeOf?.(a) ?? null;
+                const hb = pb ? null : h.placeOf?.(b) ?? null;
+                const housed = Boolean(ha || hb);
+                pa ??= ha;
+                pb ??= hb;
+                if (!pa || !pb) {
+                    m.failed = true;
+                    continue;
+                }
+                const maleFirst = !(h.male(b) === true && h.male(a) !== true);
+                const d = Math.hypot(pb.x - pa.x, pb.z - pa.z);
+                // (He comes to her: the one that mounts is the one moved nearer, on the line from where he was; `behind`:
+                // to behind her instead, by her own heading.)
+                const nearer = (from: number, behind: number | null = null): {pa: Point; pb: Point} => {
+                    const [he, she] = maleFirst ? [pa!, pb!] : [pb!, pa!];
+                    const k = d > 1e-6 ? from / d : 0;
+                    const moved = behind === null ? {x: she.x + (he.x - she.x) * k, z: she.z + (he.z - she.z) * k} : {x: she.x - Math.sin(behind) * from, z: she.z - Math.cos(behind) * from};
+                    return maleFirst ? {pa: moved, pb: she} : {pa: she, pb: moved};
+                };
+                if (housed) {
+                    const baseOf = (p: Point, own: {base: number} | null) => own?.base ?? h.ground(p.x, p.z);
+                    const [ba, bb] = [baseOf(pa, ha), baseOf(pb, hb)];
+                    m.how = "housed";
+                    if (d > HOUSED_NEAR) {
+                        // Two enclosures (two homes' tanks, two vivariums): he is brought to her side, on her floor.
+                        const hers = maleFirst ? hb ?? h.scheduleAt(b, m.act.t0 + lead) : ha ?? h.scheduleAt(a, m.act.t0 + lead);
+                        const she = maleFirst ? pb : pa;
+                        const yaw = hers?.yaw ?? 0;
+                        const off = (h.length(a) + h.length(b)) * HOUSED_BESIDE;
+                        m.beside = {she, he: {x: she.x + Math.cos(yaw) * off, z: she.z - Math.sin(yaw) * off}, yaw};
+                        // (The script is still made, from just behind her: its times are the act's, `debug`.)
+                        ({pa, pb} = nearer((h.length(a) + h.length(b)) * HOUSED_BEHIND, yaw));
+                        m.how = "brought";
+                        m.brought = maleFirst ? "a" : "b";
+                        const floor = maleFirst ? bb : ba;
+                        m.floor = () => floor;
+                    } else {
+                        // One enclosure: its floor between the two (a tank's water at each one's own depth).
+                        const [ax, az, bx, bz] = [pa.x, pa.z, pb.x, pb.z];
+                        m.floor = (x, z) => {
+                            const k = d > 1e-6 ? Math.min(Math.max(((x - ax) * (bx - ax) + (z - az) * (bz - az)) / (d * d), 0), 1) : 0.5;
+                            return ba + (bb - ba) * k;
+                        };
+                    }
+                } else if (d > MATING_MAX_APART) {
+                    ({pa, pb} = nearer(MATING_FAR_FROM));
+                    m.how = "far";
+                }
+                const close = (body: MatingBody): MatingBody => (housed ? {...body, length: body.length * HOUSED_COMPACT} : body);
+                const script = matingScript(close(this.body(a, pa)), close(this.body(b, pb)), m.act.key, {housed});
                 if (!script) {
                     m.failed = true;
                     continue;
@@ -658,14 +744,27 @@ export class LiveMatings<E> {
                 h.setAct(entry, act);
                 acting.add(entry);
             };
-            if (sM < sc.paired) {
-                pose(a, matingPose(sc, true, sM, h.ground, m.act.b));
-                pose(b, matingPose(sc, false, sM, h.ground, m.act.a));
+            const floor = m.floor ?? h.ground;
+            // (V1: the one brought beside her comes in from small, as an arrival does, and goes the same way.)
+            const brought = (which: "a" | "b", act: ActPose | null): ActPose | null => (act && m.brought === which ? {...act, scale: act.scale * Math.min(0.3 + 0.7 * ease(sM / 1.2), 0.3 + 0.7 * ease((sc.paired - sM) / 1.2))} : act);
+            if (sM < sc.paired && m.beside) {
+                // Side by side where she lives: he displays to her, then the two rest together.
+                const by = m.beside;
+                const lie = (p: Point, state: string, other: string): ActPose => ({x: p.x, z: p.z, base: floor(p.x, p.z), yaw: by.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state, speed: 0, with: other});
+                const courting = sM < sc.courted;
+                const heIsA = m.brought === "a";
+                pose(a, brought("a", lie(heIsA ? by.he : by.she, courting ? (heIsA ? "display" : "scan") : "rest", m.act.b)));
+                pose(b, brought("b", lie(heIsA ? by.she : by.he, courting ? (heIsA ? "scan" : "display") : "rest", m.act.a)));
+            } else if (sM < sc.paired) {
+                pose(a, brought("a", matingPose(sc, true, sM, floor, m.act.b)));
+                pose(b, brought("b", matingPose(sc, false, sM, floor, m.act.a)));
             } else {
                 // Part: each back to where its day has it now.
                 const last = sc.attempts[sc.attempts.length - 1];
-                const back = (entry: E, from: Point, pace: number) => {
-                    const now = h.scheduleAt(entry, epoch);
+                const back = (entry: E, from: Point, pace: number, which: "a" | "b") => {
+                    // (One that was brought is simply back where it lives.)
+                    if (m.brought === which) return null;
+                    const now = h.scheduleAt(entry, epoch) ?? h.placeOf?.(entry) ?? null;
                     if (!now) return null;
                     const d = Math.hypot(now.x - from.x, now.z - from.z);
                     const seconds = Math.min(Math.max(d / Math.max(pace, 0.3), RETURN_MIN), RETURN_MAX);
@@ -674,10 +773,10 @@ export class LiveMatings<E> {
                     const e = ease(k);
                     const x = from.x + (now.x - from.x) * e;
                     const z = from.z + (now.z - from.z) * e;
-                    return {x, z, base: h.ground(x, z), yaw: d > 0.05 ? Math.atan2(now.x - from.x, now.z - from.z) : now.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: k < 0.12 ? "rest" : "walk", speed: k < 0.12 ? 0 : d / seconds} satisfies ActPose;
+                    return {x, z, base: floor(x, z), yaw: d > 0.05 ? Math.atan2(now.x - from.x, now.z - from.z) : now.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: k < 0.12 ? "rest" : "walk", speed: k < 0.12 ? 0 : d / seconds} satisfies ActPose;
                 };
-                const ba = back(a, sc.firstMounts ? sc.side : last.spot, sc.firstMounts ? sc.m.pace : sc.f.pace);
-                const bb = back(b, sc.firstMounts ? last.spot : sc.side, sc.firstMounts ? sc.f.pace : sc.m.pace);
+                const ba = back(a, sc.firstMounts ? sc.side : last.spot, sc.firstMounts ? sc.m.pace : sc.f.pace, "a");
+                const bb = back(b, sc.firstMounts ? last.spot : sc.side, sc.firstMounts ? sc.f.pace : sc.m.pace, "b");
                 pose(a, ba);
                 pose(b, bb);
                 if (!ba && !bb) m.over = true;
@@ -691,11 +790,12 @@ export class LiveMatings<E> {
     }
 
     /** (`meet`, `courted`, `mounted`, `end`: s after `t0`, a contest's lead included: when the two meet, when the mounts begin and end, when they part.) */
-    debug(): Array<{key: string; t0: number; phase: string; court?: Courtship; mount?: MountKind; tries?: number; paired?: number; contest?: ContestKind; rival?: string; contestEnd?: number; meet?: number; courted?: number; mounted?: number; end?: number}> {
+    debug(): Array<{key: string; t0: number; phase: string; court?: Courtship; mount?: MountKind; tries?: number; paired?: number; contest?: ContestKind; rival?: string; contestEnd?: number; meet?: number; courted?: number; mounted?: number; end?: number; how?: "far" | "housed" | "brought"}> {
         return this.matings.map((m) => ({
             key: m.act.key,
             t0: m.act.t0,
             phase: m.failed ? "skipped" : m.over ? "over" : m.script ? "acting" : "waiting",
+            ...(m.how ? {how: m.how} : {}),
             ...(m.script ? {court: m.script.court, mount: m.script.mount, tries: m.script.attempts.length, paired: Math.round(m.script.paired), meet: (m.contest?.script.end ?? 0) + m.script.walk, courted: (m.contest?.script.end ?? 0) + m.script.courted, mounted: (m.contest?.script.end ?? 0) + m.script.mounted, end: (m.contest?.script.end ?? 0) + m.script.paired} : {}),
             ...(m.contest ? {contest: m.contest.script.kind, rival: m.contest.rival, contestEnd: Math.round(m.contest.script.end)} : {})
         }));

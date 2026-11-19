@@ -5,8 +5,10 @@ import type {ActPose} from "@/ark-scene/acts";
 import {
     failedTries,
     LiveMatings,
+    MATING_FAR_FROM,
     MATING_LIVE_SECONDS,
     MATING_MAX_APART,
+    MATING_WALK_MAX,
     matingPose,
     matingScript,
     mountKind,
@@ -168,17 +170,16 @@ test("the same for every viewer: a pose is pure in the time; a viewer arriving m
     assert.ok(now(a)!.pitch < -0.4, "mounted already");
 });
 
-test("not walked across the Ark: different worlds, too far apart, or long over; a busy animal is left alone; no doubles", () => {
+test("not walked across the Ark: different worlds, or long over; a busy animal is left alone; no doubles", () => {
     const a: E = {id: "a", x: 0, z: 0, world: "wild", act: null};
     const town: E = {id: "t", x: 5, z: 0, world: "town", act: null};
-    const far: E = {id: "f", x: MATING_MAX_APART + 5, z: 0, world: "wild", act: null};
     const old: E = {id: "o", x: 3, z: 0, world: "wild", act: null};
-    const layer = new LiveMatings(host([a, town, far, old]));
-    layer.add([{key: "1", a: "a", b: "t", t0: 0}, {key: "2", a: "a", b: "f", t0: 0}], 1);
+    const layer = new LiveMatings(host([a, town, old]));
+    layer.add([{key: "1", a: "a", b: "t", t0: 0}], 1);
     layer.step(2);
     assert.equal(now(a), null);
     assert.equal(now(town), null);
-    assert.equal(now(far), null);
+    assert.equal(layer.debug()[0].phase, "skipped");
     layer.add([{key: "3", a: "a", b: "o", t0: 0}], MATING_LIVE_SECONDS + 1);
     assert.equal(layer.debug().some((m) => m.key === "3"), false);
 
@@ -191,6 +192,75 @@ test("not walked across the Ark: different worlds, too far apart, or long over; 
     busy.step(3);
     assert.equal(now(x), null);
     assert.equal(now(y)?.state, "walk");
+});
+
+test("V1: a pair too far apart to walk is acted all the same: the one that mounts starts nearer, on the line from where he was", () => {
+    const she: E = {id: "she", x: 0, z: 0, world: "wild", act: null, male: false};
+    const he: E = {id: "he", x: MATING_MAX_APART + 240, z: 0, world: "wild", act: null, male: true};
+    const layer = new LiveMatings(host([she, he]));
+    layer.add([{key: "far", a: "she", b: "he", t0: 0}], 0);
+    layer.step(0.05);
+    assert.equal(layer.debug()[0].how, "far");
+    assert.ok(Math.abs(now(he)!.x - MATING_FAR_FROM) < 1 && now(he)!.z === 0, "he is 60 m from her, toward where his day had him");
+    assert.ok(dist(now(she)!, she) < 0.5, "she starts where her day has her");
+    const meet = layer.debug()[0].meet!;
+    assert.ok(meet <= MATING_WALK_MAX, "and they have met within the longest walk");
+    layer.step(meet + 0.5);
+    assert.ok(dist(now(he)!, now(she)!) < 3);
+});
+
+test("V1: a housed pair (no day to walk from) is acted in its enclosure: in place, on its own floor, no chase, one mount", () => {
+    // Two in one zoo house, 4 m apart, on a floor 2.5 m up; neither has a schedule.
+    const housed = (animals: E[], floor: Record<string, number>): LiveMatingsHost<E> => ({...host(animals), scheduleAt: () => null, ground: () => 0, placeOf: (e) => ({x: e.x, z: e.z, yaw: 0, base: floor[e.id]})});
+    const she: E = {id: "she", x: 0, z: 0, world: "town", act: null, male: false};
+    const he: E = {id: "he", x: 4, z: 0, world: "town", act: null, male: true};
+    const layer = new LiveMatings(housed([she, he], {she: 2.5, he: 2.5}));
+    layer.add([{key: keyWith(2), a: "she", b: "he", t0: 0}], 0);
+    layer.step(0.05);
+    const act = layer.debug()[0];
+    assert.equal(act.how, "housed");
+    assert.equal(act.court, "display", "a courtship in place: a chase would leave the enclosure");
+    assert.equal(act.tries, 1, "one mount: she does not walk on through a wall");
+    let reach = 0;
+    for (let s = 0; s < act.end!; s += 0.5) {
+        layer.step(s);
+        for (const e of [she, he]) {
+            const p = now(e)!;
+            reach = Math.max(reach, Math.abs(p.x - 2), Math.abs(p.z));
+            assert.ok(p.base >= 2.5 - 1e-9, `on the house's floor at ${s} s, never the ground under it`);
+        }
+    }
+    assert.ok(reach < 2.6, `the two stay between their places (${reach.toFixed(1)} m from the middle)`);
+    // Then each is back where it lives.
+    layer.step(act.end! + 40);
+    assert.equal(now(she), null);
+    assert.equal(now(he), null);
+
+    // Two enclosures (two homes' tanks, 70 m apart): he is brought beside her, on her floor, in from small.
+    const far: E = {id: "far", x: 70, z: 0, world: "town", act: null, male: true};
+    const two = new LiveMatings(housed([she, far], {she: 1.2, far: 6}));
+    two.add([{key: "two", a: "she", b: "far", t0: 0}], 0);
+    two.step(0.05);
+    assert.equal(two.debug()[0].how, "brought");
+    assert.ok(Math.abs(dist(now(far)!, she) - 0.28) < 1e-6 && Math.abs(now(far)!.z) < 1e-9, "at her side (she heads +z), a seventh of a body length off");
+    assert.equal(now(far)!.yaw, 0, "heading as she does");
+    let out = 0;
+    const states = new Set<string>();
+    for (let s = 0; s < two.debug()[0].end!; s += 0.5) {
+        two.step(s);
+        for (const e of [she, far]) out = Math.max(out, dist(now(e)!, she));
+        states.add(`${now(far)!.state}/${now(she)!.state}`);
+    }
+    assert.ok(out < 0.29, `neither ever leaves her box: she stays where she lives, he at her side (${out.toFixed(2)} m)`);
+    assert.deepEqual(Array.from(states), ["display/scan", "rest/rest"], "he displays to her, then the two rest together: no walk, no mount");
+    two.step(0.05);
+    assert.equal(now(far)!.base, 1.2, "on her floor");
+    assert.ok(now(far)!.scale < 0.5, "in from small");
+    assert.ok(dist(now(she)!, she) < 1e-9, "she stays where she lives");
+    two.step(8);
+    assert.equal(now(far)!.scale, 1);
+    two.step(two.debug()[0].end! + 1);
+    assert.equal(now(far), null, "and is simply back where he lives");
 });
 
 test("a contest first: where the species' males contest and a real rival is near, the two spar, the rival runs off, then the mating goes on", async () => {

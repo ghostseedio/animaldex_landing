@@ -24,6 +24,16 @@
  * page's static JavaScript budget, `ark-page-weight.test.ts`, had 41 bytes left).
  * Like the live matings (`live-matings.ts`), the scene gives it its entries through a host and this layer only says,
  * per frame, which act pose each takes, so nothing here touches the renderer.
+ *
+ * V1, births you can read (a tapped birth line showed the mother and no young: 8 lines of 20 read):
+ *   - den young are born tucked at her belly, where her own body hides them: each then CRAWLS OUT clear of her flank,
+ *     lies there while she licks it, and goes back to her belly to suckle;
+ *   - young far smaller than their mother (fry, a live-bearer's brood) are drawn larger for their first moments
+ *     (`pop`: up to two fifths of her length, never more than `POP_MOST` times their own size), then ease to their own;
+ *   - a mother with no day to settle from (a tank's, a cage's or a room's resident: the scene draws her where she
+ *     lives) gives birth there (`housed`): the same act on her own floor or in her own water, the brood close by her
+ *     (nothing leaves the enclosure); when it is over each young comes in where it lives, with the scene's own
+ *     entrance. Before, such a birth was not acted and the young were simply there.
  */
 
 import type {ActPose} from "@/ark-scene/acts";
@@ -52,6 +62,10 @@ export type LiveBirthsHost<E> = {
     male: (entry: E) => boolean | null;
     setAct: (entry: E, pose: ActPose | null) => void;
     busy: (entry: E) => boolean;
+    /** V1: where it is drawn now when it has no day (a tank's, a cage's or a room's resident), or null: nowhere. */
+    placeOf?: (entry: E) => {x: number; z: number; yaw: number; base: number} | null;
+    /** V1: its coming into the world, shown by the scene's own entrance where it is (it grows in, with its ripple). */
+    appear?: (entry: E) => void;
 };
 
 /** How long after its time a birth is still acted (s): the tick and the record's read come later. */
@@ -67,6 +81,14 @@ const PART_MAX = 20;
 const STAND_HEIGHT = 2.4;
 /** The young drawn at most (a big litter's others are tucked out of sight in the den or among the first). */
 const SHOWN_MAX = 6;
+/** V1: a den young lies tucked at her belly this long (s), then crawls out clear of her flank in this long. */
+const DEN_TUCKED = 2;
+const DEN_OUT = 3;
+/** V1: young smaller than this share of their mother's length are drawn up to it at first, at most this many times their size; held this long (s), eased back in this long. */
+const POP_SHARE = 0.42;
+const POP_MOST = 3;
+const POP_HOLD = 16;
+const POP_EASE = 8;
 
 type Point = {x: number; z: number};
 
@@ -85,6 +107,12 @@ export type BirthScript = {
     end: number;
     mother: {length: number; height: number; pace: number};
     pace: number;
+    /** V1: where each shown den young lies once it has crawled out (clear of her body); empty for the other styles. */
+    out: Point[];
+    /** V1: how many times its own size a newborn is drawn at first (1: as it is). */
+    pop: number;
+    /** V1: seconds after t0 by which every shown young can be seen (the watch's still). */
+    seenBy: number;
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
@@ -111,7 +139,7 @@ export function birthStyle(plan: string | null, care: ArkCareKind | null, pouch:
 }
 
 /** The litter's script, built once from where the mother's day has her at the birth. */
-export function birthScript(mother: Point & {yaw: number; length: number; height: number; pace: number; plan: string | null; care: ArkCareKind | null; pouch: boolean}, young: number, key: string, youngPace = 0.4): BirthScript {
+export function birthScript(mother: Point & {yaw: number; length: number; height: number; pace: number; plan: string | null; care: ArkCareKind | null; pouch: boolean}, young: number, key: string, youngPace = 0.4, youngLength: number | null = null, housed = false): BirthScript {
     const style = birthStyle(mother.plan, mother.care, mother.pouch);
     const standing = style === "open" && mother.height >= STAND_HEIGHT;
     const n = clamp(young, 1, SHOWN_MAX);
@@ -121,6 +149,8 @@ export function birthScript(mother: Point & {yaw: number; length: number; height
     const spread = (unit(`${key}:side`) < 0.5 ? -1 : 1);
     const born: Point[] = [];
     const nurse: Point[] = [];
+    const out: Point[] = [];
+    const yl = youngLength && youngLength > 0 ? youngLength : L * 0.35;
     for (let k = 0; k < n; k++) {
         const fan = (k - (n - 1) / 2) * 0.22;
         if (style === "open") {
@@ -132,22 +162,38 @@ export function birthScript(mother: Point & {yaw: number; length: number; height
             const p = {x: mother.x + dir.x * L * (0.25 - 0.14 * k) + side.x * spread * L * 0.3, z: mother.z + dir.z * L * (0.25 - 0.14 * k) + side.z * spread * L * 0.3};
             born.push(p);
             nurse.push(p);
+            // (V1: out from under her, clear of her flank by its own length, in a row along her; her body no longer hides it.)
+            const off = L * 0.5 + Math.max(yl, L * POP_SHARE) * 0.7;
+            out.push({x: mother.x + dir.x * L * (0.3 - 0.3 * (k - (n - 1) / 2)) + side.x * spread * off, z: mother.z + dir.z * L * (0.3 - 0.3 * (k - (n - 1) / 2)) + side.z * spread * off});
         } else if (style === "cling" || style === "back" || style === "pouch") {
             born.push({x: mother.x + dir.x * L * 0.12, z: mother.z + dir.z * L * 0.12});
             nurse.push(born[k]);
         } else {
-            // Beside her, scattered in a half ring.
+            // Beside her, scattered in a half ring. (V1: and they stay by her while it is acted, a little farther out:
+            // a brood that scattered at once left one picture holding a fish and a speck a metre from it.)
             const a = mother.yaw + Math.PI * (0.35 + 0.6 * (k / Math.max(n - 1, 1))) * spread;
-            const r = L * (0.7 + 0.25 * unit(`${key}:r${k}`));
+            // (In a tank or a cage, nearer still: nothing through the glass.)
+            const r = L * (housed ? 0.5 : 0.6 + 0.15 * unit(`${key}:r${k}`));
             born.push({x: mother.x + Math.sin(a) * r, z: mother.z + Math.cos(a) * r});
-            nurse.push({x: mother.x + Math.sin(a) * r * 1.6, z: mother.z + Math.cos(a) * r * 1.6});
+            nurse.push({x: mother.x + Math.sin(a) * r * (housed ? 1 : 1.25), z: mother.z + Math.cos(a) * r * (housed ? 1 : 1.25)});
         }
     }
     const first = SETTLE;
     const lickEnd = first + EACH * (n - 1) + (style === "beside" || style === "pouch" || style === "back" ? 4 : LICK);
     const riseEnd = lickEnd + (style === "open" ? RISE : 0);
     const end = riseEnd + (style === "beside" ? 8 : NURSE);
-    return {style, standing, spot: {x: mother.x, z: mother.z}, yaw: mother.yaw, born, nurse, first, lickEnd, riseEnd, end, mother: {length: L, height: mother.height, pace: mother.pace}, pace: youngPace};
+    // (Riders are their mother's size already as drawn against her; a newborn in the pouch is never seen.)
+    const pop = style === "open" || style === "den" || style === "beside" ? clamp((L * POP_SHARE) / yl, 1, POP_MOST) : 1;
+    const seenBy = first + EACH * (n - 1) + (style === "den" ? DEN_TUCKED + DEN_OUT : 1.5);
+    return {style, standing, spot: {x: mother.x, z: mother.z}, yaw: mother.yaw, born, nurse, first, lickEnd, riseEnd, end, mother: {length: L, height: mother.height, pace: mother.pace}, pace: youngPace, out, pop, seenBy};
+}
+
+/** V1: how large a newborn is drawn `t` seconds after it is born: in from small, at `pop` for a while, then its own size. */
+export function newbornScale(pop: number, t: number): number {
+    if (t <= 0) return 0.3;
+    const into = ease(t / 0.9);
+    const back = ease((t - POP_HOLD) / POP_EASE);
+    return (0.3 + 0.7 * into) * (1 + (pop - 1) * into * (1 - back));
 }
 
 type Ground = (x: number, z: number) => number;
@@ -164,7 +210,7 @@ export function motherPose(sc: BirthScript, s: number, ground: Ground, youngId?:
     if (s < sc.first) return at(sc.spot, sc.yaw, ground, state, extra);
     if (s < sc.lickEnd && sc.style !== "beside" && sc.style !== "pouch" && sc.style !== "back") {
         // She turns to the young and licks them (head down to them, a slow bob).
-        const toYoung = yawTo(sc.spot, sc.born[0]);
+        const toYoung = yawTo(sc.spot, sc.out[0] ?? sc.born[0]);
         const k = ease((s - sc.first) / 2.5);
         let d = toYoung - sc.yaw;
         while (d > Math.PI) d -= Math.PI * 2;
@@ -180,13 +226,29 @@ export function youngPose(sc: BirthScript, k: number, s: number, ground: Ground,
     const shown = Math.min(k, sc.born.length - 1);
     const bornAt = sc.first + EACH * shown;
     const extra: Partial<ActPose> = {meal: "resting", ...(motherId ? {with: motherId} : {})};
-    const p = sc.born[shown];
+    const p = sc.born[shown] ?? sc.spot;
     const faceMother = yawTo(p, sc.spot);
     if (s < bornAt || k >= sc.born.length || sc.style === "pouch") return {...at(p, faceMother, ground, "rest"), hidden: true};
     const up = sc.mother.height;
+    // (V1: in from small as it is born; one much smaller than her, larger than it is for its first moments.)
+    extra.scale = newbornScale(sc.pop, s - bornAt);
     if (sc.style === "cling") return at(sc.nurse[shown], sc.yaw, () => ground(sc.spot.x, sc.spot.z) + up * 0.35, "rest", {...extra, pitch: -0.5});
     if (sc.style === "back") return at({x: sc.spot.x - Math.sin(sc.yaw) * sc.mother.length * 0.1 * shown, z: sc.spot.z - Math.cos(sc.yaw) * sc.mother.length * 0.1 * shown}, sc.yaw + shown * 0.7, () => ground(sc.spot.x, sc.spot.z) + up * 0.8, "rest", extra);
-    if (sc.style === "den") return at(p, sc.yaw + Math.PI / 2, ground, "rest", {...extra, lying: 0.6});
+    if (sc.style === "den") {
+        const tucked = at(p, sc.yaw + Math.PI / 2, ground, "rest", {...extra, lying: 0.6});
+        const o = sc.out[shown];
+        if (!o) return tucked;
+        // V1: tucked at her belly as it is born; then it crawls out clear of her flank and lies there, wobbly, while
+        // she licks it; then back to her belly to suckle.
+        const t = s - bornAt;
+        const d = Math.hypot(o.x - p.x, o.z - p.z);
+        if (t < DEN_TUCKED) return tucked;
+        if (t < DEN_TUCKED + DEN_OUT) return at(lerpP(p, o, ease((t - DEN_TUCKED) / DEN_OUT)), yawTo(p, o), ground, "walk", {...extra, speed: d / DEN_OUT});
+        if (s < sc.lickEnd) return at(o, yawTo(o, sc.spot), ground, "rest", {...extra, roll: Math.sin(t * 2.3 + shown) * 0.07});
+        const b = (s - sc.lickEnd) / DEN_OUT;
+        if (b < 1) return at(lerpP(o, p, ease(b)), yawTo(o, p), ground, "walk", {...extra, speed: d / DEN_OUT});
+        return tucked;
+    }
     if (sc.style === "beside") {
         const k2 = ease((s - bornAt - 2) / 6);
         const q = lerpP(p, sc.nurse[shown], k2);
@@ -205,7 +267,7 @@ export function youngPose(sc: BirthScript, k: number, s: number, ground: Ground,
     return at(q, sc.yaw + Math.PI * 0.85, ground, "eat", {...extra, pitch: -0.25});
 }
 
-type Live<E> = {act: BirthAct; script: BirthScript | null; motherId: string | null; failed: boolean; over: boolean; acting: Set<E>};
+type Live<E> = {act: BirthAct; script: BirthScript | null; motherId: string | null; failed: boolean; over: boolean; acting: Set<E>; /** V1 (housed): the floor or the water's level the act is on (her own, where the scene draws her). */ floor?: number};
 
 export class LiveBirths<E> {
     private births: Live<E>[] = [];
@@ -261,7 +323,8 @@ export class LiveBirths<E> {
                 // born yet: out of sight until they are (their mother goes on with her day).
                 for (const id of b.act.young) {
                     const young = h.find(id);
-                    const at = young && !h.busy(young) ? h.scheduleAt(young, epoch) : null;
+                    // (V1: one with no day, a tank's, where the scene draws it.)
+                    const at = young && !h.busy(young) ? h.scheduleAt(young, epoch) ?? h.placeOf?.(young) ?? null : null;
                     if (!young || !at) continue;
                     h.setAct(young, {x: at.x, z: at.z, base: h.ground(at.x, at.z), yaw: at.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: true, speed: 0});
                     b.acting.add(young);
@@ -270,7 +333,9 @@ export class LiveBirths<E> {
             }
             if (!b.script) {
                 const mother = this.mother(b.act);
-                const place = mother ? h.scheduleAt(mother.entry, b.act.t0) : null;
+                // V1: no day to settle from (a tank, a cage, a room): where the scene draws her, on her own floor.
+                const housed = mother && !h.scheduleAt(mother.entry, b.act.t0) ? h.placeOf?.(mother.entry) ?? null : null;
+                const place = mother ? housed ?? h.scheduleAt(mother.entry, b.act.t0) : null;
                 if (!mother || !place) {
                     // (The young it kept out of sight while it was held are shown again.)
                     this.release(b);
@@ -279,9 +344,12 @@ export class LiveBirths<E> {
                 }
                 const young = b.act.young.map((id) => h.find(id)).filter((e): e is E => e !== null);
                 b.motherId = mother.id;
-                b.script = birthScript({...place, length: h.length(mother.entry), height: h.height(mother.entry), pace: h.walk(mother.entry), plan: h.plan(mother.entry), care: h.care(mother.entry), pouch: h.pouch(mother.entry)}, young.length || b.act.young.length, b.act.key, young[0] ? h.walk(young[0]) : 0.4);
+                if (housed) b.floor = housed.base;
+                b.script = birthScript({...place, length: h.length(mother.entry), height: h.height(mother.entry), pace: h.walk(mother.entry), plan: h.plan(mother.entry), care: h.care(mother.entry), pouch: h.pouch(mother.entry)}, young.length || b.act.young.length, b.act.key, young[0] ? h.walk(young[0]) : 0.4, young[0] ? h.length(young[0]) : null, Boolean(housed));
             }
             const sc = b.script;
+            const floor = b.floor;
+            const ground: Ground = floor === undefined ? h.ground : () => floor;
             const mother = b.motherId ? h.find(b.motherId) : null;
             if (!mother) {
                 this.release(b);
@@ -308,11 +376,21 @@ export class LiveBirths<E> {
             };
             const youngIds = b.act.young;
             if (s < sc.end) {
-                pose(mother, motherPose(sc, s, h.ground, youngIds[0]));
+                pose(mother, motherPose(sc, s, ground, youngIds[0]));
                 youngIds.forEach((id, k) => {
                     const e = h.find(id);
-                    if (e) pose(e, youngPose(sc, k, s, h.ground, b.motherId ?? undefined));
+                    if (e) pose(e, youngPose(sc, k, s, ground, b.motherId ?? undefined));
                 });
+            } else if (floor !== undefined) {
+                // V1 (housed): over; each young comes in where it lives (the scene's entrance), its mother as the scene draws her.
+                b.acting.forEach((e) => h.setAct(e, null));
+                b.acting.clear();
+                for (const id of youngIds) {
+                    const e = h.find(id);
+                    if (e) h.appear?.(e);
+                }
+                b.over = true;
+                continue;
             } else {
                 // Part: each back to its day. (Young beyond the shown few, and a pouch's, simply are where their day has them.)
                 const bm = back(mother, sc.spot, sc.mother.pace, sc.end);
@@ -336,7 +414,7 @@ export class LiveBirths<E> {
         this.births = this.births.filter((b) => !(b.over || b.failed) || b.acting.size > 0 || epoch - b.act.t0 < BIRTH_LIVE_SECONDS);
     }
 
-    debug(): Array<{key: string; t0: number; mother: string | null; end: number | null; phase: string; style?: BirthStyle; young: number}> {
-        return this.births.map((b) => ({key: b.act.key, t0: b.act.t0, mother: b.motherId, end: b.script ? Math.round(b.script.end) : null, phase: b.failed ? "skipped" : b.over ? "over" : b.script ? "acting" : "waiting", ...(b.script ? {style: b.script.style} : {}), young: b.act.young.length}));
+    debug(): Array<{key: string; t0: number; mother: string | null; end: number | null; phase: string; style?: BirthStyle; young: number; seenBy?: number; housed?: boolean}> {
+        return this.births.map((b) => ({key: b.act.key, t0: b.act.t0, mother: b.motherId, end: b.script ? Math.round(b.script.end) : null, phase: b.failed ? "skipped" : b.over ? "over" : b.script ? "acting" : "waiting", ...(b.script ? {style: b.script.style, seenBy: Math.round(b.script.seenBy * 10) / 10} : {}), ...(b.floor !== undefined ? {housed: true} : {}), young: b.act.young.length}));
     }
 }

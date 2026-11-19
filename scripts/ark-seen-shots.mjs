@@ -10,7 +10,7 @@
  *
  *   node scripts/ark-seen-shots.mjs --data <dir with voyage.json + events.json> --out <dir>
  *        [--kinds meal,escaped,mated,birth,death] [--count 20] [--events <id,id,…>] [--width 720 --height 1280]
- *        [--quality high|medium|low] [--step 3] [--no-clips]
+ *        [--quality high|medium|low] [--step 3] [--no-clips] [--trace] (where each of the cast is, once a second)
  *
  * mated, birth and death are the record's own events; meal and escaped are made by the page from animals really
  * aboard while production has none (the first hunts come after the launch grace). The saved reads hold usernames:
@@ -96,7 +96,7 @@ page.on("console", (m) => {
     if (m.text().startsWith("[seen]")) log(m.text().slice(0, 800));
 });
 log(`opening ${base}?quality=${quality} at ${width}×${height}`);
-await page.goto(`${base}?quality=${quality}`, {waitUntil: "domcontentloaded", timeout: 180000});
+await page.goto(`${base}?quality=${quality}${process.argv.includes("--trace") ? "&trace=1" : ""}`, {waitUntil: "domcontentloaded", timeout: 180000});
 await page.waitForFunction(() => window.__seen?.ready || window.__seenError, null, {timeout: 600000, polling: 500});
 const failed = await page.evaluate(() => window.__seenError ?? null);
 if (failed) {
@@ -127,7 +127,7 @@ const film = async (kind, id, n) => {
     Object.assign(entry, {plan: prepared, text: await page.evaluate((id) => window.__seen.lite(id), id)});
     if (prepared.skipped) {
         entry.skipped = true;
-        log(`${kind} ${id}: the layer does not act it (a housed pair, or too far apart): passed over; "${entry.text?.[0] ?? ""}"`);
+        log(`${kind} ${id}: the layer does not act it (the two on different islands, or one on the wing): nothing to film; "${entry.text?.[0] ?? ""}"`);
         return;
     }
     const name = `${kind}-${String(n).padStart(2, "0")}-${id}-${slugOf(prepared.cast[0]?.name ?? kind)}`;
@@ -184,9 +184,10 @@ for (const kind of kinds) {
     log(`${kind}: ${ids.length} line(s): ${ids.join(", ") || "none"}`);
     let n = 0;
     for (const id of ids) {
-        if (!only.length && summary.filter((e) => e.kind === kind && !e.skipped).length >= count) break;
+        // (A line the layer does not act is one of the lines all the same: counted, and not readable.)
+        if (!only.length && summary.filter((e) => e.kind === kind).length >= count) break;
         await film(only.length ? await page.evaluate((id) => window.__seen.plan(id).kind, id).catch(() => kind) : kind, id, n + 1);
-        if (!summary[summary.length - 1].skipped) n++;
+        n++;
     }
     // The kind's contact sheet: its stills, five to a row.
     const stills = summary.filter((e) => e.kind === kind && e.name && existsSync(path.join(out, `${e.name}.jpg`))).map((e) => path.join(out, `${e.name}.jpg`));

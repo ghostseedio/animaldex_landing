@@ -47,6 +47,8 @@ type Nest = {
     kind: NestKind;
     laidAt: number;
     hatchAt: number | null;
+    /** V1: seconds after the hatch began by which the nest has faded (`NEST_FADE`, or longer: its young are shown in it). */
+    fade?: number;
     /** Seconds over which the eggs pop in. */
     layingSeconds: number;
     basePositions: Vector3[];
@@ -129,9 +131,12 @@ export class ArkNests {
     }
 
     /** The eggs hatch from `now`: they rock, split and are gone; the nest fades after. */
-    hatch(id: string, now: number) {
+    hatch(id: string, now: number, fade = NEST_FADE) {
         const nest = this.nests.get(id);
-        if (nest && nest.hatchAt === null) nest.hatchAt = now;
+        if (nest && nest.hatchAt === null) {
+            nest.hatchAt = now;
+            nest.fade = Math.max(fade, NEST_FADE);
+        }
     }
 
     /** Seconds after the hatch began at which the young should appear (the eggs have split). */
@@ -139,7 +144,7 @@ export class ArkNests {
 
     step(now: number) {
         this.nests.forEach((nest, id) => {
-            if (nest.hatchAt !== null && now - nest.hatchAt > NEST_FADE) {
+            if (nest.hatchAt !== null && now - nest.hatchAt > (nest.fade ?? NEST_FADE)) {
                 this.remove(id);
                 return;
             }
@@ -175,8 +180,9 @@ export class ArkNests {
         }
         nest.eggs.instanceMatrix.needsUpdate = true;
         // The nest itself fades out once the young are out.
-        if (hatch > HATCH_GONE) {
-            const k = Math.min((hatch - HATCH_GONE) / (NEST_FADE - HATCH_GONE), 1);
+        const fadeFrom = HATCH_GONE + (nest.fade ?? NEST_FADE) - NEST_FADE;
+        if (hatch > fadeFrom) {
+            const k = Math.min((hatch - fadeFrom) / (NEST_FADE - HATCH_GONE), 1);
             nest.group.children.forEach((child) => {
                 const material = (child as Mesh).material as MeshStandardMaterial;
                 material.transparent = true;
