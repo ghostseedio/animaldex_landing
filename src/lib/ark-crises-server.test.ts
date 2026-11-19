@@ -4,7 +4,7 @@ import path from "node:path";
 import test from "node:test";
 import {decodeArkCrises} from "./ark-crises";
 import {arkCrisesFixture} from "./ark-crises-fixture";
-import {arkCrisisCountriesFrom, arkCrisisHabitat, arkCrisisIdParam, shapeArkCrises} from "./ark-crises-server";
+import {arkCrisisCountriesFrom, arkCrisisHabitat, arkCrisisIdParam, arkCrisisSavedByFrom, shapeArkCrises} from "./ark-crises-server";
 
 const BOAR = "Native range keys: europe, north_africa_middle_east, east_asia. Broadleaf and mixed forest, especially oak and beech woods, together with reed beds, marshes, scrub, steppe edges and farmland with nearby cover, from lowlands into mountains. It needs dense cover to lie up in and water within reach.";
 
@@ -69,7 +69,9 @@ test("the route's answer: the contract's keys and no other, a page slug only for
     assert.equal(body.available, true);
     assert.equal(body.as_of, "2026-11-27T08:10:00.000Z");
     const contract = JSON.parse(readFileSync(path.join(__dirname, "ark-crises-contract-keys.json"), "utf8")) as string[];
-    for (const row of body.crises) assert.deepEqual(Object.keys(row).sort(), [...contract].sort());
+    // contract 1.0's keys on every row; 1.1's optional saved_by only on a saved row that has one
+    for (const row of body.crises) assert.deepEqual(Object.keys(row).sort(), (row.saved_by ? [...contract, "saved_by"] : [...contract]).sort());
+    assert.deepEqual(body.crises.filter((row) => "saved_by" in row).map((row) => [row.name, row.saved_by]), [["Snow Leopard", [{name: "Maya R."}]], ["Iberian Lynx", [{name: null}]]]);
     const boar = body.crises.find((row) => row.name === "Wild Boar")!;
     assert.equal(boar.page_slug, "wild-boar");
     assert.deepEqual(boar.countries, []);
@@ -95,4 +97,24 @@ test("the route's answer: not available, and what is not an answer", () => {
     assert.equal(shapeArkCrises(null, () => true), null);
     assert.equal(shapeArkCrises([], () => true), null);
     assert.equal(shapeArkCrises({available: true}, () => true), null);
+});
+
+test("saved_by: only on a saved crisis, only [{name}], at most 3, a short clean name or null; nothing else of a person gets through", () => {
+    assert.deepEqual(arkCrisisSavedByFrom("saved", [{name: "Maya R."}]), [{name: "Maya R."}]);
+    assert.deepEqual(arkCrisisSavedByFrom("saved", [{name: null}]), [{name: null}]);
+    assert.equal(arkCrisisSavedByFrom("open", [{name: "Maya R."}]), null, "an open crisis has no saver");
+    assert.equal(arkCrisisSavedByFrom("extinct", [{name: "Maya R."}]), null);
+    assert.equal(arkCrisisSavedByFrom("saved", undefined), null, "no field, no key");
+    assert.equal(arkCrisisSavedByFrom("saved", []), null);
+    assert.equal(arkCrisisSavedByFrom("saved", "Maya"), null);
+    const clean = arkCrisisSavedByFrom("saved", [{name: "Maya", user_id: "u1", handle: "maya_h", avatar_url: "https://a.example/x.png", capture_id: "c1"}, {name: "B"}, {name: "C"}, {name: "D"}])!;
+    assert.equal(clean.length, 3);
+    assert.deepEqual(clean[0], {name: "Maya"});
+    assert.ok(!JSON.stringify(clean).match(/u1|maya_h|avatar|capture/));
+    assert.equal(arkCrisisSavedByFrom("saved", [{name: "x".repeat(90)}])![0].name!.length, 40);
+    // through the route's shaping: the database's extra keys are cut, other rows never get the key
+    const rows = serverAnswer().crises.map((row) => ((row as Record<string, unknown>).status === "saved" ? {...row, saved_by: [{name: "Maya R.", user_id: "u1", handle: "maya_h"}]} : {...row, saved_by: [{name: "Nope"}]}));
+    const body = shapeArkCrises({available: true, ark_day: 262.4, as_of: "2026-11-27T08:10:00Z", crises: rows}, () => true)!;
+    for (const row of body.crises) assert.equal("saved_by" in row, row.status === "saved", `${row.name}: saved_by only on a saved row`);
+    assert.ok(!JSON.stringify(body).match(/u1|maya_h|Nope/));
 });

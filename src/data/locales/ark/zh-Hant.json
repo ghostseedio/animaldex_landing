@@ -585,6 +585,8 @@
             "habitat": "棲息地",
             "foundIn": "分佈",
             "saved": "已獲救：該物種已脫離危險",
+            "savedBy": "由{name}救下",
+            "savedByCollector": "由一位收藏者救下",
             "lost": "已從野外消失",
             "listLabel": "野外瀕危物種，最新的在前",
             "unavailable": "暫時無法檢查，請稍後再試。",

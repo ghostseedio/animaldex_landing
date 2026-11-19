@@ -585,6 +585,8 @@
             "habitat": "Yaşam alanı",
             "foundIn": "Yayılış",
             "saved": "Kurtarıldı: bu tür artık tehlikede değil",
+            "savedBy": "{name} sayesinde kurtarıldı",
+            "savedByCollector": "Bir koleksiyoner sayesinde kurtarıldı",
             "lost": "Doğadan yok oldu",
             "listLabel": "Doğada tehlikedeki türler, en yeniler önce",
             "unavailable": "Şu anda kontrol edilemiyor. Birazdan tekrar dene.",

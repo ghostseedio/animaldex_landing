@@ -4797,6 +4797,8 @@
       "habitat": "Habitat",
       "foundIn": "Found in",
       "saved": "Saved: this kind is out of danger",
+      "savedBy": "Saved by {name}",
+      "savedByCollector": "Saved by a collector",
       "lost": "Lost from the wild",
       "listLabel": "Kinds in danger in the wild, newest first",
       "unavailable": "Can't check right now. Try again in a moment.",

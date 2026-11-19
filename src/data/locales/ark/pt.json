@@ -585,6 +585,8 @@
             "habitat": "Habitat",
             "foundIn": "Ocorre em",
             "saved": "Salva: esta espécie já não está em perigo",
+            "savedBy": "Graças a {name}",
+            "savedByCollector": "Graças a uma pessoa que coleciona animais",
             "lost": "Perdida na natureza",
             "listLabel": "Espécies em perigo na natureza, as mais recentes primeiro",
             "unavailable": "Não é possível verificar agora. Tente de novo daqui a pouco.",

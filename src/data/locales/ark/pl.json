@@ -585,6 +585,8 @@
             "habitat": "Siedlisko",
             "foundIn": "Zasięg",
             "saved": "Uratowano: ten gatunek nie jest już zagrożony",
+            "savedBy": "Dzięki {name}",
+            "savedByCollector": "Dzięki osobie, która zbiera zwierzęta",
             "lost": "Utracony na wolności",
             "listLabel": "Gatunki zagrożone na wolności, od najnowszych",
             "unavailable": "Nie można teraz sprawdzić. Spróbuj ponownie za chwilę.",

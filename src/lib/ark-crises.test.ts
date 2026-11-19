@@ -11,6 +11,8 @@ import {
     arkCrisisFocus,
     arkCrisisFromQuery,
     arkCrisisLink,
+    arkCrisisSavedByLine,
+    arkCrisisSaverName,
     arkCrisisSeeItPath,
     arkCrisisSummary,
     arkEndangeredWords,
@@ -26,8 +28,8 @@ const reply = (status: number, body: unknown) => async () => new Response(typeof
 test("decode: the contract's rows, last one first, then critical newest first, then ended; a malformed row is dropped, never the list", () => {
     const rows = fixture().crises;
     const list = decodeArkCrises({crises: [...rows, {name: "no id"}, {...rows[0], id: "not-a-uuid"}, {...rows[0], id: "11111111-2222-4333-8444-555555555555", band: "last", wild_count: 2}]})!;
-    assert.deepEqual(list.map((one) => one.name), ["Wild Boar", "Red Squirrel", "Eurasian Lynx", "Snow Leopard", "Giant Panda"]);
-    assert.deepEqual(list.map((one) => one.status), ["open", "open", "open", "saved", "extinct"]);
+    assert.deepEqual(list.map((one) => one.name), ["Wild Boar", "Red Squirrel", "Eurasian Lynx", "Iberian Lynx", "Snow Leopard", "Giant Panda"]);
+    assert.deepEqual(list.map((one) => one.status), ["open", "open", "open", "saved", "saved", "extinct"]);
     assert.equal(list[0].wildCount, 1);
     assert.deepEqual(list[1].lastAnimalIds.length, 2);
     assert.equal(decodeArkCrises(null), null);
@@ -59,14 +61,14 @@ test("decode: one row per crisis id (the newest), ids lower-cased, animal ids an
 test("decode: nothing finer than a country, no predator and no estimate leaks through", () => {
     const boar = {...fixture().crises[0], threat_predator_kind: "wolf", eta: "3 h", lat: 1.5, city: "Berlin", owner_id: "u1"};
     const [one] = decodeArkCrises([boar])!;
-    assert.deepEqual(Object.keys(one).sort(), ["band", "countries", "endedArkDay", "endedAt", "habitat", "id", "lastAnimalIds", "modelSlug", "name", "openedArkDay", "openedAt", "pageSlug", "scientificName", "speciesProfileId", "status", "wildCount"]);
+    assert.deepEqual(Object.keys(one).sort(), ["band", "countries", "endedArkDay", "endedAt", "habitat", "id", "lastAnimalIds", "modelSlug", "name", "openedArkDay", "openedAt", "pageSlug", "savedBy", "scientificName", "speciesProfileId", "status", "wildCount"]);
     assert.ok(!JSON.stringify(one).match(/wolf|Berlin|u1|3 h/));
 });
 
 test("fetch: a list, an empty list, no read yet (404 / available false), and an error are four different states", async () => {
     const ready = await fetchArkCrises({}, reply(200, fixture()));
     assert.equal(ready.state, "ready");
-    assert.equal(ready.crises.length, 5);
+    assert.equal(ready.crises.length, 6);
     const none = await fetchArkCrises({}, reply(200, {available: true, crises: []}));
     assert.deepEqual(none, {state: "ready", crises: []});
     for (const status of [404, 410, 501]) assert.deepEqual(await fetchArkCrises({}, reply(status, "")), {state: "absent", crises: []}, String(status));
@@ -105,7 +107,7 @@ test("countries: names in the reader's language, from the codes; an unknown code
 });
 
 test("See it in the Ark: an animal alive now, else the kind; never for a kind lost from the wild", () => {
-    const [boar, , , saved, extinct] = decodeArkCrises(fixture().crises)!;
+    const [boar, , , , saved, extinct] = decodeArkCrises(fixture().crises)!;
     assert.equal(arkCrisisFocus(boar), "b7f4a3d2-9e1c-4b6a-8f20-3c5d7e9a1b02");
     assert.equal(arkCrisisSeeItPath(boar), "/ark?focus=b7f4a3d2-9e1c-4b6a-8f20-3c5d7e9a1b02&follow=1");
     assert.equal(arkCrisisSeeItPath({...boar, lastAnimalIds: []}), `/ark?focus=${boar.speciesProfileId}`);
@@ -121,10 +123,13 @@ test("deep link: /ark/endangered?crisis=<id>; only a crisis id counts", () => {
 });
 
 test("a crisis in words, for a screen reader and the plain-text view", () => {
-    const [boar, , , saved] = decodeArkCrises(fixture().crises)!;
+    const [boar, , , collector, saved, lost] = decodeArkCrises(fixture().crises)!;
+    const plain = (line: string) => line.replace(/[\u2068\u2069]/g, "");
     assert.equal(arkCrisisBandWord(ARK_ENDANGERED_WORDS_EN, boar), "Last one");
     assert.equal(arkCrisisSummary(ARK_ENDANGERED_WORDS_EN, boar, NOW, "en"), "Wild Boar, Last one, In the wild: 1, In danger for 5 hours");
-    assert.equal(arkCrisisSummary(ARK_ENDANGERED_WORDS_EN, saved, NOW, "en"), "Snow Leopard, Saved: this kind is out of danger");
+    assert.equal(plain(arkCrisisSummary(ARK_ENDANGERED_WORDS_EN, saved, NOW, "en")), "Snow Leopard, Saved: this kind is out of danger, Saved by Maya R.");
+    assert.equal(arkCrisisSummary(ARK_ENDANGERED_WORDS_EN, collector, NOW, "en"), "Iberian Lynx, Saved: this kind is out of danger, Saved by a collector");
+    assert.equal(arkCrisisSummary(ARK_ENDANGERED_WORDS_EN, lost, NOW, "en"), "Giant Panda, Lost from the wild");
 });
 
 test("words: English key by key under a locale's missing or empty ones", () => {
@@ -150,3 +155,46 @@ test("the locale files carry every word, with the same placeholders, in all 45 l
         if (language !== "id") assert.notEqual(local.title, english.title, `${language}: the title is translated`);
     }
 });
+
+test("saved by (contract 1.1): a name or \"a collector\", only on a saved crisis, only a name, never gendered", () => {
+    const rows = fixture().crises;
+    const [, , , collector, saved] = decodeArkCrises(rows)!;
+    assert.deepEqual(saved.savedBy, [{name: "Maya R."}]);
+    assert.deepEqual(collector.savedBy, [{name: null}]);
+    assert.equal(plainLine(arkCrisisSavedByLine(ARK_ENDANGERED_WORDS_EN, saved, "en")), "Saved by Maya R.");
+    assert.equal(arkCrisisSavedByLine(ARK_ENDANGERED_WORDS_EN, collector, "en"), "Saved by a collector");
+    // a name sits inside direction isolates, so a right-to-left name in a left-to-right line reads whole
+    assert.equal(arkCrisisSavedByLine(ARK_ENDANGERED_WORDS_EN, saved, "en"), "Saved by \u2068Maya R.\u2069");
+    // the credit exists only where the answer has one: an open row, an extinct row, a saved row with no saved_by (a birth ended it)
+    const [boar] = decodeArkCrises(rows)!;
+    assert.equal(boar.savedBy, null);
+    assert.equal(arkCrisisSavedByLine(ARK_ENDANGERED_WORDS_EN, boar, "en"), null);
+    const birth = decodeArkCrises([{...rows[3], saved_by: undefined}])![0];
+    assert.equal(birth.savedBy, null);
+    assert.equal(arkCrisisSavedByLine(ARK_ENDANGERED_WORDS_EN, birth, "en"), null);
+    assert.equal(decodeArkCrises([{...rows[0], saved_by: [{name: "Open One"}]}])![0].savedBy, null, "an open crisis has no saver, whatever a read sends");
+    assert.equal(decodeArkCrises([{...rows[5], saved_by: [{name: "Late"}]}])![0].savedBy, null, "an extinct crisis has no saver");
+    // only a name: anything else in an entry is dropped, a malformed list is no list, at most 3, and each name is clean and short
+    const odd = decodeArkCrises([{...rows[3], saved_by: [{name: "  Zo\u00eb\n\tLong \u202e" + "x".repeat(60), user_id: "u1", handle: "z", url: "https://x.example"}, "str", null, {name: 7}, {name: "   "}, {name: "C"}]}])![0];
+    assert.deepEqual(odd.savedBy!.map((one) => Object.keys(one)), [["name"], ["name"], ["name"]]);
+    assert.equal(odd.savedBy!.length, 3);
+    assert.equal(odd.savedBy![0].name, "Zo\u00eb Long " + "x".repeat(31));
+    assert.equal(Array.from(odd.savedBy![0].name!).length, 40);
+    assert.deepEqual(odd.savedBy!.slice(1), [{name: null}, {name: null}]);
+    assert.equal(decodeArkCrises([{...rows[3], saved_by: "Maya"}])![0].savedBy, null);
+    assert.equal(decodeArkCrises([{...rows[3], saved_by: []}])![0].savedBy, null);
+    assert.equal(arkCrisisSaverName("\u202e\u2066 \n"), null);
+    assert.equal(arkCrisisSaverName("\u0645\u0627\u064a\u0627"), "\u0645\u0627\u064a\u0627");
+    // two names are one list in the reader's language; a mix of named and not named says the names
+    const two = {status: "saved" as const, savedBy: [{name: "A"}, {name: "B"}]};
+    assert.equal(plainLine(arkCrisisSavedByLine(ARK_ENDANGERED_WORDS_EN, two, "en")), "Saved by A and B");
+    assert.equal(arkCrisisSavedByLine(ARK_ENDANGERED_WORDS_EN, {status: "saved", savedBy: [{name: null}, {name: null}]}, "en"), "Saved by a collector");
+    // no id, handle, address or place can reach the card from a decoded row
+    assert.ok(!/user_id|handle|https?:|@/.test(JSON.stringify(odd)));
+    // the words: calm, never gendered
+    assert.ok(!/\b(he|she|his|her|him)\b/i.test(`${ARK_ENDANGERED_WORDS_EN.savedBy} ${ARK_ENDANGERED_WORDS_EN.savedByCollector}`));
+});
+
+function plainLine(line: string | null): string | null {
+    return line === null ? null : line.replace(/[\u2068\u2069]/g, "");
+}

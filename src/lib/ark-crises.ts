@@ -39,7 +39,15 @@ export type ArkCrisis = {
     habitat: string | null;
     /** ISO 3166-1 alpha-2 codes, upper case; country level only. */
     countries: string[];
+    /**
+     * Contract 1.1 (P1-2): who saved it, on a saved crisis an arrival in the wild ended; null on every other row. Name
+     * only: `name` is a public display name, or null for "a collector" (a person who is not to be named, or is gone).
+     * Never an id, handle, link or place: the server decides who is named, the client only says it.
+     */
+    savedBy: ArkCrisisSaver[] | null;
 };
+
+export type ArkCrisisSaver = {name: string | null};
 
 /** The page's words (`ark.endangered` in the locale files). */
 export type ArkEndangeredWords = {
@@ -64,6 +72,10 @@ export type ArkEndangeredWords = {
     foundIn: string;
     /** "Saved: this kind is out of danger" */
     saved: string;
+    /** "Saved by {name}" (a named saver; never gendered) */
+    savedBy: string;
+    /** "Saved by a collector" (a saver who is not named) */
+    savedByCollector: string;
     /** "Lost from the wild" */
     lost: string;
     /** The list, for a screen reader. */
@@ -87,6 +99,8 @@ export const ARK_ENDANGERED_WORDS_EN: ArkEndangeredWords = {
     habitat: "Habitat",
     foundIn: "Found in",
     saved: "Saved: this kind is out of danger",
+    savedBy: "Saved by {name}",
+    savedByCollector: "Saved by a collector",
     lost: "Lost from the wild",
     listLabel: "Kinds in danger in the wild, newest first",
     unavailable: "Can't check right now. Try again in a moment.",
@@ -137,6 +151,25 @@ function iso(value: unknown): string | null {
     return said && Number.isFinite(Date.parse(said)) ? said : null;
 }
 
+/** A display name as the card shows it: control characters and runs of spaces are one space, at most 40 characters. */
+export function arkCrisisSaverName(value: unknown): string | null {
+    if (typeof value !== "string") return null;
+    // Control characters and the bidi overrides and isolates (a name must not reorder the line around it); joiners stay (they are part of some scripts).
+    const clean = value.replace(/[\p{Cc}\u202a-\u202e\u2066-\u2069\s]+/gu, " ").trim();
+    if (!clean) return null;
+    return Array.from(clean).slice(0, 40).join("").trim() || null;
+}
+
+/** `saved_by`, checked: a list of `{name}` (at most 3), only on a saved crisis; anything else is not shown. */
+function decodeSavedBy(value: unknown, status: ArkCrisisStatus): ArkCrisisSaver[] | null {
+    if (status !== "saved" || !Array.isArray(value)) return null;
+    const savers = value
+        .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+        .slice(0, 3)
+        .map((item) => ({name: arkCrisisSaverName(item.name)}));
+    return savers.length ? savers : null;
+}
+
 function decodeOne(raw: unknown): ArkCrisis | null {
     if (!raw || typeof raw !== "object") return null;
     const row = raw as Record<string, unknown>;
@@ -173,7 +206,8 @@ function decodeOne(raw: unknown): ArkCrisis | null {
         endedAt: iso(row.ended_at),
         lastAnimalIds,
         habitat: text(row.habitat, 160),
-        countries
+        countries,
+        savedBy: decodeSavedBy(row.saved_by, status)
     };
 }
 
@@ -305,11 +339,33 @@ export function arkCrisisFromQuery(value: unknown): string | null {
     return typeof value === "string" ? uuid(value) : null;
 }
 
+/**
+ * "Saved by Maya R." or "Saved by a collector": the credit under a saved crisis's headline, or null when the answer names
+ * no saver (a birth or a mate's return ended it, or the server sent none). A name is wrapped in direction isolates so
+ * a right-to-left name in a left-to-right line (and the reverse) reads whole. Never a link: a name is only a name.
+ */
+export function arkCrisisSavedByLine(words: Pick<ArkEndangeredWords, "savedBy" | "savedByCollector">, crisis: Pick<ArkCrisis, "status" | "savedBy">, locale: string): string | null {
+    if (crisis.status !== "saved" || !crisis.savedBy?.length) return null;
+    const names = crisis.savedBy.map((one) => one.name).filter((one): one is string => Boolean(one));
+    if (!names.length) return words.savedByCollector;
+    const isolated = names.map((name) => `\u2068${name}\u2069`);
+    let list = isolated.join(", ");
+    try {
+        list = new Intl.ListFormat(locale, {style: "long", type: "conjunction"}).format(isolated);
+    } catch {
+        // a runtime with no ListFormat for this language: the plain list
+    }
+    return words.savedBy.replace("{name}", list);
+}
+
 /** The list's line for a screen reader and a plain-text view: "Wild Boar, Last one, In the wild: 1, In danger for 5 hours". */
 export function arkCrisisSummary(words: ArkEndangeredWords, crisis: ArkCrisis, now: number, locale: string): string {
     const parts = [crisis.name];
-    if (crisis.status === "saved") parts.push(words.saved);
-    else if (crisis.status === "extinct") parts.push(words.lost);
+    if (crisis.status === "saved") {
+        parts.push(words.saved);
+        const credit = arkCrisisSavedByLine(words, crisis, locale);
+        if (credit) parts.push(credit);
+    } else if (crisis.status === "extinct") parts.push(words.lost);
     else {
         parts.push(arkCrisisBandWord(words, crisis));
         parts.push(words.wildCount.replace("{count}", crisis.wildCount.toLocaleString(locale)));

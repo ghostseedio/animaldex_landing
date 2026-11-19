@@ -14,7 +14,9 @@ export const dynamic = "force-dynamic";
  * holds its habitat text and names in English only. Contract: docs/ark/audits/ecosystem/crises-api-contract.md.
  *
  * Public and the same for everyone: kinds, counts, days and animal ids. No person, capture, coordinate or city; the
- * countries are the ones the field guide's own text names. Nothing here predicts.
+ * countries are the ones the field guide's own text names. The one thing about a person: a saved crisis an arrival ended
+ * carries `saved_by` (contract 1.1), a display name or null for "a collector" (the database decides who may be named; the
+ * route keeps only `[{name}]`). Nothing here predicts.
  *
  *   200 {available: true, ...}      the list (empty most days)
  *   200 {available: false}          the read is not there yet, or its flag is off: the calm empty state

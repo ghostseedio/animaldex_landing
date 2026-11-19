@@ -585,6 +585,8 @@
             "habitat": "Leefgebied",
             "foundIn": "Verspreiding",
             "saved": "Gered: deze soort is niet meer in gevaar",
+            "savedBy": "Gered door {name}",
+            "savedByCollector": "Gered door een verzamelaar",
             "lost": "Verloren uit het wild",
             "listLabel": "Bedreigde soorten in het wild, nieuwste eerst",
             "unavailable": "Controleren lukt nu niet. Probeer het zo meteen opnieuw.",

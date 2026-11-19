@@ -585,6 +585,8 @@
             "habitat": "Tirahan",
             "foundIn": "Saklaw",
             "saved": "Nailigtas: wala na sa panganib ang uring ito",
+            "savedBy": "Iniligtas ni {name}",
+            "savedByCollector": "Iniligtas ng isang kolektor",
             "lost": "Nawala sa kalikasan",
             "listLabel": "Mga uring nasa panganib sa kalikasan, pinakabago muna",
             "unavailable": "Hindi ma-check ngayon. Subukan ulit sa ilang sandali.",

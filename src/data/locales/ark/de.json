@@ -585,6 +585,8 @@
             "habitat": "Lebensraum",
             "foundIn": "Verbreitung",
             "saved": "Gerettet: Diese Art ist nicht mehr in Gefahr",
+            "savedBy": "Gerettet von {name}",
+            "savedByCollector": "Gerettet von einer Person, die Tiere sammelt",
             "lost": "In der Wildnis verloren",
             "listLabel": "Gefährdete Arten in der Wildnis, neueste zuerst",
             "unavailable": "Prüfung gerade nicht möglich. Versuche es gleich noch einmal.",

@@ -585,6 +585,8 @@
             "habitat": "Makazi",
             "foundIn": "Mahali inapopatikana",
             "saved": "Imeokolewa: spishi hii haiko hatarini tena",
+            "savedBy": "Imeokolewa na {name}",
+            "savedByCollector": "Imeokolewa na mkusanyaji",
             "lost": "Imetoweka porini",
             "listLabel": "Spishi zilizo hatarini porini, mpya kwanza",
             "unavailable": "Haiwezi kukagua sasa. Jaribu tena baada ya muda mfupi.",

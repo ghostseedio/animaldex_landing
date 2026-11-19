@@ -585,6 +585,8 @@
             "habitat": "Môi trường sống",
             "foundIn": "Phân bố",
             "saved": "Đã được cứu: loài này không còn gặp nguy hiểm",
+            "savedBy": "Được {name} cứu",
+            "savedByCollector": "Được một người sưu tầm cứu",
             "lost": "Đã biến mất khỏi tự nhiên",
             "listLabel": "Các loài đang gặp nguy hiểm ngoài tự nhiên, mới nhất trước",
             "unavailable": "Hiện chưa kiểm tra được. Hãy thử lại sau ít phút.",
