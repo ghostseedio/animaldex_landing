@@ -7,6 +7,7 @@ import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {comparePackBuilderCaptures} from "@/lib/pack-guarantee";
+import {captureBattlePower, captureBattleTierFromPower} from "@/lib/capture-battle-tier";
 import {APP_MODULE_THUMBNAILS, ARENA_MODULE_ACCENTS} from "@/lib/app-module-thumbnails";
 import type {SupabaseClient} from "@supabase/supabase-js";
 
@@ -313,16 +314,6 @@ function readableContext(row: QueryRow) {
     }
 }
 
-function battlePower(stats: Record<string, number>) {
-    return Math.round(
-        (stats.dominance ?? 0) * 0.22
-        + (stats.speed ?? 0) * 0.14
-        + (stats.size ?? 0) * 0.10
-        + (stats.intelligence ?? 0) * 0.14
-        + (stats.rarity ?? 0) * 0.40
-    );
-}
-
 function tradeValue(stats: Record<string, number>) {
     return Math.min(100, Math.max(0, Math.round(
         (stats.dominance ?? 0) * 0.18
@@ -331,15 +322,6 @@ function tradeValue(stats: Record<string, number>) {
         + (stats.intelligence ?? 0) * 0.13
         + (stats.rarity ?? 0) * 0.45
     )));
-}
-
-function battleTier(power: number) {
-    if (power < 25) return "E";
-    if (power < 40) return "D";
-    if (power < 52) return "C";
-    if (power < 62) return "B";
-    if (power < 80) return "A";
-    return "S";
 }
 
 function toGameStats(row: QueryRow) {
@@ -363,7 +345,7 @@ function toTrainPackCapture(row: QueryRow): TrainPackCapture | null {
     if (!row.game_stats || typeof row.game_stats !== "object") return null;
 
     const stats = toGameStats(row);
-    const power = battlePower(stats);
+    const power = captureBattlePower(stats);
 
     return {
         captureId,
@@ -378,7 +360,7 @@ function toTrainPackCapture(row: QueryRow): TrainPackCapture | null {
         contextLabel: readableContext(row),
         locationDisplayLabel: typeof row.location_display_label === "string" && row.location_display_label.trim() ? row.location_display_label.trim() : null,
         battlePower: power,
-        battleTier: battleTier(power),
+        battleTier: captureBattleTierFromPower(power),
         tradeValue: tradeValue(stats),
         rarity: stats.rarity ?? 0,
         gameStats: stats
