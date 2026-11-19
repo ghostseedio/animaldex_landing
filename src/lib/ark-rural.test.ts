@@ -24,12 +24,13 @@ import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {arkBody} from "@/ark-scene/stats";
 import {townDayEpochs, validateTownAnimals} from "@/ark-scene/islands/town/validate-animals";
-import {setTownWalkSurfaces} from "@/ark-scene/islands/town/drawn-ground";
+import {setTownWalkSurfaces, townWaterSurface} from "@/ark-scene/islands/town/drawn-ground";
+import {swimDepth, waterMotion} from "@/ark-scene/sea-depth";
 import {islandHours} from "@/lib/ark-clock";
 import {sampleTownGround} from "@/ark-scene/islands/town/ground";
 import {inland, townPlan} from "@/ark-scene/islands/town/plan";
 import {farmOf} from "@/ark-scene/islands/town/areas";
-import {COOP_HOURS, coopPose, coopTick, henHouseOf, FARM_KEEP, PETTING_KEEP, RURAL_BUILDINGS, RURAL_LANE, RURAL_LANE_WIDTH, RURAL_PENS, RURAL_TRACKS, ruralKindOf, ruralPenOf, ruralPondNorm, type RuralKind} from "@/ark-scene/islands/town/rural";
+import {COOP_HOURS, coopPose, coopTick, henHouseOf, FARM_KEEP, PETTING_KEEP, RURAL_BUILDINGS, RURAL_LANE, RURAL_LANE_WIDTH, RURAL_PENS, RURAL_POND, RURAL_TRACKS, ruralKindOf, ruralPenOf, ruralPondNorm, type RuralKind} from "@/ark-scene/islands/town/rural";
 import residents from "@/ark-scene/islands/town/rural-residents.json";
 import {pickFigure, type Projector} from "@/ark-scene/tap-pick";
 
@@ -126,7 +127,7 @@ function inside(at: Box, x: number, z: number, half: number): number {
     return Math.min(at.w / 2 - Math.abs(l.x), at.d / 2 - Math.abs(l.z)) - half;
 }
 
-test("every moved body stays inside its field through an Ark day, out of the pond, on the drawn ground", () => {
+test("every moved body stays inside its field through an Ark day, out of the pond (the waterfowl on it), on the drawn ground", () => {
     const all = animals();
     const placed = placeTownAnimals(all);
     const fields = ruralFields(all);
@@ -146,7 +147,9 @@ test("every moved body stays inside its field through an Ark day, out of the pon
         const plan = modelBase(a.model_slug)?.plan ?? null;
         const half = arkBody(a, plan).display / 2;
         if (inside(field.at, place.x, place.z, half) < 0.05) out.push(`${a.model_slug} spot`);
-        assert.ok(ruralPondNorm(place.x, place.z) > 1.1, `${a.model_slug} not in the pond`);
+        // (Ark ducks: the waterfowl's spots are the pond's own water, where they float; every other animal's are out of it.)
+        if (ruralKindOf(a) === "waterfowl") assert.ok(ruralPondNorm(place.x, place.z) < 1, `${a.model_slug} on the pond`);
+        else assert.ok(ruralPondNorm(place.x, place.z) > 1.1, `${a.model_slug} not in the pond`);
         assert.notEqual(sampleTownGround(place.x, place.z).surface, "sea");
         const profile = behaviourProfile(a.model_slug, plan);
         const own = withLazyRoost({id: a.id, zone: a.zone, home: {x: place.x, y: place.ground, z: place.z}, length: arkBody(a, plan).display, sea: false, range: Math.max(info.range, 0.6) * 1.5}, () => null);
@@ -170,6 +173,55 @@ test("every moved body stays inside its field through an Ark day, out of the pon
     console.log(`countryside residents: ${moved.length}, ${check.samples} samples; sinks ${check.counts.sinks}, floats ${check.counts.floats}`);
     assert.equal(check.counts.sinks, 0, JSON.stringify(check.problems.filter((p) => p.problems.includes("sinks")).slice(0, 5)));
     assert.equal(check.counts.floats, 0, JSON.stringify(check.problems.filter((p) => p.problems.includes("floats")).slice(0, 5)));
+});
+
+test("the duck pond's waterfowl float and paddle on its water through an Ark day, and step out to its bank now and then", () => {
+    const all = animals();
+    const placed = placeTownAnimals(all);
+    const fields = ruralFields(all);
+    const sampler = townWorldSampler(placed.open, {x: 0, z: 0}, townColliderSet(placed.open, {x: 0, z: 0}));
+    const world = scheduleWorld(sampler);
+    // (The nav grid reads the pond's depth: its water is swum, never walked, and a swim goal is the pond's own.)
+    assert.ok(world.nav.swimmable(RURAL_POND.x, RURAL_POND.z, 0.4), "the pond is swimmable");
+    assert.ok(!world.nav.walkable(RURAL_POND.x, RURAL_POND.z, 0.6), "and not walkable");
+    const epochs = Array.from({length: 96}, (_, i) => Date.UTC(2026, 10, 12) / 1000 + i * 900 + 7.3 * i);
+    const hoursAt = (epoch: number) => islandHours(epoch * 1000, 0);
+    let awake = 0;
+    let afloat = 0;
+    let ashore = 0;
+    let swimming = 0;
+    let swimmingAfloat = 0;
+    let birds = 0;
+    for (const a of all) {
+        // (A floater by the species' own record: its band on the water, never a list of names.)
+        const band = swimDepth(a.model_slug, a.zone);
+        if (fields.get(a.id)?.id !== "rural-duck-pond" || !band || waterMotion(band) !== "float") continue;
+        birds++;
+        const place = placed.places.get(a.id)!;
+        const info = placed.town.get(a.id)!;
+        const plan = modelBase(a.model_slug)?.plan ?? null;
+        const profile = behaviourProfile(a.model_slug, plan);
+        const own = withLazyRoost({id: a.id, zone: a.zone, home: {x: place.x, y: place.ground, z: place.z}, length: arkBody(a, plan).display, sea: false, range: Math.max(info.range, 0.6) * 1.5}, () => null);
+        let trip: Trip | null = null;
+        for (const epoch of epochs) {
+            if (!trip || epoch < trip.start || epoch >= trip.end) trip = tripAt(world, profile, own, epoch, hoursAt, a.activity ?? null, trip);
+            const at = poseOnTrip(world, trip, epoch);
+            if (trip.doing === "sleep" || at.aloft) continue;
+            awake++;
+            const surface = townWaterSurface(at.x, at.z);
+            const wet = surface !== null && at.y <= surface + 0.02;
+            if (wet) afloat++;
+            else if (ruralPondNorm(at.x, at.z) < 1.6) ashore++;
+            if (trip.doing === "swim") {
+                swimming++;
+                if (wet) swimmingAfloat++;
+            }
+        }
+    }
+    assert.ok(birds >= 10, `${birds} waterfowl at the pond`);
+    assert.ok(afloat / awake > 0.6, `afloat ${afloat} of ${awake} awake poses`);
+    assert.ok(ashore > 0, "out on the bank at times");
+    assert.ok(swimmingAfloat / swimming > 0.9, `a swim is on the pond: ${swimmingAfloat} of ${swimming}`);
 });
 
 test("the fields lie on land, apart, clear of the lane and the tracks; their buildings inside them or clear", () => {

@@ -357,6 +357,10 @@ export function townWorldSampler(open: readonly string[], origin: {x: number; z:
         // (Lane TB: the canal's, the millpond's and the farm pond's own level, held by the lock; the sea's 0 elsewhere,
         // under every bit of the town's dry land. A swimmer floats on the water that is drawn, never 1 m under it.)
         waterSurface: (x, z) => townWaterSurface(x - ox, z - oz) ?? 0,
+        // (Ark ducks: and the depth of that water over its bed, which the walk grid reads for the swimmers' cells and takes
+        // out of the walkable ones: a floater's pond, canal or millpond is swum, and its swim targets were the sea's, 45 m
+        // off, where a penned duck stood at its rail. The sea's below 0 is as before: `surface` 0 there, `-height`.)
+        waterDepth: (x, z) => Math.max((townWaterSurface(x - ox, z - oz) ?? 0) - townHeight(x - ox, z - oz), 0),
         roadway: (x, z) => roads.some((road) => polylineDistance(road.line, x - ox, z - oz) <= road.reach),
         isWater: (x, z) => {
             const g = sampleTownGround(x - ox, z - oz);
