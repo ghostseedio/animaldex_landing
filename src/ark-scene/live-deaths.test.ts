@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {DEATH_BODY_SECONDS, DEATH_FADE_SECONDS, DEATH_FALL_SECONDS, deathBodyPose, deathBodyShowing, LiveDeaths, type DeathRecord, type DeathSpot} from "@/ark-scene/live-deaths";
+import {DEATH_BODY_SECONDS, DEATH_DYING_SECONDS, DEATH_FADE_SECONDS, DEATH_FALL_SECONDS, DEATH_WEAKEN_SECONDS, deathBodyPose, deathBodyShowing, LiveDeaths, type DeathRecord, type DeathSpot} from "@/ark-scene/live-deaths";
 import type {ActPose} from "@/ark-scene/acts";
 import type {ArkEventAnimal} from "@/lib/ark-life";
 
@@ -11,7 +11,7 @@ const animal = (id: string): ArkEventAnimal => ({id, species_profile_id: "s", na
 test("its body: only from the death's time, on its side where it died, still, then fading and gone", () => {
     assert.equal(deathBodyPose(SPOT, "death:1", T0, T0 - 1), null, "not before the death");
     assert.equal(deathBodyPose(SPOT, "death:1", T0, T0 + DEATH_BODY_SECONDS), null, "gone after its while");
-    const falling = deathBodyPose(SPOT, "death:1", T0, T0 + DEATH_FALL_SECONDS / 2)!;
+    const falling = deathBodyPose(SPOT, "death:1", T0, T0 + DEATH_WEAKEN_SECONDS + DEATH_FALL_SECONDS / 2)!;
     const down = deathBodyPose(SPOT, "death:1", T0, T0 + 60)!;
     assert.ok(Math.abs(falling.lying!) > 0 && Math.abs(falling.lying!) < 1, "falling onto its side");
     assert.equal(Math.abs(down.lying!), 1, "on its side");
@@ -23,6 +23,29 @@ test("its body: only from the death's time, on its side where it died, still, th
     const fading = deathBodyPose(SPOT, "death:1", T0, T0 + DEATH_BODY_SECONDS - DEATH_FADE_SECONDS / 2)!;
     assert.ok(fading.dim > 0 && fading.dim < 1);
     assert.ok(deathBodyShowing(T0, T0 + 10) && !deathBodyShowing(T0, T0 - 10) && !deathBodyShowing(T0, T0 + DEATH_BODY_SECONDS + 1));
+});
+
+test("the dying act: it weakens on its feet first (no fall at once), a flyer comes down, then over onto its side; never a wound", () => {
+    const weak = deathBodyPose(SPOT, "death:1", T0, T0 + DEATH_WEAKEN_SECONDS * 0.6)!;
+    assert.equal(weak.lying, 0, "still on its feet while it weakens");
+    assert.ok(weak.pitch > 0.05, "its head sinks");
+    assert.equal(weak.state, "weaken");
+    assert.equal(weak.dim, 0);
+    const first = deathBodyPose(SPOT, "death:1", T0, T0 + 0.01)!;
+    assert.ok(Math.abs(first.pitch) < 0.01 && Math.abs(first.roll) < 0.01 && first.lying === 0, "it begins as it stood: no jump");
+    const still = deathBodyPose(SPOT, "death:1", T0, T0 + DEATH_DYING_SECONDS + 0.01)!;
+    assert.equal(Math.abs(still.lying!), 1);
+    assert.equal(still.roll, 0);
+    // (A flyer's: from where it was in the air down to the ground while it weakens.)
+    const high: DeathSpot = {...SPOT, from: SPOT.base + 6};
+    const up = deathBodyPose(high, "death:1", T0, T0 + 0.01)!;
+    const landed = deathBodyPose(high, "death:1", T0, T0 + DEATH_WEAKEN_SECONDS)!;
+    assert.ok(Math.abs(up.base - (SPOT.base + 6)) < 0.05 && up.state === "glide");
+    assert.equal(landed.base, SPOT.base);
+    // (E5's hook: one already hurt begins lower, and ends the same.)
+    const hurt = deathBodyPose(SPOT, "death:1", T0, T0 + 1, "wounds")!;
+    assert.ok(hurt.pitch > deathBodyPose(SPOT, "death:1", T0, T0 + 1)!.pitch);
+    assert.deepEqual(deathBodyPose(SPOT, "death:1", T0, T0 + 60, "wounds"), deathBodyPose(SPOT, "death:1", T0, T0 + 60));
 });
 
 test("the same for every viewer: a pure function of the event and the clock (its side seeded by the event)", () => {

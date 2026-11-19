@@ -190,6 +190,7 @@
             "hatchedAboard": "Sortit de l'ou a l'Ark",
             "hatched": "Eclosió",
             "placeholder": "La seva figura 3D encara s'està fent: de moment la substitueix una figura provisional.",
+            "lone": "Únic exemplar",
             "lastOfKind": "L'últim de la seva espècie a bord: captura'n un altre perquè tingui parella",
             "revised": "El seu pas",
             "revisedWorked": "revisat: ha tornat a funcionar",
@@ -451,8 +452,8 @@
             "metaTitle": "Els animals de {name} a l'Ark",
             "title": "Els animals de {name} a l'Ark",
             "titleSelf": "Els meus animals a l'Ark",
-            "scoreAbout": "Dels seus passos que han funcionat, més per als animals que l'Ark necessita. Mai no baixa.",
-            "scoreAboutSelf": "Dels teus passos que han funcionat, més per als animals que l'Ark necessita. Mai no baixa.",
+            "scoreAbout": "La puntuació Ark d'aquesta persona creix quan van bé les espècies que ha ajudat a portar a bord.",
+            "scoreAboutSelf": "La teva puntuació Ark creix quan van bé les espècies que has ajudat a portar a bord.",
             "outOf": "de {max}",
             "summary": "{animals} a bord, {species}",
             "anonymousTitle": "Anònim a bord",
@@ -585,6 +586,8 @@
             "habitat": "Hàbitat",
             "foundIn": "Distribució",
             "saved": "Salvada: aquesta espècie ja no està en perill",
+            "savedBy": "Gràcies a {name}",
+            "savedByCollector": "Gràcies a una persona col·leccionista",
             "lost": "Perduda en llibertat",
             "listLabel": "Espècies en perill en llibertat, les més recents primer",
             "unavailable": "Ara no es pot comprovar. Torna-ho a provar d'aquí a un moment.",
@@ -677,6 +680,13 @@
                 "mythic": "Mític"
             }
         },
+        "seen": {
+            "searching": "Busca presa",
+            "stalking": "Sotja {aPrey}",
+            "stalkingNoTarget": "Sotja",
+            "mateSeeking": "Busca parella",
+            "wounded": "Amb una ferida"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Una Ark més lleugera per a aquest dispositiu",
@@ -753,14 +763,14 @@
             "score": "Puntuació Ark",
             "scoreShort": "Ark {n}",
             "outOf": "de {max}",
-            "scoreAbout": "Dels teus passos que han funcionat, més per als animals que l'Ark necessita. Mai no baixa.",
+            "scoreAbout": "La teva puntuació Ark creix quan van bé les espècies que has ajudat a portar a bord.",
             "scoreWeek": "{delta} aquesta setmana",
             "myAnimals": "Els meus animals a l'Ark",
             "theirAnimals": "Els seus animals a l'Ark",
             "notInArk": "Encara no és a l'Ark",
             "life": "Vida",
             "explainTitle": "Com creix la teva Puntuació Ark",
-            "explainBody": "Cada pas amb un animal que funciona dona punts: més quan l'Ark necessita aquell animal (un que està sol, o una espècie en declivi o en perill), menys quan n'hi ha molts a bord. Les captures porten animals a bord, però mai no et fan baixar la puntuació, i ningú més no te la pot fer baixar. Només puja. Les teves barres de vida són a sota, com abans.",
+            "explainBody": "Cada pas amb un animal que funciona dona punts: més quan l'Ark necessita aquell animal (un que està sol, o una espècie en declivi o en perill), menys quan n'hi ha molts a bord. Les teves barres de vida són a sota, com abans.",
             "explainThrive": "Els passos que funcionen fan prosperar els teus animals: més cries, i són els últims a ser caçats.",
             "explainDismiss": "Entesos",
             "arrival": "{species} ha pujat a bord de l'Ark",
@@ -839,7 +849,7 @@
                     "needsAdult": "Primer confirma que tens 18 anys o més."
                 }
             },
-            "scoreHint": "Puntuació Ark: punts dels passos que han funcionat, més per als animals que l'Ark necessita. Mai no baixa.",
+            "scoreHint": "Puntuació Ark: creix quan van bé les espècies que cada persona ha ajudat a portar a bord.",
             "offerThrive": "Si funciona, els teus exemplars de {species} a l'Ark prosperaran",
             "offerLater": "Si funciona, el teu exemplar de {species} prosperarà quan n'hi hagi un a bord",
             "resultOther": "Ha funcionat. Els teus exemplars de {species} prosperen: més cries, i són els últims a ser caçats.",
@@ -849,7 +859,7 @@
             "thrivePrime": "En plena forma",
             "thriveGood": "En bona forma",
             "thriveOrdinary": "Normal",
-            "scoreAboutTheirs": "Dels seus passos que han funcionat, més per als animals que l'Ark necessita. Mai no baixa."
+            "scoreAboutTheirs": "La puntuació Ark d'aquesta persona creix quan van bé les espècies que ha ajudat a portar a bord."
         }
     },
     "home": {

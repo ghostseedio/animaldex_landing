@@ -190,6 +190,7 @@
             "hatchedAboard": "Éclos dans l'Ark",
             "hatched": "Éclosion",
             "placeholder": "Sa figurine 3D est encore en préparation : une silhouette provisoire la remplace pour l'instant.",
+            "lone": "Seul individu",
             "lastOfKind": "Le dernier de son espèce à bord : capturez-en un autre pour lui donner un partenaire",
             "revised": "Son étape",
             "revisedWorked": "révisée : elle a de nouveau marché",
@@ -451,8 +452,8 @@
             "metaTitle": "Les animaux de {name} dans l'Ark",
             "title": "Les animaux de {name} dans l'Ark",
             "titleSelf": "Mes animaux dans l'Ark",
-            "scoreAbout": "Des points pour ses étapes qui ont marché, davantage pour les animaux dont l'Ark a besoin. Ce score ne baisse jamais.",
-            "scoreAboutSelf": "Des points pour vos étapes qui ont marché, davantage pour les animaux dont l'Ark a besoin. Ce score ne baisse jamais.",
+            "scoreAbout": "Le score Ark de cette personne augmente quand les espèces qu'elle a aidé à faire monter à bord vont bien.",
+            "scoreAboutSelf": "Votre score Ark augmente quand les espèces que vous avez aidé à faire monter à bord vont bien.",
             "outOf": "sur {max}",
             "summary": "{animals} à bord, {species}",
             "anonymousTitle": "Anonyme à bord",
@@ -585,6 +586,8 @@
             "habitat": "Habitat",
             "foundIn": "Répartition",
             "saved": "Sauvée : cette espèce n'est plus en danger",
+            "savedBy": "Grâce à {name}",
+            "savedByCollector": "Grâce à une personne qui collectionne les animaux",
             "lost": "Disparue de la nature",
             "listLabel": "Espèces en danger à l'état sauvage, les plus récentes d'abord",
             "unavailable": "Vérification impossible pour le moment. Réessayez dans un instant.",
@@ -677,6 +680,13 @@
                 "mythic": "Mythique"
             }
         },
+        "seen": {
+            "searching": "Cherche une proie",
+            "stalking": "À l'affût : {aPrey}",
+            "stalkingNoTarget": "À l'affût",
+            "mateSeeking": "Cherche un partenaire",
+            "wounded": "Avec une blessure"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Une Ark plus légère pour cet appareil",
@@ -753,14 +763,14 @@
             "score": "Score Ark",
             "scoreShort": "Ark {n}",
             "outOf": "sur {max}",
-            "scoreAbout": "Des points pour vos étapes qui ont marché, davantage pour les animaux dont l'Ark a besoin. Ce score ne baisse jamais.",
+            "scoreAbout": "Votre score Ark augmente quand les espèces que vous avez aidé à faire monter à bord vont bien.",
             "scoreWeek": "{delta} cette semaine",
             "myAnimals": "Mes animaux dans l'Ark",
             "theirAnimals": "Ses animaux dans l'Ark",
             "notInArk": "Pas encore dans l'Ark",
             "life": "Vie",
             "explainTitle": "Comment votre Score Ark augmente",
-            "explainBody": "Chaque étape avec un animal qui marche rapporte des points : davantage quand l'Ark a besoin de cet animal (un animal seul, ou une espèce en déclin ou menacée), moins quand il y en a beaucoup à bord. Les captures font monter des animaux à bord mais ne font jamais baisser votre score, et personne d'autre ne peut le faire baisser. Il ne fait qu'augmenter. Vos jauges de vie sont en dessous, comme avant.",
+            "explainBody": "Chaque étape avec un animal qui marche rapporte des points : davantage quand l'Ark a besoin de cet animal (un animal seul, ou une espèce en déclin ou menacée), moins quand il y en a beaucoup à bord. Vos jauges de vie sont en dessous, comme avant.",
             "explainThrive": "Les étapes qui marchent font s'épanouir vos animaux : plus de petits, chassés en dernier.",
             "explainDismiss": "Compris",
             "arrival": "{species} est monté à bord de l'Ark",
@@ -839,7 +849,7 @@
                     "needsAdult": "Confirmez d'abord que vous avez 18 ans ou plus."
                 }
             },
-            "scoreHint": "Score Ark : des points pour les étapes qui ont marché, davantage pour les animaux dont l'Ark a besoin. Il ne baisse jamais.",
+            "scoreHint": "Score Ark : il augmente quand les espèces que chaque personne a aidé à faire monter à bord vont bien.",
             "offerThrive": "Si ça marche, vos {species} de l'Ark s'épanouiront",
             "offerLater": "Si ça marche, votre {species} s'épanouira dès qu'il y en aura un à bord",
             "resultOther": "Ça a marché. Vos {species} s'épanouissent : plus de petits, chassés en dernier.",
@@ -849,7 +859,7 @@
             "thrivePrime": "En excellent état",
             "thriveGood": "En bon état",
             "thriveOrdinary": "Ordinaire",
-            "scoreAboutTheirs": "Des points pour ses étapes qui ont marché, davantage pour les animaux dont l'Ark a besoin. Ce score ne baisse jamais."
+            "scoreAboutTheirs": "Le score Ark de cette personne augmente quand les espèces qu'elle a aidé à faire monter à bord vont bien."
         }
     },
     "home": {

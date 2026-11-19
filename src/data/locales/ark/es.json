@@ -190,6 +190,7 @@
             "hatchedAboard": "Eclosionó en el Ark",
             "hatched": "Eclosión",
             "placeholder": "Su figura 3D aún se está creando: por ahora lo representa una figura provisional.",
+            "lone": "Único ejemplar",
             "lastOfKind": "El último de su especie a bordo: captura otro para que tenga pareja",
             "revised": "Su paso",
             "revisedWorked": "revisado: volvió a funcionar",
@@ -451,8 +452,8 @@
             "metaTitle": "Los animales de {name} en el Ark",
             "title": "Los animales de {name} en el Ark",
             "titleSelf": "Mis animales en el Ark",
-            "scoreAbout": "Puntos por sus pasos que funcionaron, más por los animales que el Ark necesita. Nunca baja.",
-            "scoreAboutSelf": "Puntos por tus pasos que funcionaron, más por los animales que el Ark necesita. Nunca baja.",
+            "scoreAbout": "La puntuación Ark de esta persona crece cuando les va bien a las especies que ayudó a subir a bordo.",
+            "scoreAboutSelf": "Tu puntuación Ark crece cuando les va bien a las especies que ayudaste a subir a bordo.",
             "outOf": "de {max}",
             "summary": "{animals} a bordo, {species}",
             "anonymousTitle": "Anónimo a bordo",
@@ -585,6 +586,8 @@
             "habitat": "Hábitat",
             "foundIn": "Distribución",
             "saved": "A salvo: esta especie ya no está en peligro",
+            "savedBy": "Gracias a {name}",
+            "savedByCollector": "Gracias a una persona coleccionista",
             "lost": "Perdida en libertad",
             "listLabel": "Especies en peligro en libertad, las más recientes primero",
             "unavailable": "No se puede comprobar ahora. Inténtalo de nuevo en un momento.",
@@ -677,6 +680,13 @@
                 "mythic": "Mítico"
             }
         },
+        "seen": {
+            "searching": "Busca presa",
+            "stalking": "Acecha a {aPrey}",
+            "stalkingNoTarget": "Acecha",
+            "mateSeeking": "Busca pareja",
+            "wounded": "Con una herida"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Un Ark más ligero para este dispositivo",
@@ -753,14 +763,14 @@
             "score": "Puntuación Ark",
             "scoreShort": "Ark {n}",
             "outOf": "de {max}",
-            "scoreAbout": "Puntos por tus pasos que funcionaron, más por los animales que el Ark necesita. Nunca baja.",
+            "scoreAbout": "Tu puntuación Ark crece cuando les va bien a las especies que ayudaste a subir a bordo.",
             "scoreWeek": "{delta} esta semana",
             "myAnimals": "Mis animales en el Ark",
             "theirAnimals": "Sus animales en el Ark",
             "notInArk": "Aún no está en el Ark",
             "life": "Vida",
             "explainTitle": "Cómo crece tu Puntuación Ark",
-            "explainBody": "Cada paso con un animal que funciona da puntos: más cuando el Ark necesita ese animal (uno solo, o una especie en declive o en riesgo), menos cuando hay muchos a bordo. Las capturas suben animales a bordo pero nunca bajan tu puntuación, y nadie más puede bajarla. Solo sube. Tus barras de vida están debajo, como antes.",
+            "explainBody": "Cada paso con un animal que funciona da puntos: más cuando el Ark necesita ese animal (uno solo, o una especie en declive o en riesgo), menos cuando hay muchos a bordo. Tus barras de vida están debajo, como antes.",
             "explainThrive": "Los pasos que funcionan hacen prosperar a tus animales: más crías, y son los últimos en ser cazados.",
             "explainDismiss": "Entendido",
             "arrival": "{species} subió a bordo del Ark",
@@ -839,7 +849,7 @@
                     "needsAdult": "Primero confirma que tienes 18 años o más."
                 }
             },
-            "scoreHint": "Puntuación Ark: puntos por los pasos que funcionaron, más por los animales que el Ark necesita. Nunca baja.",
+            "scoreHint": "Puntuación Ark: crece cuando les va bien a las especies que cada persona ayudó a subir a bordo.",
             "offerThrive": "Si funciona, tus {species} del Ark prosperarán",
             "offerLater": "Si funciona, tu {species} prosperará cuando haya uno a bordo",
             "resultOther": "Funcionó. Tus {species} están prosperando: más crías, y son los últimos en ser cazados.",
@@ -849,7 +859,7 @@
             "thrivePrime": "En óptima condición",
             "thriveGood": "En buena condición",
             "thriveOrdinary": "Normal",
-            "scoreAboutTheirs": "Puntos por sus pasos que funcionaron, más por los animales que el Ark necesita. Nunca baja."
+            "scoreAboutTheirs": "La puntuación Ark de esta persona crece cuando les va bien a las especies que ayudó a subir a bordo."
         }
     },
     "home": {

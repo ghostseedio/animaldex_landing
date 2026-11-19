@@ -190,6 +190,7 @@
             "hatchedAboard": "Vyliahnutý v Ark",
             "hatched": "Vyliahnutie",
             "placeholder": "Jeho 3D postava sa ešte pripravuje: zatiaľ ho zastupuje náhradná.",
+            "lone": "Jediný jedinec",
             "lastOfKind": "Posledný svojho druhu na palube: chyť ďalšieho, nech má partnera",
             "revised": "Jeho krok",
             "revisedWorked": "upravené: znova fungoval",
@@ -451,8 +452,8 @@
             "metaTitle": "{name}: zvieratá v Ark",
             "title": "{name}: zvieratá v Ark",
             "titleSelf": "Moje zvieratá v Ark",
-            "scoreAbout": "Z krokov tejto osoby, ktoré fungovali, viac za zvieratá, ktoré Ark potrebuje. Nikdy neklesá.",
-            "scoreAboutSelf": "Z tvojich krokov, ktoré fungovali, viac za zvieratá, ktoré Ark potrebuje. Nikdy neklesá.",
+            "scoreAbout": "Skóre Ark tejto osoby rastie, keď sa darí druhom, ktoré sa vďaka nej dostali na palubu.",
+            "scoreAboutSelf": "Tvoje skóre Ark rastie, keď sa darí druhom, ktoré sa vďaka tebe dostali na palubu.",
             "outOf": "z {max}",
             "summary": "Na palube: {animals}, {species}",
             "anonymousTitle": "Anonymne na palube",
@@ -585,6 +586,8 @@
             "habitat": "Prostredie",
             "foundIn": "Rozšírenie",
             "saved": "Zachránené: tento druh už nie je ohrozený",
+            "savedBy": "Vďaka {name}",
+            "savedByCollector": "Vďaka človeku, ktorý zbiera zvieratá",
             "lost": "Vymizol z voľnej prírody",
             "listLabel": "Ohrozené druhy vo voľnej prírode, najnovšie prvé",
             "unavailable": "Teraz sa to nedá skontrolovať. Skúste to o chvíľu znova.",
@@ -677,6 +680,13 @@
                 "mythic": "Mýtické"
             }
         },
+        "seen": {
+            "searching": "Hľadá korisť",
+            "stalking": "Zakráda sa ku koristi: {aPrey}",
+            "stalkingNoTarget": "Zakráda sa ku koristi",
+            "mateSeeking": "Hľadá partnera",
+            "wounded": "Má zranenie"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Ľahšia Ark pre toto zariadenie",
@@ -753,14 +763,14 @@
             "score": "Skóre Ark",
             "scoreShort": "Ark {n}",
             "outOf": "z {max}",
-            "scoreAbout": "Z tvojich krokov, ktoré fungovali, viac za zvieratá, ktoré Ark potrebuje. Nikdy neklesá.",
+            "scoreAbout": "Tvoje skóre Ark rastie, keď sa darí druhom, ktoré sa vďaka tebe dostali na palubu.",
             "scoreWeek": "{delta} tento týždeň",
             "myAnimals": "Moje zvieratá v Ark",
             "theirAnimals": "Zvieratá tejto osoby v Ark",
             "notInArk": "Zatiaľ nie je v Ark",
             "life": "Život",
             "explainTitle": "Ako rastie tvoje Skóre Ark",
-            "explainBody": "Každý krok so zvieraťom, ktorý funguje, prináša body: viac, keď to zviera Ark potrebuje (je tam samo alebo jeho druh ubúda či je ohrozený), menej, keď je ich na palube veľa. Úlovky privádzajú zvieratá na palubu, ale tvoje skóre nikdy neznížia a nikto iný ho znížiť nemôže. Vždy len rastie. Tvoje ukazovatele života sú nižšie, ako predtým.",
+            "explainBody": "Každý krok so zvieraťom, ktorý funguje, prináša body: viac, keď to zviera Ark potrebuje (je tam samo alebo jeho druh ubúda či je ohrozený), menej, keď je ich na palube veľa. Tvoje ukazovatele života sú nižšie, ako predtým.",
             "explainThrive": "Kroky, ktoré fungujú, pomáhajú tvojim zvieratám prospievať: viac mláďat a lovia ich až nakoniec.",
             "explainDismiss": "Rozumiem",
             "arrival": "{species} je teraz na palube Ark",
@@ -839,7 +849,7 @@
                     "needsAdult": "Najprv potvrď, že máš 18 alebo viac rokov."
                 }
             },
-            "scoreHint": "Skóre Ark: body z krokov, ktoré fungovali, viac za zvieratá, ktoré Ark potrebuje. Nikdy neklesá.",
+            "scoreHint": "Skóre Ark: rastie, keď sa darí druhom, ktoré sa vďaka každému z nich dostali na palubu.",
             "offerThrive": "Ak to zafunguje, tvoje zvieratá {species} v Arku budú prospievať",
             "offerLater": "Ak to zafunguje, tvoje zviera {species} bude prospievať, keď bude jedno na palube",
             "resultOther": "Vyšlo to. Tvoje zvieratá {species} prospievajú: viac mláďat a lovia ich až nakoniec.",
@@ -849,7 +859,7 @@
             "thrivePrime": "Vo vrcholnej kondícii",
             "thriveGood": "V dobrej kondícii",
             "thriveOrdinary": "Bežná kondícia",
-            "scoreAboutTheirs": "Z krokov tejto osoby, ktoré fungovali, viac za zvieratá, ktoré Ark potrebuje. Nikdy neklesá."
+            "scoreAboutTheirs": "Skóre Ark tejto osoby rastie, keď sa darí druhom, ktoré sa vďaka nej dostali na palubu."
         }
     },
     "home": {

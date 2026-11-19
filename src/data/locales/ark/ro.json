@@ -190,6 +190,7 @@
             "hatchedAboard": "Ieșit din ou în Ark",
             "hatched": "Ieșit din ou",
             "placeholder": "Figura lui 3D e încă în lucru: deocamdată îl arată un înlocuitor.",
+            "lone": "Singurul individ",
             "lastOfKind": "Ultimul de felul lui la bord: prinde încă unul ca să aibă pereche",
             "revised": "Pasul lui",
             "revisedWorked": "revizuit: a mers din nou",
@@ -451,8 +452,8 @@
             "metaTitle": "{name}: animalele din Ark",
             "title": "{name}: animalele din Ark",
             "titleSelf": "Animalele mele din Ark",
-            "scoreAbout": "Din pașii acestei persoane care au mers, mai mult pentru animalele de care are nevoie Ark. Nu scade niciodată.",
-            "scoreAboutSelf": "Din pașii tăi care au mers, mai mult pentru animalele de care are nevoie Ark. Nu scade niciodată.",
+            "scoreAbout": "Scorul Ark al acestei persoane crește atunci când le merge bine speciilor pe care le-a ajutat să urce la bord.",
+            "scoreAboutSelf": "Scorul tău Ark crește atunci când le merge bine speciilor pe care le-ai ajutat să urce la bord.",
             "outOf": "din {max}",
             "summary": "La bord — {animals}, {species}",
             "anonymousTitle": "Anonim la bord",
@@ -585,6 +586,8 @@
             "habitat": "Habitat",
             "foundIn": "Răspândire",
             "saved": "Salvată: această specie nu mai este în pericol",
+            "savedBy": "Datorită lui {name}",
+            "savedByCollector": "Datorită unei persoane care colecționează animale",
             "lost": "Dispărută din sălbăticie",
             "listLabel": "Specii în pericol în sălbăticie, cele mai noi primele",
             "unavailable": "Nu se poate verifica acum. Încearcă din nou peste puțin timp.",
@@ -677,6 +680,13 @@
                 "mythic": "Mitic"
             }
         },
+        "seen": {
+            "searching": "Caută pradă",
+            "stalking": "Pândește: {aPrey}",
+            "stalkingNoTarget": "La pândă",
+            "mateSeeking": "Caută pereche",
+            "wounded": "Cu o rană"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "O Ark mai ușoară pentru acest dispozitiv",
@@ -753,14 +763,14 @@
             "score": "Scor Ark",
             "scoreShort": "Ark {n}",
             "outOf": "din {max}",
-            "scoreAbout": "Din pașii tăi care au mers, mai mult pentru animalele de care are nevoie Ark. Nu scade niciodată.",
+            "scoreAbout": "Scorul tău Ark crește atunci când le merge bine speciilor pe care le-ai ajutat să urce la bord.",
             "scoreWeek": "{delta} săptămâna aceasta",
             "myAnimals": "Animalele mele din Ark",
             "theirAnimals": "Animalele sale din Ark",
             "notInArk": "Încă nu e în Ark",
             "life": "Viață",
             "explainTitle": "Cum crește Scorul tău Ark",
-            "explainBody": "Fiecare pas cu un animal care merge aduce puncte: mai multe când Ark are nevoie de acel animal (unul singur sau un fel aflat în declin ori în pericol), mai puține când sunt multe la bord. Capturile aduc animale la bord, dar nu îți scad niciodată scorul, și nimeni altcineva nu ți-l poate scădea. Doar crește. Barele tale de viață sunt mai jos, ca înainte.",
+            "explainBody": "Fiecare pas cu un animal care merge aduce puncte: mai multe când Ark are nevoie de acel animal (unul singur sau un fel aflat în declin ori în pericol), mai puține când sunt multe la bord. Barele tale de viață sunt mai jos, ca înainte.",
             "explainThrive": "Pașii care merg îți fac animalele să prospere: mai mulți pui, vânate ultimele.",
             "explainDismiss": "Am înțeles",
             "arrival": "{species} a urcat la bordul Ark",
@@ -839,7 +849,7 @@
                     "needsAdult": "Mai întâi confirmă că ai împlinit 18 ani."
                 }
             },
-            "scoreHint": "Scor Ark: puncte din pașii care au mers, mai multe pentru animalele de care are nevoie Ark. Nu scade niciodată.",
+            "scoreHint": "Scor Ark: crește atunci când le merge bine speciilor pe care fiecare persoană le-a ajutat să urce la bord.",
             "offerThrive": "Dacă merge, animalele tale {species} din Ark vor prospera",
             "offerLater": "Dacă merge, animalul tău {species} va prospera când va fi unul la bord",
             "resultOther": "A mers. Animalele tale {species} prosperă: mai mulți pui, vânate ultimele.",
@@ -849,7 +859,7 @@
             "thrivePrime": "În stare excelentă",
             "thriveGood": "În stare bună",
             "thriveOrdinary": "Stare obișnuită",
-            "scoreAboutTheirs": "Din pașii acestei persoane care au mers, mai mult pentru animalele de care are nevoie Ark. Nu scade niciodată."
+            "scoreAboutTheirs": "Scorul Ark al acestei persoane crește atunci când le merge bine speciilor pe care le-a ajutat să urce la bord."
         }
     },
     "home": {

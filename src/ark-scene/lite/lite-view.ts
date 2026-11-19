@@ -16,7 +16,9 @@ import type {ArkFounders} from "@/lib/ark-founders";
 import {decodeArkEvents} from "@/lib/ark-life";
 import {arkLiveLineText} from "@/lib/ark-live-log";
 import {crisisText} from "@/ark-scene/live/crisis-lines";
-import {arkLiveTextOf, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
+import {escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
+import {arkLiveTextOf, arkSeenWordsOf, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
+import {arkSeenStateText, arkSeenStates} from "@/ark-scene/seen/hooks";
 import {ARK_LITE_FEED_BACK_MS, ARK_LITE_FEED_LONG, ARK_LITE_FEED_POLL_MS, ARK_LITE_FEED_SHORT, arkLiteFeedFromEvents, arkLiteFeedLines, arkLiteFeedMerge, arkLiteFeedSeed, type ArkLiteFeedEntry} from "@/lib/ark-lite-feed";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import {arkLiteKindAnimals, arkLiteModel, arkLiteWords, type ArkLiteKind, type ArkLiteMine, type ArkLiteModel, type ArkLiteViewWords} from "@/lib/ark-lite";
@@ -248,7 +250,8 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
             const fresh = !first && !drawn.has(line.id);
             const item = el("li", `arkl-ev${fresh ? " new" : ""}`);
             item.appendChild(icon("i", line.slug, options.iconUrl));
-            item.appendChild(el("span", "t", crisisText(line.item, text) ?? arkLiveLineText(line.item, text, locale)));
+            // (V1: an escape's own words, both animals named, as the 3D log says it; E4: the crisis layer's.)
+            item.appendChild(el("span", "t", crisisText(line.item, text) ?? escapeText(line.item, text) ?? arkLiveLineText(line.item, text, locale)));
             item.appendChild(el("span", "ago", arkAgoText(line.at, now, locale)));
             list.appendChild(item);
         }
@@ -287,6 +290,17 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
                 more = body.more === true && newest > cursor;
                 cursor = newest;
                 feed = arkLiteFeedMerge(feed, arkLiteFeedFromEvents(events));
+                // V1: the record's escapes too (the 3D log reads them from the rows, `escape-lines.ts`): "A Plains Zebra got
+                // away from an African Lion". Words only here: Ark Lite has no world to act them in.
+                const rows = Array.isArray(body.events) ? body.events as Array<{id?: unknown; kind?: unknown; at?: unknown; animal?: {model_slug?: unknown} | null}> : [];
+                const escapes = escapeItems(rows, -Infinity, () => false).flatMap((item) => {
+                    const row = rows.find((candidate) => candidate && candidate.kind === "escaped" && `event:${String(candidate.id)}` === item.id);
+                    return row && typeof row.at === "string" ? [{id: String(item.id), at: row.at, item, slug: typeof row.animal?.model_slug === "string" ? row.animal.model_slug : null}] : [];
+                });
+                if (escapes.length) {
+                    for (const entry of escapes) cursor = Math.max(cursor, Date.parse(entry.at) || 0);
+                    feed = arkLiteFeedMerge(feed, escapes);
+                }
             })
             .catch(() => {
                 feedOk = false;
@@ -414,6 +428,8 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
         const list = el("ul", "arkl-who");
         const {animals, more} = arkLiteKindAnimals(snapshot, founders, region, kind.key);
         const now = new Date();
+        // E6's read (`animal.state`, none while its flag is off): what one is doing now, said in words as the 3D box says it.
+        const states = new Map(arkSeenStates(snapshot).map((state) => [state.id, state]));
         for (const animal of animals) {
             const row = el("li");
             const who = el("span", "w");
@@ -424,6 +440,10 @@ export function mountArkLite(host: HTMLElement, options: ArkLiteOptions): ArkLit
                 who.appendChild(by);
             }
             if (animal.mine) who.appendChild(el("span", "you", lite.you));
+            // V1 (E3's `lone`, only while the last-animal rules are on): a lone founder, said in words (the card's, `ark.life.lone`).
+            if (animal.lone) who.appendChild(el("span", "you", String(sub(words, "life").lone || "Lone founder")));
+            const state = states.get(animal.id);
+            if (state) who.appendChild(el("span", "you", arkSeenStateText(state, state.kind === "stalking" && state.target ? snapshot?.animals.find((other) => other.id === state.target)?.name ?? null : null, arkSeenWordsOf(words as ArkLiveWordsIn))));
             row.appendChild(who);
             row.appendChild(el("span", "ago", arkAgoText(animal.arrivedAt, now, locale)));
             list.appendChild(row);

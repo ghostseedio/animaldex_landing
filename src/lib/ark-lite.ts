@@ -158,6 +158,8 @@ export type ArkLiteKindAnimal = {
     mine: boolean;
     /** Its named founder's @handle (the founders read's, only while the server names founders), else null. */
     handle: string | null;
+    /** V1: a lone founder (the read's `lone`). */
+    lone?: boolean;
 };
 
 /** A tapped kind's animals listed at most (the rest as "+N more"). */
@@ -186,7 +188,8 @@ export function arkLiteKindAnimals(
             origin: animal.origin === "born" ? "born" : "arrived",
             arrivedAt: animal.arrived_at,
             mine: animal.mine === true,
-            handle: animal.origin === "born" ? null : handle
+            handle: animal.origin === "born" ? null : handle,
+            ...(animal.lone === true ? {lone: true} : {})
         };
     });
     all.sort((a, b) => Number(b.mine) - Number(a.mine) || Number(Boolean(b.handle)) - Number(Boolean(a.handle)) || b.arrivedAt.localeCompare(a.arrivedAt) || a.id.localeCompare(b.id));

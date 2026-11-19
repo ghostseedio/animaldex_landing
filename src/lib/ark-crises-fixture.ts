@@ -2,8 +2,8 @@
  * Development's crises (`/ark/endangered?fixture=crises`): the contract's example answer (AnimalDex
  * docs/ark/audits/ecosystem/crises-api-contract.md, `crises-fixture.json`), with its times moved to be 5 hours, 2
  * hours and 27 hours before `now`. Made-up data, never in production (the page only reads it under `next dev`).
- * `&fixture=crises-ended` adds a crisis that was saved and one that ended extinct, as a shared link to an ended crisis
- * would show.
+ * `&fixture=crises-ended` adds two crises that were saved (one credited by name, one to "a collector", contract 1.1) and one that
+ * ended extinct, as a shared link to an ended crisis would show.
  */
 
 export const ARK_CRISES_FIXTURE_IDS = {
@@ -11,6 +11,7 @@ export const ARK_CRISES_FIXTURE_IDS = {
     squirrel: "2a9e5d71-6c0b-4e86-b3f4-7d1c9a2e4c02",
     lynx: "9d4b7c13-8e2a-4f59-a6c0-3b5e1d7f9a03",
     saved: "4c8d2e60-7a1b-4d93-8e5f-2a6c0b9d1e04",
+    savedAnonymous: "3d9e1f72-8b2c-4e04-9f6a-5c7e1a3b2d06",
     extinct: "7e1a9b35-5c4d-4f20-a8b6-1d3e5f7a9c05"
 } as const;
 
@@ -93,7 +94,27 @@ export function arkCrisesFixture(now = Date.now(), ended = false): {available: t
                   ended_at: ago(30),
                   last_animal_ids: ["a8b9c0d1-e2f3-4a4b-8c5d-6e7f8a9b0c07"],
                   habitat: "Steep, rocky mountain slopes above the tree line.",
-                  countries: ["CN", "MN", "NP"]
+                  countries: ["CN", "MN", "NP"],
+                  saved_by: [{name: "Maya R."}]
+              },
+              {
+                  id: ARK_CRISES_FIXTURE_IDS.savedAnonymous,
+                  species_profile_id: "6e8a0c24-1b3d-4f57-a9c0-7d2f4b6e8a66",
+                  name: "Iberian Lynx",
+                  scientific_name: "Lynx pardinus",
+                  model_slug: "iberian-lynx",
+                  page_slug: "iberian-lynx",
+                  band: "critical",
+                  status: "saved",
+                  wild_count: 3,
+                  opened_ark_day: day(40),
+                  opened_at: ago(40),
+                  ended_ark_day: day(20),
+                  ended_at: ago(20),
+                  last_animal_ids: ["b9c0d1e2-f3a4-4b5c-8d6e-7f8a9b0c1d08"],
+                  habitat: "Mediterranean scrub and open woodland with plenty of rabbits.",
+                  countries: ["ES", "PT"],
+                  saved_by: [{name: null}]
               },
               {
                   id: ARK_CRISES_FIXTURE_IDS.extinct,

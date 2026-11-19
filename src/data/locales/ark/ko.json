@@ -190,6 +190,7 @@
             "hatchedAboard": "Ark에서 부화함",
             "hatched": "부화",
             "placeholder": "3D 모습을 아직 만드는 중이에요. 지금은 임시 모습으로 보여 드려요.",
+            "lone": "단 한 마리",
             "lastOfKind": "배에 남은 마지막 한 마리예요: 한 마리 더 잡으면 짝이 생겨요",
             "revised": "이 동물의 할 일",
             "revisedWorked": "수정됨: 다시 효과가 있었어요",
@@ -451,8 +452,8 @@
             "metaTitle": "Ark에 있는 {name}님의 동물",
             "title": "Ark에 있는 {name}님의 동물",
             "titleSelf": "Ark에 있는 내 동물",
-            "scoreAbout": "이분이 해서 효과가 있었던 할 일에서 얻은 점수예요. Ark에 필요한 동물일수록 더 많이 받아요. 절대 내려가지 않아요.",
-            "scoreAboutSelf": "내가 해서 효과가 있었던 할 일에서 얻은 점수예요. Ark에 필요한 동물일수록 더 많이 받아요. 절대 내려가지 않아요.",
+            "scoreAbout": "이분이 탑승시키는 데 도움을 준 종이 잘 지내면 이분의 Ark 점수가 올라요.",
+            "scoreAboutSelf": "내가 탑승시키는 데 도움을 준 종이 잘 지내면 Ark 점수가 올라요.",
             "outOf": "/ {max}",
             "summary": "{animals} 탑승 중, {species}",
             "anonymousTitle": "익명으로 탑승 중",
@@ -585,6 +586,8 @@
             "habitat": "서식지",
             "foundIn": "분포",
             "saved": "구조됨: 이 종은 더 이상 위기에 처해 있지 않습니다",
+            "savedBy": "{name}님이 구했어요",
+            "savedByCollector": "수집가가 구했어요",
             "lost": "야생에서 사라짐",
             "listLabel": "야생에서 위기에 처한 종, 최신순",
             "unavailable": "지금은 확인할 수 없습니다. 잠시 후 다시 시도해 주세요.",
@@ -677,6 +680,13 @@
                 "mythic": "신화"
             }
         },
+        "seen": {
+            "searching": "먹잇감을 찾는 중",
+            "stalking": "{aPrey}에게 몰래 다가가는 중",
+            "stalkingNoTarget": "몰래 다가가는 중",
+            "mateSeeking": "짝을 찾는 중",
+            "wounded": "다쳤어요"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "이 기기를 위한 가벼운 Ark",
@@ -753,14 +763,14 @@
             "score": "Ark 점수",
             "scoreShort": "Ark {n}",
             "outOf": "/ {max}",
-            "scoreAbout": "내가 해서 효과가 있었던 할 일에서 얻은 점수예요. Ark에 필요한 동물일수록 더 많이 받아요. 절대 내려가지 않아요.",
+            "scoreAbout": "내가 탑승시키는 데 도움을 준 종이 잘 지내면 Ark 점수가 올라요.",
             "scoreWeek": "이번 주 {delta}",
             "myAnimals": "Ark에 있는 내 동물",
             "theirAnimals": "Ark에 있는 이분의 동물",
             "notInArk": "아직 Ark에 없음",
             "life": "라이프",
             "explainTitle": "Ark 점수가 오르는 방식",
-            "explainBody": "동물과 함께한 할 일이 효과가 있을 때마다 점수를 받아요. Ark에 그 동물이 필요할 때(혼자 있는 동물이거나, 수가 줄고 있거나 위험에 처한 종일 때)는 더 많이, 이미 많이 탑승해 있을 때는 더 적게 받아요. 캡처로 동물이 탑승하지만 점수가 내려가지는 않고, 다른 누구도 내 점수를 내릴 수 없어요. 점수는 오르기만 해요. 라이프 바는 전처럼 아래에 있어요.",
+            "explainBody": "동물과 함께한 할 일이 효과가 있을 때마다 점수를 받아요. Ark에 그 동물이 필요할 때(혼자 있는 동물이거나, 수가 줄고 있거나 위험에 처한 종일 때)는 더 많이, 이미 많이 탑승해 있을 때는 더 적게 받아요. 라이프 바는 전처럼 아래에 있어요.",
             "explainThrive": "효과가 있는 할 일은 내 동물을 건강하게 해요: 새끼가 늘고, 가장 나중에 사냥당해요.",
             "explainDismiss": "알겠습니다",
             "arrival": "{species}이(가) Ark에 탑승했어요",
@@ -839,7 +849,7 @@
                     "needsAdult": "먼저 만 18세 이상인지 확인해 주세요."
                 }
             },
-            "scoreHint": "Ark 점수: 효과가 있었던 할 일에서 얻은 점수예요. Ark에 필요한 동물일수록 더 많이 받아요. 절대 내려가지 않아요.",
+            "scoreHint": "Ark 점수: 각자 탑승시키는 데 도움을 준 종이 잘 지내면 올라요.",
             "offerThrive": "이게 효과가 있으면 Ark의 내 {species}이(가) 건강하게 지내요",
             "offerLater": "이게 효과가 있으면 내 {species}이(가) 탑승한 뒤 건강하게 지내요",
             "resultOther": "효과가 있었어요. 내 {species}이(가) 건강하게 지내요: 새끼가 늘고, 가장 나중에 사냥당해요.",
@@ -849,7 +859,7 @@
             "thrivePrime": "최상의 상태",
             "thriveGood": "좋은 상태",
             "thriveOrdinary": "보통",
-            "scoreAboutTheirs": "이분이 해서 효과가 있었던 할 일에서 얻은 점수예요. Ark에 필요한 동물일수록 더 많이 받아요. 절대 내려가지 않아요."
+            "scoreAboutTheirs": "이분이 탑승시키는 데 도움을 준 종이 잘 지내면 이분의 Ark 점수가 올라요."
         }
     },
     "home": {

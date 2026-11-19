@@ -393,9 +393,12 @@ export function* townIslandSteps(options: TownIslandOptions = {}): Generator<voi
     // with each chunk an instance, culled and streamed per chunk as its own mesh was. Their order here is their order in
     // the join (one let in a reveal step) and three's order of materials.
     const layers: Array<{name: ChunkLayer; material: Material; castShadow: boolean; receiveShadow: boolean; release?: boolean}> = [
-        {name: "ground", material: materials.ground, castShadow: false, receiveShadow: true},
+        // (The ground's and the walls' arrays: nothing reads them back (the walk surfaces read the decals' alone, `islands/scene.ts`; the
+        // lit windows write the glass's and the panes' `aLit`), so the page's copy goes once on the GPU: ~50 MB of the phone's heap with
+        // the real Ark, measured 2026-11-19.)
+        {name: "ground", material: materials.ground, castShadow: false, receiveShadow: true, release: true},
         {name: "decal", material: materials.decal, castShadow: false, receiveShadow: true},
-        {name: "solid", material: materials.solid, castShadow: true, receiveShadow: true},
+        {name: "solid", material: materials.solid, castShadow: true, receiveShadow: true, release: true},
         {name: "glass", material: materials.glass, castShadow: false, receiveShadow: false},
         // (Hedges, flower beds and crops: nothing reads their arrays back, so the page's copies go once on the GPU, phone heap.)
         {name: "foliage", material: materials.foliage, castShadow: true, receiveShadow: true, release: true},

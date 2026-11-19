@@ -24,6 +24,8 @@ export type ArkHudWordsIn = {
     speciesOther?: string | null;
     /** Lost from the Ark's words (`ark.lost`). */
     lost?: Record<string, unknown> | null;
+    /** V1: the marks' words (`ark.endangered`: "Last one", "Critical"). */
+    endangered?: {last?: string | null; critical?: string | null} | null;
     hud?: Partial<Record<"show" | "hide" | "chip" | "rowCount" | "change24h" | "changeWindow" | "yours" | "herdTag" | "listLabel", string>> | null;
 } | null;
 

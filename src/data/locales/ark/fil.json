@@ -190,6 +190,7 @@
             "hatchedAboard": "Napisa sa Ark",
             "hatched": "Napisa",
             "placeholder": "Ginagawa pa ang 3D na anyo nito: may pansamantalang kapalit muna.",
+            "lone": "Ang nag-iisa",
             "lastOfKind": "Huli sa kauri nito sa barko: humuli ng isa pa para magkaroon ito ng kapareha",
             "revised": "Ang hakbang nito",
             "revisedWorked": "binago: gumana ulit",
@@ -451,8 +452,8 @@
             "metaTitle": "Ang mga hayop ni {name} sa Ark",
             "title": "Ang mga hayop ni {name} sa Ark",
             "titleSelf": "Ang mga hayop ko sa Ark",
-            "scoreAbout": "Mula sa mga hakbang niyang gumana, mas marami para sa mga hayop na kailangan ng Ark. Hindi ito bumababa kailanman.",
-            "scoreAboutSelf": "Mula sa mga hakbang mong gumana, mas marami para sa mga hayop na kailangan ng Ark. Hindi ito bumababa kailanman.",
+            "scoreAbout": "Tumataas ang Ark Score niya kapag maayos ang kalagayan ng mga uring tinulungan niyang maisakay.",
+            "scoreAboutSelf": "Tumataas ang Ark Score mo kapag maayos ang kalagayan ng mga uring tinulungan mong maisakay.",
             "outOf": "sa {max}",
             "summary": "{animals} ang nakasakay, mula sa {species}",
             "anonymousTitle": "Nakasakay nang hindi nagpapakilala",
@@ -585,6 +586,8 @@
             "habitat": "Tirahan",
             "foundIn": "Saklaw",
             "saved": "Nailigtas: wala na sa panganib ang uring ito",
+            "savedBy": "Iniligtas ni {name}",
+            "savedByCollector": "Iniligtas ng isang kolektor",
             "lost": "Nawala sa kalikasan",
             "listLabel": "Mga uring nasa panganib sa kalikasan, pinakabago muna",
             "unavailable": "Hindi ma-check ngayon. Subukan ulit sa ilang sandali.",
@@ -677,6 +680,13 @@
                 "mythic": "Mitiko"
             }
         },
+        "seen": {
+            "searching": "Naghahanap ng mabibiktima",
+            "stalking": "Minamanmanan ang {aPrey}",
+            "stalkingNoTarget": "Nagmamanman",
+            "mateSeeking": "Naghahanap ng kapares",
+            "wounded": "Sugatan"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Mas magaang Ark para sa device na ito",
@@ -753,14 +763,14 @@
             "score": "Ark Score",
             "scoreShort": "Ark {n}",
             "outOf": "sa {max}",
-            "scoreAbout": "Mula sa mga hakbang mong gumana, mas marami para sa mga hayop na kailangan ng Ark. Hindi ito bumababa kailanman.",
+            "scoreAbout": "Tumataas ang Ark Score mo kapag maayos ang kalagayan ng mga uring tinulungan mong maisakay.",
             "scoreWeek": "{delta} ngayong linggo",
             "myAnimals": "Ang mga hayop ko sa Ark",
             "theirAnimals": "Ang mga hayop niya sa Ark",
             "notInArk": "Wala pa sa Ark",
             "life": "Buhay",
             "explainTitle": "Paano lumalaki ang Ark Score mo",
-            "explainBody": "Bawat hakbang kasama ang isang hayop na gumana ay may puntos: mas marami kapag kailangan ng Ark ang hayop na iyon (nag-iisa, o isang uring kumakaunti o nanganganib), mas kaunti kapag marami nang nakasakay. Isinasakay ng mga kuha ang mga hayop pero hindi nito kailanman binababa ang score mo, at walang ibang makapagbababa nito. Tumataas lang ito. Nasa ibaba ang iyong life bars, gaya ng dati.",
+            "explainBody": "Bawat hakbang kasama ang isang hayop na gumana ay may puntos: mas marami kapag kailangan ng Ark ang hayop na iyon (nag-iisa, o isang uring kumakaunti o nanganganib), mas kaunti kapag marami nang nakasakay. Nasa ibaba ang iyong life bars, gaya ng dati.",
             "explainThrive": "Ang mga hakbang na gumagana ay nagpapasigla sa iyong mga hayop: mas maraming anak, at huling hinuhuli.",
             "explainDismiss": "Nakuha ko",
             "arrival": "Sumakay sa Ark ang isang {species}",
@@ -839,7 +849,7 @@
                     "needsAdult": "Kumpirmahin muna na edad 18 pataas ka."
                 }
             },
-            "scoreHint": "Ark Score: puntos mula sa mga hakbang na gumana, mas marami para sa mga hayop na kailangan ng Ark. Hindi ito bumababa kailanman.",
+            "scoreHint": "Ark Score: tumataas kapag maayos ang kalagayan ng mga uring tinulungang maisakay ng bawat tao.",
             "offerThrive": "Kapag gumana ito, magiging masigla ang iyong mga {species} sa Ark",
             "offerLater": "Kapag gumana ito, magiging masigla ang iyong {species} kapag may isa nang nakasakay",
             "resultOther": "Gumana ito. Masigla ang iyong mga {species}: mas maraming anak, at huling hinuhuli.",
@@ -849,7 +859,7 @@
             "thrivePrime": "Nasa pinakamahusay na kondisyon",
             "thriveGood": "Nasa magandang kondisyon",
             "thriveOrdinary": "Karaniwan",
-            "scoreAboutTheirs": "Mula sa mga hakbang niyang gumana, mas marami para sa mga hayop na kailangan ng Ark. Hindi ito bumababa kailanman."
+            "scoreAboutTheirs": "Tumataas ang Ark Score niya kapag maayos ang kalagayan ng mga uring tinulungan niyang maisakay."
         }
     },
     "home": {

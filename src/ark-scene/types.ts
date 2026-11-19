@@ -104,6 +104,19 @@ export type ArkAnimal = {
      */
     last_of_kind?: boolean;
     /**
+     * V1 (decision 389, E3's read: `lone`, sent only when true and only while `voyage_config.last_animal` is on): a lone
+     * founder, the only wild animal of a kind that arrived alone. Huntable, never a crisis; shown "lone".
+     */
+    lone?: boolean;
+    /**
+     * What it is doing now, as the engine committed and released it (E6's read, AnimalDex
+     * `docs/ark/audits/ecosystem/seen-states-api-contract.md`; sent only while `voyage_config.visible_searching` is on, and
+     * then for about one animal in ten). At most one. `kind`: `searching`, `mate_seeking`, and with hunt styles `stalking`
+     * and `wounded` (`target`: the bitten animal or the biter; `since`: the bite, ISO). Read through `seen/hooks.ts`
+     * `arkSeenStates`, which drops a kind it does not know.
+     */
+    state?: {kind: string; target?: string; since?: string};
+    /**
      * Its kind (A1): a breed's parent species (a Labrador's Domestic Dog),
      * whose pairs, breeding and cap apply. Breeds of one kind are one row in
      * the population panel. Absent: its own kind.
@@ -419,6 +432,8 @@ export type ArkCastLayer = {
     pins: ReadonlySet<string>;
     /** Ids with the soft ring under them (the last of its kind). */
     marks: ReadonlySet<string>;
+    /** V1: a short line under the selected animal's name (its crisis band, "Lone", a public state); null or absent: none. */
+    label?: (id: string) => string | null;
 };
 
 /** A replay running (`play`): skip it to jump to the Ark as it is now. */
@@ -512,6 +527,16 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * The record's matings (`mated` events: its two animals, its time on the shared clock), acted out in the live world:
      * the two walk to each other, court, nuzzle and lie together, then go back to their day. New ones are added.
      */
+    /**
+     * V1: meals from the event log as it is read, added to the live world's (`live-meals.ts` add): the hunting read's
+     * set comes up to a refresh later, by when the held chase may have begun.
+     */
+    addMeals?: (meals: Extract<ArkAct, {kind: "meal"}>[]) => void;
+    /**
+     * V1 hook for E5 (hunt styles; NOT sent by the server yet): the animals the public read says are wounded, each
+     * since when (epoch s). They limp as one that got away does (`live-escapes.ts`), until taken off the list.
+     */
+    setWounded?: (list: ReadonlyArray<{id: string; since: number}>) => void;
     addMatings?: (matings: Array<{key: string; a: string; b: string; t0: number}>) => void;
     /**
      * A mating line's tap: `a` chosen (its card), and while the two's mating is acted the view frames both of them and
@@ -530,7 +555,7 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * 3.3 fix (log): the record's deaths (`death_old`, `starved` events: the animal, its time on the shared clock). Its
      * body lies where its schedule had it at that time, on its side, for a while (`live-deaths.ts`). Keyed `death:<id>`.
      */
-    addDeaths?: (deaths: Array<{key: string; animal: ArkEventAnimal; t0: number; /** p5 (humans): where the server judged it died. */ at?: {x: number; z: number} | null}>) => void;
+    addDeaths?: (deaths: Array<{key: string; animal: ArkEventAnimal; t0: number; /** p5 (humans): where the server judged it died. */ at?: {x: number; z: number} | null; /** V1: why (the dying act's look only). */ cause?: "old" | "starved" | "wounds" | null}>) => void;
     /** 3.3 fix (log): a death line's tap: the camera to where it died. False when the scene does not know the death. */
     focusDeath?: (key: string) => boolean;
     /**

@@ -21,6 +21,7 @@
 
 import type {ArkSnapshot, ArkAnimal} from "@/ark-scene/types";
 import type {ArkCastRecord} from "@/ark-scene/replay/cast";
+import {arkActStart, arkActStartOf} from "@/lib/ark-act-hold";
 import {arkEventRows, decodeArkEvents, decodeArkMealEncounter, planArkReplay, type ArkAct, type ArkEvent, type ArkEventAnimal, type ArkMealEncounter} from "@/lib/ark-life";
 
 export const ARK_REPLAY_KINDS = ["mated", "birth", "death", "extinct", "meal", "escaped", "last_stand", "released"] as const;
@@ -43,7 +44,7 @@ export type ArkReplayMember = {role: ArkReplayRole; record: ArkCastRecord; /** I
 export type ArkReplayFeed = {
     matings?: Array<{key: string; a: string; b: string; t0: number}>;
     births?: Array<{key: string; parents: string[]; young: string[]; t0: number}>;
-    deaths?: Array<{key: string; animal: ArkEventAnimal; t0: number}>;
+    deaths?: Array<{key: string; animal: ArkEventAnimal; t0: number; cause?: "old" | "starved" | "wounds"}>;
     meals?: Array<Extract<ArkAct, {kind: "meal"}>>;
     escapes?: Array<{key: string; prey: string; predator: string; t0: number; encounter?: ArkMealEncounter}>;
     /** A hatching: the scene's own replay act (`play`), a clutch that hatches where the young stand. */
@@ -195,11 +196,15 @@ export function planArkEventReplay(eventId: string | number, raw: unknown, snaps
                 return {...base, t0, cast, marks: [], feed: {play: acts}};
             }
             if (!parents.length) return none("names no parent the log given has a record of: a live birth is acted by its mother");
-            return {...base, t0, cast, marks: [], feed: {births: [{key: `birth:${event.at}:${parentsKey}`, parents: [...event.parents], young: young.map((record) => record.id), t0}]}};
+            // (V1: a live birth begins once the record is out, `ark-act-hold.ts`, as the live world acts it.)
+            const from = arkActStart(t0);
+            return {...base, t0: from, cast, marks: [], feed: {births: [{key: `birth:${event.at}:${parentsKey}`, parents: [...event.parents], young: young.map((record) => record.id), t0: from}]}};
         }
         case "death": {
             if (!own.animal) return none("does not name its animal");
-            return {...base, t0, cast: [member("subject", own.animal)], marks: [], feed: {deaths: [{key: `death:${wanted}`, animal: own.animal, t0}]}};
+            // (V1: the dying act begins once the record is out, `ark-act-hold.ts`, as the live world acts it.)
+            const from = arkActStart(t0);
+            return {...base, t0: from, cast: [member("subject", own.animal)], marks: [], feed: {deaths: [{key: `death:${wanted}`, animal: own.animal, t0: from, ...(rowKind === "starved" ? {cause: "starved" as const} : {})}]}};
         }
         case "extinct": {
             // The row that ended the kind: its last death or the meal its last one was eaten in, at or just before the extinction.
@@ -213,11 +218,11 @@ export function planArkEventReplay(eventId: string | number, raw: unknown, snaps
             }) ?? null;
             if (!cause) return none(`is the extinction of ${species.name || "a kind"}, and the log given does not hold the death or meal that ended it`);
             const ended = decodeAnimals(cause);
-            const causeT = timeOf(cause) / 1000;
+            const causeT = arkActStart(timeOf(cause) / 1000);
             if (cause.kind === "meal") {
                 const meal = planArkReplay([decodeOwn(cause)].filter((event): event is ArkEvent => Boolean(event)), 1).acts.find((act): act is Extract<ArkAct, {kind: "meal"}> => act.kind === "meal");
                 if (!meal || !ended.animal || !ended.other) return none("ended in a meal that does not name its two animals");
-                return {...base, t0: meal.encounter?.t ?? causeT, causeEventId: idOf(cause), cast: [member("last", ended.other), member("predator", ended.animal)], marks: [ended.other.id], feed: {meals: [{...meal, extinct: true}]}};
+                return {...base, t0: arkActStartOf(meal.at, meal.encounter?.t), causeEventId: idOf(cause), cast: [member("last", ended.other), member("predator", ended.animal)], marks: [ended.other.id], feed: {meals: [{...meal, extinct: true}]}};
             }
             if (!ended.animal) return none("ended in a death that does not name its animal");
             return {...base, t0: causeT, causeEventId: idOf(cause), cast: [member("last", ended.animal)], marks: [ended.animal.id], feed: {deaths: [{key: `death:${idOf(cause)}`, animal: ended.animal, t0: causeT}]}};
@@ -226,13 +231,14 @@ export function planArkEventReplay(eventId: string | number, raw: unknown, snaps
             const event = decodeOwn(row);
             const meal = event ? planArkReplay([event], 1).acts.find((act): act is Extract<ArkAct, {kind: "meal"}> => act.kind === "meal") : undefined;
             if (!meal || !own.animal || !own.other) return none("does not name the hunter and its prey");
-            return {...base, t0: meal.encounter?.t ?? t0, cast: [member("predator", own.animal), member("prey", own.other)], marks: [], feed: {meals: [meal]}};
+            // (V1: the chase begins once the record is out, `ark-act-hold.ts`, as the live world acts it.)
+            return {...base, t0: arkActStartOf(meal.at, meal.encounter?.t), cast: [member("predator", own.animal), member("prey", own.other)], marks: [], feed: {meals: [meal]}};
         }
         case "escaped": {
             // The prey is the row's animal, the hunter its other (`ark-ecology/encounter.ts`).
             if (!own.animal || !own.other) return none("does not name the prey and the hunter");
             const encounter = decodeArkMealEncounter(row.encounter ?? rowOf(row.payload)?.encounter);
-            const step = encounter?.t ?? t0;
+            const step = arkActStart(t0, encounter?.t);
             return {...base, t0: step, cast: [member("prey", own.animal), member("predator", own.other)], marks: [], feed: {escapes: [{key: `escaped:${wanted}`, prey: own.animal.id, predator: own.other.id, t0: step, ...(encounter ? {encounter} : {})}]}};
         }
         case "last_stand": {

@@ -8,6 +8,7 @@ import {arkReplayText} from "@/ark-scene/replay/text";
 import {arkEpochSeconds, arkPinnedMs, pinArkClock} from "@/ark-scene/shared-clock";
 import type {ArkAnimal, ArkCastLayer, ArkLiveActs, ArkLocated, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import {planArkReplayShot} from "@/lib/ark-clips/replay-shots";
+import {ARK_ACT_HOLD_SECONDS} from "@/lib/ark-act-hold";
 
 /**
  * V2 replay (`src/ark-scene/replay/`): a recorded event at its own time. The record decides (never the plan), nothing
@@ -102,17 +103,20 @@ test("a hatching: the scene's own replay act, and a parent with no record is sai
     assert.match(orphan.notes[0], /no record/);
 });
 
-test("a death, a meal and an escape: the row's animals, a meal's and an escape's time the encounter's step", () => {
+test("a death, a meal and an escape: the row's animals, each act held until its record is out (never before the encounter's step)", () => {
     const death = plan(13);
     assert.deepEqual([death.kind, death.eventKind, death.cast[0].role, death.cast[0].aboard], ["death", "death_old", "subject", false]);
     assert.equal(death.feed.deaths![0].key, "death:13");
+    assert.equal(death.t0, Date.parse("2026-11-13T10:00:00Z") / 1000 + ARK_ACT_HOLD_SECONDS, "the dying act begins once the record is out");
+    assert.equal(death.feed.deaths![0].t0, death.t0);
     const meal = plan(14);
-    assert.equal(meal.t0, encounter.t);
+    assert.equal(meal.t0, Date.parse("2026-11-14T10:00:00Z") / 1000 + ARK_ACT_HOLD_SECONDS, "the chase is held until the record is out");
+    assert.ok(meal.t0 > encounter.t);
     assert.deepEqual(meal.cast.map((member) => [member.role, member.record.name]), [["predator", "African Lion"], ["prey", "Plains Zebra"]]);
     assert.deepEqual(meal.feed.meals![0].encounter?.prey, encounter.prey);
     const escaped = plan(15);
     assert.deepEqual(escaped.cast.map((member) => [member.role, member.record.id]), [["prey", id(2)], ["predator", id(9)]]);
-    assert.deepEqual(escaped.feed.escapes, [{key: "escaped:15", prey: id(2), predator: id(9), t0: encounter.t, encounter: {t: encounter.t, step: 4, island: "wild", predator: encounter.predator, prey: encounter.prey, d: 7.2}}]);
+    assert.deepEqual(escaped.feed.escapes, [{key: "escaped:15", prey: id(2), predator: id(9), t0: Date.parse("2026-11-14T11:00:00Z") / 1000 + ARK_ACT_HOLD_SECONDS, encounter: {t: encounter.t, step: 4, island: "wild", predator: encounter.predator, prey: encounter.prey, d: 7.2}}]);
 });
 
 test("an extinction: the death that ended the kind is the act, its animal marked the last; none in the log: refused", () => {
@@ -508,7 +512,7 @@ test("a small animal is filmed from as near as its size asks; a swimmer from und
     }
 });
 
-test("an escape with the lines of sight: the hunter and its quarry in one picture all the way, drawn in as it closes", () => {
+test("an escape with the lines of sight: the stalking hunter alone while it is far, the two in one picture once it is near, the lunge on the quarry with room", () => {
     const replay = plan(15);
     const key = replay.feed.escapes![0].key;
     const scene = sightScene(() => true, {escapes: [{key, t0: replay.t0, phase: "acting", missAt: 8, seconds: 16}]});
@@ -520,24 +524,26 @@ test("an escape with the lines of sight: the hunter and its quarry in one pictur
         shot.settle();
         shot.step(0, 0);
         pinArkClock(replay.t0 + 1);
+        // The stalk: the hunter alone and large while it is far from its quarry (from far enough back for both, neither reads).
         const far = shot.step(2, 1 / 30)!;
-        assert.ok(Math.abs(far.target.x - 15) < 0.01, "the point between the two, 30 m apart");
-        assert.ok(far.distance > 30, "from far enough back for both");
-        scene.put(id(9), 27, 0);
+        assert.ok(Math.abs(far.target.x) < 0.5 && far.distance < 15, "the hunter alone, 30 m from its quarry");
+        scene.put(id(9), 24, 0);
         let near = shot.step(2.1, 1 / 30)!;
         for (let i = 0; i < 90; i++) near = shot.step(2.1 + (i + 1) / 30, 1 / 30)!;
-        assert.ok(near.target.x > 28 && near.distance < far.distance * 0.5, "drawn in as the hunter closes");
-        // The lunge: the picture is on the quarry before the hunter is, with room for it; the still is the two at their nearest.
+        assert.ok(near.target.x > 26 && near.target.x < 28, "the two in one picture once it is near");
+        // The lunge: the picture is on the quarry before the hunter is, near, and stays on it; the hunter comes into it.
         scene.put(id(9), 0, 0);
         pinArkClock(replay.t0 + 7);
         let lunge = shot.step(6, 1 / 30)!;
         for (let i = 0; i < 60; i++) lunge = shot.step(6 + (i + 1) / 30, 1 / 30)!;
-        assert.ok(Math.abs(lunge.target.x - 30) < 0.5 && lunge.distance >= 6.5, "on the quarry, from far enough back for the hunter that is coming");
+        // (Composed for the lunge's end: the quarry at 30 and the place beside it, 2.5 m toward the hunter, where the hunter will be.)
+        assert.ok(Math.abs(lunge.target.x - 28.75) < 0.5 && lunge.distance >= 3.2 && lunge.distance < 25, "on the quarry and the place beside it, near, before the hunter is there");
+        assert.equal(shot.report().keyAt, null, "no still while the hunter is out of the picture");
         scene.put(id(9), 28, 0);
         pinArkClock(replay.t0 + 7.9);
         for (let i = 0; i < 30; i++) lunge = shot.step(8 + (i + 1) / 30, 1 / 30)!;
-        assert.ok(lunge.target.x > 28.5 && lunge.target.x < 29.5 && lunge.distance >= 6.5, "then the two of them");
-        assert.ok(shot.report().keyAt !== null && shot.report().keyAt! > 8, "the still: the two at their nearest");
+        assert.ok(Math.abs(lunge.target.x - 28.75) < 0.5, "the same picture: it does not pump as they close");
+        assert.ok(shot.report().keyAt !== null && shot.report().keyAt! > 8, "the still: both in the picture, at their nearest");
     } finally {
         shot.end();
     }

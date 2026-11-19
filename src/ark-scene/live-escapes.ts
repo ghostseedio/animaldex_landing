@@ -23,6 +23,7 @@
  */
 
 import {chasePace, type ActBody, type ActPose, type ChaseKind, type FleeStyle, type MealEncounter} from "@/ark-scene/acts";
+import {APPROACH_SECONDS, approachPose} from "@/ark-scene/live-meals";
 
 /** An escape from the record: who got away from whom, and when (s, the shared clock: the encounter's step). */
 export type EscapeAct = {key: string; prey: string; predator: string; t0: number; encounter?: MealEncounter | null};
@@ -577,12 +578,14 @@ export function limpOffsets(key: string, since: number, moving: boolean, length:
 
 // MARK: On the stage
 
-type Live<E> = {act: EscapeAct; script: EscapeScript | null; built: boolean; over: boolean; acting: Set<E>};
+type Live<E> = {act: EscapeAct; script: EscapeScript | null; built: boolean; over: boolean; acting: Set<E>; /** Where each one's day had it when its walk to the chase's start began. */ lead?: {predator: {x: number; z: number; y: number; yaw: number} | null; prey: {x: number; z: number; y: number; yaw: number} | null}};
 
 export class LiveEscapes<E> {
     private escapes: Live<E>[] = [];
     /** Each prey's latest escape (its limp's clock). */
     private limping = new Map<string, {t0: number; key: string}>();
+    /** V1 hook: who the server says is wounded (id to since when, epoch s). Empty until E5 sends it. */
+    private wounded = new Map<string, number>();
 
     constructor(private readonly host: LiveEscapesHost<E>) {}
 
@@ -607,7 +610,7 @@ export class LiveEscapes<E> {
     }
 
     get size(): number {
-        return this.escapes.length;
+        return this.escapes.length + this.wounded.size;
     }
 
     /** Everyone a chase under way names now (drawn one by one, never as a herd's figure). */
@@ -619,6 +622,9 @@ export class LiveEscapes<E> {
 
     /** The limp of the one that got away, now (`limpOffsets`, into `out`); false when it has none. */
     limp(id: string, epoch: number, moving: boolean, length: number, out: LimpOffsets): boolean {
+        // (A wound's limp does not ease off with time: its stride's clock runs, its amount stays whole.)
+        const hurt = this.wounded.get(id);
+        if (hurt !== undefined && epoch >= hurt) return limpOffsets(`wound:${id}`, (epoch - hurt) % (LIMP_SECONDS / 2), moving, length, out);
         const at = this.limping.get(id);
         if (!at) return false;
         return limpOffsets(at.key, epoch - at.t0, moving, length, out);
@@ -652,7 +658,13 @@ export class LiveEscapes<E> {
         const h = this.host;
         for (const e of this.escapes) {
             const s = epoch - e.act.t0;
-            if (s < 0 || e.over) continue;
+            if (e.over) continue;
+            if (s < 0) {
+                // V1 (held until the record is out, `ark-act-hold.ts`): the last seconds before the chase, each on its
+                // way from where its day has it to where the record's encounter starts them (`approachPose`).
+                if (s >= -APPROACH_SECONDS) this.approach(e, s);
+                continue;
+            }
             const prey = h.find(e.act.prey);
             const predator = h.find(e.act.predator);
             if (!e.built) {
@@ -699,6 +711,42 @@ export class LiveEscapes<E> {
                 if (epoch - at.t0 > LIMP_SECONDS) this.limping.delete(id);
             });
         }
+    }
+
+    private approach(e: Live<E>, s: number): void {
+        const h = this.host;
+        const prey = h.find(e.act.prey);
+        const predator = h.find(e.act.predator);
+        if (!prey || !predator) return;
+        if (!e.built) {
+            e.built = true;
+            const chase = h.chase(e.act, predator, prey);
+            e.script = chase ? escapeScript(chase) : null;
+        }
+        const sc = e.script;
+        if (!sc) return;
+        e.lead ??= {predator: h.scheduleAt(predator, e.act.t0 - APPROACH_SECONDS), prey: h.scheduleAt(prey, e.act.t0 - APPROACH_SECONDS)};
+        const k = (s + APPROACH_SECONDS) / APPROACH_SECONDS;
+        const acting = new Set<E>();
+        const pose = (entry: E, from: {x: number; z: number; y: number; yaw: number} | null, who: "predator" | "prey", other: string) => {
+            if (!from || h.busy(entry)) return;
+            const walked = approachPose(from, escapePose(sc, who, 0), k, h.walk(entry), h.ground);
+            if (!walked) return;
+            h.setAct(entry, {...walked, with: other});
+            acting.add(entry);
+        };
+        pose(predator, e.lead.predator, "predator", e.act.prey);
+        pose(prey, e.lead.prey, "prey", e.act.predator);
+        e.acting.forEach((entry) => {
+            if (!acting.has(entry)) h.setAct(entry, null);
+        });
+        e.acting = acting;
+    }
+
+    /** V1 hook (E5's hunt styles, NOT sent yet): an animal the server says is wounded limps as one that got away does, until it is taken off the list. */
+    setWounded(list: ReadonlyArray<{id: string; since: number}>): void {
+        this.wounded.clear();
+        for (const one of list) if (one.id && Number.isFinite(one.since)) this.wounded.set(one.id, one.since);
     }
 
     debug(): Array<{key: string; t0: number; prey: string; predator: string; phase: string; kind: string | null; missAt: number | null; seconds: number | null; closest: number | null; gap: number | null}> {

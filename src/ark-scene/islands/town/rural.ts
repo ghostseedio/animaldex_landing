@@ -163,6 +163,15 @@ export function ruralPenEdge(p: RuralPen): Poly {
     return [...c, c[0]];
 }
 
+/**
+ * The duck pond's waterfowl (Ark ducks: they stood on its bank, their swims aimed at the sea): their spots are in its
+ * deep water, inside this measure (its ellipse's, 1 at the water's edge: the bowl is over half a metre deep there,
+ * `ground.ts`, deep enough for a swim cell), and the range they keep (m), a little under its shorter half-axis, so a
+ * swim's goal lands on the pond's own water, not on the rim of its deep part.
+ */
+export const RURAL_POND_DEEP = 0.65;
+export const RURAL_POND_RANGE = 4;
+
 /** Whether a point is in the duck pond's water (in its own measure, < 1). */
 export function ruralPondNorm(x: number, z: number): number {
     const dx = x - RURAL_POND.x;

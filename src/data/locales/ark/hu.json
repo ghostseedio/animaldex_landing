@@ -190,6 +190,7 @@
             "hatchedAboard": "Az Arkon kelt ki",
             "hatched": "Kikelt",
             "placeholder": "A 3D-alakja még készül: addig egy helyettesítő mutatja.",
+            "lone": "Az egyetlen",
             "lastOfKind": "Fajtája utolsó példánya a fedélzeten: fogj még egyet, hogy legyen párja",
             "revised": "A lépése",
             "revisedWorked": "módosítva: újra bevált",
@@ -451,8 +452,8 @@
             "metaTitle": "{name} állatai az Arkon",
             "title": "{name} állatai az Arkon",
             "titleSelf": "Állataim az Arkon",
-            "scoreAbout": "A bevált lépései alapján, több azokért az állatokért, amelyekre az Arknak szüksége van. Soha nem csökken.",
-            "scoreAboutSelf": "A bevált lépéseid alapján, több azokért az állatokért, amelyekre az Arknak szüksége van. Soha nem csökken.",
+            "scoreAbout": "Az ő Ark pontszáma nő, ha jól boldogulnak azok a fajok, amelyeket segített a fedélzetre hozni.",
+            "scoreAboutSelf": "Az Ark pontszámod nő, ha jól boldogulnak azok a fajok, amelyeket segítettél a fedélzetre hozni.",
             "outOf": "/ {max}",
             "summary": "{animals} a fedélzeten, {species}",
             "anonymousTitle": "Névtelenül a fedélzeten",
@@ -585,6 +586,8 @@
             "habitat": "Élőhely",
             "foundIn": "Elterjedés",
             "saved": "Megmentve: ez a faj már nincs veszélyben",
+            "savedBy": "Megmentette: {name}",
+            "savedByCollector": "Megmentette egy gyűjtő",
             "lost": "Kipusztult a vadonból",
             "listLabel": "Veszélyeztetett fajok a vadonban, legújabb elöl",
             "unavailable": "Most nem sikerült ellenőrizni. Próbáld újra egy pillanat múlva.",
@@ -677,6 +680,13 @@
                 "mythic": "Mitikus"
             }
         },
+        "seen": {
+            "searching": "Zsákmányt keres",
+            "stalking": "Becserkészi: {aPrey}",
+            "stalkingNoTarget": "Cserkészik",
+            "mateSeeking": "Párt keres",
+            "wounded": "Sebesült"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Könnyebb Ark ehhez az eszközhöz",
@@ -753,14 +763,14 @@
             "score": "Ark pontszám",
             "scoreShort": "Ark {n}",
             "outOf": "/ {max}",
-            "scoreAbout": "A bevált lépéseid alapján, több azokért az állatokért, amelyekre az Arknak szüksége van. Soha nem csökken.",
+            "scoreAbout": "Az Ark pontszámod nő, ha jól boldogulnak azok a fajok, amelyeket segítettél a fedélzetre hozni.",
             "scoreWeek": "{delta} ezen a héten",
             "myAnimals": "Állataim az Arkban",
             "theirAnimals": "Állatai az Arkban",
             "notInArk": "Még nincs az Arkban",
             "life": "Élet",
             "explainTitle": "Hogyan nő az Ark pontszámod",
-            "explainBody": "Minden bevált lépés egy állattal pontot ér: többet, ha az Arknak szüksége van arra az állatra (ha egyedül van, vagy a faja fogy vagy veszélyben van), kevesebbet, ha sok van belőle a fedélzeten. Az elkapások felhozzák az állatokat, de soha nem csökkentik a pontszámodat, és más sem csökkentheti. Mindig csak nő. Az életsávjaid lent vannak, mint eddig.",
+            "explainBody": "Minden bevált lépés egy állattal pontot ér: többet, ha az Arknak szüksége van arra az állatra (ha egyedül van, vagy a faja fogy vagy veszélyben van), kevesebbet, ha sok van belőle a fedélzeten. Az életsávjaid lent vannak, mint eddig.",
             "explainThrive": "A bevált lépésektől jó formába kerülnek az állataid: több kölyök, és őket vadásszák utoljára.",
             "explainDismiss": "Értem",
             "arrival": "{species} felszállt az Arkra",
@@ -839,7 +849,7 @@
                     "needsAdult": "Előbb erősítsd meg, hogy elmúltál 18 éves."
                 }
             },
-            "scoreHint": "Ark pontszám: pontok a bevált lépésekért, több azokért az állatokért, amelyekre az Arknak szüksége van. Soha nem csökken.",
+            "scoreHint": "Ark pontszám: nő, ha jól boldogulnak azok a fajok, amelyeket az egyes emberek segítettek a fedélzetre hozni.",
             "offerThrive": "Ha ez beválik, jó formába kerülnek az állataid ({species}) az Arkban",
             "offerLater": "Ha ez beválik, jó formába kerül az állatod ({species}), amint egy felszáll a fedélzetre",
             "resultOther": "Bevált. Jó formában vannak az állataid ({species}): több kölyök, és őket vadásszák utoljára.",
@@ -849,7 +859,7 @@
             "thrivePrime": "Kitűnő állapotban",
             "thriveGood": "Jó állapotban",
             "thriveOrdinary": "Átlagos",
-            "scoreAboutTheirs": "A bevált lépései alapján, több azokért az állatokért, amelyekre az Arknak szüksége van. Soha nem csökken."
+            "scoreAboutTheirs": "Az ő Ark pontszáma nő, ha jól boldogulnak azok a fajok, amelyeket segített a fedélzetre hozni."
         }
     },
     "home": {

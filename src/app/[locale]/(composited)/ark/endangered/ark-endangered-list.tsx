@@ -8,6 +8,7 @@ import {
     arkCrisisBandWord,
     arkCrisisCountries,
     arkCrisisDuration,
+    arkCrisisSavedByLine,
     arkCrisisSeeItPath,
     arkCrisisSummary,
     decodeArkCrises,
@@ -45,6 +46,7 @@ function Card({crisis, words, locale, now, highlighted}: {crisis: ArkCrisis; wor
     const seeIt = arkCrisisSeeItPath(crisis);
     const countries = arkCrisisCountries(crisis.countries, locale);
     const open = crisis.status === "open";
+    const savedBy = arkCrisisSavedByLine(words, crisis, locale);
     return (
         <li
             id={`crisis-${crisis.id}`}
@@ -74,7 +76,14 @@ function Card({crisis, words, locale, now, highlighted}: {crisis: ArkCrisis; wor
                     <span>{words.openFor.replace("{duration}", arkCrisisDuration(crisis.openedAt, now, locale))}</span>
                 </p>
             ) : (
-                <p className="text-[15px] font-semibold leading-snug text-white">{crisis.status === "saved" ? words.saved : words.lost}</p>
+                <div className="flex flex-col gap-1">
+                    <p className="text-[15px] font-semibold leading-snug text-white">{crisis.status === "saved" ? words.saved : words.lost}</p>
+                    {savedBy ? (
+                        <p data-saved-by className="text-[14px] leading-snug text-ink-200">
+                            {savedBy}
+                        </p>
+                    ) : null}
+                </div>
             )}
 
             {crisis.habitat || countries.length ? (

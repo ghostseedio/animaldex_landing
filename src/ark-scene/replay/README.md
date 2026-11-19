@@ -16,6 +16,10 @@ pins them so they are always drawn, feeds the scene's own live layers the record
 Nothing here is loaded by `/ark` or the apps' embed. The scene (`index.ts`) has only a hook (`setCast`); everything in
 this folder is loaded by whoever asks for it (the recording page, the harness, later V1's live acts).
 
+V1 (`../seen/README.md`) builds on this: the live world's cast, the watch (this folder's shot run live), and the
+**hold**: a meal's and an escape's chase and a death's dying act begin `ARK_ACT_HOLD_SECONDS` after their row's time
+(`src/lib/ark-act-hold.ts`), in the live world and in a replay alike, so a replay's `t0` for those kinds is the held one.
+
 ## Rules
 
 1. **The record decides.** A replay is an event row of `/api/ark/events`. Nothing here decides an outcome, picks a
@@ -192,7 +196,7 @@ in the Ark's 44 languages.
   their schedule has them at that moment, which is where a viewer saw them.
 - **The world then.** `setAsOf` leaves out later arrivals; it does not bring back every animal that has died since
   (only the cast). Homes are spaced from predators as today's roster has them.
-- **A dying act** does not exist yet (P1-3): a death is the fall onto its side (1.2 s), then the body.
+- **A dying act** is V1's (`live-deaths.ts`): it weakens on its feet (6.4 s), goes over (2.6 s), then the body. Poses, no clip.
 - **What the layers do not act, a replay cannot either.** `live-matings` and `live-births` skip an animal with no day
   to walk from: an insect at its microhabitat, a flyer on the wing, a fish in a tank, a zoo animal held in its house.
   On 2026-11-18 every recorded event that names an animal gone since (375 deaths, 143 matings, 317 births) is an

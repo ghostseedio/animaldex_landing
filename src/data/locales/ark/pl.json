@@ -190,6 +190,7 @@
             "hatchedAboard": "Wykluty w Ark",
             "hatched": "Wyklucie",
             "placeholder": "Jego model 3D jeszcze powstaje: na razie widać figurę zastępczą.",
+            "lone": "Jedyny osobnik",
             "lastOfKind": "Ostatni ze swojego gatunku na pokładzie: złap kolejnego, aby miał partnera",
             "revised": "Jego krok",
             "revisedWorked": "poprawione: znów zadziałał",
@@ -451,8 +452,8 @@
             "metaTitle": "{name}: zwierzęta w Ark",
             "title": "{name}: zwierzęta w Ark",
             "titleSelf": "Moje zwierzęta w Ark",
-            "scoreAbout": "Punkty za kroki tej osoby, które zadziałały, więcej za zwierzęta, których Ark potrzebuje. Nigdy nie spada.",
-            "scoreAboutSelf": "Punkty za Twoje kroki, które zadziałały, więcej za zwierzęta, których Ark potrzebuje. Nigdy nie spada.",
+            "scoreAbout": "Wynik Ark tej osoby rośnie, gdy dobrze mają się gatunki, które dzięki niej trafiły na pokład.",
+            "scoreAboutSelf": "Twój wynik Ark rośnie, gdy dobrze mają się gatunki, które dzięki Tobie trafiły na pokład.",
             "outOf": "z {max}",
             "summary": "Na pokładzie: {animals}, {species}",
             "anonymousTitle": "Anonimowo na pokładzie",
@@ -585,6 +586,8 @@
             "habitat": "Siedlisko",
             "foundIn": "Zasięg",
             "saved": "Uratowano: ten gatunek nie jest już zagrożony",
+            "savedBy": "Dzięki {name}",
+            "savedByCollector": "Dzięki osobie, która zbiera zwierzęta",
             "lost": "Utracony na wolności",
             "listLabel": "Gatunki zagrożone na wolności, od najnowszych",
             "unavailable": "Nie można teraz sprawdzić. Spróbuj ponownie za chwilę.",
@@ -677,6 +680,13 @@
                 "mythic": "Mityczne"
             }
         },
+        "seen": {
+            "searching": "Szuka zdobyczy",
+            "stalking": "Podkrada się: {aPrey}",
+            "stalkingNoTarget": "Podkrada się",
+            "mateSeeking": "Szuka pary",
+            "wounded": "Z raną"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Lżejsza Ark na to urządzenie",
@@ -753,14 +763,14 @@
             "score": "Wynik Ark",
             "scoreShort": "Ark {n}",
             "outOf": "z {max}",
-            "scoreAbout": "Punkty za Twoje kroki, które zadziałały, więcej za zwierzęta, których Ark potrzebuje. Nigdy nie spada.",
+            "scoreAbout": "Twój wynik Ark rośnie, gdy dobrze mają się gatunki, które dzięki Tobie trafiły na pokład.",
             "scoreWeek": "{delta} w tym tygodniu",
             "myAnimals": "Moje zwierzęta w Ark",
             "theirAnimals": "Zwierzęta tej osoby w Ark",
             "notInArk": "Jeszcze nie w Ark",
             "life": "Życie",
             "explainTitle": "Jak rośnie Twój Wynik Ark",
-            "explainBody": "Każdy krok ze zwierzęciem, który zadziała, daje punkty: więcej, gdy Ark potrzebuje tego zwierzęcia (samotnego albo gatunku, który zanika lub jest zagrożony), mniej, gdy na pokładzie jest ich dużo. Zdjęcia wprowadzają zwierzęta na pokład, ale nigdy nie obniżają Twojego wyniku i nikt inny nie może go obniżyć. Wynik tylko rośnie. Twoje paski życia są niżej, jak wcześniej.",
+            "explainBody": "Każdy krok ze zwierzęciem, który zadziała, daje punkty: więcej, gdy Ark potrzebuje tego zwierzęcia (samotnego albo gatunku, który zanika lub jest zagrożony), mniej, gdy na pokładzie jest ich dużo. Twoje paski życia są niżej, jak wcześniej.",
             "explainThrive": "Kroki, które działają, sprawiają, że Twoje zwierzęta rozkwitają: więcej młodych i są łowione jako ostatnie.",
             "explainDismiss": "Rozumiem",
             "arrival": "{species} wszedł na pokład Ark",
@@ -839,7 +849,7 @@
                     "needsAdult": "Najpierw potwierdź, że masz co najmniej 18 lat."
                 }
             },
-            "scoreHint": "Wynik Ark: punkty za kroki, które zadziałały, więcej za zwierzęta, których Ark potrzebuje. Nigdy nie spada.",
+            "scoreHint": "Wynik Ark: rośnie, gdy dobrze mają się gatunki, które dzięki każdej osobie trafiły na pokład.",
             "offerThrive": "Jeśli to zadziała, Twoje zwierzęta {species} w Ark rozkwitną",
             "offerLater": "Jeśli to zadziała, Twoje zwierzę {species} rozkwitnie, gdy tylko jedno będzie na pokładzie",
             "resultOther": "Zadziałało. Twoje zwierzęta {species} rozkwitają: więcej młodych i są łowione jako ostatnie.",
@@ -849,7 +859,7 @@
             "thrivePrime": "W doskonałej kondycji",
             "thriveGood": "W dobrej kondycji",
             "thriveOrdinary": "Zwykła kondycja",
-            "scoreAboutTheirs": "Punkty za kroki tej osoby, które zadziałały, więcej za zwierzęta, których Ark potrzebuje. Nigdy nie spada."
+            "scoreAboutTheirs": "Wynik Ark tej osoby rośnie, gdy dobrze mają się gatunki, które dzięki niej trafiły na pokład."
         }
     },
     "home": {

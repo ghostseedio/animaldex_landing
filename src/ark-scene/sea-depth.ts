@@ -241,6 +241,8 @@ export const SURFACE_CLEAR = 0.08;
 export const FLOOR_CLEAR = 0.05;
 /** A floater's base below the surface, as a share of its height: it floats with most of its body under. */
 export const FLOAT_SINK = 0.35;
+/** How far a floater rocks up and down on the water, as a share of its height (a duck's centimetre; a swan's four). */
+export const FLOAT_BOB = 0.04;
 /** A hole-dweller's base below the floor, as a share of its height: tucked into its hole, its front out. */
 const HOLE_SINK = 0.15;
 /** At the top of a breath, the middle of the body this share of its height below the surface: its back breaks it. */
@@ -319,6 +321,8 @@ export type WaterSpec = {
     surface?: number;
     /** A floater's float line (lane MA3, `swimDepth`): the share of its drawn height under the surface; FLOAT_SINK when absent. */
     sink?: number;
+    /** A floater's bob on the water now, −1…1 of FLOAT_BOB of its height (Ark ducks); absent: none. */
+    bob?: number;
 };
 
 /** The water's surface over a point (Part C): v2's lake's and river's own level where they stand, else the sea's 0. */
@@ -339,6 +343,8 @@ export function waterSpec(depth: SpeciesDepth, floorY: number, seed: number, clo
     // (Only a surface of its own: the sea's columns stay exactly as they were.)
     if (surface) spec.surface = surface;
     if (depth.sink !== undefined && motion === "float") spec.sink = depth.sink;
+    // (Ark ducks: a floater rocks a little on the water, 2.5-4.5 s a swell from its seed; none at clock 0, still water.)
+    if (motion === "float" && clock) spec.bob = Math.sin((clock / (2.5 + 2 * ((seed * 5.77) % 1)) + seed) * Math.PI * 2);
     return spec;
 }
 
@@ -354,7 +360,7 @@ export function fitInWater(spec: WaterSpec, height: number): {base: number; midd
     // (Its surface: the sea's 0, or the bigger island's lake's and river's own level.)
     const top = spec.surface ?? 0;
     if (spec.motion === "float") {
-        const base = top - (spec.sink ?? FLOAT_SINK) * height;
+        const base = top - (spec.sink ?? FLOAT_SINK) * height + (spec.bob ?? 0) * FLOAT_BOB * height;
         return {base, middle: base + height / 2};
     }
     if (spec.motion === "walk" || spec.motion === "hole") {

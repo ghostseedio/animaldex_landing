@@ -190,6 +190,7 @@
             "hatchedAboard": "Kläckt i Ark",
             "hatched": "Kläckt",
             "placeholder": "Dess 3D-figur skapas fortfarande: en tillfällig figur visas så länge.",
+            "lone": "Den enda",
             "lastOfKind": "Den sista av sitt slag ombord: fånga en till så att den får en partner",
             "revised": "Dess steg",
             "revisedWorked": "ändrat: det fungerade igen",
@@ -451,8 +452,8 @@
             "metaTitle": "Djuren som {name} har i Ark",
             "title": "Djuren som {name} har i Ark",
             "titleSelf": "Mina djur i Ark",
-            "scoreAbout": "Från deras steg som fungerade, mer för djur som Ark behöver. Den sjunker aldrig.",
-            "scoreAboutSelf": "Från dina steg som fungerade, mer för djur som Ark behöver. Den sjunker aldrig.",
+            "scoreAbout": "Deras Ark poäng ökar när det går bra för de arter de har hjälpt ombord.",
+            "scoreAboutSelf": "Dina Ark poäng ökar när det går bra för de arter du har hjälpt ombord.",
             "outOf": "av {max}",
             "summary": "{animals} ombord, {species}",
             "anonymousTitle": "Anonym ombord",
@@ -585,6 +586,8 @@
             "habitat": "Livsmiljö",
             "foundIn": "Utbredning",
             "saved": "Räddad: arten är inte längre hotad",
+            "savedBy": "Räddad av {name}",
+            "savedByCollector": "Räddad av en samlare",
             "lost": "Försvunnen från det fria",
             "listLabel": "Hotade arter i det fria, de nyaste först",
             "unavailable": "Det går inte att kontrollera just nu. Försök igen om en stund.",
@@ -677,6 +680,13 @@
                 "mythic": "Mytisk"
             }
         },
+        "seen": {
+            "searching": "Letar efter byte",
+            "stalking": "Smyger sig på {aPrey}",
+            "stalkingNoTarget": "Smyger sig på byte",
+            "mateSeeking": "Letar efter en partner",
+            "wounded": "Skadad"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "En lättare Ark för den här enheten",
@@ -753,14 +763,14 @@
             "score": "Ark poäng",
             "scoreShort": "Ark {n}",
             "outOf": "av {max}",
-            "scoreAbout": "Från dina steg som fungerade, mer för djur som Ark behöver. Den sjunker aldrig.",
+            "scoreAbout": "Dina Ark poäng ökar när det går bra för de arter du har hjälpt ombord.",
             "scoreWeek": "{delta} den här veckan",
             "myAnimals": "Mina djur i Ark",
             "theirAnimals": "Deras djur i Ark",
             "notInArk": "Inte i Ark än",
             "life": "Liv",
             "explainTitle": "Så växer din Ark poäng",
-            "explainBody": "Varje steg med ett djur som fungerar ger poäng: fler när Ark behöver det djuret (ett som är ensamt, eller en art som minskar eller är hotad), färre när många är ombord. Fångster tar djur ombord men sänker aldrig din Ark poäng, och ingen annan kan sänka den. Den går bara uppåt. Dina livsmätare finns nedanför, som förut.",
+            "explainBody": "Varje steg med ett djur som fungerar ger poäng: fler när Ark behöver det djuret (ett som är ensamt, eller en art som minskar eller är hotad), färre när många är ombord. Dina livsmätare finns nedanför, som förut.",
             "explainThrive": "Steg som fungerar får dina djur att trivas: fler ungar, och de jagas sist.",
             "explainDismiss": "Jag förstår",
             "arrival": "{species} kom ombord på Ark",
@@ -839,7 +849,7 @@
                     "needsAdult": "Bekräfta först att du har fyllt 18."
                 }
             },
-            "scoreHint": "Ark poäng: poäng från steg som fungerade, mer för djur som Ark behöver. Den sjunker aldrig.",
+            "scoreHint": "Ark poäng: ökar när det går bra för de arter som var och en har hjälpt ombord.",
             "offerThrive": "Om det fungerar kommer dina djur av arten {species} i Ark att trivas",
             "offerLater": "Om det fungerar kommer ditt djur av arten {species} att trivas när ett är ombord",
             "resultOther": "Det fungerade. Dina djur av arten {species} trivs: fler ungar, och de jagas sist.",
@@ -849,7 +859,7 @@
             "thrivePrime": "I toppskick",
             "thriveGood": "I gott skick",
             "thriveOrdinary": "Vanligt skick",
-            "scoreAboutTheirs": "Från deras steg som fungerade, mer för djur som Ark behöver. Den sjunker aldrig."
+            "scoreAboutTheirs": "Deras Ark poäng ökar när det går bra för de arter de har hjälpt ombord."
         }
     },
     "home": {

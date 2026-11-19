@@ -6,8 +6,8 @@
  *
  * - The Ark Score is v3 (`ark_points`): the sum of the points each of your
  *   steps that worked locked in, more for animals the Ark needs. It has no
- *   top, never goes down, and captures, other people and the daily tick never
- *   lower it. `ark_points_week` is this week's points. The v2 world score
+ *   top (`ark_score_v4` can also lower it a little: no word says it never
+ *   goes down). `ark_points_week` is this week's points. The v2 world score
  *   (`ark_world_score`, 0–100) is read only from a server without
  *   `ark_points`, and the Life Sim bar sum (`ark_score`, 0–500) only from one
  *   older still, each for one deploy cycle.
@@ -30,7 +30,7 @@ export type ArkScoreRead = {
     outOf: 100 | 500 | null;
     /** A score of the shared Ark (v3 or v2), not the old Life Sim sum. */
     world: boolean;
-    /** v3 (`ark_points`): points from steps that worked, no top, never lower. */
+    /** v3 (`ark_points`): points from steps that worked, no top (v4 can lower it). */
     points: boolean;
 };
 
@@ -88,7 +88,7 @@ function clamp(value: number, min: number, max: number): number {
 // MARK: - The Ark Score
 
 /**
- * A row's Ark Score: `ark_points` (v3: no top, never lower) when the server
+ * A row's Ark Score: `ark_points` (v3: no top; v4 can lower it) when the server
  * sends it; else `ark_world_score` (v2, 0–100) from a server without v3; else
  * the old `ark_score` (0–500) from one older still. Null when none is there.
  */
