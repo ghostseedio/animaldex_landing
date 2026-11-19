@@ -451,8 +451,8 @@
             "metaTitle": "Käyttäjän {name} eläimet Arkissa",
             "title": "Käyttäjän {name} eläimet Arkissa",
             "titleSelf": "Eläimeni Arkissa",
-            "scoreAbout": "Hänen toimineista askeleistaan, enemmän eläimistä, joita Ark tarvitsee. Pisteet eivät koskaan laske.",
-            "scoreAboutSelf": "Toimineista askeleistasi, enemmän eläimistä, joita Ark tarvitsee. Pisteet eivät koskaan laske.",
+            "scoreAbout": "Hänen Ark pisteensä nousevat, kun lajeilla, jotka hän auttoi kyytiin, menee hyvin.",
+            "scoreAboutSelf": "Ark pisteesi nousevat, kun lajeilla, jotka autoit kyytiin, menee hyvin.",
             "outOf": "/ {max}",
             "summary": "Kyydissä {animals}, {species}",
             "anonymousTitle": "Nimettömänä kyydissä",
@@ -701,14 +701,14 @@
             "score": "Ark pisteet",
             "scoreShort": "Ark {n}",
             "outOf": "/ {max}",
-            "scoreAbout": "Toimineista askeleistasi, enemmän eläimistä, joita Ark tarvitsee. Pisteet eivät koskaan laske.",
+            "scoreAbout": "Ark pisteesi nousevat, kun lajeilla, jotka autoit kyytiin, menee hyvin.",
             "scoreWeek": "{delta} tällä viikolla",
             "myAnimals": "Eläimeni Arkissa",
             "theirAnimals": "Hänen eläimensä Arkissa",
             "notInArk": "Ei vielä Arkissa",
             "life": "Elämä",
             "explainTitle": "Miten Ark pisteesi kasvavat",
-            "explainBody": "Jokainen toimiva askel eläimen kanssa tuo pisteitä: enemmän, kun Ark tarvitsee sitä eläintä (yksinäistä tai lajia, joka vähenee tai on uhattuna), vähemmän, kun niitä on kyydissä paljon. Kuvaukset tuovat eläimiä kyytiin, mutta eivät koskaan laske pisteitäsi, eikä kukaan muu voi laskea niitä. Ne vain nousevat. Elämäpalkkisi ovat alla, kuten ennenkin.",
+            "explainBody": "Jokainen toimiva askel eläimen kanssa tuo pisteitä: enemmän, kun Ark tarvitsee sitä eläintä (yksinäistä tai lajia, joka vähenee tai on uhattuna), vähemmän, kun niitä on kyydissä paljon. Elämäpalkkisi ovat alla, kuten ennenkin.",
             "explainThrive": "Toimivat askeleet saavat eläimesi voimaan hyvin: enemmän poikasia, ja ne saalistetaan viimeisinä.",
             "explainDismiss": "Selvä",
             "arrival": "{species} nousi Arkin kyytiin",
@@ -787,7 +787,7 @@
                     "needsAdult": "Vahvista ensin, että olet vähintään 18-vuotias."
                 }
             },
-            "scoreHint": "Ark pisteet: pisteitä toimineista askeleista, enemmän eläimistä, joita Ark tarvitsee. Ne eivät koskaan laske.",
+            "scoreHint": "Ark pisteet: nousevat, kun lajeilla, jotka kukin auttoi kyytiin, menee hyvin.",
             "offerThrive": "Jos tämä toimii, lajin {species} eläimesi voivat hyvin Arkissa",
             "offerLater": "Jos tämä toimii, lajin {species} eläimesi voi hyvin, kun yksi on kyydissä",
             "resultOther": "Se toimi. Lajin {species} eläimesi voivat hyvin: enemmän poikasia, ja ne saalistetaan viimeisinä.",
@@ -797,7 +797,7 @@
             "thrivePrime": "Huippukunnossa",
             "thriveGood": "Hyvässä kunnossa",
             "thriveOrdinary": "Tavallinen",
-            "scoreAboutTheirs": "Hänen toimineista askeleistaan, enemmän eläimistä, joita Ark tarvitsee. Pisteet eivät koskaan laske."
+            "scoreAboutTheirs": "Hänen Ark pisteensä nousevat, kun lajeilla, jotka hän auttoi kyytiin, menee hyvin."
         }
     },
     "home": {

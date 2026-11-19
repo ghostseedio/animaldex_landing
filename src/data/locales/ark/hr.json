@@ -451,8 +451,8 @@
             "metaTitle": "{name}: životinje u Arku",
             "title": "{name}: životinje u Arku",
             "titleSelf": "Moje životinje u Arku",
-            "scoreAbout": "Od koraka te osobe koji su uspjeli, više za životinje koje Arku trebaju. Nikad se ne smanjuje.",
-            "scoreAboutSelf": "Od tvojih koraka koji su uspjeli, više za životinje koje Arku trebaju. Nikad se ne smanjuje.",
+            "scoreAbout": "Rezultat Ark te osobe raste kad dobro prolaze vrste koje su zahvaljujući njoj došle na brod.",
+            "scoreAboutSelf": "Tvoj rezultat Ark raste kad dobro prolaze vrste koje su zahvaljujući tebi došle na brod.",
             "outOf": "od {max}",
             "summary": "Na brodu: {animals}, {species}",
             "anonymousTitle": "Anonimno na brodu",
@@ -701,14 +701,14 @@
             "score": "Rezultat Ark",
             "scoreShort": "Ark {n}",
             "outOf": "od {max}",
-            "scoreAbout": "Od tvojih koraka koji su uspjeli, više za životinje koje Arku trebaju. Nikad se ne smanjuje.",
+            "scoreAbout": "Tvoj rezultat Ark raste kad dobro prolaze vrste koje su zahvaljujući tebi došle na brod.",
             "scoreWeek": "{delta} ovaj tjedan",
             "myAnimals": "Moje životinje u Arku",
             "theirAnimals": "Životinje te osobe u Arku",
             "notInArk": "Još nije u Arku",
             "life": "Život",
             "explainTitle": "Kako raste tvoj Rezultat Ark",
-            "explainBody": "Svaki korak sa životinjom koji uspije donosi bodove: više kad Arku ta životinja treba (kad je sama ili joj vrsta opada ili je ugrožena), manje kad ih je na brodu mnogo. Ulovi ukrcavaju životinje, ali ti nikad ne smanjuju rezultat, a nitko drugi ga ne može smanjiti. Samo raste. Tvoje trake života su ispod, kao i prije.",
+            "explainBody": "Svaki korak sa životinjom koji uspije donosi bodove: više kad Arku ta životinja treba (kad je sama ili joj vrsta opada ili je ugrožena), manje kad ih je na brodu mnogo. Tvoje trake života su ispod, kao i prije.",
             "explainThrive": "Koraci koji uspiju pomažu tvojim životinjama da napreduju: više mladunaca, i love ih posljednje.",
             "explainDismiss": "Razumijem",
             "arrival": "Na Ark se ukrcala nova životinja: {species}",
@@ -787,7 +787,7 @@
                     "needsAdult": "Najprije potvrdi da imaš 18 ili više godina."
                 }
             },
-            "scoreHint": "Rezultat Ark: bodovi od koraka koji su uspjeli, više za životinje koje Arku trebaju. Nikad se ne smanjuje.",
+            "scoreHint": "Rezultat Ark: raste kad dobro prolaze vrste koje su zahvaljujući svakoj osobi došle na brod.",
             "offerThrive": "Ako ovo uspije, tvoje životinje {species} u Arku će napredovati",
             "offerLater": "Ako ovo uspije, tvoja će životinja {species} napredovati kad jedna bude na brodu",
             "resultOther": "Uspjelo je. Tvoje životinje {species} napreduju: više mladunaca, i love ih posljednje.",
@@ -797,7 +797,7 @@
             "thrivePrime": "U vrhunskom stanju",
             "thriveGood": "U dobrom stanju",
             "thriveOrdinary": "Uobičajeno stanje",
-            "scoreAboutTheirs": "Od koraka te osobe koji su uspjeli, više za životinje koje Arku trebaju. Nikad se ne smanjuje."
+            "scoreAboutTheirs": "Rezultat Ark te osobe raste kad dobro prolaze vrste koje su zahvaljujući njoj došle na brod."
         }
     },
     "home": {

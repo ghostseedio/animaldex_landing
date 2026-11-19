@@ -451,8 +451,8 @@
             "metaTitle": "Die Tiere von {name} in der Ark",
             "title": "Die Tiere von {name} in der Ark",
             "titleSelf": "Meine Tiere in der Ark",
-            "scoreAbout": "Aus den Schritten dieser Person, die geklappt haben, mehr für Tiere, die die Ark braucht. Die Punktzahl sinkt nie.",
-            "scoreAboutSelf": "Aus deinen Schritten, die geklappt haben, mehr für Tiere, die die Ark braucht. Die Punktzahl sinkt nie.",
+            "scoreAbout": "Die Ark-Punktzahl dieser Person wächst, wenn es den Arten gut geht, die sie mit an Bord gebracht hat.",
+            "scoreAboutSelf": "Deine Ark-Punktzahl wächst, wenn es den Arten gut geht, die du mit an Bord gebracht hast.",
             "outOf": "von {max}",
             "summary": "{animals} an Bord, {species}",
             "anonymousTitle": "Anonym an Bord",
@@ -701,14 +701,14 @@
             "score": "Ark-Punktzahl",
             "scoreShort": "Ark {n}",
             "outOf": "von {max}",
-            "scoreAbout": "Aus deinen Schritten, die geklappt haben, mehr für Tiere, die die Ark braucht. Die Punktzahl sinkt nie.",
+            "scoreAbout": "Deine Ark-Punktzahl wächst, wenn es den Arten gut geht, die du mit an Bord gebracht hast.",
             "scoreWeek": "{delta} diese Woche",
             "myAnimals": "Meine Tiere in der Ark",
             "theirAnimals": "Ihre Tiere in der Ark",
             "notInArk": "Noch nicht in der Ark",
             "life": "Leben",
             "explainTitle": "Wie deine Ark-Punktzahl wächst",
-            "explainBody": "Jeder Schritt mit einem Tier, der klappt, bringt Punkte: mehr, wenn die Ark dieses Tier braucht (ein einzelnes oder eine Art, die abnimmt oder gefährdet ist), weniger, wenn viele an Bord sind. Aufnahmen bringen Tiere an Bord, senken deine Punktzahl aber nie, und niemand sonst kann sie senken. Sie steigt nur. Deine Lebensbalken stehen wie bisher darunter.",
+            "explainBody": "Jeder Schritt mit einem Tier, der klappt, bringt Punkte: mehr, wenn die Ark dieses Tier braucht (ein einzelnes oder eine Art, die abnimmt oder gefährdet ist), weniger, wenn viele an Bord sind. Deine Lebensbalken stehen wie bisher darunter.",
             "explainThrive": "Schritte, die klappen, lassen deine Tiere gedeihen: mehr Junge, zuletzt gejagt.",
             "explainDismiss": "Verstanden",
             "arrival": "{species} ist an Bord der Ark gekommen",
@@ -787,7 +787,7 @@
                     "needsAdult": "Bestätige zuerst, dass du 18 oder älter bist."
                 }
             },
-            "scoreHint": "Ark-Punktzahl: Punkte aus Schritten, die geklappt haben, mehr für Tiere, die die Ark braucht. Sie sinkt nie.",
+            "scoreHint": "Ark-Punktzahl: wächst, wenn es den Arten gut geht, die jede Person mit an Bord gebracht hat.",
             "offerThrive": "Wenn das klappt, gedeihen deine Tiere der Art {species} in der Ark",
             "offerLater": "Wenn das klappt, gedeiht dein Tier der Art {species}, sobald eins an Bord ist",
             "resultOther": "Es hat geklappt. Deine Tiere der Art {species} gedeihen: mehr Junge, zuletzt gejagt.",
@@ -797,7 +797,7 @@
             "thrivePrime": "In bestem Zustand",
             "thriveGood": "In gutem Zustand",
             "thriveOrdinary": "Normal",
-            "scoreAboutTheirs": "Aus den Schritten dieser Person, die geklappt haben, mehr für Tiere, die die Ark braucht. Die Punktzahl sinkt nie."
+            "scoreAboutTheirs": "Die Ark-Punktzahl dieser Person wächst, wenn es den Arten gut geht, die sie mit an Bord gebracht hat."
         }
     },
     "home": {

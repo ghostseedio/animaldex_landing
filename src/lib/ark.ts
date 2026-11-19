@@ -15,7 +15,7 @@
  * Ark Score only to draw a count-up between two values the server sent.
  *
  * Captures + thrive (2026-11-11): the Ark Score is v3, `ark_points` (lib/ark-world):
- * the points steps that worked locked in, no top, never lower. v2's world
+ * the points steps that worked locked in, no top (v4 can lower it). v2's world
  * score (`ark_world_score`, 0–100) and the old `ark_score` (0–500) are read
  * only from a server without it. The reveal and the Diary no longer show a
  * score line, though a change still decodes its `ark_score`.

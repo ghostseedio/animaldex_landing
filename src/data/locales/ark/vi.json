@@ -451,8 +451,8 @@
             "metaTitle": "Các con vật của {name} trên Ark",
             "title": "Các con vật của {name} trên Ark",
             "titleSelf": "Các con vật của tôi trên Ark",
-            "scoreAbout": "Từ các bước đã thành công của họ, nhiều hơn với những con vật Ark đang cần. Điểm không bao giờ giảm.",
-            "scoreAboutSelf": "Từ các bước đã thành công của bạn, nhiều hơn với những con vật Ark đang cần. Điểm không bao giờ giảm.",
+            "scoreAbout": "Điểm Ark của họ tăng khi những loài họ đã giúp đưa lên tàu sống tốt.",
+            "scoreAboutSelf": "Điểm Ark của bạn tăng khi những loài bạn đã giúp đưa lên tàu sống tốt.",
             "outOf": "trên {max}",
             "summary": "{animals} thuộc {species} trên tàu",
             "anonymousTitle": "Ẩn danh trên tàu",
@@ -701,14 +701,14 @@
             "score": "Điểm Ark",
             "scoreShort": "Ark {n}",
             "outOf": "trên {max}",
-            "scoreAbout": "Từ các bước đã thành công của bạn, nhiều hơn với những con vật Ark đang cần. Điểm không bao giờ giảm.",
+            "scoreAbout": "Điểm Ark của bạn tăng khi những loài bạn đã giúp đưa lên tàu sống tốt.",
             "scoreWeek": "{delta} tuần này",
             "myAnimals": "Con vật của tôi trên Ark",
             "theirAnimals": "Con vật của họ trên Ark",
             "notInArk": "Chưa có trên Ark",
             "life": "Cuộc sống",
             "explainTitle": "Điểm Ark của bạn tăng thế nào",
-            "explainBody": "Mỗi bước thành công với một con vật đều mang lại điểm: nhiều hơn khi Ark cần con vật đó (một con đơn lẻ, hoặc một loài đang suy giảm hay gặp nguy), ít hơn khi đã có nhiều con trên tàu. Lượt chụp đưa con vật lên tàu nhưng không bao giờ làm giảm điểm của bạn, và không ai khác có thể làm giảm nó. Điểm chỉ tăng lên. Các thanh sự sống của bạn ở bên dưới, như trước.",
+            "explainBody": "Mỗi bước thành công với một con vật đều mang lại điểm: nhiều hơn khi Ark cần con vật đó (một con đơn lẻ, hoặc một loài đang suy giảm hay gặp nguy), ít hơn khi đã có nhiều con trên tàu. Các thanh sự sống của bạn ở bên dưới, như trước.",
             "explainThrive": "Những bước thành công giúp các con vật của bạn phát triển tốt: đẻ nhiều con hơn, và bị săn sau cùng.",
             "explainDismiss": "Đã hiểu",
             "arrival": "Một con {species} đã lên Ark",
@@ -787,7 +787,7 @@
                     "needsAdult": "Hãy xác nhận trước rằng bạn đủ 18 tuổi trở lên."
                 }
             },
-            "scoreHint": "Điểm Ark: điểm từ các bước đã thành công, nhiều hơn với những con vật Ark đang cần. Điểm không bao giờ giảm.",
+            "scoreHint": "Điểm Ark: tăng khi những loài mỗi người đã giúp đưa lên tàu sống tốt.",
             "offerThrive": "Nếu bước này thành công, các con {species} của bạn trong Ark sẽ phát triển tốt",
             "offerLater": "Nếu bước này thành công, con {species} của bạn sẽ phát triển tốt khi có một con lên tàu",
             "resultOther": "Đã thành công. Các con {species} của bạn đang phát triển tốt: đẻ nhiều con hơn, và bị săn sau cùng.",
@@ -797,7 +797,7 @@
             "thrivePrime": "Tình trạng tốt nhất",
             "thriveGood": "Tình trạng tốt",
             "thriveOrdinary": "Bình thường",
-            "scoreAboutTheirs": "Từ các bước đã thành công của họ, nhiều hơn với những con vật Ark đang cần. Điểm không bao giờ giảm."
+            "scoreAboutTheirs": "Điểm Ark của họ tăng khi những loài họ đã giúp đưa lên tàu sống tốt."
         }
     },
     "home": {

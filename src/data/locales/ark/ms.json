@@ -451,8 +451,8 @@
             "metaTitle": "Haiwan {name} di Ark",
             "title": "Haiwan {name} di Ark",
             "titleSelf": "Haiwan saya di Ark",
-            "scoreAbout": "Daripada langkah mereka yang berjaya, lebih banyak bagi haiwan yang diperlukan Ark. Ia tidak pernah turun.",
-            "scoreAboutSelf": "Daripada langkah anda yang berjaya, lebih banyak bagi haiwan yang diperlukan Ark. Ia tidak pernah turun.",
+            "scoreAbout": "Skor Ark mereka meningkat apabila jenis haiwan yang mereka bantu bawa naik ke kapal berada dalam keadaan baik.",
+            "scoreAboutSelf": "Skor Ark anda meningkat apabila jenis haiwan yang anda bantu bawa naik ke kapal berada dalam keadaan baik.",
             "outOf": "daripada {max}",
             "summary": "{animals} di atas kapal, {species}",
             "anonymousTitle": "Tanpa nama di atas kapal",
@@ -701,14 +701,14 @@
             "score": "Skor Ark",
             "scoreShort": "Ark {n}",
             "outOf": "daripada {max}",
-            "scoreAbout": "Daripada langkah anda yang berjaya, lebih banyak bagi haiwan yang diperlukan Ark. Ia tidak pernah turun.",
+            "scoreAbout": "Skor Ark anda meningkat apabila jenis haiwan yang anda bantu bawa naik ke kapal berada dalam keadaan baik.",
             "scoreWeek": "{delta} minggu ini",
             "myAnimals": "Haiwan saya di Ark",
             "theirAnimals": "Haiwan mereka di Ark",
             "notInArk": "Belum ada di Ark",
             "life": "Kehidupan",
             "explainTitle": "Bagaimana Skor Ark anda meningkat",
-            "explainBody": "Setiap langkah dengan haiwan yang berjaya memberi mata: lebih banyak apabila Ark memerlukan haiwan itu (haiwan yang bersendirian, atau jenis yang berkurangan atau terancam), lebih sedikit apabila banyak yang sudah di atas kapal. Tangkapan membawa haiwan naik ke Ark tetapi tidak pernah menurunkan skor anda, dan tiada orang lain boleh menurunkannya. Ia hanya naik. Bar kehidupan anda ada di bawah, seperti sebelum ini.",
+            "explainBody": "Setiap langkah dengan haiwan yang berjaya memberi mata: lebih banyak apabila Ark memerlukan haiwan itu (haiwan yang bersendirian, atau jenis yang berkurangan atau terancam), lebih sedikit apabila banyak yang sudah di atas kapal. Bar kehidupan anda ada di bawah, seperti sebelum ini.",
             "explainThrive": "Langkah yang berjaya membuat haiwan anda berkembang baik: lebih banyak anak, diburu paling akhir.",
             "explainDismiss": "Faham",
             "arrival": "Seekor {species} naik ke Ark",
@@ -787,7 +787,7 @@
                     "needsAdult": "Sahkan dahulu bahawa anda berumur 18 tahun ke atas."
                 }
             },
-            "scoreHint": "Skor Ark: mata daripada langkah yang berjaya, lebih banyak bagi haiwan yang diperlukan Ark. Ia tidak pernah turun.",
+            "scoreHint": "Skor Ark: meningkat apabila jenis haiwan yang dibantu bawa naik ke kapal oleh setiap orang berada dalam keadaan baik.",
             "offerThrive": "Jika ini berjaya, {species} anda di Ark akan berkembang baik",
             "offerLater": "Jika ini berjaya, {species} anda akan berkembang baik sebaik sahaja seekor naik ke Ark",
             "resultOther": "Ia berjaya. {species} anda sedang berkembang baik: lebih banyak anak, diburu paling akhir.",
@@ -797,7 +797,7 @@
             "thrivePrime": "Dalam keadaan terbaik",
             "thriveGood": "Dalam keadaan baik",
             "thriveOrdinary": "Biasa",
-            "scoreAboutTheirs": "Daripada langkah mereka yang berjaya, lebih banyak bagi haiwan yang diperlukan Ark. Ia tidak pernah turun."
+            "scoreAboutTheirs": "Skor Ark mereka meningkat apabila jenis haiwan yang mereka bantu bawa naik ke kapal berada dalam keadaan baik."
         }
     },
     "home": {

@@ -3096,14 +3096,14 @@
       "score": "Ark Score",
       "scoreShort": "Ark {n}",
       "outOf": "of {max}",
-      "scoreAbout": "From your steps that worked, more for animals the Ark needs. It never goes down.",
+      "scoreAbout": "Your Ark Score grows when the kinds you helped bring aboard do well.",
       "scoreWeek": "{delta} this week",
       "myAnimals": "My animals in the Ark",
       "theirAnimals": "Their animals in the Ark",
       "notInArk": "Not in the Ark yet",
       "life": "Life",
       "explainTitle": "How your Ark Score grows",
-      "explainBody": "Each step with an animal that works earns points: more when the Ark needs that animal (a lone one, or a kind in decline or at risk), fewer when plenty are aboard. Captures bring animals aboard but never lower your score, and nobody else can lower it. It only ever goes up. Your life bars are below, as before.",
+      "explainBody": "Each step with an animal that works earns points: more when the Ark needs that animal (a lone one, or a kind in decline or at risk), fewer when plenty are aboard. Your life bars are below, as before.",
       "explainThrive": "Steps that work make your animals thrive: more young, hunted last.",
       "explainDismiss": "Got it",
       "arrival": "A {species} came aboard the Ark",
@@ -3182,7 +3182,7 @@
           "needsAdult": "Confirm you're 18 or over first."
         }
       },
-      "scoreHint": "Ark Score: points from steps that worked, more for animals the Ark needs. It never goes down.",
+      "scoreHint": "Ark Score: grows when the kinds each person helped bring aboard do well.",
       "offerThrive": "If this works, your {species} in the Ark thrive",
       "offerLater": "If this works, your {species} will thrive once one is aboard",
       "resultOther": "It worked. Your {species} are thriving: more young, hunted last.",
@@ -3192,7 +3192,7 @@
       "thrivePrime": "In prime condition",
       "thriveGood": "In good condition",
       "thriveOrdinary": "Ordinary",
-      "scoreAboutTheirs": "From their steps that worked, more for animals the Ark needs. It never goes down."
+      "scoreAboutTheirs": "Their Ark Score grows when the kinds they helped bring aboard do well."
     },
     "displayName": "{nickname} the {animal}",
     "card": {
@@ -4663,8 +4663,8 @@
       "metaTitle": "{name}'s animals in the Ark",
       "title": "{name}'s animals in the Ark",
       "titleSelf": "My animals in the Ark",
-      "scoreAbout": "From their steps that worked, more for animals the Ark needs. It never goes down.",
-      "scoreAboutSelf": "From your steps that worked, more for animals the Ark needs. It never goes down.",
+      "scoreAbout": "Their Ark Score grows when the kinds they helped bring aboard do well.",
+      "scoreAboutSelf": "Your Ark Score grows when the kinds you helped bring aboard do well.",
       "outOf": "of {max}",
       "summary": "{animals} aboard, {species}",
       "anonymousTitle": "Anonymous aboard",
