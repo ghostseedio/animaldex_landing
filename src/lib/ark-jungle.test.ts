@@ -26,7 +26,7 @@ test("the jungle: its own list (no scenery index moves), inside its area, clear 
     assert.equal(worldDecor().length, decor);
     // The same every time.
     assert.deepEqual(wildJungle().trees.slice(0, 5), trees.slice(0, 5));
-    const others = [...worldDecor().filter((d) => d.kind === "tree"), ...forestFill()].filter((d) => Math.hypot(d.x - JUNGLE.x, d.z - JUNGLE.z) < JUNGLE.r + 12);
+    const others = [...worldDecor().filter((d) => treeBody(d as never)), ...forestFill()].filter((d) => Math.hypot(d.x - JUNGLE.x, d.z - JUNGLE.z) < JUNGLE.r + 12);
     for (const t of trees) {
         assert.ok(Math.hypot(t.x - JUNGLE.x, t.z - JUNGLE.z) <= JUNGLE.r + 1, `tree at ${t.x},${t.z} outside`);
         for (const o of others) assert.ok(Math.hypot(t.x - o.x, t.z - o.z) > 0.8, `jungle tree at ${t.x.toFixed(1)},${t.z.toFixed(1)} on a scenery tree`);
