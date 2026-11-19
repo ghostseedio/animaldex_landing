@@ -81,8 +81,8 @@ from the read (`snapshot.ts`).
 ## Births and matings you can read (step 2)
 
 20 live lines of each kind were filmed again (`scripts/ark-seen-shots.mjs`): births read 18 of 20 (they were 8), matings
-18 of 20 counting the pairs the layer used to skip (14 of the 20 it acted before), the extinctions 2 of 2 (1). What did
-not read, and what now does:
+17 or 18 of 20 over two runs, counting the pairs the layer used to skip (14 of the 20 it acted before), the extinctions
+2 of 2 (1). What did not read, and what now does:
 
 | Line | Was | Now |
 |---|---|---|
@@ -188,7 +188,8 @@ Never sent, so never said: a chase in progress (the chase is the record's act, h
   picture is the mother resting (the 2 births of 20 that do not read). Nothing is drawn that is not so.
 - **Two matings of 20 do not read**: a pair of iguanas under a bridge's dark water, and a corn snake's: a snake longer
   than its vivarium is wide lies across it, through the glass, as the town already draws it unacted, and its mate
-  beside it does the same.
+  beside it does the same. A third reads in one run and not in the other: two parrots at a trunk's foot at night,
+  one behind the other from the bearing the camera found.
 - **A newborn is drawn larger than it is for its first moments** when it is far smaller than its mother (up to two
   fifths of her length, three times its size at most), then eases to its own size: a visibility aid, as the scene's own
   for small animals seen from afar. A housed pair's or a far pair's coming together is the client's (continuity only).
