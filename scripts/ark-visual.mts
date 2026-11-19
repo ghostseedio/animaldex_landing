@@ -15,9 +15,10 @@
  * scripts/ark-golden-shots.mjs), with two things added before it runs: WebGL on SwiftShader (the same software
  * renderer on a Mac and on the CI's Linux, so a baseline taken on one holds on the other), and a clock that the
  * harness freezes at a fixed time for each shot, so the water, grass, clouds, light and the animals' schedules are
- * the same on every run. Before the clock freezes, every animal the view draws on its rig has its rig in and faded in
- * (`settleRigs`: the scene's `loading()` does not count them, so a slow bucket gave a picture with the elephant and the
- * capybaras in their standing model's pose, run to run). What still moves between runs is inside the tolerances.
+ * the same on every run. Before the clock freezes, every animal the view draws on its rig has its rig in and drawn
+ * (`settleRigs`: the scene's `loading()` does not count rigs, so a slow bucket could give a picture with some animals on
+ * their standing model), and the scene's `resetTransients` drops what the real-clock frames carried over (the gait among
+ * it). What still moves between runs is inside the tolerances.
  *   --slow-rigs <ms>   hold every rig file's download this long (a slow bucket, locally: the pictures must not change)
  *   --wait-before-freeze <ms>   let the page run this long on the real clock before each shot's clock freezes (a slower or
  *                      faster runner reaches the freeze with the animals elsewhere: the pictures must not change)
@@ -212,31 +213,32 @@ type GoldenWindow = Window & {
 };
 
 /**
- * The rigs of every animal the view draws on its rig are in and faded in, on the real clock, before it freezes.
- * A rig is fetched when its animal first comes into view (the shot's framing) and its shader compiled when first drawn,
- * and the scene's `loading()` counts neither: the frozen frames then caught each animal on its standing model or half
- * way through its fade-in, depending on how fast the bucket answered. A rig that never arrives or never draws (not
- * listed, a placeholder, a failed file) is left as it is once nothing has changed for `RIG_QUIET_MS`: that too is the same
- * on every run.
+ * The rigs of every animal the view draws on its rig are in, and drawn, on the real clock, before it freezes.
+ * A rig is fetched when its animal first comes into view (the shot's framing) and its shader compiled when it is first
+ * drawn, and the scene's `loading()` counts neither: the frozen frames then caught an animal on its standing model or
+ * half way through its fade-in, depending on how fast the bucket answered. Two waits, each bounded (never an error: a
+ * rig that does not come or does not draw is the same on every run, and the picture is taken as it is):
+ *   1. no rig on its way and every listed rig of the view's animals loaded (`RIG_LOAD_MS`);
+ *   2. each of those animals seen drawn on it (its fade-in started: the shader is compiled) or `RIG_DRAW_MS` after (a
+ *      flyer whose rig does not fly, in the air, is never drawn on it).
  */
-const RIG_QUIET_MS = 6000;
-const RIG_LIMIT_MS = 240_000;
-async function settleRigs(page: Page, id: string): Promise<string> {
+const RIG_LOAD_MS = 120_000;
+const RIG_DRAW_MS = 8000;
+async function settleRigs(page: Page): Promise<string> {
     const started = Date.now();
-    let signature = "";
-    let changedAt = started;
+    let loadedAt = 0;
+    const drawn = new Set<string>();
     for (;;) {
         const state = await page.evaluate(() => (window as unknown as GoldenWindow).__arkGolden!.rigState());
-        const unsettled = state.wanted.filter((rig) => rig.available && !(rig.loaded && rig.weight >= 0.999));
-        if (!state.busy && !unsettled.length) return `${state.wanted.length} rigs in`;
+        const listed = state.wanted.filter((rig) => rig.available);
+        const waiting = listed.filter((rig) => !rig.loaded);
         const now = Date.now();
-        const next = JSON.stringify(state);
-        if (next !== signature) {
-            signature = next;
-            changedAt = now;
-        }
-        if (!state.busy && now - changedAt > RIG_QUIET_MS) return `${state.wanted.length - unsettled.length} rigs in, ${unsettled.length} left as they are (${unsettled.map((rig) => `${rig.slug} ${rig.loaded ? `weight ${rig.weight}` : "not loaded"}`).join(", ")})`;
-        if (now - started > RIG_LIMIT_MS) throw new Error(`${id}: the rigs did not settle in ${RIG_LIMIT_MS / 1000} s (busy ${state.busy}, ${unsettled.length} not in: ${unsettled.map((rig) => rig.slug).join(", ")})`);
+        if (!loadedAt && !state.busy && !waiting.length) loadedAt = now;
+        for (const rig of listed) if (rig.loaded && rig.weight > 0) drawn.add(rig.id);
+        const undrawn = listed.filter((rig) => rig.loaded && !drawn.has(rig.id));
+        if (loadedAt && !undrawn.length) return `${listed.length} rigs in`;
+        if (loadedAt && now - loadedAt > RIG_DRAW_MS) return `${listed.length} rigs in, ${undrawn.length} not drawn on them (${undrawn.map((rig) => rig.slug).join(", ")})`;
+        if (!loadedAt && now - started > RIG_LOAD_MS) return `${listed.length - waiting.length} rigs in, ${waiting.length} never came (${waiting.map((rig) => rig.slug).join(", ")})`;
         await page.evaluate(FRAMES(3));
     }
 }
@@ -284,7 +286,7 @@ for (const deviceName of devices) {
         // Then everything earlier real-time frames carried is dropped (the reactive layer, rig blends) and a second is
         // drawn on a frame-locked clock from that instant: a shot is a function of its time only.
         const at = 4e7 + index * 3.6e6;
-        const rigs = await settleRigs(page, id);
+        const rigs = await settleRigs(page);
         if (waitBeforeFreeze > 0) await page.waitForTimeout(waitBeforeFreeze);
         await page.evaluate((ms) => (window as unknown as GoldenWindow).__arkClock.freeze(ms), at);
         await page.evaluate(() => (window as unknown as {__arkGolden?: {resetTransients?: () => void}}).__arkGolden?.resetTransients?.());
@@ -292,7 +294,7 @@ for (const deviceName of devices) {
         // (Still every rig fully in after the frames: a rig let go or a fade cut short would show here.)
         const after = await page.evaluate(() => (window as unknown as GoldenWindow).__arkGolden!.rigState());
         const loose = after.wanted.filter((rig) => rig.available && rig.loaded && rig.weight < 0.999);
-        if (loose.length) log(id, "rigs not fully in after the frames:", loose.map((rig) => `${rig.slug} ${rig.weight}`).join(", "));
+        if (loose.length) log(id, "rigs below full weight after the frames (a flyer in the air, a placeholder):", loose.map((rig) => `${rig.slug} ${rig.weight}`).join(", "));
         // (A frame on SwiftShader can take seconds on a busy machine: the screenshot waits for one.)
         const png = await page.screenshot({type: "png", timeout: 300_000});
         await page.evaluate(() => (window as unknown as GoldenWindow).__arkClock.run());
