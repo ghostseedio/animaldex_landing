@@ -71,6 +71,9 @@ const GOLDEN_SEA_EPOCH = 1_794_391_200;
 /** Calm weather at mean tide: every golden shot unless it names its own (GOLDEN_WEATHER). */
 const CALM_SHOT = {seaLevel: 0, wetness: 0, snow: 0, wind: 0.35, storm: 0, windDirection: 0.41, cloud: 0.35};
 
+/** What the scene's development hook (`__arkDebug`) gives of its rigs and animals (`rigState`). */
+type RigDebug = {rigs: {busy: boolean; available: (slug: string) => boolean; get: (slug: string) => unknown}; entries: () => Array<{animal: {id: string; model_slug: string}; rigOn?: boolean; rig?: {weight: number} | null}>};
+
 type Debug = {scene: Scene; camera: PerspectiveCamera; controls: {minDistance: number}; lighting?: {sun?: {position: Vector3; target: {position: Vector3}}}};
 
 /** The micro shot on screen: its animal, the closest the camera may come, and how to stop it following its leaf. */
@@ -600,6 +603,19 @@ async function mountGolden(el: HTMLElement) {
             };
         },
         stats: () => handle.stats(),
+        /**
+         * The visual CI (scripts/ark-visual.mts): the rigs the view wants. A rigged animal's pose is its rig's, and a rig
+         * is fetched when its animal first comes into view and its shader compiled when it is first drawn; neither is
+         * in `handle.loading()`, so a picture taken before they land has that animal in its standing model's pose.
+         * `busy`: a rig still on its way; `wanted`: every animal the scene means to draw on its rig, with whether its
+         * rig is listed (`available`), in (`loaded`) and how far it has faded in (`weight`, 1: fully).
+         */
+        rigState: () => {
+            const debug = (window as unknown as {__arkDebug?: RigDebug}).__arkDebug;
+            if (!debug) return {busy: false, wanted: []};
+            const wanted = debug.entries().filter((entry) => entry.rigOn).map((entry) => ({id: entry.animal.id, slug: entry.animal.model_slug, available: debug.rigs.available(entry.animal.model_slug), loaded: Boolean(debug.rigs.get(entry.animal.model_slug)), weight: Math.round((entry.rig?.weight ?? 0) * 1000) / 1000}));
+            return {busy: debug.rigs.busy, wanted: wanted.sort((a, b) => a.id.localeCompare(b.id))};
+        },
         /** The visual CI (scripts/ark-visual.mts): forget transient state when its clock freezes. */
         resetTransients: () => {
             handle.resetTransients?.();
