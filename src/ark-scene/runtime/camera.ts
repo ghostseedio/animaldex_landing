@@ -18,6 +18,7 @@
 import {noHamlet} from "@/ark-scene/no-hamlet";
 import type {Vector3} from "three";
 import {forestFill, worldDecor, type DecorItem, type DecorKind} from "@/ark-scene/decor";
+import {jungleTrees} from "@/ark-scene/islands/wild/jungle";
 import {canopyTree, COTTAGE} from "@/ark-scene/micro-decor";
 import {heightAt} from "@/ark-scene/world";
 
@@ -149,7 +150,7 @@ export class CameraObstacles {
     /** The scene's: the decor, the whole forest fill (with its ranks: `collideCamera` keeps a tier's share) and the cottage. */
     static forScene(): CameraObstacles {
         // (Islands mode, `no-hamlet.ts`: no cottage.)
-        return new CameraObstacles([...worldDecor(), ...forestFill()], noHamlet() ? [] : [cottageObstacle()]);
+        return new CameraObstacles([...worldDecor(), ...forestFill(), ...jungleTrees()], noHamlet() ? [] : [cottageObstacle()]);
     }
 
     near(x: number, z: number): CameraObstacle[] {

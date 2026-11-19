@@ -27,6 +27,7 @@ import {LEAF_CELLS, LEAF_CUT, leafAtlasTexture, leafCellUniform, releaseLeafAtla
 // The least share of the woods' fill every tier draws (batch 6), shared with the attach points (decision 33).
 import {WOODS_FILL} from "@/ark-scene/tree-pick";
 import {forestFill, worldDecor} from "@/ark-scene/decor";
+import {jungleTrees} from "@/ark-scene/islands/wild/jungle";
 import {arkWorld, sampleGround, zoneAt} from "@/ark-scene/world";
 import {inPool} from "@/ark-scene/islands/wild/falls";
 
@@ -373,6 +374,8 @@ export class AssetTrees {
         };
         worldDecor().forEach((item) => add(item, false, 0));
         forestFill().forEach((item) => add(item, true, item.rank));
+        // The jungle (`islands/wild/jungle.ts`): drawn as the fill is, after it.
+        jungleTrees().forEach((item) => add(item, true, item.rank));
         void this.load(base.replace(/\/+$/, ""));
     }
 

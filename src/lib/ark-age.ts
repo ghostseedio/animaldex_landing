@@ -23,8 +23,17 @@ const CARE = (careTable as unknown as {species: Record<string, [string, number, 
 
 /** A species' care: its text's, else its plan's default (flagged). */
 export function speciesCare(slug: string | null | undefined, plan: string | null | undefined): ArkCare {
-    return decodeCare(slug ? CARE[slug] : null, plan);
+    const care = decodeCare(slug ? CARE[slug] : null, plan);
+    // ARK-JUNGLE: the monkeys' and apes' infants cling to their mothers (the catalogue's text names "infants" and the
+    // table read that as a nest: `ark-care.ts`'s last rule). Only where nothing is stated; the kinds that park their
+    // young in a nest or on a branch (the ruffed lemurs, the lorises, the aye-aye, the galagos, the tarsiers) keep theirs.
+    if (slug && plan === "mammal" && care.basis !== "stated" && CLINGING_INFANTS.test(slug) && !PARKED_INFANTS.test(slug)) return {...care, kind: "carry"};
+    return care;
 }
+
+/** Monkeys and apes by their catalogue slugs (a bird named for one, the capuchinbird, is no mammal). */
+const CLINGING_INFANTS = /(?:^|-)(?:macaque|langur|lutung|surili|gibbon|siamang|monkey|marmoset|tamarin|capuchin|gorilla|chimpanzee|bonobo|orangutan|baboon|mandrill|drill|gelada|guereza|colobus|saki|titi|uakari|douc|mangabey|guenon)(?:-|$)|^ring-tailed-lemur$/;
+const PARKED_INFANTS = /ruffed-lemur|loris|aye-aye|galago|tarsier|bushbaby/;
 
 /** Days from birth to full size, by plan (where the text gives no independence age). */
 const PLAN_GROW_DAYS: Record<string, number> = {

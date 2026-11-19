@@ -83,6 +83,11 @@ export class Plot {
     dry = false;
     /** A zoo house's hall: its logs and trees drawn in its own mesh under its own lights, not the library's. */
     indoor = false;
+    /**
+     * ARK-JUNGLE: the climbing frames' high beams (each a post's top to the next's, the beam's underside, town frame) and
+     * the posts' feet and tops: where a primate climbs and swings (`zoo-swing.ts`). Drawing is unchanged.
+     */
+    readonly climbs: Array<{a: V3; b: V3; posts: [V3, V3]; feet: [V3, V3]}> = [];
     constructor(readonly box: Box, readonly floorAt: (lx: number, lz: number) => number, worldSpots: readonly Pt[], readonly seed: number, readonly clearance = HABITAT_CLEARANCE) {
         this.spots = worldSpots.map((p) => toLocal(box, p.x, p.z));
         this.fr = {x: box.x, y: 0, z: box.z, rot: box.rot};
@@ -386,6 +391,7 @@ export function climbingFrame(geo: Geo, plot: Plot, posts: Pt[], height: number,
         const b1 = plot.p(b.at.x, b.at.z, lower);
         strut(geo, a1, b1, 0.2, LOG);
         strut(geo, [a.top[0], a.top[1] - 0.3, a.top[2]], [b.top[0], b.top[1] - 0.3, b.top[2]], 0.18, LOG);
+        plot.climbs.push({a: [a.top[0], a.top[1] - 0.3 - 0.18, a.top[2]], b: [b.top[0], b.top[1] - 0.3 - 0.18, b.top[2]], posts: [a.top, b.top], feet: [plot.p(a.at.x, a.at.z, 0), plot.p(b.at.x, b.at.z, 0)]});
         // A diagonal log, a rope swag on the high beam, ropes hanging from it.
         strut(geo, a1, [b.top[0], b.top[1] - 0.3, b.top[2]], 0.14, BARK);
         rope(geo, [a.top[0], a.top[1] - 0.4, a.top[2]], [b.top[0], b.top[1] - 0.4, b.top[2]], 0.9, 0.06);

@@ -12,6 +12,9 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import {canopyPhases} from "@/ark-scene/canopy-scene";
+import {ledgeSeen} from "@/ark-scene/rock-ledge";
+import {zooSeen} from "@/ark-scene/islands/town/zoo-swing";
+import {Raycaster, Vector3, type Object3D} from "three";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -84,6 +87,24 @@ async function main() {
             await frames(2);
             return true;
         },
+        /** The clock on by `seconds` in 10 Hz frames (a clip's next frame), never back. */
+        step: async (seconds: number) => {
+            const n = Math.max(1, Math.round(seconds * 10));
+            for (let i = 0; i < n; i++) {
+                fake!.perf += (seconds * 1000) / n;
+                fake!.date += (seconds * 1000) / n;
+                await frames(1);
+            }
+            return true;
+        },
+        /** The camera kept on an animal where it is drawn now, without waiting for models (a clip's frame). */
+        follow: async (id: string, distance: number, azimuth = 0.7, polar = 1.3, lift = 0) => {
+            const at = handle.locate(id);
+            if (!at) return null;
+            handle.setView({target: {x: at.x, y: at.y + lift, z: at.z}, distance, polar, azimuth});
+            await frames(1);
+            return at;
+        },
         hours: (h: number | null) => handle.setHours(h),
         locate: (id: string) => handle.locate(id),
         frame: async (id: string, distance: number, azimuth = 0.7, polar = 1.3, lift = 0) => {
@@ -136,6 +157,20 @@ async function main() {
             }
             return null;
         },
+        /** Scan forward from `from` (s) for the first moment an animal of these kinds is on a rock climb in this phase. */
+        findLedge: async (pattern: string, phases: string[], from: number, seconds: number, step = 1, zoo = false) => {
+            const seen = zoo ? zooSeen : ledgeSeen;
+            const re = new RegExp(pattern);
+            const ids = (window as unknown as {__arkDebug: {entries: () => Array<{animal: {id: string; model_slug: string}}>}}).__arkDebug.entries().filter((e) => re.test(e.animal.model_slug)).map((e) => e.animal.id);
+            for (let e = from; e < from + seconds; e += step) {
+                await setAt(e);
+                for (const id of ids) {
+                    const p = seen.get(id);
+                    if (p && Math.abs(p.epoch - e) < 0.5 && phases.includes(p.phase)) return {id, phase: p.phase, epoch: e};
+                }
+            }
+            return null;
+        },
         /** Objects drawn with a non-finite world matrix now (a NaN in a pose blooms white), and the camera. */
         nanScan: () => {
             const dbg = (window as unknown as {__arkDebug: {scene: {traverse: (f: (o: {name: string; type: string; visible: boolean; matrixWorld: {elements: number[]}; parent: unknown; userData: unknown}) => void) => void}; camera: {position: {x: number; y: number; z: number}}}}).__arkDebug;
@@ -151,6 +186,53 @@ async function main() {
             if (!e) return null;
             const t = e.sched?.trip;
             return {level: e.level, asleep: e.state?.asleep, at: e.sched?.at, trip: t ? {arrive: t.arrive, end: t.end, slot: t.slot, to: t.to.point} : null, moving: e.sched?.pose?.moving, beat: e.sched?.pose?.beat, act: e.sched?.pose?.act ? {episode: e.sched.pose.act.episode, own: e.sched.pose.act.own} : null, canopy: canopyPhases.get(id) ?? null};
+        },
+        /**
+         * The camera on an animal from the clearest side (ARK-JUNGLE: as the scene's own `clearCanopyView` picks a view of a
+         * canopy animal): of 24 headings and a few heights, the first with nothing drawn between it and the animal, else the
+         * one with the least. Returns the view taken and how many things were in the way.
+         */
+        clearFrame: async (id: string, distance: number, polar = 1.2, lift = 0) => {
+            // (Framed first as `frame` does, so it is drawn near and where it is drawn is known; then the clear side.)
+            let at = handle.locate(id);
+            for (let k = 0; k < 3 && at; k++) {
+                handle.setView({target: {x: at.x, y: at.y + lift, z: at.z}, distance, polar, azimuth: 0.7});
+                await frames(4);
+                at = handle.locate(id);
+            }
+            const until = realPerfNow() + 20_000;
+            while (realPerfNow() < until && handle.loading()) await wait(150);
+            await frames(4);
+            at = handle.locate(id);
+            if (!at) return null;
+            const target = new Vector3(at.x, at.y + lift, at.z);
+            const scene = (window as unknown as {__arkDebug: {scene: Object3D}}).__arkDebug.scene;
+            const ray = new Raycaster();
+            let best = {azimuth: 0, polar, hits: Infinity};
+            for (const p of [polar, polar - 0.3, polar + 0.25, polar - 0.55]) {
+                for (let k = 0; k < 24; k++) {
+                    const az = (k / 24) * Math.PI * 2;
+                    const dir = new Vector3(Math.sin(p) * Math.sin(az), Math.cos(p), Math.sin(p) * Math.cos(az));
+                    ray.set(target.clone().addScaledVector(dir, Math.max(at.length ?? 0.5, 0.4) * 0.9), dir);
+                    ray.far = distance;
+                    const hits = ray.intersectObjects(scene.children, true).filter((h) => h.object.visible && !(h.object as {isSprite?: boolean}).isSprite).length;
+                    if (hits < best.hits) best = {azimuth: az, polar: p, hits};
+                    if (!hits) break;
+                }
+                if (!best.hits) break;
+            }
+            handle.setView({target: {x: target.x, y: target.y, z: target.z}, distance, polar: best.polar, azimuth: best.azimuth});
+            await frames(4);
+            const end = realPerfNow() + 20_000;
+            while (realPerfNow() < end && handle.loading()) await wait(150);
+            await frames(4);
+            return best;
+        },
+        /** Where the animals of these kinds are drawn now, and their schedule's hold (to frame the jungle's shots). */
+        where: (pattern: string) => {
+            const re = new RegExp(pattern);
+            const all = (window as unknown as {__arkDebug: {entries: () => Array<{animal: {id: string; model_slug: string}; sched?: {trip?: {to: {point: string | null}} | null; pose?: {beat?: string}} | null}>}}).__arkDebug.entries();
+            return all.filter((e) => re.test(e.animal.model_slug)).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, at: handle.locate(e.animal.id), beat: e.sched?.pose?.beat ?? null, point: e.sched?.trip?.to.point ?? null}));
         },
         view: () => handle.view(),
         homeView: () => handle.homeView()

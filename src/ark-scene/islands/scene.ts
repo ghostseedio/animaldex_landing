@@ -29,6 +29,7 @@ import {bodyShape} from "@/ark-scene/collide/bodies"; // p3 (solid)
 import {displayLength} from "@/ark-scene/sizes"; // p3 (solid)
 import type {CameraObstacle} from "@/ark-scene/runtime/camera";
 import type {MovingCar} from "@/ark-scene/islands/town/render/vehicles"; // p5 (humans)
+import type {SurfaceFrame} from "@/ark-scene/grounding/stand"; // ARK-JUNGLE
 
 export type ArkIslandScene = {
     id: "town";
@@ -137,6 +138,11 @@ export type ArkIslandScene = {
     /** Lane TB: held at its place (in a cage, a vivarium, a tank, a zoo house): never walks off it. */
     held: (id: string) => boolean;
     /**
+     * ARK-JUNGLE: a primate house resident out on the hall's climbing frames now (`islands/town/zoo-swing.ts`): its frame
+     * (world), or null while it is on its spot (`spot`: where it is held, world).
+     */
+    zooSwing: (animal: {id: string; model_slug: string; scientific_name?: string | null}, length: number, spot: {x: number; y: number; z: number}, epoch: number, awake: boolean) => (SurfaceFrame & {air: boolean; phase: string}) | null;
+    /**
      * Lane TB: where a herd's member figure stands (its lowest point, m): in its tank's water, on its display's tray or
      * its zoo house's floor (`ground`, its place's), else on the town's drawn ground there (never the wild sea floor).
      */
@@ -240,6 +246,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const {modelBase} = await import("@/ark-scene/grounding/base");
     const {sampleTownGround} = await import("@/ark-scene/islands/town/ground");
     const {CANAL_LEVEL, townPlan} = await import("@/ark-scene/islands/town/plan");
+    const [{zooSwingFrame}, {hallClimbs}] = await Promise.all([import("@/ark-scene/islands/town/zoo-swing"), import("@/ark-scene/islands/town/render/zoo-houses")]); // ARK-JUNGLE
     const origin = options.origin ?? townWorldOrigin();
     const def = ARK_ISLANDS.town;
     const has = (animal: Pick<ArkAnimal, "island" | "area">) => animal.island === "town" || (!animal.island && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo"));
@@ -608,6 +615,13 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const body = tankBody(animal.model_slug, plan, length);
             const pose = clearOfHallRocks(tank, tankPose(tank, animal, length, height, plan, clock), body.length, body.width, height);
             return {x: pose.x + origin.x, z: pose.z + origin.z, yaw: pose.yaw, pitch: pose.pitch, base: pose.base, spec: pose.spec};
+        },
+        zooSwing: (animal, length, spot, epoch, awake) => {
+            const info = towned.get(animal.id);
+            const e = info?.enclosure;
+            if (!info || !e || e.type !== "primate_house" || info.where !== "indoor") return null;
+            const f = zooSwingFrame(animal, length, {x: spot.x - origin.x, y: spot.y, z: spot.z - origin.z}, hallClimbs(e), epoch, awake);
+            return f ? {...f, x: f.x + origin.x, z: f.z + origin.z} : null;
         },
         roomPose: (id, length, clock) => {
             const room = towned.get(id)?.room;

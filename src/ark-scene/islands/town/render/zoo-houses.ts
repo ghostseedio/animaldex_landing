@@ -166,6 +166,19 @@ function tank(t: Tank, parts: {inside: Geo; glow: Geo; glass: Geo; water: Geo}, 
     parts.water.quad(P(-ww, y0, -wd), P(-ww, y0, wd), P(-ww, y1, wd), P(-ww, y1, -wd), tint);
 }
 
+const climbMemo = new Map<string, Plot["climbs"]>();
+
+/** ARK-JUNGLE: a primate house's climbing frames' beams (`Plot.climbs`), from its hall's own dressing, once. */
+export function hallClimbs(e: ZooEnclosure): Plot["climbs"] {
+    const key = `${e.id}:${e.slot.seed}`;
+    let climbs = climbMemo.get(key);
+    if (!climbs) {
+        climbs = e.type === "primate_house" ? hall(e, {inside: new Geo(), glow: new Geo(), glass: new Geo(), water: new Geo()})?.climbs ?? [] : [];
+        climbMemo.set(key, climbs);
+    }
+    return climbs;
+}
+
 /** The hall of a house that is not the aquarium: its dressing in the corners and along the walls, the lights. */
 export function hall(e: ZooEnclosure, parts: {inside: Geo; glow: Geo; glass: Geo; water?: Geo}): Plot | null {
     const f = zooHouseFrame(e);

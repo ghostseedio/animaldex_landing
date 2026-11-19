@@ -32,6 +32,7 @@ import {floorObstacles} from "@/ark-scene/floor-assets";
 import {barnStyle, cottageStyle, defaultHomePlots, GARDEN, paddockFence, paddockRect, paddockSegments, PADDOCK_POST_TOP, picketRuns, PICKET_POST_TOP, plotFrame, plotKeepOuts, type HomePlot} from "@/ark-scene/props/home-layout";
 import {arkWorld, onArkWorld, sampleGround} from "@/ark-scene/world";
 import {fallsBlocks} from "@/ark-scene/islands/wild/falls";
+import {jungleTrees} from "@/ark-scene/islands/wild/jungle";
 import {GARDEN_POND} from "@/ark-scene/micro-decor";
 import {POND_STONES} from "@/ark-scene/world-sampler";
 
@@ -394,7 +395,7 @@ export function buildColliders(plots: HomePlot[] | null): Collider[] {
     const out: Collider[] = [];
     // (Named by the scenery's own hosts, `decor<i>` and `fill<i>` (sampler.ts): a perch on a tree names its tree.)
     const decor = worldDecor();
-    const items: Array<{item: DecorItem; host: string}> = [...decor.map((item, i) => ({item, host: `decor${i}`})), ...forestFill().map((item, i) => ({item: item as DecorItem, host: `fill${i}`}))];
+    const items: Array<{item: DecorItem; host: string}> = [...decor.map((item, i) => ({item, host: `decor${i}`})), ...forestFill().map((item, i) => ({item: item as DecorItem, host: `fill${i}`})), ...jungleTrees().map((item, j) => ({item: item as DecorItem, host: `jungle${j}`}))];
     items.forEach(({item, host}, n) => {
         if (TREE_KINDS.has(item.kind)) {
             const trunk = trunkCollider(item, host);
