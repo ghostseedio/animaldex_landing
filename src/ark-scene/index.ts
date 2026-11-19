@@ -533,6 +533,10 @@ type Entry = {
     youngOf?: {parent: string | null; play: number; at: number};
     /** 3.3 batch (C): how strongly it wears its species' young coat (`young-coat.ts`, 0-15), worked out again now and then. */
     youngCoat?: {steps: number; at: number};
+    /** ARK-JUNGLE: a young one carried on its mother now (`carriedPose`): nothing pushes it off her. */
+    riding?: boolean;
+    /** Its mother's pose as `carriedPose` read it (her id, where): moved with her when the frame's pushes move her. */
+    ridingOn?: {id: string; x: number; z: number; base: number};
     /** 3.3 batch (C): its antlers in this month of the Ark year (`antler-cycle.ts`), re-read every 30 s. */
     antler?: AntlerState & {at: number};
     /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
@@ -3796,7 +3800,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         (a.sleepNow?.t ?? 0) > 0.5 && (b.sleepNow?.t ?? 0) > 0.5 && a.animal.model_slug === b.animal.model_slug && (sleepStyle(a.animal.model_slug).social !== "apart" || Boolean(a.sched?.animal.young || b.sched?.animal.young));
 
     const keepApart = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: Pose}>, dt: number) => {
-        const near = list.filter((c) => c.visible && c.entry.sched && scheduled(c.entry) && c.distance < 45 && !c.entry.sched.pose?.aloft).sort((a, b) => a.distance - b.distance).slice(0, 80);
+        const near = list.filter((c) => c.visible && c.entry.sched && scheduled(c.entry) && c.distance < 45 && !c.entry.sched.pose?.aloft && !c.entry.riding).sort((a, b) => a.distance - b.distance).slice(0, 80);
         // Animals in an act (a birth, a mating, a contest, a meal) stand where the act has them: the others give them room.
         const acting = list.filter((c) => c.visible && c.distance < 45 && c.entry.act && !c.entry.act.hidden && !c.entry.act.role);
         for (let i = 0; i < near.length; i++) {
@@ -4042,6 +4046,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const motherModel = library.get(mother.animal.model_slug);
         const motherHeight = motherModel ? motherModel.height * (mother.length / motherModel.bodyLength) : mother.length * 0.6;
         const at = pose(mother, motherModel, motherHeight, time);
+        entry.ridingOn = {id: mother.animal.id, x: at.x, z: at.z, base: at.base};
         // Her frame: her back's way (n), her head's (t), her feet's point.
         const s = at.surface;
         const n = s ? {x: s.nx, y: s.ny, z: s.nz} : {x: 0, y: 1, z: 0};
@@ -4266,6 +4271,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         // ARK-JUNGLE: a carried young rides its mother as she is drawn this frame (up a trunk, swinging, in flight).
         const riding = !reducedMotion && entry.animal.origin === "born" ? carriedPose(entry, time) : null;
+        entry.riding = Boolean(riding);
         if (riding) return riding;
         const place = entry.place;
         if (entry.moment) {
@@ -5331,6 +5337,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (scheduleOn && !reducedMotion) {
             const started = performance.now();
             keepApart(candidates, dt);
+            // ARK-JUNGLE: a young one carried rides where its mother is drawn: moved as the reactive layer and the pushes moved her.
+            if (candidates.some((c) => c.entry.riding)) {
+                const byId = new Map(candidates.map((c) => [c.entry.animal.id, c]));
+                for (const c of candidates) {
+                    const on = c.entry.riding ? c.entry.ridingOn : null;
+                    const m = on ? byId.get(on.id) : null;
+                    if (!on || !m) continue;
+                    const dx = m.pose.x - on.x;
+                    const dz = m.pose.z - on.z;
+                    const dy = m.pose.base - on.base;
+                    c.pose.x += dx;
+                    c.pose.z += dz;
+                    c.pose.base += dy;
+                    if (c.pose.surface) c.pose.surface = {...c.pose.surface, x: c.pose.surface.x + dx, y: c.pose.surface.y + dy, z: c.pose.surface.z + dz};
+                }
+            }
             // The muzzles of the grazers biting and the bodies of the walkers nearest the camera, for the grass to bend at (`grass-press.ts`).
             const biting = (c: (typeof candidates)[number]) => c.entry.sched!.pose?.beat === "bite" || c.entry.sched!.pose?.beat === "chew";
             setGrassPress(
