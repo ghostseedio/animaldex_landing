@@ -701,6 +701,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const wild = isl ? snapshot.animals.filter((animal) => !isl.has(animal)) : snapshot.animals;
         return lastWild && sameAnimalList(lastWild.animals, wild) ? null : wild;
     };
+    /** The town's animals as the last read had them (a stand-in of the town is planned with them, `placeAll`). */
+    let lastTown: ArkAnimal[] = [];
     /** Every animal's place: the wild island's by its map, the town's by its plan (in the world frame). */
     const placeAll = (animals: ArkAnimal[], ghosts = false): Map<string, Placement> => {
         const isl = island;
@@ -722,9 +724,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             places = placeAnimals(options.wildAnimals && wild.length === options.wildAnimals.length && wild.every((a, i) => a === options.wildAnimals![i]) ? options.wildAnimals : wild);
             if (!ghosts) lastWild = {animals: wild, places: new Map(places)};
         }
-        isl.place(town, (animal) => animal.activity ?? behaviourProfile(animal.model_slug).activity).forEach((place, id) => places.set(id, place));
+        // The town's plan is of ALL its animals (`island.place` replaces it: who is in which tank, room and enclosure, who
+        // is on the schedule). A stand-in's placing (`ghosts`: an eaten prey's, a dead one's, the cast's, a replay's) gave
+        // it the stand-ins alone, most often none of the town's at all: the plan was then of nobody, so until the next
+        // read every tank's fish, every room's pet and every zoo house's resident was off its plan (no tank, no schedule
+        // made for it, the zoo's enclosures closed). Now a stand-in of the wild island leaves the town alone, and a
+        // stand-in of the town is planned with everyone who lives there.
+        if (!ghosts) {
+            lastTown = town;
+            isl.place(town, (animal) => animal.activity ?? behaviourProfile(animal.model_slug).activity).forEach((place, id) => places.set(id, place));
+        } else if (town.length) {
+            const added = new Set(town.map((animal) => animal.id));
+            const planned = isl.place([...lastTown.filter((animal) => !added.has(animal.id)), ...town], (animal) => animal.activity ?? behaviourProfile(animal.model_slug).activity);
+            for (const animal of town) {
+                const place = planned.get(animal.id);
+                if (place) places.set(animal.id, place);
+            }
+        }
         // (The town's colliders for the motion pass, L5's per island: its enclosures follow the snapshot.)
-        setIslandColliders({contains: isl.contains, set: isl.colliders()});
+        if (!ghosts || town.length) setIslandColliders({contains: isl.contains, set: isl.colliders()});
         // (A replay's departed are added to the town's list; a snapshot's replace it.)
         if (ghosts) for (const animal of town) townIds.add(animal.id);
         else townIds = new Set(town.map((animal) => animal.id));
