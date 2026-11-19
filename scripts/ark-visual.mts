@@ -9,13 +9,18 @@
  *   npx tsx scripts/ark-visual.mts accept --from <dir> [--only id,id]
  *                                                  accept a run's pictures (a CI artifact's actual/) as baselines
  *   npx tsx scripts/ark-visual.mts hooks           run the other lanes' checks in tests/ark-visual/hooks.json
- *   options: --only id,id  --devices desktop,phone  --gpu swiftshader|metal  --out <dir>  --headed
+ *   options: --only id,id  --devices desktop,phone  --gpu swiftshader|metal  --out <dir>  --headed  --slow-rigs <ms>  --wait-before-freeze <ms>
  *
  * The page is the golden-shot page (`src/ark-scene/golden-entry.ts`, the same shots and framing as
  * scripts/ark-golden-shots.mjs), with two things added before it runs: WebGL on SwiftShader (the same software
  * renderer on a Mac and on the CI's Linux, so a baseline taken on one holds on the other), and a clock that the
  * harness freezes at a fixed time for each shot, so the water, grass, clouds, light and the animals' schedules are
- * the same on every run. What still moves between runs (an animal looping on its own) is inside the tolerances.
+ * the same on every run. Before the clock freezes, every animal the view draws on its rig has its rig in and faded in
+ * (`settleRigs`: the scene's `loading()` does not count them, so a slow bucket gave a picture with the elephant and the
+ * capybaras in their standing model's pose, run to run). What still moves between runs is inside the tolerances.
+ *   --slow-rigs <ms>   hold every rig file's download this long (a slow bucket, locally: the pictures must not change)
+ *   --wait-before-freeze <ms>   let the page run this long on the real clock before each shot's clock freezes (a slower or
+ *                      faster runner reaches the freeze with the animals elsewhere: the pictures must not change)
  */
 
 import {execSync, spawnSync} from "node:child_process";
@@ -160,6 +165,7 @@ function cachedChromium(): string | undefined {
 }
 
 const {chromium} = await import("playwright-core");
+type Page = import("playwright-core").Page;
 const gpu = arg("gpu", "swiftshader");
 const gpuArgs = gpu === "swiftshader"
     ? ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--use-gl=angle"]
@@ -196,17 +202,51 @@ const STEPPED = (from: number, n: number) => `new Promise((resolve) => { let k =
 /** Draw `n` frames, then resolve (a string for the same reason). */
 const FRAMES = (n: number) => `new Promise((resolve) => { let k = 0; const step = () => (++k >= ${n} ? resolve(true) : requestAnimationFrame(step)); requestAnimationFrame(step); })`;
 
+/** `rigState` of the golden page: a rig still on its way, and every animal drawn on its rig (listed, in, how far faded in). */
+type RigState = {busy: boolean; wanted: Array<{id: string; slug: string; available: boolean; loaded: boolean; weight: number}>};
+
 type GoldenWindow = Window & {
-    __arkGolden?: {prepare: () => Promise<{settled: boolean; stats: {tier: string}}>; shoot: (place: string, time: string) => Promise<{anchor: string}>};
+    __arkGolden?: {prepare: () => Promise<{settled: boolean; stats: {tier: string}}>; shoot: (place: string, time: string) => Promise<{anchor: string}>; rigState: () => RigState};
     __arkGoldenError?: string;
     __arkClock: {freeze: (ms: number) => void; run: () => void};
 };
+
+/**
+ * The rigs of every animal the view draws on its rig are in and faded in, on the real clock, before it freezes.
+ * A rig is fetched when its animal first comes into view (the shot's framing) and its shader compiled when first drawn,
+ * and the scene's `loading()` counts neither: the frozen frames then caught each animal on its standing model or half
+ * way through its fade-in, depending on how fast the bucket answered. A rig that never arrives or never draws (not
+ * listed, a placeholder, a failed file) is left as it is once nothing has changed for `RIG_QUIET_MS`: that too is the same
+ * on every run.
+ */
+const RIG_QUIET_MS = 6000;
+const RIG_LIMIT_MS = 240_000;
+async function settleRigs(page: Page, id: string): Promise<string> {
+    const started = Date.now();
+    let signature = "";
+    let changedAt = started;
+    for (;;) {
+        const state = await page.evaluate(() => (window as unknown as GoldenWindow).__arkGolden!.rigState());
+        const unsettled = state.wanted.filter((rig) => rig.available && !(rig.loaded && rig.weight >= 0.999));
+        if (!state.busy && !unsettled.length) return `${state.wanted.length} rigs in`;
+        const now = Date.now();
+        const next = JSON.stringify(state);
+        if (next !== signature) {
+            signature = next;
+            changedAt = now;
+        }
+        if (!state.busy && now - changedAt > RIG_QUIET_MS) return `${state.wanted.length - unsettled.length} rigs in, ${unsettled.length} left as they are (${unsettled.map((rig) => `${rig.slug} ${rig.loaded ? `weight ${rig.weight}` : "not loaded"}`).join(", ")})`;
+        if (now - started > RIG_LIMIT_MS) throw new Error(`${id}: the rigs did not settle in ${RIG_LIMIT_MS / 1000} s (busy ${state.busy}, ${unsettled.length} not in: ${unsettled.map((rig) => rig.slug).join(", ")})`);
+        await page.evaluate(FRAMES(3));
+    }
+}
 
 type Row = {id: string; device: string; place: string; time: string; anchor: string; status: "pass" | "fail" | "new"; diff: VisualDiff | null; tolerance: VisualTolerance; ms: number};
 const rows: Row[] = [];
 const devices = arg("devices", Object.keys(config.devices).join(",")).split(",").filter((name) => config.devices[name]);
 const shots = config.shots.filter((shot) => devices.includes(shot.device) && (!only || only.has(idOf(shot))));
 const update = flag("update");
+const waitBeforeFreeze = Number(arg("wait-before-freeze", "0"));
 const errors: string[] = [];
 
 for (const deviceName of devices) {
@@ -215,6 +255,13 @@ for (const deviceName of devices) {
     if (!list.length) continue;
     const context = await browser.newContext({viewport: {width: device.width, height: device.height}, deviceScaleFactor: device.deviceScaleFactor, isMobile: device.mobile, hasTouch: device.mobile});
     await context.addInitScript({content: CLOCK});
+    const slowRigs = Number(arg("slow-rigs", "0"));
+    if (slowRigs > 0) {
+        await context.route("**/*.rig.glb", async (route) => {
+            await new Promise((resolve) => setTimeout(resolve, slowRigs));
+            await route.continue();
+        });
+    }
     const page = await context.newPage();
     page.on("pageerror", (error) => errors.push(`${deviceName}: ${String(error)}`));
     page.on("console", (message) => {
@@ -237,9 +284,15 @@ for (const deviceName of devices) {
         // Then everything earlier real-time frames carried is dropped (the reactive layer, rig blends) and a second is
         // drawn on a frame-locked clock from that instant: a shot is a function of its time only.
         const at = 4e7 + index * 3.6e6;
+        const rigs = await settleRigs(page, id);
+        if (waitBeforeFreeze > 0) await page.waitForTimeout(waitBeforeFreeze);
         await page.evaluate((ms) => (window as unknown as GoldenWindow).__arkClock.freeze(ms), at);
         await page.evaluate(() => (window as unknown as {__arkGolden?: {resetTransients?: () => void}}).__arkGolden?.resetTransients?.());
         await page.evaluate(STEPPED(at, 60));
+        // (Still every rig fully in after the frames: a rig let go or a fade cut short would show here.)
+        const after = await page.evaluate(() => (window as unknown as GoldenWindow).__arkGolden!.rigState());
+        const loose = after.wanted.filter((rig) => rig.available && rig.loaded && rig.weight < 0.999);
+        if (loose.length) log(id, "rigs not fully in after the frames:", loose.map((rig) => `${rig.slug} ${rig.weight}`).join(", "));
         // (A frame on SwiftShader can take seconds on a busy machine: the screenshot waits for one.)
         const png = await page.screenshot({type: "png", timeout: 300_000});
         await page.evaluate(() => (window as unknown as GoldenWindow).__arkClock.run());
@@ -261,7 +314,7 @@ for (const deviceName of devices) {
             }
         }
         rows.push({id, device: deviceName, place: shot.place, time: shot.time, anchor: framed.anchor, status, diff, tolerance, ms: Date.now() - started});
-        log(deviceName, id, update ? "written as baseline" : status, diff ? `changed ${(diff.changed * 100).toFixed(2)}%, mean ${diff.mean}, worst tile ${(diff.block * 100).toFixed(1)}%` : "", `${((Date.now() - started) / 1000).toFixed(1)} s`);
+        log(deviceName, id, `[${rigs}]`, update ? "written as baseline" : status, diff ? `changed ${(diff.changed * 100).toFixed(2)}%, mean ${diff.mean}, worst tile ${(diff.block * 100).toFixed(1)}%` : "", `${((Date.now() - started) / 1000).toFixed(1)} s`);
     }
     await context.close();
 }

@@ -9436,13 +9436,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             cast = layer;
             setSnapshot(current, false);
         }),
-        // Runtime (the visual CI): drop what earlier real-time frames carried (the reactive layer, rig blends, glances).
+        // Runtime (the visual CI): drop what earlier real-time frames carried (the reactive layer, rig blends, glances, the
+        // gait). The gait's speed is eased over the frames and a walker is drawn near, on its rig, only while it is over a
+        // fifth of its length a second (`gaitMoving`): an elephant at a walk of about that carried the real-time frames'
+        // speed over the freeze (3 % of it after the frames drawn at the frozen clock) and was on its rig in one run and a
+        // far model standing in the next.
         resetTransients: () => {
             reactive.resetAll();
             for (const entry of allEntries()) {
                 entry.reactive = null;
                 entry.rig = null;
                 entry.glance = 0;
+                entry.gait = null;
             }
         },
         // Runtime: a replay's departed animals placed in the places worker ahead of play (the map's sampler stays off
