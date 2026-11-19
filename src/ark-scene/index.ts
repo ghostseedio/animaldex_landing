@@ -3762,7 +3762,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (want && (selectedId === entry.animal.id || followId === entry.animal.id)) want = 0.55;
         const now = entry.denIn ?? 0;
         if (!want && !now) return;
-        entry.denIn = reducedMotion ? want : now + Math.max(Math.min(want - now, dt / 1.6), -dt / 1.2);
+        entry.denIn = reducedMotion || snapNow ? want : now + Math.max(Math.min(want - now, dt / 1.6), -dt / 1.2);
     };
 
     /** Sleeping together (`sleep.ts` social: a huddle, a pile, a row, a cluster; a young mammal against the adult): bodies may touch. */
@@ -5060,11 +5060,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
 
     let lastUpdate = 0;
+    /** The visual CI's `resetTransients`: the next frame sets every eased share (rest, den, stir) straight to where its schedule has it. */
+    let snapEased = false;
+    let snapNow = false;
     const IDLE_ABILITIES = {jaw: false, eyes: true, nose: false, tail: false};
     const updateInstances = (now: number) => {
         const dt = reducedMotion || !lastUpdate ? 0 : Math.min(now - lastUpdate, 0.1);
         frameDt = dt;
         lastUpdate = now;
+        snapNow = snapEased;
+        snapEased = false;
         // 3.3 batch (A): this frame's defence moves in view.
         defenceSeen.length = 0;
         projection.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
@@ -5173,7 +5178,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // shared layer has it asleep; then it lies down again (`sleep.ts`: the posture, the way down and up).
             const woke = Boolean(entry.reactive?.woke);
             const restWant = woke ? 0 : targets.rest;
-            if (!reducedMotion) entry.rest += (Math.max(restWant, headDown) - entry.rest) * Math.min(dt * (headDown ? 3 : woke ? 4 : 1.5), 1);
+            if (snapNow) entry.rest = Math.max(restWant, headDown);
+            else if (!reducedMotion) entry.rest += (Math.max(restWant, headDown) - entry.rest) * Math.min(dt * (headDown ? 3 : woke ? 4 : 1.5), 1);
             // (Its first frame with its schedule: as it is now, already lying if asleep; it never lies down on load.)
             entry.sleepNow = stepSleepNow(entry.sleepNow ?? null, {id: entry.animal.id, slug, length: entry.length, asleep: entry.state.asleep && !woke && !entry.act && !entry.visitor && !entry.moment, startled: Boolean(entry.reactive?.startled), epoch: epochNow, dt, reduced: reducedMotion || !entry.sleepStarted});
             entry.sleepStarted = true;
@@ -9436,11 +9442,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             cast = layer;
             setSnapshot(current, false);
         }),
-        // Runtime (the visual CI): drop what earlier real-time frames carried (the reactive layer, rig blends, glances, the
-        // gait). The gait's speed is eased over the frames and a walker is drawn near, on its rig, only while it is over a
-        // fifth of its length a second (`gaitMoving`): an elephant at a walk of about that carried the real-time frames'
-        // speed over the freeze (3 % of it after the frames drawn at the frozen clock) and was on its rig in one run and a
-        // far model standing in the next.
+        // Runtime (the visual CI): drop what earlier real-time frames carried, so a frame drawn at the frozen clock is a
+        // function of that time only: the reactive layer, rig blends, glances, the gait, and how far each animal is into
+        // lying down or up (its eased shares are set straight to where its schedule has it on the next frame, as on load).
+        // The gait's speed is eased over the frames and a walker is drawn near, on its rig, only while it is over a fifth
+        // of its length a second (`gaitMoving`): the jump from where an elephant stood on the real clock to where its
+        // schedule has it at the frozen time counted as a step, and what was left of it after 60 frames (about 1 m/s)
+        // put it on its rig in one run and left it a far model standing in the next.
         resetTransients: () => {
             reactive.resetAll();
             for (const entry of allEntries()) {
@@ -9448,7 +9456,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.rig = null;
                 entry.glance = 0;
                 entry.gait = null;
+                entry.sleepNow = null;
+                entry.sleepStarted = false;
+                entry.stirShare = undefined;
             }
+            snapEased = true;
         },
         // Runtime: a replay's departed animals placed in the places worker ahead of play (the map's sampler stays off
         // the main thread); play then finds them placed.

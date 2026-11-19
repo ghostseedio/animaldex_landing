@@ -288,9 +288,9 @@ for (const deviceName of devices) {
         const at = 4e7 + index * 3.6e6;
         const rigs = await settleRigs(page);
         if (waitBeforeFreeze > 0) await page.waitForTimeout(waitBeforeFreeze);
-        await page.evaluate((ms) => (window as unknown as GoldenWindow).__arkClock.freeze(ms), at);
-        await page.evaluate(() => (window as unknown as {__arkGolden?: {resetTransients?: () => void}}).__arkGolden?.resetTransients?.());
-        await page.evaluate(STEPPED(at, 60));
+        // (One evaluate, so no frame is drawn between the freeze and the reset: the first frame at the frozen clock is the
+        // same step on every run, not a frame of 0 or of 0.1 s by when the page's own frames fell.)
+        await page.evaluate(`(() => { window.__arkClock.freeze(${at}); window.__arkGolden.resetTransients(); return ${STEPPED(at, 60)}; })()`);
         // (Still every rig fully in after the frames: a rig let go or a fade cut short would show here.)
         const after = await page.evaluate(() => (window as unknown as GoldenWindow).__arkGolden!.rigState());
         const loose = after.wanted.filter((rig) => rig.available && rig.loaded && rig.weight < 0.999);
