@@ -1028,7 +1028,8 @@
             "number": "AnimalDex-nummer",
             "age": "Ålder",
             "left": "{time} kvar",
-            "ticker": "Ökar och minskar den här veckan"
+            "ticker": "Ökar och minskar den här veckan",
+            "talk": "Prata"
         },
         "how": {
             "lead": "En levande 3D-värld av riktiga djur, styrd av naturens regler.",

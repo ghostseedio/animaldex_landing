@@ -1028,7 +1028,8 @@
             "number": "AnimalDex-nummer",
             "age": "Alder",
             "left": "{time} igjen",
-            "ticker": "I vekst og i nedgang denne uken"
+            "ticker": "I vekst og i nedgang denne uken",
+            "talk": "Snakk"
         },
         "how": {
             "lead": "En levende 3D-verden av ekte dyr, styrt av naturens regler.",

@@ -1028,7 +1028,8 @@
             "number": "AnimalDex-Nummer",
             "age": "Alter",
             "left": "Noch {time}",
-            "ticker": "Diese Woche im Aufwind und im Rückgang"
+            "ticker": "Diese Woche im Aufwind und im Rückgang",
+            "talk": "Sprechen"
         },
         "how": {
             "lead": "Eine lebendige 3D-Welt echter Tiere, gelenkt von den Regeln der Natur.",

@@ -1028,7 +1028,8 @@
             "number": "Numero AnimalDex",
             "age": "Età",
             "left": "Ancora {time}",
-            "ticker": "In crescita e in calo questa settimana"
+            "ticker": "In crescita e in calo questa settimana",
+            "talk": "Parla"
         },
         "how": {
             "lead": "Un mondo 3D vivo di animali veri, guidato dalle regole della natura.",

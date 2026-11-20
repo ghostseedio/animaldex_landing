@@ -1028,7 +1028,8 @@
             "number": "AnimalDex-numero",
             "age": "Ikä",
             "left": "Jäljellä {time}",
-            "ticker": "Kasvussa ja laskussa tällä viikolla"
+            "ticker": "Kasvussa ja laskussa tällä viikolla",
+            "talk": "Juttele"
         },
         "how": {
             "lead": "Elävä 3D-maailma oikeista eläimistä, luonnon sääntöjen mukaan.",

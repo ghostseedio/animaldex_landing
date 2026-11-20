@@ -5240,7 +5240,8 @@
       "number": "AnimalDex number",
       "age": "Age",
       "left": "{time} left",
-      "ticker": "Thriving and declining this week"
+      "ticker": "Thriving and declining this week",
+      "talk": "Talk"
     },
     "how": {
       "lead": "A live 3D world of real animals, run by nature's rules.",

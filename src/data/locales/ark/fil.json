@@ -1028,7 +1028,8 @@
             "number": "Numero sa AnimalDex",
             "age": "Edad",
             "left": "{time} na lang",
-            "ticker": "Dumarami at kumokonti ngayong linggo"
+            "ticker": "Dumarami at kumokonti ngayong linggo",
+            "talk": "Kausapin"
         },
         "how": {
             "lead": "Isang buhay na 3D na mundo ng totoong mga hayop, na pinatatakbo ng mga tuntunin ng kalikasan.",

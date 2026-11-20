@@ -1028,7 +1028,8 @@
             "number": "Nombor AnimalDex",
             "age": "Umur",
             "left": "Tinggal {time}",
-            "ticker": "Meningkat dan menurun minggu ini"
+            "ticker": "Meningkat dan menurun minggu ini",
+            "talk": "Berbual"
         },
         "how": {
             "lead": "Dunia 3D hidup haiwan sebenar, berjalan mengikut peraturan alam.",

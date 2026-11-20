@@ -1028,7 +1028,8 @@
             "number": "AnimalDex numarası",
             "age": "Yaş",
             "left": "{time} kaldı",
-            "ticker": "Bu hafta artanlar ve azalanlar"
+            "ticker": "Bu hafta artanlar ve azalanlar",
+            "talk": "Konuş"
         },
         "how": {
             "lead": "Gerçek hayvanlarla dolu, doğanın kurallarıyla işleyen canlı bir 3D dünya.",
