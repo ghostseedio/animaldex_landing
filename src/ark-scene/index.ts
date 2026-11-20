@@ -77,7 +77,7 @@ import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, REVIV
 import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
 import {WaterReflections} from "@/ark-scene/water-reflect-render"; // p3 (reflect)
 import {headLimits} from "@/ark-scene/head-look";
-import {bellyOfGeometry, goesIntoRoost, lyingBody, lyingDrop, lyingTorso, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
+import {bellyOfGeometry, goesIntoRoost, LEGLESS_BELLY, lyingBody, lyingDrop, lyingTorso, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
@@ -4721,6 +4721,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      * the rig has a clip for it (`beatClip`: graze, browse, scan, shake_off,
      * into and out of the water).
      */
+    /** ARK-CONTACT: a body with legs under it (its belly above `LEGLESS_BELLY`): a snake's or a slug's lies as it is. */
+    const legsUnder = (geometry: BufferGeometry | null): boolean => {
+        if (!geometry) return false;
+        if (!geometry.boundingBox) geometry.computeBoundingBox();
+        return bellyOfGeometry(geometry) >= LEGLESS_BELLY;
+    };
     const rigFor = (entry: Entry, model: SpeciesModel, where: Pose, modelScale: number, dt: number): RigModel | null => {
         const slug = entry.animal.model_slug;
         entry.sleepClipped = false;
@@ -5901,7 +5907,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // p2 (contact): the drawn ground a lying sleeper rests on (its contact shadow's), null otherwise.
             let lyingOn: number | null = null;
             const slept = sn && !surface && !act ? sleepDraw(sn, {id: animal.id, slug: animal.model_slug, length: entry.length, epoch: epochNow, procedural: 1 - clipShare, reduced: reducedMotion}) : null;
-            if (slept) {
+            // ARK-CONTACT (the owner, 2026-11-21, the farm at night: "cows and pigs are sunk into the ground, with the lower
+            // half of their legs cut off"): a sleeper whose legs are drawn standing (no lying clip plays: the four-legged
+            // rigs' lying clips are held, `QUADRUPED_LYING_HELD`, and the near and far meshes stand) is not lowered onto its
+            // belly with its legs through the ground; it sleeps on its feet, its head low and its eyes shut, its hooves on
+            // the drawn ground like any standing animal (`groundedStand`). A rig's own lying clip still lies it down.
+            const sleepsStanding = Boolean(slept && !(rig && entry.sleepClipped && clipShare > 0) && !where.water && sn!.spec.lying && sn!.posture !== "flat" && legsUnder((level === "near" ? model.near ?? model.far : model.far ?? model.near)?.geometry ?? null));
+            if (slept && sleepsStanding) {
+                const stirTarget = entry.sched?.pose?.moving ? 0 : 1;
+                const stirWas = entry.stirShare ?? stirTarget;
+                entry.stirShare = reducedMotion ? stirTarget : stirWas + (stirTarget - stirWas) * Math.min(dt * 3, 1);
+                where.yaw += slept.yaw * entry.stirShare;
+            } else if (slept) {
                 // (Its stirred heading only while it keeps still: moving, a foal at its mother's heel say, it faces where
                 // it goes; eased out and in, so nothing snaps. 2026-11-12.)
                 const stirTarget = entry.sched?.pose?.moving ? 0 : 1;
@@ -5958,7 +5975,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 position.set(where.x + surface.nx * up, where.base + surface.ny * up, where.z + surface.nz * up);
             } else {
                 // Grounding: its true base on the drawn ground, leaning to the slope (the pose's own offsets carried over).
-                stand = !act && !slept && groundingRules() === "grounded" && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase))
+                stand = !act && (!slept || sleepsStanding) && groundingRules() === "grounded" && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase))
                     ? groundedStand({slug: animal.model_slug, level: rig ? "rig" : level === "far" ? "far" : "near", x: where.x, z: where.z, yaw: where.yaw, pitch: 0, roll: 0, scale: s, minY: model.minY, clip: rig ? entry.rig?.now.name : null, clipWeight: entry.rig?.weight, ground: island ? (x, z) => standGround(x, z, poseBase) : standGround})
                     : null;
                 if (stand) {
@@ -6069,7 +6086,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (The duller sex a little greyer: `sexDim`, beside the per-instance variation `arkVary`.)
             entry.sexDim ??= sexDim(entry.animal.id, entry.animal.model_slug);
             // Its sleep for the shader in w (`packSleep`): eyes shut, the curl (near only), a tail flick, its breaths a second.
-            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZW(index, entry.phase, Math.min((act ? act.dim : dim) + entry.sexDim, 1), entry.rest, defended || (slept ? packSleep(eyesOpenForDev ? 0 : slept.eyes, level === "near" ? slept.curl : 0, slept.flick, slept.breath) : packSleep(0, 0, 0, 0)));
+            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZW(index, entry.phase, Math.min((act ? act.dim : dim) + entry.sexDim, 1), entry.rest, defended || (slept ? packSleep(eyesOpenForDev ? 0 : slept.eyes, level === "near" && !sleepsStanding ? slept.curl : 0, slept.flick, slept.breath) : packSleep(0, 0, 0, 0)));
             setVary(mesh.geometry, index, animal.id);
             if (entry.power?.q) setVaryPower(mesh.geometry, mesh.material, index, entry.power.q, entry.power.look);
             // The head look (near only; it fades out as the animal falls asleep).
