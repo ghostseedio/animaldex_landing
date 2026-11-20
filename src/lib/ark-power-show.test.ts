@@ -181,3 +181,23 @@ test("acts: a lane's bound act first, then the sourced defence move, then a cata
     registerArkPowerAct("clip:test_sprint", (input) => ({state: "run", still: input.amount}));
     assert.equal(powerActName(plain.slug, "speed"), "clip:test_sprint");
 });
+
+test("the Blender Power clips' list (POWERCLIPS-SHIP FORMAT.md): a species' bin and clips read; a malformed one left out", async () => {
+    const {decodePowerClips} = await import("@/ark-scene/power-clips");
+    const list = decodePowerClips({
+        kind: "ark-power-clips",
+        version: 1,
+        rig_set: "v3",
+        species: {
+            alpaca: {rig: "60ced0705005", file: "08459fd9dcfa.power.bin", bones: 16, rows: 17, bytes: 6528, mechanism: "group", power_clips: [{name: "power_brace", duration: 2, frames: 16, row: 0, rows: 17, loop: true}]},
+            badger: {rig: "98db5d96d4ba", file: "b7abc92822f1.power.bin", bones: 19, rows: 25, power_clips: [{name: "power_burrow", duration: 1.6, row: 0, rows: 26}]},
+            broken: {rig: "x", file: "../../etc.power.bin", bones: 16, rows: 17, power_clips: [{name: "a", duration: 1, row: 0, rows: 17}]}
+        }
+    })!;
+    assert.deepEqual(Array.from(list.keys()), ["alpaca"]);
+    const alpaca = list.get("alpaca")!;
+    assert.equal(alpaca.clips[0].name, "power_brace");
+    assert.equal(alpaca.clips[0].seconds, 2);
+    assert.equal(alpaca.clips[0].loop, true);
+    assert.equal(decodePowerClips({kind: "other", version: 1, species: {}}), null);
+});

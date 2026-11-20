@@ -110,6 +110,10 @@ export type RigModel = {
     wings: RigWingChain | null;
     /** Last time it was drawn (seconds), for letting it go. */
     usedAt: number;
+    /** The set's version string for this species' file (its manifest's `species[slug]`), for clips made on it. */
+    version?: string;
+    /** Power clips appended (`addPowerClips`): their names, and the bytes they hold. */
+    powerClips?: string[];
 };
 
 /** Lane L2's wing chain (shoulder, forearm, hand per side, their pivots): its own type when `locomotion/flight.ts` lands. */
@@ -610,10 +614,47 @@ export class RigLibrary {
             grips,
             loco,
             wings: rigWingChain(extras.bones, restPivot),
-            usedAt: 0
+            usedAt: 0,
+            version: set.index[slug]
         });
         this.heldBytes += buffer.byteLength;
         this.onLoad(slug);
+    }
+
+    /**
+     * Powers you can see (decision 420; lane POWERCLIPS-SHIP's `power-clips.json`, FORMAT.md): a species' Power clips
+     * appended to its loaded rig, rows after the rig's own (the same float16 3x4 rows, the same bone order). Only on
+     * the v3 rig they were made on (`rig`); false otherwise, or when the bin does not fit. Let go with the rig.
+     */
+    addPowerClips(slug: string, rig: string, bin: ArrayBuffer, clips: ReadonlyArray<RigClip & {name: string; row: number; rows: number}>): boolean {
+        const model = this.models.get(slug);
+        if (!model || model.set !== 3 || model.version !== rig || model.powerClips) return false;
+        const rowHalves = model.bones * 12;
+        if (!bin.byteLength || bin.byteLength % (rowHalves * 2)) return false;
+        const extra = new Uint16Array(bin);
+        const binRows = extra.length / rowHalves;
+        const ownRows = model.data.length / rowHalves;
+        const data = new Uint16Array(model.data.length + extra.length);
+        data.set(model.data, 0);
+        data.set(extra, model.data.length);
+        const names: string[] = [];
+        for (const clip of clips) {
+            if (!Number.isInteger(clip.row) || !Number.isInteger(clip.rows) || clip.rows < 2 || clip.row < 0 || clip.row + clip.rows > binRows) continue;
+            if (model.clips[clip.name]) continue;
+            model.clips[clip.name] = withCycleSpeed({...clip, row: ownRows + clip.row}, model.entryVersion);
+            names.push(clip.name);
+        }
+        if (!names.length) return false;
+        // (The same texture object, grown: the materials keep their uniform; its GPU copy is made again at its new size.)
+        model.texture.dispose();
+        model.texture.image = {data, width: model.bones * 3, height: ownRows + binRows} as unknown as typeof model.texture.image;
+        model.texture.needsUpdate = true;
+        model.data = data;
+        model.loco?.setBakedData(data);
+        model.powerClips = names;
+        model.bytes += bin.byteLength;
+        this.heldBytes += bin.byteLength;
+        return true;
     }
 
     dispose() {

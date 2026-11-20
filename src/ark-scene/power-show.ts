@@ -42,6 +42,7 @@ import {arkPowerOf, arkPowerStrength, type ArkPower, type ArkPowerMechanism} fro
 import {arkSeenStates} from "@/ark-scene/seen/hooks";
 import {speciesRecipes, type Flock} from "@/ark-scene/behaviour-recipes";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
+import type {ArkPowerClipRigs, ArkPowerClips} from "@/ark-scene/power-clips";
 import {arkPowerAct, arkPowerActsVersion, boundArkPowerAct, registerArkPowerAct, type ArkPowerActInput, type ArkPowerActOut} from "@/ark-scene/power-acts";
 import type {ArkAnimal, ArkSnapshot, ArkThrive} from "@/ark-scene/types";
 
@@ -81,6 +82,8 @@ export type ArkPowerFrame = {
     state: string | null;
     /** An ambient flock its act draws round it (the recipes' cluster or swarm), or null. */
     flock: Flock | null;
+    /** Its species' Blender Power clip playing on its rig now (`power-clips.ts`), or null: the coded act. */
+    clip: string | null;
 };
 
 /** One drawn animal, as the scene's candidate list has it (only what is read here). */
@@ -96,8 +99,11 @@ export type ArkPowerCandidate = {
         visitor?: unknown;
         power?: ArkPowerFrame | null;
         powerKind?: ArkPower | false;
+        /** Its rig's state when it is drawn on its rig (the weight it is drawn with). */
+        rig?: {weight: number} | null;
     };
     distance: number;
+    visible?: boolean;
     pose: {x: number; z: number; base: number; yaw: number; pitch: number; roll: number; afloat: boolean};
     modelHeight: number;
     model?: {behaviour?: {plan?: string} | null} | null;
@@ -116,7 +122,7 @@ export type ArkPowerShow = {
     snapshot: (snapshot: ArkSnapshot) => void;
     step: (list: readonly ArkPowerCandidate[], dt: number, world: ArkPowerWorld) => void;
     /** The animals showing a Power now (the harness and the tests). */
-    report: () => {showing: number; passing: number; hunters: number; pass: [string, string] | null};
+    report: () => {showing: number; passing: number; hunters: number; pass: [string, string] | null; clips: string[]};
     dispose: () => void;
 };
 
@@ -227,7 +233,7 @@ export function passPhase(t: number): [number, number] {
  */
 const demo = () => Boolean((globalThis as {__arkPowerDemo?: boolean}).__arkPowerDemo);
 
-const frameOf = (): ArkPowerFrame => ({mechanism: null, react: 0, q: 0, look: null, pack: 0, still: 0, drop: 0, head: null, threat: 0, check: 0, fromX: 0, fromZ: 0, act: null, since: -1, state: null, flock: null});
+const frameOf = (): ArkPowerFrame => ({mechanism: null, react: 0, q: 0, look: null, pack: 0, still: 0, drop: 0, head: null, threat: 0, check: 0, fromX: 0, fromZ: 0, act: null, since: -1, state: null, flock: null, clip: null});
 
 // MARK: Acts (`power-acts.ts`)
 
@@ -309,7 +315,24 @@ export function powerActName(slug: string, mechanism: ArkPowerMechanism): string
 
 type Hunter = {id: string; target: string | null; since: number | null};
 
-export function createArkPowerShow(): ArkPowerShow {
+/** Within this of the camera (m), a visible animal showing its Power plays its species' Blender clip (its rig is near). */
+export const CLIP_NEAR = 30;
+
+export function createArkPowerShow(rigs?: ArkPowerClipRigs | null): ArkPowerShow {
+    // (The Blender clips: their list and bins loaded only when an animal near the camera first shows its Power.)
+    let clips: ArkPowerClips | null = null;
+    let clipsLoading = false;
+    const clipOf = (slug: string, t: number): string | null => {
+        if (!rigs?.base) return null;
+        if (clips) return clips.clipFor(slug, t);
+        if (!clipsLoading) {
+            clipsLoading = true;
+            void import("@/ark-scene/power-clips").then((m) => {
+                clips = m.createArkPowerClips(rigs);
+            });
+        }
+        return null;
+    };
     let hunters = new Map<string, Hunter>();
     const frames = new Map<string, ArkPowerFrame>();
     // (A hunter's or an alerted neighbour's look, for one with no Power of its own showing: kept, not made each frame.)
@@ -324,6 +347,7 @@ export function createArkPowerShow(): ArkPowerShow {
     };
     let showing = 0;
     let passing = 0;
+    const clipping: string[] = [];
     let lastPass: [string, string] | null = null;
     let nearby: NearbyAnimal[] | null = null;
     let nearbyAt = -1;
@@ -354,6 +378,7 @@ export function createArkPowerShow(): ArkPowerShow {
             const now = world.now;
             showing = 0;
             passing = 0;
+            clipping.length = 0;
             const ids = new Map<string, ArkPowerCandidate>();
             for (const c of list) ids.set(c.entry.animal.id, c);
             // 1. Each animal with a Power above ordinary: is anything that could eat it beside it?
@@ -469,6 +494,7 @@ export function createArkPowerShow(): ArkPowerShow {
                 f.drop = 0;
                 f.head = null;
                 f.state = null;
+                f.clip = null;
                 if (f.react > 0.02 || f.q > 0) showing++;
                 if (f.react <= 0.02) f.since = -1;
                 else if (f.since < 0) f.since = now;
@@ -489,6 +515,18 @@ export function createArkPowerShow(): ArkPowerShow {
                 const awayYaw = Math.atan2(awayX, awayZ);
                 // Its own act first (`power-acts.ts`: a lane's, its sourced defence move, a catalogue recipe played on
                 // demand): it plays in place of the generic pose.
+                // Its species' Blender Power clip first, on its rig, when it is near and in view (loaded for it alone).
+                const clip = c.visible && c.distance < CLIP_NEAR ? clipOf(e.animal.model_slug, now - Math.max(f.since, 0)) : null;
+                // (Played only while it is drawn on its rig; until then, and as it fades in, the coded act.)
+                if (clip && (e.rig?.weight ?? 0) > 0.5) {
+                    f.clip = clip;
+                    f.act = `clip:${clip}`;
+                    if (clipping.length < 16) clipping.push(`${e.animal.model_slug}:${clip}`);
+                    f.still = r;
+                    turn(f.mechanism === "vigilance" || f.mechanism === "group" ? awayYaw + Math.PI : awayYaw, r);
+                    f.flock = null;
+                    continue;
+                }
                 f.act = powerActName(e.animal.model_slug, f.mechanism);
                 const act = f.act.startsWith("generic:") ? null : arkPowerAct(f.act);
                 const out = act ? act({slug: e.animal.model_slug, mechanism: f.mechanism, amount: r, t: now - Math.max(f.since, 0), plan: c.model?.behaviour?.plan ?? null, length: len, height: c.modelHeight}) : null;
@@ -627,8 +665,10 @@ export function createArkPowerShow(): ArkPowerShow {
             if (frames.size > seen.size + 64) for (const id of Array.from(frames.keys())) if (!seen.has(id)) frames.delete(id);
             if (aux.size > 256) aux.clear();
         },
-        report: () => ({showing, passing, hunters: hunters.size, pass: lastPass}),
+        report: () => ({showing, passing, hunters: hunters.size, pass: lastPass, clips: clipping.slice()}),
         dispose: () => {
+            clips?.dispose();
+            clips = null;
             frames.clear();
             aux.clear();
             hunters.clear();

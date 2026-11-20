@@ -97,7 +97,7 @@ import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {skipEmptyDraws} from "@/ark-scene/runtime/empty-draws";
 import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
-import {climbClipName, rigBasesFrom} from "@/ark-scene/rig-clips";
+import {climbClipName, rigBasesFrom, rigSetVersion} from "@/ark-scene/rig-clips";
 import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
@@ -2992,7 +2992,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             void import("@/ark-scene/power-show")
                 .then((m) => {
                     if (disposed) return;
-                    powerShow = m.createArkPowerShow();
+                    // (The Blender Power clips ride on the v3 rigs: `power-clips.ts`, loaded only when one is wanted.)
+                    powerShow = m.createArkPowerShow({
+                        base: rigBasesFrom(options.modelBase, options.rigBase).find((base) => rigSetVersion(base) === 3) ?? null,
+                        loaded: (slug) => {
+                            const rig = rigs.get(slug);
+                            return rig ? {set: rig.set, version: rig.version, bones: rig.bones, has: (name: string) => Boolean(rig.clips[name])} : null;
+                        },
+                        request: (slug) => rigs.request(slug, true),
+                        flight: (slug) => Boolean(rigs.get(slug)?.flight),
+                        add: (slug, rig, bin, clips) => rigs.addPowerClips(slug, rig, bin, clips)
+                    });
                     if (current) powerShow.snapshot(current);
                 })
                 .catch(() => {
@@ -4966,6 +4976,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             want = any.name;
             mode = "sync";
             sync = 0;
+        }
+        // Powers you can see: its species' Blender Power clip while its Power shows (`power-clips.ts`), over its own.
+        const powerClip = !reducedMotion && !state.flying ? entry.power?.clip ?? null : null;
+        if (powerClip && rig.clips[powerClip]) {
+            want = powerClip;
+            mode = "time";
+            rate = 1;
         }
         // Development only (the rig harness's `clips_<slug>` scene): a clip forced on one animal by id, played in time,
         // its base pose taken as the clip's own (no transitions). Never set by the site.

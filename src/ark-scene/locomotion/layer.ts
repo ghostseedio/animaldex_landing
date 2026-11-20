@@ -173,7 +173,7 @@ export class LocoLayer {
     ms = 0;
     calls = 0;
 
-    constructor(readonly rig: LocoRig, private readonly data: Uint16Array) {
+    constructor(readonly rig: LocoRig, private data: Uint16Array) {
         const n = rig.bones.length;
         this.live = createLivePose(n);
         this.order = boneOrder(rig);
@@ -190,6 +190,11 @@ export class LocoLayer {
             for (const below of rig.below[root]) winged.add(below);
         }
         this.wingBones = this.order.filter((i) => winged.has(i) && rig.bones[i].parent >= 0);
+    }
+
+    /** The baked rows grown (Power clips appended after the rig's own: `RigLibrary.addPowerClips`); the rows before are the same. */
+    setBakedData(data: Uint16Array) {
+        this.data = data;
     }
 
     /**

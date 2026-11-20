@@ -39,8 +39,14 @@ async function main() {
         byKind.set(key, [...(byKind.get(key) ?? []), a]);
     }
     const wanted = (params.get("kinds") ?? "").split(",").filter(Boolean);
+    // (`species=a,b`: those species, one animal each, whatever their mechanism: the Blender Power clips' pictures.)
+    const only = (params.get("species") ?? "").split(",").filter(Boolean);
     const picks: Array<{mechanism: ArkPowerMechanism; slug: string; prime: string; ordinary: string; name: string; group: string[]}> = [];
-    for (const mechanism of ARK_POWER_MECHANISMS) {
+    for (const slug of only) {
+        const a = animals.find((x) => x.model_slug === slug && arkPowerOf(x));
+        if (a) picks.push({mechanism: arkPowerOf(a)!.mechanism, slug, prime: a.id, ordinary: a.id, name: a.name, group: [a.id]});
+    }
+    for (const mechanism of only.length ? [] : ARK_POWER_MECHANISMS) {
         // The largest drawn kind of the mechanism with two animals aboard (it reads in a close-up), or the one asked for.
         // (One animal is enough: it is filmed twice at the same spot, prime and then ordinary. A group needs its own kind round it.)
         const options = Array.from(byKind.entries()).filter(([key, list]) => key.startsWith(`${mechanism}|`) && list.length >= (mechanism === "group" && !wanted.includes(key.split("|")[1]) ? 4 : 1));
@@ -112,10 +118,15 @@ async function main() {
             if (!keep) handle.select(null);
             run(0.3);
             (globalThis as {__arkPowerDemo?: boolean}).__arkPowerDemo = true;
-            run(settle);
+            // (In steps, the page's fetches let through between them: a Power clip's list and bin arrive as they would.)
+            for (let left = settle; left > 1e-6; left -= 0.25) {
+                run(Math.min(0.25, left));
+                await pause(40);
+            }
             await pause(50);
             run(1 / FPS);
             const image = canvas()?.toDataURL("image/jpeg", look) ?? "";
+            (api as {shotClips?: string[]}).shotClips = handle.stats().powers?.clips ?? [];
             (globalThis as {__arkPowerDemo?: boolean}).__arkPowerDemo = false;
             run(4);
             return image;

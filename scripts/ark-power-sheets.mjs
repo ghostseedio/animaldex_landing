@@ -35,6 +35,10 @@ const quality = arg("quality", "high");
 const day = Number(arg("day", "10.5"));
 const night = Number(arg("night", "22.5"));
 const kinds = arg("kinds", "");
+// `--species a,b --clips <publish dir>`: those species' Blender Power clips (lane POWERCLIPS-SHIP's local publish
+// folder, served in place of the bucket's `ark-rig/v3/power-clips.json` and bins; the live rigs as they are).
+const species = arg("species", "");
+const clipsDir = arg("clips", "");
 mkdirSync(out, {recursive: true});
 
 const site = path.join(root, ".ark-golden", "powers");
@@ -89,6 +93,14 @@ const open = async (query) => {
     const context = await browser.newContext({viewport: {width, height}, deviceScaleFactor: 1});
     const page = await context.newPage();
     page.on("pageerror", (e) => log("page error:", e.message.slice(0, 300)));
+    if (clipsDir) {
+        await page.route(/\/ark-rig\/v3\/(power-clips\.json|[^/]+\/[0-9a-f]{12}\.power\.bin)(\?.*)?$/, (route) => {
+            const rel = new URL(route.request().url()).pathname.replace(/^.*\/ark-rig\/v3\//, "");
+            const file = path.join(clipsDir, "talking-models", "ark-rig", "v3", rel);
+            if (!existsSync(file)) return route.fulfill({status: 404, body: ""});
+            return route.fulfill({status: 200, contentType: rel.endsWith(".json") ? "application/json" : "application/octet-stream", body: readFileSync(file)});
+        });
+    }
     await page.goto(`${base}?quality=${quality}${query}`, {waitUntil: "domcontentloaded", timeout: 180000});
     await page.waitForFunction(() => window.__ps?.ready || window.__psError, null, {timeout: 600000, polling: 500});
     const failed = await page.evaluate(() => window.__psError ?? null);
@@ -97,7 +109,7 @@ const open = async (query) => {
 };
 const summary = {picks: [], pass: null};
 if (!process.argv.includes("--pass-only")) {
-    const {page, context} = await open(kinds ? `&kinds=${kinds}` : "");
+    const {page, context} = await open(species ? `&species=${species}` : kinds ? `&kinds=${kinds}` : "");
     const picks = await page.evaluate(() => window.__ps.picks);
     log("picks:", picks.map((p) => `${p.mechanism}:${p.slug}`).join(" "));
     const tiles = [];
@@ -106,7 +118,8 @@ if (!process.argv.includes("--pass-only")) {
         for (const [hours, when] of [[day, "day"], [night, "night"]]) {
             for (const band of ["prime", "ordinary"]) {
                 const file = path.join(out, `${pick.mechanism}-${pick.slug}-${band}-${when}.jpg`);
-                const ok = save(file, await page.evaluate(([ids, h, b, k]) => window.__ps.shoot(ids, h, b, k), [pick.group, hours, band, pick.mechanism !== "speed" && pick.mechanism !== "group"]));
+                const ok = save(file, await page.evaluate(([ids, h, b, k]) => window.__ps.shoot(ids, h, b, k), [pick.group, hours, band, Boolean(species) || (pick.mechanism !== "speed" && pick.mechanism !== "group")]));
+                if (species) log(pick.slug, when, band, "clips:", JSON.stringify(await page.evaluate(() => window.__ps.shotClips ?? [])));
                 if (ok) row.push(file);
             }
         }
@@ -124,7 +137,7 @@ if (!process.argv.includes("--pass-only")) {
     }
     await context.close();
 }
-{
+if (!species) {
     const {page, context} = await open("&allprime=1");
     for (const [hours, when] of [[day, "day"], [night, "night"]]) {
         const result = await page.evaluate((h) => window.__ps.pass(h), hours);
