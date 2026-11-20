@@ -133,7 +133,7 @@ export function townReachFile(atlas: ReachAtlasLike, cell = 1): TownReachFile {
         niches,
         zoneNiche,
         wetland,
-        seaZones: [...SEA_ZONES].sort(),
+        seaZones: Array.from(SEA_ZONES).sort(),
         kinds
     };
 
