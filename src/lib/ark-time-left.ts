@@ -59,6 +59,7 @@ import {
     ADULT_AGE,
     ARK_DAYS_PER_REAL_DAY,
     HUMAN_GROWN_DAYS,
+    HUMAN_LIFE_FACTOR,
     HUMAN_SPECIES_IDS,
     HUNT_SUCCESS,
     LIFESPAN_HI_OVER_LO,
@@ -316,6 +317,7 @@ type AgeFactor = {pess: Curve; opt: Curve; mid: Curve; reason: ArkTimeLeftReason
 function ageFactor(animal: ArkTimeLeftAnimal, arkDay: number | null): AgeFactor | null {
     const parts = ageParts(animal, arkDay);
     if (!parts || parts.low === null || parts.highMid === null) return null;
+    if (arkIsHuman(animal)) return humanAgeFactor(animal, parts);
     const {low, published, highMid, ageDays: age, sinceBornDays: sinceBorn} = parts;
     const curve = (high: number): Curve => {
         const x = Math.max(low - age, 0);
@@ -335,6 +337,44 @@ function ageFactor(animal: ArkTimeLeftAnimal, arkDay: number | null): AgeFactor 
         ageDays: age,
         sinceBornDays: sinceBorn,
         assumed
+    };
+}
+
+/**
+ * A human (decision 442; the read sends its Prime lifespan only while `human_old_age` is on): its condition band's share f
+ * of the life (`HUMAN_LIFE_FACTOR`; the read's `thrive`, Ordinary without it). One born aboard dies at S x f, S uniform over
+ * the Prime range: the usual curve over [lo x f, hi x f]. An arrival came at an unknown point of its adult life, so what it
+ * had left on arrival is uniform between 0 and (S - 18 years) x f; given the days it has already lived aboard, the curve is
+ * that spread's survival, conditioned on having lived them. One curve (no harsher or kinder bound: the rule is the rule).
+ */
+function humanAgeFactor(animal: ArkTimeLeftAnimal, parts: AgeParts): AgeFactor {
+    const f = HUMAN_LIFE_FACTOR[animal.thrive ?? "ordinary"] ?? HUMAN_LIFE_FACTOR.ordinary;
+    const lo = parts.low!;
+    const hi = parts.published ?? lo;
+    let curve: Curve;
+    if (animal.origin !== "arrived") {
+        const x = Math.max(lo * f - parts.ageDays, 0);
+        const y = Math.max(hi * f - parts.ageDays, x + MIN_SPAN_DAYS);
+        curve = (t) => (t < x ? 1 : t >= y ? 0 : (y - t) / (y - x));
+    } else {
+        // P(left on arrival > r), averaged over S: E_S[max(0, 1 - r / ((S - grown) x f))].
+        const N = 64;
+        const spans = Array.from({length: N}, (_, i) => Math.max((lo + ((i + 0.5) / N) * (hi - lo) - HUMAN_GROWN_DAYS) * f, MIN_SPAN_DAYS));
+        const over = (r: number) => spans.reduce((sum, span) => sum + Math.max(0, 1 - r / span), 0) / N;
+        const lived = parts.sinceBornDays;
+        const base = Math.max(over(lived), 1e-9);
+        curve = (t) => over(lived + t) / base;
+    }
+    return {
+        pess: curve,
+        opt: curve,
+        mid: curve,
+        reason: {kind: "age", lifespanLowDays: lo * f, lifespanHighDays: hi * f, estimate: true},
+        lowDays: lo * f,
+        highDays: hi * f,
+        ageDays: parts.ageDays,
+        sinceBornDays: parts.sinceBornDays,
+        assumed: true
     };
 }
 

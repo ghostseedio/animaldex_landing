@@ -90,3 +90,11 @@ export const HUMAN_SPECIES_IDS: readonly string[] = ["2fabfa9a-6ec9-4d71-8cf2-19
  * grown on arrival. This is a human's `adultAgeDays` here, not the engine's default year for a kind with no stored lifespan.
  */
 export const HUMAN_GROWN_DAYS = 18 * 365;
+
+/**
+ * Human old age (AnimalDex decision 442, `_shared/ark-ecology/human-life.ts` DEFAULT_HUMAN_OLD_AGE; while the server's
+ * `human_old_age` is on its read sends a human's Prime lifespan as `lifespan_days` / `lifespan_days_hi`): the share of the
+ * remaining life each condition band lives, and an arrival's age, an unknown point of its adult life (the engine draws it
+ * by the animal's id; the web never reads or guesses that draw, it uses the rule's own spread).
+ */
+export const HUMAN_LIFE_FACTOR = {prime: 1, good: 0.95, ordinary: 0.85} as const;

@@ -73,6 +73,8 @@ export type ArkLiveItem = {
     hearts?: number | null;
     /** A return from old age: a young adult again. */
     young?: boolean;
+    /** A human's old-age death (decision 442): said gently, "died peacefully of old age". */
+    peaceful?: boolean;
     /** A meal that ends a hunt seen setting out (`src/ark-scene/live/hunt-outcome.ts`): said as "caught". */
     hunted?: boolean;
     /** A kind's dormant season beginning or ending (`src/ark-scene/live/dormancy-lines.ts`): said with its own words. */
@@ -151,7 +153,7 @@ export function arkLiveServerItems(events: readonly ArkEvent[]): ArkLiveItem[] {
                 if (!animal) break;
                 // One it recovers from is its own line (never folded into "3 died of old age"), with its hearts left.
                 const hearts = event.lives && !event.lives.final ? event.lives.heartsLeft : undefined;
-                items.push({id: event.id, kind: event.kind === "starved" ? "starved" : "death", source: "server", key: `${event.kind}:${speciesOf(animal)}${hearts !== undefined ? `:h${animal.id}` : ""}`, animal: animal.name, other: null, count: 1, eggs: null, ...(hearts !== undefined ? {hearts} : {}), focus: {...focusOn(animal), animalId: null}});
+                items.push({id: event.id, kind: event.kind === "starved" ? "starved" : "death", source: "server", key: `${event.kind}:${speciesOf(animal)}${hearts !== undefined ? `:h${animal.id}` : ""}`, animal: animal.name, other: null, count: 1, eggs: null, ...(hearts !== undefined ? {hearts} : {}), ...(event.kind === "death_old" && animal.model_slug === "human" ? {peaceful: true} : {}), focus: {...focusOn(animal), animalId: null}});
                 break;
             }
             case "revived":
@@ -420,7 +422,7 @@ function isEnglish(locale: string): boolean {
 }
 
 /** A line as the reader reads it. `locale`: the words' language (English names take their plural). */
-export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young">>, words: ArkLiveText, locale: string): string {
+export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young" | "peaceful">>, words: ArkLiveText, locale: string): string {
     const text = arkLiveLineBase(line, words, locale);
     const hearts = line.hearts;
     if (typeof hearts !== "number" || line.kind === "revived" || (line.kind !== "meal" && line.kind !== "death" && line.kind !== "starved")) return text;
@@ -445,7 +447,7 @@ export function arkHeartsLeftText(hearts: number, words: ArkLiveText, locale: st
     return n === 0 ? live.heartsLeftNone : n === 1 ? live.heartsLeftOne : fillArkWords(live.heartsLeftOther, {n: n.toLocaleString(locale)});
 }
 
-function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young">>, words: ArkLiveText, locale: string): string {
+function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young" | "peaceful">>, words: ArkLiveText, locale: string): string {
     const live = words.live;
     const replay = words.replay;
     const many = line.count > 1;
@@ -506,6 +508,7 @@ function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "
             if (typeof line.hearts === "number" && line.other) return fillArkWords(live.eatenBy ?? ARK_LIVE_HEARTS_ENGLISH.eatenBy, {animal: line.other, aPredator: arkWithArticle(line.animal, words)});
             return times(fillArkWords(replay.meal, {predator: line.animal, aPrey: arkWithArticle(line.other ?? "", words)}));
         case "death":
+            if (line.peaceful) return many ? fillArkWords(live.deathPeacefulOther ?? "{count} {animals} died peacefully of old age", {count, animals}) : fillArkWords(replay.deathPeaceful ?? "The {animal} died peacefully of old age", {animal: line.animal});
             return many ? fillArkWords(live.deathOther, {count, animals}) : fillArkWords(replay.death, {animal: line.animal});
         case "starved":
             return times(fillArkWords(replay.starved, {animal: line.animal}));

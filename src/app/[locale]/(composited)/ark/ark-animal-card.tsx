@@ -380,7 +380,7 @@ function ArkLifeStory({animal, life, state, facts, words, locale, rest = null}: 
     // Right now: how it rests (the sleep lane: "Asleep in its den"), then its hunger and age ("Asleep in its den · Well-fed").
     const now = [rest, facts.condition ? w[facts.condition] : null].filter((part): part is string => Boolean(part));
     if (now.length) rows.push([w.now, now.join(" · ")]);
-    if (life?.died) rows.push([w.ended, life.died.kind === "starved" ? w.starved : life.died.kind === "eaten" ? w.endedEaten : w.endedOld]);
+    if (life?.died) rows.push([w.ended, life.died.kind === "starved" ? w.starved : life.died.kind === "eaten" ? w.endedEaten : animal.model_slug === "human" ? w.endedOldPeaceful ?? "Died peacefully of old age" : w.endedOld]);
     // A young one whose breeding the server estimated (its record gives none, or only part): said so.
     if (life?.origin.kind === "born" && (life.origin.breeding_source === "estimate" || life.origin.breeding_source === "partial")) {
         rows.push([w.breeding, life.origin.breeding_source === "estimate" ? w.breedingEstimated : w.breedingPartial]);
