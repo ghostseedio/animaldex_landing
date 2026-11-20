@@ -168,7 +168,7 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 relationsAt = Infinity;
                 const kinds = new Map<string, string[]>();
                 for (const animal of snapshot.animals) kinds.set(animal.model_slug, [...(kinds.get(animal.model_slug) ?? []), animal.id]);
-                const most = [...kinds.values()].sort((x, y) => y.length - x.length)[0] ?? [];
+                const most: string[] = Array.from(kinds.values()).sort((x, y) => y.length - x.length)[0] ?? [];
                 relationSelected = most.find((id) => handle.locate(id)) ?? null;
                 if (relationSelected) {
                     handle.select(relationSelected);

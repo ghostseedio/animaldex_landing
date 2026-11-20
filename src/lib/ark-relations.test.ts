@@ -87,7 +87,7 @@ test("breeding place: the engine's islands.ts placeOf (zoo enclosure, town area,
 });
 
 test("relations: the nearest few are drawn, the rest counted", () => {
-    const list = {all: Array.from({length: 7}, (_, i) => ({id: `a${i}`, name: "A", slug: "a", distance: i}))};
+    const list = {all: Array.from({length: 7}, (_, i) => ({id: `a${i}`, kind: "k", name: "A", slug: "a", distance: i}))};
     const {shown, more} = arkRelationShown(list);
     assert.deepEqual([shown.length, more], [4, 3]);
 });
