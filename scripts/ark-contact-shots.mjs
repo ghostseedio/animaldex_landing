@@ -436,6 +436,49 @@ const closeUp = async (name, id, toggle) => {
     const brief = (r) => r && {first: r.under?.hits?.[0] ?? null, drawnGround: r.under?.drawnGround ?? null, tips: (r.tips?.tips ?? []).map((t) => t.gap).filter((g) => g !== null).slice(0, 8)};
     console.log("closeup", name, JSON.stringify({before: brief(out.before), after: brief(out.after)}));
 };
+// Round 4e: an eave bird framed by hand from above and outside its house (the planned eave before, the drawn eave after),
+// and the shield stink bug on the town island in the page's close-up.
+if (want("r4e")) {
+    await crossTo("town");
+    let birds = [];
+    for (const h of [11, 15, 8]) {
+        await page.evaluate((h) => window.__arkScene.setHours(h), h);
+        await wait(4000);
+        birds = await page.evaluate(() => {
+            const out = [];
+            for (const e of window.__arkDebug.entries()) {
+                const p = e.sched?.pose;
+                if (!p || p.moving || p.aloft || e.length > 0.7 || e.length < 0.08 || /bat|moth|hornet|wasp|bee|fly|beetle|spider/.test(e.animal.model_slug)) continue;
+                const eave = window.__arkDebug.eaveAt?.(p.x, p.y, p.z);
+                if (eave) out.push({id: e.animal.id, slug: e.animal.model_slug, spot: {x: p.x, y: p.y, z: p.z}, eave});
+            }
+            return out;
+        });
+        console.log("r4e eave birds", h, JSON.stringify(birds.map((b) => b.slug)));
+        if (birds.length) break;
+    }
+    for (const b of birds.slice(0, 3)) {
+        for (const off of [true, false]) {
+            await page.evaluate((off) => (window.__arkEaveFixOff = off), off);
+            const at = off ? b.spot : b.eave;
+            // (From above and outside: the view looks down on the eave from 3 m, steeply, so the camera is over the roof's edge.)
+            await page.evaluate((at) => window.__arkScene.setView({target: {x: at.x, y: at.y, z: at.z}, distance: 3, polar: 0.75, azimuth: Math.atan2(at.x, at.z)}), at);
+            await wait(3500);
+            const drawn = await page.evaluate((id) => window.__arkDebug.entries().find((e) => e.animal.id === id)?.drawn ?? null, b.id);
+            console.log("r4e eave", b.slug, off ? "before" : "after", JSON.stringify({drawn: drawn && {x: drawn.x, y: drawn.y, z: drawn.z}, spot: b.spot, eave: b.eave}));
+            await shot(`eave-${b.slug}-${off ? "before" : "after"}`);
+        }
+    }
+    await page.evaluate(() => (window.__arkEaveFixOff = false));
+    let bugs = [];
+    for (let k = 0; k < 4 && !bugs.length; k++) {
+        bugs = await find("shield-stink-bug");
+        if (!bugs.length) await wait(4000);
+    }
+    console.log("r4e bugs", bugs.length, JSON.stringify(bugs.map((b) => b.micro)));
+    for (const bug of bugs.slice(0, 2)) await closeUp(`r4e-shield-stink-bug-${bug.micro ?? "ground"}`, bug.id, "__arkRockFixOff");
+}
+
 if (want("closeups")) {
     await crossTo("town");
     await page.evaluate(() => window.__arkScene.setHours(11));
