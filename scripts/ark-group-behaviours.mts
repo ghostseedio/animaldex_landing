@@ -22,11 +22,11 @@ type Row = {slug: string; name: string; field: string; quote: string; line: stri
 const data = JSON.parse(fs.readFileSync(path.join(root, "data/ark/group-behaviours.json"), "utf8")) as {lives: string[]; recipes: Record<string, string[]>; rows: Row[]};
 const profiles = new Set((JSON.parse(fs.readFileSync(path.join(root, "data/ark/behaviour-profiles.json"), "utf8")) as {profiles: Array<{slug: string}>}).profiles.map((p) => p.slug));
 const TEMPLATES = new Set(["allogroom", "v_formation", "bat_emergence", "mixed_follow", "swarm", "swarm_dusk", "cluster"]);
-const ACTS = new Set(["huddle", "sentinel", "gather", "lick", "chorus", "feast", "basking", "commute", "pairs", "roost"]);
+const ACTS = new Set(["huddle", "sentinel", "gather", "lick", "chorus", "feast", "basking", "commute", "pairs", "tight", "roost"]);
 /** The recipe each act plays (those that play one: the schedule's trip carries it, the log says its sentence). */
 const PLAYS: Record<string, string> = {huddle: "huddle", sentinel: "sentinel_post", gather: "dusk_gather", lick: "lick_gather", chorus: "chorus", feast: "tree_feast", basking: "bask_pile"};
 /** The order the engine tries a species' acts in (the specific before the general). */
-const ORDER = ["sentinel", "lick", "chorus", "feast", "basking", "huddle", "gather", "commute", "pairs", "roost"];
+const ORDER = ["sentinel", "lick", "chorus", "feast", "basking", "huddle", "gather", "commute", "pairs", "tight", "roost"];
 
 const problems: string[] = [];
 const species: Record<string, Set<string>> = {};

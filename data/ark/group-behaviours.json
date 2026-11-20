@@ -1196,9 +1196,11 @@
    "effort": "S",
    "uses": "group:tight_flock",
    "aboard": 6,
-   "acts": [],
-   "status": "held",
-   "why": "needs a new rig clip, a formation or a record the scene does not have yet"
+   "acts": [
+    "tight"
+   ],
+   "status": "partial",
+   "why": "its flock flies closer round its leader; the screeching in flight and the silence on landing are not drawn"
   },
   {
    "slug": "welcome-swallow",
@@ -1954,9 +1956,11 @@
    "effort": "S",
    "uses": "group:tight_flock",
    "aboard": 3,
-   "acts": [],
-   "status": "held",
-   "why": "needs a new rig clip, a formation or a record the scene does not have yet"
+   "acts": [
+    "tight"
+   ],
+   "status": "partial",
+   "why": "its flock flies closer round its leader; the screeching in flight and the silence on landing are not drawn"
   },
   {
    "slug": "ring-tailed-lemur",

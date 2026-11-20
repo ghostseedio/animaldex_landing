@@ -50,7 +50,7 @@ import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
 // p3 (shake): shaking off the water at the edge.
 import {shakeTotal, waterShakeOf} from "@/ark-scene/water-shake";
-import {commuteCentre, groupIntent, pairSide} from "@/ark-scene/behaviour-group";
+import {commuteCentre, flockTightness, groupIntent, pairSide} from "@/ark-scene/behaviour-group";
 import {coatOf, drawnRecipe, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, pairMeetings, recipeRoostTags, sexLook, sitterIntent, type DrawnRecipe, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
@@ -1857,7 +1857,7 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
     const pair = pairSide(group.profile.slug, group.rank);
     const pairRandom = pair ? rng(hashString(`${group.leader.id}#pair#${pair.pair}#${Math.floor(start / 1200)}`)) : null;
     const dy = ((pairRandom ? pairRandom() : random()) - 0.5) * Math.max(animal.length, 0.3) * (aquatic(group.profile) ? 2.4 : 1.6);
-    const spread = Math.max(animal.length, 0.3) * (1 + 0.35 * Math.sqrt(group.rank));
+    const spread = Math.max(animal.length, 0.3) * (1 + 0.35 * Math.sqrt(group.rank)) * flockTightness(group.profile.slug);
     // (On the ground, a place by its leader it can stand at the slot's end: else it slid to the nearest open cell over
     // the slot's last seconds, sideways or backwards, the default view's sparrow. A few seeded tries, then that.)
     // (On its own bearing from its leader, as a herd member's own side (`memberSide`), each slot a little off it, wider

@@ -23,6 +23,7 @@
  *   basking   in a day window the group basks stacked on one log or rock by the water: sliders;
  *   commute   a flock's day is at a feeding patch some way from its roost (it flies out after dawn, back at dusk by its
  *             own roost trip): budgerigars, lovebirds, pigeons, macaws, geese;
+ *   tight     in flight the whole flock keeps close (half the usual spread round its leader): lorikeets, conures;
  *   pairs     in flight each pair of a flock flies wing to wing (`pairSide`, used by the schedule's flock shadow);
  *   roost:X   how the group sleeps together (huddle, pile, row, cluster), read by `sleep.ts` when the species' own
  *             sleep text says nothing of it.
@@ -38,7 +39,7 @@ import type {ScheduleAnimal, ScheduleWorld, Spot, TripMode} from "@/ark-scene/be
 import type {ScheduleKit} from "@/ark-scene/behaviour-recipes";
 import type {AttachTag} from "@/ark-scene/world-sampler";
 
-export type GroupActId = "huddle" | "sentinel" | "gather" | "lick" | "chorus" | "feast" | "basking" | "commute" | "pairs" | "roost";
+export type GroupActId = "huddle" | "sentinel" | "gather" | "lick" | "chorus" | "feast" | "basking" | "commute" | "pairs" | "tight" | "roost";
 export type GroupAct = {id: GroupActId; arg: string | null};
 export type RoostSocial = "huddle" | "pile" | "row" | "cluster";
 
@@ -46,7 +47,7 @@ const DATA = table as unknown as {lives: string[]; species: Record<string, strin
 const LIVES = new Set(DATA.lives);
 const parsed = new Map<string, readonly GroupAct[]>();
 const NONE: readonly GroupAct[] = Object.freeze([]);
-const KNOWN = new Set<string>(["huddle", "sentinel", "gather", "lick", "chorus", "feast", "basking", "commute", "pairs", "roost"]);
+const KNOWN = new Set<string>(["huddle", "sentinel", "gather", "lick", "chorus", "feast", "basking", "commute", "pairs", "tight", "roost"]);
 
 /** A species' group acts (`huddle`, `sentinel:3`, `roost:row` …), in the order they are tried. */
 export function groupActsOf(slug: string): readonly GroupAct[] {
@@ -317,4 +318,11 @@ export function commuteCentre(world: ScheduleWorld, animal: ScheduleAnimal, slug
 export function pairSide(slug: string, rank: number): {pair: number; side: -1 | 1} | null {
     if (rank < 1 || !groupActsOf(slug).some((a) => a.id === "pairs")) return null;
     return {pair: Math.floor((rank - 1) / 2), side: (rank - 1) % 2 === 0 ? -1 : 1};
+}
+
+// MARK: Tight flocks
+
+/** How wide a flock flies round its leader against the usual: half for a species whose own text has it flying in a tight flock. */
+export function flockTightness(slug: string): number {
+    return groupActsOf(slug).some((a) => a.id === "tight") ? 0.5 : 1;
 }

@@ -466,7 +466,7 @@ async function main() {
             const lines = ids.map((id, i) => {
                 const e = debug.entries().find((x) => x.animal.id === id) as unknown as {sched?: {pose?: {beat?: string; doing?: string; act?: {recipe?: string; block?: string} | null}}} | undefined;
                 const p = at[i];
-                return `${i}${i === 0 ? "L" : " "} ${(e?.sched?.pose?.act?.recipe ?? "-").padEnd(14)} ${(e?.sched?.pose?.act?.block ?? "-").padEnd(6)} ${(e?.sched?.pose?.beat ?? "-").padEnd(6)} card:${handle.animalStatus?.(id)?.activity ?? "-"} ${p ? `d=${Math.hypot(p.x - cx, p.z - cz).toFixed(1)} y=${(p.y - handle.heightAt(p.x, p.z)).toFixed(1)}` : "-"}`;
+                return `${i}${i === 0 ? "L" : " "} ${(e?.sched?.pose?.act?.recipe ?? "-").padEnd(14)} ${(e?.sched?.pose?.act?.block ?? "-").padEnd(6)} ${(e?.sched?.pose?.beat ?? "-").padEnd(6)} card:${handle.animalStatus?.(id)?.activity ?? "-"} ${p ? `d=${Math.hypot(p.x - cx, p.z - cz).toFixed(1)} y=${(p.y - handle.heightAt(p.x, p.z)).toFixed(1)} at ${p.x.toFixed(1)},${p.z.toFixed(1)}` : "-"}`;
             });
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
             return `+${s.toFixed(0)} s spread ${spread.toFixed(1)} m centre ${cx.toFixed(1)},${cz.toFixed(1)}\n${lines.concat(said).join("\n")}`;
