@@ -177,8 +177,11 @@ test("L2: flight styles: a sparrow bounds, a gull flap-glides, an eagle soars wi
     assert.ok(modes.has("flap") && modes.has("bound"), `sparrow: ${Array.from(modes).join(",")}`);
     const gull = bird("s0.9d", 0.6);
     const gm = newFlightMemory();
-    const g1 = flightRigFrame(inputFor(gull, {clock: 200, beat: "glide"}), gm);
+    // (ARK-ANIM: a glide beat glides coming down or soaring; in level cruise it flaps, the owner's crane.)
+    const g1 = flightRigFrame(inputFor(gull, {clock: 200, beat: "glide", climb: -0.05}), gm);
     assert.ok(g1.clip === "soar" || g1.clip === "glide", g1.clip);
+    const g2 = flightRigFrame(inputFor(gull, {clock: 200, beat: "glide", climb: 0}), newFlightMemory());
+    assert.equal(g2.clip, "flap");
     const eagle = bird("s0.8d", 0.85);
     const trims = new Set<number>();
     const em = newFlightMemory();

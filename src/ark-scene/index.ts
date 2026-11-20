@@ -122,6 +122,8 @@ import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize,
 import {CAMERA_RANGE, closeUpViews, fitWhole, meetDistance, type CloseView} from "@/ark-scene/runtime/camera";
 import {easeLift, tinyLift} from "@/ark-scene/tiny-lift";
 import {Sight} from "@/ark-scene/runtime/sight";
+import {flightHeading, newFlightHeading, type FlightHeadingState} from "@/ark-scene/flight-heading";
+import {newHopState, stepHop, type HopState} from "@/ark-scene/hop-gait";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
 import {ARK_GROUND_LITE, buildLandscape, GROUND_SEGMENTS} from "@/ark-scene/terrain";
 import {ArkStreamer, spansFromHeights, STATE_IN, STATE_MAP, STATE_OUT} from "@/ark-scene/streaming";
@@ -452,6 +454,9 @@ type Sched = {
 const DEN_ROOSTS: ReadonlySet<string> = new Set(["den", "burrow", "cave", "crevice"]);
 
 type Entry = {
+    /** ARK-ANIM: its heading and bank on the wing (`flight-heading.ts`), and its hops on a rig with no gait (`hop-gait.ts`). */
+    hop?: HopState;
+    flightHeading?: FlightHeadingState;
     animal: ArkAnimal;
     place: Placement;
     /** Its drawn body length (m, head to tail): from its stored length or its size stat (`stats.ts`). */
@@ -4305,14 +4310,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // on its top a while and comes down (`rock-ledge.ts`, the shared clock's).
         const ledge = trip && !at.moving && !at.aloft && !act && !reducedMotion && own.at >= trip.arrive && (entry.denIn ?? 0) <= 0.001 && Math.abs(at.y - ground) < 0.4 ? ledgeFrame(entry.animal, trip, own.at, !entry.state.asleep, {x: at.x, y: Math.max(at.y, ground), z: at.z}, heightAt) : null;
         if (ledge) return {x: ledge.x, z: ledge.z, base: ledge.y, yaw: Math.atan2(ledge.tx, ledge.tz), pitch: 0, roll: 0, afloat: false, surface: ledge};
+        // ARK-ANIM (decision 447): on the wing it faces its track (within `SLIP`) and banks by its turn, both ways; it was
+        // banked left whenever it flew and its recipe heading lagged a swallow's curves until it flew backwards.
+        const wing = flightHeading((entry.flightHeading ??= newFlightHeading()), at.x, at.z, clockNow(), at.yaw, Boolean(at.aloft));
         return {
             x: at.x,
             z: at.z,
             base: at.y,
-            yaw: at.yaw + glance,
+            yaw: (at.aloft ? wing.yaw : at.yaw) + glance,
             // A recipe's attitude on top (a plunge nose down, an up-end, a roll in the dust).
             pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actShare : 0) + (after ? after.pitch * afterShare : 0),
-            roll: (circling && !act ? -0.35 * entry.air : 0) + (act ? act.roll * actShare : 0) + (after ? after.roll * afterShare : 0),
+            roll: (circling ? wing.roll * entry.air : 0) + (act ? act.roll * actShare : 0) + (after ? after.roll * afterShare : 0),
             // (Over water: the sea's below 0, or (lane MA3 water 2) a lake's or a river's above its bed, the v2 lake at 6 m: it
             // read as dry ground there, and a swimmer out of its band was stood on the bed by its feet, a metre down.)
             afloat: at.aloft || at.y < Math.max(ground, 0) - 0.01 || ground < 0 || ground < waterTop - 0.02 || diving,
@@ -4763,6 +4771,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // gfx (PLACE): a turn on the spot on the ground steps its feet round (`turnSteps`), never a pivot with its feet still.
         if (grounded && !where.afloat && !where.water && state.last && turnYaw !== null) moved = Math.hypot(moved, turnSteps(where.yaw - turnYaw, dt, entry.length) / Math.max(modelScale, 1e-6));
         state.last = (state.last ?? new Vector3()).copy(rigHere);
+        // ARK-ANIM: hops along its way in its own pose (`hop-gait.ts`), for a rig with no clip to move by.
+        const hopAlong = () => {
+            const hop = stepHop((entry.hop ??= newHopState()), groundSpeed * dt < 3 ? groundSpeed * dt : 0, dt, entry.length);
+            const w = state.weight;
+            where.x -= Math.sin(where.yaw) * hop.back * w;
+            where.z -= Math.cos(where.yaw) * hop.back * w;
+            where.base += hop.lift * w;
+            where.pitch += hop.pitch * w;
+        };
         if (state.weight <= 0) {
             // Out of its rig: back on its feet (the near model's rest pose) for when it comes back.
             state.base = "stand";
@@ -4923,7 +4940,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             else if (moving(move)) {
                 want = move.name;
                 mode = "distance";
-            }
+            } else if (!move) hopAlong();
         } else if (place.micro && !entry.visitor) {
             const move = climber() ?? clip("walk") ?? clip("climb") ?? clip("slither") ?? clip("hop");
             if (moving(move)) {
@@ -5006,7 +5023,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // walk spun at the flight's speed.
         } else {
             // The ground clip whose own pace fits how fast it goes (a walk, a run, a hop for a hopping bird).
-            const gaits = ["walk", "trot", "run", "hop", "slither"].map((name) => clip(name)).filter((c): c is RigClipData => Boolean(c));
+            // (ARK-ANIM: a sitting hopper's `bound` too, through its `drop` onto its fore feet: 36 rigs, the rabbits, hares,
+            // wallabies and jerboas, have no other way to go and slid along on their idle.)
+            const gaits = ["walk", "trot", "run", "hop", "slither", "bound"].map((name) => clip(name)).filter((c): c is RigClipData => Boolean(c));
             const pick = paceClip(speed, gaits, state.now.name);
             if (moving(pick)) {
                 want = pick.name;
@@ -5017,6 +5036,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 want = "slither";
                 mode = "distance";
             }
+            // ARK-ANIM (decision 447): a rig with no moving clip at all (a sitting or upright rest pose: wallabies, hares,
+            // jerboas, sifakas, the siamang) hops along its way in its pose instead of sliding on its idle (`hop-gait.ts`).
+            if (!gaits.length && !clip("slither")) hopAlong();
+            else if (entry.hop) entry.hop = undefined;
         }
         // The reactive layer's action (`reactive.ts`, intelligence-review-30 section 6), on its own feet on land: a flee
         // runs (or walks, without a run) by the distance it covers, so the feet keep up at any flee speed; a sentinel
@@ -6011,7 +6034,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // terrain under it, inside the rock. The komodo basking on a boulder, 2026-11-13; the film lane's 1c4ae4ce.)
                 const grounded = !surface && !where.water && !where.afloat && entry.air <= 0.001 && !entry.place.canopy && !entry.place.micro && !entry.place.burrow && !slept && !(island && island.held(animal.id)) && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase));
                 const locoAt = perf.on ? performance.now() : 0;
-                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, actState: act2?.state ?? recipeState, actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null}, index);
+                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null}, index);
                 if (perf.on) perf.carve("locomotion", performance.now() - locoAt);
                 if (live) {
                     (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, live.code, live.code, 0, state.weight);
