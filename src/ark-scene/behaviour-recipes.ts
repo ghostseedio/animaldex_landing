@@ -2400,6 +2400,14 @@ function airStay(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: TripP
 }
 
 /** A hanging flyer (a bat: posture "hang") still at the roost point its stay took it to. */
+/**
+ * The rig harness's roost scene (ARK-ANIM round 3): a species' rest posture on a pose, as `hangsAtRoost` draws a
+ * hanger's day at its roost (its catalogue posture; a flyer by its slug's catalogue movement).
+ */
+export function roostPosture(slug: string, base: TripPose): RecipePose {
+    return postureOf({slug, profile: {move: "fly", moves: ["fly"]}} as unknown as TripOwner, base);
+}
+
 function hangsAtRoost(owner: TripOwner, trip: Trip, base: TripPose, epoch: number): boolean {
     if (!enabled || trip.to.point === null || base.moving || epoch < trip.arrive || !STAY_HANG.has(trip.doing)) return false;
     if (speciesRecipes(owner.slug).posture !== "hang") return false;

@@ -35,6 +35,7 @@ import {
     BufferAttribute,
     BufferGeometry,
     DataTexture,
+    DataUtils,
     HalfFloatType,
     Matrix3,
     Matrix4,
@@ -48,6 +49,7 @@ import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {
     FLIGHT_CLIPS,
+    QUADRUPED_LYING_HELD,
     decodeRigEntry,
     decodeRigLook,
     decodeRigSet,
@@ -69,6 +71,8 @@ import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
 import type {GaitState, GroundQuery} from "@/ark-scene/locomotion/types";
 import {locoGround} from "@/ark-scene/locomotion/ground";
 import {clipBakeOf} from "@/ark-scene/locomotion/flight";
+import {LIE_FRAMES, LIE_SECONDS, LiePose} from "@/ark-scene/locomotion/lie-pose";
+import type {LocoRig} from "@/ark-scene/locomotion/types";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -114,6 +118,8 @@ export type RigModel = {
     version?: string;
     /** Power clips appended (`addPowerClips`): their names, and the bytes they hold. */
     powerClips?: string[];
+    /** ARK-ANIM round 3: the posed lie's check (`locomotion/lie-pose.ts`), when the rig was a candidate; its clips are in `clips` when it passed. */
+    posedLie?: {ok: boolean; reason: string | null; belly: number; sink: number} | null;
 };
 
 /** Lane L2's wing chain (shoulder, forearm, hand per side, their pivots): its own type when `locomotion/flight.ts` lands. */
@@ -649,6 +655,23 @@ export class RigLibrary {
         } catch (error) {
             console.warn(`[ark] loco ${slug}`, error instanceof Error ? error.message : error);
         }
+        // ARK-ANIM round 3: a four-legged rig with no lying clip of its own lies down in a pose made from its skeleton.
+        let rowsData = data;
+        let posedLie: RigModel["posedLie"] = null;
+        const posedOn = (globalThis as {__arkPosedLie?: boolean}).__arkPosedLie !== false;
+        if (loco && posedOn && entry.plan === "quadruped" && (POSED_LIE_OVER_PILOT.has(slug) || !(clips.sleep || clips.lie))) {
+            const posed = posedLieRows(loco.rig, geometry, data, boneCount);
+            posedLie = posed.check;
+            if (posed.rows) {
+                rowsData = posed.rows.data;
+                // (A pilot's own lying clips all go: its way up and onto a side start from its own lying pose, not this one.)
+                QUADRUPED_LYING_HELD.forEach((name) => delete clips[name]);
+                for (const clip of posed.rows.clips) clips[clip.name] = clip;
+                texture.image = {data: rowsData, width: boneCount * 3, height: rowsData.length / (boneCount * 12)} as unknown as typeof texture.image;
+                texture.needsUpdate = true;
+                loco.setBakedData(rowsData);
+            }
+        }
         this.models.set(slug, {
             slug,
             geometry,
@@ -657,7 +680,7 @@ export class RigLibrary {
             clips,
             facingDeg: Number(entry.facing_deg) || 0,
             bytes: buffer.byteLength,
-            data,
+            data: rowsData,
             centre,
             set: set.version,
             entryVersion: Number(entry.version) || 1,
@@ -671,7 +694,8 @@ export class RigLibrary {
             loco,
             wings: rigWingChain(extras.bones, restPivot),
             usedAt: 0,
-            version: set.index[slug]
+            version: set.index[slug],
+            posedLie
         });
         this.heldBytes += buffer.byteLength;
         this.onLoad(slug);
@@ -723,6 +747,44 @@ export class RigLibrary {
         });
         this.models.clear();
     }
+}
+
+/**
+ * The pilot rigs whose own lying clips give way to the posed lie (coordinator, ARK-ANIM round 3: "bear, grizzly, pig,
+ * dog, cat"). Every other four-legged rig takes it only when it has no lying clip (`QUADRUPED_LYING_HELD`).
+ */
+export const POSED_LIE_OVER_PILOT: ReadonlySet<string> = new Set(["domestic-dog", "domestic-cat"]);
+
+/**
+ * ARK-ANIM round 3 (decision 447): the posed lie's rows appended to a rig's bone rows (`locomotion/lie-pose.ts`): the
+ * way down (`lie_down`, eased over `LIE_SECONDS`), the way back up (`get_up`), and the pose held (`lie` and `sleep`,
+ * base lying). Null rows when the rig fails the pose's check (it keeps the scene's own posture, `sleep.ts`).
+ */
+export function posedLieRows(rig: LocoRig, geometry: BufferGeometry, data: Uint16Array, bones: number): {check: NonNullable<RigModel["posedLie"]>; rows: {data: Uint16Array; clips: RigClipData[]} | null} {
+    const position = geometry.getAttribute("position");
+    const joints = geometry.getAttribute("arkJoints");
+    const weights = geometry.getAttribute("arkWeights");
+    if (!position || !joints || !weights) return {check: {ok: false, reason: "no skin", belly: 1, sink: 0}, rows: null};
+    const lie = new LiePose(rig, {positions: position.array, joints: joints.array, weights: weights.array});
+    if (!lie.check.ok) return {check: lie.check, rows: null};
+    const per = bones * 12;
+    const own = data.length / per;
+    const down = Array.from({length: LIE_FRAMES + 1}, (_, k) => easeInOutCubic(k / LIE_FRAMES));
+    const ts = [...down, ...down.slice().reverse(), 1, 1];
+    const out = new Uint16Array(data.length + ts.length * per);
+    out.set(data, 0);
+    const row = new Float32Array(per);
+    ts.forEach((t, k) => {
+        lie.row(t, row);
+        const o = data.length + k * per;
+        for (let i = 0; i < per; i++) out[o + i] = DataUtils.toHalfFloat(row[i]);
+    });
+    const n = LIE_FRAMES + 1;
+    const clip = (name: string, at: number, rows: number, loop: boolean, seconds: number, base?: string): RigClipData => ({name, row: own + at, rows, frames: rows - 1, loop, seconds, pass: true, ...(base ? {base} : {})}) as RigClipData;
+    return {
+        check: lie.check,
+        rows: {data: out, clips: [clip("lie_down", 0, n, false, LIE_SECONDS), clip("get_up", n, n, false, LIE_SECONDS), clip("lie", 2 * n, 2, true, 4, "lying"), clip("sleep", 2 * n, 2, true, 4, "lying")]}
+    };
 }
 
 /**
