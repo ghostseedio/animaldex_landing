@@ -97,3 +97,29 @@ test("its rows: sit_down, sit_up and sleep appended after the rig's own; a quadr
     const lionRig = buildLocoRig(lion);
     assert.equal(posedSitRows(lionRig, lion, new Uint16Array(lionRig.bones.length * 12), lionRig.bones.length, DataUtils.toHalfFloat).data, null);
 });
+
+test("kept stock sleep by their pen's shelter at night, at their own place by day, close but apart", async () => {
+    const {stockAsleep, stockBed, penShelterSpot} = await import("@/ark-scene/islands/town/stock-beds");
+    assert.equal(stockAsleep("diurnal", 23), true);
+    assert.equal(stockAsleep("diurnal", 12), false);
+    assert.equal(stockAsleep("nocturnal", 12), true);
+    assert.equal(stockAsleep("nocturnal", 23), false);
+    const at = {x: 0, z: 0, w: 4, d: 3, rot: 0};
+    const plan = {buildings: [{id: "s", kind: "field_shelter", at}]} as never;
+    const pen = {x: 0, z: 8, w: 20, d: 12, rot: 0};
+    const spot = penShelterSpot(pen, plan)!;
+    assert.ok(spot && spot.z > 1.5, "the side facing the pen");
+    assert.equal(stockBed(pen, 0.9, "a", 1.4, "diurnal", 12, plan), null);
+    const a = stockBed(pen, 0.9, "a", 1.4, "diurnal", 23, plan)!;
+    const b = stockBed(pen, 0.9, "b", 1.4, "diurnal", 23, plan)!;
+    assert.ok(Math.hypot(a.x - spot.x, a.z - spot.z) < 1.4 * 3 + 1);
+    assert.ok(Math.hypot(a.x - b.x, a.z - b.z) > 0.01, "apart");
+});
+
+test("a ground-roosting bird's cover stays low (a crane never goes up a tree)", () => {
+    for (const slug of ["common-crane", "sandhill-crane"]) {
+        const p = behaviourProfile(slug);
+        if (p.roost === "tree") continue;
+        assert.ok(!sleepCover(p, 1.1).includes("branch"), slug);
+    }
+});

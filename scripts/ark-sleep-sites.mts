@@ -120,7 +120,7 @@ let night = Date.UTC(2026, 10, 12) / 1000;
 for (let t = night; t < night + 2 * 86400; t += 30) if (Math.abs(hoursAt(t) - 1.5) < 0.02) { night = t; break; }
 let noon = night;
 for (let t = night; t < night + 2 * 86400; t += 30) if (Math.abs(hoursAt(t) - 13) < 0.02) { noon = t; break; }
-type Row = {slug: string; id: string; kind: string; member: boolean; roost: string; on: string; up: number; cover: string; coverD: number; doing: string; at: string; dRoost: number};
+type Row = {slug: string; id: string; kind: string; member: boolean; roost: string; on: string; up: number; cover: string; coverD: number; doing: string; at: string; dRoost: number; r: number[]; len: number};
 const rows: Row[] = [];
 for (const s of subjects) {
     if (!s.sched) continue;
@@ -138,7 +138,7 @@ for (const s of subjects) {
     const kind = sleepSites ? sleepSites.sleepSiteKind(profile, s.length) : plan ?? "?";
     const trip = sched.tripAt(world, profile, animal, night, hoursAt, s.animal.activity);
     const at = sched.poseOnTrip(world, trip, night);
-    rows.push({slug: s.animal.model_slug, id: s.animal.id.slice(-4), kind, member: Boolean(animal.group), roost: profile.roost, on: tag, up: Math.round((r.y - ground) * 10) / 10, cover, coverD: Math.round(coverD * 10) / 10, doing: trip.doing, at: `${at.x.toFixed(0)},${at.z.toFixed(0)}`, dRoost: Math.round(Math.hypot(at.x - r.x, at.z - r.z) * 10) / 10});
+    rows.push({slug: s.animal.model_slug, id: s.animal.id.slice(-4), kind, member: Boolean(animal.group), roost: profile.roost, on: tag, up: Math.round((r.y - ground) * 10) / 10, cover, coverD: Math.round(coverD * 10) / 10, doing: trip.doing, at: `${at.x.toFixed(0)},${at.z.toFixed(0)}`, dRoost: Math.round(Math.hypot(at.x - r.x, at.z - r.z) * 10) / 10, r: [r.x, r.y, r.z], len: s.length});
 }
 const byKind = new Map<string, Row[]>();
 for (const r of rows) byKind.set(r.kind, [...(byKind.get(r.kind) ?? []), r]);

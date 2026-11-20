@@ -929,13 +929,23 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
             let bed: Spot | null = null;
             // (Lane ark-sleep: the cover of its kind first, on the ground by it (a rock's foot, under a bush, a burrow), the
             // nearest few that fit; `sleep-sites.ts`.)
-            for (const p of sleepCoverOnGround(world, profile, animal, Math.min(Math.max(homeRadius(profile, animal) * 1.5, 8), BED_REACH)).slice(0, 8)) {
-                let at = groundSpot(world, p.x, p.z);
-                if (world.nav.colliders) at = clearOfSolid(world, onLand, animal, at, true);
-                if (bedFits(at)) {
-                    // (The place it lies by, named: the same spot.)
-                    bed = {...at, point: at.x === p.x && at.z === p.z ? p.id : at.point};
-                    break;
+            // (Spread, never stacked: neighbours start at different ones of the nearest few, and each lies a seeded step of
+            // one to two and a half body lengths off the point, on its own rng so the fallbacks below draw as before.)
+            const near = sleepCoverOnGround(world, profile, animal, Math.min(Math.max(homeRadius(profile, animal) * 1.5, 8), BED_REACH)).slice(0, 8);
+            const spread = rng(hashString(`${animal.id}#cover-bed`));
+            const first = near.length ? Math.floor(spread() * Math.min(near.length, 4)) : 0;
+            const angle = spread() * Math.PI * 2;
+            const step = Math.max(animal.length, 0.2) * (1 + spread() * 1.5);
+            for (let i = 0; i < near.length && !bed; i++) {
+                const p = near[(first + i) % near.length];
+                for (const off of [step, step * 0.5, 0]) {
+                    let at = groundSpot(world, p.x + Math.cos(angle) * off, p.z + Math.sin(angle) * off);
+                    if (world.nav.colliders) at = clearOfSolid(world, onLand, animal, at, true);
+                    if (bedFits(at)) {
+                        // (The place it lies by, named.)
+                        bed = {...at, point: off === 0 && at.x === p.x && at.z === p.z ? p.id : at.point};
+                        break;
+                    }
                 }
             }
             for (let k = 0; k < 8 && !bed; k++) {
@@ -1037,7 +1047,7 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     // Nothing of its own roost in reach: the cover its kind sleeps in (lane ark-sleep, `sleep-sites.ts`: a monkey up a
     // tree, a fox by a rock or under a bush, a lizard under a log), before the open ground at its home.
     const cover = sleepCoverNear(world, profile, animal, Math.min(homeRadius(profile, animal) * 1.5, rangeCap(profile, animal)), seed);
-    if (cover) return spotOf(cover);
+    if (cover) return BESIDE_COVER.has(cover.tag) ? besideCover(world, animal, cover) : spotOf(cover);
     return {...groundSpot(world, animal.home.x, animal.home.z)};
 }
 
@@ -1049,6 +1059,21 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
 function sleepCoverNear(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, radius: number, roll: number): AttachPoint | null {
     const tags = sleepCover(profile, animal.length);
     return tags.length && radius > 0 ? placeNear(world, animal.home, animal.length, tags as AttachTag[], radius, roll) : null;
+}
+
+/** Ground cover lain beside, not on: the neighbours that pick the same bush or burrow lie round it, never stacked. */
+const BESIDE_COVER: ReadonlySet<string> = new Set(["shade", "leaf_litter", "burrow_entrance", "cave_mouth", "log_top", "rock_top"]);
+
+/** Its bed by a ground cover point: a seeded bearing and a step of one to two and a half body lengths (its own rng). */
+function besideCover(world: ScheduleWorld, animal: ScheduleAnimal, cover: AttachPoint): Spot {
+    const spread = rng(hashString(`${animal.id}#beside`));
+    const angle = spread() * Math.PI * 2;
+    const step = Math.max(animal.length, 0.2) * (1 + spread() * 1.5);
+    const x = cover.x + Math.cos(angle) * step;
+    const z = cover.z + Math.sin(angle) * step;
+    // (Not into the water: then on the point itself.)
+    if (world.sampler.heightAt(x, z) < 0 || surfaceY(world, x, z) > world.sampler.heightAt(x, z) + 0.02) return spotOf(cover);
+    return {...groundSpot(world, x, z), point: cover.id};
 }
 
 /** The cover of its kind on the ground within `radius` of its home, nearest first (a bed it can walk to: `roostOf`). */

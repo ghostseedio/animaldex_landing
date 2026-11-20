@@ -4,11 +4,15 @@
  * a tree); when that finds nothing in reach, the cover its kind sleeps in, in order, from the places the scene already
  * has (`world-sampler.ts` ATTACH_TAGS), before the open ground at its home:
  *
- * - primates: up in a tree (a limb), else a rock or a ledge (baboons sleep on cliffs);
+ * - primates: up in a tree (a limb), else a ledge (baboons sleep on cliffs);
  * - cats, dogs, bears, hyenas (hunters): a cave's mouth or a den, a rock (its foot, the kopje's), the shade under trees
  *   and bushes;
  * - small mammals: a burrow, under a bush, by a log or a rock, in the leaf litter;
- * - birds: a branch, a tree hole, a ledge, a post, a rock, the reeds, the water's edge (a wader on the bank);
+ * - birds: a branch, a tree hole, a ledge, the reeds, the water's edge (a wader on the bank); a bird whose own roost is
+ *   on the ground or the water (a crane, a duck) only the reeds, the water's edge or the leaf litter;
+ *
+ * (A single place, a post or a rock's top, holds one body: the many that picked one stacked on it, so a rock is slept by,
+ * at its foot, `behaviour-schedule.ts` besideCover.)
  * - reptiles and amphibians: a rock's face or foot, a burrow, a log, the leaf litter, the shade of a bush;
  * - grazers (herds): out in the open is right, clustered with the herd (`behaviour-schedule.ts` groups), near shade if any.
  *
@@ -43,16 +47,23 @@ export function sleepSiteKind(profile: Pick<ArkBehaviourProfile, "slug" | "move"
 
 /** The cover its kind sleeps in, best first (none: wherever it is). */
 export const SLEEP_COVER: Record<SleepSiteKind, readonly AttachTag[]> = {
-    primate: ["branch", "rock_top", "cliff_ledge"],
+    primate: ["branch", "cliff_ledge"],
     hunter: ["cave_mouth", "burrow_entrance", "rock_top", "shade"],
     small: ["burrow_entrance", "shade", "log_top", "rock_top", "leaf_litter"],
-    bird: ["branch", "tree_hollow", "cliff_ledge", "post", "rock_top", "reeds", "water_edge"],
+    bird: ["branch", "tree_hollow", "cliff_ledge", "reeds", "water_edge"],
     reptile: ["rock_face", "burrow_entrance", "log_top", "rock_top", "leaf_litter", "shade"],
     grazer: ["shade"],
     other: []
 };
 
-/** The cover tags for this animal (see `SLEEP_COVER`). */
-export function sleepCover(profile: Pick<ArkBehaviourProfile, "slug" | "move" | "moves" | "diet" | "water">, length: number): readonly AttachTag[] {
-    return SLEEP_COVER[sleepSiteKind(profile, length)];
+/** Roosts up off the ground (a bird whose own roost is none of these sleeps low: a crane on the ground or in the reeds). */
+const RAISED_ROOSTS: ReadonlySet<string> = new Set(["tree", "tree_hole", "cliff", "cave", "crevice", "leaf", "bark", "wall"]);
+/** A ground-roosting bird's cover: low only. */
+const LOW_BIRD: readonly AttachTag[] = ["reeds", "water_edge", "leaf_litter"];
+
+/** The cover tags for this animal (see `SLEEP_COVER`). A bird keeps to its own roost's level: a ground roost, low cover only. */
+export function sleepCover(profile: Pick<ArkBehaviourProfile, "slug" | "move" | "moves" | "diet" | "water"> & {roost?: string}, length: number): readonly AttachTag[] {
+    const kind = sleepSiteKind(profile, length);
+    if (kind === "bird" && profile.roost && !RAISED_ROOSTS.has(profile.roost)) return LOW_BIRD;
+    return SLEEP_COVER[kind];
 }
