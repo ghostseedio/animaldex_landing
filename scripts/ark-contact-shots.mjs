@@ -44,26 +44,25 @@ const page = await context.newPage();
 page.setDefaultTimeout(600_000);
 const errors = [];
 page.on("pageerror", (error) => errors.push(error.message));
-// The clock: from a fixed moment (2026-11-20 03:00 UTC, morning on the island), running at real speed; held still on asking.
+// The clock: from a fixed moment (2026-11-20 03:00 UTC), running at real speed. `hold` stills the world's time
+// (Date.now: the schedules, the weather) while the frames go on (performance.now keeps running: the scene's work
+// budgets are timed on it; held, they never end and the frames stop).
 await page.addInitScript(() => {
-    const realPerf = performance.now.bind(performance);
     const realDate = Date.now.bind(Date);
     const start = Date.UTC(2026, 10, 20, 3, 0, 0);
-    const perf0 = realPerf();
+    const date0 = realDate();
     let held = null;
     let offset = 0;
-    const now = () => (held !== null ? held : realPerf() - offset);
-    performance.now = now;
-    Date.now = () => start + (now() - perf0);
+    const now = () => (held !== null ? held : realDate() - offset);
+    Date.now = () => start + (now() - date0);
     window.__clock = {
         hold: () => (held = now()),
         run: () => {
             if (held === null) return;
-            offset = realPerf() - held;
+            offset = realDate() - held;
             held = null;
         }
     };
-    void realDate;
 });
 const wait = (ms) => page.waitForTimeout(ms);
 await page.goto(`${base}/ark/embed.html?snapshot=${snapshot}&hud=0&lang=en`, {waitUntil: "domcontentloaded"});
@@ -139,7 +138,9 @@ const close = async (name, slug, test, distanceOf, polar = 1.2, island = "wild")
     await shot(name);
 };
 
-await close("cat-rest", "domestic-cat", (r) => !r.moving, (r) => Math.max(r.length * 2.6, 1.0), 1.42, "town");
+// (From 2.5 m: closer, the camera's approach sends it off at a run, `reactive.ts`, the owner's hovering-cat frame.)
+await close("cat-rest", "domestic-cat", (r) => r.asleep || r.doing === "rest" || r.doing === "groom", (r) => 2.5, 1.42, "town");
+await close("cat-near", "domestic-cat", (r) => !r.asleep, (r) => 1.0, 1.42, "town");
 // The owner's hovering cat: its Power's lift (the climb Power's "up the slope's way", 45% of its height) on a cat on
 // the ground. The live cat rig has no pounce or leap clip (drink, graze, groom, idle, lie, run, scan, sit, sleep, trot,
 // walk...); the Power's lift is what raised it. Held on it here, as power-show.ts sets it.
@@ -163,13 +164,27 @@ if (want("cat-lift")) {
         await page.evaluate(() => clearInterval(window.__catLift));
     }
 }
-await close("bug-on-leaf", "seven-spot-ladybird", (r) => r.micro === "leaf", (r) => 0.07, 1.3, "town");
-await close("bug-on-leaf-2", "shield-stink-bug", (r) => r.micro === "leaf", (r) => 0.1, 1.3);
+await close("bug-on-leaf", "seven-spot-ladybird", (r) => r.micro === "leaf", (r) => 0.09, 0.95, "town");
+await close("bug-on-leaf-2", "shield-stink-bug", (r) => r.micro === "leaf", (r) => 0.12, 0.95);
 await close("grasshopper", "common-field-grasshopper", (r) => true, (r) => 0.16, 1.35);
 await close("crab-on-rock", "mangrove-crab", (r) => r.micro === "rock_face", (r) => 0.28, 1.4);
 await close("frog-on-bank", "marsh-frog", (r) => true, (r) => 0.45, 1.42);
 await close("starfish", "crown-of-thorns-starfish", (r) => true, (r) => 1.2, 1.2);
-await close("croc-asleep", "saltwater-crocodile", (r) => r.asleep || r.doing === "sleep" || r.doing === "rest", (r) => 6.5, 1.4);
+// (A crocodile asleep in daylight: the first daylight hour it is.)
+if (want("croc-asleep")) {
+    await crossTo("wild");
+    for (const hours of [11, 14, 16, 8, 18, 6.5]) {
+        await page.evaluate((hours) => window.__arkScene.setHours(hours), hours);
+        await wait(5000);
+        const rows = await find("saltwater-crocodile");
+        if (rows.some((r) => r.asleep || r.doing === "sleep" || r.doing === "rest")) {
+            report.crocHours = hours;
+            break;
+        }
+    }
+    await close("croc-asleep", "saltwater-crocodile", (r) => r.asleep || r.doing === "sleep" || r.doing === "rest", (r) => 6.5, 1.4);
+    await daylight();
+}
 await close("bird-at-water", "grey-heron", (r) => r.water && !r.aloft, (r) => 3, 1.42);
 await close("bird-at-water-2", "great-cormorant", (r) => r.water && !r.aloft, (r) => 2.4, 1.42);
 await close("bird-at-water-3", "little-egret", (r) => r.water && !r.aloft, (r) => 2, 1.42);
@@ -180,7 +195,7 @@ if (want("shadows")) {
         const rows = await find(slug);
         const row = pick(rows, (r) => !r.asleep && !r.aloft);
         if (!row) continue;
-        await frame(row.id, d, 0.95);
+        await frame(row.id, d, 0.6);
         report.subjects[`shadow-${i}`] = {...row, under: await under(row.id, null)};
         await shot(`shadow-${i}-${slug}`);
     }
@@ -200,35 +215,57 @@ if (want("giraffe")) {
         await page.evaluate(({target}) => window.__arkScene.setView({target: {x: target.x, y: target.y, z: target.z}, distance: 9, polar: 1.15, azimuth: 1.0}), {target});
         await wait(8000);
         await page.evaluate(() => window.__clock.hold());
-        await wait(600);
-        const steps = [];
+        await wait(1500);
+        // Every frame, every animal drawn near the paddock: where it is drawn and at which level.
+        await page.evaluate(({target}) => {
+            window.__zoomLog = [];
+            const step = () => {
+                const at = [];
+                for (const e of window.__arkDebug.entries()) {
+                    if (!e.drawn || !e.sched?.pose) continue;
+                    if (Math.hypot(e.drawn.x - target.x, e.drawn.z - target.z) > 60) continue;
+                    at.push([e.animal.id, e.animal.model_slug, e.level === "token" ? "token" : e.drawn.level, e.drawn.x, e.drawn.y, e.drawn.z]);
+                }
+                window.__zoomLog.push({t: performance.now(), distance: window.__arkDebug.camera.position.distanceTo(window.__arkDebug.controls.target), at});
+                window.__zoomRaf = requestAnimationFrame(step);
+            };
+            window.__zoomRaf = requestAnimationFrame(step);
+        }, {target});
         const DISTANCES = [9, 22, 30, 60, 90, 150, 250, 400, 650, 400, 250, 150, 90, 60, 30, 22, 9];
-        for (const distance of DISTANCES) {
+        for (const [i, distance] of DISTANCES.entries()) {
             await page.evaluate(({target, distance}) => window.__arkScene.setView({target: {x: target.x, y: target.y, z: target.z}, distance, polar: 1.15, azimuth: 1.0}), {target, distance});
             await wait(1800);
-            const at = await page.evaluate(() => window.__arkDebug.entries().filter((e) => e.drawn && e.sched?.pose).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, level: e.level === "token" ? "token" : e.drawn.level, x: e.drawn.x, y: e.drawn.y, z: e.drawn.z, reactive: e.reactive ? Math.hypot(e.reactive.dx, e.reactive.dz) : 0})));
-            steps.push({distance, at});
-            if ([9, 90, 650].includes(distance) && steps.filter((s) => s.distance === distance).length === 1) await shot(`giraffe-zoom-${distance}m`);
+            if ([9, 90, 650].includes(distance)) await shot(`giraffe-zoom-${distance}m-${i <= 8 ? "out" : "in"}`);
         }
+        const log = await page.evaluate(() => {
+            cancelAnimationFrame(window.__zoomRaf);
+            return window.__zoomLog;
+        });
         await page.evaluate(() => window.__clock.run());
-        // Every switch (an animal drawn at one level, then at another) and every move between consecutive steps.
+        // The world held still: any move of a drawn animal from one frame to the next is a jump (its clip plays on, but
+        // where it is drawn, its base by its level, does not move). Each, with the levels it was drawn at either side.
         const jumps = [];
         const switches = {};
-        for (let k = 1; k < steps.length; k++) {
-            for (const b of steps[k].at) {
-                const a = steps[k - 1].at.find((x) => x.id === b.id);
-                if (!a || a.level === "token" || b.level === "token") continue;
-                const d = Math.hypot(b.x - a.x, b.z - a.z);
-                const dy = b.y - a.y;
-                const key = `${a.level}>${b.level}`;
-                if (a.level !== b.level) switches[key] = (switches[key] ?? 0) + 1;
-                if (d > 0.02 || Math.abs(dy) > 0.02) jumps.push({slug: b.slug, id: b.id.slice(-6), from: steps[k - 1].distance, to: steps[k].distance, levels: key, moved: Math.round(d * 1000) / 1000, dy: Math.round(dy * 1000) / 1000, reactive: Math.round(b.reactive * 100) / 100});
+        const levelsSeen = {};
+        for (let k = 1; k < log.length; k++) {
+            const before = new Map(log[k - 1].at.map((r) => [r[0], r]));
+            for (const r of log[k].at) {
+                const a = before.get(r[0]);
+                levelsSeen[r[1]] ??= new Set();
+                levelsSeen[r[1]].add(r[2]);
+                if (!a) continue;
+                const key = `${a[2]}>${r[2]}`;
+                if (a[2] !== r[2]) switches[key] = (switches[key] ?? 0) + 1;
+                if (a[2] === "token" || r[2] === "token") continue;
+                const moved = Math.hypot(r[3] - a[3], r[5] - a[5]);
+                const dy = r[4] - a[4];
+                if (moved > 0.03 || Math.abs(dy) > 0.03) jumps.push({slug: r[1], id: r[0].slice(-6), distance: Math.round(log[k].distance), levels: key, moved: Math.round(moved * 1000) / 1000, dy: Math.round(dy * 1000) / 1000});
             }
         }
         jumps.sort((a, b) => Math.hypot(b.moved, b.dy) - Math.hypot(a.moved, a.dy));
-        const giraffeLevels = steps.map((s) => `${s.distance}:${s.at.filter((x) => x.slug === "giraffe").map((x) => x.level).join("/")}`);
-        report.zoom = {steps: steps.length, compared: steps[0].at.length, switches, jumps: jumps.length, worst: jumps.slice(0, 15), giraffeLevels};
-        console.log("zoom", JSON.stringify({switches, jumps: jumps.length, worst: jumps.slice(0, 6), giraffeLevels}));
+        const levels = Object.fromEntries(Object.entries(levelsSeen).map(([k, v]) => [k, Array.from(v).join("/")]));
+        report.zoom = {frames: log.length, switches, jumps: jumps.length, atSwitch: jumps.filter((j) => j.levels.includes(">") && j.levels.split(">")[0] !== j.levels.split(">")[1]).length, worst: jumps.slice(0, 20), levels};
+        console.log("zoom", JSON.stringify({frames: log.length, switches, jumps: jumps.length, atSwitch: report.zoom.atSwitch, worst: jumps.slice(0, 8), levels}));
     }
 }
 report.errors = errors.slice(0, 10);

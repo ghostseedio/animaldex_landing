@@ -1606,7 +1606,11 @@ function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, 
                 break;
             case "leap":
                 along = u;
-                y = from.y + (to.y - from.y) * u + Math.max(length * 0.6, 0.12 + flat * 0.3) * 4 * u * (1 - u);
+                // ARK-CONTACT (decision 447, the owner's hovering cat): a leap's height is its arc's over the ground it
+                // covers, launched no steeper than about 60° (apex ≤ 0.45 of the distance: a 45° launch's is a quarter).
+                // Its floor (60% of its length, whatever the distance) sent a pounce at a spot right under it 30 cm
+                // straight up and down, legs tucked, over its shadow: a hover.
+                y = from.y + (to.y - from.y) * u + Math.min(Math.max(length * 0.6, 0.12 + flat * 0.3), flat * 0.45) * 4 * u * (1 - u);
                 break;
             case "rise":
                 along = u;
