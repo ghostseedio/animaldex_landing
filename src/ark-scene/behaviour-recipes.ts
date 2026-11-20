@@ -1769,6 +1769,8 @@ function stayEpisode(world: ScheduleWorld, trip: Trip, owner: TripOwner, kit: Sc
             const template = TEMPLATES[id];
             if (!template || template.kind !== "stay" || template.goal !== "here") continue;
             if (!template.replaces.includes(trip.doing) || !hourOk(template, hours)) continue;
+            // (Lane SIG-OTHER: a stay where it is may be a sex's own, a male's low patrol; none of the older ones names a sex.)
+            if (template.sex && template.sex !== "any" && template.sex !== sexLook(owner.animal.id, owner.slug).sex) continue;
             if (random() >= weight * 0.6 * seasonFactor(species, template.season, trip.arrive)) continue;
             const start = trip.arrive + Math.max(1 + random() * Math.max(trip.end - trip.arrive - 40, 0), shakeOnArrival(trip, waterShakeOf(owner.slug), Math.max(owner.animal.length, 0.05)));
             episode = buildEpisode({world, kit, owner, species, template, anchor, t0: start, t1: Math.min(trip.end - 3, start + 60), seed: `${owner.animal.id}#here#${trip.slot}#${id}`, hours, yaw0: kit.basePose(world, trip, start).yaw});

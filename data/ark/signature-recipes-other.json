@@ -1,0 +1,186 @@
+{
+ "about": "Territory, patrol and display flights (lane SIG-OTHER), built by scripts/ark-signature-flights.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): each species whose own stored text states a territorial dart from a perch (sally_chase), a low patrol (patrol_low) or a steep-climb-and-glide display flight (display_flight), with the exact sentence. Applied to src/ark-scene/recipes.json by scripts/ark-signature-recipes.mts. held: rows the templates would draw wrongly, and why.",
+ "version": "signature-other-1",
+ "additions": [
+  {
+   "slug": "common-wood-pigeon",
+   "name": "Common Wood Pigeon",
+   "recipe": "display_flight",
+   "behaviour": "display flight: climbs steeply, claps wings, glides down",
+   "field": "facts",
+   "quote": "In display flight a male climbs steeply, claps its wings, then glides down.",
+   "id": "96f373a1-0287-4366-b768-457c0d5b5ebd"
+  },
+  {
+   "slug": "eurasian-collared-dove",
+   "name": "Eurasian Collared Dove",
+   "recipe": "display_flight",
+   "behaviour": "male's display flight: rises steeply then glides down on spread wings",
+   "field": "sexes",
+   "quote": "The male does most of the cooing and performs the display flight, rising steeply and gliding down on spread wings.",
+   "id": "9384ab45-04f6-4c2f-b16d-165eb62ac9e4"
+  },
+  {
+   "slug": "spotted-dove",
+   "name": "Spotted Dove",
+   "recipe": "display_flight",
+   "behaviour": "display flight: climbs steeply with wing claps, glides down in an arc with tail fanned",
+   "field": "story",
+   "quote": "A displaying male climbs steeply with loud wing claps, then glides down in a wide arc with his tail fanned.",
+   "id": "155a02f3-b759-41e8-a58e-57d2d8eb4c74"
+  },
+  {
+   "slug": "common-rose",
+   "name": "Common Rose",
+   "recipe": "patrol_low",
+   "behaviour": "males patrol a repeated beat and hill-top",
+   "field": "facts",
+   "quote": "Males patrol and hill-top; females spend more time at the host vine.",
+   "id": "517cfc87-270c-40d2-afc4-60192cd9db5c"
+  },
+  {
+   "slug": "fox-moth",
+   "name": "Fox Moth",
+   "recipe": "patrol_low",
+   "behaviour": "males fly fast and low in afternoon sunshine searching for females",
+   "field": "sleep",
+   "quote": "Males fly fast and low in afternoon sunshine searching for females, while females fly at night and come to light.",
+   "id": "9ca23245-3bbd-4f6b-83f4-69cb75ce4551"
+  },
+  {
+   "slug": "giant-scoliid-wasp",
+   "name": "Giant Scoliid Wasp",
+   "recipe": "patrol_low",
+   "behaviour": "males patrol low over the ground where females will emerge",
+   "field": "facts",
+   "quote": "Males are thought to patrol low over the ground where females are due to emerge.",
+   "id": "fe1a0205-52d5-4768-b45f-2da081ed0eed"
+  },
+  {
+   "slug": "little-wood-satyr",
+   "name": "Little Wood-Satyr",
+   "recipe": "patrol_low",
+   "behaviour": "males patrol woodland paths inspecting every brown shape",
+   "field": "story",
+   "quote": "Males spend long stretches patrolling woodland paths and edges, inspecting every brown shape that might be a female.",
+   "id": "9b5683a0-056c-4a53-931e-9406679fdd2b"
+  },
+  {
+   "slug": "brilliant-blue",
+   "name": "Brilliant Blue",
+   "recipe": "sally_chase",
+   "behaviour": "males perch low on open ground and chase passing butterflies",
+   "field": "facts",
+   "quote": "males often hold a small patch of open ground, perching low and chasing off other butterflies that pass",
+   "id": "e121ad7b-ca84-460e-b6f1-055041e85192"
+  },
+  {
+   "slug": "broad-bodied-chaser",
+   "name": "Broad-bodied Chaser",
+   "recipe": "sally_chase",
+   "behaviour": "male holds a pond-margin perch, flying out to chase rivals and returning",
+   "field": "story",
+   "quote": "A male holds a stretch of pond margin from a favoured perch, flying out to chase off rival males and coming back to the same spot.",
+   "id": "276a8ccd-d7a4-4e7b-8e71-8a8a62c82314"
+  },
+  {
+   "slug": "common-flangetail",
+   "name": "Common Flangetail",
+   "recipe": "sally_chase",
+   "behaviour": "males defend a perch and the water around it, chasing other males",
+   "field": "facts",
+   "quote": "Males defend a perch and the patch of water around it, chasing other males that fly too close.",
+   "id": "071166e6-d8de-460f-8c0b-ab264257943b"
+  },
+  {
+   "slug": "great-eggfly",
+   "name": "Great Eggfly",
+   "recipe": "sally_chase",
+   "behaviour": "males perch on a sunlit leaf and chase almost anything that passes",
+   "field": "facts",
+   "quote": "Males perch on a sunlit leaf and chase almost anything that passes.",
+   "id": "a3b95902-f97a-46c6-996c-91789d90490a"
+  },
+  {
+   "slug": "greater-bee-fly",
+   "name": "Greater Bee Fly",
+   "recipe": "sally_chase",
+   "behaviour": "males hold sunlit territories and chase anything of similar size",
+   "field": "facts",
+   "quote": "Males hold small territories in sunlit clearings and chase anything of similar size that crosses them.",
+   "id": "d111ba93-9196-4641-9265-6413c89c6165"
+  },
+  {
+   "slug": "hackberry-emperor",
+   "name": "Hackberry Emperor",
+   "recipe": "sally_chase",
+   "behaviour": "males perch on sunlit trunks in the afternoon and dart out at passers-by, returning to the same spot",
+   "field": "facts",
+   "quote": "Males perch on sunlit trunks, mainly in the afternoon, and dart out at passing butterflies, and even at people, before returning to the same spot.",
+   "id": "9b63a697-3fbc-455a-928d-e4ca7af9d028"
+  },
+  {
+   "slug": "mourning-cloak",
+   "name": "Mourning Cloak",
+   "recipe": "sally_chase",
+   "behaviour": "males hold a sunny perch in the afternoon and chase passers-by",
+   "field": "sexes",
+   "quote": "Males often hold a sunny perch in the afternoon and chase passing butterflies.",
+   "id": "fd13b5e5-cd44-45ae-a1ef-1ef51a032894"
+  },
+  {
+   "slug": "pied-paddy-skimmer",
+   "name": "Pied Paddy Skimmer",
+   "recipe": "sally_chase",
+   "behaviour": "male holds a tiny territory on a rice bund, perching low on grass stems",
+   "field": "facts",
+   "quote": "Males are territorial on a very small scale — a bund, not a pond.",
+   "id": "6864d8c0-904d-46de-9d8d-720e7b139028"
+  },
+  {
+   "slug": "red-admiral",
+   "name": "Red Admiral",
+   "recipe": "sally_chase",
+   "behaviour": "males hold sunlit afternoon perches and fly up to chase rivals",
+   "field": "facts",
+   "quote": "Males hold sunlit perches in the afternoon and fly up to chase rivals and other passing insects.",
+   "id": "37b2fa75-7c41-4f42-82a1-2a69764ae4fb"
+  },
+  {
+   "slug": "scarlet-skimmer",
+   "name": "Scarlet Skimmer",
+   "recipe": "sally_chase",
+   "behaviour": "male claims a sunny pond edge from a reed tip, chasing rivals and returning",
+   "field": "story",
+   "quote": "A male claims a sunny stretch of pond edge, perching on a reed tip and darting out to chase rival males before returning to the same spot.",
+   "id": "115fa47f-c35c-4e8c-945a-7c55d747afed"
+  },
+  {
+   "slug": "tropical-carpenter-bee",
+   "name": "Tropical Carpenter Bee",
+   "recipe": "sally_chase",
+   "behaviour": "males hover in place near flowers or nests and chase off other insects",
+   "field": "facts",
+   "quote": "males are thought to hold small territories near flowers or nest sites, hovering in place and chasing off other insects",
+   "id": "9ca321b9-39c0-4c5e-a068-560548524953"
+  },
+  {
+   "slug": "two-tailed-pasha",
+   "name": "Two-tailed Pasha",
+   "recipe": "sally_chase",
+   "behaviour": "male returns to the same high perch after each chase, spiralling up with rivals",
+   "field": "story",
+   "quote": "A male returns again and again to the same high perch after each chase, spiralling up with rivals before dropping back.",
+   "id": "9e833bf7-54b3-431a-98e1-4327684edd5e"
+  }
+ ],
+ "held": {
+  "Green June Beetle: males fly low back and forth over turf searching for females": "its body does not fly on the Ark (a crawler): a patrol on the wing would be drawn wrong",
+  "Common Buzzard: spring rollercoaster display: climbs high then plunges in steep dives": "a steep plunge needs a flight block that dives onto a point in the air; only plunges into water exist",
+  "Northern Lapwing: tumbling courtship flight: steep climbs, dives and side-to-side rolls": "rolls and tumbles are a body attitude the flight blocks do not have",
+  "Racket-tailed Roller: male's rolling, tumbling display flight": "rolls and tumbles are a body attitude the flight blocks do not have",
+  "Cocoa Tussock Moth: males fly at night to find the female": "a night patrol; the template is a day one",
+  "Damselfly: male grips the female behind the head and the pair flies in tandem": "a pair in tandem is a pair template with the male's grip: not drawn",
+  "Lesser Adjutant Stork: soars on thermals at midday between feeding areas": "soaring is already in the schedule's flight beats (glide)"
+ }
+}

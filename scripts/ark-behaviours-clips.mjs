@@ -95,6 +95,37 @@ for (const name of scenes) {
         await context.close();
         continue;
     }
+    if (["sally", "sallyb", "patrol", "display"].includes(name)) {
+        // Lane SIG-OTHER (flights): wait for a male in the recipe's act, then follow him: frames 1 s apart from a few body lengths.
+        const recipe = {sally: "sally_chase", sallyb: "sally_chase", patrol: "patrol_low", display: "display_flight"}[name];
+        const distance = Number(arg("distance", name === "display" ? "9" : "1.6"));
+        const count = Number(arg("frames", "12"));
+        const step = Number(arg("step", name === "display" ? "1.6" : "0.9"));
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const found = await page.evaluate(([recipe, limit]) => window.__behaviours.flightWatch(recipe, limit), [recipe, Number(arg("limit", "900"))]);
+        console.log(name, "found", JSON.stringify(found));
+        const labels = [];
+        if (found.id) {
+            for (let i = 0; i < count; i++) {
+                const note = await page.evaluate(async ([id, seconds, distance, azimuth, label]) => {
+                    const text = await window.__behaviours.flightFrame(id, seconds, distance, azimuth);
+                    document.getElementById("note").textContent = `${label}\n${text}`;
+                    return text;
+                }, [found.id, i === 0 ? 0.1 : step, distance, 0.7 + (i % 3) * 0.25, `${recipe} +${(i * step).toFixed(1)} s`]);
+                await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+                labels.push(`${String(i).padStart(2, "0")} +${(i * step).toFixed(1)} s: ${note}`);
+            }
+            writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+            execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", "scale=640:-1,tile=4x3:padding=4:color=black", "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        }
+        summary[name] = {errors: errors.slice(0, 10), found, shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
+        await context.close();
+        continue;
+    }
     if (DEFENCE[name]) {
         const dir = path.join(out, name);
         rmSync(dir, {recursive: true, force: true});

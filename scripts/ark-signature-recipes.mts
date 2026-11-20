@@ -19,7 +19,12 @@ const dry = process.argv.includes("--dry");
 const tablePath = path.join(root, "src/ark-scene/recipes.json");
 const table = JSON.parse(fs.readFileSync(tablePath, "utf8")) as {species: Record<string, string>};
 const full = JSON.parse(fs.readFileSync(path.join(root, "data/ark/behaviour-recipes.json"), "utf8")) as {species: Array<{slug: string; plan: string}>};
-const additions = (JSON.parse(fs.readFileSync(path.join(root, "data/ark/signature-recipes.json"), "utf8")) as {additions: Array<{slug: string; name: string; recipe: string}>}).additions;
+// (Lane SIG-OTHER's additions, `data/ark/signature-recipes-other.json`, built by `scripts/ark-signature-flights.mts`: its own file, so two lanes never edit one.)
+const otherPath = path.join(root, "data/ark/signature-recipes-other.json");
+const additions = [
+    ...(JSON.parse(fs.readFileSync(path.join(root, "data/ark/signature-recipes.json"), "utf8")) as {additions: Array<{slug: string; name: string; recipe: string}>}).additions,
+    ...(fs.existsSync(otherPath) ? (JSON.parse(fs.readFileSync(otherPath, "utf8")) as {additions: Array<{slug: string; name: string; recipe: string}>}).additions : [])
+];
 
 const planOf = new Map(full.species.map((s) => [s.slug, s.plan]));
 const recipesOf = (row: string) => row.split("|")[0].split(",").filter(Boolean).map((r) => ({id: r.slice(0, r.lastIndexOf(".")), weight: Number(r.slice(r.lastIndexOf(".") + 1))}));
@@ -36,7 +41,13 @@ for (const [slug, row] of Object.entries(table.species)) {
 }
 // A template new with a signature wave has no users yet to learn its plans and weight from: stated here.
 // (3.3 batch (D): `dip_lay`, a dragonfly laying, `data/ark/egg-dip.json`.)
-const NEW: Record<string, {plans: string[]; weight: number}> = {dip_lay: {plans: ["flying_insect"], weight: 6}};
+const NEW: Record<string, {plans: string[]; weight: number}> = {
+    dip_lay: {plans: ["flying_insect"], weight: 6},
+    // (Lane SIG-OTHER: territory and display flights.)
+    sally_chase: {plans: ["flying_insect"], weight: 5},
+    patrol_low: {plans: ["flying_insect"], weight: 4},
+    display_flight: {plans: ["walking_bird", "flying_bird"], weight: 6}
+};
 for (const [id, seed] of Object.entries(NEW)) {
     for (const plan of seed.plans) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
     if (!weights.has(id)) weights.set(id, new Map([[seed.weight, 1]]));
