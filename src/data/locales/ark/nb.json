@@ -741,6 +741,14 @@
             "mateSeeking": "Leter etter en make",
             "wounded": "Såret"
         },
+        "eggs": {
+            "eggsInNest": "Egg i reiret",
+            "hatchesIn": "Klekkes om omtrent {time}",
+            "ifAllGoesWell": "hvis alt går bra",
+            "minutes": "{n} min",
+            "hours": "{n} t",
+            "days": "{n} dager"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "En lettere Ark for denne enheten",

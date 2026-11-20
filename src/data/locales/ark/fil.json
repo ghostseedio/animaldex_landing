@@ -741,6 +741,14 @@
             "mateSeeking": "Naghahanap ng kapares",
             "wounded": "Sugatan"
         },
+        "eggs": {
+            "eggsInNest": "May itlog sa pugad",
+            "hatchesIn": "Mapipisa sa mga {time}",
+            "ifAllGoesWell": "kung magiging maayos ang lahat",
+            "minutes": "{n} min",
+            "hours": "{n} oras",
+            "days": "{n} araw"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Mas magaang Ark para sa device na ito",

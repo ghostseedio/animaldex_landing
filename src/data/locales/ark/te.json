@@ -741,6 +741,14 @@
             "mateSeeking": "తోడు కోసం వెతుకుతోంది",
             "wounded": "గాయపడింది"
         },
+        "eggs": {
+            "eggsInNest": "గూడులో గుడ్లు",
+            "hatchesIn": "సుమారు {time}లో పొదుగుతాయి",
+            "ifAllGoesWell": "అంతా సవ్యంగా జరిగితే",
+            "minutes": "{n} నిమి",
+            "hours": "{n} గం",
+            "days": "{n} రోజులు"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "ఈ పరికరం కోసం తేలికైన Ark",

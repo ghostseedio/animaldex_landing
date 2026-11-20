@@ -4953,6 +4953,14 @@
       "mateSeeking": "Looking for a mate",
       "wounded": "Wounded"
     },
+    "eggs": {
+      "eggsInNest": "Eggs in the nest",
+      "hatchesIn": "Hatches in about {time}",
+      "ifAllGoesWell": "if all goes well",
+      "minutes": "{n} min",
+      "hours": "{n} h",
+      "days": "{n} days"
+    },
     "liteView": {
       "title": "Ark Lite",
       "subtitle": "A lighter Ark for this device",

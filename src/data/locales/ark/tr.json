@@ -741,6 +741,14 @@
             "mateSeeking": "Eş arıyor",
             "wounded": "Yaralı"
         },
+        "eggs": {
+            "eggsInNest": "Yuvada yumurtalar",
+            "hatchesIn": "Yaklaşık {time} sonra çıkacak",
+            "ifAllGoesWell": "her şey yolunda giderse",
+            "minutes": "{n} dk",
+            "hours": "{n} sa",
+            "days": "{n} gün"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Bu cihaz için daha hafif bir Ark",

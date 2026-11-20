@@ -473,6 +473,11 @@ export type ArkWords = {
      * Optional: an older bundle lacks them (English is the fallback).
      */
     seen?: Partial<Record<"searching" | "stalking" | "stalkingNoTarget" | "mateSeeking" | "wounded", string>>;
+    /**
+     * ARK-MATING-SHOWN (owner 2026-11-20): a clutch on its mother's selection box: "Eggs in the nest", and under its bar
+     * "Hatches in about {time} · if all goes well" (`{time}`: `minutes`, `hours` or `days` with `{n}`). Optional: English fills.
+     */
+    eggs?: Partial<Record<"eggsInNest" | "hatchesIn" | "ifAllGoesWell" | "minutes" | "hours" | "days", string>>;
     /** "Estimated time left" on an animal at risk (`lib/ark-time-left.ts`); English fills any key a bundle lacks. */
     timeLeft?: Partial<ArkTimeLeftWords>;
     /** The two Ark ranking pages (`/tier-list/ark-survival`, `/tier-list/ark-fastest-breeders`; `lib/ark-rankings-words.ts`). Optional: an older bundle lacks them (English is the fallback). */

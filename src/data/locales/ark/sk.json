@@ -741,6 +741,14 @@
             "mateSeeking": "Hľadá partnera",
             "wounded": "Má zranenie"
         },
+        "eggs": {
+            "eggsInNest": "Vajcia v hniezde",
+            "hatchesIn": "Vyliahnu sa asi o {time}",
+            "ifAllGoesWell": "ak všetko pôjde dobre",
+            "minutes": "{n} min",
+            "hours": "{n} h",
+            "days": "{n} dní"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Ľahšia Ark pre toto zariadenie",

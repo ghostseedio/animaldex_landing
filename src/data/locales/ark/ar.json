@@ -741,6 +741,14 @@
             "mateSeeking": "بحث عن شريك",
             "wounded": "إصابة بجرح"
         },
+        "eggs": {
+            "eggsInNest": "بيض في العش",
+            "hatchesIn": "يفقس بعد نحو {time}",
+            "ifAllGoesWell": "إن سار كل شيء على ما يرام",
+            "minutes": "{n} دقيقة",
+            "hours": "{n} ساعة",
+            "days": "{n} أيام"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "نسخة أخف من Ark لهذا الجهاز",

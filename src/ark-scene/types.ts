@@ -455,6 +455,8 @@ export type ArkCastLayer = {
     marks: ReadonlySet<string>;
     /** V1: a short line under the selected animal's name (its crisis band, "Lone", a public state); null or absent: none. */
     label?: (id: string) => string | null;
+    /** ARK-MATING-SHOWN: a bar under that line (a clutch's time from its laying to its hatching) and its words; null or absent: none. */
+    progress?: (id: string) => {share: number; label: string} | null;
 };
 
 /** A replay running (`play`): skip it to jump to the Ark as it is now. */
@@ -590,7 +592,9 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * a mouthbrooder's fry at its mouth), and the hatchlings keep to their recorded mother (`young-care.ts`); 3.3 batch
      * (B): the kinds whose young leave a tree hole by jumping act it from that time (`duckling-drop.ts`).
      */
-    addHatchings?: (hatchings: Array<{key: string; parents: string[]; young: string[]; t0: number}>) => void;
+    addHatchings?: (hatchings: Array<{key: string; parents: string[]; young: string[]; t0: number; /** ARK-MATING-SHOWN: the hatching's act start (s), held as a birth's (`ark-act-hold.ts`). */ held?: number}>) => void;
+    /** ARK-MATING-SHOWN: the record's layings (`laid` rows): she lays where she is seen, the clutch stays until it hatches (`live-clutches.ts`). */
+    addLayings?: (layings: Array<{key: string; parents: string[]; eggs: number | null; t0: number; hatchAt: number}>) => void;
     /**
      * The record's escapes (`escaped` events, AnimalDex decision 373: the prey that got away, the predator, the time on
      * the shared clock, and the encounter's geometry as the server wrote it), acted out in the live world: the chase
@@ -687,6 +691,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     lifeOf?: (id: string) => {adult: boolean; sex: "male" | "female" | null} | null;
     /** Lane ark-relation-lines: the clutches drawn now (the props' nest sites with eggs in): species, place, the parent sitting it. */
     eggSites?: () => Array<{key: string; speciesId: string; x: number; y: number; z: number; sitter: string | null}>;
+    /** ARK-MATING-SHOWN: its drawn sex (the engine records none; the scene's look), or null: neither or not aboard. */
+    sexOf?: (id: string) => "male" | "female" | null;
     /** What an animal is doing now (the state its animation, tap card and follow mode share); null when it is not in the scene. */
     behaviour: (id: string) => ArkBehaviourState | null;
     /** How an animal is resting now (`sleep.ts` restStatus); null up and about, or not in the scene. */
@@ -772,8 +778,10 @@ export type ArkReactiveStats = {tier: string; agents: number; inputs: number; pe
 /** `ArkSceneHandle.liveActs`: each live layer's acts as its `debug()` says them (times in seconds after the act's `t0`). */
 export type ArkLiveActs = {
     meals: Array<{key: string; t0: number; catchAt: number; feedTo: number; carcassEnd: number; carcass: {x: number; z: number} | null; style: string}>;
-    matings: Array<{key: string; t0: number; phase: string; meet?: number; courted?: number; mounted?: number; end?: number; contestEnd?: number; rival?: string; /** V1: `far`: he started nearer than his day had him; `housed`: acted in their enclosure; `brought`: he was brought beside her (two enclosures). */ how?: "far" | "housed" | "brought"}>;
+    matings: Array<{key: string; t0: number; phase: string; meet?: number; courted?: number; mounted?: number; end?: number; contestEnd?: number; rival?: string; /** V1: `far`: he started nearer than his day had him; `housed`: acted in their enclosure; `brought`: he was brought beside her (two enclosures). ARK-MATING-SHOWN: `far` now walks the whole way; `free`: a small animal off any day went to her surface. */ how?: "far" | "housed" | "brought" | "free"}>;
     births: Array<{key: string; t0: number; mother: string | null; end: number | null; phase: string; /** V1: how it is acted (`live-births.ts` BirthStyle), by when every shown young can be seen (s after `t0`), and whether it is in its mother's tank, cage or room (`housed`). */ style?: string; seenBy?: number; housed?: boolean}>;
     escapes: Array<{key: string; t0: number; phase: string; missAt: number | null; seconds: number | null}>;
     deaths: Array<{key: string; id: string; t0: number; spot: {x: number; z: number; base: number; yaw: number} | null; drawn: boolean}>;
+    /** ARK-MATING-SHOWN: the layings (when each began, laid yet, the mother) and the clutches drawn, each where it is. */
+    clutches?: {layings: Array<{key: string; start: number | null; laid: boolean; mother: string | null}>; kept: Array<{key: string; at: {x: number; y: number; z: number; size: number} | null}>};
 };

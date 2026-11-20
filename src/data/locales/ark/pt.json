@@ -741,6 +741,14 @@
             "mateSeeking": "Procura um par",
             "wounded": "Com um ferimento"
         },
+        "eggs": {
+            "eggsInNest": "Ovos no ninho",
+            "hatchesIn": "Eclodem em cerca de {time}",
+            "ifAllGoesWell": "se tudo correr bem",
+            "minutes": "{n} min",
+            "hours": "{n} h",
+            "days": "{n} dias"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Uma Ark mais leve para este aparelho",

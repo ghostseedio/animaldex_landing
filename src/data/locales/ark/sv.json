@@ -741,6 +741,14 @@
             "mateSeeking": "Letar efter en partner",
             "wounded": "Skadad"
         },
+        "eggs": {
+            "eggsInNest": "Ägg i boet",
+            "hatchesIn": "Kläcks om ungefär {time}",
+            "ifAllGoesWell": "om allt går väl",
+            "minutes": "{n} min",
+            "hours": "{n} tim",
+            "days": "{n} dagar"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "En lättare Ark för den här enheten",

@@ -741,6 +741,14 @@
             "mateSeeking": "সঙ্গী খুঁজছে",
             "wounded": "আহত"
         },
+        "eggs": {
+            "eggsInNest": "বাসায় ডিম",
+            "hatchesIn": "প্রায় {time} পরে ফুটবে",
+            "ifAllGoesWell": "সব ঠিক থাকলে",
+            "minutes": "{n} মিনিট",
+            "hours": "{n} ঘণ্টা",
+            "days": "{n} দিন"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "এই ডিভাইসের জন্য হালকা Ark",

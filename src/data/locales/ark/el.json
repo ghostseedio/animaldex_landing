@@ -741,6 +741,14 @@
             "mateSeeking": "Ψάχνει ταίρι",
             "wounded": "Με τραύμα"
         },
+        "eggs": {
+            "eggsInNest": "Αυγά στη φωλιά",
+            "hatchesIn": "Εκκολάπτονται σε περίπου {time}",
+            "ifAllGoesWell": "αν όλα πάνε καλά",
+            "minutes": "{n} λεπτά",
+            "hours": "{n} ώρες",
+            "days": "{n} ημέρες"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Μια πιο ελαφριά Ark για αυτή τη συσκευή",

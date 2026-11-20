@@ -741,6 +741,14 @@
             "mateSeeking": "相手を探しています",
             "wounded": "けがをしています"
         },
+        "eggs": {
+            "eggsInNest": "巣に卵があります",
+            "hatchesIn": "あと約{time}でふ化",
+            "ifAllGoesWell": "順調にいけば",
+            "minutes": "{n}分",
+            "hours": "{n}時間",
+            "days": "{n}日"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "この端末向けの軽いArk",

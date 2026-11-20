@@ -741,6 +741,14 @@
             "mateSeeking": "Leder efter en mage",
             "wounded": "Såret"
         },
+        "eggs": {
+            "eggsInNest": "Æg i reden",
+            "hatchesIn": "Klækkes om cirka {time}",
+            "ifAllGoesWell": "hvis alt går vel",
+            "minutes": "{n} min",
+            "hours": "{n} t",
+            "days": "{n} dage"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "En lettere Ark til denne enhed",

@@ -741,6 +741,14 @@
             "mateSeeking": "Zoekt een partner",
             "wounded": "Gewond"
         },
+        "eggs": {
+            "eggsInNest": "Eieren in het nest",
+            "hatchesIn": "Komen uit over ongeveer {time}",
+            "ifAllGoesWell": "als alles goed gaat",
+            "minutes": "{n} min",
+            "hours": "{n} uur",
+            "days": "{n} dagen"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Een lichtere Ark voor dit apparaat",

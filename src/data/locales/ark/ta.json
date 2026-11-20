@@ -741,6 +741,14 @@
             "mateSeeking": "துணையைத் தேடுகிறது",
             "wounded": "காயமடைந்துள்ளது"
         },
+        "eggs": {
+            "eggsInNest": "கூட்டில் முட்டைகள்",
+            "hatchesIn": "சுமார் {time}இல் பொரிக்கும்",
+            "ifAllGoesWell": "எல்லாம் சரியாக நடந்தால்",
+            "minutes": "{n} நிமி",
+            "hours": "{n} மணி",
+            "days": "{n} நாள்"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "இந்தச் சாதனத்துக்கான இலகுவான Ark",

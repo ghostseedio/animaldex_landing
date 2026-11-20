@@ -5,7 +5,7 @@ import type {ActPose} from "@/ark-scene/acts";
 import {
     failedTries,
     LiveMatings,
-    MATING_FAR_FROM,
+    FAR_SPEED,
     MATING_LIVE_SECONDS,
     MATING_MAX_APART,
     MATING_WALK_MAX,
@@ -194,17 +194,23 @@ test("not walked across the Ark: different worlds, or long over; a busy animal i
     assert.equal(now(y)?.state, "walk");
 });
 
-test("V1: a pair too far apart to walk is acted all the same: the one that mounts starts nearer, on the line from where he was", () => {
+test("ARK-MATING-SHOWN: a pair too far apart for half a minute's walk walks (hurries) the whole way, from where each was (no jump)", () => {
     const she: E = {id: "she", x: 0, z: 0, world: "wild", act: null, male: false};
     const he: E = {id: "he", x: MATING_MAX_APART + 240, z: 0, world: "wild", act: null, male: true};
     const layer = new LiveMatings(host([she, he]));
     layer.add([{key: "far", a: "she", b: "he", t0: 0}], 0);
     layer.step(0.05);
     assert.equal(layer.debug()[0].how, "far");
-    assert.ok(Math.abs(now(he)!.x - MATING_FAR_FROM) < 1 && now(he)!.z === 0, "he is 60 m from her, toward where his day had him");
+    assert.ok(dist(now(he)!, he) < 1, "he starts where his day had him");
     assert.ok(dist(now(she)!, she) < 0.5, "she starts where her day has her");
     const meet = layer.debug()[0].meet!;
-    assert.ok(meet <= MATING_WALK_MAX, "and they have met within the longest walk");
+    assert.ok(meet >= MATING_WALK_MAX - 0.01 && meet <= (MATING_MAX_APART + 240) / 2 / FAR_SPEED + MATING_WALK_MAX, "each walks half the way, hurrying");
+    let last = {x: now(he)!.x, z: now(he)!.z};
+    for (let t = 0.15; t < meet; t += 0.1) {
+        layer.step(t);
+        assert.ok(dist(now(he)!, last as E) < FAR_SPEED * 0.1 * 1.6 + 0.01, `no jump at ${t.toFixed(1)}`);
+        last = {x: now(he)!.x, z: now(he)!.z};
+    }
     layer.step(meet + 0.5);
     assert.ok(dist(now(he)!, now(she)!) < 3);
 });

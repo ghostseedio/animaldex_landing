@@ -741,6 +741,14 @@
             "mateSeeking": "짝을 찾는 중",
             "wounded": "다쳤어요"
         },
+        "eggs": {
+            "eggsInNest": "둥지에 알이 있어요",
+            "hatchesIn": "약 {time} 후 부화",
+            "ifAllGoesWell": "모든 게 순조로우면",
+            "minutes": "{n}분",
+            "hours": "{n}시간",
+            "days": "{n}일"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "이 기기를 위한 가벼운 Ark",

@@ -741,6 +741,14 @@
             "mateSeeking": "साथी की तलाश में",
             "wounded": "घायल"
         },
+        "eggs": {
+            "eggsInNest": "घोंसले में अंडे",
+            "hatchesIn": "लगभग {time} में फूटेंगे",
+            "ifAllGoesWell": "अगर सब ठीक रहा",
+            "minutes": "{n} मिनट",
+            "hours": "{n} घंटे",
+            "days": "{n} दिन"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "इस डिवाइस के लिए हल्का Ark",
