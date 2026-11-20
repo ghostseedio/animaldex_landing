@@ -126,6 +126,45 @@
             "openList": "Katso ne Arkin päällä",
             "listLabel": "Kaikki lajit kyydissä, runsaslukuisimmat ensin"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 tuntia",
+                "7d": "7 päivää",
+                "30d": "30 päivää",
+                "all": "Kaikki"
+            },
+            "periodsShort": {
+                "24h": "24 t",
+                "7d": "7 pv",
+                "30d": "30 pv",
+                "all": "Kaikki"
+            },
+            "periodLabel": "Ajanjakso",
+            "sortLabel": "Järjestys",
+            "biggest": "Suurimmat",
+            "thriving": "Kasvavat",
+            "declining": "Vähenevät",
+            "noneThriving": "Yksikään laji ei kasvanut tänä aikana.",
+            "noneDeclining": "Yksikään laji ei vähentynyt tänä aikana.",
+            "back": "Kaikki lajit",
+            "now": "Nyt",
+            "change": "Muutos",
+            "peak": "Huippu",
+            "low": "Pohja",
+            "arrived": "{count} nousi kyytiin",
+            "born": "{count} syntyi",
+            "revived": "{count} palasi toivuttuaan",
+            "died": "{count} kuoli",
+            "eaten": "{count} syötiin",
+            "nothing": "Ei syntymiä, saapumisia eikä kuolemia tänä aikana.",
+            "flyTo": "Näytä Arkissa",
+            "goneNow": "Ei yhtään kyydissä nyt",
+            "openGraph": "{animal}: kantakaavio",
+            "graphLabel": "Lajin {animal} kanta, {period}: alussa {start}, nyt {now}",
+            "arkDays": "Arkin päivät {from}–{to}",
+            "recordStarts": "Tiedot alkavat {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Nousi kyytiin toimineen askeleen jälkeen",
             "debate": "Tuotiin kyytiin tämän jälkeen: ’{problem}’ · lajin {animal} tapa ({power}) toimi",

@@ -126,6 +126,45 @@
             "openList": "Ark کے اوپر دیکھیں",
             "listLabel": "سوار ہر نوع، سب سے زیادہ تعداد والی پہلے"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 گھنٹے",
+                "7d": "7 دن",
+                "30d": "30 دن",
+                "all": "سب"
+            },
+            "periodsShort": {
+                "24h": "24 گھنٹے",
+                "7d": "7 دن",
+                "30d": "30 دن",
+                "all": "سب"
+            },
+            "periodLabel": "مدت",
+            "sortLabel": "ترتیب",
+            "biggest": "سب سے زیادہ",
+            "thriving": "بڑھتی ہوئی",
+            "declining": "گھٹتی ہوئی",
+            "noneThriving": "اس مدت میں کوئی نوع نہیں بڑھی۔",
+            "noneDeclining": "اس مدت میں کوئی نوع نہیں گھٹی۔",
+            "back": "تمام انواع",
+            "now": "ابھی",
+            "change": "تبدیلی",
+            "peak": "عروج",
+            "low": "کم ترین",
+            "arrived": "{count} سوار ہوئے",
+            "born": "{count} پیدا ہوئے",
+            "revived": "{count} صحت یاب ہو کر لوٹے",
+            "died": "{count} مر گئے",
+            "eaten": "{count} کھائے گئے",
+            "nothing": "اس مدت میں کوئی پیدائش، آمد یا موت نہیں ہوئی۔",
+            "flyTo": "Ark میں دکھائیں",
+            "goneNow": "اب کوئی سوار نہیں",
+            "openGraph": "{animal}: آبادی کا گراف",
+            "graphLabel": "{animal} کی آبادی، {period}: {start} سے {now} تک",
+            "arkDays": "Ark کے دن {from}–{to}",
+            "recordStarts": "ریکارڈ {date} سے شروع ہوتا ہے",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "ایک کامیاب قدم کے بعد سوار ہوا",
             "debate": "اس کے بعد سوار ہوا: “{problem}” · {animal} کا طریقہ ({power}) کام کر گیا",

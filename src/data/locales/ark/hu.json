@@ -126,6 +126,45 @@
             "openList": "Mutasd az Ark fölött",
             "listLabel": "Az összes faj a fedélzeten, a legnépesebbek elöl"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 óra",
+                "7d": "7 nap",
+                "30d": "30 nap",
+                "all": "Mind"
+            },
+            "periodsShort": {
+                "24h": "24 ó",
+                "7d": "7 n",
+                "30d": "30 n",
+                "all": "Mind"
+            },
+            "periodLabel": "Időszak",
+            "sortLabel": "Sorrend",
+            "biggest": "Legnagyobb",
+            "thriving": "Növekvő",
+            "declining": "Csökkenő",
+            "noneThriving": "Ebben az időszakban egy faj sem nőtt.",
+            "noneDeclining": "Ebben az időszakban egy faj sem csökkent.",
+            "back": "Minden faj",
+            "now": "Most",
+            "change": "Változás",
+            "peak": "Csúcs",
+            "low": "Mélypont",
+            "arrived": "Felszállt: {count}",
+            "born": "Született: {count}",
+            "revived": "Gyógyulás után visszatért: {count}",
+            "died": "Elpusztult: {count}",
+            "eaten": "Megették: {count}",
+            "nothing": "Ebben az időszakban nem volt születés, érkezés vagy elhullás.",
+            "flyTo": "Mutasd az Arkon",
+            "goneNow": "Most egy sincs a fedélzeten",
+            "openGraph": "{animal}: populációgrafikon",
+            "graphLabel": "{animal} populációja, {period}: {start} és {now} között",
+            "arkDays": "Ark-napok {from}–{to}",
+            "recordStarts": "A feljegyzés ekkor kezdődik: {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Egy bevált lépés után szállt fel",
             "debate": "Ennek nyomán szállt fel: „{problem}” · bevált {animal} módszere ({power})",

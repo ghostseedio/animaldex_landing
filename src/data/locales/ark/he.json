@@ -126,6 +126,45 @@
             "openList": "לצפייה מעל Ark",
             "listLabel": "כל המינים על הסיפון, הנפוצים ביותר קודם"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 שעות",
+                "7d": "7 ימים",
+                "30d": "30 ימים",
+                "all": "הכול"
+            },
+            "periodsShort": {
+                "24h": "24 שעות",
+                "7d": "7 ימים",
+                "30d": "30 ימים",
+                "all": "הכול"
+            },
+            "periodLabel": "טווח זמן",
+            "sortLabel": "סדר",
+            "biggest": "הגדולים ביותר",
+            "thriving": "בצמיחה",
+            "declining": "בירידה",
+            "noneThriving": "אף מין לא גדל בתקופה הזו.",
+            "noneDeclining": "אף מין לא קטן בתקופה הזו.",
+            "back": "כל המינים",
+            "now": "עכשיו",
+            "change": "שינוי",
+            "peak": "שיא",
+            "low": "שפל",
+            "arrived": "{count} עלו לסיפון",
+            "born": "{count} נולדו",
+            "revived": "{count} חזרו אחרי החלמה",
+            "died": "{count} מתו",
+            "eaten": "{count} נאכלו",
+            "nothing": "אין לידות, הגעות או מקרי מוות בתקופה הזו.",
+            "flyTo": "הצג ב-Ark",
+            "goneNow": "אף אחד לא על הסיפון כרגע",
+            "openGraph": "{animal}: גרף אוכלוסייה",
+            "graphLabel": "אוכלוסיית {animal}, {period}: מ-{start} עד {now}",
+            "arkDays": "ימי Ark {from}–{to}",
+            "recordStarts": "הרישום מתחיל ב-{date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "עלה לסיפון אחרי צעד שהצליח",
             "debate": "עלה לסיפון אחרי: \"{problem}\" · הדרך של {animal} ({power}) הצליחה",

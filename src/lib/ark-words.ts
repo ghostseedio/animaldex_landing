@@ -14,6 +14,7 @@ import type {ArkEndangeredWords} from "@/lib/ark-crises";
 import type {ArkHuntWords} from "@/lib/ark-live-hunt";
 import type {ArkHeartsWords} from "@/lib/ark-hearts";
 import type {ArkTimeLeftWords} from "@/lib/ark-time-left";
+import type {ArkGraphWords} from "@/lib/ark-graph-words";
 
 export type ArkHudWords = {
     label: string;
@@ -422,6 +423,8 @@ export type ArkWords = {
     /** Islands mode (decision 148): the wild island's region names where they differ from `regions` (the former home area). */
     wildIslandRegions?: Partial<Record<ArkRegion, string>>;
     hud: ArkHudWords;
+    /** The population graphs (`lib/ark-graph-words.ts`); optional: an older bundle lacks it, and the graphs read English. */
+    graph?: ArkGraphWords;
     story: ArkStoryWords;
     life: ArkLifeWords;
     replay: ArkReplayWords;

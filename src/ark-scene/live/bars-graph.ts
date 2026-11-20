@@ -5,12 +5,16 @@
  *
  * A sparkline at each row's end (a button: it opens that species' graph), the order and period switches over the
  * list, and the graph pane in the list's place. Numbers only from `lib/ark-population-history.ts` (the server's
- * record). English words first, as /ark's (decision 374).
+ * record). Its words are `ark.graph` in the reader's language (`lib/ark-graph-words.ts`), handed in by the bars.
  */
 
+import type {ArkGraphWords} from "@/lib/ark-graph-words";
+import {fillArkWords} from "@/lib/ark-words";
 import {
     ARK_PERIODS,
     arkDayAt,
+    arkGraphDate,
+    arkGraphWhen,
     arkLinePath,
     arkStatsChangeText,
     type ArkHistory,
@@ -19,36 +23,6 @@ import {
     type ArkSeriesStats
 } from "@/lib/ark-population-history";
 
-export const ARK_BARS_GRAPH_WORDS = {
-    periods: {"24h": "24 h", "7d": "7 days", "30d": "30 days", all: "All"} as Record<ArkPeriod, string>,
-    periodsShort: {"24h": "24h", "7d": "7d", "30d": "30d", all: "All"} as Record<ArkPeriod, string>,
-    periodLabel: "Time period",
-    sortLabel: "Order",
-    biggest: "Biggest",
-    thriving: "Thriving",
-    declining: "Declining",
-    noneThriving: "No species grew in this period.",
-    noneDeclining: "No species fell in this period.",
-    back: "All species",
-    now: "Now",
-    change: "Change",
-    peak: "Peak",
-    low: "Low",
-    arrived: "came aboard",
-    born: "born",
-    revived: "back from recovery",
-    died: "died",
-    eaten: "eaten",
-    nothing: "No births, arrivals or deaths in this period.",
-    flyTo: "Show in the Ark",
-    goneNow: "None aboard now",
-    openGraph: "{animal}: population graph",
-    graphLabel: "{animal} population, {period}: {start} to {now}",
-    arkDays: "Ark days {from}–{to}",
-    recordStarts: "The record starts {date}",
-    pointAt: "{count} at {time}"
-};
-
 export type ArkSortMode = "biggest" | "thriving" | "declining";
 
 const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif)";
@@ -56,8 +30,6 @@ const UP = "#86e08f";
 const DOWN = "#ff8a7a";
 const LIME = "#c8fa63";
 const SVG = "http://www.w3.org/2000/svg";
-
-const fill = (template: string, values: Record<string, string | number>) => template.replace(/\{(\w+)\}/g, (all, key: string) => (key in values ? String(values[key]) : all));
 
 export function arkLineTone(stats: Pick<ArkSeriesStats, "delta">): string {
     return stats.delta > 0 ? UP : stats.delta < 0 ? DOWN : "rgba(255,252,244,0.55)";
@@ -70,7 +42,7 @@ function svg<K extends keyof SVGElementTagNameMap>(tag: K, attrs: Record<string,
 }
 
 /** The sparkline drawn into `button` (replacing what was there). */
-export function drawSpark(button: HTMLButtonElement, series: ArkSeries, stats: ArkSeriesStats, name: string) {
+export function drawSpark(button: HTMLButtonElement, series: ArkSeries, stats: ArkSeriesStats, name: string, words: ArkGraphWords) {
     const width = 38;
     const height = 16;
     const line = arkLinePath(series.counts, width, height);
@@ -79,7 +51,7 @@ export function drawSpark(button: HTMLButtonElement, series: ArkSeries, stats: A
     root.style.overflow = "visible";
     root.appendChild(svg("path", {d: line.d, fill: "none", stroke: arkLineTone(stats), "stroke-width": 1.4, "stroke-linejoin": "round", "stroke-linecap": "round"}));
     button.replaceChildren(root);
-    const label = fill(ARK_BARS_GRAPH_WORDS.openGraph, {animal: name});
+    const label = fillArkWords(words.openGraph, {animal: name});
     button.setAttribute("aria-label", label);
     button.title = label;
 }
@@ -127,23 +99,16 @@ function pills<T extends string>(label: string, items: Array<{id: T; text: strin
     return group;
 }
 
-export function periodPills(period: ArkPeriod, onPeriod: (period: ArkPeriod) => void): HTMLDivElement {
-    const words = ARK_BARS_GRAPH_WORDS;
+export function periodPills(period: ArkPeriod, onPeriod: (period: ArkPeriod) => void, words: ArkGraphWords): HTMLDivElement {
     return pills(words.periodLabel, ARK_PERIODS.map((id) => ({id, text: words.periodsShort[id], aria: words.periods[id]})), period, onPeriod);
 }
 
 /** The order and period switches, into `host`. */
-export function drawControls(host: HTMLElement, mode: ArkSortMode, onMode: (mode: ArkSortMode) => void, period: ArkPeriod, onPeriod: (period: ArkPeriod) => void) {
-    const words = ARK_BARS_GRAPH_WORDS;
+export function drawControls(host: HTMLElement, mode: ArkSortMode, onMode: (mode: ArkSortMode) => void, period: ArkPeriod, onPeriod: (period: ArkPeriod) => void, words: ArkGraphWords) {
     host.replaceChildren(
         pills<ArkSortMode>(words.sortLabel, [{id: "biggest", text: words.biggest}, {id: "thriving", text: words.thriving, mark: "up"}, {id: "declining", text: words.declining, mark: "down"}], mode, onMode),
-        periodPills(period, onPeriod)
+        periodPills(period, onPeriod, words)
     );
-}
-
-function when(at: number, locale: string, bucket: ArkHistory["bucket"]): string {
-    const date = new Date(at);
-    return bucket === "day" ? date.toLocaleDateString(locale, {day: "numeric", month: "short"}) : date.toLocaleString(locale, {weekday: "short", hour: "numeric", minute: "2-digit"});
 }
 
 /** One species' graph pane: back, name and count, period switch, the line, its numbers, and "Show in the Ark". */
@@ -158,9 +123,9 @@ export function buildGraphPane(options: {
     onPeriod: (period: ArkPeriod) => void;
     onBack: () => void;
     onFly: (() => void) | null;
+    words: ArkGraphWords;
 }): HTMLDivElement {
-    const {history, name, series, stats, period, locale} = options;
-    const words = ARK_BARS_GRAPH_WORDS;
+    const {history, name, series, stats, period, locale, words} = options;
     const number = (value: number) => value.toLocaleString(locale);
     const pane = document.createElement("div");
     Object.assign(pane.style, {flex: "1 1 auto", minHeight: "0", overflowY: "auto", overscrollBehavior: "contain", borderTop: "1px solid rgba(255, 255, 255, 0.08)", padding: "4px 0 10px"});
@@ -194,7 +159,7 @@ export function buildGraphPane(options: {
     const said = arkStatsChangeText(stats, locale);
     Object.assign(change.style, {font: `700 12px/1 ${FONT}`, fontVariantNumeric: "tabular-nums", color: arkLineTone(stats)});
     change.textContent = `${said.up === null ? "" : said.up ? "▲ " : "▼ "}${said.count}${said.percent && said.up !== null ? ` · ${said.percent}` : ""}`;
-    bar.append(periodPills(period, options.onPeriod), change);
+    bar.append(periodPills(period, options.onPeriod, words), change);
 
     // The line: counts from 0, a step line in the change's colour, the period's start and now under it.
     const W = 300;
@@ -205,7 +170,7 @@ export function buildGraphPane(options: {
     const plotH = H - BOTTOM - 6;
     const line = arkLinePath(series.counts, plotW, plotH, {pad: 2, fromZero: true});
     const tone = arkLineTone(stats);
-    const chart = svg("svg", {viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": fill(words.graphLabel, {animal: name, period: words.periods[period], start: number(stats.start), now: number(stats.now)})});
+    const chart = svg("svg", {viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": fillArkWords(words.graphLabel, {animal: name, period: words.periods[period], start: number(stats.start), now: number(stats.now)})});
     Object.assign(chart.style, {display: "block", width: "100%", height: "auto", touchAction: "none"});
     const top = line.max;
     const ticks = top < 1 ? [0] : top > 1 && top % 2 === 0 ? [0, top / 2, top] : [0, top];
@@ -226,7 +191,7 @@ export function buildGraphPane(options: {
     chart.appendChild(plot);
     const start = series.times[0] ?? history.asOf;
     const from = svg("text", {x: LEFT, y: H - 4, "font-size": 10, fill: "rgba(255,252,244,0.5)"});
-    from.textContent = when(Math.max(start, history.firstAt), locale, history.bucket);
+    from.textContent = arkGraphWhen(Math.max(start, history.firstAt), locale, history);
     const to = svg("text", {x: W - 4, y: H - 4, "font-size": 10, "text-anchor": "end", fill: "rgba(255,252,244,0.5)"});
     to.textContent = words.now;
     chart.append(from, to);
@@ -247,7 +212,7 @@ export function buildGraphPane(options: {
         dot.setAttribute("cx", String(point[0]));
         dot.setAttribute("cy", String(point[1]));
         dot.setAttribute("fill", LIME);
-        tip.textContent = fill(words.pointAt, {count: number(series.counts[i]), time: when(series.times[i], locale, history.bucket)});
+        tip.textContent = fillArkWords(words.pointAt, {count: number(series.counts[i]), time: arkGraphWhen(series.times[i], locale, history)});
         tip.style.display = "block";
     };
     chart.addEventListener("pointermove", hover);
@@ -267,8 +232,8 @@ export function buildGraphPane(options: {
     const dayFrom = arkDayAt(start, history.startedAt);
     const dayTo = arkDayAt(end, history.startedAt);
     note.textContent = [
-        dayFrom !== null && dayTo !== null ? fill(words.arkDays, {from: number(Math.max(0, dayFrom)), to: number(dayTo)}) : null,
-        start <= history.firstAt + history.bucketMs ? fill(words.recordStarts, {date: new Date(history.firstAt).toLocaleDateString(locale, {day: "numeric", month: "short"})}) : null
+        dayFrom !== null && dayTo !== null ? fillArkWords(words.arkDays, {from: number(Math.max(0, dayFrom)), to: number(dayTo)}) : null,
+        start <= history.firstAt + history.bucketMs ? fillArkWords(words.recordStarts, {date: arkGraphDate(history.firstAt, locale, history)}) : null
     ].filter(Boolean).join(" · ");
 
     const grid = document.createElement("dl");
@@ -288,7 +253,7 @@ export function buildGraphPane(options: {
 
     const happened = document.createElement("p");
     Object.assign(happened.style, {margin: "0", padding: "6px 14px 8px", font: `500 11.5px/1.35 ${FONT}`, opacity: "0.7"});
-    const parts = ([["arrived", stats.arrived], ["born", stats.born], ["revived", stats.revived], ["died", stats.died], ["eaten", stats.eaten]] as const).filter(([, n]) => n > 0).map(([kind, n]) => `${number(n)} ${words[kind]}`);
+    const parts = ([["arrived", stats.arrived], ["born", stats.born], ["revived", stats.revived], ["died", stats.died], ["eaten", stats.eaten]] as const).filter(([, n]) => n > 0).map(([kind, n]) => fillArkWords(words[kind], {count: number(n)}));
     happened.textContent = parts.length ? parts.join(" · ") : words.nothing;
     if (stats.goneNow) {
         const gone = document.createElement("span");

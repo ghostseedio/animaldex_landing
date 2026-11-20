@@ -126,6 +126,45 @@
             "openList": "Ark के ऊपर देखें",
             "listLabel": "सवार हर प्रजाति, सबसे ज़्यादा संख्या वाली पहले"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 घंटे",
+                "7d": "7 दिन",
+                "30d": "30 दिन",
+                "all": "सभी"
+            },
+            "periodsShort": {
+                "24h": "24 घंटे",
+                "7d": "7 दिन",
+                "30d": "30 दिन",
+                "all": "सभी"
+            },
+            "periodLabel": "समय अवधि",
+            "sortLabel": "क्रम",
+            "biggest": "सबसे अधिक",
+            "thriving": "बढ़ती",
+            "declining": "घटती",
+            "noneThriving": "इस अवधि में कोई प्रजाति नहीं बढ़ी।",
+            "noneDeclining": "इस अवधि में कोई प्रजाति नहीं घटी।",
+            "back": "सभी प्रजातियाँ",
+            "now": "अभी",
+            "change": "बदलाव",
+            "peak": "उच्चतम",
+            "low": "न्यूनतम",
+            "arrived": "{count} सवार हुए",
+            "born": "{count} जन्मे",
+            "revived": "{count} ठीक होकर लौटे",
+            "died": "{count} मरे",
+            "eaten": "{count} खाए गए",
+            "nothing": "इस अवधि में कोई जन्म, आगमन या मृत्यु नहीं हुई।",
+            "flyTo": "Ark में दिखाएँ",
+            "goneNow": "अभी कोई सवार नहीं",
+            "openGraph": "{animal}: आबादी का ग्राफ़",
+            "graphLabel": "{animal} की आबादी, {period}: {start} से {now}",
+            "arkDays": "Ark के दिन {from}–{to}",
+            "recordStarts": "रिकॉर्ड {date} से शुरू होता है",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "एक कामयाब कदम के बाद सवार हुआ",
             "debate": "इसके बाद सवार हुआ: ‘{problem}’ · {animal} का तरीका ({power}) काम कर गया",

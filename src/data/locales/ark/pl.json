@@ -126,6 +126,45 @@
             "openList": "Zobacz je nad Ark",
             "listLabel": "Wszystkie gatunki na pokładzie, od najliczniejszych"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 godz.",
+                "7d": "7 dni",
+                "30d": "30 dni",
+                "all": "Wszystko"
+            },
+            "periodsShort": {
+                "24h": "24 h",
+                "7d": "7 d",
+                "30d": "30 d",
+                "all": "Całość"
+            },
+            "periodLabel": "Okres",
+            "sortLabel": "Kolejność",
+            "biggest": "Najliczniejsze",
+            "thriving": "Rosnące",
+            "declining": "Malejące",
+            "noneThriving": "W tym okresie żaden gatunek się nie powiększył.",
+            "noneDeclining": "W tym okresie żaden gatunek się nie zmniejszył.",
+            "back": "Wszystkie gatunki",
+            "now": "Teraz",
+            "change": "Zmiana",
+            "peak": "Szczyt",
+            "low": "Minimum",
+            "arrived": "Weszło na pokład: {count}",
+            "born": "Urodziło się: {count}",
+            "revived": "Wróciło po wyzdrowieniu: {count}",
+            "died": "Zmarło: {count}",
+            "eaten": "Zjedzonych: {count}",
+            "nothing": "W tym okresie nie było narodzin, przybyć ani zgonów.",
+            "flyTo": "Pokaż w Ark",
+            "goneNow": "Teraz żadnego na pokładzie",
+            "openGraph": "{animal}: wykres liczebności",
+            "graphLabel": "Liczebność ({animal}), {period}: od {start} do {now}",
+            "arkDays": "Dni Ark {from}–{to}",
+            "recordStarts": "Zapis zaczyna się {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Weszło na pokład po kroku, który zadziałał",
             "debate": "Na pokładzie po: „{problem}” · zadziałał sposób, jaki ma {animal} ({power})",

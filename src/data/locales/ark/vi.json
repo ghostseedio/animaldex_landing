@@ -126,6 +126,45 @@
             "openList": "Xem trên Ark",
             "listLabel": "Mọi loài trên tàu, loài đông nhất trước"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 giờ",
+                "7d": "7 ngày",
+                "30d": "30 ngày",
+                "all": "Tất cả"
+            },
+            "periodsShort": {
+                "24h": "24 giờ",
+                "7d": "7 ngày",
+                "30d": "30 ngày",
+                "all": "Tất cả"
+            },
+            "periodLabel": "Khoảng thời gian",
+            "sortLabel": "Thứ tự",
+            "biggest": "Nhiều nhất",
+            "thriving": "Đang tăng",
+            "declining": "Đang giảm",
+            "noneThriving": "Không loài nào tăng trong khoảng thời gian này.",
+            "noneDeclining": "Không loài nào giảm trong khoảng thời gian này.",
+            "back": "Tất cả loài",
+            "now": "Hiện tại",
+            "change": "Thay đổi",
+            "peak": "Cao nhất",
+            "low": "Thấp nhất",
+            "arrived": "{count} con lên tàu",
+            "born": "{count} con chào đời",
+            "revived": "{count} con khỏe lại và trở về",
+            "died": "{count} con chết",
+            "eaten": "{count} con bị ăn thịt",
+            "nothing": "Không có con nào chào đời, lên tàu hay chết trong khoảng thời gian này.",
+            "flyTo": "Xem trên Ark",
+            "goneNow": "Hiện không còn con nào trên tàu",
+            "openGraph": "{animal}: biểu đồ số lượng",
+            "graphLabel": "Số lượng {animal}, {period}: từ {start} đến {now}",
+            "arkDays": "Ngày Ark {from}–{to}",
+            "recordStarts": "Bản ghi bắt đầu từ {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Lên Ark sau một bước đã thành công",
             "debate": "Được đưa lên Ark sau: “{problem}” · cách của {animal} ({power}) đã thành công",

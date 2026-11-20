@@ -1,11 +1,16 @@
 "use client";
 
-import React, {useId, useMemo, useState} from "react";
+import React, {useContext, useId, useMemo, useState} from "react";
+import {ArkGraphWordsContext} from "@/app/[locale]/(composited)/ark/ark-graph-context";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkIconUrl} from "@/ark-scene/placeholder-icon";
+import {ARK_GRAPH_ENGLISH, type ArkGraphWords} from "@/lib/ark-graph-words";
+import {fillArkWords} from "@/lib/ark-words";
 import {
     ARK_PERIODS,
     arkDayAt,
+    arkGraphDate,
+    arkGraphWhen,
     arkHistoryLines,
     arkLinePath,
     arkStatsChangeText,
@@ -25,46 +30,18 @@ export * from "@/lib/ark-population-history";
  * import once the HUD is open (the Ark page's first JavaScript is frozen, decision 371), so nothing here is in the
  * page's static bundle.
  *
- * Words are English first, as the species' own log lines are (decision 374): the HUD's existing words stay
- * translated; these come in English until the locale round adds them.
+ * Its words come from the page (`ark.graph`, in every Ark language) through `ArkGraphWordsContext`; English where there
+ * is no provider. Dates and days are the viewer's own (`history.zone`).
  */
-export const ARK_GRAPH_WORDS = {
-    periods: {"24h": "24 h", "7d": "7 days", "30d": "30 days", all: "All"} as Record<ArkPeriod, string>,
-    periodsShort: {"24h": "24h", "7d": "7d", "30d": "30d", all: "All"} as Record<ArkPeriod, string>,
-    periodLabel: "Time period",
-    sortLabel: "Order",
-    biggest: "Biggest",
-    thriving: "Thriving",
-    declining: "Declining",
-    noneThriving: "No species grew in this period.",
-    noneDeclining: "No species fell in this period.",
-    back: "All species",
-    now: "Now",
-    change: "Change",
-    peak: "Peak",
-    low: "Low",
-    arrived: "came aboard",
-    born: "born",
-    revived: "back from recovery",
-    died: "died",
-    eaten: "eaten",
-    nothing: "No births, arrivals or deaths in this period.",
-    flyTo: "Show in the Ark",
-    goneNow: "None aboard now",
-    openGraph: "{animal}: population graph",
-    graphLabel: "{animal} population, {period}: {start} to {now}",
-    arkDays: "Ark days {from}–{to}",
-    since: "Since {date}",
-    recordStarts: "The record starts {date}",
-    pointAt: "{count} at {time}"
-};
+/** The words in force: the page's, else English. */
+function useGraphWords(): ArkGraphWords {
+    return useContext(ArkGraphWordsContext) ?? ARK_GRAPH_ENGLISH;
+}
 
 const UP = "#86e08f";
 const DOWN = "#ff8a7a";
 const LIME = "#c8fa63";
 const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#c8fa63]";
-
-const fill = (template: string, values: Record<string, string | number>) => template.replace(/\{(\w+)\}/g, (all, key: string) => (key in values ? String(values[key]) : all));
 
 /** The line's colour: green up, red down, the panel's white when the same. */
 function tone(stats: Pick<ArkSeriesStats, "delta">): string {
@@ -82,7 +59,8 @@ export function ArkSparkline({series, stats, width = 44, height = 16}: {series: 
 }
 
 /** The period switch: 24 h · 7 d · 30 d · All. */
-export function ArkPeriodSwitch({period, onPeriod, words = ARK_GRAPH_WORDS}: {period: ArkPeriod; onPeriod: (period: ArkPeriod) => void; words?: typeof ARK_GRAPH_WORDS}) {
+export function ArkPeriodSwitch({period, onPeriod}: {period: ArkPeriod; onPeriod: (period: ArkPeriod) => void}) {
+    const words = useGraphWords();
     return (
         <div role="group" aria-label={words.periodLabel} className="flex rounded-full bg-white/[0.07] p-0.5">
             {ARK_PERIODS.map((id) => (
@@ -104,7 +82,8 @@ export function ArkPeriodSwitch({period, onPeriod, words = ARK_GRAPH_WORDS}: {pe
 export type ArkSortMode = "biggest" | "thriving" | "declining";
 
 /** Biggest · Thriving · Declining. */
-export function ArkSortSwitch({mode, onMode, words = ARK_GRAPH_WORDS}: {mode: ArkSortMode; onMode: (mode: ArkSortMode) => void; words?: typeof ARK_GRAPH_WORDS}) {
+export function ArkSortSwitch({mode, onMode}: {mode: ArkSortMode; onMode: (mode: ArkSortMode) => void}) {
+    const words = useGraphWords();
     const modes: ArkSortMode[] = ["biggest", "thriving", "declining"];
     return (
         <div role="group" aria-label={words.sortLabel} className="flex rounded-full bg-white/[0.07] p-0.5">
@@ -135,13 +114,6 @@ export function ArkPeriodChange({stats, locale, className = ""}: {stats: ArkSeri
     );
 }
 
-function when(at: number, locale: string, bucket: ArkHistory["bucket"]): string {
-    const date = new Date(at);
-    return bucket === "day"
-        ? date.toLocaleDateString(locale, {day: "numeric", month: "short"})
-        : date.toLocaleString(locale, {weekday: "short", hour: "numeric", minute: "2-digit"});
-}
-
 type GraphProps = {
     name: string;
     icon: React.ReactNode;
@@ -154,7 +126,6 @@ type GraphProps = {
     /** Fly to one of its animals; absent: none aboard. */
     onFly?: (() => void) | null;
     locale: string;
-    words?: typeof ARK_GRAPH_WORDS;
 };
 
 const W = 300;
@@ -163,7 +134,8 @@ const LEFT = 30;
 const BOTTOM = 18;
 
 /** One species' graph: the line over the period, its axis, and the period's numbers. */
-export function ArkPopulationGraph({name, icon, history, series, stats, period, onPeriod, onBack, onFly = null, locale, words = ARK_GRAPH_WORDS}: GraphProps) {
+export function ArkPopulationGraph({name, icon, history, series, stats, period, onPeriod, onBack, onFly = null, locale}: GraphProps) {
+    const words = useGraphWords();
     const titleId = useId();
     const [hover, setHover] = useState<number | null>(null);
     const plotW = W - LEFT - 4;
@@ -179,7 +151,7 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
     const happened = ([["arrived", stats.arrived], ["born", stats.born], ["revived", stats.revived], ["died", stats.died], ["eaten", stats.eaten]] as const).filter(([, n]) => n > 0);
     const hoverIndex = hover === null ? null : Math.max(0, Math.min(series.counts.length - 1, hover));
     const hoverPoint = hoverIndex === null ? null : line.points[Math.min(hoverIndex, line.points.length - 1)];
-    const label = fill(words.graphLabel, {animal: name, period: words.periods[period], start: number(stats.start), now: number(stats.now)});
+    const label = fillArkWords(words.graphLabel, {animal: name, period: words.periods[period], start: number(stats.start), now: number(stats.now)});
     // Count ticks: 0, the top, and the middle when it is a whole number apart.
     const top = line.max;
     const ticks = top < 1 ? [0] : top > 1 && top % 2 === 0 ? [0, top / 2, top] : [0, top];
@@ -208,7 +180,7 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
                 <span className="text-[15px] font-bold tabular-nums">{number(stats.now)}</span>
             </div>
             <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 pb-1 pt-2">
-                <ArkPeriodSwitch period={period} onPeriod={onPeriod} words={words} />
+                <ArkPeriodSwitch period={period} onPeriod={onPeriod} />
                 <span className="text-[12px] font-bold tabular-nums" style={{color}}>
                     {said.up === null ? null : <span aria-hidden="true" className="text-[9px]">{said.up ? "▲" : "▼"} </span>}
                     {said.count}
@@ -249,31 +221,31 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
                             <circle cx={line.points[line.points.length - 1][0]} cy={line.points[line.points.length - 1][1]} r={3} fill={color} />
                         )}
                     </g>
-                    <text x={LEFT} y={H - 4} fontSize={10} fill="rgba(255,252,244,0.5)">{when(Math.max(start, history.firstAt), locale, history.bucket)}</text>
+                    <text x={LEFT} y={H - 4} fontSize={10} fill="rgba(255,252,244,0.5)">{arkGraphWhen(Math.max(start, history.firstAt), locale, history)}</text>
                     <text x={W - 4} y={H - 4} fontSize={10} textAnchor="end" fill="rgba(255,252,244,0.5)">{words.now}</text>
                 </svg>
                 {hoverIndex !== null ? (
                     <p aria-live="polite" className="pointer-events-none absolute right-3 top-0 rounded-md bg-black/50 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
-                        {fill(words.pointAt, {count: number(series.counts[hoverIndex]), time: when(series.times[hoverIndex], locale, history.bucket)})}
+                        {fillArkWords(words.pointAt, {count: number(series.counts[hoverIndex]), time: arkGraphWhen(series.times[hoverIndex], locale, history)})}
                     </p>
                 ) : null}
             </div>
             <p className="px-3.5 text-[10.5px] text-white/45">
                 {[
-                    dayFrom !== null && dayTo !== null ? fill(words.arkDays, {from: number(Math.max(0, dayFrom)), to: number(dayTo)}) : null,
-                    fromRecord ? fill(words.recordStarts, {date: new Date(history.firstAt).toLocaleDateString(locale, {day: "numeric", month: "short"})}) : null
+                    dayFrom !== null && dayTo !== null ? fillArkWords(words.arkDays, {from: number(Math.max(0, dayFrom)), to: number(dayTo)}) : null,
+                    fromRecord ? fillArkWords(words.recordStarts, {date: arkGraphDate(history.firstAt, locale, history)}) : null
                 ].filter(Boolean).join(" · ")}
             </p>
             <dl className="grid grid-cols-4 gap-1 px-3.5 pb-1 pt-2.5 text-center">
-                {([[words.now, stats.now], [words.change, said.count], [words.peak, stats.peak], [words.low, stats.low]] as const).map(([term, value]) => (
-                    <div key={term} className="rounded-lg bg-white/[0.05] px-1 py-1.5">
+                {([["now", words.now, stats.now], ["change", words.change, said.count], ["peak", words.peak, stats.peak], ["low", words.low, stats.low]] as const).map(([id, term, value]) => (
+                    <div key={id} className="rounded-lg bg-white/[0.05] px-1 py-1.5">
                         <dt className="text-[10px] font-semibold uppercase tracking-wide text-white/45">{term}</dt>
-                        <dd className="text-[13px] font-bold tabular-nums" style={term === words.change ? {color} : undefined}>{typeof value === "number" ? number(value) : value}</dd>
+                        <dd className="text-[13px] font-bold tabular-nums" style={id === "change" ? {color} : undefined}>{typeof value === "number" ? number(value) : value}</dd>
                     </div>
                 ))}
             </dl>
             <p className="px-3.5 pb-2 pt-1.5 text-[11.5px] leading-snug text-white/65">
-                {happened.length ? happened.map(([kind, n]) => `${number(n)} ${words[kind]}`).join(" · ") : words.nothing}
+                {happened.length ? happened.map(([kind, n]) => fillArkWords(words[kind], {count: number(n)})).join(" · ") : words.nothing}
                 {stats.goneNow ? <span className="block pt-0.5 font-semibold" style={{color: DOWN}}>{words.goneNow}</span> : null}
             </p>
             {onFly ? (
@@ -302,7 +274,7 @@ function Icon({slug, size}: {slug: string; size: number}) {
 
 /** The sparkline as a button at a row's end: opens that species' graph. */
 export function ArkRowSpark({name, line, onOpen}: {name: string; line: ArkHudLine; onOpen: () => void}) {
-    const label = fill(ARK_GRAPH_WORDS.openGraph, {animal: name});
+    const label = fillArkWords(useGraphWords().openGraph, {animal: name});
     return (
         <button type="button" onClick={onOpen} aria-label={label} title={label} className={`flex min-h-11 shrink-0 items-center pl-1 pr-3 transition-colors hover:bg-white/[0.06] md:min-h-[2.375rem] ${FOCUS}`}>
             <ArkSparkline series={line.series} stats={line.stats} />
@@ -312,9 +284,10 @@ export function ArkRowSpark({name, line, onOpen}: {name: string; line: ArkHudLin
 
 /** Declining: a kind that died out in the period (none aboard to fly to; its graph only). */
 export function ArkGoneRow({name, slug, line, locale, onOpen, setsize, posinset}: {name: string; slug: string | null; line: ArkHudLine | null; locale: string; onOpen: () => void; setsize: number; posinset: number}) {
+    const words = useGraphWords();
     return (
         <li aria-setsize={setsize} aria-posinset={posinset} className="flex items-stretch">
-            <button type="button" onClick={onOpen} aria-label={`${name}: 0, ${ARK_GRAPH_WORDS.goneNow}`} className={`relative flex min-h-11 min-w-0 flex-1 items-center gap-2.5 py-1 pl-3.5 pr-1 text-left transition-colors duration-200 hover:bg-white/[0.06] md:min-h-[2.375rem] ${FOCUS}`}>
+            <button type="button" onClick={onOpen} aria-label={`${name}: 0, ${words.goneNow}`} className={`relative flex min-h-11 min-w-0 flex-1 items-center gap-2.5 py-1 pl-3.5 pr-1 text-left transition-colors duration-200 hover:bg-white/[0.06] md:min-h-[2.375rem] ${FOCUS}`}>
                 <span className="opacity-60"><Icon slug={slug ?? ""} size={24} /></span>
                 <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight text-white/70">{name}</span>
                 {line ? <ArkPeriodChange stats={line.stats} locale={locale} /> : null}
@@ -325,19 +298,26 @@ export function ArkGoneRow({name, slug, line, locale, onOpen, setsize, posinset}
     );
 }
 
-/** The panel's graph view of one species, in place of the list. */
-export function ArkHudGraphPane({history, name, slug, line, period, onPeriod, onBack, onFly, locale}: {history: ArkHistory; name: string; slug: string; line: ArkHudLine; period: ArkPeriod; onPeriod: (period: ArkPeriod) => void; onBack: () => void; onFly: (() => void) | null; locale: string}) {
+/**
+ * The panel's graph view of one species, in place of the list. `rows` are the species aboard (a name and an icon);
+ * a kind that died out is named by the answer's `gone`. Nothing when the kind is in neither, or has no line.
+ */
+export function ArkHudGraphPane<Row extends {name: string; slug: string}>({history, graphKey, rows, line, period, onPeriod, onBack, onFly, locale}: {history: ArkHistory; graphKey: string; rows: ReadonlyMap<string, Row>; line: ArkHudLine | undefined; period: ArkPeriod; onPeriod: (period: ArkPeriod) => void; onBack: () => void; onFly: (row: Row) => void; locale: string}) {
+    const row = rows.get(graphKey);
+    const gone = history.gone.get(graphKey);
+    if (!line || !(row || gone)) return null;
+    const slug = row?.slug ?? gone?.slug ?? "";
     return (
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] pt-1 [scrollbar-width:thin]">
-            <ArkPopulationGraph name={name} icon={<Icon slug={slug} size={28} />} history={history} series={line.series} stats={line.stats} period={period} onPeriod={onPeriod} onBack={onBack} onFly={onFly} locale={locale} />
+            <ArkPopulationGraph name={row?.name ?? gone?.name ?? ""} icon={<Icon slug={slug} size={28} />} history={history} series={line.series} stats={line.stats} period={period} onPeriod={onPeriod} onBack={onBack} onFly={row ? () => onFly(row) : null} locale={locale} />
         </div>
     );
 }
 
 /** "Thriving · +25%, 7 days" for a row's screen-reader label in those orders. */
-export function arkPeriodLabel(stats: ArkSeriesStats, period: ArkPeriod, locale: string): string {
+export function arkPeriodLabel(stats: ArkSeriesStats, period: ArkPeriod, locale: string, words: ArkGraphWords = ARK_GRAPH_ENGLISH): string {
     const said = arkStatsChangeText(stats, locale);
-    return `${said.percent ?? said.count}, ${ARK_GRAPH_WORDS.periods[period]}`;
+    return `${said.percent ?? said.count}, ${words.periods[period]}`;
 }
 
 /** The order and the period over the list; the message when nothing changed in the period. */
@@ -351,5 +331,6 @@ export function ArkHudControls({mode, onMode, period, onPeriod}: {mode: ArkSortM
 }
 
 export function ArkHudNone({mode}: {mode: ArkSortMode}) {
-    return <li className="px-3.5 py-3 text-[12px] text-white/55">{mode === "thriving" ? ARK_GRAPH_WORDS.noneThriving : ARK_GRAPH_WORDS.noneDeclining}</li>;
+    const words = useGraphWords();
+    return <li className="px-3.5 py-3 text-[12px] text-white/55">{mode === "thriving" ? words.noneThriving : words.noneDeclining}</li>;
 }

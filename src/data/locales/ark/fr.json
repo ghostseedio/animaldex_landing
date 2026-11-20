@@ -126,6 +126,45 @@
             "openList": "Les voir sur l'Ark",
             "listLabel": "Toutes les espèces à bord, les plus nombreuses d'abord"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 h",
+                "7d": "7 jours",
+                "30d": "30 jours",
+                "all": "Tout"
+            },
+            "periodsShort": {
+                "24h": "24 h",
+                "7d": "7 j",
+                "30d": "30 j",
+                "all": "Tout"
+            },
+            "periodLabel": "Période",
+            "sortLabel": "Ordre",
+            "biggest": "Plus nombreuses",
+            "thriving": "En hausse",
+            "declining": "En baisse",
+            "noneThriving": "Aucune espèce n'a progressé sur cette période.",
+            "noneDeclining": "Aucune espèce n'a reculé sur cette période.",
+            "back": "Toutes les espèces",
+            "now": "Maintenant",
+            "change": "Variation",
+            "peak": "Pic",
+            "low": "Creux",
+            "arrived": "{count} montés à bord",
+            "born": "{count} nés",
+            "revived": "{count} revenus après guérison",
+            "died": "{count} morts",
+            "eaten": "{count} dévorés",
+            "nothing": "Aucune naissance, arrivée ni mort sur cette période.",
+            "flyTo": "Voir dans l'Ark",
+            "goneNow": "Aucun à bord actuellement",
+            "openGraph": "{animal} : graphique de population",
+            "graphLabel": "{animal} : population, {period}, de {start} à {now}",
+            "arkDays": "Jours de l'Ark {from}–{to}",
+            "recordStarts": "Le relevé commence le {date}",
+            "pointAt": "{time} : {count}"
+        },
         "story": {
             "generic": "Monté à bord après une étape qui a marché",
             "debate": "Amené à bord après : « {problem} » · la manière de {animal} ({power}) a marché",

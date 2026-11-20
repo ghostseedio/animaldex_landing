@@ -126,6 +126,45 @@
             "openList": "Arkの上で見る",
             "listLabel": "乗船中のすべての種（数の多い順）"
         },
+        "graph": {
+            "periods": {
+                "24h": "24時間",
+                "7d": "7日間",
+                "30d": "30日間",
+                "all": "すべて"
+            },
+            "periodsShort": {
+                "24h": "24時間",
+                "7d": "7日",
+                "30d": "30日",
+                "all": "全期間"
+            },
+            "periodLabel": "期間",
+            "sortLabel": "並び順",
+            "biggest": "多い順",
+            "thriving": "増加中",
+            "declining": "減少中",
+            "noneThriving": "この期間に増えた種はありません。",
+            "noneDeclining": "この期間に減った種はありません。",
+            "back": "すべての種",
+            "now": "現在",
+            "change": "増減",
+            "peak": "最多",
+            "low": "最少",
+            "arrived": "乗船 {count}",
+            "born": "誕生 {count}",
+            "revived": "回復して復帰 {count}",
+            "died": "死亡 {count}",
+            "eaten": "捕食された {count}",
+            "nothing": "この期間に誕生・乗船・死亡はありません。",
+            "flyTo": "Arkで見る",
+            "goneNow": "現在乗船している個体はいません",
+            "openGraph": "{animal}：個体数グラフ",
+            "graphLabel": "{animal}の個体数、{period}：{start}から{now}",
+            "arkDays": "Arkの日数 {from}–{to}",
+            "recordStarts": "記録の開始：{date}",
+            "pointAt": "{time}：{count}"
+        },
         "story": {
             "generic": "うまくいったステップのあとに乗り込みました",
             "debate": "乗り込んだきっかけ：「{problem}」 · {animal}のやり方（{power}）がうまくいきました",

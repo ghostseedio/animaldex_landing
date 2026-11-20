@@ -126,6 +126,45 @@
             "openList": "Vezi-le peste Ark",
             "listLabel": "Toate speciile de la bord, cele mai numeroase primele"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 h",
+                "7d": "7 zile",
+                "30d": "30 de zile",
+                "all": "Tot"
+            },
+            "periodsShort": {
+                "24h": "24 h",
+                "7d": "7 z",
+                "30d": "30 z",
+                "all": "Tot"
+            },
+            "periodLabel": "Perioadă",
+            "sortLabel": "Ordine",
+            "biggest": "Cele mai multe",
+            "thriving": "În creștere",
+            "declining": "În scădere",
+            "noneThriving": "Nicio specie nu a crescut în această perioadă.",
+            "noneDeclining": "Nicio specie nu a scăzut în această perioadă.",
+            "back": "Toate speciile",
+            "now": "Acum",
+            "change": "Schimbare",
+            "peak": "Maxim",
+            "low": "Minim",
+            "arrived": "Urcate la bord: {count}",
+            "born": "Născute: {count}",
+            "revived": "Întoarse după recuperare: {count}",
+            "died": "Moarte: {count}",
+            "eaten": "Mâncate: {count}",
+            "nothing": "Nicio naștere, sosire sau moarte în această perioadă.",
+            "flyTo": "Arată în Ark",
+            "goneNow": "Niciunul la bord acum",
+            "openGraph": "{animal}: grafic al populației",
+            "graphLabel": "Populația ({animal}), {period}: de la {start} la {now}",
+            "arkDays": "Zilele Ark {from}–{to}",
+            "recordStarts": "Evidența începe pe {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "A urcat la bord după un pas care a mers",
             "debate": "Adus la bord după: „{problem}” · a mers calea propusă de {animal} ({power})",

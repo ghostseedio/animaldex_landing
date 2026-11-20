@@ -7,6 +7,7 @@
 import {ArkLive, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
 import {ArkBarsView, type ArkBarsWords} from "@/ark-scene/live/bars-view";
 import type {ArkLiveWords} from "@/lib/ark-live-words";
+import {arkGraphWords} from "@/lib/ark-graph-words";
 import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkActivityWords} from "@/lib/ark-animal-status";
 import {arkLostWords, type ArkExtinction} from "@/lib/ark-extinct";
@@ -26,6 +27,8 @@ export type ArkHudWordsIn = {
     lost?: Record<string, unknown> | null;
     /** V1: the marks' words (`ark.endangered`: "Last one", "Critical"). */
     endangered?: {last?: string | null; critical?: string | null} | null;
+    /** The population graphs' words (`ark.graph`); English key by key where absent. */
+    graph?: Record<string, unknown> | null;
     hud?: Partial<Record<"show" | "hide" | "chip" | "rowCount" | "change24h" | "changeWindow" | "yours" | "herdTag" | "listLabel", string>> | null;
 } | null;
 
@@ -61,7 +64,8 @@ function barsWords(words: ArkHudWordsIn): ArkBarsWords {
         yours: hud.yours || "Yours",
         herdTag: hud.herdTag || "herd",
         list: hud.listLabel || "Every species aboard, the most numerous first",
-        lost: arkLostWords(words?.lost)
+        lost: arkLostWords(words?.lost),
+        graph: arkGraphWords(words?.graph)
     };
 }
 

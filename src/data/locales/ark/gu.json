@@ -126,6 +126,45 @@
             "openList": "Ark ઉપર જુઓ",
             "listLabel": "સવાર દરેક પ્રજાતિ, સૌથી વધુ સંખ્યાવાળી પહેલાં"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 કલાક",
+                "7d": "7 દિવસ",
+                "30d": "30 દિવસ",
+                "all": "બધું"
+            },
+            "periodsShort": {
+                "24h": "24 કલાક",
+                "7d": "7 દિવસ",
+                "30d": "30 દિવસ",
+                "all": "બધું"
+            },
+            "periodLabel": "સમયગાળો",
+            "sortLabel": "ક્રમ",
+            "biggest": "સૌથી વધુ",
+            "thriving": "વધતી",
+            "declining": "ઘટતી",
+            "noneThriving": "આ સમયગાળામાં કોઈ પ્રજાતિ વધી નથી.",
+            "noneDeclining": "આ સમયગાળામાં કોઈ પ્રજાતિ ઘટી નથી.",
+            "back": "બધી પ્રજાતિઓ",
+            "now": "હમણાં",
+            "change": "ફેરફાર",
+            "peak": "સર્વોચ્ચ",
+            "low": "સૌથી ઓછું",
+            "arrived": "{count} સવાર થયા",
+            "born": "{count} જન્મ્યા",
+            "revived": "{count} સાજા થઈને પાછા આવ્યા",
+            "died": "{count} મૃત્યુ પામ્યા",
+            "eaten": "{count} ખવાઈ ગયા",
+            "nothing": "આ સમયગાળામાં કોઈ જન્મ, આગમન કે મૃત્યુ નથી.",
+            "flyTo": "Ark માં બતાવો",
+            "goneNow": "હવે કોઈ સવાર નથી",
+            "openGraph": "{animal}: વસ્તીનો ગ્રાફ",
+            "graphLabel": "{animal}ની વસ્તી, {period}: {start} થી {now}",
+            "arkDays": "Ark દિવસો {from}–{to}",
+            "recordStarts": "નોંધ {date}થી શરૂ થાય છે",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "કામ કરી ગયેલા પગલા પછી સવાર થયું",
             "debate": "આ પછી સવાર થયું: ‘{problem}’ · {animal} ની રીત ({power}) કામ કરી ગઈ",

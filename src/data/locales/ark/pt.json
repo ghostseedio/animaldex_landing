@@ -126,6 +126,45 @@
             "openList": "Ver sobre a Ark",
             "listLabel": "Todas as espécies a bordo, as mais numerosas primeiro"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 h",
+                "7d": "7 dias",
+                "30d": "30 dias",
+                "all": "Tudo"
+            },
+            "periodsShort": {
+                "24h": "24 h",
+                "7d": "7 d",
+                "30d": "30 d",
+                "all": "Tudo"
+            },
+            "periodLabel": "Período",
+            "sortLabel": "Ordem",
+            "biggest": "Mais numerosas",
+            "thriving": "Em alta",
+            "declining": "Em queda",
+            "noneThriving": "Nenhuma espécie cresceu neste período.",
+            "noneDeclining": "Nenhuma espécie diminuiu neste período.",
+            "back": "Todas as espécies",
+            "now": "Agora",
+            "change": "Variação",
+            "peak": "Pico",
+            "low": "Mínimo",
+            "arrived": "{count} embarcaram",
+            "born": "{count} nasceram",
+            "revived": "{count} voltaram após se recuperar",
+            "died": "{count} morreram",
+            "eaten": "{count} comidos",
+            "nothing": "Nenhum nascimento, chegada ou morte neste período.",
+            "flyTo": "Mostrar na Ark",
+            "goneNow": "Nenhum a bordo agora",
+            "openGraph": "{animal}: gráfico da população",
+            "graphLabel": "População de {animal}, {period}: de {start} a {now}",
+            "arkDays": "Dias da Ark {from}–{to}",
+            "recordStarts": "O registro começa em {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Embarcou depois de um passo que funcionou",
             "debate": "Trazido a bordo depois de: “{problem}” · o jeito de {animal} ({power}) funcionou",

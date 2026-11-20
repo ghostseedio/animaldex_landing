@@ -126,6 +126,45 @@
             "openList": "Prikaži iznad broda Ark",
             "listLabel": "Sve vrste na brodu, najbrojnije prve"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 h",
+                "7d": "7 dana",
+                "30d": "30 dana",
+                "all": "Sve"
+            },
+            "periodsShort": {
+                "24h": "24 h",
+                "7d": "7 d",
+                "30d": "30 d",
+                "all": "Sve"
+            },
+            "periodLabel": "Vremensko razdoblje",
+            "sortLabel": "Redoslijed",
+            "biggest": "Najbrojnije",
+            "thriving": "U porastu",
+            "declining": "U padu",
+            "noneThriving": "Nijedna vrsta nije porasla u ovom razdoblju.",
+            "noneDeclining": "Nijedna vrsta nije pala u ovom razdoblju.",
+            "back": "Sve vrste",
+            "now": "Sada",
+            "change": "Promjena",
+            "peak": "Vrhunac",
+            "low": "Najmanje",
+            "arrived": "Ukrcalo se: {count}",
+            "born": "Rođeno: {count}",
+            "revived": "Vratilo se nakon oporavka: {count}",
+            "died": "Uginulo: {count}",
+            "eaten": "Pojedeno: {count}",
+            "nothing": "U ovom razdoblju nema rođenja, dolazaka ni smrti.",
+            "flyTo": "Prikaži u Arku",
+            "goneNow": "Sada nijedan na brodu",
+            "openGraph": "{animal}: graf populacije",
+            "graphLabel": "Populacija ({animal}), {period}: od {start} do {now}",
+            "arkDays": "Dani Arka {from}–{to}",
+            "recordStarts": "Zapis počinje {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Ukrcala se nakon koraka koji je uspio",
             "debate": "Na brodu nakon: „{problem}” · uspio je način koji ima {animal} ({power})",

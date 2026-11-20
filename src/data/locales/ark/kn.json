@@ -126,6 +126,45 @@
             "openList": "Ark ಮೇಲೆ ನೋಡಿ",
             "listLabel": "ಹಡಗಿನಲ್ಲಿರುವ ಪ್ರತಿಯೊಂದು ಪ್ರಭೇದ, ಹೆಚ್ಚು ಸಂಖ್ಯೆಯವು ಮೊದಲು"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 ಗಂಟೆ",
+                "7d": "7 ದಿನ",
+                "30d": "30 ದಿನ",
+                "all": "ಎಲ್ಲಾ"
+            },
+            "periodsShort": {
+                "24h": "24 ಗಂಟೆ",
+                "7d": "7 ದಿನ",
+                "30d": "30 ದಿನ",
+                "all": "ಎಲ್ಲಾ"
+            },
+            "periodLabel": "ಕಾಲಾವಧಿ",
+            "sortLabel": "ಕ್ರಮ",
+            "biggest": "ಅತ್ಯಧಿಕ",
+            "thriving": "ಬೆಳೆಯುತ್ತಿರುವ",
+            "declining": "ಕುಸಿಯುತ್ತಿರುವ",
+            "noneThriving": "ಈ ಅವಧಿಯಲ್ಲಿ ಯಾವ ಪ್ರಭೇದವೂ ಹೆಚ್ಚಾಗಿಲ್ಲ.",
+            "noneDeclining": "ಈ ಅವಧಿಯಲ್ಲಿ ಯಾವ ಪ್ರಭೇದವೂ ಕಡಿಮೆಯಾಗಿಲ್ಲ.",
+            "back": "ಎಲ್ಲಾ ಪ್ರಭೇದಗಳು",
+            "now": "ಈಗ",
+            "change": "ಬದಲಾವಣೆ",
+            "peak": "ಗರಿಷ್ಠ",
+            "low": "ಕನಿಷ್ಠ",
+            "arrived": "{count} ಹಡಗು ಹತ್ತಿದವು",
+            "born": "{count} ಹುಟ್ಟಿದವು",
+            "revived": "{count} ಚೇತರಿಸಿ ಮರಳಿದವು",
+            "died": "{count} ಸತ್ತವು",
+            "eaten": "{count} ತಿನ್ನಲ್ಪಟ್ಟವು",
+            "nothing": "ಈ ಅವಧಿಯಲ್ಲಿ ಜನನ, ಆಗಮನ ಅಥವಾ ಮರಣ ಇಲ್ಲ.",
+            "flyTo": "Ark ನಲ್ಲಿ ತೋರಿಸಿ",
+            "goneNow": "ಈಗ ಯಾವುದೂ ಹಡಗಿನಲ್ಲಿ ಇಲ್ಲ",
+            "openGraph": "{animal}: ಜನಸಂಖ್ಯೆಯ ಗ್ರಾಫ್",
+            "graphLabel": "{animal} ಜನಸಂಖ್ಯೆ, {period}: {start} ರಿಂದ {now}",
+            "arkDays": "Ark ದಿನಗಳು {from}–{to}",
+            "recordStarts": "ದಾಖಲೆ {date} ರಿಂದ ಆರಂಭ",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "ಕೆಲಸ ಮಾಡಿದ ಹೆಜ್ಜೆಯ ನಂತರ Ark ಹತ್ತಿತು",
             "debate": "ಇದರ ನಂತರ Ark ಹತ್ತಿತು: ‘{problem}’ · {animal} ರೀತಿ ({power}) ಕೆಲಸ ಮಾಡಿತು",

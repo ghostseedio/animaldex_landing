@@ -18,8 +18,9 @@ import {fillArkWords} from "@/lib/ark-words";
 import {ARK_LOST_WORDS_EN, arkExtinctHow, arkExtinctWhen, fetchArkExtinct, type ArkExtinction, type ArkLostWords} from "@/lib/ark-extinct";
 import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 // popgraph: population over time (owner, 2026-11-17), from the server's record.
+import type {ArkGraphWords} from "@/lib/ark-graph-words";
 import {arkHistoryLines, arkPeriodSpan, readArkHistory, type ArkHistory, type ArkLine, type ArkPeriod} from "@/lib/ark-population-history";
-import {ARK_BARS_GRAPH_WORDS, buildGraphPane, drawControls, drawPeriodChange, drawSpark, makeSparkButton, type ArkSortMode} from "@/ark-scene/live/bars-graph";
+import {buildGraphPane, drawControls, drawPeriodChange, drawSpark, makeSparkButton, type ArkSortMode} from "@/ark-scene/live/bars-graph";
 
 const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif)";
 const GLASS = {background: "rgba(14, 20, 14, 0.72)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.14)", color: "rgba(255, 252, 244, 0.96)"};
@@ -50,6 +51,8 @@ export type ArkBarsWords = {
     list: string;
     /** Lost from the Ark (`lib/ark-extinct.ts`); English where absent. */
     lost?: ArkLostWords;
+    /** The population graphs' words (`lib/ark-graph-words.ts`). */
+    graph: ArkGraphWords;
 };
 
 export type ArkBarsViewOptions = {
@@ -520,7 +523,7 @@ export class ArkBarsView {
                 row.count.textContent = "0";
                 row.fill.style.width = "0%";
                 if (line) drawPeriodChange(row.change, line.stats, locale);
-                row.button.setAttribute("aria-label", `${gone.name}: 0, ${ARK_BARS_GRAPH_WORDS.goneNow}`);
+                row.button.setAttribute("aria-label", `${gone.name}: 0, ${words.graph.goneNow}`);
                 this.drawRowSpark(row, line, gone.name);
                 continue;
             }
@@ -548,7 +551,7 @@ export class ArkBarsView {
             const said = arkChangeText(change, locale);
             row.button.setAttribute("aria-label", [
                 fillArkWords(words.rowCount, {animal: species.name, count: number(species.count)}),
-                drawn?.ranked && line ? `${row.change.textContent}, ${ARK_BARS_GRAPH_WORDS.periods[this.period]}` : said ? fillArkWords(words.change24h, {change: said.text}) : null,
+                drawn?.ranked && line ? `${row.change.textContent}, ${words.graph.periods[this.period]}` : said ? fillArkWords(words.change24h, {change: said.text}) : null,
                 species.mine ? words.yours : null
             ].filter(Boolean).join(", "));
             this.drawRowSpark(row, line, species.name);
@@ -583,16 +586,16 @@ export class ArkBarsView {
 
     private drawRowSpark(row: Row, line: ArkLine | null, name: string) {
         row.spark.style.display = line ? "flex" : "none";
-        if (line) drawSpark(row.spark, line.series, line.stats, name);
+        if (line) drawSpark(row.spark, line.series, line.stats, name, this.options.words.graph);
     }
 
     private drawControls(history: ArkHistory | null, ranked: string[] | null) {
         const shown = Boolean(this.histories.week) && !this.graphKey;
         this.controls.style.display = shown ? "flex" : "none";
-        if (shown) drawControls(this.controls, this.mode, (mode) => this.setGraphState({mode}), this.period, (period) => this.setGraphState({period}));
+        if (shown) drawControls(this.controls, this.mode, (mode) => this.setGraphState({mode}), this.period, (period) => this.setGraphState({period}), this.options.words.graph);
         const empty = Boolean(history && ranked && !ranked.length) && !this.graphKey;
         this.none.style.display = empty ? "block" : "none";
-        this.none.textContent = this.mode === "thriving" ? ARK_BARS_GRAPH_WORDS.noneThriving : ARK_BARS_GRAPH_WORDS.noneDeclining;
+        this.none.textContent = this.mode === "thriving" ? this.options.words.graph.noneThriving : this.options.words.graph.noneDeclining;
     }
 
     private setGraphState(next: {mode?: ArkSortMode; period?: ArkPeriod; graphKey?: string | null}) {
@@ -633,6 +636,7 @@ export class ArkBarsView {
             stats: line.stats,
             period: this.period,
             locale: this.options.locale,
+            words: this.options.words.graph,
             onPeriod: (period) => this.setGraphState({period}),
             onBack: () => this.setGraphState({graphKey: null}),
             onFly: species ? () => {

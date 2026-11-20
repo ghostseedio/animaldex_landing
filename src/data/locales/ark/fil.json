@@ -126,6 +126,45 @@
             "openList": "Tingnan sila sa ibabaw ng Ark",
             "listLabel": "Bawat species na nakasakay, nauuna ang pinakamarami"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 oras",
+                "7d": "7 araw",
+                "30d": "30 araw",
+                "all": "Lahat"
+            },
+            "periodsShort": {
+                "24h": "24 oras",
+                "7d": "7 araw",
+                "30d": "30 araw",
+                "all": "Lahat"
+            },
+            "periodLabel": "Panahon",
+            "sortLabel": "Pagkakasunod-sunod",
+            "biggest": "Pinakamarami",
+            "thriving": "Lumalago",
+            "declining": "Bumababa",
+            "noneThriving": "Walang species na dumami sa panahong ito.",
+            "noneDeclining": "Walang species na nabawasan sa panahong ito.",
+            "back": "Lahat ng species",
+            "now": "Ngayon",
+            "change": "Pagbabago",
+            "peak": "Pinakamataas",
+            "low": "Pinakamababa",
+            "arrived": "{count} ang sumakay",
+            "born": "{count} ang ipinanganak",
+            "revived": "{count} ang bumalik mula sa paggaling",
+            "died": "{count} ang namatay",
+            "eaten": "{count} ang kinain",
+            "nothing": "Walang ipinanganak, dumating, o namatay sa panahong ito.",
+            "flyTo": "Ipakita sa Ark",
+            "goneNow": "Wala nang nakasakay ngayon",
+            "openGraph": "{animal}: graph ng populasyon",
+            "graphLabel": "Populasyon ng {animal}, {period}: mula {start} hanggang {now}",
+            "arkDays": "Mga araw ng Ark {from}–{to}",
+            "recordStarts": "Nagsisimula ang tala sa {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Sumakay pagkatapos ng isang hakbang na gumana",
             "debate": "Isinakay pagkatapos ng: “{problem}” · gumana ang paraan ng {animal} ({power})",
