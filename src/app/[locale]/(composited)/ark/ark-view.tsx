@@ -1000,7 +1000,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                 apply({
                     ...growFrom,
                     animals,
-                    counts: {animals: animals.length, species: new Set(animals.map((a) => a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}
+                    counts: {animals: animals.length, species: new Set(animals.map((a) => a.kind_species_profile_id || a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}
                 });
                 return;
             }

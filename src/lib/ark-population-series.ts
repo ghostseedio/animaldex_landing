@@ -52,9 +52,11 @@ function text(value: unknown): string | null {
 function keyOf(animal: Row, row: Row, aboard: Map<string, string>, kindOfLook: Map<string, string>): string | null {
     const id = text(animal.id);
     if (id && aboard.has(id)) return aboard.get(id)!;
+    // The animal's own kind when the log names it (voyage_event_animal), else its look's kind from the animals aboard.
+    const kind = text(animal.kind_species_profile_id);
     const species = text(animal.species_profile_id) ?? text(row.species_profile_id);
     const slug = text(animal.model_slug);
-    return (species && kindOfLook.get(species)) || species || (slug ? `slug:${slug}` : null);
+    return kind || (species && kindOfLook.get(species)) || species || (slug ? `slug:${slug}` : null);
 }
 
 /** Each species' count now: key -> {count, name, slug}. */

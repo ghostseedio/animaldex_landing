@@ -176,7 +176,8 @@ export function decodeArkSnapshot(raw: unknown): ArkSnapshot | null {
         voyage: {slug: text(voyage.slug) ?? "first", name: text(voyage.name) ?? "", started_at: text(voyage.started_at)},
         counts: {
             animals: count(counts.animals ?? animals.length),
-            species: count(counts.species ?? new Set(animals.map((a) => a.species_profile_id)).size),
+            // (a species is its kind: a Beagle is a Domestic Dog; the server's count is by kind)
+            species: count(counts.species ?? new Set(animals.map((a) => a.kind_species_profile_id || a.species_profile_id)).size),
             founders: count(counts.founders)
         },
         zones,
