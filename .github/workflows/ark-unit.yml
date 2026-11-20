@@ -24,6 +24,10 @@ jobs:
           # This workflow holds no Supabase credentials on purpose (any branch can dispatch it), so the database privilege
           # contract is skipped here with its reason printed; src/lib/database-privilege-contract.test.ts says how it runs.
           DATABASE_CONTRACT_OPTIONAL: "1"
+      - name: Ark bundles (the apps' Ark page needs public/ark/ark-ui.js and ark-ui.css; the build fails without them)
+        run: |
+          npm run build:ark
+          for f in public/ark/ark-scene.js public/ark/ark-ui.js public/ark/ark-ui.css; do test -s "$f" || { echo "missing $f"; exit 1; }; done
       - name: Lint
         run: npm run lint
       - name: Types (the known .svg module error is ignored; anything else fails)

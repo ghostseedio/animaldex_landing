@@ -122,3 +122,13 @@ console.log(`public/ark/ark-version.txt: ${version}`);
 // when the Ark hunts by encounter (`src/ark-scene/hunting.ts`), never in the bundle.
 copyFileSync(path.join(root, "src/ark-scene/positions/atlas.json"), path.join(root, "public/ark/positions-atlas.json"));
 console.log(`public/ark/positions-atlas.json: ${(statSync(path.join(root, "public/ark/positions-atlas.json")).size / 1024).toFixed(0)} KB`);
+// The apps' Ark page (`embed.html`) loads its panel and card from these two (ARK-SIMPLE): built here, by `prebuild` (so
+// `npm run build` and the Dockerfile's image both make them), never committed. A missing or empty one fails the build
+// rather than shipping an app Ark with no panel or card.
+for (const file of ["public/ark/ark-scene.js", "public/ark/ark-ui.js", "public/ark/ark-ui.css"]) {
+    const size = (() => { try { return statSync(path.join(root, file)).size; } catch { return 0; } })();
+    if (size < 4096) {
+        console.error(`build-ark-bundle: ${file} is missing or empty (${size} bytes)`);
+        process.exit(1);
+    }
+}
