@@ -34,6 +34,8 @@ import {
 import {ZOO_ENCLOSURE_TYPES, ZOO_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import {RURAL_BUILDINGS, RURAL_LANE, RURAL_LANE_WIDTH, RURAL_PENS, RURAL_POND_POLY, RURAL_TRACKS, ruralOrchardTrees} from "@/ark-scene/islands/town/rural";
 import type {ZooAnnexTheme} from "@/ark-scene/islands/town/zoo-homes";
+import {clipStreets} from "@/ark-scene/islands/town/street-clip";
+import {pitOnSlab, type TreePit} from "@/ark-scene/islands/town/pavement-overlap";
 import {DOME, DOME_ID, DOME_LOBBY, DOME_LOBE, DOME_PLOT, DOME_WALK} from "@/ark-scene/islands/town/dome";
 import {SAFARI, SAFARI_AREAS, SAFARI_GATE_ROAD, SAFARI_LOOP, SAFARI_LOOP_STREET, SAFARI_ROAD_WIDTH, type SafariHabitat} from "@/ark-scene/islands/town/safari";
 
@@ -312,6 +314,12 @@ export type TownPlan = {
     square: Box;
     /** Trees placed by the plan (parks, gardens, streets, churchyard, wood, orchard, zoo planting). */
     trees: Array<{x: number; z: number; kind: TreeKind; scale: number; seed: number}>;
+    /**
+     * The tree pits the street trees stand in (ark-world-2: the slab ran through their trunks): a square tray of soil in a
+     * granite edging on the pavement slab, the tree's `seed` its own. A street tree is only planted where its whole pit lies on
+     * a drawn slab (`pavement-overlap.ts`).
+     */
+    treePits: TreePit[];
     /** Where the lock gates are (the canal's end at the harbour). */
     lock: Box;
     /** Boat moorings (canal and harbour): who is in on a day is `people.ts`. */
@@ -364,6 +372,7 @@ type Ctx = {
     greens: Green[];
     hedges: Hedge[];
     trees: TownPlan["trees"];
+    treePits: TownPlan["treePits"];
     counts: {house: number; terrace: number; flats: number};
     /** Ground that nothing else may be placed on: blocks of homes and their gardens, the square, fields. */
     keepOut: Box[];
@@ -637,7 +646,7 @@ export const TOWN_STREETS: Street[] = [
 ];
 
 function buildPlan(): TownPlan {
-    const ctx: Full = {streets: [], buildings: [], parcels: [], greens: [], hedges: [], trees: [], counts: {house: 0, terrace: 0, flats: 0}, waters: [], farms: [], slots: [], spares: [], moorings: [], misses: [], keepOut: []};
+    const ctx: Full = {streets: [], buildings: [], parcels: [], greens: [], hedges: [], trees: [], treePits: [], counts: {house: 0, terrace: 0, flats: 0}, waters: [], farms: [], slots: [], spares: [], moorings: [], misses: [], keepOut: []};
     ctx.streets.push(...TOWN_STREETS);
     const street = (id: string) => ctx.streets.find((s) => s.id === id)!;
 
@@ -921,6 +930,7 @@ function buildPlan(): TownPlan {
         bridges: [],
         square,
         trees: ctx.trees,
+        treePits: ctx.treePits,
         lock: box(14, 100, 10, 6),
         moorings: ctx.moorings,
         lamps: [],
@@ -1153,22 +1163,35 @@ function plant(ctx: Full) {
         if (ctx.trees.some((t) => Math.hypot(t.x - px, t.z - pz) < 7)) continue;
         add(px, pz, r() < 0.5 ? "pine" : r() < 0.5 ? "hedge_shrub" : "oak", 0.7 + r() * 0.4, `shore-${k}`);
     }
-    // Street trees on the town's wider streets (the pavement's outer edge).
+    // Street trees on the town's wider streets, each in a tree pit in the middle of its slab (ark-world-2, the owner: "a street tree's
+    // trunk passes through the pavement": they stood 0.55 m in from the slab's outer edge, trunks 0.9 m across, so the slab, which
+    // floats 16 cm over the verge with no edge face, ran through every one of them and the trunk showed under its edge). A pit is a
+    // square tray of soil in an edging, laid on the slab (`render/tree-pits.ts`); the tree is planted only where its whole pit lies
+    // on a drawn slab (`pavement-overlap.ts`).
+    const clip = clipStreets(ctx.streets);
     for (const id of ["high_street_east", "harbour_road_east", "mill_lane_east", "east_road", "park_road", "harbour_road", "high_street"]) {
         const s = ctx.streets.find((q) => q.id === id);
         if (!s) continue;
         const length = polylineLength(s.line);
+        // The slab's middle, and the pit's half side: the slab less 0.18 m a side to walk past, at most 0.65.
+        const slab = s.pavement - 0.16;
+        const half = Math.min(0.65, (slab - 0.36) / 2);
+        if (half < 0.5) continue;
         for (let a = 10; a < length - 6; a += 18) {
             const {point, dir} = polylineAt(s.line, a);
             const side = Math.floor(a / 18) % 2 ? 1 : -1;
-            const off = side * (s.width / 2 + s.pavement - 0.55);
+            const off = side * (s.width / 2 + 0.16 + slab / 2);
             const px = point.x - dir.z * off;
             const pz = point.z + dir.x * off;
             if (ctx.streets.some((o) => o.id !== s.id && polylineWithin(o.line, px, pz, o.width / 2 + o.pavement + 3))) continue;
             if (polylineWithin(CANAL, px, pz, CANAL_WIDTH / 2 + 6)) continue;
             if (ctx.parcels.some((p) => p.drive && inBox(p.drive, px, pz, 1.5))) continue;
             if (ctx.trees.some((t) => Math.hypot(t.x - px, t.z - pz) < 7)) continue;
-            add(px, pz, "lime", 0.62 + r() * 0.15, `street-${id}-${a}`);
+            const name = `street-${id}-${a}`;
+            const pit: TreePit = {x: px, z: pz, heading: Math.atan2(dir.z, dir.x), half, street: id, seed: hashText(name)};
+            if (!pitOnSlab(clip, pit)) continue;
+            ctx.treePits.push(pit);
+            add(px, pz, "lime", 0.62 + r() * 0.15, name);
         }
     }
     // Gardens: more back-garden trees, a shrub or two in the front gardens.
