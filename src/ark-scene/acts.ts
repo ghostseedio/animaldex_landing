@@ -25,7 +25,6 @@
 
 import {SWIMMING_PLANS} from "@/ark-scene/sizes";
 import {heightAt} from "@/ark-scene/world";
-import {huntRun, type HuntAct} from "@/ark-scene/hunt-acts";
 
 /** The ground under a land animal on the move. */
 const groundAt = (x: number, z: number) => Math.max(heightAt(x, z), -0.3);
@@ -113,8 +112,6 @@ export type MealStage = {
     catchAt?: number;
     /** Where the chase happens: the two at the start, the catch (for the camera's clear view). */
     places?: Array<{x: number; y: number; z: number}>;
-    /** The hunter's own way of hunting that was drawn (`hunt-acts.ts`), when one was; absent: the generic chase. */
-    hunt?: HuntAct | null;
 };
 
 const smooth = (t: number) => {
@@ -263,8 +260,6 @@ export type ChaseOptions = {
     exact?: boolean;
     /** The meal follows (`meal-acts.ts`): the chase ends at the catch, with no fade and no carrying off. */
     meal?: boolean;
-    /** The hunter's own way of hunting (`hunt-acts.ts`), where its species has one that fits this pair; absent: the generic chase. */
-    hunt?: HuntAct | null;
 };
 
 function rng(seed: string): () => number {
@@ -287,7 +282,7 @@ const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
 const steer = (from: number, to: number, max: number) => from + Math.max(Math.min(wrap(to - from), max), -max);
 
 /** One sampled moment of one animal in the chase. */
-type Sample = {x: number; z: number; y: number; yaw: number; v: number; state: string; pitch: number; roll?: number; hidden?: boolean; dim?: number; scale?: number};
+type Sample = {x: number; z: number; y: number; yaw: number; v: number; state: string; pitch: number; hidden?: boolean; dim?: number; scale?: number};
 
 const DT = 1 / 60;
 /** Lunged at, the prey runs on straight at this share of its pace (the catch lands where it will be). */
@@ -347,7 +342,7 @@ function sampleAt(list: Sample[], t: number): Sample {
     const a = list[i];
     const b = list[Math.min(i + 1, list.length - 1)];
     const k = f - i;
-    return {...a, x: lerp(a.x, b.x, k), z: lerp(a.z, b.z, k), y: lerp(a.y, b.y, k), yaw: turn(a.yaw, b.yaw, k), v: lerp(a.v, b.v, k), pitch: lerp(a.pitch, b.pitch, k), roll: lerp(a.roll ?? 0, b.roll ?? 0, k), dim: lerp(a.dim ?? 0, b.dim ?? 0, k), scale: lerp(a.scale ?? 1, b.scale ?? 1, k)};
+    return {...a, x: lerp(a.x, b.x, k), z: lerp(a.z, b.z, k), y: lerp(a.y, b.y, k), yaw: turn(a.yaw, b.yaw, k), v: lerp(a.v, b.v, k), pitch: lerp(a.pitch, b.pitch, k), dim: lerp(a.dim ?? 0, b.dim ?? 0, k), scale: lerp(a.scale ?? 1, b.scale ?? 1, k)};
 }
 
 /**
@@ -736,9 +731,7 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody, opt
             turnAt: 0.5
         };
     }
-    // The hunter's own way (`hunt-acts.ts`) where its species has one that fits; else the generic chase below.
-    const own = options.hunt ? huntRun({act: options.hunt, predator, prey, seed: options.seed ?? `${predator.x.toFixed(2)},${prey.x.toFixed(2)}`, flee: options.flee ?? "run", miss: false, gap: 0, exact: Boolean(options.exact), meal: Boolean(options.meal), clear: options.clear, water: options.water, ground: groundAt, paces: {sprint: chasePace(predator, "sprint"), flee: chasePace(prey, "flee"), stalk: chasePace(predator, "stalk"), dive: chasePace(predator, "dive")}}) : null;
-    const run = own ?? (kind === "swoop" ? swoopChase(predator, prey, options) : landOrWaterChase(kind, predator, prey, options));
+    const run = kind === "swoop" ? swoopChase(predator, prey, options) : landOrWaterChase(kind, predator, prey, options);
     // The frame: everything both of them cover, side on (the scene's camera takes the bearing).
     let minX = Infinity;
     let maxX = -Infinity;
@@ -760,7 +753,7 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody, opt
     const extent = Math.max(maxX - minX, maxZ - minZ, (maxY - minY) * 1.4);
     const pose = (body: ActBody, list: Sample[]) => (t: number): ActPose => {
         const s = sampleAt(list, t);
-        return {x: s.x, z: s.z, base: s.y, yaw: s.yaw, pitch: s.pitch, roll: s.roll ?? 0, scale: s.scale ?? 1, dim: s.dim ?? 0, hidden: Boolean(s.hidden), state: s.state, speed: s.v};
+        return {x: s.x, z: s.z, base: s.y, yaw: s.yaw, pitch: s.pitch, roll: 0, scale: s.scale ?? 1, dim: s.dim ?? 0, hidden: Boolean(s.hidden), state: s.state, speed: s.v};
     };
     return {
         kind,
@@ -777,8 +770,7 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody, opt
             return a <= at && at < b && puff.size > 0;
         }),
         catchAt: run.tc,
-        places: [run.pred[0], run.prey[0], sampleAt(run.prey, run.tc)].map((p) => ({x: p.x, y: p.y + 0.5, z: p.z})),
-        hunt: own ? options.hunt : null
+        places: [run.pred[0], run.prey[0], sampleAt(run.prey, run.tc)].map((p) => ({x: p.x, y: p.y + 0.5, z: p.z}))
     };
 }
 
