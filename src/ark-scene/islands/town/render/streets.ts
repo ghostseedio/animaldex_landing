@@ -265,6 +265,61 @@ function kerb(geo: Geo, line: Poly, offset: number, heightAt: (x: number, z: num
     }
 }
 
+/** How far under the ground the slab's edge face goes (m), so it meets the verge with no seam. */
+export const EDGE_SINK = 0.03;
+
+/**
+ * A slab's edge: a face from its top down to the verge (ark-world-2; the owner, 2026-11-21: "the pavement slab floats 16 cm over the
+ * verge with no edge face"). The slab is a flat strip draped 16 cm over the ground, with nothing under its edge: from the grass a
+ * viewer saw straight under it, a dark gap, and through it anything behind (a trunk). The face is in the slab's own material
+ * (`SURF.slabs`: its slabs' texture along the edge and up, `surfaces.ts`), on the same stations (every metre) as the slab's top,
+ * turned away from the road at the slab's outer edge (`offset`); at the ends where the slab is cut by another street's carriageway
+ * (`capStart`, `capEnd`) a cap across its width, `inner` being its kerb-side offset, so the cut end is not a floating plane either.
+ */
+export function slabEdge(geo: Geo, line: Poly, offset: number, heightAt: (x: number, z: number) => number, options: {inner: number; capStart: boolean; capEnd: boolean; alongZ?: boolean}) {
+    const z = options.alongZ ?? runsAlongZ(line);
+    const tag = surfaceTag(SURF.slabs, z, 1);
+    const side = Math.sign(offset) || 1;
+    const st = stations(line, 1);
+    const at = (s: (typeof st)[number], o: number, lift: number): V => {
+        const x = s.x + s.nx * o;
+        const zz = s.z + s.nz * o;
+        return {x, y: heightAt(x, zz) + lift, z: zz};
+    };
+    for (let i = 1; i < st.length; i++) {
+        const a0 = at(st[i - 1], offset, PAVEMENT_LIFT);
+        const b0 = at(st[i], offset, PAVEMENT_LIFT);
+        const af = at(st[i - 1], offset, -EDGE_SINK);
+        const bf = at(st[i], offset, -EDGE_SINK);
+        // (Travelling along the line, the left is +offset: the face looks away from the road on either side.)
+        if (side > 0) {
+            tri(geo, a0, bf, b0, tag, tag, tag, PAVEMENT);
+            tri(geo, a0, af, bf, tag, tag, tag, PAVEMENT);
+        } else {
+            tri(geo, a0, b0, bf, tag, tag, tag, PAVEMENT);
+            tri(geo, a0, bf, af, tag, tag, tag, PAVEMENT);
+        }
+    }
+    // The caps: across the slab at an end the street cut, looking out along the line.
+    const cap = (s: (typeof st)[number], atEnd: boolean) => {
+        const o0 = at(s, options.inner, PAVEMENT_LIFT);
+        const o1 = at(s, offset, PAVEMENT_LIFT);
+        const f0 = at(s, options.inner, -EDGE_SINK);
+        const f1 = at(s, offset, -EDGE_SINK);
+        // At the line's end the face looks along the line, at its start back along it: with `side` the order of the offsets.
+        const forward = atEnd === side > 0;
+        if (forward) {
+            tri(geo, o0, o1, f1, tag, tag, tag, PAVEMENT);
+            tri(geo, o0, f1, f0, tag, tag, tag, PAVEMENT);
+        } else {
+            tri(geo, o0, f1, o1, tag, tag, tag, PAVEMENT);
+            tri(geo, o0, f0, f1, tag, tag, tag, PAVEMENT);
+        }
+    };
+    if (options.capStart) cap(st[0], false);
+    if (options.capEnd) cap(st[st.length - 1], true);
+}
+
 /** A flat quad (a cover, a crossing's stripe) centred at (x, z), `along` × `across` m, turned to the street. */
 function patch(geo: Geo, x: number, z: number, dir: {x: number; z: number}, along: number, across: number, heightAt: (x: number, z: number) => number, lift: number, colour: Colour, surface: SurfaceId, rowsAlongZ: boolean) {
     const ax = dir.x * (along / 2);
@@ -318,6 +373,9 @@ export function streetSurfaces(plan: TownPlan, out: StreetSurfacesOut) {
                 for (const side of [-1, 1]) {
                     for (const piece of keptPieces(part, [side * (s.width / 2 + 0.16), side * (s.width / 2 + s.pavement)], cut("pavement"))) {
                         strip(geo, piece, s.pavement - 0.16, heightAt, PAVEMENT_LIFT, PAVEMENT, SURF.slabs, {offset: side * (s.width / 2 + 0.16 + (s.pavement - 0.16) / 2), alongZ: z, acrossFrom: side < 0 ? 1 : -1, acrossTo: side < 0 ? -1 : 1});
+                        // ark-world-2: its edge face down to the verge, and a cap at each end the cut made (not at the street's own ends).
+                        const apart = (p: Pt, q: Pt) => Math.hypot(p.x - q.x, p.z - q.z) > 0.05;
+                        slabEdge(geo, piece, side * (s.width / 2 + s.pavement), heightAt, {inner: side * (s.width / 2 + 0.16), capStart: apart(piece[0], part[0]), capEnd: apart(piece[piece.length - 1], part[part.length - 1]), alongZ: z});
                     }
                     for (const piece of keptPieces(part, [side * (s.width / 2), side * (s.width / 2 + 0.16)], cut("kerb"))) kerb(geo, piece, side * (s.width / 2), heightAt);
                 }
