@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} néts",
             "lineageLaterOne": "1 descendent posterior",
             "lineageLaterOther": "{count} descendents posteriors",
-            "lineageLiving": "{count} vius ara"
+            "lineageLiving": "{count} vius ara",
+            "power": {
+                "working": "El seu Poder: {power} — funciona",
+                "partly": "El seu Poder: {power} — funciona en part",
+                "earn": "Guanya el seu Poder perquè funcioni",
+                "camouflage": "camuflatge",
+                "speed": "velocitat",
+                "armour": "cuirassa",
+                "warning": "colors d'avís",
+                "vigilance": "vigilància",
+                "group": "defensa en grup",
+                "hiding": "amagar-se",
+                "climb": "fugida cap amunt",
+                "mimicry": "mimetisme"
+            }
         },
         "replay": {
             "title": "Mentre no hi eres",

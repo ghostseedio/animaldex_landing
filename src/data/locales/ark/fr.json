@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} petits-enfants",
             "lineageLaterOne": "1 descendant plus lointain",
             "lineageLaterOther": "{count} descendants plus lointains",
-            "lineageLiving": "{count} en vie actuellement"
+            "lineageLiving": "{count} en vie actuellement",
+            "power": {
+                "working": "Son Pouvoir : {power} — à l'œuvre",
+                "partly": "Son Pouvoir : {power} — en partie à l'œuvre",
+                "earn": "Gagne son Pouvoir pour qu'il agisse",
+                "camouflage": "camouflage",
+                "speed": "vitesse",
+                "armour": "armure",
+                "warning": "couleurs d'avertissement",
+                "vigilance": "vigilance",
+                "group": "défense en groupe",
+                "hiding": "se cacher",
+                "climb": "fuite vers le haut",
+                "mimicry": "mimétisme"
+            }
         },
         "replay": {
             "title": "Pendant votre absence",

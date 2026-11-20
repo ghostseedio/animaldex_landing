@@ -260,7 +260,21 @@
             "lineageGrandOther": "Wajukuu {count}",
             "lineageLaterOne": "Mzao 1 wa vizazi vya baadaye",
             "lineageLaterOther": "Wazao {count} wa vizazi vya baadaye",
-            "lineageLiving": "{count} wako hai sasa"
+            "lineageLiving": "{count} wako hai sasa",
+            "power": {
+                "working": "Nguvu yake: {power} — inafanya kazi",
+                "partly": "Nguvu yake: {power} — inafanya kazi kiasi",
+                "earn": "Pata Nguvu yake ili ifanye kazi",
+                "camouflage": "kujificha kwa rangi",
+                "speed": "kasi",
+                "armour": "kinga ya mwili",
+                "warning": "rangi za onyo",
+                "vigilance": "uangalifu",
+                "group": "ulinzi wa kundi",
+                "hiding": "kujificha",
+                "climb": "kutoroka juu",
+                "mimicry": "kuiga"
+            }
         },
         "replay": {
             "title": "Ulipokuwa mbali",

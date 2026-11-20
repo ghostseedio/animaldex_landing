@@ -97,7 +97,7 @@ import {ModelLibrary, type SpeciesModel} from "@/ark-scene/models";
 import {skipEmptyDraws} from "@/ark-scene/runtime/empty-draws";
 import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
-import {climbClipName, rigBasesFrom} from "@/ark-scene/rig-clips";
+import {climbClipName, rigBasesFrom, rigSetVersion} from "@/ark-scene/rig-clips";
 import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
@@ -148,7 +148,9 @@ import {isAwake} from "@/lib/ark-daylight";
 import {arkAwakeAtHour, arkSleepOf, type Sleep} from "@/ark-scene/sleep-hours";
 import {ARK_DAY_MS, hash32, islandHours} from "@/lib/ark-clock";
 import {ArkLiveliness, type LiveAnimal, type LivePin} from "@/ark-scene/liveliness-scene";
-import {attachVary, setVary} from "@/ark-scene/ark-variation";
+import {attachVary, setVary, setVaryPower} from "@/ark-scene/ark-variation";
+import type {ArkPowerCandidate, ArkPowerFrame, ArkPowerShow} from "@/ark-scene/power-show";
+import type {ArkPower} from "@/ark-scene/power-table";
 import {tideFit} from "@/lib/ark-liveliness";
 import {ARK_ENV as ARK_ENVIRONMENT, ARK_WIND as ARK_WIND_VECTOR} from "@/ark-scene/glsl";
 import {WATER_WIND} from "@/ark-scene/terrain";
@@ -526,6 +528,9 @@ type Entry = {
     glance?: number;
     /** The local reactive layer's output this frame (`reactive.ts`): its offset, head look, action; null outside its budget. */
     reactive?: ReactiveOut | null;
+    /** Powers you can see (decision 420, `power-show.ts`): its kind's mechanism (false: none) and what it shows now. */
+    powerKind?: ArkPower | false;
+    power?: ArkPowerFrame | null;
     /** 3.3 batch (A): its species' defence move (`defence-moves.ts`; false: it has none) and where it is in it. */
     defenceSpec?: DefenceSpec | false;
     defence?: DefenceState;
@@ -1459,6 +1464,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let placedFor: ArkSnapshot | null = null;
     let placedAll = new Map<string, Placement>();
     let disposed = false;
+    // Powers you can see (decision 420; `power-show.ts`): loaded with the first read that has an animal above ordinary.
+    let powerShow: ArkPowerShow | null = null;
+    let powerLoading = false;
     let width = 1;
     let height = 1;
     let onScreen = true;
@@ -2977,6 +2985,30 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         else afterAnimals.push(() => call(...args));
     };
     const setSnapshot = (whole: ArkSnapshot, entrances: boolean) => {
+        // Powers you can see (decision 420): its layer loads the first time a read has an animal above ordinary.
+        if (powerShow) powerShow.snapshot(whole);
+        else if (!powerLoading && whole.animals.some((animal) => animal.thrive === "good" || animal.thrive === "prime")) {
+            powerLoading = true;
+            void import("@/ark-scene/power-show")
+                .then((m) => {
+                    if (disposed) return;
+                    // (The Blender Power clips ride on the v3 rigs: `power-clips.ts`, loaded only when one is wanted.)
+                    powerShow = m.createArkPowerShow({
+                        base: rigBasesFrom(options.modelBase, options.rigBase).find((base) => rigSetVersion(base) === 3) ?? null,
+                        loaded: (slug) => {
+                            const rig = rigs.get(slug);
+                            return rig ? {set: rig.set, version: rig.version, bones: rig.bones, has: (name: string) => Boolean(rig.clips[name])} : null;
+                        },
+                        request: (slug) => rigs.request(slug, true),
+                        flight: (slug) => Boolean(rigs.get(slug)?.flight),
+                        add: (slug, rig, bin, clips) => rigs.addPowerClips(slug, rig, bin, clips)
+                    });
+                    if (current) powerShow.snapshot(current);
+                })
+                .catch(() => {
+                    powerLoading = false;
+                });
+        }
         // p5 (humans): the record's humans are drawn as generic town people (`humans/`), never as animals.
         const people = splitHumans(whole);
         const base = people.rest;
@@ -4017,8 +4049,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const own = c.entry.sched?.pose;
             // (Her turn here too: its place beside her turned about her as she turns.)
             const [rx, rz] = led && dam && own ? nurseTurn(own.x - dam.x, own.z - dam.z, led.bodyYaw) : [0, 0];
-            const odx = led ? led.dx + rx : o.dx;
-            const odz = led ? led.dz + rz : o.dz;
+            // (Powers you can see: a camouflaged, warning-coloured or armoured one showing its Power holds its ground.)
+            const hold = 1 - (c.entry.power?.still ?? 0);
+            const odx = (led ? led.dx + rx : o.dx) * hold;
+            const odz = (led ? led.dz + rz : o.dz) * hold;
             if (odx || odz) {
                 const ground = Math.max(heightAt(pose.x, pose.z), 0);
                 const onGround = !pose.afloat && Math.abs(pose.base - ground) < 0.08;
@@ -4036,6 +4070,24 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             pose.base -= o.crouch * c.modelHeight * 0.08;
         });
         reactiveMs = performance.now() - t0;
+    };
+
+    // MARK: Powers you can see (decision 420; `power-show.ts`, loaded lazily)
+    /** Its Power's move on its pose, within its element, as the reactive layer's offsets are (`offsetShare`). */
+    const powerShift = (c: ArkPowerCandidate, dx: number, dz: number) => {
+        const ready = (worldSampling as unknown as {worldSamplerReady?: () => boolean}).worldSamplerReady;
+        if ((!dx && !dz) || (ready && !ready())) return;
+        const pose = c.pose as Pose;
+        const aloft = Boolean((c.entry as unknown as Entry).sched?.pose?.aloft);
+        const sampler = worldSampler();
+        const ground = Math.max(heightAt(pose.x, pose.z), 0);
+        const onGround = !pose.afloat && Math.abs(pose.base - ground) < 0.08;
+        const inWater = pose.afloat && !aloft && pose.base < 0.02 && sampler.isWater(pose.x, pose.z);
+        const perched = !onGround && !inWater && !pose.afloat && !aloft && pose.base - ground > PERCH_ABOVE;
+        const k = offsetShare(pose, dx, dz, onGround ? "land" : inWater ? "water" : perched ? "perch" : "free", (x, z) => sampler.isWater(x, z), heightAt);
+        pose.x += dx * k;
+        pose.z += dz * k;
+        if (onGround) pose.base = Math.max(heightAt(pose.x, pose.z), 0);
     };
 
     /** Lane L2's per-animal motion (`locomotion/l2-scene.ts`), made on first use. */
@@ -4348,7 +4400,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const flock = scheduleOn && !reducedMotion ? microMurmuration(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow(), heightAt) : null;
             entry.recipeAct = flock?.act ?? null;
             // A swarm round a small animal's spot (bees at the hive by day, mayflies at dusk), or a crawling cluster.
-            entry.recipeFlock = scheduleOn && !reducedMotion && !flock ? swarmFlock(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow()) : null;
+            entry.recipeFlock = scheduleOn && !reducedMotion && !flock ? (swarmFlock(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow()) ?? entry.power?.flock ?? null) : null;
             if (flock) return {x: flock.x, z: flock.z, base: flock.y, yaw: flock.yaw, pitch: 0.95 + flock.pitch, roll: flock.roll, afloat: true};
             // 3.3 batch (D): a pond dragonfly laying: low over the water near her spot, tapping her abdomen's tip to it.
             const laying = scheduleOn && !reducedMotion ? microDipOf(entry) : null;
@@ -4925,6 +4977,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             mode = "sync";
             sync = 0;
         }
+        // Powers you can see: its species' Blender Power clip while its Power shows (`power-clips.ts`), over its own.
+        const powerClip = !reducedMotion && !state.flying ? entry.power?.clip ?? null : null;
+        if (powerClip && rig.clips[powerClip]) {
+            want = powerClip;
+            mode = "time";
+            rate = 1;
+        }
         // Development only (the rig harness's `clips_<slug>` scene): a clip forced on one animal by id, played in time,
         // its base pose taken as the clip's own (no transitions). Never set by the site.
         const forced = (globalThis as {__arkRigForce?: Record<string, string>}).__arkRigForce?.[entry.animal.id];
@@ -5363,6 +5422,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         perf.lap("animals");
         // The local reactive layer first (its offsets and turns go onto the poses keepApart and the grass then read).
         if (scheduleOn && !reducedMotion) stepReactive(candidates, dt);
+        // Powers you can see (decision 420): after the reactive layer, on the same poses; the looks even with motion off.
+        if (powerShow) powerShow.step(candidates as unknown as ArkPowerCandidate[], dt, {now: worldMs() / 1000, motion: scheduleOn && !reducedMotion && !liteOn(), shift: powerShift});
         perf.lap("reactive");
         if (scheduleOn && !reducedMotion) {
             const started = performance.now();
@@ -5813,13 +5874,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (!surface && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase))) groundingCheck.record(animal.id, animal.model_slug, "ground", drawnContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s, (x, z) => standGround(x, z, poseBase)) ?? 0, modelHeight);
                 else if (surface && !(rig && state && state.weight > 0.5)) groundingCheck.record(animal.id, animal.model_slug, "surface", surfaceContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s, {x: where.x, y: where.base, z: where.z}, surface), modelHeight);
             }
+            // Powers you can see: its body down into cover, crouched, on its side, or up off the ground (`power-show.ts` drop).
+            if (entry.power?.drop && !reducedMotion) position.y -= entry.power.drop;
             matrix.compose(position, rotation, scale.set(s, s, s));
             if (rig && state && level === "near") {
                 // The locomotion layer (`locomotion/`, lane L1): gaits with planted feet, foot IK, the body's motion and
                 // the tail's, posed on the CPU into the species' live pose row (the baked rows when it is off).
                 const act2 = act as {state?: string; speed?: number} | null;
                 // (A behaviour recipe's state too: its attitude, a crouch or a rear, stays on the body.)
-                const recipeState = ((entry.sched?.pose ?? null) as RecipePose | null)?.act?.state ?? entry.recipeAct?.state ?? null;
+                // (Powers you can see: an act's state, a catalogue recipe played on demand or a lane's clip, when nothing else plays.)
+                const recipeState = ((entry.sched?.pose ?? null) as RecipePose | null)?.act?.state ?? entry.recipeAct?.state ?? (reducedMotion ? null : entry.power?.state) ?? null;
                 // (Lane TB: one held in a cage, a vivarium or a zoo house keeps its clip's feet: its floor may be over another.)
                 // (On the ground only, by grounding's own test: a pose held up on something the drawn ground does not know, a
                 // rock's top, a log, a climb's ramp, is no ground for the feet; the legged driver would stand its body on the
@@ -5851,12 +5915,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (said) defenceSeen.push({id: animal.id, name: animal.name, speciesId: animal.kind_species_profile_id || animal.species_profile_id || `slug:${animal.model_slug}`, zone: animal.zone, recipe: `defence_${defenceSpec.move}`, episode: said, block: "defend", fish: false, line: defenceSpec.line});
             }
             // p3 (shake): shaking off the water (`water-shake.ts`), drawn from w as the moves are (a move or sleep wins).
+            // Powers you can see: an armoured one's shape (a move of its own, or its sleep, wins).
+            if (!defended && !slept && !reducedMotion && entry.power?.pack) defended = entry.power.pack;
             if (!defended && !slept && !reducedMotion) defended = shakePackOf(((entry.sched?.pose ?? null) as RecipePose | null)?.act, animal.model_slug, entry.length, entry.rig?.now.name === "shake_off" && entry.rig.weight > 0.5);
             // (The duller sex a little greyer: `sexDim`, beside the per-instance variation `arkVary`.)
             entry.sexDim ??= sexDim(entry.animal.id, entry.animal.model_slug);
             // Its sleep for the shader in w (`packSleep`): eyes shut, the curl (near only), a tail flick, its breaths a second.
             (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZW(index, entry.phase, Math.min((act ? act.dim : dim) + entry.sexDim, 1), entry.rest, defended || (slept ? packSleep(eyesOpenForDev ? 0 : slept.eyes, level === "near" ? slept.curl : 0, slept.flick, slept.breath) : packSleep(0, 0, 0, 0)));
             setVary(mesh.geometry, index, animal.id);
+            if (entry.power?.q) setVaryPower(mesh.geometry, mesh.material, index, entry.power.q, entry.power.look);
             // The head look (near only; it fades out as the animal falls asleep).
             const lookAttr = mesh.geometry.getAttribute("arkLook") as InstancedBufferAttribute | undefined;
             const looked = level === "near" ? entry.reactive : null;
@@ -5872,6 +5939,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const pitch = Math.min(Math.max(slept.headPitch + droopOf(model.behaviour?.plan) * entry.rest, -limits.down), limits.up);
                 lookAttr.setXYZ(index, (looked?.headYaw ?? 0) * awakeW + yaw * hw, (looked?.headPitch ?? 0) * awakeW + pitch * hw, 1);
             } else if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
+            // Powers you can see: head up in alarm, or a hunter's look at a prime one and away (`power-show.ts`).
+            const powerHead = level === "near" && !slept && !forcedLook && !reducedMotion ? entry.power?.head : null;
+            if (lookAttr && powerHead && powerHead[2] > 0.05) lookAttr.setXYZ(index, powerHead[0], powerHead[1], powerHead[2]);
             // Lane L2's body channel (w): a swimmer's or a crawler's wave by the distance it moved (near only).
             if (lookAttr) lookAttr.setW(index, level === "near" && !reducedMotion ? l2BodyChannel(l2Of(entry, model.behaviour?.plan), where.x, where.base, where.z, frameDt, entry.length, Boolean(where.water) || (where.afloat && where.base < 0)) : 0);
             // Grazing or browsing on its rig, the head stays where the clip puts it: the look only turns it sideways.
@@ -6579,12 +6649,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         foldCheck = now;
         const looked = selectedId ? findEntry(selectedId) : null;
         const keep = new Set<string>();
-        if (looked?.place.canopy && looked.middle && !flight) {
+        // (Powers you can see: one looked at while its Power's act shows, on the ground too: its duck into cover, its
+        // scramble up, a hunter's pass over it are not hidden behind a bush.)
+        const acting = !looked?.place.canopy && (looked?.power?.react ?? 0) > 0.02;
+        if ((looked?.place.canopy || acting) && looked?.middle && !flight) {
             // Shrunk ones are not hit again: keep what is folded while it is still in the way (tested at full size).
             const hits = blockers(rayFrom.copy(camera.position), looked.middle, Math.max(looked.length * 0.6, 0.35));
             for (const hit of hits) {
                 // (Never a canopy tree: the animal may be on it. Those the view search keeps out of the way.)
-                if (hit.instance < 0 || hit.mesh.userData.kind === "canopy") continue;
+                if (hit.instance < 0 || (hit.mesh.userData.kind === "canopy" && !acting)) continue;
                 keep.add(`${hit.mesh.id}#${hit.instance}`);
                 let instances = folded.get(hit.mesh);
                 if (!instances) folded.set(hit.mesh, (instances = new Map()));
@@ -9945,6 +10018,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             furShells: look.on ? look.shells.drawn : 0,
             closeUpSkins: look.closeUps.loaded,
             liveliness: liveliness.stats(),
+            powers: powerShow?.report() ?? null,
             streaming: (() => {
                 const stream = streamer.stats();
                 return {renderDistance: stream.renderDistance, mapDistance: stream.mapDistance, active: stream.active, islands: stream.islands, fog: stream.fog, renderScale: stream.renderScale, map: stream.map, haze: stream.haze, chunks: stream.chunks, changes: stream.changes, tiles: landscape ? landscape.tiles.stats() : {full: 0, map: 0, hidden: 0}, animalsSkipped: streamSkipped, mapMarkers: streamMarkers, memory: stream.memory};
@@ -9952,6 +10026,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }),
         dispose: () => {
             disposed = true;
+            powerShow?.dispose();
             cancelAnimationFrame(raf);
             humanFigures.dispose(); // p5 (humans)
             humanTVs.dispose(); // humans visible

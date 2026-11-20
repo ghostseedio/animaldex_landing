@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} మనవ పిల్లలు",
             "lineageLaterOne": "తర్వాతి తరాలకు చెందిన 1 జంతువు",
             "lineageLaterOther": "తర్వాతి తరాలకు చెందిన {count} జంతువులు",
-            "lineageLiving": "ప్రస్తుతం {count} బతికి ఉన్నాయి"
+            "lineageLiving": "ప్రస్తుతం {count} బతికి ఉన్నాయి",
+            "power": {
+                "working": "దీని శక్తి: {power} — పనిచేస్తోంది",
+                "partly": "దీని శక్తి: {power} — పాక్షికంగా పనిచేస్తోంది",
+                "earn": "అది పనిచేయాలంటే దీని శక్తిని సంపాదించండి",
+                "camouflage": "మారువేషం",
+                "speed": "వేగం",
+                "armour": "కవచం",
+                "warning": "హెచ్చరిక రంగులు",
+                "vigilance": "అప్రమత్తత",
+                "group": "గుంపు రక్షణ",
+                "hiding": "దాక్కోవడం",
+                "climb": "పైకి తప్పించుకోవడం",
+                "mimicry": "అనుకరణ"
+            }
         },
         "replay": {
             "title": "మీరు లేనప్పుడు",

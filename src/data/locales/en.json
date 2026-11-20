@@ -4472,7 +4472,21 @@
       "lineageGrandOther": "{count} grandchildren",
       "lineageLaterOne": "1 later descendant",
       "lineageLaterOther": "{count} later descendants",
-      "lineageLiving": "{count} alive now"
+      "lineageLiving": "{count} alive now",
+      "power": {
+        "working": "Its Power: {power} — working",
+        "partly": "Its Power: {power} — partly working",
+        "earn": "Earn its Power to make it work",
+        "camouflage": "camouflage",
+        "speed": "speed",
+        "armour": "armour",
+        "warning": "warning colours",
+        "vigilance": "vigilance",
+        "group": "group defence",
+        "hiding": "hiding",
+        "climb": "escape upward",
+        "mimicry": "mimicry"
+      }
     },
     "replay": {
       "title": "While you were away",

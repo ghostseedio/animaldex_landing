@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} nipoti",
             "lineageLaterOne": "1 discendente successivo",
             "lineageLaterOther": "{count} discendenti successivi",
-            "lineageLiving": "{count} vivi ora"
+            "lineageLiving": "{count} vivi ora",
+            "power": {
+                "working": "Il suo Potere: {power} — all'opera",
+                "partly": "Il suo Potere: {power} — in parte all'opera",
+                "earn": "Guadagna il suo Potere perché funzioni",
+                "camouflage": "mimetismo criptico",
+                "speed": "velocità",
+                "armour": "corazza",
+                "warning": "colori di avvertimento",
+                "vigilance": "vigilanza",
+                "group": "difesa di gruppo",
+                "hiding": "nascondersi",
+                "climb": "fuga verso l'alto",
+                "mimicry": "imitazione"
+            }
         },
         "replay": {
             "title": "Mentre eri via",

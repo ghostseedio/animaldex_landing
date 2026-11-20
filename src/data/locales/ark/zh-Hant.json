@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} 隻孫輩",
             "lineageLaterOne": "1 隻更遠的後代",
             "lineageLaterOther": "{count} 隻更遠的後代",
-            "lineageLiving": "現存 {count} 隻"
+            "lineageLiving": "現存 {count} 隻",
+            "power": {
+                "working": "牠的力量：{power} — 正在發揮作用",
+                "partly": "牠的力量：{power} — 部分發揮作用",
+                "earn": "贏得牠的力量，讓它發揮作用",
+                "camouflage": "偽裝",
+                "speed": "速度",
+                "armour": "鎧甲",
+                "warning": "警戒色",
+                "vigilance": "警覺",
+                "group": "群體防禦",
+                "hiding": "躲藏",
+                "climb": "向上逃離",
+                "mimicry": "擬態"
+            }
         },
         "replay": {
             "title": "你不在的時候",
