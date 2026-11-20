@@ -30,6 +30,7 @@ import {chance, darkness, windowLit, type TownClock} from "@/ark-scene/islands/t
 import {TOWN_CHUNK_COUNT, townChunkDistance, townChunkOf, type TownChunkSpan} from "@/ark-scene/islands/town/chunks";
 import {at, COLOUR_TAG_TOLERANCE, Geo, NullGeo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
 import {TOWN_LIGHT, townWeather} from "@/ark-scene/islands/town/render/materials";
+import {roundWheel} from "@/ark-scene/islands/town/render/wheels";
 import {ARK_TIME} from "@/ark-scene/glsl";
 import {apartmentStoreys, BAY_DEPTH} from "@/ark-scene/islands/town/home-rooms";
 
@@ -1055,7 +1056,9 @@ function ruralBuilding(ctx: Ctx, b: Building) {
     // The mobile hen house: chassis, wheels, a boarded body, a gable roof, nest boxes, a ramp.
     const body: Frame = {...f, y: f.y + 0.55};
     for (const [lx, lz] of [[-w / 2 + 0.35, -d / 2 + 0.2], [w / 2 - 0.35, -d / 2 + 0.2], [w / 2 - 0.35, d / 2 - 0.2], [-w / 2 + 0.35, d / 2 - 0.2]]) {
-        solid.cylinder({...f, rot: f.rot}, lx, 0.38, lz, 0.38, 0.38, 0.1, tone("#2a2a2a"), 10);
+        // (ark-world: a round wheel on its axle, turned about the house's x so it rolls along the house; the old
+        // `cylinder` stood along y: a flat disc, a table top, not a wheel.)
+        roundWheel(solid, f, lx + (lx > 0 ? 0.12 : -0.12), 0.34, lz, 0.34, 0.12, lx > 0 ? 1 : -1, {sides: 12});
         solid.box(f, lx, 0, lz, 0.1, 0.55, 0.1, tone("#4a4a48"));
     }
     solid.box(f, 0, 0.4, 0, w - 0.1, 0.15, d - 0.3, tone("#4a4a48"));

@@ -42,7 +42,7 @@ import {rockGeometry, rockMaterial} from "@/ark-scene/asset-rocks";
 import {mountainRocks, SOLID_ACROSS, type RockPiece} from "@/ark-scene/rock-layout";
 import {cachedRock, ROCK_DETAIL} from "@/ark-scene/rock-shapes";
 import {arkWorld, riverDistance, sampleGround, ZONE_SITES, zoneAt} from "@/ark-scene/world";
-import {rockFoot} from "@/ark-scene/rock-assets";
+import {rockFoot, steepSink} from "@/ark-scene/rock-assets";
 import {behindSheet} from "@/ark-scene/islands/wild/falls";
 
 export type Areas = {
@@ -422,9 +422,14 @@ function mergedRocks(pieces: RockPiece[], level: 0 | 2): BufferGeometry | null {
         quaternion.setFromUnitVectors(up, new Vector3(...piece.up)).multiply(yawTurn.setFromAxisAngle(up, piece.yaw));
         // p4 (the boulders float): on the bigger wild island a piece on a steep face is drawn reached down to its ground,
         // stretched along its up about its top (`rock-assets.ts` rockFoot; its place, and so its attach points, unchanged).
-        const k = arkWorld() === "v2" ? rockFoot(piece) : 1;
-        const top = cachedRock(piece.style, piece.variant, ROCK_DETAIL[piece.style][0]).bounds.max[1];
-        const at = new Vector3(0, top * piece.scale * (1 - k), 0).applyQuaternion(quaternion).add(new Vector3(piece.x, piece.y, piece.z));
+        const heightOf = cachedRock(piece.style, piece.variant, ROCK_DETAIL[piece.style][0]).bounds.max[1];
+        // (ark-world, "boulders stuck to the wall": a piece on a steep slope is drawn set down into it, half buried at 50
+        // degrees; a crag, which stands out of its slope by design, by 60 % of that. `rock-assets.ts` steepSink.)
+        const sunk = arkWorld() === "v2" ? steepSink(piece.x, piece.z, piece.scale, heightOf) * (piece.role === "crag" ? 0.6 : 1) : 0;
+        const drawnPiece = sunk > 0.01 ? {...piece, y: piece.y - sunk} : piece;
+        const k = arkWorld() === "v2" ? rockFoot(drawnPiece) : 1;
+        const top = heightOf;
+        const at = new Vector3(0, top * piece.scale * (1 - k), 0).applyQuaternion(quaternion).add(new Vector3(piece.x, drawnPiece.y, piece.z));
         geometry.applyMatrix4(matrix.compose(at, quaternion, new Vector3(piece.scale, piece.scale * k, piece.scale)));
         const colours = geometry.getAttribute("color");
         for (let i = 0; i < colours.count; i++) colours.setXYZ(i, colours.getX(i) * piece.shade, colours.getY(i) * piece.shade, colours.getZ(i) * piece.shade);

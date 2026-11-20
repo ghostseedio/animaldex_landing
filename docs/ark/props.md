@@ -162,3 +162,15 @@ What remains after the mount is not the props: behaviour's `spaceHomes` (3.4 s) 
   - Tree-top nests use the attach lane's leaf points on the drawn crowns, only where `open` ≥ 0.3.
   - The props' own `ledges()`, `CAVE_SITE` and eave workaround are gone.
 - **Golden shots of things up in the air:** the scene keeps its camera target on the ground, so `golden-props.ts` `lookThrough` aims at the ground beyond the nest, on the line from the camera through it.
+
+## World props pass (ark-world, decision 447)
+
+The owner, 2026-11-20: "better modeling and animations and graphics on bushes too and maybe safari area like the trucks have square wheels". What changed, all drawing only (no place, list, collider or attach point moved):
+
+- **Wheels** (`islands/town/render/wheels.ts`): a wheel is a solid of revolution about the frame's x (`farm-machines.ts` `spinX`). The safari trucks (`render/safari.ts`, about 2,900 triangles each, four instances in one mesh; were four boxes a wheel) and the mobile hen house (`render/buildings.ts`; its wheels were `cylinder`s standing along y, flat discs). The cars, the tractor and the bikes already had round wheels.
+- **Safari**: kopjes are tors of 15 granite blocks in varied darker tones (`render/safari-habitat.ts` `kopje`), earth patches are three-ring soft outlines with specks (`render/zoo-habitat.ts` `patch`, 90 triangles, was 28 drawn both ways), the gate arch stands square to its road 3.2 m in (`islands/town/safari.ts` `safariGateArch`; it was turned by minus the heading, 37 degrees off).
+- **Zoo dome**: the waterfall is a shaded curtain of 18 strands over a backing sheet with spray (`render/zoo-habitat.ts`); the predators' rockwork is darker and warmer.
+- **Bushes**: `Geo.bush` is smooth-shaded lumps in mottled greens (420 faces, was 160 flat ones); the town's hedges take normals from their surface and their hedgerow tops are smooth lumps (`render/nature.ts`); the asset bushes' lod1 and lod2 are leaf masses with the trees' leaf pictures (`scripts/ark-assets/plants.py` `LEAFY`; lod0, the skeleton and the attach points are the plain build's).
+- **Wild island**: a boulder or stone on a steep slope is drawn set into it, half buried at 50 degrees (`rock-assets.ts` `steepSink`; crags by 60 %); the savanna's termite mounds are smooth and fluted (`props/shapes.ts`).
+- **Harness**: `scripts/ark-world-shots.mjs` shoots named views in the town's own frame (`town: true`, `x`, `z`, `dy`), follows an instanced mesh (`follow`), takes the real Ark as `--population-file`, and downloads no model (the animals stay specks).
+- **Not reproduced**: the board's "aquarium tunnel has 91 overlapping fish". On the 2026-11-20 real Ark the tunnel holds 14 residents and averages 0.2 overlapping body pairs over 24 times of day (worst 1); the reef wall's 116 are fish in the same cave, inside rock.
