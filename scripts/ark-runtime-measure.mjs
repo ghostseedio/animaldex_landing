@@ -35,6 +35,9 @@
  * the loopback for a WebView (the iOS Simulator, an Android emulator) without a browser of its own: the page posts its
  * result to /report and it is written to the output folder (open `/measure.html?…&report=/report&label=<name>`).
  *
+ * Vegetation (AnimalDex decision 417 (1)): `--grazed <level>` lays that level (0-1) on every wild zone's grass once the
+ * world is up, as the record's vegetation would (`grass-grazed.ts`: the lazy zone attribute and the define, then thinned).
+ *
  * Mobile performance lane (docs/ark/perf-audit-mobile-2026-11.md):
  *   --devices phone-low       a low phone: 360×800 at DPR 2, 6× CPU throttle, 4 cores / 3 GB reported (the low tier)
  *   --throttle <n>            the CPU throttle for every device in the run (default: the device's own)
@@ -448,7 +451,7 @@ for (const deviceName of devices) {
             await cdp.send("Profiler.setSamplingInterval", {interval: 500});
             await cdp.send("Profiler.start");
         }
-        const extra = `${arg("render", "") ? `&render=${arg("render", "")}` : ""}${arg("render-scale", "") ? `&renderScale=${arg("render-scale", "")}` : ""}${flag("tour") ? "&tour=1" : ""}${arg("focus", "") ? `&focus=${arg("focus", "")}` : ""}${flag("islands") ? "&islands=1" : ""}${arg("world", "") ? `&world=${arg("world", "")}` : ""}${arg("pan", "") ? `&pan=${arg("pan", "")}` : ""}${arg("mem", "") ? `&mem=${arg("mem", "")}` : ""}${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
+        const extra = `${arg("render", "") ? `&render=${arg("render", "")}` : ""}${arg("render-scale", "") ? `&renderScale=${arg("render-scale", "")}` : ""}${flag("tour") ? "&tour=1" : ""}${arg("focus", "") ? `&focus=${arg("focus", "")}` : ""}${flag("islands") ? "&islands=1" : ""}${arg("world", "") ? `&world=${arg("world", "")}` : ""}${arg("pan", "") ? `&pan=${arg("pan", "")}` : ""}${arg("mem", "") ? `&mem=${arg("mem", "")}` : ""}${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${arg("grazed", "") ? `&grazed=${arg("grazed", "")}` : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
         const modelsParam = modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : cdnDir ? `&models=${encodeURIComponent(`${base}/cdn/talking-models/v1/ark`)}` : "";
         let navigated = Date.now();
         const lane = `${interact ? "&interact=1" : ""}${perfOn ? "&perf=1" : ""}`;

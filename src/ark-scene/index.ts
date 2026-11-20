@@ -132,7 +132,7 @@ import {sceneMemory} from "@/ark-scene/runtime/memory";
 import {loadGroundTextures} from "@/ark-scene/ground-textures";
 import {NearDetail} from "@/ark-scene/near-detail";
 import {setNearCone} from "@/ark-scene/near-fade";
-import {BugGround, bugClearPoints, bugCoverAt} from "@/ark-scene/bug-ground";
+import {BugGround, bugClearPoints, bugCoverAt, setBugGrazing} from "@/ark-scene/bug-ground";
 // p3 (trees): small ground insects climb a grass blade now and then.
 import {ClimbStems, climbAt, climbPoint, climbStem, climbsBlades, mixClimb, type ClimbPoint, type ClimbStem} from "@/ark-scene/bug-climb";
 import {AssetTrees} from "@/ark-scene/asset-trees";
@@ -9569,6 +9569,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setVegetation: (raw) => {
             grazing = decodeVegetation(raw);
             vegetation?.setGrazed(grazing);
+            // (And the sward at bug scale round the point looked at: `bug-ground.ts`.)
+            const levels = grazing?.levels;
+            setBugGrazing(levels ? (zone) => levels.get(`wild|${zone}`) ?? 1 : null);
         },
         grassAt: (zone, island) => {
             const level = grazing?.levels.get(`${island === "town" ? "town" : "wild"}|${zone}`);

@@ -119,6 +119,12 @@ const round = (value: number) => Math.round(value * 10) / 10;
             }
         });
         const mountMs = performance.now() - mountStart;
+        // `?grazed=<0-1>` (vegetation, decision 417 (1)): every wild zone's grass at that level, as the record would set it.
+        const grazed = Number(params.get("grazed"));
+        if (params.get("grazed") !== null && Number.isFinite(grazed)) {
+            const zones = Object.fromEntries(["grassland", "woodland", "farm_garden", "river_lake", "wetland", "rainforest", "mountains", "seashore", "desert"].map((zone) => [`wild|${zone}`, {level: grazed}]));
+            (handle as {setVegetation?: (raw: unknown) => void}).setVegetation?.({day: 0, zones});
+        }
         // For the probes (scratch scripts drive the handle: visibility, power).
         (window as unknown as {__arkMeasureHandle?: unknown}).__arkMeasureHandle = handle;
         // The Mac running the harness is busy with other work: its CPU pressure is not the phone's. Power as a calm
