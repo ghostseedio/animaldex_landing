@@ -272,8 +272,9 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         // its nest stands (the props draw it only in its breeding season, or with eggs or chicks, whose sitter sits),
         // it keeps coming back to it with material now and then, tending it (`NEST_TEND`): the drawn nest is there
         // through the season, the building of it only its first few Ark days.
-        const building = id === "nest_build" && nestSource ? nestSource(input.animal.id, input.start) : null;
-        if (id === "nest_build" && nestSource && !building) continue;
+        const nests = id === "nest_build" || id === "dummy_nests";
+        const building = nests && nestSource ? nestSource(input.animal.id, input.start) : null;
+        if (nests && nestSource && !building) continue;
         const tending = building ? (building.stage >= 1 ? NEST_TEND : 1) : null;
         const pull = input.socialPull && input.socialPull !== 1 && SOCIAL_RECIPE.has(arkRecipeActivity(id) ?? "") ? input.socialPull : 1;
         const chance = weight * 0.7 * (template.often ?? 1) * (tending ?? seasonFactor(species, template.season, input.start)) * pull;
@@ -677,7 +678,7 @@ export type RecipeAct = {
 };
 
 /** Ambient flock-mates the scene draws round catalogue animals: a murmuration, a swarm, a crawling cluster, bats streaming out of a roost. */
-export type Flock = {centre: P; seed: number; t0: number; t1: number; kind?: "murmuration" | "swarm" | "cluster" | "bats" | "roost"; /** A roost's: the birds' body length (m) and how dark they are drawn. */ length?: number; tone?: "dark" | "brown"};
+export type Flock = {centre: P; seed: number; t0: number; t1: number; kind?: "murmuration" | "swarm" | "cluster" | "bats" | "roost"; /** A roost's: the birds' body length (m), how dark they are drawn, how far they spread round the centre (m: a crown's two, a house eave's less). */ length?: number; tone?: "dark" | "brown"; spread?: number};
 
 export type RecipePose = TripPose & {act?: RecipeAct | null; /** Ambient flock-mates round it now (its act may be anything). */ flock?: Flock | null};
 
@@ -2377,7 +2378,7 @@ export function marksOf(world: ScheduleWorld, trips: Trip[], epoch: number, kit:
             const key = episode.keys[i];
             if (!key.block.mark || key.t0 > epoch) continue;
             // A burrow's spoil heap and a dust bath's hollow; a turtle's covered pit is a mound.
-            const kind = episode.recipe === "dig_burrow" || (episode.recipe === "beach_nest" && i > 2) ? "mound" : key.block.mark;
+            const kind = episode.recipe === "dig_burrow" || episode.recipe === "burrow_dig" || episode.recipe === "bank_burrow" || (episode.recipe === "beach_nest" && i > 2) ? "mound" : key.block.mark;
             out.push({id: `${episode.id}#${i}`, kind, x: key.from.x, y: key.from.y, z: key.from.z, size: Math.max(episode.length * (kind === "hollow" ? 0.9 : 0.5), 0.06), from: key.t0, to: key.t0 + MARK_SECONDS});
         }
     }
@@ -2511,15 +2512,28 @@ function roostFlock(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, ep
 }
 
 /**
+ * A house bird's roost (a house sparrow, a starling, a swallow, a myna: small animals at their microhabitat, off the
+ * schedule): the crowd of its kind round the house spot it is drawn at, one a 40 m cell, through the same night. Pure.
+ */
+export function microRoost(slug: string, at: P, epoch: number, hours: number, length: number): Flock | null {
+    if (!enabled || !speciesRecipes(slug).has.has("roost_gather")) return null;
+    const window = roostWindow(hours, epoch);
+    if (!window) return null;
+    const cx = Math.floor(at.x / 40);
+    const cz = Math.floor(at.z / 40);
+    return {centre: at, seed: hashString(`${slug}#roost#${cx}#${cz}`), t0: window.t0, t1: window.t1, kind: "roost", length: Math.max(length, 0.08), tone: DARK_ROOSTERS.test(slug) ? "dark" : "brown", spread: 0.9};
+}
+
+/**
  * One roost-mate at a time: flying in along its own heading, perched in the crown, or flying out at dawn (null when it
  * is not there: before it has come in, after it has gone). `perched` tells the three apart (a wing beat, or still).
  */
-export function roostPoint(centre: P, seed: number, index: number, epoch: number, t0: number): (P & {yaw: number; pitch: number; perched: boolean}) | null {
+export function roostPoint(centre: P, seed: number, index: number, epoch: number, t0: number, reach = 2.1): (P & {yaw: number; pitch: number; perched: boolean}) | null {
     const r = rng(hashString(`r${seed}#${index}`));
     const rel = epoch - t0;
     // Its place in the crown: within about two metres of the roost point, a little above and below it.
     const a = r() * Math.PI * 2;
-    const spread = 0.3 + 2.1 * Math.sqrt(r());
+    const spread = 0.3 + reach * Math.sqrt(r());
     const px = centre.x + Math.cos(a) * spread;
     const pz = centre.z + Math.sin(a) * spread;
     const py = centre.y + (r() - 0.45) * 1.7;

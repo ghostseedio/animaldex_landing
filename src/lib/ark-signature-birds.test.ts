@@ -8,7 +8,7 @@ import lines from "@/ark-scene/signature-lines.json";
 import birds from "../../data/ark/signature-birds.json";
 import {BLOCKS} from "@/ark-scene/behaviour-blocks";
 import {TEMPLATES} from "@/ark-scene/recipe-templates";
-import {forgetRecipes, quarriesOf, ROOST_AMBIENT, ROOST_HOURS, roostPoint, sexLook, speciesRecipes, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {forgetRecipes, microRoost, quarriesOf, ROOST_AMBIENT, ROOST_HOURS, roostPoint, sexLook, speciesRecipes, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {poseOnTrip, roostOf, scheduleWorld, tripAt, tripEpisode, SLOT_SECONDS, type ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
 import {sceneSampler} from "@/ark-scene/world-sampler";
@@ -154,6 +154,23 @@ test("wave 2, birds: a roost fills at dusk and empties at dawn, the same for eve
     // Pure: the same answer twice.
     assert.deepEqual(at(3000), at(3000));
     assert.ok(ROOST_HOURS[0] > 16 && ROOST_HOURS[1] < 7);
+});
+
+test("wave 2, birds: a house bird (a small animal at its microhabitat, off the schedule) has its kind's roost round the spot it is drawn at, one a 40 m cell, only at dusk and by night", () => {
+    const at = {x: 12, y: 3.1, z: -8};
+    const t = Date.UTC(2026, 10, 12, 0) / 1000;
+    for (const slug of ["house-sparrow", "european-starling", "welcome-swallow", "javan-myna", "eurasian-tree-sparrow"]) {
+        assert.equal(microRoost(slug, at, t + 12 * 3600, 12, 0.15), null, `${slug} by day`);
+        const f = microRoost(slug, at, t + 18.5 * 3600, 18.5, 0.15)!;
+        assert.equal(f.kind, "roost");
+        assert.deepEqual(f.centre, at);
+        assert.ok(f.spread! < 1.5, "a house eave's, not a crown's");
+        // The same crowd for a neighbour in the same 40 m cell, another for a cell away.
+        assert.equal(microRoost(slug, {x: 20, y: 3, z: -2}, t + 18.5 * 3600, 18.5, 0.15)!.seed, f.seed);
+        assert.notEqual(microRoost(slug, {x: 120, y: 3, z: -2}, t + 18.5 * 3600, 18.5, 0.15)!.seed, f.seed);
+    }
+    // A bird with no roost recipe: none.
+    assert.equal(microRoost("mallard", at, t + 18.5 * 3600, 18.5, 0.5), null);
 });
 
 test("wave 2, birds: the members of a roosting flock sleep together on their leader's perch (they roosted apart before)", () => {

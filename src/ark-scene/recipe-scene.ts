@@ -379,7 +379,7 @@ export class RecipeScene {
                 const length = Math.min(Math.max(flock.length ?? 0.2, 0.08), 0.7);
                 const tone = flock.tone === "dark" ? ["#26252a", "#34312f", "#1e1f24"] : ["#6a5846", "#7a6a52", "#5a4c3e"];
                 for (let i = 0; i < ROOST_AMBIENT; i++) {
-                    const p = roostPoint(flock.centre, flock.seed, i, epoch, flock.t0);
+                    const p = roostPoint(flock.centre, flock.seed, i, epoch, flock.t0, flock.spread);
                     if (!p) continue;
                     const colour = tone[i % tone.length];
                     // (Never under a few pixels far off, a little different in size from bird to bird.)
