@@ -808,6 +808,15 @@
             "powerEarn": "파워를 획득하면 살아남을 확률이 올라가요",
             "powerWorking": "파워가 통하고 있어요: 포식자는 더 약한 개체를 먼저 노리고 이 동물은 지나쳐요"
         },
+        "sex": {
+            "male": "수컷",
+            "female": "암컷",
+            "maleN": "수컷: {count}",
+            "femaleN": "암컷: {count}",
+            "hermaphrodite": "자웅동체",
+            "parthenogenetic": "모두 암컷, 수컷이 필요 없음",
+            "asexual": "이 종에는 수컷도 암컷도 없습니다"
+        },
         "relations": {
             "title": "주변 관계",
             "predator": "사냥할 수 있는 동물",

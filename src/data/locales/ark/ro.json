@@ -808,6 +808,15 @@
             "powerEarn": "Obținerea Puterii lui îi crește șansa de a supraviețui",
             "powerWorking": "Puterea lui funcționează: prădătorii îl ocolesc în favoarea celor mai slabi"
         },
+        "sex": {
+            "male": "mascul",
+            "female": "femelă",
+            "maleN": "masculi: {count}",
+            "femaleN": "femele: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Numai femele, nu are nevoie de mascul",
+            "asexual": "Această specie nu are masculi sau femele"
+        },
         "relations": {
             "title": "În jurul lui",
             "predator": "L-ar putea vâna",

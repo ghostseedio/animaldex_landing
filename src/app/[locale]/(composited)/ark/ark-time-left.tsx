@@ -9,6 +9,7 @@ import {ARK_TIME_LEFT_HOOKS, arkLifeOutlook, arkLifeText, arkNeedsFacts, arkTime
 import {arkTimeLeftFetch, readArkTimeLeftFacts, type ArkTimeLeftFetch} from "@/lib/ark-time-left-facts";
 import {arkReleasedEntry, useArkReleased} from "@/lib/ark-release-read";
 import {arkReleaseTimeLeftHook} from "@/lib/ark-release-time-left";
+import ArkSex from "@/app/[locale]/(composited)/ark/ark-sex";
 
 /**
  * Release to the Wild (AnimalDex P1-8, behind the server's `release_to_wild`): a released animal's wild skill, and on the
@@ -38,6 +39,8 @@ type Props = {
     day?: number | null;
     /** With `release`: the scene, for the relations block beside it (lane ark-relation-lines). */
     scene?: () => ArkSceneHandle | null;
+    /** Male or female beside the card's name (or its kind's note), instead of the estimate: `ark-sex.tsx`. */
+    sex?: boolean;
 };
 
 /**
@@ -45,7 +48,8 @@ type Props = {
  * page's static JavaScript, which is budgeted): the estimate, or with `release` the Release to the Wild block. The card
  * wraps each in its own Suspense.
  */
-export default function ArkTimeLeft({release, day, snapshot = null, scene, ...rest}: Props) {
+export default function ArkTimeLeft({release, day, snapshot = null, scene, sex, ...rest}: Props) {
+    if (sex) return <ArkSex animals={[rest.animal]} words={rest.words.sex} locale={rest.locale} />;
     if (!release) return <ArkTimeLeftPanel snapshot={snapshot} {...rest} />;
     return (
         <>

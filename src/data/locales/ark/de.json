@@ -808,6 +808,15 @@
             "powerEarn": "Seine Kraft zu verdienen erhöht seine Überlebenschance",
             "powerWorking": "Seine Kraft wirkt: Raubtiere übergehen es zugunsten schwächerer"
         },
+        "sex": {
+            "male": "männlich",
+            "female": "weiblich",
+            "maleN": "männlich: {count}",
+            "femaleN": "weiblich: {count}",
+            "hermaphrodite": "Zwitter",
+            "parthenogenetic": "Nur Weibchen, kein Männchen nötig",
+            "asexual": "Diese Art hat keine Männchen und Weibchen"
+        },
         "relations": {
             "title": "Rundherum",
             "predator": "Könnte es jagen",

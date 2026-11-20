@@ -808,6 +808,15 @@
             "powerEarn": "Získanie jeho Sily zvyšuje jeho šancu prežiť",
             "powerWorking": "Jeho Sila funguje: predátori ho obchádzajú kvôli slabším"
         },
+        "sex": {
+            "male": "samec",
+            "female": "samica",
+            "maleN": "samce: {count}",
+            "femaleN": "samice: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Samé samice, samec nie je potrebný",
+            "asexual": "Tento druh nemá samcov ani samice"
+        },
         "relations": {
             "title": "Okolo neho",
             "predator": "Mohol by ho loviť",

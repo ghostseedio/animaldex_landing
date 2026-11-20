@@ -125,7 +125,12 @@ export function countsInGarden(plan: string | null, length: number): boolean {
     return length >= 0.12 && plan !== "arthropod" && plan !== "butterfly";
 }
 
-export type OutdoorPet = {id: string; slug: string; plan: string | null; length: number; home: Household};
+/**
+ * `pin` (container breeding, `containers.ts`): where the server says it is kept. "out": its home's garden, always (it counts in
+ * the garden's cap and is never sent indoors); a room: that room, always (it takes a cell before the ones the cap sends in,
+ * and the room may hold more than its usual capacity: a young one born in it). Absent: the cap decides, as before.
+ */
+export type OutdoorPet = {id: string; slug: string; plan: string | null; length: number; home: Household; pin?: "out" | HomeRoom};
 
 /** Where a pet over its garden's cap lives: its room, and its cell of the room's free floor (index of how many). */
 export type IndoorPlace = {room: HomeRoom; cell: number; cells: number};
@@ -136,7 +141,14 @@ export type IndoorPlace = {room: HomeRoom; cell: number; cells: number};
  */
 export function homeIndoors(pets: readonly OutdoorPet[], roomOf: (home: Household) => HomeRoom | null, apartments: readonly HomeRoom[]): Map<string, IndoorPlace> {
     const byHome = new Map<string, OutdoorPet[]>();
+    const pinned = new Map<string, {room: HomeRoom; list: OutdoorPet[]}>();
     for (const p of pets) {
+        if (p.pin && p.pin !== "out") {
+            let at = pinned.get(p.pin.id);
+            if (!at) pinned.set(p.pin.id, (at = {room: p.pin, list: []}));
+            at.list.push(p);
+            continue;
+        }
         if (p.home.kind === "flat" || !countsInGarden(p.plan, p.length)) continue;
         let list = byHome.get(p.home.id);
         if (!list) byHome.set(p.home.id, (list = []));
@@ -148,8 +160,8 @@ export function homeIndoors(pets: readonly OutdoorPet[], roomOf: (home: Househol
     byHome.forEach((list) => {
         const home = list[0].home;
         const cap = GARDEN_CAP[home.kind as "house" | "terrace_home"];
-        const fixed = list.filter((p) => !indoorKind(p.slug, p.plan));
-        const able = list.filter((p) => indoorKind(p.slug, p.plan)).sort(order);
+        const fixed = list.filter((p) => p.pin === "out" || !indoorKind(p.slug, p.plan));
+        const able = list.filter((p) => p.pin !== "out" && indoorKind(p.slug, p.plan)).sort(order);
         const outside = Math.max(cap - fixed.length, 0);
         const over = able.slice(outside);
         if (!over.length) return;
@@ -157,7 +169,7 @@ export function homeIndoors(pets: readonly OutdoorPet[], roomOf: (home: Househol
         if (room) {
             // (Its room takes the ones its floor holds: a dog needs its length clear in the room's depth.)
             const fits = over.filter((p) => p.length * 0.5 + 0.1 <= room.free.d / 2);
-            const taken = fits.slice(0, room.capacity);
+            const taken = fits.slice(0, Math.max(room.capacity - (pinned.get(room.id)?.list.length ?? 0), 0));
             if (taken.length) inRoom.set(room.id, taken);
             for (const p of over) if (!taken.includes(p)) toTowers.push(p);
         } else toTowers.push(...over);
@@ -168,6 +180,12 @@ export function homeIndoors(pets: readonly OutdoorPet[], roomOf: (home: Househol
         const room = roomOf(p.home);
         if (room) rooms.set(room.id, room);
     });
+    // (The pinned pets of a garden room first, in the cap's own order, then the ones the cap sent in.)
+    pinned.forEach((at) => {
+        if (at.room.kind !== "garden_room") return;
+        rooms.set(at.room.id, at.room);
+        inRoom.set(at.room.id, at.list.sort(order).concat(inRoom.get(at.room.id) ?? []));
+    });
     inRoom.forEach((list, id) => {
         const room = rooms.get(id)!;
         list.forEach((p, i) => out.set(p.id, {room, cell: i, cells: list.length}));
@@ -175,6 +193,10 @@ export function homeIndoors(pets: readonly OutdoorPet[], roomOf: (home: Househol
     // The towers: in hash order, each to its first apartment (rendezvous) with a place.
     toTowers.sort(order);
     const filled = new Map<string, OutdoorPet[]>();
+    // (An apartment's pinned pets first, in the cap's order; the rest take what places are left.)
+    pinned.forEach((at) => {
+        if (at.room.kind === "apartment") filled.set(at.room.id, at.list.sort(order));
+    });
     for (const p of toTowers) {
         const prefix = hashTextPrefix(`${p.id}|flat|`);
         let best: HomeRoom | null = null;
@@ -194,8 +216,8 @@ export function homeIndoors(pets: readonly OutdoorPet[], roomOf: (home: Househol
         list.push(p);
     }
     filled.forEach((list, id) => {
-        const room = apartments.find((a) => a.id === id)!;
-        list.forEach((p, i) => out.set(p.id, {room, cell: i, cells: room.capacity}));
+        const room = apartments.find((a) => a.id === id) ?? pinned.get(id)!.room;
+        list.forEach((p, i) => out.set(p.id, {room, cell: i, cells: Math.max(room.capacity, list.length)}));
     });
     return out;
 }
@@ -203,9 +225,19 @@ export function homeIndoors(pets: readonly OutdoorPet[], roomOf: (home: Househol
 /** A pet's cell of its room's free floor: the free floor cut into `cells` along its width. */
 export function roomCell(place: IndoorPlace): Box {
     const f = place.room.free;
-    const w = f.w / place.cells;
-    return sub(f, -f.w / 2 + w * (place.cell + 0.5), 0, w, f.d);
+    // A row of cells along the width, each at least `CELL_MIN` wide; more pets than a row holds (young ones born in the room) fill further
+    // rows across its depth, so each has a cell of its own on the floor rather than a sliver of a body's width.
+    const perRow = Math.max(Math.floor(f.w / CELL_MIN), 1);
+    const rows = Math.ceil(place.cells / perRow);
+    const row = Math.floor(place.cell / perRow);
+    const inRow = Math.min(perRow, place.cells - row * perRow);
+    const w = f.w / inRow;
+    const d = f.d / rows;
+    return sub(f, -f.w / 2 + w * ((place.cell % perRow) + 0.5), -f.d / 2 + d * (row + 0.5), w, d);
 }
+
+/** The narrowest cell of a room's floor a pet is given (m): the least an apartment's pets have (`towerApartments` gives each 1.5). */
+export const CELL_MIN = 1.2;
 
 function u01(id: string, salt: string | number): number {
     return hashText(`${id}|${salt}`) / 4294967296;

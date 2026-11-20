@@ -808,6 +808,15 @@
             "powerEarn": "Aconseguir el seu Poder en millora la probabilitat de sobreviure",
             "powerWorking": "El seu Poder funciona: els depredadors el deixen de banda per als més febles"
         },
+        "sex": {
+            "male": "mascle",
+            "female": "femella",
+            "maleN": "mascles: {count}",
+            "femaleN": "femelles: {count}",
+            "hermaphrodite": "Hermafrodita",
+            "parthenogenetic": "Totes femelles, sense necessitat de mascle",
+            "asexual": "Aquesta espècie no té mascles ni femelles"
+        },
         "relations": {
             "title": "Al seu voltant",
             "predator": "El podria caçar",

@@ -808,6 +808,15 @@
             "powerEarn": "At optjene dets Kraft øger dets chance for at overleve",
             "powerWorking": "Dets Kraft virker: rovdyrene springer det over til fordel for de svagere"
         },
+        "sex": {
+            "male": "han",
+            "female": "hun",
+            "maleN": "hanner: {count}",
+            "femaleN": "hunner: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Kun hunner, der skal ingen han til",
+            "asexual": "Denne art har hverken hanner eller hunner"
+        },
         "relations": {
             "title": "Omkring den",
             "predator": "Kan jage den",

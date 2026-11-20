@@ -808,6 +808,15 @@
             "powerEarn": "Ang pagkuha ng Kapangyarihan nito ay nagpapataas ng tsansa nitong mabuhay",
             "powerWorking": "Gumagana ang Kapangyarihan nito: nilalampasan ito ng mga maninila para sa mas mahihina"
         },
+        "sex": {
+            "male": "lalaki",
+            "female": "babae",
+            "maleN": "lalaki: {count}",
+            "femaleN": "babae: {count}",
+            "hermaphrodite": "Hermaphrodite",
+            "parthenogenetic": "Lahat babae, hindi kailangan ng lalaki",
+            "asexual": "Walang lalaki o babae ang uri na ito"
+        },
         "relations": {
             "title": "Sa paligid nito",
             "predator": "Maaaring manghuli rito",

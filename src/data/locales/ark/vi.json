@@ -808,6 +808,15 @@
             "powerEarn": "Giành được Năng lực của nó giúp tăng cơ hội sống sót",
             "powerWorking": "Năng lực của nó đang phát huy: kẻ săn mồi bỏ qua nó để chọn con yếu hơn"
         },
+        "sex": {
+            "male": "đực",
+            "female": "cái",
+            "maleN": "đực: {count}",
+            "femaleN": "cái: {count}",
+            "hermaphrodite": "Lưỡng tính",
+            "parthenogenetic": "Toàn con cái, không cần con đực",
+            "asexual": "Loài này không có con đực hay con cái"
+        },
         "relations": {
             "title": "Xung quanh nó",
             "predator": "Có thể săn nó",

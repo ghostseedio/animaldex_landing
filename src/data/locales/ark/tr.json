@@ -808,6 +808,15 @@
             "powerEarn": "Gücünü kazanmak hayatta kalma şansını artırır",
             "powerWorking": "Gücü işe yarıyor: yırtıcılar onu atlayıp daha zayıflara yöneliyor"
         },
+        "sex": {
+            "male": "erkek",
+            "female": "dişi",
+            "maleN": "erkek: {count}",
+            "femaleN": "dişi: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Hepsi dişi, erkeğe gerek yok",
+            "asexual": "Bu türün erkeği ya da dişisi yoktur"
+        },
         "relations": {
             "title": "Çevresinde",
             "predator": "Onu avlayabilir",

@@ -808,6 +808,15 @@
             "powerEarn": "Sen Voiman ansaitseminen parantaa sen selviytymismahdollisuuksia",
             "powerWorking": "Sen Voima toimii: pedot ohittavat sen heikompien takia"
         },
+        "sex": {
+            "male": "uros",
+            "female": "naaras",
+            "maleN": "uroksia: {count}",
+            "femaleN": "naaraita: {count}",
+            "hermaphrodite": "Kaksineuvoinen",
+            "parthenogenetic": "Pelkkiä naaraita, urosta ei tarvita",
+            "asexual": "Tällä lajilla ei ole uroksia eikä naaraita"
+        },
         "relations": {
             "title": "Sen ympärillä",
             "predator": "Voisi saalistaa sitä",

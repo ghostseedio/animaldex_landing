@@ -808,6 +808,15 @@
             "powerEarn": "كسب قدرته يرفع فرصته في البقاء",
             "powerWorking": "قدرته تعمل: المفترسات تتجاوزه إلى الأضعف منه"
         },
+        "sex": {
+            "male": "ذكر",
+            "female": "أنثى",
+            "maleN": "ذكور: {count}",
+            "femaleN": "إناث: {count}",
+            "hermaphrodite": "خنثى (ثنائي الجنس)",
+            "parthenogenetic": "إناث فقط، بلا حاجة إلى ذكر",
+            "asexual": "هذا النوع بلا ذكور ولا إناث"
+        },
         "relations": {
             "title": "من حوله",
             "predator": "قد يصطاده",

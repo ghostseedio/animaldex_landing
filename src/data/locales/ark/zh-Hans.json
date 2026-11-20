@@ -808,6 +808,15 @@
             "powerEarn": "获得它的能力会提高它的生存几率",
             "powerWorking": "它的能力在起作用：捕食者会先挑更弱的，放过它"
         },
+        "sex": {
+            "male": "雄性",
+            "female": "雌性",
+            "maleN": "雄性：{count}",
+            "femaleN": "雌性：{count}",
+            "hermaphrodite": "雌雄同体",
+            "parthenogenetic": "全是雌性，无需雄性",
+            "asexual": "这个物种没有雄性和雌性"
+        },
         "relations": {
             "title": "它的周围",
             "predator": "可能捕食它",

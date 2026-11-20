@@ -56,33 +56,45 @@ function animal(raw: unknown): ArkAnimal | null {
     if ("thrive" in row) life.thrive = arkThrive(row.thrive);
     if ("area" in row) life.area = arkArea(row.area);
     // Part C (islands on): its island and, in the zoo, its enclosure; each only when the server sent it.
-    if (row.island === "wild" || row.island === "town") life.island = row.island;
+    if (["wild", "town"].includes(row.island as string)) life.island = row.island as "wild" | "town";
     if ("enclosure" in row) life.enclosure = enclosure(row.enclosure);
+    // Container breeding (only while the server's switch is on): where the engine keeps a house or farm animal (an id of the town's
+    // plan, checked where it is read: `islands/town/containers.ts` knows the ids it can use).
+    if (typeof row.container === "string") life.container = row.container;
+    // Sexes (only while the server's switch is on): the key's presence says so; a mode only for a kind that is not a male and a female.
+    // As sent: checked where they are read (`lib/ark-sex.ts`, not in the page's first JavaScript).
+    if ("sex" in row) Object.assign(life, {sex: row.sex, reproduction: row.reproduction});
     const generation = whole(row.generation);
     if (generation !== null) life.generation = generation;
-    if (row.condition === "well_fed" || row.condition === "hungry" || row.condition === "old") life.condition = row.condition;
-    if (typeof row.born_ark_day === "number" && Number.isFinite(row.born_ark_day)) life.born_ark_day = row.born_ark_day;
+    if (["well_fed", "hungry", "old"].includes(row.condition as string)) life.condition = row.condition as ArkAnimal["condition"];
+    const born = finite(row.born_ark_day);
+    if (born !== null) life.born_ark_day = born;
     // Its kind's wild lifespan (the age bar), when the server sends one.
-    if (typeof row.lifespan_days === "number" && Number.isFinite(row.lifespan_days) && row.lifespan_days > 0) {
-        life.lifespan_days = row.lifespan_days;
+    const days = finite(row.lifespan_days);
+    if (days !== null && days > 0) {
+        life.lifespan_days = days;
         life.lifespan_estimate = row.lifespan_estimate === true;
         // PROPOSED (not sent yet): the upper end of that lifespan, and a predator kind's meal interval.
-        if (typeof row.lifespan_days_hi === "number" && Number.isFinite(row.lifespan_days_hi) && row.lifespan_days_hi >= row.lifespan_days) life.lifespan_days_hi = row.lifespan_days_hi;
+        const hi = finite(row.lifespan_days_hi);
+        if (hi !== null && hi >= days) life.lifespan_days_hi = hi;
     }
-    if (typeof row.hunt_interval_days === "number" && Number.isFinite(row.hunt_interval_days) && row.hunt_interval_days > 0) life.hunt_interval_days = row.hunt_interval_days;
+    const meal = finite(row.hunt_interval_days);
+    if (meal !== null && meal > 0) life.hunt_interval_days = meal;
     if ("activity" in row) life.activity = arkActivity(row.activity);
-    if (row.sociality === "solitary" || row.sociality === "pair" || row.sociality === "group") life.sociality = row.sociality;
+    if (["solitary", "pair", "group"].includes(row.sociality as string)) life.sociality = row.sociality as ArkAnimal["sociality"];
     if (bringers.length) life.bringers = bringers;
     // The species' stats and stored length, when the server sends them (else the scene reads the catalogue's).
     const statsRow = row.stats && typeof row.stats === "object" ? row.stats as Record<string, unknown> : {};
     const stats: Partial<ArkStats> = {};
     for (const key of ARK_STAT_KEYS) {
         const value = statsRow[key] ?? (key === "size" ? row.size : undefined);
-        if (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100) stats[key] = value;
+        const level = finite(value);
+        if (level !== null && level >= 0 && level <= 100) stats[key] = level;
     }
     if (Object.keys(stats).length) life.stats = stats;
-    if (typeof row.length_m === "number" && Number.isFinite(row.length_m) && row.length_m > 0) {
-        life.length_m = row.length_m;
+    const length = finite(row.length_m);
+    if (length !== null && length > 0) {
+        life.length_m = length;
         const phrase = text(row.length_phrase);
         if (phrase) life.length_phrase = phrase;
     }
@@ -182,10 +194,10 @@ export function decodeArkSnapshot(raw: unknown): ArkSnapshot | null {
         zones,
         animals: animals.sort((a, b) => a.arrived_at.localeCompare(b.arrived_at)),
         as_of: text(row.as_of),
-        ...(typeof voyage.ark_day === "number" && Number.isFinite(voyage.ark_day) ? {ark_day: voyage.ark_day} : {}),
+        ...(finite(voyage.ark_day) !== null ? {ark_day: voyage.ark_day as number} : {}),
         ...(Array.isArray(row.nests) ? {nests: row.nests.map(nestRow).filter((nest): nest is ArkNestRow => nest !== null)} : {}),
         // Part C: one island's read (`voyage_public_v3`): which island, and both islands' counts.
-        ...(row.island === "wild" || row.island === "town" ? {island: row.island} : {}),
+        ...(["wild", "town"].includes(row.island as string) ? {island: row.island as "wild" | "town"} : {}),
         ...(islandCounts(row.islands) ? {islands: islandCounts(row.islands)!} : {}),
         // PROPOSED (not sent yet): the hunting protection of the launch grace.
         ...(huntGrace(voyage.hunt_grace ?? row.hunt_grace) ? {hunt_grace: huntGrace(voyage.hunt_grace ?? row.hunt_grace)!} : {})

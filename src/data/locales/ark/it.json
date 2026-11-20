@@ -808,6 +808,15 @@
             "powerEarn": "Ottenere il suo Potere aumenta la sua probabilità di sopravvivere",
             "powerWorking": "Il suo Potere funziona: i predatori lo ignorano per i più deboli"
         },
+        "sex": {
+            "male": "maschio",
+            "female": "femmina",
+            "maleN": "maschi: {count}",
+            "femaleN": "femmine: {count}",
+            "hermaphrodite": "Ermafrodita",
+            "parthenogenetic": "Tutte femmine, nessun maschio necessario",
+            "asexual": "Questa specie non ha maschi né femmine"
+        },
         "relations": {
             "title": "Intorno a lui",
             "predator": "Potrebbe cacciarlo",

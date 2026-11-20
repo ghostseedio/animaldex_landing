@@ -21,7 +21,7 @@
 import {arkBody} from "@/ark-scene/stats";
 import type {Placement} from "@/ark-scene/placement";
 import type {ArkAnimal} from "@/ark-scene/types";
-import {hashText, hashTextOn, hashTextPrefix, inPoly, type Poly} from "@/ark-scene/islands/town/geom";
+import {hashText, hashTextOn, hashTextPrefix, inPoly, unitOf, type Poly} from "@/ark-scene/islands/town/geom";
 import {safariWaterLevel, townHeight} from "@/ark-scene/islands/town/ground";
 import {spreadPerch, townHouseholds, farmOf, householdOf, urbanNiche, zooLayout, zooSpotsFor, townAreas, type Household, type SpotWhere, type TownSpot, type ZooEnclosure, type TownArea} from "@/ark-scene/islands/town/areas";
 import {launchEnclosures, enclosuresIn} from "@/ark-scene/islands/town/areas";
@@ -29,7 +29,8 @@ import {ZOO_ENCLOSURE_TYPES, type ZooEnclosureType} from "@/ark-scene/islands/to
 import {domeZoneOf, zooResidents} from "@/ark-scene/islands/town/zoo-homes";
 import {DOME, DOME_FLOATERS, DOME_LAGOON, domeKeep, domeZoneAt, intoLagoon} from "@/ark-scene/islands/town/dome";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
-import {stayingSet, ruralPenOf, ruralPondNorm, RURAL_POND_DEEP, RURAL_POND_RANGE, type RuralPen} from "@/ark-scene/islands/town/rural";
+import {stayingSet, stayKey, ruralKindOf, ruralPenOf, BACKYARD_HENS, ruralPondNorm, RURAL_POND_DEEP, RURAL_POND_RANGE, type RuralKind, type RuralPen} from "@/ark-scene/islands/town/rural";
+import {storedContainer, type Container} from "@/ark-scene/islands/town/containers";
 import {zooTypeOfSlug} from "@/ark-scene/islands/routing";
 import {modelBase} from "@/ark-scene/grounding/base";
 import {aquariumTankOf, aquariumTanks, displaySpot, displayTank, homeKeeping, homeSiteFootprints, homeSites, inTownSolid as inBuilding, nearTownSolids as nearSolids, perchesInCage, zooHouseFrame, ZOO_HOUSE_TYPES, type HomeDisplay, type HomeKeeping, type Tank} from "@/ark-scene/islands/town/tanks";
@@ -158,7 +159,7 @@ const MEMO = new Map<string, {placement: Placement; info: TownPlace; rank: numbe
 /** Placements worked out elsewhere (the town's prebuild worker, decision 153), for exactly this list. */
 let primed: {key: string; result: TownPlacements} | null = null;
 export function townPlacementKey(animals: readonly ArkAnimal[]): string {
-    return animals.map((a) => `${a.id}|${a.area ?? ""}|${a.enclosure ?? ""}|${a.slot ?? ""}|${a.slot_rank ?? ""}|${a.zone}|${a.model_slug}`).join("\n");
+    return animals.map((a) => `${a.id}|${a.area ?? ""}|${a.enclosure ?? ""}|${a.slot ?? ""}|${a.slot_rank ?? ""}|${a.zone}|${a.model_slug}${a.container ? `|${a.container}` : ""}`).join("\n");
 }
 export function primeTownPlacements(key: string, result: TownPlacements, animals?: readonly ArkAnimal[]): void {
     primed = {key, result};
@@ -177,9 +178,39 @@ export function primeTownPlacements(key: string, result: TownPlacements, animals
         const core: Placement = {...placement};
         delete core.leader;
         delete core.rank;
-        MEMO.set(`${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}|${fieldOf.get(animal.id)?.id ?? ""}${indoorTag(animal.id)}`, {placement: core, info, rank});
-        if (info.pen) SPREAD.set(spreadKey(animal), {x: placement.x, z: placement.z, ground: placement.ground});
+        MEMO.set(memoKeyOf(openKey, animal, fieldOf), {placement: core, info, rank});
+        if (info.pen) SPREAD.set(spreadKey(animal), {x: placement.x, z: placement.z, ground: placement.ground, place: info.place});
     }
+}
+
+/** An animal's own spot and step off it are remembered under its fields (and, with container breeding, the container the server stores). */
+function memoKeyOf(openKey: string, animal: ArkAnimal, fieldOf: ReadonlyMap<string, RuralPen>): string {
+    return `${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}|${fieldOf.get(animal.id)?.id ?? ""}${indoorTag(animal.id)}${animal.container ? `|c:${animal.container}` : ""}`;
+}
+
+/**
+ * The container the server stores for a kept animal, as the town draws it (`containers.ts`), or null: none stored, or one that does
+ * not fit the animal. The server's own first guess for an animal it has no parents for is its home's garden (it cannot tell where
+ * the town draws it), so a livestock or poultry animal of a home (it lives in a field) and a horse kept at a farm are never put
+ * on a lawn for it; a young one born aboard inherited its container from its parents, never a guess, and is always where it says.
+ */
+function keptContainer(animal: ArkAnimal): Container | null {
+    const stored = storedContainer(animal);
+    if (!stored || stored.kind !== "home" || animal.area !== "house" || animal.origin === "born") return stored;
+    if (homeKeeping(animal.model_slug, animal.zone, arkBody(animal).metres, modelBase(animal.model_slug)?.plan ?? null) === "livery") return null;
+    const kind = ruralKindOf(animal);
+    if (kind && !(kind === "poultry" && unitOf(animal.id, "backyard-hen") < BACKYARD_HENS)) return null;
+    return stored;
+}
+
+/** Forget every remembered place (the tests': two placements of one read in one process must not share what the first remembered). */
+export function forgetTownPlacements(): void {
+    MEMO.clear();
+    SPREAD.clear();
+    INDOORS.clear();
+    TURTLE_HOME.clear();
+    primed = null;
+    lastFields = null;
 }
 
 export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly string[]): TownPlacements {
@@ -271,7 +302,7 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
             const cluster = clusters.get(clusterKey(animal));
             if (cluster && cluster.count > 1) leader = cluster.leader;
         }
-        const memoKey = `${openKey}|${animal.id}|${animal.area ?? ""}|${animal.enclosure ?? ""}|${animal.slot ?? ""}|${animal.slot_rank ?? ""}|${animal.zone}|${animal.model_slug}|${fieldOf.get(animal.id)?.id ?? ""}${indoorTag(animal.id)}`;
+        const memoKey = memoKeyOf(openKey, animal, fieldOf);
         const hit = MEMO.get(memoKey);
         if (hit) {
             const placement: Placement = {...hit.placement};
@@ -294,6 +325,8 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         let held: {x: number; z: number; y: number; yaw: number} | null = null;
         const plan = modelBase(slug)?.plan ?? null;
         const keeping: HomeKeeping | null = animal.area === "house" ? homeKeeping(slug, animal.zone, length, plan) : null;
+        // Container breeding: where the server says it is kept (null: none stored, or one this plan does not know: the hash decides).
+        const stored = keptContainer(animal);
         // p5 (rural): livestock and poultry of the homes, the farms and the children's farm (past its petting set) in
         // the countryside's fields, by their kind (`rural.ts` ruralPenOf).
         const field = fieldOf.get(animal.id);
@@ -303,7 +336,7 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
             // (Ark ducks: a pond's waterfowl keep to the pond, their range its own, so their swims cross the water.)
             info = penned({area: "farm", where, place: field.id, enclosure: null, range: field.kinds.includes("waterfowl") ? RURAL_POND_RANGE : 9, still: false}, field.at, length);
             rank = (own >>> 9) % 3;
-        } else if (animal.area === "house" && keeping !== "livery") {
+        } else if (animal.area === "house" && (stored ? stored.kind !== "farm" : keeping !== "livery")) {
             // Lane TB: how it is kept (`tanks.ts` homeKeeping). A pond is a house's; a long pet's vivarium or tank a house's
             // or a terrace home's (a flat's are small); a cage, a small vivarium or tank may be a flat's.
             const display = keeping === "tank" || keeping === "cage" || keeping === "vivarium" || keeping === "pond";
@@ -317,8 +350,10 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
             // (The rendezvous order of homes, the first where its display holds it: the same for every viewer, never moved by others.)
             // p5 (homes): a turtle or terrapin in a tank its own, never sharing the fish's (`planTurtleTanks`).
             const turtleHome = TURTLE_HOME.get(animal.id);
-            const home = turtleHome ?? (display ? homeInOrder(animal.id, flatOk, households, (h) => displayAt(h) !== null) : householdOf(animal.id, false, households));
-            const shown = display ? displayAt(home) : null;
+            // (Container breeding: the home the server keeps it at, and its display there when it names one.)
+            const kept = stored && stored.kind !== "farm" && stored.kind !== "field" ? stored.home : null;
+            const home = kept ?? turtleHome ?? (display ? homeInOrder(animal.id, flatOk, households, (h) => displayAt(h) !== null) : householdOf(animal.id, false, households));
+            const shown = stored?.kind === "display" ? stored.display : display ? displayAt(home) : null;
             const indoors = INDOORS.get(animal.id);
             if (indoors && !shown) {
                 // p5 (homes): over its garden's cap: indoors in its room, its own cell of the floor (`home-rooms.ts`).
@@ -345,8 +380,8 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
                 const pen = spot && spot.where !== "balcony" && spot.where !== "window" ? homePen(home, spot.x, spot.z) : null;
                 if (pen) info = penned(info, pen, length);
             }
-        } else if (animal.area === "farm" || keeping === "livery") {
-            const farm = farmOf(animal.id);
+        } else if (animal.area === "farm" || (stored ? stored.kind === "farm" : keeping === "livery")) {
+            const farm = stored?.kind === "farm" ? stored.farm : farmOf(animal.id);
             const farmSpots = (byPlace.get(farm) ?? []).filter((s) => s.area === "farm" && !inBuilding(s.x, s.z, 0.3));
             const want: SpotWhere = POULTRY.test(slug) ? "run" : GRAZER.test(slug) || size === "large" ? "paddock" : "farmyard";
             const list = farmSpots.filter((s) => s.where === want);
@@ -424,7 +459,7 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         const bound = held ? null : info.enclosure?.mask ?? null;
         let at = inside(bound, base.x + off.dx, base.z + off.dz, base.x, base.z);
         // (Lane TB: on the ground, its body clear of every building's wall and every garden room and pond.)
-        if (!held && !HIGH_WHERE.has(base.where) && base.where !== "pool") at = inside(bound, ...clearOf(at.x, at.z, Math.min(Math.max(length * 0.45, 0.12), 1.6)), base.x, base.z);
+        if (!held && !HIGH_WHERE.has(base.where) && base.where !== "pool") at = inside(bound, ...clearOf(at.x, at.z, bodyClear(length)), base.x, base.z);
         // gfx (PLACE): inside its pen, its body clear of the rails (then clear of any building again, the pen's inside).
         if (info.pen) at = inPen(info.pen, info.penMargin ?? 0, at.x, at.z, length);
         else if (info.enclosureMargin !== undefined && info.enclosure) at = keepInside(maskBox(info.enclosure.mask), at.x, at.z, info.enclosureMargin);
@@ -475,13 +510,32 @@ function wholeFields(animals: readonly ArkAnimal[]): Map<string, RuralPen> {
 
 export function ruralFields(animals: readonly ArkAnimal[]): Map<string, RuralPen> {
     const plan = townPlan();
-    const staying = stayingSet(animals, (id) => {
+    // Container breeding: a kept animal whose container the server stores is where it says (a field, or not in one: its home's
+    // garden, its farm's plot); it never goes through the rules below, and the farm's few places count the ones it keeps there.
+    const fixed = new Map<string, Container>();
+    const taken = new Map<string, number>();
+    for (const a of animals) {
+        const s = keptContainer(a);
+        if (!s) continue;
+        fixed.set(a.id, s);
+        if (s.kind === "farm" && a.area === "farm") {
+            const kind: RuralKind | null = ruralKindOf(a);
+            if (kind) taken.set(stayKey(s.farm, kind), (taken.get(stayKey(s.farm, kind)) ?? 0) + 1);
+        }
+    }
+    const free = fixed.size ? animals.filter((a) => !fixed.has(a.id)) : animals;
+    const staying = stayingSet(free, (id) => {
         const farm = farmOf(id);
         return plan.farms.find((f) => f.id === farm) ?? null;
-    });
+    }, taken);
     const kept = (a: {id: string}) => staying.has(a.id);
     const out = new Map<string, RuralPen>();
     for (const a of animals) {
+        const s = fixed.get(a.id);
+        if (s) {
+            if (s.kind === "field") out.set(a.id, s.field);
+            continue;
+        }
         const f = ruralPenOf(a, kept);
         if (f) out.set(a.id, f);
     }
@@ -528,15 +582,20 @@ function ruralSpot(field: RuralPen, id: string, length: number): TownSpot | null
  * places are remembered); a fresh read lays the pen out as the arrivals came, the same for every viewer.
  */
 function spreadPenned(animals: readonly ArkAnimal[], places: Map<string, Placement>, town: Map<string, TownPlace>, fresh: Array<{animal: ArkAnimal; placement: Placement; info: TownPlace; length: number}>): void {
-    // (Its place in its pen remembered whatever the zoo has open: a new enclosure redoes everyone's spots, not this.)
-    for (const f of fresh) {
+    // (Its place in its pen remembered whatever the zoo has open: a new enclosure redoes everyone's spots, not this. Only in the
+    // pen it was remembered in: the server's container can put an animal in another.)
+    const rememberedIn = (f: {animal: ArkAnimal; info: TownPlace}) => {
         const kept = f.info.pen ? SPREAD.get(spreadKey(f.animal)) : undefined;
+        return kept && kept.place === f.info.place ? kept : undefined;
+    };
+    for (const f of fresh) {
+        const kept = rememberedIn(f);
         if (!kept) continue;
         f.placement.x = kept.x;
         f.placement.z = kept.z;
         f.placement.ground = kept.ground;
     }
-    const newcomers = fresh.filter((f) => f.info.pen && !SPREAD.has(spreadKey(f.animal)));
+    const newcomers = fresh.filter((f) => f.info.pen && !rememberedIn(f));
     if (!newcomers.length) return;
     if (SPREAD.size > 20000) SPREAD.clear();
     const isFresh = new Set(newcomers.map((f) => f.animal.id));
@@ -563,7 +622,7 @@ function spreadPenned(animals: readonly ArkAnimal[], places: Map<string, Placeme
             f.placement.ground = townHeight(at.x, at.z);
         }
         group.push({x: f.placement.x, z: f.placement.z, length: f.length});
-        SPREAD.set(spreadKey(f.animal), {x: f.placement.x, z: f.placement.z, ground: f.placement.ground});
+        SPREAD.set(spreadKey(f.animal), {x: f.placement.x, z: f.placement.z, ground: f.placement.ground, place: f.info.place});
     }
 }
 
@@ -654,7 +713,7 @@ export function keepInDome(length: number, pose: {x: number; z: number; base?: n
 }
 
 /** A penned animal's place in its pen, by its own fields (not the zoo's open enclosures). */
-const SPREAD = new Map<string, {x: number; z: number; ground: number}>();
+const SPREAD = new Map<string, {x: number; z: number; ground: number; place: string}>();
 function spreadKey(animal: ArkAnimal): string {
     return `${animal.id}|${animal.area ?? ""}|${animal.zone}|${animal.model_slug}`;
 }
@@ -729,9 +788,23 @@ function parcelOf(building: string): ReturnType<typeof townPlan>["parcels"][numb
     return parcels.get(building);
 }
 
-/** A place with its pen: the margin half its body and a hand, and a roam the pen holds (`rangeOf` takes 1.5 times it). */
+/**
+ * How far in from a pen's rails a kept animal's middle keeps (m): its body's half length, an eighth of it again for a head put down to
+ * graze or a neck stretched out, and 0.3 m clear of the rails (decision 416, the coordinator, 2026-11-20: every kept animal stays inside
+ * its pen with clearance for its body length). A pen too small for it keeps the animal in its middle, never out of it.
+ */
+export function penMarginOf(length: number, pen: Pick<Box, "w" | "d">): number {
+    return Math.max(Math.min(length * 0.625 + 0.3, pen.w / 2 - 0.05, pen.d / 2 - 0.05), 0);
+}
+
+/** How far from a wall or a garden room a kept animal's middle keeps (m): over half its body, so a turn never puts it through. */
+function bodyClear(length: number): number {
+    return Math.min(Math.max(length * 0.55, 0.12), 1.8);
+}
+
+/** A place with its pen: `penMarginOf` in from its rails, and a roam the pen holds (`rangeOf` takes 1.5 times it). */
 function penned(info: TownPlace, pen: Box, length: number): TownPlace {
-    const margin = Math.max(Math.min(length * 0.5 + 0.15, pen.w / 2 - 0.05, pen.d / 2 - 0.05), 0);
+    const margin = penMarginOf(length, pen);
     const reach = Math.max(Math.min(pen.w, pen.d) / 2 - margin, 0.4);
     return {...info, pen, penMargin: margin, range: Math.min(info.range, Math.max(reach / 1.5, 0.4))};
 }
@@ -776,7 +849,7 @@ export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}
     pose.x = ox + pen.x + qx * c - qz * s;
     pose.z = oz + pen.z + qx * s + qz * c;
     if (!solid) return;
-    clearWithin(pose, Math.min(Math.max(margin - 0.15, 0.05), 1.2), solid, (x, z) => {
+    clearWithin(pose, Math.min(Math.max(margin - 0.15, 0.05), 1.8), solid, (x, z) => {
         const ex = x - ox - pen.x;
         const ez = z - oz - pen.z;
         return Math.abs(ex * c + ez * s) <= hx + 1e-6 && Math.abs(-ex * s + ez * c) <= hz + 1e-6;
@@ -806,11 +879,27 @@ export function clearWithin(pose: {x: number; z: number}, radius: number, solid:
     }
 }
 
-/** A point inside its pen, `margin` in from the rails, clear of the buildings in it (the rails win). */
+/**
+ * A point inside its pen, `margin` in from the rails, clear of the buildings in it. The rails win, but never by leaving the animal in a
+ * wall: when pushing it off a wall and back in from the rails lands it in one again (a barn or a garden room against the rails), the
+ * nearest point of the pen's interior that is clear of both is taken (rings about it, the same for every viewer).
+ */
 export function inPen(pen: Box, margin: number, x: number, z: number, length: number): {x: number; z: number} {
+    const radius = bodyClear(length);
     const a = keepInside(pen, x, z, margin);
-    const [cx, cz] = clearOf(a.x, a.z, Math.min(Math.max(length * 0.45, 0.12), 1.6));
-    return cx === a.x && cz === a.z ? a : keepInside(pen, cx, cz, margin);
+    const [cx, cz] = clearOf(a.x, a.z, radius);
+    const b = cx === a.x && cz === a.z ? a : keepInside(pen, cx, cz, margin);
+    if (!inBuilding(b.x, b.z, radius * 0.9)) return b;
+    for (let ring = 1; ring <= 24; ring++) {
+        const step = Math.max(length * 0.25, 0.25) * ring;
+        const n = 8 + ring * 2;
+        for (let k = 0; k < n; k++) {
+            const t = (k / n) * Math.PI * 2;
+            const p = keepInside(pen, b.x + Math.cos(t) * step, b.z + Math.sin(t) * step, margin);
+            if (!inBuilding(p.x, p.z, radius * 0.9)) return p;
+        }
+    }
+    return b;
 }
 
 /** Whether some home's tank holds a fish this long (with its swim's room). */
@@ -943,6 +1032,13 @@ function planTurtleTanks(animals: readonly ArkAnimal[], households: Household[])
         const length = arkBody(animal).metres;
         const plan = modelBase(animal.model_slug)?.plan ?? null;
         const keeping = homeKeeping(animal.model_slug, animal.zone, length, plan);
+        // Container breeding: where the server keeps it decides, and the tank it is in is taken (a turtle of no container takes another).
+        const stored = keptContainer(animal);
+        if (stored) {
+            const shown = stored.kind === "display" ? stored.display : stored.kind === "home" && (keeping === "tank" || keeping === "pond") ? displayFor(stored.home, keeping, length, keeping === "tank" && !tankHolds(length)) : null;
+            if (shown) used.add(shown.id);
+            continue;
+        }
         const turtle = TURTLE.test(animal.model_slug);
         if (keeping === "pond" && turtle) {
             // (A pond turtle at a home with no pond is kept in its tank: that tank must be its own too.)
@@ -986,6 +1082,18 @@ function planIndoors(animals: readonly ArkAnimal[]): void {
         const length = arkBody(animal).metres;
         const plan = modelBase(animal.model_slug)?.plan ?? null;
         const keeping = homeKeeping(animal.model_slug, animal.zone, length, plan);
+        // Container breeding (`containers.ts`): where the server keeps it. A display, a farm plot and a field are not the garden's
+        // pets; a room is kept to; a garden stays out, counted in its home's cap and never sent in.
+        const stored = keptContainer(animal);
+        if (stored) {
+            if (stored.kind === "room") pets.push({id: animal.id, slug: animal.model_slug, plan, length, home: stored.home ?? householdOf(animal.id, false, households), pin: stored.room});
+            else if (stored.kind === "home" && keeping !== "livery") {
+                const pondFish = keeping === "tank" && !tankHolds(length);
+                // (A pet kept in a display lives in its home's when it holds it; else, like any pet, in the garden.)
+                if (keeping === "outdoors" || !displayFor(stored.home, keeping, length, pondFish)) pets.push({id: animal.id, slug: animal.model_slug, plan, length, home: stored.home, pin: "out"});
+            }
+            continue;
+        }
         if (keeping === "livery") continue;
         if (keeping !== "outdoors") {
             // (A pet whose display no home holds lives outdoors at its first home, as the house branch places it: a

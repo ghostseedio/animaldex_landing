@@ -808,6 +808,15 @@
             "powerEarn": "Memperoleh Kuasanya meningkatkan peluangnya untuk terus hidup",
             "powerWorking": "Kuasanya berfungsi: pemangsa melepasinya demi yang lebih lemah"
         },
+        "sex": {
+            "male": "jantan",
+            "female": "betina",
+            "maleN": "jantan: {count}",
+            "femaleN": "betina: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Semuanya betina, tidak perlukan jantan",
+            "asexual": "Jenis ini tiada jantan atau betina"
+        },
         "relations": {
             "title": "Di sekelilingnya",
             "predator": "Boleh memburunya",

@@ -690,3 +690,56 @@ The models at true size; the parked cars clear of every building, wall, fence an
 | GB-10 | Lit windows' night | the lane's own clock, lane GA's `TOWN_LIGHT.lampOn` | **Lane GA's**, with `people.ts` `windowLit` for whose light is on | The coordinator's rule: one night state for the town. |
 | GB-11 | Shop signs | names, nothing, pictograms | **A pictogram of the trade** on a sign panel, no words | Generic and readable as a shop, never a brand or clutter. |
 | GB-12 | Farm buildings | improve them, leave them | **Left as they were** (they take the new windows and doors) | They are lane GC's. |
+
+## 15. Container breeding: the town draws a kept animal where the server keeps it (lane ARK-CONTAINER-WEB, branch `ark-container-web`, decision 416)
+
+Owner rule (decision 416): pets breed only within one tank, farm animals only within one pen, and what you see must match. The engine
+(AnimalDex `docs/ark/container-breeding.md`) stores a container for every house and farm animal (`voyage_animals.container`), a young one
+takes its parents'; the public read carries it (`container`, AnimalDex migration `20261209130000`, only while the server's
+`container_breeding` switch is on and only for a house or farm animal that has one). Before, the town picked a kept animal's home, tank,
+room, farm or field from a hash of its id, so a young one born in its parents' tank was drawn in a stranger's.
+
+- `islands/town/containers.ts`: what a container id names in this plan: a home's display (`house-3#0:tank`, also cage, vivarium, pond), its
+  room (`house-40#0~room`, `tower-3~f10l`), its garden (`house-3#0`), a farm plot (`smallholding-2`) or a countryside field
+  (`rural-sheep-fold`). An id the plan does not know is as no container: today's hash. `drawnContainer(info)` is the same id from where an
+  animal is drawn (what `scripts/ark-containers-truth.mts` loads and the tests compare).
+- `placement.ts`: with a container the animal is where it says: its display (`planTurtleTanks` counts the tank as taken), its room (a
+  pinned pet: `home-rooms.ts` `OutdoorPet.pin`, the room may hold more than its usual capacity: a young one born in it, one cell each), its
+  garden (pinned out: it counts in the garden's cap and is never sent indoors), its farm plot (the farm's few places count it) or its
+  field (`ruralFields`). A young one is drawn in its parents' container, so beside them. With no container stored nothing moves.
+- The server's own first guess for an arrival is its home's garden (the engine cannot tell where the town draws it), so for an arrived
+  animal a garden container never puts a cow, a horse kept at a farm or a duck on a lawn (it is drawn as before); a fish is at the named
+  home, in its tank when it holds it. A young one born aboard always is where its container says.
+- Memory: the placement memo and the pen spread remember an animal's spot under its container too, and the spread only in the pen it was
+  remembered in.
+- The zoo is by the server's `enclosure` already (one breeding group per enclosure); nothing changes there.
+- Tests: `src/lib/ark-container-placement.test.ts` on the saved real read `src/ark-scene/fixtures/town-containers.json.gz` (production,
+  2026-11-20: 2,901 animals, the 1,461 containers the owner loads): every kept animal drawn in its stored container, and nobody in the town
+  moves with them laid on; young beside parents in every kind of container.
+
+### 15.1 Male and female in the panel and the list (coordinator, 2026-11-20)
+
+The public read carries each animal's `sex` (`"m"`, `"f"` or null where its kind keeps none; the key is there for every animal while the server's
+`sexes` switch is on) and, for a kind that is not a male and a female, its `reproduction` mode (hermaphrodite, parthenogenetic, asexual), AnimalDex
+migration `20261209130000`. `lib/ark-sex.ts` (`arkSexView`) says what to draw: ♂ or ♀ for one animal, "♂3 ♀4" for a species row, or the kind's note ("Hermaphrodite",
+"All female, no male needed", "This kind has no males or females"); nothing while the switch is off. The card shows it beside the animal's name and the
+list beside each row's count (an image to a screen reader, labelled "male" / "female", "male: 3, female: 4"), the embed's bars the same
+(`live/bars-view.ts`); `ark.sex` is in en, id and the 43 Ark bundles. The page's first JavaScript is budgeted, so the card reaches it through the lazy
+`ark-time-left` (its `sex` face) and the list through the lazy graphs module; `snapshot.ts` passes the two keys on as sent and `arkSexView` checks them.
+`/ark` static JavaScript: 204,633 bytes (limit 204,800).
+
+### 15.2 Every kept animal inside its container, with clearance for its body (coordinator, 2026-11-20)
+
+A picture of a young horse in its parents' paddock showed it at the rail with its head through it and into the barn wall: a pen kept an animal's middle only
+half its body from the rails, so a head put down to graze, or a turn, took it over. Now (`placement.ts`):
+- `penMarginOf(length, pen)`: a pen's rails keep a kept animal's middle `0.625 x its length + 0.3 m` away (it was `0.5 x + 0.15`), and a pen too small for it
+  keeps it in its middle, never out of it (the scene's `keepInPen` bound uses the same figure, and clears walls by a radius that grows with it);
+- `inPen`: when pushing an animal off a wall and back in from the rails lands it in one again (a barn or a garden room against the rails), the nearest
+  point of the interior clear of both is taken, rings about it (before, "the rails win" left 3 dogs and humans of the saved read in a wall);
+- a room with more pets than a row of cells holds (young ones born in it) fills a second row across its depth, a cell each (`roomCell`).
+`ark-container-placement.test.ts` checks it on the saved real read with its containers, with a family of young in every kind of container and with
+fourteen horses in one paddock: every body (both ends, whatever way it faces) inside its rails and out of every wall, in a display inside its glass, in
+a room on its floor, and no two bodies one on another. Against main, 629 of the 2,901 animals of the saved read stand a little differently (the median 0 m,
+none more than 1.4 m: those that stood within the new margin of a rail, and the ones their spreading moved); with the 1,461 loaded containers laid on
+nobody moves, as before.
+

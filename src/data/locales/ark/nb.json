@@ -808,6 +808,15 @@
             "powerEarn": "Å tjene Kraften dets øker sjansen for å overleve",
             "powerWorking": "Kraften dets virker: rovdyrene hopper over det til fordel for de svakere"
         },
+        "sex": {
+            "male": "hann",
+            "female": "hun",
+            "maleN": "hanner: {count}",
+            "femaleN": "hunner: {count}",
+            "hermaphrodite": "Hermafroditt",
+            "parthenogenetic": "Bare hunner, ingen hann trengs",
+            "asexual": "Denne arten har verken hanner eller hunner"
+        },
         "relations": {
             "title": "Rundt den",
             "predator": "Kan jakte på den",

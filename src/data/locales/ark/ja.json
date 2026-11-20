@@ -808,6 +808,15 @@
             "powerEarn": "パワーを獲得すると生き延びる確率が上がります",
             "powerWorking": "パワーが効いています：捕食者はより弱い個体を先に狙い、素通りします"
         },
+        "sex": {
+            "male": "オス",
+            "female": "メス",
+            "maleN": "オス: {count}",
+            "femaleN": "メス: {count}",
+            "hermaphrodite": "雌雄同体",
+            "parthenogenetic": "すべてメス、オスは不要",
+            "asexual": "この種にはオスもメスもいません"
+        },
         "relations": {
             "title": "まわりの関係",
             "predator": "狩る可能性がある",

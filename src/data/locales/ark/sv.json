@@ -808,6 +808,15 @@
             "powerEarn": "Att tjäna dess Kraft ökar dess chans att överleva",
             "powerWorking": "Dess Kraft verkar: rovdjuren hoppar över det till förmån för svagare"
         },
+        "sex": {
+            "male": "hane",
+            "female": "hona",
+            "maleN": "hanar: {count}",
+            "femaleN": "honor: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Bara honor, ingen hane behövs",
+            "asexual": "Den här arten har varken hanar eller honor"
+        },
         "relations": {
             "title": "Runt den",
             "predator": "Kan jaga den",

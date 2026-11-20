@@ -808,6 +808,15 @@
             "powerEarn": "Zijn Kracht verdienen vergroot zijn overlevingskans",
             "powerWorking": "Zijn Kracht werkt: roofdieren slaan het over voor zwakkere dieren"
         },
+        "sex": {
+            "male": "mannetje",
+            "female": "vrouwtje",
+            "maleN": "mannetjes: {count}",
+            "femaleN": "vrouwtjes: {count}",
+            "hermaphrodite": "Hermafrodiet",
+            "parthenogenetic": "Alleen vrouwtjes, geen mannetje nodig",
+            "asexual": "Deze soort heeft geen mannetjes of vrouwtjes"
+        },
         "relations": {
             "title": "Eromheen",
             "predator": "Zou erop kunnen jagen",

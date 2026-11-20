@@ -808,6 +808,15 @@
             "powerEarn": "Zdobycie jego Mocy zwiększa jego szansę przeżycia",
             "powerWorking": "Jego Moc działa: drapieżniki omijają go na rzecz słabszych"
         },
+        "sex": {
+            "male": "samiec",
+            "female": "samica",
+            "maleN": "samce: {count}",
+            "femaleN": "samice: {count}",
+            "hermaphrodite": "Hermafrodyta",
+            "parthenogenetic": "Same samice, samiec niepotrzebny",
+            "asexual": "Ten gatunek nie ma samców ani samic"
+        },
         "relations": {
             "title": "Wokół niego",
             "predator": "Może na niego polować",

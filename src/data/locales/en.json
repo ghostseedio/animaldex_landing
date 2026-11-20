@@ -5020,6 +5020,15 @@
       "powerEarn": "Earning its Power raises its survival chance",
       "powerWorking": "Its Power is working: predators pass it over for weaker ones"
     },
+    "sex": {
+      "male": "male",
+      "female": "female",
+      "maleN": "male: {count}",
+      "femaleN": "female: {count}",
+      "hermaphrodite": "Hermaphrodite",
+      "parthenogenetic": "All female, no male needed",
+      "asexual": "This kind has no males or females"
+    },
     "relations": {
       "title": "Around it",
       "predator": "Could hunt it",

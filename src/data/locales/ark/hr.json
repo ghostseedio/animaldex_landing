@@ -808,6 +808,15 @@
             "powerEarn": "Osvajanje njegove Moći povećava njegovu šansu za preživljavanje",
             "powerWorking": "Njegova Moć djeluje: grabežljivci ga zaobilaze zbog slabijih"
         },
+        "sex": {
+            "male": "mužjak",
+            "female": "ženka",
+            "maleN": "mužjaci: {count}",
+            "femaleN": "ženke: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Sve ženke, mužjak nije potreban",
+            "asexual": "Ova vrsta nema mužjake ni ženke"
+        },
         "relations": {
             "title": "Oko njega",
             "predator": "Mogao bi ga loviti",

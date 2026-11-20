@@ -5005,6 +5005,15 @@
       "powerEarn": "Mendapatkan Power-nya meningkatkan peluangnya bertahan hidup",
       "powerWorking": "Power-nya bekerja: pemangsa melewatinya demi yang lebih lemah"
     },
+    "sex": {
+      "male": "jantan",
+      "female": "betina",
+      "maleN": "jantan: {count}",
+      "femaleN": "betina: {count}",
+      "hermaphrodite": "Hermafrodit",
+      "parthenogenetic": "Semuanya betina, tanpa jantan",
+      "asexual": "Jenis ini tidak punya jantan atau betina"
+    },
     "relations": {
       "title": "Di sekitarnya",
       "predator": "Bisa memburunya",

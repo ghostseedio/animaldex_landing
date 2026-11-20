@@ -808,6 +808,15 @@
             "powerEarn": "Získání jeho Síly zvyšuje jeho šanci přežít",
             "powerWorking": "Jeho Síla funguje: šelmy ho přeskočí kvůli slabším"
         },
+        "sex": {
+            "male": "samec",
+            "female": "samice",
+            "maleN": "samci: {count}",
+            "femaleN": "samice: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Samé samice, samec není třeba",
+            "asexual": "Tento druh nemá samce ani samice"
+        },
         "relations": {
             "title": "Kolem něj",
             "predator": "Mohl by ho lovit",
