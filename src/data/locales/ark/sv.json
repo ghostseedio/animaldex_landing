@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} barnbarn",
             "lineageLaterOne": "1 senare ättling",
             "lineageLaterOther": "{count} senare ättlingar",
-            "lineageLiving": "{count} lever nu"
+            "lineageLiving": "{count} lever nu",
+            "grassPlenty": "Gräs här: gott om",
+            "grassThinning": "Gräs här: glesnar",
+            "grassBare": "Gräs här: nerbetat"
         },
         "replay": {
             "title": "Medan du var borta",

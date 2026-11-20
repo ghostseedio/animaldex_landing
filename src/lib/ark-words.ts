@@ -154,6 +154,10 @@ export type ArkLifeWords = {
     lineageLaterOne: string;
     lineageLaterOther: string;
     lineageLiving: string;
+    /** Vegetation (decision 417 (1)): the grass where it lives or where the ground was tapped. Optional: older bundles. */
+    grassPlenty?: string;
+    grassThinning?: string;
+    grassBare?: string;
 };
 
 /** "While you were away": the replay's captions and its summary line. */

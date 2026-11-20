@@ -520,6 +520,15 @@ export class ArkLive {
             .catch(() => {
                 // (No answer: no forestry drawn; asked again later.)
             });
+        // Vegetation (decision 417 (1)): and how grazed the grass is, as often (null while the server's is off).
+        fetch(url.replace(/\/dormant$/, "/vegetation"))
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: {vegetation?: unknown} | null) => {
+                if (!this.disposed && body) this.options.scene()?.setVegetation?.(body.vegetation ?? null);
+            })
+            .catch(() => {
+                // (No answer: the grass as it stands; asked again later.)
+            });
         // p5 (humans): and the town's couples and their children (the server's courtship), as often.
         fetch(url.replace(/\/dormant$/, "/human-bonds"))
             .then((response) => (response.ok ? response.json() : null))

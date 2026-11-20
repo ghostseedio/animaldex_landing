@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} נכדים",
             "lineageLaterOne": "צאצא רחוק אחד",
             "lineageLaterOther": "{count} צאצאים רחוקים",
-            "lineageLiving": "{count} חיים כעת"
+            "lineageLiving": "{count} חיים כעת",
+            "grassPlenty": "עשב כאן: בשפע",
+            "grassThinning": "עשב כאן: מידלדל",
+            "grassBare": "עשב כאן: נאכל עד היסוד"
         },
         "replay": {
             "title": "בזמן שלא היית כאן",

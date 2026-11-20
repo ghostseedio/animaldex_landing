@@ -193,10 +193,22 @@ type CardProps = {
     snapshot?: ArkSnapshot | null;
 };
 
+/** "Grass here: plenty / thinning / grazed bare" (vegetation, decision 417 (1)); English where a bundle lacks it. */
+export function arkGrassWords(life: ArkWords["life"]): Record<"plenty" | "thinning" | "bare", string> {
+    return {
+        plenty: life.grassPlenty ?? "Grass here: plenty",
+        thinning: life.grassThinning ?? "Grass here: thinning",
+        bare: life.grassBare ?? "Grass here: grazed bare"
+    };
+}
+
 export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, photo = null, arkDay, voyageStart, scene, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share, lives = null, snapshot = null}: CardProps) {
     arkPerfCountRender();
     const life = state?.life ?? null;
     const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
+    // Vegetation (decision 417 (1)): the grass where it lives, while the record's vegetation is on ("Grass here: thinning").
+    const grassState = scene()?.grassAt?.(animal.zone, animal.island ?? null) ?? null;
+    const grass = grassState ? arkGrassWords(words.life)[grassState] : null;
     // A species with no Ark model (A13): the stand-in figure, said so, and no Talk page to send to.
     const placeholder = animal.placeholder === true || isArkPlaceholderSlug(animal.model_slug);
     const facts = lifeFacts(animal, life, arkDay, locale, words.formerVoyager, named);
@@ -300,6 +312,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                                 {animal.scientific_name ? <span className="italic">{animal.scientific_name}</span> : null}
                                 {animal.scientific_name ? " · " : null}
                                 <span title={words.lives}>{words.zones[animal.zone]}</span>
+                                {grass ? <span data-testid="ark-card-grass"> · {grass}</span> : null}
                             </p>
                         </div>
                         <p className="mt-0.5 min-w-0 truncate text-[12.5px] leading-snug text-ink-200" data-testid="ark-card-by">

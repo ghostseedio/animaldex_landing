@@ -245,7 +245,10 @@
             "lineageGrandOther": "wnuki ({count})",
             "lineageLaterOne": "1 dalszy potomek",
             "lineageLaterOther": "dalsi potomkowie ({count})",
-            "lineageLiving": "żyjące teraz: {count}"
+            "lineageLiving": "żyjące teraz: {count}",
+            "grassPlenty": "Trawa tutaj: obfita",
+            "grassThinning": "Trawa tutaj: przerzedza się",
+            "grassBare": "Trawa tutaj: wyjedzona do gołej ziemi"
         },
         "replay": {
             "title": "Gdy Cię nie było",

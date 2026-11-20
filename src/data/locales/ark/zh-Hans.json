@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} 只孙辈",
             "lineageLaterOne": "1 只更远的后代",
             "lineageLaterOther": "{count} 只更远的后代",
-            "lineageLiving": "现存 {count} 只"
+            "lineageLiving": "现存 {count} 只",
+            "grassPlenty": "这里的草：茂盛",
+            "grassThinning": "这里的草：渐渐稀疏",
+            "grassBare": "这里的草：被啃光了"
         },
         "replay": {
             "title": "你不在的时候",

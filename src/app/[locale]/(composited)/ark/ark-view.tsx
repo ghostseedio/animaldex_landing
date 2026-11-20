@@ -15,7 +15,7 @@ import {fetchArkHunting} from "@/lib/ark-hunting";
 import {arkHuntLine} from "@/lib/ark-live-hunt";
 import {arkSyncMeals} from "@/ark-scene/live-hunt-feed";
 import {arkReloadForRestoredContext} from "@/lib/ark-context-restore";
-import {ArkAnimalCard, ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-animal-card";
+import {ArkAnimalCard, ArkFilled, arkGrassWords, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-animal-card";
 import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkLiveHunt, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkArchipelagoHandle} from "@/ark-scene/islands/archipelago";
 import {arkIslandCounts, arkIslandSnapshot, arkLooksLikeAnimalId, arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
@@ -242,6 +242,13 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     /** The client's read of the live Ark failed (or the Ark is not there yet): "opens soon". */
     const [unavailable, setUnavailable] = useState(false);
     const [selected, setSelected] = useState<ArkAnimal | null>(null);
+    /** Vegetation (decision 417 (1)): the last ground tap's "Grass here: …", shown for a few seconds where it was tapped. */
+    const [groundTap, setGroundTap] = useState<{word: "plenty" | "thinning" | "bare"; x: number; y: number; at: number} | null>(null);
+    useEffect(() => {
+        if (!groundTap) return;
+        const timer = window.setTimeout(() => setGroundTap(null), 2600);
+        return () => window.clearTimeout(timer);
+    }, [groundTap]);
     /** What the selected animal is doing now, as the scene animates it (never worked out here from a clock of the page's own). */
     const [selectedState, setSelectedState] = useState<{id: string; state: ArkBehaviourState} | null>(null);
     const onBehaviour = useCallback((id: string, state: ArkBehaviourState) => setSelectedState({id, state}), []);
@@ -469,6 +476,8 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                         ...(process.env.NODE_ENV !== "production" && new URLSearchParams(window.location.search).get("behaviour") === "0" ? {behaviour: false} : {}),
                         iconUrl: arkIconUrl,
                         onSelect,
+                        // Vegetation (decision 417 (1)): a tap on the ground says how grazed the grass is there.
+                        onGround: (tap) => setGroundTap({...tap, at: Date.now()}),
                         onBehaviour,
                         onRest,
                         // Over the selected animal's bars: "Brought by @handle" when the server names its founder, "Born on
@@ -1152,6 +1161,11 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
             <section ref={worldRef} aria-label={words.eyebrow} data-ark-loading={loaderShown ? "" : undefined} className="relative h-[calc(100svh-4.0625rem-var(--ark-intro-h,0px))] min-h-[30rem] w-full overflow-hidden bg-[#ecdcc4]">
                 {snapshot && !failed ? <div ref={mountRef} className="absolute inset-0" onPointerUp={worldTapped} /> : null}
                 {snapshot && !failed ? <div ref={liveHostRef} className="pointer-events-none absolute inset-0" /> : null}
+                {groundTap ? (
+                    <p role="status" data-testid="ark-ground-grass" className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[130%] whitespace-nowrap rounded-full bg-canvas-950/85 px-3 py-1 text-[12.5px] font-semibold text-white shadow" style={{left: groundTap.x, top: groundTap.y}}>
+                        {arkGrassWords(words.life)[groundTap.word]}
+                    </p>
+                ) : null}
 
                 {/* A real render of the Ark's opening view until the world is up (decision 246): the page's largest paint. */}
                 {!failed && !(unavailable && !snapshot) ? <ArkPoster ready={settled} /> : null}

@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} 隻孫輩",
             "lineageLaterOne": "1 隻更遠的後代",
             "lineageLaterOther": "{count} 隻更遠的後代",
-            "lineageLiving": "現存 {count} 隻"
+            "lineageLiving": "現存 {count} 隻",
+            "grassPlenty": "這裡的草：茂盛",
+            "grassThinning": "這裡的草：漸漸稀疏",
+            "grassBare": "這裡的草：被啃光了"
         },
         "replay": {
             "title": "你不在的時候",

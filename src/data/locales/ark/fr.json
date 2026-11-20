@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} petits-enfants",
             "lineageLaterOne": "1 descendant plus lointain",
             "lineageLaterOther": "{count} descendants plus lointains",
-            "lineageLiving": "{count} en vie actuellement"
+            "lineageLiving": "{count} en vie actuellement",
+            "grassPlenty": "Herbe ici : abondante",
+            "grassThinning": "Herbe ici : se raréfie",
+            "grassBare": "Herbe ici : broutée jusqu’au sol"
         },
         "replay": {
             "title": "Pendant votre absence",

@@ -245,7 +245,10 @@
             "lineageGrandOther": "внуков: {count}",
             "lineageLaterOne": "1 дальний потомок",
             "lineageLaterOther": "дальних потомков: {count}",
-            "lineageLiving": "живы сейчас: {count}"
+            "lineageLiving": "живы сейчас: {count}",
+            "grassPlenty": "Трава здесь: вдоволь",
+            "grassThinning": "Трава здесь: редеет",
+            "grassBare": "Трава здесь: выедена дочиста"
         },
         "replay": {
             "title": "Пока вас не было",

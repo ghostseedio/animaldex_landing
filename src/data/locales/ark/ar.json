@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} من الأحفاد",
             "lineageLaterOne": "سليل واحد من الأجيال اللاحقة",
             "lineageLaterOther": "{count} من الأجيال اللاحقة",
-            "lineageLiving": "{count} على قيد الحياة الآن"
+            "lineageLiving": "{count} على قيد الحياة الآن",
+            "grassPlenty": "العشب هنا: وفير",
+            "grassThinning": "العشب هنا: يتناقص",
+            "grassBare": "العشب هنا: رُعي حتى آخره"
         },
         "replay": {
             "title": "بينما كنت غائبًا",

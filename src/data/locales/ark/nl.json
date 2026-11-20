@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} kleinkinderen",
             "lineageLaterOne": "1 latere nakomeling",
             "lineageLaterOther": "{count} latere nakomelingen",
-            "lineageLiving": "{count} nu in leven"
+            "lineageLiving": "{count} nu in leven",
+            "grassPlenty": "Gras hier: volop",
+            "grassThinning": "Gras hier: wordt dun",
+            "grassBare": "Gras hier: kaalgegraasd"
         },
         "replay": {
             "title": "Terwijl je weg was",

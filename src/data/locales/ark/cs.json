@@ -245,7 +245,10 @@
             "lineageGrandOther": "vnoučata ({count})",
             "lineageLaterOne": "1 vzdálenější potomek",
             "lineageLaterOther": "vzdálenější potomci ({count})",
-            "lineageLiving": "nyní naživu: {count}"
+            "lineageLiving": "nyní naživu: {count}",
+            "grassPlenty": "Tráva tady: hojně",
+            "grassThinning": "Tráva tady: řídne",
+            "grassBare": "Tráva tady: spasená do holého"
         },
         "replay": {
             "title": "Během tvé nepřítomnosti",

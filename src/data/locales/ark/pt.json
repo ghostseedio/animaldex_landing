@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} netos",
             "lineageLaterOne": "1 descendente posterior",
             "lineageLaterOther": "{count} descendentes posteriores",
-            "lineageLiving": "{count} vivos agora"
+            "lineageLiving": "{count} vivos agora",
+            "grassPlenty": "Capim aqui: farto",
+            "grassThinning": "Capim aqui: ficando ralo",
+            "grassBare": "Capim aqui: pastado até o chão"
         },
         "replay": {
             "title": "Enquanto você estava fora",

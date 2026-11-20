@@ -56,6 +56,7 @@ import {
     Quaternion,
     Scene,
     Raycaster,
+    Vector2,
     Sphere,
     Spherical,
     Vector3,
@@ -138,6 +139,7 @@ import {AssetTrees} from "@/ark-scene/asset-trees";
 import {AssetFloor, AssetRocks} from "@/ark-scene/asset-rocks";
 import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
 import {buildVegetation} from "@/ark-scene/vegetation";
+import {decodeVegetation, grassWord, type ArkVegetation} from "@/ark-scene/grass-grazed";
 import {seaEpochSeconds} from "@/ark-scene/fish-schools";
 // 3.3 batch (E): the sea's own look from under the surface (the water by depth, marine snow).
 import {seaClockSeconds} from "@/ark-scene/fish-schools";
@@ -989,6 +991,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     if (island) addIslandWorld(island);
     // Runtime: the grass built for the device's tier, not always the highest's (runtime/budgets.ts GRASS_BUILD).
     const vegetation = buildVegetation(arkGrassBuild(tier), chunkGrid);
+    /** The record's vegetation (`setVegetation`), null while it is off. */
+    let grazing: ArkVegetation | null = null;
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
     const nearDetail = new NearDetail();
     if (nearDetail) scene.add(nearDetail.group);
@@ -7169,6 +7173,34 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         stepArrival(performance.now() / 1000);
     };
 
+    /** The wild island's ground under a tap (a march along the view ray, then halving), its zone and the grass there. */
+    const groundTap = (clientX: number, clientY: number) => {
+        const rect = canvas.getBoundingClientRect();
+        rays.setFromCamera(tapNdc.set(((clientX - rect.left) / rect.width) * 2 - 1, -((clientY - rect.top) / rect.height) * 2 + 1), camera);
+        const o = rays.ray.origin, d = rays.ray.direction;
+        let prev = 0;
+        for (let t = 0.5; t < 400; t *= 1.08) {
+            const y = o.y + d.y * t;
+            if (y > Math.max(heightAt(o.x + d.x * t, o.z + d.z * t), 0)) {
+                prev = t;
+                continue;
+            }
+            let lo = prev, hi = t;
+            for (let i = 0; i < 12; i++) {
+                const mid = (lo + hi) / 2;
+                if (o.y + d.y * mid > Math.max(heightAt(o.x + d.x * mid, o.z + d.z * mid), 0)) lo = mid;
+                else hi = mid;
+            }
+            const x = o.x + d.x * hi, z = o.z + d.z * hi;
+            if (heightAt(x, z) <= 0) return; // the sea
+            const zone = worldSampler().zoneAt(x, z);
+            const level = grazing?.levels.get(`wild|${zone}`);
+            if (level !== undefined) options.onGround?.({zone, word: grassWord(level), x: clientX - rect.left, y: clientY - rect.top});
+            return;
+        }
+    };
+    const tapNdc = new Vector2();
+
     let down: {x: number; y: number; time: number; id: number} | null = null;
     let pointers = 0;
     const onPointerDown = (event: PointerEvent) => {
@@ -7214,6 +7246,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return;
             }
             if (selectedHerd) selectHerd(null, false);
+            // Vegetation on: bare ground tapped says how grazed the grass is there.
+            if (grazing && options.onGround) groundTap(event.clientX, event.clientY);
         }
         select(hit ? hit.animal.id : null, Boolean(hit));
     };
@@ -9531,6 +9565,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }), worldMs() / 1000);
         },
         setForestry: (record) => forest.setRecord(record), // p5 (humans)
+        // Vegetation (decision 417 (1)): the grass thins where it is overgrazed; nothing changes while it is off.
+        setVegetation: (raw) => {
+            grazing = decodeVegetation(raw);
+            vegetation?.setGrazed(grazing);
+        },
+        grassAt: (zone, island) => {
+            const level = grazing?.levels.get(`${island === "town" ? "town" : "wild"}|${zone}`);
+            return level === undefined ? null : grassWord(level);
+        },
         setHumanBonds: (raw) => townHumans.setBonds(decodeHumanBonds(raw)), // p5 (humans, couples)
         setDormant: (kinds) => {
             dormantKinds = new Set(kinds);

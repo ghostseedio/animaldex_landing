@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} Enkel",
             "lineageLaterOne": "1 späterer Nachkomme",
             "lineageLaterOther": "{count} spätere Nachkommen",
-            "lineageLiving": "{count} am Leben"
+            "lineageLiving": "{count} am Leben",
+            "grassPlenty": "Gras hier: reichlich",
+            "grassThinning": "Gras hier: wird dünn",
+            "grassBare": "Gras hier: kahl gefressen"
         },
         "replay": {
             "title": "Während du weg warst",

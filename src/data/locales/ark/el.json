@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} εγγόνια",
             "lineageLaterOne": "1 μεταγενέστερος απόγονος",
             "lineageLaterOther": "{count} μεταγενέστεροι απόγονοι",
-            "lineageLiving": "{count} ζωντανά τώρα"
+            "lineageLiving": "{count} ζωντανά τώρα",
+            "grassPlenty": "Χορτάρι εδώ: άφθονο",
+            "grassThinning": "Χορτάρι εδώ: αραιώνει",
+            "grassBare": "Χορτάρι εδώ: φαγωμένο ως το χώμα"
         },
         "replay": {
             "title": "Όσο έλειπες",

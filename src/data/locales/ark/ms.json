@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} cucu",
             "lineageLaterOne": "1 keturunan lanjut",
             "lineageLaterOther": "{count} keturunan lanjut",
-            "lineageLiving": "{count} masih hidup"
+            "lineageLiving": "{count} masih hidup",
+            "grassPlenty": "Rumput di sini: banyak",
+            "grassThinning": "Rumput di sini: semakin nipis",
+            "grassBare": "Rumput di sini: habis diragut"
         },
         "replay": {
             "title": "Semasa anda tiada",

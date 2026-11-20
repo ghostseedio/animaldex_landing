@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} cháu",
             "lineageLaterOne": "1 hậu duệ đời sau",
             "lineageLaterOther": "{count} hậu duệ đời sau",
-            "lineageLiving": "{count} con còn sống"
+            "lineageLiving": "{count} con còn sống",
+            "grassPlenty": "Cỏ ở đây: dồi dào",
+            "grassThinning": "Cỏ ở đây: đang thưa dần",
+            "grassBare": "Cỏ ở đây: bị gặm trụi"
         },
         "replay": {
             "title": "Trong lúc bạn vắng mặt",

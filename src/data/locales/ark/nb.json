@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} barnebarn",
             "lineageLaterOne": "1 senere etterkommer",
             "lineageLaterOther": "{count} senere etterkommere",
-            "lineageLiving": "{count} lever nå"
+            "lineageLiving": "{count} lever nå",
+            "grassPlenty": "Gress her: rikelig",
+            "grassThinning": "Gress her: blir tynt",
+            "grassBare": "Gress her: nedbeitet"
         },
         "replay": {
             "title": "Mens du var borte",

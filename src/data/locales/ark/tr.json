@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} torun",
             "lineageLaterOne": "1 uzak torun",
             "lineageLaterOther": "{count} uzak torun",
-            "lineageLiving": "şu an {count} hayatta"
+            "lineageLiving": "şu an {count} hayatta",
+            "grassPlenty": "Buradaki ot: bol",
+            "grassThinning": "Buradaki ot: seyreliyor",
+            "grassBare": "Buradaki ot: dibine kadar otlanmış"
         },
         "replay": {
             "title": "Sen yokken",

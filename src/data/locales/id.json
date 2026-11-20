@@ -4442,7 +4442,10 @@
       "lineageGrandOther": "{count} cucu",
       "lineageLaterOne": "1 keturunan berikutnya",
       "lineageLaterOther": "{count} keturunan berikutnya",
-      "lineageLiving": "{count} masih hidup"
+      "lineageLiving": "{count} masih hidup",
+      "grassPlenty": "Rumput di sini: melimpah",
+      "grassThinning": "Rumput di sini: menipis",
+      "grassBare": "Rumput di sini: habis dimakan"
     },
     "replay": {
       "title": "Selama kamu pergi",

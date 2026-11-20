@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} ಮೊಮ್ಮಕ್ಕಳು",
             "lineageLaterOne": "ಮುಂದಿನ ಪೀಳಿಗೆಯ 1 ವಂಶಜ",
             "lineageLaterOther": "ಮುಂದಿನ ಪೀಳಿಗೆಗಳ {count} ವಂಶಜರು",
-            "lineageLiving": "ಈಗ {count} ಜೀವಂತ"
+            "lineageLiving": "ಈಗ {count} ಜೀವಂತ",
+            "grassPlenty": "ಇಲ್ಲಿ ಹುಲ್ಲು: ಹೇರಳ",
+            "grassThinning": "ಇಲ್ಲಿ ಹುಲ್ಲು: ಕಡಿಮೆಯಾಗುತ್ತಿದೆ",
+            "grassBare": "ಇಲ್ಲಿ ಹುಲ್ಲು: ಮೇದು ಖಾಲಿ"
         },
         "replay": {
             "title": "ನೀವು ಇಲ್ಲದಿದ್ದಾಗ",

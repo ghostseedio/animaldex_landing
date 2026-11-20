@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} nietos",
             "lineageLaterOne": "1 descendiente posterior",
             "lineageLaterOther": "{count} descendientes posteriores",
-            "lineageLiving": "{count} vivos ahora"
+            "lineageLiving": "{count} vivos ahora",
+            "grassPlenty": "Hierba aquí: abundante",
+            "grassThinning": "Hierba aquí: escasea",
+            "grassBare": "Hierba aquí: pastada hasta el suelo"
         },
         "replay": {
             "title": "Mientras no estabas",

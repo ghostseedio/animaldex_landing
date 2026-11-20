@@ -245,7 +245,10 @@
             "lineageGrandOther": "unučad: {count}",
             "lineageLaterOne": "1 kasniji potomak",
             "lineageLaterOther": "kasniji potomci: {count}",
-            "lineageLiving": "trenutačno živih: {count}"
+            "lineageLiving": "trenutačno živih: {count}",
+            "grassPlenty": "Trava ovdje: obilno",
+            "grassThinning": "Trava ovdje: prorjeđuje se",
+            "grassBare": "Trava ovdje: popasena do gola"
         },
         "replay": {
             "title": "Dok te nije bilo",

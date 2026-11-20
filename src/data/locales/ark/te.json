@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count} మనవ పిల్లలు",
             "lineageLaterOne": "తర్వాతి తరాలకు చెందిన 1 జంతువు",
             "lineageLaterOther": "తర్వాతి తరాలకు చెందిన {count} జంతువులు",
-            "lineageLiving": "ప్రస్తుతం {count} బతికి ఉన్నాయి"
+            "lineageLiving": "ప్రస్తుతం {count} బతికి ఉన్నాయి",
+            "grassPlenty": "ఇక్కడ గడ్డి: పుష్కలం",
+            "grassThinning": "ఇక్కడ గడ్డి: తగ్గుతోంది",
+            "grassBare": "ఇక్కడ గడ్డి: మేసి ఖాళీ"
         },
         "replay": {
             "title": "మీరు లేనప్పుడు",

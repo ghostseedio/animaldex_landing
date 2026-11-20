@@ -245,7 +245,10 @@
             "lineageGrandOther": "{count}টি নাতি-নাতনি",
             "lineageLaterOne": "পরের প্রজন্মের ১টি বংশধর",
             "lineageLaterOther": "পরের প্রজন্মের {count}টি বংশধর",
-            "lineageLiving": "এখন {count}টি জীবিত"
+            "lineageLiving": "এখন {count}টি জীবিত",
+            "grassPlenty": "এখানে ঘাস: প্রচুর",
+            "grassThinning": "এখানে ঘাস: কমে আসছে",
+            "grassBare": "এখানে ঘাস: চরে শেষ"
         },
         "replay": {
             "title": "আপনি যখন ছিলেন না",
