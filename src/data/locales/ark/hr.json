@@ -422,7 +422,10 @@
             "dayRecord": "U njegovu zapisu",
             "dayNone": "Dan ove životinje sada se ne može izračunati.",
             "dayClose": "Zatvori njegov dan",
-            "dayHint": "Što je radila, prema zajedničkom rasporedu broda Ark: isto za sve. Točke su zapis broda Ark."
+            "dayHint": "Što je radila, prema zajedničkom rasporedu broda Ark: isto za sve. Točke su zapis broda Ark.",
+            "caredOwner": "O njemu se brine vlasnik",
+            "caredFarmer": "O njemu se brine farmer",
+            "caredKeeper": "O njemu se brine čuvar"
         },
         "activity": {
             "food": "traži hranu",

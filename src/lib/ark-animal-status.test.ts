@@ -50,7 +50,11 @@ const snapshot = decodeArkSnapshot(fixtureV2)!;
 
 test("English: the activity and card words in en.json are the ones the embed falls back to", () => {
     assert.deepEqual(english.activity, ARK_ACTIVITY_ENGLISH);
-    assert.deepEqual(english.card, ARK_CARD_ENGLISH);
+    // The carers' line (decision 418) falls back in the card's lazy block (`ark-time-left.tsx`), not in the static
+    // ARK_CARD_ENGLISH (the page's static JavaScript is budgeted); en.json holds the same English.
+    const {caredOwner, caredFarmer, caredKeeper, ...card} = english.card;
+    assert.deepEqual(card, ARK_CARD_ENGLISH);
+    assert.deepEqual([caredOwner, caredFarmer, caredKeeper], ["Cared for by its owner", "Cared for by the farmer", "Cared for by a keeper"]);
     for (const key of ARK_ACTIVITIES) assert.ok(typeof english.activity[key] === "string" && english.activity[key].trim(), `ark.activity.${key}`);
 });
 

@@ -422,7 +422,10 @@
             "dayRecord": "Nel suo registro",
             "dayNone": "Al momento non si può calcolare la giornata di questo animale.",
             "dayClose": "Chiudi la sua giornata",
-            "dayHint": "Cosa ha fatto, secondo il programma condiviso dell’Ark: lo stesso per tutti. I punti sono il registro dell’Ark."
+            "dayHint": "Cosa ha fatto, secondo il programma condiviso dell’Ark: lo stesso per tutti. I punti sono il registro dell’Ark.",
+            "caredOwner": "Accudito dal suo proprietario",
+            "caredFarmer": "Accudito dal contadino",
+            "caredKeeper": "Accudito da un guardiano"
         },
         "activity": {
             "food": "cerca cibo",

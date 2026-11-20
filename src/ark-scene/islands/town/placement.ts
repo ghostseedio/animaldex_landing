@@ -143,10 +143,10 @@ function inradius(poly: Poly): number {
 
 const WATER_WHERE = new Set<SpotWhere>(["canal", "millpond", "farm_pond", "pool"]);
 /** p2 (land): a wetland spot in the water itself (its surface at least 0.3 m over the bed), not on the bank. */
-function inTownWater(s: TownSpot): boolean {
+export function inTownWater(s: TownSpot): boolean {
     return WATER_WHERE.has(s.where) && townHeight(s.x, s.z) < s.y - 0.3;
 }
-const HIGH_WHERE = new Set<SpotWhere>(["roof", "eave", "ledge", "tall", "belfry", "balcony", "window", "lamp_wall"]);
+export const HIGH_WHERE = new Set<SpotWhere>(["roof", "eave", "ledge", "tall", "belfry", "balcony", "window", "lamp_wall"]);
 
 /**
  * Every town animal's place. `animals` is the town island's slice of the read (`voyage_public_v3('town')`); the open
