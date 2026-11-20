@@ -782,4 +782,6 @@ export type ArkLiveActs = {
     births: Array<{key: string; t0: number; mother: string | null; end: number | null; phase: string; /** V1: how it is acted (`live-births.ts` BirthStyle), by when every shown young can be seen (s after `t0`), and whether it is in its mother's tank, cage or room (`housed`). */ style?: string; seenBy?: number; housed?: boolean}>;
     escapes: Array<{key: string; t0: number; phase: string; missAt: number | null; seconds: number | null}>;
     deaths: Array<{key: string; id: string; t0: number; spot: {x: number; z: number; base: number; yaw: number} | null; drawn: boolean}>;
+    /** ARK-MATING-SHOWN: the layings (when each began, laid yet, the mother) and the clutches drawn, each where it is. */
+    clutches?: {layings: Array<{key: string; start: number | null; laid: boolean; mother: string | null}>; kept: Array<{key: string; at: {x: number; y: number; z: number; size: number} | null}>};
 };

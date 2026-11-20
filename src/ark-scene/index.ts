@@ -9679,7 +9679,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
         },
         // V2 replay: the live layers' acts under way and their times (what `__arkDebug` shows in development), for a shot's cuts.
-        liveActs: () => ({meals: liveMeals.debug(), matings: liveMatings.debug(), births: liveBirths.debug(), escapes: liveEscapes.debug(), deaths: liveDeaths.debug()}),
+        liveActs: () => {
+            const clutches = liveClutches.debug();
+            return {meals: liveMeals.debug(), matings: liveMatings.debug(), births: liveBirths.debug(), escapes: liveEscapes.debug(), deaths: liveDeaths.debug(), clutches: {layings: clutches.layings, kept: clutches.kept.map((key) => ({key, at: nests.where(key)}))}};
+        },
         // V2 replay: the recorder's exposure (1: as the Ark is; more for a night's act, a camera's own choice: nothing of the
         // world, its hour or its animals changes).
         setExposure: (gain, fill = 1) => {

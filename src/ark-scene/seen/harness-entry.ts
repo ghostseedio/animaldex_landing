@@ -159,6 +159,78 @@ async function main() {
         return ids;
     };
 
+    /** ARK-MATING-SHOWN: the record's `laid` rows whose parents are aboard: the bigger mothers first, a species at most twice. */
+    const ownLaid = (n: number): string[] => {
+        const aboard = new Set(real.animals.map((animal) => animal.id));
+        const laid = rows.filter((row) => row.kind === "laid" && Date.parse(String(row.at)) <= now && ((row.parents as string[] | null) ?? []).some((p) => aboard.has(p)));
+        const ranked = laid.map((row) => ({row, length: displayLength(String((row.animal as Row | null)?.model_slug ?? ""), null), wild: (row.animal as Row | null)?.island === "wild" ? 1 : 0})).sort((a, b) => Number(b.length >= 0.05) - Number(a.length >= 0.05) || b.wild - a.wild || b.length - a.length || Date.parse(String(b.row.at)) - Date.parse(String(a.row.at)));
+        const times = new Map<string, number>();
+        const ids: string[] = [];
+        for (const item of ranked) {
+            if (ids.length >= n) break;
+            const species = String(item.row.species ?? "");
+            if ((times.get(species) ?? 0) >= 2) continue;
+            times.set(species, (times.get(species) ?? 0) + 1);
+            ids.push(String(item.row.id));
+        }
+        return ids;
+    };
+    /** ARK-MATING-SHOWN: a laying's line: the record (its mating's row with it) arrives, the clock runs to her laying, its line is tapped. */
+    const prepareLaid = async (id: string) => {
+        live?.dispose();
+        departing = null;
+        handle.clearLiveActs?.();
+        handle.select(null);
+        if (snapshot !== real) {
+            snapshot = real;
+            handle.update(real);
+        }
+        const row = rows.find((r) => String(r.id) === id)!;
+        const pair = JSON.stringify([...((row.parents as string[] | null) ?? [])].sort());
+        const set = rows.filter((r) => r.at === row.at && (r === row || (r.kind === "mated" && JSON.stringify([...((r.parents as string[] | null) ?? [])].sort()) === pair)));
+        epoch = Date.parse(String(row.at)) / 1000 + 20;
+        pinArkClock(epoch);
+        handle.setHours(null);
+        handle.setView(handle.homeView());
+        clock.tick(0);
+        live = new ArkLive({host, scene: () => handle, words: null, locale: "en", eventsUrl: null, storageKey: null});
+        live.snapshot(real);
+        live.events(set);
+        const t0 = Date.parse(String(row.at)) / 1000;
+        current = {id, kind: "laid", plan: {kind: "laid", t0, at: String(row.at), cast: [], feed: {}} as unknown as ReturnType<typeof planArkEventReplay>, tapped: false, text: "", ended: null};
+        reads = [];
+        jumps = [];
+        lastAt.clear();
+        clip = 0;
+        index = 0;
+        laidMother = null;
+        const parents = (row.parents as string[] | null) ?? [];
+        await handle.preload(Array.from(new Set(real.animals.filter((a) => parents.includes(a.id)).map((a) => a.model_slug))));
+        for (let i = 0; i < 120; i++) {
+            await pause(50);
+            clock.tick(0);
+            if (!handle.loading() && parents.some((p) => handle.locate(p))) break;
+        }
+        run(1);
+        const key = `laid:${id}`;
+        // (Run on to a little before her eggs come: the mating, if acted, first.)
+        let laying = handle.liveActs?.().clutches?.layings.find((l) => l.key === key) ?? null;
+        for (let i = 0; i < 400 && laying && laying.start === null; i++) {
+            run(1);
+            laying = handle.liveActs?.().clutches?.layings.find((l) => l.key === key) ?? null;
+        }
+        if (laying?.start != null && laying.start - 0 > epoch) run(Math.max(laying.start + 2 - epoch, 0), 0.5);
+        laidMother = laying?.mother ?? null;
+        await pause(700);
+        const line = live.lines.find((l) => String(l.id).replace(/^event:/, "") === id) ?? null;
+        if (line) {
+            current.text = liteOf(id)[0] ?? "";
+            live.focus(line);
+        }
+        current.tapped = true;
+        return {kind: "laid", at: String(row.at), t0, tapAt: Math.round((epoch - t0) * 10) / 10, line: line ? {id: line.id, kind: line.kind} : null, lines: live.lines.length, watching: true, skipped: false, seen: null, laying, cast: parents.map((p) => ({id: p, role: "parent", name: String((row.animal as Row | null)?.name ?? ""), slug: String((row.animal as Row | null)?.model_slug ?? ""), aboard: Boolean(real.animals.find((a) => a.id === p)), located: Boolean(handle.locate(p))}))};
+    };
+
     const worldFor = (id: string): ArkSnapshot => {
         const gone = new Set(made.get(id)?.remove ?? []);
         return gone.size ? {...real, animals: real.animals.filter((animal) => !gone.has(animal.id))} : real;
@@ -194,7 +266,9 @@ async function main() {
      * `JUMP` of its own lengths (and a metre) between two frames a tenth of a second apart (no teleport).
      */
     const READ_PX = 22;
-    const READ_SECONDS = {mated: 2, birth: 1.5} as Record<string, number>;
+    const READ_SECONDS = {mated: 2, birth: 1.5, laid: 2} as Record<string, number>;
+    const LAID_FILM = 32;
+    let laidMother: string | null = null;
     const JUMP = 3;
     type Read = {t: number; ok: boolean; why: string};
     let reads: Read[] = [];
@@ -232,7 +306,40 @@ async function main() {
         }
         return {ok: true, why: "", p};
     };
+    /** ARK-MATING-SHOWN: a laying's frame reads when its mother is read and her clutch is in the picture, `CLUTCH_PX` across and in sight. */
+    const CLUTCH_PX = 8;
+    const clutchRead = (key: string): {ok: boolean; why: string} => {
+        // (Or, on a build without the live layer, the tap's own clutch: `__arkDebug.liveClutch`.)
+        const tapped = (window as unknown as {__arkDebug?: {liveClutch?: () => {key: string; at: {x: number; y: number; z: number; size: number} | null} | null}}).__arkDebug?.liveClutch?.() ?? null;
+        const kept = handle.liveActs?.().clutches?.kept.find((c) => c.key === key)?.at ?? (tapped?.key === key ? tapped.at : null);
+        if (!kept) return {ok: false, why: "no-clutch"};
+        const camera = camOf();
+        if (!camera) return {ok: false, why: "camera"};
+        const v = camera.position.clone();
+        const q = (x: number, y: number, z: number) => {
+            Object.assign(v, {x, y, z});
+            return v.project(camera);
+        };
+        const m = {...q(kept.x, kept.y + kept.size * 0.1, kept.z)};
+        if (!(Math.abs(m.x) <= 0.9 && Math.abs(m.y) <= 0.9 && m.z < 1)) return {ok: false, why: "clutch-out"};
+        const edge = {...q(kept.x + kept.size / 2, kept.y + kept.size * 0.1, kept.z)};
+        const px = Math.hypot((edge.x - m.x) * 360, (edge.y - m.y) * 640) * 2;
+        if (px < CLUTCH_PX) return {ok: false, why: "clutch-small"};
+        if (handle.sightOf) {
+            const view = handle.view();
+            if (handle.sightOf(view.target, {distance: view.distance, polar: view.polar, azimuth: view.azimuth}, [{x: kept.x, y: kept.y + kept.size * 0.1, z: kept.z, slack: kept.size * 0.3}], false, camera.near > 0.5 ? camera.near : 0, true) > 0) return {ok: false, why: "clutch-blocked"};
+        }
+        return {ok: true, why: ""};
+    };
     const measure = (t: number) => {
+        if (current?.kind === "laid") {
+            const key = `laid:${current.id}`;
+            const mother = handle.liveActs?.().clutches?.layings.find((l) => l.key === key)?.mother ?? laidMother;
+            const a = mother ? readOne(mother) : {ok: false, why: "no-mother"};
+            const c = clutchRead(key);
+            reads.push({t, ok: a.ok && c.ok, why: [a.why, c.why].filter(Boolean).join(",")});
+            return;
+        }
         if (!current || (current.kind !== "mated" && current.kind !== "birth")) return;
         const cast = current.plan.cast;
         let ids: string[];
@@ -303,7 +410,7 @@ async function main() {
         now,
         counts: () => ({animals: real.animals.length, wild: wild().length, events: rows.length, loading: handle.loading()}),
         // (A mating's lines with a few to spare: one the layer itself skips, one of the two on the wing, is counted and passed over.)
-        lines: (kind: string, n: number): string[] => (kind === "meal" || kind === "escaped" ? make(kind, n) : kind === "mated" ? own(kind, n + 4) : kind === "birth" || kind === "death" || kind === "extinct" ? own(kind, n) : []),
+        lines: (kind: string, n: number): string[] => (kind === "meal" || kind === "escaped" ? make(kind, n) : kind === "mated" ? own(kind, n + 4) : kind === "birth" || kind === "death" || kind === "extinct" ? own(kind, n) : kind === "laid" ? ownLaid(n) : []),
         plan: (id: string) => planArkEventReplay(id, rows, worldFor(id), {now}),
         /** The record arrives, the clock runs on to a little before the act's telling part, the line is tapped. */
         prepare: async (id: string) => {
@@ -385,6 +492,11 @@ async function main() {
             }
             if (departing) return {index: index++, t, done: clip > departing.until, image: quality > 0 ? canvas()?.toDataURL("image/jpeg", quality) ?? "" : ""};
             if (current && current.tapped) measure(t);
+            if (current?.kind === "laid") {
+                // (ARK-MATING-SHOWN: a laying has no watch: the line's own tap, filmed for `LAID_FILM` seconds.)
+                const image = quality > 0 ? canvas()?.toDataURL("image/jpeg", quality) ?? "" : "";
+                return {index: index++, t, done: clip > LAID_FILM, image};
+            }
             const watching = Boolean(live?.seenNow?.watching());
             if (current && current.tapped && !watching && !current.ended) current.ended = "ended";
             const image = quality > 0 ? canvas()?.toDataURL("image/jpeg", quality) ?? "" : "";
@@ -472,6 +584,8 @@ async function main() {
     const prepare = api.prepare;
     api.prepare = async (id: string) => {
         lastReport = null;
+        const row = rows.find((r) => String(r.id) === id);
+        if (row?.kind === "laid") return prepareLaid(id) as unknown as ReturnType<typeof prepare>;
         return prepare(id);
     };
     (window as unknown as {__seen: typeof api}).__seen = api;

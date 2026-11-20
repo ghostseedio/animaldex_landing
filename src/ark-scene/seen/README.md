@@ -99,6 +99,34 @@ gave the town's planner the stand-ins alone, so the town's plan was of nobody un
 no schedule made, the zoo's enclosures closed). A stand-in of the wild island now leaves the town alone; one of the
 town is planned with everyone who lives there.
 
+## Every mating shown (ARK-MATING-SHOWN, decision 416)
+
+AnimalDex `docs/ark/DECISIONS.md` 416, the owner's rule: "any reproduction in the ark MUST show the animals visually
+mating ... animals will look for eachother". What the scene now does with each released row (no look-ahead: only rows
+the drip has released; the clutch's hatching day and the read's state are released fields):
+
+| Row / state | Now |
+|---|---|
+| `mated` | Both walk from where each one's day had them to where they meet, and the meeting is where it can be SEEN (`live-matings.ts` `meetingSpot`): their midpoint unless something solid is over it (a bridge, a roof, a deck; trees are left out, a shot dissolves them) or, for a pair of land animals, it is a river's or a pond's bed: then the nearest clear spot on the line between them, then round it. A chase that would end in cover or water is a display in place; a failed try never walks her on into cover. |
+| `laid` (every egg-layer) | `live-clutches.ts`: once the pair's mating is over, the mother (the one drawn female, else the record's first) walks from where she is to where she stood for the mount (else a body length beside her), settles, the clutch appears under her egg by egg, she stands by it, then back to her day. The clutch STAYS there until it hatches (`clutch.hatch_ark_day` on the Ark clock; at most 24 at once, 10 on the low tier; taken away 10 min after it was due when no hatching came). |
+| `birth` from an egg | Held as a live birth is; her clutch's eggs rock and split and the young come out at it, stay round it 14 s, then go to their day. A clutch laid before the page read its log is put where the young are, a moment before. |
+| `birth` in a pouch | The joey's head shows at her pouch while it is acted (`live-births.ts` `pouchPose`, a quarter of her length: a visibility aid, a real newborn joey is a bean). |
+| `mate_seeking` (E6, off today) | `live-seeking.ts`: while its day has it about on the ground, it roams a loop through its day's place (three of its lengths out) and stops to look about. |
+| A clutch on its mother's box | "Eggs in the nest", a bar from the laying to the hatching, "Hatches in about 3 h · if all goes well" (`ark.eggs.*`, 45 languages; `seen/hooks.ts` `arkEggCountdown`). |
+
+The pictures' check is `scripts/ark-seen-shots.mjs`'s READABLE count (`seen/harness-entry.ts` `measure`): a mating's
+frame reads when both of the pair are drawn, inside 9/10 of the picture, at least 22 px long, the scene's lines of sight
+to each clear (ground, solid, leaves), neither under the water while the camera is above, and they are within their two
+lengths of each other; a line reads with 2 s of such frames unbroken and no jump (more than three of its lengths and a
+metre in a tenth of a second). A birth: the mother and one young near her; a laying: the mother and her clutch (8 px
+across, in sight).
+
+**Not public, so not shown (listed for the engine lanes):** a live-bearer carrying young (gestation: `voyage_animals`
+status `egg` with `carried`, its `due_day`). The public read leaves carried young out (`NOT va.carried`), the `mated`
+row has no clutch for a live-bearer, and no read carries the kind's gestation period, so neither "Pregnant" nor its
+countdown can be worked out from released facts. Wanted: on each present animal carrying young, `expecting:
+{mated_ark_day, due_ark_day}` in `voyage_public` (or the `mated` row's `clutch: {carried: true, due_ark_day}`).
+
 ## The live cast
 
 ```ts
@@ -184,8 +212,8 @@ Never sent, so never said: a chase in progress (the chase is the record's act, h
   (E6 publishes that a hunter is searching, never its quarry: the engine finds and attempts in one step.)
 - **What the layers do not act, a watch cannot either** (a pair on two islands, one of the two on the wing): the watch
   holds on the cast where they are, then gives way to the line's own focus.
-- **A marsupial's birth shows no young**: the newborn goes straight into the pouch (`live-births.ts`), so its line's
-  picture is the mother resting (the 2 births of 20 that do not read). Nothing is drawn that is not so.
+- **A marsupial's newborn is drawn at her pouch, a quarter of her length** (ARK-MATING-SHOWN; before: nothing was
+  drawn and its line showed the mother resting): a visibility aid, as the newborns' `pop`.
 - **Two matings of 20 do not read**: a pair of iguanas under a bridge's dark water, and a corn snake's: a snake longer
   than its vivarium is wide lies across it, through the glass, as the town already draws it unacted, and its mate
   beside it does the same. A third reads in one run and not in the other: two parrots at a trunk's foot at night,
