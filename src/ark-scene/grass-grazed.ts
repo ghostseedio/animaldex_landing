@@ -14,13 +14,18 @@
  */
 
 import type {Material} from "three";
-import {ARK_ZONES, type ArkZone} from "@/ark-scene/types";
+import {ARK_ZONES, type ArkZone, type GrassKey} from "@/ark-scene/types";
 
 export const GRAZED_ZONES: readonly ArkZone[] = ARK_ZONES;
 /** Each zone's level, by its index in `GRAZED_ZONES` (1 = as lush as the ground holds). */
 export const ARK_GRAZED = {value: new Float32Array(16).fill(1)};
 
 export type GrassWord = "plenty" | "thinning" | "bare";
+
+/** The page's word key for a level. */
+export function grassKey(level: number): GrassKey {
+    return ({plenty: "grassPlenty", thinning: "grassThinning", bare: "grassBare"} as const)[grassWord(level)];
+}
 
 /** The engine's thresholds (AnimalDex vegetation.ts THINNING_BELOW, BARE_BELOW). */
 export function grassWord(level: number): GrassWord {

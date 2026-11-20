@@ -139,7 +139,7 @@ import {AssetTrees} from "@/ark-scene/asset-trees";
 import {AssetFloor, AssetRocks} from "@/ark-scene/asset-rocks";
 import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
 import {buildVegetation} from "@/ark-scene/vegetation";
-import {decodeVegetation, grassWord, type ArkVegetation} from "@/ark-scene/grass-grazed";
+import {decodeVegetation, grassKey, type ArkVegetation} from "@/ark-scene/grass-grazed";
 import {seaEpochSeconds} from "@/ark-scene/fish-schools";
 // 3.3 batch (E): the sea's own look from under the surface (the water by depth, marine snow).
 import {seaClockSeconds} from "@/ark-scene/fish-schools";
@@ -168,6 +168,7 @@ import {
     type ArkRegion,
     type ArkCastLayer,
     type ArkSceneHandle,
+    type GrassKey,
     type ArkSceneOptions,
     type ArkSelectionExtras,
     type ArkSceneStats,
@@ -991,6 +992,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     if (island) addIslandWorld(island);
     // Runtime: the grass built for the device's tier, not always the highest's (runtime/budgets.ts GRASS_BUILD).
     const vegetation = buildVegetation(arkGrassBuild(tier), chunkGrid);
+    /** The words for it ("Grass here: thinning", the page's, through the live log's fetch), null until then. */
+    let grassWords: Partial<Record<GrassKey, string | null>> | null = null;
     /** The record's vegetation (`setVegetation`), null while it is off. */
     let grazing: ArkVegetation | null = null;
     // Close-up detail round what the camera looks at (graphics pass): pebbles, shells, litter, ferns, clover.
@@ -7195,11 +7198,31 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (heightAt(x, z) <= 0) return; // the sea
             const zone = worldSampler().zoneAt(x, z);
             const level = grazing?.levels.get(`wild|${zone}`);
-            if (level !== undefined) options.onGround?.({zone, word: grassWord(level), x: clientX - rect.left, y: clientY - rect.top});
+            const text = level === undefined ? undefined : grassWords?.[grassKey(level)];
+            if (text) showGroundWord(text, clientX - rect.left, clientY - rect.top);
             return;
         }
     };
     const tapNdc = new Vector2();
+    /** The ground tap's chip ("Grass here: thinning"), at the tap, for 2.6 s. */
+    let groundChip: HTMLParagraphElement | null = null;
+    let groundChipTimer = 0;
+    const showGroundWord = (text: string, x: number, y: number) => {
+        const host = canvas.parentElement;
+        if (!host) return;
+        if (!groundChip) {
+            groundChip = document.createElement("p");
+            groundChip.setAttribute("role", "status");
+            groundChip.dataset.testid = "ark-ground-grass";
+            groundChip.style.cssText = "position:absolute;z-index:10;pointer-events:none;transform:translate(-50%,-130%);white-space:nowrap;border-radius:999px;background:rgba(12,14,20,.85);color:#fff;padding:4px 12px;font:600 12.5px/1.4 inherit;box-shadow:0 1px 3px rgba(0,0,0,.3)";
+        }
+        groundChip.textContent = text;
+        groundChip.style.left = `${x}px`;
+        groundChip.style.top = `${y}px`;
+        host.appendChild(groundChip);
+        window.clearTimeout(groundChipTimer);
+        groundChipTimer = window.setTimeout(() => groundChip?.remove(), 2600);
+    };
 
     let down: {x: number; y: number; time: number; id: number} | null = null;
     let pointers = 0;
@@ -7247,7 +7270,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             if (selectedHerd) selectHerd(null, false);
             // Vegetation on: bare ground tapped says how grazed the grass is there.
-            if (grazing && options.onGround) groundTap(event.clientX, event.clientY);
+            if (grazing && grassWords) groundTap(event.clientX, event.clientY);
         }
         select(hit ? hit.animal.id : null, Boolean(hit));
     };
@@ -9566,8 +9589,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         setForestry: (record) => forest.setRecord(record), // p5 (humans)
         // Vegetation (decision 417 (1)): the grass thins where it is overgrazed; nothing changes while it is off.
-        setVegetation: (raw) => {
+        setVegetation: (raw, words) => {
             grazing = decodeVegetation(raw);
+            grassWords = words ?? null;
             vegetation?.setGrazed(grazing);
             // (And the sward at bug scale round the point looked at: `bug-ground.ts`.)
             const levels = grazing?.levels;
@@ -9575,7 +9599,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         grassAt: (zone, island) => {
             const level = grazing?.levels.get(`${island === "town" ? "town" : "wild"}|${zone}`);
-            return level === undefined ? null : grassWord(level);
+            return level === undefined ? null : (grassWords?.[grassKey(level)] ?? null);
         },
         setHumanBonds: (raw) => townHumans.setBonds(decodeHumanBonds(raw)), // p5 (humans, couples)
         setDormant: (kinds) => {
@@ -9980,6 +10004,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             })()
         }),
         dispose: () => {
+            window.clearTimeout(groundChipTimer);
+            groundChip?.remove();
             disposed = true;
             cancelAnimationFrame(raf);
             humanFigures.dispose(); // p5 (humans)

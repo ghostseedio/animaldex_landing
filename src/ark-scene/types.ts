@@ -36,6 +36,9 @@ export const ARK_ZONES = [
     "polar",
     "farm_garden"
 ] as const;
+/** Vegetation's words (the page's `ArkLifeWords` keys): plenty, thinning, grazed bare. */
+export type GrassKey = "grassPlenty" | "grassThinning" | "grassBare";
+
 export type ArkZone = typeof ARK_ZONES[number];
 
 /** The scene's world map: seven regions, each one or two zones (contract section 4). */
@@ -320,11 +323,6 @@ export type ArkSceneOptions = ArkRuntimeOptions & {
     iconUrl: (slug: string) => string;
     onSelect?: (animal: ArkAnimal | null) => void;
     /**
-     * Vegetation (AnimalDex decision 417 (1)): a tap on bare ground of the wild island, with the record's vegetation on:
-     * how grazed the grass is there (`grass-grazed.ts` grassWord) and where on the screen. Never while it is off.
-     */
-    onGround?: (tap: {zone: string; word: "plenty" | "thinning" | "bare"; x: number; y: number}) => void;
-    /**
      * What the selected animal is doing now (`behaviour-state.ts`), when it is selected and whenever that changes:
      * the tap card's state line reads this, the same state the scene animates, never a clock of its own.
      */
@@ -590,9 +588,9 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * Vegetation (AnimalDex decision 417 (1)): the record's grass and browse by island and zone (`/api/ark/vegetation`:
      * the server's levels, or null while off): the grass thins where it is overgrazed (`grass-grazed.ts`).
      */
-    setVegetation?: (raw: unknown) => void;
+    setVegetation?: (raw: unknown, words?: Partial<Record<GrassKey, string | null>> | null) => void;
     /** The grass where an animal of this zone lives ("wild" or "town"), in the card's words; null while vegetation is off. */
-    grassAt?: (zone: string, island?: string | null) => "plenty" | "thinning" | "bare" | null;
+    grassAt?: (zone: string, island?: string | null) => string | null;
     /** p5 (humans): the record's forestry (`/api/ark/forestry`: `{fromDay, v}`, or null when off). */
     setForestry?: (record: {fromDay?: unknown; v?: unknown} | null) => void;
     /** p5 (humans): the town's couples and children (`/api/ark/human-bonds`: the server's rows, decoded by the scene). */
