@@ -243,7 +243,9 @@ export type FxEmitter = {key: string; x: number; y: number; z: number; kind: FxK
 export function reproFx(p: ReproPlan, key: string, s: number, ground: Ground): FxEmitter[] {
     const size = Math.max(p.f.length, p.m.length, 0.2);
     const at = (q: Point, kind: FxKind, t: number, lift = 0): FxEmitter => ({key, x: q.x, y: ground(q.x, q.z) + lift, z: q.z, kind, t, size});
-    if (p.act === "spawn_night" && s >= p.a && s < p.c) return [at(p.to.m, "haze", s - p.a, size * 0.5), at(p.to.f, "haze", s - p.a, size * 0.5)];
+    // (A spawning plume is metres tall in the water, whatever the spawner's size: drawn at least 0.6 m across.)
+    const plume = Math.max(size, 0.6);
+    if (p.act === "spawn_night" && s >= p.a && s < p.c) return [{...at(p.to.m, "haze", s - p.a, size * 0.5), size: plume}, {...at(p.to.f, "haze", s - p.a, size * 0.5), size: plume}];
     if (p.act === "spawn_pair" && s >= p.b && s < p.c + 6) return [at(p.spot, "eggs", s - p.b), at(p.spot, "milt", s - p.b, size * 0.1)];
     if (p.act === "amplexus" && s >= p.b && s < p.c + 6) return [at(p.spot, "eggs", s - p.b)];
     if (p.act === "pouch" && s >= p.b && s < p.c + 2) return [at(p.spot, "eggs", s - p.b, Math.max(size, 0.15))];
@@ -341,7 +343,7 @@ export class ReproFx {
         this.geometry.setAttribute("color", new BufferAttribute(this.colour, 3));
         this.geometry.setDrawRange(0, 0);
         const map = dotTexture();
-        const material = new PointsMaterial({size: 0.07, vertexColors: true, transparent: true, depthWrite: false, blending: AdditiveBlending, sizeAttenuation: true, ...(map ? {map} : {})});
+        const material = new PointsMaterial({size: 0.1, vertexColors: true, transparent: true, depthWrite: false, blending: AdditiveBlending, sizeAttenuation: true, ...(map ? {map} : {})});
         this.points = new Points(this.geometry, material);
         this.points.frustumCulled = false;
         this.points.visible = false;
