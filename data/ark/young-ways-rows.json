@@ -1,0 +1,2136 @@
+{
+ "about": "Every young-care row of the catalogue (2026-11-16) with what the scene does with it today (scripts/ark-young-ways.mts): built, already (an earlier pass), eggs (ark-mating-shown), or held with its reason.",
+ "counts": {
+  "built": 80,
+  "eggs": 54,
+  "part": 15,
+  "already": 36,
+  "held": 51
+ },
+ "rows": [
+  {
+   "id": "b78d51a7-5ac7-460a-8cb5-c1cea2cdbbfc",
+   "name": "Andean Sparrow",
+   "behaviour": "fledglings hide in low cover before they can fly well, parents keep feeding",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "eb2cfc87-9ab6-441c-8e1f-13598ba16850",
+   "name": "Carrion Crow",
+   "behaviour": "male feeds incubating female",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "eb2cfc87-9ab6-441c-8e1f-13598ba16850",
+   "name": "Carrion Crow",
+   "behaviour": "young stay on parents' territory for years and help raise broods",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "f9e08065-8a52-4c71-a6b9-1fefb7af17f1",
+   "name": "Domestic Canary",
+   "behaviour": "male feeds the incubating hen",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "f195db52-aa89-4f53-807c-4203b8686132",
+   "name": "Eurasian Magpie",
+   "behaviour": "male feeds incubating female",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "1f346510-32b0-4935-ba25-b927558dc16e",
+   "name": "Pied Butcherbird",
+   "behaviour": "group helpers feed young",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "afd2fcee-ef96-41f1-955e-a67f207245e1",
+   "name": "Rufous Hornero",
+   "behaviour": "young stay on parents' territory for months",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "c8ca22b9-6e38-4082-8a84-68915cfb6ec0",
+   "name": "White-crested Laughingthrush",
+   "behaviour": "helpers from the group feed chicks",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "4e82aa8e-09f4-464b-ab6a-9ccfbd349db4",
+   "name": "White-throated Dipper",
+   "behaviour": "chicks can swim and dive at fledging",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "part",
+   "what": "line: the chicks follow; their diving is not drawn"
+  },
+  {
+   "id": "c28d3e50-15fd-45e9-b586-a55b98b9f640",
+   "name": "African Penguin",
+   "behaviour": "chicks gather in creches",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "built",
+   "what": "cluster"
+  },
+  {
+   "id": "47ae9863-1e74-4023-9363-4be8b698d823",
+   "name": "Australasian Swamphen",
+   "behaviour": "group shares one nest and the whole group feeds the chicks",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "part",
+   "what": "cluster: the chicks clump; the whole group feeding them is not drawn"
+  },
+  {
+   "id": "573fd013-27a2-4559-851a-2760d63bdd51",
+   "name": "Australian Wood Duck",
+   "behaviour": "ducklings drop from the tree hollow and are led to water by both parents",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "duckling-drop: the hollow drop"
+  },
+  {
+   "id": "8e8a2a72-9eae-48e8-a13b-4ffca9d081b5",
+   "name": "Bar-headed Goose",
+   "behaviour": "male stands guard while the female incubates",
+   "how": "procedural_pose",
+   "effort": "S",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "77afa7fe-b132-4d7c-8ee5-fd32f3de64f6",
+   "name": "Barn Owl",
+   "behaviour": "chicks hatch at different times, so nestlings are of different sizes",
+   "how": "look",
+   "effort": "M",
+   "status": "held",
+   "what": "look: a colour or shape of the young (the look lane, young-life.json coats), not a behaviour"
+  },
+  {
+   "id": "2a4b3ee8-21be-451d-bc65-d6f696020fc2",
+   "name": "Black-headed Gull",
+   "behaviour": "carries hatched eggshells far from the nest",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "adffd217-20ef-42ba-a9a8-88635f3eff1a",
+   "name": "Blue-and-yellow Macaw",
+   "behaviour": "male feeds the incubating female",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "99fd1ff4-4c8d-4058-a991-2e60ff44c027",
+   "name": "Bufflehead",
+   "behaviour": "ducklings jump from the tree hole a day or two after hatching",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "duckling-drop"
+  },
+  {
+   "id": "f5f062f7-4911-4051-800b-d5639ca0688f",
+   "name": "Canada Goose",
+   "behaviour": "both parents escort goslings and defend them vigorously",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "part",
+   "what": "line: defending them is not drawn"
+  },
+  {
+   "id": "43617108-4b2d-44df-b7d6-5cffe6e6c58c",
+   "name": "Cotton Pygmy Goose",
+   "behaviour": "ducklings jump down from a tree cavity and are led to the lily beds",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "duckling-drop"
+  },
+  {
+   "id": "cf059266-56af-4199-adba-64d2d7c0e623",
+   "name": "Domestic Chicken",
+   "behaviour": "chicks stay close to the hen for weeks",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "18f53290-95ab-4586-bb7e-2b5f7620a563",
+   "name": "Domestic Duck",
+   "behaviour": "ducklings follow the mother in a line (imprinting)",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "268f5132-fbda-4c29-bc28-a81a84220539",
+   "name": "Domestic Goose",
+   "behaviour": "gander stands a few metres off the sitting goose and charges anything that comes near",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "held",
+   "what": "existing_block: not built in this pass (display+run)"
+  },
+  {
+   "id": "268f5132-fbda-4c29-bc28-a81a84220539",
+   "name": "Domestic Goose",
+   "behaviour": "goslings follow the parent in a line (imprinting)",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "f8ada820-0a1f-4fe0-a906-287fd5a5955f",
+   "name": "Eclectus Parrot",
+   "behaviour": "female sits at her hollow entrance and is fed by one or several males",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "held",
+   "what": "existing_block: not built in this pass (carry)"
+  },
+  {
+   "id": "3b8a166c-8356-4da3-ac38-edabca7b5e86",
+   "name": "Emu",
+   "behaviour": "male sits on the eggs for about eight weeks, scarcely eating, then guards striped chicks",
+   "how": "existing_recipe",
+   "effort": "S",
+   "status": "part",
+   "what": "line: the male leads the striped chicks; his sitting on the eggs is the eggs'"
+  },
+  {
+   "id": "62f0e4bc-a7ff-43f3-a475-d3f006647161",
+   "name": "Eurasian Coot",
+   "behaviour": "chicks black with orange-red heads",
+   "how": "look",
+   "effort": "M",
+   "status": "held",
+   "what": "look: a colour or shape of the young (the look lane, young-life.json coats), not a behaviour"
+  },
+  {
+   "id": "d2bcafd0-a29c-42f8-9470-40e81834cae0",
+   "name": "Eurasian Sparrowhawk",
+   "behaviour": "male hunts and brings food to the incubating female",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "f560e718-c750-4dad-91b9-5c3eac9b7fa5",
+   "name": "Galah",
+   "behaviour": "fledglings gather in nursery trees while parents forage",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "built",
+   "what": "cluster"
+  },
+  {
+   "id": "b4ff3d58-08ba-440d-8852-4096529fabb4",
+   "name": "Great Crested Grebe",
+   "behaviour": "striped chicks ride on a parent's back",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "ee3fdd41-0a4a-41ac-8fc1-4623afb9ee26",
+   "name": "Great Curassow",
+   "behaviour": "chicks flutter up to low perches when a few days old",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "held",
+   "what": "existing_block: not built in this pass (perch)"
+  },
+  {
+   "id": "ba6458da-45a0-4c4f-81d8-d78d8e67837e",
+   "name": "Greater Rhea",
+   "behaviour": "male leads and guards a creche of chicks from several mothers, adopting strays",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "part",
+   "what": "line: the male leads the chicks; guarding the creche and adopting strays is not drawn"
+  },
+  {
+   "id": "ba6458da-45a0-4c4f-81d8-d78d8e67837e",
+   "name": "Greater Rhea",
+   "behaviour": "several females lay in one male's scrape; he alone incubates the pooled clutch",
+   "how": "existing_recipe",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "7ea52f37-e349-432b-a12c-f9dc83e06687",
+   "name": "Green-cheeked Conure",
+   "behaviour": "young wrestle, hang upside down and tussle with bills and feet",
+   "how": "existing_recipe",
+   "effort": "M",
+   "status": "already",
+   "what": "young play (heel bursts)"
+  },
+  {
+   "id": "0950c7a3-6d87-4479-8fa5-a3c52fe7b870",
+   "name": "Harris's Hawk",
+   "behaviour": "older offspring stay and help feed later broods",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "ddd1950b-b777-4239-807b-2a947c82495d",
+   "name": "Killdeer",
+   "behaviour": "rooftop chicks jump from the roof edge",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "duckling-drop"
+  },
+  {
+   "id": "30cac9d2-521a-4570-8644-f0d74c2b71d9",
+   "name": "Laughing Kookaburra",
+   "behaviour": "family helpers assist in raising young",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "39e2b2e9-7734-4f9a-b6a4-613638732a2c",
+   "name": "Lesser Whistling Duck",
+   "behaviour": "ducklings drop from a tree nest to the ground or water",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "duckling-drop"
+  },
+  {
+   "id": "399c7650-ab71-40f3-9f8b-91da027fa2ec",
+   "name": "Magnificent Frigatebird",
+   "behaviour": "female feeds the chick for most of a year after the male leaves",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "85fd945d-1452-4b1d-b3e8-3d737b2eac6c",
+   "name": "Mallard",
+   "behaviour": "ducklings follow the female alone",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "a7ec8c64-0c87-4f55-afd3-bad7b80470ad",
+   "name": "Mandarin Duck",
+   "behaviour": "ducklings jump down from a high tree cavity soon after hatching",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "duckling-drop"
+  },
+  {
+   "id": "0bf9ae47-74fb-4198-99ca-18ed92677be0",
+   "name": "Muscovy Duck",
+   "behaviour": "day-old ducklings jump from a tree cavity to follow the mother",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "duckling-drop"
+  },
+  {
+   "id": "bdaef7f3-d1b7-4370-a4ac-830512e5ca95",
+   "name": "Mute Swan",
+   "behaviour": "cygnets ride on a parent's back among raised wing feathers",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "21a2018b-2ac8-49e1-848b-a99dd776d912",
+   "name": "Red-breasted Goose",
+   "behaviour": "gander stands guard a few metres from the incubating female",
+   "how": "procedural_pose",
+   "effort": "S",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "9a33d433-8cfb-42e8-aed8-ba8ad62ac2c6",
+   "name": "Ruddy Shelduck",
+   "behaviour": "nests in cliff holes and burrows far from water; both parents walk ducklings kilometres to water",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "c9a44c8e-8425-4c51-9238-a04b94266773",
+   "name": "Southern Cassowary",
+   "behaviour": "male alone incubates the green eggs and raises the chicks",
+   "how": "existing_recipe",
+   "effort": "S",
+   "status": "part",
+   "what": "line: the male leads the chicks; his sitting on the eggs is the eggs'"
+  },
+  {
+   "id": "3adaf06d-894f-4dfb-9b04-6fff98f0e19b",
+   "name": "Wild Turkey",
+   "behaviour": "hen leads poults after hatching",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "221476ab-f99f-433b-98f0-806952ae871c",
+   "name": "African Clawed Frog",
+   "behaviour": "tadpoles hang head-down in mid-water",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "held",
+   "what": "procedural_pose: not built in this pass (pose:tadpole_head_down_hang)"
+  },
+  {
+   "id": "76ddb4b4-2908-4737-9d7e-d3fd30864637",
+   "name": "Arapaima",
+   "behaviour": "parents guard nest and fry near the surface",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "6c3ca716-734d-49bc-a2aa-0d49270186d4",
+   "name": "Asian Arowana",
+   "behaviour": "male carries the eggs and young in his mouth for about two months",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "mouth-carry (brood)"
+  },
+  {
+   "id": "3a0789c0-aa83-418c-a651-885044594648",
+   "name": "Asian Swamp Eel",
+   "behaviour": "hatchlings fan a pair of large fins they later lose",
+   "how": "look",
+   "effort": "M",
+   "status": "held",
+   "what": "look: a colour or shape of the young (the look lane, young-life.json coats), not a behaviour"
+  },
+  {
+   "id": "180adbb0-b186-4cbd-aa32-e637fd78ceef",
+   "name": "Banded Archerfish",
+   "behaviour": "young learn by watching skilled shooters",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "part",
+   "what": "line: the young keep with an adult; their watching its shots is not drawn"
+  },
+  {
+   "id": "db9895cb-6750-47e4-9d7d-650adeb36120",
+   "name": "Blue Discus",
+   "behaviour": "fry graze mucus off both parents' flanks, switching between them",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "held",
+   "what": "needs a new rig clip (P4)"
+  },
+  {
+   "id": "db9895cb-6750-47e4-9d7d-650adeb36120",
+   "name": "Blue Discus",
+   "behaviour": "lays eggs on a cleaned surface, both parents guard",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "6e85b6ec-564d-40f7-b96c-fb58549ebc79",
+   "name": "Bristlenose Pleco",
+   "behaviour": "fry cling to the cave walls by their suckermouths",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "held",
+   "what": "procedural_pose: not built in this pass (young:cling_to_den_wall)"
+  },
+  {
+   "id": "6e85b6ec-564d-40f7-b96c-fb58549ebc79",
+   "name": "Bristlenose Pleco",
+   "behaviour": "male guards and fans eggs alone in his cave, barely feeding",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "9fbfb9ff-2eb2-43d1-af5e-bd61356876b7",
+   "name": "Bull Shark",
+   "behaviour": "young shelter in rivers and estuaries where larger sharks cannot follow",
+   "how": "presence",
+   "effort": "M",
+   "status": "held",
+   "what": "presence: where the young live (a habitat or depth), nothing shown by the young themselves"
+  },
+  {
+   "id": "5b9693a3-6b55-41c9-b977-84ecb284548e",
+   "name": "Butterfly Peacock Bass",
+   "behaviour": "pair cleans a rock, both fan and guard the eggs, then shepherd fry in a tight shoal",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "bc187d88-c445-4054-bb9a-d56eb15f8307",
+   "name": "Chinese Giant Salamander",
+   "behaviour": "male guards the underwater egg den",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "00538895-aaeb-4e09-921e-1ec43841a384",
+   "name": "Clown Knifefish",
+   "behaviour": "male guards and fans the eggs on submerged wood",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "55c7d016-388f-45ec-94de-15ac823dee88",
+   "name": "Clown Triggerfish",
+   "behaviour": "defends the nest site aggressively",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "held",
+   "what": "existing_block: not built in this pass (fight (charge at nest))"
+  },
+  {
+   "id": "153faa4c-99b5-4b9b-8298-6812779d7ea0",
+   "name": "Common Molly",
+   "behaviour": "newborn fry hide in dense plants from adults",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "held",
+   "what": "existing_block: not built in this pass (flee (fry to cover))"
+  },
+  {
+   "id": "6604f90d-9c81-4aed-864f-58cd1c160caf",
+   "name": "Eastern Red-backed Salamander",
+   "behaviour": "female guards egg cluster hung inside a damp cavity under a log",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "816d13d4-1860-42d9-b56e-631fec0af8e2",
+   "name": "Electric Blue Acara",
+   "behaviour": "pair flashes colour, spreads fins and darts at fish near the eggs",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "816d13d4-1860-42d9-b56e-631fec0af8e2",
+   "name": "Electric Blue Acara",
+   "behaviour": "parents move newly hatched young into pits dug in the gravel",
+   "how": "mark",
+   "effort": "M",
+   "status": "held",
+   "what": "a ground mark (pit, exit hole): not built here"
+  },
+  {
+   "id": "ee050391-8de2-4393-89d5-17941effb34c",
+   "name": "Flathead Catfish",
+   "behaviour": "fry shoal in the shallows, then disperse to find lies of their own",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "built",
+   "what": "cluster"
+  },
+  {
+   "id": "ee050391-8de2-4393-89d5-17941effb34c",
+   "name": "Flathead Catfish",
+   "behaviour": "male clears a nest cavity and fans the eggs",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "87f52750-e3a1-4e60-b8ea-41ced1c2d1e4",
+   "name": "Freshwater Angelfish",
+   "behaviour": "bonded pair cleans a vertical leaf, fans eggs and moves fry between sites",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "855282e6-1efc-469f-8714-9e518c8aed6a",
+   "name": "Japanese Rice Fish",
+   "behaviour": "female carries her egg cluster at the vent, then brushes it onto plants",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "94e1e2a2-b276-4beb-8e9b-99b179093a82",
+   "name": "Largetooth Sawfish",
+   "behaviour": "young live in fresh water far upstream for years",
+   "how": "presence",
+   "effort": "M",
+   "status": "held",
+   "what": "presence: where the young live (a habitat or depth), nothing shown by the young themselves"
+  },
+  {
+   "id": "69579021-1299-49fa-b1ce-2754a4f88c74",
+   "name": "Longspine Snipefish",
+   "behaviour": "adults keep near the seabed, juveniles high in the water",
+   "how": "presence",
+   "effort": "M",
+   "status": "held",
+   "what": "presence: where the young live (a habitat or depth), nothing shown by the young themselves"
+  },
+  {
+   "id": "f17b4330-317e-46ae-9441-c1eb92048b05",
+   "name": "Nile Tilapia",
+   "behaviour": "mother carries eggs and fry in her mouth; fry dart back in at danger",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "mouth-carry (brood)"
+  },
+  {
+   "id": "ea6149a8-b84f-4d21-824a-4cb573af853b",
+   "name": "Northern Pike",
+   "behaviour": "larvae hang from plants by an adhesive gland",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "held",
+   "what": "procedural_pose: not built in this pass (pose:larva_hang_from_plant)"
+  },
+  {
+   "id": "ea6149a8-b84f-4d21-824a-4cb573af853b",
+   "name": "Northern Pike",
+   "behaviour": "young pike eat each other",
+   "how": "presence",
+   "effort": "M",
+   "status": "held",
+   "what": "presence: where the young live (a habitat or depth), nothing shown by the young themselves"
+  },
+  {
+   "id": "4b6ae26c-9273-4788-84b9-b22bcfb6343c",
+   "name": "Ocellaris Clownfish",
+   "behaviour": "male guards and fans eggs beside the anemone",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "13408301-20ac-4183-9cec-cb334f265d2d",
+   "name": "Oscar Fish",
+   "behaviour": "pair clears a spawning site and guards eggs and fry",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "2c519194-962c-40f5-8b33-64e2198c816f",
+   "name": "Red-bellied Piranha",
+   "behaviour": "males guard the egg nest",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "b712ed04-7bfc-4da3-bf57-56713fb76ace",
+   "name": "Red-tailed Tinfoil Barb",
+   "behaviour": "juveniles form tight shoals at once",
+   "how": "group_formation",
+   "effort": "S",
+   "status": "built",
+   "what": "cluster"
+  },
+  {
+   "id": "9c65cf08-99b5-49e9-84ee-998fe9375829",
+   "name": "Silver Arowana",
+   "behaviour": "male carries eggs and young in his mouth",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "mouth-carry (brood)"
+  },
+  {
+   "id": "b65ecb44-4684-4282-ad03-385b8717be49",
+   "name": "Snubnose Pompano",
+   "behaviour": "juveniles use shallow surf zones and estuaries as nursery",
+   "how": "presence",
+   "effort": "M",
+   "status": "held",
+   "what": "presence: where the young live (a habitat or depth), nothing shown by the young themselves"
+  },
+  {
+   "id": "b18bf604-2901-4fea-913e-792021df04dd",
+   "name": "Striped Snakehead",
+   "behaviour": "guarding parents charge intruders near the fry",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "part",
+   "what": "line: the fry keep with the parents; their charging intruders is not drawn"
+  },
+  {
+   "id": "5c4defab-42a7-4fcf-9e19-0d98c12d649a",
+   "name": "White Seabream",
+   "behaviour": "juveniles feed in water only a few centimetres deep over rock",
+   "how": "presence",
+   "effort": "M",
+   "status": "held",
+   "what": "presence: where the young live (a habitat or depth), nothing shown by the young themselves"
+  },
+  {
+   "id": "be3f5106-601a-469a-938a-655f88d9850b",
+   "name": "Black Planthopper",
+   "behaviour": "nymphs carry a fan of white waxy threads at the tail",
+   "how": "look",
+   "effort": "M",
+   "status": "held",
+   "what": "look: a colour or shape of the young (the look lane, young-life.json coats), not a behaviour"
+  },
+  {
+   "id": "9c82630b-1de8-4952-964f-1466594587f2",
+   "name": "Black and Yellow Mud Dauber",
+   "behaviour": "new adult chews a round exit hole through the hardened mud in spring",
+   "how": "mark",
+   "effort": "M",
+   "status": "held",
+   "what": "a ground mark (pit, exit hole): not built here"
+  },
+  {
+   "id": "19101fde-fae0-4d25-923c-f88357278de6",
+   "name": "Brimstone Butterfly",
+   "behaviour": "green angular chrysalis hangs from a silk girdle like a curled leaf",
+   "how": "prop",
+   "effort": "M",
+   "status": "held",
+   "what": "a prop (den or web) not drawn by this pass"
+  },
+  {
+   "id": "ca750659-a03b-42c2-b981-7c9402491626",
+   "name": "Buff-tip Moth",
+   "behaviour": "caterpillars feed together, then separate as they grow",
+   "how": "existing_recipe",
+   "effort": "S",
+   "status": "built",
+   "what": "cluster"
+  },
+  {
+   "id": "5f66ce2b-840c-4f56-8502-4338d5dfa8bd",
+   "name": "Common Eastern Firefly",
+   "behaviour": "larvae glow with a faint steady light in damp soil and litter",
+   "how": "look",
+   "effort": "M",
+   "status": "held",
+   "what": "look: a colour or shape of the young (the look lane, young-life.json coats), not a behaviour"
+  },
+  {
+   "id": "b85681d4-5a8a-4e9a-b536-c5b244144827",
+   "name": "Evergreen Bagworm Moth",
+   "behaviour": "newly hatched caterpillars hang on silk and drift on the wind",
+   "how": "flight_path",
+   "effort": "M",
+   "status": "held",
+   "what": "flight: spiderlings ballooning on silk (a flight path of tiny young): not built"
+  },
+  {
+   "id": "4de78f6e-c2cf-45d6-bf9f-c665b8d55704",
+   "name": "Golden Tortoise Beetle",
+   "behaviour": "larvae hold a shield of shed skins and droppings up over the back on a forked tail",
+   "how": "prop",
+   "effort": "M",
+   "status": "held",
+   "what": "a prop (den or web) not drawn by this pass"
+  },
+  {
+   "id": "c55c4a2a-5437-4e17-b695-5787287cab4a",
+   "name": "Io Moth",
+   "behaviour": "young caterpillars travel in single file, each following the one in front",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "part",
+   "what": "cluster: a clump, not a single file"
+  },
+  {
+   "id": "fd13b5e5-cd44-45ae-a1ef-1ef51a032894",
+   "name": "Mourning Cloak",
+   "behaviour": "lays eggs in a ring around a twig; caterpillars feed together under a shared silk web",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "20d8a84d-cd33-418e-b017-98f328a0ead3",
+   "name": "Peacock Butterfly",
+   "behaviour": "caterpillars live together in a silk web on nettles",
+   "how": "prop",
+   "effort": "M",
+   "status": "part",
+   "what": "cluster: the caterpillars clump; the silk web is not drawn"
+  },
+  {
+   "id": "c95c412f-7585-4d4f-874b-6f28f4eae453",
+   "name": "Shield & Stink Bug",
+   "behaviour": "female stands over her egg batch and newly hatched nymphs",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "c95c412f-7585-4d4f-874b-6f28f4eae453",
+   "name": "Shield & Stink Bug",
+   "behaviour": "nymphs cluster tightly after hatching",
+   "how": "existing_recipe",
+   "effort": "S",
+   "status": "built",
+   "what": "cluster"
+  },
+  {
+   "id": "cf5b9f34-04fc-4fa5-8aaf-c545c81a3bd5",
+   "name": "Spiny Leaf Insect",
+   "behaviour": "hatchlings are black with an orange head, run like ants and climb quickly to the canopy",
+   "how": "look",
+   "effort": "M",
+   "status": "held",
+   "what": "look: a colour or shape of the young (the look lane, young-life.json coats), not a behaviour"
+  },
+  {
+   "id": "c6b6d935-cc6b-4cbe-bb98-07cdc0c10a1e",
+   "name": "Tiger Moth",
+   "behaviour": "blackish yellow-ringed larvae feed in groups under fig leaves",
+   "how": "existing_recipe",
+   "effort": "S",
+   "status": "built",
+   "what": "cluster"
+  },
+  {
+   "id": "9e833bf7-54b3-431a-98e1-4327684edd5e",
+   "name": "Two-tailed Pasha",
+   "behaviour": "caterpillar rests on a silk pad on a leaf, returning between meals",
+   "how": "prop",
+   "effort": "M",
+   "status": "held",
+   "what": "a prop (den or web) not drawn by this pass"
+  },
+  {
+   "id": "7e7080ec-9c17-4a75-9d85-5a4f6a38e430",
+   "name": "African Lion",
+   "behaviour": "pride nursery: lionesses guard and nurse each other's cubs",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "837320d5-a6b8-4c7f-8630-180a3958000f",
+   "name": "American Badger",
+   "behaviour": "gives birth and raises kits in underground dens",
+   "how": "prop",
+   "effort": "S",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "64f95cbc-ffaa-4de0-87a9-55fafe3a82e6",
+   "name": "American Marten",
+   "behaviour": "kits raised in tree cavities or logs",
+   "how": "prop",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "490e7f82-eb6a-4eff-adad-cb34cbb18ac9",
+   "name": "Barbary Macaque",
+   "behaviour": "males carry and groom infants",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "90c88a61-371b-4600-a0e9-e928a89101fb",
+   "name": "Bengal Tiger",
+   "behaviour": "mother teaches cubs to hunt",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "6a1d1bad-3eb9-4149-9ca6-fa07c3f9de1e",
+   "name": "Black-and-white Ruffed Lemur",
+   "behaviour": "parks infants in nests instead of carrying them",
+   "how": "prop",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "48dde8d5-aa75-4b8b-89f2-4a96268ec8e4",
+   "name": "Bolivian Squirrel Monkey",
+   "behaviour": "infant rides on mother's back; others carry too",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "4d29c9c9-1c6d-4cd9-b859-6a2a8a17a460",
+   "name": "Bornean Orangutan",
+   "behaviour": "mother carries infant for years",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "cbdf4dc0-2503-4342-b159-adc5a7cc02c6",
+   "name": "Brown Bear",
+   "behaviour": "cubs born in the winter den, guarded for years",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "part",
+   "what": "line: the cubs follow her; the winter den is not drawn"
+  },
+  {
+   "id": "e34b2631-4c63-40b4-894a-8b925b0def8c",
+   "name": "California Sea Lion",
+   "behaviour": "crowded rookery with pup; mother makes repeated trips to sea",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "held",
+   "what": "group_formation: not built in this pass (cluster (haul-out colony) + launch/haul_out cycle)"
+  },
+  {
+   "id": "dffe0a0c-929b-46e7-afa6-5e3710e9fcae",
+   "name": "Celebes Crested Macaque",
+   "behaviour": "infant carried on belly",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "56169946-7f4c-4aa1-89d6-bc2512abd7b4",
+   "name": "Chimpanzee",
+   "behaviour": "infant clings to belly then rides on back",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "29abdd07-bc10-42ee-bbde-0dfa5b3eb93a",
+   "name": "Common Marmoset",
+   "behaviour": "fathers and siblings carry the twins",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "29abdd07-bc10-42ee-bbde-0dfa5b3eb93a",
+   "name": "Common Marmoset",
+   "behaviour": "shares food with infants and mother",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "held",
+   "what": "existing_block: not built in this pass (carry + place (food handover))"
+  },
+  {
+   "id": "e498205a-9ccf-4c96-a2eb-adeebf10b59b",
+   "name": "Common Raccoon",
+   "behaviour": "young follow and climb with mother",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "48892b54-2665-4f2e-b9f1-7eaca91e30f0",
+   "name": "Coppery Titi Monkey",
+   "behaviour": "father carries infant",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "8a8299d5-971b-4f1a-bf8d-4e3d1ecfb7d8",
+   "name": "Coyote",
+   "behaviour": "pups in a den, both parents feeding",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "5c5fab8a-0426-4588-8024-a1d30bcbbca2",
+   "name": "Domestic Cat",
+   "behaviour": "kittens play",
+   "how": "existing_recipe",
+   "effort": "S",
+   "status": "already",
+   "what": "young play (heel bursts)"
+  },
+  {
+   "id": "c54e5eca-48bc-4b31-bef6-7f69515e76f7",
+   "name": "Domestic Dog",
+   "behaviour": "pups learn through play",
+   "how": "existing_recipe",
+   "effort": "S",
+   "status": "already",
+   "what": "young play (heel bursts)"
+  },
+  {
+   "id": "516defc3-d127-4345-895e-8ec372083e95",
+   "name": "Emperor Tamarin",
+   "behaviour": "males and helpers carry twins, passed around",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "355114d7-d9b2-44bd-a567-cf23bd454456",
+   "name": "Eurasian Wolf",
+   "behaviour": "pack feeds pups regurgitated meat at the den",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "0b577f88-55a7-4ff3-abbc-5e7d3916cfab",
+   "name": "European Otter",
+   "behaviour": "cubs first swim at ~3 months, stay with mother a year",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "young follow (heel)"
+  },
+  {
+   "id": "d46b99ee-534f-4f8e-be0d-6f5bcbde9423",
+   "name": "Fisher",
+   "behaviour": "kits in tree cavities",
+   "how": "prop",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "99d41348-a2c4-4081-8f6c-83d2713f4f43",
+   "name": "Francois' Langur",
+   "behaviour": "group handles the orange infant",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "4821c5d1-356a-4a7f-b53a-adc98eb594b1",
+   "name": "Giant Panda",
+   "behaviour": "one cub stays with mother 18+ months",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "young follow (heel)"
+  },
+  {
+   "id": "59f1a1a9-cf08-4418-9baf-b20ddd00ceb3",
+   "name": "Gray Wolf",
+   "behaviour": "pack helps feed and guard pups at the den",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "6ed69858-7efc-458e-9dba-ee0d8d2b0249",
+   "name": "Hamadryas Baboon",
+   "behaviour": "infant on belly, later on back",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "739c19a0-5085-4945-af28-3542e74fb3ba",
+   "name": "Harbor Seal",
+   "behaviour": "pup swims soon after birth",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "young follow (heel)"
+  },
+  {
+   "id": "6141393c-b0b2-4205-98f6-8298433ad67b",
+   "name": "Indochinese Tiger",
+   "behaviour": "cubs follow mother on hunts",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "a90258b3-b325-4eee-9759-e7c855efd336",
+   "name": "Lar Gibbon",
+   "behaviour": "infant clings to mother's belly",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "46504ade-2836-4da1-b7dd-7311ddf3ca00",
+   "name": "Long-tailed Macaque",
+   "behaviour": "infant clings to belly",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "5a842b6e-c58f-4108-bcd6-1c182af21968",
+   "name": "Mantled Guereza",
+   "behaviour": "group members handle young",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "deaf44dd-c112-48b0-b4e8-bd6c8e483ce6",
+   "name": "Mantled Howler Monkey",
+   "behaviour": "infant clings to mother",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "1ecdb4fb-75ce-484f-8a9c-c7b7d4bcaf01",
+   "name": "Meerkat",
+   "behaviour": "group babysits pups at the burrow",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "part",
+   "what": "stay: pups at the burrow and adults coming with food; the babysitter who stays behind is not drawn"
+  },
+  {
+   "id": "ea633b40-1a24-47b5-92b1-874e188c9adf",
+   "name": "Pine Marten",
+   "behaviour": "rests and breeds in tree cavities or old nests",
+   "how": "prop",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "e348284b-509e-4a15-82ed-d184ab2e7808",
+   "name": "Raccoon Dog",
+   "behaviour": "bonded pair; both parents guard and feed pups",
+   "how": "group_formation",
+   "effort": "S",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "ccec0258-fdde-4ace-b35f-1a8fe1916617",
+   "name": "Red Fox",
+   "behaviour": "kits in dens",
+   "how": "prop",
+   "effort": "S",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "34657509-d276-44a4-a19c-6d81c933a7ee",
+   "name": "Red Panda",
+   "behaviour": "gives birth in tree hollows",
+   "how": "prop",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "872bf2ba-8b58-4fed-b8e9-0ee32cb406ad",
+   "name": "Ring-tailed Lemur",
+   "behaviour": "infant on belly then back",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "c513ebce-0421-4b92-8d29-a85ecc8e161d",
+   "name": "Siamang",
+   "behaviour": "father carries infant from second year",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "2db03649-a6d7-4acc-a2d9-e48e9165949b",
+   "name": "Smooth-coated Otter",
+   "behaviour": "pups get swimming lessons",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "young follow (heel)"
+  },
+  {
+   "id": "b89af5e8-9a36-4d23-9a13-590e9f064eb1",
+   "name": "South American Coati",
+   "behaviour": "adult males solitary; females leave to give birth in tree nests and rejoin",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "held",
+   "what": "group_formation: not built in this pass (band of females+young; males alone; tree nest prop)"
+  },
+  {
+   "id": "8baa3fba-b3dd-4328-b3f6-e2c2d9ebdab0",
+   "name": "Spotted Hyena",
+   "behaviour": "cubs raised at the clan den",
+   "how": "prop",
+   "effort": "S",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "acc88b8a-4771-49f3-97ee-5e7923887c6d",
+   "name": "Squirrel Monkey",
+   "behaviour": "infant rides on mother's back, other females carry",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "5b181c04-2d59-416d-9eb2-004eccd196f9",
+   "name": "Striped Skunk",
+   "behaviour": "kits follow mother to forage",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "4d4640e6-a545-42af-a9c8-c9cb68748adb",
+   "name": "Stump-tailed Macaque",
+   "behaviour": "troop handles and carries the infant",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "c66e4916-7b1a-4bee-9933-f88c5d65c920",
+   "name": "Sumatran Tiger",
+   "behaviour": "cubs learn the mother's forest routes",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "af29a03d-65b9-47e7-b686-f86dd0499ec8",
+   "name": "Swift Fox",
+   "behaviour": "family moves between dens with kits through summer",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "64cf1737-56a5-4c1d-82b3-1b3080cc1e59",
+   "name": "Tufted Capuchin",
+   "behaviour": "infant rides on mother's back",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "8a8dbf29-91bf-471e-9147-c9883b114ef6",
+   "name": "Tufted Gray Langur",
+   "behaviour": "other females carry and mind the infant",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "af2f052e-9c76-471d-b2dd-1990a52ccf17",
+   "name": "Western Gorilla",
+   "behaviour": "baby clings to chest then rides on back",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "already",
+   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+  },
+  {
+   "id": "a9878375-f941-476f-b560-4a6385da5f8e",
+   "name": "Western Lowland Gorilla",
+   "behaviour": "young play and stay close",
+   "how": "existing_recipe",
+   "effort": "S",
+   "status": "already",
+   "what": "young play (heel bursts)"
+  },
+  {
+   "id": "1aa1a67f-07b9-4193-9a43-183c0b7c7f3a",
+   "name": "White-nosed Coati",
+   "behaviour": "female leaves troop to give birth in tree nest, returns with young",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "held",
+   "what": "group_formation: not built in this pass (tree nest prop; adult males solitary)"
+  },
+  {
+   "id": "42ca6108-de08-4ae6-9d1e-c2b63c326d3c",
+   "name": "Agile Wallaby",
+   "behaviour": "joey in the pouch",
+   "how": "prop",
+   "effort": "M",
+   "status": "held",
+   "what": "a prop (den or web) not drawn by this pass"
+  },
+  {
+   "id": "3e37d9f8-f6ac-4ff8-9426-6ade490ce363",
+   "name": "American Red Squirrel",
+   "behaviour": "mother hands her midden territory to a young one",
+   "how": "presence",
+   "effort": "M",
+   "status": "held",
+   "what": "presence: where the young live (a habitat or depth), nothing shown by the young themselves"
+  },
+  {
+   "id": "83dc7b12-48fa-4fd1-b12c-95a0e0c64b8e",
+   "name": "Baird's Tapir",
+   "behaviour": "striped calf hides then follows mother through forest and water",
+   "how": "look",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "69e565f6-ae64-4d71-9d8d-65bcd41b624e",
+   "name": "Black Rhinoceros",
+   "behaviour": "calf follows behind its mother",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "line"
+  },
+  {
+   "id": "36ff0d47-a8c5-4299-8d47-71a38ce4b0c5",
+   "name": "Bongo",
+   "behaviour": "calf lies hidden while mother returns to nurse",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "213602bf-a066-4eeb-a93c-587ca661135c",
+   "name": "Chital",
+   "behaviour": "fawn lies hidden in cover",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "21d19b94-2955-4eb0-ab61-fe20eaa0a67e",
+   "name": "Common Eland",
+   "behaviour": "calves form a nursery group",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "built",
+   "what": "cluster"
+  },
+  {
+   "id": "42982c1c-912b-4112-8f86-ece278dceeeb",
+   "name": "Common Hippopotamus",
+   "behaviour": "calf rests on mother's back in deep water",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "d55b799d-dddf-48fd-ac76-de94f0cf8060",
+   "name": "Common Opossum",
+   "behaviour": "young ride on mother's back",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "0b84428a-4cce-44c8-af78-b44be673a7d8",
+   "name": "Coypu",
+   "behaviour": "young nurse at the waterline while mother swims",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "held",
+   "what": "procedural_pose: not built in this pass (young swim alongside mother's flank)"
+  },
+  {
+   "id": "28bd225b-11cf-4135-b380-4ca757d4bfb5",
+   "name": "Domestic Goat",
+   "behaviour": "kids lie hidden while mother browses",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "617e6954-141f-43e1-87e2-fb18aa8a338a",
+   "name": "Domestic Sheep",
+   "behaviour": "ewe butts away a strange lamb",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "held",
+   "what": "procedural_pose: not built in this pass (pose:head_butt)"
+  },
+  {
+   "id": "2a34e9f1-9a51-4676-bd42-57622ed970b6",
+   "name": "Dugong",
+   "behaviour": "calf stays close to its mother for over a year",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "young follow (heel)"
+  },
+  {
+   "id": "42d6dbb8-98c0-40bf-92e5-d02647d20375",
+   "name": "Eastern Cottontail",
+   "behaviour": "mother visits nest only briefly at dawn and dusk",
+   "how": "existing_recipe",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "0297c681-020a-4ce4-80c5-54193eb984d4",
+   "name": "Eurasian Elk",
+   "behaviour": "cow drives off last year's calf before calving",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "held",
+   "what": "existing_block: not built in this pass (chase + young go)"
+  },
+  {
+   "id": "bca30b60-8a55-4741-8652-1ce98a6ac733",
+   "name": "European Rabbit",
+   "behaviour": "doe blocks nest entrance with soil",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "held",
+   "what": "existing_block: not built in this pass (bury (fill entrance) + mark:mound)"
+  },
+  {
+   "id": "00840e62-5e2a-4253-96de-cb347568875f",
+   "name": "Fallow Deer",
+   "behaviour": "fawns hidden in cover",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "ac3b2253-fb08-453c-8ef1-2c1fd1b6e4ad",
+   "name": "Gemsbok",
+   "behaviour": "calves hide early before joining the herd",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "704e5c3c-2d0f-4b39-8edc-e4cc97412203",
+   "name": "Greater Kudu",
+   "behaviour": "calves hide early",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "8eb33a11-4588-462c-82ee-af3cd214741c",
+   "name": "Groundhog",
+   "behaviour": "young leave to dig their own burrows by midsummer",
+   "how": "existing_recipe",
+   "effort": "M",
+   "status": "held",
+   "what": "existing_recipe: not built in this pass (dig_burrow (dispersal))"
+  },
+  {
+   "id": "7ae1d505-b5a7-4295-9749-266c34054c1b",
+   "name": "Javan Rusa Deer",
+   "behaviour": "calf lies hidden in cover",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "015d256f-f9c3-45b4-bdfc-88c9b56c1ea9",
+   "name": "Kuhl's Pipistrelle Bat",
+   "behaviour": "females form nursery colonies",
+   "how": "existing_recipe",
+   "effort": "S",
+   "status": "part",
+   "what": "cluster: the young clump; the females' colony is the roost recipe's"
+  },
+  {
+   "id": "b4cc55f6-a237-4578-96db-267844168da4",
+   "name": "Large Flying Fox",
+   "behaviour": "mother carries pup on her chest",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "6b8884e8-e0b9-4c9a-b499-3c9f5e433a33",
+   "name": "Mule Deer",
+   "behaviour": "spotted fawns lie hidden",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "ca59b578-2109-4d91-9318-a9851d2134c8",
+   "name": "Nyala",
+   "behaviour": "calf lies hidden in dense vegetation",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "5a80b59c-103b-41fa-a11a-541c5741d737",
+   "name": "Patagonian Mara",
+   "behaviour": "young in communal warrens, parents visit only their own",
+   "how": "prop",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "c77f8bc4-c073-4a77-ad24-788b76fbbbda",
+   "name": "Plains Zebra",
+   "behaviour": "mare keeps other zebras away from new foal",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "held",
+   "what": "procedural_pose: not built in this pass (pose:guard_young (ears back, turn to others))"
+  },
+  {
+   "id": "9e4c04ec-46ac-4019-b396-7b9e5afb2028",
+   "name": "Red Deer",
+   "behaviour": "spotted calf lies hidden",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "ebabd793-d6e8-4916-b45e-45bb940a9622",
+   "name": "Red-necked Wallaby",
+   "behaviour": "joey returns to pouch for safety",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "held",
+   "what": "needs a new rig clip (P4)"
+  },
+  {
+   "id": "bd675401-8a57-46d2-a271-7aa9931fa60c",
+   "name": "Short-beaked Echidna",
+   "behaviour": "puggle left in a nursery burrow",
+   "how": "prop",
+   "effort": "S",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "c368b870-b16e-4866-8ced-46d92a92df05",
+   "name": "Southern Tamandua",
+   "behaviour": "carries young on its back",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "4b13e976-6aea-4920-9425-7e8e5a12a262",
+   "name": "Sperm Whale",
+   "behaviour": "group protects calves",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "already",
+   "what": "young follow (heel)"
+  },
+  {
+   "id": "05655a91-2b64-457f-adb6-c3a171cede6f",
+   "name": "Sunda Pangolin",
+   "behaviour": "carries pup on tail, curls round it when threatened",
+   "how": "existing_block",
+   "effort": "M",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "ab7ac66b-7770-479f-a7c6-cc7599fb6d1c",
+   "name": "White-tailed Deer",
+   "behaviour": "spotted fawns lie hidden while doe returns",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "built",
+   "what": "stay"
+  },
+  {
+   "id": "6c02a26d-c0f7-42f4-8fd0-58033f0a59c8",
+   "name": "Agrarian Sac Spider",
+   "behaviour": "female stays with egg sac in her retreat",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "2624871c-971f-44c1-a8e2-34e623fe3c60",
+   "name": "Amano Shrimp",
+   "behaviour": "female carries eggs under abdomen, fanning them",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "30b957f9-8bf7-4e15-b9b0-a5ee8f4f6858",
+   "name": "Amazonian Giant Centipede",
+   "behaviour": "female curls around her eggs, cleaning them",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "fd53d066-8530-46a7-956e-e0e867265fc1",
+   "name": "Barn Funnel Weaver",
+   "behaviour": "egg sacs hidden near web, camouflaged with debris",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "7944dae5-f764-42dd-b327-cf6bb834dd8e",
+   "name": "Black-and-yellow Garden Spider",
+   "behaviour": "papery egg sacs hung in the web",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "0dfcf6d8-b033-47a8-8946-1ad77692353f",
+   "name": "Bold Jumper",
+   "behaviour": "female guards egg nest",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "fd4fbc85-a448-4e06-8bed-860c91fbcf61",
+   "name": "Brazilian Wandering Spider",
+   "behaviour": "female guards flat white egg sacs",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "15981527-9f32-4b3e-8706-a30255587161",
+   "name": "Brown Widow Spider",
+   "behaviour": "spiky burr-like cream egg sacs",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "a1e6f503-55bb-48ef-8104-378d9e626f5f",
+   "name": "Carolina Wolf Spider",
+   "behaviour": "carries egg sac on spinnerets",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "a1e6f503-55bb-48ef-8104-378d9e626f5f",
+   "name": "Carolina Wolf Spider",
+   "behaviour": "spiderlings ride on mother's back",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "6326e253-4515-4aff-ab1f-3964f0b4aa2a",
+   "name": "Chaco Golden Knee Tarantula",
+   "behaviour": "guards egg sac in burrow",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "9108a9e1-cf29-4b80-b227-71fce2c02a88",
+   "name": "Cherry Shrimp",
+   "behaviour": "female carries and fans eggs; egg saddle visible",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "97daf592-8f28-42bc-aa2d-72c07c7c0fd3",
+   "name": "Common House Spider",
+   "behaviour": "pear-shaped egg sacs hung in web, mother nearby",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "5c028e04-1df9-4b00-8e4b-bb6169a8ffe3",
+   "name": "Common Octopus",
+   "behaviour": "female guards and aerates egg strings, stops feeding, dies",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "45425f7b-23fb-4421-b356-b175255143b7",
+   "name": "Daddy Long-Legs Spider",
+   "behaviour": "female carries egg bundle in her jaws",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "0114f3e3-a3a0-4b1d-a4a7-580baa23b28b",
+   "name": "Dark Fishing Spider",
+   "behaviour": "carries egg sac in jaws, then hangs it in a nursery web and guards",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "8784f4de-8fdc-437d-8723-76cba4c08f29",
+   "name": "Giant Forest Scorpion",
+   "behaviour": "mother carries young on her back",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "d211e72b-4e22-45a9-b381-27c9bff94098",
+   "name": "Giant Freshwater Prawn",
+   "behaviour": "eggs fanned under abdomen darken from orange to grey-brown",
+   "how": "look",
+   "effort": "M",
+   "status": "held",
+   "what": "look: a colour or shape of the young (the look lane, young-life.json coats), not a behaviour"
+  },
+  {
+   "id": "692eb783-aa0f-4859-ac59-65219c98147e",
+   "name": "Giant Whip Scorpion",
+   "behaviour": "carries egg sac under abdomen; hatchlings ride on her back",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "ce532c50-c5a9-4ab4-b0b0-982027943d8d",
+   "name": "Malaysian Forest Scorpion",
+   "behaviour": "white newborns ride on mother's back",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "aea8821a-8d07-4c8f-99e8-8b8ca62251e6",
+   "name": "Marbled Orbweaver",
+   "behaviour": "spiderlings balloon away on silk in spring",
+   "how": "flight_path",
+   "effort": "M",
+   "status": "held",
+   "what": "flight: spiderlings ballooning on silk (a flight path of tiny young): not built"
+  },
+  {
+   "id": "6606eac5-d009-4142-a6cf-1da9228949d7",
+   "name": "Orb-weaver Spider",
+   "behaviour": "spiderlings cluster then balloon away",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "part",
+   "what": "cluster: the spiderlings clump; their ballooning away is not drawn"
+  },
+  {
+   "id": "5ca219a4-e254-42d3-9f3a-eead9afc6932",
+   "name": "Pantropical Jumping Spider",
+   "behaviour": "female sits still guarding egg sac in wall retreat",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "8f419d4a-301a-4b14-b10f-0aa6ae351f9d",
+   "name": "Red Swamp Crayfish",
+   "behaviour": "carries eggs on swimmerets; young cling to her through first moults",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "b41fa5b6-bd4a-4e68-91af-41e7177fa557",
+   "name": "Red-kneed Tarantula",
+   "behaviour": "guards egg sac in burrow for months",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "a2229f05-c4b0-40ed-9911-28e35f8f23e7",
+   "name": "Redclaw Crayfish",
+   "behaviour": "hatchlings cling beneath mother's tail",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "5d0bf03d-f971-4da5-85d1-851019dc108c",
+   "name": "Shore Crab",
+   "behaviour": "female's tail flap bulges with orange egg mass",
+   "how": "look",
+   "effort": "M",
+   "status": "held",
+   "what": "look: a colour or shape of the young (the look lane, young-life.json coats), not a behaviour"
+  },
+  {
+   "id": "87025c15-c7f0-4e39-97ee-d66cd963f118",
+   "name": "Signature Spider",
+   "behaviour": "female guards egg sacs near the web",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "6efc467b-1872-40c5-8ab5-7cd112d94f41",
+   "name": "Silver Argiope",
+   "behaviour": "guards papery egg sac by web; spiderlings balloon",
+   "how": "flight_path",
+   "effort": "M",
+   "status": "held",
+   "what": "flight: spiderlings ballooning on silk (a flight path of tiny young): not built"
+  },
+  {
+   "id": "741cb716-4a54-4752-9076-afe5af7da7d5",
+   "name": "Southern Black Widow",
+   "behaviour": "guards several egg sacs in her web",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "741cb716-4a54-4752-9076-afe5af7da7d5",
+   "name": "Southern Black Widow",
+   "behaviour": "spiderlings drift away on silk threads",
+   "how": "flight_path",
+   "effort": "M",
+   "status": "held",
+   "what": "flight: spiderlings ballooning on silk (a flight path of tiny young): not built"
+  },
+  {
+   "id": "9aa8c292-3290-41e1-82d3-764ea5cbaa6a",
+   "name": "Spinybacked Orbweaver",
+   "behaviour": "egg cluster under a leaf wrapped in fluffy silk",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "3c32b4d1-4cc1-4348-bd32-47149d62e64e",
+   "name": "Tiger Wolf Spider",
+   "behaviour": "carries egg sac on spinnerets; spiderlings ride on her back",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "built",
+   "what": "ride"
+  },
+  {
+   "id": "d4caa55a-a65b-4823-9e81-cc9e28e3912a",
+   "name": "Trashline Orb-weaver",
+   "behaviour": "egg sacs fastened into the debris line",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "095fa090-478d-496a-aa8a-81402d4ddf19",
+   "name": "Triangulate Combfoot",
+   "behaviour": "papery egg sacs hung and guarded in the web",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "64c803f4-1c7e-47f9-9ce8-ba09f3701437",
+   "name": "Vampire Crab",
+   "behaviour": "female carries large eggs; tiny crabs hatch directly",
+   "how": "look",
+   "effort": "M",
+   "status": "held",
+   "what": "look: a colour or shape of the young (the look lane, young-life.json coats), not a behaviour"
+  },
+  {
+   "id": "ce5cd9ba-5366-4044-9b85-c4cf4e286500",
+   "name": "Wasp Spider",
+   "behaviour": "flask-shaped egg sac hung in grass near web",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "ce5cd9ba-5366-4044-9b85-c4cf4e286500",
+   "name": "Wasp Spider",
+   "behaviour": "young climb grass stems and balloon away",
+   "how": "flight_path",
+   "effort": "M",
+   "status": "held",
+   "what": "flight: spiderlings ballooning on silk (a flight path of tiny young): not built"
+  },
+  {
+   "id": "a6d7c046-4b6d-4caf-a599-1c698fd79161",
+   "name": "Woodlouse Hunter Spider",
+   "behaviour": "female seals herself into silk cell to guard eggs and young",
+   "how": "prop",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "0aba9610-a7f8-44cd-b898-02fd0a7f9684",
+   "name": "Yellow Sac Spider",
+   "behaviour": "mother dies in nest; spiderlings feed on her",
+   "how": "presence",
+   "effort": "M",
+   "status": "held",
+   "what": "presence: where the young live (a habitat or depth), nothing shown by the young themselves"
+  },
+  {
+   "id": "d132160d-adda-45ac-8d0d-40f61cd0a807",
+   "name": "American Alligator",
+   "behaviour": "mother carries hatchlings in her mouth",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "mouth-carry (jaws)"
+  },
+  {
+   "id": "f82c1223-5d1b-4376-8242-653e942ddbb8",
+   "name": "American Crocodile",
+   "behaviour": "female helps hatchlings reach water",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "part",
+   "what": "line: the hatchlings follow her; the way to the water is her day's, not set"
+  },
+  {
+   "id": "e19cee52-db4f-463a-9ab5-67358b555605",
+   "name": "Ball Python",
+   "behaviour": "female coils around her egg clutch",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "a3dd5533-899f-4563-95c5-a4fe25728be7",
+   "name": "Boa Constrictor",
+   "behaviour": "young live in trees, adults on ground",
+   "how": "existing_block",
+   "effort": "S",
+   "status": "held",
+   "what": "existing_block: not built in this pass (climb/perch (young only))"
+  },
+  {
+   "id": "59a7adff-c5f6-4c13-9808-bb3beecddbfa",
+   "name": "Burmese Python",
+   "behaviour": "coils around eggs and shivers to warm them",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "32346a51-4a0b-45db-adc4-3bb3934607ae",
+   "name": "Diamondback Terrapin",
+   "behaviour": "late hatchlings overwinter in nest and emerge in spring",
+   "how": "presence",
+   "effort": "M",
+   "status": "held",
+   "what": "presence: where the young live (a habitat or depth), nothing shown by the young themselves"
+  },
+  {
+   "id": "a80e7c27-6047-459a-9f9f-dd3d85426aba",
+   "name": "Mugger Crocodile",
+   "behaviour": "opens the nest when young call and carries hatchlings to water in her mouth",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "mouth-carry (jaws)"
+  },
+  {
+   "id": "376f5e78-9b03-4bcb-b91e-85389b4dec6c",
+   "name": "Painted Turtle",
+   "behaviour": "hatchlings overwinter in nest",
+   "how": "presence",
+   "effort": "M",
+   "status": "held",
+   "what": "presence: where the young live (a habitat or depth), nothing shown by the young themselves"
+  },
+  {
+   "id": "52b5d5ea-4f03-470d-ad65-55a40fb3b624",
+   "name": "Reticulated Python",
+   "behaviour": "female coils around eggs and shivers",
+   "how": "procedural_pose",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "13635c2e-6180-470a-b031-548352e637ed",
+   "name": "Saltwater Crocodile",
+   "behaviour": "female opens nest and carries hatchlings to water in her mouth",
+   "how": "new_clip",
+   "effort": "M",
+   "status": "already",
+   "what": "mouth-carry (jaws)"
+  },
+  {
+   "id": "58f7c810-8f4e-4677-a415-0745041e4d15",
+   "name": "Southeastern Five-lined Skink",
+   "behaviour": "female coils around her clutch until it hatches",
+   "how": "existing_recipe",
+   "effort": "S",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  },
+  {
+   "id": "9865a279-3945-458d-a407-b35f13d25c3d",
+   "name": "Spectacled Caiman",
+   "behaviour": "heaps leaf-litter nest mound; hatchlings stay in group near mother",
+   "how": "group_formation",
+   "effort": "M",
+   "status": "built",
+   "what": "cluster"
+  },
+  {
+   "id": "ef800cf1-1d07-4d79-8f52-94eedfede477",
+   "name": "Tokay Gecko",
+   "behaviour": "may guard eggs stuck to surfaces",
+   "how": "existing_recipe",
+   "effort": "M",
+   "status": "eggs",
+   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+  }
+ ]
+}
