@@ -39,9 +39,13 @@ export type CarerPost = {
 /** A drawn carer (world frame). */
 export type DrawnCarer = HumanInstance & {carer: string; kind: CarerKind};
 
-/** Of a visit: walking in with the food, bent to put it down, then watching. */
+/**
+ * Of a visit: walking in with the food, then at the work. The rigged body follows the pose (people-rig `personFor`:
+ * "carry" and "plant" are the work clothes, hi-vis and helmet; "carry" walks), so a keeper or farmer carries the food in
+ * and stays bent at the hatch or trough (no pop to casual clothes); an owner walks in and stands by the pet in their own
+ * clothes.
+ */
 const WALK_SHARE = 0.25;
-const PUT_SHARE = 0.4;
 /** How far back the carer starts the walk in (m). */
 const WALK_IN = 3.2;
 
@@ -77,7 +81,7 @@ export function carersAt(posts: readonly CarerPost[], hours: number, origin: {x:
                 y: height(x, z, post.near ?? undefined),
                 z,
                 yaw: post.yaw,
-                pose: walking ? "carry" : k < WALK_SHARE + PUT_SHARE ? "plant" : "stand",
+                pose: post.kind === "owner" ? (walking ? "walk" : "stand") : walking ? "carry" : "plant",
                 phase: (start * 997) % 7,
                 look: lookOf(post.carer)
             });

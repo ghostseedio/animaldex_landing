@@ -22,7 +22,7 @@ test("carers: the staffing is the server's (keepers per section, a farmer per 4 
     assert.notEqual(keeperOf("big_cats-1"), keeperOf("big_cats-2"));
 });
 
-test("carers: a visit is a walk in carrying the food, bent to put it down, then watching; none out of hours", () => {
+test("carers: a keeper walks in carrying the food, then works bent at the hatch (work clothes throughout); none out of hours", () => {
     const post: CarerPost = {carer: "keeper:x:0", kind: "keeper", x: 10, z: 20, yaw: 0, near: null, visits: [[9, 0.5]]};
     assert.equal(carersAt([post], 8.9, ORIGIN, flat).length, 0);
     const walk = carersAt([post], 9.05, ORIGIN, flat)[0];
@@ -30,7 +30,11 @@ test("carers: a visit is a walk in carrying the food, bent to put it down, then 
     assert.ok(walk.z < 20 + ORIGIN.z, "walking in from behind the post");
     assert.equal(carersAt([post], 9.2, ORIGIN, flat)[0].pose, "plant");
     const watch = carersAt([post], 9.45, ORIGIN, flat)[0];
-    assert.deepEqual([watch.pose, watch.x, watch.z], ["stand", 10 + ORIGIN.x, 20 + ORIGIN.z]);
+    assert.deepEqual([watch.pose, watch.x, watch.z], ["plant", 10 + ORIGIN.x, 20 + ORIGIN.z]);
+    // An owner walks in and stands by the pet in their own clothes (no hi-vis: the work poses pick the work body).
+    const owner = {...post, carer: "owner:h#0", kind: "owner" as const};
+    assert.equal(carersAt([owner], 9.05, ORIGIN, flat)[0].pose, "walk");
+    assert.equal(carersAt([owner], 9.3, ORIGIN, flat)[0].pose, "stand");
     assert.equal(carersAt([post], 9.5, ORIGIN, flat).length, 0);
     // The same carer is in one place at a time; the look is generic and the same for every viewer.
     const two = carersAt([post, {...post, x: 50}], 9.3, ORIGIN, flat);
