@@ -5245,6 +5245,25 @@
         "p2": "In the 3D world, animals the field guide calls nocturnal are out at night, diurnal ones by day, and crepuscular ones at dawn and dusk.",
         "p3": "Animals with a known wild lifespan grow old and die of old age when they reach it. Lifespans run on the Ark's clock, so an animal that lives two years in the wild lives about four real weeks aboard. When the last animal of a species dies, that species is gone from the Ark until someone captures another."
       },
+      "fair": {
+        "title": "How the Ark is kept fair",
+        "p1": "Nobody places an animal on the Ark, picks who eats whom, or decides who lives. There is no admin button that changes what happens to an animal: the world is run by its rules, on the server, and the only way an animal comes aboard is someone's capture.",
+        "p2": "The Ark only shows what has already happened. It never announces an event before it happens: no countdown to a loss, and no early warning for anyone, staff included. The one thing that looks ahead is an animal's estimated time left: a range worked out from the Ark's public facts, the same for everyone, shown as odds and never as a promise.",
+        "p3": "A kind is in danger when only two, or only one, of it still live free in the wild after a fall from more. Only the Ark's own life can start that, a loss in the wild, never a person and never a release. While any kind is in danger, the settings that decide how the Ark runs cannot be turned on or changed (turning one off is always allowed, and so are the switch that pauses the world and the settings for what is shown), and every change to the Ark's settings is written to a log: when, by whom, from what to what.",
+        "p4": "A kind is rescued when a live camera capture of it arrives in the wild. A photo from the library, an import, or an old capture analysed again still brings its animal aboard and still counts among the living, but it does not count as a rescue and earns no rescuer's credit.",
+        "seeds": "The Ark's day-by-day chances, such as how many young are born and whether a hunt succeeds, are rolled with a secret random number made for each Ark year (14 real days). Its fingerprint, a SHA-256 hash, is published here when the year starts, so it cannot be swapped afterwards, and the number itself is revealed once the year is over. Hash it as shown below and the result must match the fingerprint published at the start. An animal's lifespan is the one exception: it is fixed by the animal's own id when it is born, not by the secret.",
+        "verify": "To check a revealed year yourself, run this with the year and the number filled in:",
+        "command": "printf %s 'animaldex-ark-seed-v1|first|<year>|<number>' | shasum -a 256",
+        "listLabel": "The Ark's year seeds",
+        "yearLabel": "Ark year {year}",
+        "published": "Fingerprint published {date}",
+        "publishedLate": "Fingerprint published {date}, on Ark day {day}, after the year had begun (any chance rolled before then was rolled the old way)",
+        "fingerprint": "Fingerprint",
+        "number": "Revealed number",
+        "secret": "Secret until the year is over and the world has finished it",
+        "matches": "Matches the fingerprint",
+        "mismatch": "Does NOT match the fingerprint"
+      },
       "honesty": {
         "title": "What the Ark is, and what it isn't",
         "p1": "The Ark is built from each animal's field guide in AnimalDex. Its rules are simplified so that one shared world can run for everyone, and it is not a scientific model: its numbers show how those rules play out aboard, not how many of an animal live in the wild. Who is aboard is whoever people have photographed, so the mix is not nature's: there are far more cats and dogs aboard than snow leopards.",

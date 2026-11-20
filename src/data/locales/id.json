@@ -5230,6 +5230,25 @@
         "p2": "Di dunia 3D, hewan yang disebut nokturnal oleh panduan lapangannya keluar pada malam hari, yang diurnal pada siang hari, dan yang krepuskular saat fajar dan senja.",
         "p3": "Hewan dengan masa hidup liar yang diketahui menjadi tua dan mati karena usia saat mencapainya. Masa hidup berjalan menurut jam Ark, jadi hewan yang hidup dua tahun di alam liar hidup sekitar empat minggu nyata di Ark. Saat hewan terakhir dari suatu spesies mati, spesies itu hilang dari Ark sampai seseorang menangkap yang lain."
       },
+      "fair": {
+        "title": "Bagaimana Ark dijaga tetap adil",
+        "p1": "Tidak ada yang menaruh hewan di Ark, memilih siapa memakan siapa, atau menentukan siapa yang hidup. Tidak ada tombol admin yang mengubah nasib seekor hewan: dunia ini dijalankan oleh aturannya sendiri, di server, dan satu-satunya cara hewan datang ke Ark adalah tangkapan seseorang.",
+        "p2": "Ark hanya menunjukkan apa yang sudah terjadi. Ark tidak pernah mengumumkan suatu kejadian sebelum terjadi: tidak ada hitung mundur menuju kehilangan, dan tidak ada peringatan dini untuk siapa pun, termasuk staf. Satu-satunya hal yang melihat ke depan adalah perkiraan sisa waktu seekor hewan: rentang yang dihitung dari fakta publik Ark, sama untuk semua orang, ditampilkan sebagai peluang dan tidak pernah sebagai janji.",
+        "p3": "Satu jenis dikatakan terancam bila hanya dua, atau hanya satu, yang masih hidup bebas di alam liar setelah turun dari jumlah yang lebih banyak. Hanya kehidupan Ark sendiri yang bisa memulainya, yaitu kehilangan di alam liar, tidak pernah seseorang dan tidak pernah pelepasan. Selama ada jenis yang terancam, pengaturan yang menentukan cara Ark berjalan tidak bisa dinyalakan atau diubah (mematikannya selalu boleh, begitu juga tombol untuk menjeda dunia dan pengaturan tentang apa yang ditampilkan), dan setiap perubahan pengaturan Ark ditulis dalam log: kapan, oleh siapa, dari apa menjadi apa.",
+        "p4": "Satu jenis diselamatkan bila tangkapan kamera langsung dari jenis itu tiba di alam liar. Foto dari galeri, hasil impor, atau tangkapan lama yang dianalisis ulang tetap membawa hewannya ke Ark dan tetap dihitung sebagai yang hidup, tetapi tidak dihitung sebagai penyelamatan dan tidak memberi kredit penyelamat.",
+        "seeds": "Peluang harian Ark, seperti berapa banyak anak yang lahir dan apakah perburuan berhasil, diundi dengan angka acak rahasia yang dibuat untuk setiap tahun Ark (14 hari nyata). Sidik jarinya, hash SHA-256, diumumkan di sini saat tahun itu dimulai, sehingga tidak bisa ditukar kemudian, dan angkanya sendiri dibuka setelah tahun itu selesai. Hash angka itu seperti di bawah, dan hasilnya harus sama dengan sidik jari yang diumumkan di awal. Umur hewan adalah satu-satunya pengecualian: ditetapkan oleh id hewan itu sendiri saat lahir, bukan oleh angka rahasia.",
+        "verify": "Untuk memeriksa tahun yang sudah dibuka, jalankan ini dengan tahun dan angkanya diisi:",
+        "command": "printf %s 'animaldex-ark-seed-v1|first|<tahun>|<angka>' | shasum -a 256",
+        "listLabel": "Angka rahasia tahun Ark",
+        "yearLabel": "Tahun Ark {year}",
+        "published": "Sidik jari diumumkan {date}",
+        "publishedLate": "Sidik jari diumumkan {date}, pada hari Ark {day}, setelah tahun itu dimulai (peluang apa pun yang diundi sebelumnya diundi dengan cara lama)",
+        "fingerprint": "Sidik jari",
+        "number": "Angka yang dibuka",
+        "secret": "Rahasia sampai tahun selesai dan dunia sudah menyelesaikannya",
+        "matches": "Sama dengan sidik jari",
+        "mismatch": "TIDAK sama dengan sidik jari"
+      },
       "honesty": {
         "title": "Apa Ark itu, dan apa yang bukan",
         "p1": "Ark dibangun dari panduan lapangan setiap hewan di AnimalDex. Aturannya disederhanakan agar satu dunia bersama bisa berjalan untuk semua orang, dan Ark bukan model ilmiah: angkanya menunjukkan bagaimana aturan itu berjalan di Ark, bukan berapa banyak suatu hewan hidup di alam liar. Siapa yang ada di Ark adalah apa pun yang difoto orang, jadi campurannya bukan campuran alam: ada jauh lebih banyak kucing dan anjing di Ark daripada macan tutul salju.",
