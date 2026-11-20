@@ -32,7 +32,7 @@ export type ArkVoyageRead = {available: true; snapshot: ArkSnapshot; founders: A
  * render, `/api/ark/voyage` and its 45-second polls read the database at most once per 30 s between them, and
  * keep the last good answer (up to 10 minutes) while a read fails. Kept raw: each caller decodes its own copy.
  */
-type ArkVoyageRaw = {ok: true; data: unknown; v2: boolean} | {ok: false};
+export type ArkVoyageRaw = {ok: true; data: unknown; v2: boolean} | {ok: false};
 const anonymousRead = createArkSharedRead<ArkVoyageRaw>({freshMs: 30_000, staleMs: 10 * 60_000, retryMs: 15_000, isGood: (raw) => raw.ok});
 
 export async function readArkVoyage(): Promise<ArkVoyageRead> {
@@ -40,6 +40,21 @@ export async function readArkVoyage(): Promise<ArkVoyageRead> {
     const supabase = signedIn ? createSupabaseServerClient() : createSupabasePublicClient();
     if (!supabase) return {available: false, signedIn};
     const raw = signedIn ? await readRaw(supabase) : await anonymousRead.read(() => readRaw(supabase)).catch((): ArkVoyageRaw => ({ok: false}));
+    return arkVoyageReadOf(raw, signedIn);
+}
+
+/**
+ * The anonymous answer exactly as shared, undecoded: the same object for every caller while it is held, so a caller
+ * can keep work derived from it (`/api/ark/voyage` keeps the encoded, compressed body) keyed by its identity.
+ */
+export async function readArkVoyageAnonymousRaw(): Promise<ArkVoyageRaw> {
+    const supabase = createSupabasePublicClient();
+    if (!supabase) return {ok: false};
+    return anonymousRead.read(() => readRaw(supabase)).catch((): ArkVoyageRaw => ({ok: false}));
+}
+
+/** The read an anonymous raw answer decodes to (as `readArkVoyage` answers it). */
+export function arkVoyageReadOf(raw: ArkVoyageRaw, signedIn: boolean): ArkVoyageRead {
     if (!raw.ok) return {available: false, signedIn};
     const snapshot = decodeArkSnapshot(raw.data);
     return snapshot ? {available: true, snapshot, founders: raw.v2 ? arkFoundersOf(raw.data) : ARK_NO_FOUNDERS, signedIn} : {available: false, signedIn};
