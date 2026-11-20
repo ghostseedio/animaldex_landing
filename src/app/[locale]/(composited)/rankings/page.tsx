@@ -2,12 +2,16 @@ import {Metadata} from "next";
 import Link from "@/app/[locale]/_components/link";
 import TierListFilters from "@/app/[locale]/(composited)/rankings/_components/tier-list-filters";
 import {
+    FEATURED_TIER_LIST_SLUGS,
     getExpandedRankingEntries,
     getRankingHeadline,
     rankingPages,
     RANKING_CANONICAL_BASE_PATH,
     sortRankingPagesForHub
 } from "@/data/rankings";
+import {ARK_RANKING_IMAGE, ARK_RANKING_SLUGS, ARK_RANKING_UPDATED} from "@/data/ark-ranking-pages";
+import type {ArkRankingsWords} from "@/lib/ark-rankings-words";
+import {getArkWords} from "@/loaders/ark-words";
 import {loadLocaleMessages} from "@/loaders/locale";
 import {getScopedTranslator} from "@/loaders/translation";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
@@ -37,7 +41,8 @@ export function generateStaticParams() {
     return [];
 }
 
-const tierListHubPageCount = pagination.pageCount(rankingPages.length);
+/** The animal tier lists and the two Ark rankings (`data/ark-ranking-pages.ts`), which sit among them on the hub. */
+const tierListHubPageCount = pagination.pageCount(rankingPages.length + ARK_RANKING_SLUGS.length);
 
 type HubParams = {
     locale: string;
@@ -178,7 +183,8 @@ function formatMethodologyLabel(categoryLabel: string, statRankingKey?: string) 
 export default async function RankingsIndexPage({params}: {params: HubParams}) {
     const locale = params.locale;
     const page = resolveHubPage(params);
-    const t = await getScopedTranslator(locale, "rankings");
+    const [t, {words: arkWords}] = await Promise.all([getScopedTranslator(locale, "rankings"), getArkWords(locale)]);
+    const arkRankings = arkWords.rankings as ArkRankingsWords;
     const pageUrl = getAbsoluteUrl(locale, RANKING_CANONICAL_BASE_PATH);
 
     const collectionSchema = {
@@ -189,17 +195,39 @@ export default async function RankingsIndexPage({params}: {params: HubParams}) {
         url: pageUrl,
         inLanguage: locale
     };
+    const arkTitles = {"ark-survival": arkRankings.survival.title, "ark-fastest-breeders": arkRankings.breeders.title};
+    const arkDescriptions = {"ark-survival": arkRankings.survival.description, "ark-fastest-breeders": arkRankings.breeders.description};
+    // The Ark rankings follow the featured lists, so they stay on page 1.
+    const hubOrder: Array<{slug: string; name: string}> = sortRankingPagesForHub(rankingPages).map((ranking) => ({slug: ranking.slug, name: getRankingHeadline(ranking)}));
+    hubOrder.splice(FEATURED_TIER_LIST_SLUGS.length, 0, ...ARK_RANKING_SLUGS.map((slug) => ({slug, name: arkTitles[slug]})));
     const itemListSchema = {
         "@context": "https://schema.org",
         "@type": "ItemList",
-        itemListElement: sortRankingPagesForHub(rankingPages).map((page, index) => ({
+        itemListElement: hubOrder.map((entry, index) => ({
             "@type": "ListItem",
             position: index + 1,
-            url: getAbsoluteUrl(locale, `${RANKING_CANONICAL_BASE_PATH}/${page.slug}`),
-            name: getRankingHeadline(page)
+            url: getAbsoluteUrl(locale, `${RANKING_CANONICAL_BASE_PATH}/${entry.slug}`),
+            name: entry.name
         }))
     };
-    const cards = sortRankingPagesForHub(rankingPages).map((ranking) => {
+    const arkCards = ARK_RANKING_SLUGS.map((slug) => ({
+        slug,
+        title: arkTitles[slug],
+        description: arkDescriptions[slug],
+        category: "ark",
+        categoryLabel: arkRankings.category,
+        image: {
+            src: ARK_RANKING_IMAGE.src,
+            alt: ARK_RANKING_IMAGE.alt,
+            width: ARK_RANKING_IMAGE.width,
+            height: ARK_RANKING_IMAGE.height
+        },
+        // The most each page ranks at a time; the live numbers are on the page.
+        rankedSpeciesCount: slug === "ark-survival" ? 40 : 25,
+        updatedLabel: formatDate(locale, ARK_RANKING_UPDATED),
+        methodologyLabel: arkRankings.cardMethod
+    }));
+    const animalCards = sortRankingPagesForHub(rankingPages).map((ranking) => {
         const categoryLabel = t(`categories.${ranking.category}`);
 
         return {
@@ -221,6 +249,7 @@ export default async function RankingsIndexPage({params}: {params: HubParams}) {
             methodologyLabel: formatMethodologyLabel(categoryLabel, ranking.statRankingKey)
         };
     });
+    const cards = [...animalCards.slice(0, FEATURED_TIER_LIST_SLUGS.length), ...arkCards, ...animalCards.slice(FEATURED_TIER_LIST_SLUGS.length)];
     const totalPages = tierListHubPageCount;
     const pageSlugs = pagination.slice(cards, page).map((card) => card.slug);
     const filterLabels = {

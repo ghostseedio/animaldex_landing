@@ -16,6 +16,7 @@ import {challengeEntries} from "@/data/challenges";
 import comparisonSnapshot from "@/data/published-seo-comparison-pages.json";
 import closedSeoNamespaceSlugs from "@/data/closed-seo-namespace-slugs.json";
 import {rankingPages, RANKING_CANONICAL_BASE_PATH} from "@/data/rankings";
+import {ARK_RANKING_SLUGS, arkRankingPath} from "@/data/ark-ranking-pages";
 import {getTranslatedTierListHubPaths} from "@/data/tier-list-hub-translations";
 import {locationPages} from "@/data/locations";
 import {isPlaceCollectionIndexable} from "@/data/location-places";
@@ -190,7 +191,7 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             {url: getAbsoluteUrl(locale, "/comparisons")},
             {url: getAbsoluteUrl(locale, "/animal-wisdom")},
             {url: getAbsoluteUrl(locale, RANKING_CANONICAL_BASE_PATH)},
-            ...hubPageEntries(locale, tierListPagination, rankingPages.length),
+            ...hubPageEntries(locale, tierListPagination, rankingPages.length + ARK_RANKING_SLUGS.length),
             // Translated hub pages (pt/es/fr) — not site locales, so they sit in
             // the default-locale branch at their literal paths.
             ...getTranslatedTierListHubPaths().map((path) => ({url: getAbsoluteUrl(locale, path)})),
@@ -248,10 +249,18 @@ export async function buildSitemapEntries(): Promise<MetadataRoute.Sitemap> {
             lastModified: new Date(entry.updatedAt)
         }));
 
-        const rankingPageEntries = rankingPages.map((page) => ({
-            url: getAbsoluteUrl(locale, `${RANKING_CANONICAL_BASE_PATH}/${page.slug}`),
-            lastModified: new Date(page.updatedAt || page.publishedAt)
-        }));
+        const rankingPageEntries = [
+            ...rankingPages.map((page) => ({
+                url: getAbsoluteUrl(locale, `${RANKING_CANONICAL_BASE_PATH}/${page.slug}`),
+                lastModified: new Date(page.updatedAt || page.publishedAt)
+            })),
+            // The Ark's two live rankings (`data/ark-ranking-pages.ts`): their numbers change by the hour, like /ark's.
+            ...ARK_RANKING_SLUGS.map((slug) => ({
+                url: getAbsoluteUrl(locale, arkRankingPath(slug)),
+                lastModified: arkLastModified(),
+                changeFrequency: "hourly" as const
+            }))
+        ];
 
         const locationPageEntries = locationPages.map((page) => ({
             url: getAbsoluteUrl(locale, `/locations/${page.slug}`),

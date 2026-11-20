@@ -14,6 +14,8 @@ type RankingTableItem = {
     primaryMetric: string;
     shortReason: string;
     domain: string;
+    /** Where the row goes (default: the species page). The Ark rankings link into /ark. */
+    href?: string;
 };
 
 type RankingTableProps = {
@@ -36,9 +38,16 @@ type RankingTableProps = {
         backToTop: string;
     };
     items: RankingTableItem[];
+    /** False for a list that is not a tier list (the Ark rankings): no tier column, jump links or filter. */
+    showTier?: boolean;
+    /** Prefix for the element ids, so a page may hold several tables (default: none, the original ids). */
+    idPrefix?: string;
 };
 
-export default function RankingTable({title, description, labels, items}: RankingTableProps) {
+export default function RankingTable({title, description, labels, items, showTier = true, idPrefix = ""}: RankingTableProps) {
+    const headingId = `${idPrefix}ranking-table-heading`;
+    const searchId = `${idPrefix}animal-ranking-search`;
+    const hrefOf = (item: RankingTableItem) => item.href ?? `/animals/${item.speciesSlug}`;
     const [query, setQuery] = useState("");
     const [tier, setTier] = useState("all");
     const [domain, setDomain] = useState("all");
@@ -68,29 +77,31 @@ export default function RankingTable({title, description, labels, items}: Rankin
     }
 
     return (
-        <section className="flex flex-col gap-5" aria-labelledby="ranking-table-heading">
+        <section className="flex flex-col gap-5" aria-labelledby={headingId}>
             <div className="flex flex-col gap-2">
-                <h2 id="ranking-table-heading" className="font-display text-3xl font-bold text-white md:text-4xl">{title}</h2>
+                <h2 id={headingId} className="font-display text-3xl font-bold text-white md:text-4xl">{title}</h2>
                 <p className="max-w-4xl text-base leading-7 text-ink-300 md:text-lg">{description}</p>
             </div>
 
-            <div className="flex flex-wrap gap-2" aria-label="Tier jump links">
-                {tiers.map((item) => (
-                    <a
-                        key={item}
-                        href={`#tier-${item}`}
-                        className="min-h-[40px] rounded-md border border-line-300 bg-surface-900 px-3 py-2 text-sm font-semibold text-ink-200 transition-colors hover:border-primary-500/60 hover:text-primary-100 focus-visible:text-primary-100"
-                    >
-                        {item} tier
-                    </a>
-                ))}
-            </div>
+            {showTier ? (
+                <div className="flex flex-wrap gap-2" aria-label="Tier jump links">
+                    {tiers.map((item) => (
+                        <a
+                            key={item}
+                            href={`#tier-${item}`}
+                            className="min-h-[40px] rounded-md border border-line-300 bg-surface-900 px-3 py-2 text-sm font-semibold text-ink-200 transition-colors hover:border-primary-500/60 hover:text-primary-100 focus-visible:text-primary-100"
+                        >
+                            {item} tier
+                        </a>
+                    ))}
+                </div>
+            ) : null}
 
             <div className="sticky top-[73px] z-20 flex flex-col gap-3 rounded-lg border border-line-300 bg-canvas-900/95 p-3 backdrop-blur lg:flex-row lg:items-end">
                 <div className="flex min-w-[14rem] flex-1 flex-col gap-2">
-                    <label htmlFor="animal-ranking-search" className="text-sm font-semibold text-white">{labels.search}</label>
+                    <label htmlFor={searchId} className="text-sm font-semibold text-white">{labels.search}</label>
                     <input
-                        id="animal-ranking-search"
+                        id={searchId}
                         type="search"
                         value={query}
                         placeholder={labels.searchPlaceholder}
@@ -99,6 +110,7 @@ export default function RankingTable({title, description, labels, items}: Rankin
                         className="min-h-[42px] rounded-md border border-line-300 bg-surface-900 px-3 text-base text-white placeholder:text-ink-400 outline-none transition-colors focus:border-primary-400"
                     />
                 </div>
+                {domains.length > 0 ? (
                 <label className="flex flex-col gap-2 text-sm font-semibold text-white">
                     {labels.domainFilter}
                     <select
@@ -113,6 +125,8 @@ export default function RankingTable({title, description, labels, items}: Rankin
                         ))}
                     </select>
                 </label>
+                ) : null}
+                {showTier ? (
                 <label className="flex flex-col gap-2 text-sm font-semibold text-white">
                     {labels.tierFilter}
                     <select
@@ -127,6 +141,7 @@ export default function RankingTable({title, description, labels, items}: Rankin
                         ))}
                     </select>
                 </label>
+                ) : null}
                 <p className="text-sm text-ink-300 lg:ml-auto lg:pb-3" aria-live="polite">
                     {labels.showing} {filteredItems.length} {labels.of} {items.length}
                 </p>
@@ -138,7 +153,7 @@ export default function RankingTable({title, description, labels, items}: Rankin
                         <tr className="border-b border-line-300 text-left">
                             <th className="w-24 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-300">{labels.rank}</th>
                             <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-300">{labels.animal}</th>
-                            <th className="w-24 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-300">{labels.tier}</th>
+                            {showTier ? <th className="w-24 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-300">{labels.tier}</th> : null}
                             <th className="w-56 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-300">{labels.metric}</th>
                             <th className="px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-300">{labels.whyItRanks}</th>
                             <th className="w-40 px-4 py-3 text-xs font-semibold uppercase tracking-[0.16em] text-ink-300">{labels.readSpecies}</th>
@@ -146,11 +161,11 @@ export default function RankingTable({title, description, labels, items}: Rankin
                     </thead>
                     <tbody>
                         {filteredItems.map((item) => (
-                            <tr key={`${item.rank}-${item.speciesSlug}`} id={firstVisibleRankByTier.get(item.tier) === item.rank ? `tier-${item.tier}` : undefined} className="scroll-mt-48 border-b border-line-400 transition-colors last:border-b-0 hover:bg-surface-800/55">
+                            <tr key={`${item.rank}-${item.speciesSlug}`} id={showTier && firstVisibleRankByTier.get(item.tier) === item.rank ? `tier-${item.tier}` : undefined} className="scroll-mt-48 border-b border-line-400 transition-colors last:border-b-0 hover:bg-surface-800/55">
                                 <td className="px-4 py-3 text-base font-semibold text-white">#{item.rank}</td>
                                 <td className="px-4 py-3">
                                     <Link
-                                        href={`/animals/${item.speciesSlug}`}
+                                        href={hrefOf(item)}
                                         className="flex items-center gap-3 text-base font-semibold text-white transition-colors hover:text-primary-100 focus-visible:text-primary-100"
                                     >
                                         <SpeciesArtworkImage
@@ -163,12 +178,12 @@ export default function RankingTable({title, description, labels, items}: Rankin
                                         {item.speciesName}
                                     </Link>
                                 </td>
-                                <td className="px-4 py-3"><TierBadge tier={item.tier} /></td>
+                                {showTier ? <td className="px-4 py-3"><TierBadge tier={item.tier} /></td> : null}
                                 <td className="px-4 py-3 text-base font-semibold text-primary-100">{item.primaryMetric}</td>
                                 <td className="px-4 py-3 text-sm leading-6 text-ink-200">{item.shortReason}</td>
                                 <td className="px-4 py-3">
                                     <Link
-                                        href={`/animals/${item.speciesSlug}`}
+                                        href={hrefOf(item)}
                                         className="text-sm font-semibold text-primary-200 transition-colors hover:text-primary-100 focus-visible:text-primary-100"
                                         underline
                                     >
@@ -187,7 +202,7 @@ export default function RankingTable({title, description, labels, items}: Rankin
                         <div className="flex items-start gap-3">
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-line-300 bg-canvas-900 text-sm font-bold text-white">#{item.rank}</span>
                             <div className="min-w-0 flex-1">
-                                <Link href={`/animals/${item.speciesSlug}`} className="flex items-center gap-3 font-semibold text-white transition-colors hover:text-primary-100 focus-visible:text-primary-100">
+                                <Link href={hrefOf(item)} className="flex items-center gap-3 font-semibold text-white transition-colors hover:text-primary-100 focus-visible:text-primary-100">
                                     <SpeciesArtworkImage
                                         slug={item.speciesSlug}
                                         alt={`${item.speciesName} animal icon`}
@@ -198,11 +213,11 @@ export default function RankingTable({title, description, labels, items}: Rankin
                                     <span>{item.speciesName}</span>
                                 </Link>
                                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                                    <TierBadge tier={item.tier} />
+                                    {showTier ? <TierBadge tier={item.tier} /> : null}
                                     <span className="rounded-md border border-line-400 bg-canvas-900/50 px-2.5 py-1 text-sm font-semibold text-primary-100">{item.primaryMetric}</span>
                                 </div>
                                 <p className="mt-3 text-sm leading-6 text-ink-200">{item.shortReason}</p>
-                                <Link href={`/animals/${item.speciesSlug}`} className="mt-3 inline-block text-sm font-semibold text-primary-200 transition-colors hover:text-primary-100 focus-visible:text-primary-100" underline>
+                                <Link href={hrefOf(item)} className="mt-3 inline-block text-sm font-semibold text-primary-200 transition-colors hover:text-primary-100 focus-visible:text-primary-100" underline>
                                     {labels.readSpecies}
                                 </Link>
                             </div>

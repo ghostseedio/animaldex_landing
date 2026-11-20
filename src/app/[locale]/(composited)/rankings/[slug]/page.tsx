@@ -37,6 +37,8 @@ import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
 import {buildContentMetadata} from "@/lib/content-metadata";
 import {getAbsoluteAssetUrl, getAbsoluteUrl} from "@/lib/site";
 import {getScopedTranslator} from "@/loaders/translation";
+import {getArkWords} from "@/loaders/ark-words";
+import {arkRankingRelatedTo, arkRelatedCard} from "@/app/[locale]/(composited)/rankings/_components/ark-ranking-page";
 import {RankingStatLessonSection} from "@/app/[locale]/(composited)/rankings/_components/stat-lessons-section";
 import {statForRanking} from "@/lib/stat-lessons";
 import {AskSubjectBridge} from "@/components/ask-animaldex/ask-animaldex-provider";
@@ -209,12 +211,19 @@ export default async function RankingDetailPage({params}: RankingPageProps) {
                 image: challenge.featuredImage
             }];
         });
-    const relatedRankings = getRelatedRankings(ranking.slug, 3).map((page) => ({
-        slug: page.slug,
-        title: getRankingHeadline(page),
-        description: page.description,
-        categoryLabel: t(`categories.${page.category}`)
-    }));
+    // An Ark ranking nearest this category takes the third place among the related lists (Ark survival beside the lists of
+    // animals that endure, Ark breeders beside those that multiply).
+    const arkRelated = arkRankingRelatedTo(ranking.category);
+    const arkRankingWords = arkRelated ? ((await getArkWords(locale)).words.rankings ?? null) : null;
+    const relatedRankings = [
+        ...getRelatedRankings(ranking.slug, arkRelated && arkRankingWords ? 2 : 3).map((page) => ({
+            slug: page.slug,
+            title: getRankingHeadline(page),
+            description: page.description,
+            categoryLabel: t(`categories.${page.category}`)
+        })),
+        ...(arkRelated && arkRankingWords ? [arkRelatedCard(arkRelated, arkRankingWords)] : [])
+    ];
     const leader = entries[0];
     const immediateAnswer = leader
         ? `${leader.species.name} ranks #1 in this AnimalDex list. ${leader.shortReason}`
