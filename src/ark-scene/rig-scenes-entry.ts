@@ -660,7 +660,11 @@ async function mountScenes(el: HTMLElement) {
                     headYaw: e?.reactive ? Math.round(e.reactive.headYaw * 100) / 100 : null,
                     headPitch: e?.reactive ? Math.round(e.reactive.headPitch * 100) / 100 : null,
                     headWeight: e?.reactive ? Math.round(e.reactive.headWeight * 100) / 100 : null,
-                    action: e?.reactive?.action ?? null
+                    action: e?.reactive?.action ?? null,
+                    // (ARK-ANIM: its sleep and its base pose, for the rest-pose shots.)
+                    sleep: (e as {sleepNow?: {down: boolean; posture: string; t: number} | null} | undefined)?.sleepNow ? {down: (e as {sleepNow: {down: boolean}}).sleepNow.down, posture: (e as {sleepNow: {posture: string}}).sleepNow.posture} : null,
+                    base: (rig as {base?: string} | undefined)?.base ?? null,
+                    act: Boolean((e as {act?: unknown} | undefined)?.act)
                 };
             });
         },

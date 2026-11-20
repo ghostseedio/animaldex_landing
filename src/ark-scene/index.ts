@@ -77,7 +77,7 @@ import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, REVIV
 import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
 import {WaterReflections} from "@/ark-scene/water-reflect-render"; // p3 (reflect)
 import {headLimits} from "@/ark-scene/head-look";
-import {bellyOfGeometry, goesIntoRoost, lyingBody, lyingDrop, lyingTorso, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
+import {bellyOfGeometry, goesIntoRoost, lyingBody, lyingDrop, lyingTorso, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow, type SleepPosture} from "@/ark-scene/sleep";
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
@@ -4721,7 +4721,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const flies = rigFlies(rig);
         const grounded = !entry.state.airborne && entry.air <= 0.001;
-        const target = entry.rigOn && !entry.visitor && (grounded || flies) ? 1 : 0;
+        // ARK-ANIM (decision 447, the owner's bears and hogs at rest): asleep on a rig with no sleeping clip of its own
+        // (a four-legged rig's lying clips are held, `rig-clips.ts` QUADRUPED_LYING_HELD), the rig fades out and the
+        // near model lies in the scene's own posture (`sleep.ts`: lowered onto its chest, the legs folded under it): the
+        // rig only stood there playing its idle.
+        const sleepsOff = Boolean(entry.sleepNow?.down) && !entry.act && grounded && !sleepClipOf(rig, entry.sleepNow!.posture);
+        const target = entry.rigOn && !entry.visitor && (grounded || flies) && !sleepsOff ? 1 : 0;
         const peeking = (entry.peek ?? -1) >= 0;
         if (!peeking) state.weight = Math.min(Math.max(state.weight + Math.min(Math.max(target - state.weight, -dt / RIG_BLEND_SECONDS), dt / RIG_BLEND_SECONDS), 0), 1);
         rigHere.set(where.x, where.base, where.z);
@@ -5044,7 +5049,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const reacted = Boolean(reacting && want === reacting.name);
         // (A meal's act, `meal-acts.ts`: head down feeding, a glance up, lying up to rest, on the rig's own clips.)
         const mealState = !recipeAct && entry.act?.meal && entry.act.state && MEAL_CLIP_STATES.has(entry.act.state) ? entry.act.state : null;
-        const recipeRaw = !state.flying && !reacted && (recipeAct || mealState) ? recipeClip(recipeAct?.state ?? mealState, (name) => Boolean(clip(name))) : null;
+        const recipeRaw = !state.flying && !reacted && (recipeAct || mealState) ? recipeClip(sleepState(recipeAct?.state ?? mealState), (name) => Boolean(clip(name))) : null;
         // A rig with a sit (a pilot cat's or dog's) rests sitting up rather than lying, about half of them (by its own phase).
         const fromRecipe = recipeRaw?.name === "lie" && clip("sit") && entry.phase < 0.5 ? {...recipeRaw, name: "sit"} : recipeRaw;
         let byRecipe = false;
@@ -5144,7 +5149,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // Each animal's loops start at its own point (no herd stepping in time); a one-shot from its start.
         rigSwitch(state, want, mode === "sync" ? sync : playing.loop ? entry.phase : 0);
         // By distance, up to 3.5 times the clip's own pace (a flee is capped at the gait's 2.5: the feet never slide).
-        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 3.5) * (state.reverse ? -1 : 1);
+        // ARK-ANIM (decision 447, the owner's blue-tongued skink "too shaky"): never more than GAIT_HZ_MAX cycles a second.
+        // A short-legged clip played by the distance covered ran its legs at 20-30 cycles a second (the skink's 0.12 s
+        // run at 3.5 times its pace), a blur of shaking at 60 frames a second; above that the feet slide a little instead.
+        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 3.5, dt * GAIT_HZ_MAX) * (state.reverse ? -1 : 1);
         else if (mode === "sync") state.now.phase = sync;
         else state.now.phase += (dt / playing.seconds) * (want === "idle" ? 1 - 0.65 * entry.rest : rate);
         state.ratio = mode === "distance" && playing.ground_speed && dt > 0 ? moved / dt / playing.ground_speed : 0;
@@ -10480,4 +10488,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             labelLayer.remove();
         }
     };
+}
+
+/** ARK-ANIM: the hanging posture's act state (`behaviour-recipes.ts` postureOf: `sleep_hang`, a bat roosting head down)
+ * plays the sleep rule's clips, its own posture's first (a bat's sleep_hang, wings folded). */
+function sleepState(state: string | null | undefined): string | null | undefined {
+    return state === "sleep_hang" ? "sleep" : state;
+}
+
+/** ARK-ANIM: the most step cycles a second a gait clip plays (a cycle is two steps: twelve steps a second). */
+export const GAIT_HZ_MAX = 6;
+
+/** ARK-ANIM: the rig's own sleeping clip for a posture (`sleepPostureClips`, then its kind's), or null. */
+function sleepClipOf(rig: RigModel, posture: SleepPosture): string | null {
+    return sleepPostureClips(posture).find((name) => Boolean(rig.clips[name])) ?? ASLEEP_CLIPS.find((name) => Boolean(rig.clips[name])) ?? null;
 }
