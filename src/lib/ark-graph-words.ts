@@ -29,6 +29,10 @@ export type ArkGraphWords = {
     revived: string;
     died: string;
     eaten: string;
+    /** Kept populations (decision 444): animals born aboard that left the Ark alive. */
+    rehomed: string;
+    toMarket: string;
+    movedZoo: string;
     nothing: string;
     flyTo: string;
     goneNow: string;
@@ -62,6 +66,8 @@ export type ArkGraphWords = {
     breedsSamePlace: string;
     /** Under the chart: what makes it rise and fall (a point's own changes show under the finger). */
     riseFall: string;
+    /** Under the graph when the period has animals that left alive. */
+    riseFallKept: string;
 };
 
 /** English, as `en.json` has it (a test holds the two together). */
@@ -85,6 +91,9 @@ export const ARK_GRAPH_ENGLISH: ArkGraphWords = {
     revived: "{count} back from recovery",
     died: "{count} died",
     eaten: "{count} eaten",
+    rehomed: "{count} rehomed",
+    toMarket: "{count} went to market",
+    movedZoo: "{count} moved to another zoo",
     nothing: "No births, arrivals or deaths in this period.",
     flyTo: "Show in the Ark",
     goneNow: "None aboard now",
@@ -107,7 +116,8 @@ export const ARK_GRAPH_ENGLISH: ArkGraphWords = {
     whereTown: "among town wildlife",
     whereZoo: "in its zoo enclosure",
     breedsSamePlace: "Breeds only with others in the same place.",
-    riseFall: "Up: animals brought aboard from photos, or born. Down: animals that died or were eaten."
+    riseFall: "Up: animals brought aboard from photos, or born. Down: animals that died or were eaten.",
+    riseFallKept: "Kept animals born aboard can also leave alive: rehomed, sent to market or moved to another zoo."
 };
 
 type Loose = Record<string, unknown> | null | undefined;

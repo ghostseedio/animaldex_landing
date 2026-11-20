@@ -1,5 +1,6 @@
 "use client";
 
+import {ARK_KEPT_OFF, arkKeptLines, isArkLeftKind, readArkKeptFlags, type ArkKeptFlags} from "@/lib/ark-kept";
 import React, {Suspense, lazy, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
@@ -371,6 +372,17 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
 /** The life story in full, inside the card: how it got aboard, then every line from the server's record. */
 function ArkLifeStory({animal, life, state, facts, words, locale, rest = null}: {animal: ArkAnimal; life: ArkLife | null; state: ArkCardLife | null; facts: ReturnType<typeof lifeFacts>; words: ArkWords; locale: string; /** How it rests now, in words (the sleep lane): first in "Right now". */ rest?: string | null}) {
     const w = words.life;
+    const [keptFlags, setKeptFlags] = useState<ArkKeptFlags>(ARK_KEPT_OFF);
+    const keptPlace = animal.area === "zoo" || animal.area === "house" || animal.area === "farm";
+    useEffect(() => {
+        if (!keptPlace) return;
+        let live = true;
+        void readArkKeptFlags().then((flags) => live && setKeptFlags(flags));
+        return () => {
+            live = false;
+        };
+    }, [keptPlace]);
+    const kept = arkKeptLines(animal, keptFlags, facts.born);
     const rows: Array<[string, React.ReactNode]> = [];
     if (facts.generation !== null) rows.push([w.generation, facts.generation > 0 ? fillArkWords(w.generationBorn, {n: facts.generation}) : w.generationArrived]);
     // (An arrival's days aboard are not its age: the life block says that, from its lifespan.)
@@ -380,7 +392,14 @@ function ArkLifeStory({animal, life, state, facts, words, locale, rest = null}: 
     // Right now: how it rests (the sleep lane: "Asleep in its den"), then its hunger and age ("Asleep in its den · Well-fed").
     const now = [rest, facts.condition ? w[facts.condition] : null].filter((part): part is string => Boolean(part));
     if (now.length) rows.push([w.now, now.join(" · ")]);
-    if (life?.died) rows.push([w.ended, life.died.kind === "starved" ? w.starved : life.died.kind === "eaten" ? w.endedEaten : w.endedOld]);
+    // Kept populations (decision 444): what its keeping says (born in a zoo, neutered, eggs collected).
+    if (kept.length) rows.push([w.kept, kept.map((line) => w[line]).join(" · ")]);
+    if (life?.died) {
+        const k = life.died.kind;
+        rows.push(isArkLeftKind(k)
+            ? [w.left, k === "rehomed" ? w.endedRehomed : k === "to_market" ? w.endedMarket : w.endedMovedZoo]
+            : [w.ended, k === "starved" ? w.starved : k === "eaten" ? w.endedEaten : w.endedOld]);
+    }
     // A young one whose breeding the server estimated (its record gives none, or only part): said so.
     if (life?.origin.kind === "born" && (life.origin.breeding_source === "estimate" || life.origin.breeding_source === "partial")) {
         rows.push([w.breeding, life.origin.breeding_source === "estimate" ? w.breedingEstimated : w.breedingPartial]);
