@@ -39,6 +39,8 @@ export type ArkHistory = {
     zone: string;
     /** Local-day boundaries (steps + 1 of them, a day being 23 to 25 hours); null: steps are `bucketMs` wide from `t0`. */
     edges: number[] | null;
+    /** The answer these local days were made from (hour or UTC-day steps): the finest data there is, where peak and low are read. Null: this is the answer itself. */
+    fine: ArkHistory | null;
     /** Per kind: its count at t0 and its rows per step, on each island. */
     kinds: Map<string, ArkKindRecord>;
     /** Kinds in the answer with none aboard now: their names (the living are named by the snapshot). */
@@ -49,7 +51,17 @@ export type ArkHistory = {
 export type ArkKindRecord = {base: [number, number]; rows: Array<{step: number; island: 0 | 1; arrived: number; born: number; revived: number; died: number; eaten: number}>};
 
 /** One species' line: `counts[i]` is the count at `times[i]` (the last is now). */
-export type ArkSeries = {times: number[]; counts: number[]; arrived: number[]; born: number[]; revived: number[]; died: number[]; eaten: number[]};
+export type ArkSeries = {
+    times: number[];
+    counts: number[];
+    arrived: number[];
+    born: number[];
+    revived: number[];
+    died: number[];
+    eaten: number[];
+    /** Peak and low read from the finest steps (see `ArkHistory.fine`), where the points are local days: the same over the same record in every time zone. Absent: from `counts`. */
+    extremes?: {peak: number; peakAt: number; low: number; lowAt: number};
+};
 
 export type ArkPeriod = "24h" | "7d" | "30d" | "all";
 export const ARK_PERIODS: ArkPeriod[] = ["24h", "7d", "30d", "all"];
@@ -174,7 +186,7 @@ export function arkRebucketDays(source: ArkHistory, zoneName: string = source.zo
         }
         kinds.set(key, {base, rows: Array.from(rows.values())});
     });
-    return {...source, bucket: "day", bucketMs: DAY_MS, t0: edges[0], steps: days, zone, edges, kinds};
+    return {...source, bucket: "day", bucketMs: DAY_MS, t0: edges[0], steps: days, zone, edges, fine: source.fine ?? source, kinds};
 }
 
 /** A moment for the graph's axis and hover, in the history's zone: the date for a day step, the weekday and time for an hour. */
@@ -246,7 +258,7 @@ export function decodeArkHistory(raw: unknown, zone: string = arkViewerZone()): 
         const name = typeof one?.name === "string" && one.name.trim() ? one.name.trim() : null;
         if (name) gone.set(id, {name, slug: typeof one?.model_slug === "string" && one.model_slug ? one.model_slug : null});
     }
-    return {bucket, bucketMs, t0, asOf, firstAt, startedAt: time(body.started_at), steps, zone, edges: null, kinds, gone};
+    return {bucket, bucketMs, t0, asOf, firstAt, startedAt: time(body.started_at), steps, zone, edges: null, fine: null, kinds, gone};
 }
 
 /** The moments a series is drawn at: t0, the end of every step, the last one now. */
@@ -311,6 +323,55 @@ export function arkSeriesSlice(series: ArkSeries, start: number): ArkSeries {
     return out;
 }
 
+const fineTimes = new WeakMap<ArkHistory, number[]>();
+
+/** One kind's counts at the answer's step edges (as `arkKindSeries(...).counts`, with no rows kept per step). */
+function kindCounts(history: ArkHistory, key: string, scope: ArkHistoryScope): number[] {
+    const counts = new Array<number>(history.steps + 1).fill(0);
+    const record = history.kinds.get(key);
+    if (!record) return counts;
+    for (const row of record.rows) if (inScope(row.island, scope)) counts[row.step + 1] += row.arrived + row.born + row.revived - row.died - row.eaten;
+    let count = scope === "both" ? record.base[0] + record.base[1] : record.base[scope === "town" ? 1 : 0];
+    for (let i = 0; i < counts.length; i++) {
+        count += counts[i];
+        counts[i] = Math.max(0, count);
+    }
+    return counts;
+}
+
+/**
+ * A kind's series cut to a period, with its peak and low read from the finest steps over the same moments (from the
+ * count when the period began to now), not from the points drawn: local days sample the record at their midnights, so
+ * a rise and fall inside one day would otherwise be seen by one time zone and missed by another.
+ */
+export function arkPeriodSeries(history: ArkHistory, key: string, scope: ArkHistoryScope, start: number): ArkSeries {
+    const series = arkSeriesSlice(arkKindSeries(history, key, scope), start);
+    const fine = history.fine;
+    if (!fine || !series.times.length) return series;
+    let times = fineTimes.get(fine);
+    if (!times) fineTimes.set(fine, (times = arkHistoryTimes(fine)));
+    const counts = kindCounts(fine, key, scope);
+    // From the last step edge at or before the period's start (the count then), to the last point (now).
+    let from = 0;
+    while (from + 1 < times.length && times[from + 1] <= series.times[0]) from++;
+    let peak = -Infinity;
+    let low = Infinity;
+    let peakAt = times[from];
+    let lowAt = peakAt;
+    for (let i = from; i < counts.length; i++) {
+        if (counts[i] > peak) {
+            peak = counts[i];
+            peakAt = times[i];
+        }
+        if (counts[i] < low) {
+            low = counts[i];
+            lowAt = times[i];
+        }
+    }
+    series.extremes = {peak, peakAt, low, lowAt};
+    return series;
+}
+
 export type ArkSeriesStats = {
     now: number;
     start: number;
@@ -348,6 +409,7 @@ export function arkSeriesStats(series: ArkSeries): ArkSeriesStats {
             lowAt = series.times[i] ?? lowAt;
         }
     });
+    if (series.extremes) ({peak, peakAt, low, lowAt} = series.extremes);
     const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
     return {
         now,
@@ -440,7 +502,7 @@ export function arkHistoryLines(history: ArkHistory, period: ArkPeriod, keys: st
     const lines = new Map<string, ArkLine>();
     const start = arkPeriodStart(history, period);
     const add = (key: string) => {
-        const series = arkSeriesSlice(arkKindSeries(history, key, scope), start);
+        const series = arkPeriodSeries(history, key, scope, start);
         lines.set(key, {series, stats: arkSeriesStats(series)});
     };
     keys.forEach(add);
@@ -455,14 +517,14 @@ export type ArkLineGeometry = {d: string; area: string; points: Array<[number, n
 
 /**
  * A line through the counts in a `width` × `height` box (y down), inset by `pad`: a step line (a count holds until
- * it changes, as the record does), scaled from the lowest to the highest count (from 0 when `fromZero`). One point
- * draws flat across; a flat series sits in the middle.
+ * it changes, as the record does), scaled from the lowest to the highest count (from 0 when `fromZero`; up to `max`
+ * when that is higher, the peak a graph says). One point draws flat across; a flat series sits in the middle.
  */
-export function arkLinePath(counts: number[], width: number, height: number, options: {pad?: number; fromZero?: boolean} = {}): ArkLineGeometry {
+export function arkLinePath(counts: number[], width: number, height: number, options: {pad?: number; fromZero?: boolean; max?: number} = {}): ArkLineGeometry {
     const pad = options.pad ?? 1.5;
     const values = counts.length ? counts : [0];
     let min = options.fromZero ? 0 : Math.min(...values);
-    let max = Math.max(...values);
+    let max = Math.max(...values, options.max ?? -Infinity);
     const flat = max === min;
     if (flat) {
         min -= 1;

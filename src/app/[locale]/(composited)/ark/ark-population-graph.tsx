@@ -140,7 +140,7 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
     const [hover, setHover] = useState<number | null>(null);
     const plotW = W - LEFT - 4;
     const plotH = H - BOTTOM - 6;
-    const line = useMemo(() => arkLinePath(series.counts, plotW, plotH, {pad: 2, fromZero: true}), [series, plotW, plotH]);
+    const line = useMemo(() => arkLinePath(series.counts, plotW, plotH, {pad: 2, fromZero: true, max: stats.peak}), [series, stats.peak, plotW, plotH]);
     const number = (value: number) => value.toLocaleString(locale);
     const start = series.times[0] ?? history.asOf;
     const end = series.times[series.times.length - 1] ?? history.asOf;

@@ -168,7 +168,7 @@ export function buildGraphPane(options: {
     const BOTTOM = 18;
     const plotW = W - LEFT - 4;
     const plotH = H - BOTTOM - 6;
-    const line = arkLinePath(series.counts, plotW, plotH, {pad: 2, fromZero: true});
+    const line = arkLinePath(series.counts, plotW, plotH, {pad: 2, fromZero: true, max: stats.peak});
     const tone = arkLineTone(stats);
     const chart = svg("svg", {viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": fillArkWords(words.graphLabel, {animal: name, period: words.periods[period], start: number(stats.start), now: number(stats.now)})});
     Object.assign(chart.style, {display: "block", width: "100%", height: "auto", touchAction: "none"});

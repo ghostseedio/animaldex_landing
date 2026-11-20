@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import {arkCompactHistory, arkGraphDate, arkGraphWhen, arkKindSeries, arkLocalDayStart, arkPopulationRead, arkRebucketDays, arkLinePath, arkPeriodStart, arkRankByChange, arkSeriesSlice, arkSeriesStats, arkStatsChangeText, arkDayAt, ARK_DAY_MS, decodeArkHistory, readArkHistory} from "@/lib/ark-population-history";
+import {arkCompactHistory, arkGraphDate, arkGraphWhen, arkKindSeries, arkLocalDayStart, arkPeriodSeries, arkPopulationRead, arkRebucketDays, arkLinePath, arkPeriodStart, arkRankByChange, arkSeriesSlice, arkSeriesStats, arkHistoryLines, arkStatsChangeText, arkDayAt, ARK_DAY_MS, decodeArkHistory, readArkHistory} from "@/lib/ark-population-history";
 
 // A small record in the server's shape (test data only): t0 = 00:00, hour steps, read at 05:30.
 const H = 3_600_000;
@@ -327,4 +327,59 @@ test("the route's spans: 7 days and 31 days by the hour, the whole record by the
     assert.deepEqual(arkPopulationRead("month", now), {span: "month", bucket: "hour", since: "2026-10-20T10:00:00.000Z"});
     assert.deepEqual(arkPopulationRead("all", now), {span: "all", bucket: "day", since: null});
     assert.deepEqual(arkPopulationRead("tz=Asia/Jakarta", now), {span: "week", bucket: "hour", since: "2026-11-13T10:00:00.000Z"}, "anything else is the week: no zone reaches the server");
+});
+
+test("peak and low come from the finest steps, so they are the same in every time zone (a rise and fall inside one local day)", () => {
+    // Six arrive at 12:00Z on the 12th and five leave at 20:00Z: the count peaks at 6 for eight hours and is back to 1 by 20:00Z.
+    // Jakarta's days end at 17:00Z (6 at that midnight); Los Angeles' at 08:00Z (never 6): one samples the peak, the other does not.
+    const events = [
+        {at: at("2026-11-10T06:00:00Z"), delta: 1 as const},
+        ...Array.from({length: 5}, (_, i) => ({at: at("2026-11-12T12:00:00Z") + i * 60_000, delta: 1 as const})),
+        ...Array.from({length: 5}, (_, i) => ({at: at("2026-11-12T20:00:00Z") + i * 60_000, delta: -1 as const}))
+    ];
+    const window = {t0: at("2026-11-10T00:00:00Z"), asOf: at("2026-11-14T10:30:00Z"), firstAt: at("2026-11-10T06:00:00Z")};
+    const source = hourly(events, window);
+    const figures = (zone: string) => {
+        const days = arkRebucketDays(source, zone);
+        const line = arkHistoryLines(days, "all", ["zebra"], "both", "biggest").lines.get("zebra")!;
+        return {days, line};
+    };
+    const seen: Record<string, number> = {};
+    for (const zone of ["UTC", "Asia/Jakarta", "America/Los_Angeles", "Asia/Kolkata", "Pacific/Kiritimati", "Pacific/Pago_Pago", "Europe/Berlin"]) {
+        const {line} = figures(zone);
+        seen[zone] = Math.max(...line.series.counts);
+        assert.equal(line.stats.peak, 6, `${zone}: peak`);
+        assert.equal(line.stats.low, 0, `${zone}: low (before the record's first row)`);
+        assert.equal(line.stats.now, 1, `${zone}: now`);
+        assert.equal(line.stats.peakAt, at("2026-11-12T13:00:00Z"), `${zone}: peakAt is the first hour edge with the 6`);
+    }
+    // The drawn days do differ: a zone whose midnights fall between 12:00Z and 20:00Z never draws the 6.
+    assert.ok(Object.values(seen).some((n) => n < 6), "some zone's local days never sampled the peak");
+    assert.ok(Object.values(seen).some((n) => n === 6), "and another's did");
+    // A period that starts after the peak does not hold it (a period starting at the 12th's midnight does).
+    const jakarta = arkRebucketDays(source, "Asia/Jakarta");
+    const after = jakarta.edges!.findIndex((edge) => edge >= at("2026-11-13T00:00:00Z"));
+    assert.equal(arkSeriesStats(arkPeriodSeries(jakarta, "zebra", "both", after)).peak, 1);
+    assert.equal(arkSeriesStats(arkPeriodSeries(jakarta, "zebra", "both", after - 1)).peak, 6, "the day before still holds it");
+    // An answer that is not re-bucketed (the hours themselves) reads its own steps, as before.
+    assert.equal(arkSeriesStats(arkPeriodSeries(source, "zebra", "both", 0)).peak, 6);
+    assert.equal(source.fine, null);
+    assert.equal(jakarta.fine, source);
+});
+
+test("a kind that came and went inside one local day was there: its peak is not 0 and it is not 'none aboard' without ever having been", () => {
+    const events = [{at: at("2026-11-12T01:00:00Z"), delta: 1 as const}, {at: at("2026-11-12T02:00:00Z"), delta: -1 as const}];
+    const source = hourly(events, {t0: at("2026-11-11T00:00:00Z"), asOf: at("2026-11-13T09:30:00Z"), firstAt: at("2026-11-12T01:00:00Z")});
+    for (const zone of ["UTC", "America/Los_Angeles", "Asia/Jakarta"]) {
+        const days = arkRebucketDays(source, zone);
+        const stats = arkHistoryLines(days, "all", ["zebra"], "both", "biggest").lines.get("zebra")!.stats;
+        assert.equal(stats.peak, 1, `${zone}: it was aboard for an hour`);
+        assert.equal(stats.goneNow, true, `${zone}: and has none now`);
+    }
+});
+
+test("a chart is scaled to the peak it states", () => {
+    assert.equal(arkLinePath([0, 2, 1], 100, 20, {pad: 0, fromZero: true, max: 6}).max, 6);
+    assert.equal(arkLinePath([0, 2, 1], 100, 20, {pad: 0, fromZero: true}).max, 2);
+    assert.equal(arkLinePath([0, 7, 1], 100, 20, {pad: 0, fromZero: true, max: 6}).max, 7, "never below the points drawn");
 });
