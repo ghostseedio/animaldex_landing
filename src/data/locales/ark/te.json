@@ -406,7 +406,17 @@
             "crisis": "{animal}: అడవిలో ఇక కొన్ని మాత్రమే మిగిలాయి",
             "saved": "{animal}: అడవిలో ఇక ప్రమాదంలో లేదు",
             "wildGone": "{animal}: అడవిలో ఒక్కటి కూడా మిగల్లేదు",
-            "toCare": "{animal}: ఇప్పుడు జంతుప్రదర్శనశాల సంరక్షణలో"
+            "toCare": "{animal}: ఇప్పుడు జంతుప్రదర్శనశాల సంరక్షణలో",
+            "grownUp": "{aAnimal}: ఇప్పుడు పెద్దదైంది",
+            "grewOld": "{aAnimal}: ముసలితనం మొదలైంది",
+            "breedingSeason": "{animals}: సంతానోత్పత్తి కాలం మొదలైంది",
+            "carerLeft": "{aAnimal}: కొన్ని రోజులు సంరక్షకుడు లేరు",
+            "newCarer": "{aAnimal}: కొత్త సంరక్షకుడు బాధ్యత తీసుకున్నారు",
+            "grazedBare": "{animals}: మేత నేల పూర్తిగా మేయబడింది",
+            "regrown": "{animals}: మేత నేల మళ్లీ పచ్చగా",
+            "matedFirst": "{aAnimal}: మొదటి సంయోగం",
+            "foundMate": "{aAnimal}: {days} రోజుల తర్వాత జత దొరికింది",
+            "foundDung": "{aAnimal}: తాజా పేడ దొరికింది"
         },
         "card": {
             "now": "ఇప్పుడు: {activity}",
@@ -858,6 +868,7 @@
             "here": "ఇక్కడ {n}",
             "noneNearby": "దగ్గరలో లేవు",
             "noneAboard": "ఇక్కడ లేవు",
+            "dung": "పేడ",
             "keptFed": "సంరక్షకులు ఆహారం ఇస్తారు",
             "keptSafe": "వేటాడే జంతువుల నుండి సురక్షితం",
             "more": "మరో +{n}",

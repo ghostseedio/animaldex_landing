@@ -406,7 +406,17 @@
             "crisis": "{animal}: quedan pocos ejemplares en libertad",
             "saved": "{animal}: fuera de peligro en libertad",
             "wildGone": "{animal}: no queda ningún ejemplar en libertad",
-            "toCare": "{animal}: ahora bajo cuidado en el zoo"
+            "toCare": "{animal}: ahora bajo cuidado en el zoo",
+            "grownUp": "{aAnimal}: ya es adulto",
+            "grewOld": "{aAnimal}: empieza a envejecer",
+            "breedingSeason": "{animals}: comenzó la época de cría",
+            "carerLeft": "{aAnimal}: sin cuidador durante unos días",
+            "newCarer": "{aAnimal}: un nuevo cuidador se encarga",
+            "grazedBare": "{animals}: el pasto, agotado",
+            "regrown": "{animals}: el pasto vuelve a estar verde",
+            "matedFirst": "{aAnimal}: primer apareamiento",
+            "foundMate": "{aAnimal}: pareja encontrada tras {days} días",
+            "foundDung": "{aAnimal}: estiércol fresco encontrado"
         },
         "card": {
             "now": "Ahora: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} aquí",
             "noneNearby": "Ninguno cerca",
             "noneAboard": "Ninguno aquí",
+            "dung": "estiércol",
             "keptFed": "Lo alimentan sus cuidadores",
             "keptSafe": "A salvo de depredadores",
             "more": "+{n} más",

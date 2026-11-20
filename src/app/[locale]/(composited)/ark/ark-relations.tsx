@@ -148,6 +148,8 @@ export default function ArkRelationsPanel({animal, snapshot, scene, words, local
     const nearest = new Map<string, number>();
     for (const kind of ["predator", "prey"] as const) for (const t of value[kind].all) if (!nearest.has(t.kind)) nearest.set(t.kind, t.distance);
     const chain = arkFoodChainRows(links, value);
+    // Decision 434: a dung user's food, from its stored microhabitats (the scene's), unless the read already says it.
+    const dung = !kept && !chain.ambient.some((phrase) => /dung|droppings/i.test(phrase)) && Boolean(scene()?.eatsDung?.(slug, animal.zone));
     const tapKind = (kind: ArkFoodChainKind) => {
         setFocus(focusKind === kind.id ? null : {animal: animal.id, kind: kind.id});
         if (!on && kind.here) toggle(true);
@@ -210,7 +212,8 @@ export default function ArkRelationsPanel({animal, snapshot, scene, words, local
                             <dt className="font-semibold text-ink-200">{w.eats}</dt>
                             {capped("eats", chain.eats)}
                             {chain.ambient.map((phrase) => <dd key={phrase} className="rounded-full bg-white/[0.04] px-1.5 py-px italic text-ink-200">{phrase}</dd>)}
-                            {!chain.eats.length && !chain.ambient.length ? <dd className="text-ink-400">{w.noneAboard}</dd> : null}
+                            {dung ? <dd data-testid="ark-card-eats-dung" className="rounded-full bg-white/[0.04] px-1.5 py-px italic text-ink-200">{w.dung}</dd> : null}
+                            {!chain.eats.length && !chain.ambient.length && !dung ? <dd className="text-ink-400">{w.noneAboard}</dd> : null}
                         </div>
                         <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
                             <dt className="font-semibold text-ink-200">{w.eatenBy}</dt>

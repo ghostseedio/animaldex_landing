@@ -406,7 +406,17 @@
             "crisis": "{animal}: nog maar een paar in het wild",
             "saved": "{animal}: uit de gevarenzone in het wild",
             "wildGone": "{animal}: geen meer over in het wild",
-            "toCare": "{animal}: nu in de dierentuin verzorgd"
+            "toCare": "{animal}: nu in de dierentuin verzorgd",
+            "grownUp": "{aAnimal}: nu volwassen",
+            "grewOld": "{aAnimal}: wordt oud",
+            "breedingSeason": "{animals}: de paartijd is begonnen",
+            "carerLeft": "{aAnimal}: een paar dagen zonder verzorger",
+            "newCarer": "{aAnimal}: een nieuwe verzorger heeft het overgenomen",
+            "grazedBare": "{animals}: de weide is kaalgegraasd",
+            "regrown": "{animals}: de weide is weer groen",
+            "matedFirst": "{aAnimal}: eerste paring",
+            "foundMate": "{aAnimal}: na {days} dagen een partner gevonden",
+            "foundDung": "{aAnimal}: verse mest gevonden"
         },
         "card": {
             "now": "Nu: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} hier",
             "noneNearby": "Geen in de buurt",
             "noneAboard": "Geen hier",
+            "dung": "mest",
             "keptFed": "Gevoerd door verzorgers",
             "keptSafe": "Veilig voor roofdieren",
             "more": "+{n} meer",

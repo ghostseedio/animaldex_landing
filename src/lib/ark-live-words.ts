@@ -62,6 +62,17 @@ export type ArkLiveWords = {
     saved?: string;
     wildGone?: string;
     toCare?: string;
+    /** Rich events (decision 434, `src/ark-scene/live/rich-lines.ts`). */
+    grownUp?: string;
+    grewOld?: string;
+    breedingSeason?: string;
+    carerLeft?: string;
+    newCarer?: string;
+    grazedBare?: string;
+    regrown?: string;
+    matedFirst?: string;
+    foundMate?: string;
+    foundDung?: string;
 };
 
 /** English, as `en.json` has it: the fallback when a reader's words lack `live`. */
@@ -106,5 +117,15 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     crisis: "{animal}: only a few left in the wild",
     saved: "{animal}: out of danger in the wild",
     wildGone: "{animal}: none left in the wild",
-    toCare: "{animal}: now cared for in the zoo"
+    toCare: "{animal}: now cared for in the zoo",
+    grownUp: "{aAnimal} born aboard is now grown up",
+    grewOld: "{aAnimal} is growing old",
+    breedingSeason: "{animals}: the breeding season has begun",
+    carerLeft: "{aAnimal} is without its carer for a few days",
+    newCarer: "{aAnimal} has a new carer",
+    grazedBare: "{animals}: their grazing ground is bare",
+    regrown: "{animals}: their grazing ground is green again",
+    matedFirst: "{aAnimal} mated for the first time",
+    foundMate: "{aAnimal} found a mate after {days} days",
+    foundDung: "{aAnimal} found fresh dung"
 };

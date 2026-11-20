@@ -406,7 +406,17 @@
             "crisis": "{animal}: wamebaki wachache tu porini",
             "saved": "{animal}: hawako hatarini tena porini",
             "wildGone": "{animal}: hakuna hata mmoja porini",
-            "toCare": "{animal}: sasa anatunzwa katika bustani ya wanyama"
+            "toCare": "{animal}: sasa anatunzwa katika bustani ya wanyama",
+            "grownUp": "{aAnimal}: sasa amekomaa",
+            "grewOld": "{aAnimal}: anaanza kuzeeka",
+            "breedingSeason": "{animals}: msimu wa kuzaliana umeanza",
+            "carerLeft": "{aAnimal}: bila mlezi kwa siku chache",
+            "newCarer": "{aAnimal}: mlezi mpya amechukua jukumu",
+            "grazedBare": "{animals}: malisho yameliwa yote",
+            "regrown": "{animals}: malisho ni ya kijani tena",
+            "matedFirst": "{aAnimal}: kujamiiana kwa mara ya kwanza",
+            "foundMate": "{aAnimal}: amepata mwenzi baada ya siku {days}",
+            "foundDung": "{aAnimal}: amepata kinyesi kipya"
         },
         "card": {
             "now": "Sasa: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} hapa",
             "noneNearby": "Hakuna karibu",
             "noneAboard": "Hakuna hapa",
+            "dung": "kinyesi cha wanyama",
             "keptFed": "Hulishwa na walezi",
             "keptSafe": "Salama dhidi ya wawindaji",
             "more": "+{n} zaidi",

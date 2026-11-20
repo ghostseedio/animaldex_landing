@@ -406,7 +406,17 @@
             "crisis": "{animal}: 야생에 몇 마리만 남았어요",
             "saved": "{animal}: 야생에서 위기를 벗어났어요",
             "wildGone": "{animal}: 야생에는 한 마리도 남지 않았어요",
-            "toCare": "{animal}: 지금은 동물원에서 보살핌을 받고 있어요"
+            "toCare": "{animal}: 지금은 동물원에서 보살핌을 받고 있어요",
+            "grownUp": "{aAnimal}: 이제 다 자랐어요",
+            "grewOld": "{aAnimal}: 나이가 들기 시작했어요",
+            "breedingSeason": "{animals}: 번식기가 시작됐어요",
+            "carerLeft": "{aAnimal}: 며칠 동안 돌봐 줄 사람이 없어요",
+            "newCarer": "{aAnimal}: 새 사육사가 맡았어요",
+            "grazedBare": "{animals}: 풀밭을 다 뜯어 먹었어요",
+            "regrown": "{animals}: 풀밭이 다시 푸르러졌어요",
+            "matedFirst": "{aAnimal}: 첫 짝짓기",
+            "foundMate": "{aAnimal}: {days}일 만에 짝을 찾았어요",
+            "foundDung": "{aAnimal}: 신선한 똥을 찾았어요"
         },
         "card": {
             "now": "지금: {activity}",
@@ -858,6 +868,7 @@
             "here": "여기 {n}",
             "noneNearby": "근처에 없음",
             "noneAboard": "여기에 없음",
+            "dung": "똥",
             "keptFed": "사육사가 먹이를 줌",
             "keptSafe": "포식자로부터 안전",
             "more": "외 {n}마리",

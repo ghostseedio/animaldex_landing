@@ -406,7 +406,17 @@
             "crisis": "{animal}: в дикой природе осталось совсем немного",
             "saved": "{animal}: в дикой природе вне опасности",
             "wildGone": "{animal}: в дикой природе не осталось ни одной особи",
-            "toCare": "{animal}: теперь под опекой зоопарка"
+            "toCare": "{animal}: теперь под опекой зоопарка",
+            "grownUp": "{aAnimal}: теперь взрослая особь",
+            "grewOld": "{aAnimal}: начинается старость",
+            "breedingSeason": "{animals}: начался сезон размножения",
+            "carerLeft": "{aAnimal}: несколько дней без смотрителя",
+            "newCarer": "{aAnimal}: заботу взял новый смотритель",
+            "grazedBare": "{animals}: пастбище выедено дочиста",
+            "regrown": "{animals}: пастбище снова зелёное",
+            "matedFirst": "{aAnimal}: первое спаривание",
+            "foundMate": "{aAnimal}: пара найдена спустя {days} дн.",
+            "foundDung": "{aAnimal}: найден свежий навоз"
         },
         "card": {
             "now": "Сейчас: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} здесь",
             "noneNearby": "Рядом нет",
             "noneAboard": "Здесь нет",
+            "dung": "навоз",
             "keptFed": "Кормят смотрители",
             "keptSafe": "В безопасности от хищников",
             "more": "Ещё +{n}",

@@ -406,7 +406,17 @@
             "crisis": "{animal}: tinggal sedikit di alam liar",
             "saved": "{animal}: tidak lagi terancam di alam liar",
             "wildGone": "{animal}: tiada lagi di alam liar",
-            "toCare": "{animal}: kini dijaga di zoo"
+            "toCare": "{animal}: kini dijaga di zoo",
+            "grownUp": "{aAnimal}: kini dewasa",
+            "grewOld": "{aAnimal}: mula meningkat tua",
+            "breedingSeason": "{animals}: musim mengawan telah bermula",
+            "carerLeft": "{aAnimal}: tanpa penjaga selama beberapa hari",
+            "newCarer": "{aAnimal}: penjaga baharu telah mengambil alih",
+            "grazedBare": "{animals}: padang ragut habis diragut",
+            "regrown": "{animals}: padang ragut hijau semula",
+            "matedFirst": "{aAnimal}: mengawan buat kali pertama",
+            "foundMate": "{aAnimal}: menemui pasangan selepas {days} hari",
+            "foundDung": "{aAnimal}: menemui tahi segar"
         },
         "card": {
             "now": "Sekarang: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} di sini",
             "noneNearby": "Tiada berdekatan",
             "noneAboard": "Tiada di sini",
+            "dung": "tahi haiwan",
             "keptFed": "Diberi makan penjaganya",
             "keptSafe": "Selamat daripada pemangsa",
             "more": "+{n} lagi",

@@ -406,7 +406,17 @@
             "crisis": "{animal}: أعداد قليلة جدًا في البرية",
             "saved": "{animal}: خارج دائرة الخطر في البرية",
             "wildGone": "{animal}: لم يتبقَّ أي فرد في البرية",
-            "toCare": "{animal}: في رعاية حديقة الحيوان الآن"
+            "toCare": "{animal}: في رعاية حديقة الحيوان الآن",
+            "grownUp": "{aAnimal}: بلغ سن الرشد الآن",
+            "grewOld": "{aAnimal}: بدأ يشيخ",
+            "breedingSeason": "{animals}: بدأ موسم التزاوج",
+            "carerLeft": "{aAnimal}: بلا راعٍ لبضعة أيام",
+            "newCarer": "{aAnimal}: تولّى راعٍ جديد رعايته",
+            "grazedBare": "{animals}: المرعى صار جرداء",
+            "regrown": "{animals}: المرعى أخضر من جديد",
+            "matedFirst": "{aAnimal}: التزاوج لأول مرة",
+            "foundMate": "{aAnimal}: وجد شريكًا بعد {days} يومًا",
+            "foundDung": "{aAnimal}: وجد روثًا طازجًا"
         },
         "card": {
             "now": "الآن: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} هنا",
             "noneNearby": "لا شيء قريب",
             "noneAboard": "لا شيء هنا",
+            "dung": "الروث",
             "keptFed": "يطعمه القائمون على رعايته",
             "keptSafe": "في أمان من المفترسات",
             "more": "+{n} آخرين",

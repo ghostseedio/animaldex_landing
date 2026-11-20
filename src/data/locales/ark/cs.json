@@ -406,7 +406,17 @@
             "crisis": "{animal}: ve volné přírodě zbývá jen pár jedinců",
             "saved": "{animal}: ve volné přírodě mimo ohrožení",
             "wildGone": "{animal}: ve volné přírodě už nezbyl žádný jedinec",
-            "toCare": "{animal}: nyní v péči zoo"
+            "toCare": "{animal}: nyní v péči zoo",
+            "grownUp": "{aAnimal}: už dospělost",
+            "grewOld": "{aAnimal}: začíná stárnout",
+            "breedingSeason": "{animals}: začalo období rozmnožování",
+            "carerLeft": "{aAnimal}: několik dní bez ošetřovatele",
+            "newCarer": "{aAnimal}: nový ošetřovatel převzal péči",
+            "grazedBare": "{animals}: pastva spasená do holé země",
+            "regrown": "{animals}: pastva je znovu zelená",
+            "matedFirst": "{aAnimal}: první páření",
+            "foundMate": "{aAnimal}: partner nalezen po {days} dnech",
+            "foundDung": "{aAnimal}: nalezen čerstvý trus"
         },
         "card": {
             "now": "Teď: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} zde",
             "noneNearby": "Žádný poblíž",
             "noneAboard": "Zde žádný",
+            "dung": "trus",
             "keptFed": "Krmí ho chovatelé",
             "keptSafe": "V bezpečí před predátory",
             "more": "+{n} dalších",

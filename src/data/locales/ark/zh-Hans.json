@@ -406,7 +406,17 @@
             "crisis": "{animal}：野外只剩下少数",
             "saved": "{animal}：在野外已脱离危险",
             "wildGone": "{animal}：野外已没有了",
-            "toCare": "{animal}：现在在动物园接受照料"
+            "toCare": "{animal}：现在在动物园接受照料",
+            "grownUp": "{aAnimal}: 已经长大成年",
+            "grewOld": "{aAnimal}: 开始变老",
+            "breedingSeason": "{animals}: 繁殖季节开始了",
+            "carerLeft": "{aAnimal}: 几天内没有照料者",
+            "newCarer": "{aAnimal}: 新的照料者接手了",
+            "grazedBare": "{animals}: 草场被啃光了",
+            "regrown": "{animals}: 草场又绿了",
+            "matedFirst": "{aAnimal}: 第一次交配",
+            "foundMate": "{aAnimal}: 等了 {days} 天终于找到伴侣",
+            "foundDung": "{aAnimal}: 找到了新鲜的粪便"
         },
         "card": {
             "now": "现在：{activity}",
@@ -858,6 +868,7 @@
             "here": "此处 {n}",
             "noneNearby": "附近没有",
             "noneAboard": "此处没有",
+            "dung": "粪便",
             "keptFed": "由饲养员喂养",
             "keptSafe": "免受捕食者威胁",
             "more": "还有 {n} 只",

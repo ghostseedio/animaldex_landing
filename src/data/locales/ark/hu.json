@@ -406,7 +406,17 @@
             "crisis": "{animal}: a vadonban már csak néhány maradt",
             "saved": "{animal}: a vadonban már nincs veszélyben",
             "wildGone": "{animal}: a vadonban már egy sem maradt",
-            "toCare": "{animal}: most az állatkert gondozásában"
+            "toCare": "{animal}: most az állatkert gondozásában",
+            "grownUp": "{aAnimal}: már felnőtt",
+            "grewOld": "{aAnimal}: kezd megöregedni",
+            "breedingSeason": "{animals}: elkezdődött a szaporodási időszak",
+            "carerLeft": "{aAnimal}: néhány napig gondozó nélkül",
+            "newCarer": "{aAnimal}: új gondozó vette át",
+            "grazedBare": "{animals}: a legelő kopárra legelve",
+            "regrown": "{animals}: a legelő újra zöld",
+            "matedFirst": "{aAnimal}: első párzás",
+            "foundMate": "{aAnimal}: {days} nap után talált párt",
+            "foundDung": "{aAnimal}: friss trágyát talált"
         },
         "card": {
             "now": "Most: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} itt",
             "noneNearby": "Nincs a közelben",
             "noneAboard": "Itt nincs",
+            "dung": "trágya",
             "keptFed": "A gondozói etetik",
             "keptSafe": "Védve a ragadozóktól",
             "more": "+{n} további",

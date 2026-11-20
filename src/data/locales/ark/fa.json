@@ -406,7 +406,17 @@
             "crisis": "{animal}: در طبیعت فقط چند نمونه باقی مانده است",
             "saved": "{animal}: در طبیعت دیگر در خطر نیست",
             "wildGone": "{animal}: در طبیعت دیگر نمونه‌ای باقی نمانده است",
-            "toCare": "{animal}: اکنون در مراقبت باغ‌وحش است"
+            "toCare": "{animal}: اکنون در مراقبت باغ‌وحش است",
+            "grownUp": "{aAnimal}: اکنون بالغ شده",
+            "grewOld": "{aAnimal}: کم‌کم پیر می‌شود",
+            "breedingSeason": "{animals}: فصل جفت‌گیری آغاز شد",
+            "carerLeft": "{aAnimal}: چند روز بدون مراقب",
+            "newCarer": "{aAnimal}: مراقب تازه‌ای کار را به دست گرفت",
+            "grazedBare": "{animals}: چراگاه یکسره چریده شد",
+            "regrown": "{animals}: چراگاه دوباره سبز شد",
+            "matedFirst": "{aAnimal}: نخستین جفت‌گیری",
+            "foundMate": "{aAnimal}: پس از {days} روز جفت پیدا کرد",
+            "foundDung": "{aAnimal}: سرگین تازه پیدا کرد"
         },
         "card": {
             "now": "اکنون: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} اینجا",
             "noneNearby": "هیچ‌کدام نزدیک نیست",
             "noneAboard": "اینجا هیچ‌کدام نیست",
+            "dung": "سرگین",
             "keptFed": "نگهبانانش غذایش را می‌دهند",
             "keptSafe": "در امان از شکارچیان",
             "more": "+{n} مورد دیگر",

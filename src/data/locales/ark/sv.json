@@ -406,7 +406,17 @@
             "crisis": "{animal}: bara ett fåtal kvar i det fria",
             "saved": "{animal}: utom fara i det fria",
             "wildGone": "{animal}: inga kvar i det fria",
-            "toCare": "{animal}: nu i djurparkens vård"
+            "toCare": "{animal}: nu i djurparkens vård",
+            "grownUp": "{aAnimal}: nu vuxen",
+            "grewOld": "{aAnimal}: börjar bli gammal",
+            "breedingSeason": "{animals}: parningstiden har börjat",
+            "carerLeft": "{aAnimal}: utan skötare i några dagar",
+            "newCarer": "{aAnimal}: en ny skötare har tagit över",
+            "grazedBare": "{animals}: betet är nedbetat",
+            "regrown": "{animals}: betet är grönt igen",
+            "matedFirst": "{aAnimal}: första parningen",
+            "foundMate": "{aAnimal}: hittade en partner efter {days} dagar",
+            "foundDung": "{aAnimal}: hittade färsk spillning"
         },
         "card": {
             "now": "Nu: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} här",
             "noneNearby": "Inga i närheten",
             "noneAboard": "Inga här",
+            "dung": "spillning",
             "keptFed": "Matas av skötarna",
             "keptSafe": "Säker från rovdjur",
             "more": "+{n} till",

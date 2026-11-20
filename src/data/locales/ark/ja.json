@@ -406,7 +406,17 @@
             "crisis": "{animal}：野生に残るのはわずか",
             "saved": "{animal}：野生で危機を脱しました",
             "wildGone": "{animal}：野生には残っていません",
-            "toCare": "{animal}：今は動物園で世話を受けています"
+            "toCare": "{animal}：今は動物園で世話を受けています",
+            "grownUp": "{aAnimal}: おとなになりました",
+            "grewOld": "{aAnimal}: 年をとりはじめました",
+            "breedingSeason": "{animals}: 繁殖期が始まりました",
+            "carerLeft": "{aAnimal}: 数日間、世話をする人がいません",
+            "newCarer": "{aAnimal}: 新しい世話係が担当になりました",
+            "grazedBare": "{animals}: 草地を食べ尽くしました",
+            "regrown": "{animals}: 草地がまた緑になりました",
+            "matedFirst": "{aAnimal}: 初めての交尾",
+            "foundMate": "{aAnimal}: {days}日待って相手が見つかりました",
+            "foundDung": "{aAnimal}: 新しいふんを見つけました"
         },
         "card": {
             "now": "いま：{activity}",
@@ -858,6 +868,7 @@
             "here": "ここに{n}",
             "noneNearby": "近くにいない",
             "noneAboard": "ここにはいない",
+            "dung": "ふん",
             "keptFed": "飼育員が餌をあげている",
             "keptSafe": "天敵から安全",
             "more": "ほか{n}",
