@@ -16,6 +16,9 @@ import {canalBridges} from "@/ark-scene/islands/town/canal-bridges";
 import {segmentDistance, inBox, inPoly, polyEdgeDistance} from "@/ark-scene/islands/town/geom";
 import {sampleTownGround} from "@/ark-scene/islands/town/ground";
 import {townGates} from "@/ark-scene/islands/town/obstacles";
+import {townColliderList} from "@/ark-scene/islands/town/colliders";
+import {townHeight} from "@/ark-scene/islands/town/ground";
+import {RAIL_CLEAR} from "@/ark-scene/collide/colliders";
 import {placeTownAnimals} from "@/ark-scene/islands/town/placement";
 import {CANAL, HARBOUR_ARMS, HARBOUR_BASIN, MILLPOND, townPlan} from "@/ark-scene/islands/town/plan";
 import {homeWayFrom, partCount, reachPart, townWayOf, wayOf} from "@/ark-scene/positions/reach";
@@ -155,6 +158,30 @@ test("every barrier line is on the mask with who gets through it (the town lane'
         }
     }
     assert.ok(lines > 500, `${lines} barrier segments checked`);
+});
+
+test("the mask's barriers are the scene's colliders: a small body slips through exactly the fences the motion pass lets it under or through", () => {
+    // The colliders the animals really meet (`colliders.ts` townColliderList): a rail fence from RAIL_CLEAR up, a hedge or picket with a gap, a wall, a zoo fence or a net solid.
+    const gates = townGates(plan);
+    const kindOf = new Map(reachObstacles().filter((o) => o.kind === "barrier").map((o) => [o.id, o.kind === "barrier" ? o.barrier : ""] as [string, string]));
+    let checked = 0;
+    for (const c of townColliderList(plan.zoo.slots.map((z) => z.id), {x: 0, z: 0})) {
+        if (c.shape !== "segment" || c.kind !== "fence" || !c.id.startsWith("town:")) continue;
+        const barrier = kindOf.get(c.id.slice(5, c.id.lastIndexOf(":")));
+        // (The declared `passable` of a pig's wire says small bodies pass; the colliders make it solid: the one place the two differ, and it only fences the country's pigs.)
+        if (!barrier || barrier === "pig_wire") continue;
+        const low = Math.min(townHeight(c.ax, c.az), townHeight(c.bx, c.bz));
+        const slips = c.gap > 0 || c.y0 >= low + RAIL_CLEAR - 1e-6;
+        const near: number[] = [];
+        for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) near.push(at(c.cx + di * mask.cell, c.cz + dj * mask.cell));
+        if ((near[4] & 3) !== 0 || (near[4] & DECK) !== 0 || gates.some((g) => Math.hypot(g.x - c.cx, g.z - c.cz) < 2.6)) continue;
+        const bars = near.filter((n) => n & BAR);
+        if (!bars.length || plan.buildings.some((bd) => inBox(bd.at, c.cx, c.cz, 2))) continue;
+        checked++;
+        if (slips) assert.ok(bars.some((n) => n & SMALL), `${c.id} (${barrier}) lets a small body through in the scene's colliders but not on the mask`);
+        else assert.ok(bars.some((n) => !(n & SMALL)), `${c.id} (${barrier}) stops a small body in the scene's colliders: the mask lets one through`);
+    }
+    assert.ok(checked > 300, `${checked} colliders checked`);
 });
 
 test("the gates are gaps, the bridges are decks over the canal and the breakwaters are walkways over the sea", () => {
