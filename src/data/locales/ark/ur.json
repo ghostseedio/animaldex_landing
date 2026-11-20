@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} پوتے نواسے",
             "lineageLaterOne": "1 دور کی اولاد",
             "lineageLaterOther": "{count} دور کی اولادیں",
-            "lineageLiving": "{count} ابھی زندہ"
+            "lineageLiving": "{count} ابھی زندہ",
+            "power": {
+                "working": "اس کی طاقت: {power} — کام کر رہی ہے",
+                "partly": "اس کی طاقت: {power} — جزوی طور پر کام کر رہی ہے",
+                "earn": "اس کی طاقت حاصل کریں تاکہ وہ کام کرے",
+                "camouflage": "بھیس",
+                "speed": "رفتار",
+                "armour": "زرہ",
+                "warning": "انتباہی رنگ",
+                "vigilance": "چوکسی",
+                "group": "گروہی دفاع",
+                "hiding": "چھپنا",
+                "climb": "اوپر کی طرف فرار",
+                "mimicry": "نقالی"
+            }
         },
         "replay": {
             "title": "جب آپ موجود نہیں تھے",

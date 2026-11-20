@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} ਪੋਤੇ-ਪੋਤੀਆਂ",
             "lineageLaterOne": "ਅਗਲੀ ਪੀੜ੍ਹੀ ਦਾ 1 ਵੰਸ਼ਜ",
             "lineageLaterOther": "ਅਗਲੀਆਂ ਪੀੜ੍ਹੀਆਂ ਦੇ {count} ਵੰਸ਼ਜ",
-            "lineageLiving": "ਇਸ ਵੇਲੇ {count} ਜਿਊਂਦੇ"
+            "lineageLiving": "ਇਸ ਵੇਲੇ {count} ਜਿਊਂਦੇ",
+            "power": {
+                "working": "ਇਸ ਦੀ ਸ਼ਕਤੀ: {power} — ਕੰਮ ਕਰ ਰਹੀ ਹੈ",
+                "partly": "ਇਸ ਦੀ ਸ਼ਕਤੀ: {power} — ਅੰਸ਼ਕ ਤੌਰ 'ਤੇ ਕੰਮ ਕਰ ਰਹੀ ਹੈ",
+                "earn": "ਇਸ ਦੀ ਸ਼ਕਤੀ ਹਾਸਲ ਕਰੋ ਤਾਂ ਜੋ ਇਹ ਕੰਮ ਕਰੇ",
+                "camouflage": "ਭੇਸ",
+                "speed": "ਰਫ਼ਤਾਰ",
+                "armour": "ਕਵਚ",
+                "warning": "ਚੇਤਾਵਨੀ ਦੇ ਰੰਗ",
+                "vigilance": "ਚੌਕਸੀ",
+                "group": "ਸਮੂਹਿਕ ਬਚਾਅ",
+                "hiding": "ਲੁਕਣਾ",
+                "climb": "ਉੱਪਰ ਵੱਲ ਭੱਜਣਾ",
+                "mimicry": "ਨਕਲ"
+            }
         },
         "replay": {
             "title": "ਜਦੋਂ ਤੁਸੀਂ ਦੂਰ ਸੀ",

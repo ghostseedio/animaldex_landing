@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} barnebarn",
             "lineageLaterOne": "1 senere etterkommer",
             "lineageLaterOther": "{count} senere etterkommere",
-            "lineageLiving": "{count} lever nå"
+            "lineageLiving": "{count} lever nå",
+            "power": {
+                "working": "Kraften dets: {power} — virker",
+                "partly": "Kraften dets: {power} — virker delvis",
+                "earn": "Gjør deg fortjent til Kraften dets, så virker den",
+                "camouflage": "kamuflasje",
+                "speed": "fart",
+                "armour": "panser",
+                "warning": "varselfarger",
+                "vigilance": "årvåkenhet",
+                "group": "forsvar i flokk",
+                "hiding": "gjemmer seg",
+                "climb": "flukt oppover",
+                "mimicry": "mimikry"
+            }
         },
         "replay": {
             "title": "Mens du var borte",

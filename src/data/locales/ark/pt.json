@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} netos",
             "lineageLaterOne": "1 descendente posterior",
             "lineageLaterOther": "{count} descendentes posteriores",
-            "lineageLiving": "{count} vivos agora"
+            "lineageLiving": "{count} vivos agora",
+            "power": {
+                "working": "O Poder dele: {power} — funcionando",
+                "partly": "O Poder dele: {power} — funcionando em parte",
+                "earn": "Conquiste o Poder dele para que funcione",
+                "camouflage": "camuflagem",
+                "speed": "velocidade",
+                "armour": "couraça",
+                "warning": "cores de aviso",
+                "vigilance": "vigilância",
+                "group": "defesa em grupo",
+                "hiding": "esconder-se",
+                "climb": "fuga para cima",
+                "mimicry": "mimetismo"
+            }
         },
         "replay": {
             "title": "Enquanto você estava fora",

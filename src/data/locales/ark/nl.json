@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} kleinkinderen",
             "lineageLaterOne": "1 latere nakomeling",
             "lineageLaterOther": "{count} latere nakomelingen",
-            "lineageLiving": "{count} nu in leven"
+            "lineageLiving": "{count} nu in leven",
+            "power": {
+                "working": "Zijn Kracht: {power} — werkt",
+                "partly": "Zijn Kracht: {power} — werkt deels",
+                "earn": "Verdien zijn Kracht om hem te laten werken",
+                "camouflage": "camouflage",
+                "speed": "snelheid",
+                "armour": "pantser",
+                "warning": "waarschuwingskleuren",
+                "vigilance": "waakzaamheid",
+                "group": "groepsverdediging",
+                "hiding": "verstoppen",
+                "climb": "vlucht omhoog",
+                "mimicry": "mimicry"
+            }
         },
         "replay": {
             "title": "Terwijl je weg was",

@@ -260,7 +260,21 @@
             "lineageGrandOther": "онуків: {count}",
             "lineageLaterOne": "1 далекий нащадок",
             "lineageLaterOther": "далеких нащадків: {count}",
-            "lineageLiving": "живі зараз: {count}"
+            "lineageLiving": "живі зараз: {count}",
+            "power": {
+                "working": "Його Сила: {power} — діє",
+                "partly": "Його Сила: {power} — діє частково",
+                "earn": "Здобудь його Силу, щоб вона діяла",
+                "camouflage": "маскування",
+                "speed": "швидкість",
+                "armour": "броня",
+                "warning": "попереджувальне забарвлення",
+                "vigilance": "пильність",
+                "group": "груповий захист",
+                "hiding": "схованка",
+                "climb": "втеча вгору",
+                "mimicry": "мімікрія"
+            }
         },
         "replay": {
             "title": "Поки вас не було",

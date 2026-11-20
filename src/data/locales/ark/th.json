@@ -260,7 +260,21 @@
             "lineageGrandOther": "หลาน {count} ตัว",
             "lineageLaterOne": "ลูกหลานรุ่นหลัง 1 ตัว",
             "lineageLaterOther": "ลูกหลานรุ่นหลัง {count} ตัว",
-            "lineageLiving": "ยังมีชีวิตอยู่ {count} ตัว"
+            "lineageLiving": "ยังมีชีวิตอยู่ {count} ตัว",
+            "power": {
+                "working": "พลังของมัน: {power} — ได้ผล",
+                "partly": "พลังของมัน: {power} — ได้ผลบางส่วน",
+                "earn": "ได้รับพลังของมันเพื่อให้ได้ผล",
+                "camouflage": "การพรางตัว",
+                "speed": "ความเร็ว",
+                "armour": "เกราะ",
+                "warning": "สีเตือนภัย",
+                "vigilance": "การเฝ้าระวัง",
+                "group": "การป้องกันเป็นกลุ่ม",
+                "hiding": "การซ่อนตัว",
+                "climb": "การหนีขึ้นที่สูง",
+                "mimicry": "การเลียนแบบ"
+            }
         },
         "replay": {
             "title": "ระหว่างที่คุณไม่อยู่",

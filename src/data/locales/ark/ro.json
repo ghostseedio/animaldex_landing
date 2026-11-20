@@ -260,7 +260,21 @@
             "lineageGrandOther": "nepoți: {count}",
             "lineageLaterOne": "1 urmaș mai îndepărtat",
             "lineageLaterOther": "urmași mai îndepărtați: {count}",
-            "lineageLiving": "în viață acum: {count}"
+            "lineageLiving": "în viață acum: {count}",
+            "power": {
+                "working": "Puterea lui: {power} — funcționează",
+                "partly": "Puterea lui: {power} — funcționează parțial",
+                "earn": "Câștigă-i Puterea ca să funcționeze",
+                "camouflage": "camuflaj",
+                "speed": "viteză",
+                "armour": "armură",
+                "warning": "culori de avertizare",
+                "vigilance": "vigilență",
+                "group": "apărare în grup",
+                "hiding": "ascundere",
+                "climb": "fugă în sus",
+                "mimicry": "mimetism"
+            }
         },
         "replay": {
             "title": "Cât timp ai lipsit",

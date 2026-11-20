@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} εγγόνια",
             "lineageLaterOne": "1 μεταγενέστερος απόγονος",
             "lineageLaterOther": "{count} μεταγενέστεροι απόγονοι",
-            "lineageLiving": "{count} ζωντανά τώρα"
+            "lineageLiving": "{count} ζωντανά τώρα",
+            "power": {
+                "working": "Η Δύναμή του: {power} — λειτουργεί",
+                "partly": "Η Δύναμή του: {power} — λειτουργεί εν μέρει",
+                "earn": "Κέρδισε τη Δύναμή του για να λειτουργήσει",
+                "camouflage": "καμουφλάζ",
+                "speed": "ταχύτητα",
+                "armour": "θωράκιση",
+                "warning": "προειδοποιητικά χρώματα",
+                "vigilance": "επαγρύπνηση",
+                "group": "ομαδική άμυνα",
+                "hiding": "κρύψιμο",
+                "climb": "διαφυγή προς τα πάνω",
+                "mimicry": "μιμητισμός"
+            }
         },
         "replay": {
             "title": "Όσο έλειπες",

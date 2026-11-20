@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} cucu",
             "lineageLaterOne": "1 keturunan lanjut",
             "lineageLaterOther": "{count} keturunan lanjut",
-            "lineageLiving": "{count} masih hidup"
+            "lineageLiving": "{count} masih hidup",
+            "power": {
+                "working": "Kuasanya: {power} — berfungsi",
+                "partly": "Kuasanya: {power} — berfungsi sebahagian",
+                "earn": "Raih Kuasanya supaya ia berfungsi",
+                "camouflage": "penyamaran",
+                "speed": "kelajuan",
+                "armour": "perisai",
+                "warning": "warna amaran",
+                "vigilance": "kewaspadaan",
+                "group": "pertahanan berkumpulan",
+                "hiding": "bersembunyi",
+                "climb": "melarikan diri ke atas",
+                "mimicry": "mimikri"
+            }
         },
         "replay": {
             "title": "Semasa anda tiada",

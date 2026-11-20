@@ -260,7 +260,21 @@
             "lineageGrandOther": "{count} apo",
             "lineageLaterOne": "1 susunod na inapo",
             "lineageLaterOther": "{count} susunod na inapo",
-            "lineageLiving": "{count} ang buhay ngayon"
+            "lineageLiving": "{count} ang buhay ngayon",
+            "power": {
+                "working": "Ang Kapangyarihan nito: {power} — gumagana",
+                "partly": "Ang Kapangyarihan nito: {power} — bahagyang gumagana",
+                "earn": "Kamtin ang Kapangyarihan nito para gumana",
+                "camouflage": "pagbabalatkayo",
+                "speed": "bilis",
+                "armour": "baluti",
+                "warning": "mga kulay-babala",
+                "vigilance": "pagbabantay",
+                "group": "depensa ng grupo",
+                "hiding": "pagtatago",
+                "climb": "pagtakas pataas",
+                "mimicry": "panggagaya"
+            }
         },
         "replay": {
             "title": "Habang wala ka",
