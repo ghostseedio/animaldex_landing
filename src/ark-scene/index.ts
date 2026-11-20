@@ -9774,6 +9774,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         setCarers: (record) => {
             carersOn = record !== null || (globalThis as {__arkCarers?: boolean}).__arkCarers === true; // decision 418
         },
+        carersOn: () => carersOn,
         setHumanBonds: (raw) => townHumans.setBonds(decodeHumanBonds(raw)), // p5 (humans, couples)
         setDormant: (kinds) => {
             dormantKinds = new Set(kinds);

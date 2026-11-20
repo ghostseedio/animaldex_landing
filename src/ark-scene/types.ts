@@ -610,6 +610,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     setForestry?: (record: {fromDay?: unknown; v?: unknown} | null) => void;
     /** Carers (decision 418): the server's carers (`/api/ark/carers`: `{v, keepers, farmers, homes}`, or null when off). */
     setCarers?: (record: {v?: unknown} | null) => void;
+    /** Carers (decision 418): whether the carers are drawn (the server's switch, or `?carers=1`): the card's carer line follows it. */
+    carersOn?: () => boolean;
     /** p5 (humans): the town's couples and children (`/api/ark/human-bonds`: the server's rows, decoded by the scene). */
     setHumanBonds?: (raw: unknown) => void;
     /** The newest real hunt or meal under way on the island (the page's marker), or null. */
