@@ -1,10 +1,10 @@
 {
  "about": "Every young-care row of the catalogue (2026-11-16) with what the scene does with it today (scripts/ark-young-ways.mts): built, already (an earlier pass), eggs (ark-mating-shown), or held with its reason.",
  "counts": {
-  "built": 84,
+  "built": 77,
   "eggs": 50,
-  "part": 17,
-  "held": 56,
+  "part": 15,
+  "held": 65,
   "already": 29
  },
  "rows": [
@@ -855,8 +855,8 @@
    "quote": "The caterpillars feed together, then separate as they grow",
    "how": "existing_recipe",
    "effort": "S",
-   "status": "built",
-   "what": "cluster"
+   "status": "held",
+   "what": "cluster: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in"
   },
   {
    "id": "5f66ce2b-840c-4f56-8502-4338d5dfa8bd",
@@ -915,8 +915,8 @@
    "quote": "The caterpillars live together in a silk web, splitting up as they grow",
    "how": "prop",
    "effort": "M",
-   "status": "part",
-   "what": "cluster: the caterpillars clump; the silk web is not drawn"
+   "status": "held",
+   "what": "cluster: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in"
   },
   {
    "id": "c95c412f-7585-4d4f-874b-6f28f4eae453",
@@ -1935,8 +1935,8 @@
    "quote": "The hatched spiderlings, often more than a hundred, climb onto her back and ride there for roughly a week before dispersing.",
    "how": "existing_block",
    "effort": "S",
-   "status": "built",
-   "what": "ride"
+   "status": "held",
+   "what": "ride: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in"
   },
   {
    "id": "6326e253-4515-4aff-ab1f-3964f0b4aa2a",
@@ -2005,8 +2005,8 @@
    "quote": "Females give birth to live young and carry them on the back until they molt and disperse.",
    "how": "existing_block",
    "effort": "S",
-   "status": "built",
-   "what": "ride"
+   "status": "held",
+   "what": "ride: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in"
   },
   {
    "id": "d211e72b-4e22-45a9-b381-27c9bff94098",
@@ -2025,8 +2025,8 @@
    "quote": "Hatchlings climb onto her back and ride there until they moult, then disperse.",
    "how": "existing_block",
    "effort": "S",
-   "status": "built",
-   "what": "ride"
+   "status": "held",
+   "what": "ride: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in"
   },
   {
    "id": "ce532c50-c5a9-4ab4-b0b0-982027943d8d",
@@ -2035,8 +2035,8 @@
    "quote": "The white newborns climb onto their mother's back and ride there until their first moult, then stay near her in the burrow for some time.",
    "how": "existing_block",
    "effort": "S",
-   "status": "built",
-   "what": "ride"
+   "status": "held",
+   "what": "ride: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in"
   },
   {
    "id": "aea8821a-8d07-4c8f-99e8-8b8ca62251e6",
@@ -2055,8 +2055,8 @@
    "quote": "Spiderlings hatch in spring, cluster for a few days, then disperse on threads of silk carried by the wind.",
    "how": "group_formation",
    "effort": "M",
-   "status": "part",
-   "what": "cluster: the spiderlings clump; their ballooning away is not drawn"
+   "status": "held",
+   "what": "cluster: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in"
   },
   {
    "id": "5ca219a4-e254-42d3-9f3a-eead9afc6932",
@@ -2095,8 +2095,8 @@
    "quote": "A female carries her hatchlings clinging beneath her tail for a week or more, until they can walk and feed alone.",
    "how": "existing_block",
    "effort": "S",
-   "status": "built",
-   "what": "ride"
+   "status": "held",
+   "what": "ride: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in"
   },
   {
    "id": "5d0bf03d-f971-4da5-85d1-851019dc108c",
@@ -2165,8 +2165,8 @@
    "quote": "When the spiderlings hatch she opens the sac and they climb onto her back, riding there for several days before scattering.",
    "how": "existing_block",
    "effort": "S",
-   "status": "built",
-   "what": "ride"
+   "status": "held",
+   "what": "ride: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in"
   },
   {
    "id": "d4caa55a-a65b-4823-9e81-cc9e28e3912a",

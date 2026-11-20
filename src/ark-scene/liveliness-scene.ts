@@ -149,6 +149,8 @@ const AGE_EVERY = 30;
 /** Plans whose young play (the rest only keep close). */
 const DAWN_SINGERS = new Set(["bird", "frog", "mammal"]);
 
+/** Body plans that live in the water (their young gather there). */
+const WATER_PLANS = new Set(["fish", "ray", "cetacean", "cephalopod", "jellyfish", "eel", "sessile"]);
 type Young = {age: ArkAge; parent: string | null; at: number};
 /** One parent's (or helper's) visit to its young: where it set out from, where it stands with them, and how long the walk or flight takes. */
 type VisitRun = {key: string; plan: VisitPlan; anchor: LivePose; place: {x: number; z: number; yaw: number}; spot: Pt; go: number; back: number; flies: boolean; youngId: string; kind: "nurse" | "feed"};
@@ -641,6 +643,18 @@ export class ArkLiveliness {
         return [{x: lead.x, z: lead.z}, ...trail.points];
     }
 
+    /** The nearest dry ground to a point within `reach` m (a ring search, eight ways), or null. */
+    private nearestLand(p: Pt, reach: number): Pt | null {
+        for (let r = 3; r <= reach; r += 3) {
+            for (let k = 0; k < 8; k++) {
+                const a = (k / 8) * Math.PI * 2;
+                const q = {x: p.x + Math.sin(a) * r, z: p.z + Math.cos(a) * r};
+                if (this.landAt(q)) return q;
+            }
+        }
+        return null;
+    }
+
     private landAt(p: Pt): boolean {
         return this.options.hooks.heightAt(p.x, p.z) >= 0.1;
     }
@@ -805,8 +819,10 @@ export class ArkLiveliness {
         }
         const at = this.options.hooks.poseAt(anchor ?? self, slotStart / 1000);
         let centre: Pt | null = at ? {x: at.x, z: at.z} : null;
-        const wet = Boolean(self.depth || self.place.water);
-        if (centre && !wet && !this.landAt(centre)) centre = null;
+        // (Fish and the like gather in the water; anything else gathers ashore: a penguin crèche is on the beach, not in the surf.)
+        const plan = this.options.hooks.planOf(self.animal.model_slug) ?? "";
+        const inWater = Boolean(self.depth || self.place.water) && WATER_PLANS.has(plan);
+        if (centre && !inWater && !this.landAt(centre)) centre = this.nearestLand(centre, 40);
         if (this.spots.size > 3000) this.spots.clear();
         this.spots.set(cached, centre);
         return centre;

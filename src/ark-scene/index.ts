@@ -4085,7 +4085,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const side = belly ? -1 : 1;
         const along = style === "tail" ? -0.34 : style === "under" ? -0.3 : style === "back" ? -0.04 : belly ? 0.1 : -0.12;
         // Its feet against her: under her belly its own up is her down, so its feet (its belly) face hers.
-        const reach = motherHeight * (style === "under" ? 0.3 : 0.4);
+        // (Where on her it sits: a primate's or a mammal's back is high on her model; a bird's, floating or standing, is low under its neck and head.)
+        const motherPlan = motherModel?.behaviour?.plan;
+        const reach = motherHeight * (style === "under" ? 0.3 : motherPlan === "bird" && !belly ? -0.12 : 0.4);
         const fx = middle.x + n.x * side * reach + t.x * mother.length * along;
         const fy = middle.y + n.y * side * reach + t.y * mother.length * along;
         const fz = middle.z + n.z * side * reach + t.z * mother.length * along;

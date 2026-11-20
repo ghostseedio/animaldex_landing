@@ -37,12 +37,12 @@ export const SCENES: Record<string, Scene> = {
     tiger: {zone: "rainforest", hours: 10, kind: "line", distance: 7, cast: {slug: "bengal-tiger", name: "Bengal Tiger", n: 2, young: 2}},
     turkey: {zone: "woodland", hours: 10, kind: "line", distance: 3, cast: {slug: "wild-turkey", name: "Wild Turkey", n: 2, young: 4}},
     // Stays and visits.
-    deer: {zone: "woodland", hours: 10, kind: "stay", distance: 7, cast: {slug: "white-tailed-deer", name: "White-tailed Deer", n: 3, young: 2}},
+    deer: {zone: "grassland", hours: 10, kind: "stay", distance: 7, cast: {slug: "white-tailed-deer", name: "White-tailed Deer", n: 3, young: 2}},
     elk: {zone: "grassland", hours: 10, kind: "stay", distance: 8, cast: {slug: "red-deer", name: "Red Deer", n: 3, young: 2}},
-    fox: {zone: "woodland", hours: 10, kind: "stay", distance: 5, cast: {slug: "red-fox", name: "Red Fox", n: 2, young: 3}},
-    wolf: {zone: "woodland", hours: 10, kind: "stay", distance: 7, cast: {slug: "gray-wolf", name: "Gray Wolf", n: 4, young: 3}},
+    fox: {zone: "grassland", hours: 10, kind: "stay", distance: 5, cast: {slug: "red-fox", name: "Red Fox", n: 2, young: 3}},
+    wolf: {zone: "grassland", hours: 10, kind: "stay", distance: 7, cast: {slug: "gray-wolf", name: "Gray Wolf", n: 4, young: 3}},
     sparrow: {zone: "grassland", hours: 10, kind: "stay", distance: 2.4, cast: {slug: "andean-sparrow", name: "Andean Sparrow", n: 3, young: 2}},
-    crow: {zone: "woodland", hours: 10, kind: "stay", distance: 3, cast: {slug: "carrion-crow", name: "Carrion Crow", n: 4, young: 2}},
+    crow: {zone: "grassland", hours: 10, kind: "stay", distance: 3, cast: {slug: "carrion-crow", name: "Carrion Crow", n: 4, young: 2}},
     rabbit: {zone: "grassland", hours: 6.5, kind: "stay", distance: 3, cast: {slug: "eastern-cottontail", name: "Eastern Cottontail", n: 2, young: 3}},
     // Clumps.
     penguin: {zone: "tundra", hours: 10, kind: "cluster", distance: 4, cast: {slug: "african-penguin", name: "African Penguin", n: 3, young: 5}},
@@ -178,7 +178,7 @@ async function main() {
             return `+${s.toFixed(1)} s   ${note()}`;
         },
         /** Two animals framed together (the parent and a young one): the camera on their middle, back far enough for both. */
-        pair: async (s: number, a: string, b: string, pad = 3, azimuth = 0.7, polar = 1.1) => {
+        pair: async (s: number, a: string, b: string, pad = 2, azimuth = 0.7, polar = 0.95) => {
             await setAt(t0 + s - 2.5);
             for (let i = 1; i <= 25; i++) {
                 fake!.perf += 100;

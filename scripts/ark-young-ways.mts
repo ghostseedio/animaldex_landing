@@ -34,6 +34,8 @@ type Row = {id: string; name: string; behaviour: string; quote: string; showable
 const all = (JSON.parse(fs.readFileSync(cataloguePath, "utf8")) as {rows: Row[]}).rows;
 const rows = all.filter((r) => r.theme === "young_care" && r.showable);
 const slugs = new Set(Object.keys((JSON.parse(fs.readFileSync(path.join(root, "src/ark-scene/animal-look.json"), "utf8")) as {species: Record<string, unknown>}).species));
+/** Small animals at a microhabitat (a leaf, a wall, a stem) are posed by the micro scene, not by the shared pose layer the ways are in. */
+const micro = new Set(Object.keys((JSON.parse(fs.readFileSync(path.join(root, "src/ark-scene/microhabitats.json"), "utf8")) as {species: Record<string, unknown>}).species));
 const slugOf = (name: string) => name.toLowerCase().replace(/'/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 type Ride = "back" | "belly" | "tail" | "under";
@@ -224,6 +226,11 @@ const species: Record<string, Record<string, unknown>> = {};
 const status = new Map<string, {status: string; what: string}>();
 const merge = (slug: string, name: string, row: Row, way: Way, kind: string, part?: string) => {
     const {say, ...spec} = way;
+    // (A micro-scene animal is not on the shared pose: nothing to ride, clump or follow with, so it is not claimed.)
+    if (micro.has(slug) && kind !== "follow") {
+        status.set(`${row.id}|${row.behaviour}`, {status: "held", what: `${kind}: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in`});
+        return;
+    }
     const into = (species[slug] ??= {name, ways: {}, lines: {} as Record<string, string>});
     Object.assign(into.ways as object, spec);
     for (const k of say ?? []) (into.lines as Record<string, string>)[k] = row.line!;

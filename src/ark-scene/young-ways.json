@@ -19,51 +19,6 @@
     "ride": "{aAnimal} is swimming with cygnets riding on its back among raised feathers"
    }
   },
-  "carolina-wolf-spider": {
-   "name": "Carolina Wolf Spider",
-   "ways": {
-    "ride": "back"
-   },
-   "lines": {
-    "ride": "{aAnimal} is carrying her hatched spiderlings on her back"
-   }
-  },
-  "tiger-wolf-spider": {
-   "name": "Tiger Wolf Spider",
-   "ways": {
-    "ride": "back"
-   },
-   "lines": {
-    "ride": "{aAnimal} is carrying her newly hatched spiderlings on her back"
-   }
-  },
-  "giant-forest-scorpion": {
-   "name": "Giant Forest Scorpion",
-   "ways": {
-    "ride": "back"
-   },
-   "lines": {
-    "ride": "{aAnimal} female is carrying her young on her back"
-   }
-  },
-  "giant-whip-scorpion": {
-   "name": "Giant Whip Scorpion",
-   "ways": {
-    "ride": "back"
-   },
-   "lines": {
-    "ride": "{aAnimal} is carrying her hatchlings on her back"
-   }
-  },
-  "malaysian-forest-scorpion": {
-   "name": "Malaysian Forest Scorpion",
-   "ways": {
-    "ride": "back"
-   },
-   "lines": {
-    "ride": "{aAnimal} is carrying her white newborns on her back"
-   }
-  },
   "red-swamp-crayfish": {
    "name": "Red Swamp Crayfish",
    "ways": {
@@ -71,15 +26,6 @@
    },
    "lines": {
     "ride": "{aAnimal} female is carrying young that cling to her"
-   }
-  },
-  "redclaw-crayfish": {
-   "name": "Redclaw Crayfish",
-   "ways": {
-    "ride": "under"
-   },
-   "lines": {
-    "ride": "{aAnimal} female is carrying her hatchlings clinging beneath her tail"
    }
   },
   "common-opossum": {
@@ -853,15 +799,6 @@
     "cluster": "{animals} are clustering tightly as newly hatched nymphs"
    }
   },
-  "buff-tip-moth": {
-   "name": "Buff-tip Moth",
-   "ways": {
-    "cluster": true
-   },
-   "lines": {
-    "cluster": "{animals} are feeding together as caterpillars"
-   }
-  },
   "tiger-moth": {
    "name": "Tiger Moth",
    "ways": {
@@ -897,20 +834,6 @@
    "lines": {
     "cluster": "{animals} are staying together as hatchlings close to their mother"
    }
-  },
-  "orb-weaver-spider": {
-   "name": "Orb-weaver Spider",
-   "ways": {
-    "cluster": true
-   },
-   "lines": {}
-  },
-  "peacock-butterfly": {
-   "name": "Peacock Butterfly",
-   "ways": {
-    "cluster": true
-   },
-   "lines": {}
   }
  }
 }

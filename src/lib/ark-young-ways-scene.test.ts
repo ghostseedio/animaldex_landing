@@ -79,7 +79,7 @@ test("a line: the ranks never share a place (a duckling is clear of the one in f
 });
 
 test("riding: a grebe's chick is carried, on its back; a lar gibbon's, clinging to the belly; a sunda pangolin's, on the tail; the father carries a titi's", () => {
-    for (const [slug, plan, style] of [["great-crested-grebe", "bird", "back"], ["lar-gibbon", "mammal", "belly"], ["sunda-pangolin", "mammal", "tail"], ["redclaw-crayfish", "arthropod", "under"], ["coppery-titi-monkey", "mammal", "back"]] as const) {
+    for (const [slug, plan, style] of [["great-crested-grebe", "bird", "back"], ["lar-gibbon", "mammal", "belly"], ["sunda-pangolin", "mammal", "tail"], ["coppery-titi-monkey", "mammal", "back"]] as const) {
         const {live, ids, entries} = setup({slug, plan, adults: 2, young: 1, length: 0.5, youngLength: 0.15}, walk(0));
         const age = live.ageOf(entries.get(ids.young[0])!)!;
         assert.equal(age.stage, "young", slug);
