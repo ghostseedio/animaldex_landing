@@ -422,7 +422,10 @@
             "dayRecord": "紀錄",
             "dayNone": "現在無法推算這隻動物的一天。",
             "dayClose": "關閉牠的一天",
-            "dayHint": "牠做了什麼，來自 Ark 的共享日程：每個人看到的都一樣。圓點是 Ark 的紀錄。"
+            "dayHint": "牠做了什麼，來自 Ark 的共享日程：每個人看到的都一樣。圓點是 Ark 的紀錄。",
+            "caredOwner": "由主人照料",
+            "caredFarmer": "由農場主照料",
+            "caredKeeper": "由飼育員照料"
         },
         "activity": {
             "food": "覓食",

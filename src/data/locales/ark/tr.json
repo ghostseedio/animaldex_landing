@@ -422,7 +422,10 @@
             "dayRecord": "Kaydında",
             "dayNone": "Bu hayvanın günü şu anda hesaplanamıyor.",
             "dayClose": "Gününü kapat",
-            "dayHint": "Ne yaptığı, Ark'ın ortak programına göre: herkes için aynı. Noktalar Ark'ın kaydıdır."
+            "dayHint": "Ne yaptığı, Ark'ın ortak programına göre: herkes için aynı. Noktalar Ark'ın kaydıdır.",
+            "caredOwner": "Sahibi bakıyor",
+            "caredFarmer": "Çiftçi bakıyor",
+            "caredKeeper": "Bir bakıcı bakıyor"
         },
         "activity": {
             "food": "yiyecek arıyor",

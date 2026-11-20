@@ -14,6 +14,7 @@ import type {Placement} from "@/ark-scene/placement";
 import type {ArkAnimal} from "@/ark-scene/types";
 import type {ChunkGrid, ChunkSpan} from "@/ark-scene/streaming/chunks";
 import type {TownPlace} from "@/ark-scene/islands/town/placement";
+import type {CarerPost} from "@/ark-scene/humans/carers";
 import {ARK_ISLANDS, townWorldOrigin} from "@/ark-scene/islands";
 import {coopPose, coopTick} from "@/ark-scene/islands/town/rural";
 import {TOWN_CHUNK_COUNT, TOWN_GRID} from "@/ark-scene/islands/town/chunks";
@@ -104,6 +105,8 @@ export type ArkIslandScene = {
     place: (animals: ArkAnimal[], activityOf?: (animal: ArkAnimal) => string | null | undefined) => Map<string, Placement>;
     /** The town's facts for a placed animal (its area, home, enclosure and range; local frame). */
     townPlace: (id: string) => TownPlace | undefined;
+    /** Carers (decision 418): the keepers', farmers' and owners' posts for the kept animals placed now (town frame; `islands/town/carer-posts.ts`). */
+    carerPosts?: () => Promise<readonly CarerPost[]>;
     /**
      * A zoo animal's hard bound: a world pose pulled back inside its enclosure's mask. Lane TB: and any town animal's
      * scheduled pose under the drawn ground where no water is (a drink at the canal's walled edge, a swim by its wall)
@@ -397,6 +400,10 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     /** Each zoo resident's feeding variant (one object each: the schedule's memo is kept per animal). */
     const feeding = new WeakMap<ScheduleAnimal, ScheduleAnimal>();
     let towned = new Map<string, TownPlace>();
+    // Carers (decision 418): the last placement's local spots and rhythms, and its posts once asked for.
+    let placedNow = new Map<string, Placement>();
+    let rhythmsNow = new Map<string, Array<ReturnType<typeof zooRhythm>>>();
+    let carerPostsFor: Promise<readonly CarerPost[]> | null = null;
     /** The town's animals by id (a tank resident's slug and zone for its band). */
     const townAnimals = new Map<string, ArkAnimal>();
     let sampler: {key: string; sampler: ArkWorldSampler} | null = null;
@@ -506,6 +513,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
                 walkSurfacesNow();
             }
             towned = placed.town;
+            placedNow = placed.places;
+            carerPostsFor = null;
             // Each enclosure's residents' rhythms: the food goes down at each one's feeding times.
             const rhythms = new Map<string, Array<ReturnType<typeof zooRhythm>>>();
             for (const animal of animals) {
@@ -517,6 +526,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
                 rhythms.set(enclosure.id, list);
             }
             zooLife.setRhythms(rhythms);
+            rhythmsNow = rhythms;
             showPetHomes(placed.town);
             for (const animal of animals) townAnimals.set(animal.id, animal);
             const world = new Map<string, Placement>();
@@ -524,6 +534,21 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             return world;
         },
         townPlace: (id) => towned.get(id),
+        carerPosts: () => {
+            // (Built once per placement, on demand: the module comes only when the server's carers are on.)
+            if (!carerPostsFor) {
+                const places = placedNow, town = towned, rhythms = rhythmsNow;
+                carerPostsFor = import("@/ark-scene/islands/town/carer-posts").then(({carerPosts}) => {
+                    const kept: Array<{id: string; place: TownPlace; x: number; z: number}> = [];
+                    town.forEach((place, id) => {
+                        const at = places.get(id);
+                        if (at && (place.area === "house" || place.area === "farm" || place.area === "zoo")) kept.push({id, place, x: at.x, z: at.z});
+                    });
+                    return carerPosts(kept, rhythms);
+                });
+            }
+            return carerPostsFor;
+        },
         petRooms: () => petRoomIds, // humans visible
         setPeopleRooms: (ids) => {
             const next = ids.slice().sort();
