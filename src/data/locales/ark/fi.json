@@ -263,7 +263,21 @@
             "lineageLiving": "elossa nyt {count}",
             "grassPlenty": "Ruohoa täällä: runsaasti",
             "grassThinning": "Ruohoa täällä: harvenee",
-            "grassBare": "Ruohoa täällä: syöty paljaaksi"
+            "grassBare": "Ruohoa täällä: syöty paljaaksi",
+            "power": {
+                "working": "Sen Voima: {power} — toimii",
+                "partly": "Sen Voima: {power} — toimii osittain",
+                "earn": "Ansaitse sen Voima, niin se toimii",
+                "camouflage": "naamioituminen",
+                "speed": "nopeus",
+                "armour": "panssari",
+                "warning": "varoitusvärit",
+                "vigilance": "valppaus",
+                "group": "ryhmäpuolustus",
+                "hiding": "piiloutuminen",
+                "climb": "pako ylöspäin",
+                "mimicry": "mimikry"
+            }
         },
         "replay": {
             "title": "Sillä aikaa kun olit poissa",

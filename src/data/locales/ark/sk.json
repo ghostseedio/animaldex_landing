@@ -263,7 +263,21 @@
             "lineageLiving": "nažive: {count}",
             "grassPlenty": "Tráva tu: hojne",
             "grassThinning": "Tráva tu: rednie",
-            "grassBare": "Tráva tu: spasená do hola"
+            "grassBare": "Tráva tu: spasená do hola",
+            "power": {
+                "working": "Jeho Sila: {power} — funguje",
+                "partly": "Jeho Sila: {power} — funguje čiastočne",
+                "earn": "Získaj jeho Silu, aby fungovala",
+                "camouflage": "maskovanie",
+                "speed": "rýchlosť",
+                "armour": "pancier",
+                "warning": "výstražné farby",
+                "vigilance": "ostražitosť",
+                "group": "skupinová obrana",
+                "hiding": "ukrývanie",
+                "climb": "únik nahor",
+                "mimicry": "mimikry"
+            }
         },
         "replay": {
             "title": "Počas tvojej neprítomnosti",

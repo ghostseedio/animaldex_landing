@@ -263,7 +263,21 @@
             "lineageLiving": "şu an {count} hayatta",
             "grassPlenty": "Buradaki ot: bol",
             "grassThinning": "Buradaki ot: seyreliyor",
-            "grassBare": "Buradaki ot: dibine kadar otlanmış"
+            "grassBare": "Buradaki ot: dibine kadar otlanmış",
+            "power": {
+                "working": "Gücü: {power} — işliyor",
+                "partly": "Gücü: {power} — kısmen işliyor",
+                "earn": "İşlemesi için gücünü kazan",
+                "camouflage": "kamuflaj",
+                "speed": "hız",
+                "armour": "zırh",
+                "warning": "uyarı renkleri",
+                "vigilance": "tetikte olma",
+                "group": "grup savunması",
+                "hiding": "saklanma",
+                "climb": "yukarı kaçış",
+                "mimicry": "taklit"
+            }
         },
         "replay": {
             "title": "Sen yokken",

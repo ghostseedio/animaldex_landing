@@ -1,10 +1,13 @@
 "use client";
 
-import {useEffect, useState} from "react";
+import {Suspense, lazy, useEffect, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import type {ArkRhythmStatus} from "@/ark-scene/rhythm-status";
-import SdRhythmCompare, {RhythmDot, RHYTHM_TONE} from "@/components/ark/sd-rhythm-compare";
+import {RhythmDot, RHYTHM_TONE} from "@/components/ark/sd-rhythm-dot";
+
+/** The waveform, only once the panel opens (the page's static JavaScript budget, `ark-page-weight.test.ts`). */
+const SdRhythmCompare = lazy(() => import("@/components/ark/sd-rhythm-compare"));
 import {ARK_RHYTHM_ENGLISH, type ArkRhythmWords} from "@/lib/ark-sd-rhythm-words";
 
 /**
@@ -86,7 +89,9 @@ export function ArkRhythmPanel({rhythm, speciesProfileId, talkHref, words = ARK_
     const fixable = rhythm.causes.some((c) => c.fixable);
     return (
         <div className="mt-2 grid max-h-[42vh] grid-cols-1 gap-x-6 gap-y-3 overflow-y-auto overscroll-contain border-t border-line-200/60 pt-2.5 md:max-h-none md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)] md:overflow-visible md:pl-[3.75rem]" data-testid="ark-card-rhythm-panel">
-            <SdRhythmCompare sdPath={sdPath} line={rhythm.line} live shares={a.shares} tempo={rhythm.tempo} boutMinutes={rhythm.boutMinutes} state={a.state} score={a.score} words={words} />
+            <Suspense fallback={<div className="min-h-[120px]" />}>
+                <SdRhythmCompare sdPath={sdPath} line={rhythm.line} live shares={a.shares} tempo={rhythm.tempo} boutMinutes={rhythm.boutMinutes} state={a.state} score={a.score} words={words} />
+            </Suspense>
             <div className="flex min-w-0 flex-col gap-2 text-[12.5px] leading-snug">
                 {a.state !== "in" ? (
                     <div>

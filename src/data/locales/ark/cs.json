@@ -263,7 +263,21 @@
             "lineageLiving": "nyní naživu: {count}",
             "grassPlenty": "Tráva tady: hojně",
             "grassThinning": "Tráva tady: řídne",
-            "grassBare": "Tráva tady: spasená do holého"
+            "grassBare": "Tráva tady: spasená do holého",
+            "power": {
+                "working": "Jeho Síla: {power} — funguje",
+                "partly": "Jeho Síla: {power} — funguje částečně",
+                "earn": "Získej jeho Sílu, aby fungovala",
+                "camouflage": "maskování",
+                "speed": "rychlost",
+                "armour": "pancíř",
+                "warning": "výstražné barvy",
+                "vigilance": "ostražitost",
+                "group": "skupinová obrana",
+                "hiding": "ukrývání",
+                "climb": "únik vzhůru",
+                "mimicry": "mimikry"
+            }
         },
         "replay": {
             "title": "Během tvé nepřítomnosti",

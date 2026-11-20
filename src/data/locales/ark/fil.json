@@ -263,7 +263,21 @@
             "lineageLiving": "{count} ang buhay ngayon",
             "grassPlenty": "Damo rito: sagana",
             "grassThinning": "Damo rito: numinipis",
-            "grassBare": "Damo rito: ubos sa panginginain"
+            "grassBare": "Damo rito: ubos sa panginginain",
+            "power": {
+                "working": "Ang Kapangyarihan nito: {power} — gumagana",
+                "partly": "Ang Kapangyarihan nito: {power} — bahagyang gumagana",
+                "earn": "Kamtin ang Kapangyarihan nito para gumana",
+                "camouflage": "pagbabalatkayo",
+                "speed": "bilis",
+                "armour": "baluti",
+                "warning": "mga kulay-babala",
+                "vigilance": "pagbabantay",
+                "group": "depensa ng grupo",
+                "hiding": "pagtatago",
+                "climb": "pagtakas pataas",
+                "mimicry": "panggagaya"
+            }
         },
         "replay": {
             "title": "Habang wala ka",

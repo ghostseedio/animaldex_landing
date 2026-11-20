@@ -4460,7 +4460,21 @@
       "lineageLiving": "{count} masih hidup",
       "grassPlenty": "Rumput di sini: melimpah",
       "grassThinning": "Rumput di sini: menipis",
-      "grassBare": "Rumput di sini: habis dimakan"
+      "grassBare": "Rumput di sini: habis dimakan",
+      "power": {
+        "working": "Power-nya: {power} — bekerja",
+        "partly": "Power-nya: {power} — bekerja sebagian",
+        "earn": "Raih Power-nya agar bekerja",
+        "camouflage": "kamuflase",
+        "speed": "kecepatan",
+        "armour": "pelindung tubuh",
+        "warning": "warna peringatan",
+        "vigilance": "kewaspadaan",
+        "group": "pertahanan kelompok",
+        "hiding": "bersembunyi",
+        "climb": "kabur ke atas",
+        "mimicry": "mimikri"
+      }
     },
     "replay": {
       "title": "Selama kamu pergi",

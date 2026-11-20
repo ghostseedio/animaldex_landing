@@ -263,7 +263,21 @@
             "lineageLiving": "{count} am Leben",
             "grassPlenty": "Gras hier: reichlich",
             "grassThinning": "Gras hier: wird dünn",
-            "grassBare": "Gras hier: kahl gefressen"
+            "grassBare": "Gras hier: kahl gefressen",
+            "power": {
+                "working": "Seine Kraft: {power} — wirkt",
+                "partly": "Seine Kraft: {power} — wirkt teilweise",
+                "earn": "Verdiene seine Kraft, damit sie wirkt",
+                "camouflage": "Tarnung",
+                "speed": "Schnelligkeit",
+                "armour": "Panzer",
+                "warning": "Warnfarben",
+                "vigilance": "Wachsamkeit",
+                "group": "Gruppenabwehr",
+                "hiding": "Verstecken",
+                "climb": "Flucht nach oben",
+                "mimicry": "Mimikry"
+            }
         },
         "replay": {
             "title": "Während du weg warst",

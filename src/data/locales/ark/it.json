@@ -263,7 +263,21 @@
             "lineageLiving": "{count} vivi ora",
             "grassPlenty": "Erba qui: abbondante",
             "grassThinning": "Erba qui: si dirada",
-            "grassBare": "Erba qui: brucata fino a terra"
+            "grassBare": "Erba qui: brucata fino a terra",
+            "power": {
+                "working": "Il suo Potere: {power} — all'opera",
+                "partly": "Il suo Potere: {power} — in parte all'opera",
+                "earn": "Guadagna il suo Potere perché funzioni",
+                "camouflage": "mimetismo criptico",
+                "speed": "velocità",
+                "armour": "corazza",
+                "warning": "colori di avvertimento",
+                "vigilance": "vigilanza",
+                "group": "difesa di gruppo",
+                "hiding": "nascondersi",
+                "climb": "fuga verso l'alto",
+                "mimicry": "imitazione"
+            }
         },
         "replay": {
             "title": "Mentre eri via",

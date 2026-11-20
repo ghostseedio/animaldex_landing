@@ -263,7 +263,21 @@
             "lineageLiving": "いま生きているのは{count}匹",
             "grassPlenty": "ここの草：たっぷり",
             "grassThinning": "ここの草：まばらに",
-            "grassBare": "ここの草：食べ尽くされた"
+            "grassBare": "ここの草：食べ尽くされた",
+            "power": {
+                "working": "この子のパワー：{power} — 発揮中",
+                "partly": "この子のパワー：{power} — 一部発揮中",
+                "earn": "パワーを獲得すると発揮されます",
+                "camouflage": "擬態（保護色）",
+                "speed": "スピード",
+                "armour": "鎧",
+                "warning": "警告色",
+                "vigilance": "見張り",
+                "group": "群れでの防御",
+                "hiding": "隠れる",
+                "climb": "上へ逃げる",
+                "mimicry": "擬態（なりすまし）"
+            }
         },
         "replay": {
             "title": "留守のあいだに",

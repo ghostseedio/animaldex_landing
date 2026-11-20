@@ -263,7 +263,21 @@
             "lineageLiving": "{count} masih hidup",
             "grassPlenty": "Rumput di sini: banyak",
             "grassThinning": "Rumput di sini: semakin nipis",
-            "grassBare": "Rumput di sini: habis diragut"
+            "grassBare": "Rumput di sini: habis diragut",
+            "power": {
+                "working": "Kuasanya: {power} — berfungsi",
+                "partly": "Kuasanya: {power} — berfungsi sebahagian",
+                "earn": "Raih Kuasanya supaya ia berfungsi",
+                "camouflage": "penyamaran",
+                "speed": "kelajuan",
+                "armour": "perisai",
+                "warning": "warna amaran",
+                "vigilance": "kewaspadaan",
+                "group": "pertahanan berkumpulan",
+                "hiding": "bersembunyi",
+                "climb": "melarikan diri ke atas",
+                "mimicry": "mimikri"
+            }
         },
         "replay": {
             "title": "Semasa anda tiada",

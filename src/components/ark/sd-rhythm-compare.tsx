@@ -12,7 +12,9 @@ import {ARK_RHYTHM_ENGLISH, type ArkRhythmWords} from "@/lib/ark-sd-rhythm-words
  * kind on a sample day). Honest labels: the SD line is a shape, not a clock; the Ark line is the schedule's.
  */
 
-export const RHYTHM_TONE: Record<SdRhythmState, string> = {in: "#8fd694", slightly: "#f2c14e", out: "#ef6f5c"};
+import {RHYTHM_TONE, RhythmDot} from "@/components/ark/sd-rhythm-dot";
+
+export {RHYTHM_TONE, RhythmDot};
 const SD_STROKE = "#A7F432";
 const ARK_STROKE = "#7cc4ff";
 
@@ -30,10 +32,6 @@ export type SdRhythmCompareProps = {
     score: number;
     words?: ArkRhythmWords;
 };
-
-export function RhythmDot({state, className = ""}: {state: SdRhythmState; className?: string}) {
-    return <span aria-hidden="true" className={`inline-block h-2 w-2 shrink-0 rounded-full ${className}`} style={{background: RHYTHM_TONE[state], boxShadow: `0 0 0 2px ${RHYTHM_TONE[state]}33`}} />;
-}
 
 export default function SdRhythmCompare({sdPath, line, live, shares, tempo, boutMinutes, state, score, words = ARK_RHYTHM_ENGLISH}: SdRhythmCompareProps) {
     const clip = useId();

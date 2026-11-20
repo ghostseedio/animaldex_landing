@@ -418,6 +418,8 @@ export type AnimalMaterialOptions = {
     reflect?: ReflectUniforms | null;
 };
 
+const POWER_LOOKS = new WeakMap<object, {value: Vector4}>();
+
 export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMaterial {
     const material = new MeshStandardMaterial({map: options.map, roughness: 0.78, metalness: 0, envMapIntensity: 0.9});
     const motion = motionUniforms(options.behaviour) ?? {
@@ -465,6 +467,14 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
     Object.assign(uniforms, lookUniforms(options.look ?? null, level, options.shellLength ?? 0.01));
     material.userData.arkLook = {look: options.look ?? null, level, shell: Boolean(options.shell)};
     material.userData.arkOptions = options;
+    // Powers you can see (`power-show.ts`): the species' look while one of its animals shows its Power (`setVaryPower`);
+    // one per species texture, so its fur shells and its reflection wear the same look.
+    let power = options.map ? POWER_LOOKS.get(options.map) : undefined;
+    if (!power) {
+        power = {value: new Vector4(0, 0, 0, 0)};
+        if (options.map) POWER_LOOKS.set(options.map, power);
+    }
+    material.userData.arkPower = power;
     material.defines = {...(options.animated ? {ARK_MOTION: ""} : {}), ...(options.rig ? {ARK_RIG: ""} : {}), ...(options.rig && options.pose ? {ARK_RIG_LIVE: ""} : {}), ...lookDefines(material)};
     if (options.reflect) {
         material.defines.ARK_REFLECT = "";
@@ -521,7 +531,7 @@ ${LOOK_LIGHT}`)
 }
 ${options.reflect ? REFLECT_FRAGMENT : ""}`);
         // Each animal its own tint and mottling (`ark-variation.ts`, liveliness).
-        varyShader(shader, options.maxY - options.minY);
+        varyShader(shader, options.maxY - options.minY, power);
     };
     return material;
 }

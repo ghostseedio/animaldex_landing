@@ -263,7 +263,21 @@
             "lineageLiving": "{count} vius ara",
             "grassPlenty": "Herba aquí: abundant",
             "grassThinning": "Herba aquí: s'aclareix",
-            "grassBare": "Herba aquí: pasturada fins a terra"
+            "grassBare": "Herba aquí: pasturada fins a terra",
+            "power": {
+                "working": "El seu Poder: {power} — funciona",
+                "partly": "El seu Poder: {power} — funciona en part",
+                "earn": "Guanya el seu Poder perquè funcioni",
+                "camouflage": "camuflatge",
+                "speed": "velocitat",
+                "armour": "cuirassa",
+                "warning": "colors d'avís",
+                "vigilance": "vigilància",
+                "group": "defensa en grup",
+                "hiding": "amagar-se",
+                "climb": "fugida cap amunt",
+                "mimicry": "mimetisme"
+            }
         },
         "replay": {
             "title": "Mentre no hi eres",

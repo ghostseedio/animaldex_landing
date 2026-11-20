@@ -263,7 +263,21 @@
             "lineageLiving": "{count} él most",
             "grassPlenty": "Fű itt: bőven",
             "grassThinning": "Fű itt: ritkul",
-            "grassBare": "Fű itt: tövig lelegelve"
+            "grassBare": "Fű itt: tövig lelegelve",
+            "power": {
+                "working": "Az Ereje: {power} — működik",
+                "partly": "Az Ereje: {power} — részben működik",
+                "earn": "Szerezd meg az Erejét, hogy működjön",
+                "camouflage": "rejtőzködés",
+                "speed": "gyorsaság",
+                "armour": "páncél",
+                "warning": "figyelmeztető színek",
+                "vigilance": "éberség",
+                "group": "csoportos védekezés",
+                "hiding": "elbújás",
+                "climb": "menekülés felfelé",
+                "mimicry": "mimikri"
+            }
         },
         "replay": {
             "title": "Amíg távol voltál",

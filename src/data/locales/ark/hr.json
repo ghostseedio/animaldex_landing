@@ -263,7 +263,21 @@
             "lineageLiving": "trenutačno živih: {count}",
             "grassPlenty": "Trava ovdje: obilno",
             "grassThinning": "Trava ovdje: prorjeđuje se",
-            "grassBare": "Trava ovdje: popasena do gola"
+            "grassBare": "Trava ovdje: popasena do gola",
+            "power": {
+                "working": "Njegova Moć: {power} — djeluje",
+                "partly": "Njegova Moć: {power} — djelomično djeluje",
+                "earn": "Zaradi njegovu Moć da proradi",
+                "camouflage": "kamuflaža",
+                "speed": "brzina",
+                "armour": "oklop",
+                "warning": "boje upozorenja",
+                "vigilance": "budnost",
+                "group": "grupna obrana",
+                "hiding": "skrivanje",
+                "climb": "bijeg prema gore",
+                "mimicry": "mimikrija"
+            }
         },
         "replay": {
             "title": "Dok te nije bilo",

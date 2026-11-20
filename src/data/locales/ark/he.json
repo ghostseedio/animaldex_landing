@@ -263,7 +263,21 @@
             "lineageLiving": "{count} חיים כעת",
             "grassPlenty": "עשב כאן: בשפע",
             "grassThinning": "עשב כאן: מידלדל",
-            "grassBare": "עשב כאן: נאכל עד היסוד"
+            "grassBare": "עשב כאן: נאכל עד היסוד",
+            "power": {
+                "working": "הכוח שלה: {power} — פועל",
+                "partly": "הכוח שלה: {power} — פועל חלקית",
+                "earn": "השג את הכוח שלה כדי שיפעל",
+                "camouflage": "הסוואה",
+                "speed": "מהירות",
+                "armour": "שריון",
+                "warning": "צבעי אזהרה",
+                "vigilance": "ערנות",
+                "group": "הגנה קבוצתית",
+                "hiding": "הסתתרות",
+                "climb": "בריחה למעלה",
+                "mimicry": "חיקוי"
+            }
         },
         "replay": {
             "title": "בזמן שלא היית כאן",

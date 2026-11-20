@@ -263,7 +263,21 @@
             "lineageLiving": "{count} wako hai sasa",
             "grassPlenty": "Nyasi hapa: tele",
             "grassThinning": "Nyasi hapa: zinapungua",
-            "grassBare": "Nyasi hapa: zimelishwa zote"
+            "grassBare": "Nyasi hapa: zimelishwa zote",
+            "power": {
+                "working": "Nguvu yake: {power} — inafanya kazi",
+                "partly": "Nguvu yake: {power} — inafanya kazi kiasi",
+                "earn": "Pata Nguvu yake ili ifanye kazi",
+                "camouflage": "kujificha kwa rangi",
+                "speed": "kasi",
+                "armour": "kinga ya mwili",
+                "warning": "rangi za onyo",
+                "vigilance": "uangalifu",
+                "group": "ulinzi wa kundi",
+                "hiding": "kujificha",
+                "climb": "kutoroka juu",
+                "mimicry": "kuiga"
+            }
         },
         "replay": {
             "title": "Ulipokuwa mbali",

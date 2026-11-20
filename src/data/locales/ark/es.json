@@ -263,7 +263,21 @@
             "lineageLiving": "{count} vivos ahora",
             "grassPlenty": "Hierba aquí: abundante",
             "grassThinning": "Hierba aquí: escasea",
-            "grassBare": "Hierba aquí: pastada hasta el suelo"
+            "grassBare": "Hierba aquí: pastada hasta el suelo",
+            "power": {
+                "working": "Su Poder: {power} — funciona",
+                "partly": "Su Poder: {power} — funciona en parte",
+                "earn": "Gana su Poder para que funcione",
+                "camouflage": "camuflaje",
+                "speed": "velocidad",
+                "armour": "coraza",
+                "warning": "colores de advertencia",
+                "vigilance": "vigilancia",
+                "group": "defensa en grupo",
+                "hiding": "esconderse",
+                "climb": "huida hacia arriba",
+                "mimicry": "mimetismo"
+            }
         },
         "replay": {
             "title": "Mientras no estabas",

@@ -263,7 +263,21 @@
             "lineageLiving": "{count} lever nå",
             "grassPlenty": "Gress her: rikelig",
             "grassThinning": "Gress her: blir tynt",
-            "grassBare": "Gress her: nedbeitet"
+            "grassBare": "Gress her: nedbeitet",
+            "power": {
+                "working": "Kraften dets: {power} — virker",
+                "partly": "Kraften dets: {power} — virker delvis",
+                "earn": "Gjør deg fortjent til Kraften dets, så virker den",
+                "camouflage": "kamuflasje",
+                "speed": "fart",
+                "armour": "panser",
+                "warning": "varselfarger",
+                "vigilance": "årvåkenhet",
+                "group": "forsvar i flokk",
+                "hiding": "gjemmer seg",
+                "climb": "flukt oppover",
+                "mimicry": "mimikry"
+            }
         },
         "replay": {
             "title": "Mens du var borte",

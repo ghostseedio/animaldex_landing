@@ -263,7 +263,21 @@
             "lineageLiving": "în viață acum: {count}",
             "grassPlenty": "Iarbă aici: din belșug",
             "grassThinning": "Iarbă aici: se rărește",
-            "grassBare": "Iarbă aici: pășunată până la pământ"
+            "grassBare": "Iarbă aici: pășunată până la pământ",
+            "power": {
+                "working": "Puterea lui: {power} — funcționează",
+                "partly": "Puterea lui: {power} — funcționează parțial",
+                "earn": "Câștigă-i Puterea ca să funcționeze",
+                "camouflage": "camuflaj",
+                "speed": "viteză",
+                "armour": "armură",
+                "warning": "culori de avertizare",
+                "vigilance": "vigilență",
+                "group": "apărare în grup",
+                "hiding": "ascundere",
+                "climb": "fugă în sus",
+                "mimicry": "mimetism"
+            }
         },
         "replay": {
             "title": "Cât timp ai lipsit",

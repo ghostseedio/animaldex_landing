@@ -143,6 +143,8 @@ export type ArkLifeWords = {
     revisedNot: string;
     /** The label of its hunger and age now (`condition`: Well-fed, Hungry, Old); "Condition" is its thrive band's. */
     now: string;
+    /** Powers you can see (decision 420): its Power's line on the card (`ark-card-power.tsx`). Optional: an older bundle lacks it. */
+    power?: Partial<ArkPowerWords>;
     /** Captures + thrive: how well kept it is (`thrive`), in plain words. */
     thrivePrime: string;
     thriveGood: string;
@@ -512,6 +514,40 @@ export type ArkPersonWords = {
 };
 
 /** "{count} animals" and the like: every `{key}` filled from `values`, unknown keys left as they are. */
+/** Powers you can see (decision 420): the card's line and the mechanisms' names (`power-table.ts`). */
+export type ArkPowerWords = {
+    /** Prime: "Its Power: {power} — working". */
+    working: string;
+    /** Good: "Its Power: {power} — partly working". */
+    partly: string;
+    /** Ordinary: "Earn its Power to make it work". */
+    earn: string;
+    camouflage: string;
+    speed: string;
+    armour: string;
+    warning: string;
+    vigilance: string;
+    group: string;
+    hiding: string;
+    climb: string;
+    mimicry: string;
+};
+
+export const ARK_POWER_ENGLISH: ArkPowerWords = {
+    working: "Its Power: {power} — working",
+    partly: "Its Power: {power} — partly working",
+    earn: "Earn its Power to make it work",
+    camouflage: "camouflage",
+    speed: "speed",
+    armour: "armour",
+    warning: "warning colours",
+    vigilance: "vigilance",
+    group: "group defence",
+    hiding: "hiding",
+    climb: "escape upward",
+    mimicry: "mimicry"
+};
+
 export function fillArkWords(template: string, values: Record<string, string | number>): string {
     return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
 }

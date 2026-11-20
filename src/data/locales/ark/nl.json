@@ -263,7 +263,21 @@
             "lineageLiving": "{count} nu in leven",
             "grassPlenty": "Gras hier: volop",
             "grassThinning": "Gras hier: wordt dun",
-            "grassBare": "Gras hier: kaalgegraasd"
+            "grassBare": "Gras hier: kaalgegraasd",
+            "power": {
+                "working": "Zijn Kracht: {power} — werkt",
+                "partly": "Zijn Kracht: {power} — werkt deels",
+                "earn": "Verdien zijn Kracht om hem te laten werken",
+                "camouflage": "camouflage",
+                "speed": "snelheid",
+                "armour": "pantser",
+                "warning": "waarschuwingskleuren",
+                "vigilance": "waakzaamheid",
+                "group": "groepsverdediging",
+                "hiding": "verstoppen",
+                "climb": "vlucht omhoog",
+                "mimicry": "mimicry"
+            }
         },
         "replay": {
             "title": "Terwijl je weg was",
