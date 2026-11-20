@@ -4390,7 +4390,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const flock = scheduleOn && !reducedMotion ? microMurmuration(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow(), heightAt) : null;
             entry.recipeAct = flock?.act ?? null;
             // A swarm round a small animal's spot (bees at the hive by day, mayflies at dusk), or a crawling cluster.
-            entry.recipeFlock = scheduleOn && !reducedMotion && !flock ? swarmFlock(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow()) : null;
+            entry.recipeFlock = scheduleOn && !reducedMotion && !flock ? (swarmFlock(entry.animal.id, entry.animal.model_slug, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, hoursNow()) ?? entry.power?.flock ?? null) : null;
             if (flock) return {x: flock.x, z: flock.z, base: flock.y, yaw: flock.yaw, pitch: 0.95 + flock.pitch, roll: flock.roll, afloat: true};
             // 3.3 batch (D): a pond dragonfly laying: low over the water near her spot, tapping her abdomen's tip to it.
             const laying = scheduleOn && !reducedMotion ? microDipOf(entry) : null;
@@ -5865,7 +5865,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // the tail's, posed on the CPU into the species' live pose row (the baked rows when it is off).
                 const act2 = act as {state?: string; speed?: number} | null;
                 // (A behaviour recipe's state too: its attitude, a crouch or a rear, stays on the body.)
-                const recipeState = ((entry.sched?.pose ?? null) as RecipePose | null)?.act?.state ?? entry.recipeAct?.state ?? null;
+                // (Powers you can see: an act's state, a catalogue recipe played on demand or a lane's clip, when nothing else plays.)
+                const recipeState = ((entry.sched?.pose ?? null) as RecipePose | null)?.act?.state ?? entry.recipeAct?.state ?? (reducedMotion ? null : entry.power?.state) ?? null;
                 // (Lane TB: one held in a cage, a vivarium or a zoo house keeps its clip's feet: its floor may be over another.)
                 // (On the ground only, by grounding's own test: a pose held up on something the drawn ground does not know, a
                 // rock's top, a log, a climb's ramp, is no ground for the feet; the legged driver would stand its body on the
@@ -6631,12 +6632,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         foldCheck = now;
         const looked = selectedId ? findEntry(selectedId) : null;
         const keep = new Set<string>();
-        if (looked?.place.canopy && looked.middle && !flight) {
+        // (Powers you can see: one looked at while its Power's act shows, on the ground too: its duck into cover, its
+        // scramble up, a hunter's pass over it are not hidden behind a bush.)
+        const acting = !looked?.place.canopy && (looked?.power?.react ?? 0) > 0.02;
+        if ((looked?.place.canopy || acting) && looked?.middle && !flight) {
             // Shrunk ones are not hit again: keep what is folded while it is still in the way (tested at full size).
             const hits = blockers(rayFrom.copy(camera.position), looked.middle, Math.max(looked.length * 0.6, 0.35));
             for (const hit of hits) {
                 // (Never a canopy tree: the animal may be on it. Those the view search keeps out of the way.)
-                if (hit.instance < 0 || hit.mesh.userData.kind === "canopy") continue;
+                if (hit.instance < 0 || (hit.mesh.userData.kind === "canopy" && !acting)) continue;
                 keep.add(`${hit.mesh.id}#${hit.instance}`);
                 let instances = folded.get(hit.mesh);
                 if (!instances) folded.set(hit.mesh, (instances = new Map()));

@@ -106,7 +106,7 @@ if (!process.argv.includes("--pass-only")) {
         for (const [hours, when] of [[day, "day"], [night, "night"]]) {
             for (const band of ["prime", "ordinary"]) {
                 const file = path.join(out, `${pick.mechanism}-${pick.slug}-${band}-${when}.jpg`);
-                const ok = save(file, await page.evaluate(([ids, h, b]) => window.__ps.shoot(ids, h, b), [pick.group, hours, band]));
+                const ok = save(file, await page.evaluate(([ids, h, b, k]) => window.__ps.shoot(ids, h, b, k), [pick.group, hours, band, pick.mechanism !== "speed" && pick.mechanism !== "group"]));
                 if (ok) row.push(file);
             }
         }
