@@ -577,6 +577,8 @@ type Entry = {
     antler?: AntlerState & {at: number};
     /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
     recipeAct?: RecipeAct | null;
+    /** ARK-CONTACT: its rock face as the rock is drawn (kept, filled each frame). */
+    drawnFace?: SurfacePoint;
     /** Ambient flock-mates round a small animal's spot (a swarm, a cluster). */
     recipeFlock?: Flock | null;
     /** The duller sex's dim (`sexDim`), worked out once. */
@@ -5853,6 +5855,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     where.yaw += Math.min(Math.max(turn, -1.1), 1.1) * 0.8 * looking;
                     where.pitch -= 0.05 * looking;
                 }
+            }
+            // ARK-CONTACT (decision 447, the mangrove crab floating over its rock): on a rock's face or ledge, where the
+            // rock is drawn reached down to its ground, the face as drawn (`asset-rocks.ts` drawnFace), not as made.
+            const microTag = (entry.place.micro as {attach?: {tag?: string}} | null | undefined)?.attach?.tag;
+            const drawnFace = where.surface && where.surface !== entry.drawnFace && (microTag === "rock_face" || microTag === "ledge") ? assetRocks.drawnFace(where.surface, (entry.drawnFace ??= {...where.surface})) : null;
+            if (drawnFace && where.surface) {
+                where.x += drawnFace.x - where.surface.x;
+                where.base += drawnFace.y - where.surface.y;
+                where.z += drawnFace.z - where.surface.z;
+                where.surface = drawnFace;
             }
             const surface = where.surface;
             if (surface) entry.middle = (entry.middle ?? new Vector3()).set(where.x + surface.nx * modelHeight / 2, where.base + surface.ny * modelHeight / 2, where.z + surface.nz * modelHeight / 2);

@@ -98,3 +98,43 @@ export function inPlaceLift(rise: number, height: number): number {
     const free = IN_PLACE_LIFT_FREE * Math.max(height, 0.01);
     return rise > free ? rise - free : 0;
 }
+
+/** A rock drawn reached down to its ground (`rock-assets.ts` rockFoot): its origin, its up, its scale, its top (own units) and stretch k. */
+export type StretchedRock = {x: number; y: number; z: number; ux: number; uy: number; uz: number; scale: number; top: number; k: number};
+type FacePoint = {x: number; y: number; z: number; nx: number; ny: number; nz: number; tx: number; ty: number; tz: number};
+
+/**
+ * A rock face's attach point on a rock drawn reached down to its ground (mangrove crab "floating above a rock"): the
+ * drawing stretches the rock along its up about its top (y' = top + (y − top)·k), but its attach points are the shape's
+ * as made (the lists the server's atlas pins are kept). Here the point is moved as the rock's surface there was, its
+ * normal and its heading turned as the stretch turns them, so what sits on it sits on the rock as drawn.
+ */
+export function stretchedFace(point: FacePoint, rock: StretchedRock, out: FacePoint): FacePoint {
+    const dx = point.x - rock.x;
+    const dy = point.y - rock.y;
+    const dz = point.z - rock.z;
+    const along = (dx * rock.ux + dy * rock.uy + dz * rock.uz) / rock.scale;
+    const shift = Math.min(along - rock.top, 0) * (rock.k - 1) * rock.scale;
+    out.x = point.x + rock.ux * shift;
+    out.y = point.y + rock.uy * shift;
+    out.z = point.z + rock.uz * shift;
+    // (A normal under a stretch along up by k: its along-up part over k; a heading: its along-up part times k.)
+    const nu = point.nx * rock.ux + point.ny * rock.uy + point.nz * rock.uz;
+    const nScale = 1 / rock.k - 1;
+    let nx = point.nx + rock.ux * nu * nScale;
+    let ny = point.ny + rock.uy * nu * nScale;
+    let nz = point.nz + rock.uz * nu * nScale;
+    const nl = Math.hypot(nx, ny, nz) || 1;
+    out.nx = nx /= nl;
+    out.ny = ny /= nl;
+    out.nz = nz /= nl;
+    const tu = point.tx * rock.ux + point.ty * rock.uy + point.tz * rock.uz;
+    const tx = point.tx + rock.ux * tu * (rock.k - 1);
+    const ty = point.ty + rock.uy * tu * (rock.k - 1);
+    const tz = point.tz + rock.uz * tu * (rock.k - 1);
+    const tl = Math.hypot(tx, ty, tz) || 1;
+    out.tx = tx / tl;
+    out.ty = ty / tl;
+    out.tz = tz / tl;
+    return out;
+}

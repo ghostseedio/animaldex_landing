@@ -21,6 +21,7 @@ import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {ASSET_BASE} from "@/ark-scene/tree-assets";
 import {generatedRockFile, generatedShape, rockAssetFor, rockAssetInfo, rockFoot, steepSink} from "@/ark-scene/rock-assets";
 import {cachedRock} from "@/ark-scene/rock-shapes";
+import {stretchedFace, type StretchedRock} from "@/ark-scene/grounding/contact";
 import {floorAssetInfo, floorPlacements} from "@/ark-scene/floor-assets";
 import {worldDecor} from "@/ark-scene/decor";
 import {arkWorld} from "@/ark-scene/world";
@@ -129,6 +130,31 @@ export class AssetInstances {
     /** Ready once every needed asset is loaded. */
     ready = false;
     /** Per asset: its instances, its meshes per level, and (mobile performance lane) each instance's level as last written. */
+    /** ARK-CONTACT: the rocks drawn reached down to their ground, by 8 m cell. */
+    private readonly stretched = new Map<number, Array<StretchedRock & {reach: number}>>();
+
+    /**
+     * ARK-CONTACT (decision 447, the mangrove crab over its rock): an attach point on a rock face as the rock is drawn
+     * (`grounding/contact.ts` stretchedFace) into `out`, or null where no rock there is drawn reached down.
+     */
+    drawnFace<T extends {x: number; y: number; z: number; nx: number; ny: number; nz: number; tx: number; ty: number; tz: number}>(point: T, out: T): T | null {
+        if (!this.stretched.size) return null;
+        let best: (StretchedRock & {reach: number}) | null = null;
+        let least = Infinity;
+        const cx = Math.floor(point.x / 8);
+        const cz = Math.floor(point.z / 8);
+        for (let a = -1; a <= 1; a++)
+            for (let b = -1; b <= 1; b++)
+                for (const rock of this.stretched.get(stretchKey(cx + a, cz + b)) ?? []) {
+                    const d = Math.hypot(point.x - rock.x, point.y - rock.y, point.z - rock.z);
+                    if (d < rock.reach && d < least) {
+                        least = d;
+                        best = rock;
+                    }
+                }
+        return best ? (stretchedFace(point, best, out) as T) : null;
+    }
+
     private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; distances: [number, number, number]; info: AssetInfo; levels?: Int8Array}>();
     private reach = 1;
     private shadows = true;
@@ -156,6 +182,17 @@ export class AssetInstances {
             const foot = placed.foot && placed.foot.k > 1 ? placed.foot : null;
             at.set(0, foot ? foot.top * placed.scale * (1 - foot.k) : 0, 0).applyQuaternion(rotation).add(lift.set(placed.x, placed.y, placed.z));
             const matrix = new Matrix4().compose(at, rotation, size.set(placed.scale, placed.scale * (foot?.k ?? 1), placed.scale));
+            // ARK-CONTACT: kept, to put what sits on its faces on the rock as drawn (`drawnFace`).
+            if (foot) {
+                const up = upVector.set(0, 1, 0).applyQuaternion(rotation);
+                const b = infoFor(placed.id).bounds;
+                const reach = Math.hypot(b.max[0] - b.min[0], (b.max[1] - b.min[1]) * foot.k, b.max[2] - b.min[2]) * placed.scale;
+                const rock: StretchedRock & {reach: number} = {x: placed.x, y: placed.y, z: placed.z, ux: up.x, uy: up.y, uz: up.z, scale: placed.scale, top: foot.top, k: foot.k, reach};
+                const key = stretchCell(placed.x, placed.z);
+                const list = this.stretched.get(key);
+                if (list) list.push(rock);
+                else this.stretched.set(key, [rock]);
+            }
             const shade = placed.shade ?? 1;
             entry.instances.push({x: placed.x, y: placed.y, z: placed.z, matrix, tint: new Color(shade, shade, shade)});
         }
@@ -304,6 +341,9 @@ export class AssetInstances {
         if (this.materials.double !== this.materials.front) this.materials.double.dispose();
     }
 }
+
+const stretchKey = (cx: number, cz: number) => (cx + 4096) * 8192 + (cz + 4096);
+const stretchCell = (x: number, z: number) => stretchKey(Math.floor(x / 8), Math.floor(z / 8));
 
 /** Every decor rock as its asset rock (batch 5). */
 export class AssetRocks extends AssetInstances {

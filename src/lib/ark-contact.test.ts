@@ -161,3 +161,19 @@ test("zooming out past the reactive layer's reach, an animal it moved eases back
     agents.get("giraffe")!.offset.x = 0;
     assert.equal(layer.holding("giraffe"), false);
 });
+
+test("on a rock drawn reached down to its ground, a crab on its face sits on the face as drawn", async () => {
+    const {stretchedFace} = await import("@/ark-scene/grounding/contact");
+    // A rock 2x its own size, its top at 1 (own units), drawn stretched 2x down along its up about the top.
+    const rock = {x: 10, y: 3, z: -4, ux: 0, uy: 1, uz: 0, scale: 2, top: 1, k: 2};
+    // Its face as made at (0.5, 0.25, 0) own units, facing out and a little up.
+    const made = {x: 10 + 1, y: 3 + 0.5, z: -4, nx: 0.8, ny: 0.6, nz: 0, tx: 0, ty: 0, tz: 1};
+    const out = stretchedFace(made, rock, {...made});
+    // The drawing: y' = top + (y - top)·k = 1 + (0.25 - 1)·2 = -0.5 own units, so 3 - 1 in the world.
+    assert.ok(Math.abs(out.y - 2) < 1e-9 && out.x === made.x && out.z === made.z);
+    // Its normal: less upward (the stretched side is steeper).
+    assert.ok(out.ny < made.ny && Math.abs(Math.hypot(out.nx, out.ny, out.nz) - 1) < 1e-9);
+    // Its top is where it was.
+    const top = stretchedFace({...made, y: 3 + 2}, rock, {...made});
+    assert.equal(top.y, 5);
+});
