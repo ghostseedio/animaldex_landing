@@ -160,7 +160,7 @@ import type {ArkPower} from "@/ark-scene/power-table";
 import {tideFit} from "@/lib/ark-liveliness";
 import {ARK_ENV as ARK_ENVIRONMENT, ARK_WIND as ARK_WIND_VECTOR} from "@/ark-scene/glsl";
 import {WATER_WIND} from "@/ark-scene/terrain";
-import {allAttachPoints, attachSway, groundNormal, setAttachHomePlots, type ArkEnvironment} from "@/ark-scene/sampler";
+import {allAttachPoints, attachSway, groundNormal, setAttachHomePlots, type ArkEnvironment, type AttachPoint} from "@/ark-scene/sampler";
 import {arkHatchNest, type ArkAct, type ArkEventAnimal} from "@/lib/ark-life";
 import {BehaviourDirector, BehaviourRandom} from "@/lib/talking-models/behaviour";
 import {
@@ -203,7 +203,8 @@ import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
 import {benthicCreep, edgeBase, inPlaceLift, livesUnderWater, shadowFootprint, wadeBase} from "@/ark-scene/grounding/contact";
-import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
+import {placedTrunk} from "@/ark-scene/tree-climb";
+import {attachPoint, drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
 import {drawnGround, drawnGroundHeight, setDrawnGroundStride} from "@/ark-scene/grounding/drawn-ground";
 import {lowestPoints, seatDrop} from "@/ark-scene/grounding/tips";
 import {feetCarryClip, modelBase, uprightBody} from "@/ark-scene/grounding/base";
@@ -216,6 +217,7 @@ import {flightSpec} from "@/ark-scene/locomotion/flight";
 import {locoStyle} from "@/ark-scene/locomotion/styles";
 import {swimPaces} from "@/ark-scene/locomotion/swim";
 import {collideBlocked, collideSegmentClear, setIslandColliders, unionColliders, type ColliderSet} from "@/ark-scene/collide";
+import type {Collider} from "@/ark-scene/collide/colliders";
 import type {Stand} from "@/ark-scene/grounding/stand";
 import {lieOnGround} from "@/ark-scene/grounding/stand"; // p2 (contact): a sleeper lying on the drawn ground
 import {setBehaviourHomePlots} from "@/ark-scene/world-sampler";
@@ -588,6 +590,8 @@ type Entry = {
     drawnFace?: SurfacePoint;
     /** ARK-CONTACT: its town eave perch as drawn (`drawnEave`), kept so a frame makes no new point. */
     eaveFace?: SurfacePoint;
+    /** ARK-CONTACT: its limb point moved clear of the trunk (`trunkClear`), kept so a frame makes no new point. */
+    limbFace?: SurfacePoint;
     /** ARK-CONTACT: its flower head or leaf as drawn (`surfaceBelow`), kept so a frame makes no new point. */
     floorFace?: SurfacePoint;
     /** Ambient flock-mates round a small animal's spot (a swarm, a cluster). */
@@ -4118,7 +4122,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const plantCaster = new Raycaster();
     let plantCastsLeft = 2;
     let plantCastFrame = -1;
-    const plantBelow = (x: number, y: number, z: number, up: number, down: number, frame: number): number | null | undefined => {
+    const plantBelow = (x: number, y: number, z: number, up: number, down: number, frame: number, force = false): number | null | undefined => {
         const key = `${Math.round(x * 200)},${Math.round(y * 200)},${Math.round(z * 200)}`;
         const known = plantCache.get(key);
         if (known !== undefined) return known;
@@ -4126,7 +4130,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             plantCastFrame = frame;
             plantCastsLeft = 2;
         }
-        if (plantCastsLeft <= 0) return undefined;
+        if (plantCastsLeft <= 0 && !force) return undefined;
         plantCastsLeft--;
         // (The plant meshes, gathered again every few seconds: the sets load and swap their levels.)
         if (!plantMeshes || frame - plantMeshesAt > 300) {
@@ -4147,6 +4151,78 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (plantCache.size > 4096) plantCache.clear();
         plantCache.set(key, best);
         return best;
+    };
+    // ARK-CONTACT (the langur in the trunk): how far to draw an animal of `length` held on the tree point `id` from it so
+    // its middle is a trunk's radius (at its foot: the widest) and half its length from every trunk's axis there: out along
+    // the limb (the point's own way, turned away from the trunk; straight out from the axis on a point with none), 5 cm at
+    // a time, up to 2 m, then onto the drawn wood under that place (`plantBelow`). null when it is clear already (or no
+    // point); undefined while the wood is still to be cast; `seated` false when no wood was under it (drawn out anyway).
+    // Kept per point and length: the points and the trunks stay put.
+    // The trunks round a tree point at its height: its own tree's as drawn (`placedTrunk`: the axis leans, the radius
+    // tapers, up into the crown), and the trunk colliders near it (other trees; its own when its asset has no fit).
+    const trunksAt = (point: AttachPoint, half: number, set: ColliderSet): Array<{cx: number; cz: number; r: number; id: string}> => {
+        const at = point.position;
+        const out: Array<{cx: number; cz: number; r: number; id: string}> = [];
+        const own = point.asset && point.wind ? placedTrunk(point.asset, point.wind) : null;
+        if (own) {
+            const h = at.y - own.y;
+            if (h >= 0 && h <= own.height) out.push({cx: own.x + own.lx * h, cz: own.z + own.lz * h, r: Math.max(own.r0 + own.taper * h, own.r0 * 0.25, 0.02), id: `trunk:${point.host}`});
+        }
+        for (const c of set.near(at.x, at.z, half + 4, trunkNear.splice(0))) {
+            if (c.kind !== "trunk" || c.shape !== "circle" || at.y < c.y0 - 0.2 || at.y > c.y1 + 0.5 || (own && c.id === `trunk:${point.host}`)) continue;
+            out.push({cx: c.cx, cz: c.cz, r: c.r, id: c.id});
+        }
+        return out;
+    };
+    const TREE_HELD = new Set(["limb", "canopy_perch", "branch", "canopy_climb", "leaf"]);
+    const limbClears = new Map<string, {x: number; y: number; z: number; seated: boolean} | null>();
+    const trunkNear: Collider[] = [];
+    const limbClearOf = (id: string, length: number, frame: number, force: boolean): {x: number; y: number; z: number; seated: boolean} | null | undefined => {
+        const key = `${id}|${Math.round(length * 20)}`;
+        const known = limbClears.get(key);
+        if (known !== undefined) return known;
+        const point = attachPoint(id);
+        const set = world ? sceneColliders(world, townWorld) : null;
+        // (Not bark or a trunk's side: a woodpecker clings along the trunk, its body up it, not out from it.)
+        if (!point || !set || !TREE_HELD.has(point.tag) || point.normal.y < 0.5) return null;
+        const at = point.position;
+        const half = length / 2;
+        const trunks = trunksAt(point, half, set);
+        const inside = (x: number, z: number) => trunks.find((c) => Math.hypot(x - c.cx, z - c.cz) < c.r + half);
+        const first = inside(at.x, at.z);
+        if (!first) {
+            limbClears.set(key, null);
+            return null;
+        }
+        const out = {x: at.x - first.cx, z: at.z - first.cz};
+        const way = (along: {x: number; y: number; z: number} | null) => {
+            let w = along && Math.hypot(along.x, along.z) > 0.3 ? {...along} : {x: out.x, y: 0, z: out.z};
+            if (w.x * out.x + w.z * out.z < 0) w = {x: -w.x, y: -w.y, z: -w.z};
+            const k = 1 / (Math.hypot(w.x, w.y, w.z) || 1);
+            for (let step = 0.05; step <= 2; step += 0.05) {
+                const x = at.x + w.x * k * step;
+                const z = at.z + w.z * k * step;
+                if (!inside(x, z)) return {x: w.x * k * step, y: w.y * k * step, z: w.z * k * step};
+            }
+            return null;
+        };
+        const ways = [way(point.forward ?? null), way(null)].filter((w): w is {x: number; y: number; z: number} => w !== null);
+        if (!ways.length) {
+            limbClears.set(key, null);
+            return null;
+        }
+        for (const w of ways) {
+            const wood = plantBelow(at.x + w.x, at.y + w.y, at.z + w.z, 0.3, 0.6, frame, force);
+            if (wood === undefined) return undefined;
+            if (wood !== null) {
+                const seat = {x: w.x, y: wood - at.y, z: w.z, seated: true};
+                limbClears.set(key, seat);
+                return seat;
+            }
+        }
+        const drawnOut = {...ways[0], seated: false};
+        limbClears.set(key, drawnOut);
+        return drawnOut;
     };
     // ARK-CONTACT: the view's target and the camera's distance from it at the reactive layer's last step: a move with the
     // target still and only the distance changed is a zoom (`ReactiveWorld.cameraZooming`).
@@ -6026,6 +6102,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     where.base += inside + Math.max(entry.length * 0.25, 0.01);
                     // (On the rock's top it stands upright on it, not along a face it was set on inside the rock.)
                     if (where.surface && Math.abs(where.surface.ny) < 0.5) where.surface = undefined;
+                }
+            }
+            // ARK-CONTACT (ARK-SLEEP, 2026-11-21: a langur at limb:decor98:4 drawn inside its tree's trunk): an animal held on
+            // a tree's point (a limb's top) is never in a trunk: closer to a trunk's axis than the trunk's radius and half its
+            // length, it is drawn further out along its limb, on the limb's drawn wood there (`limbClearOf`).
+            const limbId = where.surface && !where.water ? entry.sched?.trip?.to.point ?? null : null;
+            if (limbId && world && !(process.env.NODE_ENV !== "production" && (globalThis as {__arkLimbFixOff?: boolean}).__arkLimbFixOff)) {
+                const clear = limbClearOf(limbId, entry.length, renderer.info.render.frame, false);
+                const point = clear ? attachPoint(limbId) : null;
+                if (clear && point && Math.hypot(where.x - point.position.x, where.z - point.position.z) < 0.4) {
+                    where.x += clear.x;
+                    where.base += clear.y;
+                    where.z += clear.z;
+                    const face = where.surface!;
+                    where.surface = entry.limbFace = Object.assign(entry.limbFace ?? {...face}, face, {x: face.x + clear.x, y: face.y + clear.y, z: face.z + clear.z});
                 }
             }
             // ARK-CONTACT (the owner, 2026-11-21: the ground dove in mid-air beside a house's roof): resting on a town eave's
@@ -10181,6 +10272,52 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             },
             rockDepth: (x: number, y: number, z: number) => assetRocks?.insideRock(x, y, z) ?? 0,
             planOf: (slug: string) => library.get(slug)?.behaviour?.plan ?? null,
+            // ARK-CONTACT (the langur in the trunk): every animal up off the ground whose body is in a tree's trunk (its middle
+            // closer to the axis than the trunk's radius and half its length), where it was last drawn or else posed.
+            limbClear: (id: string, length: number) => {
+                const point = attachPoint(id);
+                const set = world ? sceneColliders(world, townWorld) : null;
+                const trunk = point && set ? trunksAt(point, length / 2, set)[0] ?? null : null;
+                const off = limbClearOf(id, length, renderer.info.render.frame, true);
+                return {point: point && {position: point.position, normal: point.normal, forward: point.forward ?? null, radius: point.radius ?? null, size: point.size}, trunk, axis: point && trunk ? Math.hypot(point.position.x - trunk.cx, point.position.z - trunk.cz) : null, off: off ?? null};
+            },
+            inTrunks: () => {
+                // Every animal held at a tree's point, wherever it is on either island (its shared spot: drawn or not):
+                // its body in a trunk at the point (before), and where the scene draws it (after: `limbClearOf`).
+                const set = world ? sceneColliders(world, townWorld) : null;
+                if (!set) return null;
+                const inTrunk = (point: AttachPoint, dx: number, dz: number, half: number) => {
+                    for (const c of trunksAt(point, half, set)) {
+                        const by = c.r + half - Math.hypot(point.position.x + dx - c.cx, point.position.z + dz - c.cz);
+                        if (by > 0.02) return {by: Math.round(by * 100) / 100, trunk: c.id};
+                    }
+                    return null;
+                };
+                let checked = 0;
+                let seated = 0;
+                let unseated = 0;
+                const before: Array<{id: string; slug: string; point: string; by: number; trunk: string}> = [];
+                const after: typeof before = [];
+                for (const e of allEntries()) {
+                    const id = e.sched?.trip?.to.point;
+                    const point = id ? attachPoint(id) : null;
+                    if (!id || !point || !TREE_HELD.has(point.tag) || point.normal.y < 0.5 || e.sched?.pose?.aloft) continue;
+                    if (Math.hypot((e.sched?.pose?.x ?? 1e9) - point.position.x, (e.sched?.pose?.z ?? 1e9) - point.position.z) > 0.4) continue;
+                    checked++;
+                    const was = inTrunk(point, 0, 0, e.length / 2);
+                    if (was) before.push({id: e.animal.id, slug: e.animal.model_slug, point: id, ...was});
+                    const off = (globalThis as {__arkLimbFixOff?: boolean}).__arkLimbFixOff ? null : limbClearOf(id, e.length, renderer.info.render.frame, true);
+                    if (off) {
+                        if (off.seated) seated++;
+                        else unseated++;
+                    }
+                    const now = inTrunk(point, off?.x ?? 0, off?.z ?? 0, e.length / 2);
+                    if (now) after.push({id: e.animal.id, slug: e.animal.model_slug, point: id, ...now});
+                }
+                const top = (rows: typeof before) => rows.sort((a, b) => b.by - a.by).slice(0, 30);
+                const primates = allEntries().filter((e) => /langur|monkey|macaque|lemur|gibbon|colobus|capuchin|tamarin|marmoset|orangutan|baboon|chimp/.test(e.animal.model_slug) && (e.sched?.trip?.to.point ?? "").startsWith("limb:")).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, point: e.sched!.trip!.to.point, moving: Boolean(e.sched?.pose?.moving)}));
+                return {primates, checked, before: before.length, after: after.length, moved: seated + unseated, seated, unseated, beforeRows: top(before), afterRows: top(after)};
+            },
             // ARK-CONTACT: the clips a species' loaded rig has (the rules' pick: `rigClip`).
             rigClips: (slug: string) => Object.keys(rigs.get(slug)?.clips ?? {}),
             tips: (id: string, count = 8) => {

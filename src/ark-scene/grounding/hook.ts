@@ -83,7 +83,8 @@ onHamletSwitch(() => {
 onArkWorld(() => {
     byId = null;
 });
-function attachPoint(id: string): AttachPoint | null {
+/** A scenery attach point by its id (a map roost's too). */
+export function attachPoint(id: string): AttachPoint | null {
     byId ??= new Map(allAttachPoints().map((point) => [point.id, point]));
     // (A map roost names the scenery's point after `map:`: `map/place.ts` scheduleRoost.)
     return byId.get(id) ?? (id.startsWith("map:") ? byId.get(id.slice(4)) ?? null : null);

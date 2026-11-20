@@ -439,6 +439,41 @@ const closeUp = async (name, id, toggle) => {
     const brief = (r) => r && {first: r.under?.hits?.[0] ?? null, drawnGround: r.under?.drawnGround ?? null, tips: (r.tips?.tips ?? []).map((t) => t.gap).filter((g) => g !== null).slice(0, 8)};
     console.log("closeup", name, JSON.stringify({before: brief(out.before), after: brief(out.after)}));
 };
+// ARK-SLEEP's langur in the trunk: animals off the ground whose body is in a trunk, both islands, the fix off and on (the
+// drawn ones move), and a monkey on a limb in the page's close-up.
+if (want("langur")) {
+    const langurs = await page.evaluate(() => window.__arkDebug.entries().filter((e) => /langur/.test(e.animal.model_slug)).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, point: e.sched?.trip?.to.point ?? null, length: e.length})));
+    console.log("langurs", JSON.stringify(langurs));
+    console.log("langur limb", JSON.stringify(await page.evaluate(() => window.__arkDebug.limbClear("limb:decor98:4", 1.29))));
+}
+if (want("limbs")) {
+    const short = (rows) => rows.slice(0, 12).map((x) => [x.slug, x.point, x.by, x.trunk]);
+    let pick = null;
+    for (const hour of [3, 7, 11, 15, 19, 23]) {
+        await page.evaluate((h) => window.__arkScene.setHours(h), hour);
+        await wait(4000);
+        for (const off of [true, false]) {
+            await page.evaluate((off) => (window.__arkLimbFixOff = off), off);
+            const r = await page.evaluate(() => window.__arkDebug.inTrunks());
+            console.log("limbs", hour, off ? "before" : "after", JSON.stringify({checked: r?.checked, before: r?.before, after: r?.after, moved: r?.moved, seated: r?.seated, unseated: r?.unseated, rows: short(off ? r?.beforeRows ?? [] : r?.afterRows ?? [])}));
+            if (off) {
+                console.log("limbs", hour, "primates on limbs", JSON.stringify(r?.primates ?? []));
+                const inTrunk = (r?.beforeRows ?? []).find((x) => /langur|monkey|macaque|lemur|gibbon|colobus|capuchin|tamarin|marmoset|orangutan|baboon|chimp/.test(x.slug));
+                if (inTrunk && hour >= 7 && hour <= 15 && !pick?.inTrunk) pick = {...inTrunk, hour, inTrunk: true};
+                const still = (r?.primates ?? []).find((x) => !x.moving);
+                if (!pick && still && hour >= 7 && hour <= 15) pick = {...still, hour};
+            }
+        }
+    }
+    await page.evaluate(() => (window.__arkLimbFixOff = false));
+    console.log("limbs pick", JSON.stringify(pick));
+    if (pick) {
+        await page.evaluate((h) => window.__arkScene.setHours(h), pick.hour);
+        await wait(3000);
+        await closeUp(`limb-${pick.slug}`, pick.id, "__arkLimbFixOff");
+    }
+}
+
 // Round 4e: an eave bird framed by hand from above and outside its house (the planned eave before, the drawn eave after),
 // and the shield stink bug on the town island in the page's close-up.
 if (want("r4e")) {
