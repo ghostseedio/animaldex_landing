@@ -162,7 +162,7 @@ test("a visit: the doe comes to the fawn, stands beside it with the fawn up, and
     const {live: later, ids: lids, entries: lentries} = setup({slug: "white-tailed-deer", plan: "mammal", adults: 1, young: 1, length: 1.8, youngLength: 0.7}, wander);
     const old = lentries.get(lids.young[0])!;
     old.animal = {...old.animal, born_ark_day: DAY - 60};
-    later.setSnapshot([...lentries.values()].map((e) => e.animal), DAY);
+    later.setSnapshot(Array.from(lentries.values()).map((e) => e.animal), DAY);
     const age = later.ageOf(old)!;
     assert.equal(age.staying, false);
     assert.equal(age.follow?.parentId, lids.adults[0]);

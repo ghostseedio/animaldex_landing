@@ -568,7 +568,8 @@ export class ArkLiveliness {
         }
         const parentId = age && age.stage === "young" && age.follow ? age.follow.parentId : null;
         const parent = parentId ? this.options.hooks.entryOf(parentId) : null;
-        if (age && parent && age.follow && !pose.aloft) {
+        // (A young one that follows in a line does not take wing on its own schedule's flight: it goes with her.)
+        if (age && parent && age.follow && (!pose.aloft || age.line)) {
             // Its parent a moment ago, sheltering or not: it keeps to its heel.
             const raw = this.options.hooks.poseAt(parent, epochSeconds - HEEL_LAG_SECONDS);
             if (raw) {
