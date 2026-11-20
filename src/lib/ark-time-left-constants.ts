@@ -16,8 +16,11 @@ export const ARK_DAYS_PER_REAL_DAY = 365 / 14;
 /** `rules.ts` DEFAULT_CONFIG.oldLifeFrac: "old" from this share of the wild lifespan (the public read's `old_from_life_fraction`, 0.8). */
 export const OLD_LIFE_FRACTION = 0.8;
 
-/** `rules.ts` DEFAULT_CONFIG.adultAge*: an arrival counts as grown on arrival (its age starts at 0.15 of the lifespan's middle, 2 to 3650 days). */
-export const ADULT_AGE = {lifespanFraction: 0.15, minDays: 2, maxDays: 3650} as const;
+/**
+ * `rules.ts` DEFAULT_CONFIG.adultAge*: an arrival counts as grown on arrival (its age starts at 0.15 of the lifespan's middle,
+ * 2 to 3650 days); a kind with no stored lifespan is grown from `defaultDays` (adultAgeDefaultDays).
+ */
+export const ADULT_AGE = {lifespanFraction: 0.15, minDays: 2, maxDays: 3650, defaultDays: 365} as const;
 
 /** `rules.ts` DEFAULT_CONFIG.starve*: days of continuous hunger a predator lasts, 14 x kg^0.25, from 7 to 120 days. */
 export const STARVE = {baseDays: 14, massExponent: 0.25, minDays: 7, maxDays: 120} as const;
@@ -74,3 +77,16 @@ export const HUNT_SUCCESS: Readonly<Record<string, readonly [number, number]>> =
     "8baa3fba-b3dd-4328-b3f6-e2c2d9ebdab0": [0.15, 0.33], // Spotted Hyena
     "696281b7-35ee-4f2a-b571-cbd4dd3d7522": [0.15, 0.15] // Common Snapping Turtle
 };
+
+/**
+ * The Homo sapiens species profiles (AnimalDex 2fabfa9a, #2068, and the stray "Human" 0fd32bd2 without a scientific name):
+ * the web's `town-humans.ts` `HUMAN_SPECIES_IDS` (the test checks both). A human is outside the food web (the links refuse Homo:
+ * never prey, never a predator) and has no stored lifespan (AnimalDex decisions 378 and 380: no traits row, no old age).
+ */
+export const HUMAN_SPECIES_IDS: readonly string[] = ["2fabfa9a-6ec9-4d71-8cf2-1933edaef6d2", "0fd32bd2-669f-489d-8a1b-8e917aa5117d"];
+
+/**
+ * A human is grown 18 Ark years after it is born (the server's courtship `GROWN_DAYS`, `couples.ts`); an arrival counts as
+ * grown on arrival. This is a human's `adultAgeDays` here, not the engine's default year for a kind with no stored lifespan.
+ */
+export const HUMAN_GROWN_DAYS = 18 * 365;

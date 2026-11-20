@@ -4,18 +4,21 @@
  * are one species' place in the food chain, read from `/api/ark/food-chain?species=<slug>` (public species facts, the
  * same for everyone, cached by the CDN for an hour): never anything about one animal, never a user, never a draw.
  *
- * Read lazily, only for an animal whose risk could depend on them (`arkNeedsFacts`), in one request for its own
- * species and one for each of at most `PREDATORS_READ` predators that live in its region. Any read that fails leaves
+ * Read lazily, only for an animal whose estimate could depend on them (`arkNeedsFacts`: a wild one while the hunting
+ * protection is known, or a hungry one), in one request for its own species and one for each of at most
+ * `PREDATORS_READ` predators that live in its region. Any read that fails leaves
  * that fact unknown (the model then skips the factor); nothing is guessed.
  */
 
 import {isArkFoodChainSlug} from "@/lib/ark-food-chain";
 import {
     ARK_TIME_LEFT_HOOKS,
+    arkLifeOutlook,
     arkNeedsFacts,
     arkTimeLeft,
     arkTimeLeftKind,
     arkTimeLeftRegion,
+    type ArkLifeOutlook,
     type ArkTimeLeft,
     type ArkTimeLeftAnimal,
     type ArkTimeLeftFacts,
@@ -103,4 +106,10 @@ export async function readArkTimeLeftFacts(animal: ArkTimeLeftAnimal, world: Ark
 export async function arkTimeLeftFor(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld, fetchJson: ArkTimeLeftFetch = arkTimeLeftFetch): Promise<ArkTimeLeft | null> {
     const facts = arkNeedsFacts(animal, world) ? await readArkTimeLeftFacts(animal, world, fetchJson).catch(() => null) : null;
     return arkTimeLeft(animal, world, facts, ARK_TIME_LEFT_HOOKS);
+}
+
+/** The whole block for one animal (its age, life stage and time left, for any animal), as `arkTimeLeftFor` reads the facts. */
+export async function arkLifeOutlookFor(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld, fetchJson: ArkTimeLeftFetch = arkTimeLeftFetch): Promise<ArkLifeOutlook | null> {
+    const facts = arkNeedsFacts(animal, world) ? await readArkTimeLeftFacts(animal, world, fetchJson).catch(() => null) : null;
+    return arkLifeOutlook(animal, world, facts, ARK_TIME_LEFT_HOOKS);
 }

@@ -9,6 +9,7 @@
  */
 
 import type {ArkGraphWords} from "@/lib/ark-graph-words";
+import {arkKindAlone, arkKindHereText, arkKindRuleShown, arkKindWholeText, type ArkKindWhere} from "@/lib/ark-kind-where";
 import {fillArkWords} from "@/lib/ark-words";
 import {
     ARK_PERIODS,
@@ -17,6 +18,7 @@ import {
     arkGraphWhen,
     arkLinePath,
     arkStatsChangeText,
+    arkStepChanges,
     type ArkHistory,
     type ArkPeriod,
     type ArkSeries,
@@ -111,6 +113,29 @@ export function drawControls(host: HTMLElement, mode: ArkSortMode, onMode: (mode
     );
 }
 
+/**
+ * Where a kind's animals are, into `host`: the count across the whole Ark with its places, and, when an animal is tapped,
+ * where it stands among its own ("This one: alone in its zoo enclosure"). `rule` adds the breeding rule where it matters (the
+ * pane: the animal is alone in its place or its kind is spread over places; the panel's strip: only for an animal alone in
+ * its place). Nothing in `host` when the kind has none aboard.
+ */
+export function drawWhere(host: HTMLElement, where: ArkKindWhere | null, words: ArkGraphWords, locale: string, options: {name?: boolean; rule: "matters" | "alone"}) {
+    host.replaceChildren();
+    host.style.display = where ? "block" : "none";
+    if (!where) return;
+    const line = (text: string, style: Partial<CSSStyleDeclaration>) => {
+        const p = document.createElement("p");
+        Object.assign(p.style, {margin: "0", font: `500 11.5px/1.35 ${FONT}`}, style);
+        p.textContent = text;
+        host.appendChild(p);
+    };
+    if (options.name) line(where.name, {fontWeight: "700", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"});
+    line(arkKindWholeText(where, words, locale), {opacity: "0.75"});
+    const here = arkKindHereText(where, words, locale);
+    if (here) line(here, {fontWeight: "600", color: LIME});
+    if (options.rule === "matters" ? arkKindRuleShown(where) : arkKindAlone(where)) line(words.breedsSamePlace, {opacity: "0.45"});
+}
+
 /** One species' graph pane: back, name and count, period switch, the line, its numbers, and the fly-to button. */
 export function buildGraphPane(options: {
     history: ArkHistory;
@@ -124,6 +149,8 @@ export function buildGraphPane(options: {
     onBack: () => void;
     onFly: (() => void) | null;
     words: ArkGraphWords;
+    /** Where the kind's animals are, and where the tapped one is among them. */
+    where: ArkKindWhere | null;
 }): HTMLDivElement {
     const {history, name, series, stats, period, locale, words} = options;
     const number = (value: number) => value.toLocaleString(locale);
@@ -152,6 +179,10 @@ export function buildGraphPane(options: {
     Object.assign(now.style, {font: `700 15px/1 ${FONT}`, fontVariantNumeric: "tabular-nums"});
     now.textContent = number(stats.now);
     head.append(badge, title, now);
+
+    const whereBox = document.createElement("div");
+    Object.assign(whereBox.style, {padding: "6px 14px 0"});
+    drawWhere(whereBox, options.where, words, locale, {rule: "matters"});
 
     const bar = document.createElement("div");
     Object.assign(bar.style, {display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "8px", padding: "8px 14px 4px"});
@@ -199,7 +230,7 @@ export function buildGraphPane(options: {
     Object.assign(plotBox.style, {position: "relative", padding: "0 8px"});
     const tip = document.createElement("p");
     tip.setAttribute("aria-live", "polite");
-    Object.assign(tip.style, {position: "absolute", top: "0", right: "12px", margin: "0", padding: "2px 6px", borderRadius: "6px", background: "rgba(0,0,0,0.5)", font: `600 11px/1.2 ${FONT}`, fontVariantNumeric: "tabular-nums", display: "none", pointerEvents: "none"});
+    Object.assign(tip.style, {position: "absolute", top: "0", right: "12px", maxWidth: "85%", margin: "0", padding: "2px 6px", borderRadius: "6px", background: "rgba(0,0,0,0.6)", font: `600 11px/1.2 ${FONT}`, fontVariantNumeric: "tabular-nums", display: "none", pointerEvents: "none"});
     const hover = (event: PointerEvent) => {
         const box = chart.getBoundingClientRect();
         const x = ((event.clientX - box.left) / Math.max(box.width, 1)) * W - LEFT;
@@ -213,6 +244,14 @@ export function buildGraphPane(options: {
         dot.setAttribute("cy", String(point[1]));
         dot.setAttribute("fill", LIME);
         tip.textContent = fillArkWords(words.pointAt, {count: number(series.counts[i]), time: arkGraphWhen(series.times[i], locale, history)});
+        // What changed at this point: arrivals from photos, births, deaths (the record's own rows).
+        const changed = arkStepChanges(series, i).map(([kind, n]) => fillArkWords(words[kind], {count: number(n)})).join(" · ");
+        if (changed) {
+            const more = document.createElement("span");
+            Object.assign(more.style, {display: "block", fontWeight: "500", opacity: "0.75"});
+            more.textContent = changed;
+            tip.appendChild(more);
+        }
         tip.style.display = "block";
     };
     chart.addEventListener("pointermove", hover);
@@ -225,6 +264,10 @@ export function buildGraphPane(options: {
         tip.style.display = "none";
     });
     plotBox.append(chart, tip);
+
+    const legend = document.createElement("p");
+    Object.assign(legend.style, {margin: "0", padding: "0 14px 2px", font: `500 10.5px/1.35 ${FONT}`, opacity: "0.55"});
+    legend.textContent = words.riseFall;
 
     const note = document.createElement("p");
     Object.assign(note.style, {margin: "0", padding: "0 14px", font: `500 10.5px/1.3 ${FONT}`, opacity: "0.45"});
@@ -262,7 +305,7 @@ export function buildGraphPane(options: {
         happened.appendChild(gone);
     }
 
-    pane.append(back, head, bar, plotBox, note, grid, happened);
+    pane.append(back, head, whereBox, bar, plotBox, legend, note, grid, happened);
     if (options.onFly) {
         const fly = document.createElement("button");
         fly.type = "button";
