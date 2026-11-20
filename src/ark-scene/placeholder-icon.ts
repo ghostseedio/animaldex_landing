@@ -30,19 +30,21 @@ export function arkIconFallback(event: {currentTarget: {src: string}}) {
 }
 
 /**
- * The species the server said have no icon art (`/api/ark/voyage`'s `noIcon`, from the `animals` bucket's listing):
- * drawn as the generic figure without asking the bucket for a file it does not hold (a 400 and a console error each).
- * Until an answer says (an older server, the listing unavailable), every icon is asked for and a failed one falls back.
+ * The species the server said have no icon art of their own (`/api/ark/voyage`'s `noIcon`, from the `animals` bucket's
+ * listing): drawn as the generic figure without asking the bucket for a file it does not hold (a 400 and a console
+ * error each). An entry is a slug, or `[slug, file]` for a species whose art is filed under another of its own names
+ * (its page's slug, its identity key; `lib/ark-icons.ts`): that file is asked for instead. Until an answer says (an
+ * older server, the listing unavailable), every icon is asked for and a failed one falls back.
  */
-let iconless: ReadonlySet<string> = new Set();
+let iconless: ReadonlyMap<string, string | undefined> = new Map();
 
 /** An Ark answer's `noIcon`: each one replaces the last (an icon uploaded since is asked for again); anything else is ignored. */
 export function noteArkIconless(noIcon: unknown): void {
-    if (!Array.isArray(noIcon)) return;
-    iconless = new Set(noIcon.filter((slug): slug is string => typeof slug === "string"));
+    if (Array.isArray(noIcon)) iconless = new Map(noIcon.map((one) => ([] as unknown[]).concat(one) as [string, string]));
 }
 
 /** A species' icon art, or the generic figure for a placeholder or a species with no art. */
 export function arkIconUrl(slug: string): string {
-    return isArkPlaceholderSlug(slug) || iconless.has(slug) ? ARK_PLACEHOLDER_ICON : getSpeciesArtworkUrl(slug);
+    const file = iconless.get(slug);
+    return isArkPlaceholderSlug(slug) || (iconless.has(slug) && !file) ? ARK_PLACEHOLDER_ICON : getSpeciesArtworkUrl(file ?? slug);
 }

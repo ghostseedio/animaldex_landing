@@ -1,8 +1,9 @@
 import {NextResponse, type NextRequest} from "next/server";
 import {readArkVoyage} from "@/data/ark-voyage";
+import {readArkIconAliases} from "@/data/ark-icon-aliases";
 import {getSpeciesArtworkSlugs} from "@/data/species-artwork-index";
 import {arkFoundersOf} from "@/lib/ark-founders";
-import {arkIconlessSlugs} from "@/lib/ark-icons";
+import {arkIconlessSlugs, arkNoIcon} from "@/lib/ark-icons";
 import {arkEtagMatches, arkVoyageEtag} from "@/lib/ark-voyage-etag";
 
 export const runtime = "nodejs";
@@ -21,7 +22,11 @@ export const dynamic = "force-dynamic";
  * `noIcon` beside it: the answer's species with no icon art in the `animals`
  * bucket (`lib/ark-icons.ts`, from the bucket's listing, cached 30 minutes),
  * drawn as the generic figure without a request each; absent while the
- * listing is unavailable (every icon is then asked for, as before).
+ * listing is unavailable (every icon is then asked for, as before). A species
+ * whose art is filed under another of its own names (its page's slug, its
+ * identity key: `manta-ray.webp` for the Giant Oceanic Manta Ray) comes as
+ * `[slug, file]` instead, from `species_profiles` (`data/ark-icon-aliases.ts`,
+ * kept in memory as long as the listing is).
  *
  * An anonymous answer carries a validator (`lib/ark-voyage-etag.ts`): the same Ark but for the read's own time answers
  * 304 to a reader holding it (the apps' panel reads every 45 s: ~400 KB each time before, nothing when unchanged now).
@@ -41,7 +46,8 @@ export async function GET(request: NextRequest) {
     const [read, artwork] = await Promise.all([readArkVoyage(), getSpeciesArtworkSlugs().catch(() => null)]);
     const cache = read.signedIn ? "private, no-store" : "public, s-maxage=30, stale-while-revalidate=60";
     if (!read.available) return NextResponse.json({available: false}, {status: 503, headers: {"Cache-Control": "no-store"}});
-    const noIcon = artwork ? arkIconlessSlugs(read.snapshot.animals, artwork) : undefined;
+    const missing = artwork ? arkIconlessSlugs(read.snapshot.animals, artwork) : null;
+    const noIcon = artwork && missing ? arkNoIcon(missing, await readArkIconAliases(read.snapshot.animals, missing, artwork).catch(() => new Map<string, string>())) : undefined;
     const payload = {available: true, snapshot: read.snapshot, founders: read.founders, ...(noIcon ? {noIcon} : {})};
     if (read.signedIn) return NextResponse.json(payload, {headers: {"Cache-Control": cache}});
     const etag = arkVoyageEtag(payload);
