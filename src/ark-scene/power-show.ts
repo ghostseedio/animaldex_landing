@@ -57,6 +57,11 @@ export type ArkPowerFrame = {
     pack: number;
     /** 0 … 1: how much of the local reactive layer's flight it holds back (camouflage, warning). */
     still: number;
+    /**
+     * How far its drawn body goes down (m; negative: up), after grounding has stood it on the ground: a duck into
+     * cover, an armoured crouch, a feigner on its side, a flyer lifting off. (The pose's base would be stood up again.)
+     */
+    drop: number;
     /** Its head look (yaw, pitch, weight), or null: the scene's own. */
     head: [number, number, number] | null;
     /** (Internal.) A predator beside it at the last check, and when to check again. */
@@ -182,6 +187,21 @@ export function armourPack(slug: string, plan: string | null | undefined, amount
     return packDefence(DEFENCE_KIND.curl, amount, 0);
 }
 
+/**
+ * The species' own sourced defensive act, when the catalogue has one the scene can play on the spot (`defence-moves.json`,
+ * built from AnimalDex docs/ark/signature-behaviours.json's defence rows): its packed shape at an amount, or null. A
+ * tail-dropper's shed is not replayed (it is kept per animal and grows back over a quarter hour).
+ */
+export function ownAct(slug: string): ((amount: number, plan: string | null) => number) | null {
+    const spec = defenceMoveOf(slug);
+    if (!spec || spec.move === "tail") return null;
+    return (amount, plan) => {
+        const state = newDefenceState();
+        state.amount = amount;
+        return amount > 0.004 ? defencePack(state, spec, plan) : 0;
+    };
+}
+
 /** A hunter's pass over a prime animal at time `t` into its period: [looking at it 0…1, turned away 0…1]. */
 export function passPhase(t: number): [number, number] {
     const look = smooth(PASS_LOOK - 0.5, PASS_LOOK + 0.6, t) * (1 - smooth(PASS_AWAY - 0.3, PASS_AWAY + 0.5, t));
@@ -196,7 +216,7 @@ export function passPhase(t: number): [number, number] {
  */
 const demo = () => Boolean((globalThis as {__arkPowerDemo?: boolean}).__arkPowerDemo);
 
-const frameOf = (): ArkPowerFrame => ({mechanism: null, react: 0, q: 0, look: null, pack: 0, still: 0, head: null, threat: 0, check: 0, fromX: 0, fromZ: 0});
+const frameOf = (): ArkPowerFrame => ({mechanism: null, react: 0, q: 0, look: null, pack: 0, still: 0, drop: 0, head: null, threat: 0, check: 0, fromX: 0, fromZ: 0});
 
 type Hunter = {id: string; target: string | null; since: number | null};
 
@@ -288,7 +308,7 @@ export function createArkPowerShow(): ArkPowerShow {
                 }
             }
             // 2. The released hunt: a searching or stalking hunter drawn here, and the kinds it could eat near it.
-            const passes = new Map<string, {prey: ArkPowerCandidate; look: number; away: number}>();
+            const passes = new Map<string, {prey: ArkPowerCandidate; weaker: ArkPowerCandidate | null; look: number; away: number}>();
             let searching = Array.from(hunters.values());
             if (demo()) {
                 const extra: Hunter[] = [];
@@ -325,9 +345,20 @@ export function createArkPowerShow(): ArkPowerShow {
                         }
                     }
                     if (!prime) continue;
+                    // A weaker one it could eat near it (not prime): it turns to that one instead.
+                    let weaker: ArkPowerCandidate | null = null;
+                    let weakerD = Infinity;
+                    for (const c of list) {
+                        if (c === h || c.entry.thrive === "prime" || c.entry.state.asleep) continue;
+                        const d = Math.hypot(c.pose.x - h.pose.x, c.pose.z - h.pose.z);
+                        if (d > SEARCH_NEAR || d >= weakerD) continue;
+                        if (!canEat(hi, intelProfile(c.entry.animal.model_slug), h.entry.sched?.profile.size ?? null, c.entry.sched?.profile.size ?? null)) continue;
+                        weaker = c;
+                        weakerD = d;
+                    }
                     const t = (((now + seedOf(hunter.id) * PASS_PERIOD) % PASS_PERIOD) + PASS_PERIOD) % PASS_PERIOD;
                     const [look, away] = passPhase(t);
-                    if (look > 0.001 || away > 0.001) passes.set(hunter.id, {prey: prime, look, away});
+                    if (look > 0.001 || away > 0.001) passes.set(hunter.id, {prey: prime, weaker, look, away});
                 }
             }
             // 3. Ease each one's Power and draw it.
@@ -346,6 +377,7 @@ export function createArkPowerShow(): ArkPowerShow {
                 f.look = f.q > 0 ? powerLook(kind, e.animal, Boolean(e.place.canopy)) : null;
                 f.pack = 0;
                 f.still = 0;
+                f.drop = 0;
                 f.head = null;
                 if (f.react > 0.02 || f.q > 0) showing++;
                 if (r <= 0.004) continue;
@@ -354,6 +386,20 @@ export function createArkPowerShow(): ArkPowerShow {
                 const awayX = p.x - f.fromX;
                 const awayZ = p.z - f.fromZ;
                 const awayD = Math.hypot(awayX, awayZ) || 1;
+                // (Turned toward a heading by a share: its back to the threat, or its face.)
+                const turn = (yaw: number, share: number) => {
+                    const d = Math.atan2(Math.sin(yaw - p.yaw), Math.cos(yaw - p.yaw));
+                    p.yaw += d * share;
+                };
+                const awayYaw = Math.atan2(awayX, awayZ);
+                // Its own act first (decision 367's catalogue, as the defence moves carry it: a ball, a coil, a shell, a
+                // swell, wings flashed open): the species' sourced defence plays in place of the generic pose.
+                const own = ownAct(e.animal.model_slug);
+                if (own) {
+                    f.pack = own(r, c.model?.behaviour?.plan ?? null);
+                    f.still = r;
+                    continue;
+                }
                 switch (f.mechanism) {
                     case "camouflage":
                     case "warning":
@@ -362,6 +408,7 @@ export function createArkPowerShow(): ArkPowerShow {
                     case "speed": {
                         const reach = Math.min(Math.max(len * 3.2, 0.6), 6) * r;
                         world.shift(c, (awayX / awayD) * reach, (awayZ / awayD) * reach);
+                        turn(awayYaw, r);
                         break;
                     }
                     case "climb": {
@@ -370,25 +417,36 @@ export function createArkPowerShow(): ArkPowerShow {
                         // (Nose up, as the take-off block's; a flyer lifts off the ground.)
                         p.pitch += (BLOCKS.take_off?.pitch ?? -0.35) * r;
                         const plan = c.model?.behaviour?.plan ?? intelProfile(e.animal.model_slug).plan;
-                        if (PLANS_FLYING.has(plan) && !p.afloat) p.base += Math.min(len * 1.4, 2.5) * r;
+                        turn(awayYaw, r);
+                        if (PLANS_FLYING.has(plan) && !p.afloat) f.drop = -Math.min(Math.max(len * 1.6, 0.6), 2.5) * r;
+                        // (A climber goes up the slope's way: a rise of most of its height, a scramble's attitude.)
+                        else f.drop = -c.modelHeight * 0.45 * r;
                         break;
                     }
                     case "armour":
+                        // Its back to the threat, low and hunched (the armour toward it), and its own shape: a ball, a shell, a swell.
                         f.pack = armourPack(e.animal.model_slug, c.model?.behaviour?.plan ?? null, r);
+                        turn(awayYaw, r);
+                        p.pitch += 0.32 * r;
+                        f.drop = c.modelHeight * 0.22 * r;
                         f.still = r;
                         break;
                     case "hiding": {
                         // Down into its cover, as the bury block's heave (body lengths), never deeper than most of its height.
                         const heave = Math.abs(BLOCKS.bury?.heave ?? 0.45);
-                        p.base -= Math.min(heave * len, c.modelHeight * 0.7) * r;
+                        f.drop = Math.min(Math.max(heave * len, c.modelHeight * 0.55), c.modelHeight * 0.8) * r;
+                        p.pitch += 0.22 * r;
                         f.still = r;
                         break;
                     }
                     case "vigilance": {
                         // Head up, the alarm pose (the call block's attitude); others of its kind near it look up too.
                         const limits = headLimits(intelProfile(e.animal.model_slug).plan, e.animal.model_slug);
-                        f.head = [0, clampLook({yaw: 0, pitch: 0.55}, limits).pitch, r];
-                        p.pitch += (BLOCKS.call?.pitch ?? -0.3) * 0.6 * r;
+                        // Facing the threat, standing tall, nose up.
+                        f.head = [0, clampLook({yaw: 0, pitch: 0.7}, limits).pitch, r];
+                        turn(awayYaw + Math.PI, r);
+                        p.pitch += (BLOCKS.call?.pitch ?? -0.3) * 1.5 * r;
+                        f.drop = -c.modelHeight * 0.08 * r;
                         alerts.push([c, r]);
                         break;
                     }
@@ -403,15 +461,16 @@ export function createArkPowerShow(): ArkPowerShow {
                             sz += o.pose.z;
                             n++;
                         }
-                        if (n > 1) world.shift(c, (sx / n - p.x) * 0.45 * r, (sz / n - p.z) * 0.45 * r);
+                        if (n > 1) world.shift(c, (sx / n - p.x) * 0.7 * r, (sz / n - p.z) * 0.7 * r);
                         // (Facing out, toward what threatens it.)
+                        turn(awayYaw + Math.PI, r);
                         break;
                     }
                     case "mimicry":
                         if (kind.mimic?.kind === "feign") {
                             // Over onto its side, still, as the roll block's (feigning death; a plover's broken wing reads the same from afar).
                             p.roll += Math.min(BLOCKS.roll?.roll ?? 1.6, 1.45) * r;
-                            p.base -= c.modelHeight * 0.25 * r;
+                            f.drop = c.modelHeight * 0.3 * r;
                         }
                         f.still = r;
                         break;
@@ -441,9 +500,16 @@ export function createArkPowerShow(): ArkPowerShow {
                 rel = Math.atan2(Math.sin(rel), Math.cos(rel));
                 const limits = headLimits(intelProfile(h.entry.animal.model_slug).plan, h.entry.animal.model_slug);
                 const side = rel >= 0 ? 1 : -1;
-                const yaw = clampLook({yaw: rel * pass.look - side * limits.yaw * 0.8 * pass.away, pitch: 0}, limits).yaw;
+                // Away: toward a weaker one when there is one (its body turns to it), else simply away from the prime one.
+                let awayRel = -side * Math.max(limits.yaw * 0.8, 0.9);
+                if (pass.weaker) {
+                    const w = Math.atan2(pass.weaker.pose.x - h.pose.x, pass.weaker.pose.z - h.pose.z) - h.pose.yaw;
+                    awayRel = Math.atan2(Math.sin(w), Math.cos(w));
+                }
+                const bodyTurn = world.motion ? Math.max(Math.min(awayRel * 0.6, 1.2), -1.2) * pass.away : 0;
+                const yaw = clampLook({yaw: rel * pass.look + (awayRel - bodyTurn) * pass.away, pitch: 0}, limits).yaw;
                 hf.head = [yaw, 0, Math.max(pass.look, pass.away)];
-                if (world.motion) h.pose.yaw -= side * 0.55 * pass.away;
+                h.pose.yaw += bodyTurn;
             }
             // (Frames of animals no longer drawn here are let go.)
             if (frames.size > seen.size + 64) for (const id of Array.from(frames.keys())) if (!seen.has(id)) frames.delete(id);
