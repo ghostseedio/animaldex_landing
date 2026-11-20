@@ -39,11 +39,13 @@
 
 import type {ActPose} from "@/ark-scene/acts";
 import type {ArkCareKind} from "@/lib/ark-care";
+import {splitPose, SPLIT_SECONDS, type FxEmitter, type Repro} from "@/ark-scene/repro";
 
 /** A litter from the record: its parents, its young, and when they were born (s, the shared clock). */
 export type BirthAct = {key: string; parents: string[]; young: string[]; t0: number};
 
-export type BirthStyle = "open" | "den" | "cling" | "pouch" | "back" | "beside";
+/** (REAL-REPRODUCTION: `split`, a young pinched off its one parent; `fry`, a father's pouch releasing his brood.) */
+export type BirthStyle = "open" | "den" | "cling" | "pouch" | "back" | "beside" | "split" | "fry";
 
 export type LiveBirthsHost<E> = {
     find: (id: string) => E | null;
@@ -67,6 +69,8 @@ export type LiveBirthsHost<E> = {
     placeOf?: (entry: E) => {x: number; z: number; yaw: number; base: number} | null;
     /** V1: its coming into the world, shown by the scene's own entrance where it is (it grows in, with its ripple). */
     appear?: (entry: E) => void;
+    /** REAL-REPRODUCTION (decision 440): its kind's way of breeding (`repro.ts` reproOf), or null. */
+    repro?: (entry: E) => Repro | null;
 };
 
 /** How long after its time a birth is still acted (s): the tick and the record's read come later. */
@@ -148,8 +152,8 @@ export function birthStyle(plan: string | null, care: ArkCareKind | null, pouch:
 }
 
 /** The litter's script, built once from where the mother's day has her at the birth. */
-export function birthScript(mother: Point & {yaw: number; length: number; height: number; pace: number; plan: string | null; care: ArkCareKind | null; pouch: boolean}, young: number, key: string, youngPace = 0.4, youngLength: number | null = null, housed = false): BirthScript {
-    const style = birthStyle(mother.plan, mother.care, mother.pouch);
+export function birthScript(mother: Point & {yaw: number; length: number; height: number; pace: number; plan: string | null; care: ArkCareKind | null; pouch: boolean}, young: number, key: string, youngPace = 0.4, youngLength: number | null = null, housed = false, real: "split" | "fry" | null = null): BirthScript {
+    const style = real ?? birthStyle(mother.plan, mother.care, mother.pouch);
     const standing = style === "open" && mother.height >= STAND_HEIGHT;
     const n = clamp(young, 1, SHOWN_MAX);
     const dir = {x: Math.sin(mother.yaw), z: Math.cos(mother.yaw)};
@@ -174,6 +178,10 @@ export function birthScript(mother: Point & {yaw: number; length: number; height
             // (V1: out from under her, clear of her flank by its own length, in a row along her; her body no longer hides it.)
             const off = L * 0.5 + Math.max(yl, L * POP_SHARE) * 0.7;
             out.push({x: mother.x + dir.x * L * (0.3 - 0.3 * (k - (n - 1) / 2)) + side.x * spread * off, z: mother.z + dir.z * L * (0.3 - 0.3 * (k - (n - 1) / 2)) + side.z * spread * off});
+        } else if (style === "split") {
+            // REAL-REPRODUCTION: from its one parent's own body (`splitPose` moves it off, slowly).
+            born.push({x: mother.x, z: mother.z});
+            nurse.push(born[k]);
         } else if (style === "cling" || style === "back" || style === "pouch") {
             born.push({x: mother.x + dir.x * L * 0.12, z: mother.z + dir.z * L * 0.12});
             nurse.push(born[k]);
@@ -188,11 +196,11 @@ export function birthScript(mother: Point & {yaw: number; length: number; height
         }
     }
     const first = SETTLE;
-    const lickEnd = first + EACH * (n - 1) + (style === "beside" || style === "pouch" || style === "back" ? 4 : LICK);
+    const lickEnd = style === "split" ? first + SPLIT_SECONDS : first + EACH * (n - 1) + (style === "beside" || style === "fry" || style === "pouch" || style === "back" ? 4 : LICK);
     const riseEnd = lickEnd + (style === "open" ? RISE : 0);
-    const end = riseEnd + (style === "beside" ? 8 : NURSE);
+    const end = riseEnd + (style === "beside" || style === "fry" ? 8 : style === "split" ? 20 : NURSE);
     // (Riders are their mother's size already as drawn against her; a newborn in the pouch is never seen.)
-    const pop = style === "open" || style === "den" || style === "beside" ? clamp((L * POP_SHARE) / yl, 1, POP_MOST) : 1;
+    const pop = style === "open" || style === "den" || style === "beside" || style === "fry" ? clamp((L * POP_SHARE) / yl, 1, POP_MOST) : 1;
     const seenBy = first + EACH * (n - 1) + (style === "den" ? DEN_TUCKED + DEN_OUT : 1.5);
     return {style, standing, spot: {x: mother.x, z: mother.z}, yaw: mother.yaw, born, nurse, first, lickEnd, riseEnd, end, mother: {length: L, height: mother.height, pace: mother.pace}, pace: youngPace, out, pop, seenBy, youngLength: yl};
 }
@@ -213,11 +221,11 @@ function at(p: Point, yaw: number, ground: Ground, state: string, extra: Partial
 
 /** The mother's pose s seconds after the birth. */
 export function motherPose(sc: BirthScript, s: number, ground: Ground, youngId?: string): ActPose {
-    const lying = !sc.standing && sc.style !== "beside" && sc.style !== "back";
+    const lying = !sc.standing && sc.style !== "beside" && sc.style !== "back" && sc.style !== "split" && sc.style !== "fry";
     const state = lying ? "rest" : "scan";
     const extra: Partial<ActPose> = {meal: s < sc.lickEnd ? "birthing" : "resting", ...(youngId ? {with: youngId} : {})};
     if (s < sc.first) return at(sc.spot, sc.yaw, ground, state, extra);
-    if (s < sc.lickEnd && sc.style !== "beside" && sc.style !== "pouch" && sc.style !== "back") {
+    if (s < sc.lickEnd && sc.style !== "beside" && sc.style !== "pouch" && sc.style !== "back" && sc.style !== "split" && sc.style !== "fry") {
         // She turns to the young and licks them (head down to them, a slow bob).
         const toYoung = yawTo(sc.spot, sc.out[0] ?? sc.born[0]);
         const k = ease((s - sc.first) / 2.5);
@@ -255,6 +263,10 @@ export function youngPose(sc: BirthScript, k: number, s: number, ground: Ground,
     const faceMother = yawTo(p, sc.spot);
     if (s < bornAt || k >= sc.born.length) return {...at(p, faceMother, ground, "rest"), hidden: true};
     if (sc.style === "pouch") return pouchPose(sc, shown, s - bornAt, ground, extra);
+    if (sc.style === "split") {
+        const after = Math.min(s - bornAt, SPLIT_SECONDS);
+        return splitPose({...sc.spot, yaw: sc.yaw, length: sc.mother.length}, shown, after, ground, motherId ?? "");
+    }
     const up = sc.mother.height;
     // (V1: in from small as it is born; one much smaller than her, larger than it is for its first moments.)
     extra.scale = newbornScale(sc.pop, s - bornAt);
@@ -275,7 +287,7 @@ export function youngPose(sc: BirthScript, k: number, s: number, ground: Ground,
         if (b < 1) return at(lerpP(o, p, ease(b)), yawTo(o, p), ground, "walk", {...extra, speed: d / DEN_OUT});
         return tucked;
     }
-    if (sc.style === "beside") {
+    if (sc.style === "beside" || sc.style === "fry") {
         const k2 = ease((s - bornAt - 2) / 6);
         const q = lerpP(p, sc.nurse[shown], k2);
         return at(q, yawTo(sc.spot, sc.nurse[shown]), ground, k2 > 0 && k2 < 1 ? "walk" : "rest", {...extra, speed: k2 > 0 && k2 < 1 ? 0.2 : 0});
@@ -336,7 +348,9 @@ export class LiveBirths<E> {
     private mother(act: BirthAct): {id: string; entry: E} | null {
         const h = this.host;
         const found = act.parents.map((id) => ({id, entry: h.find(id)})).filter((p): p is {id: string; entry: E} => p.entry !== null);
-        return found.find((p) => h.male(p.entry) === false) ?? found.find((p) => h.male(p.entry) !== true) ?? found[0] ?? null;
+        // (REAL-REPRODUCTION: a seahorse's or a pipefish's young come from their father's pouch.)
+        const father = found.length && h.repro?.(found[0].entry)?.way === "male_pregnancy" ? found.find((p) => h.male(p.entry) === true) : undefined;
+        return father ?? found.find((p) => h.male(p.entry) === false) ?? found.find((p) => h.male(p.entry) !== true) ?? found[0] ?? null;
     }
 
     step(epoch: number): void {
@@ -371,7 +385,7 @@ export class LiveBirths<E> {
                 const young = b.act.young.map((id) => h.find(id)).filter((e): e is E => e !== null);
                 b.motherId = mother.id;
                 if (housed) b.floor = housed.base;
-                b.script = birthScript({...place, length: h.length(mother.entry), height: h.height(mother.entry), pace: h.walk(mother.entry), plan: h.plan(mother.entry), care: h.care(mother.entry), pouch: h.pouch(mother.entry)}, young.length || b.act.young.length, b.act.key, young[0] ? h.walk(young[0]) : 0.4, young[0] ? h.length(young[0]) : null, Boolean(housed));
+                b.script = birthScript({...place, length: h.length(mother.entry), height: h.height(mother.entry), pace: h.walk(mother.entry), plan: h.plan(mother.entry), care: h.care(mother.entry), pouch: h.pouch(mother.entry)}, young.length || b.act.young.length, b.act.key, young[0] ? h.walk(young[0]) : 0.4, young[0] ? h.length(young[0]) : null, Boolean(housed), realStyle(h.repro?.(mother.entry) ?? null, b.act.parents.length));
             }
             const sc = b.script;
             const floor = b.floor;
@@ -425,7 +439,7 @@ export class LiveBirths<E> {
                 youngIds.forEach((id, k) => {
                     const e = h.find(id);
                     if (!e || k >= sc.born.length || sc.style === "pouch") return;
-                    const from = sc.style === "open" || sc.style === "beside" ? sc.nurse[k] : sc.born[k];
+                    const from = sc.style === "open" || sc.style === "beside" || sc.style === "fry" ? sc.nurse[k] : sc.style === "split" ? splitPose({...sc.spot, yaw: sc.yaw, length: sc.mother.length}, k, SPLIT_SECONDS, h.ground, "") : sc.born[k];
                     const by = back(e, from, sc.pace, sc.end);
                     pose(e, by);
                     any ||= Boolean(by);
@@ -440,7 +454,28 @@ export class LiveBirths<E> {
         this.births = this.births.filter((b) => !(b.over || b.failed) || b.acting.size > 0 || epoch - b.act.t0 < BIRTH_LIVE_SECONDS);
     }
 
+    /** REAL-REPRODUCTION: a father's pouch releasing his brood (a small cloud of fry at his belly). */
+    fx(epoch: number): FxEmitter[] {
+        const out: FxEmitter[] = [];
+        for (const b of this.births) {
+            const sc = b.script;
+            if (!sc || sc.style !== "fry" || b.over || b.failed) continue;
+            const s = epoch - b.act.t0;
+            if (s < sc.first || s > sc.lickEnd + 8) continue;
+            out.push({key: b.act.key, x: sc.spot.x, y: (b.floor ?? this.host.ground(sc.spot.x, sc.spot.z)) + sc.mother.height * 0.4, z: sc.spot.z, kind: "fry", t: s - sc.first, size: Math.max(sc.mother.length, 0.2)});
+        }
+        return out;
+    }
+
     debug(): Array<{key: string; t0: number; mother: string | null; end: number | null; phase: string; style?: BirthStyle; young: number; seenBy?: number; housed?: boolean}> {
         return this.births.map((b) => ({key: b.act.key, t0: b.act.t0, mother: b.motherId, end: b.script ? Math.round(b.script.end) : null, phase: b.failed ? "skipped" : b.over ? "over" : b.script ? "acting" : "waiting", ...(b.script ? {style: b.script.style, seenBy: Math.round(b.script.seenBy * 10) / 10} : {}), ...(b.floor !== undefined ? {housed: true} : {}), young: b.act.young.length}));
     }
+}
+
+/** REAL-REPRODUCTION: a birth acted its kind's way: a split off one parent (an asexual kind, or a spawner that also splits, with one parent), a father's pouch releasing fry; null: as before. */
+export function realStyle(repro: Repro | null, parents: number): "split" | "fry" | null {
+    if (!repro) return null;
+    if (repro.way === "male_pregnancy") return "fry";
+    if (parents === 1 && (repro.way === "asexual" || repro.also)) return "split";
+    return null;
 }

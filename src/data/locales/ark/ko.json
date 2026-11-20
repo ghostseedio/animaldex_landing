@@ -416,7 +416,12 @@
             "regrown": "{animals}: 풀밭이 다시 푸르러졌어요",
             "matedFirst": "{aAnimal}: 첫 짝짓기",
             "foundMate": "{aAnimal}: {days}일 만에 짝을 찾았어요",
-            "foundDung": "{aAnimal}: 신선한 똥을 찾았어요"
+            "foundDung": "{aAnimal}: 신선한 똥을 찾았어요",
+            "spawnNight": "오늘 밤 산호초가 산란했어요: {animal}",
+            "spawnPair": "{animal}: 알을 낳았고 수컷이 수정시켰어요",
+            "amplexus": "{animal}: 포접한 한 쌍이 알을 낳았어요",
+            "pouchFry": "{animal}: 아빠의 육아낭에서 새끼 {count}마리가 나왔어요",
+            "split": "{animal}: 부모에게서 새 개체가 떨어져 나왔어요"
         },
         "card": {
             "now": "지금: {activity}",

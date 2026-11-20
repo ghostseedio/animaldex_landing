@@ -416,7 +416,12 @@
             "regrown": "{animals}: de weide is weer groen",
             "matedFirst": "{aAnimal}: eerste paring",
             "foundMate": "{aAnimal}: na {days} dagen een partner gevonden",
-            "foundDung": "{aAnimal}: verse mest gevonden"
+            "foundDung": "{aAnimal}: verse mest gevonden",
+            "spawnNight": "Het rif heeft vannacht gepaaid: {animal}",
+            "spawnPair": "{animal}: eitjes gelegd, en het mannetje heeft ze bevrucht",
+            "amplexus": "{animal}: een paar in amplexus, en kuit gelegd",
+            "pouchFry": "{animal}: {count} jongen vrijgelaten uit de broedbuidel van de vader",
+            "split": "{animal}: een nieuwe heeft zich van de ouder afgesplitst"
         },
         "card": {
             "now": "Nu: {activity}",

@@ -416,7 +416,12 @@
             "regrown": "{animals}: bãi cỏ đã xanh trở lại",
             "matedFirst": "{aAnimal}: giao phối lần đầu",
             "foundMate": "{aAnimal}: tìm được bạn đời sau {days} ngày",
-            "foundDung": "{aAnimal}: tìm thấy phân tươi"
+            "foundDung": "{aAnimal}: tìm thấy phân tươi",
+            "spawnNight": "Đêm nay rạn san hô đã đẻ trứng: {animal}",
+            "spawnPair": "{animal}: trứng đã đẻ, và con đực đã thụ tinh",
+            "amplexus": "{animal}: một cặp ôm nhau giao phối, và đã đẻ trứng",
+            "pouchFry": "{animal}: {count} con non ra khỏi túi của bố",
+            "split": "{animal}: một cá thể mới tách ra từ cá thể mẹ"
         },
         "card": {
             "now": "Lúc này: đang {activity}",

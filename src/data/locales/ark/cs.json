@@ -416,7 +416,12 @@
             "regrown": "{animals}: pastva je znovu zelená",
             "matedFirst": "{aAnimal}: první páření",
             "foundMate": "{aAnimal}: partner nalezen po {days} dnech",
-            "foundDung": "{aAnimal}: nalezen čerstvý trus"
+            "foundDung": "{aAnimal}: nalezen čerstvý trus",
+            "spawnNight": "Útes dnes v noci vytřel jikry: {animal}",
+            "spawnPair": "{animal}: jikry nakladeny a samec je oplodnil",
+            "amplexus": "{animal}: pár v amplexu a nakladené vajíčka",
+            "pouchFry": "{animal}: z otcova vaku vyšlo mláďat: {count}",
+            "split": "{animal}: od rodiče se oddělil nový jedinec"
         },
         "card": {
             "now": "Teď: {activity}",

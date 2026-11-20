@@ -416,7 +416,12 @@
             "regrown": "{animals}: το βοσκοτόπι πρασίνισε ξανά",
             "matedFirst": "{aAnimal}: πρώτο ζευγάρωμα",
             "foundMate": "{aAnimal}: βρήκε ταίρι μετά από {days} ημέρες",
-            "foundDung": "{aAnimal}: βρήκε φρέσκια κοπριά"
+            "foundDung": "{aAnimal}: βρήκε φρέσκια κοπριά",
+            "spawnNight": "Ο ύφαλος γέννησε απόψε: {animal}",
+            "spawnPair": "{animal}: γεννήθηκαν αυγά και το αρσενικό τα γονιμοποίησε",
+            "amplexus": "{animal}: ένα ζευγάρι σε αμπλεξία, και γέννα αυγών",
+            "pouchFry": "{animal}: {count} μικρά βγήκαν από τον θύλακο του πατέρα",
+            "split": "{animal}: ένα νέο αποσπάστηκε από τον γονέα του"
         },
         "card": {
             "now": "Τώρα: {activity}",

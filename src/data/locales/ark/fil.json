@@ -416,7 +416,12 @@
             "regrown": "{animals}: luntian na ulit ang damuhan",
             "matedFirst": "{aAnimal}: unang pagtatalik",
             "foundMate": "{aAnimal}: nakahanap ng kapareha pagkalipas ng {days} araw",
-            "foundDung": "{aAnimal}: nakahanap ng sariwang dumi"
+            "foundDung": "{aAnimal}: nakahanap ng sariwang dumi",
+            "spawnNight": "Nangitlog ang bahura ngayong gabi: {animal}",
+            "spawnPair": "{animal}: nangitlog, at pinataba ng lalaki ang mga itlog",
+            "amplexus": "{animal}: magkapares sa amplexus, at nangitlog",
+            "pouchFry": "{animal}: {count} supling ang lumabas mula sa supot ng ama",
+            "split": "{animal}: may bagong humiwalay sa magulang nito"
         },
         "card": {
             "now": "Ngayon: {activity}",

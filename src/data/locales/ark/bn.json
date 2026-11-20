@@ -416,7 +416,12 @@
             "regrown": "{animals}: চারণভূমি আবার সবুজ",
             "matedFirst": "{aAnimal}: প্রথমবার মিলন",
             "foundMate": "{aAnimal}: {days} দিন পর সঙ্গী পেয়েছে",
-            "foundDung": "{aAnimal}: তাজা গোবর পেয়েছে"
+            "foundDung": "{aAnimal}: তাজা গোবর পেয়েছে",
+            "spawnNight": "আজ রাতে প্রবালপ্রাচীরে ডিম ছাড়া হলো: {animal}",
+            "spawnPair": "{animal}: ডিম পাড়া হলো, পুরুষটি সেগুলো নিষিক্ত করল",
+            "amplexus": "{animal}: একটি জোড়া অ্যাম্প্লেক্সাসে, ডিম পাড়া হলো",
+            "pouchFry": "{animal}: বাবার থলি থেকে {count}টি বাচ্চা বেরোল",
+            "split": "{animal}: মূল দেহ থেকে নতুন একটি আলাদা হলো"
         },
         "card": {
             "now": "এখন: {activity}",

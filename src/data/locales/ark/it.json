@@ -416,7 +416,12 @@
             "regrown": "{animals}: pascolo di nuovo verde",
             "matedFirst": "{aAnimal}: primo accoppiamento",
             "foundMate": "{aAnimal}: compagno trovato dopo {days} giorni",
-            "foundDung": "{aAnimal}: sterco fresco trovato"
+            "foundDung": "{aAnimal}: sterco fresco trovato",
+            "spawnNight": "Stanotte la barriera ha deposto: {animal}",
+            "spawnPair": "{animal}: uova deposte, e il maschio le ha fecondate",
+            "amplexus": "{animal}: una coppia in amplesso, e uova deposte",
+            "pouchFry": "{animal}: {count} piccoli usciti dalla tasca del padre",
+            "split": "{animal}: uno nuovo si è separato dal genitore"
         },
         "card": {
             "now": "Ora: {activity}",

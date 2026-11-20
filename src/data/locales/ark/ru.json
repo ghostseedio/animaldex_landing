@@ -416,7 +416,12 @@
             "regrown": "{animals}: пастбище снова зелёное",
             "matedFirst": "{aAnimal}: первое спаривание",
             "foundMate": "{aAnimal}: пара найдена спустя {days} дн.",
-            "foundDung": "{aAnimal}: найден свежий навоз"
+            "foundDung": "{aAnimal}: найден свежий навоз",
+            "spawnNight": "Этой ночью риф отнерестился: {animal}",
+            "spawnPair": "{animal}: икра отложена, и самец оплодотворил её",
+            "amplexus": "{animal}: пара в амплексусе, икра отложена",
+            "pouchFry": "{animal}: из сумки отца вышло мальков: {count}",
+            "split": "{animal}: от родителя отделилась новая особь"
         },
         "card": {
             "now": "Сейчас: {activity}",

@@ -416,7 +416,12 @@
             "regrown": "{animals}: pašnjak je ponovno zelen",
             "matedFirst": "{aAnimal}: prvo parenje",
             "foundMate": "{aAnimal}: partner pronađen nakon {days} dana",
-            "foundDung": "{aAnimal}: pronađen svjež izmet"
+            "foundDung": "{aAnimal}: pronađen svjež izmet",
+            "spawnNight": "Greben se noćas mrijestio: {animal}",
+            "spawnPair": "{animal}: jajašca položena, a mužjak ih je oplodio",
+            "amplexus": "{animal}: par u amplexusu, i položen mrijest",
+            "pouchFry": "{animal}: iz očeve vrećice izašlo je mladih: {count}",
+            "split": "{animal}: novi se odvojio od roditelja"
         },
         "card": {
             "now": "Sada: {activity}",

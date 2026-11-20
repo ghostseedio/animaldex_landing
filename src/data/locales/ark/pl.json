@@ -416,7 +416,12 @@
             "regrown": "{animals}: pastwisko znów zielone",
             "matedFirst": "{aAnimal}: pierwsze kopulacje",
             "foundMate": "{aAnimal}: partner znaleziony po {days} dniach",
-            "foundDung": "{aAnimal}: znaleziono świeży nawóz"
+            "foundDung": "{aAnimal}: znaleziono świeży nawóz",
+            "spawnNight": "Rafa tarła się tej nocy: {animal}",
+            "spawnPair": "{animal}: złożone ikra, a samiec ją zapłodnił",
+            "amplexus": "{animal}: para w ampleksusie i złożony skrzek",
+            "pouchFry": "{animal}: z torby ojca wyszło młodych: {count}",
+            "split": "{animal}: nowy osobnik oddzielił się od rodzica"
         },
         "card": {
             "now": "Teraz: {activity}",

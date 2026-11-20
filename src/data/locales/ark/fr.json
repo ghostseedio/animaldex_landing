@@ -416,7 +416,12 @@
             "regrown": "{animals}: pâturage de nouveau vert",
             "matedFirst": "{aAnimal}: premier accouplement",
             "foundMate": "{aAnimal}: partenaire trouvé après {days} jours",
-            "foundDung": "{aAnimal}: bouse fraîche trouvée"
+            "foundDung": "{aAnimal}: bouse fraîche trouvée",
+            "spawnNight": "Le récif a frayé cette nuit : {animal}",
+            "spawnPair": "{animal} : œufs pondus, et le mâle les a fécondés",
+            "amplexus": "{animal} : un couple en amplexus, et une ponte",
+            "pouchFry": "{animal} : {count} petits libérés de la poche du père",
+            "split": "{animal} : un nouvel individu s'est détaché de son parent"
         },
         "card": {
             "now": "Maintenant : {activity}",

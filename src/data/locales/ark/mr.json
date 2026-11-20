@@ -416,7 +416,12 @@
             "regrown": "{animals}: कुरण पुन्हा हिरवे",
             "matedFirst": "{aAnimal}: पहिले मीलन",
             "foundMate": "{aAnimal}: {days} दिवसांनी जोडीदार मिळाला",
-            "foundDung": "{aAnimal}: ताजे शेण सापडले"
+            "foundDung": "{aAnimal}: ताजे शेण सापडले",
+            "spawnNight": "आज रात्री प्रवाळ भित्तीवर अंडी सोडली: {animal}",
+            "spawnPair": "{animal}: अंडी घातली, आणि नराने ती फलित केली",
+            "amplexus": "{animal}: अ‍ॅम्प्लेक्ससमधील एक जोडी, अंडी घातली",
+            "pouchFry": "{animal}: वडिलांच्या पिशवीतून {count} पिल्ले बाहेर आली",
+            "split": "{animal}: मूळ प्राण्यापासून नवा वेगळा झाला"
         },
         "card": {
             "now": "आत्ता: {activity}",

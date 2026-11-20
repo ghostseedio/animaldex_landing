@@ -4661,7 +4661,12 @@
       "regrown": "{animals}: padang rumputnya hijau lagi",
       "matedFirst": "{aAnimal}: kawin untuk pertama kali",
       "foundMate": "{aAnimal}: menemukan pasangan setelah {days} hari",
-      "foundDung": "{aAnimal}: menemukan kotoran segar"
+      "foundDung": "{aAnimal}: menemukan kotoran segar",
+      "spawnNight": "Terumbu memijah malam ini: {animal}",
+      "spawnPair": "{animal}: telur diletakkan, lalu dibuahi oleh jantan",
+      "amplexus": "{animal}: sepasang dalam amplexus, dan telur diletakkan",
+      "pouchFry": "{animal}: {count} anak dilepaskan dari kantong sang ayah",
+      "split": "{animal}: satu individu baru memisah dari induknya"
     },
     "card": {
       "now": "Sekarang: {activity}",

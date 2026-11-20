@@ -416,7 +416,12 @@
             "regrown": "{animals}: మేత నేల మళ్లీ పచ్చగా",
             "matedFirst": "{aAnimal}: మొదటి సంయోగం",
             "foundMate": "{aAnimal}: {days} రోజుల తర్వాత జత దొరికింది",
-            "foundDung": "{aAnimal}: తాజా పేడ దొరికింది"
+            "foundDung": "{aAnimal}: తాజా పేడ దొరికింది",
+            "spawnNight": "ఈ రాత్రి పగడపు దిబ్బలో గుడ్ల విడుదల: {animal}",
+            "spawnPair": "{animal}: గుడ్లు పెట్టబడ్డాయి, మగది వాటిని ఫలదీకరించింది",
+            "amplexus": "{animal}: ఆంప్లెక్సస్‌లో ఒక జంట, గుడ్లు పెట్టబడ్డాయి",
+            "pouchFry": "{animal}: తండ్రి సంచి నుండి {count} పిల్లలు బయటకు వచ్చాయి",
+            "split": "{animal}: తల్లిదండ్రి నుండి కొత్తది ఒకటి విడిపోయింది"
         },
         "card": {
             "now": "ఇప్పుడు: {activity}",

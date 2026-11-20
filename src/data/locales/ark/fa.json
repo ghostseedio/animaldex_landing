@@ -416,7 +416,12 @@
             "regrown": "{animals}: چراگاه دوباره سبز شد",
             "matedFirst": "{aAnimal}: نخستین جفت‌گیری",
             "foundMate": "{aAnimal}: پس از {days} روز جفت پیدا کرد",
-            "foundDung": "{aAnimal}: سرگین تازه پیدا کرد"
+            "foundDung": "{aAnimal}: سرگین تازه پیدا کرد",
+            "spawnNight": "امشب آبسنگ تخم‌ریزی کرد: {animal}",
+            "spawnPair": "{animal}: تخم‌ها گذاشته شد و نر آن‌ها را بارور کرد",
+            "amplexus": "{animal}: یک جفت در آمپلکسوس، و تخم‌ها گذاشته شد",
+            "pouchFry": "{animal}: {count} بچه از کیسهٔ پدر بیرون آمدند",
+            "split": "{animal}: یکی تازه از والدش جدا شد"
         },
         "card": {
             "now": "اکنون: {activity}",

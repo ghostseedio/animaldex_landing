@@ -416,7 +416,12 @@
             "regrown": "{animals}: ਚਰਾਗਾਹ ਫਿਰ ਹਰੀ",
             "matedFirst": "{aAnimal}: ਪਹਿਲਾ ਮੇਲ",
             "foundMate": "{aAnimal}: {days} ਦਿਨਾਂ ਬਾਅਦ ਸਾਥੀ ਮਿਲਿਆ",
-            "foundDung": "{aAnimal}: ਤਾਜ਼ਾ ਗੋਹਾ ਮਿਲਿਆ"
+            "foundDung": "{aAnimal}: ਤਾਜ਼ਾ ਗੋਹਾ ਮਿਲਿਆ",
+            "spawnNight": "ਅੱਜ ਰਾਤ ਮੂੰਗਾ ਚਟਾਨ 'ਤੇ ਆਂਡੇ ਛੱਡੇ ਗਏ: {animal}",
+            "spawnPair": "{animal}: ਆਂਡੇ ਦਿੱਤੇ ਗਏ, ਅਤੇ ਨਰ ਨੇ ਉਨ੍ਹਾਂ ਨੂੰ ਗਰਭਿਤ ਕੀਤਾ",
+            "amplexus": "{animal}: ਐਂਪਲੈਕਸਸ ਵਿੱਚ ਇੱਕ ਜੋੜਾ, ਅਤੇ ਆਂਡੇ ਦਿੱਤੇ ਗਏ",
+            "pouchFry": "{animal}: ਪਿਤਾ ਦੀ ਥੈਲੀ ਵਿੱਚੋਂ {count} ਬੱਚੇ ਨਿਕਲੇ",
+            "split": "{animal}: ਮੂਲ ਤੋਂ ਇੱਕ ਨਵਾਂ ਵੱਖ ਹੋਇਆ"
         },
         "card": {
             "now": "ਹੁਣ: {activity}",

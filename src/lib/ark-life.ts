@@ -109,6 +109,12 @@ export type ArkEvent = {
      * the hearts left and whether it came back a young adult (old age). Absent with hearts off.
      */
     lives?: ArkEventLives;
+    /**
+     * REAL-REPRODUCTION (AnimalDex decision 440, behind the server's `real_reproduction`): a `mated` row's way of breeding
+     * (`payload.way`: broadcast, brooding, spawn_pair, amplexus, male_pregnancy...), a birth's `alone` (a split or a bud
+     * off one parent) or `pouch` (from a father's pouch). Absent with it off, or when the read sends no payload.
+     */
+    way?: string;
 };
 
 export type ArkEventLives = {heartsLeft: number; returnsDay: number | null; final: boolean; ageReset: boolean; cause: "eaten" | "starved" | "died_old" | null};
@@ -266,6 +272,7 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
         const livesRow = record(row.lives);
         const livesSource = livesRow ? (kind === "revived" ? livesRow : {lives: livesRow}) : payload;
         const lives = kind === "revived" || kind === "eaten" || kind === "death_old" || kind === "starved" ? decodeArkEventLives(kind, livesSource) : null;
+        const way = payload.pouch === true || row.pouch === true ? "pouch" : text(row.way ?? payload.way, 24);
         events.push({
             id: serial !== null ? String(serial) : `${at}-${index}`,
             serial: serial ?? Number.MAX_SAFE_INTEGER,
@@ -285,7 +292,8 @@ export function decodeArkEvents(raw: unknown, snapshot: ArkSnapshot | null): Ark
             // (A `fed` row's too: a step that worked fed its person's animals, AnimalDex docs/ark/step-feeds.md.)
             source: kind === "arrival" || kind === "fed" ? arkArrivalSource(row.source ?? payload.source) : null,
             ...(encounter ? {encounter} : {}),
-            ...(lives ? {lives} : {})
+            ...(lives ? {lives} : {}),
+            ...(way && (kind === "mated" || kind === "birth") ? {way} : {})
         });
     });
     return events

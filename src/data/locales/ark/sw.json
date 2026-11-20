@@ -416,7 +416,12 @@
             "regrown": "{animals}: malisho ni ya kijani tena",
             "matedFirst": "{aAnimal}: kujamiiana kwa mara ya kwanza",
             "foundMate": "{aAnimal}: amepata mwenzi baada ya siku {days}",
-            "foundDung": "{aAnimal}: amepata kinyesi kipya"
+            "foundDung": "{aAnimal}: amepata kinyesi kipya",
+            "spawnNight": "Mwamba umetaga usiku huu: {animal}",
+            "spawnPair": "{animal}: mayai yametagwa, na dume ameyarutubisha",
+            "amplexus": "{animal}: jozi katika amplexus, na mayai yametagwa",
+            "pouchFry": "{animal}: watoto {count} wametoka kwenye mfuko wa baba",
+            "split": "{animal}: mpya amejitenga na mzazi wake"
         },
         "card": {
             "now": "Sasa: {activity}",
