@@ -286,10 +286,36 @@ async function main() {
             rig.controls.minDistance = Math.min(rig.controls.minDistance, distance);
             rig.camera.near = 0.03;
             rig.camera.updateProjectionMatrix();
-            closeView = at ? {target: {x: at.x, y: at.y, z: at.z}, distance, polar: 1.45, azimuth: at.yaw + Math.PI / 2} : null;
+            // (From the clearest side, `clearView`: a dung fly by a trunk was filmed through the trunk.)
+            const clear = at ? handle.clearView?.({x: at.x, y: at.y, z: at.z}, distance, 1.45, at.yaw + Math.PI / 2) : null;
+            closeView = at ? {target: {x: at.x, y: at.y, z: at.z}, distance, polar: clear?.polar ?? 1.45, azimuth: clear?.azimuth ?? at.yaw + Math.PI / 2} : null;
             if (closeView) handle.setView(closeView);
             await frames(4);
             return at ? `${id.slice(-3)} at ${at.x.toFixed(1)}, ${at.z.toFixed(1)} length ${at.length.toFixed(2)} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${(debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`).join(" / ")}` : "not found";
+        },
+        /**
+         * Tiny animals seen (`tiny-lift.ts`): the animal chosen (its card open) and the view `distance` back from it, from the
+         * clearest side (`clearView`: no trunk or rock between); `lift` false draws it at true size (the before picture).
+         */
+        chosen: async (id: string, distance: number | null, lift = true) => {
+            (globalThis as {__arkTinyLift?: boolean}).__arkTinyLift = lift;
+            if (!handle.locate(id)) return `${id.slice(-3)} not found`;
+            // Chosen as a reader would (its card): the page's own flight frames it, from out along the surface it is on.
+            handle.select(id);
+            for (let i = 0; i < 40; i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            if (distance !== null) {
+                // Then pulled back along the same line of sight, as a reader zooming out with the card open.
+                const rig = debug as unknown as {controls: {minDistance: number}};
+                rig.controls.minDistance = Math.min(rig.controls.minDistance, distance);
+                handle.setView({...handle.view(), distance});
+            }
+            await frames(12);
+            const at = handle.locate(id);
+            return `${id.slice(-3)} chosen, ${distance === null ? "the page's own close-up" : `${distance} m back`}, lift ${lift ? "on" : "off"}, length ${at ? at.length.toFixed(3) : "?"} m`;
         },
         /** The view on an animal where it is now, in the air too (after a `shot`, the clock standing). */
         closeOn: async (id: string, distance: number, polar = 1.35) => {
