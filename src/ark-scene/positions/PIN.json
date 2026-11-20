@@ -19,5 +19,13 @@
       "forestry.ts": "ddaea3d356d37df895cf3b803e52c4219431b940fc6b4762b6508068b36c9fd2",
       "forest-stands.json": "b6a0f884c567f5b99c3aa03e718d231f23be2179a8180c2282aede4a0c2c22f1"
     }
+  },
+  "townReach": {
+    "about": "Lane TOWN-REACH (AnimalDex decision 416, docs/ark/town-reach.md): reach.ts and town-reach.ts are byte-identical to AnimalDex supabase/functions/_shared/ark-positions/ (branch town-reach); town-reach.json is generated here (scripts/ark-town-reach.mts, from islands/town/reach-mask.ts and reach-file.ts) and copied there. src/lib/ark-town-reach.test.ts checks these hashes, that the file is what the drawn town generates, and that its mask agrees with the town. Change all three together, in both repos.",
+    "sha256": {
+      "reach.ts": "059bc42d46e5bd8a90b37e3d460f987ca7116601751048eef80676f15108652a",
+      "town-reach.ts": "810559074aad3de0cb876e4c15e7c4459c386664774d897545073f145148a5e9",
+      "town-reach.json": "a6b0398f682fcb956517419d105c299ed0a2d441a29dc6973263e9f9f960b58e"
+    }
   }
 }
