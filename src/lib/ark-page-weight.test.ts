@@ -53,6 +53,14 @@ test("the Ark page's static imports: no three.js, no scene tables, under 200 KB 
         assert.ok(!SCENE_TABLES.some((heavy) => path.includes(heavy)), `the page pulls in ${path}: ${via(path)}`);
     }
     const bytes = Array.from(reached.keys()).reduce((sum, path) => sum + (output.inputs[path]?.bytesInOutput ?? 0), 0);
+    // The top 15 contributors, each with what pulls it in, so a lane over the budget sees what to make lazy
+    // (docs/ark/lazy-loading.md).
+    const top = Array.from(reached.keys())
+        .map((path) => ({path, size: output.inputs[path]?.bytesInOutput ?? 0}))
+        .sort((a, b) => b.size - a.size)
+        .slice(0, 15);
+    console.log(`/ark static JavaScript: ${bytes} of 204800 bytes (${204_800 - bytes} left); top 15:`);
+    for (const {path, size} of top) console.log(`  ${String(size).padStart(6)}  ${path}${reached.get(path) ? `  ← ${reached.get(path)}` : ""}`);
     // 200 KB as 200 KiB (AnimalDex decision 371, 2026-11-16): the limit was 200,000 bytes with main 41 bytes under it,
     // and the count moves by ±13 bytes with code anywhere in the bundle (the minifier's names), so the check failed
     // at random and no log line or card word could be added. The guard is unchanged in kind: no three.js, no scene

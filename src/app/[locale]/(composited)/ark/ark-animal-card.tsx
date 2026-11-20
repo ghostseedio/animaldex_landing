@@ -18,6 +18,7 @@ import type {ArkCapturePhoto} from "@/lib/ark-capture-photo";
 import {arkPhotoShownOn} from "@/lib/ark-photo-label";
 import {ArkRhythmLine, ArkRhythmPanel, useAnimalRhythm} from "@/app/[locale]/(composited)/ark/ark-rhythm";
 import {ArkLivesRow} from "@/app/[locale]/(composited)/ark/ark-lives";
+import {ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-card-focus";
 import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
 
 /**
@@ -45,6 +46,8 @@ const ArkTimeLeft = lazy(() => import("@/app/[locale]/(composited)/ark/ark-time-
 const ArkItsDay = lazy(() => import("@/app/[locale]/(composited)/ark/ark-its-day"));
 
 /** A tapped animal's life story (`voyage_animal_life_v1`), as ark-view reads it. */
+export {ArkFilled, useCardFocus};
+
 export type ArkCardLife = {id: string; life: ArkLife | null; loading: boolean};
 
 const pill = "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-sans text-sm font-bold leading-none transition-colors duration-200 [transition-timing-function:cubic-bezier(.2,.8,.2,1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none";
@@ -54,29 +57,6 @@ const iconButton = `${pill} h-10 w-10 shrink-0 border`;
 function withArticle(name: string, words: ArkWords): string {
     const an = /^[aeiou]/i.test(name) && !/^(uni|eu|one|use|usu|ura)/i.test(name);
     return (an ? words.replay.an : words.replay.a).replace("{animal}", name);
-}
-
-/** A card's heading takes focus when it opened from the keyboard; Escape inside the card closes it (A18). */
-export function useCardFocus(key: string, focusOnOpen: boolean, onClose: () => void) {
-    const headingRef = useRef<HTMLHeadingElement | null>(null);
-    useEffect(() => {
-        if (focusOnOpen) headingRef.current?.focus({preventScroll: true});
-        // Only when another card opens.
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [key]);
-    const onKeyDown = (event: React.KeyboardEvent) => {
-        if (event.key !== "Escape") return;
-        event.stopPropagation();
-        onClose();
-    };
-    return {headingRef, onKeyDown};
-}
-
-/** A template with `{name}` filled by a node (a linked name), the words around it as the reader's language has them. */
-export function ArkFilled({template, name, children}: {template: string; name: string; children: React.ReactNode}) {
-    const at = template.indexOf(`{${name}}`);
-    if (at < 0) return <>{template}</>;
-    return <>{template.slice(0, at)}{children}{template.slice(at + name.length + 2)}</>;
 }
 
 /** What the card knows about an animal's life: the life story when the server sent one, else the snapshot's v2 fields. */

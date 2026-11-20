@@ -1,6 +1,6 @@
 "use client";
 
-import React, {useCallback, useEffect, useMemo, useRef, useState} from "react";
+import React, {Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
 import ArkPopulationHud from "@/app/[locale]/(composited)/ark/ark-population-hud";
@@ -10,12 +10,12 @@ import ArkLiteLayer from "@/app/[locale]/(composited)/ark/ark-lite-layer";
 import {ARK_LITE_OFFER_MS, ARK_VIEW_KEY, arkChooseView, arkLiteWords, type ArkView} from "@/lib/ark-lite";
 import {readArkPopulationThen, type ArkPopulationThen} from "@/lib/ark-population-change";
 import type {ArkPageSummary} from "@/lib/ark-page-summary";
-import {arkNewArrivals} from "@/lib/ark-live-log";
+import {arkNewArrivals} from "@/lib/ark-new-arrivals";
 import {fetchArkHunting} from "@/lib/ark-hunting";
 import {arkHuntLine} from "@/lib/ark-live-hunt";
 import {arkSyncMeals} from "@/ark-scene/live-hunt-feed";
 import {arkReloadForRestoredContext} from "@/lib/ark-context-restore";
-import {ArkAnimalCard, ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-animal-card";
+import {ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-card-focus";
 import type {ArkAnimal, ArkHerdInfo, ArkIsland, ArkLiveHunt, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkArchipelagoHandle} from "@/ark-scene/islands/archipelago";
 import {arkIslandCounts, arkIslandSnapshot, arkLooksLikeAnimalId, arkOpeningIsland, arkTwoIslands} from "@/lib/ark-islands";
@@ -125,6 +125,15 @@ type LifeState = {id: string; life: ArkLife | null; loading: boolean};
 
 /** The replay playing now: its acts, which one, and the summary to show after. */
 type ReplayState = {acts: ArkAct[]; index: number; summary: string};
+
+/**
+ * The tapped animal's card (ark-animal-card.tsx, with its rhythm, thrive and status words: ~30 KB): a lazy chunk, so the
+ * page's first JavaScript stays inside its budget (ark-page-weight.test.ts, docs/ark/lazy-loading.md). Nothing shows a
+ * card before an animal is tapped; the chunk is fetched once the browser is idle after the first paint (the same idle
+ * the scene's code waits for), so it is there long before the first tap.
+ */
+const loadArkAnimalCard = () => import("@/app/[locale]/(composited)/ark/ark-animal-card");
+const ArkAnimalCard = lazy(() => loadArkAnimalCard().then((module) => ({default: module.ArkAnimalCard})));
 
 function storage(): Storage | null {
     try {
@@ -308,6 +317,16 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     const lastMetRef = useRef<string | null>(null);
     // The species drawn as herds (A14), worked out by the scene's own rule, loaded with it (not in the page's first JavaScript).
     const [herdKeys, setHerdKeys] = useState<ReadonlySet<string>>(() => new Set());
+    // The animal card's chunk (`loadArkAnimalCard`): fetched once the browser is idle after the first paint, in 3D and lite alike.
+    useEffect(() => {
+        const load = () => void loadArkAnimalCard().catch(() => undefined);
+        const idle = window.requestIdleCallback ? window.requestIdleCallback(load, {timeout: 1500}) : null;
+        const timer = idle === null ? window.setTimeout(load, 150) : null;
+        return () => {
+            if (idle !== null) window.cancelIdleCallback?.(idle);
+            if (timer !== null) clearTimeout(timer);
+        };
+    }, []);
     useEffect(() => {
         const animals = snapshot?.animals;
         if (!animals?.length) return;
@@ -1357,34 +1376,36 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                 ) : null}
 
                 {selected ? (
-                    <ArkAnimalCard
-                        bandRef={bandRef}
-                        animal={selected}
-                        words={words}
-                        locale={locale}
-                        talk={talkTitle(selected.name, talkTitles)}
-                        arrived={dateFormat.format(new Date(selected.arrived_at))}
-                        life={life?.id === selected.id ? life : null}
-                        founders={founders.animals[selected.id] ?? null}
-                        photo={photo?.id === selected.id ? photo.photo : null}
-                        arkDay={snapshot?.ark_day ?? null}
-                        voyageStart={snapshot?.voyage.started_at ?? null}
-                        scene={sceneOf}
-                        asleep={cardSaysAsleep(selectedState?.id === selected.id ? selectedState.state : sceneRef.current?.behaviour(selected.id))}
-                        rest={selectedRest?.id === selected.id ? selectedRest.rest : sceneRef.current?.rest(selected.id) ?? null}
-                        following={following}
-                        onFollow={toggleFollow}
-                        storyOpen={storyOpen}
-                        onStory={() => setStoryOpen((open) => !open)}
-                        onClose={closeCard}
-                        focusOnOpen={Boolean(returnFocusRef.current)}
-                        share={{
-                            localePath: shareLocalePath,
-                            text: fillArkWords(words.share.textAnimal, {animal: selected.name, count: (snapshot?.animals.filter((animal) => arkSpeciesKey(animal) === arkSpeciesKey(selected)).length ?? 1).toLocaleString(locale)})
-                        }}
-                        lives={selectedLives && ownerHearts ? {entry: selectedLives, words: heartsWords, cost: ownerHearts.healCost, onRestored: onHeartRestored} : null}
-                        snapshot={snapshot}
-                    />
+                    <Suspense fallback={null}>
+                        <ArkAnimalCard
+                            bandRef={bandRef}
+                            animal={selected}
+                            words={words}
+                            locale={locale}
+                            talk={talkTitle(selected.name, talkTitles)}
+                            arrived={dateFormat.format(new Date(selected.arrived_at))}
+                            life={life?.id === selected.id ? life : null}
+                            founders={founders.animals[selected.id] ?? null}
+                            photo={photo?.id === selected.id ? photo.photo : null}
+                            arkDay={snapshot?.ark_day ?? null}
+                            voyageStart={snapshot?.voyage.started_at ?? null}
+                            scene={sceneOf}
+                            asleep={cardSaysAsleep(selectedState?.id === selected.id ? selectedState.state : sceneRef.current?.behaviour(selected.id))}
+                            rest={selectedRest?.id === selected.id ? selectedRest.rest : sceneRef.current?.rest(selected.id) ?? null}
+                            following={following}
+                            onFollow={toggleFollow}
+                            storyOpen={storyOpen}
+                            onStory={() => setStoryOpen((open) => !open)}
+                            onClose={closeCard}
+                            focusOnOpen={Boolean(returnFocusRef.current)}
+                            share={{
+                                localePath: shareLocalePath,
+                                text: fillArkWords(words.share.textAnimal, {animal: selected.name, count: (snapshot?.animals.filter((animal) => arkSpeciesKey(animal) === arkSpeciesKey(selected)).length ?? 1).toLocaleString(locale)})
+                            }}
+                            lives={selectedLives && ownerHearts ? {entry: selectedLives, words: heartsWords, cost: ownerHearts.healCost, onRestored: onHeartRestored} : null}
+                            snapshot={snapshot}
+                        />
+                    </Suspense>
                 ) : null}
 
                 {recoveringOpen && recovering.length && !selected && !herd && ownerHearts ? (
