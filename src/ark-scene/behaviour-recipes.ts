@@ -52,6 +52,11 @@ export type SpeciesRecipes = {
     posture: Posture | null;
     hovers: boolean;
     defaulted: boolean;
+    /**
+     * sig2 (mammals): it builds a nest of its own the props do not draw (a squirrel's drey, a hog's farrowing nest: the
+     * props' nests are birds'), so the recipe draws and builds it itself (row flag `o`, `scripts/ark-signature-recipes.mts`).
+     */
+    ownNest: boolean;
     /** Its recipe ids, for a quick "has it" (posing runs often). */
     has: ReadonlySet<string>;
 };
@@ -85,11 +90,12 @@ export function decodeRecipeRow(slug: string, row: string): SpeciesRecipes {
         posture: (posture as Posture) || null,
         hovers: flags.includes("h"),
         defaulted: flags.includes("d"),
+        ownNest: flags.includes("o"),
         has: new Set(recipes ? recipes.split(",").map((r) => r.split(".")[0]) : [])
     };
 }
 
-const NONE: Omit<SpeciesRecipes, "slug"> = {recipes: [], sex: {system: "separate", maleShare: 0.5, bigger: null, ratio: 1, duller: null}, mating: [], nesting: [], nest: null, entry: "wade", exit: "walk", after: "shake", posture: null, hovers: false, defaulted: true, has: new Set()};
+const NONE: Omit<SpeciesRecipes, "slug"> = {recipes: [], sex: {system: "separate", maleShare: 0.5, bigger: null, ratio: 1, duller: null}, mating: [], nesting: [], nest: null, entry: "wade", exit: "walk", after: "shake", posture: null, hovers: false, defaulted: true, ownNest: false, has: new Set()};
 
 export function speciesRecipes(slug: string): SpeciesRecipes {
     const hit = decoded.get(slug);
@@ -240,6 +246,8 @@ const SOCIAL_RECIPE = new Set(["courting", "sparring", "playing", "calling", "ne
 
 /** How often a bird whose drawn nest is finished still takes a slot to it with material, against one building it. */
 export const NEST_TEND = 0.4;
+/** sig2 (mammals): how often an own-nest species with no stored nesting months builds, against one in its season (a rat's day nest stands all year). */
+export const OWN_NEST_YEAR = 0.25;
 
 /** On unless a page or a test turns it off. */
 let enabled = true;
@@ -262,7 +270,8 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         const template = TEMPLATES[id];
         if (!template || template.kind !== "stay" || template.goal === "here") continue;
         if (!template.replaces.includes(input.behaviour) && !template.replaces.includes(input.doing)) continue;
-        if (!hourOk(template, input.hours)) continue;
+        // (sig2, mammals: a night animal's own nest is built in its night: a rat's, a hog's, not only in the day.)
+        if (!hourOk(template, input.hours) && !(id === "nest_build" && species.ownNest && input.profile.activity === "nocturnal")) continue;
         if (template.sex === "male" && sex === "female") continue;
         if (template.sex === "female" && sex !== "female") continue; // 3.3 batch (D): a female's alone (egg-laying)
         // With the props' nests wired, it builds while its nest is growing (their stage), whatever the months say; once
@@ -270,8 +279,12 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         // it keeps coming back to it with material now and then, tending it (`NEST_TEND`): the drawn nest is there
         // through the season, the building of it only its first few Ark days.
         const building = id === "nest_build" && nestSource ? nestSource(input.animal.id, input.start) : null;
-        if (id === "nest_build" && nestSource && !building) continue;
-        const tending = building ? (building.stage >= 1 ? NEST_TEND : 1) : null;
+        // (sig2, mammals: a nest of its own the props do not draw: built from its row, in its season, or all year where none is stored.)
+        const own = id === "nest_build" && !building && species.ownNest;
+        if (id === "nest_build" && nestSource && !building && !own) continue;
+        let tending = building ? (building.stage >= 1 ? NEST_TEND : 1) : null;
+        // (Its own: in its months it builds while the nest grows and tends it after, as a bird does; none out of them; no months stored: now and then all year.)
+        if (own) tending = !species.nesting.length ? OWN_NEST_YEAR : !species.nesting.includes(seasonMonthAt(input.start)) ? 0 : nestStageAt(input.slug, input.start) >= 1 ? NEST_TEND : 1;
         const pull = input.socialPull && input.socialPull !== 1 && SOCIAL_RECIPE.has(arkRecipeActivity(id) ?? "") ? input.socialPull : 1;
         const chance = weight * 0.7 * (template.often ?? 1) * (tending ?? seasonFactor(species, template.season, input.start)) * pull;
         if (random() >= chance) continue;
@@ -505,8 +518,10 @@ export function nestSiteOf(world: ScheduleWorld, profile: ArkBehaviourProfile, a
     const key = `${animal.id}#${nestYear(species, epochSeconds)}`;
     if (nestSites.has(key)) return nestSites.get(key)!;
     const kind = species.nest.kind;
-    // A low branch first (most stick and cup nests are within a few metres of the ground, and can be seen there).
-    if (kit.flies(profile) && ["cup", "dome", "platform", "other"].includes(kind)) {
+    // A low branch first (most stick and cup nests are within a few metres of the ground, and can be seen there). (sig2, mammals:
+    // a climber's ball of twigs, a squirrel's drey, is wedged in a fork too: it climbs to it.)
+    const drey = species.ownNest && kind === "dome" && (profile.move === "climb" || profile.moves.includes("climb"));
+    if ((kit.flies(profile) || drey) && ["cup", "dome", "platform", "other"].includes(kind)) {
         const low = world.sampler
             .attachPoints("branch", {x: animal.home.x, z: animal.home.z, r: 14})
             .filter((p) => p.y - topOf(world.sampler, p.x, p.z) < 5 && p.y - topOf(world.sampler, p.x, p.z) > 1.2)
@@ -535,6 +550,8 @@ export const NEST_BUILD_DAYS = 5;
  */
 export function nestStageAt(slug: string, epochSeconds: number): number {
     const species = speciesRecipes(slug);
+    // (sig2, mammals: an own nest with no stored months stands all year.)
+    if (species.ownNest && species.nest && !species.nesting.length) return 1;
     if (!species.nest || !species.nesting.length) return 0;
     const month = seasonMonthAt(epochSeconds);
     if (!species.nesting.includes(month)) return 0;

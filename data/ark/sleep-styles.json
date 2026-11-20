@@ -10396,7 +10396,7 @@
    "slug": "capybara",
    "posture": "curl",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -10405,7 +10405,8 @@
      "rule": "order Rodentia: curls up"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "evidence",
+     "phrase": "often resting communally during the hottest parts of the day or night, frequently partly submerged or at the water's edge"
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -12245,7 +12246,7 @@
    "slug": "collared-peccary",
    "posture": "sternal",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -12254,7 +12255,8 @@
      "rule": "family Tayassuidae: lies on its chest, the legs folded under"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "story",
+     "phrase": "On cold nights herd members rest pressed tightly together in a cave, under a bank or in thick brush, sharing body heat."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -17194,7 +17196,7 @@
    "slug": "domestic-sheep",
    "posture": "sternal",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -17203,7 +17205,8 @@
      "rule": "family Bovidae: lies on its chest, the legs folded under"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "evidence",
+     "phrase": "In cold weather or when feeling threatened, sheep will huddle closely together, often forming a tight mass."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -26768,7 +26771,7 @@
    "slug": "guinea-pig",
    "posture": "curl",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -26777,7 +26780,8 @@
      "rule": "order Rodentia: curls up"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "evidence",
+     "phrase": "Guinea pigs are highly social and often huddle together, especially when resting or feeling insecure."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -31112,7 +31116,7 @@
    "slug": "kuhls-pipistrelle-bat",
    "posture": "hang",
    "alts": [],
-   "social": "apart",
+   "social": "cluster",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -31121,7 +31125,8 @@
      "recipe": "posture hang"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "young",
+     "phrase": "Females gather in nursery colonies, usually of 20 to 100 bats, in buildings."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -45457,7 +45462,7 @@
    "slug": "ring-tailed-lemur",
    "posture": "sit",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -45466,7 +45471,8 @@
      "rule": "plan primate: sits hunched, the head down"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "Day-active, sleeping in groups and warming after cool nights, so shared heat becomes a daily ritual rather than just comfort."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -52182,7 +52188,7 @@
    "slug": "sugar-glider",
    "posture": "curl",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -52191,7 +52197,8 @@
      "rule": "order Diprotodontia: curls up"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "Sugar Gliders sleep in hollows by day and move in social groups through trees at night."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -54571,7 +54578,7 @@
    "slug": "tufted-capuchin",
    "posture": "sit",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -54580,7 +54587,8 @@
      "rule": "plan primate: sits hunched, the head down"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "At dusk the group settles in tall trees, often in palm crowns or large emergent trees, and sleeps on branches with members sitting close together."
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"
@@ -59165,7 +59173,7 @@
    "slug": "zebu",
    "posture": "sternal",
    "alts": [],
-   "social": "apart",
+   "social": "huddle",
    "eyes": true,
    "mammal": true,
    "breath": 1,
@@ -59174,7 +59182,8 @@
      "rule": "family Bovidae: lies on its chest, the legs folded under"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "At night the herd lies down together"
     },
     "eyes": {
      "rule": "class Mammalia: eyelids"

@@ -141,10 +141,11 @@
   {
    "slug": "barbary-macaque",
    "name": "Barbary Macaque",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "huddles in cold weather",
    "field": "sleep",
-   "quote": "Day-active, sleeping in trees or cliffs and huddling in cold weather, making warmth something the group builds together."
+   "quote": "Day-active, sleeping in trees or cliffs and huddling in cold weather, making warmth something the group builds together.",
+   "was": "cluster"
   },
   {
    "slug": "barn-owl",
@@ -205,10 +206,11 @@
   {
    "slug": "bolivian-squirrel-monkey",
    "name": "Bolivian Squirrel Monkey",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "sleeps huddled in clusters along branches",
    "field": "sleep",
-   "quote": "At night the troop sleeps in tall trees, huddled in small clusters along the branches."
+   "quote": "At night the troop sleeps in tall trees, huddled in small clusters along the branches.",
+   "was": "cluster"
   },
   {
    "slug": "bolivian-squirrel-monkey",
@@ -277,10 +279,11 @@
   {
    "slug": "capybara",
    "name": "Capybara",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "group rests together at the water's edge",
    "field": "evidence",
-   "quote": "often resting communally during the hottest parts of the day or night, frequently partly submerged or at the water's edge"
+   "quote": "often resting communally during the hottest parts of the day or night, frequently partly submerged or at the water's edge",
+   "was": "cluster"
   },
   {
    "slug": "carolina-wolf-spider",
@@ -325,10 +328,11 @@
   {
    "slug": "collared-peccary",
    "name": "Collared Peccary",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "herd huddles pressed together on cold nights",
    "field": "story",
-   "quote": "On cold nights herd members rest pressed tightly together in a cave, under a bank or in thick brush, sharing body heat."
+   "quote": "On cold nights herd members rest pressed tightly together in a cave, under a bank or in thick brush, sharing body heat.",
+   "was": "cluster"
   },
   {
    "slug": "common-bed-bug",
@@ -389,10 +393,11 @@
   {
    "slug": "common-marmoset",
    "name": "Common Marmoset",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "sleeps huddled in vine tangle",
    "field": "sleep",
-   "quote": "The group sleeps huddled together in a vine tangle, dense tree crown or hollow, and rests again in the heat of midday."
+   "quote": "The group sleeps huddled together in a vine tangle, dense tree crown or hollow, and rests again in the heat of midday.",
+   "was": "cluster"
   },
   {
    "slug": "common-myna",
@@ -429,10 +434,11 @@
   {
    "slug": "coppery-titi-monkey",
    "name": "Coppery Titi Monkey",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "family sleeps huddled on a branch",
    "field": "sleep",
-   "quote": "At night the family sleeps huddled together on a branch hidden among dense vines or leaves."
+   "quote": "At night the family sleeps huddled together on a branch hidden among dense vines or leaves.",
+   "was": "cluster"
   },
   {
    "slug": "coypu",
@@ -472,7 +478,8 @@
    "recipe": "nest_build",
    "behaviour": "fur-lined nest for young",
    "field": "young",
-   "quote": "females give birth to usually 2 to 4 blind, naked young in a fur-lined nest"
+   "quote": "females give birth to usually 2 to 4 blind, naked young in a fur-lined nest",
+   "nest": "other:hair"
   },
   {
    "slug": "desert-locust",
@@ -509,18 +516,20 @@
   {
    "slug": "domestic-pig",
    "name": "Domestic Pig",
-   "recipe": "cluster",
+   "recipe": "sleep:pile",
    "behaviour": "group sleeps lying close together",
    "field": "sleep",
-   "quote": "sleeping through the night in groups lying close together"
+   "quote": "sleeping through the night in groups lying close together",
+   "was": "cluster"
   },
   {
    "slug": "domestic-sheep",
    "name": "Domestic Sheep",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "huddles into a tight mass in cold or threat",
    "field": "evidence",
-   "quote": "In cold weather or when feeling threatened, sheep will huddle closely together, often forming a tight mass."
+   "quote": "In cold weather or when feeling threatened, sheep will huddle closely together, often forming a tight mass.",
+   "was": "cluster"
   },
   {
    "slug": "dusky-sleeper",
@@ -544,7 +553,8 @@
    "recipe": "nest_build",
    "behaviour": "builds dreys of twigs and leaves in high forks",
    "field": "facts",
-   "quote": "A drey is a ball of twigs and leaves wedged in a high fork and lined with shredded bark or grass, and one squirrel may use several."
+   "quote": "A drey is a ball of twigs and leaves wedged in a high fork and lined with shredded bark or grass, and one squirrel may use several.",
+   "nest": "dome:twigs+leaves+bark+grass"
   },
   {
    "slug": "eastern-lubber-grasshopper",
@@ -749,10 +759,11 @@
   {
    "slug": "guinea-pig",
    "name": "Guinea Pig",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "huddles together when resting or insecure",
    "field": "evidence",
-   "quote": "Guinea pigs are highly social and often huddle together, especially when resting or feeling insecure."
+   "quote": "Guinea pigs are highly social and often huddle together, especially when resting or feeling insecure.",
+   "was": "cluster"
   },
   {
    "slug": "guppy",
@@ -837,10 +848,11 @@
   {
    "slug": "javan-ferret-badger",
    "name": "Javan Ferret-Badger",
-   "recipe": "worm_pull",
+   "recipe": "worm_dig",
    "behaviour": "snuffles leaf litter and digs out worms with long claws at night",
    "field": "story",
-   "quote": "The Javan Ferret-Badger comes out at night on the forest floors of Java and Bali, snuffling through the leaf litter and digging out worms and insects with its long claws."
+   "quote": "The Javan Ferret-Badger comes out at night on the forest floors of Java and Bali, snuffling through the leaf litter and digging out worms and insects with its long claws.",
+   "was": "worm_pull"
   },
   {
    "slug": "javan-myna",
@@ -861,10 +873,11 @@
   {
    "slug": "kuhls-pipistrelle-bat",
    "name": "Kuhl's Pipistrelle Bat",
-   "recipe": "cluster",
+   "recipe": "sleep:cluster",
    "behaviour": "females form nursery colonies",
    "field": "young",
-   "quote": "Females gather in nursery colonies, usually of 20 to 100 bats, in buildings."
+   "quote": "Females gather in nursery colonies, usually of 20 to 100 bats, in buildings.",
+   "was": "cluster"
   },
   {
    "slug": "laughing-kookaburra",
@@ -941,18 +954,20 @@
   {
    "slug": "long-tailed-macaque",
    "name": "Long-tailed Macaque",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "huddles at branch ends in sleeping trees over rivers",
    "field": "sleep",
-   "quote": "Sleeping trees, often ones overhanging a river, are occupied before dusk, and the animals huddle in small groups near the ends of branches until first light."
+   "quote": "Sleeping trees, often ones overhanging a river, are occupied before dusk, and the animals huddle in small groups near the ends of branches until first light.",
+   "was": "cluster"
   },
   {
    "slug": "long-tailed-macaque",
    "name": "Long-tailed Macaque",
-   "recipe": "shell_tool",
+   "recipe": "stone_hammer",
    "behaviour": "uses stones as hammers to open oysters and nuts",
    "field": "facts",
-   "quote": "On coasts and islands in Thailand and Myanmar, some populations use stones as hammers to open oysters, sea snails and nuts."
+   "quote": "On coasts and islands in Thailand and Myanmar, some populations use stones as hammers to open oysters, sea snails and nuts.",
+   "was": "shell_tool"
   },
   {
    "slug": "malachite-butterfly",
@@ -968,7 +983,8 @@
    "recipe": "nest_build",
    "behaviour": "nests of shredded vegetation in palm crowns or undergrowth",
    "field": "sleep",
-   "quote": "It spends the day in nests of shredded vegetation hidden in dense undergrowth, frond piles or palm crowns"
+   "quote": "It spends the day in nests of shredded vegetation hidden in dense undergrowth, frond piles or palm crowns",
+   "nest": "other:grass+reeds"
   },
   {
    "slug": "mandrill",
@@ -1205,10 +1221,11 @@
   {
    "slug": "platypus",
    "name": "Platypus",
-   "recipe": "incubate_sit",
+   "recipe": "dig_burrow",
    "behaviour": "lays eggs in a nesting burrow",
    "field": "facts",
-   "quote": "Females lay eggs in nesting burrows, a rare trait among mammals."
+   "quote": "Females lay eggs in nesting burrows, a rare trait among mammals.",
+   "was": "incubate_sit"
   },
   {
    "slug": "racket-tailed-roller",
@@ -1240,7 +1257,8 @@
    "recipe": "nest_build",
    "behaviour": "piglets born in sheltered nests",
    "field": "young",
-   "quote": "Females give birth to piglets in sheltered nests or dense cover"
+   "quote": "Females give birth to piglets in sheltered nests or dense cover",
+   "nest": "other:"
   },
   {
    "slug": "red-squirrel",
@@ -1248,7 +1266,8 @@
    "recipe": "nest_build",
    "behaviour": "raises young in dreys",
    "field": "young",
-   "quote": "Females raise young in tree nests called dreys"
+   "quote": "Females raise young in tree nests called dreys",
+   "nest": "dome:"
   },
   {
    "slug": "red-tegu",
@@ -1325,10 +1344,11 @@
   {
    "slug": "ring-tailed-lemur",
    "name": "Ring-tailed Lemur",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "huddles to sleep in groups",
    "field": "sleep",
-   "quote": "Day-active, sleeping in groups and warming after cool nights, so shared heat becomes a daily ritual rather than just comfort."
+   "quote": "Day-active, sleeping in groups and warming after cool nights, so shared heat becomes a daily ritual rather than just comfort.",
+   "was": "cluster"
   },
   {
    "slug": "roadside-hawk",
@@ -1445,18 +1465,20 @@
   {
    "slug": "stump-tailed-macaque",
    "name": "Stump-tailed Macaque",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "sleeps huddled in contact",
    "field": "sleep",
-   "quote": "At night troop members sleep in tall trees, often sitting huddled together in contact."
+   "quote": "At night troop members sleep in tall trees, often sitting huddled together in contact.",
+   "was": "cluster"
   },
   {
    "slug": "sugar-glider",
    "name": "Sugar Glider",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "group sleeps together in tree hollows",
    "field": "sleep",
-   "quote": "Sugar Gliders sleep in hollows by day and move in social groups through trees at night."
+   "quote": "Sugar Gliders sleep in hollows by day and move in social groups through trees at night.",
+   "was": "cluster"
   },
   {
    "slug": "sulcata-tortoise",
@@ -1517,10 +1539,11 @@
   {
    "slug": "tufted-capuchin",
    "name": "Tufted Capuchin",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "sleeps sitting close together in palm crowns",
    "field": "sleep",
-   "quote": "At dusk the group settles in tall trees, often in palm crowns or large emergent trees, and sleeps on branches with members sitting close together."
+   "quote": "At dusk the group settles in tall trees, often in palm crowns or large emergent trees, and sleeps on branches with members sitting close together.",
+   "was": "cluster"
   },
   {
    "slug": "tufted-capuchin",
@@ -1533,10 +1556,11 @@
   {
    "slug": "tufted-capuchin",
    "name": "Tufted Capuchin",
-   "recipe": "shell_tool",
+   "recipe": "stone_hammer",
    "behaviour": "cracks nuts with stones",
    "field": "evidence",
-   "quote": "Tufted Capuchins are known for tool use in some populations, such as using stones to crack nuts."
+   "quote": "Tufted Capuchins are known for tool use in some populations, such as using stones to crack nuts.",
+   "was": "shell_tool"
   },
   {
    "slug": "tufted-gray-langur",
@@ -1645,10 +1669,11 @@
   {
    "slug": "zebu",
    "name": "Zebu",
-   "recipe": "cluster",
+   "recipe": "sleep:huddle",
    "behaviour": "herd lies down together at night",
    "field": "sleep",
-   "quote": "At night the herd lies down together"
+   "quote": "At night the herd lies down together",
+   "was": "cluster"
   },
   {
    "slug": "broad-bodied-chaser",

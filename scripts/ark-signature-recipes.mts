@@ -7,7 +7,14 @@
  *
  * Guard: a recipe is added only where species of the same body plan already use it (the templates are written for
  * bodies: a pounce is a four-legged hunter's), so a loose mapping is skipped and listed, never drawn. The weight is
- * the one that template most often has. Idempotent: run it again after `ark-behaviour-recipes.mts` regenerates.
+ * the one that template most often has. Idempotent: run it again after `ark-behaviour-recipes.mts` (and
+ * `ark-sleep-styles.mts`) regenerates.
+ *
+ * Two kinds of row are not a recipe of the table: `"recipe": "sleep:<huddle|pile|cluster>"` (sig2, mammals) is how the species
+ * sleeps with its kind (`src/ark-scene/sleep.json`, `data/ark/sleep-styles.json`: the sleep layer draws a huddle, a pile, a
+ * roost's cluster; the recipe `cluster` is only an insects' one), set only where the species has no way yet; and a
+ * `nest_build` row may carry its own `"nest": "kind:material+material"` (the generator only reads birds' nests), set only
+ * where the row has none.
  *
  *   npx tsx scripts/ark-signature-recipes.mts [--dry]
  */
@@ -19,7 +26,12 @@ const dry = process.argv.includes("--dry");
 const tablePath = path.join(root, "src/ark-scene/recipes.json");
 const table = JSON.parse(fs.readFileSync(tablePath, "utf8")) as {species: Record<string, string>};
 const full = JSON.parse(fs.readFileSync(path.join(root, "data/ark/behaviour-recipes.json"), "utf8")) as {species: Array<{slug: string; plan: string}>};
-const additions = (JSON.parse(fs.readFileSync(path.join(root, "data/ark/signature-recipes.json"), "utf8")) as {additions: Array<{slug: string; name: string; recipe: string}>}).additions;
+const additions = (JSON.parse(fs.readFileSync(path.join(root, "data/ark/signature-recipes.json"), "utf8")) as {additions: Array<{slug: string; name: string; recipe: string; field?: string; quote?: string; nest?: string}>}).additions;
+// sig2 (mammals): how a species sleeps with its kind, and where its source is kept.
+const sleepPath = path.join(root, "src/ark-scene/sleep.json");
+const sleepTable = JSON.parse(fs.readFileSync(sleepPath, "utf8")) as {species: Record<string, string>};
+const sleepStylesPath = path.join(root, "data/ark/sleep-styles.json");
+const sleepStyles = JSON.parse(fs.readFileSync(sleepStylesPath, "utf8")) as {species: Array<{slug: string; social: string; src: Record<string, unknown>}>};
 
 const planOf = new Map(full.species.map((s) => [s.slug, s.plan]));
 const recipesOf = (row: string) => row.split("|")[0].split(",").filter(Boolean).map((r) => ({id: r.slice(0, r.lastIndexOf(".")), weight: Number(r.slice(r.lastIndexOf(".") + 1))}));
@@ -36,7 +48,12 @@ for (const [slug, row] of Object.entries(table.species)) {
 }
 // A template new with a signature wave has no users yet to learn its plans and weight from: stated here.
 // (3.3 batch (D): `dip_lay`, a dragonfly laying, `data/ark/egg-dip.json`.)
-const NEW: Record<string, {plans: string[]; weight: number}> = {dip_lay: {plans: ["flying_insect"], weight: 6}};
+const NEW: Record<string, {plans: string[]; weight: number}> = {
+    dip_lay: {plans: ["flying_insect"], weight: 6},
+    // sig2 (mammals): a stone hammer (macaques, capuchins) and a worm drawn out of the leaf litter (a ferret-badger).
+    stone_hammer: {plans: ["primate"], weight: 3},
+    worm_dig: {plans: ["quadruped"], weight: 4}
+};
 for (const [id, seed] of Object.entries(NEW)) {
     for (const plan of seed.plans) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
     if (!weights.has(id)) weights.set(id, new Map([[seed.weight, 1]]));
@@ -58,6 +75,30 @@ for (const a of additions) {
         skipped.push(`${a.slug} ${a.recipe}: no row`);
         continue;
     }
+    if (a.recipe.startsWith("sleep:")) {
+        // How it sleeps with its kind: only where its sleep row has none (a way the generator found stays).
+        const social = a.recipe.slice("sleep:".length);
+        const sleepRow = sleepTable.species[a.slug];
+        if (!sleepRow) {
+            skipped.push(`${a.slug} ${a.recipe}: no sleep row`);
+            continue;
+        }
+        const f = sleepRow.split("|");
+        while (f.length < 3) f.push("");
+        if (f[2] === social) already.push(`${a.slug} ${a.recipe}`);
+        else if (f[2]) skipped.push(`${a.slug} ${a.recipe}: it already sleeps ${f[2]}`);
+        else {
+            f[2] = social;
+            sleepTable.species[a.slug] = f.join("|");
+            const style = sleepStyles.species.find((x) => x.slug === a.slug);
+            if (style) {
+                style.social = social;
+                style.src.social = {field: a.field, phrase: a.quote};
+            }
+            added++;
+        }
+        continue;
+    }
     if (recipesOf(row).some((r) => r.id === a.recipe)) {
         already.push(`${a.slug} ${a.recipe}`);
         continue;
@@ -66,17 +107,26 @@ for (const a of additions) {
         skipped.push(`${a.slug} ${a.recipe}: it already hunts its own way`);
         continue;
     }
-    if (NEEDS_GENERATOR.has(a.recipe) || !plans.get(a.recipe)?.has(plan)) {
-        skipped.push(`${a.slug} ${a.recipe}: ${NEEDS_GENERATOR.has(a.recipe) ? "needs the generator" : `no ${plan} uses it`}`);
+    const generated = NEEDS_GENERATOR.has(a.recipe) && !a.nest;
+    if (generated || !plans.get(a.recipe)?.has(plan)) {
+        skipped.push(`${a.slug} ${a.recipe}: ${generated ? "needs the generator" : `no ${plan} uses it`}`);
         continue;
     }
     const fields = row.split("|");
     fields[0] = [fields[0], `${a.recipe}.${usual(a.recipe)}`].filter(Boolean).join(",");
+    // (A nest of its own, where the generator found none: kind:material+material; flag `o`: the props do not draw it, the recipe does.)
+    if (a.nest && !fields[4]) fields[4] = a.nest;
+    while (fields.length < 8) fields.push("");
     // (No longer only its plan's defaults.)
     if (fields[7]) fields[7] = fields[7].replace("d", "");
+    if (a.nest && !fields[7].includes("o")) fields[7] += "o";
     table.species[a.slug] = fields.join("|");
     added++;
 }
-if (!dry) fs.writeFileSync(tablePath, `${JSON.stringify(table)}\n`);
+if (!dry) {
+    fs.writeFileSync(tablePath, `${JSON.stringify(table)}\n`);
+    fs.writeFileSync(sleepPath, `${JSON.stringify(sleepTable)}\n`);
+    fs.writeFileSync(sleepStylesPath, `${JSON.stringify(sleepStyles, null, 1)}\n`);
+}
 console.log(JSON.stringify({additions: additions.length, added, already: already.length, skipped: skipped.length}, null, 1));
 if (skipped.length) console.log(skipped.join("\n"));

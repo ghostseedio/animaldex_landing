@@ -5134,7 +5134,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const digs = recipes.some((r) => MARKING.has(r.id));
                 // Its nest (this branch's drawing, until the props lane's are wired; a sitter's at the wired site).
                 const sourced = nestSourceOf(c.entry.animal.id, epoch);
-                const builds = fallbackNests() && (recipes.some((r) => r.id === "nest_build") || Boolean(sourced));
+                // (sig2, mammals: a nest of its own the props do not draw is drawn here whichever way the props are wired.)
+                const builds = (fallbackNests() || speciesRecipes(c.entry.animal.model_slug).ownNest) && (recipes.some((r) => r.id === "nest_build") || Boolean(sourced));
                 const site = builds ? recipeNest(world, own.profile, own.animal, epoch) : null;
                 const stage = sourced ? ((sourced.eggs ?? 0) > 0 || (sourced.chicks ?? 0) > 0 ? 1 : sourced.stage) : site ? nestStageAt(c.entry.animal.model_slug, epoch) : 0;
                 const species = speciesRecipes(c.entry.animal.model_slug);
