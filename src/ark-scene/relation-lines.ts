@@ -22,6 +22,8 @@ type Scene = Pick<ArkSceneHandle, "locate" | "relationView" | "screenOf">;
 
 const MARGIN = 22;
 const END_R = 11;
+/** The lines are drawn again at most this often (ms): about 24 a second while the view moves, none while nothing does. */
+const FRAME_MS = 40;
 
 export type ArkRelationLinesHandle = {
     set: (selected: string | null, lines: readonly ArkRelationLine[]) => void;
@@ -133,22 +135,40 @@ export function mountArkRelationLines(scene: Scene, options: {onPick: (id: strin
         ctx.restore();
     };
 
-    const draw = () => {
-        raf = 0;
-        if (!selected || !lines.length) return clear();
+    // The ends worked out each frame (reused: nothing allocated per frame), and what was last drawn: a frame is drawn again
+    // only when an end moved by half a pixel, the dashes' drift stepped (10 a second), or a line changed, and at most every
+    // FRAME_MS. Only the box last drawn in is cleared.
+    const MAX = 32;
+    const endX = new Float32Array(MAX);
+    const endY = new Float32Array(MAX);
+    const endAngle = new Float32Array(MAX);
+    const endState = new Uint8Array(MAX); // 0 skipped, 1 inside, 2 at the edge
+    let lastKey = "";
+    let lastAt = 0;
+    let dirty = {x0: 0, y0: 0, x1: 0, y1: 0, any: false};
+    let changed = true;
+
+    const draw = (now: number) => {
+        raf = requestAnimationFrame(draw);
+        if (!selected || !lines.length) {
+            cancelAnimationFrame(raf);
+            raf = 0;
+            return clear();
+        }
+        if (now - lastAt < FRAME_MS) return;
         const v = scene.relationView!();
         const w = v.width;
         const h = v.height;
-        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        const ratio = Math.min(window.devicePixelRatio || 1, 1.5);
         if (w !== cw || h !== ch || ratio !== dpr) {
             cw = w;
             ch = h;
             dpr = ratio;
             canvas.width = Math.max(1, Math.round(w * dpr));
             canvas.height = Math.max(1, Math.round(h * dpr));
+            changed = true;
+            dirty.any = false;
         }
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        ctx.clearRect(0, 0, w, h);
         const x0 = MARGIN;
         const y0 = MARGIN;
         const x1 = w - MARGIN;
@@ -156,12 +176,13 @@ export function mountArkRelationLines(scene: Scene, options: {onPick: (id: strin
         const from = scene.locate(selected);
         const fromOk = Boolean(from) && screenOf(from!.x, from!.y, from!.z, a).front;
         const fromIn = fromOk && a.x >= x0 && a.x <= x1 && a.y >= y0 && a.y <= y1;
-        const t = reduced ? 0 : (performance.now() - started) / 1000;
-        let anyStrong = false;
-        for (let i = 0; i < lines.length; i++) if (lines[i].strong) anyStrong = true;
-        let used = 0;
-        for (let i = 0; i < lines.length; i++) {
+        const step = reduced ? 0 : Math.floor((now - started) / 100);
+        const n = Math.min(lines.length, MAX);
+        // Pass 1: the ends.
+        let key = `${fromIn ? Math.round(a.x * 2) : -1},${fromIn ? Math.round(a.y * 2) : -1},${step},${w}x${h}`;
+        for (let i = 0; i < n; i++) {
             const line = lines[i];
+            endState[i] = 0;
             const to = line.at ?? scene.locate(line.id);
             if (!to) continue;
             screenOf(to.x, to.y, to.z, b);
@@ -171,23 +192,44 @@ export function mountArkRelationLines(scene: Scene, options: {onPick: (id: strin
                 b.y = h - b.y;
             }
             const inside = b.front && b.x >= x0 && b.x <= x1 && b.y >= y0 && b.y <= y1;
-            let ex = b.x;
-            let ey = b.y;
-            let pointing: number | null = null;
-            if (!inside) {
+            if (inside) {
+                endX[i] = b.x;
+                endY[i] = b.y;
+                endState[i] = 1;
+            } else {
                 const ox = fromIn ? a.x : w / 2;
                 const oy = fromIn ? a.y : (y0 + y1) / 2;
                 if (!exitPoint(ox, oy, b.x, b.y, x0, y0, x1, y1, edge)) continue;
-                ex = edge.x;
-                ey = edge.y;
-                pointing = Math.atan2(b.y - oy, b.x - ox);
+                endX[i] = edge.x;
+                endY[i] = edge.y;
+                endAngle[i] = Math.atan2(b.y - oy, b.x - ox);
+                endState[i] = 2;
             }
+            key += `|${endState[i]}${Math.round(endX[i] * 2)},${Math.round(endY[i] * 2)}`;
+        }
+        if (!changed && key === lastKey) return;
+        changed = false;
+        lastKey = key;
+        lastAt = now;
+        // Pass 2: clear what was drawn, draw again.
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        if (dirty.any) ctx.clearRect(dirty.x0 - 2, dirty.y0 - 2, dirty.x1 - dirty.x0 + 4, dirty.y1 - dirty.y0 + 4);
+        dirty = {x0: fromIn ? a.x : w, y0: fromIn ? a.y : h, x1: fromIn ? a.x : 0, y1: fromIn ? a.y : 0, any: false};
+        let anyStrong = false;
+        for (let i = 0; i < n; i++) if (lines[i].strong) anyStrong = true;
+        let used = 0;
+        for (let i = 0; i < n; i++) {
+            if (!endState[i]) continue;
+            const line = lines[i];
+            const ex = endX[i];
+            const ey = endY[i];
+            const inside = endState[i] === 1;
             const style = ARK_RELATION_STYLE[line.kind];
             if (fromIn) {
                 // The halo, then the line; dashes drift towards the tapped animal (gently; still with reduced motion).
                 ctx.lineCap = "round";
                 ctx.setLineDash(style.dash);
-                ctx.lineDashOffset = style.dash.length ? -t * 9 : 0;
+                ctx.lineDashOffset = style.dash.length ? -step * 0.9 : 0;
                 ctx.beginPath();
                 ctx.moveTo(ex, ey);
                 ctx.lineTo(a.x, a.y);
@@ -200,7 +242,13 @@ export function mountArkRelationLines(scene: Scene, options: {onPick: (id: strin
                 ctx.stroke();
                 ctx.globalAlpha = 1;
             }
-            icon(line.kind, ex, ey, inside ? 8.5 : END_R, pointing);
+            icon(line.kind, ex, ey, inside ? 8.5 : END_R, inside ? null : endAngle[i]);
+            const r = END_R + 9;
+            dirty.x0 = Math.min(dirty.x0, ex - r);
+            dirty.y0 = Math.min(dirty.y0, ey - r);
+            dirty.x1 = Math.max(dirty.x1, ex + r);
+            dirty.y1 = Math.max(dirty.y1, ey + r);
+            dirty.any = true;
             const button = buttonFor(used++);
             button.dataset.id = line.id;
             button.title = line.label;
@@ -209,12 +257,13 @@ export function mountArkRelationLines(scene: Scene, options: {onPick: (id: strin
             button.style.transform = `translate(${ex.toFixed(1)}px, ${ey.toFixed(1)}px)`;
         }
         for (let i = used; i < buttons.length; i++) buttons[i].style.display = "none";
-        raf = requestAnimationFrame(draw);
     };
 
     const clear = () => {
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        dirty.any = false;
+        lastKey = "";
         for (const button of buttons) button.style.display = "none";
     };
 
@@ -222,6 +271,7 @@ export function mountArkRelationLines(scene: Scene, options: {onPick: (id: strin
         set: (id, next) => {
             selected = id;
             lines = next;
+            changed = true;
             if (!raf) raf = requestAnimationFrame(draw);
         },
         setReducedMotion: (value) => {

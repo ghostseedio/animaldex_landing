@@ -32,7 +32,7 @@ type Props = {
 };
 
 /** Kinds shown in each food-chain row before "+N more". */
-const CHAIN_KINDS = 5;
+const CHAIN_KINDS = 3;
 
 /** How often the nearest are worked out again (the animals move). */
 const REFRESH_MS = 2000;
@@ -164,10 +164,11 @@ export default function ArkRelationsPanel({animal, snapshot, scene, words, local
         </button>
         );
     };
-    // Compact: the first few kinds of each row (those here first), the rest behind "+N more".
+    // Compact: the first few kinds of each row that are in its region now (else the first few), the rest behind "+N more".
     const capped = (row: "eats" | "eatenBy", kinds: ArkFoodChainKind[]) => {
         const open = chainOpen === `${animal.id}|${row}`;
-        const shown = open ? kinds : kinds.slice(0, CHAIN_KINDS);
+        const nearby = kinds.filter((kind) => kind.here > 0);
+        const shown = open ? kinds : (nearby.length ? nearby : kinds).slice(0, CHAIN_KINDS);
         const more = kinds.length - shown.length;
         return (
             <>

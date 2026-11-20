@@ -733,6 +733,7 @@ for (const deviceName of devices) {
             inViewBy: r.inViewBy ?? null,
             gc,
             frameRate: r.frameRate ?? null,
+            relations: r.relations ?? null,
             longestTaskMs: longest,
             longTasks: tasks.length,
             longTaskMsTotal: tasks.reduce((sum, task) => sum + task.ms, 0),
