@@ -16,7 +16,7 @@ const DAY = 100;
 const T0 = 1.8e9; // epoch seconds
 type Spec = {slug: string; plan: string; adults: number; young: number; length: number; youngLength: number; zone?: string};
 
-function setup(spec: Spec, schedule: (id: string, t: number) => LivePose, options: {roost?: {x: number; y: number; z: number}; recorded?: (young: string) => readonly string[] | null; male?: (animal: ArkAnimal) => boolean | null} = {}) {
+function setup(spec: Spec, schedule: (id: string, t: number) => LivePose, options: {roost?: {x: number; y: number; z: number}; recorded?: (young: string) => readonly string[] | null; male?: (animal: ArkAnimal) => boolean | null; deepWater?: (x: number, z: number) => boolean} = {}) {
     const animals: ArkAnimal[] = [];
     const entries = new Map<string, LiveAnimal>();
     const ids = {adults: [] as string[], young: [] as string[]};
@@ -35,6 +35,7 @@ function setup(spec: Spec, schedule: (id: string, t: number) => LivePose, option
         roostOf: () => options.roost ?? null,
         entryOf: (id: string) => entries.get(id) ?? null,
         heightAt: () => 1,
+        deepWater: options.deepWater,
         recordedParents: options.recorded,
         maleOf: options.male
     };
@@ -238,4 +239,33 @@ test("the father carries or leads where the species' text says so: the recorded 
     // A parent not aboard any more is nobody's carrier: the seeded pick stands.
     probe = setup({slug: "coppery-titi-monkey", plan: "mammal", ...base}, walk(0), {recorded: () => ["gone", b], male: () => null});
     assert.equal(probe.live.parentOf(kid), b);
+});
+
+test("a ride on the water only: a grebe's, a swan's and a hippo's young ride while she swims and get down to follow her in a line on the bank; a monkey's ride is anywhere", () => {
+    for (const [slug, plan] of [["great-crested-grebe", "bird"], ["mute-swan", "bird"], ["common-hippopotamus", "mammal"]] as const) {
+        // She walks out of the water at x = 20 (one metre a second from 0).
+        const {ids, entries, pose, live} = setup({slug, plan, adults: 1, young: 3, length: 0.6, youngLength: 0.2}, walk(1), {deepWater: (x) => x < 20});
+        const mother = entries.get(ids.adults[0])!;
+        const kids = [...ids.young].sort();
+        assert.equal(live.ageOf(entries.get(kids[0])!)!.carried, true, `${slug}: carried by its age`);
+        // On the water (t = 10 s after the start: she is at x = 10): on her back, up off the ground, over her.
+        for (const id of kids) {
+            const p = pose(id, T0 + 10);
+            assert.ok(p.y > 1.1, `${slug}: riding on her at x ${p.x.toFixed(1)}, y ${p.y.toFixed(2)}`);
+            assert.ok(Math.abs(p.x - (10 - HEEL_LAG_SECONDS)) < 0.3);
+        }
+        // On the bank (t = 40 s: she is at x = 40): down on the ground, in a line behind her by rank, her own path.
+        const t = T0 + 40;
+        kids.forEach((id, rank) => {
+            const p = pose(id, t);
+            assert.ok(Math.abs(p.y - 1) < 1e-6, `${slug}: on the ground, y ${p.y}`);
+            const d = lineDistance(mother.length, entries.get(id)!.length, rank);
+            assert.ok(Math.abs(p.x - (40 - HEEL_LAG_SECONDS - d)) < 0.08, `${slug} rank ${rank}: ${p.x.toFixed(2)}`);
+        });
+    }
+    // A species whose ride is anywhere rides on land too.
+    const {ids, entries, pose} = setup({slug: "coppery-titi-monkey", plan: "mammal", adults: 1, young: 1, length: 0.5, youngLength: 0.15}, walk(1), {deepWater: () => false});
+    const p = pose(ids.young[0], T0 + 40);
+    assert.ok(p.y > 1.05, `a monkey's infant rides on land: y ${p.y.toFixed(2)}`);
+    void entries;
 });

@@ -23,6 +23,8 @@ export type RideStyle = "back" | "belly" | "tail" | "under";
 export type WayKind = "ride" | "line" | "stay" | "visit" | "cluster";
 export type Ways = {
     ride?: RideStyle;
+    /** Rides only while its parent is on the water (a grebe's, a swan's, a hippo's): on land it follows in a line. */
+    rideWater?: boolean;
     by?: "male";
     line?: boolean;
     follow?: boolean;

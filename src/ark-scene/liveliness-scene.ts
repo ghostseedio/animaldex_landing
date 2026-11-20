@@ -122,6 +122,8 @@ export type LiveHooks = {
     /** The scene's entry for an id. */
     entryOf: (id: string) => LiveAnimal | null;
     heightAt: (x: number, z: number) => number;
+    /** sig-young: deep enough water to swim in at a point (the scene's own judgement, the same as where a rider rides): a grebe's chicks ride only over it. Absent: everywhere. */
+    deepWater?: (x: number, z: number) => boolean;
     /** 3.3 batch (C): a young one's recorded parents (`young-care.ts` `Lineage`, the record's births), or null: the seeded pick. */
     recordedParents?: (youngId: string) => readonly string[] | null;
     /** 3.3 batch (C): an animal's drawn sex (the mother is the parent drawn female; the engine has no sexes). */
@@ -353,7 +355,7 @@ export class ArkLiveliness {
                     for (const pick of picks) if (!visitors.has(pick.id)) visitors.set(pick.id, {familyKey: key, helper: true});
                 }
             }
-            if (ways.line && parent) lineMates.set(parent, [...(lineMates.get(parent) ?? []), animal.id]);
+            if ((ways.line || ways.rideWater) && parent) lineMates.set(parent, [...(lineMates.get(parent) ?? []), animal.id]);
             if (ways.cluster) {
                 const key = `${animal.kind_species_profile_id || animal.species_profile_id || animal.model_slug}|${animal.zone}|${animal.slot ?? ""}`;
                 clumps.set(key, [...(clumps.get(key) ?? []), animal.id]);
@@ -577,9 +579,12 @@ export class ArkLiveliness {
             const raw = this.options.hooks.poseAt(parent, epochSeconds - HEEL_LAG_SECONDS);
             if (raw) {
                 const lead = this.sheltered(parent, raw, nowMs - HEEL_LAG_SECONDS * 1000);
-                const heel = heelPose(entry.animal.id, {x: lead.x, z: lead.z, yaw: lead.yaw, length: parent.length, height: parent.drawnHeight || parent.length * 0.6}, {distance: age.follow.distance, carried: age.carried}, age.play, nowMs, (ms) => this.parentAt(parent, ms));
+                // sig-young: young whose ride is on the water only (a grebe's, a swan's, a hippo's) get down when she comes out of it and follow her in a line.
+                const dismounted = age.carried && Boolean(age.ways?.rideWater) && !this.deepWater(lead.x, lead.z);
+                const carried = age.carried && !dismounted;
+                const heel = heelPose(entry.animal.id, {x: lead.x, z: lead.z, yaw: lead.yaw, length: parent.length, height: parent.drawnHeight || parent.length * 0.6}, {distance: dismounted ? 0.7 : age.follow.distance, carried}, age.play, nowMs, (ms) => this.parentAt(parent, ms));
                 // sig-young: a young one of a species that follows in a line goes along her own path, each one its length behind the last.
-                if (age.line && !age.carried) {
+                if ((age.line && !age.carried) || dismounted) {
                     const mates = this.lineMates.get(parent.animal.id);
                     const rank = Math.max(mates ? mates.indexOf(entry.animal.id) : 0, 0);
                     const spot = lineBehind(this.trailOf(parent, lead, nowMs), lineDistance(parent.length, entry.length, rank), lead.yaw);
@@ -594,7 +599,7 @@ export class ArkLiveliness {
                 }
                 // 3.3 batch (C): a mammal's young at heel comes to her flank to suckle in bouts of the shared clock
                 // (`young-care.ts`), while she stands still and it is neither carried nor at play.
-                const bout = !age.carried && !heel.playing && !lead.moving && !lead.aloft && lead.doing !== "sleep" && nurses(this.options.hooks.planOf(entry.animal.model_slug)) ? nursingBout(entry.animal.id, nowMs) : null;
+                const bout = !carried && !heel.playing && !lead.moving && !lead.aloft && lead.doing !== "sleep" && nurses(this.options.hooks.planOf(entry.animal.model_slug)) ? nursingBout(entry.animal.id, nowMs) : null;
                 if (bout) {
                     const to = nurseBlend(heel, nursePlace(entry.animal.id, {x: lead.x, z: lead.z, yaw: lead.yaw, length: parent.length}, entry.length), bout.level);
                     heel.x = to.x;
@@ -607,7 +612,7 @@ export class ArkLiveliness {
                 out = Object.assign({}, pose, {
                     x: heel.x,
                     z: heel.z,
-                    y: (age.carried ? Math.max(lead.y, ground) : ground) + heel.lift,
+                    y: (carried ? Math.max(lead.y, ground) : ground) + heel.lift,
                     yaw: heel.yaw,
                     moving: bout ? bout.level < 1 : lead.moving || heel.moving,
                     aloft: false,
@@ -868,6 +873,11 @@ export class ArkLiveliness {
         const now = this.wayNowOf.get(id);
         if (!now || nowMs - now.at > 1500 || !now.speciesLine) return null;
         return {way: now.way, key: now.key, line: now.speciesLine};
+    }
+
+    /** Deep enough water to swim in where a parent is (the scene's hook; everywhere when it has none). */
+    private deepWater(x: number, z: number): boolean {
+        return this.options.hooks.deepWater ? this.options.hooks.deepWater(x, z) : true;
     }
 
     /** At high water: a land animal standing on covered ground walks up the beach. */

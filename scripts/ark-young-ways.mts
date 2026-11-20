@@ -41,6 +41,8 @@ const slugOf = (name: string) => name.toLowerCase().replace(/'/g, "").replace(/[
 type Ride = "back" | "belly" | "tail" | "under";
 type Way = {
     ride?: Ride;
+    /** The ride is on the water only (the text says "as it swims", "in deep water"): on land the young follow in a line instead. */
+    rideWater?: boolean;
     by?: "male";
     line?: boolean;
     follow?: boolean;
@@ -57,8 +59,8 @@ type Entry = {name: string; says: RegExp; /** The part of the row's sentence the
 
 const RIDE: Entry[] = [
     // Birds on the water: a swan and a grebe carry their chicks on the back.
-    {name: "Great Crested Grebe", says: /ride on a parent's back/, ride: "back", say: ["ride"]},
-    {name: "Mute Swan", says: /ride on a parent's back/, ride: "back", say: ["ride"]},
+    {name: "Great Crested Grebe", says: /ride on a parent's back/, ride: "back", rideWater: true, say: ["ride"]},
+    {name: "Mute Swan", says: /ride on a parent's back/, ride: "back", rideWater: true, say: ["ride"]},
     // Spiders and scorpions.
     {name: "Carolina Wolf Spider", says: /spiderlings ride on mother's back/, ride: "back", say: ["ride"]},
     {name: "Tiger Wolf Spider", says: /spiderlings ride on her back/, ride: "back", say: ["ride"]},
@@ -71,7 +73,7 @@ const RIDE: Entry[] = [
     // Mammals that carry on the back, the chest or the tail.
     {name: "Common Opossum", says: /young ride on mother's back/, ride: "back", say: ["ride"]},
     {name: "Southern Tamandua", says: /carries young on its back/, ride: "back", say: ["ride"]},
-    {name: "Common Hippopotamus", says: /calf rests on mother's back in deep water/, ride: "back", say: ["ride"]},
+    {name: "Common Hippopotamus", says: /calf rests on mother's back in deep water/, ride: "back", rideWater: true, say: ["ride"]},
     {name: "Large Flying Fox", says: /mother carries pup on her chest/, ride: "belly", say: ["ride"]},
     {name: "Sunda Pangolin", says: /carries pup on tail/, ride: "tail"},
     // Primates whose infant clings to the belly (the rest of the primates' rows keep the belly-then-back carry of an earlier pass).

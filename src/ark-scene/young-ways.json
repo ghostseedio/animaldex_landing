@@ -4,7 +4,8 @@
   "great-crested-grebe": {
    "name": "Great Crested Grebe",
    "ways": {
-    "ride": "back"
+    "ride": "back",
+    "rideWater": true
    },
    "lines": {
     "ride": "{aAnimal} is swimming with striped chicks riding on its back"
@@ -13,7 +14,8 @@
   "mute-swan": {
    "name": "Mute Swan",
    "ways": {
-    "ride": "back"
+    "ride": "back",
+    "rideWater": true
    },
    "lines": {
     "ride": "{aAnimal} is swimming with cygnets riding on its back among raised feathers"
@@ -49,7 +51,8 @@
   "common-hippopotamus": {
    "name": "Common Hippopotamus",
    "ways": {
-    "ride": "back"
+    "ride": "back",
+    "rideWater": true
    },
    "lines": {
     "ride": "{aAnimal} has a calf resting on her back in deep water"

@@ -77,7 +77,9 @@ type Debug = {
         visitNow: (visitor: string, ms: number) => {state: {phase: string; level: number; held: number}; run: {place: {x: number; z: number}; kind: string; go: number; flies: boolean}} | null;
     };
     seenNow?: () => Array<{name: string; line?: string}>;
+    deepWater: (x: number, z: number) => boolean;
 };
+type Hooks = {poseAt: (e: unknown, t: number) => {x: number; z: number} | null};
 
 async function main() {
     const params = new URLSearchParams(location.search);
@@ -160,6 +162,22 @@ async function main() {
                 }
             }
             return out.sort((p, q) => p.go - q.go);
+        },
+        /** When each adult's own day takes it out of deep water (s after the start), or into it: where a ride that is on the water only starts or ends. */
+        exits: (seconds = 900) => {
+            const hooks = (debug.liveliness as unknown as {options: {hooks: Hooks}}).options.hooks;
+            const out: Array<{adult: string; at: number; to: "land" | "water"}> = [];
+            for (const id of ids.adults) {
+                const e = entryOf(id);
+                let was: boolean | null = null;
+                for (let s = 0; s < seconds; s += 1) {
+                    const at = e ? hooks.poseAt(e, t0 + s) : null;
+                    const deep = at ? debug.deepWater(at.x, at.z) : null;
+                    if (deep !== null && was !== null && deep !== was) out.push({adult: id.slice(-2), at: s, to: deep ? "water" : "land"});
+                    if (deep !== null) was = deep;
+                }
+            }
+            return out.sort((p, q) => p.at - q.at);
         },
         /** The world at `s` seconds after the start (run up a tenth of a second at a time into it), framed from `distance` on `who`, from `azimuth` off its heading. */
         shot: async (s: number, distance: number, who: string, azimuth = 0.7, polar = 1.2) => {

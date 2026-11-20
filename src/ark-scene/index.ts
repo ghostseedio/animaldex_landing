@@ -259,6 +259,11 @@ import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
 // 3.3 batch (B): the birds' own moves (mobbing dive)
 import {Mobbing, mobFoeFits, type MobHost} from "@/ark-scene/mobbing";
 import {BrokenWing} from "@/ark-scene/broken-wing";
+import {waysOf} from "@/ark-scene/young-ways";
+/** How deep the water is to swim in, where a young one's ride is on the water only (m). */
+const DEEP_WATER = 0.3;
+/** How long a young one takes to get down from its parent's back, or up (ms). */
+const RIDE_BLEND_MS = 1400;
 import {LiveDuckDrops, type Hollow} from "@/ark-scene/duckling-drop";
 import birdMoves from "@/ark-scene/bird-moves.json";
 import {tailHabitOf} from "@/ark-scene/tail-habit";
@@ -540,6 +545,11 @@ type Entry = {
     riding?: boolean;
     /** Its mother's pose as `carriedPose` read it (her id, where): moved with her when the frame's pushes move her. */
     ridingOn?: {id: string; x: number; z: number; base: number};
+    /** sig-young: its ride is on the water only; whether it rode last frame; where it was drawn; and the get-down or get-up it is easing through. */
+    rideWaterOnly?: boolean;
+    rideWas?: boolean;
+    rideLast?: {x: number; z: number; base: number; yaw: number};
+    rideBlend?: {from: {x: number; z: number; base: number; yaw: number}; at: number} | null;
     /** 3.3 batch (C): its antlers in this month of the Ark year (`antler-cycle.ts`), re-read every 30 s. */
     antler?: AntlerState & {at: number};
     /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
@@ -943,7 +953,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return own ? roostOf(worldOf(own.animal), own.profile, own.animal) : null;
             },
             entryOf: (id) => findEntry(id),
-            heightAt
+            heightAt,
+            // sig-young: water deep enough to swim in (a grebe's, a swan's, a hippo's young ride only over it, `young-ways.ts`).
+            deepWater: (x, z) => waterTopAt(x, z) - heightAt(x, z) > DEEP_WATER
         }
     });
     liveliness.setReducedMotion(reducedMotion);
@@ -4070,6 +4082,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const motherModel = library.get(mother.animal.model_slug);
         const motherHeight = motherModel ? motherModel.height * (mother.length / motherModel.bodyLength) : mother.length * 0.6;
         const at = pose(mother, motherModel, motherHeight, time);
+        // (A ride that is on the water only: out of it, on the bank, the young get down and follow, `liveliness-scene.ts`.)
+        if (age.ways?.rideWater && !(waterTopAt(at.x, at.z) - heightAt(at.x, at.z) > DEEP_WATER)) return null;
         entry.ridingOn = {id: mother.animal.id, x: at.x, z: at.z, base: at.base};
         // Her frame: her back's way (n), her head's (t), her feet's point.
         const s = at.surface;
@@ -4290,7 +4304,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {x: fix.x, z: fix.z, base, yaw: fix.yaw, pitch, roll: 0, afloat: true, water: spec};
     };
 
-    const pose = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
+    const poseCore = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
         // An act's pose, from a replayed event.
         if (entry.act) {
             const act = entry.act;
@@ -4441,6 +4455,36 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // p5 (rural): off its schedule too (asleep, at rest), a town animal's bound: a hen shut in her hen house at night.
         if (island && townIds.has(entry.animal.id)) island.bound(entry.animal.id, still);
         return still;
+    };
+    /**
+     * sig-young: a young one whose ride is on the water only (`young-ways.ts` `rideWater`) gets down when its parent comes out
+     * of the water and up when she goes in, over `RIDE_BLEND_MS`, from where it was drawn to where it is drawn now: a
+     * cygnet steps off the swan's back at the bank and follows her up it, never jumping.
+     */
+    const pose = (entry: Entry, model: SpeciesModel | undefined, modelHeight: number, time: number): Pose => {
+        const out = poseCore(entry, model, modelHeight, time);
+        if (reducedMotion || entry.animal.origin !== "born") return out;
+        entry.rideWaterOnly ??= Boolean(waysOf(entry.animal.model_slug)?.rideWater);
+        if (!entry.rideWaterOnly) return out;
+        const now = worldMs();
+        const riding = Boolean(entry.riding);
+        if (entry.rideWas !== undefined && entry.rideWas !== riding && entry.rideLast) entry.rideBlend = {from: entry.rideLast, at: now};
+        entry.rideWas = riding;
+        let drawn = out;
+        const blend = entry.rideBlend;
+        if (blend) {
+            const u = (now - blend.at) / RIDE_BLEND_MS;
+            if (u >= 1 || u < 0) entry.rideBlend = null;
+            else {
+                const k = u * u * (3 - 2 * u);
+                let turn = out.yaw - blend.from.yaw;
+                while (turn > Math.PI) turn -= Math.PI * 2;
+                while (turn < -Math.PI) turn += Math.PI * 2;
+                drawn = {...out, x: blend.from.x + (out.x - blend.from.x) * k, z: blend.from.z + (out.z - blend.from.z) * k, base: blend.from.base + (out.base - blend.from.base) * k, yaw: blend.from.yaw + turn * k};
+            }
+        }
+        entry.rideLast = {x: drawn.x, z: drawn.z, base: drawn.base, yaw: drawn.yaw};
+        return drawn;
     };
 
     // MARK: Rigs
@@ -9402,7 +9446,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // 3.3 fix (breeding taps): the clutch a laid line's tap drew, for the harness
     if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {liveClutch: () => liveClutch && {...liveClutch, at: nests.where(liveClutch.key)}});
     // 3.3 batch (B): the birds' own moves, for the harness
-    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {mobbing: () => mobbing.debug(), mobStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && mobbing.begin(worldMs() / 1000, b, t, allEntries().filter((e) => e !== b && e !== t), new Set(), 1e9)); }, seenNow: () => seenActs.slice(), lures: () => brokenWing.debug(), drops: () => duckDrops.debug(), lureStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && brokenWing.begin(worldMs() / 1000, b, t)); }});
+    if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {deepWater: (x: number, z: number) => waterTopAt(x, z) - heightAt(x, z) > DEEP_WATER, mobbing: () => mobbing.debug(), mobStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && mobbing.begin(worldMs() / 1000, b, t, allEntries().filter((e) => e !== b && e !== t), new Set(), 1e9)); }, seenNow: () => seenActs.slice(), lures: () => brokenWing.debug(), drops: () => duckDrops.debug(), lureStart: (bird: string, threat: string) => { const b = entryById.get(bird); const t = entryById.get(threat); return Boolean(b && t && brokenWing.begin(worldMs() / 1000, b, t)); }});
     // p3 (shake): the harness's question: when an animal next climbs out of the water (its trips' arrivals after an exit leg).
     // p4 (zoolive): the resting figures and the near-kept pins, for the zoo probes.
     if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {resting: () => restingGroups, nearKept: () => nearKept.slice()});

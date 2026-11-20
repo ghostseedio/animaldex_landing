@@ -86,6 +86,18 @@ for (const name of scenes) {
     if (info.kind === "ride") plan = [[3, "carried: close", "young", info.distance], [14, "carried: close, later", "young", info.distance], [40, "carried: the pair", "pair"], [90, "carried: a minute and a half on", "young", info.distance * 1.5], [200, "carried: later still", "pair"]];
     if (info.kind === "line") plan = [[15, "a line behind her", "parent", info.distance], [30, "a line behind her", "parent", info.distance], [55, "a line", "parent", info.distance], [80, "a line", "parent", info.distance], [120, "a line", "parent", info.distance], [170, "a line", "parent", info.distance]];
     if (info.kind === "cluster") plan = [[10, "clumped", "young", info.distance], [40, "clumped", "young", info.distance], [120, "clumped, apart from the adults", "young", info.distance * 2], [730, "the clump on in the next slot", "young", info.distance], [760, "the clump on in the next slot", "young", info.distance]];
+    if (info.kind === "ride" && /swan|grebe|hippo/.test(info.scene)) {
+        // Where its parent's own day takes it out of the water: the young step down and follow; and in again: they climb back on.
+        const exits = await page.evaluate(() => window.__ways.exits(900));
+        console.log(name, "exits", JSON.stringify(exits.slice(0, 6)));
+        const out = exits.find((e) => e.to === "land");
+        const back = exits.find((e) => e.to === "water" && out && e.at > out.at);
+        if (out) {
+            const who = out.adult;
+            plan = [[out.at - 8, "on the water: riding", "pair-by", who], [out.at + 0.5, "at the bank", "pair-by", who], [out.at + 2, "getting down", "pair-by", who], [out.at + 5, "following her up the bank", "pair-by", who], [out.at + 12, "in a line behind her", "pair-by", who], [out.at + 30, "on land: a line", "pair-by", who]];
+            if (back) plan.push([back.at + 6, "back in the water: riding again", "pair-by", back.adult]);
+        }
+    }
     if (info.kind === "stay") {
         const visits = await page.evaluate(() => window.__ways.visits(1500));
         console.log(name, "visits", JSON.stringify(visits.slice(0, 6)));
