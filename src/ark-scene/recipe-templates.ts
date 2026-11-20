@@ -11,6 +11,8 @@
  * and nuts that are not catalogue animals. A catalogue animal only disappears through a server meal event (`acts.ts`).
  */
 
+import {SMALL_TEMPLATES} from "@/ark-scene/recipe-small";
+
 /**
  * Where a step goes:
  * - anchor: where the episode began (the last step's anchor blends back into its schedule pose);
@@ -63,7 +65,7 @@ export type TemplateStep = {
     role?: "a" | "b";
 };
 
-export type Goal = "perch_water" | "perch" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "air" | "here";
+export type Goal = "perch_water" | "perch" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "air" | "here" | "flower";
 
 export type Template = {
     id: string;
@@ -881,7 +883,9 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
                 {b: "scan", s: [1, 2]},
                 {b: "dig", s: [4, 8]}
             ]
-        })
+        }),
+        // Wave 2, the small bodies (`recipe-small.ts`).
+        ...SMALL_TEMPLATES.map(T)
     ].map((t) => [t.id, t])
 );
 

@@ -9,6 +9,12 @@
  * bodies: a pounce is a four-legged hunter's), so a loose mapping is skipped and listed, never drawn. The weight is
  * the one that template most often has. Idempotent: run it again after `ark-behaviour-recipes.mts` regenerates.
  *
+ * Wave 2 (small bodies: arthropods; `recipe-small.ts`): a held row is released by a variant template written for its
+ * body (`variant_of` keeps the wave-1 recipe), or by a plan the original template is checked on (`also` in `data/ark/signature-templates-small.json`). An
+ * addition may carry `line` (the species' own sentence for what the recipe shows: written to
+ * `src/ark-scene/signature-lines.json`, the log's table; the test of that table holds it to its rules) and `replaces`
+ * (a generic recipe the species' own displaces: a jumping spider's dance for the generic display) or `held` (why a row stays out).
+ *
  *   npx tsx scripts/ark-signature-recipes.mts [--dry]
  */
 import fs from "node:fs";
@@ -19,7 +25,9 @@ const dry = process.argv.includes("--dry");
 const tablePath = path.join(root, "src/ark-scene/recipes.json");
 const table = JSON.parse(fs.readFileSync(tablePath, "utf8")) as {species: Record<string, string>};
 const full = JSON.parse(fs.readFileSync(path.join(root, "data/ark/behaviour-recipes.json"), "utf8")) as {species: Array<{slug: string; plan: string}>};
-const additions = (JSON.parse(fs.readFileSync(path.join(root, "data/ark/signature-recipes.json"), "utf8")) as {additions: Array<{slug: string; name: string; recipe: string}>}).additions;
+const additions = (JSON.parse(fs.readFileSync(path.join(root, "data/ark/signature-recipes.json"), "utf8")) as {additions: Array<{slug: string; name: string; recipe: string; line?: string; replaces?: string; held?: string}>}).additions;
+const linesPath = path.join(root, "src/ark-scene/signature-lines.json");
+const lines = JSON.parse(fs.readFileSync(linesPath, "utf8")) as {species: Record<string, Record<string, string>>};
 
 const planOf = new Map(full.species.map((s) => [s.slug, s.plan]));
 const recipesOf = (row: string) => row.split("|")[0].split(",").filter(Boolean).map((r) => ({id: r.slice(0, r.lastIndexOf(".")), weight: Number(r.slice(r.lastIndexOf(".") + 1))}));
@@ -41,12 +49,22 @@ for (const [id, seed] of Object.entries(NEW)) {
     for (const plan of seed.plans) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
     if (!weights.has(id)) weights.set(id, new Map([[seed.weight, 1]]));
 }
+// Wave 2, the small bodies (`src/ark-scene/recipe-small.ts`): its templates' plans and weights, and the plans a wave-1
+// template is also checked on (the behaviours harness's frames), in `data/ark/signature-templates-small.json`.
+{
+    const seeds = JSON.parse(fs.readFileSync(path.join(root, "data/ark/signature-templates-small.json"), "utf8")) as {templates: Record<string, {plans: string[]; weight: number}>; also: Record<string, string[]>};
+    for (const [id, seed] of Object.entries(seeds.templates)) {
+        for (const plan of seed.plans) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
+        if (!weights.has(id)) weights.set(id, new Map([[seed.weight, 1]]));
+    }
+    for (const [id, extra] of Object.entries(seeds.also)) for (const plan of extra) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
+}
 const usual = (id: string) => [...(weights.get(id) ?? new Map([[3, 1]]))].sort((a, b) => b[1] - a[1] || a[0] - b[0])[0][0];
 // (A nest needs the row's nest field, which only the generator writes.)
 const NEEDS_GENERATOR = new Set(["nest_build"]);
 // The ways of hunting: a species that already has one keeps it (a second would halve the hunts its own text put first;
 // an osprey's talon grab is its plunge).
-const HUNTS = new Set(["perch_plunge", "air_plunge", "talon_grab", "wade_spear", "bill_sweep", "pouch_scoop", "surface_dive", "chase_fish", "river_fish", "pounce", "hawk_insects", "aerial_hawk", "hover_drop", "bat_hawk", "bat_trawl"]);
+const HUNTS = new Set(["perch_plunge", "air_plunge", "talon_grab", "wade_spear", "bill_sweep", "pouch_scoop", "surface_dive", "chase_fish", "river_fish", "pounce", "hawk_insects", "aerial_hawk", "hover_drop", "bat_hawk", "bat_trawl", "night_hawk", "edge_ambush", "sit_snap"]);
 
 let added = 0;
 const skipped: string[] = [];
@@ -58,7 +76,17 @@ for (const a of additions) {
         skipped.push(`${a.slug} ${a.recipe}: no row`);
         continue;
     }
+    // (A row held back for a reason of its own: kept in the data with it, never drawn.)
+    if (a.held) {
+        skipped.push(`${a.slug} ${a.recipe}: ${a.held}`);
+        continue;
+    }
+    // (A sentence is kept only for a recipe the species has: the table's test.)
+    const say = () => {
+        if (a.line) (lines.species[a.slug] ??= {})[a.recipe] = a.line;
+    };
     if (recipesOf(row).some((r) => r.id === a.recipe)) {
+        say();
         already.push(`${a.slug} ${a.recipe}`);
         continue;
     }
@@ -71,12 +99,18 @@ for (const a of additions) {
         continue;
     }
     const fields = row.split("|");
+    // (Its own displaces the generic one it stands in for.)
+    if (a.replaces) fields[0] = fields[0].split(",").filter((r) => r.slice(0, r.lastIndexOf(".")) !== a.replaces).join(",");
     fields[0] = [fields[0], `${a.recipe}.${usual(a.recipe)}`].filter(Boolean).join(",");
     // (No longer only its plan's defaults.)
     if (fields[7]) fields[7] = fields[7].replace("d", "");
     table.species[a.slug] = fields.join("|");
+    say();
     added++;
 }
-if (!dry) fs.writeFileSync(tablePath, `${JSON.stringify(table)}\n`);
+if (!dry) {
+    fs.writeFileSync(tablePath, `${JSON.stringify(table)}\n`);
+    fs.writeFileSync(linesPath, JSON.stringify(lines));
+}
 console.log(JSON.stringify({additions: additions.length, added, already: already.length, skipped: skipped.length}, null, 1));
 if (skipped.length) console.log(skipped.join("\n"));

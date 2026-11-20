@@ -14,6 +14,7 @@
  */
 
 import type {ArkBeat} from "@/ark-scene/behaviour-schedule";
+import {SMALL_BLOCKS} from "@/ark-scene/recipe-small";
 
 export type BlockMotion = "travel" | "hold";
 /** A travel block's path: on the ground; a flight's arc; a plunge (steep, fast at the end); a dive (down and along); straight up; straight. */
@@ -135,7 +136,9 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         B({id: "turn", label: "turn on the spot (before setting off the other way)", motion: "hold", states: ["freeze"], beat: "pause"}),
         B({id: "perch", label: "perch", motion: "hold", states: ["perch"], beat: "rest"}),
         B({id: "rest", label: "rest", motion: "hold", states: ["rest"], beat: "rest"}),
-        B({id: "incubate", label: "sit on the nest", motion: "hold", states: ["incubate"], beat: "rest", heave: -0.08})
+        B({id: "incubate", label: "sit on the nest", motion: "hold", states: ["incubate"], beat: "rest", heave: -0.08}),
+        // Wave 2, the small bodies (`recipe-small.ts`).
+        ...SMALL_BLOCKS.map(B)
     ].map((b) => [b.id, b])
 );
 

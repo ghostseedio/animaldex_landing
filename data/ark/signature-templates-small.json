@@ -1,0 +1,68 @@
+{
+ "about": "Signature behaviours, wave 2, the small bodies (arthropods, moths, frogs): the plans and the usual weight of the templates new in src/ark-scene/recipe-small.ts (read by scripts/ark-signature-recipes.mts, which has no users yet to learn them from), and the body plans a wave-1 template is also checked on, in the behaviours harness's frames (scripts/ark-behaviours-clips.mjs, the sm-* scenes). Plans are the recipe table's (data/ark/behaviour-recipes.json), not the rig model's.",
+ "templates": {
+  "border_spar": {
+   "plans": [
+    "insect"
+   ],
+   "weight": 4
+  },
+  "claw_spar": {
+   "plans": [
+    "crustacean"
+   ],
+   "weight": 4
+  },
+  "spider_dance": {
+   "plans": [
+    "arachnid"
+   ],
+   "weight": 4
+  },
+  "night_hawk": {
+   "plans": [
+    "flying_insect"
+   ],
+   "weight": 5
+  },
+  "bank_burrow": {
+   "plans": [
+    "crustacean"
+   ],
+   "weight": 5
+  },
+  "burrow_stash": {
+   "plans": [
+    "crustacean"
+   ],
+   "weight": 4
+  },
+  "flower_hover": {
+   "plans": [
+    "flying_insect"
+   ],
+   "weight": 5
+  },
+  "edge_ambush": {
+   "plans": [
+    "amphibian"
+   ],
+   "weight": 4
+  },
+  "sit_snap": {
+   "plans": [
+    "amphibian",
+    "insect",
+    "arachnid"
+   ],
+   "weight": 4
+  }
+ },
+ "also": {
+  "dig_burrow": [
+   "arachnid",
+   "insect",
+   "crustacean"
+  ]
+ }
+}

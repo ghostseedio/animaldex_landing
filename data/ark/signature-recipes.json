@@ -1,5 +1,5 @@
 {
- "about": "Signature behaviours, wave 1 (AnimalDex docs/ark/behaviours-plan.md, decision 369): species whose own text states a behaviour an existing recipe shows, but whose recipes lacked it. Each row keeps the stored field and the exact sentence. Applied to src/ark-scene/recipes.json by scripts/ark-signature-recipes.mts (run it after scripts/ark-behaviour-recipes.mts regenerates the table).",
+ "about": "Signature behaviours, wave 1 (AnimalDex docs/ark/behaviours-plan.md, decision 369): species whose own text states a behaviour an existing recipe shows, but whose recipes lacked it. Each row keeps the stored field and the exact sentence. Applied to src/ark-scene/recipes.json by scripts/ark-signature-recipes.mts (run it after scripts/ark-behaviour-recipes.mts regenerates the table). Wave 2, the small bodies (sig2-small; src/ark-scene/recipe-small.ts): the arthropod rows wave 1 held for another body plan are released by variant templates written for their bodies (variant_of keeps the wave-1 recipe) or by a plan the template was checked on (data/ark/signature-templates-small.json); a row may carry line (its sentence for the log, scripts/ark-signature-recipes.mts writes it to src/ark-scene/signature-lines.json) and replaces (a generic recipe it displaces). Rows without variant_of that were never in wave 1 are catalogue rows of existing blocks (hover, ambush, strike) for butterflies, frogs and arthropods.",
  "version": "signature-wave-1",
  "additions": [
   {
@@ -293,10 +293,12 @@
   {
    "slug": "carpenter-ant",
    "name": "Carpenter Ant",
-   "recipe": "box_spar",
+   "recipe": "border_spar",
    "behaviour": "neighbouring majors settle borders with long ritualised front-leg boxing",
    "field": "facts",
-   "quote": "Neighbouring majors settle borders with long ritualised front-leg boxing rather than constant lethal fights."
+   "quote": "Neighbouring majors settle borders with long ritualised front-leg boxing rather than constant lethal fights.",
+   "variant_of": "box_spar",
+   "line": "{animals} are boxing with their front legs to settle a border"
   },
   {
    "slug": "carpenter-ant",
@@ -589,10 +591,12 @@
   {
    "slug": "european-hornet",
    "name": "European Hornet",
-   "recipe": "aerial_hawk",
+   "recipe": "night_hawk",
    "behaviour": "hunts on into the night when other wasps have stopped",
    "field": "story",
-   "quote": "The European Hornet hunts on into the night, drawn to lit windows, when other wasps have long stopped."
+   "quote": "The European Hornet hunts on into the night, drawn to lit windows, when other wasps have long stopped.",
+   "variant_of": "aerial_hawk",
+   "line": "{aAnimal} is still out after dark, drawn to a light, when other wasps have stopped"
   },
   {
    "slug": "european-pond-terrapin",
@@ -645,10 +649,12 @@
   {
    "slug": "giant-mud-crab",
    "name": "Giant Mud Crab",
-   "recipe": "dig_burrow",
+   "recipe": "bank_burrow",
    "behaviour": "digs burrow in mangrove mud, walks out to feed on night high tide",
    "field": "story",
-   "quote": "A Giant Mud Crab digs a burrow in soft mangrove mud and hides there by day, then walks out to feed when the tide covers the mud at night."
+   "quote": "A Giant Mud Crab digs a burrow in soft mangrove mud and hides there by day, then walks out to feed when the tide covers the mud at night.",
+   "variant_of": "dig_burrow",
+   "line": "{aAnimal} is digging its burrow in soft mangrove mud"
   },
   {
    "slug": "giant-whip-scorpion",
@@ -656,7 +662,9 @@
    "recipe": "dig_burrow",
    "behaviour": "digs its burrow with its pincers",
    "field": "sleep",
-   "quote": "It spends the day in a burrow it digs with its pincers"
+   "quote": "It spends the day in a burrow it digs with its pincers",
+   "line": "{aAnimal} is digging a burrow with its pincers",
+   "held": "a micro animal (map/species.ts trueMicro, off the schedule) whose spot is bark (microhabitats.json): no soil under it to dig"
   },
   {
    "slug": "goffins-cockatoo",
@@ -669,10 +677,12 @@
   {
    "slug": "golden-stag-beetle",
    "name": "Golden Stag Beetle",
-   "recipe": "jaw_spar",
+   "recipe": "wrestle",
    "behaviour": "males wrestle with antler-like jaws",
    "field": "traits",
-   "quote": "Antler-like jaws and wrestling"
+   "quote": "Antler-like jaws and wrestling",
+   "variant_of": "jaw_spar",
+   "line": "{animals} are wrestling with their antler-like jaws"
   },
   {
    "slug": "gray-angelfish",
@@ -981,10 +991,12 @@
   {
    "slug": "mangrove-crab",
    "name": "Mangrove Crab",
-   "recipe": "box_spar",
+   "recipe": "claw_spar",
    "behaviour": "defends burrow entrance with raised claws and sideways shoves",
    "field": "facts",
-   "quote": "Individuals frequently occupy and maintain the same burrow for long periods, defending the entrance against similar-sized neighbours with raised claws and sideways shoves."
+   "quote": "Individuals frequently occupy and maintain the same burrow for long periods, defending the entrance against similar-sized neighbours with raised claws and sideways shoves.",
+   "variant_of": "box_spar",
+   "line": "{aAnimal} is defending its burrow entrance with raised claws and sideways shoves"
   },
   {
    "slug": "mangrove-horseshoe-crab",
@@ -1117,10 +1129,13 @@
   {
    "slug": "pantropical-jumping-spider",
    "name": "Pantropical Jumping Spider",
-   "recipe": "court_dance",
+   "recipe": "spider_dance",
    "behaviour": "male jerky side-to-side dance with front legs raised",
    "field": "facts",
-   "quote": "Males are reported to court females with a jerky side-to-side dance, holding up their front legs."
+   "quote": "Males are reported to court females with a jerky side-to-side dance, holding up their front legs.",
+   "variant_of": "court_dance",
+   "line": "{aAnimal} is dancing from side to side with its front legs held up",
+   "replaces": "court_display"
   },
   {
    "slug": "pantropical-jumping-spider",
@@ -1141,10 +1156,13 @@
   {
    "slug": "peterss-jumping-spider",
    "name": "Peters's Jumping Spider",
-   "recipe": "court_dance",
+   "recipe": "spider_dance",
    "behaviour": "male dance: waving dark front legs, stepping side to side",
    "field": "facts",
-   "quote": "Males court females with a dance, raising and waving their dark front legs while stepping from side to side in front of her."
+   "quote": "Males court females with a dance, raising and waving their dark front legs while stepping from side to side in front of her.",
+   "variant_of": "court_dance",
+   "line": "{aAnimal} is waving its dark front legs and stepping from side to side",
+   "replaces": "court_display"
   },
   {
    "slug": "peterss-jumping-spider",
@@ -1221,10 +1239,13 @@
   {
    "slug": "rainbow-crab",
    "name": "Rainbow Crab",
-   "recipe": "cache_food",
+   "recipe": "burrow_stash",
    "behaviour": "drags food into its burrow",
    "field": "evidence",
-   "quote": "Food is gathered near the burrow, and some is reportedly dragged inside."
+   "quote": "Food is gathered near the burrow, and some is reportedly dragged inside.",
+   "variant_of": "cache_food",
+   "line": "{aAnimal} is dragging some food inside its burrow",
+   "held": "a micro animal (trueMicro, off the schedule) that stays at its spot: no burrow mouth to drag food to"
   },
   {
    "slug": "red-imported-fire-ant",
@@ -1277,10 +1298,13 @@
   {
    "slug": "redclaw-crayfish",
    "name": "Redclaw Crayfish",
-   "recipe": "dig_burrow",
+   "recipe": "bank_burrow",
    "behaviour": "digs shallow burrows into banks",
    "field": "evidence",
-   "quote": "Redclaw crayfish dig shallow burrows into banks and utilize existing submerged cover like logs and rocks."
+   "quote": "Redclaw crayfish dig shallow burrows into banks and utilize existing submerged cover like logs and rocks.",
+   "variant_of": "dig_burrow",
+   "line": "{aAnimal} is digging a shallow burrow into the bank",
+   "held": "a micro animal (trueMicro, off the schedule) whose spot is bark (microhabitats.json): no bank under it to dig"
   },
   {
    "slug": "reticulated-river-stingray",
@@ -1381,10 +1405,12 @@
   {
    "slug": "slender-skimmer",
    "name": "Slender Skimmer",
-   "recipe": "aerial_hawk",
+   "recipe": "hawk_insects",
    "behaviour": "catches small insects in mid-air and also other dragonflies",
    "field": "facts",
-   "quote": "Adults hunt small flying insects on the wing and are also reported to catch and eat other dragonflies."
+   "quote": "Adults hunt small flying insects on the wing and are also reported to catch and eat other dragonflies.",
+   "variant_of": "aerial_hawk",
+   "line": "{aAnimal} is hunting small flying insects on the wing"
   },
   {
    "slug": "song-thrush",
@@ -1416,7 +1442,8 @@
    "recipe": "dig_burrow",
    "behaviour": "digs with shovel-like front legs",
    "field": "story",
-   "quote": "The Southern Mole Cricket digs with front legs shaped like little shovels"
+   "quote": "The Southern Mole Cricket digs with front legs shaped like little shovels",
+   "line": "{aAnimal} is digging with its shovel-shaped front legs"
   },
   {
    "slug": "spotted-wood-owl",
@@ -1549,10 +1576,13 @@
   {
    "slug": "two-striped-telamonia",
    "name": "Two-striped Telamonia",
-   "recipe": "court_dance",
+   "recipe": "spider_dance",
    "behaviour": "male courtship: raised waving front legs, sideways steps",
    "field": "facts",
-   "quote": "males court females with a display of raised, waving front legs and sideways steps"
+   "quote": "males court females with a display of raised, waving front legs and sideways steps",
+   "variant_of": "court_dance",
+   "line": "{aAnimal} is courting with raised, waving front legs and sideways steps",
+   "replaces": "court_display"
   },
   {
    "slug": "vampire-crab",
@@ -1560,7 +1590,8 @@
    "recipe": "dig_burrow",
    "behaviour": "day in burrow dug into damp bank, out from dusk",
    "field": "sleep",
-   "quote": "In the wild they are thought to spend daylight hours in a burrow dug into a damp bank, or under stones, roots and leaf litter, where the air stays humid."
+   "quote": "In the wild they are thought to spend daylight hours in a burrow dug into a damp bank, or under stones, roots and leaf litter, where the air stays humid.",
+   "line": "{aAnimal} is digging a burrow into a damp bank"
   },
   {
    "slug": "welcome-swallow",
@@ -1681,6 +1712,156 @@
    "behaviour": "female taps eggs into temporary pools in flight, spreading the clutch across several",
    "field": "catalogue",
    "quote": "Eggs are dropped straight into temporary pools with the female tapping the water surface in flight, spreading a clutch across several pools rather than committing it all to one that might dry."
+  },
+  {
+   "slug": "coffee-hawk-moth",
+   "name": "Coffee hawk-moth",
+   "recipe": "flower_hover",
+   "behaviour": "hovers in front of a flower on a blur of wings, probing with its long proboscis",
+   "field": "story",
+   "quote": "It hovers in front of a flower on a blur of wings, holding still in the air while its long proboscis probes deep for nectar.",
+   "line": "{aAnimal} is hovering at a flower on blurred wings, probing with its long proboscis"
+  },
+  {
+   "slug": "hummingbird-clearwing",
+   "name": "Hummingbird Clearwing",
+   "recipe": "flower_hover",
+   "behaviour": "hangs in the air before each bloom, uncoils its tongue, then swings to the next flower",
+   "field": "story",
+   "quote": "At a patch of bee balm or phlox it hangs in the air before each bloom, uncoils its long tongue and drinks, then swings on to the next flower.",
+   "line": "{aAnimal} is hanging in the air before a bloom and uncoiling its long tongue"
+  },
+  {
+   "slug": "pink-spotted-hawkmoth",
+   "name": "Pink-spotted Hawkmoth",
+   "recipe": "flower_hover",
+   "behaviour": "unrolls a tongue longer than its body into a long flower tube",
+   "field": "story",
+   "quote": "At the mouth of a long, narrow flower tube it unrolls a tongue often longer than its own body and drains nectar from the very base.",
+   "line": "{aAnimal} is unrolling its long tongue into a long, narrow flower tube"
+  },
+  {
+   "slug": "privet-hawk-moth",
+   "name": "Privet Hawk-moth",
+   "recipe": "flower_hover",
+   "behaviour": "hovers at honeysuckle at dusk sipping with its long tongue",
+   "field": "story",
+   "quote": "As the light fades, the Privet Hawk-moth follows the smell of honeysuckle and hovers in front of each flower to sip nectar with its long tongue.",
+   "line": "{aAnimal} is hovering in front of a flower, sipping with its long tongue"
+  },
+  {
+   "slug": "yam-hawk-moth",
+   "name": "Yam Hawk-moth",
+   "recipe": "flower_hover",
+   "behaviour": "hovers at flowers at dusk drinking with its long tongue",
+   "field": "story",
+   "quote": "then becomes a streamlined moth that hovers at flowers in the dusk and drinks with its long tongue",
+   "line": "{aAnimal} is hovering at a flower, drinking with its long tongue"
+  },
+  {
+   "slug": "greater-bee-fly",
+   "name": "Greater Bee Fly",
+   "recipe": "flower_hover",
+   "behaviour": "hovers rock-steady at flowers with dangling legs and rigid proboscis, never landing",
+   "field": "facts",
+   "quote": "The fly never lands to feed if it can help it, which is why the hover is so steady.",
+   "line": "{aAnimal} is hovering steadily at a flower without landing"
+  },
+  {
+   "slug": "marmalade-hoverfly",
+   "name": "Marmalade Hoverfly",
+   "recipe": "flower_hover",
+   "behaviour": "hovers at flowers",
+   "field": "traits",
+   "quote": "hovering flight",
+   "line": "{aAnimal} is hovering at a flower"
+  },
+  {
+   "slug": "american-bullfrog",
+   "name": "American Bullfrog",
+   "recipe": "edge_ambush",
+   "behaviour": "waits at the water edge to catch prey",
+   "field": "facts",
+   "quote": "They are large frogs that wait at water edges to catch many types of prey.",
+   "line": "{aAnimal} is waiting at the water's edge to catch prey"
+  },
+  {
+   "slug": "american-bullfrog",
+   "name": "American Bullfrog",
+   "recipe": "wrestle",
+   "behaviour": "holds and defends the same calling spot at the pond edge",
+   "field": "evidence",
+   "quote": "Males call from a held position in the shallows at the pond edge, returning to and defending the same area through the breeding season."
+  },
+  {
+   "slug": "american-toad",
+   "name": "American Toad",
+   "recipe": "sit_snap",
+   "behaviour": "flicks out a sticky tongue to catch prey",
+   "field": "facts",
+   "quote": "Prey is caught with a sticky tongue fixed at the front of the mouth, flicked out and back in a fraction of a second.",
+   "line": "{aAnimal} is sitting still, waiting to flick its sticky tongue at passing prey"
+  },
+  {
+   "slug": "chinese-mantis",
+   "name": "Chinese Mantis",
+   "recipe": "sit_snap",
+   "behaviour": "stands still and ambushes passing insects",
+   "field": "story",
+   "quote": "If you want to catch something quickly, try standing still and waiting for the right moment",
+   "line": "{aAnimal} is standing still, waiting for the right moment"
+  },
+  {
+   "slug": "orchid-mantis",
+   "name": "Orchid Mantis",
+   "recipe": "sit_snap",
+   "behaviour": "waits on vegetation looking like a flower; insects come to it",
+   "field": "facts",
+   "quote": "Orchid mantises are famous for flower-like mimicry, and experiments showed insects approached them more often than real flowers.",
+   "line": "{aAnimal} is waiting like a flower as an insect approaches"
+  },
+  {
+   "slug": "stick-mantis",
+   "name": "Stick Mantis",
+   "recipe": "sit_snap",
+   "behaviour": "holds forelegs folded and still like a twig until prey comes within reach",
+   "field": "facts",
+   "quote": "It is thought to hold its forelegs folded and still for long periods, relying on its twig-like shape until prey comes within reach.",
+   "line": "{aAnimal} is holding its folded forelegs still, looking like a twig"
+  },
+  {
+   "slug": "red-assassin-bug",
+   "name": "Red Assassin Bug",
+   "recipe": "sit_snap",
+   "behaviour": "waits on stems with sticky legs to seize passing insects",
+   "field": "story",
+   "quote": "The Assassin Bug uses sticky grasping legs and a sharp beak to wait on stems until another insect wanders too close.",
+   "line": "{aAnimal} is waiting with sticky grasping legs for a passing insect"
+  },
+  {
+   "slug": "minute-pirate-bug",
+   "name": "minute pirate bug",
+   "recipe": "sit_snap",
+   "behaviour": "waits among flower parts and grabs prey that comes close",
+   "field": "story",
+   "quote": "It sits among flower parts and leaf veins until a thrips or aphid moves close, then grabs it and drives its beak in.",
+   "line": "{aAnimal} is waiting still for prey to move close"
+  },
+  {
+   "slug": "giant-house-spider",
+   "name": "Giant House Spider",
+   "recipe": "sit_snap",
+   "behaviour": "waits motionless in funnel, dashes out on vibration",
+   "field": "evidence",
+   "quote": "Upon detecting vibrations, the spider dashes out of its retreat at remarkable speed to capture the prey."
+  },
+  {
+   "slug": "tiger-wolf-spider",
+   "name": "Tiger Wolf Spider",
+   "recipe": "sit_snap",
+   "behaviour": "waits motionless on the ground, then runs prey down in a short dash",
+   "field": "story",
+   "quote": "After dark the spider waits motionless on the ground until the footsteps of a passing cricket reach the hairs on its legs, then runs it down in a short dash."
   }
  ]
 }

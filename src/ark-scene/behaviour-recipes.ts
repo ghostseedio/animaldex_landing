@@ -279,7 +279,7 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         if (!to) continue;
         const flyer = input.kit.flies(input.profile);
         const raisedTo = to.y > topOf(input.world.sampler, to.x, to.z) + 0.4;
-        const mode: TripMode = input.kit.aquatic(input.profile) ? "water" : flyer && (raisedTo || template.goal === "perch_water" || template.goal === "nest") ? "air" : "ground";
+        const mode: TripMode = input.kit.aquatic(input.profile) ? "water" : flyer && (raisedTo || template.goal === "perch_water" || template.goal === "nest" || template.goal === "flower") ? "air" : "ground";
         return {doing: template.doing, to, mode, recipe: id};
     }
     return null;
@@ -401,6 +401,11 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
         }
         case "bark": {
             const point = kit.placeNear(world, centre, length, ["bark"], radius * 1.4, random());
+            return point ? kit.spotOf(point) : null;
+        }
+        case "flower": {
+            // (Wave 2: a flower to hang in front of, one of the schedule's own `visit_flowers` places.)
+            const point = kit.placeNear(world, centre, length, ["flower"], radius * 1.3, random());
             return point ? kit.spotOf(point) : null;
         }
         case "rock": {
