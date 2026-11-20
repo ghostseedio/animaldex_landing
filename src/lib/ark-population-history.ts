@@ -4,17 +4,17 @@
  *
  * The numbers are the server's record, never the scene's: `voyage_population_history_v1` (AnimalDex migration
  * 20261127180000) sums the event log (arrival, birth, back from recovery +1; died of old age, eaten, starved −1) per
- * kind and island into hour or day steps, read through `/api/ark/population?span=week|all`. A species' count at a
+ * kind and island into hour or day steps, read through `/api/ark/population?span=week|month|all`. A species' count at a
  * moment is its count when the answer starts plus every step up to then: exact, from the record's first row. Before
  * the record starts nothing is drawn; between steps nothing is invented (a step with no rows is the same count).
  *
- * Days are the viewer's days (owner, 2026-11-20: "the graph follows the viewer's time zone instead of UTC"). The
- * server steps by the hour (31 days at most) or by the UTC day and has no time zone of its own, so the 30-day and
- * All views are read by the hour and re-bucketed here into the viewer's local days (`arkRebucketDays`): exact for a
- * time zone on the hour, at most the hour's width late for the others, never early (no look-ahead: a day's closing
- * count holds no row that happened after the day ended). Only when the record is older than the hour answer reaches
- * does All fall back to the server's UTC days, put into local days the same way (up to a day late, never early).
- * The axis and the hover read the same zone.
+ * Days are the viewer's days (board item, 2026-11-20: the graph's day buckets and axis dates follow the viewer's time
+ * zone instead of UTC). The server steps by the hour (31 days at most) or by the UTC day and has no time zone of its
+ * own, so the 30-day and All views are read by the hour and re-bucketed here into the viewer's local days
+ * (`arkRebucketDays`): exact for a time zone on the hour, at most the hour's width late for the others, never early
+ * (no look-ahead: a day's closing count holds no row that happened after the day ended). Only when the record is older
+ * than the hour answer reaches does All fall back to the server's UTC days, put into local days the same way (up to a
+ * day late, never early). The axis and the hover read the same zone.
  *
  * Pure: no DOM. /ark's population overlay and the apps' embed bars both draw from it.
  */
