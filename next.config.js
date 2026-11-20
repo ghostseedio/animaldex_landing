@@ -180,6 +180,14 @@ module.exports = withNextIntl({
                 destination: "/tier-list/animals-with-highest-mating-drive",
                 permanent: true
             }))),
+            // The Ark's two live rankings read in any of its 45 languages at /tier-list/<slug>/lang/<language>, so each
+            // page stays static and cached like the tier lists; `?lang=<language>` (as /ark takes it) lands there.
+            ...["ark-survival", "ark-fastest-breeders"].map((slug) => ({
+                source: `/tier-list/${slug}`,
+                has: [{type: "query", key: "lang", value: "(?<lang>[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})?)"}],
+                destination: `/tier-list/${slug}/lang/:lang`,
+                permanent: false
+            })),
             {
                 source: "/rankings",
                 destination: "/tier-list",
