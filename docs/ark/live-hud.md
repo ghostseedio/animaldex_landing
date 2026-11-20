@@ -62,7 +62,9 @@ An axolotl alone in a zoo tank, and the chart beside it rising: the chart counts
 - "This one: alone in its zoo enclosure" / "This one: 1 of 2 in its zoo enclosure" for the tapped animal: against its kind in
   the same place (the zoo counts per enclosure, `enclosure` `<type>-<n>`; the others per place). Above the list, while an
   animal is tapped, a strip says the same for its kind; it adds the breeding rule when the animal is alone in its place.
-- "Breeds only with others in the same place." (words: "the same place", so it stays true if homes become one place each).
+- "Breeds only with others in the same place." where it matters: the graph shows it when the kind is spread over more than one place or the
+  tapped animal is alone in its place; the strip, only for an animal alone in its place (words: "the same place", so it stays true if
+  homes become one place each).
 - A point under the finger or tap names what changed there from the record's own rows (arrivals from photos, births,
   deaths, meals: `arkStepChanges`), and a line under the chart says what makes it rise and fall.
 - Words: `ark.graph` (15 keys, 45 languages; English fallback key by key). The code loads with the lazy graph module; the

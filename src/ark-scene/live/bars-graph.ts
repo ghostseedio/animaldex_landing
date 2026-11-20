@@ -9,7 +9,7 @@
  */
 
 import type {ArkGraphWords} from "@/lib/ark-graph-words";
-import {arkKindHereText, arkKindWholeText, type ArkKindWhere} from "@/lib/ark-kind-where";
+import {arkKindAlone, arkKindHereText, arkKindRuleShown, arkKindWholeText, type ArkKindWhere} from "@/lib/ark-kind-where";
 import {fillArkWords} from "@/lib/ark-words";
 import {
     ARK_PERIODS,
@@ -115,10 +115,11 @@ export function drawControls(host: HTMLElement, mode: ArkSortMode, onMode: (mode
 
 /**
  * Where a kind's animals are, into `host`: the count across the whole Ark with its places, and, when an animal is tapped,
- * where it stands among its own ("This one: alone in its zoo enclosure"). `rule` adds the breeding rule (the pane always,
- * the panel's strip only for an animal alone in its place). Nothing in `host` when the kind has none aboard.
+ * where it stands among its own ("This one: alone in its zoo enclosure"). `rule` adds the breeding rule where it matters (the
+ * pane: the animal is alone in its place or its kind is spread over places; the panel's strip: only for an animal alone in
+ * its place). Nothing in `host` when the kind has none aboard.
  */
-export function drawWhere(host: HTMLElement, where: ArkKindWhere | null, words: ArkGraphWords, locale: string, options: {name?: boolean; rule: "always" | "alone"}) {
+export function drawWhere(host: HTMLElement, where: ArkKindWhere | null, words: ArkGraphWords, locale: string, options: {name?: boolean; rule: "matters" | "alone"}) {
     host.replaceChildren();
     host.style.display = where ? "block" : "none";
     if (!where) return;
@@ -132,7 +133,7 @@ export function drawWhere(host: HTMLElement, where: ArkKindWhere | null, words: 
     line(arkKindWholeText(where, words, locale), {opacity: "0.75"});
     const here = arkKindHereText(where, words, locale);
     if (here) line(here, {fontWeight: "600", color: LIME});
-    if (options.rule === "always" || (where.here && where.here.count <= 1)) line(words.breedsSamePlace, {opacity: "0.45"});
+    if (options.rule === "matters" ? arkKindRuleShown(where) : arkKindAlone(where)) line(words.breedsSamePlace, {opacity: "0.45"});
 }
 
 /** One species' graph pane: back, name and count, period switch, the line, its numbers, and the fly-to button. */
@@ -181,7 +182,7 @@ export function buildGraphPane(options: {
 
     const whereBox = document.createElement("div");
     Object.assign(whereBox.style, {padding: "6px 14px 0"});
-    drawWhere(whereBox, options.where, words, locale, {rule: "always"});
+    drawWhere(whereBox, options.where, words, locale, {rule: "matters"});
 
     const bar = document.createElement("div");
     Object.assign(bar.style, {display: "flex", flexWrap: "wrap", alignItems: "center", justifyContent: "space-between", gap: "8px", padding: "8px 14px 4px"});

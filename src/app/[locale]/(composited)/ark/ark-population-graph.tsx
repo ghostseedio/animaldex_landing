@@ -6,7 +6,7 @@ import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkIconUrl} from "@/ark-scene/placeholder-icon";
 import type {ArkSnapshot} from "@/ark-scene/types";
 import {ARK_GRAPH_ENGLISH, type ArkGraphWords} from "@/lib/ark-graph-words";
-import {arkKindHereText, arkKindWhere, arkKindWholeText, type ArkKindWhere} from "@/lib/ark-kind-where";
+import {arkKindAlone, arkKindHereText, arkKindRuleShown, arkKindWhere, arkKindWholeText, type ArkKindWhere} from "@/lib/ark-kind-where";
 import {fillArkWords} from "@/lib/ark-words";
 import {
     ARK_PERIODS,
@@ -195,7 +195,7 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
                 <div className="px-3.5 pt-1.5 text-[11.5px] leading-snug">
                     <p className="text-white/75">{arkKindWholeText(where, words, locale)}</p>
                     {here ? <p className="font-semibold text-[#c8fa63]">{here}</p> : null}
-                    <p className="text-white/45">{words.breedsSamePlace}</p>
+                    {arkKindRuleShown(where) ? <p className="text-white/45">{words.breedsSamePlace}</p> : null}
                 </div>
             ) : null}
             <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 pb-1 pt-2">
@@ -374,7 +374,7 @@ export function ArkHudControls({mode, onMode, period, onPeriod, ctx = null}: {mo
                     <p className="truncate font-bold">{where.name}</p>
                     <p className="text-white/75">{arkKindWholeText(where, words, locale)}</p>
                     {here ? <p className="font-semibold text-[#c8fa63]">{here}</p> : null}
-                    {where.here && where.here.count <= 1 ? <p className="text-white/45">{words.breedsSamePlace}</p> : null}
+                    {arkKindAlone(where) ? <p className="text-white/45">{words.breedsSamePlace}</p> : null}
                 </div>
             ) : null}
         </>

@@ -139,6 +139,18 @@ test("the graph says its count is the whole Ark, the places, where this one is, 
     assert.match(bare, /Up: animals brought aboard/);
 });
 
+test("the breeding rule shows where it matters: a kind spread over places or an animal alone, not a kind together in one place", () => {
+    const {lines} = arkHudLines(history, "24h", ["zebra"], "both", "biggest");
+    const line = lines.get("zebra")!;
+    const render = (where: ReturnType<typeof arkKindWhere>) => renderToStaticMarkup(createElement(ArkPopulationGraph, {name: "Plains Zebra", icon: null, history, series: line.series, stats: line.stats, period: "24h", onPeriod: noop, onBack: noop, onFly: noop, locale: "en", where}));
+    const together: ArkSnapshot = {...ark, animals: [zebra("t1", {island: "wild"}), zebra("t2", {island: "wild"})]};
+    assert.doesNotMatch(render(arkKindWhere(together, "zebra", "t1")), /Breeds only/);
+    assert.match(render(arkKindWhere(together, "zebra", null)), /2 in the whole Ark · 2 wild/);
+    assert.match(render(arkKindWhere(ark, "zebra", "z3")), /Breeds only with others in the same place\./, "spread over three places");
+    const alone: ArkSnapshot = {...ark, animals: [zebra("a1", {island: "wild"})]};
+    assert.match(render(arkKindWhere(alone, "zebra", "a1")), /Breeds only with others in the same place\./);
+});
+
 test("the panel's graph counts the whole Ark whatever island its rows are of, and says where the tapped animal is", () => {
     // The rows are the town island's (scope "town"): the line handed in is the town's, the pane reads the whole Ark's again.
     const town = arkHudLines(history, "24h", ["zebra"], "town", "biggest").lines.get("zebra")!;

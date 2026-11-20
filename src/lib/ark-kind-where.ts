@@ -72,6 +72,16 @@ export function arkKindWhere(snapshot: Read | null | undefined, key: string, ani
     };
 }
 
+/** The tapped animal has no other of its kind in its place. */
+export function arkKindAlone(where: ArkKindWhere): boolean {
+    return where.here !== null && where.here.count <= 1;
+}
+
+/** Where the breeding rule matters in the graph: the tapped animal is alone in its place, or its kind is spread over more than one. */
+export function arkKindRuleShown(where: ArkKindWhere): boolean {
+    return arkKindAlone(where) || where.places.length > 1;
+}
+
 const PLACE_WORD: Record<ArkKindPlace, "placeWild" | "placeHomes" | "placeFarms" | "placeTown" | "placeZoo"> = {wild: "placeWild", homes: "placeHomes", farms: "placeFarms", town: "placeTown", zoo: "placeZoo"};
 const WHERE_WORD: Record<ArkKindPlace, "whereWild" | "whereHomes" | "whereFarms" | "whereTown" | "whereZoo"> = {wild: "whereWild", homes: "whereHomes", farms: "whereFarms", town: "whereTown", zoo: "whereZoo"};
 
