@@ -223,3 +223,25 @@ test("a town eave's perch is drawn on the drawn roof: every eave perch has the d
     assert.ok(moved >= 150, `${moved} moved`);
     assert.deepEqual(off.slice(0, 10), [], `${off.length} of ${eaves} eave perches off their drawn roof`);
 });
+
+test("insideRock fires inside a drawn rock and not beside it; surfaceBelow finds its top (the shield bugs in a rock)", async () => {
+    const {AssetInstances} = await import("@/ark-scene/asset-rocks");
+    const {rockAssetInfo} = await import("@/ark-scene/rock-assets");
+    const {MeshStandardMaterial} = await import("three");
+    const material = new MeshStandardMaterial();
+    // A generated boulder (its mesh is built here, nothing is fetched), placed at (10, 2, 10), scale 1.5.
+    const set = new AssetInstances([{id: "gen-boulder-3", x: 10, y: 2, z: 10, yaw: 0.4, scale: 1.5}], (id) => rockAssetInfo(id), {front: material, double: material}, "http://localhost/none", "test-rock");
+    for (let i = 0; i < 50 && !set.ready; i++) await new Promise((r) => setTimeout(r, 10));
+    assert.ok(set.ready, "the generated rock is built");
+    const info = rockAssetInfo("gen-boulder-3");
+    const height = info.bounds!.max[1] * 1.5;
+    // Its middle, a third of its height up: inside, the rock's top above it.
+    const depth = set.insideRock(10, 2 + height / 3, 10);
+    assert.ok(depth > 0.05 && depth < height, `inside by ${depth} (height ${height})`);
+    // Well beside it and over it: outside.
+    assert.equal(set.insideRock(14, 2.1, 14), 0);
+    assert.equal(set.insideRock(10, 2 + height + 0.5, 10), 0);
+    // Its top from above, the same point the inside ray left by.
+    const top = set.surfaceBelow(10, 2 + height + 0.2, 10, 0.1, height + 0.5);
+    assert.ok(top !== null && Math.abs(top - (2 + height / 3 + depth)) < 0.02, `top ${top}`);
+});

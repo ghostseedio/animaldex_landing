@@ -419,6 +419,102 @@ if (want("eaves")) {
     await page.evaluate(() => (window.__arkEaveFixOff = false));
 }
 
+// Round 4c: the page's own close-up (select(id, true)) in daylight, the fix off then on: a bird on a town eave, the shield
+// stink bug by a rock, a beetle on a flower head.
+const closeUp = async (name, id, toggle) => {
+    const out = {};
+    for (const off of [true, false]) {
+        await page.evaluate(({toggle, off}) => (window[toggle] = off), {toggle, off});
+        await page.evaluate((id) => window.__arkScene.select(id, true), id);
+        await wait(7000);
+        out[off ? "before" : "after"] = {under: await under(id, null), tips: await page.evaluate((id) => window.__arkDebug.tips?.(id, 8) ?? null, id)};
+        await shot(`${name}-${off ? "before" : "after"}`);
+        await page.evaluate(() => window.__arkScene.select(null));
+        await wait(1500);
+    }
+    await page.evaluate((toggle) => (window[toggle] = false), toggle);
+    const brief = (r) => r && {first: r.under?.hits?.[0] ?? null, drawnGround: r.under?.drawnGround ?? null, tips: (r.tips?.tips ?? []).map((t) => t.gap).filter((g) => g !== null).slice(0, 8)};
+    console.log("closeup", name, JSON.stringify({before: brief(out.before), after: brief(out.after)}));
+};
+if (want("closeups")) {
+    await crossTo("town");
+    await page.evaluate(() => window.__arkScene.setHours(11));
+    await wait(5000);
+    // A bird (not a bat or an insect) resting on an eave perch whose drawn eave is elsewhere.
+    for (let tries = 0; tries < 3; tries++) {
+        const birds = await page.evaluate(() => {
+            const out = [];
+            for (const e of window.__arkDebug.entries()) {
+                const p = e.sched?.pose;
+                if (!p || p.moving || p.aloft || e.length > 0.7 || e.length < 0.08) continue;
+                const plan = window.__arkDebug.planOf?.(e.animal.model_slug) ?? "";
+                if (!/bird/.test(plan)) continue;
+                if (window.__arkDebug.eaveAt?.(p.x, p.y, p.z)) out.push({id: e.animal.id, slug: e.animal.model_slug});
+            }
+            return out;
+        });
+        console.log("eave birds", JSON.stringify(birds.slice(0, 10)));
+        if (birds.length) {
+            for (const b of birds.slice(0, 2)) await closeUp(`c-eave-${b.slug}`, b.id, "__arkEaveFixOff");
+            break;
+        }
+        await wait(3000);
+    }
+    await crossTo("wild");
+    await page.evaluate(() => window.__arkScene.setHours(11));
+    await wait(5000);
+    const bugs = await find("shield-stink-bug");
+    const byRock = bugs.find((r) => r.micro === "rock_face") ?? bugs.find((r) => !r.aloft);
+    if (byRock) await closeUp(`c-shield-stink-bug-${byRock.micro ?? "ground"}`, byRock.id, "__arkRockFixOff");
+    const second = bugs.find((r) => r !== byRock && !r.aloft);
+    if (second) await closeUp(`c-shield-stink-bug-2-${second.micro ?? "ground"}`, second.id, "__arkRockFixOff");
+    // A beetle on a flower head (a golden tortoise beetle where one sits on one, else the nearest beetle on a flower).
+    const onFlower = await page.evaluate(() => {
+        const out = [];
+        for (const e of window.__arkDebug.entries()) if (e.place?.micro?.attach?.tag === "flower_head" && /beetle|ladybird|weevil|chafer/.test(e.animal.model_slug)) out.push({id: e.animal.id, slug: e.animal.model_slug});
+        return out;
+    });
+    console.log("flower beetles", JSON.stringify(onFlower));
+    for (const b of onFlower.slice(0, 2)) await closeUp(`c-flower-${b.slug}`, b.id, "__arkFlowerFixOff");
+    // Leaves: the count again, framed close.
+    const leafy = await page.evaluate(() => {
+        const out = [];
+        for (const e of window.__arkDebug.entries()) {
+            const tag = e.place?.micro?.attach?.tag ?? null;
+            if ((tag === "flower_head" || tag === "leaf") && e.length <= 0.15) out.push({id: e.animal.id, slug: e.animal.model_slug, tag});
+        }
+        return out;
+    });
+    const sample = [...leafy.filter((p) => p.tag === "flower_head").slice(0, 24), ...leafy.filter((p) => p.tag === "leaf").slice(0, 10)];
+    const tally = {before: {n: 0, off: 0, flower: 0, leaf: 0}, after: {n: 0, off: 0, flower: 0, leaf: 0}};
+    for (const p of sample) {
+        const item = {...p};
+        for (const off of [true, false]) {
+            await page.evaluate((off) => (window.__arkFlowerFixOff = off), off);
+            if (!(await frame(p.id, 0.8, 1.0, Math.PI / 3, 2500))) continue;
+            const u = await under(p.id, null);
+            const first = u?.hits?.[0] ?? null;
+            const gap = first ? first.gap : null;
+            item[off ? "before" : "after"] = {gap, kind: first?.kind ?? null};
+            const t = tally[off ? "before" : "after"];
+            t.n++;
+            if (gap === null || Math.abs(gap) > 0.01) {
+                t.off++;
+                t[p.tag === "leaf" ? "leaf" : "flower"]++;
+            }
+        }
+        console.log("leafy", JSON.stringify(item));
+    }
+    await page.evaluate(() => (window.__arkFlowerFixOff = false));
+    console.log("leafy-tally", JSON.stringify(tally));
+    // Every small animal inside a drawn rock, the whole island: drawn, posed and at home.
+    const all = await page.evaluate(() => window.__arkDebug.insideRocks(0.15));
+    console.log("rocks-all wild", JSON.stringify({checked: all.checked, inside: all.inside, worst: all.rows.slice(0, 15).map((r) => [r.slug, r.depth, r.from, r.micro])}));
+    await crossTo("town");
+    const town = await page.evaluate(() => window.__arkDebug.insideRocks(0.15));
+    console.log("rocks-all town", JSON.stringify({checked: town.checked, inside: town.inside, worst: town.rows.slice(0, 15).map((r) => [r.slug, r.depth, r.from, r.micro])}));
+}
+
 // Why a sleeping farm animal plays its idle: its sleep, its act, its rig's base and the clips it has.
 if (want("farm-why")) {
     await crossTo("town");

@@ -4107,6 +4107,47 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         e.antler = {...antlerState(spec, seasonMonthAt(nowS), sexLook(e.animal.id, e.animal.model_slug).sex, e.animal.id), at: nowS};
         return e.antler;
     };
+    // ARK-CONTACT (the owner's beetle over a daisy; the leaves left over: shrubs, reeds, trees): the highest drawn plant
+    // surface straight under a resting insect's point (`up` over it to `down` under it), any plant the scene draws (the
+    // vegetation's instanced shapes, the asset trees, the floor plants), each instance as placed. Kept by the point; at
+    // most two new casts a frame (an instanced plant's ray tests every instance), the rest wait a frame.
+    const plantKinds = new Set(["acacia", "broadleaf", "cactus", "canopy", "conifer", "flower", "leaf", "lily", "orchard", "palm", "rainforest", "reed", "shrub", "asset-tree", "asset-floor"]);
+    let plantMeshes: Object3D[] | null = null;
+    let plantMeshesAt = -1;
+    const plantCache = new Map<string, number | null>();
+    const plantCaster = new Raycaster();
+    let plantCastsLeft = 2;
+    let plantCastFrame = -1;
+    const plantBelow = (x: number, y: number, z: number, up: number, down: number, frame: number): number | null | undefined => {
+        const key = `${Math.round(x * 200)},${Math.round(y * 200)},${Math.round(z * 200)}`;
+        const known = plantCache.get(key);
+        if (known !== undefined) return known;
+        if (frame !== plantCastFrame) {
+            plantCastFrame = frame;
+            plantCastsLeft = 2;
+        }
+        if (plantCastsLeft <= 0) return undefined;
+        plantCastsLeft--;
+        // (The plant meshes, gathered again every few seconds: the sets load and swap their levels.)
+        if (!plantMeshes || frame - plantMeshesAt > 300) {
+            plantMeshes = [];
+            scene.traverse((o) => {
+                if ((o as Mesh).isMesh && plantKinds.has(String(o.userData?.kind ?? ""))) plantMeshes!.push(o);
+            });
+            plantMeshesAt = frame;
+        }
+        plantCaster.set(new Vector3(x, y + up, z), new Vector3(0, -1, 0));
+        plantCaster.near = 0;
+        plantCaster.far = up + down;
+        let best: number | null = null;
+        for (const mesh of plantMeshes) {
+            if (!mesh.visible) continue;
+            for (const hit of plantCaster.intersectObject(mesh, false)) if (best === null || hit.point.y > best) best = hit.point.y;
+        }
+        if (plantCache.size > 4096) plantCache.clear();
+        plantCache.set(key, best);
+        return best;
+    };
     // ARK-CONTACT: the view's target and the camera's distance from it at the reactive layer's last step: a move with the
     // target still and only the distance changed is a zoom (`ReactiveWorld.cameraZooming`).
     let zoomWas: {x: number; y: number; z: number; d: number} | null = null;
@@ -5951,9 +5992,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // planting than the points were made for), it rests on the drawn ground, not in the air over it.
             if (assetFloor && microTag && (microTag === "flower_head" || microTag === "leaf") && where.surface && where.surface.ny > 0.5 && entry.length <= SMALL_ON_ROCKS && !entry.sched?.pose?.moving && entry.air <= 0.001 && level !== "token" && candidate.distance < 40 && !(process.env.NODE_ENV !== "production" && (globalThis as {__arkFlowerFixOff?: boolean}).__arkFlowerFixOff)) {
                 const p = where.surface;
-                const top = assetFloor.surfaceBelow(p.x, p.y, p.z, microTag === "flower_head" ? 0.3 : 0.08, 0.12);
+                const floorTop = assetFloor.surfaceBelow(p.x, p.y, p.z, microTag === "flower_head" ? 0.3 : 0.08, 0.12);
+                // (A leaf on a shrub, a reed or a tree, or a flower no floor plant holds: any drawn plant under it, near.)
+                const plantTop = floorTop === null && candidate.distance < 20 ? plantBelow(p.x, p.y, p.z, microTag === "flower_head" ? 0.3 : 0.15, 0.25, renderer.info.render.frame) : null;
+                const top = floorTop ?? plantTop ?? null;
                 const groundHere = standGround(p.x, p.z, p.y);
-                const to = top !== null ? top : microTag === "flower_head" && p.y - groundHere < 0.8 && p.y - groundHere > 0.01 ? groundHere : null;
+                const to = plantTop === undefined ? null : top !== null ? top : microTag === "flower_head" && p.y - groundHere < 0.8 && p.y - groundHere > 0.01 ? groundHere : null;
                 if (to !== null && Math.abs(to - p.y) > 0.002) {
                     where.base += to - p.y;
                     where.surface = entry.floorFace = Object.assign(entry.floorFace ?? {...p}, p, {y: to});
@@ -10108,7 +10152,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     if (e.length > maxLength || e.place.water) continue;
                     const d = (e as {drawn?: {x: number; y: number; z: number; level: string}}).drawn;
                     const p = e.sched?.pose;
-                    const at = d && d.level ? {x: d.x, y: d.y, z: d.z, from: "drawn"} : p && !p.aloft ? {x: p.x, y: p.y, z: p.z, from: "posed"} : null;
+                    // (Never drawn nor posed here: its home place, on its microhabitat's surface or its ground.)
+                    const at = d && d.level ? {x: d.x, y: d.y, z: d.z, from: "drawn"} : p && !p.aloft ? {x: p.x, y: p.y, z: p.z, from: "posed"} : e.place && !e.place.canopy && !e.place.burrow ? {x: e.place.x, y: e.place.ground, z: e.place.z, from: "home"} : null;
                     if (!at) continue;
                     checked++;
                     // (Its middle, half its height up: a body skimming a rock's face is not in it.)
@@ -10122,6 +10167,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return at ? {building: `${at.x.toFixed(1)},${at.z.toFixed(1)}`, x: at.x, y: at.y, z: at.z} : null;
             },
             rockDepth: (x: number, y: number, z: number) => assetRocks?.insideRock(x, y, z) ?? 0,
+            planOf: (slug: string) => library.get(slug)?.behaviour?.plan ?? null,
             // ARK-CONTACT: the clips a species' loaded rig has (the rules' pick: `rigClip`).
             rigClips: (slug: string) => Object.keys(rigs.get(slug)?.clips ?? {}),
             tips: (id: string, count = 8) => {
