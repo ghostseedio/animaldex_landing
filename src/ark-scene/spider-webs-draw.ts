@@ -337,19 +337,19 @@ const ALL_DIRS: V3[] = (() => {
 })();
 
 /**
- * A tangle at `home`: in a corner, two drawn surfaces of different facing within reach (a wall and an eave, a wall and
- * the ground, a post and a rail), the tangle in the space between, its threads out to them. Null: no corner near.
+ * A tangle at `home`: in a concave corner (Pholcus and the theridiids spin where two surfaces meet: two walls, a wall and
+ * the eave or sill over it, a wall and the ground at its foot: Foelix 2011; Jackson & Brassington 1987), its knots in
+ * the space between the surfaces and every frame thread out to one of them. Null: no corner near.
  */
-/** How far off its surface a tangle's heart is. */
-const r0 = (habit: WebHabit) => Math.min(habit.radius * 0.6, 0.15);
+/** How far off its surfaces a tangle's heart is. */
+const r0 = (habit: WebHabit) => Math.min(habit.radius * 0.5, 0.12);
 
 /** Where a ray down from `from` meets the drawn ground (its height at each step, refined): null past `far`. */
 function groundHit(from: V3, dir: V3, far: number, groundAt: (x: number, z: number) => number): Hit | null {
+    if (dir.y >= 0) return null;
     let d = 0;
     for (let i = 0; i < 4; i++) {
-        const x = from.x + dir.x * d;
-        const z = from.z + dir.z * d;
-        d = (from.y - groundAt(x, z)) / -dir.y;
+        d = (from.y - groundAt(from.x + dir.x * d, from.z + dir.z * d)) / -dir.y;
         if (!(d > 0) || d > far) return null;
     }
     const x = from.x + dir.x * d;
@@ -357,78 +357,109 @@ function groundHit(from: V3, dir: V3, far: number, groundAt: (x: number, z: numb
     return {d, x, y: groundAt(x, z), z, nx: 0, ny: 1, nz: 0};
 }
 
+/** A surface of a corner: a point on it and its facing (out of the solid, into the corner's space). */
+type Face = {p: V3; n: V3; ground: boolean};
+
 export function fitTangle(id: string, habit: WebHabit, home: V3, groundAt: (x: number, z: number) => number, cast: Caster): FittedWeb | null {
     return drain(fitTangleSteps(id, habit, home, groundAt, cast, NO_BUDGET));
 }
 
 function* fitTangleSteps(id: string, habit: WebHabit, home: V3, groundAt: (x: number, z: number) => number, cast: Caster, budget: {until: number}): Generator<void, FittedWeb | null> {
-    const ground = groundAt(home.x, home.z);
-    const reach = habit.radius * 2.2;
-    let best: {score: number; hub: V3; hits: Hit[]} | null = null;
-    // Candidate hubs: round its home, and just off each upright surface near it (a wall, a fence, a shed, a post), from
-    // its foot up to under anything over it (an eave, a sill): its corners.
-    const base = Math.max(home.y, ground);
-    const candidates: V3[] = [];
-    for (const [ox, oz] of [[0, 0], [0.25, 0], [-0.25, 0], [0, 0.25], [0, -0.25]]) for (const lift of [0.12, 0.8, 1.6, 2.4]) candidates.push({x: home.x + ox, y: base + lift, z: home.z + oz});
-    const walls = probeAround(home, [base + 0.3, base + 1.2, base + 2.1], cast, 4).filter((h) => Math.abs(h.ny) < 0.4).sort((a, b) => a.d - b.d);
-    for (const wall of walls.slice(0, 12)) {
-        const off = {x: wall.x + wall.nx * r0(habit), y: wall.y, z: wall.z + wall.nz * r0(habit)};
-        const over = cast(off, {x: 0, y: 1, z: 0}, 3);
-        const top = over ? off.y + over.d - 0.08 : off.y + 0.4;
-        candidates.push({...off, y: base + 0.1}, {...off, y: Math.max(base + 0.1, top - habit.radius * 0.6)}, off);
-    }
-    for (const hub of candidates.slice(0, 60)) {
-        if (performance.now() > budget.until) yield;
-        {
-            const hits: Hit[] = [];
-            let open = 0;
-            for (const dir of ALL_DIRS) {
-                let hit = cast(hub, dir, reach);
-                if (dir.y < -0.2) {
-                    const g = groundHit(hub, dir, reach, groundAt);
-                    if (g && (!hit || g.d < hit.d)) hit = g;
-                }
-                if (hit && hit.d > 0.02) hits.push(hit);
-                if (!hit) open++;
-            }
-            // (In a corner, not inside something drawn: a corner is open on a side.)
-            if (open < 4) continue;
-            // Surfaces of different facings (a corner): the hits' normals grouped.
-            const facings: V3[] = [];
-            for (const h of hits) if (!facings.some((f) => f.x * h.nx + f.y * h.ny + f.z * h.nz > 0.7)) facings.push({x: h.nx, y: h.ny, z: h.nz});
-            if (facings.length < 2 || hits.length < 4) continue;
-            // (A real corner: an upright thing at least knee high, a wall, a shed, a fence, a post; not a path's edge or a
-            // kerb in the lawn.)
-            if (!hits.some((h) => Math.abs(h.ny) < 0.4 && h.y - groundAt(h.x, h.z) > 0.25)) continue;
-            // Sheltered: something over it (an eave, a sill, a rail) is best, as the corners of houses and sheds.
-            const over = hits.some((h) => h.ny < -0.5);
-            const score = facings.length + (over ? 1.5 : 0) + hits.length * 0.05 - (hub.y - base) * 0.1 - Math.hypot(hub.x - home.x, hub.z - home.z) * 0.05;
-            if (!best || score > best.score) best = {score, hub, hits};
+    const r = habit.radius;
+    const off = r0(habit);
+    const base = Math.max(home.y, groundAt(home.x, home.z));
+    // The uprights near it (walls, a shed's, a fence's), at the foot and higher.
+    const walls = probeAround(home, [base + 0.15, base + 0.8, base + 1.6], cast, WEB_SITE_WITHIN + 1).filter((h) => Math.abs(h.ny) < 0.3).sort((a, b) => a.d - b.d);
+    let best: {score: number; faces: Face[]; hub: V3} | null = null;
+    const consider = (faces: Face[], hub: V3, kindScore: number) => {
+        // (Its heart in the open: nothing between it and each of its surfaces but the gap it sits off them.)
+        for (const f of faces) {
+            const d = (hub.x - f.p.x) * f.n.x + (hub.y - f.p.y) * f.n.y + (hub.z - f.p.z) * f.n.z;
+            if (d < off * 0.5 || d > off * 2.5) return;
+            if (!f.ground && !cast(hub, {x: -f.n.x, y: -f.n.y, z: -f.n.z}, d + 0.05)) return;
         }
+        for (const dir of ALL_DIRS) {
+            const h = cast(hub, dir, off * 0.4);
+            if (h) return;
+        }
+        const score = kindScore - Math.hypot(hub.x - home.x, hub.z - home.z) * 0.1;
+        if (!best || score > best.score) best = {score, faces, hub};
+    };
+    for (const wall of walls.slice(0, 14)) {
+        if (performance.now() > budget.until) yield;
+        const n = norm({x: wall.nx, y: 0, z: wall.nz});
+        const t = {x: -n.z, y: 0, z: n.x};
+        const face: Face = {p: {x: wall.x, y: wall.y, z: wall.z}, n, ground: false};
+        const g = groundAt(wall.x + n.x * off, wall.z + n.z * off);
+        const ground: Face = {p: {x: wall.x, y: g, z: wall.z}, n: {x: 0, y: 1, z: 0}, ground: true};
+        const foot = Math.abs(wall.y - g) < 0.4;
+        // Two walls: along this one each way to another facing back across it (the inside of an L).
+        for (const side of [1, -1]) {
+            const from = add(face.p, n, 0.05);
+            const dir = {x: t.x * side, y: 0, z: t.z * side};
+            const other = cast(from, dir, 2.5);
+            if (!other || Math.abs(other.ny) > 0.3) continue;
+            const n2 = norm({x: other.nx, y: 0, z: other.nz});
+            if (n2.x * dir.x + n2.z * dir.z > -0.5) continue;
+            const second: Face = {p: {x: other.x, y: other.y, z: other.z}, n: n2, ground: false};
+            const cornerAt = (y: number): V3 => ({x: other.x + n.x * off + n2.x * off, y, z: other.z + n.z * off + n2.z * off});
+            if (foot) consider([face, second, ground], cornerAt(g + off), 4);
+            // Up the corner to under anything over it (an eave, a ceiling, a sill), else at a height.
+            const up = cast(cornerAt(wall.y), {x: 0, y: 1, z: 0}, 2.5);
+            if (up && up.ny < -0.5) consider([face, second, {p: {x: up.x, y: up.y, z: up.z}, n: {x: 0, y: -1, z: 0}, ground: false}], cornerAt(wall.y + up.d - off), 5);
+            consider([face, second], cornerAt(wall.y), 3);
+        }
+        // A wall and what is over it (an eave, a sill).
+        const under = add(face.p, n, off);
+        const over = cast(under, {x: 0, y: 1, z: 0}, 2.5);
+        if (over && over.ny < -0.5) consider([face, {p: {x: over.x, y: over.y, z: over.z}, n: {x: 0, y: -1, z: 0}, ground: false}], {x: under.x, y: under.y + over.d - off, z: under.z}, 3.5);
+        // A wall and the ground at its foot.
+        if (foot) consider([face, ground], {x: under.x, y: g + off, z: under.z}, 2);
     }
     if (!best) return null;
+    const {faces, hub} = best as {score: number; faces: Face[]; hub: V3};
     const random = seeded(`tangle:${id}`);
-    const {hub, hits} = best;
-    const r = habit.radius;
-    // The tangle's knots: in the space the hits leave round the hub (each knot short of every surface).
+    // The knots: in the corner's space, between its surfaces (each knot a little off every one), the corner's way
+    // along (up a two-wall corner; along the wall otherwise).
+    const walls2 = faces.filter((f) => !f.ground && Math.abs(f.n.y) < 0.5);
+    const along = walls2.length >= 2 ? {x: 0, y: 1, z: 0} : walls2.length ? {x: -walls2[0].n.z, y: 0, z: walls2[0].n.x} : {x: 1, y: 0, z: 0};
     const knots: V3[] = [];
-    for (let i = 0; i < 26; i++) {
-        const dir = norm({x: random() - 0.5, y: (random() - 0.5) * 0.8, z: random() - 0.5});
-        const d = r * (0.25 + random() * 0.75);
-        const block = cast(hub, dir, d + 0.03);
-        knots.push(add(hub, dir, block ? Math.max(block.d - 0.03, 0.01) : d));
+    for (let i = 0; i < 40 && knots.length < 22; i++) {
+        let k: V3 = add(hub, along, (random() - 0.5) * r * 1.2);
+        for (const f of faces) k = add(k, f.n, (random() * 0.9 - 0.25) * r);
+        // Short of every surface and inside the corner (on the open side of each face).
+        let ok = true;
+        for (const f of faces) {
+            const d = (k.x - f.p.x) * f.n.x + (k.y - f.p.y) * f.n.y + (k.z - f.p.z) * f.n.z;
+            if (d < 0.015) ok = false;
+        }
+        if (ok && cast(hub, norm(sub(k, hub)), len(sub(k, hub)) + 0.01)) ok = false;
+        if (ok) knots.push(k);
     }
+    if (knots.length < 6) return null;
     const threads: Thread[] = [];
-    // Anchor threads from the outer knots to the surfaces (the "frame" of a tangle).
-    hits.forEach((h, i) => {
-        const k = knots[i % knots.length];
-        threads.push({a: k, b: {x: h.x, y: h.y, z: h.z}, order: 0});
-    });
-    // The tangle: each knot to two or three others.
-    for (let i = 0; i < knots.length; i++) for (let j = 0; j < 2 + (i % 2); j++) threads.push({a: knots[i], b: knots[Math.floor(random() * knots.length)], order: 0});
-    // Gumfoot lines (theridiids): straight down from the low knots to the surface under them (Benjamin & Zschokke 2003).
-    if (!habit.hangs || habit.radius < 0.2) {
-        for (const k of knots.slice(0, 8)) {
+    // Frame threads: each knot to the surfaces nearest it, straight on to each (a cast: every one ends on its surface).
+    for (const k of knots) {
+        const near = faces.map((f) => ({f, d: (k.x - f.p.x) * f.n.x + (k.y - f.p.y) * f.n.y + (k.z - f.p.z) * f.n.z})).sort((a, b) => a.d - b.d);
+        for (const {f, d} of near.slice(0, 2)) {
+            if (d > r * 1.5) continue;
+            const dir = {x: -f.n.x, y: -f.n.y, z: -f.n.z};
+            // A little slant, as real frame threads run: the cast says where it lands.
+            const slant = norm(add(dir, along, (random() - 0.5) * 0.6));
+            const hit = cast(k, slant, d * 2 + 0.05);
+            const g = f.ground ? groundHit(k, slant, d * 2 + 0.05, groundAt) : null;
+            const end = hit && (!g || hit.d < g.d) ? hit : g;
+            if (end) threads.push({a: k, b: {x: end.x, y: end.y, z: end.z}, order: 0});
+        }
+    }
+    // The tangle: each knot to its nearer neighbours (short threads, knot to knot).
+    for (let i = 0; i < knots.length; i++) {
+        const order = knots.map((k, j) => ({j, d: len(sub(k, knots[i]))})).filter((o) => o.j !== i).sort((a, b) => a.d - b.d);
+        for (const {j, d} of order.slice(0, 2 + (i % 2))) if (j > i || d > r * 0.5) threads.push({a: knots[i], b: knots[j], order: 0});
+    }
+    // Gumfoot lines (theridiids, not Pholcus): straight down from the low knots to the ground met (Benjamin & Zschokke 2003).
+    if (!habit.hangs) {
+        for (const k of knots.slice().sort((a, b) => a.y - b.y).slice(0, 5)) {
             const down = cast(k, {x: 0, y: -1, z: 0}, 0.8);
             const g = groundAt(k.x, k.z);
             const y = down ? k.y - down.d : k.y - g < 0.8 ? g : null;
@@ -436,8 +467,8 @@ function* fitTangleSteps(id: string, habit: WebHabit, home: V3, groundAt: (x: nu
         }
     }
     const normal = {x: 0, y: 1, z: 0};
-    // (Its open side, out of the corner: the surfaces' facings together, level. A look into the corner is from there.)
-    const facing = hits.reduce((m, h) => ({x: m.x + h.nx, y: 0, z: m.z + h.nz}), {x: 0, y: 0, z: 0});
+    // (Its open side, out of the corner: its surfaces' facings together, level. A look into the corner is from there.)
+    const facing = faces.reduce((m, f) => ({x: m.x + f.n.x, y: 0, z: m.z + f.n.z}), {x: 0, y: 0, z: 0});
     const open = len(facing) > 1e-3 ? norm(facing) : {x: 0, y: 0, z: 1};
     return {id, habit, hub, normal, right: {x: open.z, y: 0, z: -open.x}, up: open, radius: r, threads: threads.filter((t) => len(sub(t.a, t.b)) > 0.005), ends: knots, retreat: null, gold: 0};
 }

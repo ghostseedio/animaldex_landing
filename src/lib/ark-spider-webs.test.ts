@@ -135,6 +135,16 @@ test("a daddy long-legs' tangle in a wall's corner under an eave; a funnel web a
     const tangle = fitWeb("p1", pholcus, {x: 0, y: 0, z: 0}, () => 0, cast);
     assert.ok(tangle, "fitted");
     assert.ok(tangle!.hub.y > 1.5, "up under the eave");
+    // In the corner: within a hand of the wall's face (x = 0.2) and of the eave's underside (y = 2.4).
+    assert.ok(tangle!.hub.x > 0.0 && tangle!.hub.x < 0.2 && tangle!.hub.y > 2.1 && tangle!.hub.y < 2.4, `in the corner ${JSON.stringify(tangle!.hub)}`);
+    // Every thread ends on a knot of the tangle or on a surface: none in the air.
+    const isKnot = (p: {x: number; y: number; z: number}) => tangle!.ends.some((k) => Math.hypot(k.x - p.x, k.y - p.y, k.z - p.z) < 1e-6);
+    for (const t of tangle!.threads) for (const p of [t.a, t.b]) assert.ok(isKnot(p) || anchoredOn(cast, p, 0), `thread end ${JSON.stringify(p)} in the air`);
+    assert.ok(tangle!.threads.filter((t) => !isKnot(t.b)).length >= 8, "framed to its surfaces");
+    // Two walls meeting (an L), no eave: the tangle in the angle between them.
+    const ell = triangleCaster(new Float32Array([...box([0.2, 0, -2], [0.5, 2.6, 0.5]), ...box([-2, 0, 0.5], [0.5, 2.6, 0.8])]));
+    const angle = fitWeb("p2", pholcus, {x: 0, y: 0, z: 0}, () => 0, ell);
+    assert.ok(angle && angle.hub.x > 0.0 && angle.hub.x < 0.2 && angle.hub.z > 0.3 && angle.hub.z < 0.5, `in the angle ${JSON.stringify(angle?.hub)}`);
     const spider = spiderOnWeb(tangle!, 12, 0, 1);
     assert.equal(spider.ny, -1, "hanging upside down");
     const eratigena = webHabit("giant-house-spider", "Eratigena atrica")!;
