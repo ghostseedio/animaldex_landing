@@ -5,6 +5,7 @@
  *   breeding_season               a kind (its stored breeding months begin, two or more aboard)
  *   carer_left, new_carer         a kept animal's place (its carer left for a few days; the new one started)
  *   grazed_bare, regrown          the kind that grazes a patch most (its ground grazed bare; green again)
+ *   ate_dung                      a dung user fed on fresh dung today (one a day, a different one each day)
  * and adds facts to rows it already writes: `mated.first` (which of the pair had no litter aboard before), `mated.waited`
  * and `mated.waiter` (Ark days one of the pair waited for a mate, and which), `fed.food = "dung"` (a dung user's hunger ended on fresh dung). The server decides every one; this only says
  * them, from the row's kind, its animal and its species (no payload is sent for the new kinds), in the reader's words
@@ -44,7 +45,8 @@ const KINDS: Record<string, {key: ArkRichKey; kind: boolean; good: boolean}> = {
     carer_left: {key: "carerLeft", kind: false, good: false},
     new_carer: {key: "newCarer", kind: false, good: true},
     grazed_bare: {key: "grazedBare", kind: true, good: false},
-    regrown: {key: "regrown", kind: true, good: true}
+    regrown: {key: "regrown", kind: true, good: true},
+    ate_dung: {key: "foundDung", kind: false, good: true}
 };
 
 const named = (a: Animal | null | undefined) => (a && typeof a.name === "string" && a.name ? a.name.slice(0, 120) : "");

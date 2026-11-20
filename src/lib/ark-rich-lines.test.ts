@@ -25,6 +25,7 @@ const rows = [
     {id: 7, kind: "regrown", at, species: "Plains Zebra", species_profile_id: "sp-zebra", animal: null},
     {id: 8, kind: "mated", at, animal: zebra, other: mare, parents: ["z1", "z2"], first: ["z2"], waited: 812, waiter: "z2"},
     {id: 9, kind: "fed", at, animal: beetle, source: "forage", food: "dung"},
+    {id: 13, kind: "ate_dung", at, ark_day: 401, animal: beetle},
     // Rows that are not rich: said by their own modules, never here.
     {id: 10, kind: "mated", at, animal: zebra, other: mare, parents: ["z1", "z2"]},
     {id: 11, kind: "fed", at, animal: beetle, source: "step"},
@@ -42,6 +43,7 @@ test("the live log: one line per rich row, in plain English, the rest left to th
         "Plains Zebras: their grazing ground is bare",
         "Plains Zebras: their grazing ground is green again",
         "A Plains Zebra found a mate after 812 days",
+        "A Dung Beetle found fresh dung",
         "A Dung Beetle found fresh dung"
     ]);
     // A tap flies to the animal it is about (the waiter, the beetle), or to the kind.
@@ -49,7 +51,9 @@ test("the live log: one line per rich row, in plain English, the rest left to th
     assert.equal(items[2].focus.animalId, null);
     assert.equal(items[2].focus.speciesId, "sp-zebra");
     // Said once; none older than `from`.
-    assert.equal(richItems({events: rows}, 0, (key) => key === "rich:1", words, "en").length, 8);
+    assert.equal(richItems({events: rows}, 0, (key) => key === "rich:1", words, "en").length, 9);
+    // A dung meal is the beetle's own log line.
+    assert.equal(richNotes({events: rows}, words, "en").find((n) => n.id === "rich:13")?.animalId, "b1");
     assert.equal(richItems({events: rows}, Date.parse(at) + 1, () => false, words, "en").length, 0);
 });
 
