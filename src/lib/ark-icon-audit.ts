@@ -1,5 +1,6 @@
 import {arkIconAlias, arkIconKeys, type ArkIconProfile} from "@/lib/ark-icons";
 import {isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
+import type {ArtworkIndex} from "@/data/species-artwork-resolution";
 
 export type ArkIconAuditAnimal = {model_slug: string; species_profile_id: string};
 
@@ -24,12 +25,12 @@ export type ArkIconAudit = {
  * would be drawn as the generic figure although the bucket holds a file for one of their keys (`arkIconAlias`). Pure;
  * `scripts/ark-icon-audit.mts` feeds it the live public read.
  */
-export function arkIconAudit(animals: readonly ArkIconAuditAnimal[], artwork: {has: (slug: string) => boolean}, profiles: ReadonlyMap<string, ArkIconProfile>): ArkIconAudit {
+export function arkIconAudit(animals: readonly ArkIconAuditAnimal[], artwork: ArtworkIndex, profiles: ReadonlyMap<string, ArkIconProfile>): ArkIconAudit {
     const bySlug = new Map<string, {animals: number; ids: Set<string>}>();
     const speciesAboard = new Set<string>();
     for (const {model_slug: slug, species_profile_id: id} of animals) {
         speciesAboard.add(slug);
-        if (!slug || isArkPlaceholderSlug(slug) || artwork.has(slug)) continue;
+        if (!slug || isArkPlaceholderSlug(slug) || artwork.bySlug.has(slug)) continue;
         const one = bySlug.get(slug) ?? {animals: 0, ids: new Set<string>()};
         one.animals += 1;
         one.ids.add(id);

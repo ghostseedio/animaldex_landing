@@ -94,7 +94,7 @@ async function profilesOf(ids: string[]): Promise<Map<string, ArkIconProfile>> {
 const read = (await json(option("--read") ?? "https://animaldex.app/api/ark/voyage")) as {snapshot?: {animals?: Array<{model_slug: string; species_profile_id: string}>}};
 const animals = read.snapshot?.animals ?? [];
 if (!animals.length) throw new Error("the Ark read has no animals");
-const artwork = buildArtworkIndex(await listing()).bySlug;
+const artwork = buildArtworkIndex(await listing());
 const profiles = await profilesOf(Array.from(new Set(animals.map((animal) => animal.species_profile_id))));
 const audit = arkIconAudit(animals, artwork, profiles);
 

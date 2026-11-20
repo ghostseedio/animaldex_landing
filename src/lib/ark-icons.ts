@@ -1,4 +1,5 @@
 import {isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
+import {resolveArtworkFileInIndex, type ArtworkIndex} from "@/data/species-artwork-resolution";
 
 /**
  * The species in an Ark answer with no icon art of their own: no `<slug>.webp` in the `animals` bucket's listing
@@ -59,14 +60,23 @@ export function arkIconKeys(profile: ArkIconProfile): string[] {
 }
 
 /**
- * The file (slug of `<slug>.webp`) a species' own icon is under, for a species whose Ark slug has none: the first of
- * its profiles' keys the bucket's listing holds, or null. Only names of the species itself, never a relative's file
- * (`tiger` is not `bengal-tiger`), and never a matchup composite (the listing leaves those out).
+ * The file (slug of `<slug>.webp`) a species' icon is under, for a species whose Ark slug has none: the catalog's own
+ * picture of it, so the Ark never draws the generic figure for a species the catalog shows an icon for (owner
+ * 2026-11-20: Domestic Pigeon, Ark slug `domestic-pigeon`, page `rock-pigeon`). First its page's slug resolved exactly as
+ * the web catalog resolves it (`/animals/{slug}`, the catalog grids: `resolveArtworkFileInIndex`, the same function,
+ * with its spellings, aliases and closest relative), then the app catalog's names (`arkIconKeys`, iOS
+ * `SpeciesCatalogThumbnailView`) each exactly. Never a matchup composite (the index leaves those out). Null when
+ * neither catalog has a picture either.
  */
-export function arkIconAlias(profiles: ReadonlyArray<ArkIconProfile>, artwork: {has: (slug: string) => boolean}): string | null {
+export function arkIconAlias(profiles: ReadonlyArray<ArkIconProfile>, artwork: ArtworkIndex): string | null {
+    for (const profile of profiles) {
+        const page = text(profile.landing_page_slug).toLowerCase();
+        const file = page ? resolveArtworkFileInIndex(artwork, page) : null;
+        if (file) return file.slice(0, -".webp".length);
+    }
     for (const profile of profiles) {
         for (const key of arkIconKeys(profile)) {
-            if (artwork.has(key)) return key;
+            if (artwork.bySlug.has(key)) return key;
         }
     }
     return null;

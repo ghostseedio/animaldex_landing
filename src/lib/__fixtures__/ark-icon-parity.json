@@ -1,0 +1,608 @@
+{
+ "note": "Ark species (live public read 2026-11-20: aboard, gone, extinct) whose Ark slug has no <slug>.webp in species-artwork-snapshot.json, with their species_profiles names. src/lib/ark-icon-parity.test.ts.",
+ "species": [
+  {
+   "model_slug": "african-sacred-ibis",
+   "landing_page_slug": "sacred-ibis",
+   "normalized_identity_key": "sacred_ibis",
+   "display_name": "African Sacred Ibis",
+   "animal_name": "Sacred Ibis",
+   "refined_identity": "African Sacred Ibis",
+   "scientific_name": "Threskiornis aethiopicus"
+  },
+  {
+   "model_slug": "asian-arowana",
+   "landing_page_slug": "arowana",
+   "normalized_identity_key": "asian_arowana",
+   "display_name": "Asian Arowana",
+   "animal_name": "Asian Arowana",
+   "refined_identity": null,
+   "scientific_name": "Scleropages formosus"
+  },
+  {
+   "model_slug": "asian-water-monitor",
+   "landing_page_slug": "water-monitor",
+   "normalized_identity_key": "water_monitor",
+   "display_name": "Asian Water Monitor",
+   "animal_name": "Water Monitor",
+   "refined_identity": "Asian Water Monitor",
+   "scientific_name": "Varanus salvator"
+  },
+  {
+   "model_slug": "banded-archerfish",
+   "landing_page_slug": "archerfish",
+   "normalized_identity_key": "archerfish",
+   "display_name": "Banded Archerfish",
+   "animal_name": "Banded Archerfish",
+   "refined_identity": "Banded Archerfish",
+   "scientific_name": "Toxotes jaculatrix"
+  },
+  {
+   "model_slug": "birman-cat",
+   "landing_page_slug": "birman-cat",
+   "normalized_identity_key": "birman_cat",
+   "display_name": "Birman Cat",
+   "animal_name": "Birman Cat",
+   "refined_identity": "Birman Cat",
+   "scientific_name": "Felis catus"
+  },
+  {
+   "model_slug": "black-planthopper",
+   "landing_page_slug": "planthopper",
+   "normalized_identity_key": "ricania_speculum",
+   "display_name": "Black Planthopper",
+   "animal_name": "Black Planthopper",
+   "refined_identity": null,
+   "scientific_name": "Ricania speculum"
+  },
+  {
+   "model_slug": "black-skirt-tetra",
+   "landing_page_slug": "glofish-tetra",
+   "normalized_identity_key": "glofish_tetra",
+   "display_name": "Black Skirt Tetra",
+   "animal_name": "GloFish Tetra",
+   "refined_identity": "Black Skirt Tetra",
+   "scientific_name": "Gymnocorymbus ternetzi"
+  },
+  {
+   "model_slug": "black-tailed-prairie-dog",
+   "landing_page_slug": "prairie-dog",
+   "normalized_identity_key": "prairie_dog",
+   "display_name": "Black-tailed Prairie Dog",
+   "animal_name": "Black-tailed Prairie Dog",
+   "refined_identity": "Black-tailed Prairie Dog",
+   "scientific_name": "Cynomys ludovicianus"
+  },
+  {
+   "model_slug": "blue-discus",
+   "landing_page_slug": "discus-fish",
+   "normalized_identity_key": "discus_fish",
+   "display_name": "Blue Discus",
+   "animal_name": "Discus Fish",
+   "refined_identity": "Blue Discus",
+   "scientific_name": "Symphysodon aequifasciatus"
+  },
+  {
+   "model_slug": "british-shorthair",
+   "landing_page_slug": "british-shorthair",
+   "normalized_identity_key": "british_shorthair",
+   "display_name": "British Shorthair Cat",
+   "animal_name": "Cat",
+   "refined_identity": "British Shorthair Cat",
+   "scientific_name": "Felis catus"
+  },
+  {
+   "model_slug": "carolina-wolf-spider",
+   "landing_page_slug": "wolf-spider",
+   "normalized_identity_key": "wolf_spider",
+   "display_name": "Carolina Wolf Spider",
+   "animal_name": "Wolf Spider",
+   "refined_identity": "Carolina Wolf Spider",
+   "scientific_name": "Hogna carolinensis"
+  },
+  {
+   "model_slug": "clothes-house-moth",
+   "landing_page_slug": "clothes-and-house-moth",
+   "normalized_identity_key": "clothes_and_house_moth",
+   "display_name": "Clothes & House Moth",
+   "animal_name": "Clothes & House Moth",
+   "refined_identity": "Clothes & House Moth",
+   "scientific_name": "Tineidae"
+  },
+  {
+   "model_slug": "common-bluetail",
+   "landing_page_slug": "african-bluetail",
+   "normalized_identity_key": "african_bluetail",
+   "display_name": "Common Bluetail",
+   "animal_name": "Common Bluetail",
+   "refined_identity": null,
+   "scientific_name": "Ischnura senegalensis"
+  },
+  {
+   "model_slug": "common-green-lacewing",
+   "landing_page_slug": "green-lacewing",
+   "normalized_identity_key": "green_lacewing",
+   "display_name": "Common Green Lacewing",
+   "animal_name": "Green Lacewing",
+   "refined_identity": "Common Green Lacewing",
+   "scientific_name": "Chrysoperla carnea"
+  },
+  {
+   "model_slug": "common-molly",
+   "landing_page_slug": "black-molly",
+   "normalized_identity_key": "molly_fish",
+   "display_name": "Common Molly",
+   "animal_name": "Molly Fish",
+   "refined_identity": "Common Molly",
+   "scientific_name": "Poecilia sphenops"
+  },
+  {
+   "model_slug": "common-opossum",
+   "landing_page_slug": "opossum",
+   "normalized_identity_key": "didelphis_marsupialis",
+   "display_name": "Common Opossum",
+   "animal_name": "Common Opossum",
+   "refined_identity": null,
+   "scientific_name": "Didelphis marsupialis"
+  },
+  {
+   "model_slug": "common-raccoon",
+   "landing_page_slug": "north-american-raccoon",
+   "normalized_identity_key": "north_american_raccoon",
+   "display_name": "Common Raccoon",
+   "animal_name": "North American Raccoon",
+   "refined_identity": "Common Raccoon",
+   "scientific_name": "Procyon lotor"
+  },
+  {
+   "model_slug": "common-seahorse",
+   "landing_page_slug": "yellow-seahorse",
+   "normalized_identity_key": "hippocampus_kuda",
+   "display_name": "Common Seahorse",
+   "animal_name": "Seahorse",
+   "refined_identity": "Common Seahorse",
+   "scientific_name": "Hippocampus kuda"
+  },
+  {
+   "model_slug": "common-toad",
+   "landing_page_slug": "common-european-toad",
+   "normalized_identity_key": "common_european_toad",
+   "display_name": "Common Toad",
+   "animal_name": "Common Toad",
+   "refined_identity": null,
+   "scientific_name": "Bufo bufo"
+  },
+  {
+   "model_slug": "cow",
+   "landing_page_slug": "domestic-cattle",
+   "normalized_identity_key": "domestic_cattle",
+   "display_name": "Cow",
+   "animal_name": "Domestic Cattle",
+   "refined_identity": "Cow",
+   "scientific_name": "Bos taurus"
+  },
+  {
+   "model_slug": "daddy-long-legs-spider",
+   "landing_page_slug": "cellar-spider",
+   "normalized_identity_key": "daddy_long_legs_spider",
+   "display_name": "Daddy Long-Legs Spider",
+   "animal_name": "Daddy Long-legs Spider",
+   "refined_identity": "Daddy Long-Legs Spider",
+   "scientific_name": "Pholcus phalangioides"
+  },
+  {
+   "model_slug": "domestic-cat-bicolor",
+   "landing_page_slug": null,
+   "normalized_identity_key": "domestic_bicolor_cat",
+   "display_name": "Domestic Bicolor Cat",
+   "animal_name": "Domestic Bicolor Cat",
+   "refined_identity": "Domestic Bicolor Cat",
+   "scientific_name": "Felis catus"
+  },
+  {
+   "model_slug": "domestic-cat-black",
+   "landing_page_slug": null,
+   "normalized_identity_key": "domestic_shorthair_solid_black_coat",
+   "display_name": "Black Domestic Shorthair",
+   "animal_name": "Domestic shorthair, solid black coat",
+   "refined_identity": "Black Domestic Shorthair",
+   "scientific_name": "Felis catus"
+  },
+  {
+   "model_slug": "domestic-cat-brown-tabby",
+   "landing_page_slug": null,
+   "normalized_identity_key": "tabby_domestic_cat",
+   "display_name": "Tabby Domestic Cat",
+   "animal_name": "Tabby Domestic Cat",
+   "refined_identity": "Tabby Domestic Cat",
+   "scientific_name": "Felis catus"
+  },
+  {
+   "model_slug": "domestic-cat-calico",
+   "landing_page_slug": null,
+   "normalized_identity_key": "calico_domestic_cat",
+   "display_name": "Calico Domestic Cat",
+   "animal_name": "Calico Domestic Cat",
+   "refined_identity": "Calico Domestic Cat",
+   "scientific_name": "Felis catus"
+  },
+  {
+   "model_slug": "domestic-cat-tortoiseshell",
+   "landing_page_slug": null,
+   "normalized_identity_key": "tortoiseshell_domestic_cat",
+   "display_name": "Tortoiseshell Domestic Cat",
+   "animal_name": "Tortoiseshell Domestic Cat",
+   "refined_identity": "Tortoiseshell Domestic Cat",
+   "scientific_name": "Felis catus"
+  },
+  {
+   "model_slug": "domestic-donkey",
+   "landing_page_slug": "donkey",
+   "normalized_identity_key": "donkey",
+   "display_name": "Domestic Donkey",
+   "animal_name": "Domestic Donkey",
+   "refined_identity": "Domestic Donkey",
+   "scientific_name": "Equus asinus"
+  },
+  {
+   "model_slug": "domestic-longhair-cat",
+   "landing_page_slug": null,
+   "normalized_identity_key": "domestic_longhair",
+   "display_name": "Domestic Longhair",
+   "animal_name": "Domestic Longhair",
+   "refined_identity": "Domestic Longhair",
+   "scientific_name": "Felis catus"
+  },
+  {
+   "model_slug": "domestic-pigeon",
+   "landing_page_slug": "rock-pigeon",
+   "normalized_identity_key": "columba_livia_domestica",
+   "display_name": "Domestic Pigeon",
+   "animal_name": "Rock Pigeon",
+   "refined_identity": "Domestic Pigeon",
+   "scientific_name": "Columba livia domestica"
+  },
+  {
+   "model_slug": "eastern-blue-tongued-skink",
+   "landing_page_slug": "blue-tongued-skink",
+   "normalized_identity_key": "blue_tongued_skink",
+   "display_name": "Eastern Blue-tongued Skink",
+   "animal_name": "Blue-tongued Skink",
+   "refined_identity": "Eastern Blue-tongued Skink",
+   "scientific_name": "Tiliqua scincoides"
+  },
+  {
+   "model_slug": "eastern-spiny-lizard",
+   "landing_page_slug": "spiny-lizard",
+   "normalized_identity_key": "spiny_lizard",
+   "display_name": "Eastern Spiny Lizard",
+   "animal_name": "Eastern Spiny Lizard",
+   "refined_identity": "Eastern Spiny Lizard",
+   "scientific_name": "Sceloporus spinosus"
+  },
+  {
+   "model_slug": "eurasian-elk",
+   "landing_page_slug": "moose",
+   "normalized_identity_key": "moose",
+   "display_name": "Eurasian Elk",
+   "animal_name": "Moose",
+   "refined_identity": "Eurasian Elk",
+   "scientific_name": "Alces alces"
+  },
+  {
+   "model_slug": "flower-crab-spider",
+   "landing_page_slug": "goldenrod-crab-spider",
+   "normalized_identity_key": "goldenrod_crab_spider",
+   "display_name": "Flower Crab Spider",
+   "animal_name": "Goldenrod Crab Spider",
+   "refined_identity": "Flower Crab Spider",
+   "scientific_name": "Misumena vatia"
+  },
+  {
+   "model_slug": "freshwater-angelfish",
+   "landing_page_slug": "angelfish-freshwater",
+   "normalized_identity_key": "angelfish_freshwater",
+   "display_name": "Freshwater Angelfish",
+   "animal_name": "Freshwater Angelfish",
+   "refined_identity": "Freshwater Angelfish",
+   "scientific_name": "Pterophyllum scalare"
+  },
+  {
+   "model_slug": "german-yellowjacket",
+   "landing_page_slug": "european-wasp-german-wasp",
+   "normalized_identity_key": "german_wasp",
+   "display_name": "German Yellowjacket",
+   "animal_name": "European wasp (German wasp)",
+   "refined_identity": "German Yellowjacket",
+   "scientific_name": "Vespula germanica"
+  },
+  {
+   "model_slug": "giant-moray",
+   "landing_page_slug": "moray-eel",
+   "normalized_identity_key": "moray_eel",
+   "display_name": "Giant Moray",
+   "animal_name": "Giant Moray",
+   "refined_identity": "Giant Moray",
+   "scientific_name": "Gymnothorax javanicus"
+  },
+  {
+   "model_slug": "giant-oceanic-manta-ray",
+   "landing_page_slug": "manta-ray",
+   "normalized_identity_key": "manta_ray",
+   "display_name": "Giant Oceanic Manta Ray",
+   "animal_name": "Giant Oceanic Manta Ray",
+   "refined_identity": "Giant Oceanic Manta Ray",
+   "scientific_name": "Mobula birostris"
+  },
+  {
+   "model_slug": "goffins-cockatoo",
+   "landing_page_slug": "tanimbar-corella",
+   "normalized_identity_key": "goffin_cockatoo",
+   "display_name": "Goffin's Cockatoo",
+   "animal_name": "Goffin Cockatoo",
+   "refined_identity": "Goffin's Cockatoo",
+   "scientific_name": "Cacatua goffiniana"
+  },
+  {
+   "model_slug": "golden-stag-beetle",
+   "landing_page_slug": "stag-beetle",
+   "normalized_identity_key": "stag_beetle",
+   "display_name": "Golden Stag Beetle",
+   "animal_name": "Stag Beetle",
+   "refined_identity": "Golden Stag Beetle",
+   "scientific_name": "Odontolabis cuvera"
+  },
+  {
+   "model_slug": "guppy",
+   "landing_page_slug": "fancy-guppy",
+   "normalized_identity_key": "fancy_guppy",
+   "display_name": "Guppy",
+   "animal_name": "Fancy Guppy",
+   "refined_identity": "Guppy",
+   "scientific_name": "Poecilia reticulata"
+  },
+  {
+   "model_slug": "herring-gull",
+   "landing_page_slug": "european-herring-gull",
+   "normalized_identity_key": "european_herring_gull",
+   "display_name": "Herring Gull",
+   "animal_name": "European Herring Gull",
+   "refined_identity": "Herring Gull",
+   "scientific_name": "Larus argentatus"
+  },
+  {
+   "model_slug": "humphead-wrasse",
+   "landing_page_slug": "napoleon-wrasse",
+   "normalized_identity_key": "napoleon_wrasse",
+   "display_name": "Humphead Wrasse",
+   "animal_name": "Napoleon Wrasse",
+   "refined_identity": "Humphead Wrasse",
+   "scientific_name": "Cheilinus undulatus"
+  },
+  {
+   "model_slug": "jewel-beetle",
+   "landing_page_slug": "golden-jewel-beetle",
+   "normalized_identity_key": "jewel_beetle",
+   "display_name": "Jewel Beetle",
+   "animal_name": "Jewel Beetle",
+   "refined_identity": "Jewel Beetle",
+   "scientific_name": "Chrysochroa fulgidissima"
+  },
+  {
+   "model_slug": "lanternfly",
+   "landing_page_slug": "lantern-bug",
+   "normalized_identity_key": "lantern_bug",
+   "display_name": "Lanternfly",
+   "animal_name": "Lantern Bug",
+   "refined_identity": "Lanternfly",
+   "scientific_name": "Pyrops candelaria"
+  },
+  {
+   "model_slug": "long-eared-hedgehog",
+   "landing_page_slug": "hemiechinus-auritus",
+   "normalized_identity_key": "hemiechinus_auritus",
+   "display_name": "Long-eared Hedgehog",
+   "animal_name": "Long-eared Hedgehog",
+   "refined_identity": null,
+   "scientific_name": "Hemiechinus auritus"
+  },
+  {
+   "model_slug": "malayan-box-turtle",
+   "landing_page_slug": "cuora-amboinensis",
+   "normalized_identity_key": "cuora_amboinensis",
+   "display_name": "Malayan Box Turtle",
+   "animal_name": "Malayan Box Turtle",
+   "refined_identity": "Malayan Box Turtle",
+   "scientific_name": "Cuora amboinensis"
+  },
+  {
+   "model_slug": "mound-building-termite",
+   "landing_page_slug": "asian-subterranean-termite",
+   "normalized_identity_key": "macrotermes_gilvus",
+   "display_name": "Mound-building Termite",
+   "animal_name": "Mound-building Termite",
+   "refined_identity": "Mound-building Termite",
+   "scientific_name": "Macrotermes gilvus"
+  },
+  {
+   "model_slug": "nile-tilapia",
+   "landing_page_slug": "tilapia",
+   "normalized_identity_key": "tilapia",
+   "display_name": "Nile Tilapia",
+   "animal_name": "Tilapia",
+   "refined_identity": "Nile Tilapia",
+   "scientific_name": "Oreochromis niloticus"
+  },
+  {
+   "model_slug": "ocellaris-clownfish",
+   "landing_page_slug": "clownfish",
+   "normalized_identity_key": "clownfish",
+   "display_name": "Ocellaris Clownfish",
+   "animal_name": "Clownfish",
+   "refined_identity": "Ocellaris Clownfish",
+   "scientific_name": "Amphiprion ocellaris"
+  },
+  {
+   "model_slug": "peterss-jumping-spider",
+   "landing_page_slug": "common-housefly-catcher",
+   "normalized_identity_key": "common_housefly_catcher",
+   "display_name": "Peters's Jumping Spider",
+   "animal_name": "Common Housefly Catcher",
+   "refined_identity": "Peters's Jumping Spider",
+   "scientific_name": "Plexippus petersi"
+  },
+  {
+   "model_slug": "philippine-leaf-insect",
+   "landing_page_slug": "walking-leaf",
+   "normalized_identity_key": "walking_leaf",
+   "display_name": "Philippine Leaf Insect",
+   "animal_name": "Philippine Leaf Insect",
+   "refined_identity": "Philippine Leaf Insect",
+   "scientific_name": "Phyllium philippinicum"
+  },
+  {
+   "model_slug": "red-assassin-bug",
+   "landing_page_slug": "milkweed-assassin-bug",
+   "normalized_identity_key": "assassin_bug",
+   "display_name": "Red Assassin Bug",
+   "animal_name": "Milkweed Assassin Bug",
+   "refined_identity": "Red Assassin Bug",
+   "scientific_name": "Sycanus collaris"
+  },
+  {
+   "model_slug": "red-lionfish",
+   "landing_page_slug": "lionfish",
+   "normalized_identity_key": "lionfish",
+   "display_name": "Red Lionfish",
+   "animal_name": "Lionfish",
+   "refined_identity": "Red Lionfish",
+   "scientific_name": "Pterois volitans"
+  },
+  {
+   "model_slug": "red-tailed-tinfoil-barb",
+   "landing_page_slug": "tinfoil-barb",
+   "normalized_identity_key": "tinfoil_barb",
+   "display_name": "Red-tailed Tinfoil Barb",
+   "animal_name": "Red-tailed Tinfoil Barb",
+   "refined_identity": "Red-tailed Tinfoil Barb",
+   "scientific_name": "Barbonymus altus"
+  },
+  {
+   "model_slug": "seven-spot-ladybird",
+   "landing_page_slug": "seven-spotted-ladybird",
+   "normalized_identity_key": "seven_spotted_ladybird",
+   "display_name": "Seven-spot Ladybird",
+   "animal_name": "Seven-spotted Ladybird",
+   "refined_identity": "Seven-spot Ladybird",
+   "scientific_name": "Coccinella septempunctata"
+  },
+  {
+   "model_slug": "siamese-fighting-fish",
+   "landing_page_slug": "betta",
+   "normalized_identity_key": "betta",
+   "display_name": "Siamese Fighting Fish",
+   "animal_name": "Betta",
+   "refined_identity": "Siamese Fighting Fish",
+   "scientific_name": "Betta splendens"
+  },
+  {
+   "model_slug": "small-cabbage-white",
+   "landing_page_slug": "cabbage-white",
+   "normalized_identity_key": "pieris_rapae",
+   "display_name": "Small Cabbage White",
+   "animal_name": "Cabbage White",
+   "refined_identity": "Small Cabbage White",
+   "scientific_name": "Pieris rapae"
+  },
+  {
+   "model_slug": "south-american-coati",
+   "landing_page_slug": "ring-tailed-coati",
+   "normalized_identity_key": "ring_tailed_coati",
+   "display_name": "South American Coati",
+   "animal_name": "Ring-tailed Coati",
+   "refined_identity": "South American Coati",
+   "scientific_name": "Nasua nasua"
+  },
+  {
+   "model_slug": "south-american-tapir",
+   "landing_page_slug": "lowland-tapir",
+   "normalized_identity_key": "lowland_tapir",
+   "display_name": "South American Tapir",
+   "animal_name": "Lowland Tapir",
+   "refined_identity": "South American Tapir",
+   "scientific_name": "Tapirus terrestris"
+  },
+  {
+   "model_slug": "southern-platyfish",
+   "landing_page_slug": "platy-fish",
+   "normalized_identity_key": "platy_fish",
+   "display_name": "Southern Platyfish",
+   "animal_name": "Southern Platyfish",
+   "refined_identity": "Southern Platyfish",
+   "scientific_name": "Xiphophorus maculatus"
+  },
+  {
+   "model_slug": "spectacled-caiman",
+   "landing_page_slug": "common-caiman",
+   "normalized_identity_key": "common_caiman",
+   "display_name": "Spectacled Caiman",
+   "animal_name": "Common Caiman",
+   "refined_identity": "Spectacled Caiman",
+   "scientific_name": "Caiman crocodilus"
+  },
+  {
+   "model_slug": "tobacco-grasshopper",
+   "landing_page_slug": "slant-faced-grasshopper",
+   "normalized_identity_key": "slant_faced_grasshopper",
+   "display_name": "Tobacco Grasshopper",
+   "animal_name": "Tobacco Grasshopper",
+   "refined_identity": "Tobacco Grasshopper",
+   "scientific_name": "Atractomorpha crenulata"
+  },
+  {
+   "model_slug": "treehopper",
+   "landing_page_slug": "thorn-bug",
+   "normalized_identity_key": "treehopper",
+   "display_name": "Treehopper",
+   "animal_name": "Treehopper",
+   "refined_identity": "Treehopper",
+   "scientific_name": "Membracidae"
+  },
+  {
+   "model_slug": "two-spotted-cricket",
+   "landing_page_slug": "field-cricket",
+   "normalized_identity_key": "field_cricket",
+   "display_name": "Two-spotted Cricket",
+   "animal_name": "Field Cricket",
+   "refined_identity": "Two-spotted Cricket",
+   "scientific_name": "Gryllus bimaculatus"
+  },
+  {
+   "model_slug": "western-fence-lizard",
+   "landing_page_slug": "pacific-blue-bellied-lizard",
+   "normalized_identity_key": "pacific_blue_bellied_lizard",
+   "display_name": "Western Fence Lizard",
+   "animal_name": "Western Fence Lizard",
+   "refined_identity": null,
+   "scientific_name": "Sceloporus occidentalis"
+  },
+  {
+   "model_slug": "woodlouse-hunter-spider",
+   "landing_page_slug": "woodlouse-hunter",
+   "normalized_identity_key": "woodlouse_hunter",
+   "display_name": "Woodlouse Hunter Spider",
+   "animal_name": "Woodlouse Hunter",
+   "refined_identity": "Woodlouse Hunter Spider",
+   "scientific_name": "Dysdera crocata"
+  },
+  {
+   "model_slug": "yellow-spotted-millipede",
+   "landing_page_slug": "millipede",
+   "normalized_identity_key": "millipede",
+   "display_name": "Yellow-spotted Millipede",
+   "animal_name": "Millipede",
+   "refined_identity": "Yellow-spotted Millipede",
+   "scientific_name": "Anoplodesmus saussurii"
+  }
+ ]
+}

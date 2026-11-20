@@ -76,6 +76,17 @@ export async function getSpeciesArtworkSlugs(): Promise<ReadonlyMap<string, stri
     return index.bySlug.size ? index.bySlug : null;
 }
 
+/**
+ * The live listing's whole index (cached as above), or null when the listing is unavailable: for a surface that must
+ * resolve a species' icon exactly as the catalog does (`resolveArtworkFileInIndex`), as the Ark's icons do for a
+ * species with no art at its own slug (`lib/ark-icons.ts`). Its `bySlug` is `getSpeciesArtworkSlugs`.
+ */
+export async function getSpeciesArtworkIndex(): Promise<ArtworkIndex | null> {
+    const index = await getIndex();
+
+    return index.bySlug.size ? index : null;
+}
+
 let snapshotIndex: ArtworkIndex | null = null;
 
 /**

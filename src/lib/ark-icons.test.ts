@@ -47,13 +47,24 @@ test("ark icons: the names a species' icon may be filed under, best first, each 
 });
 
 test("ark icons: a species whose art is under another of its own names is found; a relative's or a composite is not", () => {
-    const artwork = buildArtworkIndex(["manta-ray.webp", "bengal-tiger.webp", "lion-vs-tiger.webp", "felis-catus.webp", "tiger-vs-mantas.webp"]).bySlug;
+    const artwork = buildArtworkIndex(["manta-ray.webp", "bengal-tiger.webp", "lion-vs-tiger.webp", "felis-catus.webp", "tiger-vs-mantas.webp"]);
     assert.equal(arkIconAlias([manta], artwork), "manta-ray");
     // The page slug comes first; the identity key and the names follow.
     assert.equal(arkIconAlias([{normalized_identity_key: "felis_catus"}, {scientific_name: "Felis catus"}], artwork), "felis-catus");
     assert.equal(arkIconAlias([{display_name: "Tiger"}], artwork), null, "bengal-tiger is a relative");
     assert.equal(arkIconAlias([{display_name: "Lion vs Tiger"}], artwork), null, "a matchup is not a species' art");
     assert.equal(arkIconAlias([], artwork), null);
+});
+
+test("ark icons: a species' page slug resolves as the catalog resolves it (spellings, aliases, the closest relative)", () => {
+    const artwork = buildArtworkIndex(["rock-pigeon.webp", "bengal-tiger.webp", "pig.webp", "secretarybird.webp", "lion-vs-tiger.webp"]);
+    // Domestic Pigeon: Ark slug `domestic-pigeon`, page `rock-pigeon` (owner report 2026-11-20).
+    assert.equal(arkIconAlias([{landing_page_slug: "rock-pigeon", display_name: "Domestic Pigeon"}], artwork), "rock-pigeon");
+    // `/animals/tiger` shows the Bengal tiger, so the Ark does; a name (not the page) is still matched exactly.
+    assert.equal(arkIconAlias([{landing_page_slug: "tiger"}], artwork), "bengal-tiger");
+    assert.equal(arkIconAlias([{landing_page_slug: "domestic-pig"}], artwork), "pig");
+    assert.equal(arkIconAlias([{landing_page_slug: "secretary-bird"}], artwork), "secretarybird");
+    assert.equal(arkIconAlias([{landing_page_slug: "lion"}], artwork), null, "a matchup is not a species' art");
 });
 
 test("ark icons: noIcon carries [slug, file] for an aliased species and the bare slug for one with no art anywhere", () => {
@@ -76,7 +87,7 @@ test("ark icons: the page asks for an aliased species' file, never the generic f
 });
 
 test("ark icons: the audit counts the animals drawn as the generic figure although a file exists under one of their names", () => {
-    const artwork = buildArtworkIndex(["red-fox.webp", "manta-ray.webp"]).bySlug;
+    const artwork = buildArtworkIndex(["red-fox.webp", "manta-ray.webp"]);
     const animals = [
         {model_slug: "red-fox", species_profile_id: "a"},
         {model_slug: "giant-oceanic-manta-ray", species_profile_id: "b"},

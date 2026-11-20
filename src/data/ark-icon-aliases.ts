@@ -1,5 +1,6 @@
 import "server-only";
 import {arkIconAlias, type ArkIconProfile} from "@/lib/ark-icons";
+import type {ArtworkIndex} from "@/data/species-artwork-resolution";
 import {getSupabaseHeaders, getSupabaseServerReadKey, getSupabaseUrl} from "@/lib/supabase-http";
 
 /** As long as the bucket listing is kept (`species-artwork-index.ts`): an icon uploaded since is found within this. */
@@ -21,7 +22,7 @@ let memo: Memo | null = null;
  * the listing's identity ends it with the listing); a species that cannot be read is simply left out, and the answer
  * keeps the generic figure for it, as before.
  */
-export async function readArkIconAliases(animals: ReadonlyArray<{model_slug: string; species_profile_id: string}>, missing: readonly string[], artwork: ReadonlyMap<string, string>): Promise<Map<string, string>> {
+export async function readArkIconAliases(animals: ReadonlyArray<{model_slug: string; species_profile_id: string}>, missing: readonly string[], artwork: ArtworkIndex): Promise<Map<string, string>> {
     const now = Date.now();
     if (!memo || memo.artwork !== artwork || now - memo.at >= TTL_MS) memo = {artwork, at: now, found: new Map(), retryAt: 0, pending: null};
     const state = memo;
@@ -41,7 +42,7 @@ export async function readArkIconAliases(animals: ReadonlyArray<{model_slug: str
     return aliases;
 }
 
-async function load(state: Memo, animals: ReadonlyArray<{model_slug: string; species_profile_id: string}>, slugs: readonly string[], artwork: ReadonlyMap<string, string>): Promise<void> {
+async function load(state: Memo, animals: ReadonlyArray<{model_slug: string; species_profile_id: string}>, slugs: readonly string[], artwork: ArtworkIndex): Promise<void> {
     const url = getSupabaseUrl();
     const key = getSupabaseServerReadKey();
     if (!url || !key) {
