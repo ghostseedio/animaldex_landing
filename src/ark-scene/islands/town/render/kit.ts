@@ -309,11 +309,11 @@ export class Geo {
     /**
      * A leafy bush (graphics pass 1, lane VEG: the owner, "bushes look really bad"; they were one 20-face green ball; ark-world,
      * decision 447, "better modeling and graphics on bushes": they were still seven 20-face lumps drawn flat, each face
-     * its own shade, big green facets close up): a dark heart under five lumps of leaves round its top and sides, each a
-     * lumpy 80-face mass SHADED SMOOTH (its normals lean out from the bush's middle, so the lumps melt into one mound and
+     * its own shade, big green facets close up): a dark heart under seven lumps of leaves round its top and sides, each a
+     * lumpy 20-face mass SHADED SMOOTH (its normals lean out from the bush's middle, so the lumps melt into one mound and
      * the light rolls over them instead of breaking on facets), every corner its own green (lighter on top and at the
      * leaf tips, darker low and inside, mottled so the leaves read), the lumps overlapping into a ragged crown. The same
-     * reach (`sx`, `sy`, `sz`, about its middle); 420 faces, was 160.
+     * reach (`sx`, `sy`, `sz`, about its middle); the same 160 faces (the town's scenery is 635k triangles and a phone's heap is tight).
      */
     bush(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number, colour: [number, number, number], seed: number) {
         let s = (seed ^ 0x5bd1e995) >>> 0;
@@ -326,7 +326,7 @@ export class Geo {
         };
         // The dark heart: smooth too, so no light flat facet shows through the leaves.
         this.smoothLump(cx, cy - sy * 0.1, cz, sx * 0.7, sy * 0.7, sz * 0.7, [cx, cy, cz], [colour[0] * 0.55, colour[1] * 0.55, colour[2] * 0.55], 0.55, rand, 0);
-        const clumps = 5;
+        const clumps = 7;
         for (let k = 0; k < clumps; k++) {
             const a = (k / clumps) * Math.PI * 2 + rand() * 0.7;
             // Round the sides low down, over the top higher up.
@@ -335,10 +335,10 @@ export class Geo {
             const x = cx + Math.cos(a) * out * sx * 0.5;
             const y = cy + (up - 0.2) * sy * 0.55;
             const z = cz + Math.sin(a) * out * sz * 0.5;
-            const r = 0.5 + rand() * 0.14;
+            const r = 0.44 + rand() * 0.14;
             const k2 = (0.88 + 0.26 * up) * (0.94 + rand() * 0.12);
             const green: [number, number, number] = [colour[0] * k2 * (0.94 + rand() * 0.12), colour[1] * k2, colour[2] * k2 * (0.9 + rand() * 0.15)];
-            this.smoothLump(x, y, z, sx * r, sy * r * 0.92, sz * r, [cx, cy - sy * 0.15, cz], green, 1, rand, 1);
+            this.smoothLump(x, y, z, sx * r, sy * r * 0.92, sz * r, [cx, cy - sy * 0.15, cz], green, 1, rand, 0);
         }
     }
 

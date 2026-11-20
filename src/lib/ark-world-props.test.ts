@@ -110,7 +110,7 @@ test("a patch of ground cover is a soft single-sided ring: up-facing, a smooth o
     const geo = new Geo();
     const radius = 2;
     patch(geo, plot, 3, -2, radius, [0.6, 0.5, 0.3], 12345, 0.03);
-    assert.ok(geo.triangles >= 80 && geo.triangles <= 110, `${geo.triangles} triangles`);
+    assert.ok(geo.triangles >= 45 && geo.triangles <= 60, `${geo.triangles} triangles`);
     for (let i = 1; i < geo.nor.length; i += 3) assert.ok(geo.nor[i] > 0.99, "every face looks up");
     let rimLift = 0;
     let midLift = 0;
@@ -127,7 +127,7 @@ test("a patch of ground cover is a soft single-sided ring: up-facing, a smooth o
     const outer: number[] = [];
     const ringVerts = vertices(geo).map(([x, y, z]) => ({d: Math.hypot(x - 3, z + 2), a: Math.atan2(z + 2, x - 3), y: y - 1}));
     for (const v of ringVerts.filter((q) => Math.abs(q.y - Math.max(0.03 * 0.7, 0.03 - 0.004)) < 1e-6 && q.d > radius * 0.7).sort((p, q) => p.a - q.a)) outer.push(v.d);
-    assert.ok(outer.length >= 18);
+    assert.ok(outer.length >= 16);
     for (let i = 1; i < outer.length; i++) assert.ok(Math.abs(outer[i] - outer[i - 1]) < radius * 0.5, "no spiky corners");
     assert.ok(geo.pos.every(Number.isFinite) && geo.nor.every(Number.isFinite) && geo.col.every(Number.isFinite));
 });
@@ -160,10 +160,10 @@ test("a kopje is a tor of ten blocks and more, in varied darker granite, inside 
     }
 });
 
-test("a bush is smooth-shaded lumps in mottled greens, not flat-faced facets: a vertex's normal differs across its triangle, the greens vary, 400 to 450 faces", () => {
+test("a bush is smooth-shaded lumps in mottled greens, not flat-faced facets: a vertex's normal differs across its triangle, the greens vary, 160 faces", () => {
     const geo = new Geo();
     geo.bush(0, 1, 0, 1.2, 0.8, 1.2, [0.2, 0.45, 0.18], 4242);
-    assert.ok(geo.triangles >= 400 && geo.triangles <= 450, `${geo.triangles} triangles`);
+    assert.ok(geo.triangles === 160, `${geo.triangles} triangles (the same as the flat bush it replaces)`);
     let smooth = 0;
     const greens = new Set<string>();
     for (let t = 0; t < geo.triangles; t++) {
@@ -173,7 +173,7 @@ test("a bush is smooth-shaded lumps in mottled greens, not flat-faced facets: a 
         greens.add([0, 1, 2].map((k) => geo.col[(t * 3) * 3 + k].toFixed(3)).join(","));
     }
     assert.ok(smooth > geo.triangles * 0.95, `${smooth} of ${geo.triangles} triangles carry their own corner normals`);
-    assert.ok(greens.size > 100, `${greens.size} distinct corner greens (a flat lump has one a face)`);
+    assert.ok(greens.size > 60, `${greens.size} distinct corner greens (a flat lump has one a face)`);
     assert.ok(geo.pos.every(Number.isFinite) && geo.nor.every(Number.isFinite) && geo.col.every(Number.isFinite), "no NaN");
     // The normals are unit and lean out of the bush, not into it.
     for (let i = 0; i < geo.nor.length; i += 3) assert.ok(Math.abs(Math.hypot(geo.nor[i], geo.nor[i + 1], geo.nor[i + 2]) - 1) < 1e-5);

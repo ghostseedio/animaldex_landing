@@ -177,16 +177,16 @@ export function ledge(geo: Geo, plot: Plot, lx: number, lz: number, size: number
  * corner), the surface is three rings of one colour that darkens and settles toward the floor at the rim (the trodden
  * edge where the soil meets the grass: the edge ring sits at 70 % of the lift), the cells carry a little grain, and a few
  * specks of the same earth lie just outside it, so the edge is ragged, not a polygon. Single-sided (it is seen from above:
- * the winding faces up), 90 triangles a patch where the old was 28 drawn both ways.
+ * the winding faces up), about 50 triangles a patch where the old was 28 drawn both ways (the town's scenery is 635k triangles).
  */
 export function patch(geo: Geo, plot: Plot, lx: number, lz: number, radius: number, colour: RGB, seed: number, lift = 0.012) {
     const r = rng(seed);
-    const n = 18;
+    const n = 16;
     const phase = [r() * 6.28, r() * 6.28, r() * 6.28];
     // The outline's radius at an angle: 1 ± 0.3 at most, smooth (2, 3 and 5 lobes).
     const reach = (a: number) => radius * (1 + 0.15 * Math.sin(2 * a + phase[0]) + 0.1 * Math.sin(3 * a + phase[1]) + 0.05 * Math.sin(5 * a + phase[2]));
     // Rings: the share of the reach, the lift (share of `lift`) and the colour's factor there.
-    const rings: Array<[number, number, number]> = [[0, 1, 1.04], [0.52, 1, 1.0], [0.86, 0.92, 0.94], [1, 0.7, 0.84]];
+    const rings: Array<[number, number, number]> = [[0, 1, 1.04], [0.66, 1, 0.97], [1, 0.7, 0.86]];
     const at2 = (ring: number, i: number): V3 => {
         const a = (i / n) * Math.PI * 2;
         const k = rings[ring][0] * reach(a);
@@ -213,7 +213,7 @@ export function patch(geo: Geo, plot: Plot, lx: number, lz: number, radius: numb
     }
     // Specks of the same earth just past the rim: little irregular flecks, never over a resident's spot (the patch's own
     // footprint rules do not apply: they are a handful of centimetres).
-    const flecks = 6;
+    const flecks = 4;
     for (let k = 0; k < flecks; k++) {
         const a = r() * Math.PI * 2;
         const d = reach(a) * (0.95 + r() * 0.22);

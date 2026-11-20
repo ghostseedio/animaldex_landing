@@ -240,7 +240,7 @@ const TOWN_DIGESTS = {
     // (p5 (zoospace): the dome's building: drum, lattice and netting, lobby, paths, boardwalk, lagoon, lamps, `render/dome.ts`.)
     // (p6 (zoo merge): the countryside and the dome together.)
     // (ark-world, decision 447: the safari truck's round wheels are not in this hash (an instanced mesh), but the gate arch square to its road, the hen houses' wheels, the smooth-shaded bushes (`Geo.bush`) and the new bush lumps changed the scenery's geometry; refreshed.)
-    sceneryAndBuildings: "a16a1ef9d9e3009a",
+    sceneryAndBuildings: "9d52e7c4536cf43b",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
@@ -248,7 +248,7 @@ const TOWN_DIGESTS = {
     // (p5 (zoospace): the zoo's new homes on the freed plots dressed as their kinds' exhibits, `render/zoo-habitat.ts`.)
     // (p5 (zoospace): the dome's birds out of the aviaries; the vulture aviary and the stork flight wider.)
     // (ark-world, decision 447: kopjes as piles of fourteen granite blocks, soft three-ring earth patches, the dome's waterfall curtain, smooth bushes; refreshed.)
-    zoo: "66e2fe3e59f54ddb",
+    zoo: "5d616bc6aebac218",
     // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
     // (p4 (safari): the herbivores, big cats, hyenas and crocodilians moved to the safari by the rule, `town/safari.ts`.)
     // (Pass 5 rural lane: pass 4 merged into the safari; these recomputed on that merge. Then p5 (rural): the countryside
