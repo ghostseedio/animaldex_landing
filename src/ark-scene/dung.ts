@@ -14,6 +14,8 @@
  */
 
 import type {ActPose} from "@/ark-scene/acts";
+import {mapSpecies} from "@/ark-scene/map/species";
+import type {ArkZone} from "@/ark-scene/types";
 
 export type DungDiet = "plants" | "mixed" | "meat";
 
@@ -93,4 +95,36 @@ export function dungPose(p: {x: number; z: number}, yaw: number, base: number, d
     const turn = Math.min(t / 1.5, 1);
     const e = turn * turn * (3 - 2 * turn);
     return {...mk(yaw + Math.PI * e, turn < 1 ? "walk" : "eat", turn < 1 ? 0 : 0.12), x: ahead.x - Math.sin(yaw) * length * 0.25 * e, z: ahead.z - Math.cos(yaw) * length * 0.25 * e, meal: undefined};
+}
+
+/**
+ * Dung users at real dung (AnimalDex decision 434; docs/ark/dung-and-logs.md in AnimalDex): the beetles and flies whose
+ * stored microhabitats include dung (`map/species.ts`: a dung beetle, a rainbow scarab, a yellow dung fly, blow flies, a
+ * house fly...) go to the freshest mark near them instead of standing at a fixed pat: dung beetles find a fresh pat
+ * within minutes, by smell, from tens of metres (Hanski & Cambefort 1991), and flies land on it as soon. Acting only, as
+ * the marks are: the server's dung (its food supply, behind `dung`) decides who is fed; this shows where.
+ */
+export const DUNG_VISIT_METRES = 30;
+/** At most this many on one mark at once (the rest stay home). */
+export const DUNG_VISIT_CROWD = 6;
+
+const usesDung = new Map<string, boolean>();
+/** Whether its kind lives on dung (its stored microhabitats). */
+export function eatsDung(slug: string, zone: ArkZone): boolean {
+    let on = usesDung.get(slug);
+    if (on === undefined) usesDung.set(slug, (on = Boolean(mapSpecies(slug, zone)?.allowed.has("dung"))));
+    return on;
+}
+
+/**
+ * Its pose on a mark (`s` seconds into its visit): on the pat's rim, each at its own place round it, a beetle crawling
+ * slowly round and into it, a fly hopping a little and settling again.
+ */
+export function dungVisitPose(mark: {x: number; z: number; size: number}, key: string, base: number, fly: boolean, s: number): ActPose {
+    const u = unit(`${key}:visit`);
+    const r = mark.size * (0.35 + 0.45 * unit(`${key}:ring`));
+    const a = u * Math.PI * 2 + (fly ? 0 : s * 0.12);
+    const x = mark.x + Math.cos(a) * r, z = mark.z + Math.sin(a) * r;
+    const hop = fly ? Math.max(0, Math.sin(s * 1.3 + u * 20) - 0.85) * 0.25 : 0;
+    return {x, z, base: base + hop, yaw: a + Math.PI / 2 + (fly ? Math.PI / 2 : 0), pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: hop > 0 ? "fly" : fly ? "rest" : "walk", speed: fly ? 0 : r * 0.12};
 }

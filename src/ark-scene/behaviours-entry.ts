@@ -112,7 +112,9 @@ const SCENES: Record<string, Scene> = {
     gbask: {zone: "river_lake", hours: 11, kind: "group", cast: [{slug: "red-eared-slider", name: "Red-eared Slider", n: 5}]},
     gpairs: {zone: "rainforest", hours: 12, kind: "group", cast: [{slug: "blue-fronted-amazon", name: "Blue-fronted Amazon", n: 7}]},
     // A herd's droppings along its day.
-    dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
+    dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]},
+    // Decision 434: the dung users at a herd's fresh marks (`dung.ts` dungVisitPose).
+    dungusers: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "dung-beetle", name: "Dung Beetle", n: 5}, {slug: "yellow-dung-fly", name: "Yellow Dung Fly", n: 4}]}
 };
 
 const castId = (k: number, i: number) => `0000feed-0000-4000-8000-${(k * 256 + i).toString(16).padStart(12, "0")}`;

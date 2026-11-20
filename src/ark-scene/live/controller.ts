@@ -33,6 +33,7 @@ import {HuntOutcomes, caughtText, withoutEndedHunts} from "@/ark-scene/live/hunt
 import {crisisText, recordItems} from "@/ark-scene/live/crisis-lines"; // E4 (the crisis layer)
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
+import {richItems, richNotes} from "@/ark-scene/live/rich-lines"; // decision 434
 import {forestDeathRecords, forestItems, forestText} from "@/ark-scene/live/forest-lines"; // p5 (humans)
 import {humanItems, humanText} from "@/ark-scene/live/human-lines"; // p5 (humans)
 import {releaseItems, releaseText} from "@/ark-scene/live/release-lines"; // Release to the Wild (P1-8)
@@ -486,6 +487,18 @@ export class ArkLive {
         const couples = humanItems(raw, from, (key) => this.said.has(key));
         for (const item of couples) this.remember(item.id);
         if (couples.length) this.push(couples);
+        // Rich events (AnimalDex decision 434, `rich-lines.ts`): grown up, growing old, a breeding season, a carer, the ground,
+        // a first mating, a mate found after a long wait, fresh dung found. Their lines for the animals' own logs go first,
+        // so a first mating's line takes the plain one's place.
+        const rich = richItems(raw, from, (key) => this.said.has(key), this.text, this.locale);
+        for (const item of rich) this.remember(item.id);
+        if (rich.length) this.push(rich);
+        try {
+            const notes = richNotes(raw, this.text, this.locale);
+            if (notes.length) this.options.scene()?.noteRecord?.(notes);
+        } catch {
+            // (A scene without animal logs: the log says them all the same.)
+        }
         // Release to the Wild (P1-8): a zoo animal that now lives free (`release-lines.ts`).
         const freed = releaseItems(raw, from, (key) => this.said.has(key));
         for (const item of freed) this.remember(item.id);

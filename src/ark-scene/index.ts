@@ -282,7 +282,7 @@ import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 import {defenceMoveOf, defencePack, defenceSaid, disturbedNow, escapesRunning, holdsNow, newDefenceState, predatorBeside, stepDefence, type DefenceSpec, type DefenceState} from "@/ark-scene/defence-moves";
 // p3 (shake): shaking off the water after a swim.
 import {SHAKE_LINE, shakePackOf, shakeStartOf} from "@/ark-scene/water-shake";
-import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
+import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, DUNG_VISIT_CROWD, DUNG_VISIT_METRES, dungAlpha, dungDiet, dungDrops, dungPose, dungVisitPose, eatsDung, leavesDung} from "@/ark-scene/dung";
 import pouchTable from "@/ark-scene/pouch.json";
 import {speciesCare} from "@/lib/ark-age";
 // 3.3 batch (C): young with their recorded mother
@@ -2412,7 +2412,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (A meal's act says what it is drawn doing: hunting in the chase, eating, drinking, resting after it, scavenging.)
         const activity = entry.act?.meal ?? (plan ? plan.activity : arkActivityKey({doing: null, asleep: entry.state.asleep, airborne: entry.state.airborne, breathing: entry.state.breathing}));
         const notes = records.get(animal.id) ?? [];
-        const record: ArkStatusLogEntry[] = [arkOriginEntry(animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null}))];
+        const record: ArkStatusLogEntry[] = [arkOriginEntry(animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null, ...(note.text ? {text: note.text} : {})}))];
         // How fed it is and its energy over its day (card truth, 2026-11-13): from its own schedule, its eating and waking
         // slots (awake at its slot's start, as the schedule reads it); a kill of its on record (its log's meals) fills it.
         // (A kill of its, or a step's meal for it, `fed` with source step: each fills it from that moment.)
@@ -2447,7 +2447,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (!range || !entry) return Promise.resolve(null);
         const recordIn = (): ArkStatusLogEntry[] => {
             const notes = records.get(id) ?? [];
-            const all: ArkStatusLogEntry[] = [arkOriginEntry(entry.animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null}))];
+            const all: ArkStatusLogEntry[] = [arkOriginEntry(entry.animal, notes.some((note) => note.kind === "hatched")), ...notes.filter((note) => note.kind !== "born" && note.kind !== "hatched" && note.kind !== "arrived").map((note) => ({id: note.id, source: "record" as const, at: note.at, day: note.day, kind: note.kind, other: note.other ?? null, count: note.count ?? null, via: note.via ?? null, ...(note.text ? {text: note.text} : {})}))];
             return all.filter((line) => line.at >= range.from && line.at < range.to).sort((a, b) => a.at - b.at);
         };
         return new Promise((resolve) => {
@@ -8646,9 +8646,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     let dungMarks: TraceDraw[] = [];
     let dungPauses: Array<{entry: Entry; key: string; at: number; place: {x: number; z: number; yaw: number}}> = [];
     const dungActing = new Set<Entry>();
+    let dungVisits: Array<{entry: Entry; mark: TraceDraw; key: string; fly: boolean}> = [];
     const stepDung = () => {
         if (!world || reducedMotion || !scheduleOn) {
             if (dungMarks.length) dungMarks = [];
+            dungVisits = [];
+            dungActing.forEach((e) => {
+                if (e.act) e.act = null;
+            });
+            dungActing.clear();
             return;
         }
         const epoch = worldMs() / 1000;
@@ -8683,6 +8689,31 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             dungMarks = marks;
             dungPauses = pauses;
+            // Decision 434: the dung users near the camera go to the freshest mark near them (`dung.ts` dungVisitPose),
+            // a few to a mark; one with no fresh mark near stays at home (its microhabitat, the map's pat).
+            const visits: typeof dungVisits = [];
+            const fresh = marks.filter((m) => m.alpha >= 1);
+            const crowd = new Map<string, number>();
+            if (fresh.length) {
+                for (const e of allEntries()) {
+                    if (e.held || e.visitor || !eatsDung(e.animal.model_slug, e.animal.zone)) continue;
+                    const home = e.middle ?? e.place;
+                    if (Math.hypot(home.x - controls.target.x, home.z - controls.target.z) > DUNG_NEAR) continue;
+                    let best: (typeof fresh)[number] | null = null;
+                    let bestD = DUNG_VISIT_METRES;
+                    for (const m of fresh) {
+                        const d = Math.hypot(m.x - home.x, m.z - home.z);
+                        if (d < bestD && (crowd.get(m.key) ?? 0) < DUNG_VISIT_CROWD) {
+                            best = m;
+                            bestD = d;
+                        }
+                    }
+                    if (!best) continue;
+                    crowd.set(best.key, (crowd.get(best.key) ?? 0) + 1);
+                    visits.push({entry: e, mark: best, key: `${e.animal.id}|${best.key}`, fly: e.sched?.profile.move === "fly" || FLYERS.has(e.animal.model_slug) || /fly$/.test(e.animal.model_slug)});
+                }
+            }
+            dungVisits = visits;
         }
         const acting = new Set<Entry>();
         for (const pause of dungPauses) {
@@ -8691,6 +8722,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const act = dungPose(pause.place, pause.place.yaw, Math.max(heightAt(pause.place.x, pause.place.z), 0), dungDiet(e.sched!.profile.diet), e.length, pause.key, epoch - pause.at);
             if (!act) continue;
             e.act = act;
+            acting.add(e);
+        }
+        for (const visit of dungVisits) {
+            const e = visit.entry;
+            if (acting.has(e) || e.moment || e.visitor || e.held || (e.act && !dungActing.has(e)) || mealPins.has(e.animal.id)) continue;
+            e.act = dungVisitPose(visit.mark, visit.key, Math.max(heightAt(visit.mark.x, visit.mark.z), 0), visit.fly, epoch);
             acting.add(e);
         }
         dungActing.forEach((e) => {
@@ -10135,6 +10172,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return entry ? rhythmOf(entry, asked.budgetMs ?? 8, asked.stepFeeds ?? false) : null;
         },
         noteRecord,
+        eatsDung,
         animalDay,
         happening,
         reactive: (id) => {

@@ -360,11 +360,11 @@ test("the live log's now lines come only from the scene's moments, each said onc
     log.push([{id: "e1", kind: "arrival", source: "server", key: "arrival:s3", animal: "House Sparrow", other: null, count: 1, eggs: null, focus: {animalId: null, speciesId: null, zone: null}}], 0);
     log.step(0);
     assert.equal(log.lines[0].source, "server", "the record first");
-    log.step(1_200);
+    log.step(1_600);
     assert.equal(log.lines[1]?.source, "now");
-    log.step(2_400);
+    log.step(3_200);
     assert.equal(log.lines.length, 2, "the next now line waits its gap");
-    log.step(1_200 + 3_600);
+    log.step(1_600 + 3_600);
     assert.equal(log.lines.length, 3);
 });
 

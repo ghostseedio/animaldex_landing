@@ -64,6 +64,8 @@ export function useArkLive({sceneRef, snapshotRef, setSnapshot, ready, words, lo
             if (snapshotRef.current) live.snapshot(snapshotRef.current);
             live.setCovered(coveredRef.current);
             liveRef.current = live;
+            // Development: the log by hand, for its pictures (`__arkLive.log.push(items, performance.now())`).
+            if (process.env.NODE_ENV !== "production") (window as unknown as {__arkLive?: ArkLive}).__arkLive = live;
         });
         return () => {
             disposed = true;
