@@ -14,18 +14,69 @@
 
 import {hashText, inBox, rng, toLocal, type Box, type Pt} from "@/ark-scene/islands/town/geom";
 import {at, Geo, tone, type Frame} from "@/ark-scene/islands/town/render/kit";
-import {cactus, fern, ledge, log, outcrop, patch, Plot, termiteMound, tuft} from "@/ark-scene/islands/town/render/zoo-habitat";
+import {cactus, fern, ledge, log, patch, Plot, termiteMound, tuft} from "@/ark-scene/islands/town/render/zoo-habitat";
 import {SAFARI_KOPJES, SAFARI_TERMITES, safariArea, safariWaterNorm, type SafariHabitat} from "@/ark-scene/islands/town/safari";
 
 type RGB = [number, number, number];
 
-const GRANITE = tone("#a39686");
+// (ark-world, decision 447, "kopjes pale and smooth": the one pale #a39686 on every boulder, in the strata shader's lighter
+// beds and the sun, read as concrete. Granite tors are grey-brown, stained dark under the rain and ochre where lichen
+// holds, so each boulder takes its own of these.)
+const GRANITE_TONES: RGB[] = [tone("#6a625a"), tone("#786a5c"), tone("#58524b"), tone("#85704f"), tone("#665f57"), tone("#7a7064")];
 const SANDSTONE = tone("#c4a274");
 const DRY_GRASS = tone("#c9b26a");
 const GREEN_GRASS = tone("#7c9a46");
 const REED = tone("#6f8a3e");
 const EARTH = tone("#a8946c");
 const MUD = tone("#6e5c44");
+
+/**
+ * A kopje: a tor of granite, nine or ten blocks piled in three tiers inside `r` of its middle (the footprint the spots keep
+ * clear of), `h` tall: a ring of big blocks (two of them angular, bedded and jointed; the rest rounded), a tier of three
+ * on them, a balanced cap, and a few fallen boulders at the foot. Each its own grey, brown or lichen-ochre, partly sunk.
+ * Every block takes a solid from the ground up (the tiers are one mass to a walker), as `outcrop`'s do.
+ */
+export function kopje(geo: Geo, plot: Plot, lx: number, lz: number, r: number, h: number, seed: number) {
+    const rand = rng(seed);
+    const toneOf = (i: number): RGB => {
+        const t = GRANITE_TONES[(i + seed) % GRANITE_TONES.length];
+        const k = 0.9 + rand() * 0.2;
+        return [t[0] * k, t[1] * k, t[2] * k];
+    };
+    let n = 0;
+    const block = (x: number, z: number, size: number, lift: number, squash: number, crag: boolean, solid = true) => {
+        const p = plot.p(x, z, 0);
+        const sx = size * (0.9 + rand() * 0.35);
+        const sz = size * (0.9 + rand() * 0.35);
+        const sy = size * squash;
+        const turn = rand() * 6.28;
+        const base = p[1] + lift - size * 0.16;
+        geo.rock(p[0], base, p[2], sx, sy, sz, turn, toneOf(n++), hashText(`${seed}:kopje:${n}`), 2, crag);
+        if (solid) plot.solids.push({kind: "rock", shape: "box", x: p[0], z: p[2], hw: sx * 0.85, hd: sz * 0.85, rot: turn, base: p[1] - size * 0.16, top: base + sy});
+    };
+    // The ring of big blocks (and the heaviest in the middle).
+    block(lx, lz, r * 0.46, 0, 0.82, true);
+    const ring = 5;
+    const spin = rand() * 6.28;
+    for (let i = 0; i < ring; i++) {
+        const a = spin + (i / ring) * Math.PI * 2 + (rand() - 0.5) * 0.4;
+        const d = r * (0.42 + rand() * 0.13);
+        block(lx + Math.cos(a) * d, lz + Math.sin(a) * d, r * (0.26 + rand() * 0.12), 0, 0.78 + rand() * 0.2, i < 2);
+    }
+    // The second tier, on the middle's shoulders, and the balanced cap.
+    for (let i = 0; i < 3; i++) {
+        const a = spin + 0.6 + (i / 3) * Math.PI * 2;
+        block(lx + Math.cos(a) * r * 0.2, lz + Math.sin(a) * r * 0.2, r * (0.26 + rand() * 0.08), h * 0.36, 0.8, false);
+    }
+    block(lx + (rand() - 0.5) * r * 0.1, lz + (rand() - 0.5) * r * 0.1, r * 0.22, h * 0.62, 0.78, false);
+    // Fallen boulders at the foot: rolled off, half sunk.
+    for (let i = 0; i < 5; i++) {
+        const a = rand() * Math.PI * 2;
+        const d = r * (0.82 + rand() * 0.2);
+        const size = 0.25 + rand() * 0.35;
+        block(lx + Math.cos(a) * d, lz + Math.sin(a) * d, size, -size * 0.1, 0.7, false, size > 0.45);
+    }
+}
 
 /** A safari area's dressing; null where `e` is not a safari area. */
 export function dressSafari(e: {id: string; slot: {at: Box; seed: number; safari?: SafariHabitat}}, spots: readonly Pt[], solid: Geo, heightAt: (x: number, z: number) => number, cover: Geo | null = null): Plot | null {
@@ -68,13 +119,9 @@ export function dressSafari(e: {id: string; slot: {at: Box; seed: number; safari
         if (!inBox(s, k.x, k.z, -1)) continue;
         const q = toLocal(s, k.x, k.z);
         plot.footprints.push({x: q.x, z: q.z, r: k.r, what: "rockwork"});
-        outcrop(solid, plot, q.x, q.z, k.h * 0.75, GRANITE, k.seed);
-        // A boulder or two leaning on it, and the grass grown up round its foot.
+        kopje(solid, plot, q.x, q.z, k.r, k.h, k.seed);
+        // The grass grown up round its foot.
         const r = rng(k.seed + 7);
-        for (let i = 0; i < 2; i++) {
-            const a = r() * 6.28;
-            outcrop(solid, plot, q.x + Math.cos(a) * k.r * 0.55, q.z + Math.sin(a) * k.r * 0.55, k.h * (0.35 + r() * 0.15), GRANITE, k.seed + 100 + i);
-        }
         for (let i = 0; i < 10; i++) {
             const a = (i / 10) * 6.28 + r() * 0.4;
             tuft(ground, plot, q.x + Math.cos(a) * (k.r + 0.4), q.z + Math.sin(a) * (k.r + 0.4), 0.7, DRY_GRASS, k.seed * 31 + i, 9);
@@ -127,7 +174,7 @@ export function dressSafari(e: {id: string; slot: {at: Box; seed: number; safari
         const radius = 1.4 + r() * 2.2;
         const colour = habitat === "desert" ? SANDSTONE : habitat === "wetland" || habitat === "river" ? MUD : EARTH;
         patch(solid, plot, lx, lz, radius, colour, hashText(`${e.id}:patch:${i}`), 0.03);
-        if (cover) patch(cover, plot, lx, lz, radius, colour, hashText(`${e.id}:patch:${i}`), 0.03);
+        if (cover) patch(cover, plot, lx, lz, radius, colour, hashText(`${e.id}:patch:${i}`), 0.03, true);
     }
     const area2 = (2 * W) * (2 * D);
     switch (habitat) {
