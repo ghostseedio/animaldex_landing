@@ -229,8 +229,8 @@ export function arkFoodChainRows(entry: ArkFoodChainEntry | null, relations: Ark
     }
     const eatenBy = entry.eatenBy.map((item) => ({id: item.predator.id.toLowerCase(), slug: item.predator.slug, name: item.predator.name, here: predatorsHere.get(item.predator.id.toLowerCase()) ?? 0}));
     const ambient = Array.isArray(entry.ambient) ? entry.ambient.filter((p): p is string => typeof p === "string" && p.trim().length > 0).map((p) => p.trim()) : [];
-    // (Those in its region first, then by name.)
-    const order = (a: ArkFoodChainKind, b: ArkFoodChainKind) => Number(b.here > 0) - Number(a.here > 0) || a.name.localeCompare(b.name);
+    // (The most of them in its region first, then by name.)
+    const order = (a: ArkFoodChainKind, b: ArkFoodChainKind) => b.here - a.here || a.name.localeCompare(b.name);
     return {eats: Array.from(eats.values()).sort(order), ambient, eatenBy: eatenBy.sort(order)};
 }
 
@@ -261,7 +261,6 @@ export type ArkRelationsWords = {
     more: string;
     lines: string;
     young: string;
-    none: string;
     note: string;
 };
 
@@ -283,8 +282,7 @@ export const ARK_RELATIONS_ENGLISH: ArkRelationsWords = {
     more: "+{n} more",
     lines: "Lines",
     young: "Too young to have a mate.",
-    none: "Nothing aboard could hunt it, feed it or be its mate here.",
-    note: "Who could, by the Ark's rules: never who will."
+    note: "Shows who could, never who will."
 };
 
 /** The viewer's choice, remembered in this browser only (never sent anywhere); default on. */

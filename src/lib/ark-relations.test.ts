@@ -152,3 +152,7 @@ test("food chain: kinds it eats and that eat it, with how many are in its region
     const kr = arkRelations({selected: kept, animals: [kept, zebra], entry: lionEntry, bodyOf: at({l9: [0, 0], z1: [1, 0]}), lifeOf: () => null});
     assert.deepEqual(arkFoodChainRows(lionEntry, kr), {eats: [], ambient: [], eatenBy: []});
 });
+
+test("relations words: the English fallback is en.json's", () => {
+    assert.deepEqual((en as unknown as {ark: {relations: unknown}}).ark.relations, ARK_RELATIONS_ENGLISH);
+});
