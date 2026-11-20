@@ -121,7 +121,9 @@ test("the real Ark's zoo: every enclosure's feeding times fall in its residents'
 const english = JSON.parse(readFileSync(path.join(__dirname, "..", "data", "locales", "en.json"), "utf8")).ark;
 
 test("its day's words: en.json's card words are the embed's fallback, in every Ark locale", () => {
-    assert.deepEqual(english.card, ARK_CARD_ENGLISH);
+    // The carers' line (decision 418) falls back in the card's lazy block, not in the static ARK_CARD_ENGLISH.
+    const {caredOwner: _o, caredFarmer: _f, caredKeeper: _k, ...card} = english.card;
+    assert.deepEqual(card, ARK_CARD_ENGLISH);
     const keys = ["itsDay", "dayLast", "dayEarlier", "dayLater", "dayNow", "dayWorking", "dayRecord", "dayNone", "dayClose", "dayHint"] as const;
     const dir = path.join(__dirname, "..", "data", "locales");
     const files = ["en.json", "id.json"];

@@ -51,10 +51,16 @@ type Props = {
 export default function ArkTimeLeft({release, day, snapshot = null, scene, sex, ...rest}: Props) {
     if (sex) return <ArkSex animals={[rest.animal]} words={rest.words.sex} locale={rest.locale} />;
     if (!release) return <ArkTimeLeftPanel snapshot={snapshot} {...rest} />;
+    // Carers (AnimalDex decision 418): who feeds a kept animal (a pet its owner, a farm animal the farmer, a zoo animal a
+    // keeper), under its status; here, in the card's lazy block, because the page's static JavaScript is budgeted.
+    const {animal, words} = rest;
+    const card = words.card;
+    const cared = animal.area && animal.model_slug !== "human" ? (animal.area === "house" ? card.caredOwner ?? "Cared for by its owner" : animal.area === "farm" ? card.caredFarmer ?? "Cared for by the farmer" : card.caredKeeper ?? "Cared for by a keeper") : null;
     return (
         <>
-            <ArkRelease animal={rest.animal} words={rest.words} locale={rest.locale} day={day ?? null} link={release} />
-            {scene ? <Suspense fallback={null}><ArkRelations key={rest.animal.id} animal={rest.animal} snapshot={snapshot} scene={scene} words={rest.words} locale={rest.locale} /></Suspense> : null}
+            {cared ? <p data-testid="ark-card-carer" className="mt-1 text-[11.5px] leading-snug text-ink-300">{cared}</p> : null}
+            <ArkRelease animal={animal} words={words} locale={rest.locale} day={day ?? null} link={release} />
+            {scene ? <Suspense fallback={null}><ArkRelations key={animal.id} animal={animal} snapshot={snapshot} scene={scene} words={words} locale={rest.locale} /></Suspense> : null}
         </>
     );
 }

@@ -39,10 +39,20 @@ async function main() {
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
     // p6 (people): `?people=procedural`: the p5 figures, for before/after frames.
     if (params.get("people") === "procedural") (globalThis as {__arkPeople?: string}).__arkPeople = "procedural";
+    // Carers (decision 418): `?carers=1` draws the keepers, farmers and owners as if the server's switch were on.
+    if (params.get("carers") === "1") (globalThis as {__arkCarers?: boolean}).__arkCarers = true;
     const template = fixture.animals[0];
     const dogs = Array.from({length: Number(params.get("dogs") ?? 60)}, (_, i) => ({...template, id: `0000d095-0000-4000-8000-${i.toString(16).padStart(12, "0")}`, species_profile_id: `5bec1e50-0000-4000-8000-00000000000${i % BREEDS.length}`, kind_species_profile_id: DOG_KIND_ID, kind_name: "Domestic Dog", name: BREEDS[i % BREEDS.length][1], scientific_name: "Canis lupus familiaris", model_slug: BREEDS[i % BREEDS.length][0], zone: "farm_garden", island: "town", area: "house", activity: "diurnal", sociality: "group", slot: 300 + i, slot_rank: 0, origin: "arrived"}));
     const people = Array.from({length: Number(params.get("humans") ?? 112)}, (_, i) => ({...template, id: `0000beef-0000-4000-8000-${i.toString(16).padStart(12, "0")}`, species_profile_id: "2fabfa9a-6ec9-4d71-8cf2-1933edaef6d2", name: "Human", scientific_name: "Homo sapiens", model_slug: "human", zone: "farm_garden", island: "town", area: "house", slot: 200, slot_rank: i, origin: "arrived"}));
-    const decoded = decodeArkSnapshot({...fixture, animals: [...dogs, ...people]});
+    // Carers: `?kept=1` adds kept animals of the fixture's kinds: zoo residents, farm animals, pets in tanks and gardens.
+    const like = (slug: string) => fixture.animals.find((a) => a.model_slug === slug)!;
+    const keptSpec: Array<[string, "zoo" | "farm" | "house", number, string?]> = params.get("kept") === "1"
+        ? [["african-lion", "zoo", 2, "big_cats-1"], ["meerkat", "zoo", 3, "small_mammals-1"], ["emperor-penguin", "zoo", 3, "penguin_seal_pools-1"], ["scarlet-macaw", "zoo", 2, "aviaries-1"],
+           ["domestic-goat", "farm", 4], ["mallard", "farm", 3], ["african-clawed-frog", "house", 6], ["domestic-cat", "house", 4], ["green-sea-turtle", "house", 1]]
+        : [];
+    let keptN = 0;
+    const kept = keptSpec.flatMap(([slug, area, n, enclosure]) => Array.from({length: n}, () => ({...like(slug), id: `0000ca7e-0000-4000-8000-${(keptN++).toString(16).padStart(12, "0")}`, island: "town", area, ...(enclosure ? {enclosure} : {}), slot: 400 + keptN, slot_rank: 0})));
+    const decoded = decodeArkSnapshot({...fixture, animals: [...dogs, ...people, ...kept]});
     if (!decoded) throw new Error("fixture did not decode");
     const snapshot = {...decoded, animals: decoded.animals.map((a) => ({...a, island: "town"}) as typeof a)};
     const [{arkIslandSnapshot}, {loadTownScene}] = await Promise.all([import("@/lib/ark-islands"), import("@/ark-scene/islands/scene")]);
@@ -167,6 +177,39 @@ async function main() {
         return JSON.stringify({hours, kind, of: all.length, person: h, rigged: s.rigged, drawn: s.drawn});
     };
     (api as unknown as {people: typeof framePeople}).people = framePeople;
+    /** Carers (decision 418): the `nth` carer of a kind (keeper, farmer, owner) at work at a pinned hour, framed from `distance`. */
+    const frameCarer = async (hours: number, kind: string, distance: number, polar = 1.25, turn = 0.5, nth = 0) => {
+        handle.setHours(hours);
+        type C = {carer: string; kind: string; pose: string; x: number; y: number; z: number; yaw: number};
+        const list = () => ((window as unknown as {__arkDebug: {carers?: () => C[]}}).__arkDebug.carers?.() ?? []).filter((c) => c.kind === kind);
+        for (let i = 0; i < 60 && !list().length; i++) {
+            await wait(250);
+            await frames(2);
+        }
+        const all = list();
+        const c = all[Math.min(nth, all.length - 1)];
+        if (!c) return JSON.stringify({hours, kind, none: true});
+        const rig = window as unknown as {__arkDebug: {controls: {minDistance: number}}};
+        rig.__arkDebug.controls.minDistance = Math.min(rig.__arkDebug.controls.minDistance, distance);
+        handle.setView({target: {x: c.x, y: c.y + 0.9, z: c.z}, distance, polar, azimuth: c.yaw + Math.PI + turn});
+        await frames(10);
+        await wait(2500);
+        await frames(4);
+        return JSON.stringify({hours, kind, of: all.length, carer: c});
+    };
+    (api as unknown as {carers: typeof frameCarer}).carers = frameCarer;
+    /** The first island hour in [from, to) (by 3 minutes) with a carer of `kind` at work in pose `pose` (any when null). */
+    const carerHour = async (kind: string, from: number, to: number, pose: string | null = null) => {
+        type C = {kind: string; pose: string};
+        for (let h = from; h < to; h += 0.05) {
+            handle.setHours(h);
+            await frames(2);
+            const list = ((window as unknown as {__arkDebug: {carers?: () => C[]}}).__arkDebug.carers?.() ?? []).filter((c) => c.kind === kind && (!pose || c.pose === pose));
+            if (list.length) return h;
+        }
+        return null;
+    };
+    (api as unknown as {carerHour: typeof carerHour}).carerHour = carerHour;
     /**
      * p6 (people, skin): every skin tone lined up on the beach's sand at a pinned hour: a row of swimmers (paddling) in
      * front, the same tones in day clothes behind, deep to light from the left, facing the camera. Harness only: the

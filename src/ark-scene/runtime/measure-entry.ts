@@ -69,6 +69,8 @@ const round = (value: number) => Math.round(value * 10) / 10;
     // `?relations=on|off` (lane ark-relation-lines): 8 s in, the animal with the most others of its kind is selected; with
     // `on` the relation lines go up to its 12 nearest neighbours (any kind: the drawing's cost, not who they are) and stay.
     const relations = params.get("relations");
+    // Carers (decision 418): `?carers=1` draws them as if the server's switch were on (the heap A/B).
+    if (params.get("carers") === "1") (globalThis as {__arkCarers?: boolean}).__arkCarers = true;
     try {
         // `?population=<file>`: a scale snapshot (scripts/ark-scale-fixture.mts) instead of the fixture.
         const population = params.get("population");
