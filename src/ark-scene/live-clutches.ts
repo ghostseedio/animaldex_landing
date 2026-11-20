@@ -293,6 +293,22 @@ export class LiveClutches<E> {
                 x.done = true;
                 continue;
             }
+            // (Another act has the young (a tapped line's own hatching, a mouth carry, the tree hole's jump): it is
+            // theirs; the clutch hatches now and the young are let go.)
+            if (young.some((y) => h.busy(y.entry))) {
+                if (!x.hatched) {
+                    h.hatch(x.nest, 0);
+                    x.hatched = true;
+                    this.kept = this.kept.filter((c) => c.key !== x.nest);
+                }
+                // (Our pose taken off: the act that has them sets its own each frame.)
+                young.forEach((y) => {
+                    if (x.acting.has(y.id)) h.setAct(y.entry, null);
+                });
+                x.acting.clear();
+                x.done = true;
+                continue;
+            }
             if (s >= 0 && !x.hatched) {
                 h.hatch(x.nest, s);
                 x.hatched = true;
@@ -300,7 +316,6 @@ export class LiveClutches<E> {
             }
             let any = false;
             young.forEach(({id, entry}, k) => {
-                if (h.busy(entry)) return;
                 const day = h.scheduleAt(entry, epoch);
                 const own = day ? null : h.placeOf?.(entry) ?? null;
                 const back = day ?? own;
