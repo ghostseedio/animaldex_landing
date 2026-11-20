@@ -370,8 +370,8 @@ export class ArkLiveliness {
         this.lineMates = lineMates;
         this.clumps = clumps;
         this.clumpOf = clumpOf;
-        this.spots.clear();
-        this.visitRuns.clear();
+        // (The spots and the visits are keyed by their family and slot, pure in them: nothing to drop with a new snapshot, and a
+        // clump's middle, once worked out for a slot, must not be worked out again from another set of drawn mates.)
         this.trails.clear();
         this.wayNowOf.clear();
     }
