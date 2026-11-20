@@ -126,6 +126,45 @@
             "openList": "Ark పైన చూడండి",
             "listLabel": "Ark లోని ప్రతి జాతి, ఎక్కువ సంఖ్యలో ఉన్నవి ముందు"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 గంటలు",
+                "7d": "7 రోజులు",
+                "30d": "30 రోజులు",
+                "all": "అన్నీ"
+            },
+            "periodsShort": {
+                "24h": "24 గంటలు",
+                "7d": "7 రోజులు",
+                "30d": "30 రోజులు",
+                "all": "అన్నీ"
+            },
+            "periodLabel": "కాలవ్యవధి",
+            "sortLabel": "క్రమం",
+            "biggest": "ఎక్కువ",
+            "thriving": "పెరుగుతున్నవి",
+            "declining": "తగ్గుతున్నవి",
+            "noneThriving": "ఈ కాలంలో ఏ జాతీ పెరగలేదు.",
+            "noneDeclining": "ఈ కాలంలో ఏ జాతీ తగ్గలేదు.",
+            "back": "అన్ని జాతులు",
+            "now": "ఇప్పుడు",
+            "change": "మార్పు",
+            "peak": "గరిష్ఠం",
+            "low": "కనిష్ఠం",
+            "arrived": "{count} ఎక్కాయి",
+            "born": "{count} పుట్టాయి",
+            "revived": "{count} కోలుకుని తిరిగి వచ్చాయి",
+            "died": "{count} చనిపోయాయి",
+            "eaten": "{count} తినబడ్డాయి",
+            "nothing": "ఈ కాలంలో జననాలు, రాకలు, మరణాలు ఏవీ లేవు.",
+            "flyTo": "Ark లో చూపించు",
+            "goneNow": "ఇప్పుడు ఏదీ Ark లో లేదు",
+            "openGraph": "{animal}: జనాభా గ్రాఫ్",
+            "graphLabel": "{animal} జనాభా, {period}: {start} నుండి {now} వరకు",
+            "arkDays": "Ark రోజులు {from}–{to}",
+            "recordStarts": "రికార్డు {date} నుండి మొదలవుతుంది",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "పని చేసిన ఒక అడుగు తర్వాత Ark ఎక్కింది",
             "debate": "దీని తర్వాత Ark ఎక్కింది: ‘{problem}’ · {animal} మార్గం ({power}) పని చేసింది",

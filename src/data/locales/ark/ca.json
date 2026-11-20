@@ -126,6 +126,45 @@
             "openList": "Veure-les sobre l'Ark",
             "listLabel": "Totes les espècies a bord, primer les més nombroses"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 h",
+                "7d": "7 dies",
+                "30d": "30 dies",
+                "all": "Tot"
+            },
+            "periodsShort": {
+                "24h": "24 h",
+                "7d": "7 d",
+                "30d": "30 d",
+                "all": "Tot"
+            },
+            "periodLabel": "Període de temps",
+            "sortLabel": "Ordre",
+            "biggest": "Més nombroses",
+            "thriving": "En augment",
+            "declining": "En descens",
+            "noneThriving": "Cap espècie ha crescut en aquest període.",
+            "noneDeclining": "Cap espècie ha baixat en aquest període.",
+            "back": "Totes les espècies",
+            "now": "Ara",
+            "change": "Canvi",
+            "peak": "Màxim",
+            "low": "Mínim",
+            "arrived": "{count} han pujat a bord",
+            "born": "{count} nascuts",
+            "revived": "{count} tornats després de recuperar-se",
+            "died": "{count} morts",
+            "eaten": "{count} devorats",
+            "nothing": "Cap naixement, arribada ni mort en aquest període.",
+            "flyTo": "Mostra a l'Ark",
+            "goneNow": "Ara no n'hi ha cap a bord",
+            "openGraph": "{animal}: gràfic de població",
+            "graphLabel": "Població de {animal}, {period}: de {start} a {now}",
+            "arkDays": "Dies de l'Ark {from}–{to}",
+            "recordStarts": "El registre comença el {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Va pujar a bord després d'un pas que va funcionar",
             "debate": "Portat a bord després de: «{problem}» · la manera de fer de l'animal {animal} ({power}) va funcionar",

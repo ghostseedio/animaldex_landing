@@ -126,6 +126,45 @@
             "openList": "Ark ਦੇ ਉੱਪਰ ਦੇਖੋ",
             "listLabel": "ਸਵਾਰ ਹਰ ਪ੍ਰਜਾਤੀ, ਸਭ ਤੋਂ ਵੱਧ ਗਿਣਤੀ ਵਾਲੀ ਪਹਿਲਾਂ"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 ਘੰਟੇ",
+                "7d": "7 ਦਿਨ",
+                "30d": "30 ਦਿਨ",
+                "all": "ਸਭ"
+            },
+            "periodsShort": {
+                "24h": "24 ਘੰਟੇ",
+                "7d": "7 ਦਿਨ",
+                "30d": "30 ਦਿਨ",
+                "all": "ਸਭ"
+            },
+            "periodLabel": "ਸਮਾਂ ਮਿਆਦ",
+            "sortLabel": "ਕ੍ਰਮ",
+            "biggest": "ਸਭ ਤੋਂ ਵੱਧ",
+            "thriving": "ਵਧ ਰਹੀਆਂ",
+            "declining": "ਘਟ ਰਹੀਆਂ",
+            "noneThriving": "ਇਸ ਮਿਆਦ ਵਿੱਚ ਕੋਈ ਪ੍ਰਜਾਤੀ ਨਹੀਂ ਵਧੀ।",
+            "noneDeclining": "ਇਸ ਮਿਆਦ ਵਿੱਚ ਕੋਈ ਪ੍ਰਜਾਤੀ ਨਹੀਂ ਘਟੀ।",
+            "back": "ਸਾਰੀਆਂ ਪ੍ਰਜਾਤੀਆਂ",
+            "now": "ਹੁਣ",
+            "change": "ਬਦਲਾਅ",
+            "peak": "ਸਿਖਰ",
+            "low": "ਸਭ ਤੋਂ ਘੱਟ",
+            "arrived": "{count} ਸਵਾਰ ਹੋਏ",
+            "born": "{count} ਜੰਮੇ",
+            "revived": "{count} ਠੀਕ ਹੋ ਕੇ ਵਾਪਸ ਆਏ",
+            "died": "{count} ਮਰ ਗਏ",
+            "eaten": "{count} ਖਾਏ ਗਏ",
+            "nothing": "ਇਸ ਮਿਆਦ ਵਿੱਚ ਕੋਈ ਜਨਮ, ਆਮਦ ਜਾਂ ਮੌਤ ਨਹੀਂ।",
+            "flyTo": "Ark ਵਿੱਚ ਦਿਖਾਓ",
+            "goneNow": "ਹੁਣ ਕੋਈ ਸਵਾਰ ਨਹੀਂ",
+            "openGraph": "{animal}: ਆਬਾਦੀ ਦਾ ਗ੍ਰਾਫ਼",
+            "graphLabel": "{animal} ਦੀ ਆਬਾਦੀ, {period}: {start} ਤੋਂ {now}",
+            "arkDays": "Ark ਦੇ ਦਿਨ {from}–{to}",
+            "recordStarts": "ਰਿਕਾਰਡ {date} ਤੋਂ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "ਕੰਮ ਕਰਨ ਵਾਲੇ ਕਦਮ ਤੋਂ ਬਾਅਦ ਸਵਾਰ ਹੋਇਆ",
             "debate": "ਇਸ ਤੋਂ ਬਾਅਦ ਸਵਾਰ ਹੋਇਆ: ‘{problem}’ · {animal} ਦਾ ਤਰੀਕਾ ({power}) ਕੰਮ ਕਰ ਗਿਆ",

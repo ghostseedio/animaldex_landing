@@ -126,6 +126,45 @@
             "openList": "在 Ark 上方查看",
             "listLabel": "船上的每个物种，按数量从多到少"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 小时",
+                "7d": "7 天",
+                "30d": "30 天",
+                "all": "全部"
+            },
+            "periodsShort": {
+                "24h": "24 小时",
+                "7d": "7 天",
+                "30d": "30 天",
+                "all": "全部"
+            },
+            "periodLabel": "时间范围",
+            "sortLabel": "排序",
+            "biggest": "最多",
+            "thriving": "增长",
+            "declining": "减少",
+            "noneThriving": "这段时间内没有物种增长。",
+            "noneDeclining": "这段时间内没有物种减少。",
+            "back": "所有物种",
+            "now": "现在",
+            "change": "变化",
+            "peak": "峰值",
+            "low": "最低",
+            "arrived": "登船 {count}",
+            "born": "出生 {count}",
+            "revived": "康复归来 {count}",
+            "died": "死亡 {count}",
+            "eaten": "被捕食 {count}",
+            "nothing": "这段时间内没有出生、登船或死亡。",
+            "flyTo": "在 Ark 中查看",
+            "goneNow": "目前船上没有",
+            "openGraph": "{animal}：数量曲线图",
+            "graphLabel": "{animal}的数量，{period}：从 {start} 到 {now}",
+            "arkDays": "Ark 日 {from}–{to}",
+            "recordStarts": "记录始于 {date}",
+            "pointAt": "{time}：{count}"
+        },
         "story": {
             "generic": "在奏效的一步之后登船",
             "debate": "登船缘由：“{problem}” · {animal}的方式（{power}）奏效了",

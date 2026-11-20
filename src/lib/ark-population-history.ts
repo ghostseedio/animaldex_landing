@@ -4,11 +4,19 @@
  *
  * The numbers are the server's record, never the scene's: `voyage_population_history_v1` (AnimalDex migration
  * 20261127180000) sums the event log (arrival, birth, back from recovery +1; died of old age, eaten, starved −1) per
- * kind and island into hour or day steps, read through `/api/ark/population?span=week|all`. A species' count at a
+ * kind and island into hour or day steps, read through `/api/ark/population?span=week|month|all`. A species' count at a
  * moment is its count when the answer starts plus every step up to then: exact, from the record's first row. Before
  * the record starts nothing is drawn; between steps nothing is invented (a step with no rows is the same count).
  *
- * Pure: no fetch, no DOM. /ark's population overlay and the apps' embed bars both draw from it.
+ * Days are the viewer's days (board item, 2026-11-20: the graph's day buckets and axis dates follow the viewer's time
+ * zone instead of UTC). The server steps by the hour (31 days at most) or by the UTC day and has no time zone of its
+ * own, so the 30-day and All views are read by the hour and re-bucketed here into the viewer's local days
+ * (`arkRebucketDays`): exact for a time zone on the hour, at most the hour's width late for the others, never early
+ * (no look-ahead: a day's closing count holds no row that happened after the day ended). Only when the record is older
+ * than the hour answer reaches does All fall back to the server's UTC days, put into local days the same way (up to a
+ * day late, never early). The axis and the hover read the same zone.
+ *
+ * Pure: no DOM. /ark's population overlay and the apps' embed bars both draw from it.
  */
 
 /** Which island a count is on (as the HUD's scope: one island, or both). */
@@ -25,8 +33,14 @@ export type ArkHistory = {
     firstAt: number;
     /** The voyage's start, for Ark days. */
     startedAt: number | null;
-    /** Steps in the answer: step i covers [t0 + i·bucket, t0 + (i+1)·bucket). */
+    /** Steps in the answer: step i covers [t0 + i·bucket, t0 + (i+1)·bucket), or [edges[i], edges[i+1]) with `edges`. */
     steps: number;
+    /** The viewer's time zone (IANA): what its dates and local days are read in. */
+    zone: string;
+    /** Local-day boundaries (steps + 1 of them, a day being 23 to 25 hours); null: steps are `bucketMs` wide from `t0`. */
+    edges: number[] | null;
+    /** The answer these local days were made from (hour or UTC-day steps): the finest data there is, where peak and low are read. Null: this is the answer itself. */
+    fine: ArkHistory | null;
     /** Per kind: its count at t0 and its rows per step, on each island. */
     kinds: Map<string, ArkKindRecord>;
     /** Kinds in the answer with none aboard now: their names (the living are named by the snapshot). */
@@ -37,7 +51,17 @@ export type ArkHistory = {
 export type ArkKindRecord = {base: [number, number]; rows: Array<{step: number; island: 0 | 1; arrived: number; born: number; revived: number; died: number; eaten: number}>};
 
 /** One species' line: `counts[i]` is the count at `times[i]` (the last is now). */
-export type ArkSeries = {times: number[]; counts: number[]; arrived: number[]; born: number[]; revived: number[]; died: number[]; eaten: number[]};
+export type ArkSeries = {
+    times: number[];
+    counts: number[];
+    arrived: number[];
+    born: number[];
+    revived: number[];
+    died: number[];
+    eaten: number[];
+    /** Peak and low read from the finest steps (see `ArkHistory.fine`), where the points are local days: the same over the same record in every time zone. Absent: from `counts`. */
+    extremes?: {peak: number; peakAt: number; low: number; lowAt: number};
+};
 
 export type ArkPeriod = "24h" | "7d" | "30d" | "all";
 export const ARK_PERIODS: ArkPeriod[] = ["24h", "7d", "30d", "all"];
@@ -51,6 +75,131 @@ export function arkPeriodSpan(period: ArkPeriod): "week" | "all" {
 export const ARK_DAY_MS = (14 * 86_400_000) / 365;
 export function arkDayAt(at: number, startedAt: number | null): number | null {
     return startedAt === null || !Number.isFinite(at) ? null : Math.floor((at - startedAt) / ARK_DAY_MS);
+}
+
+// MARK: Time zones
+
+const HOUR_MS = 3_600_000;
+const DAY_MS = 86_400_000;
+const formatters = new Map<string, Intl.DateTimeFormat>();
+const zones = new Map<string, string>();
+
+/** The viewer's own time zone (IANA), "UTC" where the browser does not say. */
+export function arkViewerZone(): string {
+    try {
+        return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+    } catch {
+        return "UTC";
+    }
+}
+
+/** A zone the runtime knows, else UTC (a made-up name must not throw inside a graph). */
+function knownZone(zone: string): string {
+    let known = zones.get(zone);
+    if (known === undefined) {
+        try {
+            new Intl.DateTimeFormat("en-US", {timeZone: zone});
+            known = zone;
+        } catch {
+            known = "UTC";
+        }
+        zones.set(zone, known);
+    }
+    return known;
+}
+
+/** The wall clock in `zone` at an instant: its date and time, as a UTC-based number (for adding and comparing). */
+function wallClock(at: number, zoneName: string): {day: number; offset: number} {
+    const zone = knownZone(zoneName);
+    let formatter = formatters.get(zone);
+    if (!formatter) {
+        formatter = new Intl.DateTimeFormat("en-US", {timeZone: zone, hourCycle: "h23", year: "numeric", month: "numeric", day: "numeric", hour: "numeric", minute: "numeric", second: "numeric"});
+        formatters.set(zone, formatter);
+    }
+    const parts: Record<string, number> = {};
+    for (const part of formatter.formatToParts(at)) if (part.type !== "literal") parts[part.type] = Number(part.value);
+    const wall = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour % 24, parts.minute, parts.second);
+    return {day: Date.UTC(parts.year, parts.month - 1, parts.day), offset: wall - Math.floor(at / 1000) * 1000};
+}
+
+/** The instant the local day containing `at` began (midnight, or the first moment of the day where midnight is skipped). */
+export function arkLocalDayStart(at: number, zone: string): number {
+    const {day, offset} = wallClock(at, zone);
+    let start = day - offset;
+    // The offset at midnight can differ from the offset now (a clock change in between): read it where midnight falls.
+    start = day - wallClock(start, zone).offset;
+    return start > at ? day - offset : start;
+}
+
+/** The first local midnight after `start` (a local day is 23 to 25 hours; 36 hours on is always inside the next one). */
+function nextLocalDay(start: number, zone: string): number {
+    const next = arkLocalDayStart(start + 36 * HOUR_MS, zone);
+    return next > start ? next : start + DAY_MS;
+}
+
+/**
+ * Hour-or-day steps into the viewer's local days. A step's rows go to the day in which the step *ended* (a step
+ * ending at midnight closes the day before it), so a day's closing count never holds a row from after the day ended:
+ * the count at a local midnight is the count at the last step edge at or before it. Exact where the step edges meet
+ * the zone's midnights (any whole-hour zone with hour steps); a zone at +5:30 or +5:45 puts its midnight inside an
+ * hour, and that hour's rows count in the next day (up to the step's width late, never early). The window starts at
+ * the first local midnight at or after the answer's start (the whole record: the day it began in, from none).
+ */
+export function arkRebucketDays(source: ArkHistory, zoneName: string = source.zone): ArkHistory {
+    const zone = knownZone(zoneName);
+    // Counts before the window are the answer's base; a window that starts at the record's first row has none before it.
+    const first = arkLocalDayStart(source.t0, zone);
+    const cut = source.t0 > source.firstAt;
+    const edges = [cut && first < source.t0 ? nextLocalDay(first, zone) : first];
+    while (edges[edges.length - 1] < source.asOf || edges.length < 2) edges.push(nextLocalDay(edges[edges.length - 1], zone));
+    const days = edges.length - 1;
+    const endOf = (step: number) => Math.min(source.t0 + (step + 1) * source.bucketMs, source.asOf);
+    const dayOf = (end: number) => {
+        let low = 0;
+        let high = days - 1;
+        while (low < high) {
+            const mid = (low + high) >> 1;
+            if (end <= edges[mid + 1]) high = mid;
+            else low = mid + 1;
+        }
+        return low;
+    };
+    const kinds = new Map<string, ArkKindRecord>();
+    source.kinds.forEach((record, key) => {
+        const base: [number, number] = [record.base[0], record.base[1]];
+        const rows = new Map<number, ArkKindRecord["rows"][number]>();
+        for (const row of record.rows) {
+            const end = endOf(row.step);
+            if (end <= edges[0]) {
+                base[row.island] += row.arrived + row.born + row.revived - row.died - row.eaten;
+                continue;
+            }
+            const step = dayOf(end);
+            const id = step * 2 + row.island;
+            const into = rows.get(id) ?? {step, island: row.island, arrived: 0, born: 0, revived: 0, died: 0, eaten: 0};
+            into.arrived += row.arrived;
+            into.born += row.born;
+            into.revived += row.revived;
+            into.died += row.died;
+            into.eaten += row.eaten;
+            rows.set(id, into);
+        }
+        kinds.set(key, {base, rows: Array.from(rows.values())});
+    });
+    return {...source, bucket: "day", bucketMs: DAY_MS, t0: edges[0], steps: days, zone, edges, fine: source.fine ?? source, kinds};
+}
+
+/** A moment for the graph's axis and hover, in the history's zone: the date for a day step, the weekday and time for an hour. */
+export function arkGraphWhen(at: number, locale: string, history: Pick<ArkHistory, "bucket" | "zone">): string {
+    const timeZone = knownZone(history.zone);
+    return history.bucket === "day"
+        ? new Date(at).toLocaleDateString(locale, {day: "numeric", month: "short", timeZone})
+        : new Date(at).toLocaleString(locale, {weekday: "short", hour: "numeric", minute: "2-digit", timeZone});
+}
+
+/** A date alone ("Nov 8"), in the history's zone. */
+export function arkGraphDate(at: number, locale: string, history: Pick<ArkHistory, "zone">): string {
+    return new Date(at).toLocaleDateString(locale, {day: "numeric", month: "short", timeZone: knownZone(history.zone)});
 }
 
 type Row = Record<string, unknown>;
@@ -69,7 +218,7 @@ const time = (value: unknown): number | null => {
  * gone}`, kinds by index) as an `ArkHistory`; null when it is not there (the server change not applied yet, a failed
  * read) or not well formed.
  */
-export function decodeArkHistory(raw: unknown): ArkHistory | null {
+export function decodeArkHistory(raw: unknown, zone: string = arkViewerZone()): ArkHistory | null {
     const body = raw && typeof raw === "object" && !Array.isArray(raw) ? (raw as Row) : null;
     if (!body || body.available !== true) return null;
     const bucket = body.bucket === "day" ? "day" : body.bucket === "hour" ? "hour" : null;
@@ -109,13 +258,13 @@ export function decodeArkHistory(raw: unknown): ArkHistory | null {
         const name = typeof one?.name === "string" && one.name.trim() ? one.name.trim() : null;
         if (name) gone.set(id, {name, slug: typeof one?.model_slug === "string" && one.model_slug ? one.model_slug : null});
     }
-    return {bucket, bucketMs, t0, asOf, firstAt, startedAt: time(body.started_at), steps, kinds, gone};
+    return {bucket, bucketMs, t0, asOf, firstAt, startedAt: time(body.started_at), steps, zone, edges: null, fine: null, kinds, gone};
 }
 
 /** The moments a series is drawn at: t0, the end of every step, the last one now. */
 export function arkHistoryTimes(history: ArkHistory): number[] {
     const times: number[] = [];
-    for (let i = 0; i <= history.steps; i++) times.push(Math.min(history.t0 + i * history.bucketMs, history.asOf));
+    for (let i = 0; i <= history.steps; i++) times.push(Math.min(history.edges ? history.edges[i] : history.t0 + i * history.bucketMs, history.asOf));
     return times;
 }
 
@@ -157,6 +306,11 @@ export function arkKindSeries(history: ArkHistory, key: string, scope: ArkHistor
 export function arkPeriodStart(history: ArkHistory, period: ArkPeriod): number {
     const ms = PERIOD_MS[period];
     const from = Math.max(ms === null ? -Infinity : history.asOf - ms, history.firstAt, history.t0);
+    if (history.edges) {
+        let at = 0;
+        while (at < history.steps && history.edges[at + 1] <= from) at++;
+        return at;
+    }
     return Math.max(0, Math.min(history.steps, Math.floor((from - history.t0) / history.bucketMs)));
 }
 
@@ -167,6 +321,55 @@ export function arkSeriesSlice(series: ArkSeries, start: number): ArkSeries {
     // What happened before the first point is not in the period.
     out.arrived[0] = out.born[0] = out.revived[0] = out.died[0] = out.eaten[0] = 0;
     return out;
+}
+
+const fineTimes = new WeakMap<ArkHistory, number[]>();
+
+/** One kind's counts at the answer's step edges (as `arkKindSeries(...).counts`, with no rows kept per step). */
+function kindCounts(history: ArkHistory, key: string, scope: ArkHistoryScope): number[] {
+    const counts = new Array<number>(history.steps + 1).fill(0);
+    const record = history.kinds.get(key);
+    if (!record) return counts;
+    for (const row of record.rows) if (inScope(row.island, scope)) counts[row.step + 1] += row.arrived + row.born + row.revived - row.died - row.eaten;
+    let count = scope === "both" ? record.base[0] + record.base[1] : record.base[scope === "town" ? 1 : 0];
+    for (let i = 0; i < counts.length; i++) {
+        count += counts[i];
+        counts[i] = Math.max(0, count);
+    }
+    return counts;
+}
+
+/**
+ * A kind's series cut to a period, with its peak and low read from the finest steps over the same moments (from the
+ * count when the period began to now), not from the points drawn: local days sample the record at their midnights, so
+ * a rise and fall inside one day would otherwise be seen by one time zone and missed by another.
+ */
+export function arkPeriodSeries(history: ArkHistory, key: string, scope: ArkHistoryScope, start: number): ArkSeries {
+    const series = arkSeriesSlice(arkKindSeries(history, key, scope), start);
+    const fine = history.fine;
+    if (!fine || !series.times.length) return series;
+    let times = fineTimes.get(fine);
+    if (!times) fineTimes.set(fine, (times = arkHistoryTimes(fine)));
+    const counts = kindCounts(fine, key, scope);
+    // From the last step edge at or before the period's start (the count then), to the last point (now).
+    let from = 0;
+    while (from + 1 < times.length && times[from + 1] <= series.times[0]) from++;
+    let peak = -Infinity;
+    let low = Infinity;
+    let peakAt = times[from];
+    let lowAt = peakAt;
+    for (let i = from; i < counts.length; i++) {
+        if (counts[i] > peak) {
+            peak = counts[i];
+            peakAt = times[i];
+        }
+        if (counts[i] < low) {
+            low = counts[i];
+            lowAt = times[i];
+        }
+    }
+    series.extremes = {peak, peakAt, low, lowAt};
+    return series;
 }
 
 export type ArkSeriesStats = {
@@ -206,6 +409,7 @@ export function arkSeriesStats(series: ArkSeries): ArkSeriesStats {
             lowAt = series.times[i] ?? lowAt;
         }
     });
+    if (series.extremes) ({peak, peakAt, low, lowAt} = series.extremes);
     const sum = (values: number[]) => values.reduce((total, value) => total + value, 0);
     return {
         now,
@@ -256,6 +460,17 @@ export function arkStatsChangeText(stats: Pick<ArkSeriesStats, "delta" | "ratio"
     return {count, percent: stats.delta === 0 ? shown : `${stats.delta > 0 ? "+" : "−"}${shown}`, up};
 }
 
+/**
+ * What the route asks the server for a `span`: `week` (7 days by the hour), `month` (31 days by the hour: the most the
+ * function gives by the hour, and what the 30-day and All views are re-bucketed from), `all` (the whole record by the
+ * UTC day). The start is rounded down to the hour, so readers share one cached answer.
+ */
+export function arkPopulationRead(asked: string | null, now: number): {span: "week" | "month" | "all"; bucket: "hour" | "day"; since: string | null} {
+    const span = asked === "all" ? "all" : asked === "month" ? "month" : "week";
+    const since = span === "all" ? null : new Date(Math.floor((now - (span === "week" ? 7 : 31) * DAY_MS) / HOUR_MS) * HOUR_MS).toISOString();
+    return {span, bucket: span === "all" ? "day" : "hour", since};
+}
+
 /** The server's rows with each kind's id replaced by its index in `kinds`. */
 export function arkCompactHistory(answer: Record<string, unknown>) {
     const kinds: string[] = [];
@@ -287,7 +502,7 @@ export function arkHistoryLines(history: ArkHistory, period: ArkPeriod, keys: st
     const lines = new Map<string, ArkLine>();
     const start = arkPeriodStart(history, period);
     const add = (key: string) => {
-        const series = arkSeriesSlice(arkKindSeries(history, key, scope), start);
+        const series = arkPeriodSeries(history, key, scope, start);
         lines.set(key, {series, stats: arkSeriesStats(series)});
     };
     keys.forEach(add);
@@ -302,14 +517,14 @@ export type ArkLineGeometry = {d: string; area: string; points: Array<[number, n
 
 /**
  * A line through the counts in a `width` × `height` box (y down), inset by `pad`: a step line (a count holds until
- * it changes, as the record does), scaled from the lowest to the highest count (from 0 when `fromZero`). One point
- * draws flat across; a flat series sits in the middle.
+ * it changes, as the record does), scaled from the lowest to the highest count (from 0 when `fromZero`; up to `max`
+ * when that is higher, the peak a graph says). One point draws flat across; a flat series sits in the middle.
  */
-export function arkLinePath(counts: number[], width: number, height: number, options: {pad?: number; fromZero?: boolean} = {}): ArkLineGeometry {
+export function arkLinePath(counts: number[], width: number, height: number, options: {pad?: number; fromZero?: boolean; max?: number} = {}): ArkLineGeometry {
     const pad = options.pad ?? 1.5;
     const values = counts.length ? counts : [0];
     let min = options.fromZero ? 0 : Math.min(...values);
-    let max = Math.max(...values);
+    let max = Math.max(...values, options.max ?? -Infinity);
     const flat = max === min;
     if (flat) {
         min -= 1;
@@ -337,18 +552,31 @@ export function arkLinePath(counts: number[], width: number, height: number, opt
 const READ_KEEP_MS = 5 * 60_000;
 const reads = new Map<string, {at: number; answer: Promise<ArkHistory | null>}>();
 
+type Fetcher = (url: string) => Promise<{ok: boolean; json: () => Promise<unknown>}>;
+
 /**
- * The route's answer for a span, kept for five minutes per page (both the HUD and its graph ask). Null when the
- * route is missing, says `available: false` (the server change not applied), or fails: the caller draws no graphs.
+ * The route's answer for a span, kept for five minutes per page (both the HUD and its graph ask). `week`: the last 7
+ * days by the hour. `all`: the whole record in the viewer's local days, from the 31 days by the hour (`span=month`,
+ * re-bucketed) while that reaches the record's first row, else from the server's UTC days (`span=all`) put into local
+ * days. Null when the route is missing, says `available: false` (the server change not applied), or fails: the caller
+ * draws no graphs.
  */
-export function readArkHistory(url: string, span: "week" | "all", fetcher: (url: string) => Promise<{ok: boolean; json: () => Promise<unknown>}>, now = Date.now()): Promise<ArkHistory | null> {
-    const key = `${url}|${span}`;
+export function readArkHistory(url: string, span: "week" | "all", fetcher: Fetcher, now = Date.now(), zone: string = arkViewerZone()): Promise<ArkHistory | null> {
+    const key = `${url}|${span}|${zone}`;
     const kept = reads.get(key);
     if (kept && now - kept.at < READ_KEEP_MS) return kept.answer;
-    const answer = fetcher(`${url}?span=${span}`)
-        .then((response) => (response.ok ? response.json() : null))
-        .then(decodeArkHistory)
-        .catch(() => null);
+    const get = (asked: "week" | "month" | "all") =>
+        fetcher(`${url}?span=${asked}`)
+            .then((response) => (response.ok ? response.json() : null))
+            .then((raw) => decodeArkHistory(raw, zone));
+    const answer = (span === "week"
+        ? get("week")
+        : get("month").then(async (month) => {
+              if (month && month.t0 <= month.firstAt) return arkRebucketDays(month, zone);
+              const days = await get("all");
+              return days ? arkRebucketDays(days, zone) : null;
+          })
+    ).catch(() => null);
     reads.set(key, {at: now, answer});
     return answer;
 }

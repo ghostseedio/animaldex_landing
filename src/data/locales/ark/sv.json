@@ -126,6 +126,45 @@
             "openList": "Se dem över Ark",
             "listLabel": "Alla arter ombord, de talrikaste först"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 timmar",
+                "7d": "7 dagar",
+                "30d": "30 dagar",
+                "all": "Alla"
+            },
+            "periodsShort": {
+                "24h": "24 h",
+                "7d": "7 d",
+                "30d": "30 d",
+                "all": "Alla"
+            },
+            "periodLabel": "Tidsperiod",
+            "sortLabel": "Ordning",
+            "biggest": "Flest",
+            "thriving": "Växande",
+            "declining": "Minskande",
+            "noneThriving": "Ingen art växte under perioden.",
+            "noneDeclining": "Ingen art minskade under perioden.",
+            "back": "Alla arter",
+            "now": "Nu",
+            "change": "Förändring",
+            "peak": "Topp",
+            "low": "Lägsta",
+            "arrived": "{count} kom ombord",
+            "born": "{count} föddes",
+            "revived": "{count} tillbaka efter tillfrisknande",
+            "died": "{count} dog",
+            "eaten": "{count} åts upp",
+            "nothing": "Inga födslar, ankomster eller dödsfall under perioden.",
+            "flyTo": "Visa i Ark",
+            "goneNow": "Ingen ombord nu",
+            "openGraph": "{animal}: beståndsgraf",
+            "graphLabel": "Bestånd av {animal}, {period}: {start} till {now}",
+            "arkDays": "Ark-dagar {from}–{to}",
+            "recordStarts": "Registret börjar {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Kom ombord efter ett steg som fungerade",
             "debate": "Togs ombord efter: ’{problem}’ · sättet hos {animal} ({power}) fungerade",

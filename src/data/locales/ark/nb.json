@@ -126,6 +126,45 @@
             "openList": "Se dem over Ark",
             "listLabel": "Alle arter om bord, de tallrikeste først"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 timer",
+                "7d": "7 dager",
+                "30d": "30 dager",
+                "all": "Alle"
+            },
+            "periodsShort": {
+                "24h": "24 t",
+                "7d": "7 d",
+                "30d": "30 d",
+                "all": "Alle"
+            },
+            "periodLabel": "Tidsperiode",
+            "sortLabel": "Rekkefølge",
+            "biggest": "Flest",
+            "thriving": "Økende",
+            "declining": "Synkende",
+            "noneThriving": "Ingen arter vokste i denne perioden.",
+            "noneDeclining": "Ingen arter sank i denne perioden.",
+            "back": "Alle arter",
+            "now": "Nå",
+            "change": "Endring",
+            "peak": "Topp",
+            "low": "Bunn",
+            "arrived": "{count} kom om bord",
+            "born": "{count} født",
+            "revived": "{count} tilbake etter bedring",
+            "died": "{count} døde",
+            "eaten": "{count} spist",
+            "nothing": "Ingen fødsler, ankomster eller dødsfall i denne perioden.",
+            "flyTo": "Vis i Ark",
+            "goneNow": "Ingen om bord nå",
+            "openGraph": "{animal}: bestandsgraf",
+            "graphLabel": "Bestand av {animal}, {period}: {start} til {now}",
+            "arkDays": "Ark-dager {from}–{to}",
+            "recordStarts": "Registreringen starter {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Kom om bord etter et steg som fungerte",
             "debate": "Tatt om bord etter: «{problem}» · måten til {animal} ({power}) fungerte",

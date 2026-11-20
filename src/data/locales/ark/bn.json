@@ -126,6 +126,45 @@
             "openList": "Ark-এর ওপরে দেখুন",
             "listLabel": "জাহাজের সব প্রজাতি, সংখ্যায় সবচেয়ে বেশিগুলো আগে"
         },
+        "graph": {
+            "periods": {
+                "24h": "২৪ ঘণ্টা",
+                "7d": "৭ দিন",
+                "30d": "৩০ দিন",
+                "all": "সব"
+            },
+            "periodsShort": {
+                "24h": "২৪ ঘণ্টা",
+                "7d": "৭ দিন",
+                "30d": "৩০ দিন",
+                "all": "সব"
+            },
+            "periodLabel": "সময়কাল",
+            "sortLabel": "ক্রম",
+            "biggest": "সবচেয়ে বেশি",
+            "thriving": "বাড়ছে",
+            "declining": "কমছে",
+            "noneThriving": "এই সময়ে কোনো প্রজাতি বাড়েনি।",
+            "noneDeclining": "এই সময়ে কোনো প্রজাতি কমেনি।",
+            "back": "সব প্রজাতি",
+            "now": "এখন",
+            "change": "পরিবর্তন",
+            "peak": "সর্বোচ্চ",
+            "low": "সর্বনিম্ন",
+            "arrived": "{count}টি জাহাজে উঠেছে",
+            "born": "{count}টি জন্মেছে",
+            "revived": "{count}টি সুস্থ হয়ে ফিরেছে",
+            "died": "{count}টি মারা গেছে",
+            "eaten": "{count}টিকে খেয়ে ফেলা হয়েছে",
+            "nothing": "এই সময়ে কোনো জন্ম, আগমন বা মৃত্যু হয়নি।",
+            "flyTo": "Ark-এ দেখান",
+            "goneNow": "এখন একটিও জাহাজে নেই",
+            "openGraph": "{animal}: জনসংখ্যার গ্রাফ",
+            "graphLabel": "{animal}-এর জনসংখ্যা, {period}: {start} থেকে {now}",
+            "arkDays": "Ark-এর দিন {from}–{to}",
+            "recordStarts": "রেকর্ড শুরু {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "কাজ করা একটি পদক্ষেপের পর জাহাজে উঠেছে",
             "debate": "যার পরে জাহাজে উঠেছে: ‘{problem}’ · {animal}-এর পথ ({power}) কাজ করেছে",

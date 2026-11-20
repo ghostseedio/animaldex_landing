@@ -126,6 +126,45 @@
             "openList": "اعرضها فوق Ark",
             "listLabel": "كل الأنواع على المتن، الأكثر عددًا أولًا"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 ساعة",
+                "7d": "7 أيام",
+                "30d": "30 يومًا",
+                "all": "الكل"
+            },
+            "periodsShort": {
+                "24h": "24 س",
+                "7d": "7 أيام",
+                "30d": "30 يومًا",
+                "all": "الكل"
+            },
+            "periodLabel": "الفترة الزمنية",
+            "sortLabel": "الترتيب",
+            "biggest": "الأكثر عددًا",
+            "thriving": "المزدهرة",
+            "declining": "المتراجعة",
+            "noneThriving": "لم يزد عدد أي نوع في هذه الفترة.",
+            "noneDeclining": "لم يقلّ عدد أي نوع في هذه الفترة.",
+            "back": "كل الأنواع",
+            "now": "الآن",
+            "change": "التغيّر",
+            "peak": "الذروة",
+            "low": "الأدنى",
+            "arrived": "صعد {count} على المتن",
+            "born": "وُلد {count}",
+            "revived": "عاد {count} بعد التعافي",
+            "died": "مات {count}",
+            "eaten": "أُكل {count}",
+            "nothing": "لا ولادات ولا وصول ولا وفيات في هذه الفترة.",
+            "flyTo": "اعرضه في Ark",
+            "goneNow": "لا يوجد أي منها على المتن الآن",
+            "openGraph": "{animal}: رسم بياني للأعداد",
+            "graphLabel": "أعداد {animal}، {period}: من {start} إلى {now}",
+            "arkDays": "أيام Ark {from}–{to}",
+            "recordStarts": "يبدأ السجل في {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "صعد على المتن بعد خطوة نجحت",
             "debate": "صعد على المتن بعد: «{problem}» · نجحت طريقة {animal} ({power})",

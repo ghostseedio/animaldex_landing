@@ -3,6 +3,7 @@
 import React, {useCallback, useEffect, useId, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
+import {ArkGraphWordsContext} from "@/app/[locale]/(composited)/ark/ark-graph-context";
 import ArkLostList from "@/app/[locale]/(composited)/ark/ark-lost-list";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import type {ArkSnapshot} from "@/ark-scene/types";
@@ -233,157 +234,155 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
     const place = open ? "col-span-2 justify-self-stretch" : "col-span-2 justify-self-end";
 
     return (
-        <section id="ark-aboard" aria-labelledby={`${panelId}-title`} tabIndex={-1} className={`pointer-events-none row-start-2 scroll-mt-[8rem] md:scroll-mt-[4.8rem] flex min-h-0 min-w-0 flex-col self-start outline-none md:col-span-1 md:col-start-2 md:row-span-2 md:row-start-1 md:max-h-full md:justify-self-end ${place}`}>
-            <button
-                type="button"
-                onClick={() => setOpen(true)}
-                aria-expanded={false}
-                aria-controls={panelId}
-                aria-label={[totalLine, totalSaid ? fillArkWords(hud.change24h, {change: totalSaid.text}) : null, hud.show].filter(Boolean).join(", ")}
-                title={hud.show}
-                className={`${chipShown} ${GLASS} ${FOCUS} pointer-events-auto h-11 items-center gap-2 rounded-full pl-3.5 pr-3 text-[13px] font-bold tabular-nums transition-colors hover:bg-[rgba(24,32,24,0.82)] md:h-9`}
-            >
-                <span className="whitespace-nowrap">{totalLine}</span>
-                <ArkChangeBadge change={total} words={words} locale={locale} />
-                <Caret up={false} />
-            </button>
-
-            <div id={panelId} className={`${panelShown} ${GLASS} pointer-events-auto min-h-0 w-full flex-col overflow-hidden rounded-2xl md:w-[19rem]`}>
-                <div className="flex items-start gap-1 pb-2 pl-3.5 pr-1.5 pt-2.5">
-                    <div className="min-w-0 flex-1 pt-0.5">
-                        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-                            <h2 id={`${panelId}-title`} ref={headingRef} tabIndex={-1} className="font-sans text-[15px] font-bold leading-tight tabular-nums outline-none focus-visible:underline">
-                                <span className="sr-only">{hud.label}: </span>
-                                {totalLine}
-                            </h2>
-                            {totalSaid ? (
-                                <span className="flex items-baseline gap-1">
-                                    <ArkChangeBadge change={total} words={words} locale={locale} />
-                                    <span aria-hidden="true" className="text-[10.5px] font-semibold text-white/40">{hud.changeWindow}</span>
-                                </span>
-                            ) : null}
-                        </div>
-                        <p className="mt-0.5 truncate text-[11.5px] text-white/55">{subline}</p>
-                    </div>
-                    <ArkShareButton
-                        target="population"
-                        look="icon"
-                        localePath={shareLocalePath}
-                        slug={null}
-                        title={words.eyebrow}
-                        text={fillArkWords(words.share.textArk, {
-                            animals: counted(counts.animals, words.animalsOne, words.animalsOther, locale),
-                            species: counted(counts.species, words.speciesOne, words.speciesOther, locale)
-                        })}
-                        label={words.share.shareArk}
-                        copied={words.share.copied}
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60 md:h-8 md:w-8 ${FOCUS}`}
-                    />
-                    <button
-                        type="button"
-                        onClick={() => setOpen(!isOpen())}
-                        aria-expanded
-                        aria-controls={panelId}
-                        aria-label={hud.hide}
-                        title={hud.hide}
-                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white md:h-8 md:w-8 ${FOCUS}`}
-                    >
-                        <Caret up />
-                    </button>
-                </div>
-
-                {filters ? <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">{filters}</div> : null}
-
-                {/* Population over time (once the record's read answers): the order and the period the lines cover. */}
-                {graph && history && !graphKey ? <graph.ArkHudControls mode={mode} onMode={(next) => { setMode(next); listRef.current?.scrollTo({top: 0}); }} period={period} onPeriod={setPeriod} /> : null}
-
-                {graph && history && graphKey && lines.get(graphKey) && (rowByKey.has(graphKey) || history.gone.has(graphKey)) ? (() => {
-                    const row = rowByKey.get(graphKey) ?? null;
-                    const gone = history.gone.get(graphKey);
-                    return <graph.ArkHudGraphPane history={history} name={row?.name ?? gone?.name ?? ""} slug={row?.slug ?? gone?.slug ?? ""} line={lines.get(graphKey)!} period={period} onPeriod={setPeriod} onBack={() => setGraphKey(null)} onFly={row ? () => { setGraphKey(null); pick(row); } : null} locale={locale} />;
-                })() : null}
-
-                {/* Every species, biggest first: about a dozen in view, the rest scroll inside the panel. */}
-                <ul ref={listRef} aria-label={hud.listLabel} hidden={Boolean(graph && history && graphKey)} className="relative max-h-[46svh] min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] py-1 [scrollbar-width:thin] md:max-h-[28rem]">
-                    {listed ? null : Array.from({length: 8}, (_, i) => (
-                        // Before the Ark is read: quiet placeholders at the rows' size (no shift when they come).
-                        <li key={`wait-${i}`} aria-hidden="true" className="flex min-h-11 items-center gap-2.5 px-3.5 py-1 md:min-h-[2.375rem]">
-                            <span className="h-6 w-6 shrink-0 rounded-full bg-white/[0.08]" />
-                            <span className="min-w-0 flex-1">
-                                <span className="block h-2.5 rounded-full bg-white/[0.08]" style={{width: `${72 - i * 5}%`}} />
-                                <span className="mt-[7px] block h-[3px] rounded-full bg-white/[0.06]" style={{width: `${86 - i * 7}%`}} />
-                            </span>
-                            <span className="h-2.5 w-6 rounded-full bg-white/[0.08]" />
-                        </li>
-                    ))}
-                    {graph && ranked && !ranked.length ? <graph.ArkHudNone mode={mode} /> : null}
-                    {shownRows.map((item, index) => {
-                        const line = lines.get(item.key) ?? null;
-                        const spark = graph && line ? <graph.ArkRowSpark name={"gone" in item ? item.gone.name : item.name} line={line} onOpen={() => setGraphKey(item.key)} /> : null;
-                        if ("gone" in item) return graph ? <graph.ArkGoneRow key={item.key} name={item.gone.name} slug={item.gone.slug} line={line} locale={locale} onOpen={() => setGraphKey(item.key)} setsize={ordered.length} posinset={index + 1} /> : null;
-                        const row = item;
-                        const selected = row.key === selectedKey;
-                        const fresh = row.key === arrivalKey;
-                        const isHerd = herdKeys.has(row.key) || row.breeds.some((breed) => herdKeys.has(breed.key));
-                        const change = arkChangeOf(row.count, then, row.key, scope);
-                        const said = arkChangeText(change, locale);
-                        const label = [
-                            fillArkWords(hud.rowCount, {animal: row.name, count: number(row.count)}),
-                            ranked && graph && line ? graph.arkPeriodLabel(line.stats, period, locale) : said ? fillArkWords(hud.change24h, {change: said.text}) : null,
-                            row.mine ? hud.yours : null,
-                            isHerd ? hud.herdTag : null,
-                            row.breeds.length ? fillArkWords(hud.breeds, {breeds: row.breeds.map((breed) => `${breed.name} ${number(breed.count)}`).join(", ")}) : null
-                        ].filter(Boolean).join(", ");
-                        return (
-                            // Its place in the whole list ("12 of 779"), though only the first rows are rendered yet.
-                            <li key={row.key} data-species={row.key} aria-setsize={ordered.length} aria-posinset={index + 1} className={`flex items-stretch transition-colors duration-200 ${selected ? "bg-white/[0.10]" : fresh ? "bg-[#c8fa63]/[0.10]" : ""}`}>
-                                <button
-                                    type="button"
-                                    onClick={() => pick(row)}
-                                    aria-current={selected ? "true" : undefined}
-                                    aria-label={label}
-                                    className={`relative flex min-h-11 min-w-0 flex-1 items-center gap-2.5 py-1 pl-3.5 text-left transition-colors duration-200 md:min-h-[2.375rem] ${spark ? "pr-1" : "pr-3.5"} ${FOCUS} ${selected || fresh ? "" : "hover:bg-white/[0.06]"}`}
-                                >
-                                    {selected ? <span aria-hidden="true" className="absolute inset-y-1 left-0 w-[3px] rtl:left-auto rtl:right-0 rounded-full bg-[#c8fa63]" /> : null}
-                                    <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]">
-                                        <ArkSpeciesIcon src={arkIconUrl(row.slug)} size={24} className="h-[84%] w-[84%] object-contain" />
-                                    </span>
-                                    <span className="min-w-0 flex-1">
-                                        <span className="flex items-center gap-1.5">
-                                            <span className="truncate text-[13px] font-semibold leading-tight">{row.name}</span>
-                                            {row.mine ? <span aria-hidden="true" title={hud.yours} className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#c8fa63]" /> : null}
-                                        </span>
-                                        {/* Its count against the biggest (log scale: one animal and three hundred both read); it glides as it changes. */}
-                                        <span aria-hidden="true" className="mt-[5px] block h-[3px] w-full rounded-full bg-white/[0.09]">
-                                            <span
-                                                className={`block h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${selected ? "bg-[#c8fa63]" : "bg-white/60"}`}
-                                                style={{width: `${(arkBarShare(row.count, ceiling) * 100).toFixed(1)}%`}}
-                                            />
-                                        </span>
-                                    </span>
-                                    {/* Thriving / Declining: the period's change; else the 24-hour change, as before. */}
-                                    {ranked && graph && line ? <graph.ArkPeriodChange stats={line.stats} locale={locale} /> : <ArkChangeBadge change={change} words={words} locale={locale} />}
-                                    <span className="min-w-[2rem] text-right text-[13px] font-bold tabular-nums">{number(row.count)}</span>
-                                </button>
-                                {spark}
-                            </li>
-                        );
-                    })}
-                    {shownRows.length < ordered.length ? <li ref={moreRef} aria-hidden="true" className="h-px" /> : null}
-                </ul>
-                {/* After the living: the species the server logged as gone (hidden until its read answers). */}
-                <ArkLostList words={lostWords} locale={locale} />
-                {/* Endangered now: its own lazily loaded route (a plain link; no code of its own in this page). */}
-                <Link
-                    href="/ark/endangered"
-                    data-ark-endangered-link=""
-                    className={`flex min-h-11 w-full items-center gap-2 border-t border-white/[0.08] px-3.5 text-left text-[12px] font-bold text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white md:min-h-9 ${FOCUS}`}
+        <ArkGraphWordsContext.Provider value={words.graph}>
+            <section id="ark-aboard" aria-labelledby={`${panelId}-title`} tabIndex={-1} className={`pointer-events-none row-start-2 scroll-mt-[8rem] md:scroll-mt-[4.8rem] flex min-h-0 min-w-0 flex-col self-start outline-none md:col-span-1 md:col-start-2 md:row-span-2 md:row-start-1 md:max-h-full md:justify-self-end ${place}`}>
+                <button
+                    type="button"
+                    onClick={() => setOpen(true)}
+                    aria-expanded={false}
+                    aria-controls={panelId}
+                    aria-label={[totalLine, totalSaid ? fillArkWords(hud.change24h, {change: totalSaid.text}) : null, hud.show].filter(Boolean).join(", ")}
+                    title={hud.show}
+                    className={`${chipShown} ${GLASS} ${FOCUS} pointer-events-auto h-11 items-center gap-2 rounded-full pl-3.5 pr-3 text-[13px] font-bold tabular-nums transition-colors hover:bg-[rgba(24,32,24,0.82)] md:h-9`}
                 >
-                    <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#f2c14e]" />
-                    <span className="flex-1">{words.endangered?.title || "Endangered now"}</span>
-                    <span aria-hidden="true" className="opacity-75 rtl:rotate-180">→</span>
-                </Link>
-            </div>
-        </section>
+                    <span className="whitespace-nowrap">{totalLine}</span>
+                    <ArkChangeBadge change={total} words={words} locale={locale} />
+                    <Caret up={false} />
+                </button>
+
+                <div id={panelId} className={`${panelShown} ${GLASS} pointer-events-auto min-h-0 w-full flex-col overflow-hidden rounded-2xl md:w-[19rem]`}>
+                    <div className="flex items-start gap-1 pb-2 pl-3.5 pr-1.5 pt-2.5">
+                        <div className="min-w-0 flex-1 pt-0.5">
+                            <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                                <h2 id={`${panelId}-title`} ref={headingRef} tabIndex={-1} className="font-sans text-[15px] font-bold leading-tight tabular-nums outline-none focus-visible:underline">
+                                    <span className="sr-only">{hud.label}: </span>
+                                    {totalLine}
+                                </h2>
+                                {totalSaid ? (
+                                    <span className="flex items-baseline gap-1">
+                                        <ArkChangeBadge change={total} words={words} locale={locale} />
+                                        <span aria-hidden="true" className="text-[10.5px] font-semibold text-white/40">{hud.changeWindow}</span>
+                                    </span>
+                                ) : null}
+                            </div>
+                            <p className="mt-0.5 truncate text-[11.5px] text-white/55">{subline}</p>
+                        </div>
+                        <ArkShareButton
+                            target="population"
+                            look="icon"
+                            localePath={shareLocalePath}
+                            slug={null}
+                            title={words.eyebrow}
+                            text={fillArkWords(words.share.textArk, {
+                                animals: counted(counts.animals, words.animalsOne, words.animalsOther, locale),
+                                species: counted(counts.species, words.speciesOne, words.speciesOther, locale)
+                            })}
+                            label={words.share.shareArk}
+                            copied={words.share.copied}
+                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60 md:h-8 md:w-8 ${FOCUS}`}
+                        />
+                        <button
+                            type="button"
+                            onClick={() => setOpen(!isOpen())}
+                            aria-expanded
+                            aria-controls={panelId}
+                            aria-label={hud.hide}
+                            title={hud.hide}
+                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white md:h-8 md:w-8 ${FOCUS}`}
+                        >
+                            <Caret up />
+                        </button>
+                    </div>
+
+                    {filters ? <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">{filters}</div> : null}
+
+                    {/* Population over time (once the record's read answers): the order and the period the lines cover. */}
+                    {graph && history && !graphKey ? <graph.ArkHudControls mode={mode} onMode={(next) => { setMode(next); listRef.current?.scrollTo({top: 0}); }} period={period} onPeriod={setPeriod} /> : null}
+
+                    {graph && history && graphKey ? <graph.ArkHudGraphPane history={history} graphKey={graphKey} rows={rowByKey} line={lines.get(graphKey)} period={period} onPeriod={setPeriod} onBack={() => setGraphKey(null)} onFly={(row) => { setGraphKey(null); pick(row); }} locale={locale} /> : null}
+
+                    {/* Every species, biggest first: about a dozen in view, the rest scroll inside the panel. */}
+                    <ul ref={listRef} aria-label={hud.listLabel} hidden={Boolean(graph && history && graphKey)} className="relative max-h-[46svh] min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] py-1 [scrollbar-width:thin] md:max-h-[28rem]">
+                        {listed ? null : Array.from({length: 8}, (_, i) => (
+                            // Before the Ark is read: quiet placeholders at the rows' size (no shift when they come).
+                            <li key={`wait-${i}`} aria-hidden="true" className="flex min-h-11 items-center gap-2.5 px-3.5 py-1 md:min-h-[2.375rem]">
+                                <span className="h-6 w-6 shrink-0 rounded-full bg-white/[0.08]" />
+                                <span className="min-w-0 flex-1">
+                                    <span className="block h-2.5 rounded-full bg-white/[0.08]" style={{width: `${72 - i * 5}%`}} />
+                                    <span className="mt-[7px] block h-[3px] rounded-full bg-white/[0.06]" style={{width: `${86 - i * 7}%`}} />
+                                </span>
+                                <span className="h-2.5 w-6 rounded-full bg-white/[0.08]" />
+                            </li>
+                        ))}
+                        {graph && ranked && !ranked.length ? <graph.ArkHudNone mode={mode} /> : null}
+                        {shownRows.map((item, index) => {
+                            const line = lines.get(item.key) ?? null;
+                            const spark = graph && line ? <graph.ArkRowSpark name={"gone" in item ? item.gone.name : item.name} line={line} onOpen={() => setGraphKey(item.key)} /> : null;
+                            if ("gone" in item) return graph ? <graph.ArkGoneRow key={item.key} name={item.gone.name} slug={item.gone.slug} line={line} locale={locale} onOpen={() => setGraphKey(item.key)} setsize={ordered.length} posinset={index + 1} /> : null;
+                            const row = item;
+                            const selected = row.key === selectedKey;
+                            const fresh = row.key === arrivalKey;
+                            const isHerd = herdKeys.has(row.key) || row.breeds.some((breed) => herdKeys.has(breed.key));
+                            const change = arkChangeOf(row.count, then, row.key, scope);
+                            const said = arkChangeText(change, locale);
+                            const label = [
+                                fillArkWords(hud.rowCount, {animal: row.name, count: number(row.count)}),
+                                ranked && graph && line ? graph.arkPeriodLabel(line.stats, period, locale, words.graph) : said ? fillArkWords(hud.change24h, {change: said.text}) : null,
+                                row.mine ? hud.yours : null,
+                                isHerd ? hud.herdTag : null,
+                                row.breeds.length ? fillArkWords(hud.breeds, {breeds: row.breeds.map((breed) => `${breed.name} ${number(breed.count)}`).join(", ")}) : null
+                            ].filter(Boolean).join(", ");
+                            return (
+                                // Its place in the whole list ("12 of 779"), though only the first rows are rendered yet.
+                                <li key={row.key} data-species={row.key} aria-setsize={ordered.length} aria-posinset={index + 1} className={`flex items-stretch transition-colors duration-200 ${selected ? "bg-white/[0.10]" : fresh ? "bg-[#c8fa63]/[0.10]" : ""}`}>
+                                    <button
+                                        type="button"
+                                        onClick={() => pick(row)}
+                                        aria-current={selected ? "true" : undefined}
+                                        aria-label={label}
+                                        className={`relative flex min-h-11 min-w-0 flex-1 items-center gap-2.5 py-1 pl-3.5 text-left transition-colors duration-200 md:min-h-[2.375rem] ${spark ? "pr-1" : "pr-3.5"} ${FOCUS} ${selected || fresh ? "" : "hover:bg-white/[0.06]"}`}
+                                    >
+                                        {selected ? <span aria-hidden="true" className="absolute inset-y-1 left-0 w-[3px] rtl:left-auto rtl:right-0 rounded-full bg-[#c8fa63]" /> : null}
+                                        <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]">
+                                            <ArkSpeciesIcon src={arkIconUrl(row.slug)} size={24} className="h-[84%] w-[84%] object-contain" />
+                                        </span>
+                                        <span className="min-w-0 flex-1">
+                                            <span className="flex items-center gap-1.5">
+                                                <span className="truncate text-[13px] font-semibold leading-tight">{row.name}</span>
+                                                {row.mine ? <span aria-hidden="true" title={hud.yours} className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#c8fa63]" /> : null}
+                                            </span>
+                                            {/* Its count against the biggest (log scale: one animal and three hundred both read); it glides as it changes. */}
+                                            <span aria-hidden="true" className="mt-[5px] block h-[3px] w-full rounded-full bg-white/[0.09]">
+                                                <span
+                                                    className={`block h-full rounded-full transition-[width] duration-700 ease-out motion-reduce:transition-none ${selected ? "bg-[#c8fa63]" : "bg-white/60"}`}
+                                                    style={{width: `${(arkBarShare(row.count, ceiling) * 100).toFixed(1)}%`}}
+                                                />
+                                            </span>
+                                        </span>
+                                        {/* Thriving / Declining: the period's change; else the 24-hour change, as before. */}
+                                        {ranked && graph && line ? <graph.ArkPeriodChange stats={line.stats} locale={locale} /> : <ArkChangeBadge change={change} words={words} locale={locale} />}
+                                        <span className="min-w-[2rem] text-right text-[13px] font-bold tabular-nums">{number(row.count)}</span>
+                                    </button>
+                                    {spark}
+                                </li>
+                            );
+                        })}
+                        {shownRows.length < ordered.length ? <li ref={moreRef} aria-hidden="true" className="h-px" /> : null}
+                    </ul>
+                    {/* After the living: the species the server logged as gone (hidden until its read answers). */}
+                    <ArkLostList words={lostWords} locale={locale} />
+                    {/* Endangered now: its own lazily loaded route (a plain link; no code of its own in this page). */}
+                    <Link
+                        href="/ark/endangered"
+                        data-ark-endangered-link=""
+                        className={`flex min-h-11 w-full items-center gap-2 border-t border-white/[0.08] px-3.5 text-left text-[12px] font-bold text-white/70 transition-colors hover:bg-white/[0.06] hover:text-white md:min-h-9 ${FOCUS}`}
+                    >
+                        <span aria-hidden="true" className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#f2c14e]" />
+                        <span className="flex-1">{words.endangered?.title || "Endangered now"}</span>
+                        <span aria-hidden="true" className="opacity-75 rtl:rotate-180">→</span>
+                    </Link>
+                </div>
+            </section>
+        </ArkGraphWordsContext.Provider>
     );
 }

@@ -4338,6 +4338,45 @@
       "openList": "See them over the Ark",
       "listLabel": "Every species aboard, the most numerous first"
     },
+    "graph": {
+      "periods": {
+        "24h": "24 h",
+        "7d": "7 days",
+        "30d": "30 days",
+        "all": "All"
+      },
+      "periodsShort": {
+        "24h": "24h",
+        "7d": "7d",
+        "30d": "30d",
+        "all": "All"
+      },
+      "periodLabel": "Time period",
+      "sortLabel": "Order",
+      "biggest": "Biggest",
+      "thriving": "Thriving",
+      "declining": "Declining",
+      "noneThriving": "No species grew in this period.",
+      "noneDeclining": "No species fell in this period.",
+      "back": "All species",
+      "now": "Now",
+      "change": "Change",
+      "peak": "Peak",
+      "low": "Low",
+      "arrived": "{count} came aboard",
+      "born": "{count} born",
+      "revived": "{count} back from recovery",
+      "died": "{count} died",
+      "eaten": "{count} eaten",
+      "nothing": "No births, arrivals or deaths in this period.",
+      "flyTo": "Show in the Ark",
+      "goneNow": "None aboard now",
+      "openGraph": "{animal}: population graph",
+      "graphLabel": "{animal} population, {period}: {start} to {now}",
+      "arkDays": "Ark days {from}–{to}",
+      "recordStarts": "The record starts {date}",
+      "pointAt": "{count} at {time}"
+    },
     "story": {
       "generic": "Came aboard after a step that worked",
       "debate": "Brought aboard after: ‘{problem}’ · the {animal}'s way ({power}) worked",

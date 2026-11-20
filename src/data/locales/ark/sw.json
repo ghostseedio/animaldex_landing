@@ -126,6 +126,45 @@
             "openList": "Waone juu ya Ark",
             "listLabel": "Kila spishi iliyo ndani, zenye wanyama wengi kwanza"
         },
+        "graph": {
+            "periods": {
+                "24h": "saa 24",
+                "7d": "siku 7",
+                "30d": "siku 30",
+                "all": "Zote"
+            },
+            "periodsShort": {
+                "24h": "saa 24",
+                "7d": "siku 7",
+                "30d": "siku 30",
+                "all": "Zote"
+            },
+            "periodLabel": "Kipindi",
+            "sortLabel": "Mpangilio",
+            "biggest": "Wengi zaidi",
+            "thriving": "Zinazoongezeka",
+            "declining": "Zinazopungua",
+            "noneThriving": "Hakuna spishi iliyoongezeka katika kipindi hiki.",
+            "noneDeclining": "Hakuna spishi iliyopungua katika kipindi hiki.",
+            "back": "Spishi zote",
+            "now": "Sasa",
+            "change": "Mabadiliko",
+            "peak": "Kilele",
+            "low": "Kiwango cha chini",
+            "arrived": "{count} wamepanda",
+            "born": "{count} wamezaliwa",
+            "revived": "{count} wamerudi baada ya kupona",
+            "died": "{count} wamekufa",
+            "eaten": "{count} wameliwa",
+            "nothing": "Hakuna kuzaliwa, kuwasili wala kufa katika kipindi hiki.",
+            "flyTo": "Onyesha kwenye Ark",
+            "goneNow": "Hakuna hata mmoja ndani sasa",
+            "openGraph": "{animal}: grafu ya idadi",
+            "graphLabel": "Idadi ya {animal}, {period}: kuanzia {start} hadi {now}",
+            "arkDays": "Siku za Ark {from}–{to}",
+            "recordStarts": "Rekodi inaanza {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Alipanda baada ya hatua iliyofanikiwa",
             "debate": "Aliletwa ndani baada ya: “{problem}” · njia ya {animal} ({power}) ilifanikiwa",

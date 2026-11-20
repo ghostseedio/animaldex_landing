@@ -126,6 +126,45 @@
             "openList": "Ark'ın üzerinde gör",
             "listLabel": "Gemideki her tür, en kalabalıktan başlayarak"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 sa",
+                "7d": "7 gün",
+                "30d": "30 gün",
+                "all": "Tümü"
+            },
+            "periodsShort": {
+                "24h": "24 sa",
+                "7d": "7 gün",
+                "30d": "30 gün",
+                "all": "Tümü"
+            },
+            "periodLabel": "Zaman aralığı",
+            "sortLabel": "Sıralama",
+            "biggest": "En çok",
+            "thriving": "Artan",
+            "declining": "Azalan",
+            "noneThriving": "Bu dönemde hiçbir tür artmadı.",
+            "noneDeclining": "Bu dönemde hiçbir tür azalmadı.",
+            "back": "Tüm türler",
+            "now": "Şimdi",
+            "change": "Değişim",
+            "peak": "Zirve",
+            "low": "En düşük",
+            "arrived": "{count} gemiye bindi",
+            "born": "{count} doğdu",
+            "revived": "{count} iyileşip geri döndü",
+            "died": "{count} öldü",
+            "eaten": "{count} yenildi",
+            "nothing": "Bu dönemde doğum, varış ya da ölüm olmadı.",
+            "flyTo": "Ark'ta göster",
+            "goneNow": "Şu an gemide hiç yok",
+            "openGraph": "{animal}: nüfus grafiği",
+            "graphLabel": "{animal} nüfusu, {period}: {start} ile {now} arası",
+            "arkDays": "Ark günleri {from}–{to}",
+            "recordStarts": "Kayıt {date} tarihinde başlıyor",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "İşe yarayan bir adımın ardından gemiye bindi",
             "debate": "Şunun ardından geldi: “{problem}” · {animal} yolu ({power}) işe yaradı",

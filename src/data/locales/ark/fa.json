@@ -126,6 +126,45 @@
             "openList": "دیدن آن‌ها روی Ark",
             "listLabel": "همهٔ گونه‌های سرنشین، از پرشمارترین"
         },
+        "graph": {
+            "periods": {
+                "24h": "۲۴ ساعت",
+                "7d": "۷ روز",
+                "30d": "۳۰ روز",
+                "all": "همه"
+            },
+            "periodsShort": {
+                "24h": "۲۴ ساعت",
+                "7d": "۷ روز",
+                "30d": "۳۰ روز",
+                "all": "همه"
+            },
+            "periodLabel": "بازهٔ زمانی",
+            "sortLabel": "ترتیب",
+            "biggest": "بیشترین",
+            "thriving": "در حال رشد",
+            "declining": "در حال کاهش",
+            "noneThriving": "در این بازه هیچ گونه‌ای رشد نکرد.",
+            "noneDeclining": "در این بازه هیچ گونه‌ای کاهش نیافت.",
+            "back": "همهٔ گونه‌ها",
+            "now": "اکنون",
+            "change": "تغییر",
+            "peak": "اوج",
+            "low": "کمترین",
+            "arrived": "{count} سوار شدند",
+            "born": "{count} به دنیا آمدند",
+            "revived": "{count} پس از بهبود برگشتند",
+            "died": "{count} مردند",
+            "eaten": "{count} خورده شدند",
+            "nothing": "در این بازه تولد، ورود یا مرگی نبود.",
+            "flyTo": "نمایش در Ark",
+            "goneNow": "اکنون هیچ‌کدام در کشتی نیست",
+            "openGraph": "{animal}: نمودار جمعیت",
+            "graphLabel": "جمعیت {animal}، {period}: از {start} تا {now}",
+            "arkDays": "روزهای Ark {from}–{to}",
+            "recordStarts": "ثبت از {date} شروع می‌شود",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "پس از قدمی که جواب داد سوار شد",
             "debate": "پس از این سوار شد: «{problem}» · روش {animal} ({power}) جواب داد",

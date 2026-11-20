@@ -126,6 +126,45 @@
             "openList": "Ark 위에서 보기",
             "listLabel": "탑승한 모든 종, 수가 많은 순"
         },
+        "graph": {
+            "periods": {
+                "24h": "24시간",
+                "7d": "7일",
+                "30d": "30일",
+                "all": "전체"
+            },
+            "periodsShort": {
+                "24h": "24시간",
+                "7d": "7일",
+                "30d": "30일",
+                "all": "전체"
+            },
+            "periodLabel": "기간",
+            "sortLabel": "정렬",
+            "biggest": "많은 순",
+            "thriving": "증가",
+            "declining": "감소",
+            "noneThriving": "이 기간에 늘어난 종이 없어요.",
+            "noneDeclining": "이 기간에 줄어든 종이 없어요.",
+            "back": "모든 종",
+            "now": "현재",
+            "change": "변화",
+            "peak": "최고",
+            "low": "최저",
+            "arrived": "탑승 {count}",
+            "born": "출생 {count}",
+            "revived": "회복 후 복귀 {count}",
+            "died": "사망 {count}",
+            "eaten": "잡아먹힘 {count}",
+            "nothing": "이 기간에는 출생, 탑승, 사망이 없어요.",
+            "flyTo": "Ark에서 보기",
+            "goneNow": "지금은 탑승한 개체가 없어요",
+            "openGraph": "{animal}: 개체 수 그래프",
+            "graphLabel": "{animal} 개체 수, {period}: {start}에서 {now}까지",
+            "arkDays": "Ark 일수 {from}–{to}",
+            "recordStarts": "기록 시작: {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "효과가 있었던 할 일 덕분에 탑승했어요",
             "debate": "탑승 계기: ‘{problem}’ · {animal}의 방식({power})이 효과가 있었어요",

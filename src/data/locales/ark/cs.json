@@ -126,6 +126,45 @@
             "openList": "Zobrazit nad Ark",
             "listLabel": "Všechny druhy na palubě, nejpočetnější první"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 h",
+                "7d": "7 dní",
+                "30d": "30 dní",
+                "all": "Vše"
+            },
+            "periodsShort": {
+                "24h": "24 h",
+                "7d": "7 d",
+                "30d": "30 d",
+                "all": "Vše"
+            },
+            "periodLabel": "Časové období",
+            "sortLabel": "Řazení",
+            "biggest": "Nejpočetnější",
+            "thriving": "Rostoucí",
+            "declining": "Ubývající",
+            "noneThriving": "V tomto období nepřibyl žádný druh.",
+            "noneDeclining": "V tomto období neubyl žádný druh.",
+            "back": "Všechny druhy",
+            "now": "Nyní",
+            "change": "Změna",
+            "peak": "Maximum",
+            "low": "Minimum",
+            "arrived": "Nastoupilo: {count}",
+            "born": "Narodilo se: {count}",
+            "revived": "Vrátilo se po uzdravení: {count}",
+            "died": "Uhynulo: {count}",
+            "eaten": "Sežráno: {count}",
+            "nothing": "V tomto období žádná narození, příchody ani úmrtí.",
+            "flyTo": "Zobrazit v Ark",
+            "goneNow": "Teď žádný na palubě",
+            "openGraph": "{animal}: graf populace",
+            "graphLabel": "Populace druhu {animal}, {period}: od {start} do {now}",
+            "arkDays": "Dny Ark {from}–{to}",
+            "recordStarts": "Záznam začíná {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Nastoupilo po kroku, který fungoval",
             "debate": "Na palubě po: „{problem}“ · zafungoval způsob, jaký má {animal} ({power})",

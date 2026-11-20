@@ -126,6 +126,45 @@
             "openList": "Lihat di atas Ark",
             "listLabel": "Setiap spesies di atas kapal, yang paling ramai dahulu"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 jam",
+                "7d": "7 hari",
+                "30d": "30 hari",
+                "all": "Semua"
+            },
+            "periodsShort": {
+                "24h": "24j",
+                "7d": "7h",
+                "30d": "30h",
+                "all": "Semua"
+            },
+            "periodLabel": "Tempoh masa",
+            "sortLabel": "Susunan",
+            "biggest": "Terbanyak",
+            "thriving": "Berkembang",
+            "declining": "Merosot",
+            "noneThriving": "Tiada spesies yang bertambah dalam tempoh ini.",
+            "noneDeclining": "Tiada spesies yang berkurang dalam tempoh ini.",
+            "back": "Semua spesies",
+            "now": "Sekarang",
+            "change": "Perubahan",
+            "peak": "Puncak",
+            "low": "Terendah",
+            "arrived": "{count} naik ke Ark",
+            "born": "{count} lahir",
+            "revived": "{count} kembali selepas pulih",
+            "died": "{count} mati",
+            "eaten": "{count} dimakan",
+            "nothing": "Tiada kelahiran, ketibaan atau kematian dalam tempoh ini.",
+            "flyTo": "Tunjuk di Ark",
+            "goneNow": "Tiada lagi di atas kapal",
+            "openGraph": "{animal}: graf populasi",
+            "graphLabel": "Populasi {animal}, {period}: {start} hingga {now}",
+            "arkDays": "Hari Ark {from}–{to}",
+            "recordStarts": "Rekod bermula {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Naik ke Ark selepas langkah yang berjaya",
             "debate": "Dibawa ke Ark selepas: “{problem}” · cara {animal} ({power}) berjaya",

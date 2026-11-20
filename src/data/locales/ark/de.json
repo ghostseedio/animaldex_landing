@@ -126,6 +126,45 @@
             "openList": "Über der Ark ansehen",
             "listLabel": "Alle Arten an Bord, die zahlreichsten zuerst"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 Std.",
+                "7d": "7 Tage",
+                "30d": "30 Tage",
+                "all": "Alle"
+            },
+            "periodsShort": {
+                "24h": "24 Std.",
+                "7d": "7 T",
+                "30d": "30 T",
+                "all": "Alle"
+            },
+            "periodLabel": "Zeitraum",
+            "sortLabel": "Reihenfolge",
+            "biggest": "Größte",
+            "thriving": "Wachsend",
+            "declining": "Schrumpfend",
+            "noneThriving": "In diesem Zeitraum ist keine Art gewachsen.",
+            "noneDeclining": "In diesem Zeitraum ist keine Art geschrumpft.",
+            "back": "Alle Arten",
+            "now": "Jetzt",
+            "change": "Änderung",
+            "peak": "Höchstwert",
+            "low": "Tiefstwert",
+            "arrived": "{count} an Bord gekommen",
+            "born": "{count} geboren",
+            "revived": "{count} nach Genesung zurück",
+            "died": "{count} gestorben",
+            "eaten": "{count} gefressen",
+            "nothing": "In diesem Zeitraum gab es keine Geburten, Ankünfte oder Todesfälle.",
+            "flyTo": "In der Ark zeigen",
+            "goneNow": "Aktuell keines an Bord",
+            "openGraph": "{animal}: Bestandsgrafik",
+            "graphLabel": "Bestand {animal}, {period}: {start} bis {now}",
+            "arkDays": "Ark-Tage {from}–{to}",
+            "recordStarts": "Die Aufzeichnung beginnt am {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Nach einem Schritt, der geklappt hat, an Bord gekommen",
             "debate": "An Bord gebracht nach: „{problem}“ · der Weg von {animal} ({power}) hat geklappt",

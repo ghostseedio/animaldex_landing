@@ -126,6 +126,45 @@
             "openList": "Bekijk ze boven de Ark",
             "listLabel": "Alle soorten aan boord, de talrijkste eerst"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 uur",
+                "7d": "7 dagen",
+                "30d": "30 dagen",
+                "all": "Alles"
+            },
+            "periodsShort": {
+                "24h": "24 u",
+                "7d": "7 d",
+                "30d": "30 d",
+                "all": "Alles"
+            },
+            "periodLabel": "Periode",
+            "sortLabel": "Volgorde",
+            "biggest": "Grootste",
+            "thriving": "Groeiend",
+            "declining": "Krimpend",
+            "noneThriving": "Geen soort is gegroeid in deze periode.",
+            "noneDeclining": "Geen soort is gekrompen in deze periode.",
+            "back": "Alle soorten",
+            "now": "Nu",
+            "change": "Verandering",
+            "peak": "Piek",
+            "low": "Dal",
+            "arrived": "{count} aan boord gekomen",
+            "born": "{count} geboren",
+            "revived": "{count} terug na herstel",
+            "died": "{count} gestorven",
+            "eaten": "{count} opgegeten",
+            "nothing": "Geen geboortes, aankomsten of sterfgevallen in deze periode.",
+            "flyTo": "Toon in de Ark",
+            "goneNow": "Nu niemand meer aan boord",
+            "openGraph": "{animal}: populatiegrafiek",
+            "graphLabel": "Populatie {animal}, {period}: van {start} tot {now}",
+            "arkDays": "Ark-dagen {from}–{to}",
+            "recordStarts": "Het logboek begint op {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Kwam aan boord na een stap die werkte",
             "debate": "Aan boord gebracht na: ‘{problem}’ · de manier van {animal} ({power}) werkte",

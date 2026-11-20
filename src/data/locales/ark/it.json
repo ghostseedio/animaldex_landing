@@ -126,6 +126,45 @@
             "openList": "Vedile sopra l'Ark",
             "listLabel": "Tutte le specie a bordo, prima le più numerose"
         },
+        "graph": {
+            "periods": {
+                "24h": "24 h",
+                "7d": "7 giorni",
+                "30d": "30 giorni",
+                "all": "Tutto"
+            },
+            "periodsShort": {
+                "24h": "24 h",
+                "7d": "7 g",
+                "30d": "30 g",
+                "all": "Tutto"
+            },
+            "periodLabel": "Periodo",
+            "sortLabel": "Ordine",
+            "biggest": "Più numerose",
+            "thriving": "In crescita",
+            "declining": "In calo",
+            "noneThriving": "Nessuna specie è cresciuta in questo periodo.",
+            "noneDeclining": "Nessuna specie è calata in questo periodo.",
+            "back": "Tutte le specie",
+            "now": "Ora",
+            "change": "Variazione",
+            "peak": "Picco",
+            "low": "Minimo",
+            "arrived": "{count} saliti a bordo",
+            "born": "{count} nati",
+            "revived": "{count} tornati dopo la guarigione",
+            "died": "{count} morti",
+            "eaten": "{count} mangiati",
+            "nothing": "Nessuna nascita, arrivo o morte in questo periodo.",
+            "flyTo": "Mostra sull'Ark",
+            "goneNow": "Nessuno a bordo ora",
+            "openGraph": "{animal}: grafico della popolazione",
+            "graphLabel": "Popolazione di {animal}, {period}: da {start} a {now}",
+            "arkDays": "Giorni dell'Ark {from}–{to}",
+            "recordStarts": "Il registro inizia il {date}",
+            "pointAt": "{time}: {count}"
+        },
         "story": {
             "generic": "Salito a bordo dopo un passo che ha funzionato",
             "debate": "Portato a bordo dopo: «{problem}» · il modo di {animal} ({power}) ha funzionato",
