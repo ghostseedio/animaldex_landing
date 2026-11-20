@@ -741,8 +741,18 @@
             "stageOld": "Gran",
             "ageIs": "edat: {age}",
             "ageIsAbout": "edat: uns {age}",
+            "ageIsAtLeast": "edat: almenys {age}",
             "ageMonths": "{months} mesos de l'Ark",
-            "ageMonth": "1 mes de l'Ark"
+            "ageMonth": "1 mes de l'Ark",
+            "chanceTitle": "Probabilitat de viure un any de l'Ark més",
+            "chanceMain": "Motiu principal: {reason}",
+            "chanceHow": "Com es calcula: la seva edat davant la vida típica de la seva espècie, els depredadors que poden caçar la seva espècie al seu entorn i la fam, a partir del que l'Ark ha fet públic. Una estimació que canvia quan canvia l'Ark, no una promesa.",
+            "chanceUp": "{change} més que fa un dia",
+            "chanceDown": "{change} menys que fa un dia",
+            "chanceSteady": "Igual que fa un dia",
+            "thriveWhy": "{band}: el mantenen en forma els passos fets pel seu propietari; es dilueix si s'aturen.",
+            "powerEarn": "Aconseguir el seu Poder en millora la probabilitat de sobreviure",
+            "powerWorking": "El seu Poder funciona: els depredadors el deixen de banda per als més febles"
         }
     },
     "talkPage": {

@@ -57,11 +57,32 @@ export async function fillArkTimeLeft(slot: HTMLElement, animal: ArkAnimal, snap
         title.title = left.hint;
         head.append(title, document.createTextNode(" "), el("span", "vv", left.value));
         more.appendChild(head);
-        if (left.reasons.length) {
+        const chance = text.chance;
+        if (chance) {
+            // The chance to live another Ark year and how it moved in a day, always shown beside the estimate (the summary); its reason and how it is worked out unfold.
+            const row = el("div", "ch");
+            row.dataset.testid = "ark-lite-chance";
+            const label = el("span", "tt", chance.title);
+            label.title = chance.how;
+            row.append(label, document.createTextNode(" "), el("span", "vv", chance.value));
+            head.appendChild(row);
+            if (chance.trend) {
+                const trend = el("div", `tr ${chance.trend.direction}`);
+                trend.dataset.direction = chance.trend.direction;
+                trend.append(el("i", "ar", chance.trend.direction === "up" ? "▲" : chance.trend.direction === "down" ? "▼" : "▬"), document.createTextNode(chance.trend.text));
+                head.appendChild(trend);
+            }
+            if (chance.main) more.appendChild(el("p", "mn", chance.main));
+        }
+        if (text.power) more.appendChild(el("p", "mn pw", text.power.text));
+        if (text.thrive) more.appendChild(el("p", "nn", text.thrive));
+        const reasons = left.reasons.filter((reason) => reason !== chance?.mainReason && reason !== chance?.trend?.cause);
+        if (reasons.length) {
             const list = el("ul");
-            for (const reason of left.reasons) list.appendChild(el("li", undefined, reason));
+            for (const reason of reasons) list.appendChild(el("li", undefined, reason));
             more.appendChild(list);
         }
+        if (chance) more.appendChild(el("p", "nn", chance.how));
         more.appendChild(el("p", "nn", left.hint));
         box.appendChild(more);
     }

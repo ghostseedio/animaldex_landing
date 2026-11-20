@@ -741,8 +741,18 @@
             "stageOld": "Idős",
             "ageIs": "kor: {age}",
             "ageIsAbout": "kor: körülbelül {age}",
+            "ageIsAtLeast": "kor: legalább {age}",
             "ageMonths": "{months} Ark-hónap",
-            "ageMonth": "1 Ark-hónap"
+            "ageMonth": "1 Ark-hónap",
+            "chanceTitle": "Esély még egy Ark-évet élni",
+            "chanceMain": "Fő ok: {reason}",
+            "chanceHow": "Így számoljuk: a kora a fajának élettartamához képest, a területén a fajára vadászni képes ragadozók és az éhség, abból, amit az Ark nyilvánossá tett. Becslés, amely az Arkkal együtt változik, nem ígéret.",
+            "chanceUp": "{change}-kal több, mint egy napja",
+            "chanceDown": "{change}-kal kevesebb, mint egy napja",
+            "chanceSteady": "Változatlan egy naphoz képest",
+            "thriveWhy": "{band}: gazdája teljesített lépései tartják formában; elhalványul, ha abbahagyja őket.",
+            "powerEarn": "Az Ereje megszerzése növeli a túlélési esélyét",
+            "powerWorking": "Az Ereje működik: a ragadozók elhaladnak mellette a gyengébbek kedvéért"
         }
     },
     "talkPage": {

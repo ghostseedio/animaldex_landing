@@ -741,8 +741,18 @@
             "stageOld": "Staré",
             "ageIs": "{age}",
             "ageIsAbout": "asi {age}",
+            "ageIsAtLeast": "najmenej {age}",
             "ageMonths": "mesiacov v Ark: {months}",
-            "ageMonth": "1 mesiac v Ark"
+            "ageMonth": "1 mesiac v Ark",
+            "chanceTitle": "Šanca dožiť ďalší rok v Ark",
+            "chanceMain": "Hlavný dôvod: {reason}",
+            "chanceHow": "Ako sa to počíta: jeho vek voči dĺžke života jeho druhu, predátori, ktorí môžu loviť jeho druh v jeho okolí, a hlad, podľa toho, čo Ark zverejnil. Odhad, ktorý sa mení spolu s Ark, nie sľub.",
+            "chanceUp": "O {change} viac ako pred dňom",
+            "chanceDown": "O {change} menej ako pred dňom",
+            "chanceSteady": "Bez zmeny oproti dňu predtým",
+            "thriveWhy": "{band}: v kondícii ho držia kroky, ktoré zvládol jeho majiteľ; vyprchá to, ak prestanú.",
+            "powerEarn": "Získanie jeho Sily zvyšuje jeho šancu prežiť",
+            "powerWorking": "Jeho Sila funguje: predátori ho obchádzajú kvôli slabším"
         }
     },
     "talkPage": {

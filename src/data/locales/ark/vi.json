@@ -741,8 +741,18 @@
             "stageOld": "Già",
             "ageIs": "tuổi {age}",
             "ageIsAbout": "tuổi khoảng {age}",
+            "ageIsAtLeast": "tuổi ít nhất {age}",
             "ageMonths": "{months} tháng Ark",
-            "ageMonth": "1 tháng Ark"
+            "ageMonth": "1 tháng Ark",
+            "chanceTitle": "Cơ hội sống thêm một năm Ark",
+            "chanceMain": "Lý do chính: {reason}",
+            "chanceHow": "Cách tính: tuổi của nó so với tuổi thọ của loài, những kẻ săn mồi có thể săn loài của nó trong khu vực của nó, và cơn đói, dựa trên những gì Ark đã công khai. Đây là ước tính thay đổi khi Ark thay đổi, không phải lời hứa.",
+            "chanceUp": "Tăng {change} so với một ngày trước",
+            "chanceDown": "Giảm {change} so với một ngày trước",
+            "chanceSteady": "Không đổi so với một ngày trước",
+            "thriveWhy": "{band}: được giữ phong độ nhờ các bước chủ của nó đã làm; sẽ phai đi nếu họ dừng lại.",
+            "powerEarn": "Giành được Năng lực của nó giúp tăng cơ hội sống sót",
+            "powerWorking": "Năng lực của nó đang phát huy: kẻ săn mồi bỏ qua nó để chọn con yếu hơn"
         }
     },
     "talkPage": {

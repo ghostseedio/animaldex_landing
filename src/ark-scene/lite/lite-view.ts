@@ -97,6 +97,13 @@ const CSS = `
 .arkl-tl{margin-top:6px;padding:6px 8px;border-radius:10px;background:rgba(255,255,255,.06)}
 .arkl-tl .hd{margin:0;display:flex;flex-wrap:wrap;align-items:baseline;gap:2px 8px;cursor:pointer;list-style:none}
 .arkl-tl .hd::-webkit-details-marker{display:none}
+.arkl-tl .hd .ch,.arkl-tl .hd .tr{flex:0 0 100%}
+.arkl-tl .hd .tr{display:flex;align-items:flex-start;gap:4px;font:600 11.5px/1.35 ${FONT};color:rgba(255,252,244,.7)}
+.arkl-tl .hd .tr.up{color:#7fd68f}
+.arkl-tl .hd .tr.down{color:#ffb454}
+.arkl-tl .hd .tr .ar{font-style:normal;font-size:9px;line-height:17px;flex:none}
+.arkl-tl .mn{margin:4px 0 0;color:rgba(255,252,244,.85);font-size:11.5px;line-height:1.35}
+.arkl-tl .mn.pw{font-weight:600;color:#c8fa63}
 .arkl-tl .hd::after{content:"";width:6px;height:6px;margin-inline-start:2px;border-inline-end:1.6px solid rgba(255,252,244,.5);border-bottom:1.6px solid rgba(255,252,244,.5);transform:translateY(-2px) rotate(45deg);align-self:center}
 .arkl-tl details[open]>.hd::after{transform:translateY(1px) rotate(225deg)}
 .arkl-tl .tt{font:700 10.5px/1.2 ${FONT};letter-spacing:.08em;text-transform:uppercase;color:rgba(255,252,244,.55)}

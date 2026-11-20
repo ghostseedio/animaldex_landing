@@ -741,8 +741,18 @@
             "stageOld": "Staré",
             "ageIs": "{age}",
             "ageIsAbout": "asi {age}",
+            "ageIsAtLeast": "nejméně {age}",
             "ageMonths": "měsíců v Ark: {months}",
-            "ageMonth": "1 měsíc v Ark"
+            "ageMonth": "1 měsíc v Ark",
+            "chanceTitle": "Šance dožít se dalšího roku v Ark",
+            "chanceMain": "Hlavní důvod: {reason}",
+            "chanceHow": "Jak se to počítá: z jeho věku vůči délce života jeho druhu, ze šelem, které mohou jeho druh v okolí lovit, a z hladu, podle toho, co Ark zveřejnila. Odhad, který se mění spolu s Ark, ne příslib.",
+            "chanceUp": "O {change} výše než před dnem",
+            "chanceDown": "O {change} níže než před dnem",
+            "chanceSteady": "Beze změny oproti dni předtím",
+            "thriveWhy": "{band}: drží ho ve formě kroky, které jeho majitel zvládl; když přestanou, vyprchá to.",
+            "powerEarn": "Získání jeho Síly zvyšuje jeho šanci přežít",
+            "powerWorking": "Jeho Síla funguje: šelmy ho přeskočí kvůli slabším"
         }
     },
     "talkPage": {

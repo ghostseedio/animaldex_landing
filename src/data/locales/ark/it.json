@@ -741,8 +741,18 @@
             "stageOld": "Anziano",
             "ageIs": "età: {age}",
             "ageIsAbout": "età: circa {age}",
+            "ageIsAtLeast": "età: almeno {age}",
             "ageMonths": "{months} mesi dell'Ark",
-            "ageMonth": "1 mese dell'Ark"
+            "ageMonth": "1 mese dell'Ark",
+            "chanceTitle": "Probabilità di vivere un altro anno dell'Ark",
+            "chanceMain": "Motivo principale: {reason}",
+            "chanceHow": "Come si calcola: la sua età rispetto alla durata di vita della sua specie, i predatori che possono cacciare la sua specie nella sua zona e la fame, da ciò che l'Ark ha reso pubblico. Una stima che cambia quando cambia l'Ark, non una promessa.",
+            "chanceUp": "{change} in più rispetto a un giorno fa",
+            "chanceDown": "{change} in meno rispetto a un giorno fa",
+            "chanceSteady": "Stabile rispetto a un giorno fa",
+            "thriveWhy": "{band}: è tenuto in forma dai passi compiuti dal suo proprietario; svanisce se si fermano.",
+            "powerEarn": "Ottenere il suo Potere aumenta la sua probabilità di sopravvivere",
+            "powerWorking": "Il suo Potere funziona: i predatori lo ignorano per i più deboli"
         }
     },
     "talkPage": {

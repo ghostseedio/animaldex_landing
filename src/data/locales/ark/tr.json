@@ -741,8 +741,18 @@
             "stageOld": "Yaşlı",
             "ageIs": "yaş: {age}",
             "ageIsAbout": "yaş: yaklaşık {age}",
+            "ageIsAtLeast": "yaş: en az {age}",
             "ageMonths": "{months} Ark ayı",
-            "ageMonth": "1 Ark ayı"
+            "ageMonth": "1 Ark ayı",
+            "chanceTitle": "Bir Ark yılı daha yaşama şansı",
+            "chanceMain": "Başlıca neden: {reason}",
+            "chanceHow": "Nasıl hesaplanır: yaşının türünün ömrüne göre durumu, bölgesinde türünü avlayabilecek yırtıcılar ve açlık; Ark'ın kamuya açıkladıklarına dayanır. Ark değiştikçe değişen bir tahmindir, söz değildir.",
+            "chanceUp": "Bir gün öncesine göre {change} yüksek",
+            "chanceDown": "Bir gün öncesine göre {change} düşük",
+            "chanceSteady": "Bir gün öncesiyle aynı",
+            "thriveWhy": "{band}: sahibinin tamamladığı adımlar sayesinde formda tutulur; adımlar durursa azalır.",
+            "powerEarn": "Gücünü kazanmak hayatta kalma şansını artırır",
+            "powerWorking": "Gücü işe yarıyor: yırtıcılar onu atlayıp daha zayıflara yöneliyor"
         }
     },
     "talkPage": {

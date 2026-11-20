@@ -741,8 +741,18 @@
             "stageOld": "Vanha",
             "ageIs": "{age} vanha",
             "ageIsAbout": "noin {age} vanha",
+            "ageIsAtLeast": "vähintään {age} vanha",
             "ageMonths": "{months} Ark-kuukautta",
-            "ageMonth": "1 Ark-kuukausi"
+            "ageMonth": "1 Ark-kuukausi",
+            "chanceTitle": "Todennäköisyys elää vielä yksi Ark-vuosi",
+            "chanceMain": "Tärkein syy: {reason}",
+            "chanceHow": "Näin tämä lasketaan: sen ikä suhteessa lajinsa elinikään, pedot, jotka voivat metsästää sen lajia sen alueella, ja nälkä sen perusteella, mitä Ark on julkaissut. Arvio, joka muuttuu Arkin muuttuessa, ei lupaus.",
+            "chanceUp": "{change} enemmän kuin vuorokausi sitten",
+            "chanceDown": "{change} vähemmän kuin vuorokausi sitten",
+            "chanceSteady": "Ennallaan vuorokauteen verrattuna",
+            "thriveWhy": "{band}: omistajan tekemät askeleet pitävät sen kunnossa; vaikutus hälvenee, jos ne loppuvat.",
+            "powerEarn": "Sen Voiman ansaitseminen parantaa sen selviytymismahdollisuuksia",
+            "powerWorking": "Sen Voima toimii: pedot ohittavat sen heikompien takia"
         }
     },
     "talkPage": {

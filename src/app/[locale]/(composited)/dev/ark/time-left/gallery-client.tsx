@@ -14,7 +14,8 @@ const KIND = {
     fox: "11111111-1111-4111-8111-000000000003",
     buzzard: "11111111-1111-4111-8111-000000000004",
     badger: "11111111-1111-4111-8111-000000000005",
-    cat: "11111111-1111-4111-8111-000000000006"
+    cat: "11111111-1111-4111-8111-000000000006",
+    human: "2fabfa9a-6ec9-4d71-8cf2-1933edaef6d2"
 } as const;
 
 type Row = Partial<ArkAnimal> & Pick<ArkAnimal, "id" | "species_profile_id" | "name" | "model_slug">;
@@ -49,6 +50,9 @@ function fixtureAnimals(mineId: string): ArkAnimal[] {
     // European Hedgehogs: four in the wood, hunted by the foxes.
     const hedgehog = {lifespan_days: 1826, lifespan_estimate: false};
     for (const id of ["h1", "h2", "h3", "h4"]) add(id, "hedgehog", "European Hedgehog", "european-hedgehog", {...hedgehog, born_ark_day: 150});
+    // Thriving (the read's band): one prime and one good among the ordinary, so the order the foxes take them in shows.
+    add("h5", "hedgehog", "European Hedgehog", "european-hedgehog", {...hedgehog, born_ark_day: 150, thrive: "prime"});
+    add("h6", "hedgehog", "European Hedgehog", "european-hedgehog", {...hedgehog, born_ark_day: 150, thrive: "good"});
     // Red Foxes: two fed, one hungry.
     const fox = {lifespan_days: 1826, lifespan_estimate: false, born_ark_day: 120};
     add("f1", "fox", "Red Fox", "red-fox", fox);
@@ -59,13 +63,16 @@ function fixtureAnimals(mineId: string): ArkAnimal[] {
     add("b1", "badger", "Eurasian Badger", "eurasian-badger", {lifespan_days: 3652, born_ark_day: 100});
     // A young one born on the Ark a month ago (a second badger: still under the floor of 3).
     add("b2", "badger", "Eurasian Badger", "eurasian-badger", {lifespan_days: 3652, lifespan_days_hi: 5475, origin: "born", generation: 1, source: null, born_ark_day: 230});
+    // A human (one per human capture): grown on arrival, never prey, no stored lifespan: age and stage only. A child born to an Ark couple is young.
+    add("hu1", "human", "Human", "human", {scientific_name: "Homo sapiens", zone: "farm_garden", island: "town", area: "house", born_ark_day: 239.417});
+    add("hu2", "human", "Human", "human", {scientific_name: "Homo sapiens", zone: "farm_garden", island: "town", area: "house", origin: "born", generation: 1, source: null, born_ark_day: 140});
     // A pet in a house (kept: only old age), with the upper end of its lifespan published as the live read does.
     add("p1", "cat", "Domestic Cat", "domestic-cat", {zone: "farm_garden", island: "town", area: "house", lifespan_days: 4383, lifespan_days_hi: 6574.5, born_ark_day: 77.077});
     return list;
 }
 
 /** `young`: born aboard a month ago; `adult`: arrived, healthy; `old`: the old vole; `hunted`: a wild hedgehog with foxes about; `pet`: a cat in a house. */
-const CASES: Record<string, string> = {old: "v1", hunted: "h1", hungry: "f3", safe: "b1", adult: "b1", young: "b2", pet: "p1"};
+const CASES: Record<string, string> = {old: "v1", hunted: "h1", prime: "h5", good: "h6", hungry: "f3", safe: "b1", adult: "b1", young: "b2", pet: "p1", human: "hu1", child: "hu2"};
 
 function species(kind: keyof typeof KIND, slug: string, name: string, aboard: number) {
     return {id: KIND[kind], slug, name, aboard, page: null};

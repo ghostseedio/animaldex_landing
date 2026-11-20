@@ -741,8 +741,18 @@
             "stageOld": "Gammel",
             "ageIs": "{age} gammel",
             "ageIsAbout": "omkring {age} gammel",
+            "ageIsAtLeast": "mindst {age} gammel",
             "ageMonths": "{months} Ark-måneder",
-            "ageMonth": "1 Ark-måned"
+            "ageMonth": "1 Ark-måned",
+            "chanceTitle": "Chance for at leve endnu et Ark-år",
+            "chanceMain": "Vigtigste grund: {reason}",
+            "chanceHow": "Sådan beregnes det: dens alder i forhold til artens levetid, de rovdyr der kan jage dens art i dens område, og sult, ud fra det Ark har gjort offentligt. Et skøn, der ændrer sig, når Ark ændrer sig, ikke et løfte.",
+            "chanceUp": "{change} højere end for en dag siden",
+            "chanceDown": "{change} lavere end for en dag siden",
+            "chanceSteady": "Uændret siden for en dag siden",
+            "thriveWhy": "{band}: holdes i form af ejerens gennemførte skridt; det aftager, hvis de stopper.",
+            "powerEarn": "At optjene dets Kraft øger dets chance for at overleve",
+            "powerWorking": "Dets Kraft virker: rovdyrene springer det over til fordel for de svagere"
         }
     },
     "talkPage": {

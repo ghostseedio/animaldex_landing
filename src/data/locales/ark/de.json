@@ -741,8 +741,18 @@
             "stageOld": "Alt",
             "ageIs": "{age} alt",
             "ageIsAbout": "etwa {age} alt",
+            "ageIsAtLeast": "mindestens {age} alt",
             "ageMonths": "{months} Ark-Monate",
-            "ageMonth": "1 Ark-Monat"
+            "ageMonth": "1 Ark-Monat",
+            "chanceTitle": "Chance, noch ein Ark-Jahr zu leben",
+            "chanceMain": "Wichtigster Grund: {reason}",
+            "chanceHow": "So wird das berechnet: sein Alter im Verhältnis zur Lebensspanne seiner Art, die Raubtiere, die seine Art in seinem Gebiet jagen können, und Hunger, aus dem, was Ark öffentlich gemacht hat. Eine Schätzung, die sich mit Ark ändert, kein Versprechen.",
+            "chanceUp": "{change} höher als vor einem Tag",
+            "chanceDown": "{change} niedriger als vor einem Tag",
+            "chanceSteady": "Unverändert gegenüber vor einem Tag",
+            "thriveWhy": "{band}: bleibt durch die geschafften Schritte seines Besitzers in Form; das lässt nach, wenn sie aufhören.",
+            "powerEarn": "Seine Kraft zu verdienen erhöht seine Überlebenschance",
+            "powerWorking": "Seine Kraft wirkt: Raubtiere übergehen es zugunsten schwächerer"
         }
     },
     "talkPage": {

@@ -1,6 +1,8 @@
 "use client";
 
 import React, {lazy, useEffect, useMemo, useState} from "react";
+import type SiteLink from "@/app/[locale]/_components/link";
+import {isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkWords} from "@/lib/ark-words";
 import {ARK_TIME_LEFT_HOOKS, arkLifeOutlook, arkLifeText, arkNeedsFacts, arkTimeLeftWordsFrom, arkTimeLeftWorldOf, type ArkLifeBar, type ArkTimeLeftFacts} from "@/lib/ark-time-left";
@@ -24,6 +26,8 @@ type Props = {
     fetchJson?: ArkTimeLeftFetch;
     /** Release to the Wild's block instead of the estimate: the site's link component (the card has it; see `ark-release.tsx`). */
     release?: React.ComponentProps<typeof ArkRelease>["link"];
+    /** The estimate's Power line links to how a Power is earned (the Talk page's step): the site's link component, handed in by the card. */
+    link?: typeof SiteLink;
     /** The snapshot's Ark day (the release block). */
     day?: number | null;
 };
@@ -44,7 +48,7 @@ export default function ArkTimeLeft({release, day, snapshot = null, ...rest}: Pr
  * (`ark-animal-card.tsx`), so the Ark page's static JavaScript stays inside its budget, and it reads its species facts
  * (`/api/ark/food-chain`) only when a wild animal's estimate could depend on them. Nothing here is a promise: it says so.
  */
-function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeLeftFetch}: {animal: ArkAnimal; snapshot: ArkSnapshot | null; words: ArkWords; locale: string; fetchJson?: ArkTimeLeftFetch}) {
+function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeLeftFetch, link: Link}: {animal: ArkAnimal; snapshot: ArkSnapshot | null; words: ArkWords; locale: string; fetchJson?: ArkTimeLeftFetch; link?: typeof SiteLink}) {
     const world = useMemo(() => arkTimeLeftWorldOf(snapshot), [snapshot]);
     const needs = world ? arkNeedsFacts(animal, world) : false;
     const [read, setRead] = useState<{id: string; facts: ArkTimeLeftFacts | null} | null>(null);
@@ -75,9 +79,12 @@ function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeL
     if (!outlook || !text) return null;
     const warm = outlook.tone === "risk";
     const left = text.left;
+    const chance = text.chance;
+    // A reason the chance's lines already say (its main reason, the cause of its change) is not said again in the list.
+    const reasons = left ? left.reasons.filter((reason) => reason !== chance?.mainReason && reason !== chance?.trend?.cause) : [];
     // Open when the reasons say more than "its kind's lifespan" (it could be hunted or hungry, or it is old); a healthy animal with only
     // old age ahead folds them away, so the block stays compact on a phone.
-    const open = warm || Boolean(outlook.left?.reasons.some((reason) => reason.kind !== "age"));
+    const open = warm || Boolean(text.power) || Boolean(outlook.left?.reasons.some((reason) => reason.kind !== "age"));
     return (
         <section data-testid="ark-card-time-left" data-tone={outlook.tone} aria-label={text.label} className="mt-1.5 rounded-lg bg-white/[0.05] px-2.5 py-1.5">
             {text.age ? (
@@ -89,17 +96,42 @@ function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeL
             {outlook.bar ? <ArkLifeBarMarks bar={outlook.bar} warm={warm} /> : null}
             {left ? (
                 <details key={animal.id} open={open} data-testid="ark-card-time-left-details">
-                    <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-2 rounded outline-none focus-visible:ring-1 focus-visible:ring-primary-300 [&::-webkit-details-marker]:hidden">
-                        <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400" title={left.hint}>
-                            <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-sm ${warm ? "bg-[#ffb454]" : "bg-primary-400"}`} />
-                            {left.title}
+                    <summary className="cursor-pointer list-none rounded outline-none focus-visible:ring-1 focus-visible:ring-primary-300 [&::-webkit-details-marker]:hidden">
+                        <span className="flex flex-wrap items-center gap-x-2">
+                            <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400" title={left.hint}>
+                                <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-sm ${warm ? "bg-[#ffb454]" : "bg-primary-400"}`} />
+                                {left.title}
+                            </span>
+                            <span data-testid="ark-card-time-left-value" className="text-[13.5px] font-bold text-white md:text-[14px]">{left.value}</span>
+                            <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 shrink-0 text-ink-400 transition-transform [details[open]>summary_&]:rotate-180 motion-reduce:transition-none" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 4.5 6 8l3.5-3.5" /></svg>
                         </span>
-                        <span data-testid="ark-card-time-left-value" className="text-[13.5px] font-bold text-white md:text-[14px]">{left.value}</span>
-                        <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 shrink-0 text-ink-400 transition-transform [details[open]>summary_&]:rotate-180 motion-reduce:transition-none" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 4.5 6 8l3.5-3.5" /></svg>
+                        {chance ? (
+                            <span data-testid="ark-card-chance" className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
+                                <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400" title={chance.how}>{chance.title}</span>
+                                <span data-testid="ark-card-chance-value" className="text-[13.5px] font-bold text-white md:text-[14px]">{chance.value}</span>
+                            </span>
+                        ) : null}
+                        {chance?.trend ? (
+                            <span data-testid="ark-card-chance-trend" data-direction={chance.trend.direction} className={`mt-0.5 flex items-start gap-1 text-[11.5px] font-semibold leading-snug ${chance.trend.direction === "up" ? "text-primary-300" : chance.trend.direction === "down" ? "text-[#ffb454]" : "text-ink-300"}`}>
+                                <span aria-hidden="true" className="shrink-0 text-[9px] leading-[17px]">{chance.trend.direction === "up" ? "▲" : chance.trend.direction === "down" ? "▼" : "▬"}</span>
+                                <span className="min-w-0">{chance.trend.text}</span>
+                            </span>
+                        ) : null}
                     </summary>
-                    {left.reasons.length ? (
+                    {chance?.main ? <p data-testid="ark-card-chance-main" className="mt-0.5 text-[11.5px] leading-snug text-ink-200">{chance.main}</p> : null}
+                    {text.power ? (
+                        <p data-testid="ark-card-power" data-kind={text.power.kind} className="mt-0.5 text-[11.5px] font-semibold leading-snug text-primary-200">
+                            {Link && !isArkPlaceholderSlug(animal.model_slug) && animal.placeholder !== true ? (
+                                <Link href={`/talk/${animal.model_slug}`} className="underline-offset-2 hover:underline">{text.power.text}</Link>
+                            ) : (
+                                text.power.text
+                            )}
+                        </p>
+                    ) : null}
+                    {text.thrive ? <p data-testid="ark-card-thrive-why" className="mt-0.5 text-[11.5px] leading-snug text-ink-300">{text.thrive}</p> : null}
+                    {reasons.length ? (
                         <ul className="mt-0.5 text-[11.5px] leading-snug text-ink-300">
-                            {left.reasons.map((reason) => (
+                            {reasons.map((reason) => (
                                 <li key={reason} className="flex gap-1.5">
                                     <span aria-hidden="true" className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-ink-400" />
                                     <span className="min-w-0">{reason}</span>
@@ -107,6 +139,7 @@ function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeL
                             ))}
                         </ul>
                     ) : null}
+                    {chance ? <p data-testid="ark-card-chance-how" className="mt-0.5 text-[10.5px] italic leading-snug text-ink-400">{chance.how}</p> : null}
                     <p className="mt-0.5 text-[10.5px] italic leading-snug text-ink-400">{left.hint}</p>
                 </details>
             ) : null}

@@ -340,7 +340,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             {nowLine ? <p data-testid="ark-card-now" data-activity={status?.activity ?? undefined} className={`mt-1.5 text-[14px] font-semibold italic leading-snug md:text-[15px] ${asleepNow ? "text-[#c9d6ff]" : "text-white"}`}>{nowLine}</p> : null}
                             {text?.next ? <p data-testid="ark-card-next" className="mt-0.5 text-[12.5px] italic leading-snug text-ink-300">{text.next}</p> : null}
                         </div>
-                        {snapshot ? <Suspense fallback={null}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense> : null}
+                        {snapshot ? <Suspense fallback={null}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} link={Link} /></Suspense> : null}
                         {rhythmNow ? <ArkRhythmLine rhythm={rhythmNow} open={rhythmOpen} onToggle={() => setRhythmOpen((v) => !v)} /> : null}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} /> : null}
                         {/* Release to the Wild (P1-8, behind the server's switch): the same lazy import's other block; it draws nothing while the switch is off. */}
