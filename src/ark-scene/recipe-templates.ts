@@ -11,6 +11,8 @@
  * and nuts that are not catalogue animals. A catalogue animal only disappears through a server meal event (`acts.ts`).
  */
 
+import {GROUP_TEMPLATES} from "@/ark-scene/behaviour-group-templates";
+
 /**
  * Where a step goes:
  * - anchor: where the episode began (the last step's anchor blends back into its schedule pose);
@@ -68,8 +70,8 @@ export type Goal = "perch_water" | "perch" | "edge" | "water" | "ground" | "bare
 export type Template = {
     id: string;
     label: string;
-    /** stay: a goal chosen for it (or its stay where it is); pair: two animals meet; flock: its group together (or ambient flock-mates); mark: a trace it leaves (molehills), no steps. */
-    kind: "stay" | "pair" | "flock" | "mark";
+    /** stay: a goal chosen for it (or its stay where it is); pair: two animals meet; flock: its group together (or ambient flock-mates); mark: a trace it leaves (molehills), no steps; group: an act of the whole group at a place its window sends it (`behaviour-group.ts`: the recipe pick never takes it). */
+    kind: "stay" | "pair" | "flock" | "mark" | "group";
     /** Where the schedule sends it for this (stay templates); "here": no goal, it runs in a stay where it already is. */
     goal: Goal;
     /** The schedule behaviours (or doings) it may stand in for. */
@@ -884,6 +886,9 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
         })
     ].map((t) => [t.id, t])
 );
+
+// Group life (lane SIG-GROUP): the group acts' templates (`behaviour-group.ts`).
+for (const t of GROUP_TEMPLATES) TEMPLATES[t.id] = t;
 
 /** Land-water crossings: the way in, the way out, and what follows (the schedule's enter and exit legs). */
 export const ENTRY_STYLES = ["wade", "slide", "slip", "dive", "launch"] as const;

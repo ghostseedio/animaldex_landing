@@ -71,6 +71,22 @@ const PLANS = {
  */
 const DEFENCE = {curl: [5], pangolin: [4], pill: [7, 2.4, 0.5], coil: [3, 2.4, 0.5], millipede: [4, 2.4, 0.5], shell: [5], snail: [7], hermit: [7], puff: [6], monitor: [3.5], puffer: [5], flash: [7, 2.4, 0.5], eyes: [5, 2.4, 0.5], peacock: [6, 2.4, 0.5], owl: [5, 2.4, 0.5], harnessed: [7, 2.4, 0.5], blotched: [6, 2.4, 0.5], lubber: [6, 5.4, 0.7], tail: [5, 2.4, 0.6], salamander: [5, 2.4, 0.6]};
 const DEFENCE_STEPS = [["none", 2, "before: about its day"], ["near", 0.5, "a predator beside it, half a second"], ["hold", 0.5, "one second"], ["hold", 1, "two seconds"], ["hold", 3, "five seconds"], ["away", 4, "the predator gone, four seconds"], ["hold", 12, "sixteen seconds on"], ["hold", 30, "calm again"]];
+/**
+ * Group life (lane SIG-GROUP; `behaviour-group.ts`): a group's act, seen from the cast's real animals. `act` scenes are
+ * shot round the act's own windows (before, in it, near its end, after); the others at fixed seconds from the start.
+ */
+const GROUPS = {
+    gsentinel: {act: "sentinel", distance: 9},
+    ghuddle: {act: "huddle", distance: 9},
+    glick: {act: "lick", distance: 9},
+    gchorus: {act: "chorus", distance: 7},
+    gfeast: {act: "feast", distance: 9},
+    gbask: {act: "basking", distance: 6},
+    ggather: {times: [3, 90, 200, 330, 480, 700, 900, 1200], distance: 7},
+    groost: {times: [3, 240, 800, 1500], distance: 7},
+    gcommute: {times: [10, 120, 300, 600, 1200, 2400], distance: 40, polar: 0.9},
+    gpairs: {times: [10, 120, 400, 800, 1300, 2000, 3000, 4200], distance: 14}
+};
 const summary = {};
 for (const name of scenes) {
     const context = await browser.newContext({viewport: {width: 1280, height: 720}});
@@ -92,6 +108,37 @@ for (const name of scenes) {
     const failed = await page.evaluate(() => window.__behavioursError ?? null);
     if (failed) {
         console.log(name, "failed:", failed.slice(0, 500));
+        await context.close();
+        continue;
+    }
+    if (GROUPS[name]) {
+        const cfg = GROUPS[name];
+        let times = cfg.times;
+        if (cfg.act) {
+            const windows = await page.evaluate(([act]) => window.__behaviours.groupWindows(act, 3), [cfg.act]);
+            console.log(name, "windows", JSON.stringify(windows));
+            times = windows.slice(0, 2).flatMap((w) => [Math.max(w.s - 40, 4), w.s + 100, w.s + Math.max(w.len - 20, 110), w.s + w.len + 150]);
+            if (!times.length) times = [10, 300, 900];
+        }
+        const dir = path.join(out, name);
+        rmSync(dir, {recursive: true, force: true});
+        mkdirSync(dir, {recursive: true});
+        const labels = [];
+        for (let i = 0; i < times.length; i++) {
+            const note = await page.evaluate(async ([s, d, polar]) => {
+                const text = await window.__behaviours.groupShot(s, d, 0.7, polar ?? 1.1, 0);
+                document.getElementById("note").textContent = text.split("\n").slice(0, 8).join("\n");
+                return text;
+            }, [times[i], cfg.distance, cfg.polar ?? null]);
+            labels.push(`${String(i).padStart(2, "0")} ${note.replace(/\n/g, " | ")}`);
+            await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 88});
+        }
+        writeFileSync(path.join(dir, "labels.txt"), labels.join("\n") + "\n");
+        const cols = 4;
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(dir, "%02d.jpg"), "-vf", `scale=640:-1,tile=${cols}x${Math.ceil(times.length / cols)}:padding=4:color=black`, "-frames:v", "1", path.join(out, `${name}-strip.jpg`)]);
+        summary[name] = {errors: errors.slice(0, 10), shots: labels};
+        console.log(name, labels.join("\n"));
+        if (errors.length) console.log(name, "errors:", errors.slice(0, 5));
         await context.close();
         continue;
     }

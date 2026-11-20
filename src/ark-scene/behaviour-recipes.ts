@@ -23,6 +23,7 @@
 import {onHamletSwitch} from "@/ark-scene/no-hamlet";
 import {topOf, waterSurfaceOf} from "@/ark-scene/behaviour-water";
 import table from "@/ark-scene/recipes.json";
+import groupRecipes from "@/ark-scene/group-recipes.json";
 import {BLOCKS, type BlockDef} from "@/ark-scene/behaviour-blocks";
 import {AFTER_BLOCKS, ENTRY_BLOCKS, EXIT_BLOCKS, TEMPLATES, type AfterStyle, type CarryAt, type EntryStyle, type ExitStyle, type Posture, type PreyKind, type Target, type Template, type TemplateStep} from "@/ark-scene/recipe-templates";
 import {bodyLengthsPerSecond, freeBodyLengthsPerSecond, runFactor, swimSpeedOf, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
@@ -59,6 +60,15 @@ export type SpeciesRecipes = {
 const SYSTEMS: Record<string, SexSystem> = {s: "separate", w: "workers", h: "hermaphrodite", c: "changes", p: "parthenogenetic"};
 const MONTH_LETTERS = "abcdefghijkl";
 const ROWS = (table as {species: Record<string, string>}).species;
+const EXTRA = (groupRecipes as {species: Record<string, string>}).species;
+/** A row with more recipes (id.weight, comma-joined) added to its first field; those it already has keep their weight. */
+function joinRecipes(row: string, extra: string): string {
+    const fields = row.split("|");
+    const have = new Set(fields[0].split(",").filter(Boolean).map((r) => r.split(".")[0]));
+    const add = extra.split(",").filter((r) => r && !have.has(r.split(".")[0]));
+    fields[0] = [fields[0], ...add].filter(Boolean).join(",");
+    return fields.join("|");
+}
 const decoded = new Map<string, SpeciesRecipes>();
 
 export function decodeRecipeRow(slug: string, row: string): SpeciesRecipes {
@@ -95,7 +105,9 @@ export function speciesRecipes(slug: string): SpeciesRecipes {
     const hit = decoded.get(slug);
     if (hit) return hit;
     const row = ROWS[slug];
-    const out = row ? decodeRecipeRow(slug, row) : {slug, ...NONE};
+    // (Group life, lane SIG-GROUP: existing recipes a species' own group-life text states but its row lacked, `group-recipes.json`.)
+    const extra = EXTRA[slug];
+    const out = row ? decodeRecipeRow(slug, extra ? joinRecipes(row, extra) : row) : {slug, ...NONE};
     decoded.set(slug, out);
     return out;
 }
@@ -1838,6 +1850,18 @@ export function wireRecipes(animals: WireInput[]) {
                 for (const g of Array.from(groups.values())) {
                     const ranked = [...g].sort((a, b) => (a.animal.group?.rank ?? 0) - (b.animal.group?.rank ?? 0) || a.animal.id.localeCompare(b.animal.id));
                     for (let k = 0; k + 1 < ranked.length; k += 2) link(ranked[k], ranked[k + 1], template.id);
+                }
+                // (Group life, lane SIG-GROUP: mates of a species that pairs rather than flocks (lovebirds, cockatoos: "pairs preen each
+                // other") are in no group, so no group paired them: each takes the nearest other within 45 m that is in no group either.)
+                const alone = Array.from(groups.values()).filter((g) => g.length === 1 && !g[0].animal.group && !g[0].animal.led).map((g) => g[0]);
+                const mated = new Set<string>();
+                for (const a of alone) {
+                    if (mated.has(a.animal.id)) continue;
+                    const near = alone.filter((b) => b !== a && !mated.has(b.animal.id) && dist(a, b) < 45).sort((m, n) => dist(a, m) - dist(a, n) || m.animal.id.localeCompare(n.animal.id))[0];
+                    if (!near) continue;
+                    mated.add(a.animal.id);
+                    mated.add(near.animal.id);
+                    link(a, near, template.id);
                 }
                 continue;
             }

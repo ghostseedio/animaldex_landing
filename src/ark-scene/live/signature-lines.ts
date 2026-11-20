@@ -10,14 +10,17 @@
  */
 
 import table from "@/ark-scene/signature-lines.json";
+import groupLines from "@/ark-scene/group-lines.json";
 import {arkWithArticle, type ArkLiveItem, type ArkLiveText, type ArkSeenAct, type ArkSeenMemory} from "@/lib/ark-live-log";
 import {pluralAnimalName} from "@/lib/ark-population";
 
 const LINES = (table as unknown as {species: Record<string, Record<string, string>>}).species;
+/** Group life (lane SIG-GROUP): a species' sentence for what its group acts show (`group-lines.json`). */
+const GROUP_LINES = (groupLines as unknown as {species: Record<string, Record<string, string>>}).species;
 
 /** The species' own sentence for what one of its recipes shows, or null. */
 export function signatureLineOf(slug: string | null | undefined, recipe: string): string | null {
-    return (slug && LINES[slug]?.[recipe]) || null;
+    return (slug && (LINES[slug]?.[recipe] ?? GROUP_LINES[slug]?.[recipe])) || null;
 }
 
 /** The blocks that are only the way to the thing (the walk, the flight there): the line waits for the thing itself. */
