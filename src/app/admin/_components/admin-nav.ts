@@ -73,6 +73,7 @@ export const adminNavGroups: AdminNavGroup[] = [
             {href: "/admin/support", label: "Support", icon: ChatRound, hint: "Customer inbox"},
             {href: "/admin/notifications", label: "Notifications", icon: Bell, hint: "Push and in-app messages"},
             {href: "/admin/integrity", label: "Capture integrity", icon: ShieldWarning, hint: "Forged provenance signals"},
+            {href: "/admin/disputes", label: "Strike disputes", icon: ShieldCheck, hint: "Uphold or overturn a strike"},
             {href: "/admin/reliability", label: "Reliability", icon: ShieldCheck, hint: "Error and latency budgets"},
             {href: "/admin/maintenance", label: "Maintenance", icon: Refresh, hint: "Inspect and re-run captures"},
         ],
