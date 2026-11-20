@@ -39,7 +39,7 @@
 
 import type {ActPose} from "@/ark-scene/acts";
 import type {ArkCareKind} from "@/lib/ark-care";
-import {splitPose, SPLIT_SECONDS, type FxEmitter, type Repro} from "@/ark-scene/repro";
+import {splitParent, splitPose, SPLIT_SECONDS, type FxEmitter, type Repro} from "@/ark-scene/repro";
 
 /** A litter from the record: its parents, its young, and when they were born (s, the shared clock). */
 export type BirthAct = {key: string; parents: string[]; young: string[]; t0: number};
@@ -50,7 +50,7 @@ export type BirthStyle = "open" | "den" | "cling" | "pouch" | "back" | "beside" 
 export type LiveBirthsHost<E> = {
     find: (id: string) => E | null;
     /** Its schedule's place at a time (pure in the time); null off the schedule. */
-    scheduleAt: (entry: E, epoch: number) => {x: number; z: number; yaw: number} | null;
+    scheduleAt: (entry: E, epoch: number) => {x: number; z: number; yaw: number; base?: number} | null;
     ground: (x: number, z: number) => number;
     walk: (entry: E) => number;
     /** Its drawn body length and height (m). */
@@ -201,7 +201,8 @@ export function birthScript(mother: Point & {yaw: number; length: number; height
     const end = riseEnd + (style === "beside" || style === "fry" ? 8 : style === "split" ? 20 : NURSE);
     // (Riders are their mother's size already as drawn against her; a newborn in the pouch is never seen.)
     const pop = style === "open" || style === "den" || style === "beside" || style === "fry" ? clamp((L * POP_SHARE) / yl, 1, POP_MOST) : 1;
-    const seenBy = first + EACH * (n - 1) + (style === "den" ? DEN_TUCKED + DEN_OUT : 1.5);
+    // (A split is seen once the two halves have come apart, most of its slow pinch in.)
+    const seenBy = style === "split" ? first + SPLIT_SECONDS * 0.85 : first + EACH * (n - 1) + (style === "den" ? DEN_TUCKED + DEN_OUT : 1.5);
     return {style, standing, spot: {x: mother.x, z: mother.z}, yaw: mother.yaw, born, nurse, first, lickEnd, riseEnd, end, mother: {length: L, height: mother.height, pace: mother.pace}, pace: youngPace, out, pop, seenBy, youngLength: yl};
 }
 
@@ -225,7 +226,9 @@ export function motherPose(sc: BirthScript, s: number, ground: Ground, youngId?:
     const state = lying ? "rest" : "scan";
     const extra: Partial<ActPose> = {meal: s < sc.lickEnd ? "birthing" : "resting", ...(youngId ? {with: youngId} : {})};
     if (s < sc.first) return at(sc.spot, sc.yaw, ground, state, extra);
-    if (s < sc.lickEnd && sc.style !== "beside" && sc.style !== "pouch" && sc.style !== "back" && sc.style !== "split" && sc.style !== "fry") {
+    // REAL-REPRODUCTION: in a split the parent is the front half, drawing away from the pinch as the two twist apart.
+    if (sc.style === "split") return splitParent({...sc.spot, yaw: sc.yaw, length: sc.mother.length}, s - sc.first, ground, youngId);
+    if (s < sc.lickEnd && sc.style !== "beside" && sc.style !== "pouch" && sc.style !== "back" && sc.style !== "fry") {
         // She turns to the young and licks them (head down to them, a slow bob).
         const toYoung = yawTo(sc.spot, sc.out[0] ?? sc.born[0]);
         const k = ease((s - sc.first) / 2.5);
@@ -305,7 +308,7 @@ export function youngPose(sc: BirthScript, k: number, s: number, ground: Ground,
     return at(q, sc.yaw + Math.PI * 0.85, ground, "eat", {...extra, pitch: -0.25});
 }
 
-type Live<E> = {act: BirthAct; script: BirthScript | null; motherId: string | null; failed: boolean; over: boolean; acting: Set<E>; /** V1 (housed): the floor or the water's level the act is on (her own, where the scene draws her). */ floor?: number};
+type Live<E> = {act: BirthAct; script: BirthScript | null; motherId: string | null; failed: boolean; over: boolean; acting: Set<E>; /** V1 (housed): the floor or the water's level the act is on (her own, where the scene draws her). */ floor?: number; /** REAL-REPRODUCTION: a sea kind's own depth (its seabed). */ depth?: number};
 
 export class LiveBirths<E> {
     private births: Live<E>[] = [];
@@ -385,11 +388,14 @@ export class LiveBirths<E> {
                 const young = b.act.young.map((id) => h.find(id)).filter((e): e is E => e !== null);
                 b.motherId = mother.id;
                 if (housed) b.floor = housed.base;
+                // REAL-REPRODUCTION: a sea kind's birth on its own seabed (or at its depth), not at the land's water line.
+                else if (h.repro?.(mother.entry) && place.base !== undefined && place.base < h.ground(place.x, place.z) - 0.05) b.depth = place.base;
                 b.script = birthScript({...place, length: h.length(mother.entry), height: h.height(mother.entry), pace: h.walk(mother.entry), plan: h.plan(mother.entry), care: h.care(mother.entry), pouch: h.pouch(mother.entry)}, young.length || b.act.young.length, b.act.key, young[0] ? h.walk(young[0]) : 0.4, young[0] ? h.length(young[0]) : null, Boolean(housed), realStyle(h.repro?.(mother.entry) ?? null, b.act.parents.length));
             }
             const sc = b.script;
             const floor = b.floor;
-            const ground: Ground = floor === undefined ? h.ground : () => floor;
+            const depth = b.depth;
+            const ground: Ground = floor !== undefined ? () => floor : depth !== undefined ? () => depth : h.ground;
             const mother = b.motherId ? h.find(b.motherId) : null;
             if (!mother) {
                 this.release(b);
@@ -412,7 +418,7 @@ export class LiveBirths<E> {
                 const e = ease(k);
                 const x = from.x + (now.x - from.x) * e;
                 const z = from.z + (now.z - from.z) * e;
-                return {x, z, base: h.ground(x, z), yaw: d > 0.05 ? Math.atan2(now.x - from.x, now.z - from.z) : now.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: k < 0.15 ? "rest" : "walk", speed: k < 0.15 ? 0 : d / seconds};
+                return {x, z, base: ground(x, z), yaw: d > 0.05 ? Math.atan2(now.x - from.x, now.z - from.z) : now.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: k < 0.15 ? "rest" : "walk", speed: k < 0.15 ? 0 : d / seconds};
             };
             const youngIds = b.act.young;
             if (s < sc.end) {
@@ -433,7 +439,7 @@ export class LiveBirths<E> {
                 continue;
             } else {
                 // Part: each back to its day. (Young beyond the shown few, and a pouch's, simply are where their day has them.)
-                const bm = back(mother, sc.spot, sc.mother.pace, sc.end);
+                const bm = back(mother, sc.style === "split" ? splitParent({...sc.spot, yaw: sc.yaw, length: sc.mother.length}, SPLIT_SECONDS, h.ground) : sc.spot, sc.mother.pace, sc.end);
                 pose(mother, bm);
                 let any = Boolean(bm);
                 youngIds.forEach((id, k) => {

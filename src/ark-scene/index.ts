@@ -978,6 +978,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     scene.add(dust.points);
     /** REAL-REPRODUCTION (decision 440): the gametes, eggs, milt and fry of the kinds' own ways of breeding (one draw). */
     const reproFx = new ReproFx(scene);
+    /** REAL-REPRODUCTION: spawning rocks now (where, the room kept round them, how far in). */
+    let reproNests: Array<{x: number; z: number; r: number; k: number}> = [];
     /** What meals leave on the ground (`meal-traces.ts`): feathers, fur, scales, pressed grass. */
     const mealTraces = new MealTraces();
     scene.add(mealTraces.patches, mealTraces.bits);
@@ -4425,7 +4427,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         // Lane TB: a town tank's resident (the aquarium's, a home's tank, a garden pond) swims in its tank's own water.
         const tank = island && !entry.visitor ? island.tankPose(entry.animal.id, entry.length, modelHeight, reducedMotion ? 0 : clockNow()) : null;
-        if (tank) return {x: tank.x, z: tank.z, base: tank.base, yaw: tank.yaw, pitch: tank.pitch, roll: 0, afloat: true, water: tank.spec};
+        if (tank) {
+            // REAL-REPRODUCTION: out of a spawning pair's way (`reproNests`).
+            let {x, z} = tank;
+            for (const n of reproNests) {
+                const dx = x - n.x;
+                const dz = z - n.z;
+                const d = Math.hypot(dx, dz);
+                const r = n.r + entry.length * 0.5;
+                if (d >= r) continue;
+                const ux = d > 1e-4 ? dx / d : 1;
+                const uz = d > 1e-4 ? dz / d : 0;
+                x += ux * (r - d) * n.k;
+                z += uz * (r - d) * n.k;
+            }
+            return {x, z, base: tank.base, yaw: tank.yaw, pitch: tank.pitch, roll: 0, afloat: true, water: tank.spec};
+        }
         // p5 (homes): a pet indoors walks about its room's floor on the shared clock (`islands/town/home-rooms.ts`).
         const room = island && !entry.visitor && !tank ? island.roomPose(entry.animal.id, entry.length, reducedMotion ? 0 : clockNow()) : null;
         if (room) return {x: room.x, z: room.z, base: room.base, yaw: room.yaw, pitch: 0, roll: 0, afloat: false};
@@ -5512,7 +5529,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 continue;
             }
             // (In the water at its own depth: a seabed animal is culled and loaded by where it is, not the surface over it.)
-            position.set(where.x, where.water ? where.base : Math.max(where.base, 0), where.z);
+            // (An act under the water, a sea kind's birth on its seabed: at its depth too, not at the surface, or the view
+            // from down there culls it. REAL-REPRODUCTION.)
+            position.set(where.x, where.water || (entry.act && where.base < -0.02) ? where.base : Math.max(where.base, 0), where.z);
             const distance = cameraPosition.distanceTo(position);
             // 3.3 batch (E): bubbles from an air-breather's dive and a fast swimmer's wake, near the camera under the sea.
             if (underwater && seaLook && where.water && distance < 28) seaLook.swimmer(entry.animal.id, where.x, where.base + modelHeight * 0.7, where.z, where.water.breath, entry.length, seaLookNow);
@@ -8409,7 +8428,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!entry.sched || !world || reducedMotion) return null;
             const at = schedulePose(entry, epoch);
             // (Not in the air, not out at sea on the wing: a birth is on the ground or in the water where it lives.)
-            return at.aloft ? null : {x: at.x, z: at.z, yaw: at.yaw};
+            // (`base`: its own level, a sea kind's seabed: REAL-REPRODUCTION's births there.)
+            return at.aloft ? null : {x: at.x, z: at.z, yaw: at.yaw, base: at.y};
         },
         ground: (x, z) => Math.max(heightAt(x, z), -0.3),
         walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
@@ -8931,7 +8951,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             readSeeking(epoch);
             if (liveSeeking.size) liveSeeking.step(epoch);
         }
-        if (reproFx.points.visible && !liveMatings.size && !liveBirths.size) reproFx.update([]); // REAL-REPRODUCTION
+        if (reproFx.visible && !liveMatings.size && !liveBirths.size) {
+            reproFx.update([]); // REAL-REPRODUCTION
+            reproNests = [];
+        }
         if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !duckDrops.size && !liveEscapes.size && !mouthCarry.size && !liveClutches.size) || reducedMotion) return; // 3.3 batch (B, C, D): + duckDrops, mouthCarry, liveEscapes; ARK-MATING-SHOWN: + liveClutches
         const epoch = worldMs() / 1000;
         if (liveMeals.size) liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
@@ -8941,7 +8964,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (liveEscapes.size) liveEscapes.step(epoch); // 3.3 batch (D)
         if (mouthCarry.size) mouthCarry.step(epoch); // 3.3 batch (C)
         if (liveClutches.size) liveClutches.step(epoch); // ARK-MATING-SHOWN (after the matings: her laying follows the mount)
-        reproFx.update(liveMatings.size || liveBirths.size ? [...liveMatings.fx(epoch), ...liveBirths.fx(epoch)] : []); // REAL-REPRODUCTION
+        const reproNow = liveMatings.size || liveBirths.size ? [...liveMatings.fx(epoch), ...liveBirths.fx(epoch)] : [];
+        reproFx.update(reproNow); // REAL-REPRODUCTION
+        // (A clownfish pair's rock: the tank's others keep off it while they lay and he guards, as a guarding male drives
+        // them off; the eggs are then in sight. `poseCore`'s tank branch reads it.)
+        reproNests = reproNow.filter((e) => e.kind === "rock").map((e) => ({x: e.x, z: e.z, r: Math.max(0.45, (e.long ?? e.size) * 3), k: Math.min(e.t / 3, 1)}));
         const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins(), ...duckDrops.pins(), ...liveEscapes.pins(), ...mouthCarry.pins(), ...liveClutches.pins()]); // 3.3 batch (B, C, D); ARK-MATING-SHOWN
         if (pins.size !== mealPins.size || Array.from(pins).some((id) => !mealPins.has(id))) {
             mealPins = pins;

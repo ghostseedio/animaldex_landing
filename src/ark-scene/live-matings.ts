@@ -848,7 +848,19 @@ export class LiveMatings<E> {
                 const way = h.repro?.(a) ?? h.repro?.(b) ?? null;
                 const act = reproAct(way);
                 if (act && way) {
-                    const plan = reproPlan(act, way, {from: script.from, to: script.to, walk: script.walk, heading: script.heading, m: script.m, f: script.f});
+                    let plan = reproPlan(act, way, {from: script.from, to: script.to, walk: script.walk, heading: script.heading, m: script.m, f: script.f});
+                    if (act === "amplexus" && clear) {
+                        // (She walks on as she lays: the way with nothing over it, a fence rail or a bush, so the strings are seen.)
+                        const reach = plan.f.length * 3;
+                        for (const turn of [0, 1, -1, 2, -2, 3, -3, 4]) {
+                            const yaw = plan.heading + (turn * Math.PI) / 4;
+                            const at = (k: number) => ({x: plan.spot.x + Math.sin(yaw) * reach * k, z: plan.spot.z + Math.cos(yaw) * reach * k});
+                            if ([0.35, 0.7, 1, 1.4].every((k) => clear(at(k)))) {
+                                plan = {...plan, heading: yaw};
+                                break;
+                            }
+                        }
+                    }
                     m.repro = plan;
                     if (act === "spawn_night") m.kin = (h.kinSpots?.(a) ?? []).slice(0, KIN_MOST);
                     script.court = "display";
@@ -858,7 +870,23 @@ export class LiveMatings<E> {
                     script.side = plan.to.m;
                     script.mounted = plan.end;
                     script.paired = plan.end;
-                    if (staysPut(act)) m.floor = undefined;
+                    if (staysPut(act) || !m.floor) {
+                        // (Each at its own depth, as its day has it: a bivalve on the seabed, a fish in the water. The
+                        // land's ground stops at the shore's water line, so a sea kind there would be pulled up to it.)
+                        const own = (p: Point, day: {base?: number; y?: number} | null) => Math.min(day?.base ?? day?.y ?? h.ground(p.x, p.z), h.ground(p.x, p.z));
+                        const [ba, bb] = [own(pa, ha), own(pb, hb)];
+                        const [ax, az, bx, bz] = [pa.x, pa.z, pb.x, pb.z];
+                        m.floor = (x, z) => {
+                            const k = d > 1e-6 ? Math.min(Math.max(((x - ax) * (bx - ax) + (z - az) * (bz - az)) / (d * d), 0), 1) : 0.5;
+                            return ba + (bb - ba) * k;
+                        };
+                    }
+                    if (act === "spawn_pair" || act === "pouch") {
+                        // (A pair of swimmers spawns at one level: the lower of the two, by their rock or their seabed.)
+                        const f0 = m.floor ?? h.ground;
+                        const lo = Math.min(f0(pa.x, pa.z), f0(pb.x, pb.z));
+                        m.floor = () => lo;
+                    }
                 }
                 m.script = script;
             }
@@ -953,7 +981,9 @@ export class LiveMatings<E> {
             phase: m.failed ? "skipped" : m.over ? "over" : m.script ? "acting" : "waiting",
             ...(m.how ? {how: m.how} : {}),
             ...(m.script ? {court: m.script.court, mount: m.script.mount, tries: m.script.attempts.length, paired: Math.round(m.script.paired), meet: (m.contest?.script.end ?? 0) + m.script.walk, courted: (m.contest?.script.end ?? 0) + m.script.courted, mounted: (m.contest?.script.end ?? 0) + m.script.mounted, end: (m.contest?.script.end ?? 0) + m.script.paired} : {}),
-            ...(m.contest ? {contest: m.contest.script.kind, rival: m.contest.rival, contestEnd: Math.round(m.contest.script.end)} : {})
+            ...(m.contest ? {contest: m.contest.script.kind, rival: m.contest.rival, contestEnd: Math.round(m.contest.script.end)} : {}),
+            // REAL-REPRODUCTION: the kind's own act (no mount to look away from) and when its telling part runs.
+            ...(m.repro ? {repro: m.repro.act, telling: [(m.contest?.script.end ?? 0) + m.script!.walk + m.repro.b - m.repro.walk, (m.contest?.script.end ?? 0) + m.script!.walk + m.repro.c - m.repro.walk]} : {})
         }));
     }
 }

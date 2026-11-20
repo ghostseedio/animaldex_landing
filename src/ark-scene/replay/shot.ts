@@ -642,8 +642,18 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             enter("court");
             return toward(frameOf(ids, {widen: 1.1, first: ids[0], ...high}), dt);
         }
-        // (V1: a pair brought side by side does not mount, `live-matings.ts` beside: nothing to look away from.)
-        if (options.mount !== "show" && act.how !== "brought") {
+        // REAL-REPRODUCTION: a kind's own way (a spawning, a clasp, a pair over its eggs) is no mount: it is watched
+        // through, close, its still in the middle of the laying.
+        if (act.repro) {
+            const [from, to] = act.telling ?? [courted, mounted];
+            if (now < mounted + 2.4) {
+                enter("mount");
+                if (now > from + Math.min(8, (to - from) * 0.5)) tell();
+                // (A spawning night's pair are each where they are, maybe across the bay: the first of them, close.)
+                return toward(frameOf(ids, {widen: 1.15, first: ids[0], ...high}), dt);
+            }
+            enter("rest");
+        } else if (options.mount !== "show" && act.how !== "brought") {
             if (state !== "away" && state !== "rest" && state !== "over") enter("away");
             if (state === "away") {
                 // Up and away as it begins; then on to the two resting together.
@@ -663,7 +673,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         } else enter("rest");
         if (state === "rest" && clip - stateAt > 2.5) tell();
         if (state === "rest" && clip - stateAt > 5) finish(true);
-        return drift(frameOf(ids, {widen: 1.2, ...high}), dt);
+        return drift(frameOf(ids, {widen: 1.2, ...(act.repro ? {first: ids[0]} : {}), ...high}), dt);
     };
 
     const stepBirth = (dt: number) => {
@@ -728,7 +738,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         }
         enter("birth");
         // (The still: every young that is shown can be seen, `live-births.ts` seenBy: a den's have crawled out from under her.)
-        const seenBy = Math.min(act.seenBy ?? 12, 26);
+        // (REAL-REPRODUCTION: a split's halves come apart slowly; held on until they have.)
+        const seenBy = Math.min(act.seenBy ?? 12, act.style === "split" ? 48 : 26);
         if (s > seenBy + 1) tell();
         // (Settling, the young born one by one, the first licks: the first 24 s or so; then the nursing goes on for minutes.)
         if (s > Math.min(act.end ?? 24, Math.max(24, seenBy + 5))) finish(true);

@@ -8,8 +8,8 @@ import path from "node:path";
 import type {ActPose} from "@/ark-scene/acts";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {LiveMatings, mountKind, type LiveMatingsHost} from "@/ark-scene/live-matings";
-import {birthScript, realStyle, youngPose} from "@/ark-scene/live-births";
-import {FX_MOST, particleAt, reproAct, reproOf, reproPlan, reproPose, type FxEmitter} from "@/ark-scene/repro";
+import {birthScript, motherPose, realStyle, youngPose} from "@/ark-scene/live-births";
+import {FX_MOST, particleAt, reproAct, reproFx, reproOf, reproPlan, reproPose, rockOf, type FxEmitter, type Particle} from "@/ark-scene/repro";
 import {arkLiveLineText, arkLiveServerItems, arkLiveWayOf, type ArkLiveText} from "@/lib/ark-live-log";
 import {decodeArkEvents} from "@/lib/ark-life";
 
@@ -98,21 +98,43 @@ test("a spawning night: neither moves to the other, both rear up where they are,
     assert.equal(layer.debug()[0].mount, "alongside");
 });
 
-test("a pair of fish: the builder sweeps, side by side they release (eggs and milt), the guard stays; no lift onto her", () => {
+test("clownfish: at their rock she lays a patch of eggs pass by pass, he passes over each row after her, then guards it", () => {
     const r = reproOf(CLOWNFISH)!;
+    assert.equal(r.detail, "surface");
     const plan = reproPlan("spawn_pair", r, {from: {m: {x: 4, z: 0}, f: {x: 0, z: 0}}, to: {m: {x: 0.3, z: 0}, f: {x: 0, z: 0}}, walk: 5, heading: 0, m: {length: 0.1, height: 0.05, pace: 0.3}, f: {length: 0.1, height: 0.05, pace: 0.3}});
+    const rock = rockOf(plan)!;
+    assert.ok(rock && rock.long > 0.1, "a rock longer than the fish");
+    let passesOver = 0;
     for (let s = 0; s < plan.end; s += 0.5) {
         for (const isM of [true, false]) {
             const p = reproPose(plan, isM, s, () => 0, "x");
             if (!p) continue;
-            assert.ok(p.base < 0.01, `never on top of the other (${s})`);
+            // (Never mounted: at most a body's height over the rock's top.)
+            assert.ok(p.base <= rock.tall + 0.05 + 1e-9, `never on top of the other (${s})`);
             assert.notEqual(p.state, "walk", "fish swim");
+            if (isM && s > plan.b + 2 && s < plan.c && Math.hypot(p.x - plan.spot.x, p.z - plan.spot.z) < rock.long * 0.35) passesOver++;
         }
     }
+    assert.ok(passesOver > 20, "he passes over the eggs");
+    // The patch grows as she lays and stays to the end; the rock is there throughout; his milt is over the eggs.
+    const at = (s: number) => reproFx(plan, "k", s, () => 0);
+    const patch = (s: number) => at(s).find((e) => e.kind === "patch");
+    assert.equal(patch(plan.b - 1), undefined);
+    assert.ok(patch(plan.b + 5)!.share! < patch(plan.c - 1)!.share!);
+    assert.equal(patch(plan.end - 1)!.share, 1);
+    assert.ok(at(plan.b + 10).some((e) => e.kind === "milt"));
+    assert.ok(at(plan.a).some((e) => e.kind === "rock") && at(plan.end - 1).some((e) => e.kind === "rock"));
+    const p: Particle = {x: 0, y: 0, z: 0, size: 0, alt: false};
+    const half = patch(plan.b + (plan.c - plan.b) / 2)!;
+    const full = patch(plan.c + 1)!;
+    const lit = (e: FxEmitter) => Array.from({length: 96}, (_, i) => particleAt(e, i, {...p})).filter((a) => a > 0).length;
+    assert.ok(lit(half) > 20 && lit(half) < lit(full) && lit(full) >= 90, "eggs laid row by row");
     // after the release only the guard (the male, for clownfish) is still acted
     const late = plan.c + 10;
-    assert.ok(reproPose(plan, r.guard === "male", late, () => 0, "x"));
-    assert.equal(reproPose(plan, r.guard !== "male", late, () => 0, "x"), null);
+    const guard = reproPose(plan, r.guard === "male", late, () => 0, "x")!;
+    assert.ok(Math.hypot(guard.x - plan.spot.x, guard.z - plan.spot.z) < rockOf(plan)!.wide, "he tends the eggs");
+    const she = reproPose(plan, r.guard !== "male", late, () => 0, "x")!;
+    assert.ok(Math.hypot(she.x - plan.spot.x, she.z - plan.spot.z) > rockOf(plan)!.wide, "she keeps off, near");
 });
 
 test("frogs in amplexus: he is held on her back a long while; seahorses circle and rise together", () => {
@@ -120,7 +142,12 @@ test("frogs in amplexus: he is held on her back a long while; seahorses circle a
     const at = {from: {m: {x: 1, z: 0}, f: {x: 0, z: 0}}, to: {m: {x: 0.05, z: 0}, f: {x: 0, z: 0}}, walk: 3, heading: 0, m: body, f: body};
     const amp = reproPlan("amplexus", reproOf(TOAD)!, at);
     const held = reproPose(amp, true, amp.a + 30, () => 0, "f")!;
-    assert.ok(held.base > 0.02 && amp.b - amp.a >= 60, "on her back for a minute");
+    assert.ok(held.base > 0.03 && amp.c - amp.a >= 60, "on her back for a minute");
+    // She walks on with him aboard, laying two strings of eggs behind her.
+    const she = (s: number) => reproPose(amp, false, s, () => 0, "m")!;
+    assert.ok(she(amp.c - 1).z > she(amp.b).z + 0.1, "she walks on as she lays");
+    const str = reproFx(amp, "k", amp.c - 1, () => 0).find((e) => e.kind === "string")!;
+    assert.ok(str && (str.long ?? 0) > 0.1, "the strings are as long as her walk");
     const sea = reproPlan("pouch", reproOf(SEAHORSE)!, at);
     const up = reproPose(sea, true, sea.b - 1, () => 0, "f")!;
     assert.ok(up.base > 0.05, "risen together");
@@ -135,12 +162,16 @@ test("births: a hydra's bud is pinched off its one parent slowly; a seahorse's y
     const early = youngPose(sc, 0, sc.first + 2, () => 0, "p");
     const late = youngPose(sc, 0, sc.lickEnd, () => 0, "p");
     assert.ok(Math.hypot(early.x, early.z) < Math.hypot(late.x, late.z), "it comes away from its parent");
+    // In line with the parent's body at first (one long body), then apart along it, the parent drawing forward.
+    assert.ok(Math.abs(early.x) < 1e-6 && early.z < 0, "its back half");
+    const parent = motherPose(sc, sc.lickEnd, () => 0, "y");
+    assert.ok(parent.z > 0 && parent.z - late.z > 0.02 * 0.8, "the two pulled apart");
     assert.ok(sc.lickEnd - sc.first >= 30, "slowly");
 });
 
 test("the puffs stay within their budget and fade", () => {
     const e: FxEmitter = {key: "k", x: 0, y: 0, z: 0, kind: "haze", t: 20, size: 0.3};
-    const p = {x: 0, y: 0, z: 0};
+    const p: Particle = {x: 0, y: 0, z: 0, size: 0, alt: false};
     let lit = 0;
     for (let i = 0; i < 64; i++) if (particleAt(e, i, p) > 0) lit++;
     assert.ok(lit > 20);
