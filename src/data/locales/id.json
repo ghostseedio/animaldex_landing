@@ -5005,6 +5005,26 @@
       "powerEarn": "Mendapatkan Power-nya meningkatkan peluangnya bertahan hidup",
       "powerWorking": "Power-nya bekerja: pemangsa melewatinya demi yang lebih lemah"
     },
+    "relations": {
+      "title": "Di sekitarnya",
+      "predator": "Bisa memburunya",
+      "prey": "Ia memakan",
+      "partner": "Calon pasangan",
+      "eggs": "Telur yang bisa diambilnya",
+      "eggThreat": "Bisa mengambil telurnya",
+      "chain": "Rantai makanan",
+      "eats": "Memakan",
+      "eatenBy": "Dimakan oleh",
+      "here": "{n} di sini",
+      "noneNearby": "Tidak ada di dekatnya",
+      "noneAboard": "Tidak ada di sini",
+      "keptFed": "Diberi makan perawatnya",
+      "keptSafe": "Aman dari pemangsa",
+      "more": "+{n} lagi",
+      "lines": "Garis",
+      "young": "Masih terlalu muda untuk berpasangan.",
+      "note": "Menunjukkan siapa yang bisa, bukan siapa yang akan."
+    },
     "rankings": {
       "category": "Ark",
       "breadcrumb": "Daftar tingkat",

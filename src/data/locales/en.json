@@ -5020,6 +5020,26 @@
       "powerEarn": "Earning its Power raises its survival chance",
       "powerWorking": "Its Power is working: predators pass it over for weaker ones"
     },
+    "relations": {
+      "title": "Around it",
+      "predator": "Could hunt it",
+      "prey": "It eats",
+      "partner": "Possible mates",
+      "eggs": "Eggs it could take",
+      "eggThreat": "Could take its eggs",
+      "chain": "Food chain",
+      "eats": "Eats",
+      "eatenBy": "Eaten by",
+      "here": "{n} here",
+      "noneNearby": "None nearby",
+      "noneAboard": "None aboard here",
+      "keptFed": "Fed by its keepers",
+      "keptSafe": "Safe from predators",
+      "more": "+{n} more",
+      "lines": "Lines",
+      "young": "Too young to have a mate.",
+      "note": "Shows who could, never who will."
+    },
     "rankings": {
       "category": "Ark",
       "breadcrumb": "Tier lists",

@@ -808,6 +808,26 @@
             "powerEarn": "Aconseguir el seu Poder en millora la probabilitat de sobreviure",
             "powerWorking": "El seu Poder funciona: els depredadors el deixen de banda per als més febles"
         },
+        "relations": {
+            "title": "Al seu voltant",
+            "predator": "El podria caçar",
+            "prey": "Menja",
+            "partner": "Possibles parelles",
+            "eggs": "Ous que podria prendre",
+            "eggThreat": "Podria prendre-li els ous",
+            "chain": "Cadena tròfica",
+            "eats": "Menja",
+            "eatenBy": "El mengen",
+            "here": "{n} aquí",
+            "noneNearby": "Cap a prop",
+            "noneAboard": "Cap aquí",
+            "keptFed": "L'alimenten els cuidadors",
+            "keptSafe": "A salvo dels depredadors",
+            "more": "+{n} més",
+            "lines": "Línies",
+            "young": "Massa jove per tenir parella.",
+            "note": "Mostra qui podria, mai qui ho farà."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Llistes per nivells",

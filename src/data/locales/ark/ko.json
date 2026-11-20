@@ -808,6 +808,26 @@
             "powerEarn": "파워를 획득하면 살아남을 확률이 올라가요",
             "powerWorking": "파워가 통하고 있어요: 포식자는 더 약한 개체를 먼저 노리고 이 동물은 지나쳐요"
         },
+        "relations": {
+            "title": "주변 관계",
+            "predator": "사냥할 수 있는 동물",
+            "prey": "먹는 동물",
+            "partner": "짝이 될 수 있는 동물",
+            "eggs": "가져갈 수 있는 알",
+            "eggThreat": "알을 가져갈 수 있는 동물",
+            "chain": "먹이사슬",
+            "eats": "먹는 것",
+            "eatenBy": "먹는 동물",
+            "here": "여기 {n}",
+            "noneNearby": "근처에 없음",
+            "noneAboard": "여기에 없음",
+            "keptFed": "사육사가 먹이를 줌",
+            "keptSafe": "포식자로부터 안전",
+            "more": "외 {n}마리",
+            "lines": "선",
+            "young": "짝을 짓기에는 아직 너무 어립니다.",
+            "note": "가능성만 보여 줄 뿐, 실제로 일어날 일은 아닙니다."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "티어 리스트",

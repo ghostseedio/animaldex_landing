@@ -1,9 +1,9 @@
 "use client";
 
-import React, {lazy, useEffect, useMemo, useState} from "react";
+import React, {Suspense, lazy, useEffect, useMemo, useState} from "react";
 import type SiteLink from "@/app/[locale]/_components/link";
 import {isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
-import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkAnimal, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkWords} from "@/lib/ark-words";
 import {ARK_TIME_LEFT_HOOKS, arkLifeOutlook, arkLifeText, arkNeedsFacts, arkTimeLeftWordsFrom, arkTimeLeftWorldOf, type ArkLifeBar, type ArkTimeLeftFacts} from "@/lib/ark-time-left";
 import {arkTimeLeftFetch, readArkTimeLeftFacts, type ArkTimeLeftFetch} from "@/lib/ark-time-left-facts";
@@ -16,6 +16,12 @@ import {arkReleaseTimeLeftHook} from "@/lib/ark-release-time-left";
  * the page's static JavaScript nor the estimate's chunk holds the sheet.
  */
 const ArkRelease = lazy(() => import("@/app/[locale]/(composited)/ark/ark-release"));
+
+/**
+ * Lane ark-relation-lines: who could hunt it, what it eats and its possible mates, with lines across the island. Its own
+ * chunk, rendered beside the release block (the card's one lazy import: the Ark page's static JavaScript is at its budget).
+ */
+const ArkRelations = lazy(() => import("@/app/[locale]/(composited)/ark/ark-relations"));
 
 type Props = {
     animal: ArkAnimal;
@@ -30,6 +36,8 @@ type Props = {
     link?: typeof SiteLink;
     /** The snapshot's Ark day (the release block). */
     day?: number | null;
+    /** With `release`: the scene, for the relations block beside it (lane ark-relation-lines). */
+    scene?: () => ArkSceneHandle | null;
 };
 
 /**
@@ -37,8 +45,14 @@ type Props = {
  * page's static JavaScript, which is budgeted): the estimate, or with `release` the Release to the Wild block. The card
  * wraps each in its own Suspense.
  */
-export default function ArkTimeLeft({release, day, snapshot = null, ...rest}: Props) {
-    return release ? <ArkRelease animal={rest.animal} words={rest.words} locale={rest.locale} day={day ?? null} link={release} /> : <ArkTimeLeftPanel snapshot={snapshot} {...rest} />;
+export default function ArkTimeLeft({release, day, snapshot = null, scene, ...rest}: Props) {
+    if (!release) return <ArkTimeLeftPanel snapshot={snapshot} {...rest} />;
+    return (
+        <>
+            <ArkRelease animal={rest.animal} words={rest.words} locale={rest.locale} day={day ?? null} link={release} />
+            {scene ? <Suspense fallback={null}><ArkRelations key={rest.animal.id} animal={rest.animal} snapshot={snapshot} scene={scene} words={rest.words} locale={rest.locale} /></Suspense> : null}
+        </>
+    );
 }
 
 /**

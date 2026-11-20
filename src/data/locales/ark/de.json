@@ -808,6 +808,26 @@
             "powerEarn": "Seine Kraft zu verdienen erhöht seine Überlebenschance",
             "powerWorking": "Seine Kraft wirkt: Raubtiere übergehen es zugunsten schwächerer"
         },
+        "relations": {
+            "title": "Rundherum",
+            "predator": "Könnte es jagen",
+            "prey": "Es frisst",
+            "partner": "Mögliche Partner",
+            "eggs": "Eier, die es nehmen könnte",
+            "eggThreat": "Könnte seine Eier nehmen",
+            "chain": "Nahrungskette",
+            "eats": "Frisst",
+            "eatenBy": "Gefressen von",
+            "here": "{n} hier",
+            "noneNearby": "Keins in der Nähe",
+            "noneAboard": "Keins hier",
+            "keptFed": "Von Pflegern gefüttert",
+            "keptSafe": "Sicher vor Raubtieren",
+            "more": "+{n} weitere",
+            "lines": "Linien",
+            "young": "Noch zu jung für einen Partner.",
+            "note": "Zeigt, wer könnte, nie, wer wird."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Tier-Listen",

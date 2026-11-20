@@ -808,6 +808,26 @@
             "powerEarn": "Conquistar o Poder dele aumenta a chance de sobreviver",
             "powerWorking": "O Poder dele está funcionando: os predadores o deixam de lado e vão atrás dos mais fracos"
         },
+        "relations": {
+            "title": "À sua volta",
+            "predator": "Poderia caçá-lo",
+            "prey": "Come",
+            "partner": "Possíveis parceiros",
+            "eggs": "Ovos que poderia levar",
+            "eggThreat": "Poderia levar os seus ovos",
+            "chain": "Cadeia alimentar",
+            "eats": "Come",
+            "eatenBy": "Comido por",
+            "here": "{n} aqui",
+            "noneNearby": "Nenhum por perto",
+            "noneAboard": "Nenhum aqui",
+            "keptFed": "Alimentado pelos cuidadores",
+            "keptSafe": "A salvo de predadores",
+            "more": "+{n} mais",
+            "lines": "Linhas",
+            "young": "Jovem demais para ter parceiro.",
+            "note": "Mostra quem poderia, nunca quem vai."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Listas por nível",

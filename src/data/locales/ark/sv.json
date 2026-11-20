@@ -808,6 +808,26 @@
             "powerEarn": "Att tjäna dess Kraft ökar dess chans att överleva",
             "powerWorking": "Dess Kraft verkar: rovdjuren hoppar över det till förmån för svagare"
         },
+        "relations": {
+            "title": "Runt den",
+            "predator": "Kan jaga den",
+            "prey": "Den äter",
+            "partner": "Möjliga partner",
+            "eggs": "Ägg den kan ta",
+            "eggThreat": "Kan ta dess ägg",
+            "chain": "Näringskedja",
+            "eats": "Äter",
+            "eatenBy": "Äts av",
+            "here": "{n} här",
+            "noneNearby": "Inga i närheten",
+            "noneAboard": "Inga här",
+            "keptFed": "Matas av skötarna",
+            "keptSafe": "Säker från rovdjur",
+            "more": "+{n} till",
+            "lines": "Linjer",
+            "young": "För ung för en partner.",
+            "note": "Visar vem som skulle kunna, aldrig vem som kommer att göra det."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Tier-listor",

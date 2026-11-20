@@ -808,6 +808,26 @@
             "powerEarn": "Memperoleh Kuasanya meningkatkan peluangnya untuk terus hidup",
             "powerWorking": "Kuasanya berfungsi: pemangsa melepasinya demi yang lebih lemah"
         },
+        "relations": {
+            "title": "Di sekelilingnya",
+            "predator": "Boleh memburunya",
+            "prey": "Ia makan",
+            "partner": "Pasangan yang mungkin",
+            "eggs": "Telur yang boleh diambilnya",
+            "eggThreat": "Boleh mengambil telurnya",
+            "chain": "Rantaian makanan",
+            "eats": "Makan",
+            "eatenBy": "Dimakan oleh",
+            "here": "{n} di sini",
+            "noneNearby": "Tiada berdekatan",
+            "noneAboard": "Tiada di sini",
+            "keptFed": "Diberi makan penjaganya",
+            "keptSafe": "Selamat daripada pemangsa",
+            "more": "+{n} lagi",
+            "lines": "Garisan",
+            "young": "Masih terlalu muda untuk berpasangan.",
+            "note": "Menunjukkan siapa yang boleh, bukan siapa yang akan."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Senarai peringkat",

@@ -808,6 +808,26 @@
             "powerEarn": "パワーを獲得すると生き延びる確率が上がります",
             "powerWorking": "パワーが効いています：捕食者はより弱い個体を先に狙い、素通りします"
         },
+        "relations": {
+            "title": "まわりの関係",
+            "predator": "狩る可能性がある",
+            "prey": "食べるもの",
+            "partner": "つがいの候補",
+            "eggs": "取る可能性がある卵",
+            "eggThreat": "卵を取る可能性がある",
+            "chain": "食物連鎖",
+            "eats": "食べる",
+            "eatenBy": "食べられる",
+            "here": "ここに{n}",
+            "noneNearby": "近くにいない",
+            "noneAboard": "ここにはいない",
+            "keptFed": "飼育員が餌をあげている",
+            "keptSafe": "天敵から安全",
+            "more": "ほか{n}",
+            "lines": "線",
+            "young": "つがいを持つにはまだ若すぎます。",
+            "note": "可能性を示すだけで、実際に起こることではありません。"
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "ティアリスト",

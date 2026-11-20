@@ -808,6 +808,26 @@
             "powerEarn": "Ganar su Poder aumenta su probabilidad de sobrevivir",
             "powerWorking": "Su Poder funciona: los depredadores lo pasan por alto y van a por los más débiles"
         },
+        "relations": {
+            "title": "A su alrededor",
+            "predator": "Podría cazarlo",
+            "prey": "Come",
+            "partner": "Posibles parejas",
+            "eggs": "Huevos que podría tomar",
+            "eggThreat": "Podría tomar sus huevos",
+            "chain": "Cadena alimentaria",
+            "eats": "Come",
+            "eatenBy": "Lo comen",
+            "here": "{n} aquí",
+            "noneNearby": "Ninguno cerca",
+            "noneAboard": "Ninguno aquí",
+            "keptFed": "Lo alimentan sus cuidadores",
+            "keptSafe": "A salvo de depredadores",
+            "more": "+{n} más",
+            "lines": "Líneas",
+            "young": "Demasiado joven para tener pareja.",
+            "note": "Muestra quién podría, nunca quién lo hará."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Listas por niveles",

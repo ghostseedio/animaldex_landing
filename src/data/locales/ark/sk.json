@@ -808,6 +808,26 @@
             "powerEarn": "Získanie jeho Sily zvyšuje jeho šancu prežiť",
             "powerWorking": "Jeho Sila funguje: predátori ho obchádzajú kvôli slabším"
         },
+        "relations": {
+            "title": "Okolo neho",
+            "predator": "Mohol by ho loviť",
+            "prey": "Žerie",
+            "partner": "Možní partneri",
+            "eggs": "Vajcia, ktoré by mohol vziať",
+            "eggThreat": "Mohol by mu vziať vajcia",
+            "chain": "Potravový reťazec",
+            "eats": "Žerie",
+            "eatenBy": "Žerú ho",
+            "here": "{n} tu",
+            "noneNearby": "Žiadny nablízku",
+            "noneAboard": "Tu žiadny",
+            "keptFed": "Kŕmia ho chovatelia",
+            "keptSafe": "V bezpečí pred predátormi",
+            "more": "+{n} ďalších",
+            "lines": "Čiary",
+            "young": "Na partnera je ešte príliš mladý.",
+            "note": "Ukazuje, kto by mohol, nikdy kto to urobí."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Rebríčky úrovní",

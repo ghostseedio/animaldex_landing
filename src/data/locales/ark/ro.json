@@ -808,6 +808,26 @@
             "powerEarn": "Obținerea Puterii lui îi crește șansa de a supraviețui",
             "powerWorking": "Puterea lui funcționează: prădătorii îl ocolesc în favoarea celor mai slabi"
         },
+        "relations": {
+            "title": "În jurul lui",
+            "predator": "L-ar putea vâna",
+            "prey": "Mănâncă",
+            "partner": "Parteneri posibili",
+            "eggs": "Ouă pe care le-ar putea lua",
+            "eggThreat": "I-ar putea lua ouăle",
+            "chain": "Lanț trofic",
+            "eats": "Mănâncă",
+            "eatenBy": "Mâncat de",
+            "here": "{n} aici",
+            "noneNearby": "Niciunul în apropiere",
+            "noneAboard": "Niciunul aici",
+            "keptFed": "Hrănit de îngrijitori",
+            "keptSafe": "Ferit de prădători",
+            "more": "Încă +{n}",
+            "lines": "Linii",
+            "young": "Prea tânăr pentru a avea un partener.",
+            "note": "Arată cine ar putea, niciodată cine o va face."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Liste pe niveluri",

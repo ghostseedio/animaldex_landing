@@ -808,6 +808,26 @@
             "powerEarn": "Osvajanje njegove Moći povećava njegovu šansu za preživljavanje",
             "powerWorking": "Njegova Moć djeluje: grabežljivci ga zaobilaze zbog slabijih"
         },
+        "relations": {
+            "title": "Oko njega",
+            "predator": "Mogao bi ga loviti",
+            "prey": "Jede",
+            "partner": "Mogući partneri",
+            "eggs": "Jaja koja bi mogao uzeti",
+            "eggThreat": "Mogao bi mu uzeti jaja",
+            "chain": "Hranidbeni lanac",
+            "eats": "Jede",
+            "eatenBy": "Jedu ga",
+            "here": "{n} ovdje",
+            "noneNearby": "Nijedan u blizini",
+            "noneAboard": "Nijedan ovdje",
+            "keptFed": "Hrane ga čuvari",
+            "keptSafe": "Siguran od grabežljivaca",
+            "more": "+{n} više",
+            "lines": "Linije",
+            "young": "Premlad je za partnera.",
+            "note": "Pokazuje tko bi mogao, nikad tko hoće."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Ljestvice razina",

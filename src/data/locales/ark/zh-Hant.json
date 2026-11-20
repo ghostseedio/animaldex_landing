@@ -808,6 +808,26 @@
             "powerEarn": "獲得牠的力量會提高牠的生存機率",
             "powerWorking": "牠的力量發揮了作用：掠食者會先挑更弱的，放過牠"
         },
+        "relations": {
+            "title": "它的周圍",
+            "predator": "可能捕食它",
+            "prey": "它吃",
+            "partner": "可能的配偶",
+            "eggs": "它可能取食的卵",
+            "eggThreat": "可能取食它的卵",
+            "chain": "食物鏈",
+            "eats": "吃",
+            "eatenBy": "被吃",
+            "here": "此處 {n}",
+            "noneNearby": "附近沒有",
+            "noneAboard": "此處沒有",
+            "keptFed": "由飼育員餵養",
+            "keptSafe": "免受捕食者威脅",
+            "more": "還有 {n} 隻",
+            "lines": "連線",
+            "young": "還太小，不能有配偶。",
+            "note": "只顯示可能，從不預言會發生什麼。"
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "分級榜單",

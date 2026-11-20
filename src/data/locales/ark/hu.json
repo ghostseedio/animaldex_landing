@@ -808,6 +808,26 @@
             "powerEarn": "Az Ereje megszerzése növeli a túlélési esélyét",
             "powerWorking": "Az Ereje működik: a ragadozók elhaladnak mellette a gyengébbek kedvéért"
         },
+        "relations": {
+            "title": "Körülötte",
+            "predator": "Vadászhat rá",
+            "prey": "Ezt eszi",
+            "partner": "Lehetséges párok",
+            "eggs": "Tojások, amelyeket elvihet",
+            "eggThreat": "Elviheti a tojásait",
+            "chain": "Tápláléklánc",
+            "eats": "Eszi",
+            "eatenBy": "Megeszi",
+            "here": "{n} itt",
+            "noneNearby": "Nincs a közelben",
+            "noneAboard": "Itt nincs",
+            "keptFed": "A gondozói etetik",
+            "keptSafe": "Védve a ragadozóktól",
+            "more": "+{n} további",
+            "lines": "Vonalak",
+            "young": "Még túl fiatal ahhoz, hogy párja legyen.",
+            "note": "Azt mutatja, ki tehetné, sosem azt, ki fogja."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Szintlisták",

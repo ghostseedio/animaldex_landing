@@ -808,6 +808,26 @@
             "powerEarn": "Sen Voiman ansaitseminen parantaa sen selviytymismahdollisuuksia",
             "powerWorking": "Sen Voima toimii: pedot ohittavat sen heikompien takia"
         },
+        "relations": {
+            "title": "Sen ympärillä",
+            "predator": "Voisi saalistaa sitä",
+            "prey": "Se syö",
+            "partner": "Mahdolliset kumppanit",
+            "eggs": "Munat, jotka se voisi viedä",
+            "eggThreat": "Voisi viedä sen munat",
+            "chain": "Ravintoketju",
+            "eats": "Syö",
+            "eatenBy": "Sitä syövät",
+            "here": "{n} täällä",
+            "noneNearby": "Ei lähellä",
+            "noneAboard": "Ei täällä",
+            "keptFed": "Hoitajat ruokkivat",
+            "keptSafe": "Turvassa pedoilta",
+            "more": "+{n} lisää",
+            "lines": "Viivat",
+            "young": "Liian nuori kumppanille.",
+            "note": "Näyttää, kuka voisi, ei koskaan sitä, kuka tekee."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Tasolistat",

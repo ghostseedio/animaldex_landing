@@ -12,6 +12,7 @@
  *
  *   node scripts/ark-runtime-measure.mjs --label before [--devices desktop,phone] [--runs 3] [--seconds 20]
  *        [--network 4g|none] [--quality auto|high|medium|low] [--gpu metal|swiftshader] [--headed] [--profile]
+ *        [--relations on|off] (8 s in, a big kind's animal selected; `on`: its relation lines to its 12 nearest, ark-relation-lines)
  *        [--walk] (the camera flies animal to animal) [--budget <MB>] (a small skin ceiling, to watch the drops)
  *        [--population 1x|3x] (a scale fixture) or [--population-file <path>] (any snapshot file, read where it is on
  *        every request and never copied: a local snapshot of the real Ark, real usernames and all)
@@ -448,7 +449,7 @@ for (const deviceName of devices) {
             await cdp.send("Profiler.setSamplingInterval", {interval: 500});
             await cdp.send("Profiler.start");
         }
-        const extra = `${arg("render", "") ? `&render=${arg("render", "")}` : ""}${arg("render-scale", "") ? `&renderScale=${arg("render-scale", "")}` : ""}${flag("tour") ? "&tour=1" : ""}${arg("focus", "") ? `&focus=${arg("focus", "")}` : ""}${flag("islands") ? "&islands=1" : ""}${arg("world", "") ? `&world=${arg("world", "")}` : ""}${arg("pan", "") ? `&pan=${arg("pan", "")}` : ""}${arg("mem", "") ? `&mem=${arg("mem", "")}` : ""}${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${flag("prebuild") ? "&prebuild=1" : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
+        const extra = `${arg("render", "") ? `&render=${arg("render", "")}` : ""}${arg("render-scale", "") ? `&renderScale=${arg("render-scale", "")}` : ""}${flag("tour") ? "&tour=1" : ""}${arg("focus", "") ? `&focus=${arg("focus", "")}` : ""}${flag("islands") ? "&islands=1" : ""}${arg("world", "") ? `&world=${arg("world", "")}` : ""}${arg("pan", "") ? `&pan=${arg("pan", "")}` : ""}${arg("mem", "") ? `&mem=${arg("mem", "")}` : ""}${arg("budget", "") ? `&budget=${arg("budget", "")}` : ""}${flag("walk") ? "&walk=1" : ""}${arg("relations", "") ? `&relations=${arg("relations", "")}` : ""}${flag("prebuild") ? "&prebuild=1" : ""}${populationFile ? "&population=population-file.json" : arg("population", "") ? `&population=population-${arg("population", "")}.json` : ""}`;
         const modelsParam = modelsDir ? `&models=${encodeURIComponent(`${base}/models`)}` : cdnDir ? `&models=${encodeURIComponent(`${base}/cdn/talking-models/v1/ark`)}` : "";
         let navigated = Date.now();
         const lane = `${interact ? "&interact=1" : ""}${perfOn ? "&perf=1" : ""}`;
@@ -732,6 +733,7 @@ for (const deviceName of devices) {
             inViewBy: r.inViewBy ?? null,
             gc,
             frameRate: r.frameRate ?? null,
+            relations: r.relations ?? null,
             longestTaskMs: longest,
             longTasks: tasks.length,
             longTaskMsTotal: tasks.reduce((sum, task) => sum + task.ms, 0),

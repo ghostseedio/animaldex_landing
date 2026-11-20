@@ -808,6 +808,26 @@
             "powerEarn": "Získání jeho Síly zvyšuje jeho šanci přežít",
             "powerWorking": "Jeho Síla funguje: šelmy ho přeskočí kvůli slabším"
         },
+        "relations": {
+            "title": "Kolem něj",
+            "predator": "Mohl by ho lovit",
+            "prey": "Žere",
+            "partner": "Možní partneři",
+            "eggs": "Vejce, která by mohl vzít",
+            "eggThreat": "Mohl by mu vzít vejce",
+            "chain": "Potravní řetězec",
+            "eats": "Žere",
+            "eatenBy": "Žerou ho",
+            "here": "{n} zde",
+            "noneNearby": "Žádný poblíž",
+            "noneAboard": "Zde žádný",
+            "keptFed": "Krmí ho chovatelé",
+            "keptSafe": "V bezpečí před predátory",
+            "more": "+{n} dalších",
+            "lines": "Čáry",
+            "young": "Na partnera je ještě příliš mladý.",
+            "note": "Ukazuje, kdo by mohl, nikdy kdo to udělá."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Žebříčky úrovní",

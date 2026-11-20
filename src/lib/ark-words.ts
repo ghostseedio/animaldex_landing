@@ -16,6 +16,7 @@ import type {ArkHeartsWords} from "@/lib/ark-hearts";
 import type {ArkTimeLeftWords} from "@/lib/ark-time-left";
 import type {ArkGraphWords} from "@/lib/ark-graph-words";
 import type {ArkRankingsWords} from "@/lib/ark-rankings-words";
+import type {ArkRelationsWords} from "@/lib/ark-relations";
 
 export type ArkHudWords = {
     label: string;
@@ -474,6 +475,8 @@ export type ArkWords = {
     timeLeft?: Partial<ArkTimeLeftWords>;
     /** The two Ark ranking pages (`/tier-list/ark-survival`, `/tier-list/ark-fastest-breeders`; `lib/ark-rankings-words.ts`). Optional: an older bundle lacks them (English is the fallback). */
     rankings?: ArkRankingsWords;
+    /** Who could hunt it, what it eats, its possible mates, and the lines' switch (lane ark-relation-lines); English fills any key a bundle lacks. */
+    relations?: Partial<ArkRelationsWords>;
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */

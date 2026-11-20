@@ -808,6 +808,26 @@
             "powerEarn": "Gücünü kazanmak hayatta kalma şansını artırır",
             "powerWorking": "Gücü işe yarıyor: yırtıcılar onu atlayıp daha zayıflara yöneliyor"
         },
+        "relations": {
+            "title": "Çevresinde",
+            "predator": "Onu avlayabilir",
+            "prey": "Yedikleri",
+            "partner": "Olası eşler",
+            "eggs": "Alabileceği yumurtalar",
+            "eggThreat": "Yumurtalarını alabilir",
+            "chain": "Besin zinciri",
+            "eats": "Yer",
+            "eatenBy": "Onu yiyenler",
+            "here": "Burada {n}",
+            "noneNearby": "Yakında yok",
+            "noneAboard": "Burada yok",
+            "keptFed": "Bakıcıları besliyor",
+            "keptSafe": "Avcılardan güvende",
+            "more": "+{n} daha",
+            "lines": "Çizgiler",
+            "young": "Eş edinmek için çok genç.",
+            "note": "Kimin yapabileceğini gösterir, kimin yapacağını değil."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Seviye listeleri",

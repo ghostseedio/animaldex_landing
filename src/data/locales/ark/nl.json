@@ -808,6 +808,26 @@
             "powerEarn": "Zijn Kracht verdienen vergroot zijn overlevingskans",
             "powerWorking": "Zijn Kracht werkt: roofdieren slaan het over voor zwakkere dieren"
         },
+        "relations": {
+            "title": "Eromheen",
+            "predator": "Zou erop kunnen jagen",
+            "prey": "Het eet",
+            "partner": "Mogelijke partners",
+            "eggs": "Eieren die het zou kunnen pakken",
+            "eggThreat": "Zou zijn eieren kunnen pakken",
+            "chain": "Voedselketen",
+            "eats": "Eet",
+            "eatenBy": "Gegeten door",
+            "here": "{n} hier",
+            "noneNearby": "Geen in de buurt",
+            "noneAboard": "Geen hier",
+            "keptFed": "Gevoerd door verzorgers",
+            "keptSafe": "Veilig voor roofdieren",
+            "more": "+{n} meer",
+            "lines": "Lijnen",
+            "young": "Te jong voor een partner.",
+            "note": "Toont wie zou kunnen, nooit wie het zal doen."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Tierlijsten",

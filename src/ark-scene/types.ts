@@ -224,6 +224,11 @@ export type ArkSnapshot = {
      * animal's own start is inside the next `ramp_ark_days`. Absent: unknown, and "Estimated time left" leaves hunting out.
      */
     hunt_grace?: {ends_ark_day: number; ramp_ark_days: number};
+    /**
+     * PROPOSED (not sent yet; lane ark-egg-predation): the server's `voyage_config.egg_predation` switch, true while egg-eaters
+     * take laid clutches in the wild. Absent or false: the relation lines draw no egg lines.
+     */
+    egg_predation?: boolean;
 };
 
 /** A real hunt under way (`liveHunt`): the hunter, its species, and whether it is still hunting or eating its catch. */
@@ -655,6 +660,17 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     setView: (view: ArkCameraView) => void;
     /** Where an animal (or a replay's stand-in) is now; null when it is not in the scene. */
     locate: (id: string) => ArkLocated | null;
+    /**
+     * Lane ark-relation-lines: what the page's relation lines need of the view. `relationView`: the label layer they draw
+     * in (over the world, under the page) and the view's size and the band covering its foot; `screenOf`: a world point
+     * on screen (px in that layer; `front` false when it is behind the camera); `lifeOf`: an animal's stage and sex as
+     * drawn (an arrival is grown; null: not in the scene).
+     */
+    relationView?: () => {layer: HTMLElement; width: number; height: number; inset: number};
+    screenOf?: (x: number, y: number, z: number, out: {x: number; y: number; front: boolean}) => {x: number; y: number; front: boolean};
+    lifeOf?: (id: string) => {adult: boolean; sex: "male" | "female" | null} | null;
+    /** Lane ark-relation-lines: the clutches drawn now (the props' nest sites with eggs in): species, place, the parent sitting it. */
+    eggSites?: () => Array<{key: string; speciesId: string; x: number; y: number; z: number; sitter: string | null}>;
     /** What an animal is doing now (the state its animation, tap card and follow mode share); null when it is not in the scene. */
     behaviour: (id: string) => ArkBehaviourState | null;
     /** How an animal is resting now (`sleep.ts` restStatus); null up and about, or not in the scene. */

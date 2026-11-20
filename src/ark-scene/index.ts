@@ -7614,6 +7614,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return id;
     };
 
+    /** Lane ark-relation-lines: `screenOf`'s point. */
+    const relationPoint = new Vector3();
     const visitorPoint = new Vector3();
     const placeVisitorLabel = () => {
         if (!visitorLabel) return;
@@ -9718,6 +9720,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const top = waterTopAt(middle.x, middle.z);
             const under = heightAt(middle.x, middle.z) < top - 0.15 ? Math.max(top - middle.y, 0) : 0;
             return {x: middle.x, y: middle.y, z: middle.z, ground, length: entry.length, height: entry.ghost ? Math.min(entry.drawnHeight, entry.length * 0.6) : entry.drawnHeight, awake: entry.awake, yaw: entry.yawNow ?? 0, act: entry.act?.state ?? null, shown: Boolean(entry.middle) && !entry.held && !entry.act?.hidden, under};
+        },
+        relationView: () => ({layer: labelLayer, width, height, inset: insetTarget}),
+        screenOf: (x, y, z, out) => {
+            relationPoint.set(x, y, z).project(camera);
+            out.front = relationPoint.z < 1;
+            out.x = ((relationPoint.x + 1) / 2) * width;
+            out.y = ((1 - relationPoint.y) / 2) * height;
+            return out;
+        },
+        eggSites: () => (options.props === false ? [] : nestSites().filter((site) => (site.eggs ?? 0) > 0).map((site) => ({key: site.siteId, speciesId: site.speciesId, x: site.position.x, y: site.position.y, z: site.position.z, sitter: site.sitter}))),
+        lifeOf: (id) => {
+            const entry = findEntry(id);
+            if (!entry) return null;
+            const stage = liveliness.ageOf(entry)?.stage ?? "adult";
+            return {adult: stage === "adult" || stage === "old", sex: sexLook(entry.animal.id, entry.animal.model_slug).sex};
         },
         behaviour: (id) => findEntry(id)?.state ?? null,
         rest: (id) => {

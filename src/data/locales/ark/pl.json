@@ -808,6 +808,26 @@
             "powerEarn": "Zdobycie jego Mocy zwiększa jego szansę przeżycia",
             "powerWorking": "Jego Moc działa: drapieżniki omijają go na rzecz słabszych"
         },
+        "relations": {
+            "title": "Wokół niego",
+            "predator": "Może na niego polować",
+            "prey": "Zjada",
+            "partner": "Możliwi partnerzy",
+            "eggs": "Jaja, które mógłby zabrać",
+            "eggThreat": "Mógłby zabrać jego jaja",
+            "chain": "Łańcuch pokarmowy",
+            "eats": "Zjada",
+            "eatenBy": "Zjadany przez",
+            "here": "{n} tutaj",
+            "noneNearby": "Brak w pobliżu",
+            "noneAboard": "Brak tutaj",
+            "keptFed": "Karmią go opiekunowie",
+            "keptSafe": "Bezpieczny od drapieżników",
+            "more": "+{n} więcej",
+            "lines": "Linie",
+            "young": "Za młody, by mieć partnera.",
+            "note": "Pokazuje, kto mógłby, nigdy kto to zrobi."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Listy poziomów",

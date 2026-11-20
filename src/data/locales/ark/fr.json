@@ -808,6 +808,26 @@
             "powerEarn": "Obtenir son Pouvoir augmente ses chances de survie",
             "powerWorking": "Son Pouvoir agit : les prédateurs le laissent de côté pour des proies plus faibles"
         },
+        "relations": {
+            "title": "Autour de lui",
+            "predator": "Pourrait le chasser",
+            "prey": "Il mange",
+            "partner": "Partenaires possibles",
+            "eggs": "Œufs qu'il pourrait prendre",
+            "eggThreat": "Pourrait prendre ses œufs",
+            "chain": "Chaîne alimentaire",
+            "eats": "Mange",
+            "eatenBy": "Mangé par",
+            "here": "{n} ici",
+            "noneNearby": "Aucun à proximité",
+            "noneAboard": "Aucun ici",
+            "keptFed": "Nourri par ses soigneurs",
+            "keptSafe": "À l'abri des prédateurs",
+            "more": "+{n} de plus",
+            "lines": "Lignes",
+            "young": "Trop jeune pour avoir un partenaire.",
+            "note": "Montre qui pourrait, jamais qui le fera."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Classements par niveaux",

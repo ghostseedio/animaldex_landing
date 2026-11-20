@@ -808,6 +808,26 @@
             "powerEarn": "Å tjene Kraften dets øker sjansen for å overleve",
             "powerWorking": "Kraften dets virker: rovdyrene hopper over det til fordel for de svakere"
         },
+        "relations": {
+            "title": "Rundt den",
+            "predator": "Kan jakte på den",
+            "prey": "Den spiser",
+            "partner": "Mulige partnere",
+            "eggs": "Egg den kan ta",
+            "eggThreat": "Kan ta eggene dens",
+            "chain": "Næringskjede",
+            "eats": "Spiser",
+            "eatenBy": "Spises av",
+            "here": "{n} her",
+            "noneNearby": "Ingen i nærheten",
+            "noneAboard": "Ingen her",
+            "keptFed": "Fôres av røkterne",
+            "keptSafe": "Trygg for rovdyr",
+            "more": "+{n} til",
+            "lines": "Linjer",
+            "young": "For ung til å ha en partner.",
+            "note": "Viser hvem som kunne, aldri hvem som vil."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Tier-lister",

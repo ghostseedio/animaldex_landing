@@ -808,6 +808,26 @@
             "powerEarn": "Kupata Nguvu yake huongeza nafasi yake ya kuishi",
             "powerWorking": "Nguvu yake inafanya kazi: wawindaji humpita na kuwafuata walio dhaifu"
         },
+        "relations": {
+            "title": "Kando yake",
+            "predator": "Anaweza kumwinda",
+            "prey": "Hula",
+            "partner": "Wenzi wanaowezekana",
+            "eggs": "Mayai anayoweza kuchukua",
+            "eggThreat": "Anaweza kuchukua mayai yake",
+            "chain": "Mnyororo wa chakula",
+            "eats": "Hula",
+            "eatenBy": "Huliwa na",
+            "here": "{n} hapa",
+            "noneNearby": "Hakuna karibu",
+            "noneAboard": "Hakuna hapa",
+            "keptFed": "Hulishwa na walezi",
+            "keptSafe": "Salama dhidi ya wawindaji",
+            "more": "+{n} zaidi",
+            "lines": "Mistari",
+            "young": "Bado ni mdogo mno kuwa na mwenzi.",
+            "note": "Huonyesha nani anaweza, si nani atafanya."
+        },
         "rankings": {
             "category": "Ark",
             "breadcrumb": "Orodha za viwango",
