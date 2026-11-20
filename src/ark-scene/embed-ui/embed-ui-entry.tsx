@@ -9,7 +9,7 @@
  * the world is up, so the scene's first frame never waits for React. The app keeps what it does natively: Talk and a
  * founder's profile go to the host (`ark:talk`, `ark:open-profile`), and the capture photo stays the app's own card.
  */
-import React, {useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
+import React, {Component, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore} from "react";
 import {createRoot, type Root} from "react-dom/client";
 import ArkPopulationHud from "@/app/[locale]/(composited)/ark/ark-population-hud";
 import {ArkAnimalCard, type ArkCardLife} from "@/app/[locale]/(composited)/ark/ark-animal-card";
@@ -70,7 +70,10 @@ function overlaysBottom(): number {
 
 function EmbedUi({store, options}: {store: Store; options: ArkEmbedUiOptions}) {
     const state = useSyncExternalStore(store.subscribe, store.get);
-    const {snapshot, selected, words, locale, soundOn} = state;
+    const {snapshot, words, locale, soundOn} = state;
+    // A card only for an animal aboard: the app's visiting chat animal (ark:visitor) is selectable in the world but is not
+    // on the Ark, so it has no card here (the app shows its own).
+    const selected = state.selected && snapshot?.animals.some((animal) => animal.id === state.selected?.id) ? state.selected : null;
     const scene = options.scene;
 
     // The 24-hour change (the total's badge): the event log read once, a moment after the Ark is read.
@@ -239,13 +242,14 @@ function EmbedUi({store, options}: {store: Store; options: ArkEmbedUiOptions}) {
                 />
             </div>
             {selected ? (
+                <CardBoundary key={selected.id}>
                 <ArkAnimalCard
                     bandRef={bandRef}
                     animal={selected}
                     words={words}
                     locale={locale}
                     talk={talkTitle(selected.name, options.talkTitles)}
-                    arrived={dateFormat.format(new Date(selected.arrived_at))}
+                    arrived={arrivedText(dateFormat, selected.arrived_at)}
                     life={life?.id === selected.id ? life : null}
                     founders={founders.animals[selected.id] ?? null}
                     // The capture photo is the app's own card (ark:selected), not a second one here.
@@ -272,9 +276,31 @@ function EmbedUi({store, options}: {store: Store; options: ArkEmbedUiOptions}) {
                     lives={null}
                     snapshot={snapshot}
                 />
+                </CardBoundary>
             ) : null}
         </>
     );
+}
+
+/** "20 November 2026", or nothing for a date that can't be read (Intl throws on an invalid one). */
+function arrivedText(format: Intl.DateTimeFormat, at: string | null | undefined): string {
+    const time = at ? Date.parse(at) : NaN;
+    return Number.isFinite(time) ? format.format(new Date(time)) : "";
+}
+
+/** A card that fails to draw is left out; the panel and the world stay (React would otherwise drop the whole layer). */
+type BoundaryProps = {children: React.ReactNode};
+class CardBoundary extends Component<BoundaryProps, {failed: boolean}> {
+    state = {failed: false};
+    static getDerivedStateFromError() {
+        return {failed: true};
+    }
+    componentDidCatch(error: unknown) {
+        console.error("Ark card", error);
+    }
+    render() {
+        return this.state.failed ? null : this.props.children;
+    }
 }
 
 type Store = {get: () => State; set: (patch: Partial<State>) => void; subscribe: (listener: () => void) => () => void};

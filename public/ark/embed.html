@@ -959,6 +959,20 @@ window.AnimalDexArkStart = function () {
     // Realistic kills: the meals under way (the read's, with the event log's records) and the marker chip, in the page.
     if (hunting && Ark.arkSyncMeals) Ark.arkSyncMeals(scene, hunting, {snapshot: snapshot});
     if (Ark.mountArkHuntMarker && !huntMarker) huntMarker = Ark.mountArkHuntMarker(function () { return scene; }, function () { return words; });
+    // The HUD once the words are read (2.5 s at most: wordsRead): the panel and card need them, and a world the app fed
+    // its snapshot to directly (?snapshot=data:…null) is up before the read answers.
+    wordsRead.then(function () { mountHud(shown || snapshot); });
+    var button = document.getElementById("ark-sound");
+    var label = words && words.sound ? words.sound.label : "Sound";
+    button.setAttribute("aria-label", label);
+    button.title = words && words.sound ? words.sound.hint : label;
+    button.hidden = false;
+  }
+
+  var hudMounted = false;
+  function mountHud(snapshot) {
+    if (hudMounted) return;
+    hudMounted = true;
     var withUi = hudBars && mountUi(snapshot);
     if ((hudLog || (hudBars && !withUi)) && Ark.mountArkLiveHud) {
       hud = Ark.mountArkLiveHud(document.getElementById("ark"), {
@@ -977,11 +991,6 @@ window.AnimalDexArkStart = function () {
       hud.snapshot(snapshot);
       if (feedOn) startFeed(snapshot);
     }
-    var button = document.getElementById("ark-sound");
-    var label = words && words.sound ? words.sound.label : "Sound";
-    button.setAttribute("aria-label", label);
-    button.title = words && words.sound ? words.sound.hint : label;
-    button.hidden = false;
   }
 
   // The web Ark's own panel and card (lane ARK-SIMPLE, decision 446: the apps match /ark): /ark's components, packed as
