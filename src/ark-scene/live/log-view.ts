@@ -9,9 +9,16 @@
  * tag. The chip folds the lines away (remembered per reader when the host gives a storage key). While a card
  * covers the foot of the world, the whole log moves up above it (the host's `--ark-card-h`, the card's height; owner
  * 2026-11-16: the card "hides the 'live' log … we should move the live logs up when the description container shows up").
+ *
+ * A stack (owner 2026-11-20, decision 439; `lib/ark-live-stack.ts`): the newest line comes in at the foot, the older
+ * slide up and fade a step each (at most 4, 3 at a phone's width, and only as many as fit under the controls at the
+ * top and clear of the population panel), each goes on its own at the end of its life, and only the newest carries its
+ * "Now" / "Seen" tag. Moves are transforms and opacity only (FLIP: one read of the rows before and after a change, never
+ * per frame); with reduced motion nothing slides, lines only fade.
  */
 
 import type {ArkLiveLine} from "@/lib/ark-live-log";
+import {arkLiveStackFit, arkLiveStackMax, arkLiveStackOpacity, arkLiveStackPick, arkLiveStackTagged} from "@/lib/ark-live-stack";
 
 const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif)";
 
@@ -21,8 +28,28 @@ const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe U
  */
 export const ARK_BOTTOM_CLEAR = "calc(12px + env(safe-area-inset-bottom, 0px) + var(--ark-inset-bottom, 0px))";
 
-/** While a card is up, the log shows only its newest line (the list is oldest first). */
-const COVERED_RULE = "[data-ark-live=\"log\"][data-ark-live-covered] [role=\"log\"] > :not(:last-child) { display: none !important; }";
+/** Space between two lines, and between the lines and the chip (px). */
+const ROW_GAP = 4;
+const CHIP_GAP = 5;
+/** Kept clear at the top of the world for its controls (sound, the quality leaf: px), under the host's top inset. */
+const TOP_CLEAR = 64;
+/** How long a line takes to fade out when it leaves the stack, and to slide (ms). */
+const LEAVE_MS = 420;
+const SLIDE_MS = 320;
+const EASE = "cubic-bezier(.2,.8,.2,1)";
+
+type Row = {
+    id: string;
+    el: HTMLButtonElement;
+    text: HTMLSpanElement;
+    tag: HTMLSpanElement | null;
+    count: number;
+    seen: boolean;
+    source: ArkLiveLine["source"];
+    /** Fading out, about to be taken away (no longer a button anyone can press). */
+    leaving: boolean;
+    slide: Animation | null;
+};
 
 /** A line's dot, by kind (the record), in the page's palette. */
 const DOT: Record<string, string> = {
@@ -65,8 +92,6 @@ export type ArkLiveLogViewOptions = {
     onCollapsed?: (collapsed: boolean) => void;
 };
 
-/** The last stretch of a line's life over which it fades out (ms). */
-const FADE_MS = 3000;
 
 export class ArkLiveLogView {
     readonly root: HTMLDivElement;
@@ -74,7 +99,12 @@ export class ArkLiveLogView {
     private readonly chip: HTMLButtonElement;
     private readonly dot: HTMLSpanElement;
     private readonly chipLabel: HTMLSpanElement;
-    private readonly rows = new Map<string, {el: HTMLButtonElement; text: HTMLSpanElement; count: number; seen: boolean; source: ArkLiveLine["source"]}>();
+    private readonly host: HTMLElement;
+    /** The rows in the list, oldest first (those leaving too, until they are gone). */
+    private readonly rows = new Map<string, Row>();
+    /** Lines that did not fit above a card: not drawn again while they are in the log (they are older than all shown). */
+    private readonly dropped = new Set<string>();
+    private readonly timers = new Set<ReturnType<typeof setTimeout>>();
     private collapsed: boolean;
     private covered = false;
     private labels: ArkLiveLogLabels;
@@ -94,7 +124,7 @@ export class ArkLiveLogView {
             display: "flex",
             flexDirection: "column",
             alignItems: "flex-start",
-            gap: "5px",
+            gap: `${CHIP_GAP}px`,
             maxWidth: "min(25rem, calc(100% - 80px))",
             pointerEvents: "none",
             font: `600 12.5px/1.3 ${FONT}`,
@@ -106,7 +136,7 @@ export class ArkLiveLogView {
         list.setAttribute("role", "log");
         list.setAttribute("aria-live", "polite");
         list.setAttribute("aria-relevant", "additions");
-        Object.assign(list.style, {display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "4px", maxWidth: "100%"});
+        Object.assign(list.style, {display: "flex", flexDirection: "column", alignItems: "flex-start", gap: `${ROW_GAP}px`, maxWidth: "100%"});
         const chip = document.createElement("button");
         chip.type = "button";
         chip.setAttribute("aria-controls", id);
@@ -141,12 +171,7 @@ export class ArkLiveLogView {
         });
         root.append(list, chip);
         host.appendChild(root);
-        if (!host.ownerDocument.getElementById("ark-live-covered-rule")) {
-            const rule = host.ownerDocument.createElement("style");
-            rule.id = "ark-live-covered-rule";
-            rule.textContent = COVERED_RULE;
-            host.ownerDocument.head.appendChild(rule);
-        }
+        this.host = host;
         this.root = root;
         this.list = list;
         this.chip = chip;
@@ -179,11 +204,10 @@ export class ArkLiveLogView {
         this.labels = labels;
         this.applyLabels();
         for (const row of Array.from(this.rows.values())) {
-            const tag = row.el.querySelector<HTMLElement>("[data-ark-live-seen]");
-            if (tag) {
+            if (row.tag) {
                 const now = row.source === "now";
-                tag.textContent = now ? labels.now : labels.seen;
-                tag.title = now ? labels.nowNote : labels.seenNote;
+                row.tag.textContent = now ? labels.now : labels.seen;
+                row.tag.title = now ? labels.nowNote : labels.seenNote;
             }
         }
     }
@@ -197,10 +221,16 @@ export class ArkLiveLogView {
     setCovered(covered: boolean) {
         this.covered = covered;
         this.root.style.bottom = covered ? `calc(${ARK_BOTTOM_CLEAR} + var(--ark-card-h, 0px))` : ARK_BOTTOM_CLEAR;
-        // (Above a card the world left is short, a phone's most of all: only the newest line stays, by the chip; the
-        // others come back when the card closes. Never a line cut in half under the controls at the top.)
+        // (Above a card the world left is short, a phone's most of all: the stack keeps only the lines that fit under the
+        // controls at the top, the newest always; never a line cut in half. Measured where the log will stand.)
         if (covered) this.root.dataset.arkLiveCovered = "";
         else delete this.root.dataset.arkLiveCovered;
+        // (After the log's own move up, 250 ms: measured where it stands, not where it was.)
+        const timer = setTimeout(() => {
+            this.timers.delete(timer);
+            this.fit();
+        }, this.options.reducedMotion ? 0 : 300);
+        this.timers.add(timer);
     }
 
     get isCollapsed(): boolean {
@@ -213,35 +243,125 @@ export class ArkLiveLogView {
 
     /** The lines as they are now (oldest first); `now` sets each one's fade. */
     render(lines: readonly ArkLiveLine[], now: number) {
-        const keep = new Set(lines.map((line) => line.id));
-        this.rows.forEach((row, id) => {
-            if (keep.has(id)) return;
-            row.el.remove();
-            this.rows.delete(id);
+        const present = new Set(lines.map((line) => line.id));
+        this.dropped.forEach((id) => {
+            if (!present.has(id)) this.dropped.delete(id);
         });
-        for (const line of lines) {
-            let row = this.rows.get(line.id);
-            if (!row) {
-                row = this.makeRow(line);
-                this.rows.set(line.id, row);
-                this.list.appendChild(row.el);
-                if (!this.options.reducedMotion) {
-                    row.el.animate?.([{opacity: 0, transform: "translateY(6px)"}, {opacity: 1, transform: "none"}], {duration: 260, easing: "cubic-bezier(.2,.8,.2,1)"});
+        const shown = arkLiveStackPick(lines.filter((line) => !this.dropped.has(line.id)), arkLiveStackMax(this.root.ownerDocument.defaultView?.innerWidth ?? 1024));
+        const keep = new Set(shown.map((line) => line.id));
+        const going = Array.from(this.rows.values()).filter((row) => !row.leaving && !keep.has(row.id));
+        const coming = shown.filter((line) => !this.rows.has(line.id));
+        if (going.length || coming.length) {
+            this.flip(() => {
+                for (const row of going) this.leave(row);
+                for (const line of coming) {
+                    const row = this.makeRow(line);
+                    this.rows.set(line.id, row);
+                    this.list.appendChild(row.el);
                 }
-            } else if (row.count !== line.count) {
+            });
+            for (const line of coming) {
+                const row = this.rows.get(line.id)!;
+                const life = this.lifeOf(line);
+                const target = arkLiveStackOpacity(0, life - (now - line.updatedAt));
+                row.el.style.opacity = String(target);
+                // In: from just below, the older ones sliding up (`flip`); with reduced motion only a fade.
+                row.el.animate?.(this.options.reducedMotion ? [{opacity: 0}, {opacity: target}] : [{opacity: 0, transform: "translateY(10px)"}, {opacity: target, transform: "none"}], {duration: this.options.reducedMotion ? 200 : 300, easing: EASE});
+            }
+            if (coming.length) this.fit();
+        }
+        // Each line: a step fainter for each newer one below it, and its own fade at the end of its life.
+        const byId = new Map(lines.map((line) => [line.id, line]));
+        const live = Array.from(this.rows.values()).filter((row) => !row.leaving);
+        live.forEach((row, at) => {
+            const line = byId.get(row.id);
+            if (!line) return;
+            const rank = live.length - 1 - at;
+            if (row.count !== line.count) {
                 row.count = line.count;
                 row.text.textContent = this.options.text(line);
                 row.el.setAttribute("aria-label", this.lineLabel(line));
                 if (!this.options.reducedMotion) row.el.animate?.([{backgroundColor: "rgba(255, 252, 244, 0.28)"}, {backgroundColor: row.seen ? "rgba(14, 20, 14, 0.42)" : "rgba(14, 20, 14, 0.66)"}], {duration: 700, easing: "ease-out"});
             }
-            const life = line.source === "server" ? this.options.serverLife : line.source === "now" ? this.options.nowLife ?? this.options.seenLife : this.options.seenLife;
-            const left = life - (now - line.updatedAt);
-            row.el.style.opacity = String(Math.max(Math.min(left / FADE_MS, 1), 0));
-        }
+            row.el.style.opacity = String(arkLiveStackOpacity(rank, this.lifeOf(line) - (now - line.updatedAt)));
+            if (row.tag) row.tag.style.display = arkLiveStackTagged(rank) ? "" : "none";
+        });
         // The chip's dot: lit while anything is on screen.
-        const lit = lines.length > 0;
+        const lit = live.length > 0;
         this.dot.style.background = lit ? "#8fd694" : "rgba(255, 252, 244, 0.35)";
         this.dot.style.boxShadow = lit && !this.options.reducedMotion ? "0 0 0 3px rgba(143, 214, 148, 0.22)" : "none";
+    }
+
+    private lifeOf(line: ArkLiveLine): number {
+        const life = line.source === "server" ? this.options.serverLife : line.source === "now" ? this.options.nowLife ?? this.options.seenLife : this.options.seenLife;
+        return Math.max(life, line.stay ?? 0);
+    }
+
+    /**
+     * A change to the rows with the others gliding to their new places (FLIP): where each stood before, the change,
+     * where it stands now, and a transform from the one to the other. Two reads a change (a new line, one gone), never
+     * per frame. With reduced motion the change is made as it is.
+     */
+    private flip(change: () => void) {
+        if (this.options.reducedMotion || this.collapsed) {
+            change();
+            return;
+        }
+        const before = new Map<Row, number>();
+        this.rows.forEach((row) => before.set(row, row.el.getBoundingClientRect().top));
+        change();
+        before.forEach((top, row) => {
+            if (!row.el.isConnected) return;
+            row.slide?.cancel();
+            const dy = Math.round(top - row.el.getBoundingClientRect().top);
+            row.slide = dy ? row.el.animate?.([{transform: `translateY(${dy}px)`}, {transform: "none"}], {duration: SLIDE_MS, easing: EASE}) ?? null : null;
+        });
+    }
+
+    /** A row out of the stack: it fades where it is, then goes (the others close up over it). */
+    private leave(row: Row) {
+        row.leaving = true;
+        row.el.style.pointerEvents = "none";
+        row.el.setAttribute("aria-hidden", "true");
+        row.el.tabIndex = -1;
+        row.el.style.transition = `opacity ${LEAVE_MS}ms ease`;
+        row.el.style.opacity = "0";
+        const timer = setTimeout(() => {
+            this.timers.delete(timer);
+            if (this.rows.get(row.id) !== row) return;
+            this.flip(() => {
+                row.el.remove();
+                this.rows.delete(row.id);
+            });
+        }, LEAVE_MS);
+        this.timers.add(timer);
+    }
+
+    /**
+     * Only the lines that fit: under the controls at the top of the world (and the host's top inset), clear of the
+     * population panel where the two would meet (a phone's "aboard" pill), the newest always. Read when a line comes
+     * and when a card comes or goes; the older lines that do not fit leave and are not drawn again.
+     */
+    private fit() {
+        if (this.collapsed || !this.root.isConnected) return;
+        const live = Array.from(this.rows.values()).filter((row) => !row.leaving);
+        if (live.length < 2) return;
+        const view = this.root.ownerDocument.defaultView;
+        const inset = view ? Number.parseFloat(view.getComputedStyle(this.root.ownerDocument.documentElement).getPropertyValue("--ark-inset-top")) || 0 : 0;
+        const box = this.root.getBoundingClientRect();
+        let top = this.host.getBoundingClientRect().top + inset + TOP_CLEAR;
+        const bars = this.host.querySelector<HTMLElement>("[data-ark-live=\"bars\"]");
+        if (bars) {
+            const panel = bars.getBoundingClientRect();
+            if (panel.height > 0 && panel.left < box.right && panel.right > box.left) top = Math.max(top, panel.bottom + 8);
+        }
+        const room = this.chip.getBoundingClientRect().top - CHIP_GAP - top;
+        const heights = live.map((row) => row.el.offsetHeight).reverse();
+        const n = arkLiveStackFit(heights, ROW_GAP, room);
+        if (n >= live.length) return;
+        const going = live.slice(0, live.length - n);
+        for (const row of going) this.dropped.add(row.id);
+        for (const row of going) this.leave(row);
     }
 
     private lineLabel(line: ArkLiveLine): string {
@@ -273,7 +393,9 @@ export class ArkLiveLogView {
             color: seen ? "rgba(255, 252, 244, 0.9)" : "rgba(255, 252, 244, 0.98)",
             font: "inherit",
             cursor: "pointer",
-            transition: this.options.reducedMotion ? "none" : "opacity 600ms linear"
+            // (Opacity only: the stack's steps and the end of a line's life. The slides are the rows' own animations.)
+            transition: "opacity 600ms linear",
+            willChange: "transform, opacity"
         });
         const marker = document.createElement("span");
         marker.setAttribute("aria-hidden", "true");
@@ -287,6 +409,7 @@ export class ArkLiveLogView {
         text.textContent = this.options.text(line);
         Object.assign(text.style, {minWidth: "0", overflow: "hidden", display: "-webkit-box", WebkitLineClamp: "2", WebkitBoxOrient: "vertical"});
         el.append(marker, text);
+        let tagEl: HTMLSpanElement | null = null;
         if (seen) {
             const tag = document.createElement("span");
             tag.dataset.arkLiveSeen = now ? "now" : "1";
@@ -295,20 +418,24 @@ export class ArkLiveLogView {
             tag.setAttribute("aria-hidden", "true");
             Object.assign(tag.style, {flex: "0 0 auto", padding: "1px 5px", borderRadius: "999px", border: now ? "1px solid rgba(242, 217, 138, 0.55)" : "1px solid rgba(168, 216, 232, 0.55)", color: now ? "#f6e7b4" : "#cfe9f2", font: `700 9.5px/1.3 ${FONT}`, letterSpacing: "0.08em", textTransform: "uppercase"});
             el.append(tag);
+            tagEl = tag;
         }
         el.setAttribute("aria-label", this.lineLabel(line));
         el.addEventListener("click", () => {
             const current = this.lineOf?.(line.id) ?? line;
             this.options.onTap(current);
         });
-        return {el, text, count: line.count, seen, source: line.source};
+        return {id: line.id, el, text, tag: tagEl, count: line.count, seen, source: line.source, leaving: false, slide: null} satisfies Row;
     }
 
     /** The newest copy of a line (its focus can move to the latest of a folded group). */
     lineOf: ((id: string) => ArkLiveLine | null) | null = null;
 
     dispose() {
+        this.timers.forEach((timer) => clearTimeout(timer));
+        this.timers.clear();
         this.root.remove();
         this.rows.clear();
+        this.dropped.clear();
     }
 }
