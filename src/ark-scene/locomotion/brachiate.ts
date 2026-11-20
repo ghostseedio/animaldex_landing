@@ -86,17 +86,17 @@ export function armsFit(rig: LocoRig): boolean {
 
 /**
  * The kinds whose loaded rig has arms that can take a hold (`armsFit`), by model slug: filled as rigs load
- * (`rig-player.ts`). A brachiator not in it (its rig not loaded yet, or a sitting rig whose arms cannot rise) never
- * hangs under a limb: it travels along the tops on its feet instead (`canopy-scene.ts`, `zoo-swing.ts`), so it is
- * never seen hanging in the air with no hand on the wood.
+ * (`rig-player.ts`). A brachiator not in it (its rig not loaded yet, or a sitting rig whose arms cannot rise) makes no
+ * canopy excursion at all (`canopy-scene.ts`, `zoo-swing.ts`): it stays sitting on its own hold, on the wood, so it is
+ * never seen hanging in the air with no hand on a branch, nor lying along an unseen limb top in its sitting pose.
  */
 export const handsReady = new Set<string>();
 export function canHang(slug: string): boolean {
     return handsReady.has(slug);
 }
-/** A brachiator's kind as it may travel now: the run along the tops until its rig's hands can hold. */
-export function travelKind<K extends {mode: string; why: string}>(kind: K, slug: string): K {
-    return kind.mode === "brachiate" && !handsReady.has(slug) ? {...kind, mode: "run", why: `${kind.why} (arms cannot hold yet: along the tops)`} : kind;
+/** A kind as it may travel the crowns now: null for a brachiator until its rig's hands can hold (it stays on its hold). */
+export function travelKind<K extends {mode: string}>(kind: K, slug: string): K | null {
+    return kind.mode === "brachiate" && !handsReady.has(slug) ? null : kind;
 }
 
 /** The hand's length (wrist to fingertips at rest, mesh units). */

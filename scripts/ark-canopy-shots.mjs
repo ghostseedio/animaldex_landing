@@ -53,6 +53,30 @@ try {
 }
 const context = await browser.newContext({viewport: {width: Number(arg("width", "1280")), height: Number(arg("height", "720"))}});
 const page = await context.newPage();
+// --local-set DIR: a local Ark build (DIR/ark/manifest.json + DIR/ark/<slug>/{near.glb,far.glb,ark.json}, and
+// DIR/rig/publish-v3/{manifest.json,<slug>/<version>.rig.glb}) laid over the live sets, to look at re-made models and
+// rigs before anything is uploaded (ARK-CANOPY's re-rigged gibbons).
+const localSet = arg("local-set", null);
+if (localSet) {
+    const arkLocal = JSON.parse(readFileSync(path.join(localSet, "ark", "manifest.json"), "utf8")).models ?? {};
+    const rigLocal = JSON.parse(readFileSync(path.join(localSet, "rig", "publish-v3", "manifest.json"), "utf8")).species ?? {};
+    const files = {"near.glb": "near.glb", "far.glb": "far.glb", "ark.json": "ark.json"};
+    await page.route(/talking-models\/(v1\/ark|ark-rig\/v3)\//, async (route) => {
+        const url = route.request().url();
+        if (/v1\/ark\/manifest(\.json)?(\?|$)/.test(url) || /ark-rig\/v3\/manifest(\.json)?(\?|$)/.test(url)) {
+            const live = await route.fetch();
+            const doc = await live.json();
+            if (url.includes("/v1/ark/")) Object.assign(doc.models, arkLocal);
+            else Object.assign(doc.species, rigLocal);
+            return route.fulfill({response: live, json: doc});
+        }
+        const m = /v1\/ark\/([^/]+)\/([0-9a-f]+)\.(near\.glb|far\.glb|ark\.json)/.exec(url);
+        if (m && arkLocal[m[1]] === m[2]) return route.fulfill({path: path.join(localSet, "ark", m[1], files[m[3]])});
+        const r = /ark-rig\/v3\/([^/]+)\/([0-9a-f]+)\.rig\.glb/.exec(url);
+        if (r && rigLocal[r[1]] === r[2]) return route.fulfill({path: path.join(localSet, "rig", "publish-v3", r[1], `${r[2]}.rig.glb`)});
+        return route.continue();
+    });
+}
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e.stack ?? e.message).slice(0, 600)));
 await page.goto(`${base}?world=v2&island=${arg("island", "wild")}&quality=${arg("quality", "high")}&epoch=${plan[0]?.epoch ?? ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
@@ -65,6 +89,14 @@ while (Date.now() - started < 240000) {
 }
 const notes = [];
 for (const shot of plan) {
+    if (shot.prefocus) {
+        // (Its rig loads only near the camera, and a brachiator travels the crowns only once its rig's hands can hold:
+        // framed first, at the plan's epoch, so its rig is in before the search.)
+        await page.evaluate(async (s) => {
+            await window.__canopy.at(s.epoch, 2);
+            await window.__canopy.frame(s.prefocus, 3, 0.7, 1.3, 0);
+        }, shot);
+    }
     if (shot.find) {
         // (A moment found on the page's own schedule: the first climb of these kinds from `from`, `after` seconds into it.)
         // (Or, with `phases`, the first moment one of them is swinging, leaping or in flight on its canopy route.)

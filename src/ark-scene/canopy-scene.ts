@@ -128,12 +128,13 @@ export function canopyFrame(
         owners.set(animal.id, (own = {base, kind: null, hands: !canHang(animal.model_slug), routes: new Map()}));
     }
     if (!own.base) return null;
-    // (ARK-CANOPY: a brachiator hangs under the limbs only once its rig's hands can hold; until then it goes along the tops.)
+    // (ARK-CANOPY: a brachiator goes out through the crowns only once its rig's hands can hold; until then it stays on its hold.)
     if (own.hands !== canHang(animal.model_slug) || !own.kind) {
         own.hands = canHang(animal.model_slug);
         own.kind = travelKind(own.base, animal.model_slug);
         own.routes.clear();
     }
+    if (!own.kind) return null;
     const route = routeFrom(own, animal.id, hold, length, groundAt);
     if (!route) return null;
     const start = excursionStart(route, hashString(`${animal.id}#excursion`), trip.slot, trip.end - trip.arrive);

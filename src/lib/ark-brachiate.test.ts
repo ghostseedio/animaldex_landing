@@ -67,12 +67,12 @@ test("a sitting rig (the gibbons' and the siamang's: their fore chains laid down
     assert.equal(brachiateDriver.takes(sitting, {canopy: {phase: "swing", hand: {x: 0, y: 1, z: 0}, next: null, lead: 1, u: 0.5, brachiate: true}} as unknown as LocoInput), false);
 });
 
-test("until its rig's hands can hold, a brachiator goes along the tops (never hanging in the air)", async () => {
+test("until its rig's hands can hold, a brachiator makes no canopy excursion (never hanging in the air)", async () => {
     const {travelKind, handsReady} = await import("@/ark-scene/locomotion/brachiate");
     const gibbon = {mode: "brachiate", why: "genus Hylobates"};
-    assert.equal(travelKind(gibbon, "lar-gibbon").mode, "run");
+    assert.equal(travelKind(gibbon, "lar-gibbon"), null);
     handsReady.add("lar-gibbon");
-    assert.equal(travelKind(gibbon, "lar-gibbon").mode, "brachiate");
+    assert.equal(travelKind(gibbon, "lar-gibbon")?.mode, "brachiate");
     handsReady.delete("lar-gibbon");
-    assert.equal(travelKind({mode: "leap", why: ""}, "x").mode, "leap");
+    assert.equal(travelKind({mode: "leap", why: ""}, "x")?.mode, "leap");
 });
