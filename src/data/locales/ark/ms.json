@@ -735,7 +735,14 @@
             "reasonHunted": "Pemangsa di sini: {predators}",
             "reasonHunger": "Lapar: tiada makanan baru-baru ini",
             "reasonSkill": "Dilepaskan: masih belajar mencari makanan",
-            "reasonSafe": "Perlindungan daripada pemburuan sehingga hari Ark ke-{day}"
+            "reasonSafe": "Perlindungan daripada pemburuan sehingga hari Ark ke-{day}",
+            "stageYoung": "Muda",
+            "stageAdult": "Dewasa",
+            "stageOld": "Tua",
+            "ageIs": "berumur {age}",
+            "ageIsAbout": "berumur kira-kira {age}",
+            "ageMonths": "{months} bulan Ark",
+            "ageMonth": "1 bulan Ark"
         }
     },
     "talkPage": {

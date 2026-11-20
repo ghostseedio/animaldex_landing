@@ -735,7 +735,14 @@
             "reasonHunted": "ここにいる捕食者：{predators}",
             "reasonHunger": "空腹：最近の食事なし",
             "reasonSkill": "放された動物：まだ食べ物の探し方を学習中",
-            "reasonSafe": "Ark {day}日目まで狩りから保護"
+            "reasonSafe": "Ark {day}日目まで狩りから保護",
+            "stageYoung": "幼体",
+            "stageAdult": "成体",
+            "stageOld": "高齢",
+            "ageIs": "{age}",
+            "ageIsAbout": "{age}ほど",
+            "ageMonths": "Ark時間で{months}か月",
+            "ageMonth": "Ark時間で1か月"
         }
     },
     "talkPage": {

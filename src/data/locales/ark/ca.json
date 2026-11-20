@@ -735,7 +735,14 @@
             "reasonHunted": "Depredadors aquí: {predators}",
             "reasonHunger": "Fam: cap àpat recent",
             "reasonSkill": "Alliberat: encara aprèn a trobar menjar",
-            "reasonSafe": "Protecció davant la caça fins al dia {day} de l'Ark"
+            "reasonSafe": "Protecció davant la caça fins al dia {day} de l'Ark",
+            "stageYoung": "Jove",
+            "stageAdult": "Adult",
+            "stageOld": "Gran",
+            "ageIs": "edat: {age}",
+            "ageIsAbout": "edat: uns {age}",
+            "ageMonths": "{months} mesos de l'Ark",
+            "ageMonth": "1 mes de l'Ark"
         }
     },
     "talkPage": {

@@ -735,7 +735,14 @@
             "reasonHunted": "Raubtiere hier: {predators}",
             "reasonHunger": "Hunger: keine Mahlzeit in letzter Zeit",
             "reasonSkill": "Entlassen: lernt noch, Futter zu finden",
-            "reasonSafe": "Jagdschutz bis Ark-Tag {day}"
+            "reasonSafe": "Jagdschutz bis Ark-Tag {day}",
+            "stageYoung": "Jung",
+            "stageAdult": "Erwachsen",
+            "stageOld": "Alt",
+            "ageIs": "{age} alt",
+            "ageIsAbout": "etwa {age} alt",
+            "ageMonths": "{months} Ark-Monate",
+            "ageMonth": "1 Ark-Monat"
         }
     },
     "talkPage": {

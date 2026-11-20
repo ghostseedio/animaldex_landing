@@ -735,7 +735,14 @@
             "reasonHunted": "Grabežljivci ovdje: {predators}",
             "reasonHunger": "Glad: nema nedavnog obroka",
             "reasonSkill": "Pušteno: još uči pronalaziti hranu",
-            "reasonSafe": "Zaštita od lova do dana {day} u Arku"
+            "reasonSafe": "Zaštita od lova do dana {day} u Arku",
+            "stageYoung": "Mlada",
+            "stageAdult": "Odrasla",
+            "stageOld": "Stara",
+            "ageIs": "{age}",
+            "ageIsAbout": "oko {age}",
+            "ageMonths": "mjeseci u Arku: {months}",
+            "ageMonth": "1 mjesec u Arku"
         }
     },
     "talkPage": {

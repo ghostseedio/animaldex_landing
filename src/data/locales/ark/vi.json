@@ -735,7 +735,14 @@
             "reasonHunted": "Thú săn mồi ở đây: {predators}",
             "reasonHunger": "Đói: chưa có bữa ăn gần đây",
             "reasonSkill": "Đã thả: vẫn đang học cách tìm thức ăn",
-            "reasonSafe": "Được bảo vệ khỏi bị săn đến ngày Ark {day}"
+            "reasonSafe": "Được bảo vệ khỏi bị săn đến ngày Ark {day}",
+            "stageYoung": "Non",
+            "stageAdult": "Trưởng thành",
+            "stageOld": "Già",
+            "ageIs": "tuổi {age}",
+            "ageIsAbout": "tuổi khoảng {age}",
+            "ageMonths": "{months} tháng Ark",
+            "ageMonth": "1 tháng Ark"
         }
     },
     "talkPage": {

@@ -735,7 +735,14 @@
             "reasonHunted": "Хищники здесь: {predators}",
             "reasonHunger": "Голод: недавней еды не было",
             "reasonSkill": "После выпуска: ещё учится находить еду",
-            "reasonSafe": "Защита от охоты до дня {day} по Ark"
+            "reasonSafe": "Защита от охоты до дня {day} по Ark",
+            "stageYoung": "Молодость",
+            "stageAdult": "Зрелость",
+            "stageOld": "Старость",
+            "ageIs": "{age}",
+            "ageIsAbout": "около {age}",
+            "ageMonths": "месяцев по Ark: {months}",
+            "ageMonth": "1 месяц по Ark"
         }
     },
     "talkPage": {

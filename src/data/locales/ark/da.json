@@ -735,7 +735,14 @@
             "reasonHunted": "Rovdyr her: {predators}",
             "reasonHunger": "Sult: intet nyligt måltid",
             "reasonSkill": "Sat fri: lærer stadig at finde føde",
-            "reasonSafe": "Beskyttelse mod jagt til Ark-dag {day}"
+            "reasonSafe": "Beskyttelse mod jagt til Ark-dag {day}",
+            "stageYoung": "Ung",
+            "stageAdult": "Voksen",
+            "stageOld": "Gammel",
+            "ageIs": "{age} gammel",
+            "ageIsAbout": "omkring {age} gammel",
+            "ageMonths": "{months} Ark-måneder",
+            "ageMonth": "1 Ark-måned"
         }
     },
     "talkPage": {

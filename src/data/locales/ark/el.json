@@ -735,7 +735,14 @@
             "reasonHunted": "Θηρευτές εδώ: {predators}",
             "reasonHunger": "Πείνα: κανένα πρόσφατο γεύμα",
             "reasonSkill": "Απελευθερώθηκε: μαθαίνει ακόμη να βρίσκει τροφή",
-            "reasonSafe": "Προστασία από το κυνήγι έως τη μέρα Ark {day}"
+            "reasonSafe": "Προστασία από το κυνήγι έως τη μέρα Ark {day}",
+            "stageYoung": "Νεαρό",
+            "stageAdult": "Ενήλικο",
+            "stageOld": "Ηλικιωμένο",
+            "ageIs": "ηλικίας {age}",
+            "ageIsAbout": "ηλικίας περίπου {age}",
+            "ageMonths": "{months} μήνες Ark",
+            "ageMonth": "1 μήνας Ark"
         }
     },
     "talkPage": {

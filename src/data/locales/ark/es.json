@@ -735,7 +735,14 @@
             "reasonHunted": "Depredadores aquí: {predators}",
             "reasonHunger": "Hambre: sin comida reciente",
             "reasonSkill": "Liberado: aún aprende a encontrar comida",
-            "reasonSafe": "Protección frente a la caza hasta el día {day} del Ark"
+            "reasonSafe": "Protección frente a la caza hasta el día {day} del Ark",
+            "stageYoung": "Joven",
+            "stageAdult": "Adulto",
+            "stageOld": "Viejo",
+            "ageIs": "edad: {age}",
+            "ageIsAbout": "edad: unos {age}",
+            "ageMonths": "{months} meses del Ark",
+            "ageMonth": "1 mes del Ark"
         }
     },
     "talkPage": {

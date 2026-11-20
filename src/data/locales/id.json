@@ -4932,7 +4932,14 @@
       "reasonHunted": "Pemangsa di sini: {predators}",
       "reasonHunger": "Lapar: belum makan baru-baru ini",
       "reasonSkill": "Dilepas: masih belajar mencari makan",
-      "reasonSafe": "Terlindung dari perburuan sampai hari Ark ke-{day}"
+      "reasonSafe": "Terlindung dari perburuan sampai hari Ark ke-{day}",
+      "stageYoung": "Muda",
+      "stageAdult": "Dewasa",
+      "stageOld": "Tua",
+      "ageIs": "berusia {age}",
+      "ageIsAbout": "berusia sekitar {age}",
+      "ageMonths": "{months} bulan Ark",
+      "ageMonth": "1 bulan Ark"
     }
   },
   "seo": {

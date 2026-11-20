@@ -735,7 +735,14 @@
             "reasonHunted": "Drapieżniki tutaj: {predators}",
             "reasonHunger": "Głód: brak niedawnego posiłku",
             "reasonSkill": "Wypuszczone: wciąż uczy się szukać pożywienia",
-            "reasonSafe": "Ochrona przed polowaniem do dnia {day} w Ark"
+            "reasonSafe": "Ochrona przed polowaniem do dnia {day} w Ark",
+            "stageYoung": "Młode",
+            "stageAdult": "Dorosłe",
+            "stageOld": "Stare",
+            "ageIs": "{age}",
+            "ageIsAbout": "około {age}",
+            "ageMonths": "miesięcy w Ark: {months}",
+            "ageMonth": "1 miesiąc w Ark"
         }
     },
     "talkPage": {

@@ -735,7 +735,14 @@
             "reasonHunted": "Predátoři zde: {predators}",
             "reasonHunger": "Hlad: žádné nedávné jídlo",
             "reasonSkill": "Vypuštěno: ještě se učí hledat potravu",
-            "reasonSafe": "Ochrana před lovem do dne {day} v Ark"
+            "reasonSafe": "Ochrana před lovem do dne {day} v Ark",
+            "stageYoung": "Mladé",
+            "stageAdult": "Dospělé",
+            "stageOld": "Staré",
+            "ageIs": "{age}",
+            "ageIsAbout": "asi {age}",
+            "ageMonths": "měsíců v Ark: {months}",
+            "ageMonth": "1 měsíc v Ark"
         }
     },
     "talkPage": {

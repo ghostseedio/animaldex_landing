@@ -14,7 +14,13 @@ import {
     ARK_TIME_LEFT_SNAPSHOT_FIELDS,
     ARK_TIME_LEFT_WORLD_FIELDS,
     arkAdultAgeDays,
+    arkAdultAgeFor,
+    arkAgeOf,
+    arkAgeText,
     arkAtRisk,
+    arkLifeBar,
+    arkLifeOutlook,
+    arkLifeText,
     arkMealIntervalDays,
     arkNeedsFacts,
     arkStarveDays,
@@ -38,7 +44,7 @@ import {
     RETRY_AFTER_MISS_DAYS,
     STARVE
 } from "@/lib/ark-time-left-constants";
-import {PREDATORS_READ, arkTimeLeftFor, readArkTimeLeftFacts, type ArkTimeLeftFetch} from "@/lib/ark-time-left-facts";
+import {PREDATORS_READ, arkLifeOutlookFor, arkTimeLeftFor, readArkTimeLeftFacts, type ArkTimeLeftFetch} from "@/lib/ark-time-left-facts";
 
 // MARK: Fixtures
 
@@ -155,6 +161,11 @@ test("starving: only a hungry animal whose kind eats catalogue animals", () => {
     assert.deepEqual(arkAtRisk(fox(), w, {eatsAnimals: true, predators: []}), []);
     // facts not read: not claimed
     assert.deepEqual(arkAtRisk(hungry, w, null), []);
+    // a house, a farm and the zoo feed theirs (outside the wild ecology both ways): never starving
+    for (const area of ["house", "farm", "zoo"] as const) {
+        const kept = fox({condition: "hungry", area});
+        assert.deepEqual(arkAtRisk(kept, worldOf([kept]), {eatsAnimals: true, predators: []}), [], area);
+    }
 });
 
 test("the facts are read only where they can matter", () => {
@@ -162,7 +173,8 @@ test("the facts are read only where they can matter", () => {
     assert.equal(arkNeedsFacts(me, world), true, "wild with a published protection");
     assert.equal(arkNeedsFacts(me, {...world, huntGrace: null}), false, "no protection published: nothing to ask");
     assert.equal(arkNeedsFacts(hedge({area: "zoo"}), world), false, "kept");
-    assert.equal(arkNeedsFacts(hedge({condition: "hungry", area: "zoo"}), world), true, "hungry: does its kind eat animals?");
+    assert.equal(arkNeedsFacts(hedge({condition: "hungry"}), world), true, "hungry and wild: does its kind eat animals?");
+    assert.equal(arkNeedsFacts(hedge({condition: "hungry", area: "zoo"}), world), false, "a kept animal is fed by its keepers: it cannot starve");
     assert.equal(arkNeedsFacts(hedge({condition: "old"}), {...world, huntGrace: null}), false, "old needs none");
 });
 
@@ -227,6 +239,174 @@ test("the hunting protection is a reason, and delays the hazard", () => {
     assert.deepEqual(during.reasons.filter((x) => x.kind === "safe"), [{kind: "safe", untilArkDay: 100}]);
     const after = arkTimeLeft(old, world, FOX_FACTS)!;
     assert.deepEqual(after.reasons.filter((x) => x.kind === "safe"), []);
+});
+
+// MARK: Age, life stage and the life block (every animal)
+
+/** The live read's own shape: hunt_grace beside ark_day in `voyage` (AnimalDex migration 20261203150000; a real read, 2026-11-20). */
+const LIVE_GRACE = {ends_ark_day: 443.607, ramp_ark_days: 182.5};
+
+test("age: the engine's effective birth, the life stage, and no age without a born day", () => {
+    // arrived: counted grown on arrival (0.15 of the lifespan's middle older than the days aboard), so adult
+    const arrived = hedge();
+    const age = arkAgeOf(arrived, ARK_DAY)!;
+    assert.equal(age.assumed, true);
+    assert.equal(age.sinceBornDays, 110);
+    assert.equal(age.adultAgeDays, arkAdultAgeDays(1826, 1826 * LIFESPAN_HI_OVER_LO.median));
+    assert.equal(age.ageDays, 110 + age.adultAgeDays);
+    assert.equal(age.stage, "adult");
+    // born: counted from its born day, young until it is grown
+    const young = arkAgeOf(hedge({origin: "born", born_ark_day: ARK_DAY - 10}), ARK_DAY)!;
+    assert.deepEqual([young.assumed, young.ageDays, young.stage], [false, 10, "young"]);
+    const grown = arkAgeOf(hedge({origin: "born", born_ark_day: ARK_DAY - 500}), ARK_DAY)!;
+    assert.equal(grown.stage, "adult");
+    // old: the read's flag, or 4/5 of the lower end of the lifespan gone by the engine's own count (an arrival's age starts grown)
+    assert.equal(arkAgeOf(hedge({condition: "old", origin: "born", born_ark_day: ARK_DAY - 5}), ARK_DAY)!.stage, "old");
+    assert.equal(arkAgeOf(hedge({origin: "born", born_ark_day: ARK_DAY - OLD_LIFE_FRACTION * 1826 - 1}), ARK_DAY)!.stage, "old");
+    const lateArrival = hedge({born_ark_day: ARK_DAY - 1100});
+    assert.equal(arkAgeOf(lateArrival, ARK_DAY)!.stage, "old", "1100 days aboard plus the grown age is past 4/5 of 1826");
+    assert.deepEqual(arkAtRisk(lateArrival, worldOf([lateArrival]), null), [], "(the read's own flag, on the days aboard alone, says no)");
+    // no stored lifespan: the engine's default adult age of a year; no born day or no Ark day: no age
+    assert.equal(arkAdultAgeFor(null, null), ADULT_AGE.defaultDays);
+    const noLifespan = arkAgeOf(hedge({lifespan_days: null, born_ark_day: ARK_DAY - 30}), ARK_DAY)!;
+    assert.deepEqual([noLifespan.adultAgeDays, noLifespan.ageDays, noLifespan.stage], [365, 395, "adult"]);
+    assert.equal(arkAgeOf(hedge({born_ark_day: null}), ARK_DAY), null);
+    assert.equal(arkAgeOf(hedge(), null), null);
+});
+
+test("every animal has an estimate: a healthy one is not 'at risk' and still has its age as the reason", () => {
+    const me = hedge({lifespan_days: 3650, lifespan_days_hi: 5475});
+    const world = worldOf([me], {huntGrace: null});
+    assert.equal(arkTimeLeft(me, world, null), null, "the at-risk mode is unchanged");
+    const r = arkTimeLeft(me, world, null, [], {everyone: true})!;
+    assert.deepEqual(r.atRisk, []);
+    assert.deepEqual(r.reasons.map((x) => x.kind), ["age"]);
+    assert.ok(r.lowDays >= 1 && r.highDays > r.lowDays && !r.capped, `${r.lowDays}-${r.highDays}`);
+    // years of life left, not days: a healthy hedgehog-sized kind with 10-15 years in the wild
+    assert.ok(r.lowDays > 365 * 3 && r.highDays < 365 * 20, `${r.lowDays}-${r.highDays}`);
+    const outlook = arkLifeOutlook(me, world, null)!;
+    assert.equal(outlook.tone, "plain");
+    assert.ok(outlook.age && outlook.left && outlook.bar);
+    // no lifespan and nothing hunting it: nothing bounds its time, the age is still said
+    const bare = hedge({lifespan_days: null});
+    const none = arkLifeOutlook(bare, worldOf([bare], {huntGrace: null}), null)!;
+    assert.equal(none.left, null);
+    assert.equal(none.bar, null);
+    assert.ok(none.age);
+    assert.equal(arkLifeOutlook(hedge({born_ark_day: null, lifespan_days: null}), worldOf([]), null), null);
+});
+
+test("kept animals (a house, a farm, the zoo): only old age, whatever hunts the wild around them", () => {
+    for (const area of ["house", "farm", "zoo"] as const) {
+        const {world} = wood();
+        const kept = hedge({area, condition: "hungry", lifespan_days: 3650, lifespan_days_hi: 5475});
+        const facts: ArkTimeLeftFacts = {...FOX_FACTS, eatsAnimals: true};
+        const outlook = arkLifeOutlook(kept, {...world, animals: [kept, ...world.animals]}, facts)!;
+        assert.deepEqual(outlook.left!.reasons.map((x) => x.kind), ["age"], area);
+        assert.deepEqual(outlook.left!.atRisk, [], area);
+        assert.equal(outlook.tone, "plain", area);
+        // the same animal let out into the wild is hunted
+        const wild = {...kept, area: null};
+        assert.ok(arkLifeOutlook(wild, {...world, animals: [wild, ...world.animals]}, facts)!.left!.reasons.some((x) => x.kind === "hunted" || x.kind === "hunger"), area);
+    }
+});
+
+test("the hunting protection the live read now publishes turns the hunting factor on, as a reason, and cuts the range", () => {
+    const decoded = decodeArkSnapshot({
+        voyage: {slug: "first", name: "x", started_at: null, ark_day: 292.5, hunt_grace: LIVE_GRACE},
+        animals: [hedge(), hedge(), hedge(), hedge(), fox(), fox()].map((a, i) => ({...a, id: `a${i}`, name: "n", arrived_at: "2026-11-10T10:00:00Z"}))
+    })!;
+    const world = arkTimeLeftWorldOf(decoded)!;
+    assert.deepEqual(world.huntGrace, {endsArkDay: 443.607, rampArkDays: 182.5});
+    const me = world.animals[0];
+    assert.equal(arkNeedsFacts(me, world), true, "a wild animal's estimate needs the food chain once the protection is known");
+    const off = arkLifeOutlook(me, {...world, huntGrace: null}, FOX_FACTS)!.left!;
+    const on = arkLifeOutlook(me, world, FOX_FACTS)!.left!;
+    assert.deepEqual(off.reasons.map((x) => x.kind), ["age"], "no protection published: the hunting factor is off");
+    assert.ok(on.reasons.some((x) => x.kind === "hunted") && on.reasons.some((x) => x.kind === "safe"), JSON.stringify(on.reasons));
+    assert.ok(on.highDays <= off.highDays && on.lowDays <= off.lowDays, `${on.lowDays}-${on.highDays} vs ${off.lowDays}-${off.highDays}`);
+    assert.deepEqual(on.atRisk, [], "the protection is not over: not at risk yet, but could be hunted");
+    // only its end and ramp length are public config: a read that carried more (a hash, a draw) is not echoed
+    const noisy = decodeArkSnapshot({voyage: {slug: "first", name: "x", started_at: null, ark_day: 1, hunt_grace: {...LIVE_GRACE, ramp_hash: 0.37, draws: [0.1, 0.2], per_animal: {a1: 5}}}, animals: []})!;
+    assert.deepEqual(noisy.hunt_grace, LIVE_GRACE);
+});
+
+test("the life bar: born at 0, the likely end at the far edge, never outside 0 to 1", () => {
+    assert.deepEqual(arkLifeBar(100, {lowDays: 50, highDays: 150}), {now: 0.4, from: 0.6});
+    assert.deepEqual(arkLifeBar(0, {lowDays: 1, highDays: 1}), {now: 0, from: 1});
+    const random = rng(5);
+    for (let i = 0; i < 300; i++) {
+        const age = random() * 40000;
+        const low = 1 + random() * 20000;
+        const bar = arkLifeBar(age, {lowDays: low, highDays: low + random() * 20000});
+        assert.ok(bar.now >= 0 && bar.now <= bar.from && bar.from <= 1, JSON.stringify(bar));
+    }
+});
+
+test("the age line: stage and age in Ark time, the kind's natural unit, 'about' only for an arrival's counted age", () => {
+    const {words, units} = arkTimeLeftWordsFrom(undefined, undefined);
+    const at = (ageDays: number, over: Partial<{assumed: boolean; stage: "young" | "adult" | "old"}> = {}) => arkAgeText({ageDays, sinceBornDays: ageDays, adultAgeDays: 100, assumed: false, stage: "adult", ...over}, words, units, "en");
+    assert.equal(at(9, {stage: "young"}), "Young · 9 Ark days old");
+    assert.equal(at(1, {stage: "young"}), "Young · 1 Ark day old");
+    assert.equal(at(122, {stage: "young"}), "Young · 4 Ark months old");
+    assert.equal(at(35, {stage: "young"}), "Young · 35 Ark days old");
+    assert.equal(at(100 * 3.65 * 0.8, {assumed: true}), "Adult · about 10 Ark months old");
+    assert.equal(at(1095, {assumed: true}), "Adult · about 3 Ark years old");
+    assert.equal(at(1186, {assumed: false}), "Adult · 3.2 Ark years old");
+    assert.equal(at(36500, {assumed: true, stage: "old"}), "Old · about 100 Ark years old");
+    assert.equal(at(30.4 * 14, {}), "Adult · 14 Ark months old");
+    // the time left in months too, between two months and two years
+    const result = (low: number, high: number): ArkTimeLeft => ({lowDays: low, highDays: high, capped: false, atRisk: [], reasons: [], estimate: false});
+    assert.equal(arkTimeLeftText(result(90, 400), words, units, "en").value, "About 3–13 Ark months");
+    assert.equal(arkTimeLeftText(result(30, 400), words, units, "en").value, "About 30–400 Ark days", "a low end under two months stays in days");
+    assert.equal(arkTimeLeftText(result(400, 1900), words, units, "en").value, "About 1.1–5.2 Ark years");
+    // the whole block for a screen reader: the age line and the estimate in one sentence
+    const me = hedge({lifespan_days: 3650, lifespan_days_hi: 5475});
+    const text = arkLifeText(arkLifeOutlook(me, worldOf([me], {huntGrace: null}), null)!, words, units, "en");
+    assert.match(text.age!, /^Adult · about \d+(\.\d)? Ark (years|months) old$/);
+    assert.equal(text.label, `${text.age}. ${text.left!.label}`);
+    assert.match(text.left!.value, /^About \d+(\.\d)?–\d+(\.\d)? Ark years$/);
+});
+
+test("a range of numbers is isolated in a right-to-left language (it reads 8–32, not 32–8), and only there", () => {
+    const {words, units} = arkTimeLeftWordsFrom(undefined, undefined);
+    const result = (low: number, high: number): ArkTimeLeft => ({lowDays: low, highDays: high, capped: false, atRisk: [], reasons: [], estimate: false});
+    for (const language of ["ar", "he", "fa", "ur"]) assert.match(arkTimeLeftText(result(3, 9), words, units, language).value, /\u2066\p{Nd}–\p{Nd}\u2069/u, language);
+    assert.equal(arkTimeLeftText(result(3, 9), words, units, "en").value, "About 3–9 Ark days");
+    assert.ok(!arkTimeLeftText(result(3, 3), words, units, "ar").value.includes("\u2066"), "one number needs none");
+});
+
+test("the age line in every one of the 45 languages: no placeholder left, the stage and the number are there", () => {
+    const locales = path.join(__dirname, "..", "data", "locales");
+    for (const language of ARK_LANGUAGES) {
+        const file = language === "en" || language === "id" ? path.join(locales, `${language}.json`) : path.join(locales, "ark", `${language}.json`);
+        const ark = JSON.parse(readFileSync(file, "utf8")).ark;
+        const {words, units} = arkTimeLeftWordsFrom(ark.timeLeft, ark.life);
+        assert.equal(words.stageOld, ark.life.old, `${language}: the old stage is the card's own word`);
+        for (const [ageDays, assumed, stage] of [[9, false, "young"], [150, false, "young"], [1095, true, "adult"], [20000, true, "old"]] as const) {
+            const line = arkAgeText({ageDays, sinceBornDays: ageDays, adultAgeDays: 100, assumed, stage}, words, units, language);
+            assert.ok(!/[{}]/.test(line), `${language}: ${line}`);
+            assert.ok(line.includes(" · ") && /\p{Nd}/u.test(line), `${language}: ${line}`);
+        }
+        assert.ok(!/[{}]/.test(arkTimeLeftText({lowDays: 90, highDays: 400, capped: false, atRisk: [], reasons: [], estimate: false}, words, units, language).value), language);
+    }
+});
+
+test("the life block's facts are read only where they can matter: a kept or protection-less animal asks nothing", async () => {
+    const calls: string[] = [];
+    const fetchJson: ArkTimeLeftFetch = async (url) => {
+        calls.push(url);
+        return null;
+    };
+    const {me, world} = wood();
+    const kept = hedge({area: "house"});
+    assert.ok(await arkLifeOutlookFor(kept, {...world, animals: [kept, ...world.animals]}, fetchJson));
+    assert.deepEqual(calls, [], "kept: nothing to ask");
+    assert.ok(await arkLifeOutlookFor(me, {...world, huntGrace: null}, fetchJson));
+    assert.deepEqual(calls, [], "no protection published: nothing to ask");
+    const wild = await arkLifeOutlookFor(me, world, fetchJson);
+    assert.deepEqual(calls, ["/api/ark/food-chain?species=european-hedgehog"], "wild: its own species first");
+    assert.ok(wild && wild.left && wild.age, "an unreadable species leaves the facts unknown, not the block");
 });
 
 // MARK: Monotone in each factor
@@ -396,6 +576,9 @@ test("no look-ahead: the estimate touches only the released snapshot's fields", 
         arkTimeLeft(recorded(subject, animalReads), watched, {eatsAnimals: true, predators: FOX_FACTS.predators}, ARK_TIME_LEFT_HOOKS);
         arkAtRisk(recorded(subject, animalReads), watched, FOX_FACTS);
         arkNeedsFacts(recorded(subject, animalReads), watched);
+        // the life block: age and stage, and the estimate for any animal, read nothing else
+        arkAgeOf(recorded(subject, animalReads), 260);
+        arkLifeOutlook(recorded(subject, animalReads), watched, {eatsAnimals: true, predators: FOX_FACTS.predators}, ARK_TIME_LEFT_HOOKS);
     }
     const allowedAnimal = new Set<string>(ARK_TIME_LEFT_ANIMAL_FIELDS);
     const allowedWorld = new Set<string>(ARK_TIME_LEFT_WORLD_FIELDS);
@@ -421,6 +604,13 @@ test("no look-ahead: planting the server's secrets (a drawn death day, a hunt dr
             {eatsAnimals: true, predators: FOX_FACTS.predators.map((p) => ({...p, ...DECOYS}))}
         );
         assert.deepEqual(dirty, clean);
+        // the same for the whole block (age, stage, the estimate for everyone, the bar): a planted secret changes nothing
+        const facts = {eatsAnimals: true, predators: FOX_FACTS.predators};
+        const healthy = {...subject, condition: "well_fed" as const};
+        const cleanBlock = arkLifeOutlook(healthy, {...world, animals: [healthy, ...world.animals]}, facts);
+        const dirtyBlock = arkLifeOutlook(tainted(healthy), {...world, animals: [healthy, ...world.animals].map(tainted), ...DECOYS} as ArkTimeLeftWorld, {...facts, predators: facts.predators.map((p) => ({...p, ...DECOYS}))});
+        assert.deepEqual(dirtyBlock, cleanBlock);
+        assert.deepEqual(arkAgeOf(tainted(healthy), ARK_DAY), arkAgeOf(healthy, ARK_DAY));
     }
 });
 
@@ -530,7 +720,10 @@ test("the words: units are the panel's own (`life.ageDays`), a range is one stri
     assert.equal(arkTimeLeftText(result(3, 9), mixed.words, mixed.units, "de").value, "About 3–9 Tage");
 });
 
-test("the words: every one of the 45 Ark languages has the nine keys (the ninth is Release to the Wild's skill line), filled the same way as English", () => {
+/** Words that are the same in English and in the language itself (cognates): not a missing translation. */
+const SAME_AS_ENGLISH = new Set(["ca.stageAdult", "ro.stageAdult"]);
+
+test("the words: every one of the 45 Ark languages has the sixteen keys (the ninth is Release to the Wild's skill line; the last seven are the age and life stage block), filled the same way as English", () => {
     const locales = path.join(__dirname, "..", "data", "locales");
     const english = JSON.parse(readFileSync(path.join(locales, "en.json"), "utf8")).ark.timeLeft as Record<string, string>;
     const expected: Record<string, string> = {...ARK_TIME_LEFT_ENGLISH};
@@ -544,7 +737,7 @@ test("the words: every one of the 45 Ark languages has the nine keys (the ninth 
         for (const key of Object.keys(english)) {
             assert.ok(bundle[key]?.trim(), `${language}.${key} is empty`);
             assert.deepEqual(holes(bundle[key]), holes(english[key]), `${language}.${key}: placeholders differ`);
-            if (language !== "en") assert.notEqual(bundle[key], english[key], `${language}.${key} is still English`);
+            if (language !== "en" && !SAME_AS_ENGLISH.has(`${language}.${key}`)) assert.notEqual(bundle[key], english[key], `${language}.${key} is still English`);
         }
     }
 });
@@ -592,6 +785,7 @@ engineTest("every constant is the engine's", async () => {
     assert.equal(cfg.adultAgeLifespanFrac, ADULT_AGE.lifespanFraction);
     assert.equal(cfg.adultAgeMinDays, ADULT_AGE.minDays);
     assert.equal(cfg.adultAgeMaxDays, ADULT_AGE.maxDays);
+    assert.equal(cfg.adultAgeDefaultDays, ADULT_AGE.defaultDays);
     assert.equal(cfg.starveBaseDays, STARVE.baseDays);
     assert.equal(cfg.starveMassExponent, STARVE.massExponent);
     assert.equal(cfg.starveMinDays, STARVE.minDays);
@@ -641,5 +835,27 @@ engineTest("the formulas give the engine's answers: starvation, adult age, meal 
     }
     for (const [lo, hi] of [[100, 300], [1826, 3652], [20000, 40000], [3, 5]]) {
         assert.equal(arkAdultAgeDays(lo, hi), rules.adultAgeDays({lifespan_days_wild: [lo, hi]}, rules.DEFAULT_CONFIG), `adult ${lo}-${hi}`);
+    }
+});
+
+engineTest("the age is the engine's effective-birth age, and young is the engine's not yet adult (with and without a stored lifespan)", async () => {
+    const {rules, helpers} = await engine();
+    const cfg = rules.DEFAULT_CONFIG;
+    assert.equal(arkAdultAgeFor(null, null), rules.adultAgeDays(undefined, cfg), "no stored lifespan: the default year");
+    const random = rng(11);
+    for (let i = 0; i < 200; i++) {
+        const lo = 20 + Math.floor(random() * 30000);
+        const hi = lo * (1 + random() * 2);
+        const stored = random() < 0.8;
+        const t = helpers.traits("k", {lifespan_days_wild: stored ? [lo, hi] : null});
+        const w = helpers.world([t]);
+        const day = 100 + Math.floor(random() * 4000);
+        const origin = random() < 0.5 ? "arrived" : "born";
+        const bornDay = Math.floor(random() * day);
+        const a = {id: "a", species: "k", status: "present", origin, ownerUserId: null, parents: null, bringers: [], bornDay, lastMealDay: null, generation: 0, zone: "grassland"};
+        const mine = animal("k", "red-fox", {origin, born_ark_day: bornDay, lifespan_days: stored ? lo : null, lifespan_days_hi: stored ? hi : null});
+        const age = arkAgeOf(mine, day)!;
+        assert.ok(Math.abs(age.ageDays - rules.ageOf(w, a, day)) < 1e-6, `age ${age.ageDays} vs ${rules.ageOf(w, a, day)}`);
+        assert.equal(age.stage === "young", !rules.isAdult(w, a, day) && age.stage !== "old", `${origin} young at ${age.ageDays}/${age.adultAgeDays}`);
     }
 });

@@ -735,7 +735,14 @@
             "reasonHunted": "טורפים כאן: {predators}",
             "reasonHunger": "רעב: אין ארוחה לאחרונה",
             "reasonSkill": "שוחררה: עדיין לומדת למצוא מזון",
-            "reasonSafe": "הגנה מפני ציד עד יום Ark {day}"
+            "reasonSafe": "הגנה מפני ציד עד יום Ark {day}",
+            "stageYoung": "צעיר",
+            "stageAdult": "בוגר",
+            "stageOld": "זקן",
+            "ageIs": "גיל: {age}",
+            "ageIsAbout": "גיל: בערך {age}",
+            "ageMonths": "{months} חודשי Ark",
+            "ageMonth": "חודש Ark אחד"
         }
     },
     "talkPage": {

@@ -735,7 +735,14 @@
             "reasonHunted": "Predatori qui: {predators}",
             "reasonHunger": "Fame: nessun pasto recente",
             "reasonSkill": "Liberato: impara ancora a trovare cibo",
-            "reasonSafe": "Protezione dalla caccia fino al giorno {day} dell'Ark"
+            "reasonSafe": "Protezione dalla caccia fino al giorno {day} dell'Ark",
+            "stageYoung": "Giovane",
+            "stageAdult": "Adulto",
+            "stageOld": "Anziano",
+            "ageIs": "età: {age}",
+            "ageIsAbout": "età: circa {age}",
+            "ageMonths": "{months} mesi dell'Ark",
+            "ageMonth": "1 mese dell'Ark"
         }
     },
     "talkPage": {

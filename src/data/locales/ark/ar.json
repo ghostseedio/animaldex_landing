@@ -735,7 +735,14 @@
             "reasonHunted": "المفترسات هنا: {predators}",
             "reasonHunger": "الجوع: لا وجبة حديثة",
             "reasonSkill": "أُطلق حديثًا: ما زال يتعلّم العثور على الطعام",
-            "reasonSafe": "حماية من الصيد حتى يوم Ark {day}"
+            "reasonSafe": "حماية من الصيد حتى يوم Ark {day}",
+            "stageYoung": "صغير",
+            "stageAdult": "بالغ",
+            "stageOld": "مسنّ",
+            "ageIs": "العمر: {age}",
+            "ageIsAbout": "العمر: نحو {age}",
+            "ageMonths": "{months} من أشهر Ark",
+            "ageMonth": "شهر Ark واحد"
         }
     },
     "talkPage": {

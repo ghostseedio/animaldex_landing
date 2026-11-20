@@ -735,7 +735,14 @@
             "reasonHunted": "Mga maninila rito: {predators}",
             "reasonHunger": "Gutom: walang kamakailang kain",
             "reasonSkill": "Pinakawalan: natututo pang maghanap ng pagkain",
-            "reasonSafe": "Proteksyon laban sa pangangaso hanggang araw {day} sa Ark"
+            "reasonSafe": "Proteksyon laban sa pangangaso hanggang araw {day} sa Ark",
+            "stageYoung": "Bata",
+            "stageAdult": "Nasa hustong gulang",
+            "stageOld": "Matanda",
+            "ageIs": "edad: {age}",
+            "ageIsAbout": "edad: mga {age}",
+            "ageMonths": "{months} buwan sa Ark",
+            "ageMonth": "1 buwan sa Ark"
         }
     },
     "talkPage": {

@@ -735,7 +735,14 @@
             "reasonHunted": "Хижаки тут: {predators}",
             "reasonHunger": "Голод: нещодавньої їжі не було",
             "reasonSkill": "Після випуску: ще вчиться знаходити їжу",
-            "reasonSafe": "Захист від полювання до дня {day} за Ark"
+            "reasonSafe": "Захист від полювання до дня {day} за Ark",
+            "stageYoung": "Молодість",
+            "stageAdult": "Зрілість",
+            "stageOld": "Старість",
+            "ageIs": "{age}",
+            "ageIsAbout": "приблизно {age}",
+            "ageMonths": "місяців за Ark: {months}",
+            "ageMonth": "1 місяць за Ark"
         }
     },
     "talkPage": {

@@ -735,7 +735,14 @@
             "reasonHunted": "이곳의 포식자: {predators}",
             "reasonHunger": "배고픔: 최근 식사 없음",
             "reasonSkill": "풀려남: 아직 먹이 찾는 법을 배우는 중",
-            "reasonSafe": "Ark {day}일째까지 사냥 보호"
+            "reasonSafe": "Ark {day}일째까지 사냥 보호",
+            "stageYoung": "어린 개체",
+            "stageAdult": "성체",
+            "stageOld": "노령",
+            "ageIs": "{age}",
+            "ageIsAbout": "약 {age}",
+            "ageMonths": "Ark 시간 {months}개월",
+            "ageMonth": "Ark 시간 1개월"
         }
     },
     "talkPage": {

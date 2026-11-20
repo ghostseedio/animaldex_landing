@@ -3,7 +3,7 @@
 import React, {lazy, useEffect, useMemo, useState} from "react";
 import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkWords} from "@/lib/ark-words";
-import {ARK_TIME_LEFT_HOOKS, arkNeedsFacts, arkTimeLeft, arkTimeLeftText, arkTimeLeftWordsFrom, arkTimeLeftWorldOf, type ArkTimeLeftFacts} from "@/lib/ark-time-left";
+import {ARK_TIME_LEFT_HOOKS, arkLifeOutlook, arkLifeText, arkNeedsFacts, arkTimeLeftWordsFrom, arkTimeLeftWorldOf, type ArkLifeBar, type ArkTimeLeftFacts} from "@/lib/ark-time-left";
 import {arkTimeLeftFetch, readArkTimeLeftFacts, type ArkTimeLeftFetch} from "@/lib/ark-time-left-facts";
 import {arkReleasedEntry, useArkReleased} from "@/lib/ark-release-read";
 import {arkReleaseTimeLeftHook} from "@/lib/ark-release-time-left";
@@ -38,10 +38,11 @@ export default function ArkTimeLeft({release, day, snapshot = null, ...rest}: Pr
 }
 
 /**
- * "Estimated time left" on the tapped animal's card (owner decision 389; `lib/ark-time-left.ts` says what it is made of
- * and who is at risk): a range of Ark days or years and the reasons behind it, only for an animal at risk. Loaded lazily
+ * The life block on the tapped animal's card (owner decision 389; owner 2026-11-20: every animal, with its age):
+ * its life stage and age in Ark time, a life bar (born, now, the likely end), and the "Estimated time left" range with
+ * the reasons behind it (`lib/ark-time-left.ts` says what it is made of and who is at risk). Loaded lazily
  * (`ark-animal-card.tsx`), so the Ark page's static JavaScript stays inside its budget, and it reads its species facts
- * (`/api/ark/food-chain`) only when the animal's risk could depend on them. Nothing here is a promise: it says so.
+ * (`/api/ark/food-chain`) only when a wild animal's estimate could depend on them. Nothing here is a promise: it says so.
  */
 function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeLeftFetch}: {animal: ArkAnimal; snapshot: ArkSnapshot | null; words: ArkWords; locale: string; fetchJson?: ArkTimeLeftFetch}) {
     const world = useMemo(() => arkTimeLeftWorldOf(snapshot), [snapshot]);
@@ -65,30 +66,66 @@ function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeL
     // Release to the Wild: a released animal still learning to find food is at risk too (its public release: the day, its skill).
     const released = useArkReleased();
     const release = useMemo(() => arkReleasedEntry(animal, released), [animal, released]);
-    const result = useMemo(() => (world ? arkTimeLeft(animal, world, facts, release ? [...ARK_TIME_LEFT_HOOKS, arkReleaseTimeLeftHook(release)] : ARK_TIME_LEFT_HOOKS) : null), [animal, world, facts, release]);
+    const outlook = useMemo(() => (world ? arkLifeOutlook(animal, world, facts, release ? [...ARK_TIME_LEFT_HOOKS, arkReleaseTimeLeftHook(release)] : ARK_TIME_LEFT_HOOKS) : null), [animal, world, facts, release]);
     const text = useMemo(() => {
-        if (!result) return null;
+        if (!outlook) return null;
         const {words: w, units} = arkTimeLeftWordsFrom(words.timeLeft, words.life);
-        return arkTimeLeftText(result, w, units, locale);
-    }, [result, words.timeLeft, words.life, locale]);
-    if (!text) return null;
+        return arkLifeText(outlook, w, units, locale);
+    }, [outlook, words.timeLeft, words.life, locale]);
+    if (!outlook || !text) return null;
+    const warm = outlook.tone === "risk";
+    const left = text.left;
+    // Open when the reasons say more than "its kind's lifespan" (it could be hunted or hungry, or it is old); a healthy animal with only
+    // old age ahead folds them away, so the block stays compact on a phone.
+    const open = warm || Boolean(outlook.left?.reasons.some((reason) => reason.kind !== "age"));
     return (
-        <section data-testid="ark-card-time-left" aria-label={text.label} className="mt-1.5 rounded-lg bg-white/[0.05] px-2.5 py-1.5">
-            <p className="flex flex-wrap items-baseline gap-x-2">
-                <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400" title={text.hint}>{text.title}</span>
-                <span data-testid="ark-card-time-left-value" className="text-[13.5px] font-bold text-white md:text-[14px]">{text.value}</span>
-            </p>
-            {text.reasons.length ? (
-                <ul className="mt-0.5 text-[11.5px] leading-snug text-ink-300">
-                    {text.reasons.map((reason) => (
-                        <li key={reason} className="flex gap-1.5">
-                            <span aria-hidden="true" className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-ink-400" />
-                            <span className="min-w-0">{reason}</span>
-                        </li>
-                    ))}
-                </ul>
+        <section data-testid="ark-card-time-left" data-tone={outlook.tone} aria-label={text.label} className="mt-1.5 rounded-lg bg-white/[0.05] px-2.5 py-1.5">
+            {text.age ? (
+                <p data-testid="ark-card-life-age" className="flex items-center gap-1.5 text-[12.5px] font-semibold leading-snug text-ink-100">
+                    <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-sm bg-white/50" />
+                    <span className="min-w-0">{text.age}</span>
+                </p>
             ) : null}
-            <p className="mt-0.5 text-[10.5px] italic leading-snug text-ink-400">{text.hint}</p>
+            {outlook.bar ? <ArkLifeBarMarks bar={outlook.bar} warm={warm} /> : null}
+            {left ? (
+                <details key={animal.id} open={open} data-testid="ark-card-time-left-details">
+                    <summary className="flex cursor-pointer list-none flex-wrap items-center gap-x-2 rounded outline-none focus-visible:ring-1 focus-visible:ring-primary-300 [&::-webkit-details-marker]:hidden">
+                        <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400" title={left.hint}>
+                            <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-sm ${warm ? "bg-[#ffb454]" : "bg-primary-400"}`} />
+                            {left.title}
+                        </span>
+                        <span data-testid="ark-card-time-left-value" className="text-[13.5px] font-bold text-white md:text-[14px]">{left.value}</span>
+                        <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 shrink-0 text-ink-400 transition-transform [details[open]>summary_&]:rotate-180 motion-reduce:transition-none" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 4.5 6 8l3.5-3.5" /></svg>
+                    </summary>
+                    {left.reasons.length ? (
+                        <ul className="mt-0.5 text-[11.5px] leading-snug text-ink-300">
+                            {left.reasons.map((reason) => (
+                                <li key={reason} className="flex gap-1.5">
+                                    <span aria-hidden="true" className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-ink-400" />
+                                    <span className="min-w-0">{reason}</span>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : null}
+                    <p className="mt-0.5 text-[10.5px] italic leading-snug text-ink-400">{left.hint}</p>
+                </details>
+            ) : null}
         </section>
+    );
+}
+
+/**
+ * The life bar: born at its start, the days lived so far, a tick for today, the likely end at its far end (the estimate's
+ * range, never a promise). Drawn only: the section's label says it in words. A flex row, so a right-to-left page mirrors it.
+ */
+function ArkLifeBarMarks({bar, warm}: {bar: ArkLifeBar; warm: boolean}) {
+    const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
+    return (
+        <div aria-hidden="true" data-testid="ark-card-life-bar" data-now={bar.now.toFixed(3)} data-from={bar.from.toFixed(3)} className="my-1 flex h-2 items-stretch overflow-hidden rounded-full bg-white/[0.10]">
+            <span className="bg-white/50" style={{width: pct(bar.now)}} />
+            <span className="w-[2px] shrink-0 bg-white" />
+            <span className="min-w-0 flex-1" />
+            <span className={warm ? "bg-[#ffb454]" : "bg-primary-400"} style={{width: pct(1 - bar.from), minWidth: 6}} />
+        </div>
     );
 }

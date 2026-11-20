@@ -735,7 +735,14 @@
             "reasonHunted": "Prădători aici: {predators}",
             "reasonHunger": "Foame: nicio masă recentă",
             "reasonSkill": "Eliberat: încă învață să găsească hrană",
-            "reasonSafe": "Protecție împotriva vânătorii până în ziua {day} din Ark"
+            "reasonSafe": "Protecție împotriva vânătorii până în ziua {day} din Ark",
+            "stageYoung": "Tânăr",
+            "stageAdult": "Adult",
+            "stageOld": "Bătrân",
+            "ageIs": "{age}",
+            "ageIsAbout": "aproximativ {age}",
+            "ageMonths": "luni în Ark: {months}",
+            "ageMonth": "1 lună în Ark"
         }
     },
     "talkPage": {

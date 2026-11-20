@@ -735,7 +735,14 @@
             "reasonHunted": "இங்குள்ள வேட்டையாடிகள்: {predators}",
             "reasonHunger": "பசி: சமீபத்தில் உணவு இல்லை",
             "reasonSkill": "விடப்பட்டது: இன்னும் உணவு தேடக் கற்றுக்கொள்கிறது",
-            "reasonSafe": "Ark நாள் {day} வரை வேட்டையிலிருந்து பாதுகாப்பு"
+            "reasonSafe": "Ark நாள் {day} வரை வேட்டையிலிருந்து பாதுகாப்பு",
+            "stageYoung": "இளமை",
+            "stageAdult": "முதிர்ச்சி",
+            "stageOld": "முதுமை",
+            "ageIs": "வயது {age}",
+            "ageIsAbout": "வயது சுமார் {age}",
+            "ageMonths": "{months} Ark மாதங்கள்",
+            "ageMonth": "1 Ark மாதம்"
         }
     },
     "talkPage": {

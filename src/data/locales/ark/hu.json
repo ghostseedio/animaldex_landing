@@ -735,7 +735,14 @@
             "reasonHunted": "Ragadozók itt: {predators}",
             "reasonHunger": "Éhség: nincs friss étkezés",
             "reasonSkill": "Szabadon engedve: még tanul élelmet találni",
-            "reasonSafe": "Vadászat elleni védelem a {day}. Ark-napig"
+            "reasonSafe": "Vadászat elleni védelem a {day}. Ark-napig",
+            "stageYoung": "Fiatal",
+            "stageAdult": "Felnőtt",
+            "stageOld": "Idős",
+            "ageIs": "kor: {age}",
+            "ageIsAbout": "kor: körülbelül {age}",
+            "ageMonths": "{months} Ark-hónap",
+            "ageMonth": "1 Ark-hónap"
         }
     },
     "talkPage": {

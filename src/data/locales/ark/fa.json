@@ -735,7 +735,14 @@
             "reasonHunted": "شکارچیان اینجا: {predators}",
             "reasonHunger": "گرسنگی: وعدهٔ غذایی اخیر نبوده",
             "reasonSkill": "رهاشده: هنوز پیدا کردن غذا را یاد می‌گیرد",
-            "reasonSafe": "حفاظت در برابر شکار تا روز Ark {day}"
+            "reasonSafe": "حفاظت در برابر شکار تا روز Ark {day}",
+            "stageYoung": "جوان",
+            "stageAdult": "بالغ",
+            "stageOld": "پیر",
+            "ageIs": "سن: {age}",
+            "ageIsAbout": "سن: حدود {age}",
+            "ageMonths": "{months} ماه Ark",
+            "ageMonth": "یک ماه Ark"
         }
     },
     "talkPage": {

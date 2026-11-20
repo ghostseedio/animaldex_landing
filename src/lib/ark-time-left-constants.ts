@@ -16,8 +16,11 @@ export const ARK_DAYS_PER_REAL_DAY = 365 / 14;
 /** `rules.ts` DEFAULT_CONFIG.oldLifeFrac: "old" from this share of the wild lifespan (the public read's `old_from_life_fraction`, 0.8). */
 export const OLD_LIFE_FRACTION = 0.8;
 
-/** `rules.ts` DEFAULT_CONFIG.adultAge*: an arrival counts as grown on arrival (its age starts at 0.15 of the lifespan's middle, 2 to 3650 days). */
-export const ADULT_AGE = {lifespanFraction: 0.15, minDays: 2, maxDays: 3650} as const;
+/**
+ * `rules.ts` DEFAULT_CONFIG.adultAge*: an arrival counts as grown on arrival (its age starts at 0.15 of the lifespan's middle,
+ * 2 to 3650 days); a kind with no stored lifespan is grown from `defaultDays` (adultAgeDefaultDays).
+ */
+export const ADULT_AGE = {lifespanFraction: 0.15, minDays: 2, maxDays: 3650, defaultDays: 365} as const;
 
 /** `rules.ts` DEFAULT_CONFIG.starve*: days of continuous hunger a predator lasts, 14 x kg^0.25, from 7 to 120 days. */
 export const STARVE = {baseDays: 14, massExponent: 0.25, minDays: 7, maxDays: 120} as const;

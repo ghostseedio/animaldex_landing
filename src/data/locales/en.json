@@ -4947,7 +4947,14 @@
       "reasonHunted": "Predators here: {predators}",
       "reasonHunger": "Hunger: no recent meal",
       "reasonSkill": "Released: still learning to find food",
-      "reasonSafe": "Hunting protection until Ark day {day}"
+      "reasonSafe": "Hunting protection until Ark day {day}",
+      "stageYoung": "Young",
+      "stageAdult": "Adult",
+      "stageOld": "Old",
+      "ageIs": "{age} old",
+      "ageIsAbout": "about {age} old",
+      "ageMonths": "{months} Ark months",
+      "ageMonth": "1 Ark month"
     }
   },
   "seo": {

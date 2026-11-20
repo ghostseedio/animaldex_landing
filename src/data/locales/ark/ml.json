@@ -735,7 +735,14 @@
             "reasonHunted": "ഇവിടത്തെ വേട്ടക്കാർ: {predators}",
             "reasonHunger": "വിശപ്പ്: അടുത്തിടെ ഭക്ഷണമില്ല",
             "reasonSkill": "വിട്ടയച്ചത്: ഇപ്പോഴും ഭക്ഷണം കണ്ടെത്താൻ പഠിക്കുന്നു",
-            "reasonSafe": "Ark ദിവസം {day} വരെ വേട്ടയിൽ നിന്ന് സംരക്ഷണം"
+            "reasonSafe": "Ark ദിവസം {day} വരെ വേട്ടയിൽ നിന്ന് സംരക്ഷണം",
+            "stageYoung": "ഇളം",
+            "stageAdult": "മുതിർന്ന",
+            "stageOld": "പ്രായമായി",
+            "ageIs": "പ്രായം {age}",
+            "ageIsAbout": "പ്രായം ഏകദേശം {age}",
+            "ageMonths": "{months} Ark മാസം",
+            "ageMonth": "1 Ark മാസം"
         }
     },
     "talkPage": {

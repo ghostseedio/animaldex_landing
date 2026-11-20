@@ -735,7 +735,14 @@
             "reasonHunted": "Petoeläimet täällä: {predators}",
             "reasonHunger": "Nälkä: ei ateriaa viime aikoina",
             "reasonSkill": "Vapautettu: opettelee yhä löytämään ruokaa",
-            "reasonSafe": "Metsästyssuoja Ark-päivään {day} asti"
+            "reasonSafe": "Metsästyssuoja Ark-päivään {day} asti",
+            "stageYoung": "Nuori",
+            "stageAdult": "Aikuinen",
+            "stageOld": "Vanha",
+            "ageIs": "{age} vanha",
+            "ageIsAbout": "noin {age} vanha",
+            "ageMonths": "{months} Ark-kuukautta",
+            "ageMonth": "1 Ark-kuukausi"
         }
     },
     "talkPage": {

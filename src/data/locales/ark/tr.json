@@ -735,7 +735,14 @@
             "reasonHunted": "Buradaki yırtıcılar: {predators}",
             "reasonHunger": "Açlık: yakın zamanda öğün yok",
             "reasonSkill": "Salındı: hâlâ yiyecek bulmayı öğreniyor",
-            "reasonSafe": "{day}. Ark gününe kadar avdan koruma"
+            "reasonSafe": "{day}. Ark gününe kadar avdan koruma",
+            "stageYoung": "Genç",
+            "stageAdult": "Yetişkin",
+            "stageOld": "Yaşlı",
+            "ageIs": "yaş: {age}",
+            "ageIsAbout": "yaş: yaklaşık {age}",
+            "ageMonths": "{months} Ark ayı",
+            "ageMonth": "1 Ark ayı"
         }
     },
     "talkPage": {

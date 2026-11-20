@@ -735,7 +735,14 @@
             "reasonHunted": "Rovdjur här: {predators}",
             "reasonHunger": "Hunger: ingen måltid på sistone",
             "reasonSkill": "Utsläppt: lär sig fortfarande hitta föda",
-            "reasonSafe": "Jaktskydd till Ark-dag {day}"
+            "reasonSafe": "Jaktskydd till Ark-dag {day}",
+            "stageYoung": "Ung",
+            "stageAdult": "Vuxen",
+            "stageOld": "Gammal",
+            "ageIs": "{age} gammal",
+            "ageIsAbout": "omkring {age} gammal",
+            "ageMonths": "{months} Ark-månader",
+            "ageMonth": "1 Ark-månad"
         }
     },
     "talkPage": {

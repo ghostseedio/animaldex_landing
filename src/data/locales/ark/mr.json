@@ -735,7 +735,14 @@
             "reasonHunted": "येथील शिकारी प्राणी: {predators}",
             "reasonHunger": "भूक: अलीकडे जेवण नाही",
             "reasonSkill": "सोडलेला: अजून अन्न शोधायला शिकत आहे",
-            "reasonSafe": "Ark दिवस {day} पर्यंत शिकारीपासून संरक्षण"
+            "reasonSafe": "Ark दिवस {day} पर्यंत शिकारीपासून संरक्षण",
+            "stageYoung": "तरुण",
+            "stageAdult": "प्रौढ",
+            "stageOld": "म्हातारा",
+            "ageIs": "वय {age}",
+            "ageIsAbout": "वय सुमारे {age}",
+            "ageMonths": "{months} Ark महिने",
+            "ageMonth": "1 Ark महिना"
         }
     },
     "talkPage": {

@@ -735,7 +735,14 @@
             "reasonHunted": "ಇಲ್ಲಿನ ಬೇಟೆಗಾರ ಪ್ರಾಣಿಗಳು: {predators}",
             "reasonHunger": "ಹಸಿವು: ಇತ್ತೀಚೆಗೆ ಆಹಾರ ಇಲ್ಲ",
             "reasonSkill": "ಬಿಡಲಾಗಿದೆ: ಇನ್ನೂ ಆಹಾರ ಹುಡುಕಲು ಕಲಿಯುತ್ತಿದೆ",
-            "reasonSafe": "Ark ದಿನ {day} ವರೆಗೆ ಬೇಟೆಯಿಂದ ರಕ್ಷಣೆ"
+            "reasonSafe": "Ark ದಿನ {day} ವರೆಗೆ ಬೇಟೆಯಿಂದ ರಕ್ಷಣೆ",
+            "stageYoung": "ಎಳೆಯ",
+            "stageAdult": "ವಯಸ್ಕ",
+            "stageOld": "ವಯಸ್ಸಾಗಿದೆ",
+            "ageIs": "ವಯಸ್ಸು {age}",
+            "ageIsAbout": "ವಯಸ್ಸು ಸುಮಾರು {age}",
+            "ageMonths": "{months} Ark ತಿಂಗಳುಗಳು",
+            "ageMonth": "1 Ark ತಿಂಗಳು"
         }
     },
     "talkPage": {

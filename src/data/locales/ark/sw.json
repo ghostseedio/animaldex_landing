@@ -735,7 +735,14 @@
             "reasonHunted": "Wanyama wawindaji hapa: {predators}",
             "reasonHunger": "Njaa: hakuna mlo wa hivi karibuni",
             "reasonSkill": "Ameachiliwa: bado anajifunza kutafuta chakula",
-            "reasonSafe": "Ulinzi dhidi ya uwindaji hadi siku {day} ya Ark"
+            "reasonSafe": "Ulinzi dhidi ya uwindaji hadi siku {day} ya Ark",
+            "stageYoung": "Mchanga",
+            "stageAdult": "Aliyekomaa",
+            "stageOld": "Mzee",
+            "ageIs": "umri: {age}",
+            "ageIsAbout": "umri: takriban {age}",
+            "ageMonths": "Miezi {months} ya Ark",
+            "ageMonth": "Mwezi 1 wa Ark"
         }
     },
     "talkPage": {

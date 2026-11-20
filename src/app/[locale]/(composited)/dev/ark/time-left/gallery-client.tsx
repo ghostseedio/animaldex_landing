@@ -13,7 +13,8 @@ const KIND = {
     hedgehog: "11111111-1111-4111-8111-000000000002",
     fox: "11111111-1111-4111-8111-000000000003",
     buzzard: "11111111-1111-4111-8111-000000000004",
-    badger: "11111111-1111-4111-8111-000000000005"
+    badger: "11111111-1111-4111-8111-000000000005",
+    cat: "11111111-1111-4111-8111-000000000006"
 } as const;
 
 type Row = Partial<ArkAnimal> & Pick<ArkAnimal, "id" | "species_profile_id" | "name" | "model_slug">;
@@ -56,10 +57,15 @@ function fixtureAnimals(mineId: string): ArkAnimal[] {
     add("z1", "buzzard", "Common Buzzard", "common-buzzard", {lifespan_days: 3652, born_ark_day: 100});
     // One Eurasian Badger alone in the wood: under the floor of 3 the engine never hunts its kind.
     add("b1", "badger", "Eurasian Badger", "eurasian-badger", {lifespan_days: 3652, born_ark_day: 100});
+    // A young one born on the Ark a month ago (a second badger: still under the floor of 3).
+    add("b2", "badger", "Eurasian Badger", "eurasian-badger", {lifespan_days: 3652, lifespan_days_hi: 5475, origin: "born", generation: 1, source: null, born_ark_day: 230});
+    // A pet in a house (kept: only old age), with the upper end of its lifespan published as the live read does.
+    add("p1", "cat", "Domestic Cat", "domestic-cat", {zone: "farm_garden", island: "town", area: "house", lifespan_days: 4383, lifespan_days_hi: 6574.5, born_ark_day: 77.077});
     return list;
 }
 
-const CASES: Record<string, string> = {old: "v1", hunted: "h1", hungry: "f3", safe: "b1"};
+/** `young`: born aboard a month ago; `adult`: arrived, healthy; `old`: the old vole; `hunted`: a wild hedgehog with foxes about; `pet`: a cat in a house. */
+const CASES: Record<string, string> = {old: "v1", hunted: "h1", hungry: "f3", safe: "b1", adult: "b1", young: "b2", pet: "p1"};
 
 function species(kind: keyof typeof KIND, slug: string, name: string, aboard: number) {
     return {id: KIND[kind], slug, name, aboard, page: null};
@@ -88,11 +94,11 @@ if (typeof window !== "undefined") {
 }
 
 export default function ArkTimeLeftGallery({words, talk, language}: {words: ArkWords; talk: {a: string; an: string}; language: string}) {
-    const [query, setQuery] = useState<{animal: string; view: string; grace: "over" | "ahead" | "none"} | null>(null);
+    const [query, setQuery] = useState<{animal: string; view: string; grace: "over" | "ahead" | "none" | "live"} | null>(null);
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const grace = params.get("grace");
-        setQuery({animal: params.get("animal") ?? "old", view: params.get("view") ?? "card", grace: grace === "0" ? "none" : grace === "ahead" ? "ahead" : "over"});
+        setQuery({animal: params.get("animal") ?? "old", view: params.get("view") ?? "card", grace: grace === "0" ? "none" : grace === "ahead" ? "ahead" : grace === "live" ? "live" : "over"});
     }, []);
     const selectedId = CASES[query?.animal ?? "old"] ?? "v1";
     const snapshot = useMemo<ArkSnapshot | null>(() => {
@@ -105,7 +111,8 @@ export default function ArkTimeLeftGallery({words, talk, language}: {words: ArkW
             animals,
             as_of: "2026-11-18T09:00:00Z",
             ark_day: ARK_DAY,
-            ...(query.grace !== "none" ? {hunt_grace: {ends_ark_day: query.grace === "ahead" ? 300 : 120, ramp_ark_days: 40}} : {})
+            // "live": the shape the live read publishes today (the end 183 Ark days ahead, a 182.5-day ramp).
+            ...(query.grace === "live" ? {hunt_grace: {ends_ark_day: 443.607, ramp_ark_days: 182.5}} : query.grace !== "none" ? {hunt_grace: {ends_ark_day: query.grace === "ahead" ? 300 : 120, ramp_ark_days: 40}} : {})
         };
     }, [query, selectedId]);
     const selected = snapshot?.animals.find((animal) => animal.id === selectedId) ?? null;

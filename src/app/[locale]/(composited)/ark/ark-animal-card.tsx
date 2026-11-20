@@ -36,8 +36,8 @@ import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
 const ArkCardPhoto = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card-photo"));
 
 /**
- * "Estimated time left" (decision 389, `lib/ark-time-left.ts`): lazy, as the photo block is, and only asked for an animal that
- * could be at risk (old, hungry, or any wild animal once the server publishes the hunting protection).
+ * The life block (decision 389, `lib/ark-time-left.ts`; owner 2026-11-20: every animal): its age and life stage in Ark
+ * time, a life bar, and "Estimated time left" with its reasons. Lazy, as the photo block is.
  */
 const ArkTimeLeft = lazy(() => import("@/app/[locale]/(composited)/ark/ark-time-left"));
 
@@ -227,10 +227,11 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
 
     const healthBar = text?.bars.find((bar) => bar.key === "health") ?? null;
     const thriveChip = facts.thrive ? arkThriveWords(facts.thrive, words.life) : null;
-    // Chips: its age; its condition only when it says something (hungry: the server's; card truth, 2026-11-13: well-fed,
-    // everyone's default, is not said, and the fed bar shows its day); its thrive band; old; its generation.
+    // Chips: its age (only where there is no snapshot for the life block below, which says it with its life stage); its condition
+    // only when it says something (hungry: the server's; card truth, 2026-11-13: well-fed, everyone's default, is not said, and
+    // the fed bar shows its day); its thrive band; old; its generation.
     const chips: Array<{key: string; text: string; tone: "plain" | "good" | "warn" | "bad" | "thrive"}> = [];
-    if (facts.ageDays !== null) chips.push({key: "age", text: ageText(facts.ageDays, words, locale), tone: "plain"});
+    if (facts.ageDays !== null && !snapshot) chips.push({key: "age", text: ageText(facts.ageDays, words, locale), tone: "plain"});
     if (facts.condition === "hungry") chips.push({key: "fed", text: words.life.hungry, tone: "bad"});
     if (thriveChip) chips.push({key: "thrive", text: thriveChip, tone: facts.thrive !== "ordinary" ? "thrive" : "plain"});
     if (facts.condition === "old" || healthBar?.tone === "bad") chips.push({key: "old", text: healthBar?.text ?? words.life.old, tone: "warn"});
@@ -339,9 +340,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             {nowLine ? <p data-testid="ark-card-now" data-activity={status?.activity ?? undefined} className={`mt-1.5 text-[14px] font-semibold italic leading-snug md:text-[15px] ${asleepNow ? "text-[#c9d6ff]" : "text-white"}`}>{nowLine}</p> : null}
                             {text?.next ? <p data-testid="ark-card-next" className="mt-0.5 text-[12.5px] italic leading-snug text-ink-300">{text.next}</p> : null}
                         </div>
-                        {animal.condition === "old" || animal.condition === "hungry" || snapshot?.hunt_grace ? (
-                            <Suspense fallback={null}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense>
-                        ) : null}
+                        {snapshot ? <Suspense fallback={null}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense> : null}
                         {rhythmNow ? <ArkRhythmLine rhythm={rhythmNow} open={rhythmOpen} onToggle={() => setRhythmOpen((v) => !v)} /> : null}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} /> : null}
                         {/* Release to the Wild (P1-8, behind the server's switch): the same lazy import's other block; it draws nothing while the switch is off. */}
@@ -386,7 +385,8 @@ function ArkLifeStory({animal, life, state, facts, words, locale, rest = null}: 
     const w = words.life;
     const rows: Array<[string, React.ReactNode]> = [];
     if (facts.generation !== null) rows.push([w.generation, facts.generation > 0 ? fillArkWords(w.generationBorn, {n: facts.generation}) : w.generationArrived]);
-    if (facts.ageDays !== null) rows.push([w.age, ageText(facts.ageDays, words, locale)]);
+    // (An arrival's days aboard are not its age: the life block says that, from its lifespan.)
+    if (facts.ageDays !== null && facts.born) rows.push([w.age, ageText(facts.ageDays, words, locale)]);
     // "Condition" is how well kept it is (its thrive band); its hunger and age now go under "Right now".
     if (facts.thrive) rows.push([w.condition, arkThriveWords(facts.thrive, w)]);
     // Right now: how it rests (the sleep lane: "Asleep in its den"), then its hunger and age ("Asleep in its den · Well-fed").

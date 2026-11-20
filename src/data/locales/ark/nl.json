@@ -735,7 +735,14 @@
             "reasonHunted": "Roofdieren hier: {predators}",
             "reasonHunger": "Honger: geen recente maaltijd",
             "reasonSkill": "Vrijgelaten: leert nog voedsel vinden",
-            "reasonSafe": "Bescherming tegen jacht tot Ark-dag {day}"
+            "reasonSafe": "Bescherming tegen jacht tot Ark-dag {day}",
+            "stageYoung": "Jong",
+            "stageAdult": "Volwassen",
+            "stageOld": "Oud",
+            "ageIs": "{age} oud",
+            "ageIsAbout": "ongeveer {age} oud",
+            "ageMonths": "{months} Ark-maanden",
+            "ageMonth": "1 Ark-maand"
         }
     },
     "talkPage": {

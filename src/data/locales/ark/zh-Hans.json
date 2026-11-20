@@ -735,7 +735,14 @@
             "reasonHunted": "这里的捕食者：{predators}",
             "reasonHunger": "饥饿：近期没有进食",
             "reasonSkill": "已放归：仍在学习觅食",
-            "reasonSafe": "受狩猎保护，直至 Ark 第 {day} 天"
+            "reasonSafe": "受狩猎保护，直至 Ark 第 {day} 天",
+            "stageYoung": "年幼",
+            "stageAdult": "成年",
+            "stageOld": "年老",
+            "ageIs": "年龄 {age}",
+            "ageIsAbout": "年龄约 {age}",
+            "ageMonths": "{months} 个 Ark 月",
+            "ageMonth": "1 个 Ark 月"
         }
     },
     "talkPage": {

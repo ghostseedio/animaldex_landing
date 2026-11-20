@@ -735,7 +735,14 @@
             "reasonHunted": "ఇక్కడి వేటాడే జంతువులు: {predators}",
             "reasonHunger": "ఆకలి: ఇటీవల ఆహారం లేదు",
             "reasonSkill": "వదిలినది: ఇంకా ఆహారం వెతకడం నేర్చుకుంటోంది",
-            "reasonSafe": "Ark రోజు {day} వరకు వేట నుండి రక్షణ"
+            "reasonSafe": "Ark రోజు {day} వరకు వేట నుండి రక్షణ",
+            "stageYoung": "చిన్నది",
+            "stageAdult": "పెద్దది",
+            "stageOld": "ముసలిది",
+            "ageIs": "వయసు {age}",
+            "ageIsAbout": "వయసు సుమారు {age}",
+            "ageMonths": "{months} Ark నెలలు",
+            "ageMonth": "1 Ark నెల"
         }
     },
     "talkPage": {

@@ -735,7 +735,14 @@
             "reasonHunted": "Rovdyr her: {predators}",
             "reasonHunger": "Sult: ikke noe nylig måltid",
             "reasonSkill": "Sluppet fri: lærer fortsatt å finne mat",
-            "reasonSafe": "Jaktvern til Ark-dag {day}"
+            "reasonSafe": "Jaktvern til Ark-dag {day}",
+            "stageYoung": "Ung",
+            "stageAdult": "Voksen",
+            "stageOld": "Gammel",
+            "ageIs": "{age} gammel",
+            "ageIsAbout": "omtrent {age} gammel",
+            "ageMonths": "{months} Ark-måneder",
+            "ageMonth": "1 Ark-måned"
         }
     },
     "talkPage": {
