@@ -225,9 +225,19 @@ export function homeIndoors(pets: readonly OutdoorPet[], roomOf: (home: Househol
 /** A pet's cell of its room's free floor: the free floor cut into `cells` along its width. */
 export function roomCell(place: IndoorPlace): Box {
     const f = place.room.free;
-    const w = f.w / place.cells;
-    return sub(f, -f.w / 2 + w * (place.cell + 0.5), 0, w, f.d);
+    // A row of cells along the width, each at least `CELL_MIN` wide; more pets than a row holds (young ones born in the room) fill further
+    // rows across its depth, so each has a cell of its own on the floor rather than a sliver of a body's width.
+    const perRow = Math.max(Math.floor(f.w / CELL_MIN), 1);
+    const rows = Math.ceil(place.cells / perRow);
+    const row = Math.floor(place.cell / perRow);
+    const inRow = Math.min(perRow, place.cells - row * perRow);
+    const w = f.w / inRow;
+    const d = f.d / rows;
+    return sub(f, -f.w / 2 + w * ((place.cell % perRow) + 0.5), -f.d / 2 + d * (row + 0.5), w, d);
 }
+
+/** The narrowest cell of a room's floor a pet is given (m): the least an apartment's pets have (`towerApartments` gives each 1.5). */
+export const CELL_MIN = 1.2;
 
 function u01(id: string, salt: string | number): number {
     return hashText(`${id}|${salt}`) / 4294967296;

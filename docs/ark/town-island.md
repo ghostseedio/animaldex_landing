@@ -728,3 +728,18 @@ list beside each row's count (an image to a screen reader, labelled "male" / "fe
 `ark-time-left` (its `sex` face) and the list through the lazy graphs module; `snapshot.ts` passes the two keys on as sent and `arkSexView` checks them.
 `/ark` static JavaScript: 204,633 bytes (limit 204,800).
 
+### 15.2 Every kept animal inside its container, with clearance for its body (coordinator, 2026-11-20)
+
+A picture of a young horse in its parents' paddock showed it at the rail with its head through it and into the barn wall: a pen kept an animal's middle only
+half its body from the rails, so a head put down to graze, or a turn, took it over. Now (`placement.ts`):
+- `penMarginOf(length, pen)`: a pen's rails keep a kept animal's middle `0.625 x its length + 0.3 m` away (it was `0.5 x + 0.15`), and a pen too small for it
+  keeps it in its middle, never out of it (the scene's `keepInPen` bound uses the same figure, and clears walls by a radius that grows with it);
+- `inPen`: when pushing an animal off a wall and back in from the rails lands it in one again (a barn or a garden room against the rails), the nearest
+  point of the interior clear of both is taken, rings about it (before, "the rails win" left 3 dogs and humans of the saved read in a wall);
+- a room with more pets than a row of cells holds (young ones born in it) fills a second row across its depth, a cell each (`roomCell`).
+`ark-container-placement.test.ts` checks it on the saved real read with its containers, with a family of young in every kind of container and with
+fourteen horses in one paddock: every body (both ends, whatever way it faces) inside its rails and out of every wall, in a display inside its glass, in
+a room on its floor, and no two bodies one on another. Against main, 629 of the 2,901 animals of the saved read stand a little differently (the median 0 m,
+none more than 1.4 m: those that stood within the new margin of a rail, and the ones their spreading moved); with the 1,461 loaded containers laid on
+nobody moves, as before.
+

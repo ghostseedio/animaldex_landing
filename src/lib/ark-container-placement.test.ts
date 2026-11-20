@@ -21,7 +21,10 @@ import {gunzipSync} from "node:zlib";
 import test from "node:test";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {decodeArkSnapshot} from "@/ark-scene/snapshot";
-import {forgetTownPlacements, placeTownAnimals, type TownPlace, type TownPlacements} from "@/ark-scene/islands/town/placement";
+import {forgetTownPlacements, keptGap, placeTownAnimals, type TownPlace, type TownPlacements} from "@/ark-scene/islands/town/placement";
+import {arkBody} from "@/ark-scene/stats";
+import {inTownSolid} from "@/ark-scene/islands/town/tanks";
+import {toLocal, type Box} from "@/ark-scene/islands/town/geom";
 import {drawnContainer, resolveContainer} from "@/ark-scene/islands/town/containers";
 import {townHouseholds} from "@/ark-scene/islands/town/areas";
 
@@ -261,4 +264,89 @@ test("the read's container reaches the scene: a string is kept, anything else dr
     assert.equal(resolveContainer("has space"), null);
     assert.equal(resolveContainer("x".repeat(81)), null);
     assert.equal(resolveContainer("<script>"), null);
+});
+
+/** How far inside a box a point is (m; negative: outside). */
+function inset(b: Box, x: number, z: number): number {
+    const l = toLocal(b, x, z);
+    return Math.min(b.w / 2 - Math.abs(l.x), b.d / 2 - Math.abs(l.z));
+}
+
+/**
+ * Every kept animal inside its container's interior, with clearance for its body (the coordinator, 2026-11-20: "the far horse stands
+ * through the pen's fence rail with its head into the barn wall"): in a pen, its middle at least `penMargin` from the rails (half its body,
+ * an eighth again for a head put down, 0.3 m clear), its whole body (both ends, whatever way it faces) inside the rails and out of every wall
+ * and garden room, and no two bodies one on another; in a display (cage, vivarium, tank, pond), inside its glass; in a room, inside its floor.
+ */
+function footprintProblems(animals: readonly ArkAnimal[], res: TownPlacements): string[] {
+    const out: string[] = [];
+    const byPlace = new Map<string, Array<{x: number; z: number; len: number}>>();
+    for (const a of animals) {
+        if (!kept(a)) continue;
+        const t = res.town.get(a.id)!;
+        const p = res.places.get(a.id)!;
+        const body = arkBody(a);
+        const half = Math.max(body.metres, body.display) / 2;
+        const label = `${a.model_slug} ${a.id.slice(-8)} in ${drawnContainer(t)}`;
+        const ends: Array<[number, number]> = [[p.x, p.z], [p.x + Math.sin(p.yaw) * half, p.z + Math.cos(p.yaw) * half], [p.x - Math.sin(p.yaw) * half, p.z - Math.cos(p.yaw) * half]];
+        if (t.pen) {
+            const margin = t.penMargin ?? 0;
+            if (inset(t.pen, p.x, p.z) < margin - 1e-6) out.push(`${label}: its middle ${inset(t.pen, p.x, p.z).toFixed(2)} m from the rails, margin ${margin.toFixed(2)}`);
+            // (A pen too small for the body keeps it in its middle: the body cannot be in it whatever is done.)
+            if (Math.min(t.pen.w, t.pen.d) / 2 >= half + 0.05) for (const [x, z] of ends) if (inset(t.pen, x, z) < -0.02) out.push(`${label}: a body end ${inset(t.pen, x, z).toFixed(2)} m past the rails`);
+            for (const [x, z] of ends) if (inTownSolid(x, z, -0.05)) out.push(`${label}: in a wall or a garden room`);
+            const here = byPlace.get(t.place) ?? [];
+            for (const o of here) if (Math.hypot(o.x - p.x, o.z - p.z) < keptGap(body.metres, o.len) - 1e-6) out.push(`${label}: on another animal of its pen`);
+            here.push({x: p.x, z: p.z, len: body.metres});
+            byPlace.set(t.place, here);
+        } else if (t.display) {
+            const d = t.display;
+            if (inset(d, p.x, p.z) < -0.02) out.push(`${label}: out of its ${d.form}`);
+            if ((d.form === "tank" || d.form === "pond") && body.metres + 0.1 > Math.max(d.w, d.d) + 1e-6) out.push(`${label}: longer than its ${d.form}`);
+            if (d.form === "cage" || d.form === "vivarium") for (const [x, z] of ends) if (inset(d, x, z) < -0.02 && body.metres <= Math.min(d.w, d.d)) out.push(`${label}: a body end through the ${d.form}'s glass`);
+        } else if (t.room) {
+            const room = t.room.room;
+            if (inset(room.free, p.x, p.z) < -0.02) out.push(`${label}: out of its room's floor`);
+        }
+    }
+    return out;
+}
+
+test("no kept animal's body crosses the boundary of its container: the real read with its loaded containers, and a family in every kind", () => {
+    const {animals, loaded} = load();
+    const base = withContainers(animals, loaded);
+    const real = footprintProblems(base, place(base));
+    assert.deepEqual(real.slice(0, 20), [], `${real.length} kept animals cross their container's boundary on the real read`);
+    // (And with the young one in every kind of container the family in a small pen, a full tank or a crowded room must stay inside it.)
+    const before = place(base);
+    const bySort = new Map<string, ArkAnimal[]>();
+    for (const a of base) {
+        if (!kept(a)) continue;
+        const c = category(before.town.get(a.id)!);
+        const list = bySort.get(c) ?? [];
+        if (list.length < 4) list.push(a);
+        bySort.set(c, list);
+    }
+    const parents = Array.from(bySort.values()).flat();
+    // three young of each, so a pen holds the whole family
+    const family = [0, 1, 2].flatMap((k) => youngOf(parents, loaded).map((y) => ({...y, id: `${y.id}-k${k}`})));
+    const crowded = [...base, ...family];
+    const problems = footprintProblems(crowded, place(crowded));
+    assert.deepEqual(problems.slice(0, 20), [], `${problems.length} kept animals cross their container's boundary with a family in each`);
+});
+
+test("a pen too small for a whole family spreads them inside it, never out of it", () => {
+    const {animals, loaded} = load();
+    const base = withContainers(animals, loaded);
+    const before = place(base);
+    const horse = base.find((a) => a.area === "farm" && /horse/.test(a.model_slug) && before.town.get(a.id)?.pen && category(before.town.get(a.id)!) === "farm plot")!;
+    const herd = Array.from({length: 14}, (_, i) => ({...horse, id: `herd-${i}-${horse.id}`, origin: "born" as const, arrived_at: "2026-11-21T00:00:00Z", slot: null, slot_rank: null, container: loaded.get(horse.id)!}));
+    const all = [...base, ...herd];
+    const res = place(all);
+    const pen = res.town.get(horse.id)!;
+    const inside = herd.filter((h) => res.town.get(h.id)!.place === pen.place && res.town.get(h.id)!.pen);
+    assert.equal(inside.length, herd.length, "every one in its parents' pen");
+    const problems = footprintProblems(all, res).filter((m) => m.includes("herd-"));
+    // (Fourteen more horses cannot all stand apart in one paddock: none of them is out of it, in a wall, or past the rails.)
+    assert.deepEqual(problems.filter((m) => !m.includes("on another animal")).slice(0, 10), [], "none out of its pen");
 });

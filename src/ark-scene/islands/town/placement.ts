@@ -459,7 +459,7 @@ export function placeTownAnimals(given: readonly ArkAnimal[], openAs?: readonly 
         const bound = held ? null : info.enclosure?.mask ?? null;
         let at = inside(bound, base.x + off.dx, base.z + off.dz, base.x, base.z);
         // (Lane TB: on the ground, its body clear of every building's wall and every garden room and pond.)
-        if (!held && !HIGH_WHERE.has(base.where) && base.where !== "pool") at = inside(bound, ...clearOf(at.x, at.z, Math.min(Math.max(length * 0.45, 0.12), 1.6)), base.x, base.z);
+        if (!held && !HIGH_WHERE.has(base.where) && base.where !== "pool") at = inside(bound, ...clearOf(at.x, at.z, bodyClear(length)), base.x, base.z);
         // gfx (PLACE): inside its pen, its body clear of the rails (then clear of any building again, the pen's inside).
         if (info.pen) at = inPen(info.pen, info.penMargin ?? 0, at.x, at.z, length);
         else if (info.enclosureMargin !== undefined && info.enclosure) at = keepInside(maskBox(info.enclosure.mask), at.x, at.z, info.enclosureMargin);
@@ -788,9 +788,23 @@ function parcelOf(building: string): ReturnType<typeof townPlan>["parcels"][numb
     return parcels.get(building);
 }
 
-/** A place with its pen: the margin half its body and a hand, and a roam the pen holds (`rangeOf` takes 1.5 times it). */
+/**
+ * How far in from a pen's rails a kept animal's middle keeps (m): its body's half length, an eighth of it again for a head put down to
+ * graze or a neck stretched out, and 0.3 m clear of the rails (decision 416, the coordinator, 2026-11-20: every kept animal stays inside
+ * its pen with clearance for its body length). A pen too small for it keeps the animal in its middle, never out of it.
+ */
+export function penMarginOf(length: number, pen: Pick<Box, "w" | "d">): number {
+    return Math.max(Math.min(length * 0.625 + 0.3, pen.w / 2 - 0.05, pen.d / 2 - 0.05), 0);
+}
+
+/** How far from a wall or a garden room a kept animal's middle keeps (m): over half its body, so a turn never puts it through. */
+function bodyClear(length: number): number {
+    return Math.min(Math.max(length * 0.55, 0.12), 1.8);
+}
+
+/** A place with its pen: `penMarginOf` in from its rails, and a roam the pen holds (`rangeOf` takes 1.5 times it). */
 function penned(info: TownPlace, pen: Box, length: number): TownPlace {
-    const margin = Math.max(Math.min(length * 0.5 + 0.15, pen.w / 2 - 0.05, pen.d / 2 - 0.05), 0);
+    const margin = penMarginOf(length, pen);
     const reach = Math.max(Math.min(pen.w, pen.d) / 2 - margin, 0.4);
     return {...info, pen, penMargin: margin, range: Math.min(info.range, Math.max(reach / 1.5, 0.4))};
 }
@@ -835,7 +849,7 @@ export function keepInPen(pen: Box, margin: number, pose: {x: number; z: number}
     pose.x = ox + pen.x + qx * c - qz * s;
     pose.z = oz + pen.z + qx * s + qz * c;
     if (!solid) return;
-    clearWithin(pose, Math.min(Math.max(margin - 0.15, 0.05), 1.2), solid, (x, z) => {
+    clearWithin(pose, Math.min(Math.max(margin - 0.15, 0.05), 1.8), solid, (x, z) => {
         const ex = x - ox - pen.x;
         const ez = z - oz - pen.z;
         return Math.abs(ex * c + ez * s) <= hx + 1e-6 && Math.abs(-ex * s + ez * c) <= hz + 1e-6;
@@ -865,11 +879,27 @@ export function clearWithin(pose: {x: number; z: number}, radius: number, solid:
     }
 }
 
-/** A point inside its pen, `margin` in from the rails, clear of the buildings in it (the rails win). */
+/**
+ * A point inside its pen, `margin` in from the rails, clear of the buildings in it. The rails win, but never by leaving the animal in a
+ * wall: when pushing it off a wall and back in from the rails lands it in one again (a barn or a garden room against the rails), the
+ * nearest point of the pen's interior that is clear of both is taken (rings about it, the same for every viewer).
+ */
 export function inPen(pen: Box, margin: number, x: number, z: number, length: number): {x: number; z: number} {
+    const radius = bodyClear(length);
     const a = keepInside(pen, x, z, margin);
-    const [cx, cz] = clearOf(a.x, a.z, Math.min(Math.max(length * 0.45, 0.12), 1.6));
-    return cx === a.x && cz === a.z ? a : keepInside(pen, cx, cz, margin);
+    const [cx, cz] = clearOf(a.x, a.z, radius);
+    const b = cx === a.x && cz === a.z ? a : keepInside(pen, cx, cz, margin);
+    if (!inBuilding(b.x, b.z, radius * 0.9)) return b;
+    for (let ring = 1; ring <= 24; ring++) {
+        const step = Math.max(length * 0.25, 0.25) * ring;
+        const n = 8 + ring * 2;
+        for (let k = 0; k < n; k++) {
+            const t = (k / n) * Math.PI * 2;
+            const p = keepInside(pen, b.x + Math.cos(t) * step, b.z + Math.sin(t) * step, margin);
+            if (!inBuilding(p.x, p.z, radius * 0.9)) return p;
+        }
+    }
+    return b;
 }
 
 /** Whether some home's tank holds a fish this long (with its swim's room). */
