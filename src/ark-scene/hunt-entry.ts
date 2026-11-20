@@ -23,7 +23,7 @@ const SCENES: Record<string, Scene> = {
     // pounce: a house cat on a rat; leap: a fox on a vole; jump: a jumping spider on a fly
     cat: {zone: "grassland", hours: 10, predator: {slug: "domestic-cat", name: "Domestic Cat"}, prey: {slug: "house-mouse", name: "House Mouse"}, distance: 3.2, gap: 9},
     fox: {zone: "grassland", hours: 10, predator: {slug: "red-fox", name: "Red Fox"}, prey: {slug: "meadow-vole", name: "Meadow Vole"}, distance: 4, gap: 10},
-    tiger: {zone: "grassland", hours: 10, predator: {slug: "bengal-tiger", name: "Bengal Tiger"}, prey: {slug: "impala", name: "Impala"}, distance: 12, gap: 25},
+    tiger: {zone: "grassland", hours: 10, predator: {slug: "bengal-tiger", name: "Bengal Tiger"}, prey: {slug: "wild-boar", name: "Wild Boar"}, distance: 12, gap: 25},
     jumper: {zone: "grassland", hours: 10, predator: {slug: "jumping-spider", name: "Jumping Spider"}, prey: {slug: "house-fly", name: "House Fly"}, distance: 0.35, gap: 0.5},
     // dash, lunge, tongue, web
     gecko: {zone: "grassland", hours: 10, predator: {slug: "common-house-gecko", name: "Common House Gecko"}, prey: {slug: "house-fly", name: "House Fly"}, distance: 0.9, gap: 1.6},

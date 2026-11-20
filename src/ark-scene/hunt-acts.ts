@@ -767,8 +767,8 @@ function runLurk(i: HuntInput): HuntRun | null {
     let stand = {x: Q.x, z: Q.z};
     if (!preyInWater) {
         const inland = clamp(lp * 0.55, 0.3, 3);
+        // (It comes down to the water's edge to drink, as far as the hunter's own water goes.)
         stand = {x: P.x + g.dir.x * (shore + inland), z: P.z + g.dir.z * (shore + inland)};
-        if (shore <= 0.01 && g.D > lp * 3) return null;
     }
     const D1 = Math.hypot(stand.x - P.x, stand.z - P.z);
     const toStand = heading(stand.x - P.x, stand.z - P.z);
