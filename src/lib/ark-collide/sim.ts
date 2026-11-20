@@ -15,7 +15,7 @@ import {setAttachHomePlots} from "@/ark-scene/sampler";
 import {setBehaviourHomePlots, worldSampler} from "@/ark-scene/world-sampler";
 import {behaviourProfile, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {forgetSchedules, groupSpread, rangeReach, scheduleWorld, spaceHomes, wireThreats, withLazyRoost, type HoursAt, type ScheduleAnimal, type ScheduleGroup, type ScheduleWorld} from "@/ark-scene/behaviour-schedule";
-import {setRecipeColliders, sexLook, wireRecipes} from "@/ark-scene/behaviour-recipes";
+import {setRecipeColliders, setRecordedSexes, sexLook, wireRecipes} from "@/ark-scene/behaviour-recipes";
 import {collideBlocked, collideSegmentClear} from "@/ark-scene/collide";
 import {onBehaviourSchedule} from "@/ark-scene/schedule-water";
 import {eats} from "@/ark-scene/food-links";
@@ -57,6 +57,7 @@ export function buildSim(list: ArkAnimal[], options: {planOf?: (slug: string) =>
     // (As the scene wires L7's recipe legs: against the colliders, `index.ts` setRecipeColliders.)
     setRecipeColliders({segmentClear: collideSegmentClear, blocked: (x, z, r) => collideBlocked(x, z, r)});
     forgetSchedules();
+    setRecordedSexes(list); // (As the scene's setSnapshot: the read's own sexes, when it carries them.)
     const places = placeAnimals(list);
     const world = scheduleWorld(worldSampler());
     const animals: SimAnimal[] = list.map((a) => {
