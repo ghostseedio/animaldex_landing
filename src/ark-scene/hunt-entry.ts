@@ -115,7 +115,7 @@ async function main() {
             for (let a = 0; a < 24; a++) {
                 const x = quarry.x + Math.sin((a / 24) * Math.PI * 2) * r;
                 const z = quarry.z + Math.cos((a / 24) * Math.PI * 2) * r;
-                if (handle.heightAt(x, z) < -0.2) {
+                if (handle.heightAt(x, z) < -0.06) {
                     from = {x, z};
                     break search;
                 }
@@ -152,7 +152,7 @@ async function main() {
             return {mode, act: (mode === "catch" ? meal?.hunt : escape?.hunt) ?? null, catchAt: meal?.catchAt ?? null, missAt: escape?.missAt ?? null, seconds: escape?.seconds ?? null, kind: escape?.kind ?? null, closest: escape?.closest ?? null, gap: escape?.gap ?? null, predator: scene.predator.slug, prey: scene.prey.slug};
         },
         /** The world at `s` seconds after the step, framed on the two from `distance` (or `scene.distance`). */
-        shot: async (s: number, distance?: number, azimuth = 0.7, polar = 0.95) => {
+        shot: async (s: number, distance?: number, azimuth = 0.7, polar = 0.7) => {
             await setAt(t0 + s - 1.2);
             for (let i = 1; i <= 12; i++) {
                 fake!.perf += 100;

@@ -207,8 +207,8 @@ function stopGo(t: number, move: number, hold: number, v: number): number {
 }
 const movingAt = (t: number, move: number, hold: number) => t % (move + hold) < move;
 
-/** A way from `a` to `b` over ground `ok`: straight where it is clear, else steered round what is in the way; null when it gets nowhere. */
-function routeAround(ok: ((x: number, z: number) => boolean) | undefined, a: {x: number; z: number}, b: {x: number; z: number}): Array<{x: number; z: number}> | null {
+/** A way from `a` to `b` over ground `ok`: straight where it is clear, else steered round what is in the way (straight on where it is boxed in). */
+function routeAround(ok: ((x: number, z: number) => boolean) | undefined, a: {x: number; z: number}, b: {x: number; z: number}): Array<{x: number; z: number}> {
     if (!ok || lineOk(ok, a.x, a.z, b.x, b.z)) return [{x: a.x, z: a.z}, {x: b.x, z: b.z}];
     const step = 0.4;
     const pts = [{x: a.x, z: a.z}];
@@ -235,24 +235,34 @@ function routeAround(ok: ((x: number, z: number) => boolean) | undefined, a: {x:
                 break;
             }
         }
-        if (chosen === null) return null;
+        // (Boxed in: straight on, as the generic chase does; a short way through whatever is there.)
+        if (chosen === null) return [{x: a.x, z: a.z}, {x: b.x, z: b.z}];
         yaw = steer(yaw, chosen, 0.9);
         x += Math.sin(yaw) * step;
         z += Math.cos(yaw) * step;
         pts.push({x, z});
     }
-    return null;
+    return [{x: a.x, z: a.z}, {x: b.x, z: b.z}];
 }
 
-/** Where it stands to strike, `dist` m from the prey, on the side it comes from where that is clear (else round it); null when there is none. */
-function standPoint(ok: ((x: number, z: number) => boolean) | undefined, q: {x: number; z: number}, face: number, dist: number): {x: number; z: number} | null {
+/**
+ * Where it stands to strike, `dist` m from the prey, on the side it comes from where that is clear (else round it). Ground
+ * beset with obstacles has no such place: then any clear place near, and at the last the side it comes from (a short
+ * leap or stab is not stopped by a stem). Never null: the generic chase has nothing better to offer there.
+ */
+function standPoint(ok: ((x: number, z: number) => boolean) | undefined, q: {x: number; z: number}, face: number, dist: number): {x: number; z: number} {
     const spot = (h: number) => ({x: q.x - Math.sin(h) * dist, z: q.z - Math.cos(h) * dist});
     if (!ok || dist < 0.02) return spot(face);
-    for (const off of [0, 0.5, -0.5, 1, -1, 1.6, -1.6, 2.4, -2.4, Math.PI]) {
+    const offsets = [0, 0.5, -0.5, 1, -1, 1.6, -1.6, 2.4, -2.4, Math.PI];
+    for (const off of offsets) {
         const p = spot(face + off);
         if (ok(p.x, p.z) && lineOk(ok, p.x, p.z, q.x, q.z, dist * 0.5)) return p;
     }
-    return null;
+    for (const off of offsets) {
+        const p = spot(face + off);
+        if (ok(p.x, p.z)) return p;
+    }
+    return spot(face);
 }
 
 /** A path along points `pts`: a quick advance, then a creep in stops and starts over the last `creepDist` m of it. */
@@ -374,8 +384,7 @@ function runPounce(i: HuntInput, mode: "pounce" | "leap" | "jump"): HuntRun | nu
     const A = {x: Q.x - g.dir.x * D0, z: Q.z - g.dir.z * D0};
     // Where it crouches to leap, on the side it comes from where that is clear, and the way there (round what is in it).
     const L = D0 > leapD ? standPoint(i.clear, Q, g.face, leapD) : {x: A.x, z: A.z};
-    const route = L ? routeAround(i.clear, A, L) : null;
-    if (!L || !route) return null;
+    const route = routeAround(i.clear, A, L);
     const faceL = heading(Q.x - L.x, Q.z - L.z);
     const move = 0.55 + 0.5 * random();
     const hold = 0.35 + 0.55 * random();
@@ -571,8 +580,7 @@ function runWade(i: HuntInput): HuntRun | null {
     // (Over its own ground: the shallows, or the bank.)
     const walkable = i.clear || i.water ? (x: number, z: number) => (i.clear ? i.clear(x, z) : false) || (i.water ? i.water(x, z) : false) : undefined;
     const L = D0 > strikeD ? standPoint(walkable, Q, g.face, strikeD) : {x: A.x, z: A.z};
-    const route = L ? routeAround(walkable, A, L) : null;
-    if (!L || !route) return null;
+    const route = routeAround(walkable, A, L);
     const faceL = heading(Q.x - L.x, Q.z - L.z);
     const move = 0.8 + 0.4 * random();
     const hold = 0.9 + 1.2 * random();
@@ -648,8 +656,7 @@ function runPeck(i: HuntInput): HuntRun | null {
     const D0 = exact ? g.D : Math.min(g.D, 9 * lp + 4);
     const A = {x: Q.x - g.dir.x * D0, z: Q.z - g.dir.z * D0};
     const L = D0 > strikeD ? standPoint(i.clear, Q, g.face, strikeD) : {x: A.x, z: A.z};
-    const route = L ? routeAround(i.clear, A, L) : null;
-    if (!L || !route) return null;
+    const route = routeAround(i.clear, A, L);
     const faceL = heading(Q.x - L.x, Q.z - L.z);
     const cum = [0];
     for (let k = 1; k < route.length; k++) cum.push(cum[k - 1] + Math.hypot(route[k].x - route[k - 1].x, route[k].z - route[k - 1].z));
