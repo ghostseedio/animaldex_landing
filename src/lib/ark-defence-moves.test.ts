@@ -3,7 +3,7 @@ import test from "node:test";
 import full from "../../data/ark/defence-moves.json";
 import table from "@/ark-scene/defence-moves.json";
 import {behaviourProfile, hasBehaviourProfile} from "@/ark-scene/behaviour-profile";
-import {DEFENCE_KIND, FLASH_COLOURS, HOLD, TAIL_REGROW, TAIL_TWITCH, defenceMoveOf, defencePack, defenceSaid, defenceSpecies, holdsItsGround, newDefenceState, packDefence, predatorBeside, stepDefence, unpackDefence, type DefenceSpec} from "@/ark-scene/defence-moves";
+import {DEFENCE_ACTS, DEFENCE_KIND, DISTURB_EVERY, DISTURB_FOR, FLASH_COLOURS, HOLD, TAIL_REGROW, TAIL_TWITCH, THUMP_BOUT, defenceActOf, defenceMoveOf, disturbedNow, holdsNow, defencePack, defenceSaid, defenceSpecies, holdsItsGround, newDefenceState, packDefence, predatorBeside, stepDefence, unpackDefence, type DefenceSpec} from "@/ark-scene/defence-moves";
 import {canEat, intelProfile} from "@/ark-scene/intelligence-profile";
 import {ReactiveLayer, type ReactiveInput, type ReactiveWorld} from "@/ark-scene/reactive";
 import {packSleep} from "@/ark-scene/sleep";
@@ -147,7 +147,8 @@ test("a tail-dropper: sheds once when the predator is very close, the shed tail 
 });
 
 test("the flash colours the shader lists are the ones the table names", () => {
-    const named = new Set(defenceSpecies().map(([, s]) => s.colour).filter(Boolean));
+    // (A thumper's flagged tail is white, though its row names the colour only in the thump's sentence.)
+    const named = new Set(["#f2efe8", ...defenceSpecies().map(([, s]) => s.colour).filter(Boolean)]);
     assert.deepEqual(new Set(FLASH_COLOURS), named);
     for (const hex of FLASH_COLOURS) assert.ok(/^#[0-9a-f]{6}$/.test(hex));
 });
@@ -217,4 +218,131 @@ test("a small animal at its microhabitat: a predator beside it by the food links
     assert.equal(predatorBeside("pill-millipede", 0, 0, [flying]), 0);
     // Not what cannot eat it.
     assert.equal(predatorBeside("pill-millipede", 0, 0, [animal("z", "plains-zebra", 0.1, 0)]), 0);
+});
+
+// MARK: SIG-DEFENCE (P5 M rows)
+
+test("SIG-DEFENCE: the new moves come from their rows, with a stable act name and the Power mechanisms they play for", () => {
+    assert.equal(defenceMoveOf("carolina-wolf-spider")?.move, "rear");
+    assert.equal(defenceMoveOf("carolina-wolf-spider")?.cornered, true, "its row: \"cornered, rearing up\"");
+    assert.equal(defenceMoveOf("shore-crab")?.cornered, undefined, "its row: facing an attacker, not cornered");
+    assert.equal(defenceMoveOf("daddy-long-legs-spider")?.move, "blur");
+    assert.equal(defenceMoveOf("domestic-rabbit")?.move, "thump");
+    assert.equal(defenceMoveOf("domestic-rabbit")?.flag, undefined, "its model has no tail, and its row no flag");
+    assert.equal(defenceMoveOf("european-rabbit")?.flag, true);
+    assert.equal(defenceMoveOf("eastern-cottontail")?.move, "flag");
+    assert.equal(defenceMoveOf("white-tailed-deer")?.fore, true);
+    assert.equal(defenceMoveOf("white-tailed-deer")?.disturbance, true);
+    assert.equal(defenceMoveOf("leaf-eating-slug")?.move, "flat");
+    assert.equal(defenceMoveOf("common-house-spider")?.move, "tuck");
+    assert.equal(defenceMoveOf("central-bearded-dragon")?.move, "beard");
+    assert.equal(defenceMoveOf("amazon-sailfin-catfish")?.move, "spines");
+    assert.equal(defenceMoveOf("common-house-gecko")?.move, "tail", "its model carries a tail");
+    // A sentence naming a sex the log does not check is left out (the wasp spider's "female").
+    assert.equal(defenceMoveOf("wasp-spider"), null);
+    const names = new Set<string>();
+    for (const [move, act] of Object.entries(DEFENCE_ACTS)) {
+        assert.ok(/^defence\.[a-z_]+$/.test(act.name), move);
+        assert.ok(!names.has(act.name));
+        names.add(act.name);
+        assert.ok(act.mechanisms.length > 0);
+        for (const m of act.mechanisms) assert.ok(["camouflage", "hiding", "armour", "warning", "speed", "group", "vigilance", "climb", "mimicry"].includes(m), m);
+    }
+    assert.deepEqual(defenceActOf("european-hedgehog"), {name: "defence.curl", mechanisms: ["armour"], line: defenceMoveOf("european-hedgehog")!.line});
+    assert.equal(defenceActOf("plains-zebra"), null);
+});
+
+test("SIG-DEFENCE: holding its ground: on the spot at a predator close, a rearer only when cornered, a thumper while it thumps", () => {
+    assert.equal(holdsNow("daddy-long-legs-spider", null), true);
+    assert.equal(holdsNow("carolina-wolf-spider", null), "cornered");
+    assert.equal(holdsNow("eastern-cottontail", null), false);
+    assert.equal(holdsNow("common-house-gecko", null), false);
+    assert.equal(holdsNow("plains-zebra", null), false);
+    const state = newDefenceState();
+    assert.equal(holdsNow("european-rabbit", state), false);
+    stepDefence(state, defenceMoveOf("european-rabbit")!, {action: "alert", alarmed: 1, pressed: false}, 0.1);
+    assert.equal(holdsNow("european-rabbit", state), true, "it stays to thump");
+});
+
+test("SIG-DEFENCE: a thump: one bout when it takes fright, then (a European rabbit) the white tail up as it runs; again only once calm", () => {
+    const spec = defenceMoveOf("european-rabbit")!;
+    const state = newDefenceState();
+    const step = (action: string, seconds: number) => {
+        for (let i = 0; i < seconds * 30; i++) stepDefence(state, spec, {action, alarmed: action === "scan" ? 0 : 1, pressed: false}, 1 / 30);
+    };
+    step("scan", 1);
+    assert.equal(defencePack(state, spec, "mammal"), 0);
+    step("alert", 0.5);
+    assert.equal(state.episode, 1);
+    assert.deepEqual(unpackDefence(defencePack(state, spec, "mammal")).slice(0, 1), [DEFENCE_KIND.thump]);
+    assert.equal(defenceSaid(state, spec, "r"), "defence:r:1");
+    step("alert", THUMP_BOUT);
+    step("flee", 1);
+    const [kind, amount, aux] = unpackDefence(defencePack(state, spec, "mammal"));
+    assert.equal(kind, DEFENCE_KIND.flag, "running, its tail flagged");
+    assert.ok(amount > 0.99);
+    assert.equal(FLASH_COLOURS[aux - 1], "#f2efe8", "white");
+    step("flee", 5);
+    assert.equal(state.episode, 1, "one fright, one bout");
+    step("scan", HOLD + 2);
+    assert.equal(defencePack(state, spec, "mammal"), 0);
+    step("alert", 0.2);
+    assert.equal(state.episode, 2);
+    // A domestic rabbit thumps and does not flag (no row, no tail).
+    const plain = defenceMoveOf("domestic-rabbit")!;
+    const other = newDefenceState();
+    for (let i = 0; i < 30 * 6; i++) stepDefence(other, plain, {action: i < 90 ? "alert" : "flee", alarmed: 1, pressed: false}, 1 / 30);
+    assert.equal(defencePack(other, plain, "mammal"), 0);
+});
+
+test("SIG-DEFENCE: a deer's stamp at a disturbance the day's schedule gives: about one short bout in twenty minutes, the same for every viewer", () => {
+    let on = 0;
+    let starts = 0;
+    let was = false;
+    const hours = 24;
+    for (let t = 0; t < hours * 3600; t++) {
+        const now = disturbedNow("deer-1", DISTURB_EVERY * 1_491_667 + t);
+        if (now) on++;
+        if (now && !was) starts++;
+        was = now;
+    }
+    assert.equal(starts, (hours * 3600) / DISTURB_EVERY);
+    assert.equal(on, starts * DISTURB_FOR);
+    assert.equal(disturbedNow("deer-1", 1_790_000_123), disturbedNow("deer-1", 1_790_000_123));
+    const spec = defenceMoveOf("white-tailed-deer")!;
+    const state = newDefenceState();
+    stepDefence(state, spec, {action: "scan", alarmed: 0, pressed: false, disturbed: true}, 0.5);
+    const [kind, , aux] = unpackDefence(defencePack(state, spec, "mammal"));
+    assert.equal(kind, DEFENCE_KIND.thump);
+    assert.equal(aux, 1, "a forefoot");
+});
+
+test("SIG-DEFENCE: the new moves pack to their own kinds", () => {
+    const made = {...newDefenceState(), amount: 1, on: true, raised: 1};
+    const kindOf = (slug: string, plan: string) => unpackDefence(defencePack(made, defenceMoveOf(slug)!, plan));
+    assert.deepEqual(kindOf("carolina-wolf-spider", "arthropod"), [DEFENCE_KIND.rear, 1, 0]);
+    assert.deepEqual(kindOf("southern-tamandua", "mammal"), [DEFENCE_KIND.rear, 1, 1]);
+    assert.deepEqual(kindOf("daddy-long-legs-spider", "arthropod"), [DEFENCE_KIND.blur, 1, 0]);
+    assert.deepEqual(kindOf("silver-argiope", "arthropod"), [DEFENCE_KIND.blur, 1, 1]);
+    assert.deepEqual(kindOf("leaf-eating-slug", "slow_invertebrate"), [DEFENCE_KIND.flat, 1, 0]);
+    assert.deepEqual(kindOf("common-house-spider", "arthropod"), [DEFENCE_KIND.tuck, 1, 0]);
+    assert.equal(kindOf("central-bearded-dragon", "reptile")[0], DEFENCE_KIND.beard);
+    assert.deepEqual(kindOf("walking-catfish", "fish"), [DEFENCE_KIND.spines, 1, 1]);
+    assert.deepEqual(kindOf("amazon-sailfin-catfish", "fish"), [DEFENCE_KIND.spines, 1, 0]);
+    // (Every kind is clear of the water shake's 10 and 11.)
+    for (const k of Object.values(DEFENCE_KIND) as number[]) assert.ok(k !== 10 && k !== 11);
+});
+
+test("SIG-DEFENCE: a wolf spider rears when cornered: it runs from a predator close, and rears at one very close", () => {
+    const slug = "carolina-wolf-spider";
+    const flight = intelProfile(slug).flight;
+    const run = (gap: number) => {
+        const layer = new ReactiveLayer({tier: "high"});
+        const inputs = [animal("a", slug, 0, 0, {holds: "cornered"}), animal("p", "american-toad", gap, 0, {length: 0.1})];
+        const actions = new Set<string>();
+        for (let k = 0; k < 4 * 30; k++) actions.add(layer.step(inputs, world(1000 + k / 30)).get("a")!.action);
+        return actions;
+    };
+    assert.ok(run(flight * 0.2).has("withdraw"), "very close: it stands and rears");
+    assert.ok(!run(flight * 0.8).has("withdraw"), "close: it runs");
 });

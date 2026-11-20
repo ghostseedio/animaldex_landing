@@ -264,7 +264,7 @@ import birdMoves from "@/ark-scene/bird-moves.json";
 import {tailHabitOf} from "@/ark-scene/tail-habit";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 // 3.3 batch (A): defence moves.
-import {defenceMoveOf, defencePack, defenceSaid, holdsItsGround, newDefenceState, predatorBeside, stepDefence, type DefenceSpec, type DefenceState} from "@/ark-scene/defence-moves";
+import {defenceMoveOf, defencePack, defenceSaid, disturbedNow, escapesRunning, holdsNow, newDefenceState, predatorBeside, stepDefence, type DefenceSpec, type DefenceState} from "@/ark-scene/defence-moves";
 // p3 (shake): shaking off the water after a swim.
 import {SHAKE_LINE, shakePackOf, shakeStartOf} from "@/ark-scene/water-shake";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
@@ -3969,7 +3969,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // Looked at or followed: the camera coming to it never wakes it (looking never changes what it does).
                 watched: e.animal.id === selectedId || e.animal.id === followId,
                 // 3.3 batch (A): a species whose own defence is made on the spot stays and does it.
-                holds: holdsItsGround(e.animal.model_slug),
+                // (SIG-DEFENCE: a thumper while its thumps last; a rearer only when cornered: `holdsNow`.)
+                holds: holdsNow(e.animal.model_slug, e.defence),
+                escapes: escapesRunning(e.animal.model_slug),
                 shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving) || (e.act?.speed ?? 0) > 0.3, aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
             });
         }
@@ -5842,8 +5844,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const moveState = (entry.defence ??= newDefenceState());
                 const tail = model.behaviour?.tail?.length ?? 0;
                 const reacted = act ? null : entry.reactive;
-                const beside = act || !entry.place.micro ? 0 : entry.defenceNear ?? 0;
-                stepDefence(moveState, defenceSpec, {action: beside ? "withdraw" : reacted?.action ?? null, alarmed: beside ? 1 : reacted?.alarmed ?? 0, pressed: beside === 2 || Boolean(reacted?.pressed), moved: tail > 0 && moveState.shed >= 0 ? Math.hypot(where.x - (entry.defenceAt?.x ?? where.x), where.z - (entry.defenceAt?.z ?? where.z)) / (tail * s) : 0}, dt);
+                const near = act || !entry.place.micro ? 0 : entry.defenceNear ?? 0;
+                // (SIG-DEFENCE: one that rears only when cornered does it at a predator very close; a deer's stamp at a
+                // disturbance the day's schedule gives now and then, awake and about its own day.)
+                const beside = defenceSpec.cornered && near < 2 ? 0 : near;
+                const disturbed = Boolean(defenceSpec.disturbance && !act && !slept && !entry.moment && !entry.visitor && disturbedNow(animal.id, epochNow));
+                stepDefence(moveState, defenceSpec, {action: beside ? "withdraw" : reacted?.action ?? null, alarmed: beside ? 1 : reacted?.alarmed ?? 0, pressed: near === 2 || Boolean(reacted?.pressed), moved: tail > 0 && moveState.shed >= 0 ? Math.hypot(where.x - (entry.defenceAt?.x ?? where.x), where.z - (entry.defenceAt?.z ?? where.z)) / (tail * s) : 0, disturbed}, dt);
                 (entry.defenceAt ??= {x: 0, z: 0}).x = where.x;
                 entry.defenceAt.z = where.z;
                 if (!slept) defended = defencePack(moveState, defenceSpec, model.behaviour?.plan);
@@ -6237,7 +6243,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             underwater = under;
             lighting.setUnderwater(under);
             scene.fog = under ? underFog : fog;
-            if (vegetation) vegetation.grass.visible = !under && TIER_SETTINGS[tier].grass > 0;
+            // (SIG-DEFENCE: the behaviours harness can leave the grass out, to see a spider's move at its feet.)
+            if (vegetation) vegetation.grass.visible = !under && TIER_SETTINGS[tier].grass > 0 && !(globalThis as {__arkNoGrass?: boolean}).__arkNoGrass;
             if (micro) micro.group.visible = !under;
             // 3.3 batch (E): nor the land's trees (they stand above the sea: seen from under it they are not seen, but the
             // ambient-occlusion pass still read their depth through the surface and drew dark shards on its underside).

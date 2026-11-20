@@ -110,8 +110,10 @@ export type ReactiveInput = {
      * anything smaller close by, awake or not in the shared layer, noticed at once; they scatter (`SCATTER`).
      */
     chasing?: boolean;
-    /** 3.3 batch (A): its species' own defence is a move made on the spot (a ball, a shell, a swollen body, wings flashed: `defence-moves.ts`): with a predator close it stays and does it. */
-    holds?: boolean;
+    /** 3.3 batch (A): its species' own defence is a move made on the spot (a ball, a shell, a swollen body, wings flashed: `defence-moves.ts`): with a predator close it stays and does it. SIG-DEFENCE: "cornered", only with one very close (a wolf spider rears when cornered; it runs before that). */
+    holds?: boolean | "cornered";
+    /** SIG-DEFENCE: its species' own move is made running (a gecko's tail dropped as it escapes, a cottontail's flagged tail): it never pulls in for an "armour" its generated defence list may also name. */
+    escapes?: boolean;
 };
 
 export type ReactiveWeather = {rain: number; wind: number; windDirection: number; fog: number; storm: number; lightning?: number};
@@ -895,7 +897,7 @@ export class ReactiveLayer {
                 // First it looks.
                 action = "alert";
                 target = {...agent.offset};
-            } else if (danger && me.holds && close) {
+            } else if (danger && me.holds && (me.holds === "cornered" ? veryClose : close)) {
                 // 3.3 batch (A): its own text says what it does (it rolls up, pulls in, swells, flashes its wings): it stays put and does it.
                 action = "withdraw";
                 target = {...agent.offset};
@@ -904,7 +906,7 @@ export class ReactiveLayer {
                 action = "play_dead";
                 target = {...agent.offset};
                 crouchWant = 1;
-            } else if (danger && (me.sessile || (p.defence.includes("armour") && close && (p.defence[0] === "armour" || (me.speed ?? 50) < 25)))) {
+            } else if (danger && !me.escapes && (me.sessile || (p.defence.includes("armour") && close && (p.defence[0] === "armour" || (me.speed ?? 50) < 25)))) {
                 // Its armour is its defence (a tortoise, a pangolin, a snail, a barnacle): it pulls in and stays put.
                 action = "withdraw";
                 target = {...agent.offset};

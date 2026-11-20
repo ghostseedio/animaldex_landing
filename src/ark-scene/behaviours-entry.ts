@@ -9,6 +9,7 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
+import {disturbedNow} from "@/ark-scene/defence-moves";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -50,6 +51,22 @@ const SCENES: Record<string, Scene> = {
     lubber: {zone: "farm_garden", hours: 10, kind: "defence", cast: [{slug: "eastern-lubber-grasshopper", name: "Eastern Lubber Grasshopper", n: 2}, {slug: "american-toad", name: "American Toad", n: 1}]},
     taildrop: {zone: "farm_garden", hours: 10, kind: "defence", cast: [{slug: "common-wall-lizard", name: "Common Wall Lizard", n: 2}, {slug: "bobcat", name: "Bobcat", n: 1}]},
     salamander: {zone: "farm_garden", hours: 10, kind: "defence", cast: [{slug: "eastern-red-backed-salamander", name: "Eastern Red-backed Salamander", n: 2}, {slug: "common-rat-snake", name: "Common Rat Snake", n: 1}]},
+    // SIG-DEFENCE (P5 M rows): the new moves, each species beside a predator of it by the ecology's food links.
+    rear: {zone: "farm_garden", hours: 10, kind: "defence", cast: [{slug: "carolina-wolf-spider", name: "Carolina Wolf Spider", n: 2}, {slug: "american-toad", name: "American Toad", n: 1}]},
+    crab: {zone: "seashore", hours: 10, kind: "defence", cast: [{slug: "shore-crab", name: "Shore Crab", n: 2}, {slug: "herring-gull", name: "Herring Gull", n: 1}]},
+    scorpion: {zone: "rainforest", hours: 10, kind: "defence", cast: [{slug: "malaysian-forest-scorpion", name: "Malaysian Forest Scorpion", n: 2}, {slug: "american-toad", name: "American Toad", n: 1}]},
+    tamandua: {zone: "rainforest", hours: 10, kind: "defence", cast: [{slug: "southern-tamandua", name: "Southern Tamandua", n: 2}, {slug: "amur-leopard", name: "Amur Leopard", n: 1}]},
+    whirl: {zone: "farm_garden", hours: 10, kind: "defence", cast: [{slug: "daddy-long-legs-spider", name: "Daddy Long-legs Spider", n: 2}, {slug: "american-toad", name: "American Toad", n: 1}]},
+    webshake: {zone: "farm_garden", hours: 10, kind: "defence", cast: [{slug: "black-and-yellow-garden-spider", name: "Black-and-yellow Garden Spider", n: 2}, {slug: "american-toad", name: "American Toad", n: 1}]},
+    thump: {zone: "grassland", hours: 10, kind: "defence", cast: [{slug: "european-rabbit", name: "European Rabbit", n: 2}, {slug: "red-fox", name: "Red Fox", n: 1}]},
+    thumpdomestic: {zone: "farm_garden", hours: 10, kind: "defence", cast: [{slug: "domestic-rabbit", name: "Domestic Rabbit", n: 2}, {slug: "red-fox", name: "Red Fox", n: 1}]},
+    cottontail: {zone: "grassland", hours: 10, kind: "defence", cast: [{slug: "eastern-cottontail", name: "Eastern Cottontail", n: 2}, {slug: "red-fox", name: "Red Fox", n: 1}]},
+    stamp: {zone: "woodland", hours: 10, kind: "defence", cast: [{slug: "white-tailed-deer", name: "White-tailed Deer", n: 2}, {slug: "coyote", name: "Coyote", n: 1}]},
+    slug: {zone: "farm_garden", hours: 10, kind: "defence", cast: [{slug: "leaf-eating-slug", name: "Leaf-eating Slug", n: 2}, {slug: "common-frog", name: "Common Frog", n: 1}]},
+    tuck: {zone: "farm_garden", hours: 10, kind: "defence", cast: [{slug: "common-house-spider", name: "Common House Spider", n: 2}, {slug: "american-toad", name: "American Toad", n: 1}]},
+    beard: {zone: "grassland", hours: 10, kind: "defence", cast: [{slug: "central-bearded-dragon", name: "Central Bearded Dragon", n: 2}, {slug: "bobcat", name: "Bobcat", n: 1}]},
+    spines: {zone: "river_lake", hours: 10, kind: "defence", cast: [{slug: "amazon-sailfin-catfish", name: "Amazon Sailfin Catfish", n: 2}, {slug: "giant-otter", name: "Giant Otter", n: 1}]},
+    gecko: {zone: "farm_garden", hours: 10, kind: "defence", cast: [{slug: "common-house-gecko", name: "Common House Gecko", n: 2}, {slug: "bobcat", name: "Bobcat", n: 1}]},
     // 3.3 batch (B): magpies mobbing a fox near them, in turns (`mobbing.ts`; started by hand here, the cast is placed apart).
     mob: {zone: "grassland", hours: 9, kind: "mob", cast: [{slug: "australian-magpie", name: "Australian Magpie", n: 4}, {slug: "red-fox", name: "Red Fox", n: 1}, {slug: "coyote", name: "Coyote", n: 1}, {slug: "bobcat", name: "Bobcat", n: 1}, {slug: "tawny-owl", name: "Tawny Owl", n: 1}, {slug: "red-tailed-hawk", name: "Red-tailed Hawk", n: 1}]},
     // 3.3 batch (B): the tail habits (`tail-habit.ts`): a wagtail's pump, a wren's cocked tail, a swamphen's flick, a water tyrant's fan; a sparrow beside them has none.
@@ -106,6 +123,7 @@ async function main() {
     const params = new URLSearchParams(location.search);
     const scene = SCENES[params.get("scene") ?? "birth"];
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
+    if (params.get("grass") === "0") (globalThis as {__arkNoGrass?: boolean}).__arkNoGrass = true;
     const template = fixture.animals[0];
     const day = fixture.voyage.ark_day;
     const animals: Raw[] = [];
@@ -341,6 +359,15 @@ async function main() {
             const length = debug.entries().find((e) => e.animal.id === a) as unknown as {length: number};
             const x = at.x + Math.max(gap * length.length, 0.25);
             pin(predator, () => ({x, y: Math.max(handle.heightAt(x, at.z), 0), z: at.z, yaw: -Math.PI / 2, moving: false, aloft: false, doing: "watch"}));
+        },
+        /** SIG-DEFENCE: the world's clock moved on to the next disturbance the day's schedule gives the first cast's animal (`disturbedNow`), less `before` s. */
+        disturb: async (before = 0.5) => {
+            let t = fake!.date / 1000;
+            while (!disturbedNow(a, t)) t += 1;
+            const ms = (t - before) * 1000 - fake!.date;
+            fake!.perf += ms;
+            fake!.date += ms;
+            await frames(3);
         },
         /** 3.3 batch (A): the world run on for `seconds` (a tenth of a second a frame), then the first cast's animal framed from `lengths` of its body away. */
         run: async (seconds: number, lengths: number, azimuth = 0.7, polar = 1.1) => {

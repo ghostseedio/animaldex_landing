@@ -69,7 +69,9 @@ const PLANS = {
  * then taken away: [what the harness does, seconds the world runs on, label]. Each scene: how many body lengths away
  * it is framed from, and the camera's azimuth and polar angle when the default hides the move (a flat coil is seen from above).
  */
-const DEFENCE = {curl: [5], pangolin: [4], pill: [7, 2.4, 0.5], coil: [3, 2.4, 0.5], millipede: [4, 2.4, 0.5], shell: [5], snail: [7], hermit: [7], puff: [6], monitor: [3.5], puffer: [5], flash: [7, 2.4, 0.5], eyes: [5, 2.4, 0.5], peacock: [6, 2.4, 0.5], owl: [5, 2.4, 0.5], harnessed: [7, 2.4, 0.5], blotched: [6, 2.4, 0.5], lubber: [6, 5.4, 0.7], tail: [5, 2.4, 0.6], salamander: [5, 2.4, 0.6]};
+const DEFENCE = {curl: [5], pangolin: [4], pill: [7, 2.4, 0.5], coil: [3, 2.4, 0.5], millipede: [4, 2.4, 0.5], shell: [5], snail: [7], hermit: [7], puff: [6], monitor: [3.5], puffer: [5], flash: [7, 2.4, 0.5], eyes: [5, 2.4, 0.5], peacock: [6, 2.4, 0.5], owl: [5, 2.4, 0.5], harnessed: [7, 2.4, 0.5], blotched: [6, 2.4, 0.5], lubber: [6, 5.4, 0.7], tail: [5, 2.4, 0.6], salamander: [5, 2.4, 0.6], rear: [3.5, 1.6, 1.25], crab: [4, 1.6, 1.2], scorpion: [3.5, 1.6, 1.2], tamandua: [3.5, 1.6, 1.3], whirl: [4, 2.4, 0.9], webshake: [4, 1.6, 1.1], thump: [3, 2.6, 1.25], thumpdomestic: [3, 2.6, 1.25], cottontail: [4, 2.8, 1.2], stamp: [3, 1.6, 1.3], slug: [3, 1.6, 1.0], tuck: [3.5, 2.4, 0.8], beard: [2.4, 1.2, 1.3], spines: [3, 2.4, 0.6], gecko: [5, 2.4, 0.6]};
+/** SIG-DEFENCE: a scene acted at a disturbance the day's schedule gives (a deer's stamp), not at a predator. */
+const DISTURB_STEPS = [["none", 2, "before: about its day"], ["disturb", 0.4, "a disturbance: 0.4 s in"], ["hold", 0.3, "0.7 s"], ["hold", 0.25, "0.95 s"], ["hold", 0.2, "1.15 s"], ["hold", 1.5, "2.65 s"], ["hold", 4, "6.65 s: over"], ["hold", 10, "calm again"]];
 const DEFENCE_STEPS = [["none", 2, "before: about its day"], ["near", 0.5, "a predator beside it, half a second"], ["hold", 0.5, "one second"], ["hold", 1, "two seconds"], ["hold", 3, "five seconds"], ["away", 4, "the predator gone, four seconds"], ["hold", 12, "sixteen seconds on"], ["hold", 30, "calm again"]];
 const summary = {};
 for (const name of scenes) {
@@ -81,7 +83,7 @@ for (const name of scenes) {
         if (m.type() === "error") errors.push(m.text().slice(0, 300));
         if (m.text().startsWith("[behaviours]")) console.log(name, m.text().slice(0, 600));
     });
-    await page.goto(`${base}?scene=${name}&quality=high`, {waitUntil: "domcontentloaded", timeout: 120000});
+    await page.goto(`${base}?scene=${name}&quality=high${arg("grass", "") === "0" ? "&grass=0" : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
     try {
         await page.waitForFunction(() => window.__behaviours || window.__behavioursError, null, {timeout: 300000});
     } catch (error) {
@@ -100,9 +102,11 @@ for (const name of scenes) {
         rmSync(dir, {recursive: true, force: true});
         mkdirSync(dir, {recursive: true});
         const labels = [];
-        for (let i = 0; i < DEFENCE_STEPS.length; i++) {
-            const [what, seconds, label] = DEFENCE_STEPS[i];
+        const steps = name === "stamp" ? DISTURB_STEPS : DEFENCE_STEPS;
+        for (let i = 0; i < steps.length; i++) {
+            const [what, seconds, label] = steps[i];
             const note = await page.evaluate(async ([what, seconds, lengths, label, gap, azimuth, polar]) => {
+                if (what === "disturb") await window.__behaviours.disturb(0);
                 if (what === "near") window.__behaviours.threat(gap);
                 if (what === "away") window.__behaviours.threat(null);
                 const text = await window.__behaviours.run(seconds, lengths, Number(azimuth), Number(polar));
