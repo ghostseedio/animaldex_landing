@@ -48,7 +48,6 @@ const SPECIES: Record<string, Species> = {
     "spotted-wood-owl": {id: "0000b1d0-0000-4000-8000-000000000005", name: "Spotted Wood Owl", zone: "woodland", activity: "any", sociality: null},
     rook: {id: "0000b1d0-0000-4000-8000-000000000006", name: "Rook", zone: "woodland", activity: "diurnal", sociality: "group"},
     "house-sparrow": {id: "0000b1d0-0000-4000-8000-000000000007", name: "House Sparrow", zone: "farm_garden", activity: "diurnal", sociality: "group"},
-    "common-kingfisher-nest": {id: "0000b1d0-0000-4000-8000-000000000008", name: "Common Kingfisher", zone: "river_lake", activity: "diurnal", sociality: null},
     "african-penguin": {id: "0000b1d0-0000-4000-8000-000000000009", name: "African Penguin", zone: "seashore", activity: "diurnal", sociality: "group"},
     "song-thrush": {id: "0000b1d0-0000-4000-8000-00000000000a", name: "Song Thrush", zone: "farm_garden", activity: "diurnal", sociality: null},
     limpkin: {id: "0000b1d0-0000-4000-8000-00000000000b", name: "Limpkin", zone: "wetland", activity: "diurnal", sociality: null},
@@ -252,7 +251,7 @@ const CLIPS: Record<string, Clip> = {
     roost_dawn: {live: true, cast: [["rk", "rook", 5]], hours: 5.4, date: Date.UTC(2026, 10, 13, 5) / 1000 + 1500, find: (ctx) => roostMoment(ctx, "dawn")},
     kingfisher_tunnel: {
         arkDay: 150,
-        cast: [["kt", "common-kingfisher-nest", 3]],
+        cast: [["kt", "common-kingfisher", 3]],
         hours: 10,
         date: Date.UTC(2026, 3, 14, 10) / 1000,
         find: (ctx) => digMoment(ctx, "bank_burrow")
@@ -263,8 +262,8 @@ const CLIPS: Record<string, Clip> = {
         date: Date.UTC(2026, 3, 14, 10) / 1000,
         find: (ctx) => digMoment(ctx, "dig_burrow")
     },
-    thrush_anvil: {cast: [["th", "song-thrush", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => huntMoment(ctx, "anvil_smash", "beat_prey", (k) => ({before: 10, after: 6, step: 1 / 2, close: true, track: true, view: view(k.from.x, k.from.y + 0.12, k.from.z, 1.6, 1.25, k.yaw + Math.PI / 2)}))},
-    limpkin_snail: {cast: [["lk", "limpkin", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => huntMoment(ctx, "snail_extract", "tool", (k) => ({before: 9, after: 5, step: 1 / 2, close: true, track: true, view: view(k.from.x, k.from.y + 0.35, k.from.z, 2.4, 1.25, k.yaw + Math.PI / 2)}))},
+    thrush_anvil: {cast: [["th", "song-thrush", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => blockMoment(ctx, "anvil_smash", "beat_prey", 10, 6)},
+    limpkin_snail: {cast: [["lk", "limpkin", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => blockMoment(ctx, "snail_extract", "tool", 9, 5)},
     // The male alone sits the clutch (an emu's): the seeded male of four, on the nest the props draw, the clutch the record's.
     emu_nest: {
         arkDay: 150,
@@ -388,7 +387,7 @@ function dropMoment(ctx: Context, recipe: string, ok: boolean): Moment | null {
             const side = Math.atan2(k.to.x - k.from.x, k.to.z - k.from.z) + Math.PI / 2;
             const mid = {x: (k.from.x + k.to.x) / 2, y: (k.from.y + k.to.y) / 2, z: (k.from.z + k.to.z) / 2};
             const times = [-5, -2.5, -0.8, 0, 0.12, 0.25, 0.4, 0.55, 0.8, 1.2, 2.2, 3.5, 5, 7].map((d) => k.t0 + d);
-            return {start: k.t0 - 7, seconds: 14, step: 1 / 6, times, close: true, track: a.id, view: view(mid.x, mid.y, mid.z, Math.max(span * 1.6, 4), 1.3, side), note: `${a.slug} ${a.id.slice(-4)} ${recipe}: perch ${k.from.y.toFixed(1)} m up, ${span.toFixed(1)} m to the drop at ${k.t0.toFixed(1)}, catch ${k.catch ? (k.catch.ok ? "yes" : "miss") : "none drawn"}`};
+            return {start: k.t0 - 7, seconds: 14, step: 1 / 6, times, close: true, track: a.id, view: view(mid.x, mid.y, mid.z, Math.max(a.animal.length * 9, 1.3), 1.3, side), note: `${a.slug} ${a.id.slice(-4)} ${recipe}: perch ${k.from.y.toFixed(1)} m up, ${span.toFixed(1)} m to the drop at ${k.t0.toFixed(1)}, catch ${k.catch ? (k.catch.ok ? "yes" : "miss") : "none drawn"}`};
         }
     }
     return null;
@@ -398,11 +397,26 @@ function dropMoment(ctx: Context, recipe: string, ok: boolean): Moment | null {
 function digMoment(ctx: Context, recipe: string): Moment | null {
     for (const a of ctx.animals) {
         for (const trip of trips(ctx, a, ctx.date, 30)) {
-            if (trip.recipe !== recipe) continue;
             const ep = tripEpisode(ctx.world, trip);
-            const k = ep?.keys.find((key) => key.block.id === "dig");
-            if (!ep || !k) continue;
-            return {start: k.t0 - 2, seconds: Math.min(k.t1 - k.t0 + 4, 16), step: 1 / 2, close: true, track: a.id, view: view(k.from.x, k.from.y + 0.2, k.from.z, 2.6, 1.2, k.yaw + Math.PI / 2), note: `${a.slug} ${a.id.slice(-4)} ${recipe}: dig at ${k.t0.toFixed(1)}`};
+            if (ep?.recipe !== recipe) continue;
+            const k = ep.keys.find((key) => key.block.id === "dig");
+            if (!k) continue;
+            return {start: k.t0 - 2, seconds: Math.min(k.t1 - k.t0 + 4, 16), step: 1 / 2, close: true, track: a.id, view: view(k.from.x, k.from.y + 0.2, k.from.z, Math.max(a.animal.length * 5, 1.6), 1.2, k.yaw + Math.PI / 2), note: `${a.slug} ${a.id.slice(-4)} ${recipe}: dig at ${k.t0.toFixed(1)}`};
+        }
+    }
+    return null;
+}
+
+/** A stay's block (a thrush beating its snail on the stone, a limpkin working a snail out of its shell): the bird followed close from its side. */
+function blockMoment(ctx: Context, recipe: string, block: string, before: number, after: number): Moment | null {
+    for (const a of ctx.animals) {
+        for (const trip of trips(ctx, a, ctx.date, 30)) {
+            if (trip.recipe && trip.recipe !== recipe) continue;
+            const ep = tripEpisode(ctx.world, trip);
+            if (ep?.recipe !== recipe) continue;
+            const k = ep.keys.find((key) => key.block.id === block);
+            if (!k) continue;
+            return {start: k.t0 - before, seconds: before + (k.t1 - k.t0) + after, step: 1 / 2, close: true, track: a.id, view: view(k.from.x, k.from.y + 0.1, k.from.z, Math.max(a.animal.length * 7, 1.4), 1.25, k.yaw + Math.PI / 2), note: `${a.slug} ${a.id.slice(-4)} ${recipe}: ${block} at ${k.t0.toFixed(1)}`};
         }
     }
     return null;
@@ -427,9 +441,9 @@ function roostMoment(ctx: Context, kind: "lapse" | "wave" | "night" | "dawn"): M
         }
         return n;
     };
-    const view0 = (distance: number, azimuth = 0.8) => view(centre.x, centre.y, centre.z, distance, 1.25, azimuth);
-    if (kind === "lapse") return {start: t0 + 360, seconds: 5200, step: 450, view: view0(12), note: `roost at ${centre.x.toFixed(1)},${centre.y.toFixed(1)},${centre.z.toFixed(1)} (${a.animal.group ? "group" : "alone"})`};
-    if (kind === "night") return {start: t0 + 5 * 3600, seconds: 1, step: 1, view: view0(10), note: "perched at night"};
+    const view0 = (distance: number, azimuth = 0.8) => view(centre.x, centre.y, centre.z, distance, 1.3, azimuth);
+    if (kind === "lapse") return {start: t0 + 360, seconds: 5200, step: 450, view: view0(9), note: `roost at ${centre.x.toFixed(1)},${centre.y.toFixed(1)},${centre.z.toFixed(1)} (${a.animal.group ? "group" : "alone"})`};
+    if (kind === "night") return {start: t0 + 5 * 3600, seconds: 4, step: 1, view: view0(5.5), note: "perched at night"};
     if (kind === "dawn") return {start: t0 + 12.4 * 3600, seconds: 2400, step: 200, view: view0(12), note: "leaving at dawn"};
     let best = t0 + 600;
     let most = 0;
@@ -440,7 +454,7 @@ function roostMoment(ctx: Context, kind: "lapse" | "wave" | "night" | "dawn"): M
             best = t;
         }
     }
-    return {start: best - 8, seconds: 16, step: 1, view: view0(14, 0.6), note: `busiest wave at ${(best - t0).toFixed(0)} s: ${most} in flight; roost at ${centre.x.toFixed(1)},${centre.y.toFixed(1)},${centre.z.toFixed(1)}`};
+    return {start: best - 8, seconds: 16, step: 1, view: view0(20, 0.6), note: `busiest wave at ${(best - t0).toFixed(0)} s: ${most} in flight; roost at ${centre.x.toFixed(1)},${centre.y.toFixed(1)},${centre.z.toFixed(1)}`};
 }
 
 function castId(k: number, i: number): string {
