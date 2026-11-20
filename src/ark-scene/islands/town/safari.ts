@@ -17,7 +17,7 @@
  */
 
 import {DOME_LAGOON, inDome} from "@/ark-scene/islands/town/dome";
-import {box, corners, ellipse, inBox, smoothLine, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
+import {box, corners, ellipse, inBox, polylineAt, smoothLine, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import type {ZooEnclosureType} from "@/ark-scene/islands/town/zoo-types";
 import residents from "@/ark-scene/islands/town/safari-residents.json";
 
@@ -83,6 +83,20 @@ export const SAFARI_GATE_ROAD: Poly = [
     {x: -100, z: -215},
     {x: -105, z: -214.85}
 ];
+
+/**
+ * The gate arch's place (ark-world, decision 447: "gate arch slightly off the road"): across the gate road, `GATE_ARCH_ALONG` m
+ * in from its start, turned square to the road there. Its frame's local x runs across the road (the posts at x = ±3.6), so
+ * its turn is the road's heading plus a quarter turn; the painted board's front (local +z) looks back at visitors coming
+ * from the plaza. (It was turned by minus the heading plus a quarter turn: square to the road only when the road ran due
+ * east or west, 37 degrees off on this one, and set on the road's very first point.)
+ */
+export const GATE_ARCH_ALONG = 3.2;
+export function safariGateArch(road: Poly = SAFARI_GATE_ROAD): {x: number; z: number; rot: number; heading: number} {
+    const {point, dir} = polylineAt(road, GATE_ARCH_ALONG);
+    const heading = Math.atan2(dir.z, dir.x);
+    return {x: point.x, z: point.z, rot: heading + Math.PI / 2, heading};
+}
 
 /**
  * The loop as a street (its drawn road): open, its end stopping short of its start so the two never lie one on the

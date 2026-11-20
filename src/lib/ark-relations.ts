@@ -289,20 +289,4 @@ export const ARK_RELATIONS_ENGLISH: ArkRelationsWords = {
 };
 
 /** The viewer's choice, remembered in this browser only (never sent anywhere); default on. */
-export const ARK_RELATION_LINES_KEY = "ark.relationLines";
-
-export function arkRelationLinesOn(): boolean {
-    try {
-        return window.localStorage.getItem(ARK_RELATION_LINES_KEY) !== "0";
-    } catch {
-        return true;
-    }
-}
-
-export function arkSetRelationLinesOn(on: boolean): void {
-    try {
-        window.localStorage.setItem(ARK_RELATION_LINES_KEY, on ? "1" : "0");
-    } catch {
-        // (Private window or storage blocked: the choice lasts this visit only.)
-    }
-}
+export {ARK_RELATION_LINES_EVENT, ARK_RELATION_LINES_KEY, arkRelationLinesOn, arkSetRelationLinesOn} from "@/lib/ark-relation-lines-pref";

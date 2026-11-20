@@ -18,10 +18,12 @@
 import {BufferGeometry, Group, InstancedMesh, Matrix4, Quaternion, Vector3, type Material} from "three";
 import {corners, hashText, local, polylineAt, polylineLength, rng, type Box, type Poly, type Pt} from "@/ark-scene/islands/town/geom";
 import {safariWaterLevel, townHeight} from "@/ark-scene/islands/town/ground";
+import {hull, spinX} from "@/ark-scene/islands/town/render/farm-machines";
 import {at, Geo, tone, type Frame, type V3} from "@/ark-scene/islands/town/render/kit";
+import {roundWheel} from "@/ark-scene/islands/town/render/wheels";
 import {alongZ, SURF, tagged} from "@/ark-scene/islands/town/render/surface-tags";
 import {strut, zooBarrier} from "@/ark-scene/islands/town/render/zoo-barriers";
-import {SAFARI, SAFARI_AREAS, SAFARI_GATE_ROAD, SAFARI_LOOP, safariWaterPoly, type SafariArea} from "@/ark-scene/islands/town/safari";
+import {SAFARI, SAFARI_AREAS, SAFARI_LOOP, safariGateArch, safariWaterPoly, type SafariArea} from "@/ark-scene/islands/town/safari";
 import type {ZooEnclosure} from "@/ark-scene/islands/town/areas";
 
 type RGB = [number, number, number];
@@ -82,7 +84,7 @@ export function safariScenery(chunkAt: Chunks, fresh: Geo) {
     paveBox(chunkAt, SAFARI.depot, SURF.gravel, tone("#b5a382"));
     paveBox(chunkAt, {x: -74, z: -233, w: 30, d: 12, rot: 0}, SURF.gravel, tone("#c2ae86"));
     paveBox(chunkAt, {x: -70, z: -251.5, w: 22, d: 3.4, rot: 0}, SURF.blocks, tone("#b9a582"));
-    gateArch(chunkAt, SAFARI_GATE_ROAD[0], SAFARI_GATE_ROAD[1]);
+    gateArch(chunkAt);
     // The waters' sheets.
     for (const a of SAFARI_AREAS) {
         for (const w of a.waters) {
@@ -130,11 +132,11 @@ function carParkLines(chunkAt: Chunks) {
     }
 }
 
-/** The gate arch over the road in: two log posts, a crossbeam, a painted board (the sun over an acacia). */
-function gateArch(chunkAt: Chunks, a: Pt, b: Pt) {
-    const dir = Math.atan2(b.z - a.z, b.x - a.x);
-    const c = chunkAt(a.x, a.z);
-    const f: Frame = {x: a.x, y: H(a.x, a.z), z: a.z, rot: -dir + Math.PI / 2};
+/** The gate arch over the road in: two log posts, a crossbeam, a painted board (the sun over an acacia), square to the road (`safari.ts` safariGateArch). */
+function gateArch(chunkAt: Chunks) {
+    const arch = safariGateArch();
+    const c = chunkAt(arch.x, arch.z);
+    const f: Frame = {x: arch.x, y: H(arch.x, arch.z), z: arch.z, rot: arch.rot};
     for (const lx of [-3.6, 3.6]) c.solid.cylinder(f, lx, -0.3, 0, 0.32, 0.28, 6.6, TIMBER_DARK, 8);
     c.solid.box(f, 0, 5.6, 0, 8.6, 0.5, 0.55, TIMBER);
     c.solid.box(f, 0, 6.1, 0, 6.2, 1.5, 0.18, SIGN_GREEN);
@@ -248,30 +250,88 @@ export function safariTruckAt(index: number, seconds: number, hours: number): {x
     return {x: point.x - dir.z * -0.9, z: point.z + dir.x * -0.9, turn: Math.atan2(dir.x, dir.z), moving: into < drive};
 }
 
-/** One safari truck (about 6.4 m): a green body, a cab, an open passenger deck with a canopy on posts, four wheels. */
+/**
+ * One safari truck (about 6.4 m long, 2.3 wide, the same footprint and clearances as before: ark-world, decision 447, the
+ * owner "the trucks have square wheels"). Round wheels (`wheels.ts`: tyres with ribbed crowns, dished hubs), a sloping
+ * bonnet with a grille, round headlamps and a bull bar, a raked windscreen, wheel arches, an open passenger deck with
+ * three bench rows and a canvas canopy on a roll cage, side steps, a round spare on the tailgate. About 2,900 triangles
+ * (was 150); there are four of them, one instanced mesh.
+ */
 export function safariTruckGeometry(): BufferGeometry {
     const g = new Geo();
     const f: Frame = {x: 0, y: 0, z: 0, rot: 0};
     const body = tone("#4a6a3a");
+    const bodyDark = tone("#3a5530");
     const dark = tone("#1e2420");
+    const steel = tone("#6b7176");
     const canvas = tone("#d8c9a0");
-    // Wheels (chunky, off-road).
-    for (const [lx, lz] of [[-1.05, 2.0], [1.05, 2.0], [-1.05, -1.9], [1.05, -1.9]] as const) g.box(f, lx, 0, lz, 0.38, 0.92, 0.92, dark);
-    // Chassis and body sides.
-    g.box(f, 0, 0.55, 0, 2.2, 0.55, 6.2, body);
-    g.box(f, 0, 1.1, 2.3, 2.1, 0.7, 1.4, body);
-    // The cab: windscreen frame and roof.
-    g.box(f, 0, 1.8, 1.65, 2.1, 0.9, 0.12, tone("#2a3a40"));
-    g.box(f, 0, 2.7, 1.2, 2.2, 0.1, 1.1, body);
-    // The passenger deck: three bench rows, low sides.
-    g.box(f, 0, 1.1, -1.1, 2.15, 0.35, 4.0, body);
-    for (const lz of [-2.6, -1.5, -0.4]) g.box(f, 0, 1.3, lz, 1.9, 0.45, 0.5, tone("#6a4a30"));
-    // The canopy on six posts.
-    for (const lx of [-1.0, 1.0]) for (const lz of [-2.9, -1.1, 0.6]) g.box(f, lx, 1.4, lz, 0.08, 1.35, 0.08, dark);
-    g.box(f, 0, 2.75, -1.15, 2.3, 0.08, 4.0, canvas);
-    // A spare wheel on the tailgate; headlamps.
-    g.box(f, 0, 0.9, -3.15, 0.8, 0.8, 0.25, dark);
-    for (const lx of [-0.75, 0.75]) g.box(f, lx, 1.05, 3.02, 0.3, 0.2, 0.06, tone("#f2ecd2"));
+    const glass = tone("#2a3a40");
+    const R = 0.5;
+    // Wheels: chunky, off-road; the axles at z = 2.05 and -1.85, the tyres' bottoms on the ground.
+    for (const [lx, lz] of [[-1.08, 2.05], [1.08, 2.05], [-1.08, -1.85], [1.08, -1.85]] as const) roundWheel(g, f, lx, R, lz, R, 0.4, lx > 0 ? 1 : -1, {sides: 16});
+    // The underbody and axles (dark, between the wheels).
+    g.box(f, 0, 0.32, 0.1, 1.9, 0.34, 6.2, dark);
+    g.box(f, 0, 0.42, 2.05, 2.2, 0.14, 0.14, dark);
+    g.box(f, 0, 0.42, -1.85, 2.2, 0.14, 0.14, dark);
+    // The body: the passenger deck's tub (low sides), then the cab block and the sloping bonnet, hulls so the corners lean.
+    hull(g, [at(f, -1.1, 0.62, -3.1), at(f, 1.1, 0.62, -3.1), at(f, 1.1, 0.62, 1.5), at(f, -1.1, 0.62, 1.5)], [at(f, -1.12, 1.42, -3.1), at(f, 1.12, 1.42, -3.1), at(f, 1.12, 1.42, 1.5), at(f, -1.12, 1.42, 1.5)], body);
+    // (The tub is hollow to the eye: its floor, a darker one, and the inner faces, so the open deck reads as a deck.)
+    g.box(f, 0, 1.38, -1.35, 1.92, 0.05, 3.2, bodyDark);
+    // The cab's lower block and the bonnet: sloping down to the grille.
+    hull(g, [at(f, -1.08, 0.62, 1.5), at(f, 1.08, 0.62, 1.5), at(f, 0.98, 0.62, 3.12), at(f, -0.98, 0.62, 3.12)], [at(f, -1.1, 1.42, 1.5), at(f, 1.1, 1.42, 1.5), at(f, 0.92, 1.28, 3.1), at(f, -0.92, 1.28, 3.1)], body);
+    // Wheel arches: a lip over each wheel, in the body's colour, and the dark of the well under it.
+    for (const [lx, lz] of [[-1.08, 2.05], [1.08, 2.05], [-1.08, -1.85], [1.08, -1.85]] as const) {
+        g.box(f, lx, 1.0, lz, 0.5, 0.1, 1.28, bodyDark);
+        g.box(f, lx + (lx > 0 ? 0.2 : -0.2), 0.86, lz, 0.1, 0.16, 1.2, dark);
+    }
+    // Grille, headlamps, bull bar, bumper.
+    g.box(f, 0, 0.82, 3.1, 1.34, 0.42, 0.06, dark);
+    for (let i = -2; i <= 2; i++) g.box(f, i * 0.26, 0.86, 3.13, 0.05, 0.34, 0.03, steel);
+    const lamps: Frame = {x: 0, y: 0, z: 0, rot: Math.PI / 2};
+    // (A lamp's axis is the truck's z: the frame turned so its local x runs along it, and its local z is the truck's -x.)
+    for (const sx of [-0.78, 0.78]) {
+        spinX(g, lamps, 3.07, 1.1, -sx, [[0, 0.2], [0.07, 0.16], [0.12, 0.0]], 10, (band) => (band === 0 ? steel : tone("#f4eed4")));
+    }
+    g.box(f, 0, 0.5, 3.15, 2.0, 0.2, 0.14, dark);
+    for (const sx of [-0.7, 0, 0.7]) g.box(f, sx, 0.62, 3.19, 0.07, 0.62, 0.07, steel);
+    g.box(f, 0, 1.18, 3.19, 1.5, 0.07, 0.07, steel);
+    // The windscreen: raked back from the bonnet's end, its frame and glass; a roof over the cab.
+    hull(g, [at(f, -0.98, 1.4, 1.55), at(f, 0.98, 1.4, 1.55), at(f, 0.98, 1.4, 1.48), at(f, -0.98, 1.4, 1.48)], [at(f, -0.96, 2.32, 0.95), at(f, 0.96, 2.32, 0.95), at(f, 0.96, 2.32, 0.88), at(f, -0.96, 2.32, 0.88)], glass);
+    // (The frame's two uprights lean back with the glass.)
+    for (const sx of [-1, 1]) hull(g, [at(f, sx * 0.99 - 0.035, 1.4, 1.58), at(f, sx * 0.99 + 0.035, 1.4, 1.58), at(f, sx * 0.99 + 0.035, 1.4, 1.46), at(f, sx * 0.99 - 0.035, 1.4, 1.46)], [at(f, sx * 0.99 - 0.035, 2.32, 0.98), at(f, sx * 0.99 + 0.035, 2.32, 0.98), at(f, sx * 0.99 + 0.035, 2.32, 0.86), at(f, sx * 0.99 - 0.035, 2.32, 0.86)], dark);
+    g.box(f, 0, 2.3, 0.92, 2.1, 0.09, 0.14, dark);
+    // The doors: low panels with the sill, open above (a safari truck's cab has none of its glass at the sides).
+    for (const sx of [-1, 1]) {
+        g.box(f, sx * 1.1, 0.9, 0.55, 0.06, 0.52, 1.0, bodyDark);
+        g.box(f, sx * 1.1, 1.38, 0.55, 0.09, 0.07, 1.0, steel);
+        // Side steps and mirrors.
+        g.box(f, sx * 1.2, 0.52, 0.2, 0.2, 0.06, 2.0, dark);
+        g.box(f, sx * 1.12, 1.62, 1.45, 0.05, 0.26, 0.16, dark);
+    }
+    // The passenger deck's sides, rising to a rail; the tailgate.
+    for (const sx of [-1, 1]) {
+        g.box(f, sx * 1.1, 1.42, -1.55, 0.07, 0.34, 3.2, body);
+        g.box(f, sx * 1.1, 1.74, -1.55, 0.1, 0.06, 3.2, steel);
+    }
+    g.box(f, 0, 1.42, -3.1, 2.2, 0.42, 0.09, body);
+    // Three bench rows: seat, back and a rail.
+    for (const lz of [-2.55, -1.55, -0.55]) {
+        g.box(f, 0, 1.4, lz, 1.9, 0.3, 0.54, tone("#6a4a30"));
+        g.box(f, 0, 1.7, lz - 0.28, 1.9, 0.5, 0.1, tone("#5a3e28"));
+    }
+    // The canopy: canvas on a roll cage (six posts, a ridge each side, cross bars), a lip all round.
+    for (const sx of [-1.05, 1.05]) for (const lz of [-2.95, -1.45, 0.05]) g.box(f, sx, 1.75, lz, 0.08, 1.04, 0.08, dark);
+    for (const sx of [-1.05, 1.05]) g.box(f, sx, 2.76, -1.45, 0.08, 0.08, 3.1, steel);
+    for (const lz of [-2.95, -1.45, 0.05]) g.box(f, 0, 2.76, lz, 2.18, 0.08, 0.08, steel);
+    g.box(f, 0, 2.82, -1.45, 2.4, 0.07, 3.5, canvas, 0, {top: tone("#e4d8b2")});
+    g.box(f, 0, 2.76, -1.45, 2.3, 0.06, 3.4, tone("#8a7a52"));
+    // The roof over the cab (a hard top, the body's colour), a spot lamp bar and a snorkel.
+    hull(g, [at(f, -1.1, 2.4, 1.3), at(f, 1.1, 2.4, 1.3), at(f, 1.0, 2.34, 0.88), at(f, -1.0, 2.34, 0.88)], [at(f, -1.1, 2.5, 1.3), at(f, 1.1, 2.5, 1.3), at(f, 1.0, 2.5, 0.88), at(f, -1.0, 2.5, 0.88)], body);
+    g.box(f, 0, 2.5, 1.0, 1.3, 0.09, 0.12, dark);
+    g.box(f, 1.12, 1.0, 1.55, 0.09, 1.5, 0.09, dark);
+    // The spare wheel on the tailgate: round, its face looking aft (a frame turned so its local x runs along the truck's z).
+    const aft: Frame = {x: 0, y: 0, z: 0, rot: Math.PI / 2};
+    roundWheel(g, aft, -3.27, 1.18, 0, 0.42, 0.3, -1, {sides: 14});
     return g.toGeometry();
 }
 

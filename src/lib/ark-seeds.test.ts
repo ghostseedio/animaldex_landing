@@ -111,7 +111,7 @@ test("the words: the fairness section exists in English and Indonesian with the 
 });
 
 test("the page shows the section only while the seeds are published, in its own route, and /ark does not know of it", () => {
-    const page = read("app/[locale]/(composited)/ark/how-it-works/page.tsx");
+    const page = read("app/[locale]/(composited)/ark/how-it-works/ark-how-view.tsx");
     assert.match(page, /const fair = seeds\?\.available === true;/);
     assert.match(page, /readArkSeeds\(revalidate\)/);
     assert.match(page, /fair \? \[\.\.\.SECTIONS\.slice\(0, -1\), "fair", SECTIONS\[SECTIONS\.length - 1\]\] : SECTIONS/);

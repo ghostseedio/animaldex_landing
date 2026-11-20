@@ -63,7 +63,7 @@ const PLANS = {
     // (The shot adds 2.1 s after its time: the young jump at 7.8 s, 10.4 s, 13 s, 15.6 s after the hatch.)
     drop: {distance: 6, shots: [[1, "she comes to the tree (3.1 s)"], [5.3, "the first at the mouth (7.4 s)"], [5.9, "it jumps (8.0 s)"], [6.3, "falling (8.4 s)"], [6.8, "the bounce (8.9 s)"], [8.6, "the second jumps (10.7 s)"], [11.1, "the third (13.2 s)"], [13.7, "the fourth (15.8 s)"], [18, "gathered at her (20.1 s)"], [26, "still gathered (28.1 s)"], [48, "back to their day"]]},
     dung: {distance: 5, shots: [[600, "the herd, ten minutes on"], [900, "a mark, close"], [1500, "marks fading"]]},
-    dungusers: {distance: 0.35, shots: [[600, "the herd, ten minutes on", undefined], [900, "a mark, close"], [900, "a dung beetle at a fresh mark", 1], [930, "the beetle 30 s on", 1], [900, "a yellow dung fly", 2], [1500, "marks fading"]]}
+    dungusers: {distance: 0.35, shots: [[600, "the herd, ten minutes on", undefined], [900, "a mark, close"], [900, "a dung beetle at a fresh mark", 1], [930, "the beetle 30 s on", 1], [900, "a yellow dung fly (the page's own close-up)", 2, undefined, "fly"], [1500, "marks fading"], [930, "the beetle chosen, 2.5 m back: before (true size)", 1, undefined, "off"], [930, "the beetle chosen, 2.5 m back: after (tiny lift)", 1, undefined, "on"]]}
 };
 /**
  * 3.3 batch (A): the defence moves' scenes. A predator is stood beside the animal (its shared pose pinned), left there,
@@ -303,9 +303,15 @@ for (const name of scenes) {
     mkdirSync(dir, {recursive: true});
     const labels = [];
     for (let i = 0; i < plan.shots.length; i++) {
-        const [when, label, castK, tick] = plan.shots[i];
+        const [when, label, castK, tick, chosen] = plan.shots[i];
         const s = tick ? when : at(when);
-        const note = await page.evaluate(async ([s, d, label, name, rival, who, close, tick]) => {
+        const note = await page.evaluate(async ([s, d, label, name, rival, who, close, tick, chosen]) => {
+            if (chosen && close) {
+                await window.__behaviours.shot(s, 30, close);
+                const text = await window.__behaviours.chosen(close, chosen === "fly" ? null : 2.5, chosen !== "off");
+                document.getElementById("note").textContent = `${label}\n${text}`;
+                return text;
+            }
             if (tick) {
                 const ticked = await window.__behaviours.tick(s);
                 document.getElementById("note").textContent = `${label}\n${ticked}`;
@@ -340,7 +346,7 @@ for (const name of scenes) {
             if (label.includes("close") && !name.startsWith("dung")) await window.__behaviours.closeOn(window.__behaviours.info().a, name === "lure" ? d : 2.4);
             document.getElementById("note").textContent = `${label}\n${text}`;
             return text;
-        }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? info.drops?.[0]?.mother ?? (name === "contest" ? info.a : name === "mob" ? info.c : undefined), castK === undefined ? null : info.ids[castK], tick ?? null]);
+        }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? info.drops?.[0]?.mother ?? (name === "contest" ? info.a : name === "mob" ? info.c : undefined), castK === undefined ? null : info.ids[castK], tick ?? null, chosen ?? null]);
         labels.push(`${String(i).padStart(2, "0")} ${label}: ${note.replace(/\n/g, " | ")}`);
         await page.screenshot({path: path.join(dir, `${String(i).padStart(2, "0")}.jpg`), type: "jpeg", quality: 85});
     }

@@ -158,6 +158,11 @@ export const PACE_FLOOR = 0.8;
  * carries. The same for every viewer, rig drawn or not.
  */
 export function bodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
+    // (ARK-CONTACT, decision 447: a sea star, an urchin, a sea cucumber creeps on its tube feet, 15 cm a minute for a 25 cm
+    // star; a sessile animal barely shifts. The stat curve's floor, 0.4 lengths a second, walked a crown-of-thorns at
+    // 16 cm/s, "not on the seafloor motionless". `grounding/contact.ts` benthicCreep.)
+    if (profile.move === "sessile") return 0.002;
+    if (profile.move === "crawl" && profile.seabed) return 0.01;
     const speed = profile.speed ?? 40;
     const stat = Math.min(Math.max(0.6 + (speed / 100) * 1.4, 0.4), 2.2);
     // (2026-11-11: held under 1.5 times a v1 walk's pace, then the v2 set's walks went up 4-15 times as fast: walkers
@@ -173,6 +178,9 @@ export function bodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
  * is still reckoned from it (`reachOf`).
  */
 export function freeBodyLengthsPerSecond(profile: ArkBehaviourProfile): number {
+    // (ARK-CONTACT: on the bed in the water too, a sea star creeps: `bodyLengthsPerSecond`.)
+    if (profile.move === "sessile") return 0.002;
+    if (profile.move === "crawl" && profile.seabed) return 0.01;
     const speed = profile.speed ?? 40;
     const stat = Math.min(Math.max(0.6 + (speed / 100) * 1.4, 0.4), 2.2);
     return profile.gait ? Math.max(Math.min(stat, profile.gait * GAIT_CADENCE), 0.08) : stat;

@@ -375,6 +375,9 @@ export function stepSleepNow(now: SleepNow | null, input: SleepStepInput): Sleep
     return now;
 }
 
+/** The most a posture's roll turns a body that has no clip for it (radians): a lean, never the standing model turned over. */
+export const FAKE_ROLL_MAX = 0.12;
+
 /** What the scene draws of its sleep this frame. */
 export type SleepDraw = {
     /** Its legs' share of its height taken down (`lyingDrop`), its roll (− its left side down: three.js turns +y toward −x), nose down (+), and its heading's shift. */
@@ -411,7 +414,11 @@ export function sleepDraw(now: SleepNow, input: {id: string; slug: string; lengt
     const headWeight = stages.head * k;
     return {
         legs: spec.drop * stages.body * k,
-        roll: -spec.roll * now.side * stages.roll * (1 - 0.5 * (1 - k)),
+        // ARK-ANIM (decision 447, the owner's bears and hogs "just look rotated"): the roll onto a side is the rig's own
+        // clip's (`sleep_side` lies the body over itself, 77 degrees at the hips); it was added on top of every sleep clip
+        // at half strength, and with no clip the standing model was turned over whole. Now none under a clip, and with
+        // no clip no more than `FAKE_ROLL_MAX`: a body that cannot lie on its side lies on its chest.
+        roll: -Math.sign(spec.roll) * Math.min(Math.abs(spec.roll), FAKE_ROLL_MAX) * now.side * stages.roll * k,
         pitch: spec.pitch * stages.body * k,
         yaw: stir.shift * settled,
         headYaw: head.yaw * (1 - 0.5 * lift),
@@ -499,11 +506,11 @@ export function bellyOfGeometry(geometry: BellyGeometry): number {
  * The torso a lying body rests on (model units, for `grounding/stand.ts` lieOnGround): a little inside its width, its
  * length less the head and the tail's ends (a lowered head, a tail on the ground), from its folded legs' height up.
  */
-export function lyingTorso(box: {min: {x: number; y: number; z: number}; max: {x: number; y: number; z: number}}, legs: number): {x0: number; x1: number; z0: number; z1: number; bottom: number; top: number} {
+export function lyingTorso(box: {min: {x: number; y: number; z: number}; max: {x: number; y: number; z: number}}, legs: number): {x0: number; x1: number; z0: number; z1: number; bottom: number; top: number; ends: {z0: number; z1: number}} {
     const cx = (box.min.x + box.max.x) / 2;
     const hw = ((box.max.x - box.min.x) / 2) * 0.75;
     const length = box.max.z - box.min.z;
-    return {x0: cx - hw, x1: cx + hw, z0: box.min.z + length * 0.15, z1: box.max.z - length * 0.15, bottom: box.min.y + legs * (box.max.y - box.min.y), top: box.max.y};
+    return {x0: cx - hw, x1: cx + hw, z0: box.min.z + length * 0.15, z1: box.max.z - length * 0.15, bottom: box.min.y + legs * (box.max.y - box.min.y), top: box.max.y, ends: {z0: box.min.z + length * 0.03, z1: box.max.z - length * 0.03}};
 }
 
 /** A belly this close to the ground (a share of the height) has no legs under it to fold: a snake, a slug, a fish. */

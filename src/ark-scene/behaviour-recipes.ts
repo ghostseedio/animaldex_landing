@@ -1606,7 +1606,11 @@ function keyPose(world: ScheduleWorld, key: Key, epoch: number, length: number, 
                 break;
             case "leap":
                 along = u;
-                y = from.y + (to.y - from.y) * u + Math.max(length * 0.6, 0.12 + flat * 0.3) * 4 * u * (1 - u);
+                // ARK-CONTACT (decision 447, the owner's hovering cat): a leap's height is its arc's over the ground it
+                // covers, launched no steeper than about 60° (apex ≤ 0.45 of the distance: a 45° launch's is a quarter).
+                // Its floor (60% of its length, whatever the distance) sent a pounce at a spot right under it 30 cm
+                // straight up and down, legs tucked, over its shadow: a hover.
+                y = from.y + (to.y - from.y) * u + Math.min(Math.max(length * 0.6, 0.12 + flat * 0.3), flat * 0.45) * 4 * u * (1 - u);
                 break;
             case "rise":
                 along = u;
@@ -2389,7 +2393,11 @@ function airStay(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: TripP
     const k = ease(Math.min((epoch - trip.arrive) / 1.2, 1));
     const x = trip.to.x + (Math.cos(a) * r - Math.cos((hashString(owner.animal.id) % 628) / 100) * r) * k;
     const z = trip.to.z + (Math.sin(a) * r - Math.sin((hashString(owner.animal.id) % 628) / 100) * r) * k;
-    return {...base, x, y: trip.to.y + 0.3 * Math.sin(a * 2), z, yaw: a + Math.PI, moving: true, aloft: true, beat: "fly", act: {episode: `air#${trip.slot}`, recipe: "air_stay", block: "fly", state: "fly", u: 0, pitch: 0, roll: -0.35, own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: "flying its beat"}};
+    // ARK-ANIM (decision 447, the owner's swallow "flying backwards at points"): it faces along its circle. The way it
+    // goes is (−sin a, cos a) with a growing, so its heading is −a (a right-hand circle). It was drawn at a + π, which
+    // turned the other way round and pointed backwards twice a lap. Its bank is its turn's (`flight-heading.ts`, the rig's
+    // flight frame), not a fixed left lean.
+    return {...base, x, y: trip.to.y + 0.3 * Math.sin(a * 2), z, yaw: -a, moving: true, aloft: true, beat: "fly", act: {episode: `air#${trip.slot}`, recipe: "air_stay", block: "fly", state: "fly", u: 0, pitch: 0, roll: 0, own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: "flying its beat"}};
 }
 
 const postureActs = new Map<string, RecipeAct>();

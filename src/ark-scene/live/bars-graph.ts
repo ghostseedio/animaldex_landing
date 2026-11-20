@@ -267,7 +267,8 @@ export function buildGraphPane(options: {
 
     const legend = document.createElement("p");
     Object.assign(legend.style, {margin: "0", padding: "0 14px 2px", font: `500 10.5px/1.35 ${FONT}`, opacity: "0.55"});
-    legend.textContent = words.riseFall;
+    // (Kept populations: when animals born aboard left alive in the period, the legend says how.)
+    legend.textContent = stats.rehomed + stats.toMarket + stats.movedZoo > 0 ? `${words.riseFall} ${words.riseFallKept}` : words.riseFall;
 
     const note = document.createElement("p");
     Object.assign(note.style, {margin: "0", padding: "0 14px", font: `500 10.5px/1.3 ${FONT}`, opacity: "0.45"});
@@ -296,7 +297,7 @@ export function buildGraphPane(options: {
 
     const happened = document.createElement("p");
     Object.assign(happened.style, {margin: "0", padding: "6px 14px 8px", font: `500 11.5px/1.35 ${FONT}`, opacity: "0.7"});
-    const parts = ([["arrived", stats.arrived], ["born", stats.born], ["revived", stats.revived], ["died", stats.died], ["eaten", stats.eaten]] as const).filter(([, n]) => n > 0).map(([kind, n]) => fillArkWords(words[kind], {count: number(n)}));
+    const parts = ([["arrived", stats.arrived], ["born", stats.born], ["revived", stats.revived], ["died", stats.died], ["eaten", stats.eaten], ["rehomed", stats.rehomed], ["toMarket", stats.toMarket], ["movedZoo", stats.movedZoo]] as const).filter(([, n]) => n > 0).map(([kind, n]) => fillArkWords(words[kind], {count: number(n)}));
     happened.textContent = parts.length ? parts.join(" · ") : words.nothing;
     if (stats.goneNow) {
         const gone = document.createElement("span");

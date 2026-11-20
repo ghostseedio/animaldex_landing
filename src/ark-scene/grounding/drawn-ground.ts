@@ -59,6 +59,27 @@ export function primeDrawnGround(positions: ArrayLike<number> | null): void {
 
 export type DrawnGround = {height: number; nx: number; ny: number; nz: number};
 
+/**
+ * ARK-CONTACT (decision 447: safari animals sinking): the stride the ground is drawn at under a point (`GroundTiles
+ * .strideAt`: 1, or every 4th vertex where its tile is drawn as the map), set by the scene; none (every vertex) in
+ * the audits and the tests. A coarse tile's vertices are every `stride`th of the full grid's (a chunk's 48 segments
+ * and the ground's 240 or 480 are multiples of 4), its cells cut along the same diagonal, so its height is the same
+ * sum over those corners.
+ */
+let strideAt: ((x: number, z: number) => number) | null = null;
+export function setDrawnGroundStride(at: ((x: number, z: number) => number) | null): void {
+    strideAt = at;
+}
+
+/** The cell (columns c0 to c1, rows r0 to r1 of the full grid) a point is in at a stride, and where in it. */
+function cellAt(fx: number, fz: number, stride: number): {c0: number; c1: number; r0: number; r1: number; u: number; v: number} {
+    const c0 = Math.min(Math.floor(fx / stride) * stride, DRAWN_GROUND_SEGMENTS - 1);
+    const r0 = Math.min(Math.floor(fz / stride) * stride, DRAWN_GROUND_SEGMENTS - 1);
+    const c1 = Math.min(c0 + stride, DRAWN_GROUND_SEGMENTS);
+    const r1 = Math.min(r0 + stride, DRAWN_GROUND_SEGMENTS);
+    return {c0, c1, r0, r1, u: Math.min(Math.max((fx - c0) / (c1 - c0), 0), 1), v: Math.min(Math.max((fz - r0) / (r1 - r0), 0), 1)};
+}
+
 /** Off the mesh (out at sea past the terrain square) the analytic ground stands in. */
 function outside(x: number, z: number): boolean {
     return x <= -TERRAIN_HALF || z <= -TERRAIN_HALF || x >= TERRAIN_HALF || z >= TERRAIN_HALF;
@@ -69,17 +90,14 @@ export function drawnGroundHeight(x: number, z: number): number {
     if (outside(x, z)) return sampleGround(x, z).height;
     const fx = (x + TERRAIN_HALF) / SEGMENT;
     const fz = (z + TERRAIN_HALF) / SEGMENT;
-    const column = Math.min(Math.floor(fx), DRAWN_GROUND_SEGMENTS - 1);
-    const row = Math.min(Math.floor(fz), DRAWN_GROUND_SEGMENTS - 1);
-    const u = fx - column;
-    const v = fz - row;
-    // a (c, r), b (c, r + 1), c (c + 1, r + 1), d (c + 1, r); triangles a-b-d (u + v ≤ 1) and b-c-d.
+    const {c0, c1, r0, r1, u, v} = cellAt(fx, fz, strideAt ? strideAt(x, z) : 1);
+    // a (c0, r0), b (c0, r1), c (c1, r1), d (c1, r0); triangles a-b-d (u + v ≤ 1) and b-c-d.
     if (u + v <= 1) {
-        const a = vertex(column, row);
-        return a + (vertex(column + 1, row) - a) * u + (vertex(column, row + 1) - a) * v;
+        const a = vertex(c0, r0);
+        return a + (vertex(c1, r0) - a) * u + (vertex(c0, r1) - a) * v;
     }
-    const c = vertex(column + 1, row + 1);
-    return c + (vertex(column, row + 1) - c) * (1 - u) + (vertex(column + 1, row) - c) * (1 - v);
+    const c = vertex(c1, r1);
+    return c + (vertex(c0, r1) - c) * (1 - u) + (vertex(c1, r0) - c) * (1 - v);
 }
 
 /** The drawn ground's height and its (flat-shaded) triangle's normal at a point. */
@@ -94,23 +112,22 @@ export function drawnGround(x: number, z: number): DrawnGround {
     }
     const fx = (x + TERRAIN_HALF) / SEGMENT;
     const fz = (z + TERRAIN_HALF) / SEGMENT;
-    const column = Math.min(Math.floor(fx), DRAWN_GROUND_SEGMENTS - 1);
-    const row = Math.min(Math.floor(fz), DRAWN_GROUND_SEGMENTS - 1);
-    const u = fx - column;
-    const v = fz - row;
+    const {c0, c1, r0, r1, u, v} = cellAt(fx, fz, strideAt ? strideAt(x, z) : 1);
+    const spanX = (c1 - c0) * SEGMENT;
+    const spanZ = (r1 - r0) * SEGMENT;
     let dx: number;
     let dz: number;
     let height: number;
     if (u + v <= 1) {
-        const a = vertex(column, row);
-        dx = (vertex(column + 1, row) - a) / SEGMENT;
-        dz = (vertex(column, row + 1) - a) / SEGMENT;
-        height = a + dx * SEGMENT * u + dz * SEGMENT * v;
+        const a = vertex(c0, r0);
+        dx = (vertex(c1, r0) - a) / spanX;
+        dz = (vertex(c0, r1) - a) / spanZ;
+        height = a + dx * spanX * u + dz * spanZ * v;
     } else {
-        const c = vertex(column + 1, row + 1);
-        dx = (c - vertex(column, row + 1)) / SEGMENT;
-        dz = (c - vertex(column + 1, row)) / SEGMENT;
-        height = c - dx * SEGMENT * (1 - u) - dz * SEGMENT * (1 - v);
+        const c = vertex(c1, r1);
+        dx = (c - vertex(c0, r1)) / spanX;
+        dz = (c - vertex(c1, r0)) / spanZ;
+        height = c - dx * spanX * (1 - u) - dz * spanZ * (1 - v);
     }
     const l = Math.hypot(dx, 1, dz);
     return {height, nx: -dx / l, ny: 1 / l, nz: -dz / l};

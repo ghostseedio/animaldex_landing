@@ -437,6 +437,9 @@ export type FlightMode = "flap" | "glide" | "bound" | "soar" | "hover";
  * cycle's length and the bout's beats are the animal's own (seeded). `lift` (m) is the bounding flight's rise and fall
  * about its path (up through the flaps, down through the bound).
  */
+/** A soarer's share of gliding in level flight out of rising air (it flaps more than it glides there). */
+export const CRUISE_GLIDE_MAX = 0.35;
+
 export function flightRhythm(spec: FlightSpec, clock: number, seed: number): {mode: FlightMode; lift: number; cycle: number; at: number} {
     const hz = spec.hz;
     if (spec.style === "flap_bound") {
@@ -770,10 +773,15 @@ export function flightRigFrame(input: FlightRigInput, memory: FlightMemory): Fli
     let mode: FlightMode;
     if (memory.flare > 0.3 || sinceTakeoff < 1.6 || burst) mode = "flap";
     else if (input.climb > 0.12) mode = spec.style === "flap_bound" && rhythm.mode === "bound" ? "bound" : "flap";
-    else if ((input.beat === "glide" || input.climb < -0.12) && spec.style !== "continuous" && spec.style !== "whir" && spec.style !== "bat") mode = spec.style === "soar" || input.soaring ? "soar" : "glide";
+    // (ARK-ANIM, decision 447: a glide leg glides only on its way down or riding the air; level or climbing it flaps.
+    // The owner's crane glided level for whole legs on its `glide` beat.)
+    else if (((input.beat === "glide" && (input.climb < -0.03 || input.soaring)) || input.climb < -0.12) && spec.style !== "continuous" && spec.style !== "whir" && spec.style !== "bat") mode = spec.style === "soar" || input.soaring ? "soar" : "glide";
     // (A continuous flapper sets its wings on a steep way down, well above the ground: a duck gliding in.)
     else if (spec.style === "continuous" && input.climb < -0.2 && input.agl > flareHeight * 1.5) mode = "glide";
     else if (spec.style === "continuous" || spec.style === "bat" || spec.style === "whir") mode = "flap";
+    // A soarer out of rising air (not on a soar) flap-glides, mostly flapping (ARK-ANIM: cranes, storks and eagles held
+    // their wings still in level flight on every leg).
+    else if (spec.style === "soar" && !input.soaring) mode = flightRhythm({...spec, style: "flap_glide", glideShare: Math.min(spec.glideShare, CRUISE_GLIDE_MAX)}, input.clock, input.seed).mode;
     else mode = rhythm.mode;
     // A flap bout ends on a whole beat (wings back up), never mid-stroke.
     if (memory.mode === "flap" && mode !== "flap" && memory.beat > 0.08 && memory.beat < 0.92) mode = "flap";

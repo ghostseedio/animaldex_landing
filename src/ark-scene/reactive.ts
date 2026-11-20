@@ -128,6 +128,12 @@ export type ReactiveWorld = {
     night: number;
     weather: ReactiveWeather;
     camera: Vec3 | null;
+    /**
+     * ARK-CONTACT (the owner, 2026-11-21: "zooming in and out on a resting animal makes it get up and lie back down"):
+     * the camera moved this frame only along its line to the point the view looks at (a zoom, the view's target still):
+     * the viewer looking closer, not anyone walking at the animals. Its move is no approach.
+     */
+    cameraZooming?: boolean;
     /** 0 blocked … 1 clear: terrain and dense vegetation between two points (eye heights). */
     sight?: (from: Vec3, to: Vec3) => number;
     /** The nearest refuge of a kind within r of a point, or null. */
@@ -557,6 +563,16 @@ export class ReactiveLayer {
     }
 
     /** Its memory, for tests and the tap card's debug line. */
+    /**
+     * ARK-CONTACT (decision 447, the giraffes that jumped as the camera zoomed): whether it still holds a step or a turn
+     * of the layer's own. The scene passes it in past the camera's reach while it does, so it eases back (below) rather
+     * than its offset dropping to nothing the frame the camera pulled back past the reach.
+     */
+    holding(id: string): boolean {
+        const agent = this.agents.get(id);
+        return Boolean(agent && (Math.hypot(agent.offset.x, agent.offset.z) >= 1e-3 || Math.abs(agent.head.yaw) + Math.abs(agent.head.pitch) >= 1e-3));
+    }
+
     memoryOf(id: string): Memory | null {
         return this.agents.get(id)?.memory ?? null;
     }
@@ -579,7 +595,12 @@ export class ReactiveLayer {
             const vx = (cam.x - this.camPrev.x) / world.dt;
             const vz = (cam.z - this.camPrev.z) / world.dt;
             if (Math.hypot(vx, vz) > 25) this.camVel = {x: 0, z: 0};
-            else {
+            else if (world.cameraZooming) {
+                // (A zoom: the velocity eases back to rest, as for a still camera.)
+                const k = Math.min(world.dt * 4, 1);
+                this.camVel.x -= this.camVel.x * k;
+                this.camVel.z -= this.camVel.z * k;
+            } else {
                 const k = Math.min(world.dt * 4, 1);
                 this.camVel.x += (vx - this.camVel.x) * k;
                 this.camVel.z += (vz - this.camVel.z) * k;

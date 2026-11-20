@@ -64,6 +64,8 @@ export type GroundingSample = {
     /** What it stands on (a tag, "ground"), and a word on the problem. */
     on: string;
     detail: string;
+    /** On the ground: walking (true) or standing (ARK-CONTACT's walk and idle states). */
+    moving?: boolean;
 };
 
 /** How far off a contact may be before it reads as floating or sunk: 2 cm, or 3% of its drawn height. */
@@ -74,7 +76,7 @@ export function groundingTolerance(drawnHeight: number): number {
 /** Points it clings to (its back along the surface's normal), not stands on: anything steeper than 45 degrees. */
 const CLING = 0.7071;
 
-type Subject = {
+export type Subject = {
     animal: ArkAnimal;
     place: Placement;
     plan: string | null;
@@ -156,9 +158,8 @@ function wire(subjects: Subject[], world: ScheduleWorld) {
     wireRecipes(list.map((w) => ({animal: w.animal, profile: w.profile, slug: w.slug, activity: w.activity})));
 }
 
-export function auditGrounding(animals: ArkAnimal[], options: AuditOptions = {}): GroundingAudit {
-    const epochs = options.epochs ?? arkDayEpochs();
-    const level = options.level ?? "near";
+/** The audit's subjects on the schedule, wired as the scene wires them (ARK-CONTACT's contact audit shares them). */
+export function groundingSubjects(animals: ArkAnimal[]): {subjects: Subject[]; world: ScheduleWorld; sampler: ArkWorldSampler} {
     const sampler = worldSampler();
     const world = scheduleWorld(sampler);
     const places = placeAnimals(animals);
@@ -179,6 +180,13 @@ export function auditGrounding(animals: ArkAnimal[], options: AuditOptions = {})
         return {animal, place, plan, scale, length: body.display, height: size.y * scale, sched};
     });
     wire(subjects, world);
+    return {subjects, world, sampler};
+}
+
+export function auditGrounding(animals: ArkAnimal[], options: AuditOptions = {}): GroundingAudit {
+    const epochs = options.epochs ?? arkDayEpochs();
+    const level = options.level ?? "near";
+    const {subjects, world, sampler} = groundingSubjects(animals);
     // The attach points the schedule's spots name, by id (the scenery's own: tree points sway with their tree).
     const byId = new Map<string, AttachPoint>(allAttachPoints().map((point) => [point.id, point]));
     const hoursAt = (epoch: number) => islandHours(epoch * 1000, 0);
@@ -332,8 +340,8 @@ function sampleOne(s: Subject, epoch: number, world: ScheduleWorld, byId: Map<st
     const where = inside ? `${trip.doing} ${rock ? "in a drawn rock" : "in a trunk, rock or building"} ${Math.hypot(at.x - own.animal.home.x, at.z - own.animal.home.z).toFixed(1)} m from home${trip.to.point ? ` (${trip.to.point.split(":")[0]})` : ""}` : "";
     const judge = (gap: {lowest: number}): GroundingProblem[] => [...(gap.lowest > tol ? ["floats" as const] : gap.lowest < -tol ? ["sinks" as const] : []), ...(inside ? ["inside" as const] : [])];
     return [
-        out("legacy", "ground", legacyGap.lowest, judge(legacyGap), "ground", legacyGap.lowest < -tol ? `${(-legacyGap.lowest * 100).toFixed(0)} cm into the drawn ground` : legacyGap.lowest > tol ? `${(legacyGap.lowest * 100).toFixed(0)} cm over it` : ""),
-        out("grounded", "ground", afterGap.lowest, judge(afterGap), "ground", where)
+        {...out("legacy", "ground", legacyGap.lowest, judge(legacyGap), "ground", legacyGap.lowest < -tol ? `${(-legacyGap.lowest * 100).toFixed(0)} cm into the drawn ground` : legacyGap.lowest > tol ? `${(legacyGap.lowest * 100).toFixed(0)} cm over it` : ""), moving: at.moving},
+        {...out("grounded", "ground", afterGap.lowest, judge(afterGap), "ground", where), moving: at.moving}
     ];
 }
 

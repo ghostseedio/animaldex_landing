@@ -473,7 +473,9 @@ async function fetchPublicComparisonState(captureId: string | null, userId: stri
         return null;
     }
 
-    const supabase = userId ? createSupabaseServerClient() : createSupabasePublicClient();
+    // Another person's public card: signed-in users read only their OWN rows from `captures` (location privacy,
+    // migration 20261223125500), so the public row is read with the public client whoever is viewing.
+    const supabase = createSupabasePublicClient();
 
     if (!supabase) {
         return null;
@@ -495,13 +497,16 @@ async function fetchPublicProgressState(captureId: string | null, userId: string
     }
 
     const supabase = userId ? createSupabaseServerClient() : createSupabasePublicClient();
+    // The public card row comes from the public client (signed-in users read only their own `captures` rows since
+    // migration 20261223125500); the viewer's own endorsement still comes from their session.
+    const publicClient = createSupabasePublicClient();
 
-    if (!supabase) {
+    if (!supabase || !publicClient) {
         return null;
     }
 
     const [{data: capture}, {data: progression}, endorsementResult] = await Promise.all([
-        supabase
+        publicClient
             .from("captures")
             .select("id,user_id,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements")
             .eq("id", captureId)

@@ -570,7 +570,9 @@ export function homeRadius(profile: ArkBehaviourProfile, animal: ScheduleAnimal)
     const base = flyer ? 18 : profile.move === "swim" ? 14 : 6;
     const wanted = Math.min(Math.max(base + animal.length * 5, 3), flyer ? 40 : 26);
     // A range cap (`spaceHomes`) is the whole reach, water and roost included: its everyday range is two thirds of it.
-    return Math.max(Math.min(wanted, reachOf(profile, animal) / 2, rangeCap(profile, animal) / 1.5), 0.4);
+    // (ARK-CONTACT: a creeper on the bed, a sea star, an urchin, keeps to the few centimetres it creeps in a slot.)
+    const creeps = profile.move === "sessile" || (profile.move === "crawl" && profile.seabed);
+    return Math.max(Math.min(wanted, reachOf(profile, animal) / 2, rangeCap(profile, animal) / 1.5), creeps ? 0.02 : 0.4);
 }
 
 function spotOf(point: AttachPoint): Spot {
