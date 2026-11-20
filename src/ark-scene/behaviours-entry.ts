@@ -15,7 +15,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake"};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "state"};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -82,6 +82,16 @@ const SCENES: Record<string, Scene> = {
     shaketown: {zone: "garden_wildlife", hours: 10, kind: "shake", town: true, cast: [{slug: "mallard", name: "Mallard", n: 6}]},
     shaketowngoose: {zone: "farm_garden", hours: 10, kind: "shake", town: true, cast: [{slug: "domestic-goose", name: "Domestic Goose", n: 6}]},
     shakeotter: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "european-otter", name: "European Otter", n: 2}]},
+    // Lane SIG-OTHER: look states (`look-state.ts`): each species close up with its state off and on (`lsShot`: the strength forced, or the hour or the month moved).
+    lsfish: {zone: "river_lake", hours: 12, kind: "state", cast: [{slug: "goldfish", name: "Goldfish", n: 1}, {slug: "guppy", name: "Guppy", n: 1}, {slug: "siamese-fighting-fish", name: "Siamese Fighting Fish", n: 1}, {slug: "tiger-barb", name: "Tiger Barb", n: 1}, {slug: "neon-tetra", name: "Neon Tetra", n: 1}, {slug: "black-skirt-tetra", name: "Black Skirt Tetra", n: 1}, {slug: "freshwater-angelfish", name: "Freshwater Angelfish", n: 1}]},
+    lsland: {zone: "farm_garden", hours: 12, kind: "state", cast: [{slug: "common-house-gecko", name: "Common House Gecko", n: 1}, {slug: "tropical-house-gecko", name: "Tropical House Gecko", n: 1}, {slug: "crested-gecko", name: "Crested Gecko", n: 1}, {slug: "veiled-chameleon", name: "Veiled Chameleon", n: 1}, {slug: "carolina-wolf-spider", name: "Carolina Wolf Spider", n: 1}]},
+    lsdewlap: {zone: "rainforest", hours: 12, kind: "state", cast: [{slug: "green-iguana", name: "Green Iguana", n: 1}, {slug: "green-anole", name: "Green Anole", n: 1}, {slug: "brown-anole", name: "Brown Anole", n: 1}, {slug: "oriental-garden-lizard", name: "Oriental Garden Lizard", n: 1}, {slug: "common-green-forest-lizard", name: "Common Green Forest Lizard", n: 1}, {slug: "veiled-chameleon", name: "Veiled Chameleon", n: 1}]},
+    lssac: {zone: "wetland", hours: 12, kind: "state", cast: [{slug: "american-bullfrog", name: "American Bullfrog", n: 1}, {slug: "marsh-frog", name: "Marsh Frog", n: 1}, {slug: "great-plains-toad", name: "Great Plains Toad", n: 1}, {slug: "grey-crowned-crane", name: "Grey Crowned Crane", n: 1}, {slug: "european-starling", name: "European Starling", n: 1}, {slug: "magnificent-frigatebird", name: "Magnificent Frigatebird", n: 1}, {slug: "siamang", name: "Siamang", n: 1}]},
+    lscheek: {zone: "rainforest", hours: 12, kind: "state", cast: [{slug: "long-tailed-macaque", name: "Long-tailed Macaque", n: 1}, {slug: "campbells-dwarf-hamster", name: "Campbell's Dwarf Hamster", n: 1}, {slug: "eastern-chipmunk", name: "Eastern Chipmunk", n: 1}, {slug: "mandrill", name: "Mandrill", n: 1}]},
+    lsglow: {zone: "farm_garden", hours: 12, kind: "state", cast: [{slug: "common-eastern-firefly", name: "Common Eastern Firefly", n: 1}, {slug: "carolina-wolf-spider", name: "Carolina Wolf Spider", n: 1}]},
+    lsindividual: {zone: "river_lake", hours: 12, kind: "state", cast: [{slug: "koi", name: "Koi", n: 4}, {slug: "guppy", name: "Guppy", n: 4}]},
+    lsseasonwater: {zone: "river_lake", hours: 12, kind: "state", cast: [{slug: "mallard", name: "Mallard", n: 8}, {slug: "mandarin-duck", name: "Mandarin Duck", n: 1}, {slug: "black-headed-gull", name: "Black-headed Gull", n: 1}, {slug: "great-crested-grebe", name: "Great Crested Grebe", n: 1}]},
+    lsseasonland: {zone: "woodland", hours: 12, kind: "state", cast: [{slug: "winter-white-dwarf-hamster", name: "Winter White Dwarf Hamster", n: 1}, {slug: "southeastern-five-lined-skink", name: "Southeastern Five-lined Skink", n: 1}, {slug: "two-spotted-spider-mite", name: "Two-spotted Spider Mite", n: 1}, {slug: "white-tailed-deer", name: "White-tailed Deer", n: 1}, {slug: "red-deer", name: "Red Deer", n: 1}, {slug: "raccoon-dog", name: "Raccoon Dog", n: 1}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -328,6 +338,43 @@ async function main() {
             const recipes = (debug as unknown as {scene: {getObjectByName: (n: string) => {children: Array<{type: string; geometry: {drawRange: {count: number}}}>} | undefined}}).scene.getObjectByName("ark-recipes");
             const drops = recipes?.children.find((c) => c.type === "Points")?.geometry.drawRange.count ?? -1;
             return `drops ${drops} beat ${pose?.beat ?? "-"} act ${pose?.act?.recipe ?? "-"} ${shake} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
+        },
+        /**
+         * Lane SIG-OTHER: the cast and who is in it (for the look-state shots).
+         */
+        lsPlan: () => scene.cast.map((c, k) => ({slug: c.slug, name: c.name, ids: Array.from({length: c.n}, (_, i) => castId(k, i))})),
+        /**
+         * Lane SIG-OTHER: an animal with its look state forced to `k` (0-1; null: its own), the Ark month (null: its own) and
+         * the hour of the island's day (null: as it is), framed from `lengths` of its body away, from `azimuth` off its side.
+         */
+        lsShot: async (id: string, o: {k: number | null; lengths: number; azimuth: number; polar?: number; hour?: number | null; month?: number | null; run?: number; lift?: number}) => {
+            const dbg = debug as unknown as {forceLookState: (id: string, k: number | null) => void; forceMonth: (m: number | null) => void; lookStateOf: (id: string) => {k: number} | null; controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}};
+            dbg.forceLookState(id, o.k);
+            dbg.forceMonth(o.month ?? null);
+            if (o.hour !== undefined && o.hour !== null) await setAt(Date.UTC(2026, 10, 20, o.hour) / 1000 + 60);
+            for (let i = 0; i < Math.round((o.run ?? 2.5) * 10); i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const far = handle.locate(id);
+            if (far) handle.setView({target: {x: far.x, y: far.y, z: far.z}, distance: 30, polar: 0.9, azimuth: 0.7});
+            await frames(4);
+            const drawn = debug.entries().find((e) => e.animal.id === id) as unknown as {length: number; middle: {x: number; y: number; z: number} | null};
+            const at = handle.locate(id);
+            if (!at || !drawn) return "not found";
+            const distance = Math.max(o.lengths * drawn.length, 0.05);
+            dbg.controls.minDistance = Math.min(dbg.controls.minDistance, distance);
+            dbg.camera.near = Math.min(0.03, distance / 25);
+            dbg.camera.updateProjectionMatrix();
+            const target = drawn.middle ? {x: drawn.middle.x, y: drawn.middle.y + (o.lift ?? 0) * drawn.length, z: drawn.middle.z} : {x: at.x, y: at.y + drawn.length * (0.3 + (o.lift ?? 0)), z: at.z};
+            for (let i = 0; i < 3; i++) {
+                handle.setView({target, distance, polar: o.polar ?? 1.4, azimuth: at.yaw + o.azimuth});
+                await frames(1);
+            }
+            const state = dbg.lookStateOf(id);
+            const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
+            return `strength ${state ? state.k.toFixed(2) : "-"} length ${drawn.length.toFixed(3)} m   ${said.filter((l) => l.includes(id.slice(-3)) || true).slice(0, 2).join(" / ")}`;
         },
         /**
          * 3.3 batch (A): the predator (the second cast) stood `gap` body lengths of the first cast's animal from it, or

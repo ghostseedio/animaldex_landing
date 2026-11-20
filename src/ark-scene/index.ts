@@ -275,6 +275,9 @@ import {Lineage, nurseTurn} from "@/ark-scene/young-care";
 import {applyYoungCoat, youngCoatOf, youngCoatStrength, youngSteps} from "@/ark-scene/young-coat";
 // 3.3 batch (C): the antler cycle.
 import {antlerOf, antlerState, applyAntler, type AntlerState} from "@/ark-scene/antler-cycle";
+// Lane SIG-OTHER: look states (colour by the hour, the season or a display; a swell).
+import {applyLookState, lookStateOf, nightSays, stateSays, stateSteps, stateTarget, stepStrength} from "@/ark-scene/look-state";
+import {ARK_DAYLIGHT} from "@/ark-scene/glsl";
 import {MouthCarry} from "@/ark-scene/mouth-carry";
 import {mealOnStage, mealScript, DRINK_REACH, type MealCatch} from "@/ark-scene/meal-acts";
 import {MealTraces, type TraceDraw} from "@/ark-scene/meal-traces";
@@ -542,6 +545,8 @@ type Entry = {
     ridingOn?: {id: string; x: number; z: number; base: number};
     /** 3.3 batch (C): its antlers in this month of the Ark year (`antler-cycle.ts`), re-read every 30 s. */
     antler?: AntlerState & {at: number};
+    /** Lane SIG-OTHER: its look state's strength now (`look-state.ts`, 0-1; -1 before the first frame) and its seeded sex. */
+    lookState?: {k: number; sex: "male" | "female" | null};
     /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
     recipeAct?: RecipeAct | null;
     /** Ambient flock-mates round a small animal's spot (a swarm, a cluster). */
@@ -1986,6 +1991,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const sharedPins = new Map<string, (epoch: number) => Partial<TripPose & {doing: ArkDoing}>>();
     /** Development only (the head-look probe): a fixed `arkLook` (yaw, pitch, weight) for an animal, over the reactive layer's. */
     const forcedLooks = new Map<string, [number, number, number]>();
+    /** Development only (the look-state lab): a fixed look-state strength (0-1) for an animal, and a fixed Ark month, over the real ones. */
+    const forcedLookStates = new Map<string, number>();
+    let forcedMonth: number | null = null;
+    /** The Ark month, worked out once in 30 s of the world's clock (every animal with a look state asks every frame). */
+    let lookMonthMemo: {slot: number; month: number} | null = null;
+    const lookMonth = (nowS: number): number => {
+        const slot = Math.floor(nowS / 30);
+        if (lookMonthMemo?.slot !== slot) lookMonthMemo = {slot, month: seasonMonthAt(nowS)};
+        return lookMonthMemo.month;
+    };
 
     // MARK: Collisions (motion pass L5: `collide/`)
 
@@ -5115,6 +5130,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     const d = c.entry.animal;
                     seenActs.push({id: d.id, name: d.name, speciesId: d.kind_species_profile_id || d.species_profile_id || `slug:${d.model_slug}`, zone: d.zone, recipe: "antler_cycle", episode: `antler_cycle:${d.id}:${Math.floor(epoch / 900)}`, block: "look", fish: false, line: antlerOf(d.model_slug)!.line});
                 }
+                // Lane SIG-OTHER: its look state, close by, when its species' own sentence is true of what is drawn (`look-state.ts`).
+                const lookSpecies = c.distance < 40 ? lookStateOf(c.entry.animal.model_slug) : null;
+                if (lookSpecies) {
+                    const l = c.entry.animal;
+                    const k = c.entry.lookState?.k ?? -1;
+                    if (lookSpecies.state && k >= 0 && (lookSpecies.state.say === "off" ? k < 0.05 : stateSays(k))) seenActs.push({id: l.id, name: l.name, speciesId: l.kind_species_profile_id || l.species_profile_id || `slug:${l.model_slug}`, zone: l.zone, recipe: "look_state", episode: `look_state:${l.id}:${Math.floor(epoch / 900)}`, block: "look", fish: false, line: lookSpecies.state.line});
+                    if (lookSpecies.night && nightSays(ARK_DAYLIGHT.value)) seenActs.push({id: l.id, name: l.name, speciesId: l.kind_species_profile_id || l.species_profile_id || `slug:${l.model_slug}`, zone: l.zone, recipe: "look_night", episode: `look_night:${l.id}:${Math.floor(epoch / 14400)}`, block: "look", fish: false, line: lookSpecies.night.line});
+                }
                 // (One of the log's kinds, or a recipe its species has its own sentence for: `live/signature-lines.ts`.)
                 const ownLine = act ? signatureLineOf(c.entry.animal.model_slug, act.recipe) : null;
                 if (act && (ownLine || arkSeenKind(act.recipe))) {
@@ -5896,6 +5919,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (animal.origin === "born") applyYoungCoat(mesh.geometry, index, youngCoatSteps(entry));
             // 3.3 batch (C): its antlers this month (growing in velvet, shed): `antler-cycle.ts`.
             applyAntler(mesh.geometry, index, antlerNow(entry)?.code ?? 0);
+            // Lane SIG-OTHER: its look state (a season's colour, a display's swell: `look-state.ts`): after the bits below it in `arkCoat.y`.
+            const lookSpec = lookStateOf(animal.model_slug)?.state;
+            if (lookSpec && !reducedMotion) {
+                const ls = (entry.lookState ??= {k: -1, sex: sexLook(animal.id, animal.model_slug).sex});
+                const forcedK = forcedLookStates.get(animal.id);
+                if (forcedK !== undefined) ls.k = forcedK;
+                else {
+                    const nowS = worldMs() / 1000;
+                    const recipeNow = ((entry.sched?.pose ?? null) as RecipePose | null)?.act ?? entry.recipeAct ?? null;
+                    const target = stateTarget(lookSpec.trigger, {month: forcedMonth ?? lookMonth(nowS), sex: ls.sex, block: recipeNow?.block ?? null, alarmed: entry.reactive?.alarmed ?? 0, beat: ((entry.sched?.pose ?? null) as TripPose | null)?.beat ?? null, clock: nowS, daylight: ARK_DAYLIGHT.value, seed: entry.phase});
+                    // (A season is there when it is first seen: nothing moults as the page opens.)
+                    ls.k = ls.k < 0 ? (lookSpec.trigger.kind === "season" ? target : 0) : stepStrength(lookSpec.trigger.kind, ls.k, target, frameDt);
+                }
+                applyLookState(mesh.geometry, index, stateSteps(ls.k));
+            }
 
             // Contact shadows (the animal-look pass): on a broad surface the animal really is on (a small one on a wall,
             // a leaf, a stone; a perch on bark, a rock face, a log), never on a limb, a post or a leap through the canopy,
@@ -9359,6 +9397,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         })),
         pinShared: (id: string, fn: ((epoch: number) => Partial<TripPose & {doing: ArkDoing}>) | null) => (fn ? sharedPins.set(id, fn) : sharedPins.delete(id)),
         forceLook: (id: string, look: [number, number, number] | null) => (look ? forcedLooks.set(id, look) : forcedLooks.delete(id)),
+        forceLookState: (id: string, k: number | null) => (k === null ? forcedLookStates.delete(id) : forcedLookStates.set(id, k)), forceMonth: (month: number | null) => { forcedMonth = month; }, lookStateOf: (id: string) => entryById.get(id)?.lookState ?? null,
         // 3.3 batch (A): an animal's defence move now (the harness).
         defence: (id: string) => findEntry(id)?.defence ?? null,
         // 3.3 fix (log): the record's deaths, where each lies (the harness).
