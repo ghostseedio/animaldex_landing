@@ -956,7 +956,9 @@ function runHawk(i: HuntInput): HuntRun | null {
         const u = f - Math.floor(f);
         return {x: lerp(a.x, b.x, u), z: lerp(a.z, b.z, u), y: lerp(a.y, b.y, u), yaw: a.yaw + wrap(b.yaw - a.yaw) * u, state: a.state, pitch: lerp(a.pitch, b.pitch, u)};
     };
-    const puffs: Puff[] = [];
+    // (A catch's puff is the last of the run, at the catch: the stage times it from there.)
+    const hitAt = prey[Math.min(Math.round(tHit / DT), prey.length - 1)];
+    const puffs: Puff[] = [{x: hitAt.x, y: hitAt.y, z: hitAt.z, size: Math.max(lq * 1.2, 0.03), kind: "dust"}];
     return finish(i, "swoop", Math.min(i.miss ? tEnd : tHit, tEnd), tHit, Math.max(tReady, 0), at(pred), at(prey), {turnP: 30, turnQ: 30, air: true, airQ: true, puffs, startYaw: P.yaw});
 }
 

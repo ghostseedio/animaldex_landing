@@ -182,8 +182,7 @@ export class HuntingLayer {
             }
             walk.moving = shaped.moving && d > 1e-3;
             if (!shaped.moving || shaped.beat !== "walk") walk.beat = shaped.beat;
-            if (shaped.doing) walk.doing = shaped.doing;
-            else if (!shaped.moving) walk.doing = "watch";
+            // (Its card keeps saying what it said: `doing` is the foray's own.)
         }
         if (leg.on0 && leg.on1) return walk;
         // Into a hunt (to its first waypoint) or out of one (back to where its schedule has it), over this one step.

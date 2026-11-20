@@ -18,7 +18,7 @@
  *   weave   quartering the air in sweeps from side to side (swallows, dragonflies)
  */
 import {huntActOf, type HuntAct} from "@/ark-scene/hunt-acts";
-import type {ArkBeat, ArkDoing} from "@/ark-scene/behaviour-schedule";
+import type {ArkBeat} from "@/ark-scene/behaviour-schedule";
 
 export type SearchStyle = "creep" | "watch" | "wade" | "glean" | "soar" | "weave";
 
@@ -54,7 +54,6 @@ export type SearchLeg = {
     u: number;
     moving: boolean;
     beat: ArkBeat;
-    doing: ArkDoing | null;
     /** Metres out to the side of the leg's line (to the left of its way): zero at both waypoints. */
     side: number;
 };
@@ -74,7 +73,7 @@ export function searchLeg(style: SearchStyle, u: number, key: string, length: nu
         const phase = unit(`${key}:phase`) * Math.PI * 2;
         const env = Math.sin(Math.PI * u);
         const side = amplitude * env * Math.sin(2 * Math.PI * turns * u + phase) - amplitude * env * Math.sin(phase);
-        return {u, moving: true, beat: flyer ? (style === "soar" ? "glide" : Math.sin(u * 40 + phase) > 0.6 ? "glide" : "fly") : "walk", doing: flyer ? (style === "soar" ? "soar" : "fly") : null, side};
+        return {u, moving: true, beat: flyer ? (style === "soar" ? "glide" : Math.sin(u * 40 + phase) > 0.6 ? "glide" : "fly") : "walk", side};
     }
     const n = Math.max(Math.round((LEG_SECONDS / c.period) * jitter), 1);
     const x = u * n;
@@ -83,7 +82,7 @@ export function searchLeg(style: SearchStyle, u: number, key: string, length: nu
     const go = clamp(f / c.moving, 0, 1);
     // (Ease in and out of each burst: a step starts and ends gently.)
     const eased = go * go * (3 - 2 * go);
-    return {u: (whole + eased) / n, moving: f < c.moving, beat: f < c.moving ? c.beat : c.still, doing: null, side: 0};
+    return {u: (whole + eased) / n, moving: f < c.moving, beat: f < c.moving ? c.beat : c.still, side: 0};
 }
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);

@@ -237,3 +237,36 @@ test("a search is walked in its species' way and still reaches both waypoints", 
     for (let k = 0; k < 200; k++) if (!searchLeg("watch", k / 200, "x", 0.2, false).moving) still++;
     assert.ok(still > 100, `a watcher stood ${still} of 200`);
 });
+
+test("through the meal's stage: every act gives a stage the scene can frame, with its catch, ending where the meal's script takes over", async () => {
+    const {mealStage} = await import("@/ark-scene/acts");
+    const kinds: Record<string, "glide" | "swoop" | "dart"> = {pounce: "glide", leap: "glide", jump: "glide", dash: "glide", lunge: "glide", tongue: "glide", web: "glide", wade: "glide", peck: "glide", lurk: "dart", drop: "swoop", hover: "swoop", plunge: "swoop", talon: "swoop", hawk: "swoop"};
+    for (const c of CASES) {
+        const stage = mealStage(kinds[c.act], c.predator, c.prey, {seed: `stage-${c.act}`, flee: c.flee ?? "run", exact: true, meal: true, hunt: c.act, ...(c.water ? {water: () => true} : {})});
+        assert.ok(stage.catchAt && stage.catchAt > 0.3, `${c.act} has no catch`);
+        assert.ok(stage.seconds >= stage.catchAt, c.act);
+        for (const n of [stage.focus.x, stage.focus.y, stage.focus.z, stage.distance, stage.polar]) assert.ok(Number.isFinite(n), `${c.act} frame`);
+        const at = stage.predator(stage.catchAt);
+        const prey = stage.prey(stage.catchAt);
+        assert.ok(at && Number.isFinite(at.x) && Number.isFinite(prey.x), c.act);
+        assert.ok(stage.puffs(0, stage.seconds + 1).length >= 1, `${c.act} has no puff at the catch`);
+        // The generic chase is what an unknown act (or none) gives.
+        const generic = mealStage(kinds[c.act], c.predator, c.prey, {seed: "g", flee: c.flee ?? "run", exact: true, meal: true});
+        assert.ok(generic.catchAt);
+    }
+});
+
+test("an escape of a hunter with its own way is the same act ending in a miss, and never a catch", async () => {
+    const {escapeScript, escapePose} = await import("@/ark-scene/live-escapes");
+    const kinds: Record<string, "glide" | "swoop" | "dart"> = {pounce: "glide", leap: "glide", jump: "glide", dash: "glide", lunge: "glide", tongue: "glide", web: "glide", wade: "glide", peck: "glide", lurk: "dart", drop: "swoop", hover: "swoop", plunge: "swoop", talon: "swoop", hawk: "swoop"};
+    for (const c of CASES) {
+        const script = escapeScript({kind: kinds[c.act], flee: c.flee ?? "run", predator: c.predator, prey: c.prey, seed: `esc-${c.act}`, exact: true, hunt: c.act, ground: () => (c.water ? -0.3 : 0), ...(c.water ? {water: () => true} : {})});
+        assert.ok(script.missAt > 0.3 && script.seconds > script.missAt, c.act);
+        assert.ok(script.closest >= script.gap * 0.99, `${c.act}: closest ${script.closest.toFixed(3)} under the gap ${script.gap.toFixed(3)}`);
+        for (let s = 0; s <= script.seconds; s += 0.25) {
+            const p = escapePose(script, "predator", s);
+            const q = escapePose(script, "prey", s);
+            assert.ok(Number.isFinite(p.x) && Number.isFinite(q.x) && Number.isFinite(p.roll) && Number.isFinite(q.roll), c.act);
+        }
+    }
+});
