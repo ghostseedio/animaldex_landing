@@ -227,8 +227,6 @@ async function main() {
             current.text = liteOf(id)[0] ?? "";
             live.focus(line);
         }
-        // (And the mother chosen, as a viewer taps her: her close-up, the clutch she lays beside her.)
-        if (laidMother) handle.select(laidMother, true);
         current.tapped = true;
         return {kind: "laid", at: String(row.at), t0, tapAt: Math.round((epoch - t0) * 10) / 10, line: line ? {id: line.id, kind: line.kind} : null, lines: live.lines.length, watching: true, skipped: false, seen: null, laying, cast: parents.map((p) => ({id: p, role: "parent", name: String((row.animal as Row | null)?.name ?? ""), slug: String((row.animal as Row | null)?.model_slug ?? ""), aboard: Boolean(real.animals.find((a) => a.id === p)), located: Boolean(handle.locate(p))}))};
     };
@@ -331,7 +329,10 @@ async function main() {
         // (Its eggs over the rim: a ray to the base's own middle meets the twigs of the nest it is in.)
         if (handle.sightOf) {
             const view = handle.view();
-            if (handle.sightOf(view.target, {distance: view.distance, polar: view.polar, azimuth: view.azimuth}, [{x: kept.x, y: kept.y + kept.size * 0.3, z: kept.z, slack: kept.size * 0.3}], false, camera.near > 0.5 ? camera.near : 0, true) > 0) return {ok: false, why: "clutch-blocked"};
+            // (Any of its eggs seen is the clutch seen: its middle, or either side of the heap; the rim near each is no wall.)
+            const r = kept.size * 0.25;
+            const eggs = [0, 1, -1].map((k) => ({x: kept.x + k * r, y: kept.y + kept.size * 0.3, z: kept.z + k * r, slack: kept.size * 0.5}));
+            if (handle.sightOf(view.target, {distance: view.distance, polar: view.polar, azimuth: view.azimuth}, eggs, false, camera.near > 0.5 ? camera.near : 0, true) >= eggs.length) return {ok: false, why: "clutch-blocked"};
         }
         return {ok: true, why: ""};
     };
