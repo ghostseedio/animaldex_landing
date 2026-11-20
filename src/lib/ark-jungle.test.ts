@@ -83,6 +83,9 @@ test("a langur of the rocks: up a rock's ledges near it, a while on top, down ag
 
 test("the primate house: a swinger up a post, along the frame's beams the way its kind goes, down, home", async () => {
     const {beamHolds, zooSwingFrame} = await import("@/ark-scene/islands/town/zoo-swing");
+    const {handsReady} = await import("@/ark-scene/locomotion/brachiate");
+    // (its rig's arms can hold: until one loads, a brachiator stays on its hold)
+    handsReady.add("lar-gibbon");
     // A frame of three posts 3 m apart, its beams 5 m up, on a floor at 1 m.
     const posts: Array<[number, number, number]> = [[0, 6, 0], [3, 6, 0], [6, 6, 0.5]];
     const climbs = [0, 1].map((i) => ({a: [posts[i][0], 5.52, posts[i][2]] as [number, number, number], b: [posts[i + 1][0], 5.52, posts[i + 1][2]] as [number, number, number], posts: [posts[i], posts[i + 1]] as [[number, number, number], [number, number, number]], feet: [[posts[i][0], 1, posts[i][2]], [posts[i + 1][0], 1, posts[i + 1][2]]] as [[number, number, number], [number, number, number]]}));
@@ -111,6 +114,9 @@ test("the primate house: a swinger up a post, along the frame's beams the way it
     // Asleep, or a kind of the ground: never.
     for (let e = 0; e < 3000; e += 1) assert.equal(zooSwingFrame(gibbon, 0.6, spot, climbs, e, false), null);
     for (let e = 0; e < 3000; e += 1) assert.equal(zooSwingFrame({id: "g", model_slug: "western-lowland-gorilla", scientific_name: "Gorilla gorilla"}, 1.6, spot, climbs, e, true), null);
+    // A swinger whose rig cannot hold yet (none loaded, or a sitting rig): never out on the frame.
+    handsReady.delete("lar-gibbon");
+    for (let e = 0; e < 3000; e += 1) assert.equal(zooSwingFrame(gibbon, 0.6, spot, climbs, e, true), null);
 });
 
 test("a carried young is never drawn alone: rested out of sight with its mother, drawn with her", async () => {
