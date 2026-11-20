@@ -131,7 +131,7 @@
   "plants": {
    "attach": "plants/attach.json",
    "assets": 76,
-   "bytes": 2061418,
+   "bytes": 2063322,
    "lod0_tris_max": 4774
   },
   "rocks": {
@@ -897,9 +897,9 @@
     {
      "level": "lod1",
      "file": "plants/bush-blueberry-a.lod1.glb",
-     "tris": 702,
-     "verts": 501,
-     "bytes": 7908,
+     "tris": 710,
+     "verts": 513,
+     "bytes": 8092,
      "doubleSided": true,
      "morph": false
     },
@@ -908,7 +908,7 @@
      "file": "plants/bush-blueberry-a.lod2.glb",
      "tris": 247,
      "verts": 230,
-     "bytes": 5024,
+     "bytes": 5036,
      "doubleSided": true,
      "morph": false
     }
@@ -960,9 +960,9 @@
     {
      "level": "lod1",
      "file": "plants/bush-bramble-a.lod1.glb",
-     "tris": 482,
-     "verts": 337,
-     "bytes": 6020,
+     "tris": 490,
+     "verts": 349,
+     "bytes": 6160,
      "doubleSided": true,
      "morph": false
     },
@@ -1023,9 +1023,9 @@
     {
      "level": "lod1",
      "file": "plants/bush-bramble-b.lod1.glb",
-     "tris": 284,
-     "verts": 343,
-     "bytes": 6924,
+     "tris": 304,
+     "verts": 375,
+     "bytes": 7432,
      "doubleSided": true,
      "morph": false
     },
@@ -1034,7 +1034,7 @@
      "file": "plants/bush-bramble-b.lod2.glb",
      "tris": 127,
      "verts": 190,
-     "bytes": 4936,
+     "bytes": 4964,
      "doubleSided": true,
      "morph": false
     }
@@ -1085,9 +1085,9 @@
     {
      "level": "lod1",
      "file": "plants/bush-hazel-a.lod1.glb",
-     "tris": 260,
-     "verts": 347,
-     "bytes": 7020,
+     "tris": 280,
+     "verts": 375,
+     "bytes": 7424,
      "doubleSided": true,
      "morph": false
     },
@@ -1096,7 +1096,7 @@
      "file": "plants/bush-hazel-a.lod2.glb",
      "tris": 107,
      "verts": 180,
-     "bytes": 4904,
+     "bytes": 4912,
      "doubleSided": true,
      "morph": false
     }
@@ -1147,9 +1147,9 @@
     {
      "level": "lod1",
      "file": "plants/bush-holly-a.lod1.glb",
-     "tris": 522,
-     "verts": 361,
-     "bytes": 6108,
+     "tris": 530,
+     "verts": 373,
+     "bytes": 6320,
      "doubleSided": true,
      "morph": false
     },
@@ -1158,7 +1158,7 @@
      "file": "plants/bush-holly-a.lod2.glb",
      "tris": 209,
      "verts": 202,
-     "bytes": 4652,
+     "bytes": 4672,
      "doubleSided": true,
      "morph": false
     }
@@ -1210,9 +1210,9 @@
     {
      "level": "lod1",
      "file": "plants/bush-holly-b.lod1.glb",
-     "tris": 288,
-     "verts": 341,
-     "bytes": 6780,
+     "tris": 308,
+     "verts": 373,
+     "bytes": 7184,
      "doubleSided": true,
      "morph": false
     },
@@ -1221,7 +1221,7 @@
      "file": "plants/bush-holly-b.lod2.glb",
      "tris": 127,
      "verts": 190,
-     "bytes": 4900,
+     "bytes": 4884,
      "doubleSided": true,
      "morph": false
     }
@@ -9224,5 +9224,5 @@
    ]
   }
  },
- "totalBytes": 10386010
+ "totalBytes": 10387914
 }

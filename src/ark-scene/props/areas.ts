@@ -423,9 +423,9 @@ function mergedRocks(pieces: RockPiece[], level: 0 | 2): BufferGeometry | null {
         // p4 (the boulders float): on the bigger wild island a piece on a steep face is drawn reached down to its ground,
         // stretched along its up about its top (`rock-assets.ts` rockFoot; its place, and so its attach points, unchanged).
         const heightOf = cachedRock(piece.style, piece.variant, ROCK_DETAIL[piece.style][0]).bounds.max[1];
-        // (ark-world, "boulders stuck to the wall": a fallen boulder or stone on a steep slope is drawn set down into it, half
-        // buried at 50 degrees; a crag stands out of its slope by design and is not moved. `rock-assets.ts` steepSink.)
-        const sunk = arkWorld() === "v2" && piece.role !== "crag" ? steepSink(piece.x, piece.z, piece.scale, heightOf) : 0;
+        // (ark-world, "boulders stuck to the wall": a piece on a steep slope is drawn set down into it, half buried at 50
+        // degrees; a crag, which stands out of its slope by design, by 60 % of that. `rock-assets.ts` steepSink.)
+        const sunk = arkWorld() === "v2" ? steepSink(piece.x, piece.z, piece.scale, heightOf) * (piece.role === "crag" ? 0.6 : 1) : 0;
         const drawnPiece = sunk > 0.01 ? {...piece, y: piece.y - sunk} : piece;
         const k = arkWorld() === "v2" ? rockFoot(drawnPiece) : 1;
         const top = heightOf;

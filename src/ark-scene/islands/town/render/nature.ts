@@ -188,7 +188,14 @@ export function hedgeAlong(geo: Geo, line: Poly, height: number, seed: number, h
             for (let j = 1; j < profile.length; j++) {
                 const v = (profile[j][1] + profile[j - 1][1]) / 2;
                 geo.tag = Math.max(v, 0) * (hedgerow ? 1 : 0.35);
-                const n00 = normals[k - 1][j - 1], n10 = normals[k][j - 1], n11 = normals[k][j], n01 = normals[k - 1][j];
+                // (The foliage material is double-sided: it flips a back face's normal, so the normals must lean the way the
+                // quad's winding faces, whichever side of the hedge that is: aligned to the quad's own geometric normal.)
+                const a = r0[j - 1], b = r1[j - 1], c = r1[j];
+                const gx = (b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1]);
+                const gy = (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]);
+                const gz = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+                const aligned = (v: V3): V3 => (v[0] * gx + v[1] * gy + v[2] * gz < 0 ? [-v[0], -v[1], -v[2]] : v);
+                const n00 = aligned(normals[k - 1][j - 1]), n10 = aligned(normals[k][j - 1]), n11 = aligned(normals[k][j]), n01 = aligned(normals[k - 1][j]);
                 geo.triShaded(r0[j - 1], r1[j - 1], r1[j], n00, n10, n11, lightAt(k - 1, j - 1), lightAt(k, j - 1), lightAt(k, j));
                 geo.triShaded(r0[j - 1], r1[j], r0[j], n00, n11, n01, lightAt(k - 1, j - 1), lightAt(k, j), lightAt(k - 1, j));
             }

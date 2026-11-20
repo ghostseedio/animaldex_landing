@@ -240,7 +240,7 @@ const TOWN_DIGESTS = {
     // (p5 (zoospace): the dome's building: drum, lattice and netting, lobby, paths, boardwalk, lagoon, lamps, `render/dome.ts`.)
     // (p6 (zoo merge): the countryside and the dome together.)
     // (ark-world, decision 447: the safari truck's round wheels are not in this hash (an instanced mesh), but the gate arch square to its road, the hen houses' wheels, the smooth-shaded bushes (`Geo.bush`) and the new bush lumps changed the scenery's geometry; refreshed.)
-    sceneryAndBuildings: "95aef8a5877d3ed5",
+    sceneryAndBuildings: "a16a1ef9d9e3009a",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)

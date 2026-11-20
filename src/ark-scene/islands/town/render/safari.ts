@@ -254,7 +254,7 @@ export function safariTruckAt(index: number, seconds: number, hours: number): {x
  * One safari truck (about 6.4 m long, 2.3 wide, the same footprint and clearances as before: ark-world, decision 447, the
  * owner "the trucks have square wheels"). Round wheels (`wheels.ts`: tyres with ribbed crowns, dished hubs), a sloping
  * bonnet with a grille, round headlamps and a bull bar, a raked windscreen, wheel arches, an open passenger deck with
- * three bench rows and a canvas canopy on a roll cage, side steps, a round spare on the tailgate. About 2,100 triangles
+ * three bench rows and a canvas canopy on a roll cage, side steps, a round spare on the tailgate. About 2,900 triangles
  * (was 150); there are four of them, one instanced mesh.
  */
 export function safariTruckGeometry(): BufferGeometry {

@@ -312,10 +312,16 @@ export const FOOT_MOST = 4;
  * points and its colliders are the world's, unchanged. The ground is the drawn one (`drawnGround`).
  */
 export function steepSink(x: number, z: number, scale: number, height: number): number {
-    const e = Math.max(0.6, 0.5 * scale);
-    const gx = (drawnGround(x + e, z) - drawnGround(x - e, z)) / (2 * e);
-    const gz = (drawnGround(x, z + e) - drawnGround(x, z - e)) / (2 * e);
-    const t = Math.min(Math.max((Math.hypot(gx, gz) - 0.5) / 0.7, 0), 1);
+    // The steepest way down within the rock's own reach, not the slope under its middle: on a summit's point the ground is
+    // level at the very top and falls away every side (a boulder balanced on a cone's tip is the worst of these).
+    const d = Math.max(0.6, 0.6 * scale);
+    const here = drawnGround(x, z);
+    let down = 0;
+    for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        down = Math.max(down, (here - drawnGround(x + Math.cos(a) * d, z + Math.sin(a) * d)) / d);
+    }
+    const t = Math.min(Math.max((down - 0.5) / 0.7, 0), 1);
     return height * scale * 0.5 * t * t * (3 - 2 * t);
 }
 

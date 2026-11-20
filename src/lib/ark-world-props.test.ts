@@ -178,3 +178,28 @@ test("a bush is smooth-shaded lumps in mottled greens, not flat-faced facets: a 
     // The normals are unit and lean out of the bush, not into it.
     for (let i = 0; i < geo.nor.length; i += 3) assert.ok(Math.abs(Math.hypot(geo.nor[i], geo.nor[i + 1], geo.nor[i + 2]) - 1) < 1e-5);
 });
+
+test("a hedge's surface normals lean the way each face's winding faces (the foliage material is double-sided and flips a back face's normal: an inward-leaning one drew black), and are smooth along it", async () => {
+    const {hedgeAlong} = await import("@/ark-scene/islands/town/render/nature");
+    const geo = new Geo();
+    hedgeAlong(geo, [{x: 0, z: 0}, {x: 12, z: 0}], 1.6, 7, false);
+    let aligned = 0;
+    let smooth = 0;
+    let total = 0;
+    for (let t = 0; t < geo.triangles; t++) {
+        const p = (v: number, k: number) => geo.pos[(t * 3 + v) * 3 + k];
+        const n = (v: number, k: number) => geo.nor[(t * 3 + v) * 3 + k];
+        const gx = (p(1, 1) - p(0, 1)) * (p(2, 2) - p(0, 2)) - (p(1, 2) - p(0, 2)) * (p(2, 1) - p(0, 1));
+        const gy = (p(1, 2) - p(0, 2)) * (p(2, 0) - p(0, 0)) - (p(1, 0) - p(0, 0)) * (p(2, 2) - p(0, 2));
+        const gz = (p(1, 0) - p(0, 0)) * (p(2, 1) - p(0, 1)) - (p(1, 1) - p(0, 1)) * (p(2, 0) - p(0, 0));
+        const g = Math.hypot(gx, gy, gz);
+        if (g < 1e-9) continue;
+        total++;
+        const along = [0, 1, 2].every((v) => n(v, 0) * gx + n(v, 1) * gy + n(v, 2) * gz > -1e-9);
+        if (along) aligned++;
+        if ([1, 2].some((v) => [0, 1, 2].some((k) => Math.abs(n(v, k) - n(0, k)) > 1e-6))) smooth++;
+    }
+    assert.ok(total > 100, `${total} faces`);
+    assert.ok(aligned >= total * 0.95, `${aligned} of ${total} faces carry normals along their winding`);
+    assert.ok(smooth >= total * 0.9, `${smooth} of ${total} faces are smooth-shaded`);
+});
