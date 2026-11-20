@@ -4,7 +4,7 @@ import React, {Suspense, lazy, useEffect, useMemo, useState} from "react";
 import type SiteLink from "@/app/[locale]/_components/link";
 import {isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
 import type {ArkAnimal, ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
-import type {ArkWords} from "@/lib/ark-words";
+import {ARK_SIMPLE_ENGLISH, fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {ARK_TIME_LEFT_HOOKS, arkLifeOutlook, arkLifeText, arkNeedsFacts, arkTimeLeftWordsFrom, arkTimeLeftWorldOf, type ArkLifeBar, type ArkTimeLeftFacts} from "@/lib/ark-time-left";
 import {arkTimeLeftFetch, readArkTimeLeftFacts, type ArkTimeLeftFetch} from "@/lib/ark-time-left-facts";
 import {arkReleasedEntry, useArkReleased} from "@/lib/ark-release-read";
@@ -73,7 +73,7 @@ export default function ArkTimeLeft({release, day, snapshot = null, scene, sex, 
  * (`ark-animal-card.tsx`), so the Ark page's static JavaScript stays inside its budget, and it reads its species facts
  * (`/api/ark/food-chain`) only when a wild animal's estimate could depend on them. Nothing here is a promise: it says so.
  */
-function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeLeftFetch, link: Link}: {animal: ArkAnimal; snapshot: ArkSnapshot | null; words: ArkWords; locale: string; fetchJson?: ArkTimeLeftFetch; link?: typeof SiteLink}) {
+function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeLeftFetch}: {animal: ArkAnimal; snapshot: ArkSnapshot | null; words: ArkWords; locale: string; fetchJson?: ArkTimeLeftFetch; link?: typeof SiteLink}) {
     const world = useMemo(() => arkTimeLeftWorldOf(snapshot), [snapshot]);
     const needs = world ? arkNeedsFacts(animal, world) : false;
     const [read, setRead] = useState<{id: string; facts: ArkTimeLeftFacts | null} | null>(null);
@@ -103,87 +103,98 @@ function ArkTimeLeftPanel({animal, snapshot, words, locale, fetchJson = arkTimeL
     }, [outlook, words.timeLeft, words.life, locale]);
     if (!outlook || !text) return null;
     const warm = outlook.tone === "risk";
+    const hungry = animal.condition === "hungry";
     const left = text.left;
     const chance = text.chance;
-    // A reason the chance's lines already say (its main reason, the cause of its change) is not said again in the list.
-    const reasons = left ? left.reasons.filter((reason) => reason !== chance?.mainReason && reason !== chance?.trend?.cause) : [];
-    // Open when the reasons say more than "its kind's lifespan" (it could be hunted or hungry, or it is old); a healthy animal with only
-    // old age ahead folds them away, so the block stays compact on a phone.
-    const open = warm || Boolean(text.power) || Boolean(outlook.left?.reasons.some((reason) => reason.kind !== "age"));
+    const simple = {...ARK_SIMPLE_ENGLISH, ...(words.simple ?? {})};
+    // The bar's colour says how it is (owner 2026-11-20: condition as a colour, not a word): green well, amber old or at
+    // risk, red hungry. Why, in the tooltip only (no paragraphs on the card).
+    const tone: LifeTone = hungry ? "bad" : warm ? "warn" : "good";
+    const why = [hungry ? words.life.hungry : null, ...(left?.reasons ?? [])].filter((line): line is string => Boolean(line)).filter((line) => !/\{|Ark day/.test(line));
+    const leftValue = left ? fillArkWords(simple.left, {time: lowerFirst(left.value, locale)}) : null;
     return (
-        <section data-testid="ark-card-time-left" data-tone={outlook.tone} aria-label={text.label} className="mt-1.5 rounded-lg bg-white/[0.05] px-2.5 py-1.5">
-            {text.age ? (
-                <p data-testid="ark-card-life-age" className="flex items-center gap-1.5 text-[12.5px] font-semibold leading-snug text-ink-100">
-                    <span aria-hidden="true" className="h-2 w-2 shrink-0 rounded-sm bg-white/50" />
-                    <span className="min-w-0">{text.age}</span>
-                </p>
+        <section data-testid="ark-card-time-left" data-tone={outlook.tone} aria-label={text.label} className="min-w-0">
+            {outlook.bar || (chance && outlook.chance) ? (
+                // No lifespan read (no bar) and no chance: no empty track, the age line alone.
+                <div className="mb-1.5 flex items-center gap-3">
+                    {outlook.bar ? <ArkLifeBarMarks bar={outlook.bar} tone={tone} /> : <span className="flex-1" />}
+                    {chance && outlook.chance ? <ArkChanceHeart percent={outlook.chance.percent} label={`${chance.title}: ${chance.value}`} tone={tone} locale={locale} /> : null}
+                </div>
             ) : null}
-            {outlook.bar ? <ArkLifeBarMarks bar={outlook.bar} warm={warm} /> : null}
-            {left ? (
-                <details key={animal.id} open={open} data-testid="ark-card-time-left-details">
-                    <summary className="cursor-pointer list-none rounded outline-none focus-visible:ring-1 focus-visible:ring-primary-300 [&::-webkit-details-marker]:hidden">
-                        <span className="flex flex-wrap items-center gap-x-2">
-                            <span className="flex items-center gap-1.5 text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400" title={left.hint}>
-                                <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-sm ${warm ? "bg-[#ffb454]" : "bg-primary-400"}`} />
-                                {left.title}
-                            </span>
-                            <span data-testid="ark-card-time-left-value" className="text-[13.5px] font-bold text-white md:text-[14px]">{left.value}</span>
-                            <svg viewBox="0 0 12 12" aria-hidden="true" className="h-2.5 w-2.5 shrink-0 text-ink-400 transition-transform [details[open]>summary_&]:rotate-180 motion-reduce:transition-none" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"><path d="M2.5 4.5 6 8l3.5-3.5" /></svg>
-                        </span>
-                        {chance ? (
-                            <span data-testid="ark-card-chance" className="mt-0.5 flex flex-wrap items-baseline gap-x-2">
-                                <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400" title={chance.how}>{chance.title}</span>
-                                <span data-testid="ark-card-chance-value" className="text-[13.5px] font-bold text-white md:text-[14px]">{chance.value}</span>
-                            </span>
-                        ) : null}
-                        {chance?.trend ? (
-                            <span data-testid="ark-card-chance-trend" data-direction={chance.trend.direction} className={`mt-0.5 flex items-start gap-1 text-[11.5px] font-semibold leading-snug ${chance.trend.direction === "up" ? "text-primary-300" : chance.trend.direction === "down" ? "text-[#ffb454]" : "text-ink-300"}`}>
-                                <span aria-hidden="true" className="shrink-0 text-[9px] leading-[17px]">{chance.trend.direction === "up" ? "▲" : chance.trend.direction === "down" ? "▼" : "▬"}</span>
-                                <span className="min-w-0">{chance.trend.text}</span>
-                            </span>
-                        ) : null}
-                    </summary>
-                    {chance?.main ? <p data-testid="ark-card-chance-main" className="mt-0.5 text-[11.5px] leading-snug text-ink-200">{chance.main}</p> : null}
-                    {text.power ? (
-                        <p data-testid="ark-card-power" data-kind={text.power.kind} className="mt-0.5 text-[11.5px] font-semibold leading-snug text-primary-200">
-                            {Link && !isArkPlaceholderSlug(animal.model_slug) && animal.placeholder !== true ? (
-                                <Link href={`/talk/${animal.model_slug}`} className="underline-offset-2 hover:underline">{text.power.text}</Link>
-                            ) : (
-                                text.power.text
-                            )}
-                        </p>
-                    ) : null}
-                    {text.thrive ? <p data-testid="ark-card-thrive-why" className="mt-0.5 text-[11.5px] leading-snug text-ink-300">{text.thrive}</p> : null}
-                    {reasons.length ? (
-                        <ul className="mt-0.5 text-[11.5px] leading-snug text-ink-300">
-                            {reasons.map((reason) => (
-                                <li key={reason} className="flex gap-1.5">
-                                    <span aria-hidden="true" className="mt-[6px] h-1 w-1 shrink-0 rounded-full bg-ink-400" />
-                                    <span className="min-w-0">{reason}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    ) : null}
-                    {chance ? <p data-testid="ark-card-chance-how" className="mt-0.5 text-[10.5px] italic leading-snug text-ink-400">{chance.how}</p> : null}
-                    <p className="mt-0.5 text-[10.5px] italic leading-snug text-ink-400">{left.hint}</p>
-                </details>
-            ) : null}
+            <p className="flex min-w-0 items-center justify-between gap-3 text-[12.5px] font-semibold leading-tight text-ink-100">
+                {text.age ? (
+                    <span data-testid="ark-card-life-age" title={simple.age} className="flex min-w-0 items-center gap-1.5">
+                        <LifeIcon kind="age" />
+                        <span className="truncate">{text.age}</span>
+                    </span>
+                ) : <span />}
+                {leftValue ? (
+                    <span data-testid="ark-card-time-left-value" title={[left?.title, ...why].filter(Boolean).join(" · ")} className={`flex min-w-0 shrink-0 items-center gap-1.5 ${tone === "good" ? "text-ink-100" : tone === "warn" ? "text-[#ffd28a]" : "text-[#ffb3a3]"}`}>
+                        <LifeIcon kind={hungry ? "hungry" : "left"} />
+                        <span className="truncate">{leftValue}</span>
+                    </span>
+                ) : null}
+            </p>
         </section>
     );
 }
 
-/**
- * The life bar: born at its start, the days lived so far, a tick for today, the likely end at its far end (the estimate's
- * range, never a promise). Drawn only: the section's label says it in words. A flex row, so a right-to-left page mirrors it.
- */
-function ArkLifeBarMarks({bar, warm}: {bar: ArkLifeBar; warm: boolean}) {
-    const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
+type LifeTone = "good" | "warn" | "bad";
+const TONE: Record<LifeTone, string> = {good: "#a7f432", warn: "#ffb454", bad: "#ff7a6b"};
+
+function lowerFirst(text: string, locale: string): string {
+    // "About 2 days" inside "{time} left" reads "about 2 days left" (only where the language has cases).
+    return text ? text.charAt(0).toLocaleLowerCase(locale) + text.slice(1) : text;
+}
+
+/** The age's seedling, the time left's hourglass, a hungry one's empty bowl: drawn, the words beside them. */
+function LifeIcon({kind}: {kind: "age" | "left" | "hungry"}) {
     return (
-        <div aria-hidden="true" data-testid="ark-card-life-bar" data-now={bar.now.toFixed(3)} data-from={bar.from.toFixed(3)} className="my-1 flex h-2 items-stretch overflow-hidden rounded-full bg-white/[0.10]">
-            <span className="bg-white/50" style={{width: pct(bar.now)}} />
+        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5 shrink-0 opacity-80" fill="none" stroke="currentColor" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            {kind === "age" ? <path d="M8 14V7.5M8 7.5C8 4.8 6 3 3 3c0 2.8 2 4.5 5 4.5zM8 9.5c0-2.4 1.8-4 4.8-4 0 2.5-1.8 4-4.8 4z" /> : kind === "left" ? <path d="M4 1.8h8M4 14.2h8M5 1.8c0 3.2 3 4.2 3 6.2s-3 3-3 6.2M11 1.8c0 3.2-3 4.2-3 6.2s3 3 3 6.2" /> : <path d="M2 8h12a6 6 0 0 1-12 0zM5 5.5c0-1 1-1 1-2M8.5 5.5c0-1 1-1 1-2" />}
+        </svg>
+    );
+}
+
+/** The chance to live another Ark year (two real weeks) as a heart that fills from the bottom, its number beside it. */
+function ArkChanceHeart({percent, label, tone, locale}: {percent: number; label: string; tone: LifeTone; locale: string}) {
+    const id = React.useId();
+    const fill = Math.max(0.06, Math.min(1, percent / 100));
+    const color = percent >= 50 ? TONE.good : percent >= 20 ? TONE.warn : TONE.bad;
+    let said = `${percent}%`;
+    try {
+        said = new Intl.NumberFormat(locale, {style: "percent", maximumFractionDigits: 0}).format(percent / 100);
+    } catch {
+        // As is.
+    }
+    return (
+        <span role="img" aria-label={label} title={label} data-testid="ark-card-chance" data-tone={tone} className="flex shrink-0 items-center gap-1">
+            <svg viewBox="0 0 16 16" className="h-[18px] w-[18px]" aria-hidden="true">
+                <defs>
+                    <clipPath id={`${id}-h`}><path d="M8 14.2S1.6 10.4 1.6 5.8A3.4 3.4 0 0 1 8 4.2a3.4 3.4 0 0 1 6.4 1.6C14.4 10.4 8 14.2 8 14.2z" /></clipPath>
+                </defs>
+                <rect x="0" y="0" width="16" height="16" fill="rgba(255,255,255,0.14)" clipPath={`url(#${id}-h)`} />
+                <rect x="0" y={16 - 16 * fill} width="16" height={16 * fill} fill={color} clipPath={`url(#${id}-h)`} />
+            </svg>
+            <span data-testid="ark-card-chance-value" className="text-[12.5px] font-bold tabular-nums text-white">{said}</span>
+        </span>
+    );
+}
+
+/**
+ * The life bar: born at its start, the life lived so far in its tone (green well, amber old or at risk, red hungry), a
+ * tick for now, the likely end as a faded stretch at its far end (the estimate's range, never a promise). Drawn only: the
+ * section's label says it in words. A flex row, so a right-to-left page mirrors it.
+ */
+function ArkLifeBarMarks({bar, tone}: {bar: ArkLifeBar; tone: LifeTone}) {
+    const pct = (n: number) => `${(n * 100).toFixed(2)}%`;
+    const color = TONE[tone];
+    return (
+        <div aria-hidden="true" data-testid="ark-card-life-bar" data-now={bar.now.toFixed(3)} data-from={bar.from.toFixed(3)} className="relative flex h-2.5 min-w-0 flex-1 items-stretch overflow-hidden rounded-full bg-white/[0.09]">
+            <span className="rounded-full" style={{width: pct(bar.now), minWidth: 6, background: `linear-gradient(90deg, ${color}99, ${color})`}} />
             <span className="w-[2px] shrink-0 bg-white" />
             <span className="min-w-0 flex-1" />
-            <span className={warm ? "bg-[#ffb454]" : "bg-primary-400"} style={{width: pct(1 - bar.from), minWidth: 6}} />
+            <span className="rounded-full" style={{width: pct(1 - bar.from), minWidth: 6, background: `repeating-linear-gradient(135deg, ${color}55 0 3px, ${color}22 3px 6px)`}} />
         </div>
     );
 }

@@ -10,13 +10,13 @@ import {arkKindAlone, arkKindHereText, arkKindRuleShown, arkKindWhere, arkKindWh
 import {fillArkWords} from "@/lib/ark-words";
 import {
     ARK_PERIODS,
-    arkDayAt,
     arkGraphDate,
     arkGraphWhen,
     arkHistoryLines,
     arkLinePath,
     arkPeriodSeries,
     arkPeriodStart,
+    arkRankByChange,
     arkSeriesStats,
     arkStatsChangeText,
     arkStepChanges,
@@ -31,6 +31,7 @@ import {
 export * from "@/lib/ark-population-history";
 // Male and female in a species row (`ark-sex.tsx`): beside the lazy graphs, outside the page's first JavaScript.
 export {default as ArkSex} from "@/app/[locale]/(composited)/ark/ark-sex";
+import ArkSexBadge from "@/app/[locale]/(composited)/ark/ark-sex";
 
 /**
  * The population HUD's lines (owner, 2026-11-17: "a population line graph per species, just a line might do it and a
@@ -154,12 +155,9 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
     const line = useMemo(() => arkLinePath(series.counts, plotW, plotH, {pad: 2, fromZero: true, max: stats.peak}), [series, stats.peak, plotW, plotH]);
     const number = (value: number) => value.toLocaleString(locale);
     const start = series.times[0] ?? history.asOf;
-    const end = series.times[series.times.length - 1] ?? history.asOf;
     const said = arkStatsChangeText(stats, locale);
-    const dayFrom = arkDayAt(start, history.startedAt);
-    const dayTo = arkDayAt(end, history.startedAt);
     const fromRecord = start <= history.firstAt + history.bucketMs;
-    const happened = ([["arrived", stats.arrived], ["born", stats.born], ["revived", stats.revived], ["died", stats.died], ["eaten", stats.eaten]] as const).filter(([, n]) => n > 0);
+    const happened = ([["arrived", stats.arrived], ["born", stats.born], ["revived", stats.revived], ["died", stats.died], ["eaten", stats.eaten], ["rehomed", stats.rehomed], ["toMarket", stats.toMarket], ["movedZoo", stats.movedZoo]] as const).filter(([, n]) => n > 0);
     const here = where ? arkKindHereText(where, words, locale) : null;
     // What changed at the point under the finger: arrivals from photos, births, deaths (the record's own rows).
     const changed = hover === null ? [] : arkStepChanges(series, Math.max(0, Math.min(series.counts.length - 1, hover)));
@@ -252,10 +250,9 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
                     </p>
                 ) : null}
             </div>
-            <p className="px-3.5 pb-0.5 text-[10.5px] leading-snug text-white/55">{words.riseFall}</p>
+            <p className="px-3.5 pb-0.5 text-[10.5px] leading-snug text-white/55">{words.riseFall}{stats.rehomed + stats.toMarket + stats.movedZoo > 0 ? ` ${words.riseFallKept}` : ""}</p>
             <p className="px-3.5 text-[10.5px] text-white/45">
                 {[
-                    dayFrom !== null && dayTo !== null ? fillArkWords(words.arkDays, {from: number(Math.max(0, dayFrom)), to: number(dayTo)}) : null,
                     fromRecord ? fillArkWords(words.recordStarts, {date: arkGraphDate(history.firstAt, locale, history)}) : null
                 ].filter(Boolean).join(" · ")}
             </p>
@@ -330,7 +327,7 @@ export type ArkHudWhere = {snapshot: ArkSnapshot | null; selectedKey: string | n
  * counts the whole kind across the Ark whatever island the rows are of (`line` is the rows' scope, so it is read again
  * for the whole Ark when that differs), and says where its animals are.
  */
-export function ArkHudGraphPane<Row extends {name: string; slug: string}>({history, graphKey, rows, line, period, onPeriod, onBack, onFly, locale, ctx}: {history: ArkHistory; graphKey: string; rows: ReadonlyMap<string, Row>; line: ArkHudLine | undefined; period: ArkPeriod; onPeriod: (period: ArkPeriod) => void; onBack: () => void; onFly: (row: Row) => void; locale: string; ctx: ArkHudWhere}) {
+export function ArkHudGraphPane<Row extends {name: string; slug: string; animals?: ReadonlyArray<Pick<import("@/ark-scene/types").ArkAnimal, "sex" | "reproduction">>}>({history, graphKey, rows, line, period, onPeriod, onBack, onFly, locale, ctx, sexWords = null}: {history: ArkHistory; graphKey: string; rows: ReadonlyMap<string, Row>; line: ArkHudLine | undefined; period: ArkPeriod; onPeriod: (period: ArkPeriod) => void; onBack: () => void; onFly: (row: Row) => void; locale: string; ctx: ArkHudWhere; sexWords?: React.ComponentProps<typeof ArkSexBadge>["words"]}) {
     const row = rows.get(graphKey);
     const gone = history.gone.get(graphKey);
     if (!line || !(row || gone)) return null;
@@ -339,6 +336,8 @@ export function ArkHudGraphPane<Row extends {name: string; slug: string}>({histo
     const where = arkKindWhere(ctx.snapshot, graphKey, ctx.selectedKey === graphKey ? ctx.selectedId : null);
     return (
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] pt-1 [scrollbar-width:thin]">
+            {/* Its males and females (moved here from the list's rows, owner 2026-11-20: less on each row). */}
+            {row?.animals && sexWords !== null ? <p className="px-3.5 pt-0.5 text-end"><ArkSexBadge animals={row.animals} words={sexWords} locale={locale} /></p> : null}
             <ArkPopulationGraph name={row?.name ?? gone?.name ?? ""} icon={<Icon slug={slug} size={28} />} history={history} series={whole.series} stats={whole.stats} period={period} onPeriod={onPeriod} onBack={onBack} onFly={row ? () => onFly(row) : null} locale={locale} where={where} />
         </div>
     );
@@ -386,4 +385,59 @@ export function ArkHudControls({mode, onMode, period, onPeriod, ctx = null}: {mo
 export function ArkHudNone({mode}: {mode: ArkSortMode}) {
     const words = useGraphWords();
     return <li className="px-3.5 py-3 text-[12px] text-white/55">{mode === "thriving" ? words.noneThriving : words.noneDeclining}</li>;
+}
+
+// MARK: The ticker (lane ARK-SIMPLE)
+
+/** How many kinds each way the ticker carries. */
+const TICKER_EACH = 10;
+
+/**
+ * The thriving / declining ticker under the Ark's name (owner 2026-11-20: "replace the 'Latest aboard' with a stocks like
+ * ticker that shows thriving and declining animals"): the kinds that grew most this week (green ▲) and fell most (red ▼),
+ * each with its icon, name and change, on one strip that loops sideways, paused under a pointer or focus. With reduced
+ * motion it stands still and scrolls by hand (`.ark-ticker` in globals.css). A screen reader reads one list; the loop's
+ * second copy is hidden from it. A kind aboard flies to one of its animals; a kind that died out is not listed.
+ */
+export function ArkHudTicker<Row extends {key: string; name: string; slug: string}>({history, rows, scope, locale, label, onPick}: {history: ArkHistory; rows: ReadonlyMap<string, Row>; scope: ArkHistoryScope; locale: string; label: string; onPick: (row: Row) => void}) {
+    const words = useGraphWords();
+    const items = useMemo(() => {
+        const up = arkRankByChange(history, scope, "7d", "up", rows.keys()).filter((one) => rows.has(one.key)).slice(0, TICKER_EACH);
+        const down = arkRankByChange(history, scope, "7d", "down", rows.keys()).filter((one) => rows.has(one.key)).slice(0, TICKER_EACH);
+        // Alternate the two ways so the strip reads as a market, not two lists.
+        const out: Array<{row: Row; stats: ArkSeriesStats}> = [];
+        for (let i = 0; i < Math.max(up.length, down.length); i++) {
+            if (up[i]) out.push({row: rows.get(up[i].key)!, stats: up[i].stats});
+            if (down[i]) out.push({row: rows.get(down[i].key)!, stats: down[i].stats});
+        }
+        return out;
+    }, [history, rows, scope]);
+    if (!items.length) return null;
+    const item = (one: {row: Row; stats: ArkSeriesStats}, copy: boolean) => {
+        const said = arkStatsChangeText(one.stats, locale);
+        const color = tone(one.stats);
+        const change = said.percent ?? said.count;
+        const sr = `${one.row.name}: ${said.up ? words.thriving : words.declining} ${change}, ${words.periods["7d"]}`;
+        return (
+            <li key={`${copy ? "b" : "a"}-${one.row.key}`} className="shrink-0">
+                <button type="button" tabIndex={copy ? -1 : 0} onClick={() => onPick(one.row)} aria-label={copy ? undefined : sr} title={sr} className={`group flex h-7 items-center gap-1.5 rounded-full py-0.5 pe-2.5 ps-0.5 transition-colors hover:bg-white/[0.07] ${FOCUS}`}>
+                    <Icon slug={one.row.slug} size={22} />
+                    <span className="max-w-[10rem] truncate text-[12.5px] font-semibold text-ink-100 group-hover:text-white">{one.row.name}</span>
+                    <span dir="ltr" className="whitespace-nowrap text-[12px] font-bold tabular-nums" style={{color}}>
+                        <span aria-hidden="true" className="text-[9px]">{said.up ? "▲" : "▼"}</span> {change}
+                    </span>
+                </button>
+            </li>
+        );
+    };
+    // About 3 s a kind, so the strip moves at a reading pace whatever its length.
+    const seconds = Math.max(24, items.length * 3.2);
+    return (
+        <div className="ark-ticker relative min-w-0 flex-1 overflow-hidden [-webkit-mask-image:linear-gradient(to_right,transparent,#000_2rem,#000_calc(100%-3rem),transparent)] [mask-image:linear-gradient(to_right,transparent,#000_2rem,#000_calc(100%-3rem),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" data-testid="ark-ticker">
+            <div className="ark-ticker-track flex w-max items-center" style={{"--ark-ticker-s": `${seconds}s`} as React.CSSProperties}>
+                <ul aria-label={label} className="flex items-center gap-3 pe-3">{items.map((one) => item(one, false))}</ul>
+                <ul aria-hidden="true" className="ark-ticker-copy flex items-center gap-3 pe-3">{items.map((one) => item(one, true))}</ul>
+            </div>
+        </div>
+    );
 }

@@ -21,6 +21,7 @@
  *   genuinely missing is not drawn: never a made-up value.
  */
 
+import {arkHumanAgo} from "@/lib/ark-human-time";
 import type {ArkCondition} from "@/ark-scene/types";
 import {fillArkWords} from "@/lib/ark-words";
 
@@ -752,14 +753,16 @@ export type ArkStatusText = {
 };
 
 /** A status as the reader reads it (the card on /ark; the embed sends it with `ark:status` for the apps' cards). */
-export function arkStatusText(status: ArkAnimalStatus, words: ArkStatusWords, locale: string): ArkStatusText {
+export function arkStatusText(status: ArkAnimalStatus, words: ArkStatusWords, locale: string, clockNow: number | null = null): ArkStatusText {
     const act = (key: ArkActivityKey) => words.activity[key] ?? ARK_ACTIVITY_ENGLISH[key];
     const now = status.activity ? fillArkWords(words.card.now, {activity: act(status.activity)}) : null;
     const goal = status.goal;
     const next = !goal ? null : goal.kind === "wakes" ? fillArkWords(words.card.wakes, {time: arkIslandTime(goal.at, locale)}) : fillArkWords(words.card.next, {activity: act(goal.activity)});
-    const day = (entry: ArkStatusLogEntry) => (entry.day === null ? "" : fillArkWords(words.card.day, {day: entry.day.toLocaleString(locale)}));
+    // With `now` (the /ark card, lane ARK-SIMPLE): every line stamped in the visitor's own time, "2 h ago", never "Day 305".
+    const ago = (entry: ArkStatusLogEntry) => (clockNow !== null && Number.isFinite(entry.at) ? arkHumanAgo(entry.at, clockNow, locale, "narrow") : null);
+    const day = (entry: ArkStatusLogEntry) => ago(entry) ?? (entry.day === null ? "" : fillArkWords(words.card.day, {day: entry.day.toLocaleString(locale)}));
     const log = status.log.map((entry) => {
-        if (entry.source === "schedule") return {id: entry.id, source: entry.source, stamp: arkIslandTime(entry.at / 1000, locale), text: capitalised(act(entry.activity ?? "about"))};
+        if (entry.source === "schedule") return {id: entry.id, source: entry.source, stamp: ago(entry) ?? arkIslandTime(entry.at / 1000, locale), text: capitalised(act(entry.activity ?? "about"))};
         let text: string;
         switch (entry.kind) {
             case "arrived":

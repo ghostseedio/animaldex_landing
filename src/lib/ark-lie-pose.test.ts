@@ -11,7 +11,9 @@ import test from "node:test";
 import {BufferAttribute, BufferGeometry, DataUtils, Matrix4, Vector3} from "three";
 import {buildLocoRig, bonePointNow, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
 import {LIE_FRAMES, LiePose, lieShaped} from "@/ark-scene/locomotion/lie-pose";
-import {posedLieRows} from "@/ark-scene/rig-player";
+import {clipBase, posedLieClips, posedLieRows} from "@/ark-scene/rig-player";
+import {QUADRUPED_LYING_HELD} from "@/ark-scene/rig-clips";
+import {clipDrawsSleep, sleepPostureClips, sleepsOnFeet, type SleepPosture} from "@/ark-scene/sleep";
 
 const FIXTURES = path.join(process.cwd(), "src/ark-scene/locomotion/fixtures");
 const raws = readdirSync(FIXTURES)
@@ -76,4 +78,29 @@ test("a rig that passes gets lie_down, get_up, lie and sleep rows after its own;
         ["sleep", own + 2 * (LIE_FRAMES + 1), 2, true]
     ]);
     assert.equal(rows.data.length, (own + 2 * (LIE_FRAMES + 1) + 2) * bones * 12);
+});
+
+test("at night a posed-lie species lies down, not stands (ARK-CONTACT's stand-sleep gives way to the posed lie)", () => {
+    // A four-legged rig's clips as the page holds them: its own lying clips gone (QUADRUPED_LYING_HELD), the posed lie's in.
+    const own: Record<string, {name: string; base?: string}> = {idle: {name: "idle"}, walk: {name: "walk"}, sleep: {name: "sleep", base: "lying"}};
+    QUADRUPED_LYING_HELD.forEach((name) => delete own[name]);
+    const posed = {...own, ...Object.fromEntries(posedLieClips(3).map((c) => [c.name, c]))};
+    const night = (clips: Record<string, {base?: string}>, posture: SleepPosture) => {
+        const want = sleepPostureClips(posture).find((name) => clips[name]) ?? "idle";
+        const sleepClipped = clipDrawsSleep(want, clipBase(clips[want]));
+        const base = {slept: true, rigged: true, sleepClipped, water: false, lying: true, flat: false, legsUnder: true};
+        return {want, sleepClipped, faded: sleepsOnFeet({...base, clipShare: 1}), fading: sleepsOnFeet({...base, clipShare: 0.05})};
+    };
+    for (const posture of ["sternal", "side", "curl", "sit"] as const) {
+        const lies = night(posed, posture);
+        assert.equal(lies.want, "sleep", `${posture}: the posed sleep plays`);
+        assert.ok(lies.sleepClipped, `${posture}: the posed sleep draws the posture`);
+        assert.equal(lies.faded, false, `${posture}: lies, not stands`);
+        assert.equal(lies.fading, false, `${posture}: lies as soon as the rig shows`);
+        for (const way of ["lie_down", "get_up"]) assert.ok(clipDrawsSleep(way, clipBase(posed[way])), `${way} is drawn by the rig`);
+        // Without the posed lie (its lying clips held, idle plays): ARK-CONTACT's sleep on its feet.
+        const stands = night(own, posture);
+        assert.equal(stands.want, "idle");
+        assert.equal(stands.faded, true, `${posture}: with no lying clip it sleeps on its feet`);
+    }
 });

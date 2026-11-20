@@ -788,12 +788,14 @@ export function posedLieRows(rig: LocoRig, geometry: BufferGeometry, data: Uint1
         const o = data.length + k * per;
         for (let i = 0; i < per; i++) out[o + i] = DataUtils.toHalfFloat(row[i]);
     });
+    return {check: lie.check, rows: {data: out, clips: posedLieClips(own)}};
+}
+
+/** The posed lie's clips after a rig's own `own` rows: the way down, the way up, and the held lie (as `lie` and `sleep`). */
+export function posedLieClips(own: number): RigClipData[] {
     const n = LIE_FRAMES + 1;
     const clip = (name: string, at: number, rows: number, loop: boolean, seconds: number, base?: string): RigClipData => ({name, row: own + at, rows, frames: rows - 1, loop, seconds, pass: true, ...(base ? {base} : {})}) as RigClipData;
-    return {
-        check: lie.check,
-        rows: {data: out, clips: [clip("lie_down", 0, n, false, LIE_SECONDS), clip("get_up", n, n, false, LIE_SECONDS), clip("lie", 2 * n, 2, true, 4, "lying"), clip("sleep", 2 * n, 2, true, 4, "lying")]}
-    };
+    return [clip("lie_down", 0, n, false, LIE_SECONDS), clip("get_up", n, n, false, LIE_SECONDS), clip("lie", 2 * n, 2, true, 4, "lying"), clip("sleep", 2 * n, 2, true, 4, "lying")];
 }
 
 /**

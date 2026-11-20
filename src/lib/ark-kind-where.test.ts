@@ -80,7 +80,7 @@ test("the words for another language, English key by key where a bundle lacks th
 
 test("a point's own changes: arrivals from photos, births and deaths of the step that ended there", () => {
     const zeros = [0, 0, 0, 0];
-    const series: ArkSeries = {times: [0, 1, 2, 3], counts: [4, 4, 6, 5], arrived: [0, 0, 2, 0], born: [0, 0, 1, 0], revived: zeros, died: [0, 0, 0, 2], eaten: [0, 0, 0, 1]};
+    const series: ArkSeries = {times: [0, 1, 2, 3], counts: [4, 4, 6, 5], arrived: [0, 0, 2, 0], born: [0, 0, 1, 0], revived: zeros, died: [0, 0, 0, 2], eaten: [0, 0, 0, 1], rehomed: zeros, toMarket: zeros, movedZoo: zeros};
     assert.deepEqual(arkStepChanges(series, 2), [["arrived", 2], ["born", 1]]);
     assert.deepEqual(arkStepChanges(series, 3), [["died", 2], ["eaten", 1]]);
     assert.deepEqual(arkStepChanges(series, 1), []);
