@@ -5033,7 +5033,7 @@
     "timeLeft": {
       "title": "Estimated time left",
       "about": "About {value}",
-      "hint": "A likely range from odds, not a promise. 1 Ark day is about 55 real minutes.",
+      "hint": "A likely range from odds, not a promise.",
       "reasonAge": "Typical lifespan: {span}",
       "reasonAgeEstimate": "Typical lifespan, estimated: {span}",
       "reasonHunted": "Predators here: {predators}",
@@ -5048,7 +5048,7 @@
       "ageIsAtLeast": "at least {age} old",
       "ageMonths": "{months} Ark months",
       "ageMonth": "1 Ark month",
-      "chanceTitle": "Chance to live another Ark year",
+      "chanceTitle": "Chance to live 2 more weeks",
       "chanceMain": "Main reason: {reason}",
       "chanceHow": "How this is worked out: its age against its kind's lifespan, the predators that can hunt its kind in its range, and hunger, from what the Ark has made public. An estimate that moves as the Ark changes, not a promise.",
       "chanceUp": "Up {change} vs a day ago",
@@ -5216,6 +5216,35 @@
         "faqQ2": "How many young can an animal have at once?",
         "faqA2": "At most 4 per breeding, and at most 2 for kinds that lay hundreds of eggs in real life. Short-lived kinds breed sooner, and a kind stops breeding when it reaches its population limit."
       }
+    },
+    "simple": {
+      "power": "Animal Power",
+      "number": "AnimalDex number",
+      "age": "Age",
+      "left": "{time} left",
+      "ticker": "Thriving and declining this week"
+    },
+    "how": {
+      "lead": "A live 3D world of real animals, run by nature's rules.",
+      "capture": "Snap a real animal",
+      "captureCaption": "Catch one with the AnimalDex app. One of its kind comes aboard.",
+      "islands": "Two islands",
+      "islandsCaption": "Wild animals live on the wild island. Pets, farm and zoo animals live in town.",
+      "thrive": "Help it thrive",
+      "thriveCaption": "Talk to your animal and try its step. When it works, your animals grow stronger.",
+      "food": "Who eats whom",
+      "foodCaption": "Hunters eat only what their field guide says. The weakest get caught first.",
+      "babies": "Babies",
+      "babiesCaption": "Two grown-ups of a kind, in the same place, with food: babies!",
+      "time": "Fast time",
+      "timeCaption": "A year on the Ark is 2 weeks for you. Animals grow up and grow old.",
+      "fair": "Nobody picks",
+      "fairCaption": "No one decides who lives. Only the rules, the same for everyone.",
+      "cta": "Open the Ark",
+      "more": "Read every rule",
+      "wild": "Wild",
+      "town": "Town",
+      "arkYear": "1 Ark year"
     }
   },
   "seo": {

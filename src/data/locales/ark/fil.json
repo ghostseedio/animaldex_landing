@@ -836,7 +836,7 @@
             "ageIsAtLeast": "edad: hindi bababa sa {age}",
             "ageMonths": "{months} buwan sa Ark",
             "ageMonth": "1 buwan sa Ark",
-            "chanceTitle": "Tsansang mabuhay ng isa pang taon sa Ark",
+            "chanceTitle": "Tsansang mabuhay pa nang 2 linggo",
             "chanceMain": "Pangunahing dahilan: {reason}",
             "chanceHow": "Paano ito kinakalkula: ang edad nito kumpara sa haba ng buhay ng uri nito, ang mga maninila na maaaring manghuli sa uri nito sa saklaw nito, at ang gutom, batay sa inilabas ng Ark sa publiko. Isang pagtataya na nagbabago habang nagbabago ang Ark, hindi pangako.",
             "chanceUp": "Tumaas ng {change} mula isang araw ang nakaraan",
@@ -1004,6 +1004,35 @@
                 "faqQ2": "Ilang anak ang maaaring magkaroon ng hayop nang sabay?",
                 "faqA2": "Hindi hihigit sa 4 bawat pagpaparami, at hindi hihigit sa 2 para sa mga uring nangingitlog ng daan-daan sa totoong buhay. Mas maaga magparami ang mga uring maikli ang buhay, at humihinto ang uri sa pagpaparami kapag naabot ang hangganan ng populasyon nito."
             }
+        },
+        "simple": {
+            "power": "Lakas ng Hayop",
+            "number": "Numero sa AnimalDex",
+            "age": "Edad",
+            "left": "{time} na lang",
+            "ticker": "Dumarami at kumokonti ngayong linggo"
+        },
+        "how": {
+            "lead": "Isang buhay na 3D na mundo ng totoong mga hayop, na pinatatakbo ng mga tuntunin ng kalikasan.",
+            "capture": "Kunan ng litrato ang totoong hayop",
+            "captureCaption": "Hulihin ito gamit ang AnimalDex app. Sasakay sa Arko ang isa sa uri nito.",
+            "islands": "Dalawang isla",
+            "islandsCaption": "Sa ligaw na isla nakatira ang mga ligaw na hayop. Sa bayan ang mga alaga, hayop sa bukid at sa zoo.",
+            "thrive": "Tulungan itong umunlad",
+            "thriveCaption": "Kausapin ang hayop mo at subukan ang hakbang nito. Kapag gumana, lalakas ang mga hayop mo.",
+            "food": "Sino ang kumakain kanino",
+            "foodCaption": "Kinakain lang ng mga mangangaso ang sinasabi ng gabay nila. Ang pinakamahina ang unang nahuhuli.",
+            "babies": "Mga anak",
+            "babiesCaption": "Dalawang adulto ng iisang uri, sa iisang lugar, may pagkain: may anak!",
+            "time": "Mabilis na oras",
+            "timeCaption": "Ang isang taon sa Arko ay 2 linggo para sa iyo. Lumalaki at tumatanda ang mga hayop.",
+            "fair": "Walang pumipili",
+            "fairCaption": "Walang nagpapasya kung sino ang mabubuhay. Mga tuntunin lang, pare-pareho para sa lahat.",
+            "cta": "Buksan ang Arko",
+            "more": "Basahin ang lahat ng tuntunin",
+            "wild": "Ligaw",
+            "town": "Bayan",
+            "arkYear": "1 taon sa Arko"
         }
     },
     "talkPage": {

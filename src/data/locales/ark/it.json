@@ -836,7 +836,7 @@
             "ageIsAtLeast": "età: almeno {age}",
             "ageMonths": "{months} mesi dell'Ark",
             "ageMonth": "1 mese dell'Ark",
-            "chanceTitle": "Probabilità di vivere un altro anno dell'Ark",
+            "chanceTitle": "Probabilità di vivere altre 2 settimane",
             "chanceMain": "Motivo principale: {reason}",
             "chanceHow": "Come si calcola: la sua età rispetto alla durata di vita della sua specie, i predatori che possono cacciare la sua specie nella sua zona e la fame, da ciò che l'Ark ha reso pubblico. Una stima che cambia quando cambia l'Ark, non una promessa.",
             "chanceUp": "{change} in più rispetto a un giorno fa",
@@ -1004,6 +1004,35 @@
                 "faqQ2": "Quanti cuccioli può avere un animale in una volta?",
                 "faqA2": "Al massimo 4 per riproduzione e al massimo 2 per le specie che nella realtà depongono centinaia di uova. Le specie di vita breve si riproducono prima, e una specie smette di riprodursi quando raggiunge il suo limite di popolazione."
             }
+        },
+        "simple": {
+            "power": "Potere animale",
+            "number": "Numero AnimalDex",
+            "age": "Età",
+            "left": "Ancora {time}",
+            "ticker": "In crescita e in calo questa settimana"
+        },
+        "how": {
+            "lead": "Un mondo 3D vivo di animali veri, guidato dalle regole della natura.",
+            "capture": "Fotografa un animale vero",
+            "captureCaption": "Catturane uno con l'app AnimalDex. Uno della sua specie sale sull'Arca.",
+            "islands": "Due isole",
+            "islandsCaption": "Gli animali selvatici vivono sull'isola selvaggia. Animali domestici, da fattoria e dello zoo vivono in città.",
+            "thrive": "Aiutalo a prosperare",
+            "thriveCaption": "Parla con il tuo animale e prova il suo passo. Se funziona, i tuoi animali diventano più forti.",
+            "food": "Chi mangia chi",
+            "foodCaption": "I cacciatori mangiano solo ciò che dice la loro guida. I più deboli vengono presi per primi.",
+            "babies": "Cuccioli",
+            "babiesCaption": "Due adulti della stessa specie, nello stesso posto, con cibo: cuccioli!",
+            "time": "Tempo veloce",
+            "timeCaption": "Un anno sull'Arca sono 2 settimane per te. Gli animali crescono e invecchiano.",
+            "fair": "Nessuno sceglie",
+            "fairCaption": "Nessuno decide chi vive. Solo le regole, uguali per tutti.",
+            "cta": "Apri l'Arca",
+            "more": "Leggi tutte le regole",
+            "wild": "Selvatico",
+            "town": "Città",
+            "arkYear": "1 anno dell'Arca"
         }
     },
     "talkPage": {

@@ -836,7 +836,7 @@
             "ageIsAtLeast": "cel puțin {age}",
             "ageMonths": "luni în Ark: {months}",
             "ageMonth": "1 lună în Ark",
-            "chanceTitle": "Șansa de a mai trăi un an în Ark",
+            "chanceTitle": "Șansa de a mai trăi 2 săptămâni",
             "chanceMain": "Motivul principal: {reason}",
             "chanceHow": "Cum se calculează: vârsta lui față de durata de viață a speciei, prădătorii care pot vâna specia lui în zona sa și foamea, pe baza a ceea ce Ark a făcut public. O estimare care se schimbă când se schimbă Ark, nu o promisiune.",
             "chanceUp": "Cu {change} mai mult decât acum o zi",
@@ -1004,6 +1004,35 @@
                 "faqQ2": "Câți pui poate avea un animal odată?",
                 "faqA2": "Cel mult 4 pe înmulțire și cel mult 2 pentru speciile care în realitate depun sute de ouă. Speciile cu viață scurtă se înmulțesc mai devreme, iar o specie nu se mai înmulțește când atinge limita de populație."
             }
+        },
+        "simple": {
+            "power": "Puterea animalului",
+            "number": "Număr AnimalDex",
+            "age": "Vârstă",
+            "left": "Mai are {time}",
+            "ticker": "În creștere și în scădere săptămâna aceasta"
+        },
+        "how": {
+            "lead": "O lume 3D vie de animale reale, condusă de regulile naturii.",
+            "capture": "Fotografiază un animal real",
+            "captureCaption": "Prinde unul cu aplicația AnimalDex. Unul din specia lui urcă pe Arcă.",
+            "islands": "Două insule",
+            "islandsCaption": "Animalele sălbatice trăiesc pe insula sălbatică. Animalele de companie, de fermă și de la zoo trăiesc în oraș.",
+            "thrive": "Ajută-l să înflorească",
+            "thriveCaption": "Vorbește cu animalul tău și încearcă pasul lui. Când merge, animalele tale devin mai puternice.",
+            "food": "Cine pe cine mănâncă",
+            "foodCaption": "Vânătorii mănâncă doar ce spune ghidul lor. Cei mai slabi sunt prinși primii.",
+            "babies": "Pui",
+            "babiesCaption": "Doi adulți din aceeași specie, în același loc, cu hrană: pui!",
+            "time": "Timp rapid",
+            "timeCaption": "Un an pe Arcă înseamnă 2 săptămâni pentru tine. Animalele cresc și îmbătrânesc.",
+            "fair": "Nimeni nu alege",
+            "fairCaption": "Nimeni nu decide cine trăiește. Doar regulile, aceleași pentru toți.",
+            "cta": "Deschide Arca",
+            "more": "Citește toate regulile",
+            "wild": "Sălbatic",
+            "town": "Oraș",
+            "arkYear": "1 an pe Arcă"
         }
     },
     "talkPage": {

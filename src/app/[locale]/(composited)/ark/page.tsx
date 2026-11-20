@@ -550,7 +550,7 @@ export default async function ArkPage({params, searchParams}: Props) {
                 ]
             }))}}
         />
-        <ArkIntro words={words.intro} counts={snapshot?.counts ?? null} arrivals={arrivals} locale={wordsLocale} howHref={ARK_HOW_IT_WORKS_PATH} />
+        <ArkIntro words={words.intro} counts={snapshot?.counts ?? null} locale={wordsLocale} howHref={otherLanguage ? `${ARK_HOW_IT_WORKS_PATH}/lang/${encodeURIComponent(language)}` : ARK_HOW_IT_WORKS_PATH} />
         <ArkView
             locale={wordsLocale}
             initial={handed}

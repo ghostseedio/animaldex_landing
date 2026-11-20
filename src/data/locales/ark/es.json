@@ -836,7 +836,7 @@
             "ageIsAtLeast": "edad: al menos {age}",
             "ageMonths": "{months} meses del Ark",
             "ageMonth": "1 mes del Ark",
-            "chanceTitle": "Probabilidad de vivir otro año del Ark",
+            "chanceTitle": "Probabilidad de vivir 2 semanas más",
             "chanceMain": "Motivo principal: {reason}",
             "chanceHow": "Cómo se calcula: su edad frente a la esperanza de vida de su especie, los depredadores que pueden cazar a su especie en su zona y el hambre, a partir de lo que el Ark ha hecho público. Una estimación que cambia cuando cambia el Ark, no una promesa.",
             "chanceUp": "{change} más que hace un día",
@@ -1004,6 +1004,35 @@
                 "faqQ2": "¿Cuántas crías puede tener un animal a la vez?",
                 "faqA2": "Como máximo 4 por cría y como máximo 2 en las especies que ponen cientos de huevos en la vida real. Las especies de vida corta se reproducen antes, y una especie deja de reproducirse cuando llega a su límite de población."
             }
+        },
+        "simple": {
+            "power": "Poder animal",
+            "number": "Número de AnimalDex",
+            "age": "Edad",
+            "left": "Le queda {time}",
+            "ticker": "En auge y en declive esta semana"
+        },
+        "how": {
+            "lead": "Un mundo 3D vivo de animales reales, regido por las reglas de la naturaleza.",
+            "capture": "Fotografía un animal real",
+            "captureCaption": "Atrapa uno con la app AnimalDex. Uno de su especie sube al Arca.",
+            "islands": "Dos islas",
+            "islandsCaption": "Los animales salvajes viven en la isla salvaje. Las mascotas, los animales de granja y los del zoo viven en la ciudad.",
+            "thrive": "Ayúdalo a prosperar",
+            "thriveCaption": "Habla con tu animal y prueba su paso. Si funciona, tus animales se hacen más fuertes.",
+            "food": "Quién come a quién",
+            "foodCaption": "Los cazadores solo comen lo que dice su guía de campo. Los más débiles caen primero.",
+            "babies": "Crías",
+            "babiesCaption": "Dos adultos de la misma especie, en el mismo lugar, con comida: ¡crías!",
+            "time": "Tiempo rápido",
+            "timeCaption": "Un año en el Arca son 2 semanas para ti. Los animales crecen y envejecen.",
+            "fair": "Nadie elige",
+            "fairCaption": "Nadie decide quién vive. Solo las reglas, iguales para todos.",
+            "cta": "Abrir el Arca",
+            "more": "Leer todas las reglas",
+            "wild": "Salvaje",
+            "town": "Ciudad",
+            "arkYear": "1 año del Arca"
         }
     },
     "talkPage": {

@@ -836,7 +836,7 @@
             "ageIsAtLeast": "yaş: en az {age}",
             "ageMonths": "{months} Ark ayı",
             "ageMonth": "1 Ark ayı",
-            "chanceTitle": "Bir Ark yılı daha yaşama şansı",
+            "chanceTitle": "2 hafta daha yaşama şansı",
             "chanceMain": "Başlıca neden: {reason}",
             "chanceHow": "Nasıl hesaplanır: yaşının türünün ömrüne göre durumu, bölgesinde türünü avlayabilecek yırtıcılar ve açlık; Ark'ın kamuya açıkladıklarına dayanır. Ark değiştikçe değişen bir tahmindir, söz değildir.",
             "chanceUp": "Bir gün öncesine göre {change} yüksek",
@@ -1004,6 +1004,35 @@
                 "faqQ2": "Bir hayvan aynı anda kaç yavru yapabilir?",
                 "faqA2": "Üreme başına en fazla 4, gerçekte yüzlerce yumurta bırakan türlerde en fazla 2. Kısa ömürlü türler daha erken ürer ve bir tür nüfus sınırına ulaşınca üremeyi bırakır."
             }
+        },
+        "simple": {
+            "power": "Hayvan Gücü",
+            "number": "AnimalDex numarası",
+            "age": "Yaş",
+            "left": "{time} kaldı",
+            "ticker": "Bu hafta artanlar ve azalanlar"
+        },
+        "how": {
+            "lead": "Gerçek hayvanlarla dolu, doğanın kurallarıyla işleyen canlı bir 3D dünya.",
+            "capture": "Gerçek bir hayvanın fotoğrafını çek",
+            "captureCaption": "AnimalDex uygulamasıyla bir tane yakala. Türünden biri Gemi'ye biner.",
+            "islands": "İki ada",
+            "islandsCaption": "Yaban hayvanları yabani adada yaşar. Evcil, çiftlik ve hayvanat bahçesi hayvanları kasabada yaşar.",
+            "thrive": "Gelişmesine yardım et",
+            "thriveCaption": "Hayvanınla konuş ve onun adımını dene. İşe yararsa hayvanların güçlenir.",
+            "food": "Kim kimi yer",
+            "foodCaption": "Avcılar yalnızca rehberlerinin söylediğini yer. En zayıflar önce yakalanır.",
+            "babies": "Yavrular",
+            "babiesCaption": "Aynı türden iki yetişkin, aynı yerde, yiyecekle: yavrular!",
+            "time": "Hızlı zaman",
+            "timeCaption": "Gemi'de bir yıl senin için 2 hafta. Hayvanlar büyür ve yaşlanır.",
+            "fair": "Kimse seçmez",
+            "fairCaption": "Kimin yaşayacağına kimse karar vermez. Sadece kurallar, herkes için aynı.",
+            "cta": "Gemi'yi aç",
+            "more": "Tüm kuralları oku",
+            "wild": "Yaban",
+            "town": "Kasaba",
+            "arkYear": "1 Gemi yılı"
         }
     },
     "talkPage": {

@@ -490,7 +490,17 @@ export type ArkWords = {
     rankings?: ArkRankingsWords;
     /** Who could hunt it, what it eats, its possible mates, and the lines' switch (lane ark-relation-lines); English fills any key a bundle lacks. */
     relations?: Partial<ArkRelationsWords>;
+    /**
+     * The simpler card and panel (lane ARK-SIMPLE, owner 2026-11-20): the Animal Power tile's label, the index number's
+     * name, the life row's "{time} left" and the ticker's name. Optional: English fills.
+     */
+    simple?: Partial<ArkSimpleWords>;
+    /** /ark/how-it-works, the visual page (lane ARK-SIMPLE): short captions in every Ark language. Optional: English fills. */
+    how?: Partial<Record<string, string>>;
 };
+
+export type ArkSimpleWords = {power: string; number: string; age: string; left: string; ticker: string};
+export const ARK_SIMPLE_ENGLISH: ArkSimpleWords = {power: "Animal Power", number: "AnimalDex number", age: "Age", left: "{time} left", ticker: "Thriving and declining this week"};
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */
 export type ArkPersonWords = {

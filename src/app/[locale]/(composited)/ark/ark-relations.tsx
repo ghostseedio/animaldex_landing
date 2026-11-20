@@ -9,7 +9,7 @@ import {arkHuntingRegion, isArkFoodChainSlug} from "@/lib/ark-food-chain";
 import {arkTimeLeftFetch} from "@/lib/ark-time-left-facts";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkIconUrl} from "@/ark-scene/placeholder-icon";
-import {ARK_RELATIONS_ENGLISH, arkFoodChainRows, type ArkFoodChainKind, ARK_RELATION_KINDS, ARK_RELATION_STYLE, arkRelationLinesOn, arkRelations, arkRelationShown, arkSetRelationLinesOn, type ArkRelationKind, type ArkRelations, type ArkRelationsWords} from "@/lib/ark-relations";
+import {ARK_RELATION_LINES_EVENT, ARK_RELATIONS_ENGLISH, arkFoodChainRows, type ArkFoodChainKind, ARK_RELATION_KINDS, ARK_RELATION_STYLE, arkRelationLinesOn, arkRelations, arkRelationShown, arkSetRelationLinesOn, type ArkRelationKind, type ArkRelations, type ArkRelationsWords} from "@/lib/ark-relations";
 import type {ArkRelationLinesHandle} from "@/ark-scene/relation-lines";
 
 function RelationIcon({kind}: {kind: ArkRelationKind}) {
@@ -46,7 +46,13 @@ const REFRESH_MS = 2000;
 export default function ArkRelationsPanel({animal, snapshot, scene, words, locale}: Props) {
     const w = useMemo(() => ({...ARK_RELATIONS_ENGLISH, ...(words.relations ?? {})}), [words]);
     const [on, setOn] = useState(true);
-    useEffect(() => setOn(arkRelationLinesOn()), []);
+    useEffect(() => {
+        setOn(arkRelationLinesOn());
+        // The switch is over the world now, beside the sound button (lane ARK-SIMPLE): it tells the card with an event.
+        const told = (event: Event) => setOn((event as CustomEvent<boolean>).detail !== false);
+        window.addEventListener(ARK_RELATION_LINES_EVENT, told);
+        return () => window.removeEventListener(ARK_RELATION_LINES_EVENT, told);
+    }, []);
     const kept = arkHuntingRegion(animal) === null;
     const slug = animal.model_slug;
     const needsLinks = !kept && isArkFoodChainSlug(slug);
@@ -141,32 +147,33 @@ export default function ArkRelationsPanel({animal, snapshot, scene, words, local
     }, [locale]);
 
     if (!value || !linksRead) return null;
-    // Predators and prey are listed by kind in the food chain (each with its count here and the nearest's distance);
-    // the rows below list the rest one by one (mates, eggs).
-    const rows = ARK_RELATION_KINDS.filter((kind) => kind !== "predator" && kind !== "prey" && value[kind].all.length);
-    const anyLines = ARK_RELATION_KINDS.some((kind) => value[kind].all.length);
     const nearest = new Map<string, number>();
     for (const kind of ["predator", "prey"] as const) for (const t of value[kind].all) if (!nearest.has(t.kind)) nearest.set(t.kind, t.distance);
     const chain = arkFoodChainRows(links, value);
     // Decision 434: a dung user's food, from its stored microhabitats (the scene's), unless the read already says it.
     const dung = !kept && !chain.ambient.some((phrase) => /dung|droppings/i.test(phrase)) && Boolean(scene()?.eatsDung?.(slug, animal.zone));
+    const toggle = (next: boolean) => {
+        setOn(next);
+        arkSetRelationLinesOn(next);
+    };
     const tapKind = (kind: ArkFoodChainKind) => {
         setFocus(focusKind === kind.id ? null : {animal: animal.id, kind: kind.id});
         if (!on && kind.here) toggle(true);
     };
-    const kindChip = (kind: ArkFoodChainKind) => {
-        const near = nearest.get(kind.id);
-        const where = kind.here ? `${fillArkWords(w.here, {n: kind.here.toLocaleString(locale)})}${near !== undefined && metres && Number.isFinite(near) ? ` · ${metres.format(Math.round(near))}` : ""}` : w.noneNearby;
+    const far = (distance: number | undefined) => (distance !== undefined && metres && Number.isFinite(distance) ? metres.format(Math.round(distance)) : null);
+    // One kind as its round icon (owner 2026-11-20: "compact visual rows of icons"): its name, how many are here and the
+    // nearest's distance in the tooltip; a small count when more than one is here; faded when none is nearby.
+    const kindIcon = (kind: ArkFoodChainKind) => {
+        const near = far(nearest.get(kind.id));
+        const where = kind.here ? [fillArkWords(w.here, {n: kind.here.toLocaleString(locale)}), near].filter(Boolean).join(" · ") : w.noneNearby;
         return (
-        <button key={kind.id} type="button" aria-pressed={focusKind === kind.id} onClick={() => tapKind(kind)} aria-label={`${kind.name}: ${where}`} title={where} className={`inline-flex items-center gap-1 rounded-full py-px pl-0.5 pr-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 ${focusKind === kind.id ? "bg-primary-400/20 text-white" : "bg-white/[0.07] text-ink-100 hover:bg-white/[0.14]"} ${kind.here ? "" : "opacity-60"}`}>
-            <span className="flex h-4 w-4 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]"><ArkSpeciesIcon src={arkIconUrl(kind.slug)} size={16} className="h-[85%] w-[85%] object-contain" /></span>
-            {kind.name}
-            <span className="tabular-nums text-ink-400">{kind.here ? kind.here.toLocaleString(locale) : "0"}</span>
-            {near !== undefined && metres && Number.isFinite(near) ? <span className="tabular-nums text-ink-400">· {metres.format(Math.round(near))}</span> : null}
-        </button>
+            <button key={kind.id} type="button" aria-pressed={focusKind === kind.id} onClick={() => tapKind(kind)} aria-label={`${kind.name}: ${where}`} title={`${kind.name} · ${where}`} className={`relative h-7 w-7 shrink-0 rounded-full transition-transform duration-150 hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 motion-reduce:transition-none ${focusKind === kind.id ? "ring-2 ring-primary-300" : "ring-1 ring-white/15"} ${kind.here ? "" : "opacity-45 grayscale"}`}>
+                <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]"><ArkSpeciesIcon src={arkIconUrl(kind.slug)} size={28} className="h-[84%] w-[84%] object-contain" /></span>
+                {kind.here > 1 ? <span aria-hidden="true" className="absolute -bottom-1 -end-1 min-w-[15px] rounded-full bg-[#141816] px-[3px] text-center text-[9.5px] font-bold leading-[15px] tabular-nums text-white ring-1 ring-white/20">{kind.here > 99 ? "99+" : kind.here}</span> : null}
+            </button>
         );
     };
-    // Compact: the first few kinds of each row that are in its region now (else the first few), the rest behind "+N more".
+    // The first few kinds of each row that are in its region now (else the first few), the rest behind "+N".
     const capped = (row: "eats" | "eatenBy", kinds: ArkFoodChainKind[]) => {
         const open = chainOpen === `${animal.id}|${row}`;
         const nearby = kinds.filter((kind) => kind.here > 0);
@@ -174,77 +181,67 @@ export default function ArkRelationsPanel({animal, snapshot, scene, words, local
         const more = kinds.length - shown.length;
         return (
             <>
-                {shown.map(kindChip)}
+                {shown.map(kindIcon)}
                 {more > 0 || open ? (
-                    <button type="button" aria-expanded={open} onClick={() => setChainOpen(open ? null : `${animal.id}|${row}`)} className="rounded-full px-1 text-ink-400 underline-offset-2 hover:text-ink-100 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
-                        {open ? "−" : fillArkWords(w.more, {n: more.toLocaleString(locale)})}
+                    <button type="button" aria-expanded={open} onClick={() => setChainOpen(open ? null : `${animal.id}|${row}`)} title={open ? undefined : fillArkWords(w.more, {n: more.toLocaleString(locale)})} className="flex h-7 min-w-7 items-center justify-center rounded-full bg-white/[0.08] px-1.5 text-[11px] font-bold tabular-nums text-ink-200 hover:bg-white/[0.14] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
+                        {open ? "−" : `+${more.toLocaleString(locale)}`}
                     </button>
                 ) : null}
             </>
         );
     };
     const focused = focusKind ? [...chain.eats, ...chain.eatenBy].find((kind) => kind.id === focusKind) ?? null : null;
-    const toggle = (next: boolean) => {
-        setOn(next);
-        arkSetRelationLinesOn(next);
+    // Its mates and the eggs, one icon per animal (each selects that animal).
+    const one = (kind: ArkRelationKind) => {
+        const {shown, more} = arkRelationShown(value[kind]);
+        return (
+            <>
+                {shown.map((target) => {
+                    const tip = [target.name, far(target.distance)].filter(Boolean).join(" · ");
+                    return (
+                        <button key={target.id} type="button" onClick={() => scene()?.select(target.id)} aria-label={tip} title={tip} className="h-7 w-7 shrink-0 rounded-full ring-1 ring-white/15 transition-transform duration-150 hover:scale-110 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300 motion-reduce:transition-none">
+                            <span className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7]"><ArkSpeciesIcon src={arkIconUrl(target.slug)} size={28} className="h-[84%] w-[84%] object-contain" /></span>
+                        </button>
+                    );
+                })}
+                {more ? <span title={fillArkWords(w.more, {n: more.toLocaleString(locale)})} className="text-[11px] font-bold tabular-nums text-ink-300">+{more.toLocaleString(locale)}</span> : null}
+            </>
+        );
     };
+    const group = (key: string, kind: ArkRelationKind, label: string, children: React.ReactNode) => (
+        <div key={key} role="group" aria-label={label} data-relation={kind} className="flex min-w-0 items-center gap-1.5">
+            <span title={label} className="flex shrink-0 items-center gap-1 pe-0.5 text-[11px] font-semibold text-ink-300">
+                <RelationIcon kind={kind} />
+                <span className="hidden lg:inline">{label}</span>
+            </span>
+            {children}
+        </div>
+    );
+    const none = <span aria-hidden="true" className="text-[12px] text-ink-500">—</span>;
+    const others = (["partner", "eggs", "eggThreat"] as const).filter((kind) => value[kind].all.length);
     return (
-        <section data-testid="ark-card-relations" aria-label={w.title} className="mt-1.5">
-            <div className="flex items-center gap-2">
-                <span className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400" title={w.note}>{w.title}</span>
-                {anyLines ? (
-                    <button type="button" role="switch" aria-checked={on} onClick={() => toggle(!on)} data-testid="ark-card-relations-toggle" className="inline-flex h-7 items-center gap-1.5 rounded-full border border-line-100 px-2 text-[11.5px] font-semibold text-ink-100 hover:border-primary-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
-                        <span aria-hidden="true" className={`relative h-3.5 w-6 rounded-full transition-colors ${on ? "bg-primary-400" : "bg-white/20"}`}>
-                            <span className={`absolute top-0.5 h-2.5 w-2.5 rounded-full bg-canvas-950 transition-[left] ${on ? "left-3" : "left-0.5"}`} />
-                        </span>
-                        {w.lines}
-                    </button>
-                ) : null}
-            </div>
-            {/* Its food chain by kind (owner 2026-11-20): what it eats (catalogue prey, and its background food when the read
-                sends it) and what eats it, with how many of each are in its region; a kind's tap highlights its lines. */}
-            <div role="group" aria-label={w.chain} data-testid="ark-card-food-chain" className="mt-0.5 text-[12px] leading-snug">
-                {value.kept ? (
-                    <p className="text-ink-300">{w.keptFed} · {w.keptSafe}</p>
-                ) : (
-                    <dl className="space-y-0.5">
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                            <dt className="font-semibold text-ink-200">{w.eats}</dt>
+        <section data-testid="ark-card-relations" aria-label={w.title} title={w.note} className="min-w-0">
+            {/* Its food chain by kind and its mates, as icons (owner 2026-11-20): a kind's tap highlights its lines. */}
+            {value.kept ? (
+                <p data-testid="ark-card-food-chain" className="flex items-center gap-1.5 text-[12px] text-ink-300">
+                    <RelationIcon kind="partner" />
+                    {w.keptFed} · {w.keptSafe}
+                </p>
+            ) : (
+                <div data-testid="ark-card-food-chain" className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+                    {group("eats", "prey", w.eats, (
+                        <>
                             {capped("eats", chain.eats)}
-                            {chain.ambient.map((phrase) => <dd key={phrase} className="rounded-full bg-white/[0.04] px-1.5 py-px italic text-ink-200">{phrase}</dd>)}
-                            {dung ? <dd data-testid="ark-card-eats-dung" className="rounded-full bg-white/[0.04] px-1.5 py-px italic text-ink-200">{w.dung}</dd> : null}
-                            {!chain.eats.length && !chain.ambient.length && !dung ? <dd className="text-ink-400">{w.noneAboard}</dd> : null}
-                        </div>
-                        <div className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                            <dt className="font-semibold text-ink-200">{w.eatenBy}</dt>
-                            {capped("eatenBy", chain.eatenBy)}
-                            {!chain.eatenBy.length ? <dd className="text-ink-400">{w.noneAboard}</dd> : null}
-                        </div>
-                    </dl>
-                )}
-                {focused && !focused.here ? <p role="status" className="text-[11.5px] text-ink-400">{focused.name}: {w.noneNearby}</p> : null}
-            </div>
-            {rows.length ? (
-                <ul className="mt-0.5 space-y-0.5 text-[12px] leading-snug">
-                    {rows.map((kind) => {
-                        const {shown, more} = arkRelationShown(value[kind]);
-                        return (
-                            <li key={kind} data-relation={kind} className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                                <RelationIcon kind={kind} />
-                                <span className="font-semibold text-ink-200">{w[kind]}</span>
-                                {shown.map((target) => (
-                                    <button key={target.id} type="button" onClick={() => scene()?.select(target.id)} className="rounded-full bg-white/[0.07] px-1.5 py-px text-ink-100 hover:bg-white/[0.14] focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
-                                        {target.name}
-                                        {metres && Number.isFinite(target.distance) ? <span className="ml-1 tabular-nums text-ink-400">{metres.format(Math.round(target.distance))}</span> : null}
-                                    </button>
-                                ))}
-                                {more ? <span className="text-ink-400">{fillArkWords(w.more, {n: more.toLocaleString(locale)})}</span> : null}
-                            </li>
-                        );
-                    })}
-                </ul>
-            ) : null}
-            {value.young && !value.kept ? <p className="mt-0.5 text-[11.5px] leading-snug text-ink-300">{w.young}</p> : null}
+                            {chain.ambient.map((phrase) => <span key={phrase} className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] text-ink-200">{phrase}</span>)}
+                            {dung ? <span data-testid="ark-card-eats-dung" className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] text-ink-200">{w.dung}</span> : null}
+                            {!chain.eats.length && !chain.ambient.length && !dung ? none : null}
+                        </>
+                    ))}
+                    {group("eatenBy", "predator", w.eatenBy, chain.eatenBy.length ? capped("eatenBy", chain.eatenBy) : none)}
+                    {others.map((kind) => group(kind, kind, w[kind], one(kind)))}
+                </div>
+            )}
+            {focused && !focused.here ? <p role="status" className="mt-1 text-[11.5px] text-ink-400">{focused.name}: {w.noneNearby}</p> : null}
         </section>
     );
 }

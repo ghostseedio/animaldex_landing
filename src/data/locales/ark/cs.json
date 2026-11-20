@@ -836,7 +836,7 @@
             "ageIsAtLeast": "nejméně {age}",
             "ageMonths": "měsíců v Ark: {months}",
             "ageMonth": "1 měsíc v Ark",
-            "chanceTitle": "Šance dožít se dalšího roku v Ark",
+            "chanceTitle": "Šance přežít další 2 týdny",
             "chanceMain": "Hlavní důvod: {reason}",
             "chanceHow": "Jak se to počítá: z jeho věku vůči délce života jeho druhu, ze šelem, které mohou jeho druh v okolí lovit, a z hladu, podle toho, co Ark zveřejnila. Odhad, který se mění spolu s Ark, ne příslib.",
             "chanceUp": "O {change} výše než před dnem",
@@ -1004,6 +1004,35 @@
                 "faqQ2": "Kolik mláďat může mít zvíře najednou?",
                 "faqA2": "Nejvýše 4 na jedno rozmnožení a nejvýše 2 u druhů, které v přírodě snášejí stovky vajec. Krátce žijící druhy se množí dříve a druh přestane se množit, když dosáhne limitu populace."
             }
+        },
+        "simple": {
+            "power": "Zvířecí síla",
+            "number": "Číslo v AnimalDex",
+            "age": "Věk",
+            "left": "Zbývá {time}",
+            "ticker": "Tento týden roste a klesá"
+        },
+        "how": {
+            "lead": "Živý 3D svět skutečných zvířat, který řídí pravidla přírody.",
+            "capture": "Vyfoť skutečné zvíře",
+            "captureCaption": "Chyť ho v aplikaci AnimalDex. Jedno zvíře jeho druhu nastoupí na Archu.",
+            "islands": "Dva ostrovy",
+            "islandsCaption": "Divoká zvířata žijí na divokém ostrově. Mazlíčci, hospodářská zvířata a zvířata ze zoo žijí ve městě.",
+            "thrive": "Pomoz mu prospívat",
+            "thriveCaption": "Promluv si se svým zvířetem a zkus jeho krok. Když vyjde, tvá zvířata zesílí.",
+            "food": "Kdo koho jí",
+            "foodCaption": "Lovci jedí jen to, co uvádí jejich atlas. Nejslabší jsou chyceni první.",
+            "babies": "Mláďata",
+            "babiesCaption": "Dva dospělí stejného druhu, na stejném místě, s potravou: mláďata!",
+            "time": "Rychlý čas",
+            "timeCaption": "Rok na Arše jsou pro tebe 2 týdny. Zvířata rostou a stárnou.",
+            "fair": "Nikdo nevybírá",
+            "fairCaption": "Nikdo nerozhoduje, kdo bude žít. Jen pravidla, stejná pro všechny.",
+            "cta": "Otevřít Archu",
+            "more": "Přečíst všechna pravidla",
+            "wild": "Divočina",
+            "town": "Město",
+            "arkYear": "1 rok na Arše"
         }
     },
     "talkPage": {

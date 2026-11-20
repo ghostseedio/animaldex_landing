@@ -836,7 +836,7 @@
             "ageIsAtLeast": "mindst {age} gammel",
             "ageMonths": "{months} Ark-måneder",
             "ageMonth": "1 Ark-måned",
-            "chanceTitle": "Chance for at leve endnu et Ark-år",
+            "chanceTitle": "Chance for at leve 2 uger mere",
             "chanceMain": "Vigtigste grund: {reason}",
             "chanceHow": "Sådan beregnes det: dens alder i forhold til artens levetid, de rovdyr der kan jage dens art i dens område, og sult, ud fra det Ark har gjort offentligt. Et skøn, der ændrer sig, når Ark ændrer sig, ikke et løfte.",
             "chanceUp": "{change} højere end for en dag siden",
@@ -1004,6 +1004,35 @@
                 "faqQ2": "Hvor mange unger kan et dyr få ad gangen?",
                 "faqA2": "Højst 4 pr. formering og højst 2 for arter, der i virkeligheden lægger hundredvis af æg. Kortlevende arter formerer sig før, og en art holder op med at formere sig, når den når sin bestandsgrænse."
             }
+        },
+        "simple": {
+            "power": "Dyrekraft",
+            "number": "AnimalDex-nummer",
+            "age": "Alder",
+            "left": "{time} tilbage",
+            "ticker": "I vækst og i tilbagegang denne uge"
+        },
+        "how": {
+            "lead": "En levende 3D-verden af ægte dyr, styret af naturens regler.",
+            "capture": "Fotografér et ægte dyr",
+            "captureCaption": "Fang et med AnimalDex-appen. Ét af dens art kommer om bord.",
+            "islands": "To øer",
+            "islandsCaption": "Vilde dyr bor på den vilde ø. Kæledyr, husdyr og zoodyr bor i byen.",
+            "thrive": "Hjælp det med at trives",
+            "thriveCaption": "Tal med dit dyr, og prøv dets skridt. Når det virker, bliver dine dyr stærkere.",
+            "food": "Hvem spiser hvem",
+            "foodCaption": "Jægere spiser kun det, deres felthåndbog nævner. De svageste fanges først.",
+            "babies": "Unger",
+            "babiesCaption": "To voksne af samme art, samme sted, med mad: unger!",
+            "time": "Hurtig tid",
+            "timeCaption": "Et år på Arken er 2 uger for dig. Dyrene vokser op og bliver gamle.",
+            "fair": "Ingen vælger",
+            "fairCaption": "Ingen bestemmer, hvem der lever. Kun reglerne, de samme for alle.",
+            "cta": "Åbn Arken",
+            "more": "Læs alle regler",
+            "wild": "Vild",
+            "town": "By",
+            "arkYear": "1 Ark-år"
         }
     },
     "talkPage": {

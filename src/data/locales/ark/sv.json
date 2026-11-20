@@ -836,7 +836,7 @@
             "ageIsAtLeast": "minst {age} gammal",
             "ageMonths": "{months} Ark-månader",
             "ageMonth": "1 Ark-månad",
-            "chanceTitle": "Chans att leva ytterligare ett Ark-år",
+            "chanceTitle": "Chans att leva 2 veckor till",
             "chanceMain": "Huvudorsak: {reason}",
             "chanceHow": "Så räknas det ut: dess ålder mot artens livslängd, de rovdjur som kan jaga dess art i dess område och hunger, utifrån det Ark har gjort offentligt. En uppskattning som ändras när Ark ändras, inget löfte.",
             "chanceUp": "{change} högre än för en dag sedan",
@@ -1004,6 +1004,35 @@
                 "faqQ2": "Hur många ungar kan ett djur få på en gång?",
                 "faqA2": "Högst 4 per förökning och högst 2 för arter som i verkligheten lägger hundratals ägg. Kortlivade arter förökar sig tidigare, och en art slutar föröka sig när den når sin beståndsgräns."
             }
+        },
+        "simple": {
+            "power": "Djurkraft",
+            "number": "AnimalDex-nummer",
+            "age": "Ålder",
+            "left": "{time} kvar",
+            "ticker": "Ökar och minskar den här veckan"
+        },
+        "how": {
+            "lead": "En levande 3D-värld av riktiga djur, styrd av naturens regler.",
+            "capture": "Fota ett riktigt djur",
+            "captureCaption": "Fånga ett med AnimalDex-appen. Ett av dess art kliver ombord.",
+            "islands": "Två öar",
+            "islandsCaption": "Vilda djur bor på den vilda ön. Husdjur, lantbruksdjur och djurparksdjur bor i staden.",
+            "thrive": "Hjälp det att frodas",
+            "thriveCaption": "Prata med ditt djur och prova dess steg. När det funkar blir dina djur starkare.",
+            "food": "Vem äter vem",
+            "foodCaption": "Jägare äter bara det deras fälthandbok nämner. De svagaste fångas först.",
+            "babies": "Ungar",
+            "babiesCaption": "Två vuxna av samma art, på samma plats, med mat: ungar!",
+            "time": "Snabb tid",
+            "timeCaption": "Ett år på Arken är 2 veckor för dig. Djuren växer upp och blir gamla.",
+            "fair": "Ingen väljer",
+            "fairCaption": "Ingen bestämmer vem som lever. Bara reglerna, desamma för alla.",
+            "cta": "Öppna Arken",
+            "more": "Läs alla regler",
+            "wild": "Vild",
+            "town": "Stad",
+            "arkYear": "1 Ark-år"
         }
     },
     "talkPage": {

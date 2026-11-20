@@ -836,7 +836,7 @@
             "ageIsAtLeast": "âge : au moins {age}",
             "ageMonths": "{months} mois d'Ark",
             "ageMonth": "1 mois d'Ark",
-            "chanceTitle": "Chances de vivre une année d'Ark de plus",
+            "chanceTitle": "Chance de vivre encore 2 semaines",
             "chanceMain": "Raison principale : {reason}",
             "chanceHow": "Comment c'est calculé : son âge par rapport à la durée de vie de son espèce, les prédateurs qui peuvent chasser son espèce dans sa zone, et la faim, d'après ce que l'Ark a rendu public. Une estimation qui change quand l'Ark change, pas une promesse.",
             "chanceUp": "{change} de plus qu'il y a un jour",
@@ -1004,6 +1004,35 @@
                 "faqQ2": "Combien de petits un animal peut-il avoir à la fois ?",
                 "faqA2": "Au plus 4 par reproduction, et au plus 2 pour les espèces qui pondent des centaines d'œufs dans la vraie vie. Les espèces à vie courte se reproduisent plus tôt, et une espèce cesse de se reproduire quand elle atteint sa limite de population."
             }
+        },
+        "simple": {
+            "power": "Pouvoir animal",
+            "number": "Numéro AnimalDex",
+            "age": "Âge",
+            "left": "Encore {time}",
+            "ticker": "En hausse et en baisse cette semaine"
+        },
+        "how": {
+            "lead": "Un monde 3D vivant d'animaux réels, régi par les règles de la nature.",
+            "capture": "Photographie un vrai animal",
+            "captureCaption": "Attrape-en un avec l'app AnimalDex. Un de son espèce monte à bord de l'Arche.",
+            "islands": "Deux îles",
+            "islandsCaption": "Les animaux sauvages vivent sur l'île sauvage. Animaux de compagnie, de ferme et de zoo vivent en ville.",
+            "thrive": "Aide-le à s'épanouir",
+            "thriveCaption": "Parle à ton animal et essaie son pas. Quand ça marche, tes animaux deviennent plus forts.",
+            "food": "Qui mange qui",
+            "foodCaption": "Les chasseurs ne mangent que ce que dit leur guide. Les plus faibles sont attrapés en premier.",
+            "babies": "Des petits",
+            "babiesCaption": "Deux adultes d'une même espèce, au même endroit, avec de la nourriture : des petits !",
+            "time": "Le temps file",
+            "timeCaption": "Un an sur l'Arche, c'est 2 semaines pour toi. Les animaux grandissent et vieillissent.",
+            "fair": "Personne ne choisit",
+            "fairCaption": "Personne ne décide qui vit. Seulement les règles, les mêmes pour tous.",
+            "cta": "Ouvrir l'Arche",
+            "more": "Lire toutes les règles",
+            "wild": "Sauvage",
+            "town": "Ville",
+            "arkYear": "1 an de l'Arche"
         }
     },
     "talkPage": {

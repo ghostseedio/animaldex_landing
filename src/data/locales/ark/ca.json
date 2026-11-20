@@ -836,7 +836,7 @@
             "ageIsAtLeast": "edat: almenys {age}",
             "ageMonths": "{months} mesos de l'Ark",
             "ageMonth": "1 mes de l'Ark",
-            "chanceTitle": "Probabilitat de viure un any de l'Ark més",
+            "chanceTitle": "Probabilitat de viure 2 setmanes més",
             "chanceMain": "Motiu principal: {reason}",
             "chanceHow": "Com es calcula: la seva edat davant la vida típica de la seva espècie, els depredadors que poden caçar la seva espècie al seu entorn i la fam, a partir del que l'Ark ha fet públic. Una estimació que canvia quan canvia l'Ark, no una promesa.",
             "chanceUp": "{change} més que fa un dia",
@@ -1004,6 +1004,35 @@
                 "faqQ2": "Quantes cries pot tenir un animal alhora?",
                 "faqA2": "Com a màxim 4 per cria i com a màxim 2 per a les espècies que a la vida real ponen centenars d'ous. Les espècies de vida curta es reprodueixen abans, i una espècie deixa de reproduir-se quan arriba al seu límit de població."
             }
+        },
+        "simple": {
+            "power": "Poder animal",
+            "number": "Número AnimalDex",
+            "age": "Edat",
+            "left": "Li queda {time}",
+            "ticker": "En auge i en declivi aquesta setmana"
+        },
+        "how": {
+            "lead": "Un món 3D viu d'animals reals, regit per les regles de la natura.",
+            "capture": "Fotografia un animal real",
+            "captureCaption": "Captura'n un amb l'app AnimalDex. Un de la seva espècie puja a l'Arca.",
+            "islands": "Dues illes",
+            "islandsCaption": "Els animals salvatges viuen a l'illa salvatge. Les mascotes, els animals de granja i els del zoo viuen a la ciutat.",
+            "thrive": "Ajuda'l a prosperar",
+            "thriveCaption": "Parla amb el teu animal i prova el seu pas. Si funciona, els teus animals es fan més forts.",
+            "food": "Qui menja qui",
+            "foodCaption": "Els caçadors només mengen el que diu la seva guia de camp. Els més febles cauen primer.",
+            "babies": "Cries",
+            "babiesCaption": "Dos adults de la mateixa espècie, al mateix lloc, amb menjar: cries!",
+            "time": "Temps ràpid",
+            "timeCaption": "Un any a l'Arca són 2 setmanes per a tu. Els animals creixen i envelleixen.",
+            "fair": "Ningú no tria",
+            "fairCaption": "Ningú no decideix qui viu. Només les regles, iguals per a tothom.",
+            "cta": "Obre l'Arca",
+            "more": "Llegeix totes les regles",
+            "wild": "Salvatge",
+            "town": "Ciutat",
+            "arkYear": "1 any de l'Arca"
         }
     },
     "talkPage": {

@@ -1,8 +1,6 @@
 import Link from "@/app/[locale]/_components/link";
 import type {ArkSnapshot} from "@/ark-scene/types";
-import type {ArkRecentArrival} from "@/lib/ark-recent-arrivals";
 import type {ArkIntroWords} from "@/lib/ark-words";
-import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
 
 export type {ArkIntroWords};
 
@@ -13,8 +11,8 @@ export type {ArkIntroWords};
  * - the page's one heading, "AnimalDex Ark" (what people search for), and one short line;
  * - the live figures (animals · species · people), the same counts the page has always shown, never made up;
  * - "How the Ark works" (the long explanation lives there and in the words under the world);
- * - the species that most recently came aboard, each linked to its page, on one line that never wraps: it scrolls
- *   sideways and fades at its end instead.
+ * - the thriving / declining ticker (owner 2026-11-20; it replaced the latest arrivals): this week's biggest movers on
+ *   one line that loops sideways, drawn into its slot by the panel once the population record is read.
  *
  * Its height is fixed per breakpoint (`ARK_INTRO_HEIGHT`) so the world under it fills the rest of the screen and the
  * band can never run into it. Species and counts only: never who brought one.
@@ -23,15 +21,13 @@ export type {ArkIntroWords};
 /** The band's height: the world under it is the screen less the header and this (`ark-view.tsx`). */
 export const ARK_INTRO_HEIGHT = "[--ark-intro-h:8.25rem] md:[--ark-intro-h:8.75rem] lg:[--ark-intro-h:5.75rem]";
 
-export default function ArkIntro({words, counts, arrivals, locale, howHref}: {
+export default function ArkIntro({words, counts, locale, howHref}: {
     words: ArkIntroWords;
     counts: ArkSnapshot["counts"] | null;
-    arrivals: ArkRecentArrival[] | null;
     locale: string;
     howHref: string;
 }) {
     const number = (value: number) => value.toLocaleString(locale);
-    const day = new Intl.DateTimeFormat(locale, {day: "numeric", month: "short", timeZone: "UTC"});
     const figures = counts && counts.animals
         ? [{value: counts.animals, label: words.animals}, {value: counts.species, label: words.species}, {value: counts.founders, label: words.people}]
         : null;
@@ -68,34 +64,17 @@ export default function ArkIntro({words, counts, arrivals, locale, howHref}: {
                     <span aria-hidden="true" className="[[dir=rtl]_&]:rotate-180">→</span>
                 </Link>
 
-                {arrivals && arrivals.length ? (
-                    <div className="flex min-w-0 items-center gap-3 [grid-area:latest]">
-                        <p aria-hidden="true" className="shrink-0 whitespace-nowrap text-[10.5px] font-bold uppercase tracking-[0.16em] text-primary-300">{words.latest}</p>
-                        {/* One line, never wrapped: it scrolls sideways (a swipe, a trackpad, Tab through the links) and fades at its end. */}
-                        <ul
-                            aria-label={words.latestAria}
-                            className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto overscroll-x-contain whitespace-nowrap text-[13px] leading-6 [-webkit-mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)] [mask-image:linear-gradient(to_right,#000_calc(100%-3rem),transparent)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [[dir=rtl]_&]:[-webkit-mask-image:linear-gradient(to_left,#000_calc(100%-3rem),transparent)] [[dir=rtl]_&]:[mask-image:linear-gradient(to_left,#000_calc(100%-3rem),transparent)]"
-                        >
-                            {arrivals.map((arrival) => {
-                                const inner = (
-                                    <>
-                                        {arrival.name}{" "}
-                                        <time dateTime={arrival.at} className="text-ink-400">{day.format(new Date(arrival.at))}</time>
-                                    </>
-                                );
-                                return (
-                                    <li key={arrival.speciesProfileId} className="shrink-0 last:[padding-inline-end:3rem]">
-                                        {arrival.slug && isPublishedAnimalSlug(arrival.slug) ? (
-                                            <Link href={`/animals/${arrival.slug}`} className="text-ink-100 underline-offset-4 hover:text-primary-200 hover:underline">{inner}</Link>
-                                        ) : (
-                                            <span className="text-ink-100">{inner}</span>
-                                        )}
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                    </div>
-                ) : null}
+                {/*
+                  * The thriving / declining ticker (owner 2026-11-20: it replaced "Latest aboard"): drawn into this slot by the
+                  * panel once the population record is read (`ArkHudTicker`, lazily), so the page's first JavaScript is unchanged
+                  * and the band keeps its height. A quiet label before it says what it is.
+                  */}
+                <div className="flex h-7 min-w-0 items-center gap-3 [grid-area:latest]">
+                    <span aria-hidden="true" className="flex shrink-0 items-center gap-1 text-[10.5px] font-bold uppercase tracking-[0.16em] text-ink-400">
+                        <span className="text-[#86e08f]">▲</span><span className="text-[#ff8a7a]">▼</span>
+                    </span>
+                    <div id="ark-ticker" className="flex min-w-0 flex-1 items-center" />
+                </div>
             </div>
         </section>
     );

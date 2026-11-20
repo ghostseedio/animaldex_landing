@@ -12,7 +12,9 @@ import type {ArkAnimalFounders, ArkFounder, ArkFounderStory} from "@/lib/ark-fou
 import {ArkBringerNames, ArkBroughtByFounder, ArkFounderLink, ArkFounderStoryBlock, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {arkLineageHasAny, arkLineageLine, arkThriveWords} from "@/lib/ark-thrive";
-import {arkRecordNoteFromLife, arkStatusSignature, arkStatusText, type ArkAnimalStatus, type ArkRecordNote} from "@/lib/ark-animal-status";
+import {ARK_ACTIVITY_ENGLISH, arkRecordNoteFromLife, arkStatusSignature, arkStatusText, type ArkAnimalStatus, type ArkRecordNote} from "@/lib/ark-animal-status";
+import {arkHumanDays} from "@/lib/ark-human-time";
+import {arkIndexNumber, decodeArkSpeciesCard, type ArkSpeciesCard} from "@/lib/ark-species-card";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 import type {ArkCapturePhoto} from "@/lib/ark-capture-photo";
 import {arkPhotoShownOn} from "@/lib/ark-photo-label";
@@ -56,6 +58,10 @@ export type ArkCardLife = {id: string; life: ArkLife | null; loading: boolean};
 const pill = "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-sans text-sm font-bold leading-none transition-colors duration-200 [transition-timing-function:cubic-bezier(.2,.8,.2,1)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 motion-reduce:transition-none";
 const iconButton = `${pill} h-10 w-10 shrink-0 border`;
 
+function capitalise(text: string): string {
+    return text ? text.charAt(0).toLocaleUpperCase() + text.slice(1) : text;
+}
+
 /** "a Plains Zebra", "an Arctic Fox", as the Talk titles do it. */
 function withArticle(name: string, words: ArkWords): string {
     const an = /^[aeiou]/i.test(name) && !/^(uni|eu|one|use|usu|ura)/i.test(name);
@@ -97,14 +103,38 @@ function lifeFacts(animal: ArkAnimal, life: ArkLife | null, arkDay: number | nul
     };
 }
 
-function ageText(days: number, words: ArkWords, locale: string): string {
-    if (days < 365) {
-        const whole = Math.max(Math.round(days), 0);
-        return whole === 1 ? words.life.ageDay : fillArkWords(words.life.ageDays, {days: whole.toLocaleString(locale)});
-    }
-    const years = days / 365;
-    if (Math.abs(years - 1) < 0.05) return words.life.ageYear;
-    return fillArkWords(words.life.ageYears, {years: years.toLocaleString(locale, {maximumFractionDigits: years < 10 ? 1 : 0})});
+/** Its age in the visitor's own time ("3 hours", "2 days"): never Ark days (lane ARK-SIMPLE). */
+function ageText(days: number, _words: ArkWords, locale: string): string {
+    return arkHumanDays(Math.max(days, 0), Math.max(days, 0), locale);
+}
+
+/**
+ * Its kind's AnimalDex index number and Animal Power (`/api/ark/species-card`, the catalog's row): read once per species
+ * per visit, kept for the next card of the same kind. Null until read, or when the catalog has neither.
+ */
+const speciesCards = new Map<string, Promise<ArkSpeciesCard | null>>();
+function useSpeciesCard(animal: ArkAnimal, placeholder: boolean): ArkSpeciesCard | null {
+    const key = animal.species_profile_id || animal.model_slug;
+    const [card, setCard] = useState<{key: string; card: ArkSpeciesCard | null} | null>(null);
+    useEffect(() => {
+        if (placeholder && !animal.species_profile_id) return;
+        let read = speciesCards.get(key);
+        if (!read) {
+            const query = new URLSearchParams();
+            if (animal.species_profile_id) query.set("id", animal.species_profile_id);
+            if (!placeholder) query.set("slug", animal.model_slug);
+            read = fetch(`/api/ark/species-card?${query}`).then((response) => (response.ok ? response.json() : null)).then(decodeArkSpeciesCard, () => null);
+            speciesCards.set(key, read);
+        }
+        let live = true;
+        void read.then((value) => {
+            if (live) setCard({key, card: value});
+        });
+        return () => {
+            live = false;
+        };
+    }, [key, animal.species_profile_id, animal.model_slug, placeholder]);
+    return card?.key === key ? card.card : null;
 }
 
 /**
@@ -195,7 +225,13 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     const rhythm = useAnimalRhythm(scene, animal.id);
     const [rhythmOpen, setRhythmOpen] = useState(false);
     const rhythmNow = rhythm && rhythm !== "pending" ? rhythm : null;
-    const text = useMemo(() => (status ? arkStatusText(status, {activity: words.activity, card: words.card, story: words.story, life: words.life, replay: words.replay}, locale) : null), [status, words, locale]);
+    // Its log in the visitor's own time ("2 h ago"), said again each minute.
+    const [minute, setMinute] = useState(() => Math.floor(Date.now() / 60_000));
+    useEffect(() => {
+        const timer = window.setInterval(() => setMinute(Math.floor(Date.now() / 60_000)), 30_000);
+        return () => window.clearInterval(timer);
+    }, []);
+    const text = useMemo(() => (status ? arkStatusText(status, {activity: words.activity, card: words.card, story: words.story, life: words.life, replay: words.replay}, locale, minute * 60_000 + 59_999) : null), [status, words, locale, minute]);
 
     // Its life story's record for its log: its last meal (an Ark day from the voyage's start), and a hatching.
     useEffect(() => {
@@ -208,23 +244,16 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
         if (notes.length) scene()?.noteRecord?.(notes);
     }, [life, animal.id, animal.arrived_at, voyageStart, scene]);
 
-    const healthBar = text?.bars.find((bar) => bar.key === "health") ?? null;
-    const thriveChip = facts.thrive ? arkThriveWords(facts.thrive, words.life) : null;
-    // Chips: its age (only where there is no snapshot for the life block below, which says it with its life stage); its condition
-    // only when it says something (hungry: the server's; card truth, 2026-11-13: well-fed, everyone's default, is not said, and
-    // the fed bar shows its day); its thrive band; old; its generation.
-    const chips: Array<{key: string; text: string; tone: "plain" | "good" | "warn" | "bad" | "thrive"}> = [];
-    if (facts.ageDays !== null && !snapshot) chips.push({key: "age", text: ageText(facts.ageDays, words, locale), tone: "plain"});
-    if (facts.condition === "hungry") chips.push({key: "fed", text: words.life.hungry, tone: "bad"});
-    if (thriveChip) chips.push({key: "thrive", text: thriveChip, tone: facts.thrive !== "ordinary" ? "thrive" : "plain"});
-    if (facts.condition === "old" || healthBar?.tone === "bad") chips.push({key: "old", text: healthBar?.text ?? words.life.old, tone: "warn"});
-    if (facts.generation !== null && facts.generation > 0) chips.push({key: "generation", text: fillArkWords(words.life.generationShort, {n: facts.generation}), tone: "plain"});
-
-    // Now: the schedule's activity; until the scene has it, asleep or nothing.
-    const nowLine = text?.now ?? (asleep ? fillArkWords(words.card.now, {activity: words.activity.sleeping}) : null);
+    const species = useSpeciesCard(animal, placeholder);
+    // What it is doing now, in a word or two (no "Now:"): the schedule's activity; until the scene has it, asleep or nothing.
+    const activityKey = status?.activity ?? (asleep ? "sleeping" : null);
+    const activity = activityKey ? words.activity[activityKey] ?? ARK_ACTIVITY_ENGLISH[activityKey] : null;
+    // Condition as a sign, not a chip (owner 2026-11-20): a star for a thriving one (good or prime), its band in the tooltip.
+    const thriving = facts.thrive === "prime" || facts.thrive === "good" ? arkThriveWords(facts.thrive, words.life) : null;
     const hasLife = Boolean(life) || animal.origin !== undefined;
     const restWords = arkRestWords(rest, words.life.rest);
     const asleepNow = status?.activity === "sleeping" || (!status && asleep) || arkRestIsSleep(rest);
+    const simple = words.simple;
     // The next moves: talk to it, and as icons follow it, its life story, share (in the header row on a desktop, under the
     // status on a phone; the one not shown is out of the page, so each control is there once).
     const moves = (
@@ -270,27 +299,36 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
         </>
     );
     return (
-        <div ref={bandRef} onKeyDown={onKeyDown} data-testid="ark-animal-card" className="rows-in absolute inset-x-0 bottom-0 border-t border-line-200 bg-canvas-950/[0.95] backdrop-blur-xl" role="region" aria-labelledby={`ark-card-${animal.id}`}>
-            <div className="mx-auto w-full max-w-[86rem] px-3 pb-[max(0.625rem,env(safe-area-inset-bottom))] pt-2.5 md:px-8 md:py-3">
-                {/* Who: icon, name and kind, who brought it. */}
-                <div className="flex items-start gap-3">
-                    <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7] md:h-12 md:w-12">
+        <div ref={bandRef} onKeyDown={onKeyDown} data-testid="ark-animal-card" className="ark-card-glass rows-in absolute inset-x-0 bottom-0 border-t border-white/[0.12]" role="region" aria-labelledby={`ark-card-${animal.id}`}>
+            <div className="mx-auto w-full max-w-[86rem] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:px-8 md:pb-4 md:pt-3.5">
+                {/* Who: icon, name, its sex and index number, what it is doing; who brought it under. */}
+                <div className="flex items-center gap-3">
+                    <span className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#f6f1e7] ring-1 ring-white/20 md:h-12 md:w-12">
                         <ArkSpeciesIcon src={arkIconUrl(animal.model_slug)} size={48} className="h-[82%] w-[82%] object-contain" />
                     </span>
                     <div className="min-w-0 flex-1">
-                        <div className="flex min-w-0 items-baseline gap-2">
-                            <h2 id={`ark-card-${animal.id}`} ref={headingRef} tabIndex={-1} className="min-w-0 max-w-full shrink-0 truncate font-display text-base font-extrabold leading-tight text-white outline-none focus-visible:underline md:text-lg">{animal.name}</h2>
-                            {/* Male or female beside its name, or its kind's note (`ark.sex`): the lazy block's other face, while the server's `sexes` switch is on. */}
+                        <div className="flex min-w-0 items-center gap-2">
+                            <h2 id={`ark-card-${animal.id}`} ref={headingRef} tabIndex={-1} className="min-w-0 shrink truncate font-display text-[17px] font-extrabold leading-tight text-white outline-none focus-visible:underline md:text-[19px]">{animal.name}</h2>
+                            {/* Male or female beside its name (`ark.sex`): the lazy block's other face, while the server's `sexes` switch is on. */}
                             <Suspense fallback={null}><ArkTimeLeft sex animal={animal} words={words} locale={locale} /></Suspense>
-                            <p className="min-w-0 flex-1 truncate text-[12px] text-ink-400">
-                                {animal.scientific_name ? <span className="italic">{animal.scientific_name}</span> : null}
-                                {animal.scientific_name ? " · " : null}
-                                <span title={words.lives}>{words.zones[animal.zone]}</span>
-                                {/* Vegetation (decision 417 (1)), while on: " · Grass here: thinning". */}
-                                {scene()?.grassAt?.(animal.zone, animal.island)?.replace(/^/, " · ")}
-                            </p>
+                            {thriving ? (
+                                <span role="img" aria-label={thriving} title={thriving} data-testid="ark-card-thrive" data-thrive={facts.thrive ?? undefined} className="shrink-0 text-primary-300">
+                                    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="currentColor" aria-hidden="true"><path d="M8 1.2l1.9 4.2 4.6.5-3.4 3.1 1 4.5L8 11.2l-4.1 2.3 1-4.5L1.5 5.9l4.6-.5z" /></svg>
+                                </span>
+                            ) : null}
+                            {species?.number ? (
+                                <span data-testid="ark-card-index" title={simple?.number ?? "AnimalDex number"} className="shrink-0 rounded-md bg-white/[0.08] px-1.5 py-[3px] font-mono text-[11px] font-bold leading-none tabular-nums tracking-wide text-ink-200">
+                                    <span className="sr-only">{simple?.number ?? "AnimalDex number"} </span>{arkIndexNumber(species.number)}
+                                </span>
+                            ) : null}
+                            {activity ? (
+                                <span data-testid="ark-card-now" data-activity={activityKey ?? undefined} aria-live="polite" className={`hidden min-w-0 shrink items-center gap-1.5 truncate rounded-full px-2 py-[3px] text-[11.5px] font-semibold leading-none sm:inline-flex ${asleepNow ? "bg-[#7c8cff]/15 text-[#c9d6ff]" : "bg-primary-400/[0.12] text-primary-100"}`}>
+                                    <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${asleepNow ? "bg-[#9fb0ff]" : "bg-primary-300 motion-safe:animate-pulse"}`} />
+                                    <span className="truncate">{capitalise(activity)}</span>
+                                </span>
+                            ) : null}
                         </div>
-                        <p className="mt-0.5 min-w-0 truncate text-[12.5px] leading-snug text-ink-200" data-testid="ark-card-by">
+                        <p className="mt-0.5 min-w-0 truncate text-[12.5px] leading-snug text-ink-300" data-testid="ark-card-by">
                             {facts.born && facts.anyFounder ? (
                                 <><span className="text-ink-400">{words.life.bornTo}</span>{" "}<ArkFilled template={words.life.bornToValue} name="bringers"><ArkBringerNames entries={facts.bringerEntries} locale={locale} former={words.formerVoyager} /></ArkFilled></>
                             ) : facts.born ? (
@@ -301,11 +339,13 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                             ) : (
                                 <><span className="text-ink-400">{words.broughtBy}</span> <span className="font-semibold text-ink-100">{facts.bringers}</span></>
                             )}
+                            <span className="text-ink-500"> · </span>
+                            <span title={words.lives}>{words.zones[animal.zone]}</span>
                         </p>
                     </div>
                     {shownPhoto ? <Suspense fallback={null}><ArkCardPhoto key={animal.id} part="thumb" photo={shownPhoto} species={animal.name} words={words} onLoaded={() => setLoadedPhoto(animal.id)} /></Suspense> : null}
                     <div className="hidden shrink-0 items-center gap-2 md:flex">{moves}</div>
-                    <button type="button" onClick={onClose} aria-label={words.close} className="-mr-1 -mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-200 hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
+                    <button type="button" onClick={onClose} aria-label={words.close} className="-mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-200 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
                         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                     </button>
                 </div>
@@ -313,40 +353,32 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                 {/* Whose photo, when it is not this animal's: "Born on the Ark · Photo of its parent, brought aboard by @ada". */}
                 {shownPhoto && shownPhoto.brought_by && loadedPhoto === animal.id ? <Suspense fallback={null}><ArkCardPhoto part="line" photo={shownPhoto} species={animal.name} words={words} /></Suspense> : null}
 
-                {/* Its status: chips, what it is doing now and next (left), its log (right on a desktop, under on a phone). */}
-                <div className={`mt-2 grid grid-cols-1 gap-x-6 gap-y-1.5 md:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] md:pl-[3.75rem] ${storyOpen || dayShown ? "hidden md:grid" : ""}`}>
-                    <div className="min-w-0">
-                        {chips.length ? (
-                            <p className="flex flex-wrap gap-1.5">
-                                {chips.map((chip) => (
-                                    <span key={chip.key} data-testid={chip.key === "thrive" ? "ark-card-thrive" : `ark-card-${chip.key}`} data-thrive={chip.key === "thrive" ? facts.thrive ?? undefined : undefined} className={`rounded-full px-2 py-0.5 text-[11.5px] font-semibold ${chip.tone === "thrive" ? "bg-primary-400/15 text-primary-200" : chip.tone === "bad" ? "bg-[#5a2a1e] text-[#ffc9b8]" : chip.tone === "warn" ? "bg-[#5a461e] text-[#ffe2a8]" : "bg-white/[0.08] text-ink-100"}`}>{chip.text}</span>
-                                ))}
-                            </p>
-                        ) : null}
-                        <div aria-live="polite">
-                            {nowLine ? <p data-testid="ark-card-now" data-activity={status?.activity ?? undefined} className={`mt-1.5 text-[14px] font-semibold italic leading-snug md:text-[15px] ${asleepNow ? "text-[#c9d6ff]" : "text-white"}`}>{nowLine}</p> : null}
-                            {text?.next ? <p data-testid="ark-card-next" className="mt-0.5 text-[12.5px] italic leading-snug text-ink-300">{text.next}</p> : null}
-                        </div>
-                        {snapshot ? <Suspense fallback={null}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} link={Link} /></Suspense> : null}
-                        <Suspense fallback={null}><ArkCardPower animal={animal} band={facts.thrive} words={words.life.power} /></Suspense>
+                {/*
+                  * Three columns on a desktop (one under another on a phone): its life (age, time left, chance as a heart) with who is
+                  * around it as icons; its Animal Power; its log, in the visitor's own time.
+                  */}
+                <div className={`mt-2.5 grid grid-cols-1 gap-x-6 gap-y-2.5 md:mt-3 md:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)_minmax(0,0.85fr)] md:pl-[3.75rem] ${storyOpen || dayShown ? "hidden md:grid" : ""}`}>
+                    <div className="min-w-0 space-y-2">
+                        {snapshot ? <Suspense fallback={<div className="h-[2.6rem]" />}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense> : null}
+                        {/* Release to the Wild (P1-8, behind the server's switch) and carers (decision 418), then who is around it: what it eats, what could hunt it, its mates, as icons (lane ark-relation-lines; no fallback is React 18's null). */}
+                        <Suspense><ArkTimeLeft release={Link} animal={animal} words={words} locale={locale} day={arkDay} scene={scene} snapshot={snapshot} /></Suspense>
                         {rhythmNow ? <ArkRhythmLine rhythm={rhythmNow} open={rhythmOpen} onToggle={() => setRhythmOpen((v) => !v)} /> : null}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} /> : null}
-                        {/* Release to the Wild (P1-8, behind the server's switch): the same lazy import's other block; it draws nothing while the switch is off. Carers (decision 418): it also says who feeds a kept animal. With it, who could hunt it, what it eats and its mates (lane ark-relation-lines; no fallback is React 18's null, 14 bytes under the page budget). */}
-                        <Suspense><ArkTimeLeft release={Link} animal={animal} words={words} locale={locale} day={arkDay} scene={scene} snapshot={snapshot} /></Suspense>
-                        {placeholder ? <p className="mt-1 text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
-                        {/* The last of its kind aboard (the server's last_of_kind): it ages out honestly unless another is caught. */}
-                        {/* V1 (decision 389, E3's `lone`, sent only while the last-animal rules are on): a lone founder, said under it (`ark.life.lone`, 45 languages). */}
-                        {animal.last_of_kind || animal.lone ? <p data-testid="ark-card-last-of-kind" className="mt-1 text-[12px] font-semibold leading-snug text-[#ffe2a8]">{animal.last_of_kind ? words.life.lastOfKind : words.life.lone ?? "Lone founder"}</p> : null}
+                        {placeholder ? <p className="text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
+                        {/* The last of its kind aboard (the server's last_of_kind), or a lone founder (decision 389): it ages out honestly unless another is caught. */}
+                        {animal.last_of_kind || animal.lone ? <p data-testid="ark-card-last-of-kind" className="text-[12px] font-semibold leading-snug text-[#ffe2a8]">{animal.last_of_kind ? words.life.lastOfKind : words.life.lone ?? "Lone founder"}</p> : null}
                     </div>
+                    {/* Its Animal Power: the catalog's name and one-line lesson; whether its survival Power is working shows as a tick. */}
+                    <Suspense fallback={null}><ArkCardPower animal={animal} band={facts.thrive} words={words.life.power} power={species?.power ?? null} label={simple?.power} href={placeholder ? null : `/talk/${animal.model_slug}`} link={Link} /></Suspense>
                     {text?.log.length ? (
                         <div className="min-w-0">
-                            <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-ink-400">{words.card.logTitle}</p>
-                            <ol data-testid="ark-card-log" aria-label={words.card.logTitle} tabIndex={0} className="mt-0.5 max-h-[3.9rem] overflow-y-auto overscroll-contain pr-1 outline-none focus-visible:ring-1 focus-visible:ring-primary-300 md:max-h-[5.4rem]">
+                            <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-ink-400">{words.card.logTitle}</p>
+                            <ol data-testid="ark-card-log" aria-label={words.card.logTitle} tabIndex={0} className="mt-1 max-h-[2.9rem] overflow-y-auto overscroll-contain pr-1 outline-none focus-visible:ring-1 focus-visible:ring-primary-300 md:max-h-[6.2rem]">
                                 {text.log.map((line) => (
-                                    <li key={line.id} data-source={line.source} className="flex min-w-0 items-baseline gap-2 py-[1px] text-[12px] leading-snug">
-                                        <span className={`w-[4.6rem] shrink-0 whitespace-nowrap tabular-nums ${line.source === "record" ? "text-ink-300" : "text-ink-400"}`} title={line.id.startsWith("origin:") ? arrived : undefined}>{line.stamp}</span>
-                                        <span aria-hidden="true" className={`mt-[5px] h-1.5 w-1.5 shrink-0 rounded-full ${line.source === "record" ? "bg-primary-300" : "border border-ink-400"}`} />
-                                        <span className={`min-w-0 truncate ${line.source === "record" ? "font-semibold text-ink-100" : "text-ink-200"}`}>{line.text}</span>
+                                    <li key={line.id} data-source={line.source} className="flex min-w-0 items-center gap-2 py-[2px] text-[12.5px] leading-snug">
+                                        <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${line.source === "record" ? "bg-primary-300" : "bg-white/25"}`} />
+                                        <span className={`min-w-0 flex-1 truncate ${line.source === "record" ? "font-semibold text-ink-100" : "text-ink-200"}`}>{line.text}</span>
+                                        <span className="shrink-0 whitespace-nowrap text-[11.5px] tabular-nums text-ink-400" title={line.id.startsWith("origin:") ? arrived : undefined}>{line.stamp}</span>
                                     </li>
                                 ))}
                             </ol>
@@ -362,7 +394,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                 {rhythmNow && rhythmOpen && !storyOpen ? <ArkRhythmPanel rhythm={rhythmNow} speciesProfileId={animal.species_profile_id} talkHref={placeholder ? null : `/talk/${animal.model_slug}`} /> : null}
                 {storyOpen ? <ArkLifeStory animal={animal} life={life} state={state} facts={facts} words={words} locale={locale} rest={restWords} /> : null}
 
-                <div className="mt-2 flex items-center gap-1.5 sm:gap-2 md:hidden">{moves}</div>
+                <div className="mt-2.5 flex items-center gap-1.5 sm:gap-2 md:hidden">{moves}</div>
             </div>
         </div>
     );
