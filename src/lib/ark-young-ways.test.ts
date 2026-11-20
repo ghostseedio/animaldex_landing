@@ -287,3 +287,9 @@ test("a visit's motion: from where she set off, to the young, and back to where 
         assert.ok(top < 2.5 * 1.6 + 1, `top speed ${top}`);
     }
 });
+
+test("the rows said to be shown by the primates' earlier belly-then-back carry really are: their care is carry", () => {
+    const rows = rowsFile.rows.filter((r) => r.status === "already" && /ride/.test(r.what));
+    assert.ok(rows.length >= 10);
+    for (const r of rows) assert.equal(speciesCare(slugOf(r.name), "mammal").kind, "carry", r.name);
+});

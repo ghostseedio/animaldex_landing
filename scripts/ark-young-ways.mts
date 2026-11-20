@@ -74,6 +74,8 @@ const RIDE: Entry[] = [
     {name: "Lar Gibbon", says: /infant clings to mother's belly/, ride: "belly", say: ["ride"]},
     {name: "Celebes Crested Macaque", says: /infant carried on belly/, ride: "belly", say: ["ride"]},
     {name: "Long-tailed Macaque", says: /infant clings to belly/, ride: "belly", say: ["ride"]},
+    // (The care table read this text as no care: its own sentence says the infant rides on the mother's back.)
+    {name: "Squirrel Monkey", says: /infant rides on mother's back, other females carry/, ride: "back", say: ["ride"], part: "the infant rides its mother; other females carrying it is not drawn"},
     // The father (and helpers) carries: where the record has the father, the infant rides him.
     {name: "Coppery Titi Monkey", says: /father carries infant/, ride: "back", by: "male", say: ["ride"]},
     {name: "Common Marmoset", says: /fathers and siblings carry the twins/, ride: "back", by: "male", say: ["ride"]},
@@ -200,7 +202,7 @@ const ALREADY: Array<{name: string; says: RegExp; what: string}> = [
     {name: "Black Rhinoceros", says: /calf follows behind/, what: "young follow (heel), now in line"}
 ];
 /** Primates: the infant clings and rides (an earlier pass's belly-then-back carry, `ark-age.ts`); checked against the care table. */
-const PRIMATE_RIDE = /^(Bolivian Squirrel Monkey|Bornean Orangutan|Chimpanzee|Francois' Langur|Hamadryas Baboon|Mantled Guereza|Mantled Howler Monkey|Ring-tailed Lemur|Squirrel Monkey|Stump-tailed Macaque|Tufted Capuchin|Tufted Gray Langur|Western Gorilla)$/;
+const PRIMATE_RIDE = /^(Bolivian Squirrel Monkey|Bornean Orangutan|Chimpanzee|Francois' Langur|Hamadryas Baboon|Mantled Guereza|Mantled Howler Monkey|Ring-tailed Lemur|Stump-tailed Macaque|Tufted Capuchin|Tufted Gray Langur|Western Gorilla)$/;
 
 const find = (name: string, says: RegExp, among: Row[]) => {
     const hit = among.filter((r) => r.name === name && (says.test(r.quote) || says.test(r.behaviour)));

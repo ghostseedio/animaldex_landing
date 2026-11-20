@@ -3,9 +3,9 @@
  "counts": {
   "built": 77,
   "eggs": 54,
-  "part": 15,
+  "part": 16,
   "held": 54,
-  "already": 36
+  "already": 35
  },
  "rows": [
   {
@@ -1405,8 +1405,8 @@
    "quote": "For the first weeks the infant rides on its mother's back, and other females sometimes carry it.",
    "how": "existing_block",
    "effort": "S",
-   "status": "already",
-   "what": "ride (belly then back; the primates' carry, ark-age.ts)"
+   "status": "part",
+   "what": "ride: the infant rides its mother; other females carrying it is not drawn"
   },
   {
    "id": "5b181c04-2d59-416d-9eb2-004eccd196f9",

@@ -152,6 +152,15 @@
     "ride": "{aAnimal} newborn with dark fur is clinging to its mother's belly"
    }
   },
+  "squirrel-monkey": {
+   "name": "Squirrel Monkey",
+   "ways": {
+    "ride": "back"
+   },
+   "lines": {
+    "ride": "{aAnimal} is carrying her infant on her back in its first weeks"
+   }
+  },
   "coppery-titi-monkey": {
    "name": "Coppery Titi Monkey",
    "ways": {
