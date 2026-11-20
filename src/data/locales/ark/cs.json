@@ -402,6 +402,7 @@
             "revived": "{animal} je zpět",
             "revivedYoung": "{animal} je zpět, znovu mladý dospělý",
             "released": "Vypuštění do volné přírody: {aAnimal}",
+            "mateFound": "{aAnimal} urazil(a) {distance} m, aby našel(a) partnera",
             "gone": "{animal} odchází z Arku",
             "crisis": "{animal}: ve volné přírodě zbývá jen pár jedinců",
             "saved": "{animal}: ve volné přírodě mimo ohrožení",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "Plíží se ke kořisti",
             "mateSeeking": "Hledá partnera",
             "wounded": "Má zranění"
+        },
+        "mate": {
+            "nearest": "Hledá partnera · nejbližší je {distance} m daleko",
+            "found": "Urazil(a) {distance} m, aby našel(a) partnera"
         },
         "eggs": {
             "eggsInNest": "Vejce v hnízdě",

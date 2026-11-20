@@ -402,6 +402,7 @@
             "revived": "{animal} ਵਾਪਸ ਆ ਗਿਆ",
             "revivedYoung": "{animal} ਮੁੜ ਜਵਾਨ ਬਾਲਗ ਬਣ ਕੇ ਵਾਪਸ ਆ ਗਿਆ",
             "released": "{aAnimal} ਨੂੰ ਜੰਗਲ ਵਿੱਚ ਛੱਡਿਆ ਗਿਆ",
+            "mateFound": "{aAnimal} ਨੇ ਸਾਥੀ ਲੱਭਣ ਲਈ {distance} ਮੀ. ਸਫ਼ਰ ਕੀਤਾ",
             "gone": "{animal} Ark ਤੋਂ ਚਲਾ ਗਿਆ",
             "crisis": "{animal}: ਜੰਗਲ ਵਿੱਚ ਹੁਣ ਬਹੁਤ ਥੋੜ੍ਹੀ ਗਿਣਤੀ",
             "saved": "{animal}: ਜੰਗਲ ਵਿੱਚ ਹੁਣ ਖ਼ਤਰੇ ਤੋਂ ਬਾਹਰ",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "ਘਾਤ ਵਿੱਚ",
             "mateSeeking": "ਸਾਥੀ ਦੀ ਭਾਲ ਵਿੱਚ",
             "wounded": "ਜ਼ਖ਼ਮੀ"
+        },
+        "mate": {
+            "nearest": "ਸਾਥੀ ਦੀ ਭਾਲ ਵਿੱਚ · ਸਭ ਤੋਂ ਨੇੜੇ ਵਾਲਾ {distance} ਮੀ. ਦੂਰ ਹੈ",
+            "found": "ਸਾਥੀ ਲੱਭਣ ਲਈ {distance} ਮੀ. ਸਫ਼ਰ ਕੀਤਾ"
         },
         "eggs": {
             "eggsInNest": "ਆਲ੍ਹਣੇ ਵਿੱਚ ਆਂਡੇ",

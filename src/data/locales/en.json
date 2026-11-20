@@ -4614,6 +4614,7 @@
       "revived": "{animal} is back",
       "revivedYoung": "{animal} is back, a young adult again",
       "released": "{aAnimal} was released into the wild",
+      "mateFound": "{aAnimal} travelled {distance} m to find a mate",
       "gone": "{animal} is gone from the Ark",
       "crisis": "{animal}: only a few left in the wild",
       "saved": "{animal}: out of danger in the wild",
@@ -4972,6 +4973,10 @@
       "stalkingNoTarget": "Stalking",
       "mateSeeking": "Looking for a mate",
       "wounded": "Wounded"
+    },
+    "mate": {
+      "nearest": "Looking for a mate · the nearest is {distance} m away",
+      "found": "Travelled {distance} m to find a mate"
     },
     "eggs": {
       "eggsInNest": "Eggs in the nest",

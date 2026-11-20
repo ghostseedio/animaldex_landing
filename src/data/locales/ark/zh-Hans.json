@@ -402,6 +402,7 @@
             "revived": "{animal}回来了",
             "revivedYoung": "{animal}回来了，又是年轻的成年个体",
             "released": "{aAnimal}被放归野外",
+            "mateFound": "{aAnimal}走了{distance}米去寻找配偶",
             "gone": "{animal}离开了 Ark",
             "crisis": "{animal}：野外只剩下少数",
             "saved": "{animal}：在野外已脱离危险",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "正在悄悄接近猎物",
             "mateSeeking": "正在寻找配偶",
             "wounded": "受伤了"
+        },
+        "mate": {
+            "nearest": "正在寻找配偶 ·  · 最近的一只在{distance}米外",
+            "found": "走了{distance}米去寻找配偶"
         },
         "eggs": {
             "eggsInNest": "巢里有蛋",

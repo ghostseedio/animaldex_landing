@@ -402,6 +402,7 @@
             "revived": "{animal} är tillbaka",
             "revivedYoung": "{animal} är tillbaka som ung vuxen igen",
             "released": "{aAnimal} släpptes ut i det fria",
+            "mateFound": "{aAnimal} färdades {distance} m för att hitta en partner",
             "gone": "{animal} har lämnat Ark",
             "crisis": "{animal}: bara ett fåtal kvar i det fria",
             "saved": "{animal}: utom fara i det fria",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "Smyger sig på byte",
             "mateSeeking": "Letar efter en partner",
             "wounded": "Skadad"
+        },
+        "mate": {
+            "nearest": "Letar efter en partner · den närmaste är {distance} m bort",
+            "found": "Färdades {distance} m för att hitta en partner"
         },
         "eggs": {
             "eggsInNest": "Ägg i boet",

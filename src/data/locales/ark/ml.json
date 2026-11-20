@@ -402,6 +402,7 @@
             "revived": "{animal} തിരിച്ചെത്തി",
             "revivedYoung": "{animal} വീണ്ടും യുവ മുതിർന്നതായി തിരിച്ചെത്തി",
             "released": "{aAnimal} കാട്ടിലേക്ക് വിട്ടയച്ചു",
+            "mateFound": "{aAnimal} ഇണയെ കണ്ടെത്താൻ {distance} മീ. സഞ്ചരിച്ചു",
             "gone": "{animal} Ark വിട്ടുപോയി",
             "crisis": "{animal}: കാട്ടിൽ ഇനി കുറച്ചേ ബാക്കിയുള്ളൂ",
             "saved": "{animal}: കാട്ടിൽ ഇനി അപകടത്തിലല്ല",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "പതുങ്ങി സമീപിക്കുന്നു",
             "mateSeeking": "ഇണയെ തേടുന്നു",
             "wounded": "പരിക്കേറ്റു"
+        },
+        "mate": {
+            "nearest": "ഇണയെ തിരയുന്നു · ഏറ്റവും അടുത്തത് {distance} മീ. അകലെ",
+            "found": "ഇണയെ കണ്ടെത്താൻ {distance} മീ. സഞ്ചരിച്ചു"
         },
         "eggs": {
             "eggsInNest": "കൂട്ടിൽ മുട്ടകൾ",
