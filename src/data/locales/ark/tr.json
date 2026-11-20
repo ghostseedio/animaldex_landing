@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} torun",
             "lineageLaterOne": "1 uzak torun",
             "lineageLaterOther": "{count} uzak torun",
-            "lineageLiving": "şu an {count} hayatta"
+            "lineageLiving": "şu an {count} hayatta",
+            "power": {
+                "working": "Gücü: {power} — işliyor",
+                "partly": "Gücü: {power} — kısmen işliyor",
+                "earn": "İşlemesi için gücünü kazan",
+                "camouflage": "kamuflaj",
+                "speed": "hız",
+                "armour": "zırh",
+                "warning": "uyarı renkleri",
+                "vigilance": "tetikte olma",
+                "group": "grup savunması",
+                "hiding": "saklanma",
+                "climb": "yukarı kaçış",
+                "mimicry": "taklit"
+            }
         },
         "replay": {
             "title": "Sen yokken",

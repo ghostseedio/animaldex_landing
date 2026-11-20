@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} unoka",
             "lineageLaterOne": "1 későbbi leszármazott",
             "lineageLaterOther": "{count} későbbi leszármazott",
-            "lineageLiving": "{count} él most"
+            "lineageLiving": "{count} él most",
+            "power": {
+                "working": "Az Ereje: {power} — működik",
+                "partly": "Az Ereje: {power} — részben működik",
+                "earn": "Szerezd meg az Erejét, hogy működjön",
+                "camouflage": "rejtőzködés",
+                "speed": "gyorsaság",
+                "armour": "páncél",
+                "warning": "figyelmeztető színek",
+                "vigilance": "éberség",
+                "group": "csoportos védekezés",
+                "hiding": "elbújás",
+                "climb": "menekülés felfelé",
+                "mimicry": "mimikri"
+            }
         },
         "replay": {
             "title": "Amíg távol voltál",

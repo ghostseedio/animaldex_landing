@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} 只孙辈",
             "lineageLaterOne": "1 只更远的后代",
             "lineageLaterOther": "{count} 只更远的后代",
-            "lineageLiving": "现存 {count} 只"
+            "lineageLiving": "现存 {count} 只",
+            "power": {
+                "working": "它的能力：{power} — 正在发挥作用",
+                "partly": "它的能力：{power} — 部分发挥作用",
+                "earn": "赢得它的能力，让它发挥作用",
+                "camouflage": "伪装",
+                "speed": "速度",
+                "armour": "铠甲",
+                "warning": "警戒色",
+                "vigilance": "警觉",
+                "group": "群体防御",
+                "hiding": "躲藏",
+                "climb": "向上逃离",
+                "mimicry": "拟态"
+            }
         },
         "replay": {
             "title": "你不在的时候",

@@ -245,7 +245,21 @@
             "lineageGrandOther": "vnoučata ({count})",
             "lineageLaterOne": "1 vzdálenější potomek",
             "lineageLaterOther": "vzdálenější potomci ({count})",
-            "lineageLiving": "nyní naživu: {count}"
+            "lineageLiving": "nyní naživu: {count}",
+            "power": {
+                "working": "Jeho Síla: {power} — funguje",
+                "partly": "Jeho Síla: {power} — funguje částečně",
+                "earn": "Získej jeho Sílu, aby fungovala",
+                "camouflage": "maskování",
+                "speed": "rychlost",
+                "armour": "pancíř",
+                "warning": "výstražné barvy",
+                "vigilance": "ostražitost",
+                "group": "skupinová obrana",
+                "hiding": "ukrývání",
+                "climb": "únik vzhůru",
+                "mimicry": "mimikry"
+            }
         },
         "replay": {
             "title": "Během tvé nepřítomnosti",

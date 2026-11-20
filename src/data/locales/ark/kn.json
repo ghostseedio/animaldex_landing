@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} ಮೊಮ್ಮಕ್ಕಳು",
             "lineageLaterOne": "ಮುಂದಿನ ಪೀಳಿಗೆಯ 1 ವಂಶಜ",
             "lineageLaterOther": "ಮುಂದಿನ ಪೀಳಿಗೆಗಳ {count} ವಂಶಜರು",
-            "lineageLiving": "ಈಗ {count} ಜೀವಂತ"
+            "lineageLiving": "ಈಗ {count} ಜೀವಂತ",
+            "power": {
+                "working": "ಇದರ ಶಕ್ತಿ: {power} — ಕೆಲಸ ಮಾಡುತ್ತಿದೆ",
+                "partly": "ಇದರ ಶಕ್ತಿ: {power} — ಭಾಗಶಃ ಕೆಲಸ ಮಾಡುತ್ತಿದೆ",
+                "earn": "ಅದು ಕೆಲಸ ಮಾಡಲು ಇದರ ಶಕ್ತಿಯನ್ನು ಗಳಿಸಿ",
+                "camouflage": "ಮರೆಮಾಚುವಿಕೆ",
+                "speed": "ವೇಗ",
+                "armour": "ಕವಚ",
+                "warning": "ಎಚ್ಚರಿಕೆಯ ಬಣ್ಣಗಳು",
+                "vigilance": "ಜಾಗರೂಕತೆ",
+                "group": "ಗುಂಪು ರಕ್ಷಣೆ",
+                "hiding": "ಅಡಗಿಕೊಳ್ಳುವುದು",
+                "climb": "ಮೇಲಕ್ಕೆ ಪಾರಾಗುವುದು",
+                "mimicry": "ಅನುಕರಣೆ"
+            }
         },
         "replay": {
             "title": "ನೀವು ಇಲ್ಲದಿದ್ದಾಗ",

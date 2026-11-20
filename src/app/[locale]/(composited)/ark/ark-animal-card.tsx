@@ -41,6 +41,9 @@ const ArkCardPhoto = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card
  */
 const ArkTimeLeft = lazy(() => import("@/app/[locale]/(composited)/ark/ark-time-left"));
 
+/** Powers you can see (decision 420): its Power's line, with its table, loaded with the card. */
+const ArkCardPower = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card-power"));
+
 /** Its day (lane ark-its-day): loaded only when opened. */
 const ArkItsDay = lazy(() => import("@/app/[locale]/(composited)/ark/ark-its-day"));
 
@@ -342,6 +345,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         {animal.condition === "old" || animal.condition === "hungry" || snapshot?.hunt_grace ? (
                             <Suspense fallback={null}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense>
                         ) : null}
+                        <Suspense fallback={null}><ArkCardPower animal={animal} band={facts.thrive} words={words.life.power} /></Suspense>
                         {rhythmNow ? <ArkRhythmLine rhythm={rhythmNow} open={rhythmOpen} onToggle={() => setRhythmOpen((v) => !v)} /> : null}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} /> : null}
                         {/* Release to the Wild (P1-8, behind the server's switch): the same lazy import's other block; it draws nothing while the switch is off. */}

@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} barnbarn",
             "lineageLaterOne": "1 senare ättling",
             "lineageLaterOther": "{count} senare ättlingar",
-            "lineageLiving": "{count} lever nu"
+            "lineageLiving": "{count} lever nu",
+            "power": {
+                "working": "Dess Kraft: {power} — verkar",
+                "partly": "Dess Kraft: {power} — verkar delvis",
+                "earn": "Förtjäna dess Kraft så att den verkar",
+                "camouflage": "kamouflage",
+                "speed": "snabbhet",
+                "armour": "pansar",
+                "warning": "varningsfärger",
+                "vigilance": "vaksamhet",
+                "group": "försvar i grupp",
+                "hiding": "gömmer sig",
+                "climb": "flykt uppåt",
+                "mimicry": "mimikry"
+            }
         },
         "replay": {
             "title": "Medan du var borta",

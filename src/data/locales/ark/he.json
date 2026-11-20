@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} נכדים",
             "lineageLaterOne": "צאצא רחוק אחד",
             "lineageLaterOther": "{count} צאצאים רחוקים",
-            "lineageLiving": "{count} חיים כעת"
+            "lineageLiving": "{count} חיים כעת",
+            "power": {
+                "working": "הכוח שלה: {power} — פועל",
+                "partly": "הכוח שלה: {power} — פועל חלקית",
+                "earn": "השג את הכוח שלה כדי שיפעל",
+                "camouflage": "הסוואה",
+                "speed": "מהירות",
+                "armour": "שריון",
+                "warning": "צבעי אזהרה",
+                "vigilance": "ערנות",
+                "group": "הגנה קבוצתית",
+                "hiding": "הסתתרות",
+                "climb": "בריחה למעלה",
+                "mimicry": "חיקוי"
+            }
         },
         "replay": {
             "title": "בזמן שלא היית כאן",

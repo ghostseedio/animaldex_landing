@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} نوه",
             "lineageLaterOne": "یک نوادهٔ دورتر",
             "lineageLaterOther": "{count} نوادهٔ دورتر",
-            "lineageLiving": "اکنون {count} زنده"
+            "lineageLiving": "اکنون {count} زنده",
+            "power": {
+                "working": "قدرتش: {power} — کار می‌کند",
+                "partly": "قدرتش: {power} — تا حدی کار می‌کند",
+                "earn": "قدرتش را به دست بیاور تا کار کند",
+                "camouflage": "استتار",
+                "speed": "سرعت",
+                "armour": "زره",
+                "warning": "رنگ‌های هشدار",
+                "vigilance": "هوشیاری",
+                "group": "دفاع گروهی",
+                "hiding": "پنهان شدن",
+                "climb": "فرار به بالا",
+                "mimicry": "تقلید"
+            }
         },
         "replay": {
             "title": "وقتی نبودید",

@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} børnebørn",
             "lineageLaterOne": "1 senere efterkommer",
             "lineageLaterOther": "{count} senere efterkommere",
-            "lineageLiving": "{count} lever nu"
+            "lineageLiving": "{count} lever nu",
+            "power": {
+                "working": "Dets Kraft: {power} — virker",
+                "partly": "Dets Kraft: {power} — virker delvist",
+                "earn": "Optjen dets Kraft, så den virker",
+                "camouflage": "camouflage",
+                "speed": "fart",
+                "armour": "panser",
+                "warning": "advarselsfarver",
+                "vigilance": "årvågenhed",
+                "group": "forsvar i flok",
+                "hiding": "gemmer sig",
+                "climb": "flugt opad",
+                "mimicry": "mimikry"
+            }
         },
         "replay": {
             "title": "Mens du var væk",

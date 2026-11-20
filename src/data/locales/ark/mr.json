@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} नातवंडे",
             "lineageLaterOne": "पुढील पिढीतील 1 वंशज",
             "lineageLaterOther": "पुढील पिढ्यांतील {count} वंशज",
-            "lineageLiving": "आत्ता {count} जिवंत"
+            "lineageLiving": "आत्ता {count} जिवंत",
+            "power": {
+                "working": "याची शक्ती: {power} — काम करत आहे",
+                "partly": "याची शक्ती: {power} — अंशतः काम करत आहे",
+                "earn": "ती काम करावी म्हणून याची शक्ती मिळवा",
+                "camouflage": "छद्मावरण",
+                "speed": "वेग",
+                "armour": "कवच",
+                "warning": "इशाऱ्याचे रंग",
+                "vigilance": "सावधपणा",
+                "group": "गट संरक्षण",
+                "hiding": "लपणे",
+                "climb": "वर पळून जाणे",
+                "mimicry": "नक्कल"
+            }
         },
         "replay": {
             "title": "तुम्ही दूर असताना",

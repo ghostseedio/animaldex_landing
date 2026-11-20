@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} पोते-पोतियाँ",
             "lineageLaterOne": "आगे की पीढ़ी का 1 वंशज",
             "lineageLaterOther": "आगे की पीढ़ियों के {count} वंशज",
-            "lineageLiving": "अभी {count} जीवित"
+            "lineageLiving": "अभी {count} जीवित",
+            "power": {
+                "working": "इसकी पावर: {power} — काम कर रही है",
+                "partly": "इसकी पावर: {power} — आंशिक रूप से काम कर रही है",
+                "earn": "इसकी पावर अर्जित करें ताकि वह काम करे",
+                "camouflage": "छलावरण",
+                "speed": "गति",
+                "armour": "कवच",
+                "warning": "चेतावनी के रंग",
+                "vigilance": "चौकसी",
+                "group": "समूह रक्षा",
+                "hiding": "छिपना",
+                "climb": "ऊपर की ओर भागना",
+                "mimicry": "नकल"
+            }
         },
         "replay": {
             "title": "जब आप दूर थे",

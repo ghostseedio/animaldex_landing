@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} lapsenlasta",
             "lineageLaterOne": "1 myöhempi jälkeläinen",
             "lineageLaterOther": "{count} myöhempää jälkeläistä",
-            "lineageLiving": "elossa nyt {count}"
+            "lineageLiving": "elossa nyt {count}",
+            "power": {
+                "working": "Sen Voima: {power} — toimii",
+                "partly": "Sen Voima: {power} — toimii osittain",
+                "earn": "Ansaitse sen Voima, niin se toimii",
+                "camouflage": "naamioituminen",
+                "speed": "nopeus",
+                "armour": "panssari",
+                "warning": "varoitusvärit",
+                "vigilance": "valppaus",
+                "group": "ryhmäpuolustus",
+                "hiding": "piiloutuminen",
+                "climb": "pako ylöspäin",
+                "mimicry": "mimikry"
+            }
         },
         "replay": {
             "title": "Sillä aikaa kun olit poissa",

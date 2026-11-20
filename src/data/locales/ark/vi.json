@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} cháu",
             "lineageLaterOne": "1 hậu duệ đời sau",
             "lineageLaterOther": "{count} hậu duệ đời sau",
-            "lineageLiving": "{count} con còn sống"
+            "lineageLiving": "{count} con còn sống",
+            "power": {
+                "working": "Năng lực của nó: {power} — đang phát huy",
+                "partly": "Năng lực của nó: {power} — phát huy một phần",
+                "earn": "Hãy giành Năng lực của nó để nó phát huy",
+                "camouflage": "ngụy trang",
+                "speed": "tốc độ",
+                "armour": "giáp",
+                "warning": "màu cảnh báo",
+                "vigilance": "cảnh giác",
+                "group": "phòng thủ theo bầy",
+                "hiding": "ẩn nấp",
+                "climb": "thoát lên cao",
+                "mimicry": "bắt chước"
+            }
         },
         "replay": {
             "title": "Trong lúc bạn vắng mặt",

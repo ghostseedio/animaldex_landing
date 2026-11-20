@@ -245,7 +245,21 @@
             "lineageGrandOther": "wnuki ({count})",
             "lineageLaterOne": "1 dalszy potomek",
             "lineageLaterOther": "dalsi potomkowie ({count})",
-            "lineageLiving": "żyjące teraz: {count}"
+            "lineageLiving": "żyjące teraz: {count}",
+            "power": {
+                "working": "Jego Moc: {power} — działa",
+                "partly": "Jego Moc: {power} — działa częściowo",
+                "earn": "Zdobądź jego Moc, by zadziałała",
+                "camouflage": "kamuflaż",
+                "speed": "szybkość",
+                "armour": "pancerz",
+                "warning": "barwy ostrzegawcze",
+                "vigilance": "czujność",
+                "group": "obrona w grupie",
+                "hiding": "ukrywanie się",
+                "climb": "ucieczka w górę",
+                "mimicry": "mimikra"
+            }
         },
         "replay": {
             "title": "Gdy Cię nie było",

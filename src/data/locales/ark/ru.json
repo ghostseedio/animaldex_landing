@@ -245,7 +245,21 @@
             "lineageGrandOther": "внуков: {count}",
             "lineageLaterOne": "1 дальний потомок",
             "lineageLaterOther": "дальних потомков: {count}",
-            "lineageLiving": "живы сейчас: {count}"
+            "lineageLiving": "живы сейчас: {count}",
+            "power": {
+                "working": "Его Сила: {power} — действует",
+                "partly": "Его Сила: {power} — действует частично",
+                "earn": "Заработай его Силу, чтобы она действовала",
+                "camouflage": "маскировка",
+                "speed": "скорость",
+                "armour": "броня",
+                "warning": "предупреждающая окраска",
+                "vigilance": "бдительность",
+                "group": "групповая защита",
+                "hiding": "укрытие",
+                "climb": "бегство вверх",
+                "mimicry": "мимикрия"
+            }
         },
         "replay": {
             "title": "Пока вас не было",

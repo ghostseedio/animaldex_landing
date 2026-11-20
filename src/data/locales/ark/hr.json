@@ -245,7 +245,21 @@
             "lineageGrandOther": "unučad: {count}",
             "lineageLaterOne": "1 kasniji potomak",
             "lineageLaterOther": "kasniji potomci: {count}",
-            "lineageLiving": "trenutačno živih: {count}"
+            "lineageLiving": "trenutačno živih: {count}",
+            "power": {
+                "working": "Njegova Moć: {power} — djeluje",
+                "partly": "Njegova Moć: {power} — djelomično djeluje",
+                "earn": "Zaradi njegovu Moć da proradi",
+                "camouflage": "kamuflaža",
+                "speed": "brzina",
+                "armour": "oklop",
+                "warning": "boje upozorenja",
+                "vigilance": "budnost",
+                "group": "grupna obrana",
+                "hiding": "skrivanje",
+                "climb": "bijeg prema gore",
+                "mimicry": "mimikrija"
+            }
         },
         "replay": {
             "title": "Dok te nije bilo",

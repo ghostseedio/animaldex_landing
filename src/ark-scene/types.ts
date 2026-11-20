@@ -230,6 +230,8 @@ export type ArkSnapshot = {
 export type ArkLiveHunt = {id: string; name: string; slug: string; phase: "hunting" | "eating"; since: number};
 
 export type ArkSceneStats = {
+    /** Powers you can see (decision 420, `power-show.ts`): animals showing a Power now, hunters passing one over, the read's hunters; null until loaded. */
+    powers?: {showing: number; passing: number; hunters: number; pass: [string, string] | null} | null;
     drawCalls: number;
     triangles: number;
     /** Mean CPU time of a frame's update and render, over the last second (ms). */

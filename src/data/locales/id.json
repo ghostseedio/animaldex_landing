@@ -4442,7 +4442,21 @@
       "lineageGrandOther": "{count} cucu",
       "lineageLaterOne": "1 keturunan berikutnya",
       "lineageLaterOther": "{count} keturunan berikutnya",
-      "lineageLiving": "{count} masih hidup"
+      "lineageLiving": "{count} masih hidup",
+      "power": {
+        "working": "Power-nya: {power} — bekerja",
+        "partly": "Power-nya: {power} — bekerja sebagian",
+        "earn": "Raih Power-nya agar bekerja",
+        "camouflage": "kamuflase",
+        "speed": "kecepatan",
+        "armour": "pelindung tubuh",
+        "warning": "warna peringatan",
+        "vigilance": "kewaspadaan",
+        "group": "pertahanan kelompok",
+        "hiding": "bersembunyi",
+        "climb": "kabur ke atas",
+        "mimicry": "mimikri"
+      }
     },
     "replay": {
       "title": "Selama kamu pergi",

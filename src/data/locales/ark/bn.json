@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count}টি নাতি-নাতনি",
             "lineageLaterOne": "পরের প্রজন্মের ১টি বংশধর",
             "lineageLaterOther": "পরের প্রজন্মের {count}টি বংশধর",
-            "lineageLiving": "এখন {count}টি জীবিত"
+            "lineageLiving": "এখন {count}টি জীবিত",
+            "power": {
+                "working": "এর ক্ষমতা: {power} — কাজ করছে",
+                "partly": "এর ক্ষমতা: {power} — আংশিক কাজ করছে",
+                "earn": "এর ক্ষমতা অর্জন করুন যাতে তা কাজ করে",
+                "camouflage": "ছদ্মবেশ",
+                "speed": "গতি",
+                "armour": "বর্ম",
+                "warning": "সতর্কতামূলক রং",
+                "vigilance": "সতর্ক দৃষ্টি",
+                "group": "দলগত প্রতিরক্ষা",
+                "hiding": "লুকিয়ে থাকা",
+                "climb": "উপরে পালানো",
+                "mimicry": "অনুকরণ"
+            }
         },
         "replay": {
             "title": "আপনি যখন ছিলেন না",

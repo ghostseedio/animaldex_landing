@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} من الأحفاد",
             "lineageLaterOne": "سليل واحد من الأجيال اللاحقة",
             "lineageLaterOther": "{count} من الأجيال اللاحقة",
-            "lineageLiving": "{count} على قيد الحياة الآن"
+            "lineageLiving": "{count} على قيد الحياة الآن",
+            "power": {
+                "working": "قدرته: {power} — تعمل",
+                "partly": "قدرته: {power} — تعمل جزئيًا",
+                "earn": "اكسب قدرته لتعمل",
+                "camouflage": "التمويه",
+                "speed": "السرعة",
+                "armour": "الدرع",
+                "warning": "ألوان التحذير",
+                "vigilance": "اليقظة",
+                "group": "الدفاع الجماعي",
+                "hiding": "الاختباء",
+                "climb": "الهروب إلى الأعلى",
+                "mimicry": "المحاكاة"
+            }
         },
         "replay": {
             "title": "بينما كنت غائبًا",

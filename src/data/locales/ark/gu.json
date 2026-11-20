@@ -245,7 +245,21 @@
             "lineageGrandOther": "{count} પૌત્ર-પૌત્રીઓ",
             "lineageLaterOne": "આગળની પેઢીનો 1 વંશજ",
             "lineageLaterOther": "આગળની પેઢીઓના {count} વંશજ",
-            "lineageLiving": "હમણાં {count} જીવંત"
+            "lineageLiving": "હમણાં {count} જીવંત",
+            "power": {
+                "working": "તેની શક્તિ: {power} — કામ કરે છે",
+                "partly": "તેની શક્તિ: {power} — અંશતઃ કામ કરે છે",
+                "earn": "તે કામ કરે તે માટે તેની શક્તિ મેળવો",
+                "camouflage": "છદ્માવરણ",
+                "speed": "ઝડપ",
+                "armour": "કવચ",
+                "warning": "ચેતવણીના રંગો",
+                "vigilance": "સતર્કતા",
+                "group": "જૂથ સંરક્ષણ",
+                "hiding": "છુપાવું",
+                "climb": "ઉપર તરફ ભાગવું",
+                "mimicry": "નકલ"
+            }
         },
         "replay": {
             "title": "તમે દૂર હતા ત્યારે",
