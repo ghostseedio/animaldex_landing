@@ -133,7 +133,10 @@ type ReplayState = {acts: ArkAct[]; index: number; summary: string};
  * the scene's code waits for), so it is there long before the first tap.
  */
 const loadArkAnimalCard = () => import("@/app/[locale]/(composited)/ark/ark-animal-card");
-const ArkAnimalCard = lazy(() => loadArkAnimalCard().then((module) => ({default: module.ArkAnimalCard})));
+type ArkAnimalCardModule = Awaited<ReturnType<typeof loadArkAnimalCard>>;
+/** Only for a tap before the idle preload is in; once it is, the page renders the loaded card itself (no suspend), so
+ * the card is in the DOM on the same render as before and the band's height (`--ark-card-h`, the view inset) is read at once. */
+const ArkAnimalCardLazy = lazy(() => loadArkAnimalCard().then((module) => ({default: module.ArkAnimalCard})));
 
 function storage(): Storage | null {
     try {
@@ -318,11 +321,15 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     // The species drawn as herds (A14), worked out by the scene's own rule, loaded with it (not in the page's first JavaScript).
     const [herdKeys, setHerdKeys] = useState<ReadonlySet<string>>(() => new Set());
     // The animal card's chunk (`loadArkAnimalCard`): fetched once the browser is idle after the first paint, in 3D and lite alike.
+    const [cardModule, setCardModule] = useState<ArkAnimalCardModule | null>(null);
+    const ArkAnimalCard = cardModule?.ArkAnimalCard ?? ArkAnimalCardLazy;
     useEffect(() => {
-        const load = () => void loadArkAnimalCard().catch(() => undefined);
+        let gone = false;
+        const load = () => void loadArkAnimalCard().then((module) => { if (!gone) setCardModule(module); }).catch(() => undefined);
         const idle = window.requestIdleCallback ? window.requestIdleCallback(load, {timeout: 1500}) : null;
         const timer = idle === null ? window.setTimeout(load, 150) : null;
         return () => {
+            gone = true;
             if (idle !== null) window.cancelIdleCallback?.(idle);
             if (timer !== null) clearTimeout(timer);
         };
@@ -670,7 +677,8 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
             observer.disconnect();
             phone.removeEventListener?.("change", apply);
         };
-    }, [selected, herd, recoveringBand]);
+        // cardModule: a card tapped before its chunk was in is measured once it mounts.
+    }, [selected, herd, recoveringBand, cardModule]);
 
     // MARK: Its life story
 
