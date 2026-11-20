@@ -302,9 +302,16 @@ export type ArkLiveLogOptions = {
     alarmGap: number;
     /** Record items waiting at most; more fold into one "+N more" line. */
     maxQueue: number;
+    /** Seen and now items waiting at most (a burst of the schedule's moments): the oldest are dropped, never piled up. */
+    maxSoftQueue: number;
 };
 
-export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, nowLife: 20_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6};
+/**
+ * (Owner 2026-11-20, decision 439: the log is a stack, newest at the foot, the older pushed up and fading, 3-4 at
+ * once; each line goes on its own after about 8-12 s, and in a burst each stays readable at least 1.5 s before the
+ * next one pushes it up: `gap`. The view's side is `src/ark-scene/live/log-view.ts` and `ark-live-stack.ts`.)
+ */
+export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 12_000, seenLife: 9_000, nowLife: 10_000, groupWindow: 10_000, gap: 1_500, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6, maxSoftQueue: 8};
 
 /** The kinds the record keeps first when a burst is bigger than the log: the rare and the sad before the many. */
 const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, wildGone: 1, meal: 1, crisis: 2, starved: 2, death: 3, gone: 3, revived: 3, saved: 3, toCare: 4, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, hunting: 7, eggs: 7, playing: 7, toWater: 7, home: 7, flock: 7, group: 7, doing: 7, breathing: 7, calling: 7, bathing: 7, feeding: 7, more: 8};
@@ -363,6 +370,9 @@ export class ArkLiveLog {
             if (more) more.count += folded;
             else this.queue.push({id: `more:${now}`, kind: "more", source: "server", key: `more:${now}`, animal: "", other: null, count: folded, eggs: null, focus: {animalId: null, speciesId: null, zone: null}, queuedAt: now});
         }
+        // A burst of seen or now items: the newest wait, the oldest go (they are no longer happening by their turn).
+        let soft = this.queue.reduce((n, q) => n + (q.source === "server" ? 0 : 1), 0);
+        if (soft > this.options.maxSoftQueue) this.queue = this.queue.filter((q) => q.source === "server" || soft-- <= this.options.maxSoftQueue);
         return changed;
     }
 
