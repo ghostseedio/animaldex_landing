@@ -163,7 +163,22 @@
             "graphLabel": "Bestand {animal}, {period}: {start} bis {now}",
             "arkDays": "Ark-Tage {from}–{to}",
             "recordStarts": "Die Aufzeichnung beginnt am {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} in der gesamten Ark",
+            "placeWild": "{count} in freier Wildbahn",
+            "placeHomes": "{count} in Haushalten",
+            "placeFarms": "{count} auf Farmen",
+            "placeTown": "{count} bei den Wildtieren der Stadt",
+            "placeZoo": "{count} im Zoo",
+            "thisAlone": "Dieses Tier: allein {where}",
+            "thisOneOf": "Dieses Tier: 1 von {count} {where}",
+            "whereWild": "auf der wilden Insel",
+            "whereHomes": "in Haushalten",
+            "whereFarms": "auf Farmen",
+            "whereTown": "unter den Wildtieren der Stadt",
+            "whereZoo": "in seinem Zoogehege",
+            "breedsSamePlace": "Paart sich nur mit anderen am selben Ort.",
+            "riseFall": "Aufwärts: Tiere, die per Foto an Bord kamen, oder geboren wurden. Abwärts: Tiere, die starben oder gefressen wurden."
         },
         "story": {
             "generic": "Nach einem Schritt, der geklappt hat, an Bord gekommen",

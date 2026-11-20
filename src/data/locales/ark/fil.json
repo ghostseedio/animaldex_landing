@@ -163,7 +163,22 @@
             "graphLabel": "Populasyon ng {animal}, {period}: mula {start} hanggang {now}",
             "arkDays": "Mga araw ng Ark {from}–{to}",
             "recordStarts": "Nagsisimula ang tala sa {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} sa buong Ark",
+            "placeWild": "{count} ligaw",
+            "placeHomes": "{count} sa mga bahay",
+            "placeFarms": "{count} sa mga bukid",
+            "placeTown": "{count} na ligaw na hayop sa bayan",
+            "placeZoo": "{count} sa zoo",
+            "thisAlone": "Ang isang ito: nag-iisa {where}",
+            "thisOneOf": "Ang isang ito: 1 sa {count} {where}",
+            "whereWild": "sa ligaw na isla",
+            "whereHomes": "sa mga bahay",
+            "whereFarms": "sa mga bukid",
+            "whereTown": "sa mga ligaw na hayop sa bayan",
+            "whereZoo": "sa kulungan nito sa zoo",
+            "breedsSamePlace": "Nakikipag-anak lang sa iba sa iisang lugar.",
+            "riseFall": "Pataas: mga hayop na isinakay mula sa mga larawan, o ipinanganak. Pababa: mga hayop na namatay o kinain."
         },
         "story": {
             "generic": "Sumakay pagkatapos ng isang hakbang na gumana",

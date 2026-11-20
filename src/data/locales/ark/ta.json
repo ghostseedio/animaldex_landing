@@ -163,7 +163,22 @@
             "graphLabel": "{animal} எண்ணிக்கை, {period}: {start} முதல் {now} வரை",
             "arkDays": "Ark நாட்கள் {from}–{to}",
             "recordStarts": "பதிவு {date} அன்று தொடங்குகிறது",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "முழு Ark-இல் {count}",
+            "placeWild": "{count} காட்டில்",
+            "placeHomes": "{count} வீடுகளில்",
+            "placeFarms": "{count} பண்ணைகளில்",
+            "placeTown": "{count} நகரக் காட்டுயிரில்",
+            "placeZoo": "{count} மிருகக்காட்சிசாலையில்",
+            "thisAlone": "இந்த விலங்கு: {where} தனியாக",
+            "thisOneOf": "இந்த விலங்கு: {where} {count}-இல் 1",
+            "whereWild": "காட்டுத் தீவில்",
+            "whereHomes": "வீடுகளில்",
+            "whereFarms": "பண்ணைகளில்",
+            "whereTown": "நகரக் காட்டுயிர்களுக்கு இடையில்",
+            "whereZoo": "மிருகக்காட்சிசாலையில் தன் அடைப்பில்",
+            "breedsSamePlace": "அதே இடத்தில் உள்ளவற்றுடன் மட்டுமே இனப்பெருக்கம் செய்யும்.",
+            "riseFall": "உயர்வு: புகைப்படங்களிலிருந்து Ark-இல் ஏறிய அல்லது பிறந்த விலங்குகள். குறைவு: இறந்த அல்லது உண்ணப்பட்ட விலங்குகள்."
         },
         "story": {
             "generic": "பலன் தந்த ஒரு படிக்குப் பிறகு Ark-இல் ஏறியது",

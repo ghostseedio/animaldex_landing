@@ -163,7 +163,22 @@
             "graphLabel": "จำนวนของ {animal}, {period}: {start} ถึง {now}",
             "arkDays": "วันของ Ark {from}–{to}",
             "recordStarts": "บันทึกเริ่มเมื่อ {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "ทั้ง Ark มี {count} ตัว",
+            "placeWild": "ในป่า {count} ตัว",
+            "placeHomes": "ตามบ้าน {count} ตัว",
+            "placeFarms": "ในฟาร์ม {count} ตัว",
+            "placeTown": "สัตว์ป่าในเมือง {count} ตัว",
+            "placeZoo": "ในสวนสัตว์ {count} ตัว",
+            "thisAlone": "ตัวนี้: อยู่ตัวเดียว{where}",
+            "thisOneOf": "ตัวนี้: 1 ใน {count} ตัว{where}",
+            "whereWild": "บนเกาะป่า",
+            "whereHomes": "ตามบ้าน",
+            "whereFarms": "ในฟาร์ม",
+            "whereTown": "ในหมู่สัตว์ป่าในเมือง",
+            "whereZoo": "ในกรงของมันที่สวนสัตว์",
+            "breedsSamePlace": "ผสมพันธุ์กับตัวอื่นในที่เดียวกันเท่านั้น",
+            "riseFall": "ขึ้น: สัตว์ที่ขึ้นเรือมาจากภาพถ่าย หรือเกิดใหม่ ลง: สัตว์ที่ตายหรือถูกกิน"
         },
         "story": {
             "generic": "ขึ้นเรือมาหลังจากก้าวที่ได้ผล",

@@ -163,7 +163,22 @@
             "graphLabel": "{animal} की आबादी, {period}: {start} से {now}",
             "arkDays": "Ark के दिन {from}–{to}",
             "recordStarts": "रिकॉर्ड {date} से शुरू होता है",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "पूरे Ark में {count}",
+            "placeWild": "{count} जंगली",
+            "placeHomes": "{count} घरों में",
+            "placeFarms": "{count} फार्मों में",
+            "placeTown": "{count} शहर के वन्यजीवों में",
+            "placeZoo": "{count} चिड़ियाघर में",
+            "thisAlone": "यह जानवर: {where} अकेला",
+            "thisOneOf": "यह जानवर: {where} {count} में से 1",
+            "whereWild": "जंगली द्वीप पर",
+            "whereHomes": "घरों में",
+            "whereFarms": "फार्मों में",
+            "whereTown": "शहर के वन्यजीवों के बीच",
+            "whereZoo": "चिड़ियाघर में अपने बाड़े में",
+            "breedsSamePlace": "केवल उसी जगह के दूसरे जानवरों के साथ प्रजनन करता है।",
+            "riseFall": "बढ़ना: तस्वीरों से Ark में लाए गए या जन्मे जानवर। घटना: मर गए या खाए गए जानवर।"
         },
         "story": {
             "generic": "एक कामयाब कदम के बाद सवार हुआ",

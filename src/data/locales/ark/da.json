@@ -163,7 +163,22 @@
             "graphLabel": "Bestand af {animal}, {period}: {start} til {now}",
             "arkDays": "Ark-dage {from}–{to}",
             "recordStarts": "Registreringen begynder {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} i hele Ark",
+            "placeWild": "{count} vilde",
+            "placeHomes": "{count} i hjem",
+            "placeFarms": "{count} på gårde",
+            "placeTown": "{count} i byens dyreliv",
+            "placeZoo": "{count} i zoo",
+            "thisAlone": "Denne: alene {where}",
+            "thisOneOf": "Denne: 1 af {count} {where}",
+            "whereWild": "på den vilde ø",
+            "whereHomes": "i hjem",
+            "whereFarms": "på gårde",
+            "whereTown": "blandt byens dyreliv",
+            "whereZoo": "i sin zoo-indhegning",
+            "breedsSamePlace": "Får kun unger med andre på samme sted.",
+            "riseFall": "Op: dyr bragt om bord fra fotos, eller født. Ned: dyr, der døde eller blev ædt."
         },
         "story": {
             "generic": "Kom om bord efter et skridt, der virkede",

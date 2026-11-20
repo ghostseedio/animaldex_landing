@@ -163,7 +163,22 @@
             "graphLabel": "אוכלוסיית {animal}, {period}: מ-{start} עד {now}",
             "arkDays": "ימי Ark {from}–{to}",
             "recordStarts": "הרישום מתחיל ב-{date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} בכל ה-Ark",
+            "placeWild": "{count} בטבע",
+            "placeHomes": "{count} בבתים",
+            "placeFarms": "{count} בחוות",
+            "placeTown": "{count} בחיות הבר של העיר",
+            "placeZoo": "{count} בגן החיות",
+            "thisAlone": "החיה הזו: לבדה {where}",
+            "thisOneOf": "החיה הזו: אחת מתוך {count} {where}",
+            "whereWild": "באי הפראי",
+            "whereHomes": "בבתים",
+            "whereFarms": "בחוות",
+            "whereTown": "בין חיות הבר של העיר",
+            "whereZoo": "במתחם שלה בגן החיות",
+            "breedsSamePlace": "מתרבה רק עם אחרים באותו מקום.",
+            "riseFall": "עלייה: חיות שהובאו על הסיפון מתמונות, או שנולדו. ירידה: חיות שמתו או נאכלו."
         },
         "story": {
             "generic": "עלה לסיפון אחרי צעד שהצליח",

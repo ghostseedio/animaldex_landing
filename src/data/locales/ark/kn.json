@@ -163,7 +163,22 @@
             "graphLabel": "{animal} ಜನಸಂಖ್ಯೆ, {period}: {start} ರಿಂದ {now}",
             "arkDays": "Ark ದಿನಗಳು {from}–{to}",
             "recordStarts": "ದಾಖಲೆ {date} ರಿಂದ ಆರಂಭ",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "ಇಡೀ Ark ನಲ್ಲಿ {count}",
+            "placeWild": "{count} ಕಾಡಿನಲ್ಲಿ",
+            "placeHomes": "{count} ಮನೆಗಳಲ್ಲಿ",
+            "placeFarms": "{count} ಹೊಲಗಳಲ್ಲಿ",
+            "placeTown": "{count} ಪಟ್ಟಣದ ವನ್ಯಜೀವಿಗಳಲ್ಲಿ",
+            "placeZoo": "{count} ಮೃಗಾಲಯದಲ್ಲಿ",
+            "thisAlone": "ಈ ಪ್ರಾಣಿ: {where} ಒಂಟಿಯಾಗಿದೆ",
+            "thisOneOf": "ಈ ಪ್ರಾಣಿ: {where} {count} ರಲ್ಲಿ 1",
+            "whereWild": "ಕಾಡು ದ್ವೀಪದಲ್ಲಿ",
+            "whereHomes": "ಮನೆಗಳಲ್ಲಿ",
+            "whereFarms": "ಹೊಲಗಳಲ್ಲಿ",
+            "whereTown": "ಪಟ್ಟಣದ ವನ್ಯಜೀವಿಗಳ ನಡುವೆ",
+            "whereZoo": "ಮೃಗಾಲಯದ ತನ್ನ ಆವರಣದಲ್ಲಿ",
+            "breedsSamePlace": "ಅದೇ ಸ್ಥಳದಲ್ಲಿರುವ ಇತರರೊಂದಿಗೆ ಮಾತ್ರ ಸಂತಾನೋತ್ಪತ್ತಿ ಮಾಡುತ್ತದೆ.",
+            "riseFall": "ಏರಿಕೆ: ಫೋಟೋಗಳಿಂದ Ark ಗೆ ಬಂದ ಅಥವಾ ಹುಟ್ಟಿದ ಪ್ರಾಣಿಗಳು. ಇಳಿಕೆ: ಸತ್ತ ಅಥವಾ ತಿನ್ನಲ್ಪಟ್ಟ ಪ್ರಾಣಿಗಳು."
         },
         "story": {
             "generic": "ಕೆಲಸ ಮಾಡಿದ ಹೆಜ್ಜೆಯ ನಂತರ Ark ಹತ್ತಿತು",

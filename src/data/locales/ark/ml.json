@@ -163,7 +163,22 @@
             "graphLabel": "{animal} ജനസംഖ്യ, {period}: {start} മുതൽ {now} വരെ",
             "arkDays": "Ark ദിവസങ്ങൾ {from}–{to}",
             "recordStarts": "രേഖ {date} മുതൽ ആരംഭിക്കുന്നു",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "മുഴുവൻ Ark-ൽ {count}",
+            "placeWild": "{count} വന്യമായി",
+            "placeHomes": "{count} വീടുകളിൽ",
+            "placeFarms": "{count} കൃഷിയിടങ്ങളിൽ",
+            "placeTown": "{count} പട്ടണത്തിലെ വന്യജീവികൾ",
+            "placeZoo": "{count} മൃഗശാലയിൽ",
+            "thisAlone": "ഈ മൃഗം: {where} ഒറ്റയ്ക്ക്",
+            "thisOneOf": "ഈ മൃഗം: {where} {count}ൽ ഒന്ന്",
+            "whereWild": "വന്യ ദ്വീപിൽ",
+            "whereHomes": "വീടുകളിൽ",
+            "whereFarms": "കൃഷിയിടങ്ങളിൽ",
+            "whereTown": "പട്ടണത്തിലെ വന്യജീവികൾക്കിടയിൽ",
+            "whereZoo": "മൃഗശാലയിലെ അതിന്റെ കൂട്ടിൽ",
+            "breedsSamePlace": "അതേ സ്ഥലത്തുള്ള മറ്റുള്ളവയുമായി മാത്രമേ പ്രജനനം നടത്തൂ.",
+            "riseFall": "കൂടുന്നു: ഫോട്ടോകളിൽ നിന്ന് Ark-ൽ എത്തിയതോ ജനിച്ചതോ ആയ മൃഗങ്ങൾ. കുറയുന്നു: ചത്തതോ ഭക്ഷിക്കപ്പെട്ടതോ ആയ മൃഗങ്ങൾ."
         },
         "story": {
             "generic": "ഫലിച്ച ഒരു ചുവടിന് ശേഷം Ark-ൽ കയറി",

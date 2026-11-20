@@ -163,7 +163,22 @@
             "graphLabel": "Populacija ({animal}), {period}: od {start} do {now}",
             "arkDays": "Dani Arka {from}–{to}",
             "recordStarts": "Zapis počinje {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} u cijelom Arku",
+            "placeWild": "{count} divljih",
+            "placeHomes": "{count} u domovima",
+            "placeFarms": "{count} na farmama",
+            "placeTown": "{count} među gradskim divljim životinjama",
+            "placeZoo": "{count} u zoološkom vrtu",
+            "thisAlone": "Ova životinja: sama {where}",
+            "thisOneOf": "Ova životinja: 1 od {count} {where}",
+            "whereWild": "na divljem otoku",
+            "whereHomes": "u domovima",
+            "whereFarms": "na farmama",
+            "whereTown": "među gradskim divljim životinjama",
+            "whereZoo": "u svom ograđenom prostoru u zoološkom vrtu",
+            "breedsSamePlace": "Pari se samo s drugima na istom mjestu.",
+            "riseFall": "Rast: životinje dovedene na brod s fotografija ili rođene. Pad: životinje koje su uginule ili su pojedene."
         },
         "story": {
             "generic": "Ukrcala se nakon koraka koji je uspio",

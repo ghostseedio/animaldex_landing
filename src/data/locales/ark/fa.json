@@ -163,7 +163,22 @@
             "graphLabel": "جمعیت {animal}، {period}: از {start} تا {now}",
             "arkDays": "روزهای Ark {from}–{to}",
             "recordStarts": "ثبت از {date} شروع می‌شود",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} در کل Ark",
+            "placeWild": "{count} وحشی",
+            "placeHomes": "{count} در خانه‌ها",
+            "placeFarms": "{count} در مزرعه‌ها",
+            "placeTown": "{count} از حیات وحش شهر",
+            "placeZoo": "{count} در باغ‌وحش",
+            "thisAlone": "این جانور: تنها {where}",
+            "thisOneOf": "این جانور: ۱ از {count} {where}",
+            "whereWild": "در جزیرهٔ وحشی",
+            "whereHomes": "در خانه‌ها",
+            "whereFarms": "در مزرعه‌ها",
+            "whereTown": "در میان حیات وحش شهر",
+            "whereZoo": "در محوطهٔ خودش در باغ‌وحش",
+            "breedsSamePlace": "فقط با دیگران در همان مکان زاد و ولد می‌کند.",
+            "riseFall": "افزایش: جانورانی که از روی عکس‌ها به Ark آمدند یا به دنیا آمدند. کاهش: جانورانی که مردند یا خورده شدند."
         },
         "story": {
             "generic": "پس از قدمی که جواب داد سوار شد",

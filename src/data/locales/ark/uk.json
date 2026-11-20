@@ -163,7 +163,22 @@
             "graphLabel": "Чисельність ({animal}), {period}: від {start} до {now}",
             "arkDays": "Дні Ark {from}–{to}",
             "recordStarts": "Запис починається {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} в усьому Ark",
+            "placeWild": "{count} на волі",
+            "placeHomes": "{count} у домівках",
+            "placeFarms": "{count} на фермах",
+            "placeTown": "{count} серед міської фауни",
+            "placeZoo": "{count} у зоопарку",
+            "thisAlone": "Ця тварина: одна {where}",
+            "thisOneOf": "Ця тварина: 1 з {count} {where}",
+            "whereWild": "на дикому острові",
+            "whereHomes": "у домівках",
+            "whereFarms": "на фермах",
+            "whereTown": "серед міської фауни",
+            "whereZoo": "у своєму вольєрі в зоопарку",
+            "breedsSamePlace": "Розмножується лише з іншими в тому самому місці.",
+            "riseFall": "Зростання: тварини, що потрапили на борт із фото, або народжені. Спад: тварини, що загинули або були з’їдені."
         },
         "story": {
             "generic": "На борту після кроку, який спрацював",

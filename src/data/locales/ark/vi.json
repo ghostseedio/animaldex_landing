@@ -163,7 +163,22 @@
             "graphLabel": "Số lượng {animal}, {period}: từ {start} đến {now}",
             "arkDays": "Ngày Ark {from}–{to}",
             "recordStarts": "Bản ghi bắt đầu từ {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} con trên toàn Ark",
+            "placeWild": "{count} con hoang dã",
+            "placeHomes": "{count} con trong nhà",
+            "placeFarms": "{count} con ở nông trại",
+            "placeTown": "{count} con trong động vật hoang dã của thị trấn",
+            "placeZoo": "{count} con ở sở thú",
+            "thisAlone": "Con này: một mình {where}",
+            "thisOneOf": "Con này: 1 trong {count} con {where}",
+            "whereWild": "trên đảo hoang dã",
+            "whereHomes": "trong nhà",
+            "whereFarms": "ở nông trại",
+            "whereTown": "giữa động vật hoang dã của thị trấn",
+            "whereZoo": "trong chuồng của nó ở sở thú",
+            "breedsSamePlace": "Chỉ sinh sản với những con khác ở cùng một nơi.",
+            "riseFall": "Tăng: động vật lên tàu từ ảnh chụp, hoặc mới sinh. Giảm: động vật đã chết hoặc bị ăn thịt."
         },
         "story": {
             "generic": "Lên Ark sau một bước đã thành công",

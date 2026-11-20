@@ -163,7 +163,22 @@
             "graphLabel": "Població de {animal}, {period}: de {start} a {now}",
             "arkDays": "Dies de l'Ark {from}–{to}",
             "recordStarts": "El registre comença el {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} a tot l'Ark",
+            "placeWild": "{count} salvatges",
+            "placeHomes": "{count} a cases",
+            "placeFarms": "{count} a granges",
+            "placeTown": "{count} de fauna del poble",
+            "placeZoo": "{count} al zoo",
+            "thisAlone": "Aquest: sol {where}",
+            "thisOneOf": "Aquest: 1 de {count} {where}",
+            "whereWild": "a l'illa salvatge",
+            "whereHomes": "a les cases",
+            "whereFarms": "a les granges",
+            "whereTown": "entre la fauna del poble",
+            "whereZoo": "al seu recinte del zoo",
+            "breedsSamePlace": "Només es reprodueix amb altres del mateix lloc.",
+            "riseFall": "Puja: animals pujats a bord des de fotos, o nascuts. Baixa: animals morts o devorats."
         },
         "story": {
             "generic": "Va pujar a bord després d'un pas que va funcionar",

@@ -4360,7 +4360,22 @@
       "graphLabel": "Populasi {animal}, {period}: dari {start} sampai {now}",
       "arkDays": "Hari Ark {from}–{to}",
       "recordStarts": "Catatan dimulai {date}",
-      "pointAt": "{time}: {count}"
+      "pointAt": "{time}: {count}",
+      "whole": "{count} di seluruh Ark",
+      "placeWild": "{count} liar",
+      "placeHomes": "{count} di rumah",
+      "placeFarms": "{count} di peternakan",
+      "placeTown": "{count} satwa liar kota",
+      "placeZoo": "{count} di kebun binatang",
+      "thisAlone": "Yang ini: sendirian {where}",
+      "thisOneOf": "Yang ini: 1 dari {count} {where}",
+      "whereWild": "di pulau liar",
+      "whereHomes": "di rumah",
+      "whereFarms": "di peternakan",
+      "whereTown": "di antara satwa liar kota",
+      "whereZoo": "di kandangnya di kebun binatang",
+      "breedsSamePlace": "Hanya berkembang biak dengan sesama di tempat yang sama.",
+      "riseFall": "Naik: hewan yang dibawa ke Ark dari foto, atau lahir. Turun: hewan yang mati atau dimakan."
     },
     "story": {
       "generic": "Naik ke Ark setelah langkah yang berhasil",

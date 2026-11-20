@@ -40,6 +40,28 @@ export type ArkGraphWords = {
     recordStarts: string;
     /** A point under the finger: "{count} at {time}". */
     pointAt: string;
+    /**
+     * Where a kind's animals are (owner, 2026-11-20: the chart counts the whole kind, which an axolotl alone in a zoo tank
+     * does not say). "{count} in the whole Ark", then the places that have any: wild, homes, farms, town wildlife, the zoo.
+     */
+    whole: string;
+    placeWild: string;
+    placeHomes: string;
+    placeFarms: string;
+    placeTown: string;
+    placeZoo: string;
+    /** The tapped animal: "This one: alone {where}" and "This one: 1 of {count} {where}", with one of the five `where…` phrases. */
+    thisAlone: string;
+    thisOneOf: string;
+    whereWild: string;
+    whereHomes: string;
+    whereFarms: string;
+    whereTown: string;
+    whereZoo: string;
+    /** The breeding rule, whatever a place is (a wild island, a zoo enclosure, farms, town wildlife, homes). */
+    breedsSamePlace: string;
+    /** Under the chart: what makes it rise and fall (a point's own changes show under the finger). */
+    riseFall: string;
 };
 
 /** English, as `en.json` has it (a test holds the two together). */
@@ -70,7 +92,22 @@ export const ARK_GRAPH_ENGLISH: ArkGraphWords = {
     graphLabel: "{animal} population, {period}: {start} to {now}",
     arkDays: "Ark days {from}–{to}",
     recordStarts: "The record starts {date}",
-    pointAt: "{count} at {time}"
+    pointAt: "{count} at {time}",
+    whole: "{count} in the whole Ark",
+    placeWild: "{count} wild",
+    placeHomes: "{count} in homes",
+    placeFarms: "{count} on farms",
+    placeTown: "{count} in town wildlife",
+    placeZoo: "{count} at the zoo",
+    thisAlone: "This one: alone {where}",
+    thisOneOf: "This one: 1 of {count} {where}",
+    whereWild: "on the wild island",
+    whereHomes: "in homes",
+    whereFarms: "on farms",
+    whereTown: "among town wildlife",
+    whereZoo: "in its zoo enclosure",
+    breedsSamePlace: "Breeds only with others in the same place.",
+    riseFall: "Up: animals brought aboard from photos, or born. Down: animals that died or were eaten."
 };
 
 type Loose = Record<string, unknown> | null | undefined;

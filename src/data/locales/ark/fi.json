@@ -163,7 +163,22 @@
             "graphLabel": "Lajin {animal} kanta, {period}: alussa {start}, nyt {now}",
             "arkDays": "Arkin päivät {from}–{to}",
             "recordStarts": "Tiedot alkavat {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} koko Arkissa",
+            "placeWild": "{count} luonnossa",
+            "placeHomes": "{count} kodeissa",
+            "placeFarms": "{count} maatiloilla",
+            "placeTown": "{count} kaupungin villieläimiä",
+            "placeZoo": "{count} eläintarhassa",
+            "thisAlone": "Tämä: yksin {where}",
+            "thisOneOf": "Tämä: yksi {count} eläimestä {where}",
+            "whereWild": "villillä saarella",
+            "whereHomes": "kodeissa",
+            "whereFarms": "maatiloilla",
+            "whereTown": "kaupungin villieläinten joukossa",
+            "whereZoo": "eläintarhan aitauksessa",
+            "breedsSamePlace": "Lisääntyy vain samassa paikassa olevien kanssa.",
+            "riseFall": "Ylös: kuvista kyytiin tulleet tai syntyneet eläimet. Alas: kuolleet tai syödyt eläimet."
         },
         "story": {
             "generic": "Nousi kyytiin toimineen askeleen jälkeen",

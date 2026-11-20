@@ -163,7 +163,22 @@
             "graphLabel": "{animal} کی آبادی، {period}: {start} سے {now} تک",
             "arkDays": "Ark کے دن {from}–{to}",
             "recordStarts": "ریکارڈ {date} سے شروع ہوتا ہے",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "پورے Ark میں {count}",
+            "placeWild": "{count} جنگلی",
+            "placeHomes": "{count} گھروں میں",
+            "placeFarms": "{count} فارموں میں",
+            "placeTown": "{count} شہر کی جنگلی حیات میں",
+            "placeZoo": "{count} چڑیا گھر میں",
+            "thisAlone": "یہ جانور: {where} اکیلا",
+            "thisOneOf": "یہ جانور: {where} {count} میں سے 1",
+            "whereWild": "جنگلی جزیرے پر",
+            "whereHomes": "گھروں میں",
+            "whereFarms": "فارموں میں",
+            "whereTown": "شہر کی جنگلی حیات کے درمیان",
+            "whereZoo": "چڑیا گھر میں اپنے احاطے میں",
+            "breedsSamePlace": "صرف اسی جگہ کے دوسروں کے ساتھ نسل بڑھاتا ہے۔",
+            "riseFall": "اضافہ: تصویروں سے Ark میں آنے والے یا پیدا ہونے والے جانور۔ کمی: مر جانے والے یا کھائے جانے والے جانور۔"
         },
         "story": {
             "generic": "ایک کامیاب قدم کے بعد سوار ہوا",

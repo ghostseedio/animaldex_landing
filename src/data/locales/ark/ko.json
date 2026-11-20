@@ -163,7 +163,22 @@
             "graphLabel": "{animal} 개체 수, {period}: {start}에서 {now}까지",
             "arkDays": "Ark 일수 {from}–{to}",
             "recordStarts": "기록 시작: {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "Ark 전체에 {count}마리",
+            "placeWild": "야생 {count}마리",
+            "placeHomes": "집 {count}마리",
+            "placeFarms": "농장 {count}마리",
+            "placeTown": "마을 야생동물 {count}마리",
+            "placeZoo": "동물원 {count}마리",
+            "thisAlone": "이 동물: {where} 혼자",
+            "thisOneOf": "이 동물: {where} {count}마리 중 1마리",
+            "whereWild": "야생 섬에서",
+            "whereHomes": "집에서",
+            "whereFarms": "농장에서",
+            "whereTown": "마을 야생동물 사이에서",
+            "whereZoo": "동물원 우리에서",
+            "breedsSamePlace": "같은 장소에 있는 상대와만 번식합니다.",
+            "riseFall": "증가: 사진으로 Ark에 탑승했거나 태어난 동물. 감소: 죽었거나 잡아먹힌 동물."
         },
         "story": {
             "generic": "효과가 있었던 할 일 덕분에 탑승했어요",
