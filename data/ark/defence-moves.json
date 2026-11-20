@@ -1,12 +1,21 @@
 {
- "about": "Defence moves (3.3 batch, lane A): the species whose own stored text says they curl into a ball, withdraw into a shell, puff up, drop the tail or flash hidden wing colour or eyespots when a predator is near, with the row's sentence for the live log. Built by scripts/ark-defence-moves.mts from AnimalDex docs/ark/signature-behaviours.json; never edited by hand.",
- "version": "defence-moves-1",
+ "about": "Defence moves (3.3 batch, lane A; SIG-DEFENCE 2026-11-20): the species whose own stored text says they curl into a ball, withdraw into a shell, puff up, drop the tail, flash hidden wing colour, rear up, shake to a blur, thump or stamp, flag a white tail, contract flat, pull in their legs, puff a beard or lock out fin spines when a predator is near (or, a stamp, at a disturbance), with the row's sentence for the live log. Built by scripts/ark-defence-moves.mts from AnimalDex docs/ark/signature-behaviours.json; never edited by hand.",
+ "version": "defence-moves-2",
  "counts": {
+  "spines": 3,
   "puff": 7,
+  "tuck": 3,
   "flash": 3,
   "curl": 5,
+  "thump": 4,
+  "flag": 1,
+  "rear": 11,
   "coil": 4,
-  "shell": 14
+  "shell": 14,
+  "blur": 5,
+  "flat": 2,
+  "beard": 1,
+  "tail": 1
  },
  "species": [
   {
@@ -17,7 +26,8 @@
    "line": "{aAnimal} is curling up to protect its softest parts",
    "behaviour": "curls into a spiny ball",
    "quote": "Curling behavior protects the softest parts first",
-   "uses": "pose:curl_ball"
+   "uses": "pose:curl_ball",
+   "when": "on_predator_near"
   },
   {
    "slug": "algerian-millipede",
@@ -27,7 +37,19 @@
    "line": "{aAnimal} is rolling into a flat spiral after a disturbance",
    "behaviour": "rolls into a flat spiral when disturbed",
    "quote": "Rolls into a flat spiral when disturbed",
-   "uses": "pose:coil_spiral"
+   "uses": "pose:coil_spiral",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "amazon-sailfin-catfish",
+   "name": "Amazon Sailfin Catfish",
+   "id": "12778ca4-31d0-4851-9978-9eadb9826764",
+   "move": "spines",
+   "line": "{aAnimal} is locking its fin spines out against a predator",
+   "behaviour": "locks its fin spines out against predators",
+   "quote": "Their answer is armour plating and locking fin spines that make a small mouth impossible.",
+   "uses": "pose:spines_locked",
+   "when": "on_predator_near"
   },
   {
    "slug": "american-giant-millipede",
@@ -37,7 +59,8 @@
    "line": "{aAnimal} is coiling into a tight spiral and lying still",
    "behaviour": "coils into a tight spiral and lies still",
    "quote": "Its first response is to coil into a tight spiral that shields the legs and soft underside, lying still until the danger passes.",
-   "uses": "pose:coil_spiral"
+   "uses": "pose:coil_spiral",
+   "when": "on_predator_near"
   },
   {
    "slug": "asian-forest-tortoise",
@@ -47,7 +70,8 @@
    "line": "{aAnimal} is drawing back into its shell",
    "behaviour": "withdraws into shell",
    "quote": "It withdraws into its shell when disturbed.",
-   "uses": "pose:shell_withdraw"
+   "uses": "pose:shell_withdraw",
+   "when": "on_predator_near"
   },
   {
    "slug": "asian-tramp-snail",
@@ -57,7 +81,8 @@
    "line": "{aAnimal} is pulling back into its shell at a touch",
    "behaviour": "pulls back into shell when touched",
    "quote": "It pulls back into the shell when touched.",
-   "uses": "pose:shell_withdraw"
+   "uses": "pose:shell_withdraw",
+   "when": "on_predator_near"
   },
   {
    "slug": "ball-python",
@@ -67,7 +92,132 @@
    "line": "{aAnimal} is curling into a tight ball with its head tucked inside the coils",
    "behaviour": "curls into a tight ball with head tucked when threatened",
    "quote": "When threatened or stressed, Ball Pythons curl into a tight, compact ball, tucking their head safely within the coils.",
-   "uses": "pose:snake_ball"
+   "uses": "pose:snake_ball",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "black-and-yellow-garden-spider",
+   "name": "Black-and-yellow Garden Spider",
+   "id": "7944dae5-f764-42dd-b327-cf6bb834dd8e",
+   "move": "blur",
+   "line": "{aAnimal} is pumping its web back and forth until its outline blurs",
+   "behaviour": "pumps web back and forth until outline blurs",
+   "quote": "A threatened spider pumps its web back and forth until its outline blurs, or drops to the ground and hides among the plants.",
+   "uses": "pose:web_shake_blur",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "bold-jumper",
+   "name": "Bold Jumper",
+   "id": "0dfcf6d8-b033-47a8-8946-1ad77692353f",
+   "move": "rear",
+   "line": "{aAnimal} is cornered, raising its front legs and showing its metallic jaws",
+   "behaviour": "cornered: raises front legs, shows metallic jaws",
+   "quote": "Cornered spiders raise the front legs and show the metallic jaws.",
+   "uses": "rear",
+   "when": "on_predator_near",
+   "cornered": true
+  },
+  {
+   "slug": "bronze-corydoras",
+   "name": "Bronze Corydoras",
+   "id": "4debecc1-4ac0-480b-970a-fc49d022244a",
+   "move": "spines",
+   "line": "{aAnimal} is locking its sharp fin spines upright",
+   "behaviour": "locks fin spines upright to be hard to swallow",
+   "quote": "stiff, sharp spines on the dorsal and pectoral fins, which it can lock upright to make itself hard to swallow",
+   "uses": "pose:spines_locked",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "brown-widow-spider",
+   "name": "Brown Widow Spider",
+   "id": "15981527-9f32-4b3e-8706-a30255587161",
+   "move": "tuck",
+   "line": "{aAnimal} is curling up defensively after a disturbance",
+   "behaviour": "retreats or curls up when disturbed",
+   "quote": "When disturbed, Brown Widows commonly retreat or curl defensively rather than pursuing an attacker.",
+   "uses": "pose:legs_curl_in",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "carolina-wolf-spider",
+   "name": "Carolina Wolf Spider",
+   "id": "a1e6f503-55bb-48ef-8104-378d9e626f5f",
+   "move": "rear",
+   "line": "{aAnimal} is cornered, rearing up to show its fangs",
+   "behaviour": "sprints into burrow; cornered rears up showing fangs",
+   "quote": "It escapes by sprinting into its burrow; cornered, it rears up to show its fangs and may bite.",
+   "uses": "rear",
+   "when": "on_predator_near",
+   "cornered": true
+  },
+  {
+   "slug": "central-bearded-dragon",
+   "name": "Central Bearded Dragon",
+   "id": "b861fe97-301a-451f-942d-55ceb8c9fec2",
+   "move": "beard",
+   "line": "{aAnimal} is puffing out and darkening its beard",
+   "behaviour": "beard puff and darken in threat/display",
+   "quote": "Beard display: the throat can darken and expand during threat or social signaling.",
+   "uses": "pose:beard_puff + look:beard_darken",
+   "when": "on_predator_near",
+   "colour": "#231b16"
+  },
+  {
+   "slug": "chaco-golden-knee-tarantula",
+   "name": "Chaco Golden Knee Tarantula",
+   "id": "6326e253-4515-4aff-ab1f-3964f0b4aa2a",
+   "move": "rear",
+   "line": "{aAnimal} is holding a threat posture, long before any strike",
+   "behaviour": "holds threat posture long before striking",
+   "quote": "a threat posture held long before any strike",
+   "uses": "rear",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "common-carpet-beetle",
+   "name": "Common Carpet Beetle",
+   "id": "80d36117-20d3-400f-afe6-6ab2b1eeb894",
+   "move": "tuck",
+   "line": "{aAnimal} has pulled in its legs and antennae and is playing dead",
+   "behaviour": "pulls in legs and antennae and lies still, feigning death",
+   "quote": "When disturbed, adults often pull in their legs and antennae and lie still, feigning death.",
+   "uses": "pose:play_dead_tucked",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "common-house-gecko",
+   "name": "Common House Gecko",
+   "id": "dafecca6-88b1-466b-81ee-605924ab306f",
+   "move": "tail",
+   "line": "{aAnimal} is escaping while its shed tail keeps twitching",
+   "behaviour": "sheds tail that keeps twitching while it escapes",
+   "quote": "A seized gecko sheds its tail, which keeps twitching while the animal escapes",
+   "uses": "prop:wriggling_dropped_tail",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "common-house-spider",
+   "name": "Common House Spider",
+   "id": "97daf592-8f28-42bc-aa2d-72c07c7c0fd3",
+   "move": "tuck",
+   "line": "{aAnimal} has pulled in its legs and is hanging motionless",
+   "behaviour": "drops on thread or pulls legs in and hangs motionless",
+   "quote": "A disturbed spider drops on a thread or pulls in its legs and hangs motionless.",
+   "uses": "pose:legs_curl_in",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "daddy-long-legs-spider",
+   "name": "Daddy Long-Legs Spider",
+   "id": "45425f7b-23fb-4421-b356-b175255143b7",
+   "move": "blur",
+   "line": "{aAnimal} is whirling its body so fast that it becomes a blur",
+   "behaviour": "whirls body in web until it is a blur",
+   "quote": "When disturbed or threatened, it whirls its body so fast that it becomes a blur, making it difficult for an attacker to strike or even see.",
+   "uses": "pose:web_whirl_blur",
+   "when": "on_predator_near"
   },
   {
    "slug": "danube-river-snail",
@@ -77,7 +227,19 @@
    "line": "{aAnimal} is pulling into its shell and shutting the opening with its hard lid",
    "behaviour": "pulls into shell and shuts it with a hard lid",
    "quote": "Threatened, the snail pulls its body into the shell and shuts the opening with its hard lid.",
-   "uses": "pose:shell_withdraw_operculum"
+   "uses": "pose:shell_withdraw_operculum",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "domestic-rabbit",
+   "name": "Domestic Rabbit",
+   "id": "b1a61d2c-1e09-48df-94a4-9a7eeacdf257",
+   "move": "thump",
+   "line": "{aAnimal} is thumping a hind foot on the ground to warn the others",
+   "behaviour": "freezes, bolts zigzag, thumps a warning",
+   "quote": "A rabbit freezes first, then bolts in a zigzag for cover, and thumps a hind foot on the ground to warn others.",
+   "uses": "freeze + path:zigzag + pose:foot_thump",
+   "when": "on_predator_near"
   },
   {
    "slug": "eastern-box-turtle",
@@ -87,7 +249,20 @@
    "line": "{aAnimal} is closed up tight inside its shell",
    "behaviour": "closes up fully inside hinged shell",
    "quote": "A closed-up adult resists most attacks",
-   "uses": "pose:shell_close (box seal)"
+   "uses": "pose:shell_close (box seal)",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "eastern-cottontail",
+   "name": "Eastern Cottontail",
+   "id": "42d6dbb8-98c0-40bf-92e5-d02647d20375",
+   "move": "flag",
+   "line": "{aAnimal} is zigzagging away, flashing its white tail",
+   "behaviour": "freezes, then sprints in sharp zigzags flashing white tail",
+   "quote": "During escape, the Eastern Cottontail's prominent white tail (scut) is often flashed, drawing attention as it zigs and zags.",
+   "uses": "freeze + path:zigzag + pose:tail_flag",
+   "when": "on_predator_near",
+   "colour": "#f2efe8"
   },
   {
    "slug": "european-hedgehog",
@@ -97,7 +272,8 @@
    "line": "{aAnimal} is rolling into a spiny ball at a threat",
    "behaviour": "rolls into a spiny ball when threatened",
    "quote": "European Hedgehogs roll into a spiny ball when strongly threatened.",
-   "uses": "pose:curl_ball"
+   "uses": "pose:curl_ball",
+   "when": "on_predator_near"
   },
   {
    "slug": "european-pond-terrapin",
@@ -107,7 +283,20 @@
    "line": "{aAnimal} is pulling its head and limbs inside its hard shell",
    "behaviour": "withdraws head and limbs into shell",
    "quote": "can pull the head and limbs inside the hard shell",
-   "uses": "pose:shell_withdraw"
+   "uses": "pose:shell_withdraw",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "european-rabbit",
+   "name": "European Rabbit",
+   "id": "bca30b60-8a55-4741-8652-1ce98a6ac733",
+   "move": "thump",
+   "line": "{aAnimal} is thumping its hind feet and dashing for the burrow, white tail flashing",
+   "behaviour": "thumps then dashes for burrow flashing white tail",
+   "quote": "On sensing danger, a feeding rabbit thumps the ground with its hind feet and dashes for the burrow, flashing the white underside of its tail.",
+   "uses": "pose:foot_thump + flee to warren + pose:tail_flag",
+   "when": "on_predator_near",
+   "flag": true
   },
   {
    "slug": "flamed-tigersnail",
@@ -117,7 +306,8 @@
    "line": "{aAnimal} is withdrawing into its shell",
    "behaviour": "withdraws into shell, shelters in litter by day",
    "quote": "It withdraws into its shell and shelters in damp leaf litter, logs and crevices by day.",
-   "uses": "pose:shell_withdraw"
+   "uses": "pose:shell_withdraw",
+   "when": "on_predator_near"
   },
   {
    "slug": "fowlers-toad",
@@ -127,7 +317,8 @@
    "line": "{aAnimal} is puffing up and flattening itself at a threat",
    "behaviour": "puffs up or flattens when threatened",
    "quote": "a threatened toad may puff up, flatten or play dead",
-   "uses": "pose:puff_up / pose:flatten"
+   "uses": "pose:puff_up / pose:flatten",
+   "when": "on_predator_near"
   },
   {
    "slug": "giant-african-land-snail",
@@ -137,7 +328,8 @@
    "line": "{aAnimal} is pulling deep into its shell after a disturbance",
    "behaviour": "pulls deep into shell when disturbed",
    "quote": "A disturbed snail pulls deep into its shell.",
-   "uses": "pose:shell_withdraw"
+   "uses": "pose:shell_withdraw",
+   "when": "on_predator_near"
   },
   {
    "slug": "giant-african-millipede",
@@ -147,7 +339,41 @@
    "line": "{aAnimal} is coiling its body into a tight spiral at a threat",
    "behaviour": "coils into a tight spiral when threatened",
    "quote": "When threatened, the Giant African Millipede typically coils its body into a tight spiral, protecting its vulnerable underside and presenting its harder exoskeleton.",
-   "uses": "pose:coil_spiral"
+   "uses": "pose:coil_spiral",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "giant-forest-scorpion",
+   "name": "Giant Forest Scorpion",
+   "id": "8784f4de-8fdc-437d-8723-76cba4c08f29",
+   "move": "rear",
+   "line": "{aAnimal} is holding a defensive posture",
+   "behaviour": "defensive posture before stinging",
+   "quote": "Defensive posture before stinging",
+   "uses": "pose:scorpion_threat_claws_tail",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "giant-golden-orb-weaver",
+   "name": "Giant Golden Orb-weaver",
+   "id": "60c9cee8-f3b4-4f32-bfa6-6e7ec5b65449",
+   "move": "blur",
+   "line": "{aAnimal} is shaking its web violently after a disturbance",
+   "behaviour": "shakes web violently or drops from hub on a line",
+   "quote": "Disturbed, the spider may shake the web violently or drop from the hub on a line.",
+   "uses": "pose:web_shake_blur",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "giant-whip-scorpion",
+   "name": "Giant Whip Scorpion",
+   "id": "692eb783-aa0f-4859-ac59-65219c98147e",
+   "move": "rear",
+   "line": "{aAnimal} is rearing up and holding its heavy pincers open towards an attacker",
+   "behaviour": "rears up holding heavy pincers open",
+   "quote": "Faced with a threat, it rears up and holds its heavy pincers open towards the attacker.",
+   "uses": "rear",
+   "when": "on_predator_near"
   },
   {
    "slug": "great-plains-toad",
@@ -157,7 +383,8 @@
    "line": "{aAnimal} is puffing itself up with air at a threat",
    "behaviour": "puffs up with air when threatened",
    "quote": "a threatened toad puffs up with air",
-   "uses": "pose:puff_up"
+   "uses": "pose:puff_up",
+   "when": "on_predator_near"
   },
   {
    "slug": "greek-tortoise",
@@ -167,7 +394,8 @@
    "line": "{aAnimal} is pulled into its shell with scaly forelimbs closing the front",
    "behaviour": "pulls into shell and closes front with scaly forelimbs",
    "quote": "Nosed by a fox or dog, it pulls head, legs and tail into the shell, closes the front with its scaly forelimbs and stays put.",
-   "uses": "pose:shell_withdraw (forelimb shield)"
+   "uses": "pose:shell_withdraw (forelimb shield)",
+   "when": "on_predator_near"
   },
   {
    "slug": "green-blotched-moth",
@@ -178,6 +406,7 @@
    "behaviour": "opens its leaf-like forewings to flash orange hindwings when disturbed",
    "quote": "At rest the green forewings resemble a leaf; if disturbed it opens them to reveal the orange hindwings, which may startle an attacker.",
    "uses": "pose:hindwing_flash",
+   "when": "on_predator_near",
    "colour": "#ee8a1f"
   },
   {
@@ -188,7 +417,8 @@
    "line": "{aAnimal} is rapidly pulling its soft body back into its hard shell",
    "behaviour": "retracts instantly at a bird's shadow or touch",
    "quote": "Upon sensing a threat, such as a bird's shadow, a sudden vibration, or a direct touch, the Grovesnail rapidly retracts its soft body into the safety of its hard, calcified shell.",
-   "uses": "pose:shell_withdraw"
+   "uses": "pose:shell_withdraw",
+   "when": "on_predator_near"
   },
   {
    "slug": "harnessed-moth",
@@ -199,7 +429,19 @@
    "behaviour": "sits camouflaged, then flashes scarlet hindwings when touched",
    "quote": "The Harnessed Moth sits camouflaged until it is touched, then flashes scarlet hindwings kept hidden underneath.",
    "uses": "pose:hindwing_flash",
+   "when": "on_predator_near",
    "colour": "#e0261c"
+  },
+  {
+   "slug": "leaf-eating-slug",
+   "name": "Leaf-eating Slug",
+   "id": "68f6b445-e11e-4b8d-ac21-445ee82dd119",
+   "move": "flat",
+   "line": "{aAnimal} is contracting into a stiff, flat shape and coating itself in sticky mucus",
+   "behaviour": "contracts into a stiff flattened shape coated in mucus when touched",
+   "quote": "When touched it contracts into a stiff, flattened shape and coats itself in sticky mucus.",
+   "uses": "pose:slug_contract_flat",
+   "when": "on_predator_near"
   },
   {
    "slug": "long-spined-porcupinefish",
@@ -209,7 +451,8 @@
    "line": "{aAnimal} is puffing up like a balloon, sharp spines standing out",
    "behaviour": "puffs up like a balloon with spines standing out",
    "quote": "The Long-spined Porcupinefish can puff up its body like a balloon and show off its sharp spines to scare away predators.",
-   "uses": "pose:puff_up (balloon + spines)"
+   "uses": "pose:puff_up (balloon + spines)",
+   "when": "on_predator_near"
   },
   {
    "slug": "malayan-box-turtle",
@@ -219,7 +462,19 @@
    "line": "{aAnimal} is clamping its lower shell shut, sealed into a hard box",
    "behaviour": "seals itself into a hinged box",
    "quote": "Grabbed or threatened, it pulls head, legs and tail inside and clamps its lower shell tight against the upper one, sealing itself into a hard box with no gap to bite into.",
-   "uses": "pose:shell_close (box seal)"
+   "uses": "pose:shell_close (box seal)",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "malaysian-forest-scorpion",
+   "name": "Malaysian Forest Scorpion",
+   "id": "ce532c50-c5a9-4ab4-b0b0-982027943d8d",
+   "move": "rear",
+   "line": "{aAnimal} is raising its broad pincers and arching its tail over its back",
+   "behaviour": "raises broad pincers and arches tail over back near burrow",
+   "quote": "When threatened near its burrow, it raises its broad pincers, arches its tail over its back and can make a faint hissing rasp by rubbing parts of its body together.",
+   "uses": "pose:scorpion_threat_claws_tail",
+   "when": "on_predator_near"
   },
   {
    "slug": "mediterranean-hermit-crab",
@@ -229,7 +484,8 @@
    "line": "{aAnimal} is deep in its shell, blocking the opening with its large right claw",
    "behaviour": "withdraws and blocks opening with large right claw",
    "quote": "It withdraws deep into its shell and blocks the opening with its large right claw",
-   "uses": "pose:hermit_withdraw_claw_plug"
+   "uses": "pose:hermit_withdraw_claw_plug",
+   "when": "on_predator_near"
   },
   {
    "slug": "pill-millipede",
@@ -239,7 +495,8 @@
    "line": "{aAnimal} is curling up tightly at a touch and staying closed",
    "behaviour": "rolls into a tight ball within a second and stays closed",
    "quote": "Touched on a woodland floor, it curls up within a second and stays tightly closed until the disturbance has passed.",
-   "uses": "pose:roll_ball"
+   "uses": "pose:roll_ball",
+   "when": "on_predator_near"
   },
   {
    "slug": "pointed-snail",
@@ -249,7 +506,30 @@
    "line": "{aAnimal} is withdrawing into its shell after a disturbance",
    "behaviour": "withdraws into its shell when disturbed",
    "quote": "When disturbed it withdraws into its shell.",
-   "uses": "pose:shell_withdraw"
+   "uses": "pose:shell_withdraw",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "rainbow-crab",
+   "name": "Rainbow Crab",
+   "id": "eb72cd74-e761-400b-b712-452f11be9d15",
+   "move": "rear",
+   "line": "{aAnimal} is turning to face an attacker with its claws raised and spread",
+   "behaviour": "bolts for burrow or faces attacker with claws raised and spread",
+   "quote": "When threatened it bolts for its burrow or turns to face the attacker with claws raised and spread.",
+   "uses": "rear",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "red-necked-wallaby",
+   "name": "Red-necked Wallaby",
+   "id": "ebabd793-d6e8-4916-b45e-45bb940a9622",
+   "move": "thump",
+   "line": "{aAnimal} is thumping the ground with its hind feet and bounding into cover",
+   "behaviour": "thumps ground with hind feet then bounds into cover",
+   "quote": "When alarmed it thumps the ground with its hind feet and bounds into cover.",
+   "uses": "pose:foot_thump + flee",
+   "when": "on_predator_near"
   },
   {
    "slug": "red-tegu",
@@ -259,7 +539,20 @@
    "line": "{aAnimal} is cornered, hissing and puffing itself up",
    "behaviour": "cornered: hisses, puffs up, tail lash",
    "quote": "A threatened tegu runs for its burrow, and if cornered it hisses, puffs up and bites.",
-   "uses": "pose:puff_up"
+   "uses": "pose:puff_up",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "redclaw-crayfish",
+   "name": "Redclaw Crayfish",
+   "id": "a2229f05-c4b0-40ed-9911-28e35f8f23e7",
+   "move": "rear",
+   "line": "{aAnimal} is cornered, rearing up with its claws raised and open",
+   "behaviour": "cornered: rears up with claws raised and open",
+   "quote": "Cornered, it rears up with claws raised and open.",
+   "uses": "rear",
+   "when": "on_predator_near",
+   "cornered": true
   },
   {
    "slug": "reeves-turtle",
@@ -269,7 +562,8 @@
    "line": "{aAnimal} is withdrawing into its shell",
    "behaviour": "withdraws into shell",
    "quote": "Adults withdraw into the shell",
-   "uses": "pose:shell_withdraw"
+   "uses": "pose:shell_withdraw",
+   "when": "on_predator_near"
   },
   {
    "slug": "rugose-hermit-crab",
@@ -279,7 +573,8 @@
    "line": "{aAnimal} is pulling back into its shell and blocking the opening with a claw",
    "behaviour": "pulls into shell and blocks with claw, or lets go and drops",
    "quote": "Its answer to a threat is to pull back into the shell and block the opening with a claw, or to let go of its foothold and drop.",
-   "uses": "pose:hermit_withdraw_claw_plug"
+   "uses": "pose:hermit_withdraw_claw_plug",
+   "when": "on_predator_near"
   },
   {
    "slug": "savannah-monitor",
@@ -289,7 +584,8 @@
    "line": "{aAnimal} is cornered, hissing, puffing up and lashing its tail",
    "behaviour": "cornered: hisses, puffs up, lashes tail",
    "quote": "A cornered lizard hisses, puffs up its body, lashes its tail and bites.",
-   "uses": "pose:puff_up + tail swipe"
+   "uses": "pose:puff_up + tail swipe",
+   "when": "on_predator_near"
   },
   {
    "slug": "scarlet-tiger-moth",
@@ -300,7 +596,19 @@
    "behaviour": "opens its dark wings to show bright red ones when bothered",
    "quote": "When something bothers it, the Scarlet Tiger Moth opens its dark wings and shows bright red ones underneath.",
    "uses": "pose:hindwing_flash",
+   "when": "on_predator_near",
    "colour": "#d92a23"
+  },
+  {
+   "slug": "shore-crab",
+   "name": "Shore Crab",
+   "id": "5d0bf03d-f971-4da5-85d1-851019dc108c",
+   "move": "rear",
+   "line": "{aAnimal} is facing an attacker with its claws raised",
+   "behaviour": "faces attacker with claws raised; hides or buries in sand",
+   "quote": "It hides under weed and stones or buries itself in sand, and faces an attacker with claws raised.",
+   "uses": "rear",
+   "when": "on_predator_near"
   },
   {
    "slug": "short-beaked-echidna",
@@ -310,7 +618,30 @@
    "line": "{aAnimal} is digging in and curling up",
    "behaviour": "digs in and curls up against predators",
    "quote": "Digging in and curling make defense portable.",
-   "uses": "pose:dig_in_wedge + pose:curl_ball"
+   "uses": "pose:dig_in_wedge + pose:curl_ball",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "silver-argiope",
+   "name": "Silver Argiope",
+   "id": "6efc467b-1872-40c5-8ab5-7cd112d94f41",
+   "move": "blur",
+   "line": "{aAnimal} is whipping its whole orb back and forth until its outline blurs",
+   "behaviour": "whips the whole orb until its outline blurs, then drops",
+   "quote": "Threatened, the spider whips the entire orb back and forth until its own outline blurs, then drops on a line if that fails.",
+   "uses": "pose:web_shake_blur",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "southern-tamandua",
+   "name": "Southern Tamandua",
+   "id": "c368b870-b16e-4866-8ced-46d92a92df05",
+   "move": "rear",
+   "line": "{aAnimal} is standing upright with its claws out at a threat",
+   "behaviour": "rears upright with claws out when threatened",
+   "quote": "Defensive upright posture using claws when threatened",
+   "uses": "pose:upright_claw_threat",
+   "when": "on_predator_near"
   },
   {
    "slug": "southern-toad",
@@ -320,7 +651,8 @@
    "line": "{aAnimal} is puffing its body up with air at a threat",
    "behaviour": "puffs up its body with air when threatened",
    "quote": "A threatened toad puffs up its body with air, making it harder to swallow.",
-   "uses": "pose:puff_up"
+   "uses": "pose:puff_up",
+   "when": "on_predator_near"
   },
   {
    "slug": "stars-and-stripes-pufferfish",
@@ -330,7 +662,8 @@
    "line": "{aAnimal} is gulping water and swelling into a stiff, prickly ball",
    "behaviour": "gulps water to swell into a stiff prickly ball when grabbed",
    "quote": "When grabbed or cornered, it gulps water into an elastic stomach until its body swells into a stiff, prickly ball far too wide for most mouths.",
-   "uses": "pose:puff_up (water ball)"
+   "uses": "pose:puff_up (water ball)",
+   "when": "on_predator_near"
   },
   {
    "slug": "sunda-pangolin",
@@ -340,26 +673,87 @@
    "line": "{aAnimal} is curling up tight against a threat",
    "behaviour": "rolls up into a scaly ball",
    "quote": "Curling works against many predators",
-   "uses": "pose:curl_ball"
+   "uses": "pose:curl_ball",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "trashline-orb-weaver",
+   "name": "Trashline Orb-weaver",
+   "id": "d4caa55a-a65b-4823-9e81-cc9e28e3912a",
+   "move": "blur",
+   "line": "{aAnimal} is shaking its web so that its outline blurs",
+   "behaviour": "shakes web to blur or drops and lies still",
+   "quote": "A disturbed spider may shake the web so that its outline blurs, or drop to the ground on a safety line and lie still.",
+   "uses": "pose:web_shake_blur",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "tropical-leatherleaf-slug",
+   "name": "Tropical Leatherleaf Slug",
+   "id": "a705b52d-c60b-4570-8b9c-706e7594bc35",
+   "move": "flat",
+   "line": "{aAnimal} is contracting into a firm oval and drawing its tentacles under its mantle",
+   "behaviour": "contracts into a firm oval, tucks tentacles under mantle",
+   "quote": "A touched slug contracts into a firm oval, draws its tentacles under the mantle and gives off sticky mucus.",
+   "uses": "pose:slug_contract_flat",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "walking-catfish",
+   "name": "Walking Catfish",
+   "id": "2abf9d4a-b910-4364-8217-4ef94e5e4326",
+   "move": "spines",
+   "line": "{aAnimal} is locking its pectoral spines erect",
+   "behaviour": "locks its pectoral spines erect",
+   "quote": "Its pectoral spines can be locked erect, making it awkward to swallow.",
+   "uses": "pose:spines_locked",
+   "when": "on_predator_near"
+  },
+  {
+   "slug": "white-tailed-deer",
+   "name": "White-tailed Deer",
+   "id": "ab7ac66b-7770-479f-a7c6-cc7599fb6d1c",
+   "move": "thump",
+   "line": "{aAnimal} is snorting loudly and stamping a forefoot at danger it cannot see",
+   "behaviour": "snorts and stamps a forefoot at unseen danger",
+   "quote": "A deer that senses danger it cannot yet see often snorts loudly and stamps a forefoot.",
+   "uses": "pose:stamp",
+   "when": "on_disturbance",
+   "fore": true
+  },
+  {
+   "slug": "woodlouse-hunter-spider",
+   "name": "Woodlouse Hunter Spider",
+   "id": "a6d7c046-4b6d-4caf-a599-1c698fd79161",
+   "move": "rear",
+   "line": "{aAnimal} is rearing up and spreading its jaws at a threat",
+   "behaviour": "rears up and spreads jaws when threatened",
+   "quote": "When threatened it rears up, spreads its jaws and bites readily.",
+   "uses": "rear",
+   "when": "on_predator_near"
   }
  ],
  "skipped": [
-  "Eastern Red-backed Salamander (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is dropping its tail to get away\"",
+  "Eastern Red-backed Salamander (tail): the model carries no tail (ark.json behaviour.tail) to drop or raise: \"{aAnimal} is dropping its tail to get away\"",
   "Warty Frogfish (puff): the sentence says it is grabbed or seized: \"{aAnimal} is swallowing water and swelling up after being seized\"",
   "Eastern Lubber Grasshopper (flash): its wings lie between its hind legs on the model: the flash coloured the legs, not the wings: \"{aAnimal} is lifting its short front wings to flash the rose-red wings beneath\"",
   "Io Moth (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is opening its wings to reveal huge fake eyes\"",
   "Owl Butterfly (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is showing the eyespots on its wings to an attacker\"",
   "Peacock Butterfly (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is flicking its wings open and rubbing them together with a hiss\"",
   "Polyphemus Moth (flash): eyespots (or no colour named): the scene cannot open a wing to show them: \"{aAnimal} is flashing open the hidden eyespots on its huge tan wings\"",
+  "Varied Carpet Beetle (tuck): the sentence is about the caterpillar, the model is the adult: \"{aAnimal} larva is raising its tufts of barbed hairs at an attacker\"",
   "White Underwing Moth (flash): the sentence says another action than the move: \"{aAnimal} is bolting in fast, erratic flight to resettle on another trunk\"",
+  "Chital (flag): the model carries no tail (ark.json behaviour.tail) to drop or raise: \"{aAnimal} is fleeing with its tail raised to flash white\"",
+  "Common Warthog (flag): the model carries no tail (ark.json behaviour.tail) to drop or raise: \"{aAnimal} is running away with its tail raised like a flag\"",
   "Long-eared Hedgehog (curl): the sentence says another action than the move: \"{aAnimal} is raising its spines, hissing and jumping at a threat\"",
-  "Bocage's Wall Lizard (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is shedding its tail as it is seized\"",
-  "Common House Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping while its shed tail keeps twitching\"",
-  "Common Sun Skink (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping while its broken-off tail wriggles\"",
-  "Common Wall Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is fleeing into a crack, leaving its shed tail wriggling\"",
-  "Common Wall Lizard (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping while its shed tail goes on twitching\"",
+  "White-tailed Deer (flag): the model carries no tail (ark.json behaviour.tail) to drop or raise: \"{aAnimal} is bounding away between the trees with its white tail raised\"",
+  "Wasp Spider (blur): the sentence names a sex the log does not check (decision 374): \"{aAnimal} female is pumping her web back and forth so fast her outline blurs\"",
+  "Bocage's Wall Lizard (tail): the sentence says it is grabbed or seized: \"{aAnimal} is shedding its tail as it is seized\"",
+  "Common Sun Skink (tail): the model carries no tail (ark.json behaviour.tail) to drop or raise: \"{aAnimal} is escaping while its broken-off tail wriggles\"",
+  "Common Wall Gecko (tail): the sentence names a place the scene does not guarantee: \"{aAnimal} is fleeing into a crack, leaving its shed tail wriggling\"",
+  "Common Wall Lizard (tail): the model carries no tail (ark.json behaviour.tail) to drop or raise: \"{aAnimal} is escaping while its shed tail goes on twitching\"",
   "Loggerhead Musk Turtle (shell): the sentence says it is grabbed or seized: \"{aAnimal} is biting hard and drawing into its shell as it is grabbed\"",
-  "Mediterranean House Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is escaping into a crack while its shed tail keeps wriggling\"",
-  "Tropical House Gecko (tail): the move is not drawn yet (the tail drop: the models carry no tail to drop): \"{aAnimal} is leaving its broken-off tail twitching behind\""
+  "Mediterranean House Gecko (tail): the sentence names a place the scene does not guarantee: \"{aAnimal} is escaping into a crack while its shed tail keeps wriggling\"",
+  "Tropical House Gecko (tail): the model carries no tail (ark.json behaviour.tail) to drop or raise: \"{aAnimal} is leaving its broken-off tail twitching behind\""
  ]
 }

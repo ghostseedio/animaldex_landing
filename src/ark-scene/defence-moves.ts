@@ -8,6 +8,19 @@
  *   - puff: a pufferfish, a toad, a cornered monitor swells;
  *   - flash: a moth or a grasshopper shows the colour it kept hidden on its wings;
  *   - tail: a lizard or a salamander drops its tail, runs, and the tail grows back.
+ * SIG-DEFENCE (2026-11-20, P5 of AnimalDex docs/ark/behaviours-plan.md, the catalogue's M rows), on the same rails:
+ *   - rear: a wolf spider, a jumping spider, a crab, a scorpion, a crayfish rears up, front raised (some only when
+ *     cornered, as their rows say); a tamandua stands upright;
+ *   - blur: a daddy-long-legs whirls its body, an orb weaver pumps its web, until the outline blurs;
+ *   - thump: a rabbit or a wallaby thumps its hind feet (then runs; the European rabbit flags its white tail as it
+ *     goes); a white-tailed deer stamps a forefoot, at a disturbance the day's schedule gives now and then;
+ *   - flag: a cottontail runs with its white tail raised;
+ *   - flat: a slug contracts into a stiff, flat oval;
+ *   - tuck: a house spider, a widow, a carpet beetle pulls its legs in and keeps still;
+ *   - beard: a bearded dragon puffs out its beard and it darkens;
+ *   - spines: an armoured catfish locks its fin spines out.
+ * Each move is also an act with a stable name (`DEFENCE_ACTS`, "defence.<move>") and the earned-Power mechanisms it can
+ * play for (AnimalDex decision 420's classes, `data/ark/power-mechanisms.json` on the ark-powers-visible lane).
  *
  * Viewer-local and visual only, like the reactive layer that sets it off (`reactive.ts`: the action `withdraw` for
  * the moves made on the spot, `pressed` for the tail): nothing here decides a catch or an escape, and every move
@@ -28,11 +41,58 @@ import table from "@/ark-scene/defence-moves.json";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {canEat, intelProfile, type ArkIntelProfile} from "@/ark-scene/intelligence-profile";
 
-export type DefenceMove = "curl" | "coil" | "shell" | "puff" | "tail" | "flash";
-export type DefenceSpec = {move: DefenceMove; /** The species' own sentence (the catalogue row's `line`). */ line: string; /** A flash's hidden colour (sRGB hex), as its own text names it. */ colour: string | null};
+export type DefenceMove = "curl" | "coil" | "shell" | "puff" | "tail" | "flash" | "rear" | "blur" | "thump" | "flag" | "flat" | "tuck" | "beard" | "spines";
+export type DefenceSpec = {
+    move: DefenceMove;
+    /** The species' own sentence (the catalogue row's `line`). */
+    line: string;
+    /** A flash's hidden colour (sRGB hex), as its own text names it; a flagged tail's white, a beard's dark. */
+    colour: string | null;
+    /** A thump: then, running, it flags its white tail (the European rabbit's row says both). */
+    flag?: boolean;
+    /** A rear: only when cornered (the predator very close), as its row says; otherwise at a predator close. */
+    cornered?: boolean;
+    /** A thump: a forefoot's stamp (a deer), not the hind feet's thump. */
+    fore?: boolean;
+    /** Acted at a disturbance (its row's `when`: "at danger it cannot see"), which the day's schedule gives now and then (`disturbedNow`). */
+    disturbance?: boolean;
+};
 
-const SPECIES = (table as unknown as {species: Record<string, [DefenceMove, string, string?]>}).species;
-const SPECS = new Map<string, DefenceSpec>(Object.entries(SPECIES).map(([slug, [move, line, colour]]) => [slug, {move, line, colour: colour ?? null}]));
+const SPECIES = (table as unknown as {species: Record<string, [DefenceMove, string, string?, number?]>}).species;
+const SPECS = new Map<string, DefenceSpec>(
+    Object.entries(SPECIES).map(([slug, [move, line, colour, bits = 0]]) => [
+        slug,
+        {move, line, colour: colour || null, ...(bits & 1 ? {flag: true} : {}), ...(bits & 2 ? {cornered: true} : {}), ...(bits & 4 ? {fore: true} : {}), ...(bits & 8 ? {disturbance: true} : {})}
+    ])
+);
+
+/**
+ * Each move as an act with a stable name, for the earned Powers (lane ark-powers-visible): the survival mechanisms of
+ * AnimalDex decision 420 (`data/ark/power-mechanisms.json`: camouflage, hiding, armour, warning, speed, group,
+ * vigilance, climb, mimicry) a species' Power can be shown by with this act. Names never change once given.
+ */
+export const DEFENCE_ACTS: Record<DefenceMove, {name: string; mechanisms: string[]}> = {
+    curl: {name: "defence.curl", mechanisms: ["armour"]},
+    coil: {name: "defence.coil", mechanisms: ["armour", "hiding"]},
+    shell: {name: "defence.shell", mechanisms: ["armour", "hiding"]},
+    puff: {name: "defence.puff", mechanisms: ["warning", "armour"]},
+    tail: {name: "defence.tail_drop", mechanisms: ["speed"]},
+    flash: {name: "defence.flash", mechanisms: ["warning", "mimicry"]},
+    rear: {name: "defence.rear_threat", mechanisms: ["warning"]},
+    blur: {name: "defence.blur", mechanisms: ["warning", "camouflage"]},
+    thump: {name: "defence.thump", mechanisms: ["vigilance", "group", "warning"]},
+    flag: {name: "defence.tail_flag", mechanisms: ["speed", "vigilance"]},
+    flat: {name: "defence.contract_flat", mechanisms: ["armour"]},
+    tuck: {name: "defence.legs_tucked", mechanisms: ["hiding", "camouflage", "mimicry"]},
+    beard: {name: "defence.beard_puff", mechanisms: ["warning"]},
+    spines: {name: "defence.spines_locked", mechanisms: ["armour", "warning"]}
+};
+
+/** The act a species shows, by name, and the mechanisms it plays for (the Powers lane's question), or null. */
+export function defenceActOf(slug: string | null | undefined): {name: string; mechanisms: string[]; line: string} | null {
+    const spec = defenceMoveOf(slug);
+    return spec ? {...DEFENCE_ACTS[spec.move], line: spec.line} : null;
+}
 
 /** The species' defence move, or null (most species: they freeze, run or hide as before). */
 export function defenceMoveOf(slug: string | null | undefined): DefenceSpec | null {
@@ -51,7 +111,39 @@ export function defenceSpecies(): Array<[string, DefenceSpec]> {
  */
 export function holdsItsGround(slug: string | null | undefined): boolean {
     const spec = defenceMoveOf(slug);
-    return Boolean(spec && spec.move !== "tail");
+    return Boolean(spec && !RUNS.has(spec.move) && !spec.cornered);
+}
+/** Moves made while it runs, or before it runs (the thump): never held through a predator's coming. */
+const RUNS = new Set<DefenceMove>(["tail", "flag", "thump"]);
+
+/**
+ * SIG-DEFENCE: what the reactive layer is told this frame (`ReactiveInput.holds`): true it stays and makes its move at a
+ * predator close; "cornered" only at one very close (it runs before that); false it runs. A thumper holds while its
+ * thumps last (`THUMP_BOUT`), then runs.
+ */
+export function holdsNow(slug: string | null | undefined, state: DefenceState | null | undefined): boolean | "cornered" {
+    const spec = defenceMoveOf(slug);
+    if (!spec) return false;
+    if (spec.move === "thump") return Boolean(state && state.bout >= 0 && state.bout < THUMP_BOUT);
+    if (RUNS.has(spec.move)) return false;
+    return spec.cornered ? "cornered" : true;
+}
+
+/**
+ * SIG-DEFENCE: a disturbance now (a deer stamping "at danger it cannot see"): the day's schedule gives one now and then,
+ * the same for every viewer (the world's clock and the animal's id): about one 6 s bout in 20 minutes, while it is
+ * awake and about its own day. A drawing rate: the catalogue gives none.
+ */
+export const DISTURB_EVERY = 1200;
+export const DISTURB_FOR = 6;
+export function disturbedNow(id: string, epochSeconds: number): boolean {
+    const slot = Math.floor(epochSeconds / DISTURB_EVERY);
+    let h = 2166136261;
+    const key = `${id}:${slot}`;
+    for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+    const start = ((h >>> 0) / 4294967296) * (DISTURB_EVERY - DISTURB_FOR);
+    const into = epochSeconds - slot * DISTURB_EVERY - start;
+    return into >= 0 && into < DISTURB_FOR;
 }
 
 /**
@@ -94,18 +186,26 @@ export type DefenceState = {
     on: boolean;
     /** Seconds since the predator was last beside it: it stays closed a while (`HOLD`). */
     calm: number;
+    /** A thump's bout: seconds into it, or -1 (none since it last calmed). */
+    bout: number;
+    /** 0 … 1 its white tail flagged as it runs (a flag, or a thumper's flag after the thumps). */
+    raised: number;
 };
 
 export function newDefenceState(): DefenceState {
-    return {amount: 0, tail: 0, shed: -1, left: 0, episode: 0, on: false, calm: 0};
+    return {amount: 0, tail: 0, shed: -1, left: 0, episode: 0, on: false, calm: 0, bout: -1, raised: 0};
 }
 
 /** What the reactive layer says this frame (`ReactiveOut`), as far as a move needs it. */
-export type DefenceSignal = {action: string | null; alarmed: number; /** The predator is very close (inside 0.4 of its flight distance). */ pressed: boolean; /** How far it moved this frame, in lengths of its own tail. */ moved?: number};
+export type DefenceSignal = {action: string | null; alarmed: number; /** The predator is very close (inside 0.4 of its flight distance). */ pressed: boolean; /** How far it moved this frame, in lengths of its own tail. */ moved?: number; /** SIG-DEFENCE: a disturbance the day's schedule gives now (`disturbedNow`; a species acted at one). */ disturbed?: boolean};
 
 /** How fast each move is made and undone (a share of it a second): a pill millipede closes "within a second", a toad fills with air more slowly, wings flash open at once. */
-const RATE_IN: Record<DefenceMove, number> = {curl: 2.4, coil: 1.5, shell: 2.2, puff: 0.9, flash: 7, tail: 6};
-const RATE_OUT: Record<DefenceMove, number> = {curl: 0.35, coil: 0.3, shell: 0.4, puff: 0.3, flash: 1.5, tail: 0};
+const RATE_IN: Record<DefenceMove, number> = {curl: 2.4, coil: 1.5, shell: 2.2, puff: 0.9, flash: 7, tail: 6, rear: 3, blur: 4, thump: 6, flag: 5, flat: 1.2, tuck: 2.5, beard: 1.5, spines: 6};
+const RATE_OUT: Record<DefenceMove, number> = {curl: 0.35, coil: 0.3, shell: 0.4, puff: 0.3, flash: 1.5, tail: 0, rear: 0.6, blur: 1.5, thump: 4, flag: 0.8, flat: 0.25, tuck: 0.35, beard: 0.3, spines: 0.6};
+/** A thump's bout (s): three or four thumps on the ground, then it runs (a drawing span; the rows give none). */
+export const THUMP_BOUT = 2.4;
+/** The reactive layer's actions that set off a thump (it has seen or heard danger). */
+const STARTLED = new Set(["alert", "freeze", "withdraw", "flee", "threat_display", "shield_young"]);
 /** Once the predator is no longer beside it, it holds its move this long before it opens up (s): it "stays closed". */
 export const HOLD = 3;
 /** The shed tail lies twitching where it fell this long (s), then is gone; the stump grows back over this long (s of the world's clock; a drawing span, not a sourced rate). */
@@ -133,6 +233,34 @@ export function stepDefence(state: DefenceState, spec: DefenceSpec, signal: Defe
         }
         return;
     }
+    if (spec.move === "thump") {
+        // A bout of thumps when it first takes fright (or at a disturbance), once until it has calmed; then, running,
+        // a thumper that flags raises its white tail.
+        const startled = STARTLED.has(signal.action ?? "") || Boolean(signal.disturbed);
+        state.calm = startled ? 0 : state.calm + dt;
+        if (state.bout < 0 && startled) {
+            state.bout = 0;
+            state.episode++;
+        } else if (state.bout >= 0) {
+            state.bout += dt;
+            if (state.bout > THUMP_BOUT && state.calm > HOLD) state.bout = -1;
+        }
+        const thumping = state.bout >= 0 && state.bout < THUMP_BOUT;
+        state.on = thumping;
+        state.amount = thumping ? Math.min(state.amount + dt * RATE_IN.thump, 1) : Math.max(state.amount - dt * RATE_OUT.thump, 0);
+        const run = Boolean(spec.flag) && !thumping && signal.action === "flee";
+        state.raised = run ? Math.min(state.raised + dt * RATE_IN.flag, 1) : Math.max(state.raised - dt * RATE_OUT.flag, 0);
+        return;
+    }
+    if (spec.move === "flag") {
+        // Running from it, the tail up and its white showing; down again once it stops.
+        const run = signal.action === "flee";
+        if (run && !state.on && state.raised < 0.05) state.episode++;
+        state.on = run;
+        state.raised = run ? Math.min(state.raised + dt * RATE_IN.flag, 1) : Math.max(state.raised - dt * RATE_OUT.flag, 0);
+        state.amount = state.raised;
+        return;
+    }
     const threatened = signal.action === "withdraw";
     state.calm = threatened ? 0 : state.calm + dt;
     const want = threatened || (state.amount > 0 && (state.calm < HOLD || (signal.action === "recover" && signal.alarmed > 0.5)));
@@ -143,17 +271,19 @@ export function stepDefence(state: DefenceState, spec: DefenceSpec, signal: Defe
 
 /** Whether the move is far enough along to be said in the log (the species' sentence), and its episode's key. */
 export function defenceSaid(state: DefenceState, spec: DefenceSpec, id: string): string | null {
-    const showing = spec.move === "tail" ? state.shed >= 0 : state.on && state.amount > 0.5;
+    const showing = spec.move === "tail" ? state.shed >= 0 : spec.move === "thump" ? (state.on && state.amount > 0.5) || state.raised > 0.5 : state.on && state.amount > 0.5;
     return showing ? `defence:${id}:${state.episode}` : null;
 }
 
 // MARK: The shader's side
 
 /** The shader's kinds. */
-export const DEFENCE_KIND = {curl: 1, coil: 2, shell: 3, puff: 5, tail: 7, flash: 8} as const;
+export const DEFENCE_KIND = {curl: 1, coil: 2, shell: 3, puff: 5, tail: 7, flash: 8, rear: 20, blur: 21, thump: 22, flag: 23, flat: 24, tuck: 25, beard: 26, spines: 27} as const;
 
 /** The flash colours the table names, in order (the shader's list, numbered from 1). */
-export const FLASH_COLOURS: string[] = Array.from(new Set(Array.from(SPECS.values(), (s) => s.colour).filter((c): c is string => Boolean(c)))).sort();
+export const FLASH_COLOURS: string[] = Array.from(new Set(["#f2efe8", ...Array.from(SPECS.values(), (s) => s.colour).filter((c): c is string => Boolean(c))])).sort();
+/** A colour's number in the shader's list (from 1), or 0 (none named: drawn as it is). */
+const colourIndex = (hex: string | null | undefined) => FLASH_COLOURS.indexOf(hex ?? "") + 1;
 
 /** A move for the shader in one float: -(kind·65536 + aux·256 + amount), amount and aux 0…255. Never positive (that is a sleep). */
 export function packDefence(kind: number, amount: number, aux: number): number {
@@ -191,7 +321,27 @@ export function defencePack(state: DefenceState, spec: DefenceSpec, plan: string
         case "puff":
             return packDefence(DEFENCE_KIND.puff, state.amount, PUFF_ALL_ROUND.has(plan ?? "") ? 1 : 0);
         case "flash":
-            return packDefence(DEFENCE_KIND.flash, state.amount, FLASH_COLOURS.indexOf(spec.colour ?? "") + 1);
+            return packDefence(DEFENCE_KIND.flash, state.amount, colourIndex(spec.colour));
+        case "rear":
+            // (aux 1: a mammal stands upright on its hind feet; 0: an arthropod raises its front.)
+            return packDefence(DEFENCE_KIND.rear, state.amount, plan === "mammal" ? 1 : 0);
+        case "blur":
+            // (aux 0: the body whirled round and round, "whirling"; 1: pumped back and forth on its web.)
+            return packDefence(DEFENCE_KIND.blur, state.amount, /whirl/i.test(spec.line) ? 0 : 1);
+        case "thump":
+            if (state.amount <= 0.001 && state.raised > 0.001) return packDefence(DEFENCE_KIND.flag, state.raised, colourIndex("#f2efe8"));
+            return packDefence(DEFENCE_KIND.thump, state.amount, spec.fore ? 1 : 0);
+        case "flag":
+            return packDefence(DEFENCE_KIND.flag, state.raised, colourIndex(spec.colour));
+        case "flat":
+            return packDefence(DEFENCE_KIND.flat, state.amount, 0);
+        case "tuck":
+            return packDefence(DEFENCE_KIND.tuck, state.amount, 0);
+        case "beard":
+            return packDefence(DEFENCE_KIND.beard, state.amount, colourIndex(spec.colour));
+        case "spines":
+            // (aux 1: the pectoral spines only, as its row says; 0: its fin spines, the dorsal's too.)
+            return packDefence(DEFENCE_KIND.spines, state.amount, /pectoral/i.test(spec.line) ? 1 : 0);
         case "tail": {
             if (state.tail <= 0.001) return 0;
             // (aux: the shed tail's time, 1…255 over TAIL_TWITCH while it lies there; 0 once it is gone. Amount: the stump.)
@@ -335,6 +485,91 @@ export const DEFENCE_VERTEX = `
         float onBack = smoothstep(0.45, 0.62, (position.y - dy0) / dHigh) * (1.0 - smoothstep(0.7, 0.9, side));
         float flatBody = 1.0 - smoothstep(0.45, 0.7, dHigh / max(2.0 * arkDefSpan, 0.001));
         vArkDefence = vec2(defA * rear * mix(onBack, smoothstep(0.16, 0.3, side), flatBody), arkDef.z);
+    } else if (defK > 19.5 && defK < 20.5) {
+        // SIG-DEFENCE: rearing up. The front of the body turns up about a point on the ground a third of the way along
+        // from the rear; the front legs (low, ahead of the middle) go up further and open. A mammal (aux 1: a
+        // tamandua) stands upright on its hind feet, about its hips.
+        float ease = defA * defA * (3.0 - 2.0 * defA);
+        float upright = arkDef.z > 0.5 ? 1.0 : 0.0;
+        float pz = mix(dz0 + dLen * 0.32, dz0 + dLen * 0.22, upright);
+        float w = smoothstep(pz - dLen * 0.05, pz + dLen * 0.12, transformed.z);
+        float legs = (1.0 - smoothstep(dy0, dy0 + dHigh * 0.45, transformed.y)) * smoothstep(dMid, dz1, transformed.z) * (1.0 - upright);
+        float ang = ease * mix(0.62, 1.2, upright) * w * (1.0 + 0.7 * legs);
+        float ry = transformed.y - dy0;
+        float rz = transformed.z - pz;
+        float rc = cos(ang);
+        float rs = sin(ang);
+        transformed.y = dy0 + ry * rc + rz * rs;
+        transformed.z = pz - ry * rs + rz * rc;
+        transformed.x *= 1.0 + 0.3 * ease * legs;
+    } else if (defK > 20.5 && defK < 21.5) {
+        // SIG-DEFENCE: shaken to a blur: the whole body whirled round in small fast circles (aux 0, a daddy-long-legs),
+        // or pumped back and forth across its web (aux 1, an orb weaver), faster than the eye can follow.
+        float bt = arkClock * 6.2831853 * 7.0 + arkInstance.x * 40.0;
+        float br = defA * dLen * 0.16;
+        if (arkDef.z < 0.5) {
+            transformed.x += br * cos(bt);
+            transformed.z += br * sin(bt);
+        } else {
+            transformed.y += br * 1.3 * sin(bt);
+        }
+    } else if (defK > 21.5 && defK < 22.5) {
+        // SIG-DEFENCE: a thump of the hind feet (a rabbit, a wallaby), or a forefoot's stamp (aux 1, a deer): the foot
+        // comes up and slams down, about twice a second; the haunch rises a little with it.
+        float tf = fract(arkClock * 2.2 + arkInstance.x * 7.0);
+        float lift = smoothstep(0.0, 0.55, tf) * (1.0 - smoothstep(0.62, 0.7, tf));
+        float fore = arkDef.z > 0.5 ? 1.0 : 0.0;
+        float alongF = mix(1.0 - smoothstep(dz0 + dLen * 0.22, dz0 + dLen * 0.45, transformed.z), smoothstep(dz1 - dLen * 0.45, dz1 - dLen * 0.3, transformed.z), fore);
+        float low = 1.0 - smoothstep(dy0 + dHigh * 0.1, dy0 + dHigh * 0.4, transformed.y);
+        float sideF = mix(1.0, smoothstep(-0.05, 0.25, transformed.x / max(arkDefSpan, 0.001)), fore);
+        transformed.y += defA * lift * alongF * sideF * (low * dHigh * mix(0.16, 0.24, fore) + (1.0 - fore) * (1.0 - low) * dHigh * 0.06);
+    } else if (defK > 22.5 && defK < 23.5 && tailLength > 0.0 && transformed.z < tailBaseZ + tailLength * 0.15 && abs(transformed.y - arkTailBaseY) < tailLength * 1.4) {
+        // SIG-DEFENCE: the tail flagged as it runs: turned straight up about its base, its white showing (aux: the colour).
+        float into = clamp((tailBaseZ + tailLength * 0.15 - transformed.z) / (tailLength * 1.15), 0.0, 1.0);
+        float tailSide = 1.0 - smoothstep(0.6, 1.1, abs(transformed.x - tailBaseX) / tailLength);
+        float fm = smoothstep(0.0, 0.3, into) * tailSide;
+        float turn = defA * 1.35 * fm;
+        float hy = transformed.y - arkTailBaseY;
+        float hz = transformed.z - tailBaseZ;
+        transformed.y = arkTailBaseY + hy * cos(turn) - hz * sin(turn);
+        transformed.z = tailBaseZ + hy * sin(turn) + hz * cos(turn);
+        vArkDefence = vec2(defA * fm, arkDef.z);
+    } else if (defK > 23.5 && defK < 24.5) {
+        // SIG-DEFENCE: contracted flat: shorter, lower and wider (a slug's stiff oval), its tentacles drawn in with the rest.
+        float ease = defA * defA * (3.0 - 2.0 * defA);
+        transformed.z = dMid + (transformed.z - dMid) * (1.0 - 0.38 * ease);
+        transformed.y = dy0 + (transformed.y - dy0) * (1.0 - 0.45 * ease);
+        transformed.x *= 1.0 + 0.32 * ease;
+    } else if (defK > 24.5 && defK < 25.5) {
+        // SIG-DEFENCE: legs pulled in: what reaches out at the sides (the legs) is drawn in toward the body and up under
+        // it, and what reaches forward or back beside it (the long front and hind legs, the antennae) toward the middle.
+        float ease = defA * defA * (3.0 - 2.0 * defA);
+        float cx = arkDefSpan * 0.28;
+        float ax = abs(transformed.x);
+        float legness = smoothstep(cx, cx * 2.2, ax);
+        if (ax > cx) transformed.x = sign(transformed.x) * (cx + (ax - cx) * (1.0 - 0.72 * ease));
+        transformed.z = mix(transformed.z, dMid + (transformed.z - dMid) * 0.55, ease * legness);
+        float low = 1.0 - smoothstep(dy0, dy0 + dHigh * 0.45, transformed.y);
+        transformed.y += ease * low * legness * dHigh * 0.2;
+    } else if (defK > 25.5 && defK < 26.5) {
+        // SIG-DEFENCE: the beard puffed out and darkened: the throat under the head swells down and out, and goes dark (aux: the colour).
+        float along = smoothstep(dz1 - dLen * 0.3, dz1 - dLen * 0.2, transformed.z) * (1.0 - smoothstep(dz1 - dLen * 0.07, dz1 - dLen * 0.01, transformed.z));
+        float under = 1.0 - smoothstep(dy0 + dHigh * 0.3, dy0 + dHigh * 0.62, transformed.y);
+        float bm = along * under;
+        transformed.y -= defA * bm * dHigh * 0.2;
+        transformed.x *= 1.0 + defA * bm * 0.5;
+        vArkDefence = vec2(min(defA * along * (under + 0.25) * 1.3, 1.0), arkDef.z);
+    } else if (defK > 26.5 && defK < 27.5) {
+        // SIG-DEFENCE: fin spines locked out: the pectoral fins (low at the sides, behind the head) stand out stiff,
+        // and (aux 0) the dorsal fin stands up tall.
+        float sideS = smoothstep(0.4, 0.8, abs(transformed.x) / max(arkDefSpan, 0.001));
+        float frontS = smoothstep(dz1 - dLen * 0.6, dz1 - dLen * 0.45, transformed.z) * (1.0 - smoothstep(dz1 - dLen * 0.25, dz1 - dLen * 0.12, transformed.z));
+        float lowS = 1.0 - smoothstep(dy0 + dHigh * 0.3, dy0 + dHigh * 0.6, transformed.y);
+        transformed.x *= 1.0 + defA * sideS * frontS * lowS * 0.7;
+        if (arkDef.z < 0.5) {
+            float topS = smoothstep(dy0 + dHigh * 0.7, dy1, transformed.y) * smoothstep(dz0 + dLen * 0.2, dz0 + dLen * 0.35, transformed.z) * (1.0 - smoothstep(dz1 - dLen * 0.3, dz1 - dLen * 0.15, transformed.z));
+            transformed.y += defA * topS * dHigh * 0.22;
+        }
     }
 }
 `;
