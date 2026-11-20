@@ -11,7 +11,7 @@ import {townTileHeight} from "@/ark-scene/islands/town/drawn-ground";
 import {tractor} from "@/ark-scene/islands/town/render/farm-machines";
 import {townDeadwood} from "@/ark-scene/islands/town/deadwood";
 import {drawDeadwood, drawLeafPatch} from "@/ark-scene/islands/town/render/deadwood";
-import {CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_BASIN, MILLPOND, TOWN_LEVEL, TOWPATH, townPlan, type Hedge, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
+import {BREAKWATER_TOP, CANAL, CANAL_LEVEL, CANAL_WIDTH, HARBOUR_ARMS, HARBOUR_BASIN, MILLPOND, TOWN_LEVEL, TOWPATH, townPlan, type Hedge, type Street, type TownPlan} from "@/ark-scene/islands/town/plan";
 import {zooSpotsOf, type ZooEnclosure, type ZooLayout} from "@/ark-scene/islands/town/areas";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 import {at, Geo, tone, type Frame, type V3} from "@/ark-scene/islands/town/render/kit";
@@ -240,8 +240,7 @@ function harbour(out: SceneryOut) {
         }
     }
     // Breakwaters: two stone arms out from the basin's mouth, the lighthouse on the east one's end.
-    const arms: Array<[Pt, Pt]> = [[local(b, -b.w / 2, b.d / 2), {x: 6, z: 168}], [local(b, b.w / 2, b.d / 2), {x: 36, z: 166}]];
-    for (const [a, e] of arms) {
+    for (const [a, e] of HARBOUR_ARMS) {
         const length = Math.hypot(e.x - a.x, e.z - a.z);
         const n = Math.ceil(length / 6);
         for (let k = 0; k < n; k++) {
@@ -251,7 +250,7 @@ function harbour(out: SceneryOut) {
             const c = chunkFor(out, p.x, p.z);
             const f: Frame = {x: p.x, y: -6, z: p.z, rot: Math.atan2(-(e.x - a.x), e.z - a.z)};
             c.solid.box(f, 0, 0, 0, 6.5, 6 + TOWN_LEVEL, length / n + 0.1, tone("#8a847a"));
-            c.solid.box(f, 0, 6 + TOWN_LEVEL, 0, 4.2, 0.3, length / n + 0.1, tone("#a8a194"));
+            c.solid.box(f, 0, 6 + TOWN_LEVEL, 0, BREAKWATER_TOP, 0.3, length / n + 0.1, tone("#a8a194"));
             // Armour stones on the sea side.
             const r = rng(hashText(`${p.x}|${p.z}`));
             for (let s = 0; s < 3; s++) c.solid.blob(at(f, 3.6, 0, 0)[0] + (r() - 0.5) * 3, -0.2 + r() * 1.5, at(f, 3.6, 0, 0)[2] + (r() - 0.5) * 3, 1.4, 1.0, 1.3, tone("#7d786e"), hashText(`${p.x}|${s}`), 0);

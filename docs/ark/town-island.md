@@ -743,3 +743,26 @@ a room on its floor, and no two bodies one on another. Against main, 629 of the 
 none more than 1.4 m: those that stood within the new margin of a rail, and the ones their spreading moved); with the 1,461 loaded containers laid on
 nobody moves, as before.
 
+
+## 16. The reach file (lane TOWN-REACH, branch `town-reach`)
+
+AnimalDex decision 416 (the owner): "if animals can't reach eachother - no mating". The server breeds a town wildlife pair only if both
+homes lie in one connected part of the town for the kind's way of moving (AnimalDex `docs/ark/town-reach.md`, flag `reachable_mates`,
+default off). The server has no town geometry, so this repo generates it, from the town's own plan, as a file both repos share byte for
+byte (as the positions atlas and the forest stands):
+
+| File | What |
+|---|---|
+| `src/ark-scene/islands/town/reach-mask.ts` | The connectivity mask: 1 m cells over the town's square, the atlas mask's format (medium in the low two bits) with four flags above it: `BAR` (a building's wall or a barrier line), `SMALL` / `CLIMB` (who gets through it: the obstacles' `passable`), `DECK` (a bridge's deck or a breakwater's walkway over water). The ground's water, the zoo's pools, every building (outline = wall, inside = roof), every barrier of `obstacles.ts` (all zoo plots), the front gardens' gates (`townGates`), the four canal bridges, the breakwaters (`HARBOUR_ARMS`, which `render/scenery.ts` now draws from) |
+| `src/ark-scene/islands/town/reach-file.ts` | The file's data: the mask run-length coded, the 2,456 wildlife spots (`areas.ts`, with what `placement.ts` picks by), each species' niche, size, `flies` (the scene's) and climbs, and the contract cases |
+| `scripts/ark-town-reach.mts` | Writes `src/ark-scene/positions/town-reach.json`; `--check`; `--picture` (the mask) and `--parts` (the parts by way). Fails if the server's pick of a cluster's spot (`positions/town-reach.ts townHome`) is not the scene's (`placeTownAnimals`) for any of 4,136 sampled (species, zone, slot) |
+| `src/ark-scene/positions/reach.ts`, `town-reach.ts`, `town-reach.json` | Pinned copies (AnimalDex `supabase/functions/_shared/ark-positions/`): `PIN.json` `townReach.sha256` |
+| `src/lib/ark-town-reach.test.ts` | The pins, that the file is what the drawn town generates, that the mask agrees with the town (ground, canal, ponds, harbour, buildings, barriers and who they let through, zoo fences, gates, bridges, breakwaters, the parts), and the server's pick against the scene's |
+
+Regenerate and re-pin after any change to the town's plan, ground, buildings, fences, wildlife spots or niches, or a catalogue species added:
+`npx tsx scripts/ark-town-reach.mts`, copy the file to AnimalDex, re-pin. Small changes to the scene made here: `placement.ts` exports `HIGH_WHERE`
+and `inTownWater`, `wetland.ts` exports `SEA_ZONES`, `obstacles.ts` has `townGates` (the nav file's gates, same numbers), `plan.ts` has
+`HARBOUR_ARMS` and `BREAKWATER_TOP` (the two arms and their walkway width, drawn as before).
+
+**Found on the way (not changed here):** five wildlife spots (the wild corner at (-52, -92) and a deadwood and a leaves spot beside it,
+and one in `small_mammals-3`) lie inside open zoo plots' fences: wildlife is drawn standing inside the children's farm.

@@ -132,8 +132,13 @@ export function townObstaclesJSON(plan: TownPlan = townPlan()): string {
             }
             return found.map((p) => ({street: s.id, x: p.x, z: p.z, width: s.width + s.pavement * 2}));
         });
-    const gates = plan.parcels.filter((p) => p.front).map((p) => ({parcel: p.id, x: p.front!.x + -Math.sin(p.at.rot) * (p.front!.d / 2), z: p.front!.z + Math.cos(p.at.rot) * (p.front!.d / 2)}));
+    const gates = townGates(plan);
     return JSON.stringify(round({island: "town", units: "m", frame: "town local (x east, z south, y up)", bounds: {half: 316.8}, obstacles: townObstacles(plan), bridges, gates}));
+}
+
+/** Each front garden's gate on the pavement (where a walker gets through its fence, wall or hedge). */
+export function townGates(plan: TownPlan = townPlan()): Array<{parcel: string; x: number; z: number}> {
+    return plan.parcels.filter((p) => p.front).map((p) => ({parcel: p.id, x: p.front!.x + -Math.sin(p.at.rot) * (p.front!.d / 2), z: p.front!.z + Math.cos(p.at.rot) * (p.front!.d / 2)}));
 }
 
 function segDistance(x: number, z: number, a: Pt, b: Pt): number {
