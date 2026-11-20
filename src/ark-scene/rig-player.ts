@@ -69,7 +69,7 @@ import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
 import type {GaitState, GroundQuery} from "@/ark-scene/locomotion/types";
 import {locoGround} from "@/ark-scene/locomotion/ground";
 import {clipBakeOf} from "@/ark-scene/locomotion/flight";
-import type {LocoCanopy} from "@/ark-scene/locomotion/brachiate";
+import {armsFit, handsReady, type LocoCanopy} from "@/ark-scene/locomotion/brachiate";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -647,6 +647,8 @@ export class RigLibrary {
         let loco: LocoLayer | null = null;
         try {
             loco = new LocoLayer(buildLocoRig(rawSkeletonOf(mesh, extras.bones, geometry, slug, entry)), data);
+            // ARK-CANOPY: a rig whose arms can take a hold may hang under the limbs (`locomotion/brachiate.ts`).
+            if (loco.rig.plan === "primate" && armsFit(loco.rig)) handsReady.add(slug);
         } catch (error) {
             console.warn(`[ark] loco ${slug}`, error instanceof Error ? error.message : error);
         }

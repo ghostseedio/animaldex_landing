@@ -13,7 +13,7 @@ import {treeBody} from "@/ark-scene/tree-spacing";
 import {jungleHolds, jungleTrees} from "@/ark-scene/islands/wild/jungle";
 import {hashString} from "@/ark-scene/world";
 import type {SurfaceFrame} from "@/ark-scene/grounding/stand";
-import {brachiateDriver, type LocoCanopy} from "@/ark-scene/locomotion/brachiate";
+import {brachiateDriver, canHang, travelKind, type LocoCanopy} from "@/ark-scene/locomotion/brachiate";
 import {registerLocoDriver} from "@/ark-scene/locomotion/layer";
 
 // ARK-CANOPY: a brachiator's arms on its holds while it swings (asked before the legged and L2 drivers: it takes only
@@ -24,7 +24,7 @@ registerLocoDriver(brachiateDriver);
 const HOLD_TAGS = new Set(["limb", "canopy_hang", "branch"]);
 const AROUND = 11;
 
-type Own = {kind: CanopyKind | null; routes: Map<string, CanopyRoute | null>};
+type Own = {base: CanopyKind | null; kind: CanopyKind | null; hands: boolean; routes: Map<string, CanopyRoute | null>};
 const owners = new Map<string, Own>();
 let indexOf: AttachPoint[] | null = null;
 let byId = new Map<string, AttachPoint>();
@@ -123,8 +123,17 @@ export function canopyFrame(
     const hold = sceneryPoint(trip.to.point);
     if (!hold || !HOLD_TAGS.has(hold.tag)) return null;
     let own = owners.get(animal.id);
-    if (!own) owners.set(animal.id, (own = {kind: canopyKindOf(animal.model_slug, animal.scientific_name), routes: new Map()}));
-    if (!own.kind) return null;
+    if (!own) {
+        const base = canopyKindOf(animal.model_slug, animal.scientific_name);
+        owners.set(animal.id, (own = {base, kind: null, hands: !canHang(animal.model_slug), routes: new Map()}));
+    }
+    if (!own.base) return null;
+    // (ARK-CANOPY: a brachiator hangs under the limbs only once its rig's hands can hold; until then it goes along the tops.)
+    if (own.hands !== canHang(animal.model_slug) || !own.kind) {
+        own.hands = canHang(animal.model_slug);
+        own.kind = travelKind(own.base, animal.model_slug);
+        own.routes.clear();
+    }
     const route = routeFrom(own, animal.id, hold, length, groundAt);
     if (!route) return null;
     const start = excursionStart(route, hashString(`${animal.id}#excursion`), trip.slot, trip.end - trip.arrive);
@@ -157,6 +166,6 @@ export function canopyFrame(
     const tl = Math.hypot(t.x - d * n.x, t.y - d * n.y, t.z - d * n.z) || 1;
     // (ARK-CANOPY: what its arms do, for the brachiation driver: the hold, the next one, which hand; eased in and out with
     // the excursion, so the hand goes to the wood as it leaves its sitting pose.)
-    const arms: LocoCanopy | null = pose.blend > 0.5 && (pose.phase === "swing" || pose.phase === "flight" || pose.phase === "hold") ? {phase: pose.phase, hand: pose.hand, next: pose.next ?? null, lead: pose.lead ?? 1, u: pose.u ?? 0, brachiate: own.kind.mode === "brachiate"} : null;
+    const arms: LocoCanopy | null = pose.blend > 0.5 && (pose.phase === "swing" || pose.phase === "flight" || pose.phase === "hold") ? {phase: pose.phase, hand: pose.hand, next: pose.next ?? null, lead: pose.lead ?? 1, u: pose.u ?? 0, brachiate: route.kind.mode === "brachiate"} : null;
     return {x, y, z, nx: n.x, ny: n.y, nz: n.z, tx: (t.x - d * n.x) / tl, ty: (t.y - d * n.y) / tl, tz: (t.z - d * n.z) / tl, air: pose.air, hand: pose.hand, arms, leap: pose.phase === "leap" ? pose.u ?? null : null, canopy: true};
 }

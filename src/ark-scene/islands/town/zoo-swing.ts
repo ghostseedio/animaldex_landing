@@ -14,7 +14,7 @@
 import {canopyKindOf, canopyPoseAt, planRoute, type Anchor, type CanopyRoute} from "@/ark-scene/canopy-travel";
 import {hashString} from "@/ark-scene/world";
 import type {SurfaceFrame} from "@/ark-scene/grounding/stand";
-import type {LocoCanopy} from "@/ark-scene/locomotion/brachiate";
+import {canHang, travelKind, type LocoCanopy} from "@/ark-scene/locomotion/brachiate";
 
 type Vec = {x: number; y: number; z: number};
 type V3 = [number, number, number];
@@ -63,10 +63,12 @@ const plans = new Map<string, Excursion | null>();
 
 /** Its excursion from its spot: to the nearest post, up it, out along the beams and back, down and home. */
 function plan(id: string, slug: string, scientific: string | null | undefined, length: number, spot: Vec, climbs: readonly ZooClimb[]): Excursion | null {
-    const key = `${id}@${spot.x.toFixed(1)},${spot.z.toFixed(1)}`;
+    const key = `${id}@${spot.x.toFixed(1)},${spot.z.toFixed(1)}${canHang(slug) ? "#hands" : ""}`;
     if (plans.has(key)) return plans.get(key) ?? null;
     let out: Excursion | null = null;
-    const kind = canopyKindOf(slug, scientific);
+    // (ARK-CANOPY: under the beams by its hands only when its rig's arms can hold; else along their tops.)
+    const found = canopyKindOf(slug, scientific);
+    const kind = found ? travelKind(found, slug) : null;
     if (kind && climbs.length) {
         // The nearest post's foot, and its top.
         let best: {foot: Vec; top: Vec; d: number} | null = null;
