@@ -260,7 +260,10 @@
             "lineageGrandOther": "หลาน {count} ตัว",
             "lineageLaterOne": "ลูกหลานรุ่นหลัง 1 ตัว",
             "lineageLaterOther": "ลูกหลานรุ่นหลัง {count} ตัว",
-            "lineageLiving": "ยังมีชีวิตอยู่ {count} ตัว"
+            "lineageLiving": "ยังมีชีวิตอยู่ {count} ตัว",
+            "grassPlenty": "หญ้าตรงนี้: อุดมสมบูรณ์",
+            "grassThinning": "หญ้าตรงนี้: เริ่มบางลง",
+            "grassBare": "หญ้าตรงนี้: ถูกแทะเล็มจนเตียน"
         },
         "replay": {
             "title": "ระหว่างที่คุณไม่อยู่",

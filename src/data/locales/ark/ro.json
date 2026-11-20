@@ -260,7 +260,10 @@
             "lineageGrandOther": "nepoți: {count}",
             "lineageLaterOne": "1 urmaș mai îndepărtat",
             "lineageLaterOther": "urmași mai îndepărtați: {count}",
-            "lineageLiving": "în viață acum: {count}"
+            "lineageLiving": "în viață acum: {count}",
+            "grassPlenty": "Iarbă aici: din belșug",
+            "grassThinning": "Iarbă aici: se rărește",
+            "grassBare": "Iarbă aici: pășunată până la pământ"
         },
         "replay": {
             "title": "Cât timp ai lipsit",

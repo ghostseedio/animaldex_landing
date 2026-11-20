@@ -38,6 +38,7 @@ import {forestFill, grassTufts, rockRadius, rockSquash, worldDecor, type DecorKi
 import {ARK_TIME, ARK_WIND, NOISE_GLSL} from "@/ark-scene/glsl";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {withGrassPress} from "@/ark-scene/grass-press";
+import {GRAZED_ZONES, setGrazedLevels, withGrazing, type ArkVegetation} from "@/ark-scene/grass-grazed";
 import {ARK_NEAR_CONE, ARK_NEAR_FADE, ARK_NEAR_FADE_CLIP, ARK_NEAR_FADE_PARS} from "@/ark-scene/near-fade";
 import {canopyTree, DECOR_SINK, FLOWER_SHAPE, LEAF_LIFT, limbAt} from "@/ark-scene/micro-decor";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
@@ -842,6 +843,11 @@ export type Vegetation = {
     /** Grass: drawn only on tiers that can afford it. */
     grass: InstancedMesh;
     setGrassCount: (count: number) => void;
+    /**
+     * The record's vegetation (`grass-grazed.ts`): the grass thins where it is overgrazed and comes back as it regrows.
+     * Null (off): the grass as built. The first non-null one adds the tufts' zone attribute (lazily, once).
+     */
+    setGrazed: (vegetation: ArkVegetation | null) => void;
     setShadows: (on: boolean) => void;
     /** The forest fill (graphics pass): the share of the extra trees drawn, 0…1, by tier. */
     setFill: (fraction: number) => void;
@@ -923,7 +929,7 @@ export function buildVegetation(maxGrass: number, grid: ChunkGrid | null = null)
     const tufts = grassTufts(maxGrass);
     const grassGeometry = tuft();
     // (Bent where a grazer bites or a walker steps: `grass-press.ts`, wired by the release.)
-    const grassMaterial = withGrassPress(foliageMaterial(0.35, 0.6, true));
+    const grassMaterial = withGrazing(withGrassPress(foliageMaterial(0.35, 0.6, true)));
     materials.push(grassMaterial);
     const grass = new InstancedMesh(grassGeometry, grassMaterial, Math.max(tufts.length, 1));
     const grassTints = new Float32Array(Math.max(tufts.length, 1) * 3);
@@ -961,6 +967,18 @@ export function buildVegetation(maxGrass: number, grid: ChunkGrid | null = null)
             if (grassChunked) grassChunked.setLimit(limit);
             else grass.count = limit;
             grass.visible = limit > 0;
+        },
+        setGrazed: (vegetation) => {
+            setGrazedLevels(vegetation);
+            if (!vegetation || !tufts.length || grassGeometry.getAttribute("arkGrassZone")) return;
+            // (Once: each tuft's zone, in the built order; the chunked grass lays it out with the rest.)
+            const zones = new Float32Array(tufts.length);
+            tufts.forEach((t, i) => (zones[i] = Math.max(GRAZED_ZONES.indexOf(t.zone), 0)));
+            const attribute = new InstancedBufferAttribute(grassChunked ? new Float32Array(tufts.length) : zones, 1);
+            grassGeometry.setAttribute("arkGrassZone", attribute);
+            if (grassChunked) grassChunked.keep(attribute, zones);
+            grassMaterial.defines = {...(grassMaterial.defines ?? {}), ARK_GRAZED: 1};
+            grassMaterial.needsUpdate = true;
         },
         setShadows: (on) => {
             for (const mesh of shadowCasters) mesh.castShadow = on;

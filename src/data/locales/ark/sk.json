@@ -260,7 +260,10 @@
             "lineageGrandOther": "vnúčatá: {count}",
             "lineageLaterOne": "1 ďalší potomok",
             "lineageLaterOther": "ďalší potomkovia: {count}",
-            "lineageLiving": "nažive: {count}"
+            "lineageLiving": "nažive: {count}",
+            "grassPlenty": "Tráva tu: hojne",
+            "grassThinning": "Tráva tu: rednie",
+            "grassBare": "Tráva tu: spasená do hola"
         },
         "replay": {
             "title": "Počas tvojej neprítomnosti",

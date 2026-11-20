@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} nipoti",
             "lineageLaterOne": "1 discendente successivo",
             "lineageLaterOther": "{count} discendenti successivi",
-            "lineageLiving": "{count} vivi ora"
+            "lineageLiving": "{count} vivi ora",
+            "grassPlenty": "Erba qui: abbondante",
+            "grassThinning": "Erba qui: si dirada",
+            "grassBare": "Erba qui: brucata fino a terra"
         },
         "replay": {
             "title": "Mentre eri via",

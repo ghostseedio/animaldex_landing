@@ -41,12 +41,12 @@ import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 import {ARK_ACTIVITY_ENGLISH, arkRecordNotesFromEvents, type ArkActivityWords} from "@/lib/ark-animal-status";
 import {arkPickAnimal, arkSpeciesKey} from "@/lib/ark-population";
 import {hashString} from "@/ark-scene/world";
-import {ZONE_REGION, type ArkSceneHandle, type ArkSnapshot} from "@/ark-scene/types";
+import {ZONE_REGION, type ArkSceneHandle, type ArkSnapshot, type GrassKey} from "@/ark-scene/types";
 import {ArkLiveLogView} from "@/ark-scene/live/log-view";
 import {breedFocus, isBreedKind, youngStillWanted, YOUNG_WAIT_MS} from "@/ark-scene/live/breed-focus";
 
 /** The words the log needs (the Ark's `live` and `replay`, and "Show me"), as the page or `/api/ark/words` has them. */
-export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null; /** V1: the marks' words (`ark.endangered`'s "Last one" and "Critical", `ark.life.lone`) and the states' (`ark.seen`). */ endangered?: {last?: string | null; critical?: string | null} | null; life?: {lone?: string | null} | null; seen?: Partial<Record<string, string | null>> | null; /** ARK-MATING-SHOWN: a clutch's countdown's (`ark.eggs`). */ eggs?: Partial<Record<string, string | null>> | null} | null;
+export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null; /** V1: the marks' words (`ark.endangered`'s "Last one" and "Critical", `ark.life.lone`) and the states' (`ark.seen`). */ endangered?: {last?: string | null; critical?: string | null} | null; life?: ({lone?: string | null} & Partial<Record<GrassKey, string | null>>) | null; seen?: Partial<Record<string, string | null>> | null; /** ARK-MATING-SHOWN: a clutch's countdown's (`ark.eggs`). */ eggs?: Partial<Record<string, string | null>> | null} | null;
 
 /** V1: the server's kinds that are acted with a cast (`seen/live-cast.ts` ARK_SEEN_KINDS; here so nothing of `seen/` loads until one comes). */
 // (ARK-MATING-SHOWN: and `laid`, for its clutch's countdown on the mother: `seen/index.ts` eggs.)
@@ -537,6 +537,15 @@ export class ArkLive {
             })
             .catch(() => {
                 // (No answer: no carers drawn; asked again later.)
+            });
+        // Vegetation (decision 417 (1)): and how grazed the grass is, as often (null while the server's is off).
+        fetch(url.replace(/\/dormant$/, "/vegetation"))
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: {vegetation?: unknown} | null) => {
+                if (!this.disposed && body) this.options.scene()?.setVegetation?.(body.vegetation ?? null, this.options.words?.life);
+            })
+            .catch(() => {
+                // (No answer: the grass as it stands; asked again later.)
             });
         // p5 (humans): and the town's couples and their children (the server's courtship), as often.
         fetch(url.replace(/\/dormant$/, "/human-bonds"))

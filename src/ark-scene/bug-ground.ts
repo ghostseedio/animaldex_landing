@@ -42,7 +42,13 @@ import {wildWaterSurface} from "@/ark-scene/islands/wild/map-v2";
 
 export type BugSurface = "meadow" | "lawn" | "woods" | "sand" | "soil" | "gravel";
 /** What covers a point at bug scale, and the drawn ground's height there; null: nothing grows (water, paving, rock). */
-export type BugCover = {surface: BugSurface; height: number; /** 0 lush … 1 parched: the share of dry blades. */ dry: number};
+export type BugCover = {
+    surface: BugSurface;
+    height: number;
+    /** 0 lush … 1 parched: the share of dry blades. */ dry: number;
+    /** Vegetation (decision 417 (1), `grass-grazed.ts`): the record's level of the grass here, absent while it is off. */
+    graze?: number;
+};
 export type BugCoverAt = (x: number, z: number) => BugCover | null;
 
 export const BUG_KINDS = ["blade", "grit", "moss", "twig", "leaf", "rosette", "shell"] as const;
@@ -110,6 +116,11 @@ const GRIT_TONES: Record<BugSurface, number[]> = {
     gravel: [5, 6, 3, 7, 1]
 };
 
+function smoothstep01(t: number): number {
+    const k = Math.min(Math.max(t, 0), 1);
+    return k * k * (3 - 2 * k);
+}
+
 function cellSeed(cx: number, cz: number): number {
     return ((Math.imul(cx, 73856093) ^ Math.imul(cz, 19349663) ^ 0x6b2f) >>> 0) || 1;
 }
@@ -168,8 +179,12 @@ export function bugCellItems(cx: number, cz: number, coverAt: BugCoverAt, share:
             switch (kind) {
                 case "blade": {
                     const [lo, hi] = density.blade;
-                    const tall = lo + (hi - lo) * a * a;
-                    const dry = c < cover.dry * 0.8 + 0.04;
+                    // Vegetation: a grazed sward keeps a share of its blades (by a hash of the spot: the same ones go
+                    // first), cropped shorter and drier (grass-grazed.ts's own curve).
+                    const graze = cover.graze;
+                    if (graze !== undefined && Math.abs(Math.sin(x * 12.9898 + z * 78.233) * 43758.5453) % 1 > 0.15 + 0.85 * smoothstep01((graze - 0.05) / 0.45)) continue;
+                    const tall = (lo + (hi - lo) * a * a) * (graze === undefined ? 1 : 0.3 + 0.7 * smoothstep01((graze - 0.08) / 0.52));
+                    const dry = c < cover.dry * 0.8 + 0.04 + (graze === undefined ? 0 : 0.7 * (1 - smoothstep01((graze - 0.1) / 0.5)));
                     item = {kind, x, y: y - 0.006, z, yaw, lean: 0.08 + b * 0.55, sx: 0.6 + b * 1.1, sy: tall, sz: tall, colour: dry ? 6 + Math.floor(a * 3) % 3 : Math.floor(c * 6) % 6};
                     break;
                 }
@@ -230,8 +245,19 @@ export function wildBugCover(x: number, z: number): BugCover | null {
     const slope = Math.hypot(drawnGroundHeight(x + e, z) - drawnGroundHeight(x - e, z), drawnGroundHeight(x, z + e) - drawnGroundHeight(x, z - e)) / (2 * e);
     if (slope > 0.75) return null;
     const height = drawnGroundHeight(x, z);
-    const w = s.weights as Record<string, number | undefined>;
     const zone = zoneAt(s);
+    // Vegetation on: the meadow and lawn blades thin, shorten and dry with the record's level of the zone's grass.
+    const level = grazeOf ? grazeOf(zone) : 1;
+    if (level < 0.999) {
+        const cover = wildCover(s, zone, slope, height);
+        return cover && (cover.surface === "meadow" || cover.surface === "lawn") ? {...cover, graze: level} : cover;
+    }
+    return wildCover(s, zone, slope, height);
+}
+
+/** The wild island's cover by its zone (`wildBugCover`'s body). */
+function wildCover(s: ReturnType<typeof sampleGround>, zone: ReturnType<typeof zoneAt>, slope: number, height: number): BugCover | null {
+    const w = s.weights as Record<string, number | undefined>;
     // The beach: the seashore's sand down by the water (the shader's sand), dune grass behind it.
     const beach = (1 - Math.min(Math.max((s.land - 0.45) / 0.55, 0), 1)) * (1 - s.cliff);
     if (zone === "polar") return null;
@@ -258,6 +284,13 @@ export function setBugIslandCover(next: IslandCover | null): void {
     coverVersion++;
 }
 let coverVersion = 0;
+
+let grazeOf: ((zone: string) => number) | null = null;
+/** Vegetation (decision 417 (1)): each wild zone's grass level (1 lush), or null (off); the cells are built again. */
+export function setBugGrazing(levelOf: ((zone: string) => number) | null): void {
+    grazeOf = levelOf;
+    coverVersion++;
+}
 
 /** The cover at a world point: the town's where it is, the wild island's elsewhere. */
 export function bugCoverAt(x: number, z: number): BugCover | null {

@@ -4472,7 +4472,10 @@
       "lineageGrandOther": "{count} grandchildren",
       "lineageLaterOne": "1 later descendant",
       "lineageLaterOther": "{count} later descendants",
-      "lineageLiving": "{count} alive now"
+      "lineageLiving": "{count} alive now",
+      "grassPlenty": "Grass here: plenty",
+      "grassThinning": "Grass here: thinning",
+      "grassBare": "Grass here: grazed bare"
     },
     "replay": {
       "title": "While you were away",

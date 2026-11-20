@@ -260,7 +260,10 @@
             "lineageGrandOther": "손주 {count}마리",
             "lineageLaterOne": "더 먼 후손 1마리",
             "lineageLaterOther": "더 먼 후손 {count}마리",
-            "lineageLiving": "{count}마리 생존 중"
+            "lineageLiving": "{count}마리 생존 중",
+            "grassPlenty": "이곳의 풀: 넉넉함",
+            "grassThinning": "이곳의 풀: 줄어드는 중",
+            "grassBare": "이곳의 풀: 다 뜯겨 맨땅"
         },
         "replay": {
             "title": "자리를 비운 사이에",

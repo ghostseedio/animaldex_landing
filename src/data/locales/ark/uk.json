@@ -260,7 +260,10 @@
             "lineageGrandOther": "онуків: {count}",
             "lineageLaterOne": "1 далекий нащадок",
             "lineageLaterOther": "далеких нащадків: {count}",
-            "lineageLiving": "живі зараз: {count}"
+            "lineageLiving": "живі зараз: {count}",
+            "grassPlenty": "Трава тут: вдосталь",
+            "grassThinning": "Трава тут: рідшає",
+            "grassBare": "Трава тут: вигризена дочиста"
         },
         "replay": {
             "title": "Поки вас не було",

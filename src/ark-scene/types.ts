@@ -36,6 +36,9 @@ export const ARK_ZONES = [
     "polar",
     "farm_garden"
 ] as const;
+/** Vegetation's words (the page's `ArkLifeWords` keys): plenty, thinning, grazed bare. */
+export type GrassKey = "grassPlenty" | "grassThinning" | "grassBare";
+
 export type ArkZone = typeof ARK_ZONES[number];
 
 /** The scene's world map: seven regions, each one or two zones (contract section 4). */
@@ -606,6 +609,13 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * decision 370): their animals are in their dens, out of sight, and their cards say sleeping. An empty list ends it.
      */
     setDormant?: (kinds: string[]) => void;
+    /**
+     * Vegetation (AnimalDex decision 417 (1)): the record's grass and browse by island and zone (`/api/ark/vegetation`:
+     * the server's levels, or null while off): the grass thins where it is overgrazed (`grass-grazed.ts`).
+     */
+    setVegetation?: (raw: unknown, words?: Partial<Record<GrassKey, string | null>> | null) => void;
+    /** The grass where an animal of this zone lives ("wild" or "town"), in the card's words; null while vegetation is off. */
+    grassAt?: (zone: string, island?: string | null) => string | null;
     /** p5 (humans): the record's forestry (`/api/ark/forestry`: `{fromDay, v}`, or null when off). */
     setForestry?: (record: {fromDay?: unknown; v?: unknown} | null) => void;
     /** Carers (decision 418): the server's carers (`/api/ark/carers`: `{v, keepers, farmers, homes}`, or null when off). */

@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} børnebørn",
             "lineageLaterOne": "1 senere efterkommer",
             "lineageLaterOther": "{count} senere efterkommere",
-            "lineageLiving": "{count} lever nu"
+            "lineageLiving": "{count} lever nu",
+            "grassPlenty": "Græs her: masser",
+            "grassThinning": "Græs her: bliver tyndt",
+            "grassBare": "Græs her: afgnavet"
         },
         "replay": {
             "title": "Mens du var væk",

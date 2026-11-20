@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} unoka",
             "lineageLaterOne": "1 későbbi leszármazott",
             "lineageLaterOther": "{count} későbbi leszármazott",
-            "lineageLiving": "{count} él most"
+            "lineageLiving": "{count} él most",
+            "grassPlenty": "Fű itt: bőven",
+            "grassThinning": "Fű itt: ritkul",
+            "grassBare": "Fű itt: tövig lelegelve"
         },
         "replay": {
             "title": "Amíg távol voltál",

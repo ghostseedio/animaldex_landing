@@ -303,6 +303,8 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                                 {animal.scientific_name ? <span className="italic">{animal.scientific_name}</span> : null}
                                 {animal.scientific_name ? " · " : null}
                                 <span title={words.lives}>{words.zones[animal.zone]}</span>
+                                {/* Vegetation (decision 417 (1)), while on: " · Grass here: thinning". */}
+                                {scene()?.grassAt?.(animal.zone, animal.island)?.replace(/^/, " · ")}
                             </p>
                         </div>
                         <p className="mt-0.5 min-w-0 truncate text-[12.5px] leading-snug text-ink-200" data-testid="ark-card-by">

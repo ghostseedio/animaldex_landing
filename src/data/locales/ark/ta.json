@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} பேரக்குட்டிகள்",
             "lineageLaterOne": "அடுத்த தலைமுறைகளில் 1 வழித்தோன்றல்",
             "lineageLaterOther": "அடுத்த தலைமுறைகளில் {count} வழித்தோன்றல்கள்",
-            "lineageLiving": "இப்போது {count} உயிருடன்"
+            "lineageLiving": "இப்போது {count} உயிருடன்",
+            "grassPlenty": "இங்கே புல்: ஏராளம்",
+            "grassThinning": "இங்கே புல்: குறைந்து வருகிறது",
+            "grassBare": "இங்கே புல்: மேய்ந்து தீர்ந்தது"
         },
         "replay": {
             "title": "நீங்கள் இல்லாதபோது",

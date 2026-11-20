@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} lapsenlasta",
             "lineageLaterOne": "1 myöhempi jälkeläinen",
             "lineageLaterOther": "{count} myöhempää jälkeläistä",
-            "lineageLiving": "elossa nyt {count}"
+            "lineageLiving": "elossa nyt {count}",
+            "grassPlenty": "Ruohoa täällä: runsaasti",
+            "grassThinning": "Ruohoa täällä: harvenee",
+            "grassBare": "Ruohoa täällä: syöty paljaaksi"
         },
         "replay": {
             "title": "Sillä aikaa kun olit poissa",

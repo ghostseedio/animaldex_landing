@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} पोते-पोतियाँ",
             "lineageLaterOne": "आगे की पीढ़ी का 1 वंशज",
             "lineageLaterOther": "आगे की पीढ़ियों के {count} वंशज",
-            "lineageLiving": "अभी {count} जीवित"
+            "lineageLiving": "अभी {count} जीवित",
+            "grassPlenty": "यहाँ घास: भरपूर",
+            "grassThinning": "यहाँ घास: कम हो रही है",
+            "grassBare": "यहाँ घास: चरकर ख़त्म"
         },
         "replay": {
             "title": "जब आप दूर थे",

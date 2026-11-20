@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} പേരക്കുട്ടികൾ",
             "lineageLaterOne": "പിൻതലമുറയിലെ 1 പിൻഗാമി",
             "lineageLaterOther": "പിൻതലമുറകളിലെ {count} പിൻഗാമികൾ",
-            "lineageLiving": "ഇപ്പോൾ {count} ജീവനോടെ"
+            "lineageLiving": "ഇപ്പോൾ {count} ജീവനോടെ",
+            "grassPlenty": "ഇവിടെ പുല്ല്: ധാരാളം",
+            "grassThinning": "ഇവിടെ പുല്ല്: കുറഞ്ഞുവരുന്നു",
+            "grassBare": "ഇവിടെ പുല്ല്: മേഞ്ഞുതീർന്നു"
         },
         "replay": {
             "title": "നിങ്ങൾ ഇല്ലാതിരുന്നപ്പോൾ",

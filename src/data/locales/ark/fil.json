@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} apo",
             "lineageLaterOne": "1 susunod na inapo",
             "lineageLaterOther": "{count} susunod na inapo",
-            "lineageLiving": "{count} ang buhay ngayon"
+            "lineageLiving": "{count} ang buhay ngayon",
+            "grassPlenty": "Damo rito: sagana",
+            "grassThinning": "Damo rito: numinipis",
+            "grassBare": "Damo rito: ubos sa panginginain"
         },
         "replay": {
             "title": "Habang wala ka",

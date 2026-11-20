@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} ਪੋਤੇ-ਪੋਤੀਆਂ",
             "lineageLaterOne": "ਅਗਲੀ ਪੀੜ੍ਹੀ ਦਾ 1 ਵੰਸ਼ਜ",
             "lineageLaterOther": "ਅਗਲੀਆਂ ਪੀੜ੍ਹੀਆਂ ਦੇ {count} ਵੰਸ਼ਜ",
-            "lineageLiving": "ਇਸ ਵੇਲੇ {count} ਜਿਊਂਦੇ"
+            "lineageLiving": "ਇਸ ਵੇਲੇ {count} ਜਿਊਂਦੇ",
+            "grassPlenty": "ਇੱਥੇ ਘਾਹ: ਭਰਪੂਰ",
+            "grassThinning": "ਇੱਥੇ ਘਾਹ: ਘਟ ਰਿਹਾ ਹੈ",
+            "grassBare": "ਇੱਥੇ ਘਾਹ: ਚਰ ਕੇ ਮੁੱਕਿਆ"
         },
         "replay": {
             "title": "ਜਦੋਂ ਤੁਸੀਂ ਦੂਰ ਸੀ",

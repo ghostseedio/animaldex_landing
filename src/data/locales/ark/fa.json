@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} نوه",
             "lineageLaterOne": "یک نوادهٔ دورتر",
             "lineageLaterOther": "{count} نوادهٔ دورتر",
-            "lineageLiving": "اکنون {count} زنده"
+            "lineageLiving": "اکنون {count} زنده",
+            "grassPlenty": "علف اینجا: فراوان",
+            "grassThinning": "علف اینجا: رو به کم‌شدن",
+            "grassBare": "علف اینجا: تا ته چرا شده"
         },
         "replay": {
             "title": "وقتی نبودید",

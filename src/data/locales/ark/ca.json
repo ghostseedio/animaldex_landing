@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} néts",
             "lineageLaterOne": "1 descendent posterior",
             "lineageLaterOther": "{count} descendents posteriors",
-            "lineageLiving": "{count} vius ara"
+            "lineageLiving": "{count} vius ara",
+            "grassPlenty": "Herba aquí: abundant",
+            "grassThinning": "Herba aquí: s'aclareix",
+            "grassBare": "Herba aquí: pasturada fins a terra"
         },
         "replay": {
             "title": "Mentre no hi eres",

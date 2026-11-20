@@ -42,6 +42,21 @@ export class ChunkedInstances {
         this.shown = this.limit;
     }
 
+    /**
+     * A per-instance attribute added after building (grazed grass, `grass-grazed.ts`): `source` holds its values in the
+     * built order; the buffer is laid out as the others are now.
+     */
+    keep(attribute: InstancedBufferAttribute, source: Float32Array) {
+        const kept = {attribute, source, size: attribute.itemSize};
+        this.kept.push(kept);
+        if (this.identity) {
+            (attribute.array as Float32Array).set(source);
+            attribute.needsUpdate = true;
+            return;
+        }
+        this.write();
+    }
+
     get total(): number {
         return this.chunks.length;
     }

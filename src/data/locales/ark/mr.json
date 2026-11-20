@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} नातवंडे",
             "lineageLaterOne": "पुढील पिढीतील 1 वंशज",
             "lineageLaterOther": "पुढील पिढ्यांतील {count} वंशज",
-            "lineageLiving": "आत्ता {count} जिवंत"
+            "lineageLiving": "आत्ता {count} जिवंत",
+            "grassPlenty": "इथे गवत: भरपूर",
+            "grassThinning": "इथे गवत: विरळ होत आहे",
+            "grassBare": "इथे गवत: चरून संपले"
         },
         "replay": {
             "title": "तुम्ही दूर असताना",

@@ -260,7 +260,10 @@
             "lineageGrandOther": "{count} પૌત્ર-પૌત્રીઓ",
             "lineageLaterOne": "આગળની પેઢીનો 1 વંશજ",
             "lineageLaterOther": "આગળની પેઢીઓના {count} વંશજ",
-            "lineageLiving": "હમણાં {count} જીવંત"
+            "lineageLiving": "હમણાં {count} જીવંત",
+            "grassPlenty": "અહીં ઘાસ: પુષ્કળ",
+            "grassThinning": "અહીં ઘાસ: ઓછું થઈ રહ્યું છે",
+            "grassBare": "અહીં ઘાસ: ચરાઈને ખતમ"
         },
         "replay": {
             "title": "તમે દૂર હતા ત્યારે",

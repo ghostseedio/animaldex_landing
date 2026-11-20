@@ -260,7 +260,10 @@
             "lineageGrandOther": "Wajukuu {count}",
             "lineageLaterOne": "Mzao 1 wa vizazi vya baadaye",
             "lineageLaterOther": "Wazao {count} wa vizazi vya baadaye",
-            "lineageLiving": "{count} wako hai sasa"
+            "lineageLiving": "{count} wako hai sasa",
+            "grassPlenty": "Nyasi hapa: tele",
+            "grassThinning": "Nyasi hapa: zinapungua",
+            "grassBare": "Nyasi hapa: zimelishwa zote"
         },
         "replay": {
             "title": "Ulipokuwa mbali",
