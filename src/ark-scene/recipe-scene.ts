@@ -33,7 +33,7 @@ import {
     SphereGeometry,
     Vector3
 } from "three";
-import {EMERGENCE_AMBIENT, emergencePoint, MARK_SECONDS, MURMURATION_AMBIENT, murmurationPoint, swarmPoint, type Flock, type RecipeAct, type RecipeMark} from "@/ark-scene/behaviour-recipes";
+import {EMERGENCE_AMBIENT, emergencePoint, MARK_SECONDS, MURMURATION_AMBIENT, murmurationPoint, ROOST_AMBIENT, roostPoint, swarmPoint, type Flock, type RecipeAct, type RecipeMark} from "@/ark-scene/behaviour-recipes";
 import {quarrySize, type QuarryNow} from "@/ark-scene/recipe-hunt";
 import {hashString} from "@/ark-scene/world";
 
@@ -62,6 +62,8 @@ const SWARM_INSECTS = 90;
 const CLUSTER_BUGS = 40;
 const MAX_INSECTS = SWARM_INSECTS * 4;
 const MAX_BATS = EMERGENCE_AMBIENT * 2;
+/** Signature wave 2 (birds): a roost's ambient birds, in flight and perched (a roost or two in view). */
+const MAX_ROOST = ROOST_AMBIENT * 3;
 const MAX_QUARRY = 64;
 const NEST_TWIGS = 44;
 
@@ -97,6 +99,10 @@ export class RecipeScene {
     private readonly flock: InstancedMesh;
     private readonly insects: InstancedMesh;
     private readonly bats: InstancedMesh;
+    /** A roost's ambient birds: on the wing (a dark chevron), perched (a body and a head). */
+    private readonly roostFlying: InstancedMesh;
+    private readonly roostBodies: InstancedMesh;
+    private readonly roostHeads: InstancedMesh;
     /** The quarry: grasshoppers, moths and flies, fish. */
     private readonly hoppers: InstancedMesh;
     private readonly fliers: InstancedMesh;
@@ -153,6 +159,11 @@ export class RecipeScene {
         // Dark brown (a little lighter than black, so the stream reads over grass as well as against the sky).
         this.bats = make(chevronGeometry(), "#3a2e27", MAX_BATS, 0.85);
         (this.bats.material as MeshStandardMaterial).side = 2;
+        // Signature wave 2 (birds): a communal roost's birds: each drawn in its tone (instance colour), its size set per bird.
+        this.roostFlying = make(chevronGeometry(), "#ffffff", MAX_ROOST, 0.85);
+        (this.roostFlying.material as MeshStandardMaterial).side = 2;
+        this.roostBodies = make(new SphereGeometry(0.5, 8, 5), "#ffffff", MAX_ROOST, 0.85);
+        this.roostHeads = make(new SphereGeometry(0.5, 7, 4), "#ffffff", MAX_ROOST, 0.85);
         // A grasshopper: a long body, nose along +z (scaled to its length); a moth or fly: a tiny chevron with its wings
         // beating; a fish: a long silvery body.
         this.hoppers = make(new SphereGeometry(0.5, 8, 5), "#93b44c", MAX_QUARRY, 0.7);
@@ -204,6 +215,9 @@ export class RecipeScene {
         this.flock.count = 0;
         this.insects.count = 0;
         this.bats.count = 0;
+        this.roostFlying.count = 0;
+        this.roostBodies.count = 0;
+        this.roostHeads.count = 0;
         this.hoppers.count = 0;
         this.fliers.count = 0;
         this.quarryFish.count = 0;
@@ -359,6 +373,30 @@ export class RecipeScene {
                 }
                 continue;
             }
+            if (kind === "roost") {
+                // Its roost-mates: only near enough to see (a roost is a crown; far off it is the catalogue birds alone).
+                if (away > 90) continue;
+                const length = Math.min(Math.max(flock.length ?? 0.2, 0.08), 0.7);
+                const tone = flock.tone === "dark" ? ["#26252a", "#34312f", "#1e1f24"] : ["#6a5846", "#7a6a52", "#5a4c3e"];
+                for (let i = 0; i < ROOST_AMBIENT; i++) {
+                    const p = roostPoint(flock.centre, flock.seed, i, epoch, flock.t0, flock.spread);
+                    if (!p) continue;
+                    const colour = tone[i % tone.length];
+                    // (Never under a few pixels far off, a little different in size from bird to bird.)
+                    const size = Math.max(length * (0.9 + 0.2 * ((i * 7) % 5) / 5), Math.hypot(p.x - camera.x, p.y - camera.y, p.z - camera.z) * 0.004);
+                    if (p.perched) {
+                        // A body, its head forward and up, the tail's end behind.
+                        const sin = Math.sin(p.yaw);
+                        const cos = Math.cos(p.yaw);
+                        this.put(this.roostBodies, p.x, p.y + size * 0.3, p.z, p.yaw, 0.35, 0, size * 0.42, size * 0.4, size * 0.85, colour);
+                        this.put(this.roostHeads, p.x + sin * size * 0.3, p.y + size * 0.52, p.z + cos * size * 0.3, p.yaw, 0, 0, size * 0.24, size * 0.24, size * 0.28, colour);
+                    } else {
+                        const flap = Math.sin(now * 22 + i * 1.7);
+                        this.put(this.roostFlying, p.x, p.y, p.z, p.yaw, p.pitch, flap * 0.3, size * 0.9, size * (0.7 + 0.6 * flap), size * 0.9, colour);
+                    }
+                }
+                continue;
+            }
             if (away > 320) continue;
             const k = Math.min(Math.min(epoch - flock.t0, flock.t1 - epoch) / 40, 1);
             for (let i = 0; i < MURMURATION_AMBIENT && drawn < MAX_FLOCK; i++, drawn++) {
@@ -380,7 +418,7 @@ export class RecipeScene {
     }
 
     private meshes(): InstancedMesh[] {
-        return [...Object.values(this.items), this.fish, this.twigs, this.flock, this.insects, this.bats, this.hoppers, this.fliers, this.quarryFish, ...Object.values(this.marks)];
+        return [...Object.values(this.items), this.fish, this.twigs, this.flock, this.insects, this.bats, this.roostFlying, this.roostBodies, this.roostHeads, this.hoppers, this.fliers, this.quarryFish, ...Object.values(this.marks)];
     }
 
     /**

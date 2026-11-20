@@ -11,8 +11,8 @@ import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import type {ArkAct, ArkEventAnimal} from "@/lib/ark-life";
 import {forgetSchedules, roostOf, scheduleWorld, SLOT_SECONDS, tripAt, tripEpisode, recipeNest, poseOnTrip, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
-import {microMurmuration, nestStageAt, pairWindows, setFallbackNests, setNestSource, sexLook, type Episode, type Key, type RecipePose} from "@/ark-scene/behaviour-recipes";
-import {heightAt} from "@/ark-scene/world";
+import {microMurmuration, nestStageAt, pairWindows, ROOST_AMBIENT, roostPoint, setFallbackNests, setNestSource, sexLook, type Episode, type Key, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {hashString, heightAt} from "@/ark-scene/world";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {worldSampler} from "@/ark-scene/world-sampler";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
@@ -39,11 +39,25 @@ const SPECIES: Record<string, Species> = {
     serval: {id: "656dc11e-271e-41d9-ac6a-ae6fbfa69fe2", name: "Serval", zone: "grassland", activity: "diurnal", sociality: null},
     "spinner-dolphin": {id: "0000c0de-0000-4000-8000-00000000d01f", name: "Spinner Dolphin", zone: "coral_reef", activity: "any", sociality: "group"},
     "african-lion": {id: "7e7080ec-9c17-4a75-9d85-5a4f6a38e430", name: "African Lion", zone: "grassland", activity: "diurnal", sociality: "group"},
-    "plains-zebra": {id: "c77f8bc4-c073-4a77-ad24-788b76fbbbda", name: "Plains Zebra", zone: "grassland", activity: "diurnal", sociality: "group"}
+    "plains-zebra": {id: "c77f8bc4-c073-4a77-ad24-788b76fbbbda", name: "Plains Zebra", zone: "grassland", activity: "diurnal", sociality: "group"},
+    // Signature behaviours, wave 2 (birds): staged by day (an owl is "any": its schedule forages in the light for the clip).
+    "brown-shrike": {id: "0000b1d0-0000-4000-8000-000000000001", name: "Brown Shrike", zone: "grassland", activity: "diurnal", sociality: null},
+    "american-kestrel": {id: "0000b1d0-0000-4000-8000-000000000002", name: "American Kestrel", zone: "grassland", activity: "diurnal", sociality: null},
+    "little-owl": {id: "0000b1d0-0000-4000-8000-000000000003", name: "Little Owl", zone: "farm_garden", activity: "any", sociality: null},
+    "laughing-kookaburra": {id: "0000b1d0-0000-4000-8000-000000000004", name: "Laughing Kookaburra", zone: "woodland", activity: "diurnal", sociality: null},
+    "spotted-wood-owl": {id: "0000b1d0-0000-4000-8000-000000000005", name: "Spotted Wood Owl", zone: "woodland", activity: "any", sociality: null},
+    rook: {id: "0000b1d0-0000-4000-8000-000000000006", name: "Rook", zone: "woodland", activity: "diurnal", sociality: "group"},
+    "house-sparrow": {id: "0000b1d0-0000-4000-8000-000000000007", name: "House Sparrow", zone: "farm_garden", activity: "diurnal", sociality: "group"},
+    "african-penguin": {id: "0000b1d0-0000-4000-8000-000000000009", name: "African Penguin", zone: "seashore", activity: "diurnal", sociality: "group"},
+    "song-thrush": {id: "0000b1d0-0000-4000-8000-00000000000a", name: "Song Thrush", zone: "farm_garden", activity: "diurnal", sociality: null},
+    limpkin: {id: "0000b1d0-0000-4000-8000-00000000000b", name: "Limpkin", zone: "wetland", activity: "diurnal", sociality: null},
+    "black-swan": {id: "0000b1d0-0000-4000-8000-00000000000c", name: "Black Swan", zone: "river_lake", activity: "diurnal", sociality: "group"},
+    "emu": {id: "0000b1d0-0000-4000-8000-00000000000e", name: "Emu", zone: "grassland", activity: "diurnal", sociality: "group"},
+    "white-throated-kingfisher": {id: "0000b1d0-0000-4000-8000-00000000000d", name: "White-throated Kingfisher", zone: "grassland", activity: "diurnal", sociality: null}
 };
 
-type Moment = {start: number; seconds: number; step: number; view: ArkCameraView; note: string; follow?: string | null; /** A replay to play from the start (a meal's chase). */ play?: ArkAct[]; /** Closer than the scene's 4 m (a grasshopper's chase): the view held each frame, the near limit lowered. */ close?: boolean};
-type Clip = {cast: Array<[string, string, number]>; hours: number; date: number; find: (ctx: Context) => Moment | null};
+type Moment = {start: number; seconds: number; step: number; /** Signature wave 2 (birds): the world times (epoch s) of the frames, where uniform steps would miss a second-long swoop: the recorder takes these in place of `step`. */ times?: number[]; view: ArkCameraView; note: string; follow?: string | null; /** Signature wave 2 (birds): the camera follows this animal (its place each frame, the view's distance and angles kept). */ track?: string | null; /** A replay to play from the start (a meal's chase). */ play?: ArkAct[]; /** Closer than the scene's 4 m (a grasshopper's chase): the view held each frame, the near limit lowered. */ close?: boolean};
+type Clip = {cast: Array<[string, string, number]>; hours: number; date: number; /** Signature wave 2 (birds): the island hour follows the clock (a roost's evening), not pinned at `hours`. */ live?: boolean; /** Signature wave 2 (birds): the Ark day pinned (a nesting season), else the clock's. */ arkDay?: number; /** Signature wave 2 (birds): clutches in the snapshot (the props' nests, the eggs a male sits). */ nests?: string[]; find: (ctx: Context) => Moment | null};
 type Context = {world: ReturnType<typeof scheduleWorld>; animals: Array<{id: string; slug: string; animal: ScheduleAnimal; profile: ArkBehaviourProfile; activity: ArkBehaviourProfile["activity"] | null; place: {x: number; z: number}; zone: string}>; micro: Array<{id: string; slug: string; at: {x: number; y: number; z: number}}>; hoursAt: (epoch: number) => number; date: number};
 
 const view = (x: number, y: number, z: number, distance: number, polar = 1.15, azimuth = 0.6): ArkCameraView => ({target: {x, y, z}, distance, polar, azimuth});
@@ -222,6 +236,64 @@ const CLIPS: Record<string, Clip> = {
             return null;
         }
     },
+    // MARK: Signature behaviours, wave 2 (birds): the perch-hunters' drop, a communal roost, a kingfisher's tunnel, a thrush's anvil, a limpkin's snail, a swan's preening.
+    drop_shrike: {cast: [["sh", "brown-shrike", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => dropMoment(ctx, "perch_drop_insect", true)},
+    drop_kestrel: {cast: [["ke", "american-kestrel", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => dropMoment(ctx, "perch_drop_insect_feet", true)},
+    drop_owl: {cast: [["ow", "little-owl", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => dropMoment(ctx, "perch_drop", false)},
+    drop_kookaburra: {cast: [["kb", "laughing-kookaburra", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => dropMoment(ctx, "perch_drop", false)},
+    drop_woodowl: {cast: [["wo", "spotted-wood-owl", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => dropMoment(ctx, "perch_drop", false)},
+    drop_wtkingfisher: {cast: [["wk", "white-throated-kingfisher", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => dropMoment(ctx, "perch_drop", false)},
+    // The roost: the busiest hour of arrivals (a time lapse of the evening) and the minute of the busiest wave (real time).
+    roost_lapse: {live: true, cast: [["rk", "rook", 5]], hours: 17.1, date: Date.UTC(2026, 10, 12, 17) / 1000 + 360, find: (ctx) => roostMoment(ctx, "lapse")},
+    roost_wave: {live: true, cast: [["rk", "rook", 5]], hours: 17.1, date: Date.UTC(2026, 10, 12, 17) / 1000 + 360, find: (ctx) => roostMoment(ctx, "wave")},
+    roost_sparrow: {live: true, cast: [["hs", "house-sparrow", 5]], hours: 17.1, date: Date.UTC(2026, 10, 12, 17) / 1000 + 360, find: (ctx) => roostMoment(ctx, "wave")},
+    roost_night: {live: true, cast: [["rk", "rook", 5]], hours: 22, date: Date.UTC(2026, 10, 12, 22) / 1000, find: (ctx) => roostMoment(ctx, "night")},
+    roost_dawn: {live: true, cast: [["rk", "rook", 5]], hours: 5.4, date: Date.UTC(2026, 10, 13, 5) / 1000 + 1500, find: (ctx) => roostMoment(ctx, "dawn")},
+    kingfisher_tunnel: {
+        arkDay: 150,
+        cast: [["kt", "common-kingfisher", 3]],
+        hours: 10,
+        date: Date.UTC(2026, 3, 14, 10) / 1000,
+        find: (ctx) => digMoment(ctx, "bank_burrow")
+    },
+    penguin_dig: {
+        cast: [["pg", "african-penguin", 3]],
+        hours: 10,
+        date: Date.UTC(2026, 3, 14, 10) / 1000,
+        find: (ctx) => digMoment(ctx, "dig_burrow")
+    },
+    thrush_anvil: {cast: [["th", "song-thrush", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => blockMoment(ctx, "anvil_smash", "beat_prey", 10, 6)},
+    limpkin_snail: {cast: [["lk", "limpkin", 3]], hours: 10, date: Date.UTC(2026, 3, 14, 10) / 1000, find: (ctx) => blockMoment(ctx, "snail_extract", "tool", 9, 5)},
+    // The male alone sits the clutch (an emu's): the seeded male of four, on the nest the props draw, the clutch the record's.
+    emu_nest: {
+        arkDay: 150,
+        nests: ["emu"],
+        cast: [["em", "emu", 4]],
+        hours: 10,
+        date: Date.UTC(2026, 10, 10, 10) / 1000,
+        find: (ctx) => {
+            const male = ctx.animals.find((x) => sexLook(x.id, x.slug).sex === "male");
+            if (!male) return null;
+            return {start: ctx.date + 600, seconds: 16, step: 1, close: true, track: male.id, view: view(male.place.x, Math.max(heightAt(male.place.x, male.place.z), 0), male.place.z, 5.5, 1.2, 0.9), note: `the male ${male.id.slice(-4)} of ${ctx.animals.length} emus`};
+        }
+    },
+    swan_preen: {
+        cast: [["sw", "black-swan", 3]],
+        hours: 10,
+        date: Date.UTC(2026, 3, 14, 10) / 1000,
+        find: (ctx) => {
+            for (const a of ctx.animals) {
+                for (const trip of trips(ctx, a, ctx.date, 12)) {
+                    const ep = tripEpisode(ctx.world, trip);
+                    if (ep?.recipe !== "groom_self") continue;
+                    const k = ep.keys.find((key) => key.block.id === "groom");
+                    if (!k) continue;
+                    return {start: ep.t0 - 1, seconds: Math.min(ep.t1 - ep.t0 + 2, 22), step: 1 / 2, close: true, track: a.id, view: view(k.from.x, k.from.y + 0.5, k.from.z, 4.5, 1.3, k.yaw + Math.PI / 2), note: `${a.id.slice(-4)} groom_self ${(ep.t1 - ep.t0).toFixed(0)} s`};
+                }
+            }
+            return null;
+        }
+    },
     // MARK: The chases (motion pass, lane L7): visual hunts of ambient prey, and a meal's chase.
     pounce: {
         cast: [["sv", "serval", 2]],
@@ -287,7 +359,7 @@ const CLIPS: Record<string, Clip> = {
 };
 
 /** A hunt's moment: the first of the recipe's catches of this block that comes off (`recipe-hunt.ts` draws its quarry). */
-function huntMoment(ctx: Context, recipe: string, block: string, frame: (k: Key, ep: Episode) => {before: number; after: number; step: number; view: ArkCameraView; follow?: boolean; close?: boolean}): Moment | null {
+function huntMoment(ctx: Context, recipe: string, block: string, frame: (k: Key, ep: Episode) => {before: number; after: number; step: number; view: ArkCameraView; follow?: boolean; close?: boolean; track?: boolean}): Moment | null {
     for (const a of ctx.animals) {
         for (const trip of trips(ctx, a, ctx.date, 30)) {
             if (trip.recipe !== recipe) continue;
@@ -297,10 +369,92 @@ function huntMoment(ctx: Context, recipe: string, block: string, frame: (k: Key,
             const f = frame(k, ep);
             // (Where its quarry is through the hunt, for the record: `recipe-hunt.ts`.)
             const q = [k.t0 - 2, k.t0, k.t1 - 0.05].map((t) => (poseOnTrip(ctx.world, trip, t) as RecipePose).act?.quarry).map((x) => (x ? `${x.look} ${x.phase} ${x.x.toFixed(2)},${x.y.toFixed(2)},${x.z.toFixed(2)}` : "none"));
-            return {start: k.t0 - f.before, seconds: f.before + (k.t1 - k.t0) + f.after, step: f.step, view: f.view, close: f.close, follow: f.follow ? a.id : null, note: `${a.slug} ${a.id.slice(-4)} ${recipe}: ${block} at ${k.t0.toFixed(1)}; quarry ${q.join(" | ")}`};
+            return {start: k.t0 - f.before, seconds: f.before + (k.t1 - k.t0) + f.after, step: f.step, view: f.view, close: f.close, follow: f.follow ? a.id : null, track: f.track ? a.id : null, note: `${a.slug} ${a.id.slice(-4)} ${recipe}: ${block} at ${k.t0.toFixed(1)}; quarry ${q.join(" | ")}`};
         }
     }
     return null;
+}
+
+/** Signature wave 2 (birds): a perch-hunter's drop: from before it watches to its flight back (`swoop` onto the ground; a catch only where `ok`). */
+function dropMoment(ctx: Context, recipe: string, ok: boolean): Moment | null {
+    for (const a of ctx.animals) {
+        for (const trip of trips(ctx, a, ctx.date, 30)) {
+            if (trip.recipe !== recipe) continue;
+            const ep = tripEpisode(ctx.world, trip);
+            const k = ep?.keys.find((key) => key.block.id === "swoop" && (!ok || key.catch?.ok));
+            if (!ep || !k) continue;
+            const span = Math.hypot(k.to.x - k.from.x, k.to.y - k.from.y, k.to.z - k.from.z);
+            const side = Math.atan2(k.to.x - k.from.x, k.to.z - k.from.z) + Math.PI / 2;
+            const mid = {x: (k.from.x + k.to.x) / 2, y: (k.from.y + k.to.y) / 2, z: (k.from.z + k.to.z) / 2};
+            const times = [-5, -2.5, -0.8, 0, 0.12, 0.25, 0.4, 0.55, 0.8, 1.2, 2.2, 3.5, 5, 7].map((d) => k.t0 + d);
+            return {start: k.t0 - 7, seconds: 14, step: 1 / 6, times, close: true, track: a.id, view: view(mid.x, mid.y, mid.z, Math.max(a.animal.length * 9, 1.3), 1.3, side), note: `${a.slug} ${a.id.slice(-4)} ${recipe}: perch ${k.from.y.toFixed(1)} m up, ${span.toFixed(1)} m to the drop at ${k.t0.toFixed(1)}, catch ${k.catch ? (k.catch.ok ? "yes" : "miss") : "none drawn"}`};
+        }
+    }
+    return null;
+}
+
+/** A tunnel or a burrow dug: the dig, framed close from the side. */
+function digMoment(ctx: Context, recipe: string): Moment | null {
+    for (const a of ctx.animals) {
+        for (const trip of trips(ctx, a, ctx.date, 30)) {
+            const ep = tripEpisode(ctx.world, trip);
+            if (ep?.recipe !== recipe) continue;
+            const k = ep.keys.find((key) => key.block.id === "dig");
+            if (!k) continue;
+            return {start: k.t0 - 2, seconds: Math.min(k.t1 - k.t0 + 4, 16), step: 1 / 2, close: true, track: a.id, view: view(k.from.x, k.from.y + 0.2, k.from.z, Math.max(a.animal.length * 5, 1.6), 1.2, k.yaw + Math.PI / 2), note: `${a.slug} ${a.id.slice(-4)} ${recipe}: dig at ${k.t0.toFixed(1)}`};
+        }
+    }
+    return null;
+}
+
+/** A stay's block (a thrush beating its snail on the stone, a limpkin working a snail out of its shell): the bird followed close from its side. */
+function blockMoment(ctx: Context, recipe: string, block: string, before: number, after: number): Moment | null {
+    for (const a of ctx.animals) {
+        for (const trip of trips(ctx, a, ctx.date, 30)) {
+            if (trip.recipe && trip.recipe !== recipe) continue;
+            const ep = tripEpisode(ctx.world, trip);
+            if (ep?.recipe !== recipe) continue;
+            const k = ep.keys.find((key) => key.block.id === block);
+            if (!k) continue;
+            return {start: k.t0 - before, seconds: before + (k.t1 - k.t0) + after, step: 1 / 2, close: true, track: a.id, view: view(k.from.x, k.from.y + 0.1, k.from.z, Math.max(a.animal.length * 7, 1.4), 1.25, k.yaw + Math.PI / 2), note: `${a.slug} ${a.id.slice(-4)} ${recipe}: ${block} at ${k.t0.toFixed(1)}`};
+        }
+    }
+    return null;
+}
+
+/** A communal roost: its leader's roost point; the evening as a time lapse, the busiest wave in real time, the night, the dawn. */
+function roostMoment(ctx: Context, kind: "lapse" | "wave" | "night" | "dawn"): Moment | null {
+    const a = ctx.animals[0];
+    if (!a) return null;
+    const roost = roostOf(ctx.world, a.profile, a.animal);
+    const group = a.animal.group?.leader ?? a.animal;
+    const leaderRoost = a.animal.group ? roostOf(ctx.world, a.animal.group.profile, group) : roost;
+    const centre = {x: leaderRoost.x, y: leaderRoost.y, z: leaderRoost.z};
+    const seed = hashString(`${group.id}#roost`);
+    // The window's start in world seconds: the evening's 17:00 (hours map to the clock one to one).
+    const t0 = Date.UTC(2026, 10, 12, 17) / 1000;
+    const inFlight = (epoch: number) => {
+        let n = 0;
+        for (let i = 0; i < ROOST_AMBIENT; i++) {
+            const p = roostPoint(centre, seed, i, epoch, t0);
+            if (p && !p.perched) n++;
+        }
+        return n;
+    };
+    const view0 = (distance: number, azimuth = 0.8) => view(centre.x, centre.y, centre.z, distance, 1.3, azimuth);
+    if (kind === "lapse") return {start: t0 + 360, seconds: 5200, step: 450, view: view0(9), note: `roost at ${centre.x.toFixed(1)},${centre.y.toFixed(1)},${centre.z.toFixed(1)} (${a.animal.group ? "group" : "alone"})`};
+    if (kind === "night") return {start: t0 + 5 * 3600, seconds: 4, step: 1, view: view0(5.5), note: "perched at night"};
+    if (kind === "dawn") return {start: t0 + 12.4 * 3600, seconds: 2400, step: 200, view: view0(12), note: "leaving at dawn"};
+    let best = t0 + 600;
+    let most = 0;
+    for (let t = t0 + 360; t < t0 + 5400; t += 3) {
+        const n = inFlight(t);
+        if (n > most) {
+            most = n;
+            best = t;
+        }
+    }
+    return {start: best - 8, seconds: 16, step: 1, view: view0(20, 0.6), note: `busiest wave at ${(best - t0).toFixed(0)} s: ${most} in flight; roost at ${centre.x.toFixed(1)},${centre.y.toFixed(1)},${centre.z.toFixed(1)}`};
 }
 
 function castId(k: number, i: number): string {
@@ -337,13 +491,18 @@ async function main() {
     const name = params.get("clip") ?? "kingfisher";
     const clip = CLIPS[name];
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
-    const snapshot = decodeArkSnapshot({...fixture, animals: castAnimals(clip.cast)});
+    // (A nesting season: the Ark day the props and the recipes' seasons read, pinned.)
+    if (clip.arkDay !== undefined) (globalThis as {__arkPropsArkDay?: number}).__arkPropsArkDay = clip.arkDay;
+    const nests = (clip.nests ?? []).map((slug) => ({species_profile_id: SPECIES[slug].id, name: SPECIES[slug].name, model_slug: slug, zone: SPECIES[slug].zone, status: "egg", eggs: 4, laid_ark_day: 140, hatch_ark_day: 190, mine: false}));
+    const snapshot = decodeArkSnapshot({...fixture, animals: castAnimals(clip.cast), ...(nests.length ? {nests} : {})});
     if (!snapshot) throw new Error("fixture did not decode");
     let ready = false;
     const el = document.getElementById("ark")!;
     const handle: ArkSceneHandle = mountArk(el, {snapshot, modelBase: MODELS, iconUrl: (slug) => ICONS + encodeURIComponent(slug) + ".webp", recording: true, hours: clip.hours, onReady: () => (ready = true)});
     handle.setEnvironment({seaLevel: 0, wetness: 0, snow: 0, wind: 0.25, storm: 0, windDirection: 0.4});
     handle.setClockScale(1, clip.date * 1000);
+    // (A roost's evening: the island hour is the clock's, so the window moves with the time the frames step through.)
+    if (clip.live) handle.setHours(null);
     const until = realPerfNow() + 120_000;
     while (realPerfNow() < until && (!ready || handle.loading())) await wait(200);
     console.log(`[clip] loaded ${name} in ${((realPerfNow() - (until - 120_000)) / 1000).toFixed(0)} s`);
@@ -383,8 +542,13 @@ async function main() {
                 console.log(`[clip] t=${epoch.toFixed(2)} cam ${JSON.stringify(handle.view?.() ?? null)} ${acting.map((e) => `${e.animal.model_slug} ${e.act!.x.toFixed(1)},${e.act!.z.toFixed(1)} y${e.act!.base.toFixed(2)} ${e.act!.state ?? ""} v${(e.act!.speed ?? 0).toFixed(1)}${e.act!.hidden ? " hidden" : ""}`).join(" | ")}`);
             }
             if (moment?.close) {
-                (debug as unknown as {controls: {minDistance: number}}).controls.minDistance = 0.8;
-                handle.setView(moment.view);
+                (debug as unknown as {controls: {minDistance: number}}).controls.minDistance = moment.track ? 0.5 : 0.8;
+                // (Following a small bird: the view's place is where it is drawn now, its distance and angles kept; two passes, the first lets the scene place it.)
+                for (let pass = 0; pass < (moment.track ? 2 : 1); pass++) {
+                    const at = moment.track ? handle.locate(moment.track) : null;
+                    handle.setView(at ? {...moment.view, target: {x: at.x, y: at.y + at.length * 0.3, z: at.z}} : moment.view);
+                    if (pass === 0 && moment.track) await frames(1);
+                }
             }
             await frames(3);
         },
@@ -408,6 +572,11 @@ async function main() {
             console.log("[clip] playing the replay");
             handle.play(moment.play);
         }
+    }
+    // (For the record: where the cast is drawn and what it is doing at the first frame.)
+    if (moment) {
+        const rows = (debug as unknown as {entries: () => Array<{animal: {id: string; model_slug: string}; level?: string; sched?: {pose?: {act?: {block?: string; state?: string} | null} | null} | null}>}).entries();
+        console.log(`[clip] cast ${rows.slice(0, 5).map((e) => `${e.animal.id.slice(-4)} ${e.level ?? "?"} ${JSON.stringify(handle.locate(e.animal.id))} ${e.sched?.pose?.act?.block ?? "-"}`).join(" | ")}`);
     }
     (window as unknown as {__clip: typeof api}).__clip = api;
 }

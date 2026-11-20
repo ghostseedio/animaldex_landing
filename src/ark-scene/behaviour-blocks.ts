@@ -98,6 +98,9 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         B({id: "drum", label: "drum or hammer on wood", motion: "hold", states: ["drum"], beat: "peck", surge: 0.08, rate: 9, fx: "chips", fxAt: "during"}),
         B({id: "eat", label: "swallow or eat", motion: "hold", states: ["eat"], beat: "chew", pitch: -0.15}),
         B({id: "beat_prey", label: "beat the catch on a branch or rock", motion: "hold", states: ["beat_prey"], beat: "bite", pitch: 0.3, sway: 0.1, rate: 2.2}),
+        // Signature behaviours, wave 2 (birds): a perch-hunter's drop onto the ground, gathering speed (a shrike's, an owl's,
+        // a kookaburra's): a shallow swoop with a bill or talon strike at its end, never a dive into water.
+        B({id: "swoop", label: "swoop down from a perch onto the ground", motion: "travel", curve: "plunge", states: ["glide"], beat: "glide", aloft: true, pitch: 0.5, fx: "dust", fxAt: "end"}),
         // Handling things
         B({id: "pick_up", label: "pick up", motion: "hold", states: ["pick_up"], beat: "peck", pitch: 0.55}),
         B({id: "carry", label: "carry (in the mouth, bill, feet or on the back)", motion: "travel", curve: "ground", states: ["carry"], beat: "walk"}),

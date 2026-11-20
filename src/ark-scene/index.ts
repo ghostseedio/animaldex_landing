@@ -80,7 +80,7 @@ import {bellyOfGeometry, goesIntoRoost, lyingBody, lyingDrop, lyingTorso, packSl
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
-import {applyRecipeCoat, seasonMonthAt, setRecipeArkDay, fallbackNests, microMurmuration, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, seasonFactor, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {applyRecipeCoat, seasonMonthAt, setRecipeArkDay, fallbackNests, microMurmuration, microRoost, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, seasonFactor, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
 import {fishSchoolsNear} from "@/ark-scene/fish-schools";
 import {setFishChasers} from "@/ark-scene/fish-render";
@@ -4365,7 +4365,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.recipeAct = laying.act;
                 return {x: laying.x, z: laying.z, base: laying.y, yaw: laying.yaw, pitch: laying.pitch, roll: 0, afloat: true};
             }
-            return microPose(entry, reducedMotion ? 0 : time);
+            const resting = microPose(entry, reducedMotion ? 0 : time);
+            // (Signature wave 2, birds: a house bird's roost at dusk: its kind's crowd round the spot it is drawn at.)
+            if (!entry.recipeFlock && scheduleOn && !reducedMotion) entry.recipeFlock = microRoost(entry.animal.model_slug, {x: resting.x, y: resting.base, z: resting.z}, worldMs() / 1000, hoursNow(), entry.length);
+            return resting;
         }
         // Off its schedule (reduced motion): on its perch, its back to the perch's normal.
         if (place.perch && !entry.visitor) return {x: place.perch.x, z: place.perch.z, base: place.perch.y, yaw: Math.atan2(place.perch.tx, place.perch.tz), pitch: 0, roll: 0, afloat: true, surface: place.perch};
@@ -5072,7 +5075,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** Marks (holes, mounds) and nests near the camera, worked out again every second (pure: the same for every viewer). */
     const recipeNear = new Map<string, {at: number; marks: RecipeMark[]; nest: RecipeNest | null; coat: RecipeCoat | null}>();
     const COATING = new Set(["wallow", "dust_bathe", "roll", "bathe", "dabble", "surface_dive", "chase_fish", "perch_plunge", "air_plunge", "talon_grab", "pouch_scoop", "river_fish"]);
-    const MARKING = new Set(["root_dig", "dig_burrow", "dust_bathe", "wallow", "bury_sand", "beach_nest", "cache_food", "pounce"]);
+    const MARKING = new Set(["root_dig", "dig_burrow", "dust_bathe", "wallow", "bury_sand", "beach_nest", "cache_food", "pounce", "burrow_dig", "bank_burrow"]);
     // The live log's "seen" (`lib/ark-live-log.ts`): who is in view near the camera, and the logged recipes they run now.
     let seenActs: ArkSeenAct[] = [];
     // 3.3 batch (A): the defence moves in view this frame (said in the log in the species' own sentence).
@@ -5143,7 +5146,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const digs = recipes.some((r) => MARKING.has(r.id));
                 // Its nest (this branch's drawing, until the props lane's are wired; a sitter's at the wired site).
                 const sourced = nestSourceOf(c.entry.animal.id, epoch);
-                const builds = fallbackNests() && (recipes.some((r) => r.id === "nest_build") || Boolean(sourced));
+                const builds = fallbackNests() && (recipes.some((r) => r.id === "nest_build" || r.id === "dummy_nests") || Boolean(sourced));
                 const site = builds ? recipeNest(world, own.profile, own.animal, epoch) : null;
                 const stage = sourced ? ((sourced.eggs ?? 0) > 0 || (sourced.chicks ?? 0) > 0 ? 1 : sourced.stage) : site ? nestStageAt(c.entry.animal.model_slug, epoch) : 0;
                 const species = speciesRecipes(c.entry.animal.model_slug);
