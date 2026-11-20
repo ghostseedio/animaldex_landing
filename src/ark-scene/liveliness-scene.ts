@@ -309,7 +309,8 @@ export class ArkLiveliness {
             const mother = recorded ? motherAmong(recorded, maleOf, (id) => byId.has(id)) : null;
             // sig-young: where its species' own text says the father carries or leads (`young-ways.ts` `by`), the recorded father; else the pick among the kind's drawn males.
             const byMale = waysOf(animal.model_slug)?.by === "male";
-            const father = byMale && recorded ? fatherAmong(recorded, maleOf, (id) => byId.has(id)) : null;
+            // (Where no sex is drawn for the pair, the parent that is not the mother.)
+            const father = byMale && recorded ? fatherAmong(recorded, maleOf, (id) => byId.has(id)) ?? recorded.find((id) => byId.has(id) && id !== mother && maleOf(id) !== false) ?? null : null;
             const pool = (adults.get(key) ?? []).map((a) => ({a, male: byMale ? maleOf(a.id) : null}));
             const pickFrom = byMale && !father && pool.some((p) => p.male === true) ? pool.filter((p) => p.male === true) : pool;
             const parent = father ?? mother ?? pickParent({id: animal.id, slot: animal.slot, zone: animal.zone}, pickFrom.map(({a}) => ({id: a.id, slot: a.slot, zone: a.zone})));
