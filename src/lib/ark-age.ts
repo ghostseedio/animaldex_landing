@@ -16,6 +16,7 @@
  */
 
 import careTable from "@/ark-scene/care.json";
+import {stayDaysOf, waysOf, type RideStyle, type YoungWays} from "@/ark-scene/young-ways";
 import {decodeCare, type ArkCare, type ArkCareKind} from "@/lib/ark-care";
 import {hash32} from "@/lib/ark-clock";
 
@@ -23,12 +24,26 @@ const CARE = (careTable as unknown as {species: Record<string, [string, number, 
 
 /** A species' care: its text's, else its plan's default (flagged). */
 export function speciesCare(slug: string | null | undefined, plan: string | null | undefined): ArkCare {
-    const care = decodeCare(slug ? CARE[slug] : null, plan);
+    const care = withWays(decodeCare(slug ? CARE[slug] : null, plan), waysOf(slug));
     // ARK-JUNGLE: the monkeys' and apes' infants cling to their mothers (the catalogue's text names "infants" and the
     // table read that as a nest: `ark-care.ts`'s last rule). Only where nothing is stated; the kinds that park their
     // young in a nest or on a branch (the ruffed lemurs, the lorises, the aye-aye, the galagos, the tarsiers) keep theirs.
     if (slug && plan === "mammal" && care.basis !== "stated" && CLINGING_INFANTS.test(slug) && !PARKED_INFANTS.test(slug)) return {...care, kind: "carry"};
     return care;
+}
+
+/**
+ * Where the species' own stored text says how it keeps its young (the catalogue's young-care rows: `young-ways.ts`), that is
+ * what it does, over the care table's reading of its notes: carried (a grebe's chicks on its back) is carry, a line behind
+ * the parent (ducklings) is follow, young kept at a spot while the parent comes and goes (a fawn lying hidden, kits at the
+ * den) is nest. Stated by the species' own text, so the basis is stated.
+ */
+function withWays(care: ArkCare, ways: YoungWays | null): ArkCare {
+    if (!ways) return care;
+    // (Carried is carried: the births' style follows it, a scorpion's young are born on her back. A hider or a line keeps the table's kind, so
+    // the births' style stays as it was: a doe still calves in the open, a tigress in the den.)
+    if (ways.ride) return {...care, kind: "carry", basis: "stated", ways};
+    return {...care, ways};
 }
 
 /** Monkeys and apes by their catalogue slugs (a bird named for one, the capuchinbird, is no mammal). */
@@ -87,6 +102,14 @@ export type ArkAge = {
     egg: {progress: number; satOn: boolean} | null;
     care: ArkCareKind;
     careBasis: ArkCare["basis"];
+    /** How its species keeps its young (`young-ways.ts`), and which of those holds for it now. */
+    ways: YoungWays | null;
+    /** Kept at one spot now (lying hidden, at the den, in the nest): the parent comes back in bouts. */
+    staying: boolean;
+    /** How it rides, when carried. */
+    ride: RideStyle | null;
+    /** Follows in a line along its parent's path. */
+    line: boolean;
 };
 
 function clamp01(v: number): number {
@@ -102,7 +125,8 @@ export function chosenParent(id: string, parents: string[] | null | undefined): 
 
 export function ageOf(animal: ArkAgeInput, arkDay: number, plan: string | null | undefined, care: ArkCare): ArkAge {
     const p = plan ?? "";
-    const base = {care: care.kind, careBasis: care.basis};
+    const ways = care.ways ?? null;
+    const base = {care: care.kind, careBasis: care.basis, ways, staying: false, ride: null as RideStyle | null, line: false};
     if (animal.status === "egg") {
         const laid = animal.laid_ark_day ?? arkDay;
         const hatch = animal.hatch_ark_day ?? null;
@@ -130,27 +154,41 @@ export function ageOf(animal: ArkAgeInput, arkDay: number, plan: string | null |
     let follow: ArkAge["follow"] = null;
     let carried = false;
     let atHome = false;
-    if (dependent) {
+    let staying = false;
+    let ride: RideStyle | null = null;
+    let line = false;
+    const stayFor = ways?.stay ? stayDaysOf(ways, independent) : 0;
+    if (dependent && parentId && ways?.stay && ageDays < stayFor) {
+        // Kept at a spot (lying hidden, at the den, in the nest) while its parent goes about her day and comes back to it.
+        atHome = true;
+        staying = true;
+    } else if (dependent) {
         switch (care.kind) {
             case "carry":
                 // Carried for the first third of its dependence, then at heel.
                 carried = parentId != null && ageDays < independent / 3;
                 if (parentId) follow = {parentId, distance: carried ? 0 : 0.7};
+                if (carried && ways?.ride) ride = ways.ride;
                 break;
             case "follow":
                 if (parentId) follow = {parentId, distance: 0.7 + 0.8 * f};
                 break;
             case "nest":
-                atHome = true;
+                // (Or, where its species' own text has it follow in a line, at its parent's heel.)
+                if (ways?.line && parentId) follow = {parentId, distance: 0.7 + 0.8 * f};
+                else if (ways?.stay && parentId) follow = {parentId, distance: 0.7 + 0.8 * f};
+                else atHome = true;
                 break;
             case "guard":
                 // Guarded at first, then off on its own.
                 if (parentId && ageDays < independent * 0.3) follow = {parentId, distance: 1.5};
                 break;
             case "none":
+                if (ways?.line && parentId) follow = {parentId, distance: 0.7 + 0.8 * f};
                 break;
         }
+        line = Boolean(follow && ways?.line);
     }
     const play = (PLAN_PLAY[p] ?? 0) * Math.sqrt(1 - f) * (care.kind === "none" ? 0.3 : 1);
-    return {...base, stage: "young", ageDays, growth, scale, follow, carried, atHome, play, pace: 1, egg: null};
+    return {...base, stage: "young", ageDays, growth, scale, follow, carried, atHome, play, pace: 1, egg: null, staying, ride, line};
 }

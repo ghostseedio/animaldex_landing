@@ -46,10 +46,33 @@ import {Traces, TRACE_WITHIN} from "@/ark-scene/traces";
 import type {ArkAnimal} from "@/ark-scene/types";
 import {WeatherFx} from "@/ark-scene/weather-fx";
 import {motherAmong, nurseBlend, nursePlace, nurses, nursingBout} from "@/ark-scene/young-care";
+import {
+    clumpSpot,
+    fatherAmong,
+    familyClock,
+    familySpot,
+    HELPER_CHANCE,
+    inVisitHours,
+    lineBehind,
+    lineDistance,
+    moveBlend,
+    PARENT_CHANCE,
+    siblingOffset,
+    visitPlace,
+    visitPlan,
+    visitState,
+    VISIT_REACH,
+    waysOf,
+    walkSeconds,
+    type Pt,
+    type VisitPlan,
+    type VisitState,
+    type WayKind
+} from "@/ark-scene/young-ways";
 import {arkWorld, coastRadius, LAKE, RIVER, sampleGround} from "@/ark-scene/world";
 import {fallsSoundAt} from "@/ark-scene/islands/wild/falls";
 import {ageOf, speciesCare, type ArkAge} from "@/lib/ark-age";
-import {arkDayAt, lightningAt, seaLevelAt, shoreAt, tideAt, weatherAt, type ArkShore, type ArkTide, type ArkWeather} from "@/lib/ark-clock";
+import {arkDayAt, hash32, islandHours, lightningAt, seaLevelAt, shoreAt, tideAt, unit, weatherAt, type ArkShore, type ArkTide, type ArkWeather} from "@/lib/ark-clock";
 import {
     aboveTide,
     backToWindYaw,
@@ -125,6 +148,8 @@ const AGE_EVERY = 30;
 const DAWN_SINGERS = new Set(["bird", "frog", "mammal"]);
 
 type Young = {age: ArkAge; parent: string | null; at: number};
+/** One parent's (or helper's) visit to its young: where it set out from, where it stands with them, and how long the walk or flight takes. */
+type VisitRun = {key: string; plan: VisitPlan; anchor: LivePose; place: {x: number; z: number; yaw: number}; spot: Pt; go: number; flies: boolean; youngId: string; kind: "nurse" | "feed"};
 type Shelter = {/** The kind it was asked for (the cache key; `kind` may have fallen back to hunkering). */ asked: ShelterKind; kind: ShelterKind; spot: {x: number; y: number; z: number} | null; travelMs: number; /** The spot's height over the ground (a roost up a tree), worked out once. */ up: number};
 
 export class ArkLiveliness {
@@ -151,6 +176,18 @@ export class ArkLiveliness {
     /** 3.3 batch (C): the last snapshot's animals (the parents are worked out again when the record tells a birth), and who suckles now. */
     private snapshotAnimals: ArkAnimal[] = [];
     readonly nursing = new Map<string, {mother: string; key: string; at: number}>();
+    /** sig-young: the families whose young stay at a spot (by their parent's id), who visits whom, who follows in a line, who clumps. */
+    private families = new Map<string, {young: string[]}>();
+    private visitors = new Map<string, {familyKey: string; helper: boolean}>();
+    private familyVisitors = new Map<string, string[]>();
+    private lineMates = new Map<string, string[]>();
+    private clumps = new Map<string, string[]>();
+    private clumpOf = new Map<string, string>();
+    private readonly spots = new Map<string, Pt | null>();
+    private readonly visitRuns = new Map<string, VisitRun | null>();
+    private readonly trails = new Map<string, {g: number; points: Pt[]}>();
+    /** What a young one (or its visitor) is doing now in the young-ways (the log says it in its species' own sentence once an episode). */
+    readonly wayNowOf = new Map<string, {way: WayKind; key: string; at: number; speciesLine: string | null}>();
     private arkDayNow = 0;
     private reducedMotion = false;
     private tier: QualityTier;
@@ -266,12 +303,73 @@ export class ArkLiveliness {
             const key = animal.kind_species_profile_id || animal.species_profile_id || animal.model_slug;
             // 3.3 batch (C): its recorded mother when the record has said who its parents are; else the seeded pick.
             const recorded = this.options.hooks.recordedParents?.(animal.id);
-            const mother = recorded ? motherAmong(recorded, (id) => (byId.has(id) ? this.options.hooks.maleOf?.(byId.get(id)!) ?? null : null), (id) => byId.has(id)) : null;
-            const parent = mother ?? pickParent({id: animal.id, slot: animal.slot, zone: animal.zone}, (adults.get(key) ?? []).map((a) => ({id: a.id, slot: a.slot, zone: a.zone})));
+            const maleOf = (id: string) => (byId.has(id) ? this.options.hooks.maleOf?.(byId.get(id)!) ?? null : null);
+            const mother = recorded ? motherAmong(recorded, maleOf, (id) => byId.has(id)) : null;
+            // sig-young: where its species' own text says the father carries or leads (`young-ways.ts` `by`), the recorded father; else the pick among the kind's drawn males.
+            const byMale = waysOf(animal.model_slug)?.by === "male";
+            const father = byMale && recorded ? fatherAmong(recorded, maleOf, (id) => byId.has(id)) : null;
+            const pool = (adults.get(key) ?? []).map((a) => ({a, male: byMale ? maleOf(a.id) : null}));
+            const pickFrom = byMale && !father && pool.some((p) => p.male === true) ? pool.filter((p) => p.male === true) : pool;
+            const parent = father ?? mother ?? pickParent({id: animal.id, slot: animal.slot, zone: animal.zone}, pickFrom.map(({a}) => ({id: a.id, slot: a.slot, zone: a.zone})));
             if (parent) parents.set(animal.id, parent);
         }
         this.parents = parents;
         this.young.clear();
+        this.buildFamilies(animals, adults, parents);
+    }
+
+    /**
+     * sig-young: the ways its species keeps young (`young-ways.ts`), for the young now aboard: whose young stay at a spot
+     * (so who comes back to them, and which helpers of the kind come too), who follows in a line behind whom, and which
+     * young clump. Worked out again with the snapshot and when the record tells a birth.
+     */
+    private buildFamilies(animals: ArkAnimal[], adults: Map<string, ArkAnimal[]>, parents: Map<string, string>) {
+        const families = new Map<string, {young: string[]}>();
+        const visitors = new Map<string, {familyKey: string; helper: boolean}>();
+        const lineMates = new Map<string, string[]>();
+        const clumps = new Map<string, string[]>();
+        const clumpOf = new Map<string, string>();
+        for (const animal of animals) {
+            if (animal.origin !== "born") continue;
+            const ways = waysOf(animal.model_slug);
+            if (!ways) continue;
+            const parent = parents.get(animal.id) ?? null;
+            if (ways.stay) {
+                const key = parent ?? animal.id;
+                const family = families.get(key) ?? {young: []};
+                family.young.push(animal.id);
+                families.set(key, family);
+                if (parent) visitors.set(parent, {familyKey: key, helper: false});
+                if (parent && ways.helpers) {
+                    // (Up to two other adults of the kind in its cluster, the same pool as its seeded parent: their own pick by the young one's id.)
+                    const kind = animal.kind_species_profile_id || animal.species_profile_id || animal.model_slug;
+                    const pool = (adults.get(kind) ?? []).filter((a) => a.id !== parent && a.zone === animal.zone && (animal.slot == null || a.slot === animal.slot)).map((a) => a.id).sort();
+                    const picks = pool.map((id) => ({id, h: hash32(animal.id, "helper", id)})).sort((a, b) => a.h - b.h || (a.id < b.id ? -1 : 1)).slice(0, 2);
+                    for (const pick of picks) if (!visitors.has(pick.id)) visitors.set(pick.id, {familyKey: key, helper: true});
+                }
+            }
+            if (ways.line && parent) lineMates.set(parent, [...(lineMates.get(parent) ?? []), animal.id]);
+            if (ways.cluster) {
+                const key = `${animal.kind_species_profile_id || animal.species_profile_id || animal.model_slug}|${animal.zone}|${animal.slot ?? ""}`;
+                clumps.set(key, [...(clumps.get(key) ?? []), animal.id]);
+                clumpOf.set(animal.id, key);
+            }
+        }
+        families.forEach((list) => list.young.sort());
+        lineMates.forEach((list) => list.sort());
+        clumps.forEach((list) => list.sort());
+        const familyVisitors = new Map<string, string[]>();
+        visitors.forEach((v, id) => familyVisitors.set(v.familyKey, [...(familyVisitors.get(v.familyKey) ?? []), id]));
+        familyVisitors.forEach((list) => list.sort());
+        this.families = families;
+        this.visitors = visitors;
+        this.familyVisitors = familyVisitors;
+        this.lineMates = lineMates;
+        this.clumps = clumps;
+        this.clumpOf = clumpOf;
+        this.spots.clear();
+        this.visitRuns.clear();
+        this.trails.clear();
     }
 
     /** 3.3 batch (C): the record told a birth (`Lineage.note`): who follows whom is worked out again. */
@@ -456,6 +554,15 @@ export class ArkLiveliness {
         const nowMs = epochSeconds * 1000;
         let out = pose;
         const age = this.ageOf(entry);
+        // sig-young: young kept at a spot (lying hidden, at the den, in the nest) and the parent's or helper's visits to it,
+        // young that clump (`young-ways.ts`).
+        if (age && age.stage === "young" && (age.staying || age.ways?.cluster)) {
+            const kept = age.staying ? this.stayPose(entry, age, pose, nowMs) : this.clusterPose(entry, pose, nowMs);
+            if (kept) return this.offTheTide(entry, kept);
+        } else if (this.visitors.size && this.visitors.has(entry.animal.id)) {
+            const visiting = this.visitPose(entry, this.sheltered(entry, pose, nowMs), nowMs);
+            if (visiting) return this.offTheTide(entry, visiting);
+        }
         const parentId = age && age.stage === "young" && age.follow ? age.follow.parentId : null;
         const parent = parentId ? this.options.hooks.entryOf(parentId) : null;
         if (age && parent && age.follow && !pose.aloft) {
@@ -464,6 +571,20 @@ export class ArkLiveliness {
             if (raw) {
                 const lead = this.sheltered(parent, raw, nowMs - HEEL_LAG_SECONDS * 1000);
                 const heel = heelPose(entry.animal.id, {x: lead.x, z: lead.z, yaw: lead.yaw, length: parent.length, height: parent.drawnHeight || parent.length * 0.6}, {distance: age.follow.distance, carried: age.carried}, age.play, nowMs, (ms) => this.parentAt(parent, ms));
+                // sig-young: a young one of a species that follows in a line goes along her own path, each one its length behind the last.
+                if (age.line && !age.carried) {
+                    const mates = this.lineMates.get(parent.animal.id);
+                    const rank = Math.max(mates ? mates.indexOf(entry.animal.id) : 0, 0);
+                    const spot = lineBehind(this.trailOf(parent, lead, nowMs), lineDistance(parent.length, entry.length, rank), lead.yaw);
+                    heel.x = spot.x;
+                    heel.z = spot.z;
+                    heel.yaw = spot.yaw;
+                    heel.lift = 0;
+                    heel.playing = false;
+                    heel.moving = false;
+                    const key = `line:${parent.animal.id}:${Math.floor(nowMs / 900_000)}`;
+                    this.noteWay(entry.animal.id, "line", key, nowMs, age.ways?.lines.line ?? null);
+                }
                 // 3.3 batch (C): a mammal's young at heel comes to her flank to suckle in bouts of the shared clock
                 // (`young-care.ts`), while she stands still and it is neither carried nor at play.
                 const bout = !age.carried && !heel.playing && !lead.moving && !lead.aloft && lead.doing !== "sleep" && nurses(this.options.hooks.planOf(entry.animal.model_slug)) ? nursingBout(entry.animal.id, nowMs) : null;
@@ -491,6 +612,236 @@ export class ArkLiveliness {
         }
         out = this.sheltered(entry, out, nowMs);
         return this.offTheTide(entry, out);
+    }
+
+    // MARK: Young kept at a spot, visits, lines and clumps (sig-young; `young-ways.ts`)
+
+    /** The leader's recent places, newest first, half a second apart (a few seconds' walk): shared by all the young behind her. */
+    private trailOf(leader: LiveAnimal, lead: {x: number; z: number}, nowMs: number): Pt[] {
+        const STEP = 500;
+        const g = Math.floor(nowMs / STEP) * STEP;
+        let trail = this.trails.get(leader.animal.id);
+        if (!trail || trail.g !== g) {
+            const points: Pt[] = [];
+            for (let j = 0; j < 24; j++) {
+                const ms = g - j * STEP;
+                const raw = this.options.hooks.poseAt(leader, ms / 1000 - HEEL_LAG_SECONDS);
+                const at = raw ? this.sheltered(leader, raw, ms - HEEL_LAG_SECONDS * 1000) : null;
+                if (at) points.push({x: at.x, z: at.z});
+            }
+            trail = {g, points};
+            this.trails.set(leader.animal.id, trail);
+            if (this.trails.size > 200) this.trails.delete(this.trails.keys().next().value as string);
+        }
+        return [{x: lead.x, z: lead.z}, ...trail.points];
+    }
+
+    private landAt(p: Pt): boolean {
+        return this.options.hooks.heightAt(p.x, p.z) >= 0.1;
+    }
+
+    /** Where the family's young lie in a stay slot (null: nowhere on land to put them: they keep their day). Cached. */
+    private staySpot(young: LiveAnimal, stay: NonNullable<ArkAge["ways"]>["stay"], familyKey: string, parentId: string | null, slot: number, slotStart: number): Pt | null {
+        const key = `${familyKey}#${slot}`;
+        const known = this.spots.get(key);
+        if (known !== undefined) return known;
+        const parent = parentId ? this.options.hooks.entryOf(parentId) : null;
+        let anchor: Pt | null = null;
+        let den = false;
+        if (stay === "den") {
+            const roost = this.options.hooks.roostOf(young) ?? (parent ? this.options.hooks.roostOf(parent) : null);
+            if (roost) {
+                anchor = {x: roost.x, z: roost.z};
+                den = true;
+            }
+        }
+        if (!anchor) {
+            const at = this.options.hooks.poseAt(parent ?? young, slotStart / 1000);
+            if (at) anchor = {x: at.x, z: at.z};
+        }
+        let spot: Pt | null = null;
+        if (anchor) {
+            spot = den ? anchor : familySpot(familyKey, slot, anchor, parent?.length ?? young.length * 3);
+            if (!this.landAt(spot)) spot = this.landAt(anchor) ? anchor : null;
+        }
+        if (this.spots.size > 3000) this.spots.clear();
+        this.spots.set(key, spot);
+        return spot;
+    }
+
+    /** A young one lying hidden / at its den / in its nest: at its family's spot, up and watching while a visitor is with it. */
+    private stayPose<P extends LivePose>(entry: LiveAnimal, age: ArkAge, pose: P, nowMs: number): P | null {
+        const ways = age.ways;
+        if (!ways?.stay) return null;
+        const id = entry.animal.id;
+        const parentId = this.parents.get(id) ?? null;
+        const familyKey = parentId ?? id;
+        const clock = familyClock(familyKey, nowMs);
+        const here = this.staySpot(entry, ways.stay, familyKey, parentId, clock.stay, clock.stayStart);
+        if (!here) return null;
+        const before = this.staySpot(entry, ways.stay, familyKey, parentId, clock.stay - 1, clock.stayStart - 720_000) ?? here;
+        const mine = siblingOffset(id, entry.length);
+        const move = moveBlend({x: before.x + mine.x, z: before.z + mine.z}, {x: here.x + mine.x, z: here.z + mine.z}, nowMs - clock.stayStart);
+        // A visitor with it now (its parent, or a helper of the kind).
+        let visit: {visitor: string; place: {x: number; z: number; yaw: number}; kind: "nurse" | "feed"; key: string} | null = null;
+        for (const visitorId of this.familyVisitors.get(familyKey) ?? []) {
+            const now = this.visitNow(visitorId, nowMs);
+            if (now && now.state.phase === "hold") {
+                visit = {visitor: visitorId, place: now.run.place, kind: now.run.kind, key: now.run.key};
+                break;
+            }
+        }
+        const ground = this.groundOf(id, move.x, move.z);
+        const asleep = ways.stay === "hide";
+        const facing = visit ? Math.atan2(visit.place.x - move.x, visit.place.z - move.z) : move.yaw ?? unit(id, "stay-yaw") * Math.PI * 2;
+        const key = visit ? visit.key : `stay:${familyKey}:${clock.stay}`;
+        this.noteWay(id, visit ? "visit" : "stay", key, nowMs, (visit ? ways.lines.visit : ways.lines.stay) ?? null);
+        this.counts.young++;
+        return Object.assign({}, pose, {
+            x: move.x,
+            z: move.z,
+            y: ground,
+            yaw: facing,
+            moving: move.moving,
+            aloft: false,
+            doing: move.moving ? "wander" : visit ? "watch" : asleep ? "sleep" : "rest"
+        }, visit ? {nurse: visit.visitor, beat: undefined} : null);
+    }
+
+    /** The visit of `visitorId` to its family now: its plan, where it goes and when; null when it is not on a visit. Cached by plan. */
+    private visitNow(visitorId: string, nowMs: number): {state: VisitState; run: VisitRun} | null {
+        const v = this.visitors.get(visitorId);
+        if (!v) return null;
+        const youngId = this.families.get(v.familyKey)?.young[0];
+        const young = youngId ? this.options.hooks.entryOf(youngId) : null;
+        const visitor = this.options.hooks.entryOf(visitorId);
+        if (!young || !visitor) return null;
+        const ways = waysOf(young.animal.model_slug);
+        if (!ways?.stay) return null;
+        if (!inVisitHours(islandHours(nowMs, this.options.offsetHours), ways.hours)) return null;
+        const plan = visitPlan(visitorId, v.familyKey, nowMs, v.helper ? HELPER_CHANCE : PARENT_CHANCE);
+        if (!plan || nowMs < plan.start || nowMs >= plan.end) return null;
+        let run = this.visitRuns.get(plan.key);
+        if (run === undefined) {
+            run = this.buildRun(plan, visitor, young, ways);
+            if (this.visitRuns.size > 400) this.visitRuns.clear();
+            this.visitRuns.set(plan.key, run);
+        }
+        if (!run) return null;
+        const state = visitState(plan, nowMs, run.go);
+        return state ? {state, run} : null;
+    }
+
+    private buildRun(plan: VisitPlan, visitor: LiveAnimal, young: LiveAnimal, ways: NonNullable<ArkAge["ways"]>): VisitRun | null {
+        const age = this.ageOf(young);
+        if (!age || age.stage !== "young" || !age.staying || !ways.stay) return null;
+        const parentId = this.parents.get(young.animal.id) ?? null;
+        const clock = familyClock(plan.familyKey, plan.start);
+        const base = this.staySpot(young, ways.stay, plan.familyKey, parentId, clock.stay, clock.stayStart);
+        const anchor = this.options.hooks.poseAt(visitor, plan.start / 1000);
+        // (Not out of her bed at night: a sleeper keeps to it.)
+        if (!base || !anchor || anchor.doing === "sleep" || anchor.doing === "to_roost") return null;
+        const place = visitPlace(visitor.animal.id, base, visitor.length, young.length);
+        const dist = Math.hypot(place.x - anchor.x, place.z - anchor.z);
+        if (dist > VISIT_REACH) return null;
+        const flies = this.options.hooks.planOf(visitor.animal.model_slug) === "bird" && this.options.hooks.profileOf(visitor)?.move === "fly" && dist > 8;
+        const go = walkSeconds(dist, flies ? 5 : shelterPace(visitor.length) * 1.5);
+        return {key: plan.key, plan, anchor, place, spot: base, go, flies, youngId: young.animal.id, kind: (ways.visit ?? "nurse") as "nurse" | "feed"};
+    }
+
+    /** A parent (or helper) on its way to its young, with them, and back: nursing or feeding them where they lie. */
+    private visitPose<P extends LivePose>(entry: LiveAnimal, pose: P, nowMs: number): P | null {
+        const now = this.visitNow(entry.animal.id, nowMs);
+        if (!now) return null;
+        const {state, run} = now;
+        const L = state.level;
+        const hold = state.phase === "hold";
+        const from = state.phase === "back" ? {x: pose.x, z: pose.z, y: pose.y} : {x: run.anchor.x, z: run.anchor.z, y: run.anchor.y};
+        const x = from.x + (run.place.x - from.x) * L;
+        const z = from.z + (run.place.z - from.z) * L;
+        const moving = !hold && L > 0.02 && L < 0.98;
+        const ground = this.groundOf(entry.animal.id, x, z);
+        const lift = run.flies && moving ? Math.sin(Math.PI * L) * Math.min(Math.hypot(run.place.x - from.x, run.place.z - from.z) * 0.2, 5) : 0;
+        // Her heading: the way she walks while she walks, then her head to the young.
+        const way = state.phase === "back" ? yawToward(pose.x - run.place.x, pose.z - run.place.z) : yawToward(run.place.x - run.anchor.x, run.place.z - run.anchor.z);
+        const turn = state.phase === "back" ? ease((1 - L) * 4) : ease(L * 4 - 3);
+        const yaw = state.phase === "back" ? lerpAngle(run.place.yaw, way, turn) : lerpAngle(way, run.place.yaw, turn);
+        this.noteWay(entry.animal.id, hold ? "visit" : "stay", run.key, nowMs, hold ? waysOf(entry.animal.model_slug)?.lines.visit ?? this.visitLine(run.youngId) : null);
+        return Object.assign({}, pose, {
+            x,
+            z,
+            y: ground + lift,
+            yaw,
+            moving,
+            aloft: run.flies && moving,
+            doing: moving ? (run.flies ? "fly" : "wander") : hold ? (run.kind === "feed" ? "forage" : "watch") : pose.doing
+        }, hold ? {nurse: run.youngId, beat: undefined} : null);
+    }
+
+    /** The visit sentence of the young one's species (a helper of another name says the family's). */
+    private visitLine(youngId: string): string | null {
+        const young = this.options.hooks.entryOf(youngId);
+        return young ? waysOf(young.animal.model_slug)?.lines.visit ?? null : null;
+    }
+
+    /** The clump's middle in a stay slot: where its first member's day has it when the slot began. Cached. */
+    private clumpCentre(key: string, mates: readonly string[], self: LiveAnimal, slot: number, slotStart: number): Pt | null {
+        const cached = `${key}#c${slot}`;
+        const known = this.spots.get(cached);
+        if (known !== undefined) return known;
+        let anchor: LiveAnimal | null = null;
+        for (const id of mates) {
+            anchor = this.options.hooks.entryOf(id);
+            if (anchor) break;
+        }
+        const at = this.options.hooks.poseAt(anchor ?? self, slotStart / 1000);
+        let centre: Pt | null = at ? {x: at.x, z: at.z} : null;
+        const wet = Boolean(self.depth || self.place.water);
+        if (centre && !wet && !this.landAt(centre)) centre = null;
+        if (this.spots.size > 3000) this.spots.clear();
+        this.spots.set(cached, centre);
+        return centre;
+    }
+
+    /** A young one of a species whose young gather (a creche, a nymph cluster, a shoal): in the clump of its kind there, which moves on by the slot. */
+    private clusterPose<P extends LivePose>(entry: LiveAnimal, pose: P, nowMs: number): P | null {
+        const id = entry.animal.id;
+        const key = this.clumpOf.get(id);
+        const mates = key ? this.clumps.get(key) : null;
+        if (!key || !mates || mates.length < 2) return null;
+        const clock = familyClock(key, nowMs);
+        const centre = this.clumpCentre(key, mates, entry, clock.stay, clock.stayStart);
+        if (!centre) return null;
+        const prev = this.clumpCentre(key, mates, entry, clock.stay - 1, clock.stayStart - 720_000) ?? centre;
+        const index = mates.indexOf(id);
+        const move = moveBlend(clumpSpot(prev, index, mates.length, entry.length), clumpSpot(centre, index, mates.length, entry.length), nowMs - clock.stayStart);
+        const wet = Boolean(entry.depth || entry.place.water);
+        const ways = this.ageOf(entry)?.ways;
+        this.noteWay(id, "cluster", `cluster:${key}:${clock.stay}`, nowMs, ways?.lines.cluster ?? null);
+        this.counts.young++;
+        return Object.assign({}, pose, {
+            x: move.x,
+            z: move.z,
+            y: wet ? pose.y : this.groundOf(id, move.x, move.z),
+            yaw: move.yaw ?? pose.yaw,
+            moving: move.moving,
+            aloft: false,
+            doing: move.moving ? "wander" : pose.doing === "sleep" ? "sleep" : pose.moving ? "rest" : pose.doing
+        });
+    }
+
+    /** Notes what a young one (or its visitor) shows of its species' ways now (the one record per animal is kept, not made again every frame). */
+    private noteWay(id: string, way: WayKind, key: string, nowMs: number, line: string | null) {
+        const known = this.wayNowOf.get(id);
+        if (known && known.way === way && known.key === key && known.speciesLine === line) known.at = nowMs;
+        else this.wayNowOf.set(id, {way, key, at: nowMs, speciesLine: line});
+    }
+
+    /** What a young one (or a visitor) is showing now of its species' ways, for the log: once an episode; null when nothing. */
+    wayNow(id: string, nowMs: number): {way: WayKind; key: string; line: string} | null {
+        const now = this.wayNowOf.get(id);
+        if (!now || nowMs - now.at > 1500 || !now.speciesLine) return null;
+        return {way: now.way, key: now.key, line: now.speciesLine};
     }
 
     /** At high water: a land animal standing on covered ground walks up the beach. */

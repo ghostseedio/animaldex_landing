@@ -4077,12 +4077,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const t = s ? {x: s.tx, y: s.ty, z: s.tz} : {x: Math.sin(at.yaw), y: 0, z: Math.cos(at.yaw)};
         const foot = {x: at.x, y: at.base, z: at.z};
         const middle = {x: foot.x + n.x * motherHeight * 0.5, y: foot.y + n.y * motherHeight * 0.5, z: foot.z + n.z * motherHeight * 0.5};
-        // (A newborn's first weeks under her, then on her back: a share of its growth, `ark-age.ts`.)
-        const belly = age.growth < 0.11;
+        // (A newborn's first weeks under her, then on her back: a share of its growth, `ark-age.ts`; a species whose own text
+        // says where its young ride (`young-ways.ts`) has it there: on the back, clinging to the belly or chest, on the tail
+        // root, beneath the tail.)
+        const style = age.ride;
+        const belly = style === "belly" || style === "under" ? true : style ? false : age.growth < 0.11;
         const side = belly ? -1 : 1;
-        const along = belly ? 0.1 : -0.12;
+        const along = style === "tail" ? -0.34 : style === "under" ? -0.3 : style === "back" ? -0.04 : belly ? 0.1 : -0.12;
         // Its feet against her: under her belly its own up is her down, so its feet (its belly) face hers.
-        const reach = motherHeight * 0.4;
+        const reach = motherHeight * (style === "under" ? 0.3 : 0.4);
         const fx = middle.x + n.x * side * reach + t.x * mother.length * along;
         const fy = middle.y + n.y * side * reach + t.y * mother.length * along;
         const fz = middle.z + n.z * side * reach + t.z * mother.length * along;
@@ -5104,6 +5107,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (carrying) {
                     const p = c.entry.animal;
                     seenActs.push({id: p.id, name: p.name, speciesId: p.kind_species_profile_id || p.species_profile_id || `slug:${p.model_slug}`, zone: p.zone, recipe: "mouth_carry", episode: carrying.key, block: "carry", fish: false, line: carrying.line});
+                }
+                // sig-young: a young one kept, carried or led as its species' own text says (`young-ways.ts`), close by: the species' own sentence for it.
+                if (c.distance < 45 && c.entry.animal.origin === "born") {
+                    const y = c.entry.animal;
+                    const way = liveliness.wayNow(y.id, epoch * 1000);
+                    const ride = c.entry.riding ? liveliness.ageOf(c.entry)?.ways?.lines.ride : null;
+                    const said = way ?? (ride ? {way: "ride", key: `ride:${y.id}:${Math.floor(epoch / 900)}`, line: ride} : null);
+                    if (said) seenActs.push({id: y.id, name: y.name, speciesId: y.kind_species_profile_id || y.species_profile_id || `slug:${y.model_slug}`, zone: y.zone, recipe: `young_${said.way}`, episode: said.key, block: "care", fish: false, line: said.line});
                 }
                 // 3.3 batch (C): a young one in its species' young coat, close by: the species' own sentence for it.
                 if (c.distance < 40 && (c.entry.youngCoat?.steps ?? 0) > 7) {
