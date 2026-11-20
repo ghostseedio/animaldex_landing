@@ -163,7 +163,22 @@
             "graphLabel": "{animal} : population, {period}, de {start} à {now}",
             "arkDays": "Jours de l'Ark {from}–{to}",
             "recordStarts": "Le relevé commence le {date}",
-            "pointAt": "{time} : {count}"
+            "pointAt": "{time} : {count}",
+            "whole": "{count} dans toute l'Ark",
+            "placeWild": "{count} à l'état sauvage",
+            "placeHomes": "{count} dans des maisons",
+            "placeFarms": "{count} dans des fermes",
+            "placeTown": "{count} dans la faune de la ville",
+            "placeZoo": "{count} au zoo",
+            "thisAlone": "Celui-ci : seul {where}",
+            "thisOneOf": "Celui-ci : 1 sur {count} {where}",
+            "whereWild": "sur l'île sauvage",
+            "whereHomes": "dans des maisons",
+            "whereFarms": "dans des fermes",
+            "whereTown": "parmi la faune de la ville",
+            "whereZoo": "dans son enclos du zoo",
+            "breedsSamePlace": "Ne se reproduit qu'avec d'autres au même endroit.",
+            "riseFall": "Hausse : animaux montés à bord grâce à des photos, ou nés. Baisse : animaux morts ou dévorés."
         },
         "story": {
             "generic": "Monté à bord après une étape qui a marché",

@@ -163,7 +163,22 @@
             "graphLabel": "{animal} ਦੀ ਆਬਾਦੀ, {period}: {start} ਤੋਂ {now}",
             "arkDays": "Ark ਦੇ ਦਿਨ {from}–{to}",
             "recordStarts": "ਰਿਕਾਰਡ {date} ਤੋਂ ਸ਼ੁਰੂ ਹੁੰਦਾ ਹੈ",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "ਪੂਰੇ Ark ਵਿੱਚ {count}",
+            "placeWild": "{count} ਜੰਗਲੀ",
+            "placeHomes": "{count} ਘਰਾਂ ਵਿੱਚ",
+            "placeFarms": "{count} ਖੇਤਾਂ ਵਿੱਚ",
+            "placeTown": "{count} ਸ਼ਹਿਰ ਦੇ ਜੰਗਲੀ ਜੀਵਾਂ ਵਿੱਚ",
+            "placeZoo": "{count} ਚਿੜੀਆਘਰ ਵਿੱਚ",
+            "thisAlone": "ਇਹ ਜਾਨਵਰ: {where} ਇਕੱਲਾ",
+            "thisOneOf": "ਇਹ ਜਾਨਵਰ: {where} {count} ਵਿੱਚੋਂ 1",
+            "whereWild": "ਜੰਗਲੀ ਟਾਪੂ ਉੱਤੇ",
+            "whereHomes": "ਘਰਾਂ ਵਿੱਚ",
+            "whereFarms": "ਖੇਤਾਂ ਵਿੱਚ",
+            "whereTown": "ਸ਼ਹਿਰ ਦੇ ਜੰਗਲੀ ਜੀਵਾਂ ਵਿੱਚ",
+            "whereZoo": "ਚਿੜੀਆਘਰ ਵਿੱਚ ਆਪਣੇ ਅਹਾਤੇ ਵਿੱਚ",
+            "breedsSamePlace": "ਸਿਰਫ਼ ਉਸੇ ਥਾਂ ਦੇ ਦੂਜਿਆਂ ਨਾਲ ਹੀ ਪ੍ਰਜਨਨ ਕਰਦਾ ਹੈ।",
+            "riseFall": "ਵਾਧਾ: ਫੋਟੋਆਂ ਤੋਂ Ark ਵਿੱਚ ਆਏ ਜਾਂ ਜੰਮੇ ਜਾਨਵਰ। ਘਾਟਾ: ਮਰ ਗਏ ਜਾਂ ਖਾਏ ਗਏ ਜਾਨਵਰ।"
         },
         "story": {
             "generic": "ਕੰਮ ਕਰਨ ਵਾਲੇ ਕਦਮ ਤੋਂ ਬਾਅਦ ਸਵਾਰ ਹੋਇਆ",

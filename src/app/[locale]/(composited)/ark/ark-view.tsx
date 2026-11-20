@@ -1301,6 +1301,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                             words={words}
                             locale={locale}
                             selectedKey={selected ? arkSpeciesKey(selected) : herdSpeciesKey}
+                            selectedId={selected?.id}
                             herdKeys={herdKeys}
                             arrivalKey={arrival ? arkSpeciesKey(arrival) : null}
                             onSpecies={pickSpecies}

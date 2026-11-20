@@ -372,6 +372,14 @@ export function arkPeriodSeries(history: ArkHistory, key: string, scope: ArkHist
     return series;
 }
 
+/** The five things the record counts, in the order the panels say them. */
+export const ARK_EVENT_KINDS = ["arrived", "born", "revived", "died", "eaten"] as const;
+
+/** What changed in the step that ended at point `i` (the count there against the point before): each kind with any, as [kind, count]. */
+export function arkStepChanges(series: ArkSeries, i: number): Array<[(typeof ARK_EVENT_KINDS)[number], number]> {
+    return ARK_EVENT_KINDS.map((kind) => [kind, series[kind][i] ?? 0] as [(typeof ARK_EVENT_KINDS)[number], number]).filter(([, n]) => n > 0);
+}
+
 export type ArkSeriesStats = {
     now: number;
     start: number;

@@ -163,7 +163,22 @@
             "graphLabel": "{animal}的數量，{period}：從 {start} 到 {now}",
             "arkDays": "Ark 日 {from}–{to}",
             "recordStarts": "紀錄始於 {date}",
-            "pointAt": "{time}：{count}"
+            "pointAt": "{time}：{count}",
+            "whole": "整個 Ark 共 {count} 隻",
+            "placeWild": "野外 {count} 隻",
+            "placeHomes": "家庭 {count} 隻",
+            "placeFarms": "農場 {count} 隻",
+            "placeTown": "小鎮野生動物 {count} 隻",
+            "placeZoo": "動物園 {count} 隻",
+            "thisAlone": "這隻：{where}獨自一隻",
+            "thisOneOf": "這隻：{where}{count} 隻中的 1 隻",
+            "whereWild": "在野生島上",
+            "whereHomes": "在家庭中",
+            "whereFarms": "在農場裡",
+            "whereTown": "在小鎮野生動物中",
+            "whereZoo": "在動物園自己的圍欄裡",
+            "breedsSamePlace": "只與同一地點的其他個體繁殖。",
+            "riseFall": "上升：透過照片登船或出生的動物。下降：死亡或被捕食的動物。"
         },
         "story": {
             "generic": "在奏效的一步之後登船",

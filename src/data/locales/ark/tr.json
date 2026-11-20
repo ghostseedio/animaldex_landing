@@ -163,7 +163,22 @@
             "graphLabel": "{animal} nüfusu, {period}: {start} ile {now} arası",
             "arkDays": "Ark günleri {from}–{to}",
             "recordStarts": "Kayıt {date} tarihinde başlıyor",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "Tüm Ark'ta {count}",
+            "placeWild": "{count} doğada",
+            "placeHomes": "{count} evlerde",
+            "placeFarms": "{count} çiftliklerde",
+            "placeTown": "{count} kasabanın yaban hayatında",
+            "placeZoo": "{count} hayvanat bahçesinde",
+            "thisAlone": "Bu hayvan: {where} tek başına",
+            "thisOneOf": "Bu hayvan: {where} {count} hayvandan biri",
+            "whereWild": "vahşi adada",
+            "whereHomes": "evlerde",
+            "whereFarms": "çiftliklerde",
+            "whereTown": "kasabanın yaban hayatı arasında",
+            "whereZoo": "hayvanat bahçesindeki kendi bölmesinde",
+            "breedsSamePlace": "Yalnızca aynı yerdeki diğerleriyle ürer.",
+            "riseFall": "Yukarı: fotoğraflardan gemiye gelen veya doğan hayvanlar. Aşağı: ölen veya yenilen hayvanlar."
         },
         "story": {
             "generic": "İşe yarayan bir adımın ardından gemiye bindi",

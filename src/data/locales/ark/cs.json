@@ -163,7 +163,22 @@
             "graphLabel": "Populace druhu {animal}, {period}: od {start} do {now}",
             "arkDays": "Dny Ark {from}–{to}",
             "recordStarts": "Záznam začíná {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} v celé Ark",
+            "placeWild": "{count} divokých",
+            "placeHomes": "{count} v domácnostech",
+            "placeFarms": "{count} na farmách",
+            "placeTown": "{count} mezi divokými zvířaty ve městě",
+            "placeZoo": "{count} v zoo",
+            "thisAlone": "Toto zvíře: samo {where}",
+            "thisOneOf": "Toto zvíře: 1 z {count} {where}",
+            "whereWild": "na divokém ostrově",
+            "whereHomes": "v domácnostech",
+            "whereFarms": "na farmách",
+            "whereTown": "mezi divokými zvířaty ve městě",
+            "whereZoo": "ve svém výběhu v zoo",
+            "breedsSamePlace": "Množí se jen s ostatními na stejném místě.",
+            "riseFall": "Nahoru: zvířata dovezená na palubu z fotek, nebo narozená. Dolů: zvířata, která uhynula nebo byla sežrána."
         },
         "story": {
             "generic": "Nastoupilo po kroku, který fungoval",

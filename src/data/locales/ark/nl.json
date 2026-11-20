@@ -163,7 +163,22 @@
             "graphLabel": "Populatie {animal}, {period}: van {start} tot {now}",
             "arkDays": "Ark-dagen {from}–{to}",
             "recordStarts": "Het logboek begint op {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} in de hele Ark",
+            "placeWild": "{count} in het wild",
+            "placeHomes": "{count} in huizen",
+            "placeFarms": "{count} op boerderijen",
+            "placeTown": "{count} bij de wilde dieren van de stad",
+            "placeZoo": "{count} in de dierentuin",
+            "thisAlone": "Dit dier: alleen {where}",
+            "thisOneOf": "Dit dier: 1 van {count} {where}",
+            "whereWild": "op het wilde eiland",
+            "whereHomes": "in huizen",
+            "whereFarms": "op boerderijen",
+            "whereTown": "tussen de wilde dieren van de stad",
+            "whereZoo": "in zijn dierentuinverblijf",
+            "breedsSamePlace": "Plant zich alleen voort met andere dieren op dezelfde plek.",
+            "riseFall": "Omhoog: dieren die via foto's aan boord kwamen, of werden geboren. Omlaag: dieren die stierven of werden opgegeten."
         },
         "story": {
             "generic": "Kwam aan boord na een stap die werkte",

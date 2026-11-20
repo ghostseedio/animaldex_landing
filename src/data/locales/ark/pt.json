@@ -163,7 +163,22 @@
             "graphLabel": "População de {animal}, {period}: de {start} a {now}",
             "arkDays": "Dias da Ark {from}–{to}",
             "recordStarts": "O registro começa em {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} em toda a Ark",
+            "placeWild": "{count} selvagens",
+            "placeHomes": "{count} em casas",
+            "placeFarms": "{count} em fazendas",
+            "placeTown": "{count} na fauna da cidade",
+            "placeZoo": "{count} no zoológico",
+            "thisAlone": "Este: sozinho {where}",
+            "thisOneOf": "Este: 1 de {count} {where}",
+            "whereWild": "na ilha selvagem",
+            "whereHomes": "em casas",
+            "whereFarms": "em fazendas",
+            "whereTown": "entre a fauna da cidade",
+            "whereZoo": "no seu recinto do zoológico",
+            "breedsSamePlace": "Só se reproduz com outros do mesmo lugar.",
+            "riseFall": "Sobe: animais trazidos a bordo por fotos, ou nascidos. Desce: animais que morreram ou foram comidos."
         },
         "story": {
             "generic": "Embarcou depois de um passo que funcionou",

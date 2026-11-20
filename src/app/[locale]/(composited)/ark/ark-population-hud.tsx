@@ -45,6 +45,8 @@ const ROWS_STEP = 40;
 
 const GLASS = "border border-white/[0.14] bg-[rgba(14,20,14,0.72)] text-[#fffcf4] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.55)] backdrop-blur-xl";
 const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#c8fa63]";
+/** The panel's round icon buttons (share, hide). */
+const ROUND = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white md:h-8 md:w-8";
 const UP = "text-[#86e08f]";
 const DOWN = "text-[#ff8a7a]";
 
@@ -65,6 +67,8 @@ type Props = {
     locale: string;
     /** The species of the selected animal (or herd), highlighted. */
     selectedKey: string | null;
+    /** The selected animal itself (not a herd): the graph says where it stands among its kind. */
+    selectedId?: string;
     /** Species drawn as a herd (A14). */
     herdKeys: ReadonlySet<string>;
     /** The species of the newest arrival, while its notice shows. */
@@ -105,7 +109,7 @@ function Caret({up}: {up: boolean}) {
     );
 }
 
-export default function ArkPopulationHud({snapshot, counts, listed, scope, then, totalThen, words, locale, selectedKey, herdKeys, arrivalKey, onSpecies, filters = null, shareLocalePath = "/ark", populationUrl = POPULATION_URL}: Props) {
+export default function ArkPopulationHud({snapshot, counts, listed, scope, then, totalThen, words, locale, selectedKey, selectedId, herdKeys, arrivalKey, onSpecies, filters = null, shareLocalePath = "/ark", populationUrl = POPULATION_URL}: Props) {
     arkPerfCountRender();
     const hud = words.hud;
     const lostWords = useMemo(() => arkLostWords(words.lost), [words.lost]);
@@ -198,6 +202,7 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
         return () => observer.disconnect();
     }, [shownRows.length, ordered.length]);
     const ceiling = useMemo(() => arkBarCeiling(rows[0]?.count ?? 0), [rows]);
+    const where = {snapshot, selectedKey, selectedId, scope, locale};
     const number = (value: number) => value.toLocaleString(locale);
     const total = snapshot ? arkTotalChange(snapshot.animals.length, totalThen, "both") : null;
     const totalSaid = arkChangeText(total, locale);
@@ -279,7 +284,7 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                             })}
                             label={words.share.shareArk}
                             copied={words.share.copied}
-                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white disabled:opacity-60 md:h-8 md:w-8 ${FOCUS}`}
+                            className={`${ROUND} disabled:opacity-60 ${FOCUS}`}
                         />
                         <button
                             type="button"
@@ -288,7 +293,7 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                             aria-controls={panelId}
                             aria-label={hud.hide}
                             title={hud.hide}
-                            className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white md:h-8 md:w-8 ${FOCUS}`}
+                            className={`${ROUND} ${FOCUS}`}
                         >
                             <Caret up />
                         </button>
@@ -297,9 +302,9 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                     {filters ? <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">{filters}</div> : null}
 
                     {/* Population over time (once the record's read answers): the order and the period the lines cover. */}
-                    {graph && history && !graphKey ? <graph.ArkHudControls mode={mode} onMode={(next) => { setMode(next); listRef.current?.scrollTo({top: 0}); }} period={period} onPeriod={setPeriod} /> : null}
+                    {graph && history && !graphKey ? <graph.ArkHudControls mode={mode} onMode={(next) => { setMode(next); listRef.current?.scrollTo({top: 0}); }} period={period} onPeriod={setPeriod} ctx={where} /> : null}
 
-                    {graph && history && graphKey ? <graph.ArkHudGraphPane history={history} graphKey={graphKey} rows={rowByKey} line={lines.get(graphKey)} period={period} onPeriod={setPeriod} onBack={() => setGraphKey(null)} onFly={(row) => { setGraphKey(null); pick(row); }} locale={locale} /> : null}
+                    {graph && history && graphKey ? <graph.ArkHudGraphPane history={history} graphKey={graphKey} rows={rowByKey} line={lines.get(graphKey)} period={period} onPeriod={setPeriod} onBack={() => setGraphKey(null)} onFly={(row) => { setGraphKey(null); pick(row); }} locale={locale} ctx={where} /> : null}
 
                     {/* Every species, biggest first: about a dozen in view, the rest scroll inside the panel. */}
                     <ul ref={listRef} aria-label={hud.listLabel} hidden={Boolean(graph && history && graphKey)} className="relative max-h-[46svh] min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] py-1 [scrollbar-width:thin] md:max-h-[28rem]">

@@ -163,7 +163,22 @@
             "graphLabel": "Populația ({animal}), {period}: de la {start} la {now}",
             "arkDays": "Zilele Ark {from}–{to}",
             "recordStarts": "Evidența începe pe {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} în toată Ark",
+            "placeWild": "{count} sălbatice",
+            "placeHomes": "{count} în case",
+            "placeFarms": "{count} în ferme",
+            "placeTown": "{count} în fauna orașului",
+            "placeZoo": "{count} la grădina zoologică",
+            "thisAlone": "Acesta: singur {where}",
+            "thisOneOf": "Acesta: 1 din {count} {where}",
+            "whereWild": "pe insula sălbatică",
+            "whereHomes": "în case",
+            "whereFarms": "în ferme",
+            "whereTown": "printre animalele sălbatice ale orașului",
+            "whereZoo": "în țarcul lui de la grădina zoologică",
+            "breedsSamePlace": "Se înmulțește doar cu alții din același loc.",
+            "riseFall": "Sus: animale urcate la bord din fotografii sau născute. Jos: animale care au murit sau au fost mâncate."
         },
         "story": {
             "generic": "A urcat la bord după un pas care a mers",

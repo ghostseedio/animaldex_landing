@@ -163,7 +163,22 @@
             "graphLabel": "Πληθυσμός {animal}, {period}: από {start} έως {now}",
             "arkDays": "Ημέρες Ark {from}–{to}",
             "recordStarts": "Το αρχείο ξεκινά στις {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} σε ολόκληρη την Ark",
+            "placeWild": "{count} άγρια",
+            "placeHomes": "{count} σε σπίτια",
+            "placeFarms": "{count} σε φάρμες",
+            "placeTown": "{count} στην άγρια ζωή της πόλης",
+            "placeZoo": "{count} στον ζωολογικό κήπο",
+            "thisAlone": "Αυτό το ζώο: μόνο του {where}",
+            "thisOneOf": "Αυτό το ζώο: 1 από {count} {where}",
+            "whereWild": "στο άγριο νησί",
+            "whereHomes": "σε σπίτια",
+            "whereFarms": "σε φάρμες",
+            "whereTown": "ανάμεσα στην άγρια ζωή της πόλης",
+            "whereZoo": "στον χώρο του στον ζωολογικό κήπο",
+            "breedsSamePlace": "Αναπαράγεται μόνο με άλλα στο ίδιο μέρος.",
+            "riseFall": "Άνοδος: ζώα που ανέβηκαν στο σκάφος από φωτογραφίες ή γεννήθηκαν. Πτώση: ζώα που πέθαναν ή φαγώθηκαν."
         },
         "story": {
             "generic": "Ανέβηκε στο σκάφος μετά από ένα βήμα που πέτυχε",

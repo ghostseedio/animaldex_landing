@@ -20,7 +20,8 @@ import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 // popgraph: population over time (owner, 2026-11-17), from the server's record.
 import type {ArkGraphWords} from "@/lib/ark-graph-words";
 import {arkHistoryLines, arkPeriodSpan, readArkHistory, type ArkHistory, type ArkLine, type ArkPeriod} from "@/lib/ark-population-history";
-import {buildGraphPane, drawControls, drawPeriodChange, drawSpark, makeSparkButton, type ArkSortMode} from "@/ark-scene/live/bars-graph";
+import {buildGraphPane, drawControls, drawPeriodChange, drawSpark, drawWhere, makeSparkButton, type ArkSortMode} from "@/ark-scene/live/bars-graph";
+import {arkKindWhere} from "@/lib/ark-kind-where";
 
 const FONT = "var(--font-sans, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif)";
 const GLASS = {background: "rgba(14, 20, 14, 0.72)", backdropFilter: "blur(12px)", border: "1px solid rgba(255, 255, 255, 0.14)", color: "rgba(255, 252, 244, 0.96)"};
@@ -137,6 +138,8 @@ export class ArkBarsView {
     private lines = new Map<string, ArkLine>();
     private order: string[] = [];
     private readonly controls: HTMLDivElement;
+    /** Where the selected animal's kind lives and where it stands among its own (shown while an animal is selected). */
+    private readonly whereBox: HTMLDivElement;
     private readonly none: HTMLParagraphElement;
     private graphPane: HTMLDivElement | null = null;
 
@@ -234,7 +237,9 @@ export class ArkBarsView {
         Object.assign(controls.style, {display: "none", flexWrap: "wrap", alignItems: "center", gap: "6px", padding: "0 14px 10px"});
         const none = document.createElement("p");
         Object.assign(none.style, {display: "none", margin: "0", padding: "12px 14px", font: `500 12px/1.3 ${FONT}`, opacity: "0.55", borderTop: "1px solid rgba(255, 255, 255, 0.08)"});
-        panel.append(head, controls, none, list, lost);
+        const whereBox = document.createElement("div");
+        Object.assign(whereBox.style, {display: "none", padding: "8px 14px", borderTop: "1px solid rgba(255, 255, 255, 0.08)"});
+        panel.append(head, controls, whereBox, none, list, lost);
 
         root.append(chip, panel);
         host.appendChild(root);
@@ -255,6 +260,7 @@ export class ArkBarsView {
         this.lostCount = lostCount;
         this.lostBody = lostBody;
         this.controls = controls;
+        this.whereBox = whereBox;
         this.none = none;
         this.applyCollapsed();
     }
@@ -395,6 +401,8 @@ export class ArkBarsView {
     setSelected(id: string | null) {
         this.selectedId = id;
         if (this.snapshot) this.drawSelected();
+        // An open graph says where the tapped animal stands among its kind.
+        if (this.graphKey && this.snapshot) this.drawGraph();
     }
 
     update(snapshot: ArkSnapshot) {
@@ -637,6 +645,7 @@ export class ArkBarsView {
             period: this.period,
             locale: this.options.locale,
             words: this.options.words.graph,
+            where: arkKindWhere(this.snapshot, key, this.selectedId),
             onPeriod: (period) => this.setGraphState({period}),
             onBack: () => this.setGraphState({graphKey: null}),
             onFly: species ? () => {
@@ -658,6 +667,8 @@ export class ArkBarsView {
             if (selected) row.button.setAttribute("aria-current", "true");
             else row.button.removeAttribute("aria-current");
         });
+        // The strip says where the selected animal's kind is (the list's counts are the whole Ark's; the chart is too).
+        drawWhere(this.whereBox, key && !this.graphKey ? arkKindWhere(this.snapshot, key, animal?.id ?? null) : null, this.options.words.graph, this.options.locale, {name: true, rule: "alone"});
     }
 
     private pick(key: string) {
