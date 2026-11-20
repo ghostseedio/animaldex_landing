@@ -5,7 +5,7 @@
  * Chromium (playwright-core, Apache-2.0, an existing dev dependency) through each clip frame by frame on the page's
  * controlled clock: frames (jpg), a video (mp4, the system's ffmpeg) and a contact sheet per clip.
  *
- *   node scripts/ark-recipe-clips.mjs --out <dir> [--clips kingfisher,stags,murmuration,nest,heron,osprey] [--width 960 --height 540]
+ *   node scripts/ark-recipe-clips.mjs --out <dir> [--clips kingfisher,stags,murmuration,nest,heron,osprey,drop_shrike,roost_wave,...] [--width 960 --height 540]
  */
 import {execFileSync} from "node:child_process";
 import {createServer} from "node:http";
@@ -86,13 +86,17 @@ for (const clip of clips) {
     rmSync(dir, {recursive: true, force: true});
     mkdirSync(dir, {recursive: true});
     const {start, seconds, step} = info.moment;
-    const n = Math.round(seconds / step);
+    // (Frames at stated times where uniform steps would miss a second-long move: signature wave 2, birds.)
+    const times = info.moment.times ?? Array.from({length: Math.round(seconds / step)}, (_, i) => start + i * step);
+    const n = times.length;
     for (let i = 0; i < n; i++) {
-        const t = start + i * step;
-        await page.evaluate(async ({t, label}) => {
+        const t = times[i];
+        await page.evaluate(async ({t, label, lead}) => {
+            // (Frames at stated times: the scene's smoothing is walked into each by a few small steps first.)
+            if (lead) for (const d of [0.45, 0.3, 0.15]) await window.__clip.at(t - d);
             await window.__clip.at(t);
             document.getElementById("note").textContent = label;
-        }, {t, label: `${clip}   world +${(i * step).toFixed(2)} s`});
+        }, {t, label: `${clip}   world +${(t - start).toFixed(2)} s`, lead: Boolean(info.moment.times)});
         await page.screenshot({path: path.join(dir, `${String(i).padStart(4, "0")}.jpg`), type: "jpeg", quality: 85});
     }
     if (clip === "nest") {
@@ -106,10 +110,11 @@ for (const clip of clips) {
             await page.screenshot({path: path.join(dir, `stage-${d}.jpg`), type: "jpeg", quality: 88});
         }
     }
-    const fps = Math.round(1 / step);
+    const fps = Math.max(Math.round(1 / step), 1);
     execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(Math.min(fps, 24)), "-i", path.join(dir, "%04d.jpg"), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", path.join(out, `${clip}.mp4`)]);
     // Contact sheet: 12 frames spread through the clip.
     const pick = Array.from({length: 12}, (_, k) => Math.min(Math.round((k / 11) * (n - 1)), n - 1));
+    if (n < 12) pick.splice(n, 12 - n, ...Array.from({length: 12 - n}, () => n - 1));
     const sheetIn = pick.flatMap((k) => ["-i", path.join(dir, `${String(k).padStart(4, "0")}.jpg`)]);
     execFileSync("ffmpeg", ["-y", "-loglevel", "error", ...sheetIn, "-filter_complex", `${pick.map((_, k) => `[${k}:v]scale=480:-1[v${k}]`).join(";")};${pick.map((_, k) => `[v${k}]`).join("")}xstack=inputs=12:layout=${[0, 1, 2, 3].flatMap((r) => [0, 1, 2].map((c) => `${c === 0 ? "0" : c === 1 ? "w0" : "w0+w1"}_${r === 0 ? "0" : r === 1 ? "h0" : r === 2 ? "h0+h1" : "h0+h1+h2"}`)).join("|")}`, path.join(out, `${clip}-sheet.jpg`)]);
     await context.close();
