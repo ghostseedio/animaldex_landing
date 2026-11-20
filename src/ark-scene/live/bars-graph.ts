@@ -111,7 +111,7 @@ export function drawControls(host: HTMLElement, mode: ArkSortMode, onMode: (mode
     );
 }
 
-/** One species' graph pane: back, name and count, period switch, the line, its numbers, and "Show in the Ark". */
+/** One species' graph pane: back, name and count, period switch, the line, its numbers, and the fly-to button. */
 export function buildGraphPane(options: {
     history: ArkHistory;
     name: string;

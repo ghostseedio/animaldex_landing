@@ -73,3 +73,19 @@ test("the graphs' words: /ark's HUD holds only the provider; the English and the
     const context = readFileSync(path.join(root, "app/[locale]/(composited)/ark/ark-graph-context.ts"), "utf8");
     assert.ok(!/ARK_GRAPH_ENGLISH|ark-graph-words"/.test(context.replace(/import type[^;]*;/g, "")), "the context module carries no English");
 });
+
+test("the graphs' words: neither graph (the page's, the apps' embed bars) says an English word of its own", () => {
+    const root = path.join(__dirname, "..");
+    const sources = {
+        "ark-population-graph.tsx": readFileSync(path.join(root, "app/[locale]/(composited)/ark/ark-population-graph.tsx"), "utf8"),
+        "bars-graph.ts": readFileSync(path.join(root, "ark-scene/live/bars-graph.ts"), "utf8"),
+        "bars-view.ts": readFileSync(path.join(root, "ark-scene/live/bars-view.ts"), "utf8")
+    };
+    for (const text of Object.values(flat(ARK_GRAPH_ENGLISH)).filter((one) => one.length > 5)) {
+        for (const [file, source] of Object.entries(sources)) assert.ok(!source.includes(`"${text}"`), `${file} has "${text}" written out`);
+    }
+    // The embed hands the page's words (or English key by key) to the bars.
+    const live = readFileSync(path.join(root, "ark-scene/live/index.ts"), "utf8");
+    assert.match(live, /graph: arkGraphWords\(words\?\.graph\)/);
+    assert.match(readFileSync(path.join(root, "ark-scene/live/bars-view.ts"), "utf8"), /words\.graph/);
+});
