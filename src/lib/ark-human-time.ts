@@ -91,7 +91,9 @@ export function arkHumanAgo(at: number, now: number, locale = "en", style: "long
     return format ? format.format(-n, unit) : `${n} ${ENGLISH_UNIT[unit]} ago`;
 }
 
-/** The chance's horizon (one Ark year) in real time: "2 weeks". */
+/** One Ark year in real time, in weeks ("2 weeks"): the chance's horizon and how-it-works' one explainer. */
 export function arkHumanYear(locale = "en"): string {
-    return arkHumanDays(365, 365, locale);
+    const weeks = Math.max(1, Math.round(arkDaysToMs(365) / WEEK_MS));
+    const format = unitFormat(locale, "week", "long");
+    return format ? format.format(weeks) : `${weeks} ${ENGLISH_UNIT.week}`;
 }

@@ -103,7 +103,7 @@ import {arkPageSummary} from "@/lib/ark-page-summary";
  * The page stays dynamic for its query (`?focus=` cards, `?lang=`), but its render is cheap.
  */
 
-type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; follow?: string; arrival?: string; hour?: string; since?: string; publicStory?: string; record?: string; replay?: string; lite?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; feed?: string; hearts?: string}};
+type Props = {params: {locale: string}; searchParams: {fixture?: string; snapshot?: string; islands?: string; island?: string; focus?: string; follow?: string; arrival?: string; hour?: string; since?: string; publicStory?: string; record?: string; replay?: string; lite?: string; lang?: string; rig?: string; rigv?: string; models?: string; founders?: string; lifespans?: string; feed?: string; hearts?: string}};
 
 type FixtureMode = "full" | "early" | "grow" | "sizes" | "micro" | "layers" | "herd1000" | "herd5" | "placeholder" | "eggs";
 
@@ -226,17 +226,19 @@ function arkPageJsonLd(input: {locale: string; title: string; description: strin
     ];
 }
 
-async function loadFixture(mode: FixtureMode, founders: boolean): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null; founders: ArkFounders}> {
+async function loadFixture(mode: FixtureMode, founders: boolean, lifespans = false): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null; founders: ArkFounders}> {
     const named = founders ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounders : null;
-    const read = await loadFixtureSnapshot(mode, named);
+    const read = await loadFixtureSnapshot(mode, named, lifespans);
     return {...read, founders: read.raw ? arkFoundersOf(read.raw) : ARK_NO_FOUNDERS};
 }
 
-async function loadFixtureSnapshot(mode: FixtureMode, named: (<T>(raw: T) => T) | null): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null; raw: unknown}> {
+async function loadFixtureSnapshot(mode: FixtureMode, named: (<T>(raw: T) => T) | null, lifespans = false): Promise<{snapshot: ArkSnapshot; full: ArkSnapshot | null; raw: unknown}> {
     // The fixtures are the server's answers verbatim (scripts/ark-life-fixtures-from-server.mts): decoded as the live ones are.
     // Captures + thrive: with the frozen contract's `thrive`, `area` and `source` laid on (`lib/ark-thrive-fixture`).
     const {withArkThriveFixture} = await import("@/lib/ark-thrive-fixture");
-    const base = withArkThriveFixture((await import("@/ark-scene/fixtures/snapshot-v2.json")).default);
+    const thrived = withArkThriveFixture((await import("@/ark-scene/fixtures/snapshot-v2.json")).default);
+    // `&lifespans=1`: the kinds whose field guide gives a lifespan carry it, so a card shows its life bar (lib/ark-life-fixture).
+    const base = lifespans ? (await import("@/lib/ark-life-fixture")).withArkLifeFixture(thrived) : thrived;
     // Founders (on unless `&founders=0`): the same answer as names-on writes it.
     const raw = named ? named(base) : base;
     if (EDGE_MODES.has(mode)) {
@@ -510,7 +512,7 @@ export default async function ArkPage({params, searchParams}: Props) {
     // The live Ark: the public read from the data cache (decision 246); the visitor's own (`mine`) only for the recorder.
     const [{words, talk, language}, data, arrivals, navWords] = await Promise.all([
         getArkWords(locale, langOf(searchParams)),
-        mode ? loadFixture(mode, fixtureFounders).then((fixture) => ({fixture, read: null, shared: null}))
+        mode ? loadFixture(mode, fixtureFounders, searchParams.lifespans === "1").then((fixture) => ({fixture, read: null, shared: null}))
             : local ? Promise.resolve({fixture: null, read: null, shared: null})
             : record ? readArkVoyage().then((read) => ({fixture: null, read, shared: null}))
             : readPublicArk(PUBLIC_REVALIDATE_SECONDS).then((shared) => ({fixture: null, read: null, shared})),

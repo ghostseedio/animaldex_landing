@@ -100,7 +100,7 @@ export default async function ArkHowItWorksView({locale, lang}: {locale: string;
                         {how.cta} <span aria-hidden="true" className="rtl:rotate-180">→</span>
                     </Link>
                     <Link href="/ark/food-chain" className="inline-flex min-h-12 items-center rounded-full border border-white/15 px-5 text-[15px] font-bold text-white transition-colors hover:border-primary-300">{word(page, "ctaFoodChain")}</Link>
-                    <StoreLinks className="!mt-0" />
+                    <StoreLinks variant="text" className="!mt-0 !justify-start ms-2 !gap-x-5" />
                 </div>
 
                 {/* Every rule in full (the page's own words): folded away, the same facts as the pictures. */}

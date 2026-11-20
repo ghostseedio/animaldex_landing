@@ -8,7 +8,7 @@ import {ARK_POWER_ENGLISH, fillArkWords, type ArkPowerWords} from "@/lib/ark-wor
 
 /**
  * The tapped card's Animal Power tile (lane ARK-SIMPLE, owner 2026-11-20: "add the animal's lesson / power"): its kind's
- * Animal Power, the catalog's name and one-line lesson (`/api/ark/species-card`, the row the apps and Talk read), linked
+ * Animal Power, the catalog's name and one-line lesson (English only in the catalog today, so marked lang="en") (`/api/ark/species-card`, the row the apps and Talk read), linked
  * to its Talk page, where a Power is earned. Powers you can see (decision 420) ride on it as a sign, not a sentence: a
  * tick when its survival Power (`power-table.ts`) is working (prime) or partly (good), its words in the tooltip. Lazy
  * (the table loads with the first card that asks), so /ark's static JavaScript stays inside its budget.
@@ -43,8 +43,8 @@ export default function ArkCardPower({animal, band, words, power, label = "Anima
                     </span>
                 ) : null}
             </span>
-            <span dir="auto" className="mt-1 block truncate font-display text-[16px] font-extrabold leading-tight text-white md:text-[17px]">{power.name}</span>
-            {power.lesson ? <span dir="auto" className="mt-0.5 line-clamp-2 block text-[12.5px] leading-snug text-ink-200">{power.lesson}</span> : null}
+            <span lang="en" dir="auto" className="mt-1 block truncate font-display text-[16px] font-extrabold leading-tight text-white md:text-[17px]">{power.name}</span>
+            {power.lesson ? <span lang="en" dir="auto" className="mt-0.5 line-clamp-2 block text-[12.5px] leading-snug text-ink-200">{power.lesson}</span> : null}
         </>
     );
     const className = "group block min-w-0 self-start rounded-2xl border border-primary-300/25 bg-[linear-gradient(135deg,rgba(200,250,99,0.13),rgba(255,255,255,0.03)_60%)] px-3.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]";

@@ -67,12 +67,9 @@ export default function ArkIntro({words, counts, locale, howHref}: {
                 {/*
                   * The thriving / declining ticker (owner 2026-11-20: it replaced "Latest aboard"): drawn into this slot by the
                   * panel once the population record is read (`ArkHudTicker`, lazily), so the page's first JavaScript is unchanged
-                  * and the band keeps its height. A quiet label before it says what it is.
+                  * and the band keeps its height. Its list carries its own label for screen readers.
                   */}
-                <div className="flex h-7 min-w-0 items-center gap-3 [grid-area:latest]">
-                    <span aria-hidden="true" className="flex shrink-0 items-center gap-1 text-[10.5px] font-bold uppercase tracking-[0.16em] text-ink-400">
-                        <span className="text-[#86e08f]">▲</span><span className="text-[#ff8a7a]">▼</span>
-                    </span>
+                <div className="flex h-7 min-w-0 items-center [grid-area:latest]">
                     <div id="ark-ticker" className="flex min-w-0 flex-1 items-center" />
                 </div>
             </div>

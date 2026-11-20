@@ -23,7 +23,7 @@ export const ARK_HOW_ENGLISH: ArkHowWords = {
     babies: "Babies",
     babiesCaption: "Two grown-ups of a kind, in the same place, with food: babies!",
     time: "Fast time",
-    timeCaption: "A year on the Ark is 2 weeks for you. Animals grow up and grow old.",
+    timeCaption: "Animals live fast here: a year passes in 2 weeks.",
     fair: "Nobody picks",
     fairCaption: "No one decides who lives. Only the rules, the same for everyone.",
     cta: "Open the Ark",
@@ -179,7 +179,7 @@ function Babies() {
     );
 }
 
-function Time({words, twoWeeks}: {words: ArkHowWords; twoWeeks: string}) {
+function Time({twoWeeks}: {twoWeeks: string}) {
     return (
         <div className={`${STAGE} flex items-center justify-center gap-[6%]`}>
             <svg viewBox="0 0 120 120" className="h-[70%] w-auto" aria-hidden="true">
@@ -188,11 +188,10 @@ function Time({words, twoWeeks}: {words: ArkHowWords; twoWeeks: string}) {
                 <g className="ark-how-spin"><line x1="60" y1="60" x2="60" y2="20" stroke="#c8fa63" strokeWidth="4" strokeLinecap="round" /></g>
                 <circle cx="60" cy="60" r="5" fill="#c8fa63" />
             </svg>
-            <div className="flex flex-col items-center gap-1 text-center">
-                <span className="rounded-full bg-white/10 px-3 py-1 text-[13px] font-bold text-white">{words.arkYear}</span>
-                <span aria-hidden="true" className="text-[22px] font-black leading-none text-white/60">=</span>
-                <span className="rounded-full bg-primary-400 px-3 py-1 text-[15px] font-extrabold text-canvas-950">{twoWeeks}</span>
-                <span className="ark-how-grow mt-2 inline-flex"><Icon slug="african-bush-elephant" size={44} /></span>
+            {/* One explainer, no "Ark year" (owner 2026-11-20): a whole year of an animal's life fits in two of your weeks. */}
+            <div className="flex flex-col items-center gap-2 text-center">
+                <span className="ark-how-grow inline-flex"><Icon slug="african-bush-elephant" size={52} /></span>
+                <span className="rounded-full bg-primary-400 px-3.5 py-1 text-[15px] font-extrabold text-canvas-950">{twoWeeks}</span>
             </div>
         </div>
     );
@@ -200,14 +199,22 @@ function Time({words, twoWeeks}: {words: ArkHowWords; twoWeeks: string}) {
 
 function Fair() {
     return (
-        <div className={`${STAGE} flex items-center justify-center lg:aspect-[33/10]`}>
-            <svg viewBox="0 0 160 100" className="h-[78%] w-auto" aria-hidden="true">
+        // Big or small, the same rules: a rabbit and an elephant level on the scale, the whole cast beside it (wider screens).
+        <div className={`${STAGE} flex items-center justify-center gap-[7%] px-[5%] lg:aspect-[33/10]`}>
+            <div className="relative aspect-[16/10] h-[58%] shrink-0 lg:h-[80%]">
+                <span className="absolute left-[18.75%] top-[57%] -translate-x-1/2 -translate-y-full"><Icon slug="european-rabbit" size={40} /></span>
+                <span className="absolute left-[81.25%] top-[57%] -translate-x-1/2 -translate-y-full"><Icon slug="african-bush-elephant" size={40} /></span>
+            <svg viewBox="0 0 160 100" className="h-full w-full" aria-hidden="true">
                 <path d="M80 14v70M50 84h60" stroke="rgba(255,255,255,0.75)" strokeWidth="4" strokeLinecap="round" />
                 <path d="M30 30h100" stroke="rgba(255,255,255,0.75)" strokeWidth="4" strokeLinecap="round" />
                 <circle cx="80" cy="14" r="6" fill="#c8fa63" />
                 <path d="M30 30 16 58h28z M130 30l-14 28h28z" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="2.5" strokeLinejoin="round" />
                 <path d="M14 58a16 7 0 0 0 32 0z M114 58a16 7 0 0 0 32 0z" fill="#c8fa63" />
             </svg>
+            </div>
+            <div className="hidden grid-cols-4 gap-2.5 sm:grid">
+                {["red-fox", "plains-zebra", "golden-eagle", "meerkat", "african-lion", "domestic-goat", "great-white-shark", "house-sparrow"].map((slug) => <Icon key={slug} slug={slug} size={44} />)}
+            </div>
         </div>
     );
 }
@@ -221,7 +228,7 @@ export function arkHowSteps(words: ArkHowWords, twoWeeks: string): ArkHowStep[] 
         {id: "condition", title: words.thrive, caption: words.thriveCaption, picture: <Thrive />},
         {id: "food", title: words.food, caption: words.foodCaption, picture: <Food />},
         {id: "breeding", title: words.babies, caption: words.babiesCaption, picture: <Babies />},
-        {id: "seasons", title: words.time, caption: words.timeCaption, picture: <Time words={words} twoWeeks={twoWeeks} />},
+        {id: "seasons", title: words.time, caption: words.timeCaption, picture: <Time twoWeeks={twoWeeks} />},
         {id: "fair", title: words.fair, caption: words.fairCaption, picture: <Fair />}
     ];
 }

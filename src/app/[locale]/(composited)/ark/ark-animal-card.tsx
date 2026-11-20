@@ -18,7 +18,6 @@ import {arkIndexNumber, decodeArkSpeciesCard, type ArkSpeciesCard} from "@/lib/a
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 import type {ArkCapturePhoto} from "@/lib/ark-capture-photo";
 import {arkPhotoShownOn} from "@/lib/ark-photo-label";
-import {ArkRhythmLine, ArkRhythmPanel, useAnimalRhythm} from "@/app/[locale]/(composited)/ark/ark-rhythm";
 import {ArkLivesRow} from "@/app/[locale]/(composited)/ark/ark-lives";
 import {ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-card-focus";
 import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
@@ -221,10 +220,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     const status = useAnimalStatus(scene, animal.id);
     const [dayOpen, setDayOpen] = useState<string | null>(null);
     const dayShown = dayOpen === animal.id;
-    // Its rhythm against its kind's System Dynamics (lane ark-sd-align): a line under "now", the comparison on a tap.
-    const rhythm = useAnimalRhythm(scene, animal.id);
-    const [rhythmOpen, setRhythmOpen] = useState(false);
-    const rhythmNow = rhythm && rhythm !== "pending" ? rhythm : null;
+    // Its rhythm against System Dynamics is not on the card (owner 2026-11-20: jargon a new visitor cannot read).
     // Its log in the visitor's own time ("2 h ago"), said again each minute.
     const [minute, setMinute] = useState(() => Math.floor(Date.now() / 60_000));
     useEffect(() => {
@@ -362,7 +358,6 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         {snapshot ? <Suspense fallback={<div className="h-[2.6rem]" />}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense> : null}
                         {/* Release to the Wild (P1-8, behind the server's switch) and carers (decision 418), then who is around it: what it eats, what could hunt it, its mates, as icons (lane ark-relation-lines; no fallback is React 18's null). */}
                         <Suspense><ArkTimeLeft release={Link} animal={animal} words={words} locale={locale} day={arkDay} scene={scene} snapshot={snapshot} /></Suspense>
-                        {rhythmNow ? <ArkRhythmLine rhythm={rhythmNow} open={rhythmOpen} onToggle={() => setRhythmOpen((v) => !v)} /> : null}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} /> : null}
                         {placeholder ? <p className="text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
                         {/* The last of its kind aboard (the server's last_of_kind), or a lone founder (decision 389): it ages out honestly unless another is caught. */}
@@ -391,7 +386,6 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         <ArkItsDay id={animal.id} scene={scene} words={words} locale={locale} onClose={() => setDayOpen(null)} />
                     </Suspense>
                 ) : null}
-                {rhythmNow && rhythmOpen && !storyOpen ? <ArkRhythmPanel rhythm={rhythmNow} speciesProfileId={animal.species_profile_id} talkHref={placeholder ? null : `/talk/${animal.model_slug}`} /> : null}
                 {storyOpen ? <ArkLifeStory animal={animal} life={life} state={state} facts={facts} words={words} locale={locale} rest={restWords} /> : null}
 
                 <div className="mt-2.5 flex items-center gap-1.5 sm:gap-2 md:hidden">{moves}</div>

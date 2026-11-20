@@ -217,7 +217,8 @@ export default function ArkRelationsPanel({animal, snapshot, scene, words, local
             {children}
         </div>
     );
-    const none = <span aria-hidden="true" className="text-[12px] text-ink-500">—</span>;
+    // An empty row is hidden, not a dash (owner 2026-11-20).
+    const eatsAny = Boolean(chain.eats.length || chain.ambient.length || dung);
     const others = (["partner", "eggs", "eggThreat"] as const).filter((kind) => value[kind].all.length);
     return (
         <section data-testid="ark-card-relations" aria-label={w.title} title={w.note} className="min-w-0">
@@ -229,15 +230,14 @@ export default function ArkRelationsPanel({animal, snapshot, scene, words, local
                 </p>
             ) : (
                 <div data-testid="ark-card-food-chain" className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-                    {group("eats", "prey", w.eats, (
+                    {eatsAny ? group("eats", "prey", w.eats, (
                         <>
                             {capped("eats", chain.eats)}
                             {chain.ambient.map((phrase) => <span key={phrase} className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] text-ink-200">{phrase}</span>)}
                             {dung ? <span data-testid="ark-card-eats-dung" className="rounded-full bg-white/[0.06] px-2 py-0.5 text-[11.5px] text-ink-200">{w.dung}</span> : null}
-                            {!chain.eats.length && !chain.ambient.length && !dung ? none : null}
                         </>
-                    ))}
-                    {group("eatenBy", "predator", w.eatenBy, chain.eatenBy.length ? capped("eatenBy", chain.eatenBy) : none)}
+                    )) : null}
+                    {chain.eatenBy.length ? group("eatenBy", "predator", w.eatenBy, capped("eatenBy", chain.eatenBy)) : null}
                     {others.map((kind) => group(kind, kind, w[kind], one(kind)))}
                 </div>
             )}
