@@ -113,6 +113,11 @@ export function holdsItsGround(slug: string | null | undefined): boolean {
     const spec = defenceMoveOf(slug);
     return Boolean(spec && !RUNS.has(spec.move) && !spec.cornered);
 }
+/** SIG-DEFENCE: its move is made running (a tail dropped, a tail flagged): the reactive layer's `escapes`. */
+export function escapesRunning(slug: string | null | undefined): boolean {
+    const move = defenceMoveOf(slug)?.move;
+    return move === "tail" || move === "flag";
+}
 /** Moves made while it runs, or before it runs (the thump): never held through a predator's coming. */
 const RUNS = new Set<DefenceMove>(["tail", "flag", "thump"]);
 
@@ -494,7 +499,7 @@ export const DEFENCE_VERTEX = `
         float pz = mix(dz0 + dLen * 0.32, dz0 + dLen * 0.22, upright);
         float w = smoothstep(pz - dLen * 0.05, pz + dLen * 0.12, transformed.z);
         float legs = (1.0 - smoothstep(dy0, dy0 + dHigh * 0.45, transformed.y)) * smoothstep(dMid, dz1, transformed.z) * (1.0 - upright);
-        float ang = ease * mix(0.62, 1.2, upright) * w * (1.0 + 0.7 * legs);
+        float ang = ease * mix(0.5, 1.2, upright) * w * (1.0 + 0.7 * legs);
         float ry = transformed.y - dy0;
         float rz = transformed.z - pz;
         float rc = cos(ang);
@@ -523,17 +528,18 @@ export const DEFENCE_VERTEX = `
         float low = 1.0 - smoothstep(dy0 + dHigh * 0.1, dy0 + dHigh * 0.4, transformed.y);
         float sideF = mix(1.0, smoothstep(-0.05, 0.25, transformed.x / max(arkDefSpan, 0.001)), fore);
         transformed.y += defA * lift * alongF * sideF * (low * dHigh * mix(0.16, 0.24, fore) + (1.0 - fore) * (1.0 - low) * dHigh * 0.06);
-    } else if (defK > 22.5 && defK < 23.5 && tailLength > 0.0 && transformed.z < tailBaseZ + tailLength * 0.15 && abs(transformed.y - arkTailBaseY) < tailLength * 1.4) {
-        // SIG-DEFENCE: the tail flagged as it runs: turned straight up about its base, its white showing (aux: the colour).
-        float into = clamp((tailBaseZ + tailLength * 0.15 - transformed.z) / (tailLength * 1.15), 0.0, 1.0);
-        float tailSide = 1.0 - smoothstep(0.6, 1.1, abs(transformed.x - tailBaseX) / tailLength);
-        float fm = smoothstep(0.0, 0.3, into) * tailSide;
-        float turn = defA * 1.35 * fm;
-        float hy = transformed.y - arkTailBaseY;
-        float hz = transformed.z - tailBaseZ;
-        transformed.y = arkTailBaseY + hy * cos(turn) - hz * sin(turn);
-        transformed.z = tailBaseZ + hy * sin(turn) + hz * cos(turn);
-        vArkDefence = vec2(defA * fm, arkDef.z);
+    } else if (defK > 22.5 && defK < 23.5) {
+        // SIG-DEFENCE: the tail flagged as it runs: the tail (a round about the model's own tail, its base to its tip)
+        // lifted up and back, its white showing (aux: the colour). Every vertex carries the colour's number, so the
+        // varying is the same over a triangle and never reads as another colour or the shed tail's seam.
+        vArkDefence = vec2(0.0, arkDef.z);
+        if (tailLength > 0.0) {
+            vec3 tailMid = vec3(tailBaseX, arkTailBaseY, tailBaseZ - tailLength * 0.5);
+            float fm = 1.0 - smoothstep(tailLength * 0.55, tailLength * 1.0, distance(transformed, tailMid));
+            transformed.y += defA * fm * tailLength * 0.9;
+            transformed.z -= defA * fm * tailLength * 0.25;
+            vArkDefence.x = defA * fm;
+        }
     } else if (defK > 23.5 && defK < 24.5) {
         // SIG-DEFENCE: contracted flat: shorter, lower and wider (a slug's stiff oval), its tentacles drawn in with the rest.
         float ease = defA * defA * (3.0 - 2.0 * defA);
@@ -553,12 +559,14 @@ export const DEFENCE_VERTEX = `
         transformed.y += ease * low * legness * dHigh * 0.2;
     } else if (defK > 25.5 && defK < 26.5) {
         // SIG-DEFENCE: the beard puffed out and darkened: the throat under the head swells down and out, and goes dark (aux: the colour).
-        float along = smoothstep(dz1 - dLen * 0.3, dz1 - dLen * 0.2, transformed.z) * (1.0 - smoothstep(dz1 - dLen * 0.07, dz1 - dLen * 0.01, transformed.z));
-        float under = 1.0 - smoothstep(dy0 + dHigh * 0.3, dy0 + dHigh * 0.62, transformed.y);
-        float bm = along * under;
+        // (The head and neck only, the last sixth of the body; under the jaw, and narrow: not the forelegs beside it.)
+        float along = smoothstep(dz1 - dLen * 0.19, dz1 - dLen * 0.13, transformed.z) * (1.0 - smoothstep(dz1 - dLen * 0.05, dz1 - dLen * 0.01, transformed.z));
+        float under = 1.0 - smoothstep(dy0 + dHigh * 0.35, dy0 + dHigh * 0.65, transformed.y);
+        float narrow = 1.0 - smoothstep(arkDefSpan * 0.3, arkDefSpan * 0.5, abs(transformed.x));
+        float bm = along * under * narrow;
         transformed.y -= defA * bm * dHigh * 0.2;
         transformed.x *= 1.0 + defA * bm * 0.5;
-        vArkDefence = vec2(min(defA * along * (under + 0.25) * 1.3, 1.0), arkDef.z);
+        vArkDefence = vec2(min(defA * along * narrow * (under + 0.25) * 1.3, 1.0), arkDef.z);
     } else if (defK > 26.5 && defK < 27.5) {
         // SIG-DEFENCE: fin spines locked out: the pectoral fins (low at the sides, behind the head) stand out stiff,
         // and (aux 0) the dorsal fin stands up tall.

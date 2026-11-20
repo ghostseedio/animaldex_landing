@@ -330,7 +330,7 @@ test("SIG-DEFENCE: the new moves pack to their own kinds", () => {
     assert.deepEqual(kindOf("walking-catfish", "fish"), [DEFENCE_KIND.spines, 1, 1]);
     assert.deepEqual(kindOf("amazon-sailfin-catfish", "fish"), [DEFENCE_KIND.spines, 1, 0]);
     // (Every kind is clear of the water shake's 10 and 11.)
-    for (const k of Object.values(DEFENCE_KIND)) assert.ok(k !== 10 && k !== 11);
+    for (const k of Object.values(DEFENCE_KIND) as number[]) assert.ok(k !== 10 && k !== 11);
 });
 
 test("SIG-DEFENCE: a wolf spider rears when cornered: it runs from a predator close, and rears at one very close", () => {

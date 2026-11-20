@@ -123,6 +123,7 @@ async function main() {
     const params = new URLSearchParams(location.search);
     const scene = SCENES[params.get("scene") ?? "birth"];
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
+    if (params.get("grass") === "0") (globalThis as {__arkNoGrass?: boolean}).__arkNoGrass = true;
     const template = fixture.animals[0];
     const day = fixture.voyage.ark_day;
     const animals: Raw[] = [];

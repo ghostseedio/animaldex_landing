@@ -83,7 +83,7 @@ for (const name of scenes) {
         if (m.type() === "error") errors.push(m.text().slice(0, 300));
         if (m.text().startsWith("[behaviours]")) console.log(name, m.text().slice(0, 600));
     });
-    await page.goto(`${base}?scene=${name}&quality=high`, {waitUntil: "domcontentloaded", timeout: 120000});
+    await page.goto(`${base}?scene=${name}&quality=high${arg("grass", "") === "0" ? "&grass=0" : ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
     try {
         await page.waitForFunction(() => window.__behaviours || window.__behavioursError, null, {timeout: 300000});
     } catch (error) {

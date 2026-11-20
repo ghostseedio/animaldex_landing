@@ -264,7 +264,7 @@ import birdMoves from "@/ark-scene/bird-moves.json";
 import {tailHabitOf} from "@/ark-scene/tail-habit";
 import {signatureLineOf} from "@/ark-scene/live/signature-lines";
 // 3.3 batch (A): defence moves.
-import {defenceMoveOf, defencePack, defenceSaid, disturbedNow, holdsNow, newDefenceState, predatorBeside, stepDefence, type DefenceSpec, type DefenceState} from "@/ark-scene/defence-moves";
+import {defenceMoveOf, defencePack, defenceSaid, disturbedNow, escapesRunning, holdsNow, newDefenceState, predatorBeside, stepDefence, type DefenceSpec, type DefenceState} from "@/ark-scene/defence-moves";
 // p3 (shake): shaking off the water after a swim.
 import {SHAKE_LINE, shakePackOf, shakeStartOf} from "@/ark-scene/water-shake";
 import {DUNG_PAUSE_SECONDS, DUNG_SNIFF_SECONDS, dungAlpha, dungDiet, dungDrops, dungPose, leavesDung} from "@/ark-scene/dung";
@@ -3971,6 +3971,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // 3.3 batch (A): a species whose own defence is made on the spot stays and does it.
                 // (SIG-DEFENCE: a thumper while its thumps last; a rearer only when cornered: `holdsNow`.)
                 holds: holdsNow(e.animal.model_slug, e.defence),
+                escapes: escapesRunning(e.animal.model_slug),
                 shared: {x: c.pose.x, y: c.pose.base, z: c.pose.z, yaw: c.pose.yaw, moving: Boolean(sp?.moving) || (e.act?.speed ?? 0) > 0.3, aloft: Boolean(sp?.aloft) || e.air > 0.5, doing: sp?.doing ?? "rest", spot: e.sched.trip?.to.point ?? null}
             });
         }
@@ -6242,7 +6243,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             underwater = under;
             lighting.setUnderwater(under);
             scene.fog = under ? underFog : fog;
-            if (vegetation) vegetation.grass.visible = !under && TIER_SETTINGS[tier].grass > 0;
+            // (SIG-DEFENCE: the behaviours harness can leave the grass out, to see a spider's move at its feet.)
+            if (vegetation) vegetation.grass.visible = !under && TIER_SETTINGS[tier].grass > 0 && !(globalThis as {__arkNoGrass?: boolean}).__arkNoGrass;
             if (micro) micro.group.visible = !under;
             // 3.3 batch (E): nor the land's trees (they stand above the sea: seen from under it they are not seen, but the
             // ambient-occlusion pass still read their depth through the surface and drew dark shards on its underside).
