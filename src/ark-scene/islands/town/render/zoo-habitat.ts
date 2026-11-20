@@ -1026,9 +1026,26 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
                     const m = 1 - 0.12 * edge;
                     return [(base[0] + (foam[0] - base[0]) * foamed) * m, (base[1] + (foam[1] - base[1]) * foamed) * m, (base[2] + (foam[2] - base[2]) * foamed) * m];
                 };
+                // (Each side's normal leans the way ITS winding faces: the solid material is front-faced, so the face a viewer sees is
+                // the one wound toward them, and its normal must point at them. A fixed pairing drew the curtain black from the lagoon.)
                 const strip = (a: V3, b: V3, c: V3, ca: RGB, cb: RGB, cc: RGB) => {
-                    solid.triShaded(a, b, c, faceN, faceN, faceN, ca, cb, cc);
-                    solid.triShaded(a, c, b, backN, backN, backN, ca, cc, cb);
+                    const gx = (b[1] - a[1]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[1] - a[1]);
+                    const gy = (b[2] - a[2]) * (c[0] - a[0]) - (b[0] - a[0]) * (c[2] - a[2]);
+                    const gz = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+                    // (The face's own geometric normal, led a little toward the curtain's: always on the winding's side, and still soft.)
+                    const lean = (sx: number, sy: number, sz: number): V3 => {
+                        const len = Math.hypot(sx, sy, sz) || 1;
+                        const toward = sx * faceN[0] + sy * faceN[1] + sz * faceN[2] >= sx * backN[0] + sy * backN[1] + sz * backN[2] ? faceN : backN;
+                        const nx = sx / len + 0.5 * toward[0];
+                        const ny = sy / len + 0.5 * toward[1];
+                        const nz = sz / len + 0.5 * toward[2];
+                        const l = Math.hypot(nx, ny, nz) || 1;
+                        return [nx / l, ny / l, nz / l];
+                    };
+                    const first = lean(gx, gy, gz);
+                    const second = lean(-gx, -gy, -gz);
+                    solid.triShaded(a, b, c, first, first, first, ca, cb, cc);
+                    solid.triShaded(a, c, b, second, second, second, ca, cc, cb);
                 };
                 // The backing sheet, set a hand off the rock behind the strands.
                 for (let i = 0; i < rows; i++) {

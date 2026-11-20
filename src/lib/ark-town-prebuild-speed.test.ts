@@ -248,7 +248,7 @@ const TOWN_DIGESTS = {
     // (p5 (zoospace): the zoo's new homes on the freed plots dressed as their kinds' exhibits, `render/zoo-habitat.ts`.)
     // (p5 (zoospace): the dome's birds out of the aviaries; the vulture aviary and the stork flight wider.)
     // (ark-world, decision 447: kopjes as piles of fourteen granite blocks, soft three-ring earth patches, the dome's waterfall curtain, smooth bushes; refreshed.)
-    zoo: "5d616bc6aebac218",
+    zoo: "2b2cbcb153e74a2a",
     // (p4 (zoolive): outdoor zoo residents' spots keep their whole body clear of the fence, `enclosureMargin`.)
     // (p4 (safari): the herbivores, big cats, hyenas and crocodilians moved to the safari by the rule, `town/safari.ts`.)
     // (Pass 5 rural lane: pass 4 merged into the safari; these recomputed on that merge. Then p5 (rural): the countryside

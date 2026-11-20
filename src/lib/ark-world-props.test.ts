@@ -203,3 +203,43 @@ test("a hedge's surface normals lean the way each face's winding faces (the foli
     assert.ok(aligned >= total * 0.95, `${aligned} of ${total} faces carry normals along their winding`);
     assert.ok(smooth >= total * 0.9, `${smooth} of ${total} faces are smooth-shaded`);
 });
+
+test("the dome's waterfall: 18 strands over a backing sheet, every face's normal leaning the way its own winding faces (the solid material is front-faced: a viewer sees the wound side, and a fixed pairing drew the curtain black from the lagoon)", async () => {
+    const {dressPaddock} = await import("@/ark-scene/islands/town/render/zoo-habitat");
+    const {DOME, DOME_CLIFF, DOME_ID} = await import("@/ark-scene/islands/town/dome");
+    const {zooLayout, zooSpotsOf} = await import("@/ark-scene/islands/town/areas");
+    const {townHeight} = await import("@/ark-scene/islands/town/ground");
+    const e = zooLayout([DOME_ID]).enclosures.find((x) => x.id === DOME_ID)!;
+    assert.ok(e, "the dome's enclosure");
+    const solid = new Geo();
+    dressPaddock(e, zooSpotsOf(e), solid, new Geo(), (x, z) => townHeight(x, z), null, null);
+    // The curtain: faces within 2.5 m of the fall's axis (the notch down to the lagoon) and above the floor.
+    const fx = DOME.x + Math.cos(DOME_CLIFF.fall) * (DOME_CLIFF.inner + 1.2);
+    const fz = DOME.z + Math.sin(DOME_CLIFF.fall) * (DOME_CLIFF.inner + 1.2);
+    let water = 0;
+    let wrong = 0;
+    // (Above the spray: the plumes at the foot are smooth lumps, checked as bushes are.)
+    let low = Infinity;
+    for (let t = 0; t < solid.triangles; t++) {
+        const cx = (solid.pos[t * 9] + solid.pos[t * 9 + 3] + solid.pos[t * 9 + 6]) / 3;
+        const cz = (solid.pos[t * 9 + 2] + solid.pos[t * 9 + 5] + solid.pos[t * 9 + 8]) / 3;
+        const b = solid.col[t * 9 + 2];
+        if (Math.hypot(cx - fx, cz - fz) < 2.6 && b > 0.5) low = Math.min(low, (solid.pos[t * 9 + 1] + solid.pos[t * 9 + 4] + solid.pos[t * 9 + 7]) / 3);
+    }
+    for (let t = 0; t < solid.triangles; t++) {
+        const p = (v: number, k: number) => solid.pos[(t * 3 + v) * 3 + k];
+        const c = (k: number) => (p(0, k) + p(1, k) + p(2, k)) / 3;
+        // Water is blue-white: the blue channel the highest of three, bright.
+        const r = solid.col[t * 9];
+        const g = solid.col[t * 9 + 1];
+        const b = solid.col[t * 9 + 2];
+        if (Math.hypot(c(0) - fx, c(2) - fz) > 2.6 || c(1) < low + 1.4 || !(b >= g && g >= r * 0.99 && b > 0.1)) continue;
+        const gx = (p(1, 1) - p(0, 1)) * (p(2, 2) - p(0, 2)) - (p(1, 2) - p(0, 2)) * (p(2, 1) - p(0, 1));
+        const gy = (p(1, 2) - p(0, 2)) * (p(2, 0) - p(0, 0)) - (p(1, 0) - p(0, 0)) * (p(2, 2) - p(0, 2));
+        const gz = (p(1, 0) - p(0, 0)) * (p(2, 1) - p(0, 1)) - (p(1, 1) - p(0, 1)) * (p(2, 0) - p(0, 0));
+        water++;
+        for (let v = 0; v < 3; v++) if (solid.nor[(t * 3 + v) * 3] * gx + solid.nor[(t * 3 + v) * 3 + 1] * gy + solid.nor[(t * 3 + v) * 3 + 2] * gz < -1e-9) wrong++;
+    }
+    assert.ok(water >= 500, `${water} water faces at the fall`);
+    assert.equal(wrong, 0, `${wrong} corners lean against their face's winding`);
+});
