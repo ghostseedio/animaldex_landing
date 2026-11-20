@@ -332,9 +332,30 @@ BUSHES = {
 }
 
 
+# Leaf masses for the middle and far levels (ark-world, decision 447: the owner, "better modeling ... on bushes": lod1 and
+# lod2 were ~900 and ~250 single leaves, flat-lit quads that read as green facets past a few metres). Each kind's
+# (spray, single leaf) pictures from the trees' leaf atlas, and leaf-mass cards at the twig ends facing out of the crown
+# with soft crown normals, exactly as the trees' crowns are made. Only lod1 and lod2 take them: lod0 (the attach points'
+# leaves, pinned with the positions atlas), the skeleton and the attach points are the plain build's, untouched.
+LEAFY = {
+    "bush-hazel": dict(leaf_tex=("ovate", "ovate"), r=(0.2, 0.32)),
+    "bush-holly": dict(leaf_tex=("lobed", "lobed"), r=(0.15, 0.25)),
+    "bush-blueberry": dict(leaf_tex=("ovate", "ovate"), r=(0.1, 0.17)),
+    "bush-bramble": dict(leaf_tex=("lobed", "palmate"), r=(0.18, 0.3)),
+}
+
+
 def bush(kind, variant_index):
     seed, spec = BUSHES[kind][variant_index]
     a = trees.build_from_spec(kind, "abc"[variant_index], spec, seed, set_="plants")
+    look = LEAFY[kind]
+    leafy = dict(spec, leaf_tex=look["leaf_tex"],
+                 clumps=dict(levels=[2, 3], per_limb=(1, 2), r=look["r"], points=10, notch=0.7, cup=0.3, face_up=0.5),
+                 budget=(spec["budget"][0], 520, 340))
+    b = trees.build_from_spec(kind, "abc"[variant_index], leafy, seed, set_="plants")
+    # (The same seed grows the same skeleton: the leafy build's lod1 and lod2 replace the plain ones; its lod0 is dropped.)
+    a.lods[1], a.lods[2] = b.lods[1], b.lods[2]
+    a.meta["wood_tris"] = [a.meta["wood_tris"][0]] + list(b.meta["wood_tris"][1:])
     a.meta.update(group="bush", view=dict(elev=18))
     if spec.get("fruit"):
         a.meta["berries"] = True

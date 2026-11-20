@@ -37,7 +37,9 @@ const MESH = tone("#2a2d2f");
 const NETTING = tone("#3a3f42");
 const GLASS = tone("#c8dde0");
 const STONE = tone("#a59c8a");
-const ROCK = tone("#8f877a");
+// (ark-world, decision 447: the rockwork round the predators' areas read as rows of pale eggs; darker and warmer, each boulder its own tone.)
+const ROCK = tone("#7b7266");
+const ROCK_WARM = tone("#86705a");
 const BRICK = tone("#8c5a48");
 const TIMBER = tone("#7a5a3e");
 const CABLE = tone("#3a3a3a");
@@ -106,7 +108,8 @@ function rockwork(solid: Geo, a: Pt, b: Pt, height: number, seed: number) {
         const sx = 0.6 + r() * 0.35;
         const sy = height * (0.3 + r() * 0.2);
         const sz = 0.55 + r() * 0.3;
-        const tone = shade(ROCK, 0.82 + r() * 0.3);
+        const base = r() < 0.3 ? ROCK_WARM : ROCK;
+        const tone = shade(base, 0.8 + r() * 0.34);
         const id = hashText(`${seed}:${t.toFixed(1)}`);
         solid.rock(p[0], p[1] - 0.15, p[2], sx, mid + sy * 0.75 + 0.15, sz, (id % 628) / 100, tone, id, 1);
     }

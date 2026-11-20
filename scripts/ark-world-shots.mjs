@@ -149,7 +149,20 @@ for (const name of views) {
         const handle = window.__arkMeasureHandle;
         // A view in the town's own frame: moved by the town's world origin (601.2, -249 on the v2 island), its target on the ground.
         let view = viewIn;
-        if (view && view.town) {
+        // `follow`: a named instanced mesh's instance `index` (the safari trucks, "town:safari-trucks"), re-read every frame (it moves).
+        const followed = () => {
+            const mesh = window.__arkDebug.scene.getObjectByName(viewIn.follow);
+            mesh.updateWorldMatrix(true, false);
+            const m = mesh.matrixWorld.elements;
+            const e = mesh.instanceMatrix.array;
+            const i = viewIn.index ?? 0;
+            const x = e[i * 16 + 12] + m[12];
+            const y = e[i * 16 + 13] + m[13];
+            const z = e[i * 16 + 14] + m[14];
+            return {target: {x, y: y + (viewIn.dy ?? 0.8), z}, distance: viewIn.distance, polar: viewIn.polar, azimuth: viewIn.azimuth};
+        };
+        if (viewIn && viewIn.follow) view = followed();
+        else if (view && view.town) {
             const x = view.x + 601.2;
             const z = view.z - 249;
             view = {target: {x, y: handle.heightAt(x, z) + (view.dy ?? 0.6), z}, distance: view.distance, polar: view.polar, azimuth: view.azimuth};
@@ -161,13 +174,13 @@ for (const name of views) {
         const frame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
         for (let i = 0; i < 90; i++) {
             if (target.distance < 2) window.__arkDebug.controls.minDistance = 0.05;
-            handle.setView(target);
+            handle.setView(viewIn && viewIn.follow ? followed() : target);
             await frame();
         }
         await new Promise((resolve) => setTimeout(resolve, 2500));
         for (let i = 0; i < 6; i++) {
             if (target.distance < 2) window.__arkDebug.controls.minDistance = 0.05;
-            handle.setView(target);
+            handle.setView(viewIn && viewIn.follow ? followed() : target);
             await frame();
         }
         return {asked: target, actual: handle.view()};

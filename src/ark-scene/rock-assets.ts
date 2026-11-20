@@ -304,6 +304,21 @@ export function rockFoot(rock: FootedRock): number {
 /** The most a rock is reached down (its height under its top, fourfold). */
 export const FOOT_MOST = 4;
 
+/**
+ * How far a rock standing on a steep slope is set down into it when it is drawn (m; ark-world, decision 447: "some boulders
+ * on steep faces look stuck to the wall"): a boulder as round as an egg on a 45 degree face is a ball stuck to a wall. Over a
+ * slope of tan 0.5 (27 degrees) it begins to sink, and by tan 1.2 (50 degrees) it is half buried (`height` is the shape's
+ * height at scale 1), as a rock that has come to rest there is. Only the drawing moves: its place, its lists, its attach
+ * points and its colliders are the world's, unchanged. The ground is the drawn one (`drawnGround`).
+ */
+export function steepSink(x: number, z: number, scale: number, height: number): number {
+    const e = Math.max(0.6, 0.5 * scale);
+    const gx = (drawnGround(x + e, z) - drawnGround(x - e, z)) / (2 * e);
+    const gz = (drawnGround(x, z + e) - drawnGround(x, z - e)) / (2 * e);
+    const t = Math.min(Math.max((Math.hypot(gx, gz) - 0.5) / 0.7, 0), 1);
+    return height * scale * 0.5 * t * t * (3 - 2 * t);
+}
+
 export type RockAttach = {tag: string; spot: string; position: {x: number; y: number; z: number}; normal: {x: number; y: number; z: number}; size: [number, number]};
 
 /** A placed rock's attach points (attach.json, measured on the drawn lod0 surface), in the world. */

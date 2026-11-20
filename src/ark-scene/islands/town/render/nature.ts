@@ -150,15 +150,47 @@ export function hedgeAlong(geo: Geo, line: Poly, height: number, seed: number, h
             });
             rings.push(ring);
         }
+        // (ark-world, decision 447, "hedges blocky": each face was flat-shaded, a quad a shade, so the lumpy cross-section
+        // read as a row of facets. The same quads, but each corner takes a normal from the surface (the ring's neighbours
+        // along the hedge and across its profile) and its own light, so the hedge rolls as one rounded mass.)
+        const normals: V3[][] = rings.map((ring, k) =>
+            ring.map((p, j) => {
+                const a = rings[Math.min(k + 1, n)][j];
+                const b = rings[Math.max(k - 1, 0)][j];
+                const c = ring[Math.min(j + 1, ring.length - 1)];
+                const d = ring[Math.max(j - 1, 0)];
+                const ax = a[0] - b[0], ay = a[1] - b[1], az = a[2] - b[2];
+                const cx = c[0] - d[0], cy = c[1] - d[1], cz = c[2] - d[2];
+                let nx = ay * cz - az * cy;
+                let ny = az * cx - ax * cz;
+                let nz = ax * cy - ay * cx;
+                // Outward: away from the hedge's heart (the middle of its ring, 0.4 of its height up).
+                const mx = (ring[0][0] + ring[ring.length - 1][0]) / 2;
+                const mz = (ring[0][2] + ring[ring.length - 1][2]) / 2;
+                const my = ring[0][1] + tops[k] * 0.4;
+                if (nx * (p[0] - mx) + ny * (p[1] - my) + nz * (p[2] - mz) < 0) {
+                    nx = -nx;
+                    ny = -ny;
+                    nz = -nz;
+                }
+                const l = Math.hypot(nx, ny, nz) || 1;
+                return [nx / l, ny / l, nz / l] as V3;
+            })
+        );
+        const lightAt = (k: number, j: number): RGB => {
+            const light = 0.72 + 0.4 * Math.max(profile[j][1], 0) + (noise3(k * 0.9 + seed * 0.001, j * 1.7, seed * 0.0007) - 0.5) * 0.14;
+            return shade(base, light);
+        };
         for (let k = 1; k <= n; k++) {
             if (open[k] || open[k - 1]) continue;
             const r0 = rings[k - 1];
             const r1 = rings[k];
             for (let j = 1; j < profile.length; j++) {
                 const v = (profile[j][1] + profile[j - 1][1]) / 2;
-                const light = 0.72 + 0.4 * Math.max(v, 0) + (r() - 0.5) * 0.1;
                 geo.tag = Math.max(v, 0) * (hedgerow ? 1 : 0.35);
-                geo.quad(r0[j - 1], r1[j - 1], r1[j], r0[j], shade(base, light));
+                const n00 = normals[k - 1][j - 1], n10 = normals[k][j - 1], n11 = normals[k][j], n01 = normals[k - 1][j];
+                geo.triShaded(r0[j - 1], r1[j - 1], r1[j], n00, n10, n11, lightAt(k - 1, j - 1), lightAt(k, j - 1), lightAt(k, j));
+                geo.triShaded(r0[j - 1], r1[j], r0[j], n00, n11, n01, lightAt(k - 1, j - 1), lightAt(k, j), lightAt(k - 1, j));
             }
         }
         // End caps where the hedge stops (its line's ends and a gate's posts).
@@ -178,7 +210,10 @@ export function hedgeAlong(geo: Geo, line: Poly, height: number, seed: number, h
                 if (gaps.some((g) => Math.hypot(cx - g.x, cz - g.z) < g.half + 1)) continue;
                 const top = H(cx, cz) + height * (0.8 + 0.25 * noise3(cx * 0.35, 0, cz * 0.35));
                 geo.tag = 1;
-                geo.blob(cx, top, cz, 0.55 + r() * 0.35, 0.45 + r() * 0.35, 0.55 + r() * 0.35, shade(base, 0.95 + r() * 0.2), hashText(`${seed}:${t.toFixed(1)}`), 0);
+                // (ark-world: a smooth-shaded lump, normals leaning out of the hedge, not a flat 20-face blob: the big faceted
+                // polygons on a hedgerow's top. Same 20 faces.)
+                const sr = rng(hashText(`${seed}:${t.toFixed(1)}`));
+                geo.smoothLump(cx, top, cz, 0.55 + r() * 0.35, 0.45 + r() * 0.35, 0.55 + r() * 0.35, [cx, top - 0.7, cz], shade(base, 0.95 + r() * 0.2), 1, sr, 0);
             }
         }
     }

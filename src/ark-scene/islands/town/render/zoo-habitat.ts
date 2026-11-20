@@ -190,7 +190,8 @@ export function patch(geo: Geo, plot: Plot, lx: number, lz: number, radius: numb
     const at2 = (ring: number, i: number): V3 => {
         const a = (i / n) * Math.PI * 2;
         const k = rings[ring][0] * reach(a);
-        return plot.p(lx + Math.cos(a) * k, lz + Math.sin(a) * k, lift * rings[ring][1]);
+        // (A rim settles toward the floor, but never more than 4 mm under the patch's own lift: the floor's own ripple must not show through.)
+        return plot.p(lx + Math.cos(a) * k, lz + Math.sin(a) * k, Math.max(lift * rings[ring][1], lift - 0.004));
     };
     const centre = plot.p(lx, lz, lift);
     const shadeOf = (ring: number, i: number, j: number): RGB => {
@@ -220,7 +221,7 @@ export function patch(geo: Geo, plot: Plot, lx: number, lz: number, radius: numb
         const cx = lx + Math.cos(a) * d;
         const cz = lz + Math.sin(a) * d;
         const t = r() * 6.28;
-        const corner = (m: number) => plot.p(cx + Math.cos(t + m * 2.1) * s, cz + Math.sin(t + m * 2.1) * s * (0.7 + 0.2 * m), lift * 0.7);
+        const corner = (m: number) => plot.p(cx + Math.cos(t + m * 2.1) * s, cz + Math.sin(t + m * 2.1) * s * (0.7 + 0.2 * m), Math.max(lift * 0.7, lift - 0.004));
         const g = 0.86 + 0.14 * r();
         geo.tri(corner(0), corner(2), corner(1), [colour[0] * g, colour[1] * g, colour[2] * g]);
     }
@@ -754,7 +755,8 @@ export function termiteMound(geo: Geo, plot: Plot, lx: number, lz: number, heigh
         }
     }
     // Rounded tops on each chimney (a small cap over its last ring).
-    for (const c of chimneys) geo.blob(base[0] + c.x, base[1] + c.h * 0.97, base[2] + c.z, c.w * 0.55, c.w * 0.4, c.w * 0.55, pale, hashText(`${seed}cap${c.h.toFixed(2)}`), 1);
+    // (ark-world: each cap a smooth lump of the mound's own surface, normals leaning out from its chimney, not a faceted blob.)
+    for (const c of chimneys) geo.smoothLump(base[0] + c.x, base[1] + c.h * 0.97, base[2] + c.z, c.w * 0.55, c.w * 0.4, c.w * 0.55, [base[0] + c.x, base[1] + c.h * 0.4, base[2] + c.z], pale, 0, r, 1);
 }
 
 /** A hay rack: a timber feeder on legs with a hay load, under a little roof (the grazers'). */
