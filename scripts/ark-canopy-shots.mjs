@@ -9,7 +9,7 @@
  * A plan is `[{name, epoch, id?, target?: {x, y, z}, distance, azimuth?, polar?, lift?, hours?}]`.
  */
 import {createServer} from "node:http";
-import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from "node:fs";
+import {appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {createRequire} from "node:module";
@@ -158,6 +158,23 @@ for (const shot of plan) {
                 if (s.id && s.cut) await window.__canopy.cut(s.id);
             }, {s: shot, dt: k ? 1 / fps : 0});
             await page.screenshot({path: path.join(dir, `f${String(k).padStart(4, "0")}.jpg`), type: "jpeg", quality: 85});
+            // (each frame: its canopy phase and, for a brachiator, how far its holding hand is from its hold)
+            const probe = await page.evaluate((id) => {
+                const miss = window.__canopy.handMiss?.() ?? null;
+                // (each hold on the screen, px: through the camera's own matrices)
+                const cam = window.__arkDebug?.camera;
+                if (cam && miss) {
+                    for (const m of Object.values(miss)) {
+                        if (!m.hold) continue;
+                        const v = m.hold, a = cam.matrixWorldInverse.elements, b = cam.projectionMatrix.elements;
+                        const e = [0, 1, 2, 3].map((r) => a[r] * v[0] + a[4 + r] * v[1] + a[8 + r] * v[2] + a[12 + r]);
+                        const c = [0, 1, 2, 3].map((r) => b[r] * e[0] + b[4 + r] * e[1] + b[8 + r] * e[2] + b[12 + r] * e[3]);
+                        m.screen = [(c[0] / c[3] + 1) / 2 * innerWidth, (1 - c[1] / c[3]) / 2 * innerHeight];
+                    }
+                }
+                return {phase: id ? window.__canopy.who(id)?.canopy ?? null : null, miss};
+            }, shot.id ?? null);
+            appendFileSync(path.join(dir, "probe.jsonl"), JSON.stringify({k, ...probe}) + "\n");
         }
         try {
             const {execFileSync} = await import("node:child_process");

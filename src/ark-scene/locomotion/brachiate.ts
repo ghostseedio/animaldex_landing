@@ -157,6 +157,9 @@ function tuckLegs(rig: LocoRig, world: Matrix4[], amount: number): void {
     }
 }
 
+/** The last frame's gap between the holding hand's fingertips and its hold (m), by species: for the shot harness. */
+export const handMiss = new Map<string, {miss: number; phase: string; reach: number; hold: [number, number, number]}>();
+
 export const brachiateDriver: LocoDriver = {
     name: "brachiate",
     takes(rig, input) {
@@ -180,14 +183,15 @@ export const brachiateDriver: LocoDriver = {
         if (c.hand) {
             vHold.set(c.hand.x, c.hand.y, c.hand.z).applyMatrix4(inv);
             // The holding hand on the wood; out of reach, the whole body up under the hand (it hangs from it).
-            for (let k = 0; k < 2; k++) {
+            for (let k = 0; k < 4; k++) {
                 const miss = reachArm(rig, world, holding, vHold);
                 if (miss < 1e-3) break;
                 vA.subVectors(vHold, tipNow(rig, world, holding, vTip));
-                const most = 0.6 * rig.height;
+                const most = 1.0 * rig.height;
                 if (vA.length() > most) vA.setLength(most);
                 if (rig.hips >= 0) translateSubtree(rig, world, rig.hips, vA.x, vA.y, vA.z);
             }
+            handMiss.set(rig.slug, {miss: tipNow(rig, world, holding, vTip).distanceTo(vHold) * input.scale, phase: c.phase, reach: (holding.upperLength + holding.lowerLength) * input.scale, hold: [c.hand.x, c.hand.y, c.hand.z]});
             // The free arm: out ahead toward the next hold as it swings (hanging at a hold, half up beside the other).
             if (c.next && c.phase === "swing") reachToward(rig, world, free, vNext, 0.55 + 0.4 * smooth(c.u));
             else if (c.phase === "hold") {

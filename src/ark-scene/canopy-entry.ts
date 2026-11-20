@@ -12,6 +12,7 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import {canopyPhases} from "@/ark-scene/canopy-scene";
+import {handMiss} from "@/ark-scene/locomotion/brachiate";
 import {ledgeSeen} from "@/ark-scene/rock-ledge";
 import {zooSeen} from "@/ark-scene/islands/town/zoo-swing";
 import {Raycaster, Vector3, type Object3D} from "three";
@@ -104,6 +105,12 @@ async function main() {
             handle.setView({target: {x: at.x, y: at.y + lift, z: at.z}, distance, polar, azimuth});
             await frames(1);
             return at;
+        },
+        /** The holding hand's gap to its hold last frame (m), by species, then cleared. */
+        handMiss: () => {
+            const out = Object.fromEntries(handMiss);
+            handMiss.clear();
+            return out;
         },
         hours: (h: number | null) => handle.setHours(h),
         locate: (id: string) => handle.locate(id),
