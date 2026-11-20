@@ -227,6 +227,9 @@ async function main() {
             current.text = liteOf(id)[0] ?? "";
             live.focus(line);
         }
+        // (And the mother chosen, as a laid line's tap does when the read names her (`breedFocus`); a saved read's
+        // line may lack the controller's clutch, so the harness chooses her itself.)
+        if (laidMother) handle.select(laidMother, true);
         current.tapped = true;
         return {kind: "laid", at: String(row.at), t0, tapAt: Math.round((epoch - t0) * 10) / 10, line: line ? {id: line.id, kind: line.kind} : null, lines: live.lines.length, watching: true, skipped: false, seen: null, laying, cast: parents.map((p) => ({id: p, role: "parent", name: String((row.animal as Row | null)?.name ?? ""), slug: String((row.animal as Row | null)?.model_slug ?? ""), aboard: Boolean(real.animals.find((a) => a.id === p)), located: Boolean(handle.locate(p))}))};
     };
