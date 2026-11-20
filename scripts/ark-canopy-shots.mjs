@@ -133,6 +133,13 @@ for (const shot of plan) {
     const note = await page.evaluate(async (s) => {
         const c = window.__canopy;
         if (s.hours !== undefined) c.hours(s.hours);
+        // (`light`: the light alone pinned to that hour, lane ark-sleep; the schedule keeps the world's hour.)
+        c.light(s.light ?? null);
+        // (`near`: the camera there first, so a far animal's entry is made and drawn before it is framed; lane ark-sleep.)
+        if (s.near) {
+            await c.look(s.near, s.distance ?? 8, s.azimuth ?? 0.7, s.polar ?? 1.3);
+            await c.at(s.epoch, s.run ?? 2);
+        }
         await c.at(s.epoch, s.run ?? 2);
         if (s.id && s.clear) return JSON.stringify({view: await c.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0), at: c.locate(s.id)});
         if (s.id) return JSON.stringify(await c.frame(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0));

@@ -106,6 +106,17 @@ async function main() {
             return at;
         },
         hours: (h: number | null) => handle.setHours(h),
+        /**
+         * The light alone pinned to an hour (lane ark-sleep: night's sleepers seen in daylight; the schedule keeps the
+         * world's own hour). null: the light follows the world's hour again.
+         */
+        light: (h: number | null) => {
+            const lighting = (window as unknown as {__arkDebug?: {lighting?: {setHours: (hours: number, fog?: unknown) => void; __own?: (hours: number, fog?: unknown) => void}}}).__arkDebug?.lighting;
+            if (!lighting) return;
+            lighting.__own ??= lighting.setHours.bind(lighting);
+            const own = lighting.__own;
+            lighting.setHours = h === null ? own : (_hours: number, fog?: unknown) => own(h, fog);
+        },
         locate: (id: string) => handle.locate(id),
         frame: async (id: string, distance: number, azimuth = 0.7, polar = 1.3, lift = 0) => {
             // (Where it is drawn is only kept up to date near the camera: framed once, then again where it is drawn.)

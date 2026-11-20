@@ -47,6 +47,7 @@ import {craterAt} from "@/ark-scene/islands/wild/crater";
 import {boutPhase, rhythmChoice} from "@/ark-scene/sd-rhythm";
 import type {ArkCondition, ArkZone, ArkThrive} from "@/ark-scene/types";
 import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
+import {sleepCover} from "@/ark-scene/sleep-sites";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
 // p3 (shake): shaking off the water at the edge.
 import {shakeTotal, waterShakeOf} from "@/ark-scene/water-shake";
@@ -926,6 +927,17 @@ export function roostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, anim
             const onLand = {...profile, move: "walk" as const, seabed: false};
             const radius = Math.min(homeRadius(profile, animal), 2);
             let bed: Spot | null = null;
+            // (Lane ark-sleep: the cover of its kind first, on the ground by it (a rock's foot, under a bush, a burrow), the
+            // nearest few that fit; `sleep-sites.ts`.)
+            for (const p of sleepCoverOnGround(world, profile, animal, Math.min(Math.max(homeRadius(profile, animal) * 1.5, 8), BED_REACH)).slice(0, 8)) {
+                let at = groundSpot(world, p.x, p.z);
+                if (world.nav.colliders) at = clearOfSolid(world, onLand, animal, at, true);
+                if (bedFits(at)) {
+                    // (The place it lies by, named: the same spot.)
+                    bed = {...at, point: at.x === p.x && at.z === p.z ? p.id : at.point};
+                    break;
+                }
+            }
             for (let k = 0; k < 8 && !bed; k++) {
                 let at = rangeSpot(world, onLand, animal, animal.home, radius * (1 + k / 4), random);
                 if (world.nav.colliders) at = clearOfSolid(world, onLand, animal, at, true);
@@ -1022,7 +1034,33 @@ function rawRoostOf(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: 
     // floor, and ~20 of the town's roof birds slept inside walls the collisions could not push them out of).
     const perch = flies(profile) ? homePerch(world, animal) : null;
     if (perch) return perch;
+    // Nothing of its own roost in reach: the cover its kind sleeps in (lane ark-sleep, `sleep-sites.ts`: a monkey up a
+    // tree, a fox by a rock or under a bush, a lizard under a log), before the open ground at its home.
+    const cover = sleepCoverNear(world, profile, animal, Math.min(homeRadius(profile, animal) * 1.5, rangeCap(profile, animal)), seed);
+    if (cover) return spotOf(cover);
     return {...groundSpot(world, animal.home.x, animal.home.z)};
+}
+
+/**
+ * The nearer places of the cover its kind sleeps in (`sleep-sites.ts` sleepCover), in its order, within `radius` of its
+ * home: a seeded pick weighted to the nearest (`placeNear`), so neighbours of a kind spread over the cover there rather
+ * than all on one spot. Null: none in reach.
+ */
+function sleepCoverNear(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, radius: number, roll: number): AttachPoint | null {
+    const tags = sleepCover(profile, animal.length);
+    return tags.length && radius > 0 ? placeNear(world, animal.home, animal.length, tags as AttachTag[], radius, roll) : null;
+}
+
+/** The cover of its kind on the ground within `radius` of its home, nearest first (a bed it can walk to: `roostOf`). */
+function sleepCoverOnGround(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, radius: number): AttachPoint[] {
+    const out: AttachPoint[] = [];
+    for (const tag of sleepCover(profile, animal.length)) {
+        if (tag === "branch" || tag === "tree_hollow" || tag === "cliff_ledge" || tag === "post" || tag === "rock_face") continue;
+        const list = world.sampler.attachPoints(tag, {x: animal.home.x, z: animal.home.z, r: radius}).filter((p) => perchSuits(p, animal.length) || tag === "rock_top");
+        list.sort((p, q) => Math.hypot(p.x - animal.home.x, p.z - animal.home.z) - Math.hypot(q.x - animal.home.x, q.z - animal.home.z) || p.id.localeCompare(q.id));
+        out.push(...list);
+    }
+    return out;
 }
 
 /** Places a body can be on up off the ground, as a raised home's own place (`homePerch`). */

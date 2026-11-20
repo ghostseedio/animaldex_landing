@@ -35,6 +35,7 @@ import {
     BufferAttribute,
     BufferGeometry,
     DataTexture,
+    DataUtils,
     HalfFloatType,
     Matrix3,
     Matrix4,
@@ -69,6 +70,7 @@ import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
 import type {GaitState, GroundQuery} from "@/ark-scene/locomotion/types";
 import {locoGround} from "@/ark-scene/locomotion/ground";
 import {clipBakeOf} from "@/ark-scene/locomotion/flight";
+import {posedSitRows} from "@/ark-scene/locomotion/sit-sleep-pose";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -649,6 +651,22 @@ export class RigLibrary {
         } catch (error) {
             console.warn(`[ark] loco ${slug}`, error instanceof Error ? error.message : error);
         }
+        // Lane ark-sleep: a primate sleeps sitting hunched, posed from its skeleton (`locomotion/sit-sleep-pose.ts`), not
+        // the rig's own crouch on all fours. (`__arkPosedSit = false`: the rig's own, to compare.)
+        let rowsData = data;
+        if (loco && entry.plan === "primate" && (globalThis as {__arkPosedSit?: boolean}).__arkPosedSit !== false) {
+            const position = geometry.getAttribute("position");
+            const joints = geometry.getAttribute("arkJoints");
+            const weights = geometry.getAttribute("arkWeights");
+            const posed = position && joints && weights ? posedSitRows(loco.rig, {positions: position.array, joints: joints.array, weights: weights.array}, data, boneCount, DataUtils.toHalfFloat) : null;
+            if (posed?.data) {
+                rowsData = posed.data;
+                for (const clip of posed.clips) clips[clip.name] = clip as RigClipData;
+                texture.image = {data: rowsData, width: boneCount * 3, height: rowsData.length / (boneCount * 12)} as unknown as typeof texture.image;
+                texture.needsUpdate = true;
+                loco.setBakedData(rowsData);
+            }
+        }
         this.models.set(slug, {
             slug,
             geometry,
@@ -657,7 +675,7 @@ export class RigLibrary {
             clips,
             facingDeg: Number(entry.facing_deg) || 0,
             bytes: buffer.byteLength,
-            data,
+            data: rowsData,
             centre,
             set: set.version,
             entryVersion: Number(entry.version) || 1,

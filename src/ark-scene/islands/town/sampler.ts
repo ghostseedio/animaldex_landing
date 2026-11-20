@@ -27,7 +27,8 @@ import {townObstacles} from "@/ark-scene/islands/town/obstacles";
 import {townTreePerches, townTrees} from "@/ark-scene/islands/town/trees";
 import {townWaterSurface} from "@/ark-scene/islands/town/drawn-ground";
 import {homeSiteFootprints, inTownSolid} from "@/ark-scene/islands/town/tanks";
-import {corners} from "@/ark-scene/islands/town/geom";
+import {corners, local} from "@/ark-scene/islands/town/geom";
+import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 import {townHouseholds} from "@/ark-scene/islands/town/areas";
 import {WALL_FACE} from "@/ark-scene/wall-climb";
 import {deadwoodPlaces, leafPatchPlaces, townDeadwood} from "@/ark-scene/islands/town/deadwood";
@@ -309,8 +310,40 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
         let limb = 0;
         for (const p of townTreePerches(t)) add(p.tag, p.tag === "branch" ? `town:tree:${i}:limb${limb++}` : `town:tree:${i}:${p.tag}`, p.x, p.y, p.z, p.nx, p.ny, p.nz, p.yaw);
     });
+    // Lane ark-sleep (`sleep-sites.ts`): where the farms' stock and the zoo's paddock animals sleep, in the lee of their
+    // shelter: before a field shelter's open front, a pig ark's mouth, along a stable or a barn, before a zoo paddock's
+    // keepers' shed (the way to its night quarters). Shade places, as under a tree; never in a solid's footprint.
+    const lee = (id: string, x: number, z: number) => {
+        if (!inTownSolid(x, z, 0.3)) add("shade", id, x, townHeight(x, z), z);
+    };
+    for (const b of plan.buildings) {
+        if (!SLEEP_SHELTERS.has(b.kind)) continue;
+        const out = b.kind === "pig_ark" ? 0.7 : 1.1;
+        const front = local(b.at, 0, b.at.d / 2 + out);
+        lee(`town:sleep:${b.id}:front`, front.x, front.z);
+        if (b.kind === "barn" || b.kind === "stable") {
+            // (Along a long wall: two more, a third of the way in from each end, front and back.)
+            for (const [k, lx, lz] of [[1, -b.at.w / 3, b.at.d / 2 + out], [2, b.at.w / 3, b.at.d / 2 + out], [3, -b.at.w / 3, -b.at.d / 2 - out], [4, b.at.w / 3, -b.at.d / 2 - out]] as const) {
+                const p = local(b.at, lx, lz);
+                lee(`town:sleep:${b.id}:${k}`, p.x, p.z);
+            }
+        }
+    }
+    for (const e of zooLayout(open).enclosures) {
+        const form = ZOO_TYPES[e.type].form;
+        if (e.shared || e.slot.safari || e.type === "penguin_seal_pools" || (form !== "paddock" && form !== "pool")) continue;
+        const s = e.slot.at;
+        // (Its shed as `solids.ts` places it: at the back, 1.5 m deep; its front faces into the paddock.)
+        for (const [k, dx] of [[0, 0], [1, -1.6], [2, 1.6]] as const) {
+            const p = local(s, s.w / 2 - 4 + dx, -s.d / 2 + 2.2 + 1.5 + 1.0);
+            lee(`town:sleep:zoo:${e.id}:${k}`, p.x, p.z);
+        }
+    }
     return {solid, points};
 }
+
+/** The farm buildings stock sleeps by (lane ark-sleep). */
+const SLEEP_SHELTERS: ReadonlySet<string> = new Set(["field_shelter", "pig_ark", "stable", "barn"]);
 
 /** The town's behaviour world (see the top); `data`: its raster and places worked out already (`townSamplerData`). */
 export function townWorldSampler(open: readonly string[], origin: {x: number; z: number} = {x: 0, z: 0}, colliders?: ColliderSet, data?: TownSamplerData): TownSampler {
