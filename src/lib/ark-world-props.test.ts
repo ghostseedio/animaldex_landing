@@ -130,6 +130,12 @@ test("a patch of ground cover is a soft single-sided ring: up-facing, a smooth o
     assert.ok(outer.length >= 16);
     for (let i = 1; i < outer.length; i++) assert.ok(Math.abs(outer[i] - outer[i - 1]) < radius * 0.5, "no spiky corners");
     assert.ok(geo.pos.every(Number.isFinite) && geo.nor.every(Number.isFinite) && geo.col.every(Number.isFinite));
+    // The walk surface (`cover`, never drawn) is a plain 16-face fan at the patch's lift, up-facing, inside its outline.
+    const walk = new Geo();
+    patch(walk, plot, 3, -2, radius, [0.6, 0.5, 0.3], 12345, 0.03, true);
+    assert.equal(walk.triangles, 16);
+    for (let i = 1; i < walk.nor.length; i += 3) assert.ok(walk.nor[i] > 0.99);
+    for (const [x, y, z] of vertices(walk)) assert.ok(Math.hypot(x - 3, z + 2) <= radius * 1.3 && Math.abs(y - 1.03) < 1e-9);
 });
 
 test("a kopje is a tor of ten blocks and more, in varied darker granite, inside its footprint, each a solid from the ground up", () => {

@@ -174,7 +174,7 @@ export function dressSafari(e: {id: string; slot: {at: Box; seed: number; safari
         const radius = 1.4 + r() * 2.2;
         const colour = habitat === "desert" ? SANDSTONE : habitat === "wetland" || habitat === "river" ? MUD : EARTH;
         patch(solid, plot, lx, lz, radius, colour, hashText(`${e.id}:patch:${i}`), 0.03);
-        if (cover) patch(cover, plot, lx, lz, radius, colour, hashText(`${e.id}:patch:${i}`), 0.03);
+        if (cover) patch(cover, plot, lx, lz, radius, colour, hashText(`${e.id}:patch:${i}`), 0.03, true);
     }
     const area2 = (2 * W) * (2 * D);
     switch (habitat) {

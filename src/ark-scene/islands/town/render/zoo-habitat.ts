@@ -179,19 +179,42 @@ export function ledge(geo: Geo, plot: Plot, lx: number, lz: number, size: number
  * specks of the same earth lie just outside it, so the edge is ragged, not a polygon. Single-sided (it is seen from above:
  * the winding faces up), about 50 triangles a patch where the old was 28 drawn both ways (the town's scenery is 635k triangles).
  */
-export function patch(geo: Geo, plot: Plot, lx: number, lz: number, radius: number, colour: RGB, seed: number, lift = 0.012) {
+export function patch(geo: Geo, plot: Plot, lx: number, lz: number, radius: number, colour: RGB, seed: number, lift = 0.012, walk = false) {
     const r = rng(seed);
     const n = 16;
     const phase = [r() * 6.28, r() * 6.28, r() * 6.28];
     // The outline's radius at an angle: 1 ± 0.3 at most, smooth (2, 3 and 5 lobes).
     const reach = (a: number) => radius * (1 + 0.15 * Math.sin(2 * a + phase[0]) + 0.1 * Math.sin(3 * a + phase[1]) + 0.05 * Math.sin(5 * a + phase[2]));
+    if (walk) {
+        // The walk surface a resident stands on (`cover`, never drawn): the patch's whole outline, the very polygon of its outer
+        // ring, as a plain fan at its lift: 16 faces (the soft rim and the specks are for the eye; the heap holds every triangle
+        // of it). Any smaller and a hoof on the rim stands under what is drawn (`ark-zoo-grounding.test.ts`).
+        const top = plot.p(lx, lz, lift);
+        const rim = (i: number): V3 => {
+            const a = (i / n) * Math.PI * 2;
+            const k = reach(a);
+            return plot.p(lx + Math.cos(a) * k, lz + Math.sin(a) * k, lift);
+        };
+        for (let i = 0; i < n; i++) geo.tri(top, rim((i + 1) % n), rim(i), colour);
+        return;
+    }
     // Rings: the share of the reach, the lift (share of `lift`) and the colour's factor there.
     const rings: Array<[number, number, number]> = [[0, 1, 1.04], [0.66, 1, 0.97], [1, 0.7, 0.86]];
+    // (The floor under the patch is read at its middle and on its outline only, and the rings between lie on the straight line
+    // from one to the other: the patch is the very surface of the walk fan below it (`walk`), as the old fan of corners was, so a
+    // hoof on it never stands under what is drawn. A ring that followed the floor over its own bumps rose above the fan by 5 cm.)
+    const middle = plot.p(lx, lz, 0)[1];
+    const rimFloor = Array.from({length: n}, (_, i) => {
+        const a = (i / n) * Math.PI * 2;
+        return plot.p(lx + Math.cos(a) * reach(a), lz + Math.sin(a) * reach(a), 0)[1];
+    });
     const at2 = (ring: number, i: number): V3 => {
         const a = (i / n) * Math.PI * 2;
-        const k = rings[ring][0] * reach(a);
+        const f = rings[ring][0];
+        const k = f * reach(a);
+        const q = plot.p(lx + Math.cos(a) * k, lz + Math.sin(a) * k, 0);
         // (A rim settles toward the floor, but never more than 4 mm under the patch's own lift: the floor's own ripple must not show through.)
-        return plot.p(lx + Math.cos(a) * k, lz + Math.sin(a) * k, Math.max(lift * rings[ring][1], lift - 0.004));
+        return [q[0], middle + (rimFloor[i] - middle) * f + Math.max(lift * rings[ring][1], lift - 0.004), q[2]];
     };
     const centre = plot.p(lx, lz, lift);
     const shadeOf = (ring: number, i: number, j: number): RGB => {
@@ -213,7 +236,8 @@ export function patch(geo: Geo, plot: Plot, lx: number, lz: number, radius: numb
     }
     // Specks of the same earth just past the rim: little irregular flecks, never over a resident's spot (the patch's own
     // footprint rules do not apply: they are a handful of centimetres).
-    const flecks = 4;
+    // (Only on a patch laid close to the floor: a raised slab, `lift` over 4 cm, has no specks hovering round it.)
+    const flecks = lift <= 0.04 ? 4 : 0;
     for (let k = 0; k < flecks; k++) {
         const a = r() * Math.PI * 2;
         const d = reach(a) * (0.95 + r() * 0.22);
@@ -866,7 +890,7 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
     // camel and ostrich sunk into the ground in the zoo": their hooves and toes were 6 cm under the patches.
     const ground = (lx: number, lz: number, radius: number, colour: RGB, seed: number, lift: number) => {
         patch(solid, plot, lx, lz, radius, colour, seed, lift);
-        if (cover) patch(cover, plot, lx, lz, radius, colour, seed, lift);
+        if (cover) patch(cover, plot, lx, lz, radius, colour, seed, lift, true);
     };
     const logs = (n: number, colour = "#6f5236") => {
         for (let k = 0; k < n; k++) {
