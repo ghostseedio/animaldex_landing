@@ -145,6 +145,14 @@ export type ArkAnimal = {
     island?: ArkIsland | null;
     /** Part C: a zoo animal's enclosure, `<type>-<n>` (`voyage_animals.enclosure`; the town's `zoo-types.ts` ids). */
     enclosure?: string | null;
+    /**
+     * Container breeding (decision 416; AnimalDex `voyage_public_animal_extras`, migration 20261209130000; sent only for a house
+     * or farm animal that has one stored, and only while the server's `container_breeding` switch is on): where the engine keeps
+     * it, so the town draws it there and its young beside it, never from a hash of its id. An opaque id of the town's plan: a
+     * home's display (`house-3#0:tank`), its room (`house-40#0~room`, `tower-3~f10l`), its garden (`house-3#0`), a farm plot
+     * (`smallholding-2`) or a countryside field (`rural-sheep-fold`). Absent or one the plan does not know: today's hash.
+     */
+    container?: string | null;
     /** 0 for an arrival, a parent's plus one for the young. */
     generation?: number;
     condition?: ArkCondition | null;

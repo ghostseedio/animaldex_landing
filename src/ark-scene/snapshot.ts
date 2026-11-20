@@ -58,18 +58,25 @@ function animal(raw: unknown): ArkAnimal | null {
     // Part C (islands on): its island and, in the zoo, its enclosure; each only when the server sent it.
     if (row.island === "wild" || row.island === "town") life.island = row.island;
     if ("enclosure" in row) life.enclosure = enclosure(row.enclosure);
+    // Container breeding (only while the server's switch is on): where the engine keeps a house or farm animal (an id of the town's
+    // plan, checked where it is read: `islands/town/containers.ts` knows the ids it can use).
+    if (typeof row.container === "string") life.container = row.container;
     const generation = whole(row.generation);
     if (generation !== null) life.generation = generation;
     if (row.condition === "well_fed" || row.condition === "hungry" || row.condition === "old") life.condition = row.condition;
-    if (typeof row.born_ark_day === "number" && Number.isFinite(row.born_ark_day)) life.born_ark_day = row.born_ark_day;
+    const born = finite(row.born_ark_day);
+    if (born !== null) life.born_ark_day = born;
     // Its kind's wild lifespan (the age bar), when the server sends one.
-    if (typeof row.lifespan_days === "number" && Number.isFinite(row.lifespan_days) && row.lifespan_days > 0) {
-        life.lifespan_days = row.lifespan_days;
+    const days = finite(row.lifespan_days);
+    if (days !== null && days > 0) {
+        life.lifespan_days = days;
         life.lifespan_estimate = row.lifespan_estimate === true;
         // PROPOSED (not sent yet): the upper end of that lifespan, and a predator kind's meal interval.
-        if (typeof row.lifespan_days_hi === "number" && Number.isFinite(row.lifespan_days_hi) && row.lifespan_days_hi >= row.lifespan_days) life.lifespan_days_hi = row.lifespan_days_hi;
+        const hi = finite(row.lifespan_days_hi);
+        if (hi !== null && hi >= days) life.lifespan_days_hi = hi;
     }
-    if (typeof row.hunt_interval_days === "number" && Number.isFinite(row.hunt_interval_days) && row.hunt_interval_days > 0) life.hunt_interval_days = row.hunt_interval_days;
+    const meal = finite(row.hunt_interval_days);
+    if (meal !== null && meal > 0) life.hunt_interval_days = meal;
     if ("activity" in row) life.activity = arkActivity(row.activity);
     if (row.sociality === "solitary" || row.sociality === "pair" || row.sociality === "group") life.sociality = row.sociality;
     if (bringers.length) life.bringers = bringers;
@@ -81,8 +88,9 @@ function animal(raw: unknown): ArkAnimal | null {
         if (typeof value === "number" && Number.isFinite(value) && value >= 0 && value <= 100) stats[key] = value;
     }
     if (Object.keys(stats).length) life.stats = stats;
-    if (typeof row.length_m === "number" && Number.isFinite(row.length_m) && row.length_m > 0) {
-        life.length_m = row.length_m;
+    const length = finite(row.length_m);
+    if (length !== null && length > 0) {
+        life.length_m = length;
         const phrase = text(row.length_phrase);
         if (phrase) life.length_phrase = phrase;
     }

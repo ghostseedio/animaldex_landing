@@ -257,7 +257,7 @@ export const FARM_KEEP = {farmstead: {big: 6, birds: 5}, smallholding: {big: 3, 
  * town animals: one arriving can take a place at home from one who then moves out to the fields (the census's crowding
  * otherwise: the coordinator, 2026-11-17, "farmstead paddocks 31/30 big animals in 238 m²").
  */
-export function stayingSet(animals: readonly Resident[], farmOf: (id: string) => {id: string; kind: "farmstead" | "smallholding"} | null): Set<string> {
+export function stayingSet(animals: readonly Resident[], farmOf: (id: string) => {id: string; kind: "farmstead" | "smallholding"} | null, taken: ReadonlyMap<string, number> = new Map()): Set<string> {
     const groups = new Map<string, {cap: number; list: Array<{id: string; h: number; kind: string}>}>();
     const add = (key: string, cap: number, id: string, kind: string) => {
         let g = groups.get(key);
@@ -276,7 +276,7 @@ export function stayingSet(animals: readonly Resident[], farmOf: (id: string) =>
         }
     }
     const out = new Set<string>();
-    groups.forEach((g) => {
+    groups.forEach((g, key) => {
         // (Each kind's in hash order, then one of each kind in turn: a varied few, the lowest hashes first.)
         g.list.sort((a, b) => a.h - b.h || a.id.localeCompare(b.id));
         const turn = new Map<string, number>();
@@ -286,9 +286,15 @@ export function stayingSet(animals: readonly Resident[], farmOf: (id: string) =>
             return {...k, n};
         });
         ranked.sort((a, b) => a.n - b.n || a.h - b.h || a.id.localeCompare(b.id));
-        for (const k of ranked.slice(0, g.cap)) out.add(k.id);
+        // (Container breeding: the ones the server keeps at the farm already hold places of its few: `stayKey`.)
+        for (const k of ranked.slice(0, Math.max(g.cap - (taken.get(key) ?? 0), 0))) out.add(k.id);
     });
     return out;
+}
+
+/** The group `stayingSet` counts a farm's resident in, for a farm and a kind of resident (its big animals, its birds). */
+export function stayKey(farmId: string, kind: RuralKind): string {
+    return `${farmId}|${kind === "poultry" || kind === "waterfowl" ? "birds" : "big"}`;
 }
 
 /** The fields' boxes inside which nothing else is placed (the plan keeps clear of them). */

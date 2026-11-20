@@ -690,3 +690,29 @@ The models at true size; the parked cars clear of every building, wall, fence an
 | GB-10 | Lit windows' night | the lane's own clock, lane GA's `TOWN_LIGHT.lampOn` | **Lane GA's**, with `people.ts` `windowLit` for whose light is on | The coordinator's rule: one night state for the town. |
 | GB-11 | Shop signs | names, nothing, pictograms | **A pictogram of the trade** on a sign panel, no words | Generic and readable as a shop, never a brand or clutter. |
 | GB-12 | Farm buildings | improve them, leave them | **Left as they were** (they take the new windows and doors) | They are lane GC's. |
+
+## 15. Container breeding: the town draws a kept animal where the server keeps it (lane ARK-CONTAINER-WEB, branch `ark-container-web`, decision 416)
+
+Owner rule (decision 416): pets breed only within one tank, farm animals only within one pen, and what you see must match. The engine
+(AnimalDex `docs/ark/container-breeding.md`) stores a container for every house and farm animal (`voyage_animals.container`), a young one
+takes its parents'; the public read carries it (`container`, AnimalDex migration `20261209130000`, only while the server's
+`container_breeding` switch is on and only for a house or farm animal that has one). Before, the town picked a kept animal's home, tank,
+room, farm or field from a hash of its id, so a young one born in its parents' tank was drawn in a stranger's.
+
+- `islands/town/containers.ts`: what a container id names in this plan: a home's display (`house-3#0:tank`, also cage, vivarium, pond), its
+  room (`house-40#0~room`, `tower-3~f10l`), its garden (`house-3#0`), a farm plot (`smallholding-2`) or a countryside field
+  (`rural-sheep-fold`). An id the plan does not know is as no container: today's hash. `drawnContainer(info)` is the same id from where an
+  animal is drawn (what `scripts/ark-containers-truth.mts` loads and the tests compare).
+- `placement.ts`: with a container the animal is where it says: its display (`planTurtleTanks` counts the tank as taken), its room (a
+  pinned pet: `home-rooms.ts` `OutdoorPet.pin`, the room may hold more than its usual capacity: a young one born in it, one cell each), its
+  garden (pinned out: it counts in the garden's cap and is never sent indoors), its farm plot (the farm's few places count it) or its
+  field (`ruralFields`). A young one is drawn in its parents' container, so beside them. With no container stored nothing moves.
+- The server's own first guess for an arrival is its home's garden (the engine cannot tell where the town draws it), so for an arrived
+  animal a garden container never puts a cow, a horse kept at a farm or a duck on a lawn (it is drawn as before); a fish is at the named
+  home, in its tank when it holds it. A young one born aboard always is where its container says.
+- Memory: the placement memo and the pen spread remember an animal's spot under its container too, and the spread only in the pen it was
+  remembered in.
+- The zoo is by the server's `enclosure` already (one breeding group per enclosure); nothing changes there.
+- Tests: `src/lib/ark-container-placement.test.ts` on the saved real read `src/ark-scene/fixtures/town-containers.json.gz` (production,
+  2026-11-20: 2,901 animals, the 1,461 containers the owner loads): every kept animal drawn in its stored container, and nobody in the town
+  moves with them laid on; young beside parents in every kind of container.
