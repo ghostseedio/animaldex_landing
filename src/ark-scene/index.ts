@@ -205,6 +205,7 @@ import {prepareAttachPoints} from "@/ark-scene/sampler";
 import {benthicCreep, edgeBase, inPlaceLift, livesUnderWater, shadowFootprint, wadeBase} from "@/ark-scene/grounding/contact";
 import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
 import {drawnGround, drawnGroundHeight, setDrawnGroundStride} from "@/ark-scene/grounding/drawn-ground";
+import {lowestPoints, seatDrop} from "@/ark-scene/grounding/tips";
 import {feetCarryClip, modelBase, uprightBody} from "@/ark-scene/grounding/base";
 import {canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
 import {ledgeFrame} from "@/ark-scene/rock-ledge"; // ARK-JUNGLE
@@ -551,6 +552,10 @@ type Entry = {
     glance?: number;
     /** The local reactive layer's output this frame (`reactive.ts`): its offset, head look, action; null outside its budget. */
     reactive?: ReactiveOut | null;
+    /** ARK-CONTACT round 4: its push off its neighbours as drawn (eased toward what `keepApart` wants). */
+    apart?: {x: number; z: number};
+    /** Development (ARK-CONTACT round 4): which path set its pose this frame. */
+    posePath?: string;
     /** Powers you can see (decision 420, `power-show.ts`): its kind's mechanism (false: none) and what it shows now. */
     powerKind?: ArkPower | false;
     power?: ArkPowerFrame | null;
@@ -2205,7 +2210,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const modelled = entry.level === "near" || entry.level === "far" || watched;
         // (Drawn as a model again after a while as a dot or out of sight: its pose with the collisions now, not up to half a
         // second later, so what it is drawn at is the shared pose from its first frame.)
+        if (process.env.NODE_ENV !== "production") entry.posePath = "kept";
         if (!own.pose || epoch - own.at >= every || epoch < own.at || (modelled && !own.collided)) {
+            if (process.env.NODE_ENV !== "production") entry.posePath = "full";
             // On top of the schedule: young at heel, shelter from rain, off the tide (`liveliness-scene.ts`; shared); then
             // the collisions: out of anything solid, eased off its neighbours (`collide/`; shared).
             // (Drawn as a model, near or far: a dot far off is the same dot either way, so it skips them; the models round it
@@ -2230,6 +2237,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // steps follows its schedule every frame (the trip's own path, cheap), with the collisions' last offset
             // held; it was held still for half a second and then jumped on (a walking giraffe 60 cm at a time), only
             // from as far off as it is drawn far, so zooming out set it stuttering. The collisions still run twice a second.
+            if (process.env.NODE_ENV !== "production") entry.posePath = "follow";
             const base = sharedBase(entry, epoch, pin);
             const x = base.x + own.eased.dx;
             const z = base.z + own.eased.dz;
@@ -3967,6 +3975,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const near = list.filter((c) => c.entry.sched && scheduled(c.entry) && focus(c) < 45 && !c.entry.sched.pose?.aloft && !c.entry.riding).sort((a, b) => focus(a) - focus(b)).slice(0, 80);
         // Animals in an act (a birth, a mating, a contest, a meal) stand where the act has them: the others give them room.
         const acting = list.filter((c) => focus(c) < 45 && c.entry.act && !c.entry.act.hidden && !c.entry.act.role);
+        // ARK-CONTACT round 4 (the owner's giraffes "jumping", most under load): the push apart was put on in full each
+        // frame. One giraffe running past another standing slid the standing one sideways at the runner's 5 m/s, its
+        // schedule still, and a long frame made that slide one step of half a metre. Now each frame's push is what it
+        // wants; what it gets moves toward that at a walk (`APART_PACE`), and back to nothing when it is clear.
+        const wanted = new Map<Entry, {x: number; z: number}>();
+        const want = (e: Entry, x: number, z: number) => {
+            const w = wanted.get(e);
+            if (w) {
+                w.x += x;
+                w.z += z;
+            } else wanted.set(e, {x, z});
+        };
         for (let i = 0; i < near.length; i++) {
             const a = near[i];
             const pa = a.entry.sched!.profile;
@@ -3981,6 +4001,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // (Straight off it; one standing exactly on it steps off along its own heading.)
                 const ux = d > 1e-4 ? dx / d : Math.sin(a.pose.yaw);
                 const uz = d > 1e-4 ? dz / d : Math.cos(a.pose.yaw);
+                // (Off an act at once, as before: the act's spot is where it is, not a neighbour going by.)
                 a.pose.x += ux * (room - d);
                 a.pose.z += uz * (room - d);
                 if (onGround) a.pose.base = Math.max(heightAt(a.pose.x, a.pose.z), 0);
@@ -3994,12 +4015,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const room = (a.entry.length + b.entry.length) * 0.42 * (sleepsTouching(a.entry, b.entry) ? 0.45 : 1);
                 if (j > i && d < room && d > 1e-4) {
                     const push = (room - d) / 2;
-                    for (const [c, sign] of [[a, -1], [b, 1]] as const) {
-                        const onGround = Math.abs(c.pose.base - Math.max(heightAt(c.pose.x, c.pose.z), 0)) < 0.05;
-                        c.pose.x += (dx / d) * push * sign;
-                        c.pose.z += (dz / d) * push * sign;
-                        if (onGround) c.pose.base = Math.max(heightAt(c.pose.x, c.pose.z), 0);
-                    }
+                    want(a.entry, (-dx / d) * push, (-dz / d) * push);
+                    want(b.entry, (dx / d) * push, (dz / d) * push);
                 }
                 // A predator (a meat or fish eater bigger than it) moving within 6 m: it looks.
                 const pb = b.entry.sched!.profile;
@@ -4009,8 +4026,36 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             while (look !== null && look > Math.PI) look -= Math.PI * 2;
             while (look !== null && look < -Math.PI) look += Math.PI * 2;
-            const want = look === null ? 0 : Math.max(Math.min(look, 1.2), -1.2);
-            a.entry.glance = (a.entry.glance ?? 0) + (want - (a.entry.glance ?? 0)) * Math.min(dt * 3, 1);
+            const turnTo = look === null ? 0 : Math.max(Math.min(look, 1.2), -1.2);
+            a.entry.glance = (a.entry.glance ?? 0) + (turnTo - (a.entry.glance ?? 0)) * Math.min(dt * 3, 1);
+        }
+        // The pushes, eased (and those pushed before, now clear or out of the set, eased back).
+        for (const c of list) {
+            const e = c.entry;
+            const w = wanted.get(e);
+            if (!w && !e.apart) continue;
+            const at = (e.apart ??= {x: 0, z: 0});
+            const tx = w?.x ?? 0;
+            const tz = w?.z ?? 0;
+            const gx = tx - at.x;
+            const gz = tz - at.z;
+            const gap = Math.hypot(gx, gz);
+            const most = Math.min(Math.max(e.length * 0.5, 0.4), 2) * Math.min(Math.max(dt, 0), 0.1);
+            if (gap <= most || reducedMotion) {
+                at.x = tx;
+                at.z = tz;
+            } else {
+                at.x += (gx / gap) * most;
+                at.z += (gz / gap) * most;
+            }
+            if (!w && Math.hypot(at.x, at.z) < 1e-4) {
+                e.apart = undefined;
+                continue;
+            }
+            const onGround = Math.abs(c.pose.base - Math.max(heightAt(c.pose.x, c.pose.z), 0)) < 0.05;
+            c.pose.x += at.x;
+            c.pose.z += at.z;
+            if (onGround) c.pose.base = Math.max(heightAt(c.pose.x, c.pose.z), 0);
         }
     };
 
@@ -5499,6 +5544,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (The one chosen or followed never waits: the camera is flying to where it is, and a first step taken after
             // the flight had ended moved it out from in front of the camera, 1.9 m for a fish 8 cm long.)
             if (sched && !sched.warm && warmFrameMs > WARM_MS && !options.recording && selectedId !== entry.animal.id && followId !== entry.animal.id) {
+                if (process.env.NODE_ENV !== "production") entry.posePath = "warm-wait";
                 if (!sched.pose) {
                     entry.middle = null;
                     continue;
@@ -5506,6 +5552,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             } else if (sched && tripDue && warmFrameMs > WARM_MS && !options.recording && entry.animal.id !== selectedId && entry.animal.id !== followId && epochNow >= sched.at && epochNow - sched.at < (entry.level === "near" ? TRIP_HOLD_NEAR_SECONDS : TRIP_HOLD_SECONDS)) {
                 // (Held: drawn where it was this frame.)
                 tripsHeld++;
+                if (process.env.NODE_ENV !== "production") entry.posePath = "trip-hold";
             } else if (sched) {
                 const started = performance.now();
                 collideCallMs = 0;
@@ -6111,6 +6158,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const powerFlies = entry.air > 0.001 || model.behaviour?.plan === "bird" || model.behaviour?.plan === "bat" || model.behaviour?.plan === "flying_insect";
             if (entry.power?.drop && !reducedMotion) position.y -= entry.power.drop < 0 && stand && !powerFlies ? 0 : entry.power.drop;
             matrix.compose(position, rotation, scale.set(s, s, s));
+            // ARK-CONTACT round 4 (the town's cat asleep 4 to 14 cm over the lawn): a body lying on the ground in its
+            // rig's sleep or lying pose, settled (no fade from another clip), lowered until the pose's own lowest
+            // points (its clip's frame, skinned: `grounding/tips.ts`) meet the ground, by 15 cm at most.
+            if (rig && state && lyingOn !== null && entry.sleepClipped && state.weight >= 0.999 && !state.from && !reducedMotion) {
+                const clipNow = rig.clips[state.now.name];
+                if (clipNow) {
+                    const drop = seatDrop(lowestPoints(rig, clipRows(clipNow, state.now.phase)[0]), matrix.elements, (x, z) => standGround(x, z, poseBase));
+                    if (drop > 0) {
+                        position.y -= drop;
+                        matrix.setPosition(position);
+                    }
+                }
+            }
             // Development (ARK-CONTACT's zoom probe, `scripts/ark-contact-shots.mjs`): where it is drawn, its base by
             // the level it is drawn at, to measure any jump as the camera crosses a level's distance.
             if (process.env.NODE_ENV !== "production") {
@@ -6125,7 +6185,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 drawn.slept = Boolean(slept);
                 drawn.scale = s;
                 (drawn as {m?: number[]}).m = matrix.elements.slice();
-                Object.assign(drawn, {wx: where.x, wz: where.z, yaw: where.yaw, react: (entry as {reactive?: {offset?: {x: number; z: number}}}).reactive?.offset ?? null, surfacePoint: surface ? {x: surface.x, y: surface.y, z: surface.z, nx: surface.nx, ny: surface.ny, nz: surface.nz} : null, faceFixed: Boolean(entry.drawnFace && surface === entry.drawnFace), inWater: Boolean(where.water), afloat: Boolean(where.afloat), waterTop: waterTopAt(where.x, where.z), height: heightAt(where.x, where.z), base: where.base, poseY: entry.sched?.pose?.y ?? null, clip: entry.rig?.now.name ?? null});
+                Object.assign(drawn, {path: entry.posePath ?? null, frameDt: dt, wx: where.x, wz: where.z, yaw: where.yaw, react: entry.reactive ? {x: entry.reactive.dx, z: entry.reactive.dz} : null, apart: entry.apart ? {...entry.apart} : null, surfacePoint: surface ? {x: surface.x, y: surface.y, z: surface.z, nx: surface.nx, ny: surface.ny, nz: surface.nz} : null, faceFixed: Boolean(entry.drawnFace && surface === entry.drawnFace), inWater: Boolean(where.water), afloat: Boolean(where.afloat), waterTop: waterTopAt(where.x, where.z), height: heightAt(where.x, where.z), base: where.base, poseY: entry.sched?.pose?.y ?? null, clip: entry.rig?.now.name ?? null});
             }
             if (rig && state && level === "near") {
                 // The locomotion layer (`locomotion/`, lane L1): gaits with planted feet, foot IK, the body's motion and

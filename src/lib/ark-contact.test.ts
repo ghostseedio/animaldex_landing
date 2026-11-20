@@ -177,3 +177,22 @@ test("on a rock drawn reached down to its ground, a crab on its face sits on the
     const top = stretchedFace({...made, y: 3 + 2}, rock, {...made});
     assert.equal(top.y, 5);
 });
+
+test("a lying pose is seated by its own lowest points, lowered by 15 cm at most and never raised", async () => {
+    const {lowestPoints, seatDrop, SEAT_MOST} = await import("@/ark-scene/grounding/tips");
+    // A rest mesh of three points on one bone, its row the identity (half floats: 1 is 0x3c00).
+    const ys = [0.2, 0.5, 0.9];
+    const attr = (values: number[][]) => ({count: values.length, getX: (i: number) => values[i][0], getY: (i: number) => values[i][1], getZ: (i: number) => values[i][2], getComponent: (i: number, k: number) => values[i][k]});
+    const geometry = {
+        getAttribute: (name: string) =>
+            name === "position" ? attr(ys.map((y, i) => [i, y, 0])) : name === "arkJoints" ? attr(ys.map(() => [0, 0, 0, 0])) : attr(ys.map(() => [1, 0, 0, 0]))
+    };
+    const data = new Uint16Array([0x3c00, 0, 0, 0, 0, 0x3c00, 0, 0, 0, 0, 0x3c00, 0]);
+    const points = lowestPoints({geometry, data, bones: 1}, 0, 2);
+    assert.ok(Math.abs(points[1] - 0.2) < 1e-6);
+    // Drawn 1 m up (no turn, scale 1): its lowest point at 1.2.
+    const m = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 1, 0, 1];
+    assert.ok(Math.abs(seatDrop(points, m, () => 1.1) - 0.1) < 1e-6);
+    assert.equal(seatDrop(points, m, () => 0), SEAT_MOST);
+    assert.equal(seatDrop(points, m, () => 1.3), 0);
+});

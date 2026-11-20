@@ -221,7 +221,7 @@ if (want("long-frame")) {
                     for (const e of window.__arkDebug.entries()) {
                         if (!e.drawn || !e.sched?.pose || e.level === "token") continue;
                         if (Math.hypot(e.drawn.x - target.x, e.drawn.z - target.z) > 60) continue;
-                        at.push([e.animal.id, e.animal.model_slug, e.drawn.level, e.drawn.wx, e.drawn.wz, e.sched.pose.x, e.sched.pose.z, e.drawn.paceLag ?? 0, e.drawn.topPace ?? null]);
+                        at.push([e.animal.id, e.animal.model_slug, e.drawn.level, e.drawn.wx, e.drawn.wz, e.sched.pose.x, e.sched.pose.z, 0, null, e.drawn.path ?? null, e.drawn.frameDt ?? null, e.sched.at ?? null, e.drawn.react?.x ?? 0, e.drawn.react?.z ?? 0, e.drawn.apart?.x ?? 0, e.drawn.apart?.z ?? 0]);
                     }
                     window.__lfLog.push({t: performance.now(), at});
                     window.__lfRaf = requestAnimationFrame(step);
@@ -234,11 +234,14 @@ if (want("long-frame")) {
                 clearInterval(window.__lfStall);
                 return window.__lfLog;
             });
+            writeFileSync(path.join(out, `${label}-long-frame-${stall ? "forced" : "normal"}.json`), JSON.stringify(log));
             // Drawn steps (only frames where something moved: the scene draws on some frames, not every one).
             const last = new Map();
             let worst = 0;
             let worstRatio = 0;
             let longFrames = 0;
+            let longPose = 0;
+            let worstExcess = 0;
             const steps = [];
             for (const f of log) {
                 for (const r of f.at) {
@@ -246,6 +249,8 @@ if (want("long-frame")) {
                     if (p) {
                         const d = Math.hypot(r[3] - p.r[3], r[4] - p.r[4]);
                         const pd = Math.hypot(r[5] - p.r[5], r[6] - p.r[6]);
+                        if (r[10] >= 0.09) longPose = Math.max(longPose, pd);
+                        if (d > 1e-4 && pd > 0.02) worstExcess = Math.max(worstExcess, d - pd);
                         if (d > 1e-4) {
                             steps.push(d);
                             if (d > worst) worst = d;
@@ -263,7 +268,7 @@ if (want("long-frame")) {
                 if (r[1] === "giraffe" && r[8] !== null) top = r[8];
             }
             steps.sort((a, b) => b - a);
-            return {frames: log.length, longFrames, worstStep: Math.round(worst * 1000) / 1000, p99: Math.round((steps[Math.floor(steps.length * 0.01)] ?? 0) * 1000) / 1000, worstOverSchedule: Math.round(worstRatio * 100) / 100, eased: Math.round(lag * 1000) / 1000, giraffeTopPace: top};
+            return {frames: log.length, longFrames, worstStep: Math.round(worst * 1000) / 1000, p99: Math.round((steps[Math.floor(steps.length * 0.01)] ?? 0) * 1000) / 1000, worstOverSchedule: Math.round(worstRatio * 100) / 100, eased: Math.round(lag * 1000) / 1000, giraffeTopPace: top, scheduleStepInLongFrames: Math.round(longPose * 1000) / 1000, worstStepOverSchedule: Math.round(worstExcess * 1000) / 1000};
         };
         report.longFrame = {normal: await run(false), forced: await run(true)};
         console.log("long-frame", JSON.stringify(report.longFrame));
