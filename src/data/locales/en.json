@@ -4375,7 +4375,22 @@
       "graphLabel": "{animal} population, {period}: {start} to {now}",
       "arkDays": "Ark days {from}–{to}",
       "recordStarts": "The record starts {date}",
-      "pointAt": "{count} at {time}"
+      "pointAt": "{count} at {time}",
+      "whole": "{count} in the whole Ark",
+      "placeWild": "{count} wild",
+      "placeHomes": "{count} in homes",
+      "placeFarms": "{count} on farms",
+      "placeTown": "{count} in town wildlife",
+      "placeZoo": "{count} at the zoo",
+      "thisAlone": "This one: alone {where}",
+      "thisOneOf": "This one: 1 of {count} {where}",
+      "whereWild": "on the wild island",
+      "whereHomes": "in homes",
+      "whereFarms": "on farms",
+      "whereTown": "among town wildlife",
+      "whereZoo": "in its zoo enclosure",
+      "breedsSamePlace": "Breeds only with others in the same place.",
+      "riseFall": "Up: animals brought aboard from photos, or born. Down: animals that died or were eaten."
     },
     "story": {
       "generic": "Came aboard after a step that worked",

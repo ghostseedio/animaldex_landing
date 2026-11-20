@@ -163,7 +163,22 @@
             "graphLabel": "{animal}-এর জনসংখ্যা, {period}: {start} থেকে {now}",
             "arkDays": "Ark-এর দিন {from}–{to}",
             "recordStarts": "রেকর্ড শুরু {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "পুরো Ark-এ {count}",
+            "placeWild": "{count}টি বন্য",
+            "placeHomes": "{count}টি বাড়িতে",
+            "placeFarms": "{count}টি খামারে",
+            "placeTown": "{count}টি শহরের বন্যপ্রাণী",
+            "placeZoo": "{count}টি চিড়িয়াখানায়",
+            "thisAlone": "এই প্রাণীটি: {where} একা",
+            "thisOneOf": "এই প্রাণীটি: {where} {count}টির মধ্যে ১টি",
+            "whereWild": "বন্য দ্বীপে",
+            "whereHomes": "বাড়িগুলোতে",
+            "whereFarms": "খামারে",
+            "whereTown": "শহরের বন্যপ্রাণীদের মধ্যে",
+            "whereZoo": "চিড়িয়াখানার নিজের খাঁচায়",
+            "breedsSamePlace": "শুধু একই জায়গার অন্যদের সঙ্গে প্রজনন করে।",
+            "riseFall": "বাড়ে: ছবি থেকে Ark-এ আনা বা জন্মানো প্রাণী। কমে: মারা যাওয়া বা খেয়ে ফেলা প্রাণী।"
         },
         "story": {
             "generic": "কাজ করা একটি পদক্ষেপের পর জাহাজে উঠেছে",

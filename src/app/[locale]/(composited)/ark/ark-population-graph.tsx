@@ -4,7 +4,9 @@ import React, {useContext, useId, useMemo, useState} from "react";
 import {ArkGraphWordsContext} from "@/app/[locale]/(composited)/ark/ark-graph-context";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkIconUrl} from "@/ark-scene/placeholder-icon";
+import type {ArkSnapshot} from "@/ark-scene/types";
 import {ARK_GRAPH_ENGLISH, type ArkGraphWords} from "@/lib/ark-graph-words";
+import {arkKindHereText, arkKindWhere, arkKindWholeText, type ArkKindWhere} from "@/lib/ark-kind-where";
 import {fillArkWords} from "@/lib/ark-words";
 import {
     ARK_PERIODS,
@@ -13,11 +15,16 @@ import {
     arkGraphWhen,
     arkHistoryLines,
     arkLinePath,
+    arkPeriodSeries,
+    arkPeriodStart,
+    arkSeriesStats,
     arkStatsChangeText,
+    arkStepChanges,
     type ArkHistory,
     type ArkLine,
     type ArkPeriod,
     type ArkSeries,
+    type ArkHistoryScope,
     type ArkSeriesStats
 } from "@/lib/ark-population-history";
 
@@ -126,6 +133,8 @@ type GraphProps = {
     /** Fly to one of its animals; absent: none aboard. */
     onFly?: (() => void) | null;
     locale: string;
+    /** Where the kind's animals are, and where the tapped one is among them; absent: not said. */
+    where?: ArkKindWhere | null;
 };
 
 const W = 300;
@@ -134,7 +143,7 @@ const LEFT = 30;
 const BOTTOM = 18;
 
 /** One species' graph: the line over the period, its axis, and the period's numbers. */
-export function ArkPopulationGraph({name, icon, history, series, stats, period, onPeriod, onBack, onFly = null, locale}: GraphProps) {
+export function ArkPopulationGraph({name, icon, history, series, stats, period, onPeriod, onBack, onFly = null, locale, where = null}: GraphProps) {
     const words = useGraphWords();
     const titleId = useId();
     const [hover, setHover] = useState<number | null>(null);
@@ -149,6 +158,9 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
     const dayTo = arkDayAt(end, history.startedAt);
     const fromRecord = start <= history.firstAt + history.bucketMs;
     const happened = ([["arrived", stats.arrived], ["born", stats.born], ["revived", stats.revived], ["died", stats.died], ["eaten", stats.eaten]] as const).filter(([, n]) => n > 0);
+    const here = where ? arkKindHereText(where, words, locale) : null;
+    // What changed at the point under the finger: arrivals from photos, births, deaths (the record's own rows).
+    const changed = hover === null ? [] : arkStepChanges(series, Math.max(0, Math.min(series.counts.length - 1, hover)));
     const hoverIndex = hover === null ? null : Math.max(0, Math.min(series.counts.length - 1, hover));
     const hoverPoint = hoverIndex === null ? null : line.points[Math.min(hoverIndex, line.points.length - 1)];
     const label = fillArkWords(words.graphLabel, {animal: name, period: words.periods[period], start: number(stats.start), now: number(stats.now)});
@@ -179,6 +191,13 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
                 <h3 id={titleId} className="min-w-0 flex-1 truncate font-sans text-[14px] font-bold normal-case leading-tight tracking-normal">{name}</h3>
                 <span className="text-[15px] font-bold tabular-nums">{number(stats.now)}</span>
             </div>
+            {where ? (
+                <div className="px-3.5 pt-1.5 text-[11.5px] leading-snug">
+                    <p className="text-white/75">{arkKindWholeText(where, words, locale)}</p>
+                    {here ? <p className="font-semibold text-[#c8fa63]">{here}</p> : null}
+                    <p className="text-white/45">{words.breedsSamePlace}</p>
+                </div>
+            ) : null}
             <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 pb-1 pt-2">
                 <ArkPeriodSwitch period={period} onPeriod={onPeriod} />
                 <span className="text-[12px] font-bold tabular-nums" style={{color}}>
@@ -225,11 +244,13 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
                     <text x={W - 4} y={H - 4} fontSize={10} textAnchor="end" fill="rgba(255,252,244,0.5)">{words.now}</text>
                 </svg>
                 {hoverIndex !== null ? (
-                    <p aria-live="polite" className="pointer-events-none absolute right-3 top-0 rounded-md bg-black/50 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
+                    <p aria-live="polite" className="pointer-events-none absolute right-3 top-0 max-w-[85%] rounded-md bg-black/60 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-white">
                         {fillArkWords(words.pointAt, {count: number(series.counts[hoverIndex]), time: arkGraphWhen(series.times[hoverIndex], locale, history)})}
+                        {changed.length ? <span className="block font-medium text-white/75">{changed.map(([kind, n]) => fillArkWords(words[kind], {count: number(n)})).join(" · ")}</span> : null}
                     </p>
                 ) : null}
             </div>
+            <p className="px-3.5 pb-0.5 text-[10.5px] leading-snug text-white/55">{words.riseFall}</p>
             <p className="px-3.5 text-[10.5px] text-white/45">
                 {[
                     dayFrom !== null && dayTo !== null ? fillArkWords(words.arkDays, {from: number(Math.max(0, dayFrom)), to: number(dayTo)}) : null,
@@ -298,20 +319,33 @@ export function ArkGoneRow({name, slug, line, locale, onOpen, setsize, posinset}
     );
 }
 
+/** What the panel tells the graph module about the Ark: the whole read, the tapped animal and the rows' scope. */
+export type ArkHudWhere = {snapshot: ArkSnapshot | null; selectedKey: string | null; selectedId?: string; scope: ArkHistoryScope; locale: string};
+
 /**
  * The panel's graph view of one species, in place of the list. `rows` are the species aboard (a name and an icon);
- * a kind that died out is named by the answer's `gone`. Nothing when the kind is in neither, or has no line.
+ * a kind that died out is named by the answer's `gone`. Nothing when the kind is in neither, or has no line. The graph
+ * counts the whole kind across the Ark whatever island the rows are of (`line` is the rows' scope, so it is read again
+ * for the whole Ark when that differs), and says where its animals are.
  */
-export function ArkHudGraphPane<Row extends {name: string; slug: string}>({history, graphKey, rows, line, period, onPeriod, onBack, onFly, locale}: {history: ArkHistory; graphKey: string; rows: ReadonlyMap<string, Row>; line: ArkHudLine | undefined; period: ArkPeriod; onPeriod: (period: ArkPeriod) => void; onBack: () => void; onFly: (row: Row) => void; locale: string}) {
+export function ArkHudGraphPane<Row extends {name: string; slug: string}>({history, graphKey, rows, line, period, onPeriod, onBack, onFly, locale, ctx}: {history: ArkHistory; graphKey: string; rows: ReadonlyMap<string, Row>; line: ArkHudLine | undefined; period: ArkPeriod; onPeriod: (period: ArkPeriod) => void; onBack: () => void; onFly: (row: Row) => void; locale: string; ctx: ArkHudWhere}) {
     const row = rows.get(graphKey);
     const gone = history.gone.get(graphKey);
     if (!line || !(row || gone)) return null;
     const slug = row?.slug ?? gone?.slug ?? "";
+    const whole = ctx.scope === "both" ? line : wholeLine(history, graphKey, period);
+    const where = arkKindWhere(ctx.snapshot, graphKey, ctx.selectedKey === graphKey ? ctx.selectedId : null);
     return (
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] pt-1 [scrollbar-width:thin]">
-            <ArkPopulationGraph name={row?.name ?? gone?.name ?? ""} icon={<Icon slug={slug} size={28} />} history={history} series={line.series} stats={line.stats} period={period} onPeriod={onPeriod} onBack={onBack} onFly={row ? () => onFly(row) : null} locale={locale} />
+            <ArkPopulationGraph name={row?.name ?? gone?.name ?? ""} icon={<Icon slug={slug} size={28} />} history={history} series={whole.series} stats={whole.stats} period={period} onPeriod={onPeriod} onBack={onBack} onFly={row ? () => onFly(row) : null} locale={locale} where={where} />
         </div>
     );
+}
+
+/** One kind's line over the whole Ark (both islands) for a period. */
+function wholeLine(history: ArkHistory, key: string, period: ArkPeriod): ArkHudLine {
+    const series = arkPeriodSeries(history, key, "both", arkPeriodStart(history, period));
+    return {series, stats: arkSeriesStats(series)};
 }
 
 /** "Thriving · +25%, 7 days" for a row's screen-reader label in those orders. */
@@ -320,13 +354,30 @@ export function arkPeriodLabel(stats: ArkSeriesStats, period: ArkPeriod, locale:
     return `${said.percent ?? said.count}, ${words.periods[period]}`;
 }
 
-/** The order and the period over the list; the message when nothing changed in the period. */
-export function ArkHudControls({mode, onMode, period, onPeriod}: {mode: ArkSortMode; onMode: (mode: ArkSortMode) => void; period: ArkPeriod; onPeriod: (period: ArkPeriod) => void}) {
+/**
+ * The order and the period over the list; and, while an animal (or a herd) is tapped, where its kind's animals are and
+ * where this one stands among them (the list's counts are per island, the chart's the whole Ark).
+ */
+export function ArkHudControls({mode, onMode, period, onPeriod, ctx = null}: {mode: ArkSortMode; onMode: (mode: ArkSortMode) => void; period: ArkPeriod; onPeriod: (period: ArkPeriod) => void; ctx?: ArkHudWhere | null}) {
+    const words = useGraphWords();
+    const locale = ctx?.locale ?? "en";
+    const where = ctx?.selectedKey ? arkKindWhere(ctx.snapshot, ctx.selectedKey, ctx.selectedId) : null;
+    const here = where ? arkKindHereText(where, words, locale) : null;
     return (
-        <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">
-            <ArkSortSwitch mode={mode} onMode={onMode} />
-            <ArkPeriodSwitch period={period} onPeriod={onPeriod} />
-        </div>
+        <>
+            <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">
+                <ArkSortSwitch mode={mode} onMode={onMode} />
+                <ArkPeriodSwitch period={period} onPeriod={onPeriod} />
+            </div>
+            {where ? (
+                <div className="border-t border-white/[0.08] px-3.5 py-2 text-[11.5px] leading-snug">
+                    <p className="truncate font-bold">{where.name}</p>
+                    <p className="text-white/75">{arkKindWholeText(where, words, locale)}</p>
+                    {here ? <p className="font-semibold text-[#c8fa63]">{here}</p> : null}
+                    {where.here && where.here.count <= 1 ? <p className="text-white/45">{words.breedsSamePlace}</p> : null}
+                </div>
+            ) : null}
+        </>
     );
 }
 

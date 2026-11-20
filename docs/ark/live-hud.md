@@ -52,6 +52,25 @@ populations only in order of biggest first", "show population % changes in red a
   2-5 s, `more`, so nothing is said until it leaves the window (about 20:44 UTC on 2026-11-12).
 - Tests: `src/lib/ark-population-change.test.ts`.
 
+### What the count and the chart mean (`lib/ark-kind-where.ts`, owner 2026-11-20)
+An axolotl alone in a zoo tank, and the chart beside it rising: the chart counts the WHOLE kind across the Ark (9 axolotls:
+7 in homes, 1 zoo, 1 wild, all from photos). So wherever a kind's chart shows (/ark's panel and the embed's), it says so:
+- The graph's header is the whole Ark's count whatever island the rows are of (the pane reads the line again with scope
+  "both" when the rows are one island's), then "9 in the whole Ark · 7 in homes · 1 wild · 1 at the zoo": only the five
+  kinds of place that have animals (wild, homes, farms, town wildlife, zoo), most first. From the public read only: each
+  animal's `island`, `area` and `enclosure`; no owner, no house, not even the enclosure's name.
+- "This one: alone in its zoo enclosure" / "This one: 1 of 2 in its zoo enclosure" for the tapped animal: against its kind in
+  the same place (the zoo counts per enclosure, `enclosure` `<type>-<n>`; the others per place). Above the list, while an
+  animal is tapped, a strip says the same for its kind; it adds the breeding rule when the animal is alone in its place.
+- "Breeds only with others in the same place." (words: "the same place", so it stays true if homes become one place each).
+- A point under the finger or tap names what changed there from the record's own rows (arrivals from photos, births,
+  deaths, meals: `arkStepChanges`), and a line under the chart says what makes it rise and fall.
+- Words: `ark.graph` (15 keys, 45 languages; English fallback key by key). The code loads with the lazy graph module; the
+  page's static JavaScript only passes the tapped animal's id and the read.
+- Not here: an animal's sex. The public read carries none (the engine keeps it internal, `ark-ecology/sexes.ts`), so no
+  ♂/♀ is drawn; it needs `sex` ('m'|'f') per animal in `voyage_public_v2` and the kind's reproduction mode.
+- Tests: `src/lib/ark-kind-where.test.ts`, `src/lib/ark-population-graph.test.ts`, `src/lib/ark-graph-words.test.ts`.
+
 ## Page weight and speed (decision 246, 2026-11-12)
 The SEO audit (landing `seo-audit` 80ec7308, §3.9): mobile Lighthouse 49, LCP 4.7 s, TBT 1,061 ms; 5.2 MB of HTML, 4 MB
 of it the whole live snapshot as RSC props; 1.9 MB of JS; TTFB 2-3 s (`force-dynamic`, a per-visitor read per request).

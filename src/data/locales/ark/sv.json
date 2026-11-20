@@ -163,7 +163,22 @@
             "graphLabel": "Bestånd av {animal}, {period}: {start} till {now}",
             "arkDays": "Ark-dagar {from}–{to}",
             "recordStarts": "Registret börjar {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} i hela Ark",
+            "placeWild": "{count} vilda",
+            "placeHomes": "{count} i hem",
+            "placeFarms": "{count} på gårdar",
+            "placeTown": "{count} i stadens djurliv",
+            "placeZoo": "{count} i djurparken",
+            "thisAlone": "Det här djuret: ensamt {where}",
+            "thisOneOf": "Det här djuret: 1 av {count} {where}",
+            "whereWild": "på den vilda ön",
+            "whereHomes": "i hem",
+            "whereFarms": "på gårdar",
+            "whereTown": "bland stadens djurliv",
+            "whereZoo": "i sin hage i djurparken",
+            "breedsSamePlace": "Får bara ungar med andra på samma plats.",
+            "riseFall": "Upp: djur som kommit ombord från foton, eller som fötts. Ner: djur som dött eller blivit uppätna."
         },
         "story": {
             "generic": "Kom ombord efter ett steg som fungerade",

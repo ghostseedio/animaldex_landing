@@ -28,7 +28,7 @@ test("the graphs' words: the site's English file IS the module's English (the fa
 test("the graphs' words: every one of the 45 Ark languages has every key, filled the same way as English, in its own words", () => {
     const english = flat(ARK_GRAPH_ENGLISH);
     assert.equal(ARK_LANGUAGES.length, 45);
-    assert.equal(Object.keys(english).length, 33, "25 lines, 4 periods and their 4 short forms");
+    assert.equal(Object.keys(english).length, 48, "40 lines, 4 periods and their 4 short forms");
     for (const language of ARK_LANGUAGES) {
         const own = flat(read(language));
         assert.deepEqual(Object.keys(own).sort(), Object.keys(english).sort(), language);
@@ -48,6 +48,10 @@ test("the graphs' words: every one of the 45 Ark languages has every key, filled
         assert.ok(distinct(["periodsShort.24h", "periodsShort.7d", "periodsShort.30d", "periodsShort.all"]), `${language}: short periods repeat`);
         assert.ok(distinct(["biggest", "thriving", "declining"]), `${language}: orders repeat`);
         assert.ok(distinct(["now", "change", "peak", "low"]), `${language}: the four figures repeat`);
+        // Where a kind's animals are: five places, each said its own way; the lines that take one say so with {where}.
+        assert.ok(distinct(["placeWild", "placeHomes", "placeFarms", "placeTown", "placeZoo"]), `${language}: the places' counts repeat`);
+        assert.ok(distinct(["whereWild", "whereHomes", "whereFarms", "whereTown", "whereZoo"]), `${language}: the places repeat`);
+        assert.ok(own.whole.includes("{count}") && own.thisAlone.includes("{where}") && own.thisOneOf.includes("{where}") && own.thisOneOf.includes("{count}"), `${language}: where-lines need their holes`);
     }
 });
 

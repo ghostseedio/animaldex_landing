@@ -163,7 +163,22 @@
             "graphLabel": "{animal} populációja, {period}: {start} és {now} között",
             "arkDays": "Ark-napok {from}–{to}",
             "recordStarts": "A feljegyzés ekkor kezdődik: {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} az egész Arkon",
+            "placeWild": "{count} vadon",
+            "placeHomes": "{count} otthonokban",
+            "placeFarms": "{count} farmokon",
+            "placeTown": "{count} a városi vadvilágban",
+            "placeZoo": "{count} az állatkertben",
+            "thisAlone": "Ez az állat: egyedül {where}",
+            "thisOneOf": "Ez az állat: {count} közül egy {where}",
+            "whereWild": "a vad szigeten",
+            "whereHomes": "otthonokban",
+            "whereFarms": "farmokon",
+            "whereTown": "a városi vadvilág között",
+            "whereZoo": "az állatkerti kifutójában",
+            "breedsSamePlace": "Csak ugyanazon a helyen élő társaival szaporodik.",
+            "riseFall": "Fel: fotókról a fedélzetre került vagy született állatok. Le: elpusztult vagy megevett állatok."
         },
         "story": {
             "generic": "Egy bevált lépés után szállt fel",

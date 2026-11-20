@@ -163,7 +163,22 @@
             "graphLabel": "Idadi ya {animal}, {period}: kuanzia {start} hadi {now}",
             "arkDays": "Siku za Ark {from}–{to}",
             "recordStarts": "Rekodi inaanza {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} katika Ark nzima",
+            "placeWild": "{count} porini",
+            "placeHomes": "{count} nyumbani",
+            "placeFarms": "{count} mashambani",
+            "placeTown": "{count} wanyamapori wa mjini",
+            "placeZoo": "{count} kwenye bustani ya wanyama",
+            "thisAlone": "Huyu: peke yake {where}",
+            "thisOneOf": "Huyu: 1 kati ya {count} {where}",
+            "whereWild": "kwenye kisiwa cha porini",
+            "whereHomes": "nyumbani",
+            "whereFarms": "mashambani",
+            "whereTown": "miongoni mwa wanyamapori wa mjini",
+            "whereZoo": "kwenye zizi lake la bustani ya wanyama",
+            "breedsSamePlace": "Huzaana tu na wengine walio mahali pamoja.",
+            "riseFall": "Juu: wanyama walioletwa ndani kutoka kwa picha, au waliozaliwa. Chini: wanyama waliokufa au kuliwa."
         },
         "story": {
             "generic": "Alipanda baada ya hatua iliyofanikiwa",

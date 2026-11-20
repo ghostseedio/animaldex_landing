@@ -5,7 +5,9 @@ import {renderToStaticMarkup} from "react-dom/server";
 import {readFileSync} from "node:fs";
 import path from "node:path";
 import {ArkGraphWordsContext} from "@/app/[locale]/(composited)/ark/ark-graph-context";
-import {ArkGoneRow, ArkHudControls, ArkHudNone, ArkPopulationGraph, ArkRowSpark, arkHudLines, arkPeriodLabel} from "@/app/[locale]/(composited)/ark/ark-population-graph";
+import {ArkGoneRow, ArkHudControls, ArkHudGraphPane, ArkHudNone, ArkPopulationGraph, ArkRowSpark, arkHudLines, arkPeriodLabel, type ArkHudWhere} from "@/app/[locale]/(composited)/ark/ark-population-graph";
+import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
+import {arkKindWhere} from "@/lib/ark-kind-where";
 import type {ArkGraphWords} from "@/lib/ark-graph-words";
 import {arkCompactHistory, arkRebucketDays, arkStatsChangeText, decodeArkHistory} from "@/lib/ark-population-history";
 
@@ -115,4 +117,65 @@ test("the axis and the hover name the viewer's days: the same record, two time z
     assert.equal(la.zebra.series.counts.at(-1), 2);
     // The aria label's start and end are the period's counts; nothing says UTC.
     assert.match(jakarta.html, /population, All: 0 to 2/);
+});
+
+// MARK: What the count is, and where the animals are (owner, 2026-11-20)
+
+const zebra = (id: string, extra: Partial<ArkAnimal> = {}) => ({id, species_profile_id: "zebra", name: "Plains Zebra", scientific_name: null, model_slug: "zebra", zone: "grassland", arrived_at: "2026-11-01T00:00:00Z", brought_by: {label: "@someone", named: true}, mine: false, island: "town", ...extra}) as ArkAnimal;
+const zebras = [zebra("z1", {area: "zoo", enclosure: "savanna_paddocks-1"}), zebra("z2", {area: "house"}), zebra("z3", {island: "wild"}), zebra("z4", {island: "wild"})];
+const ark: ArkSnapshot = {voyage: {slug: "ark", name: "Ark", started_at: null}, counts: {animals: 4, species: 1, founders: 1}, zones: [], animals: zebras, as_of: null};
+
+test("the graph says its count is the whole Ark, the places, where this one is, the breeding rule and what moves the line", () => {
+    const {lines} = arkHudLines(history, "24h", ["zebra"], "both", "biggest");
+    const line = lines.get("zebra")!;
+    const html = renderToStaticMarkup(createElement(ArkPopulationGraph, {name: "Plains Zebra", icon: null, history, series: line.series, stats: line.stats, period: "24h", onPeriod: noop, onBack: noop, onFly: noop, locale: "en", where: arkKindWhere(ark, "zebra", "z1")}));
+    assert.match(html, /4 in the whole Ark · 2 wild · 1 in homes · 1 at the zoo/);
+    assert.match(html, /This one: alone in its zoo enclosure/);
+    assert.match(html, /Breeds only with others in the same place\./);
+    assert.match(html, /Up: animals brought aboard from photos, or born\. Down: animals that died or were eaten\./);
+    // Without it (a kind that died out, an older caller): the chart and its legend only.
+    const bare = renderToStaticMarkup(createElement(ArkPopulationGraph, {name: "Plains Zebra", icon: null, history, series: line.series, stats: line.stats, period: "24h", onPeriod: noop, onBack: noop, onFly: noop, locale: "en"}));
+    assert.doesNotMatch(bare, /whole Ark|This one/);
+    assert.match(bare, /Up: animals brought aboard/);
+});
+
+test("the panel's graph counts the whole Ark whatever island its rows are of, and says where the tapped animal is", () => {
+    // The rows are the town island's (scope "town"): the line handed in is the town's, the pane reads the whole Ark's again.
+    const town = arkHudLines(history, "24h", ["zebra"], "town", "biggest").lines.get("zebra")!;
+    assert.equal(town.stats.now, 0, "the record has its zebras on the wild island");
+    const ctx: ArkHudWhere = {snapshot: ark, selectedKey: "zebra", selectedId: "z2", scope: "town", locale: "en"};
+    const rows = new Map([["zebra", {name: "Plains Zebra", slug: "zebra"}]]);
+    const html = renderToStaticMarkup(createElement(ArkHudGraphPane, {history, graphKey: "zebra", rows, line: town, period: "24h", onPeriod: noop, onBack: noop, onFly: noop, locale: "en", ctx}));
+    assert.match(html, /Plains Zebra population, 24 h: 4 to 6/, "the whole Ark's line, not the town's");
+    assert.match(html, /This one: 1 of 1 in homes|This one: alone in homes/);
+    // Another kind tapped: the graph still says where the kind is, with no "this one".
+    const elsewhere = renderToStaticMarkup(createElement(ArkHudGraphPane, {history, graphKey: "zebra", rows, line: town, period: "24h", onPeriod: noop, onBack: noop, onFly: noop, locale: "en", ctx: {...ctx, selectedKey: "lynx", selectedId: "l1"}}));
+    assert.match(elsewhere, /4 in the whole Ark/);
+    assert.doesNotMatch(elsewhere, /This one/);
+});
+
+test("the list's strip: the tapped animal's kind across the Ark, shown only while one is tapped", () => {
+    const ctx: ArkHudWhere = {snapshot: ark, selectedKey: "zebra", selectedId: "z3", scope: "both", locale: "en"};
+    const withStrip = renderToStaticMarkup(createElement(ArkHudControls, {mode: "biggest", onMode: noop, period: "24h", onPeriod: noop, ctx}));
+    assert.match(withStrip, /Plains Zebra/);
+    assert.match(withStrip, /4 in the whole Ark · 2 wild · 1 in homes · 1 at the zoo/);
+    assert.match(withStrip, /This one: 1 of 2 on the wild island/);
+    assert.doesNotMatch(withStrip, /Breeds only/, "the rule shows for an animal alone in its place");
+    const lone = renderToStaticMarkup(createElement(ArkHudControls, {mode: "biggest", onMode: noop, period: "24h", onPeriod: noop, ctx: {...ctx, selectedId: "z1"}}));
+    assert.match(lone, /This one: alone in its zoo enclosure/);
+    assert.match(lone, /Breeds only with others in the same place\./);
+    const none = renderToStaticMarkup(createElement(ArkHudControls, {mode: "biggest", onMode: noop, period: "24h", onPeriod: noop, ctx: {...ctx, selectedKey: null, selectedId: null}}));
+    assert.doesNotMatch(none, /whole Ark/);
+    assert.doesNotMatch(renderToStaticMarkup(createElement(ArkHudControls, {mode: "biggest", onMode: noop, period: "24h", onPeriod: noop})), /whole Ark/);
+});
+
+test("the new lines in another language: the page's words, the holes filled", () => {
+    const de = bundle("de");
+    const {lines} = arkHudLines(history, "24h", ["zebra"], "both", "biggest");
+    const line = lines.get("zebra")!;
+    const html = renderToStaticMarkup(inLanguage(de, createElement(ArkPopulationGraph, {name: "Steppenzebra", icon: null, history, series: line.series, stats: line.stats, period: "24h", onPeriod: noop, onBack: noop, onFly: noop, locale: "de", where: arkKindWhere(ark, "zebra", "z1")})));
+    assert.ok(html.includes("4 in der gesamten Ark"), "the whole Ark's count");
+    assert.ok(html.includes("Dieses Tier: allein in seinem Zoogehege"));
+    assert.ok(html.includes(de.breedsSamePlace) && html.includes(de.riseFall));
+    assert.ok(!/in the whole Ark|This one|Breeds only|Up: animals/.test(html), "no English left");
 });

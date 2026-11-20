@@ -163,7 +163,22 @@
             "graphLabel": "أعداد {animal}، {period}: من {start} إلى {now}",
             "arkDays": "أيام Ark {from}–{to}",
             "recordStarts": "يبدأ السجل في {date}",
-            "pointAt": "{time}: {count}"
+            "pointAt": "{time}: {count}",
+            "whole": "{count} في كل Ark",
+            "placeWild": "{count} بريّة",
+            "placeHomes": "{count} في المنازل",
+            "placeFarms": "{count} في المزارع",
+            "placeTown": "{count} من حياة المدينة البرية",
+            "placeZoo": "{count} في حديقة الحيوان",
+            "thisAlone": "هذا الحيوان: وحيد {where}",
+            "thisOneOf": "هذا الحيوان: واحد من {count} {where}",
+            "whereWild": "في الجزيرة البرية",
+            "whereHomes": "في المنازل",
+            "whereFarms": "في المزارع",
+            "whereTown": "بين حيوانات المدينة البرية",
+            "whereZoo": "في حظيرته بحديقة الحيوان",
+            "breedsSamePlace": "يتكاثر فقط مع غيره في المكان نفسه.",
+            "riseFall": "ارتفاع: حيوانات جاءت إلى Ark من الصور أو وُلدت. انخفاض: حيوانات ماتت أو أُكلت."
         },
         "story": {
             "generic": "صعد على المتن بعد خطوة نجحت",
