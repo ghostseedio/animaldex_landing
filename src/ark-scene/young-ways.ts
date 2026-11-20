@@ -149,16 +149,22 @@ export function visitPlan(visitorId: string, familyKey: string, ms: number, chan
 export type VisitState = {phase: "go" | "hold" | "back"; /** 0 at where she was … 1 with the young. */ level: number; /** Seconds into the hold. */ held: number};
 
 /**
- * Where a visit is at `ms`, for a walk of `go` seconds each way (her pace over the distance, kept inside the window:
- * the hold is VISIT_HOLD_S, the two walks fill the rest at most); null before it starts and after it is over.
+ * Where a visit is at `ms`, for a walk of `go` seconds out and `back` seconds home (each her pace over its own distance:
+ * her day has moved on while she was away, so the way back is not the way out). The hold is VISIT_HOLD_S; the walks are kept
+ * inside the window, both shortened alike if they are too long. Null before it starts and after it is over.
  */
-export function visitState(plan: VisitPlan, ms: number, go: number): VisitState | null {
+export function visitState(plan: VisitPlan, ms: number, go: number, back = go): VisitState | null {
     const s = (ms - plan.start) / 1000;
-    const g = Math.min(Math.max(go, 2), (VISIT_WINDOW_S - VISIT_HOLD_S) / 2);
-    if (s < 0 || s >= 2 * g + VISIT_HOLD_S) return null;
+    const room = VISIT_WINDOW_S - VISIT_HOLD_S;
+    const g0 = Math.max(go, 2);
+    const b0 = Math.max(back, 2);
+    const k = Math.min(room / (g0 + b0), 1);
+    const g = g0 * k;
+    const b = b0 * k;
+    if (s < 0 || s >= g + VISIT_HOLD_S + b) return null;
     if (s < g) return {phase: "go", level: smooth(s / g), held: 0};
     if (s < g + VISIT_HOLD_S) return {phase: "hold", level: 1, held: s - g};
-    return {phase: "back", level: 1 - smooth((s - g - VISIT_HOLD_S) / g), held: VISIT_HOLD_S};
+    return {phase: "back", level: 1 - smooth((s - g - VISIT_HOLD_S) / b), held: VISIT_HOLD_S};
 }
 
 /** The seconds a walk of `distance` metres takes at `pace` m/s, at least 3 s. */

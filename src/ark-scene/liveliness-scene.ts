@@ -62,6 +62,7 @@ import {
     visitMotion,
     visitPlan,
     visitState,
+    VISIT_HOLD_S,
     VISIT_REACH,
     waysOf,
     walkSeconds,
@@ -150,7 +151,7 @@ const DAWN_SINGERS = new Set(["bird", "frog", "mammal"]);
 
 type Young = {age: ArkAge; parent: string | null; at: number};
 /** One parent's (or helper's) visit to its young: where it set out from, where it stands with them, and how long the walk or flight takes. */
-type VisitRun = {key: string; plan: VisitPlan; anchor: LivePose; place: {x: number; z: number; yaw: number}; spot: Pt; go: number; flies: boolean; youngId: string; kind: "nurse" | "feed"};
+type VisitRun = {key: string; plan: VisitPlan; anchor: LivePose; place: {x: number; z: number; yaw: number}; spot: Pt; go: number; back: number; flies: boolean; youngId: string; kind: "nurse" | "feed"};
 type Shelter = {/** The kind it was asked for (the cache key; `kind` may have fallen back to hunkering). */ asked: ShelterKind; kind: ShelterKind; spot: {x: number; y: number; z: number} | null; travelMs: number; /** The spot's height over the ground (a roost up a tree), worked out once. */ up: number};
 
 export class ArkLiveliness {
@@ -730,7 +731,7 @@ export class ArkLiveliness {
             this.visitRuns.set(plan.key, run);
         }
         if (!run) return null;
-        const state = visitState(plan, nowMs, run.go);
+        const state = visitState(plan, nowMs, run.go, run.back);
         return state ? {state, run} : null;
     }
 
@@ -747,8 +748,13 @@ export class ArkLiveliness {
         const dist = Math.hypot(place.x - anchor.x, place.z - anchor.z);
         if (dist > VISIT_REACH) return null;
         const flies = this.options.hooks.planOf(visitor.animal.model_slug) === "bird" && this.options.hooks.profileOf(visitor)?.move === "fly" && dist > 8;
-        const go = walkSeconds(dist, flies ? 5 : shelterPace(visitor.length) * 1.5);
-        return {key: plan.key, plan, anchor, place, spot: base, go, flies, youngId: young.animal.id, kind: (ways.visit ?? "nurse") as "nurse" | "feed"};
+        const pace = flies ? 5 : shelterPace(visitor.length) * 1.5;
+        const go = walkSeconds(dist, pace);
+        // (Her day has moved on by the time she goes back: the way home is from here to where her day has her then.)
+        const home = (after: number) => this.options.hooks.poseAt(visitor, plan.start / 1000 + after) ?? anchor;
+        let back = walkSeconds(Math.hypot(home(go + VISIT_HOLD_S + go).x - place.x, home(go + VISIT_HOLD_S + go).z - place.z), pace);
+        back = walkSeconds(Math.hypot(home(go + VISIT_HOLD_S + back).x - place.x, home(go + VISIT_HOLD_S + back).z - place.z), pace);
+        return {key: plan.key, plan, anchor, place, spot: base, go, back, flies, youngId: young.animal.id, kind: (ways.visit ?? "nurse") as "nurse" | "feed"};
     }
 
     /** A parent (or helper) on its way to its young, with them, and back: nursing or feeding them where they lie. */
