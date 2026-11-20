@@ -300,10 +300,11 @@ function coralAt(geo: Geo, fr: Frame, lx: number, y: number, lz: number, size: n
     } else if (seed % 3 === 1) {
         // A sea fan: a flat, broad, upright lobe.
         const turn = r() * Math.PI;
-        geo.blob(p[0], y + size * 0.55, p[2], size * 0.6 * Math.abs(Math.cos(turn)) + size * 0.06, size * 0.55, size * 0.6 * Math.abs(Math.sin(turn)) + size * 0.06, colour, seed, 0);
+        // (ark-world: coral heads smooth-shaded, not flat-faced facets.)
+        geo.smoothLump(p[0], y + size * 0.55, p[2], size * 0.6 * Math.abs(Math.cos(turn)) + size * 0.06, size * 0.55, size * 0.6 * Math.abs(Math.sin(turn)) + size * 0.06, [p[0], y - size * 0.3, p[2]], colour, 1, r, 1);
     } else {
         // A brain or boulder coral: a squat lobed dome.
-        geo.blob(p[0], y + size * 0.2, p[2], size * 0.5, size * 0.32, size * 0.5, colour, seed, 1);
+        geo.smoothLump(p[0], y + size * 0.2, p[2], size * 0.5, size * 0.32, size * 0.5, [p[0], y - size * 0.5, p[2]], colour, 1, r, 1);
     }
 }
 
