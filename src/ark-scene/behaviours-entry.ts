@@ -452,7 +452,11 @@ async function main() {
             }
             const ids = Array.from({length: scene.cast[k].n}, (_, i) => castId(k, i));
             const at = ids.map((id) => handle.locate(id));
-            const found = at.filter((p): p is NonNullable<typeof p> => Boolean(p));
+            // (The members acting out a group act, if any: the frame is on them.)
+            const GROUP_RECIPES = new Set(["huddle", "sentinel_post", "dusk_gather", "lick_gather", "chorus", "tree_feast", "bask_pile"]);
+            const actingNow = ids.map((id) => GROUP_RECIPES.has((debug.entries().find((x) => x.animal.id === id) as unknown as {sched?: {pose?: {act?: {recipe?: string} | null}}} | undefined)?.sched?.pose?.act?.recipe ?? ""));
+            const some = actingNow.some(Boolean);
+            const found = at.filter((p, i): p is NonNullable<typeof p> => Boolean(p) && (!some || actingNow[i]));
             const cx = found.reduce((m, p) => m + p.x, 0) / Math.max(found.length, 1);
             const cz = found.reduce((m, p) => m + p.z, 0) / Math.max(found.length, 1);
             const cy = found.reduce((m, p) => m + p.y, 0) / Math.max(found.length, 1);

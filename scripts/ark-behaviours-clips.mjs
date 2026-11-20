@@ -76,14 +76,14 @@ const DEFENCE_STEPS = [["none", 2, "before: about its day"], ["near", 0.5, "a pr
  * shot round the act's own windows (before, in it, near its end, after); the others at fixed seconds from the start.
  */
 const GROUPS = {
-    gsentinel: {act: "sentinel", distance: 9},
-    ghuddle: {act: "huddle", distance: 9},
-    glick: {act: "lick", distance: 9},
-    gchorus: {act: "chorus", distance: 7},
-    gfeast: {act: "feast", distance: 9},
-    gbask: {act: "basking", distance: 6},
-    ggather: {times: [3, 90, 200, 330, 480, 700, 900, 1200], distance: 7},
-    groost: {times: [3, 240, 800, 1500], distance: 7},
+    gsentinel: {act: "sentinel", distance: 3.2, polar: 1.25},
+    ghuddle: {act: "huddle", distance: 6},
+    glick: {act: "lick", distance: 3, polar: 1.2},
+    gchorus: {act: "chorus", distance: 3.5, polar: 1.25},
+    gfeast: {act: "feast", distance: 5, polar: 1.3},
+    gbask: {act: "basking", distance: 4},
+    ggather: {times: [3, 330], distance: 14, polar: 1.35},
+    groost: {times: [3, 600], distance: 14, polar: 1.35},
     gcommute: {times: [10, 120, 300, 600, 1200, 2400], distance: 40, polar: 0.9},
     gpairs: {times: [10, 120, 400, 800, 1300, 2000, 3000, 4200], distance: 14}
 };
