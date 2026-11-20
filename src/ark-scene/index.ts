@@ -151,7 +151,7 @@ import {SeaLookView} from "@/ark-scene/sea-look-render";
 import {TalkingActor, talkingSource, TextMouth, type TalkingModelSource} from "@/ark-scene/talking";
 import {isAwake} from "@/lib/ark-daylight";
 import {arkAwakeAtHour, arkSleepOf, type Sleep} from "@/ark-scene/sleep-hours";
-import {ARK_DAY_MS, hash32, islandHours} from "@/lib/ark-clock";
+import {ARK_DAY_MS, hash32, islandHours, unit} from "@/lib/ark-clock";
 import {ArkLiveliness, type LiveAnimal, type LivePin} from "@/ark-scene/liveliness-scene";
 import {attachVary, setVary, setVaryPower} from "@/ark-scene/ark-variation";
 import type {ArkPowerCandidate, ArkPowerFrame, ArkPowerShow} from "@/ark-scene/power-show";
@@ -188,6 +188,8 @@ import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState}
 import {behaviourProfile, bodyLengthsPerSecond, runFactor, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {attachedOn, tripPhase} from "@/ark-scene/collide/attach";
 import {bodyShape} from "@/ark-scene/collide/bodies";
+import {chooseHost, excursionAt, groundHop, hopArc, hopFlight, hops, hostSurface, hostTier, nightNow, riderOf, spotOf, type GroundHop, type HostFrame, type RiderSpec, type Surface as RideSurface} from "@/ark-scene/riders";
+import {bodyOf as mapBodyOf} from "@/ark-scene/map/species";
 import {CollideLayer} from "@/ark-scene/collide/layer";
 import {doorWalkAt} from "@/ark-scene/collide/routes";
 import type {ResolvePose} from "@/ark-scene/collide/resolve";
@@ -453,6 +455,25 @@ type Sched = {
 /** The roost kinds whose way in the props lane draws (`scene-modules.ts` roostOf). */
 const DEN_ROOSTS: ReadonlySet<string> = new Set(["den", "burrow", "cave", "crevice"]);
 
+/** A rider's or a hopper's memory (`riders.ts`, `ridePose`): only what the clock cannot give back. */
+type RideMemo = {
+    /** The host it is on (or would be on), and when that was last looked at (s, shared clock). */
+    host: string | null;
+    checked: number;
+    /** Its host's pace (m/s, eased) and where the host was last frame: a flea only jumps off a host that keeps still. */
+    pace: number;
+    last: {x: number; z: number; t: number} | null;
+    /** A flea's time off its host: the slot's window, where it hops about (beside the host as it was then), the point it left from. */
+    off: {start: number; end: number; mid: {x: number; z: number}; from: {x: number; y: number; z: number}; leave: number} | null;
+    /** Jumping back on: from where, when (s, shared clock). */
+    board: {x: number; y: number; z: number; t0: number} | null;
+    /** On its host last frame (a change of state is never a jump cut while it is watched). */
+    on: boolean;
+    seen: boolean;
+    surface: RideSurface;
+    hop: GroundHop;
+};
+
 type Entry = {
     /** ARK-ANIM: its heading and bank on the wing (`flight-heading.ts`), and its hops on a rig with no gait (`hop-gait.ts`). */
     hop?: HopState;
@@ -564,6 +585,8 @@ type Entry = {
     riding?: boolean;
     /** Its mother's pose as `carriedPose` read it (her id, where): moved with her when the frame's pushes move her. */
     ridingOn?: {id: string; x: number; z: number; base: number};
+    /** A rider or a hopper (`riders.ts`): its host, when that was chosen, a flea's time off its host, the host's pace. */
+    ride?: RideMemo;
     /** sig-young: its ride is on the water only; whether it rode last frame; where it was drawn; and the get-down or get-up it is easing through. */
     rideWaterOnly?: boolean;
     rideWas?: boolean;
@@ -4227,6 +4250,219 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         return {x: fx, z: fz, base: fy, yaw: Math.atan2(t.x, t.z), pitch: 0, roll: 0, afloat: true, surface};
     };
 
+    // MARK: Riders and hoppers (`riders.ts`; owner, 2026-11-21: fleas hop, and ride their cats)
+
+    /** Per rider kind, the entries that can be its host and their tier: worked out again when the entries change. */
+    let rideHosts: {of: Entry[]; bySlug: Map<string, Array<{entry: Entry; tier: number}>>} | null = null;
+    const rideHostsFor = (slug: string, spec: RiderSpec) => {
+        if (!rideHosts || rideHosts.of !== entries) rideHosts = {of: entries, bySlug: new Map()};
+        let list = rideHosts.bySlug.get(slug);
+        if (!list) {
+            list = [];
+            for (const e of entries) {
+                if (e.ghost || e.visitor || riderOf(e.animal.model_slug)) continue;
+                const tier = hostTier(spec, {slug: e.animal.model_slug, kindId: e.animal.kind_species_profile_id, speciesId: e.animal.species_profile_id, water: Boolean(e.place.water)});
+                if (tier >= 0) list.push({entry: e, tier});
+            }
+            rideHosts.bySlug.set(slug, list);
+        }
+        return list;
+    };
+    /** A host as it is drawn this frame (its own pose, worked out again here, so its rider is never a frame behind it). */
+    const hostFrameOf = (host: Entry, time: number): {frame: HostFrame; at: Pose} => {
+        const slug = host.animal.model_slug;
+        const model = library.get(slug);
+        const height = model ? model.height * (host.length / model.bodyLength) : host.length * 0.6;
+        const at = pose(host, model, height, time);
+        const s = at.surface;
+        const frame: HostFrame = {
+            x: at.x, y: at.base, z: at.z,
+            nx: s ? s.nx : 0, ny: s ? s.ny : 1, nz: s ? s.nz : 0,
+            tx: s ? s.tx : Math.sin(at.yaw), ty: s ? s.ty : 0, tz: s ? s.tz : Math.cos(at.yaw),
+            length: host.length,
+            height,
+            radius: bodyShape(slug, host.length).radius,
+            body: mapBodyOf(slug),
+            rest: host.rest
+        };
+        return {frame, at};
+    };
+    /** How far a flea can jump onto a host (m): a long flea jump (Cadiergues et al. 2000: up to about 48 cm). */
+    const RIDE_REACH = 0.45;
+    const rideGround = (x: number, z: number) => Math.max(heightAt(x, z), 0);
+    const hopSurface = (hop: {x: number; y: number; z: number; hx: number; hz: number}, out: RideSurface): RideSurface => {
+        out.x = hop.x;
+        out.y = hop.y;
+        out.z = hop.z;
+        out.nx = 0;
+        out.ny = 1;
+        out.nz = 0;
+        out.tx = hop.hx;
+        out.ty = 0;
+        out.tz = hop.hz;
+        return out;
+    };
+    const surfacePose = (sf: RideSurface): Pose => ({x: sf.x, z: sf.z, base: sf.y, yaw: Math.atan2(sf.tx, sf.tz), pitch: 0, roll: 0, afloat: true, surface: {...sf}});
+
+    /**
+     * A rider on its host, or a hopper hopping (`riders.ts`); null: neither now (it is drawn as before). The host is the
+     * first tier's nearest in range of its own spot while one is drawn; once on, it stays on that host while the host is
+     * drawn. A flea jumps off a host that keeps still now and then, hops about beside it and jumps back on (or on as the
+     * host gets up, if still within a jump). Whatever has no jump to show it (on or off a host out of sight, a chicken
+     * mite at dusk) changes only while it is not the one chosen or followed.
+     */
+    const ridePose = (entry: Entry, time: number): Pose | null => {
+        const slug = entry.animal.model_slug;
+        const spec = riderOf(slug);
+        const hopper = hops(slug);
+        // (`__arkRiders = false`: the harness's before picture, every rider drawn as it was.)
+        if ((!spec && !hopper) || (globalThis as {__arkRiders?: boolean}).__arkRiders === false) return null;
+        const id = entry.animal.id;
+        const place = entry.place;
+        const epoch = worldMs() / 1000;
+        const still = reducedMotion;
+        const memo = (entry.ride ??= {host: null, checked: -Infinity, pace: 0, last: null, off: null, board: null, on: false, seen: false, surface: {x: 0, y: 0, z: 0, nx: 0, ny: 1, nz: 0, tx: 0, ty: 0, tz: 1}, hop: {x: 0, y: 0, z: 0, hx: 0, hz: 1, air: -1, n: 0}});
+        const watched = selectedId === id || followId === id;
+        const L = Math.max(entry.trueLength, 0.0005);
+        // Its host now, if any.
+        let host: Entry | null = null;
+        if (spec) {
+            const hostOk = (e: Entry | null | undefined): e is Entry => Boolean(e && e.middle && !e.held && !e.ghost && !e.act?.hidden);
+            if (spec.range === null) host = place.host ? findEntry(place.host.id) : null;
+            else if (spec.night && !nightNow(hoursNow())) host = null;
+            else {
+                const current = memo.host ? findEntry(memo.host) : null;
+                if (hostOk(current)) host = current;
+                else if (epoch - memo.checked >= 1 || epoch < memo.checked) {
+                    memo.checked = epoch;
+                    const home = {x: place.x, y: place.ground, z: place.z};
+                    const candidates: Array<{id: string; tier: number; x: number; y: number; z: number}> = [];
+                    for (const c of rideHostsFor(slug, spec)) {
+                        if (!hostOk(c.entry)) continue;
+                        const m = c.entry.middle!;
+                        candidates.push({id: c.entry.animal.id, tier: c.tier, x: m.x, y: m.y - c.entry.drawnHeight * 0.5, z: m.z});
+                    }
+                    const chosen = chooseHost(home, spec.range, candidates, null);
+                    host = chosen ? findEntry(chosen) : null;
+                }
+            }
+            if (!hostOk(host)) host = null;
+            // (Watched, nothing changes without a jump to show it: on its host it stays with that host while it is drawn;
+            // off any host (and not on a hop off one) it does not appear on one.)
+            if (watched && memo.seen) {
+                if (memo.on) {
+                    const was = memo.host ? findEntry(memo.host) : null;
+                    host = hostOk(was) ? was : null;
+                } else if (!memo.off) host = null;
+            }
+            memo.host = host ? host.animal.id : null;
+        }
+        memo.seen = true;
+        if (host && spec) {
+            const {frame, at} = hostFrameOf(host, time);
+            // Its host's pace (a flea jumps off one that keeps still, and back on as it gets up).
+            if (memo.last && epoch > memo.last.t) {
+                const v = Math.hypot(frame.x - memo.last.x, frame.z - memo.last.z) / Math.max(epoch - memo.last.t, 1e-3);
+                memo.pace += (Math.min(v, 20) - memo.pace) * Math.min((epoch - memo.last.t) / 0.5, 1);
+            }
+            memo.last = {x: frame.x, z: frame.z, t: epoch};
+            const spot = spotOf(id, spec.on, still ? 0 : epoch);
+            const onHost = hostSurface(frame, spot, memo.surface);
+            if (spec.on === "belly") {
+                // A remora's sucking disc is on its head's top: it hangs under the belly, its back to the host.
+                const h = Math.max(entry.length * 0.25, 0.01);
+                onHost.x += onHost.nx * h;
+                onHost.y += onHost.ny * h;
+                onHost.z += onHost.nz * h;
+                onHost.nx = -onHost.nx;
+                onHost.ny = -onHost.ny;
+                onHost.nz = -onHost.nz;
+            }
+            const ridden = (): Pose => {
+                entry.riding = true;
+                entry.ridingOn = {id: host!.animal.id, x: at.x, z: at.z, base: at.base};
+                memo.on = true;
+                return surfacePose(onHost);
+            };
+            // A flea's time off its host (never with reduced motion).
+            if (spec.excursions && hopper && !still) {
+                const window = excursionAt(id, epoch);
+                if (!memo.off && window && epoch >= window.start && epoch - window.start < 1.5 && memo.pace < 0.08 && memo.on) {
+                    // Off beside the host, where a hop or two from its side puts it, on the ground.
+                    const side = unit(id, "off-side", window.start) < 0.5 ? -1 : 1;
+                    const sx = frame.tz * side;
+                    const sz = -frame.tx * side;
+                    const out = frame.radius + L * 90;
+                    memo.off = {start: window.start, end: window.end, mid: {x: frame.x + sx * out, z: frame.z + sz * out}, from: {x: onHost.x, y: onHost.y, z: onHost.z}, leave: 0};
+                    memo.board = null;
+                }
+                const off = memo.off;
+                if (off) {
+                    const t = epoch - off.start;
+                    const first = groundHop(id, off.mid, L, 0, rideGround, memo.hop, 0);
+                    const firstAt = {x: first.x, y: first.y, z: first.z};
+                    off.leave ||= hopFlight(Math.hypot(firstAt.x - off.from.x, firstAt.z - off.from.z), firstAt.y - off.from.y);
+                    if (t < off.leave) {
+                        // The jump off: a ballistic arc from its spot on the host to the ground.
+                        entry.riding = false;
+                        memo.on = false;
+                        const p = hopArc(off.from, firstAt, t / off.leave);
+                        const dx = firstAt.x - off.from.x;
+                        const dz = firstAt.z - off.from.z;
+                        const dl = Math.hypot(dx, dz) || 1;
+                        return surfacePose(hopSurface({x: p.x, y: p.y, z: p.z, hx: dx / dl, hz: dz / dl}, memo.surface));
+                    }
+                    const ground = memo.board ? null : groundHop(id, off.mid, L, t - off.leave, rideGround, memo.hop, 0);
+                    if (ground && ground.air < 0) {
+                        // Back on: its time is up, or its host gets up; only if it is still within a jump (else it waits on the ground).
+                        const near = Math.hypot(onHost.x - ground.x, onHost.z - ground.z);
+                        if ((epoch >= off.end || memo.pace > 0.15) && near <= RIDE_REACH) memo.board = {x: ground.x, y: ground.y, z: ground.z, t0: epoch};
+                        // (Left behind too long, a few minutes, and not watched: it is back on its host.)
+                        else if (epoch - off.end > 180 && !watched) {
+                            memo.off = null;
+                            return ridden();
+                        }
+                    }
+                    const board = memo.board;
+                    if (board) {
+                        const flight = hopFlight(Math.hypot(onHost.x - board.x, onHost.z - board.z), onHost.y - board.y);
+                        const u = (epoch - board.t0) / flight;
+                        if (u >= 1) {
+                            memo.off = null;
+                            memo.board = null;
+                            return ridden();
+                        }
+                        entry.riding = false;
+                        memo.on = false;
+                        const p = hopArc(board, onHost, u);
+                        const dx = onHost.x - board.x;
+                        const dz = onHost.z - board.z;
+                        const dl = Math.hypot(dx, dz) || 1;
+                        return surfacePose(hopSurface({x: p.x, y: p.y, z: p.z, hx: dx / dl, hz: dz / dl}, memo.surface));
+                    }
+                    entry.riding = false;
+                    memo.on = false;
+                    return surfacePose(hopSurface(ground!, memo.surface));
+                }
+            }
+            return ridden();
+        }
+        memo.on = false;
+        memo.off = null;
+        memo.board = null;
+        memo.last = null;
+        // No host: a hopper hops about its own spot on the ground (only where that spot is on the ground).
+        if (!hopper) return null;
+        if (Math.abs(place.ground - rideGround(place.x, place.z)) > 0.25) return null;
+        const at = groundHop(id, {x: place.x, z: place.z}, L, still ? 0 : epoch, rideGround, memo.hop);
+        if (still) {
+            at.x = place.x;
+            at.z = place.z;
+            at.y = rideGround(place.x, place.z);
+        }
+        return surfacePose(hopSurface(at, memo.surface));
+    };
+
     /** Its schedule's pose as the scene draws it: banked into the turn when circling, the head a little down asleep. */
     const fromSchedule = (entry: Entry, modelHeight: number): Pose => {
         const own = entry.sched!;
@@ -4465,6 +4701,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             entry.residentAt = null;
             const door = plotSpots(place.hamlet.plot).door;
             return {x: door.x, z: door.z, base: Math.max(heightAt(door.x, door.z), 0), yaw: place.hamlet.plot.rotation, pitch: 0, roll: 0, afloat: false};
+        }
+        // Riders on their hosts and hoppers hopping (`riders.ts`): a flea on its cat, a tick on its horse, an oxpecker on its buffalo.
+        if (!entry.visitor) {
+            const ride = ridePose(entry, time);
+            if (ride) return ride;
         }
         if (place.host && !entry.visitor) {
             // A partner on its host (map section 6): on its back, under a shark, at a grazer's feet, beside it, as the host moves now.

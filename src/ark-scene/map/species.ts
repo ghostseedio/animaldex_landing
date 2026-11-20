@@ -130,6 +130,23 @@ export function isHost(group: HostGroup, slug: string, kindId: string | null | u
     return hosts.slugs.includes(slug) || hosts.ids.includes(speciesId) || Boolean(kindId && hosts.ids.includes(kindId));
 }
 
+/** A host's species id by its model slug, from the host table (riders: a breed's kind id names its kind, `riders.ts`). */
+const HOST_IDS = new Map<string, string | null>();
+export function hostSlugId(slug: string): string | null {
+    let id = HOST_IDS.get(slug);
+    if (id !== undefined) return id;
+    id = null;
+    for (const hosts of Object.values(TABLE.hosts)) {
+        const at = hosts.slugs.indexOf(slug);
+        if (at >= 0) {
+            id = hosts.ids[at] ?? null;
+            break;
+        }
+    }
+    HOST_IDS.set(slug, id);
+    return id;
+}
+
 /** The launch points (decision 6): per spawn tag, per zone. */
 export function launchPoints(): Record<string, Record<string, number>> {
     return TABLE.points;
