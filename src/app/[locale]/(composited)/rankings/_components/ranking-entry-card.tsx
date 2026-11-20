@@ -10,6 +10,8 @@ type RankingEntryCardProps = {
     shortReason: string;
     summary: string;
     readSpeciesLabel: string;
+    /** Where the card goes (default: the species page). The Ark rankings link into /ark. */
+    href?: string;
 };
 
 export default function RankingEntryCard({
@@ -20,13 +22,15 @@ export default function RankingEntryCard({
     primaryMetric,
     shortReason,
     summary,
-    readSpeciesLabel
+    readSpeciesLabel,
+    href
 }: RankingEntryCardProps) {
+    const target = href ?? `/animals/${speciesSlug}`;
     return (
         <article className="flex flex-col gap-4 rounded-lg border border-line-300 bg-surface-900/75 p-5">
             <div className="flex items-start gap-4">
                 <Link
-                    href={`/animals/${speciesSlug}`}
+                    href={target}
                     className="grid h-16 w-16 shrink-0 place-items-center overflow-hidden rounded-2xl border border-line-300 bg-canvas-950/70 p-2 transition-colors hover:border-primary-400/60"
                     aria-label={speciesName}
                 >
@@ -51,7 +55,7 @@ export default function RankingEntryCard({
                         </span>
                     </div>
                     <h3 className="mt-3 font-display text-2xl font-bold leading-tight text-white">
-                        <Link href={`/animals/${speciesSlug}`} className="hover:text-primary-100 transition-colors">
+                        <Link href={target} className="hover:text-primary-100 transition-colors">
                             {speciesName}
                         </Link>
                     </h3>
@@ -60,7 +64,7 @@ export default function RankingEntryCard({
             <p className="text-base leading-7 text-ink-200">{shortReason}</p>
             <p className="text-sm leading-6 text-ink-300">{summary}</p>
             <Link
-                href={`/animals/${speciesSlug}`}
+                href={target}
                 className="mt-auto w-fit text-sm font-semibold text-primary-200 hover:text-primary-100 transition-colors"
                 underline
             >

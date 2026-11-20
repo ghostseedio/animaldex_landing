@@ -15,6 +15,7 @@ import type {ArkHuntWords} from "@/lib/ark-live-hunt";
 import type {ArkHeartsWords} from "@/lib/ark-hearts";
 import type {ArkTimeLeftWords} from "@/lib/ark-time-left";
 import type {ArkGraphWords} from "@/lib/ark-graph-words";
+import type {ArkRankingsWords} from "@/lib/ark-rankings-words";
 
 export type ArkHudWords = {
     label: string;
@@ -471,6 +472,8 @@ export type ArkWords = {
     seen?: Partial<Record<"searching" | "stalking" | "stalkingNoTarget" | "mateSeeking" | "wounded", string>>;
     /** "Estimated time left" on an animal at risk (`lib/ark-time-left.ts`); English fills any key a bundle lacks. */
     timeLeft?: Partial<ArkTimeLeftWords>;
+    /** The two Ark ranking pages (`/tier-list/ark-survival`, `/tier-list/ark-fastest-breeders`; `lib/ark-rankings-words.ts`). Optional: an older bundle lacks them (English is the fallback). */
+    rankings?: ArkRankingsWords;
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */
