@@ -39,21 +39,25 @@ async function main() {
         byKind.set(key, [...(byKind.get(key) ?? []), a]);
     }
     const wanted = (params.get("kinds") ?? "").split(",").filter(Boolean);
-    const picks: Array<{mechanism: ArkPowerMechanism; slug: string; prime: string; ordinary: string; name: string}> = [];
+    const picks: Array<{mechanism: ArkPowerMechanism; slug: string; prime: string; ordinary: string; name: string; group: string[]}> = [];
     for (const mechanism of ARK_POWER_MECHANISMS) {
         // The largest drawn kind of the mechanism with two animals aboard (it reads in a close-up), or the one asked for.
-        const options = Array.from(byKind.entries()).filter(([key, list]) => key.startsWith(`${mechanism}|`) && list.length >= 2);
-        options.sort((a, b) => displayLength(b[1][0].model_slug, null) - displayLength(a[1][0].model_slug, null));
+        // (One animal is enough: it is filmed twice at the same spot, prime and then ordinary. A group needs its own kind round it.)
+        const options = Array.from(byKind.entries()).filter(([key, list]) => key.startsWith(`${mechanism}|`) && list.length >= (mechanism === "group" ? 4 : 1));
+        options.sort((a, b) => (mechanism === "group" ? b[1].length - a[1].length : 0) || displayLength(b[1][0].model_slug, null) - displayLength(a[1][0].model_slug, null));
         const chosen = options.find(([key]) => wanted.includes(key.split("|")[1])) ?? options.find(([, list]) => displayLength(list[0].model_slug, null) < 4) ?? options[0];
         if (!chosen) continue;
-        const [a, b] = chosen[1];
-        a.thrive = "prime";
-        b.thrive = "ordinary";
-        picks.push({mechanism, slug: a.model_slug, prime: a.id, ordinary: b.id, name: a.name});
+        const [a] = chosen[1];
+        // (A group: all of its kind there share the band, so its ranks close together.)
+        picks.push({mechanism, slug: a.model_slug, prime: a.id, ordinary: a.id, name: a.name, group: mechanism === "group" ? chosen[1].map((x) => x.id) : [a.id]});
     }
     // (The pass's page: every animal of a kind with a Power is prime, so a predator is found near one.)
     if (params.get("allprime") === "1") for (const a of animals) if (arkPowerOf(a)) a.thrive = "prime";
-    const snapshot = {...real, animals};
+    // (One animal of a Power kind away from the picks is good from the start, so the scene loads its Power layer at once.)
+    const taken = new Set(picks.flatMap((p) => p.group));
+    const loader = animals.find((a) => arkPowerOf(a) && !taken.has(a.id));
+    if (loader) loader.thrive = "good";
+    let snapshot = {...real, animals};
     const el = document.getElementById("ark")!;
     const clock = installRecordClock(window);
     (globalThis as {__arkPowerDemo?: boolean}).__arkPowerDemo = true;
@@ -79,29 +83,52 @@ async function main() {
         ready: true,
         picks,
         stats: () => handle.stats().powers ?? null,
-        shoot: async (id: string, hours: number, settle = 3, look = 0.86) => {
+        /**
+         * The same animal at the same spot, with its band set (and its group's): the camera comes to it and settles with
+         * nothing threatening it, is left parked there, then a threat (the demo's) for `settle` s: what moves, moves in the
+         * picture (a dart, a duck, a turn, ranks closing), and the coat shows as it does.
+         */
+        shoot: async (ids: string[], hours: number, band: "prime" | "ordinary", settle = 2.5, look = 0.86) => {
+            const set = new Set(ids);
+            snapshot = {...snapshot, animals: snapshot.animals.map((a) => (set.has(a.id) ? {...a, thrive: band} : a))};
+            handle.update(snapshot);
             handle.setHours(hours);
             handle.setEnvironment({rain: 0, fog: 0, storm: 0, cloud: 0.2, wetness: 0, snow: 0});
-            handle.select(id, true);
+            (globalThis as {__arkPowerDemo?: boolean}).__arkPowerDemo = false;
+            handle.select(ids[0], true);
             run(0.5);
             await settleLoading();
+            run(3);
+            handle.select(null);
+            run(0.3);
+            (globalThis as {__arkPowerDemo?: boolean}).__arkPowerDemo = true;
             run(settle);
             await pause(50);
             run(1 / FPS);
-            return canvas()?.toDataURL("image/jpeg", look) ?? "";
+            const image = canvas()?.toDataURL("image/jpeg", look) ?? "";
+            (globalThis as {__arkPowerDemo?: boolean}).__arkPowerDemo = false;
+            run(4);
+            return image;
         },
         pass: async (hours: number) => {
             handle.setHours(hours);
             handle.select(null);
             // A predator near a prime one: shown once the layer has found one (the stats' last pass).
-            run(1);
-            const pair = handle.stats().powers?.pass ?? null;
+            (globalThis as {__arkPowerDemo?: boolean}).__arkPowerDemo = true;
+            let pair: [string, string] | null = null;
+            for (let i = 0; i < 60 && !pair; i++) {
+                run(0.5);
+                await pause(20);
+                pair = handle.stats().powers?.pass ?? null;
+            }
             if (!pair) return {pair: null, images: []};
             handle.selectPair?.(pair[1], pair[0]);
             run(1);
             await settleLoading();
+            run(2);
+            handle.select(null);
             const images: string[] = [];
-            for (let i = 0; i < 6; i++) {
+            for (let i = 0; i < 9; i++) {
                 run(1.5);
                 images.push(canvas()?.toDataURL("image/jpeg", 0.86) ?? "");
             }

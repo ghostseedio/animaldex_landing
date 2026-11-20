@@ -9,7 +9,7 @@
  *        [--quality high|medium|low] [--day 10.5] [--night 22.5] [--kinds slug,slug]
  *
  * A mechanism's sheet (`sheet-<mechanism>.jpg`) is one row: prime by day, ordinary by day, prime by night, ordinary by
- * night; the pass's (`sheet-pass-<day|night>.jpg`) six moments 1.5 s apart.
+ * night, the same animal at the same spot; the pass's (`sheet-pass-<day|night>.jpg`) nine moments 1.5 s apart.
  *
  * The saved read holds usernames: keep it out of the repository.
  */
@@ -106,7 +106,7 @@ const summary = {picks: [], pass: null};
         for (const [hours, when] of [[day, "day"], [night, "night"]]) {
             for (const band of ["prime", "ordinary"]) {
                 const file = path.join(out, `${pick.mechanism}-${pick.slug}-${band}-${when}.jpg`);
-                const ok = save(file, await page.evaluate(([id, h]) => window.__ps.shoot(id, h, 3), [pick[band], hours]));
+                const ok = save(file, await page.evaluate(([ids, h, b]) => window.__ps.shoot(ids, h, b), [pick.group, hours, band]));
                 if (ok) row.push(file);
             }
         }
@@ -134,7 +134,7 @@ const summary = {picks: [], pass: null};
         rmSync(tmp, {recursive: true, force: true});
         mkdirSync(tmp, {recursive: true});
         result.images.forEach((img, i) => save(path.join(tmp, `${i}.jpg`), img));
-        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(tmp, "%d.jpg"), "-vf", "scale=400:-1,tile=3x2:padding=4:color=black", "-frames:v", "1", path.join(out, `sheet-pass-${when}.jpg`)]);
+        execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", "1", "-i", path.join(tmp, "%d.jpg"), "-vf", "scale=400:-1,tile=3x3:padding=4:color=black", "-frames:v", "1", path.join(out, `sheet-pass-${when}.jpg`)]);
         rmSync(tmp, {recursive: true, force: true});
         summary.pass = {...(summary.pass ?? {}), [when]: result.pair};
     }

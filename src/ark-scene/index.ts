@@ -5857,6 +5857,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (!surface && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase))) groundingCheck.record(animal.id, animal.model_slug, "ground", drawnContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s, (x, z) => standGround(x, z, poseBase)) ?? 0, modelHeight);
                 else if (surface && !(rig && state && state.weight > 0.5)) groundingCheck.record(animal.id, animal.model_slug, "surface", surfaceContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s, {x: where.x, y: where.base, z: where.z}, surface), modelHeight);
             }
+            // Powers you can see: its body down into cover, crouched, on its side, or up off the ground (`power-show.ts` drop).
+            if (entry.power?.drop && !reducedMotion) position.y -= entry.power.drop;
             matrix.compose(position, rotation, scale.set(s, s, s));
             if (rig && state && level === "near") {
                 // The locomotion layer (`locomotion/`, lane L1): gaits with planted feet, foot IK, the body's motion and
