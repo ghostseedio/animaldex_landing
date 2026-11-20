@@ -708,7 +708,7 @@
             "skillPower": "Máš jeho Sílu: začíná s malým náskokem.",
             "warn": "Zvířata odchovaná v zoo to mají zpočátku těžké. Udělej jeho krok, ať přežije.",
             "lastOfKind": "Je poslední svého druhu na palubě. Pokud zemře bez jediného srdce, jeho druh z Arku zmizí.",
-            "hearts": "Srdce mu zůstávají. Pokud neuspěje a zbývá mu srdce, vrátí se do zoo a čeká 30 dní. Bez jediného srdce zemře.",
+            "hearts": "Srdce mu zůstávají. Pokud zemře a zbývá mu srdce, o to srdce přijde a vrátí se do divočiny. Bez jediného srdce zemře.",
             "rules": "Po vypuštění se nic nevrací, ať se mu stane cokoli. Jedno vypuštění denně, jedno od každého druhu týdně.",
             "price": "{credits} kreditů",
             "balance": "Máš {credits}",

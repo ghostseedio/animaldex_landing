@@ -708,7 +708,7 @@
             "skillPower": "Je hebt zijn Kracht: het begint met een kleine voorsprong.",
             "warn": "Dieren die in de dierentuin zijn opgegroeid hebben het eerst moeilijk. Doe zijn stap om het te helpen overleven.",
             "lastOfKind": "Het is de laatste van zijn soort aan boord. Sterft het zonder hart over, dan is zijn soort weg uit de Ark.",
-            "hearts": "Het houdt zijn harten. Mislukt het met een hart over, dan komt het terug in de dierentuin en wacht 30 dagen. Zonder hart over sterft het.",
+            "hearts": "Het houdt zijn harten. Sterft het met een hart over, dan verliest het dat hart en keert het terug in het wild. Zonder hart over sterft het.",
             "rules": "Geen terugbetaling na de vrijlating, wat er ook mee gebeurt. Eén vrijlating per dag, één per soort per week.",
             "price": "{credits} credits",
             "balance": "Je hebt {credits}",

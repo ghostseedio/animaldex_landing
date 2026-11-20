@@ -708,7 +708,7 @@
             "skillPower": "Anda memegang Kuasanya: ia bermula sedikit di hadapan.",
             "warn": "Haiwan yang dibesarkan di zoo sukar pada mulanya. Lakukan langkahnya untuk membantunya terus hidup.",
             "lastOfKind": "Ia yang terakhir daripada jenisnya di Ark. Jika ia mati tanpa hati yang tinggal, jenisnya hilang dari Ark.",
-            "hearts": "Hatinya kekal. Jika ia gagal ketika masih ada hati, ia kembali ke zoo dan menunggu 30 hari. Tanpa hati yang tinggal, ia mati.",
+            "hearts": "Hatinya kekal. Jika ia mati ketika masih ada hati, ia kehilangan hati itu dan kembali ke alam liar. Tanpa hati yang tinggal, ia mati.",
             "rules": "Tiada bayaran balik selepas ia dilepaskan, apa pun yang berlaku kepadanya. Satu pelepasan sehari, satu daripada setiap jenis seminggu.",
             "price": "{credits} Kredit",
             "balance": "Anda ada {credits}",

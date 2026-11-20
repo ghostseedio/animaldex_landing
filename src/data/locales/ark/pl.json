@@ -708,7 +708,7 @@
             "skillPower": "Masz jego Moc: zaczyna z niewielką przewagą.",
             "warn": "Zwierzętom wychowanym w zoo na początku jest trudno. Zrób jego krok, aby pomóc mu przetrwać.",
             "lastOfKind": "To ostatnie ze swojego gatunku na pokładzie. Jeśli umrze bez żadnego serca, jego gatunek zniknie z Ark.",
-            "hearts": "Zachowuje swoje serca. Jeśli mu się nie uda, a ma jeszcze serce, wraca do zoo i czeka 30 dni. Bez żadnego serca umiera.",
+            "hearts": "Zachowuje swoje serca. Jeśli zginie, a ma jeszcze serce, traci to serce i wraca na wolność. Bez żadnego serca umiera.",
             "rules": "Po wypuszczeniu nie ma zwrotu, cokolwiek się z nim stanie. Jedno wypuszczenie dziennie, jedno z każdego gatunku na tydzień.",
             "price": "{credits} kredytów",
             "balance": "Masz {credits}",
