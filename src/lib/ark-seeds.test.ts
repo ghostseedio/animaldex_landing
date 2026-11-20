@@ -105,7 +105,7 @@ test("the words: the fairness section exists in English and Indonesian with the 
     }
     for (const key of ["title", "p1", "p2", "p3", "p4", "seeds", "verify", "command"]) assert.ok(en[key], key);
     assert.match(en.command, /animaldex-ark-seed-v1\|first\|<year>\|<number>/);
-    // Rules in plain words: nothing that predicts an outcome (no odds, no countdown offered, no date in the future).
+    // Rules in plain words: nothing that predicts an outcome (no odds of anything, no countdown, no date in the future); the one look-ahead the Ark has, the estimated time left, is named as odds and not a promise.
     const rules = [en.p1, en.p2, en.p3, en.p4].join(" ");
     assert.ok(!/\b(will die|odds of|chance of|probability|expected to|likely to)\b/i.test(rules));
 });
