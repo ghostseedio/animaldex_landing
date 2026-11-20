@@ -328,9 +328,10 @@ async function main() {
         const edge = {...q(kept.x + kept.size / 2, kept.y + kept.size * 0.1, kept.z)};
         const px = Math.hypot((edge.x - m.x) * 360, (edge.y - m.y) * 640) * 2;
         if (px < CLUTCH_PX) return {ok: false, why: "clutch-small"};
+        // (Its eggs over the rim: a ray to the base's own middle meets the twigs of the nest it is in.)
         if (handle.sightOf) {
             const view = handle.view();
-            if (handle.sightOf(view.target, {distance: view.distance, polar: view.polar, azimuth: view.azimuth}, [{x: kept.x, y: kept.y + kept.size * 0.1, z: kept.z, slack: kept.size * 0.3}], false, camera.near > 0.5 ? camera.near : 0, true) > 0) return {ok: false, why: "clutch-blocked"};
+            if (handle.sightOf(view.target, {distance: view.distance, polar: view.polar, azimuth: view.azimuth}, [{x: kept.x, y: kept.y + kept.size * 0.3, z: kept.z, slack: kept.size * 0.3}], false, camera.near > 0.5 ? camera.near : 0, true) > 0) return {ok: false, why: "clutch-blocked"};
         }
         return {ok: true, why: ""};
     };
