@@ -22,6 +22,7 @@ import {
     Vector2,
     Vector3
 } from "three";
+import {mergeVertices} from "three/examples/jsm/utils/BufferGeometryUtils.js";
 import {lumpy, merge, paint, place} from "@/ark-scene/props/kit";
 import {seeded} from "@/ark-scene/world";
 
@@ -214,7 +215,56 @@ export function antMound(r: number, h: number, seed = 5): BufferGeometry {
     return merge(parts);
 }
 
-/** A termite mound: a buttressed cathedral of red earth with a few spires (`h` high). */
+/**
+ * A body of revolution shaded as ONE smooth surface (ark-world, decision 447): `paint` flattens every face (it is the
+ * props' faceted look), and a termite mound drawn that way was a pyramid of facets; this welds the vertices, takes the
+ * normals from the surface and keeps them when the parts are merged, then colours each corner by `shade`.
+ */
+function smoothPaint(geometry: BufferGeometry, colour: Color, shade: (y: number, i: number, x: number, z: number) => number = () => 1): BufferGeometry {
+    geometry.deleteAttribute("uv");
+    geometry.deleteAttribute("normal");
+    const welded = mergeVertices(geometry, 1e-3);
+    welded.computeVertexNormals();
+    const out = welded.toNonIndexed();
+    const position = out.getAttribute("position");
+    const colors = new Float32Array(position.count * 3);
+    for (let i = 0; i < position.count; i++) {
+        const value = shade(position.getY(i), i, position.getX(i), position.getZ(i));
+        colors[i * 3] = colour.r * value;
+        colors[i * 3 + 1] = colour.g * value;
+        colors[i * 3 + 2] = colour.b * value;
+    }
+    out.setAttribute("color", new BufferAttribute(colors, 3));
+    return out;
+}
+
+/** One spire's lathe: a parabolic cathedral spire, fluted by the rain (`flutes` ridges), `sides` round, `rings` high. */
+function spire(height: number, base: number, sides: number, rings: number, flutes: number, twist: number, bulge: number): BufferGeometry {
+    const points: Vector2[] = [];
+    for (let k = 0; k <= rings; k++) {
+        const t = k / rings;
+        // A broad foot that sweeps up into a narrowing, rounded-off spire.
+        const r = base * ((1 - t) ** 1.25 * (1 + bulge * Math.sin(t * 7 + twist)) + 0.04 * (1 - t));
+        points.push(new Vector2(Math.max(r, k === rings ? 0.0 : 0.012), t * height));
+    }
+    const lathe = new LatheGeometry(points, sides);
+    const position = lathe.getAttribute("position");
+    for (let i = 0; i < position.count; i++) {
+        const x = position.getX(i);
+        const z = position.getZ(i);
+        const t = position.getY(i) / height;
+        const flute = 1 + 0.09 * Math.sin(flutes * Math.atan2(z, x) + twist + t * 3) * (1 - t * 0.6);
+        position.setXYZ(i, x * flute, position.getY(i), z * flute);
+    }
+    return lathe;
+}
+
+/**
+ * A termite mound: a buttressed cathedral of red earth with a few spires (`h` high). (ark-world, decision 447: it was
+ * 9-sided lathes shaded face by face on a flat disc, an orange pyramid with a skirt. Now 18 sides and 10 rings a spire,
+ * fluted down its sides, the whole one smooth surface with the rain's streaks in its colour, dark at the foot, pale and
+ * dusty up the spires, with a few dark vents, standing on a lumpy foot that fades into the ground.)
+ */
 export function termiteMound(h: number, seed = 6): BufferGeometry {
     const random = seeded(4600 + seed);
     const parts: BufferGeometry[] = [];
@@ -222,26 +272,25 @@ export function termiteMound(h: number, seed = 6): BufferGeometry {
     for (let s = 0; s < spires; s++) {
         const height = h * (s === 0 ? 1 : 0.45 + random() * 0.35);
         const base = h * (s === 0 ? 0.34 : 0.18);
-        const points: Vector2[] = [];
-        for (let k = 0; k <= 8; k++) {
-            const t = k / 8;
-            points.push(new Vector2(Math.max(base * (1 - t) ** 1.4 * (1 + 0.15 * Math.sin(t * 9 + s)), 0.01), t * height));
-        }
-        const lathe = new LatheGeometry(points, 9);
-        lumpy(lathe, 0.08, random);
+        const lathe = spire(height, base, 18, 10, 5 + Math.floor(random() * 3), random() * 6.28, 0.12);
+        lumpy(lathe, 0.06, random);
         const ox = s === 0 ? 0 : (random() - 0.5) * h * 0.4;
         const oz = s === 0 ? 0 : (random() - 0.5) * h * 0.4;
-        parts.push(paint(place(lathe, ox, 0, oz), new Color("#b0673f"), (y, i) => 0.72 + 0.3 * (y / h) + ((i * 11) % 7) / 50));
+        const streak = random() * 6.28;
+        parts.push(smoothPaint(place(lathe, ox, 0, oz), new Color("#b0673f"), (y, i, x, z) => (0.62 + 0.4 * Math.min(y / h, 1) ** 0.8 + 0.1 * Math.sin(Math.atan2(z - oz, x - ox) * 9 + streak + y * 2)) * (0.94 + ((i * 11) % 7) / 60)));
     }
-    const foot = new CylinderGeometry(h * 0.42, h * 0.55, h * 0.12, 12, 1);
+    // The foot: a low lumpy skirt of the same earth, its rim sunk into the ground (a dome, not a plate).
+    const foot = new SphereGeometry(h * 0.5, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2);
+    foot.scale(1, 0.2, 1);
     lumpy(foot, 0.1, random);
-    parts.push(paint(place(foot, 0, h * 0.04, 0), new Color("#a35f3a"), (_, i) => jitter(i)));
+    parts.push(smoothPaint(place(foot, 0, -h * 0.01, 0), new Color("#a35f3a"), (_, i) => 0.78 * jitter(i)));
     return merge(parts);
 }
 
-/** A far termite mound: a few triangles. */
+/** A far termite mound: the spire alone, smooth, 12 sides and 6 rings (about 130 triangles; was a 6-sided cone). */
 export function termiteMoundFar(h: number): BufferGeometry {
-    return paint(new ConeGeometry(h * 0.36, h, 6), new Color("#ad6640"), (y) => 0.75 + 0.3 * (y / h + 0.5)).translate(0, h / 2, 0);
+    const lathe = spire(h, h * 0.34, 12, 6, 5, 0.7, 0.1);
+    return smoothPaint(lathe, new Color("#ad6640"), (y, i) => (0.66 + 0.4 * Math.min(y / h, 1) ** 0.8) * (0.94 + ((i * 11) % 7) / 60));
 }
 
 /** A hive box in the garden: a stand, two boxes, a gabled roof (about 0.9 m tall). */

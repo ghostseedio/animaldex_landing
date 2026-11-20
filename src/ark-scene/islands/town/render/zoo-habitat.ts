@@ -170,21 +170,59 @@ export function ledge(geo: Geo, plot: Plot, lx: number, lz: number, size: number
     plot.solids.push({kind: "rock", shape: "box", x: p[0], z: p[2], hw: size * 1.3 * 0.85, hd: size * 0.85, rot: (seed % 628) / 100, base: p[1] - size * 0.1, top: p[1] + size * 0.28});
 }
 
-/** An irregular flat patch of ground cover (grass, bark, sand, leaf litter) `lift` over the floor. */
+/**
+ * An irregular patch of ground cover (grass, bark, sand, leaf litter, bare earth) `lift` over the floor. (ark-world,
+ * decision 447, "earth patches blocky": it was a 14-corner fan, each corner's radius its own random number, one flat
+ * colour with a hard edge, drawn from both sides.) Now the outline wanders smoothly (three low harmonics, not noise per
+ * corner), the surface is three rings of one colour that darkens and settles toward the floor at the rim (the trodden
+ * edge where the soil meets the grass: the edge ring sits at 70 % of the lift), the cells carry a little grain, and a few
+ * specks of the same earth lie just outside it, so the edge is ragged, not a polygon. Single-sided (it is seen from above:
+ * the winding faces up), 90 triangles a patch where the old was 28 drawn both ways.
+ */
 export function patch(geo: Geo, plot: Plot, lx: number, lz: number, radius: number, colour: RGB, seed: number, lift = 0.012) {
     const r = rng(seed);
-    const n = 14;
-    const radii = Array.from({length: n}, () => radius * (0.7 + r() * 0.45));
+    const n = 18;
+    const phase = [r() * 6.28, r() * 6.28, r() * 6.28];
+    // The outline's radius at an angle: 1 ± 0.3 at most, smooth (2, 3 and 5 lobes).
+    const reach = (a: number) => radius * (1 + 0.15 * Math.sin(2 * a + phase[0]) + 0.1 * Math.sin(3 * a + phase[1]) + 0.05 * Math.sin(5 * a + phase[2]));
+    // Rings: the share of the reach, the lift (share of `lift`) and the colour's factor there.
+    const rings: Array<[number, number, number]> = [[0, 1, 1.04], [0.52, 1, 1.0], [0.86, 0.92, 0.94], [1, 0.7, 0.84]];
+    const at2 = (ring: number, i: number): V3 => {
+        const a = (i / n) * Math.PI * 2;
+        const k = rings[ring][0] * reach(a);
+        return plot.p(lx + Math.cos(a) * k, lz + Math.sin(a) * k, lift * rings[ring][1]);
+    };
     const centre = plot.p(lx, lz, lift);
+    const shadeOf = (ring: number, i: number, j: number): RGB => {
+        const g = rings[ring][2] * (0.95 + 0.1 * (((i * 7 + j * 13 + ring * 5) % 11) / 11));
+        return [colour[0] * g, colour[1] * g, colour[2] * g * (ring === 3 ? 0.96 : 1)];
+    };
     for (let i = 0; i < n; i++) {
-        const a0 = (i / n) * Math.PI * 2;
-        const a1 = ((i + 1) / n) * Math.PI * 2;
-        const x0 = lx + Math.cos(a0) * radii[i];
-        const z0 = lz + Math.sin(a0) * radii[i];
-        const x1 = lx + Math.cos(a1) * radii[(i + 1) % n];
-        const z1 = lz + Math.sin(a1) * radii[(i + 1) % n];
-        const k = 0.94 + r() * 0.1;
-        both(geo, centre, plot.p(x1, z1, lift), plot.p(x0, z0, lift), [colour[0] * k, colour[1] * k, colour[2] * k]);
+        const j = (i + 1) % n;
+        // (Winding: the fan's (centre, next, this) faces up, as the old fan's did.)
+        geo.tri(centre, at2(1, j), at2(1, i), shadeOf(0, i, j));
+        for (let ring = 1; ring + 1 < rings.length; ring++) {
+            const a = at2(ring, i);
+            const b = at2(ring, j);
+            const c = at2(ring + 1, j);
+            const d = at2(ring + 1, i);
+            geo.tri(a, b, c, shadeOf(ring, i, j));
+            geo.tri(a, c, d, shadeOf(ring + 1, i, j));
+        }
+    }
+    // Specks of the same earth just past the rim: little irregular flecks, never over a resident's spot (the patch's own
+    // footprint rules do not apply: they are a handful of centimetres).
+    const flecks = 6;
+    for (let k = 0; k < flecks; k++) {
+        const a = r() * Math.PI * 2;
+        const d = reach(a) * (0.95 + r() * 0.22);
+        const s = 0.07 + r() * 0.13;
+        const cx = lx + Math.cos(a) * d;
+        const cz = lz + Math.sin(a) * d;
+        const t = r() * 6.28;
+        const corner = (m: number) => plot.p(cx + Math.cos(t + m * 2.1) * s, cz + Math.sin(t + m * 2.1) * s * (0.7 + 0.2 * m), lift * 0.7);
+        const g = 0.86 + 0.14 * r();
+        geo.tri(corner(0), corner(2), corner(1), [colour[0] * g, colour[1] * g, colour[2] * g]);
     }
 }
 
@@ -947,27 +985,96 @@ export function dressPaddock(e: {id: string; type: string; slot: {at: Box; seed:
                 }
             });
             plot.footprints.push({x: Math.cos((C.a0 + C.a1) / 2) * (C.inner + 3.5), z: Math.sin((C.a0 + C.a1) / 2) * (C.inner + 3.5), r: 4.5, what: "rockwork"});
-            // The waterfall: from the notch down the face to the lagoon's end, in narrow ribbons of white water side by
-            // side (each its own shade and reach, thrown a little clear of the rock), foam and spray at its foot.
+            // The waterfall (ark-world, decision 447, "the dome's waterfall is flat white strips": seven flat ribbons of one
+            // colour each, with the rock showing between them): a curtain of water falling from the notch in a thrown arc,
+            // a backing sheet of green-blue water under eighteen overlapping strands, every strand shaded corner by corner
+            // (glassy at the lip, white where it is torn on the ledges, foamed at the foot) with bands of density running down
+            // it, its edges ragged, spray plumes and foam rings where it lands in the lagoon.
             {
                 const at3 = (rho: number, y: number): V3 => [DOME.x + Math.cos(C.fall) * rho, floor + y, DOME.z + Math.sin(C.fall) * rho];
                 const sx = -Math.sin(C.fall);
                 const sz = Math.cos(C.fall);
-                const shades = ["#d9ecf2", "#c2dde8", "#eaf5f8", "#b7d5e2", "#dcedf3", "#c9e2ec", "#e6f2f6"];
-                for (let k = 0; k < 7; k++) {
-                    const off = (k - 3) * 0.42 + (r() - 0.5) * 0.12;
-                    const w = 0.3 + r() * 0.16;
-                    const throwOut = 0.25 + r() * 0.5;
-                    const line: V3[] = [at3(C.inner + 3.3, 7.25), at3(C.inner + 1.5 - throwOut * 0.3, 6.75 + r() * 0.15), at3(C.inner + 0.4 - throwOut, 3.6 + r() * 0.5), at3(C.inner - 0.7 - throwOut, 0.0)];
-                    const side = (p: V3, q: number): V3 => [p[0] + sx * (off + q * w), p[1], p[2] + sz * (off + q * w)];
-                    const colour = tone(shades[k]);
-                    for (let i = 1; i < line.length; i++) {
-                        solid.quad(side(line[i - 1], -0.5), side(line[i - 1], 0.5), side(line[i], 0.5), side(line[i], -0.5), colour);
-                        solid.quad(side(line[i], -0.5), side(line[i], 0.5), side(line[i - 1], 0.5), side(line[i - 1], -0.5), colour);
+                // The way the water faces (toward the dome's middle, and a little up): its normal, both sides.
+                const faceN: V3 = [-Math.cos(C.fall) * 0.93, 0.3, -Math.sin(C.fall) * 0.93];
+                const backN: V3 = [-faceN[0], 0.3, -faceN[2]];
+                const spine: Array<[number, number]> = [[C.inner + 3.3, 7.25], [C.inner + 2.3, 7.0], [C.inner + 1.5, 6.6], [C.inner + 0.9, 5.6], [C.inner + 0.5, 4.2], [C.inner + 0.15, 2.7], [C.inner - 0.1, 1.2], [C.inner - 0.35, 0.05]];
+                const pointAt = (t: number, drift: number, off: number): V3 => {
+                    const f = t * (spine.length - 1);
+                    const i = Math.min(Math.floor(f), spine.length - 2);
+                    const k = f - i;
+                    const rho = spine[i][0] + (spine[i + 1][0] - spine[i][0]) * k - drift * Math.sin(t * Math.PI) * 0.5;
+                    const y = spine[i][1] + (spine[i + 1][1] - spine[i][1]) * k;
+                    const p = at3(rho, y);
+                    // (The curtain spreads a little as it falls.)
+                    const o = off * (1 + 0.22 * t);
+                    return [p[0] + sx * o, p[1], p[2] + sz * o];
+                };
+                const glass = tone("#7fb1c4");
+                const white = tone("#f2fafc");
+                const foam = tone("#ffffff");
+                const sheet = tone("#6c9eb2");
+                const rows = 8;
+                const strands = 18;
+                const span = 3.5;
+                const water = (t: number, k: number, edge: number, band: number): RGB => {
+                    // Glassy up top, whiter as it falls and tears, foam at the foot; bands of density run down it.
+                    const whiten = Math.min(1, 0.15 + 0.85 * t * t + 0.25 * band);
+                    const base: RGB = [glass[0] + (white[0] - glass[0]) * whiten, glass[1] + (white[1] - glass[1]) * whiten, glass[2] + (white[2] - glass[2]) * whiten];
+                    const foamed = Math.max(0, (t - 0.82) / 0.18);
+                    const m = 1 - 0.12 * edge;
+                    return [(base[0] + (foam[0] - base[0]) * foamed) * m, (base[1] + (foam[1] - base[1]) * foamed) * m, (base[2] + (foam[2] - base[2]) * foamed) * m];
+                };
+                const strip = (a: V3, b: V3, c: V3, ca: RGB, cb: RGB, cc: RGB) => {
+                    solid.triShaded(a, b, c, faceN, faceN, faceN, ca, cb, cc);
+                    solid.triShaded(a, c, b, backN, backN, backN, ca, cc, cb);
+                };
+                // The backing sheet, set a hand off the rock behind the strands.
+                for (let i = 0; i < rows; i++) {
+                    const t0 = i / rows;
+                    const t1 = (i + 1) / rows;
+                    const half = span * 0.5 + 0.12;
+                    const c0 = [sheet[0] * (0.9 + 0.2 * t0), sheet[1] * (0.9 + 0.2 * t0), sheet[2] * (0.9 + 0.2 * t0)] as RGB;
+                    const c1 = [sheet[0] * (0.9 + 0.2 * t1), sheet[1] * (0.9 + 0.2 * t1), sheet[2] * (0.9 + 0.2 * t1)] as RGB;
+                    const a = pointAt(t0, -0.12, -half);
+                    const b = pointAt(t0, -0.12, half);
+                    const c2 = pointAt(t1, -0.12, half);
+                    const d = pointAt(t1, -0.12, -half);
+                    strip(a, b, c2, c0, c0, c1);
+                    strip(a, c2, d, c0, c1, c1);
+                }
+                for (let k = 0; k < strands; k++) {
+                    const u = (k + 0.5) / strands - 0.5;
+                    const off = u * span + (r() - 0.5) * 0.1;
+                    const edge = Math.abs(u) * 2;
+                    const w = 0.22 + r() * 0.16;
+                    // Each strand its own throw, and its own phase of bands.
+                    const drift = 0.25 + r() * 0.6;
+                    const phase = r() * 6.28;
+                    const reach = 0.78 + 0.22 * r();
+                    for (let i = 0; i < rows * reach; i++) {
+                        const t0 = i / rows;
+                        const t1 = Math.min((i + 1) / rows, reach);
+                        const band0 = 0.5 + 0.5 * Math.sin(t0 * 11 + phase);
+                        const band1 = 0.5 + 0.5 * Math.sin(t1 * 11 + phase);
+                        const a = pointAt(t0, drift, off - w * 0.5 * (1 - 0.3 * t0));
+                        const b = pointAt(t0, drift, off + w * 0.5 * (1 - 0.3 * t0));
+                        const c2 = pointAt(t1, drift, off + w * 0.5 * (1 - 0.3 * t1));
+                        const d = pointAt(t1, drift, off - w * 0.5 * (1 - 0.3 * t1));
+                        const ca = water(t0, k, edge, band0);
+                        const cb = water(t0, k, edge, band0);
+                        const cc = water(t1, k, edge, band1);
+                        const cd = water(t1, k, edge, band1);
+                        strip(a, b, c2, ca, cb, cc);
+                        strip(a, c2, d, ca, cc, cd);
                     }
                 }
-                const foot = at3(C.inner - 1.3, 0.05);
+                // The foot: foam rings spreading over the lagoon, and spray plumes standing in the fall's last metres.
+                const foot = at3(C.inner - 1.0, 0.05);
                 for (let k = 0; k < 9; k++) solid.blob(foot[0] + (r() - 0.5) * 3.2, foot[1] - 0.04, foot[2] + (r() - 0.5) * 3.2, 0.6 + r() * 0.6, 0.1 + r() * 0.06, 0.6 + r() * 0.6, tone(k % 2 ? "#dfeef2" : "#c9e0e8"), hashText(`${e.id}foam${k}`), 1);
+                for (let k = 0; k < 7; k++) {
+                    const along = (k / 6 - 0.5) * span * 0.9;
+                    solid.blob(foot[0] + sx * along + (r() - 0.5) * 0.4, foot[1] + 0.35 + r() * 0.5, foot[2] + sz * along + (r() - 0.5) * 0.4, 0.38 + r() * 0.3, 0.45 + r() * 0.35, 0.38 + r() * 0.3, tone(k % 2 ? "#f4fbfd" : "#e4f2f6"), hashText(`${e.id}spray${k}`), 1);
+                }
             }
             // The perches: the snags (a stripped trunk and its limbs, a perch at each limb's tip and at its top), the
             // cliff's nest ledges (a slab, a nest of sticks on every other one), the feeding stations (a post and a tray).
