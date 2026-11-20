@@ -91,8 +91,11 @@ export function buildSim(list: ArkAnimal[], options: {planOf?: (slug: string) =>
         eats,
         (id) => radius.get(id) ?? 3
     );
+    const ledOf = new Map<unknown, number>();
+    groups.forEach((g) => g && ledOf.set(g.leader, (ledOf.get(g.leader) ?? 1) + 1));
     for (const s of onIt) {
         s.sched!.group = groups.get(s) ?? null;
+        s.sched!.led = ledOf.get(s.sched!) ?? 0;
         const age = options.arkDay != null && typeof s.a.born_ark_day === "number" ? options.arkDay - s.a.born_ark_day : null;
         s.sched!.young = s.a.origin === "born" && age !== null && age < 90;
     }

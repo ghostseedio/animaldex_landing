@@ -10,13 +10,14 @@ import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {disturbedNow} from "@/ark-scene/defence-moves";
+import {actWindow} from "@/ark-scene/behaviour-group";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake"};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "group"};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -99,6 +100,17 @@ const SCENES: Record<string, Scene> = {
     shaketown: {zone: "garden_wildlife", hours: 10, kind: "shake", town: true, cast: [{slug: "mallard", name: "Mallard", n: 6}]},
     shaketowngoose: {zone: "farm_garden", hours: 10, kind: "shake", town: true, cast: [{slug: "domestic-goose", name: "Domestic Goose", n: 6}]},
     shakeotter: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "european-otter", name: "European Otter", n: 2}]},
+    // Group life (lane SIG-GROUP; `behaviour-group.ts`): the group's own act, from the cast's real animals aboard together, at a pinned hour.
+    gsentinel: {zone: "farm_garden", hours: 10, kind: "group", cast: [{slug: "american-crow", name: "American Crow", n: 4}]},
+    ghuddle: {zone: "river_lake", hours: 12, kind: "group", cast: [{slug: "capybara", name: "Capybara", n: 5}]},
+    ggather: {zone: "farm_garden", hours: 17.9, kind: "group", cast: [{slug: "house-sparrow", name: "House Sparrow", n: 6}]},
+    groost: {zone: "farm_garden", hours: 22, kind: "group", cast: [{slug: "house-sparrow", name: "House Sparrow", n: 6}, {slug: "ring-tailed-lemur", name: "Ring-tailed Lemur", n: 4}]},
+    glick: {zone: "rainforest", hours: 8, kind: "group", cast: [{slug: "african-grey-parrot", name: "African Grey Parrot", n: 5}]},
+    gchorus: {zone: "farm_garden", hours: 6.2, kind: "group", cast: [{slug: "australian-magpie", name: "Australian Magpie", n: 4}]},
+    gcommute: {zone: "rainforest", hours: 12, kind: "group", cast: [{slug: "blue-fronted-amazon", name: "Blue-fronted Amazon", n: 6}]},
+    gfeast: {zone: "rainforest", hours: 10, kind: "group", cast: [{slug: "northern-pig-tailed-macaque", name: "Northern Pig-tailed Macaque", n: 5}]},
+    gbask: {zone: "river_lake", hours: 11, kind: "group", cast: [{slug: "red-eared-slider", name: "Red-eared Slider", n: 5}]},
+    gpairs: {zone: "rainforest", hours: 12, kind: "group", cast: [{slug: "blue-fronted-amazon", name: "Blue-fronted Amazon", n: 7}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -447,6 +459,48 @@ async function main() {
             const laid = mode === "clutch" ? (debug as unknown as {liveClutch: () => {eggs: number | null; at: {x: number; y: number; z: number; size: number} | null} | null}).liveClutch() : null;
             const clutch = laid ? ` clutch of ${laid.eggs} at ${laid.at ? `${laid.at.x.toFixed(2)},${laid.at.z.toFixed(2)} ${laid.at.size.toFixed(3)} m` : "-"}; she at ${at[1] ? `${at[1].x.toFixed(2)},${at[1].z.toFixed(2)}` : "-"}` : "";
             return `+${s} s ${mode}:${clutch} view ${v.distance.toFixed(2)} m; apart ${apart} m; lengths ${at.map((p) => p?.length.toFixed(3) ?? "-").join("/")}`;
+        },
+        /** Group life (lane SIG-GROUP): an act's next windows for the cast's group (seconds after the scene's start, and how long each lasts). */
+        groupWindows: (act: Parameters<typeof actWindow>[0], count: number) => {
+            const out: Array<{n: number; s: number; len: number}> = [];
+            for (let s = 0; s < 14400 && out.length < count; s += 10) {
+                const w = actWindow(act, castId(0, 0), t0 + s);
+                if (w && !out.some((o) => o.n === w.n)) out.push({n: w.n, s: w.t0 - t0, len: w.t1 - w.t0});
+            }
+            return out;
+        },
+        /** Group life: the world at `s` seconds after the scene's start, the cast's group framed from `lengths` of its spread (or `distance` m), and what each member is doing. */
+        groupShot: async (s: number, distance: number, azimuth = 0.7, polar = 1.1, k = 0) => {
+            await setAt(t0 + s - 2.5);
+            for (let i = 1; i <= 25; i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const ids = Array.from({length: scene.cast[k].n}, (_, i) => castId(k, i));
+            const at = ids.map((id) => handle.locate(id));
+            // (The members acting out a group act, if any: the frame is on them.)
+            const GROUP_RECIPES = new Set(["huddle", "sentinel_post", "dusk_gather", "lick_gather", "chorus", "tree_feast", "bask_pile"]);
+            const actingNow = ids.map((id) => GROUP_RECIPES.has((debug.entries().find((x) => x.animal.id === id) as unknown as {sched?: {pose?: {act?: {recipe?: string} | null}}} | undefined)?.sched?.pose?.act?.recipe ?? ""));
+            const some = actingNow.some(Boolean);
+            const found = at.filter((p, i): p is NonNullable<typeof p> => Boolean(p) && (!some || actingNow[i]));
+            const cx = found.reduce((m, p) => m + p.x, 0) / Math.max(found.length, 1);
+            const cz = found.reduce((m, p) => m + p.z, 0) / Math.max(found.length, 1);
+            const cy = found.reduce((m, p) => m + p.y, 0) / Math.max(found.length, 1);
+            const spread = found.reduce((m, p) => Math.max(m, Math.hypot(p.x - cx, p.z - cz)), 0);
+            const controls = (debug as unknown as {controls: {minDistance: number}}).controls;
+            for (let i = 0; i < 3; i++) {
+                controls.minDistance = 0.08;
+                handle.setView({target: {x: cx, y: Math.max(cy, handle.heightAt(cx, cz)) + 0.2, z: cz}, distance: Math.max(distance, spread * 2.4 + 1.2), polar, azimuth});
+                await frames(1);
+            }
+            const lines = ids.map((id, i) => {
+                const e = debug.entries().find((x) => x.animal.id === id) as unknown as {sched?: {pose?: {beat?: string; doing?: string; act?: {recipe?: string; block?: string} | null}}} | undefined;
+                const p = at[i];
+                return `${i}${i === 0 ? "L" : " "} ${(e?.sched?.pose?.act?.recipe ?? "-").padEnd(14)} ${(e?.sched?.pose?.act?.block ?? "-").padEnd(6)} ${(e?.sched?.pose?.beat ?? "-").padEnd(6)} card:${handle.animalStatus?.(id)?.activity ?? "-"} ${p ? `d=${Math.hypot(p.x - cx, p.z - cz).toFixed(1)} y=${(p.y - handle.heightAt(p.x, p.z)).toFixed(1)} at ${p.x.toFixed(1)},${p.z.toFixed(1)}` : "-"}`;
+            });
+            const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
+            return `+${s.toFixed(0)} s spread ${spread.toFixed(1)} m centre ${cx.toFixed(1)},${cz.toFixed(1)}\n${lines.concat(said).join("\n")}`;
         },
         handle
     };

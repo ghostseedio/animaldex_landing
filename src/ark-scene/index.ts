@@ -258,6 +258,8 @@ import {LiveEscapes, type LimpOffsets} from "@/ark-scene/live-escapes";
 import {DipRipples, microDipAt, waterNear} from "@/ark-scene/egg-dip";
 // 3.3 batch (B): the birds' own moves (mobbing dive)
 import {Mobbing, mobFoeFits, type MobHost} from "@/ark-scene/mobbing";
+// Group life (lane SIG-GROUP): species that live in groups by their own text though their profile says otherwise.
+import {groupLives} from "@/ark-scene/behaviour-group";
 import {BrokenWing} from "@/ark-scene/broken-wing";
 import {LiveDuckDrops, type Hollow} from "@/ark-scene/duckling-drop";
 import birdMoves from "@/ark-scene/bird-moves.json";
@@ -1885,9 +1887,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const groups = new Map<Entry, ScheduleGroup | null>();
         for (const e of onIt) {
             const own = e.sched!;
-            const leader = e.leader && e.leader.sched && e.leader.animal.model_slug === e.animal.model_slug && GROUPED.has(own.profile.social) ? e.leader : null;
+            const leader = e.leader && e.leader.sched && e.leader.animal.model_slug === e.animal.model_slug && (GROUPED.has(own.profile.social) || groupLives(e.animal.model_slug)) ? e.leader : null;
             groups.set(e, leader ? {leader: leader.sched!.animal, profile: leader.sched!.profile, activity: leader.animal.activity, rank: Math.max(e.place.rank ?? 1, 1), size: sizes.get(leader) ?? 2} : null);
         }
+        // (Who really leads a group: only members that are grouped count, a species that does not flock leads nobody.)
+        const ledOf = new Map<ScheduleAnimal, number>();
+        groups.forEach((g) => g && ledOf.set(g.leader, (ledOf.get(g.leader) ?? 1) + 1));
         const navOf = (e: Entry) => worldOf(e.sched!.animal).nav;
         // A leader's reach includes its group's spread round it (its members roam round where it is).
         const radius = new Map(onIt.map((e) => [e.animal.id, rangeReach(e.sched!.profile, e.sched!.animal) + (sizes.has(e) ? groupSpread(e.length, sizes.get(e)!) : 0)]));
@@ -1907,6 +1912,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             for (const e of onIt) {
                 const own = e.sched!;
                 own.animal.group = groups.get(e) ?? null;
+                // (How many a leader leads, itself included: its group's acts, `behaviour-group.ts`.)
+                own.animal.led = ledOf.get(own.animal) ?? 0;
                 const age = arkDay !== null && typeof e.animal.born_ark_day === "number" ? arkDay - e.animal.born_ark_day : null;
                 own.animal.young = e.animal.origin === "born" && age !== null && age < 90;
                 own.wired = true;

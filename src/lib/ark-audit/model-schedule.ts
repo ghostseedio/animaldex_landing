@@ -142,6 +142,12 @@ export async function scheduleModel(fixture: AuditFixture, data: SceneData, meta
             // (The fixture's animals all arrived: none is young.)
             own.animal.young = false;
         }
+        // (How many a leader leads, itself included: its group's acts, `behaviour-group.ts`.)
+        for (const i of onIt) holders[i].sched!.animal.led = 0;
+        for (const i of onIt) {
+            const g = holders[i].sched!.animal.group;
+            if (g) g.leader.led = (g.leader.led || 1) + 1;
+        }
         const nav = world.nav;
         const reach = new Map(onIt.map((i) => [subjects[i].id, schedule.rangeReach(holders[i].sched!.profile, holders[i].sched!.animal) + (sizes.has(i) ? schedule.groupSpread(subjects[i].length, sizes.get(i)!) : 0)]));
         const spaced = schedule.spaceHomes(

@@ -29,6 +29,7 @@
  */
 
 import data from "@/ark-scene/sleep.json";
+import {groupRoostOf} from "@/ark-scene/behaviour-group";
 import {hashString} from "@/ark-scene/world";
 
 export const SLEEP_POSTURES = ["sternal", "side", "curl", "stand", "one_leg", "tuck", "hang", "float_back", "sit", "flat", "bottom", "hover", "bottle", "still"] as const;
@@ -71,6 +72,10 @@ export function sleepStyle(slug: string): SleepStyle {
     if (!hit) {
         const row = ROWS[slug];
         hit = row ? Object.freeze(decodeSleepRow(row)) : STILL;
+        // (Group life, lane SIG-GROUP: a species whose own text has it roosting or huddling with its kind, where its sleep
+        // text said nothing of it: `behaviour-group.ts` / `data/ark/group-behaviours.json`.)
+        const together = hit.social === "apart" ? groupRoostOf(slug) : null;
+        if (together) hit = Object.freeze({...hit, social: together});
         STYLES.set(slug, hit);
     }
     return hit;

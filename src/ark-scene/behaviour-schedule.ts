@@ -50,6 +50,7 @@ import {roostOffset, sleepSpacing, sleepStyle} from "@/ark-scene/sleep";
 import {airLift, airPacesOf, airProgress, airStage, flightSpec, flightSpecOf, FLIGHT_ACCEL_MAX, G, planAirLeg, takeoffClass, type AirPaces, type AirPlan, type AirStage} from "@/ark-scene/locomotion/flight";
 // p3 (shake): shaking off the water at the edge.
 import {shakeTotal, waterShakeOf} from "@/ark-scene/water-shake";
+import {commuteCentre, flockTightness, groupIntent, pairSide} from "@/ark-scene/behaviour-group";
 import {coatOf, drawnRecipe, episodeOfTrip, episodePose, forgetRecipes, marksOf, nestSiteOf, pairMeetings, recipeRoostTags, sexLook, sitterIntent, type DrawnRecipe, type RecipeCoat, MARK_SECONDS, recipeIntent, type Episode, type RecipeMark, type RecipePose, type ScheduleKit, type TripOwner} from "@/ark-scene/behaviour-recipes";
 
 export const SLOT_SECONDS = 80;
@@ -193,6 +194,8 @@ export type ScheduleAnimal = {
     /** For a predator: its nearest prey's home, which it may stalk towards (never past its own range). */
     prey?: {x: number; z: number} | null;
     group?: ScheduleGroup | null;
+    /** How many are in the group it leads, itself included (a leader has no `group`): set where the groups are wired (`behaviour-group.ts`). */
+    led?: number;
     /** The predators aboard that could eat it (top predators only: `wireThreats`); it watches one it can see. */
     threats?: ScheduleThreat[] | null;
     /**
@@ -1587,7 +1590,8 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         return {doing: "breathe", to: {x: spot.x, y: surfaceAt(world, spot.x, spot.z), z: spot.z, nx: 0, ny: 1, nz: 0, point: null}, mode: "water", stay: []};
     }
     const personality = animalPersonality(animal.id);
-    const centre = groupCentre(world, animal, slot, hoursAt) ?? animal.home;
+    // (A flock that commutes spends its day at a feeding patch: its leader's centre is the patch from after dawn to dusk, `behaviour-group.ts`.)
+    const centre = groupCentre(world, animal, slot, hoursAt) ?? commuteCentre(world, animal, profile.slug, hours, (x, z) => world.nav.region(x, z, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug)) === world.nav.region(animal.home.x, animal.home.z, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug))) ?? animal.home;
     // A group member keeps within its group's spread of its leader (both capped where predator and prey were kept apart).
     const radius = group ? Math.min(homeRadius(profile, animal), groupSpread(animal.length, size), rangeCap(group.profile, group.leader) / 2) : homeRadius(profile, animal);
     const groupAnimal: ScheduleAnimal = group ? {...animal, home: {x: centre.x, y: animal.home.y, z: centre.z}} : animal;
@@ -1608,6 +1612,9 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
         const spot = rangeSpot(world, profile, groupAnimal, group ? memberSide(away, animal, group.rank, radius * 0.6) : away, Math.max(radius * 0.25, 0.5), wary);
         return {doing: "watch", to: spot, mode: aquatic(profile) ? "water" : profile.move === "fly" ? "air" : "ground", stay: stayBeats("watch", wary, null), face: Math.atan2(threat.x - spot.x, threat.z - spot.z)};
     }
+    // Group life (`behaviour-group.ts`): a huddle, a sentinel's post, the roost's dusk gathering, a clay lick, of the animals aboard together.
+    const grouped = groupIntent({world, profile, animal, slug: profile.slug, start, hours, centre, radius, kit: KIT});
+    if (grouped) return {doing: grouped.doing as ArkDoing, to: grouped.to, mode: grouped.mode, stay: [], recipe: grouped.recipe, ...(grouped.face !== undefined ? {face: grouped.face} : {})};
     if (watchTurn) {
         // At the group's edge, facing out.
         const spot = rangeSpot(world, profile, groupAnimal, own, radius * (group ? 0.3 : 0.9), random);
@@ -1845,18 +1852,26 @@ function shadowOf(world: ScheduleWorld, animal: ScheduleAnimal, slot: number, ho
     const at = basePoseOnTrip(world, trips[trips.length - 1], end);
     let dx = 0;
     let dz = 0;
-    const dy = (random() - 0.5) * Math.max(animal.length, 0.3) * (aquatic(group.profile) ? 2.4 : 1.6);
-    const spread = Math.max(animal.length, 0.3) * (1 + 0.35 * Math.sqrt(group.rank));
+    // (Wing to wing: a pairing species' pairs (ranks 2k+1 and 2k+2, `behaviour-group.ts`) share one place in the flock, from
+    // their leader's id and a twenty-minute period, and fly a wingspan apart there.)
+    const pair = pairSide(group.profile.slug, group.rank);
+    const pairRandom = pair ? rng(hashString(`${group.leader.id}#pair#${pair.pair}#${Math.floor(start / 1200)}`)) : null;
+    const dy = ((pairRandom ? pairRandom() : random()) - 0.5) * Math.max(animal.length, 0.3) * (aquatic(group.profile) ? 2.4 : 1.6);
+    const spread = Math.max(animal.length, 0.3) * (1 + 0.35 * Math.sqrt(group.rank)) * flockTightness(group.profile.slug);
     // (On the ground, a place by its leader it can stand at the slot's end: else it slid to the nearest open cell over
     // the slot's last seconds, sideways or backwards, the default view's sparrow. A few seeded tries, then that.)
     // (On its own bearing from its leader, as a herd member's own side (`memberSide`), each slot a little off it, wider
     // a try at a time: a school's members at random bearings stood in an even row now and then, like the herds.)
     const bearing = group.rank * 2.399963 + ((hashString(`${animal.id}#side`) % 1000) / 1000 - 0.5) * 0.5;
     for (let attempt = 0; attempt < 6; attempt++) {
-        const a = bearing + (random() - 0.5) * (0.7 + attempt * 0.6);
-        const d = (0.8 + random() * 2.2) * spread;
+        const a = pair ? (pair.pair + 1) * 2.399963 + (pairRandom!() - 0.5) * 0.5 : bearing + (random() - 0.5) * (0.7 + attempt * 0.6);
+        const d = pair ? (0.8 + pairRandom!() * 2.2) * Math.max(animal.length, 0.3) * (1 + 0.35 * Math.sqrt(2 * pair.pair + 1)) : (0.8 + random() * 2.2) * spread;
         dx = Math.cos(a) * d;
         dz = Math.sin(a) * d;
+        if (pair) {
+            dx += pair.side * Math.cos(a + Math.PI / 2) * Math.max(animal.length, 0.3) * 0.55;
+            dz += pair.side * Math.sin(a + Math.PI / 2) * Math.max(animal.length, 0.3) * 0.55;
+        }
         if (at.aloft || at.y < surfaceY(world, at.x, at.z) || world.nav.walkable(at.x + dx, at.z + dz)) break;
     }
     const fx = at.x + dx;
