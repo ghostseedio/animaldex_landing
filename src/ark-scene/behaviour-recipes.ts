@@ -128,11 +128,38 @@ function unit(seed: string): number {
     return (hashString(seed) % 100_003) / 100_003;
 }
 
-/** Its seeded sex (the stored ratio; none for a hermaphrodite) and how that shows (size, a duller coat or plumage), from its id. */
+/**
+ * The engine's own sexes, as the public read sends them (`animal.sex` "m" or "f", only while the server's `sexes` switch is on;
+ * the card's symbol is the same field), by animal id. Every choice of a mother or a father in the scene (a mating's roles, who
+ * lays, nurses, carries or guards, a nest's sitter, antlers, size) goes through `sexLook`, so it follows these. Filled from each
+ * read the scene takes (`setRecordedSexes`) and only added to or changed, never emptied: a stand-in for an animal the read has
+ * since dropped (an act's cast) keeps the sex it had. An animal whose read has the key but no sex (a kind that keeps none) is
+ * dropped from it; one whose read has no key keeps what it had; neither is in it: the seeded look below, as before.
+ */
+const recordedSexes = new Map<string, "male" | "female">();
+
+export function setRecordedSexes(animals: ReadonlyArray<{id: string; sex?: unknown}>): void {
+    for (const animal of animals) {
+        if (animal.sex === "m") recordedSexes.set(animal.id, "male");
+        else if (animal.sex === "f") recordedSexes.set(animal.id, "female");
+        else if ("sex" in animal) recordedSexes.delete(animal.id);
+    }
+}
+
+/** For tests and scripts: forget every recorded sex (the seeded look alone). */
+export function resetRecordedSexes(): void {
+    recordedSexes.clear();
+}
+
+/**
+ * Its sex and how that shows (size, a duller coat or plumage): the record's when the read carries it (`setRecordedSexes`),
+ * else seeded from its id (the stored ratio; none for a hermaphrodite), the same every time for the same id.
+ */
 export function sexLook(id: string, slug: string): SexLook {
     const s = speciesRecipes(slug).sex;
-    if (s.system === "hermaphrodite") return {sex: null, scale: 1, saturation: 1, value: 1};
-    const sex: ArkSex = unit(`${id}#sex`) < s.maleShare ? "male" : "female";
+    const recorded = recordedSexes.get(id);
+    if (!recorded && s.system === "hermaphrodite") return {sex: null, scale: 1, saturation: 1, value: 1};
+    const sex: ArkSex = recorded ?? (unit(`${id}#sex`) < s.maleShare ? "male" : "female");
     const half = Math.sqrt(Math.max(s.ratio, 1));
     const scale = !s.bigger ? 1 : s.bigger === sex ? half : 1 / half;
     const dull = s.duller === sex;

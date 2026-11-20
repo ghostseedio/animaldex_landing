@@ -81,7 +81,7 @@ import {bellyOfGeometry, goesIntoRoost, lyingBody, lyingDrop, lyingTorso, packSl
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
-import {applyRecipeCoat, seasonMonthAt, setRecipeArkDay, fallbackNests, microMurmuration, microRoost, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, seasonFactor, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
+import {applyRecipeCoat, seasonMonthAt, setRecipeArkDay, fallbackNests, microMurmuration, microRoost, molehillsOf, nestSourceFromProps, nestSourceOf, nestStageAt, setFishSource, setNestSource, setRecipeColliders, seasonFactor, setRecordedSexes, sexDim, sexLook, speciesRecipes, swarmFlock, wireRecipes, type Flock, type RecipeAct, type RecipeCoat, type RecipeMark, type RecipePose} from "@/ark-scene/behaviour-recipes";
 import {nestSites, nestStage} from "@/ark-scene/props/nest-growth";
 import {fishSchoolsNear} from "@/ark-scene/fish-schools";
 import {setFishChasers} from "@/ark-scene/fish-render";
@@ -3035,6 +3035,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         else afterAnimals.push(() => call(...args));
     };
     const setSnapshot = (whole: ArkSnapshot, entrances: boolean) => {
+        // The engine's own sexes first (`animal.sex`, while the server's switch is on): every mother, father and look below follows them.
+        setRecordedSexes(whole.animals);
         // Powers you can see (decision 420): its layer loads the first time a read has an animal above ordinary.
         if (powerShow) powerShow.snapshot(whole);
         else if (!powerLoading && whole.animals.some((animal) => animal.thrive === "good" || animal.thrive === "prime")) {
