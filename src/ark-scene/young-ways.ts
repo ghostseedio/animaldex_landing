@@ -165,6 +165,25 @@ export function walkSeconds(distance: number, pace: number): number {
     return Math.max(distance / Math.max(pace, 0.3), 3);
 }
 
+export type VisitMotion = {x: number; z: number; /** Height over the ground (a bird's flight there). */ lift: number; moving: boolean; aloft: boolean; /** Her heading: the way she goes while she goes, her head to the young with them (the caller blends in the turn). */ way: number};
+
+/**
+ * Where she is on a visit: out from where she set off (`anchor`) to the place beside the young, the hold, and back to where
+ * her own day has her now (`sched`, which moves on meanwhile), so she is never somewhere her day is not at either end. A
+ * flier goes in an arc over the way.
+ */
+export function visitMotion(state: VisitState, anchor: Pt, place: Pt, sched: Pt, flies: boolean): VisitMotion {
+    const L = state.level;
+    const from = state.phase === "back" ? sched : anchor;
+    const x = from.x + (place.x - from.x) * L;
+    const z = from.z + (place.z - from.z) * L;
+    const moving = state.phase !== "hold" && L > 0.02 && L < 0.98;
+    const reach = Math.hypot(place.x - from.x, place.z - from.z);
+    const lift = flies && moving ? Math.sin(Math.PI * L) * Math.min(reach * 0.2, 5) : 0;
+    const way = state.phase === "back" ? Math.atan2(sched.x - place.x, sched.z - place.z) : Math.atan2(place.x - anchor.x, place.z - anchor.z);
+    return {x, z, lift, moving, aloft: flies && moving, way};
+}
+
 /** Where she stands with the young: beside its spot on her own seeded side, at a body's reach, her head toward it. */
 export function visitPlace(visitorId: string, spot: Pt, visitorLength: number, youngLength: number): {x: number; z: number; yaw: number} {
     const angle = unit(visitorId, "visit-side") * Math.PI * 2;

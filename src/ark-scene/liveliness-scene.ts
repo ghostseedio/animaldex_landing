@@ -59,6 +59,7 @@ import {
     PARENT_CHANCE,
     siblingOffset,
     visitPlace,
+    visitMotion,
     visitPlan,
     visitState,
     VISIT_REACH,
@@ -756,16 +757,15 @@ export class ArkLiveliness {
         const {state, run} = now;
         const L = state.level;
         const hold = state.phase === "hold";
-        const from = state.phase === "back" ? {x: pose.x, z: pose.z, y: pose.y} : {x: run.anchor.x, z: run.anchor.z, y: run.anchor.y};
-        const x = from.x + (run.place.x - from.x) * L;
-        const z = from.z + (run.place.z - from.z) * L;
-        const moving = !hold && L > 0.02 && L < 0.98;
-        const ground = this.groundOf(entry.animal.id, x, z);
-        const lift = run.flies && moving ? Math.sin(Math.PI * L) * Math.min(Math.hypot(run.place.x - from.x, run.place.z - from.z) * 0.2, 5) : 0;
+        const m = visitMotion(state, run.anchor, run.place, pose, run.flies);
+        const ground = this.groundOf(entry.animal.id, m.x, m.z);
         // Her heading: the way she walks while she walks, then her head to the young.
-        const way = state.phase === "back" ? yawToward(pose.x - run.place.x, pose.z - run.place.z) : yawToward(run.place.x - run.anchor.x, run.place.z - run.anchor.z);
         const turn = state.phase === "back" ? ease((1 - L) * 4) : ease(L * 4 - 3);
-        const yaw = state.phase === "back" ? lerpAngle(run.place.yaw, way, turn) : lerpAngle(way, run.place.yaw, turn);
+        const yaw = state.phase === "back" ? lerpAngle(run.place.yaw, m.way, turn) : lerpAngle(m.way, run.place.yaw, turn);
+        const x = m.x;
+        const z = m.z;
+        const moving = m.moving;
+        const lift = m.lift;
         this.noteWay(entry.animal.id, hold ? "visit" : "stay", run.key, nowMs, hold ? waysOf(entry.animal.model_slug)?.lines.visit ?? this.visitLine(run.youngId) : null);
         return Object.assign({}, pose, {
             x,

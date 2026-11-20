@@ -19,6 +19,7 @@ import {
     stayDaysOf,
     STAY_MOVE_MS,
     STAY_SLOT_MS,
+    visitMotion,
     visitPlace,
     visitPlan,
     visitState,
@@ -243,4 +244,43 @@ test("the father: the recorded parent drawn male and still aboard, else none (th
     assert.equal(fatherAmong(["dam", "sire"], male), "sire");
     assert.equal(fatherAmong(["dam", "who"], male), null);
     assert.equal(fatherAmong(["dam", "sire"], male, (id) => id !== "sire"), null);
+});
+
+test("a visit's motion: from where she set off, to the young, and back to where her own day has her, no jump anywhere and no faster than her walk", () => {
+    const plan = visitPlan("0000feed-0000-4000-8000-000000000002", "0000feed-0000-4000-8000-000000000001", 1.8e12, 1)!;
+    const anchor: Pt = {x: 0, z: 0};
+    const place: Pt = {x: 30, z: 40};
+    // Her own day's place moves on while she is away.
+    const sched = (ms: number): Pt => ({x: 10 + (ms - plan.start) * 0.0004, z: -20 + (ms - plan.start) * 0.0006});
+    for (const flies of [false, true]) {
+        const go = 20;
+        let last: ReturnType<typeof visitMotion> | null = null;
+        let lastAt = 0;
+        let top = 0;
+        for (let ms = plan.start; ms < plan.start + (2 * go + VISIT_HOLD_S) * 1000; ms += 100) {
+            const state = visitState(plan, ms, go)!;
+            const m = visitMotion(state, anchor, place, sched(ms), flies);
+            if (last) {
+                // (She and her own day's place both move: the step is her walk plus that.)
+                const step = Math.hypot(m.x - last.x, m.z - last.z) / ((ms - lastAt) / 1000);
+                top = Math.max(top, step);
+            }
+            if (state.phase === "hold") {
+                assert.equal(m.moving, false);
+                assert.ok(Math.hypot(m.x - place.x, m.z - place.z) < 1e-9, "with the young");
+                assert.equal(m.lift, 0);
+            }
+            if (!flies) assert.equal(m.lift, 0);
+            last = m;
+            lastAt = ms;
+        }
+        const first = visitMotion(visitState(plan, plan.start + 1, go)!, anchor, place, sched(plan.start), flies);
+        assert.ok(Math.hypot(first.x - anchor.x, first.z - anchor.z) < 0.01, "she sets out from where she was");
+        const endMs = plan.start + (2 * go + VISIT_HOLD_S) * 1000 - 1;
+        const end = visitMotion(visitState(plan, endMs, go)!, anchor, place, sched(endMs), flies);
+        const day = sched(endMs);
+        assert.ok(Math.hypot(end.x - day.x, end.z - day.z) < 0.01, "and ends where her own day has her");
+        // 50 m out in 20 s is 2.5 m/s; her day's drift is under 1 m/s: nothing quicker than the walk and the drift together.
+        assert.ok(top < 2.5 * 1.6 + 1, `top speed ${top}`);
+    }
 });
