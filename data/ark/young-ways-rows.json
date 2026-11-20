@@ -2,10 +2,10 @@
  "about": "Every young-care row of the catalogue (2026-11-16) with what the scene does with it today (scripts/ark-young-ways.mts): built, already (an earlier pass), eggs (ark-mating-shown), or held with its reason.",
  "counts": {
   "built": 84,
-  "eggs": 54,
-  "part": 16,
+  "eggs": 50,
+  "part": 17,
   "held": 56,
-  "already": 26
+  "already": 29
  },
  "rows": [
   {
@@ -485,8 +485,8 @@
    "quote": "Parents guard nests and young, with males often protecting fry near the surface where breathing and vulnerability meet.",
    "how": "existing_block",
    "effort": "M",
-   "status": "eggs",
-   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+   "status": "part",
+   "what": "follow: the fry keep with the parent; guarding the nest is the eggs'"
   },
   {
    "id": "6c3ca716-734d-49bc-a2aa-0d49270186d4",
@@ -575,8 +575,8 @@
    "quote": "Both parents fan and guard the eggs, then shepherd the fry in a tight shoal, often for several weeks.",
    "how": "existing_block",
    "effort": "M",
-   "status": "eggs",
-   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+   "status": "already",
+   "what": "young follow the guarding parent (care: guard); the eggs' fanning is the eggs'"
   },
   {
    "id": "bc187d88-c445-4054-bb9a-d56eb15f8307",
@@ -675,8 +675,8 @@
    "quote": "A bonded pair cleans a vertical surface and lays several hundred eggs on it, then both parents fan and guard them and move the fry between sites until they are free-swimming.",
    "how": "existing_block",
    "effort": "M",
-   "status": "eggs",
-   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+   "status": "already",
+   "what": "young follow the guarding parent (care: guard); the eggs' fanning is the eggs'"
   },
   {
    "id": "855282e6-1efc-469f-8714-9e518c8aed6a",
@@ -755,8 +755,8 @@
    "quote": "Pairs may clear a spawning site and guard eggs and fry near the claimed patch",
    "how": "existing_block",
    "effort": "M",
-   "status": "eggs",
-   "what": "the eggs' or the clutch's (laying, sitting, guarding eggs, sacs): ark-mating-shown's layings and clutches"
+   "status": "already",
+   "what": "young follow the guarding parent (care: guard); the eggs' guarding is the eggs'"
   },
   {
    "id": "2c519194-962c-40f5-8b33-64e2198c816f",

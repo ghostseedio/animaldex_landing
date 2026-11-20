@@ -430,6 +430,13 @@
    },
    "lines": {}
   },
+  "arapaima": {
+   "name": "Arapaima",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
   "bongo": {
    "name": "Bongo",
    "ways": {

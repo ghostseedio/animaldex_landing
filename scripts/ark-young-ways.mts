@@ -119,7 +119,8 @@ const FOLLOW: Entry[] = [
     {name: "Harbor Seal", says: /pup swims soon after birth/, follow: true},
     {name: "Domestic Cat", says: /kittens play/, follow: true},
     {name: "Domestic Dog", says: /pups learn through play/, follow: true},
-    {name: "Green-cheeked Conure", says: /young wrestle/, follow: true}
+    {name: "Green-cheeked Conure", says: /young wrestle/, follow: true},
+    {name: "Arapaima", says: /parents guard nest and fry near the surface/, follow: true, part: "the fry keep with the parent; guarding the nest is the eggs'"}
 ];
 
 /** Young kept at a spot while the parent is away: lying hidden, at the den, in the nest. */
@@ -200,6 +201,9 @@ const ALREADY: Array<{name: string; says: RegExp; what: string}> = [
     {name: "American Alligator", says: /carries hatchlings in her mouth/, what: "mouth-carry (jaws)"},
     {name: "Mugger Crocodile", says: /carries hatchlings to water in her mouth/, what: "mouth-carry (jaws)"},
     {name: "Saltwater Crocodile", says: /carries hatchlings to water in her mouth/, what: "mouth-carry (jaws)"},
+    {name: "Butterfly Peacock Bass", says: /shepherd fry in a tight shoal/, what: "young follow the guarding parent (care: guard); the eggs' fanning is the eggs'"},
+    {name: "Oscar Fish", says: /guards eggs and fry/, what: "young follow the guarding parent (care: guard); the eggs' guarding is the eggs'"},
+    {name: "Freshwater Angelfish", says: /moves fry between sites/, what: "young follow the guarding parent (care: guard); the eggs' fanning is the eggs'"},
     {name: "Dugong", says: /calf stays close to its mother/, what: "young follow (heel)"},
     {name: "Sperm Whale", says: /group protects calves/, what: "young follow (heel)"},
     {name: "Western Lowland Gorilla", says: /young play and stay close/, what: "young play (heel bursts)"}
