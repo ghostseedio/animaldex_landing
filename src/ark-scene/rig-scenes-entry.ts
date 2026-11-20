@@ -70,6 +70,8 @@ COURSE_CAST.forEach((c, i) => {
 if (typeof location !== "undefined" && new URLSearchParams(location.search).get("loco") === "0") (globalThis as {__arkLoco?: boolean}).__arkLoco = false;
 // `?posedlie=0`: no posed lie (ARK-ANIM round 3, `locomotion/lie-pose.ts`): the rigs as before it, for before/after recordings.
 if (typeof location !== "undefined" && new URLSearchParams(location.search).get("posedlie") === "0") (globalThis as {__arkPosedLie?: boolean}).__arkPosedLie = false;
+// `?skinfix=0`: no load-time skin and clip fixes (`rig-player.ts` skinAndClipFixes), for before/after recordings.
+if (typeof location !== "undefined" && new URLSearchParams(location.search).get("skinfix") === "0") (globalThis as {__arkSkinFix?: boolean}).__arkSkinFix = false;
 
 function castId(prefix: string, i: number): string {
     const k = CAST.findIndex((c) => c[0] === prefix);

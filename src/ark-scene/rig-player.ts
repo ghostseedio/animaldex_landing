@@ -66,6 +66,8 @@ import {
 import {gripBones} from "@/ark-scene/map/grip";
 import {finalStatus, ModelFileError, retrySeconds, worthAskingAgain} from "@/ark-scene/model-files";
 import {buildLocoRig, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
+import {birdYawLimits, isBirdRig, spreadBirdRows} from "@/ark-scene/locomotion/bird-neck";
+import {isEquid, rigidMuzzle, seatLyingRows, tailOffLegs} from "@/ark-scene/locomotion/skin-fixes";
 import {LocoLayer, newLocoAnimal, type ClipRows, type LocoAnimal} from "@/ark-scene/locomotion/layer";
 import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
 import type {GaitState, GroundQuery} from "@/ark-scene/locomotion/types";
@@ -157,6 +159,8 @@ export type RigLookChain = {
 };
 
 const DEG = Math.PI / 180;
+/** A bird's look's yaw at most (degrees), owls aside. */
+export const BIRD_LOOK_YAW_DEG = 30;
 
 /** A bone's bit in a look mask (texture indices 0-30; a bone past that is not turned by the mask). */
 const lookBit = (i: number) => (i >= 0 && i < 31 ? 1 << i : 0);
@@ -209,7 +213,9 @@ export function rigLookChain(
             head,
             neckPivot: hasNeck ? look.rest[look.bones[0]].head : [0, 0, 0],
             headPivot: look.rest[headName].head,
-            yaw: look.limits_deg.yaw * DEG,
+            // (A bird's look on top of its clips' head turn, already capped at 70° from its body: 30° more at most, an
+            // owl's its own. ARK-ANIM, the eared dove's neck.)
+            yaw: Math.min(look.limits_deg.yaw, isBirdRig(entry.plan ?? null, ["chest", "neck", "head"]) && !/(^|-)owl(et)?$/.test(slug) ? BIRD_LOOK_YAW_DEG : 180) * DEG,
             up: look.limits_deg.pitch_up * DEG,
             down: look.limits_deg.pitch_down * DEG,
             neckShare: share,
@@ -651,7 +657,10 @@ export class RigLibrary {
         const flight = flightApproved(own, slug) && Object.keys(clips).some((name) => FLIGHT_CLIPS.has(name));
         let loco: LocoLayer | null = null;
         try {
-            loco = new LocoLayer(buildLocoRig(rawSkeletonOf(mesh, extras.bones, geometry, slug, entry)), data);
+            const locoRig = buildLocoRig(rawSkeletonOf(mesh, extras.bones, geometry, slug, entry));
+            // ARK-ANIM (owner, batch 13): the skin and the lying clips fixed as the rig loads (`skinAndClipFixes`).
+            if ((globalThis as {__arkSkinFix?: boolean}).__arkSkinFix !== false) skinAndClipFixes(locoRig, slug, entry.plan ?? null, geometry, data, boneCount, clips);
+            loco = new LocoLayer(locoRig, data);
         } catch (error) {
             console.warn(`[ark] loco ${slug}`, error instanceof Error ? error.message : error);
         }
@@ -786,6 +795,48 @@ export function posedLieRows(rig: LocoRig, geometry: BufferGeometry, data: Uint1
         rows: {data: out, clips: [clip("lie_down", 0, n, false, LIE_SECONDS), clip("get_up", n, n, false, LIE_SECONDS), clip("lie", 2 * n, 2, true, 4, "lying"), clip("sleep", 2 * n, 2, true, 4, "lying")]}
     };
 }
+
+/**
+ * ARK-ANIM (the owner on batch 13: the eared dove's and the robin's necks tearing, a resting horse in mid-air with its
+ * muzzle bent and its tail torn, a sleeping elk's legs in the ground): a rig's skin and clips fixed as it loads, in
+ * place (the rest mesh is unchanged; only how the bones move it). Birds: head turns capped and spread, the wing off the
+ * neck (`locomotion/bird-neck.ts`). Four-legged: lying clips seated by their lowest point, the tail off the hind legs,
+ * an equid's muzzle on its head (`locomotion/skin-fixes.ts`).
+ */
+export function skinAndClipFixes(rig: LocoRig, slug: string, plan: string | null, geometry: BufferGeometry, data: Uint16Array, bones: number, clips: Record<string, RigClipData>): SkinFixReport {
+    const position = geometry.getAttribute("position");
+    const joints = geometry.getAttribute("arkJoints");
+    const weights = geometry.getAttribute("arkWeights");
+    const report: SkinFixReport = {};
+    if (!position || !joints || !weights) return report;
+    const skin = {positions: position.array, joints: joints.array as Uint8Array, weights: weights.array as Float32Array};
+    const names = rig.bones.map((b) => b.name);
+    if (isBirdRig(plan, names)) {
+        const limits = birdYawLimits(slug);
+        report.birdYaw = spreadBirdRows(rig, data, bones, limits.cap, limits.shares);
+        // (The wing kept off the neck, `birdWingWeights`, is not applied: across the 654 bird rigs it stretched the seam it
+        // made 2–8 times further at the capped turn. With the turn capped and mostly on the head the neck moves 18° at
+        // most and the wing's top no longer folds over it.)
+    }
+    if (plan === "quadruped") {
+        report.tailVertices = tailOffLegs(rig, skin);
+        if (isEquid(slug)) report.muzzleVertices = rigidMuzzle(rig, skin);
+        geometry.computeBoundingBox();
+        const box = geometry.boundingBox!;
+        const legs = new Set(names.flatMap((name, i) => (/^leg\d+[LR]_/.test(name) ? [i] : [])));
+        report.seated = seatLyingRows(skin, box.min.y, box.max.z - box.min.z, legs, data, bones, clips as unknown as Record<string, {row: number; rows: number; base?: string; ends?: string; starts?: string}>);
+    }
+    joints.needsUpdate = true;
+    weights.needsUpdate = true;
+    return report;
+}
+export type SkinFixReport = {
+    birdYaw?: {worstBefore: number; worstAfter: number};
+    wingVertices?: number;
+    tailVertices?: number;
+    muzzleVertices?: number;
+    seated?: Record<string, {belly: number; low: number; shift: number}>;
+};
 
 /**
  * A rig's skeleton as the locomotion layer reads it (`locomotion/skeleton.ts` buildLocoRig): its texture bones, their

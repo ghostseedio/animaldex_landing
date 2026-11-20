@@ -307,6 +307,8 @@ import {l2BodyChannel, l2BodyUniforms, l2ClipBake, l2FlightFrame, l2FlightGate, 
 import {pickFigure, preferTap, type Projector} from "@/ark-scene/tap-pick";
 // 3.3 fix: the kept town animals near the look point move.
 import {keptToBringOut, nearKeptDue, NEAR_KEPT_VIEW, NEAR_ZOO_MAX, NEAR_ZOO_MAX_LOW, NEAR_ZOO_VIEW, sameIds} from "@/ark-scene/near-kept";
+/** ARK-ANIM: how far a rig drawn standing may go down into the ground as it sleeps (m; it cannot fold its legs). */
+const RIG_STANDING_SINK = 0.02;
 // 3.3 fix: a perched animal's reactions keep it on its perch (the schedule's own "raised": 0.4 m over the ground).
 const PERCH_ABOVE = 0.4;
 
@@ -5935,6 +5937,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const box = lyingGeometry?.boundingBox ?? null;
                 // p2 (contact): no deeper than its belly, a legless body flat (`sleep.ts` lyingBody), on the drawn ground.
                 const body = lyingBody(slept, sn!.spec.drop, lyingGeometry ? bellyOfGeometry(lyingGeometry) : 1);
+                // ARK-ANIM (the owner on batch 13: a sleeping elk's legs in the ground): a rig drawn standing (no lying clip
+                // of its own playing) cannot fold its legs, so lowering it to its belly put them through the ground: no
+                // more than 2 cm down.
+                if (rig && entry.rig && entry.rig.weight > 0.5 && clipShare < 0.5 && modelHeight > 0) body.legs = Math.min(body.legs, RIG_STANDING_SINK / modelHeight);
                 where.roll += body.roll;
                 if (where.water) {
                     // On the bottom: down to the floor under it as it settles.
