@@ -351,7 +351,10 @@ async function main() {
             ids = mother ? [mother] : [];
             young = cast.filter((m) => m.role === "young").map((m) => m.record.id);
         }
-        for (const id of [...ids, ...young]) {
+        // (A hatching's young come out of their clutch: they are what is read, with or without a parent by them; a
+        // newborn's coming into view is no jump, so only a parent's moves are watched for one.)
+        const hatching = current.kind === "birth" && rows.find((r) => String(r.id) === current!.id)?.from_egg === true;
+        for (const id of ids) {
             const at = handle.locate(id);
             const was = lastAt.get(id);
             if (at && was && t - was.t > 0 && t - was.t <= 0.2) {
@@ -359,6 +362,11 @@ async function main() {
                 if (d > at.length * JUMP + 1) jumps.push({id, t: Math.round(t * 10) / 10, d: Math.round(d * 10) / 10});
             }
             if (at) lastAt.set(id, {x: at.x, z: at.z, t});
+        }
+        if (hatching) {
+            const out = young.map(readOne).filter((g) => g.ok);
+            reads.push({t, ok: out.length > 0, why: out.length ? "" : young.map(readOne).map((g) => g.why).join(",") || "no-young"});
+            return;
         }
         const got = ids.map(readOne);
         let ok = got.length === (current.kind === "mated" ? 2 : 1) && got.every((g) => g.ok);
