@@ -55,11 +55,13 @@ try {
         ["keeper-round", "keeper", 7.5, 9, "plant", 7, 1.15, 0.6, 0],
         ["keeper-feed", "keeper", 9, 19.5, "plant", 9, 1.05, 0.9, 1],
         ["farmer", "farmer", 6.9, 9, "plant", 7, 1.15, 0.6, 0],
-        ["owner-tank", "owner", 6.9, 9.5, "plant", 4.5, 1.2, 0.5, 0],
+        ["owner-tank", "owner", 6.9, 9.5, "stand", 4.5, 1.2, 0.5, 0],
         ["owner-evening", "owner", 17.9, 20, "stand", 5, 1.2, -0.6, 1]
     ];
+    const only = process.argv.includes("--only") ? process.argv[process.argv.indexOf("--only") + 1].split(",") : null;
     const log = [];
     for (const [name, kind, from, to, pose, distance, polar, turn, nth] of shots) {
+        if (only && !only.includes(name)) continue;
         const hour = await page.evaluate(([k, f, t, p]) => window.__humans.carerHour(k, f, t, p), [kind, from, to, pose]);
         if (hour === null) {
             log.push({name, none: true});
