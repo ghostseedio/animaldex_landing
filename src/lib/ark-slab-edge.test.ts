@@ -60,7 +60,7 @@ test("the caps at a cut end look out along the line (back at its start, on along
 test("over the whole town every slab's edge face is true to the ground: its top 16 cm over it, its foot 3 cm under it, standing upright", () => {
     const out = buildScenery(townPlan());
     let faces = 0;
-    for (const chunk of out.chunks.values()) {
+    for (const chunk of Array.from(out.chunks.values())) {
         const g = chunk.decal;
         for (let t = 0; t < g.triangles; t++) {
             if (readTag(g.extra[t * 3]).surface !== SURF.slabs || Math.abs(g.nor[t * 9 + 1]) > 0.1) continue;
