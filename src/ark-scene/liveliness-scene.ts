@@ -371,6 +371,7 @@ export class ArkLiveliness {
         this.spots.clear();
         this.visitRuns.clear();
         this.trails.clear();
+        this.wayNowOf.clear();
     }
 
     /** 3.3 batch (C): the record told a birth (`Lineage.note`): who follows whom is worked out again. */
