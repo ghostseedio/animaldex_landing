@@ -51,3 +51,16 @@ test("the window's moments and the last day's happenings", () => {
     assert.deepEqual(arkSeriesTimes(0, 100, 3), [0, 50, 100]);
     assert.deepEqual(arkHappeningsSince(EVENTS, Date.parse("2026-11-10T10:00:00Z")), {arrivals: 0, births: 1, meals: 1, deaths: 1});
 });
+
+test("a breed no longer aboard that left is put in its kind's line from the log's own kind id", () => {
+    const dogs = [
+        {...animal("g1", "sp-labrador", "labrador"), kind_species_profile_id: "sp-dog", kind_name: "Domestic Dog"},
+        {...animal("g2", "sp-labrador", "labrador"), kind_species_profile_id: "sp-dog", kind_name: "Domestic Dog"}
+    ];
+    const snapshot: ArkSnapshot = {...SNAPSHOT, counts: {animals: 2, species: 1, founders: 1}, animals: dogs};
+    // A Poodle (none aboard now) was eaten at 18:00: the dogs were 3 before it, 2 after.
+    const events = {events: [{id: 1, at: "2026-11-10T18:00:00Z", kind: "eaten", animal: {id: "p1", species_profile_id: "sp-poodle", kind_species_profile_id: "sp-dog", model_slug: "poodle"}}]};
+    const series = arkPopulationSeries(snapshot, events, {times: ["2026-11-10T12:00:00Z", "2026-11-10T21:00:00Z"], top: 2});
+    assert.deepEqual(series.species.map((row) => row.key), ["sp-dog"]);
+    assert.deepEqual(series.counts[0], [3, 2]);
+});

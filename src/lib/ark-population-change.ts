@@ -103,9 +103,11 @@ export function arkEventsNet(raw: unknown, snapshot: ArkSnapshot): Counts {
         if (!animal || !id) return null;
         const known = aboard.get(id);
         if (known) return {id, key: arkSpeciesKey(known), island: arkIslandOf(known, two)};
+        // The animal's own kind when the log names it (voyage_event_animal), else its look's kind from the animals aboard.
+        const kind = text(animal.kind_species_profile_id);
         const species = text(animal.species_profile_id) ?? text(row.species_profile_id);
         const slug = text(animal.model_slug);
-        const key = (species && kindOfLook.get(species)) || species || (slug ? `slug:${slug}` : null);
+        const key = kind || (species && kindOfLook.get(species)) || species || (slug ? `slug:${slug}` : null);
         if (!key) return null;
         return {id, key, island: arkIslandOf({island: text(animal.island) as ArkAnimal["island"], area: text(animal.area) as ArkAnimal["area"]}, two)};
     };

@@ -257,7 +257,7 @@ async function loadFixtureSnapshot(mode: FixtureMode, named: (<T>(raw: T) => T) 
     if (mode === "layers") return {snapshot: withLayerAnimals(withSmallAnimals(full)), full: null, raw};
     // Grow: the first few, then more on each refresh (the client takes them from `full`).
     const animals = full.animals.slice(0, 6);
-    return {snapshot: {...full, animals, counts: {animals: animals.length, species: new Set(animals.map((a) => a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}}, full, raw};
+    return {snapshot: {...full, animals, counts: {animals: animals.length, species: new Set(animals.map((a) => a.kind_species_profile_id || a.species_profile_id)).size, founders: new Set(animals.map((a) => a.brought_by.label)).size}}, full, raw};
 }
 
 /**

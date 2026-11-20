@@ -138,6 +138,17 @@ test("a breed that left counts in its kind's row (A1), as the panel lists it", (
     assert.equal(then.then["sp-labrador"], undefined);
 });
 
+test("a breed no longer aboard that left names its kind in the log (voyage_event_animal's kind id): the kind's row counts it", () => {
+    const dogs = many(3, "Labrador", "town", {kind_species_profile_id: "sp-dog", kind_name: "Domestic Dog"});
+    const snapshot = snapshotOf(dogs);
+    // The last Poodle was eaten: no Poodle is aboard, so only the row's own kind id says where it belonged.
+    const poodle = {id: "g-poodle", species_profile_id: "sp-poodle", kind_species_profile_id: "sp-dog", model_slug: "poodle", island: "town"};
+    const log = {events: [{id: 1, kind: "eaten", at: "2026-11-12T01:00:00Z", species_profile_id: "sp-poodle", animal: poodle, other: null}]};
+    assert.deepEqual(arkEventsNet(log, snapshot).get("sp-dog"), [0, -1]);
+    assert.equal(arkEventsNet(log, snapshot).get("sp-poodle"), undefined);
+    assert.deepEqual(arkPopulationThen(snapshot, log, 0, "x").then["sp-dog"], [0, 4], "4 dogs 24 hours ago, 3 now");
+});
+
 test("said as a percentage from three animals then, as a count below; nothing when unchanged; null when not read", () => {
     assert.deepEqual(arkChangeText({delta: 3, base: 25}, "en"), {text: "+12%", up: true, percent: true});
     assert.deepEqual(arkChangeText({delta: -1, base: 4}, "en"), {text: "−25%", up: false, percent: true});
