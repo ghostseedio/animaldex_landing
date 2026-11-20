@@ -77,8 +77,13 @@ for (const shot of plan) {
     if (shot.pick) {
         // (`pick`: the first of these kinds drawn one by one at that moment, `skip` of them passed over; lane ark-sleep.)
         const found = await page.evaluate(async (s) => {
+            // (Entries are made near the camera: look at `nearTo` first.)
+            if (s.nearTo) await window.__canopy.look({x: s.nearTo.x, y: s.nearTo.y ?? 0, z: s.nearTo.z}, 20, 0.7, 1.0);
             await window.__canopy.at(s.epoch, s.run ?? 2);
-            return window.__canopy.where(s.pick).filter((w) => w.at).slice(s.skip ?? 0)[0] ?? null;
+            const found = window.__canopy.where(s.pick).filter((w) => w.at);
+            // (`nearTo`: the one nearest that point first.)
+            if (s.nearTo) found.sort((a, b) => Math.hypot(a.at.x - s.nearTo.x, a.at.z - s.nearTo.z) - Math.hypot(b.at.x - s.nearTo.x, b.at.z - s.nearTo.z));
+            return found.slice(s.skip ?? 0)[0] ?? null;
         }, shot);
         console.log(shot.name, "picked", JSON.stringify(found));
         if (!found) continue;

@@ -212,3 +212,4 @@ The owner: "some animals like monkeys are sleeping weird, and also generally ani
 
   `__arkPosedSit = false` turns it off. `scripts/ark-sit-sleep-sheet.mts` draws it on the fixture rigs.
 - **Measure** with `scripts/ark-sleep-sites.mts <snapshot>`: each wild animal's roost, what it is on and the nearest cover. On the live Ark (958 scheduled wild animals), sleepers with no cover were 74 before, about half that after. Most of the rest are group members, which sleep round their leader by design.
+- **Zoo primates sleep up** (`islands/town/zoo-swing.ts` zooSleepFrame, `islands/scene.ts` zooSwing): a primate house resident that climbs (a canopy traveller, or a tree or cliff roost: macaques, lemurs, gibbons, baboons) sleeps on the top of one of the hall's climbing-frame beams, its place seeded by its id; the gorillas (nesting) stay on the floor. Before, they slept on the hall floor.

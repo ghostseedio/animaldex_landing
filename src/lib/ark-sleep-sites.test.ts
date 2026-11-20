@@ -123,3 +123,13 @@ test("a ground-roosting bird's cover stays low (a crane never goes up a tree)", 
         assert.ok(!sleepCover(p, 1.1).includes("branch"), slug);
     }
 });
+
+test("a primate house climber sleeps up on the frames' beams, awake it is not placed there, a gorilla stays down", async () => {
+    const {zooSleepFrame} = await import("@/ark-scene/islands/town/zoo-swing");
+    const climbs = [{a: [0, 3, 0], b: [6, 3, 0], posts: [[0, 3.5, 0], [6, 3.5, 0]], feet: [[0, 0, 0], [6, 0, 0]]}] as never;
+    const macaque = {id: "m1", model_slug: "long-tailed-macaque", scientific_name: "Macaca fascicularis"};
+    const f = zooSleepFrame(macaque, climbs, false, behaviourProfile("long-tailed-macaque").roost)!;
+    assert.ok(f && f.y > 3 && f.x >= 0 && f.x <= 6 && f.z === 0, JSON.stringify(f));
+    assert.equal(zooSleepFrame(macaque, climbs, true, "tree"), null);
+    assert.equal(zooSleepFrame({id: "g1", model_slug: "western-gorilla", scientific_name: "Gorilla gorilla"}, climbs, false, "nest"), null);
+});

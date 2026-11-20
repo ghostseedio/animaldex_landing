@@ -252,7 +252,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const {modelBase} = await import("@/ark-scene/grounding/base");
     const {sampleTownGround} = await import("@/ark-scene/islands/town/ground");
     const {CANAL_LEVEL, townPlan} = await import("@/ark-scene/islands/town/plan");
-    const [{zooSwingFrame}, {hallClimbs}] = await Promise.all([import("@/ark-scene/islands/town/zoo-swing"), import("@/ark-scene/islands/town/render/zoo-houses")]); // ARK-JUNGLE
+    const [{zooSleepFrame, zooSwingFrame}, {hallClimbs}] = await Promise.all([import("@/ark-scene/islands/town/zoo-swing"), import("@/ark-scene/islands/town/render/zoo-houses")]); // ARK-JUNGLE
     const origin = options.origin ?? townWorldOrigin();
     const def = ARK_ISLANDS.town;
     const has = (animal: Pick<ArkAnimal, "island" | "area">) => animal.island === "town" || (!animal.island && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo"));
@@ -648,7 +648,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const info = towned.get(animal.id);
             const e = info?.enclosure;
             if (!info || !e || e.type !== "primate_house" || info.where !== "indoor") return null;
-            const f = zooSwingFrame(animal, length, {x: spot.x - origin.x, y: spot.y, z: spot.z - origin.z}, hallClimbs(e), epoch, awake);
+            // (Lane ark-sleep: asleep, a climber sleeps up on the frames' beams, `zooSleepFrame`.)
+            const f = zooSleepFrame(animal, hallClimbs(e), awake, behaviourProfile(animal.model_slug).roost) ?? zooSwingFrame(animal, length, {x: spot.x - origin.x, y: spot.y, z: spot.z - origin.z}, hallClimbs(e), epoch, awake);
             return f ? {...f, x: f.x + origin.x, z: f.z + origin.z} : null;
         },
         roomPose: (id, length, clock) => {

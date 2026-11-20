@@ -1,0 +1,35 @@
+import {readFileSync} from "node:fs";
+const R = process.cwd() + "/src";
+const {decodeArkSnapshot} = await import(R + "/ark-scene/snapshot.ts");
+const {arkIslandSnapshot} = await import(R + "/lib/ark-islands.ts");
+const {placeTownAnimals} = await import(R + "/ark-scene/islands/town/placement.ts");
+const {townColliderSet} = await import(R + "/ark-scene/islands/town/colliders.ts");
+const {townWorldSampler} = await import(R + "/ark-scene/islands/town/sampler.ts");
+const {townWorldOrigin} = await import(R + "/ark-scene/islands/index.ts");
+const {behaviourProfile} = await import(R + "/ark-scene/behaviour-profile.ts");
+const sch = await import(R + "/ark-scene/behaviour-schedule.ts");
+const {displayLength} = await import(R + "/ark-scene/sizes.ts");
+const raw = JSON.parse(readFileSync("public/ark-local/live.json", "utf8"));
+const local = (await import(R + "/lib/ark-local-snapshot.ts")).arkLocalSnapshotOf(raw);
+const snap = local?.snapshot ?? decodeArkSnapshot(raw);
+const origin = townWorldOrigin();
+const town = arkIslandSnapshot(snap, "town");
+const placed = placeTownAnimals(town.animals);
+const set = townColliderSet(placed.open, origin);
+const sampler = townWorldSampler(placed.open, origin, set);
+const world = sch.scheduleWorld(sampler);
+const decks = sampler.attachPoints("branch").filter((p) => p.id.startsWith("town:sleep:deck"));
+console.log("DECKS", decks.length);
+let n = 0;
+for (const a of town.animals) {
+    const info = placed.town.get(a.id);
+    const p = placed.places.get(a.id);
+    if (!info?.enclosure || !p) continue;
+    if (!/macaque|lemur|monkey|baboon|capuchin|gibbon|chimp|gorilla|orangutan|langur|tamarin|marmoset/.test(a.model_slug)) continue;
+    const profile = behaviourProfile(a.model_slug);
+    const length = displayLength(a);
+    const s = {id: a.id, zone: a.zone, home: {x: p.x + origin.x, y: p.ground, z: p.z + origin.z}, length, sea: false, range: Math.max(info.range, 0.6) * 1.5};
+    const r = sch.roostOf(world, profile, s);
+    const near = decks.filter((d) => Math.hypot(d.x - s.home.x, d.z - s.home.z) < 15);
+    if (n++ < 16) console.log(a.model_slug, info.enclosure.type, info.enclosure.id, info.where, info.still, profile.roost, "range", s.range.toFixed(1), "decks<15", near.length, near.length ? Math.min(...near.map((d) => Math.hypot(d.x - s.home.x, d.z - s.home.z))).toFixed(1) : "-", "roost", r.point, (r.y - p.ground).toFixed(1));
+}
