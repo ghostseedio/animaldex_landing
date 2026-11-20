@@ -62,8 +62,9 @@ const RAISED_ROOSTS: ReadonlySet<string> = new Set(["tree", "tree_hole", "cliff"
 const LOW_BIRD: readonly AttachTag[] = ["reeds", "water_edge", "leaf_litter"];
 
 /** The cover tags for this animal (see `SLEEP_COVER`). A bird keeps to its own roost's level: a ground roost, low cover only. */
-export function sleepCover(profile: Pick<ArkBehaviourProfile, "slug" | "move" | "moves" | "diet" | "water"> & {roost?: string}, length: number): readonly AttachTag[] {
+export function sleepCover(profile: Pick<ArkBehaviourProfile, "slug" | "move" | "moves" | "diet" | "water"> & {roost?: string; social?: string}, length: number): readonly AttachTag[] {
     const kind = sleepSiteKind(profile, length);
-    if (kind === "bird" && profile.roost && !RAISED_ROOSTS.has(profile.roost)) return LOW_BIRD;
+    // (A flock or a colony of ground roosters sleeps together where it is, round its leader, as before: its cover is the flock.)
+    if (kind === "bird" && profile.roost && !RAISED_ROOSTS.has(profile.roost)) return profile.social === "flock" || profile.social === "colony" ? [] : LOW_BIRD;
     return SLEEP_COVER[kind];
 }
