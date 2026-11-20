@@ -52,7 +52,7 @@ for (const rules of ["before", "after"] as const) {
 
 // Clip lift: a clip played in place (not a gait, a standing clip, a path's take-off or landing, a flight, a leap along a
 // limb) whose root rises over its rest past a bob for most of it: the body hovers over its shadow.
-type RigLift = {slug: string; clip: string; mean: number; peak: number};
+type RigLift = {slug: string; clip: string; mean: number; peak: number; dip: number};
 const rigDir = value("--rigs");
 const lifts: RigLift[] = [];
 let clipsSeen = 0;
@@ -100,12 +100,14 @@ if (rigDir) {
                 clipsSeen++;
                 let sum = 0;
                 let peak = 0;
+                let dip = 0;
                 for (let r = 0; r < clip.rows; r++) {
                     const rise = (rootY(clip.row + r) - c.y) / Math.max(height, 1e-6);
                     sum += Math.max(rise, 0);
                     peak = Math.max(peak, rise);
+                    dip = Math.min(dip, rise);
                 }
-                lifts.push({slug, clip: name, mean: sum / clip.rows, peak});
+                lifts.push({slug, clip: name, mean: sum / clip.rows, peak, dip});
             }
             geometry.dispose();
         } catch (error) {
@@ -120,7 +122,7 @@ if (rigDir) {
     console.log(`\nclip lift (played in place on the ground; ${clipsSeen} clips over ${new Set(lifts.map((l) => l.slug)).size} rigs): before ${before.length} clips / ${new Set(before.map((l) => l.slug)).size} species hover over ${(IN_PLACE_LIFT_FREE * 100).toFixed(0)}% of their height on average; after ${after.length}`);
     console.log("  worst:", before.sort((a, b) => b.mean - a.mean).slice(0, 12).map((l) => `${l.slug}/${l.clip} ${(l.mean * 100).toFixed(0)}% (peak ${(l.peak * 100).toFixed(0)}%)`).join(", "));
     const cat = lifts.filter((l) => /domestic-cat|^cat$/.test(l.slug));
-    if (cat.length) console.log("  domestic cat:", cat.map((l) => `${l.clip} ${(l.mean * 100).toFixed(0)}%/${(l.peak * 100).toFixed(0)}%`).join(", "));
+    if (cat.length) console.log("  domestic cat:", cat.map((l) => `${l.clip} ${(l.mean * 100).toFixed(0)}%/${(l.peak * 100).toFixed(0)}%/dip ${(l.dip * 100).toFixed(0)}%`).join(", "));
 }
 const out = value("--json");
 if (out) writeFileSync(out, JSON.stringify({animals: audit.animals, species: audit.species, samples: audit.samples, offenders: audit.offenders, worst: {before: audit.worst.before.slice(0, 200), after: audit.worst.after.slice(0, 200)}, clipLift: lifts}, null, 1));

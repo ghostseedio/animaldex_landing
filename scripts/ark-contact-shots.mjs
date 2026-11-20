@@ -88,7 +88,7 @@ const find = (slug) =>
             if (e.animal.model_slug !== slug) continue;
             const p = e.sched?.pose;
             const at = e.middle ?? (p ? {x: p.x, y: p.y, z: p.z} : null);
-            rows.push({id: e.animal.id, x: at?.x ?? null, y: at?.y ?? null, z: at?.z ?? null, doing: e.sched?.trip?.doing ?? null, moving: Boolean(p?.moving), aloft: Boolean(p?.aloft), length: e.length, level: e.level, asleep: Boolean(e.state?.asleep), yaw: e.yawNow ?? 0, water: Boolean(e.place?.water), micro: e.place?.micro ? e.place.micro.attach?.tag ?? e.place.micro.surface : null, normal: e.sched?.pose?.surface ? {x: e.sched.pose.surface.nx, y: e.sched.pose.surface.ny, z: e.sched.pose.surface.nz} : null});
+            rows.push({id: e.animal.id, x: at?.x ?? null, y: at?.y ?? null, z: at?.z ?? null, doing: e.sched?.trip?.doing ?? null, moving: Boolean(p?.moving), aloft: Boolean(p?.aloft), length: e.length, level: e.level, asleep: Boolean(e.state?.asleep), yaw: e.yawNow ?? 0, water: Boolean(e.place?.water), micro: e.place?.micro ? e.place.micro.attach?.tag ?? e.place.micro.surface : null, normal: e.sched?.pose?.surface ? {x: e.sched.pose.surface.nx, y: e.sched.pose.surface.ny, z: e.sched.pose.surface.nz} : null, clip: e.rig ? {now: e.rig.now?.name ?? null, phase: e.rig.now?.phase ?? null, from: e.rig.from?.name ?? null, weight: e.rig.weight, flying: Boolean(e.rig.flying)} : null, act: e.sched?.pose?.act?.block ?? e.act?.state ?? null, recipe: e.sched?.pose?.act?.recipe ?? null, sleepStarted: Boolean(e.sleepStarted), held: Boolean(e.held), gait: e.gait ? {moving: e.gait.moving ?? null, speed: e.gait.speed ?? null} : null, power: e.power ? {drop: e.power.drop, state: e.power.state} : null});
         }
         return rows;
     }, slug);
@@ -134,6 +134,11 @@ const close = async (name, slug, test, distanceOf, polar = 1.2, island = "wild")
     if (!(await frame(row.id, distanceOf(row), polar))) return console.log("not located:", slug);
     report.subjects[name] = (await find(slug)).find((r) => r.id === row.id);
     report.subjects[name].under = await under(row.id, row.normal ?? null);
+    console.log(name, "drawn", JSON.stringify(await page.evaluate((id) => {
+        const e = window.__arkDebug.entries().find((x) => x.animal.id === id);
+        return e ? {drawn: e.drawn, length: e.length, minY: null} : null;
+    }, row.id)));
+    console.log(name, "state", JSON.stringify({doing: report.subjects[name].doing, asleep: report.subjects[name].asleep, moving: report.subjects[name].moving, clip: report.subjects[name].clip, act: report.subjects[name].act, recipe: report.subjects[name].recipe, sleepStarted: report.subjects[name].sleepStarted, gait: report.subjects[name].gait, power: report.subjects[name].power}));
     console.log(name, JSON.stringify(report.subjects[name].under));
     await shot(name);
 };
@@ -164,11 +169,11 @@ if (want("cat-lift")) {
         await page.evaluate(() => clearInterval(window.__catLift));
     }
 }
-await close("bug-on-leaf", "seven-spot-ladybird", (r) => r.micro === "leaf", (r) => 0.09, 0.95, "town");
-await close("bug-on-leaf-2", "shield-stink-bug", (r) => r.micro === "leaf", (r) => 0.12, 0.95);
+await close("bug-on-leaf", "seven-spot-ladybird", (r) => r.micro === "leaf", (r) => 0.22, 1.05, "town");
+await close("bug-on-leaf-2", "shield-stink-bug", (r) => r.micro === "leaf", (r) => 0.3, 1.1);
 await close("grasshopper", "common-field-grasshopper", (r) => true, (r) => 0.16, 1.35);
 await close("crab-on-rock", "mangrove-crab", (r) => r.micro === "rock_face", (r) => 0.28, 1.4);
-await close("frog-on-bank", "marsh-frog", (r) => true, (r) => 0.45, 1.42);
+await close("frog-on-bank", "marsh-frog", (r) => true, (r) => 0.8, 0.75);
 await close("starfish", "crown-of-thorns-starfish", (r) => true, (r) => 1.2, 1.2);
 // (A crocodile asleep in daylight: the first daylight hour it is.)
 if (want("croc-asleep")) {
@@ -186,7 +191,7 @@ if (want("croc-asleep")) {
     await daylight();
 }
 await close("bird-at-water", "grey-heron", (r) => r.water && !r.aloft, (r) => 3, 1.42);
-await close("bird-at-water-2", "great-cormorant", (r) => r.water && !r.aloft, (r) => 2.4, 1.42);
+await close("bird-at-water-2", "great-cormorant", (r) => r.water && !r.aloft, (r) => 3.2, 0.85);
 await close("bird-at-water-3", "little-egret", (r) => r.water && !r.aloft, (r) => 2, 1.42);
 
 // Shadows of four sizes: a beetle-sized, a cat-sized, a zebra-sized and an elephant, each framed from above-side.
@@ -266,6 +271,110 @@ if (want("giraffe")) {
         const levels = Object.fromEntries(Object.entries(levelsSeen).map(([k, v]) => [k, Array.from(v).join("/")]));
         report.zoom = {frames: log.length, switches, jumps: jumps.length, atSwitch: jumps.filter((j) => j.levels.includes(">") && j.levels.split(">")[0] !== j.levels.split(">")[1]).length, worst: jumps.slice(0, 20), levels};
         console.log("zoom", JSON.stringify({frames: log.length, switches, jumps: jumps.length, atSwitch: report.zoom.atSwitch, worst: jumps.slice(0, 8), levels}));
+    }
+}
+// The zoom again with the world's clock running (what the owner sees): every frame, each walking animal's step from
+// the last; a jump is a step far off the one before it (its pace does not change in a frame). A far model stepped at
+// half a second showed as such jumps zoomed out, and one more as it came in near.
+if (want("zoom-run")) {
+    await crossTo("town");
+    const rows = await find("giraffe");
+    if (rows.length) {
+        const target = await page.evaluate((id) => window.__arkScene.locate(id), rows[0].id);
+        await page.evaluate(({target}) => {
+            window.__zoomLog = [];
+            const step = () => {
+                const at = [];
+                for (const e of window.__arkDebug.entries()) {
+                    if (!e.drawn || !e.sched?.pose || e.level === "token") continue;
+                    if (Math.hypot(e.drawn.x - target.x, e.drawn.z - target.z) > 80) continue;
+                    at.push([e.animal.id, e.animal.model_slug, e.drawn.level, e.drawn.x, e.drawn.y, e.drawn.z, e.sched.pose.x, e.sched.pose.z, e.sched.at, Boolean(e.sched.pose.moving), e.level]);
+                }
+                window.__zoomLog.push({t: performance.now(), at});
+                window.__zoomRaf = requestAnimationFrame(step);
+            };
+            window.__zoomRaf = requestAnimationFrame(step);
+        }, {target});
+        for (const distance of [12, 40, 90, 200, 90, 40, 12]) {
+            await page.evaluate(({target, distance}) => window.__arkScene.setView({target: {x: target.x, y: target.y, z: target.z}, distance, polar: 1.15, azimuth: 1.0}), {target, distance});
+            await wait(4000);
+        }
+        const log = await page.evaluate(() => {
+            cancelAnimationFrame(window.__zoomRaf);
+            return window.__zoomLog;
+        });
+        // (Velocities by each frame's own time: under load the frames come 20 to 150 ms apart, and a walk's step per
+        // frame with them. A jump: its velocity changed by over 3 m/s from one frame to the next, and it moved over 5 cm
+        // in that frame; no animal here changes pace that fast.)
+        writeFileSync(path.join(out, `${label}-zoom-run.json`), JSON.stringify(log));
+        const spikes = {};
+        const steps = {};
+        const worst = [];
+        for (let k = 2; k < log.length; k++) {
+            const dt1 = (log[k - 1].t - log[k - 2].t) / 1000;
+            const dt2 = (log[k].t - log[k - 1].t) / 1000;
+            if (dt1 <= 0 || dt2 <= 0) continue;
+            const a = new Map(log[k - 2].at.map((r) => [r[0], r]));
+            const b = new Map(log[k - 1].at.map((r) => [r[0], r]));
+            for (const r of log[k].at) {
+                const p = a.get(r[0]);
+                const q = b.get(r[0]);
+                if (!p || !q) continue;
+                const v1 = [(q[3] - p[3]) / dt1, (q[4] - p[4]) / dt1, (q[5] - p[5]) / dt1];
+                const step = [r[3] - q[3], r[4] - q[4], r[5] - q[5]];
+                const v2 = step.map((d) => d / dt2);
+                const change = Math.hypot(v2[0] - v1[0], v2[1] - v1[1], v2[2] - v1[2]);
+                const key = q[2] === r[2] ? r[2] : `${q[2]}>${r[2]}`;
+                steps[key] = (steps[key] ?? 0) + 1;
+                if (change > 3 && Math.hypot(...step) > 0.05) {
+                    spikes[key] = (spikes[key] ?? 0) + 1;
+                    worst.push({slug: r[1], levels: key, step: Math.round(Math.hypot(...step) * 1000) / 1000, dy: Math.round(step[1] * 1000) / 1000, change: Math.round(change * 10) / 10});
+                }
+            }
+        }
+        worst.sort((x, y) => y.step - x.step);
+        report.zoomRun = {frames: log.length, steps, spikes, worst: worst.slice(0, 12)};
+        console.log("zoom-run", JSON.stringify(report.zoomRun));
+    }
+}
+
+// Safari animals on the wild island at a distance (their ground's tiles drawn as the map past the render distance):
+// each one's gap to the ground tile drawn under it, near and zoomed out. Before: they stood on the full ground's
+// triangles over coarse ones (sinking in hollows, floating on rises).
+if (want("safari")) {
+    await crossTo("wild");
+    const rows = await find("african-bush-elephant");
+    const row = pick(rows, (r) => !r.aloft);
+    if (row) {
+        await frame(row.id, 14, 1.2, Math.PI / 3, 5000);
+        const target = await page.evaluate((id) => window.__arkScene.locate(id), row.id);
+        const SAFARI = ["african-bush-elephant", "plains-zebra", "giraffe", "rhinoceros", "african-lion", "cape-buffalo", "impala", "common-warthog", "meerkat"];
+        report.safari = [];
+        for (const distance of [14, 120, 250, 450]) {
+            await page.evaluate(({target, distance}) => window.__arkScene.setView({target: {x: target.x, y: target.y, z: target.z}, distance, polar: 1.0, azimuth: 0.8}), {target, distance});
+            await wait(3500);
+            const gaps = await page.evaluate(({target, SAFARI}) => {
+                const out = [];
+                for (const e of window.__arkDebug.entries()) {
+                    if (!e.drawn || e.level === "token" || !e.sched?.pose || e.sched.pose.afloat) continue;
+                    if (Math.hypot(e.drawn.x - target.x, e.drawn.z - target.z) > 120) continue;
+                    if (!SAFARI.includes(e.animal.model_slug) && (e.length ?? 0) < 1) continue;
+                    const u = window.__arkDebug.under(e.animal.id);
+                    const ground = u?.hits.find((h) => h.kind.startsWith("ark-ground"));
+                    if (ground) out.push({slug: e.animal.model_slug, level: e.drawn.level, gap: ground.gap, asleep: Boolean(e.sleepNow?.down), lying: e.drawn.lying ?? null, act: e.sched.pose.act?.state ?? null, root: e.drawn.root, stand: e.drawn.ground});
+                }
+                return out;
+            }, {target, SAFARI});
+            const worst = gaps.filter((g) => g.lying === null).sort((a, b) => Math.abs(b.gap) - Math.abs(a.gap)).slice(0, 5);
+            // (One lying asleep has its torso on the ground, `lieOnGround`: its feet line is under the ground by design.)
+            const standing = gaps.filter((g) => g.lying === null);
+            const sunk = standing.filter((g) => g.gap > 0.05).length;
+            const floating = standing.filter((g) => g.gap < -0.05).length;
+            writeFileSync(path.join(out, `${label}-safari-${distance}.json`), JSON.stringify(gaps));
+            report.safari.push({distance, animals: gaps.length, sunkOver5cm: sunk, floatingOver5cm: floating, worst});
+            console.log("safari", distance, JSON.stringify({animals: gaps.length, lying: gaps.length - standing.length, sunk, floating, worst}));
+            if (distance === 250) await shot("safari-250m");
+        }
     }
 }
 report.errors = errors.slice(0, 10);

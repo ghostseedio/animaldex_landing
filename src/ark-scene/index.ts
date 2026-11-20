@@ -2222,7 +2222,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Close by, walkers lean to the slope; far away nobody can see it. (Grounding leans every level to the drawn
             // slope where it draws it: `groundedStand`.)
             own.pitch = onLand && entry.level !== "far" && groundingRules() === "legacy" ? slopePitch(at.x, at.z, at.yaw, entry.length) : 0;
-        } else if (modelled && own.pose?.moving && own.eased && epoch >= own.at) {
+        } else if (modelled && own.pose && own.eased && epoch >= own.at) {
+            // (Whether or not it was moving at the last step: one that set off since was held where it stood until the
+            // next, and drawn near again it was on its way, 1.3 m on in a frame: the owner's giraffes "jumping" as the
+            // camera came in. ARK-CONTACT zoom-run, 2026-11-21.)
             // ARK-CONTACT (decision 447, positions "glitch as I zoom in and out"): a far model on the move between its
             // steps follows its schedule every frame (the trip's own path, cheap), with the collisions' last offset
             // held; it was held still for half a second and then jumped on (a walking giraffe 60 cm at a time), only
@@ -6108,11 +6111,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Development (ARK-CONTACT's zoom probe, `scripts/ark-contact-shots.mjs`): where it is drawn, its base by
             // the level it is drawn at, to measure any jump as the camera crosses a level's distance.
             if (process.env.NODE_ENV !== "production") {
-                const drawn = ((entry as {drawn?: {x: number; y: number; z: number; level: string}}).drawn ??= {x: 0, y: 0, z: 0, level: ""});
+                const drawn = ((entry as {drawn?: {x: number; y: number; z: number; level: string; root?: number; ground?: number; lying?: number | null; slept?: boolean; scale?: number}}).drawn ??= {x: 0, y: 0, z: 0, level: ""});
                 drawn.x = position.x;
                 drawn.y = position.y + groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s;
                 drawn.z = position.z;
                 drawn.level = rig ? "rig" : level;
+                drawn.root = position.y;
+                drawn.ground = standGround(where.x, where.z, poseBase);
+                drawn.lying = lyingOn;
+                drawn.slept = Boolean(slept);
+                drawn.scale = s;
             }
             if (rig && state && level === "near") {
                 // The locomotion layer (`locomotion/`, lane L1): gaits with planted feet, foot IK, the body's motion and
