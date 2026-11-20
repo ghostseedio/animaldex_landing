@@ -90,7 +90,7 @@ const SCENES: Record<string, Scene> = {
     groost: {zone: "farm_garden", hours: 22, kind: "group", cast: [{slug: "house-sparrow", name: "House Sparrow", n: 6}, {slug: "ring-tailed-lemur", name: "Ring-tailed Lemur", n: 4}]},
     glick: {zone: "rainforest", hours: 8, kind: "group", cast: [{slug: "african-grey-parrot", name: "African Grey Parrot", n: 5}]},
     gchorus: {zone: "farm_garden", hours: 6.2, kind: "group", cast: [{slug: "australian-magpie", name: "Australian Magpie", n: 4}]},
-    gcommute: {zone: "grassland", hours: 12, kind: "group", cast: [{slug: "budgerigar", name: "Budgerigar", n: 6}]},
+    gcommute: {zone: "rainforest", hours: 12, kind: "group", cast: [{slug: "blue-fronted-amazon", name: "Blue-fronted Amazon", n: 6}]},
     gfeast: {zone: "rainforest", hours: 10, kind: "group", cast: [{slug: "northern-pig-tailed-macaque", name: "Northern Pig-tailed Macaque", n: 5}]},
     gbask: {zone: "river_lake", hours: 11, kind: "group", cast: [{slug: "red-eared-slider", name: "Red-eared Slider", n: 5}]},
     gpairs: {zone: "rainforest", hours: 12, kind: "group", cast: [{slug: "blue-fronted-amazon", name: "Blue-fronted Amazon", n: 7}]},

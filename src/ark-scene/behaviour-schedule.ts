@@ -1591,7 +1591,7 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
     }
     const personality = animalPersonality(animal.id);
     // (A flock that commutes spends its day at a feeding patch: its leader's centre is the patch from after dawn to dusk, `behaviour-group.ts`.)
-    const centre = groupCentre(world, animal, slot, hoursAt) ?? commuteCentre(world, animal, profile.slug, hours) ?? animal.home;
+    const centre = groupCentre(world, animal, slot, hoursAt) ?? commuteCentre(world, animal, profile.slug, hours, (x, z) => world.nav.region(x, z, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug)) === world.nav.region(animal.home.x, animal.home.z, maxSlopeOf(animal), bodyRadiusOf(animal, profile.slug))) ?? animal.home;
     // A group member keeps within its group's spread of its leader (both capped where predator and prey were kept apart).
     const radius = group ? Math.min(homeRadius(profile, animal), groupSpread(animal.length, size), rangeCap(group.profile, group.leader) / 2) : homeRadius(profile, animal);
     const groupAnimal: ScheduleAnimal = group ? {...animal, home: {x: centre.x, y: animal.home.y, z: centre.z}} : animal;

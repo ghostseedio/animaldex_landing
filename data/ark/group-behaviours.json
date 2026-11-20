@@ -119,11 +119,9 @@
    "effort": "M",
    "uses": "flight:dawn_water_run",
    "aboard": 20,
-   "acts": [
-    "commute"
-   ],
-   "status": "built",
-   "why": null
+   "acts": [],
+   "status": "held",
+   "why": "a walk-first bird: its schedule keeps the flock within a walk or a swim of home, so the flight out to a feeding patch is not drawn"
   },
   {
    "slug": "eurasian-tree-sparrow",
@@ -637,8 +635,8 @@
    "acts": [
     "commute"
    ],
-   "status": "built",
-   "why": null
+   "status": "partial",
+   "why": "the flock spends its day at a feeding patch 40-70 m from its roost and comes back by its dusk roost trip; its own wide flights go on besides, and the dawn departure is not timed"
   },
   {
    "slug": "peach-faced-lovebird",
@@ -1088,11 +1086,9 @@
    "effort": "M",
    "uses": "flight:dawn_dusk_commute",
    "aboard": 6,
-   "acts": [
-    "commute"
-   ],
-   "status": "built",
-   "why": null
+   "acts": [],
+   "status": "held",
+   "why": "a walk-first bird: its schedule keeps the flock within a walk or a swim of home, so the flight out to a feeding patch is not drawn"
   },
   {
    "slug": "eared-dove",
@@ -1274,8 +1270,8 @@
    "acts": [
     "commute"
    ],
-   "status": "built",
-   "why": null
+   "status": "partial",
+   "why": "the flock spends its day at a feeding patch 40-70 m from its roost and comes back by its dusk roost trip; its own wide flights go on besides, and the dawn departure is not timed"
   },
   {
    "slug": "blue-fronted-amazon",
@@ -1293,8 +1289,8 @@
    "acts": [
     "commute"
    ],
-   "status": "built",
-   "why": null
+   "status": "partial",
+   "why": "the flock spends its day at a feeding patch 40-70 m from its roost and comes back by its dusk roost trip; its own wide flights go on besides, and the dawn departure is not timed"
   },
   {
    "slug": "blue-fronted-amazon",
@@ -1404,11 +1400,9 @@
    "effort": "M",
    "uses": "flight:dawn_dusk_commute",
    "aboard": 5,
-   "acts": [
-    "commute"
-   ],
-   "status": "built",
-   "why": null
+   "acts": [],
+   "status": "held",
+   "why": "a swim-first bird: its schedule keeps the flock within a walk or a swim of home, so the flight out to a feeding patch is not drawn"
   },
   {
    "slug": "greylag-goose",
@@ -1606,11 +1600,9 @@
    "effort": "M",
    "uses": "flight:dusk_feeding",
    "aboard": 4,
-   "acts": [
-    "commute"
-   ],
-   "status": "built",
-   "why": null
+   "acts": [],
+   "status": "held",
+   "why": "a swim-first bird: its schedule keeps the flock within a walk or a swim of home, so the flight out to a feeding patch is not drawn"
   },
   {
    "slug": "black-headed-gull",
@@ -1940,8 +1932,8 @@
    "acts": [
     "commute"
    ],
-   "status": "built",
-   "why": null
+   "status": "partial",
+   "why": "the flock spends its day at a feeding patch 40-70 m from its roost and comes back by its dusk roost trip; its own wide flights go on besides, and the dawn departure is not timed"
   },
   {
    "slug": "rainbow-lorikeet",
@@ -2155,11 +2147,9 @@
    "effort": "M",
    "uses": "flight:dusk_commute",
    "aboard": 2,
-   "acts": [
-    "commute"
-   ],
-   "status": "built",
-   "why": null
+   "acts": [],
+   "status": "held",
+   "why": "a swim-first bird: its schedule keeps the flock within a walk or a swim of home, so the flight out to a feeding patch is not drawn"
   },
   {
    "slug": "black-and-white-ruffed-lemur",
@@ -2706,8 +2696,8 @@
    "acts": [
     "commute"
    ],
-   "status": "built",
-   "why": null
+   "status": "partial",
+   "why": "the flock spends its day at a feeding patch 40-70 m from its roost and comes back by its dusk roost trip; its own wide flights go on besides, and the dawn departure is not timed"
   },
   {
    "slug": "blue-rumped-parrot",
@@ -4152,11 +4142,9 @@
    "effort": "M",
    "uses": "flight:dawn_dusk_commute",
    "aboard": 1,
-   "acts": [
-    "commute"
-   ],
-   "status": "built",
-   "why": null
+   "acts": [],
+   "status": "held",
+   "why": "a swim-first bird: its schedule keeps the flock within a walk or a swim of home, so the flight out to a feeding patch is not drawn"
   },
   {
    "slug": "red-crowned-parrot",
@@ -4611,8 +4599,8 @@
    "acts": [
     "commute"
    ],
-   "status": "built",
-   "why": null
+   "status": "partial",
+   "why": "the flock spends its day at a feeding patch 40-70 m from its roost and comes back by its dusk roost trip; its own wide flights go on besides, and the dawn departure is not timed"
   },
   {
    "slug": "yellowfin-surgeonfish",

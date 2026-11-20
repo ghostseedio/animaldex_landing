@@ -286,7 +286,7 @@ const patches = new WeakMap<ScheduleWorld, WeakMap<ScheduleAnimal, {x: number; z
  * seeded by its id: the same every day), or null: not a commuter, not a leader of a group aboard, or not the day's hours.
  * Its members keep to their leader's goals, so the flock flies out after dawn and, at dusk, back to its roost.
  */
-export function commuteCentre(world: ScheduleWorld, animal: ScheduleAnimal, slug: string, hours: number): {x: number; z: number} | null {
+export function commuteCentre(world: ScheduleWorld, animal: ScheduleAnimal, slug: string, hours: number, sameGround: (x: number, z: number) => boolean = () => true): {x: number; z: number} | null {
     if (animal.group || (animal.led ?? 1) < 2 || hours < COMMUTE_FROM || hours > COMMUTE_TO) return null;
     if (!groupActsOf(slug).some((a) => a.id === "commute")) return null;
     let byAnimal = patches.get(world);
@@ -302,7 +302,8 @@ export function commuteCentre(world: ScheduleWorld, animal: ScheduleAnimal, slug
         const x = animal.home.x + Math.cos(a) * far;
         const z = animal.home.z + Math.sin(a) * far;
         const land = world.nav.nearest(x, z, "walk", 0.5, 12);
-        if (land && Math.hypot(land.x - animal.home.x, land.z - animal.home.z) >= far * 0.7 && !world.sampler.blocked(land.x, land.z, 2.2)) out = {x: land.x, z: land.z};
+        // (On its own stretch of ground: a walk-first bird goes only there, `sameGround`; one that cannot would stay home.)
+        if (land && Math.hypot(land.x - animal.home.x, land.z - animal.home.z) >= far * 0.7 && !world.sampler.blocked(land.x, land.z, 2.2) && sameGround(land.x, land.z)) out = {x: land.x, z: land.z};
     }
     byAnimal.set(animal, out);
     return out;
