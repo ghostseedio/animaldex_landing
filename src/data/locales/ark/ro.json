@@ -708,7 +708,7 @@
             "skillPower": "Ai Puterea lui: pornește cu un mic avans.",
             "warn": "Animalele crescute la zoo se descurcă greu la început. Fă pasul lui ca să îl ajuți să supraviețuiască.",
             "lastOfKind": "Este ultimul din specia lui la bord. Dacă moare fără nicio inimă rămasă, specia lui dispare din Ark.",
-            "hearts": "Își păstrează inimile. Dacă dă greș și mai are o inimă, se întoarce la zoo și așteaptă 30 de zile. Fără nicio inimă rămasă, moare.",
+            "hearts": "Își păstrează inimile. Dacă moare și mai are o inimă, pierde acea inimă și se întoarce în sălbăticie. Fără nicio inimă rămasă, moare.",
             "rules": "Fără rambursare după eliberare, orice i s-ar întâmpla. O eliberare pe zi, una din fiecare specie pe săptămână.",
             "price": "{credits} credite",
             "balance": "Ai {credits}",

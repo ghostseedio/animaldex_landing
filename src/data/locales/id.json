@@ -4905,7 +4905,7 @@
       "skillPower": "Kamu memegang Power-nya: ia mulai sedikit lebih unggul.",
       "warn": "Hewan yang besar di kebun binatang kesulitan pada awalnya. Lakukan langkahnya untuk membantunya bertahan hidup.",
       "lastOfKind": "Ia yang terakhir dari jenisnya di Ark. Jika ia mati tanpa hati tersisa, jenisnya hilang dari Ark.",
-      "hearts": "Hatinya tetap. Jika ia gagal saat masih punya hati, ia kembali ke kebun binatang dan menunggu 30 hari. Tanpa hati tersisa, ia mati.",
+      "hearts": "Hatinya tetap. Jika ia mati saat masih punya hati, ia kehilangan hati itu dan kembali ke alam liar. Tanpa hati tersisa, ia mati.",
       "rules": "Tidak ada pengembalian setelah ia dilepas, apa pun yang terjadi padanya. Satu pelepasan sehari, satu dari tiap jenis seminggu.",
       "price": "{credits} Kredit",
       "balance": "Kamu punya {credits}",

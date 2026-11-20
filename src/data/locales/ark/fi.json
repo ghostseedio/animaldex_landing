@@ -708,7 +708,7 @@
             "skillPower": "Sinulla on sen Voima: se aloittaa hieman edellä.",
             "warn": "Eläintarhassa kasvaneilla eläimillä on aluksi vaikeaa. Tee sen askel auttaaksesi sitä selviytymään.",
             "lastOfKind": "Se on lajinsa viimeinen Arkissa. Jos se kuolee ilman yhtään sydäntä, sen laji katoaa Arkista.",
-            "hearts": "Se pitää sydämensä. Jos se epäonnistuu, kun sydän on jäljellä, se palaa eläintarhaan ja odottaa 30 päivää. Ilman yhtään sydäntä se kuolee.",
+            "hearts": "Se pitää sydämensä. Jos se kuolee, kun sydän on jäljellä, se menettää sen sydämen ja palaa luontoon. Ilman yhtään sydäntä se kuolee.",
             "rules": "Ei hyvitystä vapauttamisen jälkeen, kävi sille miten tahansa. Yksi vapautus päivässä, yksi kutakin lajia viikossa.",
             "price": "{credits} krediittiä",
             "balance": "Sinulla on {credits}",

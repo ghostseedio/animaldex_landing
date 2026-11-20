@@ -708,7 +708,7 @@
             "skillPower": "Você tem o Poder dele: ele começa um pouco à frente.",
             "warn": "Animais criados no zoológico têm dificuldade no começo. Faça o passo dele para ajudá-lo a sobreviver.",
             "lastOfKind": "É o último da sua espécie a bordo. Se morrer sem nenhum coração, a espécie some da Ark.",
-            "hearts": "Ele mantém os corações. Se falhar com um coração sobrando, volta para o zoológico e espera 30 dias. Sem nenhum coração, morre.",
+            "hearts": "Ele mantém os corações. Se morrer com um coração sobrando, perde esse coração e volta à natureza. Sem nenhum coração, morre.",
             "rules": "Sem reembolso depois de solto, aconteça o que acontecer. Uma soltura por dia, uma de cada espécie por semana.",
             "price": "{credits} créditos",
             "balance": "Você tem {credits}",

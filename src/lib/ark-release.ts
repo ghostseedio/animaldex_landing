@@ -267,7 +267,7 @@ export const ARK_RELEASE_ENGLISH: ArkReleaseWords = {
     skillPower: "You hold its Power: it starts a little ahead.",
     warn: "Zoo-raised animals struggle at first. Do its step to help it survive.",
     lastOfKind: "It is the last of its kind aboard. If it dies with no heart left, its kind is gone from the Ark.",
-    hearts: "It keeps its hearts. If it fails with a heart left, it comes back into the zoo and waits 30 days. With no heart left, it dies.",
+    hearts: "It keeps its hearts. If it dies with a heart left, it loses that heart and comes back in the wild. With no heart left, it dies.",
     rules: "No refund once it is released, whatever happens to it. One release a day, one of each kind a week.",
     price: "{credits} Credits",
     balance: "You have {credits}",

@@ -708,7 +708,7 @@
             "skillPower": "Imaš njegovu Moć: kreće s malom prednošću.",
             "warn": "Životinjama odraslima u zoološkom vrtu u početku je teško. Napravi njegov korak da mu pomogneš preživjeti.",
             "lastOfKind": "Posljednje je od svoje vrste na brodu. Ako ugine bez ijednog srca, njegova vrsta nestaje iz Arka.",
-            "hearts": "Zadržava svoja srca. Ako ne uspije, a ostalo mu je srce, vraća se u zoološki vrt i čeka 30 dana. Bez ijednog srca ugiba.",
+            "hearts": "Zadržava svoja srca. Ako ugine, a ostalo mu je srce, gubi to srce i vraća se u divljinu. Bez ijednog srca ugiba.",
             "rules": "Nema povrata nakon puštanja, što god mu se dogodilo. Jedno puštanje dnevno, jedno od svake vrste tjedno.",
             "price": "{credits} kredita",
             "balance": "Imaš {credits}",

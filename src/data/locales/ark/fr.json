@@ -708,7 +708,7 @@
             "skillPower": "Tu détiens son Pouvoir : il part avec une petite avance.",
             "warn": "Les animaux élevés au zoo peinent au début. Fais son pas pour l'aider à survivre.",
             "lastOfKind": "C'est le dernier de son espèce à bord. S'il meurt sans cœur restant, son espèce disparaît de l'Ark.",
-            "hearts": "Il garde ses cœurs. S'il échoue avec un cœur restant, il revient au zoo et attend 30 jours. Sans cœur restant, il meurt.",
+            "hearts": "Il garde ses cœurs. S'il meurt avec un cœur restant, il perd ce cœur et revient à l'état sauvage. Sans cœur restant, il meurt.",
             "rules": "Aucun remboursement une fois relâché, quoi qu'il lui arrive. Un relâcher par jour, un de chaque espèce par semaine.",
             "price": "{credits} crédits",
             "balance": "Tu as {credits}",

@@ -708,7 +708,7 @@
             "skillPower": "Hawak mo ang Kapangyarihan nito: medyo nauuna ito sa simula.",
             "warn": "Nahihirapan sa simula ang mga hayop na lumaki sa zoo. Gawin ang hakbang nito para matulungan itong mabuhay.",
             "lastOfKind": "Ito na ang huli sa uri nito sa Ark. Kapag namatay ito nang wala nang puso, mawawala ang uri nito sa Ark.",
-            "hearts": "Nananatili ang mga puso nito. Kapag nabigo ito habang may puso pa, babalik ito sa zoo at maghihintay ng 30 araw. Kapag wala nang puso, mamamatay ito.",
+            "hearts": "Nananatili ang mga puso nito. Kapag namatay ito habang may puso pa, mawawala ang pusong iyon at babalik ito sa kalikasan. Kapag wala nang puso, mamamatay ito.",
             "rules": "Walang refund kapag napakawalan na ito, anuman ang mangyari dito. Isang pagpapakawala kada araw, isa sa bawat uri kada linggo.",
             "price": "{credits} Credits",
             "balance": "Mayroon kang {credits}",
