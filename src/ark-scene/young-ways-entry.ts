@@ -9,6 +9,7 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
+import {arkDayAt} from "@/lib/ark-clock";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
@@ -83,7 +84,9 @@ async function main() {
     const scene = SCENES[params.get("scene") ?? "grebe"];
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
     const template = fixture.animals[0];
-    const day = fixture.voyage.ark_day;
+    // The Ark day the scene's own clock will have at the start (it counts from the voyage's start, not the fixture's day).
+    const startAt = Date.UTC(2026, 10, 20, Math.floor(scene.hours), (scene.hours % 1) * 60) / 1000 + 60;
+    const day = arkDayAt(startAt * 1000, Date.parse(fixture.voyage.started_at));
     const ids = {adults: [] as string[], young: [] as string[]};
     const animals: Raw[] = [];
     const c = scene.cast;
