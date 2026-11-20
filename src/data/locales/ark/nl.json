@@ -1010,7 +1010,8 @@
             "number": "AnimalDex-nummer",
             "age": "Leeftijd",
             "left": "Nog {time}",
-            "ticker": "Deze week in opkomst en in verval"
+            "ticker": "Deze week in opkomst en in verval",
+            "talk": "Praat"
         },
         "how": {
             "lead": "Een levende 3D-wereld van echte dieren, gestuurd door de regels van de natuur.",

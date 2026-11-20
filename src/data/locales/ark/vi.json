@@ -1010,7 +1010,8 @@
             "number": "Số AnimalDex",
             "age": "Tuổi",
             "left": "Còn {time}",
-            "ticker": "Tăng và giảm trong tuần này"
+            "ticker": "Tăng và giảm trong tuần này",
+            "talk": "Trò chuyện"
         },
         "how": {
             "lead": "Một thế giới 3D sống động gồm những loài vật thật, vận hành theo quy luật tự nhiên.",

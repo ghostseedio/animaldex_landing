@@ -499,8 +499,8 @@ export type ArkWords = {
     how?: Partial<Record<string, string>>;
 };
 
-export type ArkSimpleWords = {power: string; number: string; age: string; left: string; ticker: string};
-export const ARK_SIMPLE_ENGLISH: ArkSimpleWords = {power: "Animal Power", number: "AnimalDex number", age: "Age", left: "{time} left", ticker: "Thriving and declining this week"};
+export type ArkSimpleWords = {power: string; number: string; age: string; left: string; ticker: string; talk: string};
+export const ARK_SIMPLE_ENGLISH: ArkSimpleWords = {power: "Animal Power", number: "AnimalDex number", age: "Age", left: "{time} left", ticker: "Thriving and declining this week", talk: "Talk"};
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */
 export type ArkPersonWords = {

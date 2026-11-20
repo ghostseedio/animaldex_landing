@@ -1010,7 +1010,8 @@
             "number": "Numer AnimalDex",
             "age": "Wiek",
             "left": "Zostało {time}",
-            "ticker": "W tym tygodniu rosną i maleją"
+            "ticker": "W tym tygodniu rosną i maleją",
+            "talk": "Rozmawiaj"
         },
         "how": {
             "lead": "Żywy świat 3D prawdziwych zwierząt, rządzony prawami natury.",

@@ -1010,7 +1010,8 @@
             "number": "Číslo v AnimalDex",
             "age": "Věk",
             "left": "Zbývá {time}",
-            "ticker": "Tento týden roste a klesá"
+            "ticker": "Tento týden roste a klesá",
+            "talk": "Mluvit"
         },
         "how": {
             "lead": "Živý 3D svět skutečných zvířat, který řídí pravidla přírody.",

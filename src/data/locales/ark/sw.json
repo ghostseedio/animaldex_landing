@@ -1010,7 +1010,8 @@
             "number": "Namba ya AnimalDex",
             "age": "Umri",
             "left": "Imebaki {time}",
-            "ticker": "Wanaostawi na wanaopungua wiki hii"
+            "ticker": "Wanaostawi na wanaopungua wiki hii",
+            "talk": "Ongea"
         },
         "how": {
             "lead": "Ulimwengu hai wa 3D wa wanyama halisi, unaoendeshwa na sheria za maumbile.",

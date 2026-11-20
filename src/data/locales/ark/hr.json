@@ -1010,7 +1010,8 @@
             "number": "AnimalDex broj",
             "age": "Dob",
             "left": "Preostalo {time}",
-            "ticker": "U porastu i u padu ovaj tjedan"
+            "ticker": "U porastu i u padu ovaj tjedan",
+            "talk": "Razgovaraj"
         },
         "how": {
             "lead": "Živi 3D svijet pravih životinja, kojim vladaju pravila prirode.",

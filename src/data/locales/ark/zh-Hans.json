@@ -1010,7 +1010,8 @@
             "number": "AnimalDex 编号",
             "age": "年龄",
             "left": "还剩{time}",
-            "ticker": "本周增长与减少"
+            "ticker": "本周增长与减少",
+            "talk": "聊天"
         },
         "how": {
             "lead": "一个由真实动物组成、按自然规律运转的鲜活 3D 世界。",

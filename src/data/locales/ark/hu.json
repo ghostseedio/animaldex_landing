@@ -1010,7 +1010,8 @@
             "number": "AnimalDex-szám",
             "age": "Kor",
             "left": "Még {time}",
-            "ticker": "Gyarapodók és fogyók ezen a héten"
+            "ticker": "Gyarapodók és fogyók ezen a héten",
+            "talk": "Beszélgess"
         },
         "how": {
             "lead": "Igazi állatok élő 3D világa, a természet szabályai szerint.",

@@ -1010,7 +1010,8 @@
             "number": "Număr AnimalDex",
             "age": "Vârstă",
             "left": "Mai are {time}",
-            "ticker": "În creștere și în scădere săptămâna aceasta"
+            "ticker": "În creștere și în scădere săptămâna aceasta",
+            "talk": "Vorbește"
         },
         "how": {
             "lead": "O lume 3D vie de animale reale, condusă de regulile naturii.",

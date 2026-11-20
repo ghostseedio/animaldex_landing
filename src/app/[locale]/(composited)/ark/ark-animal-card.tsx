@@ -205,6 +205,39 @@ type CardProps = {
     snapshot?: ArkSnapshot | null;
 };
 
+/**
+ * "Talk to a Plains Zebra" when it fits, else the chat icon and the short word (owner 2026-11-20: never an animal's name cut
+ * mid-word). A hidden copy of the full label is measured against the room the button has, again on every resize.
+ */
+function ArkTalkLabel({full, short}: {full: string; short: string}) {
+    const boxRef = useRef<HTMLSpanElement | null>(null);
+    const fullRef = useRef<HTMLSpanElement | null>(null);
+    const [fits, setFits] = useState(true);
+    useEffect(() => {
+        const box = boxRef.current;
+        const measure = fullRef.current;
+        if (!box || !measure) return;
+        const check = () => setFits(measure.scrollWidth <= box.clientWidth + 1);
+        check();
+        const observer = typeof ResizeObserver === "function" ? new ResizeObserver(check) : null;
+        observer?.observe(box);
+        return () => observer?.disconnect();
+    }, [full]);
+    return (
+        <span ref={boxRef} className="relative flex min-w-0 flex-1 items-center justify-center overflow-hidden">
+            <span ref={fullRef} aria-hidden="true" className="invisible absolute start-0 top-0 whitespace-nowrap">{full}</span>
+            {fits ? (
+                <span aria-hidden="true" className="whitespace-nowrap">{full}</span>
+            ) : (
+                <span aria-hidden="true" className="flex items-center gap-1.5 whitespace-nowrap">
+                    <svg viewBox="0 0 20 20" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round"><path d="M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v6.5A1.5 1.5 0 0 1 16 14H9l-4 3v-3H4a1.5 1.5 0 0 1-1.5-1.5V6A1.5 1.5 0 0 1 4 4.5z" /></svg>
+                    {short}
+                </span>
+            )}
+        </span>
+    );
+}
+
 export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, photo = null, arkDay, voyageStart, scene, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share, lives = null, snapshot = null}: CardProps) {
     arkPerfCountRender();
     const life = state?.life ?? null;
@@ -255,9 +288,9 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     const moves = (
         <>
                 {placeholder ? null : (
-                    <Link href={`/talk/${animal.model_slug}`} className={`${pill} h-10 min-w-0 flex-1 bg-primary-400 px-3 text-[13.5px] sm:px-4 text-canvas-950 hover:bg-primary-100 sm:flex-none md:max-w-[17rem]`}>
-                        <span className="truncate">{talk}</span>
-                        <span aria-hidden="true">→</span>
+                    <Link href={`/talk/${animal.model_slug}`} aria-label={talk} title={talk} className={`${pill} h-10 min-w-0 flex-1 bg-primary-400 px-3 text-[13.5px] sm:px-4 text-canvas-950 hover:bg-primary-100 sm:flex-none md:max-w-[17rem]`}>
+                        <ArkTalkLabel full={talk} short={simple?.talk ?? "Talk"} />
+                        <span aria-hidden="true" className="rtl:rotate-180">→</span>
                     </Link>
                 )}
                 <button

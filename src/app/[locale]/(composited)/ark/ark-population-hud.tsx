@@ -86,6 +86,15 @@ type Props = {
     populationUrl?: string | null;
 };
 
+/** "today" in the reader's words (`Intl.RelativeTimeFormat`, every language, no strings of ours). */
+function arkTodayWord(locale: string): string {
+    try {
+        return new Intl.RelativeTimeFormat(locale, {numeric: "auto"}).format(0, "day");
+    } catch {
+        return "today";
+    }
+}
+
 function counted(count: number, one: string, other: string, locale: string): string {
     return count === 1 ? one : other.replace("{count}", count.toLocaleString(locale));
 }
@@ -133,8 +142,13 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
     }, []);
     useEffect(() => {
         try {
-            const stored = window.localStorage.getItem(ARK_HUD_OPEN_KEY);
-            if (stored === "1" || stored === "0") setOpenState(stored === "1");
+            // A phone always starts on the "130 aboard" pill (owner 2026-11-20: opened, the list covers the whole world);
+            // the remembered choice is the desktop's.
+            if (window.matchMedia(PHONE).matches) setOpenState(false);
+            else {
+                const stored = window.localStorage.getItem(ARK_HUD_OPEN_KEY);
+                if (stored === "1" || stored === "0") setOpenState(stored === "1");
+            }
         } catch {
             // No storage: by the screen.
         }
@@ -216,7 +230,11 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
     const ceiling = useMemo(() => arkBarCeiling(rows[0]?.count ?? 0), [rows]);
     const where = {snapshot, selectedKey, selectedId, scope, locale};
     const number = (value: number) => value.toLocaleString(locale);
-    const total = snapshot ? arkTotalChange(snapshot.animals.length, totalThen, "both") : null;
+    // The total's change, said as "today" (owner 2026-11-20: no time filters, so no "24 h"); none when every animal aboard
+    // is new (the change is the total itself, "+130" beside "130", which says nothing).
+    const totalChange = snapshot ? arkTotalChange(snapshot.animals.length, totalThen, "both") : null;
+    const total = totalChange && totalChange.base > 0 ? totalChange : null;
+    const today = useMemo(() => arkTodayWord(locale), [locale]);
     const totalSaid = arkChangeText(total, locale);
     const totalLine = fillArkWords(hud.chip, {count: number(counts.animals)});
     const subline = `${counted(counts.species, words.speciesOne, words.speciesOther, locale)} · ${counted(counts.founders, words.foundersOne, words.foundersOther, locale)}`;
@@ -278,7 +296,7 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                                 {totalSaid ? (
                                     <span className="flex items-baseline gap-1">
                                         <ArkChangeBadge change={total} words={words} locale={locale} />
-                                        <span aria-hidden="true" className="text-[10.5px] font-semibold text-white/40">{hud.changeWindow}</span>
+                                        <span aria-hidden="true" className="text-[10.5px] font-semibold text-white/40">{today}</span>
                                     </span>
                                 ) : null}
                             </div>

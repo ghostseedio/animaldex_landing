@@ -5207,7 +5207,8 @@
       "number": "Nomor AnimalDex",
       "age": "Umur",
       "left": "Sisa {time}",
-      "ticker": "Naik dan turun minggu ini"
+      "ticker": "Naik dan turun minggu ini",
+      "talk": "Bicara"
     },
     "how": {
       "lead": "Dunia 3D hidup berisi hewan sungguhan, berjalan dengan aturan alam.",

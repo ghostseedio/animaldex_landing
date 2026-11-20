@@ -1010,7 +1010,8 @@
             "number": "Número AnimalDex",
             "age": "Idade",
             "left": "Faltam {time}",
-            "ticker": "Em alta e em baixa esta semana"
+            "ticker": "Em alta e em baixa esta semana",
+            "talk": "Conversar"
         },
         "how": {
             "lead": "Um mundo 3D vivo de animais reais, regido pelas regras da natureza.",
