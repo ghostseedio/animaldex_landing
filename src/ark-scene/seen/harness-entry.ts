@@ -301,8 +301,9 @@ async function main() {
         if ((at.under ?? 0) > Math.max(0.25, (at.height ?? 0.3) * 0.6) && camera.position.y > at.y + (at.under ?? 0)) return {ok: false, why: "underwater", p};
         if (handle.sightOf) {
             const view = handle.view();
-            const blocked = handle.sightOf(view.target, {distance: view.distance, polar: view.polar, azimuth: view.azimuth}, [{x: at.x, y: at.y, z: at.z, slack: Math.min(at.length * 0.3, 0.5)}], false, camera.near > 0.5 ? camera.near : 0, true);
-            if (blocked > 0) return {ok: false, why: `blocked:${handle.sightMet?.() || "?"}`, p};
+            // (Its middle, or its back: a beetle on a twig, its middle a few millimetres over the bark, shows its back.)
+            const ask = (y: number) => handle.sightOf!(view.target, {distance: view.distance, polar: view.polar, azimuth: view.azimuth}, [{x: at.x, y, z: at.z, slack: Math.min(at.length * 0.3, 0.5)}], false, camera.near > 0.5 ? camera.near : 0, true);
+            if (ask(at.y) > 0 && ask(at.y + (at.height ?? at.length * 0.3) * 0.5) > 0) return {ok: false, why: `blocked:${handle.sightMet?.() || "?"}`, p};
         }
         return {ok: true, why: "", p};
     };
