@@ -751,9 +751,9 @@ export class RigLibrary {
 
 /**
  * The pilot rigs whose own lying clips give way to the posed lie (coordinator, ARK-ANIM round 3: "bear, grizzly, pig,
- * dog, cat"). Every other four-legged rig takes it only when it has no lying clip (`QUADRUPED_LYING_HELD`).
+ * dog, cat"; then the horse, whose pilot lie lay flat and turned over, the owner's "rotated"). Every other four-legged rig takes it only when it has no lying clip (`QUADRUPED_LYING_HELD`).
  */
-export const POSED_LIE_OVER_PILOT: ReadonlySet<string> = new Set(["domestic-dog", "domestic-cat"]);
+export const POSED_LIE_OVER_PILOT: ReadonlySet<string> = new Set(["domestic-dog", "domestic-cat", "domestic-horse"]);
 
 /**
  * ARK-ANIM round 3 (decision 447): the posed lie's rows appended to a rig's bone rows (`locomotion/lie-pose.ts`): the

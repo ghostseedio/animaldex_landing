@@ -41,7 +41,7 @@ export const LIE_FRAMES = 8;
 export type LieMesh = {positions: ArrayLike<number>; joints: ArrayLike<number>; weights: ArrayLike<number>};
 export type LieCheck = {ok: boolean; reason: string | null; belly: number; sink: number};
 
-type Part = "torso" | "head" | number;
+type Part = "torso" | "head" | "tail" | number;
 
 /** Whether a rig can take the posed lie at all: four legs, a fore and a hind pair, standing (not a sitting rest pose). */
 export function lieShaped(rig: LocoRig): boolean {
@@ -95,6 +95,7 @@ export class LiePose {
         const owner = new Map<number, Part>();
         const headRoot = rig.neck >= 0 ? rig.neck : rig.head;
         if (headRoot >= 0) for (const b of [headRoot, ...rig.below[headRoot]]) owner.set(b, "head");
+        if (rig.tail.length && rig.tail[0] >= 0) for (const b of [rig.tail[0], ...rig.below[rig.tail[0]]]) owner.set(b, "tail");
         rig.legs.forEach((leg, li) => {
             for (const b of [leg.upper, ...rig.below[leg.upper]]) owner.set(b, li);
         });
@@ -154,6 +155,20 @@ export class LiePose {
                 if (this.lowestOf(world, "head") >= this.ground - this.height * 0.005) break;
             }
         }
+        // The tail laid back along the ground behind it (a long one, a horse's, hung to the ground and held the body up).
+        const tail = rig.tail.filter((b) => b >= 0);
+        if (tail.length > 1) {
+            const saved = [tail[0], ...rig.below[tail[0]]].map((b) => world[b].clone());
+            for (const up of [0, 15, 30, 45, 60]) {
+                [tail[0], ...rig.below[tail[0]]].forEach((b, k) => world[b].copy(saved[k]));
+                for (let k = 0; k + 1 < tail.length; k++) {
+                    at(world[tail[k]], A);
+                    at(world[tail[k + 1]], B);
+                    this.turn(world, tail[k], A, DOWN.subVectors(B, A), this.sagittal((k === 0 ? -50 : -95) - up), t);
+                }
+                if (this.lowestOf(world, "tail") >= this.ground - this.height * 0.005) break;
+            }
+        }
         return world;
     }
 
@@ -203,11 +218,11 @@ export class LiePose {
         return out;
     }
 
-    /** The lowest point of the body and legs (the head left out: it drops after), or of everything. */
+    /** The lowest point of the body and legs (the head and the tail left out: they settle after), or of everything. */
     private lowest(world: Matrix4[], head: boolean): number {
         this.skinned(world);
         let low = Infinity;
-        for (let i = 0; i < this.parts.length; i++) if (head || this.parts[i] !== "head") low = Math.min(low, this.vertex(i, A).y);
+        for (let i = 0; i < this.parts.length; i++) if (head || (this.parts[i] !== "head" && this.parts[i] !== "tail")) low = Math.min(low, this.vertex(i, A).y);
         return low;
     }
 
