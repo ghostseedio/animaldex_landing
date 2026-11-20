@@ -1,5 +1,7 @@
 import {NextResponse, type NextRequest} from "next/server";
-import {readArkVoyage} from "@/data/ark-voyage";
+import {arkVoyageReadOf, readArkVoyage, readArkVoyageAnonymousRaw, type ArkVoyageRead} from "@/data/ark-voyage";
+import {arkPickEncoding, createArkEncodedBodyCache, type ArkEncodedBody} from "@/lib/ark-encoded-body";
+import {requestHasSupabaseAuthCookie} from "@/lib/supabase/auth-cookie";
 import {readArkIconAliases} from "@/data/ark-icon-aliases";
 import {getSpeciesArtworkIndex} from "@/data/species-artwork-index";
 import {arkFoundersOf} from "@/lib/ark-founders";
@@ -31,7 +33,9 @@ export const dynamic = "force-dynamic";
  *
  * An anonymous answer carries a validator (`lib/ark-voyage-etag.ts`): the same Ark but for the read's own time answers
  * 304 to a reader holding it (the apps' panel reads every 45 s: ~400 KB each time before, nothing when unchanged now).
- * A signed-in answer stays `no-store`, as before.
+ * A signed-in answer stays `no-store`, as before. The anonymous answer is encoded once per shared read
+ * (`lib/ark-encoded-body.ts`: JSON, gzip, brotli) and the same bytes go to every anonymous caller (2026-11-20: per-request
+ * decode + encode + gzip of ~4 MB made 10 concurrent callers take 9–30 s on the web VM).
  *
  * In development, `?fixture=1` answers the v2 fixture (as `/ark?fixture=1`),
  * for `/ark/embed.html?fixture=1`, as names-on answers it (bringers as their
@@ -43,15 +47,42 @@ export async function GET(request: NextRequest) {
         const fixture = request.nextUrl.searchParams.get("founders") !== "0" ? (await import("@/lib/ark-founders-fixture")).withArkFixtureFounders(base) : base;
         return NextResponse.json({available: true, snapshot: fixture, founders: arkFoundersOf(fixture)}, {headers: {"Cache-Control": "no-store"}});
     }
-    // (The listing beside the read, never after it: cached in the server for 30 minutes, it costs the read nothing.)
-    const [read, artwork] = await Promise.all([readArkVoyage(), getSpeciesArtworkIndex().catch(() => null)]);
-    const cache = read.signedIn ? "private, no-store" : "public, s-maxage=30, stale-while-revalidate=60";
-    if (!read.available) return NextResponse.json({available: false}, {status: 503, headers: {"Cache-Control": "no-store"}});
+    if (requestHasSupabaseAuthCookie(request.headers.get("cookie"))) {
+        // (The listing beside the read, never after it: cached in the server for 30 minutes, it costs the read nothing.)
+        const [read, artwork] = await Promise.all([readArkVoyage(), getSpeciesArtworkIndex().catch(() => null)]);
+        if (!read.available) return NextResponse.json({available: false}, {status: 503, headers: {"Cache-Control": "no-store"}});
+        return NextResponse.json(await payloadOf(read, artwork), {headers: {"Cache-Control": "private, no-store"}});
+    }
+    // Anonymous: the same bytes for everyone while the shared read holds the same answer (encoded and compressed once).
+    const [raw, artwork] = await Promise.all([readArkVoyageAnonymousRaw(), getSpeciesArtworkIndex().catch(() => null)]);
+    if (!raw.ok) return NextResponse.json({available: false}, {status: 503, headers: {"Cache-Control": "no-store"}});
+    let body: ArkEncodedBody;
+    try {
+        body = await anonymousBody.get([raw, artwork], async () => {
+            const read = arkVoyageReadOf(raw, false);
+            if (!read.available) throw new Error("undecodable");
+            const payload = await payloadOf(read, artwork);
+            return {payload, etag: arkVoyageEtag(payload)};
+        });
+    } catch {
+        return NextResponse.json({available: false}, {status: 503, headers: {"Cache-Control": "no-store"}});
+    }
+    // Cloudflare may keep it (a cache rule must make /api/ark/voyage eligible and bypass it for the auth cookie).
+    const headers: Record<string, string> = {"Cache-Control": ANONYMOUS_CACHE, ETag: body.etag, Vary: "Accept-Encoding"};
+    if (arkEtagMatches(request.headers.get("if-none-match"), body.etag)) return new NextResponse(null, {status: 304, headers});
+    const encoding = arkPickEncoding(request.headers.get("accept-encoding"));
+    const bytes = encoding === "br" ? body.br : encoding === "gzip" ? body.gzip : body.json;
+    if (encoding) headers["Content-Encoding"] = encoding;
+    headers["Content-Type"] = "application/json";
+    headers["Content-Length"] = String(bytes.length);
+    return new NextResponse(new Uint8Array(bytes.buffer, bytes.byteOffset, bytes.length), {status: 200, headers});
+}
+
+const ANONYMOUS_CACHE = "public, max-age=0, s-maxage=30, stale-while-revalidate=300";
+const anonymousBody = createArkEncodedBodyCache();
+
+async function payloadOf(read: Extract<ArkVoyageRead, {available: true}>, artwork: Awaited<ReturnType<typeof getSpeciesArtworkIndex>> | null) {
     const missing = artwork ? arkIconlessSlugs(read.snapshot.animals, artwork.bySlug) : null;
     const noIcon = artwork && missing ? arkNoIcon(missing, await readArkIconAliases(read.snapshot.animals, missing, artwork).catch(() => new Map<string, string>())) : undefined;
-    const payload = {available: true, snapshot: read.snapshot, founders: read.founders, ...(noIcon ? {noIcon} : {})};
-    if (read.signedIn) return NextResponse.json(payload, {headers: {"Cache-Control": cache}});
-    const etag = arkVoyageEtag(payload);
-    if (arkEtagMatches(request.headers.get("if-none-match"), etag)) return new NextResponse(null, {status: 304, headers: {"Cache-Control": cache, ETag: etag}});
-    return NextResponse.json(payload, {headers: {"Cache-Control": cache, ETag: etag}});
+    return {available: true, snapshot: read.snapshot, founders: read.founders, ...(noIcon ? {noIcon} : {})};
 }

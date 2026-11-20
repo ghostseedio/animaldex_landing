@@ -30,6 +30,7 @@ import type {ArkEvent, ArkEventAnimal} from "@/lib/ark-life";
 import {ARK_ACTIVITY_ENGLISH, type ArkActivityKey, type ArkActivityWords} from "@/lib/ark-animal-status";
 import {pluralAnimalName} from "@/lib/ark-population";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
+import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 
 // In its own module so the page's first JavaScript needn't carry the live log (docs/ark/lazy-loading.md).
 export {arkNewArrivals} from "@/lib/ark-new-arrivals";
@@ -73,6 +74,8 @@ export type ArkLiveItem = {
     hearts?: number | null;
     /** A return from old age: a young adult again. */
     young?: boolean;
+    /** REAL-REPRODUCTION (decision 440): a breeding said its kind's own way (a spawning night, a pair's spawn, amplexus, a father's pouch, a split). */
+    way?: ArkLiveWay;
     /** A meal that ends a hunt seen setting out (`src/ark-scene/live/hunt-outcome.ts`): said as "caught". */
     hunted?: boolean;
     /** A kind's dormant season beginning or ending (`src/ark-scene/live/dormancy-lines.ts`): said with its own words. */
@@ -125,7 +128,9 @@ export function arkLiveServerItems(events: readonly ArkEvent[]): ArkLiveItem[] {
                     litter.count++;
                     break;
                 }
-                const item: ArkLiveItem = {id: event.id, kind, source: "server", key: `${kind}:${speciesOf(animal)}`, animal: animal.name, other: null, count: 1, eggs: null, focus: focusOn(animal)};
+                // (REAL-REPRODUCTION: young from a father's pouch, or split off one parent, are said so.)
+                const way = event.way === "pouch" ? "pouchFry" : event.way === "alone" && !event.from_egg ? "split" : null;
+                const item: ArkLiveItem = {id: event.id, kind, source: "server", key: `${kind}:${speciesOf(animal)}${way ? `:${way}` : ""}`, animal: animal.name, other: null, count: 1, eggs: null, ...(way ? {way} : {}), focus: focusOn(animal)};
                 litters.set(litterKey, item);
                 items.push(item);
                 break;
@@ -134,7 +139,8 @@ export function arkLiveServerItems(events: readonly ArkEvent[]): ArkLiveItem[] {
                 // A pair bred: one line, before its young or eggs (the server writes it first).
                 const name = animal?.name || event.species?.name || "";
                 const species = animal ? speciesOf(animal) : event.species?.id || null;
-                if (name) items.push({id: event.id, kind: "mated", source: "server", key: `mated:${species ?? name}`, animal: name, other: null, count: 1, eggs: null, focus: {animalId: event.parents[0] ?? animal?.id ?? null, speciesId: species, zone: animal?.zone ?? null}});
+                const way = arkLiveWayOf(event.way);
+                if (name) items.push({id: event.id, kind: "mated", source: "server", key: `mated:${species ?? name}${way ? `:${way}` : ""}`, animal: name, other: null, count: 1, eggs: null, ...(way ? {way} : {}), focus: {animalId: event.parents[0] ?? animal?.id ?? null, speciesId: species, zone: animal?.zone ?? null}});
                 break;
             }
             case "laid":
@@ -302,9 +308,16 @@ export type ArkLiveLogOptions = {
     alarmGap: number;
     /** Record items waiting at most; more fold into one "+N more" line. */
     maxQueue: number;
+    /** Seen and now items waiting at most (a burst of the schedule's moments): the oldest are dropped, never piled up. */
+    maxSoftQueue: number;
 };
 
-export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 15_000, seenLife: 9_000, nowLife: 20_000, groupWindow: 10_000, gap: 1_100, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6};
+/**
+ * (Owner 2026-11-20, decision 439: the log is a stack, newest at the foot, the older pushed up and fading, 3-4 at
+ * once; each line goes on its own after about 8-12 s, and in a burst each stays readable at least 1.5 s before the
+ * next one pushes it up: `gap`. The view's side is `src/ark-scene/live/log-view.ts` and `ark-live-stack.ts`.)
+ */
+export const ARK_LIVE_LOG_DEFAULTS: ArkLiveLogOptions = {maxLines: 4, serverLife: 12_000, seenLife: 9_000, nowLife: 10_000, groupWindow: 10_000, gap: 1_500, seenGap: 3_500, seenStale: 7_000, alarmGap: 20_000, maxQueue: 6, maxSoftQueue: 8};
 
 /** The kinds the record keeps first when a burst is bigger than the log: the rare and the sad before the many. */
 const PRIORITY: Record<ArkLiveKind, number> = {extinction: 0, wildGone: 1, meal: 1, crisis: 2, starved: 2, death: 3, gone: 3, revived: 3, saved: 3, toCare: 4, mated: 4, birth: 4, hatched: 4, laid: 5, arrival: 6, courting: 7, contest: 7, fishing: 7, nest: 7, alarm: 7, hunting: 7, eggs: 7, playing: 7, toWater: 7, home: 7, flock: 7, group: 7, doing: 7, breathing: 7, calling: 7, bathing: 7, feeding: 7, more: 8};
@@ -363,6 +376,9 @@ export class ArkLiveLog {
             if (more) more.count += folded;
             else this.queue.push({id: `more:${now}`, kind: "more", source: "server", key: `more:${now}`, animal: "", other: null, count: folded, eggs: null, focus: {animalId: null, speciesId: null, zone: null}, queuedAt: now});
         }
+        // A burst of seen or now items: the newest wait, the oldest go (they are no longer happening by their turn).
+        let soft = this.queue.reduce((n, q) => n + (q.source === "server" ? 0 : 1), 0);
+        if (soft > this.options.maxSoftQueue) this.queue = this.queue.filter((q) => q.source === "server" || soft-- <= this.options.maxSoftQueue);
         return changed;
     }
 
@@ -420,12 +436,23 @@ function isEnglish(locale: string): boolean {
 }
 
 /** A line as the reader reads it. `locale`: the words' language (English names take their plural). */
-export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young">>, words: ArkLiveText, locale: string): string {
+export function arkLiveLineText(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young" | "way">>, words: ArkLiveText, locale: string): string {
     const text = arkLiveLineBase(line, words, locale);
     const hearts = line.hearts;
     if (typeof hearts !== "number" || line.kind === "revived" || (line.kind !== "meal" && line.kind !== "death" && line.kind !== "starved")) return text;
     return fillArkWords(words.live.withHearts ?? ARK_LIVE_HEARTS_ENGLISH.withHearts, {line: text, hearts: arkHeartsLeftText(hearts, words, locale)});
 }
+
+/** REAL-REPRODUCTION (decision 440): the ways a breeding is said. */
+export type ArkLiveWay = "spawnNight" | "spawnPair" | "amplexus" | "pouchFry" | "split";
+
+/** A `mated` row's way (`payload.way`) as its line: null for a pair's mating (said as before). */
+export function arkLiveWayOf(way: string | undefined): ArkLiveWay | null {
+    return way === "broadcast" || way === "brooding" ? "spawnNight" : way === "spawn_pair" ? "spawnPair" : way === "amplexus" ? "amplexus" : null;
+}
+
+/** (Their English is `ARK_LIVE_ENGLISH`'s, as en.json has it.) */
+export const ARK_LIVE_WAY_ENGLISH = ARK_LIVE_ENGLISH as Required<Pick<typeof ARK_LIVE_ENGLISH, ArkLiveWay>>;
 
 const ARK_LIVE_HEARTS_ENGLISH = {
     heartsLeftOne: "1 ♥ left",
@@ -445,8 +472,14 @@ export function arkHeartsLeftText(hearts: number, words: ArkLiveText, locale: st
     return n === 0 ? live.heartsLeftNone : n === 1 ? live.heartsLeftOne : fillArkWords(live.heartsLeftOther, {n: n.toLocaleString(locale)});
 }
 
-function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young">>, words: ArkLiveText, locale: string): string {
+function arkLiveLineBase(line: Pick<ArkLiveItem, "kind" | "animal" | "other" | "count" | "eggs"> & Partial<Pick<ArkLiveItem, "source" | "group" | "activity" | "hearts" | "young" | "way">>, words: ArkLiveText, locale: string): string {
     const live = words.live;
+    // REAL-REPRODUCTION (decision 440): its kind's own way, in its own words (no verb that agrees with a number).
+    if (line.way && (line.kind === "mated" || line.kind === "birth" || line.kind === "hatched")) {
+        const said = words.live[line.way] ?? ARK_LIVE_WAY_ENGLISH[line.way];
+        const many = line.count > 1;
+        return fillArkWords(said, {animal: line.animal, count: line.count.toLocaleString(locale)}) + (many && line.kind === "mated" ? ` ×${line.count.toLocaleString(locale)}` : "");
+    }
     const replay = words.replay;
     const many = line.count > 1;
     const count = line.count.toLocaleString(locale);

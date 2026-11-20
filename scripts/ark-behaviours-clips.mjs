@@ -62,7 +62,8 @@ const PLANS = {
     lure: {distance: 1.6, shots: [[-1.2, "close: the run off the nest (0.9 s)"], [-0.3, "close: a fluttering hop (1.8 s)"], [0.4, "close: dragging, looking back (2.5 s)"], [1.1, "close: the next hop (3.2 s)"], [1.8, "close: dragging (3.9 s)"], [5.3, "close: further on (7.4 s)"], [11.2, "close: still leading (13.3 s)"], [14.6, "close: it stands up whole (16.7 s)"], [17.3, "close: the flight back (19.4 s)"], [21.5, "close: back where its day has it"]]},
     // (The shot adds 2.1 s after its time: the young jump at 7.8 s, 10.4 s, 13 s, 15.6 s after the hatch.)
     drop: {distance: 6, shots: [[1, "she comes to the tree (3.1 s)"], [5.3, "the first at the mouth (7.4 s)"], [5.9, "it jumps (8.0 s)"], [6.3, "falling (8.4 s)"], [6.8, "the bounce (8.9 s)"], [8.6, "the second jumps (10.7 s)"], [11.1, "the third (13.2 s)"], [13.7, "the fourth (15.8 s)"], [18, "gathered at her (20.1 s)"], [26, "still gathered (28.1 s)"], [48, "back to their day"]]},
-    dung: {distance: 5, shots: [[600, "the herd, ten minutes on"], [900, "a mark, close"], [1500, "marks fading"]]}
+    dung: {distance: 5, shots: [[600, "the herd, ten minutes on"], [900, "a mark, close"], [1500, "marks fading"]]},
+    dungusers: {distance: 0.35, shots: [[600, "the herd, ten minutes on", undefined], [900, "a mark, close"], [900, "a dung beetle at a fresh mark", 1], [930, "the beetle 30 s on", 1], [900, "a yellow dung fly", 2], [1500, "marks fading"]]}
 };
 /**
  * 3.3 batch (A): the defence moves' scenes. A predator is stood beside the animal (its shared pose pinned), left there,
@@ -311,7 +312,7 @@ for (const name of scenes) {
                 return ticked;
             }
             let point;
-            if (name === "dung" && label.includes("close")) {
+            if (name.startsWith("dung") && label.includes("close")) {
                 await window.__behaviours.shot(s, d);
                 const marks = window.__behaviours.dung().sort((p, q) => q.alpha - p.alpha);
                 if (marks[0]) point = {x: marks[0].x, z: marks[0].z};
@@ -335,8 +336,8 @@ for (const name of scenes) {
                 document.getElementById("note").textContent = `${label}\n${text}`;
                 return text;
             }
-            const text = await window.__behaviours.shot(s, point ? 2.2 : label.includes("close") && name !== "dung" ? 2.6 : d, name === "contest" && label.includes("runs") ? rival : label.includes("close") && name !== "dung" ? window.__behaviours.info().a : who, point, name === "contest" ? 2.4 : 0.7, name === "contest" ? 0.85 : 1.15);
-            if (label.includes("close") && name !== "dung") await window.__behaviours.closeOn(window.__behaviours.info().a, name === "lure" ? d : 2.4);
+            const text = await window.__behaviours.shot(s, point ? 2.2 : label.includes("close") && !name.startsWith("dung") ? 2.6 : d, name === "contest" && label.includes("runs") ? rival : label.includes("close") && !name.startsWith("dung") ? window.__behaviours.info().a : who, point, name === "contest" ? 2.4 : 0.7, name === "contest" ? 0.85 : 1.15);
+            if (label.includes("close") && !name.startsWith("dung")) await window.__behaviours.closeOn(window.__behaviours.info().a, name === "lure" ? d : 2.4);
             document.getElementById("note").textContent = `${label}\n${text}`;
             return text;
         }, [s, plan.distance, label, name, mating?.rival, info.births[0]?.mother ?? info.drops?.[0]?.mother ?? (name === "contest" ? info.a : name === "mob" ? info.c : undefined), castK === undefined ? null : info.ids[castK], tick ?? null]);

@@ -500,6 +500,7 @@ export function reachOf(profile: ArkBehaviourProfile, animal: ScheduleAnimal): n
         const paces = airPaces(profile, animal.length);
         if (paces.kind !== "insect") return paces.cruise * SLOT_SECONDS * 0.75;
     }
+    if (profile.creep) return profile.creep * SLOT_SECONDS * 0.75;
     const flyer = profile.move === "fly";
     // (On foot at its walk's pace; in the air and the water at its own: the walk clip governs only walking.)
     if (profile.move === "swim") return swimSpeedOf(profile, animal.length) * SLOT_SECONDS * 0.75;
@@ -1528,7 +1529,28 @@ function tooFarOnFoot(world: ScheduleWorld, profile: ArkBehaviourProfile, animal
 }
 
 function rawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
-    return remember(memoOf(world, hoursAt, animal).raw, slot, () => workRawIntent(world, profile, animal, activity, slot, hoursAt));
+    return remember(memoOf(world, hoursAt, animal).raw, slot, () => (profile.creep ? creepIntent(profile, animal, slot, workRawIntent(world, profile, animal, activity, slot, hoursAt)) : workRawIntent(world, profile, animal, activity, slot, hoursAt)));
+}
+
+/** REAL-REPRODUCTION: of a creeper's waking slots, the share in which it moves at all (it rests through the rest). */
+export const CREEP_MOVES = 0.2;
+
+/**
+ * A slow creeper's slot (a sea cucumber, a sea star, a snail: `profile.creep`, decision 440): mostly it stays where it
+ * is; in about one waking slot in five it creeps a few centimetres toward where its day would have sent it, never
+ * further from home than it creeps in a slot (so every way fits its slot at its true centimetres a minute).
+ */
+function creepIntent(profile: ArkBehaviourProfile, animal: ScheduleAnimal, slot: number, planned: Intent): Intent {
+    const random = rng(hashString(`${animal.id}#${slot}#creep`));
+    const awake = planned.doing !== "sleep" && planned.doing !== "to_roost";
+    if (!awake || !planned.to || random() >= CREEP_MOVES) return {doing: awake ? "rest" : "sleep", to: null, mode: "stay", stay: []};
+    const home = animal.home;
+    const reach = profile.creep! * SLOT_SECONDS * 0.4;
+    const dx = planned.to.x - home.x;
+    const dz = planned.to.z - home.z;
+    const d = Math.hypot(dx, dz);
+    const k = d > reach ? reach / d : 1;
+    return {...planned, to: {...planned.to, x: home.x + dx * k, z: home.z + dz * k, y: planned.to.y, point: null}, stay: []};
 }
 
 function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: ScheduleAnimal, activity: ArkBehaviourProfile["activity"] | null | undefined, slot: number, hoursAt: HoursAt): Intent {
@@ -2100,7 +2122,7 @@ function tripFor(world: ScheduleWorld, profile: ArkBehaviourProfile, animal: Sch
     if (!now.to || (Math.hypot(to.x - from.x, to.z - from.z) < 0.05 && Math.abs(to.y - from.y) < 0.05)) mode = "stay";
     // Up off the ground at either end (a branch, a wall, a rock top): a flyer flies it, anything else climbs it.
     if ((mode === "ground" || mode === "water") && (raised(world, from) || raised(world, to))) mode = flies(profile) ? "air" : "surface";
-    const pace = bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05);
+    const pace = profile.creep ?? bodyLengthsPerSecond(profile) * Math.max(animal.length, 0.05);
     // A bird walks a few steps; further than that it flies, once the flight is worth it (MA1: a way so short its flight
     // would average under about 0.4 of its cruise, `WALK_SHARE` of what its take-off and landing lose at half a g, is
     // walked, waded or swum when it gets there that way in under WALK_INSTEAD s). A flyer's own way to a spot nearby

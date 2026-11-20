@@ -728,6 +728,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     animalRhythm?: (id: string, options?: {budgetMs?: number; stepFeeds?: boolean}) => ArkRhythmStatus | "pending" | null;
     /** Record lines for animals' logs, from the server (the page's life story, the live log's events): never made up. */
     noteRecord?: (notes: readonly ArkRecordNote[]) => void;
+    /** Decision 434: whether a kind lives on dung (its stored microhabitats): the card's Eats line says "dung". */
+    eatsDung?: (slug: string, zone: ArkZone) => boolean;
     /**
      * Lane ark-its-day: an animal's day over a window (epoch ms, at most a day long, at most a week back, clamped): what
      * it did as the card would have said it at every moment (the same schedule and status function), and its record
@@ -794,7 +796,7 @@ export type ArkReactiveStats = {tier: string; agents: number; inputs: number; pe
 /** `ArkSceneHandle.liveActs`: each live layer's acts as its `debug()` says them (times in seconds after the act's `t0`). */
 export type ArkLiveActs = {
     meals: Array<{key: string; t0: number; catchAt: number; feedTo: number; carcassEnd: number; carcass: {x: number; z: number} | null; style: string}>;
-    matings: Array<{key: string; t0: number; phase: string; meet?: number; courted?: number; mounted?: number; end?: number; contestEnd?: number; rival?: string; /** V1: `far`: he started nearer than his day had him; `housed`: acted in their enclosure; `brought`: he was brought beside her (two enclosures). ARK-MATING-SHOWN: `far` now walks the whole way; `free`: a small animal off any day went to her surface. */ how?: "far" | "housed" | "brought" | "free"}>;
+    matings: Array<{key: string; t0: number; phase: string; meet?: number; courted?: number; mounted?: number; end?: number; contestEnd?: number; rival?: string; /** V1: `far`: he started nearer than his day had him; `housed`: acted in their enclosure; `brought`: he was brought beside her (two enclosures). ARK-MATING-SHOWN: `far` now walks the whole way; `free`: a small animal off any day went to her surface. */ how?: "far" | "housed" | "brought" | "free"; /** REAL-REPRODUCTION: acted its kind's own way (a spawning, amplexus, a seahorse pair), and when its telling part runs (s). */ repro?: string; telling?: [number, number]}>;
     births: Array<{key: string; t0: number; mother: string | null; end: number | null; phase: string; /** V1: how it is acted (`live-births.ts` BirthStyle), by when every shown young can be seen (s after `t0`), and whether it is in its mother's tank, cage or room (`housed`). */ style?: string; seenBy?: number; housed?: boolean}>;
     escapes: Array<{key: string; t0: number; phase: string; missAt: number | null; seconds: number | null}>;
     deaths: Array<{key: string; id: string; t0: number; spot: {x: number; z: number; base: number; yaw: number} | null; drawn: boolean}>;

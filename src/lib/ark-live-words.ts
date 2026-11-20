@@ -62,6 +62,28 @@ export type ArkLiveWords = {
     saved?: string;
     wildGone?: string;
     toCare?: string;
+    /** Rich events (decision 434, `src/ark-scene/live/rich-lines.ts`). */
+    grownUp?: string;
+    grewOld?: string;
+    breedingSeason?: string;
+    carerLeft?: string;
+    newCarer?: string;
+    grazedBare?: string;
+    regrown?: string;
+    matedFirst?: string;
+    foundMate?: string;
+    foundDung?: string;
+    /**
+     * REAL-REPRODUCTION (AnimalDex decision 440): a breeding said its kind's own way, each "{animal}: ..." with no verb that
+     * agrees with a number. `spawnNight`: a mass spawning (corals, sea cucumbers); `spawnPair`: a pair of fish spawning,
+     * the male fertilising the laid eggs; `amplexus`: frogs and toads; `pouchFry` ({count}): young from a seahorse's
+     * pouch; `split`: a young split or budded off its one parent.
+     */
+    spawnNight?: string;
+    spawnPair?: string;
+    amplexus?: string;
+    pouchFry?: string;
+    split?: string;
 };
 
 /** English, as `en.json` has it: the fallback when a reader's words lack `live`. */
@@ -106,5 +128,20 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     crisis: "{animal}: only a few left in the wild",
     saved: "{animal}: out of danger in the wild",
     wildGone: "{animal}: none left in the wild",
-    toCare: "{animal}: now cared for in the zoo"
+    toCare: "{animal}: now cared for in the zoo",
+    grownUp: "{aAnimal} born aboard is now grown up",
+    grewOld: "{aAnimal} is growing old",
+    breedingSeason: "{animals}: the breeding season has begun",
+    carerLeft: "{aAnimal} is without its carer for a few days",
+    newCarer: "{aAnimal} has a new carer",
+    grazedBare: "{animals}: their grazing ground is bare",
+    regrown: "{animals}: their grazing ground is green again",
+    matedFirst: "{aAnimal} mated for the first time",
+    foundMate: "{aAnimal} found a mate after {days} days",
+    foundDung: "{aAnimal} found fresh dung",
+    spawnNight: "The reef spawned tonight: {animal}",
+    spawnPair: "{animal}: eggs laid, and the male fertilised them",
+    amplexus: "{animal}: a pair in amplexus, and spawn laid",
+    pouchFry: "{animal}: {count} young released from the father's pouch",
+    split: "{animal}: a new one split off its parent"
 };
