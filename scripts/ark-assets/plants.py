@@ -347,10 +347,10 @@ LEAFY = {
 
 def bush(kind, variant_index):
     seed, spec = BUSHES[kind][variant_index]
-    a = trees.build_from_spec(kind, "abc"[variant_index], spec, seed, set_="plants")
     look = LEAFY[kind]
+    a = trees.build_from_spec(kind, "abc"[variant_index], spec, seed, set_="plants")
     leafy = dict(spec, leaf_tex=look["leaf_tex"],
-                 clumps=dict(levels=[2, 3], per_limb=(1, 2), r=look["r"], points=10, notch=0.7, cup=0.3, face_up=0.5),
+                 clumps=dict(levels=[2, 3], per_limb=(2, 3), r=look["r"], points=9, notch=0.7, cup=0.3, face_up=0.5),
                  budget=(spec["budget"][0], 520, 340))
     b = trees.build_from_spec(kind, "abc"[variant_index], leafy, seed, set_="plants")
     # (The same seed grows the same skeleton: the leafy build's lod1 and lod2 replace the plain ones; its lod0 is dropped.)
