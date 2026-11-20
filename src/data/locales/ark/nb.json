@@ -406,7 +406,17 @@
             "crisis": "{animal}: bare noen få igjen i naturen",
             "saved": "{animal}: ute av fare i naturen",
             "wildGone": "{animal}: ingen igjen i naturen",
-            "toCare": "{animal}: nå i dyrehagens omsorg"
+            "toCare": "{animal}: nå i dyrehagens omsorg",
+            "grownUp": "{aAnimal}: nå voksen",
+            "grewOld": "{aAnimal}: begynner å bli gammel",
+            "breedingSeason": "{animals}: paringstiden har begynt",
+            "carerLeft": "{aAnimal}: uten røkter i noen dager",
+            "newCarer": "{aAnimal}: en ny røkter har tatt over",
+            "grazedBare": "{animals}: beitet er snauspist",
+            "regrown": "{animals}: beitet er grønt igjen",
+            "matedFirst": "{aAnimal}: første paring",
+            "foundMate": "{aAnimal}: fant en make etter {days} dager",
+            "foundDung": "{aAnimal}: fant fersk møkk"
         },
         "card": {
             "now": "Nå: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} her",
             "noneNearby": "Ingen i nærheten",
             "noneAboard": "Ingen her",
+            "dung": "møkk",
             "keptFed": "Fôres av røkterne",
             "keptSafe": "Trygg for rovdyr",
             "more": "+{n} til",

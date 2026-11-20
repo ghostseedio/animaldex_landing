@@ -406,7 +406,17 @@
             "crisis": "{animal}: जंगल में अब बहुत कम संख्या",
             "saved": "{animal}: जंगल में अब खतरे से बाहर",
             "wildGone": "{animal}: जंगल में अब एक भी नहीं",
-            "toCare": "{animal}: अब चिड़ियाघर की देखरेख में"
+            "toCare": "{animal}: अब चिड़ियाघर की देखरेख में",
+            "grownUp": "{aAnimal}: अब वयस्क",
+            "grewOld": "{aAnimal}: बूढ़ा होने लगा",
+            "breedingSeason": "{animals}: प्रजनन का मौसम शुरू हो गया",
+            "carerLeft": "{aAnimal}: कुछ दिनों तक कोई देखभाल करने वाला नहीं",
+            "newCarer": "{aAnimal}: नए देखभाल करने वाले ने ज़िम्मेदारी ली",
+            "grazedBare": "{animals}: चरागाह पूरी तरह चर लिया गया",
+            "regrown": "{animals}: चरागाह फिर से हरा",
+            "matedFirst": "{aAnimal}: पहला संभोग",
+            "foundMate": "{aAnimal}: {days} दिन बाद साथी मिला",
+            "foundDung": "{aAnimal}: ताज़ा गोबर मिला"
         },
         "card": {
             "now": "अभी: {activity}",
@@ -858,6 +868,7 @@
             "here": "यहाँ {n}",
             "noneNearby": "पास में कोई नहीं",
             "noneAboard": "यहाँ कोई नहीं",
+            "dung": "गोबर",
             "keptFed": "रखवाले खिलाते हैं",
             "keptSafe": "शिकारियों से सुरक्षित",
             "more": "+{n} और",

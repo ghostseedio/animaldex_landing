@@ -406,7 +406,17 @@
             "crisis": "{animal}: เหลืออยู่ในธรรมชาติเพียงไม่กี่ตัว",
             "saved": "{animal}: พ้นอันตรายในธรรมชาติแล้ว",
             "wildGone": "{animal}: ไม่เหลือในธรรมชาติแล้ว",
-            "toCare": "{animal}: ตอนนี้อยู่ในการดูแลของสวนสัตว์"
+            "toCare": "{animal}: ตอนนี้อยู่ในการดูแลของสวนสัตว์",
+            "grownUp": "{aAnimal}: โตเต็มวัยแล้ว",
+            "grewOld": "{aAnimal}: เริ่มแก่ตัวลง",
+            "breedingSeason": "{animals}: ฤดูผสมพันธุ์เริ่มแล้ว",
+            "carerLeft": "{aAnimal}: ไม่มีผู้ดูแลอยู่หลายวัน",
+            "newCarer": "{aAnimal}: ผู้ดูแลคนใหม่รับหน้าที่แล้ว",
+            "grazedBare": "{animals}: ทุ่งหญ้าถูกกินจนโล่ง",
+            "regrown": "{animals}: ทุ่งหญ้ากลับมาเขียวอีกครั้ง",
+            "matedFirst": "{aAnimal}: ผสมพันธุ์ครั้งแรก",
+            "foundMate": "{aAnimal}: พบคู่หลังรอ {days} วัน",
+            "foundDung": "{aAnimal}: พบมูลสด"
         },
         "card": {
             "now": "ตอนนี้: กำลัง{activity}",
@@ -858,6 +868,7 @@
             "here": "{n} ที่นี่",
             "noneNearby": "ไม่มีในบริเวณใกล้",
             "noneAboard": "ไม่มีที่นี่",
+            "dung": "มูลสัตว์",
             "keptFed": "ผู้ดูแลให้อาหาร",
             "keptSafe": "ปลอดภัยจากผู้ล่า",
             "more": "อีก {n}",

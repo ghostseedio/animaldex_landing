@@ -406,7 +406,17 @@
             "crisis": "{animal}: luonnossa on jäljellä vain muutama",
             "saved": "{animal}: ei enää vaarassa luonnossa",
             "wildGone": "{animal}: luonnossa ei ole enää yhtään",
-            "toCare": "{animal}: nyt eläintarhan hoidossa"
+            "toCare": "{animal}: nyt eläintarhan hoidossa",
+            "grownUp": "{aAnimal}: nyt aikuinen",
+            "grewOld": "{aAnimal}: alkaa vanheta",
+            "breedingSeason": "{animals}: lisääntymiskausi on alkanut",
+            "carerLeft": "{aAnimal}: muutaman päivän ilman hoitajaa",
+            "newCarer": "{aAnimal}: uusi hoitaja on aloittanut",
+            "grazedBare": "{animals}: laidun on syöty paljaaksi",
+            "regrown": "{animals}: laidun on taas vihreä",
+            "matedFirst": "{aAnimal}: ensimmäinen parittelu",
+            "foundMate": "{aAnimal}: löysi kumppanin {days} päivän jälkeen",
+            "foundDung": "{aAnimal}: löysi tuoretta lantaa"
         },
         "card": {
             "now": "Nyt: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} täällä",
             "noneNearby": "Ei lähellä",
             "noneAboard": "Ei täällä",
+            "dung": "lanta",
             "keptFed": "Hoitajat ruokkivat",
             "keptSafe": "Turvassa pedoilta",
             "more": "+{n} lisää",

@@ -406,7 +406,17 @@
             "crisis": "{animal}: nur noch wenige in der Wildnis",
             "saved": "{animal}: in der Wildnis außer Gefahr",
             "wildGone": "{animal}: keine mehr in der Wildnis",
-            "toCare": "{animal}: jetzt im Zoo betreut"
+            "toCare": "{animal}: jetzt im Zoo betreut",
+            "grownUp": "{aAnimal}: jetzt erwachsen",
+            "grewOld": "{aAnimal}: wird langsam alt",
+            "breedingSeason": "{animals}: die Paarungszeit hat begonnen",
+            "carerLeft": "{aAnimal}: ein paar Tage ohne Pfleger",
+            "newCarer": "{aAnimal}: ein neuer Pfleger kümmert sich jetzt",
+            "grazedBare": "{animals}: die Weide ist kahl gefressen",
+            "regrown": "{animals}: die Weide ist wieder grün",
+            "matedFirst": "{aAnimal}: erste Paarung",
+            "foundMate": "{aAnimal}: Partner gefunden nach {days} Tagen",
+            "foundDung": "{aAnimal}: frischen Dung gefunden"
         },
         "card": {
             "now": "Jetzt: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} hier",
             "noneNearby": "Keins in der Nähe",
             "noneAboard": "Keins hier",
+            "dung": "Dung",
             "keptFed": "Von Pflegern gefüttert",
             "keptSafe": "Sicher vor Raubtieren",
             "more": "+{n} weitere",

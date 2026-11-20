@@ -728,6 +728,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     animalRhythm?: (id: string, options?: {budgetMs?: number; stepFeeds?: boolean}) => ArkRhythmStatus | "pending" | null;
     /** Record lines for animals' logs, from the server (the page's life story, the live log's events): never made up. */
     noteRecord?: (notes: readonly ArkRecordNote[]) => void;
+    /** Decision 434: whether a kind lives on dung (its stored microhabitats): the card's Eats line says "dung". */
+    eatsDung?: (slug: string, zone: ArkZone) => boolean;
     /**
      * Lane ark-its-day: an animal's day over a window (epoch ms, at most a day long, at most a week back, clamped): what
      * it did as the card would have said it at every moment (the same schedule and status function), and its record

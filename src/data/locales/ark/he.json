@@ -406,7 +406,17 @@
             "crisis": "{animal}: נותר מספר קטן בלבד בטבע",
             "saved": "{animal}: מחוץ לסכנה בטבע",
             "wildGone": "{animal}: לא נותר אף פרט בטבע",
-            "toCare": "{animal}: כעת בטיפול גן החיות"
+            "toCare": "{animal}: כעת בטיפול גן החיות",
+            "grownUp": "{aAnimal}: כבר בוגר",
+            "grewOld": "{aAnimal}: מתחיל להזדקן",
+            "breedingSeason": "{animals}: עונת הרבייה החלה",
+            "carerLeft": "{aAnimal}: בלי מטפל לכמה ימים",
+            "newCarer": "{aAnimal}: מטפל חדש התחיל",
+            "grazedBare": "{animals}: המרעה נאכל עד היסוד",
+            "regrown": "{animals}: המרעה שוב ירוק",
+            "matedFirst": "{aAnimal}: הזדווגות ראשונה",
+            "foundMate": "{aAnimal}: נמצא בן זוג אחרי {days} ימים",
+            "foundDung": "{aAnimal}: נמצא גללים טריים"
         },
         "card": {
             "now": "עכשיו: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} כאן",
             "noneNearby": "אין בקרבת מקום",
             "noneAboard": "אין כאן",
+            "dung": "גללים",
             "keptFed": "מטפליו מאכילים אותו",
             "keptSafe": "מוגן מטורפים",
             "more": "+{n} נוספים",

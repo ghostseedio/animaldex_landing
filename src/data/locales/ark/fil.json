@@ -406,7 +406,17 @@
             "crisis": "{animal}: kakaunti na lang ang natitira sa kalikasan",
             "saved": "{animal}: ligtas na sa panganib sa kalikasan",
             "wildGone": "{animal}: wala nang natitira sa kalikasan",
-            "toCare": "{animal}: inaalagaan na ngayon sa zoo"
+            "toCare": "{animal}: inaalagaan na ngayon sa zoo",
+            "grownUp": "{aAnimal}: ganap nang malaki",
+            "grewOld": "{aAnimal}: nagsisimula nang tumanda",
+            "breedingSeason": "{animals}: nagsimula na ang panahon ng pagpaparami",
+            "carerLeft": "{aAnimal}: walang tagapag-alaga nang ilang araw",
+            "newCarer": "{aAnimal}: may bagong tagapag-alaga na",
+            "grazedBare": "{animals}: ubos na ang damuhan",
+            "regrown": "{animals}: luntian na ulit ang damuhan",
+            "matedFirst": "{aAnimal}: unang pagtatalik",
+            "foundMate": "{aAnimal}: nakahanap ng kapareha pagkalipas ng {days} araw",
+            "foundDung": "{aAnimal}: nakahanap ng sariwang dumi"
         },
         "card": {
             "now": "Ngayon: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} dito",
             "noneNearby": "Walang malapit",
             "noneAboard": "Wala rito",
+            "dung": "dumi ng hayop",
             "keptFed": "Pinapakain ng tagapag-alaga",
             "keptSafe": "Ligtas sa maninila",
             "more": "+{n} pa",

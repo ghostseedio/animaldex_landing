@@ -206,7 +206,7 @@ export function arkActivityKey(input: ArkActivityInput): ArkActivityKey {
 // MARK: The status
 
 /** A server record's kind, as the card's log says it. */
-export type ArkRecordKind = "arrived" | "born" | "hatched" | "meal" | "young" | "laid" | "mated" | "stepFed";
+export type ArkRecordKind = "arrived" | "born" | "hatched" | "meal" | "young" | "laid" | "mated" | "stepFed" | "said";
 
 /**
  * One line of an animal's own log. `record`: the server's (stamped with its Ark day); `schedule`: what its schedule had
@@ -228,6 +228,8 @@ export type ArkStatusLogEntry = {
     other?: string | null;
     /** Young in a litter, eggs in a clutch. */
     count?: number | null;
+    /** A line already said in the reader's words (`said`: the scene's rich lines, `src/ark-scene/live/rich-lines.ts`). */
+    text?: string;
 };
 
 export type ArkBarTone = "good" | "warn" | "bad";
@@ -290,7 +292,7 @@ export function arkStatusLog(schedule: readonly ArkStatusLogEntry[], record: rea
 // MARK: The record
 
 /** A record line the page or the log noted for an animal (the life story's last meal, the event log's young). */
-export type ArkRecordNote = {animalId: string; id: string; kind: ArkRecordKind; at: number; day: number | null; other?: string | null; count?: number | null; via?: "capture" | "step" | null};
+export type ArkRecordNote = {animalId: string; id: string; kind: ArkRecordKind; at: number; day: number | null; other?: string | null; count?: number | null; via?: "capture" | "step" | null; text?: string};
 
 /** An animal's first record line, from the snapshot: it came aboard (when), or was born (its born day). */
 export function arkOriginEntry(animal: {id: string; arrived_at: string; origin?: "arrived" | "born"; born_ark_day?: number | null; source?: "capture" | "step" | null}, hatched = false): ArkStatusLogEntry {
@@ -785,7 +787,7 @@ export function arkStatusText(status: ArkAnimalStatus, words: ArkStatusWords, lo
                 text = words.card.stepFed || ARK_CARD_ENGLISH.stepFed;
                 break;
             default:
-                text = "";
+                text = entry.text ?? "";
         }
         return {id: entry.id, source: entry.source, stamp: day(entry), text};
     });

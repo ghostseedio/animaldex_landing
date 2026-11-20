@@ -406,7 +406,17 @@
             "crisis": "{animal}: doğada yalnızca birkaçı kaldı",
             "saved": "{animal}: doğada artık tehlikede değil",
             "wildGone": "{animal}: doğada hiçbiri kalmadı",
-            "toCare": "{animal}: şimdi hayvanat bahçesinin bakımında"
+            "toCare": "{animal}: şimdi hayvanat bahçesinin bakımında",
+            "grownUp": "{aAnimal}: artık yetişkin",
+            "grewOld": "{aAnimal}: yaşlanmaya başladı",
+            "breedingSeason": "{animals}: üreme mevsimi başladı",
+            "carerLeft": "{aAnimal}: birkaç gün bakıcısız",
+            "newCarer": "{aAnimal}: yeni bir bakıcı görevi devraldı",
+            "grazedBare": "{animals}: otlak tamamen yenip bitti",
+            "regrown": "{animals}: otlak yeniden yeşil",
+            "matedFirst": "{aAnimal}: ilk çiftleşme",
+            "foundMate": "{aAnimal}: {days} gün sonra eş buldu",
+            "foundDung": "{aAnimal}: taze dışkı buldu"
         },
         "card": {
             "now": "Şimdi: {activity}",
@@ -858,6 +868,7 @@
             "here": "Burada {n}",
             "noneNearby": "Yakında yok",
             "noneAboard": "Burada yok",
+            "dung": "dışkı",
             "keptFed": "Bakıcıları besliyor",
             "keptSafe": "Avcılardan güvende",
             "more": "+{n} daha",

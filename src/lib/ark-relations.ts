@@ -255,6 +255,8 @@ export type ArkRelationsWords = {
     here: string;
     noneNearby: string;
     noneAboard: string;
+    /** Decision 434: a dung user's food on its Eats line. */
+    dung: string;
     /** A kept animal's chain: fed by its keepers, safe from predators. */
     keptFed: string;
     keptSafe: string;
@@ -277,6 +279,7 @@ export const ARK_RELATIONS_ENGLISH: ArkRelationsWords = {
     here: "{n} here",
     noneNearby: "None nearby",
     noneAboard: "None aboard here",
+    dung: "dung",
     keptFed: "Fed by its keepers",
     keptSafe: "Safe from predators",
     more: "+{n} more",

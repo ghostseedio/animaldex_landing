@@ -406,7 +406,17 @@
             "crisis": "{animal} : il n'en reste que peu à l'état sauvage",
             "saved": "{animal} : hors de danger à l'état sauvage",
             "wildGone": "{animal} : plus aucun individu à l'état sauvage",
-            "toCare": "{animal} : désormais sous les soins du zoo"
+            "toCare": "{animal} : désormais sous les soins du zoo",
+            "grownUp": "{aAnimal}: désormais adulte",
+            "grewOld": "{aAnimal}: commence à vieillir",
+            "breedingSeason": "{animals}: la saison de reproduction a commencé",
+            "carerLeft": "{aAnimal}: sans soigneur pendant quelques jours",
+            "newCarer": "{aAnimal}: un nouveau soigneur a pris le relais",
+            "grazedBare": "{animals}: pâturage tondu à ras",
+            "regrown": "{animals}: pâturage de nouveau vert",
+            "matedFirst": "{aAnimal}: premier accouplement",
+            "foundMate": "{aAnimal}: partenaire trouvé après {days} jours",
+            "foundDung": "{aAnimal}: bouse fraîche trouvée"
         },
         "card": {
             "now": "Maintenant : {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} ici",
             "noneNearby": "Aucun à proximité",
             "noneAboard": "Aucun ici",
+            "dung": "bouse",
             "keptFed": "Nourri par ses soigneurs",
             "keptSafe": "À l'abri des prédateurs",
             "more": "+{n} de plus",

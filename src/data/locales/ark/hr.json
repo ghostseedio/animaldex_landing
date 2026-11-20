@@ -406,7 +406,17 @@
             "crisis": "{animal}: u divljini je ostalo tek nekoliko jedinki",
             "saved": "{animal}: izvan opasnosti u divljini",
             "wildGone": "{animal}: u divljini više nema nijedne jedinke",
-            "toCare": "{animal}: sada u skrbi zoološkog vrta"
+            "toCare": "{animal}: sada u skrbi zoološkog vrta",
+            "grownUp": "{aAnimal}: sada odrasla jedinka",
+            "grewOld": "{aAnimal}: počinje stariti",
+            "breedingSeason": "{animals}: počela je sezona parenja",
+            "carerLeft": "{aAnimal}: nekoliko dana bez njegovatelja",
+            "newCarer": "{aAnimal}: preuzeo je novi njegovatelj",
+            "grazedBare": "{animals}: pašnjak je popasen do gola",
+            "regrown": "{animals}: pašnjak je ponovno zelen",
+            "matedFirst": "{aAnimal}: prvo parenje",
+            "foundMate": "{aAnimal}: partner pronađen nakon {days} dana",
+            "foundDung": "{aAnimal}: pronađen svjež izmet"
         },
         "card": {
             "now": "Sada: {activity}",
@@ -858,6 +868,7 @@
             "here": "{n} ovdje",
             "noneNearby": "Nijedan u blizini",
             "noneAboard": "Nijedan ovdje",
+            "dung": "izmet",
             "keptFed": "Hrane ga čuvari",
             "keptSafe": "Siguran od grabežljivaca",
             "more": "+{n} više",

@@ -406,7 +406,17 @@
             "crisis": "{animal}: বনে মাত্র কয়েকটি বাকি",
             "saved": "{animal}: বনে আর বিপদে নেই",
             "wildGone": "{animal}: বনে আর একটিও নেই",
-            "toCare": "{animal}: এখন চিড়িয়াখানায় যত্নে আছে"
+            "toCare": "{animal}: এখন চিড়িয়াখানায় যত্নে আছে",
+            "grownUp": "{aAnimal}: এখন পূর্ণবয়স্ক",
+            "grewOld": "{aAnimal}: বুড়ো হতে শুরু করেছে",
+            "breedingSeason": "{animals}: প্রজনন ঋতু শুরু হয়েছে",
+            "carerLeft": "{aAnimal}: কয়েক দিন কোনো পরিচর্যাকারী নেই",
+            "newCarer": "{aAnimal}: নতুন পরিচর্যাকারী দায়িত্ব নিয়েছে",
+            "grazedBare": "{animals}: চারণভূমি খেয়ে ফাঁকা",
+            "regrown": "{animals}: চারণভূমি আবার সবুজ",
+            "matedFirst": "{aAnimal}: প্রথমবার মিলন",
+            "foundMate": "{aAnimal}: {days} দিন পর সঙ্গী পেয়েছে",
+            "foundDung": "{aAnimal}: তাজা গোবর পেয়েছে"
         },
         "card": {
             "now": "এখন: {activity}",
@@ -858,6 +868,7 @@
             "here": "এখানে {n}",
             "noneNearby": "কাছাকাছি নেই",
             "noneAboard": "এখানে কেউ নেই",
+            "dung": "গোবর",
             "keptFed": "রক্ষকেরা খাওয়ায়",
             "keptSafe": "শিকারি থেকে নিরাপদ",
             "more": "আরও +{n}",
