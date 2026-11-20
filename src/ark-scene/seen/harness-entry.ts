@@ -383,14 +383,12 @@ async function main() {
         if (!current) return null;
         const need = READ_SECONDS[current.kind] ?? 2;
         let best = 0;
-        let run = 0;
-        let from = 0;
+        let from: number | null = null;
         for (const r of reads) {
             if (r.ok) {
-                if (!run) from = r.t;
-                run = r.t - from;
-                best = Math.max(best, run);
-            } else run = 0;
+                from ??= r.t;
+                best = Math.max(best, r.t - from);
+            } else from = null;
         }
         const why: Record<string, number> = {};
         for (const r of reads) if (!r.ok) why[r.why] = (why[r.why] ?? 0) + 1;

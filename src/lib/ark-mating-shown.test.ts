@@ -221,3 +221,41 @@ test("a clutch laid before the page read its log is put where the young are, the
     layer.step(200 + 11 * 60);
     assert.equal(nests.has("laid:9"), false, "overdue: gone");
 });
+
+test("two small animals off any day (on a wall, on a flower) are acted, not skipped: he goes to her surface, by the ground or flying", async () => {
+    const {LiveMatings} = await import("@/ark-scene/live-matings");
+    type E = {id: string; x: number; z: number; base: number; act: ActPose | null; male: boolean | null; fly: boolean};
+    for (const fly of [false, true]) {
+        const she: E = {id: "she", x: 0, z: 0, base: 1.5, act: null, male: false, fly};
+        const he: E = {id: "he", x: 8, z: 0, base: 0.4, act: null, male: true, fly};
+        const layer = new LiveMatings<E>({
+            find: (id) => [she, he].find((e) => e.id === id) ?? null,
+            scheduleAt: () => null,
+            ground: () => 0,
+            walk: () => 0.3,
+            length: () => 0.02,
+            height: () => 0.01,
+            plan: () => (fly ? "flying_insect" : "arthropod"),
+            courtship: () => null,
+            male: (e) => e.male,
+            together: () => true,
+            setAct: (e, pose) => {
+                e.act = pose;
+            },
+            busy: () => false,
+            placeOf: (e) => ({x: e.x, z: e.z, yaw: 0, base: e.base, free: true}),
+            flies: (e) => e.fly
+        });
+        layer.add([{key: `free${fly}`, a: "she", b: "he", t0: 0}], 0);
+        layer.step(0.05);
+        const d = layer.debug()[0];
+        assert.equal(d.phase, "acting");
+        assert.equal(d.how, "free");
+        assert.ok(Math.abs(he.act!.x - 8) < 0.1 && Math.abs(he.act!.base - 0.4) < 0.05, "he starts on his own surface");
+        layer.step(d.meet! / 2);
+        const mid = he.act!.base;
+        assert.ok(fly ? mid > 0.9 : mid < 0.05, fly ? "flying over" : "down on the ground between");
+        layer.step((d.courted! + d.mounted!) / 2);
+        assert.ok(Math.abs(she.act!.base - 1.5) < 0.05 && Math.hypot(he.act!.x - she.act!.x, he.act!.z - she.act!.z) < 0.1, "together on her surface");
+    }
+});

@@ -127,7 +127,7 @@ export function hatchlingPose(s: number, k: number, n: number, nest: Point & {si
     return mk(lerpP(at, back, ease(p)), d > 0.03 ? yawTo(at, back) : angle, "walk", {speed: d / HATCH_PART});
 }
 
-type Laying = {act: LaidAct; mother: string | null; start: number | null; from: (Point & {yaw: number}) | null; spot: Point | null; laid: boolean; done: boolean; acting: boolean};
+type Laying = {act: LaidAct; mother: string | null; start: number | null; from: (Point & {yaw: number}) | null; spot: Point | null; laid: boolean; done: boolean; acting: boolean; /** One off any day (housed, or a small animal on its wall): her own floor, not the ground. */ floor: number | null};
 type Hatching = {act: HatchedAct; nest: string | null; acting: Set<string>; done: boolean; hatched: boolean};
 
 export class LiveClutches<E> {
@@ -147,7 +147,7 @@ export class LiveClutches<E> {
         const known = new Set(this.layings.map((l) => l.act.key));
         for (const act of acts) {
             if (known.has(act.key) || !act.parents.length || !Number.isFinite(act.t0) || this.kept.some((c) => c.key === act.key)) continue;
-            this.layings.push({act, mother: null, start: null, from: null, spot: null, laid: false, done: false, acting: false});
+            this.layings.push({act, mother: null, start: null, from: null, spot: null, laid: false, done: false, acting: false, floor: null});
             known.add(act.key);
         }
     }
@@ -233,12 +233,13 @@ export class LiveClutches<E> {
                     continue;
                 }
                 l.from = {x: at.x, z: at.z, yaw: at.yaw};
+                l.floor = housed ? housed.base : null;
                 l.spot = housed ? {x: at.x, z: at.z} : laySpot(at, h.length(entry), l.act.key, h.clutchSpot(mother.id));
             }
             const spot = l.spot!;
             if (!l.laid && s >= LAY_AT) {
                 l.laid = true;
-                h.lay(l.act.key, {...spot, base: h.ground(spot.x, spot.z)}, entry, l.act.eggs, s - LAY_AT);
+                h.lay(l.act.key, {...spot, base: l.floor ?? h.ground(spot.x, spot.z)}, entry, l.act.eggs, s - LAY_AT);
                 this.keep(l.act.key, l.act.parents, l.act.hatchAt);
             }
             const back = h.scheduleAt(entry, epoch);
@@ -248,7 +249,8 @@ export class LiveClutches<E> {
                 if (s > LAY_AT) l.done = true;
                 continue;
             }
-            const pose = layPose(s, l.from, spot, back, h.length(entry), h.walk(entry), h.ground);
+            const floor = l.floor;
+            const pose = layPose(s, l.from, spot, back ?? (floor !== null ? l.from : null), h.length(entry), h.walk(entry), floor !== null ? () => floor : h.ground);
             if (pose) {
                 h.setAct(entry, pose);
                 l.acting = true;
@@ -260,7 +262,7 @@ export class LiveClutches<E> {
                 l.done = true;
                 if (!l.laid) {
                     l.laid = true;
-                    h.lay(l.act.key, {...spot, base: h.ground(spot.x, spot.z)}, entry, l.act.eggs, 0);
+                    h.lay(l.act.key, {...spot, base: l.floor ?? h.ground(spot.x, spot.z)}, entry, l.act.eggs, 0);
                     this.keep(l.act.key, l.act.parents, l.act.hatchAt);
                 }
             }
@@ -299,9 +301,13 @@ export class LiveClutches<E> {
             let any = false;
             young.forEach(({id, entry}, k) => {
                 if (h.busy(entry)) return;
-                const back = h.scheduleAt(entry, epoch);
+                const day = h.scheduleAt(entry, epoch);
+                const own = day ? null : h.placeOf?.(entry) ?? null;
+                const back = day ?? own;
+                // (On the clutch's own surface, a wall's or a leaf's too, until it walks off to its day's ground.)
+                const surface = (x: number, z: number) => (day && Math.hypot(x - nest.x, z - nest.z) > nest.size * 1.5 ? h.ground(x, z) : nest.y);
                 // (Before it begins: out of sight in the egg.)
-                const pose = s < 0 ? {...hatchlingPose(0, k, young.length, nest, back, h.ground)!, hidden: true} : hatchlingPose(s, k, young.length, nest, back, h.ground);
+                const pose = s < 0 ? {...hatchlingPose(0, k, young.length, nest, back, surface)!, hidden: true} : hatchlingPose(s, k, young.length, nest, back, surface);
                 if (pose) {
                     h.setAct(entry, pose);
                     x.acting.add(id);

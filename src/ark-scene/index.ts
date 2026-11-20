@@ -8062,6 +8062,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const moves = Boolean(island.tankPose(id, entry.length, entry.drawnHeight || entry.length * 0.3, clockNow()) ?? island.roomPose(id, entry.length, clockNow()));
         return moves ? {x: at.x, z: at.z, yaw: at.yaw, base: at.base} : {x: entry.place.x, z: entry.place.z, yaw: entry.place.yaw ?? at.yaw, base: at.base};
     };
+    /**
+     * ARK-MATING-SHOWN: where an act takes one with no day: a held one's place (`housedPlace`), else, for a small animal
+     * off any day (on its wall, its flower, its leaf: `map/place.ts` onSchedule), where it is drawn, `free`.
+     */
+    const actPlace = (entry: Entry): {x: number; z: number; yaw: number; base: number; free?: boolean} | null => {
+        const housed = housedPlace(entry);
+        if (housed || entry.sched || reducedMotion || island?.held(entry.animal.id)) return housed;
+        const at = bodyOf(entry);
+        return {x: at.x, z: at.z, yaw: at.yaw, base: at.base, free: true};
+    };
     /** The record's matings acted out (owner 2026-11-15): the two walk to each other, court, nuzzle and lie together. */
     const liveMatings = new LiveMatings<Entry>({
         find: (id) => {
@@ -8115,7 +8125,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return best?.entry ?? null;
         },
         // V1: one with no day to walk from (the town's held: a zoo house's, a tank's, a cage's or a room's resident) is where the scene draws it now.
-        placeOf: (entry) => housedPlace(entry),
+        // ARK-MATING-SHOWN: and one off any day that is not held (a small animal on its wall, its flower, its leaf): where
+        // it is drawn, `free` (he goes to her there).
+        placeOf: (entry) => actPlace(entry),
+        flies: (entry) => {
+            const plan = library.get(entry.animal.model_slug)?.behaviour?.plan ?? "";
+            return FLYERS.has(entry.animal.model_slug) || /fly|butterfly|bird|bat/.test(plan);
+        },
         // ARK-MATING-SHOWN (decision 416): a meeting that can be seen: dry ground for land animals, nothing solid over it.
         clear: (p, wet) => {
             const ground = heightAt(p.x, p.z);
@@ -8165,7 +8181,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id)),
         // V1: one with no day (the town's held: a tank's, a cage's, a room's or a zoo house's resident) is where the scene
         // draws it now; after a birth there each young comes in where it lives with the scene's own entrance.
-        placeOf: (entry) => housedPlace(entry),
+        placeOf: (entry) => actPlace(entry), // ARK-MATING-SHOWN: and a small animal off any day, where it is drawn
         appear: (entry) => {
             entry.arrivedAt = elapsedNow();
         }
@@ -8589,7 +8605,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const at = schedulePose(entry, epoch);
             return at.aloft ? null : {x: at.x, z: at.z, yaw: at.yaw};
         },
-        placeOf: (entry) => housedPlace(entry),
+        placeOf: (entry) => actPlace(entry),
         ground: (x, z) => Math.max(heightAt(x, z), -0.3),
         length: (entry) => entry.length,
         walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
@@ -8603,9 +8619,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         lay: (key, at, mother, eggs, ago) => {
             const water = waterTopAt(at.x, at.z) > heightAt(at.x, at.z) + 0.05;
             const kind = nestKind({plan: library.get(mother.animal.model_slug)?.behaviour?.plan, slug: mother.animal.model_slug, water});
-            // (A small animal on its wall, trunk or flower: the eggs where it is.)
-            const micro = mother.place.micro && mother.middle ? mother.middle.y - mother.drawnHeight * 0.5 : null;
-            const y = micro ?? Math.max(heightAt(at.x, at.z), 0) + (kind === "spawn" ? -0.05 : 0);
+            // (On her own floor when she has one, a tank's, a cage's, a wall's or a flower's: the eggs where she is.)
+            const own = Math.abs(at.base - Math.max(heightAt(at.x, at.z), -0.3)) > 0.02;
+            const y = own ? at.base : Math.max(heightAt(at.x, at.z), 0) + (kind === "spawn" ? -0.05 : 0);
             nests.lay(key, {x: at.x, y, z: at.z}, clutchSize(mother.length), kind, eggs, performance.now() / 1000 - ago);
         },
         hatch: (key, ago) => nests.hatch(key, performance.now() / 1000 - ago, HATCHLINGS_SECONDS + ArkNests.YOUNG_AFTER + 1.1),
