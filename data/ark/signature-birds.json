@@ -284,8 +284,9 @@
    "quote": "The male incubates the clutch for around eight weeks, eating and drinking very little and losing a large proportion of his body weight, then raises the chicks for over a year.",
    "catalogueId": "3b8a166c-8356-4da3-ac38-edabca7b5e86",
    "when": "nesting",
-   "line": "{aAnimal} is sitting on his eggs, eating and drinking very little",
-   "maleSits": true
+   "line": null,
+   "maleSits": true,
+   "note": "its line says 'his': the log's rule is that no line names a sex, and an incubate_sit episode is no recipe of the species' own row; held back"
   },
   {
    "slug": "southern-cassowary",
@@ -297,8 +298,9 @@
    "quote": "The male Southern Cassowary takes sole responsibility for incubating the strikingly green eggs and raising the chicks for up to nine months.",
    "catalogueId": "c9a44c8e-8425-4c51-9238-a04b94266773",
    "when": "nesting",
-   "line": "{aAnimal} is sitting alone on his green eggs",
-   "maleSits": true
+   "line": null,
+   "maleSits": true,
+   "note": "its line says 'his': the log's rule is that no line names a sex, and an incubate_sit episode is no recipe of the species' own row; held back"
   },
   {
    "slug": "greater-rhea",

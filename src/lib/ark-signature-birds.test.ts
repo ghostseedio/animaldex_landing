@@ -54,13 +54,13 @@ test("wave 2, birds: each row's recipe is on the species' row (or its flag, or i
     assert.equal(BLOCKS.swoop.curve, "plunge");
 });
 
-test("wave 2, birds: the log lines are the species' own and say only what the recipe shows (no sex, season or time of day unless the male alone sits)", () => {
+test("wave 2, birds: the log lines are the species' own and say only what the recipe shows (no sex, season or time of day)", () => {
     const words = /\b(male|female|he|she|his|her|winter|summer|spring|autumn|season|dusk|dawn|night|twilight|evening|morning)\b/i;
     const species = (lines as unknown as {species: Record<string, Record<string, string>>}).species;
     for (const r of rows) {
         if (!r.line) continue;
         assert.equal(species[r.slug]?.[r.recipe], r.line, `${r.slug} ${r.recipe}`);
-        if (!r.maleSits) assert.ok(!words.test(r.line), `${r.slug}: ${r.line}`);
+        assert.ok(!words.test(r.line), `${r.slug}: ${r.line}`);
         assert.ok(r.line.startsWith("{aAnimal}") || r.line.startsWith("{animals}"), r.line);
     }
     // A flock-only roost has no episode of its own: no line (nothing could say it).
