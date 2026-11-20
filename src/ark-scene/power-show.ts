@@ -40,6 +40,9 @@ import {canEat, intelProfile} from "@/ark-scene/intelligence-profile";
 import {ZONE_PALETTES} from "@/ark-scene/palettes";
 import {arkPowerOf, arkPowerStrength, type ArkPower, type ArkPowerMechanism} from "@/ark-scene/power-table";
 import {arkSeenStates} from "@/ark-scene/seen/hooks";
+import {speciesRecipes, type Flock} from "@/ark-scene/behaviour-recipes";
+import {TEMPLATES} from "@/ark-scene/recipe-templates";
+import {arkPowerAct, arkPowerActsVersion, boundArkPowerAct, registerArkPowerAct, type ArkPowerActInput, type ArkPowerActOut} from "@/ark-scene/power-acts";
 import type {ArkAnimal, ArkSnapshot, ArkThrive} from "@/ark-scene/types";
 
 /** The shader's looks (`ark-variation.ts` FRAGMENT): what `arkPower.w` says. */
@@ -70,6 +73,14 @@ export type ArkPowerFrame = {
     /** (Internal.) Who it is threatened by now (a point), for a dart's direction. */
     fromX: number;
     fromZ: number;
+    /** The act it plays (`power-acts.ts` names: `defence:<move>`, `recipe:<template>`, a lane's, `generic:<mechanism>`). */
+    act: string | null;
+    /** (Internal.) When its Power began showing this time (s), or -1. */
+    since: number;
+    /** A rig state its act plays, or null. */
+    state: string | null;
+    /** An ambient flock its act draws round it (the recipes' cluster or swarm), or null. */
+    flock: Flock | null;
 };
 
 /** One drawn animal, as the scene's candidate list has it (only what is read here). */
@@ -216,7 +227,85 @@ export function passPhase(t: number): [number, number] {
  */
 const demo = () => Boolean((globalThis as {__arkPowerDemo?: boolean}).__arkPowerDemo);
 
-const frameOf = (): ArkPowerFrame => ({mechanism: null, react: 0, q: 0, look: null, pack: 0, still: 0, drop: 0, head: null, threat: 0, check: 0, fromX: 0, fromZ: 0});
+const frameOf = (): ArkPowerFrame => ({mechanism: null, react: 0, q: 0, look: null, pack: 0, still: 0, drop: 0, head: null, threat: 0, check: 0, fromX: 0, fromZ: 0, act: null, since: -1, state: null, flock: null});
+
+// MARK: Acts (`power-acts.ts`)
+
+/** The catalogue recipes that are a mechanism's act, in the order tried (decision 367's recipes, played on demand). */
+export const MECHANISM_RECIPES: Readonly<Record<string, readonly string[]>> = {hiding: ["bury_sand", "dig_burrow"], group: ["cluster", "swarm"]};
+
+/** A recipe's hold steps as an on-demand timeline: the block at `t` s, looped (its travel steps left out). */
+function recipeBlockAt(id: string, t: number): {block: string; u: number} | null {
+    const template = TEMPLATES[id];
+    const holds = (template?.steps ?? []).filter((step) => BLOCKS[step.b]?.motion === "hold");
+    if (!holds.length) return null;
+    const lengths = holds.map((step) => {
+        const span = (step as {s?: [number, number]}).s;
+        // (A short version: the act is shown while it is threatened, not for its full minutes.)
+        return Math.min(span ? (span[0] + span[1]) / 2 : 4, 6);
+    });
+    const total = lengths.reduce((a, b) => a + b, 0);
+    let at = ((t % total) + total) % total;
+    for (let i = 0; i < holds.length; i++) {
+        if (at < lengths[i]) return {block: holds[i].b, u: at / lengths[i]};
+        at -= lengths[i];
+    }
+    return {block: holds[holds.length - 1].b, u: 1};
+}
+
+/** A catalogue recipe as an act: its blocks' attitude (pitch, roll, a burrower's heave down) and their rig states. */
+function recipeAct(id: string) {
+    return (input: ArkPowerActInput): ArkPowerActOut | null => {
+        if (id === "cluster" || id === "swarm") return {flock: id, still: input.amount, turn: "face"};
+        const now = recipeBlockAt(id, input.t);
+        const block = now ? BLOCKS[now.block] : null;
+        if (!block) return null;
+        const a = input.amount;
+        const wave = block.rate ? Math.sin(input.t * block.rate * 2 * Math.PI) : 0;
+        const heave = block.heave ?? 0;
+        // (A bury's heave is down into the ground, in body lengths: never deeper than most of its height.)
+        const drop = heave < 0 ? Math.min(Math.abs(heave) * input.length, input.height * 0.8) * a * Math.min(now!.u * 3, 1) : 0;
+        return {pitch: ((block.pitch ?? 0) + (block.pitchWave ?? 0) * wave) * a, roll: ((block.roll ?? 0) + (block.rollWave ?? 0) * wave) * a, drop, still: a, turn: "away", state: block.states[0] ?? null};
+    };
+}
+
+const defenceAct = (input: ArkPowerActInput): ArkPowerActOut | null => {
+    const own = ownAct(input.slug);
+    return own ? {pack: own(input.amount, input.plan), still: input.amount} : null;
+};
+
+const chosen = new Map<string, string>();
+let chosenAt = -1;
+
+/** The act a species plays for its mechanism (see `power-acts.ts` for the order). Registers the built-in acts as needed. */
+export function powerActName(slug: string, mechanism: ArkPowerMechanism): string {
+    const version = arkPowerActsVersion();
+    if (version !== chosenAt) {
+        chosen.clear();
+        chosenAt = version;
+    }
+    const key = `${slug}|${mechanism}`;
+    const hit = chosen.get(key);
+    if (hit) return hit;
+    let name = boundArkPowerAct(slug);
+    if (!name) {
+        const move = defenceMoveOf(slug);
+        if (move && move.move !== "tail") name = `defence:${move.move}`;
+    }
+    if (!name) {
+        const has = speciesRecipes(slug).has;
+        const id = (MECHANISM_RECIPES[mechanism] ?? []).find((recipe) => has.has(recipe));
+        if (id) name = `recipe:${id}`;
+    }
+    name ??= `generic:${mechanism}`;
+    if (!name.startsWith("generic:") && !arkPowerAct(name)) {
+        registerArkPowerAct(name, name.startsWith("defence:") ? defenceAct : recipeAct(name.slice("recipe:".length)));
+        // (Registering moved the version on: keep the choices made so far.)
+        chosenAt = arkPowerActsVersion();
+    }
+    chosen.set(key, name);
+    return name;
+}
 
 type Hunter = {id: string; target: string | null; since: number | null};
 
@@ -379,8 +468,14 @@ export function createArkPowerShow(): ArkPowerShow {
                 f.still = 0;
                 f.drop = 0;
                 f.head = null;
+                f.state = null;
                 if (f.react > 0.02 || f.q > 0) showing++;
-                if (r <= 0.004) continue;
+                if (f.react <= 0.02) f.since = -1;
+                else if (f.since < 0) f.since = now;
+                if (r <= 0.004) {
+                    f.flock = null;
+                    continue;
+                }
                 const p = c.pose;
                 const len = Math.max(e.length, 0.05);
                 const awayX = p.x - f.fromX;
@@ -392,14 +487,31 @@ export function createArkPowerShow(): ArkPowerShow {
                     p.yaw += d * share;
                 };
                 const awayYaw = Math.atan2(awayX, awayZ);
-                // Its own act first (decision 367's catalogue, as the defence moves carry it: a ball, a coil, a shell, a
-                // swell, wings flashed open): the species' sourced defence plays in place of the generic pose.
-                const own = ownAct(e.animal.model_slug);
-                if (own) {
-                    f.pack = own(r, c.model?.behaviour?.plan ?? null);
-                    f.still = r;
+                // Its own act first (`power-acts.ts`: a lane's, its sourced defence move, a catalogue recipe played on
+                // demand): it plays in place of the generic pose.
+                f.act = powerActName(e.animal.model_slug, f.mechanism);
+                const act = f.act.startsWith("generic:") ? null : arkPowerAct(f.act);
+                const out = act ? act({slug: e.animal.model_slug, mechanism: f.mechanism, amount: r, t: now - Math.max(f.since, 0), plan: c.model?.behaviour?.plan ?? null, length: len, height: c.modelHeight}) : null;
+                if (out) {
+                    f.pack = out.pack ?? 0;
+                    f.still = out.still ?? 0;
+                    f.drop = out.drop ?? 0;
+                    f.state = out.state ?? null;
+                    p.pitch += out.pitch ?? 0;
+                    p.roll += out.roll ?? 0;
+                    if (out.turn) turn(out.turn === "away" ? awayYaw : awayYaw + Math.PI, r);
+                    if (out.flock) {
+                        const flock = (f.flock ??= {centre: {x: 0, y: 0, z: 0}, seed: seedOf(e.animal.id) * 1e6, t0: 0, t1: 0, kind: out.flock});
+                        flock.centre.x = p.x;
+                        flock.centre.y = p.base;
+                        flock.centre.z = p.z;
+                        flock.t0 = now - 60;
+                        flock.t1 = now + 60;
+                        flock.kind = out.flock;
+                    } else f.flock = null;
                     continue;
                 }
+                f.flock = null;
                 switch (f.mechanism) {
                     case "camouflage":
                     case "warning":

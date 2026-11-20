@@ -96,7 +96,7 @@ async function main() {
          * nothing threatening it, is left parked there, then a threat (the demo's) for `settle` s: what moves, moves in the
          * picture (a dart, a duck, a turn, ranks closing), and the coat shows as it does.
          */
-        shoot: async (ids: string[], hours: number, band: "prime" | "ordinary", settle = 2.5, look = 0.86) => {
+        shoot: async (ids: string[], hours: number, band: "prime" | "ordinary", keep = false, settle = 2.5, look = 0.86) => {
             const set = new Set(ids);
             snapshot = {...snapshot, animals: snapshot.animals.map((a) => (set.has(a.id) ? {...a, thrive: band} : a))};
             handle.update(snapshot);
@@ -107,7 +107,9 @@ async function main() {
             run(0.5);
             await settleLoading();
             run(3);
-            handle.select(null);
+            // (An act in place stays looked at, so the leaves in its way fold as in the focus view; a dart or a herd's
+            // ranks closing are watched from a parked camera.)
+            if (!keep) handle.select(null);
             run(0.3);
             (globalThis as {__arkPowerDemo?: boolean}).__arkPowerDemo = true;
             run(settle);

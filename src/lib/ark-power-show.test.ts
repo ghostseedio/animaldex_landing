@@ -155,3 +155,29 @@ test("an animal's Power by its kind (the canonical id first)", () => {
     assert.equal(arkPowerOf({species_profile_id: "00000000-x", kind_species_profile_id: row.id})?.mechanism, "camouflage");
     assert.equal(arkPowerOf({species_profile_id: row.id, kind_species_profile_id: null})?.mechanism, "camouflage");
 });
+
+test("acts: a lane's bound act first, then the sourced defence move, then a catalogue recipe on demand, else the generic pose", async () => {
+    const {powerActName, MECHANISM_RECIPES} = await import("@/ark-scene/power-show");
+    const {arkPowerAct, bindArkPowerAct, registerArkPowerAct} = await import("@/ark-scene/power-acts");
+    const {defenceMoveOf} = await import("@/ark-scene/defence-moves");
+    const {speciesRecipes} = await import("@/ark-scene/behaviour-recipes");
+    const shown = rows.filter((row) => row.mechanism !== "none");
+    const defended = shown.find((row) => defenceMoveOf(row.slug) && defenceMoveOf(row.slug)!.move !== "tail")!;
+    assert.equal(powerActName(defended.slug, defended.mechanism as never), `defence:${defenceMoveOf(defended.slug)!.move}`);
+    const burrower = shown.find((row) => row.mechanism === "hiding" && !defenceMoveOf(row.slug) && MECHANISM_RECIPES.hiding.some((id) => speciesRecipes(row.slug).has.has(id)))!;
+    const name = powerActName(burrower.slug, "hiding");
+    assert.match(name, /^recipe:(bury_sand|dig_burrow)$/);
+    // (The recipe on demand: its block's rig state, and down into the ground as it goes on.)
+    const act = arkPowerAct(name)!;
+    const early = act({slug: burrower.slug, mechanism: "hiding", amount: 1, t: 0.1, plan: null, length: 0.4, height: 0.2})!;
+    const later = act({slug: burrower.slug, mechanism: "hiding", amount: 1, t: 2, plan: null, length: 0.4, height: 0.2})!;
+    assert.ok(later.state);
+    assert.ok(later.still === 1 && (later.drop ?? 0) >= (early.drop ?? 0));
+    const plain = shown.find((row) => row.mechanism === "speed" && !defenceMoveOf(row.slug))!;
+    assert.equal(powerActName(plain.slug, "speed"), "generic:speed");
+    // A lane's act, bound to the species, wins once it is registered (a binding alone does not).
+    bindArkPowerAct(plain.slug, "clip:test_sprint");
+    assert.equal(powerActName(plain.slug, "speed"), "generic:speed");
+    registerArkPowerAct("clip:test_sprint", (input) => ({state: "run", still: input.amount}));
+    assert.equal(powerActName(plain.slug, "speed"), "clip:test_sprint");
+});
