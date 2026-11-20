@@ -1,11 +1,11 @@
 {
  "about": "Every young-care row of the catalogue (2026-11-16) with what the scene does with it today (scripts/ark-young-ways.mts): built, already (an earlier pass), eggs (ark-mating-shown), or held with its reason.",
  "counts": {
-  "built": 80,
+  "built": 77,
   "eggs": 54,
   "part": 15,
-  "already": 36,
-  "held": 51
+  "held": 54,
+  "already": 36
  },
  "rows": [
   {
@@ -104,8 +104,8 @@
    "behaviour": "group shares one nest and the whole group feeds the chicks",
    "how": "group_formation",
    "effort": "M",
-   "status": "part",
-   "what": "cluster: the chicks clump; the whole group feeding them is not drawn"
+   "status": "held",
+   "what": "the group's shared nest and its feeding the chicks (a nest and a group's feeding, not drawn)"
   },
   {
    "id": "573fd013-27a2-4559-851a-2760d63bdd51",
@@ -806,8 +806,8 @@
    "behaviour": "young caterpillars travel in single file, each following the one in front",
    "how": "group_formation",
    "effort": "M",
-   "status": "part",
-   "what": "cluster: a clump, not a single file"
+   "status": "held",
+   "what": "caterpillars in single file (a file with no parent to lead it: not built)"
   },
   {
    "id": "fd13b5e5-cd44-45ae-a1ef-1ef51a032894",
@@ -1229,8 +1229,8 @@
    "behaviour": "father carries infant from second year",
    "how": "existing_block",
    "effort": "M",
-   "status": "built",
-   "what": "ride"
+   "status": "part",
+   "what": "ride: the infant rides its mother; the father carrying it from its second year is not drawn"
   },
   {
    "id": "2db03649-a6d7-4acc-a2d9-e48e9165949b",
@@ -1256,8 +1256,8 @@
    "behaviour": "cubs raised at the clan den",
    "how": "prop",
    "effort": "S",
-   "status": "built",
-   "what": "stay"
+   "status": "part",
+   "what": "stay: the cubs wait at the den and their mother comes to nurse them; the clan's raising them together is not drawn"
   },
   {
    "id": "acc88b8a-4771-49f3-97ee-5e7923887c6d",
@@ -1544,8 +1544,8 @@
    "behaviour": "females form nursery colonies",
    "how": "existing_recipe",
    "effort": "S",
-   "status": "part",
-   "what": "cluster: the young clump; the females' colony is the roost recipe's"
+   "status": "held",
+   "what": "the females' nursery colony (a roost of females, the roost recipe's), not the young"
   },
   {
    "id": "b4cc55f6-a237-4578-96db-267844168da4",
@@ -2120,8 +2120,8 @@
    "behaviour": "heaps leaf-litter nest mound; hatchlings stay in group near mother",
    "how": "group_formation",
    "effort": "M",
-   "status": "built",
-   "what": "cluster"
+   "status": "part",
+   "what": "cluster: the hatchlings clump; their staying near her is her day's"
   },
   {
    "id": "ef800cf1-1d07-4d79-8f52-94eedfede477",

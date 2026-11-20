@@ -78,7 +78,7 @@ const RIDE: Entry[] = [
     {name: "Coppery Titi Monkey", says: /father carries infant/, ride: "back", by: "male", say: ["ride"]},
     {name: "Common Marmoset", says: /fathers and siblings carry the twins/, ride: "back", by: "male", say: ["ride"]},
     {name: "Emperor Tamarin", says: /males and helpers carry twins/, ride: "back", by: "male", say: ["ride"]},
-    {name: "Siamang", says: /father carries infant from second year/, ride: "back", by: "male", say: ["ride"]},
+    {name: "Siamang", says: /father carries infant from second year/, ride: "back", part: "the infant rides its mother; the father carrying it from its second year is not drawn"},
     {name: "Barbary Macaque", says: /males carry and groom infants/, ride: "back", by: "male", say: ["ride"]}
 ];
 
@@ -125,6 +125,8 @@ const STAY: Entry[] = [
     {name: "Eastern Cottontail", says: /mother visits nest only briefly at dawn and dusk/, stay: "hide", visit: "nurse", hours: "dawn_dusk", say: ["visit"]},
     // Fledglings that hide in cover while the parents keep feeding them.
     {name: "Andean Sparrow", says: /fledglings hide in low cover/, stay: "hide", visit: "feed", say: ["stay", "visit"]},
+    // The eland calf lies hidden for its first weeks (its row's quote), then joins the nursery group.
+    {name: "Common Eland", says: /calves form a nursery group/, stay: "hide", visit: "nurse", say: []},
     // Dens: kits and pups wait at the den's mouth and the parent (and helpers) come back with food.
     {name: "American Badger", says: /gives birth and raises kits in underground dens/, stay: "den", visit: "nurse"},
     {name: "American Marten", says: /kits raised in tree cavities or logs/, stay: "den", visit: "nurse"},
@@ -135,7 +137,7 @@ const STAY: Entry[] = [
     {name: "Coyote", says: /pups in a den, both parents feeding/, stay: "den", visit: "feed", say: ["stay", "visit"]},
     {name: "Gray Wolf", says: /pack helps feed and guard pups at the den/, stay: "den", visit: "feed", helpers: true, say: ["stay", "visit"]},
     {name: "Eurasian Wolf", says: /pack feeds pups regurgitated meat at the den/, stay: "den", visit: "feed", helpers: true, say: ["stay", "visit"]},
-    {name: "Spotted Hyena", says: /cubs raised at the clan den/, stay: "den", visit: "nurse", helpers: true, say: ["stay"]},
+    {name: "Spotted Hyena", says: /cubs raised at the clan den/, stay: "den", visit: "nurse", say: ["stay"], part: "the cubs wait at the den and their mother comes to nurse them; the clan's raising them together is not drawn"},
     {name: "Raccoon Dog", says: /both parents guard and feed pups/, stay: "den", visit: "feed", say: ["visit"]},
     {name: "Short-beaked Echidna", says: /puggle left in a nursery burrow/, stay: "den", visit: "nurse", say: ["stay"]},
     {name: "Swift Fox", says: /family moves between dens with kits through summer/, stay: "den", visit: "feed"},
@@ -157,16 +159,13 @@ const CLUSTER: Entry[] = [
     {name: "African Penguin", says: /chicks gather in creches/, cluster: true, say: ["cluster"]},
     {name: "Galah", says: /fledglings gather in nursery trees while parents forage/, cluster: true, say: ["cluster"]},
     {name: "Common Eland", says: /calves form a nursery group/, cluster: true, say: ["cluster"]},
-    {name: "Australasian Swamphen", says: /group shares one nest and the whole group feeds the chicks/, cluster: true, part: "the chicks clump; the whole group feeding them is not drawn"},
-    {name: "Kuhl's Pipistrelle Bat", says: /females form nursery colonies/, cluster: true, part: "the young clump; the females\' colony is the roost recipe\'s"},
     {name: "Shield & Stink Bug", says: /nymphs cluster tightly after hatching/, cluster: true, say: ["cluster"]},
     {name: "Buff-tip Moth", says: /caterpillars feed together, then separate as they grow/, cluster: true, say: ["cluster"]},
     {name: "Tiger Moth", says: /larvae feed in groups under fig leaves/, cluster: true, say: ["cluster"]},
     {name: "Red-tailed Tinfoil Barb", says: /juveniles form tight shoals at once/, cluster: true, say: ["cluster"]},
     {name: "Flathead Catfish", says: /fry shoal in the shallows, then disperse/, cluster: true, say: ["cluster"]},
-    {name: "Spectacled Caiman", says: /hatchlings stay in group near mother/, cluster: true, say: ["cluster"]},
+    {name: "Spectacled Caiman", says: /hatchlings stay in group near mother/, cluster: true, say: ["cluster"], part: "the hatchlings clump; their staying near her is her day's"},
     {name: "Orb-weaver Spider", says: /spiderlings cluster then balloon away/, cluster: true, part: "the spiderlings clump; their ballooning away is not drawn"},
-    {name: "Io Moth", says: /caterpillars travel in single file/, cluster: true, part: "a clump, not a single file"},
     {name: "Peacock Butterfly", says: /caterpillars live together in a silk web/, cluster: true, part: "the caterpillars clump; the silk web is not drawn"}
 ];
 
@@ -242,7 +241,13 @@ for (const r of rows) {
 
 /** Held rows by their catalogue shape (the reason is said, never drawn wrong). */
 const EGGS = /egg|sac\b|clutch|incubat|brood guard|coil around|coil|berried|nest cavity|guard nest|guards? (?:the )?(?:egg|nest)|lays|deposit|vent/i;
+const HELD_BY_NAME: Record<string, string> = {
+    "Australasian Swamphen": "the group's shared nest and its feeding the chicks (a nest and a group's feeding, not drawn)",
+    "Kuhl's Pipistrelle Bat": "the females' nursery colony (a roost of females, the roost recipe's), not the young",
+    "Io Moth": "caterpillars in single file (a file with no parent to lead it: not built)"
+};
 const held = (r: Row): {status: string; what: string} => {
+    if (HELD_BY_NAME[r.name]) return {status: "held", what: HELD_BY_NAME[r.name]};
     const text = [r.behaviour, r.uses].join(" ");
     if (r.how === "look") return {status: "held", what: "look: a colour or shape of the young (the look lane, young-life.json coats), not a behaviour"};
     if (r.how === "presence") return {status: "held", what: "presence: where the young live (a habitat or depth), nothing shown by the young themselves"};

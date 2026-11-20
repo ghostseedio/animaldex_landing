@@ -325,8 +325,7 @@
   "siamang": {
    "name": "Siamang",
    "ways": {
-    "ride": "back",
-    "by": "male"
+    "ride": "back"
    },
    "rows": [
     {
@@ -335,9 +334,7 @@
      "quote": "It clings to the mother at first; from around its second year the father often carries it."
     }
    ],
-   "lines": {
-    "ride": "{aAnimal} father is carrying the youngster"
-   }
+   "lines": {}
   },
   "barbary-macaque": {
    "name": "Barbary Macaque",
@@ -925,6 +922,29 @@
     "visit": "{aAnimal} fledgling is hiding in low cover while its parents keep feeding it"
    }
   },
+  "common-eland": {
+   "name": "Common Eland",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse",
+    "cluster": true
+   },
+   "rows": [
+    {
+     "id": "21d19b94-2955-4eb0-ab61-fe20eaa0a67e",
+     "behaviour": "calves form a nursery group",
+     "quote": "It lies hidden for its first weeks, then joins a nursery group of young that stay together while the mothers feed nearby."
+    },
+    {
+     "id": "21d19b94-2955-4eb0-ab61-fe20eaa0a67e",
+     "behaviour": "calves form a nursery group",
+     "quote": "It lies hidden for its first weeks, then joins a nursery group of young that stay together while the mothers feed nearby."
+    }
+   ],
+   "lines": {
+    "cluster": "{animals} have calves staying together in a nursery group while the mothers feed nearby"
+   }
+  },
   "american-badger": {
    "name": "American Badger",
    "ways": {
@@ -1078,8 +1098,7 @@
    "name": "Spotted Hyena",
    "ways": {
     "stay": "den",
-    "visit": "nurse",
-    "helpers": true
+    "visit": "nurse"
    },
    "rows": [
     {
@@ -1353,50 +1372,6 @@
     "cluster": "{aAnimal} fledgling is waiting in a nursery tree with other young"
    }
   },
-  "common-eland": {
-   "name": "Common Eland",
-   "ways": {
-    "cluster": true
-   },
-   "rows": [
-    {
-     "id": "21d19b94-2955-4eb0-ab61-fe20eaa0a67e",
-     "behaviour": "calves form a nursery group",
-     "quote": "It lies hidden for its first weeks, then joins a nursery group of young that stay together while the mothers feed nearby."
-    }
-   ],
-   "lines": {
-    "cluster": "{animals} have calves staying together in a nursery group while the mothers feed nearby"
-   }
-  },
-  "australasian-swamphen": {
-   "name": "Australasian Swamphen",
-   "ways": {
-    "cluster": true
-   },
-   "rows": [
-    {
-     "id": "47ae9863-1e74-4023-9363-4be8b698d823",
-     "behaviour": "group shares one nest and the whole group feeds the chicks",
-     "quote": "Breeding groups often share one nest, a bowl of trampled reeds in which two or more females may lay."
-    }
-   ],
-   "lines": {}
-  },
-  "kuhls-pipistrelle-bat": {
-   "name": "Kuhl's Pipistrelle Bat",
-   "ways": {
-    "cluster": true
-   },
-   "rows": [
-    {
-     "id": "015d256f-f9c3-45b4-bdfc-88c9b56c1ea9",
-     "behaviour": "females form nursery colonies",
-     "quote": "Females gather in nursery colonies, usually of 20 to 100 bats, in buildings."
-    }
-   ],
-   "lines": {}
-  },
   "shield-stink-bug": {
    "name": "Shield & Stink Bug",
    "ways": {
@@ -1503,20 +1478,6 @@
      "id": "6606eac5-d009-4142-a6cf-1da9228949d7",
      "behaviour": "spiderlings cluster then balloon away",
      "quote": "Spiderlings hatch in spring, cluster for a few days, then disperse on threads of silk carried by the wind."
-    }
-   ],
-   "lines": {}
-  },
-  "io-moth": {
-   "name": "Io Moth",
-   "ways": {
-    "cluster": true
-   },
-   "rows": [
-    {
-     "id": "c55c4a2a-5437-4e17-b695-5787287cab4a",
-     "behaviour": "young caterpillars travel in single file, each following the one in front",
-     "quote": "Young caterpillars travel in single file, each following the one in front, as they move between feeding and resting places."
     }
    ],
    "lines": {}
