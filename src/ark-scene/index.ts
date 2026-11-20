@@ -200,7 +200,8 @@ import {arkActivityKey, arkDayWindow, arkEnergy, arkOriginEntry, arkStatusBars, 
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
-import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
+import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, hangPointAt, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
+import {HANG_EASE, hangPivot, hangPose} from "@/ark-scene/grounding/hang";
 import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
 import {modelBase, uprightBody} from "@/ark-scene/grounding/base";
 import {canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
@@ -599,7 +600,11 @@ type Entry = {
     /** Its sleep has been stepped once (its first frame is drawn as it is: no lying down on load). */
     sleepStarted?: boolean;
     /** Its sleeping posture's attitude (the recipes' act: a bat turned over), kept to ease it back as it wakes. */
-    sleepAct?: {pitch: number; roll: number} | null;
+    sleepAct?: {pitch: number; roll: number; hang?: boolean} | null;
+    /** ARK-ANIM: hanging under its roost (`grounding/hang.ts`): since when (clock s), since when letting go, and posed once. */
+    hangFrom?: number | null;
+    hangOff?: number | null;
+    hangSeen?: boolean;
     /** Lane L2's motion (`locomotion/l2-scene.ts`): its flight beat, its swim and crawl cycles (per viewer, visual only). */
     l2?: L2Motion | null;
     /** Part B: where it was last worked out (its schedule's pose) and when (scene seconds), for the render distance. */
@@ -4274,11 +4279,39 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A sleeping posture's attitude (a bat turned over, an otter on its back) comes in as it settles and goes as it
         // wakes (kept from its last sleeping moment, so the turn back is eased too), never at once.
         const sleepT = entry.sleepNow?.t ?? 0;
-        if (act && act.episode === "sleep") entry.sleepAct = {pitch: act.pitch, roll: act.roll};
+        const hangAct = Boolean(act) && act!.episode === "sleep" && act!.state === "sleep_hang" && act!.pitch > 1;
+        if (act && act.episode === "sleep") entry.sleepAct = {pitch: act.pitch, roll: act.roll, hang: hangAct};
         else if (!sleepT) entry.sleepAct = null;
         const actShare = act && act.episode === "sleep" ? sleepStages(sleepT).roll : 1;
         const after = !act || act.episode !== "sleep" ? entry.sleepAct ?? null : null;
         const afterShare = after ? sleepStages(sleepT).roll : 0;
+        // ARK-ANIM (round 4): a bat roosting hangs under its limb from its feet, head down, its body below the limb,
+        // swinging slowly about its feet (`grounding/hang.ts`); it lay along the limb, turned about its middle.
+        // (Its own ease, 1.2 s each way: a bat roosting by day is resting, not asleep, so the sleep stages never turn
+        // it. Already hanging on its first frame: no turning over on load.)
+        const hangNow = clockNow();
+        if (hangAct) {
+            entry.hangFrom ??= entry.hangSeen ? hangNow : hangNow - HANG_EASE;
+            entry.hangOff = null;
+        } else if (entry.hangFrom != null) entry.hangOff ??= hangNow;
+        entry.hangSeen = true;
+        const hangEase = (u: number) => {
+            const c = Math.min(Math.max(u, 0), 1);
+            return c * c * (3 - 2 * c);
+        };
+        let hanging = entry.hangFrom == null ? 0 : hangEase((hangNow - entry.hangFrom) / HANG_EASE) * (entry.hangOff == null ? 1 : 1 - hangEase((hangNow - entry.hangOff) / HANG_EASE));
+        if (entry.hangOff != null && hangNow - entry.hangOff >= HANG_EASE) {
+            entry.hangFrom = entry.hangOff = null;
+            hanging = 0;
+        }
+        if (hanging > 0 && !at.aloft && groundingRules() === "grounded") {
+            const roostTrip = own.trip;
+            const held = roostTrip?.to?.point && own.at >= roostTrip.arrive ? hangPointAt(roostTrip.to.point, ARK_TIME.value, ARK_WIND_VECTOR.value) : null;
+            const pivot = hangPivot(held && Math.hypot(at.x - held.x, at.z - held.z) < 0.3 ? held : {x: at.x, y: at.y, z: at.z, tag: "canopy_hang"});
+            const yaw = at.yaw + glance;
+            const hung = hangPose(pivot, yaw, entry.length, hanging, clockNow(), entry.seed);
+            return {x: hung.x, z: hung.z, base: hung.base, yaw, pitch: hung.pitch, roll: hung.roll, afloat: true};
+        }
         // Grounding: held on a raised point (a branch, a limb, bark, a wall), drawn on it: its back along the surface's
         // normal, up a trunk, swaying with its tree (`scheduledPerch`).
         const trip = own.trip;
