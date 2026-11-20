@@ -19,7 +19,22 @@ const dry = process.argv.includes("--dry");
 const tablePath = path.join(root, "src/ark-scene/recipes.json");
 const table = JSON.parse(fs.readFileSync(tablePath, "utf8")) as {species: Record<string, string>};
 const full = JSON.parse(fs.readFileSync(path.join(root, "data/ark/behaviour-recipes.json"), "utf8")) as {species: Array<{slug: string; plan: string}>};
-const additions = (JSON.parse(fs.readFileSync(path.join(root, "data/ark/signature-recipes.json"), "utf8")) as {additions: Array<{slug: string; name: string; recipe: string}>}).additions;
+// (Every `data/ark/signature-recipes*.json`: the first wave's, and a lane's own: its `additions`, and its `templates`, the
+// plans and the weight of a template the table has no users of yet, or the plans a reviewed variant is drawn for.)
+type Addition = {slug: string; name: string; recipe: string; nest?: string};
+const files = fs.readdirSync(path.join(root, "data/ark")).filter((f) => /^signature-recipes.*\.json$/.test(f)).sort();
+const additions: Addition[] = [];
+const seeded: Record<string, {plans: string[]; weight: number}> = {};
+// (`replaces`: held rows another file's addition now shows another way, not listed as held; `held`: rows held again, with why.)
+const replaced = new Set<string>();
+const heldWhy = new Map<string, string>();
+for (const f of files) {
+    const j = JSON.parse(fs.readFileSync(path.join(root, "data/ark", f), "utf8")) as {additions: Addition[]; templates?: Record<string, {plans: string[]; weight: number}>; replaces?: Array<{slug: string; recipe: string}>; held?: Array<{slug: string; recipe: string; reason: string}>};
+    additions.push(...j.additions);
+    Object.assign(seeded, j.templates ?? {});
+    for (const r of j.replaces ?? []) replaced.add(`${r.slug} ${r.recipe}`);
+    for (const h of j.held ?? []) heldWhy.set(`${h.slug} ${h.recipe}`, h.reason);
+}
 
 const planOf = new Map(full.species.map((s) => [s.slug, s.plan]));
 const recipesOf = (row: string) => row.split("|")[0].split(",").filter(Boolean).map((r) => ({id: r.slice(0, r.lastIndexOf(".")), weight: Number(r.slice(r.lastIndexOf(".") + 1))}));
@@ -36,7 +51,7 @@ for (const [slug, row] of Object.entries(table.species)) {
 }
 // A template new with a signature wave has no users yet to learn its plans and weight from: stated here.
 // (3.3 batch (D): `dip_lay`, a dragonfly laying, `data/ark/egg-dip.json`.)
-const NEW: Record<string, {plans: string[]; weight: number}> = {dip_lay: {plans: ["flying_insect"], weight: 6}};
+const NEW: Record<string, {plans: string[]; weight: number}> = {dip_lay: {plans: ["flying_insect"], weight: 6}, ...seeded};
 for (const [id, seed] of Object.entries(NEW)) {
     for (const plan of seed.plans) (plans.get(id) ?? plans.set(id, new Set()).get(id)!).add(plan);
     if (!weights.has(id)) weights.set(id, new Map([[seed.weight, 1]]));
@@ -49,9 +64,15 @@ const NEEDS_GENERATOR = new Set(["nest_build"]);
 const HUNTS = new Set(["perch_plunge", "air_plunge", "talon_grab", "wade_spear", "bill_sweep", "pouch_scoop", "surface_dive", "chase_fish", "river_fish", "pounce", "hawk_insects", "aerial_hawk", "hover_drop", "bat_hawk", "bat_trawl"]);
 
 let added = 0;
+let superseded = 0;
 const skipped: string[] = [];
 const already: string[] = [];
 for (const a of additions) {
+    // (An original row another file shows another way: its replacement is what is applied.)
+    if (replaced.has(`${a.slug} ${a.recipe}`)) {
+        superseded++;
+        continue;
+    }
     const row = table.species[a.slug];
     const plan = planOf.get(a.slug);
     if (row === undefined || !plan) {
@@ -62,21 +83,25 @@ for (const a of additions) {
         already.push(`${a.slug} ${a.recipe}`);
         continue;
     }
-    if (HUNTS.has(a.recipe) && recipesOf(row).some((r) => HUNTS.has(r.id))) {
+    // (A variant `pounce~lizard` is a way of hunting like its plain recipe: judged as it, `recipe-templates-reptiles.ts`.)
+    const hunts = (id: string) => HUNTS.has(id.split("~")[0]);
+    if (hunts(a.recipe) && recipesOf(row).some((r) => hunts(r.id))) {
         skipped.push(`${a.slug} ${a.recipe}: it already hunts its own way`);
         continue;
     }
     if (NEEDS_GENERATOR.has(a.recipe) || !plans.get(a.recipe)?.has(plan)) {
-        skipped.push(`${a.slug} ${a.recipe}: ${NEEDS_GENERATOR.has(a.recipe) ? "needs the generator" : `no ${plan} uses it`}`);
+        skipped.push(`${a.slug} ${a.recipe}: ${heldWhy.get(`${a.slug} ${a.recipe}`) ?? (NEEDS_GENERATOR.has(a.recipe) ? "needs the generator" : `no ${plan} uses it`)}`);
         continue;
     }
     const fields = row.split("|");
     fields[0] = [fields[0], `${a.recipe}.${usual(a.recipe)}`].filter(Boolean).join(",");
+    // (A nest guard's site: the generic nest field for a species whose row has none, so the schedule can place a nest for it.)
+    if (a.nest && !fields[4]) fields[4] = a.nest;
     // (No longer only its plan's defaults.)
     if (fields[7]) fields[7] = fields[7].replace("d", "");
     table.species[a.slug] = fields.join("|");
     added++;
 }
 if (!dry) fs.writeFileSync(tablePath, `${JSON.stringify(table)}\n`);
-console.log(JSON.stringify({additions: additions.length, added, already: already.length, skipped: skipped.length}, null, 1));
+console.log(JSON.stringify({additions: additions.length, added, already: already.length, superseded, skipped: skipped.length}, null, 1));
 if (skipped.length) console.log(skipped.join("\n"));

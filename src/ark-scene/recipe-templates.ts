@@ -11,6 +11,8 @@
  * and nuts that are not catalogue animals. A catalogue animal only disappears through a server meal event (`acts.ts`).
  */
 
+import {REPTILE_TEMPLATES} from "@/ark-scene/recipe-templates-reptiles";
+
 /**
  * Where a step goes:
  * - anchor: where the episode began (the last step's anchor blends back into its schedule pose);
@@ -79,6 +81,8 @@ export type Template = {
     hours?: "day" | "night" | "dawn_dusk" | "dusk" | "any";
     /** Only in its mating or nesting season (where the data has one). */
     season?: "mating" | "nesting";
+    /** (Lane SIG2-REPTILES) A nesting template, for a species whose text names no months: how much it runs all year (the others: never). */
+    unstored?: number;
     /** How often it takes a slot it could, relative to its weight (1 when absent): a fishing flight out and back is a
      *  now-and-then thing, not every forage. */
     often?: number;
@@ -884,6 +888,9 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
         })
     ].map((t) => [t.id, t])
 );
+
+// (Lane SIG2-REPTILES: the reptile and turtle variants, `recipe-templates-reptiles.ts`.)
+for (const template of REPTILE_TEMPLATES) TEMPLATES[template.id] = template;
 
 /** Land-water crossings: the way in, the way out, and what follows (the schedule's enter and exit legs). */
 export const ENTRY_STYLES = ["wade", "slide", "slip", "dive", "launch"] as const;

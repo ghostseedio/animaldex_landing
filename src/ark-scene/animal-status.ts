@@ -12,6 +12,7 @@
 import {awakeAt, drawnRecipeAt, flightSpan, pairMeetingsAt, scheduleGeneration, slotOffset, slotPlanAt, stayIsFeeding, SLOT_SECONDS, tripAt, type HoursAt, type ScheduleAnimal, type ScheduleWorld, type SlotPlan, type Trip} from "@/ark-scene/behaviour-schedule";
 import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {hash32} from "@/lib/ark-clock";
+import {recipeBase} from "@/ark-scene/recipe-templates-reptiles";
 import {arkActivityKey, arkFed, arkFedRates, arkRecipeActivity, type ArkActivityKey, type ArkFed, type ArkFedSlot, type ArkStatusGoal, type ArkStatusLogEntry} from "@/lib/ark-animal-status";
 
 /** One animal on the schedule, as the status reads it. */
@@ -110,14 +111,14 @@ export function scheduleStatus(subject: ScheduleSubject, epoch: number, context:
     // The pair meetings it has had since, and the one it is in.
     const from = plan.start - LOOK_BACK * SLOT_SECONDS;
     for (const meeting of pairMeetingsAt(subject.world, subject.profile, subject.animalAt(epoch), from, epoch, subject.hoursAt, subject.activity)) {
-        const key = arkRecipeActivity(meeting.recipe);
+        const key = arkRecipeActivity(recipeBase(meeting.recipe));
         if (key) timeline = layEpisode(timeline, meeting.t0, meeting.t1, key);
     }
     // What its pose plays now on its trip (the scene's): its stay's episode, a meeting, a murmuration; and a flyer on its
     // way through the air on a slot said as settled.
     if (trip && !context.hunting) {
         const drawn = plan.doing === "sleep" ? null : drawnRecipeAt(subject.world, trip, epoch);
-        const key = drawn ? arkRecipeActivity(drawn.recipe) : null;
+        const key = drawn ? arkRecipeActivity(recipeBase(drawn.recipe)) : null;
         if (drawn && key) timeline = layEpisode(timeline, drawn.t0, drawn.t1, key);
         else if (!drawn && SETTLED.has(keyOf(subject, plan)) && subject.profile.move === "fly") {
             const span = flightSpan(trip);
@@ -196,7 +197,7 @@ function daySlotCells(subject: ScheduleSubject, plan: SlotPlan, previous: Segmen
     const at = plan.start + 0.5;
     for (const meeting of pairMeetingsAt(subject.world, subject.profile, subject.animalAt(at), plan.start - DAY_MEETING_BACK, plan.end, subject.hoursAt, subject.activity)) {
         if (meeting.t1 <= (previous[0]?.at ?? plan.start)) continue;
-        const key = arkRecipeActivity(meeting.recipe);
+        const key = arkRecipeActivity(recipeBase(meeting.recipe));
         if (key) timeline = layEpisode(timeline, meeting.t0, meeting.t1, key);
     }
     const runs: Segment[] = [];
@@ -215,7 +216,7 @@ function daySlotCells(subject: ScheduleSubject, plan: SlotPlan, previous: Segmen
         if (trip && t < trip.arrive && key === settled && run && run.at <= plan.start) key = travelKey;
         if (trip) {
             const drawn = drawnRecipeAt(subject.world, trip, t);
-            const said = drawn ? arkRecipeActivity(drawn.recipe) : null;
+            const said = drawn ? arkRecipeActivity(recipeBase(drawn.recipe)) : null;
             if (said) key = said;
             else if (!drawn && span && t >= span.from && t < span.to) key = "flying";
         }
@@ -456,7 +457,7 @@ function midSlotMoments(subject: MomentSubject, from: number, to: number): Array
     }
     for (const meeting of pairMeetingsAt(subject.world, subject.profile, subject.animalAt(from), from, to, subject.hoursAt, subject.activity)) {
         if (meeting.role !== "a") continue;
-        const key = arkRecipeActivity(meeting.recipe);
+        const key = arkRecipeActivity(recipeBase(meeting.recipe));
         const kind: ScheduleMomentKind | null = key === "courting" ? "courting" : key === "sparring" ? "contest" : key === "grooming" ? "doing" : null;
         if (key && kind) out.push({kind, activity: key, at: meeting.t0, recipe: meeting.recipe});
     }

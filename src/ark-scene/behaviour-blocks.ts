@@ -14,6 +14,7 @@
  */
 
 import type {ArkBeat} from "@/ark-scene/behaviour-schedule";
+import {REPTILE_BLOCKS} from "@/ark-scene/behaviour-blocks-reptiles";
 
 export type BlockMotion = "travel" | "hold";
 /** A travel block's path: on the ground; a flight's arc; a plunge (steep, fast at the end); a dive (down and along); straight up; straight. */
@@ -138,6 +139,9 @@ export const BLOCKS: Record<string, BlockDef> = Object.fromEntries(
         B({id: "incubate", label: "sit on the nest", motion: "hold", states: ["incubate"], beat: "rest", heave: -0.08})
     ].map((b) => [b.id, b])
 );
+
+// (Lane SIG2-REPTILES: the reptile signature variants' two blocks.)
+for (const block of REPTILE_BLOCKS) BLOCKS[block.id] = block;
 
 /** Every named animation state a block can ask for: the rig player lane maps these to clips (unmapped: the block's `beat`). */
 export const ARK_RECIPE_STATES: string[] = Array.from(new Set(Object.values(BLOCKS).flatMap((b) => b.states))).sort();

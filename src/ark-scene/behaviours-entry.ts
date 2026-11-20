@@ -9,13 +9,20 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
+// (Reptile signatures, lane SIG2-REPTILES: the recipe scenes below.)
+import recipeTable from "@/ark-scene/recipes.json";
+import {scheduleWorld, SLOT_SECONDS, tripAt, tripEpisode, type ScheduleAnimal, type Trip} from "@/ark-scene/behaviour-schedule";
+import {worldSampler} from "@/ark-scene/world-sampler";
+import type {ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
+import {ambushBouts} from "@/ark-scene/micro-ambush";
+import {surfacePoint} from "@/ark-scene/micro";
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake"};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "recipe" | "micro"; /** (recipe) the recipe's episode to find, and the row to give the first cast when its table has not got it yet ("recipe.weight[,...]"). */ recipe?: string; inject?: string; /** (recipe, micro) how far in body lengths, the camera's azimuth off its side and its polar angle. */ lengths?: number; azimuth?: number; polar?: number; /** (recipe) the first of the cast to frame. */ pick?: number};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -82,6 +89,29 @@ const SCENES: Record<string, Scene> = {
     shaketown: {zone: "garden_wildlife", hours: 10, kind: "shake", town: true, cast: [{slug: "mallard", name: "Mallard", n: 6}]},
     shaketowngoose: {zone: "farm_garden", hours: 10, kind: "shake", town: true, cast: [{slug: "domestic-goose", name: "Domestic Goose", n: 6}]},
     shakeotter: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "european-otter", name: "European Otter", n: 2}]},
+    // Reptile signatures (lane SIG2-REPTILES): a recipe's episode of one species, found from the schedule and framed close.
+    // `inject` gives the cast's row the recipe while the table lacks it; every row's seasons are all year here.
+    rt_dig: {zone: "grassland", hours: 9, kind: "recipe", recipe: "dig_burrow~tortoise", inject: "dig_burrow~tortoise.9", lengths: 3.2, cast: [{slug: "sulcata-tortoise", name: "Sulcata Tortoise", n: 3}]},
+    rt_dig_russian: {zone: "grassland", hours: 9, kind: "recipe", recipe: "dig_burrow~tortoise", inject: "dig_burrow~tortoise.9", lengths: 3.2, cast: [{slug: "russian-tortoise", name: "Russian Tortoise", n: 3}]},
+    rt_nest: {zone: "grassland", hours: 9, kind: "recipe", recipe: "dig_burrow~nest", inject: "dig_burrow~nest.9", lengths: 3.2, cast: [{slug: "aldabra-giant-tortoise", name: "Aldabra Giant Tortoise", n: 4}]},
+    rt_nest_leopard: {zone: "grassland", hours: 9, kind: "recipe", recipe: "dig_burrow~nest", inject: "dig_burrow~nest.9", lengths: 3.2, cast: [{slug: "leopard-tortoise", name: "Leopard Tortoise", n: 4}]},
+    rt_wallow: {zone: "wetland", hours: 9, kind: "recipe", recipe: "wallow~turtle", inject: "wallow~turtle.9", lengths: 3.2, cast: [{slug: "asian-forest-tortoise", name: "Asian Forest Tortoise", n: 3}]},
+    rt_wallow_galapagos: {zone: "wetland", hours: 9, kind: "recipe", recipe: "wallow~turtle", inject: "wallow~turtle.9", lengths: 3.2, cast: [{slug: "galapagos-tortoise", name: "Galapagos Tortoise", n: 3}]},
+    rt_reef: {zone: "coral_reef", hours: 9, kind: "recipe", recipe: "probe_feed~turtle", inject: "probe_feed~turtle.9", lengths: 3.2, cast: [{slug: "hawksbill-sea-turtle", name: "Hawksbill Sea Turtle", n: 3}]},
+    rt_skink: {zone: "woodland", hours: 9, kind: "recipe", recipe: "probe_feed", inject: "probe_feed.9", lengths: 3.2, cast: [{slug: "indonesian-blue-tongued-skink", name: "Indonesian Blue-tongued Skink", n: 3}]},
+    rt_bank: {zone: "river_lake", hours: 9, kind: "recipe", recipe: "beach_nest~bank", inject: "beach_nest~bank.9", lengths: 3.2, cast: [{slug: "mugger-crocodile", name: "Mugger Crocodile", n: 4}]},
+    rt_bank_lizard: {zone: "river_lake", hours: 9, kind: "recipe", recipe: "beach_nest~bank", inject: "beach_nest~bank.9", lengths: 3.2, cast: [{slug: "amboina-sailfin-lizard", name: "Amboina Sailfin Lizard", n: 4}]},
+    rt_guard: {zone: "river_lake", hours: 9, kind: "recipe", recipe: "incubate_sit~reptile", inject: "incubate_sit~reptile.9", lengths: 3.2, cast: [{slug: "siamese-crocodile", name: "Siamese Crocodile", n: 4}]},
+    rt_guard_tegu: {zone: "grassland", hours: 9, kind: "recipe", recipe: "incubate_sit~reptile", inject: "incubate_sit~reptile.9", lengths: 3.2, cast: [{slug: "red-tegu", name: "Red Tegu", n: 4}]},
+    rt_ambush: {zone: "farm_garden", hours: 9, kind: "recipe", recipe: "pounce~lizard", inject: "pounce~lizard.9", lengths: 5, cast: [{slug: "oriental-garden-lizard", name: "Oriental Garden Lizard", n: 3}]},
+    // Reptile signatures: small clingers that hunt by sit-and-wait, on the cottage's wall at night (`micro-ambush.ts`) and on rocks.
+    mi_wall: {zone: "farm_garden", hours: 21, kind: "micro", lengths: 6, cast: [{slug: "common-wall-gecko", name: "Common Wall Gecko", n: 6}]},
+    mi_house: {zone: "farm_garden", hours: 21, kind: "micro", lengths: 6, cast: [{slug: "common-house-gecko", name: "Common House Gecko", n: 6}]},
+    mi_med: {zone: "farm_garden", hours: 21, kind: "micro", lengths: 6, cast: [{slug: "mediterranean-house-gecko", name: "Mediterranean House Gecko", n: 6}]},
+    mi_tropical: {zone: "farm_garden", hours: 21, kind: "micro", lengths: 6, cast: [{slug: "tropical-house-gecko", name: "Tropical House Gecko", n: 6}]},
+    mi_leopard: {zone: "grassland", hours: 21, kind: "micro", lengths: 6, cast: [{slug: "leopard-gecko", name: "Leopard Gecko", n: 6}]},
+    mi_lava: {zone: "grassland", hours: 11, kind: "micro", lengths: 6, cast: [{slug: "brazilian-lava-lizard", name: "Brazilian Lava Lizard", n: 6}]},
+    mi_bocage: {zone: "grassland", hours: 11, kind: "micro", lengths: 6, cast: [{slug: "bocages-wall-lizard", name: "Bocage's Wall Lizard", n: 6}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -104,7 +134,15 @@ const frames = (n: number) =>
 
 async function main() {
     const params = new URLSearchParams(location.search);
-    const scene = SCENES[params.get("scene") ?? "birth"];
+    const scene = {...SCENES[params.get("scene") ?? "birth"]};
+    // (Reptile signatures: a recipe scene's recipe, injected row, cast and zone may be overridden: `?recipe=pounce&inject=pounce.9&slug=leopard-gecko&zone=grassland`.)
+    if (scene.kind === "recipe") {
+        if (params.get("recipe")) scene.recipe = params.get("recipe")!;
+        if (params.get("inject")) scene.inject = params.get("inject")!;
+        if (params.get("zone")) scene.zone = params.get("zone")!;
+        if (params.get("hours")) scene.hours = Number(params.get("hours"));
+        if (params.get("slug")) scene.cast = [{slug: params.get("slug")!, name: params.get("slug")!, n: Number(params.get("n") ?? 3)}];
+    }
     (globalThis as {__arkQuality?: string}).__arkQuality = params.get("quality") ?? "high";
     const template = fixture.animals[0];
     const day = fixture.voyage.ark_day;
@@ -117,6 +155,17 @@ async function main() {
             animals.push({...template, id: castId(k, i), species_profile_id: speciesId(k), name: c.name, scientific_name: c.name, model_slug: c.slug, zone: scene.zone, activity: "diurnal", sociality: "group", slot: 90 + k, slot_rank: i, origin: young ? "born" : "arrived", born_ark_day: young ? day : 0} as Raw);
         }
     });
+    // (Reptile signatures: the cast's row given the recipe (only that one, every season open) while the table lacks it.)
+    if (scene.kind === "recipe" && scene.inject) {
+        const rows = (recipeTable as unknown as {species: Record<string, string>}).species;
+        for (const c of scene.cast) {
+            const fields = (rows[c.slug] ?? "|s:50:m:112:-||||wade:walk:bask||").split("|");
+            fields[0] = scene.inject;
+            fields[2] = fields[3] = "abcdefghijkl";
+            if (!fields[4]) fields[4] = "other:";
+            rows[c.slug] = fields.join("|");
+        }
+    }
     const decoded = decodeArkSnapshot({...fixture, animals});
     if (!decoded) throw new Error("fixture did not decode");
     let snapshot = decoded;
@@ -420,6 +469,97 @@ async function main() {
             const laid = mode === "clutch" ? (debug as unknown as {liveClutch: () => {eggs: number | null; at: {x: number; y: number; z: number; size: number} | null} | null}).liveClutch() : null;
             const clutch = laid ? ` clutch of ${laid.eggs} at ${laid.at ? `${laid.at.x.toFixed(2)},${laid.at.z.toFixed(2)} ${laid.at.size.toFixed(3)} m` : "-"}; she at ${at[1] ? `${at[1].x.toFixed(2)},${at[1].z.toFixed(2)}` : "-"}` : "";
             return `+${s} s ${mode}:${clutch} view ${v.distance.toFixed(2)} m; apart ${apart} m; lengths ${at.map((p) => p?.length.toFixed(3) ?? "-").join("/")}`;
+        },
+        /**
+         * Reptile signatures: a recipe's episode of the cast, found from the schedule's own pure functions (the way
+         * `recipes-entry.ts` finds its moments): which animal, when, and its keys (block, seconds, where).
+         */
+        episode: () => {
+            if (scene.kind !== "recipe" || !scene.recipe) return null;
+            const world = scheduleWorld(worldSampler());
+            const entries = debug.entries() as unknown as Array<{animal: {id: string; model_slug: string; activity: ArkBehaviourProfile["activity"] | null}; sched?: {animal: ScheduleAnimal; profile: ArkBehaviourProfile} | null}>;
+            const wanted = scene.recipe;
+            const found: Array<Record<string, unknown>> = [];
+            for (const e of entries) {
+                if (!e.sched) continue;
+                for (let k = 0; k < 90 && found.length < 6; k++) {
+                    const trip: Trip = tripAt(world, e.sched.profile, e.sched.animal, t0 + k * SLOT_SECONDS, () => scene.hours, e.animal.activity);
+                    if (trip.recipe !== wanted) continue;
+                    const ep = tripEpisode(world, trip);
+                    if (!ep) continue;
+                    found.push({id: e.animal.id, slot: trip.slot, t0: ep.t0, t1: ep.t1, anchor: ep.anchor, keys: ep.keys.map((key) => ({b: key.block.id, t0: key.t0, t1: key.t1, from: key.from, to: key.to, caught: key.catch ? key.catch.ok : null}))});
+                    break;
+                }
+            }
+            return found;
+        },
+        /**
+         * The world at an absolute time (s) run up a tenth of a second a frame from 2 s before (the clips settle), then
+         * the animal framed from `lengths` of its body from its side (`azimuth` off its heading), with what it is doing.
+         */
+        recipeShot: async (id: string, epoch: number, lengthsIn: number | null, azimuthIn?: number | null, polarIn?: number | null) => {
+            const lengths = lengthsIn || scene.lengths || 4;
+            const azimuth = azimuthIn ?? scene.azimuth ?? Math.PI / 2;
+            const polar = polarIn ?? scene.polar ?? 1.3;
+            await setAt(epoch - 2);
+            for (let i = 0; i < 20; i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const drawn = debug.entries().find((e) => e.animal.id === id) as unknown as {length: number; middle: {x: number; y: number; z: number} | null; sched?: {pose?: {beat?: string; act?: {recipe?: string; block?: string; state?: string; u?: number} | null}}; act?: {meal?: unknown} | null};
+            const at = handle.locate(id);
+            if (!at) return "not drawn";
+            const target = drawn.middle ? {x: drawn.middle.x, y: drawn.middle.y, z: drawn.middle.z} : {x: at.x, y: at.y + drawn.length * 0.3, z: at.z};
+            const controls = (debug as unknown as {controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}});
+            for (let i = 0; i < 3; i++) {
+                controls.controls.minDistance = 0.05;
+                controls.camera.near = 0.02;
+                controls.camera.updateProjectionMatrix();
+                handle.setView({target, distance: Math.max(lengths * drawn.length, 0.3), polar, azimuth: at.yaw + azimuth});
+                await frames(1);
+            }
+            const pose = drawn.sched?.pose;
+            const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`)));
+            return `${id.slice(-3)} length ${drawn.length.toFixed(2)} beat ${pose?.beat ?? "-"} act ${pose?.act?.recipe ?? "-"}/${pose?.act?.block ?? "-"}/${pose?.act?.state ?? "-"} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
+        },
+        /** Reptile signatures: the first of the cast with a sit-and-wait bout in the next four minutes (`micro-ambush.ts`), and its bouts. */
+        microBouts: () => {
+            const entries = debug.entries() as unknown as Array<{animal: {id: string}; trueLength: number}>;
+            for (let i = 0; i < scene.cast[0].n; i++) {
+                const id = castId(0, i);
+                const e = entries.find((x) => x.animal.id === id);
+                if (!e) continue;
+                const bouts = ambushBouts(id, e.trueLength, t0, t0 + 240);
+                if (bouts.length) return {id, length: e.trueLength, bouts};
+            }
+            return null;
+        },
+        /** The world at an absolute time (s) run up a tenth of a second a frame from 2 s before, then the animal framed close from in front of its surface. */
+        microShot: async (id: string, epoch: number, lengthsIn: number | null) => {
+            const lengths = lengthsIn || scene.lengths || 6;
+            await setAt(epoch - 2);
+            for (let i = 0; i < 20; i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const e = debug.entries().find((x) => x.animal.id === id) as unknown as {trueLength: number; length: number; place: {micro?: unknown; x: number; z: number}; recipeAct?: {block?: string; state?: string; quarry?: {phase: string} | null} | null; animal: {zone: string}};
+            const at = handle.locate(id);
+            if (!at) return "not drawn";
+            const micro = e.place.micro as Parameters<typeof surfacePoint>[0];
+            const point = surfacePoint(micro, e.animal.zone as never, 0);
+            const wall = Math.abs(point.ny) < 0.6;
+            const controls = debug as unknown as {controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}};
+            for (let i = 0; i < 3; i++) {
+                controls.controls.minDistance = 0.03;
+                controls.camera.near = 0.01;
+                controls.camera.updateProjectionMatrix();
+                handle.setView({target: {x: at.x, y: at.y, z: at.z}, distance: Math.max(lengths * e.trueLength, 0.25), polar: wall ? 1.45 : 1.05, azimuth: wall ? Math.atan2(point.nx, point.nz) + 0.25 : at.yaw + Math.PI / 2});
+                await frames(1);
+            }
+            const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`)));
+            return `${id.slice(-3)} length ${e.trueLength.toFixed(3)} on ${wall ? "a wall" : "a surface"} act ${e.recipeAct?.block ?? "-"}/${e.recipeAct?.state ?? "-"} insect ${e.recipeAct?.quarry?.phase ?? "-"} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
         },
         handle
     };

@@ -30,6 +30,7 @@ import type {ArkBeat, HoursAt, ScheduleAnimal, ScheduleWorld, Spot, Trip, TripMo
 import type {AttachPoint, AttachTag} from "@/ark-scene/world-sampler";
 import {hashString} from "@/ark-scene/world";
 import {arkRecipeActivity} from "@/lib/ark-animal-status";
+import {recipeBase} from "@/ark-scene/recipe-templates-reptiles";
 import {dipDepth} from "@/ark-scene/egg-dip";
 // p3 (shake): shaking off the water after a swim.
 import {shakeAt, shakeOnArrival, shakeTotal, sinceOutOfWater, waterShakeOf, type ShakeNow} from "@/ark-scene/water-shake";
@@ -272,8 +273,10 @@ export function recipeIntent(input: RecipeIntentInput): RecipeIntent | null {
         const building = id === "nest_build" && nestSource ? nestSource(input.animal.id, input.start) : null;
         if (id === "nest_build" && nestSource && !building) continue;
         const tending = building ? (building.stage >= 1 ? NEST_TEND : 1) : null;
-        const pull = input.socialPull && input.socialPull !== 1 && SOCIAL_RECIPE.has(arkRecipeActivity(id) ?? "") ? input.socialPull : 1;
-        const chance = weight * 0.7 * (template.often ?? 1) * (tending ?? seasonFactor(species, template.season, input.start)) * pull;
+        const pull = input.socialPull && input.socialPull !== 1 && SOCIAL_RECIPE.has(arkRecipeActivity(recipeBase(id)) ?? "") ? input.socialPull : 1;
+        // (A nest dug or guarded by a kind whose text names no month for it: a little all year, where its template says so.)
+        const season = template.season === "nesting" && !species.nesting.length && template.unstored !== undefined ? template.unstored : seasonFactor(species, template.season, input.start);
+        const chance = weight * 0.7 * (template.often ?? 1) * (tending ?? season) * pull;
         if (random() >= chance) continue;
         const to = goalSpot(input, template, random);
         if (!to) continue;
@@ -2330,7 +2333,8 @@ export function marksOf(world: ScheduleWorld, trips: Trip[], epoch: number, kit:
             const key = episode.keys[i];
             if (!key.block.mark || key.t0 > epoch) continue;
             // A burrow's spoil heap and a dust bath's hollow; a turtle's covered pit is a mound.
-            const kind = episode.recipe === "dig_burrow" || (episode.recipe === "beach_nest" && i > 2) ? "mound" : key.block.mark;
+            const base = recipeBase(episode.recipe);
+            const kind = base === "dig_burrow" || (base === "beach_nest" && i > 2) ? "mound" : key.block.mark;
             out.push({id: `${episode.id}#${i}`, kind, x: key.from.x, y: key.from.y, z: key.from.z, size: Math.max(episode.length * (kind === "hollow" ? 0.9 : 0.5), 0.06), from: key.t0, to: key.t0 + MARK_SECONDS});
         }
     }
@@ -2529,7 +2533,8 @@ export function coatOf(world: ScheduleWorld, trips: Trip[], epoch: number, kit: 
             if (key.t0 > epoch) continue;
             const since = Math.max(epoch - key.t1, 0);
             const id = key.block.id;
-            if (id === "wallow") {
+            // (A tortoise settling into the mud, `wallow~turtle`, is muddied as a wallowing pig is.)
+            if (id === "wallow" || (id === "bury" && recipeBase(episode.recipe) === "wallow")) {
                 wet = Math.max(wet, 0.55 * Math.max(1 - since / 1200, 0));
                 dust = Math.max(dust, 0.9 * Math.max(1 - since / 1200, 0));
             } else if (id === "dust_bathe" || id === "roll") dust = Math.max(dust, Math.max(1 - since / 900, 0));
