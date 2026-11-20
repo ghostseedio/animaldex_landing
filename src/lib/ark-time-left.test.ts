@@ -1204,3 +1204,20 @@ engineTest("the order a predator takes a kind in is the engine's rankPrey: the o
         assert.equal(rank.below, 0, `round ${round}: the engine takes ${taken.id} (${picked.thrive}, ${picked.origin}) with ${rank.below} before it in our order`);
     }
 });
+
+test("a snapshot decoded twice keeps its Ark day, so the card's age and estimate still draw (production 2026-11-20)", () => {
+    // `/api/ark/voyage` and the page hand the client an already decoded snapshot: `ark_day` at the top, none in `voyage`.
+    const server = {
+        voyage: {slug: "first", name: "The first Ark", started_at: "2026-11-08T21:45:21Z", ark_day: 301.104},
+        counts: {animals: 1, species: 1, founders: 1},
+        zones: [],
+        animals: [{id: "2fede2ca-12b2-4571-8161-a12298ebf96a", species_profile_id: "p", name: "Platypus", scientific_name: "Ornithorhynchus anatinus", model_slug: "platypus", zone: "river_lake", arrived_at: "2026-11-09T00:00:00Z", brought_by: {label: "@a", named: true}, mine: false, origin: "arrived", source: "capture", thrive: "ordinary", condition: "well_fed", born_ark_day: 77.077, lifespan_days: 4383, lifespan_estimate: true, activity: "nocturnal", slot: 0}],
+        as_of: "2026-11-20T10:00:00Z"
+    };
+    const once = decodeArkSnapshot(server)!;
+    const twice = decodeArkSnapshot(JSON.parse(JSON.stringify(once)))!;
+    assert.equal(once.ark_day, 301.104);
+    assert.equal(twice.ark_day, 301.104);
+    const outlook = arkLifeOutlook(twice.animals[0], arkTimeLeftWorldOf(twice)!);
+    assert.ok(outlook?.age && outlook.left, "the age line and the estimate");
+});

@@ -195,7 +195,9 @@ export function decodeArkSnapshot(raw: unknown): ArkSnapshot | null {
         zones,
         animals: animals.sort((a, b) => a.arrived_at.localeCompare(b.arrived_at)),
         as_of: text(row.as_of),
-        ...(finite(voyage.ark_day) !== null ? {ark_day: voyage.ark_day as number} : {}),
+        // The Ark's day: the server's `voyage.ark_day`, or a decoded snapshot's own `ark_day` (what `/api/ark/voyage` and the page
+        // hand the client: decoding it again must keep the day, or every card's age and "Estimated time left" draw nothing).
+        ...(finite(voyage.ark_day ?? row.ark_day) !== null ? {ark_day: finite(voyage.ark_day ?? row.ark_day) as number} : {}),
         ...(Array.isArray(row.nests) ? {nests: row.nests.map(nestRow).filter((nest): nest is ArkNestRow => nest !== null)} : {}),
         // Part C: one island's read (`voyage_public_v3`): which island, and both islands' counts.
         ...(["wild", "town"].includes(row.island as string) ? {island: row.island as "wild" | "town"} : {}),
