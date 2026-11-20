@@ -506,11 +506,11 @@ export function bellyOfGeometry(geometry: BellyGeometry): number {
  * The torso a lying body rests on (model units, for `grounding/stand.ts` lieOnGround): a little inside its width, its
  * length less the head and the tail's ends (a lowered head, a tail on the ground), from its folded legs' height up.
  */
-export function lyingTorso(box: {min: {x: number; y: number; z: number}; max: {x: number; y: number; z: number}}, legs: number): {x0: number; x1: number; z0: number; z1: number; bottom: number; top: number} {
+export function lyingTorso(box: {min: {x: number; y: number; z: number}; max: {x: number; y: number; z: number}}, legs: number): {x0: number; x1: number; z0: number; z1: number; bottom: number; top: number; ends: {z0: number; z1: number}} {
     const cx = (box.min.x + box.max.x) / 2;
     const hw = ((box.max.x - box.min.x) / 2) * 0.75;
     const length = box.max.z - box.min.z;
-    return {x0: cx - hw, x1: cx + hw, z0: box.min.z + length * 0.15, z1: box.max.z - length * 0.15, bottom: box.min.y + legs * (box.max.y - box.min.y), top: box.max.y};
+    return {x0: cx - hw, x1: cx + hw, z0: box.min.z + length * 0.15, z1: box.max.z - length * 0.15, bottom: box.min.y + legs * (box.max.y - box.min.y), top: box.max.y, ends: {z0: box.min.z + length * 0.03, z1: box.max.z - length * 0.03}};
 }
 
 /** A belly this close to the ground (a share of the height) has no legs under it to fold: a snake, a slug, a fish. */

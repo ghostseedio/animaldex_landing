@@ -201,9 +201,10 @@ import {arkActivityKey, arkDayWindow, arkEnergy, arkOriginEntry, arkStatusBars, 
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
+import {benthicCreep, edgeBase, inPlaceLift, livesUnderWater, shadowFootprint, wadeBase} from "@/ark-scene/grounding/contact";
 import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
 import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
-import {modelBase, uprightBody} from "@/ark-scene/grounding/base";
+import {feetCarryClip, modelBase, uprightBody} from "@/ark-scene/grounding/base";
 import {canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
 import {ledgeFrame} from "@/ark-scene/rock-ledge"; // ARK-JUNGLE
 import {keepCarriedWithMothers} from "@/ark-scene/carry-cull"; // ARK-JUNGLE
@@ -446,6 +447,8 @@ type Sched = {
     warm?: boolean;
     /** Its pose was last worked out with the collisions (drawn as a model): one drawn again is worked out with them at once. */
     collided?: boolean;
+    /** ARK-CONTACT: how far the collisions moved it off its schedule's pose when last worked out (m), held between steps. */
+    eased?: {dx: number; dz: number};
     /** When (epoch s) a step last left its trip over (its pose came from elsewhere, a foray): not held as "due a new trip" meanwhile. */
     offTripAt?: number;
 };
@@ -2206,6 +2209,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const collideAt = perf.on ? performance.now() : 0;
             const at = (own.pose = modelled ? withCollisions(entry, base, epoch) : base);
             own.collided = modelled;
+            own.eased = {dx: at.x - base.x, dz: at.z - base.z};
             if (perf.on) collideCallMs += performance.now() - collideAt;
             own.at = epoch;
             own.ground = heightAt(at.x, at.z);
@@ -2213,6 +2217,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Close by, walkers lean to the slope; far away nobody can see it. (Grounding leans every level to the drawn
             // slope where it draws it: `groundedStand`.)
             own.pitch = onLand && entry.level !== "far" && groundingRules() === "legacy" ? slopePitch(at.x, at.z, at.yaw, entry.length) : 0;
+        } else if (modelled && own.pose?.moving && own.eased && epoch >= own.at) {
+            // ARK-CONTACT (decision 447, positions "glitch as I zoom in and out"): a far model on the move between its
+            // steps follows its schedule every frame (the trip's own path, cheap), with the collisions' last offset
+            // held; it was held still for half a second and then jumped on (a walking giraffe 60 cm at a time), only
+            // from as far off as it is drawn far, so zooming out set it stuttering. The collisions still run twice a second.
+            const base = sharedBase(entry, epoch, pin);
+            const x = base.x + own.eased.dx;
+            const z = base.z + own.eased.dz;
+            const onGround = !base.aloft && base.y >= -0.01;
+            const y = onGround ? Math.max(heightAt(x, z), 0) + Math.max(base.y - Math.max(heightAt(base.x, base.z), 0), 0) : base.y;
+            own.pose = {...base, x, y, z};
+            own.ground = heightAt(x, z);
         }
         const target = own.pose.aloft ? 1 : 0;
         entry.air += (target - entry.air) * Math.min(dt * 6, 1);
@@ -3729,7 +3745,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (entry.climb && !reducedMotion) {
             climbStems.note(entry.climb);
             const climb = climbAt(entry.animal.id, time);
-            if (climb.on > 0) {
+            // (ARK-CONTACT: only up a blade that is drawn: `ClimbStems.shown`.)
+            if (climb.on > 0 && climbStems.shown(entry.climb)) {
                 Object.assign(climbGround, point);
                 const mixed = mixClimb(climbGround, climbPoint(entry.climb, climb.up, climb.turn, climbBlade), climb.on, climbBlade);
                 Object.assign(point, mixed);
@@ -3931,9 +3948,17 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         (a.sleepNow?.t ?? 0) > 0.5 && (b.sleepNow?.t ?? 0) > 0.5 && a.animal.model_slug === b.animal.model_slug && (sleepStyle(a.animal.model_slug).social !== "apart" || Boolean(a.sched?.animal.young || b.sched?.animal.young));
 
     const keepApart = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: Pose}>, dt: number) => {
-        const near = list.filter((c) => c.visible && c.entry.sched && scheduled(c.entry) && c.distance < 45 && !c.entry.sched.pose?.aloft && !c.entry.riding).sort((a, b) => a.distance - b.distance).slice(0, 80);
+        // ARK-CONTACT (decision 447, "the giraffes in their enclosure glitch positions as I zoom in and out"): who is eased
+        // apart is chosen by the distance from the point the view looks at, not from the camera: zooming moves the camera
+        // along its line to that point, so the same animals are pushed apart at every zoom (by the camera's distance a
+        // herd crossing 45 m snapped back together and apart again, a metre for a giraffe).
+        const tx = controls.target.x;
+        const tz = controls.target.z;
+        const focus = (c: {pose: Pose}) => Math.hypot(c.pose.x - tx, c.pose.z - tz);
+        // (In view or not: one just off the screen's edge still holds its neighbour where it was pushed.)
+        const near = list.filter((c) => c.entry.sched && scheduled(c.entry) && focus(c) < 45 && !c.entry.sched.pose?.aloft && !c.entry.riding).sort((a, b) => focus(a) - focus(b)).slice(0, 80);
         // Animals in an act (a birth, a mating, a contest, a meal) stand where the act has them: the others give them room.
-        const acting = list.filter((c) => c.visible && c.distance < 45 && c.entry.act && !c.entry.act.hidden && !c.entry.act.role);
+        const acting = list.filter((c) => focus(c) < 45 && c.entry.act && !c.entry.act.hidden && !c.entry.act.role);
         for (let i = 0; i < near.length; i++) {
             const a = near[i];
             const pa = a.entry.sched!.profile;
@@ -4258,7 +4283,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const stand = Math.max(at.y, ground);
             const fitted = tideFit(spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
             const dip = (edge.mode === "enter" ? 0.32 : -0.26) * Math.sin(Math.PI * edge.u);
-            return {x: at.x, z: at.z, base: stand + (fitted - stand) * k, yaw: at.yaw + (entry.glance ?? 0), pitch: dip + floatPitch(band.kind) * k, roll: 0, afloat: k > 0.5, edge: {mode: edge.mode, u: edge.u, k, stand, spec}};
+            // (ARK-CONTACT: never into the bank it is on: a marsh frog climbing out sank half its body into it.)
+            return {x: at.x, z: at.z, base: edgeBase(stand, fitted, k, Math.max(ground, standGround(at.x, at.z, stand))), yaw: at.yaw + (entry.glance ?? 0), pitch: dip + floatPitch(band.kind) * k, roll: 0, afloat: k > 0.5, edge: {mode: edge.mode, u: edge.u, k, stand, spec}};
         }
         // (A recipe's act owns its pose, a dive under the surface; one at the surface, a dabble's swim and up-end, rides at
         // its float line all the same: lane MA3, a dabbling duck stood on the water.)
@@ -4285,7 +4311,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // No walking on the water (lane MA3): over water with no band (a heron, an egret in the shallows), not in the air,
         // it stands on the bed, its legs in the water, never on the surface.
         if (!band && !at.aloft && !act?.own && ground < waterTop - 0.02 && at.y >= ground - 0.01 && at.y <= waterTop + 0.02) {
-            return {x: at.x, z: at.z, base: ground, yaw: at.yaw + (entry.glance ?? 0), pitch: act ? act.pitch : 0, roll: act ? act.roll : 0, afloat: false, wading: true};
+            // (ARK-CONTACT: only as deep as its legs; deeper, at its float line, never under the surface on the bed: the
+            // owner's "birds under the water walking on the water floor", decision 447. `grounding/contact.ts` wadeBase.)
+            const plan = library.get(entry.animal.model_slug)?.behaviour?.plan ?? modelBase(entry.animal.model_slug)?.plan;
+            const wade = wadeBase(ground, waterTop, modelHeight, own.profile.water, plan, livesUnderWater(own.profile, plan));
+            return {x: at.x, z: at.z, base: wade.base, yaw: at.yaw + (entry.glance ?? 0), pitch: act ? act.pitch : 0, roll: act ? act.roll : 0, afloat: wade.floating, wading: !wade.floating};
         }
         const circling = at.aloft && (at.doing === "fly" || at.doing === "soar");
         const glance = entry.glance ?? 0;
@@ -5497,7 +5527,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const plan = model?.behaviour?.plan ?? "";
             const pace = 1 - 0.85 * entry.rest;
             // Its speed sets the pace: a tuna laps the reef, a turtle drifts.
-            if (entry.depth) entry.loop += dt * (0.05 + entry.phase * 0.05) * (entry.phase > 0.5 ? 1 : -1) * pace * entry.pace * waterPace(waterMotion(entry.depth));
+            // (ARK-CONTACT: a sea star or an urchin creeps on the bed, centimetres a minute; a sessile one keeps still.)
+            const creep = entry.depth && waterMotion(entry.depth) === "walk" ? benthicCreep(behaviourProfile(slug, plan)) : null;
+            if (entry.depth && creep !== null) entry.loop += dt * creep * Math.max(entry.length, 0.02) / Math.max(waterLoopRadius("walk", entry.phase, entry.length), 0.1) * (entry.phase > 0.5 ? 1 : -1) * pace;
+            else if (entry.depth) entry.loop += dt * (0.05 + entry.phase * 0.05) * (entry.phase > 0.5 ? 1 : -1) * pace * entry.pace * waterPace(waterMotion(entry.depth));
             else if (atSeaOf(entry) && SWIMMING_PLANS.has(plan)) entry.loop += dt * (0.05 + entry.phase * 0.05) * (entry.phase > 0.5 ? 1 : -1) * pace * entry.pace;
             else if (entry.air > 0.001) entry.loop += dt * (0.16 + entry.phase * 0.08) * pace * entry.pace;
             // A flyer comes down to its roost to sleep and takes to the air again awake (an act flies its own path).
@@ -5781,7 +5814,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             } else if (where.edge) {
                 // (Lane MA3: into the water or out of it, settled to its float line as far as its slide has gone, at the height it is drawn at.)
                 const fitted = tideFit(where.edge.spec, modelHeight, ARK_ENVIRONMENT.seaLevel.value, fitInWater).base;
-                where.base = where.edge.stand + (fitted - where.edge.stand) * where.edge.k;
+                where.base = edgeBase(where.edge.stand, fitted, where.edge.k, Math.max(heightAt(where.x, where.z), standGround(where.x, where.z, where.edge.stand)));
             }
             if (!candidate.visible) {
                 entry.middle = null;
@@ -5871,7 +5904,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // Its shadow on the ground under it now (not its home spot's height), gone off the ground or in water.
                 const under = groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, true, where.base);
                 const touch = groundContact(where.base + lift, under.height, under.water, entry.drawnHeight || entry.length * 0.6);
-                if (touch) shadowList.push({x: where.x, y: touch.y, z: where.z, width: Math.max(entry.length * sizeUp * 0.5, 0.4), length: entry.length * sizeUp, yaw: where.yaw, strength: touch.strength});
+                if (touch) shadowList.push({x: where.x, y: touch.y, z: where.z, width: actor.width * as, length: actor.length * as, yaw: where.yaw, strength: touch.strength});
                 // (Afloat: on the water's surface there, the sea's 0, the v2 lake's 6 m: lane MA3 water 2, it was under the lake's bed.)
                 if (marked) ringList.push({x: where.x, y: where.afloat ? waterTopAt(where.x, where.z) : rest, z: where.z, radius: Math.max(entry.length * sizeUp * 0.8, 0.7), color: marked === 2 ? SELECTED : marked === 3 ? LAST_OF_KIND : MINE, alpha: 1});
                 counts.near++;
@@ -5936,7 +5969,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     if (sn!.posture === "bottom") where.base += (where.water.floorY + modelHeight * 0.05 - where.base) * sleepStages(sn!.t).body;
                 } else if (box && !surface && groundingRules() === "grounded" && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase))) {
                     const lyingGround = standGround(where.x, where.z, poseBase);
-                    const lie = lieOnGround(where.x, where.z, where.yaw, s, lyingTorso(box, body.legs), where.pitch, where.roll, lyingGround, groundNormalAt(where.x, where.z, lyingGround));
+                    const lie = lieOnGround(where.x, where.z, where.yaw, s, lyingTorso(box, body.legs), where.pitch, where.roll, lyingGround, groundNormalAt(where.x, where.z, lyingGround), (x, z) => standGround(x, z, poseBase));
                     where.pitch += lie.pitch;
                     where.roll += lie.roll;
                     where.base = lie.rootY + groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s;
@@ -6017,6 +6050,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     if (!carried || !play) continue;
                     rootOffset(rig, carried, play.phase, rigLift, true).multiplyScalar(s * state.weight * share).applyQuaternion(rotation);
                     position.sub(rigLift);
+                }
+                // ARK-CONTACT (decision 447, the owner's hovering cat): a clip played in place on the ground (a pounce, a
+                // strike at play, a Power clip) lifted its root off its rest as if it leapt, with nothing under it carrying
+                // a leap: the body stood in the air over its shadow for the clip's length. On the ground its rise past a
+                // bob comes off (`grounding/contact.ts` inPlaceLift), as a standing clip's sole offset does.
+                if (stand && !state.flying) {
+                    for (const [play, share] of [[state.now, 1 - fromShare], [state.from, fromShare]] as const) {
+                        const inPlace = play && share > 0 && play.name !== "leap" && !PATH_CARRIED_CLIPS.has(play.name) && !feetCarryClip(play.name) ? rig.clips[play.name] : undefined;
+                        if (!inPlace || !play) continue;
+                        const rise = rootOffset(rig, inPlace, play.phase, rigLift, true).y * s * state.weight * share;
+                        position.y -= inPlaceLift(rise, modelHeight);
+                    }
                 }
                 const clipNow = rig.clips[state.now.name];
                 const [a0, a1, at] = clipNow ? clipRows(clipNow, state.now.phase) : [0, 0, 0];
@@ -6142,8 +6187,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const contact = underFeet ? groundContact(lyingOn !== null ? Math.max(lyingOn, underFeet.height) : where.base + lift, underFeet.height, underFeet.water, modelHeight) : null;
             if ((broadSurface && look.on) || contact) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
-                const width = (box.max.x - box.min.x) * candidate.modelScale * sizeUp * 1.15;
-                const length = model.length * candidate.modelScale * sizeUp * 1.0;
+                // ARK-CONTACT (decision 447, "animal shadows don't match their body or size"): its own box as it lies now,
+                // turned by its pitch and roll (a lion on its side, a giraffe's long narrow body), at every level; no
+                // generic floor (from afar every shadow was at least 40 cm across: a sparrow's a fox's).
+                const foot = shadowFootprint(box, candidate.modelScale * sizeUp, where.pitch, where.roll);
+                const width = foot.width;
+                const length = foot.length;
                 if (broadSurface && look.on && surface) {
                     // On a wall, a leaf, a flower or a stone: under its body (not its splayed legs), on that surface where it
                     // touches it, long the way it crawls.
@@ -6151,15 +6200,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 } else if (contact) {
                     // On the ground under it: on its slope (near ones, with the pass on), under the body's middle (a
                     // model's origin is not always there: a seal's is at its chest), turned with it.
+                    // (Its middle at every level and with the pass off too: a level change never moves the shadow.)
                     const normal = look.on && level === "near" ? groundNormalAt(where.x, where.z) : null;
-                    const midX = look.on ? ((box.min.x + box.max.x) / 2) * s : 0;
-                    const midZ = look.on ? ((box.min.z + box.max.z) / 2) * s : 0;
+                    const midX = foot.midX;
+                    const midZ = foot.midZ;
                     shadowList.push({
                         x: where.x + midX * Math.cos(where.yaw) + midZ * Math.sin(where.yaw),
                         y: contact.y,
                         z: where.z - midX * Math.sin(where.yaw) + midZ * Math.cos(where.yaw),
-                        width: Math.max(width, look.on && level === "near" ? 0.05 : 0.4),
-                        length: Math.max(length, look.on && level === "near" ? 0.05 : 0),
+                        width: Math.max(width, 0.004),
+                        length: Math.max(length, 0.004),
                         yaw: where.yaw,
                         strength: grow * contact.strength,
                         ...(normal ? {nx: normal.x, ny: normal.y, nz: normal.z} : {})
@@ -6205,7 +6255,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     index++;
                     if ("resting" in herd.herd) counts.restingFigures++;
                     else counts.herdFigures++;
-                    if (!member.water && shadowList.length < 900) shadowList.push({x: member.x, y: Math.max(member.ground, 0), z: member.z, width: Math.max(herd.width, 0.3), length: herd.depth, yaw: member.yaw, strength: 1});
+                    if (!member.water && shadowList.length < 900) shadowList.push({x: member.x, y: Math.max(member.ground, 0), z: member.z, width: herd.width, length: herd.depth, yaw: member.yaw, strength: 1});
                 } else if (colour) {
                     specks.push(herd.shape, herd.speckMatrices, i * 16, dim ? DIM_SPECK : colour);
                     if ("resting" in herd.herd) counts.restingSpecks++;

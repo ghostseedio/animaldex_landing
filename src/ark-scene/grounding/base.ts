@@ -114,6 +114,12 @@ export function meanDrop(slug: string): number {
  * air time, a take-off) are carried by their own paths and poses: 0.
  */
 const STANDING = new Set(["idle", "walk", "run", "trot", "gallop", "graze", "browse", "scan", "call", "display", "groom", "dig", "strike", "fight", "clash", "shake_off", "perch", "stalk", "sniff", "drink"]);
+/** ARK-CONTACT: a clip the feet carry as it goes (a standing clip, or a gait: its own bob and a hop's air time are its own). */
+const GAITS = new Set(["hop", "slither", "crawl", "climb", "swim", "paddle"]);
+export function feetCarryClip(name: string): boolean {
+    return STANDING.has(name) || GAITS.has(name);
+}
+
 export function clipStandOffset(slug: string, clip: string | null | undefined): number {
     if (!clip || !STANDING.has(clip)) return 0;
     // (Only a real offset, half a percent of the body, is listed: the rest is the clip's own bob.)

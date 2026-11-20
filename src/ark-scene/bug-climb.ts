@@ -219,11 +219,26 @@ export class ClimbStems {
         if (this.noted.length < 256) this.noted.push(stem);
     }
 
+    /**
+     * ARK-CONTACT (decision 447, "grasshoppers not on the blade of grass"): whether its blade was drawn last frame. A bug
+     * climbs only a blade that is drawn: it climbed at any distance its body was drawn (42 m) and past the first 24 noted
+     * (in no order), and between 14 and 42 m, or past the cap, it went up and down an empty column of air.
+     */
+    shown(stem: ClimbStem): boolean {
+        return this.drawn.has(stem);
+    }
+    private drawn = new Set<ClimbStem>();
+
     update(camera: {x: number; y: number; z: number}) {
         let count = 0;
+        // (The nearest first: the cap's blades are the ones the camera is closest to.)
+        const away = (stem: ClimbStem) => Math.hypot(stem.x - camera.x, stem.y - camera.y, stem.z - camera.z);
+        if (this.noted.length > CAP) this.noted.sort((a, b) => away(a) - away(b));
+        this.drawn.clear();
         for (const stem of this.noted) {
             if (count >= CAP) break;
-            if (Math.hypot(stem.x - camera.x, stem.y - camera.y, stem.z - camera.z) > STEM_DRAWN_WITHIN) continue;
+            if (away(stem) > STEM_DRAWN_WITHIN) continue;
+            this.drawn.add(stem);
             // Its lean toward the side its bug climbs: the blade's own +x turned to `side`.
             this.rotation.setFromAxisAngle(this.up, -stem.side);
             this.matrix.compose(this.position.set(stem.x, stem.y - 0.004, stem.z), this.rotation, this.scale.set(1, stem.height + 0.004, 1));
