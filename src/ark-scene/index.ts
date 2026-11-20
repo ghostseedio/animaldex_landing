@@ -5985,6 +5985,19 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 where.z += drawnFace.z - where.surface.z;
                 where.surface = drawnFace;
             }
+            // ARK-CONTACT (the coordinator, 2026-11-21: a wolf spider 4 m up a tree): a ground dweller (its microhabitat the
+            // leaf litter: a wolf spider, a ground beetle, a woodlouse) given a raised plant point (a tree's or a shrub's
+            // leaf, a branch, bark, a flower head) more than 30 cm up is drawn on the drawn ground straight below it, where
+            // it hunts, not up in the plant.
+            const groundDweller = entry.micro?.spot === "leaf_litter" && (microTag === "leaf" || microTag === "branch" || microTag === "bark" || microTag === "flower_head" || microTag === "canopy_perch" || microTag === "limb");
+            if (groundDweller && where.surface && !where.water && entry.air <= 0.001 && !(process.env.NODE_ENV !== "production" && (globalThis as {__arkFlowerFixOff?: boolean}).__arkFlowerFixOff)) {
+                const p = where.surface;
+                const below = standGround(p.x, p.z, p.y);
+                if (p.y - below > 0.3) {
+                    where.base = below;
+                    where.surface = undefined;
+                }
+            }
             // ARK-CONTACT (the owner, 2026-11-21: "a golden tortoise beetle is hovering above a daisy"): an insect at rest on
             // a flower's head or a low leaf is drawn on the flower or the leaf as drawn there (the drawn floor plant under
             // its point, as placed and scaled: `asset-rocks.ts` surfaceBelow), not at the height the point was made with
