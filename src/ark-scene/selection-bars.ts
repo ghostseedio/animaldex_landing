@@ -422,6 +422,8 @@ export class ArkSelectionBars {
             host.querySelectorAll("[data-ark-live]").forEach((part) => over.push(...Array.from(part.children)));
             const sound = document.getElementById("ark-sound");
             if (sound) over.push(sound);
+            // (The apps' embed draws the page's own ticker, "aboard" chip and switches over the view: ARK-SIMPLE.)
+            document.querySelectorAll('#ark-ui #ark-ticker, #ark-ui #ark-aboard > button, #ark-ui [role="switch"]').forEach((part) => over.push(part));
             for (const element of over) {
                 const box = element.getBoundingClientRect();
                 if (box.width < 2 || box.height < 2) continue;

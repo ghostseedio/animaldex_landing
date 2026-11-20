@@ -172,7 +172,7 @@ function EmbedUi({store, options}: {store: Store; options: ArkEmbedUiOptions}) {
             // The scene centres the animal over the card; here the ticker, the switches and the chip hold the world's top
             // too (the app's own bar above them), so the centre is the free band between those and the card.
             const top = height > 0 ? overlaysBottom() : 0;
-            scene()?.setViewInset(Math.max(height - top, 0));
+            scene()?.setViewInset(height, top);
         };
         if (!selected || !band) {
             delete root.dataset.arkCard;

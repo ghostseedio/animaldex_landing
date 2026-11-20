@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {Vector3} from "three";
 import {worldDecor} from "@/ark-scene/decor";
-import {CameraObstacles, collideCamera, dampingFor, ease, FollowSmoother, inside, obstaclesOf, penetration, sightExit, type CameraObstacle} from "@/ark-scene/runtime/camera";
+import {CameraObstacles, collideCamera, dampingFor, ease, fitAboveCard, FollowSmoother, inside, obstaclesOf, penetration, sightExit, type CameraObstacle} from "@/ark-scene/runtime/camera";
 import {heightAt} from "@/ark-scene/world";
 
 const options = {dt: 1 / 60, diving: false, clearance: 1.2, closeUp: false};
@@ -171,4 +171,22 @@ test("runtime camera: following an animal at a steady pace keeps it in the middl
         other.y += step.y;
     }
     assert.ok(Math.abs(other.x - target.x) < 0.15, `${other.x} vs ${target.x}`);
+});
+
+test("runtime camera: a selected animal fits whole above the card (ARK-SIMPLE: the apps' Ark)", () => {
+    const vertical = 2 * Math.tan((38 * Math.PI) / 360);
+    const phone = 402 / 874;
+    for (const [name, length, height] of [["cat", 0.5, 0.3], ["horse", 2.4, 1.7], ["elephant", 6.5, 3.3]] as const) {
+        const visible = 0.25;
+        const d = fitAboveCard(length, height, phone, visible);
+        // Its height within 70% of the band above the card, its length within 80% of the width.
+        assert.ok(height / (d * vertical) <= 0.7 * visible + 1e-9, `${name}: tall`);
+        assert.ok(length / (d * vertical * phone) <= 0.8 + 1e-9, `${name}: wide`);
+        // Never further than it must be: one of the two is at its limit.
+        const tight = Math.max(height / (d * vertical * 0.7 * visible), length / (d * vertical * phone * 0.8));
+        assert.ok(Math.abs(tight - 1) < 1e-9, `${name}: tight`);
+    }
+    // A bigger card (less room) frames from further back; no card at all, from nearer.
+    assert.ok(fitAboveCard(2.4, 1.7, phone, 0.2) > fitAboveCard(2.4, 1.7, phone, 0.25));
+    assert.ok(fitAboveCard(2.4, 1.7, phone, 1) <= fitAboveCard(2.4, 1.7, phone, 0.25));
 });
