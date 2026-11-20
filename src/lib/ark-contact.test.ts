@@ -196,3 +196,30 @@ test("a lying pose is seated by its own lowest points, lowered by 15 cm at most 
     assert.equal(seatDrop(points, m, () => 0), SEAT_MOST);
     assert.equal(seatDrop(points, m, () => 1.3), 0);
 });
+
+test("a town eave's perch is drawn on the drawn roof: every eave perch has the drawn roof 0-3 cm under it (the ground dove beside the roof)", async () => {
+    const {townAreas} = await import("@/ark-scene/islands/town/areas");
+    const {townPlan} = await import("@/ark-scene/islands/town/plan");
+    const {buildingSolid, surfacesAt} = await import("@/ark-scene/islands/town/roof-perch");
+    const {drawnEave} = await import("@/ark-scene/islands/town/eave-draw");
+    const byId = new Map(townPlan().buildings.map((b) => [b.id, b]));
+    const solids = new Map<string, number[]>();
+    let eaves = 0;
+    let moved = 0;
+    const off: string[] = [];
+    for (const s of townAreas().spots) {
+        if (s.where !== "eave") continue;
+        eaves++;
+        const b = byId.get(s.place)!;
+        const solid = solids.get(b.id) ?? buildingSolid(b);
+        solids.set(b.id, solid);
+        const at = drawnEave(s.x, s.y, s.z) ?? s;
+        if (at !== s) moved++;
+        const under = surfacesAt(solid, at.x, at.z).filter((h) => h <= at.y + 0.001);
+        const gap = under.length ? at.y - Math.max(...under) : Infinity;
+        if (!(gap >= 0 && gap <= 0.03)) off.push(`${b.id} ${gap.toFixed(3)}`);
+    }
+    assert.ok(eaves >= 250, `${eaves} eaves`);
+    assert.ok(moved >= 150, `${moved} moved`);
+    assert.deepEqual(off.slice(0, 10), [], `${off.length} of ${eaves} eave perches off their drawn roof`);
+});

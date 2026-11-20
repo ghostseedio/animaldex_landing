@@ -333,6 +333,8 @@ const LITE_CAPS = {near: 40, nearSpecies: 24, models: 80};
  * motion none.
  */
 const RIG_CAPS_DRAWN = {animals: 24, species: 12};
+/** ARK-CONTACT: animals this long (m) or shorter are kept out of the drawn rocks (`insideRock`): the bugs, snails, spiders. */
+const SMALL_ON_ROCKS = 0.15;
 const RIG_CAPS_DRAWN_LITE = {animals: 8, species: 4};
 const RIG_WITHIN = 20;
 /**
@@ -584,6 +586,10 @@ type Entry = {
     recipeAct?: RecipeAct | null;
     /** ARK-CONTACT: its rock face as the rock is drawn (kept, filled each frame). */
     drawnFace?: SurfacePoint;
+    /** ARK-CONTACT: its town eave perch as drawn (`drawnEave`), kept so a frame makes no new point. */
+    eaveFace?: SurfacePoint;
+    /** ARK-CONTACT: its flower head or leaf as drawn (`surfaceBelow`), kept so a frame makes no new point. */
+    floorFace?: SurfacePoint;
     /** Ambient flock-mates round a small animal's spot (a swarm, a cluster). */
     recipeFlock?: Flock | null;
     /** The duller sex's dim (`sexDim`), worked out once. */
@@ -4101,6 +4107,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         e.antler = {...antlerState(spec, seasonMonthAt(nowS), sexLook(e.animal.id, e.animal.model_slug).sex, e.animal.id), at: nowS};
         return e.antler;
     };
+    // ARK-CONTACT: the view's target and the camera's distance from it at the reactive layer's last step: a move with the
+    // target still and only the distance changed is a zoom (`ReactiveWorld.cameraZooming`).
+    let zoomWas: {x: number; y: number; z: number; d: number} | null = null;
+    const cameraZoomingNow = (): boolean => {
+        const t = controls.target;
+        const d = camera.position.distanceTo(t);
+        const was = zoomWas;
+        zoomWas = {x: t.x, y: t.y, z: t.z, d};
+        // (Development: the before-and-after zoom test turns the fix off for its "before" runs.)
+        if (process.env.NODE_ENV !== "production" && (globalThis as {__arkZoomFixOff?: boolean}).__arkZoomFixOff) return false;
+        return Boolean(was && Math.hypot(t.x - was.x, t.y - was.y, t.z - was.z) < 0.05 && Math.abs(d - was.d) > 0.005);
+    };
     const stepReactive = (list: Array<{entry: Entry; distance: number; pose: Pose; modelHeight: number}>, dt: number) => {
         const t0 = performance.now();
         const want = reactiveTier();
@@ -4190,6 +4208,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             night: lighting.daylight.night,
             weather: reactiveWeather,
             camera: {x: camera.position.x, y: camera.position.y, z: camera.position.z},
+            cameraZooming: cameraZoomingNow(),
             sight: queries.sight,
             refuge: queries.refuge
         });
@@ -4878,6 +4897,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Out of its rig: back on its feet (the near model's rest pose) for when it comes back.
             state.base = "stand";
             state.toward = null;
+            // (ARK-CONTACT: and when it comes back, straight into the pose it is in then, no transition: `entering`.)
+            state.entering = true;
             return null;
         }
         // Its pace for choosing the clip, eased over about a fifth of a second (the clip's phase still follows the real distance).
@@ -5232,6 +5253,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         } else {
             state.toward = null;
             const target = clipBase(rig.clips[want]);
+            // ARK-CONTACT: back in its rig after a level swap (a zoom), it is already in the pose its behaviour holds: that
+            // pose's own clip from its steady phase, no lie_down or get_up played for a change the schedule never made.
+            if (state.entering && !(process.env.NODE_ENV !== "production" && (globalThis as {__arkZoomFixOff?: boolean}).__arkZoomFixOff)) state.base = target;
             const urgent = entry.reactive?.action === "flee" || entry.reactive?.action === "alert" || entry.reactive?.action === "startle";
             const step = baseStep(state.base, target, (name) => Boolean(rig.clips[name]), urgent);
             if (step) {
@@ -5250,6 +5274,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (want === "sleep_side" && recipeAct?.roll) where.roll -= recipeAct.roll * state.weight;
         // A sleep posture, a lying base or the way down and up draws the posture itself (the head, the drop, the breath):
         // the procedural one (`sleep.ts` sleepDraw) gives way to it as the rig fades in.
+        state.entering = false;
         entry.sleepClipped = want.startsWith("sleep") || clipBase(rig.clips[want]) !== "stand" || want === "lie_down" || want === "get_up" || want === "get_up_fast";
         const playing = rig.clips[want];
         if (!playing) return null;
@@ -5918,6 +5943,45 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 where.base += drawnFace.y - where.surface.y;
                 where.z += drawnFace.z - where.surface.z;
                 where.surface = drawnFace;
+            }
+            // ARK-CONTACT (the owner, 2026-11-21: "a golden tortoise beetle is hovering above a daisy"): an insect at rest on
+            // a flower's head or a low leaf is drawn on the flower or the leaf as drawn there (the drawn floor plant under
+            // its point, as placed and scaled: `asset-rocks.ts` surfaceBelow), not at the height the point was made with
+            // (the flower's unscaled shape, the ground then). Where no flower is drawn at a flower's point (a thinner
+            // planting than the points were made for), it rests on the drawn ground, not in the air over it.
+            if (assetFloor && microTag && (microTag === "flower_head" || microTag === "leaf") && where.surface && where.surface.ny > 0.5 && entry.length <= SMALL_ON_ROCKS && !entry.sched?.pose?.moving && entry.air <= 0.001 && level !== "token" && candidate.distance < 40 && !(process.env.NODE_ENV !== "production" && (globalThis as {__arkFlowerFixOff?: boolean}).__arkFlowerFixOff)) {
+                const p = where.surface;
+                const top = assetFloor.surfaceBelow(p.x, p.y, p.z, microTag === "flower_head" ? 0.3 : 0.08, 0.12);
+                const groundHere = standGround(p.x, p.z, p.y);
+                const to = top !== null ? top : microTag === "flower_head" && p.y - groundHere < 0.8 && p.y - groundHere > 0.01 ? groundHere : null;
+                if (to !== null && Math.abs(to - p.y) > 0.002) {
+                    where.base += to - p.y;
+                    where.surface = entry.floorFace = Object.assign(entry.floorFace ?? {...p}, p, {y: to});
+                }
+            }
+            // ARK-CONTACT (the owner, 2026-11-21: "shield bugs and stink bugs are inside a rock"): a small animal (a bug, a
+            // beetle, an ant, a spider, a snail, a woodlouse) is never drawn inside a drawn rock: on its way over the ground
+            // (the schedule's walk knows the rock's place, not the rock as drawn on today's ground) or on a rock point the
+            // face cast left as made, it walks up and over the rock, on its top straight above (`asset-rocks.ts` insideRock).
+            if (assetRocks && entry.length <= SMALL_ON_ROCKS && !(process.env.NODE_ENV !== "production" && (globalThis as {__arkRockFixOff?: boolean}).__arkRockFixOff) && !where.water && !where.afloat && entry.air <= 0.001 && level !== "token" && candidate.distance < 40) {
+                const inside = assetRocks.insideRock(where.x, where.base + Math.max(entry.length * 0.25, 0.01), where.z);
+                if (inside > 0.005) {
+                    where.base += inside + Math.max(entry.length * 0.25, 0.01);
+                    // (On the rock's top it stands upright on it, not along a face it was set on inside the rock.)
+                    if (where.surface && Math.abs(where.surface.ny) < 0.5) where.surface = undefined;
+                }
+            }
+            // ARK-CONTACT (the owner, 2026-11-21: the ground dove in mid-air beside a house's roof): resting on a town eave's
+            // perch, on the drawn roof's edge (`islands/town/eave-draw.ts`), not beside it.
+            if (island && !where.water && !where.afloat && !entry.sched?.pose?.moving && entry.air <= 0.001 && !(process.env.NODE_ENV !== "production" && (globalThis as {__arkEaveFixOff?: boolean}).__arkEaveFixOff)) {
+                const from = where.surface ?? {x: where.x, y: where.base, z: where.z};
+                const eave = island.drawnEave?.(from.x, from.y, from.z) ?? null;
+                if (eave) {
+                    where.x += eave.x - from.x;
+                    where.base += eave.y - from.y;
+                    where.z += eave.z - from.z;
+                    if (where.surface) where.surface = entry.eaveFace = Object.assign(entry.eaveFace ?? {...where.surface}, where.surface, {x: eave.x, y: eave.y, z: eave.z});
+                }
             }
             const surface = where.surface;
             if (surface) entry.middle = (entry.middle ?? new Vector3()).set(where.x + surface.nx * modelHeight / 2, where.base + surface.ny * modelHeight / 2, where.z + surface.nz * modelHeight / 2);
@@ -10035,6 +10099,31 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             },
             // ARK-CONTACT round 3: its leg tips this frame (the playing clip's frame skinned on the CPU, by the instance's
             // matrix), each one's gap over what is drawn under it along the body's up (negative: in the air).
+            // ARK-CONTACT (the shield bugs in a rock): every small animal (to `maxLength` m) inside a drawn rock, by where it
+            // was last drawn (`drawn`) or, never drawn, where its schedule has it (`posed`).
+            insideRocks: (maxLength = 0.15) => {
+                const out: Array<{id: string; slug: string; depth: number; from: string; x: number; y: number; z: number; micro: string | null}> = [];
+                let checked = 0;
+                for (const e of allEntries()) {
+                    if (e.length > maxLength || e.place.water) continue;
+                    const d = (e as {drawn?: {x: number; y: number; z: number; level: string}}).drawn;
+                    const p = e.sched?.pose;
+                    const at = d && d.level ? {x: d.x, y: d.y, z: d.z, from: "drawn"} : p && !p.aloft ? {x: p.x, y: p.y, z: p.z, from: "posed"} : null;
+                    if (!at) continue;
+                    checked++;
+                    // (Its middle, half its height up: a body skimming a rock's face is not in it.)
+                    const depth = assetRocks?.insideRock(at.x, at.y + Math.max(e.length * 0.25, 0.01), at.z) ?? 0;
+                    if (depth > 0.005) out.push({id: e.animal.id, slug: e.animal.model_slug, depth: Math.round(depth * 1000) / 1000, from: at.from, x: at.x, y: at.y, z: at.z, micro: (e.place.micro as {attach?: {tag?: string}} | null | undefined)?.attach?.tag ?? null});
+                }
+                return {checked, inside: out.length, rows: out.sort((a, b) => b.depth - a.depth).slice(0, 60)};
+            },
+            eaveAt: (x: number, y: number, z: number) => {
+                const at = island?.drawnEave?.(x, y, z) ?? null;
+                return at ? {building: `${at.x.toFixed(1)},${at.z.toFixed(1)}`, x: at.x, y: at.y, z: at.z} : null;
+            },
+            rockDepth: (x: number, y: number, z: number) => assetRocks?.insideRock(x, y, z) ?? 0,
+            // ARK-CONTACT: the clips a species' loaded rig has (the rules' pick: `rigClip`).
+            rigClips: (slug: string) => Object.keys(rigs.get(slug)?.clips ?? {}),
             tips: (id: string, count = 8) => {
                 const entry = entryById.get(id);
                 const drawn = (entry as {drawn?: {m?: number[]}} | undefined)?.drawn;

@@ -60,6 +60,8 @@ export type ArkIslandScene = {
      */
     /** `near`: the body's height (its pose's base): the floor it stands on where floors are stacked (balconies). */
     drawnHeight: (x: number, z: number, near?: number) => number;
+    /** ARK-CONTACT: a body resting on a planned eave perch at (x, y, z) (world frame): the eave as drawn, else null (`islands/town/eave-draw.ts`). */
+    drawnEave?: (x: number, y: number, z: number) => {x: number; y: number; z: number} | null;
     drawnGround: (x: number, z: number) => {height: number; nx: number; ny: number; nz: number};
     /**
      * The drawn ground under a point and the water's surface over it (null on dry land), for contact shadows and rings.
@@ -251,6 +253,8 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const {CANAL_LEVEL, townPlan} = await import("@/ark-scene/islands/town/plan");
     const [{zooSwingFrame}, {hallClimbs}] = await Promise.all([import("@/ark-scene/islands/town/zoo-swing"), import("@/ark-scene/islands/town/render/zoo-houses")]); // ARK-JUNGLE
     const origin = options.origin ?? townWorldOrigin();
+    let eaveDraw: ((x: number, y: number, z: number) => {x: number; y: number; z: number} | null) | null = null;
+    let eaveLoad: Promise<void> | null = null;
     const def = ARK_ISLANDS.town;
     const has = (animal: Pick<ArkAnimal, "island" | "area">) => animal.island === "town" || (!animal.island && (animal.area === "house" || animal.area === "farm" || animal.area === "zoo"));
     const open = enclosuresIn(options.animals.filter(has));
@@ -429,6 +433,17 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             }),
         heightAt: (x, z) => town.heightAt(x - origin.x, z - origin.z),
         drawnHeight: (x, z, near) => townDrawnHeight(x - origin.x, z - origin.z, undefined, near),
+        drawnEave: (x, y, z) => {
+            // (Loaded with the town's other modules, off the first paint: none until it is in.)
+            if (!eaveDraw) {
+                eaveLoad ??= import("@/ark-scene/islands/town/eave-draw").then((m) => {
+                    eaveDraw = m.drawnEave;
+                });
+                return null;
+            }
+            const at = eaveDraw(x - origin.x, y, z - origin.z);
+            return at ? {x: at.x + origin.x, y: at.y, z: at.z + origin.z} : null;
+        },
         drawnGround: (x, z) => townDrawnGround(x - origin.x, z - origin.z),
         groundUnder: (x, z, seaLevel, near) => {
             const lx = x - origin.x;

@@ -232,6 +232,84 @@ export class AssetInstances {
         return out;
     }
 
+    private readonly belowCache = new Map<string, number | null>();
+
+    /**
+     * ARK-CONTACT (the owner, 2026-11-21: "a golden tortoise beetle is hovering above a daisy"): the highest drawn surface
+     * of these instances straight under a point, from `up` over it to `down` under it (its world height), or null where
+     * none is drawn there. Each instance as placed (its own scale and turn). Kept by the point (5 mm).
+     */
+    surfaceBelow(x: number, y: number, z: number, up: number, down: number): number | null {
+        const key = `${Math.round(x * 200)},${Math.round(y * 200)},${Math.round(z * 200)},${up},${down}`;
+        const known = this.belowCache.get(key);
+        if (known !== undefined) return known;
+        let best: number | null = null;
+        const cx = Math.floor(x / 8);
+        const cz = Math.floor(z / 8);
+        for (let a = -1; a <= 1; a++)
+            for (let b = -1; b <= 1; b++)
+                for (const at of this.cells.get(stretchKey(cx + a, cz + b)) ?? []) {
+                    const entry = this.byAsset.get(at.asset)!;
+                    const it = entry.instances[at.index];
+                    if (Math.hypot(x - it.x, z - it.z) > at.reach) continue;
+                    const geometry = (entry.meshes.lod0 ?? entry.meshes.lod1)?.geometry;
+                    if (!geometry) continue;
+                    const mesh = this.castMesh;
+                    mesh.geometry = geometry;
+                    mesh.material = this.insideMaterial;
+                    mesh.matrixWorld.copy(it.matrix);
+                    this.caster.set(castFrom.set(x, y + up, z), castDown.set(0, -1, 0));
+                    this.caster.near = 0;
+                    this.caster.far = up + down;
+                    const hit = this.caster.intersectObject(mesh, false)[0];
+                    if (hit && (best === null || hit.point.y > best)) best = hit.point.y;
+                }
+        if (this.belowCache.size > 8192) this.belowCache.clear();
+        this.belowCache.set(key, best);
+        return best;
+    }
+
+    private readonly insideCache = new Map<string, number>();
+    private readonly insideMaterial = new MeshStandardMaterial({side: DoubleSide});
+
+    /**
+     * ARK-CONTACT (the owner, 2026-11-21: "shield bugs and stink bugs are inside a rock"): how far a point is inside a
+     * drawn rock (m, to the rock's surface straight above it), 0 outside every rock. A ray up from the point through
+     * the rock instances within reach: its first crossing leaving a rock (the face turned the ray's way) is the rock's
+     * top over the point. Kept by the point (2 cm).
+     */
+    insideRock(x: number, y: number, z: number): number {
+        const key = `${Math.round(x * 50)},${Math.round(y * 50)},${Math.round(z * 50)}`;
+        const known = this.insideCache.get(key);
+        if (known !== undefined) return known;
+        let depth = 0;
+        const cx = Math.floor(x / 8);
+        const cz = Math.floor(z / 8);
+        for (let a = -1; a <= 1; a++)
+            for (let b = -1; b <= 1; b++)
+                for (const at of this.cells.get(stretchKey(cx + a, cz + b)) ?? []) {
+                    const entry = this.byAsset.get(at.asset)!;
+                    const it = entry.instances[at.index];
+                    if (Math.hypot(x - it.x, z - it.z) > at.reach) continue;
+                    const geometry = (entry.meshes.lod0 ?? entry.meshes.lod1)?.geometry;
+                    if (!geometry) continue;
+                    const mesh = this.castMesh;
+                    mesh.geometry = geometry;
+                    mesh.material = this.insideMaterial;
+                    mesh.matrixWorld.copy(it.matrix);
+                    this.caster.set(castFrom.set(x, y, z), castDown.set(0, 1, 0));
+                    this.caster.near = 0;
+                    this.caster.far = at.reach * 2 + 1;
+                    const hit = this.caster.intersectObject(mesh, false)[0];
+                    if (!hit?.face) continue;
+                    const up = castNormal.copy(hit.face.normal).transformDirection(mesh.matrixWorld).y;
+                    if (up > 0.05) depth = Math.max(depth, hit.distance);
+                }
+        if (this.insideCache.size > 8192) this.insideCache.clear();
+        this.insideCache.set(key, depth);
+        return depth;
+    }
+
     private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; distances: [number, number, number]; info: AssetInfo; levels?: Int8Array}>();
     private reach = 1;
     private shadows = true;

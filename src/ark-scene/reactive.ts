@@ -128,6 +128,12 @@ export type ReactiveWorld = {
     night: number;
     weather: ReactiveWeather;
     camera: Vec3 | null;
+    /**
+     * ARK-CONTACT (the owner, 2026-11-21: "zooming in and out on a resting animal makes it get up and lie back down"):
+     * the camera moved this frame only along its line to the point the view looks at (a zoom, the view's target still):
+     * the viewer looking closer, not anyone walking at the animals. Its move is no approach.
+     */
+    cameraZooming?: boolean;
     /** 0 blocked … 1 clear: terrain and dense vegetation between two points (eye heights). */
     sight?: (from: Vec3, to: Vec3) => number;
     /** The nearest refuge of a kind within r of a point, or null. */
@@ -589,7 +595,12 @@ export class ReactiveLayer {
             const vx = (cam.x - this.camPrev.x) / world.dt;
             const vz = (cam.z - this.camPrev.z) / world.dt;
             if (Math.hypot(vx, vz) > 25) this.camVel = {x: 0, z: 0};
-            else {
+            else if (world.cameraZooming) {
+                // (A zoom: the velocity eases back to rest, as for a still camera.)
+                const k = Math.min(world.dt * 4, 1);
+                this.camVel.x -= this.camVel.x * k;
+                this.camVel.z -= this.camVel.z * k;
+            } else {
                 const k = Math.min(world.dt * 4, 1);
                 this.camVel.x += (vx - this.camVel.x) * k;
                 this.camVel.z += (vz - this.camVel.z) * k;

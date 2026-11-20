@@ -200,6 +200,300 @@ await close("bird-at-water-2", "great-cormorant", (r) => r.water && !r.aloft, (r
 await close("bird-at-water-3", "little-egret", (r) => r.water && !r.aloft, (r) => 2, 1.42);
 
 // Shadows of four sizes: a beetle-sized, a cat-sized, a zebra-sized and an elephant, each framed from above-side.
+// The owner's farm (2026-11-21): cows and pigs sunk to their hocks in the paddock, at night, on main. Each farm kind
+// standing and walking, framed close (its rig), at 25 m and at 70 m: its feet line against the town's drawn ground
+// (positive: sunk), and its leg tips (the rig's).
+if (want("farm")) {
+    await crossTo("town");
+    report.farm = [];
+    for (const slug of ["cow", "domestic-pig", "domestic-sheep", "domestic-goat", "domestic-horse", "domestic-chicken"]) {
+        const rows = await find(slug);
+        const picks = [rows.find((r) => !r.moving && !r.asleep), rows.find((r) => r.moving)].filter(Boolean);
+        for (const row of picks) {
+            for (const distance of [Math.max(row.length * 3.5, 2.5), 25, 70]) {
+                if (!(await frame(row.id, distance, 1.1, Math.PI / 4, 3500))) continue;
+                const u = await under(row.id, null);
+                const t = await page.evaluate((id) => window.__arkDebug.tips?.(id) ?? null, row.id);
+                const gaps = (t?.tips ?? []).map((x) => x.gap).filter((g) => g !== null);
+                const item = {slug, moving: row.moving, distance: Math.round(distance), level: u?.drawn?.level ?? null, feetLineSunk: u?.drawnGround ?? null, tipsLowest: gaps.length ? Math.max(...gaps) : null, tipsHighest: gaps.length ? Math.min(...gaps) : null, clip: u?.drawn?.clip ?? null, base: u?.drawn?.base ?? null, poseY: u?.drawn?.poseY ?? null, height: u?.drawn?.height ?? null, ground: u?.drawn?.ground ?? null};
+                report.farm.push(item);
+                console.log("farm", JSON.stringify(item));
+                if (distance < 20 && !report.farmShot?.[slug]) {
+                    (report.farmShot ??= {})[slug] = true;
+                    await shot(`farm-${slug}`);
+                }
+            }
+        }
+    }
+}
+
+// The owner: "zooming in and out on a resting animal makes it get up and lie back down". A sleeping horse, deer and dog
+// zoomed 12 -> 90 -> 12 m five times (the view's target held on it, the distance eased as a wheel does), the fix off
+// ("before") and on ("after"): how often it woke, got up (its sleep's share fell under 0.9), or played a way down or up.
+if (want("zoom-sleep")) {
+    report.zoomSleep = [];
+    for (const [slug, island] of [["domestic-horse", "town"], ["domestic-dog", "town"], ["cow", "town"], ["red-deer", "wild"], ["fallow-deer", "wild"], ["white-tailed-deer", "wild"]]) {
+        await crossTo(island);
+        let row = null;
+        for (const h of [23, 2, 4, 21, 13]) {
+            await page.evaluate((h) => window.__arkScene.setHours(h), h);
+            await wait(3000);
+            const rows = await find(slug);
+            row = rows.find((r) => r.asleep) ?? rows.find((r) => r.doing === "rest" && !r.moving) ?? null;
+            if (row) break;
+        }
+        if (!row) {
+            console.log("zoom-sleep", slug, "none asleep or resting");
+            continue;
+        }
+        for (const off of [true, false]) {
+            await page.evaluate((off) => (window.__arkZoomFixOff = off), off);
+            if (!(await frame(row.id, 12, 1.1, Math.PI / 3, 3000))) continue;
+            const result = await page.evaluate(async (id) => {
+                const e = () => window.__arkDebug.entries().find((x) => x.animal.id === id);
+                const at = window.__arkScene.locate(id);
+                const c = window.__arkDebug.controls;
+                const polar = c.getPolarAngle();
+                const azimuth = c.getAzimuthalAngle();
+                const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+                const counts = {woke: 0, gotUp: 0, restDrops: 0, reacted: new Set(), transitions: 0, clips: new Set(), samples: 0, levels: new Set()};
+                let wasRest = (e()?.rest ?? 0) > 0.6;
+                let wasWoke = Boolean(e()?.reactive?.woke);
+                let wasUp = (e()?.sleepNow?.t ?? 0) < 0.9;
+                let wasClip = e()?.rig?.now?.name ?? null;
+                const sample = () => {
+                    const x = e();
+                    if (!x) return;
+                    counts.samples++;
+                    counts.levels.add(x.level);
+                    const woke = Boolean(x.reactive?.woke);
+                    if (woke && !wasWoke) counts.woke++;
+                    wasWoke = woke;
+                    const resting = (x.rest ?? 0) > 0.6;
+                    if (!resting && wasRest) counts.restDrops++;
+                    wasRest = resting;
+                    if (x.reactive?.action) counts.reacted.add(x.reactive.action);
+                    const up = (x.sleepNow?.t ?? 0) < 0.9;
+                    if (up && !wasUp) counts.gotUp++;
+                    wasUp = up;
+                    const clip = x.rig && x.rig.weight > 0.05 ? x.rig.now?.name ?? null : null;
+                    if (clip && clip !== wasClip && ["lie_down", "get_up", "get_up_fast", "side_down", "side_up", "sit_down", "sit_up", "rise", "drop"].includes(clip)) counts.transitions++;
+                    if (clip) counts.clips.add(clip);
+                    wasClip = clip;
+                };
+                for (let cycle = 0; cycle < 5; cycle++) {
+                    for (const [from, to] of [[12, 90], [90, 12]]) {
+                        // Eased as a wheel zoom: about 1.5 s each way, a 50 ms step.
+                        for (let k = 1; k <= 30; k++) {
+                            const d = from * Math.pow(to / from, k / 30);
+                            window.__arkScene.setView({target: {x: at.x, y: at.y, z: at.z}, distance: d, polar, azimuth});
+                            await sleep(50);
+                            sample();
+                        }
+                        for (let k = 0; k < 20; k++) {
+                            await sleep(100);
+                            sample();
+                        }
+                    }
+                }
+                return {...counts, clips: [...counts.clips], levels: [...counts.levels], reacted: [...counts.reacted], doing: e()?.sched?.trip?.doing ?? null, asleep: Boolean(e()?.state?.asleep)};
+            }, row.id);
+            const item = {slug, fix: !off, ...result};
+            report.zoomSleep.push(item);
+            console.log("zoom-sleep", JSON.stringify(item));
+        }
+    }
+    await page.evaluate(() => (window.__arkZoomFixOff = false));
+    await daylight();
+}
+
+// The owner: "shield bugs and stink bugs are inside a rock", "a golden tortoise beetle is hovering above a daisy".
+// Every small animal inside a drawn rock across the Ark (posed, and drawn where drawn), then the worst framed close with
+// the fix off and on; insects on flower heads and leaves framed close: their gap to the first drawn surface under them.
+if (want("micro-fix")) {
+    report.micro = {};
+    for (const island of ["wild"]) {
+        await crossTo(island);
+        await page.evaluate(() => window.__arkScene.setHours(11));
+        await wait(3000);
+        const all = await page.evaluate(() => window.__arkDebug.insideRocks(0.15));
+        console.log("micro-rocks", island, JSON.stringify({checked: all.checked, inside: all.inside, worst: all.rows.slice(0, 12).map((r) => [r.slug, r.depth, r.from, r.micro])}));
+        const rows = all.rows.slice(0, 12);
+        const bugs = (await find("shield-stink-bug")).slice(0, 4).map((r) => ({id: r.id, slug: "shield-stink-bug"}));
+        const tested = [];
+        for (const r of [...rows, ...bugs]) {
+            const one = {slug: r.slug, id: r.id};
+            for (const off of [true, false]) {
+                await page.evaluate((off) => (window.__arkRockFixOff = off), off);
+                if (!(await frame(r.id, 1.2, 1.0, Math.PI / 3, 2200))) continue;
+                const depth = await page.evaluate((id) => {
+                    const e = window.__arkDebug.entries().find((x) => x.animal.id === id);
+                    const d = e?.drawn;
+                    return d ? window.__arkDebug.insideRocks && window.__arkDebug.rockDepth(d.x, d.y + Math.max(e.length * 0.25, 0.01), d.z) : null;
+                }, r.id);
+                one[off ? "before" : "after"] = depth;
+                if (r.slug === "shield-stink-bug" && !report.micro[`bug-${off}`]) {
+                    report.micro[`bug-${off}`] = true;
+                    await shot(`${island}-shield-stink-bug-${off ? "before" : "after"}`);
+                }
+            }
+            tested.push(one);
+            console.log("micro-rock", island, JSON.stringify(one));
+        }
+        await page.evaluate(() => (window.__arkRockFixOff = false));
+        report.micro[island] = {all, tested};
+        // On flowers and leaves.
+        const perched = await page.evaluate(() => {
+            const out = [];
+            for (const e of window.__arkDebug.entries()) {
+                const tag = e.place?.micro?.attach?.tag ?? null;
+                if ((tag === "flower_head" || tag === "leaf") && e.length <= 0.15) out.push({id: e.animal.id, slug: e.animal.model_slug, tag});
+            }
+            return out;
+        });
+        const beetles = (await find("golden-tortoise-beetle")).map((r) => ({id: r.id, slug: "golden-tortoise-beetle", tag: r.micro}));
+        const sample = [...beetles, ...perched.filter((p) => p.tag === "flower_head").slice(0, 24), ...perched.filter((p) => p.tag === "leaf").slice(0, 10)];
+        const tally = {before: {n: 0, off: 0}, after: {n: 0, off: 0}};
+        for (const p of sample) {
+            const item = {...p};
+            for (const off of [true, false]) {
+                await page.evaluate((off) => (window.__arkFlowerFixOff = off), off);
+                if (!(await frame(p.id, 0.8, 1.0, Math.PI / 3, 2200))) continue;
+                const u = await under(p.id, null);
+                const first = u?.hits?.[0] ?? null;
+                const gap = first ? first.gap : null;
+                item[off ? "before" : "after"] = {gap, kind: first?.kind ?? null};
+                const t = tally[off ? "before" : "after"];
+                t.n++;
+                if (gap === null || Math.abs(gap) > 0.01) t.off++;
+                if (p.slug === "golden-tortoise-beetle") await shot(`${island}-golden-tortoise-beetle-${off ? "before" : "after"}`);
+            }
+            console.log("micro-flower", island, JSON.stringify(item));
+        }
+        await page.evaluate(() => (window.__arkFlowerFixOff = false));
+        console.log("micro-flower-tally", island, JSON.stringify(tally));
+    }
+    await daylight();
+}
+
+// The owner: "a Ruddy Ground Dove perched on a house roof is in mid-air". Town birds resting on an eave perch (the
+// plan's eave spots), framed close with the fix off and on: the gap to the first drawn surface under them; 10 houses.
+if (want("eaves")) {
+    await crossTo("town");
+    report.eaves = [];
+    let shots = 0;
+    for (const h of [11, 15, 8]) {
+        await page.evaluate((h) => window.__arkScene.setHours(h), h);
+        await wait(3500);
+        const birds = await page.evaluate(() => {
+            const out = [];
+            for (const e of window.__arkDebug.entries()) {
+                const p = e.sched?.pose;
+                if (!p || p.moving || p.aloft || e.length > 0.7) continue;
+                const eave = window.__arkScene.island?.() === "town" ? window.__arkDebug.eaveAt?.(p.x, p.y, p.z) : null;
+                if (eave) out.push({id: e.animal.id, slug: e.animal.model_slug, building: eave.building});
+            }
+            return out;
+        });
+        console.log("eaves", h, birds.length, JSON.stringify(birds.slice(0, 12).map((b) => b.slug)));
+        const seen = new Set(report.eaves.map((r) => r.building));
+        for (const b of birds) {
+            if (seen.has(b.building) || report.eaves.length >= 10) continue;
+            seen.add(b.building);
+            const item = {...b};
+            for (const off of [true, false]) {
+                await page.evaluate((off) => (window.__arkEaveFixOff = off), off);
+                if (!(await frame(b.id, 2.2, 1.15, Math.PI / 3, 2200))) continue;
+                const t = await page.evaluate((id) => window.__arkDebug.tips?.(id, 8) ?? null, b.id);
+                const gaps = (t?.tips ?? []).map((x) => x.gap).filter((g) => g !== null);
+                const u = await under(b.id, null);
+                item[off ? "before" : "after"] = {first: u?.hits?.[0] ?? null, tipsLowest: gaps.length ? Math.max(...gaps) : null};
+                if (shots < 3) await shot(`eave-${b.slug}-${off ? "before" : "after"}`);
+            }
+            shots++;
+            report.eaves.push(item);
+            console.log("eave", JSON.stringify(item));
+        }
+        if (report.eaves.length >= 10) break;
+    }
+    await page.evaluate(() => (window.__arkEaveFixOff = false));
+}
+
+// Why a sleeping farm animal plays its idle: its sleep, its act, its rig's base and the clips it has.
+if (want("farm-why")) {
+    await crossTo("town");
+    await page.evaluate(() => window.__arkScene.setHours(23));
+    await wait(4000);
+    for (const slug of ["domestic-pig", "domestic-sheep", "cow"]) {
+        const rows = await find(slug);
+        for (const row of rows.slice(0, 3)) {
+            await frame(row.id, 4, 1.1, Math.PI / 4, 3000);
+            const why = await page.evaluate((id) => {
+                const e = window.__arkDebug.entries().find((x) => x.animal.id === id);
+                if (!e) return null;
+                return {doing: e.sched?.trip?.doing ?? null, level: e.level, sleepNow: e.sleepNow ? {posture: e.sleepNow.posture, down: e.sleepNow.down, t: e.sleepNow.t} : null, act: e.act ? {state: e.act.state, meal: Boolean(e.act.meal)} : null, sleepClipped: e.sleepClipped ?? null, clips: window.__arkDebug.rigClips?.(e.animal.model_slug) ?? null, rig: e.rig ? {now: e.rig.now?.name, base: e.rig.base, toward: e.rig.toward ?? null, weight: e.rig.weight} : null, visitor: Boolean(e.visitor), reactive: e.reactive ? {action: e.reactive.action, woke: e.reactive.woke} : null, place: e.place ? Object.keys(e.place).filter((k) => e.place[k]) : null};
+            }, row.id);
+            console.log("farm-why", slug, JSON.stringify(why));
+        }
+    }
+}
+
+// The owner's report at 03:31: the farm at night, every cow and pig (asleep or not), close at its rig and from 25 m.
+if (want("farm-night")) {
+    await crossTo("town");
+    report.farmNight = [];
+    for (const h of [3, 23]) {
+        await page.evaluate((h) => window.__arkScene.setHours(h), h);
+        await wait(4000);
+        for (const slug of ["cow", "domestic-pig", "domestic-horse", "domestic-sheep"]) {
+            const rows = await find(slug);
+            console.log("farm-night", h, slug, JSON.stringify(rows.map((r) => [r.doing, r.asleep ? "z" : r.moving ? "m" : "s", r.clip?.now ?? null])));
+            const picks = [rows.find((r) => r.asleep), rows.find((r) => !r.asleep && !r.moving), rows.find((r) => r.moving)].filter(Boolean);
+            for (const row of picks) {
+                for (const distance of [Math.max(row.length * 3.5, 2.5), 25]) {
+                    if (!(await frame(row.id, distance, 1.1, Math.PI / 4, 3000))) continue;
+                    const u = await under(row.id, null);
+                    const t = await page.evaluate((id) => window.__arkDebug.tips?.(id) ?? null, row.id);
+                    const gaps = (t?.tips ?? []).map((x) => x.gap).filter((g) => g !== null);
+                    const item = {h, slug, asleep: row.asleep, moving: row.moving, distance: Math.round(distance), level: u?.drawn?.level ?? null, lying: u?.drawn?.lying ?? null, feetLineSunk: u?.drawnGround ?? null, tipsLowest: gaps.length ? Math.max(...gaps) : null, tipsHighest: gaps.length ? Math.min(...gaps) : null, clip: u?.drawn?.clip ?? null, base: u?.drawn?.base ?? null, poseY: u?.drawn?.poseY ?? null};
+                    report.farmNight.push(item);
+                    console.log("farm-night", JSON.stringify(item));
+                    if (distance < 20) await shot(`night-${h}-${slug}-${row.asleep ? "asleep" : row.moving ? "moving" : "awake"}`);
+                }
+            }
+        }
+    }
+    await daylight();
+}
+
+// The owner's walking pig and cow: hours tried until one walks; shot at 5, 15 and 35 m (its rig, near and far).
+if (want("farm-walk")) {
+    await crossTo("town");
+    for (const slug of ["domestic-pig", "cow"]) {
+        let row = null;
+        for (const h of [11, 9, 13, 15, 17, 7, 19, 21, 23, 3]) {
+            await page.evaluate((h) => window.__arkScene.setHours(h), h);
+            await wait(3500);
+            row = (await find(slug)).find((r) => r.moving) ?? null;
+            if (row) {
+                console.log("farm-walk", slug, "walking at", h);
+                break;
+            }
+        }
+        if (!row) {
+            console.log("farm-walk", slug, "never walking");
+            continue;
+        }
+        for (const d of [5, 15, 35]) {
+            if (!(await frame(row.id, d, 1.25, Math.PI / 3, 2500))) continue;
+            const u = await under(row.id, null);
+            console.log("farm-walk", slug, d, JSON.stringify({level: u?.drawn?.level ?? null, sunk: u?.drawnGround ?? null, clip: u?.drawn?.clip ?? null}));
+            await shot(`walk-${slug}-${d}m`);
+        }
+    }
+    await daylight();
+}
+
 // Round 3 (rig jerk under load): a giraffe framed from 14 m, the clock running; 6 s as the page runs, then 6 s with
 // the main thread held 150 ms every 300 ms (a long frame forced). Each frame's drawn step against its schedule's.
 if (want("long-frame")) {
