@@ -112,24 +112,6 @@ export const SMALL_TEMPLATES: Template[] = [
             {b: "dig", s: [4, 8]}
         ]
     }),
-    // A crab with food it drags to its burrow: its burrow's mouth dug first, then food fetched and dragged in.
-    T({
-        id: "burrow_stash",
-        label: "digs its burrow's mouth, then drags food inside",
-        kind: "stay",
-        goal: "ground",
-        replaces: ["forage", "wander", "burrow"],
-        doing: "forage",
-        steps: [
-            {b: "dig", s: [3, 6]},
-            {b: "go", to: "ground", r: 2.5},
-            {b: "pick_up", s: [0.8, 1.4], pick: "material", carry: "mouth"},
-            {b: "carry", to: "anchor"},
-            {b: "place", s: [0.6, 1], drop: true},
-            {b: "scan", s: [1, 2]}
-        ],
-        loop: 0
-    }),
     // A hawkmoth, a bee-fly: at a flower, in the air, never landing; then on to the next.
     T({
         id: "flower_hover",

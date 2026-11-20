@@ -31,12 +31,6 @@
    ],
    "weight": 5
   },
-  "burrow_stash": {
-   "plans": [
-    "crustacean"
-   ],
-   "weight": 4
-  },
   "flower_hover": {
    "plans": [
     "flying_insect"

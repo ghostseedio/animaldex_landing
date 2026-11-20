@@ -441,7 +441,8 @@ async function main() {
                 fake!.date += 100;
                 await frames(1);
             }
-            type Drawn = {length: number; middle: {x: number; y: number; z: number} | null; sched?: {pose?: {beat?: string; act?: {recipe?: string; block?: string; state?: string; pitch?: number; roll?: number; carry?: unknown; mark?: unknown} | null}}};
+            type ActNow = {recipe?: string; block?: string; state?: string; pitch?: number; roll?: number; carry?: unknown; mark?: unknown};
+            type Drawn = {length: number; middle: {x: number; y: number; z: number} | null; recipeAct?: ActNow | null; toLight?: number; place?: {micro?: unknown}; sched?: {pose?: {beat?: string; act?: ActNow | null}}};
             const drawn = ids.map((id) => debug.entries().find((e) => e.animal.id === id) as unknown as Drawn);
             const at = ids.map((id) => handle.locate(id));
             const mids = drawn.map((d, i) => (d?.middle ? d.middle : at[i] ? {x: at[i]!.x, y: at[i]!.y + (d?.length ?? 0.1) * 0.3, z: at[i]!.z} : null)).filter(Boolean) as Array<{x: number; y: number; z: number}>;
@@ -455,7 +456,10 @@ async function main() {
                     await frames(1);
                 }
             }
-            const say = (d: Drawn | undefined, id: string) => `${id.slice(-3)} ${d?.sched?.pose?.act ? `${d.sched.pose.act.recipe}/${d.sched.pose.act.block}/${d.sched.pose.act.state} pitch ${(d.sched.pose.act.pitch ?? 0).toFixed(2)} roll ${(d.sched.pose.act.roll ?? 0).toFixed(2)}${d.sched.pose.act.carry ? " carrying" : ""}${d.sched.pose.act.mark ? " marking" : ""}` : `its day (${d?.sched?.pose?.beat ?? "-"})`} len ${(d?.length ?? 0).toFixed(3)}`;
+            const say = (d: Drawn | undefined, id: string) => {
+                const act = d?.recipeAct ?? d?.sched?.pose?.act ?? null;
+                return `${id.slice(-3)}${d?.place?.micro ? " (micro)" : ""} ${act ? `${act.recipe}/${act.block}/${act.state} pitch ${(act.pitch ?? 0).toFixed(2)} roll ${(act.roll ?? 0).toFixed(2)}${act.carry ? " carrying" : ""}${act.mark ? " marking" : ""}` : `its day (${d?.sched?.pose?.beat ?? (d?.toLight ? `to the light ${d.toLight.toFixed(2)}` : "-")})`} len ${(d?.length ?? 0).toFixed(3)}`;
+            };
             const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
             return `${ids.map((id, i) => say(drawn[i], id)).join(" | ")} ${said.join(" / ")}`;
         },

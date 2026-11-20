@@ -521,3 +521,15 @@ Measured with the release merged: circling, every animal, 0.15% facing and 0.02%
 
   - Behaviour's "a grazer drifts forward", "an in-place activity barely turns" (0 of 13,657 minutes over), "no spinning" and the stags all pass.
 - **New tests:** a wading heron (under 3.5), a diving puffin (under 3), wrestling bulls (under 5).
+
+## Signature behaviours, wave 2: the small bodies (sig2-small, 2026-11-20)
+
+Rows the wave-1 script held for another body plan (arthropods), and rows of existing blocks for moths, frogs and arthropods (AnimalDex `docs/ark/behaviours-plan.md`, decision 367/369).
+
+- **Why most of them never showed.** A true micro animal (a small invertebrate under 12 cm, `map/species.ts` `trueMicro`) lives at its microhabitat and is *off the schedule* (`onSchedule`), so the recipe engine never plays its recipes: every ant, spider, small crab, moth, fly and mantis recipe in `recipes.json` was drawn by no one. Frogs and toads are never micro (the schedule plays them); a mud crab (18 cm) and the burrowers are scheduled too.
+- **Micro acts** (`src/ark-scene/micro-acts.ts`, hooked in `index.ts` `microPlay`): a micro animal whose row has one of `MICRO_ACTS` (`spider_dance`, `dig_burrow`, `bank_burrow`, `flower_hover`, `sit_snap`, `border_spar`, `claw_spar`, `wrestle`) plays it in place in a window every `period` seconds taken with the recipe's weight: the same blocks (`behaviour-blocks.ts`, `recipe-small.ts`), its attitude applied to its surface's frame (`tiltSurface`), its named state for the rig, its dirt and its hole, a hover's lift; a pair's recipe by the two of its cluster (rank 0/1, 2/3) facing each other; held still where it stood, easing back into its crawl over 2.5 s. Pure in (id, slug, clock). A dig needs leaf litter (`soilSpot`), a hover a flower head (`flowerSpot`), a dance a male by day in season.
+- **Templates for the schedule's bodies** (`recipe-small.ts`, spread into `TEMPLATES` and `BLOCKS`): `edge_ambush` and `sit_snap` (frogs, toads), `bank_burrow` (a mud crab), `flower_hover`, `spider_dance`, `border_spar`, `claw_spar`, `night_hawk`; the new goal `flower`.
+- **Data**: `data/ark/signature-recipes.json` entries carry `line` (the log sentence, written to `signature-lines.json`), `replaces` (a generic recipe the species' own displaces), `variant_of` (the wave-1 recipe) and `held` (why a row stays out); `data/ark/signature-templates-small.json` seeds the plans of the new templates; `scripts/ark-signature-recipes.mts` applies all of it (idempotent).
+- **Held**: whip scorpion and redclaw crayfish (micro spots are bark: nothing to dig), rainbow crab (nothing to drag food to), the skimmer (a micro dragonfly: its hawking would need a flight pattern like `egg-dip.ts`'s).
+- **Hornet**: `microhabitats.json` gives the hornet the moths' flag (`m`), so after dark it circles the lamp ("drawn to lit windows"), with its sentence.
+- **Frames**: `node scripts/ark-behaviours-clips.mjs --out <dir> --scenes sm-ant,sm-dance2,…` (the `sm-*` scenes of `behaviours-small.ts`; the finder reads the engine's own windows).

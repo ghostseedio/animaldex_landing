@@ -649,6 +649,29 @@ function easeOutBack(t: number): number {
     return 1 + (c + 1) * (t - 1) ** 3 + c * (t - 1) ** 2;
 }
 
+/**
+ * sig2-small: a surface's frame tipped by an act's pitch (nose down positive, about the sideways axis) and rolled about its
+ * heading, for a small animal on a wall, a leaf or a flower, whose body is set by that frame alone (a pose's pitch and roll are
+ * for the ground's).
+ */
+function tiltSurface(s: SurfacePoint, pitch: number, roll: number): SurfacePoint {
+    if (!pitch && !roll) return s;
+    const bx = s.ny * s.tz - s.nz * s.ty;
+    const by = s.nz * s.tx - s.nx * s.tz;
+    const bz = s.nx * s.ty - s.ny * s.tx;
+    const cp = Math.cos(pitch);
+    const sp = Math.sin(pitch);
+    const tx = s.tx * cp - s.nx * sp;
+    const ty = s.ty * cp - s.ny * sp;
+    const tz = s.tz * cp - s.nz * sp;
+    const px = s.nx * cp + s.tx * sp;
+    const py = s.ny * cp + s.ty * sp;
+    const pz = s.nz * cp + s.tz * sp;
+    const cr = Math.cos(roll);
+    const sr = Math.sin(roll);
+    return {...s, tx, ty, tz, nx: px * cr + bx * sr, ny: py * cr + by * sr, nz: pz * cr + bz * sr};
+}
+
 function easeInOut(t: number): number {
     return t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 }
@@ -3673,6 +3696,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const RELEASE = 2.5;
     const microPartners = new Map<string, {until: number; hit: {id: string; key: string; role: "a" | "b"} | null}>();
     const microMarks = new Map<string, RecipeMark>();
+    const microLast = new Map<string, {t0: number; t1: number}>();
     const microPartnerOf = (entry: Entry, epoch: number) => {
         const id = entry.animal.id;
         const known = microPartners.get(id);
@@ -3698,11 +3722,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const pair = microPartnerOf(entry, epoch);
         const input = {id: entry.animal.id, slug, epoch, hours: hoursNow(), length: entry.trueLength, soil: soilSpot(micro.spot), flower: flowerSpot(micro.attach?.tag), resting: entry.rest > 0.5, pair};
         const now = microActAt(input);
+        if (now) microLast.set(input.id, {t0: now.t0, t1: now.t1});
         // Just after an act: the crawl comes back from where it stood.
-        const was = now ? null : microActAt({...input, epoch: epoch - RELEASE});
-        const act = now ?? was;
+        const last = now ? null : microLast.get(input.id);
+        if (last && epoch >= last.t1 + RELEASE) microLast.delete(input.id);
+        const act = now ?? (last && epoch < last.t1 + RELEASE ? last : null);
         if (!act) return null;
-        const frozen = microPose(entry, time - (epoch - act.t0 - 0.0));
+        const frozen = microPose(entry, time - (epoch - act.t0));
         if (now && entry.crawl) entry.crawl.pause = Math.max(entry.crawl.pause, 0.3);
         let at = frozen;
         if (!now) {
@@ -3738,7 +3764,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 microMarks.set(id, {id, kind: "hole", x: frozen.x, y: frozen.base, z: frozen.z, size: Math.max(entry.trueLength * 0.9, 0.02), from: now.t0, to: now.t0 + 20 * 60});
             }
         }
-        return {...frozen, base: frozen.base + now.heave, yaw, pitch: frozen.pitch + now.pitch, roll: frozen.roll + now.roll, surface: surface && now.heave > 0 ? {...surface, y: surface.y + now.heave} : surface};
+        return {...frozen, base: frozen.base + now.heave, yaw, pitch: frozen.pitch + now.pitch, roll: frozen.roll + now.roll, surface: surface ? tiltSurface(surface, now.pitch, now.roll) : surface};
     };
     const nearestCloud = (x: number, z: number) => PLANKTON.reduce((best, cloud) => (Math.hypot(cloud.x - x, cloud.z - z) < Math.hypot(best.x - x, best.z - z) ? cloud : best), PLANKTON[0]);
 

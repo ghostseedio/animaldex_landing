@@ -1239,12 +1239,10 @@
   {
    "slug": "rainbow-crab",
    "name": "Rainbow Crab",
-   "recipe": "burrow_stash",
+   "recipe": "cache_food",
    "behaviour": "drags food into its burrow",
    "field": "evidence",
    "quote": "Food is gathered near the burrow, and some is reportedly dragged inside.",
-   "variant_of": "cache_food",
-   "line": "{aAnimal} is dragging some food inside its burrow",
    "held": "a micro animal (trueMicro, off the schedule) that stays at its spot: no burrow mouth to drag food to"
   },
   {
