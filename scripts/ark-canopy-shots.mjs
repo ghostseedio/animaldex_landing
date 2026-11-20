@@ -55,7 +55,7 @@ const context = await browser.newContext({viewport: {width: Number(arg("width", 
 const page = await context.newPage();
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e.stack ?? e.message).slice(0, 600)));
-await page.goto(`${base}?world=v2&quality=${arg("quality", "high")}&epoch=${plan[0]?.epoch ?? ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
+await page.goto(`${base}?world=v2&island=${arg("island", "wild")}&quality=${arg("quality", "high")}&epoch=${plan[0]?.epoch ?? ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
 const started = Date.now();
 while (Date.now() - started < 240000) {
     const state = await page.evaluate(() => ({ok: Boolean(window.__canopy?.ready?.()), error: window.__canopyError ?? null}));
@@ -68,7 +68,7 @@ for (const shot of plan) {
     if (shot.find) {
         // (A moment found on the page's own schedule: the first climb of these kinds from `from`, `after` seconds into it.)
         // (Or, with `phases`, the first moment one of them is swinging, leaping or in flight on its canopy route.)
-        const found = await page.evaluate(async (f) => (f.ledge || f.zoo ? window.__canopy.findLedge(f.pattern, f.ledge ?? f.zoo, f.from, f.seconds ?? 1800, f.step ?? 1, Boolean(f.zoo)) : f.phases ? window.__canopy.findCanopy(f.pattern, f.phases, f.from, f.seconds ?? 1800, f.step ?? 1, f.skip ?? []) : window.__canopy.findClimb(f.pattern, f.from, f.seconds ?? 1800, f.step ?? 2, f.skip ?? [])), shot.find);
+        const found = await page.evaluate(async (f) => (f.ledge || f.zoo ? window.__canopy.findLedge(f.pattern, f.ledge ?? f.zoo, f.from, f.seconds ?? 1800, f.step ?? 1, Boolean(f.zoo)) : f.phases ? window.__canopy.findCanopy(f.pattern, f.phases, f.from, f.seconds ?? 1800, f.step ?? 1, f.skip ?? []) : window.__canopy.findClimb(f.pattern, f.from, f.seconds ?? 1800, f.step ?? 2, f.skip ?? [], f.beat ?? "climb")), shot.find);
         console.log(shot.name, "found", JSON.stringify(found));
         if (!found) continue;
         shot.epoch = found.epoch + (shot.find.after ?? 1);
@@ -81,6 +81,12 @@ for (const shot of plan) {
         }, shot);
         notes.push(`${shot.name}: ${JSON.stringify(at)}`);
         console.log(shot.name, JSON.stringify(at));
+        continue;
+    }
+    if (shot.climbs) {
+        const log = await page.evaluate((c) => window.__canopy.climbLog(c.pattern, c.from, c.seconds, c.step ?? 2), shot.climbs);
+        writeFileSync(path.join(out, `${shot.name}.json`), JSON.stringify(log, null, 1));
+        console.log(shot.name, log.length, "climbs");
         continue;
     }
     if (shot.where) {
@@ -117,6 +123,7 @@ for (const shot of plan) {
             await page.evaluate(async ({s, dt}) => {
                 if (dt > 0) await window.__canopy.step(dt);
                 if (s.id && s.clip.follow !== false) await window.__canopy.follow(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
+                if (s.id && s.cut) await window.__canopy.cut(s.id);
             }, {s: shot, dt: k ? 1 / fps : 0});
             await page.screenshot({path: path.join(dir, `f${String(k).padStart(4, "0")}.jpg`), type: "jpeg", quality: 85});
         }
@@ -134,8 +141,11 @@ for (const shot of plan) {
         const c = window.__canopy;
         if (s.hours !== undefined) c.hours(s.hours);
         await c.at(s.epoch, s.run ?? 2);
-        if (s.id && s.clear) return JSON.stringify({view: await c.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0), at: c.locate(s.id)});
-        if (s.id) return JSON.stringify(await c.frame(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0));
+        if (s.id && s.clear) return JSON.stringify({view: await c.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0), at: c.locate(s.id), cut: s.cut ? await c.cut(s.id) : 0});
+        if (s.id) {
+            const framed = await c.frame(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
+            return JSON.stringify({framed, cut: s.cut ? await c.cut(s.id) : 0});
+        }
         await c.look(s.target, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3);
         return "view";
     }, shot);

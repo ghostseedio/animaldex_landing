@@ -204,7 +204,8 @@ import {prepareAttachPoints} from "@/ark-scene/sampler";
 import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
 import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
 import {modelBase, uprightBody} from "@/ark-scene/grounding/base";
-import {canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
+import {brachiates, canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
+import type {LocoCanopy} from "@/ark-scene/locomotion/brachiate"; // ARK-CANOPY
 import {ledgeFrame} from "@/ark-scene/rock-ledge"; // ARK-JUNGLE
 import {keepCarriedWithMothers} from "@/ark-scene/carry-cull"; // ARK-JUNGLE
 import {setLocoGround} from "@/ark-scene/locomotion/ground";
@@ -4809,6 +4810,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             return name ? clip(name) : null;
         };
         const own = entry.sched && scheduled(entry) ? entry.sched : null;
+        // (ARK-CANOPY: how far through a leap on its canopy route it is, or null: `canopy-scene.ts`.)
+        const canopyLeap = (where.surface as {leap?: number | null} | undefined)?.leap ?? null;
         // A behaviour recipe's act (`behaviour-recipes.ts`): on its schedule pose, or a house starling's own.
         const recipeAct = ((own?.pose ?? null) as RecipePose | null)?.act ?? entry.recipeAct ?? null;
         // In the air: on its schedule, from the moment an air leg starts (the pose counts as aloft only a little way up,
@@ -5018,6 +5021,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 want = "swim";
                 mode = swim.ground_speed ? "distance" : "time";
             }
+        } else if (!entry.visitor && typeof canopyLeap === "number" && clip("leap")) {
+            // ARK-CANOPY: a leap from crown to crown on its canopy route (`canopy-travel.ts`): its own leap clip through the
+            // arc (crouch, spring, reach, land), not a run spun at the leap's speed.
+            want = "leap";
+            mode = "sync";
+            sync = canopyLeap;
         } else if (!flies && (entry.air > 0.001 || entry.state.airborne)) {
             // Leaving the ground or coming down on a rig that does not fly (it fades out in the air): its idle, never a
             // walk spun at the flight's speed.
@@ -5935,7 +5944,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (Lane L2: a sidewinder's body lies across its way while it moves, `l2Sidewind`.)
             if (entry.l2 && !where.water && !act) where.yaw += l2Sidewind(entry.l2, entry.phase);
             let stand: Stand | null = null;
-            const uprightOn = surface && Math.abs(surface.ny) < 0.5 ? uprightBody(animal.model_slug) : null; // p5 (monkeys)
+            // (ARK-CANOPY: and always on its canopy route: swinging under a hold its back tilts past the half way at each end
+            // of the swing, and an upright body was turned onto its back there, head down, twice a swing.)
+            const uprightOn = surface && (Math.abs(surface.ny) < 0.5 || (surface as {canopy?: boolean}).canopy) ? uprightBody(animal.model_slug) : null; // p5 (monkeys)
             if (surface && uprightOn) {
                 // p5 (monkeys): an upright-bodied model (a gibbon, an ape: taller than long) on a trunk, a wall, or hanging
                 // from a hold: its spine along the climb's heading, its front to the surface, its front's depth off it.
@@ -6034,7 +6045,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // terrain under it, inside the rock. The komodo basking on a boulder, 2026-11-13; the film lane's 1c4ae4ce.)
                 const grounded = !surface && !where.water && !where.afloat && entry.air <= 0.001 && !entry.place.canopy && !entry.place.micro && !entry.place.burrow && !slept && !(island && island.held(animal.id)) && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase));
                 const locoAt = perf.on ? performance.now() : 0;
-                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null}, index);
+                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null, canopy: (surface as {arms?: LocoCanopy | null} | null | undefined)?.arms ?? (entry.hop && (entry.hop.hopping || state.pace > entry.length * 0.1) && !surface && !where.water && brachiates(animal.model_slug, animal.scientific_name) ? {phase: "walk", hand: null, next: null, lead: 1, u: (epochNow * 1.4 + entry.phase) % 1, brachiate: true} : null)}, index);
                 if (perf.on) perf.carve("locomotion", performance.now() - locoAt);
                 if (live) {
                     (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, live.code, live.code, 0, state.weight);

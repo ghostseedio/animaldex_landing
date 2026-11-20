@@ -77,6 +77,21 @@ function slotSegments(subject: ScheduleSubject, plan: SlotPlan, given: Trip | nu
     return out;
 }
 
+/** A climb leg's height (m) or more is said as climbing: a step up onto a low rock or a kerb is not. */
+const CLIMB_SAID = 0.6;
+
+/** When its trip's legs climb (up into a tree, onto a wall, or down off it), from the leg's start to its end. */
+export function climbSpans(trip: Trip): Array<{from: number; to: number}> {
+    const out: Array<{from: number; to: number}> = [];
+    let t = trip.start;
+    for (const leg of trip.legs) {
+        const end = t + leg.seconds;
+        if (leg.mode === "surface" && leg.seconds > 0.2 && Math.abs(leg.to.y - leg.from.y) >= CLIMB_SAID) out.push({from: t, to: end});
+        t = end;
+    }
+    return out;
+}
+
 /** An episode laid over the timeline (a pair's meeting, its stay's recipe): its key from its start, then what was in force. */
 function layEpisode(timeline: Segment[], t0: number, t1: number, key: ArkActivityKey): Segment[] {
     let after: ArkActivityKey | null = null;
@@ -124,6 +139,9 @@ export function scheduleStatus(subject: ScheduleSubject, epoch: number, context:
             if (span && epoch >= span.from && epoch < span.to) timeline = layEpisode(timeline, span.from, span.to, "flying");
         }
     }
+    // (ARK-CANOPY, the owner's black rat "Resting" while it climbed a trunk: a climb on its way, up into a tree or onto a
+    // wall and down again, is said as climbing while its pose climbs, whatever the slot is for.)
+    if (trip && !context.hunting && plan.doing !== "sleep") for (const span of climbSpans(trip)) timeline = layEpisode(timeline, span.from, span.to, "climbing");
     // Runs: consecutive segments that say the same.
     const runs: Segment[] = [];
     for (const seg of timeline) if (!runs.length || runs[runs.length - 1].key !== seg.key) runs.push(seg);

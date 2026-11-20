@@ -214,7 +214,18 @@ export type CanopyPose = {
     phase: "swing" | "flight" | "leap" | "run" | "hold";
     /** The share of the excursion's ease in from its sitting pose (0 → 1) and out to it at the end (1 → 0). */
     blend: number;
+    /**
+     * ARK-CANOPY (the arms, `locomotion/brachiate.ts`): the hold it swings or flies to next (null: none), which hand
+     * holds (+1 its left, -1 its right: hand over hand, the other one hold by hold) and how far through the swing or
+     * the flight it is (0 → 1).
+     */
+    next?: Vec | null;
+    lead?: 1 | -1;
+    u?: number;
 };
+
+/** Hand over hand: hop `i` is held by the left hand when even, the right when odd (the other hand catches the next hold). */
+export const leadOf = (hop: number): 1 | -1 => (((hop % 2) + 2) % 2 === 0 ? 1 : -1);
 
 const norm = (v: Vec): Vec => {
     const l = Math.hypot(v.x, v.y, v.z) || 1;
@@ -278,14 +289,14 @@ export function canopyPoseAt(route: CanopyRoute, t: number): CanopyPose | null {
     if (t < FROM_HOLD) {
         const h = across(first);
         const hold = atHold(first.from, h, route, false);
-        return {...hold, air: false, phase: "hold", blend: ease(t / FROM_HOLD)};
+        return {...hold, air: false, phase: "hold", blend: ease(t / FROM_HOLD), lead: leadOf(0), u: 0, next: null};
     }
     const s = t - FROM_HOLD;
     const end = last.start + last.seconds;
     if (s >= end) {
         const h = across(last);
         const hold = atHold(last.to, h, route, false);
-        return {...hold, air: false, phase: "hold", blend: 1 - ease((s - end) / TO_HOLD)};
+        return {...hold, air: false, phase: "hold", blend: 1 - ease((s - end) / TO_HOLD), lead: leadOf(hops.length), u: 0, next: null};
     }
     let hop = hops.findIndex((p) => s < p.start + p.seconds);
     if (hop < 0) hop = hops.length - 1;
@@ -302,7 +313,7 @@ export function canopyPoseAt(route: CanopyRoute, t: number): CanopyPose | null {
             const held = prev.start + prev.seconds;
             const k = Math.min(Math.max((s - held) / Math.max(p.start - held, 1e-6), 0), 1);
             const hold = atHold(p.from, across(prev), route, false, -SWING * Math.cos(Math.PI * k));
-            return {...hold, air: false, phase: "hold", blend: 1};
+            return {...hold, air: false, phase: "hold", blend: 1, lead: leadOf(hop), u: k, next: null};
         }
         if (feeding && tail) {
             // Down off its hold to hang by its tail and feed, and back up onto it before it sets off home (eased).
@@ -326,7 +337,7 @@ export function canopyPoseAt(route: CanopyRoute, t: number): CanopyPose | null {
         // Straight on from a catch (no pause between): its swing turns from the way it came to the way it goes next.
         const prev = hops[hop - 1];
         const from = prev && prev.style === "swing" && Math.abs(prev.start + prev.seconds - p.start) < 1e-6 ? across(prev) : h;
-        return swingPose(route, p, k, h, from);
+        return {...swingPose(route, p, k, h, from), lead: leadOf(hop)};
     }
     // A leap or a run along: a ballistic arc from the hold's top to the next, the body along its way, pitched to it.
     const a = atHold(p.from, h, route, false);
@@ -353,7 +364,7 @@ export function canopyPoseAt(route: CanopyRoute, t: number): CanopyPose | null {
     const fd = forward.x * up.x + forward.y * up.y + forward.z * up.z;
     forward = norm({x: forward.x - fd * up.x, y: forward.y - fd * up.y, z: forward.z - fd * up.z});
     const air = u > 0 && u < 1 && (p.style === "leap" || p.from.tree !== p.to.tree);
-    return {centre, up, forward, hand: null, air, phase: p.style === "leap" ? (air ? "leap" : "hold") : "run", blend: 1};
+    return {centre, up, forward, hand: null, air, phase: p.style === "leap" ? (air ? "leap" : "hold") : "run", blend: 1, u: k};
 }
 
 /** Arm over arm: on its hold from behind to ahead (a pendulum's half period), then across to the next hold's catch. */
@@ -373,7 +384,7 @@ function swingPose(route: CanopyRoute, p: Hop, k: number, h: Vec, from: Vec = h)
         da = Math.atan2(Math.sin(da), Math.cos(da));
         const turn = {x: Math.sin(a0 + da * w), y: 0, z: Math.cos(a0 + da * w)};
         const hang = hanging(pa, turn, phi, reach);
-        return {...hang, hand: pa, air: false, phase: "swing", blend: 1};
+        return {...hang, hand: pa, air: false, phase: "swing", blend: 1, next: pb, u: k / share};
     }
     // Let go at the top of the swing; across on a ballistic arc to where it catches the next hold from behind.
     const release = hanging(pa, h, SWING, reach);
@@ -386,7 +397,7 @@ function swingPose(route: CanopyRoute, p: Hop, k: number, h: Vec, from: Vec = h)
     const side = norm(cross(h, {x: 0, y: 1, z: 0}));
     let up = norm(cross(forward, side));
     if (up.x * h.x + up.z * h.z > 0) up = {x: -up.x, y: -up.y, z: -up.z};
-    return {centre, up, forward, hand: null, air: true, phase: "flight", blend: 1};
+    return {centre, up, forward, hand: null, air: true, phase: "flight", blend: 1, next: pb, u};
 }
 
 // MARK: - When

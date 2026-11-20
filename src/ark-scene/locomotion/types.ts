@@ -14,6 +14,7 @@
 
 import type {Matrix4} from "three";
 import type {ClipBake} from "@/ark-scene/locomotion/flight";
+import type {LocoCanopy} from "@/ark-scene/locomotion/brachiate";
 
 /** The rig contract's body plans (docs/ark/rig-v2-manifest.md section 4), plus `whale` for chain-rigged cetaceans. */
 export type BodyPlan =
@@ -170,6 +171,8 @@ export type LocoInput = {
     airStage?: string | null;
     /** What the clip now bakes itself (`flight.ts` clipBakeOf: a v7 rig's flight clips), or null (v2: as before). */
     clipBake?: ClipBake | null;
+    /** ARK-CANOPY: on its canopy route, what its arms hold and reach for (`brachiate.ts`), or null. */
+    canopy?: LocoCanopy | null;
 };
 
 /** One foot's target this frame (world space), for debug views, metrics and L3's checks. */

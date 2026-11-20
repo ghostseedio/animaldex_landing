@@ -9,7 +9,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import moves from "@/ark-scene/canopy-moves.json";
-import {canopyKindOf, canopyPoseAt, excursionStart, gapOf, pivotOf, planRoute, type Anchor, type CanopyKind, type CanopyRoute, type TrunkDisc} from "@/ark-scene/canopy-travel";
+import {canopyKindOf, canopyPoseAt, leadOf, excursionStart, gapOf, pivotOf, planRoute, type Anchor, type CanopyKind, type CanopyRoute, type TrunkDisc} from "@/ark-scene/canopy-travel";
 
 const dist = (a: {x: number; y: number; z: number}, b: {x: number; y: number; z: number}) => Math.hypot(a.x - b.x, a.y - b.y, a.z - b.z);
 
@@ -122,6 +122,29 @@ test("a gibbon swings arm over arm from tree to tree and back: hand on the hold 
         if (pose.phase === "flight") flying++;
     }
     assert.ok(swinging > 50 && flying > 10, `${swinging} swinging, ${flying} flying`);
+});
+
+test("ARK-CANOPY: hand over hand: the hand that catches a hold is the one that holds it next swing; the next hold ahead, the swing's progress", () => {
+    const {anchors, trunks} = grove();
+    const route = planRoute(anchors[1], anchors, trunks, canopyKindOf("siamang", "Symphalangus syndactylus")!, 0.89, 777, flat)!;
+    assert.ok(route && route.hops.length >= 2);
+    assert.deepEqual([0, 1, 2, 3].map(leadOf), [1, -1, 1, -1]);
+    let lastU = -1;
+    let lastPhase = "";
+    let lastLead: number | undefined;
+    for (const {pose} of sample(route)) {
+        if (pose.phase === "swing" || pose.phase === "flight") {
+            // (Swinging toward the next hold, or flying to it: it is ahead, a hold of the route.)
+            assert.ok(pose.next && route.hops.some((h) => dist(pivotOf(h.to), pose.next!) < 1e-6), "the next hold is one of its route's");
+            assert.ok(pose.u! >= 0 && pose.u! <= 1 + 1e-9);
+            if (pose.phase === lastPhase) assert.ok(pose.u! >= lastU - 1e-9, "the swing goes one way");
+            lastU = pose.u!;
+        }
+        // From one swing's flight to the next swing (or the hold it catches): the other hand.
+        if (lastPhase === "flight" && pose.phase !== "flight") assert.equal(pose.lead, -lastLead!, "the catching hand is the other one");
+        lastPhase = pose.phase;
+        lastLead = pose.lead;
+    }
 });
 
 test("a colobus leaps on an arc from crown to crown and lands on the hold; a squirrel monkey runs and bounds", () => {

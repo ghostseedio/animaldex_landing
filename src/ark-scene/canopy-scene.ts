@@ -13,6 +13,12 @@ import {treeBody} from "@/ark-scene/tree-spacing";
 import {jungleHolds, jungleTrees} from "@/ark-scene/islands/wild/jungle";
 import {hashString} from "@/ark-scene/world";
 import type {SurfaceFrame} from "@/ark-scene/grounding/stand";
+import {brachiateDriver, type LocoCanopy} from "@/ark-scene/locomotion/brachiate";
+import {registerLocoDriver} from "@/ark-scene/locomotion/layer";
+
+// ARK-CANOPY: a brachiator's arms on its holds while it swings (asked before the legged and L2 drivers: it takes only
+// an animal out on its canopy route, which none of them does).
+registerLocoDriver(brachiateDriver);
 
 /** The holds it may go to (a limb's top, a branch, a hang point under a limb), and how far round its own it looks (m). */
 const HOLD_TAGS = new Set(["limb", "canopy_hang", "branch"]);
@@ -84,6 +90,14 @@ function routeFrom(own: Own, seed: string, hold: AttachPoint, length: number, gr
     return route;
 }
 
+/** ARK-CANOPY: whether a kind swings arm over arm (the gibbons, the siamang, the orangutan): on the ground it walks with its arms up. */
+const brachiators = new Map<string, boolean>();
+export function brachiates(slug: string, scientific: string | null | undefined): boolean {
+    let known = brachiators.get(slug);
+    if (known === undefined) brachiators.set(slug, (known = canopyKindOf(slug, scientific)?.mode === "brachiate"));
+    return known;
+}
+
 /** Whether a kind travels through the crowns at all (`canopy-moves.json`, or its genus). */
 export function travelsCanopy(slug: string, scientific: string | null | undefined): boolean {
     return canopyKindOf(slug, scientific) !== null;
@@ -104,7 +118,7 @@ export function canopyFrame(
     awake: boolean,
     held: SurfaceFrame | null,
     groundAt: (x: number, z: number) => number
-): (SurfaceFrame & {air: boolean; hand: {x: number; y: number; z: number} | null}) | null {
+): (SurfaceFrame & {air: boolean; hand: {x: number; y: number; z: number} | null; arms: LocoCanopy | null; leap: number | null; canopy: true}) | null {
     if (!trip || !awake || !trip.to.point || epoch < trip.arrive) return null;
     const hold = sceneryPoint(trip.to.point);
     if (!hold || !HOLD_TAGS.has(hold.tag)) return null;
@@ -141,5 +155,8 @@ export function canopyFrame(
     // (Its heading square to its up.)
     const d = t.x * n.x + t.y * n.y + t.z * n.z;
     const tl = Math.hypot(t.x - d * n.x, t.y - d * n.y, t.z - d * n.z) || 1;
-    return {x, y, z, nx: n.x, ny: n.y, nz: n.z, tx: (t.x - d * n.x) / tl, ty: (t.y - d * n.y) / tl, tz: (t.z - d * n.z) / tl, air: pose.air, hand: pose.hand};
+    // (ARK-CANOPY: what its arms do, for the brachiation driver: the hold, the next one, which hand; eased in and out with
+    // the excursion, so the hand goes to the wood as it leaves its sitting pose.)
+    const arms: LocoCanopy | null = pose.blend > 0.5 && (pose.phase === "swing" || pose.phase === "flight" || pose.phase === "hold") ? {phase: pose.phase, hand: pose.hand, next: pose.next ?? null, lead: pose.lead ?? 1, u: pose.u ?? 0, brachiate: own.kind.mode === "brachiate"} : null;
+    return {x, y, z, nx: n.x, ny: n.y, nz: n.z, tx: (t.x - d * n.x) / tl, ty: (t.y - d * n.y) / tl, tz: (t.z - d * n.z) / tl, air: pose.air, hand: pose.hand, arms, leap: pose.phase === "leap" ? pose.u ?? null : null, canopy: true};
 }

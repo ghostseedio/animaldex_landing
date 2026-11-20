@@ -30,6 +30,7 @@ import {homeSiteFootprints, inTownSolid} from "@/ark-scene/islands/town/tanks";
 import {corners} from "@/ark-scene/islands/town/geom";
 import {townHouseholds} from "@/ark-scene/islands/town/areas";
 import {WALL_FACE} from "@/ark-scene/wall-climb";
+import {placedTrunk} from "@/ark-scene/tree-climb";
 import {deadwoodPlaces, leafPatchPlaces, townDeadwood} from "@/ark-scene/islands/town/deadwood";
 
 /** Lane TB: spots on raised things (roofs, eaves, ledges, a balcony, a lamp-lit wall); every other spot is on the ground. */
@@ -352,6 +353,13 @@ export function townWorldSampler(open: readonly string[], origin: {x: number; z:
         // (L5: the walk grid's clearance and its paths exact against the town's own colliders, `colliders.ts`.)
         ...(colliders ? {colliders} : {}),
         heightAt: (x, z) => townHeight(x - ox, z - oz),
+        // (ARK-CANOPY, the owner's black rat climbing beside its street tree: the trunk a climb goes up is the drawn one,
+        // its asset's own bark fitted with its lean and taper, where the town places that asset; not a 0.22 m stand-in.)
+        treeTrunk: (host) => {
+            const m = /^town:tree:(\d+)$/.exec(host);
+            const t = m ? townTrees(townPlan())[Number(m[1])] : undefined;
+            return t && !t.low ? placedTrunk(t.asset, {root: {x: t.x + ox, y: t.y, z: t.z + oz}, rotation: t.rotation, scale: t.scale}) : null;
+        },
         // (Lane town birds: a flight keeps over the roofs, the towers and the chimneys in its way: `townRoofTop`.)
         flightFloor: (x, z) => townRoofTop(x - ox, z - oz),
         // (Lane TB: the canal's, the millpond's and the farm pond's own level, held by the lock; the sea's 0 elsewhere,

@@ -1690,6 +1690,10 @@ function workRawIntent(world: ScheduleWorld, profile: ArkBehaviourProfile, anima
                 // (Lane MA3: a bird that walks or swims first flies up to a perch, a branch, a ledge only as often as it flies:
                 // otherwise it does what it came to do on the ground, the next of its places.)
                 if (up && flyer && !airAllowed(profile, animal, slot)) continue;
+                // (ARK-CANOPY: a browser that neither climbs nor flies browses what it reaches from the ground: a limb's top
+                // 8 m up a tree is no place for a deer. The owner's report of climbers in empty air; the town's roe deer and
+                // white-tailed deer stood chewing in the air at their paddock tree's limbs, its trip a walk up to them.)
+                if (up && doing === "browse" && !flyer && profile.move !== "climb" && !profile.moves.includes("climb") && point.y > topAt(world, point.x, point.z) + Math.max(animal.length * 1.2, 0.5)) continue;
                 // A patch of ground (grass, shade, the water's edge, the litter, a cliff's ledge): each animal stands its own
                 // place in it, so a herd spreads over the grass and a colony over its ledges instead of stacking on one
                 // point or standing in the ledges' even row.
@@ -2878,6 +2882,8 @@ export function trunkOfSpot(world: ScheduleWorld, spot: Spot): Trunk | null {
     if (!own) trunks.set(world.sampler, (own = new Map()));
     if (own.has(host)) return own.get(host) ?? null;
     let trunk: Trunk | null = null;
+    // (ARK-CANOPY: the town's trees too, by their drawn asset: `ArkWorldSampler.treeTrunk`.)
+    if (town && world.sampler.treeTrunk) trunk = world.sampler.treeTrunk(host);
     if (!town) {
         // (The scenery's places are rebuilt on a world or islands switch: a new list, a new index.)
         const all = allAttachPoints();

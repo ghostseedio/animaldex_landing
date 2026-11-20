@@ -69,6 +69,7 @@ import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
 import type {GaitState, GroundQuery} from "@/ark-scene/locomotion/types";
 import {locoGround} from "@/ark-scene/locomotion/ground";
 import {clipBakeOf} from "@/ark-scene/locomotion/flight";
+import type {LocoCanopy} from "@/ark-scene/locomotion/brachiate";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -1357,6 +1358,8 @@ export type RigLiveInput = {
     /** Its air leg's stage on the schedule while it flies (MA1: the flight driver tucks its legs by it). */
     airStage?: string | null;
     ground?: GroundQuery;
+    /** ARK-CANOPY: on its canopy route, its arms' holds (`locomotion/brachiate.ts`). */
+    canopy?: LocoCanopy | null;
 };
 
 /**
@@ -1390,7 +1393,8 @@ export function rigLivePose(model: RigModel, state: RigState, input: RigLiveInpu
             actState: input.actState ?? null,
             actSpeed: input.actSpeed ?? null,
             airStage: input.airStage ?? null,
-            clipBake: clipBakeOf(model.code, now)
+            clipBake: clipBakeOf(model.code, now),
+            canopy: input.canopy ?? null
         },
         a,
         b,
