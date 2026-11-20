@@ -19,19 +19,11 @@ import {arkWithArticle, type ArkLiveItem, type ArkLiveText} from "@/lib/ark-live
 import type {ArkRecordNote} from "@/lib/ark-animal-status";
 import {pluralAnimalName} from "@/lib/ark-population";
 import {fillArkWords} from "@/lib/ark-words";
+import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 
-export const ARK_RICH_ENGLISH = {
-    grownUp: "{aAnimal} born aboard is now grown up",
-    grewOld: "{aAnimal} is growing old",
-    breedingSeason: "{animals}: the breeding season has begun",
-    carerLeft: "{aAnimal} is without its carer for a few days",
-    newCarer: "{aAnimal} has a new carer",
-    grazedBare: "{animals}: their grazing ground is bare",
-    regrown: "{animals}: their grazing ground is green again",
-    matedFirst: "{aAnimal} mated for the first time",
-    foundMate: "{aAnimal} found a mate after {days} days",
-    foundDung: "{aAnimal} found fresh dung"
-} as const;
+const RICH_KEYS = ["grownUp", "grewOld", "breedingSeason", "carerLeft", "newCarer", "grazedBare", "regrown", "matedFirst", "foundMate", "foundDung"] as const;
+/** English, as `en.json` has it (`ark-live-words.ts`). */
+export const ARK_RICH_ENGLISH = Object.fromEntries(RICH_KEYS.map((key) => [key, ARK_LIVE_ENGLISH[key]!])) as Record<(typeof RICH_KEYS)[number], string>;
 export type ArkRichKey = keyof typeof ARK_RICH_ENGLISH;
 
 type Animal = {id?: unknown; name?: unknown; species_profile_id?: unknown; model_slug?: unknown; zone?: unknown};
