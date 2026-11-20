@@ -69,7 +69,7 @@ const frames = (n: number) =>
 type Debug = {
     controls: {minDistance: number};
     camera: {near: number; updateProjectionMatrix: () => void};
-    entries: () => Array<{animal: {id: string}; length: number; sched?: {pose?: {doing?: string; moving?: boolean}} | null; riding?: boolean}>;
+    entries: () => Array<{animal: {id: string}; length: number; sched?: {pose?: {doing?: string; moving?: boolean}} | null; act?: unknown; riding?: boolean; ridingOn?: {id: string}}>;
     liveliness: {
         parentOf: (id: string) => string | null;
         ageOf: (e: unknown) => {stage: string; staying: boolean; carried: boolean; ride: string | null; line: boolean; ways: unknown} | null;
@@ -130,7 +130,12 @@ async function main() {
             const w = debug.liveliness.wayNowOf.get(id);
             const age = e ? debug.liveliness.ageOf(e) : null;
             const role = ids.young.includes(id) ? `y${id.slice(-2)}` : `a${id.slice(-2)}`;
-            return `${role}:${e?.sched?.pose?.doing ?? "-"}${e?.sched?.pose?.moving ? "*" : ""}${age ? ` [${age.staying ? "stay " : ""}${age.carried ? `carried ${age.ride ?? "default"} ` : ""}${age.line ? "line " : ""}${age.stage}]` : ""}${w ? ` <${w.way}>` : ""}`;
+            const parentId = debug.liveliness.parentOf(id);
+            const at = handle.locate(id);
+            const pat = parentId ? handle.locate(parentId) : null;
+            const gap = at && pat ? Math.hypot(at.x - pat.x, at.z - pat.z).toFixed(2) : "?";
+            const ride = ids.young.includes(id) ? ` {riding ${e?.riding ? "yes" : "no"}${e?.ridingOn ? ` on ${e.ridingOn.id.slice(-2)}` : ""}, ${gap} m from its parent, parent act ${parentId ? (entryOf(parentId)?.act ? "yes" : "no") : "-"} sched ${parentId ? (entryOf(parentId)?.sched ? "yes" : "no") : "-"}}` : "";
+            return `${role}:${e?.sched?.pose?.doing ?? "-"}${e?.sched?.pose?.moving ? "*" : ""}${ride}${age ? ` [${age.staying ? "stay " : ""}${age.carried ? `carried ${age.ride ?? "default"} ` : ""}${age.line ? "line " : ""}${age.stage}]` : ""}${w ? ` <${w.way}>` : ""}`;
         });
         const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`).replace("{animals}", `${x.name}s`)}`)));
         return `${parts.join(" | ")}${said.length ? `\n${said.join(" / ")}` : ""}`;
