@@ -1,5 +1,5 @@
 import type {ContentImage} from "@/data/content-schema";
-import {ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
+import {ARK_ISLAND_RENDER_IMAGE, ARK_RENDER_IMAGE} from "@/lib/seo/ark-pages";
 
 /**
  * The two Ark ranking pages in the Rankings category (they live at /tier-list/<slug> beside the animal tier lists, and
@@ -26,13 +26,12 @@ export const ARK_RANKING_PUBLISHED = "2026-11-20";
 /** When their text last changed (the sitemap's lastmod floor: their numbers change by the hour). */
 export const ARK_RANKING_UPDATED = "2026-11-20";
 
-/** The share image of both: a real render of the live Ark (`lib/seo/ark-pages.ts`). */
-export const ARK_RANKING_IMAGE: ContentImage = {
-    src: ARK_RENDER_IMAGE,
-    alt: "The Ark: the wild island and the town across the strait",
-    width: 1200,
-    height: 630
-};
+/** The share images: real renders of the live Ark (`lib/seo/ark-pages.ts`), the two islands for survival and the wild island for breeders. */
+export function arkRankingImage(slug: ArkRankingSlug): ContentImage {
+    return slug === "ark-survival"
+        ? {src: ARK_RENDER_IMAGE, alt: "The Ark: the wild island and the town across the strait", width: 1200, height: 630}
+        : {src: ARK_ISLAND_RENDER_IMAGE, alt: "The Ark's wild island seen from the sea", width: 1200, height: 630};
+}
 
 /**
  * The existing tier lists that name an Ark page among their related lists, by category: survival beside the lists of

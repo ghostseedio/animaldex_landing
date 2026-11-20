@@ -192,7 +192,7 @@ export type ArkSurvivalReport = {
     kinds: number;
     /** Survival by place and the causes of deaths in the last week; null while the week's log cannot be read to its end. */
     survival: ArkSurvival | null;
-    risk: (ArkRisk & {kindRank: Map<string, number>}) | null;
+    risk: (ArkRisk & {kindRank: Map<string, number>; animalRank: Map<string, number>}) | null;
     /** Since the record began (the population record): `died` is old age and starvation together, `eaten` apart. */
     allTime: {born: number; died: number; eaten: number} | null;
 };

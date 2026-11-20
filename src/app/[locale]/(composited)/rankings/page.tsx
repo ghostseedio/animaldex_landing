@@ -9,7 +9,7 @@ import {
     RANKING_CANONICAL_BASE_PATH,
     sortRankingPagesForHub
 } from "@/data/rankings";
-import {ARK_RANKING_IMAGE, ARK_RANKING_SLUGS, ARK_RANKING_UPDATED} from "@/data/ark-ranking-pages";
+import {arkRankingImage, ARK_RANKING_SLUGS, ARK_RANKING_UPDATED} from "@/data/ark-ranking-pages";
 import type {ArkRankingsWords} from "@/lib/ark-rankings-words";
 import {getArkWords} from "@/loaders/ark-words";
 import {loadLocaleMessages} from "@/loaders/locale";
@@ -216,12 +216,7 @@ export default async function RankingsIndexPage({params}: {params: HubParams}) {
         description: arkDescriptions[slug],
         category: "ark",
         categoryLabel: arkRankings.category,
-        image: {
-            src: ARK_RANKING_IMAGE.src,
-            alt: ARK_RANKING_IMAGE.alt,
-            width: ARK_RANKING_IMAGE.width,
-            height: ARK_RANKING_IMAGE.height
-        },
+        image: arkRankingImage(slug),
         // The most each page ranks at a time; the live numbers are on the page.
         rankedSpeciesCount: slug === "ark-survival" ? 40 : 25,
         updatedLabel: formatDate(locale, ARK_RANKING_UPDATED),

@@ -4,7 +4,7 @@ import {
     arkArticleSchema,
     arkBreadcrumbSchema,
     arkFaqSchema,
-    arkIconOf,
+    arkIconResolver,
     arkItemListSchema,
     arkRankingContext,
     arkRankingMetadata,
@@ -50,7 +50,7 @@ export async function arkBreedersMetadata(props: ArkRankingProps): Promise<Metad
 export async function ArkBreedersView(props: ArkRankingProps) {
     const {locale, rankings: w, readerLocale, dir} = await arkRankingContext(props);
     const b = w.breeders;
-    const [report, related] = await Promise.all([readArkBreedersReport(), arkRelatedItems(SLUG, locale, w)]);
+    const [report, related, arkIconOf] = await Promise.all([readArkBreedersReport(), arkRelatedItems(SLUG, locale, w), arkIconResolver()]);
     const title = b.title;
     const modified = report?.asOf ? report.asOf.slice(0, 10) : ARK_RANKING_UPDATED;
     const updatedValue = new Intl.DateTimeFormat(readerLocale, {dateStyle: "long"}).format(new Date(report?.asOf ?? ARK_RANKING_UPDATED));

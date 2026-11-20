@@ -140,9 +140,9 @@ function reasonOf(row: ArkRiskAnimal, timeWords: ArkRiskWords, locale: string): 
     return parts.join(" · ");
 }
 
-export function arkRiskAnimalRows(rows: readonly ArkRiskAnimal[], words: ArkRankingsWords, timeWords: ArkRiskWords, locale: string, iconOf: (slug: string) => string): ArkRankingRow[] {
-    return rows.map((row, index) => ({
-        rank: index + 1,
+export function arkRiskAnimalRows(rows: readonly ArkRiskAnimal[], rankOf: (animalId: string) => number, words: ArkRankingsWords, timeWords: ArkRiskWords, locale: string, iconOf: (slug: string) => string): ArkRankingRow[] {
+    return rows.map((row) => ({
+        rank: rankOf(row.animal.id),
         tier: "",
         speciesSlug: row.animal.model_slug,
         speciesName: row.animal.name,

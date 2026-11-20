@@ -213,9 +213,11 @@ test("every group's least-safe kinds are kept even when the overall cut would dr
     const map = new Map<string, ArkGroup>([["kind-vole", "mammal"], ...animals.slice(0, 8).map((a): [string, ArkGroup] => [a.species_profile_id, "insect"])]);
     const risk = arkRiskRanking(snapshotOf(animals), () => null, (id) => map.get(id) ?? null, {limit: 3, perGroup: 2});
     assert.ok(risk.kinds.some((kind) => kind.group === "mammal"), "the mammal is kept beyond the overall three");
+    // The three least overall (every animal here is on the wild island, whose own two least are among them).
     assert.equal(risk.animals.length, 3);
     // Its overall rank is where the full order puts it, not its place in the cut list.
     assert.equal(risk.kindRank.get("kind-vole"), 9);
+    assert.equal(risk.animalRank.get(risk.animals[0].animal.id), 1);
 });
 
 test("the vertebrates are mammals, birds, reptiles, amphibians and fish", () => {

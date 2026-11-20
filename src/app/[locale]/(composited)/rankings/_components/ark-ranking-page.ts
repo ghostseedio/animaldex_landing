@@ -1,7 +1,8 @@
 import type {Metadata} from "next";
 import {getRankingHeadline, getRankingPage} from "@/data/rankings";
-import {ARK_RANKING_IMAGE, ARK_RANKING_PUBLISHED, ARK_RANKING_RELATED, ARK_RANKING_SLUGS, arkRankingPath, type ArkRankingSlug} from "@/data/ark-ranking-pages";
-import {buildSpeciesArtworkSrc} from "@/data/species-artwork-index";
+import {arkRankingImage, ARK_RANKING_PUBLISHED, ARK_RANKING_RELATED, ARK_RANKING_SLUGS, arkRankingPath, type ArkRankingSlug} from "@/data/ark-ranking-pages";
+import {getSpeciesArtworkSlugs} from "@/data/species-artwork-index";
+import {getSpeciesArtworkUrl} from "@/data/species-artwork";
 import {localeConfig} from "@/i18n";
 import {arkDirection} from "@/lib/ark-languages";
 import {ARK_PLACEHOLDER_ICON, isArkPlaceholderSlug} from "@/ark-scene/placeholder-icon";
@@ -52,7 +53,7 @@ export function arkRankingMetadata({locale, lang, slug, title, description, keyw
         title,
         description,
         keywords,
-        featuredImage: ARK_RANKING_IMAGE,
+        featuredImage: arkRankingImage(slug),
         publishedAt: ARK_RANKING_PUBLISHED,
         updatedAt,
         tags: ["ark", slug]
@@ -60,9 +61,18 @@ export function arkRankingMetadata({locale, lang, slug, title, description, keyw
     return lang ? {...metadata, robots: {index: false, follow: true}} : metadata;
 }
 
-/** A species icon: the catalogue's artwork route, or the generic figure for a species with no model (`placeholder--…`). */
-export function arkIconOf(slug: string): string {
-    return isArkPlaceholderSlug(slug) ? ARK_PLACEHOLDER_ICON : buildSpeciesArtworkSrc(slug, null);
+/**
+ * A species' icon as the Ark draws it: its own art in the `animals` bucket (the bucket's listing, cached), the generic
+ * figure for a species with no art or no model (`placeholder--…`). With the listing unavailable every icon is asked for.
+ */
+export async function arkIconResolver(): Promise<(slug: string) => string> {
+    const artwork = await getSpeciesArtworkSlugs().catch(() => null);
+    return (slug) => {
+        if (isArkPlaceholderSlug(slug)) return ARK_PLACEHOLDER_ICON;
+        if (!artwork) return getSpeciesArtworkUrl(slug);
+        const file = artwork.get(slug);
+        return file ? getSpeciesArtworkUrl(slug, file) : ARK_PLACEHOLDER_ICON;
+    };
 }
 
 export function arkArticleSchema({locale, slug, title, description, modifiedAt}: {locale: string; slug: ArkRankingSlug; title: string; description: string; modifiedAt: string}) {
@@ -75,7 +85,7 @@ export function arkArticleSchema({locale, slug, title, description, modifiedAt}:
         dateModified: modifiedAt,
         inLanguage: locale,
         url: getAbsoluteUrl(locale, arkRankingPath(slug)),
-        image: getAbsoluteAssetUrl(ARK_RANKING_IMAGE.src),
+        image: getAbsoluteAssetUrl(arkRankingImage(slug).src),
         author: {"@type": "Organization", name: "AnimalDex"},
         publisher: {"@type": "Organization", name: "AnimalDex"}
     };

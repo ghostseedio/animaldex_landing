@@ -4,7 +4,7 @@ import {
     arkArticleSchema,
     arkBreadcrumbSchema,
     arkFaqSchema,
-    arkIconOf,
+    arkIconResolver,
     arkItemListSchema,
     arkRankingContext,
     arkRankingMetadata,
@@ -58,7 +58,7 @@ export async function arkSurvivalMetadata(props: ArkRankingProps): Promise<Metad
 export async function ArkSurvivalView(props: ArkRankingProps) {
     const {locale, rankings: w, readerLocale, dir, time} = await arkRankingContext(props);
     const s = w.survival;
-    const [report, related] = await Promise.all([readArkSurvivalReport(), arkRelatedItems(SLUG, locale, w)]);
+    const [report, related, arkIconOf] = await Promise.all([readArkSurvivalReport(), arkRelatedItems(SLUG, locale, w), arkIconResolver()]);
     const title = s.title;
     const modified = report?.asOf ? report.asOf.slice(0, 10) : ARK_RANKING_UPDATED;
     const updatedValue = new Intl.DateTimeFormat(readerLocale, {dateStyle: "long"}).format(new Date(report?.asOf ?? ARK_RANKING_UPDATED));
@@ -72,7 +72,7 @@ export async function ArkSurvivalView(props: ArkRankingProps) {
     const huntingLine = report ? arkHuntingLine(report, w, readerLocale) : "";
     // The chances count hunting only where the species' food links were read; the page says so only then.
     const hunting = report && report.hunting === "counted" && report.hunt.state === "protected" ? s.huntingCounted : "";
-    const animalRows = risk ? arkRiskAnimalRows(risk.animals, w, time, readerLocale, arkIconOf) : [];
+    const animalRows = risk ? arkRiskAnimalRows(risk.animals, (id) => risk.animalRank.get(id) ?? 0, w, time, readerLocale, arkIconOf) : [];
     const kindRows = risk ? arkRiskKindRows(risk.kinds, (id) => risk.kindRank.get(id) ?? 0, w, time, readerLocale, arkIconOf) : [];
     // The vertebrate kinds nearest the end, up close: the table's insects would otherwise be all there is to see.
     const closeUps = risk

@@ -236,14 +236,15 @@ const sooner = (a: ArkRiskAnimal, b: ArkRiskAnimal): number => (a.left?.lowDays 
 /**
  * The animals and the kinds with the least chance to be aboard in an Ark year (the Ark card's model, middle estimate),
  * the least first; the soonest likely end breaks a tie (hundreds of short-lived animals have none). `animals` is the
- * `limit` least; `kinds` is the `limit` least overall plus the `perGroup` least of each group (so a list that a group's
- * filter narrows is never empty), each with its overall rank kept by its place in the full order.
+ * `limit` least plus the `perGroup` least of each place, and `kinds` the `limit` least plus the `perGroup` least of each
+ * group (so a list that a place's or a group's filter narrows is never empty), each with its overall rank kept by its
+ * place in the full order.
  */
-export function arkRiskRanking(snapshot: ArkSnapshot, factsFor: ArkFactsFor, groupOf: ArkGroupOf, options: {limit?: number; perGroup?: number} = {}): ArkRisk & {kindRank: Map<string, number>} {
+export function arkRiskRanking(snapshot: ArkSnapshot, factsFor: ArkFactsFor, groupOf: ArkGroupOf, options: {limit?: number; perGroup?: number} = {}): ArkRisk & {kindRank: Map<string, number>; animalRank: Map<string, number>} {
     const limit = options.limit ?? 40;
     const perGroup = options.perGroup ?? 12;
     const world = arkTimeLeftWorldOf(snapshot);
-    if (!world) return {animals: [], kinds: [], considered: 0, unbounded: 0, kindRank: new Map()};
+    if (!world) return {animals: [], kinds: [], considered: 0, unbounded: 0, kindRank: new Map(), animalRank: new Map()};
     const rows: ArkRiskAnimal[] = [];
     // A kind with an animal nothing bounds cannot be at risk: that one lives on.
     const unboundedKinds = new Set<string>();
@@ -287,12 +288,22 @@ export function arkRiskRanking(snapshot: ArkSnapshot, factsFor: ArkFactsFor, gro
         }
     }
     const pickedKinds = kinds.filter((kind) => keep.has(kind.kindId));
-    const pickedAnimals = rows.slice(0, limit);
+    const animalRank = new Map(rows.map((row, index) => [row.animal.id, index + 1]));
+    const keepAnimals = new Set(rows.slice(0, limit).map((row) => row.animal.id));
+    for (const place of ARK_PLACES) {
+        let taken = 0;
+        for (const row of rows) {
+            if (row.place !== place) continue;
+            if (taken++ >= perGroup) break;
+            keepAnimals.add(row.animal.id);
+        }
+    }
+    const pickedAnimals = rows.filter((row) => keepAnimals.has(row.animal.id));
     // The card's whole block (with the reason, and how it moved in a day) only for the rows shown.
     for (const row of [...pickedAnimals, ...pickedKinds.map((kind) => kind.worst)]) {
         if (!row.outlook) row.outlook = arkLifeOutlook(row.animal, world, factsFor(row.animal), []);
     }
-    return {animals: pickedAnimals, kinds: pickedKinds, considered: rows.length, unbounded, kindRank};
+    return {animals: pickedAnimals, kinds: pickedKinds, considered: rows.length, unbounded, kindRank, animalRank};
 }
 
 // MARK: Fastest breeders
