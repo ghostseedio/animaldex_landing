@@ -47,7 +47,7 @@ export default function ArkCardPower({animal, band, words, power, label = "Anima
             {power.lesson ? <span lang="en" dir="auto" className="mt-0.5 line-clamp-2 block text-[12.5px] leading-snug text-ink-200">{power.lesson}</span> : null}
         </>
     );
-    const className = "group block min-w-0 self-start rounded-2xl border border-primary-300/25 bg-[linear-gradient(135deg,rgba(200,250,99,0.13),rgba(255,255,255,0.03)_60%)] px-3.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]";
+    const className = "group block min-w-0 self-start rounded-none border border-primary-300/25 bg-[linear-gradient(135deg,rgba(200,250,99,0.13),rgba(255,255,255,0.03)_60%)] px-3.5 py-2.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]";
     const title = state && !working ? state : undefined;
     return href && Link ? (
         <Link href={href} data-testid="ark-card-power" data-power={survival?.mechanism} data-band={band ?? "ordinary"} title={title} className={`${className} transition-colors hover:border-primary-300/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300`}>
