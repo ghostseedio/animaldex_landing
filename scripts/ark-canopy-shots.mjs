@@ -140,7 +140,8 @@ for (const shot of plan) {
         const count = Math.round((shot.clip.seconds ?? 4) * fps);
         await page.evaluate(async (s) => {
             if (s.hours !== undefined) window.__canopy.hours(s.hours);
-            await window.__canopy.at(s.epoch, s.run ?? 2);
+            // (`lead`: begun this many seconds early and played up to the moment, so its rig is posing when the clip starts)
+            await window.__canopy.at(s.epoch - (s.lead ?? 0), s.run ?? 2);
             if (s.id && s.clear) {
                 const v = await window.__canopy.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0);
                 if (v) {
@@ -149,13 +150,21 @@ for (const shot of plan) {
                 }
             } else if (s.id) await window.__canopy.frame(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
             else await window.__canopy.look(s.target, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3);
+            // (`hands`: the clip waits for that species' rig, so no frame shows the still model before it)
+            if (s.hands) s.handsIn = await window.__canopy.handsReady(s.hands);
+            for (let t = 0; t < (s.lead ?? 0) - 1e-6; t += 1 / (s.clip.fps ?? 15)) {
+                await window.__canopy.step(1 / (s.clip.fps ?? 15));
+                if (s.id) await window.__canopy.follow(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
+            }
             return s;
-        }, shot).then((s) => Object.assign(shot, {azimuth: s.azimuth, polar: s.polar}));
+        }, shot).then((s) => Object.assign(shot, {azimuth: s.azimuth, polar: s.polar, handsIn: s.handsIn}));
         for (let k = 0; k < count; k++) {
             await page.evaluate(async ({s, dt}) => {
                 if (dt > 0) await window.__canopy.step(dt);
-                if (s.id && s.clip.follow !== false) await window.__canopy.follow(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
-                if (s.id && s.cut) await window.__canopy.cut(s.id);
+                // (`reclear`: each frame from its own clearest side, for a sheet of stills where the crowns would hide it)
+                if (s.id && s.clip.reclear) await window.__canopy.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0);
+                else if (s.id && s.clip.follow !== false) await window.__canopy.follow(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
+                if (s.id && s.cut) await window.__canopy.cut(s.id, s.cut === "leaves");
             }, {s: shot, dt: k ? 1 / fps : 0});
             await page.screenshot({path: path.join(dir, `f${String(k).padStart(4, "0")}.jpg`), type: "jpeg", quality: 85});
             // (each frame: its canopy phase and, for a brachiator, how far its holding hand is from its hold)

@@ -12,7 +12,7 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import {canopyPhases} from "@/ark-scene/canopy-scene";
-import {handMiss} from "@/ark-scene/locomotion/brachiate";
+import {handMiss, handsReady} from "@/ark-scene/locomotion/brachiate";
 import {ledgeSeen} from "@/ark-scene/rock-ledge";
 import {zooSeen} from "@/ark-scene/islands/town/zoo-swing";
 import {Raycaster, Vector3, type Object3D} from "three";
@@ -105,6 +105,13 @@ async function main() {
             handle.setView({target: {x: at.x, y: at.y + lift, z: at.z}, distance, polar, azimuth});
             await frames(1);
             return at;
+        },
+        /** Its rig is in and its arms can take a hold (until then the still model stands in). */
+        handsReady: async (slug: string, ms = 20_000) => {
+            const end = realPerfNow() + ms;
+            while (realPerfNow() < end && !handsReady.has(slug)) await wait(150);
+            await frames(2);
+            return handsReady.has(slug);
         },
         /** The holding hand's gap to its hold last frame (m), by species, then cleared. */
         handMiss: () => {
@@ -271,17 +278,21 @@ async function main() {
          * For a look at an animal in a crown (development shots only): every drawn thing between the camera and the animal
          * hidden (a leaf set, a limb), so its body and its arms are seen. Returns how many were hidden.
          */
-        cut: async (id: string) => {
+        cut: async (id: string, leavesOnly = false) => {
             const at = handle.locate(id);
             const dbg = (window as unknown as {__arkDebug: {scene: Object3D; camera: {position: Vector3}}}).__arkDebug;
             if (!at) return 0;
-            const target = new Vector3(at.x, at.y + (at.height ?? 0.3) * 0.5, at.z);
+            // (the body, and each brachiator's hold this frame, so the hand on the branch is seen too)
+            const targets = [new Vector3(at.x, at.y + (at.height ?? 0.3) * 0.5, at.z)];
+            if (leavesOnly) for (const m of Array.from(handMiss.values())) targets.push(new Vector3(...m.hold));
             let hidden = 0;
-            for (let pass = 0; pass < 6; pass++) {
+            for (const target of targets) for (let pass = 0; pass < (leavesOnly ? 30 : 6); pass++) {
                 const from = new Vector3().copy(dbg.camera.position);
                 const ray = new Raycaster(from, target.clone().sub(from).normalize());
-                ray.far = from.distanceTo(target) - Math.max(at.length ?? 0.5, 0.4);
-                const hit = ray.intersectObjects(dbg.scene.children, true).find((h) => h.object.visible && !(h.object as {isSprite?: boolean}).isSprite);
+                ray.far = from.distanceTo(target) - (target === targets[0] ? Math.max(at.length ?? 0.5, 0.4) : 0.12);
+                // (`leavesOnly`: never the wood the hand is on (what is hit within 30 cm of the hold) nor an animal itself)
+                const near = target === targets[0] ? 0 : 0.3;
+                const hit = ray.intersectObjects(dbg.scene.children, true).find((h) => h.object.visible && !(h.object as {isSprite?: boolean}).isSprite && (!leavesOnly || (!(h.object as {isSkinnedMesh?: boolean}).isSkinnedMesh && h.point.distanceTo(target) > near)));
                 if (!hit) break;
                 hit.object.visible = false;
                 hidden++;
