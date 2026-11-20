@@ -49,6 +49,8 @@ export type ArkLiveWords = {
     caught?: string;
     /** Release to the Wild (AnimalDex P1-8): "{aAnimal} was released into the wild" (`release-lines.ts`). */
     released?: string;
+    /** MATE-FINDING (AnimalDex decision 432): "{aAnimal} travelled {distance} m to find a mate" (`mate-lines.ts`). */
+    mateFound?: string;
     revived: string;
     revivedYoung: string;
     gone: string;
@@ -102,6 +104,7 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     revived: "{animal} is back",
     revivedYoung: "{animal} is back, a young adult again",
     released: "{aAnimal} was released into the wild",
+    mateFound: "{aAnimal} travelled {distance} m to find a mate",
     gone: "{animal} is gone from the Ark",
     crisis: "{animal}: only a few left in the wild",
     saved: "{animal}: out of danger in the wild",

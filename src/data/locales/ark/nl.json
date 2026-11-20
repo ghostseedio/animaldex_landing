@@ -402,6 +402,7 @@
             "revived": "{animal} is terug",
             "revivedYoung": "{animal} is terug, weer jong volwassen",
             "released": "{aAnimal} werd vrijgelaten in het wild",
+            "mateFound": "{aAnimal} legde {distance} m af om een partner te vinden",
             "gone": "{animal} is uit de Ark vertrokken",
             "crisis": "{animal}: nog maar een paar in het wild",
             "saved": "{animal}: uit de gevarenzone in het wild",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "Besluipt prooi",
             "mateSeeking": "Zoekt een partner",
             "wounded": "Gewond"
+        },
+        "mate": {
+            "nearest": "Zoekt een partner · de dichtstbijzijnde is {distance} m verderop",
+            "found": "Legde {distance} m af om een partner te vinden"
         },
         "eggs": {
             "eggsInNest": "Eieren in het nest",

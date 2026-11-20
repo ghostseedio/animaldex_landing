@@ -402,6 +402,7 @@
             "revived": "{animal} ফিরে এসেছে",
             "revivedYoung": "{animal} আবার তরুণ প্রাপ্তবয়স্ক হয়ে ফিরে এসেছে",
             "released": "{aAnimal}-কে বনে ছেড়ে দেওয়া হয়েছে",
+            "mateFound": "{aAnimal} সঙ্গী খুঁজতে {distance} মি. পথ পাড়ি দিয়েছে",
             "gone": "{animal} Ark থেকে চলে গেছে",
             "crisis": "{animal}: বনে মাত্র কয়েকটি বাকি",
             "saved": "{animal}: বনে আর বিপদে নেই",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "ওত পেতে আছে",
             "mateSeeking": "সঙ্গী খুঁজছে",
             "wounded": "আহত"
+        },
+        "mate": {
+            "nearest": "সঙ্গী খুঁজছে · সবচেয়ে কাছেরটি {distance} মি. দূরে",
+            "found": "সঙ্গী খুঁজতে {distance} মি. পথ পাড়ি দিয়েছে"
         },
         "eggs": {
             "eggsInNest": "বাসায় ডিম",

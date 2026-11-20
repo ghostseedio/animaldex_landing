@@ -402,6 +402,7 @@
             "revived": "{animal} amerudi",
             "revivedYoung": "{animal} amerudi, mtu mzima kijana tena",
             "released": "{aAnimal} aliachiliwa porini",
+            "mateFound": "{aAnimal} alisafiri m {distance} kumpata mwenzi",
             "gone": "{animal} ameondoka Ark",
             "crisis": "{animal}: wamebaki wachache tu porini",
             "saved": "{animal}: hawako hatarini tena porini",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "Ananyemelea",
             "mateSeeking": "Anatafuta mwenzi",
             "wounded": "Amejeruhiwa"
+        },
+        "mate": {
+            "nearest": "Anatafuta mwenzi · aliye karibu zaidi yuko m {distance}",
+            "found": "Alisafiri m {distance} kumpata mwenzi"
         },
         "eggs": {
             "eggsInNest": "Mayai kiotani",

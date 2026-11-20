@@ -402,6 +402,7 @@
             "revived": "{animal} s-a întors",
             "revivedYoung": "{animal} s-a întors, din nou adult tânăr",
             "released": "Eliberare în sălbăticie: {aAnimal}",
+            "mateFound": "{aAnimal} a parcurs {distance} m ca să-și găsească pereche",
             "gone": "{animal} a plecat din Ark",
             "crisis": "{animal}: în sălbăticie au mai rămas doar câțiva indivizi",
             "saved": "{animal}: în afara pericolului în sălbăticie",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "La pândă",
             "mateSeeking": "Caută pereche",
             "wounded": "Cu o rană"
+        },
+        "mate": {
+            "nearest": "Își caută pereche · cea mai apropiată e la {distance} m",
+            "found": "A parcurs {distance} m ca să-și găsească pereche"
         },
         "eggs": {
             "eggsInNest": "Ouă în cuib",

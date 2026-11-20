@@ -402,6 +402,7 @@
             "revived": "{animal} חזר",
             "revivedYoung": "{animal} חזר, שוב בוגר צעיר",
             "released": "{aAnimal} שוחרר לטבע",
+            "mateFound": "{aAnimal} עבר {distance} מ' כדי למצוא בן זוג",
             "gone": "{animal} עזב את ה-Ark",
             "crisis": "{animal}: נותר מספר קטן בלבד בטבע",
             "saved": "{animal}: מחוץ לסכנה בטבע",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "במארב",
             "mateSeeking": "בחיפוש אחר בן זוג",
             "wounded": "עם פציעה"
+        },
+        "mate": {
+            "nearest": "מחפש בן זוג · הקרוב ביותר נמצא {distance} מ' משם",
+            "found": "עבר {distance} מ' כדי למצוא בן זוג"
         },
         "eggs": {
             "eggsInNest": "ביצים בקן",

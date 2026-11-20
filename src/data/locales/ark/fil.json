@@ -402,6 +402,7 @@
             "revived": "Nakabalik na ang {animal}",
             "revivedYoung": "Nakabalik na ang {animal}, batang adulto ulit",
             "released": "{aAnimal} ang pinakawalan sa kalikasan",
+            "mateFound": "Naglakbay ang {aAnimal} nang {distance} m para makahanap ng kapareha",
             "gone": "Wala na sa Ark ang {animal}",
             "crisis": "{animal}: kakaunti na lang ang natitira sa kalikasan",
             "saved": "{animal}: ligtas na sa panganib sa kalikasan",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "Nagmamanman",
             "mateSeeking": "Naghahanap ng kapares",
             "wounded": "Sugatan"
+        },
+        "mate": {
+            "nearest": "Naghahanap ng kapareha · ang pinakamalapit ay {distance} m ang layo",
+            "found": "Naglakbay nang {distance} m para makahanap ng kapareha"
         },
         "eggs": {
             "eggsInNest": "May itlog sa pugad",

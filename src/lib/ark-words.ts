@@ -480,6 +480,12 @@ export type ArkWords = {
      */
     seen?: Partial<Record<"searching" | "stalking" | "stalkingNoTarget" | "mateSeeking" | "wounded", string>>;
     /**
+     * MATE-FINDING (AnimalDex decision 432): the selection box's line for one looking for a far mate ("Looking for a mate ·
+     * the nearest is {distance} m away") and for one that travelled to its mate ("Travelled {distance} m to find a mate").
+     * Optional: English fills.
+     */
+    mate?: Partial<Record<"nearest" | "found", string>>;
+    /**
      * ARK-MATING-SHOWN (owner 2026-11-20): a clutch on its mother's selection box: "Eggs in the nest", and under its bar
      * "Hatches in about {time} · if all goes well" (`{time}`: `minutes`, `hours` or `days` with `{n}`). Optional: English fills.
      */

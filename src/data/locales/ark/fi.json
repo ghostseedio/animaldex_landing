@@ -402,6 +402,7 @@
             "revived": "{animal} on palannut",
             "revivedYoung": "{animal} on palannut, taas nuori aikuinen",
             "released": "{aAnimal} vapautettiin luontoon",
+            "mateFound": "{aAnimal} kulki {distance} m löytääkseen kumppanin",
             "gone": "{animal} on poissa Arkista",
             "crisis": "{animal}: luonnossa on jäljellä vain muutama",
             "saved": "{animal}: ei enää vaarassa luonnossa",
@@ -760,6 +761,10 @@
             "stalkingNoTarget": "Vaanii saalista",
             "mateSeeking": "Etsii paria",
             "wounded": "Haavoittunut"
+        },
+        "mate": {
+            "nearest": "Etsii kumppania · lähin on {distance} m:n päässä",
+            "found": "Kulki {distance} m löytääkseen kumppanin"
         },
         "eggs": {
             "eggsInNest": "Munia pesässä",

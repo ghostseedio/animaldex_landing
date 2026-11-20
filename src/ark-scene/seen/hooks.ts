@@ -59,6 +59,10 @@ export const ARK_SEEN_ENGLISH = {
     stalking: "Stalking {aPrey}",
     stalkingNoTarget: "Stalking",
     mate_seeking: "Looking for a mate",
+    // MATE-FINDING (decision 432): the nearest of its kind it could mate with, from where the scene draws their homes; and
+    // the trip a `mate_found` row says it made (`{distance}`: metres, to the nearest 10).
+    mateNearest: "Looking for a mate · the nearest is {distance} m away",
+    mateFound: "Travelled {distance} m to find a mate",
     wounded: "Wounded",
     // (Short: the selection's box is two bar rows wide. A lone founder: the only wild one of a kind that arrived alone.)
     lone: "Lone founder",

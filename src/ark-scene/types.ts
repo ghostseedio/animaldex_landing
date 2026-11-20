@@ -567,6 +567,16 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     setWounded?: (list: ReadonlyArray<{id: string; since: number}>) => void;
     addMatings?: (matings: Array<{key: string; a: string; b: string; t0: number}>) => void;
     /**
+     * MATE-FINDING (AnimalDex decision 432): the record's trips to a far mate (`live/mate-lines.ts` journeysOf), acted from
+     * the old home to the new one (`live-journeys.ts`).
+     */
+    addJourneys?: (journeys: Array<import("@/ark-scene/live/mate-lines").Journey>) => void;
+    /**
+     * MATE-FINDING: how far (m) from an animal's home the nearest of its kind it could mate with lives (same island, wild,
+     * grown, the other drawn sex when both have one); null: none drawn, or not in the scene.
+     */
+    mateNearest?: (id: string) => number | null;
+    /**
      * A mating line's tap: `a` chosen (its card), and while the two's mating is acted the view frames both of them and
      * follows them; once it is over, `a` alone, as `select`.
      */
