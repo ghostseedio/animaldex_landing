@@ -433,7 +433,9 @@ export function* buildHomesSteps(presence: Presence, placeOf: (id: string) => Pl
 
     yield;
     // MARK: Spiders: webs on the porch, between branches by the zone's corner and at the garden's fence
-    if (has("spiders")) {
+    // (The hamlet's world only, v1. With the islands on, each web spinner's own web is at its home instead, hung on
+    // what is drawn there: ARK-WEBS, `spider-webs-draw.ts`.)
+    if (has("spiders") && !noHamlet()) {
         const halfD = COTTAGE.depth / 2;
         const postX = COTTAGE.x + COTTAGE.porch.width / 2 - 0.1;
         const postZ = COTTAGE.z + halfD + COTTAGE.porch.depth - 0.1;

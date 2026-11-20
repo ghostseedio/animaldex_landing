@@ -1,0 +1,981 @@
+/**
+ * The spiders' webs drawn (lane ARK-WEBS): each web-spinning spider aboard (`spider-webs.ts` webHabit) gets its web at
+ * its home, hung on what is drawn there, and sits on it. Loaded with the scene's first web spider (a dynamic import).
+ *
+ * Anchored, never floating: a web is fitted once its spider is within `FIT_WITHIN` of the camera. The triangles drawn
+ * round its home (every mesh, instanced set and batch the scene draws there, as they are drawn, plus the drawn ground's
+ * heights) are gathered, and rays are cast from candidate hubs in the web's plane (an orb), in every direction (a
+ * tangle) or along the ground (a sheet). A web hangs only where its threads meet drawn surfaces on enough sides: an
+ * orb's frame on three sides or more round its hub, a tangle in a corner of two surfaces, a sheet on the ground with a
+ * wall or plants to run its funnel into. Every anchor thread ends on the surface its ray met. Nowhere to hang: no web.
+ *
+ * Cheap: one draw call for every web near the camera (thin camera-facing quads, `MAX_WEBS` webs at most), faded out
+ * from `FADE_FROM` to `DRAWN_WITHIN` and not drawn beyond; nothing at all in a wide view. Silk is near invisible
+ * except where it catches the light: a fibre glints where the sun's half-vector is square to it, glows when the camera
+ * looks toward the sun through it, and carries dew at a still dawn (`props/conditions.ts` dewOf).
+ */
+
+import {BufferAttribute, BufferGeometry, Color, Matrix4, Mesh, ShaderMaterial, Sphere, Vector2, Vector3, type BatchedMesh, type InstancedMesh, type Material, type Object3D} from "three";
+import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_SUN} from "@/ark-scene/glsl";
+import {dewOf} from "@/ark-scene/props/conditions";
+import {threadOrder} from "@/ark-scene/props/web-spin";
+import {atHub, silkTrip, webHabit, webStage, type WebHabit} from "@/ark-scene/spider-webs";
+import {hashString} from "@/ark-scene/world";
+
+/** Fitted within this far of the camera (m). */
+export const FIT_WITHIN = 30;
+/** Drawn within this far (m), fading out from `FADE_FROM`. */
+export const DRAWN_WITHIN = 24;
+export const FADE_FROM = 9;
+/** Webs drawn at once (the nearest). */
+export const MAX_WEBS = 16;
+/** Fitting's share of a frame (ms). */
+const FIT_BUDGET_MS = 1.5;
+
+export type WebPoint = {x: number; y: number; z: number; nx: number; ny: number; nz: number; tx: number; ty: number; tz: number};
+type V3 = {x: number; y: number; z: number};
+
+/** A ray's first drawn surface: its distance, the point, the surface's normal there. */
+export type Hit = {d: number; x: number; y: number; z: number; nx: number; ny: number; nz: number};
+/** Casts rays among what is drawn near a point: the first surface within `far`, or null. */
+export type Caster = (origin: V3, dir: V3, far: number) => Hit | null;
+
+/** One thread: its ends, when it is laid (0–1), its colour's gold (Nephila's silk is yellow). */
+type Thread = {a: V3; b: V3; order: number};
+
+export type FittedWeb = {
+    id: string;
+    habit: WebHabit;
+    /** The hub (an orb's middle, a tangle's heart, a sheet's funnel mouth). */
+    hub: V3;
+    /** The web's plane: its normal (an orb's face; a sheet's is up) and its right and up in that plane. */
+    normal: V3;
+    right: V3;
+    up: V3;
+    radius: number;
+    threads: Thread[];
+    /** The radii's far ends (an orb's), the tangle's knots, the sheet's edge: where trips go. */
+    ends: V3[];
+    /** A night spinner's retreat by day: the top anchor, on its surface. */
+    retreat: WebPoint | null;
+    gold: number;
+};
+
+// MARK: Fitting (pure, given a caster)
+
+const sub = (a: V3, b: V3): V3 => ({x: a.x - b.x, y: a.y - b.y, z: a.z - b.z});
+const add = (a: V3, b: V3, k = 1): V3 => ({x: a.x + b.x * k, y: a.y + b.y * k, z: a.z + b.z * k});
+const len = (a: V3) => Math.hypot(a.x, a.y, a.z);
+const norm = (a: V3): V3 => {
+    const l = len(a) || 1;
+    return {x: a.x / l, y: a.y / l, z: a.z / l};
+};
+const unit = (key: string) => (hashString(key) % 100000) / 100000;
+
+/** A small seeded random for a web's own threads (the same web for every viewer). */
+function seeded(key: string): () => number {
+    let s = hashString(key) >>> 0 || 1;
+    return () => {
+        s ^= s << 13;
+        s >>>= 0;
+        s ^= s >>> 17;
+        s ^= s << 5;
+        s >>>= 0;
+        return s / 4294967296;
+    };
+}
+
+/** An orb's rays: `n` directions round the hub in its plane (right, up). */
+function planeDirs(right: V3, up: V3, n: number): V3[] {
+    const out: V3[] = [];
+    for (let k = 0; k < n; k++) {
+        const a = (k / n) * Math.PI * 2;
+        out.push(norm(add({x: right.x * Math.cos(a), y: right.y * Math.cos(a), z: right.z * Math.cos(a)}, up, Math.sin(a))));
+    }
+    return out;
+}
+
+/**
+ * An orb at `home`: the best hub and face among candidates round it, its frame anchored on three sides or more (the
+ * widest gap between anchors under 160°), room for at least `minRadius` of orb. Null: nowhere to hang one.
+ */
+export function fitOrb(id: string, habit: WebHabit, home: V3, ground: number, cast: Caster): FittedWeb | null {
+    const RAYS = 12;
+    const reach = habit.radius * 2.6 + 0.25;
+    const minRadius = Math.min(habit.radius * 0.35, 0.08);
+    let best: {score: number; hub: V3; right: V3; hits: Array<Hit | null>; radius: number} | null = null;
+    const turn0 = unit(`orb:${id}`) * Math.PI;
+    // Candidate hubs: round its home, and between two drawn things near it (two stems, a post and a shrub) the orb's
+    // span apart, its face across the gap (`probeAround`).
+    const base = Math.max(home.y, ground);
+    const candidates: Array<{hub: V3; faces: number[]}> = [];
+    const allFaces = [0, 1, 2, 3, 4, 5].map((f) => turn0 + (f / 6) * Math.PI);
+    for (const [ox, oz] of [[0, 0], [0.3, 0], [-0.3, 0], [0, 0.3], [0, -0.3]]) for (const lift of [1.0, 1.6, 2.4]) candidates.push({hub: {x: home.x + ox, y: base + habit.radius * lift + 0.05, z: home.z + oz}, faces: allFaces});
+    const levels = [base + habit.radius * 1.1 + 0.05, base + habit.radius * 2 + 0.1, base + 0.9, base + 1.4];
+    for (const pair of probePairs(home, levels, cast, 0.2, Math.min(reach * 2, 2.4), 3)) candidates.push({hub: pair.mid, faces: [Math.atan2(pair.dir.z, pair.dir.x)]});
+    for (const {hub, faces} of candidates.slice(0, 48)) {
+        {
+            for (const a of faces) {
+                const right = {x: Math.cos(a), y: 0, z: Math.sin(a)};
+                const dirs = planeDirs(right, {x: 0, y: 1, z: 0}, RAYS);
+                const hits = dirs.map((dir) => {
+                    const hit = cast(hub, dir, reach);
+                    // The ground counts as drawn (its heights), for the threads that go down to it.
+                    if (dir.y < -0.2) {
+                        const d = (hub.y - ground) / -dir.y;
+                        if (d > 0 && d < reach && (!hit || d < hit.d)) return {d, x: hub.x + dir.x * d, y: ground, z: hub.z + dir.z * d, nx: 0, ny: 1, nz: 0};
+                    }
+                    return hit;
+                });
+                const near = hits.map((h) => (h ? h.d : reach));
+                const radius = Math.min(habit.radius, Math.min(...near) * 0.85);
+                if (radius < minRadius) continue;
+                // Anchored all round: the widest run of rays with nothing to hold to.
+                let gap = 0;
+                let run = 0;
+                for (let k = 0; k < RAYS * 2; k++) {
+                    run = hits[k % RAYS] ? 0 : run + 1;
+                    gap = Math.max(gap, run);
+                }
+                const anchored = hits.filter(Boolean).length;
+                // (Anchors at most 150° apart round the hub: a frame on every side.)
+                if (anchored < 3 || (gap + 1) * (360 / RAYS) > 150) continue;
+                // A big orb on short threads, its hub not too low.
+                const slack = hits.reduce((s, h) => s + (h ? Math.max(h.d - radius, 0) : 0), 0) / anchored;
+                const score = radius - slack * 0.25 + anchored * 0.005 - Math.hypot(hub.x - home.x, hub.z - home.z) * 0.01;
+                if (!best || score > best.score) best = {score, hub, right, hits, radius};
+            }
+        }
+    }
+    if (!best) return null;
+    return buildOrb(id, habit, best.hub, best.right, best.hits, best.radius);
+}
+
+function buildOrb(id: string, habit: WebHabit, hub: V3, right: V3, hits: Array<Hit | null>, radius: number): FittedWeb {
+    const random = seeded(`orb-threads:${id}`);
+    const up = {x: 0, y: 1, z: 0};
+    const normal = norm({x: right.z, y: 0, z: -right.x});
+    const threads: Thread[] = [];
+    const RAYS = hits.length;
+    const anchors = hits.map((hit, k) => (hit ? {hit, k} : null)).filter((a): a is {hit: Hit; k: number} => a !== null);
+    // Nephila's hub sits high in its orb: the orb reaches further down than up (Robinson & Robinson 1973).
+    const high = habit.spinHour === null && habit.radius >= 0.5;
+    const spokes = 22 + Math.floor(random() * 10);
+    const at = (a: number, r: number): V3 => add(add(hub, right, Math.cos(a) * r), up, Math.sin(a) * r);
+    // The orb's reach on each radius: its circle, a little uneven, and lower than the hub for Nephila.
+    const reachOf = (a: number) => radius * (0.9 + 0.1 * Math.sin(a * 3 + random() * 0.2)) * (high ? (Math.sin(a) < 0 ? 1 : 0.55) : 1);
+    // The frame: anchor threads from the rim out to what each ray met, laid first.
+    anchors.forEach(({hit, k}, i) => {
+        const a = (k / RAYS) * Math.PI * 2;
+        threads.push({a: at(a, reachOf(a)), b: {x: hit.x, y: hit.y, z: hit.z}, order: threadOrder("anchor", i, anchors.length)});
+    });
+    // The frame's polygon round the rim, between the anchor threads' rim ends.
+    for (let i = 0; i < anchors.length; i++) {
+        const a0 = (anchors[i].k / RAYS) * Math.PI * 2;
+        const a1 = (anchors[(i + 1) % anchors.length].k / RAYS) * Math.PI * 2;
+        threads.push({a: at(a0, reachOf(a0)), b: at(a1, reachOf(a1)), order: threadOrder("anchor", i, anchors.length)});
+    }
+    const ends: V3[] = [];
+    const angles: number[] = [];
+    for (let k = 0; k < spokes; k++) {
+        const a = (k / spokes) * Math.PI * 2 + (random() - 0.5) * 0.06;
+        angles.push(a);
+        const end = at(a, reachOf(a));
+        ends.push(end);
+        threads.push({a: hub, b: end, order: threadOrder("spoke", k, spokes)});
+    }
+    // The sticky spiral from the rim inward, a free zone round the hub (the hub's own little spiral).
+    const turns = Math.round(10 + radius * 30);
+    const total = turns * spokes;
+    for (let t = 0; t < total; t++) {
+        const k0 = t % spokes;
+        const k1 = (t + 1) % spokes;
+        const r0 = 0.22 + 0.74 * (t / total);
+        const r1 = 0.22 + 0.74 * ((t + 1) / total);
+        threads.push({a: at(angles[k0], reachOf(angles[k0]) * r0), b: at(angles[k1], reachOf(angles[k1]) * r1), order: threadOrder("spiral", t, total)});
+    }
+    // The hub's own few turns, laid with the spokes.
+    for (let t = 0; t < spokes * 2; t++) {
+        const k0 = t % spokes;
+        const k1 = (t + 1) % spokes;
+        threads.push({a: at(angles[k0], radius * (0.05 + 0.05 * (t / (spokes * 2)))), b: at(angles[k1], radius * (0.05 + 0.05 * ((t + 1) / (spokes * 2)))), order: threadOrder("spoke", spokes - 1, spokes)});
+    }
+    // Argiope's band (Herberstein et al. 2000): a zigzag above and below the hub, or an X of four arms; Cyclosa's line
+    // of prey remains through the hub. Laid last.
+    if (habit.band) {
+        const arms = habit.band === "cross" ? [Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4] : [Math.PI / 2, -Math.PI / 2];
+        for (const arm of arms) {
+            const steps = habit.band === "debris" ? 6 : 16;
+            const reach = radius * (habit.band === "debris" ? 0.7 : 0.55);
+            for (let s = 0; s < steps; s++) {
+                const r0 = radius * 0.1 + (reach * s) / steps;
+                const r1 = radius * 0.1 + (reach * (s + 1)) / steps;
+                const w = habit.band === "debris" ? 0.004 : 0.018 * (1 - s / steps * 0.4);
+                const side = s % 2 ? 1 : -1;
+                const p0 = add(add(hub, right, Math.cos(arm) * r0 - Math.sin(arm) * w * side), up, Math.sin(arm) * r0 + Math.cos(arm) * w * side);
+                const p1 = add(add(hub, right, Math.cos(arm) * r1 + Math.sin(arm) * w * side), up, Math.sin(arm) * r1 - Math.cos(arm) * w * side);
+                threads.push({a: p0, b: p1, order: 1});
+                if (habit.band !== "debris") threads.push({a: p0, b: add(p1, up, 0.002), order: 1});
+            }
+        }
+    }
+    // A night spinner's retreat: where its highest anchor thread meets its surface (bark, a post).
+    let retreat: WebPoint | null = null;
+    if (habit.nightOnly) {
+        const top = anchors.reduce<{hit: Hit; k: number} | null>((best, a) => (!best || a.hit.y > best.hit.y ? a : best), null);
+        if (top) {
+            const n = norm({x: top.hit.nx, y: top.hit.ny, z: top.hit.nz});
+            const t = norm(sub({x: hub.x, y: hub.y, z: hub.z}, top.hit));
+            retreat = {x: top.hit.x, y: top.hit.y, z: top.hit.z, nx: n.x, ny: n.y, nz: n.z, tx: t.x, ty: t.y, tz: t.z};
+        }
+    }
+    return {id, habit, hub, normal, right, up, radius, threads, ends, retreat, gold: high ? 1 : 0};
+}
+
+/** Horizontal rays out from its home at these heights: the drawn surfaces round it (walls, posts, stems, shrubs). */
+function probeAround(home: V3, levels: number[], cast: Caster, far: number, rays = 16): Array<Hit & {dir: V3}> {
+    const out: Array<Hit & {dir: V3}> = [];
+    for (const y of levels) {
+        for (let k = 0; k < rays; k++) {
+            const a = (k / rays) * Math.PI * 2 + 0.1;
+            const dir = {x: Math.cos(a), y: 0, z: Math.sin(a)};
+            const hit = cast({x: home.x, y, z: home.z}, dir, far);
+            if (hit) out.push({...hit, dir});
+        }
+    }
+    return out;
+}
+
+/** Pairs of drawn things a span apart near its home (each found by a ray across the gap from the other): their middle and the line between. */
+function probePairs(home: V3, levels: number[], cast: Caster, minSpan: number, maxSpan: number, far: number): Array<{mid: V3; dir: V3}> {
+    const out: Array<{mid: V3; dir: V3; d: number}> = [];
+    for (const hit of probeAround(home, levels, cast, far)) {
+        // From just off the surface met, back across: the next drawn thing within the span.
+        const back = {x: -hit.dir.x, y: 0, z: -hit.dir.z};
+        for (const turn of [0, 0.35, -0.35]) {
+            const c = Math.cos(turn);
+            const sn = Math.sin(turn);
+            const dir = {x: back.x * c - back.z * sn, y: 0, z: back.x * sn + back.z * c};
+            const from = {x: hit.x + dir.x * 0.01, y: hit.y, z: hit.z + dir.z * 0.01};
+            const other = cast(from, dir, maxSpan);
+            if (!other || other.d < minSpan) continue;
+            const mid = {x: (from.x + other.x) / 2, y: hit.y, z: (from.z + other.z) / 2};
+            out.push({mid, dir, d: Math.hypot(mid.x - home.x, mid.z - home.z)});
+        }
+    }
+    out.sort((a, b) => a.d - b.d);
+    return out;
+}
+
+/** The 3D directions a tangle's or a sheet's rays go: the six axes and the eight diagonals. */
+const ALL_DIRS: V3[] = (() => {
+    const out: V3[] = [{x: 1, y: 0, z: 0}, {x: -1, y: 0, z: 0}, {x: 0, y: 1, z: 0}, {x: 0, y: -1, z: 0}, {x: 0, y: 0, z: 1}, {x: 0, y: 0, z: -1}];
+    for (const sx of [-1, 1]) for (const sy of [-1, 1]) for (const sz of [-1, 1]) out.push(norm({x: sx, y: sy, z: sz}));
+    for (let k = 0; k < 8; k++) out.push({x: Math.cos((k / 8) * Math.PI * 2 + 0.39), y: 0, z: Math.sin((k / 8) * Math.PI * 2 + 0.39)});
+    return out;
+})();
+
+/**
+ * A tangle at `home`: in a corner, two drawn surfaces of different facing within reach (a wall and an eave, a wall and
+ * the ground, a post and a rail), the tangle in the space between, its threads out to them. Null: no corner near.
+ */
+/** How far off its surface a tangle's heart is. */
+const r0 = (habit: WebHabit) => Math.min(habit.radius * 0.6, 0.15);
+
+export function fitTangle(id: string, habit: WebHabit, home: V3, ground: number, cast: Caster): FittedWeb | null {
+    const reach = habit.radius * 2.2;
+    let best: {score: number; hub: V3; hits: Hit[]} | null = null;
+    // Candidate hubs: round its home, and just off each upright surface near it (a wall, a fence, a shed, a post), from
+    // its foot up to under anything over it (an eave, a sill): its corners.
+    const base = Math.max(home.y, ground);
+    const candidates: V3[] = [];
+    for (const [ox, oz] of [[0, 0], [0.25, 0], [-0.25, 0], [0, 0.25], [0, -0.25]]) for (const lift of [0.12, 0.8, 1.6, 2.4]) candidates.push({x: home.x + ox, y: base + lift, z: home.z + oz});
+    const walls = probeAround(home, [base + 0.3, base + 1.2, base + 2.1], cast, 4).filter((h) => Math.abs(h.ny) < 0.4).sort((a, b) => a.d - b.d);
+    for (const wall of walls.slice(0, 12)) {
+        const off = {x: wall.x + wall.nx * r0(habit), y: wall.y, z: wall.z + wall.nz * r0(habit)};
+        const over = cast(off, {x: 0, y: 1, z: 0}, 3);
+        const top = over ? off.y + over.d - 0.08 : off.y + 0.4;
+        candidates.push({...off, y: base + 0.1}, {...off, y: Math.max(base + 0.1, top - habit.radius * 0.6)}, off);
+    }
+    for (const hub of candidates.slice(0, 60)) {
+        {
+            const hits: Hit[] = [];
+            let open = 0;
+            for (const dir of ALL_DIRS) {
+                let hit = cast(hub, dir, reach);
+                if (dir.y < -0.2) {
+                    const d = (hub.y - ground) / -dir.y;
+                    if (d > 0 && d < reach && (!hit || d < hit.d)) hit = {d, x: hub.x + dir.x * d, y: ground, z: hub.z + dir.z * d, nx: 0, ny: 1, nz: 0};
+                }
+                if (hit && hit.d > 0.02) hits.push(hit);
+                if (!hit) open++;
+            }
+            // (In a corner, not inside something drawn: a corner is open on a side.)
+            if (open < 4) continue;
+            // Surfaces of different facings (a corner): the hits' normals grouped.
+            const facings: V3[] = [];
+            for (const h of hits) if (!facings.some((f) => f.x * h.nx + f.y * h.ny + f.z * h.nz > 0.7)) facings.push({x: h.nx, y: h.ny, z: h.nz});
+            if (facings.length < 2 || hits.length < 4) continue;
+            // Sheltered: something over it (an eave, a sill, a rail) is best, as the corners of houses and sheds.
+            const over = hits.some((h) => h.ny < -0.5);
+            const score = facings.length + (over ? 1.5 : 0) + hits.length * 0.05 - (hub.y - base) * 0.1 - Math.hypot(hub.x - home.x, hub.z - home.z) * 0.05;
+            if (!best || score > best.score) best = {score, hub, hits};
+        }
+    }
+    if (!best) return null;
+    const random = seeded(`tangle:${id}`);
+    const {hub, hits} = best;
+    const r = habit.radius;
+    // The tangle's knots: in the space the hits leave round the hub (each knot short of every surface).
+    const knots: V3[] = [];
+    for (let i = 0; i < 26; i++) {
+        const dir = norm({x: random() - 0.5, y: (random() - 0.5) * 0.8, z: random() - 0.5});
+        const d = r * (0.25 + random() * 0.75);
+        const block = cast(hub, dir, d + 0.03);
+        knots.push(add(hub, dir, block ? Math.max(block.d - 0.03, 0.01) : d));
+    }
+    const threads: Thread[] = [];
+    // Anchor threads from the outer knots to the surfaces (the "frame" of a tangle).
+    hits.forEach((h, i) => {
+        const k = knots[i % knots.length];
+        threads.push({a: k, b: {x: h.x, y: h.y, z: h.z}, order: 0});
+    });
+    // The tangle: each knot to two or three others.
+    for (let i = 0; i < knots.length; i++) for (let j = 0; j < 2 + (i % 2); j++) threads.push({a: knots[i], b: knots[Math.floor(random() * knots.length)], order: 0});
+    // Gumfoot lines (theridiids): straight down from the low knots to the surface under them (Benjamin & Zschokke 2003).
+    if (!habit.hangs || habit.radius < 0.2) {
+        for (const k of knots.slice(0, 8)) {
+            const down = cast(k, {x: 0, y: -1, z: 0}, 2.5);
+            const y = down ? k.y - down.d : ground;
+            if (k.y - y < 2.5) threads.push({a: k, b: {x: k.x, y, z: k.z}, order: 0});
+        }
+    }
+    const normal = {x: 0, y: 1, z: 0};
+    return {id, habit, hub, normal, right: {x: 1, y: 0, z: 0}, up: {x: 0, y: 0, z: 1}, radius: r, threads: threads.filter((t) => len(sub(t.a, t.b)) > 0.005), ends: knots, retreat: null, gold: 0};
+}
+
+/**
+ * A sheet and its funnel at `home`: on the ground, its funnel running back into the nearest vertical surface (a wall's
+ * foot, a fence, a log, a stone) within reach, else into the grass (the funnel down into the plants' bases, as a grass
+ * spider's). Its edge held up by threads to the surfaces round it.
+ */
+export function fitSheet(id: string, habit: WebHabit, home: V3, ground: (x: number, z: number) => number, cast: Caster): FittedWeb | null {
+    const r = habit.radius;
+    let best: {score: number; mouth: V3; back: V3; wall: Hit | null} | null = null;
+    // Candidate mouths: round its home, and at the foot of each upright surface near it (a wall's, a fence's, a log's).
+    const g0 = ground(home.x, home.z);
+    const spots: Array<[number, number]> = [[0, 0], [0.4, 0], [-0.4, 0], [0, 0.4], [0, -0.4]];
+    for (const wall of probeAround({x: home.x, y: g0, z: home.z}, [g0 + 0.15], cast, 4).filter((h) => Math.abs(h.ny) < 0.4).sort((a, b) => a.d - b.d).slice(0, 8)) spots.push([wall.x + wall.nx * 0.25 - home.x, wall.z + wall.nz * 0.25 - home.z]);
+    for (const [ox, oz] of spots) {
+        const x = home.x + ox;
+        const z = home.z + oz;
+        const g = ground(x, z);
+        const at = {x, y: g + 0.06, z};
+        const walls: Array<Hit | null> = [];
+        for (let k = 0; k < 8; k++) {
+            const a = (k / 8) * Math.PI * 2;
+            walls.push(cast(at, {x: Math.cos(a), y: 0, z: Math.sin(a)}, 0.6));
+        }
+        // (Not inside something drawn: a wall's or a log's inside meets its faces all round.)
+        if (walls.filter(Boolean).length >= 6) continue;
+        for (let k = 0; k < 8; k++) {
+            const a = (k / 8) * Math.PI * 2;
+            const dir = {x: Math.cos(a), y: 0, z: Math.sin(a)};
+            const wall = walls[k];
+            const vertical = wall && Math.abs(wall.ny) < 0.5;
+            const score = vertical ? 2 - wall!.d : 0;
+            if (!best || score > best.score) best = {score, mouth: at, back: dir, wall: vertical ? wall : null};
+        }
+    }
+    if (!best) return null;
+    const random = seeded(`sheet:${id}`);
+    const {back, wall} = best;
+    // The funnel's mouth a little out from the wall; the sheet spreads away from it.
+    const mouth = wall ? {x: best.mouth.x + back.x * (wall.d - 0.07), y: best.mouth.y, z: best.mouth.z + back.z * (wall.d - 0.07)} : best.mouth;
+    const out = {x: -back.x, y: 0, z: -back.z};
+    const side = {x: -out.z, y: 0, z: out.x};
+    const threads: Thread[] = [];
+    const ends: V3[] = [];
+    // The sheet: a fan of threads out from the mouth and rings across them, just over the ground and sagging a little.
+    const RADII = 14;
+    const RINGS = 9;
+    const pt = (u: number, w: number): V3 => {
+        const a = (w - 0.5) * Math.PI * 0.95;
+        const d = r * (0.08 + 0.92 * u) * (0.85 + 0.15 * Math.sin(w * 9 + u * 3));
+        const x = mouth.x + (out.x * Math.cos(a) + side.x * Math.sin(a)) * d;
+        const z = mouth.z + (out.z * Math.cos(a) + side.z * Math.sin(a)) * d;
+        return {x, y: Math.max(ground(x, z) + 0.035, mouth.y - 0.01 - 0.01 * Math.sin(u * Math.PI)), z};
+    };
+    for (let i = 0; i < RADII; i++) {
+        const w = i / (RADII - 1);
+        let prev = mouth;
+        for (let s = 1; s <= RINGS; s++) {
+            const p = pt(s / RINGS, w);
+            threads.push({a: prev, b: p, order: 0});
+            prev = p;
+        }
+        ends.push(prev);
+    }
+    for (let s = 1; s <= RINGS; s++) {
+        for (let i = 0; i < RADII - 1; i++) threads.push({a: pt(s / RINGS, i / (RADII - 1)), b: pt(s / RINGS, (i + 1) / (RADII - 1)), order: 0});
+        // A few crossing threads: a sheet is a felt, not a fan.
+        for (let i = 0; i < 4; i++) threads.push({a: pt(s / RINGS, random()), b: pt(Math.min((s + 1) / RINGS, 1), random()), order: 0});
+    }
+    // The funnel: a tube of threads from the mouth back into the corner (or down into the grass's bases).
+    const funnelEnd = wall ? {x: wall.x - back.x * 0.005, y: mouth.y - 0.02, z: wall.z - back.z * 0.005} : {x: mouth.x + back.x * 0.08, y: ground(mouth.x, mouth.z) + 0.005, z: mouth.z + back.z * 0.08};
+    for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        const ring = (p: V3, rr: number): V3 => ({x: p.x + side.x * Math.cos(a) * rr, y: p.y + 0.012 + Math.sin(a) * rr * 0.7, z: p.z + side.z * Math.cos(a) * rr});
+        threads.push({a: ring(mouth, 0.03), b: ring(funnelEnd, 0.012), order: 0});
+    }
+    // Scaffold threads from the sheet's edge up to the wall or the plants over it.
+    if (wall) {
+        for (let i = 0; i < 6; i++) {
+            const e = ends[Math.floor(random() * ends.length)];
+            const upHit = cast(e, norm({x: back.x, y: 0.6, z: back.z}), r * 2.5);
+            if (upHit) threads.push({a: e, b: {x: upHit.x, y: upHit.y, z: upHit.z}, order: 0});
+        }
+    }
+    return {id, habit, hub: mouth, normal: {x: 0, y: 1, z: 0}, right: side, up: out, radius: r, threads, ends, retreat: null, gold: 0};
+}
+
+/** Fit a spider's web of its kind at its home. */
+export function fitWeb(id: string, habit: WebHabit, home: V3, ground: (x: number, z: number) => number, cast: Caster): FittedWeb | null {
+    const g = ground(home.x, home.z);
+    if (habit.kind === "orb") return fitOrb(id, habit, home, g, cast);
+    if (habit.kind === "tangle") return fitTangle(id, habit, home, g, cast);
+    return fitSheet(id, habit, home, ground, cast);
+}
+
+// MARK: The spider on its web
+
+/** Where on its web its spider is now (its feet's point, its back's way, its head's way). */
+export function spiderOnWeb(web: FittedWeb, hours: number, seconds: number, built: number): WebPoint {
+    const {habit, hub, normal} = web;
+    if (habit.kind === "orb") {
+        // A night spinner by day: in its retreat.
+        if (web.retreat && !atHub(habit, web.id, hours)) return web.retreat;
+        const stage = webStage(habit, web.id, hours);
+        let at: V3 = hub;
+        if (stage.spinning) {
+            // At the thread being laid now (the last one whose turn has come).
+            let last: Thread | null = null;
+            for (const t of web.threads) if (t.order <= built && (!last || t.order >= last.order)) last = t;
+            if (last) at = last.b;
+        } else if (!stage.takingDown && web.ends.length) {
+            const trip = silkTrip(web.id, seconds);
+            const end = web.ends[trip.thread % web.ends.length];
+            at = add(hub, sub(end, hub), trip.out * 0.9);
+        }
+        // Head down on its face (Argiope sits head down at the hub: Bugguide), its back off the face toward the side it rests.
+        return {x: at.x, y: at.y, z: at.z, nx: normal.x, ny: normal.y, nz: normal.z, tx: 0, ty: -1, tz: 0};
+    }
+    if (habit.kind === "tangle") {
+        // Hanging upside down under its tangle's knots (theridiids and Pholcus hang inverted: Foelix 2011), out along a
+        // thread now and then.
+        const trip = silkTrip(web.id, seconds);
+        const home = web.ends.reduce((best, k) => (k.y > best.y ? k : best), web.ends[0] ?? hub);
+        const to = web.ends[trip.thread % Math.max(web.ends.length, 1)] ?? home;
+        const at = add(home, sub(to, home), trip.out);
+        const a = unit(`tangle-face:${web.id}`) * Math.PI * 2;
+        return {x: at.x, y: at.y, z: at.z, nx: 0, ny: -1, nz: 0, tx: Math.cos(a), ty: 0, tz: Math.sin(a)};
+    }
+    // A sheet weaver at its funnel's mouth, facing out over its sheet; out over it and back now and then.
+    const trip = silkTrip(web.id, seconds);
+    const to = web.ends[trip.thread % Math.max(web.ends.length, 1)] ?? hub;
+    const at = add(hub, sub(to, hub), trip.out * 0.8);
+    const dir = trip.out > 0 ? norm(sub(to, hub)) : norm(web.up);
+    return {x: at.x, y: at.y, z: at.z, nx: 0, ny: 1, nz: 0, tx: dir.x, ty: 0, tz: dir.z};
+}
+
+// MARK: Gathering what is drawn
+
+/** Names never to hang a web on: the weather, the sky, the animals' marks, water. */
+const NEVER = /sky|cloud|rain|snow|mist|halo|label|dust|trace|mark|icon|ring|shadow|speck|dot|water|sea|wave|glow|light|webs/i;
+const TO_LOCAL = new Matrix4();
+const M = new Matrix4();
+const W = new Matrix4();
+const A = new Vector3();
+const B = new Vector3();
+const C = new Vector3();
+const L = new Vector3();
+const SPHERE = new Sphere();
+
+/**
+ * The triangles drawn within `reach` of `centre` (world frame, nine numbers each), from every visible mesh, instanced set
+ * (each instance near) and batch under `root`. The ground is asked by its heights instead (its meshes are left out).
+ */
+export function gatherDrawn(root: Object3D, centre: V3, reach: number, skip: (object: Object3D) => boolean): Float32Array {
+    let list = new Float32Array(9 * 1024);
+    let count = 0;
+    const push = (a: Vector3, b: Vector3, c: Vector3) => {
+        if ((count + 1) * 9 > list.length) {
+            const grown = new Float32Array(list.length * 2);
+            grown.set(list);
+            list = grown;
+        }
+        const at = count * 9;
+        list[at] = a.x;
+        list[at + 1] = a.y;
+        list[at + 2] = a.z;
+        list[at + 3] = b.x;
+        list[at + 4] = b.y;
+        list[at + 5] = b.z;
+        list[at + 6] = c.x;
+        list[at + 7] = c.y;
+        list[at + 8] = c.z;
+        count++;
+    };
+    const take = (geometry: BufferGeometry, matrix: Matrix4, start = 0, total = -1) => {
+        const position = geometry.getAttribute("position") as BufferAttribute | undefined;
+        if (!position) return;
+        const index = geometry.index;
+        TO_LOCAL.copy(matrix).invert();
+        const scale = matrix.getMaxScaleOnAxis() || 1;
+        L.set(centre.x, centre.y, centre.z).applyMatrix4(TO_LOCAL);
+        const r = reach / scale;
+        const n = total >= 0 ? total : index ? index.count : position.count;
+        for (let t = start; t + 2 < start + n; t += 3) {
+            const a = index ? index.getX(t) : t;
+            const b = index ? index.getX(t + 1) : t + 1;
+            const c = index ? index.getX(t + 2) : t + 2;
+            const ax = position.getX(a);
+            const bx = position.getX(b);
+            const cx = position.getX(c);
+            if (Math.min(ax, bx, cx) > L.x + r || Math.max(ax, bx, cx) < L.x - r) continue;
+            const az = position.getZ(a);
+            const bz = position.getZ(b);
+            const cz = position.getZ(c);
+            if (Math.min(az, bz, cz) > L.z + r || Math.max(az, bz, cz) < L.z - r) continue;
+            const ay = position.getY(a);
+            const by = position.getY(b);
+            const cy = position.getY(c);
+            if (Math.min(ay, by, cy) > L.y + r || Math.max(ay, by, cy) < L.y - r) continue;
+            push(A.set(ax, ay, az).applyMatrix4(matrix), B.set(bx, by, bz).applyMatrix4(matrix), C.set(cx, cy, cz).applyMatrix4(matrix));
+        }
+    };
+    const near = (geometry: BufferGeometry, matrix: Matrix4) => {
+        if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+        const sphere = geometry.boundingSphere!;
+        A.copy(sphere.center).applyMatrix4(matrix);
+        const radius = sphere.radius * (matrix.getMaxScaleOnAxis() || 1);
+        return Math.hypot(A.x - centre.x, A.y - centre.y, A.z - centre.z) < radius + reach;
+    };
+    const visit = (object: Object3D) => {
+        if (!object.visible || skip(object)) return;
+        const mesh = object as Mesh;
+        const name = mesh.name || (mesh.userData.kind as string | undefined) || "";
+        if (mesh.isMesh && !(NEVER.test(name) || /ground|terrain|tile/i.test(name)) && !mesh.userData.arkAnimal && !(mesh as unknown as {isSkinnedMesh?: boolean}).isSkinnedMesh) {
+            const material = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as Material | undefined;
+            const seen = material && material.visible && material.colorWrite && !(material.transparent && material.opacity < 0.5);
+            const geometry = mesh.geometry as BufferGeometry;
+            if (seen && geometry) {
+                const batched = mesh as unknown as BatchedMesh;
+                const instanced = mesh as unknown as InstancedMesh;
+                if (batched.isBatchedMesh) {
+                    for (let i = 0; i < batched.instanceCount; i++) {
+                        try {
+                            if (!batched.getVisibleAt(i)) continue;
+                            const g = batched.getGeometryIdAt(i);
+                            batched.getMatrixAt(i, M);
+                            W.multiplyMatrices(mesh.matrixWorld, M);
+                            const box = batched.getBoundingSphereAt(g, SPHERE);
+                            if (!box) continue;
+                            A.copy(box.center).applyMatrix4(W);
+                            if (Math.hypot(A.x - centre.x, A.y - centre.y, A.z - centre.z) > box.radius * (W.getMaxScaleOnAxis() || 1) + reach) continue;
+                            const range = batched.getGeometryRangeAt(g) as {indexStart: number; indexCount: number; vertexStart: number; vertexCount: number};
+                            if (geometry.index && range.indexCount > 0) take(geometry, W, range.indexStart, range.indexCount);
+                            else take(geometry, W, range.vertexStart, range.vertexCount);
+                        } catch {
+                            continue;
+                        }
+                    }
+                } else if (instanced.isInstancedMesh) {
+                    // (Ground cover in the tens of thousands, grass blades, is no frame for a web: its drawn blades sway.)
+                    if (instanced.count <= 20000) {
+                        if (!geometry.boundingSphere) geometry.computeBoundingSphere();
+                        const sphere = geometry.boundingSphere!;
+                        const e = instanced.instanceMatrix.array as Float32Array;
+                        const worldScale = mesh.matrixWorld.getMaxScaleOnAxis() || 1;
+                        for (let i = 0; i < instanced.count; i++) {
+                            // (First by the instance's own place and size, read straight from its matrix: most are far.)
+                            const k = i * 16;
+                            const scale = Math.max(Math.hypot(e[k], e[k + 1], e[k + 2]), Math.hypot(e[k + 4], e[k + 5], e[k + 6]), Math.hypot(e[k + 8], e[k + 9], e[k + 10]));
+                            A.set(e[k + 12], e[k + 13], e[k + 14]).applyMatrix4(mesh.matrixWorld);
+                            const r = (len(sphere.center) * scale + sphere.radius * scale) * worldScale;
+                            if (Math.hypot(A.x - centre.x, A.y - centre.y, A.z - centre.z) > r + reach) continue;
+                            instanced.getMatrixAt(i, M);
+                            W.multiplyMatrices(mesh.matrixWorld, M);
+                            if (near(geometry, W)) take(geometry, W);
+                        }
+                    }
+                } else if (near(geometry, mesh.matrixWorld)) {
+                    const draw = geometry.drawRange;
+                    const total = geometry.index ? geometry.index.count : (geometry.getAttribute("position")?.count ?? 0);
+                    const start = Math.max(draw.start, 0);
+                    take(geometry, mesh.matrixWorld, start, Math.min(draw.count, total - start));
+                }
+            }
+        }
+        for (const child of object.children) visit(child);
+    };
+    visit(root);
+    return list.subarray(0, count * 9);
+}
+
+/** A caster over gathered triangles (both faces): the nearest hit and its normal. */
+export function triangleCaster(list: Float32Array, centre: V3 = {x: 0, y: 0, z: 0}, reach = 6): Caster {
+    const count = list.length / 9;
+    // A grid of the triangles (by their boxes, `CELL` m cells): a ray tests only those in the cells it passes.
+    const CELL = 0.4;
+    const cells = new Map<number, number[]>();
+    const key = (i: number, j: number, k: number) => ((i + 2048) * 4096 + (j + 2048)) * 4096 + (k + 2048);
+    const lo = {x: Math.floor((centre.x - reach) / CELL), y: Math.floor((centre.y - reach) / CELL), z: Math.floor((centre.z - reach) / CELL)};
+    const hi = {x: Math.floor((centre.x + reach) / CELL), y: Math.floor((centre.y + reach) / CELL), z: Math.floor((centre.z + reach) / CELL)};
+    for (let t = 0; t < count; t++) {
+        const k = t * 9;
+        const x0 = Math.floor(Math.min(list[k], list[k + 3], list[k + 6]) / CELL);
+        const x1 = Math.floor(Math.max(list[k], list[k + 3], list[k + 6]) / CELL);
+        const y0 = Math.floor(Math.min(list[k + 1], list[k + 4], list[k + 7]) / CELL);
+        const y1 = Math.floor(Math.max(list[k + 1], list[k + 4], list[k + 7]) / CELL);
+        const z0 = Math.floor(Math.min(list[k + 2], list[k + 5], list[k + 8]) / CELL);
+        const z1 = Math.floor(Math.max(list[k + 2], list[k + 5], list[k + 8]) / CELL);
+        // (A huge triangle, a wall's whole face, only in the cells within the gathered reach.)
+        for (let i = Math.max(x0, lo.x); i <= Math.min(x1, hi.x); i++) {
+            for (let j = Math.max(y0, lo.y); j <= Math.min(y1, hi.y); j++) {
+                for (let m = Math.max(z0, lo.z); m <= Math.min(z1, hi.z); m++) {
+                    const c = key(i, j, m);
+                    const here = cells.get(c);
+                    if (here) here.push(t);
+                    else cells.set(c, [t]);
+                }
+            }
+        }
+    }
+    const stamp = new Uint32Array(count);
+    let ray = 0;
+    const visited: number[] = [];
+    return (o, d, far) => {
+        let best = far;
+        let at = -1;
+        ray++;
+        visited.length = 0;
+        let last = -1;
+        // The cells along the ray, a half cell a step (and the cells either side of each step's point).
+        for (let s = 0; s <= far + CELL; s += CELL * 0.5) {
+            const x = o.x + d.x * Math.min(s, far);
+            const y = o.y + d.y * Math.min(s, far);
+            const z = o.z + d.z * Math.min(s, far);
+            const c = key(Math.floor(x / CELL), Math.floor(y / CELL), Math.floor(z / CELL));
+            if (c === last) continue;
+            last = c;
+            const here = cells.get(c);
+            if (!here) continue;
+            for (const t of here) {
+                if (stamp[t] === ray) continue;
+                stamp[t] = ray;
+                visited.push(t);
+            }
+        }
+        for (const i of visited) {
+            const k = i * 9;
+            const ax = list[k];
+            const ay = list[k + 1];
+            const az = list[k + 2];
+            const e1x = list[k + 3] - ax;
+            const e1y = list[k + 4] - ay;
+            const e1z = list[k + 5] - az;
+            const e2x = list[k + 6] - ax;
+            const e2y = list[k + 7] - ay;
+            const e2z = list[k + 8] - az;
+            const px = d.y * e2z - d.z * e2y;
+            const py = d.z * e2x - d.x * e2z;
+            const pz = d.x * e2y - d.y * e2x;
+            const det = e1x * px + e1y * py + e1z * pz;
+            if (Math.abs(det) < 1e-12) continue;
+            const inv = 1 / det;
+            const tx = o.x - ax;
+            const ty = o.y - ay;
+            const tz = o.z - az;
+            const u = (tx * px + ty * py + tz * pz) * inv;
+            if (u < 0 || u > 1) continue;
+            const qx = ty * e1z - tz * e1y;
+            const qy = tz * e1x - tx * e1z;
+            const qz = tx * e1y - ty * e1x;
+            const v = (d.x * qx + d.y * qy + d.z * qz) * inv;
+            if (v < 0 || u + v > 1) continue;
+            const t = (e2x * qx + e2y * qy + e2z * qz) * inv;
+            if (t > 1e-4 && t < best) {
+                best = t;
+                at = i;
+            }
+        }
+        if (at < 0) return null;
+        const k = at * 9;
+        const e1 = {x: list[k + 3] - list[k], y: list[k + 4] - list[k + 1], z: list[k + 5] - list[k + 2]};
+        const e2 = {x: list[k + 6] - list[k], y: list[k + 7] - list[k + 1], z: list[k + 8] - list[k + 2]};
+        let n = norm({x: e1.y * e2.z - e1.z * e2.y, y: e1.z * e2.x - e1.x * e2.z, z: e1.x * e2.y - e1.y * e2.x});
+        // (Facing back toward the ray's origin: the side the thread is on.)
+        if (n.x * d.x + n.y * d.y + n.z * d.z > 0) n = {x: -n.x, y: -n.y, z: -n.z};
+        return {d: best, x: o.x + d.x * best, y: o.y + d.y * best, z: o.z + d.z * best, nx: n.x, ny: n.y, nz: n.z};
+    };
+}
+
+// MARK: Drawing
+
+const VERTEX = /* glsl */ `
+uniform float uBuilt[${MAX_WEBS}];
+uniform float uFade[${MAX_WEBS}];
+uniform vec2 uRes;
+uniform float uPx;
+uniform vec3 uSun;
+attribute vec3 aB;
+attribute vec2 aCorner;
+attribute float aOrder;
+attribute float aSlot;
+attribute float aGold;
+varying float vFade;
+varying float vGlint;
+varying float vU;
+varying float vGold;
+void main() {
+    int slot = int(aSlot + 0.5);
+    float built = 1.0;
+    float fade = 0.0;
+    for (int i = 0; i < ${MAX_WEBS}; i++) {
+        if (i == slot) { built = uBuilt[i]; fade = uFade[i]; }
+    }
+    vec4 ca = projectionMatrix * viewMatrix * vec4(position, 1.0);
+    vec4 cb = projectionMatrix * viewMatrix * vec4(aB, 1.0);
+    vec4 c = mix(ca, cb, aCorner.x);
+    if (aOrder > built + 1e-4 || fade <= 0.0 || ca.w <= 0.0 || cb.w <= 0.0) {
+        gl_Position = vec4(0.0, 0.0, 2.0, 1.0);
+        return;
+    }
+    vec2 sa = ca.xy / ca.w * uRes;
+    vec2 sb = cb.xy / cb.w * uRes;
+    vec2 dir = sb - sa;
+    dir = length(dir) > 1e-5 ? normalize(dir) : vec2(1.0, 0.0);
+    c.xy += vec2(-dir.y, dir.x) * aCorner.y * uPx / uRes * c.w;
+    gl_Position = c;
+    vec3 wp = mix(position, aB, aCorner.x);
+    vec3 v = normalize(cameraPosition - wp);
+    vec3 t = normalize(aB - position + 1e-6);
+    // A fibre's highlight: where the sun's half-vector is square to it; and the glow of silk against the sun.
+    vec3 h = normalize(uSun + v);
+    float th = dot(t, h);
+    vGlint = pow(max(1.0 - th * th, 0.0), 30.0) + 0.9 * pow(max(dot(-v, uSun), 0.0), 5.0);
+    vFade = fade;
+    vU = aCorner.x * length(aB - position);
+    vGold = aGold;
+}
+`;
+
+const FRAGMENT = /* glsl */ `
+uniform float uDay;
+uniform float uDew;
+uniform vec3 uGlint;
+varying float vFade;
+varying float vGlint;
+varying float vU;
+varying float vGold;
+void main() {
+    // Dew: beads along the threads at a still dawn.
+    float bead = uDew * smoothstep(0.55, 0.95, sin(vU * 420.0) * 0.5 + 0.5);
+    float lit = vGlint * uDay;
+    float a = vFade * clamp(0.16 * (0.35 + 0.65 * uDay) + 0.85 * lit + 0.55 * bead, 0.0, 0.95);
+    vec3 silk = mix(vec3(0.86, 0.89, 0.9), vec3(0.95, 0.8, 0.35), vGold * 0.8);
+    vec3 colour = mix(silk * (0.35 + 0.65 * uDay), uGlint, clamp(lit + bead * 0.6, 0.0, 1.0));
+    gl_FragColor = vec4(colour, a);
+}
+`;
+
+type Spider = {id: string; habit: WebHabit; home: V3; web: FittedWeb | null; tries: number; triedAt: number};
+
+export type WebsStats = {spiders: number; fitted: number; drawn: number; threads: number; fitMs: number};
+
+/** The webs of the scene's web spiders: fitted near the camera, drawn in one call, their spiders' places on them. */
+export class SpiderWebs {
+    readonly mesh: Mesh;
+    private readonly material: ShaderMaterial;
+    private readonly spiders = new Map<string, Spider>();
+    private slots: Spider[] = [];
+    private slotKey = "";
+    private fitMs = 0;
+    private lastPick = -Infinity;
+    private readonly res = new Vector2(1, 1);
+
+    constructor(private readonly root: Object3D, private readonly ground: (x: number, z: number) => number) {
+        this.material = new ShaderMaterial({
+            uniforms: {
+                uBuilt: {value: new Array(MAX_WEBS).fill(1)},
+                uFade: {value: new Array(MAX_WEBS).fill(0)},
+                uRes: {value: this.res},
+                uPx: {value: 0.6},
+                uSun: {value: new Vector3(0, 1, 0)},
+                uDay: {value: 1},
+                uDew: {value: 0},
+                uGlint: {value: new Color("#fff4e0")}
+            },
+            vertexShader: VERTEX,
+            fragmentShader: FRAGMENT,
+            transparent: true,
+            depthWrite: false
+        });
+        this.mesh = new Mesh(new BufferGeometry(), this.material);
+        this.mesh.name = "spider-webs";
+        this.mesh.frustumCulled = false;
+        this.mesh.visible = false;
+        this.mesh.renderOrder = 2;
+    }
+
+    /** A spider aboard (its slug and stored scientific name decide whether it spins a web); its home on its island. */
+    note(id: string, slug: string, scientificName: string | null | undefined, home: V3): boolean {
+        if (this.spiders.has(id)) return true;
+        const habit = webHabit(slug, scientificName);
+        if (!habit) return false;
+        this.spiders.set(id, {id, habit, home, web: null, tries: 0, triedAt: -Infinity});
+        return true;
+    }
+
+    forget(id: string): void {
+        this.spiders.delete(id);
+    }
+
+    /** Where its spider is drawn now: on its web, once its web is fitted. */
+    pose(id: string, hours: number, seconds: number): WebPoint | null {
+        const spider = this.spiders.get(id);
+        if (!spider?.web) return null;
+        const built = webStage(spider.habit, id, hours).built;
+        return spiderOnWeb(spider.web, hours, seconds, built);
+    }
+
+    /** The fitted web of a spider (the probes and the tests read it). */
+    web(id: string): FittedWeb | null {
+        return this.spiders.get(id)?.web ?? null;
+    }
+
+    /**
+     * Each frame: fit the nearest unfitted web within reach (within a time budget), choose the nearest fitted webs, set
+     * their stage and fade, and the light: the sun's way, the hour's light, the dew of a still dawn.
+     */
+    update(camera: V3, hours: number, seconds: number, view: {width: number; height: number; pixelRatio: number}, reducedMotion: boolean): void {
+        if (!this.spiders.size) {
+            this.mesh.visible = false;
+            return;
+        }
+        const started = performance.now();
+        // Fitting: nearest first, within the budget.
+        const pending: Array<{s: Spider; d: number}> = [];
+        for (const s of Array.from(this.spiders.values())) {
+            if (s.web || s.tries >= 3 || seconds - s.triedAt < 8) continue;
+            const d = Math.hypot(s.home.x - camera.x, s.home.y - camera.y, s.home.z - camera.z);
+            if (d < FIT_WITHIN) pending.push({s, d});
+        }
+        pending.sort((a, b) => a.d - b.d);
+        for (const {s} of pending) {
+            if (performance.now() - started > FIT_BUDGET_MS) break;
+            s.tries++;
+            s.triedAt = seconds;
+            const reach = s.habit.radius * 3 + 5;
+            const list = gatherDrawn(this.root, s.home, reach, (o) => o === this.mesh);
+            s.web = fitWeb(s.id, s.habit, s.home, this.ground, triangleCaster(list, s.home, reach));
+        }
+        this.fitMs = performance.now() - started;
+        // The nearest fitted webs within reach, re-chosen twice a second.
+        if (seconds - this.lastPick > 0.5 || seconds < this.lastPick) {
+            this.lastPick = seconds;
+            const near: Array<{s: Spider; d: number}> = [];
+            for (const s of Array.from(this.spiders.values())) {
+                if (!s.web) continue;
+                const d = Math.hypot(s.web.hub.x - camera.x, s.web.hub.y - camera.y, s.web.hub.z - camera.z);
+                if (d < DRAWN_WITHIN) near.push({s, d});
+            }
+            near.sort((a, b) => a.d - b.d);
+            const chosen = near.slice(0, MAX_WEBS).map((n) => n.s);
+            const key = chosen.map((s) => s.id).join(",");
+            if (key !== this.slotKey) {
+                this.slotKey = key;
+                this.slots = chosen;
+                this.rebuild();
+            }
+        }
+        if (!this.slots.length) {
+            this.mesh.visible = false;
+            return;
+        }
+        const uniforms = this.material.uniforms;
+        const built = uniforms.uBuilt.value as number[];
+        const fade = uniforms.uFade.value as number[];
+        this.slots.forEach((s, i) => {
+            const web = s.web!;
+            const d = Math.hypot(web.hub.x - camera.x, web.hub.y - camera.y, web.hub.z - camera.z);
+            fade[i] = 1 - Math.min(Math.max((d - FADE_FROM) / (DRAWN_WITHIN - FADE_FROM), 0), 1);
+            built[i] = reducedMotion ? 1 : webStage(s.habit, s.id, hours).built;
+        });
+        for (let i = this.slots.length; i < MAX_WEBS; i++) fade[i] = 0;
+        this.res.set(view.width / 2, view.height / 2);
+        uniforms.uPx.value = 0.55 * view.pixelRatio;
+        (uniforms.uSun.value as Vector3).copy(ARK_SUN.value);
+        uniforms.uDay.value = Math.min(Math.max(ARK_DAYLIGHT.value, 0), 1);
+        uniforms.uDew.value = dewOf(hours, ARK_ENV.wind.value, ARK_ENV.rain.value, ARK_ENV.wetness.value);
+        (uniforms.uGlint.value as Color).copy(ARK_GLINT.value);
+        this.mesh.visible = true;
+    }
+
+    private rebuild(): void {
+        let threads = 0;
+        for (const s of this.slots) threads += s.web!.threads.length;
+        const a = new Float32Array(threads * 4 * 3);
+        const b = new Float32Array(threads * 4 * 3);
+        const corner = new Float32Array(threads * 4 * 2);
+        const order = new Float32Array(threads * 4);
+        const slot = new Float32Array(threads * 4);
+        const gold = new Float32Array(threads * 4);
+        const index = new Uint32Array(threads * 6);
+        let v = 0;
+        let q = 0;
+        this.slots.forEach((s, i) => {
+            for (const t of s.web!.threads) {
+                for (let c = 0; c < 4; c++) {
+                    a.set([t.a.x, t.a.y, t.a.z], (v + c) * 3);
+                    b.set([t.b.x, t.b.y, t.b.z], (v + c) * 3);
+                    corner[(v + c) * 2] = c < 2 ? 0 : 1;
+                    corner[(v + c) * 2 + 1] = c % 2 ? 1 : -1;
+                    order[v + c] = t.order;
+                    slot[v + c] = i;
+                    gold[v + c] = s.web!.gold;
+                }
+                index.set([v, v + 1, v + 2, v + 2, v + 1, v + 3], q);
+                v += 4;
+                q += 6;
+            }
+        });
+        const geometry = new BufferGeometry();
+        geometry.setAttribute("position", new BufferAttribute(a, 3));
+        geometry.setAttribute("aB", new BufferAttribute(b, 3));
+        geometry.setAttribute("aCorner", new BufferAttribute(corner, 2));
+        geometry.setAttribute("aOrder", new BufferAttribute(order, 1));
+        geometry.setAttribute("aSlot", new BufferAttribute(slot, 1));
+        geometry.setAttribute("aGold", new BufferAttribute(gold, 1));
+        geometry.setIndex(new BufferAttribute(index, 1));
+        this.mesh.geometry.dispose();
+        this.mesh.geometry = geometry;
+    }
+
+    stats(): WebsStats {
+        let fitted = 0;
+        for (const s of Array.from(this.spiders.values())) if (s.web) fitted++;
+        let threads = 0;
+        for (const s of this.slots) threads += s.web!.threads.length;
+        return {spiders: this.spiders.size, fitted, drawn: this.slots.length, threads, fitMs: this.fitMs};
+    }
+
+    dispose(): void {
+        this.mesh.geometry.dispose();
+        this.material.dispose();
+        this.mesh.removeFromParent();
+        this.spiders.clear();
+        this.slots = [];
+    }
+}
