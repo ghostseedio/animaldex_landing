@@ -15,13 +15,15 @@
  * looks toward the sun through it, and carries dew at a still dawn (`props/conditions.ts` dewOf).
  */
 
-import {BufferAttribute, BufferGeometry, Color, Matrix4, Mesh, ShaderMaterial, Sphere, Vector2, Vector3, type BatchedMesh, type InstancedMesh, type Material, type Object3D} from "three";
+import {BufferAttribute, BufferGeometry, Color, DoubleSide, Matrix4, Mesh, ShaderMaterial, Sphere, Vector2, Vector3, type BatchedMesh, type InstancedMesh, type Material, type Object3D} from "three";
 import {ARK_DAYLIGHT, ARK_ENV, ARK_GLINT, ARK_SUN} from "@/ark-scene/glsl";
 import {dewOf} from "@/ark-scene/props/conditions";
 import {threadOrder} from "@/ark-scene/props/web-spin";
 import {atHub, silkTrip, webHabit, webStage, type WebHabit} from "@/ark-scene/spider-webs";
 import {hashString} from "@/ark-scene/world";
 
+/** How far from its home a spider hangs its web at most (m): where there is something to hang it on. */
+export const WEB_SITE_WITHIN = 5;
 /** Fitted within this far of the camera (m). */
 export const FIT_WITHIN = 30;
 /** Drawn within this far (m), fading out from `FADE_FROM`. */
@@ -112,7 +114,16 @@ export function fitOrb(id: string, habit: WebHabit, home: V3, ground: number, ca
     const allFaces = [0, 1, 2, 3, 4, 5].map((f) => turn0 + (f / 6) * Math.PI);
     for (const [ox, oz] of [[0, 0], [0.3, 0], [-0.3, 0], [0, 0.3], [0, -0.3]]) for (const lift of [1.0, 1.6, 2.4]) candidates.push({hub: {x: home.x + ox, y: base + habit.radius * lift + 0.05, z: home.z + oz}, faces: allFaces});
     const levels = [base + habit.radius * 1.1 + 0.05, base + habit.radius * 2 + 0.1, base + 0.9, base + 1.4];
-    for (const pair of probePairs(home, levels, cast, 0.2, Math.min(reach * 2, 2.4), 3)) candidates.push({hub: pair.mid, faces: [Math.atan2(pair.dir.z, pair.dir.x)]});
+    // (Nothing near: an orb weaver hangs its web where there is something to hang it on, a few strides off at most.)
+    let pairs = probePairs(home, levels, cast, 0.2, Math.min(reach * 2, 2.4), 3);
+    for (let ring = 2.5; pairs.length < 4 && ring <= WEB_SITE_WITHIN; ring += 2.5) {
+        for (let k = 0; k < 8; k++) {
+            const a = (k / 8) * Math.PI * 2 + ring;
+            const from = {x: home.x + Math.cos(a) * ring, y: home.y, z: home.z + Math.sin(a) * ring};
+            pairs = pairs.concat(probePairs(from, levels, cast, 0.2, Math.min(reach * 2, 2.4), 2).map((p) => ({...p, d: p.d + ring})));
+        }
+    }
+    for (const pair of pairs) candidates.push({hub: pair.mid, faces: [Math.atan2(pair.dir.z, pair.dir.x)]});
     for (const {hub, faces} of candidates.slice(0, 48)) {
         {
             for (const a of faces) {
@@ -234,6 +245,20 @@ function buildOrb(id: string, habit: WebHabit, hub: V3, right: V3, hits: Array<H
 
 /** Horizontal rays out from its home at these heights: the drawn surfaces round it (walls, posts, stems, shrubs). */
 function probeAround(home: V3, levels: number[], cast: Caster, far: number, rays = 16): Array<Hit & {dir: V3}> {
+    const out = probeFrom(home, levels, cast, far, rays);
+    // (A home in or against something drawn, a trunk, a hedge: rays all round meet it at once. Probed again from a
+    // stride out on each side.)
+    if (out.filter((h) => h.d < 0.6).length >= levels.length * rays * 0.6) {
+        for (let k = 0; k < 8; k++) {
+            const a = (k / 8) * Math.PI * 2;
+            out.push(...probeFrom({x: home.x + Math.cos(a) * 1.2, y: home.y, z: home.z + Math.sin(a) * 1.2}, levels, cast, far, 8));
+        }
+        return out.filter((h) => h.d >= 0.6);
+    }
+    return out;
+}
+
+function probeFrom(home: V3, levels: number[], cast: Caster, far: number, rays: number): Array<Hit & {dir: V3}> {
     const out: Array<Hit & {dir: V3}> = [];
     for (const y of levels) {
         for (let k = 0; k < rays; k++) {
@@ -247,7 +272,7 @@ function probeAround(home: V3, levels: number[], cast: Caster, far: number, rays
 }
 
 /** Pairs of drawn things a span apart near its home (each found by a ray across the gap from the other): their middle and the line between. */
-function probePairs(home: V3, levels: number[], cast: Caster, minSpan: number, maxSpan: number, far: number): Array<{mid: V3; dir: V3}> {
+function probePairs(home: V3, levels: number[], cast: Caster, minSpan: number, maxSpan: number, far: number): Array<{mid: V3; dir: V3; d: number}> {
     const out: Array<{mid: V3; dir: V3; d: number}> = [];
     for (const hit of probeAround(home, levels, cast, far)) {
         // From just off the surface met, back across: the next drawn thing within the span.
@@ -345,9 +370,9 @@ export function fitTangle(id: string, habit: WebHabit, home: V3, ground: number,
     // Gumfoot lines (theridiids): straight down from the low knots to the surface under them (Benjamin & Zschokke 2003).
     if (!habit.hangs || habit.radius < 0.2) {
         for (const k of knots.slice(0, 8)) {
-            const down = cast(k, {x: 0, y: -1, z: 0}, 2.5);
-            const y = down ? k.y - down.d : ground;
-            if (k.y - y < 2.5) threads.push({a: k, b: {x: k.x, y, z: k.z}, order: 0});
+            const down = cast(k, {x: 0, y: -1, z: 0}, 0.8);
+            const y = down ? k.y - down.d : k.y - ground < 0.8 ? ground : null;
+            if (y !== null) threads.push({a: k, b: {x: k.x, y, z: k.z}, order: 0});
         }
     }
     const normal = {x: 0, y: 1, z: 0};
@@ -505,7 +530,8 @@ const SPHERE = new Sphere();
  * The triangles drawn within `reach` of `centre` (world frame, nine numbers each), from every visible mesh, instanced set
  * (each instance near) and batch under `root`. The ground is asked by its heights instead (its meshes are left out).
  */
-export function gatherDrawn(root: Object3D, centre: V3, reach: number, skip: (object: Object3D) => boolean): Float32Array {
+export function gatherDrawn(root: Object3D, centre: V3, reach: number, skip: (object: Object3D) => boolean, tally?: Map<string, number>): Float32Array {
+    let current = "";
     let list = new Float32Array(9 * 1024);
     let count = 0;
     const push = (a: Vector3, b: Vector3, c: Vector3) => {
@@ -525,6 +551,7 @@ export function gatherDrawn(root: Object3D, centre: V3, reach: number, skip: (ob
         list[at + 7] = c.y;
         list[at + 8] = c.z;
         count++;
+        if (tally) tally.set(current, (tally.get(current) ?? 0) + 1);
     };
     const take = (geometry: BufferGeometry, matrix: Matrix4, start = 0, total = -1) => {
         const position = geometry.getAttribute("position") as BufferAttribute | undefined;
@@ -565,7 +592,8 @@ export function gatherDrawn(root: Object3D, centre: V3, reach: number, skip: (ob
         if (!object.visible || skip(object)) return;
         const mesh = object as Mesh;
         const name = mesh.name || (mesh.userData.kind as string | undefined) || "";
-        if (mesh.isMesh && !(NEVER.test(name) || /ground|terrain|tile/i.test(name)) && !mesh.userData.arkAnimal && !(mesh as unknown as {isSkinnedMesh?: boolean}).isSkinnedMesh) {
+        current = name || mesh.parent?.name || "?";
+        if (mesh.isMesh && !(NEVER.test(name) || /ground|terrain|tile|inside|decal|near:|litter|pebble|scatter/i.test(name)) && !mesh.userData.arkAnimal && !(mesh as unknown as {isSkinnedMesh?: boolean}).isSkinnedMesh) {
             const material = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as Material | undefined;
             const seen = material && material.visible && material.colorWrite && !(material.transparent && material.opacity < 0.5);
             const geometry = mesh.geometry as BufferGeometry;
@@ -764,7 +792,7 @@ void main() {
     // A fibre's highlight: where the sun's half-vector is square to it; and the glow of silk against the sun.
     vec3 h = normalize(uSun + v);
     float th = dot(t, h);
-    vGlint = pow(max(1.0 - th * th, 0.0), 30.0) + 0.9 * pow(max(dot(-v, uSun), 0.0), 5.0);
+    vGlint = pow(max(1.0 - th * th, 0.0), 120.0) + 0.7 * pow(max(dot(-v, uSun), 0.0), 6.0);
     vFade = fade;
     vU = aCorner.x * length(aB - position);
     vGold = aGold;
@@ -775,6 +803,7 @@ const FRAGMENT = /* glsl */ `
 uniform float uDay;
 uniform float uDew;
 uniform vec3 uGlint;
+uniform float uDebug;
 varying float vFade;
 varying float vGlint;
 varying float vU;
@@ -783,16 +812,16 @@ void main() {
     // Dew: beads along the threads at a still dawn.
     float bead = uDew * smoothstep(0.55, 0.95, sin(vU * 420.0) * 0.5 + 0.5);
     float lit = vGlint * uDay;
-    float a = vFade * clamp(0.16 * (0.35 + 0.65 * uDay) + 0.85 * lit + 0.55 * bead, 0.0, 0.95);
+    float a = vFade * clamp(0.12 * (0.35 + 0.65 * uDay) + 0.7 * lit + 0.5 * bead, 0.0, 0.9);
     vec3 silk = mix(vec3(0.86, 0.89, 0.9), vec3(0.95, 0.8, 0.35), vGold * 0.8);
     vec3 colour = mix(silk * (0.35 + 0.65 * uDay), uGlint, clamp(lit + bead * 0.6, 0.0, 1.0));
-    gl_FragColor = vec4(colour, a);
+    gl_FragColor = uDebug > 0.5 ? vec4(1.0, 0.1, 0.6, 1.0) : vec4(colour, a);
 }
 `;
 
-type Spider = {id: string; habit: WebHabit; home: V3; web: FittedWeb | null; tries: number; triedAt: number};
+type Spider = {id: string; habit: WebHabit; home: V3; web: FittedWeb | null; tries: number; triedAt: number; cast: Caster | null};
 
-export type WebsStats = {spiders: number; fitted: number; drawn: number; threads: number; fitMs: number};
+export type WebsStats = {spiders: number; fitted: number; drawn: number; threads: number; fitMs: number; fitMaxMs: number};
 
 /** The webs of the scene's web spiders: fitted near the camera, drawn in one call, their spiders' places on them. */
 export class SpiderWebs {
@@ -802,6 +831,7 @@ export class SpiderWebs {
     private slots: Spider[] = [];
     private slotKey = "";
     private fitMs = 0;
+    private fitMaxMs = 0;
     private lastPick = -Infinity;
     private readonly res = new Vector2(1, 1);
 
@@ -815,12 +845,18 @@ export class SpiderWebs {
                 uSun: {value: new Vector3(0, 1, 0)},
                 uDay: {value: 1},
                 uDew: {value: 0},
-                uGlint: {value: new Color("#fff4e0")}
+                uGlint: {value: new Color("#fff4e0")},
+                // (Development: every thread drawn solid magenta, to check where the webs hang.)
+                uDebug: {value: 0}
             },
             vertexShader: VERTEX,
             fragmentShader: FRAGMENT,
             transparent: true,
-            depthWrite: false
+            depthWrite: false,
+            // (Every quad is wound the same way round on screen, its side offset turning with the thread: never culled.)
+            side: DoubleSide,
+            // (One pass: three draws a transparent double-sided material twice, back faces then front, otherwise.)
+            forceSinglePass: true
         });
         this.mesh = new Mesh(new BufferGeometry(), this.material);
         this.mesh.name = "spider-webs";
@@ -834,7 +870,7 @@ export class SpiderWebs {
         if (this.spiders.has(id)) return true;
         const habit = webHabit(slug, scientificName);
         if (!habit) return false;
-        this.spiders.set(id, {id, habit, home, web: null, tries: 0, triedAt: -Infinity});
+        this.spiders.set(id, {id, habit, home, web: null, tries: 0, triedAt: -Infinity, cast: null});
         return true;
     }
 
@@ -873,15 +909,22 @@ export class SpiderWebs {
             if (d < FIT_WITHIN) pending.push({s, d});
         }
         pending.sort((a, b) => a.d - b.d);
+        // (In two frames, never both in one: what is drawn round it gathered, then the web fitted on it.)
         for (const {s} of pending) {
             if (performance.now() - started > FIT_BUDGET_MS) break;
+            const reach = s.habit.radius * 3 + WEB_SITE_WITHIN + 1;
+            if (!s.cast) {
+                s.cast = triangleCaster(gatherDrawn(this.root, s.home, reach, (o) => o === this.mesh), s.home, reach);
+                break;
+            }
             s.tries++;
             s.triedAt = seconds;
-            const reach = s.habit.radius * 3 + 5;
-            const list = gatherDrawn(this.root, s.home, reach, (o) => o === this.mesh);
-            s.web = fitWeb(s.id, s.habit, s.home, this.ground, triangleCaster(list, s.home, reach));
+            s.web = fitWeb(s.id, s.habit, s.home, this.ground, s.cast);
+            s.cast = null;
+            break;
         }
         this.fitMs = performance.now() - started;
+        this.fitMaxMs = Math.max(this.fitMaxMs, this.fitMs);
         // The nearest fitted webs within reach, re-chosen twice a second.
         if (seconds - this.lastPick > 0.5 || seconds < this.lastPick) {
             this.lastPick = seconds;
@@ -915,7 +958,7 @@ export class SpiderWebs {
         });
         for (let i = this.slots.length; i < MAX_WEBS; i++) fade[i] = 0;
         this.res.set(view.width / 2, view.height / 2);
-        uniforms.uPx.value = 0.55 * view.pixelRatio;
+        uniforms.uPx.value = 0.5 * view.pixelRatio;
         (uniforms.uSun.value as Vector3).copy(ARK_SUN.value);
         uniforms.uDay.value = Math.min(Math.max(ARK_DAYLIGHT.value, 0), 1);
         uniforms.uDew.value = dewOf(hours, ARK_ENV.wind.value, ARK_ENV.rain.value, ARK_ENV.wetness.value);
@@ -963,12 +1006,25 @@ export class SpiderWebs {
         this.mesh.geometry = geometry;
     }
 
+    /** Development: what is drawn round a spider's home (the probes read it). */
+    explain(id: string): {home: V3; triangles: number; around: Array<{d: number; ny: number; y: number}>; by: Array<[string, number]>} | null {
+        const s = this.spiders.get(id);
+        if (!s) return null;
+        const reach = s.habit.radius * 3 + 5;
+        const tally = new Map<string, number>();
+        const list = gatherDrawn(this.root, s.home, reach, (o) => o === this.mesh, tally);
+        const cast = triangleCaster(list, s.home, reach);
+        const g = this.ground(s.home.x, s.home.z);
+        const around = probeAround(s.home, [Math.max(s.home.y, g) + 0.3, Math.max(s.home.y, g) + 1.2], cast, 4).map((h) => ({d: Math.round(h.d * 100) / 100, ny: Math.round(h.ny * 100) / 100, y: Math.round(h.y * 100) / 100}));
+        return {home: s.home, triangles: list.length / 9, around, by: Array.from(tally.entries()).sort((a, b) => b[1] - a[1]).slice(0, 12)};
+    }
+
     stats(): WebsStats {
         let fitted = 0;
         for (const s of Array.from(this.spiders.values())) if (s.web) fitted++;
         let threads = 0;
         for (const s of this.slots) threads += s.web!.threads.length;
-        return {spiders: this.spiders.size, fitted, drawn: this.slots.length, threads, fitMs: this.fitMs};
+        return {spiders: this.spiders.size, fitted, drawn: this.slots.length, threads, fitMs: this.fitMs, fitMaxMs: this.fitMaxMs};
     }
 
     dispose(): void {
