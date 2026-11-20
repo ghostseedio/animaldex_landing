@@ -83,7 +83,7 @@ export const HUNT_SUCCESS: Readonly<Record<string, readonly [number, number]>> =
  * the web's `town-humans.ts` `HUMAN_SPECIES_IDS` (the test checks both). A human is outside the food web (the links refuse Homo:
  * never prey, never a predator) and has no stored lifespan (AnimalDex decisions 378 and 380: no traits row, no old age).
  */
-export const HUMAN_SPECIES_IDS: readonly string[] = ["2fabfa9a-6ec9-4d71-8cf2-1933edaef6d2", "0fd32bd2-669f-489d-8a1b-8e917aa5117d"];
+export {HUMAN_SPECIES_IDS} from "@/lib/ark-human";
 
 /**
  * A human is grown 18 Ark years after it is born (the server's courtship `GROWN_DAYS`, `couples.ts`); an arrival counts as

@@ -51,6 +51,7 @@
  * hook once the server publishes it (`safe_until_ark_day`).
  */
 
+import {arkIsHuman} from "@/lib/ark-human";
 import type {ArkAnimal, ArkSnapshot, ArkThrive} from "@/ark-scene/types";
 import {arkStats, massFromSize} from "@/ark-scene/stats";
 import {arkHuntingRegion} from "@/lib/ark-food-chain";
@@ -125,15 +126,6 @@ export type ArkTimeLeftAnimal = Pick<
 > &
     Partial<Pick<ArkAnimal, "scientific_name" | "thrive">>;
 
-/** Whether it is a human (a Homo sapiens of a human capture): outside the food web, and with no old age unless the read gives it a lifespan. */
-export function arkIsHuman(animal: Pick<ArkTimeLeftAnimal, "species_profile_id" | "kind_species_profile_id" | "model_slug" | "scientific_name">): boolean {
-    return (
-        HUMAN_SPECIES_IDS.includes(animal.species_profile_id.toLowerCase()) ||
-        (animal.kind_species_profile_id != null && HUMAN_SPECIES_IDS.includes(animal.kind_species_profile_id.toLowerCase())) ||
-        animal.model_slug === "human" ||
-        /^homo\s+sapiens/i.test(animal.scientific_name ?? "")
-    );
-}
 
 export type ArkTimeLeftWorld = {
     /** The snapshot's Ark day (`ark_day`). */
@@ -1140,3 +1132,5 @@ export function arkTimeLeftWordsFrom(timeLeft: unknown, life: unknown): {words: 
  * and the read publishes what they need. Nothing applies to every animal, so this list is empty.
  */
 export const ARK_TIME_LEFT_HOOKS: readonly ArkTimeLeftHook[] = [];
+
+export {arkIsHuman};

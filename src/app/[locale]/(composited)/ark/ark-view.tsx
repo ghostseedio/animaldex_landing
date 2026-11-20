@@ -1,5 +1,6 @@
 "use client";
 
+import {arkIsHuman} from "@/lib/ark-human";
 import React, {Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
@@ -196,7 +197,7 @@ function actCaption(act: ArkAct, words: ArkWords, locale: string, animals: ArkAn
                 + (act.phrase ? ` · ${fillArkWords(w.mealPhrase, {phrase: act.phrase})}` : "")
                 + gone(act.prey.name, act.extinct);
         case "death":
-            return fillArkWords(act.cause === "starved" ? w.starved : act.animal.model_slug === "human" ? w.deathPeaceful ?? "The {animal} died peacefully of old age" : w.death, {animal: act.animal.name}) + gone(act.animal.name, act.extinct);
+            return fillArkWords(act.cause === "starved" ? w.starved : arkIsHuman(act.animal) ? w.deathPeaceful ?? "The {animal} died peacefully of old age" : w.death, {animal: act.animal.name}) + gone(act.animal.name, act.extinct);
         case "extinction":
             return fillArkWords(w.extinction, {animal: act.species});
     }
