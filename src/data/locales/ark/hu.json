@@ -708,7 +708,7 @@
             "skillPower": "Nálad van az Ereje: kis előnnyel indul.",
             "warn": "Az állatkertben felnőtt állatoknak eleinte nehéz. Tedd meg a lépését, hogy segíts neki túlélni.",
             "lastOfKind": "Ő a fajtája utolsó egyede a fedélzeten. Ha szív nélkül pusztul el, a fajtája eltűnik az Arkból.",
-            "hearts": "Megtartja a szíveit. Ha kudarcot vall, és maradt szíve, visszakerül az állatkertbe, és 30 napot vár. Ha nem maradt szíve, elpusztul.",
+            "hearts": "Megtartja a szíveit. Ha elpusztul, és maradt szíve, elveszíti azt a szívet, és visszatér a vadonba. Ha nem maradt szíve, elpusztul.",
             "rules": "A szabadon engedés után nincs visszatérítés, bármi történjék is vele. Naponta egy szabadon engedés, hetente fajtánként egy.",
             "price": "{credits} kredit",
             "balance": "Egyenleged: {credits}",

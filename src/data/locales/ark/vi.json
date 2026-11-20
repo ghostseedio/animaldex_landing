@@ -708,7 +708,7 @@
             "skillPower": "Bạn giữ Năng lực của nó: nó khởi đầu nhỉnh hơn một chút.",
             "warn": "Động vật lớn lên trong sở thú lúc đầu sẽ chật vật. Hãy làm bước của nó để giúp nó sống sót.",
             "lastOfKind": "Nó là con cuối cùng của loài trên Ark. Nếu nó chết khi không còn trái tim nào, loài của nó sẽ biến mất khỏi Ark.",
-            "hearts": "Nó giữ nguyên các trái tim. Nếu thất bại khi còn một trái tim, nó trở lại sở thú và chờ 30 ngày. Không còn trái tim nào thì nó chết.",
+            "hearts": "Nó giữ nguyên các trái tim. Nếu chết khi còn một trái tim, nó mất trái tim đó và trở về tự nhiên. Không còn trái tim nào thì nó chết.",
             "rules": "Không hoàn lại sau khi đã thả, dù có chuyện gì xảy ra với nó. Mỗi ngày một lần thả, mỗi loài một lần một tuần.",
             "price": "{credits} Credits",
             "balance": "Bạn có {credits}",

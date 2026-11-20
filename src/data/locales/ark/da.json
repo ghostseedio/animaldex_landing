@@ -708,7 +708,7 @@
             "skillPower": "Du har dets Kraft: det starter lidt foran.",
             "warn": "Dyr, der er vokset op i zoo, har det svært i starten. Tag dets skridt for at hjælpe det med at overleve.",
             "lastOfKind": "Det er det sidste af sin art om bord. Dør det uden et hjerte tilbage, er arten væk fra Ark.",
-            "hearts": "Det beholder sine hjerter. Mislykkes det med et hjerte tilbage, kommer det tilbage i zoo og venter 30 dage. Uden et hjerte tilbage dør det.",
+            "hearts": "Det beholder sine hjerter. Dør det med et hjerte tilbage, mister det det hjerte og kommer tilbage i naturen. Uden et hjerte tilbage dør det.",
             "rules": "Ingen refusion, når det er sat fri, uanset hvad der sker med det. Én frisættelse om dagen, én af hver art om ugen.",
             "price": "{credits} kreditter",
             "balance": "Du har {credits}",

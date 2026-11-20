@@ -708,7 +708,7 @@
             "skillPower": "Du har dess Kraft: det börjar med ett litet försprång.",
             "warn": "Djur som vuxit upp i djurpark har det svårt i början. Gör dess steg för att hjälpa det att överleva.",
             "lastOfKind": "Det är det sista av sin art ombord. Dör det utan något hjärta kvar är arten borta från Ark.",
-            "hearts": "Det behåller sina hjärtan. Misslyckas det med ett hjärta kvar kommer det tillbaka till djurparken och väntar 30 dagar. Utan något hjärta kvar dör det.",
+            "hearts": "Det behåller sina hjärtan. Dör det med ett hjärta kvar förlorar det det hjärtat och kommer tillbaka till det vilda. Utan något hjärta kvar dör det.",
             "rules": "Ingen återbetalning när det väl är utsläppt, vad som än händer med det. Ett utsläpp om dagen, ett av varje art i veckan.",
             "price": "{credits} krediter",
             "balance": "Du har {credits}",

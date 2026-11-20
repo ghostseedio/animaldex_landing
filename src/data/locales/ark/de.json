@@ -708,7 +708,7 @@
             "skillPower": "Du hast seine Kraft: Es startet mit einem kleinen Vorsprung.",
             "warn": "Im Zoo aufgewachsene Tiere tun sich anfangs schwer. Mach seinen Schritt, damit es überlebt.",
             "lastOfKind": "Es ist das letzte seiner Art an Bord. Stirbt es ohne ein Herz, ist seine Art aus der Ark verschwunden.",
-            "hearts": "Es behält seine Herzen. Scheitert es mit einem Herz übrig, kommt es in den Zoo zurück und wartet 30 Tage. Ohne Herz stirbt es.",
+            "hearts": "Es behält seine Herzen. Stirbt es mit einem Herz übrig, verliert es dieses Herz und kehrt in die Wildnis zurück. Ohne Herz stirbt es.",
             "rules": "Keine Erstattung nach der Entlassung, was auch immer passiert. Eine Entlassung pro Tag, eine pro Art pro Woche.",
             "price": "{credits} Credits",
             "balance": "Du hast {credits}",

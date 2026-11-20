@@ -708,7 +708,7 @@
             "skillPower": "Du har Kraften dets: det starter litt foran.",
             "warn": "Dyr som har vokst opp i dyrehage, sliter i starten. Ta steget dets for å hjelpe det å overleve.",
             "lastOfKind": "Det er det siste av sin art om bord. Dør det uten et hjerte igjen, er arten borte fra Ark.",
-            "hearts": "Det beholder hjertene sine. Mislykkes det med et hjerte igjen, kommer det tilbake til dyrehagen og venter 30 dager. Uten et hjerte igjen dør det.",
+            "hearts": "Det beholder hjertene sine. Dør det med et hjerte igjen, mister det det hjertet og kommer tilbake til naturen. Uten et hjerte igjen dør det.",
             "rules": "Ingen refusjon når det er sluppet fri, uansett hva som skjer med det. Én slipp om dagen, én av hver art i uken.",
             "price": "{credits} kreditter",
             "balance": "Du har {credits}",

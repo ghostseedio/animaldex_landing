@@ -708,7 +708,7 @@
             "skillPower": "Tienes su Poder: empieza con un poco de ventaja.",
             "warn": "A los animales criados en el zoo les cuesta al principio. Haz su paso para ayudarlo a sobrevivir.",
             "lastOfKind": "Es el último de su especie a bordo. Si muere sin ningún corazón, su especie desaparece del Ark.",
-            "hearts": "Conserva sus corazones. Si fracasa y le queda un corazón, vuelve al zoo y espera 30 días. Sin ningún corazón, muere.",
+            "hearts": "Conserva sus corazones. Si muere y le queda un corazón, pierde ese corazón y vuelve a la naturaleza. Sin ningún corazón, muere.",
             "rules": "No hay reembolso una vez liberado, pase lo que pase. Una liberación al día, una de cada especie a la semana.",
             "price": "{credits} créditos",
             "balance": "Tienes {credits}",
