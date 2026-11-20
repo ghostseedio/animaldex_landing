@@ -136,3 +136,88 @@ test("words: ark.eggs in every one of the 45 languages, translated, with its pla
         if (file !== "en.json") for (const key of ["eggsInNest", "hatchesIn", "ifAllGoesWell"]) assert.notEqual(eggs[key], en[key], `${file} ${key} untranslated`);
     }
 });
+
+test("laying: after the mating, she walks to her spot, settles, the clutch is laid there and stays until it hatches; the young come out of it", async () => {
+    const {LiveClutches, LAY_AT, LAY_WALK} = await import("@/ark-scene/live-clutches");
+    type E = {id: string; female: boolean; act: ActPose | null; at: {x: number; z: number}};
+    const es: E[] = [{id: "m", female: false, act: null, at: {x: 0, z: 0}}, {id: "f", female: true, act: null, at: {x: 10, z: 0}}, {id: "y1", female: false, act: null, at: {x: 30, z: 30}}, {id: "y2", female: false, act: null, at: {x: 31, z: 30}}];
+    const nests = new Map<string, {x: number; z: number; hatched: boolean}>();
+    const layer = new LiveClutches<E>({
+        find: (id) => es.find((e) => e.id === id) ?? null,
+        female: (e) => e.female,
+        scheduleAt: (e) => ({x: e.at.x, z: e.at.z, yaw: 0}),
+        ground: flat,
+        length: () => 1,
+        walk: () => 1,
+        spawns: () => false,
+        setAct: (e, pose) => {
+            e.act = pose;
+        },
+        busy: () => false,
+        matingEnd: () => 100,
+        clutchSpot: () => ({x: 5, z: 0}),
+        lay: (key, at) => nests.set(key, {x: at.x, z: at.z, hatched: false}),
+        hatch: (key) => {
+            nests.get(key)!.hatched = true;
+        },
+        where: (key) => (nests.has(key) ? {...nests.get(key)!, y: 0, size: 0.5} : null),
+        remove: (key) => nests.delete(key)
+    });
+    layer.addLaid([{key: "laid:1", parents: ["m", "f"], eggs: 3, t0: 50, hatchAt: 5000}]);
+    layer.step(60);
+    assert.equal(es[1].act, null, "nothing before the mating is over");
+    layer.step(100 + LAY_WALK / 2);
+    const walking = es[1].act as ActPose | null;
+    assert.ok(walking && walking.state === "walk" && walking.x > 5 && walking.x < 10, "the mother (the female) walks from where she was to her spot");
+    assert.equal(es[0].act, null, "not the father");
+    layer.step(100 + LAY_AT + 0.1);
+    assert.deepEqual(nests.get("laid:1"), {x: 5, z: 0, hatched: false}, "laid where she stood for the mount");
+    layer.step(1000);
+    assert.equal(es[1].act, null, "back to her day");
+    assert.ok(nests.has("laid:1"), "the clutch stays");
+    layer.addHatched([{key: "hatch:1", parents: ["f", "m"], young: ["y1", "y2"], t0: 2000}]);
+    layer.step(1990);
+    assert.equal(es[2].act?.hidden, true, "out of sight in the egg until it begins");
+    layer.step(2003);
+    assert.equal(nests.get("laid:1")!.hatched, true, "her clutch hatches");
+    const out = es[2].act as ActPose | null;
+    assert.ok(out && !out.hidden && Math.hypot(out.x - 5, out.z) < 1, "the young are out at the clutch");
+    layer.step(2100);
+    assert.equal(es[2].act, null, "then their own day");
+});
+
+test("a clutch laid before the page read its log is put where the young are, then hatches; an overdue one is taken away", async () => {
+    const {LiveClutches} = await import("@/ark-scene/live-clutches");
+    type E = {id: string; act: ActPose | null};
+    const es: E[] = [{id: "f", act: null}, {id: "y", act: null}];
+    const nests = new Map<string, boolean>();
+    const layer = new LiveClutches<E>({
+        find: (id) => es.find((e) => e.id === id) ?? null,
+        female: () => true,
+        scheduleAt: () => ({x: 2, z: 2, yaw: 0}),
+        ground: flat,
+        length: () => 1,
+        walk: () => 1,
+        spawns: () => false,
+        setAct: (e, pose) => {
+            e.act = pose;
+        },
+        busy: () => false,
+        matingEnd: () => null,
+        clutchSpot: () => null,
+        lay: (key) => nests.set(key, false),
+        hatch: (key) => nests.set(key, true),
+        where: (key) => (nests.has(key) ? {x: 2, z: 2, y: 0, size: 0.4} : null),
+        remove: (key) => nests.delete(key)
+    });
+    layer.addHatched([{key: "h", parents: ["f"], young: ["y"], t0: 10}]);
+    layer.step(5);
+    assert.equal(nests.get("hatch:h"), false, "there already");
+    layer.step(12);
+    assert.equal(nests.get("hatch:h"), true);
+    layer.addLaid([{key: "laid:9", parents: ["f"], eggs: 2, t0: 100, hatchAt: 200}]);
+    layer.step(130);
+    assert.ok(nests.has("laid:9"));
+    layer.step(200 + 11 * 60);
+    assert.equal(nests.has("laid:9"), false, "overdue: gone");
+});

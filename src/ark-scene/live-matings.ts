@@ -642,6 +642,16 @@ export class LiveMatings<E> {
         return null;
     }
 
+    /** ARK-MATING-SHOWN: when the mating of a pair naming `id` is over (s, the shared clock: they have rested together), or null: none acted. */
+    endOf(id: string): number | null {
+        for (let i = this.matings.length - 1; i >= 0; i--) {
+            const m = this.matings[i];
+            if (m.failed || !m.script || (m.act.a !== id && m.act.b !== id)) continue;
+            return m.act.t0 + (m.contest?.script.end ?? 0) + m.script.paired;
+        }
+        return null;
+    }
+
     partnerOf(id: string): string | null {
         for (let i = this.matings.length - 1; i >= 0; i--) {
             const m = this.matings[i];

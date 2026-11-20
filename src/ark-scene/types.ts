@@ -592,7 +592,9 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * a mouthbrooder's fry at its mouth), and the hatchlings keep to their recorded mother (`young-care.ts`); 3.3 batch
      * (B): the kinds whose young leave a tree hole by jumping act it from that time (`duckling-drop.ts`).
      */
-    addHatchings?: (hatchings: Array<{key: string; parents: string[]; young: string[]; t0: number}>) => void;
+    addHatchings?: (hatchings: Array<{key: string; parents: string[]; young: string[]; t0: number; /** ARK-MATING-SHOWN: the hatching's act start (s), held as a birth's (`ark-act-hold.ts`). */ held?: number}>) => void;
+    /** ARK-MATING-SHOWN: the record's layings (`laid` rows): she lays where she is seen, the clutch stays until it hatches (`live-clutches.ts`). */
+    addLayings?: (layings: Array<{key: string; parents: string[]; eggs: number | null; t0: number; hatchAt: number}>) => void;
     /**
      * The record's escapes (`escaped` events, AnimalDex decision 373: the prey that got away, the predator, the time on
      * the shared clock, and the encounter's geometry as the server wrote it), acted out in the live world: the chase

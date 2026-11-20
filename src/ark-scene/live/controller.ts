@@ -25,6 +25,7 @@
 
 import {decodeArkEvents, planArkReplay, type ArkAct, type ArkEvent} from "@/lib/ark-life";
 import {arkActStart, arkActStartOf} from "@/lib/ark-act-hold";
+import {ARK_DAY_MS} from "@/lib/ark-clock";
 import {arkPinnedMs} from "@/ark-scene/shared-clock";
 import type {ArkSeen, ArkSeenWords} from "@/ark-scene/seen";
 import {ArkLiveLog, ArkSeenMemory, arkLiveArrivalsFromSnapshot, arkLiveLineText, arkNowItems, arkSeenItems, ARK_LIVE_LOG_DEFAULTS, type ArkLiveItem, type ArkLiveLine, type ArkLiveText} from "@/lib/ark-live-log";
@@ -403,6 +404,7 @@ export class ArkLive {
         this.mate(decoded);
         this.died(decoded); // 3.3 fix (log)
         this.born(decoded);
+        this.laid(raw); // ARK-MATING-SHOWN
         this.hatched(decoded); // 3.3 batch (B): ducklings dropping from the tree hole
         this.push(this.staying(recordItems(decoded), (id) => Date.parse(decoded.find((event) => String(event.id) === id)?.at ?? "")));
     }
@@ -548,7 +550,7 @@ export class ArkLive {
 
     /** 3.3 batch (B, C): the record's hatchings, for the scene (`addHatchings`): a tree hole's jump, a mouth carry, the lineage. */
     private hatched(events: readonly ArkEvent[]) {
-        const clutches = new Map<string, {key: string; parents: string[]; young: string[]; t0: number}>();
+        const clutches = new Map<string, {key: string; parents: string[]; young: string[]; t0: number; held: number}>();
         for (const event of events) {
             if (event.kind !== "birth" || !event.from_egg || !event.animal || !event.parents.length) continue;
             const t0 = Date.parse(event.at) / 1000;
@@ -556,11 +558,35 @@ export class ArkLive {
             const key = `hatch:${event.at}:${[...event.parents].sort().join(",")}`;
             const clutch = clutches.get(key);
             if (clutch) clutch.young.push(event.animal.id);
-            else clutches.set(key, {key, parents: [...event.parents], young: [event.animal.id], t0});
+            else clutches.set(key, {key, parents: [...event.parents], young: [event.animal.id], t0, held: arkActStartOf(event.at)});
         }
         if (!clutches.size) return;
         try {
             this.options.scene()?.addHatchings?.(Array.from(clutches.values()));
+        } catch {
+            // (A scene without it: the log says it all the same.)
+        }
+    }
+
+    /**
+     * ARK-MATING-SHOWN: the record's layings for the scene (`addLayings`): its parents, its eggs, its time and when it
+     * hatches (the row's `clutch.hatch_ark_day` on the Ark clock: from the voyage's start, else from the row's own day).
+     */
+    private laid(raw: unknown) {
+        const list: unknown[] = Array.isArray(raw) ? raw : raw && typeof raw === "object" && Array.isArray((raw as {events?: unknown}).events) ? (raw as {events: unknown[]}).events : [];
+        const start = Date.parse(this.current?.voyage.started_at ?? "");
+        const out: Array<{key: string; parents: string[]; eggs: number | null; t0: number; hatchAt: number}> = [];
+        for (const item of list) {
+            const row = item as {kind?: unknown; id?: unknown; at?: unknown; ark_day?: unknown; parents?: unknown; clutch?: {eggs?: unknown; hatch_ark_day?: unknown} | null} | null;
+            if (!row || row.kind !== "laid" || !Array.isArray(row.parents) || !row.parents.length) continue;
+            const t0 = Date.parse(String(row.at)) / 1000;
+            const hatch = typeof row.clutch?.hatch_ark_day === "number" ? row.clutch.hatch_ark_day : NaN;
+            const hatchAt = (Number.isFinite(start) ? start + hatch * ARK_DAY_MS : typeof row.ark_day === "number" ? t0 * 1000 + (hatch - row.ark_day) * ARK_DAY_MS : NaN) / 1000;
+            if (Number.isFinite(t0)) out.push({key: `laid:${String(row.id)}`, parents: row.parents.filter((p): p is string => typeof p === "string"), eggs: typeof row.clutch?.eggs === "number" ? row.clutch.eggs : null, t0, hatchAt});
+        }
+        if (!out.length) return;
+        try {
+            this.options.scene()?.addLayings?.(out);
         } catch {
             // (A scene without it: the log says it all the same.)
         }
@@ -691,6 +717,8 @@ export class ArkLive {
                 this.mate(events);
                 this.died(events); // 3.3 fix (log)
                 this.born(events);
+                // (ARK-MATING-SHOWN: its rows as released, the ones this read had not said.)
+                this.laid((Array.isArray(body.events) ? (body.events as Array<{id?: unknown}>) : []).filter((row) => events.some((event) => String(event.id) === String(row?.id))));
                 this.hatched(events); // 3.3 batch (B)
                 this.push(this.staying(recordItems(events), (id) => Date.parse(events.find((event) => String(event.id) === id)?.at ?? "")));
             })

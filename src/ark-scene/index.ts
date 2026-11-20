@@ -252,6 +252,7 @@ import {easeToward, framePair} from "@/ark-scene/pair-frame"; // 3.3 fix (mating
 import {CLUTCH_FRAME_POLAR, CLUTCH_SHOWN_SECONDS, clutchFrame, clutchSize, kinFrameApart, seenAt} from "@/ark-scene/live/breed-focus"; // 3.3 fix (breeding taps)
 import {LiveBirths, newbornScale} from "@/ark-scene/live-births";
 import {LiveSeeking} from "@/ark-scene/live-seeking";
+import {LiveClutches} from "@/ark-scene/live-clutches";
 import {LiveDeaths, type DeathRecord} from "@/ark-scene/live-deaths"; // 3.3 fix (log)
 import {ForestScene} from "@/ark-scene/forestry/forest-scene"; // p5 (humans): logging and replanting
 // 3.3 batch (D): the escapes and the dragonflies' dips
@@ -6825,7 +6826,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const clutch = liveClutch;
         if (!clutch) return;
         if (now > clutch.until) {
-            nests.remove(clutch.key);
+            // (ARK-MATING-SHOWN: a clutch the live layer keeps stays until it hatches.)
+            if (!liveClutches.keeps(clutch.key)) nests.remove(clutch.key);
             liveClutch = null;
             return;
         }
@@ -6859,6 +6861,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
               : {x: middle.x + Math.cos(yaw) * side * mother.length * 0.9, y: 0, z: middle.z - Math.sin(yaw) * side * mother.length * 0.9};
         if (mother.place.micro) spot.y = middle.y - mother.drawnHeight * 0.5;
         else spot.y = Math.max(heightAt(spot.x, spot.z), 0) + (kind === "spawn" ? -0.05 : 0);
+        // (ARK-MATING-SHOWN: the clutch the live layer laid already is where it is.)
+        const laid = nests.where(clutch.key);
+        if (laid) Object.assign(spot, {x: laid.x, y: laid.y, z: laid.z});
         nests.lay(clutch.key, spot, clutchSize(mother.length), kind, clutch.eggs, now);
         clutch.mother = mother.animal.id;
         clutch.spot = {...spot, radius: Math.max(mother.length * 1.1, clutchSize(mother.length) * 1.5, 0.06)};
@@ -8566,6 +8571,50 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         },
         busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveMatings.pins().includes(entry.animal.id) || liveBirths.pins().includes(entry.animal.id))
     });
+    /**
+     * ARK-MATING-SHOWN (decision 416): the record's layings and hatchings you can see (`live-clutches.ts`): she lays
+     * where she stood for the mount, the clutch stays there until it hatches, the young come out of it.
+     */
+    const liveClutches = new LiveClutches<Entry>({
+        find: (id) => {
+            const e = entryById.get(id);
+            return e && !e.held && !e.visitor ? e : null;
+        },
+        female: (entry) => {
+            const sex = sexLook(entry.animal.id, entry.animal.model_slug).sex;
+            return sex === "female" ? true : sex === "male" ? false : null;
+        },
+        scheduleAt: (entry, epoch) => {
+            if (!entry.sched || !world || reducedMotion) return null;
+            const at = schedulePose(entry, epoch);
+            return at.aloft ? null : {x: at.x, z: at.z, yaw: at.yaw};
+        },
+        placeOf: (entry) => housedPlace(entry),
+        ground: (x, z) => Math.max(heightAt(x, z), -0.3),
+        length: (entry) => entry.length,
+        walk: (entry) => Math.max(moveSpeed(entry.animal, entry.length) * 0.5, 0.3),
+        spawns: (entry, p) => nestKind({plan: library.get(entry.animal.model_slug)?.behaviour?.plan, slug: entry.animal.model_slug, water: waterTopAt(p.x, p.z) > heightAt(p.x, p.z) + 0.05}) === "spawn",
+        setAct: (entry, pose) => {
+            entry.act = pose;
+        },
+        busy: (entry) => Boolean(entry.moment || entry.visitor || (replay && replayPins.has(entry.animal.id)) || liveMeals.pins().includes(entry.animal.id) || liveBirths.pins().includes(entry.animal.id) || mouthCarry.pins().includes(entry.animal.id) || duckDrops.pins().includes(entry.animal.id)),
+        matingEnd: (id) => liveMatings.endOf(id),
+        clutchSpot: (id) => liveMatings.clutchSpotOf(id),
+        lay: (key, at, mother, eggs, ago) => {
+            const water = waterTopAt(at.x, at.z) > heightAt(at.x, at.z) + 0.05;
+            const kind = nestKind({plan: library.get(mother.animal.model_slug)?.behaviour?.plan, slug: mother.animal.model_slug, water});
+            // (A small animal on its wall, trunk or flower: the eggs where it is.)
+            const micro = mother.place.micro && mother.middle ? mother.middle.y - mother.drawnHeight * 0.5 : null;
+            const y = micro ?? Math.max(heightAt(at.x, at.z), 0) + (kind === "spawn" ? -0.05 : 0);
+            nests.lay(key, {x: at.x, y, z: at.z}, clutchSize(mother.length), kind, eggs, performance.now() / 1000 - ago);
+        },
+        hatch: (key, ago) => nests.hatch(key, performance.now() / 1000 - ago, HATCHLINGS_SECONDS + ArkNests.YOUNG_AFTER + 1.1),
+        where: (key) => {
+            const at = nests.where(key);
+            return at ? {x: at.x, y: at.y, z: at.z, size: at.size} : null;
+        },
+        remove: (key) => nests.remove(key)
+    });
     let seekingRead = -Infinity;
     const readSeeking = (epoch: number) => {
         if (epoch - seekingRead < 2 && epoch >= seekingRead) return;
@@ -8581,7 +8630,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             readSeeking(epoch);
             if (liveSeeking.size) liveSeeking.step(epoch);
         }
-        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !duckDrops.size && !liveEscapes.size && !mouthCarry.size) || reducedMotion) return; // 3.3 batch (B, C, D): + duckDrops, mouthCarry, liveEscapes
+        if ((!liveMeals.size && !liveMatings.size && !liveBirths.size && !duckDrops.size && !liveEscapes.size && !mouthCarry.size && !liveClutches.size) || reducedMotion) return; // 3.3 batch (B, C, D): + duckDrops, mouthCarry, liveEscapes; ARK-MATING-SHOWN: + liveClutches
         const epoch = worldMs() / 1000;
         if (liveMeals.size) liveMeals.step(epoch, (id) => Boolean(replay && replayPins.has(id)));
         if (liveMatings.size) liveMatings.step(epoch);
@@ -8589,7 +8638,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (duckDrops.size) duckDrops.step(epoch); // 3.3 batch (B)
         if (liveEscapes.size) liveEscapes.step(epoch); // 3.3 batch (D)
         if (mouthCarry.size) mouthCarry.step(epoch); // 3.3 batch (C)
-        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins(), ...duckDrops.pins(), ...liveEscapes.pins(), ...mouthCarry.pins()]); // 3.3 batch (B, C, D)
+        if (liveClutches.size) liveClutches.step(epoch); // ARK-MATING-SHOWN (after the matings: her laying follows the mount)
+        const pins = new Set([...liveMeals.pins(), ...liveMatings.pins(), ...liveBirths.pins(), ...duckDrops.pins(), ...liveEscapes.pins(), ...mouthCarry.pins(), ...liveClutches.pins()]); // 3.3 batch (B, C, D); ARK-MATING-SHOWN
         if (pins.size !== mealPins.size || Array.from(pins).some((id) => !mealPins.has(id))) {
             mealPins = pins;
             refreshLive();
@@ -9481,7 +9531,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // 3.3 fix (breeding taps): a laid line's clutch beside the mother (`stepLiveClutch`).
         showClutch: (key, parents, eggs) => {
             if (reducedMotion || !parents.length) return;
-            if (liveClutch && liveClutch.key !== key) nests.remove(liveClutch.key);
+            if (liveClutch && liveClutch.key !== key && !liveClutches.keeps(liveClutch.key)) nests.remove(liveClutch.key);
             if (liveClutch?.key === key) return;
             liveClutch = {key, parents, eggs, mother: null, until: performance.now() / 1000 + CLUTCH_SHOWN_SECONDS, spot: null, framed: false};
         },
@@ -9573,7 +9623,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (births.map((b) => lineage.note(b.young, b.parents)).some(Boolean)) liveliness.lineageChanged();
         },
         // 3.3 batch (C): the record's hatchings: a mouth-carrying species acts it (`mouth-carry.ts`); the lineage as for a birth.
+        addLayings: (layings) => {
+            liveClutches.most = tier === "low" ? 10 : 24;
+            liveClutches.addLaid(layings);
+        },
         addHatchings: (hatchings) => {
+            // ARK-MATING-SHOWN: the young come out of their clutch, held as a birth is (`live-clutches.ts`).
+            liveClutches.addHatched(hatchings.map((h) => ({key: h.key, parents: h.parents, young: h.young, t0: h.held ?? h.t0})));
             mouthCarry.add(hatchings, worldMs() / 1000);
             duckDrops.add(hatchings, worldMs() / 1000); // 3.3 batch (B): ducklings dropping from the tree hole
             if (hatchings.map((b) => lineage.note(b.young, b.parents)).some(Boolean)) liveliness.lineageChanged();
@@ -9613,6 +9669,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             liveMatings.clear();
             liveBirths.clear();
             liveSeeking.clear();
+            liveClutches.clear();
             liveEscapes.clear();
             liveDeaths.clear();
             for (const entry of entries) if (cast?.pins.has(entry.animal.id)) entry.held = false;
