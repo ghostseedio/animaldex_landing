@@ -169,15 +169,15 @@ test("a huddle: in a window the whole group goes to one place, a body-length or 
 });
 
 test("a commuting flock's leader spends the day at a patch 40-70 m off; a lone one, a member and the night do not", () => {
-    const flock = group("budgerigar", 4, {x: 40, z: -60}, 0.18);
+    const flock = group("blue-fronted-amazon", 4, {x: 40, z: -60}, 0.18);
     const lead = flock[0].animal;
-    const patch = commuteCentre(world, lead, "budgerigar", 12);
+    const patch = commuteCentre(world, lead, "blue-fronted-amazon", 12);
     assert.ok(patch, "a patch");
     const d = Math.hypot(patch.x - lead.home.x, patch.z - lead.home.z);
     assert.ok(d >= 25 && d <= 75, `patch ${d.toFixed(0)} m away`);
-    assert.deepEqual(commuteCentre(world, lead, "budgerigar", 12), patch, "the same every day");
-    assert.equal(commuteCentre(world, lead, "budgerigar", 21), null);
-    assert.equal(commuteCentre(world, flock[1].animal, "budgerigar", 12), null);
-    assert.equal(commuteCentre(world, group("budgerigar", 1, {x: 40, z: -60}, 0.18)[0].animal, "budgerigar", 12), null);
+    assert.deepEqual(commuteCentre(world, lead, "blue-fronted-amazon", 12), patch, "the same every day");
+    assert.equal(commuteCentre(world, lead, "blue-fronted-amazon", 21), null);
+    assert.equal(commuteCentre(world, flock[1].animal, "blue-fronted-amazon", 12), null);
+    assert.equal(commuteCentre(world, group("blue-fronted-amazon", 1, {x: 40, z: -60}, 0.18)[0].animal, "blue-fronted-amazon", 12), null);
     assert.equal(commuteCentre(world, lead, "house-sparrow", 12), null);
 });
