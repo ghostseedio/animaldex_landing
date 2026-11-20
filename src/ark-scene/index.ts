@@ -1047,7 +1047,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (!spiderWebsLoading) {
                 spiderWebsLoading = true;
                 void import("@/ark-scene/spider-webs-draw").then((m) => {
-                    spiderWebs = new m.SpiderWebs(scene, (x, z) => standGround(x, z));
+                    spiderWebs = new m.SpiderWebs(scene, (x, z, near) => standGround(x, z, near));
                     scene.add(spiderWebs.mesh);
                     if (process.env.NODE_ENV !== "production") (window as unknown as {__arkWebs?: SpiderWebs}).__arkWebs = spiderWebs;
                 }).catch(() => undefined);
@@ -6566,6 +6566,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A scenery module's close-up (a nest, a web, the cave): the camera may come nearer than usual.
         let moduleWant = 4;
         if (!close) for (const sceneModule of modules) moduleWant = Math.min(moduleWant, sceneModule.closeUp?.(target.x, target.y, target.z) ?? 4);
+        if (!close && spiderWebs) moduleWant = Math.min(moduleWant, spiderWebs.closeUp(target.x, target.y, target.z)); // ARK-WEBS
         const want = Math.min(shotClosest ?? Infinity, castTiny ? Math.min(MICRO_MIN_DISTANCE, Math.max(castTiny.trueLength * 4, 0.008)) : close ? MICRO_MIN_DISTANCE : moduleWant);
         // Down at once; back up gently (the camera eases out rather than jumping).
         controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
