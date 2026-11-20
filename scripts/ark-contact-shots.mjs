@@ -70,6 +70,14 @@ await page.goto(`${base}/ark/embed.html?snapshot=${snapshot}&hud=0&lang=en`, {wa
 await page.waitForFunction(() => Boolean(window.__arkScene), null, {timeout: 600_000});
 await page.evaluate(() => window.__arkScene.mounted());
 await page.waitForFunction(() => !window.__arkScene.attached || window.__arkScene.attached(), null, {timeout: 600_000}).catch(() => undefined);
+// Daylight and dry, whatever the clock (the owner can't judge contact at night in the rain): late morning, no rain, no
+// fog, no storm, ground dry, a little cloud.
+const HOURS = Number(arg("hours", "11"));
+const daylight = () => page.evaluate((hours) => {
+    window.__arkScene.setHours?.(hours);
+    window.__arkScene.setEnvironment?.({rain: 0, wetness: 0, fog: 0, storm: 0, snow: 0, cloud: 0.15, wind: 0.2});
+}, HOURS);
+await daylight();
 await wait(8000);
 console.log("mounted", JSON.stringify(await page.evaluate(() => ({island: window.__arkScene.island?.(), two: window.__arkScene.twoIslands?.(), entries: window.__arkDebug?.entries().length}))));
 
@@ -81,7 +89,7 @@ const find = (slug) =>
             if (e.animal.model_slug !== slug) continue;
             const p = e.sched?.pose;
             const at = e.middle ?? (p ? {x: p.x, y: p.y, z: p.z} : null);
-            rows.push({id: e.animal.id, x: at?.x ?? null, y: at?.y ?? null, z: at?.z ?? null, doing: e.sched?.trip?.doing ?? null, moving: Boolean(p?.moving), aloft: Boolean(p?.aloft), length: e.length, level: e.level, asleep: Boolean(e.state?.asleep), yaw: e.yawNow ?? 0, water: Boolean(e.place?.water), micro: e.place?.micro ? e.place.micro.attach?.tag ?? e.place.micro.surface : null});
+            rows.push({id: e.animal.id, x: at?.x ?? null, y: at?.y ?? null, z: at?.z ?? null, doing: e.sched?.trip?.doing ?? null, moving: Boolean(p?.moving), aloft: Boolean(p?.aloft), length: e.length, level: e.level, asleep: Boolean(e.state?.asleep), yaw: e.yawNow ?? 0, water: Boolean(e.place?.water), micro: e.place?.micro ? e.place.micro.attach?.tag ?? e.place.micro.surface : null, normal: e.sched?.pose?.surface ? {x: e.sched.pose.surface.nx, y: e.sched.pose.surface.ny, z: e.sched.pose.surface.nz} : null});
         }
         return rows;
     }, slug);
@@ -105,12 +113,15 @@ const shot = async (name) => {
     await page.locator("canvas").first().screenshot({path: file});
     console.log("shot", file);
 };
+/** What is drawn under it (`__arkDebug.under`): its base's gap over the first surface (negative: into it). */
+const under = (id, normal) => page.evaluate(({id, normal}) => window.__arkDebug.under?.(id, normal) ?? null, {id, normal});
 const want = (name) => !only || only.includes(name);
 const pick = (rows, test) => rows.find(test) ?? rows[0];
 const crossTo = async (island) => {
     if ((await page.evaluate(() => window.__arkScene.island?.())) === island) return;
     await page.evaluate((island) => window.__arkScene.crossTo?.(island), island);
     await wait(6000);
+    await daylight();
 };
 const report = {label, zoom: null, subjects: {}};
 
@@ -123,19 +134,45 @@ const close = async (name, slug, test, distanceOf, polar = 1.2, island = "wild")
     if (!row) return console.log("none:", slug);
     if (!(await frame(row.id, distanceOf(row), polar))) return console.log("not located:", slug);
     report.subjects[name] = (await find(slug)).find((r) => r.id === row.id);
+    report.subjects[name].under = await under(row.id, row.normal ?? null);
+    console.log(name, JSON.stringify(report.subjects[name].under));
     await shot(name);
 };
 
-await close("cat", "domestic-cat", (r) => !r.asleep, (r) => Math.max(r.length * 3, 1.2), 1.3, "town");
-await close("bug-on-leaf", "seven-spot-ladybird", (r) => r.micro === "leaf", (r) => 0.12, 1.1, "town");
-await close("bug-on-leaf-2", "shield-stink-bug", (r) => true, (r) => 0.18, 1.1);
-await close("grasshopper", "common-field-grasshopper", (r) => true, (r) => 0.3, 1.25);
-await close("crab-on-rock", "mangrove-crab", (r) => true, (r) => 0.6, 1.2);
-await close("frog-on-bank", "marsh-frog", (r) => true, (r) => 0.6, 1.3);
-await close("starfish", "crown-of-thorns-starfish", (r) => true, (r) => 1.4, 0.9);
-await close("croc-asleep", "saltwater-crocodile", (r) => r.asleep || r.doing === "sleep" || r.doing === "rest", (r) => 7, 1.3);
-await close("bird-at-water", "great-cormorant", (r) => r.water || !r.aloft, (r) => 2.2, 1.35);
-await close("bird-at-water-2", "grey-heron", (r) => !r.aloft, (r) => 3, 1.35);
+await close("cat-rest", "domestic-cat", (r) => !r.moving, (r) => Math.max(r.length * 2.6, 1.0), 1.42, "town");
+// The owner's hovering cat: its Power's lift (the climb Power's "up the slope's way", 45% of its height) on a cat on
+// the ground. The live cat rig has no pounce or leap clip (drink, graze, groom, idle, lie, run, scan, sit, sleep, trot,
+// walk...); the Power's lift is what raised it. Held on it here, as power-show.ts sets it.
+if (want("cat-lift")) {
+    await crossTo("town");
+    const rows = await find("domestic-cat");
+    const row = pick(rows, (r) => !r.moving && !r.asleep) ?? rows[0];
+    if (row) {
+        await page.evaluate((id) => {
+            const e = window.__arkDebug.entries().find((x) => x.animal.id === id);
+            window.__catLift = setInterval(() => {
+                if (!e) return;
+                const h = (e.length ?? 0.45) * 0.55;
+                e.power = Object.assign(e.power ?? {}, {mechanism: "c", react: 1, q: 1, look: null, pack: 0, still: 0, drop: -h * 0.45, head: null, threat: 0, check: 0, fromX: 0, fromZ: 0, act: null, since: 0, state: null, flock: null, clip: null});
+            }, 16);
+        }, row.id);
+        await frame(row.id, Math.max(row.length * 2.6, 1.0), 1.42);
+        report.subjects["cat-lift"] = {...row, under: await under(row.id, null)};
+        console.log("cat-lift", JSON.stringify(report.subjects["cat-lift"].under));
+        await shot("cat-lift");
+        await page.evaluate(() => clearInterval(window.__catLift));
+    }
+}
+await close("bug-on-leaf", "seven-spot-ladybird", (r) => r.micro === "leaf", (r) => 0.07, 1.3, "town");
+await close("bug-on-leaf-2", "shield-stink-bug", (r) => r.micro === "leaf", (r) => 0.1, 1.3);
+await close("grasshopper", "common-field-grasshopper", (r) => true, (r) => 0.16, 1.35);
+await close("crab-on-rock", "mangrove-crab", (r) => r.micro === "rock_face", (r) => 0.28, 1.4);
+await close("frog-on-bank", "marsh-frog", (r) => true, (r) => 0.45, 1.42);
+await close("starfish", "crown-of-thorns-starfish", (r) => true, (r) => 1.2, 1.2);
+await close("croc-asleep", "saltwater-crocodile", (r) => r.asleep || r.doing === "sleep" || r.doing === "rest", (r) => 6.5, 1.4);
+await close("bird-at-water", "grey-heron", (r) => r.water && !r.aloft, (r) => 3, 1.42);
+await close("bird-at-water-2", "great-cormorant", (r) => r.water && !r.aloft, (r) => 2.4, 1.42);
+await close("bird-at-water-3", "little-egret", (r) => r.water && !r.aloft, (r) => 2, 1.42);
 
 // Shadows of four sizes: a beetle-sized, a cat-sized, a zebra-sized and an elephant, each framed from above-side.
 if (want("shadows")) {
@@ -143,12 +180,15 @@ if (want("shadows")) {
         const rows = await find(slug);
         const row = pick(rows, (r) => !r.asleep && !r.aloft);
         if (!row) continue;
-        await frame(row.id, d, 0.75);
+        await frame(row.id, d, 0.95);
+        report.subjects[`shadow-${i}`] = {...row, under: await under(row.id, null)};
         await shot(`shadow-${i}-${slug}`);
     }
 }
 
-// Giraffes in their zoo paddock at three zooms, the clock held still: their drawn positions at each.
+// Giraffes in their zoo paddock, the clock held still, zoomed out through every level's distance and back in (near,
+// rig off, far, icon, then back): where each animal is drawn at every step (`entry.drawn`: its base by its level), and
+// any jump at a level's switch. With the clock still, any move at all is a jump.
 if (want("giraffe")) {
     await crossTo("town");
     const rows = await find("giraffe");
@@ -156,29 +196,39 @@ if (want("giraffe")) {
         const first = rows[0];
         await frame(first.id, 12, 1.15, Math.PI / 3, 6000);
         const target = await page.evaluate((id) => window.__arkScene.locate(id), first.id);
+        // Let the camera's approach be seen (the reactive layer: a giraffe steps back from a camera close by).
+        await page.evaluate(({target}) => window.__arkScene.setView({target: {x: target.x, y: target.y, z: target.z}, distance: 9, polar: 1.15, azimuth: 1.0}), {target});
+        await wait(8000);
         await page.evaluate(() => window.__clock.hold());
         await wait(600);
-        const positions = [];
-        for (const distance of [9, 30, 90]) {
+        const steps = [];
+        const DISTANCES = [9, 22, 30, 60, 90, 150, 250, 400, 650, 400, 250, 150, 90, 60, 30, 22, 9];
+        for (const distance of DISTANCES) {
             await page.evaluate(({target, distance}) => window.__arkScene.setView({target: {x: target.x, y: target.y, z: target.z}, distance, polar: 1.15, azimuth: 1.0}), {target, distance});
-            await wait(2500);
-            const at = await page.evaluate(() => window.__arkDebug.entries().filter((e) => e.sched?.pose).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, level: e.level, x: e.middle?.x ?? null, y: e.middle?.y ?? null, z: e.middle?.z ?? null})));
-            positions.push({distance, at});
-            await shot(`giraffe-zoom-${distance}m`);
+            await wait(1800);
+            const at = await page.evaluate(() => window.__arkDebug.entries().filter((e) => e.drawn && e.sched?.pose).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, level: e.level === "token" ? "token" : e.drawn.level, x: e.drawn.x, y: e.drawn.y, z: e.drawn.z, reactive: e.reactive ? Math.hypot(e.reactive.dx, e.reactive.dz) : 0})));
+            steps.push({distance, at});
+            if ([9, 90, 650].includes(distance) && steps.filter((s) => s.distance === distance).length === 1) await shot(`giraffe-zoom-${distance}m`);
         }
         await page.evaluate(() => window.__clock.run());
-        // How far each animal drawn at every zoom moved between them (the clock still: it should not have moved at all).
-        const moved = [];
-        for (const a of positions[0].at) {
-            if (a.x === null) continue;
-            const others = positions.slice(1).map((p) => p.at.find((b) => b.id === a.id)).filter((b) => b && b.x !== null);
-            if (others.length < positions.length - 1) continue;
-            const d = Math.max(...others.map((b) => Math.hypot(b.x - a.x, b.z - a.z, b.y - a.y)));
-            moved.push({id: a.id, slug: a.slug, moved: Math.round(d * 1000) / 1000, levels: [a.level, ...others.map((b) => b.level)].join(">")});
+        // Every switch (an animal drawn at one level, then at another) and every move between consecutive steps.
+        const jumps = [];
+        const switches = {};
+        for (let k = 1; k < steps.length; k++) {
+            for (const b of steps[k].at) {
+                const a = steps[k - 1].at.find((x) => x.id === b.id);
+                if (!a || a.level === "token" || b.level === "token") continue;
+                const d = Math.hypot(b.x - a.x, b.z - a.z);
+                const dy = b.y - a.y;
+                const key = `${a.level}>${b.level}`;
+                if (a.level !== b.level) switches[key] = (switches[key] ?? 0) + 1;
+                if (d > 0.02 || Math.abs(dy) > 0.02) jumps.push({slug: b.slug, id: b.id.slice(-6), from: steps[k - 1].distance, to: steps[k].distance, levels: key, moved: Math.round(d * 1000) / 1000, dy: Math.round(dy * 1000) / 1000, reactive: Math.round(b.reactive * 100) / 100});
+            }
         }
-        moved.sort((a, b) => b.moved - a.moved);
-        report.zoom = {animals: moved.length, over2cm: moved.filter((m) => m.moved > 0.02).length, giraffes: moved.filter((m) => m.slug === "giraffe"), worst: moved.slice(0, 12)};
-        console.log("zoom", JSON.stringify({animals: report.zoom.animals, over2cm: report.zoom.over2cm, giraffes: report.zoom.giraffes}));
+        jumps.sort((a, b) => Math.hypot(b.moved, b.dy) - Math.hypot(a.moved, a.dy));
+        const giraffeLevels = steps.map((s) => `${s.distance}:${s.at.filter((x) => x.slug === "giraffe").map((x) => x.level).join("/")}`);
+        report.zoom = {steps: steps.length, compared: steps[0].at.length, switches, jumps: jumps.length, worst: jumps.slice(0, 15), giraffeLevels};
+        console.log("zoom", JSON.stringify({switches, jumps: jumps.length, worst: jumps.slice(0, 6), giraffeLevels}));
     }
 }
 report.errors = errors.slice(0, 10);

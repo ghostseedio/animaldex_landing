@@ -557,6 +557,16 @@ export class ReactiveLayer {
     }
 
     /** Its memory, for tests and the tap card's debug line. */
+    /**
+     * ARK-CONTACT (decision 447, the giraffes that jumped as the camera zoomed): whether it still holds a step or a turn
+     * of the layer's own. The scene passes it in past the camera's reach while it does, so it eases back (below) rather
+     * than its offset dropping to nothing the frame the camera pulled back past the reach.
+     */
+    holding(id: string): boolean {
+        const agent = this.agents.get(id);
+        return Boolean(agent && (Math.hypot(agent.offset.x, agent.offset.z) >= 1e-3 || Math.abs(agent.head.yaw) + Math.abs(agent.head.pitch) >= 1e-3));
+    }
+
     memoryOf(id: string): Memory | null {
         return this.agents.get(id)?.memory ?? null;
     }

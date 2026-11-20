@@ -95,7 +95,8 @@ if (rigDir) {
                 return halfToFloat(data[at]) * c.x + halfToFloat(data[at + 1]) * c.y + halfToFloat(data[at + 2]) * c.z + halfToFloat(data[at + 3]);
             };
             for (const [name, clip] of Object.entries(ex.rig.clips)) {
-                if (feetCarryClip(name) || PATH_CARRIED_CLIPS.has(name) || FLIGHT.test(name) || !(clip.rows > 1)) continue;
+                // (`--all-clips`: gaits and standing clips too, to read one species' clips.)
+                if ((!process.argv.includes("--all-clips") && (feetCarryClip(name) || PATH_CARRIED_CLIPS.has(name) || FLIGHT.test(name))) || !(clip.rows > 1)) continue;
                 clipsSeen++;
                 let sum = 0;
                 let peak = 0;

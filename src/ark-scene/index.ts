@@ -67,6 +67,7 @@ import {
     CylinderGeometry,
     Group,
     Mesh,
+    type Object3D,
     MeshStandardMaterial,
     type Material,
     type ShaderMaterial,
@@ -203,7 +204,7 @@ import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
 import {benthicCreep, edgeBase, inPlaceLift, livesUnderWater, shadowFootprint, wadeBase} from "@/ark-scene/grounding/contact";
 import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
-import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
+import {drawnGround, drawnGroundHeight, setDrawnGroundStride} from "@/ark-scene/grounding/drawn-ground";
 import {feetCarryClip, modelBase, uprightBody} from "@/ark-scene/grounding/base";
 import {canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
 import {ledgeFrame} from "@/ark-scene/rock-ledge"; // ARK-JUNGLE
@@ -1005,6 +1006,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // (A live view: the ground's tiles coming within the render distance are built in full two a frame, the nearest to
     // what the camera looks at first, `streaming/ground-tiles.ts`; a recording builds them at once, as before.)
     if (landscape && !options.recording) landscape.tiles.spread = 2;
+    // ARK-CONTACT (decision 447): the animals stand on the ground as its tiles draw it now (a map tile: every 4th vertex).
+    if (landscape) setDrawnGroundStride((x, z) => landscape.tiles.strideAt(x, z));
     const graphicsBase = (options.graphicsBase ?? "/ark/graphics").replace(/\/+$/, "");
     void loadGroundTextures(graphicsBase);
     lighting.loadDaySky(`${graphicsBase}/sky-day.hdr`);
@@ -4070,7 +4073,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const e = c.entry;
             e.reactive = null;
             // p2 (ocean): not one out on its open-ocean loop (its way is the loop's: a body turn would swim it backwards).
-            if (!e.sched || e.micro || e.visitor || e.place.burrow || e.ocean || c.distance > reach) continue;
+            // (ARK-CONTACT: past the reach only while it still holds a step of the layer's, to ease back from it: zooming
+            // out past the reach snapped it back to its schedule's place, a jump the owner saw on the giraffes.)
+            if (!e.sched || e.micro || e.visitor || e.place.burrow || e.ocean || (c.distance > reach && !reactive.holding(e.animal.id))) continue;
             const intel = intelProfile(e.animal.model_slug, null, e.stats.intelligence);
             const sp = e.sched.pose;
             const young = youngFor(e);
@@ -6088,6 +6093,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const powerFlies = entry.air > 0.001 || model.behaviour?.plan === "bird" || model.behaviour?.plan === "bat" || model.behaviour?.plan === "flying_insect";
             if (entry.power?.drop && !reducedMotion) position.y -= entry.power.drop < 0 && stand && !powerFlies ? 0 : entry.power.drop;
             matrix.compose(position, rotation, scale.set(s, s, s));
+            // Development (ARK-CONTACT's zoom probe, `scripts/ark-contact-shots.mjs`): where it is drawn, its base by
+            // the level it is drawn at, to measure any jump as the camera crosses a level's distance.
+            if (process.env.NODE_ENV !== "production") {
+                const drawn = ((entry as {drawn?: {x: number; y: number; z: number; level: string}}).drawn ??= {x: 0, y: 0, z: 0, level: ""});
+                drawn.x = position.x;
+                drawn.y = position.y + groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s;
+                drawn.z = position.z;
+                drawn.level = rig ? "rig" : level;
+            }
             if (rig && state && level === "near") {
                 // The locomotion layer (`locomotion/`, lane L1): gaits with planted feet, foot IK, the body's motion and
                 // the tail's, posed on the CPU into the species' live pose row (the baked rows when it is off).
@@ -9895,6 +9909,35 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // p3 (shake): the harness's question: when an animal next climbs out of the water (its trips' arrivals after an exit leg).
     // p4 (zoolive): the resting figures and the near-kept pins, for the zoo probes.
     if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {resting: () => restingGroups, nearKept: () => nearKept.slice()});
+    // Development (ARK-CONTACT's contact probe): the drawn surfaces straight under where an animal is drawn (its base by
+    // its level, `entry.drawn`), top down: what it stands on and how far its base is over (or under) each. Animals,
+    // marks and the water's surface are left out.
+    if (process.env.NODE_ENV !== "production") {
+        const probe = new Raycaster();
+        const down = new Vector3(0, -1, 0);
+        const from = new Vector3();
+        const marks = new Set<Object3D>([shadows.mesh, rings.mesh, tokens.mesh, dots.mesh]);
+        Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {
+            under: (id: string, normal?: {x: number; y: number; z: number}) => {
+                const drawn = (entryById.get(id) as {drawn?: {x: number; y: number; z: number; level: string}} | undefined)?.drawn;
+                if (!drawn) return null;
+                const n = normal ? new Vector3(normal.x, normal.y, normal.z).normalize() : new Vector3(0, 1, 0);
+                probe.set(from.set(drawn.x, drawn.y, drawn.z).addScaledVector(n, 3), down.copy(n).negate());
+                probe.near = 0;
+                probe.far = 8;
+                const hits = [];
+                for (const hit of probe.intersectObjects(scene.children, true)) {
+                    const object = hit.object as Mesh;
+                    if (marks.has(object) || object.geometry?.getAttribute?.("arkInstance") || object.geometry?.getAttribute?.("arkRigA") || !object.visible) continue;
+                    const kind = String(object.userData?.kind ?? object.name ?? object.type);
+                    if (/water|sea|ocean|sky|rain|fog|cloud/i.test(kind)) continue;
+                    hits.push({gap: Math.round((3 - hit.distance) * 1000) / 1000, kind, instance: hit.instanceId ?? null});
+                    if (hits.length >= 6) break;
+                }
+                return {drawn: {...drawn}, hits};
+            }
+        });
+    }
     if (process.env.NODE_ENV !== "production") Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {waterOuts: (id: string, from: number, slots: number) => { const e = entryById.get(id); const own = e?.sched; if (!e || !own) return []; const out: Array<{arrive: number; x: number; z: number}> = []; let previous: Trip | null = null; for (let k = 0; k < slots && out.length < 6; k++) { const trip: Trip = tripAt(worldOf(own.animal), own.profile, own.animal, from + k * SLOT_SECONDS + 1, scheduleHours, e.animal.activity, previous); previous = trip; const at = shakeStartOf(trip); if (at !== null) out.push({arrive: at, x: trip.to.x, z: trip.to.z}); } return out; }});
 
     return {
@@ -10541,6 +10584,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             shadows.dispose();
             rings.dispose();
             landscape?.dispose();
+            setDrawnGroundStride(null);
             nearDetail?.dispose();
             bugGround.dispose(); // p2 (ground)
             reflections.dispose(); // p3 (reflect)

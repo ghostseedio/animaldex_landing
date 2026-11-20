@@ -108,3 +108,56 @@ test("a bug climbs only a blade that is drawn (the nearest 24 within 14 m)", () 
     for (const stem of nearest) assert.ok(stems.shown(stem));
     stems.dispose();
 });
+
+test("over a tile drawn as the map, an animal stands on the coarse ground as drawn (the safari animals that sank)", async () => {
+    const {groundArrays} = await import("@/ark-scene/terrain");
+    const {tileGeometry, MAP_STRIDE} = await import("@/ark-scene/streaming/ground-tiles");
+    const {chunkGridFor, tileRange, chunkCount} = await import("@/ark-scene/streaming/chunks");
+    const {drawnGroundHeight, setDrawnGroundStride, DRAWN_GROUND_SEGMENTS} = await import("@/ark-scene/grounding/drawn-ground");
+    const {TERRAIN_HALF} = await import("@/ark-scene/world");
+    const arrays = groundArrays();
+    const grid = chunkGridFor(TERRAIN_HALF, DRAWN_GROUND_SEGMENTS);
+    // The hilliest tile: where full and coarse differ most.
+    let worstFull = 0;
+    let worstCoarse = 0;
+    try {
+        setDrawnGroundStride(() => MAP_STRIDE);
+        for (let key = 0; key < chunkCount(grid); key += 3) {
+            const geometry = tileGeometry(arrays, tileRange(grid, key, DRAWN_GROUND_SEGMENTS), MAP_STRIDE);
+            const p = geometry.getAttribute("position");
+            const index = geometry.getIndex()!;
+            // The grid's own triangles (the skirt's come after them: lowered edge copies).
+            const across = Math.round(Math.sqrt(p.count));
+            for (let t = 0; t < Math.min(index.count, 600); t += 3 * 7) {
+                const [i, j, k] = [index.getX(t), index.getX(t + 1), index.getX(t + 2)];
+                if (i >= across * across || j >= across * across || k >= across * across) continue;
+                const w = [0.25, 0.35, 0.4];
+                const x = w[0] * p.getX(i) + w[1] * p.getX(j) + w[2] * p.getX(k);
+                const y = w[0] * p.getY(i) + w[1] * p.getY(j) + w[2] * p.getY(k);
+                const z = w[0] * p.getZ(i) + w[1] * p.getZ(j) + w[2] * p.getZ(k);
+                worstCoarse = Math.max(worstCoarse, Math.abs(drawnGroundHeight(x, z) - y));
+                setDrawnGroundStride(null);
+                worstFull = Math.max(worstFull, Math.abs(drawnGroundHeight(x, z) - y));
+                setDrawnGroundStride(() => MAP_STRIDE);
+            }
+            geometry.dispose();
+        }
+    } finally {
+        setDrawnGroundStride(null);
+    }
+    assert.ok(worstCoarse < 1e-3, `on a map tile the drawn ground is off by ${worstCoarse} m`);
+    // (Before: the full ground's height there, as much as this far from what is drawn.)
+    assert.ok(worstFull > 0.05, `the full and the map ground hardly differ here (${worstFull} m): the test proves nothing`);
+});
+
+test("zooming out past the reactive layer's reach, an animal it moved eases back rather than jumping", async () => {
+    const {ReactiveLayer} = await import("@/ark-scene/reactive");
+    const layer = new ReactiveLayer({tier: "high"});
+    assert.equal(layer.holding("nobody"), false);
+    // (Its agents' offsets: one with a step of the layer's own is held.)
+    const agents = (layer as unknown as {agents: Map<string, {offset: {x: number; z: number}; head: {yaw: number; pitch: number}}>}).agents;
+    agents.set("giraffe", {offset: {x: 0.8, z: 0}, head: {yaw: 0, pitch: 0}} as never);
+    assert.equal(layer.holding("giraffe"), true);
+    agents.get("giraffe")!.offset.x = 0;
+    assert.equal(layer.holding("giraffe"), false);
+});
