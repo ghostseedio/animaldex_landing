@@ -8695,7 +8695,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const nestSpot = (parent: Entry, acts: ArkAct[], index: number) => {
         const plan = library.get(parent.animal.model_slug)?.behaviour?.plan;
         const kind = nestKind({plan, slug: parent.animal.model_slug, water: inWater(parent)});
-        const size = Math.min(Math.max(parent.length * 0.55, 0.25), 1.6);
+        const size = clutchSize(parent.length);
         const laid = acts[index];
         for (let i = index + 1; i < acts.length; i++) {
             const later = acts[i];
@@ -8759,7 +8759,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const parent = act.parents.map((id) => findEntry(id)).find(Boolean) ?? null;
             const plan = library.get((parent ?? first).animal.model_slug)?.behaviour?.plan;
             const kind = nestKind({plan, slug: (parent ?? first).animal.model_slug, water: inWater(parent ?? first)});
-            const at = nests.where(nestId) ?? {x: first.place.x, y: Math.max(first.place.ground, 0) + (kind === "spawn" ? -0.05 : 0), z: first.place.z, size: Math.min(Math.max((parent ?? first).length * 0.55, 0.25), 1.6)};
+            const at = nests.where(nestId) ?? {x: first.place.x, y: Math.max(first.place.ground, 0) + (kind === "spawn" ? -0.05 : 0), z: first.place.z, size: clutchSize((parent ?? first).length)};
             // V1 (a tapped hatching line showed a nest and no young: they were where their day had them, a roost's hole at
             // night, a branch across the wood): the young are IN THE NEST as the eggs split, each in from small, and stay in
             // it while the act lasts (`HATCHLINGS_SECONDS`, the nest with them); then each is where its day has it, as before.
