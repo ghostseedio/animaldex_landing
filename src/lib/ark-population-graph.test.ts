@@ -164,7 +164,7 @@ test("the list's strip: the tapped animal's kind across the Ark, shown only whil
     const lone = renderToStaticMarkup(createElement(ArkHudControls, {mode: "biggest", onMode: noop, period: "24h", onPeriod: noop, ctx: {...ctx, selectedId: "z1"}}));
     assert.match(lone, /This one: alone in its zoo enclosure/);
     assert.match(lone, /Breeds only with others in the same place\./);
-    const none = renderToStaticMarkup(createElement(ArkHudControls, {mode: "biggest", onMode: noop, period: "24h", onPeriod: noop, ctx: {...ctx, selectedKey: null, selectedId: null}}));
+    const none = renderToStaticMarkup(createElement(ArkHudControls, {mode: "biggest", onMode: noop, period: "24h", onPeriod: noop, ctx: {...ctx, selectedKey: null, selectedId: undefined}}));
     assert.doesNotMatch(none, /whole Ark/);
     assert.doesNotMatch(renderToStaticMarkup(createElement(ArkHudControls, {mode: "biggest", onMode: noop, period: "24h", onPeriod: noop})), /whole Ark/);
 });
