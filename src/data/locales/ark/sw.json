@@ -832,6 +832,7 @@
             "chanceTitle": "Nafasi ya kuishi mwaka mwingine wa Ark",
             "chanceMain": "Sababu kuu: {reason}",
             "chanceHow": "Jinsi inavyokokotolewa: umri wake dhidi ya muda wa kuishi wa aina yake, wanyama wawindaji wanaoweza kuwinda aina yake katika eneo lake, na njaa, kutokana na yale ambayo Ark imeyaweka wazi. Makadirio yanayobadilika Ark inapobadilika, si ahadi.",
+            "chanceHowHuman": "Jinsi inavyohesabiwa: umri wake ukilinganishwa na maisha ya binadamu, mafupi au marefu kulingana na hali yake. Makadirio, si ahadi.",
             "chanceUp": "Juu kwa {change} kuliko siku moja iliyopita",
             "chanceDown": "Chini kwa {change} kuliko siku moja iliyopita",
             "chanceSteady": "Haijabadilika tangu siku moja iliyopita",

@@ -509,6 +509,17 @@ test("humans with old age on (decision 442): Ordinary lives 0.85 of the Prime ra
     const a = left(arrival);
     assert.ok(a.lowDays < 15 * 365 && a.highDays > 20 * 365 && a.highDays < (85 - 18) * 365, JSON.stringify(a));
     assert.equal(arkAgeOf(arrival, at)!.atLeast, true, "its age is still only a floor, never guessed");
+    // the "how this is worked out" line names no predators or hunger for a human
+    const outlook = arkLifeOutlook(arrival, {arkDay: at, animals: [arrival], huntGrace: null}, null)!;
+    for (const language of ARK_LANGUAGES) {
+        const file = path.join(__dirname, "..", "data", "locales", ...(language === "en" || language === "id" ? [`${language}.json`] : ["ark", `${language}.json`]));
+        const ark = JSON.parse(readFileSync(file, "utf8")).ark;
+        const {words: w, units} = arkTimeLeftWordsFrom(ark.timeLeft, ark.life);
+        const how = arkLifeText(outlook, w, units, language).chance!.how;
+        assert.equal(how, ark.timeLeft.chanceHowHuman, language);
+        assert.notEqual(how, ark.timeLeft.chanceHow, language);
+        if (language === "en") assert.ok(!/predator|hunger/i.test(how), how);
+    }
 });
 
 // MARK: The chance to live another Ark year

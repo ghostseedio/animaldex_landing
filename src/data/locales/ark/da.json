@@ -832,6 +832,7 @@
             "chanceTitle": "Chance for at leve endnu et Ark-år",
             "chanceMain": "Vigtigste grund: {reason}",
             "chanceHow": "Sådan beregnes det: dens alder i forhold til artens levetid, de rovdyr der kan jage dens art i dens område, og sult, ud fra det Ark har gjort offentligt. Et skøn, der ændrer sig, når Ark ændrer sig, ikke et løfte.",
+            "chanceHowHuman": "Sådan regnes det ud: alderen mod et menneskes levetid, kortere eller længere efter tilstanden. Et skøn, ikke et løfte.",
             "chanceUp": "{change} højere end for en dag siden",
             "chanceDown": "{change} lavere end for en dag siden",
             "chanceSteady": "Uændret siden for en dag siden",

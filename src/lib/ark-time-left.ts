@@ -820,6 +820,8 @@ export type ArkLifeOutlook = {
      * Old age, hunger and a carer's absence do not depend on it, and nothing here says they do.
      */
     power: "earn" | "working" | null;
+    /** A human (decision 442): its "how this is worked out" line names no predators or hunger. */
+    human?: boolean;
 };
 
 /** The bar's marks for an age and an estimate (never anything outside 0 to 1). */
@@ -847,7 +849,8 @@ export function arkLifeOutlook(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorl
         chance,
         trend: chance ? arkChanceTrend(animal, world, facts, hooks, chance) : null,
         band,
-        power: band && chance?.reasons.hunted ? (band === "prime" ? "working" : "earn") : null
+        power: band && chance?.reasons.hunted ? (band === "prime" ? "working" : "earn") : null,
+        ...(arkIsHuman(animal) ? {human: true} : {})
     };
 }
 
@@ -882,6 +885,8 @@ export type ArkTimeLeftWords = {
     chanceTitle: string;
     chanceMain: string;
     chanceHow: string;
+    /** A human's (decision 442): only its age and condition bound its life, never predators or hunger. */
+    chanceHowHuman?: string;
     chanceUp: string;
     chanceDown: string;
     chanceSteady: string;
@@ -1031,6 +1036,8 @@ function percentText(percent: number, locale: string): string {
     }
 }
 
+const ARK_TIME_LEFT_ENGLISH_HOW_HUMAN = "How this is worked out: their age against a human lifespan, shortened or lengthened by their condition. An estimate, not a promise.";
+
 export function arkChanceText(outlook: ArkLifeOutlook, words: ArkTimeLeftWords, units: ArkTimeLeftUnitWords, locale: string): ArkChanceText | null {
     const {chance, trend} = outlook;
     if (!chance) return null;
@@ -1049,7 +1056,7 @@ export function arkChanceText(outlook: ArkLifeOutlook, words: ArkTimeLeftWords, 
         trend: said,
         main: main ? fill(words.chanceMain, {reason: main}) : null,
         mainReason: main ?? null,
-        how: words.chanceHow,
+        how: outlook.human ? words.chanceHowHuman ?? ARK_TIME_LEFT_ENGLISH_HOW_HUMAN : words.chanceHow,
         label: [`${words.chanceTitle}: ${value}`, said ? (said.text.split(" · ")[0]) : null].filter((part): part is string => Boolean(part)).join(". ")
     };
 }
@@ -1107,6 +1114,7 @@ export const ARK_TIME_LEFT_ENGLISH: ArkTimeLeftWords = {
     chanceTitle: "Chance to live another Ark year",
     chanceMain: "Main reason: {reason}",
     chanceHow: "How this is worked out: its age against its kind's lifespan, the predators that can hunt its kind in its range, and hunger, from what the Ark has made public. An estimate that moves as the Ark changes, not a promise.",
+    chanceHowHuman: "How this is worked out: their age against a human lifespan, shortened or lengthened by their condition. An estimate, not a promise.",
     chanceUp: "Up {change} vs a day ago",
     chanceDown: "Down {change} vs a day ago",
     chanceSteady: "Steady vs a day ago",

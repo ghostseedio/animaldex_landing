@@ -832,6 +832,7 @@
             "chanceTitle": "Szansa na przeżycie kolejnego roku w Ark",
             "chanceMain": "Główny powód: {reason}",
             "chanceHow": "Jak to liczymy: jego wiek wobec długości życia jego gatunku, drapieżniki, które mogą polować na jego gatunek w jego okolicy, i głód, na podstawie tego, co Ark ujawnił publicznie. Szacunek, który zmienia się wraz z Ark, a nie obietnica.",
+            "chanceHowHuman": "Jak to liczymy: wiek wobec długości ludzkiego życia, krótszego lub dłuższego zależnie od kondycji. Szacunek, nie obietnica.",
             "chanceUp": "O {change} więcej niż dobę temu",
             "chanceDown": "O {change} mniej niż dobę temu",
             "chanceSteady": "Bez zmian względem doby temu",

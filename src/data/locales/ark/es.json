@@ -832,6 +832,7 @@
             "chanceTitle": "Probabilidad de vivir otro año del Ark",
             "chanceMain": "Motivo principal: {reason}",
             "chanceHow": "Cómo se calcula: su edad frente a la esperanza de vida de su especie, los depredadores que pueden cazar a su especie en su zona y el hambre, a partir de lo que el Ark ha hecho público. Una estimación que cambia cuando cambia el Ark, no una promesa.",
+            "chanceHowHuman": "Cómo se calcula: su edad frente a la vida de un ser humano, más corta o más larga según su estado. Una estimación, no una promesa.",
             "chanceUp": "{change} más que hace un día",
             "chanceDown": "{change} menos que hace un día",
             "chanceSteady": "Igual que hace un día",

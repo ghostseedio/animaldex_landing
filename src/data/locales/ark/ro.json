@@ -832,6 +832,7 @@
             "chanceTitle": "Șansa de a mai trăi un an în Ark",
             "chanceMain": "Motivul principal: {reason}",
             "chanceHow": "Cum se calculează: vârsta lui față de durata de viață a speciei, prădătorii care pot vâna specia lui în zona sa și foamea, pe baza a ceea ce Ark a făcut public. O estimare care se schimbă când se schimbă Ark, nu o promisiune.",
+            "chanceHowHuman": "Cum se calculează: vârsta față de durata unei vieți omenești, mai scurtă sau mai lungă după stare. O estimare, nu o promisiune.",
             "chanceUp": "Cu {change} mai mult decât acum o zi",
             "chanceDown": "Cu {change} mai puțin decât acum o zi",
             "chanceSteady": "Neschimbat față de acum o zi",

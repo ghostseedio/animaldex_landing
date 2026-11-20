@@ -5029,6 +5029,7 @@
       "chanceTitle": "Peluang hidup satu tahun Ark lagi",
       "chanceMain": "Alasan utama: {reason}",
       "chanceHow": "Cara menghitungnya: usianya dibandingkan umur jenisnya, pemangsa yang dapat memburu jenisnya di wilayahnya, dan rasa lapar, dari apa yang telah dipublikasikan Ark. Perkiraan yang berubah seiring Ark berubah, bukan janji.",
+      "chanceHowHuman": "Cara menghitungnya: usianya dibandingkan dengan rentang hidup manusia, diperpendek atau diperpanjang oleh kondisinya. Sebuah perkiraan, bukan janji.",
       "chanceUp": "Naik {change} dari sehari lalu",
       "chanceDown": "Turun {change} dari sehari lalu",
       "chanceSteady": "Tetap dibanding sehari lalu",

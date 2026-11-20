@@ -832,6 +832,7 @@
             "chanceTitle": "Bir Ark yılı daha yaşama şansı",
             "chanceMain": "Başlıca neden: {reason}",
             "chanceHow": "Nasıl hesaplanır: yaşının türünün ömrüne göre durumu, bölgesinde türünü avlayabilecek yırtıcılar ve açlık; Ark'ın kamuya açıkladıklarına dayanır. Ark değiştikçe değişen bir tahmindir, söz değildir.",
+            "chanceHowHuman": "Nasıl hesaplanır: yaşı bir insan ömrüyle karşılaştırılır, durumuna göre daha kısa ya da daha uzun. Bir tahmin, söz değil.",
             "chanceUp": "Bir gün öncesine göre {change} yüksek",
             "chanceDown": "Bir gün öncesine göre {change} düşük",
             "chanceSteady": "Bir gün öncesiyle aynı",

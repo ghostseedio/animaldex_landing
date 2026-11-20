@@ -832,6 +832,7 @@
             "chanceTitle": "Chance, noch ein Ark-Jahr zu leben",
             "chanceMain": "Wichtigster Grund: {reason}",
             "chanceHow": "So wird das berechnet: sein Alter im Verhältnis zur Lebensspanne seiner Art, die Raubtiere, die seine Art in seinem Gebiet jagen können, und Hunger, aus dem, was Ark öffentlich gemacht hat. Eine Schätzung, die sich mit Ark ändert, kein Versprechen.",
+            "chanceHowHuman": "So wird es berechnet: das Alter im Vergleich zur Lebensdauer eines Menschen, je nach Zustand kürzer oder länger. Eine Schätzung, kein Versprechen.",
             "chanceUp": "{change} höher als vor einem Tag",
             "chanceDown": "{change} niedriger als vor einem Tag",
             "chanceSteady": "Unverändert gegenüber vor einem Tag",

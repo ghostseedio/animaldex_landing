@@ -832,6 +832,7 @@
             "chanceTitle": "Todennäköisyys elää vielä yksi Ark-vuosi",
             "chanceMain": "Tärkein syy: {reason}",
             "chanceHow": "Näin tämä lasketaan: sen ikä suhteessa lajinsa elinikään, pedot, jotka voivat metsästää sen lajia sen alueella, ja nälkä sen perusteella, mitä Ark on julkaissut. Arvio, joka muuttuu Arkin muuttuessa, ei lupaus.",
+            "chanceHowHuman": "Näin se lasketaan: ikä suhteessa ihmisen elinikään, lyhyempi tai pidempi kunnon mukaan. Arvio, ei lupaus.",
             "chanceUp": "{change} enemmän kuin vuorokausi sitten",
             "chanceDown": "{change} vähemmän kuin vuorokausi sitten",
             "chanceSteady": "Ennallaan vuorokauteen verrattuna",

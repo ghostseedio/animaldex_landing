@@ -832,6 +832,7 @@
             "chanceTitle": "Šansa da proživi još jednu godinu u Arku",
             "chanceMain": "Glavni razlog: {reason}",
             "chanceHow": "Kako se računa: njegova dob prema životnom vijeku njegove vrste, grabežljivci koji mogu loviti njegovu vrstu u njegovu području i glad, prema onome što je Ark objavio. Procjena koja se mijenja kako se Ark mijenja, a ne obećanje.",
+            "chanceHowHuman": "Kako se računa: dob u odnosu na ljudski životni vijek, kraći ili dulji prema stanju. Procjena, ne obećanje.",
             "chanceUp": "{change} više nego prije dan",
             "chanceDown": "{change} manje nego prije dan",
             "chanceSteady": "Nepromijenjeno u odnosu na prije dan",

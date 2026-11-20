@@ -832,6 +832,7 @@
             "chanceTitle": "Chances de vivre une année d'Ark de plus",
             "chanceMain": "Raison principale : {reason}",
             "chanceHow": "Comment c'est calculé : son âge par rapport à la durée de vie de son espèce, les prédateurs qui peuvent chasser son espèce dans sa zone, et la faim, d'après ce que l'Ark a rendu public. Une estimation qui change quand l'Ark change, pas une promesse.",
+            "chanceHowHuman": "Comment c'est calculé : l'âge par rapport à la durée d'une vie humaine, plus courte ou plus longue selon l'état. Une estimation, pas une promesse.",
             "chanceUp": "{change} de plus qu'il y a un jour",
             "chanceDown": "{change} de moins qu'il y a un jour",
             "chanceSteady": "Stable par rapport à il y a un jour",

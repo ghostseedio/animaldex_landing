@@ -5044,6 +5044,7 @@
       "chanceTitle": "Chance to live another Ark year",
       "chanceMain": "Main reason: {reason}",
       "chanceHow": "How this is worked out: its age against its kind's lifespan, the predators that can hunt its kind in its range, and hunger, from what the Ark has made public. An estimate that moves as the Ark changes, not a promise.",
+      "chanceHowHuman": "How this is worked out: their age against a human lifespan, shortened or lengthened by their condition. An estimate, not a promise.",
       "chanceUp": "Up {change} vs a day ago",
       "chanceDown": "Down {change} vs a day ago",
       "chanceSteady": "Steady vs a day ago",

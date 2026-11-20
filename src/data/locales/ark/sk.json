@@ -832,6 +832,7 @@
             "chanceTitle": "Šanca dožiť ďalší rok v Ark",
             "chanceMain": "Hlavný dôvod: {reason}",
             "chanceHow": "Ako sa to počíta: jeho vek voči dĺžke života jeho druhu, predátori, ktorí môžu loviť jeho druh v jeho okolí, a hlad, podľa toho, čo Ark zverejnil. Odhad, ktorý sa mení spolu s Ark, nie sľub.",
+            "chanceHowHuman": "Ako sa to počíta: vek voči dĺžke ľudského života, kratšej alebo dlhšej podľa kondície. Odhad, nie sľub.",
             "chanceUp": "O {change} viac ako pred dňom",
             "chanceDown": "O {change} menej ako pred dňom",
             "chanceSteady": "Bez zmeny oproti dňu predtým",

@@ -832,6 +832,7 @@
             "chanceTitle": "Probabilitat de viure un any de l'Ark més",
             "chanceMain": "Motiu principal: {reason}",
             "chanceHow": "Com es calcula: la seva edat davant la vida típica de la seva espècie, els depredadors que poden caçar la seva espècie al seu entorn i la fam, a partir del que l'Ark ha fet públic. Una estimació que canvia quan canvia l'Ark, no una promesa.",
+            "chanceHowHuman": "Com es calcula: la seva edat davant la vida d'un humà, més curta o més llarga segons el seu estat. Una estimació, no una promesa.",
             "chanceUp": "{change} més que fa un dia",
             "chanceDown": "{change} menys que fa un dia",
             "chanceSteady": "Igual que fa un dia",

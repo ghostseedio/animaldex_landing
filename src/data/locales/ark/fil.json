@@ -832,6 +832,7 @@
             "chanceTitle": "Tsansang mabuhay ng isa pang taon sa Ark",
             "chanceMain": "Pangunahing dahilan: {reason}",
             "chanceHow": "Paano ito kinakalkula: ang edad nito kumpara sa haba ng buhay ng uri nito, ang mga maninila na maaaring manghuli sa uri nito sa saklaw nito, at ang gutom, batay sa inilabas ng Ark sa publiko. Isang pagtataya na nagbabago habang nagbabago ang Ark, hindi pangako.",
+            "chanceHowHuman": "Paano ito kinukuwenta: ang edad laban sa haba ng buhay ng tao, mas maikli o mas mahaba ayon sa kalagayan. Tantiya, hindi pangako.",
             "chanceUp": "Tumaas ng {change} mula isang araw ang nakaraan",
             "chanceDown": "Bumaba ng {change} mula isang araw ang nakaraan",
             "chanceSteady": "Walang pagbabago mula isang araw ang nakaraan",

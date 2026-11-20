@@ -832,6 +832,7 @@
             "chanceTitle": "Sjanse til å leve ett Ark-år til",
             "chanceMain": "Hovedgrunn: {reason}",
             "chanceHow": "Slik regnes det ut: alderen i forhold til artens levetid, rovdyrene som kan jakte på arten i området, og sult, ut fra det Ark har gjort offentlig. Et anslag som endrer seg når Ark endrer seg, ikke et løfte.",
+            "chanceHowHuman": "Slik regnes det ut: alderen mot et menneskes levetid, kortere eller lengre etter tilstanden. Et anslag, ikke et løfte.",
             "chanceUp": "{change} høyere enn for en dag siden",
             "chanceDown": "{change} lavere enn for en dag siden",
             "chanceSteady": "Uendret siden for en dag siden",
