@@ -26,6 +26,8 @@ export type ArkLiveWords = {
     hatchedOne: string;
     hatchedOther: string;
     deathOther: string;
+    /** Humans (decision 442): "{count} {animals} died peacefully of old age". */
+    deathPeacefulOther?: string;
     courting: string;
     contest: string;
     fishing: string;
@@ -83,6 +85,7 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     hatchedOne: "{aAnimal} hatched",
     hatchedOther: "{count} {animal} young hatched",
     deathOther: "{count} {animals} died of old age",
+    deathPeacefulOther: "{count} {animals} died peacefully of old age",
     courting: "{aAnimal} is courting",
     contest: "{animal} rivals are clashing",
     fishing: "{aAnimal} caught a fish",

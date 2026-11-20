@@ -66,13 +66,17 @@ function fixtureAnimals(mineId: string): ArkAnimal[] {
     // A human (one per human capture): grown on arrival, never prey, no stored lifespan: age and stage only. A child born to an Ark couple is young.
     add("hu1", "human", "Human", "human", {scientific_name: "Homo sapiens", zone: "farm_garden", island: "town", area: "house", born_ark_day: 239.417});
     add("hu2", "human", "Human", "human", {scientific_name: "Homo sapiens", zone: "farm_garden", island: "town", area: "house", origin: "born", generation: 1, source: null, born_ark_day: 140});
+    // Human old age on (AnimalDex decision 442): the read sends the Prime lifespan (72-100 years); the card applies the band.
+    const life = {lifespan_days: 72 * 365, lifespan_days_hi: 100 * 365, lifespan_estimate: false};
+    add("hu3", "human", "Human", "human", {scientific_name: "Homo sapiens", zone: "farm_garden", island: "town", area: "house", born_ark_day: 239.417, thrive: "ordinary", ...life});
+    add("hu4", "human", "Human", "human", {scientific_name: "Homo sapiens", zone: "farm_garden", island: "town", area: "house", origin: "born", generation: 1, source: null, born_ark_day: 140, thrive: "prime", ...life});
     // A pet in a house (kept: only old age), with the upper end of its lifespan published as the live read does.
     add("p1", "cat", "Domestic Cat", "domestic-cat", {zone: "farm_garden", island: "town", area: "house", lifespan_days: 4383, lifespan_days_hi: 6574.5, born_ark_day: 77.077});
     return list;
 }
 
 /** `young`: born aboard a month ago; `adult`: arrived, healthy; `old`: the old vole; `hunted`: a wild hedgehog with foxes about; `pet`: a cat in a house. */
-const CASES: Record<string, string> = {old: "v1", hunted: "h1", prime: "h5", good: "h6", hungry: "f3", safe: "b1", adult: "b1", young: "b2", pet: "p1", human: "hu1", child: "hu2"};
+const CASES: Record<string, string> = {old: "v1", hunted: "h1", prime: "h5", good: "h6", hungry: "f3", safe: "b1", adult: "b1", young: "b2", pet: "p1", human: "hu1", child: "hu2", humanOld: "hu3", childOld: "hu4"};
 
 function species(kind: keyof typeof KIND, slug: string, name: string, aboard: number) {
     return {id: KIND[kind], slug, name, aboard, page: null};

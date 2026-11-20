@@ -114,6 +114,8 @@ export type ArkLifeWords = {
     ended: string;
     endedEaten: string;
     endedOld: string;
+    /** A human's old-age death (decision 442): gentle, it is someone's own photo. */
+    endedOldPeaceful?: string;
     /** Life v2: a predator dead of long hunger. */
     starved: string;
     breeding: string;
@@ -175,6 +177,8 @@ export type ArkReplayWords = {
     meal: string;
     mealPhrase: string;
     death: string;
+    /** A human's old-age death (decision 442). */
+    deathPeaceful?: string;
     starved: string;
     lastGone: string;
     extinction: string;

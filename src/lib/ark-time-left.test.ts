@@ -494,6 +494,34 @@ test("humans: no estimate of time left today (no lifespan is stored for Homo: no
     assert.ok(outlook.bar);
 });
 
+test("humans with old age on (decision 442): Ordinary lives 0.85 of the Prime range, an arrival's time left is the rule's spread", () => {
+    const life = {lifespan_days: 72 * 365, lifespan_days_hi: 100 * 365};
+    const at = 292.5;
+    const born = (thrive: "ordinary" | "good" | "prime") => human({...life, origin: "born", born_ark_day: at - 365 * 30, thrive});
+    const left = (a: ArkTimeLeftAnimal) => arkLifeOutlook(a, {arkDay: at, animals: [a], huntGrace: null}, null)!.left!;
+    const o = left(born("ordinary")), p = left(born("prime")), g = left(born("good"));
+    // born aboard, 30 years old: ordinary dies between 61.2 and 85 years, prime between 72 and 100 (the quartiles inside)
+    assert.ok(o.lowDays > (61.2 - 30) * 365 * 0.99 && o.highDays < (85 - 30) * 365 * 1.02, JSON.stringify(o));
+    assert.ok(p.lowDays > o.lowDays && p.highDays > g.highDays && g.highDays > o.highDays, "a better band, a longer life");
+    assert.deepEqual(o.reasons.map((x) => x.kind), ["age"]);
+    // an arrival: at an unknown point of its adult life, so the time left starts near zero and runs to decades
+    const arrival = human({...life, thrive: "ordinary"});
+    const a = left(arrival);
+    assert.ok(a.lowDays < 15 * 365 && a.highDays > 20 * 365 && a.highDays < (85 - 18) * 365, JSON.stringify(a));
+    assert.equal(arkAgeOf(arrival, at)!.atLeast, true, "its age is still only a floor, never guessed");
+    // the "how this is worked out" line names no predators or hunger for a human
+    const outlook = arkLifeOutlook(arrival, {arkDay: at, animals: [arrival], huntGrace: null}, null)!;
+    for (const language of ARK_LANGUAGES) {
+        const file = path.join(__dirname, "..", "data", "locales", ...(language === "en" || language === "id" ? [`${language}.json`] : ["ark", `${language}.json`]));
+        const ark = JSON.parse(readFileSync(file, "utf8")).ark;
+        const {words: w, units} = arkTimeLeftWordsFrom(ark.timeLeft, ark.life);
+        const how = arkLifeText(outlook, w, units, language).chance!.how;
+        assert.equal(how, ark.timeLeft.chanceHowHuman, language);
+        assert.notEqual(how, ark.timeLeft.chanceHow, language);
+        if (language === "en") assert.ok(!/predator|hunger/i.test(how), how);
+    }
+});
+
 // MARK: The chance to live another Ark year
 
 /** A hedgehog in a wood with the protection over: hunted by the foxes (more foxes = a worse chance). */
