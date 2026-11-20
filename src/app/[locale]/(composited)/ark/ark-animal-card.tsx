@@ -296,6 +296,8 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                     <div className="min-w-0 flex-1">
                         <div className="flex min-w-0 items-baseline gap-2">
                             <h2 id={`ark-card-${animal.id}`} ref={headingRef} tabIndex={-1} className="min-w-0 max-w-full shrink-0 truncate font-display text-base font-extrabold leading-tight text-white outline-none focus-visible:underline md:text-lg">{animal.name}</h2>
+                            {/* Male or female beside its name, or its kind's note (`ark.sex`): the lazy block's other face, while the server's `sexes` switch is on. */}
+                            <Suspense fallback={null}><ArkTimeLeft sex animal={animal} words={words} locale={locale} /></Suspense>
                             <p className="min-w-0 flex-1 truncate text-[12px] text-ink-400">
                                 {animal.scientific_name ? <span className="italic">{animal.scientific_name}</span> : null}
                                 {animal.scientific_name ? " · " : null}

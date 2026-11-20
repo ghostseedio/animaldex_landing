@@ -775,6 +775,15 @@
             "reasonHunger": "Hambre: sin comida reciente",
             "reasonSkill": "Liberado: aún aprende a encontrar comida",
             "reasonSafe": "Protección frente a la caza hasta el día {day} del Ark"
+        },
+        "sex": {
+            "male": "macho",
+            "female": "hembra",
+            "maleN": "machos: {count}",
+            "femaleN": "hembras: {count}",
+            "hermaphrodite": "Hermafrodita",
+            "parthenogenetic": "Todas hembras, sin necesidad de macho",
+            "asexual": "Esta especie no tiene machos ni hembras"
         }
     },
     "talkPage": {

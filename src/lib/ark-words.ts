@@ -423,6 +423,8 @@ export type ArkWords = {
     /** Islands mode (decision 148): the wild island's region names where they differ from `regions` (the former home area). */
     wildIslandRegions?: Partial<Record<ArkRegion, string>>;
     hud: ArkHudWords;
+    /** Male and female (`ark.sex`, `lib/ark-sex.ts`); optional: an older bundle lacks it, and nothing is said. */
+    sex?: import("@/lib/ark-sex").ArkSexWords;
     /** The population graphs (`lib/ark-graph-words.ts`); optional: an older bundle lacks it, and the graphs read English. */
     graph?: ArkGraphWords;
     story: ArkStoryWords;

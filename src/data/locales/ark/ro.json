@@ -775,6 +775,15 @@
             "reasonHunger": "Foame: nicio masă recentă",
             "reasonSkill": "Eliberat: încă învață să găsească hrană",
             "reasonSafe": "Protecție împotriva vânătorii până în ziua {day} din Ark"
+        },
+        "sex": {
+            "male": "mascul",
+            "female": "femelă",
+            "maleN": "masculi: {count}",
+            "femaleN": "femele: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Numai femele, nu are nevoie de mascul",
+            "asexual": "Această specie nu are masculi sau femele"
         }
     },
     "talkPage": {

@@ -775,6 +775,15 @@
             "reasonHunger": "Açlık: yakın zamanda öğün yok",
             "reasonSkill": "Salındı: hâlâ yiyecek bulmayı öğreniyor",
             "reasonSafe": "{day}. Ark gününe kadar avdan koruma"
+        },
+        "sex": {
+            "male": "erkek",
+            "female": "dişi",
+            "maleN": "erkek: {count}",
+            "femaleN": "dişi: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Hepsi dişi, erkeğe gerek yok",
+            "asexual": "Bu türün erkeği ya da dişisi yoktur"
         }
     },
     "talkPage": {

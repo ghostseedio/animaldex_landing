@@ -22,6 +22,8 @@ import {
 } from "@/lib/ark-population-history";
 
 export * from "@/lib/ark-population-history";
+// Male and female in a species row (`ark-sex.tsx`): beside the lazy graphs, outside the page's first JavaScript.
+export {default as ArkSex} from "@/app/[locale]/(composited)/ark/ark-sex";
 
 /**
  * The population HUD's lines (owner, 2026-11-17: "a population line graph per species, just a line might do it and a

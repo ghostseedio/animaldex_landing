@@ -15,6 +15,7 @@ import {arkBarCeiling, arkBarShare} from "@/lib/ark-live-bars";
 import {arkChangeOf, arkChangeText, arkRankedSpecies, arkTotalChange, readArkPopulationThen, type ArkChange, type ArkPopulationThen} from "@/lib/ark-population-change";
 import {arkPickAnimal, arkSpeciesKey, type ArkSpeciesRow} from "@/lib/ark-population";
 import {fillArkWords} from "@/lib/ark-words";
+import {arkSexView, type ArkSexWords} from "@/lib/ark-sex";
 import {ARK_LOST_WORDS_EN, arkExtinctHow, arkExtinctWhen, fetchArkExtinct, type ArkExtinction, type ArkLostWords} from "@/lib/ark-extinct";
 import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 // popgraph: population over time (owner, 2026-11-17), from the server's record.
@@ -53,6 +54,8 @@ export type ArkBarsWords = {
     lost?: ArkLostWords;
     /** The population graphs' words (`lib/ark-graph-words.ts`). */
     graph: ArkGraphWords;
+    /** Male and female (`lib/ark-sex.ts`, `ark.sex`); absent: nothing is said. */
+    sex?: Partial<ArkSexWords> | null;
 };
 
 export type ArkBarsViewOptions = {
@@ -77,7 +80,7 @@ export type ArkBarsViewOptions = {
     onLostSpecies?: ((one: ArkExtinction) => void) | null;
 };
 
-type Row = {el: HTMLLIElement; button: HTMLButtonElement; icon: HTMLImageElement; name: HTMLSpanElement; mine: HTMLSpanElement; fill: HTMLSpanElement; change: HTMLSpanElement; count: HTMLSpanElement; spark: HTMLButtonElement; slug: string};
+type Row = {el: HTMLLIElement; button: HTMLButtonElement; icon: HTMLImageElement; name: HTMLSpanElement; mine: HTMLSpanElement; fill: HTMLSpanElement; change: HTMLSpanElement; count: HTMLSpanElement; sex: HTMLSpanElement; spark: HTMLButtonElement; slug: string};
 
 const CARET = `<svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 7.5l5 5 5-5"/></svg>`;
 
@@ -465,7 +468,11 @@ export class ArkBarsView {
         Object.assign(change.style, {flex: "0 0 auto", font: `700 11px/1 ${FONT}`, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap"});
         const count = document.createElement("span");
         Object.assign(count.style, {flex: "0 0 auto", minWidth: "2em", textAlign: "end", font: `700 13px/1 ${FONT}`, fontVariantNumeric: "tabular-nums"});
-        button.append(badge, middle, change, count);
+        // (♂3 ♀4, or the kind's note: drawn only while the server's `sexes` switch is on; `lib/ark-sex.ts`.)
+        const sex = document.createElement("span");
+        sex.setAttribute("aria-hidden", "true");
+        Object.assign(sex.style, {flex: "0 0 auto", display: "none", maxWidth: "7.5em", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", font: `600 11px/1 ${FONT}`, fontVariantNumeric: "tabular-nums", color: "rgba(255, 252, 244, 0.7)"});
+        button.append(badge, middle, sex, change, count);
         button.addEventListener("click", () => this.pick(key));
         el.style.display = "flex";
         button.style.flex = "1 1 auto";
@@ -473,7 +480,7 @@ export class ArkBarsView {
         const spark = makeSparkButton(() => this.openGraph(key));
         spark.style.display = "none";
         el.append(button, spark);
-        return {el, button, icon, name, mine, fill, change, count, spark, slug: ""};
+        return {el, button, icon, name, mine, fill, change, count, sex, spark, slug: ""};
     }
 
     private draw() {
@@ -549,8 +556,12 @@ export class ArkBarsView {
             if (drawn?.ranked && line) drawPeriodChange(row.change, line.stats, locale);
             else drawChange(row.change, change, words, locale);
             const said = arkChangeText(change, locale);
+            const sexed = arkSexView(species.animals, words.sex, number);
+            row.sex.textContent = sexed?.text ?? "";
+            row.sex.style.display = sexed ? "inline" : "none";
             row.button.setAttribute("aria-label", [
                 fillArkWords(words.rowCount, {animal: species.name, count: number(species.count)}),
+                sexed?.label,
                 drawn?.ranked && line ? `${row.change.textContent}, ${words.graph.periods[this.period]}` : said ? fillArkWords(words.change24h, {change: said.text}) : null,
                 species.mine ? words.yours : null
             ].filter(Boolean).join(", "));

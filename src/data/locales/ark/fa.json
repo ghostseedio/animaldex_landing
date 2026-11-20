@@ -775,6 +775,15 @@
             "reasonHunger": "گرسنگی: وعدهٔ غذایی اخیر نبوده",
             "reasonSkill": "رهاشده: هنوز پیدا کردن غذا را یاد می‌گیرد",
             "reasonSafe": "حفاظت در برابر شکار تا روز Ark {day}"
+        },
+        "sex": {
+            "male": "نر",
+            "female": "ماده",
+            "maleN": "نر: {count}",
+            "femaleN": "ماده: {count}",
+            "hermaphrodite": "دوجنسی",
+            "parthenogenetic": "همه ماده، بدون نیاز به نر",
+            "asexual": "این گونه نر و ماده ندارد"
         }
     },
     "talkPage": {

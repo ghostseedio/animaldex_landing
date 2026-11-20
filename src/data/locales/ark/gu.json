@@ -775,6 +775,15 @@
             "reasonHunger": "ભૂખ: તાજેતરમાં કોઈ ભોજન નથી",
             "reasonSkill": "છોડાયેલું: હજી ખોરાક શોધતાં શીખી રહ્યું છે",
             "reasonSafe": "Ark દિવસ {day} સુધી શિકારથી રક્ષણ"
+        },
+        "sex": {
+            "male": "નર",
+            "female": "માદા",
+            "maleN": "નર: {count}",
+            "femaleN": "માદા: {count}",
+            "hermaphrodite": "ઉભયલિંગી",
+            "parthenogenetic": "બધી માદા, નરની જરૂર નથી",
+            "asexual": "આ પ્રજાતિમાં નર કે માદા નથી"
         }
     },
     "talkPage": {

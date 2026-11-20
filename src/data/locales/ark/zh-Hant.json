@@ -775,6 +775,15 @@
             "reasonHunger": "飢餓：近期沒有進食",
             "reasonSkill": "已野放：仍在學習覓食",
             "reasonSafe": "受狩獵保護，直至 Ark 第 {day} 天"
+        },
+        "sex": {
+            "male": "雄性",
+            "female": "雌性",
+            "maleN": "雄性：{count}",
+            "femaleN": "雌性：{count}",
+            "hermaphrodite": "雌雄同體",
+            "parthenogenetic": "全是雌性，無需雄性",
+            "asexual": "這個物種沒有雄性和雌性"
         }
     },
     "talkPage": {

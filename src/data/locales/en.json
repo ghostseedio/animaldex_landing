@@ -4987,6 +4987,15 @@
       "reasonHunger": "Hunger: no recent meal",
       "reasonSkill": "Released: still learning to find food",
       "reasonSafe": "Hunting protection until Ark day {day}"
+    },
+    "sex": {
+      "male": "male",
+      "female": "female",
+      "maleN": "male: {count}",
+      "femaleN": "female: {count}",
+      "hermaphrodite": "Hermaphrodite",
+      "parthenogenetic": "All female, no male needed",
+      "asexual": "This kind has no males or females"
     }
   },
   "seo": {

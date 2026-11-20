@@ -775,6 +775,15 @@
             "reasonHunger": "الجوع: لا وجبة حديثة",
             "reasonSkill": "أُطلق حديثًا: ما زال يتعلّم العثور على الطعام",
             "reasonSafe": "حماية من الصيد حتى يوم Ark {day}"
+        },
+        "sex": {
+            "male": "ذكر",
+            "female": "أنثى",
+            "maleN": "ذكور: {count}",
+            "femaleN": "إناث: {count}",
+            "hermaphrodite": "خنثى (ثنائي الجنس)",
+            "parthenogenetic": "إناث فقط، بلا حاجة إلى ذكر",
+            "asexual": "هذا النوع بلا ذكور ولا إناث"
         }
     },
     "talkPage": {

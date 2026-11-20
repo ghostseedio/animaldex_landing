@@ -775,6 +775,15 @@
             "reasonHunger": "空腹：最近の食事なし",
             "reasonSkill": "放された動物：まだ食べ物の探し方を学習中",
             "reasonSafe": "Ark {day}日目まで狩りから保護"
+        },
+        "sex": {
+            "male": "オス",
+            "female": "メス",
+            "maleN": "オス: {count}",
+            "femaleN": "メス: {count}",
+            "hermaphrodite": "雌雄同体",
+            "parthenogenetic": "すべてメス、オスは不要",
+            "asexual": "この種にはオスもメスもいません"
         }
     },
     "talkPage": {

@@ -775,6 +775,15 @@
             "reasonHunger": "Gutom: walang kamakailang kain",
             "reasonSkill": "Pinakawalan: natututo pang maghanap ng pagkain",
             "reasonSafe": "Proteksyon laban sa pangangaso hanggang araw {day} sa Ark"
+        },
+        "sex": {
+            "male": "lalaki",
+            "female": "babae",
+            "maleN": "lalaki: {count}",
+            "femaleN": "babae: {count}",
+            "hermaphrodite": "Hermaphrodite",
+            "parthenogenetic": "Lahat babae, hindi kailangan ng lalaki",
+            "asexual": "Walang lalaki o babae ang uri na ito"
         }
     },
     "talkPage": {

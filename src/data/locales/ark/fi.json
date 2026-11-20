@@ -775,6 +775,15 @@
             "reasonHunger": "Nälkä: ei ateriaa viime aikoina",
             "reasonSkill": "Vapautettu: opettelee yhä löytämään ruokaa",
             "reasonSafe": "Metsästyssuoja Ark-päivään {day} asti"
+        },
+        "sex": {
+            "male": "uros",
+            "female": "naaras",
+            "maleN": "uroksia: {count}",
+            "femaleN": "naaraita: {count}",
+            "hermaphrodite": "Kaksineuvoinen",
+            "parthenogenetic": "Pelkkiä naaraita, urosta ei tarvita",
+            "asexual": "Tällä lajilla ei ole uroksia eikä naaraita"
         }
     },
     "talkPage": {

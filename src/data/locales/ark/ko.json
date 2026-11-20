@@ -775,6 +775,15 @@
             "reasonHunger": "배고픔: 최근 식사 없음",
             "reasonSkill": "풀려남: 아직 먹이 찾는 법을 배우는 중",
             "reasonSafe": "Ark {day}일째까지 사냥 보호"
+        },
+        "sex": {
+            "male": "수컷",
+            "female": "암컷",
+            "maleN": "수컷: {count}",
+            "femaleN": "암컷: {count}",
+            "hermaphrodite": "자웅동체",
+            "parthenogenetic": "모두 암컷, 수컷이 필요 없음",
+            "asexual": "이 종에는 수컷도 암컷도 없습니다"
         }
     },
     "talkPage": {

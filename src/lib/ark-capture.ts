@@ -38,10 +38,10 @@ export const ARK_PUBLIC_SHAPES = {
 } as const;
 
 /**
- * Keys the edge-case reads add (`20261113120000`, A13 and A3; `last_of_kind`, 20261119110000; `container`, 20261209130000), allowed but not
+ * Keys the edge-case reads add (`20261113120000`, A13 and A3; `last_of_kind`, 20261119110000; `container`, `sex`, `reproduction`, 20261209130000), allowed but not
  * required, so a capture from before or after that migration both check.
  */
-export const ARK_PUBLIC_EDGE_KEYS: ReadonlySet<string> = new Set(["placeholder", "revision", "kind_species_profile_id", "kind_name", "last_of_kind", "lone", "container"]);
+export const ARK_PUBLIC_EDGE_KEYS: ReadonlySet<string> = new Set(["placeholder", "revision", "kind_species_profile_id", "kind_name", "last_of_kind", "lone", "container", "sex", "reproduction"]);
 
 const MARK_BEGIN = "CAPTURE_BEGIN";
 const MARK_END = "CAPTURE_END";

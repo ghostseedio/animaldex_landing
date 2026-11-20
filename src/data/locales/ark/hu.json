@@ -775,6 +775,15 @@
             "reasonHunger": "Éhség: nincs friss étkezés",
             "reasonSkill": "Szabadon engedve: még tanul élelmet találni",
             "reasonSafe": "Vadászat elleni védelem a {day}. Ark-napig"
+        },
+        "sex": {
+            "male": "hím",
+            "female": "nőstény",
+            "maleN": "hímek: {count}",
+            "femaleN": "nőstények: {count}",
+            "hermaphrodite": "Hermafrodita",
+            "parthenogenetic": "Csupa nőstény, hímre nincs szükség",
+            "asexual": "Ennek a fajnak nincsenek hímjei és nőstényei"
         }
     },
     "talkPage": {

@@ -775,6 +775,15 @@
             "reasonHunger": "Đói: chưa có bữa ăn gần đây",
             "reasonSkill": "Đã thả: vẫn đang học cách tìm thức ăn",
             "reasonSafe": "Được bảo vệ khỏi bị săn đến ngày Ark {day}"
+        },
+        "sex": {
+            "male": "đực",
+            "female": "cái",
+            "maleN": "đực: {count}",
+            "femaleN": "cái: {count}",
+            "hermaphrodite": "Lưỡng tính",
+            "parthenogenetic": "Toàn con cái, không cần con đực",
+            "asexual": "Loài này không có con đực hay con cái"
         }
     },
     "talkPage": {

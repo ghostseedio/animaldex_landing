@@ -775,6 +775,15 @@
             "reasonHunger": "ఆకలి: ఇటీవల ఆహారం లేదు",
             "reasonSkill": "వదిలినది: ఇంకా ఆహారం వెతకడం నేర్చుకుంటోంది",
             "reasonSafe": "Ark రోజు {day} వరకు వేట నుండి రక్షణ"
+        },
+        "sex": {
+            "male": "మగ",
+            "female": "ఆడ",
+            "maleN": "మగ: {count}",
+            "femaleN": "ఆడ: {count}",
+            "hermaphrodite": "ద్విలింగి",
+            "parthenogenetic": "అన్నీ ఆడవే, మగ అవసరం లేదు",
+            "asexual": "ఈ జాతికి మగ, ఆడ ఉండవు"
         }
     },
     "talkPage": {

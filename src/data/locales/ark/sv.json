@@ -775,6 +775,15 @@
             "reasonHunger": "Hunger: ingen måltid på sistone",
             "reasonSkill": "Utsläppt: lär sig fortfarande hitta föda",
             "reasonSafe": "Jaktskydd till Ark-dag {day}"
+        },
+        "sex": {
+            "male": "hane",
+            "female": "hona",
+            "maleN": "hanar: {count}",
+            "femaleN": "honor: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Bara honor, ingen hane behövs",
+            "asexual": "Den här arten har varken hanar eller honor"
         }
     },
     "talkPage": {

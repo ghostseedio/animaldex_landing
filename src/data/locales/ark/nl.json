@@ -775,6 +775,15 @@
             "reasonHunger": "Honger: geen recente maaltijd",
             "reasonSkill": "Vrijgelaten: leert nog voedsel vinden",
             "reasonSafe": "Bescherming tegen jacht tot Ark-dag {day}"
+        },
+        "sex": {
+            "male": "mannetje",
+            "female": "vrouwtje",
+            "maleN": "mannetjes: {count}",
+            "femaleN": "vrouwtjes: {count}",
+            "hermaphrodite": "Hermafrodiet",
+            "parthenogenetic": "Alleen vrouwtjes, geen mannetje nodig",
+            "asexual": "Deze soort heeft geen mannetjes of vrouwtjes"
         }
     },
     "talkPage": {

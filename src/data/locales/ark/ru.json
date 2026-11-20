@@ -775,6 +775,15 @@
             "reasonHunger": "Голод: недавней еды не было",
             "reasonSkill": "После выпуска: ещё учится находить еду",
             "reasonSafe": "Защита от охоты до дня {day} по Ark"
+        },
+        "sex": {
+            "male": "самец",
+            "female": "самка",
+            "maleN": "самцы: {count}",
+            "femaleN": "самки: {count}",
+            "hermaphrodite": "Гермафродит",
+            "parthenogenetic": "Только самки, самец не нужен",
+            "asexual": "У этого вида нет самцов и самок"
         }
     },
     "talkPage": {

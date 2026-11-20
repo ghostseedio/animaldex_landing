@@ -775,6 +775,15 @@
             "reasonHunger": "Hunger: keine Mahlzeit in letzter Zeit",
             "reasonSkill": "Entlassen: lernt noch, Futter zu finden",
             "reasonSafe": "Jagdschutz bis Ark-Tag {day}"
+        },
+        "sex": {
+            "male": "männlich",
+            "female": "weiblich",
+            "maleN": "männlich: {count}",
+            "femaleN": "weiblich: {count}",
+            "hermaphrodite": "Zwitter",
+            "parthenogenetic": "Nur Weibchen, kein Männchen nötig",
+            "asexual": "Diese Art hat keine Männchen und Weibchen"
         }
     },
     "talkPage": {

@@ -363,6 +363,7 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                                         {ranked && graph && line ? <graph.ArkPeriodChange stats={line.stats} locale={locale} /> : <ArkChangeBadge change={change} words={words} locale={locale} />}
                                         <span className="min-w-[2rem] text-right text-[13px] font-bold tabular-nums">{number(row.count)}</span>
                                     </button>
+                                    {graph ? <graph.ArkSex row animals={row.animals} words={words.sex} locale={locale} /> : null}
                                     {spark}
                                 </li>
                             );

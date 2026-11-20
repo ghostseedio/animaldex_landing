@@ -775,6 +775,15 @@
             "reasonHunger": "Fam: cap àpat recent",
             "reasonSkill": "Alliberat: encara aprèn a trobar menjar",
             "reasonSafe": "Protecció davant la caça fins al dia {day} de l'Ark"
+        },
+        "sex": {
+            "male": "mascle",
+            "female": "femella",
+            "maleN": "mascles: {count}",
+            "femaleN": "femelles: {count}",
+            "hermaphrodite": "Hermafrodita",
+            "parthenogenetic": "Totes femelles, sense necessitat de mascle",
+            "asexual": "Aquesta espècie no té mascles ni femelles"
         }
     },
     "talkPage": {

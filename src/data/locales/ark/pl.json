@@ -775,6 +775,15 @@
             "reasonHunger": "Głód: brak niedawnego posiłku",
             "reasonSkill": "Wypuszczone: wciąż uczy się szukać pożywienia",
             "reasonSafe": "Ochrona przed polowaniem do dnia {day} w Ark"
+        },
+        "sex": {
+            "male": "samiec",
+            "female": "samica",
+            "maleN": "samce: {count}",
+            "femaleN": "samice: {count}",
+            "hermaphrodite": "Hermafrodyta",
+            "parthenogenetic": "Same samice, samiec niepotrzebny",
+            "asexual": "Ten gatunek nie ma samców ani samic"
         }
     },
     "talkPage": {

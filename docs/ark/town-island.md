@@ -716,3 +716,15 @@ room, farm or field from a hash of its id, so a young one born in its parents' t
 - Tests: `src/lib/ark-container-placement.test.ts` on the saved real read `src/ark-scene/fixtures/town-containers.json.gz` (production,
   2026-11-20: 2,901 animals, the 1,461 containers the owner loads): every kept animal drawn in its stored container, and nobody in the town
   moves with them laid on; young beside parents in every kind of container.
+
+### 15.1 Male and female in the panel and the list (coordinator, 2026-11-20)
+
+The public read carries each animal's `sex` (`"m"`, `"f"` or null where its kind keeps none; the key is there for every animal while the server's
+`sexes` switch is on) and, for a kind that is not a male and a female, its `reproduction` mode (hermaphrodite, parthenogenetic, asexual), AnimalDex
+migration `20261209130000`. `lib/ark-sex.ts` (`arkSexView`) says what to draw: ♂ or ♀ for one animal, "♂3 ♀4" for a species row, or the kind's note ("Hermaphrodite",
+"All female, no male needed", "This kind has no males or females"); nothing while the switch is off. The card shows it beside the animal's name and the
+list beside each row's count (an image to a screen reader, labelled "male" / "female", "male: 3, female: 4"), the embed's bars the same
+(`live/bars-view.ts`); `ark.sex` is in en, id and the 43 Ark bundles. The page's first JavaScript is budgeted, so the card reaches it through the lazy
+`ark-time-left` (its `sex` face) and the list through the lazy graphs module; `snapshot.ts` passes the two keys on as sent and `arkSexView` checks them.
+`/ark` static JavaScript: 204,633 bytes (limit 204,800).
+

@@ -775,6 +775,15 @@
             "reasonHunger": "Glad: nema nedavnog obroka",
             "reasonSkill": "Pušteno: još uči pronalaziti hranu",
             "reasonSafe": "Zaštita od lova do dana {day} u Arku"
+        },
+        "sex": {
+            "male": "mužjak",
+            "female": "ženka",
+            "maleN": "mužjaci: {count}",
+            "femaleN": "ženke: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Sve ženke, mužjak nije potreban",
+            "asexual": "Ova vrsta nema mužjake ni ženke"
         }
     },
     "talkPage": {

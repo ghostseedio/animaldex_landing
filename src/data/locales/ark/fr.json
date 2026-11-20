@@ -775,6 +775,15 @@
             "reasonHunger": "Faim : aucun repas récent",
             "reasonSkill": "Relâché : apprend encore à trouver sa nourriture",
             "reasonSafe": "Protection contre la chasse jusqu'au jour {day} de l'Ark"
+        },
+        "sex": {
+            "male": "mâle",
+            "female": "femelle",
+            "maleN": "mâles : {count}",
+            "femaleN": "femelles : {count}",
+            "hermaphrodite": "Hermaphrodite",
+            "parthenogenetic": "Que des femelles, aucun mâle nécessaire",
+            "asexual": "Cette espèce n'a ni mâles ni femelles"
         }
     },
     "talkPage": {

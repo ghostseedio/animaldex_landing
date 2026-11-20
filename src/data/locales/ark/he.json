@@ -775,6 +775,15 @@
             "reasonHunger": "רעב: אין ארוחה לאחרונה",
             "reasonSkill": "שוחררה: עדיין לומדת למצוא מזון",
             "reasonSafe": "הגנה מפני ציד עד יום Ark {day}"
+        },
+        "sex": {
+            "male": "זכר",
+            "female": "נקבה",
+            "maleN": "זכרים: {count}",
+            "femaleN": "נקבות: {count}",
+            "hermaphrodite": "הרמפרודיט",
+            "parthenogenetic": "כולן נקבות, אין צורך בזכר",
+            "asexual": "למין הזה אין זכרים ונקבות"
         }
     },
     "talkPage": {

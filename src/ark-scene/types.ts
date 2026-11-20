@@ -153,6 +153,14 @@ export type ArkAnimal = {
      * (`smallholding-2`) or a countryside field (`rural-sheep-fold`). Absent or one the plan does not know: today's hash.
      */
     container?: string | null;
+    /**
+     * Sexes (AnimalDex `voyage_public_animal_extras`, migration 20261209130000; sent only while the server's `sexes` switch is on):
+     * the engine's stored sex, "m" or "f", null where its kind keeps none. Its key being there at all says the switch is on, so
+     * absent is "not sent" and null is "none".
+     */
+    sex?: "m" | "f" | null;
+    /** Sexes, with `sex`: how its kind breeds when not as a male and a female (absent with `sex` present: sexual). */
+    reproduction?: "hermaphrodite" | "parthenogenetic" | "asexual";
     /** 0 for an arrival, a parent's plus one for the young. */
     generation?: number;
     condition?: ArkCondition | null;

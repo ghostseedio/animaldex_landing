@@ -775,6 +775,15 @@
             "reasonHunger": "بھوک: حال میں کوئی کھانا نہیں",
             "reasonSkill": "آزاد کیا گیا: ابھی خوراک ڈھونڈنا سیکھ رہا ہے",
             "reasonSafe": "Ark دن {day} تک شکار سے تحفظ"
+        },
+        "sex": {
+            "male": "نر",
+            "female": "مادہ",
+            "maleN": "نر: {count}",
+            "femaleN": "مادہ: {count}",
+            "hermaphrodite": "دو جنسی",
+            "parthenogenetic": "سب مادہ، نر کی ضرورت نہیں",
+            "asexual": "اس نوع میں نر یا مادہ نہیں ہوتے"
         }
     },
     "talkPage": {

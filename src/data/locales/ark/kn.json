@@ -775,6 +775,15 @@
             "reasonHunger": "ಹಸಿವು: ಇತ್ತೀಚೆಗೆ ಆಹಾರ ಇಲ್ಲ",
             "reasonSkill": "ಬಿಡಲಾಗಿದೆ: ಇನ್ನೂ ಆಹಾರ ಹುಡುಕಲು ಕಲಿಯುತ್ತಿದೆ",
             "reasonSafe": "Ark ದಿನ {day} ವರೆಗೆ ಬೇಟೆಯಿಂದ ರಕ್ಷಣೆ"
+        },
+        "sex": {
+            "male": "ಗಂಡು",
+            "female": "ಹೆಣ್ಣು",
+            "maleN": "ಗಂಡು: {count}",
+            "femaleN": "ಹೆಣ್ಣು: {count}",
+            "hermaphrodite": "ಉಭಯಲಿಂಗಿ",
+            "parthenogenetic": "ಎಲ್ಲವೂ ಹೆಣ್ಣು, ಗಂಡಿನ ಅಗತ್ಯವಿಲ್ಲ",
+            "asexual": "ಈ ಜಾತಿಗೆ ಗಂಡು ಅಥವಾ ಹೆಣ್ಣು ಇಲ್ಲ"
         }
     },
     "talkPage": {

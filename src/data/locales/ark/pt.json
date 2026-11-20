@@ -775,6 +775,15 @@
             "reasonHunger": "Fome: sem refeição recente",
             "reasonSkill": "Solto: ainda aprendendo a encontrar comida",
             "reasonSafe": "Proteção contra a caça até o dia {day} da Ark"
+        },
+        "sex": {
+            "male": "macho",
+            "female": "fêmea",
+            "maleN": "machos: {count}",
+            "femaleN": "fêmeas: {count}",
+            "hermaphrodite": "Hermafrodita",
+            "parthenogenetic": "Só fêmeas, sem precisar de macho",
+            "asexual": "Esta espécie não tem machos nem fêmeas"
         }
     },
     "talkPage": {

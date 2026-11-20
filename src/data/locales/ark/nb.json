@@ -775,6 +775,15 @@
             "reasonHunger": "Sult: ikke noe nylig måltid",
             "reasonSkill": "Sluppet fri: lærer fortsatt å finne mat",
             "reasonSafe": "Jaktvern til Ark-dag {day}"
+        },
+        "sex": {
+            "male": "hann",
+            "female": "hun",
+            "maleN": "hanner: {count}",
+            "femaleN": "hunner: {count}",
+            "hermaphrodite": "Hermafroditt",
+            "parthenogenetic": "Bare hunner, ingen hann trengs",
+            "asexual": "Denne arten har verken hanner eller hunner"
         }
     },
     "talkPage": {

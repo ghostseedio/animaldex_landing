@@ -8,6 +8,7 @@ import {ArkLive, type ArkLiveWordsIn} from "@/ark-scene/live/controller";
 import {ArkBarsView, type ArkBarsWords} from "@/ark-scene/live/bars-view";
 import type {ArkLiveWords} from "@/lib/ark-live-words";
 import {arkGraphWords} from "@/lib/ark-graph-words";
+import type {ArkSexWords} from "@/lib/ark-sex";
 import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkActivityWords} from "@/lib/ark-animal-status";
 import {arkLostWords, type ArkExtinction} from "@/lib/ark-extinct";
@@ -30,6 +31,8 @@ export type ArkHudWordsIn = {
     /** The population graphs' words (`ark.graph`); English key by key where absent. */
     graph?: Record<string, unknown> | null;
     hud?: Partial<Record<"show" | "hide" | "chip" | "rowCount" | "change24h" | "changeWindow" | "yours" | "herdTag" | "listLabel", string>> | null;
+    /** Male and female (`ark.sex`). */
+    sex?: Partial<ArkSexWords> | null;
 } | null;
 
 export type ArkLiveHudOptions = {
@@ -65,7 +68,8 @@ function barsWords(words: ArkHudWordsIn): ArkBarsWords {
         herdTag: hud.herdTag || "herd",
         list: hud.listLabel || "Every species aboard, the most numerous first",
         lost: arkLostWords(words?.lost),
-        graph: arkGraphWords(words?.graph)
+        graph: arkGraphWords(words?.graph),
+        sex: words?.sex
     };
 }
 

@@ -775,6 +775,15 @@
             "reasonHunger": "Hlad: žádné nedávné jídlo",
             "reasonSkill": "Vypuštěno: ještě se učí hledat potravu",
             "reasonSafe": "Ochrana před lovem do dne {day} v Ark"
+        },
+        "sex": {
+            "male": "samec",
+            "female": "samice",
+            "maleN": "samci: {count}",
+            "femaleN": "samice: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Samé samice, samec není třeba",
+            "asexual": "Tento druh nemá samce ani samice"
         }
     },
     "talkPage": {

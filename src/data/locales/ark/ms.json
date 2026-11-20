@@ -775,6 +775,15 @@
             "reasonHunger": "Lapar: tiada makanan baru-baru ini",
             "reasonSkill": "Dilepaskan: masih belajar mencari makanan",
             "reasonSafe": "Perlindungan daripada pemburuan sehingga hari Ark ke-{day}"
+        },
+        "sex": {
+            "male": "jantan",
+            "female": "betina",
+            "maleN": "jantan: {count}",
+            "femaleN": "betina: {count}",
+            "hermaphrodite": "Hermafrodit",
+            "parthenogenetic": "Semuanya betina, tidak perlukan jantan",
+            "asexual": "Jenis ini tiada jantan atau betina"
         }
     },
     "talkPage": {

@@ -775,6 +775,15 @@
             "reasonHunger": "Njaa: hakuna mlo wa hivi karibuni",
             "reasonSkill": "Ameachiliwa: bado anajifunza kutafuta chakula",
             "reasonSafe": "Ulinzi dhidi ya uwindaji hadi siku {day} ya Ark"
+        },
+        "sex": {
+            "male": "dume",
+            "female": "jike",
+            "maleN": "madume: {count}",
+            "femaleN": "majike: {count}",
+            "hermaphrodite": "Hermafrodita",
+            "parthenogenetic": "Wote ni majike, dume halihitajiki",
+            "asexual": "Aina hii haina madume wala majike"
         }
     },
     "talkPage": {

@@ -775,6 +775,15 @@
             "reasonHunger": "भूक: अलीकडे जेवण नाही",
             "reasonSkill": "सोडलेला: अजून अन्न शोधायला शिकत आहे",
             "reasonSafe": "Ark दिवस {day} पर्यंत शिकारीपासून संरक्षण"
+        },
+        "sex": {
+            "male": "नर",
+            "female": "मादी",
+            "maleN": "नर: {count}",
+            "femaleN": "मादी: {count}",
+            "hermaphrodite": "उभयलिंगी",
+            "parthenogenetic": "सर्व मादी, नराची गरज नाही",
+            "asexual": "या प्रजातीत नर किंवा मादी नसतात"
         }
     },
     "talkPage": {
