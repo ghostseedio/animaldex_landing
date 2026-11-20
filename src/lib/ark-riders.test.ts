@@ -20,6 +20,8 @@ import {
     riderOf,
     spotOf,
     trunkOf,
+    backProfile,
+    profileSpot,
     type HostFrame
 } from "@/ark-scene/riders";
 import {mapSlugs} from "@/ark-scene/map/species";
@@ -179,9 +181,56 @@ test("a flea's time off its host: some slots, inside the slot, a quarter minute 
     assert.ok(off > 100 && off < 220, `${off}`);
 });
 
-test("the scene asks the riders before its old partner placement, and a watched rider never jumps cut", () => {
+test("the scene asks the riders before its old partner placement, and a watched rider keeps its host", () => {
     const scene = readFileSync("src/ark-scene/index.ts", "utf8");
     const ride = scene.indexOf("const ride = ridePose(entry, time);");
     assert.ok(ride > 0 && ride < scene.indexOf("// A partner on its host (map section 6)"));
-    assert.match(scene, /if \(watched && memo\.seen\)/);
+    assert.match(scene, /if \(watched && memo\.on\)/);
+});
+
+test("on the host's own mesh: the back's top in the trunk's middle, not a raised tail or the head", () => {
+    // A cat-like mesh: legs to 0.5, a trunk 0.5-0.8 over z -0.2…0.3, a head to 0.95 at z 0.3…0.5, a tail up to 1.0 at z -0.5…-0.2.
+    const pts: number[][] = [];
+    for (let i = 0; i <= 40; i++) {
+        const z = -0.5 + i * 0.025;
+        const top = z < -0.2 ? 1.0 : z > 0.3 ? 0.95 : 0.8;
+        const half = z < -0.2 ? 0.02 : 0.12;
+        for (let j = 0; j <= 8; j++) {
+            const a = (j / 8) * Math.PI * 2;
+            pts.push([Math.sin(a) * half, top - 0.15 + Math.cos(a) * 0.15, z]);
+        }
+        pts.push([0.05, 0, z]);
+    }
+    const p = backProfile(pts.length, (i) => pts[i][0], (i) => pts[i][1], (i) => pts[i][2])!;
+    for (const s of [-0.9, -0.5, 0, 0.5, 0.9]) {
+        const top = profileSpot(p, {s, phi: 0});
+        // (On the back or the broad head, never up the thin raised tail.)
+        assert.ok(top.y >= 0.8 - 1e-6 && top.y <= 0.95 + 1e-6, `s ${s}: ${top.y}`);
+        assert.ok(top.z > -0.2, `s ${s}: z ${top.z}`);
+        assert.ok(top.ny > 0.99);
+    }
+    assert.ok(Math.abs(profileSpot(p, {s: -0.3, phi: 0}).y - 0.8) < 1e-6);
+    const flank = profileSpot(p, {s: -0.3, phi: Math.PI / 2});
+    assert.ok(Math.abs(flank.x - 0.12) < 0.01 && flank.nx > 0.9);
+    // Lying on its clip: lowered with it.
+    assert.ok(Math.abs(profileSpot(p, {s: -0.3, phi: 0}, 0.3).y - 0.5) < 1e-6);
+});
+
+test("a rider on a rig: the vertex posed as the shader poses it", async () => {
+    const {skinVertex, nearestVertex} = await import("@/ark-scene/riders");
+    // One bone; row 0 rest (identity), row 1 the body lowered 0.3 and turned a quarter about z (on its side).
+    const rows: number[][] = [
+        [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0],
+        [0, -1, 0, 0, 1, 0, 0, -0.3, 0, 0, 1, 0]
+    ];
+    const out = {x: 0, y: 0, z: 0, nx: 0, ny: 0, nz: 0};
+    const bone = (row: number, _b: number, k: number) => rows[row][k];
+    skinVertex({x: 0, y: 1, z: 0}, {x: 0, y: 1, z: 0}, [0, 0, 0, 0], [1, 0, 0, 0], bone, [1, 1, 0], 1, out);
+    assert.ok(Math.abs(out.x + 1) < 1e-9 && Math.abs(out.y + 0.3) < 1e-9 && Math.abs(out.nx + 1) < 1e-9);
+    skinVertex({x: 0, y: 1, z: 0}, {x: 0, y: 1, z: 0}, [0, 0, 0, 0], [1, 0, 0, 0], bone, [0, 1, 0.5], 0, out);
+    assert.ok(Math.abs(out.y - 1) < 1e-9, "weight 0: at rest");
+    const pts = [[0, 1, 0], [0, -1, 0], [0, 0.9, 0.1]];
+    const nrm = [[0, 1, 0], [0, -1, 0], [0, 1, 0]];
+    assert.equal(nearestVertex(3, (i, o) => o.splice(0, 3, ...pts[i]), (i, o) => o.splice(0, 3, ...nrm[i]), {x: 0, y: 0.95, z: 0.1, nx: 0, ny: 1, nz: 0}), 2);
+    assert.equal(nearestVertex(3, (i, o) => o.splice(0, 3, ...pts[i]), (i, o) => o.splice(0, 3, ...nrm[i]), {x: 0, y: -0.5, z: 0, nx: 0, ny: 1, nz: 0}), 2);
 });

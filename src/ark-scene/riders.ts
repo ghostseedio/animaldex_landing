@@ -360,3 +360,153 @@ export function nightNow(hours: number): boolean {
     const h = ((hours % 24) + 24) % 24;
     return h >= 20 || h < 5;
 }
+
+/**
+ * A host model's trunk as its own mesh has it (model space: +z its head, +y up), for placing a rider on the coat it is
+ * drawn with rather than on a guessed ellipsoid: along its length in `PROFILE_BINS` stretches, the top of the mesh in
+ * each, and its half-width near that top (the back's breadth). From the rest pose (standing).
+ */
+export type BackProfile = {minY: number; maxY: number; minZ: number; maxZ: number; top: Float32Array; half: Float32Array; bottom: Float32Array; /** The trunk's stretch (model z): the run of broad bins about the broadest (a thin tail or neck is not trunk). */ from: number; to: number};
+export const PROFILE_BINS = 24;
+
+export function backProfile(count: number, x: (i: number) => number, y: (i: number) => number, z: (i: number) => number): BackProfile | null {
+    if (count < 16) return null;
+    let minY = Infinity, maxY = -Infinity, minZ = Infinity, maxZ = -Infinity;
+    for (let i = 0; i < count; i++) {
+        const yy = y(i), zz = z(i);
+        if (yy < minY) minY = yy;
+        if (yy > maxY) maxY = yy;
+        if (zz < minZ) minZ = zz;
+        if (zz > maxZ) maxZ = zz;
+    }
+    const span = maxZ - minZ;
+    if (!(span > 0) || !(maxY > minY)) return null;
+    const top = new Float32Array(PROFILE_BINS).fill(-Infinity);
+    const bottom = new Float32Array(PROFILE_BINS).fill(Infinity);
+    const half = new Float32Array(PROFILE_BINS);
+    const bin = (zz: number) => Math.min(PROFILE_BINS - 1, Math.max(0, Math.floor(((zz - minZ) / span) * PROFILE_BINS)));
+    for (let i = 0; i < count; i++) {
+        const b = bin(z(i));
+        const yy = y(i);
+        if (yy > top[b]) top[b] = yy;
+        if (yy < bottom[b]) bottom[b] = yy;
+    }
+    // The breadth near the top: the widest point in the top quarter of the body's height under the bin's top.
+    const band = (maxY - minY) * 0.25;
+    for (let i = 0; i < count; i++) {
+        const b = bin(z(i));
+        if (y(i) >= top[b] - band) half[b] = Math.max(half[b], Math.abs(x(i)));
+    }
+    for (let b = 0; b < PROFILE_BINS; b++) {
+        if (!Number.isFinite(top[b])) top[b] = minY;
+        if (!Number.isFinite(bottom[b])) bottom[b] = minY;
+    }
+    // The trunk: from the broadest bin (of the middle two thirds) out each way while the bins stay broad.
+    let widest = Math.floor(PROFILE_BINS / 6);
+    for (let b = widest; b < PROFILE_BINS - Math.floor(PROFILE_BINS / 6); b++) if (half[b] > half[widest]) widest = b;
+    const broad = half[widest] * 0.5;
+    let lo = widest;
+    let hi = widest;
+    while (lo > 0 && half[lo - 1] >= broad) lo--;
+    while (hi < PROFILE_BINS - 1 && half[hi + 1] >= broad) hi++;
+    const bz = span / PROFILE_BINS;
+    return {minY, maxY, minZ, maxZ, top, half, bottom, from: minZ + (lo + 0.5) * bz, to: minZ + (hi + 0.5) * bz};
+}
+
+/**
+ * A spot on the profile (model space): along the trunk's stretch (s -1 … 1 over most of it: never on a raised tail), round the section from
+ * its top (phi 0) down a flank (±π/2) to under it (π): a section an ellipse under the bin's top, its breadth the bin's,
+ * its depth a quarter of the body's height (its whole depth under it for a belly spot). `lower`: model units the trunk is
+ * lowered by (a sleeper's lying clip). The normal is outward; the way along is +z (the head).
+ */
+export function profileSpot(p: BackProfile, spot: {s: number; phi: number}, lower = 0): {x: number; y: number; z: number; nx: number; ny: number; nz: number} {
+    const span = p.maxZ - p.minZ;
+    const zc = (p.from + p.to) / 2;
+    const zz = zc + Math.min(Math.max(spot.s, -1), 1) * (p.to - p.from) * 0.42;
+    const f = ((zz - p.minZ) / span) * PROFILE_BINS - 0.5;
+    const b0 = Math.min(PROFILE_BINS - 1, Math.max(0, Math.floor(f)));
+    const b1 = Math.min(PROFILE_BINS - 1, b0 + 1);
+    const k = Math.min(Math.max(f - b0, 0), 1);
+    const top = p.top[b0] + (p.top[b1] - p.top[b0]) * k;
+    const bottom = p.bottom[b0] + (p.bottom[b1] - p.bottom[b0]) * k;
+    const half = Math.max(p.half[b0] + (p.half[b1] - p.half[b0]) * k, (p.maxY - p.minY) * 0.05);
+    const depth = Math.max(Math.min((p.maxY - p.minY) * 0.25, (top - bottom) / 2), (p.maxY - p.minY) * 0.05);
+    const below = Math.cos(spot.phi) < 0;
+    // Over the back: an ellipse hung from the top; under the belly: one stood on the bottom (a fish's, a turtle's).
+    const cy = below ? bottom + depth : top - depth;
+    const c = Math.cos(spot.phi);
+    const sn = Math.sin(spot.phi);
+    const nx = sn / half;
+    const ny = c / depth;
+    const nl = Math.hypot(nx, ny) || 1;
+    return {x: half * sn, y: cy + depth * c - lower, z: zz, nx: nx / nl, ny: ny / nl, nz: 0};
+}
+
+/**
+ * One vertex of a rig's mesh as its bones pose it (the same sum the shader makes, `animal-material.ts` arkSkinAt): its
+ * four joints' 3×4 matrices (`bone(row, bone, axis, k)`) at the clip's two rows, blended by the row share `t`, and the
+ * whole by the clip's weight against the rest pose. A rider stays on the coat it is drawn with, lying, rolled or walking.
+ * (A row below 0 is the locomotion layer's live pose: `bone` reads it from that layer's own rows.)
+ */
+export function skinVertex(
+    v: {x: number; y: number; z: number},
+    n: {x: number; y: number; z: number},
+    joints: ArrayLike<number>,
+    weights: ArrayLike<number>,
+    bone: (row: number, bone: number, k: number) => number,
+    rows: [number, number, number],
+    weight: number,
+    out: {x: number; y: number; z: number; nx: number; ny: number; nz: number}
+) {
+    let px = 0, py = 0, pz = 0, qx = 0, qy = 0, qz = 0;
+    const [r0, r1, t] = rows;
+    const w = Math.min(Math.max(weight, 0), 1);
+    if (w > 0) {
+        for (let j = 0; j < 4; j++) {
+            const wj = weights[j];
+            if (!(wj > 0)) continue;
+            const b = joints[j];
+            const m = (axis: number, k: number) => bone(r0, b, axis * 4 + k) * (1 - t) + bone(r1, b, axis * 4 + k) * t;
+            const ax = m(0, 0) * v.x + m(0, 1) * v.y + m(0, 2) * v.z + m(0, 3);
+            const ay = m(1, 0) * v.x + m(1, 1) * v.y + m(1, 2) * v.z + m(1, 3);
+            const az = m(2, 0) * v.x + m(2, 1) * v.y + m(2, 2) * v.z + m(2, 3);
+            px += ax * wj;
+            py += ay * wj;
+            pz += az * wj;
+            qx += (m(0, 0) * n.x + m(0, 1) * n.y + m(0, 2) * n.z) * wj;
+            qy += (m(1, 0) * n.x + m(1, 1) * n.y + m(1, 2) * n.z) * wj;
+            qz += (m(2, 0) * n.x + m(2, 1) * n.y + m(2, 2) * n.z) * wj;
+        }
+    }
+    out.x = v.x * (1 - w) + px * w;
+    out.y = v.y * (1 - w) + py * w;
+    out.z = v.z * (1 - w) + pz * w;
+    const nx = n.x * (1 - w) + qx * w;
+    const ny = n.y * (1 - w) + qy * w;
+    const nz = n.z * (1 - w) + qz * w;
+    const l = Math.hypot(nx, ny, nz) || 1;
+    out.nx = nx / l;
+    out.ny = ny / l;
+    out.nz = nz / l;
+    return out;
+}
+
+/** The vertex nearest a spot (model space) whose normal faces the spot's own way (out of the coat, not the far side). */
+export function nearestVertex(count: number, at: (i: number, out: number[]) => void, normal: ((i: number, out: number[]) => void) | null, p: {x: number; y: number; z: number; nx: number; ny: number; nz: number}): number {
+    let best = -1;
+    let bestD = Infinity;
+    const v = [0, 0, 0];
+    const n = [0, 0, 0];
+    for (let i = 0; i < count; i++) {
+        at(i, v);
+        const d = (v[0] - p.x) ** 2 + (v[1] - p.y) ** 2 + (v[2] - p.z) ** 2;
+        if (d >= bestD) continue;
+        if (normal) {
+            normal(i, n);
+            if (n[0] * p.nx + n[1] * p.ny + n[2] * p.nz < 0.2) continue;
+        }
+        best = i;
+        bestD = d;
+    }
+    return best;
+}

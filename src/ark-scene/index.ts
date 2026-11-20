@@ -99,7 +99,7 @@ import {skipEmptyDraws} from "@/ark-scene/runtime/empty-draws";
 import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {climbClipName, rigBasesFrom, rigSetVersion} from "@/ark-scene/rig-clips";
-import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, halfToFloat, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {waterLevelAt} from "@/ark-scene/water-level";
@@ -188,7 +188,7 @@ import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState}
 import {behaviourProfile, bodyLengthsPerSecond, runFactor, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {attachedOn, tripPhase} from "@/ark-scene/collide/attach";
 import {bodyShape} from "@/ark-scene/collide/bodies";
-import {chooseHost, excursionAt, groundHop, hopArc, hopFlight, hops, hostSurface, hostTier, nightNow, riderOf, spotOf, type GroundHop, type HostFrame, type RiderSpec, type Surface as RideSurface} from "@/ark-scene/riders";
+import {backProfile, chooseHost, excursionAt, nearestVertex, profileSpot, skinVertex, type BackProfile, groundHop, hopArc, hopFlight, hops, hostSurface, hostTier, nightNow, riderOf, spotOf, type GroundHop, type HostFrame, type RiderSpec, type Surface as RideSurface} from "@/ark-scene/riders";
 import {bodyOf as mapBodyOf} from "@/ark-scene/map/species";
 import {CollideLayer} from "@/ark-scene/collide/layer";
 import {doorWalkAt} from "@/ark-scene/collide/routes";
@@ -464,12 +464,11 @@ type RideMemo = {
     pace: number;
     last: {x: number; z: number; t: number} | null;
     /** A flea's time off its host: the slot's window, where it hops about (beside the host as it was then), the point it left from. */
-    off: {start: number; end: number; mid: {x: number; z: number}; from: {x: number; y: number; z: number}; leave: number} | null;
+    off: {start: number; end: number; mid: {x: number; z: number}; from: {x: number; y: number; z: number}; leave: number; floor: (x: number, z: number) => number} | null;
     /** Jumping back on: from where, when (s, shared clock). */
     board: {x: number; y: number; z: number; t0: number} | null;
-    /** On its host last frame (a change of state is never a jump cut while it is watched). */
+    /** On its host last frame (watched, it then keeps that host). */
     on: boolean;
-    seen: boolean;
     surface: RideSurface;
     hop: GroundHop;
 };
@@ -587,6 +586,11 @@ type Entry = {
     ridingOn?: {id: string; x: number; z: number; base: number};
     /** A rider or a hopper (`riders.ts`): its host, when that was chosen, a flea's time off its host, the host's pace. */
     ride?: RideMemo;
+    /** A host with a rider on it: its drawn transform this frame (`rideLate` puts the rider on the coat it is drawn with), and the frame's number. */
+    drawnMatrix?: Matrix4;
+    drawnFrame?: number;
+    /** …and when it is drawn on its rig, the rig and its instance (its clip rows are read back from the instance). */
+    drawnRig?: {rig: RigModel; mesh: InstancedMesh; index: number} | null;
     /** sig-young: its ride is on the water only; whether it rode last frame; where it was drawn; and the get-down or get-up it is easing through. */
     rideWaterOnly?: boolean;
     rideWas?: boolean;
@@ -3215,7 +3219,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         });
         // (One the roster has again, a stand-in brought for its act: its fade gives way at once.)
         if (departing.length) stepDeparting(performance.now() / 1000, nextById);
-        entries = next;
+        // (Riders last: their hosts are drawn first in each frame, `rideLate`.)
+        entries = next.some((e) => riderOf(e.animal.model_slug)) ? [...next.filter((e) => !riderOf(e.animal.model_slug)), ...next.filter((e) => riderOf(e.animal.model_slug))] : next;
         entryById = nextById;
         // (The collisions' bodies and speeds follow the entries' sizes: worked out again.)
         collisions.reset();
@@ -4290,6 +4295,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     /** How far a flea can jump onto a host (m): a long flea jump (Cadiergues et al. 2000: up to about 48 cm). */
     const RIDE_REACH = 0.45;
     const rideGround = (x: number, z: number) => Math.max(heightAt(x, z), 0);
+    /** The floor it hops on: the ground, or (a room's floor, a deck: well off the ground there) the flat at that height. */
+    const floorAt = (y: number) => (x: number, z: number) => {
+        const ground = rideGround(x, z);
+        return Math.abs(ground - y) < 0.12 ? ground : y;
+    };
     const hopSurface = (hop: {x: number; y: number; z: number; hx: number; hz: number}, out: RideSurface): RideSurface => {
         out.x = hop.x;
         out.y = hop.y;
@@ -4304,12 +4314,100 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
     const surfacePose = (sf: RideSurface): Pose => ({x: sf.x, z: sf.z, base: sf.y, yaw: Math.atan2(sf.tx, sf.tz), pitch: 0, roll: 0, afloat: true, surface: {...sf}});
 
+    let rideFrame = 0;
+    const riddenNow = new Set<string>();
+    const rideProfiles = new Map<string, BackProfile | null>();
+    const rideProfile = (slug: string, model: SpeciesModel | undefined): BackProfile | null => {
+        let profile = rideProfiles.get(slug);
+        if (profile !== undefined) return profile;
+        const geometry = (model?.near ?? model?.far)?.geometry;
+        if (!geometry || model?.placeholder) return null;
+        const at = geometry.getAttribute("position");
+        profile = backProfile(at.count, (i) => at.getX(i), (i) => at.getY(i), (i) => at.getZ(i));
+        // (Measured again once the near file is in: the far one has lost its thin parts.)
+        if (model?.near) rideProfiles.set(slug, profile);
+        return profile;
+    };
+    const rideLocal = new Vector3();
+    const rideNormal = new Vector3();
+    const rideAlong = new Vector3();
+    /**
+     * The rider's spot on its host as the host is drawn this frame: its own mesh's back (`backProfile`) under the host's
+     * whole drawn transform (its place, heading, slope, lying down, scale). A sleeper lying on its rig's clip is lowered by
+     * its posture's drop (the clip lowers the mesh, not the transform).
+     */
+    const rideVertex = new Map<string, {vertex: number; at: number}>();
+    const identity12 = [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0];
+    const rideSkin = {x: 0, y: 0, z: 0, nx: 0, ny: 0, nz: 0};
+    const rideLate = (entry: Entry, where: Pose) => {
+        const memo = entry.ride!;
+        const host = memo.host ? findEntry(memo.host) : null;
+        const spec = riderOf(entry.animal.model_slug);
+        if (!host || !spec || host.drawnFrame !== rideFrame || !host.drawnMatrix) return;
+        const drawnRig = host.drawnRig;
+        const clock = reducedMotion ? 0 : worldMs() / 1000;
+        let p: {x: number; y: number; z: number; nx: number; ny: number; nz: number};
+        if (drawnRig) {
+            // On a rig: a vertex of its own mesh near the spot (chosen again as the spot creeps), posed by its bones.
+            const {rig, mesh, index} = drawnRig;
+            const geometry = rig.geometry;
+            const profile = rideProfile(`rig:${host.animal.model_slug}`, {near: {geometry}} as unknown as SpeciesModel);
+            if (!profile) return;
+            const position = geometry.getAttribute("position");
+            const normal = geometry.getAttribute("normal");
+            let chosen = rideVertex.get(entry.animal.id);
+            if (!chosen || chosen.at > clock || clock - chosen.at > 2) {
+                const target = profileSpot(profile, spotOf(entry.animal.id, spec.on, clock));
+                const vertex = nearestVertex(position.count, (i, o) => { o[0] = position.getX(i); o[1] = position.getY(i); o[2] = position.getZ(i); }, normal ? (i, o) => { o[0] = normal.getX(i); o[1] = normal.getY(i); o[2] = normal.getZ(i); } : null, target);
+                if (vertex < 0) return;
+                rideVertex.set(entry.animal.id, (chosen = {vertex, at: clock}));
+            }
+            const i = chosen.vertex;
+            const joints = geometry.getAttribute("arkJoints");
+            const weights = geometry.getAttribute("arkWeights");
+            const a = mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute;
+            const data = rig.data;
+            const stride = rig.bones * 12;
+            // (The locomotion layer's live rows, a negative clip row: its own pose texture's data.)
+            const live = rig.loco?.live.data ?? null;
+            p = skinVertex(
+                {x: position.getX(i), y: position.getY(i), z: position.getZ(i)},
+                normal ? {x: normal.getX(i), y: normal.getY(i), z: normal.getZ(i)} : {x: 0, y: 1, z: 0},
+                [joints.getX(i), joints.getY(i), joints.getZ(i), joints.getW(i)],
+                [weights.getX(i), weights.getY(i), weights.getZ(i), weights.getW(i)],
+                (row, b, k) => (row < -0.5 ? (live ? live[(Math.round(-row) - 1) * stride + Math.round(b) * 12 + k] ?? 0 : identity12[k]) : halfToFloat(data[Math.round(row) * stride + Math.round(b) * 12 + k] ?? 0)),
+                [a.getX(index), a.getY(index), a.getZ(index)],
+                a.getW(index),
+                rideSkin
+            );
+        } else {
+            const model = library.get(host.animal.model_slug);
+            const profile = rideProfile(host.animal.model_slug, model);
+            if (!profile) return;
+            p = profileSpot(profile, spotOf(entry.animal.id, spec.on, clock));
+        }
+        const m = host.drawnMatrix;
+        rideLocal.set(p.x, p.y, p.z).applyMatrix4(m);
+        rideNormal.set(p.nx, p.ny, p.nz).transformDirection(m);
+        rideAlong.set(0, 0, 1).transformDirection(m);
+        rideAlong.addScaledVector(rideNormal, -rideAlong.dot(rideNormal)).normalize();
+        if (spec.on === "belly") {
+            // (A remora hangs under: its back, the disc on its head, to the host's belly.)
+            rideLocal.addScaledVector(rideNormal, Math.max(entry.length * 0.25, 0.01));
+            rideNormal.negate();
+        }
+        where.x = rideLocal.x;
+        where.z = rideLocal.z;
+        where.base = rideLocal.y;
+        where.yaw = Math.atan2(rideAlong.x, rideAlong.z);
+        where.surface = {x: rideLocal.x, y: rideLocal.y, z: rideLocal.z, nx: rideNormal.x, ny: rideNormal.y, nz: rideNormal.z, tx: rideAlong.x, ty: rideAlong.y, tz: rideAlong.z};
+    };
+
     /**
      * A rider on its host, or a hopper hopping (`riders.ts`); null: neither now (it is drawn as before). The host is the
      * first tier's nearest in range of its own spot while one is drawn; once on, it stays on that host while the host is
      * drawn. A flea jumps off a host that keeps still now and then, hops about beside it and jumps back on (or on as the
-     * host gets up, if still within a jump). Whatever has no jump to show it (on or off a host out of sight, a chicken
-     * mite at dusk) changes only while it is not the one chosen or followed.
+     * host gets up, if still within a jump). Chosen or followed while on its host, it keeps that host.
      */
     const ridePose = (entry: Entry, time: number): Pose | null => {
         const slug = entry.animal.model_slug;
@@ -4321,13 +4419,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const place = entry.place;
         const epoch = worldMs() / 1000;
         const still = reducedMotion;
-        const memo = (entry.ride ??= {host: null, checked: -Infinity, pace: 0, last: null, off: null, board: null, on: false, seen: false, surface: {x: 0, y: 0, z: 0, nx: 0, ny: 1, nz: 0, tx: 0, ty: 0, tz: 1}, hop: {x: 0, y: 0, z: 0, hx: 0, hz: 1, air: -1, n: 0}});
+        const memo = (entry.ride ??= {host: null, checked: -Infinity, pace: 0, last: null, off: null, board: null, on: false, surface: {x: 0, y: 0, z: 0, nx: 0, ny: 1, nz: 0, tx: 0, ty: 0, tz: 1}, hop: {x: 0, y: 0, z: 0, hx: 0, hz: 1, air: -1, n: 0}});
         const watched = selectedId === id || followId === id;
         const L = Math.max(entry.trueLength, 0.0005);
         // Its host now, if any.
         let host: Entry | null = null;
         if (spec) {
-            const hostOk = (e: Entry | null | undefined): e is Entry => Boolean(e && e.middle && !e.held && !e.ghost && !e.act?.hidden);
+            // (A host of the roster, drawn this frame or not: one just behind the camera, or not yet drawn as the view arrives, still counts.)
+            const hostOk = (e: Entry | null | undefined): e is Entry => Boolean(e && entryById.get(e.animal.id) === e && !e.held && !e.ghost && !e.act?.hidden);
             if (spec.range === null) host = place.host ? findEntry(place.host.id) : null;
             else if (spec.night && !nightNow(hoursNow())) host = null;
             else {
@@ -4339,25 +4438,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     const candidates: Array<{id: string; tier: number; x: number; y: number; z: number}> = [];
                     for (const c of rideHostsFor(slug, spec)) {
                         if (!hostOk(c.entry)) continue;
-                        const m = c.entry.middle!;
-                        candidates.push({id: c.entry.animal.id, tier: c.tier, x: m.x, y: m.y - c.entry.drawnHeight * 0.5, z: m.z});
+                        const e = c.entry;
+                        const at = e.middle ? {x: e.middle.x, y: e.middle.y - e.drawnHeight * 0.5, z: e.middle.z} : e.sched?.pose ? {x: e.sched.pose.x, y: e.sched.pose.y, z: e.sched.pose.z} : {x: e.place.x, y: e.place.ground, z: e.place.z};
+                        candidates.push({id: e.animal.id, tier: c.tier, ...at});
                     }
                     const chosen = chooseHost(home, spec.range, candidates, null);
                     host = chosen ? findEntry(chosen) : null;
                 }
             }
-            if (!hostOk(host)) host = null;
-            // (Watched, nothing changes without a jump to show it: on its host it stays with that host while it is drawn;
-            // off any host (and not on a hop off one) it does not appear on one.)
-            if (watched && memo.seen) {
-                if (memo.on) {
-                    const was = memo.host ? findEntry(memo.host) : null;
-                    host = hostOk(was) ? was : null;
-                } else if (!memo.off) host = null;
+            // (`__arkRidersFree = true`: the harness's hop strip, every rider off its host.)
+            if (!hostOk(host) || (globalThis as {__arkRidersFree?: boolean}).__arkRidersFree) host = null;
+            // (Watched and on its host, it stays with that host while the host is aboard: never moved to another one.)
+            if (watched && memo.on) {
+                const was = memo.host ? findEntry(memo.host) : null;
+                if (hostOk(was)) host = was;
             }
             memo.host = host ? host.animal.id : null;
         }
-        memo.seen = true;
         if (host && spec) {
             const {frame, at} = hostFrameOf(host, time);
             // Its host's pace (a flea jumps off one that keeps still, and back on as it gets up).
@@ -4379,13 +4476,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 onHost.nz = -onHost.nz;
             }
             const ridden = (): Pose => {
+                riddenNow.add(host!.animal.id);
                 entry.riding = true;
                 entry.ridingOn = {id: host!.animal.id, x: at.x, z: at.z, base: at.base};
                 memo.on = true;
                 return surfacePose(onHost);
             };
             // A flea's time off its host (never with reduced motion).
-            if (spec.excursions && hopper && !still) {
+            // (`__arkRidersStay = true`: the harness's pictures on the host, no time off it.)
+            if (spec.excursions && hopper && !still && !(globalThis as {__arkRidersStay?: boolean}).__arkRidersStay) {
                 const window = excursionAt(id, epoch);
                 if (!memo.off && window && epoch >= window.start && epoch - window.start < 1.5 && memo.pace < 0.08 && memo.on) {
                     // Off beside the host, where a hop or two from its side puts it, on the ground.
@@ -4393,13 +4492,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     const sx = frame.tz * side;
                     const sz = -frame.tx * side;
                     const out = frame.radius + L * 90;
-                    memo.off = {start: window.start, end: window.end, mid: {x: frame.x + sx * out, z: frame.z + sz * out}, from: {x: onHost.x, y: onHost.y, z: onHost.z}, leave: 0};
+                    memo.off = {start: window.start, end: window.end, mid: {x: frame.x + sx * out, z: frame.z + sz * out}, from: {x: onHost.x, y: onHost.y, z: onHost.z}, leave: 0, floor: floorAt(frame.y)};
                     memo.board = null;
                 }
                 const off = memo.off;
                 if (off) {
                     const t = epoch - off.start;
-                    const first = groundHop(id, off.mid, L, 0, rideGround, memo.hop, 0);
+                    const first = groundHop(id, off.mid, L, 0, off.floor, memo.hop, 0);
                     const firstAt = {x: first.x, y: first.y, z: first.z};
                     off.leave ||= hopFlight(Math.hypot(firstAt.x - off.from.x, firstAt.z - off.from.z), firstAt.y - off.from.y);
                     if (t < off.leave) {
@@ -4412,7 +4511,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                         const dl = Math.hypot(dx, dz) || 1;
                         return surfacePose(hopSurface({x: p.x, y: p.y, z: p.z, hx: dx / dl, hz: dz / dl}, memo.surface));
                     }
-                    const ground = memo.board ? null : groundHop(id, off.mid, L, t - off.leave, rideGround, memo.hop, 0);
+                    const ground = memo.board ? null : groundHop(id, off.mid, L, t - off.leave, off.floor, memo.hop, 0);
                     if (ground && ground.air < 0) {
                         // Back on: its time is up, or its host gets up; only if it is still within a jump (else it waits on the ground).
                         const near = Math.hypot(onHost.x - ground.x, onHost.z - ground.z);
@@ -4453,12 +4552,15 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         memo.last = null;
         // No host: a hopper hops about its own spot on the ground (only where that spot is on the ground).
         if (!hopper) return null;
-        if (Math.abs(place.ground - rideGround(place.x, place.z)) > 0.25) return null;
-        const at = groundHop(id, {x: place.x, z: place.z}, L, still ? 0 : epoch, rideGround, memo.hop);
+        // (Only where its own spot faces up: a floor, the ground, a step; not a wall or a stem.)
+        const home = place.micro ? surfacePoint(place.micro, entry.animal.zone, 0) : {x: place.x, y: place.ground, z: place.z, ny: 1};
+        if (home.ny < 0.7) return null;
+        const floor = floorAt(home.y);
+        const at = groundHop(id, {x: home.x, z: home.z}, L, still ? 0 : epoch, floor, memo.hop);
         if (still) {
-            at.x = place.x;
-            at.z = place.z;
-            at.y = rideGround(place.x, place.z);
+            at.x = home.x;
+            at.z = home.z;
+            at.y = floor(home.x, home.z);
         }
         return surfacePose(hopSurface(at, memo.surface));
     };
@@ -5631,6 +5733,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         scheduledCount = 0;
         const night = lighting.daylight.night;
         const candidates: Candidate[] = [];
+        // Riders (`riders.ts`): this frame's number, and the hosts ridden now (their drawn transforms are kept for `rideLate`).
+        rideFrame++;
+        riddenNow.clear();
         // Part B: animals past the render distance this frame, and their markers in the map view.
         const streamDots: FindDot[] = [];
         streamSkipped = 0;
@@ -5984,6 +6089,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
         for (const candidate of candidates) {
             const {entry, model, pose: where} = candidate;
+            // A rider on its host: on the coat its host was drawn with this frame (hosts are drawn first: riders end the roster).
+            if (entry.ride?.on) rideLate(entry, where);
             // (Grounding: the pose's own base before the offsets below, an idle's lift, a sleeper's drop, a den, a gait's bob.)
             const poseBase = where.base;
             const level = entry.level;
@@ -6262,6 +6369,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // Powers you can see: its body down into cover, crouched, on its side, or up off the ground (`power-show.ts` drop).
             if (entry.power?.drop && !reducedMotion) position.y -= entry.power.drop;
             matrix.compose(position, rotation, scale.set(s, s, s));
+            if (riddenNow.has(animal.id)) {
+                (entry.drawnMatrix ??= new Matrix4()).copy(matrix);
+                entry.drawnFrame = rideFrame;
+                entry.drawnRig = rig && state && mesh ? {rig, mesh, index} : null;
+            }
             if (rig && state && level === "near") {
                 // The locomotion layer (`locomotion/`, lane L1): gaits with planted feet, foot IK, the body's motion and
                 // the tail's, posed on the CPU into the species' live pose row (the baked rows when it is off).
