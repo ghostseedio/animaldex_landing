@@ -774,7 +774,24 @@
             "reasonHunted": "Rovdjur här: {predators}",
             "reasonHunger": "Hunger: ingen måltid på sistone",
             "reasonSkill": "Utsläppt: lär sig fortfarande hitta föda",
-            "reasonSafe": "Jaktskydd till Ark-dag {day}"
+            "reasonSafe": "Jaktskydd till Ark-dag {day}",
+            "stageYoung": "Ung",
+            "stageAdult": "Vuxen",
+            "stageOld": "Gammal",
+            "ageIs": "{age} gammal",
+            "ageIsAbout": "omkring {age} gammal",
+            "ageIsAtLeast": "minst {age} gammal",
+            "ageMonths": "{months} Ark-månader",
+            "ageMonth": "1 Ark-månad",
+            "chanceTitle": "Chans att leva ytterligare ett Ark-år",
+            "chanceMain": "Huvudorsak: {reason}",
+            "chanceHow": "Så räknas det ut: dess ålder mot artens livslängd, de rovdjur som kan jaga dess art i dess område och hunger, utifrån det Ark har gjort offentligt. En uppskattning som ändras när Ark ändras, inget löfte.",
+            "chanceUp": "{change} högre än för en dag sedan",
+            "chanceDown": "{change} lägre än för en dag sedan",
+            "chanceSteady": "Oförändrad sedan för en dag sedan",
+            "thriveWhy": "{band}: hålls i form av ägarens genomförda steg; det avtar om de upphör.",
+            "powerEarn": "Att tjäna dess Kraft ökar dess chans att överleva",
+            "powerWorking": "Dess Kraft verkar: rovdjuren hoppar över det till förmån för svagare"
         }
     },
     "talkPage": {

@@ -774,7 +774,24 @@
             "reasonHunted": "טורפים כאן: {predators}",
             "reasonHunger": "רעב: אין ארוחה לאחרונה",
             "reasonSkill": "שוחררה: עדיין לומדת למצוא מזון",
-            "reasonSafe": "הגנה מפני ציד עד יום Ark {day}"
+            "reasonSafe": "הגנה מפני ציד עד יום Ark {day}",
+            "stageYoung": "צעיר",
+            "stageAdult": "בוגר",
+            "stageOld": "זקן",
+            "ageIs": "גיל: {age}",
+            "ageIsAbout": "גיל: בערך {age}",
+            "ageIsAtLeast": "גיל: לפחות {age}",
+            "ageMonths": "{months} חודשי Ark",
+            "ageMonth": "חודש Ark אחד",
+            "chanceTitle": "הסיכוי לחיות עוד שנת Ark",
+            "chanceMain": "הסיבה העיקרית: {reason}",
+            "chanceHow": "כך זה מחושב: גילו ביחס לתוחלת החיים של מינו, הטורפים שיכולים לצוד את מינו בתחומו, והרעב, לפי מה ש-Ark פרסמה לציבור. הערכה שמשתנה כש-Ark משתנה, לא הבטחה.",
+            "chanceUp": "עלייה של {change} לעומת לפני יום",
+            "chanceDown": "ירידה של {change} לעומת לפני יום",
+            "chanceSteady": "ללא שינוי לעומת לפני יום",
+            "thriveWhy": "{band}: נשמר בכושר בזכות הצעדים שבעליו השלים; זה דועך אם הם נפסקים.",
+            "powerEarn": "הרווחת הכוח שלו מעלה את סיכויי ההישרדות שלו",
+            "powerWorking": "הכוח שלו פועל: טורפים מדלגים עליו לטובת החלשים ממנו"
         }
     },
     "talkPage": {

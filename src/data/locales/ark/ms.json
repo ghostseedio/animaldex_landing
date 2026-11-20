@@ -774,7 +774,24 @@
             "reasonHunted": "Pemangsa di sini: {predators}",
             "reasonHunger": "Lapar: tiada makanan baru-baru ini",
             "reasonSkill": "Dilepaskan: masih belajar mencari makanan",
-            "reasonSafe": "Perlindungan daripada pemburuan sehingga hari Ark ke-{day}"
+            "reasonSafe": "Perlindungan daripada pemburuan sehingga hari Ark ke-{day}",
+            "stageYoung": "Muda",
+            "stageAdult": "Dewasa",
+            "stageOld": "Tua",
+            "ageIs": "berumur {age}",
+            "ageIsAbout": "berumur kira-kira {age}",
+            "ageIsAtLeast": "berumur sekurang-kurangnya {age}",
+            "ageMonths": "{months} bulan Ark",
+            "ageMonth": "1 bulan Ark",
+            "chanceTitle": "Peluang hidup satu tahun Ark lagi",
+            "chanceMain": "Sebab utama: {reason}",
+            "chanceHow": "Cara ia dikira: umurnya berbanding jangka hayat spesiesnya, pemangsa yang boleh memburu spesiesnya di kawasannya, dan kelaparan, daripada apa yang telah diumumkan Ark. Anggaran yang berubah apabila Ark berubah, bukan janji.",
+            "chanceUp": "Naik {change} berbanding sehari lalu",
+            "chanceDown": "Turun {change} berbanding sehari lalu",
+            "chanceSteady": "Sama berbanding sehari lalu",
+            "thriveWhy": "{band}: kekal baik berkat langkah yang dilakukan pemiliknya; pudar jika langkah itu berhenti.",
+            "powerEarn": "Memperoleh Kuasanya meningkatkan peluangnya untuk terus hidup",
+            "powerWorking": "Kuasanya berfungsi: pemangsa melepasinya demi yang lebih lemah"
         }
     },
     "talkPage": {

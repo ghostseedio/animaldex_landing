@@ -774,7 +774,24 @@
             "reasonHunted": "Prădători aici: {predators}",
             "reasonHunger": "Foame: nicio masă recentă",
             "reasonSkill": "Eliberat: încă învață să găsească hrană",
-            "reasonSafe": "Protecție împotriva vânătorii până în ziua {day} din Ark"
+            "reasonSafe": "Protecție împotriva vânătorii până în ziua {day} din Ark",
+            "stageYoung": "Tânăr",
+            "stageAdult": "Adult",
+            "stageOld": "Bătrân",
+            "ageIs": "{age}",
+            "ageIsAbout": "aproximativ {age}",
+            "ageIsAtLeast": "cel puțin {age}",
+            "ageMonths": "luni în Ark: {months}",
+            "ageMonth": "1 lună în Ark",
+            "chanceTitle": "Șansa de a mai trăi un an în Ark",
+            "chanceMain": "Motivul principal: {reason}",
+            "chanceHow": "Cum se calculează: vârsta lui față de durata de viață a speciei, prădătorii care pot vâna specia lui în zona sa și foamea, pe baza a ceea ce Ark a făcut public. O estimare care se schimbă când se schimbă Ark, nu o promisiune.",
+            "chanceUp": "Cu {change} mai mult decât acum o zi",
+            "chanceDown": "Cu {change} mai puțin decât acum o zi",
+            "chanceSteady": "Neschimbat față de acum o zi",
+            "thriveWhy": "{band}: este ținut în formă de pașii făcuți de stăpânul lui; se estompează dacă aceștia se opresc.",
+            "powerEarn": "Obținerea Puterii lui îi crește șansa de a supraviețui",
+            "powerWorking": "Puterea lui funcționează: prădătorii îl ocolesc în favoarea celor mai slabi"
         }
     },
     "talkPage": {

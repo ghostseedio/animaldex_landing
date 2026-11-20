@@ -1,12 +1,14 @@
 /**
  * "Estimated time left" on the Ark's info panel (owner decision 389, `docs/ark/audits/ecosystem-audit-2026-11-18.md`
- * sections 2.1 and 2.2): for an animal at risk, a RANGE of Ark days (or years) it is likely to have, and the reasons
- * behind it. Pure and client-safe; loaded lazily, only once an animal at risk is on screen.
+ * sections 2.1 and 2.2): a RANGE of Ark days, months or years an animal is likely to have, and the reasons behind it,
+ * for EVERY animal (owner 2026-11-20, lane ark-age-timeleft), beside its AGE and life stage (`arkLifeOutlook`: one
+ * compact block with a life bar, born, now, likely end). Pure and client-safe; loaded lazily, once an animal is on screen.
  *
  * What it is made of: probabilities only, from public, already-released facts.
  *
  * - It reads the public snapshot's fields of the animal and of the animals around it (`ARK_TIME_LEFT_ANIMAL_FIELDS`,
- *   `ARK_TIME_LEFT_WORLD_FIELDS`: all of them in the released `voyage_public` read, or marked PROPOSED below) and species
+ *   `ARK_TIME_LEFT_WORLD_FIELDS`: all of them in the released `voyage_public` read, live since AnimalDex migration
+ *   20261203150000, which publishes `voyage.hunt_grace`, `lifespan_days_hi` and a hunter's `hunt_interval_days`) and species
  *   facts (what eats what: `/api/ark/food-chain`; body size: the catalogue's stats). It NEVER reads, rebuilds or
  *   guesses the server's random draws (an animal's drawn death day, a hunt's draw, the seed), the next hunt of any
  *   predator, a decided-but-unreleased event or the launch ramp's per-animal hash: the engine's `naturalDeathDay`,
@@ -14,14 +16,16 @@
  *   outside the lists is touched and that a planted secret changes nothing.
  * - Each number is the engine's own (`ark-time-left-constants.ts`, checked against the engine's source by the test).
  *
- * Who is "at risk" (any one is enough; the estimate is shown only then):
+ * Who is "at risk" (any one is enough; it sets the block's warm tone and what the reasons say; the estimate itself
+ * is shown for everyone):
  * - old: the read's `condition` is "old" (the server's own flag, 4/5 of the wild lifespan gone), or the age the engine
  *   counts is at that share of the lifespan;
  * - hunted: the animal lives in the wild ecology (not kept: a house, a farm or the zoo are fed by their keepers), at
  *   least `PREY_FLOOR` (3) of its kind are in its hunting region (below that the engine never hunts the kind), a
  *   predator of its kind lives in that region, and the hunting protection has ended (nothing hunts it before that);
  * - starving: the read's `condition` is "hungry" and its kind eats catalogue animals (only such a kind can starve:
- *   herbivores and ambient-fed animals never do).
+ *   herbivores and ambient-fed animals never do), and it is not kept: a house, a farm and the zoo are outside the wild
+ *   ecology both ways (the engine's `keptFed`), so a kept animal's only way out is old age.
  *
  * The model: three independent ways to die, the first one wins.
  * - Age (engine: a death age drawn uniformly between the wild lifespan's two ends, `rules.ts` naturalDeathDay; we use
@@ -32,10 +36,11 @@
  * - Hunger (only a hungry predator): it starves after `starveDays` of continuous hunger and we do not know how long it
  *   has been hungry, so what is left is uniform between 0 and that many days.
  * - Being hunted: each predator kind in its region catches about once per meal interval per predator (the
- *   engine's allometric interval from the predator's mass; the class, endotherm or not, is not in the read, so both
- *   are tried), and takes one of the animals it can take in that region: the chance it is this one is 1 / (those
- *   animals in the region, among kinds above the floor). Misses cost one 15-Ark-minute step. The hazard starts when the
- *   hunting protection ends (the launch grace and its ramp: PROPOSED `voyage.hunt_grace`; with no figure published the
+ *   engine's allometric interval from the predator's mass, or the interval the read publishes for a hunter; the class,
+ *   endotherm or not, is not always in the read, so both are tried), and takes one of the animals it can take in that
+ *   region: the chance it is this one is 1 / (those animals in the region, among kinds above the floor). Misses cost one
+ *   15-Ark-minute step. The hazard starts when the hunting protection ends (the launch grace and its ramp, `voyage.hunt_grace`,
+ *   published by the read: only its END and ramp length, never an animal's own start; with no figure published the
  *   hunting factor is OFF, never assumed).
  *   The range is the 25th percentile of the time to the first of these under the harsher bounds to the 75th percentile
  *   under the kinder ones (the middle half of the likely outcomes).
@@ -46,11 +51,15 @@
  * hook once the server publishes it (`safe_until_ark_day`).
  */
 
-import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
+import type {ArkAnimal, ArkSnapshot, ArkThrive} from "@/ark-scene/types";
 import {arkStats, massFromSize} from "@/ark-scene/stats";
 import {arkHuntingRegion} from "@/lib/ark-food-chain";
+import {arkDirection} from "@/lib/ark-languages";
 import {
     ADULT_AGE,
+    ARK_DAYS_PER_REAL_DAY,
+    HUMAN_GROWN_DAYS,
+    HUMAN_SPECIES_IDS,
     HUNT_SUCCESS,
     LIFESPAN_HI_OVER_LO,
     MEAL_INTERVAL,
@@ -63,8 +72,9 @@ import {
 // MARK: What may be read
 
 /**
- * The animal fields this module may read (the snapshot's `animals[]`). PROPOSED (not in the read yet, absent today and
- * then simply not used): `lifespan_days_hi`, `hunt_interval_days`.
+ * The animal fields this module may read (the snapshot's `animals[]`). `lifespan_days_hi` and `hunt_interval_days` are
+ * published by the live read (AnimalDex migration 20261203150000) and optional: an older server lacks them and they are
+ * then simply not used.
  */
 export const ARK_TIME_LEFT_ANIMAL_FIELDS = [
     "species_profile_id",
@@ -80,16 +90,18 @@ export const ARK_TIME_LEFT_ANIMAL_FIELDS = [
     "lifespan_estimate",
     "stats",
     "lifespan_days_hi",
-    "hunt_interval_days"
+    "hunt_interval_days",
+    "scientific_name",
+    "thrive"
 ] as const;
 
-/** The world fields it may read: the snapshot's Ark day, its animals, and (PROPOSED) the hunting protection. */
+/** The world fields it may read: the snapshot's Ark day, its animals, and the hunting protection's end and ramp. */
 export const ARK_TIME_LEFT_WORLD_FIELDS = ["arkDay", "animals", "huntGrace"] as const;
 
-/** The snapshot's own top-level fields `arkTimeLeftWorldOf` reads (`hunt_grace` is PROPOSED). */
+/** The snapshot's own top-level fields `arkTimeLeftWorldOf` reads (`hunt_grace`: the read's `voyage.hunt_grace`, live, optional). */
 export const ARK_TIME_LEFT_SNAPSHOT_FIELDS = ["ark_day", "animals", "hunt_grace"] as const;
 
-/** Proposed, not in today's read: the fields above that only a future server sends. */
+/** Optional: the fields above that a server older than migration 20261203150000 does not send (then not used, never guessed). */
 export const ARK_TIME_LEFT_PROPOSED = ["lifespan_days_hi", "hunt_interval_days", "huntGrace"] as const;
 
 export type ArkTimeLeftAnimal = Pick<
@@ -108,7 +120,18 @@ export type ArkTimeLeftAnimal = Pick<
     | "stats"
     | "lifespan_days_hi"
     | "hunt_interval_days"
->;
+> &
+    Partial<Pick<ArkAnimal, "scientific_name" | "thrive">>;
+
+/** Whether it is a human (a Homo sapiens of a human capture): outside the food web, and with no old age unless the read gives it a lifespan. */
+export function arkIsHuman(animal: Pick<ArkTimeLeftAnimal, "species_profile_id" | "kind_species_profile_id" | "model_slug" | "scientific_name">): boolean {
+    return (
+        HUMAN_SPECIES_IDS.includes(animal.species_profile_id.toLowerCase()) ||
+        (animal.kind_species_profile_id != null && HUMAN_SPECIES_IDS.includes(animal.kind_species_profile_id.toLowerCase())) ||
+        animal.model_slug === "human" ||
+        /^homo\s+sapiens/i.test(animal.scientific_name ?? "")
+    );
+}
 
 export type ArkTimeLeftWorld = {
     /** The snapshot's Ark day (`ark_day`). */
@@ -116,7 +139,7 @@ export type ArkTimeLeftWorld = {
     /** The snapshot's animals around it. */
     animals: readonly ArkTimeLeftAnimal[];
     /**
-     * PROPOSED (`voyage.hunt_grace`): the Ark day the launch grace ends (no animal is hunted before it) and the days over
+     * `voyage.hunt_grace` (live): the Ark day the launch grace ends (no animal is hunted before it) and the days over
      * which hunting then ramps in (each animal's own start is inside, by a hash we do not read). Absent: unknown, and the
      * hunting factor is off.
      */
@@ -204,6 +227,12 @@ export function arkAdultAgeDays(lowDays: number, highDays: number): number {
     return clamp(ADULT_AGE.lifespanFraction * ((lowDays + highDays) / 2), ADULT_AGE.minDays, ADULT_AGE.maxDays);
 }
 
+/** The engine's `adultAgeDays` for a kind with a stored lifespan, or (null) without one: the default of a year. */
+export function arkAdultAgeFor(lowDays: number | null, highDays: number | null): number {
+    if (lowDays === null || highDays === null) return clamp(ADULT_AGE.defaultDays, ADULT_AGE.minDays, ADULT_AGE.maxDays);
+    return arkAdultAgeDays(lowDays, highDays);
+}
+
 /** The engine's `starveDays` for a body mass: 14 x kg^0.25, from 7 to 120 days. */
 export function arkStarveDays(massKg: number): number {
     return clamp(Math.round(STARVE.baseDays * massKg ** STARVE.massExponent), STARVE.minDays, STARVE.maxDays);
@@ -263,17 +292,31 @@ function quantileDays(survival: Curve, q: number): number {
 
 // MARK: The factors
 
-type AgeFactor = {pess: Curve; opt: Curve; reason: ArkTimeLeftReason; lowDays: number; highDays: number; ageDays: number; sinceBornDays: number; assumed: boolean};
+/** What an animal's age is made of, from the snapshot's own fields: its lifespan (lower end, upper end if published) and its days. */
+type AgeParts = {low: number | null; published: number | null; highMid: number | null; adultDays: number; sinceBornDays: number; ageDays: number};
+
+/**
+ * The age the engine counts (`effectiveBirth`: an arrival counts as grown on arrival, `adultAgeDays` older than the days
+ * it has been aboard; the young are counted from their born day), or null when the read has no born day or no Ark day.
+ */
+function ageParts(animal: ArkTimeLeftAnimal, arkDay: number | null): AgeParts | null {
+    if (!finite(animal.born_ark_day) || arkDay === null) return null;
+    const low = finite(animal.lifespan_days) && animal.lifespan_days > 0 ? animal.lifespan_days : null;
+    const published = low !== null && finite(animal.lifespan_days_hi) && animal.lifespan_days_hi >= low ? animal.lifespan_days_hi : null;
+    const highMid = low === null ? null : published ?? low * LIFESPAN_HI_OVER_LO.median;
+    // A human is grown at 18 Ark years (the server's courtship rule), whatever the engine's default for a kind with no lifespan.
+    const adultDays = arkIsHuman(animal) ? HUMAN_GROWN_DAYS : arkAdultAgeFor(low, highMid);
+    const sinceBornDays = Math.max(arkDay - animal.born_ark_day, 0);
+    return {low, published, highMid, adultDays, sinceBornDays, ageDays: sinceBornDays + (animal.origin === "arrived" ? adultDays : 0)};
+}
+
+type AgeFactor = {pess: Curve; opt: Curve; mid: Curve; reason: ArkTimeLeftReason; lowDays: number; highDays: number; ageDays: number; sinceBornDays: number; assumed: boolean};
 
 /** Age against the wild lifespan, or null when the read has no lifespan or no born day. */
 function ageFactor(animal: ArkTimeLeftAnimal, arkDay: number | null): AgeFactor | null {
-    const low = animal.lifespan_days;
-    if (!finite(low) || low <= 0 || !finite(animal.born_ark_day) || arkDay === null) return null;
-    const published = finite(animal.lifespan_days_hi) && animal.lifespan_days_hi >= low ? animal.lifespan_days_hi : null;
-    const highMid = published ?? low * LIFESPAN_HI_OVER_LO.median;
-    const adult = animal.origin === "arrived" ? arkAdultAgeDays(low, highMid) : 0;
-    const sinceBorn = Math.max(arkDay - animal.born_ark_day, 0);
-    const age = sinceBorn + adult;
+    const parts = ageParts(animal, arkDay);
+    if (!parts || parts.low === null || parts.highMid === null) return null;
+    const {low, published, highMid, ageDays: age, sinceBornDays: sinceBorn} = parts;
     const curve = (high: number): Curve => {
         const x = Math.max(low - age, 0);
         const y = Math.max(high - age, x + MIN_SPAN_DAYS);
@@ -284,6 +327,8 @@ function ageFactor(animal: ArkTimeLeftAnimal, arkDay: number | null): AgeFactor 
         // The harsher bound: the shorter upper end; the kinder: the longer (only when the upper end is assumed).
         pess: curve(published ?? low * LIFESPAN_HI_OVER_LO.low),
         opt: curve(published ?? low * LIFESPAN_HI_OVER_LO.high),
+        // The middle: the published upper end, else the middle of the engine's stored spread (the chance's own curve).
+        mid: curve(highMid),
         reason: {kind: "age", lifespanLowDays: low, lifespanHighDays: highMid, estimate: animal.lifespan_estimate === true || assumed},
         lowDays: low,
         highDays: highMid,
@@ -293,28 +338,128 @@ function ageFactor(animal: ArkTimeLeftAnimal, arkDay: number | null): AgeFactor 
     };
 }
 
+// MARK: Age and life stage
+
+/** Where an animal is in its life: young (not yet grown), grown, or old (the read's `old`, or the same share of its lifespan gone). */
+export type ArkLifeStage = "young" | "adult" | "old";
+
+export type ArkAge = {
+    /** The age the engine counts, in Ark days (`effectiveBirth`). */
+    ageDays: number;
+    /** The Ark days since it was born or came aboard. */
+    sinceBornDays: number;
+    /** When it counts as grown (`adultAgeDays`). */
+    adultAgeDays: number;
+    /** An arrival: counted grown on arrival, so its age is the engine's rule, not a birthday: said "about". */
+    assumed: boolean;
+    /**
+     * A human arrival: only known to be grown (18 Ark years), never guessed (not from its photo or anything else), so its age
+     * is a floor, the grown age plus the days aboard: said "at least".
+     */
+    atLeast: boolean;
+    stage: ArkLifeStage;
+};
+
+/**
+ * An animal's age and life stage from the released facts only (its born or boarded Ark day, its origin, its kind's
+ * lifespan, the read's `condition`): the same `effectiveBirth` rule the estimate uses. Null when the read has no born
+ * day or no Ark day. "Old" is the read's own flag, or the engine's earliest old (`oldLifeFrac` of the lower end of the
+ * lifespan gone, counted from the same effective birth); never the animal's own drawn death day, which is not read.
+ */
+export function arkAgeOf(animal: ArkTimeLeftAnimal, arkDay: number | null): ArkAge | null {
+    const parts = ageParts(animal, arkDay);
+    if (!parts) return null;
+    const old = animal.condition === "old" || (parts.low !== null && parts.ageDays >= OLD_LIFE_FRACTION * parts.low);
+    return {
+        ageDays: parts.ageDays,
+        sinceBornDays: parts.sinceBornDays,
+        adultAgeDays: parts.adultDays,
+        assumed: animal.origin === "arrived",
+        atLeast: animal.origin === "arrived" && arkIsHuman(animal),
+        stage: old ? "old" : parts.ageDays < parts.adultDays ? "young" : "adult"
+    };
+}
+
 type HuntFactor = {
     pess: Curve;
     opt: Curve;
+    /** The middle (the chance's own curve): the mean of the two hazards, the start spread evenly over the ramp (the public length of it, never an animal's own start). */
+    mid: Curve;
     predators: Array<{name: string; count: number; hazard: number}>;
     startsInDays: number;
     classTried: boolean;
+    /** Its place in the order its kind is taken in (see `victimRank`). */
+    rank: VictimRank;
 };
+
+/**
+ * Where an animal stands among the animals of its kind in its hunting region, in the order a predator takes them (the
+ * engine's `rankPrey`, `thrive.ts`): `below` of them are taken before it, `group` (itself included) cannot be told apart
+ * from public facts, `n` are in the pool. `thriveKnown`: every one of them carries its thrive band, so the order is the
+ * band's (ordinary, then good, then prime), the young and the old before prime-age adults within a band; the within-band
+ * order by condition is not public, so those tied are one group. Without the bands the engine's own victim rule
+ * ("youngest") orders them by their born day.
+ */
+export type VictimRank = {below: number; group: number; n: number; thriveKnown: boolean};
+
+const BAND_RANK: Record<"ordinary" | "good" | "prime", number> = {ordinary: 0, good: 1, prime: 2};
+
+export function victimRank(animal: ArkTimeLeftAnimal, pool: readonly ArkTimeLeftAnimal[], arkDay: number | null): VictimRank {
+    const thriveKnown = pool.every((other) => other.thrive != null);
+    // Lower is taken sooner. Band, then young-or-old before a prime-age adult; or the youngest first.
+    const key = (a: ArkTimeLeftAnimal): number => {
+        if (!thriveKnown) return -(finite(a.born_ark_day) ? a.born_ark_day : 0);
+        const stage = arkAgeOf(a, arkDay)?.stage;
+        return BAND_RANK[a.thrive ?? "ordinary"] * 2 + (stage === "adult" ? 1 : 0);
+    };
+    const mine = key(animal);
+    let below = 0;
+    let group = 0;
+    for (const other of pool) {
+        const k = key(other);
+        if (k < mine) below += 1;
+        else if (k === mine) group += 1;
+    }
+    return {below, group: Math.max(group, 1), n: pool.length, thriveKnown};
+}
+
+/** The chance a Poisson count with mean `mu` is below `r` (r >= 1): the chance the r-th catch has not come yet. */
+export function poissonBelow(r: number, mu: number): number {
+    if (!(mu > 0)) return 1;
+    if (r > mu + 12 * Math.sqrt(mu) + 20) return 1;
+    if (mu > 60) {
+        // The normal approximation with a continuity correction (the Abramowitz-Stegun erf).
+        const z = (r - 0.5 - mu) / Math.sqrt(mu) / Math.SQRT2;
+        const x = Math.abs(z);
+        const t = 1 / (1 + 0.3275911 * x);
+        const erf = 1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-x * x);
+        return Math.min(1, Math.max(0, 0.5 * (1 + (z < 0 ? -erf : erf))));
+    }
+    let term = Math.exp(-mu);
+    let sum = term;
+    for (let j = 1; j < r; j++) {
+        term *= mu / j;
+        sum += term;
+    }
+    return Math.min(1, sum);
+}
 
 function hunters(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld, facts: ArkTimeLeftFacts): HuntFactor | null {
     const grace = world.huntGrace;
-    if (!grace || !finite(world.arkDay) || !finite(grace.endsArkDay)) return null;
+    if (!grace || !finite(world.arkDay) || !finite(grace.endsArkDay) || arkIsHuman(animal)) return null;
     const region = arkTimeLeftRegion(animal);
     if (region === null || !facts.predators.length) return null;
     const own = arkTimeLeftKind(animal);
     // The pool by kind in its region (kept animals are out of it); its own kind must stand at or above the floor.
     const pool = new Map<string, number>();
     const predatorAnimals = new Map<string, ArkTimeLeftAnimal[]>();
+    const ownAnimals: ArkTimeLeftAnimal[] = [];
     const wanted = new Set(facts.predators.map((p) => p.id.toLowerCase()));
     for (const other of world.animals) {
         if (arkTimeLeftRegion(other) !== region) continue;
         const kind = arkTimeLeftKind(other);
         pool.set(kind, (pool.get(kind) ?? 0) + 1);
+        if (kind === own) ownAnimals.push(other);
         if (wanted.has(kind)) {
             const list = predatorAnimals.get(kind) ?? [];
             list.push(other);
@@ -366,9 +511,27 @@ function hunters(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld, facts: ArkT
     const startHarsh = left(grace.endsArkDay);
     const startKind = left(grace.endsArkDay + Math.max(grace.rampArkDays, 0));
     rows.sort((a, b) => b.hazard - a.hazard || a.name.localeCompare(b.name));
+    // The catches on its kind come at `n` times one animal's rate (the share of each predator's catches that land on the kind);
+    // the one at place r of the order is taken at the r-th of them, so its chance to be alive is that fewer than r have come.
+    const rank = victimRank(animal, ownAnimals, world.arkDay);
+    const n = Math.max(pool.get(own) ?? 0, 1);
+    const hazardMid = (harsh + kinder) / 2;
+    const STARTS = 16;
+    const SPOTS = Math.min(rank.group, 6);
+    const spot = (i: number) => rank.below + 1 + Math.floor(((i + 0.5) * rank.group) / SPOTS);
     return {
-        pess: (t) => Math.exp(-harsh * Math.max(t - startHarsh, 0)),
-        opt: (t) => Math.exp(-kinder * Math.max(t - startKind, 0)),
+        // (the weakest place of its group and the earliest start with the harsher rate; the strongest place and the latest start with the kinder)
+        pess: (t) => poissonBelow(rank.below + 1, harsh * n * Math.max(t - startHarsh, 0)),
+        opt: (t) => poissonBelow(rank.below + rank.group, kinder * n * Math.max(t - startKind, 0)),
+        mid: (t) => {
+            let sum = 0;
+            for (let i = 0; i < STARTS; i++) {
+                const mu = hazardMid * n * Math.max(t - (startHarsh + ((i + 0.5) / STARTS) * (startKind - startHarsh)), 0);
+                for (let k = 0; k < SPOTS; k++) sum += poissonBelow(spot(k), mu);
+            }
+            return sum / (STARTS * SPOTS);
+        },
+        rank,
         predators: rows,
         startsInDays: startHarsh,
         classTried
@@ -377,9 +540,14 @@ function hunters(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld, facts: ArkT
 
 // MARK: At risk
 
+/** Hunger can end only a wild animal: a house, a farm and the zoo feed theirs (the engine's `keptFed`, outside the wild ecology). */
+function hungerApplies(animal: Pick<ArkTimeLeftAnimal, "condition" | "area" | "island" | "zone" | "species_profile_id" | "kind_species_profile_id" | "model_slug" | "scientific_name">): boolean {
+    return animal.condition === "hungry" && arkTimeLeftRegion(animal) !== null && !arkIsHuman(animal);
+}
+
 /**
- * Which risks apply to this animal (empty: not at risk, no estimate is shown). `facts` may be null (not read yet or
- * unreadable): then only the risks that need none are found.
+ * Which risks apply to this animal (empty: not at risk). `facts` may be null (not read yet or unreadable): then only the
+ * risks that need none are found.
  */
 export function arkAtRisk(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld, facts: ArkTimeLeftFacts | null = null): ArkRiskKind[] {
     const out: ArkRiskKind[] = [];
@@ -389,7 +557,7 @@ export function arkAtRisk(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld, fa
     if (facts) {
         const hunt = hunters(animal, world, facts);
         if (hunt && hunt.startsInDays <= 0) out.push("hunted");
-        if (animal.condition === "hungry" && facts.eatsAnimals) out.push("starving");
+        if (hungerApplies(animal) && facts.eatsAnimals) out.push("starving");
     }
     return out;
 }
@@ -399,21 +567,26 @@ export function arkAtRisk(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld, fa
  * one that could be hunted (wild, and the hunting protection is known). Everything else is decided without them.
  */
 export function arkNeedsFacts(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld): boolean {
-    if (animal.condition === "hungry") return true;
+    if (arkIsHuman(animal)) return false;
+    if (hungerApplies(animal)) return true;
     return Boolean(world.huntGrace) && arkTimeLeftRegion(animal) !== null;
 }
 
-/** The estimate for one animal, or null when it is not at risk or nothing is known to bound its time. */
+/**
+ * The estimate for one animal, or null when it is not at risk (unless `everyone`: the panel's mode, an estimate for any
+ * animal that has something to bound its time) or nothing is known to bound its time.
+ */
 export function arkTimeLeft(
     animal: ArkTimeLeftAnimal,
     world: ArkTimeLeftWorld,
     facts: ArkTimeLeftFacts | null = null,
-    hooks: readonly ArkTimeLeftHook[] = []
+    hooks: readonly ArkTimeLeftHook[] = [],
+    options: {everyone?: boolean} = {}
 ): ArkTimeLeft | null {
     const atRisk = arkAtRisk(animal, world, facts);
     // A hook's own risk (a released animal still learning to find food) is a risk too.
     const extra = hooks.map((hook) => hook(animal, world)).filter((x): x is NonNullable<typeof x> => x !== null);
-    if (!atRisk.length && !extra.length) return null;
+    if (!atRisk.length && !extra.length && !options.everyone) return null;
     const age = ageFactor(animal, world.arkDay);
     const hunt = facts ? hunters(animal, world, facts) : null;
     const starving = atRisk.includes("starving");
@@ -444,7 +617,7 @@ export function arkTimeLeft(
     const huntMoves = Boolean(hunt) && !only(all, rangeOf(true, false));
 
     const reasons: ArkTimeLeftReason[] = [];
-    if (age && (atRisk.includes("old") || ageMoves || (!hunt && !starving && !extra.length))) reasons.push(age.reason);
+    if (age && (options.everyone || atRisk.includes("old") || ageMoves || (!hunt && !starving && !extra.length))) reasons.push(age.reason);
     if (starving) reasons.push({kind: "hunger"});
     if (hunt && (atRisk.includes("hunted") || huntMoves)) {
         reasons.push({kind: "hunted", predators: hunt.predators.slice(0, 3).map(({name, count}) => ({name, count}))});
@@ -463,6 +636,181 @@ export function arkTimeLeft(
     };
 }
 
+// MARK: The chance to live another Ark year
+
+/** The horizon of the chance: one Ark year. */
+export const ARK_CHANCE_HORIZON_DAYS = ARK_YEAR;
+/** "A day ago" is a real day: 365 / 14 Ark days. */
+export const ARK_CHANCE_TREND_DAYS = ARK_DAYS_PER_REAL_DAY;
+
+export type ArkChanceFactor = "age" | "hunted" | "hunger" | "extra";
+
+/**
+ * The chance an animal is still alive one Ark year from now, from the same factors and curves as the time-left estimate,
+ * but their middle (the published or the middle upper end of the lifespan, the mean of the two hunting hazards with the
+ * start spread over the public ramp, a hungry predator's chance to eat before it starves, a hook's curve): one number.
+ * Pure: the animal's and the world's released fields, the species facts, nothing seeded and nothing unreleased. Each factor
+ * exists only where its inputs are published (the lifespan, the hunting protection, a hungry hunter's condition): a switch
+ * that is off publishes nothing and the factor is simply absent (food level, egg predators and a carer's absence, decision
+ * 418, have no public input yet and no factor).
+ */
+export type ArkChance = {
+    /** 0 to 1. */
+    chance: number;
+    /** The whole percent shown: from 1 to 99, an estimate is never sure. */
+    percent: number;
+    /** Each factor's hazard over the horizon (minus the log of its chance to live): 0 where it does not apply. */
+    hazards: Record<ArkChanceFactor, number>;
+    /** What to say for each factor that applies. */
+    reasons: Record<ArkChanceFactor, ArkTimeLeftReason | null>;
+    /** How many predators of its kind's hunters live in its range now. */
+    predators: number;
+    /** The factor that takes the most (at least 1 in 100), as its reason: null when nothing does. */
+    main: ArkTimeLeftReason | null;
+};
+
+/** The change since a day ago: whole percentage points, and the factor that moved the most. */
+export type ArkChanceTrend = {change: number; cause: ArkTimeLeftReason | null};
+
+/** The animals and the Ark day of `days` ago, as the released state says: those not yet born or aboard then are left out (a death in between is not known, so not added back). */
+export function arkWorldBefore(world: ArkTimeLeftWorld, days: number): ArkTimeLeftWorld | null {
+    if (!finite(world.arkDay)) return null;
+    const then = world.arkDay - days;
+    return {...world, arkDay: then, animals: world.animals.filter((other) => !finite(other.born_ark_day) || other.born_ark_day <= then)};
+}
+
+/** A hungry predator's middle curve: it starves after `span` days of hunger unless it makes a catch first (at its own meal interval and its published success). */
+function hungerMid(animal: ArkTimeLeftAnimal): Curve {
+    const mass = massOf(animal);
+    const span = arkStarveDays(mass);
+    const interval = arkMealIntervalDays(mass);
+    const rate = 1 / catchPeriodDays((interval.endo + interval.ecto) / 2, arkHuntSuccess(arkTimeLeftKind(animal)));
+    return (t) => 1 - (1 - Math.exp(-rate * Math.min(t, span))) / (rate * span);
+}
+
+/** The chance for one animal now, or null where nothing bounds its life (as `arkTimeLeft`). */
+export function arkChanceOf(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld, facts: ArkTimeLeftFacts | null = null, hooks: readonly ArkTimeLeftHook[] = []): ArkChance | null {
+    const age = ageFactor(animal, world.arkDay);
+    const hunt = facts ? hunters(animal, world, facts) : null;
+    const starving = facts !== null && facts.eatsAnimals && hungerApplies(animal);
+    const extra = hooks.map((hook) => hook(animal, world)).filter((x): x is NonNullable<typeof x> => x !== null);
+    if (!age && !hunt && !starving && !extra.length) return null;
+    const T = ARK_CHANCE_HORIZON_DAYS;
+    const lives: Record<ArkChanceFactor, number> = {
+        age: age ? age.mid(T) : 1,
+        hunted: hunt ? hunt.mid(T) : 1,
+        hunger: starving ? hungerMid(animal)(T) : 1,
+        extra: extra.reduce((product, e) => product * e.survival(T), 1)
+    };
+    const hazards: Record<ArkChanceFactor, number> = {age: 0, hunted: 0, hunger: 0, extra: 0};
+    for (const key of Object.keys(lives) as ArkChanceFactor[]) hazards[key] = Math.max(0, -Math.log(clamp(lives[key], 1e-6, 1)));
+    const reasons: Record<ArkChanceFactor, ArkTimeLeftReason | null> = {
+        age: age ? age.reason : null,
+        hunted: hunt ? {kind: "hunted", predators: hunt.predators.slice(0, 3).map(({name, count}) => ({name, count}))} : null,
+        hunger: starving ? {kind: "hunger"} : null,
+        extra: extra.length ? extra[0].reason : null
+    };
+    const chance = clamp(lives.age * lives.hunted * lives.hunger * lives.extra, 0, 1);
+    let top: ArkChanceFactor | null = null;
+    for (const key of ["age", "hunted", "hunger", "extra"] as const) if (reasons[key] && hazards[key] >= -Math.log(0.99) && (top === null || hazards[key] > hazards[top])) top = key;
+    return {
+        chance,
+        percent: clamp(Math.round(chance * 100), 1, 99),
+        hazards,
+        reasons,
+        predators: hunt ? hunt.predators.reduce((sum, p) => sum + p.count, 0) : 0,
+        main: top ? reasons[top] : null
+    };
+}
+
+/**
+ * The chance now against the chance a day ago (a real day), the Ark as the released state says it was: each animal a day
+ * younger, those that arrived or were born since not there yet, the same condition. Null when the animal itself was not
+ * there yet, or nothing bounded its life then. The cause is the factor whose hazard moved the most.
+ */
+export function arkChanceTrend(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld, facts: ArkTimeLeftFacts | null, hooks: readonly ArkTimeLeftHook[], now: ArkChance): ArkChanceTrend | null {
+    const before = arkWorldBefore(world, ARK_CHANCE_TREND_DAYS);
+    if (!before || !finite(animal.born_ark_day) || animal.born_ark_day > before.arkDay!) return null;
+    const then = arkChanceOf(animal, before, facts, hooks);
+    if (!then) return null;
+    let moved: ArkChanceFactor | null = null;
+    let most = 0.002;
+    for (const key of ["age", "hunted", "hunger", "extra"] as const) {
+        const move = Math.abs(now.hazards[key] - then.hazards[key]);
+        if (move > most) {
+            moved = key;
+            most = move;
+        }
+    }
+    let cause: ArkTimeLeftReason | null = null;
+    if (moved === "hunted") {
+        // Nobody came or went: it is the protection running out; else the predators in its range.
+        const grace = world.huntGrace;
+        cause = now.predators === then.predators && grace && finite(world.arkDay) && world.arkDay < grace.endsArkDay ? {kind: "safe", untilArkDay: Math.ceil(grace.endsArkDay)} : now.reasons.hunted ?? then.reasons.hunted;
+    } else if (moved) {
+        cause = now.reasons[moved] ?? then.reasons[moved];
+    }
+    return {change: now.percent - then.percent, cause};
+}
+
+// MARK: The life block: age, life stage and time left together
+
+/**
+ * Where the block's marks sit along the life bar, as 0 to 1 fractions of the bar: born is 0, the bar ends at the
+ * likely end's far edge (the age plus the high end of the estimate). `now` is today; the likely end is `from` to 1.
+ */
+export type ArkLifeBar = {now: number; from: number};
+
+/** The panel's block for one animal. */
+export type ArkLifeOutlook = {
+    age: ArkAge | null;
+    left: ArkTimeLeft | null;
+    /** Present when both the age and the estimate are known. */
+    bar: ArkLifeBar | null;
+    /** "risk" when it is at risk or old (the block's warm tone), else "plain". */
+    tone: "plain" | "risk";
+    /** The chance to live another Ark year (where anything bounds its life), and how it moved in a day. */
+    chance: ArkChance | null;
+    trend: ArkChanceTrend | null;
+    /** Its thrive band (the public read's `thrive`: the band only, never a user's raw condition or steps), or null where the read has none. */
+    band: ArkThrive | null;
+    /**
+     * Said only where the engine acts on it (a predator takes the weaker bands first, `rankPrey`: so only where hunting is
+     * one of the factors): "earn" below prime (earning its Power raises its place in the order), "working" at prime.
+     * Old age, hunger and a carer's absence do not depend on it, and nothing here says they do.
+     */
+    power: "earn" | "working" | null;
+};
+
+/** The bar's marks for an age and an estimate (never anything outside 0 to 1). */
+export function arkLifeBar(ageDays: number, left: Pick<ArkTimeLeft, "lowDays" | "highDays">): ArkLifeBar {
+    const end = Math.max(ageDays + left.highDays, 1);
+    return {now: clamp(ageDays / end, 0, 1), from: clamp((ageDays + left.lowDays) / end, 0, 1)};
+}
+
+/**
+ * Everything the panel shows for one animal: its age and life stage, and the estimate of its time left, for EVERY
+ * animal (the facts and hooks are as `arkTimeLeft`'s). Null when neither is known.
+ */
+export function arkLifeOutlook(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorld, facts: ArkTimeLeftFacts | null = null, hooks: readonly ArkTimeLeftHook[] = []): ArkLifeOutlook | null {
+    const age = arkAgeOf(animal, world.arkDay);
+    const left = arkTimeLeft(animal, world, facts, hooks, {everyone: true});
+    if (!age && !left) return null;
+    const risky = Boolean(left && (left.atRisk.length || left.reasons.some((reason) => reason.kind === "skill"))) || age?.stage === "old";
+    const chance = arkChanceOf(animal, world, facts, hooks);
+    const band = animal.thrive ?? null;
+    return {
+        age,
+        left,
+        bar: age && left ? arkLifeBar(age.ageDays, left) : null,
+        tone: risky ? "risk" : "plain",
+        chance,
+        trend: chance ? arkChanceTrend(animal, world, facts, hooks, chance) : null,
+        band,
+        power: band && chance?.reasons.hunted ? (band === "prime" ? "working" : "earn") : null
+    };
+}
+
 // MARK: Words
 
 /** The words of the panel (`ark.timeLeft` in the locale files). */
@@ -478,10 +826,45 @@ export type ArkTimeLeftWords = {
     reasonSafe: string;
     /** A released animal still learning to find food (Release to the Wild). */
     reasonSkill?: string;
+    /** Its life stage, in the block's age line: "Young", "Adult", "Old" (nouns or neutral forms: never gendered for the animal). */
+    stageYoung: string;
+    stageAdult: string;
+    stageOld: string;
+    /** "{age} old" and "about {age} old" (an arrival counts as grown on arrival: its age is a rule, so "about"): {age} is "3 Ark years". */
+    ageIs: string;
+    ageIsAbout: string;
+    /** A human arrival's age, a floor: "at least {age} old". */
+    ageIsAtLeast: string;
+    /** Its age or time in months, in Ark time: "{months} Ark months", "1 Ark month". */
+    ageMonths: string;
+    ageMonth: string;
+    /** The chance to live another Ark year ("About 72%"), its main reason, how it is worked out, and the change since a day ago ({change}: "3%"). */
+    chanceTitle: string;
+    chanceMain: string;
+    chanceHow: string;
+    chanceUp: string;
+    chanceDown: string;
+    chanceSteady: string;
+    /** "{band}: kept thriving by its owner's worked steps; it fades if they stop." ({band}: "In prime condition"). */
+    thriveWhy: string;
+    /** Below prime: earning its Power raises its survival chance; at prime its Power is working. */
+    powerEarn: string;
+    powerWorking: string;
 };
 
-/** What `ark.life` and the locale give for units: "{days} Ark days", "1 Ark day", "{years} Ark years", "1 Ark year". */
-export type ArkTimeLeftUnitWords = {ageDays: string; ageDay: string; ageYears: string; ageYear: string};
+/** What `ark.life` and the locale give for units: "{days} Ark days", "1 Ark day", "{years} Ark years", "1 Ark year", and the months. */
+export type ArkTimeLeftUnitWords = {
+    ageDays: string;
+    ageDay: string;
+    ageYears: string;
+    ageYear: string;
+    ageMonths: string;
+    ageMonth: string;
+    /** The card's thrive bands (`ark.life.thrivePrime` ...). */
+    thrivePrime: string;
+    thriveGood: string;
+    thriveOrdinary: string;
+};
 
 export type ArkTimeLeftText = {
     title: string;
@@ -497,20 +880,47 @@ function fill(template: string, values: Record<string, string | number>): string
     return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
 }
 
-/** A count of Ark days as the panel's units say it: "3-9 Ark days", "1 Ark day", "2-4 Ark years" (a range is one number string). */
+const ARK_MONTH = ARK_YEAR / 12;
+
+/**
+ * A count of Ark days as the panel's units say it, in the unit that fits it: "3-9 Ark days", "1 Ark day", "4-10 Ark
+ * months" (a range from two months to about three years), "2-4 Ark years" (a range is one number string).
+ */
 function unitValue(low: number, high: number, capped: boolean, units: ArkTimeLeftUnitWords, locale: string): string {
     const years = high >= 1000 && low >= 180;
+    const months = !years && low >= 60 && high < 1000;
     const part = (days: number) => {
+        if (months) return Math.round(days / ARK_MONTH).toLocaleString(locale);
         if (!years) return Math.round(days).toLocaleString(locale);
         const y = days / ARK_YEAR;
         return y.toLocaleString(locale, {maximumFractionDigits: y < 10 ? 1 : 0});
     };
     const a = part(low);
     const b = `${part(high)}${capped ? "+" : ""}`;
-    const range = a === b ? a : `${a}–${b}`;
-    const one = !capped && a === b && (years ? Math.abs(low / ARK_YEAR - 1) < 0.05 : Math.round(low) === 1);
+    // A range of numbers in a right-to-left language is isolated, so it reads "8–32", not "32–8".
+    const range = a === b ? a : arkDirection(locale) === "rtl" ? `\u2066${a}–${b}\u2069` : `${a}–${b}`;
+    const one = !capped && a === b && (years ? Math.abs(low / ARK_YEAR - 1) < 0.05 : months ? Math.round(low / ARK_MONTH) === 1 : Math.round(low) === 1);
     if (years) return one ? units.ageYear : fill(units.ageYears, {years: range});
+    if (months) return one ? units.ageMonth : fill(units.ageMonths, {months: range});
     return one ? units.ageDay : fill(units.ageDays, {days: range});
+}
+
+/**
+ * One age in the kind's natural terms, in Ark time: days under two months, months under two years, years after.
+ * An arrival's age is a rule ("about"), so its years are whole once there are two of them.
+ */
+function ageValue(days: number, mode: "exact" | "about" | "atLeast", units: ArkTimeLeftUnitWords, locale: string): string {
+    if (days < 60) {
+        const n = Math.max(1, Math.round(days));
+        return n === 1 ? units.ageDay : fill(units.ageDays, {days: n.toLocaleString(locale)});
+    }
+    if (days < 730) {
+        const n = Math.round(days / ARK_MONTH);
+        return n === 1 ? units.ageMonth : fill(units.ageMonths, {months: n.toLocaleString(locale)});
+    }
+    // (A floor is rounded down, so "at least" never says more than is known.)
+    const y = mode === "atLeast" ? Math.floor(days / ARK_YEAR + 1e-9) : days / ARK_YEAR;
+    return fill(units.ageYears, {years: y.toLocaleString(locale, {maximumFractionDigits: mode !== "exact" || y >= 10 ? 0 : 1})});
 }
 
 function listOf(names: string[], locale: string): string {
@@ -521,28 +931,118 @@ function listOf(names: string[], locale: string): string {
     }
 }
 
+/** One reason in words (none for a reason this build has no words for). */
+function reasonLine(reason: ArkTimeLeftReason, words: ArkTimeLeftWords, units: ArkTimeLeftUnitWords, locale: string): string[] {
+    switch (reason.kind) {
+        case "age": {
+            const span = unitValue(reason.lifespanLowDays, Math.max(reason.lifespanHighDays, reason.lifespanLowDays), false, units, locale);
+            return [fill(reason.estimate ? words.reasonAgeEstimate : words.reasonAge, {span})];
+        }
+        case "hunger":
+            return [words.reasonHunger];
+        case "hunted":
+            return [fill(words.reasonHunted, {predators: listOf(reason.predators.map((p) => p.name), locale)})];
+        case "safe":
+            return [fill(words.reasonSafe, {day: reason.untilArkDay.toLocaleString(locale)})];
+        case "skill":
+            return [words.reasonSkill ?? ARK_TIME_LEFT_SKILL_ENGLISH];
+        default:
+            return [];
+    }
+}
+
 /** The panel's lines for an estimate, in the reader's words (never gendered: no pronoun for the animal, nouns for causes). */
 export function arkTimeLeftText(result: ArkTimeLeft, words: ArkTimeLeftWords, units: ArkTimeLeftUnitWords, locale: string): ArkTimeLeftText {
     const value = fill(words.about, {value: unitValue(result.lowDays, result.highDays, result.capped, units, locale)});
-    const reasons = result.reasons.flatMap((reason): string[] => {
-        switch (reason.kind) {
-            case "age": {
-                const span = unitValue(reason.lifespanLowDays, Math.max(reason.lifespanHighDays, reason.lifespanLowDays), false, units, locale);
-                return [fill(reason.estimate ? words.reasonAgeEstimate : words.reasonAge, {span})];
-            }
-            case "hunger":
-                return [words.reasonHunger];
-            case "hunted":
-                return [fill(words.reasonHunted, {predators: listOf(reason.predators.map((p) => p.name), locale)})];
-            case "safe":
-                return [fill(words.reasonSafe, {day: reason.untilArkDay.toLocaleString(locale)})];
-            case "skill":
-                return [words.reasonSkill ?? ARK_TIME_LEFT_SKILL_ENGLISH];
-            default:
-                return [];
-        }
-    });
+    const reasons = result.reasons.flatMap((reason) => reasonLine(reason, words, units, locale));
     return {title: words.title, value, reasons, hint: words.hint, label: `${words.title}: ${value}`};
+}
+
+/** "Adult · about 3 Ark years old", "Young · 4 Ark months old": the life stage and the age, in Ark time. */
+export function arkAgeText(age: ArkAge, words: ArkTimeLeftWords, units: ArkTimeLeftUnitWords, locale: string): string {
+    const stage = age.stage === "young" ? words.stageYoung : age.stage === "old" ? words.stageOld : words.stageAdult;
+    const mode = age.atLeast ? "atLeast" : age.assumed ? "about" : "exact";
+    const said = mode === "atLeast" ? words.ageIsAtLeast : mode === "about" ? words.ageIsAbout : words.ageIs;
+    return `${stage} · ${fill(said, {age: ageValue(age.ageDays, mode, units, locale)})}`;
+}
+
+/** The chance to live another Ark year in words. */
+export type ArkChanceText = {
+    title: string;
+    /** "About 72%". */
+    value: string;
+    /** "Down 3% vs a day ago · Predators here: Red Fox", or null when there is nothing to compare with. */
+    trend: {direction: "up" | "down" | "steady"; text: string; /** The cause alone ("Predators here: Red Fox"), or null. */ cause: string | null} | null;
+    /** "Main reason: Typical lifespan: 5–10 Ark years", or null when nothing takes much. */
+    main: string | null;
+    /** The main reason alone, as a reason line reads ("Typical lifespan: 5–10 Ark years"), or null. */
+    mainReason: string | null;
+    /** The "how this is worked out" line. */
+    how: string;
+    /** For a screen reader: the title, the value and the change. */
+    label: string;
+};
+
+function percentText(percent: number, locale: string): string {
+    try {
+        return new Intl.NumberFormat(locale, {style: "percent", maximumFractionDigits: 0}).format(percent / 100);
+    } catch {
+        return `${percent}%`;
+    }
+}
+
+export function arkChanceText(outlook: ArkLifeOutlook, words: ArkTimeLeftWords, units: ArkTimeLeftUnitWords, locale: string): ArkChanceText | null {
+    const {chance, trend} = outlook;
+    if (!chance) return null;
+    const value = fill(words.about, {value: percentText(chance.percent, locale)});
+    let said: ArkChanceText["trend"] = null;
+    if (trend) {
+        const direction = trend.change > 0 ? "up" : trend.change < 0 ? "down" : "steady";
+        const change = fill(direction === "up" ? words.chanceUp : direction === "down" ? words.chanceDown : words.chanceSteady, {change: percentText(Math.abs(trend.change), locale)});
+        const cause = trend.cause && direction !== "steady" ? reasonLine(trend.cause, words, units, locale)[0] : null;
+        said = {direction, text: cause ? `${change} · ${cause}` : change, cause: cause ?? null};
+    }
+    const main = chance.main ? reasonLine(chance.main, words, units, locale)[0] : null;
+    return {
+        title: words.chanceTitle,
+        value,
+        trend: said,
+        main: main ? fill(words.chanceMain, {reason: main}) : null,
+        mainReason: main ?? null,
+        how: words.chanceHow,
+        label: [`${words.chanceTitle}: ${value}`, said ? (said.text.split(" · ")[0]) : null].filter((part): part is string => Boolean(part)).join(". ")
+    };
+}
+
+export type ArkLifeText = {
+    /** "Adult · about 3 Ark years old", or null when the age is not known. */
+    age: string | null;
+    /** The estimate's title, value, reasons and hint, or null when nothing bounds its time. */
+    left: ArkTimeLeftText | null;
+    /** The chance to live another Ark year, or null. */
+    chance: ArkChanceText | null;
+    /** "In prime condition: kept thriving by its owner's worked steps; it fades if they stop." for a thriving (good or prime) animal, else null. */
+    thrive: string | null;
+    /** The Power line (see `ArkLifeOutlook.power`), or null. */
+    power: {kind: "earn" | "working"; text: string} | null;
+    /** For a screen reader: the age line, the estimate and the chance in one sentence (the bar itself is drawn, not read). */
+    label: string;
+};
+
+/** The block's lines for one animal, in the reader's words. */
+export function arkLifeText(outlook: ArkLifeOutlook, words: ArkTimeLeftWords, units: ArkTimeLeftUnitWords, locale: string): ArkLifeText {
+    const age = outlook.age ? arkAgeText(outlook.age, words, units, locale) : null;
+    const left = outlook.left ? arkTimeLeftText(outlook.left, words, units, locale) : null;
+    const chance = arkChanceText(outlook, words, units, locale);
+    const band = outlook.band === "prime" ? units.thrivePrime : outlook.band === "good" ? units.thriveGood : null;
+    return {
+        age,
+        left,
+        chance,
+        thrive: band ? fill(words.thriveWhy, {band}) : null,
+        power: outlook.power ? {kind: outlook.power, text: outlook.power === "working" ? words.powerWorking : words.powerEarn} : null,
+        label: [age, left?.label, chance?.label].filter((part): part is string => Boolean(part)).join(". ")
+    };
 }
 
 /** The English words, for a bundle that lacks them (the loader's English fallback fills the rest). */
@@ -555,7 +1055,24 @@ export const ARK_TIME_LEFT_ENGLISH: ArkTimeLeftWords = {
     reasonHunted: "Predators here: {predators}",
     reasonHunger: "Hunger: no recent meal",
     reasonSkill: "Released: still learning to find food",
-    reasonSafe: "Hunting protection until Ark day {day}"
+    reasonSafe: "Hunting protection until Ark day {day}",
+    stageYoung: "Young",
+    stageAdult: "Adult",
+    stageOld: "Old",
+    ageIs: "{age} old",
+    ageIsAbout: "about {age} old",
+    ageIsAtLeast: "at least {age} old",
+    ageMonths: "{months} Ark months",
+    ageMonth: "1 Ark month",
+    chanceTitle: "Chance to live another Ark year",
+    chanceMain: "Main reason: {reason}",
+    chanceHow: "How this is worked out: its age against its kind's lifespan, the predators that can hunt its kind in its range, and hunger, from what the Ark has made public. An estimate that moves as the Ark changes, not a promise.",
+    chanceUp: "Up {change} vs a day ago",
+    chanceDown: "Down {change} vs a day ago",
+    chanceSteady: "Steady vs a day ago",
+    thriveWhy: "{band}: kept thriving by its owner's worked steps; it fades if they stop.",
+    powerEarn: "Earning its Power raises its survival chance",
+    powerWorking: "Its Power is working: predators pass it over for weaker ones"
 };
 
 /** The skill line's English (Release to the Wild), for a words object built without it. */
@@ -573,9 +1090,15 @@ export function arkTimeLeftWordsFrom(timeLeft: unknown, life: unknown): {words: 
         return out as T;
     };
     const own = timeLeft && typeof timeLeft === "object" ? (timeLeft as Record<string, unknown>).reasonSkill : null;
+    const words: ArkTimeLeftWords = {...pick(ARK_TIME_LEFT_ENGLISH, timeLeft), ...(typeof own === "string" && own.trim() ? {reasonSkill: own} : {})};
     return {
-        words: {...pick(ARK_TIME_LEFT_ENGLISH, timeLeft), ...(typeof own === "string" && own.trim() ? {reasonSkill: own} : {})},
-        units: pick({ageDays: "{days} Ark days", ageDay: "1 Ark day", ageYears: "{years} Ark years", ageYear: "1 Ark year"}, life)
+        words,
+        // The days and years are the card's own words (`ark.life`); the months are this block's.
+        units: {
+            ...pick({ageDays: "{days} Ark days", ageDay: "1 Ark day", ageYears: "{years} Ark years", ageYear: "1 Ark year", thrivePrime: "In prime condition", thriveGood: "In good condition", thriveOrdinary: "Ordinary"}, life),
+            ageMonths: words.ageMonths,
+            ageMonth: words.ageMonth
+        }
     };
 }
 

@@ -774,7 +774,24 @@
             "reasonHunted": "Grabežljivci ovdje: {predators}",
             "reasonHunger": "Glad: nema nedavnog obroka",
             "reasonSkill": "Pušteno: još uči pronalaziti hranu",
-            "reasonSafe": "Zaštita od lova do dana {day} u Arku"
+            "reasonSafe": "Zaštita od lova do dana {day} u Arku",
+            "stageYoung": "Mlada",
+            "stageAdult": "Odrasla",
+            "stageOld": "Stara",
+            "ageIs": "{age}",
+            "ageIsAbout": "oko {age}",
+            "ageIsAtLeast": "najmanje {age}",
+            "ageMonths": "mjeseci u Arku: {months}",
+            "ageMonth": "1 mjesec u Arku",
+            "chanceTitle": "Šansa da proživi još jednu godinu u Arku",
+            "chanceMain": "Glavni razlog: {reason}",
+            "chanceHow": "Kako se računa: njegova dob prema životnom vijeku njegove vrste, grabežljivci koji mogu loviti njegovu vrstu u njegovu području i glad, prema onome što je Ark objavio. Procjena koja se mijenja kako se Ark mijenja, a ne obećanje.",
+            "chanceUp": "{change} više nego prije dan",
+            "chanceDown": "{change} manje nego prije dan",
+            "chanceSteady": "Nepromijenjeno u odnosu na prije dan",
+            "thriveWhy": "{band}: održavaju ga u formi koraci koje je njegov vlasnik odradio; slabi ako prestanu.",
+            "powerEarn": "Osvajanje njegove Moći povećava njegovu šansu za preživljavanje",
+            "powerWorking": "Njegova Moć djeluje: grabežljivci ga zaobilaze zbog slabijih"
         }
     },
     "talkPage": {

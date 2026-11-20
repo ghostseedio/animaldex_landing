@@ -4986,7 +4986,24 @@
       "reasonHunted": "Predators here: {predators}",
       "reasonHunger": "Hunger: no recent meal",
       "reasonSkill": "Released: still learning to find food",
-      "reasonSafe": "Hunting protection until Ark day {day}"
+      "reasonSafe": "Hunting protection until Ark day {day}",
+      "stageYoung": "Young",
+      "stageAdult": "Adult",
+      "stageOld": "Old",
+      "ageIs": "{age} old",
+      "ageIsAbout": "about {age} old",
+      "ageIsAtLeast": "at least {age} old",
+      "ageMonths": "{months} Ark months",
+      "ageMonth": "1 Ark month",
+      "chanceTitle": "Chance to live another Ark year",
+      "chanceMain": "Main reason: {reason}",
+      "chanceHow": "How this is worked out: its age against its kind's lifespan, the predators that can hunt its kind in its range, and hunger, from what the Ark has made public. An estimate that moves as the Ark changes, not a promise.",
+      "chanceUp": "Up {change} vs a day ago",
+      "chanceDown": "Down {change} vs a day ago",
+      "chanceSteady": "Steady vs a day ago",
+      "thriveWhy": "{band}: kept thriving by its owner's worked steps; it fades if they stop.",
+      "powerEarn": "Earning its Power raises its survival chance",
+      "powerWorking": "Its Power is working: predators pass it over for weaker ones"
     }
   },
   "seo": {

@@ -774,7 +774,24 @@
             "reasonHunted": "ここにいる捕食者：{predators}",
             "reasonHunger": "空腹：最近の食事なし",
             "reasonSkill": "放された動物：まだ食べ物の探し方を学習中",
-            "reasonSafe": "Ark {day}日目まで狩りから保護"
+            "reasonSafe": "Ark {day}日目まで狩りから保護",
+            "stageYoung": "幼体",
+            "stageAdult": "成体",
+            "stageOld": "高齢",
+            "ageIs": "{age}",
+            "ageIsAbout": "{age}ほど",
+            "ageIsAtLeast": "{age}以上",
+            "ageMonths": "Ark時間で{months}か月",
+            "ageMonth": "Ark時間で1か月",
+            "chanceTitle": "あとArk時間で1年生きられる確率",
+            "chanceMain": "主な理由：{reason}",
+            "chanceHow": "計算のしかた：その種の寿命に対する年齢、生息範囲でその種を狩れる捕食者、そして空腹を、Arkが公開している情報から見積もります。Arkの変化とともに動く目安で、約束ではありません。",
+            "chanceUp": "1日前より{change}上昇",
+            "chanceDown": "1日前より{change}低下",
+            "chanceSteady": "1日前と変わらず",
+            "thriveWhy": "{band}：飼い主が達成したステップで好調を保っています。止まると薄れていきます。",
+            "powerEarn": "パワーを獲得すると生き延びる確率が上がります",
+            "powerWorking": "パワーが効いています：捕食者はより弱い個体を先に狙い、素通りします"
         }
     },
     "talkPage": {
