@@ -840,7 +840,8 @@ export class ArkLiveliness {
         const prev = this.clumpCentre(key, mates, entry, clock.stay - 1, clock.stayStart - 720_000) ?? centre;
         const index = mates.indexOf(id);
         const move = moveBlend(clumpSpot(prev, index, mates.length, entry.length), clumpSpot(centre, index, mates.length, entry.length), nowMs - clock.stayStart);
-        const wet = Boolean(entry.depth || entry.place.water);
+        // (A water kind keeps the depth its schedule gave it; any other gathers on dry ground: a penguin chick stands on the beach.)
+        const wet = WATER_PLANS.has(this.options.hooks.planOf(entry.animal.model_slug) ?? "");
         const ways = this.ageOf(entry)?.ways;
         this.noteWay(id, "cluster", `cluster:${key}:${clock.stay}`, nowMs, ways?.lines.cluster ?? null);
         this.counts.young++;

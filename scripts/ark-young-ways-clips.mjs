@@ -113,8 +113,11 @@ for (const name of scenes) {
             else if (how === "parent") t = await window.__ways.shot(s, extra, parent, 0.9, 1.0);
             else if (how === "pair") t = await window.__ways.pair(s, parent, young0);
             else {
-                const visitor = window.__ways.info().ids.adults.find((id) => id.endsWith(extra));
-                t = await window.__ways.pair(s, visitor, young0, 2);
+                const inf = window.__ways.info();
+                const visitor = inf.ids.adults.find((id) => id.endsWith(extra));
+                // (The visitor with its own young: the one whose parent it is.)
+                const own = inf.ids.young.find((id) => inf.parents[id.slice(-2)] === extra) ?? young0;
+                t = await window.__ways.pair(s, visitor, own, 2);
             }
             document.getElementById("note").textContent = `${label}\n${t}`;
             return t;
