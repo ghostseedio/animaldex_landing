@@ -43,16 +43,24 @@ async function main() {
     for (const mechanism of ARK_POWER_MECHANISMS) {
         // The largest drawn kind of the mechanism with two animals aboard (it reads in a close-up), or the one asked for.
         // (One animal is enough: it is filmed twice at the same spot, prime and then ordinary. A group needs its own kind round it.)
-        const options = Array.from(byKind.entries()).filter(([key, list]) => key.startsWith(`${mechanism}|`) && list.length >= (mechanism === "group" ? 4 : 1));
+        const options = Array.from(byKind.entries()).filter(([key, list]) => key.startsWith(`${mechanism}|`) && list.length >= (mechanism === "group" && !wanted.includes(key.split("|")[1]) ? 4 : 1));
         options.sort((a, b) => (mechanism === "group" ? b[1].length - a[1].length : 0) || displayLength(b[1][0].model_slug, null) - displayLength(a[1][0].model_slug, null));
         const chosen = options.find(([key]) => wanted.includes(key.split("|")[1])) ?? options.find(([, list]) => displayLength(list[0].model_slug, null) < 4) ?? options[0];
         if (!chosen) continue;
         const [a] = chosen[1];
+        // (A fixture herd, never a production write: a group asked for by name with fewer than five aboard gets copies of
+        // its first animal beside it, so the ranks have something to close.)
+        if (mechanism === "group") for (let i = chosen[1].length; i < 5; i++) {
+            const copy = {...a, id: `${a.id}-herd${i}`};
+            animals.push(copy);
+            chosen[1].push(copy);
+        }
         // (A group: all of its kind there share the band, so its ranks close together.)
         picks.push({mechanism, slug: a.model_slug, prime: a.id, ordinary: a.id, name: a.name, group: mechanism === "group" ? chosen[1].map((x) => x.id) : [a.id]});
     }
     // (The pass's page: every animal of a kind with a Power is prime, so a predator is found near one.)
-    if (params.get("allprime") === "1") for (const a of animals) if (arkPowerOf(a)) a.thrive = "prime";
+    // (Only kinds big enough to read at phone size: an insect passed over is a speck.)
+    if (params.get("allprime") === "1") for (const a of animals) if (arkPowerOf(a) && displayLength(a.model_slug, null) >= 0.5) a.thrive = "prime";
     // (One animal of a Power kind away from the picks is good from the start, so the scene loads its Power layer at once.)
     const taken = new Set(picks.flatMap((p) => p.group));
     const loader = animals.find((a) => arkPowerOf(a) && !taken.has(a.id));
@@ -126,7 +134,7 @@ async function main() {
             run(1);
             await settleLoading();
             run(2);
-            handle.select(null);
+            // (The pair stays framed: the free camera parked among trees hid them.)
             const images: string[] = [];
             for (let i = 0; i < 9; i++) {
                 run(1.5);

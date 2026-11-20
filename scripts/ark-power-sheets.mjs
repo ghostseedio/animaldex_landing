@@ -96,7 +96,7 @@ const open = async (query) => {
     return {page, context};
 };
 const summary = {picks: [], pass: null};
-{
+if (!process.argv.includes("--pass-only")) {
     const {page, context} = await open(kinds ? `&kinds=${kinds}` : "");
     const picks = await page.evaluate(() => window.__ps.picks);
     log("picks:", picks.map((p) => `${p.mechanism}:${p.slug}`).join(" "));
