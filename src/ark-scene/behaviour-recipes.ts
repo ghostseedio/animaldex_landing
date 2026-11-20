@@ -2389,7 +2389,11 @@ function airStay(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: TripP
     const k = ease(Math.min((epoch - trip.arrive) / 1.2, 1));
     const x = trip.to.x + (Math.cos(a) * r - Math.cos((hashString(owner.animal.id) % 628) / 100) * r) * k;
     const z = trip.to.z + (Math.sin(a) * r - Math.sin((hashString(owner.animal.id) % 628) / 100) * r) * k;
-    return {...base, x, y: trip.to.y + 0.3 * Math.sin(a * 2), z, yaw: a + Math.PI, moving: true, aloft: true, beat: "fly", act: {episode: `air#${trip.slot}`, recipe: "air_stay", block: "fly", state: "fly", u: 0, pitch: 0, roll: -0.35, own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: "flying its beat"}};
+    // ARK-ANIM (decision 447, the owner's swallow "flying backwards at points"): it faces along its circle. The way it
+    // goes is (−sin a, cos a) with a growing, so its heading is −a (a right-hand circle). It was drawn at a + π, which
+    // turned the other way round and pointed backwards twice a lap. Its bank is its turn's (`flight-heading.ts`, the rig's
+    // flight frame), not a fixed left lean.
+    return {...base, x, y: trip.to.y + 0.3 * Math.sin(a * 2), z, yaw: -a, moving: true, aloft: true, beat: "fly", act: {episode: `air#${trip.slot}`, recipe: "air_stay", block: "fly", state: "fly", u: 0, pitch: 0, roll: 0, own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: "flying its beat"}};
 }
 
 const postureActs = new Map<string, RecipeAct>();

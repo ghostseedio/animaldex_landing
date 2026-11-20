@@ -140,16 +140,56 @@ export type RigLookChain = {
     up: number;
     down: number;
     neckShare: number;
+    /**
+     * The bones the look turns, as bit masks over texture indices (ARK-ANIM, decision 447): the head with everything it
+     * carries (a dog's jaw and ears, a bird's eyes), and the neck with the bones between it and the head (a second neck
+     * bone). Turning only the two named bones left the jaw, the ears and `neck1` behind: the dogs' and cats' necks and
+     * muzzles tore at every look. Without a hierarchy, just the two bones.
+     */
+    neckMask?: number;
+    headMask?: number;
 };
 
 const DEG = Math.PI / 180;
+
+/** A bone's bit in a look mask (texture indices 0-30; a bone past that is not turned by the mask). */
+const lookBit = (i: number) => (i >= 0 && i < 31 ? 1 << i : 0);
+
+/**
+ * The look's bit masks (`RigLookChain.neckMask`, `headMask`): the head's subtree, and the neck's subtree without the
+ * head's. `parentOf` gives a bone's parent's name (null at the root); absent, only the two bones themselves.
+ */
+export function lookMasks(boneNames: readonly string[], neck: number, head: number, parentOf?: ((name: string) => string | null) | null): {neckMask: number; headMask: number} {
+    if (!parentOf) return {neckMask: lookBit(neck), headMask: lookBit(head)};
+    const under = (i: number, root: number) => {
+        let name: string | null = boneNames[i];
+        for (let guard = 0; name !== null && guard < 64; guard++) {
+            if (name === boneNames[root]) return true;
+            name = parentOf(name);
+        }
+        return false;
+    };
+    let neckMask = 0;
+    let headMask = 0;
+    boneNames.forEach((_, i) => {
+        if (head >= 0 && under(i, head)) headMask |= lookBit(i);
+        else if (neck >= 0 && under(i, neck)) neckMask |= lookBit(i);
+    });
+    return {neckMask, headMask};
+}
 
 /**
  * A rig's look chain: a v2 entry's `look` (its bones, pivots, limits and
  * share), else (a v1 file) its own `neck` and `head` bones at their rest
  * joints, within the plan's limits. Null without a head bone.
  */
-export function rigLookChain(entry: RigEntry, slug: string, boneNames: readonly string[], restPivot: (name: string) => [number, number, number] | null): RigLookChain | null {
+export function rigLookChain(
+    entry: RigEntry,
+    slug: string,
+    boneNames: readonly string[],
+    restPivot: (name: string) => [number, number, number] | null,
+    parentOf?: ((name: string) => string | null) | null
+): RigLookChain | null {
     const look = decodeRigLook(entry.look);
     if (look) {
         const hasNeck = look.bones.length === 2 && look.bones[0] === "neck";
@@ -166,7 +206,8 @@ export function rigLookChain(entry: RigEntry, slug: string, boneNames: readonly 
             yaw: look.limits_deg.yaw * DEG,
             up: look.limits_deg.pitch_up * DEG,
             down: look.limits_deg.pitch_down * DEG,
-            neckShare: share
+            neckShare: share,
+            ...lookMasks(boneNames, neck, head, parentOf)
         };
     }
     if (entry.look === null && (entry.version ?? 1) >= 2) return null;
@@ -180,7 +221,17 @@ export function rigLookChain(entry: RigEntry, slug: string, boneNames: readonly 
     const neck = neckPivot ? neckAt : -1;
     const {limits_deg, neck: neckShare} = rigLookLimits(entry.plan, slug);
     if (limits_deg.yaw <= 0 && limits_deg.pitch_up <= 0 && limits_deg.pitch_down <= 0) return null;
-    return {neck, head, neckPivot: neckPivot ?? [0, 0, 0], headPivot, yaw: limits_deg.yaw * DEG, up: limits_deg.pitch_up * DEG, down: limits_deg.pitch_down * DEG, neckShare: neck >= 0 ? neckShare : 0};
+    return {
+        neck,
+        head,
+        neckPivot: neckPivot ?? [0, 0, 0],
+        headPivot,
+        yaw: limits_deg.yaw * DEG,
+        up: limits_deg.pitch_up * DEG,
+        down: limits_deg.pitch_down * DEG,
+        neckShare: neck >= 0 ? neckShare : 0,
+        ...lookMasks(boneNames, neck, head, parentOf)
+    };
 }
 
 /**
@@ -550,7 +601,12 @@ export class RigLibrary {
             return [at.x, at.y, at.z];
         };
         const box = geometry.boundingBox!;
-        const sitting = sittingLook(rigLookChain(entry, slug, extras.bones, restPivot), entry.pose ?? null, box.min.y, box.max.y);
+        const parentOf = (name: string): string | null => {
+            const bone = (mesh.skeleton.bones as Bone[]).find((b) => b.name === name);
+            const up = bone?.parent as Bone | null | undefined;
+            return up && (up as Bone).isBone ? up.name : null;
+        };
+        const sitting = sittingLook(rigLookChain(entry, slug, extras.bones, restPivot, parentOf), entry.pose ?? null, box.min.y, box.max.y);
         const look = sitting.look;
         const material = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         material.forEach((m) => m.dispose());

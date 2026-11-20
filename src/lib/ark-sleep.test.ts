@@ -4,7 +4,7 @@ import behaviours from "@/ark-scene/behaviours.json";
 import {behaviourProfile} from "@/ark-scene/behaviour-profile";
 import {intelProfile} from "@/ark-scene/intelligence-profile";
 import {ReactiveLayer, SLEEP_HEARING, SLEEP_SIGHT, perceive, type ReactiveInput, type ReactiveOut, type ReactiveWorld, type SharedPose} from "@/ark-scene/reactive";
-import {
+import {FAKE_ROLL_MAX, 
     POSTURE_SPECS,
     SLEEP_POSTURES,
     breathRate,
@@ -235,6 +235,9 @@ test("each posture asks the rig for its own v6 sleep clip first, then its kind's
     assert.equal(clipped.headWeight, 0);
     assert.equal(clipped.breath, 0);
     assert.equal(clipped.eyes, own.eyes);
+    // ARK-ANIM (the owner's rotated bears and hogs): no roll on top of a clip, and no more than a lean without one.
+    assert.equal(Math.abs(clipped.roll), 0, "a sleep clip lies the body over itself");
+    assert.ok(Math.abs(own.roll) <= FAKE_ROLL_MAX + 1e-9, `no clip: a lean at most (${own.roll})`);
 });
 
 // MARK: Waking (the reactive layer)
