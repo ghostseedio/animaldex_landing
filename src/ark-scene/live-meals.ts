@@ -378,7 +378,7 @@ export class LiveMeals<E> {
     }
 
     /** Development (the kills harness): each meal's times (s after its step) and who comes to it. */
-    debug(): Array<{key: string; t0: number; catchAt: number; style: string; feedTo: number; drink: [number, number] | null; rest: [number, number]; carcassEnd: number; visits: Array<{id: string; start: number; arrive: number; leave: number}>; carcass: {x: number; z: number} | null; plan: MealPlan | null}> {
+    debug(): Array<{key: string; t0: number; catchAt: number; hunt: string | null; style: string; feedTo: number; drink: [number, number] | null; rest: [number, number]; carcassEnd: number; visits: Array<{id: string; start: number; arrive: number; leave: number}>; carcass: {x: number; z: number} | null; plan: MealPlan | null}> {
         return this.meals.map((m) => {
             const b = m.built;
             const at = b?.catchAt ?? 0;
@@ -386,6 +386,7 @@ export class LiveMeals<E> {
                 key: m.key,
                 t0: m.t0,
                 catchAt: at,
+                hunt: b?.stage.hunt ?? null,
                 style: b?.script.plan.style ?? "-",
                 feedTo: at + (b?.script.feedTo ?? 0),
                 drink: b?.script.drink ? [at + b.script.drink.from, at + b.script.drink.to] : null,
