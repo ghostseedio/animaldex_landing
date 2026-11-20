@@ -16,7 +16,7 @@ const DAY = 100;
 const T0 = 1.8e9; // epoch seconds
 type Spec = {slug: string; plan: string; adults: number; young: number; length: number; youngLength: number; zone?: string};
 
-function setup(spec: Spec, schedule: (id: string, t: number) => LivePose, options: {roost?: {x: number; y: number; z: number}} = {}) {
+function setup(spec: Spec, schedule: (id: string, t: number) => LivePose, options: {roost?: {x: number; y: number; z: number}; recorded?: (young: string) => readonly string[] | null; male?: (animal: ArkAnimal) => boolean | null} = {}) {
     const animals: ArkAnimal[] = [];
     const entries = new Map<string, LiveAnimal>();
     const ids = {adults: [] as string[], young: [] as string[]};
@@ -34,7 +34,9 @@ function setup(spec: Spec, schedule: (id: string, t: number) => LivePose, option
         poseAt: (e: LiveAnimal, t: number) => schedule(e.animal.id, t),
         roostOf: () => options.roost ?? null,
         entryOf: (id: string) => entries.get(id) ?? null,
-        heightAt: () => 1
+        heightAt: () => 1,
+        recordedParents: options.recorded,
+        maleOf: options.male
     };
     const live = new ArkLiveliness({tier: "low", fog: new Fog(0), renderer: {} as never, voyageStartMs: null, offsetHours: 0, soundBase: null, hooks: hooks as never});
     live.environmentAt(T0 * 1000, {rain: 0, storm: 0, fog: 0, wind: 0, wetness: 0});
@@ -216,4 +218,24 @@ test("an adult is untouched by the ways: no way, no change to its pose", () => {
     assert.equal(shared.z, own.z);
     assert.equal(shared.doing, own.doing);
     void entries;
+});
+
+test("the father carries or leads where the species' text says so: the recorded father, else the other parent than the mother; the mother where the text says nothing", () => {
+    const base = {adults: 2, young: 1, length: 0.5, youngLength: 0.15};
+    // A titi: the record's parents are the first two adults; the second is drawn male.
+    let probe = setup({slug: "coppery-titi-monkey", plan: "mammal", ...base}, walk(0));
+    const [a, b] = probe.ids.adults;
+    const kid = probe.ids.young[0];
+    const sexes = (animal: ArkAnimal) => (animal.id === b ? true : animal.id === a ? false : null);
+    probe = setup({slug: "coppery-titi-monkey", plan: "mammal", ...base}, walk(0), {recorded: () => [a, b], male: sexes});
+    assert.equal(probe.live.parentOf(kid), b, "the drawn male parent carries");
+    // No sex drawn for either: the parent that is not the mother (the first).
+    probe = setup({slug: "coppery-titi-monkey", plan: "mammal", ...base}, walk(0), {recorded: () => [a, b], male: () => null});
+    assert.equal(probe.live.parentOf(kid), b);
+    // A species with no word of the father: the mother carries.
+    probe = setup({slug: "lar-gibbon", plan: "mammal", ...base}, walk(0), {recorded: () => [a, b], male: sexes});
+    assert.equal(probe.live.parentOf(kid), a);
+    // A parent not aboard any more is nobody's carrier: the seeded pick stands.
+    probe = setup({slug: "coppery-titi-monkey", plan: "mammal", ...base}, walk(0), {recorded: () => ["gone", b], male: () => null});
+    assert.equal(probe.live.parentOf(kid), b);
 });
