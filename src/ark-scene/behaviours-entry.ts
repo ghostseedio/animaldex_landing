@@ -15,7 +15,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string; n: number; young?: number};
-type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake"};
+type Scene = {zone: string; hours: number; cast: Cast[]; /** p3 (shake): on the town island (its millpond, its canal). */ town?: boolean; kind: "birth" | "mating" | "dung" | "defence" | "mob" | "look" | "lure" | "hatch" | "death" | "shake" | "tails"};
 
 const SCENES: Record<string, Scene> = {
     // A foal born in the open: licked, up on wobbly legs, suckling.
@@ -82,6 +82,8 @@ const SCENES: Record<string, Scene> = {
     shaketown: {zone: "garden_wildlife", hours: 10, kind: "shake", town: true, cast: [{slug: "mallard", name: "Mallard", n: 6}]},
     shaketowngoose: {zone: "farm_garden", hours: 10, kind: "shake", town: true, cast: [{slug: "domestic-goose", name: "Domestic Goose", n: 6}]},
     shakeotter: {zone: "river_lake", hours: 10, kind: "shake", cast: [{slug: "european-otter", name: "European Otter", n: 2}]},
+    // Lane SIG-OTHER: tail postures (`tail-posture.ts`): a dog's wag, a coati's flag, a chipmunk's, the baboons' and the macaque's (`tailShot`).
+    tails: {zone: "rainforest", hours: 10, kind: "tails", cast: [{slug: "domestic-dog", name: "Domestic Dog", n: 1}, {slug: "south-american-coati", name: "South American Coati", n: 1}, {slug: "eastern-chipmunk", name: "Eastern Chipmunk", n: 1}, {slug: "hamadryas-baboon", name: "Hamadryas Baboon", n: 1}, {slug: "olive-baboon", name: "Olive Baboon", n: 1}, {slug: "toque-macaque", name: "Toque Macaque", n: 1}]},
     // A herd's droppings along its day.
     dung: {zone: "grassland", hours: 10, kind: "dung", cast: [{slug: "plains-zebra", name: "Plains Zebra", n: 6}, {slug: "african-lion", name: "African Lion", n: 2}]}
 };
@@ -328,6 +330,49 @@ async function main() {
             const recipes = (debug as unknown as {scene: {getObjectByName: (n: string) => {children: Array<{type: string; geometry: {drawRange: {count: number}}}>} | undefined}}).scene.getObjectByName("ark-recipes");
             const drops = recipes?.children.find((c) => c.type === "Points")?.geometry.drawRange.count ?? -1;
             return `drops ${drops} beat ${pose?.beat ?? "-"} act ${pose?.act?.recipe ?? "-"} ${shake} rig ${JSON.stringify((debug as unknown as {rigState: (id: string) => unknown}).rigState(id))} ${said.join(" / ")}`;
+        },
+        /** Lane SIG-OTHER: the cast and who is in it (for the tail shots). */
+        tailPlan: () => scene.cast.map((c, k) => ({slug: c.slug, name: c.name, ids: Array.from({length: c.n}, (_, i) => castId(k, i))})),
+        /**
+         * Lane SIG-OTHER: an animal with its social strength forced to `social` (null: its own), the world run on until it is
+         * moving (`moving`, up to 300 s; its pace is the locomotion layer's `motion`), then framed from `lengths` of its body
+         * away from `azimuth` off its heading (3.14: from behind).
+         */
+        tailShot: async (id: string, o: {social: number | null; moving: boolean; lengths: number; azimuth: number; polar?: number; run?: number}) => {
+            const dbg = debug as unknown as {forceTailSocial: (id: string, k: number | null) => void; tailSocialOf: (id: string) => number | null; controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}};
+            dbg.forceTailSocial(id, o.social);
+            const gaitOf = () => (debug.entries().find((e) => e.animal.id === id) as unknown as {gait?: {speed: number} | null}).gait?.speed ?? 0;
+            let waited = 0;
+            while (o.moving && gaitOf() < 0.35 && waited < 300) {
+                for (let i = 0; i < 10; i++) {
+                    fake!.perf += 100;
+                    fake!.date += 100;
+                    await frames(1);
+                }
+                waited++;
+            }
+            for (let i = 0; i < Math.round((o.run ?? 1) * 10); i++) {
+                fake!.perf += 100;
+                fake!.date += 100;
+                await frames(1);
+            }
+            const far = handle.locate(id);
+            if (far) handle.setView({target: {x: far.x, y: far.y, z: far.z}, distance: 30, polar: 0.9, azimuth: 0.7});
+            await frames(4);
+            const drawn = debug.entries().find((e) => e.animal.id === id) as unknown as {length: number; middle: {x: number; y: number; z: number} | null};
+            const at = handle.locate(id);
+            if (!at || !drawn) return "not found";
+            const distance = Math.max(o.lengths * drawn.length, 0.08);
+            dbg.controls.minDistance = Math.min(dbg.controls.minDistance, distance);
+            dbg.camera.near = Math.min(0.03, distance / 25);
+            dbg.camera.updateProjectionMatrix();
+            const target = drawn.middle ? {x: drawn.middle.x, y: drawn.middle.y, z: drawn.middle.z} : {x: at.x, y: at.y + drawn.length * 0.3, z: at.z};
+            for (let i = 0; i < 3; i++) {
+                handle.setView({target, distance, polar: o.polar ?? 1.3, azimuth: at.yaw + o.azimuth});
+                await frames(1);
+            }
+            const said = Array.from(new Set((debug.seenNow?.() ?? []).filter((x) => x.line).map((x) => `log: ${x.line!.replace("{aAnimal}", `a ${x.name}`)}`)));
+            return `social ${dbg.tailSocialOf(id)?.toFixed(2) ?? "-"} pace ${gaitOf().toFixed(2)} (waited ${waited} s) length ${drawn.length.toFixed(2)} m ${said.slice(0, 2).join(" / ")}`;
         },
         /**
          * 3.3 batch (A): the predator (the second cast) stood `gap` body lengths of the first cast's animal from it, or

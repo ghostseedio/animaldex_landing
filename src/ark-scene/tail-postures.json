@@ -1,0 +1,96 @@
+{
+ "about": "Tail postures of the rigged mammals (lane SIG-OTHER), built by scripts/ark-tail-postures.mts from the species catalogue (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. when: always, while moving (the locomotion layer's motion), or while it signals socially (the scene's: it looks at another animal or the camera, or is at play). pitch: radians each tail link holds at full hold (up positive); idle: the share kept when not held; wag: the yaw swing of each link at full social strength and its rate (Hz). line = the species' own sentence, said in the live log while it is drawn.",
+ "species": {
+  "domestic-dog": {
+   "name": "Domestic Dog",
+   "id": "c54e5eca-48bc-4b31-bef6-7f69515e76f7",
+   "quote": "Tail wagged or raised as a social signal",
+   "line": "{aAnimal} is wagging its tail as a signal",
+   "when": "social",
+   "pitch": [
+    0.35,
+    0.15,
+    0.05
+   ],
+   "idle": 0,
+   "wag": {
+    "amp": [
+     0.3,
+     0.4,
+     0.5
+    ],
+    "rate": 3.4
+   }
+  },
+  "south-american-coati": {
+   "name": "South American Coati",
+   "id": "b89af5e8-9a36-4d23-9a13-590e9f064eb1",
+   "quote": "Raised ringed tail: the tail works like a visible group flag while moving.",
+   "line": "{aAnimal} is walking with its ringed tail raised like a flag",
+   "when": "moving",
+   "pitch": [
+    1,
+    0.35,
+    0.1
+   ],
+   "idle": 0.3
+  },
+  "eastern-chipmunk": {
+   "name": "Eastern Chipmunk",
+   "id": "0452aadd-5014-4b30-a41d-55773b6613cd",
+   "quote": "Tail held straight up when running",
+   "line": "{aAnimal} is running with its tail held straight up",
+   "when": "moving",
+   "pitch": [
+    1.1,
+    0.3,
+    0.1
+   ],
+   "idle": 0.2
+  },
+  "hamadryas-baboon": {
+   "name": "Hamadryas Baboon",
+   "id": "6ed69858-7efc-458e-9dba-ee0d8d2b0249",
+   "quote": "Tail held in an arch, ending in a small tuft",
+   "line": "{aAnimal} is holding its tail in an arch, ending in a small tuft",
+   "when": "always",
+   "pitch": [
+    0.9,
+    -0.1,
+    -0.6
+   ],
+   "idle": 1
+  },
+  "olive-baboon": {
+   "name": "Olive Baboon",
+   "id": "9daf47de-6da1-4868-aff7-76ef311e54a0",
+   "quote": "Tail bent sharply near the base, then hanging down",
+   "line": "{aAnimal} is carrying its tail bent sharply near the base, then hanging down",
+   "when": "always",
+   "pitch": [
+    1.1,
+    -1,
+    -0.15
+   ],
+   "idle": 1
+  },
+  "toque-macaque": {
+   "name": "Toque Macaque",
+   "id": "b4767bc7-09c8-4689-bfa1-5f96294ff391",
+   "quote": "Tail as long as the body, carried in an S or C",
+   "line": "{aAnimal} is carrying its long tail in an S shape",
+   "when": "always",
+   "pitch": [
+    0.7,
+    -0.7,
+    0.6
+   ],
+   "idle": 1
+  }
+ },
+ "skipped": {
+  "Prevost's Squirrel: quick dashes with frequent pauses, tail arched": "its quote gives the dashes and pauses, not an arched tail",
+  "Tayra: bounds with back arched and tail out": "the tail held out is the rig's rest pose; the arched back is a body clip",
+  "Giraffe: flicks tufted tail against flies": "its rig has no tail bones"
+ }
+}

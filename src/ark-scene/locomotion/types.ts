@@ -12,6 +12,7 @@
  * Space: the rig file's mesh space (glTF), +y up, the animal faces +z, its left is +x. World space is the scene's.
  */
 
+import type {TailPostureSpec} from "@/ark-scene/tail-posture";
 import type {Matrix4} from "three";
 import type {ClipBake} from "@/ark-scene/locomotion/flight";
 
@@ -170,6 +171,8 @@ export type LocoInput = {
     airStage?: string | null;
     /** What the clip now bakes itself (`flight.ts` clipBakeOf: a v7 rig's flight clips), or null (v2: as before). */
     clipBake?: ClipBake | null;
+    /** Lane SIG-OTHER: its species' tail posture (`tail-posture.ts`) and how socially it signals now (0-1), or null: the tail's own springs alone. */
+    tail?: {spec: TailPostureSpec; social: number} | null;
 };
 
 /** One foot's target this frame (world space), for debug views, metrics and L3's checks. */
