@@ -345,6 +345,15 @@ export const CANAL: Poly = smoothLine([
 export const MILLPOND = {x: -14, z: -72, rx: 24, rz: 13};
 /** The harbour's basin (sea water, tidal): the canal's lock opens into its north side. */
 export const HARBOUR_BASIN = box(16, 131, 66, 52);
+/**
+ * The breakwaters: two stone arms out from the basin's mouth (a walkway 4.2 m wide on top), the lighthouse on the east one's end
+ * (`render/scenery.ts` draws them from these; the reach mask (`reach-mask.ts`) lets a body walk along them).
+ */
+export const HARBOUR_ARMS: ReadonlyArray<readonly [Pt, Pt]> = [
+    [local(HARBOUR_BASIN, -HARBOUR_BASIN.w / 2, HARBOUR_BASIN.d / 2), {x: 6, z: 168}],
+    [local(HARBOUR_BASIN, HARBOUR_BASIN.w / 2, HARBOUR_BASIN.d / 2), {x: 36, z: 166}]
+];
+export const BREAKWATER_TOP = 4.2;
 
 // MARK: - Building blocks
 

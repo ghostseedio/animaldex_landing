@@ -23,7 +23,7 @@ import type {SpotWhere} from "@/ark-scene/islands/town/niche";
 const SWIMMERS = new Set<ArkWaterKind>(["fish", "bed", "skater"]);
 /** At the water's edge and on it. */
 const EDGE = new Set<ArkWaterKind>(["dabbler", "diver", "swan", "goose", "grebe", "coot", "wader", "amphibian"]);
-const SEA_ZONES = new Set(["seashore", "coral_reef", "open_ocean", "polar"]);
+export const SEA_ZONES = new Set(["seashore", "coral_reef", "open_ocean", "polar"]);
 
 /** The town's still fresh water, the millpond first (the park's, the biggest). */
 export const TOWN_WETLAND: readonly SpotWhere[] = ["millpond", "farm_pond", "canal"];
