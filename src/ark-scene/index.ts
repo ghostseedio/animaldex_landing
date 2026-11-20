@@ -6081,7 +6081,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 else if (surface && !(rig && state && state.weight > 0.5)) groundingCheck.record(animal.id, animal.model_slug, "surface", surfaceContactGap(animal.model_slug, checkLevel, model.minY, position, rotation, s, {x: where.x, y: where.base, z: where.z}, surface), modelHeight);
             }
             // Powers you can see: its body down into cover, crouched, on its side, or up off the ground (`power-show.ts` drop).
-            if (entry.power?.drop && !reducedMotion) position.y -= entry.power.drop;
+            // ARK-CONTACT (decision 447, the hovering cat): a lift (a negative drop: the climb Power's "up the slope's way",
+            // 45% of its height, the vigilance stand's 8%) only off the ground or for a flyer. On the ground a walker rose
+            // into the air with nothing under it, nose up like a pounce, its shadow left below: its climb is its shift,
+            // its attitude and its clip.
+            const powerFlies = entry.air > 0.001 || model.behaviour?.plan === "bird" || model.behaviour?.plan === "bat" || model.behaviour?.plan === "flying_insect";
+            if (entry.power?.drop && !reducedMotion) position.y -= entry.power.drop < 0 && stand && !powerFlies ? 0 : entry.power.drop;
             matrix.compose(position, rotation, scale.set(s, s, s));
             if (rig && state && level === "near") {
                 // The locomotion layer (`locomotion/`, lane L1): gaits with planted feet, foot IK, the body's motion and

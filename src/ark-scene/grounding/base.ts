@@ -115,7 +115,7 @@ export function meanDrop(slug: string): number {
  */
 const STANDING = new Set(["idle", "walk", "run", "trot", "gallop", "graze", "browse", "scan", "call", "display", "groom", "dig", "strike", "fight", "clash", "shake_off", "perch", "stalk", "sniff", "drink"]);
 /** ARK-CONTACT: a clip the feet carry as it goes (a standing clip, or a gait: its own bob and a hop's air time are its own). */
-const GAITS = new Set(["hop", "slither", "crawl", "climb", "swim", "paddle"]);
+const GAITS = new Set(["hop", "bound", "gallop", "slither", "crawl", "climb", "rise", "drop", "swim", "paddle"]);
 export function feetCarryClip(name: string): boolean {
     return STANDING.has(name) || GAITS.has(name);
 }
