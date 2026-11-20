@@ -187,3 +187,26 @@ Measured on 2026-11-11 on the shared Mac (load about 15–25).
 - **Sleeping costs less, not more.** Asleep is no worse than awake with a third more near models, all with the lids, curl, breath and stirs.
 - **Den sleepers cost nothing to draw.** An animal gone into its den isn't drawn.
 - **GPU work only where it shows.** The curl, breath and stirs run only near the camera, and the lid code only on shut eyes.
+
+## 9. Where they sleep, and the primates' sit (lane ark-sleep, 2026-11-21)
+
+The owner: "some animals like monkeys are sleeping weird, and also generally animals don't sleep in the open - they find a hiding spot or something".
+
+- **Cover by kind** (`sleep-sites.ts`, used by `behaviour-schedule.ts` `rawRoostOf` and the bed search in `roostOf`). The species' own roost still comes first. When nothing of it is in reach, the cover its kind sleeps in, best first:
+  - primates: a limb, then a rock or a ledge;
+  - hunters (cats, dogs, bears, hyenas): a cave mouth or den, the foot of a rock, the shade of trees and bushes;
+  - small mammals: a burrow, under a bush, a log, a rock, the leaf litter;
+  - birds: a branch, a tree hole, a ledge, a post, a rock, the reeds, the water's edge;
+  - reptiles and amphibians: a rock face, a burrow, a log, a rock, the leaf litter, a bush's shade;
+  - grazers: shade if any (a herd still sleeps clustered round its leader).
+
+  The pick is seeded by id and weighted to the nearest (`placeNear`), so neighbours spread over the cover. Beds keep the walk-region and enclosure checks (`bedFits`) and the collisions (`clearOfSolid`).
+- **The town's shelters** (`islands/town/sampler.ts`): shade places at a field shelter's front, a pig ark's mouth, along the farms' barns and stables, at a home's back wall (garden pets), and before a zoo paddock's keepers' shed.
+- **Primates sit asleep** (`locomotion/sit-sleep-pose.ts`, `rig-player.ts`). The rig's own primate `sleep` crouched on all fours with the head down. A primate rig now gets a sit posed from its skeleton, replacing that clip (`sit_down`, `sit_up`, `sleep`):
+  - the back leans up 58 degrees;
+  - the knees are drawn up and the hands rest on them;
+  - the head is forward and down in front of the chest;
+  - the rump sits where its feet were (on the branch).
+
+  `__arkPosedSit = false` turns it off. `scripts/ark-sit-sleep-sheet.mts` draws it on the fixture rigs.
+- **Measure** with `scripts/ark-sleep-sites.mts <snapshot>`: each wild animal's roost, what it is on and the nearest cover. On the live Ark (958 scheduled wild animals), sleepers with no cover were 74 before, about half that after. Most of the rest are group members, which sleep round their leader by design.

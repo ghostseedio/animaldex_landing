@@ -140,6 +140,11 @@ for (const shot of plan) {
             await c.look(s.near, s.distance ?? 8, s.azimuth ?? 0.7, s.polar ?? 1.3);
             await c.at(s.epoch, s.run ?? 2);
         }
+        // (`pin`: followed, so the live budget draws it though it rests this turn; lane ark-sleep.)
+        if (s.pin && s.id) {
+            c.pin(s.id);
+            await c.at(s.epoch, 4);
+        }
         await c.at(s.epoch, s.run ?? 2);
         if (s.id && s.clear) return JSON.stringify({view: await c.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0), at: c.locate(s.id)});
         if (s.id) return JSON.stringify(await c.frame(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0));
@@ -147,6 +152,7 @@ for (const shot of plan) {
         return "view";
     }, shot);
     await page.screenshot({path: path.join(out, `${shot.name}.jpg`), type: "jpeg", quality: 88});
+    if (shot.pin) await page.evaluate(() => window.__canopy.pin(null));
     const scan = await page.evaluate((id) => JSON.stringify({...window.__canopy.nanScan(), who: id ? window.__canopy.who(id) : null}), shot.id ?? null);
     notes.push(`${shot.name}: epoch ${shot.epoch} id ${shot.id ?? "-"} ${note} ${scan}`);
     console.log(shot.name, note, scan);

@@ -106,6 +106,8 @@ async function main() {
             return at;
         },
         hours: (h: number | null) => handle.setHours(h),
+        /** Followed (lane ark-sleep): an animal the live budget is resting this turn is drawn all the same (a pin). */
+        pin: (id: string | null) => handle.follow(id),
         /**
          * The light alone pinned to an hour (lane ark-sleep: night's sleepers seen in daylight; the schedule keeps the
          * world's own hour). null: the light follows the world's hour again.

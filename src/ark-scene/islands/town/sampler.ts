@@ -310,9 +310,10 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
         let limb = 0;
         for (const p of townTreePerches(t)) add(p.tag, p.tag === "branch" ? `town:tree:${i}:limb${limb++}` : `town:tree:${i}:${p.tag}`, p.x, p.y, p.z, p.nx, p.ny, p.nz, p.yaw);
     });
-    // Lane ark-sleep (`sleep-sites.ts`): where the farms' stock and the zoo's paddock animals sleep, in the lee of their
-    // shelter: before a field shelter's open front, a pig ark's mouth, along a stable or a barn, before a zoo paddock's
-    // keepers' shed (the way to its night quarters). Shade places, as under a tree; never in a solid's footprint.
+    // Lane ark-sleep (`sleep-sites.ts`): where the farms' stock, the garden pets and the zoo's paddock animals sleep, in
+    // the lee of their shelter: before a field shelter's open front, a pig ark's mouth, along a stable or a barn, by a
+    // home's back wall, before a zoo paddock's keepers' shed (the way to its night quarters). Shade places, as under a
+    // tree; never in a solid's footprint.
     const lee = (id: string, x: number, z: number) => {
         if (!inTownSolid(x, z, 0.3)) add("shade", id, x, townHeight(x, z), z);
     };
@@ -327,6 +328,15 @@ export function townSamplerData(open: readonly string[], origin: {x: number; z: 
                 const p = local(b.at, lx, lz);
                 lee(`town:sleep:${b.id}:${k}`, p.x, p.z);
             }
+        }
+    }
+    // (A garden pet's bed by its home's back wall, one per household of a house or a terrace: the garden is behind it.)
+    for (const b of plan.buildings) {
+        if (b.kind !== "house" && b.kind !== "terrace") continue;
+        const n = Math.max(b.households, 1);
+        for (let k = 0; k < n; k++) {
+            const p = local(b.at, -b.at.w / 2 + (b.at.w * (k + 0.5)) / n, -b.at.d / 2 - 0.9);
+            lee(`town:sleep:${b.id}:back${k}`, p.x, p.z);
         }
     }
     for (const e of zooLayout(open).enclosures) {
