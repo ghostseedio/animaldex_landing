@@ -18,9 +18,12 @@
  *                     (the water under it is still water for a swimmer)
  *
  * A cell with several barriers lets a body through only when every one does (SMALL and CLIMB are the AND). A building's
- * wall lets a climber through, never a walker or a small one. Everything is a pure function of the town's plan, ground and obstacle footprints, so the mask is
- * exactly the town the page draws; `scripts/ark-town-reach.mts` writes it, `src/lib/ark-town-reach.test.ts` checks it
- * against the drawn town (the plan, the ground, the colliders' footprints and the bridges).
+ * wall lets a climber through, never a walker or a small one. Each front garden's gate (`townGates`) is a gap in whatever
+ * stands there. The zoo's fences are all in (every plot), so the mask does not change as the server opens the next one.
+ *
+ * Everything is a pure function of the town's plan, ground and obstacle footprints, so the mask is exactly the town the page
+ * draws; `scripts/ark-town-reach.mts` writes it, `src/lib/ark-town-reach.test.ts` checks it against the drawn town (the plan,
+ * the ground, the scene's colliders, the gates, the bridges and the breakwaters).
  */
 
 import {bridgeAt} from "@/ark-scene/islands/town/canal-bridges";
