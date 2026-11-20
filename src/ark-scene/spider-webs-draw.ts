@@ -531,6 +531,18 @@ const SPHERE = new Sphere();
  * (each instance near) and batch under `root`. The ground is asked by its heights instead (its meshes are left out).
  */
 export function gatherDrawn(root: Object3D, centre: V3, reach: number, skip: (object: Object3D) => boolean, tally?: Map<string, number>): Float32Array {
+    const steps = gatherSteps(root, centre, reach, skip, {until: Infinity}, tally);
+    for (;;) {
+        const step = steps.next();
+        if (step.done) return step.value;
+    }
+}
+
+/**
+ * The same, a slice at a time: it pauses (yields) once `budget.until` (performance.now()) is past, at the next scene object
+ * or every 256 instances, and is resumed in a later frame, so a gather never stalls one frame.
+ */
+export function* gatherSteps(root: Object3D, centre: V3, reach: number, skip: (object: Object3D) => boolean, budget: {until: number}, tally?: Map<string, number>): Generator<void, Float32Array> {
     let current = "";
     let list = new Float32Array(9 * 1024);
     let count = 0;
@@ -588,8 +600,11 @@ export function gatherDrawn(root: Object3D, centre: V3, reach: number, skip: (ob
         const radius = sphere.radius * (matrix.getMaxScaleOnAxis() || 1);
         return Math.hypot(A.x - centre.x, A.y - centre.y, A.z - centre.z) < radius + reach;
     };
-    const visit = (object: Object3D) => {
-        if (!object.visible || skip(object)) return;
+    const stack: Object3D[] = [root];
+    while (stack.length) {
+        if (performance.now() > budget.until) yield;
+        const object = stack.pop()!;
+        if (!object.visible || skip(object)) continue;
         const mesh = object as Mesh;
         const name = mesh.name || (mesh.userData.kind as string | undefined) || "";
         current = name || mesh.parent?.name || "?";
@@ -602,6 +617,7 @@ export function gatherDrawn(root: Object3D, centre: V3, reach: number, skip: (ob
                 const instanced = mesh as unknown as InstancedMesh;
                 if (batched.isBatchedMesh) {
                     for (let i = 0; i < batched.instanceCount; i++) {
+                        if ((i & 255) === 255 && performance.now() > budget.until) yield;
                         try {
                             if (!batched.getVisibleAt(i)) continue;
                             const g = batched.getGeometryIdAt(i);
@@ -626,6 +642,7 @@ export function gatherDrawn(root: Object3D, centre: V3, reach: number, skip: (ob
                         const e = instanced.instanceMatrix.array as Float32Array;
                         const worldScale = mesh.matrixWorld.getMaxScaleOnAxis() || 1;
                         for (let i = 0; i < instanced.count; i++) {
+                            if ((i & 255) === 255 && performance.now() > budget.until) yield;
                             // (First by the instance's own place and size, read straight from its matrix: most are far.)
                             const k = i * 16;
                             const scale = Math.max(Math.hypot(e[k], e[k + 1], e[k + 2]), Math.hypot(e[k + 4], e[k + 5], e[k + 6]), Math.hypot(e[k + 8], e[k + 9], e[k + 10]));
@@ -645,9 +662,8 @@ export function gatherDrawn(root: Object3D, centre: V3, reach: number, skip: (ob
                 }
             }
         }
-        for (const child of object.children) visit(child);
-    };
-    visit(root);
+        for (let c = object.children.length - 1; c >= 0; c--) stack.push(object.children[c]);
+    }
     return list.subarray(0, count * 9);
 }
 
@@ -819,7 +835,7 @@ void main() {
 }
 `;
 
-type Spider = {id: string; habit: WebHabit; home: V3; web: FittedWeb | null; tries: number; triedAt: number; cast: Caster | null};
+type Spider = {id: string; habit: WebHabit; home: V3; web: FittedWeb | null; tries: number; triedAt: number; cast: Caster | null; gather: Generator<void, Float32Array> | null};
 
 export type WebsStats = {spiders: number; fitted: number; drawn: number; threads: number; fitMs: number; fitMaxMs: number};
 
@@ -832,6 +848,7 @@ export class SpiderWebs {
     private slotKey = "";
     private fitMs = 0;
     private fitMaxMs = 0;
+    private readonly budget = {until: 0};
     private lastPick = -Infinity;
     private readonly res = new Vector2(1, 1);
 
@@ -870,7 +887,7 @@ export class SpiderWebs {
         if (this.spiders.has(id)) return true;
         const habit = webHabit(slug, scientificName);
         if (!habit) return false;
-        this.spiders.set(id, {id, habit, home, web: null, tries: 0, triedAt: -Infinity, cast: null});
+        this.spiders.set(id, {id, habit, home, web: null, tries: 0, triedAt: -Infinity, cast: null, gather: null});
         return true;
     }
 
@@ -914,7 +931,12 @@ export class SpiderWebs {
             if (performance.now() - started > FIT_BUDGET_MS) break;
             const reach = s.habit.radius * 3 + WEB_SITE_WITHIN + 1;
             if (!s.cast) {
-                s.cast = triangleCaster(gatherDrawn(this.root, s.home, reach, (o) => o === this.mesh), s.home, reach);
+                this.budget.until = started + FIT_BUDGET_MS;
+                s.gather ??= gatherSteps(this.root, s.home, reach, (o) => o === this.mesh, this.budget);
+                const step = s.gather.next();
+                if (!step.done) break;
+                s.gather = null;
+                s.cast = triangleCaster(step.value, s.home, reach);
                 break;
             }
             s.tries++;
