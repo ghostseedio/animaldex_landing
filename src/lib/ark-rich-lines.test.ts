@@ -4,7 +4,8 @@ import test from "node:test";
 import {ARK_RICH_ENGLISH, richItems, richNotes} from "@/ark-scene/live/rich-lines";
 import {dungVisitPose, eatsDung} from "@/ark-scene/dung";
 import {arkStatusBars, arkStatusText, arkStatusWords} from "@/lib/ark-animal-status";
-import {ARK_LIVE_ENGLISH, type ArkLiveText} from "@/lib/ark-live-log";
+import {type ArkLiveText} from "@/lib/ark-live-log";
+import {ARK_LIVE_ENGLISH} from "@/lib/ark-live-words";
 
 /** Decision 434 (AnimalDex docs/ark/dung-and-logs.md): the rich events' lines, dung users at real dung. */
 
