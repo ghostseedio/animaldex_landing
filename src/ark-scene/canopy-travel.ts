@@ -59,6 +59,26 @@ export function canopyKindOf(slug: string, scientific?: string | null): CanopyKi
 export type Anchor = {id: string; tree: string; x: number; y: number; z: number; nx: number; ny: number; nz: number; under: boolean};
 /** A trunk to keep clear of (its axis at x, z; its radius; the height it stands to). */
 export type TrunkDisc = {tree: string; x: number; z: number; r: number; top: number};
+/** A crown's leaf mass (its middle, its reach, from its lowest leaves to its top): what hides an animal in it (m). */
+export type CrownDisc = {x: number; z: number; r: number; bottom: number; top: number};
+
+/**
+ * The share of a hop's middle (its line from a quarter to three quarters of the way) that is in the open, out of every
+ * crown's leaf mass (ARK-JUNGLE: a crossing over a gap in the canopy is seen; one through the leaves is not).
+ */
+export function openShare(a: {x: number; y: number; z: number}, b: {x: number; y: number; z: number}, crowns: readonly CrownDisc[]): number {
+    if (!crowns.length) return 0;
+    let open = 0;
+    const samples = 5;
+    for (let k = 0; k < samples; k++) {
+        const t = 0.25 + (0.5 * k) / (samples - 1);
+        const x = a.x + (b.x - a.x) * t;
+        const y = a.y + (b.y - a.y) * t;
+        const z = a.z + (b.z - a.z) * t;
+        if (!crowns.some((c) => y > c.bottom - 0.3 && y < c.top && Math.hypot(x - c.x, z - c.z) < c.r)) open++;
+    }
+    return open / samples;
+}
 
 export type Hop = {from: Anchor; to: Anchor; style: "swing" | "leap" | "run"; start: number; seconds: number; /** Brachiation: release and catch points of the body's centre, the arc's rise. */ rise: number};
 export type CanopyRoute = {kind: CanopyKind; length: number; reach: number; hops: Hop[]; seconds: number; home: Anchor; /** When (s, after its first move) it reaches the far end and holds there a while. */ farEnd: number};
@@ -85,7 +105,8 @@ function segDistance(ax: number, az: number, bx: number, bz: number, px: number,
 
 /** The longest gap (m) a kind crosses between holds, by its way and its size. */
 export function gapOf(kind: CanopyKind, length: number): number {
-    if (kind.mode === "brachiate") return kind.slow ? Math.max(1.6, length * 1.6) : Math.min(Math.max(4.5, length * 6), 8);
+    // (A gibbon's flight across a gap: up to 8 m and more in the wild; the siamang's, nearly 7 m at its size.)
+    if (kind.mode === "brachiate") return kind.slow ? Math.max(1.6, length * 1.6) : Math.min(Math.max(4.5, length * 7.5), 8);
     if (kind.mode === "leap") return Math.min(Math.max(4, length * 7), 9);
     return Math.min(Math.max(2.2, length * 4), 4);
 }
@@ -96,7 +117,7 @@ export function gapOf(kind: CanopyKind, length: number): number {
  * metres and more over the ground), its line clear of every other trunk. Then back the same way. Null when no
  * neighbour is in reach. `seed`: the animal's and the route's own (its hash), so each animal goes its own way.
  */
-export function planRoute(home: Anchor, anchors: readonly Anchor[], trunks: readonly TrunkDisc[], kind: CanopyKind, length: number, seed: number, groundAt: (x: number, z: number) => number, most = 3): CanopyRoute | null {
+export function planRoute(home: Anchor, anchors: readonly Anchor[], trunks: readonly TrunkDisc[], kind: CanopyKind, length: number, seed: number, groundAt: (x: number, z: number) => number, most = 3, crowns: readonly CrownDisc[] = []): CanopyRoute | null {
     const gap = gapOf(kind, length);
     const chain: Anchor[] = [home];
     const used = new Set([home.id]);
@@ -130,7 +151,8 @@ export function planRoute(home: Anchor, anchors: readonly Anchor[], trunks: read
         if (!ok.length) break;
         // Its own choice among them (seeded), the longer crossings a little more likely.
         // (Another tree's crown first where one is in reach.)
-        const scored = ok.map((b, i) => ({b, s: unit(seed, k * 31 + i) + 0.3 * Math.hypot(b.x - at.x, b.z - at.z) / gap + (b.tree === at.tree ? 0 : 1.5)})).sort((p, q) => q.s - p.s || p.b.id.localeCompare(q.b.id));
+        // (ARK-JUNGLE: and over open air where there is a crossing over a gap: the more of it in the open, the likelier.)
+        const scored = ok.map((b, i) => ({b, s: unit(seed, k * 31 + i) + 0.3 * Math.hypot(b.x - at.x, b.z - at.z) / gap + (b.tree === at.tree ? 0 : 1.5) + 1.6 * openShare(at, b, crowns)})).sort((p, q) => q.s - p.s || p.b.id.localeCompare(q.b.id));
         const next = scored[0].b;
         chain.push(next);
         used.add(next.id);

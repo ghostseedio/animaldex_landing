@@ -197,6 +197,8 @@ import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundi
 import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
 import {modelBase, uprightBody} from "@/ark-scene/grounding/base";
 import {canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
+import {ledgeFrame} from "@/ark-scene/rock-ledge"; // ARK-JUNGLE
+import {keepCarriedWithMothers} from "@/ark-scene/carry-cull"; // ARK-JUNGLE
 import {setLocoGround} from "@/ark-scene/locomotion/ground";
 import {fleePace, sprintPace} from "@/ark-scene/locomotion/flee";
 import {flightSpec} from "@/ark-scene/locomotion/flight";
@@ -534,6 +536,10 @@ type Entry = {
     youngOf?: {parent: string | null; play: number; at: number};
     /** 3.3 batch (C): how strongly it wears its species' young coat (`young-coat.ts`, 0-15), worked out again now and then. */
     youngCoat?: {steps: number; at: number};
+    /** ARK-JUNGLE: a young one carried on its mother now (`carriedPose`): nothing pushes it off her. */
+    riding?: boolean;
+    /** Its mother's pose as `carriedPose` read it (her id, where): moved with her when the frame's pushes move her. */
+    ridingOn?: {id: string; x: number; z: number; base: number};
     /** 3.3 batch (C): its antlers in this month of the Ark year (`antler-cycle.ts`), re-read every 30 s. */
     antler?: AntlerState & {at: number};
     /** A small animal's recipe act off the schedule (a house starling in a murmuration), for the near detail. */
@@ -3035,6 +3041,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // schedule. On the low tier and the lighter view they take their turn in the budget like everyone.)
         const livePins = isl && !liteOn() && tier !== "low" ? new Set([...Array.from(pins), ...snapshot.animals.filter((animal) => isl.has(animal) && isl.held(animal.id)).map((animal) => animal.id)]) : pins;
         const outside = runtime.outside(candidates, representatives.live, livePins, liteOn(), restingFor(snapshot, places));
+        // ARK-JUNGLE: a carried young rests with its mother: never drawn alone while she is out of sight.
+        const bornById = new Map(snapshot.animals.filter((animal) => animal.origin === "born").map((animal) => [animal.id, animal]));
+        if (bornById.size) keepCarriedWithMothers(outside, (id) => (bornById.has(id) ? liveliness.carriedBy(bornById.get(id)!) : null));
         // (For the resting warm-up: what the next step's rotation will be asked about, `runtime.restingAsks`.)
         // (Kept by the read, not the roster: the warm-up asks only what the rotation will, with a cast too.)
         lastRotation = {snapshot: base, candidates, live: representatives.live, pins: livePins, lite: liteOn()};
@@ -3815,7 +3824,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         (a.sleepNow?.t ?? 0) > 0.5 && (b.sleepNow?.t ?? 0) > 0.5 && a.animal.model_slug === b.animal.model_slug && (sleepStyle(a.animal.model_slug).social !== "apart" || Boolean(a.sched?.animal.young || b.sched?.animal.young));
 
     const keepApart = (list: Array<{entry: Entry; distance: number; visible: boolean; pose: Pose}>, dt: number) => {
-        const near = list.filter((c) => c.visible && c.entry.sched && scheduled(c.entry) && c.distance < 45 && !c.entry.sched.pose?.aloft).sort((a, b) => a.distance - b.distance).slice(0, 80);
+        const near = list.filter((c) => c.visible && c.entry.sched && scheduled(c.entry) && c.distance < 45 && !c.entry.sched.pose?.aloft && !c.entry.riding).sort((a, b) => a.distance - b.distance).slice(0, 80);
         // Animals in an act (a birth, a mating, a contest, a meal) stand where the act has them: the others give them room.
         const acting = list.filter((c) => c.visible && c.distance < 45 && c.entry.act && !c.entry.act.hidden && !c.entry.act.role);
         for (let i = 0; i < near.length; i++) {
@@ -4047,6 +4056,41 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
      */
     const waterTopAt = (x: number, z: number) => Math.max(waterSurfaceAt(x, z), waterLevelAt(x, z, 0));
 
+    /**
+     * ARK-JUNGLE (board: "mothers carrying infants"): a young one its species carries (`ark-age.ts`: the first third of its
+     * dependence) rides its mother wherever she is drawn now, in her own frame: a newborn clings under her belly, facing her
+     * chest, its back to the ground; older, it rides on her back. So it goes up the trunk with her, swings under her and
+     * flies the gap with her. Null when it is not carried, or its mother is not drawn (it is then at heel, as before).
+     */
+    const carriedPose = (entry: Entry, time: number): Pose | null => {
+        const age = liveliness.ageOf(entry);
+        if (!age || age.stage !== "young" || !age.carried) return null;
+        const mother = findEntry(age.follow?.parentId ?? liveliness.parentOf(entry.animal.id));
+        if (!mother || mother === entry || mother.act || !mother.sched) return null;
+        const motherModel = library.get(mother.animal.model_slug);
+        const motherHeight = motherModel ? motherModel.height * (mother.length / motherModel.bodyLength) : mother.length * 0.6;
+        const at = pose(mother, motherModel, motherHeight, time);
+        entry.ridingOn = {id: mother.animal.id, x: at.x, z: at.z, base: at.base};
+        // Her frame: her back's way (n), her head's (t), her feet's point.
+        const s = at.surface;
+        const n = s ? {x: s.nx, y: s.ny, z: s.nz} : {x: 0, y: 1, z: 0};
+        const t = s ? {x: s.tx, y: s.ty, z: s.tz} : {x: Math.sin(at.yaw), y: 0, z: Math.cos(at.yaw)};
+        const foot = {x: at.x, y: at.base, z: at.z};
+        const middle = {x: foot.x + n.x * motherHeight * 0.5, y: foot.y + n.y * motherHeight * 0.5, z: foot.z + n.z * motherHeight * 0.5};
+        // (A newborn's first weeks under her, then on her back: a share of its growth, `ark-age.ts`.)
+        const belly = age.growth < 0.11;
+        const side = belly ? -1 : 1;
+        const along = belly ? 0.1 : -0.12;
+        // Its feet against her: under her belly its own up is her down, so its feet (its belly) face hers.
+        const reach = motherHeight * 0.4;
+        const fx = middle.x + n.x * side * reach + t.x * mother.length * along;
+        const fy = middle.y + n.y * side * reach + t.y * mother.length * along;
+        const fz = middle.z + n.z * side * reach + t.z * mother.length * along;
+        const up = belly ? {x: -n.x, y: -n.y, z: -n.z} : n;
+        const surface = {x: fx, y: fy, z: fz, nx: up.x, ny: up.y, nz: up.z, tx: t.x, ty: t.y, tz: t.z};
+        return {x: fx, z: fz, base: fy, yaw: Math.atan2(t.x, t.z), pitch: 0, roll: 0, afloat: true, surface};
+    };
+
     /** Its schedule's pose as the scene draws it: banked into the turn when circling, the head a little down asleep. */
     const fromSchedule = (entry: Entry, modelHeight: number): Pose => {
         const own = entry.sched!;
@@ -4126,6 +4170,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const canopy = trip && perch && !at.moving && !act && !reducedMotion ? canopyFrame(entry.animal, trip, own.at, entry.length, !entry.state.asleep, perch, heightAt) : null;
         if (canopy) return {x: canopy.x, z: canopy.z, base: canopy.y, yaw: Math.atan2(canopy.tx, canopy.tz), pitch: 0, roll: 0, afloat: false, surface: canopy};
         if (perch) return {x: perch.x, z: perch.z, base: perch.y, yaw: at.yaw + glance, pitch: 0, roll: 0, afloat: false, surface: perch};
+        // ARK-JUNGLE: a langur of the rocks resting on the ground goes up a rock near it now and then, ledge by ledge, sits
+        // on its top a while and comes down (`rock-ledge.ts`, the shared clock's).
+        const ledge = trip && !at.moving && !at.aloft && !act && !reducedMotion && own.at >= trip.arrive && (entry.denIn ?? 0) <= 0.001 && Math.abs(at.y - ground) < 0.4 ? ledgeFrame(entry.animal, trip, own.at, !entry.state.asleep, {x: at.x, y: Math.max(at.y, ground), z: at.z}, heightAt) : null;
+        if (ledge) return {x: ledge.x, z: ledge.z, base: ledge.y, yaw: Math.atan2(ledge.tx, ledge.tz), pitch: 0, roll: 0, afloat: false, surface: ledge};
         return {
             x: at.x,
             z: at.z,
@@ -4245,6 +4293,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const lying = act.lying ? Math.sign(act.lying) * LYING_ROLL * Math.min(Math.abs(act.lying), 1) : 0;
             return {x: act.x, z: act.z, base: act.base, yaw: act.yaw, pitch: act.pitch, roll: act.roll + lying, afloat: act.base < -0.02 || act.base > Math.max(heightAt(act.x, act.z), 0) + 0.3};
         }
+        // ARK-JUNGLE: a carried young rides its mother as she is drawn this frame (up a trunk, swinging, in flight).
+        const riding = !reducedMotion && entry.animal.origin === "born" ? carriedPose(entry, time) : null;
+        entry.riding = Boolean(riding);
+        if (riding) return riding;
         const place = entry.place;
         if (entry.moment) {
             const at = momentAt(entry, model, modelHeight, time);
@@ -4256,6 +4308,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // p5 (homes): a pet indoors walks about its room's floor on the shared clock (`islands/town/home-rooms.ts`).
         const room = island && !entry.visitor && !tank ? island.roomPose(entry.animal.id, entry.length, reducedMotion ? 0 : clockNow()) : null;
         if (room) return {x: room.x, z: room.z, base: room.base, yaw: room.yaw, pitch: 0, roll: 0, afloat: false};
+        // ARK-JUNGLE: a primate house resident that travels through trees goes out on the hall's climbing frames now and then
+        // (up a post, along the beams the way its kind travels, back down: `islands/town/zoo-swing.ts`, the shared clock's).
+        const swing = island && !entry.visitor && !tank && !room && !reducedMotion && !entry.act && island.held(entry.animal.id) ? island.zooSwing(entry.animal, entry.length, {x: place.x, y: place.ground, z: place.z}, worldMs() / 1000, !entry.state.asleep) : null;
+        if (swing) return {x: swing.x, z: swing.z, base: swing.y, yaw: Math.atan2(swing.tx, swing.tz), pitch: 0, roll: 0, afloat: true, surface: swing};
         if (entry.depth && oceanRoams(entry)) return oceanPose(entry, entry.depth, modelHeight); // p2 (ocean)
         if (place.hamlet && !entry.visitor) {
             // A hamlet resident: on its spot when out, walking out of its door or back in, else at its door (drawn only when it is yours).
@@ -5311,6 +5367,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (scheduleOn && !reducedMotion) {
             const started = performance.now();
             keepApart(candidates, dt);
+            // ARK-JUNGLE: a young one carried rides where its mother is drawn: moved as the reactive layer and the pushes moved her.
+            if (candidates.some((c) => c.entry.riding)) {
+                const byId = new Map(candidates.map((c) => [c.entry.animal.id, c]));
+                for (const c of candidates) {
+                    const on = c.entry.riding ? c.entry.ridingOn : null;
+                    const m = on ? byId.get(on.id) : null;
+                    if (!on || !m) continue;
+                    const dx = m.pose.x - on.x;
+                    const dz = m.pose.z - on.z;
+                    const dy = m.pose.base - on.base;
+                    c.pose.x += dx;
+                    c.pose.z += dz;
+                    c.pose.base += dy;
+                    if (c.pose.surface) c.pose.surface = {...c.pose.surface, x: c.pose.surface.x + dx, y: c.pose.surface.y + dy, z: c.pose.surface.z + dz};
+                }
+            }
             // The muzzles of the grazers biting and the bodies of the walkers nearest the camera, for the grass to bend at (`grass-press.ts`).
             const biting = (c: (typeof candidates)[number]) => c.entry.sched!.pose?.beat === "bite" || c.entry.sched!.pose?.beat === "chew";
             setGrassPress(

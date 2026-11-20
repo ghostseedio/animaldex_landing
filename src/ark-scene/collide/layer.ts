@@ -237,7 +237,8 @@ export class CollideLayer<E> {
         this.begin(epoch);
         const done = this.resolvedNow.get(e);
         if (done) return done;
-        const self = this.placed(e, epoch, base)!;
+        // (Its base given now, even when a neighbour's push asked first at this moment and found it had none.)
+        const self = this.placed(e, epoch, base) ?? base;
         const {q0, q1, s} = separationMoments(epoch);
         const a = this.pushAt(e, q0);
         const b = this.pushAt(e, q1);

@@ -54,7 +54,7 @@ try {
 const context = await browser.newContext({viewport: {width: Number(arg("width", "1280")), height: Number(arg("height", "720"))}});
 const page = await context.newPage();
 const errors = [];
-page.on("pageerror", (e) => errors.push(e.message));
+page.on("pageerror", (e) => errors.push(String(e.stack ?? e.message).slice(0, 600)));
 await page.goto(`${base}?world=v2&quality=${arg("quality", "high")}&epoch=${plan[0]?.epoch ?? ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
 const started = Date.now();
 while (Date.now() - started < 240000) {
@@ -68,16 +68,73 @@ for (const shot of plan) {
     if (shot.find) {
         // (A moment found on the page's own schedule: the first climb of these kinds from `from`, `after` seconds into it.)
         // (Or, with `phases`, the first moment one of them is swinging, leaping or in flight on its canopy route.)
-        const found = await page.evaluate(async (f) => (f.phases ? window.__canopy.findCanopy(f.pattern, f.phases, f.from, f.seconds ?? 1800, f.step ?? 1, f.skip ?? []) : window.__canopy.findClimb(f.pattern, f.from, f.seconds ?? 1800, f.step ?? 2, f.skip ?? [])), shot.find);
+        const found = await page.evaluate(async (f) => (f.ledge || f.zoo ? window.__canopy.findLedge(f.pattern, f.ledge ?? f.zoo, f.from, f.seconds ?? 1800, f.step ?? 1, Boolean(f.zoo)) : f.phases ? window.__canopy.findCanopy(f.pattern, f.phases, f.from, f.seconds ?? 1800, f.step ?? 1, f.skip ?? []) : window.__canopy.findClimb(f.pattern, f.from, f.seconds ?? 1800, f.step ?? 2, f.skip ?? [])), shot.find);
         console.log(shot.name, "found", JSON.stringify(found));
         if (!found) continue;
         shot.epoch = found.epoch + (shot.find.after ?? 1);
         shot.id = found.id;
     }
+    if (shot.young) {
+        const at = await page.evaluate(async (s) => {
+            await window.__canopy.at(s.epoch, s.run ?? 2);
+            return s.young.map((id) => window.__canopy.young(id));
+        }, shot);
+        notes.push(`${shot.name}: ${JSON.stringify(at)}`);
+        console.log(shot.name, JSON.stringify(at));
+        continue;
+    }
+    if (shot.where) {
+        // (Where the animals of these kinds are at that moment: no picture.)
+        const at = await page.evaluate(async (s) => {
+            await window.__canopy.at(s.epoch, s.run ?? 2);
+            return window.__canopy.where(s.where);
+        }, shot);
+        notes.push(`${shot.name}: ${JSON.stringify(at)}`);
+        console.log(shot.name, JSON.stringify(at));
+        continue;
+    }
+    if (shot.clip) {
+        // A short clip: `clip.seconds` of the page's clock at `clip.fps`, the camera following the animal (or held on the
+        // target), each frame a still; ffmpeg makes them an mp4 when it is on the path.
+        const dir = path.join(out, `${shot.name}.frames`);
+        mkdirSync(dir, {recursive: true});
+        const fps = shot.clip.fps ?? 15;
+        const count = Math.round((shot.clip.seconds ?? 4) * fps);
+        await page.evaluate(async (s) => {
+            if (s.hours !== undefined) window.__canopy.hours(s.hours);
+            await window.__canopy.at(s.epoch, s.run ?? 2);
+            if (s.id && s.clear) {
+                const v = await window.__canopy.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0);
+                if (v) {
+                    s.azimuth = v.azimuth;
+                    s.polar = v.polar;
+                }
+            } else if (s.id) await window.__canopy.frame(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
+            else await window.__canopy.look(s.target, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3);
+            return s;
+        }, shot).then((s) => Object.assign(shot, {azimuth: s.azimuth, polar: s.polar}));
+        for (let k = 0; k < count; k++) {
+            await page.evaluate(async ({s, dt}) => {
+                if (dt > 0) await window.__canopy.step(dt);
+                if (s.id && s.clip.follow !== false) await window.__canopy.follow(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
+            }, {s: shot, dt: k ? 1 / fps : 0});
+            await page.screenshot({path: path.join(dir, `f${String(k).padStart(4, "0")}.jpg`), type: "jpeg", quality: 85});
+        }
+        try {
+            const {execFileSync} = await import("node:child_process");
+            execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(fps), "-i", path.join(dir, "f%04d.jpg"), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-vf", "scale=trunc(iw/2)*2:trunc(ih/2)*2", path.join(out, `${shot.name}.mp4`)]);
+        } catch (e) {
+            console.log(shot.name, "no mp4:", String(e).slice(0, 120));
+        }
+        notes.push(`${shot.name}: clip ${count} frames from ${shot.epoch} id ${shot.id ?? "-"}`);
+        console.log(shot.name, "clip", count);
+        continue;
+    }
     const note = await page.evaluate(async (s) => {
         const c = window.__canopy;
         if (s.hours !== undefined) c.hours(s.hours);
         await c.at(s.epoch, s.run ?? 2);
+        if (s.id && s.clear) return JSON.stringify({view: await c.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0), at: c.locate(s.id)});
         if (s.id) return JSON.stringify(await c.frame(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0));
         await c.look(s.target, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3);
         return "view";

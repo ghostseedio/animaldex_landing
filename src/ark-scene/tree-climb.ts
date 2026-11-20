@@ -402,5 +402,5 @@ export function treeHostOf(id: string | null | undefined): string | null {
     const town = /^(?:map:)?town:tree:(\d+):/.exec(id);
     if (town) return `town:tree:${town[1]}`;
     const parts = (id.startsWith("map:") ? id.slice(4) : id).split(":");
-    return parts.length >= 3 && /^(decor|fill)\d+$/.test(parts[1]) ? parts[1] : null;
+    return parts.length >= 3 && /^(decor|fill|jungle)\d+$/.test(parts[1]) ? parts[1] : null;
 }

@@ -6,8 +6,11 @@
  */
 
 import {allAttachPoints, type AttachPoint} from "@/ark-scene/sampler";
-import {canopyKindOf, canopyPoseAt, excursionStart, planRoute, type Anchor, type CanopyKind, type CanopyRoute, type TrunkDisc} from "@/ark-scene/canopy-travel";
+import {canopyKindOf, canopyPoseAt, excursionStart, planRoute, type Anchor, type CanopyKind, type CanopyRoute, type CrownDisc, type TrunkDisc} from "@/ark-scene/canopy-travel";
 import {placedTrunk, treeHostOf} from "@/ark-scene/tree-climb";
+import {forestFill, worldDecor, type DecorItem} from "@/ark-scene/decor";
+import {treeBody} from "@/ark-scene/tree-spacing";
+import {jungleHolds, jungleTrees} from "@/ark-scene/islands/wild/jungle";
 import {hashString} from "@/ark-scene/world";
 import type {SurfaceFrame} from "@/ark-scene/grounding/stand";
 
@@ -30,6 +33,23 @@ function sceneryPoint(id: string): AttachPoint | null {
     return byId.get(id.startsWith("map:") ? id.slice(4) : id) ?? null;
 }
 
+/** A tree host's item (`decor<i>`, `fill<i>`, `jungle<j>`), for its crown. */
+function hostItem(host: string): DecorItem | null {
+    const m = /^(decor|fill|jungle)(\d+)$/.exec(host);
+    if (!m) return null;
+    const list: readonly DecorItem[] = m[1] === "decor" ? worldDecor() : m[1] === "fill" ? forestFill() : jungleTrees();
+    return list[Number(m[2])] ?? null;
+}
+
+/** A tree's leaf mass as a disc a crossing is hidden in (its widest reach, a little in from the leaves' tips). */
+function crownOf(host: string): CrownDisc | null {
+    const item = hostItem(host);
+    const body = item ? treeBody(item) : null;
+    if (!body || !body.bands.length) return null;
+    const reach = Math.max(...body.bands.map((band) => band[2])) * Math.max(...body.sectors);
+    return {x: body.cx, z: body.cz, r: reach * 0.8, bottom: body.bands[0][0], top: body.top};
+}
+
 function anchorOf(p: AttachPoint): Anchor | null {
     const tree = treeHostOf(p.id);
     if (!tree) return null;
@@ -42,9 +62,12 @@ function routeFrom(own: Own, seed: string, hold: AttachPoint, length: number, gr
     let route: CanopyRoute | null = null;
     const home = anchorOf(hold);
     if (home && own.kind) {
-        const near = allAttachPoints().filter((p) => Math.abs(p.position.x - hold.position.x) < AROUND + 3 && Math.abs(p.position.z - hold.position.z) < AROUND + 3);
+        // (And the jungle's holds round it, `islands/wild/jungle.ts`: no home is on one, they are only gone through.)
+        const close = (p: {position: {x: number; z: number}}) => Math.abs(p.position.x - hold.position.x) < AROUND + 3 && Math.abs(p.position.z - hold.position.z) < AROUND + 3;
+        const near = [...allAttachPoints().filter(close), ...(jungleTrees().length ? (jungleHolds() as unknown as AttachPoint[]).filter(close) : [])];
         const anchors = near.filter((p) => HOLD_TAGS.has(p.tag) && Math.hypot(p.position.x - hold.position.x, p.position.z - hold.position.z) < AROUND).map(anchorOf).filter((a): a is Anchor => a !== null);
         const trunks: TrunkDisc[] = [];
+        const crowns: CrownDisc[] = [];
         const seen = new Set<string>();
         for (const p of near) {
             const tree = treeHostOf(p.id);
@@ -52,8 +75,10 @@ function routeFrom(own: Own, seed: string, hold: AttachPoint, length: number, gr
             seen.add(tree);
             const trunk = placedTrunk(p.asset, p.wind);
             if (trunk) trunks.push({tree, x: trunk.x, z: trunk.z, r: trunk.r0, top: trunk.y + trunk.height});
+            const crown = crownOf(tree);
+            if (crown) crowns.push(crown);
         }
-        route = planRoute(home, anchors, trunks, own.kind, length, hashString(`${seed}#${hold.id}#canopy`), groundAt);
+        route = planRoute(home, anchors, trunks, own.kind, length, hashString(`${seed}#${hold.id}#canopy`), groundAt, 3, crowns);
     }
     own.routes.set(hold.id, route);
     return route;

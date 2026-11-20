@@ -26,6 +26,7 @@ import {allAttachPoints} from "@/ark-scene/sampler";
 import {colliderSetFor} from "@/ark-scene/collide/colliders";
 import {wildScenery} from "@/ark-scene/islands/wild/scenery";
 import {WILD_HALF} from "@/ark-scene/islands/wild/frame";
+import {jungleTrees} from "@/ark-scene/islands/wild/jungle";
 
 const hash = (value: unknown) => createHash("sha1").update(JSON.stringify(value)).digest("hex");
 
@@ -127,12 +128,12 @@ test("v2: the rocks, the colliders and the grass come from the wild island's sce
         assert.ok(rocks.filter((rock) => rock.source === "crag").length > 40, "crags on the mountain");
         assert.ok(decorRocks.some((item) => rockAssetFor(item)!.id.startsWith("gen-")), "the mountain's decor rocks are L6's angular ones");
         assert.ok(allMountainRocks().some((piece) => piece.y > 30), "crags above today's ceiling (v2's snow line is 52 m)");
-        // L5's colliders: a trunk for every decor and fill tree as drawn, a box for every drawn rock, the floor's logs.
+        // L5's colliders: a trunk for every decor, fill and jungle tree as drawn, a box for every drawn rock, the floor's logs.
         const list = colliderSetFor(null).list;
         const count = (kind: string) => list.filter((c) => c.kind === kind).length;
         assert.equal(count("rock"), rocks.length);
         assert.equal(count("log"), floorObstacles().length);
-        assert.equal(count("trunk"), [...decor, ...fill].filter((item) => TREE_KINDS.has(item.kind) || item.kind === "canopy").length);
+        assert.equal(count("trunk"), [...decor, ...fill, ...jungleTrees()].filter((item) => TREE_KINDS.has(item.kind) || item.kind === "canopy").length);
         for (const kind of ["building", "fence", "hay", "pond", "post"]) assert.equal(count(kind), 0, `a ${kind} collider`);
         // The termite mounds are the generator's (and the termites' own while aboard).
         assert.ok(allMounds().length >= wildScenery().filter((item) => item.kind === "mound").length);
