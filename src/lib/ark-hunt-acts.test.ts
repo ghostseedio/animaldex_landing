@@ -270,3 +270,17 @@ test("an escape of a hunter with its own way is the same act ending in a miss, a
         }
     }
 });
+
+test("round what is in the way: a wall between the hunter and its prey is gone round, and the act still ends at the prey", () => {
+    // A wall across the way, 4 m wide, a few metres short of the prey.
+    const blocked = (x: number, z: number) => !(Math.abs(x) < 2 && z > 3.5 && z < 4.5);
+    for (const [act, predator, prey, flee] of [["pounce", body(0, 0, 0.5), body(0, 9, 0.08), "run"], ["leap", body(0, 0, 0.7), body(0, 10, 0.12), "run"], ["peck", body(0, 0, 0.25), body(0, 8, 0.02), "run"], ["wade", body(0, 0, 1.0), body(0, 9, 0.3), "swim"]] as const) {
+        for (const miss of [false, true]) {
+            const input = base(act, predator, prey, {miss, flee, clear: blocked, water: act === "wade" ? () => false : undefined});
+            const out = huntRun(input);
+            assert.ok(out, `${act} ${miss ? "miss" : "catch"} found no way round`);
+            for (const s of out.pred) assert.ok(blocked(s.x, s.z), `${act} ${miss ? "miss" : "catch"} walks through the wall at ${s.x.toFixed(2)}, ${s.z.toFixed(2)}`);
+            finite(out);
+        }
+    }
+});

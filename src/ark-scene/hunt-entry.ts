@@ -17,24 +17,24 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string};
-type Scene = {zone: string; hours: number; predator: Cast; prey: Cast; /** How far off the camera stands (m): a few of the hunter's lengths. */ distance: number; /** The prey stands this far from the hunter (m) at the encounter, when set. */ gap?: number};
+type Scene = {zone: string; hours: number; predator: Cast; prey: Cast; /** How far off the camera stands (m): a few of the hunter's lengths. */ distance: number; /** The prey stands this far from the hunter (m) at the encounter, when set. */ gap?: number; /** The hunter starts in the water, at its edge nearest the prey (a crocodilian). */ water?: boolean};
 
 const SCENES: Record<string, Scene> = {
     // pounce: a house cat on a rat; leap: a fox on a vole; jump: a jumping spider on a fly
-    cat: {zone: "farm_garden", hours: 10, predator: {slug: "domestic-cat", name: "Domestic Cat"}, prey: {slug: "house-mouse", name: "House Mouse"}, distance: 3.2, gap: 9},
+    cat: {zone: "grassland", hours: 10, predator: {slug: "domestic-cat", name: "Domestic Cat"}, prey: {slug: "house-mouse", name: "House Mouse"}, distance: 3.2, gap: 9},
     fox: {zone: "grassland", hours: 10, predator: {slug: "red-fox", name: "Red Fox"}, prey: {slug: "meadow-vole", name: "Meadow Vole"}, distance: 4, gap: 10},
     tiger: {zone: "grassland", hours: 10, predator: {slug: "bengal-tiger", name: "Bengal Tiger"}, prey: {slug: "impala", name: "Impala"}, distance: 12, gap: 25},
-    jumper: {zone: "farm_garden", hours: 10, predator: {slug: "jumping-spider", name: "Jumping Spider"}, prey: {slug: "house-fly", name: "House Fly"}, distance: 0.35, gap: 0.5},
+    jumper: {zone: "grassland", hours: 10, predator: {slug: "jumping-spider", name: "Jumping Spider"}, prey: {slug: "house-fly", name: "House Fly"}, distance: 0.35, gap: 0.5},
     // dash, lunge, tongue, web
-    gecko: {zone: "farm_garden", hours: 10, predator: {slug: "common-house-gecko", name: "Common House Gecko"}, prey: {slug: "house-fly", name: "House Fly"}, distance: 0.9, gap: 1.6},
-    wolf: {zone: "farm_garden", hours: 10, predator: {slug: "carolina-wolf-spider", name: "Carolina Wolf Spider"}, prey: {slug: "two-spotted-cricket", name: "Two-spotted Cricket"}, distance: 0.5, gap: 0.6},
-    mantis: {zone: "farm_garden", hours: 10, predator: {slug: "chinese-mantis", name: "Chinese Mantis"}, prey: {slug: "house-cricket", name: "House Cricket"}, distance: 0.8, gap: 1.2},
-    toad: {zone: "farm_garden", hours: 10, predator: {slug: "american-toad", name: "American Toad"}, prey: {slug: "two-spotted-cricket", name: "Two-spotted Cricket"}, distance: 0.7, gap: 1.2},
-    web: {zone: "farm_garden", hours: 10, predator: {slug: "orb-weaver-spider", name: "Orb-weaver Spider"}, prey: {slug: "house-fly", name: "House Fly"}, distance: 0.4, gap: 0.5},
+    gecko: {zone: "grassland", hours: 10, predator: {slug: "common-house-gecko", name: "Common House Gecko"}, prey: {slug: "house-fly", name: "House Fly"}, distance: 0.9, gap: 1.6},
+    wolf: {zone: "grassland", hours: 10, predator: {slug: "carolina-wolf-spider", name: "Carolina Wolf Spider"}, prey: {slug: "two-spotted-cricket", name: "Two-spotted Cricket"}, distance: 0.5, gap: 0.6},
+    mantis: {zone: "grassland", hours: 10, predator: {slug: "chinese-mantis", name: "Chinese Mantis"}, prey: {slug: "house-cricket", name: "House Cricket"}, distance: 0.8, gap: 1.2},
+    toad: {zone: "grassland", hours: 10, predator: {slug: "american-toad", name: "American Toad"}, prey: {slug: "two-spotted-cricket", name: "Two-spotted Cricket"}, distance: 0.7, gap: 1.2},
+    web: {zone: "grassland", hours: 10, predator: {slug: "orb-weaver-spider", name: "Orb-weaver Spider"}, prey: {slug: "house-fly", name: "House Fly"}, distance: 0.4, gap: 0.5},
     // wade, peck, lurk
     heron: {zone: "river_lake", hours: 9, predator: {slug: "grey-heron", name: "Grey Heron"}, prey: {slug: "rainbow-trout", name: "Rainbow Trout"}, distance: 4, gap: 7},
     blackbird: {zone: "grassland", hours: 9, predator: {slug: "common-blackbird", name: "Common Blackbird"}, prey: {slug: "common-earthworm", name: "Common Earthworm"}, distance: 1.1, gap: 3},
-    croc: {zone: "river_lake", hours: 9, predator: {slug: "saltwater-crocodile", name: "Saltwater Crocodile"}, prey: {slug: "wild-boar", name: "Wild Boar"}, distance: 12, gap: 8},
+    croc: {zone: "river_lake", hours: 9, predator: {slug: "saltwater-crocodile", name: "Saltwater Crocodile"}, prey: {slug: "wild-boar", name: "Wild Boar"}, distance: 12, gap: 8, water: true},
     // drop, hover, plunge, talon
     owl: {zone: "grassland", hours: 10, predator: {slug: "little-owl", name: "Little Owl"}, prey: {slug: "meadow-vole", name: "Meadow Vole"}, distance: 5, gap: 10},
     kestrel: {zone: "grassland", hours: 10, predator: {slug: "common-kestrel", name: "Common Kestrel"}, prey: {slug: "meadow-vole", name: "Meadow Vole"}, distance: 7, gap: 8},
@@ -108,7 +108,21 @@ async function main() {
     const hx = quarry.x + (hunter.x - quarry.x) * k;
     const hz = quarry.z + (hunter.z - quarry.z) * k;
     const record = (c: Cast, id: string, k2: number): ArkEventAnimal => ({id, species_profile_id: speciesId(k2), name: c.name, model_slug: c.slug, zone: scene.zone as ArkEventAnimal["zone"], arrived_at: "2026-11-12T00:00:00Z", origin: "arrived", generation: 0, slot: 90 + k2, slot_rank: 0, activity: "diurnal" as ArkEventAnimal["activity"], sociality: null, status: null});
-    const encounter = {t: t0, predator: {x: hx, z: hz}, prey: {x: quarry.x, z: quarry.z, r: 0.5}};
+    let from = {x: hx, z: hz};
+    if (scene.water) {
+        // The nearest water to the prey, on rings round it.
+        search: for (let r = 2; r <= 30; r += 2) {
+            for (let a = 0; a < 24; a++) {
+                const x = quarry.x + Math.sin((a / 24) * Math.PI * 2) * r;
+                const z = quarry.z + Math.cos((a / 24) * Math.PI * 2) * r;
+                if (handle.heightAt(x, z) < -0.2) {
+                    from = {x, z};
+                    break search;
+                }
+            }
+        }
+    }
+    const encounter = {t: t0, predator: from, prey: {x: quarry.x, z: quarry.z, r: 0.5}};
     if (mode === "catch") {
         // (A record's act begins 75 s after its row (`ark-act-hold.ts`): the row is dated so that it begins at the step.)
         const act: Extract<ArkAct, {kind: "meal"}> = {kind: "meal", at: new Date((t0 - 75) * 1000).toISOString(), predator: record(scene.predator, predatorId, 0), prey: record(scene.prey, preyId, 1), phrase: null, extinct: false, encounter};
@@ -118,7 +132,7 @@ async function main() {
     }
     await setAt(t0 + 0.05);
     await frames(4);
-    type Debug = {meals: () => Array<{t0: number; catchAt: number}>; escapes: () => Array<{missAt: number | null; seconds: number | null; kind: string | null; closest: number | null; gap: number | null; phase: string}>; entries: () => Array<{animal: {id: string; model_slug: string}; act: Record<string, unknown> | null}>};
+    type Debug = {meals: () => Array<{t0: number; catchAt: number; hunt: string | null}>; escapes: () => Array<{hunt: string | null; missAt: number | null; seconds: number | null; kind: string | null; closest: number | null; gap: number | null; phase: string}>; entries: () => Array<{animal: {id: string; model_slug: string}; act: Record<string, unknown> | null}>};
     const debug = (window as unknown as {__arkDebug: Debug}).__arkDebug;
     // (The act is built on the first frame both animals are in the scene: asked for a few seconds.)
     const waitUntil = realPerfNow() + 8000;
@@ -135,10 +149,10 @@ async function main() {
         info: () => {
             const meal = debug.meals()[0];
             const escape = debug.escapes()[0];
-            return {mode, catchAt: meal?.catchAt ?? null, missAt: escape?.missAt ?? null, seconds: escape?.seconds ?? null, kind: escape?.kind ?? null, closest: escape?.closest ?? null, gap: escape?.gap ?? null, predator: scene.predator.slug, prey: scene.prey.slug};
+            return {mode, act: (mode === "catch" ? meal?.hunt : escape?.hunt) ?? null, catchAt: meal?.catchAt ?? null, missAt: escape?.missAt ?? null, seconds: escape?.seconds ?? null, kind: escape?.kind ?? null, closest: escape?.closest ?? null, gap: escape?.gap ?? null, predator: scene.predator.slug, prey: scene.prey.slug};
         },
         /** The world at `s` seconds after the step, framed on the two from `distance` (or `scene.distance`). */
-        shot: async (s: number, distance?: number, azimuth = 0.7, polar = 1.12) => {
+        shot: async (s: number, distance?: number, azimuth = 0.7, polar = 0.95) => {
             await setAt(t0 + s - 1.2);
             for (let i = 1; i <= 12; i++) {
                 fake!.perf += 100;

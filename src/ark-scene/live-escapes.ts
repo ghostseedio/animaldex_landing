@@ -81,6 +81,8 @@ export type EscapeScript = {
     gap: number;
     pred: Sample[];
     prey: Sample[];
+    /** The hunter's own way of hunting that was drawn (`hunt-acts.ts`), when one was. */
+    hunt?: HuntAct | null;
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
@@ -528,7 +530,7 @@ export function escapeScript(chase: EscapeChase): EscapeScript {
         if (run) {
             let closest = Infinity;
             for (let k = 0; k < run.pred.length; k++) closest = Math.min(closest, Math.hypot(run.pred[k].x - run.prey[k].x, run.pred[k].z - run.prey[k].z, air ? run.pred[k].y - run.prey[k].y : 0));
-            return {kind: chase.kind, missAt: run.tc, seconds: run.seconds, closest, gap, pred: run.pred, prey: run.prey};
+            return {kind: chase.kind, missAt: run.tc, seconds: run.seconds, closest, gap, pred: run.pred, prey: run.prey, hunt: chase.hunt};
         }
     }
     return chase.kind === "swoop" ? swoopMiss(chase) : groundMiss(chase);
@@ -763,7 +765,7 @@ export class LiveEscapes<E> {
         for (const one of list) if (one.id && Number.isFinite(one.since)) this.wounded.set(one.id, one.since);
     }
 
-    debug(): Array<{key: string; t0: number; prey: string; predator: string; phase: string; kind: string | null; missAt: number | null; seconds: number | null; closest: number | null; gap: number | null}> {
-        return this.escapes.map((e) => ({key: e.act.key, t0: e.act.t0, prey: e.act.prey, predator: e.act.predator, phase: e.over ? (e.script ? "limping" : "limp only") : e.built ? "acting" : "waiting", kind: e.script?.kind ?? null, missAt: e.script ? Math.round(e.script.missAt * 100) / 100 : null, seconds: e.script ? Math.round(e.script.seconds * 100) / 100 : null, closest: e.script ? Math.round(e.script.closest * 1000) / 1000 : null, gap: e.script ? Math.round(e.script.gap * 1000) / 1000 : null}));
+    debug(): Array<{key: string; t0: number; prey: string; predator: string; phase: string; kind: string | null; hunt: string | null; missAt: number | null; seconds: number | null; closest: number | null; gap: number | null}> {
+        return this.escapes.map((e) => ({key: e.act.key, t0: e.act.t0, prey: e.act.prey, predator: e.act.predator, phase: e.over ? (e.script ? "limping" : "limp only") : e.built ? "acting" : "waiting", kind: e.script?.kind ?? null, hunt: e.script?.hunt ?? null, missAt: e.script ? Math.round(e.script.missAt * 100) / 100 : null, seconds: e.script ? Math.round(e.script.seconds * 100) / 100 : null, closest: e.script ? Math.round(e.script.closest * 1000) / 1000 : null, gap: e.script ? Math.round(e.script.gap * 1000) / 1000 : null}));
     }
 }

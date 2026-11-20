@@ -91,7 +91,8 @@ export function huntChoice(c: HuntCtx): HuntChoice | null {
         case "web":
             return land && lq <= lp * 4 ? {act, kind: "glide"} : null;
         case "wade":
-            return bird && !c.predatorWater && (c.preyWater || lq <= lp * 0.5) ? {act, kind: "glide"} : null;
+            // (In the shallows or on the bank: a wading bird stands where it is, never swims.)
+            return bird && (c.preyWater || lq <= lp * 0.5) ? {act, kind: "glide"} : null;
         case "lurk":
             return c.predatorWater ? {act, kind: "dart"} : null;
         case "drop":
@@ -206,20 +207,75 @@ function stopGo(t: number, move: number, hold: number, v: number): number {
 }
 const movingAt = (t: number, move: number, hold: number) => t % (move + hold) < move;
 
-/** A path from `a` to `b`: a quick advance, then a creep in stops and starts over the last `creepDist` m of it. */
-function approach(a: {x: number; z: number}, b: {x: number; z: number}, o: {creepDist: number; fast: number; creep: number; move: number; hold: number}) {
-    const D = Math.hypot(b.x - a.x, b.z - a.z) || 1e-6;
-    const ux = (b.x - a.x) / D;
-    const uz = (b.z - a.z) / D;
+/** A way from `a` to `b` over ground `ok`: straight where it is clear, else steered round what is in the way; null when it gets nowhere. */
+function routeAround(ok: ((x: number, z: number) => boolean) | undefined, a: {x: number; z: number}, b: {x: number; z: number}): Array<{x: number; z: number}> | null {
+    if (!ok || lineOk(ok, a.x, a.z, b.x, b.z)) return [{x: a.x, z: a.z}, {x: b.x, z: b.z}];
+    const step = 0.4;
+    const pts = [{x: a.x, z: a.z}];
+    let x = a.x;
+    let z = a.z;
+    let yaw = heading(b.x - a.x, b.z - a.z);
+    // (Round an obstacle on one side, kept: it does not swing from side to side at a corner.)
+    let side = 0;
+    for (let n = 0; n < 600; n++) {
+        if (Math.hypot(b.x - x, b.z - z) < 0.6) {
+            pts.push({x: b.x, z: b.z});
+            return pts;
+        }
+        const want = heading(b.x - x, b.z - z);
+        // (Clear a step on, a few steps on, and a body's width to each side of the first: it does not clip a corner.)
+        const free = (h: number) => ok(x + Math.sin(h) * step, z + Math.cos(h) * step) && ok(x + Math.sin(h) * step * 2.5, z + Math.cos(h) * step * 2.5) && ok(x + Math.sin(h) * step + Math.cos(h) * 0.3, z + Math.cos(h) * step - Math.sin(h) * 0.3) && ok(x + Math.sin(h) * step - Math.cos(h) * 0.3, z + Math.cos(h) * step + Math.sin(h) * 0.3);
+        let chosen: number | null = null;
+        const offsets = side === 0 ? [0, 0.35, -0.35, 0.7, -0.7, 1.05, -1.05, 1.5, -1.5, 2.1, -2.1, 2.7, -2.7] : [0, 0.35 * side, 0.7 * side, 1.05 * side, 1.5 * side, 2.1 * side, 2.7 * side, -0.35 * side, -0.7 * side, -1.05 * side];
+        for (const off of offsets) {
+            if (free(want + off)) {
+                chosen = want + off;
+                if (off !== 0) side = Math.sign(off);
+                else side = 0;
+                break;
+            }
+        }
+        if (chosen === null) return null;
+        yaw = steer(yaw, chosen, 0.9);
+        x += Math.sin(yaw) * step;
+        z += Math.cos(yaw) * step;
+        pts.push({x, z});
+    }
+    return null;
+}
+
+/** Where it stands to strike, `dist` m from the prey, on the side it comes from where that is clear (else round it); null when there is none. */
+function standPoint(ok: ((x: number, z: number) => boolean) | undefined, q: {x: number; z: number}, face: number, dist: number): {x: number; z: number} | null {
+    const spot = (h: number) => ({x: q.x - Math.sin(h) * dist, z: q.z - Math.cos(h) * dist});
+    if (!ok || dist < 0.02) return spot(face);
+    for (const off of [0, 0.5, -0.5, 1, -1, 1.6, -1.6, 2.4, -2.4, Math.PI]) {
+        const p = spot(face + off);
+        if (ok(p.x, p.z) && lineOk(ok, p.x, p.z, q.x, q.z, dist * 0.5)) return p;
+    }
+    return null;
+}
+
+/** A path along points `pts`: a quick advance, then a creep in stops and starts over the last `creepDist` m of it. */
+function approach(pts: Array<{x: number; z: number}>, o: {creepDist: number; fast: number; creep: number; move: number; hold: number}) {
+    const cum = [0];
+    for (let k = 1; k < pts.length; k++) cum.push(cum[k - 1] + Math.hypot(pts[k].x - pts[k - 1].x, pts[k].z - pts[k - 1].z));
+    const D = Math.max(cum[cum.length - 1], 1e-6);
     const dCreep = Math.min(D, Math.max(o.creepDist, 0));
     const dFast = D - dCreep;
     const tFast = dFast / Math.max(o.fast, 0.05);
     const moveTotal = stopGo(o.creep, o.move, o.hold, 1) || 1;
     const vm = dCreep / moveTotal;
+    const along = (s: number) => {
+        let k = 1;
+        while (k < cum.length - 1 && cum[k] < s) k++;
+        const seg = Math.max(cum[k] - cum[k - 1], 1e-9);
+        const f = clamp((s - cum[k - 1]) / seg, 0, 1);
+        return {x: lerp(pts[k - 1].x, pts[k].x, f), z: lerp(pts[k - 1].z, pts[k].z, f), yaw: heading(pts[k].x - pts[k - 1].x, pts[k].z - pts[k - 1].z)};
+    };
     return {
         end: tFast + (dCreep > 1e-4 ? o.creep : 0),
         fastFor: tFast,
-        at(t: number): {x: number; z: number; moving: boolean; creeping: boolean} {
+        at(t: number): {x: number; z: number; yaw: number; moving: boolean; creeping: boolean} {
             let s: number;
             let moving: boolean;
             let creeping = false;
@@ -232,10 +288,15 @@ function approach(a: {x: number; z: number}, b: {x: number; z: number}, o: {cree
                 moving = dCreep > 1e-4 && t - tFast < o.creep && movingAt(u, o.move, o.hold);
                 creeping = dCreep > 1e-4 && t - tFast < o.creep;
             }
-            return {x: a.x + ux * s, z: a.z + uz * s, moving, creeping};
+            const p = along(Math.min(s, D));
+            return {x: p.x, z: p.z, yaw: p.yaw, moving, creeping};
         }
     };
 }
+
+const routeLength = (pts: Array<{x: number; z: number}>) => pts.reduce((sum, p, k) => (k ? sum + Math.hypot(p.x - pts[k - 1].x, p.z - pts[k - 1].z) : 0), 0);
+/** A heading part of the way from `a` toward `b` (the short way round). */
+const lerpYaw = (a: number, b: number, f: number) => a + wrap(b - a) * f;
 
 /** The pace of the quick advance before a creep: its base pace, or what covers the distance in about `secs` s (at most most of its sprint). */
 const trot = (distance: number, base: number, sprint: number, secs = 3.2) => clamp(distance / secs, base, Math.max(sprint * 0.6, base));
@@ -311,13 +372,16 @@ function runPounce(i: HuntInput, mode: "pounce" | "leap" | "jump"): HuntRun | nu
     const D0 = exact ? g.D : Math.min(g.D, creepDist + 8);
     const leapD = Math.min(jump ? clamp(lp * 6, 0.03, 1.4) : clamp(lp * (high ? 3.2 : 2.6), 0.5, 7.5), D0);
     const A = {x: Q.x - g.dir.x * D0, z: Q.z - g.dir.z * D0};
-    const L = {x: Q.x - g.dir.x * leapD, z: Q.z - g.dir.z * leapD};
-    if (D0 > leapD && !lineOk(i.clear, A.x, A.z, L.x, L.z, 0)) return null;
+    // Where it crouches to leap, on the side it comes from where that is clear, and the way there (round what is in it).
+    const L = D0 > leapD ? standPoint(i.clear, Q, g.face, leapD) : {x: A.x, z: A.z};
+    const route = L ? routeAround(i.clear, A, L) : null;
+    if (!L || !route) return null;
+    const faceL = heading(Q.x - L.x, Q.z - L.z);
     const move = 0.55 + 0.5 * random();
     const hold = 0.35 + 0.55 * random();
     const creepFor = clamp(creepDist / clamp(lp * 0.35, 0.04, 1.1), 1.2, 4.2);
-    const fast = trot(D0 - leapD - creepDist, clamp(Math.max(i.paces.stalk * 3, lp * 1.3 + 0.3), 0.3, Math.max(i.paces.sprint * 0.5, 0.6)), i.paces.sprint);
-    const way = approach(A, L, {creepDist, fast, creep: creepFor, move, hold});
+    const fast = trot(Math.max(routeLength(route) - creepDist, 0), clamp(Math.max(i.paces.stalk * 3, lp * 1.3 + 0.3), 0.3, Math.max(i.paces.sprint * 0.5, 0.6)), i.paces.sprint);
+    const way = approach(route, {creepDist, fast, creep: creepFor, move, hold});
     const tReady = 0.35;
     const wiggle = (jump ? 0.6 : 0.8) + 0.8 * random();
     const tL = tReady + way.end + wiggle;
@@ -328,30 +392,30 @@ function runPounce(i: HuntInput, mode: "pounce" | "leap" | "jump"): HuntRun | nu
     // The prey breaks as it comes, on along its way at a lunged-at prey's pace; a miss adds a sharp break aside.
     const vq = i.flee === "still" ? 0 : Math.min(i.paces.flee, i.paces.sprint * 0.72);
     const tB = tL + 0.08;
-    const fwd = g.face + side * 0.35;
+    const fwd = faceL + side * 0.35;
     const dq = bolted(tc - tB, vq * 0.85);
     const aim = {x: Q.x + Math.sin(fwd) * dq, z: Q.z + Math.cos(fwd) * dq};
     const aimYaw = heading(aim.x - L.x, aim.z - L.z);
     const land = {x: aim.x - Math.sin(aimYaw) * mouth * 0.9, z: aim.z - Math.cos(aimYaw) * mouth * 0.9};
     const lat = i.miss ? Math.max(i.gap * 1.7, vq * 0.2) : 0;
-    const perp = {x: Math.cos(g.face) * side, z: -Math.sin(g.face) * side};
+    const perp = {x: Math.cos(faceL) * side, z: -Math.sin(faceL) * side};
     const tail = 3.2;
     const end = i.miss ? tc + tail : tc;
     const arc = (jump ? 0.35 * dist0 : clamp(dist0 * 0.3, lp * 0.2, lp * 1.1)) * (high ? 1.8 : 1);
     const puffs: Puff[] = [{x: land.x, y: i.ground(land.x, land.z), z: land.z, size: lp * 0.5, kind: "dust"}];
     const ground = (x: number, z: number) => i.ground(x, z);
     const pred: At = (t) => {
-        if (t < tReady) return {x: A.x, z: A.z, y: ground(A.x, A.z), yaw: g.face, state: "stalk", pitch: 0.07 * smooth(t / tReady)};
+        if (t < tReady) return {x: A.x, z: A.z, y: ground(A.x, A.z), yaw: heading(route[1].x - route[0].x, route[1].z - route[0].z), state: "stalk", pitch: 0.07 * smooth(t / tReady)};
         const u = t - tReady;
         if (u < way.end) {
             const p = way.at(u);
             const fastPhase = u < way.fastFor;
-            return {x: p.x, z: p.z, y: ground(p.x, p.z), yaw: g.face, state: p.moving || fastPhase ? "stalk" : "crouch", pitch: fastPhase ? 0.05 : 0.14};
+            return {x: p.x, z: p.z, y: ground(p.x, p.z), yaw: p.moving || fastPhase ? p.yaw : lerpYaw(p.yaw, faceL, 0.7), state: p.moving || fastPhase ? "stalk" : "crouch", pitch: fastPhase ? 0.05 : 0.14};
         }
         if (t < tL) {
             // Crouched at the launch: the hind end working side to side, a little more as the moment comes.
             const w = (t - tReady - way.end) / wiggle;
-            return {x: L.x, z: L.z, y: ground(L.x, L.z), yaw: g.face + Math.sin(t * 33) * 0.05 * (0.4 + w), state: "crouch", pitch: 0.2, roll: Math.sin(t * 33 + 1.3) * 0.05 * (0.4 + w)};
+            return {x: L.x, z: L.z, y: ground(L.x, L.z), yaw: faceL + Math.sin(t * 33) * 0.05 * (0.4 + w), state: "crouch", pitch: 0.2, roll: Math.sin(t * 33 + 1.3) * 0.05 * (0.4 + w)};
         }
         if (t < tc) {
             const k = (t - tL) / Tl;
@@ -504,54 +568,57 @@ function runWade(i: HuntInput): HuntRun | null {
     const exact = i.exact && g.D <= 40;
     const D0 = Math.max(exact ? g.D : Math.min(g.D, strikeD + creepDist + 4), strikeD);
     const A = {x: Q.x - g.dir.x * D0, z: Q.z - g.dir.z * D0};
-    const L = {x: Q.x - g.dir.x * strikeD, z: Q.z - g.dir.z * strikeD};
     // (Over its own ground: the shallows, or the bank.)
-    if (D0 > strikeD && !lineOk((x, z) => (i.clear ? i.clear(x, z) : true) || (i.water ? i.water(x, z) : false), A.x, A.z, L.x, L.z, strikeD)) return null;
+    const walkable = i.clear || i.water ? (x: number, z: number) => (i.clear ? i.clear(x, z) : false) || (i.water ? i.water(x, z) : false) : undefined;
+    const L = D0 > strikeD ? standPoint(walkable, Q, g.face, strikeD) : {x: A.x, z: A.z};
+    const route = L ? routeAround(walkable, A, L) : null;
+    if (!L || !route) return null;
+    const faceL = heading(Q.x - L.x, Q.z - L.z);
     const move = 0.8 + 0.4 * random();
     const hold = 0.9 + 1.2 * random();
     const creepFor = clamp(creepDist / clamp(lp * 0.12, 0.04, 0.4), 2, 4.6);
-    const fast = trot(D0 - strikeD - creepDist, clamp(Math.max(i.paces.stalk * 2.4, lp * 0.8), 0.25, 2.2), i.paces.sprint, 4);
-    const way = approach(A, L, {creepDist, fast, creep: creepFor, move, hold});
+    const fast = trot(Math.max(routeLength(route) - creepDist, 0), clamp(Math.max(i.paces.stalk * 2.4, lp * 0.8), 0.25, 2.2), i.paces.sprint, 4);
+    const way = approach(route, {creepDist, fast, creep: creepFor, move, hold});
     const tReady = 0.4;
     const still = 1.2 + 0.9 * random();
     const tS = tReady + way.end + still;
     const strikeFor = 0.17;
     const tc = tS + strikeFor;
     const side = random() < 0.5 ? -1 : 1;
-    const away = g.face + side * 1.2;
+    const away = faceL + side * 1.2;
     const vq = Math.min(i.paces.flee, 3);
     const tB = tS - 0.02;
     const catchAt = {x: Q.x + g.dir.x * 0, z: Q.z + g.dir.z * 0};
     const lat = i.miss ? Math.max(i.gap * 1.7, vq * 0.2) : 0;
-    const perp = {x: Math.cos(g.face) * side, z: -Math.sin(g.face) * side};
+    const perp = {x: Math.cos(faceL) * side, z: -Math.sin(faceL) * side};
     const tail = 2.8;
     const end = i.miss ? tc + tail : tc;
-    const strikeTo = {x: Q.x - g.dir.x * (mouth * 0.9 + (i.miss ? lat * 0.4 : 0)), z: Q.z - g.dir.z * (mouth * 0.9 + (i.miss ? lat * 0.4 : 0))};
+    const strikeTo = {x: Q.x - Math.sin(faceL) * (mouth * 0.9 + (i.miss ? lat * 0.4 : 0)), z: Q.z - Math.cos(faceL) * (mouth * 0.9 + (i.miss ? lat * 0.4 : 0))};
     const stand = (x: number, z: number) => i.ground(x, z);
     const puffs: Puff[] = [{x: Q.x, y: -0.05, z: Q.z, size: lq * 1.2 + lp * 0.2, kind: "bubble"}];
     const pred: At = (t) => {
-        if (t < tReady) return {x: A.x, z: A.z, y: stand(A.x, A.z), yaw: g.face, state: "scan", pitch: 0};
+        if (t < tReady) return {x: A.x, z: A.z, y: stand(A.x, A.z), yaw: heading(route[1].x - route[0].x, route[1].z - route[0].z), state: "scan", pitch: 0};
         const u = t - tReady;
         if (u < way.end) {
             const p = way.at(u);
             const fastPhase = u < way.fastFor;
             // (A step lifts the body a little; a bird freezes mid-way, head low.)
-            return {x: p.x, z: p.z, y: stand(p.x, p.z), yaw: g.face, state: p.moving ? "wade" : "scan", pitch: fastPhase ? 0.04 : 0.12};
+            return {x: p.x, z: p.z, y: stand(p.x, p.z), yaw: p.moving || fastPhase ? p.yaw : lerpYaw(p.yaw, faceL, 0.7), state: p.moving ? "wade" : "scan", pitch: fastPhase ? 0.04 : 0.12};
         }
         if (t < tS) {
             const w = (t - tReady - way.end) / still;
-            return {x: L.x, z: L.z, y: stand(L.x, L.z), yaw: g.face, state: "scan", pitch: 0.2 + 0.2 * smooth(w) + Math.sin(t * 14) * 0.01 * w};
+            return {x: L.x, z: L.z, y: stand(L.x, L.z), yaw: faceL, state: "scan", pitch: 0.2 + 0.2 * smooth(w) + Math.sin(t * 14) * 0.01 * w};
         }
         if (t < tc) {
             const k = (t - tS) / strikeFor;
             const e = 1 - (1 - k) * (1 - k);
-            return {x: lerp(L.x, strikeTo.x, e), z: lerp(L.z, strikeTo.z, e), y: stand(L.x, L.z), yaw: g.face, state: "strike", pitch: lerp(0.4, 1.05, e)};
+            return {x: lerp(L.x, strikeTo.x, e), z: lerp(L.z, strikeTo.z, e), y: stand(L.x, L.z), yaw: faceL, state: "strike", pitch: lerp(0.4, 1.05, e)};
         }
         const after = t - tc;
         // A catch is the meal's from here. A miss: it straightens up, the neck coming back, and watches.
         const x = strikeTo.x;
         const z = strikeTo.z;
-        return {x, z, y: stand(x, z), yaw: g.face + (after > 0.9 ? Math.sin((after - 0.9) * 1.5) * 0.5 : 0), state: "scan", pitch: lerp(1.0, 0.05, smooth(after / 0.7))};
+        return {x, z, y: stand(x, z), yaw: faceL + (after > 0.9 ? Math.sin((after - 0.9) * 1.5) * 0.5 : 0), state: "scan", pitch: lerp(1.0, 0.05, smooth(after / 0.7))};
     };
     const prey: At = (t) => {
         const water = i.flee === "swim";
@@ -580,15 +647,19 @@ function runPeck(i: HuntInput): HuntRun | null {
     const exact = i.exact && g.D <= 40;
     const D0 = exact ? g.D : Math.min(g.D, 9 * lp + 4);
     const A = {x: Q.x - g.dir.x * D0, z: Q.z - g.dir.z * D0};
-    const L = {x: Q.x - g.dir.x * strikeD, z: Q.z - g.dir.z * strikeD};
-    if (D0 > strikeD && !lineOk(i.clear, A.x, A.z, L.x, L.z, strikeD)) return null;
+    const L = D0 > strikeD ? standPoint(i.clear, Q, g.face, strikeD) : {x: A.x, z: A.z};
+    const route = L ? routeAround(i.clear, A, L) : null;
+    if (!L || !route) return null;
+    const faceL = heading(Q.x - L.x, Q.z - L.z);
+    const cum = [0];
+    for (let k = 1; k < route.length; k++) cum.push(cum[k - 1] + Math.hypot(route[k].x - route[k - 1].x, route[k].z - route[k - 1].z));
     // Runs of a few strides, each ending in a stop with the head cocked.
     const stride = clamp(lp * 6, 0.4, 3.5);
-    const runs = clamp(Math.ceil((D0 - strikeD) / (lp * 10 + 0.5)), 1, 4);
+    const runs = clamp(Math.ceil(cum[cum.length - 1] / (lp * 10 + 0.5)), 1, 4);
     const legs: Array<{from: number; to: number; t0: number; t1: number; stop: number}> = [];
     let t = 0.4;
     let d = 0;
-    const total = Math.max(D0 - strikeD, 0);
+    const total = cum[cum.length - 1];
     for (let k = 0; k < runs; k++) {
         const piece = total / runs;
         const dur = Math.max(piece / stride, 0.15);
@@ -603,10 +674,15 @@ function runPeck(i: HuntInput): HuntRun | null {
     const tB = tS - 0.12;
     const side = random() < 0.5 ? -1 : 1;
     const vq = i.flee === "still" ? 0 : Math.min(i.paces.flee, 1.5);
-    const perp = {x: Math.cos(g.face) * side, z: -Math.sin(g.face) * side};
+    const perp = {x: Math.cos(faceL) * side, z: -Math.sin(faceL) * side};
     const lat = i.miss ? Math.max(i.gap * 1.6, 0.06) : 0;
     const end = i.miss ? tc + 2.4 : tc;
-    const along = (dd: number) => ({x: A.x + g.dir.x * dd, z: A.z + g.dir.z * dd});
+    const along = (dd: number) => {
+        let k = 1;
+        while (k < cum.length - 1 && cum[k] < dd) k++;
+        const f = clamp((dd - cum[k - 1]) / Math.max(cum[k] - cum[k - 1], 1e-9), 0, 1);
+        return {x: lerp(route[k - 1].x, route[k].x, f), z: lerp(route[k - 1].z, route[k].z, f), yaw: heading(route[k].x - route[k - 1].x, route[k].z - route[k - 1].z)};
+    };
     const pred: At = (tt) => {
         const ground = (x: number, z: number) => i.ground(x, z);
         let dd = 0;
@@ -631,20 +707,20 @@ function runPeck(i: HuntInput): HuntRun | null {
         if (tt >= tS - 0.0 && tt < tc) {
             const k = (tt - tS) / strikeFor;
             const e = 1 - (1 - k) * (1 - k);
-            const x = lerp(L.x, L.x + g.dir.x * lp * 0.3, e);
-            const z = lerp(L.z, L.z + g.dir.z * lp * 0.3, e);
-            return {x, z, y: ground(x, z), yaw: g.face, state: "peck", pitch: lerp(0.1, 0.95, e)};
+            const x = lerp(L.x, L.x + Math.sin(faceL) * lp * 0.3, e);
+            const z = lerp(L.z, L.z + Math.cos(faceL) * lp * 0.3, e);
+            return {x, z, y: ground(x, z), yaw: faceL, state: "peck", pitch: lerp(0.1, 0.95, e)};
         }
         if (tt >= tc) {
             const after = tt - tc;
-            const x = L.x + g.dir.x * lp * 0.3;
-            const z = L.z + g.dir.z * lp * 0.3;
-            return {x, z, y: ground(x, z), yaw: g.face + (after > 0.6 ? Math.sin(after * 3) * 0.4 : 0), state: after < 0.4 ? "peck" : "scan", pitch: lerp(0.95, 0.1, smooth(after / 0.4))};
+            const x = L.x + Math.sin(faceL) * lp * 0.3;
+            const z = L.z + Math.cos(faceL) * lp * 0.3;
+            return {x, z, y: ground(x, z), yaw: faceL + (after > 0.6 ? Math.sin(after * 3) * 0.4 : 0), state: after < 0.4 ? "peck" : "scan", pitch: lerp(0.95, 0.1, smooth(after / 0.4))};
         }
-        return {x: p.x, z: p.z, y: ground(p.x, p.z), yaw: g.face + tilt, state, pitch: state === "run" ? 0.12 : tilt !== 0 ? -0.08 : 0};
+        return {x: p.x, z: p.z, y: ground(p.x, p.z), yaw: (state === "run" ? p.yaw : faceL) + tilt, state, pitch: state === "run" ? 0.12 : tilt !== 0 ? -0.08 : 0};
     };
     const prey: At = (tt) => {
-        const awayYaw = g.face + side * (i.miss ? 1.3 : 0.4);
+        const awayYaw = faceL + side * (i.miss ? 1.3 : 0.4);
         if (tt < tB) return {x: Q.x, z: Q.z, y: preyY(i, Q.x, Q.z), yaw: Q.yaw, state: "rest", pitch: 0};
         const since = tt - tB;
         if (!i.miss) {
@@ -696,7 +772,7 @@ function runLurk(i: HuntInput): HuntRun | null {
     const move = 1.2 + 0.8 * random();
     const hold = 0.8 + 0.9 * random();
     const driftFor = clamp((D1 - strikeD) / drift, 0.3, 6.5);
-    const way = approach({x: P.x, z: P.z}, L, {creepDist: Math.hypot(L.x - P.x, L.z - P.z), fast: drift, creep: driftFor, move, hold});
+    const way = approach([{x: P.x, z: P.z}, L], {creepDist: Math.hypot(L.x - P.x, L.z - P.z), fast: drift, creep: driftFor, move, hold});
     const tReady = 0.4;
     const still = 1.0 + 0.8 * random();
     const tS = tReady + way.end + still;

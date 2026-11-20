@@ -113,6 +113,8 @@ export type MealStage = {
     catchAt?: number;
     /** Where the chase happens: the two at the start, the catch (for the camera's clear view). */
     places?: Array<{x: number; y: number; z: number}>;
+    /** The hunter's own way of hunting that was drawn (`hunt-acts.ts`), when one was; absent: the generic chase. */
+    hunt?: HuntAct | null;
 };
 
 const smooth = (t: number) => {
@@ -775,7 +777,8 @@ export function mealStage(kind: ChaseKind, predator: ActBody, prey: ActBody, opt
             return a <= at && at < b && puff.size > 0;
         }),
         catchAt: run.tc,
-        places: [run.pred[0], run.prey[0], sampleAt(run.prey, run.tc)].map((p) => ({x: p.x, y: p.y + 0.5, z: p.z}))
+        places: [run.pred[0], run.prey[0], sampleAt(run.prey, run.tc)].map((p) => ({x: p.x, y: p.y + 0.5, z: p.z})),
+        hunt: own ? options.hunt : null
     };
 }
 
