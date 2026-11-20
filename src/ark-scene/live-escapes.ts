@@ -24,6 +24,7 @@
 
 import {chasePace, type ActBody, type ActPose, type ChaseKind, type FleeStyle, type MealEncounter} from "@/ark-scene/acts";
 import {APPROACH_SECONDS, approachPose} from "@/ark-scene/live-meals";
+import {huntRun, type HuntAct} from "@/ark-scene/hunt-acts";
 
 /** An escape from the record: who got away from whom, and when (s, the shared clock: the encounter's step). */
 export type EscapeAct = {key: string; prey: string; predator: string; t0: number; encounter?: MealEncounter | null};
@@ -41,6 +42,8 @@ export type EscapeChase = {
     clear?: (x: number, z: number) => boolean;
     water?: (x: number, z: number) => boolean;
     ground: (x: number, z: number) => number;
+    /** The hunter's own way of hunting (`hunt-acts.ts`), where its species has one that fits this pair; absent: the generic chase. */
+    hunt?: HuntAct | null;
 };
 
 export type LiveEscapesHost<E> = {
@@ -66,7 +69,7 @@ const DT = 1 / 60;
 /** The hunter is held this much beyond the least gap at every sample. */
 const HOLD = 1.03;
 
-type Sample = {x: number; z: number; y: number; yaw: number; v: number; state: string; pitch: number};
+type Sample = {x: number; z: number; y: number; yaw: number; v: number; state: string; pitch: number; roll?: number};
 
 export type EscapeScript = {
     kind: EscapeChase["kind"];
@@ -517,6 +520,17 @@ function swoopMiss(c: EscapeChase): EscapeScript {
 
 /** The escape's script, built once (pure in the chase): both animals at every sixtieth of a second. */
 export function escapeScript(chase: EscapeChase): EscapeScript {
+    // The hunter's own way where its species has one (`hunt-acts.ts`): the same act as its catches, ending in the miss.
+    if (chase.hunt) {
+        const gap = missGap(chase.predator.length, chase.prey.length);
+        const air = chase.kind === "swoop";
+        const run = huntRun({act: chase.hunt, predator: chase.predator, prey: chase.prey, seed: chase.seed, flee: chase.flee, miss: true, gap, exact: Boolean(chase.exact), meal: false, clear: chase.clear, water: chase.water, ground: chase.ground, paces: {sprint: chasePace(chase.predator, "sprint"), flee: chasePace(chase.prey, "flee"), stalk: chasePace(chase.predator, "stalk"), dive: chasePace(chase.predator, "dive")}});
+        if (run) {
+            let closest = Infinity;
+            for (let k = 0; k < run.pred.length; k++) closest = Math.min(closest, Math.hypot(run.pred[k].x - run.prey[k].x, run.pred[k].z - run.prey[k].z, air ? run.pred[k].y - run.prey[k].y : 0));
+            return {kind: chase.kind, missAt: run.tc, seconds: run.seconds, closest, gap, pred: run.pred, prey: run.prey};
+        }
+    }
     return chase.kind === "swoop" ? swoopMiss(chase) : groundMiss(chase);
 }
 
@@ -527,7 +541,7 @@ function sampleAt(list: Sample[], s: number): Sample {
     const a = list[i];
     const b = list[Math.min(i + 1, list.length - 1)];
     const k = f - i;
-    return {x: lerp(a.x, b.x, k), z: lerp(a.z, b.z, k), y: lerp(a.y, b.y, k), yaw: a.yaw + wrap(b.yaw - a.yaw) * k, pitch: lerp(a.pitch, b.pitch, k), state: a.state, v: lerp(a.v, b.v, k)};
+    return {x: lerp(a.x, b.x, k), z: lerp(a.z, b.z, k), y: lerp(a.y, b.y, k), yaw: a.yaw + wrap(b.yaw - a.yaw) * k, pitch: lerp(a.pitch, b.pitch, k), roll: lerp(a.roll ?? 0, b.roll ?? 0, k), state: a.state, v: lerp(a.v, b.v, k)};
 }
 
 /**
@@ -537,7 +551,7 @@ function sampleAt(list: Sample[], s: number): Sample {
 export function escapePose(script: EscapeScript, who: "predator" | "prey", s: number): ActPose {
     const at = sampleAt(who === "predator" ? script.pred : script.prey, s);
     if (who === "predator") pushOut(at, sampleAt(script.prey, s), script.gap);
-    return {x: at.x, z: at.z, base: at.y, yaw: at.yaw, pitch: at.pitch, roll: 0, scale: 1, dim: 0, hidden: false, state: at.state, speed: at.v};
+    return {x: at.x, z: at.z, base: at.y, yaw: at.yaw, pitch: at.pitch, roll: at.roll ?? 0, scale: 1, dim: 0, hidden: false, state: at.state, speed: at.v};
 }
 
 // MARK: The limp
