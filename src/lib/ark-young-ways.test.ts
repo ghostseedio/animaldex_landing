@@ -33,14 +33,17 @@ import {
 import {ageOf, speciesCare} from "@/lib/ark-age";
 
 const slugs = new Set(Object.keys((animalLook as unknown as {species: Record<string, unknown>}).species));
-const table = JSON.parse(fs.readFileSync(path.join(process.cwd(), "src/ark-scene/young-ways.json"), "utf8")) as {species: Record<string, {name: string; ways: Record<string, unknown>; rows: Array<{id: string; behaviour: string; quote: string}>; lines: Record<string, string>}>};
+const table = JSON.parse(fs.readFileSync(path.join(process.cwd(), "src/ark-scene/young-ways.json"), "utf8")) as {species: Record<string, {name: string; ways: Record<string, unknown>; lines: Record<string, string>}>};
+const slugOf = (name: string) => name.toLowerCase().replace(/'/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 test("every species with a way has a model, a sourced row (id, behaviour, quote) and a line for each way its row says", () => {
     assert.ok(waysSlugs().length >= 90);
     for (const [slug, row] of Object.entries(table.species)) {
         assert.ok(slugs.has(slug), `${slug}: no model`);
-        assert.ok(row.rows.length >= 1, `${slug}: no source row`);
-        for (const r of row.rows) {
+        // (Its sourced rows, with the quotes of its own stored text, are in the rows file.)
+        const sources = rowsFile.rows.filter((r) => (r.status === "built" || r.status === "part") && slugOf(r.name) === slug);
+        assert.ok(sources.length >= 1, `${slug}: no source row`);
+        for (const r of sources) {
             assert.match(r.id, /^[0-9a-f-]{36}$/);
             assert.ok(r.behaviour.length > 5 && r.quote.length > 5, `${slug}: the row's words`);
         }
@@ -66,7 +69,7 @@ test("every young-care row of the catalogue is accounted for: built, an earlier 
     // A built row belongs to a species that has the way in the scene's table.
     const bySlug = new Set(waysSlugs());
     for (const r of rowsFile.rows.filter((x) => x.status === "built" || x.status === "part")) {
-        const slug = r.name.toLowerCase().replace(/'/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+        const slug = slugOf(r.name);
         assert.ok(bySlug.has(slug), `${r.name}: built but not in the table`);
     }
 });

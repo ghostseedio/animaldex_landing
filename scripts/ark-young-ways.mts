@@ -215,9 +215,8 @@ const species: Record<string, Record<string, unknown>> = {};
 const status = new Map<string, {status: string; what: string}>();
 const merge = (slug: string, name: string, row: Row, way: Way, kind: string, part?: string) => {
     const {say, ...spec} = way;
-    const into = (species[slug] ??= {name, ways: {}, rows: [] as unknown[], lines: {} as Record<string, string>});
+    const into = (species[slug] ??= {name, ways: {}, lines: {} as Record<string, string>});
     Object.assign(into.ways as object, spec);
-    (into.rows as unknown[]).push({id: row.id, behaviour: row.behaviour, quote: row.quote});
     for (const k of say ?? []) (into.lines as Record<string, string>)[k] = row.line!;
     status.set(`${row.id}|${row.behaviour}`, part ? {status: "part", what: `${kind}: ${part}`} : {status: "built", what: kind});
 };
@@ -260,13 +259,13 @@ const held = (r: Row): {status: string; what: string} => {
 };
 const rowsOut = rows.map((r) => {
     const s = status.get(`${r.id}|${r.behaviour}`) ?? held(r);
-    return {id: r.id, name: r.name, behaviour: r.behaviour, how: r.how, effort: r.effort, ...s};
+    return {id: r.id, name: r.name, behaviour: r.behaviour, quote: r.quote, how: r.how, effort: r.effort, ...s};
 });
 const counts: Record<string, number> = {};
 for (const r of rowsOut) counts[r.status] = (counts[r.status] ?? 0) + 1;
 
 const out = {
-    about: "How young are kept (sig-young lane), built by scripts/ark-young-ways.mts from the species catalogue's young-care rows (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. ride: young carried on a parent (style back/belly/tail/under; by male: the father); line: young follow in a line along the parent's path; stay: young kept at one spot (hide/den/nest) while the parent comes back in bouts (visit nurse/feed; helpers: other adults of the kind too; hours; days); cluster: the young of the kind gather in a clump. lines: the row's own English log sentence by way. Used by young-ways.ts.",
+    about: "How young are kept (sig-young lane), built by scripts/ark-young-ways.mts from the species catalogue's young-care rows (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. ride: young carried on a parent (style back/belly/tail/under; by male: the father); line: young follow in a line along the parent's path; stay: young kept at one spot (hide/den/nest) while the parent comes back in bouts (visit nurse/feed; helpers: other adults of the kind too; hours; days); cluster: the young of the kind gather in a clump. lines: the row's own English log sentence by way. Used by young-ways.ts. The rows each way is read from, with their quotes, are in data/ark/young-ways-rows.json.",
     species
 };
 console.log(`species ${Object.keys(species).length}; rows ${rowsOut.length}: ${Object.entries(counts).map(([k, v]) => `${k} ${v}`).join(", ")}`);

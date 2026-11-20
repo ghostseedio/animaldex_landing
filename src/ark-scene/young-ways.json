@@ -1,18 +1,11 @@
 {
- "about": "How young are kept (sig-young lane), built by scripts/ark-young-ways.mts from the species catalogue's young-care rows (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. ride: young carried on a parent (style back/belly/tail/under; by male: the father); line: young follow in a line along the parent's path; stay: young kept at one spot (hide/den/nest) while the parent comes back in bouts (visit nurse/feed; helpers: other adults of the kind too; hours; days); cluster: the young of the kind gather in a clump. lines: the row's own English log sentence by way. Used by young-ways.ts.",
+ "about": "How young are kept (sig-young lane), built by scripts/ark-young-ways.mts from the species catalogue's young-care rows (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. ride: young carried on a parent (style back/belly/tail/under; by male: the father); line: young follow in a line along the parent's path; stay: young kept at one spot (hide/den/nest) while the parent comes back in bouts (visit nurse/feed; helpers: other adults of the kind too; hours; days); cluster: the young of the kind gather in a clump. lines: the row's own English log sentence by way. Used by young-ways.ts. The rows each way is read from, with their quotes, are in data/ark/young-ways-rows.json.",
  "species": {
   "great-crested-grebe": {
    "name": "Great Crested Grebe",
    "ways": {
     "ride": "back"
    },
-   "rows": [
-    {
-     "id": "b4ff3d58-08ba-440d-8852-4096529fabb4",
-     "behaviour": "striped chicks ride on a parent's back",
-     "quote": "Striped chicks ride on a parent's back and are fed for about ten weeks."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} is swimming with striped chicks riding on its back"
    }
@@ -22,13 +15,6 @@
    "ways": {
     "ride": "back"
    },
-   "rows": [
-    {
-     "id": "bdaef7f3-d1b7-4370-a4ac-830512e5ca95",
-     "behaviour": "cygnets ride on a parent's back among raised wing feathers",
-     "quote": "Small cygnets often climb onto a parent's back and ride there among the raised wing feathers as it swims."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} is swimming with cygnets riding on its back among raised feathers"
    }
@@ -38,13 +24,6 @@
    "ways": {
     "ride": "back"
    },
-   "rows": [
-    {
-     "id": "a1e6f503-55bb-48ef-8104-378d9e626f5f",
-     "behaviour": "spiderlings ride on mother's back",
-     "quote": "The hatched spiderlings, often more than a hundred, climb onto her back and ride there for roughly a week before dispersing."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} is carrying her hatched spiderlings on her back"
    }
@@ -54,13 +33,6 @@
    "ways": {
     "ride": "back"
    },
-   "rows": [
-    {
-     "id": "3c32b4d1-4cc1-4348-bd32-47149d62e64e",
-     "behaviour": "carries egg sac on spinnerets; spiderlings ride on her back",
-     "quote": "When the spiderlings hatch she opens the sac and they climb onto her back, riding there for several days before scattering."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} is carrying her newly hatched spiderlings on her back"
    }
@@ -70,13 +42,6 @@
    "ways": {
     "ride": "back"
    },
-   "rows": [
-    {
-     "id": "8784f4de-8fdc-437d-8723-76cba4c08f29",
-     "behaviour": "mother carries young on her back",
-     "quote": "Females give birth to live young and carry them on the back until they molt and disperse."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} female is carrying her young on her back"
    }
@@ -86,13 +51,6 @@
    "ways": {
     "ride": "back"
    },
-   "rows": [
-    {
-     "id": "692eb783-aa0f-4859-ac59-65219c98147e",
-     "behaviour": "carries egg sac under abdomen; hatchlings ride on her back",
-     "quote": "Hatchlings climb onto her back and ride there until they moult, then disperse."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} is carrying her hatchlings on her back"
    }
@@ -102,13 +60,6 @@
    "ways": {
     "ride": "back"
    },
-   "rows": [
-    {
-     "id": "ce532c50-c5a9-4ab4-b0b0-982027943d8d",
-     "behaviour": "white newborns ride on mother's back",
-     "quote": "The white newborns climb onto their mother's back and ride there until their first moult, then stay near her in the burrow for some time."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} is carrying her white newborns on her back"
    }
@@ -118,13 +69,6 @@
    "ways": {
     "ride": "under"
    },
-   "rows": [
-    {
-     "id": "8f419d4a-301a-4b14-b10f-0aa6ae351f9d",
-     "behaviour": "carries eggs on swimmerets; young cling to her through first moults",
-     "quote": "the young cling to her through their first moults"
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} female is carrying young that cling to her"
    }
@@ -134,13 +78,6 @@
    "ways": {
     "ride": "under"
    },
-   "rows": [
-    {
-     "id": "a2229f05-c4b0-40ed-9911-28e35f8f23e7",
-     "behaviour": "hatchlings cling beneath mother's tail",
-     "quote": "A female carries her hatchlings clinging beneath her tail for a week or more, until they can walk and feed alone."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} female is carrying her hatchlings clinging beneath her tail"
    }
@@ -150,13 +87,6 @@
    "ways": {
     "ride": "back"
    },
-   "rows": [
-    {
-     "id": "d55b799d-dddf-48fd-ac76-de94f0cf8060",
-     "behaviour": "young ride on mother's back",
-     "quote": "Once too large for the pouch, the young ride on the mother's back, gripping her fur as she forages."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} is foraging with her young riding on her back, gripping her fur"
    }
@@ -166,13 +96,6 @@
    "ways": {
     "ride": "back"
    },
-   "rows": [
-    {
-     "id": "c368b870-b16e-4866-8ced-46d92a92df05",
-     "behaviour": "carries young on its back",
-     "quote": "Females usually carry a single young on the back while moving and foraging."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} is foraging with a single young riding on her back"
    }
@@ -182,13 +105,6 @@
    "ways": {
     "ride": "back"
    },
-   "rows": [
-    {
-     "id": "42982c1c-912b-4112-8f86-ece278dceeeb",
-     "behaviour": "calf rests on mother's back in deep water",
-     "quote": "young calves rest on the mother's back in deep water"
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} has a calf resting on her back in deep water"
    }
@@ -198,13 +114,6 @@
    "ways": {
     "ride": "belly"
    },
-   "rows": [
-    {
-     "id": "b4cc55f6-a237-4578-96db-267844168da4",
-     "behaviour": "mother carries pup on her chest",
-     "quote": "The mother carries it on her chest for the first days, then leaves it at the roost"
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} is carrying her pup on her chest"
    }
@@ -214,13 +123,6 @@
    "ways": {
     "ride": "tail"
    },
-   "rows": [
-    {
-     "id": "05655a91-2b64-457f-adb6-c3a171cede6f",
-     "behaviour": "carries pup on tail, curls round it when threatened",
-     "quote": "Females usually carry one pup on the tail or body, curling around it when threatened."
-    }
-   ],
    "lines": {}
   },
   "lar-gibbon": {
@@ -228,13 +130,6 @@
    "ways": {
     "ride": "belly"
    },
-   "rows": [
-    {
-     "id": "a90258b3-b325-4eee-9759-e7c855efd336",
-     "behaviour": "infant clings to mother's belly",
-     "quote": "It clings to its mother's belly, is weaned at around two years and stays with the family until roughly eight to ten years old."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} infant is clinging to its mother's belly"
    }
@@ -244,13 +139,6 @@
    "ways": {
     "ride": "belly"
    },
-   "rows": [
-    {
-     "id": "dffe0a0c-929b-46e7-afa6-5e3710e9fcae",
-     "behaviour": "infant carried on belly",
-     "quote": "She carries it against her belly at first and suckles it for around a year."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} is carrying her infant against her belly"
    }
@@ -260,13 +148,6 @@
    "ways": {
     "ride": "belly"
    },
-   "rows": [
-    {
-     "id": "46504ade-2836-4da1-b7dd-7311ddf3ca00",
-     "behaviour": "infant clings to belly",
-     "quote": "Newborns have dark fur and cling to the mother's belly; weaning takes roughly a year, and daughters stay in the birth troop while sons leave around puberty."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} newborn with dark fur is clinging to its mother's belly"
    }
@@ -277,13 +158,6 @@
     "ride": "back",
     "by": "male"
    },
-   "rows": [
-    {
-     "id": "48892b54-2665-4f2e-b9f1-7eaca91e30f0",
-     "behaviour": "father carries infant",
-     "quote": "The father does most of the carrying from the first days, passing the infant to the mother mainly for nursing, and older offspring stay with the family group for a year or more before leaving."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} father is carrying the infant"
    }
@@ -294,13 +168,6 @@
     "ride": "back",
     "by": "male"
    },
-   "rows": [
-    {
-     "id": "29abdd07-bc10-42ee-bbde-0dfa5b3eb93a",
-     "behaviour": "fathers and siblings carry the twins",
-     "quote": "Fathers and older siblings (helpers) routinely carry infants on their backs, often for the majority of the day, transferring them to the mother only for nursing."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} father is carrying the infants on his back"
    }
@@ -311,13 +178,6 @@
     "ride": "back",
     "by": "male"
    },
-   "rows": [
-    {
-     "id": "516defc3-d127-4345-895e-8ec372083e95",
-     "behaviour": "males and helpers carry twins, passed around",
-     "quote": "Twins are carried mostly by adult males and other helpers rather than by the mother, passed between group members through the day."
-    }
-   ],
    "lines": {
     "ride": "{animals} are passing the twins between them, males and helpers carrying"
    }
@@ -327,13 +187,6 @@
    "ways": {
     "ride": "back"
    },
-   "rows": [
-    {
-     "id": "c513ebce-0421-4b92-8d29-a85ecc8e161d",
-     "behaviour": "father carries infant from second year",
-     "quote": "It clings to the mother at first; from around its second year the father often carries it."
-    }
-   ],
    "lines": {}
   },
   "barbary-macaque": {
@@ -342,13 +195,6 @@
     "ride": "back",
     "by": "male"
    },
-   "rows": [
-    {
-     "id": "490e7f82-eb6a-4eff-adad-cb34cbb18ac9",
-     "behaviour": "males carry and groom infants",
-     "quote": "Males often interact closely with infants, carrying and grooming them and using them in social exchanges with other males."
-    }
-   ],
    "lines": {
     "ride": "{aAnimal} male is carrying and grooming an infant"
    }
@@ -358,13 +204,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "18f53290-95ab-4586-bb7e-2b5f7620a563",
-     "behaviour": "ducklings follow the mother in a line (imprinting)",
-     "quote": "Ducklings follow the first large moving thing they see after hatching, a process called imprinting."
-    }
-   ],
    "lines": {
     "line": "{aAnimal} is walking with ducklings following close behind in a line"
    }
@@ -374,13 +213,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "268f5132-fbda-4c29-bc28-a81a84220539",
-     "behaviour": "goslings follow the parent in a line (imprinting)",
-     "quote": "Goslings follow the first large moving thing they see after hatching, which Konrad Lorenz showed by getting greylag goslings to follow him."
-    }
-   ],
    "lines": {
     "line": "{aAnimal} is walking with goslings following behind in a line"
    }
@@ -390,13 +222,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "85fd945d-1452-4b1d-b3e8-3d737b2eac6c",
-     "behaviour": "ducklings follow the female alone",
-     "quote": "Ducklings leave the nest within a day of hatching and feed themselves, led by the female alone."
-    }
-   ],
    "lines": {
     "line": "{aAnimal} is leading her ducklings from the nest on her own"
    }
@@ -406,13 +231,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "f5f062f7-4911-4051-800b-d5639ca0688f",
-     "behaviour": "both parents escort goslings and defend them vigorously",
-     "quote": "Canada geese form long-term pair bonds, both parents escort goslings, and family groups migrate together within the larger flock, defending young vigorously."
-    }
-   ],
    "lines": {}
   },
   "domestic-chicken": {
@@ -420,13 +238,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "cf059266-56af-4199-adba-64d2d7c0e623",
-     "behaviour": "chicks stay close to the hen for weeks",
-     "quote": "Chicks hatch covered in down and feed themselves within a day, staying close to the hen for several weeks."
-    }
-   ],
    "lines": {}
   },
   "wild-turkey": {
@@ -434,13 +245,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "3adaf06d-894f-4dfb-9b04-6fff98f0e19b",
-     "behaviour": "hen leads poults after hatching",
-     "quote": "Females lay clutches on the ground and lead poults after hatching."
-    }
-   ],
    "lines": {
     "line": "{aAnimal} is leading her newly hatched poults"
    }
@@ -450,13 +254,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "9a33d433-8cfb-42e8-aed8-ba8ad62ac2c6",
-     "behaviour": "nests in cliff holes and burrows far from water; both parents walk ducklings kilometres to water",
-     "quote": "After hatching, both adults escort the ducklings on foot across the full distance from the nest site to water, which can be kilometres."
-    }
-   ],
    "lines": {}
   },
   "striped-skunk": {
@@ -464,13 +261,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "5b181c04-2d59-416d-9eb2-004eccd196f9",
-     "behaviour": "kits follow mother to forage",
-     "quote": "Females give birth to litters of kits in dens and care for them until they can follow and forage."
-    }
-   ],
    "lines": {
     "line": "{animals} are out foraging, kits following their mother"
    }
@@ -480,13 +270,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "69e565f6-ae64-4d71-9d8d-65bcd41b624e",
-     "behaviour": "calf follows behind its mother",
-     "quote": "Calf usually follows behind its mother"
-    }
-   ],
    "lines": {
     "line": "{aAnimal} has a calf following close behind its mother"
    }
@@ -496,13 +279,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "90c88a61-371b-4600-a0e9-e928a89101fb",
-     "behaviour": "mother teaches cubs to hunt",
-     "quote": "Females raise cubs alone, teaching them to hunt before independence."
-    }
-   ],
    "lines": {
     "line": "{aAnimal} is teaching her cubs to hunt"
    }
@@ -512,13 +288,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "6141393c-b0b2-4205-98f6-8298433ad67b",
-     "behaviour": "cubs follow mother on hunts",
-     "quote": "The mother raises them alone; they follow her on hunts from a few months old and leave at about two years."
-    }
-   ],
    "lines": {
     "line": "{animals} are out hunting, cubs following their mother"
    }
@@ -528,13 +297,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "c66e4916-7b1a-4bee-9933-f88c5d65c920",
-     "behaviour": "cubs learn the mother's forest routes",
-     "quote": "Cubs learn stealth slowly from the mother’s forest routes."
-    }
-   ],
    "lines": {}
   },
   "common-raccoon": {
@@ -542,13 +304,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "e498205a-9ccf-4c96-a2eb-adeebf10b59b",
-     "behaviour": "young follow and climb with mother",
-     "quote": "The young learn by following, touching, climbing, and experimenting, making dexterity something practiced from the start."
-    }
-   ],
    "lines": {}
   },
   "southern-cassowary": {
@@ -557,13 +312,6 @@
     "line": true,
     "by": "male"
    },
-   "rows": [
-    {
-     "id": "c9a44c8e-8425-4c51-9238-a04b94266773",
-     "behaviour": "male alone incubates the green eggs and raises the chicks",
-     "quote": "The male Southern Cassowary takes sole responsibility for incubating the strikingly green eggs and raising the chicks for up to nine months."
-    }
-   ],
    "lines": {}
   },
   "emu": {
@@ -572,13 +320,6 @@
     "line": true,
     "by": "male"
    },
-   "rows": [
-    {
-     "id": "3b8a166c-8356-4da3-ac38-edabca7b5e86",
-     "behaviour": "male sits on the eggs for about eight weeks, scarcely eating, then guards striped chicks",
-     "quote": "The male incubates the clutch for around eight weeks, eating and drinking very little and losing a large proportion of his body weight, then raises the chicks for over a year."
-    }
-   ],
    "lines": {}
   },
   "greater-rhea": {
@@ -587,13 +328,6 @@
     "line": true,
     "by": "male"
    },
-   "rows": [
-    {
-     "id": "ba6458da-45a0-4c4f-81d8-d78d8e67837e",
-     "behaviour": "male leads and guards a creche of chicks from several mothers, adopting strays",
-     "quote": "The crèche a male guards includes chicks hatched from eggs laid by several females, and he does not distinguish between them; he may also adopt stray chicks from other broods."
-    }
-   ],
    "lines": {}
   },
   "rufous-hornero": {
@@ -601,13 +335,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "afd2fcee-ef96-41f1-955e-a67f207245e1",
-     "behaviour": "young stay on parents' territory for months",
-     "quote": "The young often stay on their parents' territory for several months."
-    }
-   ],
    "lines": {}
   },
   "white-throated-dipper": {
@@ -615,13 +342,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "4e82aa8e-09f4-464b-ab6a-9ccfbd349db4",
-     "behaviour": "chicks can swim and dive at fledging",
-     "quote": "both parents feed the chicks, which fledge after about three weeks and can swim and dive."
-    }
-   ],
    "lines": {}
   },
   "american-crocodile": {
@@ -629,13 +349,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "f82c1223-5d1b-4376-8242-653e942ddbb8",
-     "behaviour": "female helps hatchlings reach water",
-     "quote": "Females guard nests and may help hatchlings reach water."
-    }
-   ],
    "lines": {}
   },
   "brown-bear": {
@@ -643,13 +356,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "cbdf4dc0-2503-4342-b159-adc5a7cc02c6",
-     "behaviour": "cubs born in the winter den, guarded for years",
-     "quote": "Females usually give birth in winter dens and protect cubs for multiple years."
-    }
-   ],
    "lines": {}
   },
   "banded-archerfish": {
@@ -657,13 +363,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "180adbb0-b186-4cbd-aa32-e637fd78ceef",
-     "behaviour": "young learn by watching skilled shooters",
-     "quote": "young fish learn partly by watching skilled shooters"
-    }
-   ],
    "lines": {}
   },
   "striped-snakehead": {
@@ -671,13 +370,6 @@
    "ways": {
     "line": true
    },
-   "rows": [
-    {
-     "id": "b18bf604-2901-4fea-913e-792021df04dd",
-     "behaviour": "guarding parents charge intruders near the fry",
-     "quote": "parents guarding fry are reported to charge at intruders"
-    }
-   ],
    "lines": {}
   },
   "bongo": {
@@ -686,13 +378,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "36ff0d47-a8c5-4299-8d47-71a38ce4b0c5",
-     "behaviour": "calf lies hidden while mother returns to nurse",
-     "quote": "The calf lies hidden for a week or more while the mother returns to nurse it"
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} is back to nurse the calf lying hidden",
     "visit": "{aAnimal} is back to nurse the calf lying hidden"
@@ -704,13 +389,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "213602bf-a066-4eeb-a93c-587ca661135c",
-     "behaviour": "fawn lies hidden in cover",
-     "quote": "The fawn lies hidden in cover for its first days while the mother feeds nearby"
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} has a fawn lying hidden in cover while the mother feeds nearby"
    }
@@ -721,13 +399,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "28bd225b-11cf-4135-b380-4ca757d4bfb5",
-     "behaviour": "kids lie hidden while mother browses",
-     "quote": "in their first days many lie hidden while the mother browses nearby"
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} has a kid lying hidden while the mother browses nearby"
    }
@@ -738,13 +409,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "00840e62-5e2a-4253-96de-cb347568875f",
-     "behaviour": "fawns hidden in cover",
-     "quote": "Females give birth to fawns hidden in cover before they become strong enough to follow."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} has a fawn hidden in cover until it can follow"
    }
@@ -755,13 +419,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "ac3b2253-fb08-453c-8ef1-2c1fd1b6e4ad",
-     "behaviour": "calves hide early before joining the herd",
-     "quote": "Females give birth to calves that hide early before joining stronger herd movement."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} has a calf hiding before it joins the herd"
    }
@@ -772,13 +429,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "704e5c3c-2d0f-4b39-8edc-e4cc97412203",
-     "behaviour": "calves hide early",
-     "quote": "Females give birth to calves that hide for early protection before joining the mother more openly."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} has a calf hiding away before it joins the mother in the open"
    }
@@ -789,13 +439,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "7ae1d505-b5a7-4295-9749-266c34054c1b",
-     "behaviour": "calf lies hidden in cover",
-     "quote": "The calf lies hidden in cover for its first weeks"
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} has a calf lying hidden in cover"
    }
@@ -806,13 +449,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "6b8884e8-e0b9-4c9a-b499-3c9f5e433a33",
-     "behaviour": "spotted fawns lie hidden",
-     "quote": "Spotted fawns lie hidden for their first weeks while the mother feeds nearby."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} has a spotted fawn lying hidden while the mother feeds nearby"
    }
@@ -823,13 +459,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "ca59b578-2109-4d91-9318-a9851d2134c8",
-     "behaviour": "calf lies hidden in dense vegetation",
-     "quote": "For its first weeks it lies hidden in dense vegetation while the mother returns to suckle it."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} is back to suckle the calf lying hidden in dense vegetation"
    }
@@ -840,13 +469,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "9e4c04ec-46ac-4019-b396-7b9e5afb2028",
-     "behaviour": "spotted calf lies hidden",
-     "quote": "It lies hidden in vegetation for its first days while the mother feeds nearby"
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} has a calf lying hidden in the vegetation while the mother feeds nearby"
    }
@@ -857,13 +479,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "ab7ac66b-7770-479f-a7c6-cc7599fb6d1c",
-     "behaviour": "spotted fawns lie hidden while doe returns",
-     "quote": "Fawns lie hidden while the doe returns to nurse"
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} is back to nurse the fawn lying hidden",
     "visit": "{aAnimal} is back to nurse the fawn lying hidden"
@@ -875,13 +490,6 @@
     "stay": "hide",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "83dc7b12-48fa-4fd1-b12c-95a0e0c64b8e",
-     "behaviour": "striped calf hides then follows mother through forest and water",
-     "quote": "Females usually bear a single striped calf that hides early, then follows the mother through forest and water routes."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} has a striped calf following her through forest and water"
    }
@@ -893,13 +501,6 @@
     "visit": "nurse",
     "hours": "dawn_dusk"
    },
-   "rows": [
-    {
-     "id": "42d6dbb8-98c0-40bf-92e5-d02647d20375",
-     "behaviour": "mother visits nest only briefly at dawn and dusk",
-     "quote": "Mothers visit the nest to nurse only briefly, mostly around dawn and dusk, which keeps scent and activity at the nest low."
-    }
-   ],
    "lines": {
     "visit": "{aAnimal} is making a brief visit to the nest to nurse her young"
    }
@@ -910,13 +511,6 @@
     "stay": "hide",
     "visit": "feed"
    },
-   "rows": [
-    {
-     "id": "b78d51a7-5ac7-460a-8cb5-c1cea2cdbbfc",
-     "behaviour": "fledglings hide in low cover before they can fly well, parents keep feeding",
-     "quote": "Young birds leave the nest before they can fly well and hide in low cover while the parents keep feeding them."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} fledgling is hiding in low cover while its parents keep feeding it",
     "visit": "{aAnimal} fledgling is hiding in low cover while its parents keep feeding it"
@@ -929,18 +523,6 @@
     "visit": "nurse",
     "cluster": true
    },
-   "rows": [
-    {
-     "id": "21d19b94-2955-4eb0-ab61-fe20eaa0a67e",
-     "behaviour": "calves form a nursery group",
-     "quote": "It lies hidden for its first weeks, then joins a nursery group of young that stay together while the mothers feed nearby."
-    },
-    {
-     "id": "21d19b94-2955-4eb0-ab61-fe20eaa0a67e",
-     "behaviour": "calves form a nursery group",
-     "quote": "It lies hidden for its first weeks, then joins a nursery group of young that stay together while the mothers feed nearby."
-    }
-   ],
    "lines": {
     "cluster": "{animals} have calves staying together in a nursery group while the mothers feed nearby"
    }
@@ -951,13 +533,6 @@
     "stay": "den",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "837320d5-a6b8-4c7f-8630-180a3958000f",
-     "behaviour": "gives birth and raises kits in underground dens",
-     "quote": "Females give birth in underground dens and raise kits in protected chambers."
-    }
-   ],
    "lines": {}
   },
   "american-marten": {
@@ -966,13 +541,6 @@
     "stay": "den",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "64f95cbc-ffaa-4de0-87a9-55fafe3a82e6",
-     "behaviour": "kits raised in tree cavities or logs",
-     "quote": "Females raise kits in tree cavities, logs, or sheltered dens."
-    }
-   ],
    "lines": {}
   },
   "fisher": {
@@ -981,13 +549,6 @@
     "stay": "den",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "d46b99ee-534f-4f8e-be0d-6f5bcbde9423",
-     "behaviour": "kits in tree cavities",
-     "quote": "Females use tree cavities or sheltered dens for kits, which are born helpless and grow into agile hunters."
-    }
-   ],
    "lines": {}
   },
   "pine-marten": {
@@ -996,13 +557,6 @@
     "stay": "den",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "ea633b40-1a24-47b5-92b1-874e188c9adf",
-     "behaviour": "rests and breeds in tree cavities or old nests",
-     "quote": "They often use tree cavities, old nests, or sheltered dens for resting and breeding."
-    }
-   ],
    "lines": {}
   },
   "red-panda": {
@@ -1011,13 +565,6 @@
     "stay": "den",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "34657509-d276-44a4-a19c-6d81c933a7ee",
-     "behaviour": "gives birth in tree hollows",
-     "quote": "Females give birth in tree hollows or sheltered nests and raise small litters alone."
-    }
-   ],
    "lines": {}
   },
   "red-fox": {
@@ -1026,13 +573,6 @@
     "stay": "den",
     "visit": "feed"
    },
-   "rows": [
-    {
-     "id": "ccec0258-fdde-4ace-b35f-1a8fe1916617",
-     "behaviour": "kits in dens",
-     "quote": "Females give birth to kits in dens, and both parents or helpers may provide food in some situations."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} is tending her kits in the den",
     "visit": "{aAnimal} is tending her kits in the den"
@@ -1044,13 +584,6 @@
     "stay": "den",
     "visit": "feed"
    },
-   "rows": [
-    {
-     "id": "8a8299d5-971b-4f1a-bf8d-4e3d1ecfb7d8",
-     "behaviour": "pups in a den, both parents feeding",
-     "quote": "Females den to give birth to pups, and both parents may help feed and protect them."
-    }
-   ],
    "lines": {
     "stay": "{animals} are feeding their pups at the den, both parents helping",
     "visit": "{animals} are feeding their pups at the den, both parents helping"
@@ -1063,13 +596,6 @@
     "visit": "feed",
     "helpers": true
    },
-   "rows": [
-    {
-     "id": "59f1a1a9-cf08-4418-9baf-b20ddd00ceb3",
-     "behaviour": "pack helps feed and guard pups at the den",
-     "quote": "Breeding females den and the pack helps feed and guard pups."
-    }
-   ],
    "lines": {
     "stay": "{animals} are feeding and guarding the pups at the den together",
     "visit": "{animals} are feeding and guarding the pups at the den together"
@@ -1082,13 +608,6 @@
     "visit": "feed",
     "helpers": true
    },
-   "rows": [
-    {
-     "id": "355114d7-d9b2-44bd-a567-cf23bd454456",
-     "behaviour": "pack feeds pups regurgitated meat at the den",
-     "quote": "A litter of usually four to six pups is born blind in a den in spring, suckled for six to eight weeks and then fed on regurgitated meat by the whole pack."
-    }
-   ],
    "lines": {
     "stay": "{animals} are all feeding the pups at the den with meat brought back up",
     "visit": "{animals} are all feeding the pups at the den with meat brought back up"
@@ -1100,13 +619,6 @@
     "stay": "den",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "8baa3fba-b3dd-4328-b3f6-e2c2d9ebdab0",
-     "behaviour": "cubs raised at the clan den",
-     "quote": "Females give birth in dens, nurse cubs for a long time, and raise them within clan politics."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} is nursing her cubs at the den"
    }
@@ -1117,13 +629,6 @@
     "stay": "den",
     "visit": "feed"
    },
-   "rows": [
-    {
-     "id": "e348284b-509e-4a15-82ed-d184ab2e7808",
-     "behaviour": "bonded pair; both parents guard and feed pups",
-     "quote": "Females give birth in dens, and both parents may help guard and feed pups."
-    }
-   ],
    "lines": {
     "visit": "{animals} are guarding and feeding their pups, both parents together"
    }
@@ -1134,13 +639,6 @@
     "stay": "den",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "bd675401-8a57-46d2-a271-7aa9931fa60c",
-     "behaviour": "puggle left in a nursery burrow",
-     "quote": "the puggle later stays in a nursery burrow."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} has a puggle waiting in a nursery burrow"
    }
@@ -1151,13 +649,6 @@
     "stay": "den",
     "visit": "feed"
    },
-   "rows": [
-    {
-     "id": "af29a03d-65b9-47e7-b686-f86dd0499ec8",
-     "behaviour": "family moves between dens with kits through summer",
-     "quote": "Both parents provision them, and the family moves between dens through the summer as the kits grow."
-    }
-   ],
    "lines": {}
   },
   "patagonian-mara": {
@@ -1166,13 +657,6 @@
     "stay": "den",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "5a80b59c-103b-41fa-a11a-541c5741d737",
-     "behaviour": "young in communal warrens, parents visit only their own",
-     "quote": "Young are often placed in communal burrows, but parents visit only their own offspring to nurse them."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} is visiting the shared burrow to nurse only its own young",
     "visit": "{aAnimal} is visiting the shared burrow to nurse only its own young"
@@ -1185,13 +669,6 @@
     "visit": "feed",
     "helpers": true
    },
-   "rows": [
-    {
-     "id": "1ecdb4fb-75ce-484f-8a9c-c7b7d4bcaf01",
-     "behaviour": "group babysits pups at the burrow",
-     "quote": "Females usually give birth in underground burrows, and the group helps babysit, feed, and guard the pups."
-    }
-   ],
    "lines": {
     "stay": "{animals} are babysitting and guarding the pups at the burrow"
    }
@@ -1202,13 +679,6 @@
     "stay": "nest",
     "visit": "nurse"
    },
-   "rows": [
-    {
-     "id": "6a1d1bad-3eb9-4149-9ca6-fa07c3f9de1e",
-     "behaviour": "parks infants in nests instead of carrying them",
-     "quote": "Unlike many lemurs, they often nest their infants."
-    }
-   ],
    "lines": {
     "stay": "{aAnimal} is keeping her infants in a nest"
    }
@@ -1220,13 +690,6 @@
     "visit": "nurse",
     "helpers": true
    },
-   "rows": [
-    {
-     "id": "7e7080ec-9c17-4a75-9d85-5a4f6a38e430",
-     "behaviour": "pride nursery: lionesses guard and nurse each other's cubs",
-     "quote": "Lionesses in a pride often nurse and guard one another's cubs, sharing the responsibility of raising the young."
-    }
-   ],
    "lines": {
     "stay": "{animals} are guarding and nursing one another's cubs",
     "visit": "{animals} are guarding and nursing one another's cubs"
@@ -1239,13 +702,6 @@
     "visit": "feed",
     "helpers": true
    },
-   "rows": [
-    {
-     "id": "eb2cfc87-9ab6-441c-8e1f-13598ba16850",
-     "behaviour": "young stay on parents' territory for years and help raise broods",
-     "quote": "young crows often stay on their parents' territory for years and help raise later broods."
-    }
-   ],
    "lines": {
     "visit": "{aAnimal} youngster is staying on its parents' territory and helping raise the new brood"
    }
@@ -1257,13 +713,6 @@
     "visit": "feed",
     "helpers": true
    },
-   "rows": [
-    {
-     "id": "1f346510-32b0-4935-ba25-b927558dc16e",
-     "behaviour": "group helpers feed young",
-     "quote": "with additional group members sometimes helping a breeding pair care for young."
-    }
-   ],
    "lines": {
     "visit": "{aAnimal} helper is feeding the breeding pair's young"
    }
@@ -1275,13 +724,6 @@
     "visit": "feed",
     "helpers": true
    },
-   "rows": [
-    {
-     "id": "c8ca22b9-6e38-4082-8a84-68915cfb6ec0",
-     "behaviour": "helpers from the group feed chicks",
-     "quote": "Helpers from the group join the parents in feeding the chicks."
-    }
-   ],
    "lines": {
     "visit": "{aAnimal} helper is joining the parents in feeding the chicks"
    }
@@ -1293,13 +735,6 @@
     "visit": "feed",
     "helpers": true
    },
-   "rows": [
-    {
-     "id": "0950c7a3-6d87-4479-8fa5-a3c52fe7b870",
-     "behaviour": "older offspring stay and help feed later broods",
-     "quote": "Older offspring often stay on and help to feed later broods."
-    }
-   ],
    "lines": {
     "visit": "{aAnimal} is helping to feed the younger brood at the family nest"
    }
@@ -1311,13 +746,6 @@
     "visit": "feed",
     "helpers": true
    },
-   "rows": [
-    {
-     "id": "30cac9d2-521a-4570-8644-f0d74c2b71d9",
-     "behaviour": "family helpers assist in raising young",
-     "quote": "Females lay eggs in tree hollows or termite mounds, and family helpers may assist in raising young."
-    }
-   ],
    "lines": {
     "visit": "{aAnimal} is helping its family to raise the young"
    }
@@ -1329,13 +757,6 @@
     "visit": "feed",
     "days": 120
    },
-   "rows": [
-    {
-     "id": "399c7650-ab71-40f3-9f8b-91da027fa2ec",
-     "behaviour": "female feeds the chick for most of a year after the male leaves",
-     "quote": "The male leaves when the chick is around three months old and the female goes on feeding it for most of a year, so she can breed only every second year."
-    }
-   ],
    "lines": {
     "visit": "{aAnimal} is still feeding her chick, long after the male has left"
    }
@@ -1345,13 +766,6 @@
    "ways": {
     "cluster": true
    },
-   "rows": [
-    {
-     "id": "c28d3e50-15fd-45e9-b586-a55b98b9f640",
-     "behaviour": "chicks gather in creches",
-     "quote": "Chicks are guarded for the first month, then gather in crèches, and go to sea at roughly 60 to 130 days depending on food supply."
-    }
-   ],
    "lines": {
     "cluster": "{aAnimal} chick is gathering with others in a crèche"
    }
@@ -1361,13 +775,6 @@
    "ways": {
     "cluster": true
    },
-   "rows": [
-    {
-     "id": "f560e718-c750-4dad-91b9-5c3eac9b7fa5",
-     "behaviour": "fledglings gather in nursery trees while parents forage",
-     "quote": "Chicks leave the hollow at about seven weeks and gather in nursery trees with other young while the parents forage."
-    }
-   ],
    "lines": {
     "cluster": "{aAnimal} fledgling is waiting in a nursery tree with other young"
    }
@@ -1377,13 +784,6 @@
    "ways": {
     "cluster": true
    },
-   "rows": [
-    {
-     "id": "c95c412f-7585-4d4f-874b-6f28f4eae453",
-     "behaviour": "nymphs cluster tightly after hatching",
-     "quote": "Nymphs cluster tightly after hatching"
-    }
-   ],
    "lines": {
     "cluster": "{animals} are clustering tightly as newly hatched nymphs"
    }
@@ -1393,13 +793,6 @@
    "ways": {
     "cluster": true
    },
-   "rows": [
-    {
-     "id": "ca750659-a03b-42c2-b981-7c9402491626",
-     "behaviour": "caterpillars feed together, then separate as they grow",
-     "quote": "The caterpillars feed together, then separate as they grow"
-    }
-   ],
    "lines": {
     "cluster": "{animals} are feeding together as caterpillars"
    }
@@ -1409,13 +802,6 @@
    "ways": {
     "cluster": true
    },
-   "rows": [
-    {
-     "id": "c6b6d935-cc6b-4cbe-bb98-07cdc0c10a1e",
-     "behaviour": "blackish yellow-ringed larvae feed in groups under fig leaves",
-     "quote": "Larvae rest beneath Ficus leaves and feed in groups after eggs are laid in batches."
-    }
-   ],
    "lines": {
     "cluster": "{animals} are feeding in a group as larvae beneath a fig leaf"
    }
@@ -1425,13 +811,6 @@
    "ways": {
     "cluster": true
    },
-   "rows": [
-    {
-     "id": "b712ed04-7bfc-4da3-bf57-56713fb76ace",
-     "behaviour": "juveniles form tight shoals at once",
-     "quote": "Juveniles form tight shoals immediately, so the cover starts before anything else does."
-    }
-   ],
    "lines": {
     "cluster": "{animals} are packed in a tight shoal as juveniles"
    }
@@ -1441,13 +820,6 @@
    "ways": {
     "cluster": true
    },
-   "rows": [
-    {
-     "id": "ee050391-8de2-4393-89d5-17941effb34c",
-     "behaviour": "fry shoal in the shallows, then disperse to find lies of their own",
-     "quote": "Fry shoal together in the shallows before dispersing to find lies of their own."
-    }
-   ],
    "lines": {
     "cluster": "{animals} are shoaling together in the shallows as fry"
    }
@@ -1457,13 +829,6 @@
    "ways": {
     "cluster": true
    },
-   "rows": [
-    {
-     "id": "9865a279-3945-458d-a407-b35f13d25c3d",
-     "behaviour": "heaps leaf-litter nest mound; hatchlings stay in group near mother",
-     "quote": "hatchlings stay in groups near her for months"
-    }
-   ],
    "lines": {
     "cluster": "{animals} are staying together as hatchlings close to their mother"
    }
@@ -1473,13 +838,6 @@
    "ways": {
     "cluster": true
    },
-   "rows": [
-    {
-     "id": "6606eac5-d009-4142-a6cf-1da9228949d7",
-     "behaviour": "spiderlings cluster then balloon away",
-     "quote": "Spiderlings hatch in spring, cluster for a few days, then disperse on threads of silk carried by the wind."
-    }
-   ],
    "lines": {}
   },
   "peacock-butterfly": {
@@ -1487,13 +845,6 @@
    "ways": {
     "cluster": true
    },
-   "rows": [
-    {
-     "id": "20d8a84d-cd33-418e-b017-98f328a0ead3",
-     "behaviour": "caterpillars live together in a silk web on nettles",
-     "quote": "The caterpillars live together in a silk web, splitting up as they grow"
-    }
-   ],
    "lines": {}
   }
  }
