@@ -520,6 +520,15 @@ export class ArkLive {
             .catch(() => {
                 // (No answer: no forestry drawn; asked again later.)
             });
+        // Decision 418: and the record's carers (keepers, farmers, pet owners at work), as often.
+        fetch(url.replace(/\/dormant$/, "/carers"))
+            .then((response) => (response.ok ? response.json() : null))
+            .then((body: {carers?: {v?: unknown} | null} | null) => {
+                if (!this.disposed && body) this.options.scene()?.setCarers?.(body.carers ?? null);
+            })
+            .catch(() => {
+                // (No answer: no carers drawn; asked again later.)
+            });
         // p5 (humans): and the town's couples and their children (the server's courtship), as often.
         fetch(url.replace(/\/dormant$/, "/human-bonds"))
             .then((response) => (response.ok ? response.json() : null))

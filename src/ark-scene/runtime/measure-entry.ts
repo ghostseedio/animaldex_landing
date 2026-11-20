@@ -66,6 +66,8 @@ const round = (value: number) => Math.round(value * 10) / 10;
     const focus = params.get("focus");
     // `?walk=1`: after the opening, the camera visits the zones in turn (as a reader would), so near levels come and go.
     const walk = params.get("walk") === "1";
+    // Carers (decision 418): `?carers=1` draws them as if the server's switch were on (the heap A/B).
+    if (params.get("carers") === "1") (globalThis as {__arkCarers?: boolean}).__arkCarers = true;
     try {
         // `?population=<file>`: a scale snapshot (scripts/ark-scale-fixture.mts) instead of the fixture.
         const population = params.get("population");

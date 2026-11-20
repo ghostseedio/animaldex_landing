@@ -407,7 +407,10 @@
             "dayRecord": "No registro dele",
             "dayNone": "Não é possível calcular o dia deste animal agora.",
             "dayClose": "Fechar o dia dele",
-            "dayHint": "O que ele fez, pela agenda compartilhada da Ark: a mesma para todos. Os pontos são o registro da Ark."
+            "dayHint": "O que ele fez, pela agenda compartilhada da Ark: a mesma para todos. Os pontos são o registro da Ark.",
+            "caredOwner": "Cuidado pelo dono",
+            "caredFarmer": "Cuidado pelo agricultor",
+            "caredKeeper": "Cuidado por um tratador"
         },
         "activity": {
             "food": "procurando comida",

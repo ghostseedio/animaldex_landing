@@ -407,7 +407,10 @@
             "dayRecord": "In seinem Logbuch",
             "dayNone": "Der Tag dieses Tiers lässt sich gerade nicht berechnen.",
             "dayClose": "Seinen Tag schließen",
-            "dayHint": "Was es getan hat, nach dem gemeinsamen Zeitplan der Ark: für alle gleich. Punkte sind Einträge der Ark."
+            "dayHint": "Was es getan hat, nach dem gemeinsamen Zeitplan der Ark: für alle gleich. Punkte sind Einträge der Ark.",
+            "caredOwner": "Versorgt von seinem Halter",
+            "caredFarmer": "Versorgt vom Landwirt",
+            "caredKeeper": "Versorgt von einem Tierpfleger"
         },
         "activity": {
             "food": "sucht Futter",

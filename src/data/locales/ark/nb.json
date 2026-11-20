@@ -407,7 +407,10 @@
             "dayRecord": "I loggen dens",
             "dayNone": "Dagen til dette dyret kan ikke regnes ut nå.",
             "dayClose": "Lukk dagen dens",
-            "dayHint": "Hva den gjorde, etter Arks felles timeplan: lik for alle. Prikkene er Arks logg."
+            "dayHint": "Hva den gjorde, etter Arks felles timeplan: lik for alle. Prikkene er Arks logg.",
+            "caredOwner": "Stelt av eieren sin",
+            "caredFarmer": "Stelt av bonden",
+            "caredKeeper": "Stelt av en dyrepasser"
         },
         "activity": {
             "food": "leter etter mat",

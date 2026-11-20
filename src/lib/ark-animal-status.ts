@@ -613,6 +613,10 @@ export type ArkCardWords = {
     dayNone: string;
     dayClose: string;
     dayHint: string;
+    /** Carers (decision 418): who feeds a kept animal, said on its card (a pet, a farm animal, a zoo animal). */
+    caredOwner?: string;
+    caredFarmer?: string;
+    caredKeeper?: string;
 };
 
 /** English, as `en.json` has it: the embed's fallback until (or unless) its words read. */

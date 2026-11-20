@@ -407,7 +407,10 @@
             "dayRecord": "Kwenye rekodi yake",
             "dayNone": "Siku ya mnyama huyu haiwezi kukokotolewa sasa.",
             "dayClose": "Funga siku yake",
-            "dayHint": "Alichofanya, kwa ratiba ya pamoja ya Ark: sawa kwa kila mtu. Nukta ni rekodi ya Ark."
+            "dayHint": "Alichofanya, kwa ratiba ya pamoja ya Ark: sawa kwa kila mtu. Nukta ni rekodi ya Ark.",
+            "caredOwner": "Hutunzwa na mmiliki wake",
+            "caredFarmer": "Hutunzwa na mkulima",
+            "caredKeeper": "Hutunzwa na mlinzi wa wanyama"
         },
         "activity": {
             "food": "anatafuta chakula",

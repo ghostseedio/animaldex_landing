@@ -228,6 +228,7 @@ import type {OceanTrafficView} from "@/ark-scene/ocean-traffic-render"; // p2 (o
 import {PeopleFigures} from "@/ark-scene/humans/people-figures"; // p6 (people): the rigged bodies
 import {BeachProps} from "@/ark-scene/humans/beach-props"; // p5 (humans, quality pass)
 import {chosenHuman, isHumanAnimal, TownHumans, type ChosenHuman} from "@/ark-scene/humans/town-humans"; // p5 (humans)
+import {carersAt, type CarerPost, type DrawnCarer} from "@/ark-scene/humans/carers"; // decision 418 (carers)
 import {humanRoomHost} from "@/ark-scene/humans/home-rooms-host"; // humans visible
 import {HumanTVs} from "@/ark-scene/humans/tvs"; // humans visible
 import {SleepCovers} from "@/ark-scene/humans/sleep-covers"; // humans polish
@@ -1340,6 +1341,25 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     // in furnished (`island.setPeopleRooms`). Before this they were never drawn (no room host), so at night no one was seen.
     const townHumans = new TownHumans({away: (id) => forest.away(id), origin: townWorldOrigin(), roadHeight: townRoadHeight, seaLevel: () => ARK_ENVIRONMENT.seaLevel.value, boatSeconds: () => clockNow()});
     const humanFigures = new PeopleFigures(); // p6 (people): rigged bodies (the procedural figures while they load)
+    // Carers (decision 418): the keepers, farmers and owners who feed the kept animals, generic figures (never anyone's
+    // photo, face or name; not humans aboard), drawn only while the server's `carers` is on (`setCarers`; `?carers=1` in
+    // the harnesses). Their posts are the town's (`island.carerPosts`), asked for once per placement.
+    let carersOn = (globalThis as {__arkCarers?: boolean}).__arkCarers === true;
+    let carerPosts: readonly CarerPost[] = [];
+    let carerAsk: Promise<readonly CarerPost[]> | null = null;
+    const carerOut: DrawnCarer[] = [];
+    const stepCarers = (isl: NonNullable<typeof island>, hours: number): readonly DrawnCarer[] => {
+        if (!carersOn) return carerOut.length ? ((carerOut.length = 0), carerOut) : carerOut;
+        const ask = isl.carerPosts?.() ?? null;
+        if (ask !== carerAsk) {
+            carerAsk = ask;
+            carerPosts = [];
+            void ask?.then((posts) => {
+                if (carerAsk === ask) carerPosts = posts;
+            });
+        }
+        return carersAt(carerPosts, hours, townWorldOrigin(), isl.drawnHeight, carerOut);
+    };
     scene.add(humanFigures.group);
     const humanTVs = new HumanTVs(); // humans visible: the TVs people at home watch
     scene.add(humanTVs.group);
@@ -9065,12 +9085,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         island?.update(pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000);
         // p5 (humans): the town's people on their day (none drawn without humans aboard or the town).
-        if (island && townHumans.count) {
+        if (island && (townHumans.count || carersOn)) {
             const islandMs = pinnedHours === null ? worldMs() : worldMs() + (pinnedHours - islandHours(worldMs(), ISLAND_OFFSET_HOURS)) * 3_600_000;
             const traffic = island.movingCars?.();
             townHumans.setArkDay(arkDayNow(current, worldMs())); // p5 (humans, couples): a child's age
             syncHumanRooms(island); // humans visible
-            humanFigures.setFrame(townHumans.frame(islandMs, traffic?.cars ?? null, traffic?.count ?? 0), camera.position, islandMs / 1000);
+            const people = townHumans.frame(islandMs, traffic?.cars ?? null, traffic?.count ?? 0);
+            const carers = stepCarers(island, hoursNow()); // decision 418: the carers at work now
+            humanFigures.setFrame(carers.length ? [...people, ...carers] : people, camera.position, islandMs / 1000);
             humanTVs.setFrame(townHumans.tvs, islandMs / 1000); // humans visible
             sleepCovers.setFrame(townHumans.covers, camera.position); // humans polish
             stepPendingHuman(); // humans visible
@@ -9364,6 +9386,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // 3.3 fix (log): the record's deaths, where each lies (the harness).
         deaths: () => liveDeaths.debug(),
         forest: () => forest.debug(), // p5 (humans)
+        carers: () => carerOut.map((h) => ({carer: h.carer, kind: h.kind, pose: h.pose, x: h.x, y: h.y, z: h.z, yaw: h.yaw})), // decision 418
         people: () => ({rigged: humanFigures.rigged, drawn: {...humanFigures.drawn}, out: townHumans.out.map((h) => ({id: h.id, what: h.what, pose: h.pose, x: h.x, y: h.y, z: h.z, yaw: h.yaw, face: h.face}))}), // p6 (people)
         dogWalks: () => ({walked: townHumans.dogs.map((d) => ({id: d.id, walker: d.walker, x: d.x, y: d.y, z: d.z, yaw: d.yaw, sniffing: d.sniffing})), pins: walkPins.slice(), live: Array.from(dogActs.keys()), pairs: dogWalks.pairing.walkerOf.size, home: dogWalks.pairing.home.length}), // p5 (humans, dogs)
         rigState: (id: string) => {
@@ -9531,6 +9554,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }), worldMs() / 1000);
         },
         setForestry: (record) => forest.setRecord(record), // p5 (humans)
+        setCarers: (record) => {
+            carersOn = record !== null || (globalThis as {__arkCarers?: boolean}).__arkCarers === true; // decision 418
+        },
         setHumanBonds: (raw) => townHumans.setBonds(decodeHumanBonds(raw)), // p5 (humans, couples)
         setDormant: (kinds) => {
             dormantKinds = new Set(kinds);

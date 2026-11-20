@@ -407,7 +407,10 @@
             "dayRecord": "W jego zapisie",
             "dayNone": "Nie można teraz obliczyć dnia tego zwierzęcia.",
             "dayClose": "Zamknij jego dzień",
-            "dayHint": "Co robiło, według wspólnego planu Ark: dla wszystkich taki sam. Kropki to zapis Ark."
+            "dayHint": "Co robiło, według wspólnego planu Ark: dla wszystkich taki sam. Kropki to zapis Ark.",
+            "caredOwner": "Opiekuje się nim właściciel",
+            "caredFarmer": "Opiekuje się nim rolnik",
+            "caredKeeper": "Opiekuje się nim opiekun"
         },
         "activity": {
             "food": "szuka pożywienia",

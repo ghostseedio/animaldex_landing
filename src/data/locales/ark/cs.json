@@ -407,7 +407,10 @@
             "dayRecord": "V jeho záznamu",
             "dayNone": "Den tohoto zvířete teď nejde spočítat.",
             "dayClose": "Zavřít jeho den",
-            "dayHint": "Co dělalo, podle společného rozvrhu Ark: pro všechny stejné. Tečky jsou záznam Ark."
+            "dayHint": "Co dělalo, podle společného rozvrhu Ark: pro všechny stejné. Tečky jsou záznam Ark.",
+            "caredOwner": "Stará se o něj jeho majitel",
+            "caredFarmer": "Stará se o něj farmář",
+            "caredKeeper": "Stará se o něj ošetřovatel"
         },
         "activity": {
             "food": "hledá potravu",

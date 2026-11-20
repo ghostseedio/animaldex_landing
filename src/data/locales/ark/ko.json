@@ -407,7 +407,10 @@
             "dayRecord": "기록",
             "dayNone": "지금은 이 동물의 하루를 계산할 수 없어요.",
             "dayClose": "하루 닫기",
-            "dayHint": "Ark의 공유 일정에 따른 행동이에요. 누구에게나 똑같아요. 점은 Ark의 기록이에요."
+            "dayHint": "Ark의 공유 일정에 따른 행동이에요. 누구에게나 똑같아요. 점은 Ark의 기록이에요.",
+            "caredOwner": "주인이 돌보고 있어요",
+            "caredFarmer": "농부가 돌보고 있어요",
+            "caredKeeper": "사육사가 돌보고 있어요"
         },
         "activity": {
             "food": "먹이를 찾는 중",

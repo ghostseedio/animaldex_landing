@@ -407,7 +407,10 @@
             "dayRecord": "Sa tala nito",
             "dayNone": "Hindi pa makuwenta ang araw ng hayop na ito ngayon.",
             "dayClose": "Isara ang araw nito",
-            "dayHint": "Ang ginawa nito, mula sa pinagsasaluhang iskedyul ng Ark: pareho para sa lahat. Ang mga tuldok ay tala ng Ark."
+            "dayHint": "Ang ginawa nito, mula sa pinagsasaluhang iskedyul ng Ark: pareho para sa lahat. Ang mga tuldok ay tala ng Ark.",
+            "caredOwner": "Inaalagaan ng may-ari nito",
+            "caredFarmer": "Inaalagaan ng magsasaka",
+            "caredKeeper": "Inaalagaan ng isang tagapag-alaga"
         },
         "activity": {
             "food": "naghahanap ng pagkain",

@@ -407,7 +407,10 @@
             "dayRecord": "I dens logbog",
             "dayNone": "Dens dag kan ikke regnes ud for dette dyr lige nu.",
             "dayClose": "Luk dens dag",
-            "dayHint": "Hvad den lavede, fra Arks fælles skema: det samme for alle. Prikkerne er Arks optegnelser."
+            "dayHint": "Hvad den lavede, fra Arks fælles skema: det samme for alle. Prikkerne er Arks optegnelser.",
+            "caredOwner": "Passes af sin ejer",
+            "caredFarmer": "Passes af landmanden",
+            "caredKeeper": "Passes af en dyrepasser"
         },
         "activity": {
             "food": "leder efter føde",

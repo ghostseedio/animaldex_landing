@@ -4652,7 +4652,10 @@
       "dayRecord": "Dalam catatannya",
       "dayNone": "Harinya belum bisa dihitung untuk hewan ini sekarang.",
       "dayClose": "Tutup harinya",
-      "dayHint": "Apa yang dilakukannya, dari jadwal bersama Ark: sama untuk semua orang. Titik adalah catatan Ark."
+      "dayHint": "Apa yang dilakukannya, dari jadwal bersama Ark: sama untuk semua orang. Titik adalah catatan Ark.",
+      "caredOwner": "Dirawat oleh pemiliknya",
+      "caredFarmer": "Dirawat oleh peternak",
+      "caredKeeper": "Dirawat oleh seorang penjaga"
     },
     "activity": {
       "food": "mencari makanan",

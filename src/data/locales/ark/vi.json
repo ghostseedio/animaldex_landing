@@ -407,7 +407,10 @@
             "dayRecord": "Trong nhật ký của nó",
             "dayNone": "Hiện chưa thể tính một ngày của con vật này.",
             "dayClose": "Đóng một ngày của nó",
-            "dayHint": "Những gì nó đã làm, theo lịch chung của Ark: giống nhau với mọi người. Các chấm là nhật ký của Ark."
+            "dayHint": "Những gì nó đã làm, theo lịch chung của Ark: giống nhau với mọi người. Các chấm là nhật ký của Ark.",
+            "caredOwner": "Được chủ chăm sóc",
+            "caredFarmer": "Được người nông dân chăm sóc",
+            "caredKeeper": "Được một người giữ thú chăm sóc"
         },
         "activity": {
             "food": "tìm thức ăn",

@@ -407,7 +407,10 @@
             "dayRecord": "Sen kirjauksissa",
             "dayNone": "Tämän eläimen päivää ei voi laskea juuri nyt.",
             "dayClose": "Sulje sen päivä",
-            "dayHint": "Mitä se teki Arkin yhteisen aikataulun mukaan: sama kaikille. Pisteet ovat Arkin kirjauksia."
+            "dayHint": "Mitä se teki Arkin yhteisen aikataulun mukaan: sama kaikille. Pisteet ovat Arkin kirjauksia.",
+            "caredOwner": "Sitä hoitaa sen omistaja",
+            "caredFarmer": "Sitä hoitaa maanviljelijä",
+            "caredKeeper": "Sitä hoitaa eläintenhoitaja"
         },
         "activity": {
             "food": "etsii ruokaa",

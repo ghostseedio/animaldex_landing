@@ -407,7 +407,10 @@
             "dayRecord": "Dans son registre",
             "dayNone": "Impossible de calculer la journée de cet animal pour l’instant.",
             "dayClose": "Fermer sa journée",
-            "dayHint": "Ce qu’il a fait, d’après l’emploi du temps partagé de l’Ark : le même pour tous. Les points sont le registre de l’Ark."
+            "dayHint": "Ce qu’il a fait, d’après l’emploi du temps partagé de l’Ark : le même pour tous. Les points sont le registre de l’Ark.",
+            "caredOwner": "Soigné par son propriétaire",
+            "caredFarmer": "Soigné par le fermier",
+            "caredKeeper": "Soigné par un soigneur"
         },
         "activity": {
             "food": "cherche de la nourriture",

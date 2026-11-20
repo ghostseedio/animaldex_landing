@@ -407,7 +407,10 @@
             "dayRecord": "In zijn logboek",
             "dayNone": "De dag van dit dier kan nu niet worden berekend.",
             "dayClose": "Zijn dag sluiten",
-            "dayHint": "Wat het deed, volgens het gedeelde schema van de Ark: voor iedereen hetzelfde. Stippen zijn de gegevens van de Ark."
+            "dayHint": "Wat het deed, volgens het gedeelde schema van de Ark: voor iedereen hetzelfde. Stippen zijn de gegevens van de Ark.",
+            "caredOwner": "Verzorgd door zijn eigenaar",
+            "caredFarmer": "Verzorgd door de boer",
+            "caredKeeper": "Verzorgd door een dierverzorger"
         },
         "activity": {
             "food": "zoekt voedsel",

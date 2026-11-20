@@ -407,7 +407,10 @@
             "dayRecord": "A naplójában",
             "dayNone": "Ennek az állatnak a napja most nem számítható ki.",
             "dayClose": "A napja bezárása",
-            "dayHint": "Mit csinált, az Ark közös menetrendje szerint: mindenkinek ugyanaz. A pöttyök az Ark feljegyzései."
+            "dayHint": "Mit csinált, az Ark közös menetrendje szerint: mindenkinek ugyanaz. A pöttyök az Ark feljegyzései.",
+            "caredOwner": "A gazdája gondozza",
+            "caredFarmer": "A gazda gondozza",
+            "caredKeeper": "Egy állatgondozó gondozza"
         },
         "activity": {
             "food": "élelmet keres",
