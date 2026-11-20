@@ -159,7 +159,7 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
     const dayFrom = arkDayAt(start, history.startedAt);
     const dayTo = arkDayAt(end, history.startedAt);
     const fromRecord = start <= history.firstAt + history.bucketMs;
-    const happened = ([["arrived", stats.arrived], ["born", stats.born], ["revived", stats.revived], ["died", stats.died], ["eaten", stats.eaten]] as const).filter(([, n]) => n > 0);
+    const happened = ([["arrived", stats.arrived], ["born", stats.born], ["revived", stats.revived], ["died", stats.died], ["eaten", stats.eaten], ["rehomed", stats.rehomed], ["toMarket", stats.toMarket], ["movedZoo", stats.movedZoo]] as const).filter(([, n]) => n > 0);
     const here = where ? arkKindHereText(where, words, locale) : null;
     // What changed at the point under the finger: arrivals from photos, births, deaths (the record's own rows).
     const changed = hover === null ? [] : arkStepChanges(series, Math.max(0, Math.min(series.counts.length - 1, hover)));
@@ -252,7 +252,7 @@ export function ArkPopulationGraph({name, icon, history, series, stats, period, 
                     </p>
                 ) : null}
             </div>
-            <p className="px-3.5 pb-0.5 text-[10.5px] leading-snug text-white/55">{words.riseFall}</p>
+            <p className="px-3.5 pb-0.5 text-[10.5px] leading-snug text-white/55">{words.riseFall}{stats.rehomed + stats.toMarket + stats.movedZoo > 0 ? ` ${words.riseFallKept}` : ""}</p>
             <p className="px-3.5 text-[10.5px] text-white/45">
                 {[
                     dayFrom !== null && dayTo !== null ? fillArkWords(words.arkDays, {from: number(Math.max(0, dayFrom)), to: number(dayTo)}) : null,
