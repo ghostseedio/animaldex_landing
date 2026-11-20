@@ -447,8 +447,7 @@ if (want("closeups")) {
             for (const e of window.__arkDebug.entries()) {
                 const p = e.sched?.pose;
                 if (!p || p.moving || p.aloft || e.length > 0.7 || e.length < 0.08) continue;
-                const plan = window.__arkDebug.planOf?.(e.animal.model_slug) ?? "";
-                if (!/bird/.test(plan)) continue;
+                if (!/dove|pigeon|sparrow|gull|crow|jackdaw|starling|wren|swallow|martin|robin|finch|tit$|blackbird|kestrel/.test(e.animal.model_slug)) continue;
                 if (window.__arkDebug.eaveAt?.(p.x, p.y, p.z)) out.push({id: e.animal.id, slug: e.animal.model_slug});
             }
             return out;
@@ -463,7 +462,12 @@ if (want("closeups")) {
     await crossTo("wild");
     await page.evaluate(() => window.__arkScene.setHours(11));
     await wait(5000);
-    const bugs = await find("shield-stink-bug");
+    let bugs = await find("shield-stink-bug");
+    for (let k = 0; k < 4 && !bugs.length; k++) {
+        await wait(4000);
+        bugs = await find("shield-stink-bug");
+    }
+    console.log("bugs", bugs.length, JSON.stringify(bugs.map((b) => b.micro)));
     const byRock = bugs.find((r) => r.micro === "rock_face") ?? bugs.find((r) => !r.aloft);
     if (byRock) await closeUp(`c-shield-stink-bug-${byRock.micro ?? "ground"}`, byRock.id, "__arkRockFixOff");
     const second = bugs.find((r) => r !== byRock && !r.aloft);
@@ -471,8 +475,9 @@ if (want("closeups")) {
     // A beetle on a flower head (a golden tortoise beetle where one sits on one, else the nearest beetle on a flower).
     const onFlower = await page.evaluate(() => {
         const out = [];
-        for (const e of window.__arkDebug.entries()) if (e.place?.micro?.attach?.tag === "flower_head" && /beetle|ladybird|weevil|chafer/.test(e.animal.model_slug)) out.push({id: e.animal.id, slug: e.animal.model_slug});
-        return out;
+        for (const e of window.__arkDebug.entries()) if (e.place?.micro?.attach?.tag === "flower_head" && e.length <= 0.05) out.push({id: e.animal.id, slug: e.animal.model_slug});
+        // (Beetles first.)
+        return out.sort((a, b) => Number(/beetle|ladybird|weevil|chafer/.test(b.slug)) - Number(/beetle|ladybird|weevil|chafer/.test(a.slug)));
     });
     console.log("flower beetles", JSON.stringify(onFlower));
     for (const b of onFlower.slice(0, 2)) await closeUp(`c-flower-${b.slug}`, b.id, "__arkFlowerFixOff");
