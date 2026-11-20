@@ -31,6 +31,9 @@ import {ARK_ACTIVITY_ENGLISH, type ArkActivityKey, type ArkActivityWords} from "
 import {pluralAnimalName} from "@/lib/ark-population";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 
+// In its own module so the page's first JavaScript needn't carry the live log (docs/ark/lazy-loading.md).
+export {arkNewArrivals} from "@/lib/ark-new-arrivals";
+
 /**
  * (`crisis`, `saved`, `wildGone`, `toCare`: the crisis layer's records (AnimalDex E4), said by `ark-scene/live/crisis-lines.ts`
  * with the scene, never in the Ark page's static JavaScript: a kind down to a few in the wild, out of danger again, none
@@ -169,15 +172,6 @@ export function arkLiveServerItems(events: readonly ArkEvent[]): ArkLiveItem[] {
         }
     }
     return items;
-}
-
-/**
- * The animals that came aboard between two snapshots: arrivals only, never the young born on the Ark (the
- * page's "new arrival" notice).
- */
-export function arkNewArrivals<T extends {id: string; origin?: "arrived" | "born"}>(before: ReadonlyArray<{id: string}>, next: readonly T[]): T[] {
-    const known = new Set(before.map((animal) => animal.id));
-    return next.filter((animal) => !known.has(animal.id) && animal.origin !== "born");
 }
 
 /** The animals a snapshot gained, as items: what the log says when the server's event log can't be read. */
