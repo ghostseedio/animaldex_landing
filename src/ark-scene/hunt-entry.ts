@@ -110,23 +110,33 @@ async function main() {
     const record = (c: Cast, id: string, k2: number): ArkEventAnimal => ({id, species_profile_id: speciesId(k2), name: c.name, model_slug: c.slug, zone: scene.zone as ArkEventAnimal["zone"], arrived_at: "2026-11-12T00:00:00Z", origin: "arrived", generation: 0, slot: 90 + k2, slot_rank: 0, activity: "diurnal" as ArkEventAnimal["activity"], sociality: null, status: null});
     const encounter = {t: t0, predator: {x: hx, z: hz}, prey: {x: quarry.x, z: quarry.z, r: 0.5}};
     if (mode === "catch") {
-        const act: Extract<ArkAct, {kind: "meal"}> = {kind: "meal", at: new Date(t0 * 1000).toISOString(), predator: record(scene.predator, predatorId, 0), prey: record(scene.prey, preyId, 1), phrase: null, extinct: false, encounter};
+        // (A record's act begins 75 s after its row (`ark-act-hold.ts`): the row is dated so that it begins at the step.)
+        const act: Extract<ArkAct, {kind: "meal"}> = {kind: "meal", at: new Date((t0 - 75) * 1000).toISOString(), predator: record(scene.predator, predatorId, 0), prey: record(scene.prey, preyId, 1), phrase: null, extinct: false, encounter};
         handle.setMeals?.([act]);
     } else {
         handle.addEscapes?.([{key: `escape:${name}`, prey: preyId, predator: predatorId, t0, encounter}]);
     }
     await setAt(t0 + 0.05);
     await frames(4);
-    type Debug = {meals: () => Array<{catchAt: number}>; escapes: () => Array<{missAt: number | null; seconds: number | null; kind: string | null; closest: number | null; gap: number | null}>; entries: () => Array<{animal: {id: string; model_slug: string}; act: Record<string, unknown> | null}>};
+    type Debug = {meals: () => Array<{t0: number; catchAt: number}>; escapes: () => Array<{missAt: number | null; seconds: number | null; kind: string | null; closest: number | null; gap: number | null; phase: string}>; entries: () => Array<{animal: {id: string; model_slug: string}; act: Record<string, unknown> | null}>};
     const debug = (window as unknown as {__arkDebug: Debug}).__arkDebug;
-    const meal = debug.meals()[0];
-    const escape = debug.escapes()[0];
+    // (The act is built on the first frame both animals are in the scene: asked for a few seconds.)
+    const waitUntil = realPerfNow() + 8000;
+    while (realPerfNow() < waitUntil && !(mode === "catch" ? debug.meals()[0]?.catchAt : debug.escapes()[0]?.seconds)) {
+        await setAt(t0 + 0.1);
+        await wait(150);
+    }
+    if (!(mode === "catch" ? debug.meals()[0]?.catchAt : debug.escapes()[0]?.seconds)) throw new Error(`no act built: ${JSON.stringify(mode === "catch" ? debug.meals() : debug.escapes())}`);
     const stateOf = (id: string) => {
         const e = debug.entries().find((x) => x.animal.id === id);
         return e?.act ? `${String(e.act.state ?? "-")}${e.act.hidden ? " hidden" : ""}` : "-";
     };
     const api = {
-        info: () => ({mode, catchAt: meal?.catchAt ?? null, missAt: escape?.missAt ?? null, seconds: escape?.seconds ?? null, kind: escape?.kind ?? null, closest: escape?.closest ?? null, gap: escape?.gap ?? null, predator: scene.predator.slug, prey: scene.prey.slug}),
+        info: () => {
+            const meal = debug.meals()[0];
+            const escape = debug.escapes()[0];
+            return {mode, catchAt: meal?.catchAt ?? null, missAt: escape?.missAt ?? null, seconds: escape?.seconds ?? null, kind: escape?.kind ?? null, closest: escape?.closest ?? null, gap: escape?.gap ?? null, predator: scene.predator.slug, prey: scene.prey.slug};
+        },
         /** The world at `s` seconds after the step, framed on the two from `distance` (or `scene.distance`). */
         shot: async (s: number, distance?: number, azimuth = 0.7, polar = 1.12) => {
             await setAt(t0 + s - 1.2);
