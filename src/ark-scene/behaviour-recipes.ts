@@ -138,7 +138,7 @@ function unit(seed: string): number {
  */
 const recordedSexes = new Map<string, "male" | "female">();
 
-export function setRecordedSexes(animals: Iterable<{id: string; sex?: unknown}>): void {
+export function setRecordedSexes(animals: ReadonlyArray<{id: string; sex?: unknown}>): void {
     for (const animal of animals) {
         if (animal.sex === "m") recordedSexes.set(animal.id, "male");
         else if (animal.sex === "f") recordedSexes.set(animal.id, "female");
