@@ -11,6 +11,8 @@
  * flagged as such (`basis: "plan_default"`).
  */
 
+import type {YoungWays} from "@/ark-scene/young-ways";
+
 export type ArkCareKind = "follow" | "carry" | "nest" | "guard" | "none";
 
 export type ArkCareBasis = "stated" | "inferred" | "plan_default";
@@ -23,6 +25,8 @@ export type ArkCare = {
     independentDays: number | null;
     /** The sentence it was read from. */
     phrase: string | null;
+    /** How its species keeps its young where its own text says (the catalogue's young-care rows, `young-ways.ts`): the scene's, never the care table's. */
+    ways?: YoungWays | null;
 };
 
 type Rule = {kind: ArkCareKind; basis: Exclude<ArkCareBasis, "plan_default">; pattern: RegExp};

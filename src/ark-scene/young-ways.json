@@ -1,0 +1,828 @@
+{
+ "about": "How young are kept (sig-young lane), built by scripts/ark-young-ways.mts from the species catalogue's young-care rows (AnimalDex docs/ark/signature-behaviours.json): only what a species' own stored text says. ride: young carried on a parent (style back/belly/tail/under; by male: the father); line: young follow in a line along the parent's path; stay: young kept at one spot (hide/den/nest) while the parent comes back in bouts (visit nurse/feed; helpers: other adults of the kind too; hours; days); cluster: the young of the kind gather in a clump. lines: the row's own English log sentence by way. Used by young-ways.ts. The rows each way is read from, with their quotes, are in data/ark/young-ways-rows.json.",
+ "species": {
+  "great-crested-grebe": {
+   "name": "Great Crested Grebe",
+   "ways": {
+    "ride": "back",
+    "rideWater": true
+   },
+   "lines": {
+    "ride": "{aAnimal} is swimming with striped chicks riding on its back"
+   }
+  },
+  "mute-swan": {
+   "name": "Mute Swan",
+   "ways": {
+    "ride": "back",
+    "rideWater": true
+   },
+   "lines": {
+    "ride": "{aAnimal} is swimming with cygnets riding on its back among raised feathers"
+   }
+  },
+  "red-swamp-crayfish": {
+   "name": "Red Swamp Crayfish",
+   "ways": {
+    "ride": "under"
+   },
+   "lines": {
+    "ride": "{aAnimal} female is carrying young that cling to her"
+   }
+  },
+  "common-opossum": {
+   "name": "Common Opossum",
+   "ways": {
+    "ride": "back"
+   },
+   "lines": {
+    "ride": "{aAnimal} is foraging with her young riding on her back, gripping her fur"
+   }
+  },
+  "southern-tamandua": {
+   "name": "Southern Tamandua",
+   "ways": {
+    "ride": "back"
+   },
+   "lines": {
+    "ride": "{aAnimal} is foraging with a single young riding on her back"
+   }
+  },
+  "common-hippopotamus": {
+   "name": "Common Hippopotamus",
+   "ways": {
+    "ride": "back",
+    "rideWater": true
+   },
+   "lines": {
+    "ride": "{aAnimal} has a calf resting on her back in deep water"
+   }
+  },
+  "large-flying-fox": {
+   "name": "Large Flying Fox",
+   "ways": {
+    "ride": "belly"
+   },
+   "lines": {
+    "ride": "{aAnimal} is carrying her pup on her chest"
+   }
+  },
+  "sunda-pangolin": {
+   "name": "Sunda Pangolin",
+   "ways": {
+    "ride": "tail"
+   },
+   "lines": {}
+  },
+  "lar-gibbon": {
+   "name": "Lar Gibbon",
+   "ways": {
+    "ride": "belly"
+   },
+   "lines": {
+    "ride": "{aAnimal} infant is clinging to its mother's belly"
+   }
+  },
+  "celebes-crested-macaque": {
+   "name": "Celebes Crested Macaque",
+   "ways": {
+    "ride": "belly"
+   },
+   "lines": {
+    "ride": "{aAnimal} is carrying her infant against her belly"
+   }
+  },
+  "long-tailed-macaque": {
+   "name": "Long-tailed Macaque",
+   "ways": {
+    "ride": "belly"
+   },
+   "lines": {
+    "ride": "{aAnimal} newborn with dark fur is clinging to its mother's belly"
+   }
+  },
+  "squirrel-monkey": {
+   "name": "Squirrel Monkey",
+   "ways": {
+    "ride": "back"
+   },
+   "lines": {
+    "ride": "{aAnimal} is carrying her infant on her back in its first weeks"
+   }
+  },
+  "coppery-titi-monkey": {
+   "name": "Coppery Titi Monkey",
+   "ways": {
+    "ride": "back",
+    "by": "male"
+   },
+   "lines": {
+    "ride": "{aAnimal} father is carrying the infant"
+   }
+  },
+  "common-marmoset": {
+   "name": "Common Marmoset",
+   "ways": {
+    "ride": "back",
+    "by": "male"
+   },
+   "lines": {
+    "ride": "{aAnimal} father is carrying the infants on his back"
+   }
+  },
+  "emperor-tamarin": {
+   "name": "Emperor Tamarin",
+   "ways": {
+    "ride": "back",
+    "by": "male"
+   },
+   "lines": {
+    "ride": "{animals} are passing the twins between them, males and helpers carrying"
+   }
+  },
+  "siamang": {
+   "name": "Siamang",
+   "ways": {
+    "ride": "back"
+   },
+   "lines": {}
+  },
+  "barbary-macaque": {
+   "name": "Barbary Macaque",
+   "ways": {
+    "ride": "back",
+    "by": "male"
+   },
+   "lines": {
+    "ride": "{aAnimal} male is carrying and grooming an infant"
+   }
+  },
+  "domestic-duck": {
+   "name": "Domestic Duck",
+   "ways": {
+    "line": true
+   },
+   "lines": {
+    "line": "{aAnimal} is walking with ducklings following close behind in a line"
+   }
+  },
+  "domestic-goose": {
+   "name": "Domestic Goose",
+   "ways": {
+    "line": true
+   },
+   "lines": {
+    "line": "{aAnimal} is walking with goslings following behind in a line"
+   }
+  },
+  "mallard": {
+   "name": "Mallard",
+   "ways": {
+    "line": true
+   },
+   "lines": {
+    "line": "{aAnimal} is leading her ducklings from the nest on her own"
+   }
+  },
+  "canada-goose": {
+   "name": "Canada Goose",
+   "ways": {
+    "line": true
+   },
+   "lines": {}
+  },
+  "domestic-chicken": {
+   "name": "Domestic Chicken",
+   "ways": {
+    "line": true
+   },
+   "lines": {}
+  },
+  "wild-turkey": {
+   "name": "Wild Turkey",
+   "ways": {
+    "line": true
+   },
+   "lines": {
+    "line": "{aAnimal} is leading her newly hatched poults"
+   }
+  },
+  "ruddy-shelduck": {
+   "name": "Ruddy Shelduck",
+   "ways": {
+    "line": true
+   },
+   "lines": {}
+  },
+  "striped-skunk": {
+   "name": "Striped Skunk",
+   "ways": {
+    "line": true
+   },
+   "lines": {
+    "line": "{animals} are out foraging, kits following their mother"
+   }
+  },
+  "black-rhinoceros": {
+   "name": "Black Rhinoceros",
+   "ways": {
+    "line": true
+   },
+   "lines": {
+    "line": "{aAnimal} has a calf following close behind its mother"
+   }
+  },
+  "bengal-tiger": {
+   "name": "Bengal Tiger",
+   "ways": {
+    "line": true
+   },
+   "lines": {
+    "line": "{aAnimal} is teaching her cubs to hunt"
+   }
+  },
+  "indochinese-tiger": {
+   "name": "Indochinese Tiger",
+   "ways": {
+    "line": true
+   },
+   "lines": {
+    "line": "{animals} are out hunting, cubs following their mother"
+   }
+  },
+  "sumatran-tiger": {
+   "name": "Sumatran Tiger",
+   "ways": {
+    "line": true
+   },
+   "lines": {}
+  },
+  "common-raccoon": {
+   "name": "Common Raccoon",
+   "ways": {
+    "line": true
+   },
+   "lines": {}
+  },
+  "southern-cassowary": {
+   "name": "Southern Cassowary",
+   "ways": {
+    "line": true,
+    "by": "male"
+   },
+   "lines": {}
+  },
+  "emu": {
+   "name": "Emu",
+   "ways": {
+    "line": true,
+    "by": "male"
+   },
+   "lines": {}
+  },
+  "greater-rhea": {
+   "name": "Greater Rhea",
+   "ways": {
+    "line": true,
+    "by": "male"
+   },
+   "lines": {}
+  },
+  "rufous-hornero": {
+   "name": "Rufous Hornero",
+   "ways": {
+    "line": true
+   },
+   "lines": {}
+  },
+  "white-throated-dipper": {
+   "name": "White-throated Dipper",
+   "ways": {
+    "line": true
+   },
+   "lines": {}
+  },
+  "american-crocodile": {
+   "name": "American Crocodile",
+   "ways": {
+    "line": true
+   },
+   "lines": {}
+  },
+  "brown-bear": {
+   "name": "Brown Bear",
+   "ways": {
+    "line": true
+   },
+   "lines": {}
+  },
+  "banded-archerfish": {
+   "name": "Banded Archerfish",
+   "ways": {
+    "line": true
+   },
+   "lines": {}
+  },
+  "striped-snakehead": {
+   "name": "Striped Snakehead",
+   "ways": {
+    "line": true
+   },
+   "lines": {}
+  },
+  "giant-panda": {
+   "name": "Giant Panda",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "european-otter": {
+   "name": "European Otter",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "smooth-coated-otter": {
+   "name": "Smooth-coated Otter",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "harbor-seal": {
+   "name": "Harbor Seal",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "green-cheeked-conure": {
+   "name": "Green-cheeked Conure",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "arapaima": {
+   "name": "Arapaima",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "bongo": {
+   "name": "Bongo",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} is back to nurse the calf lying hidden",
+    "visit": "{aAnimal} is back to nurse the calf lying hidden"
+   }
+  },
+  "chital": {
+   "name": "Chital",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} has a fawn lying hidden in cover while the mother feeds nearby"
+   }
+  },
+  "domestic-goat": {
+   "name": "Domestic Goat",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} has a kid lying hidden while the mother browses nearby"
+   }
+  },
+  "fallow-deer": {
+   "name": "Fallow Deer",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} has a fawn hidden in cover until it can follow"
+   }
+  },
+  "gemsbok": {
+   "name": "Gemsbok",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} has a calf hiding before it joins the herd"
+   }
+  },
+  "greater-kudu": {
+   "name": "Greater Kudu",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} has a calf hiding away before it joins the mother in the open"
+   }
+  },
+  "javan-rusa-deer": {
+   "name": "Javan Rusa Deer",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} has a calf lying hidden in cover"
+   }
+  },
+  "mule-deer": {
+   "name": "Mule Deer",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} has a spotted fawn lying hidden while the mother feeds nearby"
+   }
+  },
+  "nyala": {
+   "name": "Nyala",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} is back to suckle the calf lying hidden in dense vegetation"
+   }
+  },
+  "red-deer": {
+   "name": "Red Deer",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} has a calf lying hidden in the vegetation while the mother feeds nearby"
+   }
+  },
+  "white-tailed-deer": {
+   "name": "White-tailed Deer",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} is back to nurse the fawn lying hidden",
+    "visit": "{aAnimal} is back to nurse the fawn lying hidden"
+   }
+  },
+  "bairds-tapir": {
+   "name": "Baird's Tapir",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} has a striped calf following her through forest and water"
+   }
+  },
+  "eastern-cottontail": {
+   "name": "Eastern Cottontail",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse",
+    "hours": "dawn_dusk"
+   },
+   "lines": {
+    "visit": "{aAnimal} is making a brief visit to the nest to nurse her young"
+   }
+  },
+  "andean-sparrow": {
+   "name": "Andean Sparrow",
+   "ways": {
+    "stay": "hide",
+    "visit": "feed"
+   },
+   "lines": {
+    "stay": "{aAnimal} fledgling is hiding in low cover while its parents keep feeding it",
+    "visit": "{aAnimal} fledgling is hiding in low cover while its parents keep feeding it"
+   }
+  },
+  "common-eland": {
+   "name": "Common Eland",
+   "ways": {
+    "stay": "hide",
+    "visit": "nurse",
+    "cluster": true
+   },
+   "lines": {
+    "cluster": "{animals} have calves staying together in a nursery group while the mothers feed nearby"
+   }
+  },
+  "american-badger": {
+   "name": "American Badger",
+   "ways": {
+    "stay": "den",
+    "visit": "nurse"
+   },
+   "lines": {}
+  },
+  "american-marten": {
+   "name": "American Marten",
+   "ways": {
+    "stay": "den",
+    "visit": "nurse"
+   },
+   "lines": {}
+  },
+  "fisher": {
+   "name": "Fisher",
+   "ways": {
+    "stay": "den",
+    "visit": "nurse"
+   },
+   "lines": {}
+  },
+  "pine-marten": {
+   "name": "Pine Marten",
+   "ways": {
+    "stay": "den",
+    "visit": "nurse"
+   },
+   "lines": {}
+  },
+  "red-panda": {
+   "name": "Red Panda",
+   "ways": {
+    "stay": "den",
+    "visit": "nurse"
+   },
+   "lines": {}
+  },
+  "red-fox": {
+   "name": "Red Fox",
+   "ways": {
+    "stay": "den",
+    "visit": "feed"
+   },
+   "lines": {
+    "stay": "{aAnimal} is tending her kits in the den",
+    "visit": "{aAnimal} is tending her kits in the den"
+   }
+  },
+  "coyote": {
+   "name": "Coyote",
+   "ways": {
+    "stay": "den",
+    "visit": "feed"
+   },
+   "lines": {
+    "stay": "{animals} are feeding their pups at the den, both parents helping",
+    "visit": "{animals} are feeding their pups at the den, both parents helping"
+   }
+  },
+  "gray-wolf": {
+   "name": "Gray Wolf",
+   "ways": {
+    "stay": "den",
+    "visit": "feed",
+    "helpers": true
+   },
+   "lines": {
+    "stay": "{animals} are feeding and guarding the pups at the den together",
+    "visit": "{animals} are feeding and guarding the pups at the den together"
+   }
+  },
+  "eurasian-wolf": {
+   "name": "Eurasian Wolf",
+   "ways": {
+    "stay": "den",
+    "visit": "feed",
+    "helpers": true
+   },
+   "lines": {
+    "stay": "{animals} are all feeding the pups at the den with meat brought back up",
+    "visit": "{animals} are all feeding the pups at the den with meat brought back up"
+   }
+  },
+  "spotted-hyena": {
+   "name": "Spotted Hyena",
+   "ways": {
+    "stay": "den",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} is nursing her cubs at the den"
+   }
+  },
+  "raccoon-dog": {
+   "name": "Raccoon Dog",
+   "ways": {
+    "stay": "den",
+    "visit": "feed"
+   },
+   "lines": {
+    "visit": "{animals} are guarding and feeding their pups, both parents together"
+   }
+  },
+  "short-beaked-echidna": {
+   "name": "Short-beaked Echidna",
+   "ways": {
+    "stay": "den",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} has a puggle waiting in a nursery burrow"
+   }
+  },
+  "swift-fox": {
+   "name": "Swift Fox",
+   "ways": {
+    "stay": "den",
+    "visit": "feed"
+   },
+   "lines": {}
+  },
+  "patagonian-mara": {
+   "name": "Patagonian Mara",
+   "ways": {
+    "stay": "den",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} is visiting the shared burrow to nurse only its own young",
+    "visit": "{aAnimal} is visiting the shared burrow to nurse only its own young"
+   }
+  },
+  "meerkat": {
+   "name": "Meerkat",
+   "ways": {
+    "stay": "den",
+    "visit": "feed",
+    "helpers": true
+   },
+   "lines": {
+    "stay": "{animals} are babysitting and guarding the pups at the burrow"
+   }
+  },
+  "black-and-white-ruffed-lemur": {
+   "name": "Black-and-white Ruffed Lemur",
+   "ways": {
+    "stay": "nest",
+    "visit": "nurse"
+   },
+   "lines": {
+    "stay": "{aAnimal} is keeping her infants in a nest"
+   }
+  },
+  "african-lion": {
+   "name": "African Lion",
+   "ways": {
+    "stay": "den",
+    "visit": "nurse",
+    "helpers": true
+   },
+   "lines": {
+    "stay": "{animals} are guarding and nursing one another's cubs",
+    "visit": "{animals} are guarding and nursing one another's cubs"
+   }
+  },
+  "carrion-crow": {
+   "name": "Carrion Crow",
+   "ways": {
+    "stay": "nest",
+    "visit": "feed",
+    "helpers": true
+   },
+   "lines": {
+    "visit": "{aAnimal} youngster is staying on its parents' territory and helping raise the new brood"
+   }
+  },
+  "pied-butcherbird": {
+   "name": "Pied Butcherbird",
+   "ways": {
+    "stay": "nest",
+    "visit": "feed",
+    "helpers": true
+   },
+   "lines": {
+    "visit": "{aAnimal} helper is feeding the breeding pair's young"
+   }
+  },
+  "white-crested-laughingthrush": {
+   "name": "White-crested Laughingthrush",
+   "ways": {
+    "stay": "nest",
+    "visit": "feed",
+    "helpers": true
+   },
+   "lines": {
+    "visit": "{aAnimal} helper is joining the parents in feeding the chicks"
+   }
+  },
+  "harriss-hawk": {
+   "name": "Harris's Hawk",
+   "ways": {
+    "stay": "nest",
+    "visit": "feed",
+    "helpers": true
+   },
+   "lines": {
+    "visit": "{aAnimal} is helping to feed the younger brood at the family nest"
+   }
+  },
+  "laughing-kookaburra": {
+   "name": "Laughing Kookaburra",
+   "ways": {
+    "stay": "nest",
+    "visit": "feed",
+    "helpers": true
+   },
+   "lines": {
+    "visit": "{aAnimal} is helping its family to raise the young"
+   }
+  },
+  "magnificent-frigatebird": {
+   "name": "Magnificent Frigatebird",
+   "ways": {
+    "stay": "nest",
+    "visit": "feed",
+    "days": 120
+   },
+   "lines": {
+    "visit": "{aAnimal} is still feeding her chick, long after the male has left"
+   }
+  },
+  "african-penguin": {
+   "name": "African Penguin",
+   "ways": {
+    "cluster": true
+   },
+   "lines": {
+    "cluster": "{aAnimal} chick is gathering with others in a crèche"
+   }
+  },
+  "galah": {
+   "name": "Galah",
+   "ways": {
+    "cluster": true
+   },
+   "lines": {
+    "cluster": "{aAnimal} fledgling is waiting in a nursery tree with other young"
+   }
+  },
+  "shield-stink-bug": {
+   "name": "Shield & Stink Bug",
+   "ways": {
+    "cluster": true
+   },
+   "lines": {
+    "cluster": "{animals} are clustering tightly as newly hatched nymphs"
+   }
+  },
+  "tiger-moth": {
+   "name": "Tiger Moth",
+   "ways": {
+    "cluster": true
+   },
+   "lines": {
+    "cluster": "{animals} are feeding in a group as larvae beneath a fig leaf"
+   }
+  },
+  "red-tailed-tinfoil-barb": {
+   "name": "Red-tailed Tinfoil Barb",
+   "ways": {
+    "cluster": true
+   },
+   "lines": {
+    "cluster": "{animals} are packed in a tight shoal as juveniles"
+   }
+  },
+  "flathead-catfish": {
+   "name": "Flathead Catfish",
+   "ways": {
+    "cluster": true
+   },
+   "lines": {
+    "cluster": "{animals} are shoaling together in the shallows as fry"
+   }
+  },
+  "spectacled-caiman": {
+   "name": "Spectacled Caiman",
+   "ways": {
+    "cluster": true
+   },
+   "lines": {
+    "cluster": "{animals} are staying together as hatchlings close to their mother"
+   }
+  }
+ }
+}
