@@ -736,6 +736,27 @@
             "reasonHunger": "Honger: geen recente maaltijd",
             "reasonSkill": "Vrijgelaten: leert nog voedsel vinden",
             "reasonSafe": "Bescherming tegen jacht tot Ark-dag {day}"
+        },
+        "relations": {
+            "title": "Eromheen",
+            "predator": "Zou erop kunnen jagen",
+            "prey": "Het eet",
+            "partner": "Mogelijke partners",
+            "eggs": "Eieren die het zou kunnen pakken",
+            "eggThreat": "Zou zijn eieren kunnen pakken",
+            "chain": "Voedselketen",
+            "eats": "Eet",
+            "eatenBy": "Gegeten door",
+            "here": "{n} hier",
+            "noneNearby": "Geen in de buurt",
+            "noneAboard": "Geen hier",
+            "keptFed": "Gevoerd door verzorgers",
+            "keptSafe": "Veilig voor roofdieren",
+            "more": "+{n} meer",
+            "lines": "Lijnen",
+            "young": "Te jong voor een partner.",
+            "none": "Niets hier zou erop kunnen jagen, zijn voedsel kunnen zijn of zijn partner kunnen zijn.",
+            "note": "Toont wie zou kunnen, nooit wie het zal doen."
         }
     },
     "talkPage": {

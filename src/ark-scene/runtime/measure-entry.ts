@@ -66,6 +66,9 @@ const round = (value: number) => Math.round(value * 10) / 10;
     const focus = params.get("focus");
     // `?walk=1`: after the opening, the camera visits the zones in turn (as a reader would), so near levels come and go.
     const walk = params.get("walk") === "1";
+    // `?relations=on|off` (lane ark-relation-lines): 8 s in, the animal with the most others of its kind is selected; with
+    // `on` the relation lines go up to its 12 nearest neighbours (any kind: the drawing's cost, not who they are) and stay.
+    const relations = params.get("relations");
     try {
         // `?population=<file>`: a scale snapshot (scripts/ark-scale-fixture.mts) instead of the fixture.
         const population = params.get("population");
@@ -155,8 +158,35 @@ const round = (value: number) => Math.round(value * 10) / 10;
         let peakHeap = 0;
         let inViewRequests: number | null = null;
         let peakGpu = 0;
+        let relationsAt = relations === "on" || relations === "off" ? performance.now() + 8000 : Infinity;
+        let relationLines: {set: (id: string | null, lines: Array<{kind: "predator" | "prey" | "partner"; id: string; label: string}>) => void} | null = null;
+        let relationSelected: string | null = null;
+        let relationsAgain = Infinity;
         while (performance.now() < until) {
             await new Promise((resolve) => setTimeout(resolve, 250));
+            if (performance.now() > relationsAt) {
+                relationsAt = Infinity;
+                const kinds = new Map<string, string[]>();
+                for (const animal of snapshot.animals) kinds.set(animal.model_slug, [...(kinds.get(animal.model_slug) ?? []), animal.id]);
+                const most = [...kinds.values()].sort((x, y) => y.length - x.length)[0] ?? [];
+                relationSelected = most.find((id) => handle.locate(id)) ?? null;
+                if (relationSelected) {
+                    handle.select(relationSelected);
+                    if (relations === "on") {
+                        const {mountArkRelationLines} = await import("@/ark-scene/relation-lines");
+                        relationLines = mountArkRelationLines(handle, {onPick: () => undefined, reducedMotion: false});
+                        relationsAgain = performance.now();
+                    }
+                }
+            }
+            // (As the page's card does: the nearest worked out again every 2 s.)
+            if (relationLines && relationSelected && performance.now() > relationsAgain) {
+                relationsAgain = performance.now() + 2000;
+                const here = handle.locate(relationSelected);
+                const near = here ? snapshot.animals.filter((a) => a.id !== relationSelected).map((a) => ({id: a.id, at: handle.locate(a.id)})).filter((a) => a.at).map((a) => ({id: a.id, d: Math.hypot(a.at!.x - here.x, a.at!.z - here.z)})).sort((x, y) => x.d - y.d).slice(0, 12) : [];
+                const kinds = ["predator", "prey", "partner"] as const;
+                relationLines.set(relationSelected, near.map((a, i) => ({kind: kinds[i % 3], id: a.id, label: a.id})));
+            }
             if (walk && performance.now() > nextVisit) {
                 nextVisit = performance.now() + 3000;
                 handle.select(visits[visit++ % visits.length]);
@@ -216,6 +246,7 @@ const round = (value: number) => Math.round(value * 10) / 10;
                 inViewBy,
                 quietMs: quiet ? round(quiet) : null,
                 frameRate,
+                relations: relations ? {mode: relations, selected: relationSelected, lines: Boolean(relationLines)} : null,
                 stats,
                 memory: memory ? {geometryMB: round(memory.geometryBytes / 2 ** 20), textureMB: round(memory.textureBytes / 2 ** 20), geometries: memory.geometries, textures: memory.textures, instances: memory.instances} : null,
                 heapMB: heap === null ? null : round(heap / 2 ** 20),

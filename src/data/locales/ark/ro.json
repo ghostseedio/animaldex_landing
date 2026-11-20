@@ -736,6 +736,27 @@
             "reasonHunger": "Foame: nicio masă recentă",
             "reasonSkill": "Eliberat: încă învață să găsească hrană",
             "reasonSafe": "Protecție împotriva vânătorii până în ziua {day} din Ark"
+        },
+        "relations": {
+            "title": "În jurul lui",
+            "predator": "L-ar putea vâna",
+            "prey": "Mănâncă",
+            "partner": "Parteneri posibili",
+            "eggs": "Ouă pe care le-ar putea lua",
+            "eggThreat": "I-ar putea lua ouăle",
+            "chain": "Lanț trofic",
+            "eats": "Mănâncă",
+            "eatenBy": "Mâncat de",
+            "here": "{n} aici",
+            "noneNearby": "Niciunul în apropiere",
+            "noneAboard": "Niciunul aici",
+            "keptFed": "Hrănit de îngrijitori",
+            "keptSafe": "Ferit de prădători",
+            "more": "Încă +{n}",
+            "lines": "Linii",
+            "young": "Prea tânăr pentru a avea un partener.",
+            "none": "Aici nimic nu l-ar putea vâna, nu i-ar putea fi hrană și nici partener.",
+            "note": "Arată cine ar putea, niciodată cine o va face."
         }
     },
     "talkPage": {

@@ -736,6 +736,27 @@
             "reasonHunger": "Njaa: hakuna mlo wa hivi karibuni",
             "reasonSkill": "Ameachiliwa: bado anajifunza kutafuta chakula",
             "reasonSafe": "Ulinzi dhidi ya uwindaji hadi siku {day} ya Ark"
+        },
+        "relations": {
+            "title": "Kando yake",
+            "predator": "Anaweza kumwinda",
+            "prey": "Hula",
+            "partner": "Wenzi wanaowezekana",
+            "eggs": "Mayai anayoweza kuchukua",
+            "eggThreat": "Anaweza kuchukua mayai yake",
+            "chain": "Mnyororo wa chakula",
+            "eats": "Hula",
+            "eatenBy": "Huliwa na",
+            "here": "{n} hapa",
+            "noneNearby": "Hakuna karibu",
+            "noneAboard": "Hakuna hapa",
+            "keptFed": "Hulishwa na walezi",
+            "keptSafe": "Salama dhidi ya wawindaji",
+            "more": "+{n} zaidi",
+            "lines": "Mistari",
+            "young": "Bado ni mdogo mno kuwa na mwenzi.",
+            "none": "Hapa hakuna kinachoweza kumwinda, kuwa chakula chake au kuwa mwenzi wake.",
+            "note": "Huonyesha nani anaweza, si nani atafanya."
         }
     },
     "talkPage": {

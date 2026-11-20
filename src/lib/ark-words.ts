@@ -14,6 +14,7 @@ import type {ArkEndangeredWords} from "@/lib/ark-crises";
 import type {ArkHuntWords} from "@/lib/ark-live-hunt";
 import type {ArkHeartsWords} from "@/lib/ark-hearts";
 import type {ArkTimeLeftWords} from "@/lib/ark-time-left";
+import type {ArkRelationsWords} from "@/lib/ark-relations";
 
 export type ArkHudWords = {
     label: string;
@@ -468,6 +469,8 @@ export type ArkWords = {
     seen?: Partial<Record<"searching" | "stalking" | "stalkingNoTarget" | "mateSeeking" | "wounded", string>>;
     /** "Estimated time left" on an animal at risk (`lib/ark-time-left.ts`); English fills any key a bundle lacks. */
     timeLeft?: Partial<ArkTimeLeftWords>;
+    /** Who could hunt it, what it eats, its possible mates, and the lines' switch (lane ark-relation-lines); English fills any key a bundle lacks. */
+    relations?: Partial<ArkRelationsWords>;
 };
 
 /** `/u/{handle}/ark` (Ark 3.3, Part 3): one person's animals aboard, as privacy allows. */

@@ -736,6 +736,27 @@
             "reasonHunger": "Lapar: tiada makanan baru-baru ini",
             "reasonSkill": "Dilepaskan: masih belajar mencari makanan",
             "reasonSafe": "Perlindungan daripada pemburuan sehingga hari Ark ke-{day}"
+        },
+        "relations": {
+            "title": "Di sekelilingnya",
+            "predator": "Boleh memburunya",
+            "prey": "Ia makan",
+            "partner": "Pasangan yang mungkin",
+            "eggs": "Telur yang boleh diambilnya",
+            "eggThreat": "Boleh mengambil telurnya",
+            "chain": "Rantaian makanan",
+            "eats": "Makan",
+            "eatenBy": "Dimakan oleh",
+            "here": "{n} di sini",
+            "noneNearby": "Tiada berdekatan",
+            "noneAboard": "Tiada di sini",
+            "keptFed": "Diberi makan penjaganya",
+            "keptSafe": "Selamat daripada pemangsa",
+            "more": "+{n} lagi",
+            "lines": "Garisan",
+            "young": "Masih terlalu muda untuk berpasangan.",
+            "none": "Di sini tiada apa yang boleh memburunya, menjadi makanannya atau menjadi pasangannya.",
+            "note": "Menunjukkan siapa yang boleh, bukan siapa yang akan."
         }
     },
     "talkPage": {

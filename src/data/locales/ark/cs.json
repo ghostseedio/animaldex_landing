@@ -736,6 +736,27 @@
             "reasonHunger": "Hlad: žádné nedávné jídlo",
             "reasonSkill": "Vypuštěno: ještě se učí hledat potravu",
             "reasonSafe": "Ochrana před lovem do dne {day} v Ark"
+        },
+        "relations": {
+            "title": "Kolem něj",
+            "predator": "Mohl by ho lovit",
+            "prey": "Žere",
+            "partner": "Možní partneři",
+            "eggs": "Vejce, která by mohl vzít",
+            "eggThreat": "Mohl by mu vzít vejce",
+            "chain": "Potravní řetězec",
+            "eats": "Žere",
+            "eatenBy": "Žerou ho",
+            "here": "{n} zde",
+            "noneNearby": "Žádný poblíž",
+            "noneAboard": "Zde žádný",
+            "keptFed": "Krmí ho chovatelé",
+            "keptSafe": "V bezpečí před predátory",
+            "more": "+{n} dalších",
+            "lines": "Čáry",
+            "young": "Na partnera je ještě příliš mladý.",
+            "none": "Nic tady ho nemůže lovit, být jeho potravou ani jeho partnerem.",
+            "note": "Ukazuje, kdo by mohl, nikdy kdo to udělá."
         }
     },
     "talkPage": {

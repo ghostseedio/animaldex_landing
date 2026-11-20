@@ -736,6 +736,27 @@
             "reasonHunger": "饥饿：近期没有进食",
             "reasonSkill": "已放归：仍在学习觅食",
             "reasonSafe": "受狩猎保护，直至 Ark 第 {day} 天"
+        },
+        "relations": {
+            "title": "它的周围",
+            "predator": "可能捕食它",
+            "prey": "它吃",
+            "partner": "可能的配偶",
+            "eggs": "它可能取食的卵",
+            "eggThreat": "可能取食它的卵",
+            "chain": "食物链",
+            "eats": "吃",
+            "eatenBy": "被吃",
+            "here": "此处 {n}",
+            "noneNearby": "附近没有",
+            "noneAboard": "此处没有",
+            "keptFed": "由饲养员喂养",
+            "keptSafe": "免受捕食者威胁",
+            "more": "还有 {n} 只",
+            "lines": "连线",
+            "young": "还太小，不能有配偶。",
+            "none": "这里没有谁能捕食它、成为它的食物或成为它的配偶。",
+            "note": "只显示可能，从不预言会发生什么。"
         }
     },
     "talkPage": {

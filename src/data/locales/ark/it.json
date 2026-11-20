@@ -736,6 +736,27 @@
             "reasonHunger": "Fame: nessun pasto recente",
             "reasonSkill": "Liberato: impara ancora a trovare cibo",
             "reasonSafe": "Protezione dalla caccia fino al giorno {day} dell'Ark"
+        },
+        "relations": {
+            "title": "Intorno a lui",
+            "predator": "Potrebbe cacciarlo",
+            "prey": "Mangia",
+            "partner": "Possibili compagni",
+            "eggs": "Uova che potrebbe prendere",
+            "eggThreat": "Potrebbe prendere le sue uova",
+            "chain": "Catena alimentare",
+            "eats": "Mangia",
+            "eatenBy": "Mangiato da",
+            "here": "{n} qui",
+            "noneNearby": "Nessuno vicino",
+            "noneAboard": "Nessuno qui",
+            "keptFed": "Nutrito dai custodi",
+            "keptSafe": "Al sicuro dai predatori",
+            "more": "+{n} altri",
+            "lines": "Linee",
+            "young": "Troppo giovane per avere un compagno.",
+            "none": "Qui nulla potrebbe cacciarlo, essere il suo cibo o essere il suo compagno.",
+            "note": "Mostra chi potrebbe, mai chi lo farà."
         }
     },
     "talkPage": {

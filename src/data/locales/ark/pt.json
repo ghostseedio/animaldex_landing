@@ -736,6 +736,27 @@
             "reasonHunger": "Fome: sem refeição recente",
             "reasonSkill": "Solto: ainda aprendendo a encontrar comida",
             "reasonSafe": "Proteção contra a caça até o dia {day} da Ark"
+        },
+        "relations": {
+            "title": "À sua volta",
+            "predator": "Poderia caçá-lo",
+            "prey": "Come",
+            "partner": "Possíveis parceiros",
+            "eggs": "Ovos que poderia levar",
+            "eggThreat": "Poderia levar os seus ovos",
+            "chain": "Cadeia alimentar",
+            "eats": "Come",
+            "eatenBy": "Comido por",
+            "here": "{n} aqui",
+            "noneNearby": "Nenhum por perto",
+            "noneAboard": "Nenhum aqui",
+            "keptFed": "Alimentado pelos cuidadores",
+            "keptSafe": "A salvo de predadores",
+            "more": "+{n} mais",
+            "lines": "Linhas",
+            "young": "Jovem demais para ter parceiro.",
+            "none": "Aqui nada poderia caçá-lo, ser seu alimento ou ser seu parceiro.",
+            "note": "Mostra quem poderia, nunca quem vai."
         }
     },
     "talkPage": {

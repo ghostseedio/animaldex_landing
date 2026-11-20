@@ -736,6 +736,27 @@
             "reasonHunger": "Fam: cap àpat recent",
             "reasonSkill": "Alliberat: encara aprèn a trobar menjar",
             "reasonSafe": "Protecció davant la caça fins al dia {day} de l'Ark"
+        },
+        "relations": {
+            "title": "Al seu voltant",
+            "predator": "El podria caçar",
+            "prey": "Menja",
+            "partner": "Possibles parelles",
+            "eggs": "Ous que podria prendre",
+            "eggThreat": "Podria prendre-li els ous",
+            "chain": "Cadena tròfica",
+            "eats": "Menja",
+            "eatenBy": "El mengen",
+            "here": "{n} aquí",
+            "noneNearby": "Cap a prop",
+            "noneAboard": "Cap aquí",
+            "keptFed": "L'alimenten els cuidadors",
+            "keptSafe": "A salvo dels depredadors",
+            "more": "+{n} més",
+            "lines": "Línies",
+            "young": "Massa jove per tenir parella.",
+            "none": "Aquí res no el podria caçar, ser el seu aliment ni ser la seva parella.",
+            "note": "Mostra qui podria, mai qui ho farà."
         }
     },
     "talkPage": {

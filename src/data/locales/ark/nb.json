@@ -736,6 +736,27 @@
             "reasonHunger": "Sult: ikke noe nylig måltid",
             "reasonSkill": "Sluppet fri: lærer fortsatt å finne mat",
             "reasonSafe": "Jaktvern til Ark-dag {day}"
+        },
+        "relations": {
+            "title": "Rundt den",
+            "predator": "Kan jakte på den",
+            "prey": "Den spiser",
+            "partner": "Mulige partnere",
+            "eggs": "Egg den kan ta",
+            "eggThreat": "Kan ta eggene dens",
+            "chain": "Næringskjede",
+            "eats": "Spiser",
+            "eatenBy": "Spises av",
+            "here": "{n} her",
+            "noneNearby": "Ingen i nærheten",
+            "noneAboard": "Ingen her",
+            "keptFed": "Fôres av røkterne",
+            "keptSafe": "Trygg for rovdyr",
+            "more": "+{n} til",
+            "lines": "Linjer",
+            "young": "For ung til å ha en partner.",
+            "none": "Ingenting her kan jakte på den, være maten dens eller være partneren dens.",
+            "note": "Viser hvem som kunne, aldri hvem som vil."
         }
     },
     "talkPage": {

@@ -65,6 +65,17 @@ export type ArkFoodChainEntry = {
     kept: boolean;
     /** Never listed as prey: kept, or a pet kind. */
     neverPrey: boolean;
+    /**
+     * PROPOSED (not sent yet; lane ark-egg-predation): the kinds aboard whose eggs it eats, and the kinds aboard that eat
+     * its eggs, from the server's egg-eater table (egg-eaters.json, generated from the stored diets). Sent only while
+     * `voyage_config.egg_predation` is on. The relation lines (`lib/ark-relations.ts`) draw egg lines only from this.
+     */
+    eggs?: {eats: ArkFoodChainSpecies[]; eatenBy: ArkFoodChainSpecies[]};
+    /**
+     * PROPOSED (not sent yet): its background food in plain words, `voyage_species_traits.ambient_phrases` ("grasses",
+     * "plankton"). The table is service-role only today, so the food-chain read cannot send it; the card shows it when sent.
+     */
+    ambient?: string[];
 };
 
 /** A `voyage_food_links` row as read (decision 244: species, link and phrase columns only). */

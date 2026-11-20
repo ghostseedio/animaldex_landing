@@ -736,6 +736,27 @@
             "reasonHunger": "Nälkä: ei ateriaa viime aikoina",
             "reasonSkill": "Vapautettu: opettelee yhä löytämään ruokaa",
             "reasonSafe": "Metsästyssuoja Ark-päivään {day} asti"
+        },
+        "relations": {
+            "title": "Sen ympärillä",
+            "predator": "Voisi saalistaa sitä",
+            "prey": "Se syö",
+            "partner": "Mahdolliset kumppanit",
+            "eggs": "Munat, jotka se voisi viedä",
+            "eggThreat": "Voisi viedä sen munat",
+            "chain": "Ravintoketju",
+            "eats": "Syö",
+            "eatenBy": "Sitä syövät",
+            "here": "{n} täällä",
+            "noneNearby": "Ei lähellä",
+            "noneAboard": "Ei täällä",
+            "keptFed": "Hoitajat ruokkivat",
+            "keptSafe": "Turvassa pedoilta",
+            "more": "+{n} lisää",
+            "lines": "Viivat",
+            "young": "Liian nuori kumppanille.",
+            "none": "Täällä mikään ei voisi saalistaa sitä, olla sen ravintoa tai sen kumppani.",
+            "note": "Näyttää, kuka voisi, ei koskaan sitä, kuka tekee."
         }
     },
     "talkPage": {

@@ -736,6 +736,27 @@
             "reasonHunger": "Sult: intet nyligt måltid",
             "reasonSkill": "Sat fri: lærer stadig at finde føde",
             "reasonSafe": "Beskyttelse mod jagt til Ark-dag {day}"
+        },
+        "relations": {
+            "title": "Omkring den",
+            "predator": "Kan jage den",
+            "prey": "Den spiser",
+            "partner": "Mulige partnere",
+            "eggs": "Æg den kan tage",
+            "eggThreat": "Kan tage dens æg",
+            "chain": "Fødekæde",
+            "eats": "Spiser",
+            "eatenBy": "Spises af",
+            "here": "{n} her",
+            "noneNearby": "Ingen i nærheden",
+            "noneAboard": "Ingen her",
+            "keptFed": "Fodres af sine passere",
+            "keptSafe": "Sikker mod rovdyr",
+            "more": "+{n} mere",
+            "lines": "Linjer",
+            "young": "For ung til at have en partner.",
+            "none": "Intet her kan jage den, være dens føde eller være dens partner.",
+            "note": "Viser hvem der kunne, aldrig hvem der vil."
         }
     },
     "talkPage": {

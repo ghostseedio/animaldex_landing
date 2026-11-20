@@ -736,6 +736,27 @@
             "reasonHunger": "空腹：最近の食事なし",
             "reasonSkill": "放された動物：まだ食べ物の探し方を学習中",
             "reasonSafe": "Ark {day}日目まで狩りから保護"
+        },
+        "relations": {
+            "title": "まわりの関係",
+            "predator": "狩る可能性がある",
+            "prey": "食べるもの",
+            "partner": "つがいの候補",
+            "eggs": "取る可能性がある卵",
+            "eggThreat": "卵を取る可能性がある",
+            "chain": "食物連鎖",
+            "eats": "食べる",
+            "eatenBy": "食べられる",
+            "here": "ここに{n}",
+            "noneNearby": "近くにいない",
+            "noneAboard": "ここにはいない",
+            "keptFed": "飼育員が餌をあげている",
+            "keptSafe": "天敵から安全",
+            "more": "ほか{n}",
+            "lines": "線",
+            "young": "つがいを持つにはまだ若すぎます。",
+            "none": "ここには、この動物を狩るもの、餌になるもの、つがいになれるものはいません。",
+            "note": "可能性を示すだけで、実際に起こることではありません。"
         }
     },
     "talkPage": {

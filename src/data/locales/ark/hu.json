@@ -736,6 +736,27 @@
             "reasonHunger": "Éhség: nincs friss étkezés",
             "reasonSkill": "Szabadon engedve: még tanul élelmet találni",
             "reasonSafe": "Vadászat elleni védelem a {day}. Ark-napig"
+        },
+        "relations": {
+            "title": "Körülötte",
+            "predator": "Vadászhat rá",
+            "prey": "Ezt eszi",
+            "partner": "Lehetséges párok",
+            "eggs": "Tojások, amelyeket elvihet",
+            "eggThreat": "Elviheti a tojásait",
+            "chain": "Tápláléklánc",
+            "eats": "Eszi",
+            "eatenBy": "Megeszi",
+            "here": "{n} itt",
+            "noneNearby": "Nincs a közelben",
+            "noneAboard": "Itt nincs",
+            "keptFed": "A gondozói etetik",
+            "keptSafe": "Védve a ragadozóktól",
+            "more": "+{n} további",
+            "lines": "Vonalak",
+            "young": "Még túl fiatal ahhoz, hogy párja legyen.",
+            "none": "Itt semmi sem vadászhatna rá, lehetne a tápláléka vagy a párja.",
+            "note": "Azt mutatja, ki tehetné, sosem azt, ki fogja."
         }
     },
     "talkPage": {

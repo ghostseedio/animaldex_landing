@@ -736,6 +736,27 @@
             "reasonHunger": "Đói: chưa có bữa ăn gần đây",
             "reasonSkill": "Đã thả: vẫn đang học cách tìm thức ăn",
             "reasonSafe": "Được bảo vệ khỏi bị săn đến ngày Ark {day}"
+        },
+        "relations": {
+            "title": "Xung quanh nó",
+            "predator": "Có thể săn nó",
+            "prey": "Nó ăn",
+            "partner": "Bạn đời có thể",
+            "eggs": "Trứng nó có thể lấy",
+            "eggThreat": "Có thể lấy trứng của nó",
+            "chain": "Chuỗi thức ăn",
+            "eats": "Ăn",
+            "eatenBy": "Bị ăn bởi",
+            "here": "{n} ở đây",
+            "noneNearby": "Không có gần đây",
+            "noneAboard": "Không có ở đây",
+            "keptFed": "Người chăm sóc cho ăn",
+            "keptSafe": "An toàn trước kẻ săn mồi",
+            "more": "Thêm +{n}",
+            "lines": "Đường nối",
+            "young": "Còn quá nhỏ để có bạn đời.",
+            "none": "Ở đây không gì có thể săn nó, làm thức ăn cho nó hay làm bạn đời của nó.",
+            "note": "Cho thấy ai có thể, không phải ai sẽ."
         }
     },
     "talkPage": {

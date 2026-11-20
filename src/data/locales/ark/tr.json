@@ -736,6 +736,27 @@
             "reasonHunger": "Açlık: yakın zamanda öğün yok",
             "reasonSkill": "Salındı: hâlâ yiyecek bulmayı öğreniyor",
             "reasonSafe": "{day}. Ark gününe kadar avdan koruma"
+        },
+        "relations": {
+            "title": "Çevresinde",
+            "predator": "Onu avlayabilir",
+            "prey": "Yedikleri",
+            "partner": "Olası eşler",
+            "eggs": "Alabileceği yumurtalar",
+            "eggThreat": "Yumurtalarını alabilir",
+            "chain": "Besin zinciri",
+            "eats": "Yer",
+            "eatenBy": "Onu yiyenler",
+            "here": "Burada {n}",
+            "noneNearby": "Yakında yok",
+            "noneAboard": "Burada yok",
+            "keptFed": "Bakıcıları besliyor",
+            "keptSafe": "Avcılardan güvende",
+            "more": "+{n} daha",
+            "lines": "Çizgiler",
+            "young": "Eş edinmek için çok genç.",
+            "none": "Burada hiçbir şey onu avlayamaz, besini ya da eşi olamaz.",
+            "note": "Kimin yapabileceğini gösterir, kimin yapacağını değil."
         }
     },
     "talkPage": {

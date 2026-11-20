@@ -736,6 +736,27 @@
             "reasonHunger": "Hunger: keine Mahlzeit in letzter Zeit",
             "reasonSkill": "Entlassen: lernt noch, Futter zu finden",
             "reasonSafe": "Jagdschutz bis Ark-Tag {day}"
+        },
+        "relations": {
+            "title": "Rundherum",
+            "predator": "Könnte es jagen",
+            "prey": "Es frisst",
+            "partner": "Mögliche Partner",
+            "eggs": "Eier, die es nehmen könnte",
+            "eggThreat": "Könnte seine Eier nehmen",
+            "chain": "Nahrungskette",
+            "eats": "Frisst",
+            "eatenBy": "Gefressen von",
+            "here": "{n} hier",
+            "noneNearby": "Keins in der Nähe",
+            "noneAboard": "Keins hier",
+            "keptFed": "Von Pflegern gefüttert",
+            "keptSafe": "Sicher vor Raubtieren",
+            "more": "+{n} weitere",
+            "lines": "Linien",
+            "young": "Noch zu jung für einen Partner.",
+            "none": "Hier könnte nichts es jagen, seine Nahrung sein oder sein Partner sein.",
+            "note": "Zeigt, wer könnte, nie, wer wird."
         }
     },
     "talkPage": {

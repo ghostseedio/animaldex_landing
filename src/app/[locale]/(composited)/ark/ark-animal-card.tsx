@@ -344,8 +344,8 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         ) : null}
                         {rhythmNow ? <ArkRhythmLine rhythm={rhythmNow} open={rhythmOpen} onToggle={() => setRhythmOpen((v) => !v)} /> : null}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} /> : null}
-                        {/* Release to the Wild (P1-8, behind the server's switch): the same lazy import's other block; it draws nothing while the switch is off. */}
-                        <Suspense fallback={null}><ArkTimeLeft release={Link} animal={animal} words={words} locale={locale} day={arkDay} /></Suspense>
+                        {/* Release to the Wild (P1-8, behind the server's switch): the same lazy import's other block; it draws nothing while the switch is off. With it, who could hunt it, what it eats and its mates (lane ark-relation-lines; no fallback is React 18's null, 14 bytes under the page budget). */}
+                        <Suspense><ArkTimeLeft release={Link} animal={animal} words={words} locale={locale} day={arkDay} scene={scene} snapshot={snapshot} /></Suspense>
                         {placeholder ? <p className="mt-1 text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
                         {/* The last of its kind aboard (the server's last_of_kind): it ages out honestly unless another is caught. */}
                         {/* V1 (decision 389, E3's `lone`, sent only while the last-animal rules are on): a lone founder, said under it (`ark.life.lone`, 45 languages). */}
