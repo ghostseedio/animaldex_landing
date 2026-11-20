@@ -140,6 +140,11 @@ const close = async (name, slug, test, distanceOf, polar = 1.2, island = "wild")
     }, row.id)));
     console.log(name, "state", JSON.stringify({doing: report.subjects[name].doing, asleep: report.subjects[name].asleep, moving: report.subjects[name].moving, clip: report.subjects[name].clip, act: report.subjects[name].act, recipe: report.subjects[name].recipe, sleepStarted: report.subjects[name].sleepStarted, gait: report.subjects[name].gait, power: report.subjects[name].power}));
     console.log(name, JSON.stringify(report.subjects[name].under));
+    const sp = report.subjects[name].under?.drawn?.surfacePoint;
+    if (sp) console.log(name, "surfacePoint", JSON.stringify(await page.evaluate(({id, sp}) => window.__arkDebug.under(id, {x: sp.nx, y: sp.ny, z: sp.nz}, sp), {id: row.id, sp})));
+    report.subjects[name].tips = await page.evaluate((id) => window.__arkDebug.tips?.(id) ?? null, row.id);
+    console.log(name, "tips", JSON.stringify(report.subjects[name].tips));
+    if (island === "town") console.log(name, "rayAll", JSON.stringify(await page.evaluate(({x, z}) => window.__arkDebug.rayAll?.(x, z) ?? null, report.subjects[name].under?.drawn ?? {x: 0, z: 0})));
     await shot(name);
 };
 
@@ -195,6 +200,112 @@ await close("bird-at-water-2", "great-cormorant", (r) => r.water && !r.aloft, (r
 await close("bird-at-water-3", "little-egret", (r) => r.water && !r.aloft, (r) => 2, 1.42);
 
 // Shadows of four sizes: a beetle-sized, a cat-sized, a zebra-sized and an elephant, each framed from above-side.
+// Round 3 (rig jerk under load): a giraffe framed from 14 m, the clock running; 6 s as the page runs, then 6 s with
+// the main thread held 150 ms every 300 ms (a long frame forced). Each frame's drawn step against its schedule's.
+if (want("long-frame")) {
+    await crossTo("town");
+    const rows = await find("giraffe");
+    const row = pick(rows, (r) => r.moving) ?? rows[0];
+    if (row) {
+        await frame(row.id, 14, 1.2, Math.PI / 3, 5000);
+        const target = await page.evaluate((id) => window.__arkScene.locate(id), row.id);
+        const run = async (stall) => {
+            await page.evaluate(({target, stall}) => {
+                window.__lfLog = [];
+                if (stall) window.__lfStall = setInterval(() => {
+                    const until = performance.now() + 150;
+                    while (performance.now() < until) {}
+                }, 300);
+                const step = () => {
+                    const at = [];
+                    for (const e of window.__arkDebug.entries()) {
+                        if (!e.drawn || !e.sched?.pose || e.level === "token") continue;
+                        if (Math.hypot(e.drawn.x - target.x, e.drawn.z - target.z) > 60) continue;
+                        at.push([e.animal.id, e.animal.model_slug, e.drawn.level, e.drawn.wx, e.drawn.wz, e.sched.pose.x, e.sched.pose.z, e.drawn.paceLag ?? 0, e.drawn.topPace ?? null]);
+                    }
+                    window.__lfLog.push({t: performance.now(), at});
+                    window.__lfRaf = requestAnimationFrame(step);
+                };
+                window.__lfRaf = requestAnimationFrame(step);
+            }, {target, stall});
+            await wait(6000);
+            const log = await page.evaluate(() => {
+                cancelAnimationFrame(window.__lfRaf);
+                clearInterval(window.__lfStall);
+                return window.__lfLog;
+            });
+            // Drawn steps (only frames where something moved: the scene draws on some frames, not every one).
+            const last = new Map();
+            let worst = 0;
+            let worstRatio = 0;
+            let longFrames = 0;
+            const steps = [];
+            for (const f of log) {
+                for (const r of f.at) {
+                    const p = last.get(r[0]);
+                    if (p) {
+                        const d = Math.hypot(r[3] - p.r[3], r[4] - p.r[4]);
+                        const pd = Math.hypot(r[5] - p.r[5], r[6] - p.r[6]);
+                        if (d > 1e-4) {
+                            steps.push(d);
+                            if (d > worst) worst = d;
+                            if (pd > 0.02) worstRatio = Math.max(worstRatio, d / pd);
+                        }
+                    }
+                    last.set(r[0], {r});
+                }
+            }
+            for (let k = 1; k < log.length; k++) if (log[k].t - log[k - 1].t > 100) longFrames++;
+            let lag = 0;
+            let top = null;
+            for (const f of log) for (const r of f.at) {
+                lag = Math.max(lag, r[7] ?? 0);
+                if (r[1] === "giraffe" && r[8] !== null) top = r[8];
+            }
+            steps.sort((a, b) => b - a);
+            return {frames: log.length, longFrames, worstStep: Math.round(worst * 1000) / 1000, p99: Math.round((steps[Math.floor(steps.length * 0.01)] ?? 0) * 1000) / 1000, worstOverSchedule: Math.round(worstRatio * 100) / 100, eased: Math.round(lag * 1000) / 1000, giraffeTopPace: top};
+        };
+        report.longFrame = {normal: await run(false), forced: await run(true)};
+        console.log("long-frame", JSON.stringify(report.longFrame));
+    }
+}
+
+// Round 3: chosen as the page chooses one (`select(id, true)`: its close-up, tiny ones shown true to size), the camera
+// the page's own; hours tried in turn until one is as wanted (an awake cat on the move).
+const selected = async (name, slug, test, island = "wild", hours = [11]) => {
+    if (!want(name)) return;
+    await crossTo(island);
+    let row = null;
+    for (const h of hours) {
+        await page.evaluate((h) => window.__arkScene.setHours(h), h);
+        await wait(4000);
+        row = (await find(slug)).find(test) ?? null;
+        if (row) {
+            report.subjects[`${name}-hours`] = h;
+            break;
+        }
+    }
+    if (!row) row = (await find(slug))[0] ?? null;
+    if (!row) return console.log("none:", slug);
+    await page.evaluate((id) => window.__arkScene.select(id, true), row.id);
+    await wait(7000);
+    const now = (await find(slug)).find((r) => r.id === row.id) ?? row;
+    console.log(name, "state", JSON.stringify({doing: now.doing, asleep: now.asleep, moving: now.moving, clip: now.clip, micro: now.micro, hours: report.subjects[`${name}-hours`] ?? null}));
+    console.log(name, "under", JSON.stringify(await under(row.id, row.normal ?? null)));
+    console.log(name, "tips", JSON.stringify(await page.evaluate((id) => window.__arkDebug.tips?.(id) ?? null, row.id)));
+    await shot(name);
+    await page.evaluate(() => window.__arkScene.select(null));
+    await daylight();
+    await wait(1500);
+};
+await selected("r3-frog", "marsh-frog", (r) => !r.aloft);
+await selected("r3-crab", "mangrove-crab", (r) => r.micro === "rock_face");
+await selected("r3-cat-walk", "domestic-cat", (r) => !r.asleep && r.moving, "town", [8, 9.5, 13, 15, 17, 18.5, 20, 7]);
+await selected("r3-cat-awake", "domestic-cat", (r) => !r.asleep, "town", [8, 13, 17, 20, 7]);
+await selected("r3-bug-leaf", "seven-spot-ladybird", (r) => r.micro === "leaf", "town");
+await selected("r3-bug-leaf-2", "shield-stink-bug", (r) => r.micro === "leaf");
+await daylight();
+
 if (want("shadows")) {
     for (const [i, slug, d] of [[1, "meerkat", 1.6], [2, "domestic-dog", 3], [3, "plains-zebra", 6], [4, "african-bush-elephant", 12]]) {
         const rows = await find(slug);
@@ -288,7 +399,7 @@ if (want("zoom-run")) {
                 for (const e of window.__arkDebug.entries()) {
                     if (!e.drawn || !e.sched?.pose || e.level === "token") continue;
                     if (Math.hypot(e.drawn.x - target.x, e.drawn.z - target.z) > 80) continue;
-                    at.push([e.animal.id, e.animal.model_slug, e.drawn.level, e.drawn.x, e.drawn.y, e.drawn.z, e.sched.pose.x, e.sched.pose.z, e.sched.at, Boolean(e.sched.pose.moving), e.level]);
+                    at.push([e.animal.id, e.animal.model_slug, e.drawn.level, e.drawn.x, e.drawn.y, e.drawn.z, e.sched.pose.x, e.sched.pose.z, e.sched.at, Boolean(e.sched.pose.moving), e.level, e.drawn.wx, e.drawn.wz, e.drawn.yaw, e.drawn.react?.x ?? null, e.drawn.react?.z ?? null, e.reactive?.action ?? null]);
                 }
                 window.__zoomLog.push({t: performance.now(), at});
                 window.__zoomRaf = requestAnimationFrame(step);
@@ -359,9 +470,11 @@ if (want("safari")) {
                     if (!e.drawn || e.level === "token" || !e.sched?.pose || e.sched.pose.afloat) continue;
                     if (Math.hypot(e.drawn.x - target.x, e.drawn.z - target.z) > 120) continue;
                     if (!SAFARI.includes(e.animal.model_slug) && (e.length ?? 0) < 1) continue;
+                    // (Swimming, its body in the water over the bed, is no gap; on a rock, the rock is what it stands on.)
+                    if (e.drawn.inWater) continue;
                     const u = window.__arkDebug.under(e.animal.id);
-                    const ground = u?.hits.find((h) => h.kind.startsWith("ark-ground"));
-                    if (ground) out.push({slug: e.animal.model_slug, level: e.drawn.level, gap: ground.gap, asleep: Boolean(e.sleepNow?.down), lying: e.drawn.lying ?? null, act: e.sched.pose.act?.state ?? null, root: e.drawn.root, stand: e.drawn.ground});
+                    const ground = u?.hits.find((h) => h.kind.startsWith("ark-ground") || h.kind.startsWith("asset-rock") || h.kind.startsWith("props")) ?? (u ? {gap: u.drawnGround, kind: "drawn-ground"} : null);
+                    if (ground) out.push({slug: e.animal.model_slug, level: e.drawn.level, gap: ground.gap, on: ground.kind, asleep: Boolean(e.sleepNow?.down), lying: e.drawn.lying ?? null, act: e.sched.pose.act?.state ?? null, root: e.drawn.root, stand: e.drawn.ground, inWater: e.drawn.inWater, afloat: e.drawn.afloat, waterTop: e.drawn.waterTop, height: e.drawn.height, base: e.drawn.base, poseY: e.drawn.poseY, clip: e.drawn.clip, doing: e.state?.doing ?? null});
                 }
                 return out;
             }, {target, SAFARI});

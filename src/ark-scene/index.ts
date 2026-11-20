@@ -100,7 +100,7 @@ import {skipEmptyDraws} from "@/ark-scene/runtime/empty-draws";
 import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {climbClipName, rigBasesFrom, rigSetVersion} from "@/ark-scene/rig-clips";
-import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, halfToFloat, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {waterLevelAt} from "@/ark-scene/water-level";
@@ -4353,10 +4353,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // ARK-ANIM (decision 447): on the wing it faces its track (within `SLIP`) and banks by its turn, both ways; it was
         // banked left whenever it flew and its recipe heading lagged a swallow's curves until it flew backwards.
         const wing = flightHeading((entry.flightHeading ??= newFlightHeading()), at.x, at.z, clockNow(), at.yaw, Boolean(at.aloft));
+        // ARK-CONTACT round 3 (crocs and seals "floating" at the shore): out of the water on a swim (its way in or out
+        // over the bank), the swim's own height is the water's, not the bank's; on dry ground it walks on the ground.
+        const ashore = at.doing === "swim" && !at.aloft && !act?.own && !diving && ground >= waterTop - 0.02 && ground > 0 && at.y > ground && at.y - ground < Math.max(modelHeight, 0.5);
         return {
             x: at.x,
             z: at.z,
-            base: at.y,
+            base: ashore ? ground : at.y,
             yaw: (at.aloft ? wing.yaw : at.yaw) + glance,
             // A recipe's attitude on top (a plunge nose down, an up-end, a roll in the dust).
             pitch: (at.aloft ? 0.95 * entry.air : 0.05 * entry.rest + own.pitch) + (act ? act.pitch * actShare : 0) + (after ? after.pitch * afterShare : 0),
@@ -6121,6 +6124,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 drawn.lying = lyingOn;
                 drawn.slept = Boolean(slept);
                 drawn.scale = s;
+                (drawn as {m?: number[]}).m = matrix.elements.slice();
+                Object.assign(drawn, {wx: where.x, wz: where.z, yaw: where.yaw, react: (entry as {reactive?: {offset?: {x: number; z: number}}}).reactive?.offset ?? null, surfacePoint: surface ? {x: surface.x, y: surface.y, z: surface.z, nx: surface.nx, ny: surface.ny, nz: surface.nz} : null, faceFixed: Boolean(entry.drawnFace && surface === entry.drawnFace), inWater: Boolean(where.water), afloat: Boolean(where.afloat), waterTop: waterTopAt(where.x, where.z), height: heightAt(where.x, where.z), base: where.base, poseY: entry.sched?.pose?.y ?? null, clip: entry.rig?.now.name ?? null});
             }
             if (rig && state && level === "near") {
                 // The locomotion layer (`locomotion/`, lane L1): gaits with planted feet, foot IK, the body's motion and
@@ -6221,10 +6226,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // nor under water; everything else is projected down onto the ground under it now, and fades as it leaves
             // the ground (a hop, a perch, flight), none where water covers the ground.
             const broadSurface = Boolean(surface) && !entry.toLight && !where.water && !entry.place.canopy && (Boolean(entry.place.micro) || Boolean(entry.place.perch && SHADOW_SURFACE_TAGS.has(entry.place.perch.tag)));
-            const underFeet = broadSurface && look.on ? null : groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, level === "near", poseBase);
+            // (Round 3: on a rock, a leaf or a wall its shadow is on that surface with the look pass off too; it fell back to
+            // the terrain under it, a metre down, and drew nothing: the crab on its rock with no shadow under it.)
+            const underFeet = broadSurface ? null : groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, level === "near", poseBase);
             // (A sleeper lying on the ground touches it with its body, its legs folded into it: its shadow stays.)
             const contact = underFeet ? groundContact(lyingOn !== null ? Math.max(lyingOn, underFeet.height) : where.base + lift, underFeet.height, underFeet.water, modelHeight) : null;
-            if ((broadSurface && look.on) || contact) {
+            if (broadSurface || contact) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
                 // ARK-CONTACT (decision 447, "animal shadows don't match their body or size"): its own box as it lies now,
                 // turned by its pitch and roll (a lion on its side, a giraffe's long narrow body), at every level; no
@@ -6232,7 +6239,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const foot = shadowFootprint(box, candidate.modelScale * sizeUp, where.pitch, where.roll);
                 const width = foot.width;
                 const length = foot.length;
-                if (broadSurface && look.on && surface) {
+                if (broadSurface && surface) {
                     // On a wall, a leaf, a flower or a stone: under its body (not its splayed legs), on that surface where it
                     // touches it, long the way it crawls.
                     shadowList.push({x: where.x, y: where.base, z: where.z, width: width * 0.8, length: length * 0.9, yaw: where.yaw, strength: grow, nx: surface.nx, ny: surface.ny, nz: surface.nz, tx: surface.tx, ty: surface.ty, tz: surface.tz});
@@ -9938,9 +9945,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const from = new Vector3();
         const marks = new Set<Object3D>([shadows.mesh, rings.mesh, tokens.mesh, dots.mesh]);
         Object.assign((window as unknown as {__arkDebug: object}).__arkDebug, {
-            under: (id: string, normal?: {x: number; y: number; z: number}) => {
-                const drawn = (entryById.get(id) as {drawn?: {x: number; y: number; z: number; level: string}} | undefined)?.drawn;
-                if (!drawn) return null;
+            under: (id: string, normal?: {x: number; y: number; z: number}, point?: {x: number; y: number; z: number}) => {
+                const found = (entryById.get(id) as {drawn?: {x: number; y: number; z: number; level: string}} | undefined)?.drawn;
+                if (!found) return null;
+                const drawn = point ? {...found, x: point.x, y: point.y, z: point.z} : found;
                 const n = normal ? new Vector3(normal.x, normal.y, normal.z).normalize() : new Vector3(0, 1, 0);
                 probe.set(from.set(drawn.x, drawn.y, drawn.z).addScaledVector(n, 3), down.copy(n).negate());
                 probe.near = 0;
@@ -9950,11 +9958,77 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     const object = hit.object as Mesh;
                     if (marks.has(object) || object.geometry?.getAttribute?.("arkInstance") || object.geometry?.getAttribute?.("arkRigA") || !object.visible) continue;
                     const kind = String(object.userData?.kind ?? object.name ?? object.type);
-                    if (/water|sea|ocean|sky|rain|fog|cloud/i.test(kind)) continue;
+                    if (/water|sea|ocean|sky|rain|fog|cloud|mist|bug-ground/i.test(kind)) continue;
                     hits.push({gap: Math.round((3 - hit.distance) * 1000) / 1000, kind, instance: hit.instanceId ?? null});
                     if (hits.length >= 6) break;
                 }
-                return {drawn: {...drawn}, hits};
+                // (The town's ground is not drawn as a mesh a ray meets: its drawn height, on its own island, straight down.)
+                const ground = standGround(drawn.x, drawn.z, drawn.y);
+                return {drawn: {...drawn}, hits, drawnGround: Math.round((ground - drawn.y) * 1000) / 1000};
+            },
+            // ARK-CONTACT round 3: everything a ray down at a spot meets (no filtering), to name what a probe misses.
+            rayAll: (x: number, z: number, top = 40) => {
+                probe.set(from.set(x, top, z), down.set(0, -1, 0));
+                probe.near = 0;
+                probe.far = top + 60;
+                return probe.intersectObjects(scene.children, true).slice(0, 12).map((hit) => ({y: Math.round(hit.point.y * 1000) / 1000, name: hit.object.name, type: hit.object.type, kind: String(hit.object.userData?.kind ?? ""), parent: hit.object.parent?.name ?? "", visible: hit.object.visible, instanced: Boolean((hit.object as Mesh).geometry?.getAttribute?.("arkInstance"))}));
+            },
+            // ARK-CONTACT round 3: its leg tips this frame (the playing clip's frame skinned on the CPU, by the instance's
+            // matrix), each one's gap over what is drawn under it along the body's up (negative: in the air).
+            tips: (id: string, count = 8) => {
+                const entry = entryById.get(id);
+                const drawn = (entry as {drawn?: {m?: number[]}} | undefined)?.drawn;
+                const rig = entry ? rigs.get(entry.animal.model_slug) : null;
+                const state = entry?.rig;
+                if (!entry || !drawn?.m || !rig || !state) return null;
+                const clip = rig.clips[state.now.name];
+                if (!clip) return null;
+                const [r0] = clipRows(clip, state.now.phase);
+                const m = new Matrix4().fromArray(drawn.m);
+                const up = new Vector3().setFromMatrixColumn(m, 1).normalize();
+                const position = rig.geometry.getAttribute("position");
+                const joints = rig.geometry.getAttribute("arkJoints");
+                const weights = rig.geometry.getAttribute("arkWeights");
+                const d = rig.data;
+                const out: Array<{x: number; y: number; z: number; along: number}> = [];
+                const p = new Vector3();
+                for (let v = 0; v < position.count; v++) {
+                    const x = position.getX(v), y = position.getY(v), z = position.getZ(v);
+                    let sx = 0, sy = 0, sz = 0;
+                    for (let k = 0; k < 4; k++) {
+                        const w = weights.getComponent(v, k);
+                        if (w <= 0) continue;
+                        const o = r0 * rig.bones * 12 + joints.getComponent(v, k) * 12;
+                        const h = (i: number) => halfToFloat(d[o + i]);
+                        sx += w * (h(0) * x + h(1) * y + h(2) * z + h(3));
+                        sy += w * (h(4) * x + h(5) * y + h(6) * z + h(7));
+                        sz += w * (h(8) * x + h(9) * y + h(10) * z + h(11));
+                    }
+                    p.set(sx, sy, sz).applyMatrix4(m);
+                    out.push({x: p.x, y: p.y, z: p.z, along: p.dot(up)});
+                }
+                out.sort((a, b) => a.along - b.along);
+                // The lowest, a few centimetres apart at the least (one per tip, not one tip's vertices).
+                const spread = (entry.length || 0.1) * 0.12;
+                const picked: typeof out = [];
+                for (const t of out) {
+                    if (picked.length >= count) break;
+                    if (picked.every((q) => Math.hypot(q.x - t.x, q.y - t.y, q.z - t.z) > spread)) picked.push(t);
+                }
+                const result = picked.map((t) => {
+                    probe.set(from.set(t.x, t.y, t.z).addScaledVector(up, 1), down.copy(up).negate());
+                    probe.near = 0;
+                    probe.far = 3;
+                    for (const hit of probe.intersectObjects(scene.children, true)) {
+                        const object = hit.object as Mesh;
+                        if (marks.has(object) || object.geometry?.getAttribute?.("arkInstance") || object.geometry?.getAttribute?.("arkRigA") || !object.visible) continue;
+                        const kind = String(object.userData?.kind ?? object.name ?? object.type);
+                        if (/water|sea|ocean|sky|rain|fog|cloud|mist|bug-ground/i.test(kind)) continue;
+                        return {gap: Math.round((1 - hit.distance) * 1000) / 1000, kind};
+                    }
+                    return {gap: Math.round((standGround(t.x, t.z, t.y) - t.y) * 1000) / 1000, kind: "drawn-ground"};
+                });
+                return {clip: state.now.name, up: {x: up.x, y: up.y, z: up.z}, tips: result};
             }
         });
     }
