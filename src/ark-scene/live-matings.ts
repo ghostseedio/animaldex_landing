@@ -80,6 +80,10 @@ export type LiveMatingsHost<E> = {
      * dry ground, not a river's or a pond's bed. Absent: anywhere is.
      */
     clear?: (p: Point, wet: boolean) => boolean;
+    /** REAL-REPRODUCTION: nothing at all overhead there (a rail, a hedge, a roof too). */
+    open?: (p: Point) => boolean;
+    /** REAL-REPRODUCTION: whether one could walk straight from one to the other (no fence or wall across). */
+    between?: (a: Point, b: Point) => boolean;
     /** REAL-REPRODUCTION (decision 440): its kind's way of breeding (`repro.ts` reproOf), or null: it mates. */
     repro?: (entry: E) => Repro | null;
     /** REAL-REPRODUCTION: where others of its kind are near it now (they spawn with it on its spawning night). */
@@ -787,6 +791,24 @@ export class LiveMatings<E> {
                     m.failed = true;
                     continue;
                 }
+                // REAL-REPRODUCTION: a pair in amplexus in an enclosure, at its fence, moves in off it to where the camera
+                // can look in from any side (a rail between was all the picture): the nearest open spot it can walk to.
+                if (housed && h.open && h.between) {
+                    const way0 = h.repro?.(a) ?? h.repro?.(b) ?? null;
+                    const mid = {x: (pa.x + pb.x) / 2, z: (pa.z + pb.z) / 2};
+                    if (way0 && reproAct(way0) === "amplexus" && !h.open(mid)) {
+                        search: for (const r of [0.3, 0.6, 0.9, 1.3]) {
+                            for (let i = 0; i < 8; i++) {
+                                const q = {x: mid.x + Math.sin((i * Math.PI) / 4) * r, z: mid.z + Math.cos((i * Math.PI) / 4) * r};
+                                if (h.open(q) && h.between(mid, q)) {
+                                    pa = {...pa, x: pa.x + q.x - mid.x, z: pa.z + q.z - mid.z};
+                                    pb = {...pb, x: pb.x + q.x - mid.x, z: pb.z + q.z - mid.z};
+                                    break search;
+                                }
+                            }
+                        }
+                    }
+                }
                 const maleFirst = !(h.male(b) === true && h.male(a) !== true);
                 const d = Math.hypot(pb.x - pa.x, pb.z - pa.z);
                 // (He comes to her: the one that mounts is the one moved nearer, on the line from where he was; `behind`:
@@ -838,7 +860,16 @@ export class LiveMatings<E> {
                 // (ARK-MATING-SHOWN: a pair of swimmers may meet in the water; any other pair on dry ground. Neither under cover.)
                 const wet = mountKind(h.plan(a) ?? h.plan(b)) === "alongside";
                 const clear = h.clear ? (p: Point) => h.clear!(p, wet) : undefined;
-                const script = matingScript(close(this.body(a, pa)), close(this.body(b, pb)), m.act.key, {housed, clear: free ? undefined : clear, far: m.how === "far" || free, atHer: free});
+                // REAL-REPRODUCTION: amplexus is watched from beside the pair: a spot open all round (no fence rail or
+                // post between the camera and them), else the usual one.
+                const wayFirst = h.repro?.(a) ?? h.repro?.(b) ?? null;
+                const roomy = wayFirst && reproAct(wayFirst) === "amplexus" && h.open && clear ? (p: Point) => clear(p) && h.open!(p) : null;
+                // (A small pair that would meet at her place meets there only when it is open round; else at the
+                // nearest open spot, which `meetingSpot` finds, or her place after all.)
+                const roomyAt = roomy && (!free || roomy({x: (pa.x + pb.x) / 2, z: (pa.z + pb.z) / 2}) === false) ? roomy : null;
+                const script =
+                    (roomyAt && matingScript(close(this.body(a, pa)), close(this.body(b, pb)), m.act.key, {housed, clear: roomyAt, far: m.how === "far" || free, atHer: false})) ||
+                    matingScript(close(this.body(a, pa)), close(this.body(b, pb)), m.act.key, {housed, clear: free ? undefined : clear, far: m.how === "far" || free, atHer: free});
                 if (!script) {
                     m.failed = true;
                     continue;
@@ -849,17 +880,23 @@ export class LiveMatings<E> {
                 const act = reproAct(way);
                 if (act && way) {
                     let plan = reproPlan(act, way, {from: script.from, to: script.to, walk: script.walk, heading: script.heading, m: script.m, f: script.f});
-                    if (act === "amplexus" && clear) {
-                        // (She walks on as she lays: the way with nothing over it, a fence rail or a bush, so the strings are seen.)
+                    const openAt = h.open ?? clear;
+                    if (act === "amplexus" && openAt) {
+                        // (She walks on as she lays: the way with the most open round it, nothing over it and room on
+                        // every side where she ends (the camera looks in from beside her: a rail or a post a hand's
+                        // breadth off would stand between), so the strings and the pair are seen.)
                         const reach = plan.f.length * 3;
+                        let best = {yaw: plan.heading, open: -1};
                         for (const turn of [0, 1, -1, 2, -2, 3, -3, 4]) {
                             const yaw = plan.heading + (turn * Math.PI) / 4;
                             const at = (k: number) => ({x: plan.spot.x + Math.sin(yaw) * reach * k, z: plan.spot.z + Math.cos(yaw) * reach * k});
-                            if ([0.35, 0.7, 1, 1.4].every((k) => clear(at(k)))) {
-                                plan = {...plan, heading: yaw};
-                                break;
-                            }
+                            const end = at(1);
+                            const checks = [at(0.35), at(0.7), end, at(1.4), ...[0, 1, 2, 3, 4, 5].map((i) => ({x: end.x + Math.sin((i * Math.PI) / 3) * 0.4, z: end.z + Math.cos((i * Math.PI) / 3) * 0.4}))];
+                            const open = checks.filter((q) => openAt(q)).length;
+                            if (open > best.open) best = {yaw, open};
+                            if (open === checks.length) break;
                         }
+                        plan = {...plan, heading: best.yaw};
                     }
                     m.repro = plan;
                     if (act === "spawn_night") m.kin = (h.kinSpots?.(a) ?? []).slice(0, KIN_MOST);

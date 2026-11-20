@@ -8409,8 +8409,39 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const from = overheadFrom.set(p.x, Math.max(ground, wet ? ground : 0) + 0.25, p.z);
             overheadSight.near(from, 30);
             return !overheadSight.blocked(from, overheadTo.set(p.x, from.y + 30, p.z), 0);
+        },
+        // REAL-REPRODUCTION: nothing at all over it, a fence rail or a hedge counted too (the shots look in past them).
+        open: (p) => {
+            // (A fence, a wall, a post near: the camera that looks in from a metre off would have it between.)
+            if (collideBlocked(p.x, p.z, 1.3)) return false;
+            const ground = heightAt(p.x, p.z);
+            if (!openSight) {
+                openSight = new Sight(scene);
+                openSight.skip = (mesh) => mesh.userData.kind === "asset-tree";
+            }
+            // (Up and out on every side, as the camera looks in: a rail beside the spot meets one of these.)
+            const from = overheadFrom.set(p.x, Math.max(ground, 0) + 0.15, p.z);
+            openSight.near(from, 8);
+            for (const tilt of [0.35, 0.7, 1.05]) {
+                for (let i = 0; i < 8; i++) {
+                    const turn = (i * Math.PI) / 4;
+                    const out = Math.sin(tilt) * 5;
+                    if (openSight.blocked(from, overheadTo.set(p.x + Math.sin(turn) * out, from.y + Math.cos(tilt) * 5, p.z + Math.cos(turn) * out), 0)) return false;
+                }
+            }
+            return !openSight.blocked(from, overheadTo.set(p.x, from.y + 30, p.z), 0);
+        },
+        between: (a, b) => {
+            if (!openSight) return false;
+            for (const up of [0.1, 0.4, 0.9]) {
+                const from = overheadFrom.set(a.x, Math.max(heightAt(a.x, a.z), 0) + up, a.z);
+                openSight.near(from, 4);
+                if (openSight.blocked(from, overheadTo.set(b.x, Math.max(heightAt(b.x, b.z), 0) + up, b.z), 0)) return false;
+            }
+            return true;
         }
     }, (entry) => entry.animal.id);
+    let openSight: Sight | null = null;
     let overheadSight: Sight | null = null;
     const overheadFrom = new Vector3();
     const overheadTo = new Vector3();
