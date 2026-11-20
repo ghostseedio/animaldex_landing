@@ -5987,9 +5987,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
             // ARK-CONTACT (the coordinator, 2026-11-21: a wolf spider 4 m up a tree): a ground dweller (its microhabitat the
             // leaf litter: a wolf spider, a ground beetle, a woodlouse) given a raised plant point (a tree's or a shrub's
-            // leaf, a branch, bark, a flower head) more than 30 cm up is drawn on the drawn ground straight below it, where
+            // leaf, a branch, bark; not a flower head, which it visits) more than 30 cm up is drawn on the drawn ground straight below it, where
             // it hunts, not up in the plant.
-            const groundDweller = entry.micro?.spot === "leaf_litter" && (microTag === "leaf" || microTag === "branch" || microTag === "bark" || microTag === "flower_head" || microTag === "canopy_perch" || microTag === "limb");
+            const groundDweller = entry.micro?.spot === "leaf_litter" && (microTag === "leaf" || microTag === "branch" || microTag === "bark" || microTag === "canopy_perch" || microTag === "limb");
             if (groundDweller && where.surface && !where.water && entry.air <= 0.001 && !(process.env.NODE_ENV !== "production" && (globalThis as {__arkFlowerFixOff?: boolean}).__arkFlowerFixOff)) {
                 const p = where.surface;
                 const below = standGround(p.x, p.z, p.y);
