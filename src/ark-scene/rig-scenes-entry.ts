@@ -72,6 +72,8 @@ if (typeof location !== "undefined" && new URLSearchParams(location.search).get(
 if (typeof location !== "undefined" && new URLSearchParams(location.search).get("posedlie") === "0") (globalThis as {__arkPosedLie?: boolean}).__arkPosedLie = false;
 // `?skinfix=0`: no load-time skin and clip fixes (`rig-player.ts` skinAndClipFixes), for before/after recordings.
 if (typeof location !== "undefined" && new URLSearchParams(location.search).get("skinfix") === "0") (globalThis as {__arkSkinFix?: boolean}).__arkSkinFix = false;
+// `?flank=0`: the flank kept on the upper limbs (`skin-fixes.ts` flankOffLegs off), for the lying cervids' before.
+if (typeof location !== "undefined" && new URLSearchParams(location.search).get("flank") === "0") (globalThis as {__arkFlankFix?: boolean}).__arkFlankFix = false;
 
 function castId(prefix: string, i: number): string {
     const k = CAST.findIndex((c) => c[0] === prefix);

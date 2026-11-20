@@ -26,6 +26,16 @@ export const LIE_FOLD: Record<"fore" | "hind", readonly [number, number, number]
     fore: [75, -80, 85],
     hind: [75, -80, 85]
 };
+/**
+ * The second try, for a rig whose forelegs fold out past its nose (the bighorn sheep's, long-legged under a short body):
+ * the forearm tucked back under the chest, the hooves under it, a kneeling fold. The hind legs as before.
+ */
+export const LIE_FOLD_TUCKED: Record<"fore" | "hind", readonly [number, number, number]> = {
+    fore: [20, -150, 120],
+    hind: LIE_FOLD.hind
+};
+/** The folds a rig tries, in order: the first its gate passes is its lie. */
+export const LIE_FOLDS = [LIE_FOLD, LIE_FOLD_TUCKED] as const;
 /** The folded legs turned out from under the body (degrees, fore and hind), about the body's long axis at the hip. */
 export const LIE_SPLAY: [number, number] = [25, 25];
 /** The head's drop (degrees, nose down) when the ground allows it. */
@@ -71,7 +81,7 @@ export class LiePose {
     private readonly skin: Matrix4[];
     readonly check: LieCheck;
 
-    constructor(readonly rig: LocoRig, private readonly mesh: LieMesh) {
+    constructor(readonly rig: LocoRig, private readonly mesh: LieMesh, readonly fold: Record<"fore" | "hind", readonly [number, number, number]> = LIE_FOLD) {
         const n = mesh.positions.length / 3;
         let minY = Infinity;
         let maxY = -Infinity;
@@ -122,7 +132,7 @@ export class LiePose {
         rig.bones.forEach((bone, i) => world[i].copy(bone.restWorld));
         if (t <= 0) return world;
         for (const leg of rig.legs) {
-            const fold = LIE_FOLD[leg.end === "fore" ? "fore" : "hind"];
+            const fold = this.fold[leg.end === "fore" ? "fore" : "hind"];
             // The upper limb, the lower and the foot each to its angle, in the leg's own plane along the body (its splay kept).
             at(world[leg.upper], A);
             at(world[leg.lower], B);
@@ -253,6 +263,7 @@ export class LiePose {
             front = Math.max(front, v.z);
         }
         let over = 0;
+        let overLeg = "";
         // (Its joints: a folded knee, ankle or sole no higher than its hip.)
         for (const leg of this.rig.legs) {
             const hip = at(world[leg.upper], new Vector3()).y + this.height * 0.05;
@@ -268,12 +279,18 @@ export class LiePose {
                 const leg = this.rig.legs[part];
                 if (v.y > top) reason = `leg ${leg.key} through the back`;
                 else if ((v.x - this.cx) * leg.side < -width * 0.4) reason = `leg ${leg.key} across the body`;
-                else over = Math.max(over, (back - v.z) / (front - back), (v.z - front) / (front - back));
+                else {
+                    const out = Math.max((back - v.z) / (front - back), (v.z - front) / (front - back));
+                    if (out > over) {
+                        over = out;
+                        overLeg = `${leg.key} ${(back - v.z) > (v.z - front) ? (this.fwd > 0 ? "behind" : "ahead") : this.fwd > 0 ? "ahead" : "behind"}`;
+                    }
+                }
             }
         }
         const belly = Number.isFinite(torso) ? (torso - this.ground) / this.height : 1;
         const sink = Math.max(this.ground - low, 0) / this.height;
-        if (!reason && over > PAST_BODY) reason = `a leg out past the body by ${(over * 100).toFixed(0)}% of its length`;
+        if (!reason && over > PAST_BODY) reason = `a leg out past the body by ${(over * 100).toFixed(0)}% of its length (${overLeg})`;
         if (!reason && belly > BELLY_GAP) reason = `belly ${(belly * 100).toFixed(0)}% of the height off the ground`;
         if (!reason && sink > 0.01) reason = `${(sink * 100).toFixed(1)}% of the height under the ground`;
         return {ok: !reason, reason, belly, sink};

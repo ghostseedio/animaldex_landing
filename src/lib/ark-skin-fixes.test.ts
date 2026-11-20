@@ -8,8 +8,9 @@ import path from "node:path";
 import test from "node:test";
 import {DataUtils, Matrix4, Quaternion, Vector3} from "three";
 import {buildLocoRig, restInverses, rotateSubtree, skinRow, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
-import {BIRD_YAW_CAP_DEG, birdYawLimits, isBirdRig, spreadBirdYaw, yawFromChest} from "@/ark-scene/locomotion/bird-neck";
-import {LIE_SINK, lowestOfRow, rigidMuzzle, seatLyingRows} from "@/ark-scene/locomotion/skin-fixes";
+import {BIRD_YAW_CAP_DEG, BIRD_YAW_SHARES, birdYawLimits, isBirdRig, NECK_HEAVY_SHARES, pickBirdShares, spreadBirdYaw, yawFromChest} from "@/ark-scene/locomotion/bird-neck";
+import {flankOffLegs, LIE_SINK, lowestOfRow, rigidMuzzle, seatLyingRows} from "@/ark-scene/locomotion/skin-fixes";
+import {LIE_FOLD, LIE_FOLDS, LIE_FOLD_TUCKED} from "@/ark-scene/locomotion/lie-pose";
 
 const FIXTURES = path.join(process.cwd(), "src/ark-scene/locomotion/fixtures");
 const raw = (slug: string) => JSON.parse(readFileSync(path.join(FIXTURES, `${slug}.json`), "utf8")) as RawSkeleton;
@@ -75,4 +76,51 @@ test("an equid's muzzle is held by its head, not its neck", () => {
         for (let k = 0; k < 4; k++) if (skin.joints[v * 4 + k] === neck) onNeck += skin.weights[v * 4 + k];
         assert.ok(onNeck < 1e-6, `vertex ${v} still ${onNeck} on the neck`);
     }
+});
+
+test("the flank over a hip leaves the upper limb for the body; each vertex keeps its whole weight", () => {
+    const r = raw("red-deer");
+    const rig = buildLocoRig(r);
+    // (The fixture's skin is a sample: a vertex held wholly by each upper limb is added over its hip, and one under it.)
+    const positions = Array.from(r.positions);
+    const rawJ = Array.from(r.joints);
+    const rawW = Array.from(r.weights);
+    for (const leg of rig.legs) {
+        for (const dy of [leg.upperLength * 0.5, -leg.upperLength * 0.9]) {
+            positions.push(leg.hip[0], leg.hip[1] + dy, leg.hip[2]);
+            rawJ.push(leg.upper, 0, 0, 0);
+            rawW.push(1, 0, 0, 0);
+        }
+    }
+    const joints = Uint8Array.from(rawJ);
+    const weights = Float32Array.from(rawW);
+    const changed = flankOffLegs(rig, {positions, joints, weights});
+    assert.ok(changed >= rig.legs.length);
+    const uppers = new Map(rig.legs.map((leg) => [leg.upper, leg]));
+    for (let v = 0; v < positions.length / 3; v++) {
+        let before = 0;
+        let after = 0;
+        for (let k = 0; k < 4; k++) {
+            before += rawW[v * 4 + k];
+            after += weights[v * 4 + k];
+            const leg = uppers.get(joints[v * 4 + k]);
+            // Over its own hip (by a fifth of the upper limb) a vertex keeps none of that upper limb.
+            if (leg && weights[v * 4 + k] > 1e-6) assert.ok(positions[v * 3 + 1] <= leg.hip[1] + leg.upperLength * 0.2 + 1e-6, `vertex ${v} over ${leg.key}'s hip`);
+        }
+        assert.ok(Math.abs(before - after) < 1e-5, `vertex ${v}: ${before} -> ${after}`);
+    }
+    // The one well under the hip stays on its leg.
+    const under = positions.length / 3 - 1;
+    assert.equal(joints[under * 4], rig.legs[rig.legs.length - 1].upper);
+    assert.ok(weights[under * 4] > 0.99);
+});
+
+test("a bird takes the split its neck stretches least on; the tucked fold is tried after the usual", () => {
+    const r = raw("mallard");
+    const rig = buildLocoRig(r);
+    const index = Array.from({length: Math.floor(r.positions.length / 9) * 3}, (_, i) => i);
+    const pick = pickBirdShares(rig, {positions: r.positions, joints: r.joints, weights: r.weights}, index, 70, BIRD_YAW_SHARES);
+    assert.equal(pick.stretch.length, 2);
+    assert.equal(pick.shares, pick.stretch[1] < pick.stretch[0] ? NECK_HEAVY_SHARES : BIRD_YAW_SHARES);
+    assert.deepEqual(LIE_FOLDS, [LIE_FOLD, LIE_FOLD_TUCKED]);
 });

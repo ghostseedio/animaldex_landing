@@ -240,3 +240,58 @@ export function tailOffLegs(rig: LocoRig, skin: Skin): number {
     }
     return changed;
 }
+
+/** How far under the hip (a share of the upper limb) the flank's weight on the upper limb starts going over to the body. */
+export const FLANK_RAMP = 1.0;
+/** Where that ease starts, from the joint (a share of the upper limb, + up). */
+export const FLANK_FROM = -0.8;
+
+/**
+ * The flank and the rump off the upper limb (the owner on batch 14: the lying elk's belly ballooned down, its folded legs
+ * shrunk): a vertex over a leg's hip (or shoulder) joint moves its weight on that leg's upper bone to the bone the leg
+ * hangs from, eased over `FLANK_RAMP` of the upper limb under the joint. Folded 75 degrees forward, the upper limb carried
+ * the flank over its pivot down and out with it; a step's swing (25 degrees) moved the same flank a little, which the
+ * body bone now does. Returns the vertices changed.
+ */
+export function flankOffLegs(rig: LocoRig, skin: Skin, rampShare = FLANK_RAMP, fromShare = FLANK_FROM): number {
+    const P = skin.positions;
+    const n = P.length / 3;
+    const legs = rig.legs.filter((leg) => leg.end !== "mid" && rig.bones[leg.upper]?.parent >= 0);
+    if (!legs.length) return 0;
+    let changed = 0;
+    const held = new Map<number, number>();
+    for (let v = 0; v < n; v++) {
+        const y = P[v * 3 + 1];
+        held.clear();
+        let total = 0;
+        for (let s = 0; s < 4; s++) {
+            const w = skin.weights[v * 4 + s];
+            if (w <= 0) continue;
+            const j = skin.joints[v * 4 + s];
+            held.set(j, (held.get(j) ?? 0) + w);
+            total += w;
+        }
+        let moved = false;
+        for (const leg of legs) {
+            const w = held.get(leg.upper);
+            if (!w) continue;
+            const ramp = Math.max(leg.upperLength * rampShare, 1e-6);
+            const share = Math.min(Math.max((y - (leg.hip[1] + leg.upperLength * fromShare)) / ramp, 0), 1);
+            if (share <= 0) continue;
+            const parent = rig.bones[leg.upper].parent;
+            held.set(leg.upper, w * (1 - share));
+            held.set(parent, (held.get(parent) ?? 0) + w * share);
+            moved = true;
+        }
+        if (!moved) continue;
+        // The four heaviest, summing to what the vertex had.
+        const top = Array.from(held.entries()).filter(([, w]) => w > 1e-6).sort((a, b) => b[1] - a[1]).slice(0, 4);
+        const sum = top.reduce((a, [, w]) => a + w, 0);
+        for (let s = 0; s < 4; s++) {
+            skin.joints[v * 4 + s] = top[s]?.[0] ?? 0;
+            skin.weights[v * 4 + s] = top[s] ? (top[s][1] * total) / sum : 0;
+        }
+        changed++;
+    }
+    return changed;
+}

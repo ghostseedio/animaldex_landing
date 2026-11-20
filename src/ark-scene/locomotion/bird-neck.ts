@@ -22,6 +22,14 @@ export const OWL_YAW_CAP_DEG = 170;
  * share turned the wings off the body (shards along the back), so the chest keeps none. */
 export const BIRD_YAW_SHARES: readonly [number, number, number] = [0, 0.25, 0.75];
 export const OWL_YAW_SHARES: readonly [number, number, number] = [0, 0.3, 0.7];
+/**
+ * The other split a rig may take, most on the neck (the clips' own 60/40): for 83 of the 654 bird rigs (kingfishers,
+ * pelicans, the blue tit, macaws) whose head's skin reaches far down the neck, the head-heavy split tore that seam
+ * further than the clips' turns had (the batch 14 scan). Each rig takes whichever split stretches its neck least at its
+ * cap (`pickBirdShares`). Moving the neck's skin from the head to the neck along its length instead stretched 44 of
+ * the 83 further and helped 26 (left out).
+ */
+export const NECK_HEAVY_SHARES: readonly [number, number, number] = [0, 0.6, 0.4];
 /** A vertex held this much by wing bones keeps no neck or head weight. */
 export let WING_HOLD = 0.4;
 /** What is left of the neck's and the head's weight on such a vertex (a share of the vertex). */
@@ -217,4 +225,81 @@ export function birdWingWeights(rig: LocoRig, positions: ArrayLike<number>, join
         changed++;
     }
     return changed;
+}
+
+
+/**
+ * The split (`BIRD_YAW_SHARES` or `NECK_HEAVY_SHARES`, an owl's own first) that stretches this rig's neck least turned
+ * to its cap either way from rest: the longest edge of the neck and head's skin over its rest length (edges under 1% of
+ * the mesh's size left out). The rest mesh's `positions`, `joints`, `weights` (4 per vertex) and triangle `index`.
+ */
+export function pickBirdShares(rig: LocoRig, skin: {positions: ArrayLike<number>; joints: ArrayLike<number>; weights: ArrayLike<number>}, index: ArrayLike<number>, capDeg: number, first: readonly [number, number, number]): {shares: readonly [number, number, number]; stretch: number[]} {
+    const names = rig.bones.map((b) => b.name);
+    const neck = names.indexOf("neck");
+    const head = names.indexOf("head");
+    const chest = names.indexOf("chest");
+    if (neck < 0 || head < 0 || chest < 0) return {shares: first, stretch: []};
+    const region = new Set([neck, head, ...rig.below[neck]]);
+    const P = skin.positions;
+    const n = P.length / 3;
+    const inR = new Uint8Array(n);
+    let lo = Infinity;
+    let hi = -Infinity;
+    for (let v = 0; v < n; v++) {
+        for (let k = 0; k < 4; k++) if (skin.weights[v * 4 + k] > 0.05 && region.has(skin.joints[v * 4 + k])) inR[v] = 1;
+        lo = Math.min(lo, P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
+        hi = Math.max(hi, P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
+    }
+    const minLen = 0.01 * (hi - lo);
+    const edges: number[] = [];
+    for (let t = 0; t + 2 < index.length; t += 3) {
+        for (const [a, b] of [[index[t], index[t + 1]], [index[t + 1], index[t + 2]], [index[t + 2], index[t]]]) {
+            if (!inR[a] && !inR[b]) continue;
+            if (Math.hypot(P[a * 3] - P[b * 3], P[a * 3 + 1] - P[b * 3 + 1], P[a * 3 + 2] - P[b * 3 + 2]) < minLen) continue;
+            edges.push(a, b);
+        }
+    }
+    const used = Array.from(new Set(edges));
+    const inv = restInverses(rig);
+    const out = new Float32Array(n * 3);
+    const v = new Vector3();
+    const acc = new Vector3();
+    const world = rig.bones.map(() => new Matrix4());
+    const mats = rig.bones.map(() => new Matrix4());
+    const worst = (shares: readonly [number, number, number]) => {
+        let w = 1;
+        for (const sign of [1, -1]) {
+            rig.bones.forEach((bone, i) => world[i].copy(bone.restWorld));
+            turned(rig, world, chest, v.set(0, 1, 0), UP);
+            const angle = sign * capDeg * DEG;
+            turnSubtree(rig, world, chest, shares[0] * angle);
+            turnSubtree(rig, world, neck, shares[1] * angle);
+            turnSubtree(rig, world, head, shares[2] * angle);
+            world.forEach((m, i) => mats[i].multiplyMatrices(m, inv[i]));
+            for (const i of used) {
+                acc.set(0, 0, 0);
+                for (let k = 0; k < 4; k++) {
+                    const wt = skin.weights[i * 4 + k];
+                    if (wt <= 0) continue;
+                    v.set(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]).applyMatrix4(mats[skin.joints[i * 4 + k]]).multiplyScalar(wt);
+                    acc.add(v);
+                }
+                out[i * 3] = acc.x;
+                out[i * 3 + 1] = acc.y;
+                out[i * 3 + 2] = acc.z;
+            }
+            for (let e = 0; e < edges.length; e += 2) {
+                const a = edges[e];
+                const b = edges[e + 1];
+                const rest = Math.hypot(P[a * 3] - P[b * 3], P[a * 3 + 1] - P[b * 3 + 1], P[a * 3 + 2] - P[b * 3 + 2]);
+                w = Math.max(w, Math.hypot(out[a * 3] - out[b * 3], out[a * 3 + 1] - out[b * 3 + 1], out[a * 3 + 2] - out[b * 3 + 2]) / rest);
+            }
+        }
+        return w;
+    };
+    const options = first === NECK_HEAVY_SHARES ? [first] : [first, NECK_HEAVY_SHARES];
+    const stretch = options.map(worst);
+    let best = 0;
+    for (let i = 1; i < options.length; i++) if (stretch[i] < stretch[best]) best = i;
+    return {shares: options[best], stretch};
 }

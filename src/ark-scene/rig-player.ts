@@ -66,14 +66,14 @@ import {
 import {gripBones} from "@/ark-scene/map/grip";
 import {finalStatus, ModelFileError, retrySeconds, worthAskingAgain} from "@/ark-scene/model-files";
 import {buildLocoRig, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
-import {birdYawLimits, isBirdRig, spreadBirdRows} from "@/ark-scene/locomotion/bird-neck";
-import {isEquid, rigidMuzzle, seatLyingRows, tailOffLegs} from "@/ark-scene/locomotion/skin-fixes";
+import {birdYawLimits, isBirdRig, pickBirdShares, spreadBirdRows} from "@/ark-scene/locomotion/bird-neck";
+import {flankOffLegs, isEquid, rigidMuzzle, seatLyingRows, tailOffLegs} from "@/ark-scene/locomotion/skin-fixes";
 import {LocoLayer, newLocoAnimal, type ClipRows, type LocoAnimal} from "@/ark-scene/locomotion/layer";
 import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
 import type {GaitState, GroundQuery} from "@/ark-scene/locomotion/types";
 import {locoGround} from "@/ark-scene/locomotion/ground";
 import {clipBakeOf} from "@/ark-scene/locomotion/flight";
-import {LIE_FRAMES, LIE_SECONDS, LiePose} from "@/ark-scene/locomotion/lie-pose";
+import {LIE_FOLDS, LIE_FRAMES, LIE_SECONDS, LiePose} from "@/ark-scene/locomotion/lie-pose";
 import type {LocoRig} from "@/ark-scene/locomotion/types";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
@@ -668,7 +668,7 @@ export class RigLibrary {
         let rowsData = data;
         let posedLie: RigModel["posedLie"] = null;
         const posedOn = (globalThis as {__arkPosedLie?: boolean}).__arkPosedLie !== false;
-        if (loco && posedOn && entry.plan === "quadruped" && (POSED_LIE_OVER_PILOT.has(slug) || !(clips.sleep || clips.lie))) {
+        if (loco && posedOn && entry.plan === "quadruped" && !POSED_LIE_HELD.has(slug) && (POSED_LIE_OVER_PILOT.has(slug) || !(clips.sleep || clips.lie))) {
             const posed = posedLieRows(loco.rig, geometry, data, boneCount);
             posedLie = posed.check;
             if (posed.rows) {
@@ -763,6 +763,12 @@ export class RigLibrary {
  * dog, cat"; then the horse, whose pilot lie lay flat and turned over, the owner's "rotated"). Every other four-legged rig takes it only when it has no lying clip (`QUADRUPED_LYING_HELD`).
  */
 export const POSED_LIE_OVER_PILOT: ReadonlySet<string> = new Set(["domestic-dog", "domestic-cat", "domestic-horse"]);
+/**
+ * Rigs whose posed lie passes the gate but reads wrong (each looked at, batch 14 round 5): the addax's, walia ibex's and
+ * oribi's one hind leg, rigged from the top of the rump, folds out behind and up; the pikas' and the poodle's bodies
+ * fold flat into a sheet. They sleep standing until they are rigged again.
+ */
+export const POSED_LIE_HELD: ReadonlySet<string> = new Set(["addax", "walia-ibex", "oribi", "american-pika", "ili-pika", "poodle"]);
 
 /**
  * ARK-ANIM round 3 (decision 447): the posed lie's rows appended to a rig's bone rows (`locomotion/lie-pose.ts`): the
@@ -774,7 +780,13 @@ export function posedLieRows(rig: LocoRig, geometry: BufferGeometry, data: Uint1
     const joints = geometry.getAttribute("arkJoints");
     const weights = geometry.getAttribute("arkWeights");
     if (!position || !joints || !weights) return {check: {ok: false, reason: "no skin", belly: 1, sink: 0}, rows: null};
-    const lie = new LiePose(rig, {positions: position.array, joints: joints.array, weights: weights.array});
+    const mesh = {positions: position.array, joints: joints.array, weights: weights.array};
+    let lie = new LiePose(rig, mesh);
+    for (const fold of LIE_FOLDS.slice(1)) {
+        if (lie.check.ok) break;
+        const next = new LiePose(rig, mesh, fold);
+        if (next.check.ok) lie = next;
+    }
     if (!lie.check.ok) return {check: lie.check, rows: null};
     const per = bones * 12;
     const own = data.length / per;
@@ -815,13 +827,19 @@ export function skinAndClipFixes(rig: LocoRig, slug: string, plan: string | null
     const names = rig.bones.map((b) => b.name);
     if (isBirdRig(plan, names)) {
         const limits = birdYawLimits(slug);
-        report.birdYaw = spreadBirdRows(rig, data, bones, limits.cap, limits.shares);
+        // Its split: the head-heavy one, or the neck-heavy one where its neck stretches less so (`pickBirdShares`).
+        const index = geometry.getIndex();
+        const split = index ? pickBirdShares(rig, skin, index.array, limits.cap, limits.shares) : {shares: limits.shares, stretch: []};
+        report.birdShares = split.shares;
+        report.birdYaw = spreadBirdRows(rig, data, bones, limits.cap, split.shares);
         // (The wing kept off the neck, `birdWingWeights`, is not applied: across the 654 bird rigs it stretched the seam it
         // made 2–8 times further at the capped turn. With the turn capped and mostly on the head the neck moves 18° at
         // most and the wing's top no longer folds over it.)
     }
     if (plan === "quadruped") {
         report.tailVertices = tailOffLegs(rig, skin);
+        // (The rig harness's `?flank=0` compares without it.)
+        if ((globalThis as {__arkFlankFix?: boolean}).__arkFlankFix !== false) report.flankVertices = flankOffLegs(rig, skin);
         if (isEquid(slug)) report.muzzleVertices = rigidMuzzle(rig, skin);
         geometry.computeBoundingBox();
         const box = geometry.boundingBox!;
@@ -834,8 +852,10 @@ export function skinAndClipFixes(rig: LocoRig, slug: string, plan: string | null
 }
 export type SkinFixReport = {
     birdYaw?: {worstBefore: number; worstAfter: number};
+    birdShares?: readonly [number, number, number];
     wingVertices?: number;
     tailVertices?: number;
+    flankVertices?: number;
     muzzleVertices?: number;
     seated?: Record<string, {belly: number; low: number; shift: number}>;
 };
