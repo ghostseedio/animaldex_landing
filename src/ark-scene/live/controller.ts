@@ -45,10 +45,11 @@ import {ArkLiveLogView} from "@/ark-scene/live/log-view";
 import {breedFocus, isBreedKind, youngStillWanted, YOUNG_WAIT_MS} from "@/ark-scene/live/breed-focus";
 
 /** The words the log needs (the Ark's `live` and `replay`, and "Show me"), as the page or `/api/ark/words` has them. */
-export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null; /** V1: the marks' words (`ark.endangered`'s "Last one" and "Critical", `ark.life.lone`) and the states' (`ark.seen`). */ endangered?: {last?: string | null; critical?: string | null} | null; life?: {lone?: string | null} | null; seen?: Partial<Record<string, string | null>> | null} | null;
+export type ArkLiveWordsIn = {live?: Partial<ArkLiveText["live"]> | null; replay?: Partial<ArkLiveText["replay"]> | null; showMe?: string | null; /** The schedule's moments' words (`ark.activity`). */ activity?: Partial<ArkActivityWords> | null; /** V1: the marks' words (`ark.endangered`'s "Last one" and "Critical", `ark.life.lone`) and the states' (`ark.seen`). */ endangered?: {last?: string | null; critical?: string | null} | null; life?: {lone?: string | null} | null; seen?: Partial<Record<string, string | null>> | null; /** ARK-MATING-SHOWN: a clutch's countdown's (`ark.eggs`). */ eggs?: Partial<Record<string, string | null>> | null} | null;
 
 /** V1: the server's kinds that are acted with a cast (`seen/live-cast.ts` ARK_SEEN_KINDS; here so nothing of `seen/` loads until one comes). */
-const SEEN_KINDS: ReadonlySet<string> = new Set(["mated", "birth", "death_old", "starved", "meal", "escaped", "extinction"]);
+// (ARK-MATING-SHOWN: and `laid`, for its clutch's countdown on the mother: `seen/index.ts` eggs.)
+const SEEN_KINDS: ReadonlySet<string> = new Set(["mated", "birth", "death_old", "starved", "meal", "escaped", "extinction", "laid"]);
 /** V1: the crises read (`/api/ark/crises`, E4): asked a little after the log starts, then this often; rarely while it is not there. */
 const CRISES_FIRST_MS = 12_000;
 const CRISES_EVERY_MS = 3 * 60_000;
@@ -69,6 +70,12 @@ export function arkSeenWordsOf(input: ArkLiveWordsIn): ArkSeenWords {
         if (typeof value === "string" && value.trim()) out[key] = value;
     }
     if (typeof seen?.mateSeeking === "string" && seen.mateSeeking.trim()) out.mate_seeking = seen.mateSeeking;
+    // ARK-MATING-SHOWN: a clutch's countdown (`ark.eggs.*`).
+    const eggs = input?.eggs;
+    for (const key of ["eggsInNest", "hatchesIn", "ifAllGoesWell", "minutes", "hours", "days"] as const) {
+        const value = eggs?.[key];
+        if (typeof value === "string" && value.trim()) out[key] = value;
+    }
     return out;
 }
 

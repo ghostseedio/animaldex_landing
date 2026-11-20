@@ -741,6 +741,14 @@
             "mateSeeking": "Traži partnera",
             "wounded": "S ranom"
         },
+        "eggs": {
+            "eggsInNest": "Jaja u gnijezdu",
+            "hatchesIn": "Izlegu se za otprilike {time}",
+            "ifAllGoesWell": "ako sve bude u redu",
+            "minutes": "{n} min",
+            "hours": "{n} h",
+            "days": "{n} dana"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Lakši Ark za ovaj uređaj",

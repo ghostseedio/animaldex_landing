@@ -741,6 +741,14 @@
             "mateSeeking": "正在寻找配偶",
             "wounded": "受伤了"
         },
+        "eggs": {
+            "eggsInNest": "巢里有蛋",
+            "hatchesIn": "约{time}后孵化",
+            "ifAllGoesWell": "如果一切顺利",
+            "minutes": "{n}分钟",
+            "hours": "{n}小时",
+            "days": "{n}天"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "适合此设备的轻量版 Ark",

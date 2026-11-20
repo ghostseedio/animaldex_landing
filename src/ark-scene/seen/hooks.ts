@@ -65,9 +65,35 @@ export const ARK_SEEN_ENGLISH = {
     last: "Last one in the wild",
     critical: "Critical: one of two left in the wild",
     a: "a {animal}",
-    an: "an {animal}"
+    an: "an {animal}",
+    // ARK-MATING-SHOWN (owner 2026-11-20): a clutch the record says was laid (`laid`, its `clutch.hatch_ark_day`), on
+    // its mother's selection box, with a bar from the laying to the hatching (`ark.eggs.*`).
+    eggsInNest: "Eggs in the nest",
+    hatchesIn: "Hatches in about {time}",
+    ifAllGoesWell: "if all goes well",
+    minutes: "{n} min",
+    hours: "{n} h",
+    days: "{n} days"
 } as const;
 export type ArkSeenWords = Partial<Record<keyof typeof ARK_SEEN_ENGLISH, string>>;
+
+/**
+ * ARK-MATING-SHOWN: a clutch's countdown from released facts only: laid at `laidMs` (the `laid` row's time), hatching at
+ * `hatchMs` (its `clutch.hatch_ark_day` on the Ark clock: the engine sets it at the laying, `hatch_ark_day`, no draw).
+ * The bar's share from the laying to the hatching, and its words ("Hatches in about 3 h · if all goes well": eggs can be
+ * eaten once egg predation is on). Null once it is due. Pure.
+ */
+export function arkEggCountdown(laidMs: number, hatchMs: number, nowMs: number, words: ArkSeenWords | null = null): {share: number; text: string; left: string} | null {
+    if (!Number.isFinite(laidMs) || !Number.isFinite(hatchMs) || !(hatchMs > nowMs)) return null;
+    const w = {...ARK_SEEN_ENGLISH, ...(words ?? {})};
+    const span = Math.max(hatchMs - laidMs, 1);
+    const share = Math.round(Math.min(Math.max((nowMs - laidMs) / span, 0), 1) * 100) / 100;
+    const minutes = (hatchMs - nowMs) / 60_000;
+    // ("About": minutes to the nearest five under an hour, hours under two days, then days.)
+    const left = minutes < 55 ? w.minutes.replace("{n}", String(Math.max(Math.round(minutes / 5) * 5, minutes < 3 ? 1 : 5))) : minutes < 47.5 * 60 ? w.hours.replace("{n}", String(Math.max(Math.round(minutes / 60), 1))) : w.days.replace("{n}", String(Math.round(minutes / 1440)));
+    const time = w.hatchesIn.replace("{time}", left);
+    return {share, text: `${time} · ${w.ifAllGoesWell}`, left};
+}
 
 /** A state's line for the selection and for Ark Lite. `targetName`: the stalked one's species, when it is in the read. */
 export function arkSeenStateText(state: Pick<ArkSeenState, "kind">, targetName: string | null, words: ArkSeenWords | null = null): string {

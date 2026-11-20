@@ -741,6 +741,14 @@
             "mateSeeking": "Anatafuta mwenzi",
             "wounded": "Amejeruhiwa"
         },
+        "eggs": {
+            "eggsInNest": "Mayai kiotani",
+            "hatchesIn": "Yataanguliwa baada ya takriban {time}",
+            "ifAllGoesWell": "mambo yakienda vizuri",
+            "minutes": "dakika {n}",
+            "hours": "saa {n}",
+            "days": "siku {n}"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Ark nyepesi kwa kifaa hiki",

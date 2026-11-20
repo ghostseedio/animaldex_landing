@@ -741,6 +741,14 @@
             "mateSeeking": "ഇണയെ തേടുന്നു",
             "wounded": "പരിക്കേറ്റു"
         },
+        "eggs": {
+            "eggsInNest": "കൂട്ടിൽ മുട്ടകൾ",
+            "hatchesIn": "ഏകദേശം {time} കഴിഞ്ഞ് വിരിയും",
+            "ifAllGoesWell": "എല്ലാം ശരിയായാൽ",
+            "minutes": "{n} മിനിറ്റ്",
+            "hours": "{n} മണിക്കൂർ",
+            "days": "{n} ദിവസം"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "ഈ ഉപകരണത്തിനായി ഭാരം കുറഞ്ഞ Ark",

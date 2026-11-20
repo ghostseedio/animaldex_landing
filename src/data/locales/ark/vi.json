@@ -741,6 +741,14 @@
             "mateSeeking": "Đang tìm bạn đời",
             "wounded": "Bị thương"
         },
+        "eggs": {
+            "eggsInNest": "Trứng trong tổ",
+            "hatchesIn": "Nở sau khoảng {time}",
+            "ifAllGoesWell": "nếu mọi việc suôn sẻ",
+            "minutes": "{n} phút",
+            "hours": "{n} giờ",
+            "days": "{n} ngày"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Ark nhẹ hơn cho thiết bị này",

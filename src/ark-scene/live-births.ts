@@ -14,8 +14,9 @@
  *   part     each walks back to where its day has it now.
  *
  * How it goes comes from the species' care (`care.json`, read from its stored text): follow, carry, nest, guard, none.
- * Carried young: a primate's infant clings to her at once; a marsupial's newborn goes straight into the pouch (nothing
- * to see but the mother resting: never a joey on the ground); a scorpion's young climb onto her back. Young that are
+ * Carried young: a primate's infant clings to her at once; a marsupial's newborn goes straight into the pouch (never a
+ * joey on the ground: since ARK-MATING-SHOWN its head shows at her pouch while it is acted, `pouchPose`); a scorpion's
+ * young climb onto her back. Young that are
  * guarded or on their own (live-bearing snakes, lizards, fish) appear beside her and stay near or go.
  *
  * The scene never decides a birth: the young and their parents come only from the record (`voyage_events` kind `birth`,
@@ -89,6 +90,12 @@ const POP_SHARE = 0.42;
 const POP_MOST = 3;
 const POP_HOLD = 16;
 const POP_EASE = 8;
+/**
+ * ARK-MATING-SHOWN (decision 416: "a pouch birth shows the joey's head or a clear pouch cue"): a marsupial's newborn is
+ * drawn in her pouch, its head out at her belly, this share of her length (a visibility aid: a real newborn joey is a
+ * bean, out of sight; flagged in `seen/README.md`). Before, nothing was drawn and the line showed the mother resting.
+ */
+const POUCH_SHARE = 0.24;
 
 type Point = {x: number; z: number};
 
@@ -113,6 +120,8 @@ export type BirthScript = {
     pop: number;
     /** V1: seconds after t0 by which every shown young can be seen (the watch's still). */
     seenBy: number;
+    /** ARK-MATING-SHOWN: the newborn's own drawn length (m), for the pouch's joey (`POUCH_SHARE`). */
+    youngLength: number;
 };
 
 const clamp = (v: number, lo: number, hi: number) => Math.min(Math.max(v, lo), hi);
@@ -185,7 +194,7 @@ export function birthScript(mother: Point & {yaw: number; length: number; height
     // (Riders are their mother's size already as drawn against her; a newborn in the pouch is never seen.)
     const pop = style === "open" || style === "den" || style === "beside" ? clamp((L * POP_SHARE) / yl, 1, POP_MOST) : 1;
     const seenBy = first + EACH * (n - 1) + (style === "den" ? DEN_TUCKED + DEN_OUT : 1.5);
-    return {style, standing, spot: {x: mother.x, z: mother.z}, yaw: mother.yaw, born, nurse, first, lickEnd, riseEnd, end, mother: {length: L, height: mother.height, pace: mother.pace}, pace: youngPace, out, pop, seenBy};
+    return {style, standing, spot: {x: mother.x, z: mother.z}, yaw: mother.yaw, born, nurse, first, lickEnd, riseEnd, end, mother: {length: L, height: mother.height, pace: mother.pace}, pace: youngPace, out, pop, seenBy, youngLength: yl};
 }
 
 /** V1: how large a newborn is drawn `t` seconds after it is born: in from small, at `pop` for a while, then its own size. */
@@ -221,6 +230,22 @@ export function motherPose(sc: BirthScript, s: number, ground: Ground, youngId?:
     return at(sc.spot, sc.yaw, ground, state, extra);
 }
 
+/**
+ * ARK-MATING-SHOWN: a pouch's newborn `t` seconds after it is born: in her pouch at her belly, a little forward of her
+ * middle and low, facing as she does with its head up and out (it grows in, as any newborn), the next one beside it.
+ */
+export function pouchPose(sc: BirthScript, k: number, t: number, ground: Ground, extra: Partial<ActPose>): ActPose {
+    const L = sc.mother.length;
+    const dir = {x: Math.sin(sc.yaw), z: Math.cos(sc.yaw)};
+    const side = {x: dir.z, z: -dir.x};
+    const fwd = L * 0.16;
+    const across = (k % 2 ? 1 : -1) * Math.ceil(k / 2) * L * 0.06;
+    const p = {x: sc.spot.x + dir.x * fwd + side.x * across, z: sc.spot.z + dir.z * fwd + side.z * across};
+    const size = clamp((L * POUCH_SHARE) / Math.max(sc.youngLength, 1e-3), 0.15, POP_MOST);
+    const lift = sc.mother.height * (sc.standing ? 0.4 : 0.22);
+    return at(p, sc.yaw, () => ground(sc.spot.x, sc.spot.z) + lift, "rest", {...extra, scale: size * ease(t / 0.9), pitch: -0.45});
+}
+
 /** The k-th young's pose s seconds after the birth (hidden before it is born). */
 export function youngPose(sc: BirthScript, k: number, s: number, ground: Ground, motherId?: string): ActPose {
     const shown = Math.min(k, sc.born.length - 1);
@@ -228,7 +253,8 @@ export function youngPose(sc: BirthScript, k: number, s: number, ground: Ground,
     const extra: Partial<ActPose> = {meal: "resting", ...(motherId ? {with: motherId} : {})};
     const p = sc.born[shown] ?? sc.spot;
     const faceMother = yawTo(p, sc.spot);
-    if (s < bornAt || k >= sc.born.length || sc.style === "pouch") return {...at(p, faceMother, ground, "rest"), hidden: true};
+    if (s < bornAt || k >= sc.born.length) return {...at(p, faceMother, ground, "rest"), hidden: true};
+    if (sc.style === "pouch") return pouchPose(sc, shown, s - bornAt, ground, extra);
     const up = sc.mother.height;
     // (V1: in from small as it is born; one much smaller than her, larger than it is for its first moments.)
     extra.scale = newbornScale(sc.pop, s - bornAt);

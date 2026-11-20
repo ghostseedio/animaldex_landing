@@ -54,7 +54,7 @@ export type ArkSelectionByline =
     | {kind: "text"; text: string};
 
 /** What the host adds to the selected animal's box: who brought it, and its Talk link (null: not talkable). */
-export type ArkSelectionExtras = {byline: ArkSelectionByline | null; talk: {label: string; href: string} | null; /** V1: one short line of its own (the scene's: "Last one in the wild", "Lone"); absent: none. */ mark?: string | null};
+export type ArkSelectionExtras = {byline: ArkSelectionByline | null; talk: {label: string; href: string} | null; /** V1: one short line of its own (the scene's: "Last one in the wild", "Lone"); absent: none. */ mark?: string | null; /** ARK-MATING-SHOWN: a bar under the mark (0..1) with its words (a clutch's countdown); absent: none. */ progress?: {share: number; label: string} | null};
 
 /** A tap on one of the box's links; the host answers true when it handled it (the link then does not navigate). */
 export type ArkSelectionLink = {kind: "profile"; handle: string} | {kind: "talk"; slug: string; animalId: string};
@@ -107,6 +107,10 @@ export class ArkSelectionBars {
     private readonly talk: HTMLAnchorElement;
     private readonly byline: HTMLDivElement;
     private readonly mark: HTMLDivElement;
+    /** ARK-MATING-SHOWN: the countdown's bar (a progressbar with its words as its label) and its words under it. */
+    private readonly countdown: HTMLDivElement;
+    private readonly countdownFill: HTMLDivElement;
+    private readonly countdownText: HTMLDivElement;
     private links: {talk: ArkSelectionLink | null; profile: ArkSelectionLink | null} = {talk: null, profile: null};
     private readonly head: HTMLDivElement;
     private readonly dot: HTMLSpanElement;
@@ -210,6 +214,25 @@ export class ArkSelectionBars {
         Object.assign(mark.style, {...line, display: "none", font: `700 ${ICON_PX}px/1.2 ${FONT}`, color: "#ffe2a8", paddingBottom: "1px"});
         el.appendChild(mark);
         this.mark = mark;
+        // ARK-MATING-SHOWN: a clutch's countdown: a thin amber bar (filled from the laying to the hatching), its words under it.
+        const countdown = document.createElement("div");
+        countdown.dataset.arkBarsCountdown = "";
+        countdown.setAttribute("role", "progressbar");
+        countdown.setAttribute("aria-valuemin", "0");
+        countdown.setAttribute("aria-valuemax", "100");
+        Object.assign(countdown.style, {display: "none", height: "4px", borderRadius: "2px", background: "rgba(255, 252, 244, 0.22)", overflow: "hidden", margin: "1px 0 2px"});
+        const countdownFill = document.createElement("div");
+        Object.assign(countdownFill.style, {height: "100%", width: "0%", background: "#ffe2a8", borderRadius: "2px"});
+        countdown.appendChild(countdownFill);
+        el.appendChild(countdown);
+        const countdownText = document.createElement("div");
+        countdownText.dir = "auto";
+        countdownText.setAttribute("aria-hidden", "true");
+        Object.assign(countdownText.style, {...line, display: "none", font: `500 ${ICON_PX}px/1.2 ${FONT}`, color: "rgba(255, 252, 244, 0.82)", paddingBottom: "1px"});
+        el.appendChild(countdownText);
+        this.countdown = countdown;
+        this.countdownFill = countdownFill;
+        this.countdownText = countdownText;
         for (const link of [talk]) this.guard(link, "talk");
         for (const key of KEYS) {
             const row = document.createElement("div");
@@ -320,6 +343,16 @@ export class ArkSelectionBars {
         const mark = label ? extras?.mark?.trim() || "" : "";
         if (this.mark.textContent !== mark) this.mark.textContent = mark;
         this.mark.style.display = mark ? "block" : "none";
+        const progress = label ? extras?.progress ?? null : null;
+        this.countdown.style.display = progress ? "block" : "none";
+        this.countdownText.style.display = progress ? "block" : "none";
+        if (progress) {
+            const percent = Math.round(Math.min(Math.max(progress.share, 0), 1) * 100);
+            this.countdownFill.style.width = `${percent}%`;
+            this.countdown.setAttribute("aria-valuenow", String(percent));
+            this.countdown.setAttribute("aria-label", progress.label);
+            if (this.countdownText.textContent !== progress.label) this.countdownText.textContent = progress.label;
+        }
         for (const key of KEYS) {
             const bar = bars?.[key] ?? null;
             const {row, fill} = this.rows.get(key)!;

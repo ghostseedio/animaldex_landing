@@ -741,6 +741,14 @@
             "mateSeeking": "Busca parella",
             "wounded": "Amb una ferida"
         },
+        "eggs": {
+            "eggsInNest": "Ous al niu",
+            "hatchesIn": "Es desclouran d'aquí a uns {time}",
+            "ifAllGoesWell": "si tot va bé",
+            "minutes": "{n} min",
+            "hours": "{n} h",
+            "days": "{n} dies"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Una Ark més lleugera per a aquest dispositiu",

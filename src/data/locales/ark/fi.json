@@ -741,6 +741,14 @@
             "mateSeeking": "Etsii paria",
             "wounded": "Haavoittunut"
         },
+        "eggs": {
+            "eggsInNest": "Munia pesässä",
+            "hatchesIn": "Kuoriutuvat noin {time} kuluttua",
+            "ifAllGoesWell": "jos kaikki menee hyvin",
+            "minutes": "{n} min",
+            "hours": "{n} h",
+            "days": "{n} päivän"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Kevyempi Ark tälle laitteelle",

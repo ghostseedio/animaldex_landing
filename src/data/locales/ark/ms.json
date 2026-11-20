@@ -741,6 +741,14 @@
             "mateSeeking": "Mencari pasangan",
             "wounded": "Cedera"
         },
+        "eggs": {
+            "eggsInNest": "Telur dalam sarang",
+            "hatchesIn": "Menetas dalam kira-kira {time}",
+            "ifAllGoesWell": "jika semuanya baik",
+            "minutes": "{n} min",
+            "hours": "{n} jam",
+            "days": "{n} hari"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Ark yang lebih ringan untuk peranti ini",

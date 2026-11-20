@@ -741,6 +741,14 @@
             "mateSeeking": "ਸਾਥੀ ਦੀ ਭਾਲ ਵਿੱਚ",
             "wounded": "ਜ਼ਖ਼ਮੀ"
         },
+        "eggs": {
+            "eggsInNest": "ਆਲ੍ਹਣੇ ਵਿੱਚ ਆਂਡੇ",
+            "hatchesIn": "ਲਗਭਗ {time} ਵਿੱਚ ਨਿਕਲਣਗੇ",
+            "ifAllGoesWell": "ਜੇ ਸਭ ਠੀਕ ਰਿਹਾ",
+            "minutes": "{n} ਮਿੰਟ",
+            "hours": "{n} ਘੰਟੇ",
+            "days": "{n} ਦਿਨ"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "ਇਸ ਡਿਵਾਈਸ ਲਈ ਹਲਕਾ Ark",

@@ -741,6 +741,14 @@
             "mateSeeking": "กำลังหาคู่",
             "wounded": "บาดเจ็บ"
         },
+        "eggs": {
+            "eggsInNest": "มีไข่ในรัง",
+            "hatchesIn": "จะฟักในอีกราว {time}",
+            "ifAllGoesWell": "หากทุกอย่างราบรื่น",
+            "minutes": "{n} นาที",
+            "hours": "{n} ชม.",
+            "days": "{n} วัน"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Ark แบบเบาสำหรับอุปกรณ์นี้",

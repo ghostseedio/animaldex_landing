@@ -741,6 +741,14 @@
             "mateSeeking": "Caută pereche",
             "wounded": "Cu o rană"
         },
+        "eggs": {
+            "eggsInNest": "Ouă în cuib",
+            "hatchesIn": "Eclozează în aproximativ {time}",
+            "ifAllGoesWell": "dacă totul merge bine",
+            "minutes": "{n} min",
+            "hours": "{n} h",
+            "days": "{n} zile"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "O Ark mai ușoară pentru acest dispozitiv",

@@ -455,6 +455,8 @@ export type ArkCastLayer = {
     marks: ReadonlySet<string>;
     /** V1: a short line under the selected animal's name (its crisis band, "Lone", a public state); null or absent: none. */
     label?: (id: string) => string | null;
+    /** ARK-MATING-SHOWN: a bar under that line (a clutch's time from its laying to its hatching) and its words; null or absent: none. */
+    progress?: (id: string) => {share: number; label: string} | null;
 };
 
 /** A replay running (`play`): skip it to jump to the Ark as it is now. */
@@ -687,6 +689,8 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
     lifeOf?: (id: string) => {adult: boolean; sex: "male" | "female" | null} | null;
     /** Lane ark-relation-lines: the clutches drawn now (the props' nest sites with eggs in): species, place, the parent sitting it. */
     eggSites?: () => Array<{key: string; speciesId: string; x: number; y: number; z: number; sitter: string | null}>;
+    /** ARK-MATING-SHOWN: its drawn sex (the engine records none; the scene's look), or null: neither or not aboard. */
+    sexOf?: (id: string) => "male" | "female" | null;
     /** What an animal is doing now (the state its animation, tap card and follow mode share); null when it is not in the scene. */
     behaviour: (id: string) => ArkBehaviourState | null;
     /** How an animal is resting now (`sleep.ts` restStatus); null up and about, or not in the scene. */

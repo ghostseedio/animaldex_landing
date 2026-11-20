@@ -10,9 +10,10 @@
 import {attachArkCast, type ArkCast} from "@/ark-scene/replay/cast";
 import {planArkEventReplay, recordOfAboard, type ArkEventReplay} from "@/ark-scene/replay/event-replay";
 import {ARK_SEEN_KINDS, ARK_SEEN_WATCH_BEFORE, ArkSeenCast, type ArkSeenCrisis, type ArkSeenGroup} from "@/ark-scene/seen/live-cast";
-import {ARK_SEEN_ENGLISH, arkSeenStateText, arkSeenStates, arkSeenStatesToPin, type ArkSeenState, type ArkSeenWords} from "@/ark-scene/seen/hooks";
+import {ARK_SEEN_ENGLISH, arkEggCountdown, arkSeenStateText, arkSeenStates, arkSeenStatesToPin, type ArkSeenState, type ArkSeenWords} from "@/ark-scene/seen/hooks";
 import {startArkWatch, type ArkWatch, type ArkWatchEnd} from "@/ark-scene/seen/watch";
 import {arkPinnedMs} from "@/ark-scene/shared-clock";
+import {ARK_DAY_MS} from "@/lib/ark-clock";
 import type {ArkSceneHandle, ArkSnapshot} from "@/ark-scene/types";
 
 export {ARK_SEEN_KINDS} from "@/ark-scene/seen/live-cast";
@@ -96,13 +97,56 @@ export function attachArkSeen(options: ArkSeenOptions): ArkSeen {
     let caption: HTMLButtonElement | null = null;
     let disposed = false;
 
+    /**
+     * ARK-MATING-SHOWN (owner 2026-11-20): the clutches the record says were laid (`laid` rows: their parents, the
+     * laying's time, `clutch.hatch_ark_day` on the Ark clock), until they hatch (a `birth` from_egg of the same parents)
+     * or are due. Shown on the mother: the parent the scene draws as female, else the record's first.
+     */
+    const eggs = new Map<string, {parents: string[]; laidMs: number; hatchMs: number}>();
+    const pairOf = (parents: unknown) => (Array.isArray(parents) ? parents.filter((p): p is string => typeof p === "string") : []);
+    const noteEggs = (row: Row) => {
+        const parents = pairOf(row.parents);
+        if (!parents.length) return;
+        const key = [...parents].sort().join("|");
+        if (row.kind === "birth" && row.from_egg === true) {
+            eggs.delete(key);
+            return;
+        }
+        if (row.kind !== "laid") return;
+        const clutch = row.clutch && typeof row.clutch === "object" ? row.clutch as Row : null;
+        const hatch = typeof clutch?.hatch_ark_day === "number" ? clutch.hatch_ark_day : NaN;
+        const laidMs = Date.parse(String(row.at));
+        const start = Date.parse(read?.voyage.started_at ?? "");
+        // (On the Ark clock from the voyage's start; without it, from the row's own day.)
+        const hatchMs = Number.isFinite(start) ? start + hatch * ARK_DAY_MS : typeof row.ark_day === "number" ? laidMs + (hatch - row.ark_day) * ARK_DAY_MS : NaN;
+        if (Number.isFinite(laidMs) && Number.isFinite(hatchMs) && hatchMs > laidMs) eggs.set(key, {parents, laidMs, hatchMs});
+    };
+    const eggsOf = (id: string) => {
+        const now = epochMs();
+        for (const [key, clutch] of Array.from(eggs)) {
+            if (clutch.hatchMs <= now) {
+                eggs.delete(key);
+                continue;
+            }
+            if (!clutch.parents.includes(id)) continue;
+            const female = clutch.parents.find((p) => options.handle.sexOf?.(p) === "female");
+            if ((female ?? clutch.parents[0]) === id) return clutch;
+        }
+        return null;
+    };
+    cast.progress = (id) => {
+        const clutch = eggs.size ? eggsOf(id) : null;
+        const countdown = clutch ? arkEggCountdown(clutch.laidMs, clutch.hatchMs, epochMs(), words) : null;
+        return countdown ? {share: countdown.share, label: countdown.text} : null;
+    };
     cast.label = (id) => {
         const band = seen.band(id);
         if (band) return words[band];
         const state = states.get(id);
         // (A stalker names its quarry; a wounded one's `target` is its biter, which its line does not name.)
         if (state) return arkSeenStateText(state, state.kind === "stalking" && state.target ? read?.animals.find((animal) => animal.id === state.target)?.name ?? null : null, words);
-        return lone.has(id) ? words.lone : null;
+        if (lone.has(id)) return words.lone;
+        return eggs.size && eggsOf(id) ? words.eggsInNest : null;
     };
     // (The label is asked whether or not anything is pinned: the cast is in the scene from the start.)
     cast.apply();
@@ -148,6 +192,7 @@ export function attachArkSeen(options: ArkSeenOptions): ArkSeen {
             const known = new Set(rows.map(idOf));
             for (const item of incoming) {
                 const row = item && typeof item === "object" && !Array.isArray(item) ? item as Row : null;
+                if (row && (row.kind === "laid" || row.kind === "birth")) noteEggs(row);
                 if (!row || typeof row.kind !== "string" || !ARK_SEEN_KINDS.has(row.kind) || !idOf(row) || known.has(idOf(row))) continue;
                 known.add(idOf(row));
                 fresh.push(row);

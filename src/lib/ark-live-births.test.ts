@@ -38,9 +38,16 @@ test("a tall hoofed mother (a giraffe) gives birth standing", () => {
     assert.equal(motherPose(birthScript(mother({height: 4.5}), 1, "g"), 1, ground).state, "scan");
 });
 
-test("a marsupial's newborn is never drawn on the ground (it is in the pouch)", () => {
-    const sc = birthScript(mother({care: "carry", pouch: true}), 1, "w");
-    for (const s of [0, sc.first, sc.first + 5, sc.end - 1]) assert.equal(youngPose(sc, 0, s, ground).hidden, true);
+test("a marsupial's newborn is never on the ground: its head shows at her pouch (decision 416)", () => {
+    const sc = birthScript(mother({care: "carry", pouch: true}), 1, "w", 0.4, 0.3);
+    assert.equal(youngPose(sc, 0, 0, ground).hidden, true, "not before it is born");
+    for (const s of [sc.first + 1, sc.first + 5, sc.end - 1]) {
+        const y = youngPose(sc, 0, s, ground);
+        assert.equal(y.hidden, false, `shown at ${s}`);
+        assert.ok(y.base > 0.2, "up at her belly, not on the ground");
+        assert.ok(Math.hypot(y.x - sc.spot.x, y.z - sc.spot.z) < sc.mother.length * 0.3, "at her, not beside her");
+        assert.ok(Math.abs(y.scale * 0.3 - sc.mother.length * 0.24) < 0.05, "drawn about a quarter of her length");
+    }
 });
 
 test("a scorpion's young ride on her back", () => {

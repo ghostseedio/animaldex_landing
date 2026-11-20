@@ -741,6 +741,14 @@
             "mateSeeking": "Párt keres",
             "wounded": "Sebesült"
         },
+        "eggs": {
+            "eggsInNest": "Tojások a fészekben",
+            "hatchesIn": "Kb. {time} múlva kelnek ki",
+            "ifAllGoesWell": "ha minden jól megy",
+            "minutes": "{n} perc",
+            "hours": "{n} óra",
+            "days": "{n} nap"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Könnyebb Ark ehhez az eszközhöz",

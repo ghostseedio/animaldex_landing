@@ -4938,6 +4938,14 @@
       "mateSeeking": "Mencari pasangan",
       "wounded": "Terluka"
     },
+    "eggs": {
+      "eggsInNest": "Telur di sarang",
+      "hatchesIn": "Menetas sekitar {time} lagi",
+      "ifAllGoesWell": "jika semua berjalan baik",
+      "minutes": "{n} mnt",
+      "hours": "{n} jam",
+      "days": "{n} hari"
+    },
     "liteView": {
       "title": "Ark Lite",
       "subtitle": "Ark yang lebih ringan untuk perangkat ini",

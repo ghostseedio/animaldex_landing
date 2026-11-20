@@ -159,7 +159,7 @@ const film = async (kind, id, n) => {
     }
     const after = await page.evaluate(() => window.__seen.report());
     const seen = Object.fromEntries(Object.entries(report?.seen ?? {}).map(([castId, s]) => [castId, {role: s.role, shown: s.frames ? Math.round((s.shown / s.frames) * 100) : null}]));
-    Object.assign(entry, {frames, seconds: times[times.length - 1] ?? 0, wall: Math.round((Date.now() - started) / 1000), report: report ? {acted: report.acted, reason: report.reason, notes: report.notes, keyAt: report.keyAt, hour: report.hour, night: report.night, gain: report.gain, standIns: report.standIns, pins: report.pins.length, sight: report.sight} : null, seen, cast: after.seen});
+    Object.assign(entry, {frames, seconds: times[times.length - 1] ?? 0, wall: Math.round((Date.now() - started) / 1000), report: report ? {acted: report.acted, reason: report.reason, notes: report.notes, keyAt: report.keyAt, hour: report.hour, night: report.night, gain: report.gain, standIns: report.standIns, pins: report.pins.length, sight: report.sight} : null, seen, cast: after.seen, read: after.read});
     const fps = 30 / step;
     const at = (seconds) => Math.min(Math.max(Math.round(seconds * fps), 0), frames - 1);
     // The still: the watch's own telling moment; without one, two thirds of the way through.
@@ -176,7 +176,7 @@ const film = async (kind, id, n) => {
     if (clips) execFileSync("ffmpeg", ["-y", "-loglevel", "error", "-framerate", String(fps), "-i", path.join(dir, "%04d.jpg"), "-c:v", "libx264", "-preset", "veryfast", "-crf", "25", "-pix_fmt", "yuv420p", "-r", "30", path.join(out, `${name}.mp4`)]);
     rmSync(dir, {recursive: true, force: true});
     entry.ok = Boolean(report?.acted);
-    log(`${name}: ${frames} frames (${entry.seconds.toFixed(1)} s) in ${entry.wall} s; ${report?.acted ? "acted" : `NOT acted: ${report?.reason}`}; key ${report?.keyAt}; stand-ins ${report?.standIns.length ?? 0}; seen ${Object.values(seen).map((s) => `${s.role} ${s.shown}%`).join(", ")}; sight ${report?.sight ? `${report.sight.searches} searches, ${report.sight.blocked} not clear ${JSON.stringify(report.sight.met)}` : "-"}; "${entry.text?.[0] ?? ""}"`);
+    log(`${name}: ${frames} frames (${entry.seconds.toFixed(1)} s) in ${entry.wall} s; ${report?.acted ? "acted" : `NOT acted: ${report?.reason}`}; key ${report?.keyAt}; READ ${after.read ? `${after.read.readable ? "yes" : "NO"} (${after.read.best}/${after.read.need} s, ${after.read.okFrames}/${after.read.frames} frames ${JSON.stringify(after.read.why)}${after.read.jumps.length ? ` jumps ${JSON.stringify(after.read.jumps)}` : ""})` : "-"}; stand-ins ${report?.standIns.length ?? 0}; seen ${Object.values(seen).map((s) => `${s.role} ${s.shown}%`).join(", ")}; sight ${report?.sight ? `${report.sight.searches} searches, ${report.sight.blocked} not clear ${JSON.stringify(report.sight.met)}` : "-"}; "${entry.text?.[0] ?? ""}"`);
 };
 
 for (const kind of kinds) {
@@ -189,6 +189,9 @@ for (const kind of kinds) {
         await film(only.length ? await page.evaluate((id) => window.__seen.plan(id).kind, id).catch(() => kind) : kind, id, n + 1);
         n++;
     }
+    // ARK-MATING-SHOWN: the kind's count by the readability measure (a line the layer skipped, or not watched, does not read).
+    const mine = summary.filter((e) => e.kind === kind);
+    if (mine.length) log(`${kind}: READABLE ${mine.filter((e) => e.read?.readable).length} / ${mine.length}${mine.filter((e) => !e.read?.readable).map((e) => ` | ${e.id} ${e.name ?? (e.skipped ? "skipped" : e.error ?? "not watched")} ${e.read ? JSON.stringify(e.read.why) : ""}`).join("")}`);
     // The kind's contact sheet: its stills, five to a row.
     const stills = summary.filter((e) => e.kind === kind && e.name && existsSync(path.join(out, `${e.name}.jpg`))).map((e) => path.join(out, `${e.name}.jpg`));
     if (stills.length && !only.length) {

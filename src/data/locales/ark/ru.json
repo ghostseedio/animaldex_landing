@@ -741,6 +741,14 @@
             "mateSeeking": "Ищет пару",
             "wounded": "С раной"
         },
+        "eggs": {
+            "eggsInNest": "Яйца в гнезде",
+            "hatchesIn": "Вылупятся примерно через {time}",
+            "ifAllGoesWell": "если всё пойдёт хорошо",
+            "minutes": "{n} мин",
+            "hours": "{n} ч",
+            "days": "{n} дн."
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Облегчённый Ark для этого устройства",

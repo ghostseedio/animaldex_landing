@@ -741,6 +741,14 @@
             "mateSeeking": "בחיפוש אחר בן זוג",
             "wounded": "עם פציעה"
         },
+        "eggs": {
+            "eggsInNest": "ביצים בקן",
+            "hatchesIn": "יבקעו בעוד כ־{time}",
+            "ifAllGoesWell": "אם הכול ילך כשורה",
+            "minutes": "{n} דק׳",
+            "hours": "{n} שע׳",
+            "days": "{n} ימים"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Ark קל יותר למכשיר הזה",

@@ -741,6 +741,14 @@
             "mateSeeking": "در جست‌وجوی جفت",
             "wounded": "زخمی"
         },
+        "eggs": {
+            "eggsInNest": "تخم در لانه",
+            "hatchesIn": "حدود {time} دیگر سر از تخم درمی‌آیند",
+            "ifAllGoesWell": "اگر همه‌چیز خوب پیش برود",
+            "minutes": "{n} دقیقه",
+            "hours": "{n} ساعت",
+            "days": "{n} روز"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "نسخه‌ای سبک‌تر از Ark برای این دستگاه",

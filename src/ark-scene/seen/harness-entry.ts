@@ -183,6 +183,113 @@ async function main() {
     const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
     const since = () => (current ? epoch - current.plan.t0 : 0);
 
+    /**
+     * ARK-MATING-SHOWN (decision 416): the readability measure, every filmed frame of a tapped mating or birth. A member
+     * is READ in a frame when it is drawn (`shown`), its middle is inside the picture (9/10 of each half), its body is at
+     * least `READ_PX` long on the screen, the scene's lines of sight from the camera to it are clear (the ground, what is
+     * drawn solid and the leaves: `sightOf` with `leaves`, past the shot's near cut), and it is not under the water while
+     * the camera is above it. A mating's frame reads when both of the pair are read and they are together (their middles
+     * within their two lengths and a half metre); a birth's when the mother and at least one young are read, near her.
+     * The line reads when such frames run unbroken for `READ_SECONDS`. And the walk: no one of the pair moves more than
+     * `JUMP` of its own lengths (and a metre) between two frames a tenth of a second apart (no teleport).
+     */
+    const READ_PX = 22;
+    const READ_SECONDS = {mated: 2, birth: 1.5} as Record<string, number>;
+    const JUMP = 3;
+    type Read = {t: number; ok: boolean; why: string};
+    let reads: Read[] = [];
+    let jumps: Array<{id: string; t: number; d: number}> = [];
+    const lastAt = new Map<string, {x: number; z: number; t: number}>();
+    const camOf = () => (window as unknown as {__arkDebug?: {camera: {position: {x: number; y: number; z: number; clone: () => {x: number; y: number; z: number; project: (c: unknown) => {x: number; y: number; z: number}}}; near: number}}}).__arkDebug?.camera ?? null;
+    const readOne = (id: string): {ok: boolean; why: string; p: {x: number; y: number; z: number; length: number} | null} => {
+        const at = handle.locate(id) as (ReturnType<ArkSceneHandle["locate"]> & {shown?: boolean; under?: number}) | null;
+        if (!at) return {ok: false, why: "none", p: null};
+        const p = {x: at.x, y: at.y, z: at.z, length: at.length};
+        if (at.shown === false) return {ok: false, why: "hidden", p};
+        const camera = camOf();
+        if (!camera) return {ok: false, why: "camera", p};
+        const v = camera.position.clone();
+        const project = (x: number, y: number, z: number) => {
+            Object.assign(v, {x, y, z});
+            const q = v.project(camera);
+            return {x: q.x, y: q.y, z: q.z};
+        };
+        const m = project(at.x, at.y, at.z);
+        if (!(Math.abs(m.x) <= 0.9 && Math.abs(m.y) <= 0.9 && m.z < 1)) return {ok: false, why: "out", p};
+        const yaw = at.yaw ?? 0;
+        const h = at.length / 2;
+        const a = project(at.x + Math.sin(yaw) * h, at.y, at.z + Math.cos(yaw) * h);
+        const b = project(at.x - Math.sin(yaw) * h, at.y, at.z - Math.cos(yaw) * h);
+        // (On the screen, in pixels of a 720 by 1280 picture: its length, or its height for one seen end on.)
+        const tall = project(at.x, at.y + (at.height ?? at.length * 0.4) / 2, at.z);
+        const size = Math.max(Math.hypot((a.x - b.x) * 360, (a.y - b.y) * 640), Math.abs(tall.y - m.y) * 1280);
+        if (size < READ_PX) return {ok: false, why: "small", p};
+        if ((at.under ?? 0) > Math.max(0.25, (at.height ?? 0.3) * 0.6) && camera.position.y > at.y + (at.under ?? 0)) return {ok: false, why: "underwater", p};
+        if (handle.sightOf) {
+            const view = handle.view();
+            const blocked = handle.sightOf(view.target, {distance: view.distance, polar: view.polar, azimuth: view.azimuth}, [{x: at.x, y: at.y, z: at.z, slack: Math.min(at.length * 0.3, 0.5)}], false, camera.near > 0.5 ? camera.near : 0, true);
+            if (blocked > 0) return {ok: false, why: `blocked:${handle.sightMet?.() || "?"}`, p};
+        }
+        return {ok: true, why: "", p};
+    };
+    const measure = (t: number) => {
+        if (!current || (current.kind !== "mated" && current.kind !== "birth")) return;
+        const cast = current.plan.cast;
+        let ids: string[];
+        let young: string[] = [];
+        if (current.kind === "mated") ids = cast.filter((m) => m.role === "pair").map((m) => m.record.id).slice(0, 2);
+        else {
+            const acts = handle.liveActs?.();
+            const mother = (acts?.births ?? []).map((b) => b.mother).find((id) => id && cast.some((m) => m.record.id === id)) ?? cast.find((m) => m.role === "parent")?.record.id ?? null;
+            ids = mother ? [mother] : [];
+            young = cast.filter((m) => m.role === "young").map((m) => m.record.id);
+        }
+        for (const id of [...ids, ...young]) {
+            const at = handle.locate(id);
+            const was = lastAt.get(id);
+            if (at && was && t - was.t > 0 && t - was.t <= 0.2) {
+                const d = Math.hypot(at.x - was.x, at.z - was.z);
+                if (d > at.length * JUMP + 1) jumps.push({id, t: Math.round(t * 10) / 10, d: Math.round(d * 10) / 10});
+            }
+            if (at) lastAt.set(id, {x: at.x, z: at.z, t});
+        }
+        const got = ids.map(readOne);
+        let ok = got.length === (current.kind === "mated" ? 2 : 1) && got.every((g) => g.ok);
+        let why = got.map((g) => g.why).filter(Boolean).join(",") || (ok ? "" : "cast");
+        if (ok && current.kind === "mated") {
+            const [a, b] = got.map((g) => g.p!);
+            if (Math.hypot(a.x - b.x, a.z - b.z) > a.length + b.length + 0.5) {
+                ok = false;
+                why = "apart";
+            }
+        } else if (ok) {
+            const mother = got[0].p!;
+            const seenYoung = young.map(readOne).filter((g) => g.ok && Math.hypot(g.p!.x - mother.x, g.p!.z - mother.z) <= mother.length * 2.5 + 1);
+            if (!seenYoung.length) {
+                ok = false;
+                why = "no-young";
+            }
+        }
+        reads.push({t, ok, why});
+    };
+    const readability = () => {
+        if (!current) return null;
+        const need = READ_SECONDS[current.kind] ?? 2;
+        let best = 0;
+        let run = 0;
+        let from = 0;
+        for (const r of reads) {
+            if (r.ok) {
+                if (!run) from = r.t;
+                run = r.t - from;
+                best = Math.max(best, run);
+            } else run = 0;
+        }
+        const why: Record<string, number> = {};
+        for (const r of reads) if (!r.ok) why[r.why] = (why[r.why] ?? 0) + 1;
+        return {readable: best >= need && jumps.length === 0, best: Math.round(best * 10) / 10, need, frames: reads.length, okFrames: reads.filter((r) => r.ok).length, why, jumps: jumps.slice(0, 5)};
+    };
+
     const liteOf = (id: string): string[] => {
         const set = rowsOf(id);
         const text = arkLiveTextOf(null);
@@ -221,6 +328,9 @@ async function main() {
             live.snapshot(world);
             live.events(rowsOf(id));
             current = {id, kind: plan.kind, plan, tapped: false, text: "", ended: null};
+            reads = [];
+            jumps = [];
+            lastAt.clear();
             clip = 0;
             index = 0;
             // The cast's models (a stand-in's, a far animal's): asked for, then waited for.
@@ -274,6 +384,7 @@ async function main() {
                 }
             }
             if (departing) return {index: index++, t, done: clip > departing.until, image: quality > 0 ? canvas()?.toDataURL("image/jpeg", quality) ?? "" : ""};
+            if (current && current.tapped) measure(t);
             const watching = Boolean(live?.seenNow?.watching());
             if (current && current.tapped && !watching && !current.ended) current.ended = "ended";
             const image = quality > 0 ? canvas()?.toDataURL("image/jpeg", quality) ?? "" : "";
@@ -282,7 +393,7 @@ async function main() {
         report: () => {
             const watch = live?.seenNow?.current() ?? null;
             const report = lastReport ?? watch?.report() ?? null;
-            return {watch: report, clock: {clip, since: since()}, acts: handle.liveActs?.() ?? null, seen: live?.seenNow?.report() ?? null, where: Object.fromEntries((current?.plan.cast ?? []).map((member) => [member.record.id, handle.locate(member.record.id)])), view: handle.view(), stats: handle.stats(), pinned: arkPinnedMs()};
+            return {watch: report, read: readability(), clock: {clip, since: since()}, acts: handle.liveActs?.() ?? null, seen: live?.seenNow?.report() ?? null, where: Object.fromEntries((current?.plan.cast ?? []).map((member) => [member.record.id, handle.locate(member.record.id)])), view: handle.view(), stats: handle.stats(), pinned: arkPinnedMs()};
         },
         /** The watch's own account, kept as the frames go (it is gone once the watch ends). */
         keep: () => {

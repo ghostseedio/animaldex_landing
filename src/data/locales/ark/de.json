@@ -741,6 +741,14 @@
             "mateSeeking": "Sucht einen Partner",
             "wounded": "Verletzt"
         },
+        "eggs": {
+            "eggsInNest": "Eier im Nest",
+            "hatchesIn": "Schlüpfen in etwa {time}",
+            "ifAllGoesWell": "wenn alles gut geht",
+            "minutes": "{n} Min.",
+            "hours": "{n} Std.",
+            "days": "{n} Tagen"
+        },
         "liteView": {
             "title": "Ark Lite",
             "subtitle": "Eine leichtere Ark für dieses Gerät",
