@@ -355,20 +355,6 @@
    },
    "lines": {}
   },
-  "domestic-cat": {
-   "name": "Domestic Cat",
-   "ways": {
-    "follow": true
-   },
-   "lines": {}
-  },
-  "domestic-dog": {
-   "name": "Domestic Dog",
-   "ways": {
-    "follow": true
-   },
-   "lines": {}
-  },
   "green-cheeked-conure": {
    "name": "Green-cheeked Conure",
    "ways": {

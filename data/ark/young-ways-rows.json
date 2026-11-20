@@ -1,10 +1,10 @@
 {
  "about": "Every young-care row of the catalogue (2026-11-16) with what the scene does with it today (scripts/ark-young-ways.mts): built, already (an earlier pass), eggs (ark-mating-shown), or held with its reason.",
  "counts": {
-  "built": 77,
+  "built": 75,
   "eggs": 50,
   "part": 15,
-  "held": 65,
+  "held": 67,
   "already": 29
  },
  "rows": [
@@ -1145,8 +1145,8 @@
    "quote": "Females can bear litters of kittens that learn through play, nursing, and observation.",
    "how": "existing_recipe",
    "effort": "S",
-   "status": "built",
-   "what": "follow"
+   "status": "held",
+   "what": "follow: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in"
   },
   {
    "id": "c54e5eca-48bc-4b31-bef6-7f69515e76f7",
@@ -1155,8 +1155,8 @@
    "quote": "Females bear litters and pups develop through play, nursing, and social learning.",
    "how": "existing_recipe",
    "effort": "S",
-   "status": "built",
-   "what": "follow"
+   "status": "held",
+   "what": "follow: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in"
   },
   {
    "id": "516defc3-d127-4345-895e-8ec372083e95",

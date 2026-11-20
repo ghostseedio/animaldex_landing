@@ -227,7 +227,7 @@ const status = new Map<string, {status: string; what: string}>();
 const merge = (slug: string, name: string, row: Row, way: Way, kind: string, part?: string) => {
     const {say, ...spec} = way;
     // (A micro-scene animal is not on the shared pose: nothing to ride, clump or follow with, so it is not claimed.)
-    if (micro.has(slug) && kind !== "follow") {
+    if (micro.has(slug)) {
         status.set(`${row.id}|${row.behaviour}`, {status: "held", what: `${kind}: a small animal at a microhabitat, posed by the micro scene (its place on a leaf or a stem), not by the shared pose the ways are in`});
         return;
     }
