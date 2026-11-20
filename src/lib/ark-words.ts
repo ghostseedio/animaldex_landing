@@ -84,6 +84,17 @@ export type ArkRestWords = {
 
 /** The tap card's life story (life v2). */
 export type ArkLifeWords = {
+    /** Kept populations (decision 444): the card's "Kept" row and its lines, and how an animal left alive. */
+    kept: string;
+    bornZoo: string;
+    bornHome: string;
+    bornFarm: string;
+    neutered: string;
+    eggsCollected: string;
+    left: string;
+    endedRehomed: string;
+    endedMarket: string;
+    endedMovedZoo: string;
     bornAboard: string;
     bornTo: string;
     bornToValue: string;

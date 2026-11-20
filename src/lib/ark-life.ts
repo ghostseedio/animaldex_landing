@@ -13,6 +13,7 @@
  *   server's flag lets it through.
  */
 
+import {isArkLeftKind, type ArkLeftKind} from "@/lib/ark-kept";
 import type {ArkArea, ArkArrivalSource, ArkSnapshot, ArkSociality, ArkThrive, ArkZone} from "@/ark-scene/types";
 import {arkArea, arkArrivalSource} from "@/ark-scene/thrive";
 import {decodeArkLineage, decodeArkThriveField, type ArkLineage} from "@/lib/ark-thrive";
@@ -485,7 +486,7 @@ export type ArkLife = {
     /** The first arrival in its line: who brought its ancestors (a label, anonymous by default). */
     ancestor_brought_by: string | null;
     /** How it ended, when it has. */
-    died: {at: string | null; kind: "eaten" | "died_old" | "starved"} | null;
+    died: {at: string | null; kind: "eaten" | "died_old" | "starved" | ArkLeftKind} | null;
     /** A3: the latest revision of the step that brought it (`worked`: it reads "worked" again). The animal stays. */
     revision: {at: string | null; worked: boolean} | null;
     /** The public debate it came from: only when the server's `public_story` flag is on. */
@@ -552,7 +553,8 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
         young_raised: count(row.young_raised),
         milestones: {count: count(milestones?.count), latest_at: text(milestones?.latest_at, 40)},
         ancestor_brought_by: label(row.ancestor_brought_by),
-        died: died && (died.kind === "eaten" || died.kind === "died_old" || died.kind === "starved") ? {at: text(died.at, 40), kind: died.kind} : null,
+        // (Kept populations, decision 444: an animal born aboard that left alive, rehomed, to market or to another zoo.)
+        died: died && (died.kind === "eaten" || died.kind === "died_old" || died.kind === "starved" || isArkLeftKind(died.kind)) ? {at: text(died.at, 40), kind: died.kind} : null,
         revision: revision ? {at: text(revision.at, 40), worked: revision.worked === true} : null,
         story_public: decodeArkStory(row.story_public),
         founders: {
