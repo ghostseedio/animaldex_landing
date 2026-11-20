@@ -662,7 +662,7 @@ async function mountScenes(el: HTMLElement) {
                     headWeight: e?.reactive ? Math.round(e.reactive.headWeight * 100) / 100 : null,
                     action: e?.reactive?.action ?? null,
                     // (ARK-ANIM: its sleep and its base pose, for the rest-pose shots.)
-                    sleep: (e as {sleepNow?: {down: boolean; posture: string; t: number} | null} | undefined)?.sleepNow ? {down: (e as {sleepNow: {down: boolean}}).sleepNow.down, posture: (e as {sleepNow: {posture: string}}).sleepNow.posture} : null,
+                    sleep: ((sn) => (sn ? {down: sn.down, posture: sn.posture} : null))((e as unknown as {sleepNow?: {down: boolean; posture: string} | null} | undefined)?.sleepNow),
                     base: (rig as {base?: string} | undefined)?.base ?? null,
                     act: Boolean((e as {act?: unknown} | undefined)?.act)
                 };
