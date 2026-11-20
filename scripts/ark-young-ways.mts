@@ -12,6 +12,7 @@
  * The ways (what the scene does with a species' young, `young-ways.ts`):
  *   ride    young carried on a parent: style back | belly | tail | under; `by` male: the father carries
  *   line    young follow in a line behind the parent (the parent's own path); `by` male: the father leads
+ *   follow  young keep at the parent's heel and play round her (the care table read the species' notes as a nest or nothing)
  *   stay    young kept at one spot while the parent is away and comes back in bouts (a nursing visit, food brought):
  *           hide (lies flat in cover), den (at its den's mouth), nest (a chick that gapes); `helpers`: other adults of the
  *           kind bring food too; `hours`: only at those hours; `days`: how long it stays (else its dependence)
@@ -40,6 +41,7 @@ type Way = {
     ride?: Ride;
     by?: "male";
     line?: boolean;
+    follow?: boolean;
     stay?: "hide" | "den" | "nest";
     visit?: "nurse" | "feed";
     helpers?: boolean;
@@ -107,6 +109,17 @@ const LINE: Entry[] = [
     {name: "Brown Bear", says: /cubs born in the winter den, guarded for years/, line: true, part: "the cubs follow her; the winter den is not drawn"},
     {name: "Banded Archerfish", says: /young learn by watching skilled shooters/, line: true, part: "the young keep with an adult; their watching its shots is not drawn"},
     {name: "Striped Snakehead", says: /guarding parents charge intruders near the fry/, line: true, part: "the fry keep with the parents; their charging intruders is not drawn"}
+];
+
+/** Young at the parent's heel, with the play of young (the earlier pass's heel and play bursts, which the care table kept from them). */
+const FOLLOW: Entry[] = [
+    {name: "Giant Panda", says: /one cub stays with mother/, follow: true},
+    {name: "European Otter", says: /cubs first swim at ~3 months/, follow: true},
+    {name: "Smooth-coated Otter", says: /pups get swimming lessons/, follow: true},
+    {name: "Harbor Seal", says: /pup swims soon after birth/, follow: true},
+    {name: "Domestic Cat", says: /kittens play/, follow: true},
+    {name: "Domestic Dog", says: /pups learn through play/, follow: true},
+    {name: "Green-cheeked Conure", says: /young wrestle/, follow: true}
 ];
 
 /** Young kept at a spot while the parent is away: lying hidden, at the den, in the nest. */
@@ -178,8 +191,6 @@ const CLUSTER: Entry[] = [
 const ALREADY: Array<{name: string; says: RegExp; what: string}> = [
     {name: "Australian Wood Duck", says: /duckling/, what: "duckling-drop: the hollow drop"},
     {name: "Bufflehead", says: /ducklings jump/, what: "duckling-drop"},
-    {name: "Cotton Pygmy Goose", says: /ducklings jump/, what: "duckling-drop"},
-    {name: "Killdeer", says: /rooftop chicks jump/, what: "duckling-drop"},
     {name: "Lesser Whistling Duck", says: /ducklings drop/, what: "duckling-drop"},
     {name: "Mandarin Duck", says: /ducklings jump/, what: "duckling-drop"},
     {name: "Muscovy Duck", says: /ducklings jump|day-old ducklings/, what: "duckling-drop"},
@@ -189,17 +200,9 @@ const ALREADY: Array<{name: string; says: RegExp; what: string}> = [
     {name: "American Alligator", says: /carries hatchlings in her mouth/, what: "mouth-carry (jaws)"},
     {name: "Mugger Crocodile", says: /carries hatchlings to water in her mouth/, what: "mouth-carry (jaws)"},
     {name: "Saltwater Crocodile", says: /carries hatchlings to water in her mouth/, what: "mouth-carry (jaws)"},
-    {name: "Giant Panda", says: /one cub stays with mother/, what: "young follow (heel)"},
     {name: "Dugong", says: /calf stays close to its mother/, what: "young follow (heel)"},
-    {name: "Harbor Seal", says: /pup swims soon after birth/, what: "young follow (heel)"},
-    {name: "European Otter", says: /cubs first swim/, what: "young follow (heel)"},
-    {name: "Smooth-coated Otter", says: /pups get swimming lessons/, what: "young follow (heel)"},
     {name: "Sperm Whale", says: /group protects calves/, what: "young follow (heel)"},
-    {name: "Domestic Cat", says: /kittens play/, what: "young play (heel bursts)"},
-    {name: "Domestic Dog", says: /pups learn through play/, what: "young play (heel bursts)"},
-    {name: "Western Lowland Gorilla", says: /young play and stay close/, what: "young play (heel bursts)"},
-    {name: "Green-cheeked Conure", says: /young wrestle/, what: "young play (heel bursts)"},
-    {name: "Black Rhinoceros", says: /calf follows behind/, what: "young follow (heel), now in line"}
+    {name: "Western Lowland Gorilla", says: /young play and stay close/, what: "young play (heel bursts)"}
 ];
 /** Primates: the infant clings and rides (an earlier pass's belly-then-back carry, `ark-age.ts`); checked against the care table. */
 const PRIMATE_RIDE = /^(Bolivian Squirrel Monkey|Bornean Orangutan|Chimpanzee|Francois' Langur|Hamadryas Baboon|Mantled Guereza|Mantled Howler Monkey|Ring-tailed Lemur|Stump-tailed Macaque|Tufted Capuchin|Tufted Gray Langur|Western Gorilla)$/;
@@ -222,7 +225,7 @@ const merge = (slug: string, name: string, row: Row, way: Way, kind: string, par
     for (const k of say ?? []) (into.lines as Record<string, string>)[k] = row.line!;
     status.set(`${row.id}|${row.behaviour}`, part ? {status: "part", what: `${kind}: ${part}`} : {status: "built", what: kind});
 };
-for (const [kind, list] of [["ride", RIDE], ["line", LINE], ["stay", STAY], ["cluster", CLUSTER]] as const) {
+for (const [kind, list] of [["ride", RIDE], ["line", LINE], ["follow", FOLLOW], ["stay", STAY], ["cluster", CLUSTER]] as const) {
     for (const {name, says, part, ...way} of list) {
         const {row, slug} = find(name, says, rows);
         merge(slug, name, row, way, kind, part);
@@ -243,6 +246,8 @@ for (const r of rows) {
 /** Held rows by their catalogue shape (the reason is said, never drawn wrong). */
 const EGGS = /egg|sac\b|clutch|incubat|brood guard|coil around|coil|berried|nest cavity|guard nest|guards? (?:the )?(?:egg|nest)|lays|deposit|vent/i;
 const HELD_BY_NAME: Record<string, string> = {
+    "Cotton Pygmy Goose": "the duckling drop's rule: its quote says only that they jump down, not from a tree hole (scripts/ark-bird-moves.mts skipped it)",
+    "Killdeer": "the duckling drop is a tree hole's; these chicks jump from a roof edge (not drawn)",
     "Australasian Swamphen": "the group's shared nest and its feeding the chicks (a nest and a group's feeding, not drawn)",
     "Kuhl's Pipistrelle Bat": "the females' nursery colony (a roost of females, the roost recipe's), not the young",
     "Io Moth": "caterpillars in single file (a file with no parent to lead it: not built)"

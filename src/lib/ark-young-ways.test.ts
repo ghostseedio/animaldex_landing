@@ -3,6 +3,8 @@ import fs from "node:fs";
 import path from "node:path";
 import {test} from "node:test";
 import animalLook from "@/ark-scene/animal-look.json";
+import birdMoves from "@/ark-scene/bird-moves.json";
+import youngLife from "@/ark-scene/young-life.json";
 import rowsFile from "../../data/ark/young-ways-rows.json";
 import {
     clumpSpot,
@@ -52,7 +54,7 @@ test("every species with a way has a model, a sourced row (id, behaviour, quote)
             assert.match(line, /^\{(aAnimal|animals)\}/, `${slug}: ${way} line`);
         }
         const keys = Object.keys(row.ways);
-        assert.ok(keys.some((k) => ["ride", "line", "stay", "cluster"].includes(k)), `${slug}: no way`);
+        assert.ok(keys.some((k) => ["ride", "line", "follow", "stay", "cluster"].includes(k)), `${slug}: no way`);
     }
 });
 
@@ -292,4 +294,16 @@ test("the rows said to be shown by the primates' earlier belly-then-back carry r
     const rows = rowsFile.rows.filter((r) => r.status === "already" && /ride/.test(r.what));
     assert.ok(rows.length >= 10);
     for (const r of rows) assert.equal(speciesCare(slugOf(r.name), "mammal").kind, "carry", r.name);
+});
+
+test("every row said to be shown by an earlier pass is: the hollow drop, the mouth carry, young at heel", () => {
+    const drop = new Set(Object.keys((birdMoves as unknown as {drop: Record<string, unknown>}).drop));
+    const mouth = new Set(Object.keys((youngLife as unknown as {mouthCarry: Record<string, unknown>}).mouthCarry));
+    for (const r of rowsFile.rows.filter((x) => x.status === "already")) {
+        const slug = slugOf(r.name);
+        if (/^duckling-drop/.test(r.what)) assert.ok(drop.has(slug), `${r.name}: not in the drop's table`);
+        else if (/^mouth-carry/.test(r.what)) assert.ok(mouth.has(slug), `${r.name}: not in the mouth carry's table`);
+        else if (/follow|play/.test(r.what)) assert.ok(["follow", "carry", "guard"].includes(speciesCare(slug, "mammal").kind), `${r.name}: its young are not at heel (${speciesCare(slug, "mammal").kind})`);
+        else assert.ok(/ride/.test(r.what), `${r.name}: ${r.what}`);
+    }
 });

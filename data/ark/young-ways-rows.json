@@ -1,11 +1,11 @@
 {
  "about": "Every young-care row of the catalogue (2026-11-16) with what the scene does with it today (scripts/ark-young-ways.mts): built, already (an earlier pass), eggs (ark-mating-shown), or held with its reason.",
  "counts": {
-  "built": 77,
+  "built": 84,
   "eggs": 54,
   "part": 16,
-  "held": 54,
-  "already": 35
+  "held": 56,
+  "already": 26
  },
  "rows": [
   {
@@ -195,8 +195,8 @@
    "quote": "Ducklings jump down and are led to the lily beds within a day of hatching.",
    "how": "new_clip",
    "effort": "M",
-   "status": "already",
-   "what": "duckling-drop"
+   "status": "held",
+   "what": "the duckling drop's rule: its quote says only that they jump down, not from a tree hole (scripts/ark-bird-moves.mts skipped it)"
   },
   {
    "id": "cf059266-56af-4199-adba-64d2d7c0e623",
@@ -335,8 +335,8 @@
    "quote": "Young birds kept in captivity wrestle, hang upside down and tussle with bills and feet on perches and in nest boxes.",
    "how": "existing_recipe",
    "effort": "M",
-   "status": "already",
-   "what": "young play (heel bursts)"
+   "status": "built",
+   "what": "follow"
   },
   {
    "id": "0950c7a3-6d87-4479-8fa5-a3c52fe7b870",
@@ -355,8 +355,8 @@
    "quote": "Flat gravel rooftops are regularly used for nesting, and the chicks must jump from the roof edge to reach the ground.",
    "how": "new_clip",
    "effort": "M",
-   "status": "already",
-   "what": "duckling-drop"
+   "status": "held",
+   "what": "the duckling drop is a tree hole's; these chicks jump from a roof edge (not drawn)"
   },
   {
    "id": "30cac9d2-521a-4570-8644-f0d74c2b71d9",
@@ -1145,8 +1145,8 @@
    "quote": "Females can bear litters of kittens that learn through play, nursing, and observation.",
    "how": "existing_recipe",
    "effort": "S",
-   "status": "already",
-   "what": "young play (heel bursts)"
+   "status": "built",
+   "what": "follow"
   },
   {
    "id": "c54e5eca-48bc-4b31-bef6-7f69515e76f7",
@@ -1155,8 +1155,8 @@
    "quote": "Females bear litters and pups develop through play, nursing, and social learning.",
    "how": "existing_recipe",
    "effort": "S",
-   "status": "already",
-   "what": "young play (heel bursts)"
+   "status": "built",
+   "what": "follow"
   },
   {
    "id": "516defc3-d127-4345-895e-8ec372083e95",
@@ -1185,8 +1185,8 @@
    "quote": "They first swim at about three months and stay with the mother for around a year.",
    "how": "existing_block",
    "effort": "S",
-   "status": "already",
-   "what": "young follow (heel)"
+   "status": "built",
+   "what": "follow"
   },
   {
    "id": "d46b99ee-534f-4f8e-be0d-6f5bcbde9423",
@@ -1215,8 +1215,8 @@
    "quote": "The cub stays with her for eighteen months or more.",
    "how": "existing_block",
    "effort": "S",
-   "status": "already",
-   "what": "young follow (heel)"
+   "status": "built",
+   "what": "follow"
   },
   {
    "id": "59f1a1a9-cf08-4418-9baf-b20ddd00ceb3",
@@ -1245,8 +1245,8 @@
    "quote": "Harbor Seal pups can swim soon after birth.",
    "how": "existing_block",
    "effort": "S",
-   "status": "already",
-   "what": "young follow (heel)"
+   "status": "built",
+   "what": "follow"
   },
   {
    "id": "6141393c-b0b2-4205-98f6-8298433ad67b",
@@ -1375,8 +1375,8 @@
    "quote": "Females give birth in dens near water, and pups depend on family protection and swimming lessons.",
    "how": "existing_block",
    "effort": "S",
-   "status": "already",
-   "what": "young follow (heel)"
+   "status": "built",
+   "what": "follow"
   },
   {
    "id": "b89af5e8-9a36-4d23-9a13-590e9f064eb1",

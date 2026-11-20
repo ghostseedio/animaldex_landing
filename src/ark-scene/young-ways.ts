@@ -25,6 +25,7 @@ export type Ways = {
     ride?: RideStyle;
     by?: "male";
     line?: boolean;
+    follow?: boolean;
     stay?: "hide" | "den" | "nest";
     visit?: "nurse" | "feed";
     helpers?: boolean;

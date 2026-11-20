@@ -175,7 +175,7 @@ export function ageOf(animal: ArkAgeInput, arkDay: number, plan: string | null |
                 break;
             case "nest":
                 // (Or, where its species' own text has it follow in a line, at its parent's heel.)
-                if (ways?.line && parentId) follow = {parentId, distance: 0.7 + 0.8 * f};
+                if ((ways?.line || ways?.follow) && parentId) follow = {parentId, distance: 0.7 + 0.8 * f};
                 else if (ways?.stay && parentId) follow = {parentId, distance: 0.7 + 0.8 * f};
                 else atHome = true;
                 break;
@@ -184,7 +184,7 @@ export function ageOf(animal: ArkAgeInput, arkDay: number, plan: string | null |
                 if (parentId && ageDays < independent * 0.3) follow = {parentId, distance: 1.5};
                 break;
             case "none":
-                if (ways?.line && parentId) follow = {parentId, distance: 0.7 + 0.8 * f};
+                if ((ways?.line || ways?.follow) && parentId) follow = {parentId, distance: 0.7 + 0.8 * f};
                 break;
         }
         line = Boolean(follow && ways?.line);

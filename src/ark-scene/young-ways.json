@@ -381,6 +381,55 @@
    },
    "lines": {}
   },
+  "giant-panda": {
+   "name": "Giant Panda",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "european-otter": {
+   "name": "European Otter",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "smooth-coated-otter": {
+   "name": "Smooth-coated Otter",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "harbor-seal": {
+   "name": "Harbor Seal",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "domestic-cat": {
+   "name": "Domestic Cat",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "domestic-dog": {
+   "name": "Domestic Dog",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
+  "green-cheeked-conure": {
+   "name": "Green-cheeked Conure",
+   "ways": {
+    "follow": true
+   },
+   "lines": {}
+  },
   "bongo": {
    "name": "Bongo",
    "ways": {
