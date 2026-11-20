@@ -853,7 +853,7 @@
             "ageIsAtLeast": "co najmniej {age}",
             "ageMonths": "miesięcy w Ark: {months}",
             "ageMonth": "1 miesiąc w Ark",
-            "chanceTitle": "Szansa na przeżycie kolejnego roku w Ark",
+            "chanceTitle": "Szansa na kolejne 2 tygodnie życia",
             "chanceMain": "Główny powód: {reason}",
             "chanceHow": "Jak to liczymy: jego wiek wobec długości życia jego gatunku, drapieżniki, które mogą polować na jego gatunek w jego okolicy, i głód, na podstawie tego, co Ark ujawnił publicznie. Szacunek, który zmienia się wraz z Ark, a nie obietnica.",
             "chanceHowHuman": "Jak to liczymy: wiek wobec długości ludzkiego życia, krótszego lub dłuższego zależnie od kondycji. Szacunek, nie obietnica.",
@@ -1022,6 +1022,35 @@
                 "faqQ2": "Ile młodych może mieć zwierzę naraz?",
                 "faqA2": "Najwyżej 4 na rozmnażanie i najwyżej 2 dla gatunków, które w naturze składają setki jaj. Gatunki krótko żyjące rozmnażają się wcześniej, a gatunek przestaje się rozmnażać, gdy osiągnie limit populacji."
             }
+        },
+        "simple": {
+            "power": "Moc zwierzęcia",
+            "number": "Numer AnimalDex",
+            "age": "Wiek",
+            "left": "Zostało {time}",
+            "ticker": "W tym tygodniu rosną i maleją"
+        },
+        "how": {
+            "lead": "Żywy świat 3D prawdziwych zwierząt, rządzony prawami natury.",
+            "capture": "Sfotografuj prawdziwe zwierzę",
+            "captureCaption": "Złap jedno w aplikacji AnimalDex. Jedno z jego gatunku wchodzi na Arkę.",
+            "islands": "Dwie wyspy",
+            "islandsCaption": "Dzikie zwierzęta żyją na dzikiej wyspie. Zwierzęta domowe, gospodarskie i z zoo żyją w mieście.",
+            "thrive": "Pomóż mu rozkwitnąć",
+            "thriveCaption": "Porozmawiaj ze swoim zwierzęciem i spróbuj jego kroku. Gdy zadziała, twoje zwierzęta stają się silniejsze.",
+            "food": "Kto kogo je",
+            "foodCaption": "Łowcy jedzą tylko to, co podaje ich przewodnik. Najsłabsze są łapane pierwsze.",
+            "babies": "Młode",
+            "babiesCaption": "Dwa dorosłe tego samego gatunku, w tym samym miejscu, z jedzeniem: młode!",
+            "time": "Szybki czas",
+            "timeCaption": "Zwierzęta żyją tu szybko: rok mija w 2 tygodnie.",
+            "fair": "Nikt nie wybiera",
+            "fairCaption": "Nikt nie decyduje, kto żyje. Tylko zasady, takie same dla wszystkich.",
+            "cta": "Otwórz Arkę",
+            "more": "Przeczytaj wszystkie zasady",
+            "wild": "Dzika",
+            "town": "Miasto",
+            "arkYear": "1 rok na Arce"
         }
     },
     "talkPage": {

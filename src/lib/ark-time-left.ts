@@ -55,6 +55,7 @@ import type {ArkAnimal, ArkSnapshot, ArkThrive} from "@/ark-scene/types";
 import {arkStats, massFromSize} from "@/ark-scene/stats";
 import {arkHuntingRegion} from "@/lib/ark-food-chain";
 import {arkDirection} from "@/lib/ark-languages";
+import {arkDaysToMs, arkHumanDays, arkHumanSpan, arkHumanUnit} from "@/lib/ark-human-time";
 import {
     ADULT_AGE,
     ARK_DAYS_PER_REAL_DAY,
@@ -925,47 +926,27 @@ function fill(template: string, values: Record<string, string | number>): string
     return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
 }
 
-const ARK_MONTH = ARK_YEAR / 12;
-
 /**
- * A count of Ark days as the panel's units say it, in the unit that fits it: "3-9 Ark days", "1 Ark day", "4-10 Ark
- * months" (a range from two months to about three years), "2-4 Ark years" (a range is one number string).
+ * A count of Ark days in the visitor's own time (lane ARK-SIMPLE, owner 2026-11-20: never "Ark days" or "Ark years"):
+ * "2–5 days", "3 hours", "4 weeks", in the unit that fits its larger end (`ark-human-time.ts`, the browser's own words in
+ * every language). `units` is kept for the callers' shape; the Ark-time unit words are no longer said.
  */
-function unitValue(low: number, high: number, capped: boolean, units: ArkTimeLeftUnitWords, locale: string): string {
-    const years = high >= 1000 && low >= 180;
-    const months = !years && low >= 60 && high < 1000;
-    const part = (days: number) => {
-        if (months) return Math.round(days / ARK_MONTH).toLocaleString(locale);
-        if (!years) return Math.round(days).toLocaleString(locale);
-        const y = days / ARK_YEAR;
-        return y.toLocaleString(locale, {maximumFractionDigits: y < 10 ? 1 : 0});
-    };
-    const a = part(low);
-    const b = `${part(high)}${capped ? "+" : ""}`;
+function unitValue(low: number, high: number, capped: boolean, _units: ArkTimeLeftUnitWords, locale: string): string {
+    const text = arkHumanDays(low, Math.max(high, low), locale, "long", capped);
     // A range of numbers in a right-to-left language is isolated, so it reads "8–32", not "32–8".
-    const range = a === b ? a : arkDirection(locale) === "rtl" ? `\u2066${a}–${b}\u2069` : `${a}–${b}`;
-    const one = !capped && a === b && (years ? Math.abs(low / ARK_YEAR - 1) < 0.05 : months ? Math.round(low / ARK_MONTH) === 1 : Math.round(low) === 1);
-    if (years) return one ? units.ageYear : fill(units.ageYears, {years: range});
-    if (months) return one ? units.ageMonth : fill(units.ageMonths, {months: range});
-    return one ? units.ageDay : fill(units.ageDays, {days: range});
+    return arkDirection(locale) === "rtl" && /[–-]/.test(text) ? `\u2066${text}\u2069` : text;
 }
 
 /**
- * One age in the kind's natural terms, in Ark time: days under two months, months under two years, years after.
- * An arrival's age is a rule ("about"), so its years are whole once there are two of them.
+ * One age in the visitor's own time ("3 hours", "2 days", "4 weeks"). A floor ("at least") is rounded down, so it never
+ * says more than is known.
  */
-function ageValue(days: number, mode: "exact" | "about" | "atLeast", units: ArkTimeLeftUnitWords, locale: string): string {
-    if (days < 60) {
-        const n = Math.max(1, Math.round(days));
-        return n === 1 ? units.ageDay : fill(units.ageDays, {days: n.toLocaleString(locale)});
-    }
-    if (days < 730) {
-        const n = Math.round(days / ARK_MONTH);
-        return n === 1 ? units.ageMonth : fill(units.ageMonths, {months: n.toLocaleString(locale)});
-    }
-    // (A floor is rounded down, so "at least" never says more than is known.)
-    const y = mode === "atLeast" ? Math.floor(days / ARK_YEAR + 1e-9) : days / ARK_YEAR;
-    return fill(units.ageYears, {years: y.toLocaleString(locale, {maximumFractionDigits: mode !== "exact" || y >= 10 ? 0 : 1})});
+function ageValue(days: number, mode: "exact" | "about" | "atLeast", _units: ArkTimeLeftUnitWords, locale: string): string {
+    const ms = arkDaysToMs(Math.max(days, 0));
+    if (mode !== "atLeast") return arkHumanSpan(ms, ms, locale);
+    const {size} = arkHumanUnit(ms);
+    const floor = Math.max(1, Math.floor(ms / size + 1e-9)) * size;
+    return arkHumanSpan(floor, floor, locale);
 }
 
 function listOf(names: string[], locale: string): string {
@@ -1096,7 +1077,7 @@ export function arkLifeText(outlook: ArkLifeOutlook, words: ArkTimeLeftWords, un
 export const ARK_TIME_LEFT_ENGLISH: ArkTimeLeftWords = {
     title: "Estimated time left",
     about: "About {value}",
-    hint: "A likely range from odds, not a promise. 1 Ark day is about 55 real minutes.",
+    hint: "A likely range from odds, not a promise.",
     reasonAge: "Typical lifespan: {span}",
     reasonAgeEstimate: "Typical lifespan, estimated: {span}",
     reasonHunted: "Predators here: {predators}",
@@ -1111,7 +1092,7 @@ export const ARK_TIME_LEFT_ENGLISH: ArkTimeLeftWords = {
     ageIsAtLeast: "at least {age} old",
     ageMonths: "{months} Ark months",
     ageMonth: "1 Ark month",
-    chanceTitle: "Chance to live another Ark year",
+    chanceTitle: "Chance to live 2 more weeks",
     chanceMain: "Main reason: {reason}",
     chanceHow: "How this is worked out: its age against its kind's lifespan, the predators that can hunt its kind in its range, and hunger, from what the Ark has made public. An estimate that moves as the Ark changes, not a promise.",
     chanceHowHuman: "How this is worked out: their age against a human lifespan, shortened or lengthened by their condition. An estimate, not a promise.",

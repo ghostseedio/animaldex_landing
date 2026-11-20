@@ -357,33 +357,34 @@ test("the life bar: born at 0, the likely end at the far edge, never outside 0 t
 test("the age line: stage and age in Ark time, the kind's natural unit, 'about' only for an arrival's counted age", () => {
     const {words, units} = arkTimeLeftWordsFrom(undefined, undefined);
     const at = (ageDays: number, over: Partial<{assumed: boolean; stage: "young" | "adult" | "old"}> = {}) => arkAgeText({ageDays, sinceBornDays: ageDays, adultAgeDays: 100, assumed: false, atLeast: false, stage: "adult", ...over}, words, units, "en");
-    assert.equal(at(9, {stage: "young"}), "Young · 9 Ark days old");
-    assert.equal(at(1, {stage: "young"}), "Young · 1 Ark day old");
-    assert.equal(at(122, {stage: "young"}), "Young · 4 Ark months old");
-    assert.equal(at(35, {stage: "young"}), "Young · 35 Ark days old");
-    assert.equal(at(100 * 3.65 * 0.8, {assumed: true}), "Adult · about 10 Ark months old");
-    assert.equal(at(1095, {assumed: true}), "Adult · about 3 Ark years old");
-    assert.equal(at(1186, {assumed: false}), "Adult · 3.2 Ark years old");
-    assert.equal(at(36500, {assumed: true, stage: "old"}), "Old · about 100 Ark years old");
-    assert.equal(at(30.4 * 14, {}), "Adult · 14 Ark months old");
+    // Human time (lane ARK-SIMPLE, owner 2026-11-20): 9 Ark days is about 8 real hours.
+    assert.equal(at(9, {stage: "young"}), "Young · 8 hours old");
+    assert.equal(at(1, {stage: "young"}), "Young · 55 minutes old");
+    assert.equal(at(122, {stage: "young"}), "Young · 5 days old");
+    assert.equal(at(35, {stage: "young"}), "Young · 32 hours old");
+    assert.equal(at(100 * 3.65 * 0.8, {assumed: true}), "Adult · about 11 days old");
+    assert.equal(at(1095, {assumed: true}), "Adult · about 6 weeks old");
+    assert.equal(at(1186, {assumed: false}), "Adult · 6 weeks old");
+    assert.equal(at(36500, {assumed: true, stage: "old"}), "Old · about 4 years old");
+    assert.equal(at(30.4 * 14, {}), "Adult · 16 days old");
     // the time left in months too, between two months and two years
     const result = (low: number, high: number): ArkTimeLeft => ({lowDays: low, highDays: high, capped: false, atRisk: [], reasons: [], estimate: false});
-    assert.equal(arkTimeLeftText(result(90, 400), words, units, "en").value, "About 3–13 Ark months");
-    assert.equal(arkTimeLeftText(result(30, 400), words, units, "en").value, "About 30–400 Ark days", "a low end under two months stays in days");
-    assert.equal(arkTimeLeftText(result(400, 1900), words, units, "en").value, "About 1.1–5.2 Ark years");
+    assert.equal(arkTimeLeftText(result(90, 400), words, units, "en").value, "About 3–15 days");
+    assert.equal(arkTimeLeftText(result(30, 400), words, units, "en").value, "About 1–15 days", "a low end under two months stays in days");
+    assert.equal(arkTimeLeftText(result(400, 1900), words, units, "en").value, "About 2–10 weeks");
     // the whole block for a screen reader: the age line and the estimate in one sentence
     const me = hedge({lifespan_days: 3650, lifespan_days_hi: 5475});
     const text = arkLifeText(arkLifeOutlook(me, worldOf([me], {huntGrace: null}), null)!, words, units, "en");
-    assert.match(text.age!, /^Adult · about \d+(\.\d)? Ark (years|months) old$/);
+    assert.match(text.age!, /^Adult · about \d+ (weeks|months) old$/);
     assert.equal(text.label, `${text.age}. ${text.left!.label}. ${text.chance!.label}`);
-    assert.match(text.left!.value, /^About \d+(\.\d)?–\d+(\.\d)? Ark years$/);
+    assert.match(text.left!.value, /^About \d+–\d+ (weeks|months)$/);
 });
 
 test("a range of numbers is isolated in a right-to-left language (it reads 8–32, not 32–8), and only there", () => {
     const {words, units} = arkTimeLeftWordsFrom(undefined, undefined);
     const result = (low: number, high: number): ArkTimeLeft => ({lowDays: low, highDays: high, capped: false, atRisk: [], reasons: [], estimate: false});
-    for (const language of ["ar", "he", "fa", "ur"]) assert.match(arkTimeLeftText(result(3, 9), words, units, language).value, /\u2066\p{Nd}–\p{Nd}\u2069/u, language);
-    assert.equal(arkTimeLeftText(result(3, 9), words, units, "en").value, "About 3–9 Ark days");
+    for (const language of ["ar", "he", "fa", "ur"]) assert.match(arkTimeLeftText(result(3, 9), words, units, language).value, /\u2066\p{Nd}+–\p{Nd}+[^\u2069]*\u2069/u, language);
+    assert.equal(arkTimeLeftText(result(3, 9), words, units, "en").value, "About 3–8 hours");
     assert.ok(!arkTimeLeftText(result(3, 3), words, units, "ar").value.includes("\u2066"), "one number needs none");
 });
 
@@ -397,7 +398,8 @@ test("the age line in every one of the 45 languages: no placeholder left, the st
         for (const [ageDays, assumed, atLeast, stage] of [[9, false, false, "young"], [150, false, false, "young"], [1095, true, false, "adult"], [20000, true, false, "old"], [6623, true, true, "adult"]] as const) {
             const line = arkAgeText({ageDays, sinceBornDays: ageDays, adultAgeDays: 100, assumed, atLeast, stage}, words, units, language);
             assert.ok(!/[{}]/.test(line), `${language}: ${line}`);
-            assert.ok(line.includes(" · ") && /\p{Nd}/u.test(line), `${language}: ${line}`);
+            // The number may be a word (Arabic says two years as one word, "سنتان"), so a time after the stage is enough.
+            assert.ok(line.includes(" · ") && line.split(" · ")[1].trim().length > 1, `${language}: ${line}`);
         }
         // the thrive and Power lines
         for (const [band, power] of [["good", "earn"], ["prime", "working"], ["ordinary", "earn"]] as const) {
@@ -459,18 +461,18 @@ test("humans: an arrival is grown (18 Ark years at least, never guessed), a chil
     const arrived = arkAgeOf(human(), 292.521)!;
     assert.deepEqual([arrived.stage, arrived.assumed, arrived.atLeast, arrived.adultAgeDays], ["adult", true, true, HUMAN_GROWN_DAYS]);
     assert.ok(Math.abs(arrived.ageDays - (292.521 - 239.417 + HUMAN_GROWN_DAYS)) < 1e-9);
-    assert.equal(arkAgeText(arrived, words, units, "en"), "Adult · at least 18 Ark years old");
+    assert.equal(arkAgeText(arrived, words, units, "en"), "Adult · at least 8 months old");
     // 19 Ark years aboard-plus-grown: the floor rounds down, never claims more
-    assert.equal(arkAgeText(arkAgeOf(human({born_ark_day: 292.5 - 365 * 1.99}), 292.5)!, words, units, "en"), "Adult · at least 19 Ark years old");
-    assert.equal(arkAgeText(arkAgeOf(human({born_ark_day: 292.5 - 365 * 0.99}), 292.5)!, words, units, "en"), "Adult · at least 18 Ark years old");
+    assert.equal(arkAgeText(arkAgeOf(human({born_ark_day: 292.5 - 365 * 1.99}), 292.5)!, words, units, "en"), "Adult · at least 9 months old");
+    assert.equal(arkAgeText(arkAgeOf(human({born_ark_day: 292.5 - 365 * 0.99}), 292.5)!, words, units, "en"), "Adult · at least 8 months old");
     // children of an Ark couple: counted from the born day, exact, young until 18 Ark years
     const baby = arkAgeOf(human({origin: "born", born_ark_day: 292.5 - 20}), 292.5)!;
     assert.deepEqual([baby.stage, baby.atLeast, baby.assumed], ["young", false, false]);
-    assert.equal(arkAgeText(baby, words, units, "en"), "Young · 20 Ark days old");
-    assert.equal(arkAgeText(arkAgeOf(human({origin: "born", born_ark_day: 292.5 - 122}), 292.5)!, words, units, "en"), "Young · 4 Ark months old");
-    assert.equal(arkAgeText(arkAgeOf(human({origin: "born", born_ark_day: 292.5 - 365 * 7.4}), 292.5)!, words, units, "en"), "Young · 7.4 Ark years old");
+    assert.equal(arkAgeText(baby, words, units, "en"), "Young · 18 hours old");
+    assert.equal(arkAgeText(arkAgeOf(human({origin: "born", born_ark_day: 292.5 - 122}), 292.5)!, words, units, "en"), "Young · 5 days old");
+    assert.equal(arkAgeText(arkAgeOf(human({origin: "born", born_ark_day: 292.5 - 365 * 7.4}), 292.5)!, words, units, "en"), "Young · 3 months old");
     assert.equal(arkAgeOf(human({origin: "born", born_ark_day: 292.5 - HUMAN_GROWN_DAYS + 1}), 292.5)!.stage, "young");
-    assert.equal(arkAgeText(arkAgeOf(human({origin: "born", born_ark_day: 292.5 - HUMAN_GROWN_DAYS - 5}), 292.5)!, words, units, "en"), "Adult · 18 Ark years old");
+    assert.equal(arkAgeText(arkAgeOf(human({origin: "born", born_ark_day: 292.5 - HUMAN_GROWN_DAYS - 5}), 292.5)!, words, units, "en"), "Adult · 8 months old");
 });
 
 test("humans: no estimate of time left today (no lifespan is stored for Homo: no old age), never hunted, never starving, never a bar", () => {
@@ -652,7 +654,7 @@ test("chance in words: 'About 72%', the change against a day ago with its cause,
     const crowded = {...world, animals: [...world.animals, fox({born_ark_day: ARK_DAY - 3}), fox({born_ark_day: ARK_DAY - 5})]};
     const outlook = arkLifeOutlook(me, crowded, FOX_FACTS)!;
     const text = arkChanceText(outlook, words, units, "en")!;
-    assert.equal(text.title, "Chance to live another Ark year");
+    assert.equal(text.title, "Chance to live 2 more weeks");
     assert.match(text.value, /^About \d{1,2}%$/);
     assert.equal(text.trend?.direction, "down");
     assert.match(text.trend!.text, /^Down \d+% vs a day ago · Predators here: Red Fox$/);
@@ -1041,11 +1043,11 @@ test("the words: units are the panel's own (`life.ageDays`), a range is one stri
     assert.deepEqual(words, ARK_TIME_LEFT_ENGLISH);
     const result = (low: number, high: number, over: Partial<ArkTimeLeft> = {}): ArkTimeLeft => ({lowDays: low, highDays: high, capped: false, atRisk: ["old"], reasons: [], estimate: false, ...over});
     const at = (r: ArkTimeLeft) => arkTimeLeftText(r, words, units, "en").value;
-    assert.equal(at(result(3, 9)), "About 3–9 Ark days");
-    assert.equal(at(result(1, 1)), "About 1 Ark day");
-    assert.equal(at(result(40, 1200)), "About 40–1,200 Ark days");
-    assert.equal(at(result(400, 1900)), "About 1.1–5.2 Ark years");
-    assert.equal(at(result(1000, 36500, {capped: true})), "About 2.7–100+ Ark years");
+    assert.equal(at(result(3, 9)), "About 3–8 hours");
+    assert.equal(at(result(1, 1)), "About 55 minutes");
+    assert.equal(at(result(40, 1200)), "About 1–7 weeks");
+    assert.equal(at(result(400, 1900)), "About 2–10 weeks");
+    assert.equal(at(result(1000, 36500, {capped: true})), "About 1–4 years+");
     const text = arkTimeLeftText(
         result(3, 9, {reasons: [{kind: "age", lifespanLowDays: 730, lifespanHighDays: 1460, estimate: true}, {kind: "hunted", predators: [{name: "Red Fox", count: 2}, {name: "Common Buzzard", count: 1}, {name: "Barn Owl", count: 1}]}, {kind: "hunger"}, {kind: "safe", untilArkDay: 1234}]}),
         words,
@@ -1053,17 +1055,17 @@ test("the words: units are the panel's own (`life.ageDays`), a range is one stri
         "en"
     );
     assert.deepEqual(text.reasons, [
-        "Typical lifespan, estimated: 2–4 Ark years",
+        "Typical lifespan, estimated: 4–8 weeks",
         "Predators here: Red Fox, Common Buzzard, and Barn Owl",
         "Hunger: no recent meal",
         "Hunting protection until Ark day 1,234"
     ]);
-    assert.equal(text.label, "Estimated time left: About 3–9 Ark days");
+    assert.equal(text.label, "Estimated time left: About 3–8 hours");
     // a bundle's own words win, English fills the rest
     const mixed = arkTimeLeftWordsFrom({title: "Restzeit"}, {ageDays: "{days} Tage"});
     assert.equal(mixed.words.title, "Restzeit");
     assert.equal(mixed.words.about, "About {value}");
-    assert.equal(arkTimeLeftText(result(3, 9), mixed.words, mixed.units, "de").value, "About 3–9 Tage");
+    assert.equal(arkTimeLeftText(result(3, 9), mixed.words, mixed.units, "de").value, "About 3–8 Stunden", "the unit is the browser's own (Intl), in real time");
 });
 
 /** Words that are the same in English and in the language itself (cognates): not a missing translation. */

@@ -853,7 +853,7 @@
             "ageIsAtLeast": "mindestens {age} alt",
             "ageMonths": "{months} Ark-Monate",
             "ageMonth": "1 Ark-Monat",
-            "chanceTitle": "Chance, noch ein Ark-Jahr zu leben",
+            "chanceTitle": "Chance, noch 2 Wochen zu leben",
             "chanceMain": "Wichtigster Grund: {reason}",
             "chanceHow": "So wird das berechnet: sein Alter im Verhältnis zur Lebensspanne seiner Art, die Raubtiere, die seine Art in seinem Gebiet jagen können, und Hunger, aus dem, was Ark öffentlich gemacht hat. Eine Schätzung, die sich mit Ark ändert, kein Versprechen.",
             "chanceHowHuman": "So wird es berechnet: das Alter im Vergleich zur Lebensdauer eines Menschen, je nach Zustand kürzer oder länger. Eine Schätzung, kein Versprechen.",
@@ -1022,6 +1022,35 @@
                 "faqQ2": "Wie viele Junge kann ein Tier auf einmal haben?",
                 "faqA2": "Höchstens 4 pro Zucht und höchstens 2 bei Arten, die in der Natur Hunderte Eier legen. Kurzlebige Arten vermehren sich früher, und eine Art hört auf, sich zu vermehren, wenn sie ihre Bestandsgrenze erreicht."
             }
+        },
+        "simple": {
+            "power": "Tierkraft",
+            "number": "AnimalDex-Nummer",
+            "age": "Alter",
+            "left": "Noch {time}",
+            "ticker": "Diese Woche im Aufwind und im Rückgang"
+        },
+        "how": {
+            "lead": "Eine lebendige 3D-Welt echter Tiere, gelenkt von den Regeln der Natur.",
+            "capture": "Fotografiere ein echtes Tier",
+            "captureCaption": "Fang eins mit der AnimalDex-App. Eins seiner Art kommt an Bord.",
+            "islands": "Zwei Inseln",
+            "islandsCaption": "Wildtiere leben auf der wilden Insel. Haustiere, Nutztiere und Zootiere leben in der Stadt.",
+            "thrive": "Hilf ihm zu gedeihen",
+            "thriveCaption": "Sprich mit deinem Tier und probier seinen Schritt. Klappt er, werden deine Tiere stärker.",
+            "food": "Wer frisst wen",
+            "foodCaption": "Jäger fressen nur, was ihr Bestimmungsbuch nennt. Die Schwächsten werden zuerst gefangen.",
+            "babies": "Junge",
+            "babiesCaption": "Zwei Erwachsene einer Art, am selben Ort, mit Futter: Junge!",
+            "time": "Schnelle Zeit",
+            "timeCaption": "Tiere leben hier schnell: Ein Jahr vergeht in 2 Wochen.",
+            "fair": "Niemand wählt aus",
+            "fairCaption": "Niemand entscheidet, wer lebt. Nur die Regeln, für alle gleich.",
+            "cta": "Arche öffnen",
+            "more": "Alle Regeln lesen",
+            "wild": "Wild",
+            "town": "Stadt",
+            "arkYear": "1 Arche-Jahr"
         }
     },
     "talkPage": {

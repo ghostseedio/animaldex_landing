@@ -853,7 +853,7 @@
             "ageIsAtLeast": "berumur sekurang-kurangnya {age}",
             "ageMonths": "{months} bulan Ark",
             "ageMonth": "1 bulan Ark",
-            "chanceTitle": "Peluang hidup satu tahun Ark lagi",
+            "chanceTitle": "Peluang hidup 2 minggu lagi",
             "chanceMain": "Sebab utama: {reason}",
             "chanceHow": "Cara ia dikira: umurnya berbanding jangka hayat spesiesnya, pemangsa yang boleh memburu spesiesnya di kawasannya, dan kelaparan, daripada apa yang telah diumumkan Ark. Anggaran yang berubah apabila Ark berubah, bukan janji.",
             "chanceHowHuman": "Cara ia dikira: umurnya berbanding jangka hayat manusia, lebih pendek atau lebih panjang mengikut keadaannya. Anggaran, bukan janji.",
@@ -1022,6 +1022,35 @@
                 "faqQ2": "Berapa banyak anak yang boleh dimiliki haiwan sekali gus?",
                 "faqA2": "Paling banyak 4 setiap pembiakan, dan paling banyak 2 untuk jenis yang bertelur ratusan dalam kehidupan sebenar. Jenis berhayat pendek membiak lebih awal, dan sesuatu jenis berhenti membiak apabila mencapai had populasinya."
             }
+        },
+        "simple": {
+            "power": "Kuasa Haiwan",
+            "number": "Nombor AnimalDex",
+            "age": "Umur",
+            "left": "Tinggal {time}",
+            "ticker": "Meningkat dan menurun minggu ini"
+        },
+        "how": {
+            "lead": "Dunia 3D hidup haiwan sebenar, berjalan mengikut peraturan alam.",
+            "capture": "Ambil gambar haiwan sebenar",
+            "captureCaption": "Tangkap satu dengan aplikasi AnimalDex. Satu daripada spesiesnya naik ke Bahtera.",
+            "islands": "Dua pulau",
+            "islandsCaption": "Haiwan liar tinggal di pulau liar. Haiwan peliharaan, ternakan dan zoo tinggal di bandar.",
+            "thrive": "Bantu ia berkembang",
+            "thriveCaption": "Berbual dengan haiwan anda dan cuba langkahnya. Jika berjaya, haiwan anda jadi lebih kuat.",
+            "food": "Siapa makan siapa",
+            "foodCaption": "Pemburu hanya makan apa yang disebut panduannya. Yang paling lemah ditangkap dahulu.",
+            "babies": "Anak",
+            "babiesCaption": "Dua dewasa sejenis, di tempat yang sama, dengan makanan: anak!",
+            "time": "Masa pantas",
+            "timeCaption": "Haiwan hidup pantas di sini: setahun berlalu dalam 2 minggu.",
+            "fair": "Tiada siapa memilih",
+            "fairCaption": "Tiada siapa menentukan siapa hidup. Hanya peraturan, sama untuk semua.",
+            "cta": "Buka Bahtera",
+            "more": "Baca semua peraturan",
+            "wild": "Liar",
+            "town": "Bandar",
+            "arkYear": "1 tahun Bahtera"
         }
     },
     "talkPage": {

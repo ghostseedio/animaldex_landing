@@ -5050,7 +5050,7 @@
       "ageIsAtLeast": "berusia sedikitnya {age}",
       "ageMonths": "{months} bulan Ark",
       "ageMonth": "1 bulan Ark",
-      "chanceTitle": "Peluang hidup satu tahun Ark lagi",
+      "chanceTitle": "Peluang hidup 2 minggu lagi",
       "chanceMain": "Alasan utama: {reason}",
       "chanceHow": "Cara menghitungnya: usianya dibandingkan umur jenisnya, pemangsa yang dapat memburu jenisnya di wilayahnya, dan rasa lapar, dari apa yang telah dipublikasikan Ark. Perkiraan yang berubah seiring Ark berubah, bukan janji.",
       "chanceHowHuman": "Cara menghitungnya: usianya dibandingkan dengan rentang hidup manusia, diperpendek atau diperpanjang oleh kondisinya. Sebuah perkiraan, bukan janji.",
@@ -5219,6 +5219,35 @@
         "faqQ2": "Berapa anak yang bisa dimiliki hewan sekaligus?",
         "faqA2": "Paling banyak 4 per kelahiran, dan paling banyak 2 untuk jenis yang bertelur ratusan di alam nyata. Jenis berumur pendek berkembang biak lebih cepat, dan suatu jenis berhenti berkembang biak saat mencapai batas populasinya."
       }
+    },
+    "simple": {
+      "power": "Kekuatan Hewan",
+      "number": "Nomor AnimalDex",
+      "age": "Umur",
+      "left": "Sisa {time}",
+      "ticker": "Naik dan turun minggu ini"
+    },
+    "how": {
+      "lead": "Dunia 3D hidup berisi hewan sungguhan, berjalan dengan aturan alam.",
+      "capture": "Foto hewan sungguhan",
+      "captureCaption": "Tangkap satu dengan aplikasi AnimalDex. Satu dari jenisnya naik ke Bahtera.",
+      "islands": "Dua pulau",
+      "islandsCaption": "Hewan liar tinggal di pulau liar. Hewan peliharaan, ternak, dan kebun binatang tinggal di kota.",
+      "thrive": "Bantu ia berkembang",
+      "thriveCaption": "Ajak hewanmu bicara dan coba langkahnya. Kalau berhasil, hewan-hewanmu makin kuat.",
+      "food": "Siapa makan siapa",
+      "foodCaption": "Pemburu hanya memakan apa yang disebut buku panduannya. Yang paling lemah tertangkap duluan.",
+      "babies": "Bayi",
+      "babiesCaption": "Dua dewasa sejenis, di tempat yang sama, ada makanan: lahirlah bayi!",
+      "time": "Waktu cepat",
+      "timeCaption": "Hewan hidup cepat di sini: setahun berlalu dalam 2 minggu.",
+      "fair": "Tak ada yang memilih",
+      "fairCaption": "Tak seorang pun memutuskan siapa yang hidup. Hanya aturan, sama untuk semua.",
+      "cta": "Buka Bahtera",
+      "more": "Baca semua aturan",
+      "wild": "Liar",
+      "town": "Kota",
+      "arkYear": "1 tahun Bahtera"
     }
   },
   "seo": {

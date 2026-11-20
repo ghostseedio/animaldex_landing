@@ -853,7 +853,7 @@
             "ageIsAtLeast": "tuổi ít nhất {age}",
             "ageMonths": "{months} tháng Ark",
             "ageMonth": "1 tháng Ark",
-            "chanceTitle": "Cơ hội sống thêm một năm Ark",
+            "chanceTitle": "Khả năng sống thêm 2 tuần",
             "chanceMain": "Lý do chính: {reason}",
             "chanceHow": "Cách tính: tuổi của nó so với tuổi thọ của loài, những kẻ săn mồi có thể săn loài của nó trong khu vực của nó, và cơn đói, dựa trên những gì Ark đã công khai. Đây là ước tính thay đổi khi Ark thay đổi, không phải lời hứa.",
             "chanceHowHuman": "Cách tính: tuổi so với tuổi thọ của con người, ngắn hơn hoặc dài hơn tùy tình trạng. Một ước tính, không phải lời hứa.",
@@ -1022,6 +1022,35 @@
                 "faqQ2": "Một con vật có thể có bao nhiêu con non cùng lúc?",
                 "faqA2": "Tối đa 4 con mỗi lần sinh sản, và tối đa 2 với loài ngoài đời đẻ hàng trăm trứng. Loài đời ngắn sinh sản sớm hơn, và loài ngừng sinh sản khi đạt giới hạn dân số."
             }
+        },
+        "simple": {
+            "power": "Sức mạnh loài vật",
+            "number": "Số AnimalDex",
+            "age": "Tuổi",
+            "left": "Còn {time}",
+            "ticker": "Tăng và giảm trong tuần này"
+        },
+        "how": {
+            "lead": "Một thế giới 3D sống động gồm những loài vật thật, vận hành theo quy luật tự nhiên.",
+            "capture": "Chụp một con vật thật",
+            "captureCaption": "Bắt một con bằng ứng dụng AnimalDex. Một con cùng loài sẽ lên Con Tàu.",
+            "islands": "Hai hòn đảo",
+            "islandsCaption": "Động vật hoang dã sống ở đảo hoang. Thú cưng, vật nuôi và thú trong vườn thú sống ở thị trấn.",
+            "thrive": "Giúp nó phát triển",
+            "thriveCaption": "Trò chuyện với con vật của bạn và thử bước của nó. Khi hiệu quả, các con vật của bạn khỏe hơn.",
+            "food": "Ai ăn ai",
+            "foodCaption": "Kẻ săn mồi chỉ ăn những gì sách hướng dẫn của chúng ghi. Con yếu nhất bị bắt trước.",
+            "babies": "Con non",
+            "babiesCaption": "Hai con trưởng thành cùng loài, cùng một chỗ, có thức ăn: con non!",
+            "time": "Thời gian nhanh",
+            "timeCaption": "Ở đây các con vật sống nhanh: một năm trôi qua trong 2 tuần.",
+            "fair": "Không ai chọn",
+            "fairCaption": "Không ai quyết định ai được sống. Chỉ có luật, như nhau với mọi người.",
+            "cta": "Mở Con Tàu",
+            "more": "Đọc mọi luật",
+            "wild": "Hoang dã",
+            "town": "Thị trấn",
+            "arkYear": "1 năm trên Con Tàu"
         }
     },
     "talkPage": {

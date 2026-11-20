@@ -853,7 +853,7 @@
             "ageIsAtLeast": "年龄至少 {age}",
             "ageMonths": "{months} 个 Ark 月",
             "ageMonth": "1 个 Ark 月",
-            "chanceTitle": "再活一个 Ark 年的几率",
+            "chanceTitle": "再活 2 周的概率",
             "chanceMain": "主要原因：{reason}",
             "chanceHow": "计算方式：它的年龄对照其物种的寿命、其活动范围内能捕食其物种的捕食者，以及饥饿，依据 Ark 已公开的信息。这是随 Ark 变化而变化的估计，不是承诺。",
             "chanceHowHuman": "计算方式：以人类寿命衡量其年龄，并随身体状况缩短或延长。这是估计，不是承诺。",
@@ -1022,6 +1022,35 @@
                 "faqQ2": "一只动物一次最多能有多少幼崽？",
                 "faqA2": "一次繁殖最多 4 只，现实中一次产数百枚卵的物种最多 2 只。寿命短的物种繁殖更早，物种达到数量上限后就会停止繁殖。"
             }
+        },
+        "simple": {
+            "power": "动物之力",
+            "number": "AnimalDex 编号",
+            "age": "年龄",
+            "left": "还剩{time}",
+            "ticker": "本周增长与减少"
+        },
+        "how": {
+            "lead": "一个由真实动物组成、按自然规律运转的鲜活 3D 世界。",
+            "capture": "拍下一只真实的动物",
+            "captureCaption": "用 AnimalDex 应用抓到一只,它的同类就会登上方舟。",
+            "islands": "两座岛",
+            "islandsCaption": "野生动物住在野生岛上。宠物、家畜和动物园的动物住在小镇里。",
+            "thrive": "帮它茁壮成长",
+            "thriveCaption": "和你的动物聊聊,试试它给的一步。成功了,你的动物就会更强壮。",
+            "food": "谁吃谁",
+            "foodCaption": "猎手只吃图鉴里写的食物。最弱的会先被抓到。",
+            "babies": "宝宝",
+            "babiesCaption": "同一种的两只成年动物,在同一个地方,有食物:宝宝来了!",
+            "time": "时间飞快",
+            "timeCaption": "这里的动物活得很快:一年只需 2 周。",
+            "fair": "没有人挑选",
+            "fairCaption": "没有人决定谁能活下来。只有规则,对每个人都一样。",
+            "cta": "打开方舟",
+            "more": "阅读全部规则",
+            "wild": "野生",
+            "town": "小镇",
+            "arkYear": "方舟 1 年"
         }
     },
     "talkPage": {

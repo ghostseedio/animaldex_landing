@@ -1,6 +1,7 @@
 "use client";
 
 import React, {useCallback, useEffect, useId, useMemo, useRef, useState} from "react";
+import {createPortal} from "react-dom";
 import Link from "@/app/[locale]/_components/link";
 import ArkShareButton from "@/app/[locale]/(composited)/ark/ark-share";
 import {ArkGraphWordsContext} from "@/app/[locale]/(composited)/ark/ark-graph-context";
@@ -12,7 +13,10 @@ import {arkBarCeiling, arkBarShare} from "@/lib/ark-live-bars";
 import {arkChangeOf, arkChangeText, arkRankedSpecies, arkTotalChange, type ArkChange, type ArkChangeScope, type ArkPopulationThen} from "@/lib/ark-population-change";
 import type {ArkSpeciesRow} from "@/lib/ark-population";
 import {arkLostWords} from "@/lib/ark-extinct";
-import {fillArkWords, type ArkWords} from "@/lib/ark-words";
+import {ARK_SIMPLE_ENGLISH, fillArkWords, type ArkWords} from "@/lib/ark-words";
+
+/** The intro band's slot the ticker is drawn into (`ark-intro.tsx`). */
+export const ARK_TICKER_SLOT = "ark-ticker";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 import type {ArkHistory, ArkPeriod, ArkSeries, ArkSeriesStats} from "@/lib/ark-population-history";
 
@@ -43,7 +47,7 @@ const PHONE = "(max-width: 767px)";
 /** Rows rendered at a time. */
 const ROWS_STEP = 40;
 
-const GLASS = "border border-white/[0.14] bg-[rgba(14,20,14,0.72)] text-[#fffcf4] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.55)] backdrop-blur-xl";
+const GLASS = "ark-glass border border-white/[0.14] text-[#fffcf4]";
 const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[#c8fa63]";
 /** The panel's round icon buttons (share, hide). */
 const ROUND = "flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-white/70 transition-colors hover:bg-white/10 hover:text-white md:h-8 md:w-8";
@@ -147,13 +151,20 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
     const isOpen = () => open ?? !window.matchMedia(PHONE).matches;
 
     const rows = useMemo(() => arkRankedSpecies(listed), [listed]);
+    // The ticker's slot in the intro band (`ark-intro.tsx`): found once mounted (the band is the server's).
+    const [ticker, setTicker] = useState<HTMLElement | null>(null);
+    useEffect(() => setTicker(document.getElementById(ARK_TICKER_SLOT)), []);
+    const tickerLabel = words.simple?.ticker ?? ARK_SIMPLE_ENGLISH.ticker;
 
     // Population over time: the graphs' module and the record's answer, once the Ark is read. Until the server's read
     // exists (`available: false`) or when it fails, nothing of it shows.
     const [graph, setGraph] = useState<GraphModule | null>(null);
     const [histories, setHistories] = useState<{week: ArkHistory | null; all: ArkHistory | null}>({week: null, all: null});
-    const [period, setPeriod] = useState<ArkPeriod>("24h");
-    const [mode, setMode] = useState<SortMode>("biggest");
+    // The list's lines are the week's (owner 2026-11-20: no period or order switches; the sparklines are the long-term
+    // signal, biggest first); a species' own graph keeps its period switch.
+    const period: ArkPeriod = "7d";
+    const mode: SortMode = "biggest";
+    const [detailPeriod, setDetailPeriod] = useState<ArkPeriod>("7d");
     const [graphKey, setGraphKey] = useState<string | null>(null);
     const hasListed = Boolean(listed);
     useEffect(() => {
@@ -169,7 +180,7 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
             live = false;
         };
     }, [hasListed, populationUrl, graph]);
-    const span = graph ? graph.arkPeriodSpan(period) : "week";
+    const span = graph ? graph.arkPeriodSpan(graphKey ? detailPeriod : period) : "week";
     useEffect(() => {
         if (!graph || !populationUrl || span !== "all" || histories.all) return;
         let live = true;
@@ -180,7 +191,8 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
             live = false;
         };
     }, [graph, populationUrl, span, histories.all]);
-    const history = graph ? (span === "all" ? histories.all : histories.week) : null;
+    const history = graph ? histories.week : null;
+    const detailHistory = graph ? (span === "all" ? histories.all : histories.week) : null;
     // Each listed species' line over the period, and the Thriving / Declining order (the graphs' module works them out).
     const {lines, ranked} = useMemo(() => (graph && history ? graph.arkHudLines(history, period, rows.map((row) => row.key), scope, mode) : {lines: new Map<string, {series: ArkSeries; stats: ArkSeriesStats}>(), ranked: null}), [graph, history, period, rows, scope, mode]);
     const rowByKey = useMemo(() => new Map(rows.map((row) => [row.key, row])), [rows]);
@@ -301,13 +313,14 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
 
                     {filters ? <div className="flex flex-wrap items-center gap-1.5 px-3.5 pb-2.5">{filters}</div> : null}
 
-                    {/* Population over time (once the record's read answers): the order and the period the lines cover. */}
-                    {graph && history && !graphKey ? <graph.ArkHudControls mode={mode} onMode={(next) => { setMode(next); listRef.current?.scrollTo({top: 0}); }} period={period} onPeriod={setPeriod} ctx={where} /> : null}
+                    {/* A species' own graph (from its sparkline): its period switch, where its animals are, its sexes. */}
+                    {graph && detailHistory && graphKey ? <graph.ArkHudGraphPane history={detailHistory} graphKey={graphKey} rows={rowByKey} line={graph.arkHudLines(detailHistory, detailPeriod, [graphKey], scope, "biggest").lines.get(graphKey)} period={detailPeriod} onPeriod={setDetailPeriod} onBack={() => setGraphKey(null)} onFly={(row) => { setGraphKey(null); pick(row); }} locale={locale} ctx={where} sexWords={words.sex} /> : null}
 
-                    {graph && history && graphKey ? <graph.ArkHudGraphPane history={history} graphKey={graphKey} rows={rowByKey} line={lines.get(graphKey)} period={period} onPeriod={setPeriod} onBack={() => setGraphKey(null)} onFly={(row) => { setGraphKey(null); pick(row); }} locale={locale} ctx={where} /> : null}
+                    {/* The thriving / declining ticker, under the Ark's name (the intro band's slot): this week's biggest movers. */}
+                    {graph && history && ticker ? createPortal(<graph.ArkHudTicker history={history} rows={rowByKey} scope={scope} locale={locale} label={tickerLabel} onPick={pick} />, ticker) : null}
 
                     {/* Every species, biggest first: about a dozen in view, the rest scroll inside the panel. */}
-                    <ul ref={listRef} aria-label={hud.listLabel} hidden={Boolean(graph && history && graphKey)} className="relative max-h-[46svh] min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] py-1 [scrollbar-width:thin] md:max-h-[28rem]">
+                    <ul ref={listRef} aria-label={hud.listLabel} hidden={Boolean(graph && detailHistory && graphKey)} className="relative max-h-[46svh] min-h-0 flex-1 overflow-y-auto overscroll-contain border-t border-white/[0.08] py-1 [scrollbar-width:thin] md:max-h-[28rem]">
                         {listed ? null : Array.from({length: 8}, (_, i) => (
                             // Before the Ark is read: quiet placeholders at the rows' size (no shift when they come).
                             <li key={`wait-${i}`} aria-hidden="true" className="flex min-h-11 items-center gap-2.5 px-3.5 py-1 md:min-h-[2.375rem]">
@@ -332,7 +345,7 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                             const said = arkChangeText(change, locale);
                             const label = [
                                 fillArkWords(hud.rowCount, {animal: row.name, count: number(row.count)}),
-                                ranked && graph && line ? graph.arkPeriodLabel(line.stats, period, locale, words.graph) : said ? fillArkWords(hud.change24h, {change: said.text}) : null,
+                                graph && line ? graph.arkPeriodLabel(line.stats, period, locale, words.graph) : said ? fillArkWords(hud.change24h, {change: said.text}) : null,
                                 row.mine ? hud.yours : null,
                                 isHerd ? hud.herdTag : null,
                                 row.breeds.length ? fillArkWords(hud.breeds, {breeds: row.breeds.map((breed) => `${breed.name} ${number(breed.count)}`).join(", ")}) : null
@@ -364,11 +377,9 @@ export default function ArkPopulationHud({snapshot, counts, listed, scope, then,
                                                 />
                                             </span>
                                         </span>
-                                        {/* Thriving / Declining: the period's change; else the 24-hour change, as before. */}
-                                        {ranked && graph && line ? <graph.ArkPeriodChange stats={line.stats} locale={locale} /> : <ArkChangeBadge change={change} words={words} locale={locale} />}
-                                        <span className="min-w-[2rem] text-right text-[13px] font-bold tabular-nums">{number(row.count)}</span>
+                                        {/* Its count; the sparkline beside it is its week (owner 2026-11-20: no badges, the line says it). */}
+                                        <span className="min-w-[2rem] text-end text-[13px] font-bold tabular-nums">{number(row.count)}</span>
                                     </button>
-                                    {graph ? <graph.ArkSex row animals={row.animals} words={words.sex} locale={locale} /> : null}
                                     {spark}
                                 </li>
                             );

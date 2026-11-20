@@ -853,7 +853,7 @@
             "ageIsAtLeast": "vähintään {age} vanha",
             "ageMonths": "{months} Ark-kuukautta",
             "ageMonth": "1 Ark-kuukausi",
-            "chanceTitle": "Todennäköisyys elää vielä yksi Ark-vuosi",
+            "chanceTitle": "Mahdollisuus elää vielä 2 viikkoa",
             "chanceMain": "Tärkein syy: {reason}",
             "chanceHow": "Näin tämä lasketaan: sen ikä suhteessa lajinsa elinikään, pedot, jotka voivat metsästää sen lajia sen alueella, ja nälkä sen perusteella, mitä Ark on julkaissut. Arvio, joka muuttuu Arkin muuttuessa, ei lupaus.",
             "chanceHowHuman": "Näin se lasketaan: ikä suhteessa ihmisen elinikään, lyhyempi tai pidempi kunnon mukaan. Arvio, ei lupaus.",
@@ -1022,6 +1022,35 @@
                 "faqQ2": "Montako poikasta eläimellä voi olla kerrallaan?",
                 "faqA2": "Enintään 4 per lisääntyminen ja enintään 2 lajeilla, jotka todellisuudessa munivat satoja munia. Lyhytikäiset lajit lisääntyvät aiemmin, ja laji lakkaa lisääntymästä saavutettuaan kantarajansa."
             }
+        },
+        "simple": {
+            "power": "Eläinvoima",
+            "number": "AnimalDex-numero",
+            "age": "Ikä",
+            "left": "Jäljellä {time}",
+            "ticker": "Kasvussa ja laskussa tällä viikolla"
+        },
+        "how": {
+            "lead": "Elävä 3D-maailma oikeista eläimistä, luonnon sääntöjen mukaan.",
+            "capture": "Kuvaa oikea eläin",
+            "captureCaption": "Nappaa yksi AnimalDex-sovelluksella. Yksi sen lajista nousee Arkkiin.",
+            "islands": "Kaksi saarta",
+            "islandsCaption": "Villieläimet asuvat villillä saarella. Lemmikit, kotieläimet ja eläintarhan eläimet asuvat kaupungissa.",
+            "thrive": "Auta sitä kukoistamaan",
+            "thriveCaption": "Juttele eläimesi kanssa ja kokeile sen askelta. Kun se toimii, eläimesi vahvistuvat.",
+            "food": "Kuka syö kenet",
+            "foodCaption": "Saalistajat syövät vain sitä, mitä niiden opas kertoo. Heikoimmat napataan ensin.",
+            "babies": "Poikaset",
+            "babiesCaption": "Kaksi saman lajin aikuista, samassa paikassa, ruokaa: poikasia!",
+            "time": "Nopea aika",
+            "timeCaption": "Eläimet elävät täällä nopeasti: vuosi kuluu 2 viikossa.",
+            "fair": "Kukaan ei valitse",
+            "fairCaption": "Kukaan ei päätä, kuka elää. Vain säännöt, samat kaikille.",
+            "cta": "Avaa Arkki",
+            "more": "Lue kaikki säännöt",
+            "wild": "Villi",
+            "town": "Kaupunki",
+            "arkYear": "1 Arkin vuosi"
         }
     },
     "talkPage": {

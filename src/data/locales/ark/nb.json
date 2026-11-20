@@ -853,7 +853,7 @@
             "ageIsAtLeast": "minst {age} gammel",
             "ageMonths": "{months} Ark-måneder",
             "ageMonth": "1 Ark-måned",
-            "chanceTitle": "Sjanse til å leve ett Ark-år til",
+            "chanceTitle": "Sjanse til å leve 2 uker til",
             "chanceMain": "Hovedgrunn: {reason}",
             "chanceHow": "Slik regnes det ut: alderen i forhold til artens levetid, rovdyrene som kan jakte på arten i området, og sult, ut fra det Ark har gjort offentlig. Et anslag som endrer seg når Ark endrer seg, ikke et løfte.",
             "chanceHowHuman": "Slik regnes det ut: alderen mot et menneskes levetid, kortere eller lengre etter tilstanden. Et anslag, ikke et løfte.",
@@ -1022,6 +1022,35 @@
                 "faqQ2": "Hvor mange unger kan et dyr få om gangen?",
                 "faqA2": "Høyst 4 per formering og høyst 2 for arter som i virkeligheten legger hundrevis av egg. Kortlivede arter formerer seg tidligere, og en art slutter å formere seg når den når bestandsgrensen."
             }
+        },
+        "simple": {
+            "power": "Dyrekraft",
+            "number": "AnimalDex-nummer",
+            "age": "Alder",
+            "left": "{time} igjen",
+            "ticker": "I vekst og i nedgang denne uken"
+        },
+        "how": {
+            "lead": "En levende 3D-verden av ekte dyr, styrt av naturens regler.",
+            "capture": "Ta bilde av et ekte dyr",
+            "captureCaption": "Fang ett med AnimalDex-appen. Ett av samme art kommer om bord.",
+            "islands": "To øyer",
+            "islandsCaption": "Ville dyr bor på den ville øya. Kjæledyr, husdyr og dyr fra dyrehagen bor i byen.",
+            "thrive": "Hjelp det å trives",
+            "thriveCaption": "Snakk med dyret ditt og prøv steget dets. Når det virker, blir dyrene dine sterkere.",
+            "food": "Hvem spiser hvem",
+            "foodCaption": "Jegere spiser bare det feltguiden deres nevner. De svakeste blir tatt først.",
+            "babies": "Unger",
+            "babiesCaption": "To voksne av samme art, på samme sted, med mat: unger!",
+            "time": "Rask tid",
+            "timeCaption": "Dyrene lever fort her: et år går på 2 uker.",
+            "fair": "Ingen velger",
+            "fairCaption": "Ingen bestemmer hvem som lever. Bare reglene, de samme for alle.",
+            "cta": "Åpne Arken",
+            "more": "Les alle reglene",
+            "wild": "Vill",
+            "town": "By",
+            "arkYear": "1 Ark-år"
         }
     },
     "talkPage": {

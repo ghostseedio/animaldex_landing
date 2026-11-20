@@ -853,7 +853,7 @@
             "ageIsAtLeast": "idade: pelo menos {age}",
             "ageMonths": "{months} meses da Ark",
             "ageMonth": "1 mês da Ark",
-            "chanceTitle": "Chance de viver mais um ano da Ark",
+            "chanceTitle": "Chance de viver mais 2 semanas",
             "chanceMain": "Motivo principal: {reason}",
             "chanceHow": "Como é calculado: a idade dele em relação à vida típica da espécie, os predadores que podem caçar a espécie na sua área e a fome, a partir do que a Ark tornou público. Uma estimativa que muda quando a Ark muda, não uma promessa.",
             "chanceHowHuman": "Como é calculado: a idade face à duração de uma vida humana, mais curta ou mais longa conforme o estado. Uma estimativa, não uma promessa.",
@@ -1022,6 +1022,35 @@
                 "faqQ2": "Quantos filhotes um animal pode ter de uma vez?",
                 "faqA2": "No máximo 4 por reprodução, e no máximo 2 para espécies que botam centenas de ovos na vida real. Espécies de vida curta se reproduzem mais cedo, e uma espécie para de se reproduzir ao atingir seu limite de população."
             }
+        },
+        "simple": {
+            "power": "Poder animal",
+            "number": "Número AnimalDex",
+            "age": "Idade",
+            "left": "Faltam {time}",
+            "ticker": "Em alta e em baixa esta semana"
+        },
+        "how": {
+            "lead": "Um mundo 3D vivo de animais reais, regido pelas regras da natureza.",
+            "capture": "Fotografe um animal real",
+            "captureCaption": "Capture um com o app AnimalDex. Um da espécie dele sobe na Arca.",
+            "islands": "Duas ilhas",
+            "islandsCaption": "Animais selvagens vivem na ilha selvagem. Pets, animais de fazenda e de zoológico vivem na cidade.",
+            "thrive": "Ajude-o a prosperar",
+            "thriveCaption": "Converse com seu animal e tente o passo dele. Quando funciona, seus animais ficam mais fortes.",
+            "food": "Quem come quem",
+            "foodCaption": "Caçadores só comem o que o guia deles diz. Os mais fracos são pegos primeiro.",
+            "babies": "Filhotes",
+            "babiesCaption": "Dois adultos da mesma espécie, no mesmo lugar, com comida: filhotes!",
+            "time": "Tempo rápido",
+            "timeCaption": "Aqui os animais vivem depressa: um ano passa em 2 semanas.",
+            "fair": "Ninguém escolhe",
+            "fairCaption": "Ninguém decide quem vive. Só as regras, iguais para todos.",
+            "cta": "Abrir a Arca",
+            "more": "Ler todas as regras",
+            "wild": "Selvagem",
+            "town": "Cidade",
+            "arkYear": "1 ano da Arca"
         }
     },
     "talkPage": {

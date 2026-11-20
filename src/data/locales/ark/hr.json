@@ -853,7 +853,7 @@
             "ageIsAtLeast": "najmanje {age}",
             "ageMonths": "mjeseci u Arku: {months}",
             "ageMonth": "1 mjesec u Arku",
-            "chanceTitle": "Šansa da proživi još jednu godinu u Arku",
+            "chanceTitle": "Šansa da poživi još 2 tjedna",
             "chanceMain": "Glavni razlog: {reason}",
             "chanceHow": "Kako se računa: njegova dob prema životnom vijeku njegove vrste, grabežljivci koji mogu loviti njegovu vrstu u njegovu području i glad, prema onome što je Ark objavio. Procjena koja se mijenja kako se Ark mijenja, a ne obećanje.",
             "chanceHowHuman": "Kako se računa: dob u odnosu na ljudski životni vijek, kraći ili dulji prema stanju. Procjena, ne obećanje.",
@@ -1022,6 +1022,35 @@
                 "faqQ2": "Koliko mladunaca životinja može imati odjednom?",
                 "faqA2": "Najviše 4 po razmnožavanju i najviše 2 za vrste koje u stvarnosti nesu stotine jaja. Kratkoživuće vrste razmnožavaju se ranije, a vrsta prestaje se razmnožavati kad dosegne ograničenje populacije."
             }
+        },
+        "simple": {
+            "power": "Životinjska moć",
+            "number": "AnimalDex broj",
+            "age": "Dob",
+            "left": "Preostalo {time}",
+            "ticker": "U porastu i u padu ovaj tjedan"
+        },
+        "how": {
+            "lead": "Živi 3D svijet pravih životinja, kojim vladaju pravila prirode.",
+            "capture": "Fotografiraj pravu životinju",
+            "captureCaption": "Uhvati jednu aplikacijom AnimalDex. Jedna njezine vrste ukrca se na Arku.",
+            "islands": "Dva otoka",
+            "islandsCaption": "Divlje životinje žive na divljem otoku. Kućni ljubimci, domaće životinje i životinje iz zoološkog žive u gradu.",
+            "thrive": "Pomozi joj da napreduje",
+            "thriveCaption": "Razgovaraj sa svojom životinjom i isprobaj njezin korak. Kad uspije, tvoje životinje ojačaju.",
+            "food": "Tko koga jede",
+            "foodCaption": "Lovci jedu samo ono što navodi njihov vodič. Najslabiji se hvataju prvi.",
+            "babies": "Mladunčad",
+            "babiesCaption": "Dvije odrasle jedinke iste vrste, na istom mjestu, s hranom: mladunčad!",
+            "time": "Brzo vrijeme",
+            "timeCaption": "Ovdje životinje žive brzo: godina prođe za 2 tjedna.",
+            "fair": "Nitko ne bira",
+            "fairCaption": "Nitko ne odlučuje tko živi. Samo pravila, ista za sve.",
+            "cta": "Otvori Arku",
+            "more": "Pročitaj sva pravila",
+            "wild": "Divljina",
+            "town": "Grad",
+            "arkYear": "1 godina Arke"
         }
     },
     "talkPage": {

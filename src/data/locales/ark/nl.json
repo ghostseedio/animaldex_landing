@@ -853,7 +853,7 @@
             "ageIsAtLeast": "minstens {age} oud",
             "ageMonths": "{months} Ark-maanden",
             "ageMonth": "1 Ark-maand",
-            "chanceTitle": "Kans om nog een Ark-jaar te leven",
+            "chanceTitle": "Kans om nog 2 weken te leven",
             "chanceMain": "Belangrijkste reden: {reason}",
             "chanceHow": "Zo wordt het berekend: zijn leeftijd tegenover de levensduur van zijn soort, de roofdieren die zijn soort in zijn gebied kunnen jagen, en honger, op basis van wat Ark openbaar heeft gemaakt. Een schatting die verandert als Ark verandert, geen belofte.",
             "chanceHowHuman": "Zo wordt het berekend: de leeftijd tegenover een mensenleven, korter of langer naar de conditie. Een schatting, geen belofte.",
@@ -1022,6 +1022,35 @@
                 "faqQ2": "Hoeveel jongen kan een dier tegelijk krijgen?",
                 "faqA2": "Hoogstens 4 per voortplanting en hoogstens 2 voor soorten die in het echt honderden eieren leggen. Kortlevende soorten planten zich eerder voort, en een soort stopt met voortplanten als ze haar populatielimiet bereikt."
             }
+        },
+        "simple": {
+            "power": "Dierenkracht",
+            "number": "AnimalDex-nummer",
+            "age": "Leeftijd",
+            "left": "Nog {time}",
+            "ticker": "Deze week in opkomst en in verval"
+        },
+        "how": {
+            "lead": "Een levende 3D-wereld van echte dieren, gestuurd door de regels van de natuur.",
+            "capture": "Fotografeer een echt dier",
+            "captureCaption": "Vang er een met de AnimalDex-app. Eén van zijn soort komt aan boord.",
+            "islands": "Twee eilanden",
+            "islandsCaption": "Wilde dieren wonen op het wilde eiland. Huisdieren, boerderijdieren en dierentuindieren wonen in de stad.",
+            "thrive": "Help het groeien",
+            "thriveCaption": "Praat met je dier en probeer zijn stap. Werkt het, dan worden je dieren sterker.",
+            "food": "Wie eet wie",
+            "foodCaption": "Jagers eten alleen wat hun veldgids noemt. De zwaksten worden het eerst gevangen.",
+            "babies": "Jongen",
+            "babiesCaption": "Twee volwassenen van een soort, op dezelfde plek, met eten: jongen!",
+            "time": "Snelle tijd",
+            "timeCaption": "Dieren leven hier snel: een jaar gaat voorbij in 2 weken.",
+            "fair": "Niemand kiest",
+            "fairCaption": "Niemand beslist wie leeft. Alleen de regels, voor iedereen gelijk.",
+            "cta": "Open de Ark",
+            "more": "Lees alle regels",
+            "wild": "Wild",
+            "town": "Stad",
+            "arkYear": "1 Ark-jaar"
         }
     },
     "talkPage": {

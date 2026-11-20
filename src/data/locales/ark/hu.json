@@ -853,7 +853,7 @@
             "ageIsAtLeast": "kor: legalább {age}",
             "ageMonths": "{months} Ark-hónap",
             "ageMonth": "1 Ark-hónap",
-            "chanceTitle": "Esély még egy Ark-évet élni",
+            "chanceTitle": "Esély, hogy még 2 hetet éljen",
             "chanceMain": "Fő ok: {reason}",
             "chanceHow": "Így számoljuk: a kora a fajának élettartamához képest, a területén a fajára vadászni képes ragadozók és az éhség, abból, amit az Ark nyilvánossá tett. Becslés, amely az Arkkal együtt változik, nem ígéret.",
             "chanceHowHuman": "Így számoljuk: az életkor egy emberi élethosszhoz mérve, az állapottól függően rövidebb vagy hosszabb. Becslés, nem ígéret.",
@@ -1022,6 +1022,35 @@
                 "faqQ2": "Hány kölyke lehet egy állatnak egyszerre?",
                 "faqA2": "Legfeljebb 4 szaporodásonként, és legfeljebb 2 azoknál a fajoknál, amelyek a valóságban több száz tojást raknak. A rövid életű fajok hamarabb szaporodnak, és a faj abbahagyja a szaporodást, ha eléri a populációs korlátját."
             }
+        },
+        "simple": {
+            "power": "Állaterő",
+            "number": "AnimalDex-szám",
+            "age": "Kor",
+            "left": "Még {time}",
+            "ticker": "Gyarapodók és fogyók ezen a héten"
+        },
+        "how": {
+            "lead": "Igazi állatok élő 3D világa, a természet szabályai szerint.",
+            "capture": "Fotózz le egy igazi állatot",
+            "captureCaption": "Kapj el egyet az AnimalDex appal. Egy a fajtájából felszáll a Bárkára.",
+            "islands": "Két sziget",
+            "islandsCaption": "A vadállatok a vad szigeten élnek. A háziállatok, haszonállatok és állatkerti állatok a városban.",
+            "thrive": "Segítsd, hogy virágozzon",
+            "thriveCaption": "Beszélgess az állatoddal, és próbáld ki a lépését. Ha működik, az állataid erősebbek lesznek.",
+            "food": "Ki kit eszik",
+            "foodCaption": "A vadászok csak azt eszik, amit a határozójuk ír. A leggyengébbeket kapják el először.",
+            "babies": "Kicsinyek",
+            "babiesCaption": "Két felnőtt egy fajtából, egy helyen, élelemmel: kicsinyek!",
+            "time": "Gyors idő",
+            "timeCaption": "Itt az állatok gyorsan élnek: egy év 2 hét alatt telik el.",
+            "fair": "Senki sem választ",
+            "fairCaption": "Senki sem dönti el, ki él. Csak a szabályok, mindenkire ugyanazok.",
+            "cta": "Bárka megnyitása",
+            "more": "Minden szabály",
+            "wild": "Vad",
+            "town": "Város",
+            "arkYear": "1 Bárka-év"
         }
     },
     "talkPage": {

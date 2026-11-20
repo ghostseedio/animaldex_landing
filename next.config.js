@@ -188,6 +188,13 @@ module.exports = withNextIntl({
                 destination: `/tier-list/${slug}/lang/:lang`,
                 permanent: false
             })),
+            // /ark/how-it-works in the Ark's 45 languages (lane ARK-SIMPLE), the same way.
+            {
+                source: "/ark/how-it-works",
+                has: [{type: "query", key: "lang", value: "(?<lang>[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})?)"}],
+                destination: "/ark/how-it-works/lang/:lang",
+                permanent: false
+            },
             {
                 source: "/rankings",
                 destination: "/tier-list",
