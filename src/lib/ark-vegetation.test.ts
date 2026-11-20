@@ -10,13 +10,13 @@ import {ARK_BUNDLE_LANGUAGES} from "@/lib/ark-languages";
 test("vegetation: off (null, junk, no zones) decodes to null and leaves the grass lush", () => {
     for (const raw of [null, undefined, 3, "x", {}, {zones: []}, {zones: {}}, {zones: {"wild|grassland": {level: "a"}}}]) assert.equal(decodeVegetation(raw), null);
     setGrazedLevels(null);
-    assert.ok([...ARK_GRAZED.value].every((v) => v === 1));
+    assert.ok(Array.from(ARK_GRAZED.value).every((v) => v === 1));
 });
 
 test("vegetation: levels by island|zone, clamped; the wild island's laid into the uniform by zone", () => {
     const v = decodeVegetation({day: 400, zones: {"wild|grassland": {level: 0.12, grass: 0.1}, "wild|woodland": {level: 1.4}, "town|farm_garden": {level: 0.3}, "bad key": {level: 0.5}}})!;
     assert.equal(v.day, 400);
-    assert.deepEqual([...v.levels.keys()].sort(), ["town|farm_garden", "wild|grassland", "wild|woodland"]);
+    assert.deepEqual(Array.from(v.levels.keys()).sort(), ["town|farm_garden", "wild|grassland", "wild|woodland"]);
     assert.equal(v.levels.get("wild|woodland"), 1);
     setGrazedLevels(v);
     assert.equal(ARK_GRAZED.value[GRAZED_ZONES.indexOf("grassland")], Math.fround(0.12));
