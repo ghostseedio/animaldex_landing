@@ -20,6 +20,7 @@
 import type {ArkAnimal, ArkNestRow, ArkSnapshot, ArkZone} from "@/ark-scene/types";
 import {nestProfile, type NestProfile} from "@/ark-scene/props/nest-kinds";
 import {seasonWindow} from "@/ark-scene/props/nest-growth";
+import {sexLook, speciesRecipes} from "@/ark-scene/behaviour-recipes";
 
 export const PROP_GROUPS = [
     "birds",
@@ -188,7 +189,10 @@ export function propsPresence(snapshot: Pick<ArkSnapshot, "animals" | "ark_day" 
         const chicks = members.filter(young).length;
         const season = breedingSeason(first.zone, arkDay);
         if (!clutch && !chicks && season <= 0) continue;
-        const sitter = members.find((member) => !young(member))?.id ?? null;
+        // (Signature wave 2, birds: an emu's, a cassowary's and a rhea's eggs are sat by the male alone: the seeded male, and
+        // nobody while none is aboard.)
+        const maleSits = speciesRecipes(first.model_slug).maleSits;
+        const sitter = members.find((member) => !young(member) && (!maleSits || sexLook(member.id, member.model_slug).sex === "male"))?.id ?? null;
         nests.push({key, speciesId: speciesKey(first), slug: first.model_slug, name: first.name, zone: first.zone, profile, sitter, eggs: clutch ? Math.min(Math.max(clutch.eggs ?? 3, 1), 6) : 0, chicks: Math.min(chicks, 4), season});
     }
     nests.sort((a, b) => a.key.localeCompare(b.key));

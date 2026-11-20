@@ -51,6 +51,8 @@ export type SpeciesRecipes = {
     after: AfterStyle;
     posture: Posture | null;
     hovers: boolean;
+    /** Signature wave 2 (birds): the male alone sits the eggs (an emu's, a cassowary's, a rhea's): the props' nest sitter is the seeded male. */
+    maleSits: boolean;
     defaulted: boolean;
     /** Its recipe ids, for a quick "has it" (posing runs often). */
     has: ReadonlySet<string>;
@@ -84,12 +86,13 @@ export function decodeRecipeRow(slug: string, row: string): SpeciesRecipes {
         after: (after as AfterStyle) || "shake",
         posture: (posture as Posture) || null,
         hovers: flags.includes("h"),
+        maleSits: flags.includes("m"),
         defaulted: flags.includes("d"),
         has: new Set(recipes ? recipes.split(",").map((r) => r.split(".")[0]) : [])
     };
 }
 
-const NONE: Omit<SpeciesRecipes, "slug"> = {recipes: [], sex: {system: "separate", maleShare: 0.5, bigger: null, ratio: 1, duller: null}, mating: [], nesting: [], nest: null, entry: "wade", exit: "walk", after: "shake", posture: null, hovers: false, defaulted: true, has: new Set()};
+const NONE: Omit<SpeciesRecipes, "slug"> = {recipes: [], sex: {system: "separate", maleShare: 0.5, bigger: null, ratio: 1, duller: null}, mating: [], nesting: [], nest: null, entry: "wade", exit: "walk", after: "shake", posture: null, hovers: false, maleSits: false, defaulted: true, has: new Set()};
 
 export function speciesRecipes(slug: string): SpeciesRecipes {
     const hit = decoded.get(slug);
@@ -354,6 +357,31 @@ function plungeWater(world: ScheduleWorld, from: P, reach: number, length: numbe
     return null;
 }
 
+/** A swoop's way down (the plunge curve: across in the first four fifths of the time, the drop gathering speed) is clear of the ground between, and ends clearly below its perch. */
+function swoopClear(sampler: ScheduleWorld["sampler"], from: P, x: number, z: number, groundThere: number): boolean {
+    if (groundThere > from.y - 0.4) return false;
+    for (let k = 1; k <= 7; k++) {
+        const u = k / 8;
+        const along = Math.min(u * 1.25, 1);
+        const y = from.y + (groundThere - from.y) * Math.pow(u, 1.6);
+        if (sampler.heightAt(from.x + (x - from.x) * along, from.z + (z - from.z) * along) > y - 0.08) return false;
+    }
+    return true;
+}
+
+/** A lookout with dry, walkable ground to drop on within a few metres of it (not water, a wall or the crown's inside). */
+function lookoutDrop(world: ScheduleWorld, from: {x: number; z: number}, length: number): boolean {
+    const reach = Math.min(Math.max(length * 12, 2.5), 6);
+    let ground = 0;
+    for (let k = 0; k < 8; k++) {
+        const a = (k / 8) * Math.PI * 2;
+        const x = from.x + Math.sin(a) * reach * 0.75;
+        const z = from.z + Math.cos(a) * reach * 0.75;
+        if (world.sampler.heightAt(x, z) > waterSurfaceOf(world.sampler, x, z) + 0.03 && walkableAt(world, x, z)) ground++;
+    }
+    return ground >= 3;
+}
+
 function goalSpot(input: RecipeIntentInput, template: Template, random: () => number): Spot | null {
     const {world, profile, animal, kit, centre} = input;
     const length = Math.max(animal.length, 0.05);
@@ -378,6 +406,18 @@ function goalSpot(input: RecipeIntentInput, template: Template, random: () => nu
         case "perch": {
             const point = kit.placeNear(world, centre, length, ["branch", "rock_top", "cliff_ledge", "reeds"], radius * 1.3, random());
             return point ? kit.spotOf(point) : null;
+        }
+        case "lookout": {
+            // (Signature wave 2, birds.) A low lookout over open ground, where a perch-hunter waits to drop: a fence post, a
+            // fallen log, a rock, a low branch or a ledge, one to a few metres up (a body length times fourteen, 2.2 to 6 m).
+            const lowest = Math.min(Math.max(length * 14, 2.2), 6);
+            for (const tag of ["post", "log_top", "rock_top", "branch", "cliff_ledge"] as AttachTag[]) {
+                const point = kit.placeNear(world, centre, length, [tag], radius * 1.3, random());
+                if (!point) continue;
+                const up = point.y - topOf(world.sampler, point.x, point.z);
+                if (up >= 0.3 && up <= lowest && lookoutDrop(world, point, length)) return kit.spotOf(point);
+            }
+            return null;
         }
         case "edge": {
             const point = kit.placeNear(world, centre, length, ["water_edge"], Math.min(radius * 1.8, 40), random());
@@ -637,7 +677,7 @@ export type RecipeAct = {
 };
 
 /** Ambient flock-mates the scene draws round catalogue animals: a murmuration, a swarm, a crawling cluster, bats streaming out of a roost. */
-export type Flock = {centre: P; seed: number; t0: number; t1: number; kind?: "murmuration" | "swarm" | "cluster" | "bats"};
+export type Flock = {centre: P; seed: number; t0: number; t1: number; kind?: "murmuration" | "swarm" | "cluster" | "bats" | "roost"; /** A roost's: the birds' body length (m) and how dark they are drawn. */ length?: number; tone?: "dark" | "brown"};
 
 export type RecipePose = TripPose & {act?: RecipeAct | null; /** Ambient flock-mates round it now (its act may be anything). */ flock?: Flock | null};
 
@@ -692,6 +732,9 @@ function speedOf(block: BlockDef, walk: number, height: number, profile: ArkBeha
         case "dive_feet":
             // Faster from higher up: a kingfisher's few metres at 6-8 m/s, a gannet's twenty-odd at 20.
             return Math.min(Math.max(4 + height * 0.9, 4), 20);
+        case "swoop":
+            // (Signature wave 2, birds: a perch-hunter's drop onto the ground: a shrike's few metres at 4-6 m/s, an owl's a little more.)
+            return Math.min(Math.max(3 + height * 0.8, 3.5), 9);
         default:
             return walk;
     }
@@ -1123,7 +1166,8 @@ function resolveTarget(ctx: BuildContext, step: TemplateStep, block: BlockDef, p
             // (Material too is gathered ahead, round the nest: each trip goes out on through the nest, not back and forth.)
             // (Only where its way there is clear ground: never across the garden pond, a rock or a building.)
             // (A pounce too: it does not leap a fence or a rock to land on its prey.)
-            const reachable = (x: number, z: number) => sampler.heightAt(x, z) > waterSurfaceOf(sampler, x, z) + 0.03 && walkableAt(world, x, z) && ((block.aloft && block.id !== "leap") || groundWay(world, pos, null, null, {x, y: 0, z}));
+            // (Signature wave 2, birds: a swoop drops: only onto ground clearly below its perch, never uphill.)
+            const reachable = (x: number, z: number) => sampler.heightAt(x, z) > waterSurfaceOf(sampler, x, z) + 0.03 && walkableAt(world, x, z) && (block.id !== "swoop" || swoopClear(sampler, pos, x, z, ground(x, z))) && ((block.aloft && block.id !== "leap") || groundWay(world, pos, null, null, {x, y: 0, z}));
             const drifts = !ctx.pair && driftsOn(step, block, ctx.template);
             const ahead = aheadSpot(ctx, step, pos, heading, step.to === "material" ? reach * 0.6 : reach, drifts ? DRIFT_SPREAD : block.id === "leap" ? 0.2 : 0.3, random, (x, z) => (reachable(x, z) ? {x, y: ground(x, z), z} : null), t, drifts);
             if (ahead) return ahead;
@@ -1267,6 +1311,8 @@ function buildEpisode(ctx: BuildContext): Episode | null {
                 continue;
             }
             if (step.if === "caught" && !caught) continue;
+            // (Signature wave 2, birds: a step only if it has gone from where it began: the flight back up from a drop, not a hop in place.)
+            if (step.if === "away" && Math.hypot(pos.x - ctx.anchor.x, pos.z - ctx.anchor.z) < 0.5) continue;
             if (step.if === "hovers" && !species.hovers) continue;
             let block = BLOCKS[step.b];
             if (!block) continue;
@@ -1384,7 +1430,7 @@ function buildEpisode(ctx: BuildContext): Episode | null {
                 }
             }
             if (step.eat || step.drop) carry = null;
-            if (budgeted && !ctx.pair) {
+            if (budgeted && !ctx.pair && !template.airTurns) {
                 // (The turning it is drawn with along the step's keys, not just where it ends up facing: a curve swings.)
                 let turn = 0;
                 for (let k = before.n; k < keys.length; k++) turn += keyTurning(world, keys[k], length, k > 0 ? keys[k - 1] : null);
@@ -1648,7 +1694,7 @@ export function quarriesOf(world: ScheduleWorld, episode: Episode): QuarryTrack[
         const c = key.catch;
         if (!c || (c.kind !== "fish" && c.kind !== "insect")) return;
         const b = key.block.id;
-        const look: QuarryLook = c.kind === "fish" ? "fish" : key.block.aloft && b !== "leap" ? "flier" : "hopper";
+        const look: QuarryLook = c.kind === "fish" ? "fish" : key.block.aloft && b !== "leap" && b !== "swoop" ? "flier" : "hopper";
         const hold = key.block.motion === "hold";
         const tc = hold ? key.t0 + (key.t1 - key.t0) * CATCH_AT_HOLD : key.t1 - 0.02;
         // Seen from the first of the watching that leads up to it (a stalk, a freeze, an ambush, a hover), at most 14 s.
@@ -1731,7 +1777,8 @@ function onEpisode(world: ScheduleWorld, episode: Episode, base: TripPose, epoch
 
 // MARK: Which episode a trip is in
 
-const HERE_DOINGS = new Set(["rest", "groom", "perch", "bask", "watch", "idle"]);
+// ("burrow": a penguin at its burrow, which digs at it, `burrow_dig`: only a template that replaces it runs there.)
+const HERE_DOINGS = new Set(["rest", "groom", "perch", "bask", "watch", "idle", "burrow"]);
 
 /** p3 (shake): the bath's shake_off step held still (the shader shakes the body). */
 const SHAKE_STILL: BlockDef = {...BLOCKS.shake_off, rollWave: 0};
@@ -2170,7 +2217,7 @@ export function episodePose(world: ScheduleWorld, trip: Trip, base: TripPose, ep
     if (!owner) return base;
     const pose = settingOff(world, owner, trip, overlaid(world, owner, trip, base, epoch, kit), epoch, kit);
     // Ambient flock-mates round it (a swarm at its spot, its roost-mates streaming out at dusk), whatever it is doing.
-    const flock = emergenceFlock(world, owner, kit, epoch) ?? (speciesRecipes(owner.slug).has.size ? swarmFlock(owner.animal.id, owner.slug, owner.animal.home, epoch, owner.hoursAt(epoch)) : null);
+    const flock = emergenceFlock(world, owner, kit, epoch) ?? roostFlock(world, owner, kit, epoch) ?? (speciesRecipes(owner.slug).has.size ? swarmFlock(owner.animal.id, owner.slug, owner.animal.home, epoch, owner.hoursAt(epoch)) : null);
     return flock ? {...pose, flock} : pose;
 }
 
@@ -2427,6 +2474,77 @@ export function emergencePoint(centre: P, seed: number, index: number, epoch: nu
     const z = centre.z + Math.cos(heading) * d - Math.sin(heading) * wob;
     const y = centre.y - 0.3 + Math.min(phase * 1.6, 9) + 0.6 * Math.sin(phase * 3 + r() * 5);
     return {x, y, z, yaw: heading};
+}
+
+/**
+ * Signature wave 2 (birds): a communal roost. From the evening (island hours ROOST_HOURS[0]) to the next dawn the
+ * species' roost-mates, a seeded crowd round the catalogue birds that sleep together at their leader's roost, fly in
+ * from all sides over an hour and a half, settle in the crown, and leave again in the morning. The scene draws them
+ * only near the camera. Pure in the centre, the seed, the bird's index and the time.
+ */
+export const ROOST_HOURS: [number, number] = [17.0, 6.2];
+export const ROOST_AMBIENT = 120;
+/** They come in small flocks: ROOST_WAVES of them through the arrival window (seconds after the evening's start), each bird within seconds of its wave. */
+const ROOST_ARRIVE = [360, 5040];
+const ROOST_WAVES = 30;
+const ROOST_LEAVE_WAVES = 12;
+const ROOST_LEAVE = [44640, 47160];
+
+/** Its roost's night now: the window it is in (world seconds), or null by day. */
+function roostWindow(hours: number, epoch: number): {t0: number; t1: number} | null {
+    const since = hours >= ROOST_HOURS[0] ? hours - ROOST_HOURS[0] : hours <= ROOST_HOURS[1] ? hours + 24 - ROOST_HOURS[0] : null;
+    if (since === null) return null;
+    const t0 = epoch - since * 3600;
+    return {t0, t1: t0 + (24 - ROOST_HOURS[0] + ROOST_HOURS[1]) * 3600};
+}
+
+const DARK_ROOSTERS = /crow|rook|jackdaw|starling|myna|grackle|blackbird|magpie/;
+
+function roostFlock(world: ScheduleWorld, owner: TripOwner, kit: ScheduleKit, epoch: number): Flock | null {
+    if (!speciesRecipes(owner.slug).has.has("roost_gather")) return null;
+    const window = roostWindow(owner.hoursAt(epoch), epoch);
+    if (!window) return null;
+    const leader = owner.animal.group?.leader ?? owner.animal;
+    const leaderProfile = owner.animal.group?.profile ?? owner.profile;
+    const roost = kit.roostOf(world, leaderProfile, leader);
+    return {centre: {x: roost.x, y: roost.y, z: roost.z}, seed: hashString(`${leader.id}#roost`), t0: window.t0, t1: window.t1, kind: "roost", length: Math.max(owner.animal.length, 0.08), tone: DARK_ROOSTERS.test(owner.slug) ? "dark" : "brown"};
+}
+
+/**
+ * One roost-mate at a time: flying in along its own heading, perched in the crown, or flying out at dawn (null when it
+ * is not there: before it has come in, after it has gone). `perched` tells the three apart (a wing beat, or still).
+ */
+export function roostPoint(centre: P, seed: number, index: number, epoch: number, t0: number): (P & {yaw: number; pitch: number; perched: boolean}) | null {
+    const r = rng(hashString(`r${seed}#${index}`));
+    const rel = epoch - t0;
+    // Its place in the crown: within about two metres of the roost point, a little above and below it.
+    const a = r() * Math.PI * 2;
+    const spread = 0.3 + 2.1 * Math.sqrt(r());
+    const px = centre.x + Math.cos(a) * spread;
+    const pz = centre.z + Math.sin(a) * spread;
+    const py = centre.y + (r() - 0.45) * 1.7;
+    const wave = Math.floor(Math.pow(r(), 0.85) * ROOST_WAVES);
+    const comes = ROOST_ARRIVE[0] + (ROOST_ARRIVE[1] - ROOST_ARRIVE[0]) * ((wave + 0.15 + 0.7 * rng(hashString(`w${seed}#${wave}`))()) / ROOST_WAVES) + (r() - 0.5) * 16;
+    const leave = Math.floor(r() * ROOST_LEAVE_WAVES);
+    const goes = ROOST_LEAVE[0] + (ROOST_LEAVE[1] - ROOST_LEAVE[0]) * ((leave + 0.15 + 0.7 * rng(hashString(`l${seed}#${leave}`))()) / ROOST_LEAVE_WAVES) + (r() - 0.5) * 16;
+    const inHeading = r() * Math.PI * 2;
+    const outHeading = r() * Math.PI * 2;
+    const FLIGHT = 9;
+    if (rel < comes - FLIGHT || rel > goes + FLIGHT) return null;
+    if (rel < comes) {
+        // Flying in: from 40-odd metres out and a few up, slowing as it comes to its branch.
+        const left = comes - rel;
+        const d = 7 * left * (0.5 + 0.5 * Math.min(left / 4, 1));
+        const drop = 0.5 * left * (0.4 + 0.6 * r());
+        return {x: px + Math.sin(inHeading) * d, y: py + drop + 0.3 * Math.sin(left * 6 + index), z: pz + Math.cos(inHeading) * d, yaw: inHeading + Math.PI, pitch: -0.18 * Math.min(left, 1), perched: false};
+    }
+    if (rel < goes) {
+        // Perched, turning its head now and then.
+        return {x: px, y: py, z: pz, yaw: (r() - 0.5) * 6 + 0.25 * Math.sin(rel * 0.07 + index), pitch: 0, perched: true};
+    }
+    const gone = rel - goes;
+    const d = 2.5 * gone + 0.6 * gone * gone;
+    return {x: px + Math.sin(outHeading) * d, y: py + 1.5 * gone, z: pz + Math.cos(outHeading) * d, yaw: outHeading, pitch: -0.3, perched: false};
 }
 
 /** Mixed flocks: a follower's place in another species' flock or troop now (a window a period, by day), or null. */

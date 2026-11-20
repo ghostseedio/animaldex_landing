@@ -1428,7 +1428,7 @@
    "slug": "american-crow",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -1437,7 +1437,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "then gather at communal roosts",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -1707,7 +1709,7 @@
    "slug": "american-robin",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -1716,7 +1718,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "Outside the breeding season birds gather at dusk in communal roosts in dense trees, some holding many thousands.",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -2704,7 +2708,7 @@
    "slug": "asian-glossy-starling",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -2713,7 +2717,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "evidence",
+     "phrase": "At dusk, noisy flocks, sometimes in their thousands, gather in communal roosts in tall city trees, palms, or on buildings, often alongside other species.",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -13651,7 +13657,7 @@
    "slug": "common-myna",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -13660,7 +13666,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "In the evening birds gather in large, noisy communal roosts in trees, sometimes hundreds or thousands together",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -19495,7 +19503,7 @@
    "slug": "eurasian-magpie",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -19504,7 +19512,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "in winter many birds gather at shared roosts that can hold dozens or even hundreds.",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -19613,7 +19623,7 @@
    "slug": "eurasian-tree-sparrow",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -19622,7 +19632,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "Outside the breeding season flocks gather at dusk in dense hedges, ivy or reedbeds to roost together",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -20307,7 +20319,7 @@
    "slug": "european-starling",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -20316,7 +20328,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "outside the breeding season birds gather in shared roosts in reedbeds, conifers, city buildings or under piers and bridges",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -25219,7 +25233,7 @@
    "slug": "great-tailed-grackle",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -25228,7 +25242,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "At dusk flocks gather in noisy communal roosts, sometimes thousands strong in winter",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -28603,7 +28619,7 @@
    "slug": "house-sparrow",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -28612,7 +28628,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "Before dusk, noisy flocks gather in dense hedges, ivy, creepers or under eaves and chatter loudly before settling for the night.",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -29136,7 +29154,7 @@
    "slug": "indian-pied-myna",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -29145,7 +29163,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "evidence",
+     "phrase": "Indian Pied Mynas gather in large, often noisy, communal roosts",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -29553,7 +29573,7 @@
    "slug": "jackdaw",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -29562,7 +29582,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "evidence",
+     "phrase": "Jackdaws roost communally in large numbers and forage in flocks",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -29972,7 +29994,7 @@
    "slug": "javan-myna",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -29981,7 +30003,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "Before dusk birds gather in shared roosts in the dense crowns of roadside trees or on building ledges, calling loudly until dark",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -41051,7 +41075,7 @@
    "slug": "pied-crow",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -41060,7 +41084,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "Outside the breeding season birds gather towards dusk at shared roosts in tall trees, where hundreds may spend the night together.",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -44829,7 +44855,7 @@
    "slug": "red-winged-blackbird",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -44838,7 +44864,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "Outside the breeding season it gathers at dusk in communal roosts in marshes and thickets, often shared with grackles, cowbirds and starlings",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -45781,7 +45809,7 @@
    "slug": "rook",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -45790,7 +45818,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "Rooks are diurnal and often gather to roost communally after feeding.",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"
@@ -56465,7 +56495,7 @@
    "slug": "welcome-swallow",
    "posture": "tuck",
    "alts": [],
-   "social": "apart",
+   "social": "row",
    "eyes": true,
    "mammal": false,
    "breath": 1.25,
@@ -56474,7 +56504,9 @@
      "recipe": "posture tuck"
     },
     "social": {
-     "rule": "no shared sleeping place in its text: each sleeps a little apart"
+     "field": "sleep",
+     "phrase": "Outside the breeding season birds gather to roost together, sometimes in large flocks",
+     "signature": "wave 2 (birds): a communal roost, sleeping together in a row at its leader's roost"
     },
     "eyes": {
      "rule": "class Aves: eyelids"

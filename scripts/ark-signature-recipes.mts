@@ -13,6 +13,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+// Wave 2, birds (data/ark/signature-birds.json): the bird rows wave 1 held, with the bird recipes that show them.
+import {applyBirdLines, applyBirdRecipes, applyBirdSleep, birdHandles, loadBirds} from "./ark-signature-birds.mts";
 
 const root = path.resolve(path.dirname(new URL(import.meta.url).pathname), "..");
 const dry = process.argv.includes("--dry");
@@ -51,7 +53,10 @@ const HUNTS = new Set(["perch_plunge", "air_plunge", "talon_grab", "wade_spear",
 let added = 0;
 const skipped: string[] = [];
 const already: string[] = [];
+const birds = loadBirds(root);
 for (const a of additions) {
+    // (A bird row wave 2 handles: it is shown by its own bird recipe, below.)
+    if (birdHandles(birds.rows, a.slug, a.recipe)) continue;
     const row = table.species[a.slug];
     const plan = planOf.get(a.slug);
     if (row === undefined || !plan) {
@@ -77,6 +82,22 @@ for (const a of additions) {
     table.species[a.slug] = fields.join("|");
     added++;
 }
-if (!dry) fs.writeFileSync(tablePath, `${JSON.stringify(table)}\n`);
-console.log(JSON.stringify({additions: additions.length, added, already: already.length, skipped: skipped.length}, null, 1));
+// Wave 2, birds: the recipes (and the nests and flags the rows' sentences give), the roosts' sleep, the log lines.
+const birdReport = applyBirdRecipes(table, birds.rows);
+const sleepPath = path.join(root, "src/ark-scene/sleep.json");
+const stylesPath = path.join(root, "data/ark/sleep-styles.json");
+const linesPath = path.join(root, "src/ark-scene/signature-lines.json");
+const sleep = JSON.parse(fs.readFileSync(sleepPath, "utf8")) as {species: Record<string, string>};
+const styles = JSON.parse(fs.readFileSync(stylesPath, "utf8")) as {species: Array<Record<string, unknown>>};
+const lines = JSON.parse(fs.readFileSync(linesPath, "utf8")) as {species: Record<string, Record<string, string>>};
+const birdSleep = applyBirdSleep(sleep, styles, birds.rows);
+const birdLines = applyBirdLines(lines, birds.rows);
+if (!dry) {
+    fs.writeFileSync(tablePath, `${JSON.stringify(table)}\n`);
+    fs.writeFileSync(sleepPath, `${JSON.stringify(sleep)}\n`);
+    fs.writeFileSync(stylesPath, `${JSON.stringify(styles, null, 1)}\n`);
+    fs.writeFileSync(linesPath, JSON.stringify(lines));
+}
+console.log(JSON.stringify({additions: additions.length, added, already: already.length, skipped: skipped.length, birds: {rows: birds.rows.length, added: birdReport.added.length, already: birdReport.already.length, missing: birdReport.missing.length, sleepRows: birdSleep, lines: birdLines, notShown: birds.notShown.map((n) => `${n.slug} ${n.was}`)}}, null, 1));
 if (skipped.length) console.log(skipped.join("\n"));
+if (birdReport.missing.length) console.log(birdReport.missing.join("\n"));

@@ -521,3 +521,21 @@ Measured with the release merged: circling, every animal, 0.15% facing and 0.02%
 
   - Behaviour's "a grazer drifts forward", "an in-place activity barely turns" (0 of 13,657 minutes over), "no spinning" and the stags all pass.
 - **New tests:** a wading heron (under 3.5), a diving puffin (under 3), wrestling bulls (under 5).
+
+## Signature behaviours, wave 2: birds (sig2-birds)
+
+Wave 1 held the bird rows whose recipe was written for another body plan (`scripts/ark-signature-recipes.mts` prints the held list). `data/ark/signature-birds.json` holds those rows with the catalogue's field, exact sentence and log line, and `scripts/ark-signature-birds.mts` (called by the wave-1 script, idempotent) applies them to `recipes.json`, `sleep.json` (+ `data/ark/sleep-styles.json`) and `signature-lines.json`. 43 of the 45 held bird rows show (the osprey's and the great kiskadee's already did, through their own hunts); the other two are named in `notShown` with the reason (the ostrich's communal nest, the gull's swarm).
+
+| Behaviour (species) | What shows | Where |
+|---|---|---|
+| Waits on a perch, drops onto prey, flies back (shrike, kestrels, owls, kookaburra, roller, butcherbird, serpent eagle, roadside hawk, white-throated kingfisher) | `perch_drop`, `perch_drop_insect`, `perch_drop_insect_feet`: a lookout (post, log, rock, low branch) over open ground, a 9–26 s watch, the `swoop` block (shallow, gathering speed, never uphill or through a bump), a pick-up, the flight back; an insect quarry sitting in the grass only where the sentence names an insect (the kestrel's grasshopper is carried in one foot) | `recipe-templates.ts`, `behaviour-blocks.ts` (`swoop`), `behaviour-recipes.ts` (`lookout` goal, `swoopClear`) |
+| Communal roosts (16 songbirds and the like) | `roost_gather`: from 17:00 to 06:12 the species' roost-mates (ambient, up to 120) fly in in small flocks, settle in the crown round the leader's roost point, and leave at dawn; the catalogue birds now sleep together in a row on their leader's perch (`sleep.json`: they roosted apart before) | `behaviour-recipes.ts` (`roostPoint`, `roostFlock`), `recipe-scene.ts` |
+| Kingfisher's tunnel; penguins' burrows | `bank_burrow` (water's edge, nesting months where stored); `burrow_dig` (a penguin's "burrow" stay) | templates |
+| Song thrush's anvil; limpkin's snail | `anvil_smash` (a snail carried to the stone and beaten there), `snail_extract` (carried from the shallows, the bill slid into the shell) | templates |
+| Black swan's long preening | `groom_self` leads its row | recipes.json |
+| Male alone sits the eggs (emu, cassowary, rhea) | the props' nest sitter is the seeded male (recipes row flag `m`), nobody while no male is aboard | `props/presence.ts` |
+| Palm cockatoo, house wren | `nest_build` (a cavity of twigs; the wren's male alone as `dummy_nests`) | templates |
+
+Engine additions for flyers: `Template.airTurns` (a swoop and the flight back up are one U-turn in the air, not counted against the on-the-spot turn budget), the step condition `if: "away"`, the season `tunnel`. The osprey and the great kiskadee were already shown by their own hunts (`talon_grab`, `hawk_insects`) and only gain their log line.
+
+Check: `node scripts/ark-recipe-clips.mjs --out <dir> --clips drop_shrike,drop_owl,roost_wave,roost_lapse,roost_night,kingfisher_tunnel,penguin_dig,thrush_anvil,limpkin_snail,emu_nest` (frames at stated times; the camera follows the bird); `src/lib/ark-signature-birds.test.ts`.

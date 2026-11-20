@@ -59,11 +59,11 @@ export type TemplateStep = {
     /** Faces: the water, the sun, the other in a pair, the way it was going. */
     face?: "water" | "sun" | "other" | "away";
     /** Only if it caught something; only for species that hover; only in a pair's role ("a": the dominant or the male). */
-    if?: "caught" | "hovers";
+    if?: "caught" | "hovers" | "away";
     role?: "a" | "b";
 };
 
-export type Goal = "perch_water" | "perch" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "air" | "here";
+export type Goal = "perch_water" | "perch" | "lookout" | "edge" | "water" | "ground" | "bare" | "bark" | "rock" | "nest" | "air" | "here";
 
 export type Template = {
     id: string;
@@ -77,13 +77,15 @@ export type Template = {
     /** The doing it shows as (the tap card's, its group's). */
     doing: string;
     hours?: "day" | "night" | "dawn_dusk" | "dusk" | "any";
-    /** Only in its mating or nesting season (where the data has one). */
-    season?: "mating" | "nesting";
+    /** Only in its mating or nesting season (where the data has one). "tunnel": in its nesting months where stored, a little all year where not (a kingfisher digs its tunnel). */
+    season?: "mating" | "nesting" | "tunnel";
     /** How often it takes a slot it could, relative to its weight (1 when absent): a fishing flight out and back is a
      *  now-and-then thing, not every forage. */
     often?: number;
     /** Its swims drift forward as a forager's steps do (a dabbling duck paddles on, it does not weave). */
     drift?: boolean;
+    /** Its turns are flights (signature wave 2, birds: a swoop and the flight back up are a U-turn in the air): not counted against the turn budget, which is for turning on the spot. */
+    airTurns?: boolean;
     /** Only males (a display), or the pair's sexes (pair templates: "males" both male, "mixed" a male and a female, "any"). */
     sex?: "male" | "female" | "males" | "mixed" | "any";
     steps: TemplateStep[];
@@ -371,6 +373,117 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
                 {b: "hover", s: [3, 7]},
                 {b: "leap", to: "ground", near: "here", r: 1.5, catch: "insect", p: 0.4},
                 {b: "eat", s: [1, 2], if: "caught", eat: true}
+            ],
+            loop: 0
+        }),
+        // MARK: Signature behaviours, wave 2 (birds; `data/ark/signature-recipes.json`, scripts/ark-signature-recipes.mts)
+        // A perch-hunter's wait and drop (shrikes, kingfishers, rollers, kookaburras, butcherbirds, owls, small hawks): the
+        // stillness on a post or a branch, the swoop onto the ground, and the flight back up to a lookout to wait again.
+        // Without a quarry: a vole or a lizard in the grass is not drawn (the rows' own sentences name no ambient prey).
+        T({
+            id: "perch_drop",
+            label: "watches from a perch, drops onto prey on the ground and flies back up to wait",
+            airTurns: true,
+            kind: "stay",
+            goal: "lookout",
+            replaces: ["forage", "perch", "watch", "wander", "hunt"],
+            doing: "forage",
+            // (The flight back is the tail: turning back the way it came is not counted against the turn budget, which a drop and its return would spend at once.)
+            steps: [
+                {b: "perch", s: [9, 26]},
+                {b: "scan", s: [1.5, 3.5]},
+                {b: "swoop", to: "ground", r: 6},
+                {b: "pick_up", s: [0.6, 1.2]}
+            ],
+            tail: [
+                {b: "take_off", to: "up", h: 0.5, if: "away"},
+                {b: "fly", to: "anchor", if: "away"}
+            ]
+        }),
+        // The same where its sentence names an insect (a grasshopper, a beetle): the ambient quarry sits in the grass, the
+        // bird drops on it and flies back to eat it on its perch.
+        T({
+            id: "perch_drop_insect",
+            label: "watches from a perch, drops onto an insect in the grass and eats it back on the perch",
+            airTurns: true,
+            kind: "stay",
+            goal: "lookout",
+            replaces: ["forage", "perch", "watch", "wander", "hunt"],
+            doing: "forage",
+            hours: "day",
+            steps: [
+                {b: "perch", s: [9, 26]},
+                {b: "scan", s: [1.5, 3.5]},
+                {b: "swoop", to: "ground", r: 6, catch: "insect", p: 0.6, carry: "beak"},
+                {b: "pick_up", s: [0.6, 1.2], if: "caught"}
+            ],
+            tail: [
+                {b: "take_off", to: "up", h: 0.5, if: "away"},
+                {b: "fly", to: "anchor", if: "away"},
+                {b: "beat_prey", s: [1, 2], if: "caught"},
+                {b: "eat", s: [0.8, 1.4], if: "caught", eat: true}
+            ]
+        }),
+        // A kestrel's: the grasshopper carried back to the perch in one foot.
+        T({
+            id: "perch_drop_insect_feet",
+            label: "watches from a perch, drops onto an insect in the grass and eats it back on the perch, carried in one foot",
+            airTurns: true,
+            kind: "stay",
+            goal: "lookout",
+            replaces: ["forage", "perch", "watch", "wander", "hunt"],
+            doing: "forage",
+            hours: "day",
+            steps: [
+                {b: "perch", s: [9, 26]},
+                {b: "scan", s: [1.5, 3.5]},
+                {b: "swoop", to: "ground", r: 6, catch: "insect", p: 0.6, carry: "feet"},
+                {b: "pick_up", s: [0.6, 1.2], if: "caught"}
+            ],
+            tail: [
+                {b: "take_off", to: "up", h: 0.5, if: "away"},
+                {b: "fly", to: "anchor", if: "away"},
+                {b: "beat_prey", s: [1, 2], if: "caught"},
+                {b: "eat", s: [0.8, 1.4], if: "caught", eat: true}
+            ]
+        }),
+        // A song thrush's anvil: it takes a snail to its stone and beats it on the stone, again and again, until the shell breaks.
+        T({
+            id: "anvil_smash",
+            label: "takes a snail to a stone and smashes it there until the shell breaks",
+            airTurns: true,
+            kind: "stay",
+            goal: "rock",
+            replaces: ["forage", "wander", "graze", "perch"],
+            doing: "forage",
+            hours: "day",
+            // (It leaves the stone by a short flight, a stone's top being no way to walk from.)
+            steps: [
+                {b: "fly", to: "ground", r: 4},
+                {b: "pick_up", s: [0.8, 1.4], catch: "shellfish", p: 0.9, carry: "beak"}
+            ],
+            tail: [
+                {b: "go", to: "anchor"},
+                {b: "beat_prey", s: [2, 3.5], if: "caught"},
+                {b: "beat_prey", s: [2, 3.5], if: "caught"},
+                {b: "eat", s: [1.2, 2], if: "caught", eat: true}
+            ]
+        }),
+        // A limpkin's snail: it wades the shallows for an apple snail, carries it to the edge and slides its bill into the shell.
+        T({
+            id: "snail_extract",
+            label: "carries an apple snail from the shallows and slides its bill into the shell to snip the snail free",
+            kind: "stay",
+            goal: "edge",
+            replaces: ["forage", "wander", "drink"],
+            doing: "forage",
+            steps: [
+                {b: "wade", to: "shallows", near: "here", r: 3},
+                {b: "probe", s: [1.2, 2.6]},
+                {b: "pick_up", s: [0.8, 1.4], catch: "shellfish", p: 0.85, carry: "beak"},
+                {b: "walk", to: "anchor"},
+                {b: "tool", s: [3, 5.5], if: "caught"},
+                {b: "eat", s: [1.5, 2.5], if: "caught", eat: true}
             ],
             loop: 0
         }),
@@ -763,6 +876,9 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
         T({id: "swarm", label: "a swarm round it by day (ambient insects: bees at the hive, wasps, locusts, dragonflies)", kind: "flock", goal: "here", replaces: [], doing: "fly", hours: "day", steps: []}),
         T({id: "swarm_dusk", label: "a swarm round it at dusk (ambient insects: mayflies dancing, termites' and ants' nuptial flights)", kind: "flock", goal: "here", replaces: [], doing: "fly", hours: "dusk", steps: []}),
         T({id: "cluster", label: "a crawling cluster round it (ambient bugs gathered on a warm surface)", kind: "flock", goal: "here", replaces: [], doing: "rest", steps: []}),
+        // Signature wave 2 (birds): a communal roost at dusk: its roost-mates (ambient) fly in from all sides and settle in the
+        // crown round the catalogue birds that sleep together there (`sleep.json`: in a row), and fly out again at dawn.
+        T({id: "roost_gather", label: "gathers with its kind at dusk in a shared roost in the trees (ambient roost-mates fly in and settle)", kind: "flock", goal: "here", replaces: [], doing: "rest", hours: "dusk", steps: []}),
         T({id: "bat_emergence", label: "bats stream out of the roost at dusk (with ambient roost-mates)", kind: "flock", goal: "here", replaces: [], doing: "fly", hours: "dusk", steps: []}),
         T({
             id: "mixed_follow",
@@ -851,6 +967,27 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
             ],
             loop: 1
         }),
+        // A male house wren's dummy nests: the male alone carries material to a nest he starts, and starts another.
+        T({
+            id: "dummy_nests",
+            label: "carries material to a nest he starts, one of several dummy nests",
+            kind: "stay",
+            goal: "nest",
+            replaces: ["forage", "perch", "wander", "rest"],
+            doing: "forage",
+            hours: "day",
+            season: "nesting",
+            sex: "male",
+            steps: [
+                {b: "scan", s: [1, 2]},
+                {b: "go", to: "material", r: 8},
+                {b: "pick_up", s: [1, 2], pick: "material", carry: "beak"},
+                {b: "go", to: "nest"},
+                {b: "place", s: [3, 5], drop: true},
+                {b: "incubate", s: [6, 12]}
+            ],
+            loop: 1
+        }),
         T({
             id: "beach_nest",
             label: "hauls out at night, digs a pit in the sand and covers it",
@@ -866,6 +1003,37 @@ export const TEMPLATES: Record<string, Template> = Object.fromEntries(
                 {b: "rest", s: [10, 18]},
                 {b: "dig", s: [8, 14]},
                 {b: "crawl", to: "edge"}
+            ]
+        }),
+        // Signature wave 2 (birds): a penguin at its burrow (it lives in one: its schedule's "burrow" stay): digging at the entrance, throwing out earth.
+        T({
+            id: "burrow_dig",
+            label: "digs at its nest burrow, throwing out earth",
+            kind: "stay",
+            goal: "here",
+            replaces: ["burrow"],
+            doing: "burrow",
+            steps: [
+                {b: "dig", s: [6, 12]},
+                {b: "scan", s: [1, 2]},
+                {b: "dig", s: [4, 8]}
+            ]
+        }),
+        // Signature wave 2 (birds): a kingfisher's nest tunnel, dug with its bill into the bank at the water's edge.
+        T({
+            id: "bank_burrow",
+            label: "digs its nest tunnel into the bank with its bill",
+            kind: "stay",
+            goal: "edge",
+            replaces: ["burrow", "forage", "rest", "hide", "perch"],
+            doing: "burrow",
+            hours: "day",
+            season: "tunnel",
+            steps: [
+                {b: "walk", to: "ground", near: "here", r: 0.8},
+                {b: "dig", s: [5, 10]},
+                {b: "scan", s: [1, 2]},
+                {b: "dig", s: [4, 8]}
             ]
         }),
         T({
