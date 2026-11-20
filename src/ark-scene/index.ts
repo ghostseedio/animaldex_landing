@@ -120,6 +120,7 @@ import {ArkPerf, arkPerfAsked} from "@/ark-scene/runtime/perf";
 import {ArkFramePacer, SLOW_CPU_MS} from "@/ark-scene/runtime/pace";
 import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize, screenWeight, SWIMMING_PLANS} from "@/ark-scene/sizes";
 import {CAMERA_RANGE, closeUpViews, fitWhole, meetDistance, type CloseView} from "@/ark-scene/runtime/camera";
+import {easeLift, tinyLift} from "@/ark-scene/tiny-lift";
 import {Sight} from "@/ark-scene/runtime/sight";
 import {arkBody, arkIdleBehaviour, bodyAxisExtent, arkStats, glance, loopPace, moveSpeed, type ArkStats} from "@/ark-scene/stats";
 import {ARK_GROUND_LITE, buildLandscape, GROUND_SEGMENTS} from "@/ark-scene/terrain";
@@ -1347,6 +1348,23 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     const findEntry = (id: string | null) => (id ? entryById.get(id) ?? (visitor?.animal.id === id ? visitor : null) : null);
     /** The animal the camera follows (until any drag). */
     let followId: string | null = null;
+    /** Tiny animals seen (`tiny-lift.ts`): the eased lift of the one chosen or followed, and when it was last stepped. */
+    const tinyLifts = new Map<string, {value: number; at: number}>();
+    const liftTiny = (entry: Entry, distance: number, at: number): number => {
+        const id = entry.animal.id;
+        // (`__arkTinyLift = false`: the harness's before picture, true size.)
+        const watched = (selectedId === id || followId === id) && (globalThis as {__arkTinyLift?: boolean}).__arkTinyLift !== false;
+        const want = tinyLift(watched, entry.trueLength, entry.length, distance, height, FOV);
+        const was = tinyLifts.get(id);
+        if (!was && want === 1) return 1;
+        const value = reducedMotion ? want : easeLift(was?.value ?? 1, want, was ? at - was.at : 0.016);
+        if (want === 1 && Math.abs(value - 1) < 0.01) {
+            tinyLifts.delete(id);
+            return 1;
+        }
+        tinyLifts.set(id, {value, at});
+        return value;
+    };
     // Who is talking, and the full model that stands in for them.
     const talking = {
         target: null as ArkTalking | null,
@@ -5717,7 +5735,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
             }
             // Big animals need less help to be seen: a whale isn't blown up like a sparrow.
-            const sizeUp = level !== "near" ? 1 + (exaggerate - 1) * Math.min(Math.max(1.6 / entry.length, 0.25), 1) : 1;
+            // (Tiny animals seen, `tiny-lift.ts`: a beetle or a fly chosen or followed, near, is at least a few pixels long.)
+            const sizeUp = level !== "near" ? 1 + (exaggerate - 1) * Math.min(Math.max(1.6 / entry.length, 0.25), 1) : liftTiny(entry, candidate.distance, now);
             const modelHeight = candidate.modelHeight * sizeUp;
             entry.drawnHeight = modelHeight;
             // In the water: fitted again at the height it is drawn at (from afar it is drawn larger), so its back never breaks the surface.
