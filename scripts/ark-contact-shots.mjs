@@ -391,7 +391,7 @@ if (want("eaves")) {
                 const p = e.sched?.pose;
                 if (!p || p.moving || p.aloft || e.length > 0.7) continue;
                 const eave = window.__arkScene.island?.() === "town" ? window.__arkDebug.eaveAt?.(p.x, p.y, p.z) : null;
-                if (eave) out.push({id: e.animal.id, slug: e.animal.model_slug, building: eave.building});
+                if (eave) out.push({id: e.animal.id, slug: e.animal.model_slug, building: eave.building, spot: {x: p.x, y: p.y, z: p.z}, eave});
             }
             return out;
         });
@@ -403,7 +403,10 @@ if (want("eaves")) {
             const item = {...b};
             for (const off of [true, false]) {
                 await page.evaluate((off) => (window.__arkEaveFixOff = off), off);
-                if (!(await frame(b.id, 2.2, 1.15, Math.PI / 3, 2200))) continue;
+                // (From above and outside its house: looking steeply down on the eave from 3 m, the view's target on the eave.)
+                const at = off ? b.spot : b.eave;
+                await page.evaluate((at) => window.__arkScene.setView({target: {x: at.x, y: at.y, z: at.z}, distance: 3, polar: 0.75, azimuth: Math.atan2(at.x, at.z)}), at);
+                await wait(3500);
                 const t = await page.evaluate((id) => window.__arkDebug.tips?.(id, 8) ?? null, b.id);
                 const gaps = (t?.tips ?? []).map((x) => x.gap).filter((g) => g !== null);
                 const u = await under(b.id, null);
