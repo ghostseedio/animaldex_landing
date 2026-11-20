@@ -257,7 +257,9 @@ const TOWN_DIGESTS = {
     // (p5 (zoospace): the crowded residents moved to new homes or spread over their type's plots, kept apart, `zoo-homes.ts`.)
     // (p5 (zoospace): the waterbirds and the big kinds moved to the free-flight dome by the rule, each in its zone.)
     // (p6 (zoo merge): both lobes' animals: the fields' livestock and poultry and the dome's birds, the zoo residents' new homes.)
-    places: "bc79e65e11168d6b"
+    // (Container breeding, 2026-11-20: a kept animal's middle keeps `penMarginOf` from its pen's rails (0.625 x its length + 0.3 m, was
+    // 0.5 x + 0.15) and out of the walls by 0.55 x its length: the coordinator's "no body through a rail or into the barn".)
+    places: "f86b9f3109b930a1"
 };
 
 test("the town's prebuild on the fixture: the same plan, areas, ground, scenery, buildings, zoo and places as before", async () => {
