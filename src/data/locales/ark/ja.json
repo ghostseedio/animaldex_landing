@@ -438,7 +438,10 @@
             "spawnPair": "{animal}：産卵し、オスが卵に受精させた",
             "amplexus": "{animal}：抱接したペアが産卵した",
             "pouchFry": "{animal}：父親の育児嚢から子が{count}匹出た",
-            "split": "{animal}：親から新しい個体が分かれた"
+            "split": "{animal}：親から新しい個体が分かれた",
+            "giftMeal": "{aAnimal}: 訪問者からごはんをもらいました",
+            "giftShelter": "{aPrey}: 訪問者の隠れ家で{aPredator}から守られました",
+            "giftNest": "{aAnimal}: 訪問者の巣づくりの手助けで交尾しました"
         },
         "card": {
             "now": "いま：{activity}",
@@ -1060,6 +1063,35 @@
             "wild": "野生",
             "town": "町",
             "arkYear": "箱舟の1年"
+        },
+        "care": {
+            "title": "訪問者からのお世話",
+            "meal": "ごはん",
+            "shelter": "隠れ家",
+            "nest": "巣づくりの手助け",
+            "fedBy": "{who}がごはんをあげました",
+            "shelteredBy": "{who}が隠れ家をあげました",
+            "nestBy": "{who}からの巣づくりの手助け",
+            "you": "あなた",
+            "aVisitor": "訪問者",
+            "fuller": "あと{time}満腹",
+            "safe": "あと{time}安全",
+            "helping": "あと{time}手助け中",
+            "stoppedHunt": "狩りを1回防ぎました",
+            "nestUsed": "子育てを手助けしました",
+            "onItsWay": "届く途中",
+            "mealDoes": "{time}満腹",
+            "shelterDoes": "{time}、1回の狩りから安全",
+            "nestDoes": "{time}、子どもができやすくなる",
+            "credits": "{n}クレジット",
+            "send": "{n}クレジットで送る",
+            "cancel": "キャンセル",
+            "sent": "送りました。役に立てない場合、クレジットは戻ります。",
+            "noCredits": "これにはもっとクレジットが必要です。",
+            "notNow": "今はできません。",
+            "limit": "今日のお世話は上限に達しました。",
+            "tooNew": "アカウント作成から1週間たち、カードがあるとお世話できます。",
+            "failed": "送れませんでした。もう一度お試しください。"
         }
     },
     "talkPage": {

@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: nangitlog, at pinataba ng lalaki ang mga itlog",
             "amplexus": "{animal}: magkapares sa amplexus, at nangitlog",
             "pouchFry": "{animal}: {count} supling ang lumabas mula sa supot ng ama",
-            "split": "{animal}: may bagong humiwalay sa magulang nito"
+            "split": "{animal}: may bagong humiwalay sa magulang nito",
+            "giftMeal": "{aAnimal}: pinakain ng isang bisita",
+            "giftShelter": "{aPrey}: ligtas mula sa {aPredator} sa silungan ng isang bisita",
+            "giftNest": "{aAnimal}: nag-asawa, sa tulong sa pugad ng isang bisita"
         },
         "card": {
             "now": "Ngayon: {activity}",
@@ -1060,6 +1063,35 @@
             "wild": "Ligaw",
             "town": "Bayan",
             "arkYear": "1 taon sa Arko"
+        },
+        "care": {
+            "title": "Alaga mula sa mga bisita",
+            "meal": "Isang pagkain",
+            "shelter": "Silungan",
+            "nest": "Tulong sa pugad",
+            "fedBy": "Pinakain ni {who}",
+            "shelteredBy": "Sinilungan ni {who}",
+            "nestBy": "Tulong sa pugad mula kay {who}",
+            "you": "ikaw",
+            "aVisitor": "isang bisita",
+            "fuller": "busog nang {time}",
+            "safe": "ligtas nang {time}",
+            "helping": "tumutulong nang {time}",
+            "stoppedHunt": "napigilan nito ang isang pangangaso",
+            "nestUsed": "nakatulong ito sa mga anak",
+            "onItsWay": "papunta na",
+            "mealDoes": "Busog nang {time}",
+            "shelterDoes": "Ligtas sa isang pangangaso nang {time}",
+            "nestDoes": "Mas magandang tsansa ng anak nang {time}",
+            "credits": "{n} Credits",
+            "send": "Ipadala sa {n} Credits",
+            "cancel": "Kanselahin",
+            "sent": "Naipadala. Kung hindi ito makakatulong, babalik ang iyong Credits.",
+            "noCredits": "Kailangan mo ng mas maraming Credits para dito.",
+            "notNow": "Hindi posible ngayon.",
+            "limit": "Naibigay mo na ang pinakamaraming alaga para sa araw na ito.",
+            "tooNew": "Bubukas ang alaga kapag isang linggo na ang account mo at may card ito.",
+            "failed": "Hindi naipadala. Subukan ulit."
         }
     },
     "talkPage": {

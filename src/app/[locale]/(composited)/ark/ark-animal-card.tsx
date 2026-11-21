@@ -51,6 +51,8 @@ const ArkCardPower = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card
 
 /** Its day (lane ark-its-day): loaded only when opened. */
 const ArkItsDay = lazy(() => import("@/app/[locale]/(composited)/ark/ark-its-day"));
+/** Care from visitors (GIFTS-CARE, decision 387): what was given and what the reader could give; lazy, nothing while the server's switch is off. */
+const ArkCardCare = lazy(() => import("@/app/[locale]/(composited)/ark/ark-card-care"));
 
 /** A tapped animal's life story (`voyage_animal_life_v1`), as ark-view reads it. */
 export {ArkFilled, useCardFocus};
@@ -438,6 +440,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         {snapshot ? <Suspense fallback={<div className="h-[2.6rem]" />}><ArkTimeLeft animal={animal} snapshot={snapshot} words={words} locale={locale} /></Suspense> : null}
                         {/* Release to the Wild (P1-8, behind the server's switch) and carers (decision 418), then who is around it: what it eats, what could hunt it, its mates, as icons (lane ark-relation-lines; no fallback is React 18's null). */}
                         <Suspense><ArkTimeLeft release={Link} animal={animal} words={words} locale={locale} day={arkDay} scene={scene} snapshot={snapshot} /></Suspense>
+                        {placeholder ? null : <Suspense fallback={null}><ArkCardCare animalId={animal.id} words={words.care} locale={locale} /></Suspense>}
                         {lives && animal.mine ? <ArkLivesRow entry={lives.entry} words={lives.words} locale={locale} cost={lives.cost} onRestored={lives.onRestored} /> : null}
                         {placeholder ? <p className="text-[11.5px] leading-snug text-ink-400">{words.life.placeholder}</p> : null}
                         {/* The last of its kind aboard (the server's last_of_kind), or a lone founder (decision 389): it ages out honestly unless another is caught. */}

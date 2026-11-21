@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: eitjes gelegd, en het mannetje heeft ze bevrucht",
             "amplexus": "{animal}: een paar in amplexus, en kuit gelegd",
             "pouchFry": "{animal}: {count} jongen vrijgelaten uit de broedbuidel van de vader",
-            "split": "{animal}: een nieuwe heeft zich van de ouder afgesplitst"
+            "split": "{animal}: een nieuwe heeft zich van de ouder afgesplitst",
+            "giftMeal": "{aAnimal}: gevoerd door een bezoeker",
+            "giftShelter": "{aPrey}: veilig voor {aPredator} in de schuilplaats van een bezoeker",
+            "giftNest": "{aAnimal}: gepaard, met nesthulp van een bezoeker"
         },
         "card": {
             "now": "Nu: {activity}",
@@ -1060,6 +1063,35 @@
             "wild": "Wild",
             "town": "Stad",
             "arkYear": "1 Ark-jaar"
+        },
+        "care": {
+            "title": "Zorg van bezoekers",
+            "meal": "Een maaltijd",
+            "shelter": "Schuilplaats",
+            "nest": "Nesthulp",
+            "fedBy": "Gevoerd door {who}",
+            "shelteredBy": "Beschut door {who}",
+            "nestBy": "Nesthulp van {who}",
+            "you": "jou",
+            "aVisitor": "een bezoeker",
+            "fuller": "verzadigd voor {time}",
+            "safe": "veilig voor {time}",
+            "helping": "helpt voor {time}",
+            "stoppedHunt": "het hield een jacht tegen",
+            "nestUsed": "het hielp met jongen",
+            "onItsWay": "onderweg",
+            "mealDoes": "Verzadigd voor {time}",
+            "shelterDoes": "Veilig voor één jacht, {time} lang",
+            "nestDoes": "Meer kans op jongen, {time} lang",
+            "credits": "{n} credits",
+            "send": "Verstuur voor {n} credits",
+            "cancel": "Annuleren",
+            "sent": "Verstuurd. Als het niet kan helpen, krijg je je credits terug.",
+            "noCredits": "Je hebt hier meer credits voor nodig.",
+            "notNow": "Nu niet mogelijk.",
+            "limit": "Je hebt vandaag al de meeste zorg gegeven.",
+            "tooNew": "Zorg geven kan zodra je account een week oud is en een kaart heeft.",
+            "failed": "Versturen mislukt. Probeer het opnieuw."
         }
     },
     "talkPage": {
