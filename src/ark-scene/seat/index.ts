@@ -31,6 +31,9 @@ export type SeatFacts = {
     lying: boolean;
 };
 
+/** One kept record of the facts: filled in place for each animal, so a frame makes no object for them. */
+export const SEAT_FACTS: SeatFacts = {riding: false, carried: false, hanging: false, onWeb: false, flying: false, water: false, afloat: false, den: false, growing: false, acting: false, swinging: false, hopping: false, surfaceNy: null, lying: false};
+
 /** The seat's kind for an animal: what it is left alone for, or how it is seated. */
 export function seatKind(f: SeatFacts): SeatKind {
     if (f.riding) return "ride";

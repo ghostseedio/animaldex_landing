@@ -154,10 +154,11 @@ export function posedHull(hull: Hull, pose: RigPose | null, out: Float32Array): 
                     const a = ((part ? pose.from0 : pose.row0) * pose.bones + bone) * 12;
                     const b = ((part ? pose.from1 : pose.row1) * pose.bones + bone) * 12;
                     const t = part ? pose.fromT : pose.t;
-                    const h = (i: number) => halfTable[baked[a + i]] * (1 - t) + halfTable[baked[b + i]] * t;
-                    sx += share * w * (h(0) * x + h(1) * y + h(2) * z + h(3));
-                    sy += share * w * (h(4) * x + h(5) * y + h(6) * z + h(7));
-                    sz += share * w * (h(8) * x + h(9) * y + h(10) * z + h(11));
+                    const u = 1 - t;
+                    const k = share * w;
+                    sx += k * ((halfTable[baked[a]] * u + halfTable[baked[b]] * t) * x + (halfTable[baked[a + 1]] * u + halfTable[baked[b + 1]] * t) * y + (halfTable[baked[a + 2]] * u + halfTable[baked[b + 2]] * t) * z + halfTable[baked[a + 3]] * u + halfTable[baked[b + 3]] * t);
+                    sy += k * ((halfTable[baked[a + 4]] * u + halfTable[baked[b + 4]] * t) * x + (halfTable[baked[a + 5]] * u + halfTable[baked[b + 5]] * t) * y + (halfTable[baked[a + 6]] * u + halfTable[baked[b + 6]] * t) * z + halfTable[baked[a + 7]] * u + halfTable[baked[b + 7]] * t);
+                    sz += k * ((halfTable[baked[a + 8]] * u + halfTable[baked[b + 8]] * t) * x + (halfTable[baked[a + 9]] * u + halfTable[baked[b + 9]] * t) * y + (halfTable[baked[a + 10]] * u + halfTable[baked[b + 10]] * t) * z + halfTable[baked[a + 11]] * u + halfTable[baked[b + 11]] * t);
                 }
             }
         }
