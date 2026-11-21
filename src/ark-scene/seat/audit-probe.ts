@@ -269,9 +269,10 @@ export class SeatProbe {
         const length = Math.max(drawn.length, 0.002);
         const out: SeatMeasure = {kind: drawn.kind, level: drawn.level, gap: null, low: null, on: "", inside: 0, of: 0, middle: false, insideOf: "", points: 0};
         if (drawn.kind !== "stand" && drawn.kind !== "lie" && drawn.kind !== "perch" && drawn.kind !== "cling") return out;
-        const held = drawn.kind === "perch" || drawn.kind === "cling";
+        // (Held: the scene says so, or it is plainly up off the ground, more than its own height.)
+        const held = drawn.kind === "perch" || drawn.kind === "cling" || y0 - this.ground(cx, cz, cy) > Math.max(0.25, height);
         const up = Math.min(Math.max(0.75 * height, 0.03), 1);
-        const mask = held || length <= 0.08 ? ROCK | HARD | TREE | SOFT : ROCK | HARD;
+        const mask = length <= 0.08 || (held && length <= 0.6) ? ROCK | HARD | TREE | SOFT : held ? ROCK | HARD | TREE : ROCK | HARD;
         // The scene's triangles round its body: under it down to the ground, over it as far as a rock's top is looked for.
         const pad = drawn.kind === "cling" ? Math.max(0.3, 1.6 * height) + 1 : 0.02;
         const under = Math.min(y0, this.ground(cx, cz, cy), this.ground(x0, z0, cy), this.ground(x1, z1, cy), this.ground(x0, z1, cy), this.ground(x1, z0, cy)) - 0.5;
@@ -426,7 +427,8 @@ export class SeatProbe {
                 // (Up out of it is its seat when that is a step's height or it is held there; deeper, it is inside: counted above.)
                 if (closed < gap && (held || closed >= -Math.max(up, 0.3 * height))) gap = closed;
             }
-            return {gap, low: gaps[0], on: chosen.on, points: points.length};
+            // (`low`: whether anything of it touches: its lowest point's gap; held, its best contact's.)
+            return {gap, low: held ? gap : Math.min(gaps[0], gap), on: chosen.on, points: points.length};
         };
         const onFace = drawn.kind === "cling" && drawn.surface !== null;
         let found: ReturnType<typeof seat> = null;

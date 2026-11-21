@@ -8,8 +8,8 @@
  * posed, against the scene's own meshes with three's Raycaster, not the seat pass's index.
  *
  * It fails (exit 1, with `--gate`) when an animal that is not flying, swimming, hanging, carried or in its den is
- *   - more than 3 cm over the drawn surface it rests on (hovering),
- *   - more than 3 cm under it (sunk), or
+ *   - more than 3 cm over the drawn surface it rests on (hovering: its lowest point, nothing of it touching),
+ *   - more than 3 cm under it (sunk: its seat, the quarter of its lowest points on uneven ground allowed for), or
  *   - inside a rock, a wall or any closed solid (its middle, or two or more of some forty points of its body, more
  *     than 3 cm under the thing's own top; one on a trunk's or a wall's face is measured against that face instead).
  *
@@ -172,12 +172,13 @@ const verdict = (row) => {
     if (!SEATED.has(row.kind)) return "exempt";
     if (row.middle || row.inside >= 2) return "inside";
     if (row.gap === null) return "nothing";
-    if (row.gap > TOLERANCE) return "above";
+    // (Hovering: nothing of it touches, its lowest point over the surface. Sunk: its seat under it.)
+    if (row.low > TOLERANCE) return "above";
     if (row.gap < -TOLERANCE) return "below";
     return "ok";
 };
 /** How far off its seat a measure has it (for the better of two looks): inside counts most. */
-const badness = (row) => (verdict(row) === "ok" || verdict(row) === "exempt" ? 0 : (row.middle || row.inside >= 2 ? 100 : 0) + (row.gap === null ? 50 : Math.abs(row.gap)));
+const badness = (row) => (verdict(row) === "ok" || verdict(row) === "exempt" ? 0 : (row.middle || row.inside >= 2 ? 100 : 0) + (row.gap === null ? 50 : Math.max(Math.abs(row.gap), Math.abs(row.low))));
 
 const rows = [];
 const notDrawn = [];

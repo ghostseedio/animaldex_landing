@@ -91,6 +91,12 @@ export type SeatInput = {
     moving: boolean;
     /** The drawn ground under a point (m), near a height where floors are stacked. */
     ground: (x: number, z: number, near?: number) => number;
+    /**
+     * How far its own motion lifts it off what it is on in a stride (m): a moving rig in a clip of its own (a bound's or a
+     * gallop's moment in the air); 0 for one whose feet the locomotion layer plants, a still one, a mesh with no rig.
+     * Its offset follows a rise within this only once it has lasted.
+     */
+    bounce?: number;
     /** The chosen animal: worked out now, whatever the budget. */
     focus: boolean;
     /** Development: the level it is drawn at ("near", "far"), for the audit. */
@@ -129,6 +135,8 @@ export class SeatPass {
     private pushesLeft = 1;
     private overhead = 0;
     private clock = 0;
+    private wait = 0;
+    private short = false;
     /** Development: keep each solve's support points. */
     keepPoints = false;
     /** Off (the before pictures, the A/B measure): every offset zero. */
@@ -150,6 +158,9 @@ export class SeatPass {
     begin(dt = 1 / 60): void {
         const frame = ++this.frame;
         this.clock += Math.min(Math.max(dt, 0), 0.25);
+        // (The last frame's budget ran out before everyone due was seated: each waits a frame longer between turns; else less.)
+        this.wait = this.short ? Math.min(this.wait + 1, 90) : Math.max(this.wait - 1, 0);
+        this.short = false;
         this.spent = 0;
         this.hullsLeft = 1;
         this.pushesLeft = 1;
@@ -212,7 +223,14 @@ export class SeatPass {
         if (this.keepPoints) return true;
         if (this.off || !SEATED.has(kind)) return false;
         // (Its turn, or the scenery round it has changed since it was seated: a tree's nearer level, a rock field come in.)
-        return focus || this.forced || ((this.frame >= (holder.seat?.due ?? 0) || holder.seat?.seen !== this.solids.version) && this.spent < SEAT_BUDGET_MS);
+        const s = holder.seat;
+        if (focus || this.forced || !s) return true;
+        if (this.frame < s.due && s.seen === this.solids.version) return false;
+        if (this.spent >= SEAT_BUDGET_MS) {
+            this.short = true;
+            return false;
+        }
+        return !s.solved || this.frame - s.frame >= this.wait;
     }
 
     /**
@@ -237,7 +255,12 @@ export class SeatPass {
         }
         if (this.off || !SEATED.has(input.kind)) return;
         if (!input.focus && !this.forced) {
-            if ((this.frame < s.due && s.seen === this.solids.version) || this.spent >= SEAT_BUDGET_MS) return;
+            if ((this.frame < s.due && s.seen === this.solids.version) || this.spent >= SEAT_BUDGET_MS) {
+                if (this.spent >= SEAT_BUDGET_MS) this.short = true;
+                return;
+            }
+            // (Everyone's turn: when a frame's budget does not reach them all, one seated lately waits for those seated longer ago.)
+            if (s.solved && this.frame - s.frame < this.wait) return;
             if (!hullKnown(input.geometry)) {
                 if (this.hullsLeft <= 0) return;
                 this.hullsLeft--;
@@ -301,7 +324,9 @@ export class SeatPass {
         const height = Math.max(input.height, 0.002);
         const length = Math.max(input.length, 0.002);
         const cling = input.kind === "cling" && input.surface !== null;
-        const held = input.kind === "perch" || input.kind === "cling";
+        // Held on something: the scene says so, or it is plainly up off the ground (more than its own height: a bird the
+        // schedule has in a tree between two of its points, an animal on a log): then anything drawn can be what it is on.
+        const held = input.kind === "perch" || input.kind === "cling" || y0 - input.ground(cx, cz, cy) > Math.max(0.25, height);
         // The way off the surface: up, or the face's normal on a trunk, a wall, a rock's face.
         let ax = 0;
         let ay = 1;
@@ -353,7 +378,9 @@ export class SeatPass {
             }
         }
         const tiny = length <= 0.08;
-        const mask = held || tiny ? ALL : ROCK | HARD;
+        // What can hold it: anything for the smallest and for a small one held up; a big one held up, wood and rock (a
+        // leopard on a limb is not on a fern); one on its feet on the ground, only what is closed (a rock, a log, a roof).
+        const mask = tiny || (held && length <= 0.6) ? ALL : held ? ROCK | HARD | TREE : ROCK | HARD;
         const up = Math.min(Math.max(0.75 * height, 0.03), 1);
         // Everything drawn near its body, once: its casts are made against these.
         const reachUp = Math.max(0.5, 1.5 * height);
@@ -510,8 +537,8 @@ export class SeatPass {
             if (!s.inside && !sideways) s.pushes = 0;
         }
         // Held on something with nothing near under it: a drawn surface beside it first.
-        if (input.kind === "perch" && gap > Math.max(0.1, height)) {
-            const side = this.beside(cx, least, cz, length, Math.max(0.1, height), mask, input.ground);
+        if (held && !cling && gap > Math.max(0.1, height)) {
+            const side = this.beside(cx, least, cz, length, Math.max(0.1, height), length <= 0.6 ? mask : ROCK | HARD, input.ground);
             if (side) {
                 s.tx = s.x + side.x;
                 s.ty = s.y - side.gap;
@@ -535,12 +562,14 @@ export class SeatPass {
         if (!moved) {
             // The gap it would have with no offset along its way, at its lowest over its motion (`SeatState.env`).
             const u = gap - (s.x * ax + s.y * ay + s.z * az);
-            if (fresh || s.env !== s.env || u <= s.env) {
+            const band = Math.max(input.bounce ?? 0, 0);
+            if (fresh || s.env !== s.env || u <= s.env || band <= 0) {
                 s.env = u;
                 s.above = 0;
             } else {
+                // (Up by more than a stride lifts it: followed at once to within that; within it, only once it has lasted.)
                 s.above += dt;
-                s.env = Math.min(u, s.env + (s.above < 0.25 ? 0.05 : 0.05 + 4 * (s.above - 0.25)) * dt);
+                s.env = Math.min(u, Math.max(s.env + (s.above < 0.25 ? 0.05 : 0.05 + 4 * (s.above - 0.25)) * dt, u - band));
             }
             // Its offset along that way, when where it eases to would leave it more than a centimetre off.
             const along = s.tx * ax + s.ty * ay + s.tz * az;

@@ -4214,7 +4214,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 frame: () => seat.frames,
                 /** The animals drawn in the last `within` frames as a model (near, far or a rig). */
                 drawn: (within = 2) => allEntries().filter((e) => { const d = drawnOf(e); return d !== null && seat.frames - d.frame <= within; }).map((e) => { const d = drawnOf(e)!; return {id: e.animal.id, slug: e.animal.model_slug, island: e.animal.island ?? null, kind: d.kind, level: d.level, length: e.length, plan: library.get(e.animal.model_slug)?.behaviour?.plan ?? null, x: d.m[12], y: d.m[13], z: d.m[14]}; }),
-                measure: (id: string) => { const e = entryById.get(id); const d = e ? drawnOf(e) : null; return d ? {...probe.measure(d), seat: e!.seat ? {x: e!.seat.x, y: e!.seat.y, z: e!.seat.z, gap: e!.seat.gap, on: e!.seat.on, inside: e!.seat.inside, pushes: e!.seat.pushes, stuck: e!.seat.stuck, solved: e!.seat.solved} : null} : null; }
+                measure: (id: string) => { const e = entryById.get(id); const d = e ? drawnOf(e) : null; return d ? {...probe.measure(d), seat: e!.seat ? {x: e!.seat.x, y: e!.seat.y, z: e!.seat.z, gap: e!.seat.gap, on: e!.seat.on, inside: e!.seat.inside, pushes: e!.seat.pushes, fell: e!.seat.fell, solved: e!.seat.solved} : null} : null; }
             };
         });
     }
@@ -6976,6 +6976,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     length: entry.length * sizeUp,
                     surface: seatFell ? null : surface ?? null,
                     moving: Boolean(entry.sched?.pose?.moving),
+                    // (A moving rig in a clip of its own, no planted feet: its stride's moment in the air is its own.)
+                    bounce: rig && !seatGait && entry.sched?.pose?.moving ? Math.min(Math.max(0.25 * modelHeight, 0.02), 0.3) : 0,
                     ground: (x, z, near) => standGround(x, z, near ?? poseBase),
                     focus: selectedId === animal.id,
                     level

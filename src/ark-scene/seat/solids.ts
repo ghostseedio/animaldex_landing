@@ -72,6 +72,8 @@ type Solid = {
     cells: Map<number, number[]> | null;
     wide: number[];
     asked: Uint32Array;
+    /** How often its instances moved lately (counted down as the meshes are read again). */
+    changes: number;
 };
 
 /** Instances a solid has before they are kept by cell, and the cell's side (m). */
@@ -130,8 +132,9 @@ export class DrawnSolids {
                 if (cls > 0) {
                     const known = before.get(mesh);
                     const material = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as Material | undefined;
-                    const solid: Solid = known && known.geometry === mesh.geometry ? known : {mesh, instanced: (mesh as InstancedMesh).isInstancedMesh ? (mesh as InstancedMesh) : null, cls, kind: label, geometry: mesh.geometry, double: false, version: -1, count: -1, stamp: NaN, boxes: new Float32Array(0), box: new Float64Array(6), shown: visible, dead: false, cells: null, wide: [], asked: new Uint32Array(0)};
+                    const solid: Solid = known && known.geometry === mesh.geometry ? known : {mesh, instanced: (mesh as InstancedMesh).isInstancedMesh ? (mesh as InstancedMesh) : null, cls, kind: label, geometry: mesh.geometry, double: false, version: -1, count: -1, stamp: NaN, boxes: new Float32Array(0), box: new Float64Array(6), shown: visible, dead: false, cells: null, wide: [], asked: new Uint32Array(0), changes: 0};
                     solid.shown = visible;
+                    if (solid.changes > 0 && this.frame % 4 === 0) solid.changes--;
                     solid.double = (material?.side ?? 0) === 2 || cls === SOFT || cls === TREE;
                     next.push(solid);
                 }
@@ -184,13 +187,13 @@ export class DrawnSolids {
     /** A solid's instances' boxes in the world, made again when its matrices changed. */
     private refresh(solid: Solid): void {
         const mesh = solid.mesh;
+        const was = solid.count;
         const count = solid.instanced ? solid.instanced.count : 1;
         const version = solid.instanced ? solid.instanced.instanceMatrix.version : 0;
         const w = mesh.matrixWorld.elements;
         const stamp = w[12] + w[13] * 3 + w[14] * 7 + w[0] * 11 + w[5] * 13 + w[10] * 17;
         if (solid.version === version && solid.count === count && solid.stamp === stamp) return;
-        // (Not its first reading: its instances changed, a tree's nearer level taking its place say.)
-        if (solid.version !== -1) this.version++;
+        const first = solid.version === -1;
         solid.version = version;
         solid.count = count;
         solid.stamp = stamp;
@@ -207,7 +210,11 @@ export class DrawnSolids {
         const ex = (b.max.x - b.min.x) / 2;
         const ey = (b.max.y - b.min.y) / 2;
         const ez = (b.max.z - b.min.z) / 2;
-        if (solid.boxes.length < count * 6) solid.boxes = new Float32Array(Math.max(count, 1) * 6);
+        let changed = count !== was;
+        if (solid.boxes.length < count * 6) {
+            solid.boxes = new Float32Array(Math.max(count, 1) * 6);
+            changed = true;
+        }
         const box = solid.box;
         box[0] = box[1] = box[2] = Infinity;
         box[3] = box[4] = box[5] = -Infinity;
@@ -224,6 +231,8 @@ export class DrawnSolids {
             const ry = Math.abs(e[1]) * ex + Math.abs(e[5]) * ey + Math.abs(e[9]) * ez;
             const rz = Math.abs(e[2]) * ex + Math.abs(e[6]) * ey + Math.abs(e[10]) * ez;
             const o = i * 6;
+            // (Written again as it was, a level's list rebuilt the same each frame, is no change.)
+            if (!changed && (Math.abs(solid.boxes[o] - (x - rx)) > 1e-3 || Math.abs(solid.boxes[o + 1] - (y - ry)) > 1e-3 || Math.abs(solid.boxes[o + 2] - (z - rz)) > 1e-3 || Math.abs(solid.boxes[o + 3] - (x + rx)) > 1e-3 || Math.abs(solid.boxes[o + 4] - (y + ry)) > 1e-3 || Math.abs(solid.boxes[o + 5] - (z + rz)) > 1e-3)) changed = true;
             solid.boxes[o] = x - rx;
             solid.boxes[o + 1] = y - ry;
             solid.boxes[o + 2] = z - rz;
@@ -237,6 +246,10 @@ export class DrawnSolids {
             if (y + ry > box[4]) box[4] = y + ry;
             if (z + rz > box[5]) box[5] = z + rz;
         }
+        if (!changed && !first) return;
+        // Its instances moved (a tree's nearer level taking its place): the seats round it are made again. One that
+        // moves all the time (a boat on the swell) does not ask that of everyone each frame.
+        if (!first && ++solid.changes <= 3) this.version++;
         solid.cells = null;
         solid.wide.length = 0;
         if (count >= CELLS_FROM) {
