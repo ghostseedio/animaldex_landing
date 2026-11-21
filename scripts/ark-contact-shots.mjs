@@ -446,6 +446,164 @@ if (want("langur")) {
     console.log("langurs", JSON.stringify(langurs));
     console.log("langur limb", JSON.stringify(await page.evaluate(() => window.__arkDebug.limbClear("limb:decor98:4", 1.29))));
 }
+// The owner's Cunner (2026-11-21): focused, the food-chain lines from empty water, no fish drawn.
+const fishState = (id) => page.evaluate((id) => {
+    const e = window.__arkDebug.entries().find((x) => x.animal.id === id);
+    if (!e) return null;
+    const r = (v) => (v && typeof v.x === "number" ? {x: +v.x.toFixed(2), y: +v.y.toFixed(2), z: +v.z.toFixed(2)} : v ?? null);
+    return {slug: e.animal.model_slug, island: e.animal.zone, length: e.length, trueLength: e.trueLength, drawnHeight: e.drawnHeight, level: e.level, middle: r(e.middle), drawn: e.drawn ? {...r(e.drawn), level: e.drawn.level} : null, place: {x: e.place?.x, z: e.place?.z, water: e.place?.water, ocean: e.ocean ?? null}, depth: e.depth ?? null, asleep: Boolean(e.state?.asleep), pose: e.sched?.pose ? r(e.sched.pose) : null, view: window.__arkScene.view()};
+}, id);
+if (want("cunner")) {
+    const ids = ["2b54da38-5667-44ab-b688-b0d8fe17d0f8", "a396a836-6970-4275-9859-b54fbd976a73", "d78d4016-dbd2-4a55-83ef-43d40867c225"];
+    console.log("cunners", JSON.stringify(ids));
+    for (const hour of [3, 11]) {
+        await page.evaluate((h) => window.__arkScene.setHours(h), hour);
+        for (const id of ids) {
+            await page.evaluate((id) => window.__arkScene.select(id, true), id);
+            await wait(8000);
+            console.log("cunner", hour, id, JSON.stringify(await fishState(id)));
+            await shot(`cunner-${hour}-${id.slice(0, 4)}`);
+            await page.evaluate(() => window.__arkScene.select(null));
+            await wait(1500);
+        }
+    }
+}
+if (want("aquatic")) {
+    for (const island of ["wild", "town"]) {
+        await crossTo(island);
+        for (const hour of [3, 11, 19]) {
+            await page.evaluate((h) => window.__arkScene.setHours(h), hour);
+            await wait(4000);
+            for (const off of [true, false]) {
+                const r = await page.evaluate((off) => window.__arkDebug.aquaticFocus(off), off);
+                console.log("aquatic", island, hour, off ? "before" : "after", JSON.stringify({submerged: r.submerged, framedFromAbove: r.framedFromAbove, rows: r.rows.slice(0, 12).map((x) => [x.slug, x.depth, x.top, x.camera])}));
+            }
+        }
+    }
+}
+// Every animal under the water, chosen as the page chooses it, the framing fix off and on: seen when the camera is under
+// the same water, the animal on the screen, at least 12 px long, drawn, and its lines from within 1 m of it.
+if (want("fishfly")) {
+    for (const island of ["wild", "town"]) {
+        await crossTo(island);
+        await page.evaluate(() => window.__arkScene.setHours(11));
+        await wait(3000);
+        const ids = (await page.evaluate(() => window.__arkDebug.aquaticFocus(true))).all;
+        for (const off of [true, false]) {
+            await page.evaluate((off) => (window.__arkSwimFixOff = off), off);
+            let unseen = 0;
+            const bad = [];
+            for (const [id, slug] of ids) {
+                await page.evaluate((id) => window.__arkScene.select(id, true), id);
+                // (Until the flight has ended: the view still for half a second, 9 s at most.)
+                let last = null;
+                for (let t = 0; t < 18; t++) {
+                    await wait(500);
+                    const v = JSON.stringify(await page.evaluate(() => window.__arkScene.view()));
+                    if (t >= 4 && v === last) break;
+                    last = v;
+                }
+                const r = await page.evaluate((id) => {
+                    const r = window.__arkDebug.focusSeen(id);
+                    const at = window.__arkScene.locate?.(id);
+                    return r && {...r, lineFrom: at ? +Math.hypot(at.x - r.mx, at.y - r.my, at.z - r.mz).toFixed(2) : null};
+                }, id);
+                // (Seen through the surface only where it is shallow over it: a triggerfish 40 cm down by the shore shows.)
+                const seen = r && (r.camUnder || r.fishTop - r.my < 0.6) && r.onScreen && r.px >= 12 && r.drawn && (r.lineFrom ?? 0) <= 1;
+                if (!seen) {
+                    unseen++;
+                    bad.push([slug, r?.camUnder, +(r?.fishTop - r?.my).toFixed(2), r?.onScreen, r?.px, r?.drawn, r?.lineFrom]);
+                    if (!off) await shot(`fishfly-${island}-${slug}`);
+                }
+                await page.evaluate(() => window.__arkScene.select(null));
+                await wait(800);
+            }
+            console.log("fishfly", island, off ? "before" : "after", JSON.stringify({chosen: ids.length, unseen, bad: bad.slice(0, 20)}));
+        }
+    }
+}
+if (want("fishone")) {
+    await page.evaluate(() => window.__arkScene.setHours(11));
+    await wait(3000);
+    const all = (await page.evaluate(() => window.__arkDebug.aquaticFocus(true))).all;
+    const pick = ["titan-triggerfish", "northern-pike", "striped-snakehead", "koi", "electric-eel"].map((slug) => all.find((x) => x[1] === slug)).filter(Boolean);
+    for (const [id, slug] of pick) {
+        await page.evaluate((id) => window.__arkScene.select(id, true), id);
+        await wait(4500);
+        const r = await page.evaluate((id) => ({seen: window.__arkDebug.focusSeen(id), view: window.__arkScene.view()}), id);
+        console.log("fishone", slug, JSON.stringify(r));
+        await shot(`fishone-${slug}`);
+        await page.evaluate(() => window.__arkScene.select(null));
+        await wait(800);
+    }
+}
+if (want("fishpair")) {
+    const all = (await page.evaluate(() => window.__arkDebug.aquaticFocus(true))).all;
+    const picks = [["cunner", 3], ["giant-gourami", 11], ["boesemans-rainbowfish", 11], ["asian-swamp-eel", 11]];
+    for (const [slug, hour] of picks) {
+        const hit = all.find((x) => x[1] === slug);
+        if (!hit) {
+            console.log("fishpair none", slug);
+            continue;
+        }
+        await page.evaluate((h) => window.__arkScene.setHours(h), hour);
+        for (const off of [true, false]) {
+            await page.evaluate((off) => (window.__arkSwimFixOff = off), off);
+            await page.evaluate(() => window.__arkScene.setView({target: {x: 0, y: 0, z: 0}, distance: 120, polar: 0.9, azimuth: 0}));
+            await wait(1500);
+            await page.evaluate((id) => window.__arkScene.select(id, true), hit[0]);
+            await wait(9000);
+            console.log("fishpair", slug, off ? "before" : "after", JSON.stringify(await page.evaluate((id) => window.__arkDebug.focusSeen(id), hit[0])));
+            await shot(`fishpair-${slug}-${off ? "before" : "after"}`);
+            await page.evaluate(() => window.__arkScene.select(null));
+        }
+    }
+    await page.evaluate(() => (window.__arkSwimFixOff = false));
+}
+// The owner's other ways to the Cunner: following it from its card, and zooming out from it.
+if (want("fishways")) {
+    // (The owner's: Cunner #1781, asleep, at night, the lines on; here a born cunner of the snapshot's.)
+    const id = "2b54da38-5667-44ab-b688-b0d8fe17d0f8";
+    await page.evaluate(() => window.__arkScene.setHours(3));
+    for (const off of [true, false]) {
+        await page.evaluate((off) => (window.__arkSwimFixOff = off), off);
+        await page.evaluate(() => window.__arkScene.select(null));
+        await page.evaluate(() => window.__arkScene.setView({target: {x: 0, y: 0, z: 150}, distance: 80, polar: 0.9, azimuth: 0}));
+        await wait(1500);
+        await page.evaluate((id) => window.__arkScene.select(id, true), id);
+        await wait(9000);
+        await shot(`fishways-focused-${off ? "before" : "after"}`);
+        // A wheel out, as a reader zooms: 10 notches over the canvas.
+        await page.mouse.move(450, 320);
+        for (let i = 0; i < 10; i++) {
+            await page.mouse.wheel(0, 300);
+            await wait(150);
+        }
+        await wait(2500);
+        console.log("fishways zoomed", off ? "before" : "after", JSON.stringify(await page.evaluate((id) => ({seen: window.__arkDebug.focusSeen(id), view: window.__arkScene.view()}), id)));
+        await shot(`fishways-zoomed-${off ? "before" : "after"}`);
+    }
+    await page.evaluate(() => (window.__arkSwimFixOff = false));
+}
+if (want("fishview")) {
+    const id = "2b54da38-5667-44ab-b688-b0d8fe17d0f8";
+    await page.evaluate(() => window.__arkScene.setViewInset?.(300));
+    for (const hour of [3, 11]) {
+        await page.evaluate((h) => window.__arkScene.setHours(h), hour);
+        await page.evaluate((id) => window.__arkScene.select(id, true), id);
+        await wait(8000);
+        const st = await fishState(id);
+        console.log("fishview", hour, "focused", JSON.stringify(st?.view), JSON.stringify(st?.middle));
+        await shot(`fishview-${hour}-focused`);
+        for (const d of [4, 8, 16]) {
+            await page.evaluate(({m, d}) => window.__arkScene.setView({target: m, distance: d, polar: 0.8, azimuth: 0.5}), {m: st.middle, d});
+            await wait(2500);
+            await shot(`fishview-${hour}-above-${d}`);
+        }
+        await page.evaluate(() => window.__arkScene.select(null));
+        await wait(1500);
+    }
+}
 if (want("limbs")) {
     const short = (rows) => rows.slice(0, 12).map((x) => [x.slug, x.point, x.by, x.trunk]);
     let pick = null;

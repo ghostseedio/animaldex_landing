@@ -7287,6 +7287,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const below = shotClosest !== null ? Math.min(heightAt(camera.position.x, camera.position.z), standGround(camera.position.x, camera.position.z)) : heightAt(camera.position.x, camera.position.z);
         const floor = (diving && below < -0.4 ? below + 0.5 : Math.max(below, underFresh || camera.position.y > below + 6 ? 0 : waterLevelAt(camera.position.x, camera.position.z, 0), 0)) + (diving ? 0 : Math.min(Math.max(viewDistance * 0.25, shotClosest !== null ? 0.003 : 0.03), 1.2));
         if (camera.position.y < floor) camera.position.y = floor;
+        // ARK-CONTACT (the owner's Cunner, 2026-11-21: zoomed out from a fish chosen under the sea, the camera rose out
+        // of the water at its polar angle and the surface hid the fish; its food-chain lines started from empty water):
+        // while a swimmer under the sea is chosen and looked at, the camera stays under the sea's surface as it backs
+        // off, its polar angle opened (level with it, then up at it, as far as a dive allows) rather than rising out.
+        if (diving && looked && !followId && !golden?.free && !(process.env.NODE_ENV !== "production" && (globalThis as {__arkSwimFixOff?: boolean}).__arkSwimFixOff)) {
+            const top = waterSurfaceAt(camera.position.x, camera.position.z) - 0.1;
+            if (camera.position.y > top && looked.middle && Math.hypot(target.x - looked.middle.x, target.z - looked.middle.z) < looked.length + 2 && swimmerFrame(looked)) {
+                offset.copy(camera.position).sub(target);
+                spherical.setFromVector3(offset);
+                const k = Math.max((top - target.y) / Math.max(spherical.radius, 1e-3), Math.cos(1.62));
+                spherical.phi = Math.acos(Math.min(k, 1));
+                camera.position.copy(target).add(offset.setFromSpherical(spherical));
+                if (camera.position.y > top) camera.position.y = top;
+            }
+        }
         // Looking up at the surface is allowed only under it; up at a canopy animal only while it is looked at.
         controls.maxPolarAngle = golden?.maxPolar ?? (diving ? 1.62 : looked?.place.canopy ? 2.7 : 1.36);
     };
@@ -7368,6 +7383,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const selected = selectedId ? findEntry(selectedId) : null;
         // Looking at a small animal (flying to it, too: at its microhabitat, or a crab on the seabed), or with one close in front.
         let close = Boolean(selected?.micro) || Boolean(selected && selected.trueLength < 0.3);
+        // ARK-CONTACT (the owner's Cunner): or under a lake's, a pond's or the shallows' surface, framed close under it
+        // (`swimmerFrame`): held back at the usual 4 m the camera was over the water, where the surface hides it.
+        if (!close && selected && selectedId === framedUnder) close = Boolean(swimmerFrame(selected)?.under);
         /** V2 replay: an animal of the cast under about 5 cm that the view is on (an aphid, a water flea): the camera comes as near as its size asks. */
         let castTiny: Entry | null = null;
         // (V1: with a cast, looked for whatever is chosen: a watched line's own animal is chosen too, and it is its stand-in
@@ -7995,6 +8013,45 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         pendingHuman = null;
         selectHuman(chosen, true, false);
     };
+    /**
+     * A swimmer under the surface, framed under it (`select`): where the camera aims, how far back it stands, and its
+     * polar angle; null for an animal not under water. At sea or on the coast 30 cm under sea level, as before: aimed at
+     * least 80 cm down, a small one (under 30 cm: a crab on the seabed) at about six of its lengths, the rest a few metres
+     * off. ARK-CONTACT (the owner's Cunner, 2026-11-21: the food-chain lines from empty water, the fish not drawn): any
+     * other animal of the sea wholly under the sea's surface where the tide has it (the shallows, a rock pool's, a fish
+     * less than 30 cm under sea level) is framed under that surface too, close enough for the camera to stay under it:
+     * from over the sea its surface hides whatever is under it (a cunner 2 m down, from 4 m away at noon).
+     */
+    /** The animal last framed under a lake's or the shallows' surface by a selection (`swimmerFrame`'s `under`). */
+    let framedUnder: string | null = null;
+    const swimmerFrame = (entry: Entry): {target: () => Vector3; distance: number; polar: number; small: boolean; under?: true} | null => {
+        const small = entry.trueLength < 0.3;
+        const m = middleNow(entry);
+        if ((atSeaOf(entry) || entry.depth?.home === "coast") && m.y - entry.drawnHeight / 2 < -0.3) {
+            // (A whale far enough back to be seen whole: true scale. p2 (ocean): out in the open ocean, 24 m at most.)
+            const whole = Math.max(Math.min(3 + entry.length * 2.2, 14), fitWhole(entry.length, width / Math.max(height, 1), FOV));
+            const away = small ? Math.min(Math.max(entry.trueLength * 6, 0.15), 3) : entry.ocean ? Math.min(whole, 24) : whole;
+            return {target: () => middleNow(entry).setY(Math.min(middleNow(entry).y, -0.8)), distance: away, polar: small ? 1.1 : 1.5, small};
+        }
+        // (The sea's only, its surface where the tide has it: a lake's, a river's and a pond's clear water shows a fish
+        // under it from over it, in the day at least; the sea's hides one 2 m down even from 4 m away.)
+        if (!(atSeaOf(entry) || entry.depth?.home === "coast" || entry.depth?.water === "salt") || entry.place.micro || entry.place.burrow) return null;
+        if (process.env.NODE_ENV !== "production" && (globalThis as {__arkSwimFixOff?: boolean}).__arkSwimFixOff) return null;
+        const top = waterSurfaceAt(m.x, m.z);
+        if (waterLevelAt(m.x, m.z, 0) > top + 0.05) return null;
+        if (m.y + entry.drawnHeight / 2 > top - 0.05) return null;
+        // (Aimed 30 cm under the surface at least; the camera's polar at most the view's own, 1.3: its distance no more
+        // than keeps it 10 cm under the surface.)
+        const polar = 1.3;
+        const target = () => {
+            const now = middleNow(entry);
+            return now.setY(Math.min(now.y, waterSurfaceAt(now.x, now.z) - 0.3));
+        };
+        const room = (top - 0.1 - Math.min(m.y, top - 0.3)) / Math.cos(polar);
+        const away = small ? Math.max(entry.trueLength * 6, 0.15) : Math.min(3 + entry.length * 2.2, 14);
+        const distanceNow = Math.max(Math.min(away, room), MICRO_MIN_DISTANCE);
+        return {target, distance: distanceNow, polar, small: small || distanceNow < 1, under: true};
+    };
     const select = (id: string | null, flyTo: boolean, close = false) => {
         heldHuman = null;
         if (id !== null) pendingHuman = null;
@@ -8053,18 +8110,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 return;
             }
             // A swimmer under the surface: the camera dives to it, level with it (underwater).
-            const swimming = atSeaOf(entry) || entry.depth?.home === "coast" ? middleNow(entry) : null;
             // (The apps' face-to-face close-up too: from above the water it looked at the surface over the animal.)
-            if (swimming && swimming.y - entry.drawnHeight / 2 < -0.3) {
-                const under = () => middleNow(entry).setY(Math.min(middleNow(entry).y, -0.8));
-                // A small one (a crab on the seabed) close, at about six of its lengths; the rest a few metres off.
-                // (A whale far enough back to be seen whole: true scale.)
-                const whole = Math.max(Math.min(3 + entry.length * 2.2, 14), fitWhole(entry.length, width / Math.max(height, 1), FOV));
-                // p2 (ocean): out in the open ocean, 24 m at most (side on, a whale still fills the frame; further, the water hides it).
-                const away = entry.trueLength < 0.3 ? Math.min(Math.max(entry.trueLength * 6, 0.15), 3) : entry.ocean ? Math.min(whole, 24) : whole;
-                if (entry.trueLength < 0.3) controls.minDistance = MICRO_MIN_DISTANCE;
-                fly(under(), away, distance > 30 ? 2 : 1.4, entry.trueLength < 0.3 ? 1.1 : 1.5, (entry.yawNow ?? entry.place.yaw) + Math.PI / 2);
-                if (flight) flight.aim = () => (selectedId === entry.animal.id ? under() : null);
+            const swim = swimmerFrame(entry);
+            if (swim) {
+                if (swim.small) controls.minDistance = MICRO_MIN_DISTANCE;
+                framedUnder = swim.under ? entry.animal.id : null;
+                fly(swim.target(), swim.distance, distance > 30 ? 2 : 1.4, swim.polar, (entry.yawNow ?? entry.place.yaw) + Math.PI / 2);
+                if (flight) flight.aim = () => (selectedId === entry.animal.id ? swim.target() : null);
                 return;
             }
             // A bird of the air in flight stays in the air: the camera goes up to it and keeps it in view.
@@ -10839,6 +10891,44 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             },
             rockDepth: (x: number, y: number, z: number) => assetRocks?.insideRock(x, y, z) ?? 0,
             planOf: (slug: string) => library.get(slug)?.behaviour?.plan ?? null,
+            // ARK-CONTACT (the owner's Cunner, 2026-11-21): every animal in the water: under its surface (sea, lake, river),
+            // and whether a focus dives the camera under that surface to it (`select`'s swimmer framing) or frames it from
+            // above, where the surface hides it.
+            // The chosen animal as the view has it now: the camera under or over the water there, the animal's middle on
+            // the screen and its length there (px), and the relation lines' origin (`locate`) from its drawn middle.
+            focusSeen: (id: string) => {
+                const e = findEntry(id);
+                if (!e) return null;
+                const m = middleNow(e);
+                const p = m.clone().project(camera);
+                const d = camera.position.distanceTo(m);
+                const px = (e.length / (2 * d * Math.tan((camera.fov * Math.PI) / 360))) * height;
+                const camTop = waterTopAt(camera.position.x, camera.position.z);
+                const fishTop = waterTopAt(m.x, m.z);
+                return {camUnder: camera.position.y < camTop - 0.01, camY: +camera.position.y.toFixed(2), camTop: +camTop.toFixed(2), fishUnder: m.y + e.drawnHeight / 2 < fishTop - 0.05, fishY: +m.y.toFixed(2), onScreen: p.z < 1 && Math.abs(p.x) < 1 && Math.abs(p.y) < 1, px: Math.round(px), distance: +d.toFixed(2), drawn: Boolean((e as {drawn?: {level: string}}).drawn?.level), fishTop, mx: m.x, my: m.y, mz: m.z};
+            },
+            aquaticFocus: (off = false) => {
+                const rows: Array<{id: string; slug: string; depth: number; top: number; camera: number | null; sea: boolean}> = [];
+                let submerged = 0;
+                const all: Array<[string, string]> = [];
+                for (const e of allEntries()) {
+                    if (!(atSeaOf(e) || e.depth?.home === "coast" || e.depth?.water === "salt") || e.place.micro || e.place.burrow) continue;
+                    const m = middleNow(e);
+                    const top = waterSurfaceAt(m.x, m.z);
+                    if (waterLevelAt(m.x, m.z, 0) > top + 0.05) continue;
+                    if (m.y + e.drawnHeight / 2 > top - 0.05) continue;
+                    submerged++;
+                    all.push([e.animal.id, e.animal.model_slug]);
+                    // (Before: only the sea's and the coast's 30 cm under sea level were framed under the water.)
+                    const frame = swimmerFrame(e);
+                    const seaOld = (atSeaOf(e) || e.depth?.home === "coast") && m.y - e.drawnHeight / 2 < -0.3;
+                    const used = off && !seaOld ? null : frame;
+                    const t = used?.target();
+                    const camera = t ? t.y + Math.max(used!.distance, used!.small || used!.under || e.trueLength < 0.3 ? MICRO_MIN_DISTANCE : CAMERA_RANGE.near) * Math.cos(used!.polar) : null;
+                    if (camera === null || camera > waterSurfaceAt(t!.x, t!.z) - 0.02) rows.push({id: e.animal.id, slug: e.animal.model_slug, depth: Math.round((top - m.y) * 100) / 100, top: Math.round(top * 100) / 100, camera: camera === null ? null : Math.round(camera * 100) / 100, sea: Boolean(atSeaOf(e))});
+                }
+                return {submerged, framedFromAbove: rows.length, rows: rows.slice(0, 40), all};
+            },
             // ARK-CONTACT (the langur in the trunk): every animal up off the ground whose body is in a tree's trunk (its middle
             // closer to the axis than the trunk's radius and half its length), where it was last drawn or else posed.
             limbClear: (id: string, length: number) => {
