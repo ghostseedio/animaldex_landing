@@ -433,7 +433,12 @@
             "regrown": "{animals}: laidun on taas vihreä",
             "matedFirst": "{aAnimal}: ensimmäinen parittelu",
             "foundMate": "{aAnimal}: löysi kumppanin {days} päivän jälkeen",
-            "foundDung": "{aAnimal}: löysi tuoretta lantaa"
+            "foundDung": "{aAnimal}: löysi tuoretta lantaa",
+            "spawnNight": "Riutta kutui tänä yönä: {animal}",
+            "spawnPair": "{animal}: munat laskettu, ja koiras hedelmöitti ne",
+            "amplexus": "{animal}: pari amplexuksessa, ja kutu laskettu",
+            "pouchFry": "{animal}: isän hautomapussista vapautui poikasia: {count}",
+            "split": "{animal}: uusi yksilö irtosi emostaan"
         },
         "card": {
             "now": "Nyt: {activity}",

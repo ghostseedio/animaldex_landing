@@ -433,7 +433,12 @@
             "regrown": "{animals}: ચરાણ ફરી લીલું",
             "matedFirst": "{aAnimal}: પહેલું સંવનન",
             "foundMate": "{aAnimal}: {days} દિવસ પછી સાથી મળ્યો",
-            "foundDung": "{aAnimal}: તાજું છાણ મળ્યું"
+            "foundDung": "{aAnimal}: તાજું છાણ મળ્યું",
+            "spawnNight": "આજે રાત્રે ખડકપટ્ટી પર ઈંડાં છોડાયાં: {animal}",
+            "spawnPair": "{animal}: ઈંડાં મુકાયાં, અને નરે તેને ફલિત કર્યાં",
+            "amplexus": "{animal}: એક જોડ એમ્પ્લેક્સસમાં, અને ઈંડાં મુકાયાં",
+            "pouchFry": "{animal}: પિતાની થેલીમાંથી {count} બચ્ચાં બહાર આવ્યાં",
+            "split": "{animal}: માતૃદેહથી એક નવું અલગ થયું"
         },
         "card": {
             "now": "હમણાં: {activity}",

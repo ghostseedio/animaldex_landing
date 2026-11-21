@@ -433,7 +433,12 @@
             "regrown": "{animals}: המרעה שוב ירוק",
             "matedFirst": "{aAnimal}: הזדווגות ראשונה",
             "foundMate": "{aAnimal}: נמצא בן זוג אחרי {days} ימים",
-            "foundDung": "{aAnimal}: נמצא גללים טריים"
+            "foundDung": "{aAnimal}: נמצא גללים טריים",
+            "spawnNight": "השונית הטילה הלילה: {animal}",
+            "spawnPair": "{animal}: הוטלו ביצים, והזכר הפרה אותן",
+            "amplexus": "{animal}: זוג באמפלקסוס, והוטלו ביצים",
+            "pouchFry": "{animal}: {count} צאצאים יצאו מכיס האב",
+            "split": "{animal}: פרט חדש נפרד מהורהו"
         },
         "card": {
             "now": "עכשיו: {activity}",

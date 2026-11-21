@@ -433,7 +433,12 @@
             "regrown": "{animals}: ಮೇವಿನ ನೆಲ ಮತ್ತೆ ಹಸಿರು",
             "matedFirst": "{aAnimal}: ಮೊದಲ ಸಂಯೋಗ",
             "foundMate": "{aAnimal}: {days} ದಿನಗಳ ನಂತರ ಜೊತೆ ಸಿಕ್ಕಿತು",
-            "foundDung": "{aAnimal}: ತಾಜಾ ಸಗಣಿ ಸಿಕ್ಕಿತು"
+            "foundDung": "{aAnimal}: ತಾಜಾ ಸಗಣಿ ಸಿಕ್ಕಿತು",
+            "spawnNight": "ಇಂದು ರಾತ್ರಿ ಹವಳದ ದಿಬ್ಬದಲ್ಲಿ ಮೊಟ್ಟೆ ಬಿಡುಗಡೆ: {animal}",
+            "spawnPair": "{animal}: ಮೊಟ್ಟೆ ಇಡಲಾಯಿತು, ಗಂಡು ಅವನ್ನು ಫಲೀಕರಿಸಿತು",
+            "amplexus": "{animal}: ಆಂಪ್ಲೆಕ್ಸಸ್‌ನಲ್ಲಿ ಒಂದು ಜೋಡಿ, ಮೊಟ್ಟೆ ಇಡಲಾಯಿತು",
+            "pouchFry": "{animal}: ತಂದೆಯ ಚೀಲದಿಂದ {count} ಮರಿಗಳು ಹೊರಬಂದವು",
+            "split": "{animal}: ಮೂಲದಿಂದ ಹೊಸದೊಂದು ಬೇರ್ಪಟ್ಟಿತು"
         },
         "card": {
             "now": "ಈಗ: {activity}",

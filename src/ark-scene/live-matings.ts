@@ -34,6 +34,7 @@
  */
 
 import type {ActPose} from "@/ark-scene/acts";
+import {reproAct, reproFx, reproPlan, reproPose, staysPut, type FxEmitter, type Repro, type ReproPlan} from "@/ark-scene/repro";
 
 /** A mating from the record: its two animals and when it happened (s, the shared clock). */
 export type MatingAct = {key: string; a: string; b: string; t0: number};
@@ -79,6 +80,14 @@ export type LiveMatingsHost<E> = {
      * dry ground, not a river's or a pond's bed. Absent: anywhere is.
      */
     clear?: (p: Point, wet: boolean) => boolean;
+    /** REAL-REPRODUCTION: nothing at all overhead there (a rail, a hedge, a roof too). */
+    open?: (p: Point) => boolean;
+    /** REAL-REPRODUCTION: whether one could walk straight from one to the other (no fence or wall across). */
+    between?: (a: Point, b: Point) => boolean;
+    /** REAL-REPRODUCTION (decision 440): its kind's way of breeding (`repro.ts` reproOf), or null: it mates. */
+    repro?: (entry: E) => Repro | null;
+    /** REAL-REPRODUCTION: where others of its kind are near it now (they spawn with it on its spawning night). */
+    kinSpots?: (entry: E) => Point[];
 };
 
 /**
@@ -218,6 +227,8 @@ const RETURN_MIN = 4;
 const RETURN_MAX = 30;
 /** How long after its time a mating is still acted (s): the server's tick and the record's read come later. */
 export const MATING_LIVE_SECONDS = 20 * 60;
+/** REAL-REPRODUCTION: others of its kind drawn spawning with a pair on its spawning night, at most. */
+const KIN_MOST = 10;
 
 type Point = {x: number; z: number};
 export type MatingBody = Point & {pace: number; length: number; height: number; plan: string | null; courtship: Courtship | null; male: boolean | null};
@@ -260,7 +271,7 @@ export type MatingScript = {
     f: {length: number; height: number; pace: number};
 };
 
-type Live<E> = {act: MatingAct; script: MatingScript | null; failed: boolean; over: boolean; acting: Set<E>; contest?: {script: ContestScript; rival: string; maleFirst: boolean} | null; /** V1: how it was brought about (`far`: he started nearer; `housed`: in their enclosure; `brought`: he was brought beside her), the floor a housed pair stands on, and who was brought. */ how?: "far" | "housed" | "brought" | "free"; floor?: (x: number, z: number) => number; brought?: "a" | "b" | null; /** V1 (brought): where she lives and where he lies beside her, both heading as she does. */ beside?: {she: Point; he: Point; yaw: number}};
+type Live<E> = {act: MatingAct; script: MatingScript | null; failed: boolean; over: boolean; acting: Set<E>; contest?: {script: ContestScript; rival: string; maleFirst: boolean} | null; /** V1: how it was brought about (`far`: he started nearer; `housed`: in their enclosure; `brought`: he was brought beside her), the floor a housed pair stands on, and who was brought. */ how?: "far" | "housed" | "brought" | "free"; floor?: (x: number, z: number) => number; brought?: "a" | "b" | null; /** REAL-REPRODUCTION: the act of the kind's own way (no mount), and its kin's spots. */ repro?: ReproPlan | null; kin?: Point[]; /** V1 (brought): where she lives and where he lies beside her, both heading as she does. */ beside?: {she: Point; he: Point; yaw: number}};
 
 const ease = (u: number) => {
     const c = Math.min(Math.max(u, 0), 1);
@@ -319,8 +330,16 @@ export function mountKind(plan: string | null): MountKind {
         case "legless":
         case "cephalopod_jelly":
             return "alongside";
-        default:
+        case "mammal":
+        case "quadruped":
+        case "primate":
+        case "bat":
+        case null:
             return "mount";
+        default:
+            // REAL-REPRODUCTION (decision 440): no mammal's mount for anything that is not a mammal. The rig's "other"
+            // (snails, slugs, worms, stars, sponges...) and any plan not named here lie alongside.
+            return "alongside";
     }
 }
 
@@ -717,7 +736,7 @@ export class LiveMatings<E> {
                 const maleFirst = !(h.male(b) === true && h.male(a) !== true);
                 const male = maleFirst ? a : b;
                 const female = maleFirst ? b : a;
-                const kind = h.together(a, b) ? h.contest?.(male) ?? null : null;
+                const kind = h.together(a, b) && !reproAct(h.repro?.(a) ?? null) ? h.contest?.(male) ?? null : null;
                 const rival = kind ? h.rival?.(male, female, m.act.t0) ?? null : null;
                 const pm = rival ? h.scheduleAt(male, m.act.t0) : null;
                 const pr = rival ? h.scheduleAt(rival, m.act.t0) : null;
@@ -772,6 +791,24 @@ export class LiveMatings<E> {
                     m.failed = true;
                     continue;
                 }
+                // REAL-REPRODUCTION: a pair in amplexus in an enclosure, at its fence, moves in off it to where the camera
+                // can look in from any side (a rail between was all the picture): the nearest open spot it can walk to.
+                if (housed && h.open && h.between) {
+                    const way0 = h.repro?.(a) ?? h.repro?.(b) ?? null;
+                    const mid = {x: (pa.x + pb.x) / 2, z: (pa.z + pb.z) / 2};
+                    if (way0 && reproAct(way0) === "amplexus" && !h.open(mid)) {
+                        search: for (const r of [0.3, 0.6, 0.9, 1.3]) {
+                            for (let i = 0; i < 8; i++) {
+                                const q = {x: mid.x + Math.sin((i * Math.PI) / 4) * r, z: mid.z + Math.cos((i * Math.PI) / 4) * r};
+                                if (h.open(q) && h.between(mid, q)) {
+                                    pa = {...pa, x: pa.x + q.x - mid.x, z: pa.z + q.z - mid.z};
+                                    pb = {...pb, x: pb.x + q.x - mid.x, z: pb.z + q.z - mid.z};
+                                    break search;
+                                }
+                            }
+                        }
+                    }
+                }
                 const maleFirst = !(h.male(b) === true && h.male(a) !== true);
                 const d = Math.hypot(pb.x - pa.x, pb.z - pa.z);
                 // (He comes to her: the one that mounts is the one moved nearer, on the line from where he was; `behind`:
@@ -823,10 +860,70 @@ export class LiveMatings<E> {
                 // (ARK-MATING-SHOWN: a pair of swimmers may meet in the water; any other pair on dry ground. Neither under cover.)
                 const wet = mountKind(h.plan(a) ?? h.plan(b)) === "alongside";
                 const clear = h.clear ? (p: Point) => h.clear!(p, wet) : undefined;
-                const script = matingScript(close(this.body(a, pa)), close(this.body(b, pb)), m.act.key, {housed, clear: free ? undefined : clear, far: m.how === "far" || free, atHer: free});
+                // REAL-REPRODUCTION: amplexus is watched from beside the pair: a spot open all round (no fence rail or
+                // post between the camera and them), else the usual one.
+                const wayFirst = h.repro?.(a) ?? h.repro?.(b) ?? null;
+                const roomy = wayFirst && reproAct(wayFirst) === "amplexus" && h.open && clear ? (p: Point) => clear(p) && h.open!(p) : null;
+                // (A small pair that would meet at her place meets there only when it is open round; else at the
+                // nearest open spot, which `meetingSpot` finds, or her place after all.)
+                const roomyAt = roomy && (!free || roomy({x: (pa.x + pb.x) / 2, z: (pa.z + pb.z) / 2}) === false) ? roomy : null;
+                const script =
+                    (roomyAt && matingScript(close(this.body(a, pa)), close(this.body(b, pb)), m.act.key, {housed, clear: roomyAt, far: m.how === "far" || free, atHer: false})) ||
+                    matingScript(close(this.body(a, pa)), close(this.body(b, pb)), m.act.key, {housed, clear: free ? undefined : clear, far: m.how === "far" || free, atHer: free});
                 if (!script) {
                     m.failed = true;
                     continue;
+                }
+                // REAL-REPRODUCTION (decision 440): the kind's own way instead of a mount (a spawning night where each
+                // is, a redd, amplexus, the seahorses' dance): the same meeting, its own act and its own length.
+                const way = h.repro?.(a) ?? h.repro?.(b) ?? null;
+                const act = reproAct(way);
+                if (act && way) {
+                    let plan = reproPlan(act, way, {from: script.from, to: script.to, walk: script.walk, heading: script.heading, m: script.m, f: script.f});
+                    const openAt = h.open ?? clear;
+                    if (act === "amplexus" && openAt) {
+                        // (She walks on as she lays: the way with the most open round it, nothing over it and room on
+                        // every side where she ends (the camera looks in from beside her: a rail or a post a hand's
+                        // breadth off would stand between), so the strings and the pair are seen.)
+                        const reach = plan.f.length * 3;
+                        let best = {yaw: plan.heading, open: -1};
+                        for (const turn of [0, 1, -1, 2, -2, 3, -3, 4]) {
+                            const yaw = plan.heading + (turn * Math.PI) / 4;
+                            const at = (k: number) => ({x: plan.spot.x + Math.sin(yaw) * reach * k, z: plan.spot.z + Math.cos(yaw) * reach * k});
+                            const end = at(1);
+                            const checks = [at(0.35), at(0.7), end, at(1.4), ...[0, 1, 2, 3, 4, 5].map((i) => ({x: end.x + Math.sin((i * Math.PI) / 3) * 0.4, z: end.z + Math.cos((i * Math.PI) / 3) * 0.4}))];
+                            const open = checks.filter((q) => openAt(q)).length;
+                            if (open > best.open) best = {yaw, open};
+                            if (open === checks.length) break;
+                        }
+                        plan = {...plan, heading: best.yaw};
+                    }
+                    m.repro = plan;
+                    if (act === "spawn_night") m.kin = (h.kinSpots?.(a) ?? []).slice(0, KIN_MOST);
+                    script.court = "display";
+                    script.chase = null;
+                    script.courted = plan.walk;
+                    script.attempts = [{spot: plan.spot, behind: plan.spot, approach: plan.walk, rise: plan.walk, on: plan.walk, off: plan.end, end: plan.end, took: true}];
+                    script.side = plan.to.m;
+                    script.mounted = plan.end;
+                    script.paired = plan.end;
+                    if (staysPut(act) || !m.floor) {
+                        // (Each at its own depth, as its day has it: a bivalve on the seabed, a fish in the water. The
+                        // land's ground stops at the shore's water line, so a sea kind there would be pulled up to it.)
+                        const own = (p: Point, day: {base?: number; y?: number} | null) => Math.min(day?.base ?? day?.y ?? h.ground(p.x, p.z), h.ground(p.x, p.z));
+                        const [ba, bb] = [own(pa, ha), own(pb, hb)];
+                        const [ax, az, bx, bz] = [pa.x, pa.z, pb.x, pb.z];
+                        m.floor = (x, z) => {
+                            const k = d > 1e-6 ? Math.min(Math.max(((x - ax) * (bx - ax) + (z - az) * (bz - az)) / (d * d), 0), 1) : 0.5;
+                            return ba + (bb - ba) * k;
+                        };
+                    }
+                    if (act === "spawn_pair" || act === "pouch") {
+                        // (A pair of swimmers spawns at one level: the lower of the two, by their rock or their seabed.)
+                        const f0 = m.floor ?? h.ground;
+                        const lo = Math.min(f0(pa.x, pa.z), f0(pb.x, pb.z));
+                        m.floor = () => lo;
+                    }
                 }
                 m.script = script;
             }
@@ -849,6 +946,9 @@ export class LiveMatings<E> {
                 const heIsA = m.brought === "a";
                 pose(a, brought("a", lie(heIsA ? by.he : by.she, courting ? (heIsA ? "display" : "scan") : "rest", m.act.b)));
                 pose(b, brought("b", lie(heIsA ? by.she : by.he, courting ? (heIsA ? "scan" : "display") : "rest", m.act.a)));
+            } else if (sM < sc.paired && m.repro) {
+                pose(a, brought("a", reproPose(m.repro, sc.firstMounts, sM, floor, m.act.b)));
+                pose(b, brought("b", reproPose(m.repro, !sc.firstMounts, sM, floor, m.act.a)));
             } else if (sM < sc.paired) {
                 pose(a, brought("a", matingPose(sc, true, sM, floor, m.act.b)));
                 pose(b, brought("b", matingPose(sc, false, sM, floor, m.act.a)));
@@ -869,6 +969,19 @@ export class LiveMatings<E> {
                     const z = from.z + (now.z - from.z) * e;
                     return {x, z, base: floor(x, z), yaw: d > 0.05 ? Math.atan2(now.x - from.x, now.z - from.z) : now.yaw, pitch: 0, roll: 0, scale: 1, dim: 0, hidden: false, state: k < 0.12 ? "rest" : "walk", speed: k < 0.12 ? 0 : d / seconds} satisfies ActPose;
                 };
+                if (m.repro) {
+                    const end = (isM: boolean): Point => (m.repro!.guard === "both" || m.repro!.guard === (isM ? "m" : "f") ? m.repro!.spot : isM ? m.repro!.to.m : m.repro!.to.f);
+                    const ra = back(a, end(sc.firstMounts), sc.firstMounts ? sc.m.pace : sc.f.pace, "a");
+                    const rb = back(b, end(!sc.firstMounts), sc.firstMounts ? sc.f.pace : sc.m.pace, "b");
+                    pose(a, ra);
+                    pose(b, rb);
+                    if (!ra && !rb) m.over = true;
+                    m.acting.forEach((e) => {
+                        if (!acting.has(e)) h.setAct(e, null);
+                    });
+                    m.acting = acting;
+                    continue;
+                }
                 const ba = back(a, sc.firstMounts ? sc.side : last.spot, sc.firstMounts ? sc.m.pace : sc.f.pace, "a");
                 const bb = back(b, sc.firstMounts ? last.spot : sc.side, sc.firstMounts ? sc.f.pace : sc.m.pace, "b");
                 pose(a, ba);
@@ -883,6 +996,20 @@ export class LiveMatings<E> {
         this.matings = this.matings.filter((m) => !(m.over || m.failed) || m.acting.size > 0 || epoch - m.act.t0 < MATING_LIVE_SECONDS);
     }
 
+    /** REAL-REPRODUCTION: the puffs of every act under way at `epoch` (gametes, eggs, milt), its kin's haze too. */
+    fx(epoch: number): FxEmitter[] {
+        const out: FxEmitter[] = [];
+        for (const m of this.matings) {
+            if (!m.repro || !m.script || m.failed || m.over || !m.acting.size) continue;
+            const s = epoch - m.act.t0 - (m.contest?.script.end ?? 0);
+            const floor = m.floor ?? this.host.ground;
+            const mine = reproFx(m.repro, m.act.key, s, floor);
+            out.push(...mine);
+            if (m.kin && mine.length && mine[0].kind === "haze") m.kin.forEach((k, i) => out.push({...mine[0], key: `${m.act.key}#${i}`, x: k.x, z: k.z, y: this.host.ground(k.x, k.z) + mine[0].size * 0.5}));
+        }
+        return out;
+    }
+
     /** (`meet`, `courted`, `mounted`, `end`: s after `t0`, a contest's lead included: when the two meet, when the mounts begin and end, when they part.) */
     debug(): Array<{key: string; t0: number; phase: string; court?: Courtship; mount?: MountKind; tries?: number; paired?: number; contest?: ContestKind; rival?: string; contestEnd?: number; meet?: number; courted?: number; mounted?: number; end?: number; how?: "far" | "housed" | "brought" | "free"}> {
         return this.matings.map((m) => ({
@@ -891,7 +1018,9 @@ export class LiveMatings<E> {
             phase: m.failed ? "skipped" : m.over ? "over" : m.script ? "acting" : "waiting",
             ...(m.how ? {how: m.how} : {}),
             ...(m.script ? {court: m.script.court, mount: m.script.mount, tries: m.script.attempts.length, paired: Math.round(m.script.paired), meet: (m.contest?.script.end ?? 0) + m.script.walk, courted: (m.contest?.script.end ?? 0) + m.script.courted, mounted: (m.contest?.script.end ?? 0) + m.script.mounted, end: (m.contest?.script.end ?? 0) + m.script.paired} : {}),
-            ...(m.contest ? {contest: m.contest.script.kind, rival: m.contest.rival, contestEnd: Math.round(m.contest.script.end)} : {})
+            ...(m.contest ? {contest: m.contest.script.kind, rival: m.contest.rival, contestEnd: Math.round(m.contest.script.end)} : {}),
+            // REAL-REPRODUCTION: the kind's own act (no mount to look away from) and when its telling part runs.
+            ...(m.repro ? {repro: m.repro.act, telling: [(m.contest?.script.end ?? 0) + m.script!.walk + m.repro.b - m.repro.walk, (m.contest?.script.end ?? 0) + m.script!.walk + m.repro.c - m.repro.walk]} : {})
         }));
     }
 }

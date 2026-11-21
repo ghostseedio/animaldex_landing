@@ -433,7 +433,12 @@
             "regrown": "{animals}: pășunea e din nou verde",
             "matedFirst": "{aAnimal}: prima împerechere",
             "foundMate": "{aAnimal}: partener găsit după {days} zile",
-            "foundDung": "{aAnimal}: bălegar proaspăt găsit"
+            "foundDung": "{aAnimal}: bălegar proaspăt găsit",
+            "spawnNight": "Recifului i-a venit noaptea depunerii: {animal}",
+            "spawnPair": "{animal}: icre depuse, iar masculul le-a fecundat",
+            "amplexus": "{animal}: o pereche în amplexus și ponta depusă",
+            "pouchFry": "{animal}: pui ieșiți din punga tatălui: {count}",
+            "split": "{animal}: unul nou s-a desprins de părinte"
         },
         "card": {
             "now": "Acum: {activity}",

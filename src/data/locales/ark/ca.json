@@ -433,7 +433,12 @@
             "regrown": "{animals}: la pastura torna a ser verda",
             "matedFirst": "{aAnimal}: primer aparellament",
             "foundMate": "{aAnimal}: parella trobada després de {days} dies",
-            "foundDung": "{aAnimal}: fems frescos trobats"
+            "foundDung": "{aAnimal}: fems frescos trobats",
+            "spawnNight": "Aquesta nit l'escull ha fresat: {animal}",
+            "spawnPair": "{animal}: ous posats, i el mascle els ha fecundat",
+            "amplexus": "{animal}: una parella en amplexus, i posta feta",
+            "pouchFry": "{animal}: {count} cries alliberades de la bossa del pare",
+            "split": "{animal}: un de nou s'ha separat del progenitor"
         },
         "card": {
             "now": "Ara: {activity}",

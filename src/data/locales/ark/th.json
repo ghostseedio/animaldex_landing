@@ -433,7 +433,12 @@
             "regrown": "{animals}: ทุ่งหญ้ากลับมาเขียวอีกครั้ง",
             "matedFirst": "{aAnimal}: ผสมพันธุ์ครั้งแรก",
             "foundMate": "{aAnimal}: พบคู่หลังรอ {days} วัน",
-            "foundDung": "{aAnimal}: พบมูลสด"
+            "foundDung": "{aAnimal}: พบมูลสด",
+            "spawnNight": "คืนนี้แนวปะการังวางไข่: {animal}",
+            "spawnPair": "{animal}: วางไข่แล้ว และตัวผู้ปฏิสนธิไข่",
+            "amplexus": "{animal}: คู่หนึ่งกอดรัดผสมพันธุ์ และวางไข่แล้ว",
+            "pouchFry": "{animal}: ลูก {count} ตัวออกจากถุงของพ่อ",
+            "split": "{animal}: ตัวใหม่แยกออกจากตัวแม่"
         },
         "card": {
             "now": "ตอนนี้: กำลัง{activity}",

@@ -433,7 +433,12 @@
             "regrown": "{animals}: die Weide ist wieder grün",
             "matedFirst": "{aAnimal}: erste Paarung",
             "foundMate": "{aAnimal}: Partner gefunden nach {days} Tagen",
-            "foundDung": "{aAnimal}: frischen Dung gefunden"
+            "foundDung": "{aAnimal}: frischen Dung gefunden",
+            "spawnNight": "Das Riff hat heute Nacht gelaicht: {animal}",
+            "spawnPair": "{animal}: Eier gelegt, und das Männchen hat sie befruchtet",
+            "amplexus": "{animal}: ein Paar im Amplexus, und Laich abgelegt",
+            "pouchFry": "{animal}: {count} Junge aus der Bruttasche des Vaters entlassen",
+            "split": "{animal}: ein neues Tier hat sich vom Elterntier abgeteilt"
         },
         "card": {
             "now": "Jetzt: {activity}",

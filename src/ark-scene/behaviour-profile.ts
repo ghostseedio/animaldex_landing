@@ -60,6 +60,12 @@ export type ArkBehaviourProfile = {
     /** Its walk's and its run's own pace (body lengths a second: the clip's ground_speed over its duty); null without. */
     walkPace: number | null;
     runPace: number | null;
+    /**
+     * REAL-REPRODUCTION (AnimalDex decision 440): a slow creeper's true pace (m/s: centimetres a minute; a sea cucumber, a
+     * sea star, a snail, a slug), or null. It rests most of its time and moves only a few centimetres when it does
+     * (`behaviour-schedule.ts` creepIntent); it never flees (it withdraws).
+     */
+    creep?: number | null;
     /** Some field is a body-plan default (data missing). */
     defaulted: boolean;
     /** Not in the table: the body plan's defaults. */
@@ -108,8 +114,36 @@ export function decodeBehaviourRow(slug: string, row: string): ArkBehaviourProfi
         walkPace: number(walkPace),
         runPace: number(runPace),
         defaulted: flags.includes("d"),
-        fallback: false
+        fallback: false,
+        ...realMotion(slug, move as ArkMove)
     };
+}
+
+/**
+ * REAL-REPRODUCTION movement audit (AnimalDex decision 440, owner 2026-11-20: "animals that stay motionless 99% of time
+ * like coral, black sea cucumber (currently moves a lot)"). The generated table had some fixed animals swimming or
+ * crawling about: a glass sponge and a clam swimming, a tube worm and a bivalve crawling, a sea pig swimming. Fixed ones
+ * are `sessile` (never moved); slow creepers keep their move with `creep`, their pace in m/s. Paces are estimates of the
+ * usual cruising pace from the literature's orders of magnitude (garden snails about 1 mm/s; sea stars 5 to 15 cm a
+ * minute; Holothuria atra a few centimetres a minute; sea urchins and sand dollars a few centimetres a minute or less;
+ * limpets graze at under a centimetre a minute), not stored per kind.
+ */
+const SESSILE_SLUGS = new Set(["christmas-tree-worm", "bivalve", "venus-flower-basket", "ocean-quahog", "common-hydra", "giant-tube-worm", "freshwater-pearl-mussel"]);
+const CREEPERS: Array<[RegExp, number]> = [
+    [/sea-cucumber|sea-pig/, 0.0008],
+    [/brittle-star|basket-star/, 0.004],
+    [/sea-star|starfish|linckia/, 0.002],
+    [/urchin|sand-dollar/, 0.0005],
+    [/limpet/, 0.00015],
+    [/snail|slug|nudibranch|elysia|sea-bunny|leaf-sheep|nerite|periwinkle/, 0.001]
+];
+
+function realMotion(slug: string, move: ArkMove): Partial<ArkBehaviourProfile> {
+    if (SESSILE_SLUGS.has(slug)) return {move: "sessile", moves: [], creep: null};
+    // (Not a goose, a fish, a bird with a borrowed name: only crawlers, sessile limpets and the swimming sea pig.)
+    if (move !== "crawl" && move !== "sessile" && slug !== "sea-pig" && slug !== "northern-basket-star") return {};
+    for (const [pattern, pace] of CREEPERS) if (pattern.test(slug)) return {move: "crawl", moves: [], creep: pace, ...(slug === "sea-pig" || slug === "northern-basket-star" ? {seabed: true} : {})};
+    return {};
 }
 
 /** The body plan's defaults, for a species the table lacks. */
@@ -217,6 +251,7 @@ function floatsOnWater(profile: ArkBehaviourProfile): boolean {
  * 1.1: a swan swam at 1.9 m/s). Anything else (a fish, a seal, a penguin) as before: its free pace.
  */
 export function swimSpeedOf(profile: ArkBehaviourProfile, length: number): number {
+    if (profile.creep) return profile.creep;
     const L = profile.move === "swim" ? swimPaceLength(length) : Math.max(length, 0.05);
     if (!floatsOnWater(profile)) return freeBodyLengthsPerSecond(profile) * L * 1.4;
     return Math.min(swimBodyLengthsPerSecond(profile) * L * 1.4, Math.sqrt(Math.max(length, 0.05)));

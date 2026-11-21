@@ -59,6 +59,8 @@ const CONE = 0.2;
 const CONE_MOST = 0.4;
 /** A swimmer under the surface is filmed level with it, from under the water (the angle from straight above). */
 const POLAR_UNDER = 1.33;
+/** REAL-REPRODUCTION: a split on the seabed, looked down on through the water (a flat star level with the camera is a sliver). */
+const POLAR_SEABED = 0.8;
 /**
  * The night's lift at its darkest, as gains on the Ark's own (the camera's exposure, and the sky's own light as a
  * fill): an act on a forest floor at midnight reads, still blue and dim. `nightGain` scales both.
@@ -315,7 +317,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
      * The view that holds these animals: the two farthest apart framed together (the selection's pair framing), or the
      * one alone at its meeting distance; side on to the line between them, from the island's outer side.
      */
-    const frameOf = (list: string[], style: {polar?: number; widen?: number; max?: number; /** Alone in the picture while the rest are farther than `closing` (default `CLOSING`) from it. */ first?: string; closing?: number; /** V1: places held in the picture as well, with nobody at them yet (where a hunter will be at its lunge's end). */ also?: Array<ArkLocated & {id: string}>} = {}): Frame | null => {
+    const frameOf = (list: string[], style: {polar?: number; widen?: number; max?: number; /** Alone in the picture while the rest are farther than `closing` (default `CLOSING`) from it. */ first?: string; closing?: number; /** REAL-REPRODUCTION: one on the seabed (a split sea star or cucumber): looked down on through the water, never level with it. */ seabed?: boolean; /** V1: places held in the picture as well, with nobody at them yet (where a hunter will be at its lunge's end). */ also?: Array<ArkLocated & {id: string}>} = {}): Frame | null => {
         const all = located(list);
         const drawn = all.filter((at) => at.shown !== false);
         let who = drawn.length ? drawn : all;
@@ -342,7 +344,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         const max = style.max ?? 150;
         // (Swimmers under the surface: level with them, the camera in the water too.)
         const under = Math.min(...who.map((p) => (p.under ?? 0) - p.height / 2));
-        const polar = under > 0.12 ? POLAR_UNDER : style.polar ?? (length < 0.3 ? POLAR_SMALL : POLAR);
+        const polar = style.seabed ? POLAR_SEABED : under > 0.12 ? POLAR_UNDER : style.polar ?? (length < 0.3 ? POLAR_SMALL : POLAR);
         const apartNow = far > Math.max(length * 0.5, 0.2);
         const centre = {x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, z: (a.z + b.z) / 2};
         // The least distance that holds the two from a bearing and a height: across the picture, the part of the line
@@ -642,8 +644,18 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
             enter("court");
             return toward(frameOf(ids, {widen: 1.1, first: ids[0], ...high}), dt);
         }
-        // (V1: a pair brought side by side does not mount, `live-matings.ts` beside: nothing to look away from.)
-        if (options.mount !== "show" && act.how !== "brought") {
+        // REAL-REPRODUCTION: a kind's own way (a spawning, a clasp, a pair over its eggs) is no mount: it is watched
+        // through, close, its still in the middle of the laying.
+        if (act.repro) {
+            const [from, to] = act.telling ?? [courted, mounted];
+            if (now < mounted + 2.4) {
+                enter("mount");
+                if (now > from + Math.min(8, (to - from) * 0.5)) tell();
+                // (A spawning night's pair are each where they are, maybe across the bay: the first of them, close.)
+                return toward(frameOf(ids, {widen: 1.15, first: ids[0], ...high}), dt);
+            }
+            enter("rest");
+        } else if (options.mount !== "show" && act.how !== "brought") {
             if (state !== "away" && state !== "rest" && state !== "over") enter("away");
             if (state === "away") {
                 // Up and away as it begins; then on to the two resting together.
@@ -663,7 +675,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         } else enter("rest");
         if (state === "rest" && clip - stateAt > 2.5) tell();
         if (state === "rest" && clip - stateAt > 5) finish(true);
-        return drift(frameOf(ids, {widen: 1.2, ...high}), dt);
+        return drift(frameOf(ids, {widen: 1.2, ...(act.repro ? {first: ids[0]} : {}), ...high}), dt);
     };
 
     const stepBirth = (dt: number) => {
@@ -728,7 +740,8 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         }
         enter("birth");
         // (The still: every young that is shown can be seen, `live-births.ts` seenBy: a den's have crawled out from under her.)
-        const seenBy = Math.min(act.seenBy ?? 12, 26);
+        // (REAL-REPRODUCTION: a split's halves come apart slowly; held on until they have.)
+        const seenBy = Math.min(act.seenBy ?? 12, act.style === "split" ? 48 : 26);
         if (s > seenBy + 1) tell();
         // (Settling, the young born one by one, the first licks: the first 24 s or so; then the nursing goes on for minutes.)
         if (s > Math.min(act.end ?? 24, Math.max(24, seenBy + 5))) finish(true);
@@ -737,6 +750,9 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
         const born = located(byRole("young")).some((at) => at.shown !== false);
         if (act.housed) cutShare = CUT_GROUND_HOUSED;
         // (A tank's, a cage's or a room's: from above, through its open or glass top; from the side there is a wall.)
+        // (REAL-REPRODUCTION: a split on the seabed: from above through the water, both halves held, never so near that the
+        // camera's near plane cuts into the flat body.)
+        if (act.style === "split") return toward(frameOf(who, {widen: 1.8, seabed: true}), dt);
         return toward(frameOf(who, {widen: born ? BIRTH_CLOSE : 1.15, ...(act.housed ? {polar: POLAR_HOUSED} : {})}), dt);
     };
 
@@ -1050,7 +1066,7 @@ export function createArkReplayShot(options: ArkReplayShotOptions): ArkReplaySho
                     const act = handle.liveActs?.().births.find((b) => b.key === replay.feed.births![0].key);
                     const mother = act?.mother ? handle.locate(act.mother) : null;
                     const by = mother ? located(byRole("young")).filter((at) => at.shown !== false && Math.hypot(at.x - mother.x, at.z - mother.z) <= Math.max(mother.length * 2.5, 0.5)).map((at) => at.id) : [];
-                    if (mother) return drift(frameOf([act!.mother!, ...by], {widen: by.length ? BIRTH_CLOSE : 1.2}), dt, 0.06);
+                    if (mother) return drift(frameOf([act!.mother!, ...by], act?.style === "split" ? {widen: 1.8, seabed: true} : {widen: by.length ? BIRTH_CLOSE : 1.2}), dt, 0.06);
                 }
                 const all = located(ids);
                 const near = all.length < 2 || all.every((p) => all.every((q) => Math.hypot(p.x - q.x, p.z - q.z) <= TOGETHER * 2));

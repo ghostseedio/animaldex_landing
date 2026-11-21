@@ -433,7 +433,12 @@
             "regrown": "{animals}: 草場又綠了",
             "matedFirst": "{aAnimal}: 第一次交配",
             "foundMate": "{aAnimal}: 等了 {days} 天終於找到伴侶",
-            "foundDung": "{aAnimal}: 找到了新鮮的糞便"
+            "foundDung": "{aAnimal}: 找到了新鮮的糞便",
+            "spawnNight": "今晚珊瑚礁集體產卵：{animal}",
+            "spawnPair": "{animal}：產下卵，雄性為卵受精",
+            "amplexus": "{animal}：一對抱接產卵",
+            "pouchFry": "{animal}：{count}隻幼體從父親的育兒囊中出來",
+            "split": "{animal}：從親體分裂出一個新個體"
         },
         "card": {
             "now": "現在：{activity}",

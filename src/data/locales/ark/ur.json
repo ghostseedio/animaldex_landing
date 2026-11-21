@@ -433,7 +433,12 @@
             "regrown": "{animals}: چراگاہ پھر سے ہری",
             "matedFirst": "{aAnimal}: پہلا ملاپ",
             "foundMate": "{aAnimal}: {days} دن بعد ساتھی ملا",
-            "foundDung": "{aAnimal}: تازہ گوبر ملا"
+            "foundDung": "{aAnimal}: تازہ گوبر ملا",
+            "spawnNight": "آج رات مرجانی چٹان نے انڈے چھوڑے: {animal}",
+            "spawnPair": "{animal}: انڈے دیے گئے، اور نر نے انہیں بارور کیا",
+            "amplexus": "{animal}: ایمپلیکسس میں ایک جوڑا، اور انڈے دیے گئے",
+            "pouchFry": "{animal}: باپ کی تھیلی سے {count} بچے نکلے",
+            "split": "{animal}: اپنے والد جاندار سے ایک نیا الگ ہوا"
         },
         "card": {
             "now": "ابھی: {activity}",

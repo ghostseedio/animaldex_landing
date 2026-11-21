@@ -433,7 +433,12 @@
             "regrown": "{animals}: pasto verde de novo",
             "matedFirst": "{aAnimal}: primeiro acasalamento",
             "foundMate": "{aAnimal}: par encontrado após {days} dias",
-            "foundDung": "{aAnimal}: esterco fresco encontrado"
+            "foundDung": "{aAnimal}: esterco fresco encontrado",
+            "spawnNight": "O recife desovou esta noite: {animal}",
+            "spawnPair": "{animal}: ovos postos, e o macho fecundou-os",
+            "amplexus": "{animal}: um casal em amplexo, e desova feita",
+            "pouchFry": "{animal}: {count} filhotes saíram da bolsa do pai",
+            "split": "{animal}: um novo separou-se do progenitor"
         },
         "card": {
             "now": "Agora: {activity}",

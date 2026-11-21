@@ -433,7 +433,12 @@
             "regrown": "{animals}: betet är grönt igen",
             "matedFirst": "{aAnimal}: första parningen",
             "foundMate": "{aAnimal}: hittade en partner efter {days} dagar",
-            "foundDung": "{aAnimal}: hittade färsk spillning"
+            "foundDung": "{aAnimal}: hittade färsk spillning",
+            "spawnNight": "Revet lekte i natt: {animal}",
+            "spawnPair": "{animal}: ägg lagda, och hanen befruktade dem",
+            "amplexus": "{animal}: ett par i amplexus, och rom lagd",
+            "pouchFry": "{animal}: {count} ungar släppta ur faderns ruvpung",
+            "split": "{animal}: en ny delade sig från sin förälder"
         },
         "card": {
             "now": "Nu: {activity}",

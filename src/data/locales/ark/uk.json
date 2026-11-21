@@ -433,7 +433,12 @@
             "regrown": "{animals}: пасовище знову зелене",
             "matedFirst": "{aAnimal}: перше парування",
             "foundMate": "{aAnimal}: пару знайдено через {days} дн.",
-            "foundDung": "{aAnimal}: знайдено свіжий гній"
+            "foundDung": "{aAnimal}: знайдено свіжий гній",
+            "spawnNight": "Цієї ночі риф відкидав ікру: {animal}",
+            "spawnPair": "{animal}: ікру відкладено, і самець її запліднив",
+            "amplexus": "{animal}: пара в амплексусі, ікру відкладено",
+            "pouchFry": "{animal}: із сумки батька вийшло мальків: {count}",
+            "split": "{animal}: від батьківської особини відокремилася нова"
         },
         "card": {
             "now": "Зараз: {activity}",

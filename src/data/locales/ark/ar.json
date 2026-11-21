@@ -433,7 +433,12 @@
             "regrown": "{animals}: المرعى أخضر من جديد",
             "matedFirst": "{aAnimal}: التزاوج لأول مرة",
             "foundMate": "{aAnimal}: وجد شريكًا بعد {days} يومًا",
-            "foundDung": "{aAnimal}: وجد روثًا طازجًا"
+            "foundDung": "{aAnimal}: وجد روثًا طازجًا",
+            "spawnNight": "أطلقت الشعاب بيوضها الليلة: {animal}",
+            "spawnPair": "{animal}: وُضع البيض ثم لقّحه الذكر",
+            "amplexus": "{animal}: زوج في وضع العناق التزاوجي، ووُضع البيض",
+            "pouchFry": "{animal}: خرج {count} صغيرًا من جراب الأب",
+            "split": "{animal}: انفصل فرد جديد عن أصله"
         },
         "card": {
             "now": "الآن: {activity}",

@@ -433,7 +433,12 @@
             "regrown": "{animals}: beitet er grønt igjen",
             "matedFirst": "{aAnimal}: første paring",
             "foundMate": "{aAnimal}: fant en make etter {days} dager",
-            "foundDung": "{aAnimal}: fant fersk møkk"
+            "foundDung": "{aAnimal}: fant fersk møkk",
+            "spawnNight": "Revet gytte i natt: {animal}",
+            "spawnPair": "{animal}: egg lagt, og hannen befruktet dem",
+            "amplexus": "{animal}: et par i amplexus, og egg lagt",
+            "pouchFry": "{animal}: {count} unger sluppet ut av farens pung",
+            "split": "{animal}: en ny delte seg fra forelderen"
         },
         "card": {
             "now": "Nå: {activity}",

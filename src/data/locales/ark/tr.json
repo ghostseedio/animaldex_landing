@@ -433,7 +433,12 @@
             "regrown": "{animals}: otlak yeniden yeşil",
             "matedFirst": "{aAnimal}: ilk çiftleşme",
             "foundMate": "{aAnimal}: {days} gün sonra eş buldu",
-            "foundDung": "{aAnimal}: taze dışkı buldu"
+            "foundDung": "{aAnimal}: taze dışkı buldu",
+            "spawnNight": "Resif bu gece yumurtladı: {animal}",
+            "spawnPair": "{animal}: yumurtalar bırakıldı ve erkek onları döllüyor",
+            "amplexus": "{animal}: amplekstaki bir çift, yumurta bırakıldı",
+            "pouchFry": "{animal}: babanın kesesinden {count} yavru çıktı",
+            "split": "{animal}: ebeveyninden yeni bir birey ayrıldı"
         },
         "card": {
             "now": "Şimdi: {activity}",

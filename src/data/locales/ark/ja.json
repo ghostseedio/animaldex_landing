@@ -433,7 +433,12 @@
             "regrown": "{animals}: 草地がまた緑になりました",
             "matedFirst": "{aAnimal}: 初めての交尾",
             "foundMate": "{aAnimal}: {days}日待って相手が見つかりました",
-            "foundDung": "{aAnimal}: 新しいふんを見つけました"
+            "foundDung": "{aAnimal}: 新しいふんを見つけました",
+            "spawnNight": "今夜、サンゴ礁で一斉産卵：{animal}",
+            "spawnPair": "{animal}：産卵し、オスが卵に受精させた",
+            "amplexus": "{animal}：抱接したペアが産卵した",
+            "pouchFry": "{animal}：父親の育児嚢から子が{count}匹出た",
+            "split": "{animal}：親から新しい個体が分かれた"
         },
         "card": {
             "now": "いま：{activity}",
