@@ -309,11 +309,14 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
         const onKey = (event: KeyboardEvent) => {
             const step = arkCycleKey(event, document.documentElement.dir === "rtl");
             if (!step) return;
+            // (Before the world's own arrow-key panning, `controls.listenToKeyEvents(canvas)`: with a card of a kind
+            // of several open, ← → page through them; ↑ ↓ still pan, and with one of a kind ← → pan as before.)
             event.preventDefault();
+            event.stopPropagation();
             stepCycle(step);
         };
-        window.addEventListener("keydown", onKey);
-        return () => window.removeEventListener("keydown", onKey);
+        window.addEventListener("keydown", onKey, true);
+        return () => window.removeEventListener("keydown", onKey, true);
     }, [stepCycle]);
     // What it is doing now, in a word or two (no "Now:"): the schedule's activity; until the scene has it, asleep or nothing.
     const activityKey = status?.activity ?? (asleep ? "sleeping" : null);
@@ -369,7 +372,7 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
         </>
     );
     return (
-        <div ref={bandRef} onKeyDown={onKeyDown} data-testid="ark-animal-card" className="ark-card-glass rows-in absolute inset-x-0 bottom-0 border-t border-white/[0.12]" role="region" aria-labelledby={`ark-card-${animal.id}`}>
+        <div ref={bandRef} onKeyDown={onKeyDown} data-testid="ark-animal-card" className="ark-card-glass rows-in pointer-events-auto absolute inset-x-0 bottom-0 border-t border-white/[0.12]" role="region" aria-labelledby={`ark-card-${animal.id}`}>
             <div className="mx-auto w-full max-w-[86rem] px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:px-8 md:pb-4 md:pt-3.5">
                 {/* Who: icon, name, its sex and index number, what it is doing; who brought it under. */}
                 <div className="flex items-center gap-3">
