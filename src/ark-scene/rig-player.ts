@@ -766,9 +766,10 @@ export const POSED_LIE_OVER_PILOT: ReadonlySet<string> = new Set(["domestic-dog"
 /**
  * Rigs whose posed lie passes the gate but reads wrong (each looked at, batch 14 round 5): the addax's, walia ibex's and
  * oribi's one hind leg, rigged from the top of the rump, folds out behind and up; the pikas' and the poodle's bodies
- * fold flat into a sheet. They sleep standing until they are rigged again.
+ * fold flat into a sheet; the Arabian oryx's re-rig (round 6) drags its rump and tail out long behind it. They sleep
+ * standing until they are rigged again.
  */
-export const POSED_LIE_HELD: ReadonlySet<string> = new Set(["addax", "walia-ibex", "oribi", "american-pika", "ili-pika", "poodle"]);
+export const POSED_LIE_HELD: ReadonlySet<string> = new Set(["addax", "walia-ibex", "oribi", "american-pika", "ili-pika", "poodle", "arabian-oryx"]);
 
 /**
  * ARK-ANIM round 3 (decision 447): the posed lie's rows appended to a rig's bone rows (`locomotion/lie-pose.ts`): the
