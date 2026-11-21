@@ -79,7 +79,40 @@ export function hullOf(geometry: BufferGeometry): Hull {
             }
         }
     }
-    const vertices = Uint32Array.from(new Set(Array.from(at).filter((v) => v >= 0)));
+    // Along its length and across it, the lowest vertex of each slice: its belly's line and each pair of feet (a long
+    // body on uneven ground rests on more than its ends).
+    const picked = new Set<number>(Array.from(at).filter((v) => v >= 0));
+    let minX = Infinity;
+    let maxX = -Infinity;
+    let minZ = Infinity;
+    let maxZ = -Infinity;
+    for (let v = 0; v < n; v += stride) {
+        const x = position.getX(v);
+        const z = position.getZ(v);
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (z < minZ) minZ = z;
+        if (z > maxZ) maxZ = z;
+    }
+    const ALONG = 14;
+    const ACROSS = 6;
+    const lowY = new Float32Array(ALONG + ACROSS).fill(Infinity);
+    const lowAt = new Int32Array(ALONG + ACROSS).fill(-1);
+    for (let v = 0; v < n; v += stride) {
+        const y = position.getY(v);
+        const a = Math.min(Math.floor(((position.getZ(v) - minZ) / Math.max(maxZ - minZ, 1e-9)) * ALONG), ALONG - 1);
+        const c = ALONG + Math.min(Math.floor(((position.getX(v) - minX) / Math.max(maxX - minX, 1e-9)) * ACROSS), ACROSS - 1);
+        if (y < lowY[a]) {
+            lowY[a] = y;
+            lowAt[a] = v;
+        }
+        if (y < lowY[c]) {
+            lowY[c] = y;
+            lowAt[c] = v;
+        }
+    }
+    for (const v of lowAt) if (v >= 0) picked.add(v);
+    const vertices = Uint32Array.from(picked);
     const rest = new Float32Array(vertices.length * 3);
     const j = geometry.getAttribute("arkJoints") as BufferAttribute | undefined;
     const w = geometry.getAttribute("arkWeights") as BufferAttribute | undefined;
@@ -116,7 +149,56 @@ const halfTable = (() => {
  * now (`row0` to `row1` by `t`), another clip fading out (`from*`, by `fromWeight`), and the rest pose for what is
  * left of `weight`.
  */
-export type RigPose = {bones: number; live: Float32Array | null; liveRow: number; baked: Uint16Array | null; row0: number; row1: number; t: number; from0: number; from1: number; fromT: number; fromWeight: number; weight: number};
+export type RigPose = {
+    bones: number;
+    live: Float32Array | null;
+    liveRow: number;
+    baked: Uint16Array | null;
+    row0: number;
+    row1: number;
+    t: number;
+    from0: number;
+    from1: number;
+    fromT: number;
+    fromWeight: number;
+    weight: number;
+    /**
+     * A still animal wholly in one clip of its own (no gait under it, nothing fading): the clip's rows (its first, how
+     * many). Its seat is then taken at the clip's lowest frame (`lowRow`), not the frame drawn now.
+     */
+    clip?: {row: number; rows: number} | null;
+};
+
+const lows = new WeakMap<Hull, Map<number, number>>();
+
+/**
+ * The row of a clip (its first row, how many) at which the posed hull's lowest point is lowest: where the body is
+ * nearest what it stands on over the clip (kept per hull and clip).
+ */
+export function lowRow(hull: Hull, baked: Uint16Array, bones: number, first: number, rows: number): number {
+    let known = lows.get(hull);
+    if (!known) lows.set(hull, (known = new Map()));
+    const kept = known.get(first);
+    if (kept !== undefined) return kept;
+    const out = new Float32Array(hull.vertices.length * 3);
+    const pose: RigPose = {bones, live: null, liveRow: -1, baked, row0: 0, row1: 0, t: 0, from0: 0, from1: 0, fromT: 0, fromWeight: 0, weight: 1};
+    let best = first;
+    let least = Infinity;
+    // (Every row of a short clip, every few of a long one: a body's lowest moment is not one frame long.)
+    const step = Math.max(1, Math.floor(rows / 24));
+    for (let r = 0; r < Math.max(rows, 1); r += step) {
+        pose.row0 = pose.row1 = first + r;
+        const n = posedHull(hull, pose, out);
+        let low = Infinity;
+        for (let i = 0; i < n; i++) if (out[i * 3 + 1] < low) low = out[i * 3 + 1];
+        if (low < least) {
+            least = low;
+            best = first + r;
+        }
+    }
+    known.set(first, best);
+    return best;
+}
 
 /**
  * The hull's points as posed (model space) into `out` (x y z each); a still mesh's are its rest points. Returns how
