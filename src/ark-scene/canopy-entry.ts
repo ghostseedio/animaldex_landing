@@ -12,6 +12,7 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import {canopyPhases} from "@/ark-scene/canopy-scene";
+import {handMiss, handsReady} from "@/ark-scene/locomotion/brachiate";
 import {ledgeSeen} from "@/ark-scene/rock-ledge";
 import {zooSeen} from "@/ark-scene/islands/town/zoo-swing";
 import {Raycaster, Vector3, type Object3D} from "three";
@@ -105,6 +106,19 @@ async function main() {
             await frames(1);
             return at;
         },
+        /** Its rig is in and its arms can take a hold (until then the still model stands in). */
+        handsReady: async (slug: string, ms = 20_000) => {
+            const end = realPerfNow() + ms;
+            while (realPerfNow() < end && !handsReady.has(slug)) await wait(150);
+            await frames(2);
+            return handsReady.has(slug);
+        },
+        /** The holding hand's gap to its hold last frame (m), by species, then cleared. */
+        handMiss: () => {
+            const out = Object.fromEntries(handMiss);
+            handMiss.clear();
+            return out;
+        },
         hours: (h: number | null) => handle.setHours(h),
         locate: (id: string) => handle.locate(id),
         frame: async (id: string, distance: number, azimuth = 0.7, polar = 1.3, lift = 0) => {
@@ -136,13 +150,35 @@ async function main() {
             return all.filter((e) => re.test(e.animal.model_slug)).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, beat: e.sched?.pose?.beat ?? null, moving: Boolean(e.sched?.pose?.moving), y: e.sched?.pose?.y ?? null, ny: e.sched?.pose?.ny ?? null}));
         },
         /** Scan forward from `from` (s) in `step`s for the first moment an animal of these kinds is on a climb, moving. */
-        findClimb: async (pattern: string, from: number, seconds: number, step = 2, skip: string[] = []) => {
+        findClimb: async (pattern: string, from: number, seconds: number, step = 2, skip: string[] = [], beat = "climb") => {
             for (let e = from; e < from + seconds; e += step) {
                 await setAt(e);
-                const hit = (window.__canopy!.beats as unknown as (p: string) => Array<{id: string; beat: string | null; moving: boolean}>)(pattern).find((b) => b.beat === "climb" && b.moving && !skip.includes(b.id));
+                const hit = (window.__canopy!.beats as unknown as (p: string) => Array<{id: string; beat: string | null; moving: boolean}>)(pattern).find((b) => b.beat === beat && b.moving && !skip.includes(b.id));
                 if (hit) return {epoch: e, ...hit};
             }
             return null;
+        },
+        /** Every climb of these kinds from `from` (s) for `seconds`: who, where to and from, its pose (for an audit of climbs in the air). */
+        climbLog: async (pattern: string, from: number, seconds: number, step = 2) => {
+            const re = new RegExp(pattern);
+            const out: Array<Record<string, unknown>> = [];
+            const seen = new Set<string>();
+            type E = {animal: {id: string; model_slug: string}; sched?: {trip?: {slot: number; from: {point: string | null; x: number; y: number; z: number}; to: {point: string | null; x: number; y: number; z: number}} | null; pose?: {beat?: string; moving?: boolean; x?: number; y?: number; z?: number; nx?: number; ny?: number; nz?: number}} | null};
+            for (let e = from; e < from + seconds; e += step) {
+                await setAt(e);
+                const all = (window as unknown as {__arkDebug: {entries: () => E[]}}).__arkDebug.entries();
+                for (const x of all) {
+                    if (!re.test(x.animal.model_slug)) continue;
+                    const p = x.sched?.pose;
+                    const t = x.sched?.trip;
+                    if (!p || p.beat !== "climb" || !p.moving || !t) continue;
+                    const key = `${x.animal.id}#${t.slot}`;
+                    if (seen.has(key)) continue;
+                    seen.add(key);
+                    out.push({epoch: e, id: x.animal.id, slug: x.animal.model_slug, from: t.from.point, to: t.to.point, toAt: [t.to.x, t.to.y, t.to.z].map((v) => Math.round(v * 100) / 100), pose: [p.x, p.y, p.z, p.nx, p.ny, p.nz].map((v) => Math.round((v ?? 0) * 100) / 100)});
+                }
+            }
+            return out;
         },
         /** Scan forward from `from` (s) for the first moment an animal of these kinds is in this canopy phase. */
         findCanopy: async (pattern: string, phases: string[], from: number, seconds: number, step = 1, skip: string[] = []) => {
@@ -237,6 +273,32 @@ async function main() {
             while (realPerfNow() < end && handle.loading()) await wait(150);
             await frames(4);
             return best;
+        },
+        /**
+         * For a look at an animal in a crown (development shots only): every drawn thing between the camera and the animal
+         * hidden (a leaf set, a limb), so its body and its arms are seen. Returns how many were hidden.
+         */
+        cut: async (id: string, leavesOnly = false) => {
+            const at = handle.locate(id);
+            const dbg = (window as unknown as {__arkDebug: {scene: Object3D; camera: {position: Vector3}}}).__arkDebug;
+            if (!at) return 0;
+            // (the body, and each brachiator's hold this frame, so the hand on the branch is seen too)
+            const targets = [new Vector3(at.x, at.y + (at.height ?? 0.3) * 0.5, at.z)];
+            if (leavesOnly) for (const m of Array.from(handMiss.values())) targets.push(new Vector3(...m.hold));
+            let hidden = 0;
+            for (const target of targets) for (let pass = 0; pass < (leavesOnly ? 30 : 6); pass++) {
+                const from = new Vector3().copy(dbg.camera.position);
+                const ray = new Raycaster(from, target.clone().sub(from).normalize());
+                ray.far = from.distanceTo(target) - (target === targets[0] ? Math.max(at.length ?? 0.5, 0.4) : 0.12);
+                // (`leavesOnly`: never the wood the hand is on (what is hit within 30 cm of the hold) nor an animal itself)
+                const near = target === targets[0] ? 0 : 0.3;
+                const hit = ray.intersectObjects(dbg.scene.children, true).find((h) => h.object.visible && !(h.object as {isSprite?: boolean}).isSprite && (!leavesOnly || (!(h.object as {isSkinnedMesh?: boolean}).isSkinnedMesh && h.point.distanceTo(target) > near)));
+                if (!hit) break;
+                hit.object.visible = false;
+                hidden++;
+            }
+            await frames(3);
+            return hidden;
         },
         /** Where the animals of these kinds are drawn now, and their schedule's hold (to frame the jungle's shots). */
         where: (pattern: string) => {

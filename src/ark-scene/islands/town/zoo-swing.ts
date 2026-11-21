@@ -14,6 +14,7 @@
 import {canopyKindOf, canopyPoseAt, planRoute, type Anchor, type CanopyRoute} from "@/ark-scene/canopy-travel";
 import {hashString} from "@/ark-scene/world";
 import type {SurfaceFrame} from "@/ark-scene/grounding/stand";
+import {canHang, travelKind, type LocoCanopy} from "@/ark-scene/locomotion/brachiate";
 
 type Vec = {x: number; y: number; z: number};
 type V3 = [number, number, number];
@@ -62,10 +63,12 @@ const plans = new Map<string, Excursion | null>();
 
 /** Its excursion from its spot: to the nearest post, up it, out along the beams and back, down and home. */
 function plan(id: string, slug: string, scientific: string | null | undefined, length: number, spot: Vec, climbs: readonly ZooClimb[]): Excursion | null {
-    const key = `${id}@${spot.x.toFixed(1)},${spot.z.toFixed(1)}`;
+    const key = `${id}@${spot.x.toFixed(1)},${spot.z.toFixed(1)}${canHang(slug) ? "#hands" : ""}`;
     if (plans.has(key)) return plans.get(key) ?? null;
     let out: Excursion | null = null;
-    const kind = canopyKindOf(slug, scientific);
+    // (ARK-CANOPY: under the beams by its hands only when its rig's arms can hold; else along their tops.)
+    const found = canopyKindOf(slug, scientific);
+    const kind = found ? travelKind(found, slug) : null;
     if (kind && climbs.length) {
         // The nearest post's foot, and its top.
         let best: {foot: Vec; top: Vec; d: number} | null = null;
@@ -111,7 +114,7 @@ export function zooSwingFrame(
     climbs: readonly ZooClimb[],
     epoch: number,
     awake: boolean
-): (SurfaceFrame & {air: boolean; phase: string}) | null {
+): (SurfaceFrame & {air: boolean; phase: string; arms?: LocoCanopy | null; leap?: number | null; canopy?: boolean}) | null {
     if (!awake || !climbs.length) return null;
     const ex = plan(animal.id, animal.model_slug, animal.scientific_name, length, spot, climbs);
     if (!ex) return null;
@@ -149,7 +152,9 @@ export function zooSwingFrame(
             f = norm(lerp(up, f, w));
         }
         zooSeen.set(animal.id, {epoch, phase: pose.phase});
-        return frame(p, n, f, pose.air, pose.phase);
+        // (ARK-CANOPY: its arms on the beam's holds and its leaps' clip, as on the wild island's trees: `canopy-scene.ts`.)
+        const arms: LocoCanopy | null = pose.blend > 0.5 && (pose.phase === "swing" || pose.phase === "flight" || pose.phase === "hold") ? {phase: pose.phase, hand: pose.hand, next: pose.next ?? null, lead: pose.lead ?? 1, u: pose.u ?? 0, brachiate: ex.route.kind.mode === "brachiate"} : null;
+        return {...frame(p, n, f, pose.air, pose.phase), arms, leap: pose.phase === "leap" ? pose.u ?? null : null, canopy: true};
     }
     s -= ex.route.seconds;
     if (s < ex.climb) return frame(lerp(ex.top, ex.foot, ease(s / ex.climb)), ex.postOut, {x: 0, y: -1, z: 0}, false, "climb");

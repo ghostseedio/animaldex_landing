@@ -9,7 +9,7 @@
  * A plan is `[{name, epoch, id?, target?: {x, y, z}, distance, azimuth?, polar?, lift?, hours?}]`.
  */
 import {createServer} from "node:http";
-import {existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from "node:fs";
+import {appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {createRequire} from "node:module";
@@ -53,9 +53,33 @@ try {
 }
 const context = await browser.newContext({viewport: {width: Number(arg("width", "1280")), height: Number(arg("height", "720"))}});
 const page = await context.newPage();
+// --local-set DIR: a local Ark build (DIR/ark/manifest.json + DIR/ark/<slug>/{near.glb,far.glb,ark.json}, and
+// DIR/rig/publish-v3/{manifest.json,<slug>/<version>.rig.glb}) laid over the live sets, to look at re-made models and
+// rigs before anything is uploaded (ARK-CANOPY's re-rigged gibbons).
+const localSet = arg("local-set", null);
+if (localSet) {
+    const arkLocal = JSON.parse(readFileSync(path.join(localSet, "ark", "manifest.json"), "utf8")).models ?? {};
+    const rigLocal = JSON.parse(readFileSync(path.join(localSet, "rig", "publish-v3", "manifest.json"), "utf8")).species ?? {};
+    const files = {"near.glb": "near.glb", "far.glb": "far.glb", "ark.json": "ark.json"};
+    await page.route(/talking-models\/(v1\/ark|ark-rig\/v3)\//, async (route) => {
+        const url = route.request().url();
+        if (/v1\/ark\/manifest(\.json)?(\?|$)/.test(url) || /ark-rig\/v3\/manifest(\.json)?(\?|$)/.test(url)) {
+            const live = await route.fetch();
+            const doc = await live.json();
+            if (url.includes("/v1/ark/")) Object.assign(doc.models, arkLocal);
+            else Object.assign(doc.species, rigLocal);
+            return route.fulfill({response: live, json: doc});
+        }
+        const m = /v1\/ark\/([^/]+)\/([0-9a-f]+)\.(near\.glb|far\.glb|ark\.json)/.exec(url);
+        if (m && arkLocal[m[1]] === m[2]) return route.fulfill({path: path.join(localSet, "ark", m[1], files[m[3]])});
+        const r = /ark-rig\/v3\/([^/]+)\/([0-9a-f]+)\.rig\.glb/.exec(url);
+        if (r && rigLocal[r[1]] === r[2]) return route.fulfill({path: path.join(localSet, "rig", "publish-v3", r[1], `${r[2]}.rig.glb`)});
+        return route.continue();
+    });
+}
 const errors = [];
 page.on("pageerror", (e) => errors.push(String(e.stack ?? e.message).slice(0, 600)));
-await page.goto(`${base}?world=v2&quality=${arg("quality", "high")}&epoch=${plan[0]?.epoch ?? ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
+await page.goto(`${base}?world=v2&island=${arg("island", "wild")}&quality=${arg("quality", "high")}&epoch=${plan[0]?.epoch ?? ""}`, {waitUntil: "domcontentloaded", timeout: 120000});
 const started = Date.now();
 while (Date.now() - started < 240000) {
     const state = await page.evaluate(() => ({ok: Boolean(window.__canopy?.ready?.()), error: window.__canopyError ?? null}));
@@ -65,10 +89,18 @@ while (Date.now() - started < 240000) {
 }
 const notes = [];
 for (const shot of plan) {
+    if (shot.prefocus) {
+        // (Its rig loads only near the camera, and a brachiator travels the crowns only once its rig's hands can hold:
+        // framed first, at the plan's epoch, so its rig is in before the search.)
+        await page.evaluate(async (s) => {
+            await window.__canopy.at(s.epoch, 2);
+            await window.__canopy.frame(s.prefocus, 3, 0.7, 1.3, 0);
+        }, shot);
+    }
     if (shot.find) {
         // (A moment found on the page's own schedule: the first climb of these kinds from `from`, `after` seconds into it.)
         // (Or, with `phases`, the first moment one of them is swinging, leaping or in flight on its canopy route.)
-        const found = await page.evaluate(async (f) => (f.ledge || f.zoo ? window.__canopy.findLedge(f.pattern, f.ledge ?? f.zoo, f.from, f.seconds ?? 1800, f.step ?? 1, Boolean(f.zoo)) : f.phases ? window.__canopy.findCanopy(f.pattern, f.phases, f.from, f.seconds ?? 1800, f.step ?? 1, f.skip ?? []) : window.__canopy.findClimb(f.pattern, f.from, f.seconds ?? 1800, f.step ?? 2, f.skip ?? [])), shot.find);
+        const found = await page.evaluate(async (f) => (f.ledge || f.zoo ? window.__canopy.findLedge(f.pattern, f.ledge ?? f.zoo, f.from, f.seconds ?? 1800, f.step ?? 1, Boolean(f.zoo)) : f.phases ? window.__canopy.findCanopy(f.pattern, f.phases, f.from, f.seconds ?? 1800, f.step ?? 1, f.skip ?? []) : window.__canopy.findClimb(f.pattern, f.from, f.seconds ?? 1800, f.step ?? 2, f.skip ?? [], f.beat ?? "climb")), shot.find);
         console.log(shot.name, "found", JSON.stringify(found));
         if (!found) continue;
         shot.epoch = found.epoch + (shot.find.after ?? 1);
@@ -81,6 +113,12 @@ for (const shot of plan) {
         }, shot);
         notes.push(`${shot.name}: ${JSON.stringify(at)}`);
         console.log(shot.name, JSON.stringify(at));
+        continue;
+    }
+    if (shot.climbs) {
+        const log = await page.evaluate((c) => window.__canopy.climbLog(c.pattern, c.from, c.seconds, c.step ?? 2), shot.climbs);
+        writeFileSync(path.join(out, `${shot.name}.json`), JSON.stringify(log, null, 1));
+        console.log(shot.name, log.length, "climbs");
         continue;
     }
     if (shot.where) {
@@ -102,7 +140,8 @@ for (const shot of plan) {
         const count = Math.round((shot.clip.seconds ?? 4) * fps);
         await page.evaluate(async (s) => {
             if (s.hours !== undefined) window.__canopy.hours(s.hours);
-            await window.__canopy.at(s.epoch, s.run ?? 2);
+            // (`lead`: begun this many seconds early and played up to the moment, so its rig is posing when the clip starts)
+            await window.__canopy.at(s.epoch - (s.lead ?? 0), s.run ?? 2);
             if (s.id && s.clear) {
                 const v = await window.__canopy.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0);
                 if (v) {
@@ -111,14 +150,40 @@ for (const shot of plan) {
                 }
             } else if (s.id) await window.__canopy.frame(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
             else await window.__canopy.look(s.target, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3);
+            // (`hands`: the clip waits for that species' rig, so no frame shows the still model before it)
+            if (s.hands) s.handsIn = await window.__canopy.handsReady(s.hands);
+            for (let t = 0; t < (s.lead ?? 0) - 1e-6; t += 1 / (s.clip.fps ?? 15)) {
+                await window.__canopy.step(1 / (s.clip.fps ?? 15));
+                if (s.id) await window.__canopy.follow(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
+            }
             return s;
-        }, shot).then((s) => Object.assign(shot, {azimuth: s.azimuth, polar: s.polar}));
+        }, shot).then((s) => Object.assign(shot, {azimuth: s.azimuth, polar: s.polar, handsIn: s.handsIn}));
         for (let k = 0; k < count; k++) {
             await page.evaluate(async ({s, dt}) => {
                 if (dt > 0) await window.__canopy.step(dt);
-                if (s.id && s.clip.follow !== false) await window.__canopy.follow(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
+                // (`reclear`: each frame from its own clearest side, for a sheet of stills where the crowns would hide it)
+                if (s.id && s.clip.reclear) await window.__canopy.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0);
+                else if (s.id && s.clip.follow !== false) await window.__canopy.follow(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
+                if (s.id && s.cut) await window.__canopy.cut(s.id, s.cut === "leaves");
             }, {s: shot, dt: k ? 1 / fps : 0});
             await page.screenshot({path: path.join(dir, `f${String(k).padStart(4, "0")}.jpg`), type: "jpeg", quality: 85});
+            // (each frame: its canopy phase and, for a brachiator, how far its holding hand is from its hold)
+            const probe = await page.evaluate((id) => {
+                const miss = window.__canopy.handMiss?.() ?? null;
+                // (each hold on the screen, px: through the camera's own matrices)
+                const cam = window.__arkDebug?.camera;
+                if (cam && miss) {
+                    for (const m of Object.values(miss)) {
+                        if (!m.hold) continue;
+                        const v = m.hold, a = cam.matrixWorldInverse.elements, b = cam.projectionMatrix.elements;
+                        const e = [0, 1, 2, 3].map((r) => a[r] * v[0] + a[4 + r] * v[1] + a[8 + r] * v[2] + a[12 + r]);
+                        const c = [0, 1, 2, 3].map((r) => b[r] * e[0] + b[4 + r] * e[1] + b[8 + r] * e[2] + b[12 + r] * e[3]);
+                        m.screen = [(c[0] / c[3] + 1) / 2 * innerWidth, (1 - c[1] / c[3]) / 2 * innerHeight];
+                    }
+                }
+                return {phase: id ? window.__canopy.who(id)?.canopy ?? null : null, miss};
+            }, shot.id ?? null);
+            appendFileSync(path.join(dir, "probe.jsonl"), JSON.stringify({k, ...probe}) + "\n");
         }
         try {
             const {execFileSync} = await import("node:child_process");
@@ -134,8 +199,11 @@ for (const shot of plan) {
         const c = window.__canopy;
         if (s.hours !== undefined) c.hours(s.hours);
         await c.at(s.epoch, s.run ?? 2);
-        if (s.id && s.clear) return JSON.stringify({view: await c.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0), at: c.locate(s.id)});
-        if (s.id) return JSON.stringify(await c.frame(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0));
+        if (s.id && s.clear) return JSON.stringify({view: await c.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0), at: c.locate(s.id), cut: s.cut ? await c.cut(s.id) : 0});
+        if (s.id) {
+            const framed = await c.frame(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
+            return JSON.stringify({framed, cut: s.cut ? await c.cut(s.id) : 0});
+        }
         await c.look(s.target, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3);
         return "view";
     }, shot);

@@ -75,6 +75,7 @@ import {locoGround} from "@/ark-scene/locomotion/ground";
 import {clipBakeOf} from "@/ark-scene/locomotion/flight";
 import {LIE_FOLDS, LIE_FRAMES, LIE_SECONDS, LiePose} from "@/ark-scene/locomotion/lie-pose";
 import type {LocoRig} from "@/ark-scene/locomotion/types";
+import {armsFit, handsReady, type LocoCanopy} from "@/ark-scene/locomotion/brachiate";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -661,6 +662,8 @@ export class RigLibrary {
             // ARK-ANIM (owner, batch 13): the skin and the lying clips fixed as the rig loads (`skinAndClipFixes`).
             if ((globalThis as {__arkSkinFix?: boolean}).__arkSkinFix !== false) skinAndClipFixes(locoRig, slug, entry.plan ?? null, geometry, data, boneCount, clips);
             loco = new LocoLayer(locoRig, data);
+            // ARK-CANOPY: a rig whose arms can take a hold may hang under the limbs (`locomotion/brachiate.ts`).
+            if (loco.rig.plan === "primate" && armsFit(loco.rig)) handsReady.add(slug);
         } catch (error) {
             console.warn(`[ark] loco ${slug}`, error instanceof Error ? error.message : error);
         }
@@ -1498,6 +1501,8 @@ export type RigLiveInput = {
     /** Its air leg's stage on the schedule while it flies (MA1: the flight driver tucks its legs by it). */
     airStage?: string | null;
     ground?: GroundQuery;
+    /** ARK-CANOPY: on its canopy route, its arms' holds (`locomotion/brachiate.ts`). */
+    canopy?: LocoCanopy | null;
 };
 
 /**
@@ -1531,7 +1536,8 @@ export function rigLivePose(model: RigModel, state: RigState, input: RigLiveInpu
             actState: input.actState ?? null,
             actSpeed: input.actSpeed ?? null,
             airStage: input.airStage ?? null,
-            clipBake: clipBakeOf(model.code, now)
+            clipBake: clipBakeOf(model.code, now),
+            canopy: input.canopy ?? null
         },
         a,
         b,

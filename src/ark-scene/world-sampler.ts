@@ -127,6 +127,11 @@ export interface ArkWorldSampler {
      */
     roadway?(x: number, z: number): boolean;
     heightAt(x: number, z: number): number;
+    /**
+     * ARK-CANOPY (the town): a tree host's drawn trunk (`town:tree:<i>`): its asset's bark fitted, leaning and tapering,
+     * where the town draws it. Absent, or null: the schedule's stand-in behind its bark place.
+     */
+    treeTrunk?(host: string): import("@/ark-scene/tree-climb").Trunk | null;
     /** Under water there (the sea, the lake, the river, a pond). */
     isWater(x: number, z: number): boolean;
     /** The ground's steepness there (rise over run). */

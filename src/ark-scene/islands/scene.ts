@@ -146,7 +146,7 @@ export type ArkIslandScene = {
      * ARK-JUNGLE: a primate house resident out on the hall's climbing frames now (`islands/town/zoo-swing.ts`): its frame
      * (world), or null while it is on its spot (`spot`: where it is held, world).
      */
-    zooSwing: (animal: {id: string; model_slug: string; scientific_name?: string | null}, length: number, spot: {x: number; y: number; z: number}, epoch: number, awake: boolean) => (SurfaceFrame & {air: boolean; phase: string}) | null;
+    zooSwing: (animal: {id: string; model_slug: string; scientific_name?: string | null}, length: number, spot: {x: number; y: number; z: number}, epoch: number, awake: boolean) => (SurfaceFrame & {air: boolean; phase: string; arms?: import("@/ark-scene/locomotion/brachiate").LocoCanopy | null; leap?: number | null; canopy?: boolean}) | null;
     /**
      * Lane TB: where a herd's member figure stands (its lowest point, m): in its tank's water, on its display's tray or
      * its zoo house's floor (`ground`, its place's), else on the town's drawn ground there (never the wild sea floor).
@@ -661,7 +661,10 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const e = info?.enclosure;
             if (!info || !e || e.type !== "primate_house" || info.where !== "indoor") return null;
             const f = zooSwingFrame(animal, length, {x: spot.x - origin.x, y: spot.y, z: spot.z - origin.z}, hallClimbs(e), epoch, awake);
-            return f ? {...f, x: f.x + origin.x, z: f.z + origin.z} : null;
+            if (!f) return null;
+            // (ARK-CANOPY: its hands' holds into the world's frame too.)
+            const out = (p: {x: number; y: number; z: number} | null) => (p ? {x: p.x + origin.x, y: p.y, z: p.z + origin.z} : null);
+            return {...f, x: f.x + origin.x, z: f.z + origin.z, ...(f.arms ? {arms: {...f.arms, hand: out(f.arms.hand), next: out(f.arms.next)}} : {})};
         },
         roomPose: (id, length, clock) => {
             const room = towned.get(id)?.room;
