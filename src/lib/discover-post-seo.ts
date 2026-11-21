@@ -115,7 +115,12 @@ export function discoverPostSeoFields(item: DiscoverTimelineItem): DiscoverPostS
 }
 
 /** The post's structured data: the post and its video, published by AnimalDex, with no person named. */
-export function discoverPostJsonLd(seo: DiscoverPostSeo, input: {pageUrl: string; imageUrl: string; videoUrl: string | null; siteUrl: string}) {
+/**
+ * `imageUrl`: what Google may fetch and index. The post page passes the animal's
+ * share card and its same-origin artwork, not the capture photo: that sits under
+ * the robots-disallowed /api/ (SEO pass 2, 2026-11-21).
+ */
+export function discoverPostJsonLd(seo: DiscoverPostSeo, input: {pageUrl: string; imageUrl: string | string[]; videoUrl: string | null; siteUrl: string}) {
     const publisher = {"@type": "Organization", name: "AnimalDex", url: input.siteUrl};
     return [
         {
@@ -136,7 +141,7 @@ export function discoverPostJsonLd(seo: DiscoverPostSeo, input: {pageUrl: string
                 "@type": "VideoObject",
                 name: seo.title,
                 description: seo.description,
-                thumbnailUrl: [input.imageUrl],
+                thumbnailUrl: ([] as string[]).concat(input.imageUrl),
                 contentUrl: input.videoUrl,
                 uploadDate: seo.publishedAt,
                 publisher

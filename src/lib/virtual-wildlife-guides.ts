@@ -865,7 +865,7 @@ export function guideSeo(guide: Pick<GuideDetail, "title" | "summary" | "areaLab
     return {title, description};
 }
 
-export function guideStructuredData(guide: GuideDetail, canonicalUrl: string, image?: string | null) {
+export function guideStructuredData(guide: GuideDetail, canonicalUrl: string, image?: string | string[] | null) {
     return {
         "@context": "https://schema.org",
         "@type": "Product",
@@ -874,7 +874,7 @@ export function guideStructuredData(guide: GuideDetail, canonicalUrl: string, im
         name: normalizeSeoText(guide.title, 120),
         description: normalizeSeoText(guide.summary || guide.overview, 300),
         category: "Virtual wildlife guide",
-        ...(image ? {image} : {}),
+        ...(image && image.length ? {image} : {}),
         ...(guide.seller ? {brand: {"@type": "Person", name: guideAuthorName(guide.seller)}} : {}),
         offers: {
             "@type": "Offer",
