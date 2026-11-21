@@ -315,7 +315,8 @@ const PAVING_COLOUR = `
     else if (id == 6) { layer = 4.0; metres = ${f(TOWN_LAYER_METRES[4])}; soak = 0.34; pool = 0.2; }
     else if (id == 11 || id == 12) { layer = 5.0; metres = ${f(TOWN_LAYER_METRES[5])}; soak = 0.3; pool = id == 12 ? 0.3 : 0.0; }
     // A kerb's face: along the street, and up.
-    if (id == 11 && abs(vTownNormal.y) < 0.5) uv = vec2(q.x, vTownWorld.y);
+    // (ark-world-2: and a slab's edge face down to the verge, in the slab's own material: its slabs' texture along the edge and up.)
+    if ((id == 11 || id == 3) && abs(vTownNormal.y) < 0.5) uv = vec2(q.x, vTownWorld.y);
     if (layer >= 0.0 && townReady > 0.5) {
         vec4 t = townLayer(townAlbedo, layer, uv / metres, st);
         vec3 c = t.rgb / townMeans[int(layer)];

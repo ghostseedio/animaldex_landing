@@ -18,6 +18,8 @@ import {at, Geo, tone, type Frame, type V3} from "@/ark-scene/islands/town/rende
 import {buildingFrame} from "@/ark-scene/islands/town/render/buildings";
 import {clipStreets, keptPieces, onAnyStreet} from "@/ark-scene/islands/town/street-clip";
 import {streetSurfaces} from "@/ark-scene/islands/town/render/streets";
+import {treePits} from "@/ark-scene/islands/town/render/tree-pits";
+import {footOnPavement, LAMP_FOOT, nearPit, type TreePit} from "@/ark-scene/islands/town/pavement-overlap";
 import {streetFurniture, type FurnitureOut} from "@/ark-scene/islands/town/render/furniture";
 import {downtownScenery} from "@/ark-scene/islands/town/render/downtown";
 import {alongZ, SURF, tagged} from "@/ark-scene/islands/town/render/surface-tags";
@@ -793,20 +795,28 @@ function zooHouse(out: SceneryOut, e: ZooEnclosure) {
 
 // MARK: - Plan trees, lamps
 
-function lamps(out: SceneryOut, plan: TownPlan) {
+function lamps(out: SceneryOut, plan: TownPlan, pits: readonly TreePit[]) {
+    // ark-world-2: each lamp wholly on a walkway (a slab or a footpath), never in a carriageway at a junction (five stood in the road)
+    // and never in a street tree's pit; a lamp that would is slid along its street (1.5 m at a time, up to 4.5) or left out.
+    const clip = clipStreets(plan.streets);
     for (const s of plan.streets) {
         if (s.kind !== "high" && s.kind !== "road" && s.kind !== "quay" && s.kind !== "path") continue;
         const length = polylineLength(s.line);
         const step = s.kind === "high" ? 22 : 30;
         for (let a = 8; a < length - 4; a += step) {
-            const {point, dir} = polylineAt(s.line, a);
             const side = Math.floor(a / step) % 2 ? 1 : -1;
             const off = side * (s.width / 2 + s.pavement - 0.4);
-            const x = point.x - dir.z * off;
-            const z = point.z + dir.x * off;
-            // p4 (townfix): none on a canal bridge's deck (a path's lamp stood in Church Walk's footbridge).
-            if (s.kind === "path" && bridgeAt(x, z)) continue;
-            out.lamps.push({x, y: streetHeight(x, z) + 0.16, z});
+            for (const shift of [0, 1.5, -1.5, 3, -3, 4.5, -4.5]) {
+                if (a + shift < 1 || a + shift > length - 1) continue;
+                const {point, dir} = polylineAt(s.line, a + shift);
+                const x = point.x - dir.z * off;
+                const z = point.z + dir.x * off;
+                // p4 (townfix): none on a canal bridge's deck (a path's lamp stood in Church Walk's footbridge).
+                if (s.kind === "path" && bridgeAt(x, z)) break;
+                if (footOnPavement(clip, x, z, LAMP_FOOT) !== "on_walkway" || nearPit(pits, x, z, 0.35)) continue;
+                out.lamps.push({x, y: streetHeight(x, z) + 0.16, z});
+                break;
+            }
         }
     }
     // Lamps along the canal's towpaths and round the park's pond.
@@ -886,7 +896,11 @@ export function buildScenery(plan: TownPlan = townPlan()): SceneryOut {
     safariScenery((x, z) => chunkFor(out, x, z), out.fresh);
     // p5 (zoospace): the free-flight dome's building, its paths, boardwalk and lagoon, its path lamps (`render/dome.ts`).
     domeScenery((x, z) => chunkFor(out, x, z), out.fresh, out.lamps);
-    lamps(out, plan);
+    // ark-world-2: each street tree in its pit on the slab (`tree-pits.ts`); the lamps keep out of the pits.
+    const planted = new Set(trees.map((t) => t.seed));
+    const pits = plan.treePits.filter((p) => planted.has(p.seed));
+    lamps(out, plan, pits);
+    treePits(pits, planted, (x, z) => chunkFor(out, x, z), streetHeight);
     beds(out, plan);
     // The lamps' and the street furniture's bodies into the chunks; their lights and the lamp map (lane GA).
     out.furniture = streetFurniture(plan, out.lamps, {chunkAt: (x, z) => chunkFor(out, x, z), heightAt: streetHeight});

@@ -28,6 +28,8 @@ import {townHeight} from "@/ark-scene/islands/town/ground";
 import {clearOfDoors, spotBox} from "@/ark-scene/islands/town/doors";
 import {townPlan, type TownPlan, type TreeKind} from "@/ark-scene/islands/town/plan";
 import {zooSpotsOf, type ZooLayout} from "@/ark-scene/islands/town/areas";
+import {clipStreets} from "@/ark-scene/islands/town/street-clip";
+import {footOnPavement, PIT_EDGING} from "@/ark-scene/islands/town/pavement-overlap";
 import {SAFARI_KOPJES, SAFARI_TERMITES, SAFARI_WATERS, safariWaterNorm, type SafariHabitat} from "@/ark-scene/islands/town/safari";
 import {ZOO_TYPES} from "@/ark-scene/islands/town/zoo-types";
 
@@ -176,7 +178,7 @@ function blockersOf(plan: TownPlan): Blocker[] {
 }
 
 /** Settles one candidate: its planted size, then younger; null where even the youngest clashes. */
-function settleOne(spacing: TreeSpacing, blockers: readonly Blocker[], id: string, kind: TreeKind, x: number, z: number, size: number, seed: number, own?: string, height?: number): TownTree | null {
+function settleOne(spacing: TreeSpacing, blockers: readonly Blocker[], id: string, kind: TreeKind, x: number, z: number, size: number, seed: number, own?: string, height?: number, ok?: (tree: TownTree) => boolean): TownTree | null {
     const species = SPECIES[kind];
     const asset = pickAsset(kind, size, seed);
     const info = ASSETS[asset];
@@ -187,6 +189,8 @@ function settleOne(spacing: TreeSpacing, blockers: readonly Blocker[], id: strin
         const candidate = drawn(id, kind, asset, x, y, z, seed, planted * younger);
         if (!candidate) return null;
         if (blockedBy(candidate.body, blockers, own)) continue;
+        // (ark-world-2: a trunk that stands on the pavement: `pavement-overlap.ts`; the plan's own test says which.)
+        if (ok && !ok(candidate.tree)) continue;
         if (!spacing.fits(candidate.body)) continue;
         spacing.add(candidate.body);
         return candidate.tree;
@@ -201,10 +205,16 @@ function settlePlan(plan: TownPlan): Settled {
     const spacing = new TreeSpacing();
     const blockers = blockersOf(plan);
     const trees: TownTree[] = [];
+    // ark-world-2: a tree's trunk never stands on a drawn street surface: a street tree stands in its tray (the plan's
+    // `treePits`: its trunk and the tray's edging inside the pit), any other wholly off the carriageways, kerbs and slabs.
+    const clip = clipStreets(plan.streets);
+    const pitOf = new Map(plan.treePits.map((p) => [p.seed, p]));
     plan.trees.forEach((t, i) => {
         // gfx (props): no tree or shrub on a home's door step or the path to its door (`doors.ts`).
         if (!clearOfDoors(spotBox(t, 0.8), 0, plan)) return;
-        const tree = settleOne(spacing, blockers, `town:${i}:${t.seed}`, t.kind, t.x, t.z, t.scale, t.seed);
+        const pit = pitOf.get(t.seed);
+        const ok = (tree: TownTree) => (tree.low ? true : pit ? Math.hypot(tree.x - pit.x, tree.z - pit.z) < 0.05 && tree.trunk + PIT_EDGING <= pit.half : footOnPavement(clip, tree.x, tree.z, tree.trunk) === "off_pavement");
+        const tree = settleOne(spacing, blockers, `town:${i}:${t.seed}`, t.kind, t.x, t.z, t.scale, t.seed, undefined, undefined, ok);
         if (tree) trees.push(tree);
     });
     // (A fresh spacing with the town's trees in it, for each set of zoo trees.)

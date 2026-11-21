@@ -213,7 +213,8 @@ const TOWN_DIGESTS = {
     // (p5 (zoospace): the free-flight dome: its lobe's lawn, its walk, its plot as a zoo slot, palms round it.)
     // (Merged origin/main (TOWNFIX: church, canal bridges, library dressing) into p5 (zoospace): both changes, plan, areas, scenery, zoo.)
     // (p5 (rural): the countryside: its lobe's land, lane, fields, pond and buildings. p6 (zoo merge): both lobes, the dome's west and the fields' east.)
-    plan: "e08c3ee941cc8e1b",
+    // (ark-world-2: the street limes in the middle of their slabs with their tree pits (`treePits`), none where a pit would not lie on a slab; the plan only.)
+    plan: "47a3816fbc0c60d2",
     // (Lane ark-its-day: the nocturnal house's day round 15:00, its night residents fed at dusk; the areas carry the times.)
     // (3.3 fix, roof-perch.ts: the roofs', eaves' and ledges' perches lifted onto the drawn roofs: their heights only.)
     // (Merged 3.3 fixes + graphics pass 1: the wall climbers' places, the props lane's doors/fences/benches, the water
@@ -240,7 +241,8 @@ const TOWN_DIGESTS = {
     // (p5 (zoospace): the dome's building: drum, lattice and netting, lobby, paths, boardwalk, lagoon, lamps, `render/dome.ts`.)
     // (p6 (zoo merge): the countryside and the dome together.)
     // (ark-world, decision 447: the safari truck's round wheels are not in this hash (an instanced mesh), but the gate arch square to its road, the hen houses' wheels, the smooth-shaded bushes (`Geo.bush`) and the new bush lumps changed the scenery's geometry; refreshed.)
-    sceneryAndBuildings: "9d52e7c4536cf43b",
+    // (ark-world-2: the tree pits on the slabs; the street lamps wholly on a walkway and out of the pits; then every slab's edge face down to the verge, `slabEdge`.)
+    sceneryAndBuildings: "9555b6ad057c5b8a",
     // (Graphics pass 1, lane PROPS: the zoo plaza's and closed plots' benches.)
     // (p2 (zoo): the aviaries' barrel-vault frame, netting and porch; every outdoor enclosure dressed as its habitat.)
     // (p3 (zoofix): the habitats' ground cover kept for the walk surfaces; the zoo's boulders recorded for instancing.)
