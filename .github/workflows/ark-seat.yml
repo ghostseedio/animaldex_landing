@@ -1,0 +1,109 @@
+# The Ark's seat audit (lane ARK-SEAT; the owner, 2026-11-21: "i need guaranteed fixes on animals not properly
+# interacting with their environments from bugs to mammals"): the real scene, headless on SwiftShader, on the real
+# Ark's snapshot (tests/ark-seat/snapshot.json.gz: 2026-11-20, without who brought each animal), both islands. The
+# camera goes animal to animal; each one drawn as a model or a rig is measured by the scene's probe
+# (src/ark-scene/seat/audit-probe.ts: every vertex of its posed body against the scene's own meshes).
+#
+# Fails when an animal that is not flying, swimming, hanging, carried or in its den is more than 3 cm over the drawn
+# surface it rests on, more than 3 cm under it, or inside a rock, a wall or any closed solid.
+#
+# GitHub's machines draw in software, so this run takes a sample (the stops below, at two hours of the day); the whole
+# roster at six hours is run on a Mac with a GPU: `node scripts/ark-seat-audit.mjs` (its header says how).
+# The report (every row, the tables) is the `ark-seat` artifact. The models are read from the public bucket.
+name: Ark seat audit
+
+on:
+  pull_request:
+    paths:
+      - "src/ark-scene/**"
+      - "scripts/ark-seat-audit.mjs"
+      - "tests/ark-seat/**"
+      - ".github/workflows/ark-seat.yml"
+  workflow_dispatch:
+    inputs:
+      stops:
+        description: "Camera stops per island and hour"
+        type: string
+        default: "20"
+      hours:
+        description: "Hours of the island day (comma-separated)"
+        type: string
+        default: "11,23"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ark-seat-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  seat:
+    name: Every drawn animal rests on what is drawn under it
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Chromium
+        run: npx playwright-core install --with-deps chromium
+      - name: The seat's own rules (unit)
+        run: npx tsx --test src/lib/ark-seat.test.ts
+      - name: The scene's development bundle (the probe is in it)
+        run: node scripts/build-ark-bundle.mjs --dev
+      - name: Seat audit
+        env:
+          STOPS: ${{ inputs.stops || '20' }}
+          HOURS: ${{ inputs.hours || '11,23' }}
+        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --unbudgeted --quality medium --width 420 --height 300 --hours "$HOURS" --stops "$STOPS" --out .ark-golden/seat --label ci --gate
+      - name: Summary
+        if: always()
+        run: test -f .ark-golden/seat/ci.md && cat .ark-golden/seat/ci.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ark-seat
+          path: .ark-golden/seat
+          include-hidden-files: true
+          retention-days: 14
+
+  # The same stops with the pass off: what the gate would say without it (never fails; by hand, or on the seat lane's own branches).
+  without:
+    name: The same audit with the pass off (for the record)
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'ark-seat')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Chromium
+        run: npx playwright-core install --with-deps chromium
+      - name: The scene's development bundle
+        run: node scripts/build-ark-bundle.mjs --dev
+      - name: Seat audit, pass off
+        env:
+          STOPS: ${{ inputs.stops || '20' }}
+          HOURS: ${{ inputs.hours || '11,23' }}
+        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --quality medium --width 420 --height 300 --hours "$HOURS" --stops "$STOPS" --seat off --out .ark-golden/seat --label before
+      - name: Summary
+        if: always()
+        run: test -f .ark-golden/seat/before.md && cat .ark-golden/seat/before.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ark-seat-before
+          path: .ark-golden/seat
+          include-hidden-files: true
+          retention-days: 14

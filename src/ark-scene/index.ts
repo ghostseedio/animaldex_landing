@@ -208,6 +208,7 @@ import {prepareAttachPoints} from "@/ark-scene/sampler";
 import {benthicCreep, edgeBase, inPlaceLift, livesUnderWater, shadowFootprint, wadeBase} from "@/ark-scene/grounding/contact";
 import {placedTrunk} from "@/ark-scene/tree-climb";
 import {attachPoint, drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, hangPointAt, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
+import {SEAT_FACTS, SeatPass, seatKind, type SeatState} from "@/ark-scene/seat";
 import {HANG_EASE, hangPivot, hangPose} from "@/ark-scene/grounding/hang";
 import {drawnGround, drawnGroundHeight, setDrawnGroundStride} from "@/ark-scene/grounding/drawn-ground";
 import {lowestPoints, seatDrop} from "@/ark-scene/grounding/tips";
@@ -343,6 +344,8 @@ const LITE_CAPS = {near: 40, nearSpecies: 24, models: 80};
  * motion none.
  */
 const RIG_CAPS_DRAWN = {animals: 24, species: 12};
+/** ARK-SEAT: an act's states that are off the ground by their own motion (`acts.ts` ActPose.state): left to it. */
+const SEAT_ACT_FREE: ReadonlySet<string> = new Set(["leap", "swim", "fly", "glide", "plunge", "strike_feet", "takeoff"]);
 /** ARK-CONTACT: animals this long (m) or shorter are kept out of the drawn rocks (`insideRock`): the bugs, snails, spiders. */
 const SMALL_ON_ROCKS = 0.15;
 const RIG_CAPS_DRAWN_LITE = {animals: 8, species: 4};
@@ -601,6 +604,8 @@ type Entry = {
     youngCoat?: {steps: number; at: number};
     /** ARK-JUNGLE: a young one carried on its mother now (`carriedPose`): nothing pushes it off her. */
     riding?: boolean;
+    /** ARK-SEAT: its seat on what is drawn under it (`seat/seat.ts`): the offset it is drawn with, eased. */
+    seat?: SeatState;
     /** Its mother's pose as `carriedPose` read it (her id, where): moved with her when the frame's pushes move her. */
     ridingOn?: {id: string; x: number; z: number; base: number};
     /** A rider or a hopper (`riders.ts`): its host, when that was chosen, a flea's time off its host, the host's pace. */
@@ -4189,6 +4194,36 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         e.antler = {...antlerState(spec, seasonMonthAt(nowS), sexLook(e.animal.id, e.animal.model_slug).sex, e.animal.id), at: nowS};
         return e.antler;
     };
+    // ARK-SEAT (the owner, 2026-11-21: "i need guaranteed fixes on animals not properly interacting with their
+    // environments from bugs to mammals"): the last pass over every drawn animal: its body's own lowest points on what
+    // is drawn under them, whatever kind of thing that is, and out of any rock or wall it is in (`seat/seat.ts`).
+    // (`__arkSeatOff = true`: the harness's before picture.)
+    const seat = new SeatPass(scene);
+    if (process.env.NODE_ENV !== "production") {
+        seat.off = (globalThis as {__arkSeatOff?: boolean}).__arkSeatOff === true || new URLSearchParams(window.location.search).get("seat") === "off";
+        seat.keepPoints = true;
+        (window as unknown as {__arkSeat?: SeatPass}).__arkSeat = seat;
+        // The audit's probe (`scripts/ark-seat-audit.mjs`): every drawn animal's body against the scene's own meshes.
+        void import("@/ark-scene/seat/audit-probe").then(({SeatProbe}) => {
+            const probe = new SeatProbe(scene, (x, z, near) => standGround(x, z, near), (x, z, near) => groundUnderAt(x, z, ARK_ENVIRONMENT.seaLevel.value, false, near).water ?? -Infinity);
+            type Drawn = Parameters<typeof probe.measure>[0];
+            const drawnOf = (e: Entry) => (e as Entry & {seatDrawn?: Drawn}).seatDrawn ?? null;
+            // (What its own motion has it doing, for the audit's rows: its pose's height, its trip's place, its clip.)
+            const ownOf = (e: Entry) => {
+                const d = (e as Entry & {drawn?: {base?: number; path?: string | null; clip?: string | null}}).drawn;
+                const p = e.sched?.pose;
+                return {base: d?.base ?? null, path: d?.path ?? null, clip: d?.clip ?? null, doing: p?.doing ?? null, moving: Boolean(p?.moving), aloft: Boolean(p?.aloft), point: e.sched?.trip?.to.point ?? null, act: e.act?.state ?? (e.act ? "act" : null), held: Boolean(island?.held(e.animal.id))};
+            };
+            (window as unknown as {__arkSeatProbe?: unknown}).__arkSeatProbe = {
+                begin: () => probe.begin(),
+                end: () => probe.end(),
+                frame: () => seat.frames,
+                /** The animals drawn in the last `within` frames as a model (near, far or a rig). */
+                drawn: (within = 2) => allEntries().filter((e) => { const d = drawnOf(e); return d !== null && seat.frames - d.frame <= within; }).map((e) => { const d = drawnOf(e)!; return {id: e.animal.id, slug: e.animal.model_slug, island: e.animal.island ?? null, kind: d.kind, level: d.level, length: e.length, plan: library.get(e.animal.model_slug)?.behaviour?.plan ?? null, x: d.m[12], y: d.m[13], z: d.m[14]}; }),
+                measure: (id: string) => { const e = entryById.get(id); const d = e ? drawnOf(e) : null; return d ? {...probe.measure(d), seat: e!.seat ? {x: e!.seat.x, y: e!.seat.y, z: e!.seat.z, gap: e!.seat.gap, on: e!.seat.on, inside: e!.seat.inside, pushes: e!.seat.pushes, fell: e!.seat.fell, solved: e!.seat.solved} : null, own: ownOf(e!)} : null; }
+            };
+        });
+    }
     // ARK-CONTACT (the owner's beetle over a daisy; the leaves left over: shrubs, reeds, trees): the highest drawn plant
     // surface straight under a resting insect's point (`up` over it to `down` under it), any plant the scene draws (the
     // vegetation's instanced shapes, the asset trees, the floor plants), each instance as placed. Kept by the point; at
@@ -6442,6 +6477,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         });
         perf.lap("herds");
 
+        seat.begin(dt);
         for (const candidate of candidates) {
             const {entry, model, pose: where} = candidate;
             // A rider on its host: on the coat its host was drawn with this frame (hosts are drawn first: riders end the roster).
@@ -6596,6 +6632,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const surface = where.surface;
             if (surface) entry.middle = (entry.middle ?? new Vector3()).set(where.x + surface.nx * modelHeight / 2, where.base + surface.ny * modelHeight / 2, where.z + surface.nz * modelHeight / 2);
             else entry.middle = (entry.middle ?? new Vector3()).set(where.x, where.base + lift + modelHeight / 2, where.z);
+            // (ARK-SEAT: where it is drawn: its seat's offset on its middle too, for its label, its ring and the camera.)
+            if (entry.seat && !seat.off) entry.middle.set(entry.middle.x + entry.seat.x, entry.middle.y + entry.seat.y, entry.middle.z + entry.seat.z);
             // What it leaves behind, and (sound on) its calls (`liveliness-scene.ts`); the reactive layer's alarm when it has one.
             if (!candidate.skip && level !== "token") {
                 const reaction = (entry as {reactive?: {called?: boolean; alarmed?: number} | null}).reactive ?? null;
@@ -6837,6 +6875,45 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // its attitude and its clip.
             const powerFlies = entry.air > 0.001 || model.behaviour?.plan === "bird" || model.behaviour?.plan === "bat" || model.behaviour?.plan === "flying_insect";
             if (entry.power?.drop && !reducedMotion) position.y -= entry.power.drop < 0 && stand && !powerFlies ? 0 : entry.power.drop;
+            // ARK-SEAT: what it is doing, for its seat, and the offset its last solve left it (eased in).
+            const facts = SEAT_FACTS;
+            facts.riding = Boolean(entry.ride?.on);
+            facts.carried = entry.riding === true;
+            facts.hanging = entry.hangFrom != null;
+            facts.onWeb = Boolean(surface) && Boolean(webNoted.get(animal.id));
+            // (Off the ground by its pose's own rule, with no surface under it: which rule. In a flock or laying on the wing,
+            // it flies; placed in the water, under it or with its base under the surface, it swims; in its burrow's mouth
+            // or held in a tank, a cage or a zoo house whose floor is its own, it is in its den. Anything else the scene
+            // only calls afloat (a bird resting at a pool's edge, 18 cm over the bank) is on its feet, and seated.)
+            const loose = where.afloat && !surface;
+            facts.flying = entry.air > 0.001 || Boolean(state?.flying) || Boolean(entry.sched?.pose?.aloft) || (loose && Boolean(entry.recipeAct || entry.recipeFlock));
+            facts.water = Boolean(where.water) || Boolean(where.edge) || Boolean((where as {underwater?: boolean}).underwater) || (loose && (Boolean(entry.place.water) || where.base < (groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, false, poseBase).water ?? -Infinity) - 0.02));
+            facts.afloat = false;
+            facts.den = Boolean(entry.denIn) || Boolean(entry.power?.drop) || (loose && (Boolean(entry.place.burrow) || Boolean(island?.held(animal.id))));
+            facts.growing = grow < 1;
+            // (An act on its feet, a stalk, a run, a meal, is seated like any other; one in the air or the water, or fading out, is its own.)
+            facts.acting = Boolean(act) && (act!.hidden || act!.scale < 0.999 || SEAT_ACT_FREE.has(act!.state ?? ""));
+            facts.swinging = Boolean((surface as {canopy?: boolean} | undefined)?.canopy);
+            facts.hopping = Boolean(entry.hop?.hopping);
+            facts.surfaceNy = surface ? surface.ny : null;
+            facts.lying = (Boolean(slept) && !sleepsStanding) || lyingOn !== null || Boolean(act?.lying);
+            let seatAs = seatKind(facts);
+            // (Held where nothing is drawn, a trunk's side that is not there: upright, to come down onto what is under it.)
+            const seatFell = Boolean(surface) && seat.fallen(entry, seatAs, where.x, where.z);
+            if (seatFell) {
+                seatAs = "perch";
+                rotation.setFromEuler(euler.set(0, where.yaw, 0));
+                position.set(where.x, where.base - groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s, where.z);
+            }
+            const seated = seat.offset(entry, seatAs, dt, Boolean(entry.sched?.pose?.moving));
+            // (Where its own motion has it, before its seat's offset: which floor is its where floors are stacked, a flat 70 m
+            // up a tower. Asked for by where the pass had moved it, that fed back, a floor at a time.)
+            const seatNear = position.y;
+            if (seated) {
+                position.x += seated.x;
+                position.y += seated.y;
+                position.z += seated.z;
+            }
             matrix.compose(position, rotation, scale.set(s, s, s));
             // ARK-CONTACT round 4 (the town's cat asleep 4 to 14 cm over the lawn): a body lying on the ground in its
             // rig's sleep or lying pose, settled (no fade from another clip), lowered until the pose's own lowest
@@ -6873,6 +6950,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.drawnFrame = rideFrame;
                 entry.drawnRig = rig && state && mesh ? {rig, mesh, index} : null;
             }
+            // (ARK-SEAT: whether a gait of the locomotion layer poses it this frame, not a clip of its own.)
+            let seatGait = false;
             if (rig && state && level === "near") {
                 // The locomotion layer (`locomotion/`, lane L1): gaits with planted feet, foot IK, the body's motion and
                 // the tail's, posed on the CPU into the species' live pose row (the baked rows when it is off).
@@ -6886,12 +6965,49 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // terrain under it, inside the rock. The komodo basking on a boulder, 2026-11-13; the film lane's 1c4ae4ce.)
                 const grounded = !surface && !where.water && !where.afloat && entry.air <= 0.001 && !entry.place.canopy && !entry.place.micro && !entry.place.burrow && !slept && !(island && island.held(animal.id)) && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase));
                 const locoAt = perf.on ? performance.now() : 0;
-                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null, canopy: (surface as {arms?: LocoCanopy | null} | null | undefined)?.arms ?? (entry.hop && (entry.hop.hopping || state.pace > entry.length * 0.1) && !surface && !where.water && brachiates(animal.model_slug, animal.scientific_name) ? {phase: "walk", hand: null, next: null, lead: 1, u: (epochNow * 1.4 + entry.phase) % 1, brachiate: true} : null)}, index);
+                // (ARK-SEAT: on a rock's top or a roof its feet's ground is that top, not the terrain under it.)
+                const seatFloor = entry.seat && entry.seat.floor !== null && (entry.seat.x || entry.seat.y || entry.seat.z) ? entry.seat.floor : null;
+                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, ...(seatFloor !== null ? {ground: () => ({height: seatFloor, nx: 0, ny: 1, nz: 0})} : {}), actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null, canopy: (surface as {arms?: LocoCanopy | null} | null | undefined)?.arms ?? (entry.hop && (entry.hop.hopping || state.pace > entry.length * 0.1) && !surface && !where.water && brachiates(animal.model_slug, animal.scientific_name) ? {phase: "walk", hand: null, next: null, lead: 1, u: (epochNow * 1.4 + entry.phase) % 1, brachiate: true} : null)}, index);
                 if (perf.on) perf.carve("locomotion", performance.now() - locoAt);
+                seatGait = Boolean(live?.gait);
                 if (live) {
                     (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, live.code, live.code, 0, state.weight);
                     (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).setXYZW(index, 0, 0, 0, 0);
                 }
+            }
+            // ARK-SEAT: where its body, as posed and placed now, rests on what is drawn (worked out for a few a frame).
+            // (Its model or its rig, near: one drawn from afar is seated only while it carries an offset from when it was near,
+            // to keep that true or let it go; the far models' hulls and a seat for every animal in the island's whole view
+            // were 2 MB of a phone's heap for corrections of a pixel.)
+            const seatHeld = entry.seat;
+            if ((level !== "far" || (seatHeld !== undefined && (seatHeld.x !== 0 || seatHeld.y !== 0 || seatHeld.z !== 0 || seatHeld.tx !== 0 || seatHeld.ty !== 0 || seatHeld.tz !== 0))) && seat.wants(entry, seatAs, selectedId === animal.id)) {
+                const rigA = rig && state ? (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute) : null;
+                const rigB = rig && state ? (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute) : null;
+                const liveRow = rigA && rigA.getX(index) < -0.5 ? Math.round(-rigA.getX(index)) - 1 : -1;
+                seat.settle({
+                    holder: entry,
+                    kind: seatAs,
+                    matrix,
+                    geometry: rig ? rig.geometry : mesh.geometry,
+                    pose: rig && rigA && rigB ? {bones: rig.bones, live: liveRow >= 0 ? rig.loco?.live.data ?? null : null, liveRow, baked: rig.data, row0: Math.max(rigA.getX(index), 0), row1: Math.max(rigA.getY(index), 0), t: rigA.getZ(index), from0: Math.max(rigB.getX(index), 0), from1: Math.max(rigB.getY(index), 0), fromT: rigB.getZ(index), fromWeight: rigB.getW(index), weight: rigA.getW(index), clip: !seatGait && !state!.from && state!.weight >= 0.99 && !entry.sched?.pose?.moving && rig.clips[state!.now.name] ? rig.clips[state!.now.name] : null} : null,
+                    height: modelHeight,
+                    length: entry.length * sizeUp,
+                    surface: seatFell ? null : surface ?? null,
+                    moving: Boolean(entry.sched?.pose?.moving),
+                    // (A moving rig in a clip of its own, no planted feet: its stride's moment in the air is its own.)
+                    bounce: rig && !seatGait && entry.sched?.pose?.moving ? Math.min(Math.max(0.25 * modelHeight, 0.02), 0.3) : 0,
+                    // (The floor its own motion has it by where floors are stacked; over water deeper than it wades, its float line.)
+                    ground: (x, z) => {
+                        // (Water over the ground there, not a level some lake has elsewhere: `waterTopAt` gave a duck on a
+                        // shore under the crater lake a float line 33 m over its head.)
+                        const wet = groundUnderAt(x, z, ARK_ENVIRONMENT.seaLevel.value, false, seatNear).water;
+                        const under = standGround(x, z, seatNear);
+                        return wet !== null && wet - 0.3 * modelHeight > under ? wet - 0.3 * modelHeight : under;
+                    },
+                    near: seatNear,
+                    focus: selectedId === animal.id,
+                    level
+                });
             }
             mesh.setMatrixAt(index, matrix);
             // 3.3 batch (A): its defence move (`defence-moves.ts`): stepped from the reactive layer's action, drawn by the
@@ -6974,9 +7090,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const broadSurface = Boolean(surface) && !entry.toLight && !where.water && !entry.place.canopy && (Boolean(entry.place.micro) || Boolean(entry.place.perch && SHADOW_SURFACE_TAGS.has(entry.place.perch.tag)));
             // (Round 3: on a rock, a leaf or a wall its shadow is on that surface with the look pass off too; it fell back to
             // the terrain under it, a metre down, and drew nothing: the crab on its rock with no shadow under it.)
-            const underFeet = broadSurface ? null : groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, level === "near", poseBase);
+            // (ARK-SEAT: under the body where its seat drew it: moved out of a rock, or up onto one, its shadow goes with it.)
+            const seatX = seated?.x ?? 0;
+            const seatY = seated?.y ?? 0;
+            const seatZ = seated?.z ?? 0;
+            const seatOn = seated && entry.seat && entry.seat.floor !== null && entry.seat.solved ? entry.seat.floor : null;
+            const underFeet = broadSurface ? null : groundUnderAt(where.x + seatX, where.z + seatZ, ARK_ENVIRONMENT.seaLevel.value, level === "near", poseBase);
             // (A sleeper lying on the ground touches it with its body, its legs folded into it: its shadow stays.)
-            const contact = underFeet ? groundContact(lyingOn !== null ? Math.max(lyingOn, underFeet.height) : where.base + lift, underFeet.height, underFeet.water, modelHeight) : null;
+            const contact = underFeet ? groundContact(seatOn !== null ? underFeet.height : lyingOn !== null ? Math.max(lyingOn, underFeet.height) : where.base + seatY + lift, underFeet.height, underFeet.water, modelHeight) : null;
             if (broadSurface || contact) {
                 const box = (level === "near" ? model.near : model.far)!.geometry.boundingBox!;
                 // ARK-CONTACT (decision 447, "animal shadows don't match their body or size"): its own box as it lies now,
@@ -6988,7 +7109,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 if (broadSurface && surface) {
                     // On a wall, a leaf, a flower or a stone: under its body (not its splayed legs), on that surface where it
                     // touches it, long the way it crawls.
-                    shadowList.push({x: where.x, y: where.base, z: where.z, width: width * 0.8, length: length * 0.9, yaw: where.yaw, strength: grow, nx: surface.nx, ny: surface.ny, nz: surface.nz, tx: surface.tx, ty: surface.ty, tz: surface.tz});
+                    shadowList.push({x: where.x + seatX, y: where.base + seatY, z: where.z + seatZ, width: width * 0.8, length: length * 0.9, yaw: where.yaw, strength: grow, nx: surface.nx, ny: surface.ny, nz: surface.nz, tx: surface.tx, ty: surface.ty, tz: surface.tz});
                 } else if (contact) {
                     // On the ground under it: on its slope (near ones, with the pass on), under the body's middle (a
                     // model's origin is not always there: a seal's is at its chest), turned with it.
@@ -6997,9 +7118,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     const midX = foot.midX;
                     const midZ = foot.midZ;
                     shadowList.push({
-                        x: where.x + midX * Math.cos(where.yaw) + midZ * Math.sin(where.yaw),
-                        y: contact.y,
-                        z: where.z - midX * Math.sin(where.yaw) + midZ * Math.cos(where.yaw),
+                        x: where.x + seatX + midX * Math.cos(where.yaw) + midZ * Math.sin(where.yaw),
+                        y: seatOn !== null ? Math.max(seatOn, contact.y) : contact.y,
+                        z: where.z + seatZ - midX * Math.sin(where.yaw) + midZ * Math.cos(where.yaw),
                         width: Math.max(width, 0.004),
                         length: Math.max(length, 0.004),
                         yaw: where.yaw,
@@ -7024,6 +7145,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             }
         }
 
+        if (perf.on) perf.carve("seat", seat.frameMs);
         perf.lap("instances");
         // The herds' figures after their species' representatives, in the same far mesh (one draw call); the specks in one mesh for all.
         specks.begin();
