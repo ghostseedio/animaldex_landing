@@ -14,7 +14,7 @@ import type {ArkAnimalFounders, ArkFounder, ArkFounderStory} from "@/lib/ark-fou
 import {ArkBringerNames, ArkBroughtByFounder, ArkFounderLink, ArkFounderStoryBlock, type ArkBringerEntry} from "@/components/ark/ark-founder-bits";
 import {fillArkWords, type ArkWords} from "@/lib/ark-words";
 import {arkLineageHasAny, arkLineageLine, arkThriveWords} from "@/lib/ark-thrive";
-import {ARK_ACTIVITY_ENGLISH, arkRecordNoteFromLife, arkStatusSignature, arkStatusText, type ArkAnimalStatus, type ArkRecordNote} from "@/lib/ark-animal-status";
+import {ARK_ACTIVITY_ENGLISH, ARK_CARD_ENGLISH, arkRecordNoteFromLife, arkStatusSignature, arkStatusText, type ArkAnimalStatus, type ArkRecordNote} from "@/lib/ark-animal-status";
 import {arkHumanDays} from "@/lib/ark-human-time";
 import {arkIndexNumber, decodeArkSpeciesCard, type ArkSpeciesCard} from "@/lib/ark-species-card";
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
@@ -23,6 +23,7 @@ import {arkPhotoShownOn} from "@/lib/ark-photo-label";
 import {ArkLivesRow} from "@/app/[locale]/(composited)/ark/ark-lives";
 import {ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-card-focus";
 import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
+import {arkCycleKey, arkCycleOf, arkCycleStep, type ArkCycle} from "@/lib/ark-cycle";
 
 /**
  * The tapped animal's card along the world's foot (decision 240, owner 2026-11-12: "should be showing all the animals
@@ -205,7 +206,31 @@ type CardProps = {
     lives?: {entry: ArkAnimalHearts; words: ArkHeartsWords; cost: number; onRestored: (captureId: string, hearts: number) => void} | null;
     /** The public snapshot, for "Estimated time left" (the animals around it, the Ark day): read only, never changed. */
     snapshot?: ArkSnapshot | null;
+    /** "My animals" is on: the chevrons page through the reader's own of its kind only (the others are hidden). */
+    mineOnly?: boolean;
 };
+
+/**
+ * Toggle through a species (lane ARK-CYCLE, owner 2026-11-21): "‹ 1 of 2 ›" when more than one of the focused animal's
+ * kind is aboard (`lib/ark-cycle.ts`, from the live animals the scene was given), on either island. A chevron selects the
+ * next through the scene's own `select`, the same flight as a tap or the HUD's list (across the strait when it is on the
+ * other island). Square, as the card's Power box; 44 px targets on a phone.
+ */
+function ArkCycler({cycle, words, locale, onStep, wide}: {cycle: ArkCycle; words: ArkWords; locale: string; onStep: (step: 1 | -1) => void; wide: boolean}) {
+    const card = words.card;
+    const prev = card.cyclePrev || ARK_CARD_ENGLISH.cyclePrev;
+    const next = card.cycleNext || ARK_CARD_ENGLISH.cycleNext;
+    const count = fillArkWords(card.cycleCount || ARK_CARD_ENGLISH.cycleCount, {n: (cycle.index + 1).toLocaleString(locale), total: cycle.count.toLocaleString(locale)});
+    const button = `flex shrink-0 items-center justify-center rounded-none border border-line-100 text-ink-100 transition-colors hover:border-primary-400 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary-300 ${wide ? "h-11 w-14" : "h-9 w-9"}`;
+    const chevron = (d: string) => <svg viewBox="0 0 20 20" className="h-4 w-4 rtl:rotate-180" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={d} /></svg>;
+    return (
+        <div role="group" aria-label={count} data-testid="ark-card-cycle" data-index={cycle.index + 1} data-count={cycle.count} className={wide ? "mt-2 flex items-center justify-between gap-2" : "flex shrink-0 items-center"}>
+            <button type="button" onClick={() => onStep(-1)} aria-label={prev} title={prev} data-testid="ark-card-cycle-prev" className={button}>{chevron("M12.5 4.5 7 10l5.5 5.5")}</button>
+            <span aria-live="polite" className={`whitespace-nowrap text-center font-sans text-[12.5px] font-bold tabular-nums text-ink-100 ${wide ? "flex-1" : "min-w-[3.75rem] px-2"}`}>{count}</span>
+            <button type="button" onClick={() => onStep(1)} aria-label={next} title={next} data-testid="ark-card-cycle-next" className={button}>{chevron("M7.5 4.5 13 10l-5.5 5.5")}</button>
+        </div>
+    );
+}
 
 /**
  * "Talk to a Plains Zebra" when it fits, else the chat icon and the short word (owner 2026-11-20: never an animal's name cut
@@ -240,7 +265,7 @@ function ArkTalkLabel({full, short}: {full: string; short: string}) {
     );
 }
 
-export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, photo = null, arkDay, voyageStart, scene, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share, lives = null, snapshot = null}: CardProps) {
+export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, life: state, founders: named, photo = null, arkDay, voyageStart, scene, asleep, rest, following, onFollow, storyOpen, onStory, onClose, focusOnOpen, share, lives = null, snapshot = null, mineOnly = false}: CardProps) {
     arkPerfCountRender();
     const life = state?.life ?? null;
     const {headingRef, onKeyDown} = useCardFocus(animal.id, focusOnOpen, onClose);
@@ -276,6 +301,20 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
     }, [life, animal.id, animal.arrived_at, voyageStart, scene]);
 
     const species = useSpeciesCard(animal, placeholder);
+    // The others of its kind aboard (real animals only: the snapshot the scene draws), and ← → to page through them.
+    const cycle = useMemo(() => arkCycleOf(snapshot, animal.id, {mineOnly}), [snapshot, animal.id, mineOnly]);
+    const stepCycle = useMemo(() => (cycle ? (step: 1 | -1) => scene()?.select(arkCycleStep(cycle, step)) : null), [cycle, scene]);
+    useEffect(() => {
+        if (!stepCycle) return;
+        const onKey = (event: KeyboardEvent) => {
+            const step = arkCycleKey(event, document.documentElement.dir === "rtl");
+            if (!step) return;
+            event.preventDefault();
+            stepCycle(step);
+        };
+        window.addEventListener("keydown", onKey);
+        return () => window.removeEventListener("keydown", onKey);
+    }, [stepCycle]);
     // What it is doing now, in a word or two (no "Now:"): the schedule's activity; until the scene has it, asleep or nothing.
     const activityKey = status?.activity ?? (asleep ? "sleeping" : null);
     const activity = activityKey ? words.activity[activityKey] ?? ARK_ACTIVITY_ENGLISH[activityKey] : null;
@@ -375,11 +414,14 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                         </p>
                     </div>
                     {shownPhoto ? <Suspense fallback={null}><ArkCardPhoto key={animal.id} part="thumb" photo={shownPhoto} species={animal.name} words={words} onLoaded={() => setLoadedPhoto(animal.id)} /></Suspense> : null}
+                    {cycle && stepCycle ? <div className="hidden md:flex"><ArkCycler cycle={cycle} words={words} locale={locale} onStep={stepCycle} wide={false} /></div> : null}
                     <div className="hidden shrink-0 items-center gap-2 md:flex">{moves}</div>
                     <button type="button" onClick={onClose} aria-label={words.close} className="-mr-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink-200 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary-300">
                         <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg>
                     </button>
                 </div>
+
+                {cycle && stepCycle ? <div className="md:hidden"><ArkCycler cycle={cycle} words={words} locale={locale} onStep={stepCycle} wide /></div> : null}
 
                 {/* Whose photo, when it is not this animal's: "Born on the Ark · Photo of its parent, brought aboard by @ada". */}
                 {shownPhoto && shownPhoto.brought_by && loadedPhoto === animal.id ? <Suspense fallback={null}><ArkCardPhoto part="line" photo={shownPhoto} species={animal.name} words={words} /></Suspense> : null}

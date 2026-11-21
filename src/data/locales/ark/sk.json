@@ -472,6 +472,9 @@
             "dayNone": "Deň tohto zvieraťa sa teraz nedá vypočítať.",
             "dayClose": "Zavrieť jeho deň",
             "dayHint": "Čo robilo, podľa spoločného rozvrhu Ark: pre všetkých rovnaké. Bodky sú záznam Ark.",
+            "cyclePrev": "Predchádzajúci tohto druhu",
+            "cycleNext": "Ďalší tohto druhu",
+            "cycleCount": "{n} z {total}",
             "caredOwner": "Stará sa oň majiteľ",
             "caredFarmer": "Stará sa oň farmár",
             "caredKeeper": "Stará sa oň ošetrovateľ"

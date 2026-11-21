@@ -472,6 +472,9 @@
             "dayNone": "Dagen til dette dyret kan ikke regnes ut nå.",
             "dayClose": "Lukk dagen dens",
             "dayHint": "Hva den gjorde, etter Arks felles timeplan: lik for alle. Prikkene er Arks logg.",
+            "cyclePrev": "Forrige av sitt slag",
+            "cycleNext": "Neste av sitt slag",
+            "cycleCount": "{n} av {total}",
             "caredOwner": "Stelt av eieren sin",
             "caredFarmer": "Stelt av bonden",
             "caredKeeper": "Stelt av en dyrepasser"

@@ -472,6 +472,9 @@
             "dayNone": "Ziua acestui animal nu poate fi calculată acum.",
             "dayClose": "Închide ziua lui",
             "dayHint": "Ce a făcut, după programul comun al Ark: același pentru toți. Punctele sunt registrul Ark.",
+            "cyclePrev": "Anteriorul din specia sa",
+            "cycleNext": "Următorul din specia sa",
+            "cycleCount": "{n} din {total}",
             "caredOwner": "Îngrijit de stăpânul său",
             "caredFarmer": "Îngrijit de fermier",
             "caredKeeper": "Îngrijit de un îngrijitor"

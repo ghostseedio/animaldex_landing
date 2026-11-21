@@ -616,6 +616,10 @@ export type ArkCardWords = {
     dayNone: string;
     dayClose: string;
     dayHint: string;
+    /** Toggle through a species (lane ARK-CYCLE): the card's chevrons and "{n} of {total}". */
+    cyclePrev: string;
+    cycleNext: string;
+    cycleCount: string;
     /** Carers (decision 418): who feeds a kept animal, said on its card (a pet, a farm animal, a zoo animal). */
     caredOwner?: string;
     caredFarmer?: string;
@@ -711,7 +715,10 @@ export const ARK_CARD_ENGLISH: ArkCardWords = {
     dayRecord: "On its record",
     dayNone: "Its day can’t be worked out for this animal now.",
     dayClose: "Close its day",
-    dayHint: "What it did, from the Ark’s shared schedule: the same for everyone. Dots are the Ark’s record."
+    dayHint: "What it did, from the Ark’s shared schedule: the same for everyone. Dots are the Ark’s record.",
+    cyclePrev: "Previous of its kind",
+    cycleNext: "Next of its kind",
+    cycleCount: "{n} of {total}"
 };
 
 /** The words a status needs: the activities, the card's, and the life story's and the story's few it borrows. */

@@ -472,6 +472,9 @@
             "dayNone": "Tämän eläimen päivää ei voi laskea juuri nyt.",
             "dayClose": "Sulje sen päivä",
             "dayHint": "Mitä se teki Arkin yhteisen aikataulun mukaan: sama kaikille. Pisteet ovat Arkin kirjauksia.",
+            "cyclePrev": "Edellinen samaa lajia",
+            "cycleNext": "Seuraava samaa lajia",
+            "cycleCount": "{n}/{total}",
             "caredOwner": "Sitä hoitaa sen omistaja",
             "caredFarmer": "Sitä hoitaa maanviljelijä",
             "caredKeeper": "Sitä hoitaa eläintenhoitaja"

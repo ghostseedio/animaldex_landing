@@ -472,6 +472,9 @@
             "dayNone": "Hari haiwan ini tidak dapat dikira sekarang.",
             "dayClose": "Tutup harinya",
             "dayHint": "Apa yang dilakukannya, daripada jadual bersama Ark: sama untuk semua orang. Titik ialah rekod Ark.",
+            "cyclePrev": "Sebelumnya daripada jenisnya",
+            "cycleNext": "Seterusnya daripada jenisnya",
+            "cycleCount": "{n} daripada {total}",
             "caredOwner": "Dijaga oleh pemiliknya",
             "caredFarmer": "Dijaga oleh petani",
             "caredKeeper": "Dijaga oleh seorang penjaga"

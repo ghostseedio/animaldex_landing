@@ -472,6 +472,9 @@
             "dayNone": "現在無法推算這隻動物的一天。",
             "dayClose": "關閉牠的一天",
             "dayHint": "牠做了什麼，來自 Ark 的共享日程：每個人看到的都一樣。圓點是 Ark 的紀錄。",
+            "cyclePrev": "同種的上一隻",
+            "cycleNext": "同種的下一隻",
+            "cycleCount": "第 {n} 隻，共 {total} 隻",
             "caredOwner": "由主人照料",
             "caredFarmer": "由農場主照料",
             "caredKeeper": "由飼育員照料"

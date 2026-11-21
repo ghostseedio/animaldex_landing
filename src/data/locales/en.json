@@ -4684,6 +4684,9 @@
       "dayNone": "Its day can’t be worked out for this animal now.",
       "dayClose": "Close its day",
       "dayHint": "What it did, from the Ark’s shared schedule: the same for everyone. Dots are the Ark’s record.",
+      "cyclePrev": "Previous of its kind",
+      "cycleNext": "Next of its kind",
+      "cycleCount": "{n} of {total}",
       "caredOwner": "Cared for by its owner",
       "caredFarmer": "Cared for by the farmer",
       "caredKeeper": "Cared for by a keeper"

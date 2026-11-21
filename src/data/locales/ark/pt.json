@@ -472,6 +472,9 @@
             "dayNone": "Não é possível calcular o dia deste animal agora.",
             "dayClose": "Fechar o dia dele",
             "dayHint": "O que ele fez, pela agenda compartilhada da Ark: a mesma para todos. Os pontos são o registro da Ark.",
+            "cyclePrev": "Anterior da sua espécie",
+            "cycleNext": "Seguinte da sua espécie",
+            "cycleCount": "{n} de {total}",
             "caredOwner": "Cuidado pelo dono",
             "caredFarmer": "Cuidado pelo agricultor",
             "caredKeeper": "Cuidado por um tratador"

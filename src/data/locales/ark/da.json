@@ -472,6 +472,9 @@
             "dayNone": "Dens dag kan ikke regnes ud for dette dyr lige nu.",
             "dayClose": "Luk dens dag",
             "dayHint": "Hvad den lavede, fra Arks fælles skema: det samme for alle. Prikkerne er Arks optegnelser.",
+            "cyclePrev": "Forrige af sin art",
+            "cycleNext": "Næste af sin art",
+            "cycleCount": "{n} af {total}",
             "caredOwner": "Passes af sin ejer",
             "caredFarmer": "Passes af landmanden",
             "caredKeeper": "Passes af en dyrepasser"

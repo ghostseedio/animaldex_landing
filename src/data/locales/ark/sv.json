@@ -472,6 +472,9 @@
             "dayNone": "Det går inte att räkna ut det här djurets dag just nu.",
             "dayClose": "Stäng dess dag",
             "dayHint": "Vad det gjorde, enligt Arks gemensamma schema: samma för alla. Prickarna är Arks logg.",
+            "cyclePrev": "Föregående av sin art",
+            "cycleNext": "Nästa av sin art",
+            "cycleCount": "{n} av {total}",
             "caredOwner": "Sköts av sin ägare",
             "caredFarmer": "Sköts av bonden",
             "caredKeeper": "Sköts av en djurskötare"

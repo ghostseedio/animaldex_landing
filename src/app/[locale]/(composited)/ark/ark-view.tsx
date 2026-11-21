@@ -1423,6 +1423,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                             }}
                             lives={selectedLives && ownerHearts ? {entry: selectedLives, words: heartsWords, cost: ownerHearts.healCost, onRestored: onHeartRestored} : null}
                             snapshot={snapshot}
+                            mineOnly={mineOnly}
                         />
                     </Suspense>
                 ) : null}

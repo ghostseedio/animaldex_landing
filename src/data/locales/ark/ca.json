@@ -472,6 +472,9 @@
             "dayNone": "Ara no es pot calcular el dia d’aquest animal.",
             "dayClose": "Tanca el seu dia",
             "dayHint": "Què ha fet, segons l’horari compartit de l’Ark: el mateix per a tothom. Els punts són el registre de l’Ark.",
+            "cyclePrev": "Anterior de la seva espècie",
+            "cycleNext": "Següent de la seva espècie",
+            "cycleCount": "{n} de {total}",
             "caredOwner": "En té cura el seu propietari",
             "caredFarmer": "En té cura el pagès",
             "caredKeeper": "En té cura un cuidador"
