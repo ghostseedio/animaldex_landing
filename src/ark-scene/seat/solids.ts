@@ -135,7 +135,9 @@ export class DrawnSolids {
                     const solid: Solid = known && known.geometry === mesh.geometry ? known : {mesh, instanced: (mesh as InstancedMesh).isInstancedMesh ? (mesh as InstancedMesh) : null, cls, kind: label, geometry: mesh.geometry, double: false, version: -1, count: -1, stamp: NaN, boxes: new Float32Array(0), box: new Float64Array(6), shown: visible, dead: false, cells: null, wide: [], asked: new Uint32Array(0), changes: 0};
                     solid.shown = visible;
                     if (solid.changes > 0 && this.frame % 4 === 0) solid.changes--;
-                    solid.double = (material?.side ?? 0) === 2 || cls === SOFT || cls === TREE;
+                    // (Thin: a leaf, a card, a sheet, met from either side. A rock is a lump whatever its material's sides
+                    // (the dens' boulders are drawn two-sided); a built thing drawn two-sided is taken as sheets.)
+                    solid.double = cls === SOFT || cls === TREE || (cls === HARD && (material?.side ?? 0) === 2);
                     next.push(solid);
                 }
             }
