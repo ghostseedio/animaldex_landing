@@ -33,6 +33,8 @@ export type SeatKind = "stand" | "lie" | "perch" | "cling" | "fly" | "swim" | "h
 /** Kinds that keep the offset they had (a hop's arc, an entrance): they are back on their feet in a moment. */
 const HOLDS: ReadonlySet<SeatKind> = new Set<SeatKind>(["hop", "grow", "act"]);
 const SEATED: ReadonlySet<SeatKind> = new Set<SeatKind>(["stand", "lie", "perch", "cling"]);
+/** Kinds in the air or the water by their own motion: not seated, but kept out of rock and walls (`clear`). */
+const FREE: ReadonlySet<SeatKind> = new Set<SeatKind>(["fly", "swim"]);
 
 export type SeatState = {
     /** The offset drawn now (m), and the one it eases to. */
@@ -186,8 +188,9 @@ export class SeatPass {
         if (!s || this.off) return null;
         s.kind = kind;
         if (!SEATED.has(kind) && !HOLDS.has(kind)) {
-            // Let go: back to where its own motion has it, over half a second.
-            s.tx = s.ty = s.tz = 0;
+            // Let go: back to where its own motion has it, over half a second (one in the air or the water keeps only what
+            // takes it out of a rock: `clear`).
+            if (!FREE.has(kind)) s.tx = s.ty = s.tz = 0;
             s.solved = false;
         }
         const k = s.solved || !SEATED.has(kind) ? 1 - Math.exp(-Math.min(Math.max(dt, 0), 0.1) * (SEATED.has(kind) ? EASE : 5)) : 1;
@@ -221,7 +224,8 @@ export class SeatPass {
      */
     wants(holder: SeatHolder, kind: SeatKind, focus: boolean): boolean {
         if (this.keepPoints) return true;
-        if (this.off || !SEATED.has(kind)) return false;
+        if (this.off || (!SEATED.has(kind) && !FREE.has(kind))) return false;
+        if (FREE.has(kind)) return this.frame >= (holder.seat?.due ?? 0) && (this.spent < SEAT_BUDGET_MS || this.forced);
         // (Its turn, or the scenery round it has changed since it was seated: a tree's nearer level, a rock field come in.)
         const s = holder.seat;
         if (focus || this.forced || !s) return true;
@@ -253,7 +257,16 @@ export class SeatPass {
             drawn.surface = input.surface ? {nx: input.surface.nx, ny: input.surface.ny, nz: input.surface.nz, sway: input.surface.sway ? {...input.surface.sway} : undefined} : null;
             drawn.frame = this.frame;
         }
-        if (this.off || !SEATED.has(input.kind)) return;
+        if (this.off) return;
+        if (FREE.has(input.kind)) {
+            if (this.frame >= s.due && (this.spent < SEAT_BUDGET_MS || this.forced)) {
+                const started = performance.now();
+                this.clear(input, s);
+                this.spent += performance.now() - started;
+            }
+            return;
+        }
+        if (!SEATED.has(input.kind)) return;
         if (!input.focus && !this.forced) {
             if ((this.frame < s.due && s.seen === this.solids.version) || this.spent >= SEAT_BUDGET_MS) {
                 if (this.spent >= SEAT_BUDGET_MS) this.short = true;
@@ -274,6 +287,57 @@ export class SeatPass {
         this.solves++;
         // (A mesh it stands by still being read: again next frame, keeping what it had.)
         if (!whole) s.due = this.frame + 1;
+    }
+
+    /**
+     * One flying or swimming: left to its own motion, but not inside a rock or a wall. Its middle in one, it is taken up
+     * over it (a flier) or out sideways to the nearest free water (a swimmer; up, with none); out of it, back to its own
+     * way.
+     */
+    private clear(input: SeatInput, s: SeatState): void {
+        const e = input.matrix.elements;
+        const height = Math.max(input.height, 0.002);
+        const length = Math.max(input.length, 0.002);
+        // (Its middle: half its height up its own up from where it is drawn.)
+        const scale = Math.hypot(e[4], e[5], e[6]) || 1;
+        const cx = e[12] + (e[4] / scale) * height * 0.5;
+        const cy = e[13] + (e[5] / scale) * height * 0.5;
+        const cz = e[14] + (e[6] / scale) * height * 0.5;
+        const reach = Math.max(0.5, 1.5 * height);
+        const far = Math.max(2 * length, 0.3);
+        near.length = 0;
+        this.solids.release();
+        const whole = this.solids.collect(cx - far, cy - reach, cz - far, cx + far, cy + ROCK_REACH, cz + far, ROCK | HARD, near);
+        s.frame = this.frame;
+        s.seen = this.solids.version;
+        s.due = this.frame + (whole ? 6 + (Math.abs(Math.round(e[12] * 31 + e[14] * 17)) % 6) : 1);
+        s.inside = 0;
+        if (!whole || !near.length) {
+            if (whole) s.tx = s.ty = s.tz = 0;
+            return;
+        }
+        const depth = this.depthAt(cx, cy, cz, reach);
+        if (depth <= 0) {
+            // Free where it is drawn: and where its own motion has it? Then back to that.
+            if ((s.tx || s.ty || s.tz) && this.depthAt(cx - s.x, cy - s.y, cz - s.z, reach) <= 0) s.tx = s.ty = s.tz = 0;
+            return;
+        }
+        s.inside = 1;
+        if (input.kind === "swim") {
+            const step = Math.max(0.25 * length, 0.04);
+            for (let j = 1; j <= 8; j++)
+                for (let k = 0; k < 8; k++) {
+                    const dx = Math.cos((k * Math.PI) / 4) * step * j;
+                    const dz = Math.sin((k * Math.PI) / 4) * step * j;
+                    if (this.depthAt(cx + dx, cy, cz + dz, reach) <= 0) {
+                        s.tx = s.x + dx;
+                        s.tz = s.z + dz;
+                        return;
+                    }
+                }
+        }
+        s.ty = s.y + depth + 0.5 * height;
+        if (Math.hypot(s.tx, s.ty, s.tz) > MOST) s.tx = s.ty = s.tz = 0;
     }
 
     private solve(input: SeatInput, s: SeatState): boolean {

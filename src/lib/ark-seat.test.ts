@@ -157,7 +157,7 @@ function seatBody(kind: SeatKind, at: Vector3, options: {surface?: SeatInput["su
         matrix.compose(position, fell ? new Quaternion() : options.rotation ?? new Quaternion(), new Vector3(1, 1, 1));
         // (Its turn every frame here: the chosen animal's.)
         pass.settle({holder, kind: as, matrix, geometry, pose: null, height: 0.2, length: 0.6, surface: fell ? null : options.surface ?? null, moving: false, ground, focus: true});
-        if (pass.solids.stats().pending === 0 && holder.seat?.solved && holder.seat.x === holder.seat.tx && holder.seat.y === holder.seat.ty && holder.seat.z === holder.seat.tz && frames > 3) break;
+        if (as !== "fly" && as !== "swim" && pass.solids.stats().pending === 0 && holder.seat?.solved && holder.seat.x === holder.seat.tx && holder.seat.y === holder.seat.ty && holder.seat.z === holder.seat.tz && frames > 3) break;
     }
     return {seat: holder.seat!, position: position.clone(), frames, pass};
 }
@@ -179,6 +179,11 @@ test("seat: over a rock it stands on the rock; a flier is left alone", () => {
     assert.match(over.seat.on, /asset-rock/);
     const flier = seatBody("fly", new Vector3(100, 1.5, 100));
     assert.equal(flier.position.y, 1.5);
+    // A flier whose way goes through the rock is taken up over it, and let back when it is clear.
+    const through = seatBody("fly", new Vector3(100, 0.2, 100), {frames: 120});
+    assert.ok(through.position.y > 0.75, `a flier in the rock: ${through.position.y}`);
+    const swimmer = seatBody("swim", new Vector3(100, 0.2, 100), {frames: 120});
+    assert.ok(Math.hypot(swimmer.position.x - 100, swimmer.position.z - 100) > 0.4, `a swimmer in the rock: ${swimmer.position.x}, ${swimmer.position.z}`);
 });
 
 test("seat: a body inside a rock is put out of it", () => {

@@ -7,7 +7,8 @@
  * each one drawn is measured by the scene's probe (`src/ark-scene/seat/audit-probe.ts`): every vertex of its body as
  * posed, against the scene's own meshes with three's Raycaster, not the seat pass's index.
  *
- * It fails (exit 1, with `--gate`) when an animal that is not flying, swimming, hanging, carried or in its den is
+ * It fails (exit 1, with `--gate`) when one flying or swimming has its middle inside a rock, or when an animal that is
+ * not flying, swimming, hanging, carried or in its den is
  *   - more than 3 cm over the drawn surface it rests on (hovering: its lowest point, nothing of it touching),
  *   - more than 3 cm under it (sunk: its seat, the quarter of its lowest points on uneven ground allowed for), or
  *   - inside a rock, a wall or any closed solid (its middle, or two or more of some forty points of its body, more
@@ -169,7 +170,8 @@ const settle = async () => {
 
 const SEATED = new Set(["stand", "lie", "perch", "cling"]);
 const verdict = (row) => {
-    if (!SEATED.has(row.kind)) return "exempt";
+    // (Flying or swimming: left alone, but never inside a rock.)
+    if (!SEATED.has(row.kind)) return (row.kind === "fly" || row.kind === "swim") && row.middle ? "inside" : "exempt";
     if (row.middle || row.inside >= 2) return "inside";
     if (row.gap === null) return "nothing";
     // (Hovering: nothing of it touches, its lowest point over the surface. Sunk: its seat under it.)
@@ -308,9 +310,12 @@ for (const row of failures) {
     it.on.add(row.verdict === "inside" ? row.insideOf : row.on);
     bySpecies.set(key, it);
 }
+// Left alone as off the ground by their pose's own rule (a burrow's mouth, a swarm, the sea floor), not flying or swimming:
+// how many of them have nothing of their body within 3 cm of anything drawn (for the record; not part of the gate).
+const afloatInAir = gated.filter((row) => row.kind === "afloat" && row.low !== null && row.low > TOLERANCE);
 const exempt = {};
 for (const row of gated) if (row.verdict === "exempt") exempt[`${row.category}:${row.kind}`] = (exempt[`${row.category}:${row.kind}`] ?? 0) + 1;
-const summary = {label, seat: seatOff ? "off" : "on", quality: arg("quality", "high"), tolerance: TOLERANCE, hours, islands, coverage, table, failures: failures.length, exempt, seatStats, errors: errors.slice(0, 10)};
+const summary = {label, seat: seatOff ? "off" : "on", quality: arg("quality", "high"), afloatInAir: afloatInAir.length, tolerance: TOLERANCE, hours, islands, coverage, table, failures: failures.length, exempt, seatStats, errors: errors.slice(0, 10)};
 writeFileSync(path.join(out, `${label}.json`), JSON.stringify({summary, rows, notDrawn}, null, 1));
 const md = [
     `# Ark seat audit: ${label} (seat pass ${seatOff ? "off" : "on"})`,
@@ -332,6 +337,10 @@ const md = [
     "| species | state | verdict | count | worst gap (cm) | on |",
     "|---|---|---|---|---|---|",
     ...Array.from(bySpecies.values()).sort((a, b) => b.count - a.count).slice(0, 200).map((it) => `| ${it.slug} | ${it.kind} | ${it.verdict} | ${it.count} | ${(it.worst * 100).toFixed(1)} | ${Array.from(it.on).slice(0, 3).join(", ")} |`),
+    "",
+    `## Left alone by their pose's own rule ("afloat") and over 3 cm from anything drawn: ${afloatInAir.length}`,
+    "",
+    ...Object.entries(afloatInAir.reduce((by, row) => ((by[`${row.category}: ${row.slug}`] = Math.max(by[`${row.category}: ${row.slug}`] ?? 0, row.low)), by), {})).sort().map(([k, v]) => `- ${k}: ${(v * 100).toFixed(1)} cm`),
     "",
     "## Left alone, by category and state",
     "",

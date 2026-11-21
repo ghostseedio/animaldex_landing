@@ -268,9 +268,23 @@ export class SeatProbe {
         const height = Math.max(drawn.height, 0.002);
         const length = Math.max(drawn.length, 0.002);
         const out: SeatMeasure = {kind: drawn.kind, level: drawn.level, gap: null, low: null, on: "", inside: 0, of: 0, middle: false, insideOf: "", points: 0};
-        if (drawn.kind !== "stand" && drawn.kind !== "lie" && drawn.kind !== "perch" && drawn.kind !== "cling") return out;
+        // (One the scene leaves alone as off the ground by its pose's own rule, a burrow's mouth, a swarm, is measured too,
+        // for the record: how far it is from anything drawn.)
+        const record = drawn.kind === "afloat";
+        if (drawn.kind === "fly" || drawn.kind === "swim") {
+            // In the air or the water: only whether its middle is inside a rock (under a rock's own top).
+            this.gather(cx - 0.01, cy - 0.01, cz - 0.01, cx + 0.01, cy + 12.5, cz + 0.01, ROCK | HARD);
+            let first: {d: number; ny: number; target: Target} | null = null;
+            for (const hit of this.cast(cx, cy, cz, 0, 1, 0, 12, ROCK)) if (hit.target.closed && (!first || hit.d < first.d)) first = hit;
+            if (first && first.ny > 0.2 && first.d > 0.03) {
+                out.middle = true;
+                out.insideOf = first.target.kind;
+            }
+            return out;
+        }
+        if (drawn.kind !== "stand" && drawn.kind !== "lie" && drawn.kind !== "perch" && drawn.kind !== "cling" && !record) return out;
         // (Held: the scene says so, or it is plainly up off the ground, more than its own height.)
-        const held = drawn.kind === "perch" || drawn.kind === "cling" || y0 - this.ground(cx, cz, cy) > Math.max(0.25, height);
+        const held = record || drawn.kind === "perch" || drawn.kind === "cling" || y0 - this.ground(cx, cz, cy) > Math.max(0.25, height);
         const up = Math.min(Math.max(0.75 * height, 0.03), 1);
         const mask = length <= 0.08 || (held && length <= 0.6) ? ROCK | HARD | TREE | SOFT : held ? ROCK | HARD | TREE : ROCK | HARD;
         // The scene's triangles round its body: under it down to the ground, over it as far as a rock's top is looked for.
