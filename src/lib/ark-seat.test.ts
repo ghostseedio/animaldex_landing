@@ -120,6 +120,8 @@ test("seat: what each drawn thing is to an animal", () => {
     assert.equal(solidClass("|bug-ground:blade|bug-ground"), 0);
     assert.equal(solidClass("|ark-fresh-water|ark-ground"), 0);
     assert.equal(solidClass("|props:nest-cup-moss:near|props:homes"), SOFT);
+    assert.equal(solidClass("|buildings:detail|town:chunk:74"), HARD);
+    assert.equal(solidClass("||town:zoo-life"), SOFT);
     assert.equal(solidClass("|something-new|"), -1);
 });
 

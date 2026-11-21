@@ -33,8 +33,8 @@ const SKIP = /water|\bsea\b|:sea|ocean|sky|rain|fog|cloud|mist|glow|glass|decal|
 const ROCKS = /asset-rock|^rock\||rocks|pebbles|falls-cliff|falls-rim|boulder|crag|:stone/i;
 const TREES = /asset-tree|town:trees|^broadleaf\||^rainforest\||^conifer\||^acacia\||^palm\||^orchard\||^cactus\|/i;
 const WOOD = /log|stump|snag|roots|forest-limbs|log-pile/i;
-const SOFTS = /asset-floor|^shrub\||^reed\||^flower\||^leaf\||^canopy\||foliage|wildflowers|cabbages|ferns|bush|fern|:weed|:leaf|:flower|:litter|nest|chrysalis|cocoon|bee-hollow/i;
-const HARDS = /solid|shell|inside|outdoor|bars|bins|boats|narrowboats|stalls|troughs|coops|mound|safari-trucks|warren|:den|lair|forest-tools/i;
+const SOFTS = /zoo-life|asset-floor|^shrub\||^reed\||^flower\||^leaf\||^canopy\||foliage|wildflowers|cabbages|ferns|bush|fern|:weed|:leaf|:flower|:litter|nest|chrysalis|cocoon|bee-hollow/i;
+const HARDS = /buildings|solid|shell|inside|outdoor|bars|bins|boats|narrowboats|stalls|troughs|coops|mound|safari-trucks|warren|:den|lair|forest-tools/i;
 
 /** The class of a drawn mesh by its kind, its name and its parent's (0: not a surface; -1: a mesh this does not know). */
 export function solidClass(label: string): number {
