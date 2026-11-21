@@ -208,6 +208,7 @@ import {prepareAttachPoints} from "@/ark-scene/sampler";
 import {benthicCreep, edgeBase, inPlaceLift, livesUnderWater, shadowFootprint, wadeBase} from "@/ark-scene/grounding/contact";
 import {placedTrunk} from "@/ark-scene/tree-climb";
 import {attachPoint, drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, hangPointAt, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
+import {SeatPass, seatKind, type SeatState} from "@/ark-scene/seat";
 import {HANG_EASE, hangPivot, hangPose} from "@/ark-scene/grounding/hang";
 import {drawnGround, drawnGroundHeight, setDrawnGroundStride} from "@/ark-scene/grounding/drawn-ground";
 import {lowestPoints, seatDrop} from "@/ark-scene/grounding/tips";
@@ -343,6 +344,8 @@ const LITE_CAPS = {near: 40, nearSpecies: 24, models: 80};
  * motion none.
  */
 const RIG_CAPS_DRAWN = {animals: 24, species: 12};
+/** ARK-SEAT: an act's states that are off the ground by their own motion (`acts.ts` ActPose.state): left to it. */
+const SEAT_ACT_FREE: ReadonlySet<string> = new Set(["leap", "swim", "fly", "glide", "plunge", "strike_feet", "takeoff"]);
 /** ARK-CONTACT: animals this long (m) or shorter are kept out of the drawn rocks (`insideRock`): the bugs, snails, spiders. */
 const SMALL_ON_ROCKS = 0.15;
 const RIG_CAPS_DRAWN_LITE = {animals: 8, species: 4};
@@ -601,6 +604,8 @@ type Entry = {
     youngCoat?: {steps: number; at: number};
     /** ARK-JUNGLE: a young one carried on its mother now (`carriedPose`): nothing pushes it off her. */
     riding?: boolean;
+    /** ARK-SEAT: its seat on what is drawn under it (`seat/seat.ts`): the offset it is drawn with, eased. */
+    seat?: SeatState;
     /** Its mother's pose as `carriedPose` read it (her id, where): moved with her when the frame's pushes move her. */
     ridingOn?: {id: string; x: number; z: number; base: number};
     /** A rider or a hopper (`riders.ts`): its host, when that was chosen, a flea's time off its host, the host's pace. */
@@ -4189,6 +4194,30 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         e.antler = {...antlerState(spec, seasonMonthAt(nowS), sexLook(e.animal.id, e.animal.model_slug).sex, e.animal.id), at: nowS};
         return e.antler;
     };
+    // ARK-SEAT (the owner, 2026-11-21: "i need guaranteed fixes on animals not properly interacting with their
+    // environments from bugs to mammals"): the last pass over every drawn animal: its body's own lowest points on what
+    // is drawn under them, whatever kind of thing that is, and out of any rock or wall it is in (`seat/seat.ts`).
+    // (`__arkSeatOff = true`: the harness's before picture.)
+    const seat = new SeatPass(scene);
+    if (process.env.NODE_ENV !== "production") {
+        seat.off = (globalThis as {__arkSeatOff?: boolean}).__arkSeatOff === true || new URLSearchParams(window.location.search).get("seat") === "off";
+        seat.keepPoints = true;
+        (window as unknown as {__arkSeat?: SeatPass}).__arkSeat = seat;
+        // The audit's probe (`scripts/ark-seat-audit.mjs`): every drawn animal's body against the scene's own meshes.
+        void import("@/ark-scene/seat/audit-probe").then(({SeatProbe}) => {
+            const probe = new SeatProbe(scene, (x, z, near) => standGround(x, z, near));
+            type Drawn = Parameters<typeof probe.measure>[0];
+            const drawnOf = (e: Entry) => (e as Entry & {seatDrawn?: Drawn}).seatDrawn ?? null;
+            (window as unknown as {__arkSeatProbe?: unknown}).__arkSeatProbe = {
+                begin: () => probe.begin(),
+                end: () => probe.end(),
+                frame: () => renderer.info.render.frame,
+                /** The animals drawn in the last `within` frames as a model (near, far or a rig). */
+                drawn: (within = 2) => allEntries().filter((e) => { const d = drawnOf(e); return d !== null && renderer.info.render.frame - d.frame <= within; }).map((e) => { const d = drawnOf(e)!; return {id: e.animal.id, slug: e.animal.model_slug, kind: d.kind, level: d.level, length: e.length, plan: library.get(e.animal.model_slug)?.behaviour?.plan ?? null, x: d.m[12], y: d.m[13], z: d.m[14]}; }),
+                measure: (id: string) => { const e = entryById.get(id); const d = e ? drawnOf(e) : null; return d ? {...probe.measure(d), seat: e!.seat ? {x: e!.seat.x, y: e!.seat.y, z: e!.seat.z, gap: e!.seat.gap, on: e!.seat.on, inside: e!.seat.inside, pushes: e!.seat.pushes, stuck: e!.seat.stuck, solved: e!.seat.solved} : null} : null; }
+            };
+        });
+    }
     // ARK-CONTACT (the owner's beetle over a daisy; the leaves left over: shrubs, reeds, trees): the highest drawn plant
     // surface straight under a resting insect's point (`up` over it to `down` under it), any plant the scene draws (the
     // vegetation's instanced shapes, the asset trees, the floor plants), each instance as placed. Kept by the point; at
@@ -6442,6 +6471,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         });
         perf.lap("herds");
 
+        seat.begin(renderer.info.render.frame);
         for (const candidate of candidates) {
             const {entry, model, pose: where} = candidate;
             // A rider on its host: on the coat its host was drawn with this frame (hosts are drawn first: riders end the roster).
@@ -6837,6 +6867,30 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // its attitude and its clip.
             const powerFlies = entry.air > 0.001 || model.behaviour?.plan === "bird" || model.behaviour?.plan === "bat" || model.behaviour?.plan === "flying_insect";
             if (entry.power?.drop && !reducedMotion) position.y -= entry.power.drop < 0 && stand && !powerFlies ? 0 : entry.power.drop;
+            // ARK-SEAT: what it is doing, for its seat, and the offset its last solve left it (eased in).
+            const seatAs = seatKind({
+                riding: Boolean(entry.ride?.on),
+                carried: entry.riding === true,
+                hanging: entry.hangFrom != null,
+                onWeb: Boolean(surface) && Boolean(webNoted.get(animal.id)),
+                flying: entry.air > 0.001 || Boolean(state?.flying) || Boolean(entry.sched?.pose?.aloft),
+                water: Boolean(where.water) || Boolean(where.edge),
+                afloat: where.afloat,
+                den: Boolean(entry.denIn) || Boolean(entry.power?.drop),
+                growing: grow < 1,
+                // (An act on its feet, a stalk, a run, a meal, is seated like any other; one in the air or the water, or fading out, is its own.)
+                acting: Boolean(act) && (act!.hidden || act!.scale < 0.999 || SEAT_ACT_FREE.has(act!.state ?? "")),
+                swinging: Boolean((surface as {canopy?: boolean} | undefined)?.canopy),
+                hopping: Boolean(entry.hop?.hopping),
+                surfaceNy: surface ? surface.ny : null,
+                lying: (Boolean(slept) && !sleepsStanding) || lyingOn !== null || Boolean(act?.lying)
+            });
+            const seated = seat.offset(entry, seatAs, dt);
+            if (seated) {
+                position.x += seated.x;
+                position.y += seated.y;
+                position.z += seated.z;
+            }
             matrix.compose(position, rotation, scale.set(s, s, s));
             // ARK-CONTACT round 4 (the town's cat asleep 4 to 14 cm over the lawn): a body lying on the ground in its
             // rig's sleep or lying pose, settled (no fade from another clip), lowered until the pose's own lowest
@@ -6886,12 +6940,34 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // terrain under it, inside the rock. The komodo basking on a boulder, 2026-11-13; the film lane's 1c4ae4ce.)
                 const grounded = !surface && !where.water && !where.afloat && entry.air <= 0.001 && !entry.place.canopy && !entry.place.micro && !entry.place.burrow && !slept && !(island && island.held(animal.id)) && standsOnGround({...where, base: poseBase}, heightAt(where.x, where.z), standGround(where.x, where.z, poseBase));
                 const locoAt = perf.on ? performance.now() : 0;
-                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null, canopy: (surface as {arms?: LocoCanopy | null} | null | undefined)?.arms ?? (entry.hop && (entry.hop.hopping || state.pace > entry.length * 0.1) && !surface && !where.water && brachiates(animal.model_slug, animal.scientific_name) ? {phase: "walk", hand: null, next: null, lead: 1, u: (epochNow * 1.4 + entry.phase) % 1, brachiate: true} : null)}, index);
+                // (ARK-SEAT: on a rock's top or a roof its feet's ground is that top, not the terrain under it.)
+                const seatFloor = entry.seat && entry.seat.floor !== null && (entry.seat.x || entry.seat.y || entry.seat.z) ? entry.seat.floor : null;
+                const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, ...(seatFloor !== null ? {ground: () => ({height: seatFloor, nx: 0, ny: 1, nz: 0})} : {}), actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null, canopy: (surface as {arms?: LocoCanopy | null} | null | undefined)?.arms ?? (entry.hop && (entry.hop.hopping || state.pace > entry.length * 0.1) && !surface && !where.water && brachiates(animal.model_slug, animal.scientific_name) ? {phase: "walk", hand: null, next: null, lead: 1, u: (epochNow * 1.4 + entry.phase) % 1, brachiate: true} : null)}, index);
                 if (perf.on) perf.carve("locomotion", performance.now() - locoAt);
                 if (live) {
                     (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, live.code, live.code, 0, state.weight);
                     (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).setXYZW(index, 0, 0, 0, 0);
                 }
+            }
+            // ARK-SEAT: where its body, as posed and placed now, rests on what is drawn (worked out for a few a frame).
+            if (!seat.off) {
+                const rigA = rig && state ? (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute) : null;
+                const rigB = rig && state ? (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute) : null;
+                const liveRow = rigA && rigA.getX(index) < -0.5 ? Math.round(-rigA.getX(index)) - 1 : -1;
+                seat.settle({
+                    holder: entry,
+                    kind: seatAs,
+                    matrix,
+                    geometry: rig ? rig.geometry : mesh.geometry,
+                    pose: rig && rigA && rigB ? {bones: rig.bones, live: liveRow >= 0 ? rig.loco?.live.data ?? null : null, liveRow, baked: rig.data, row0: Math.max(rigA.getX(index), 0), row1: Math.max(rigA.getY(index), 0), t: rigA.getZ(index), from0: Math.max(rigB.getX(index), 0), from1: Math.max(rigB.getY(index), 0), fromT: rigB.getZ(index), fromWeight: rigB.getW(index), weight: rigA.getW(index)} : null,
+                    height: modelHeight,
+                    length: entry.length * sizeUp,
+                    surface: surface ?? null,
+                    moving: Boolean(entry.sched?.pose?.moving),
+                    ground: (x, z, near) => standGround(x, z, near ?? poseBase),
+                    focus: selectedId === animal.id,
+                    level
+                });
             }
             mesh.setMatrixAt(index, matrix);
             // 3.3 batch (A): its defence move (`defence-moves.ts`): stepped from the reactive layer's action, drawn by the

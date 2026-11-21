@@ -126,7 +126,8 @@ export function scheduledPerch(
         const dz = steep ? 0 : at.z - point.position.z;
         const dy = steep ? 0 : -(point.normal.x * dx + point.normal.z * dz) / point.normal.y;
         const frame = scheduleSurface({x: point.position.x + dx + sway.x, y: point.position.y + dy + sway.y, z: point.position.z + dz + sway.z, yaw: at.yaw, nx: point.normal.x, ny: point.normal.y, nz: point.normal.z}, steep ? point.forward ?? null : null);
-        return frame;
+        // (ARK-SEAT: its tree's sway now, so the seat reads the scenery where it stands still.)
+        return Object.assign(frame, {sway});
     }
     // A raised place the scenery's points do not hold it at: one the schedule's own world made (`world-sampler.ts`: a
     // rock's top, `rock_top:<n>`, a decor rock's or a crag's, on either wild island; the town's), or a map roost set off
