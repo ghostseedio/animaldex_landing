@@ -513,6 +513,24 @@ export function lyingTorso(box: {min: {x: number; y: number; z: number}; max: {x
     return {x0: cx - hw, x1: cx + hw, z0: box.min.z + length * 0.15, z1: box.max.z - length * 0.15, bottom: box.min.y + legs * (box.max.y - box.min.y), top: box.max.y};
 }
 
+/**
+ * Whether the clip a rig plays draws the sleep posture itself (`entry.sleepClipped`): a sleep clip, a lying base, or the
+ * way down and up. The posed lie (`rig-player.ts` posedLieClips: `lie` and `sleep` on a "lying" base, `lie_down`,
+ * `get_up`) always does, so its sleeper lies down and is never stood up by `sleepsOnFeet`.
+ */
+export function clipDrawsSleep(name: string, base: string): boolean {
+    return name.startsWith("sleep") || base !== "stand" || name === "lie_down" || name === "get_up" || name === "get_up_fast";
+}
+
+/**
+ * ARK-CONTACT (the owner, 2026-11-21: farm sleepers sunk to the belly): a sleeper whose legs are drawn standing (no
+ * lying clip of its rig drawn: `clipShare` 0) sleeps on its feet; one whose rig lies down (`sleepClipped`, faded in)
+ * lies. Never in the water, never a flat sleeper, never a body with no legs under it.
+ */
+export function sleepsOnFeet(o: {slept: boolean; rigged: boolean; sleepClipped: boolean; clipShare: number; water: boolean; lying: boolean; flat: boolean; legsUnder: boolean}): boolean {
+    return o.slept && !(o.rigged && o.sleepClipped && o.clipShare > 0) && !o.water && o.lying && !o.flat && o.legsUnder;
+}
+
 /** A belly this close to the ground (a share of the height) has no legs under it to fold: a snake, a slug, a fish. */
 export const LEGLESS_BELLY = 0.06;
 

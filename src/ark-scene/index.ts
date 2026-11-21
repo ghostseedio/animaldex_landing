@@ -77,7 +77,7 @@ import {DEATH_SECONDS, ARRIVAL_SECONDS, BIRTH_SECONDS, EXTINCTION_SECONDS, REVIV
 import {animalMaterial, ARK_CLOCK, droopOf} from "@/ark-scene/animal-material";
 import {WaterReflections} from "@/ark-scene/water-reflect-render"; // p3 (reflect)
 import {headLimits} from "@/ark-scene/head-look";
-import {bellyOfGeometry, goesIntoRoost, LEGLESS_BELLY, lyingBody, lyingDrop, lyingTorso, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, stepSleepNow, type ArkRestStatus, type SleepNow} from "@/ark-scene/sleep";
+import {bellyOfGeometry, clipDrawsSleep, goesIntoRoost, LEGLESS_BELLY, lyingBody, lyingDrop, lyingTorso, packSleep, restStatus, sleepPostureClips, sleepDraw, sleepStages, sleepStyle, sleepsOnFeet, stepSleepNow, type ArkRestStatus, type SleepNow, type SleepPosture} from "@/ark-scene/sleep";
 import {AnimalLook, attachLook, groundContact, SHADOW_SURFACE_TAGS, speciesLook, type LookWeather} from "@/ark-scene/animal-look";
 import {DustPuffs} from "@/ark-scene/dust";
 import {RecipeScene, type RecipeActor, type RecipeNest} from "@/ark-scene/recipe-scene";
@@ -201,7 +201,8 @@ import {arkActivityKey, arkDayWindow, arkEnergy, arkOriginEntry, arkStatusBars, 
 import {setGrassPress} from "@/ark-scene/grass-press";
 import {prepareAttachPoints} from "@/ark-scene/sampler";
 // Grounding (motion 100x pass, lane L3): true bases, the drawn ground, perches on real branches, the runtime check.
-import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
+import {drawnContactGap, gripSoleDrop, groundedLevelBase, groundedStand, groundingCheck, groundingRules, hangPointAt, scheduledPerch, standsOnGround, surfaceContactGap} from "@/ark-scene/grounding/hook";
+import {HANG_EASE, hangPivot, hangPose} from "@/ark-scene/grounding/hang";
 import {drawnGround, drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
 import {modelBase, uprightBody} from "@/ark-scene/grounding/base";
 import {canopyFrame} from "@/ark-scene/canopy-scene"; // p5 (monkeys)
@@ -307,6 +308,8 @@ import {l2BodyChannel, l2BodyUniforms, l2ClipBake, l2FlightFrame, l2FlightGate, 
 import {pickFigure, preferTap, type Projector} from "@/ark-scene/tap-pick";
 // 3.3 fix: the kept town animals near the look point move.
 import {keptToBringOut, nearKeptDue, NEAR_KEPT_VIEW, NEAR_ZOO_MAX, NEAR_ZOO_MAX_LOW, NEAR_ZOO_VIEW, sameIds} from "@/ark-scene/near-kept";
+/** ARK-ANIM: how far a rig drawn standing may go down into the ground as it sleeps (m; it cannot fold its legs). */
+const RIG_STANDING_SINK = 0.02;
 // 3.3 fix: a perched animal's reactions keep it on its perch (the schedule's own "raised": 0.4 m over the ground).
 const PERCH_ABOVE = 0.4;
 
@@ -600,7 +603,11 @@ type Entry = {
     /** Its sleep has been stepped once (its first frame is drawn as it is: no lying down on load). */
     sleepStarted?: boolean;
     /** Its sleeping posture's attitude (the recipes' act: a bat turned over), kept to ease it back as it wakes. */
-    sleepAct?: {pitch: number; roll: number} | null;
+    sleepAct?: {pitch: number; roll: number; hang?: boolean} | null;
+    /** ARK-ANIM: hanging under its roost (`grounding/hang.ts`): since when (clock s), since when letting go, and posed once. */
+    hangFrom?: number | null;
+    hangOff?: number | null;
+    hangSeen?: boolean;
     /** Lane L2's motion (`locomotion/l2-scene.ts`): its flight beat, its swim and crawl cycles (per viewer, visual only). */
     l2?: L2Motion | null;
     /** Part B: where it was last worked out (its schedule's pose) and when (scene seconds), for the render distance. */
@@ -4292,11 +4299,39 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A sleeping posture's attitude (a bat turned over, an otter on its back) comes in as it settles and goes as it
         // wakes (kept from its last sleeping moment, so the turn back is eased too), never at once.
         const sleepT = entry.sleepNow?.t ?? 0;
-        if (act && act.episode === "sleep") entry.sleepAct = {pitch: act.pitch, roll: act.roll};
+        const hangAct = Boolean(act) && act!.episode === "sleep" && act!.state === "sleep_hang" && act!.pitch > 1;
+        if (act && act.episode === "sleep") entry.sleepAct = {pitch: act.pitch, roll: act.roll, hang: hangAct};
         else if (!sleepT) entry.sleepAct = null;
         const actShare = act && act.episode === "sleep" ? sleepStages(sleepT).roll : 1;
         const after = !act || act.episode !== "sleep" ? entry.sleepAct ?? null : null;
         const afterShare = after ? sleepStages(sleepT).roll : 0;
+        // ARK-ANIM (round 4): a bat roosting hangs under its limb from its feet, head down, its body below the limb,
+        // swinging slowly about its feet (`grounding/hang.ts`); it lay along the limb, turned about its middle.
+        // (Its own ease, 1.2 s each way: a bat roosting by day is resting, not asleep, so the sleep stages never turn
+        // it. Already hanging on its first frame: no turning over on load.)
+        const hangNow = clockNow();
+        if (hangAct) {
+            entry.hangFrom ??= entry.hangSeen ? hangNow : hangNow - HANG_EASE;
+            entry.hangOff = null;
+        } else if (entry.hangFrom != null) entry.hangOff ??= hangNow;
+        entry.hangSeen = true;
+        const hangEase = (u: number) => {
+            const c = Math.min(Math.max(u, 0), 1);
+            return c * c * (3 - 2 * c);
+        };
+        let hanging = entry.hangFrom == null ? 0 : hangEase((hangNow - entry.hangFrom) / HANG_EASE) * (entry.hangOff == null ? 1 : 1 - hangEase((hangNow - entry.hangOff) / HANG_EASE));
+        if (entry.hangOff != null && hangNow - entry.hangOff >= HANG_EASE) {
+            entry.hangFrom = entry.hangOff = null;
+            hanging = 0;
+        }
+        if (hanging > 0 && !at.aloft && groundingRules() === "grounded") {
+            const roostTrip = own.trip;
+            const held = roostTrip?.to?.point && own.at >= roostTrip.arrive ? hangPointAt(roostTrip.to.point, ARK_TIME.value, ARK_WIND_VECTOR.value) : null;
+            const pivot = hangPivot(held && Math.hypot(at.x - held.x, at.z - held.z) < 0.3 ? held : {x: at.x, y: at.y, z: at.z, tag: "canopy_hang"});
+            const yaw = at.yaw + glance;
+            const hung = hangPose(pivot, yaw, entry.length, hanging, clockNow(), entry.seed);
+            return {x: hung.x, z: hung.z, base: hung.base, yaw, pitch: hung.pitch, roll: hung.roll, afloat: true};
+        }
         // Grounding: held on a raised point (a branch, a limb, bark, a wall), drawn on it: its back along the surface's
         // normal, up a trunk, swaying with its tree (`scheduledPerch`).
         const trip = own.trip;
@@ -4745,7 +4780,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         }
         const flies = rigFlies(rig);
         const grounded = !entry.state.airborne && entry.air <= 0.001;
-        const target = entry.rigOn && !entry.visitor && (grounded || flies) ? 1 : 0;
+        // ARK-ANIM (decision 447, the owner's bears and hogs at rest): asleep on a rig with no sleeping clip of its own
+        // (a four-legged rig's lying clips are held, `rig-clips.ts` QUADRUPED_LYING_HELD), the rig fades out and the
+        // near model lies in the scene's own posture (`sleep.ts`: lowered onto its chest, the legs folded under it): the
+        // rig only stood there playing its idle.
+        const sleepsOff = Boolean(entry.sleepNow?.down) && !entry.act && grounded && !sleepClipOf(rig, entry.sleepNow!.posture);
+        const target = entry.rigOn && !entry.visitor && (grounded || flies) && !sleepsOff ? 1 : 0;
         const peeking = (entry.peek ?? -1) >= 0;
         if (!peeking) state.weight = Math.min(Math.max(state.weight + Math.min(Math.max(target - state.weight, -dt / RIG_BLEND_SECONDS), dt / RIG_BLEND_SECONDS), 0), 1);
         rigHere.set(where.x, where.base, where.z);
@@ -5068,7 +5108,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const reacted = Boolean(reacting && want === reacting.name);
         // (A meal's act, `meal-acts.ts`: head down feeding, a glance up, lying up to rest, on the rig's own clips.)
         const mealState = !recipeAct && entry.act?.meal && entry.act.state && MEAL_CLIP_STATES.has(entry.act.state) ? entry.act.state : null;
-        const recipeRaw = !state.flying && !reacted && (recipeAct || mealState) ? recipeClip(recipeAct?.state ?? mealState, (name) => Boolean(clip(name))) : null;
+        const recipeRaw = !state.flying && !reacted && (recipeAct || mealState) ? recipeClip(sleepState(recipeAct?.state ?? mealState), (name) => Boolean(clip(name))) : null;
         // A rig with a sit (a pilot cat's or dog's) rests sitting up rather than lying, about half of them (by its own phase).
         const fromRecipe = recipeRaw?.name === "lie" && clip("sit") && entry.phase < 0.5 ? {...recipeRaw, name: "sit"} : recipeRaw;
         let byRecipe = false;
@@ -5162,13 +5202,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         if (want === "sleep_side" && recipeAct?.roll) where.roll -= recipeAct.roll * state.weight;
         // A sleep posture, a lying base or the way down and up draws the posture itself (the head, the drop, the breath):
         // the procedural one (`sleep.ts` sleepDraw) gives way to it as the rig fades in.
-        entry.sleepClipped = want.startsWith("sleep") || clipBase(rig.clips[want]) !== "stand" || want === "lie_down" || want === "get_up" || want === "get_up_fast";
+        entry.sleepClipped = clipDrawsSleep(want, clipBase(rig.clips[want]));
         const playing = rig.clips[want];
         if (!playing) return null;
         // Each animal's loops start at its own point (no herd stepping in time); a one-shot from its start.
         rigSwitch(state, want, mode === "sync" ? sync : playing.loop ? entry.phase : 0);
         // By distance, up to 3.5 times the clip's own pace (a flee is capped at the gait's 2.5: the feet never slide).
-        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 3.5) * (state.reverse ? -1 : 1);
+        // ARK-ANIM (decision 447, the owner's blue-tongued skink "too shaky"): never more than GAIT_HZ_MAX cycles a second.
+        // A short-legged clip played by the distance covered ran its legs at 20-30 cycles a second (the skink's 0.12 s
+        // run at 3.5 times its pace), a blur of shaking at 60 frames a second; above that the feet slide a little instead.
+        if (mode === "distance") state.now.phase += Math.min(cyclesFor(playing, moved), (dt / playing.seconds) * 3.5, dt * GAIT_HZ_MAX) * (state.reverse ? -1 : 1);
         else if (mode === "sync") state.now.phase = sync;
         else state.now.phase += (dt / playing.seconds) * (want === "idle" ? 1 - 0.65 * entry.rest : rate);
         state.ratio = mode === "distance" && playing.ground_speed && dt > 0 ? moved / dt / playing.ground_speed : 0;
@@ -5912,7 +5955,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // rigs' lying clips are held, `QUADRUPED_LYING_HELD`, and the near and far meshes stand) is not lowered onto its
             // belly with its legs through the ground; it sleeps on its feet, its head low and its eyes shut, its hooves on
             // the drawn ground like any standing animal (`groundedStand`). A rig's own lying clip still lies it down.
-            const sleepsStanding = Boolean(slept && !(rig && entry.sleepClipped && clipShare > 0) && !where.water && sn!.spec.lying && sn!.posture !== "flat" && legsUnder((level === "near" ? model.near ?? model.far : model.far ?? model.near)?.geometry ?? null));
+            const sleepsStanding = sleepsOnFeet({slept: Boolean(slept), rigged: Boolean(rig), sleepClipped: entry.sleepClipped === true, clipShare, water: Boolean(where.water), lying: Boolean(sn?.spec.lying), flat: sn?.posture === "flat", legsUnder: Boolean(slept) && legsUnder((level === "near" ? model.near ?? model.far : model.far ?? model.near)?.geometry ?? null)});
             if (slept && sleepsStanding) {
                 const stirTarget = entry.sched?.pose?.moving ? 0 : 1;
                 const stirWas = entry.stirShare ?? stirTarget;
@@ -5930,6 +5973,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const box = lyingGeometry?.boundingBox ?? null;
                 // p2 (contact): no deeper than its belly, a legless body flat (`sleep.ts` lyingBody), on the drawn ground.
                 const body = lyingBody(slept, sn!.spec.drop, lyingGeometry ? bellyOfGeometry(lyingGeometry) : 1);
+                // ARK-ANIM (the owner on batch 13: a sleeping elk's legs in the ground): a rig drawn standing (no lying clip
+                // of its own playing) cannot fold its legs, so lowering it to its belly put them through the ground: no
+                // more than 2 cm down.
+                if (rig && entry.rig && entry.rig.weight > 0.5 && clipShare < 0.5 && modelHeight > 0) body.legs = Math.min(body.legs, RIG_STANDING_SINK / modelHeight);
                 where.roll += body.roll;
                 if (where.water) {
                     // On the bottom: down to the floor under it as it settles.
@@ -10516,4 +10563,18 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             labelLayer.remove();
         }
     };
+}
+
+/** ARK-ANIM: the hanging posture's act state (`behaviour-recipes.ts` postureOf: `sleep_hang`, a bat roosting head down)
+ * plays the sleep rule's clips, its own posture's first (a bat's sleep_hang, wings folded). */
+function sleepState(state: string | null | undefined): string | null | undefined {
+    return state === "sleep_hang" ? "sleep" : state;
+}
+
+/** ARK-ANIM: the most step cycles a second a gait clip plays (a cycle is two steps: twelve steps a second). */
+export const GAIT_HZ_MAX = 6;
+
+/** ARK-ANIM: the rig's own sleeping clip for a posture (`sleepPostureClips`, then its kind's), or null. */
+function sleepClipOf(rig: RigModel, posture: SleepPosture): string | null {
+    return sleepPostureClips(posture).find((name) => Boolean(rig.clips[name])) ?? ASLEEP_CLIPS.find((name) => Boolean(rig.clips[name])) ?? null;
 }

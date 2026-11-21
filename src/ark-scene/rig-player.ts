@@ -35,6 +35,7 @@ import {
     BufferAttribute,
     BufferGeometry,
     DataTexture,
+    DataUtils,
     HalfFloatType,
     Matrix3,
     Matrix4,
@@ -48,6 +49,7 @@ import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
 import {
     FLIGHT_CLIPS,
+    QUADRUPED_LYING_HELD,
     decodeRigEntry,
     decodeRigLook,
     decodeRigSet,
@@ -64,11 +66,15 @@ import {
 import {gripBones} from "@/ark-scene/map/grip";
 import {finalStatus, ModelFileError, retrySeconds, worthAskingAgain} from "@/ark-scene/model-files";
 import {buildLocoRig, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
+import {birdYawLimits, isBirdRig, pickBirdShares, spreadBirdRows} from "@/ark-scene/locomotion/bird-neck";
+import {flankOffLegs, isEquid, rigidMuzzle, seatLyingRows, tailOffLegs} from "@/ark-scene/locomotion/skin-fixes";
 import {LocoLayer, newLocoAnimal, type ClipRows, type LocoAnimal} from "@/ark-scene/locomotion/layer";
 import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
 import type {GaitState, GroundQuery} from "@/ark-scene/locomotion/types";
 import {locoGround} from "@/ark-scene/locomotion/ground";
 import {clipBakeOf} from "@/ark-scene/locomotion/flight";
+import {LIE_FOLDS, LIE_FRAMES, LIE_SECONDS, LiePose} from "@/ark-scene/locomotion/lie-pose";
+import type {LocoRig} from "@/ark-scene/locomotion/types";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -114,6 +120,8 @@ export type RigModel = {
     version?: string;
     /** Power clips appended (`addPowerClips`): their names, and the bytes they hold. */
     powerClips?: string[];
+    /** ARK-ANIM round 3: the posed lie's check (`locomotion/lie-pose.ts`), when the rig was a candidate; its clips are in `clips` when it passed. */
+    posedLie?: {ok: boolean; reason: string | null; belly: number; sink: number} | null;
 };
 
 /** Lane L2's wing chain (shoulder, forearm, hand per side, their pivots): its own type when `locomotion/flight.ts` lands. */
@@ -151,6 +159,8 @@ export type RigLookChain = {
 };
 
 const DEG = Math.PI / 180;
+/** A bird's look's yaw at most (degrees), owls aside. */
+export const BIRD_LOOK_YAW_DEG = 30;
 
 /** A bone's bit in a look mask (texture indices 0-30; a bone past that is not turned by the mask). */
 const lookBit = (i: number) => (i >= 0 && i < 31 ? 1 << i : 0);
@@ -203,7 +213,9 @@ export function rigLookChain(
             head,
             neckPivot: hasNeck ? look.rest[look.bones[0]].head : [0, 0, 0],
             headPivot: look.rest[headName].head,
-            yaw: look.limits_deg.yaw * DEG,
+            // (A bird's look on top of its clips' head turn, already capped at 70° from its body: 30° more at most, an
+            // owl's its own. ARK-ANIM, the eared dove's neck.)
+            yaw: Math.min(look.limits_deg.yaw, isBirdRig(entry.plan ?? null, ["chest", "neck", "head"]) && !/(^|-)owl(et)?$/.test(slug) ? BIRD_LOOK_YAW_DEG : 180) * DEG,
             up: look.limits_deg.pitch_up * DEG,
             down: look.limits_deg.pitch_down * DEG,
             neckShare: share,
@@ -645,9 +657,29 @@ export class RigLibrary {
         const flight = flightApproved(own, slug) && Object.keys(clips).some((name) => FLIGHT_CLIPS.has(name));
         let loco: LocoLayer | null = null;
         try {
-            loco = new LocoLayer(buildLocoRig(rawSkeletonOf(mesh, extras.bones, geometry, slug, entry)), data);
+            const locoRig = buildLocoRig(rawSkeletonOf(mesh, extras.bones, geometry, slug, entry));
+            // ARK-ANIM (owner, batch 13): the skin and the lying clips fixed as the rig loads (`skinAndClipFixes`).
+            if ((globalThis as {__arkSkinFix?: boolean}).__arkSkinFix !== false) skinAndClipFixes(locoRig, slug, entry.plan ?? null, geometry, data, boneCount, clips);
+            loco = new LocoLayer(locoRig, data);
         } catch (error) {
             console.warn(`[ark] loco ${slug}`, error instanceof Error ? error.message : error);
+        }
+        // ARK-ANIM round 3: a four-legged rig with no lying clip of its own lies down in a pose made from its skeleton.
+        let rowsData = data;
+        let posedLie: RigModel["posedLie"] = null;
+        const posedOn = (globalThis as {__arkPosedLie?: boolean}).__arkPosedLie !== false;
+        if (loco && posedOn && entry.plan === "quadruped" && !POSED_LIE_HELD.has(slug) && (POSED_LIE_OVER_PILOT.has(slug) || !(clips.sleep || clips.lie))) {
+            const posed = posedLieRows(loco.rig, geometry, data, boneCount);
+            posedLie = posed.check;
+            if (posed.rows) {
+                rowsData = posed.rows.data;
+                // (A pilot's own lying clips all go: its way up and onto a side start from its own lying pose, not this one.)
+                QUADRUPED_LYING_HELD.forEach((name) => delete clips[name]);
+                for (const clip of posed.rows.clips) clips[clip.name] = clip;
+                texture.image = {data: rowsData, width: boneCount * 3, height: rowsData.length / (boneCount * 12)} as unknown as typeof texture.image;
+                texture.needsUpdate = true;
+                loco.setBakedData(rowsData);
+            }
         }
         this.models.set(slug, {
             slug,
@@ -657,7 +689,7 @@ export class RigLibrary {
             clips,
             facingDeg: Number(entry.facing_deg) || 0,
             bytes: buffer.byteLength,
-            data,
+            data: rowsData,
             centre,
             set: set.version,
             entryVersion: Number(entry.version) || 1,
@@ -671,7 +703,8 @@ export class RigLibrary {
             loco,
             wings: rigWingChain(extras.bones, restPivot),
             usedAt: 0,
-            version: set.index[slug]
+            version: set.index[slug],
+            posedLie
         });
         this.heldBytes += buffer.byteLength;
         this.onLoad(slug);
@@ -724,6 +757,108 @@ export class RigLibrary {
         this.models.clear();
     }
 }
+
+/**
+ * The pilot rigs whose own lying clips give way to the posed lie (coordinator, ARK-ANIM round 3: "bear, grizzly, pig,
+ * dog, cat"; then the horse, whose pilot lie lay flat and turned over, the owner's "rotated"). Every other four-legged rig takes it only when it has no lying clip (`QUADRUPED_LYING_HELD`).
+ */
+export const POSED_LIE_OVER_PILOT: ReadonlySet<string> = new Set(["domestic-dog", "domestic-cat", "domestic-horse"]);
+/**
+ * Rigs whose posed lie passes the gate but reads wrong (each looked at, batch 14 round 5): the addax's, walia ibex's and
+ * oribi's one hind leg, rigged from the top of the rump, folds out behind and up; the pikas' and the poodle's bodies
+ * fold flat into a sheet. They sleep standing until they are rigged again.
+ */
+export const POSED_LIE_HELD: ReadonlySet<string> = new Set(["addax", "walia-ibex", "oribi", "american-pika", "ili-pika", "poodle"]);
+
+/**
+ * ARK-ANIM round 3 (decision 447): the posed lie's rows appended to a rig's bone rows (`locomotion/lie-pose.ts`): the
+ * way down (`lie_down`, eased over `LIE_SECONDS`), the way back up (`get_up`), and the pose held (`lie` and `sleep`,
+ * base lying). Null rows when the rig fails the pose's check (it keeps the scene's own posture, `sleep.ts`).
+ */
+export function posedLieRows(rig: LocoRig, geometry: BufferGeometry, data: Uint16Array, bones: number): {check: NonNullable<RigModel["posedLie"]>; rows: {data: Uint16Array; clips: RigClipData[]} | null} {
+    const position = geometry.getAttribute("position");
+    const joints = geometry.getAttribute("arkJoints");
+    const weights = geometry.getAttribute("arkWeights");
+    if (!position || !joints || !weights) return {check: {ok: false, reason: "no skin", belly: 1, sink: 0}, rows: null};
+    const mesh = {positions: position.array, joints: joints.array, weights: weights.array};
+    let lie = new LiePose(rig, mesh);
+    for (const fold of LIE_FOLDS.slice(1)) {
+        if (lie.check.ok) break;
+        const next = new LiePose(rig, mesh, fold);
+        if (next.check.ok) lie = next;
+    }
+    if (!lie.check.ok) return {check: lie.check, rows: null};
+    const per = bones * 12;
+    const own = data.length / per;
+    const down = Array.from({length: LIE_FRAMES + 1}, (_, k) => easeInOutCubic(k / LIE_FRAMES));
+    const ts = [...down, ...down.slice().reverse(), 1, 1];
+    const out = new Uint16Array(data.length + ts.length * per);
+    out.set(data, 0);
+    const row = new Float32Array(per);
+    ts.forEach((t, k) => {
+        lie.row(t, row);
+        const o = data.length + k * per;
+        for (let i = 0; i < per; i++) out[o + i] = DataUtils.toHalfFloat(row[i]);
+    });
+    return {check: lie.check, rows: {data: out, clips: posedLieClips(own)}};
+}
+
+/** The posed lie's clips after a rig's own `own` rows: the way down, the way up, and the held lie (as `lie` and `sleep`). */
+export function posedLieClips(own: number): RigClipData[] {
+    const n = LIE_FRAMES + 1;
+    const clip = (name: string, at: number, rows: number, loop: boolean, seconds: number, base?: string): RigClipData => ({name, row: own + at, rows, frames: rows - 1, loop, seconds, pass: true, ...(base ? {base} : {})}) as RigClipData;
+    return [clip("lie_down", 0, n, false, LIE_SECONDS), clip("get_up", n, n, false, LIE_SECONDS), clip("lie", 2 * n, 2, true, 4, "lying"), clip("sleep", 2 * n, 2, true, 4, "lying")];
+}
+
+/**
+ * ARK-ANIM (the owner on batch 13: the eared dove's and the robin's necks tearing, a resting horse in mid-air with its
+ * muzzle bent and its tail torn, a sleeping elk's legs in the ground): a rig's skin and clips fixed as it loads, in
+ * place (the rest mesh is unchanged; only how the bones move it). Birds: head turns capped and spread, the wing off the
+ * neck (`locomotion/bird-neck.ts`). Four-legged: lying clips seated by their lowest point, the tail off the hind legs,
+ * an equid's muzzle on its head (`locomotion/skin-fixes.ts`).
+ */
+export function skinAndClipFixes(rig: LocoRig, slug: string, plan: string | null, geometry: BufferGeometry, data: Uint16Array, bones: number, clips: Record<string, RigClipData>): SkinFixReport {
+    const position = geometry.getAttribute("position");
+    const joints = geometry.getAttribute("arkJoints");
+    const weights = geometry.getAttribute("arkWeights");
+    const report: SkinFixReport = {};
+    if (!position || !joints || !weights) return report;
+    const skin = {positions: position.array, joints: joints.array as Uint8Array, weights: weights.array as Float32Array};
+    const names = rig.bones.map((b) => b.name);
+    if (isBirdRig(plan, names)) {
+        const limits = birdYawLimits(slug);
+        // Its split: the head-heavy one, or the neck-heavy one where its neck stretches less so (`pickBirdShares`).
+        const index = geometry.getIndex();
+        const split = index ? pickBirdShares(rig, skin, index.array, limits.cap, limits.shares) : {shares: limits.shares, stretch: []};
+        report.birdShares = split.shares;
+        report.birdYaw = spreadBirdRows(rig, data, bones, limits.cap, split.shares);
+        // (The wing kept off the neck, `birdWingWeights`, is not applied: across the 654 bird rigs it stretched the seam it
+        // made 2–8 times further at the capped turn. With the turn capped and mostly on the head the neck moves 18° at
+        // most and the wing's top no longer folds over it.)
+    }
+    if (plan === "quadruped") {
+        report.tailVertices = tailOffLegs(rig, skin);
+        // (The rig harness's `?flank=0` compares without it.)
+        if ((globalThis as {__arkFlankFix?: boolean}).__arkFlankFix !== false) report.flankVertices = flankOffLegs(rig, skin);
+        if (isEquid(slug)) report.muzzleVertices = rigidMuzzle(rig, skin);
+        geometry.computeBoundingBox();
+        const box = geometry.boundingBox!;
+        const legs = new Set(names.flatMap((name, i) => (/^leg\d+[LR]_/.test(name) ? [i] : [])));
+        report.seated = seatLyingRows(skin, box.min.y, box.max.z - box.min.z, legs, data, bones, clips as unknown as Record<string, {row: number; rows: number; base?: string; ends?: string; starts?: string}>);
+    }
+    joints.needsUpdate = true;
+    weights.needsUpdate = true;
+    return report;
+}
+export type SkinFixReport = {
+    birdYaw?: {worstBefore: number; worstAfter: number};
+    birdShares?: readonly [number, number, number];
+    wingVertices?: number;
+    tailVertices?: number;
+    flankVertices?: number;
+    muzzleVertices?: number;
+    seated?: Record<string, {belly: number; low: number; shift: number}>;
+};
 
 /**
  * A rig's skeleton as the locomotion layer reads it (`locomotion/skeleton.ts` buildLocoRig): its texture bones, their

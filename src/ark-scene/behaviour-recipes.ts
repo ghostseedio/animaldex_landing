@@ -2298,6 +2298,9 @@ function overlaid(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: Trip
     const murmuring = murmurationPose(world, owner, kit, base, epoch);
     if (murmuring) return murmuring;
     if (trip.doing === "sleep") return postureOf(owner, base);
+    // ARK-ANIM (decision 447, the owner's "bats not hanging upside down"): a bat roosting at its roost point (under a
+    // limb, a cave's mouth, an eave) by day hangs head down there too, not only once the schedule calls it asleep.
+    if (hangsAtRoost(owner, trip, base, epoch)) return postureOf(owner, base);
     const pair = pairEpisode(world, owner, kit, epoch);
     if (pair) return onEpisode(world, pair, base, epoch);
     const mixed = mixedPose(world, owner, kit, base, epoch);
@@ -2395,6 +2398,22 @@ function airStay(world: ScheduleWorld, owner: TripOwner, trip: Trip, base: TripP
     // flight frame), not a fixed left lean.
     return {...base, x, y: trip.to.y + 0.3 * Math.sin(a * 2), z, yaw: -a, moving: true, aloft: true, beat: "fly", act: {episode: `air#${trip.slot}`, recipe: "air_stay", block: "fly", state: "fly", u: 0, pitch: 0, roll: 0, own: true, carry: null, prey: null, catch: null, fx: null, mark: null, label: "flying its beat"}};
 }
+
+/** A hanging flyer (a bat: posture "hang") still at the roost point its stay took it to. */
+/**
+ * The rig harness's roost scene (ARK-ANIM round 3): a species' rest posture on a pose, as `hangsAtRoost` draws a
+ * hanger's day at its roost (its catalogue posture; a flyer by its slug's catalogue movement).
+ */
+export function roostPosture(slug: string, base: TripPose): RecipePose {
+    return postureOf({slug, profile: {move: "fly", moves: ["fly"]}} as unknown as TripOwner, base);
+}
+
+function hangsAtRoost(owner: TripOwner, trip: Trip, base: TripPose, epoch: number): boolean {
+    if (!enabled || trip.to.point === null || base.moving || epoch < trip.arrive || !STAY_HANG.has(trip.doing)) return false;
+    if (speciesRecipes(owner.slug).posture !== "hang") return false;
+    return owner.profile.move === "fly" || owner.profile.moves.includes("fly");
+}
+const STAY_HANG: ReadonlySet<string> = new Set(["rest", "groom", "idle", "watch"]);
 
 const postureActs = new Map<string, RecipeAct>();
 

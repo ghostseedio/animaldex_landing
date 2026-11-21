@@ -265,10 +265,16 @@ transformed = (arkSkin * vec4(transformed, 1.0)).xyz;
 #endif
     // Asleep (the hour and the species' activity): still, the head down, breathing slow.
     float arkRest = arkInstance.z;
-    if (arkRest > 0.001 && arkDroop > 0.0) {
+    float arkDroopRest = arkRest;
+#ifdef ARK_RIG
+    // (A rig's own lying and sleeping clips carry its head: the droop on top bent a horse's muzzle and a bird's beak
+    // down like rubber. ARK-ANIM, the owner on batch 13.)
+    arkDroopRest *= 1.0 - arkRigA.w;
+#endif
+    if (arkDroopRest > 0.001 && arkDroop > 0.0) {
         float headFrom = motionStill - (motionStill - motionRear) * 0.14;
         float into = smoothstep(headFrom, motionStill + 0.04, transformed.z);
-        float droop = arkDroop * arkRest * into;
+        float droop = arkDroop * arkDroopRest * into;
         float py = mix(motionBottom, motionTop, 0.7);
         float dy = transformed.y - py;
         float dz = transformed.z - headFrom;

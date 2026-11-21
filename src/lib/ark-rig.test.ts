@@ -153,7 +153,8 @@ test("rig look: a v2 entry's chain (bones, pivots, limits, share); a v1 file's n
     assert.ok(Math.abs(v1!.yaw - (70 * Math.PI) / 180) < 1e-9);
     const owl = rigLookChain({state: "passed", plan: "flying_bird", clips: {}}, "barn-owl", bones, (name) => pivots[name] ?? null);
     assert.ok(Math.abs(owl!.yaw - (170 * Math.PI) / 180) < 1e-9, "an owl turns its head furthest");
-    assert.equal(rigLookLimits("flying_bird", "owlet-nightjar").limits_deg.yaw, 110, "an owlet-nightjar is not an owl");
+    // (A bird other than an owl looks 30° on top of its clips' turn, itself capped at 70°: `locomotion/bird-neck.ts`.)
+    assert.equal(rigLookLimits("flying_bird", "owlet-nightjar").limits_deg.yaw, 30, "an owlet-nightjar is not an owl");
     assert.equal(rigLookLimits("flying_bird", "jungle-owlet").limits_deg.yaw, 170);
     assert.equal(rigLookChain({state: "passed", plan: "quadruped", clips: {}}, "x", ["hips", "chest"], () => [0, 0, 0]), null, "no head bone: no look");
 });
