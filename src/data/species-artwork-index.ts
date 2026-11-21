@@ -230,3 +230,22 @@ export async function getSpeciesArtworkDirectUrl(slug: string, size?: number): P
 
     return urls.get(slug) ?? getSpeciesArtworkRoute(slug, size);
 }
+
+/**
+ * The bucket file that is exactly this slug's own artwork (`<slug>.webp`), from
+ * the live listing, or from the committed snapshot when the listing is
+ * unavailable; never a relative's. The allow-list behind the same-origin
+ * `/img/species/<slug>.webp` route: a slug with no file of its own is a 404 there,
+ * so Google Images never files one animal's picture under another's name.
+ */
+export async function getExactSpeciesArtworkFile(slug: string): Promise<string | null> {
+    const normalized = slug.trim().toLowerCase();
+    if (!normalized) return null;
+    const live = isSeoSsgRemoteForbidden() ? null : await getSpeciesArtworkSlugs();
+    return (live ?? getSnapshotIndex().bySlug).get(normalized) ?? null;
+}
+
+/** Whether the committed snapshot holds the slug's own artwork: for pages built without remote reads. */
+export function hasExactSpeciesArtworkInSnapshot(slug: string): boolean {
+    return getSnapshotIndex().bySlug.has(slug.trim().toLowerCase());
+}

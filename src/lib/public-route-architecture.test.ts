@@ -32,7 +32,10 @@ const DYNAMIC_ALLOWLIST = [
     "app/blog/feed.xml/route.ts",
     // Built per request with an in-process cache: a build-time copy (no database
     // at build) served Google an empty video sitemap after every deploy.
-    "app/video-sitemap.xml/route.ts"
+    "app/video-sitemap.xml/route.ts",
+    // Species artwork relayed from the public bucket for Google Images (SEO pass 2): an image,
+    // not a page; Cloudflare holds each file for 30 days (s-maxage), so the app is rarely asked.
+    "app/img/species/[file]/route.ts"
 ];
 
 const CATALOG_WALK_ALLOWLIST: string[] = [];

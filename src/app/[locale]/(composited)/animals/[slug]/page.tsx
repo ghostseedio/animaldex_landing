@@ -49,7 +49,8 @@ import {getPublicSpeciesSightings, getPublicWildlifeGuides, type SpeciesSighting
 import {formatGuidePrice, guidePath} from "@/lib/virtual-wildlife-guides";
 import {ogContentImage} from "@/lib/og/og-image";
 import {getSpeciesArtworkRoute} from "@/data/species-artwork";
-import {getSpeciesArtworkDirectUrl} from "@/data/species-artwork-index";
+import {getSpeciesArtworkDirectUrl, hasExactSpeciesArtworkInSnapshot} from "@/data/species-artwork-index";
+import {speciesImageUrl} from "@/lib/species-image-path";
 import {
     getSpeciesImageAltText,
     getSpeciesImageRoute
@@ -658,8 +659,10 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
     // The species as a schema.org Taxon (SEO lane S3): its binomial, common name and genus, only when the
     // scientific name is a binomial; otherwise a plain Thing with the names and summary (no unknown properties).
     const taxonSchema = speciesTaxonJsonLd({scientificName: entry.analysis.scientificName, commonName: entry.name, url: pageUrl});
+    // The species' own artwork from animaldex.app (/img/species, no robots header), when the bucket has its own file.
+    const ownArtworkUrl = hasExactSpeciesArtworkInSnapshot(entry.slug) ? speciesImageUrl(entry.slug) : null;
     const thingSchema = taxonSchema
-        ? {...taxonSchema, description: entry.analysis.summary}
+        ? {...taxonSchema, description: entry.analysis.summary, ...(ownArtworkUrl ? {image: ownArtworkUrl} : {})}
         : {
             "@context": "https://schema.org",
             "@type": "Thing",
@@ -677,7 +680,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         dateModified: speciesContentModifiedAt(entry),
         // The share card: robots.txt allows /api/og/, while the artwork route
         // (/api/species-artwork, a redirect) sits under the disallowed /api/.
-        image: ogCardImageUrl("species", entry.slug),
+        image: [ogCardImageUrl("species", entry.slug), ...(ownArtworkUrl ? [ownArtworkUrl] : [])],
         ...articleAuthorship(),
         mainEntityOfPage: pageUrl,
         about: taxonSchema

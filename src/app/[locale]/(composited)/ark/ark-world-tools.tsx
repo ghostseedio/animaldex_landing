@@ -164,6 +164,11 @@ export function ArkPoster({ready}: {ready: boolean}) {
     }, [ready]);
     if (gone) return null;
     return (
+        <>
+        {/* The largest paint, asked for from the head (React hoists these links) at the top priority, before the
+            page's scripts and fonts queue ahead of it; one per screen shape, as the <picture> below picks. */}
+        <link rel="preload" as="image" type="image/webp" media="(max-width: 767px)" href={ARK_POSTER.tall} {...({fetchPriority: "high"} as React.LinkHTMLAttributes<HTMLLinkElement>)} />
+        <link rel="preload" as="image" type="image/webp" media="(min-width: 768px)" href={ARK_POSTER.wide} {...({fetchPriority: "high"} as React.LinkHTMLAttributes<HTMLLinkElement>)} />
         <div data-ark-poster="" aria-hidden="true" className={`pointer-events-none absolute inset-0 z-[1] overflow-hidden bg-[#476260] transition-opacity duration-700 ease-out motion-reduce:transition-none ${ready ? "opacity-0" : "opacity-100"}`}>
             <PosterPlaceholder src={ARK_POSTER_BLURRED.tall} className="md:hidden" />
             <PosterPlaceholder src={ARK_POSTER_BLURRED.wide} className="hidden md:block" />
@@ -173,5 +178,6 @@ export function ArkPoster({ready}: {ready: boolean}) {
                 <img src={ARK_POSTER.wide} alt="" width={1600} height={900} decoding="async" {...({fetchPriority: "high"} as React.ImgHTMLAttributes<HTMLImageElement>)} className="absolute inset-0 h-full w-full object-cover" />
             </picture>
         </div>
+        </>
     );
 }

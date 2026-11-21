@@ -135,6 +135,8 @@ type ReplayState = {acts: ArkAct[]; index: number; summary: string};
  * the scene's code waits for), so it is there long before the first tap.
  */
 const loadArkAnimalCard = () => import("@/app/[locale]/(composited)/ark/ark-animal-card");
+/** The longest the 3D scene waits for the page's load event before it starts anyway (the scene-start effect below). */
+const ARK_SCENE_START_CEILING_MS = 4000;
 type ArkAnimalCardModule = Awaited<ReturnType<typeof loadArkAnimalCard>>;
 /** Only for a tap before the idle preload is in; once it is, the page renders the loaded card itself (no suspend), so
  * the card is in the DOM on the same render as before and the band's height (`--ark-card-h`, the view inset) is read at once. */
@@ -584,11 +586,31 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                 }
             })
             .catch(() => setFailed(true));
-        const idle = window.requestIdleCallback ? window.requestIdleCallback(() => void start(), {timeout: 1500}) : null;
-        const timer = idle === null ? window.setTimeout(() => void start(), 150) : null;
+        // After the page's own load (SEO pass 2, 2026-11-21): the scene's code no longer competes with the poster,
+        // the fonts and the first paint's images for the network and the main thread; then the browser's first idle
+        // moment, as before. ARK_SCENE_START_CEILING_MS is the latest it waits for a load event that is slow to come.
+        let idle: number | null = null;
+        let timer: number | null = null;
+        let started = false;
+        const begin = () => {
+            if (started || disposed) return;
+            started = true;
+            window.removeEventListener("load", schedule);
+            if (ceiling !== null) clearTimeout(ceiling);
+            idle = window.requestIdleCallback ? window.requestIdleCallback(() => void start(), {timeout: 1500}) : null;
+            timer = idle === null ? window.setTimeout(() => void start(), 150) : null;
+        };
+        function schedule() {
+            begin();
+        }
+        const ceiling: number | null = document.readyState === "complete" ? null : window.setTimeout(begin, ARK_SCENE_START_CEILING_MS);
+        if (document.readyState === "complete") begin();
+        else window.addEventListener("load", schedule);
         return () => {
             disposed = true;
             settleCancel?.();
+            window.removeEventListener("load", schedule);
+            if (ceiling !== null) clearTimeout(ceiling);
             if (idle !== null) window.cancelIdleCallback?.(idle);
             if (timer !== null) clearTimeout(timer);
             handle?.dispose();
