@@ -137,16 +137,17 @@ jobs:
           cache-to: type=gha,scope=selfhost-runtime-base,mode=max
           provenance: false
 
-      # Next's .next/cache (webpack, .tsbuildinfo, eslint) lives in a BuildKit cache mount;
-      # carry it between runs through actions/cache. A new entry per commit; restore the newest.
+      # Next's .next/cache lives in a BuildKit cache mount; the Dockerfile keeps only the
+      # type-check and ESLint caches in it. Carried between runs through actions/cache:
+      # a new entry per commit, restore the newest.
       - name: Restore Next.js build cache
         id: next-cache
         uses: actions/cache@v4
         with:
           path: next-cache
-          key: selfhost-next-cache-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
+          key: selfhost-next-tscache-${{ hashFiles('package-lock.json') }}-${{ github.sha }}
           restore-keys: |
-            selfhost-next-cache-${{ hashFiles('package-lock.json') }}-
+            selfhost-next-tscache-${{ hashFiles('package-lock.json') }}-
 
       - name: Inject Next.js build cache into BuildKit
         uses: reproducible-containers/buildkit-cache-dance@v3.3.2

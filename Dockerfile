@@ -87,13 +87,16 @@ COPY public ./public
 COPY src ./src
 COPY scripts ./scripts
 
-# .next/cache (webpack cache, .tsbuildinfo, eslint cache) is a BuildKit cache mount: never in a
-# layer, and CI carries it between runs (buildkit-cache-dance), so an app-code change recompiles
-# only what changed. fetch-cache and images are dropped first so build-time data and image
-# output are always fresh, exactly as in a cold build.
+# .next/cache is a BuildKit cache mount (never in a layer) that CI carries between runs
+# (buildkit-cache-dance). Only the type-check (.tsbuildinfo) and ESLint caches are kept: they
+# cut "Linting and checking validity of types" from ~80 s to ~12 s and cannot change what the
+# build emits. webpack, fetch-cache and images are dropped before and after every build, so
+# compiled output and build-time data always come from a cold build (and the carried cache
+# stays small: moving the 240 MB webpack cache cost more time than it saved).
 RUN --mount=type=cache,id=next-cache,target=/app/.next/cache,sharing=locked \
-  rm -rf .next/cache/fetch-cache .next/cache/images \
+  rm -rf .next/cache/webpack .next/cache/fetch-cache .next/cache/images \
   && npm run build \
+  && rm -rf .next/cache/webpack .next/cache/fetch-cache .next/cache/images \
   && rm -f .next/standalone/.env .next/standalone/.env.* \
   && find .next/standalone -name '.env*' -type f -delete
 
@@ -141,7 +144,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 # Belt-and-suspenders: never ship dotenv files into the final image
 RUN rm -f .env .env.local .env.production .env.development \
   && find /app -name '.env*' -type f -delete \
-  && chown -R nextjs:nodejs /app
+  && find /app \! \( -user nextjs -group nodejs \) -exec chown -h nextjs:nodejs {} +
+# (Same result as chown -R nextjs:nodejs /app, but it only touches the few paths COPY --chown
+# left root-owned; chown -R copied every file up through overlayfs and took ~30 s.)
 
 USER nextjs
 
