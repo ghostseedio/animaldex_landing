@@ -81,7 +81,8 @@ import {getLegendaryCaptureRequirementMessage} from "@/lib/legendary-earth-beast
 import {getScopedTranslator} from "@/loaders/translation";
 import {getPublishedEnglishAnimalStaticParams} from "@/lib/published-seo-page-data";
 import {getAbsoluteAssetUrl, getAbsoluteUrl, getLocalePath} from "@/lib/site";
-import {speciesTaxonJsonLd} from "@/lib/seo/structured-data";
+import {articleAuthorship, ogCardImageUrl, speciesTaxonJsonLd} from "@/lib/seo/structured-data";
+import {nameLead} from "@/lib/species-name-lead";
 import {speciesContentModifiedAt} from "@/lib/static-species-overlay";
 import {STORY_MEDIA_REVALIDATE_SECONDS, getSpeciesStoryMedia} from "@/lib/species-story-media";
 import {buildSpeciesVideoSchemas, collectSpeciesVideoUrls} from "@/lib/species-video-schema";
@@ -131,20 +132,6 @@ function firstSentence(text: string) {
  * What the animal is (the field guide's first sentence), then its meaning and the
  * chat: "Ask the Cheetah anything". ≤ 155 characters, cut at a word boundary.
  */
-/** "Lions are…" → "Lions (Panthera leo) are…"; a sentence that does not open on the name gets "Lion (Panthera leo): " in front. */
-function nameLead(name: string, scientificName: string, sentence: string) {
-    const science = scientificName && scientificName.toLowerCase() !== name.toLowerCase() ? ` (${scientificName})` : "";
-    const article = sentence.match(/^(?:(?:the|an?) )?/i)![0].length;
-    if (sentence.slice(article, article + name.length).toLowerCase() === name.toLowerCase()) {
-        const plural = sentence.slice(article + name.length).match(/^(?:e?s)?(?![a-z])/i);
-        if (plural) {
-            const end = article + name.length + plural[0].length;
-            return `${sentence.slice(0, end)}${science}${sentence.slice(end)}`;
-        }
-    }
-    return `${name}${science}: ${sentence}`;
-}
-
 function buildSpeciesDescription(name: string, scientificName: string, summary: string, principle: string | null) {
     const tail = `${principle ? ` Its Power: ${principle}.` : ""} Talk to the ${name}: it answers as itself.`;
     const room = 155 - tail.length;
@@ -688,15 +675,10 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         datePublished: entry.publishedAt,
         // The field guide's own date, or the catalogue snapshot it was last refreshed from when that is later.
         dateModified: speciesContentModifiedAt(entry),
-        image: getAbsoluteUrl(locale, getSpeciesImageRoute(entry.slug)),
-        author: {
-            "@type": "Organization",
-            name: "AnimalDex"
-        },
-        publisher: {
-            "@type": "Organization",
-            name: "AnimalDex"
-        },
+        // The share card: robots.txt allows /api/og/, while the artwork route
+        // (/api/species-artwork, a redirect) sits under the disallowed /api/.
+        image: ogCardImageUrl("species", entry.slug),
+        ...articleAuthorship(),
         mainEntityOfPage: pageUrl,
         about: taxonSchema
             ? {"@type": "Taxon", name: taxonSchema.name, alternateName: entry.name}
@@ -717,7 +699,7 @@ export default async function SpeciesPage({params}: SpeciesPageProps) {
         pageUrl,
         speciesName: entry.name,
         speciesSummary: entry.analysis.summary,
-        fallbackThumbnailUrl: getAbsoluteUrl(locale, getSpeciesImageRoute(entry.slug)),
+        fallbackThumbnailUrl: ogCardImageUrl("species", entry.slug),
         fallbackUploadDate: entry.publishedAt,
         publisherLogoUrl: getAbsoluteAssetUrl("/images/logo.webp")
     });

@@ -48,6 +48,19 @@ export const STRUCTURED_DATA_SPECS: Record<string, Spec> = {
     Place: {props: [...THING, "address", "geo", "containedInPlace"], required: ["name"]}
 };
 
+/**
+ * The `applicationCategory` values Google's software app rich result accepts
+ * (developers.google.com/search/docs/appearance/structured-data/software-app).
+ * The home page said "EducationApplication", which is not one (SEO pass, 2026-11-21).
+ */
+export const GOOGLE_APPLICATION_CATEGORIES = [
+    "GameApplication", "SocialNetworkingApplication", "TravelApplication", "ShoppingApplication", "SportsApplication",
+    "LifestyleApplication", "BusinessApplication", "DesignApplication", "DeveloperApplication", "DriverApplication",
+    "EducationalApplication", "HealthApplication", "FinanceApplication", "SecurityApplication", "BrowserApplication",
+    "CommunicationApplication", "DesktopEnhancementApplication", "EntertainmentApplication", "MultimediaApplication",
+    "HomeApplication", "UtilitiesApplication", "ReferenceApplication"
+];
+
 export type JsonLdIssue = {path: string; message: string};
 
 function isAbsoluteUrl(value: unknown): boolean {
@@ -113,6 +126,9 @@ function checkNode(node: unknown, path: string, issues: JsonLdIssue[], top: bool
             if (type === "BreadcrumbList" && items.length < 2) issues.push({path, message: "a breadcrumb needs at least two levels"});
         }
         if (type === "Offer" && typeof record.price !== "string" && typeof record.price !== "number") issues.push({path, message: "Offer price must be a number or string"});
+        if ("applicationCategory" in record && !GOOGLE_APPLICATION_CATEGORIES.includes(String(record.applicationCategory))) {
+            issues.push({path: `${path}.applicationCategory`, message: `not one of Google's application categories: ${String(record.applicationCategory)}`});
+        }
     }
     for (const [key, value] of Object.entries(record)) {
         if (key === "@context" || key === "@type") continue;

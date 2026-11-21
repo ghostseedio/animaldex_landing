@@ -18,6 +18,8 @@ import {getPublishedEnglishLessonStaticParams} from "@/lib/published-seo-page-da
 import {getNextPublishedLessonSlug} from "@/lib/published-seo-slugs";
 import {getScopedTranslator} from "@/loaders/translation";
 import {ogContentImage} from "@/lib/og/og-image";
+import {templateSafeTitle} from "@/lib/brand-title";
+import {articleAuthorship, ogCardImageUrl} from "@/lib/seo/structured-data";
 import AnimalPowerIcon from "@/components/animal-detail/animal-powers/animal-power-icon";
 import {fetchAnimalPowerIconIndex, resolveAnimalPowerIcon} from "@/lib/animal-power-icons-server";
 import {STORY_MEDIA_REVALIDATE_SECONDS} from "@/lib/species-story-media";
@@ -68,7 +70,9 @@ export async function generateMetadata({params}: AnimalLessonPageProps): Promise
         featuredImage: ogContentImage(`${lesson.displayName} power from nature on AnimalDex`, "lesson", lesson.slug)
     });
 
-    return {...metadata, title: {absolute: title}};
+    // "What Can We Learn from the Tent-making Bat? The Power of Folded Leaf Home"
+    // is already past what a result shows: the brand goes only where it fits.
+    return {...metadata, title: templateSafeTitle(title)};
 }
 
 export default async function AnimalLessonDetailPage({params}: AnimalLessonPageProps) {
@@ -168,8 +172,8 @@ export default async function AnimalLessonDetailPage({params}: AnimalLessonPageP
         inLanguage: params.locale,
         url: pageUrl,
         mainEntityOfPage: pageUrl,
-        author: {"@type": "Organization", name: "AnimalDex"},
-        publisher: {"@type": "Organization", name: "AnimalDex"},
+        image: ogCardImageUrl("lesson", lesson.slug),
+        ...articleAuthorship(),
         about: {
             "@type": "Thing",
             name: lesson.displayName,
