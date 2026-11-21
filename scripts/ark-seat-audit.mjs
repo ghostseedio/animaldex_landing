@@ -283,6 +283,8 @@ for (const island of islands) {
         const left = Array.from(targets.keys()).filter((id) => !seen.has(id) && !gone.has(id)).length;
         coverage.push({island, hour, animals: all.size, measured: seen.size, notDrawn: gone.size, left, stops, seconds: Math.round((Date.now() - started) / 1000)});
         console.log("done", JSON.stringify(coverage[coverage.length - 1]));
+        // (What is measured so far, should the run be cut short.)
+        writeFileSync(path.join(out, `${label}.partial.json`), JSON.stringify({coverage, rows: rows.map((row) => ({...row, verdict: verdict(row)})), notDrawn}));
     }
 }
 const seatStats = await page.evaluate(() => ({...window.__arkSeat.solids.stats(), solves: window.__arkSeat.solves, ms: window.__arkSeat.ms}));
