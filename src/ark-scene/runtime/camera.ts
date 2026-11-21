@@ -55,6 +55,21 @@ export function fitWhole(length: number, aspect: number, fovDegrees = 38): numbe
     return length / (0.7 * vertical * Math.min(Math.max(aspect, 0.3), 1));
 }
 
+/**
+ * The distance (m) that frames a selected animal whole in the part of the view left between a card at the foot and
+ * what the page draws over the top, less room for its bars box over its head (lane ARK-SIMPLE: the apps' Ark, where
+ * the card covers the lower ~45%). `visible`: that part's share of the view's height (0.12 to 1). The body's height
+ * takes at most 70% of it, a margin above and below; its length at most 80% of the width. (The view is shifted up so
+ * that part's middle is the view's, `setViewInset`.)
+ */
+export function fitAboveCard(length: number, height: number, aspect: number, visible: number, fovDegrees = 38): number {
+    const vertical = 2 * Math.tan((fovDegrees * Math.PI) / 360);
+    const share = Math.min(Math.max(visible, 0.12), 1);
+    const tall = Math.max(height, 0.001) / (0.7 * share * vertical);
+    const wide = Math.max(length, 0.001) / (0.8 * vertical * Math.max(aspect, 0.3));
+    return Math.min(Math.max(tall, wide), CAMERA_RANGE.far);
+}
+
 /** `rank` (0–1, forest fill only): drawn, and so an obstacle, only under the tier's fill share. */
 type Ellipsoid = {kind: "ellipsoid"; x: number; y: number; z: number; rx: number; ry: number; rz: number; solid: boolean; rank?: number};
 type Capsule = {kind: "capsule"; x: number; z: number; y0: number; y1: number; r: number; rank?: number};

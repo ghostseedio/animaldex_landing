@@ -24,7 +24,8 @@ type Props = {
     /** Part C: the two islands (the one loaded, their counts, a crossing under way); null with one island. */
     islands: {island: ArkIsland; counts: ArkIslandCounts; crossing: boolean; names: Record<ArkIsland, string> & {label: string}; onCross: (island: ArkIsland) => void} | null;
     /** The lighter view (A18): on now, and whether the device chose it (the reader didn't). */
-    lite: {on: boolean; auto: boolean; onToggle: () => void};
+    /** The Lite switch; null: none (the apps' panel, which has its own way to Lite). */
+    lite: {on: boolean; auto: boolean; onToggle: () => void} | null;
     sound: {on: boolean; onToggle: () => void};
     /** "Around it" lines (lane ARK-SIMPLE: the card's switch moved here, beside sound), while an animal's card is open; else null. */
     lines?: {on: boolean; onToggle: () => void; label: string; hint: string} | null;
@@ -110,9 +111,11 @@ export function ArkWorldTools({words, locale, islands, lite, sound, lines = null
                 </div>
             ) : null}
             <span className="pointer-events-auto flex shrink-0 items-center gap-1.5">
-                <IconSwitch on={lite.on} label={words.lite.label} hint={lite.auto ? `${words.lite.hint} (${words.lite.auto})` : words.lite.hint} onClick={lite.onToggle} badge={lite.auto}>
-                    <LiteIcon />
-                </IconSwitch>
+                {lite ? (
+                    <IconSwitch on={lite.on} label={words.lite.label} hint={lite.auto ? `${words.lite.hint} (${words.lite.auto})` : words.lite.hint} onClick={lite.onToggle} badge={lite.auto}>
+                        <LiteIcon />
+                    </IconSwitch>
+                ) : null}
                 <IconSwitch on={sound.on} label={words.sound.label} hint={words.sound.hint} onClick={sound.onToggle}>
                     <SoundIcon on={sound.on} />
                 </IconSwitch>

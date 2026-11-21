@@ -492,8 +492,10 @@ export type ArkSceneHandle = ArkRuntimeHandle & {
      * Pixels at the foot of the view covered by the page (a tap band): the
      * view's middle moves up by half of it, so what the camera looks at
      * stays in sight above the band. 0 gives the whole view back.
+     * `topPixels` (the apps' embed): what the page draws over the top of the view (its ticker and chips); the middle
+     * is then between the two, and a selected animal is framed whole in that part (`fitAboveCard`).
      */
-    setViewInset: (bottomPixels: number) => void;
+    setViewInset: (bottomPixels: number, topPixels?: number) => void;
     /**
      * Show the chat's animal as a visitor at the landing (or none). Returns
      * the visitor's id, which `select` and `setTalking` take.

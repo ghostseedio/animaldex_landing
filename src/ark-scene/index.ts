@@ -120,7 +120,7 @@ import {ArkPost, arkCpuScoreMs, lowerTier, tierFor, tierTrialFailed, tierTrialOn
 import {ArkPerf, arkPerfAsked} from "@/ark-scene/runtime/perf";
 import {ArkFramePacer, SLOW_CPU_MS} from "@/ark-scene/runtime/pace";
 import {displayLength, iconSize, MARKER_BELOW_PIXELS, markerNotIcon, nearBySize, screenWeight, SWIMMING_PLANS} from "@/ark-scene/sizes";
-import {CAMERA_RANGE, closeUpViews, fitWhole, meetDistance, type CloseView} from "@/ark-scene/runtime/camera";
+import {CAMERA_RANGE, closeUpViews, fitAboveCard, fitWhole, meetDistance, type CloseView} from "@/ark-scene/runtime/camera";
 import {easeLift, tinyLift} from "@/ark-scene/tiny-lift";
 import {Sight} from "@/ark-scene/runtime/sight";
 import {flightHeading, newFlightHeading, type FlightHeadingState} from "@/ark-scene/flight-heading";
@@ -2727,7 +2727,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         barsPoint.copy(middle).setY(middle.y + entry.drawnHeight * 0.55 + 0.1).project(camera);
         const visible = barsPoint.z < 1 && Math.abs(barsPoint.x) < 1.02 && Math.abs(barsPoint.y) < 1.02;
         // (Kept above the page's card at the foot of the view, `setViewInset`: over it when the animal is behind the card.)
-        selectionBars.place(((barsPoint.x + 1) / 2) * width, ((1 - barsPoint.y) / 2) * height, visible, {width, height: Math.max(height - insetTarget, 60)});
+        selectionBars.place(((barsPoint.x + 1) / 2) * width, ((1 - barsPoint.y) / 2) * height, visible, {width, height: Math.max(height - Math.max(insetTarget, insetCovered > 0 ? insetBottom : 0), 60)});
     };
 
     // The live log's moments (`animal-status.ts` pickMoment): who can be named, worked out again when the animals change
@@ -7697,14 +7697,20 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 // Face to face: low, near, from three-quarters in front, where its mouth can be seen.
                 // A visitor is seen from along the beach, with the jetty beside it rather than under the camera.
                 if (entry.length < 0.3) controls.minDistance = MICRO_MIN_DISTANCE;
-                fly(target, entry.length < 0.3 ? meetDistance(entry.length, width / Math.max(height, 1), FOV) : 3.5 + entry.length * 2, 1.6, 1.26, (entry.yawNow ?? entry.place.yaw) + 0.35);
+                fly(target, Math.max(entry.length < 0.3 ? meetDistance(entry.length, width / Math.max(height, 1), FOV) : 3.5 + entry.length * 2, cardFit(entry)), 1.6, 1.26, (entry.yawNow ?? entry.place.yaw) + 0.35);
+                framedOnGround = entry.animal.id;
                 follow();
                 return;
             }
             // True scale (motion pass §3): a small one close enough to see, a whale or an elephant far enough back to see whole.
             const meet = meetDistance(entry.length, width / Math.max(height, 1), FOV);
             if (entry.length < 0.3) controls.minDistance = MICRO_MIN_DISTANCE;
-            const distanceTo = entry.length < 0.3 ? meet : distance > 40 ? Math.max(10 + entry.length * 4, meet) : Math.min(distance, Math.max(10 + entry.length * 6, meet));
+            // (With a card over the view's foot, never nearer than the whole animal and its bars fit above it: the apps open on
+            // a close-up of the chat's animal, and a pick from there kept that distance, a horse filling the screen.)
+            const plain = entry.length < 0.3 ? meet : distance > 40 ? Math.max(10 + entry.length * 4, meet) : Math.min(distance, Math.max(10 + entry.length * 6, meet));
+            const fit = cardFit(entry);
+            const distanceTo = Math.max(plain, fit);
+            framedOnGround = entry.animal.id;
             // One partly behind a tree or a rock from the south is seen from the side or the north, wherever the ground leaves a clear view.
             fly(target, distanceTo, 1.3, CLOSE_POLAR, entry.place.covered ? clearAzimuth(target, distanceTo, CLOSE_POLAR, entry.phase) : undefined);
             follow();
@@ -7734,6 +7740,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     controls.addEventListener("start", () => {
         arriving = null;
         arrived = null;
+        framedOnGround = null;
     });
     /**
      * The longest the flight waits for an animal that cannot be drawn at all, and (from when it can) for its model: a
@@ -7804,6 +7811,30 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         arrived = {id: held.id, close: held.close, wired: Boolean(entry.sched?.wired) || Boolean(entry.visitor)};
         flyToChosen(held.id, held.close);
     };
+    /**
+     * The nearest a selected animal on the ground is framed from while a card covers the view's foot (`setViewInset`):
+     * whole, with its bars box, in the part above the card (`fitAboveCard`); 0 with no card.
+     */
+    const cardFit = (entry: Entry): number => {
+        if (insetCovered <= 0 || height <= 0) return 0;
+        return fitAboveCard(entry.length, entry.drawnHeight, width / Math.max(height, 1), (height - insetCovered) / height, FOV);
+    };
+    /** The animal last framed on the ground by a selection (until the reader moves the view): refitted when a card opens. */
+    let framedOnGround: string | null = null;
+    /** A card that opened (or grew) after the flight: back out until the animal fits above it, the flight still aiming at it. */
+    const refitAboveCard = () => {
+        const entry = framedOnGround && selectedId === framedOnGround ? findEntry(selectedId) : null;
+        if (!entry) return;
+        const fit = cardFit(entry);
+        if (camera.position.distanceTo(controls.target) >= fit * 0.92) return;
+        const aim = () => {
+            const at = selectAim(middleNow(entry), entry.drawnHeight);
+            return new Vector3(at.x, at.y, at.z);
+        };
+        fly(aim(), fit, reducedMotion ? 0 : 0.9);
+        if (flight) flight.aim = () => (selectedId === entry.animal.id ? aim() : null);
+    };
+
     const arrive = (id: string | null, close: boolean) => {
         arriving = null;
         arrived = null;
@@ -7974,6 +8005,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     let inset = 0;
     let insetTarget = 0;
+    /** The bars box's height over a selected animal's head, and its gap (CSS px): kept clear above it in the apps' embed. */
+    const SELECTION_BARS_ROOM = 120;
+    /** The card's own height at the foot (`setViewInset`), and that plus what the page draws over the top: the view's covered part. */
+    let insetBottom = 0;
+    let insetCovered = 0;
     const applyInset = () => {
         if (inset < 0.5) camera.clearViewOffset();
         else camera.setViewOffset(width, height, 0, inset / 2, width, height);
@@ -10741,8 +10777,16 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             talking.pulseAt = performance.now() / 1000;
             talking.lastActive = talking.pulseAt;
         },
-        setViewInset: (bottomPixels) => {
-            insetTarget = Math.max(0, Math.min(bottomPixels, height * 0.6));
+        setViewInset: (bottomPixels, topPixels = 0) => {
+            const before = insetCovered;
+            // (With a top given, room for the selected animal's bars box over its head counts as covered too: the animal
+            // is framed below it, the box clear of the page's chips.)
+            const top = topPixels === undefined ? 0 : Math.max(0, Math.min(topPixels + SELECTION_BARS_ROOM, height * 0.6));
+            insetBottom = Math.max(0, Math.min(bottomPixels, height * 0.7));
+            // (Framing whole above the card only for a page that says what covers the top too: the apps' embed.)
+            insetCovered = topPixels === undefined ? 0 : Math.min(insetBottom + top, height * 0.88);
+            insetTarget = Math.max(0, Math.min(insetBottom - top, height * 0.6));
+            if (insetCovered > before + 1) refitAboveCard();
         },
         view: (): ArkCameraView => {
             spherical.setFromVector3(offset.copy(camera.position).sub(controls.target));
