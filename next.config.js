@@ -73,7 +73,11 @@ module.exports = withNextIntl({
         // satori (share cards, /api/og) loads its yoga layout wasm at runtime; keep it unbundled.
         serverComponentsExternalPackages: ["sharp", "satori"],
         // src/instrumentation.ts: logs every paid AI call for /admin/ai-spend.
-        instrumentationHook: true
+        instrumentationHook: true,
+        // Static generation workers. Next defaults to CPUs - 1 (3 on the 4-vCPU image builder,
+        // whose main thread sits idle while 8,700+ pages render); the Dockerfile sets
+        // NEXT_STATIC_WORKERS to every vCPU. Unset (local builds): Next's default.
+        ...(Number(process.env.NEXT_STATIC_WORKERS) > 0 ? {cpus: Number(process.env.NEXT_STATIC_WORKERS)} : {})
     },
     async redirects() {
         return [
