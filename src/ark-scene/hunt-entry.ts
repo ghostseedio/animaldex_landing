@@ -17,7 +17,7 @@ const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public
 
 type Raw = (typeof fixture)["animals"][number];
 type Cast = {slug: string; name: string};
-type Scene = {zone: string; hours: number; predator: Cast; prey: Cast; /** How far off the camera stands (m): a few of the hunter's lengths. */ distance: number; /** The prey stands this far from the hunter (m) at the encounter, when set. */ gap?: number; /** The hunter starts in the water, at its edge nearest the prey (a crocodilian). */ water?: boolean};
+type Scene = {zone: string; hours: number; predator: Cast; prey: Cast; /** How far off the camera stands (m): a few of the hunter's lengths. */ distance: number; /** The prey stands this far from the hunter (m) at the encounter, when set. */ gap?: number; /** The hunter starts in the water, at its edge nearest the prey (a crocodilian). */ water?: boolean; /** The camera's angles (radians), where the default view is blocked by the scene. */ azimuth?: number; polar?: number};
 
 const SCENES: Record<string, Scene> = {
     // pounce: a house cat on a rat; leap: a fox on a vole; jump: a jumping spider on a fly
@@ -145,6 +145,7 @@ async function main() {
         const e = debug.entries().find((x) => x.animal.id === id);
         return e?.act ? `${String(e.act.state ?? "-")}${e.act.hidden ? " hidden" : ""}` : "-";
     };
+    const strikeAt: number | null = (mode === "catch" ? debug.meals()[0]?.catchAt : debug.escapes()[0]?.missAt) ?? null;
     const api = {
         info: () => {
             const meal = debug.meals()[0];
@@ -162,10 +163,28 @@ async function main() {
             const a = handle.locate(predatorId);
             const b = handle.locate(preyId);
             if (a && b) {
-                const x = (a.x + b.x) / 2;
-                const z = (a.z + b.z) / 2;
+                // Readable catch frames: around the strike (1.5 s either side) the camera holds on the hunter at the scene's
+                // own distance (a few of its lengths), whatever the gap, so the catch fills the frame; before it, both are
+                // framed with a margin in the scene's own scale (it was a flat +1 m and +0.2 m: a spider's catch was a dot).
+                const d0 = distance ?? scene.distance;
+                const near = strikeAt !== null && Math.abs(s - strikeAt) <= 1.5;
+                const x = near ? a.x * 0.75 + b.x * 0.25 : (a.x + b.x) / 2;
+                const z = near ? a.z * 0.75 + b.z * 0.25 : (a.z + b.z) / 2;
                 const ground = handle.heightAt(x, z);
-                const view: ArkCameraView = {target: {x, y: Math.max((a.y + b.y) / 2, Math.max(ground, 0)) + 0.2, z}, distance: Math.max(distance ?? scene.distance, Math.hypot(a.x - b.x, a.z - b.z) * 1.15 + 1), polar, azimuth};
+                const y = Math.max(near ? a.y : (a.y + b.y) / 2, Math.max(ground, 0)) + 0.06 * d0;
+                const span = Math.hypot(a.x - b.x, a.z - b.z);
+                // Near the strike: a few of the hunter's own lengths (the cat's 0.5 m: 1.6 m), never wider than the scene's distance.
+                const dist = near ? Math.max(Math.min(d0, 3.2 * (a.length || d0)), span * 0.9, 0.12) : Math.max(d0, span * 1.15 + 0.3 * d0);
+                // (Near the strike, from higher up: posts, trunks and grass round a small hunter hid the catch from the side.)
+                polar = near ? Math.min(polar, 0.45) : polar;
+                // (Closer than the page lets a visitor come, as the behaviours harness does: a jumping spider is 1 cm long.)
+                const rig = debug as unknown as {controls: {minDistance: number}; camera: {near: number; updateProjectionMatrix: () => void}};
+                rig.controls.minDistance = Math.min(rig.controls.minDistance, dist);
+                rig.camera.near = Math.min(0.03, dist / 20);
+                rig.camera.updateProjectionMatrix();
+                // (From the clearest side, `clearView`: trunks, posts and canopy between the camera and the catch hid it.)
+                const clear = handle.clearView?.({x, y, z}, dist, scene.polar ?? polar, scene.azimuth ?? azimuth, [{x: a.x, y: a.y, z: a.z}, {x: b.x, y: b.y, z: b.z}]) ?? null;
+                const view: ArkCameraView = {target: {x, y, z}, distance: dist, polar: clear?.polar ?? scene.polar ?? polar, azimuth: clear?.azimuth ?? scene.azimuth ?? azimuth};
                 handle.setView(view);
             }
             await frames(3);
