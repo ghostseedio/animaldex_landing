@@ -12,6 +12,8 @@
 import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkSceneHandle} from "@/ark-scene/types";
 import {canopyPhases} from "@/ark-scene/canopy-scene";
+import {allAttachPoints, type AttachPoint} from "@/ark-scene/sampler";
+import {jungleHolds} from "@/ark-scene/islands/wild/jungle";
 import {handMiss, handsReady} from "@/ark-scene/locomotion/brachiate";
 import {ledgeSeen} from "@/ark-scene/rock-ledge";
 import {zooSeen} from "@/ark-scene/islands/town/zoo-swing";
@@ -113,6 +115,8 @@ async function main() {
             await frames(2);
             return handsReady.has(slug);
         },
+        /** The holds last posed (each brachiator's hand on, and the next), not cleared: a camera put side-on to the swing. */
+        peekHolds: () => Array.from(handMiss.values()).map((m) => ({slug: m.slug, hold: m.hold, next: m.next})),
         /** The holding hand's gap to its hold last frame (m), by species, then cleared. */
         handMiss: () => {
             const out = Object.fromEntries(handMiss);
@@ -319,6 +323,14 @@ async function main() {
             const all = (window as unknown as {__arkDebug: {entries: () => Array<{animal: {id: string; model_slug: string}; sched?: {trip?: {to: {point: string | null}} | null; pose?: {beat?: string}} | null}>}}).__arkDebug.entries();
             return all.filter((e) => re.test(e.animal.model_slug)).map((e) => ({id: e.animal.id, slug: e.animal.model_slug, at: handle.locate(e.animal.id), beat: e.sched?.pose?.beat ?? null, point: e.sched?.trip?.to.point ?? null}));
         },
+        /** A hold's own record (its tag, tree asset, limb radius, where), from the scenery's points and the jungle's. */
+        holdInfo: (id: string) => {
+            const key = id.startsWith("map:") ? id.slice(4) : id;
+            const p = (allAttachPoints().find((q) => q.id === key) ?? (jungleHolds() as unknown as AttachPoint[]).find((q) => q.id === key)) as (AttachPoint & {radius?: number; asset?: string}) | undefined;
+            return p ? {id, tag: p.tag, asset: p.asset ?? null, radius: p.radius ?? null, at: p.position} : null;
+        },
+        /** The replay's own see-through cone (`near-fade.ts` setNearCone): leaves on the view's axis nearer than `end` m dissolve, wood stays. */
+        cone: (tan: number, end: number) => handle.setNearCone?.(tan > 0 ? {tan, end} : null),
         view: () => handle.view(),
         homeView: () => handle.homeView()
     } as never;

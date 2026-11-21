@@ -15,6 +15,7 @@ import {hashString} from "@/ark-scene/world";
 import type {SurfaceFrame} from "@/ark-scene/grounding/stand";
 import {brachiateDriver, canHang, travelKind, type LocoCanopy} from "@/ark-scene/locomotion/brachiate";
 import {registerLocoDriver} from "@/ark-scene/locomotion/layer";
+import woodData from "@/ark-scene/canopy-wood.json";
 
 // ARK-CANOPY: a brachiator's arms on its holds while it swings (asked before the legged and L2 drivers: it takes only
 // an animal out on its canopy route, which none of them does).
@@ -56,6 +57,32 @@ function crownOf(host: string): CrownDisc | null {
     return {x: body.cx, z: body.cz, r: reach * 0.8, bottom: body.bands[0][0], top: body.top};
 }
 
+/** Per asset tree and tag, each point's worst gap to drawn wood over lod0–lod2 and its point on lod0's wood (`scripts/ark-canopy-wood.mjs`). */
+const WOOD = (woodData as unknown as {assets: Record<string, Record<string, number[][]>>}).assets;
+/** Within this of wood every near level draws, a hand may hold there (m). */
+const ON_WOOD = 0.1;
+/** The sine of the steepest a limb a hand hangs from may run (35°). */
+const STEEP = Math.sin((35 * Math.PI) / 180);
+
+/**
+ * ARK-CANOPY: where a hand holds this point, on the tree's drawn wood, or null where there is none within 10 cm at
+ * every near level (a twig only lod0 draws, a leaf clump) or the tree is a palm (a frond cannot hold an ape).
+ */
+export function woodHold(p: Pick<AttachPoint, "id" | "tag"> & {asset?: string; forward?: {x: number; y: number; z: number}; wind?: {root: {x: number; y: number; z: number}; rotation: number; scale: number}}): {x: number; y: number; z: number} | null {
+    if (!p.asset || !p.wind || p.asset.startsWith("palm-")) return null;
+    // (Nor a limb that stands steeper than 35°: a hand slides down it, an ape climbs it rather than hangs.)
+    if (p.forward && Math.abs(p.forward.y) / (Math.hypot(p.forward.x, p.forward.y, p.forward.z) || 1) > STEEP) return null;
+    const n = Number(p.id.slice(p.id.lastIndexOf(":") + 1));
+    const row = WOOD[p.asset]?.[p.tag]?.[n];
+    const {root, rotation, scale} = p.wind;
+    if (!row || row[0] * scale > ON_WOOD) return null;
+    const c = Math.cos(rotation);
+    const sn = Math.sin(rotation);
+    const x = row[1] * scale;
+    const z = row[3] * scale;
+    return {x: root.x + x * c + z * sn, y: root.y + row[2] * scale, z: root.z - x * sn + z * c};
+}
+
 function anchorOf(p: AttachPoint): Anchor | null {
     const tree = treeHostOf(p.id);
     if (!tree) return null;
@@ -84,7 +111,20 @@ function routeFrom(own: Own, seed: string, hold: AttachPoint, length: number, gr
             const crown = crownOf(tree);
             if (crown) crowns.push(crown);
         }
-        route = planRoute(home, anchors, trunks, own.kind, length, hashString(`${seed}#${hold.id}#canopy`), groundAt, 3, crowns);
+        const routeSeed = hashString(`${seed}#${hold.id}#canopy`);
+        if (own.kind.mode === "brachiate") {
+            // (ARK-CANOPY: a swinger's hand only ever on drawn wood: each hold moved onto it, the rest left out; where its
+            // tree has too few for a swing, it goes along the limbs' tops instead, on its feet.)
+            const onWood = (a: Anchor, p: AttachPoint): Anchor | null => {
+                const w = woodHold(p);
+                return w ? {...a, x: w.x, y: w.y, z: w.z} : null;
+            };
+            const woodHome = onWood(home, hold);
+            const byAnchor = new Map(near.map((p) => [p.id, p]));
+            const woody = anchors.map((a) => onWood(a, byAnchor.get(a.id)!)).filter((a): a is Anchor => a !== null);
+            route = woodHome ? planRoute(woodHome, woody, trunks, own.kind, length, routeSeed, groundAt, 3, crowns) : null;
+            if (!route) route = planRoute(home, anchors.filter((a) => !a.under), trunks, {...own.kind, mode: "run"}, length, routeSeed, groundAt, 3, crowns);
+        } else route = planRoute(home, anchors, trunks, own.kind, length, routeSeed, groundAt, 3, crowns);
     }
     own.routes.set(hold.id, route);
     return route;
@@ -108,7 +148,7 @@ export function travelsCanopy(slug: string, scientific: string | null | undefine
  * slot, or before or after its excursion). `held`: the schedule's own frame on its hold, eased from and back to.
  */
 /** Each traveller's phase when last drawn on its route (for the canopy harness to find a swing; not read by the scene). */
-export const canopyPhases = new Map<string, {phase: string; air: boolean; epoch: number}>();
+export const canopyPhases = new Map<string, {phase: string; air: boolean; epoch: number; holds?: string[]}>();
 
 export function canopyFrame(
     animal: {id: string; model_slug: string; scientific_name?: string | null},
@@ -141,7 +181,7 @@ export function canopyFrame(
     if (start === null) return null;
     const pose = canopyPoseAt(route, epoch - trip.arrive - start);
     if (!pose) return null;
-    canopyPhases.set(animal.id, {phase: pose.phase, air: pose.air, epoch});
+    canopyPhases.set(animal.id, {phase: pose.phase, air: pose.air, epoch, holds: [route.hops[0].from.id, ...route.hops.map((h) => h.to.id)]});
     // The frame: its underside a fifth of its length under its middle, against its back's way.
     const drop = length * 0.18;
     let x = pose.centre.x - pose.up.x * drop;
