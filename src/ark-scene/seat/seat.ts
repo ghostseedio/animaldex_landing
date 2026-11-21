@@ -65,6 +65,8 @@ export type SeatState = {
      */
     env: number;
     above: number;
+    /** At rest on its seat at its last solve (not on the move, nothing left to close): its turn can wait longest. */
+    calm: boolean;
     /** The pass's clock at its last solve (s), and the scenery's version it was solved against. */
     at: number;
     seen: number;
@@ -272,14 +274,15 @@ export class SeatPass {
             this.short = true;
             return false;
         }
-        return !s.solved || this.frame - s.frame >= this.wait;
+        // (One still on its way to its seat, or on the move, a quarter as long as one at rest on it.)
+        return !s.solved || this.frame - s.frame >= (s.calm ? this.wait : this.wait >> 2);
     }
 
     /**
      * After its matrix is final: work out where it rests, if it is its turn. Sets the target its offset eases to.
      */
     settle(input: SeatInput): void {
-        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, at: 0, seen: -1, doubt: 0, fell: false, fellX: 0, fellZ: 0});
+        const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, pushes: 0, floor: null, env: NaN, above: 0, calm: false, at: 0, seen: -1, doubt: 0, fell: false, fellX: 0, fellZ: 0});
         s.kind = input.kind;
         if (this.keepPoints) {
             // Development (the audit's probe, `audit-probe.ts`): the animal as drawn this frame.
@@ -312,7 +315,7 @@ export class SeatPass {
                 return;
             }
             // (Everyone's turn: when a frame's budget does not reach them all, one seated lately waits for those seated longer ago.)
-            if (s.solved && this.frame - s.frame < this.wait) return;
+            if (s.solved && this.frame - s.frame < (s.calm ? this.wait : this.wait >> 2)) return;
             // (A mesh's hull, a clip's seat: one new one a frame.)
             if (!hullKnown(input.geometry) || (input.pose?.clip && !clipSeatKnown(input.geometry, input.pose.clip.row))) {
                 if (this.hullsLeft <= 0) return;
@@ -706,7 +709,7 @@ export class SeatPass {
                 s.tz -= az * off;
             }
         }
-        if (sideways && !moved && s.pushes < 4 && s.x === s.tx && s.y === s.ty && s.z === s.tz && (this.pushesLeft > 0 || this.forced || input.focus)) {
+        if (sideways && !moved && s.pushes < 8 && s.x === s.tx && s.y === s.ty && s.z === s.tz && (this.pushesLeft > 0 || this.forced || input.focus)) {
             this.pushesLeft--;
             const out = this.wayOut(n, cx, cy, cz, length, reachUp, input.ground);
             s.pushes++;
@@ -727,6 +730,7 @@ export class SeatPass {
             s.solved = true;
         }
         const settled = !moved && s.env === s.env && Math.abs(s.env + (s.tx * ax + s.ty * ay + s.tz * az)) <= DEAD && s.x === s.tx && s.y === s.ty && s.z === s.tz;
+        s.calm = settled && !input.moving;
         s.due = this.frame + (waiting ? 4 : settled ? (input.moving ? 2 : 24 + (Math.abs(Math.round(e[12] * 31 + e[14] * 17)) % 12)) : 1);
         return true;
     }
@@ -882,16 +886,15 @@ export class SeatPass {
 
     /**
      * The nearest move sideways that takes the body out of the closed things it is in: a step at a time each way, to
-     * the first place where none of its points (its lowest, and a couple of dozen over its hull) is under a closed
-     * thing's own top. Null: none within two body lengths (it is left: the audit says so).
+     * the first place where none of its points is under a closed thing's own top. Null: none within two body lengths (it is left: the audit says so).
      */
     private wayOut(n: number, cx: number, cy: number, cz: number, length: number, reach: number, ground: (x: number, z: number, near?: number) => number): {x: number; y: number; z: number} | null {
         const step = Math.max(0.25 * length, 0.04);
         const here = ground(cx, cz, cy);
         const far = step * 8 + length;
+        // (Every point of it: a place is free when none of them is in anything, as the seat itself then finds.)
         wayPoints.length = 0;
-        for (const i of support) if (i < n) wayPoints.push(i);
-        for (let i = 0; i < n; i += Math.max(1, Math.floor(n / 24))) wayPoints.push(i);
+        for (let i = 0; i < n; i++) wayPoints.push(i);
         near.length = 0;
         this.solids.release();
         this.solids.collect(cx - far, cy - reach - length, cz - far, cx + far, cy + ROCK_REACH, cz + far, ROCK | HARD, near);
