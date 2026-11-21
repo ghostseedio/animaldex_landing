@@ -186,6 +186,7 @@ import {
 } from "@/ark-scene/types";
 import {arkThriveOf} from "@/ark-scene/thrive";
 import {ARK_FLYERS} from "@/ark-scene/flyers";
+import {huntChoice} from "@/ark-scene/hunt-acts";
 import {animationTargets, behaviourState, sameBehaviour, type ArkBehaviourState} from "@/ark-scene/behaviour-state";
 import {behaviourProfile, bodyLengthsPerSecond, runFactor, type ArkBehaviourProfile} from "@/ark-scene/behaviour-profile";
 import {attachedOn, tripPhase} from "@/ark-scene/collide/attach";
@@ -9244,13 +9245,21 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const model = library.get(predator.animal.model_slug);
         const predatorWater = inWater(predator);
         const preyWater = inWater(prey);
-        const kind = chaseKind({
+        const generic = chaseKind({
             predatorSlug: predator.animal.model_slug,
             predatorPlan: model?.behaviour?.plan ?? null,
             predatorWater,
             preyWater,
             predatorFlies: FLYERS.has(predator.animal.model_slug) && ZONE_SITES[predator.animal.zone]?.kind !== "sea"
         });
+        // The hunter's own way of hunting (`hunt-acts.ts`), where its species has one that fits the pair.
+        const fleeGeneric = preyFleeStyle({preySlug: prey.animal.model_slug, preyPlan: library.get(prey.animal.model_slug)?.behaviour?.plan ?? null, preyWater, preyFlies: FLYERS.has(prey.animal.model_slug) && ZONE_SITES[prey.animal.zone]?.kind !== "sea", speedStat: prey.stats.speed});
+        // (A stand-in has no schedule: its species' profile says whether it flies. Where the record gives the places, the water is where they are.)
+        const aerial = (e: Entry) => ((e.sched?.profile ?? behaviourProfile(e.animal.model_slug, library.get(e.animal.model_slug)?.behaviour?.plan ?? null)).move === "fly" || FLYERS.has(e.animal.model_slug)) && ZONE_SITES[e.animal.zone]?.kind !== "sea";
+        const placed = mealEncounter(act);
+        const wetAt = (at: {x: number; z: number} | undefined, own: boolean) => (at ? heightAt(at.x, at.z) < -0.05 : own);
+        const hunt = huntChoice({slug: predator.animal.model_slug, plan: model?.behaviour?.plan ?? null, predatorLength: predator.length, preyLength: prey.length, predatorWater: wetAt(placed?.predator, Boolean(predatorWater)), preyWater: wetAt(placed?.prey, Boolean(preyWater)), predatorAerial: aerial(predator), preyAerial: aerial(prey), flee: fleeGeneric});
+        const kind = hunt?.kind ?? generic;
         // The chase (L7, `acts.ts`): with both sides' speeds, the prey's way of fleeing, the ground or water each may cross.
         const chaser = (entry: Entry): ActBody => ({...bodyOf(entry), speedStat: entry.stats.speed, gait: entry.sched?.profile.gait ?? null, slug: entry.animal.model_slug});
         const encounter = mealEncounter(act);
@@ -9263,11 +9272,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const qh = {...quarry, x: encounter.prey.x, z: encounter.prey.z, base: preyWater ? Math.min(quarry.base, -0.05) : ground(encounter.prey.x, encounter.prey.z), yaw: ((hash32(act.prey.id) % 6283) / 1000) - Math.PI};
             bodies = encounterBodies(ph, qh, encounter);
         } else bodies = {predator: chaser(predator), prey: chaser(prey)};
-        const flee = preyFleeStyle({preySlug: prey.animal.model_slug, preyPlan: library.get(prey.animal.model_slug)?.behaviour?.plan ?? null, preyWater, preyFlies: FLYERS.has(prey.animal.model_slug) && ZONE_SITES[prey.animal.zone]?.kind !== "sea", speedStat: prey.stats.speed});
+        const flee = hunt?.act === "hawk" ? "fly" : fleeGeneric;
         const chaseGround = (x: number, z: number) => !world || (world.nav.walkable(x, z) && !world.sampler.blocked(x, z, 0.3) && !collideBlocked(x, z, 0.3));
         const seed = `${act.prey.id}#${act.at}`;
         const withMeal = kind !== "cutaway";
-        const stage = mealStage(kind, bodies.predator, bodies.prey, {seed, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter), meal: withMeal});
+        const stage = mealStage(kind, bodies.predator, bodies.prey, {seed, flee, clear: chaseGround, water: (x, z) => heightAt(x, z) < -0.05, exact: Boolean(encounter), meal: withMeal, hunt: hunt?.act ?? null});
         if (!withMeal) return {kind, stage, bodies, script: null, plan: null, catchInfo: null};
         const plan = mealPlan(mealSideOf(predator, predatorWater), mealSideOf(prey, preyWater), seed);
         const at = stage.catchAt ?? stage.seconds;
@@ -9763,7 +9772,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const predatorWater = Boolean(inWater(predator));
             const preyWater = Boolean(inWater(prey));
             const planOf = (e: Entry) => library.get(e.animal.model_slug)?.behaviour?.plan ?? null;
-            const kind = chaseKind({predatorSlug: predator.animal.model_slug, predatorPlan: planOf(predator), predatorWater, preyWater, predatorFlies: escapeFlies(predator)});
+            const generic = chaseKind({predatorSlug: predator.animal.model_slug, predatorPlan: planOf(predator), predatorWater, preyWater, predatorFlies: escapeFlies(predator)});
+            // The hunter's own way of hunting (`hunt-acts.ts`), where its species has one that fits the pair: the same act as its catches.
+            const fleeGeneric = preyFleeStyle({preySlug: prey.animal.model_slug, preyPlan: planOf(prey), preyWater, preyFlies: escapeFlies(prey), speedStat: prey.stats.speed});
+            const aerialOf = (e: Entry) => ((e.sched?.profile ?? behaviourProfile(e.animal.model_slug, planOf(e))).move === "fly" || FLYERS.has(e.animal.model_slug)) && ZONE_SITES[e.animal.zone]?.kind !== "sea";
+            const wetAt = (at: {x: number; z: number} | undefined, own: boolean) => (at ? heightAt(at.x, at.z) < -0.05 : own);
+            const hunt = huntChoice({slug: predator.animal.model_slug, plan: planOf(predator), predatorLength: predator.length, preyLength: prey.length, predatorWater: wetAt(act.encounter?.predator, predatorWater), preyWater: wetAt(act.encounter?.prey, preyWater), predatorAerial: aerialOf(predator), preyAerial: aerialOf(prey), flee: fleeGeneric});
+            const kind = hunt?.kind ?? generic;
             if (kind === "cutaway") return null;
             const ground = (x: number, z: number) => Math.max(heightAt(x, z), -0.3);
             const at = (e: Entry, water: boolean): ActBody & {aloft: boolean} => {
@@ -9776,8 +9791,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (quarry.aloft && kind !== "swoop") return null;
             const e = act.encounter ?? null;
             const bodies = e ? encounterBodies(hunter, quarry, e, ground) : {predator: hunter, prey: quarry};
-            const flee = preyFleeStyle({preySlug: prey.animal.model_slug, preyPlan: planOf(prey), preyWater, preyFlies: escapeFlies(prey), speedStat: prey.stats.speed});
-            return {kind, flee, predator: bodies.predator, prey: bodies.prey, seed: `${act.prey}#${act.t0}`, exact: Boolean(e), ground, clear: (x, z) => world!.nav.walkable(x, z) && !world!.sampler.blocked(x, z, 0.3) && !collideBlocked(x, z, 0.3), water: (x, z) => heightAt(x, z) < -0.05};
+            const flee = hunt?.act === "hawk" ? "fly" : fleeGeneric;
+            return {kind, flee, predator: bodies.predator, prey: bodies.prey, seed: `${act.prey}#${act.t0}`, exact: Boolean(e), hunt: hunt?.act ?? null, ground, clear: (x, z) => world!.nav.walkable(x, z) && !world!.sampler.blocked(x, z, 0.3) && !collideBlocked(x, z, 0.3), water: (x, z) => heightAt(x, z) < -0.05};
         },
         scheduleAt: (entry, epoch) => {
             if (!entry.sched || !world || reducedMotion) return null;

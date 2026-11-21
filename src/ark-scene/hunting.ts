@@ -19,6 +19,7 @@ import type {ArkAnimal} from "@/ark-scene/types";
 import {arkSleepOf} from "@/ark-scene/sleep-hours";
 import type {ArkHunting} from "@/lib/ark-hunting";
 import pin from "@/ark-scene/positions/PIN.json";
+import {searchLeg, searchStyleOf} from "@/ark-scene/hunt-search";
 
 export type HuntPose = TripPose & {doing: ArkDoing};
 
@@ -165,7 +166,24 @@ export class HuntingLayer {
                 doing: flyer ? "fly" : swimmer ? "swim" : "stalk"
             };
         };
-        const walk = at({x: leg.a.x + (leg.b.x - leg.a.x) * u, z: leg.a.z + (leg.b.z - leg.a.z) * u}, leg.b);
+        // Its species' way of searching (`hunt-search.ts`): the same waypoints, reached on the step, walked in its own way.
+        const style = leg.on0 && leg.on1 ? searchStyleOf(animal.model_slug) : null;
+        const shaped = style ? searchLeg(style, u, `${animal.id}:${k}`, length, flyer) : null;
+        const along = shaped ? shaped.u : u;
+        const walk = at({x: leg.a.x + (leg.b.x - leg.a.x) * along, z: leg.a.z + (leg.b.z - leg.a.z) * along}, leg.b);
+        if (shaped) {
+            const dx = leg.b.x - leg.a.x;
+            const dz = leg.b.z - leg.a.z;
+            const d = Math.hypot(dx, dz);
+            if (d > 1e-3 && shaped.side !== 0) {
+                // (To the left of the way it goes.)
+                walk.x += (-dz / d) * shaped.side;
+                walk.z += (dx / d) * shaped.side;
+            }
+            walk.moving = shaped.moving && d > 1e-3;
+            if (!shaped.moving || shaped.beat !== "walk") walk.beat = shaped.beat;
+            // (Its card keeps saying what it said: `doing` is the foray's own.)
+        }
         if (leg.on0 && leg.on1) return walk;
         // Into a hunt (to its first waypoint) or out of one (back to where its schedule has it), over this one step.
         const sched = schedule();
