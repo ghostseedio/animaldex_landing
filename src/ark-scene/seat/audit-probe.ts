@@ -340,10 +340,16 @@ export class SeatProbe {
                 const lift = cx * ax + cy * ay + cz * az - least;
                 const middle: [number, number, number] = [cx - ax * lift, cy - ay * lift, cz - az * lift];
                 points.push(middle);
-                for (const [dx, dy, dz] of [[0.18 * (x1 - x0), 0, 0], [-0.18 * (x1 - x0), 0, 0], face ? [0, 0.18 * (y1 - y0), 0] : [0, 0, 0.18 * (z1 - z0)], face ? [0, -0.18 * (y1 - y0), 0] : [0, 0, -0.18 * (z1 - z0)]]) {
-                    const off = dx * ax + dy * ay + dz * az;
-                    points.push([middle[0] + dx - ax * off, middle[1] + dy - ay * off, middle[2] + dz - az * off]);
-                }
+                // (Under its middle closely: a twig is a couple of centimetres across, and a sample either side of it says nothing.)
+                for (let u = -2; u <= 2; u++)
+                    for (let v = -2; v <= 2; v++) {
+                        if (!u && !v) continue;
+                        const dx = 0.09 * u * (x1 - x0);
+                        const dy = face ? 0.09 * v * (y1 - y0) : 0;
+                        const dz = face ? 0 : 0.09 * v * (z1 - z0);
+                        const off = dx * ax + dy * ay + dz * az;
+                        points.push([middle[0] + dx - ax * off, middle[1] + dy - ay * off, middle[2] + dz - az * off]);
+                    }
             } else {
                 // On its feet: its lowest vertices, eight of them, apart.
                 const picked: number[] = [];
