@@ -1,4 +1,5 @@
 import type {Metadata} from "next";
+import {templateSafeTitle} from "@/lib/brand-title";
 import {notFound} from "next/navigation";
 import Link from "@/app/[locale]/_components/link";
 import {isVideoSourceType} from "@/lib/content-video/plan";
@@ -44,7 +45,8 @@ export async function generateMetadata({params}: WatchPageProps): Promise<Metada
     const title = `${video.title} (Video)`;
     const description = describe(video);
     return {
-        title,
+        // 106 of 164 watch pages ran past 60 characters with " | AnimalDex" (Nov 2026).
+        title: templateSafeTitle(title),
         description,
         alternates: {canonical: path},
         openGraph: {
