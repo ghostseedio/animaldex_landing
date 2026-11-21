@@ -60,7 +60,7 @@ jobs:
         env:
           STOPS: ${{ inputs.stops || '20' }}
           HOURS: ${{ inputs.hours || '11,23' }}
-        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --quality medium --width 420 --height 300 --hours "$HOURS" --stops "$STOPS" --out .ark-golden/seat --label ci --gate
+        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --unbudgeted --quality medium --width 420 --height 300 --hours "$HOURS" --stops "$STOPS" --out .ark-golden/seat --label ci --gate
       - name: Summary
         if: always()
         run: test -f .ark-golden/seat/ci.md && cat .ark-golden/seat/ci.md >> "$GITHUB_STEP_SUMMARY" || true

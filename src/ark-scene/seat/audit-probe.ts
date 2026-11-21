@@ -106,7 +106,7 @@ export class SeatProbe {
     private readonly local = new Box3();
     private readonly lows = new WeakMap<Hull, Map<number, number>>();
 
-    constructor(private readonly scene: Object3D, private readonly ground: (x: number, z: number, near?: number) => number) {}
+    constructor(private readonly scene: Object3D, private readonly floor: (x: number, z: number, near?: number) => number, private readonly water: (x: number, z: number) => number = () => -Infinity) {}
 
     /** Before a batch of measures: the scene's meshes as they are drawn now. */
     begin(): {meshes: number; unknown: string[]} {
@@ -282,6 +282,9 @@ export class SeatProbe {
         cz /= n;
         const height = Math.max(drawn.height, 0.002);
         const length = Math.max(drawn.length, 0.002);
+        // What is under a point when no mesh is: the drawn ground (the floor its own motion has it by, where floors are
+        // stacked), or, over water deeper than it wades, its float line.
+        const ground = (x: number, z: number) => Math.max(this.floor(x, z, drawn.near), this.water(x, z) - 0.3 * height);
         const out: SeatMeasure = {kind: drawn.kind, level: drawn.level, gap: null, low: null, on: "", inside: 0, of: 0, middle: false, insideOf: "", points: 0};
         // (One the scene leaves alone as off the ground by its pose's own rule, a burrow's mouth, a swarm, is measured too,
         // for the record: how far it is from anything drawn.)
@@ -299,12 +302,12 @@ export class SeatProbe {
         }
         if (drawn.kind !== "stand" && drawn.kind !== "lie" && drawn.kind !== "perch" && drawn.kind !== "cling" && !record) return out;
         // (Held: the scene says so, or it is plainly up off the ground, more than its own height.)
-        const held = record || drawn.kind === "perch" || drawn.kind === "cling" || y0 - this.ground(cx, cz, cy) > Math.max(0.25, height);
+        const held = record || drawn.kind === "perch" || drawn.kind === "cling" || y0 - ground(cx, cz) > Math.max(0.25, height);
         const up = Math.min(Math.max(0.75 * height, 0.03), 1);
         const mask = length <= 0.08 || (held && length <= 0.6) ? ROCK | HARD | TREE | SOFT : held ? ROCK | HARD | TREE : ROCK | HARD;
         // The scene's triangles round its body: under it down to the ground, over it as far as a rock's top is looked for.
         const pad = drawn.kind === "cling" ? Math.max(0.3, 1.6 * height) + 1 : 0.02;
-        const under = Math.min(y0, this.ground(cx, cz, cy), this.ground(x0, z0, cy), this.ground(x1, z1, cy), this.ground(x0, z1, cy), this.ground(x1, z0, cy)) - 0.5;
+        const under = Math.min(y0, ground(cx, cz), ground(x0, z0), ground(x1, z1), ground(x0, z1), ground(x1, z0)) - 0.5;
         this.gather(x0 - pad, under, z0 - pad, x1 + pad, y1 + 12.5, z1 + pad, ROCK | HARD | TREE | SOFT);
         /** Its seat's gap measured along a way off the surface (up, or a face's normal): the gap, its lowest point's, what it is on. */
         const seat = (ax: number, ay: number, az: number, face: boolean): {gap: number; low: number; on: string; points: number} | null => {
@@ -352,16 +355,16 @@ export class SeatProbe {
                         }
                     }
                     if (gap === null && ay > 0.15) {
-                        const g = (y - this.ground(x, z, y)) * ay;
+                        const g = (y - ground(x, z)) * ay;
                         if (Math.abs(g) < down) gap = g;
                     }
                 } else {
-                    const ground = this.ground(x, z, y);
+                    const under = ground(x, z);
                     const top = y + (held ? 12 : up);
-                    const bottom = Math.min(y, ground) - 0.02;
+                    const bottom = Math.min(y, under) - 0.02;
                     const hits = top > bottom ? this.cast(x, top, z, 0, -1, 0, top - bottom, mask) : [];
                     // The ground, and the top of anything closed within a step's reach over the point (any face met from above).
-                    let floor = ground;
+                    let floor = under;
                     for (const hit of hits) {
                         const hy = top - hit.d;
                         if (!hit.target.closed || hit.ny <= 0 || hy > y + up) continue;
