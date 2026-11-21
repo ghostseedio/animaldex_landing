@@ -11,6 +11,10 @@ import {decodeArkSnapshot, mountArk} from "@/ark-scene";
 import type {ArkCameraView, ArkSceneHandle} from "@/ark-scene/types";
 import type {ArkAct, ArkEventAnimal} from "@/lib/ark-life";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
+import {setAllHuntActs} from "@/ark-scene/hunt-acts";
+
+// (The harness films every act, the ones not live yet too: decision 456.)
+setAllHuntActs(true);
 
 const MODELS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/talking-models/v1/ark";
 const ICONS = "https://wwhsdzpczekgdlobwaej.supabase.co/storage/v1/object/public/animals/";

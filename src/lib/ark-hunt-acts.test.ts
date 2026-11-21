@@ -4,7 +4,10 @@ import table from "@/ark-scene/hunt-acts.json";
 import recipesTable from "@/ark-scene/recipes.json";
 import full from "../../data/ark/hunt-acts.json";
 import tactics from "../../data/ark/hunt-tactics.json";
-import {HUNT_ACTS, huntActOf, huntChoice, huntRun, type HuntAct, type HuntCtx, type HuntInput, type HuntRun} from "@/ark-scene/hunt-acts";
+import {HUNT_ACTS, LIVE_HUNT_ACTS, huntActOf, huntChoice, huntRun, setAllHuntActs, type HuntAct, type HuntCtx, type HuntInput, type HuntRun} from "@/ark-scene/hunt-acts";
+
+// (Every act, as the harness plays them; the live page plays only LIVE_HUNT_ACTS: the last test.)
+setAllHuntActs(true);
 import {missGap} from "@/ark-scene/live-escapes";
 import type {ActBody} from "@/ark-scene/acts";
 
@@ -282,5 +285,19 @@ test("round what is in the way: a wall between the hunter and its prey is gone r
             for (const s of out.pred) assert.ok(blocked(s.x, s.z), `${act} ${miss ? "miss" : "catch"} walks through the wall at ${s.x.toFixed(2)}, ${s.z.toFixed(2)}`);
             finite(out);
         }
+    }
+});
+
+test("the live page plays only the acts whose frames read (decision 456): the others are the generic chase", () => {
+    const ctx = (slug: string, plan: string, pl: number, ql: number): HuntCtx => ({slug, plan, predatorLength: pl, preyLength: ql, predatorWater: false, preyWater: false, predatorAerial: false, preyAerial: false, flee: "run" as HuntCtx["flee"]});
+    try {
+        setAllHuntActs(false);
+        assert.deepEqual(Array.from(LIVE_HUNT_ACTS).sort(), ["jump", "pounce"]);
+        assert.equal(huntChoice(ctx("domestic-cat", "mammal", 0.5, 0.08))?.act, "pounce");
+        assert.equal(huntChoice(ctx("jumping-spider", "arthropod", 0.01, 0.007))?.act, "jump");
+        assert.equal(huntChoice(ctx("orb-weaver-spider", "arthropod", 0.02, 0.007)), null);
+        assert.equal(huntChoice(ctx("common-kestrel", "bird", 0.35, 0.1)), null);
+    } finally {
+        setAllHuntActs(true);
     }
 });

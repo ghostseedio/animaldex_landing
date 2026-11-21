@@ -70,6 +70,24 @@ const PECK_PREY = 0.4;
  * "swoop" carries a small catch off, a swimmer eats where it is), or null for the generic chase.
  */
 export function huntChoice(c: HuntCtx): HuntChoice | null {
+    const choice = actChoice(c);
+    return choice && (!liveActs || liveActs.has(choice.act)) ? choice : null;
+}
+
+/**
+ * The acts played on the live page (decision 456): only those whose catch frames read in the harness's pictures
+ * (scripts/ark-hunt-clips.mjs; 2026-11-21: the cat's pounce, the jumping spider's jump). Every other act is the generic
+ * chase, as before #33, until its frames read; the harness plays them all (`setAllHuntActs`).
+ */
+export const LIVE_HUNT_ACTS: ReadonlySet<HuntAct> = new Set<HuntAct>(["pounce", "jump"]);
+let liveActs: ReadonlySet<HuntAct> | null = LIVE_HUNT_ACTS;
+
+/** The harness and the tests: every act (true), or only the live ones (false). */
+export function setAllHuntActs(all: boolean): void {
+    liveActs = all ? null : LIVE_HUNT_ACTS;
+}
+
+function actChoice(c: HuntCtx): HuntChoice | null {
     let act = huntActOf(c.slug);
     const bird = c.plan === "bird";
     const lp = Math.max(c.predatorLength, 0.01);
