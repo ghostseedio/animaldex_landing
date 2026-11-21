@@ -104,7 +104,7 @@ export class SeatProbe {
     private readonly inverse = new Matrix4();
     private readonly box = new Box3();
     private readonly local = new Box3();
-    private readonly lows = new WeakMap<Hull, Map<number, number>>();
+    private readonly feet = new WeakMap<Hull, Map<number, Int32Array>>();
 
     constructor(private readonly scene: Object3D, private readonly floor: (x: number, z: number, near?: number) => number, private readonly water: (x: number, z: number, near?: number) => number = () => -Infinity) {}
 
@@ -213,15 +213,16 @@ export class SeatProbe {
     }
 
     /**
-     * The row of a clip a still animal is seated by: where the whole posed mesh's lowest vertex is at its usual height
-     * over the clip (the median of every row's; kept per mesh and clip).
+     * The vertices a still animal in a clip of its own rests on: those lowest (within a twentieth of the mesh's height)
+     * in the clip's usual frame, the row where the whole posed mesh's lowest vertex is at the median of every row's.
+     * Their numbers in the full hull; kept per mesh and clip.
      */
-    private usualRow(hull: Hull, pose: RigPose): number {
+    private feetOf(hull: Hull, pose: RigPose): Int32Array {
         const clip = pose.clip!;
-        let known = this.lows.get(hull);
-        if (!known) this.lows.set(hull, (known = new Map()));
+        let known = this.feet.get(hull);
+        if (!known) this.feet.set(hull, (known = new Map()));
         const kept = known.get(clip.row);
-        if (kept !== undefined) return kept;
+        if (kept) return kept;
         const out = new Float32Array(hull.vertices.length * 3);
         const at: RigPose = {...pose, live: null, liveRow: -1, fromWeight: 0, weight: 1, t: 0, clip: null};
         const lows: Array<[number, number]> = [];
@@ -233,20 +234,28 @@ export class SeatProbe {
             lows.push([low, clip.row + r]);
         }
         lows.sort((a, b) => a[0] - b[0]);
-        const row = lows[Math.floor((lows.length - 1) / 2)][1];
-        known.set(clip.row, row);
-        return row;
+        at.row0 = at.row1 = lows[Math.floor((lows.length - 1) / 2)][1];
+        const n = posedHull(hull, at, out);
+        let low = Infinity;
+        let high = -Infinity;
+        for (let i = 0; i < n; i++) {
+            low = Math.min(low, out[i * 3 + 1]);
+            high = Math.max(high, out[i * 3 + 1]);
+        }
+        const feet: number[] = [];
+        for (let i = 0; i < n; i++) if (out[i * 3 + 1] <= low + 0.05 * (high - low)) feet.push(i);
+        const found = Int32Array.from(feet);
+        known.set(clip.row, found);
+        return found;
     }
 
     measure(drawn: SeatDrawn): SeatMeasure {
         const hull = fullHull(drawn.geometry);
         const model = new Float32Array(hull.vertices.length * 3);
-        // (A still animal in a clip of its own is measured at the clip's usual frame: its bob and its peck are its motion.)
-        let pose = drawn.pose;
-        if (pose && pose.clip && pose.baked) {
-            const low = this.usualRow(hull, pose);
-            pose = {...pose, live: null, liveRow: -1, row0: low, row1: low, t: 0, fromWeight: 0, weight: 1, clip: null};
-        }
+        // (A still animal in a clip of its own rests on its feet, the vertices lowest in the clip's usual frame, as they
+        // are in the frame drawn now: a bill at the ground is not what it stands on.)
+        const pose = drawn.pose;
+        const feet = pose && pose.clip && pose.baked ? this.feetOf(hull, pose) : null;
         const n = posedHull(hull, pose, model);
         const e = drawn.m;
         const sway = drawn.surface?.sway;
@@ -316,7 +325,12 @@ export class SeatProbe {
             for (let i = 0; i < n; i++) least = Math.min(least, along(i));
             const band = Math.max(0.004, 0.05 * height);
             const lowest: number[] = [];
-            for (let i = 0; i < n; i++) if (along(i) <= least + band) lowest.push(i);
+            if (feet && !face) {
+                // (Its feet: the lowest of them now.)
+                let low = Infinity;
+                for (let k = 0; k < feet.length; k++) low = Math.min(low, along(feet[k]));
+                for (let k = 0; k < feet.length; k++) if (along(feet[k]) <= low + band) lowest.push(feet[k]);
+            } else for (let i = 0; i < n; i++) if (along(i) <= least + band) lowest.push(i);
             lowest.sort((a, b) => along(a) - along(b));
             const points: Array<[number, number, number]> = [];
             if (held) {

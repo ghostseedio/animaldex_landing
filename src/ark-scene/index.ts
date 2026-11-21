@@ -6906,6 +6906,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 position.set(where.x, where.base - groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s, where.z);
             }
             const seated = seat.offset(entry, seatAs, dt, Boolean(entry.sched?.pose?.moving));
+            // (Where its own motion has it, before its seat's offset: which floor is its where floors are stacked, a flat 70 m
+            // up a tower. Asked for by where the pass had moved it, that fed back, a floor at a time.)
+            const seatNear = position.y;
             if (seated) {
                 position.x += seated.x;
                 position.y += seated.y;
@@ -6997,11 +7000,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     ground: (x, z) => {
                         // (Water over the ground there, not a level some lake has elsewhere: `waterTopAt` gave a duck on a
                         // shore under the crater lake a float line 33 m over its head.)
-                        const wet = groundUnderAt(x, z, ARK_ENVIRONMENT.seaLevel.value, false, poseBase).water;
-                        const under = standGround(x, z, poseBase);
+                        const wet = groundUnderAt(x, z, ARK_ENVIRONMENT.seaLevel.value, false, seatNear).water;
+                        const under = standGround(x, z, seatNear);
                         return wet !== null && wet - 0.3 * modelHeight > under ? wet - 0.3 * modelHeight : under;
                     },
-                    near: poseBase,
+                    near: seatNear,
                     focus: selectedId === animal.id,
                     level
                 });

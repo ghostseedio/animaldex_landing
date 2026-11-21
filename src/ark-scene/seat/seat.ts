@@ -132,7 +132,6 @@ const GRID_BUDGET_MS = 0.3;
 const MAX_POINTS = 144;
 const world = new Float32Array(3 * (MAX_POINTS + 8));
 const model = new Float32Array(3 * MAX_POINTS);
-const still: RigPose = {bones: 0, live: null, liveRow: -1, baked: null, row0: 0, row1: 0, t: 0, from0: 0, from1: 0, fromT: 0, fromWeight: 0, weight: 1};
 const hits: SolidHit[] = [];
 const near: Near[] = [];
 const order: number[] = [];
@@ -383,20 +382,13 @@ export class SeatPass {
 
     private solve(input: SeatInput, s: SeatState): boolean {
         const hull = hullOf(input.geometry);
-        // A still rig in a clip of its own (a preen, a peck, a hop on the spot): as it is at the clip's own usual frame,
-        // so the clip's rise and fall is its motion, not a gap to close; with the vertices lowest in that frame.
-        let pose = input.pose;
-        let n = 0;
-        if (pose && pose.clip && pose.baked) {
-            const seat = clipSeat(input.geometry, hull, pose.baked, pose.bones, pose.clip.row, pose.clip.rows);
-            still.bones = pose.bones;
-            still.baked = pose.baked;
-            still.row0 = still.row1 = seat.row;
-            pose = still;
-            n = posedHull(seat.low, pose, model);
-        }
-        n += posedHull(hull, pose, n ? model.subarray(n * 3) : model);
-        n = Math.min(n, MAX_POINTS);
+        // A still rig in a clip of its own (a preen, a peck, a hop on the spot): it rests on the vertices that are lowest
+        // in the clip's usual frame, its feet (`clipSeat`), as they are in the frame drawn now; not on whatever is lowest
+        // now (a bill at the ground would lift the bird). They come first in the points; its hull after them.
+        const pose = input.pose;
+        let feet = 0;
+        if (pose && pose.clip && pose.baked) feet = posedHull(clipSeat(input.geometry, hull, pose.baked, pose.bones, pose.clip.row, pose.clip.rows).low, pose, model);
+        const n = Math.min(feet + posedHull(hull, pose, feet ? model.subarray(feet * 3) : model), MAX_POINTS);
         const e = input.matrix.elements;
         const sway = input.surface?.sway;
         let cx = 0;
@@ -447,11 +439,12 @@ export class SeatPass {
             az = input.surface.nz / l;
         }
         // The points it rests on: the lowest along that way, a few, apart.
+        const among = feet || n;
         let least = Infinity;
-        for (let i = 0; i < n; i++) least = Math.min(least, world[i * 3] * ax + world[i * 3 + 1] * ay + world[i * 3 + 2] * az);
+        for (let i = 0; i < among; i++) least = Math.min(least, world[i * 3] * ax + world[i * 3 + 1] * ay + world[i * 3 + 2] * az);
         const band = Math.max(0.004, 0.05 * height);
         order.length = 0;
-        for (let i = 0; i < n; i++) if (world[i * 3] * ax + world[i * 3 + 1] * ay + world[i * 3 + 2] * az <= least + band) order.push(i);
+        for (let i = 0; i < among; i++) if (world[i * 3] * ax + world[i * 3 + 1] * ay + world[i * 3 + 2] * az <= least + band) order.push(i);
         order.sort((a, b) => world[a * 3] * ax + world[a * 3 + 1] * ay + world[a * 3 + 2] * az - (world[b * 3] * ax + world[b * 3 + 1] * ay + world[b * 3 + 2] * az));
         const apart = 0.12 * length;
         support.length = 0;
@@ -694,7 +687,8 @@ export class SeatPass {
         if (!moved && !waiting) {
             // The gap it would have with no offset along its way, at its lowest over its motion (`SeatState.env`).
             const u = gap - (s.x * ax + s.y * ay + s.z * az);
-            const band = Math.max(input.bounce ?? 0, 0);
+            // (A still one in a clip of its own: its feet's own bob, a tenth of its height.)
+            const band = Math.max(input.bounce ?? 0, feet ? Math.min(Math.max(0.12 * height, 0.01), 0.1) : 0);
             if (fresh || s.env !== s.env || u <= s.env || band <= 0) {
                 s.env = u;
                 s.above = 0;
