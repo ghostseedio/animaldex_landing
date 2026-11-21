@@ -197,7 +197,7 @@ export function clipSeatKnown(geometry: BufferGeometry, first: number): boolean 
  * The frame of a clip (its first row, how many) a still animal is seated by: the one where its lowest point is at
  * its usual height, the median over the clip. Not the lowest (a bird pecking has its bill under its feet for a
  * moment: seated by that, it would stand in the air) nor the highest (a hop's top). And the mesh's lowest vertices
- * at that frame, sixteen of them apart: a lying pose rests on its flank and the side of its legs, which the rest
+ * at that frame, up to thirty-two of them apart: a lying pose rests on its flank and the side of its legs, which the rest
  * pose's hull does not know. Kept per mesh and clip; one whole skin of the mesh, once.
  */
 export function clipSeat(geometry: BufferGeometry, hull: Hull, baked: Uint16Array, bones: number, first: number, rows: number): ClipSeat {
@@ -255,9 +255,9 @@ export function clipSeat(geometry: BufferGeometry, hull: Hull, baked: Uint16Arra
             if (sy < bottom) bottom = sy;
         }
         const order = Array.from({length: count}, (_, k) => k).sort((a, b) => ys[a] - ys[b]);
-        const apart = (top - bottom) * 0.06;
+        const apart = (top - bottom) * 0.04;
         for (const k of order) {
-            if (picked.length >= 16 || ys[k] > bottom + (top - bottom) * 0.25) break;
+            if (picked.length >= 32 || ys[k] > bottom + (top - bottom) * 0.15) break;
             let clear = true;
             for (const q of picked) if (Math.hypot(xyz[q * 3] - xyz[k * 3], xyz[q * 3 + 1] - xyz[k * 3 + 1], xyz[q * 3 + 2] - xyz[k * 3 + 2]) <= apart) clear = false;
             if (clear) picked.push(k);

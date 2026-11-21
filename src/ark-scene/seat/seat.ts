@@ -131,7 +131,7 @@ const EASE_MOVING = 45;
 export const SEAT_BUDGET_MS = 0.6;
 const GRID_BUDGET_MS = 0.3;
 
-const MAX_POINTS = 144;
+const MAX_POINTS = 168;
 const world = new Float32Array(3 * (MAX_POINTS + 8));
 const model = new Float32Array(3 * MAX_POINTS);
 const hits: SolidHit[] = [];
@@ -442,7 +442,8 @@ export class SeatPass {
             az = input.surface.nz / l;
         }
         // The points it rests on: the lowest along that way, a few, apart.
-        const among = feet || n;
+        // (A long low body, a snake, a lizard, a crocodile, rests along its whole length: every point is one it may rest on.)
+        const among = feet && length <= 4 * height ? feet : n;
         let least = Infinity;
         for (let i = 0; i < among; i++) least = Math.min(least, world[i * 3] * ax + world[i * 3 + 1] * ay + world[i * 3 + 2] * az);
         const band = Math.max(0.004, 0.05 * height);
@@ -452,7 +453,7 @@ export class SeatPass {
         const apart = 0.12 * length;
         support.length = 0;
         for (const i of order) {
-            if (support.length >= 6) break;
+            if (support.length >= 10) break;
             let clear = true;
             for (const j of support) if (Math.hypot(world[i * 3] - world[j * 3], world[i * 3 + 1] - world[j * 3 + 1], world[i * 3 + 2] - world[j * 3 + 2]) <= apart) clear = false;
             if (clear) support.push(i);
