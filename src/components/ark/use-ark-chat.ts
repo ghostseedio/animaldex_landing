@@ -41,6 +41,7 @@ import {
     type ArkStepOffer
 } from "@/lib/ark-world";
 import {decodeArkStepResult, type ArkStepResult} from "@/lib/ark-thrive";
+import type {ArkCardDeath} from "@/lib/ark-chat-death";
 
 type Species = {speciesProfileId: string | null; slug: string | null; name: string | null};
 
@@ -562,4 +563,47 @@ export function useArkFounderShare({animalId, species, enabled, stepId = null, s
     const setProblem = useCallback((problem: string) => setState((current) => ({...current, problem, error: null})), []);
 
     return {state, share, edit, notNow, remove, setStep, setProblem};
+}
+
+/**
+ * Whether the animal this card brought aboard has died on the Ark for good
+ * (`/api/ark/capture-lives`, `voyage_capture_lives_v1`): the quiet line in
+ * the card's own thread (`ark-chat-death.ts`). Read once per card while the
+ * chat is the owner's. Development: `?arkdeath=1` draws it from a fixture in
+ * any chat, signed out too (8 days aboard, died an hour ago), `=nodays`
+ * without the days line.
+ */
+export function useArkCardDeath({enabled, captureId}: {enabled: boolean; captureId: string | null}): ArkCardDeath | null {
+    const [death, setDeath] = useState<{key: string; value: ArkCardDeath | null; preview?: boolean} | null>(null);
+    useEffect(() => {
+        // Development only (devParam): the fixture shows in any chat, signed out too, to look at it in place.
+        const fixture = devParam("arkdeath");
+        if (fixture) {
+            setDeath({
+                key: captureId ?? "preview",
+                preview: true,
+                value: {
+                    animalId: "00000000-0000-4000-8000-0000000000d1",
+                    diedAt: new Date(Date.now() - 60 * 60_000).toISOString(),
+                    deathKind: "died_old",
+                    lives: 3,
+                    daysAboard: fixture === "nodays" ? null : 8
+                }
+            });
+            return;
+        }
+        if (!enabled || !captureId) return;
+        let live = true;
+        void fetch(`/api/ark/capture-lives?capture=${encodeURIComponent(captureId)}`, {headers: {Accept: "application/json"}, cache: "no-store"})
+            .then((response) => (response.ok ? response.json() as Promise<{death?: ArkCardDeath | null}> : {death: null}))
+            .then((body) => {
+                if (live) setDeath({key: captureId, value: body.death ?? null});
+            })
+            .catch(() => undefined);
+        return () => {
+            live = false;
+        };
+    }, [enabled, captureId]);
+    if (death?.preview) return death.value;
+    return enabled && captureId && death?.key === captureId ? death.value : null;
 }

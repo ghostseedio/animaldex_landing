@@ -84,6 +84,8 @@ export type AskTurnRead = {
     safety: boolean;
     /** A question about AnimalDex itself. */
     app: boolean;
+    /** A question about the Ark or their kin on it: only asked, and only ever present, with `askArk`. */
+    ark?: true;
     verdict: AskKindVerdict | null;
 };
 
@@ -132,6 +134,12 @@ export type AskKindVerdictInput = {
     facets?: RecordFacets | null;
     /** Behaviours this reader has already heard from this animal, newest first. */
     heard?: string[];
+    /**
+     * Also ask whether they are asking about the Ark (the apps'
+     * animal-kind-verdict.ts `askArk`, chat-is-Ark): only with
+     * voyage_config.ark_kin_activity or chat_mention on; off, the prompt is unchanged.
+     */
+    askArk?: boolean;
 };
 
 /**
@@ -184,6 +192,7 @@ export function buildAskKindVerdictPrompt(input: AskKindVerdictInput): string {
     const facets = input.facets ? recordFacetLines(input.facets) : [];
     const heard = (input.heard ?? []).map((entry) => clip(entry, 80)).filter(Boolean).slice(0, 12);
     const step = (n: number) => (anchored ? n : n - 1);
+    const flags = input.askArk ? '"app": true or false, "ark": true or false' : '"app": true or false';
     return [
         `You are a field biologist who knows ${species} well. You are not advising anyone and you do not care what would`,
         "be good for a person. In AnimalDex, people bring their lives to animals, and each animal answers from how its",
@@ -210,6 +219,12 @@ export function buildAskKindVerdictPrompt(input: AskKindVerdictInput): string {
         "   or the app. Read slang, abbreviations and typos the way a friend would.",
         "2. safety: is someone controlling, threatening or hurting them, or are they in danger?",
         "3. app: are they asking about AnimalDex itself: messages, credits, Pro, how it works, whether this is an AI?",
+        ...(input.askArk
+            ? [
+                "   ark: are they asking about the Ark (the shared world in the app where their animals arrive after steps that",
+                "   worked), or about what this animal's kind or their own animals are doing there?",
+            ]
+            : []),
         "4. If kind is decision or problem: problem, the kind of problem in general words anyone could have, with nothing of",
         "   this person in it.",
         ...(held.length > 0
@@ -257,12 +272,12 @@ export function buildAskKindVerdictPrompt(input: AskKindVerdictInput): string {
         "problem, angle, verdict, latch and twist never name a person, place, company or product.",
         "",
         "Return JSON only, on one line.",
-        `A decision or a problem: {"kind": "decision" or "problem", "safety": true or false, "app": true or false, "problem": "max 8 words",${held.length > 0 ? ' "same_as": number,' : ""}`,
+        `A decision or a problem: {"kind": "decision" or "problem", "safety": true or false, ${flags}, "problem": "max 8 words",${held.length > 0 ? ' "same_as": number,' : ""}`,
         `"obvious": "max 10 words", ${anchored ? '"power_says": "max 8 words", ' : ""}"angle": "max 8 words", "verdict": "the side and the move, max 16 words",`,
         `"latch": {"from": "system_dynamics, power or field_guide", "behaviour": "max 14 words"}}`,
-        `An idea: {"kind": "idea", "safety": true or false, "app": true or false, "obvious": "max 10 words", "latches": [{"from": "a part of`,
+        `An idea: {"kind": "idea", "safety": true or false, ${flags}, "obvious": "max 10 words", "latches": [{"from": "a part of`,
         `the record", "behaviour": "max 14 words", "twist": "max 14 words", "fit": 1-5, "fresh": 1-5}, and two more, each from another part]}`,
-        `Chat: {"kind": "chat", "safety": true or false, "app": true or false}`,
+        `Chat: {"kind": "chat", "safety": true or false, ${flags}}`,
     ].filter((line, index, lines) => line !== "" || lines[index - 1] !== "").join("\n");
 }
 
@@ -301,7 +316,8 @@ export function parseAskTurnRead(raw: Record<string, unknown>, held: AskHeldStan
     const kind = readKind(raw);
     const safety = raw.safety === true;
     const app = raw.app === true;
-    const read = (verdict: AskKindVerdict | null): AskTurnRead => ({kind, safety, app, verdict});
+    const ark = raw.ark === true ? {ark: true as const} : {};
+    const read = (verdict: AskKindVerdict | null): AskTurnRead => ({kind, safety, app, ...ark, verdict});
     // Safety is decided per message, never inherited, and must be said.
     if (raw.safety !== false || kind === null || kind === "chat") return read(null);
     const field = (key: string, max: number) => (typeof raw[key] === "string" ? clip(raw[key] as string, max) : "");

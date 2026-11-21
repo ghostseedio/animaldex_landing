@@ -141,8 +141,9 @@ import {
 } from "@/components/companions/use-steps";
 import {StepDoneChip, type StepReportDraft} from "@/components/companions/step-views";
 import {ArkRevealMessages, ArkRevisionCard} from "@/components/ark/ark-views";
-import {ArkArrivalLine, ArkStepOfferNote, ArkStepResultLine} from "@/components/ark/ark-chat-lines";
-import {useArkArrivals, useArkStepOffer, useArkStepResults} from "@/components/ark/use-ark-chat";
+import {ArkArrivalLine, ArkCardDeathLine, ArkStepOfferNote, ArkStepResultLine} from "@/components/ark/ark-chat-lines";
+import {useArkArrivals, useArkCardDeath, useArkStepOffer, useArkStepResults} from "@/components/ark/use-ark-chat";
+import {arkCardDeathAnchor} from "@/lib/ark-chat-death";
 import {useArkPanelControl} from "@/components/ark/ark-panel";
 import {arkStepOutcome} from "@/lib/ark-measure";
 import {trackArk} from "@/lib/ark-measure-client";
@@ -2011,6 +2012,16 @@ function AskConversation({
         return null;
     }, [messages, arkStepResults]);
     const arkPanel = useArkPanelControl();
+    // Chat-is-Ark (decision 438): in the card's own thread, once the animal it brought aboard has died on the Ark for
+    // good, one quiet line where it happened in the thread (never a stored message: the clients draw it).
+    const arkDeath = useArkCardDeath({enabled: ownerChat, captureId: ownerChat ? resolvedSubject.captureId ?? null : null});
+    const arkDeathAnchor = useMemo(
+        () => (arkDeath ? arkCardDeathAnchor(arkDeath, messages.slice(drawnFrom)) : undefined),
+        [arkDeath, messages, drawnFrom]
+    );
+    const arkDeathLine = arkDeath && arkSpecies.name ? (
+        <ArkCardDeathLine key="ark-card-death" death={arkDeath} species={arkSpecies.name} slug={arkSpecies.slug} words={words.ark} locale={locale} />
+    ) : null;
     /**
      * "I've done it" puts the bar in report mode: one button, no accepting
      * first (owner, 2026-11-09). The reveal comes once the step is done,
@@ -3052,6 +3063,7 @@ function AskConversation({
                             <div className="flex flex-col">
                                 {/* The AI tag beside the name is the notice (owner, 2026-11-06: "drop both"). */}
                                 {debateBlocks("top")}
+                                {arkDeathAnchor === null ? arkDeathLine : null}
                                 {messages.flatMap((message, index) => index < drawnFrom ? [] : [
                                     // The open step no reply here carries, where the conversation picks up.
                                     index === threadStepAt ? threadStepMessage : null,
@@ -3102,8 +3114,10 @@ function AskConversation({
                                         {arkBlocks(message)}
                                         {arkArrivalBlock(message)}
                                         {debateBlocks(message.id)}
+                                        {arkDeathAnchor === message.id ? arkDeathLine : null}
                                     </div>
                                 ])}
+                                {arkDeathAnchor === "end" ? arkDeathLine : null}
                                 {threadStepAt === messages.length ? threadStepMessage : null}
                                 {arkThread?.atEnd.map(arkReveal)}
                                 {debateSetupMessage}

@@ -106,6 +106,7 @@ import {
     type ArkRevisionMention,
     type StepTagAnimal
 } from "@/lib/ask-animaldex/ark-sim";
+import {arkChatAsksArk, arkChatPromptLines, startArkChatReads, type ArkChatLines} from "@/lib/ask-animaldex/ark-chat";
 import {chatMessageId} from "@/lib/ask-animaldex/chat-history";
 import {
     ASK_CRISIS_PATTERN,
@@ -485,6 +486,11 @@ export async function POST(request: Request) {
     // apps' animal_species_stances): what it already holds comes in beside the
     // companion read, and what it settles is kept after.
     const stanceMemory = stanceMemoryEarly;
+    // The chat is the Ark animal (decision 438, `ark-chat.ts`): on the owner's own card, the read also says whether
+    // they are asking about the Ark, while the server's Ark switches are on (off, its prompt is unchanged).
+    const arkAsks: Promise<boolean> = service && ownsCapture && speaksAsAnimal && !isCall && !subject.trialContext
+        ? arkChatAsksArk(service, {captureThread: true})
+        : Promise.resolve(false);
     // Not for small talk by its words: a hello has no side to take, and the
     // turn never waits for it.
     const kindVerdict = verdictKey && askKindVerdictEnabled() && speaksAsAnimal && verdictSpecies && question &&
@@ -496,9 +502,10 @@ export async function POST(request: Request) {
                 ? speciesIdPending.then((speciesId) => (speciesId ? heldStancesEarly : []))
                 : Promise.resolve([]),
             // The angles this reader has already heard from this animal (`angle.ts`).
-            speciesIdPending.then((speciesId) => (speciesId && viewer.userId && service ? loadAnglesHeard(service, viewer.userId, speciesId) : []))
+            speciesIdPending.then((speciesId) => (speciesId && viewer.userId && service ? loadAnglesHeard(service, viewer.userId, speciesId) : [])),
+            arkAsks
         ]).then(
-            ([companion, held, heard]) => requestAskTurnRead({
+            ([companion, held, heard, askArk]) => requestAskTurnRead({
                 key: verdictKey,
                 input: {
                     animalName: verdictSpecies.name,
@@ -517,7 +524,8 @@ export async function POST(request: Request) {
                     history,
                     held,
                     facets: askRecordFacets(verdictSpecies),
-                    heard
+                    heard,
+                    ...(askArk ? {askArk: true} : {})
                 }
             }).then((read) => {
                 const verdict = read?.verdict ?? null;
@@ -571,6 +579,20 @@ export async function POST(request: Request) {
     // rounds, one after the other. A hello's daily cap is read here too, unless
     // another animal sent them (referral_id), which the loop below decides.
     const referralRequested = typeof body.referral_id === "string" && UUID_PATTERN.test(body.referral_id.trim());
+    // The chat is the Ark animal (`ark-chat.ts`): the edge's Ark reads for the owner's own turn, started beside the
+    // loop (the same rule as the revisions: personalisation on, not a Trial, not a call). A question's kin facts
+    // wait for the turn read.
+    const arkReadsPending = ownerSpeciesIdPending.then((ownerSpeciesId) =>
+        ownerSpeciesId && viewer.userId && service && personalise && !aboutTrial && !isCall
+            ? startArkChatReads(service, {
+                userId: viewer.userId,
+                speciesProfileId: ownerSpeciesId,
+                captureId: subject.captureId ?? null,
+                greeting: isGreeting,
+                call: false
+            }, smallTalk ? null : kindVerdict)
+            : null
+    );
     const [memory, companion, quantiles, owner, extras, ownerContext, dueFollowUp, visitorNotes, ownStories, holdsSpecies, greetingTaken, arkRevisions] =
         await Promise.all([
             speaksAsAnimal && personalise ? loadAskMemory(viewer.userId) : Promise.resolve([]),
@@ -679,6 +701,24 @@ export async function POST(request: Request) {
     const secondOpinion = turnKind === "idea" || turnKind === "decision";
     // Teen mode: nothing sensitive reaches the prompt.
     const promptMemory = teen ? memory.filter((fact) => teenMemoryAllowed(fact.fact)) : memory;
+
+    // The Ark's lines (`ark-chat.ts`, the edge's order after the revisions): the step's, the card's own Ark animal,
+    // the hello's meal or its kin, or its kin when they ask about the Ark. Only with the loop, as the edge.
+    const arkReads = await arkReadsPending;
+    const arkChat: ArkChatLines | null = loop && arkReads && service && viewer.userId && ownerSpeciesId
+        ? await arkChatPromptLines(service, arkReads, {
+            userId: viewer.userId,
+            speciesProfileId: ownerSpeciesId,
+            captureId: subject.captureId ?? null,
+            greeting: isGreeting,
+            call: false,
+            // A hello the model writes: another animal sent them, or the day's free hello was taken.
+            speaks: Boolean(referral || greetingTaken === true),
+            focusSensitive: (loop.state?.focus as {sensitive?: boolean} | null | undefined)?.sensitive === true,
+            read: turnRead ? {...(turnRead.ark ? {ark: true as const} : {}), safety: turnRead.safety} : null,
+            now: askedAt
+        }).catch(() => null)
+        : null;
 
     // Its nature, its day, and the moment they met.
     const species = basePacket.species
@@ -800,7 +840,7 @@ export async function POST(request: Request) {
                     secondOpinion,
                     // On a call: whether a yes may hand the debate over now.
                     ...(callDebates ? {debateHandOver: debate.handOver} : {})
-                }), ...arkRevisionPromptLines({revisions: arkRevisions, focus: loop.state?.focus ?? null})]
+                }), ...arkRevisionPromptLines({revisions: arkRevisions, focus: loop.state?.focus ?? null}), ...(arkChat?.lines ?? [])]
             }
             : {})
     };
@@ -818,7 +858,14 @@ export async function POST(request: Request) {
     // this animal, in its own voice and their language.
     let companionResult: Record<string, unknown> | null = null;
     let arkMentionMarked = false;
+    let arkKinClaim = isGreeting ? null : arkChat?.afterReply ?? null;
     const markArkMentioned = () => {
+        // A question about the Ark spends the day's one Ark reference, if nothing has yet (the edge's afterResponse).
+        if (arkKinClaim) {
+            const claim = arkKinClaim;
+            arkKinClaim = null;
+            void claim().catch(() => undefined);
+        }
         if (arkMentionMarked || arkRevisions.length === 0 || !service || !viewer.userId) return;
         arkMentionMarked = true;
         void markRevisionsMentioned(service, {userId: viewer.userId, ids: arkRevisions.map((revision) => revision.id)});

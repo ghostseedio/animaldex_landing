@@ -1100,6 +1100,10 @@
             "arrival": "{species} سوار Ark شد",
             "arrivalAn": "{species} سوار Ark شد",
             "arrivalSee": "دیدنش در Ark",
+            "deathEnded": "زندگی {species} تو در Ark به پایان رسید.",
+            "deathLivedOne": "۱ روز آنجا زندگی کرد.",
+            "deathLivedMany": "{days} روز آنجا زندگی کرد.",
+            "deathSee": "دیدن هم‌نوعانش در Ark",
             "stats": {
                 "money": "پول",
                 "relationships": "روابط",

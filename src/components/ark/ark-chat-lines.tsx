@@ -21,7 +21,11 @@
  *   the story attaches to their animal of the step's kind;
  * - history: under a reply whose step brought an animal aboard (before
  *   captures did), the animal, with its icon; "See it in the Ark" opens the
- *   panel beside the chat on it, when the chat has one.
+ *   panel beside the chat on it, when the chat has one;
+ * - in a card's own thread (chat-is-Ark, decision 438), once the animal that
+ *   card brought aboard has died there for good: one quiet centred line, not a
+ *   bubble and never the animal's voice, "Your House Fly's life on the Ark has
+ *   ended. It lived there for 8 days.", with "See its kind in the Ark".
  */
 
 import Link from "@/app/[locale]/_components/link";
@@ -32,6 +36,7 @@ import {arkStepResultLines, type ArkStepResult, type ArkStepResultWords} from "@
 import {pluralAnimalName} from "@/lib/ark-population";
 import {ARK_STORY_PROBLEM_MAX, ARK_STORY_STEP_MAX} from "@/lib/ark-founders";
 import {useArkFounderShare} from "@/components/ark/use-ark-chat";
+import {arkCardDeathLines, type ArkCardDeath, type ArkCardDeathWords} from "@/lib/ark-chat-death";
 
 /** The line's words under an arrival (`companions.ark.founders`): the name question, the story, and the 18+ error. */
 export type ArkFounderShareWords = {
@@ -174,6 +179,43 @@ export function ArkArrivalLine({species, slug, fresh, words, locale, onSee, plai
                     ) : null}
                 </div>
             </AskSpecialBubble>
+        </div>
+    );
+}
+
+/**
+ * In a card's own thread, where the animal it brought aboard died on the Ark for good (`voyage_capture_lives_v1`):
+ * a quiet centred line between hairlines, square, not a bubble and never in the animal's voice. "See its kind in
+ * the Ark" flies the Ark to its kind: the animal itself is no longer there.
+ */
+export function ArkCardDeathLine({death, species, slug, words, locale}: {
+    death: ArkCardDeath;
+    species: string;
+    slug: string | null;
+    words: ArkCardDeathWords;
+    locale: string;
+}) {
+    const lines = arkCardDeathLines(death, species, words, locale);
+    return (
+        <div className="flex items-center gap-3 pb-1 pt-4" role="note" data-testid="ark-card-death" data-died-at={death.diedAt}>
+            <span aria-hidden="true" className="h-px min-w-4 flex-1 bg-white/10" />
+            <div className="max-w-[30rem] text-center">
+                <p className="text-[12px] font-semibold leading-[18px] text-ink-300">
+                    <span className="mr-1.5 inline-block align-[-2px] text-ink-400"><ArkGlyph /></span>
+                    {lines.ended}
+                    {lines.lived ? <> {lines.lived}</> : null}
+                </p>
+                {slug ? (
+                    <Link
+                        href={`/ark?focus=${encodeURIComponent(slug)}`}
+                        className="mt-1 inline-block text-[12px] font-semibold leading-[18px] text-primary-200 underline decoration-primary-200/30 underline-offset-4 hover:decoration-primary-200"
+                        data-testid="ark-card-death-see"
+                    >
+                        {words.deathSee}
+                    </Link>
+                ) : null}
+            </div>
+            <span aria-hidden="true" className="h-px min-w-4 flex-1 bg-white/10" />
         </div>
     );
 }
