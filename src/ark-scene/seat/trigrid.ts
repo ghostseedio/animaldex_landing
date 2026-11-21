@@ -22,6 +22,47 @@ export type GridHit = {
 
 const EPS = 1e-9;
 
+/** The hits handed out (reused once a cast starts on an empty list: a hit is read before the next cast). */
+const pool: GridHit[] = [];
+let pooled = 0;
+
+type Box = {min: {x: number; y: number; z: number}; max: {x: number; y: number; z: number}};
+const boxes = new WeakMap<BufferGeometry, Box | null>();
+
+/**
+ * A geometry's box in its own space, read from its positions here (kept): null for one with no triangle or with
+ * positions that are not numbers (three's own `computeBoundingBox` reports those as an error each time).
+ */
+export function boxOf(geometry: BufferGeometry): Box | null {
+    const known = boxes.get(geometry);
+    if (known !== undefined) return known;
+    const position = geometry.getAttribute("position") as BufferAttribute | undefined;
+    let box: Box | null = null;
+    if (geometry.boundingBox && Number.isFinite(geometry.boundingBox.min.x + geometry.boundingBox.max.x + geometry.boundingBox.min.y + geometry.boundingBox.max.y + geometry.boundingBox.min.z + geometry.boundingBox.max.z)) {
+        const b = geometry.boundingBox;
+        box = {min: {x: b.min.x, y: b.min.y, z: b.min.z}, max: {x: b.max.x, y: b.max.y, z: b.max.z}};
+    } else if (position && position.count >= 3) {
+        box = {min: {x: Infinity, y: Infinity, z: Infinity}, max: {x: -Infinity, y: -Infinity, z: -Infinity}};
+        for (let v = 0; v < position.count; v++) {
+            const x = position.getX(v);
+            const y = position.getY(v);
+            const z = position.getZ(v);
+            if (x < box.min.x) box.min.x = x;
+            if (y < box.min.y) box.min.y = y;
+            if (z < box.min.z) box.min.z = z;
+            if (x > box.max.x) box.max.x = x;
+            if (y > box.max.y) box.max.y = y;
+            if (z > box.max.z) box.max.z = z;
+            if (x !== x || y !== y || z !== z) {
+                box = null;
+                break;
+            }
+        }
+    }
+    boxes.set(geometry, box);
+    return box;
+}
+
 export class TriGrid {
     readonly tris: number;
     private readonly position: BufferAttribute | InterleavedBufferAttribute;
@@ -50,8 +91,7 @@ export class TriGrid {
         const range = geometry.drawRange;
         this.first = Math.min(Math.max(Math.floor((range?.start ?? 0) / 3), 0), Math.floor(total));
         this.tris = Math.max(Math.min(Math.floor(total) - this.first, Number.isFinite(range?.count) ? Math.floor((range?.count ?? 0) / 3) : Infinity), 0);
-        if (!geometry.boundingBox) geometry.computeBoundingBox();
-        const box = geometry.boundingBox!;
+        const box = boxOf(geometry) ?? {min: {x: 0, y: 0, z: 0}, max: {x: 0, y: 0, z: 0}};
         const side = Math.min(Math.max(Math.ceil(Math.sqrt(this.tris / 2)), 1), 128);
         const spanX = Math.max(box.max.x - box.min.x, 1e-6);
         const spanZ = Math.max(box.max.z - box.min.z, 1e-6);
@@ -64,7 +104,7 @@ export class TriGrid {
         this.cellX = spanX / this.nx;
         this.cellZ = spanZ / this.nz;
         this.starts = new Uint32Array(this.nx * this.nz + 1);
-        if (!this.tris) this.stage = 2;
+        if (!this.tris || !boxOf(geometry)) this.stage = 2;
     }
 
     get ready(): boolean {
@@ -157,6 +197,7 @@ export class TriGrid {
         // (Clear of the grid altogether.)
         if (Math.max(ox, ox + dx) < this.minX - 1e-6 || Math.min(ox, ox + dx) > this.minX + this.cellX * this.nx + 1e-6) return;
         if (Math.max(oz, oz + dz) < this.minZ - 1e-6 || Math.min(oz, oz + dz) > this.minZ + this.cellZ * this.nz + 1e-6) return;
+        if (!out.length) pooled = 0;
         const from = out.length;
         for (let r = r0; r <= r1; r++) {
             for (let c = c0; c <= c1; c++) {
@@ -192,7 +233,15 @@ export class TriGrid {
                     let seen = false;
                     for (let h = from; h < out.length; h++) if (out[h].tri === tri) seen = true;
                     if (seen) continue;
-                    out.push({t, nx: e1y * e2z - e1z * e2y, ny: e1z * e2x - e1x * e2z, nz: e1x * e2y - e1y * e2x, tri});
+                    // (Kept objects: a frame's casts make no garbage.)
+                    const hit = pool[pooled] ?? (pool[pooled] = {t: 0, nx: 0, ny: 0, nz: 0, tri: 0});
+                    pooled++;
+                    hit.t = t;
+                    hit.nx = e1y * e2z - e1z * e2y;
+                    hit.ny = e1z * e2x - e1x * e2z;
+                    hit.nz = e1x * e2y - e1y * e2x;
+                    hit.tri = tri;
+                    out.push(hit);
                 }
             }
         }

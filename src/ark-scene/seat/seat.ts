@@ -92,6 +92,8 @@ export type SeatInput = {
 };
 
 const DEAD = 0.012;
+/** How far over a point a rock's top is looked for (m): the biggest boulders. */
+const ROCK_REACH = 12;
 const EASE = 14;
 /** The time a frame may spend on solves (ms), and on building grids. */
 export const SEAT_BUDGET_MS = 0.7;
@@ -101,13 +103,21 @@ const world = new Float32Array(3 * 80);
 const model = new Float32Array(3 * 80);
 const hits: SolidHit[] = [];
 const near: Near[] = [];
+const order: number[] = [];
+const support: number[] = [];
+const gaps: number[] = [];
 
 export class SeatPass {
     readonly solids: DrawnSolids;
     private frame = 0;
     private spent = 0;
+    /** Frames begun (development: the audit's clock). */
+    get frames(): number {
+        return this.frame;
+    }
     private hullsLeft = 1;
     private pushesLeft = 1;
+    private overhead = 0;
     /** Development: keep each solve's support points. */
     keepPoints = false;
     /** Off (the before pictures, the A/B measure): every offset zero. */
@@ -125,15 +135,23 @@ export class SeatPass {
         this.solids = new DrawnSolids(scene);
     }
 
-    /** The frame's start. */
-    begin(frame: number): void {
-        this.frame = frame;
+    /** The frame's start (its own count of frames: the renderer's counts every pass it draws). */
+    begin(): void {
+        const frame = ++this.frame;
         this.spent = 0;
         this.hullsLeft = 1;
         this.pushesLeft = 1;
+        this.overhead = 0;
         if (this.off) return;
+        const started = performance.now();
         this.solids.begin(frame);
         this.solids.step(GRID_BUDGET_MS);
+        this.overhead = performance.now() - started;
+    }
+
+    /** The frame's time in the pass so far (ms): its solves, and reading the scene's meshes. */
+    get frameMs(): number {
+        return this.spent + this.overhead;
     }
 
     /**
@@ -160,10 +178,19 @@ export class SeatPass {
     }
 
     /**
+     * Whether `settle` has anything to do for this animal this frame (its turn, inside the budget): asked first, so
+     * the frames it is not due cost one comparison and make nothing.
+     */
+    wants(holder: SeatHolder, kind: SeatKind, focus: boolean): boolean {
+        if (this.keepPoints) return true;
+        if (this.off || !SEATED.has(kind)) return false;
+        return focus || this.forced || (this.frame >= (holder.seat?.due ?? 0) && this.spent < SEAT_BUDGET_MS);
+    }
+
+    /**
      * After its matrix is final: work out where it rests, if it is its turn. Sets the target its offset eases to.
      */
     settle(input: SeatInput): void {
-        if (this.off) return;
         const s = (input.holder.seat ??= {x: 0, y: 0, z: 0, tx: 0, ty: 0, tz: 0, due: 0, solved: false, kind: input.kind, gap: 0, low: 0, on: "", inside: 0, frame: -1, px: NaN, py: NaN, pz: NaN, pushes: 0, floor: null, wasGap: NaN, wasY: 0, stuck: 0});
         s.kind = input.kind;
         if (this.keepPoints) {
@@ -180,7 +207,7 @@ export class SeatPass {
             drawn.surface = input.surface ? {nx: input.surface.nx, ny: input.surface.ny, nz: input.surface.nz, sway: input.surface.sway ? {...input.surface.sway} : undefined} : null;
             drawn.frame = this.frame;
         }
-        if (!SEATED.has(input.kind)) return;
+        if (this.off || !SEATED.has(input.kind)) return;
         if (!input.focus && !this.forced) {
             if (this.frame < s.due || this.spent >= SEAT_BUDGET_MS) return;
             if (!hullKnown(input.geometry)) {
@@ -239,16 +266,24 @@ export class SeatPass {
         let least = Infinity;
         for (let i = 0; i < n; i++) least = Math.min(least, world[i * 3] * ax + world[i * 3 + 1] * ay + world[i * 3 + 2] * az);
         const band = Math.max(0.004, 0.05 * height);
-        const order: number[] = [];
+        order.length = 0;
         for (let i = 0; i < n; i++) if (world[i * 3] * ax + world[i * 3 + 1] * ay + world[i * 3 + 2] * az <= least + band) order.push(i);
         order.sort((a, b) => world[a * 3] * ax + world[a * 3 + 1] * ay + world[a * 3 + 2] * az - (world[b * 3] * ax + world[b * 3 + 1] * ay + world[b * 3 + 2] * az));
         const apart = 0.12 * length;
-        const support: number[] = [];
+        support.length = 0;
         for (const i of order) {
             if (support.length >= 6) break;
             if (support.every((j) => Math.hypot(world[i * 3] - world[j * 3], world[i * 3 + 1] - world[j * 3 + 1], world[i * 3 + 2] - world[j * 3 + 2]) > apart)) support.push(i);
         }
         const held = input.kind === "perch" || input.kind === "cling";
+        if (held && n < 80) {
+            // Held on something narrow (a stem, a twig, a leaf's tip), its feet may be wider than it: under its middle too.
+            const lift = cx * ax + cy * ay + cz * az - least;
+            world[n * 3] = cx - ax * lift;
+            world[n * 3 + 1] = cy - ay * lift;
+            world[n * 3 + 2] = cz - az * lift;
+            support.unshift(n);
+        }
         const tiny = length <= 0.08;
         const mask = held || tiny ? ALL : ROCK | HARD;
         const up = Math.min(Math.max(0.75 * height, 0.03), 1);
@@ -273,8 +308,8 @@ export class SeatPass {
         const under = cling ? y0 - pad : Math.min(y0, input.ground(cx, cz, cy)) - 0.3;
         near.length = 0;
         this.solids.release();
-        let whole = this.solids.collect(x0 - pad, under, z0 - pad, x1 + pad, y1 + Math.max(up, reachUp), z1 + pad, held || tiny ? ALL : ROCK | HARD, near);
-        const gaps: number[] = [];
+        let whole = this.solids.collect(x0 - pad, under, z0 - pad, x1 + pad, y1 + (cling ? Math.max(up, reachUp) : ROCK_REACH), z1 + pad, held || tiny ? ALL : ROCK | HARD, near);
+        gaps.length = 0;
         let on = "ground";
         let nearest = Infinity;
         for (const i of support) {
@@ -289,7 +324,7 @@ export class SeatPass {
                 for (const hit of hits) {
                     const facing = hit.nx * ax + hit.ny * ay + hit.nz * az;
                     if ((hit.double ? Math.abs(facing) : facing) < 0.25) continue;
-                    const gap = up - hit.t * (up + down);
+                    const gap = hit.t * (up + down) - up;
                     if (best === null || Math.abs(gap) < Math.abs(best)) {
                         best = gap;
                         if (Math.abs(gap) < nearest) {
@@ -359,7 +394,8 @@ export class SeatPass {
         }
         gaps.sort((a, b) => a - b);
         const sink = input.kind === "lie" ? 0.015 : Math.max(0.015, 0.08 * height);
-        let gap = Math.min(gaps[Math.floor(0.25 * (gaps.length - 1))], gaps[0] + sink);
+        // (Held: the first of it to touch. On its feet: a quarter of them may be a little in, on uneven ground.)
+        let gap = held ? gaps[0] : Math.min(gaps[Math.floor(0.25 * (gaps.length - 1))], gaps[0] + sink);
         // Held on something with nothing near under it: a drawn surface beside it first.
         let sideX = 0;
         let sideZ = 0;
@@ -425,7 +461,7 @@ export class SeatPass {
         near.length = 0;
         this.solids.release();
         this.solids.collect(cx - 1.3, y - reach, cz - 1.3, cx + 1.3, y + reach, cz + 1.3, mask, near);
-        for (const r of [Math.min(Math.max(0.5 * length, 0.03), 0.4), Math.min(Math.max(length, 0.06), 0.8), Math.min(Math.max(2 * length, 0.12), 1.2)]) {
+        for (const r of [Math.min(Math.max(0.25 * length, 0.015), 0.2), Math.min(Math.max(0.5 * length, 0.03), 0.4), Math.min(Math.max(length, 0.06), 0.8), Math.min(Math.max(2 * length, 0.12), 1.2)]) {
             let best: {x: number; z: number; gap: number; kind: string} | null = null;
             for (let k = 0; k < 8; k++) {
                 const dx = Math.cos((k * Math.PI) / 4) * r;
@@ -452,10 +488,12 @@ export class SeatPass {
      */
     private insidePoint(x: number, y: number, z: number, reach: number): boolean {
         hits.length = 0;
-        this.solids.castIn(near, x, y, z, 0, reach, 0, hits);
+        this.solids.castIn(near, x, y, z, 0, ROCK_REACH, 0, hits);
         let first: SolidHit | null = null;
-        for (const hit of hits) if (!hit.double && hit.cls & (ROCK | HARD) && (!first || hit.t < first.t)) first = hit;
+        for (const hit of hits) if (!hit.double && (hit.cls === ROCK || (hit.cls === HARD && hit.t * ROCK_REACH <= reach)) && (!first || hit.t < first.t)) first = hit;
         if (first === null || first.ny <= 0.2) return false;
+        // (A rock is a lump: under its top is in it. Anything built may be a sheet over a room: only with no floor under.)
+        if (first.cls === ROCK) return true;
         hits.length = 0;
         this.solids.castIn(near, x, y, z, 0, -reach, 0, hits);
         first = null;
@@ -485,7 +523,7 @@ export class SeatPass {
         const far = step * 8 + length;
         near.length = 0;
         this.solids.release();
-        this.solids.collect(cx - far, cy - reach - length, cz - far, cx + far, cy + reach + length, cz + far, ROCK | HARD, near);
+        this.solids.collect(cx - far, cy - reach - length, cz - far, cx + far, cy + ROCK_REACH, cz + far, ROCK | HARD, near);
         for (let j = 1; j <= 8; j++) {
             for (let k = 0; k < 8; k++) {
                 const dx = Math.cos((k * Math.PI) / 4) * step * j;
@@ -496,7 +534,7 @@ export class SeatPass {
         }
         // Up onto it: the highest top over its middle.
         hits.length = 0;
-        this.solids.cast(cx, cy + 8, cz, 0, -8, 0, ROCK | HARD, hits);
+        this.solids.cast(cx, cy + ROCK_REACH, cz, 0, -ROCK_REACH, 0, ROCK | HARD, hits);
         let top = -Infinity;
         for (const hit of hits) if (!hit.double && hit.ny > 0.25) top = Math.max(top, hit.y);
         if (top === -Infinity) return null;

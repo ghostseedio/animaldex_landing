@@ -33,6 +33,7 @@ export const ARK_PERF_SECTIONS = [
     "apart",
     "rigs",
     "locomotion",
+    "seat",
     "instances",
     "herds",
     "particles",

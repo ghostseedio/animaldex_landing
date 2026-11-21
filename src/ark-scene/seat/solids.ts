@@ -14,7 +14,7 @@
  */
 
 import {Matrix4, type BufferGeometry, type InstancedMesh, type Material, type Mesh, type Object3D} from "three";
-import {TriGrid, type GridHit} from "@/ark-scene/seat/trigrid";
+import {boxOf, TriGrid, type GridHit} from "@/ark-scene/seat/trigrid";
 
 /** What a drawn thing is to an animal on it. */
 export const ROCK = 1; // rock: anything stands on it, nothing is inside it
@@ -84,6 +84,8 @@ export class DrawnSolids {
     private readonly scratch: GridHit[] = [];
     private readonly pool: Array<{solid: Solid; grid: TriGrid; e: Float64Array}> = [];
     private pooled = 0;
+    private readonly hitPool: SolidHit[] = [];
+    private hitsOut = 0;
     private readonly unknown = new Set<string>();
     private frame = 0;
     /** The audit and the tests: grids built at once, nothing ever waits. */
@@ -171,15 +173,8 @@ export class DrawnSolids {
         solid.count = count;
         solid.stamp = stamp;
         this.refreshed++;
-        const position = solid.geometry.getAttribute("position");
-        if (!position || position.count < 3) {
-            solid.dead = true;
-            solid.count = 0;
-            return;
-        }
-        if (!solid.geometry.boundingBox) solid.geometry.computeBoundingBox();
-        const b = solid.geometry.boundingBox!;
-        if (!Number.isFinite(b.min.x + b.min.y + b.min.z + b.max.x + b.max.y + b.max.z)) {
+        const b = boxOf(solid.geometry);
+        if (!b) {
             solid.dead = true;
             solid.count = 0;
             return;
@@ -270,6 +265,8 @@ export class DrawnSolids {
      */
     castIn(list: Near[], ox: number, oy: number, oz: number, dx: number, dy: number, dz: number, out: SolidHit[]): void {
         this.casts++;
+        // (The hits are kept objects, reused once a cast starts on an empty list: read them before the next cast.)
+        if (!out.length) this.hitsOut = 0;
         for (const near of list) {
             const e = near.e;
             const lx = e[0] * ox + e[4] * oy + e[8] * oz + e[12];
@@ -290,7 +287,19 @@ export class DrawnSolids {
                 nx /= l;
                 ny /= l;
                 nz /= l;
-                out.push({t: hit.t, x: ox + dx * hit.t, y: oy + dy * hit.t, z: oz + dz * hit.t, nx, ny, nz, cls: near.solid.cls, kind: near.solid.kind, double: near.solid.double});
+                const kept = this.hitPool[this.hitsOut] ?? (this.hitPool[this.hitsOut] = {t: 0, x: 0, y: 0, z: 0, nx: 0, ny: 0, nz: 0, cls: 0, kind: "", double: false});
+                this.hitsOut++;
+                kept.t = hit.t;
+                kept.x = ox + dx * hit.t;
+                kept.y = oy + dy * hit.t;
+                kept.z = oz + dz * hit.t;
+                kept.nx = nx;
+                kept.ny = ny;
+                kept.nz = nz;
+                kept.cls = near.solid.cls;
+                kept.kind = near.solid.kind;
+                kept.double = near.solid.double;
+                out.push(kept);
             }
         }
     }
