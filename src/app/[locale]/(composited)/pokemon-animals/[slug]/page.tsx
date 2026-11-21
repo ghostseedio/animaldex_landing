@@ -21,6 +21,8 @@ import {
 import {englishOnlyLanguageAlternates} from "@/lib/content-metadata";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {withOgCard} from "@/lib/og/og-image";
+import {templateSafeTitle} from "@/lib/brand-title";
+import {articleAuthorship, ogCardImageUrl} from "@/lib/seo/structured-data";
 
 type PokemonAnimalDetailPageProps = {
     params: {
@@ -61,7 +63,7 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
                 url: getLocalePath(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${generation.slug}`)
             },
             twitter: {
-                card: "summary",
+                card: "summary_large_image",
                 title: `${title} | AnimalDex`,
                 description
             }
@@ -78,7 +80,8 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
     const description = buildPokemonEntryDescription(entry);
 
     return withOgCard({
-        title,
+        // "What Animal Is Butterfree Based On? Real Animal Explained" leaves no room for the brand.
+        title: templateSafeTitle(title),
         description,
         keywords: [
             `what animal is ${entry.name} based on`,
@@ -96,7 +99,7 @@ export async function generateMetadata({params}: PokemonAnimalDetailPageProps): 
             url: getLocalePath(locale, `${POKEMON_ANIMAL_CANONICAL_BASE_PATH}/${entry.slug}`)
         },
         twitter: {
-            card: "summary",
+            card: "summary_large_image",
             title: `${title} | AnimalDex`,
             description
         }
@@ -191,8 +194,8 @@ function PokemonEntryPage({locale, slug}: {locale: string; slug: string}) {
             description: answer,
             url: pageUrl,
             inLanguage: locale,
-            author: {"@type": "Organization", name: "AnimalDex"},
-            publisher: {"@type": "Organization", name: "AnimalDex"},
+            image: ogCardImageUrl("pokemon", entry.slug),
+            ...articleAuthorship(),
             ...(species.length > 0
                 ? {about: species.map((item) => ({"@type": "Thing", name: item.name, url: getAbsoluteUrl(locale, item.animalHref)}))}
                 : {})

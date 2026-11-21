@@ -14,6 +14,17 @@ import {PUBLIC_SUPPORT_CHAT_HREF} from "@/lib/support-chat";
 import {localeConfig} from "@/i18n";
 import {getAbsoluteUrl, getLocalePath, getMetadataLocale} from "@/lib/site";
 import {withOgCard} from "@/lib/og/og-image";
+import {templateSafeTitle} from "@/lib/brand-title";
+import {articleAuthorship, ogCardImageUrl} from "@/lib/seo/structured-data";
+
+/**
+ * The result snippet: the summary is the answer's first sentence, and some are
+ * a single word ("Yes."); under 70 characters the whole answer is used, and
+ * withOgCard cuts it to whole sentences within 160.
+ */
+function supportMetaDescription(article: {summary: string; body: string}): string {
+    return article.summary.trim().length >= 70 || !article.body.trim() ? article.summary : article.body;
+}
 
 type ArticlePageProps = {
     params: {locale: string; categorySlug: string; articleSlug: string};
@@ -25,10 +36,12 @@ export async function generateMetadata({params}: ArticlePageProps): Promise<Meta
     if (!article) return {};
 
     const path = getSupportArticlePath(article);
+    const description = supportMetaDescription(article);
 
     return withOgCard({
-        title: `${article.title} — AnimalDex Help Center`,
-        description: article.summary,
+        // "… — AnimalDex Help Center | AnimalDex" named the brand twice; this names it once.
+        title: templateSafeTitle(`${article.title} — AnimalDex Help`),
+        description,
         alternates: {
             canonical: getLocalePath(locale, path),
             languages: localeConfig.locales.reduce((languages, item) => {
@@ -40,7 +53,7 @@ export async function generateMetadata({params}: ArticlePageProps): Promise<Meta
             type: "article",
             locale: getMetadataLocale(locale),
             title: article.title,
-            description: article.summary,
+            description,
             url: getLocalePath(locale, path)
         }
     }, article.title, "support", article.categorySlug, article.slug);
@@ -77,7 +90,9 @@ export default async function SupportArticlePage({params}: ArticlePageProps) {
         datePublished: article.publishedAt,
         url: getAbsoluteUrl(locale, path),
         articleSection: article.categoryTitle,
-        inLanguage: locale
+        inLanguage: locale,
+        image: ogCardImageUrl("support", article.categorySlug, article.slug),
+        ...articleAuthorship()
     };
 
     return (
