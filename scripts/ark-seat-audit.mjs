@@ -154,7 +154,8 @@ const settle = async () => {
             for (const row of rows) {
                 const s = entries.get(row.id)?.seat;
                 if (!s || !["stand", "lie", "perch", "cling"].includes(row.kind)) continue;
-                if (!s.solved || s.x !== s.tx || s.y !== s.ty || s.z !== s.tz || s.seen !== window.__arkSeat.solids.version) moving++;
+                // (Not seated yet, on its way to its seat, seated before the scenery last changed, or waiting to see whether what it is held on is drawn.)
+                if (!s.solved || s.x !== s.tx || s.y !== s.ty || s.z !== s.tz || s.seen !== window.__arkSeat.solids.version || (s.doubt > 0 && s.doubt < 0.8) || s.gap !== s.gap) moving++;
             }
             // (The models and the rigs on their way: an animal is its marker until its model is in.)
             const loading = (window.__arkDebug.library?.busy ? 1 : 0) + (window.__arkDebug.rigs?.busy ? 1 : 0);
