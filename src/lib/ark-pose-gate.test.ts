@@ -28,6 +28,8 @@ import {
     worstLook
 } from "@/ark-scene/locomotion/neck-gate";
 import {SIT_SHAPES, SitSleepPose, posedSitRows} from "@/ark-scene/locomotion/sit-sleep-pose";
+import {capHeadYawRows, yawFromChest} from "@/ark-scene/locomotion/bird-neck";
+import {rowToWorld} from "@/ark-scene/locomotion/skeleton";
 import {rigLookShare} from "@/ark-scene/rig-player";
 
 const FIXTURES = path.join(process.cwd(), "src/ark-scene/locomotion/fixtures");
@@ -207,6 +209,29 @@ test("a clip's share of the look: all of it at rest, less on a pose that turns t
     assert.equal(rigLookShare(model, {now: play("sleep"), from: null, fade: 1}), 0);
     assert.ok(Math.abs(rigLookShare(model, {now: play("sleep"), from: play("idle"), fade: 0.25}) - 0.75) < 1e-9);
     assert.ok(Math.abs(rigLookShare(model, {now: play("groom"), from: play("sleep"), fade: 1}) - 0.3) < 1e-9);
+});
+
+test("a clip's own head turn: a row past the look's cap comes back to it, one within it is left as it is", () => {
+    const {rig, chain} = tube(0.05);
+    const bones = rig.bones.length;
+    const per = bones * 12;
+    const rows = [20, 50, 75, -75].map((deg) => lookOnRow(restRow(rig), bones, chain, 0.4, (deg * Math.PI) / 180, 0, new Float32Array(per)));
+    const data = new Uint16Array(rows.length * per);
+    rows.forEach((row, r) => row.forEach((v, i) => (data[r * per + i] = DataUtils.toHalfFloat(v))));
+    const before = data.slice();
+    const done = capHeadYawRows(rig, data, bones, 60);
+    assert.equal(done.changed, 2);
+    assert.ok(Math.abs(done.worstBefore - 75) < 0.5 && Math.abs(done.worstAfter - 60) < 0.5);
+    assert.deepEqual(Array.from(data.subarray(0, 2 * per)), Array.from(before.subarray(0, 2 * per)), "20 and 50 degrees untouched");
+    const world = rig.bones.map(() => new Matrix4());
+    const yawOf = (r: number, bone: number) => {
+        rowToWorld(rig, Float32Array.from(data.subarray(r * per, (r + 1) * per), (h) => DataUtils.fromHalfFloat(h)), 0, world);
+        return (yawFromChest(rig, world, rig.chest, bone)! * 180) / Math.PI;
+    };
+    assert.ok(Math.abs(Math.abs(yawOf(2, rig.head)) - 60) < 0.5 && Math.abs(Math.abs(yawOf(3, rig.head)) - 60) < 0.5, "75 either way comes back to 60");
+    assert.ok(yawOf(2, rig.head) * yawOf(3, rig.head) < 0, "each to its own side");
+    // The neck keeps its share of the turn (0.4 of it).
+    assert.ok(Math.abs(Math.abs(yawOf(2, rig.neck)) - 24) < 0.5);
 });
 
 test("the posed sit's shapes: ARK-SLEEP's first, each next one bends the neck less; a rig keeps the first its neck takes", () => {

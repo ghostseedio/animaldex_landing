@@ -66,7 +66,7 @@ import {
 import {gripBones} from "@/ark-scene/map/grip";
 import {finalStatus, ModelFileError, retrySeconds, worthAskingAgain} from "@/ark-scene/model-files";
 import {buildLocoRig, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
-import {birdYawLimits, isBirdRig, pickBirdShares, spreadBirdRows} from "@/ark-scene/locomotion/bird-neck";
+import {birdYawLimits, capHeadYawRows, isBirdRig, pickBirdShares, spreadBirdRows} from "@/ark-scene/locomotion/bird-neck";
 import {flankOffLegs, isEquid, rigidMuzzle, seatLyingRows, tailOffLegs} from "@/ark-scene/locomotion/skin-fixes";
 import {LocoLayer, newLocoAnimal, type ClipRows, type LocoAnimal} from "@/ark-scene/locomotion/layer";
 import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
@@ -801,7 +801,9 @@ export function prepareRigPoses(rig: LocoRig, slug: string, plan: string | null,
                 rowsData = posed.rows.data;
                 // (A pilot's own lying clips all go: its way up and onto a side start from its own lying pose, not this one.)
                 QUADRUPED_LYING_HELD.forEach((name) => delete clips[name]);
-                if (gateOn) for (const [name, clip] of Object.entries(clips)) if (clipBase(clip) === "lying" || clipBase(clip) === "side") delete clips[name];
+                // (And, under the gate, every other clip on its own lying pose: the lion's lying feed, groom and yawn would
+                // jump from the posed lie to the pilot's crouch. A rig with no lying clip of its own keeps its wallow and roll.)
+                if (gateOn && ownClip) for (const [name, clip] of Object.entries(clips)) if (clipBase(clip) === "lying" || clipBase(clip) === "side") delete clips[name];
                 for (const clip of posed.rows.clips) clips[clip.name] = clip;
                 chose = "posed";
             }
@@ -841,6 +843,8 @@ export function prepareRigPoses(rig: LocoRig, slug: string, plan: string | null,
             const DEG = Math.PI / 180;
             const fit = fitMammalLook(region, skin, rig, look, cls, {caps: {yaw: look.yaw / DEG, up: look.up / DEG, down: look.down / DEG}, neckShare: look.neckShare});
             look = {...look, yaw: fit.caps.yaw * DEG, up: fit.caps.up * DEG, down: fit.caps.down * DEG, neckShare: fit.neckShare};
+            // Its clips' own head turns no further round than its look goes (`bird-neck.ts` capHeadYawRows).
+            const clipYaw = capHeadYawRows(rig, rowsData, bones, fit.caps.yaw);
             const shares: Record<string, number> = {};
             const row = new Float32Array(bones * 12);
             const seen = new Map<number, number>();
@@ -865,14 +869,14 @@ export function prepareRigPoses(rig: LocoRig, slug: string, plan: string | null,
                     shares[clip.name] = share;
                 }
             }
-            neck = {fit, shares};
+            neck = {fit, shares, clipYaw};
         }
     }
     return {data: rowsData, posedLie, fixes, look, lying, neck, sit};
 }
 
 /** ARK-POSE: a mammal rig's look as fitted, and the clips that take less than all of it (`RigClipData.lookShare`). */
-export type NeckReport = {fit: MammalLookFit; shares: Record<string, number>};
+export type NeckReport = {fit: MammalLookFit; shares: Record<string, number>; clipYaw: {worstBefore: number; worstAfter: number; changed: number}};
 
 /** ARK-POSE: what a four-legged rig lies in, and its own lying clip's and the posed lie's measures (`locomotion/pose-gate.ts`). */
 export type LyingReport = {chose: "own" | "posed" | "stand"; own: LyingMeasure | null; posed: LyingMeasure | null};

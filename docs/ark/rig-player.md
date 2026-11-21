@@ -138,7 +138,7 @@ What a rig lies in:
 2. Else the posed lie (`locomotion/lie-pose.ts`), when it passes its own check and the gate. Each pair of folded legs is turned out by the least that takes it out from under the belly (`solveSplay`), so the belly meets the ground. A rig the solved turn fails is tried at the one fixed turn (25°), then with the tucked fold.
 3. Else it stands (as the oryx): its lying clips are removed, and the scene sleeps it on its feet (`sleep.ts` `sleepsOnFeet`).
 
-A clip on a lying base that the posed lie replaces (the lion's lying `feed`, `groom`, `yawn`) is removed with it.
+When the posed lie replaces a rig's own lying clip, the rig's other clips on that lying pose (the lion's lying `feed`, `groom`, `yawn`) are removed with it. A rig with no lying clip of its own keeps its `wallow` and `roll`; the gate does not measure those.
 
 ### Neck (`locomotion/neck-gate.ts`)
 
@@ -149,7 +149,9 @@ The measure is the 99th percentile of the neck's and the head's skin edges over 
 - **A clip's share of the look** (`RigClipData.lookShare`): a clip that holds the head 25° or more from rest takes the largest of 1, 0.6, 0.3, 0 of the look that keeps the neck within the limit (or within 3% of what the clip alone does). `rigLookShare` applies it where the scene sets the look.
 - **The primates' posed sit** (`locomotion/sit-sleep-pose.ts` `SIT_SHAPES`): the first shape bends the neck's one joint 110° to 130°. A rig whose neck that tears takes the bend on the head's joint, then a smaller bend with the back hunched further forward.
 
-Not changed: the clips' own head turns (a groom back to the flank, a graze down to the ground). The scan reports them.
+- **The clips' own head turns** (`bird-neck.ts` `capHeadYawRows`): a row whose head is turned further round from the chest than the rig's look goes (a groom back to the flank is 75° on most rigs) has its neck's and head's yaw scaled back to that cap. A row within the cap is left exactly as it is.
+
+Not changed: how far a clip takes the head down or up (a graze or a drink reaches the ground, 90° to 100° from rest). The scan reports each clip's stretch.
 
 ### The scan
 
