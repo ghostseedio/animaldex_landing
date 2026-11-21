@@ -71,3 +71,12 @@ test("every Ark language has the chip's and the life row's words", () => {
         for (const key of ["button", "bar", "now", "end", "heart"] as const) assert.ok(ark.lifeHelp?.[key], `${file} lifeHelp.${key}`);
     }
 });
+
+test("on the owner's own card the hearts show once, in the header, from their own (current) count", () => {
+    const html = renderToStaticMarkup(createElement(ArkCaptureBadges, {life: decodeArkLife({id: "a5", origin: {kind: "arrived"}, capture_tier: "B", capture_hearts: 1}), words: en, ownHearts: 3}));
+    assert.match(html, /data-hearts="3"/, "the owner's count wins (a restore shows at once)");
+    assert.equal((html.match(/data-testid="ark-card-hearts"/g) ?? []).length, 1);
+    const card = source("app", "[locale]", "(composited)", "ark", "ark-animal-card.tsx");
+    assert.match(card, /<ArkLivesRow [^>]*heartsInHeader \/>/, "the lives row below keeps only Recovering and the restore");
+    assert.match(source("app", "[locale]", "(composited)", "ark", "ark-lives.tsx"), /heartsInHeader \? null :/);
+});

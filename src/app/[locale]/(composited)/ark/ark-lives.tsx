@@ -25,10 +25,12 @@ type LivesProps = {
     cost: number;
     /** A heart restored: the card's new count (the page updates every animal that card brought). */
     onRestored: (captureId: string, hearts: number) => void;
+    /** On the owner's own card the hearts are in the header (once): this row keeps only "Recovering…" and the restore. */
+    heartsInHeader?: boolean;
 };
 
 /** The lives row and its restore button. */
-export function ArkLivesRow({entry, words, locale, cost, onRestored}: LivesProps) {
+export function ArkLivesRow({entry, words, locale, cost, onRestored, heartsInHeader = false}: LivesProps) {
     const [restoring, setRestoring] = useState(false);
     const [problem, setProblem] = useState<{text: string; credits: boolean} | null>(null);
     const now = useNow(entry.status === "recovering");
@@ -46,15 +48,21 @@ export function ArkLivesRow({entry, words, locale, cost, onRestored}: LivesProps
         });
     };
     return (
-        <div className="mt-1.5" data-testid="ark-card-lives" data-hearts={entry.hearts} data-status={entry.status}>
-            <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] leading-snug">
-                <ArkHeartIcons hearts={entry.hearts} />
-                <span className="sr-only">{fillArkWords(words.label, {n: entry.hearts})}</span>
-                <span className="font-semibold text-ink-100">{arkLivesText(entry.hearts, words, locale)}</span>
-                {entry.status === "recovering" ? (
-                    <span data-testid="ark-card-recovering" className="rounded-full bg-[#2a3350] px-2 py-0.5 text-[11.5px] font-semibold text-[#c9d6ff]">{arkRecoveringText(entry, now, words, locale)}</span>
-                ) : null}
-            </p>
+        <div className={heartsInHeader ? "mt-1" : "mt-1.5"} data-testid="ark-card-lives" data-hearts={entry.hearts} data-status={entry.status}>
+            {!heartsInHeader || entry.status === "recovering" ? (
+                <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[12.5px] leading-snug">
+                    {heartsInHeader ? null : (
+                        <>
+                            <ArkHeartIcons hearts={entry.hearts} />
+                            <span className="sr-only">{fillArkWords(words.label, {n: entry.hearts})}</span>
+                            <span className="font-semibold text-ink-100">{arkLivesText(entry.hearts, words, locale)}</span>
+                        </>
+                    )}
+                    {entry.status === "recovering" ? (
+                        <span data-testid="ark-card-recovering" className="rounded-full bg-[#2a3350] px-2 py-0.5 text-[11.5px] font-semibold text-[#c9d6ff]">{arkRecoveringText(entry, now, words, locale)}</span>
+                    ) : null}
+                </p>
+            ) : null}
             {arkCanRestoreHeart(entry) ? (
                 <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
                     <button

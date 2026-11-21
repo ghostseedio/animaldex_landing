@@ -12,10 +12,10 @@ import {ARK_SIMPLE_ENGLISH, fillArkWords, type ArkWords} from "@/lib/ark-words";
  * aboard (the server's letter, never one worked out here) and that card's hearts, its lives in the Ark, read-only for
  * everyone (the restore stays on the owner's lives row). An animal born on the Ark has neither: nothing shows.
  */
-export function ArkCaptureBadges({life, words}: {life: ArkLife | null; words: ArkWords}) {
-    if (!life || life.origin.kind !== "arrived") return null;
-    const tier = life.capture_tier ?? null;
-    const hearts = typeof life.capture_hearts === "number" ? life.capture_hearts : null;
+export function ArkCaptureBadges({life, words, ownHearts = null}: {life: ArkLife | null; words: ArkWords; /** The owner's own count (/api/ark/hearts): shown here, once, and current after a restore. */ ownHearts?: number | null}) {
+    if (life && life.origin.kind !== "arrived") return null;
+    const tier = life?.capture_tier ?? null;
+    const hearts = typeof ownHearts === "number" ? ownHearts : typeof life?.capture_hearts === "number" ? life.capture_hearts : null;
     if (!tier && hearts === null) return null;
     const simple = {...ARK_SIMPLE_ENGLISH, ...(words.simple ?? {})};
     const heartsLabel = fillArkWords(arkHeartsWords(words.hearts).label, {n: hearts ?? 0});
