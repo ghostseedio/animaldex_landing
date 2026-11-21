@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: jajašca položena, a mužjak ih je oplodio",
             "amplexus": "{animal}: par u amplexusu, i položen mrijest",
             "pouchFry": "{animal}: iz očeve vrećice izašlo je mladih: {count}",
-            "split": "{animal}: novi se odvojio od roditelja"
+            "split": "{animal}: novi se odvojio od roditelja",
+            "giftMeal": "{aAnimal}: nahranio ga je posjetitelj",
+            "giftShelter": "{aPrey}: sigurno od {aPredator} u zaklonu posjetitelja",
+            "giftNest": "{aAnimal}: parenje, uz posjetiteljevu pomoć s gnijezdom"
         },
         "card": {
             "now": "Sada: {activity}",
@@ -1081,6 +1084,35 @@
             "wild": "Divljina",
             "town": "Grad",
             "arkYear": "1 godina Arke"
+        },
+        "care": {
+            "title": "Briga posjetitelja",
+            "meal": "Obrok",
+            "shelter": "Zaklon",
+            "nest": "Pomoć s gnijezdom",
+            "fedBy": "Nahranio/la {who}",
+            "shelteredBy": "Zaklonio/la {who}",
+            "nestBy": "Pomoć s gnijezdom od {who}",
+            "you": "ti",
+            "aVisitor": "posjetitelj",
+            "fuller": "sito na {time}",
+            "safe": "sigurno na {time}",
+            "helping": "pomaže na {time}",
+            "stoppedHunt": "spriječilo je jedan lov",
+            "nestUsed": "pomoglo je s mladima",
+            "onItsWay": "na putu",
+            "mealDoes": "Sito na {time}",
+            "shelterDoes": "Sigurno od jednog lova na {time}",
+            "nestDoes": "Veća šansa za mlade na {time}",
+            "credits": "{n} kredita",
+            "send": "Pošalji za {n} kredita",
+            "cancel": "Odustani",
+            "sent": "Poslano. Ako ne može pomoći, krediti ti se vraćaju.",
+            "noCredits": "Za ovo trebaš više kredita.",
+            "notNow": "Trenutno nije moguće.",
+            "limit": "Danas si već dao/la najviše brige.",
+            "tooNew": "Briga se otvara kad ti je račun star tjedan dana i ima kartu.",
+            "failed": "Slanje nije uspjelo. Pokušaj ponovno."
         },
         "lifeHelp": {
             "button": "Što znači traka života",

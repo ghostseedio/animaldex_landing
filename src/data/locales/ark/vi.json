@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: trứng đã đẻ, và con đực đã thụ tinh",
             "amplexus": "{animal}: một cặp ôm nhau giao phối, và đã đẻ trứng",
             "pouchFry": "{animal}: {count} con non ra khỏi túi của bố",
-            "split": "{animal}: một cá thể mới tách ra từ cá thể mẹ"
+            "split": "{animal}: một cá thể mới tách ra từ cá thể mẹ",
+            "giftMeal": "{aAnimal}: được một khách thăm cho ăn",
+            "giftShelter": "{aPrey}: an toàn trước {aPredator} trong chỗ trú ẩn của khách thăm",
+            "giftNest": "{aAnimal}: giao phối, nhờ hỗ trợ làm tổ của khách thăm"
         },
         "card": {
             "now": "Lúc này: đang {activity}",
@@ -1081,6 +1084,35 @@
             "wild": "Hoang dã",
             "town": "Thị trấn",
             "arkYear": "1 năm trên Con Tàu"
+        },
+        "care": {
+            "title": "Chăm sóc từ khách thăm",
+            "meal": "Một bữa ăn",
+            "shelter": "Chỗ trú ẩn",
+            "nest": "Hỗ trợ làm tổ",
+            "fedBy": "Được {who} cho ăn",
+            "shelteredBy": "Được {who} che chở",
+            "nestBy": "Hỗ trợ làm tổ từ {who}",
+            "you": "bạn",
+            "aVisitor": "một khách thăm",
+            "fuller": "no trong {time}",
+            "safe": "an toàn trong {time}",
+            "helping": "đang hỗ trợ trong {time}",
+            "stoppedHunt": "đã chặn một cuộc săn",
+            "nestUsed": "đã giúp nuôi con",
+            "onItsWay": "đang trên đường",
+            "mealDoes": "No trong {time}",
+            "shelterDoes": "An toàn trước một cuộc săn trong {time}",
+            "nestDoes": "Cơ hội có con cao hơn trong {time}",
+            "credits": "{n} Credits",
+            "send": "Gửi với {n} Credits",
+            "cancel": "Hủy",
+            "sent": "Đã gửi. Nếu không giúp được, Credits của bạn sẽ được hoàn lại.",
+            "noCredits": "Bạn cần thêm Credits cho việc này.",
+            "notNow": "Hiện chưa thể.",
+            "limit": "Hôm nay bạn đã chăm sóc nhiều nhất có thể.",
+            "tooNew": "Chăm sóc mở khi tài khoản của bạn được một tuần và có một thẻ.",
+            "failed": "Không gửi được. Hãy thử lại."
         },
         "lifeHelp": {
             "button": "Thanh sự sống nghĩa là gì",

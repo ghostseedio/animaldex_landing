@@ -438,7 +438,10 @@
             "spawnPair": "{animal}：產下卵，雄性為卵受精",
             "amplexus": "{animal}：一對抱接產卵",
             "pouchFry": "{animal}：{count}隻幼體從父親的育兒囊中出來",
-            "split": "{animal}：從親體分裂出一個新個體"
+            "split": "{animal}：從親體分裂出一個新個體",
+            "giftMeal": "{aAnimal}：一位訪客餵了牠",
+            "giftShelter": "{aPrey}：在訪客的庇護所裡躲過了{aPredator}",
+            "giftNest": "{aAnimal}：藉助訪客的築巢幫助完成了交配"
         },
         "card": {
             "now": "現在：{activity}",
@@ -1081,6 +1084,35 @@
             "wild": "野生",
             "town": "小鎮",
             "arkYear": "方舟 1 年"
+        },
+        "care": {
+            "title": "來自訪客的照顧",
+            "meal": "一頓飯",
+            "shelter": "庇護所",
+            "nest": "築巢幫助",
+            "fedBy": "{who}餵了牠",
+            "shelteredBy": "{who}給了牠庇護",
+            "nestBy": "來自{who}的築巢幫助",
+            "you": "你",
+            "aVisitor": "一位訪客",
+            "fuller": "還能飽{time}",
+            "safe": "還安全{time}",
+            "helping": "還在幫助{time}",
+            "stoppedHunt": "牠擋下了一次狩獵",
+            "nestUsed": "牠幫助了育幼",
+            "onItsWay": "正在路上",
+            "mealDoes": "飽足{time}",
+            "shelterDoes": "{time}內免於一次狩獵",
+            "nestDoes": "{time}內更有機會生育後代",
+            "credits": "{n} 點數",
+            "send": "用 {n} 點數送出",
+            "cancel": "取消",
+            "sent": "已送出。如果幫不上忙，點數會退還給你。",
+            "noCredits": "你需要更多點數。",
+            "notNow": "現在還不行。",
+            "limit": "你今天給出的照顧已達上限。",
+            "tooNew": "帳號滿一週並擁有一張卡片後即可照顧動物。",
+            "failed": "沒能送出。請再試一次。"
         },
         "lifeHelp": {
             "button": "生命條是什麼意思",

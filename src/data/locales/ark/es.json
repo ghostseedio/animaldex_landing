@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: huevos puestos, y el macho los fecundó",
             "amplexus": "{animal}: una pareja en amplexo, y puesta hecha",
             "pouchFry": "{animal}: {count} crías liberadas de la bolsa del padre",
-            "split": "{animal}: uno nuevo se separó de su progenitor"
+            "split": "{animal}: uno nuevo se separó de su progenitor",
+            "giftMeal": "{aAnimal}: alimentado por un visitante",
+            "giftShelter": "{aPrey}: a salvo de {aPredator} en el refugio de un visitante",
+            "giftNest": "{aAnimal}: apareamiento, con la ayuda de un visitante para el nido"
         },
         "card": {
             "now": "Ahora: {activity}",
@@ -1081,6 +1084,35 @@
             "wild": "Salvaje",
             "town": "Ciudad",
             "arkYear": "1 año del Arca"
+        },
+        "care": {
+            "title": "Cuidados de los visitantes",
+            "meal": "Una comida",
+            "shelter": "Refugio",
+            "nest": "Ayuda con el nido",
+            "fedBy": "Alimentado por {who}",
+            "shelteredBy": "Refugiado por {who}",
+            "nestBy": "Ayuda con el nido de {who}",
+            "you": "ti",
+            "aVisitor": "un visitante",
+            "fuller": "saciado durante {time}",
+            "safe": "a salvo durante {time}",
+            "helping": "ayudando durante {time}",
+            "stoppedHunt": "frustró una caza",
+            "nestUsed": "ayudó con las crías",
+            "onItsWay": "en camino",
+            "mealDoes": "Saciado durante {time}",
+            "shelterDoes": "A salvo de una caza durante {time}",
+            "nestDoes": "Más probabilidades de tener crías durante {time}",
+            "credits": "{n} créditos",
+            "send": "Enviar por {n} créditos",
+            "cancel": "Cancelar",
+            "sent": "Enviado. Si no puede ayudar, recuperas tus créditos.",
+            "noCredits": "Necesitas más créditos para esto.",
+            "notNow": "No es posible ahora mismo.",
+            "limit": "Ya has dado el máximo de cuidados por hoy.",
+            "tooNew": "Los cuidados se abren cuando tu cuenta tiene una semana y una tarjeta.",
+            "failed": "No se pudo enviar. Inténtalo de nuevo."
         },
         "lifeHelp": {
             "button": "Qué significa la barra de vida",

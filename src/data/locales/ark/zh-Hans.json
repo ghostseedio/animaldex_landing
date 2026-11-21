@@ -438,7 +438,10 @@
             "spawnPair": "{animal}：产下卵，雄性为卵受精",
             "amplexus": "{animal}：一对抱对产卵",
             "pouchFry": "{animal}：{count}只幼崽从父亲的育儿袋中出来",
-            "split": "{animal}：从亲体分裂出一个新个体"
+            "split": "{animal}：从亲体分裂出一个新个体",
+            "giftMeal": "{aAnimal}：一位访客喂了它",
+            "giftShelter": "{aPrey}：在访客的庇护所里躲过了{aPredator}",
+            "giftNest": "{aAnimal}：借助访客的筑巢帮助完成了交配"
         },
         "card": {
             "now": "现在：{activity}",
@@ -1081,6 +1084,35 @@
             "wild": "野生",
             "town": "小镇",
             "arkYear": "方舟 1 年"
+        },
+        "care": {
+            "title": "来自访客的照顾",
+            "meal": "一顿饭",
+            "shelter": "庇护所",
+            "nest": "筑巢帮助",
+            "fedBy": "{who}喂了它",
+            "shelteredBy": "{who}给了它庇护",
+            "nestBy": "来自{who}的筑巢帮助",
+            "you": "你",
+            "aVisitor": "一位访客",
+            "fuller": "还能饱{time}",
+            "safe": "还安全{time}",
+            "helping": "还在帮助{time}",
+            "stoppedHunt": "它挡下了一次狩猎",
+            "nestUsed": "它帮助了育幼",
+            "onItsWay": "正在路上",
+            "mealDoes": "饱腹{time}",
+            "shelterDoes": "{time}内免于一次狩猎",
+            "nestDoes": "{time}内更有机会生育后代",
+            "credits": "{n} 积分",
+            "send": "用 {n} 积分送出",
+            "cancel": "取消",
+            "sent": "已送出。如果帮不上忙，积分会退还给你。",
+            "noCredits": "你需要更多积分。",
+            "notNow": "现在还不行。",
+            "limit": "你今天给出的照顾已达上限。",
+            "tooNew": "账号满一周并拥有一张卡片后即可照顾动物。",
+            "failed": "没能送出。请再试一次。"
         },
         "lifeHelp": {
             "button": "生命条是什么意思",

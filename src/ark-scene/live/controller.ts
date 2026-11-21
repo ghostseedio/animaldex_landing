@@ -34,6 +34,7 @@ import {crisisText, recordItems} from "@/ark-scene/live/crisis-lines"; // E4 (th
 import {dormancyItems, dormancyText} from "@/ark-scene/live/dormancy-lines";
 import {escapeActs, escapeItems, escapeText} from "@/ark-scene/live/escape-lines";
 import {richItems, richNotes} from "@/ark-scene/live/rich-lines"; // decision 434
+import {careItems, careNotes} from "@/ark-scene/live/care-lines"; // GIFTS-CARE, decision 387
 import {forestDeathRecords, forestItems, forestText} from "@/ark-scene/live/forest-lines"; // p5 (humans)
 import {humanItems, humanText} from "@/ark-scene/live/human-lines"; // p5 (humans)
 import {releaseItems, releaseText} from "@/ark-scene/live/release-lines"; // Release to the Wild (P1-8)
@@ -495,6 +496,16 @@ export class ArkLive {
         if (rich.length) this.push(rich);
         try {
             const notes = richNotes(raw, this.text, this.locale);
+            if (notes.length) this.options.scene()?.noteRecord?.(notes);
+        } catch {
+            // (A scene without animal logs: the log says them all the same.)
+        }
+        // Gifts as Ark care (GIFTS-CARE, decision 387, `care-lines.ts`): a visitor's meal, shelter, nesting help.
+        const cared = careItems(raw, from, (key) => this.said.has(key), this.text);
+        for (const item of cared) this.remember(item.id);
+        if (cared.length) this.push(cared);
+        try {
+            const notes = careNotes(raw, this.text);
             if (notes.length) this.options.scene()?.noteRecord?.(notes);
         } catch {
             // (A scene without animal logs: the log says them all the same.)

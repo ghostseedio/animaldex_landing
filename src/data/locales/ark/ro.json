@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: icre depuse, iar masculul le-a fecundat",
             "amplexus": "{animal}: o pereche în amplexus și ponta depusă",
             "pouchFry": "{animal}: pui ieșiți din punga tatălui: {count}",
-            "split": "{animal}: unul nou s-a desprins de părinte"
+            "split": "{animal}: unul nou s-a desprins de părinte",
+            "giftMeal": "{aAnimal}: hrănit de un vizitator",
+            "giftShelter": "{aPrey}: în siguranță de {aPredator} în adăpostul unui vizitator",
+            "giftNest": "{aAnimal}: împerechere, cu ajutorul la cuib al unui vizitator"
         },
         "card": {
             "now": "Acum: {activity}",
@@ -1081,6 +1084,35 @@
             "wild": "Sălbatic",
             "town": "Oraș",
             "arkYear": "1 an pe Arcă"
+        },
+        "care": {
+            "title": "Grijă de la vizitatori",
+            "meal": "O masă",
+            "shelter": "Adăpost",
+            "nest": "Ajutor la cuib",
+            "fedBy": "Hrănit de {who}",
+            "shelteredBy": "Adăpostit de {who}",
+            "nestBy": "Ajutor la cuib de la {who}",
+            "you": "tine",
+            "aVisitor": "un vizitator",
+            "fuller": "sătul pentru {time}",
+            "safe": "în siguranță pentru {time}",
+            "helping": "ajută pentru {time}",
+            "stoppedHunt": "a oprit o vânătoare",
+            "nestUsed": "a ajutat cu puii",
+            "onItsWay": "pe drum",
+            "mealDoes": "Sătul pentru {time}",
+            "shelterDoes": "În siguranță de o vânătoare pentru {time}",
+            "nestDoes": "Șanse mai bune de pui pentru {time}",
+            "credits": "{n} credite",
+            "send": "Trimite pentru {n} credite",
+            "cancel": "Anulează",
+            "sent": "Trimis. Dacă nu poate ajuta, creditele îți revin.",
+            "noCredits": "Ai nevoie de mai multe credite pentru asta.",
+            "notNow": "Nu este posibil acum.",
+            "limit": "Ai dat deja cea mai multă grijă pentru azi.",
+            "tooNew": "Grija se deschide când contul tău are o săptămână și un card.",
+            "failed": "Nu s-a putut trimite. Încearcă din nou."
         },
         "lifeHelp": {
             "button": "Ce înseamnă bara vieții",

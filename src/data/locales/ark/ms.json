@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: telur dikeluarkan, dan si jantan mensenyawakannya",
             "amplexus": "{animal}: sepasang dalam amplexus, dan telur dikeluarkan",
             "pouchFry": "{animal}: {count} anak dilepaskan dari kantung bapa",
-            "split": "{animal}: satu individu baharu terpisah daripada induknya"
+            "split": "{animal}: satu individu baharu terpisah daripada induknya",
+            "giftMeal": "{aAnimal} diberi makanan oleh seorang pelawat",
+            "giftShelter": "{aPrey} selamat daripada {aPredator} di tempat berlindung pelawat",
+            "giftNest": "{aAnimal} mengawan, dengan bantuan sarang pelawat"
         },
         "card": {
             "now": "Sekarang: {activity}",
@@ -1081,6 +1084,35 @@
             "wild": "Liar",
             "town": "Bandar",
             "arkYear": "1 tahun Bahtera"
+        },
+        "care": {
+            "title": "Penjagaan daripada pelawat",
+            "meal": "Makanan",
+            "shelter": "Tempat berlindung",
+            "nest": "Bantuan sarang",
+            "fedBy": "Diberi makan oleh {who}",
+            "shelteredBy": "Dilindungi oleh {who}",
+            "nestBy": "Bantuan sarang daripada {who}",
+            "you": "anda",
+            "aVisitor": "seorang pelawat",
+            "fuller": "kenyang selama {time}",
+            "safe": "selamat selama {time}",
+            "helping": "membantu selama {time}",
+            "stoppedHunt": "ia menggagalkan satu buruan",
+            "nestUsed": "ia membantu membesarkan anak",
+            "onItsWay": "dalam perjalanan",
+            "mealDoes": "Kenyang selama {time}",
+            "shelterDoes": "Selamat daripada satu buruan selama {time}",
+            "nestDoes": "Peluang lebih baik untuk beranak selama {time}",
+            "credits": "{n} Kredit",
+            "send": "Hantar untuk {n} Kredit",
+            "cancel": "Batal",
+            "sent": "Dihantar. Jika ia tidak membantu, Kredit anda dipulangkan.",
+            "noCredits": "Anda perlukan lebih banyak Kredit untuk ini.",
+            "notNow": "Tidak boleh sekarang.",
+            "limit": "Anda telah memberi penjagaan paling banyak untuk hari ini.",
+            "tooNew": "Penjagaan dibuka apabila akaun anda berusia seminggu dan mempunyai kad.",
+            "failed": "Tidak dapat dihantar. Cuba lagi."
         },
         "lifeHelp": {
             "button": "Maksud bar hayat",

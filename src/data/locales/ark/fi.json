@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: munat laskettu, ja koiras hedelmöitti ne",
             "amplexus": "{animal}: pari amplexuksessa, ja kutu laskettu",
             "pouchFry": "{animal}: isän hautomapussista vapautui poikasia: {count}",
-            "split": "{animal}: uusi yksilö irtosi emostaan"
+            "split": "{animal}: uusi yksilö irtosi emostaan",
+            "giftMeal": "{aAnimal}: vierailija antoi aterian",
+            "giftShelter": "{aPrey}: turvassa {aPredator}-saalistajalta vierailijan suojassa",
+            "giftNest": "{aAnimal}: pariutui vierailijan pesäavun turvin"
         },
         "card": {
             "now": "Nyt: {activity}",
@@ -1081,6 +1084,35 @@
             "wild": "Villi",
             "town": "Kaupunki",
             "arkYear": "1 Arkin vuosi"
+        },
+        "care": {
+            "title": "Vierailijoiden hoiva",
+            "meal": "Ateria",
+            "shelter": "Suoja",
+            "nest": "Pesäapu",
+            "fedBy": "Ruokkinut: {who}",
+            "shelteredBy": "Suojannut: {who}",
+            "nestBy": "Pesäapu: {who}",
+            "you": "sinä",
+            "aVisitor": "vierailija",
+            "fuller": "kylläinen {time}",
+            "safe": "turvassa {time}",
+            "helping": "auttaa {time}",
+            "stoppedHunt": "se esti yhden saalistuksen",
+            "nestUsed": "se auttoi poikasten kanssa",
+            "onItsWay": "matkalla",
+            "mealDoes": "Kylläinen {time}",
+            "shelterDoes": "Turvassa yhdeltä saalistukselta {time}",
+            "nestDoes": "Parempi mahdollisuus poikasiin {time}",
+            "credits": "{n} krediittiä",
+            "send": "Lähetä {n} krediitillä",
+            "cancel": "Peruuta",
+            "sent": "Lähetetty. Jos se ei voi auttaa, krediitit palautetaan.",
+            "noCredits": "Tarvitset tähän enemmän krediittejä.",
+            "notNow": "Ei mahdollista juuri nyt.",
+            "limit": "Olet antanut tälle päivälle eniten hoivaa.",
+            "tooNew": "Hoiva avautuu, kun tilisi on viikon vanha ja siinä on kortti.",
+            "failed": "Lähetys ei onnistunut. Yritä uudelleen."
         },
         "lifeHelp": {
             "button": "Mitä elämäpalkki tarkoittaa",

@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: jikry nakladeny a samec je oplodnil",
             "amplexus": "{animal}: pár v amplexu a nakladené vajíčka",
             "pouchFry": "{animal}: z otcova vaku vyšlo mláďat: {count}",
-            "split": "{animal}: od rodiče se oddělil nový jedinec"
+            "split": "{animal}: od rodiče se oddělil nový jedinec",
+            "giftMeal": "{aAnimal}: nakrmeno návštěvníkem",
+            "giftShelter": "{aPrey}: v bezpečí před {aPredator} v úkrytu od návštěvníka",
+            "giftNest": "{aAnimal}: páření, s pomocí návštěvníka s hnízdem"
         },
         "card": {
             "now": "Teď: {activity}",
@@ -1081,6 +1084,35 @@
             "wild": "Divočina",
             "town": "Město",
             "arkYear": "1 rok na Arše"
+        },
+        "care": {
+            "title": "Péče od návštěvníků",
+            "meal": "Jídlo",
+            "shelter": "Úkryt",
+            "nest": "Pomoc s hnízdem",
+            "fedBy": "Nakrmil(a) {who}",
+            "shelteredBy": "Ukryl(a) {who}",
+            "nestBy": "Pomoc s hnízdem od {who}",
+            "you": "ty",
+            "aVisitor": "návštěvník",
+            "fuller": "sytý na {time}",
+            "safe": "v bezpečí na {time}",
+            "helping": "pomáhá na {time}",
+            "stoppedHunt": "zmařil jeden lov",
+            "nestUsed": "pomohl s mláďaty",
+            "onItsWay": "na cestě",
+            "mealDoes": "Sytý na {time}",
+            "shelterDoes": "V bezpečí před jedním lovem na {time}",
+            "nestDoes": "Větší šance na mláďata na {time}",
+            "credits": "{n} kreditů",
+            "send": "Poslat za {n} kreditů",
+            "cancel": "Zrušit",
+            "sent": "Odesláno. Pokud nemůže pomoci, kredity se ti vrátí.",
+            "noCredits": "Na tohle potřebuješ víc kreditů.",
+            "notNow": "Teď to není možné.",
+            "limit": "Na dnešek jsi už dal(a) nejvíc péče.",
+            "tooNew": "Péče se otevře, až bude tvůj účet týden starý a bude mít kartu.",
+            "failed": "Nepodařilo se odeslat. Zkus to znovu."
         },
         "lifeHelp": {
             "button": "Co znamená ukazatel života",

@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: æg lagt, og hannen befrugtede dem",
             "amplexus": "{animal}: et par i amplexus, og æg lagt",
             "pouchFry": "{animal}: {count} unger sluppet ud af farens pose",
-            "split": "{animal}: en ny delte sig fra sin forælder"
+            "split": "{animal}: en ny delte sig fra sin forælder",
+            "giftMeal": "{aAnimal}: fodret af en besøgende",
+            "giftShelter": "{aPrey}: i sikkerhed for {aPredator} i en besøgendes ly",
+            "giftNest": "{aAnimal}: parret, med en besøgendes redehjælp"
         },
         "card": {
             "now": "Nu: {activity}",
@@ -1081,6 +1084,35 @@
             "wild": "Vild",
             "town": "By",
             "arkYear": "1 Ark-år"
+        },
+        "care": {
+            "title": "Omsorg fra besøgende",
+            "meal": "Et måltid",
+            "shelter": "Ly",
+            "nest": "Redehjælp",
+            "fedBy": "Fodret af {who}",
+            "shelteredBy": "Givet ly af {who}",
+            "nestBy": "Redehjælp fra {who}",
+            "you": "dig",
+            "aVisitor": "en besøgende",
+            "fuller": "mæt i {time}",
+            "safe": "i sikkerhed i {time}",
+            "helping": "hjælper i {time}",
+            "stoppedHunt": "den stoppede en jagt",
+            "nestUsed": "den hjalp med unger",
+            "onItsWay": "på vej",
+            "mealDoes": "Mæt i {time}",
+            "shelterDoes": "Sikker mod én jagt i {time}",
+            "nestDoes": "Bedre chance for unger i {time}",
+            "credits": "{n} kreditter",
+            "send": "Send for {n} kreditter",
+            "cancel": "Annuller",
+            "sent": "Sendt. Hvis det ikke kan hjælpe, får du dine kreditter tilbage.",
+            "noCredits": "Du skal bruge flere kreditter til dette.",
+            "notNow": "Ikke muligt lige nu.",
+            "limit": "Du har givet mest omsorg for i dag.",
+            "tooNew": "Omsorg åbner, når din konto er en uge gammel og har et kort.",
+            "failed": "Kunne ikke sende. Prøv igen."
         },
         "lifeHelp": {
             "button": "Hvad livsbjælken betyder",
