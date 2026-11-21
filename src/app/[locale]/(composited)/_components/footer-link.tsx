@@ -23,4 +23,3 @@ export default function FooterLink({href, children}: FooterLinkProps) {
         </Link>
     )
 }
-// build-cache timing test (reverted in the next commit)
