@@ -140,6 +140,8 @@ for (const shot of plan) {
         const count = Math.round((shot.clip.seconds ?? 4) * fps);
         await page.evaluate(async (s) => {
             if (s.hours !== undefined) window.__canopy.hours(s.hours);
+            // (`cone`: [tan, end] the replay's see-through cone, leaves on the line of sight dissolved, never wood)
+            if (s.cone) window.__canopy.cone(s.cone[0], s.cone[1]);
             // (`lead`: begun this many seconds early and played up to the moment, so its rig is posing when the clip starts)
             await window.__canopy.at(s.epoch - (s.lead ?? 0), s.run ?? 2);
             if (s.id && s.clear) {
@@ -162,6 +164,21 @@ for (const shot of plan) {
             await page.evaluate(async ({s, dt}) => {
                 if (dt > 0) await window.__canopy.step(dt);
                 // (`reclear`: each frame from its own clearest side, for a sheet of stills where the crowns would hide it)
+                // (`side`: the camera square to the swing (its hold to the next), on the side it is already on, so the hand on
+                // the limb is seen past the limb's end rather than behind it)
+                if (s.side) {
+                    // (holding on at the end, no next: square to the line from its hold to its body instead)
+                    const h = window.__canopy.peekHolds().find((m) => m.slug === s.side);
+                    const body = h && !h.next && s.id ? window.__canopy.locate(s.id) : null;
+                    const to = h?.next ?? (body ? [body.x, body.y, body.z] : null);
+                    if (h && to && Math.hypot(to[0] - h.hold[0], to[2] - h.hold[2]) > 0.05) {
+                        const dx = to[0] - h.hold[0], dz = to[2] - h.hold[2];
+                        let az = Math.atan2(-dz, dx);
+                        const turn = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+                        if (Math.abs(turn(az - (s.azimuth ?? 0))) > Math.PI / 2) az = turn(az + Math.PI);
+                        s.azimuth = az;
+                    }
+                }
                 if (s.id && s.clip.reclear) await window.__canopy.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0);
                 else if (s.id && s.clip.follow !== false) await window.__canopy.follow(s.id, s.distance, s.azimuth ?? 0.7, s.polar ?? 1.3, s.lift ?? 0);
                 if (s.id && s.cut) await window.__canopy.cut(s.id, s.cut === "leaves");
@@ -181,7 +198,9 @@ for (const shot of plan) {
                         m.screen = [(c[0] / c[3] + 1) / 2 * innerWidth, (1 - c[1] / c[3]) / 2 * innerHeight];
                     }
                 }
-                return {phase: id ? window.__canopy.who(id)?.canopy ?? null : null, miss};
+                const live = id ? window.__canopy.who(id)?.canopy ?? null : null;
+                const phase = live ? {...live, holds: live.holds?.map((h) => window.__canopy.holdInfo(h))} : null;
+                return {phase, miss};
             }, shot.id ?? null);
             appendFileSync(path.join(dir, "probe.jsonl"), JSON.stringify({k, ...probe}) + "\n");
         }
