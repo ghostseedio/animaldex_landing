@@ -6962,7 +6962,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 }
             }
             // ARK-SEAT: where its body, as posed and placed now, rests on what is drawn (worked out for a few a frame).
-            if (seat.wants(entry, seatAs, selectedId === animal.id)) {
+            // (Its model or its rig, near: one drawn from afar is seated only while it carries an offset from when it was near,
+            // to keep that true or let it go; the far models' hulls and a seat for every animal in the island's whole view
+            // were 2 MB of a phone's heap for corrections of a pixel.)
+            const seatHeld = entry.seat;
+            if ((level !== "far" || (seatHeld !== undefined && (seatHeld.x !== 0 || seatHeld.y !== 0 || seatHeld.z !== 0 || seatHeld.tx !== 0 || seatHeld.ty !== 0 || seatHeld.tz !== 0))) && seat.wants(entry, seatAs, selectedId === animal.id)) {
                 const rigA = rig && state ? (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute) : null;
                 const rigB = rig && state ? (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute) : null;
                 const liveRow = rigA && rigA.getX(index) < -0.5 ? Math.round(-rigA.getX(index)) - 1 : -1;
