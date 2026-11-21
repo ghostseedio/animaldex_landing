@@ -54,7 +54,7 @@ jobs:
         run: npx playwright-core install --with-deps chromium
       - name: The seat's own rules (unit)
         run: npx tsx --test src/lib/ark-seat.test.ts
-      - name: The scene's bundle (development: the probe is in it)
+      - name: The scene's development bundle (the probe is in it)
         run: node scripts/build-ark-bundle.mjs --dev
       - name: Seat audit
         env:
