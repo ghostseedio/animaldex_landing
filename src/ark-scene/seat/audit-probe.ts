@@ -106,7 +106,7 @@ export class SeatProbe {
     private readonly local = new Box3();
     private readonly lows = new WeakMap<Hull, Map<number, number>>();
 
-    constructor(private readonly scene: Object3D, private readonly floor: (x: number, z: number, near?: number) => number, private readonly water: (x: number, z: number) => number = () => -Infinity) {}
+    constructor(private readonly scene: Object3D, private readonly floor: (x: number, z: number, near?: number) => number, private readonly water: (x: number, z: number, near?: number) => number = () => -Infinity) {}
 
     /** Before a batch of measures: the scene's meshes as they are drawn now. */
     begin(): {meshes: number; unknown: string[]} {
@@ -284,7 +284,7 @@ export class SeatProbe {
         const length = Math.max(drawn.length, 0.002);
         // What is under a point when no mesh is: the drawn ground (the floor its own motion has it by, where floors are
         // stacked), or, over water deeper than it wades, its float line.
-        const ground = (x: number, z: number) => Math.max(this.floor(x, z, drawn.near), this.water(x, z) - 0.3 * height);
+        const ground = (x: number, z: number) => Math.max(this.floor(x, z, drawn.near), this.water(x, z, drawn.near) - 0.3 * height);
         const out: SeatMeasure = {kind: drawn.kind, level: drawn.level, gap: null, low: null, on: "", inside: 0, of: 0, middle: false, insideOf: "", points: 0};
         // (One the scene leaves alone as off the ground by its pose's own rule, a burrow's mouth, a swarm, is measured too,
         // for the record: how far it is from anything drawn.)

@@ -4205,16 +4205,22 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         (window as unknown as {__arkSeat?: SeatPass}).__arkSeat = seat;
         // The audit's probe (`scripts/ark-seat-audit.mjs`): every drawn animal's body against the scene's own meshes.
         void import("@/ark-scene/seat/audit-probe").then(({SeatProbe}) => {
-            const probe = new SeatProbe(scene, (x, z, near) => standGround(x, z, near), (x, z) => waterTopAt(x, z));
+            const probe = new SeatProbe(scene, (x, z, near) => standGround(x, z, near), (x, z, near) => groundUnderAt(x, z, ARK_ENVIRONMENT.seaLevel.value, false, near).water ?? -Infinity);
             type Drawn = Parameters<typeof probe.measure>[0];
             const drawnOf = (e: Entry) => (e as Entry & {seatDrawn?: Drawn}).seatDrawn ?? null;
+            // (What its own motion has it doing, for the audit's rows: its pose's height, its trip's place, its clip.)
+            const ownOf = (e: Entry) => {
+                const d = (e as Entry & {drawn?: {base?: number; path?: string | null; clip?: string | null}}).drawn;
+                const p = e.sched?.pose;
+                return {base: d?.base ?? null, path: d?.path ?? null, clip: d?.clip ?? null, doing: p?.doing ?? null, moving: Boolean(p?.moving), aloft: Boolean(p?.aloft), point: e.sched?.trip?.to.point ?? null, act: e.act?.state ?? (e.act ? "act" : null), held: Boolean(island?.held(e.animal.id))};
+            };
             (window as unknown as {__arkSeatProbe?: unknown}).__arkSeatProbe = {
                 begin: () => probe.begin(),
                 end: () => probe.end(),
                 frame: () => seat.frames,
                 /** The animals drawn in the last `within` frames as a model (near, far or a rig). */
                 drawn: (within = 2) => allEntries().filter((e) => { const d = drawnOf(e); return d !== null && seat.frames - d.frame <= within; }).map((e) => { const d = drawnOf(e)!; return {id: e.animal.id, slug: e.animal.model_slug, island: e.animal.island ?? null, kind: d.kind, level: d.level, length: e.length, plan: library.get(e.animal.model_slug)?.behaviour?.plan ?? null, x: d.m[12], y: d.m[13], z: d.m[14]}; }),
-                measure: (id: string) => { const e = entryById.get(id); const d = e ? drawnOf(e) : null; return d ? {...probe.measure(d), seat: e!.seat ? {x: e!.seat.x, y: e!.seat.y, z: e!.seat.z, gap: e!.seat.gap, on: e!.seat.on, inside: e!.seat.inside, pushes: e!.seat.pushes, fell: e!.seat.fell, solved: e!.seat.solved} : null} : null; }
+                measure: (id: string) => { const e = entryById.get(id); const d = e ? drawnOf(e) : null; return d ? {...probe.measure(d), seat: e!.seat ? {x: e!.seat.x, y: e!.seat.y, z: e!.seat.z, gap: e!.seat.gap, on: e!.seat.on, inside: e!.seat.inside, pushes: e!.seat.pushes, fell: e!.seat.fell, solved: e!.seat.solved} : null, own: ownOf(e!)} : null; }
             };
         });
     }
@@ -6881,7 +6887,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // only calls afloat (a bird resting at a pool's edge, 18 cm over the bank) is on its feet, and seated.)
             const loose = where.afloat && !surface;
             facts.flying = entry.air > 0.001 || Boolean(state?.flying) || Boolean(entry.sched?.pose?.aloft) || (loose && Boolean(entry.recipeAct || entry.recipeFlock));
-            facts.water = Boolean(where.water) || Boolean(where.edge) || Boolean((where as {underwater?: boolean}).underwater) || (loose && (Boolean(entry.place.water) || where.base < waterTopAt(where.x, where.z) - 0.02));
+            facts.water = Boolean(where.water) || Boolean(where.edge) || Boolean((where as {underwater?: boolean}).underwater) || (loose && (Boolean(entry.place.water) || where.base < (groundUnderAt(where.x, where.z, ARK_ENVIRONMENT.seaLevel.value, false, poseBase).water ?? -Infinity) - 0.02));
             facts.afloat = false;
             facts.den = Boolean(entry.denIn) || Boolean(entry.power?.drop) || (loose && (Boolean(entry.place.burrow) || Boolean(island?.held(animal.id))));
             facts.growing = grow < 1;
@@ -6988,7 +6994,13 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     // (A moving rig in a clip of its own, no planted feet: its stride's moment in the air is its own.)
                     bounce: rig && !seatGait && entry.sched?.pose?.moving ? Math.min(Math.max(0.25 * modelHeight, 0.02), 0.3) : 0,
                     // (The floor its own motion has it by where floors are stacked; over water deeper than it wades, its float line.)
-                    ground: (x, z) => Math.max(standGround(x, z, poseBase), waterTopAt(x, z) - 0.3 * modelHeight),
+                    ground: (x, z) => {
+                        // (Water over the ground there, not a level some lake has elsewhere: `waterTopAt` gave a duck on a
+                        // shore under the crater lake a float line 33 m over its head.)
+                        const wet = groundUnderAt(x, z, ARK_ENVIRONMENT.seaLevel.value, false, poseBase).water;
+                        const under = standGround(x, z, poseBase);
+                        return wet !== null && wet - 0.3 * modelHeight > under ? wet - 0.3 * modelHeight : under;
+                    },
                     near: poseBase,
                     focus: selectedId === animal.id,
                     level

@@ -97,6 +97,8 @@ export class DrawnSolids {
     private pooled = 0;
     private query = 0;
     private stamp = 0;
+    private restless = false;
+    private told = 0;
     /** Goes up when what is drawn changes (a mesh shown, hidden, its instances moved): seats made before are made again. */
     version = 0;
     private readonly hitPool: SolidHit[] = [];
@@ -115,6 +117,13 @@ export class DrawnSolids {
     begin(frame: number): void {
         this.frame = frame;
         if (frame - this.gathered >= 30 || frame < this.gathered) this.gather();
+        // (Things that move all the time, a level's list rebuilt as the camera goes: their changes are told a third of a
+        // second apart, and the last of them always.)
+        if (this.restless && frame - this.told >= 20) {
+            this.restless = false;
+            this.told = frame;
+            this.version++;
+        }
     }
 
     /** Read the scene's meshes again now. */
@@ -251,7 +260,10 @@ export class DrawnSolids {
         if (!changed && !first) return;
         // Its instances moved (a tree's nearer level taking its place): the seats round it are made again. One that
         // moves all the time (a boat on the swell) does not ask that of everyone each frame.
-        if (!first && ++solid.changes <= 3) this.version++;
+        if (!first) {
+            if (++solid.changes <= 3) this.version++;
+            else this.restless = true;
+        }
         solid.cells = null;
         solid.wide.length = 0;
         if (count >= CELLS_FROM) {
