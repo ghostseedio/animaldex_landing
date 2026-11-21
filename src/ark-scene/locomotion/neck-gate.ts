@@ -14,7 +14,7 @@
  * 2. the look on top of a posed clip. The look turns the bones in their rest frame; a primate's posed sit already bows
  *    the neck 55° and drops the face 70° (`sit-sleep-pose.ts`), and a look to the flank on top of that wrung the neck
  *    (the macaque). Each clip that holds the head away from rest gets its own share of the look
- *    (`RigClip.look` 0…1, `clipLookShares`), down to none;
+ *    (`RigClipData.lookShare` 0…1, `clipLookShare`), down to none; one that holds it 60° or more from rest takes none;
  * 3. the clips' own head turns (a groom back to the flank): capped at the class's yaw from the chest and spread along
  *    the neck (`bird-neck.ts` spreadBirdRows, with the mammal's shares).
  */
@@ -266,6 +266,12 @@ export function fitMammalLook(region: NeckRegion, skin: NeckSkin, rig: LocoRig, 
 
 /** A clip whose head never turns this far from rest (degrees, against the chest) takes the whole look: not measured. */
 export const HELD_TURN_DEG = 25;
+/**
+ * A clip that holds the head this far from rest (degrees, against the chest) takes no look at all: the look turns the
+ * head about its rest pose's up and side, and on a head bowed onto the chest (a primate's posed sit, 110 degrees) or
+ * down at the grass those are no longer its yaw and its pitch: a look to the side rolled the bowed head up and back.
+ */
+export const LOOK_OFF_TURN_DEG = 60;
 /** On a pose that stretches the neck past `NECK_STRETCH_MAX` by itself, the look may add this much at most (a factor). */
 export const CLIP_LOOK_OVER = 1.03;
 /** The shares of the look a clip may take, most first. */

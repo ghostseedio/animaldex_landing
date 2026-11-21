@@ -77,7 +77,7 @@ import {LIE_FOLDS, LIE_FRAMES, LIE_SECONDS, LiePose} from "@/ark-scene/locomotio
 import type {LocoRig} from "@/ark-scene/locomotion/types";
 import {armsFit, handsReady, type LocoCanopy} from "@/ark-scene/locomotion/brachiate";
 import {posedSitRows, type SitCheck} from "@/ark-scene/locomotion/sit-sleep-pose";
-import {clipLookShare, fitMammalLook, headTurnDeg, HELD_TURN_DEG, mammalLookClass, neckRegion, type MammalLookFit} from "@/ark-scene/locomotion/neck-gate";
+import {clipLookShare, fitMammalLook, headTurnDeg, HELD_TURN_DEG, LOOK_OFF_TURN_DEG, mammalLookClass, neckRegion, type MammalLookFit} from "@/ark-scene/locomotion/neck-gate";
 import {floatRow, LOWER_BY, measureLying, measureLyingClip, SIDE_GAP, type LyingMeasure} from "@/ark-scene/locomotion/pose-gate";
 
 export type RigClipData = RigClip & {
@@ -861,7 +861,7 @@ export function prepareRigPoses(rig: LocoRig, slug: string, plan: string | null,
                             at = clip.row + f;
                         }
                     }
-                    share = worst < HELD_TURN_DEG ? 1 : clipLookShare(region, skin, floatRow(rowsData, bones, at, row), bones, look, fit.neckShare, fit.caps).share;
+                    share = worst < HELD_TURN_DEG ? 1 : worst >= LOOK_OFF_TURN_DEG ? 0 : clipLookShare(region, skin, floatRow(rowsData, bones, at, row), bones, look, fit.neckShare, fit.caps).share;
                     seen.set(clip.row, share);
                 }
                 if (share < 1) {

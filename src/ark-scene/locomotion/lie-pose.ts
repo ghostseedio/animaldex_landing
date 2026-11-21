@@ -48,6 +48,9 @@ export const LIE_SPLAY: [number, number] = [25, 25];
 export const SPLAY_MIN = 0;
 export const SPLAY_MAX = 80;
 export const SPLAY_STEP = 10;
+/** The tail laid down behind a lying body: each joint at most this steep (degrees below level), its bones this far over the ground (shares of the standing height, the least that keeps a thick tail's skin out of it). */
+export const TAIL_DOWN_DEG = 55;
+export const TAIL_CLEAR: readonly number[] = [0.02, 0.045, 0.08, 0.12];
 /** A folded leg may sit this far lower than the belly (a share of the standing height) and still not hold it up. */
 export const LEG_UNDER = 0.004;
 /** The head's drop (degrees, nose down) when the ground allows it. */
@@ -93,6 +96,8 @@ export class LiePose {
     private readonly skin: Matrix4[];
     /** Each leg's turn out from under the body lying down (degrees; `solveSplay`). */
     readonly splay: number[];
+    /** Whether the legs' turn out is solved and the tail laid on the ground (ARK-POSE); false: the pose as before it. */
+    private readonly solved: boolean;
     readonly check: LieCheck;
 
     constructor(readonly rig: LocoRig, private readonly mesh: LieMesh, private readonly fold_: Record<"fore" | "hind", readonly [number, number, number]> = LIE_FOLD, solved = true) {
@@ -140,7 +145,8 @@ export class LiePose {
         this.splay = rig.legs.map((leg) => LIE_SPLAY[leg.end === "fore" ? 0 : 1]);
         const shaped = lieShaped(rig);
         // (`solved` false: every leg at `LIE_SPLAY`, as before ARK-POSE; a rig the solved turn fails may pass with it.)
-        if (shaped && solved && (globalThis as {__arkPoseGate?: boolean}).__arkPoseGate !== false) this.solveSplay();
+        this.solved = solved && (globalThis as {__arkPoseGate?: boolean}).__arkPoseGate !== false;
+        if (shaped && this.solved) this.solveSplay();
         this.check = shaped ? this.measure() : {ok: false, reason: "not four standing legs", belly: 1, sink: 0};
     }
 
@@ -196,7 +202,24 @@ export class LiePose {
         const tail = rig.tail.filter((b) => b >= 0);
         if (tail.length > 1) {
             const saved = [tail[0], ...rig.below[tail[0]]].map((b) => world[b].clone());
-            for (const up of [0, 15, 30, 45, 60]) {
+            // ARK-POSE: down to the ground and along it, each joint no steeper than `TAIL_DOWN_DEG` and no lower than
+            // the ground (the lion's, lying low, was held straight out behind it in the air by the tries below).
+            let laid = false;
+            for (const clear of this.solved ? TAIL_CLEAR : []) {
+                [tail[0], ...rig.below[tail[0]]].forEach((b, k) => world[b].copy(saved[k]));
+                const floor = this.ground + this.height * clear;
+                for (let k = 0; k + 1 < tail.length; k++) {
+                    at(world[tail[k]], A);
+                    at(world[tail[k + 1]], B);
+                    const length = A.distanceTo(B);
+                    const down = length > 1e-9 ? Math.min(Math.asin(Math.min(Math.max((A.y - floor) / length, 0), 1)) * (180 / Math.PI), TAIL_DOWN_DEG) : 0;
+                    this.turn(world, tail[k], A, DOWN.subVectors(B, A), this.sagittal(-(90 - down)), t);
+                }
+                laid = this.lowestOf(world, "tail") >= this.ground - this.height * 0.005;
+                if (laid) break;
+            }
+            if (!laid) [tail[0], ...rig.below[tail[0]]].forEach((b, k) => world[b].copy(saved[k]));
+            for (const up of laid ? [] : [0, 15, 30, 45, 60]) {
                 [tail[0], ...rig.below[tail[0]]].forEach((b, k) => world[b].copy(saved[k]));
                 for (let k = 0; k + 1 < tail.length; k++) {
                     at(world[tail[k]], A);
