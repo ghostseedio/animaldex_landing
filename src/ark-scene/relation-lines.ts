@@ -9,10 +9,14 @@
  * yellow), its own dash (solid, dashed, dotted) and its own icon (claw marks, a fork, a heart), the same as the card's
  * legend (`lib/ark-relations.ts` ARK_RELATION_STYLE). A dark halo under each line keeps it legible on sand, grass, sea and at night.
  *
+ * Lane ARK-DIST: each drawn line carries a small dark chip at its middle with the ground distance between its two animals
+ * ("12 m", "1.4 km"; `lib/ark-relation-distance.ts`), screen-sized, kept off the end icons, the nearest eight only.
+ *
  * Loaded only after a tap with the lines on; draws only while it has lines; nothing allocated per frame.
  */
 
 import type {ArkSceneHandle} from "@/ark-scene/types";
+import {ARK_DISTANCE_MAX_LABELS, arkDistanceChipAt, arkHorizontalDistance, arkNearestLabels, formatArkDistance} from "@/lib/ark-relation-distance";
 import {ARK_RELATION_STYLE, type ArkRelationKind} from "@/lib/ark-relations";
 
 /** A line's end: an animal (where the scene has it now), or a clutch at its nest (`at`); `id` is selected on its tap. */
@@ -24,6 +28,10 @@ const MARGIN = 22;
 const END_R = 11;
 /** The lines are drawn again at most this often (ms): about 24 a second while the view moves, none while nothing does. */
 const FRAME_MS = 40;
+/** The distance chip (lane ARK-DIST): its type, height and side padding in px; square, like the rest of the Ark's panels. */
+const CHIP_FONT = "600 11px system-ui, -apple-system, \"Segoe UI\", Roboto, sans-serif";
+const CHIP_H = 17;
+const CHIP_PAD = 5;
 
 export type ArkRelationLinesHandle = {
     set: (selected: string | null, lines: readonly ArkRelationLine[]) => void;
@@ -143,6 +151,17 @@ export function mountArkRelationLines(scene: Scene, options: {onPick: (id: strin
     const endY = new Float32Array(MAX);
     const endAngle = new Float32Array(MAX);
     const endState = new Uint8Array(MAX); // 0 skipped, 1 inside, 2 at the edge
+    // Lane ARK-DIST: each line's ground distance now (m; NaN: unknown), its chip's text and width (made again only when the
+    // whole metres change), which lines get a chip (the nearest few), and where the chips went this frame.
+    const dist = new Float32Array(MAX);
+    const distShown = new Float64Array(MAX).fill(-1);
+    const distText: string[] = new Array<string>(MAX).fill("");
+    const distWidth = new Float32Array(MAX);
+    const labelled = new Uint8Array(MAX);
+    const chipX = new Float32Array(MAX);
+    const chipY = new Float32Array(MAX);
+    const chipW = new Float32Array(MAX);
+    const chip = {x: 0, y: 0};
     let lastKey = "";
     let lastAt = 0;
     let dirty = {x0: 0, y0: 0, x1: 0, y1: 0, any: false};
@@ -183,8 +202,19 @@ export function mountArkRelationLines(scene: Scene, options: {onPick: (id: strin
         for (let i = 0; i < n; i++) {
             const line = lines[i];
             endState[i] = 0;
+            dist[i] = Number.NaN;
             const to = line.at ?? scene.locate(line.id);
             if (!to) continue;
+            if (from) {
+                dist[i] = arkHorizontalDistance(from, to);
+                const metres = dist[i] < 999.5 ? Math.round(dist[i]) : -Math.round(dist[i] / 100);
+                if (metres !== distShown[i]) {
+                    distShown[i] = metres;
+                    distText[i] = formatArkDistance(dist[i]);
+                    distWidth[i] = 0;
+                }
+                key += `~${metres}`;
+            }
             screenOf(to.x, to.y, to.z, b);
             // (Behind the camera, the projection is mirrored: its direction is the other way round from the middle.)
             if (!b.front) {
@@ -257,6 +287,44 @@ export function mountArkRelationLines(scene: Scene, options: {onPick: (id: strin
             button.style.transform = `translate(${ex.toFixed(1)}px, ${ey.toFixed(1)}px)`;
         }
         for (let i = used; i < buttons.length; i++) buttons[i].style.display = "none";
+        // Lane ARK-DIST: the distance chips, over every line, the nearest lines' first; a chip that would cover another is left out.
+        if (fromIn) {
+            arkNearestLabels(dist, n, ARK_DISTANCE_MAX_LABELS, labelled);
+            ctx.font = CHIP_FONT;
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.setLineDash([]);
+            let placed = 0;
+            for (let i = 0; i < n; i++) {
+                if (!endState[i] || !labelled[i] || !distText[i]) continue;
+                if (!distWidth[i]) distWidth[i] = Math.ceil(ctx.measureText(distText[i]).width) + CHIP_PAD * 2;
+                const cw2 = distWidth[i];
+                if (!arkDistanceChipAt(a.x, a.y, endX[i], endY[i], cw2, CHIP_H, END_R + 1.5, chip)) continue;
+                let clash = false;
+                for (let j = 0; j < placed && !clash; j++) {
+                    clash = Math.abs(chip.x - chipX[j]) < (cw2 + chipW[j]) / 2 + 2 && Math.abs(chip.y - chipY[j]) < CHIP_H + 2;
+                }
+                if (clash) continue;
+                chipX[placed] = chip.x;
+                chipY[placed] = chip.y;
+                chipW[placed] = cw2;
+                placed++;
+                const left = Math.round(chip.x - cw2 / 2);
+                const top = Math.round(chip.y - CHIP_H / 2);
+                const line = lines[i];
+                ctx.globalAlpha = anyStrong && !line.strong ? 0.55 : 1;
+                ctx.fillStyle = "rgba(10, 14, 10, 0.78)";
+                ctx.fillRect(left, top, cw2, CHIP_H);
+                ctx.fillStyle = "#f2f4ee";
+                ctx.fillText(distText[i], left + cw2 / 2, top + CHIP_H / 2 + 0.5);
+                ctx.globalAlpha = 1;
+                dirty.x0 = Math.min(dirty.x0, left);
+                dirty.y0 = Math.min(dirty.y0, top);
+                dirty.x1 = Math.max(dirty.x1, left + cw2);
+                dirty.y1 = Math.max(dirty.y1, top + CHIP_H);
+                dirty.any = true;
+            }
+        }
     };
 
     const clear = () => {
