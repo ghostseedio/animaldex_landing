@@ -23,7 +23,7 @@
 import {Matrix4, Quaternion, Vector3} from "three";
 import {bonePointNow, rotateSubtree, skinRow, restInverses} from "@/ark-scene/locomotion/skeleton";
 import type {LocoRig} from "@/ark-scene/locomotion/types";
-import {NECK_STRETCH_MAX, neckRegion, neckStretch} from "@/ark-scene/locomotion/neck-gate";
+import {neckRegion, neckStretch, overLimit} from "@/ark-scene/locomotion/neck-gate";
 
 /** The back's lean above level when it sits (degrees): a hunch, leaning forward over the knees. */
 export const BACK_DEG = 58;
@@ -46,29 +46,36 @@ export type SitMesh = {positions: ArrayLike<number>; joints: ArrayLike<number>; 
 export const SIT_BOW_OVER = 1.15;
 /** How it sits: the back's lean above level (degrees), the neck's share of the way to `NECK_DEG`, and the face's heading below level (degrees; null: the head rides the neck, no turn of its own). */
 export type SitShape = {back: number; neck: number; face: number | null};
-export type SitCheck = {ok: boolean; reason: string | null; sink: number; /** The shoulders over the hips sitting, a share of the back's length (the sine of its lean). */ up?: number; /** ARK-POSE: the shape it keeps, the neck's stretch under it, and under the first (full) shape. */ shape?: SitShape; stretch?: number; stretchFull?: number};
+export type SitCheck = {ok: boolean; reason: string | null; sink: number; /** The shoulders over the hips sitting, a share of the back's length (the sine of its lean). */ up?: number; /** The rump (the lowest skin the hips or a thigh holds) over the ground, a share of the standing height. */ rump?: number; /** ARK-POSE: the shape it keeps, the neck's stretch under it, and under the first (full) shape. */ shape?: SitShape; stretch?: number; stretchFull?: number};
 /**
  * ARK-POSE (the owner on batch 14, a toque macaque asleep on a limb, its neck drawn out long and thin): the shapes a
  * rig tries, in order. The first (ARK-SLEEP's) leans the back 58 degrees and drops the face 70 below level: 110 to 130
- * degrees between the chest and the face, all on the neck's one joint. Across the 79 primate rigs the neck's skin
- * stretched 2.3 times at the median, 6.7 at the worst tenth. It is the neck's joint that tears (the macaque: 2.15
- * with the bend half on the neck, 1.4 with it all on the head, whose skin is its own), so the bend goes over to the
- * head (the neck a quarter of its way, or none), then comes down a step at a time: the face less far down (55, 45, 30,
- * 15 degrees below level; 70 on the head's joint alone folds the face into the chest), the back hunched further
- * forward (48, 40 degrees) so the head still hangs. The first whose neck stretches no more than `NECK_STRETCH_MAX`
- * (or `SIT_BOW_OVER` times what the sit does with no bow at all: the arms' swing pulls the neck's base too) is its sit;
- * none: the one that stretches least (never the head left riding the back, its face to the sky).
+ * degrees between the chest and the face, all on the neck's one joint. Across the 78 primate rigs the neck's skin
+ * stretched 2.3 times at the median, 6.7 at the worst tenth. No joint takes that bend: on the neck's it draws the neck
+ * out (the macaque: 2.31), and all on the head's (tried: 1.51 at the neck) it folds the face into the chest and the
+ * back of the skull is left pointing at the sky, a head thrown back. So the bend itself comes down, a step at a time:
+ * the face less far down (25 to 4 degrees below level), the neck a third of its way or less, never more than about 60
+ * degrees on the head's own joint; then the same with the back hunched further forward (48, then 40 degrees), where
+ * that does not lift the rump off the ground onto the hands (`SIT_RUMP_OVER`). The first that keeps the
+ * neck within `NECK_STRETCH_MAX` and the head's own skin within `HEAD_STRETCH_MAX` (or within `SIT_BOW_OVER` of
+ * what the sit does with no bow at all: the arms' swing pulls the neck's base too) is its sit; none: the one nearest.
  */
 export const SIT_SHAPES: readonly SitShape[] = [
     {back: BACK_DEG, neck: 1, face: FACE_DEG},
-    {back: BACK_DEG, neck: 0.25, face: 55},
-    {back: BACK_DEG, neck: 0, face: 55},
-    {back: 48, neck: 0.25, face: 45},
-    {back: 48, neck: 0, face: 45},
-    {back: 48, neck: 0, face: 30},
-    {back: 40, neck: 0, face: 30},
+    {back: BACK_DEG, neck: 0.35, face: 25},
+    {back: BACK_DEG, neck: 0.25, face: 20},
+    {back: BACK_DEG, neck: 0.25, face: 10},
+    {back: BACK_DEG, neck: 0.15, face: 10},
+    {back: BACK_DEG, neck: 0, face: 4},
+    {back: 48, neck: 0.35, face: 25},
+    {back: 48, neck: 0.25, face: 15},
+    {back: 48, neck: 0.15, face: 10},
+    {back: 48, neck: 0, face: 10},
+    {back: 40, neck: 0.25, face: 15},
     {back: 40, neck: 0, face: 15}
 ];
+/** A shape may leave the rump this much further off the ground than the first does (a share of the standing height): hunched further forward, long arms reach the ground first and it sits on its hands. */
+export const SIT_RUMP_OVER = 0.02;
 /** The sit with no bow: what the arms and the back alone do to the neck's skin. */
 const SIT_NO_BOW: SitShape = {back: BACK_DEG, neck: 0, face: null};
 
@@ -262,7 +269,24 @@ export class SitSleepPose {
         const hips = mid("hind");
         const shoulders = mid("fore");
         const up = ok ? (shoulders.y - hips.y) / Math.max(shoulders.distanceTo(hips), 1e-6) : 0;
-        return {ok: ok && sink <= 0.02, reason: !ok ? "not finite" : sink > 0.02 ? `${(sink * 100).toFixed(1)}% under the ground` : null, sink, up};
+        // (And its rump: `lowest` left the skin matrices of this pose in `this.skin`.)
+        const seat = new Set<number>([this.rig.hips]);
+        for (const leg of this.rig.legs) if (leg.end === "hind") seat.add(leg.upper);
+        let low = Infinity;
+        const p = this.mesh.positions;
+        for (let i = 0; ok && i < this.owner.length; i++) {
+            if (!seat.has(this.owner[i])) continue;
+            let vy = 0;
+            for (let k = 0; k < 4; k++) {
+                const w = this.mesh.weights[i * 4 + k];
+                if (w <= 0) continue;
+                const e = this.skin[this.mesh.joints[i * 4 + k]].elements;
+                vy += w * (e[1] * p[i * 3] + e[5] * p[i * 3 + 1] + e[9] * p[i * 3 + 2] + e[13]);
+            }
+            low = Math.min(low, vy);
+        }
+        const rump = Number.isFinite(low) ? (low - this.ground) / this.height : 0;
+        return {ok: ok && sink <= 0.02, reason: !ok ? "not finite" : sink > 0.02 ? `${(sink * 100).toFixed(1)}% under the ground` : null, sink, up, rump};
     }
 }
 
@@ -292,29 +316,29 @@ export function posedSitRows(rig: LocoRig, mesh: SitMesh, data: Uint16Array, bon
     const region = index ? neckRegion(rig, mesh, index) : null;
     if (region) {
         const probe = new Float32Array(per);
-        const stretchOf = (pose: SitSleepPose) => neckStretch(region, mesh, pose.row(1, probe)).p99;
+        const stretchOf = (pose: SitSleepPose) => neckStretch(region, mesh, pose.row(1, probe));
         const full = stretchOf(sit);
         const none = new SitSleepPose(rig, mesh, SIT_NO_BOW);
-        const limit = Math.max(NECK_STRETCH_MAX, (none.check.ok ? stretchOf(none) : 1) * SIT_BOW_OVER);
+        const limit = Math.max(1, (none.check.ok ? overLimit(stretchOf(none)) : 1) * SIT_BOW_OVER);
         let best = {sit, stretch: full};
-        if (full > limit) {
-            let least: {sit: SitSleepPose; stretch: number} | null = null;
+        if (overLimit(full) > limit) {
+            let least: {sit: SitSleepPose; stretch: typeof full} | null = null;
             for (const shape of SIT_SHAPES.slice(1)) {
                 const next = new SitSleepPose(rig, mesh, shape);
-                if (!next.check.ok) continue;
+                if (!next.check.ok || (next.check.rump ?? 0) > Math.max(sit.check.rump ?? 0, 0.02) + SIT_RUMP_OVER) continue;
                 const stretch = stretchOf(next);
-                if (!least || stretch < least.stretch - 1e-4) least = {sit: next, stretch};
-                if (stretch <= limit) {
+                if (!least || overLimit(stretch) < overLimit(least.stretch) - 1e-4) least = {sit: next, stretch};
+                if (overLimit(stretch) <= limit) {
                     least = {sit: next, stretch};
                     break;
                 }
             }
-            if (least && least.stretch < full) best = least;
+            if (least && overLimit(least.stretch) < overLimit(full)) best = least;
         }
         sit = best.sit;
         sit.check.shape = sit.shape;
-        sit.check.stretch = best.stretch;
-        sit.check.stretchFull = full;
+        sit.check.stretch = best.stretch.p99;
+        sit.check.stretchFull = full.p99;
     }
     const own = data.length / per;
     const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
