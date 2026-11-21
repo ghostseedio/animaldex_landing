@@ -95,7 +95,7 @@ COPY scripts ./scripts
 # stays small: moving the 240 MB webpack cache cost more time than it saved).
 RUN --mount=type=cache,id=next-cache,target=/app/.next/cache,sharing=locked \
   rm -rf .next/cache/webpack .next/cache/fetch-cache .next/cache/images \
-  && npm run build \
+  && NEXT_STATIC_WORKERS="$(nproc)" npm run build \
   && rm -rf .next/cache/webpack .next/cache/fetch-cache .next/cache/images \
   && rm -f .next/standalone/.env .next/standalone/.env.* \
   && find .next/standalone -name '.env*' -type f -delete
