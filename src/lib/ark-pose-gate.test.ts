@@ -238,8 +238,9 @@ test("a clip's own head turn: a row past the look's cap comes back to it, one wi
     assert.ok(Math.abs(Math.abs(yawOf(2, rig.neck)) - 24) < 0.5);
 });
 
-test("the posed sit: the head ends level and facing ahead, its turn split between the neck and the head; a model's own head turn is taken back", () => {
-    for (const shape of SIT_SHAPES) assert.ok(shape.level && shape.back === 58 && shape.face === SIT_FACE_DEG && shape.neck >= 0 && shape.neck <= 0.8, JSON.stringify(shape));
+test("the posed sit: the head ends level, its turn split between the neck and the head; a model whose head was turned keeps the turn and is levelled about its own axis", () => {
+    for (const shape of SIT_SHAPES) assert.ok(shape.level! >= 0.85 && shape.level! <= 1 && shape.back === 58 && shape.face === SIT_FACE_DEG && shape.neck >= 0 && shape.neck <= 0.8, JSON.stringify(shape));
+    assert.equal(SIT_SHAPES[0].level, 1);
     assert.deepEqual(SIT_FULL_BOW, {back: 58, neck: 1, face: 70});
     const raw = raws.find((r) => r.slug === "chimpanzee")! as RawSkeleton & {positions: number[]; joints: number[]; weights: number[]};
     const rig = buildLocoRig(raw);
@@ -248,27 +249,27 @@ test("the posed sit: the head ends level and facing ahead, its turn split betwee
         const sit = new SitSleepPose(rig, raw, shape);
         assert.ok(sit.check.ok, JSON.stringify(shape));
         assert.ok((sit.check.up ?? 0) > 0.5, `${JSON.stringify(shape)}: the shoulders over the hips`);
-        assert.ok(Math.abs(sit.check.headPitch! + SIT_FACE_DEG) < 0.01 && Math.abs(sit.check.headYaw!) < 0.01, `${JSON.stringify(shape)}: head pitch ${sit.check.headPitch}, yaw ${sit.check.headYaw}`);
-        assert.ok(Math.abs(sit.check.headPitch!) <= SIT_HEAD_LEVEL_DEG);
+        if (shape.level === 1) assert.ok(Math.abs(sit.check.headPitch! + SIT_FACE_DEG) < 0.01, `${JSON.stringify(shape)}: head pitch ${sit.check.headPitch}`);
+        // (Chin down or at the horizon, never up past a few degrees.)
+        assert.ok(sit.check.headPitch! <= 4);
+        assert.ok(Math.abs(sit.check.headYaw!) < 0.01 && Math.abs(sit.check.headPitch!) <= SIT_HEAD_LEVEL_DEG, `${JSON.stringify(shape)}: head pitch ${sit.check.headPitch}, yaw ${sit.check.headYaw}`);
     }
     // ARK-SLEEP's own sit (what plays with no triangles to measure by) drops the face far below level.
     assert.ok(new SitSleepPose(rig, raw).check.headPitch! < -SIT_HEAD_LEVEL_DEG);
     const per = rig.bones.length * 12;
     const plain = posedSitRows(rig, raw, new Uint16Array(per * 2), rig.bones.length, DataUtils.toHalfFloat);
     assert.equal(plain.check.shape, undefined);
-    // A model whose head was turned 40 degrees to its right and 20 up at rest: sitting, the turn is taken back.
-    for (const unturn of [1, 0.5]) {
-        const sit = new SitSleepPose(rig, raw, {...SIT_SHAPES[0], unturn}, {yaw: -40, pitch: 20});
-        assert.ok(Math.abs(sit.check.headYaw! - -40 * (1 - unturn)) < 3, `unturn ${unturn}: yaw ${sit.check.headYaw}`);
-        if (unturn === 1) assert.ok(Math.abs(sit.check.headPitch! + SIT_FACE_DEG) < 0.5, `pitch ${sit.check.headPitch}`);
-    }
+    // A model whose head was turned 40 degrees to its right and 20 up at rest: sitting, it keeps the turn and its face is levelled.
+    const turned = new SitSleepPose(rig, raw, SIT_SHAPES[0], {yaw: -40, pitch: 20});
+    assert.ok(Math.abs(turned.check.headYaw! + 40) < 2, `yaw ${turned.check.headYaw}`);
+    assert.ok(Math.abs(turned.check.headPitch! + SIT_FACE_DEG) < 0.5, `pitch ${turned.check.headPitch}`);
     // With the mesh's triangles, on a made primate: the fit says which split it keeps, and its head is level.
     const made = tube(0.01, 0.1, "primate");
     const madePer = made.rig.bones.length * 12;
     const fitted = posedSitRows(made.rig, made.raw, new Uint16Array(madePer * 2), made.rig.bones.length, DataUtils.toHalfFloat, made.index);
     assert.ok(fitted.data && fitted.check.shape, JSON.stringify(fitted.check));
     assert.ok(SIT_SHAPES.some((shape) => shape === fitted.check.shape));
-    assert.ok(Math.abs(fitted.check.headPitch! + SIT_FACE_DEG) < 0.01);
+    assert.ok(Math.abs(fitted.check.headPitch!) <= SIT_HEAD_LEVEL_DEG);
     // The models in the table are primates the scene has, their turns within what a neck can take back.
     for (const [slug, turn] of Object.entries(REST_HEAD_TURNS)) assert.ok(/^[a-z0-9-]+$/.test(slug) && Math.abs(turn.yaw) <= 90 && Math.abs(turn.pitch) <= 30, slug);
 });

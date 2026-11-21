@@ -48,7 +48,7 @@ export type SitMesh = {positions: ArrayLike<number>; joints: ArrayLike<number>; 
  * rest on the head's. Not `level` (ARK-SLEEP's first shape): the neck aimed `neck` of its way to `NECK_DEG` and the
  * face dropped to `face` below level (null: the head rides the neck, no turn of its own).
  */
-export type SitShape = {back: number; neck: number; face: number | null; level?: boolean; /** How much of the model's own head turn is taken back (0…1; `REST_HEAD_TURNS`). */ unturn?: number};
+export type SitShape = {back: number; neck: number; face: number | null; /** ARK-POSE's shapes: how much of the back's lean the head turns back (1: level; 0.85 leaves the chin at the horizon). */ level?: number};
 export type SitCheck = {
     ok: boolean;
     reason: string | null;
@@ -77,24 +77,20 @@ export const SIT_HEAD_LEVEL_DEG = 15;
  * chest and the face, all on the neck's one joint; across the 78 primate rigs the neck's skin stretched 2.3 times at
  * the median, 6.7 at the worst tenth. Now the head ends level, the face `SIT_FACE_DEG` below the horizon: the back's
  * lean turns the neck and the head up with it, and they turn back down by exactly that, dealt between the neck's joint
- * and the head's (half and half first, then more on one or the other). The first split that keeps the neck within
+ * and the head's (half and half first, then more on one or the other; then 0.85 of the turn, the chin at the
+ * horizon). The first that keeps the neck within
  * `NECK_STRETCH_MAX` and the head's own skin within `HEAD_STRETCH_MAX` (or within `SIT_BOW_OVER` of what the sit does
  * with no turn of the head at all: the arms' swing pulls the neck's base too) is its sit; none: the one nearest.
  * (The first cut of these shapes read the neck's turn with an angle that wrapped past straight up, and turned the
  * head the wrong way round by what was left of a full circle: the head tipped back.)
  */
 export const SIT_SHAPES: readonly SitShape[] = [
-    {back: BACK_DEG, neck: 0.5, face: SIT_FACE_DEG, level: true},
-    {back: BACK_DEG, neck: 0.35, face: SIT_FACE_DEG, level: true},
-    {back: BACK_DEG, neck: 0.65, face: SIT_FACE_DEG, level: true},
-    {back: BACK_DEG, neck: 0.2, face: SIT_FACE_DEG, level: true},
-    {back: BACK_DEG, neck: 0.8, face: SIT_FACE_DEG, level: true},
-    {back: BACK_DEG, neck: 0, face: SIT_FACE_DEG, level: true}
+    ...[0.5, 0.35, 0.65, 0.2, 0.8, 0].map((neck) => ({back: BACK_DEG, neck, face: SIT_FACE_DEG, level: 1})),
+    // (Then a little short of level, where no split of the whole turn is within the limits: the chin at the horizon,
+    // a degree or two over it at most. Less than that was tried, 0.7 of the turn: 13 of the 78 sat with the chin 7 to
+    // 14 degrees up.)
+    ...[0.5, 0.2, 0].map((neck) => ({back: BACK_DEG, neck, face: SIT_FACE_DEG, level: 0.85}))
 ];
-/** How much of a model's own head turn the sit takes back, most first. */
-export const SIT_UNTURNS: readonly number[] = [1, 0.7, 0.4];
-/** Past the limits, a turn taken back further may stretch the neck this much more than the least of the tries (a factor). */
-export const SIT_UNTURN_OVER = 1.15;
 /** ARK-SLEEP's sit: the neck aimed down, the face dropped onto the chest (the pose with the gate off). */
 export const SIT_FULL_BOW: SitShape = {back: BACK_DEG, neck: 1, face: FACE_DEG};
 /** A bow may stretch the neck this much more than the sit with no bow does (a factor), when that is past `NECK_STRETCH_MAX` already. */
@@ -109,8 +105,13 @@ export type HeadTurn = {yaw: number; pitch: number};
  * its front and its side, and the neck turned through a strip of yaws until the face is square to the front). The
  * Ark's models are made from photographs, and the toque macaque's was looking back over its right shoulder: its head
  * is 85 degrees round and a little up, and its bones were set as for a head facing ahead, so its face is the neck
- * bone's (the head bone holds the crown alone). Every pose carries that turn; sitting asleep it read as a head twisted
- * round and tipped back. The sit takes it back, on the neck's joint.
+ * bone's (the head bone holds the crown alone). Every pose carries that turn.
+ *
+ * The sit keeps the turn and levels the head about the head's own side-to-side axis: on a head 85 degrees round, a
+ * nod about the body's side-to-side axis is a roll onto one ear, which is what tipped the macaque's face to the sky.
+ * (Taking the turn back at the neck was tried: the face came square to the front, and the harness's picture showed
+ * the neck wrung, its skin a pink band round the throat; the neck read 2.18.) Such a model needs making again to
+ * face ahead.
  *
  * Read by eye, not by rule: two rules were tried on the 78 primate rigs (the upright plane the head's skin mirrors best
  * across; the skull's base to the middle of the head's skin) and neither agreed with the pictures (they turned the
@@ -131,7 +132,6 @@ const TARGET = new Vector3();
 const Q = new Quaternion();
 const ID = new Quaternion();
 const AXIS = new Vector3();
-const UP = new Vector3();
 
 /** Whether a rig can take the posed sit: a primate with two arms and two legs. */
 export function sitShaped(rig: LocoRig): boolean {
@@ -210,17 +210,23 @@ export class SitSleepPose {
         if (headRoot >= 0 && rig.head >= 0 && this.shape.level) {
             // ARK-POSE: level, facing ahead. The back's turn took the neck and the head up with it: they turn back down
             // by that and `face` more, the neck's joint its share, the head's the rest. (An upright rig's back turns
-            // down: then up.) First the model's own head turn taken back (`REST_HEAD_TURNS`), about the head's own up
-            // as the back carries it, so the face is in the body's middle plane before it is levelled.
+            // down: then up.)
             const deg = Math.PI / 180;
             // (A model whose head was turned: its face is the neck bone's, so the neck's joint takes all of it.)
-            const share = headRoot === rig.head ? 0 : this.headRest.yaw ? 1 : this.shape.neck;
-            const unturn = (this.shape.unturn ?? 1) * t;
-            // (The model's turn comes off at the neck's joint, whole: on such a model the face is the neck bone's.)
-            if (this.headRest.yaw) rotateSubtree(rig, world, headRoot, Q.setFromAxisAngle(UP.set(0, Math.cos(turn), -this.fwd * Math.sin(turn)), -this.headRest.yaw * deg * unturn).clone(), at(world[headRoot], new Vector3()));
-            const down = turn + ((this.shape.face ?? 0) * t + this.headRest.pitch * unturn) * deg;
+            const turned = this.headRest.yaw !== 0;
+            const share = headRoot === rig.head ? 0 : turned ? 1 : this.shape.neck;
+            const nod = ((this.shape.face ?? 0) + this.headRest.pitch) * t * deg;
+            // (A head facing ahead nods about the body's side-to-side axis, with the lean's undoing; a turned one about
+            // its own, `REST_HEAD_TURNS`: the lean undone first puts it back as it was at rest.)
+            const undo = turn * this.shape.level;
+            const down = turned ? undo : undo + nod;
             if (share) rotateSubtree(rig, world, headRoot, Q.setFromAxisAngle(AXIS.set(this.fwd, 0, 0), down * share).clone(), at(world[headRoot], new Vector3()));
             rotateSubtree(rig, world, rig.head, Q.setFromAxisAngle(AXIS.set(this.fwd, 0, 0), down * (1 - share)).clone(), at(world[rig.head], new Vector3()));
+            if (turned) {
+                const yaw = this.headRest.yaw * deg;
+                const carrier = share ? headRoot : rig.head;
+                rotateSubtree(rig, world, carrier, Q.setFromAxisAngle(AXIS.set(this.fwd * Math.cos(yaw), 0, -Math.sin(yaw)).normalize(), nod).clone(), at(world[carrier], new Vector3()));
+            }
         } else if (headRoot >= 0 && rig.head >= 0) {
             const deg = Math.PI / 180;
             if (headRoot === rig.head) {
@@ -394,33 +400,18 @@ export function posedSitRows(rig: LocoRig, mesh: SitMesh, data: Uint16Array, bon
         const full = stretchOf(sit);
         const none = new SitSleepPose(rig, mesh, SIT_NO_BOW);
         const limit = Math.max(1, (none.check.ok ? overLimit(stretchOf(none)) : 1) * SIT_BOW_OVER);
-        // A model's own head turn (`REST_HEAD_TURNS`) taken back whole where the neck takes it, else by less.
+        // (A model's own head turn, `REST_HEAD_TURNS`: kept, and its head levelled about its own axis.)
         const headRest = REST_HEAD_TURNS[rig.slug] ?? {yaw: 0, pitch: 0};
-        const turned = headRest.yaw !== 0 || headRest.pitch !== 0;
         let best: {sit: SitSleepPose; stretch: typeof full} | null = null;
-        const tried: Array<{sit: SitSleepPose; stretch: typeof full; unturn: number}> = [];
-        search: for (const unturn of turned ? SIT_UNTURNS : [1]) {
-            for (const shape of SIT_SHAPES) {
-                const next = new SitSleepPose(rig, mesh, turned ? {...shape, unturn} : shape, headRest);
-                if (!next.check.ok) continue;
-                const stretch = stretchOf(next);
-                tried.push({sit: next, stretch, unturn});
-                if (!best || overLimit(stretch) < overLimit(best.stretch) - 1e-4) best = {sit: next, stretch};
-                if (overLimit(stretch) <= limit) {
-                    best = {sit: next, stretch};
-                    break search;
-                }
-                // (A turned model's neck takes all of it whatever the split: one try a turn.)
-                if (turned) break;
+        for (const shape of SIT_SHAPES) {
+            const next = new SitSleepPose(rig, mesh, shape, headRest);
+            if (!next.check.ok) continue;
+            const stretch = stretchOf(next);
+            if (!best || overLimit(stretch) < overLimit(best.stretch) - 1e-4) best = {sit: next, stretch};
+            if (overLimit(stretch) <= limit) {
+                best = {sit: next, stretch};
+                break;
             }
-        }
-        // None within the limits (a turned model's neck takes its whole turn and the levelling too): the face forward
-        // matters more than the last tenth of stretch, so the most of its turn taken back that stretches the neck no
-        // more than `SIT_UNTURN_OVER` times the least of them.
-        if (best && turned && overLimit(best.stretch) > limit) {
-            const least = overLimit(best.stretch);
-            const most = tried.find((one) => overLimit(one.stretch) <= least * SIT_UNTURN_OVER);
-            if (most) best = most;
         }
         if (best) {
             sit = best.sit;
