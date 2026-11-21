@@ -153,7 +153,8 @@ test("rig look: a v2 entry's chain (bones, pivots, limits, share); a v1 file's n
     assert.ok(Math.abs(v1!.yaw - (70 * Math.PI) / 180) < 1e-9);
     const owl = rigLookChain({state: "passed", plan: "flying_bird", clips: {}}, "barn-owl", bones, (name) => pivots[name] ?? null);
     assert.ok(Math.abs(owl!.yaw - (170 * Math.PI) / 180) < 1e-9, "an owl turns its head furthest");
-    assert.equal(rigLookLimits("flying_bird", "owlet-nightjar").limits_deg.yaw, 110, "an owlet-nightjar is not an owl");
+    // (A bird other than an owl looks 30° on top of its clips' turn, itself capped at 70°: `locomotion/bird-neck.ts`.)
+    assert.equal(rigLookLimits("flying_bird", "owlet-nightjar").limits_deg.yaw, 30, "an owlet-nightjar is not an owl");
     assert.equal(rigLookLimits("flying_bird", "jungle-owlet").limits_deg.yaw, 170);
     assert.equal(rigLookChain({state: "passed", plan: "quadruped", clips: {}}, "x", ["hips", "chest"], () => [0, 0, 0]), null, "no head bone: no look");
 });
@@ -310,6 +311,21 @@ test("rig gait of movers with no rig: a pace by the distance covered, a bob with
     assert.equal(gaitPose(still, 2, 1.4).weight, 0, "standing: no bob");
     const jump = stepGait({x: 0, z: 0, phase: 0, speed: 0}, 50, 0, 1 / 60, 2);
     assert.equal(jump.phase, 0, "a jump to a new spot is no step");
+});
+
+test("rig look turns the head's whole subtree and a second neck bone (ARK-ANIM: dogs' jaws and ears, neck1)", async () => {
+    const {lookMasks, rigLookChain} = await import("@/ark-scene/rig-player");
+    const bones = ["hips", "spine", "chest", "neck", "neck1", "head", "jaw", "earL", "earR", "leg0L_upper"];
+    const parent: Record<string, string | null> = {hips: null, spine: "hips", chest: "spine", neck: "chest", neck1: "neck", head: "neck1", jaw: "head", earL: "head", earR: "head", leg0L_upper: "chest"};
+    const parentOf = (name: string) => parent[name] ?? null;
+    const m = lookMasks(bones, 3, 5, parentOf);
+    assert.equal(m.headMask, (1 << 5) | (1 << 6) | (1 << 7) | (1 << 8), "head, jaw and both ears");
+    assert.equal(m.neckMask, (1 << 3) | (1 << 4), "neck and neck1, never the head's subtree");
+    assert.deepEqual(lookMasks(bones, 3, 5), {neckMask: 1 << 3, headMask: 1 << 5}, "no hierarchy: the two bones");
+    const look = {bones: ["neck", "head"], rest: {neck: {head: [0, 0.1, 0.2]}, head: {head: [0, 0.3, 0.3]}}, limits_deg: {yaw: 70, pitch_up: 30, pitch_down: 45}, share: {neck: 0.45, head: 0.55}};
+    const chain = rigLookChain({version: 2, state: "passed", plan: "quadruped", clips: {}, look: look as never}, "domestic-dog", bones, () => null, parentOf);
+    assert.equal(chain?.headMask, m.headMask);
+    assert.equal(chain?.neckMask, m.neckMask);
 });
 
 test("rig look on a sitting rig: none at all (its chain is at mid-body), and the shader's turn off too", async () => {

@@ -23,6 +23,7 @@ import {clipStandOffset, levelBase, meanDrop, modelBase, type ModelLevelName} fr
 import {drawnGroundHeight} from "@/ark-scene/grounding/drawn-ground";
 import {scheduleSurface, standOnGround, type Stand, type SurfaceFrame} from "@/ark-scene/grounding/stand";
 import {STEEP_NY, wallHeading} from "@/ark-scene/wall-climb";
+import type {HangPoint} from "@/ark-scene/grounding/hang";
 
 /** The level's true base (model units); `minY` for a model the base file does not list. */
 export function groundedLevelBase(slug: string, level: ModelLevelName | "rig" | "token", minY: number): number {
@@ -140,6 +141,14 @@ export function scheduledPerch(
     if (at.forward && (at.ny < 0.95 || at.y > ground(at.x, at.z) + RAISED_BY)) return scheduleSurface(at, at.forward);
     if (at.ny < 0.95) return scheduleSurface(at, at.down && Math.abs(at.ny) < STEEP_NY ? wallHeading(true) : null);
     return null;
+}
+
+/** ARK-ANIM: a roost point a hanger holds (`hang.ts`): where it is now (with its tree's sway), its tag and limb radius. */
+export function hangPointAt(id: string, time: number, wind: {x: number; y: number}): HangPoint | null {
+    const point = attachPoint(id);
+    if (!point) return null;
+    const sway = attachSway(point, time, wind);
+    return {x: point.position.x + sway.x, y: point.position.y + sway.y, z: point.position.z + sway.z, tag: point.tag, radius: point.radius};
 }
 
 /** How far below its grip bones' pivots a gripping rig's soles are (model units; 0 without measured feet). */

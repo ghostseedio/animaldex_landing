@@ -15,7 +15,7 @@ import {ARK_POSTER, ARK_POSTER_BLURRED} from "@/lib/ark-poster";
  * either site theme. 44 px targets on a phone, 36 px on a desktop.
  */
 
-const GLASS = "border border-white/[0.14] bg-[rgba(14,20,14,0.72)] text-[#fffcf4] shadow-[0_10px_30px_-12px_rgba(0,0,0,0.55)] backdrop-blur-xl";
+const GLASS = "ark-glass border border-white/[0.14] text-[#fffcf4]";
 const FOCUS = "focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c8fa63]";
 
 type Props = {
@@ -26,7 +26,22 @@ type Props = {
     /** The lighter view (A18): on now, and whether the device chose it (the reader didn't). */
     lite: {on: boolean; auto: boolean; onToggle: () => void};
     sound: {on: boolean; onToggle: () => void};
+    /** "Around it" lines (lane ARK-SIMPLE: the card's switch moved here, beside sound), while an animal's card is open; else null. */
+    lines?: {on: boolean; onToggle: () => void; label: string; hint: string} | null;
 };
+
+function LinesIcon() {
+    // Three lines fanning out from a dot: who is around it.
+    return (
+        <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <circle cx="6" cy="17" r="2.4" fill="currentColor" stroke="none" />
+            <path d="M8 15.5 18 6" strokeDasharray="2.6 2.4" />
+            <path d="M8.4 17H19.5" />
+            <path d="M7.4 19 13 21.5" strokeDasharray="1 2.4" />
+            <circle cx="19" cy="5.5" r="1.6" />
+        </svg>
+    );
+}
 
 function LiteIcon() {
     // A feather: fewer details, a lighter Ark.
@@ -73,7 +88,7 @@ function IconSwitch({on, label, hint, onClick, children, badge = false}: {on: bo
     );
 }
 
-export function ArkWorldTools({words, locale, islands, lite, sound}: Props) {
+export function ArkWorldTools({words, locale, islands, lite, sound, lines = null}: Props) {
     return (
         <div className="pointer-events-none col-span-2 row-start-1 flex min-w-0 items-center gap-1.5 md:col-span-1">
             {islands ? (
@@ -101,6 +116,13 @@ export function ArkWorldTools({words, locale, islands, lite, sound}: Props) {
                 <IconSwitch on={sound.on} label={words.sound.label} hint={words.sound.hint} onClick={sound.onToggle}>
                     <SoundIcon on={sound.on} />
                 </IconSwitch>
+                {lines ? (
+                    <span className="rows-in inline-flex" data-testid="ark-lines-toggle">
+                        <IconSwitch on={lines.on} label={lines.label} hint={lines.hint} onClick={lines.onToggle}>
+                            <LinesIcon />
+                        </IconSwitch>
+                    </span>
+                ) : null}
             </span>
         </div>
     );

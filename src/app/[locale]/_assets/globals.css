@@ -684,6 +684,34 @@ html:not([data-hero="b"]) [data-hero-arm="b"] {
     .ark-island-count { display: inline; }
 }
 
+/* The Ark's glass (lane ARK-SIMPLE): the iOS panel's photo-card glass, ArkPanelView.barGlass (20, 24, 22 at 0.55) over a
+   strong blur, a hairline highlight on top. The tapped card's band is a little denser so its words read over a bright world. */
+.ark-glass {
+    background: rgba(20, 24, 22, 0.55);
+    -webkit-backdrop-filter: blur(22px) saturate(160%);
+    backdrop-filter: blur(22px) saturate(160%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 12px 32px -14px rgba(0, 0, 0, 0.6);
+}
+.ark-card-glass {
+    background: linear-gradient(180deg, rgba(20, 24, 22, 0.66), rgba(20, 24, 22, 0.86));
+    -webkit-backdrop-filter: blur(26px) saturate(160%);
+    backdrop-filter: blur(26px) saturate(160%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+/* The thriving / declining ticker under the Ark's name (lane ARK-SIMPLE): one strip that loops sideways, paused under a
+   pointer or focus; with reduced motion it stands still and scrolls by hand. */
+@keyframes ark-ticker { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ark-ticker-track { animation: ark-ticker var(--ark-ticker-s, 40s) linear infinite; will-change: transform; }
+[dir="rtl"] .ark-ticker-track { animation-name: ark-ticker-rtl; }
+@keyframes ark-ticker-rtl { from { transform: translateX(0); } to { transform: translateX(50%); } }
+.ark-ticker:hover .ark-ticker-track, .ark-ticker:focus-within .ark-ticker-track { animation-play-state: paused; }
+@media (prefers-reduced-motion: reduce) {
+    .ark-ticker-track { animation: none; }
+    .ark-ticker-copy { display: none; }
+    .ark-ticker { overflow-x: auto; }
+}
+
 /* The Ark's loading screen (lib/ark-loading.ts): the part of the bar the work going on now will fill is a still tint
    (never progress of its own; a moving sheen there cost the scene 0.5 s to its first frame on the phone profile, and
    the stage's dot pulsing slowly is all that needs to move). While the loading card shows, the scene's own quiet loading

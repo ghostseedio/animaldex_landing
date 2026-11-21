@@ -249,11 +249,58 @@ export function laidOnTrack(rest: readonly Vector3[], front: number, amp: number
     }
 }
 
+/** A body's thickness as a share of its length, for how tight its coils lie (a python about 1/25). */
+export const COIL_THICKNESS = 0.04;
+
+/** Asleep on land: its act's state (`behaviour-recipes.ts` postureOf, `sleep_curl`...), not swimming, not travelling. */
+function coiledNow(input: LocoInput): boolean {
+    return Boolean(input.actState?.startsWith("sleep")) && input.clipNow !== "slither" && input.clipNow !== "swim";
+}
+
+/**
+ * Chain targets laid on a flat spiral on the ground (mesh space): the head at the middle, raised a little on the
+ * coils, the body wound outwards round it, each point at its own rest distance from the front along the curve (the
+ * body keeps its length), the coils a body's thickness apart. A sleeping python, boa or viper rests so.
+ */
+export function laidOnCoil(rest: readonly Vector3[], front: number, thickness: number, out: Vector3[]): void {
+    const w = Math.max(thickness, 1e-4);
+    // r = r0 + b θ: one body's thickness further out each turn.
+    const b = w / (2 * Math.PI);
+    const r0 = 1.2 * w;
+    // The middle of the coil where the front lay, so it rests about its own spot.
+    const cx = rest[0].x;
+    const cz = front - 2.5 * w;
+    let th = 0;
+    let walked = 0;
+    const step = 0.02;
+    for (let k = 0; k < rest.length; k++) {
+        const want = front - rest[k].z;
+        while (walked < want - 1e-9) {
+            const r = r0 + b * th;
+            const ds = Math.hypot(r, b) * step;
+            if (walked + ds >= want) {
+                th += step * ((want - walked) / ds);
+                walked = want;
+                break;
+            }
+            walked += ds;
+            th += step;
+        }
+        const r = r0 + b * th;
+        // The head and neck (the first body's-thickness of turn) raised onto the coil beside them.
+        const up = th < Math.PI ? w * 0.9 * (1 - th / Math.PI) : 0;
+        out[k].set(cx + r * Math.sin(th), rest[k].y + up, cz + r * Math.cos(th));
+    }
+}
+
 export const chainDriver: LocoDriver = {
     name: "l2-chain",
     takes(rig, input) {
-        if ((globalThis as {__arkL2Motion?: boolean}).__arkL2Motion === false || rig.chain.length < 3 || !CHAIN_DRIVER_CLIPS.has(input.clipNow)) return false;
+        if ((globalThis as {__arkL2Motion?: boolean}).__arkL2Motion === false || rig.chain.length < 3) return false;
         const style = locoStyle(rig.slug, rig.plan);
+        // ARK-ANIM (decision 447): a snake asleep on land lies coiled (`laidOnCoil`), whatever clip it holds.
+        if (style.legless && coiledNow(input)) return true;
+        if (!CHAIN_DRIVER_CLIPS.has(input.clipNow)) return false;
         return Boolean(style.swim || style.legless);
     },
     base() {
@@ -278,6 +325,12 @@ export const chainDriver: LocoDriver = {
         let phase = 0;
         let cadence = 0;
         let stride = 0;
+        if (style.legless && coiledNow(input)) {
+            // Its body's own thickness, a share of its length, sets how tight the coils lie.
+            laidOnCoil(state.rest, state.front, COIL_THICKNESS * L, targets);
+            bendChain(rig, world, rig.chain, targets);
+            return {gait: "coil", phase: 0, cadence: 0, stride: 0, duty: 1, speed: 0, accel: 0, turn: 0, froude: 0, feet: []};
+        }
         // In the water (below the surface over it): an eel or a sea snake playing its slither swims its eel's wave.
         const e = input.instance.elements;
         const under = input.ground(e[12], e[14]);

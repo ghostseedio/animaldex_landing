@@ -28,7 +28,7 @@ test("the graphs' words: the site's English file IS the module's English (the fa
 test("the graphs' words: every one of the 45 Ark languages has every key, filled the same way as English, in its own words", () => {
     const english = flat(ARK_GRAPH_ENGLISH);
     assert.equal(ARK_LANGUAGES.length, 45);
-    assert.equal(Object.keys(english).length, 48, "40 lines, 4 periods and their 4 short forms");
+    assert.equal(Object.keys(english).length, 52, "44 lines, 4 periods and their 4 short forms");
     for (const language of ARK_LANGUAGES) {
         const own = flat(read(language));
         assert.deepEqual(Object.keys(own).sort(), Object.keys(english).sort(), language);

@@ -308,9 +308,10 @@ export function decodeRigLook(raw: unknown): RigLook | null {
 export const RIG_LOOK_LIMITS: Record<string, [number, number, number, number]> = {
     quadruped: [70, 30, 45, 0.45],
     primate: [80, 40, 40, 0.4],
-    flying_bird: [110, 45, 60, 0.6],
-    walking_bird: [110, 45, 60, 0.6],
-    flightless_bird: [100, 45, 60, 0.6],
+    // (Birds 30°, owls 170° below: the clips turn the head up to 70° from the body already, `bird-neck.ts`.)
+    flying_bird: [30, 45, 60, 0.25],
+    walking_bird: [30, 45, 60, 0.25],
+    flightless_bird: [30, 45, 60, 0.25],
     bat: [45, 30, 30, 0.4],
     lizard: [35, 25, 20, 0.5],
     turtle: [45, 30, 30, 0.6],

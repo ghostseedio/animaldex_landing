@@ -1,5 +1,6 @@
 "use client";
 
+import {arkIsHuman} from "@/lib/ark-human";
 import React, {Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState} from "react";
 import Link from "@/app/[locale]/_components/link";
 import {useHeaderAuth} from "@/app/[locale]/(composited)/_components/header-auth-provider";
@@ -36,6 +37,7 @@ import {postArkOpenProfile} from "@/lib/ark-profile-link";
 import {useParams} from "next/navigation";
 import ArkAgeAsk from "@/components/ark/ark-age-ask";
 import {ARK_SOUND_STORAGE_KEY, initialSoundPreference, storedSoundPreference} from "@/lib/ark-sound";
+import {ARK_RELATION_LINES_EVENT, arkRelationLinesOn, arkSetRelationLinesOn} from "@/lib/ark-relation-lines-pref";
 import ArkLoaderCard, {type ArkLoaderNewest} from "@/app/[locale]/(composited)/ark/ark-loader";
 import {ARK_LOAD_START, ARK_LOST_CONTEXT_WAIT_MS, arkAnimalsShare, arkFailureText, arkLoadAnimals, arkLoadStage, arkLoadStep, arkNewestArrival, arkWhenSettled, markArkLoad, type ArkLoadState, type ArkLoadStep} from "@/lib/ark-loading";
 import {arkPageSource, type ArkSource} from "@/lib/ark-measure";
@@ -195,7 +197,7 @@ function actCaption(act: ArkAct, words: ArkWords, locale: string, animals: ArkAn
                 + (act.phrase ? ` · ${fillArkWords(w.mealPhrase, {phrase: act.phrase})}` : "")
                 + gone(act.prey.name, act.extinct);
         case "death":
-            return fillArkWords(act.cause === "starved" ? w.starved : w.death, {animal: act.animal.name}) + gone(act.animal.name, act.extinct);
+            return fillArkWords(act.cause === "starved" ? w.starved : arkIsHuman(act.animal) ? w.deathPeaceful ?? "The {animal} died peacefully of old age" : w.death, {animal: act.animal.name}) + gone(act.animal.name, act.extinct);
         case "extinction":
             return fillArkWords(w.extinction, {animal: act.species});
     }
@@ -310,6 +312,14 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
     const [reducedMotion, setReducedMotion] = useState(false);
     // Sound (liveliness): always off until a tap. A remembered "on" only means the first tap on the world turns it on.
     const [soundOn, setSoundOn] = useState(false);
+    // The "Around it" lines' switch over the world (lane ARK-SIMPLE): the viewer's choice, told to the card by an event.
+    const [linesOn, setLinesOn] = useState(true);
+    useEffect(() => {
+        setLinesOn(arkRelationLinesOn());
+        const told = (event: Event) => setLinesOn((event as CustomEvent<boolean>).detail !== false);
+        window.addEventListener(ARK_RELATION_LINES_EVENT, told);
+        return () => window.removeEventListener(ARK_RELATION_LINES_EVENT, told);
+    }, []);
     const soundRemembered = useRef(false);
     const [creditsOpen, setCreditsOpen] = useState(false);
     const [credits, setCredits] = useState<Array<{text: string; page: string | null; license: string}>>([]);
@@ -1231,6 +1241,7 @@ export default function ArkView({locale, initial, summary: pageSummary = null, f
                             islands={twoIslands && islandCounts ? {island, counts: islandCounts, crossing, names: islandWords, onCross: crossTo} : null}
                             lite={{on: liteChoice ?? liteOn, auto: liteChoice === null && liteOn, onToggle: toggleLite}}
                             sound={{on: soundOn, onToggle: () => setSound(!soundOn)}}
+                            lines={selected ? {on: linesOn, onToggle: () => arkSetRelationLinesOn(!linesOn), label: `${words.relations?.title ?? "Around it"}: ${words.relations?.lines ?? "Lines"}`, hint: words.relations?.note ?? "Shows who could, never who will."} : null}
                         />
 
                         <div className="pointer-events-none col-span-2 row-start-3 flex min-w-0 flex-col items-start gap-2 self-start md:col-span-1 md:row-start-2">

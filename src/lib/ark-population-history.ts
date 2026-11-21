@@ -47,8 +47,17 @@ export type ArkHistory = {
     gone: Map<string, {name: string; slug: string | null}>;
 };
 
-/** Per island ([wild, town]): count at t0, and per step: [arrived, born, revived, died, eaten]. */
-export type ArkKindRecord = {base: [number, number]; rows: Array<{step: number; island: 0 | 1; arrived: number; born: number; revived: number; died: number; eaten: number}>};
+/**
+ * Per island ([wild, town]): count at t0, and per step: [arrived, born, revived, died, eaten], then (kept populations,
+ * AnimalDex migration 20261223120000, only on a step that has one) the animals born aboard that left alive: rehomed, sent
+ * to market, moved to another zoo.
+ */
+export type ArkKindRecord = {base: [number, number]; rows: Array<{step: number; island: 0 | 1; arrived: number; born: number; revived: number; died: number; eaten: number; rehomed: number; toMarket: number; movedZoo: number}>};
+
+/** A step's change: in (arrived, born, back from recovery) minus out (died, eaten, left alive). */
+function net(row: {arrived: number; born: number; revived: number; died: number; eaten: number; rehomed: number; toMarket: number; movedZoo: number}): number {
+    return row.arrived + row.born + row.revived - row.died - row.eaten - row.rehomed - row.toMarket - row.movedZoo;
+}
 
 /** One species' line: `counts[i]` is the count at `times[i]` (the last is now). */
 export type ArkSeries = {
@@ -59,6 +68,9 @@ export type ArkSeries = {
     revived: number[];
     died: number[];
     eaten: number[];
+    rehomed: number[];
+    toMarket: number[];
+    movedZoo: number[];
     /** Peak and low read from the finest steps (see `ArkHistory.fine`), where the points are local days: the same over the same record in every time zone. Absent: from `counts`. */
     extremes?: {peak: number; peakAt: number; low: number; lowAt: number};
 };
@@ -171,17 +183,20 @@ export function arkRebucketDays(source: ArkHistory, zoneName: string = source.zo
         for (const row of record.rows) {
             const end = endOf(row.step);
             if (end <= edges[0]) {
-                base[row.island] += row.arrived + row.born + row.revived - row.died - row.eaten;
+                base[row.island] += net(row);
                 continue;
             }
             const step = dayOf(end);
             const id = step * 2 + row.island;
-            const into = rows.get(id) ?? {step, island: row.island, arrived: 0, born: 0, revived: 0, died: 0, eaten: 0};
+            const into = rows.get(id) ?? {step, island: row.island, arrived: 0, born: 0, revived: 0, died: 0, eaten: 0, rehomed: 0, toMarket: 0, movedZoo: 0};
             into.arrived += row.arrived;
             into.born += row.born;
             into.revived += row.revived;
             into.died += row.died;
             into.eaten += row.eaten;
+            into.rehomed += row.rehomed;
+            into.toMarket += row.toMarket;
+            into.movedZoo += row.movedZoo;
             rows.set(id, into);
         }
         kinds.set(key, {base, rows: Array.from(rows.values())});
@@ -249,7 +264,7 @@ export function decodeArkHistory(raw: unknown, zone: string = arkViewerZone()): 
         const step = num(item[2]);
         const record = kindOf(item[0]);
         if (!record || step === null || step < 0 || step >= steps) continue;
-        record.rows.push({step, island: item[1] === 1 ? 1 : 0, arrived: int(item[3]), born: int(item[4]), revived: int(item[5]), died: int(item[6]), eaten: int(item[7])});
+        record.rows.push({step, island: item[1] === 1 ? 1 : 0, arrived: int(item[3]), born: int(item[4]), revived: int(item[5]), died: int(item[6]), eaten: int(item[7]), rehomed: int(item[8]), toMarket: int(item[9]), movedZoo: int(item[10])});
     }
     const gone = new Map<string, {name: string; slug: string | null}>();
     const goneRaw = body.gone && typeof body.gone === "object" && !Array.isArray(body.gone) ? (body.gone as Row) : {};
@@ -279,7 +294,7 @@ function inScope(island: 0 | 1, scope: ArkHistoryScope): boolean {
 export function arkKindSeries(history: ArkHistory, key: string, scope: ArkHistoryScope): ArkSeries {
     const length = history.steps + 1;
     const zeros = () => new Array<number>(length).fill(0);
-    const out: ArkSeries = {times: arkHistoryTimes(history), counts: zeros(), arrived: zeros(), born: zeros(), revived: zeros(), died: zeros(), eaten: zeros()};
+    const out: ArkSeries = {times: arkHistoryTimes(history), counts: zeros(), arrived: zeros(), born: zeros(), revived: zeros(), died: zeros(), eaten: zeros(), rehomed: zeros(), toMarket: zeros(), movedZoo: zeros()};
     const record = history.kinds.get(key);
     if (!record) return out;
     const delta = zeros();
@@ -291,7 +306,10 @@ export function arkKindSeries(history: ArkHistory, key: string, scope: ArkHistor
         out.revived[at] += row.revived;
         out.died[at] += row.died;
         out.eaten[at] += row.eaten;
-        delta[at] += row.arrived + row.born + row.revived - row.died - row.eaten;
+        out.rehomed[at] += row.rehomed;
+        out.toMarket[at] += row.toMarket;
+        out.movedZoo[at] += row.movedZoo;
+        delta[at] += net(row);
     }
     let count = scope === "both" ? record.base[0] + record.base[1] : record.base[scope === "town" ? 1 : 0];
     for (let i = 0; i < length; i++) {
@@ -317,9 +335,9 @@ export function arkPeriodStart(history: ArkHistory, period: ArkPeriod): number {
 /** A series cut to a period (its first point the count when the period began). */
 export function arkSeriesSlice(series: ArkSeries, start: number): ArkSeries {
     const cut = (values: number[]) => values.slice(start);
-    const out = {times: cut(series.times), counts: cut(series.counts), arrived: cut(series.arrived), born: cut(series.born), revived: cut(series.revived), died: cut(series.died), eaten: cut(series.eaten)};
+    const out = {times: cut(series.times), counts: cut(series.counts), arrived: cut(series.arrived), born: cut(series.born), revived: cut(series.revived), died: cut(series.died), eaten: cut(series.eaten), rehomed: cut(series.rehomed), toMarket: cut(series.toMarket), movedZoo: cut(series.movedZoo)};
     // What happened before the first point is not in the period.
-    out.arrived[0] = out.born[0] = out.revived[0] = out.died[0] = out.eaten[0] = 0;
+    out.arrived[0] = out.born[0] = out.revived[0] = out.died[0] = out.eaten[0] = out.rehomed[0] = out.toMarket[0] = out.movedZoo[0] = 0;
     return out;
 }
 
@@ -330,7 +348,7 @@ function kindCounts(history: ArkHistory, key: string, scope: ArkHistoryScope): n
     const counts = new Array<number>(history.steps + 1).fill(0);
     const record = history.kinds.get(key);
     if (!record) return counts;
-    for (const row of record.rows) if (inScope(row.island, scope)) counts[row.step + 1] += row.arrived + row.born + row.revived - row.died - row.eaten;
+    for (const row of record.rows) if (inScope(row.island, scope)) counts[row.step + 1] += net(row);
     let count = scope === "both" ? record.base[0] + record.base[1] : record.base[scope === "town" ? 1 : 0];
     for (let i = 0; i < counts.length; i++) {
         count += counts[i];
@@ -372,8 +390,8 @@ export function arkPeriodSeries(history: ArkHistory, key: string, scope: ArkHist
     return series;
 }
 
-/** The five things the record counts, in the order the panels say them. */
-export const ARK_EVENT_KINDS = ["arrived", "born", "revived", "died", "eaten"] as const;
+/** The things the record counts, in the order the panels say them (the last three: left the Ark alive). */
+export const ARK_EVENT_KINDS = ["arrived", "born", "revived", "died", "eaten", "rehomed", "toMarket", "movedZoo"] as const;
 
 /** What changed in the step that ended at point `i` (the count there against the point before): each kind with any, as [kind, count]. */
 export function arkStepChanges(series: ArkSeries, i: number): Array<[(typeof ARK_EVENT_KINDS)[number], number]> {
@@ -395,6 +413,10 @@ export type ArkSeriesStats = {
     revived: number;
     died: number;
     eaten: number;
+    /** Kept populations: animals born aboard that left alive. */
+    rehomed: number;
+    toMarket: number;
+    movedZoo: number;
     /** It had animals in the period and has none now. */
     goneNow: boolean;
 };
@@ -433,6 +455,9 @@ export function arkSeriesStats(series: ArkSeries): ArkSeriesStats {
         revived: sum(series.revived),
         died: sum(series.died),
         eaten: sum(series.eaten),
+        rehomed: sum(series.rehomed),
+        toMarket: sum(series.toMarket),
+        movedZoo: sum(series.movedZoo),
         goneNow: now === 0 && peak > 0
     };
 }

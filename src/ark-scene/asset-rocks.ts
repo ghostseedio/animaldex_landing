@@ -19,7 +19,7 @@ import {ARK_ENV, NOISE_GLSL} from "@/ark-scene/glsl";
 import {readNowOrLater} from "@/ark-scene/model-files";
 import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {ASSET_BASE} from "@/ark-scene/tree-assets";
-import {generatedRockFile, generatedShape, rockAssetFor, rockAssetInfo, rockFoot} from "@/ark-scene/rock-assets";
+import {generatedRockFile, generatedShape, rockAssetFor, rockAssetInfo, rockFoot, steepSink} from "@/ark-scene/rock-assets";
 import {cachedRock} from "@/ark-scene/rock-shapes";
 import {floorAssetInfo, floorPlacements} from "@/ark-scene/floor-assets";
 import {worldDecor} from "@/ark-scene/decor";
@@ -317,8 +317,11 @@ export class AssetRocks extends AssetInstances {
             if (arkWorld() === "v2" && behindSheet(placed.x, placed.y + 0.5 * placed.scale, placed.z, 0.8 * placed.scale)) continue;
             // p4: a rock made here on a steep face, reached down to its ground (the bigger wild island's mountain).
             const shape = arkWorld() === "v2" ? generatedShape(placed.id) : null;
-            const foot = shape ? {k: rockFoot({...shape, x: placed.x, y: placed.y, z: placed.z, yaw: placed.yaw, up: placed.up ?? [0, 1, 0], scale: placed.scale}), top: rockAssetInfo(placed.id).bounds.max[1]} : undefined;
-            placements.push({...placed, shade: 0.92 + 0.16 * frac(item.x * 5.17 + item.z * 2.93), foot});
+            // (ark-world: on a steep slope it is drawn set down into it, half buried at 50 degrees: `rock-assets.ts` steepSink.)
+            const sunk = arkWorld() === "v2" ? steepSink(placed.x, placed.z, placed.scale, rockAssetInfo(placed.id).bounds.max[1]) : 0;
+            const drawn = sunk > 0.01 ? {...placed, y: placed.y - sunk} : placed;
+            const foot = shape ? {k: rockFoot({...shape, x: drawn.x, y: drawn.y, z: drawn.z, yaw: drawn.yaw, up: drawn.up ?? [0, 1, 0], scale: drawn.scale}), top: rockAssetInfo(drawn.id).bounds.max[1]} : undefined;
+            placements.push({...drawn, shade: 0.92 + 0.16 * frac(item.x * 5.17 + item.z * 2.93), foot});
         }
         const material = rockMaterial();
         super(placements, rockAssetInfo, {front: material, double: material}, base, "asset-rock");

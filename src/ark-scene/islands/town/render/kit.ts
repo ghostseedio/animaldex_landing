@@ -251,13 +251,14 @@ export class Geo {
      * its base at `y` (set it a little into the ground), `sx` × `sy` × `sz` its half width, height and half depth,
      * turned by `turn`, shaded by the rock's own crevices and joint faces in `colour`.
      */
-    rock(x: number, y: number, z: number, sx: number, sy: number, sz: number, turn: number, colour: [number, number, number], variant: number, detail = 2) {
+    rock(x: number, y: number, z: number, sx: number, sy: number, sz: number, turn: number, colour: [number, number, number], variant: number, detail = 2, crag = true) {
         // p2 (town2): shaded smooth from the rock's own normals and coloured per corner from its own weathering (lichen,
         // streaks, moss), tinted to `colour` (the owner: "big rocks and boulders shouldn't have any sharp polygons"):
         // it was drawn flat, one shade a face, so even a rounded rock showed every facet.
         if (this.rocks) {
             // p4 (townfix): the big rockwork (a metre tall and more) as bedded crags (`rock-instances.ts` CRAG).
-            this.rocks.push(x, y, z, sx, sy, sz, turn, colour[0], colour[1], colour[2], variant % ROCK_VARIANTS.boulder, detail + (sy >= 0.9 ? 4 : 0));
+            // (`crag` false: a big one still a rounded boulder, a granite kopje's, not bedded strata: ark-world.)
+            this.rocks.push(x, y, z, sx, sy, sz, turn, colour[0], colour[1], colour[2], variant % ROCK_VARIANTS.boulder, detail + (crag && sy >= 0.9 ? 4 : 0));
             return;
         }
         const m = cachedRock("boulder", variant % ROCK_VARIANTS.boulder, detail, true);
@@ -306,10 +307,13 @@ export class Geo {
     }
 
     /**
-     * A leafy bush (graphics pass 1, lane VEG: the owner, "bushes look really bad"; they were one 20-face green ball):
-     * a dark heart under seven smaller clumps of leaves round its top and sides, each its own green (lighter on top,
-     * darker low), so it reads as a mass of leaf clusters. The same reach (`sx`, `sy`, `sz`, about its middle); 160
-     * faces, was 20.
+     * A leafy bush (graphics pass 1, lane VEG: the owner, "bushes look really bad"; they were one 20-face green ball; ark-world,
+     * decision 447, "better modeling and graphics on bushes": they were still seven 20-face lumps drawn flat, each face
+     * its own shade, big green facets close up): a dark heart under seven lumps of leaves round its top and sides, each a
+     * lumpy 20-face mass SHADED SMOOTH (its normals lean out from the bush's middle, so the lumps melt into one mound and
+     * the light rolls over them instead of breaking on facets), every corner its own green (lighter on top and at the
+     * leaf tips, darker low and inside, mottled so the leaves read), the lumps overlapping into a ragged crown. The same
+     * reach (`sx`, `sy`, `sz`, about its middle); the same 160 faces (the town's scenery is 635k triangles and a phone's heap is tight).
      */
     bush(cx: number, cy: number, cz: number, sx: number, sy: number, sz: number, colour: [number, number, number], seed: number) {
         let s = (seed ^ 0x5bd1e995) >>> 0;
@@ -320,21 +324,42 @@ export class Geo {
             t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
             return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
         };
-        this.blob(cx, cy - sy * 0.1, cz, sx * 0.72, sy * 0.72, sz * 0.72, [colour[0] * 0.6, colour[1] * 0.6, colour[2] * 0.6], seed, 0);
+        // The dark heart: smooth too, so no light flat facet shows through the leaves.
+        this.smoothLump(cx, cy - sy * 0.1, cz, sx * 0.7, sy * 0.7, sz * 0.7, [cx, cy, cz], [colour[0] * 0.55, colour[1] * 0.55, colour[2] * 0.55], 0.55, rand, 0);
         const clumps = 7;
         for (let k = 0; k < clumps; k++) {
-            const a = (k / clumps) * Math.PI * 2 + rand() * 0.6;
+            const a = (k / clumps) * Math.PI * 2 + rand() * 0.7;
             // Round the sides low down, over the top higher up.
-            const up = k === 0 ? 1 : 0.05 + rand() * 0.75;
+            const up = k === 0 ? 0.95 : 0.1 + rand() * 0.6;
             const out = Math.sqrt(1 - up * up);
-            const x = cx + Math.cos(a) * out * sx * 0.55;
-            const y = cy + (up - 0.15) * sy * 0.55;
-            const z = cz + Math.sin(a) * out * sz * 0.55;
-            const r = 0.42 + rand() * 0.14;
-            const k2 = (0.86 + 0.28 * up) * (0.92 + rand() * 0.16);
+            const x = cx + Math.cos(a) * out * sx * 0.5;
+            const y = cy + (up - 0.2) * sy * 0.55;
+            const z = cz + Math.sin(a) * out * sz * 0.5;
+            const r = 0.44 + rand() * 0.14;
+            const k2 = (0.88 + 0.26 * up) * (0.94 + rand() * 0.12);
             const green: [number, number, number] = [colour[0] * k2 * (0.94 + rand() * 0.12), colour[1] * k2, colour[2] * k2 * (0.9 + rand() * 0.15)];
-            this.blob(x, y, z, sx * r, sy * r * 0.9, sz * r, green, seed + 97 * (k + 1), 0);
+            this.smoothLump(x, y, z, sx * r, sy * r * 0.92, sz * r, [cx, cy - sy * 0.15, cz], green, 1, rand, 0);
         }
+    }
+
+    /**
+     * A lumpy mass shaded smooth (`bush`'s lump): an icosphere of `detail` jittered in radius, its normals the lump's own
+     * outward blended with the direction away from `centre` (the whole bush's middle), its corners' greens mottled and
+     * lighter toward the top. `leafy` 0 is the dark heart (plain), 1 the lit leaf lumps.
+     */
+    smoothLump(x: number, y: number, z: number, rx: number, ry: number, rz: number, centre: V3, colour: [number, number, number], leafy: number, rand: () => number, detail: number) {
+        const verts = icosphere(detail);
+        const jitter = verts.points.map(() => 0.84 + rand() * 0.28);
+        const p = verts.points.map((v, i) => [x + v[0] * rx * jitter[i], y + v[1] * ry * jitter[i], z + v[2] * rz * jitter[i]] as V3);
+        const n = verts.points.map((v, i) => {
+            const away = normalise([p[i][0] - centre[0], p[i][1] - centre[1], p[i][2] - centre[2]]);
+            return normalise([v[0] * 0.45 + away[0] * 0.55, v[1] * 0.45 + away[1] * 0.55 + 0.12, v[2] * 0.45 + away[2] * 0.55]);
+        });
+        const c = verts.points.map((v) => {
+            const lift = leafy ? 0.8 + 0.34 * (v[1] * 0.5 + 0.5) + (rand() - 0.5) * 0.18 : 0.9 + (rand() - 0.5) * 0.1;
+            return [colour[0] * lift * (0.96 + rand() * 0.08), colour[1] * lift, colour[2] * lift * (0.94 + rand() * 0.1)] as [number, number, number];
+        });
+        for (const [a, b, d] of verts.faces) this.triShaded(p[a], p[b], p[d], n[a], n[b], n[d], c[a], c[b], c[d]);
     }
 
     /** A flat strip along a polyline at heights from `heightAt` (+ `lift`), `width` wide (roads, paths, kerbs). */

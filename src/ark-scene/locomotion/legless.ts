@@ -50,12 +50,13 @@ const smooth = (v: number) => {
 };
 
 /**
- * The mode it moves in now: a rectilinear snake undulates once it goes faster than a quarter of a length a second
- * (blended from 0.12), so `blend` is the share of lateral undulation.
+ * The mode it moves in now: a rectilinear snake creeps straight only when barely moving and undulates from a tenth of
+ * a length a second (blended from 0.03), so `blend` is the share of lateral undulation. (ARK-ANIM, decision 447: at
+ * the Ark's walking paces the pythons, boas and vipers crept straight, and read as sliding along the floor.)
  */
 export function leglessMode(mode: LeglessMode, speedBLs: number): {mode: LeglessMode; blend: number} {
     if (mode !== "rectilinear") return {mode, blend: mode === "lateral" ? 1 : 0};
-    const blend = smooth((speedBLs - 0.12) / 0.13);
+    const blend = smooth((speedBLs - 0.03) / 0.07);
     return {mode: blend > 0.5 ? "lateral" : "rectilinear", blend};
 }
 

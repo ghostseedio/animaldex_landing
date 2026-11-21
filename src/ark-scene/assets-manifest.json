@@ -131,7 +131,7 @@
   "plants": {
    "attach": "plants/attach.json",
    "assets": 76,
-   "bytes": 2132774,
+   "bytes": 2063322,
    "lod0_tris_max": 4774
   },
   "rocks": {
@@ -897,18 +897,18 @@
     {
      "level": "lod1",
      "file": "plants/bush-blueberry-a.lod1.glb",
-     "tris": 1036,
-     "verts": 1077,
-     "bytes": 15192,
+     "tris": 710,
+     "verts": 513,
+     "bytes": 8092,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "plants/bush-blueberry-a.lod2.glb",
-     "tris": 295,
-     "verts": 326,
-     "bytes": 6188,
+     "tris": 247,
+     "verts": 230,
+     "bytes": 5036,
      "doubleSided": true,
      "morph": false
     }
@@ -916,7 +916,7 @@
    "attach": 38,
    "wood_tris": [
     3485,
-    766,
+    646,
     221
    ],
    "leaves": 371,
@@ -960,18 +960,18 @@
     {
      "level": "lod1",
      "file": "plants/bush-bramble-a.lod1.glb",
-     "tris": 964,
-     "verts": 1033,
-     "bytes": 14456,
+     "tris": 490,
+     "verts": 349,
+     "bytes": 6160,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "plants/bush-bramble-a.lod2.glb",
-     "tris": 249,
-     "verts": 302,
-     "bytes": 5968,
+     "tris": 199,
+     "verts": 202,
+     "bytes": 4748,
      "doubleSided": true,
      "morph": false
     }
@@ -979,7 +979,7 @@
    "attach": 36,
    "wood_tris": [
     2941,
-    694,
+    426,
     163
    ],
    "leaves": 732,
@@ -1023,18 +1023,18 @@
     {
      "level": "lod1",
      "file": "plants/bush-bramble-b.lod1.glb",
-     "tris": 824,
-     "verts": 1399,
-     "bytes": 19244,
+     "tris": 304,
+     "verts": 375,
+     "bytes": 7432,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "plants/bush-bramble-b.lod2.glb",
-     "tris": 249,
-     "verts": 434,
-     "bytes": 7760,
+     "tris": 127,
+     "verts": 190,
+     "bytes": 4964,
      "doubleSided": true,
      "morph": false
     }
@@ -1042,7 +1042,7 @@
    "attach": 24,
    "wood_tris": [
     615,
-    212,
+    122,
     55
    ],
    "leaves": 306,
@@ -1085,18 +1085,18 @@
     {
      "level": "lod1",
      "file": "plants/bush-hazel-a.lod1.glb",
-     "tris": 900,
-     "verts": 1177,
-     "bytes": 17164,
+     "tris": 280,
+     "verts": 375,
+     "bytes": 7424,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "plants/bush-hazel-a.lod2.glb",
-     "tris": 249,
-     "verts": 392,
-     "bytes": 7480,
+     "tris": 107,
+     "verts": 180,
+     "bytes": 4912,
      "doubleSided": true,
      "morph": false
     }
@@ -1104,8 +1104,8 @@
    "attach": 20,
    "wood_tris": [
     1843,
-    520,
-    91
+    66,
+    25
    ],
    "leaves": 2285,
    "height": 2.12,
@@ -1147,18 +1147,18 @@
     {
      "level": "lod1",
      "file": "plants/bush-holly-a.lod1.glb",
-     "tris": 1034,
-     "verts": 1084,
-     "bytes": 14584,
+     "tris": 530,
+     "verts": 373,
+     "bytes": 6320,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "plants/bush-holly-a.lod2.glb",
-     "tris": 253,
-     "verts": 290,
-     "bytes": 5680,
+     "tris": 209,
+     "verts": 202,
+     "bytes": 4672,
      "doubleSided": true,
      "morph": false
     }
@@ -1166,7 +1166,7 @@
    "attach": 33,
    "wood_tris": [
     3353,
-    764,
+    466,
     179
    ],
    "leaves": 1093,
@@ -1210,18 +1210,18 @@
     {
      "level": "lod1",
      "file": "plants/bush-holly-b.lod1.glb",
-     "tris": 900,
-     "verts": 1533,
-     "bytes": 20036,
+     "tris": 308,
+     "verts": 373,
+     "bytes": 7184,
      "doubleSided": true,
      "morph": false
     },
     {
      "level": "lod2",
      "file": "plants/bush-holly-b.lod2.glb",
-     "tris": 249,
-     "verts": 434,
-     "bytes": 7528,
+     "tris": 127,
+     "verts": 190,
+     "bytes": 4884,
      "doubleSided": true,
      "morph": false
     }
@@ -1229,7 +1229,7 @@
    "attach": 19,
    "wood_tris": [
     635,
-    226,
+    130,
     55
    ],
    "leaves": 403,
@@ -9224,5 +9224,5 @@
    ]
   }
  },
- "totalBytes": 10457366
+ "totalBytes": 10387914
 }

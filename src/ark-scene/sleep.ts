@@ -375,6 +375,9 @@ export function stepSleepNow(now: SleepNow | null, input: SleepStepInput): Sleep
     return now;
 }
 
+/** The most a posture's roll turns a body that has no clip for it (radians): a lean, never the standing model turned over. */
+export const FAKE_ROLL_MAX = 0.12;
+
 /** What the scene draws of its sleep this frame. */
 export type SleepDraw = {
     /** Its legs' share of its height taken down (`lyingDrop`), its roll (− its left side down: three.js turns +y toward −x), nose down (+), and its heading's shift. */
@@ -411,7 +414,11 @@ export function sleepDraw(now: SleepNow, input: {id: string; slug: string; lengt
     const headWeight = stages.head * k;
     return {
         legs: spec.drop * stages.body * k,
-        roll: -spec.roll * now.side * stages.roll * (1 - 0.5 * (1 - k)),
+        // ARK-ANIM (decision 447, the owner's bears and hogs "just look rotated"): the roll onto a side is the rig's own
+        // clip's (`sleep_side` lies the body over itself, 77 degrees at the hips); it was added on top of every sleep clip
+        // at half strength, and with no clip the standing model was turned over whole. Now none under a clip, and with
+        // no clip no more than `FAKE_ROLL_MAX`: a body that cannot lie on its side lies on its chest.
+        roll: -Math.sign(spec.roll) * Math.min(Math.abs(spec.roll), FAKE_ROLL_MAX) * now.side * stages.roll * k,
         pitch: spec.pitch * stages.body * k,
         yaw: stir.shift * settled,
         headYaw: head.yaw * (1 - 0.5 * lift),
@@ -504,6 +511,24 @@ export function lyingTorso(box: {min: {x: number; y: number; z: number}; max: {x
     const hw = ((box.max.x - box.min.x) / 2) * 0.75;
     const length = box.max.z - box.min.z;
     return {x0: cx - hw, x1: cx + hw, z0: box.min.z + length * 0.15, z1: box.max.z - length * 0.15, bottom: box.min.y + legs * (box.max.y - box.min.y), top: box.max.y};
+}
+
+/**
+ * Whether the clip a rig plays draws the sleep posture itself (`entry.sleepClipped`): a sleep clip, a lying base, or the
+ * way down and up. The posed lie (`rig-player.ts` posedLieClips: `lie` and `sleep` on a "lying" base, `lie_down`,
+ * `get_up`) always does, so its sleeper lies down and is never stood up by `sleepsOnFeet`.
+ */
+export function clipDrawsSleep(name: string, base: string): boolean {
+    return name.startsWith("sleep") || base !== "stand" || name === "lie_down" || name === "get_up" || name === "get_up_fast";
+}
+
+/**
+ * ARK-CONTACT (the owner, 2026-11-21: farm sleepers sunk to the belly): a sleeper whose legs are drawn standing (no
+ * lying clip of its rig drawn: `clipShare` 0) sleeps on its feet; one whose rig lies down (`sleepClipped`, faded in)
+ * lies. Never in the water, never a flat sleeper, never a body with no legs under it.
+ */
+export function sleepsOnFeet(o: {slept: boolean; rigged: boolean; sleepClipped: boolean; clipShare: number; water: boolean; lying: boolean; flat: boolean; legsUnder: boolean}): boolean {
+    return o.slept && !(o.rigged && o.sleepClipped && o.clipShare > 0) && !o.water && o.lying && !o.flat && o.legsUnder;
 }
 
 /** A belly this close to the ground (a share of the height) has no legs under it to fold: a snake, a slug, a fish. */

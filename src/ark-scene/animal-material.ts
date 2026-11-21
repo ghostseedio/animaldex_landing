@@ -190,6 +190,7 @@ attribute vec4 arkRigB;
 // The look chain: the neck's and the head's texture index (-1: none), their joints in the rest pose, and the
 // limits (yaw, pitch up, pitch down; radians) with the neck's share of the turn.
 uniform vec2 arkLookBones;
+uniform ivec2 arkLookMask;
 uniform vec3 arkLookNeckPivot;
 uniform vec3 arkLookHeadPivot;
 uniform vec4 arkLookLimits;
@@ -217,8 +218,12 @@ ${LIVE_FETCH}    return mat4(r0.x, r1.x, r2.x, 0.0, r0.y, r1.y, r2.y, 0.0, r0.z,
 mat4 arkBoneAt(vec3 at, float bone) {
     mat4 m = arkBone(at.x, bone) * (1.0 - at.z) + arkBone(at.y, bone) * at.z;
     if (arkLooking) {
-        if (abs(bone - arkLookBones.x) < 0.5) return m * arkLookNeck;
-        if (abs(bone - arkLookBones.y) < 0.5) return m * arkLookHead;
+        // The head's subtree (jaw, ears, eyes) and the neck's (a second neck bone) turn with them (ARK-ANIM).
+        int bit = int(bone + 0.5);
+        if (bit < 31) {
+            if (((arkLookMask.y >> bit) & 1) == 1) return m * arkLookHead;
+            if (((arkLookMask.x >> bit) & 1) == 1) return m * arkLookNeck;
+        }
     }
     return m;
 }
@@ -260,10 +265,16 @@ transformed = (arkSkin * vec4(transformed, 1.0)).xyz;
 #endif
     // Asleep (the hour and the species' activity): still, the head down, breathing slow.
     float arkRest = arkInstance.z;
-    if (arkRest > 0.001 && arkDroop > 0.0) {
+    float arkDroopRest = arkRest;
+#ifdef ARK_RIG
+    // (A rig's own lying and sleeping clips carry its head: the droop on top bent a horse's muzzle and a bird's beak
+    // down like rubber. ARK-ANIM, the owner on batch 13.)
+    arkDroopRest *= 1.0 - arkRigA.w;
+#endif
+    if (arkDroopRest > 0.001 && arkDroop > 0.0) {
         float headFrom = motionStill - (motionStill - motionRear) * 0.14;
         float into = smoothstep(headFrom, motionStill + 0.04, transformed.z);
-        float droop = arkDroop * arkRest * into;
+        float droop = arkDroop * arkDroopRest * into;
         float py = mix(motionBottom, motionTop, 0.7);
         float dy = transformed.y - py;
         float dz = transformed.z - headFrom;
@@ -462,6 +473,8 @@ export function animalMaterial(options: AnimalMaterialOptions): MeshStandardMate
         uniforms.arkLookNeckPivot = {value: new Vector3(...(chain?.neckPivot ?? [0, 0, 0]))};
         uniforms.arkLookHeadPivot = {value: new Vector3(...(chain?.headPivot ?? [0, 0, 0]))};
         uniforms.arkLookLimits = {value: new Vector4(chain?.yaw ?? 0, chain?.up ?? 0, chain?.down ?? 0, chain?.neckShare ?? 0)};
+        // ARK-ANIM: the bones the look turns (bit masks; a chain from an older caller: just its two bones).
+        uniforms.arkLookMask = {value: [chain?.neckMask ?? (chain && chain.neck >= 0 && chain.neck < 31 ? 1 << chain.neck : 0), chain?.headMask ?? (chain && chain.head >= 0 && chain.head < 31 ? 1 << chain.head : 0)]};
     }
     const level = options.level ?? (options.animated ? "near" : "far");
     Object.assign(uniforms, lookUniforms(options.look ?? null, level, options.shellLength ?? 0.01));

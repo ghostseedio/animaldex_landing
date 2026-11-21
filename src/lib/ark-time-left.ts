@@ -51,14 +51,17 @@
  * hook once the server publishes it (`safe_until_ark_day`).
  */
 
+import {arkIsHuman} from "@/lib/ark-human";
 import type {ArkAnimal, ArkSnapshot, ArkThrive} from "@/ark-scene/types";
 import {arkStats, massFromSize} from "@/ark-scene/stats";
 import {arkHuntingRegion} from "@/lib/ark-food-chain";
 import {arkDirection} from "@/lib/ark-languages";
+import {arkDaysToMs, arkHumanDays, arkHumanSpan, arkHumanUnit} from "@/lib/ark-human-time";
 import {
     ADULT_AGE,
     ARK_DAYS_PER_REAL_DAY,
     HUMAN_GROWN_DAYS,
+    HUMAN_LIFE_FACTOR,
     HUMAN_SPECIES_IDS,
     HUNT_SUCCESS,
     LIFESPAN_HI_OVER_LO,
@@ -123,15 +126,6 @@ export type ArkTimeLeftAnimal = Pick<
 > &
     Partial<Pick<ArkAnimal, "scientific_name" | "thrive">>;
 
-/** Whether it is a human (a Homo sapiens of a human capture): outside the food web, and with no old age unless the read gives it a lifespan. */
-export function arkIsHuman(animal: Pick<ArkTimeLeftAnimal, "species_profile_id" | "kind_species_profile_id" | "model_slug" | "scientific_name">): boolean {
-    return (
-        HUMAN_SPECIES_IDS.includes(animal.species_profile_id.toLowerCase()) ||
-        (animal.kind_species_profile_id != null && HUMAN_SPECIES_IDS.includes(animal.kind_species_profile_id.toLowerCase())) ||
-        animal.model_slug === "human" ||
-        /^homo\s+sapiens/i.test(animal.scientific_name ?? "")
-    );
-}
 
 export type ArkTimeLeftWorld = {
     /** The snapshot's Ark day (`ark_day`). */
@@ -316,6 +310,7 @@ type AgeFactor = {pess: Curve; opt: Curve; mid: Curve; reason: ArkTimeLeftReason
 function ageFactor(animal: ArkTimeLeftAnimal, arkDay: number | null): AgeFactor | null {
     const parts = ageParts(animal, arkDay);
     if (!parts || parts.low === null || parts.highMid === null) return null;
+    if (arkIsHuman(animal)) return humanAgeFactor(animal, parts);
     const {low, published, highMid, ageDays: age, sinceBornDays: sinceBorn} = parts;
     const curve = (high: number): Curve => {
         const x = Math.max(low - age, 0);
@@ -335,6 +330,44 @@ function ageFactor(animal: ArkTimeLeftAnimal, arkDay: number | null): AgeFactor 
         ageDays: age,
         sinceBornDays: sinceBorn,
         assumed
+    };
+}
+
+/**
+ * A human (decision 442; the read sends its Prime lifespan only while `human_old_age` is on): its condition band's share f
+ * of the life (`HUMAN_LIFE_FACTOR`; the read's `thrive`, Ordinary without it). One born aboard dies at S x f, S uniform over
+ * the Prime range: the usual curve over [lo x f, hi x f]. An arrival came at an unknown point of its adult life, so what it
+ * had left on arrival is uniform between 0 and (S - 18 years) x f; given the days it has already lived aboard, the curve is
+ * that spread's survival, conditioned on having lived them. One curve (no harsher or kinder bound: the rule is the rule).
+ */
+function humanAgeFactor(animal: ArkTimeLeftAnimal, parts: AgeParts): AgeFactor {
+    const f = HUMAN_LIFE_FACTOR[animal.thrive ?? "ordinary"] ?? HUMAN_LIFE_FACTOR.ordinary;
+    const lo = parts.low!;
+    const hi = parts.published ?? lo;
+    let curve: Curve;
+    if (animal.origin !== "arrived") {
+        const x = Math.max(lo * f - parts.ageDays, 0);
+        const y = Math.max(hi * f - parts.ageDays, x + MIN_SPAN_DAYS);
+        curve = (t) => (t < x ? 1 : t >= y ? 0 : (y - t) / (y - x));
+    } else {
+        // P(left on arrival > r), averaged over S: E_S[max(0, 1 - r / ((S - grown) x f))].
+        const N = 64;
+        const spans = Array.from({length: N}, (_, i) => Math.max((lo + ((i + 0.5) / N) * (hi - lo) - HUMAN_GROWN_DAYS) * f, MIN_SPAN_DAYS));
+        const over = (r: number) => spans.reduce((sum, span) => sum + Math.max(0, 1 - r / span), 0) / N;
+        const lived = parts.sinceBornDays;
+        const base = Math.max(over(lived), 1e-9);
+        curve = (t) => over(lived + t) / base;
+    }
+    return {
+        pess: curve,
+        opt: curve,
+        mid: curve,
+        reason: {kind: "age", lifespanLowDays: lo * f, lifespanHighDays: hi * f, estimate: true},
+        lowDays: lo * f,
+        highDays: hi * f,
+        ageDays: parts.ageDays,
+        sinceBornDays: parts.sinceBornDays,
+        assumed: true
     };
 }
 
@@ -780,6 +813,8 @@ export type ArkLifeOutlook = {
      * Old age, hunger and a carer's absence do not depend on it, and nothing here says they do.
      */
     power: "earn" | "working" | null;
+    /** A human (decision 442): its "how this is worked out" line names no predators or hunger. */
+    human?: boolean;
 };
 
 /** The bar's marks for an age and an estimate (never anything outside 0 to 1). */
@@ -807,7 +842,8 @@ export function arkLifeOutlook(animal: ArkTimeLeftAnimal, world: ArkTimeLeftWorl
         chance,
         trend: chance ? arkChanceTrend(animal, world, facts, hooks, chance) : null,
         band,
-        power: band && chance?.reasons.hunted ? (band === "prime" ? "working" : "earn") : null
+        power: band && chance?.reasons.hunted ? (band === "prime" ? "working" : "earn") : null,
+        ...(arkIsHuman(animal) ? {human: true} : {})
     };
 }
 
@@ -842,6 +878,8 @@ export type ArkTimeLeftWords = {
     chanceTitle: string;
     chanceMain: string;
     chanceHow: string;
+    /** A human's (decision 442): only its age and condition bound its life, never predators or hunger. */
+    chanceHowHuman?: string;
     chanceUp: string;
     chanceDown: string;
     chanceSteady: string;
@@ -880,47 +918,27 @@ function fill(template: string, values: Record<string, string | number>): string
     return template.replace(/\{(\w+)\}/g, (match, key: string) => (key in values ? String(values[key]) : match));
 }
 
-const ARK_MONTH = ARK_YEAR / 12;
-
 /**
- * A count of Ark days as the panel's units say it, in the unit that fits it: "3-9 Ark days", "1 Ark day", "4-10 Ark
- * months" (a range from two months to about three years), "2-4 Ark years" (a range is one number string).
+ * A count of Ark days in the visitor's own time (lane ARK-SIMPLE, owner 2026-11-20: never "Ark days" or "Ark years"):
+ * "2–5 days", "3 hours", "4 weeks", in the unit that fits its larger end (`ark-human-time.ts`, the browser's own words in
+ * every language). `units` is kept for the callers' shape; the Ark-time unit words are no longer said.
  */
-function unitValue(low: number, high: number, capped: boolean, units: ArkTimeLeftUnitWords, locale: string): string {
-    const years = high >= 1000 && low >= 180;
-    const months = !years && low >= 60 && high < 1000;
-    const part = (days: number) => {
-        if (months) return Math.round(days / ARK_MONTH).toLocaleString(locale);
-        if (!years) return Math.round(days).toLocaleString(locale);
-        const y = days / ARK_YEAR;
-        return y.toLocaleString(locale, {maximumFractionDigits: y < 10 ? 1 : 0});
-    };
-    const a = part(low);
-    const b = `${part(high)}${capped ? "+" : ""}`;
+function unitValue(low: number, high: number, capped: boolean, _units: ArkTimeLeftUnitWords, locale: string): string {
+    const text = arkHumanDays(low, Math.max(high, low), locale, "long", capped);
     // A range of numbers in a right-to-left language is isolated, so it reads "8–32", not "32–8".
-    const range = a === b ? a : arkDirection(locale) === "rtl" ? `\u2066${a}–${b}\u2069` : `${a}–${b}`;
-    const one = !capped && a === b && (years ? Math.abs(low / ARK_YEAR - 1) < 0.05 : months ? Math.round(low / ARK_MONTH) === 1 : Math.round(low) === 1);
-    if (years) return one ? units.ageYear : fill(units.ageYears, {years: range});
-    if (months) return one ? units.ageMonth : fill(units.ageMonths, {months: range});
-    return one ? units.ageDay : fill(units.ageDays, {days: range});
+    return arkDirection(locale) === "rtl" && /[–-]/.test(text) ? `\u2066${text}\u2069` : text;
 }
 
 /**
- * One age in the kind's natural terms, in Ark time: days under two months, months under two years, years after.
- * An arrival's age is a rule ("about"), so its years are whole once there are two of them.
+ * One age in the visitor's own time ("3 hours", "2 days", "4 weeks"). A floor ("at least") is rounded down, so it never
+ * says more than is known.
  */
-function ageValue(days: number, mode: "exact" | "about" | "atLeast", units: ArkTimeLeftUnitWords, locale: string): string {
-    if (days < 60) {
-        const n = Math.max(1, Math.round(days));
-        return n === 1 ? units.ageDay : fill(units.ageDays, {days: n.toLocaleString(locale)});
-    }
-    if (days < 730) {
-        const n = Math.round(days / ARK_MONTH);
-        return n === 1 ? units.ageMonth : fill(units.ageMonths, {months: n.toLocaleString(locale)});
-    }
-    // (A floor is rounded down, so "at least" never says more than is known.)
-    const y = mode === "atLeast" ? Math.floor(days / ARK_YEAR + 1e-9) : days / ARK_YEAR;
-    return fill(units.ageYears, {years: y.toLocaleString(locale, {maximumFractionDigits: mode !== "exact" || y >= 10 ? 0 : 1})});
+function ageValue(days: number, mode: "exact" | "about" | "atLeast", _units: ArkTimeLeftUnitWords, locale: string): string {
+    const ms = arkDaysToMs(Math.max(days, 0));
+    if (mode !== "atLeast") return arkHumanSpan(ms, ms, locale);
+    const {size} = arkHumanUnit(ms);
+    const floor = Math.max(1, Math.floor(ms / size + 1e-9)) * size;
+    return arkHumanSpan(floor, floor, locale);
 }
 
 function listOf(names: string[], locale: string): string {
@@ -991,6 +1009,8 @@ function percentText(percent: number, locale: string): string {
     }
 }
 
+const ARK_TIME_LEFT_ENGLISH_HOW_HUMAN = "How this is worked out: their age against a human lifespan, shortened or lengthened by their condition. An estimate, not a promise.";
+
 export function arkChanceText(outlook: ArkLifeOutlook, words: ArkTimeLeftWords, units: ArkTimeLeftUnitWords, locale: string): ArkChanceText | null {
     const {chance, trend} = outlook;
     if (!chance) return null;
@@ -1009,7 +1029,7 @@ export function arkChanceText(outlook: ArkLifeOutlook, words: ArkTimeLeftWords, 
         trend: said,
         main: main ? fill(words.chanceMain, {reason: main}) : null,
         mainReason: main ?? null,
-        how: words.chanceHow,
+        how: outlook.human ? words.chanceHowHuman ?? ARK_TIME_LEFT_ENGLISH_HOW_HUMAN : words.chanceHow,
         label: [`${words.chanceTitle}: ${value}`, said ? (said.text.split(" · ")[0]) : null].filter((part): part is string => Boolean(part)).join(". ")
     };
 }
@@ -1049,7 +1069,7 @@ export function arkLifeText(outlook: ArkLifeOutlook, words: ArkTimeLeftWords, un
 export const ARK_TIME_LEFT_ENGLISH: ArkTimeLeftWords = {
     title: "Estimated time left",
     about: "About {value}",
-    hint: "A likely range from odds, not a promise. 1 Ark day is about 55 real minutes.",
+    hint: "A likely range from odds, not a promise.",
     reasonAge: "Typical lifespan: {span}",
     reasonAgeEstimate: "Typical lifespan, estimated: {span}",
     reasonHunted: "Predators here: {predators}",
@@ -1064,9 +1084,10 @@ export const ARK_TIME_LEFT_ENGLISH: ArkTimeLeftWords = {
     ageIsAtLeast: "at least {age} old",
     ageMonths: "{months} Ark months",
     ageMonth: "1 Ark month",
-    chanceTitle: "Chance to live another Ark year",
+    chanceTitle: "Chance to live 2 more weeks",
     chanceMain: "Main reason: {reason}",
     chanceHow: "How this is worked out: its age against its kind's lifespan, the predators that can hunt its kind in its range, and hunger, from what the Ark has made public. An estimate that moves as the Ark changes, not a promise.",
+    chanceHowHuman: "How this is worked out: their age against a human lifespan, shortened or lengthened by their condition. An estimate, not a promise.",
     chanceUp: "Up {change} vs a day ago",
     chanceDown: "Down {change} vs a day ago",
     chanceSteady: "Steady vs a day ago",
@@ -1111,3 +1132,5 @@ export function arkTimeLeftWordsFrom(timeLeft: unknown, life: unknown): {words: 
  * and the read publishes what they need. Nothing applies to every animal, so this list is empty.
  */
 export const ARK_TIME_LEFT_HOOKS: readonly ArkTimeLeftHook[] = [];
+
+export {arkIsHuman};

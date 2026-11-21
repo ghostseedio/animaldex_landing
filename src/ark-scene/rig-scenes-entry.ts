@@ -18,6 +18,8 @@ import type {ArkSceneHandle} from "@/ark-scene/types";
 import {heightAt, LAKE, ZONE_SITES} from "@/ark-scene/world";
 import fixture from "@/ark-scene/fixtures/snapshot-v2.json";
 import {hipShare} from "@/ark-scene/locomotion/flee";
+import {attachPoints} from "@/ark-scene/sampler";
+import {roostPosture} from "@/ark-scene/behaviour-recipes";
 import {G} from "@/ark-scene/locomotion/gaits";
 import {townPlan} from "@/ark-scene/islands/town/plan";
 import {townColliderSet} from "@/ark-scene/islands/town/colliders";
@@ -66,6 +68,12 @@ COURSE_CAST.forEach((c, i) => {
 });
 // `?loco=0`: the locomotion layer off (the baked clips, as before), for before/after recordings.
 if (typeof location !== "undefined" && new URLSearchParams(location.search).get("loco") === "0") (globalThis as {__arkLoco?: boolean}).__arkLoco = false;
+// `?posedlie=0`: no posed lie (ARK-ANIM round 3, `locomotion/lie-pose.ts`): the rigs as before it, for before/after recordings.
+if (typeof location !== "undefined" && new URLSearchParams(location.search).get("posedlie") === "0") (globalThis as {__arkPosedLie?: boolean}).__arkPosedLie = false;
+// `?skinfix=0`: no load-time skin and clip fixes (`rig-player.ts` skinAndClipFixes), for before/after recordings.
+if (typeof location !== "undefined" && new URLSearchParams(location.search).get("skinfix") === "0") (globalThis as {__arkSkinFix?: boolean}).__arkSkinFix = false;
+// `?flank=0`: the flank kept on the upper limbs (`skin-fixes.ts` flankOffLegs off), for the lying cervids' before.
+if (typeof location !== "undefined" && new URLSearchParams(location.search).get("flank") === "0") (globalThis as {__arkFlankFix?: boolean}).__arkFlankFix = false;
 
 function castId(prefix: string, i: number): string {
     const k = CAST.findIndex((c) => c[0] === prefix);
@@ -367,6 +375,42 @@ async function mountScenes(el: HTMLElement) {
     );
 
     /**
+     * ARK-ANIM round 3 (the owner's "bats not hanging upside down"): one course animal at rest at its roost by day, as the
+     * schedule draws a hanger's stay there (`behaviour-recipes.ts` hangsAtRoost): at the island's nearest roost under a
+     * limb (`canopy_hang`), head down from its feet. The camera beside it (`?camfit=` times its length, default 5).
+     */
+    const roostScenes: Record<string, () => {note: string; watch: string[]; go?: () => void}> = Object.fromEntries(
+        COURSE_CAST.map((c, i) => [
+            `roost_${c.slug}`,
+            () => {
+                const id = ids[`c${i}`][0];
+                const from = site("woodland");
+                // (The most open one near the wood, so the camera sees it from outside its tree's crown.)
+                const points = attachPoints({tag: "canopy_hang", near: {x: from.x, z: from.z, radius: 40}}).sort((a, b) => (b.open ?? 0) - (a.open ?? 0));
+                const point = points[0];
+                const at = point ? point.position : {x: from.x, y: ground(from.x, from.z) + 3, z: from.z};
+                const yaw = point?.yaw ?? 0;
+                debug().setHome(id, at.x, at.z);
+                pinPose(id, () => roostPosture(c.slug, {x: at.x, z: at.z, y: at.y, yaw, moving: false, aloft: false, doing: "rest", beat: "rest", nx: 0, ny: 1, nz: 0} as unknown as Parameters<typeof roostPosture>[1]));
+                const fit = Number(new URLSearchParams(location.search).get("camfit") ?? "8");
+                const token = ++tracking;
+                const step = () => {
+                    if (token !== tracking) return;
+                    debug().controls.minDistance = 0.1;
+                    const a = handle.locate(id);
+                    const len = Math.max(a?.length ?? 0.3, 0.05);
+                    // (From outside its tree and a little below the limb, the way it is seen from the ground.)
+                    const azimuth = Number(new URLSearchParams(location.search).get("camaz") ?? String(yaw + Math.PI / 2));
+                    handle.setView({target: {x: at.x, y: at.y - len * 0.5, z: at.z}, distance: fit * len, polar: Number(new URLSearchParams(location.search).get("campolar") ?? "1.75"), azimuth});
+                    requestAnimationFrame(step);
+                };
+                requestAnimationFrame(step);
+                return {note: `${c.slug}: at its roost by day (${point?.id ?? "no canopy_hang point"})`, watch: [id]};
+            }
+        ])
+    );
+
+    /**
      * gfx (fauna): a close look at one course animal's everyday postures at one spot: standing and looking about
      * (0-4 s), a short walk (4-10 s), at rest (10-17 s), asleep (17-28 s), standing again. The camera from its side.
      */
@@ -402,7 +446,9 @@ async function mountScenes(el: HTMLElement) {
                     debug().controls.minDistance = 0.1;
                     const a = handle.locate(id);
                     const tx = a ? a.x : from.x, tz = a ? a.z : from.z;
-                    handle.setView({target: {x: tx, y: (a ? a.y : ground(tx, tz)) + 0.1, z: tz}, distance, polar: 1.2, azimuth: yaw + Math.PI / 2 - 0.5});
+                    // (`?camfit=k`: k times its own length off, for a small animal.)
+                    const fit = Number(new URLSearchParams(location.search).get("camfit") ?? "0");
+                    handle.setView({target: {x: tx, y: (a ? a.y : ground(tx, tz)) + 0.1, z: tz}, distance: fit > 0 && a ? fit * Math.max(a.length ?? 0.5, 0.05) : distance, polar: 1.2, azimuth: yaw + Math.PI / 2 - 0.5});
                     (window as unknown as {__arkCatLoc?: unknown}).__arkCatLoc = a;
                     requestAnimationFrame(step);
                 };
@@ -528,6 +574,7 @@ async function mountScenes(el: HTMLElement) {
         ...courseScenes,
         ...clipScenes,
         ...postureScenes,
+        ...roostScenes,
         ...wallScenes,
         /** The same flight seen from 36 m (past the near level's 25 m): a flying rig is still drawn near, flapping. */
         duck_flight_far: () => {
@@ -660,7 +707,11 @@ async function mountScenes(el: HTMLElement) {
                     headYaw: e?.reactive ? Math.round(e.reactive.headYaw * 100) / 100 : null,
                     headPitch: e?.reactive ? Math.round(e.reactive.headPitch * 100) / 100 : null,
                     headWeight: e?.reactive ? Math.round(e.reactive.headWeight * 100) / 100 : null,
-                    action: e?.reactive?.action ?? null
+                    action: e?.reactive?.action ?? null,
+                    // (ARK-ANIM: its sleep and its base pose, for the rest-pose shots.)
+                    sleep: ((sn) => (sn ? {down: sn.down, posture: sn.posture} : null))((e as unknown as {sleepNow?: {down: boolean; posture: string} | null} | undefined)?.sleepNow),
+                    base: (rig as {base?: string} | undefined)?.base ?? null,
+                    act: Boolean((e as {act?: unknown} | undefined)?.act)
                 };
             });
         },
