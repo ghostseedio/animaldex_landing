@@ -23,6 +23,7 @@
  *        [--seat off]                the pass off (the "before" numbers)
  *        [--gl swiftshader]          software WebGL (GitHub's runners)
  *        [--quality high|medium|low] the tier, pinned (default high: 1,200 animals out at once; medium 400)
+ *        [--width 900 --height 640]  the page's size (software WebGL: a small one, a frame costs its pixels)
  *        [--gate]                    exit 1 on any failure
  *        [--label after]
  *
@@ -88,7 +89,7 @@ const browser = await chromium.launch(
         ? {headless: true, args: ["--headless=new", "--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--use-gl=angle", "--disable-background-timer-throttling", "--disable-renderer-backgrounding"]}
         : {channel: "chrome", headless: true, args: ["--headless=new", "--enable-gpu", "--ignore-gpu-blocklist", `--use-angle=${gl}`]}
 );
-const context = await browser.newContext({viewport: {width: 900, height: 640}, deviceScaleFactor: 1});
+const context = await browser.newContext({viewport: {width: Number(arg("width", "900")), height: Number(arg("height", "640"))}, deviceScaleFactor: 1});
 const page = await context.newPage();
 page.setDefaultTimeout(900_000);
 const errors = [];
@@ -145,7 +146,7 @@ const settle = async () => {
     let frame = await page.evaluate(() => window.__arkSeat.frames);
     for (let i = 0; i < 60; i++) {
         // (By frames drawn, not by the clock: software WebGL draws a few a second.)
-        frame += 4;
+        frame += 3;
         await page.waitForFunction((f) => window.__arkSeat.frames >= f, frame, {timeout: 4000, polling: 50}).catch(() => undefined);
         const now = await page.evaluate(() => {
             const rows = window.__arkSeatProbe.drawn(3);

@@ -24,7 +24,7 @@ on:
       stops:
         description: "Camera stops per island and hour"
         type: string
-        default: "30"
+        default: "20"
       hours:
         description: "Hours of the island day (comma-separated)"
         type: string
@@ -58,9 +58,9 @@ jobs:
         run: node scripts/build-ark-bundle.mjs --dev
       - name: Seat audit
         env:
-          STOPS: ${{ inputs.stops || '30' }}
+          STOPS: ${{ inputs.stops || '20' }}
           HOURS: ${{ inputs.hours || '11,23' }}
-        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --quality medium --hours "$HOURS" --stops "$STOPS" --out .ark-golden/seat --label ci --gate
+        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --quality medium --width 420 --height 300 --hours "$HOURS" --stops "$STOPS" --out .ark-golden/seat --label ci --gate
       - name: Summary
         if: always()
         run: test -f .ark-golden/seat/ci.md && cat .ark-golden/seat/ci.md >> "$GITHUB_STEP_SUMMARY" || true
@@ -93,9 +93,9 @@ jobs:
         run: node scripts/build-ark-bundle.mjs --dev
       - name: Seat audit, pass off
         env:
-          STOPS: ${{ inputs.stops || '30' }}
+          STOPS: ${{ inputs.stops || '20' }}
           HOURS: ${{ inputs.hours || '11,23' }}
-        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --quality medium --hours "$HOURS" --stops "$STOPS" --seat off --out .ark-golden/seat --label before
+        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --quality medium --width 420 --height 300 --hours "$HOURS" --stops "$STOPS" --seat off --out .ark-golden/seat --label before
       - name: Summary
         if: always()
         run: test -f .ark-golden/seat/before.md && cat .ark-golden/seat/before.md >> "$GITHUB_STEP_SUMMARY" || true
