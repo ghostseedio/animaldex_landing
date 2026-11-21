@@ -1,11 +1,10 @@
+# syntax=docker/dockerfile:1.7
 # AnimalDex Next.js 13.4 standalone image (linux/amd64).
 # Build off-VM (GitHub Actions). Runtime secrets are injected on the host — never baked in.
 #
 # Node/npm must match local lockfile generation:
 #   Node 22.13.0 + npm 10.9.2 (lockfileVersion 3)
 # Buildx supplies linux/amd64 via `platforms:` — do not hardcode FROM --platform.
-
-# syntax=docker/dockerfile:1.7
 
 ARG NODE_VERSION=22.13.0
 ARG NPM_VERSION=10.9.2
@@ -32,11 +31,18 @@ RUN rm -rf node_modules/sharp node_modules/@img \
 # -----------------------------------------------------------------------------
 # Builder
 # -----------------------------------------------------------------------------
-FROM node:${NODE_VERSION}-bookworm-slim AS builder
-	ARG NPM_VERSION
+# builder-base holds only the toolchain and node_modules (no build args, no sources), so
+# CI exports it to its layer cache on its own (target: builder-base) and an app-code change
+# never rebuilds or re-copies node_modules.
+FROM node:${NODE_VERSION}-bookworm-slim AS builder-base
+ARG NPM_VERSION
 WORKDIR /app
 
 RUN npm install -g "npm@${NPM_VERSION}"
+
+COPY --from=deps /app/node_modules ./node_modules
+
+FROM builder-base AS builder
 
 ENV NEXT_TELEMETRY_DISABLED=1 \
     NODE_ENV=production \
@@ -75,21 +81,26 @@ ENV CANONICAL_URL=$CANONICAL_URL \
     GOOGLE_ANALYTICS_ID=$GOOGLE_ANALYTICS_ID \
     NEXT_PUBLIC_APP_STORE_PROVIDER_TOKEN=$NEXT_PUBLIC_APP_STORE_PROVIDER_TOKEN
 
-COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json .npmrc next.config.js tsconfig.json \
      postcss.config.js tailwind.config.js globals.d.ts ./
 COPY public ./public
 COPY src ./src
 COPY scripts ./scripts
 
-RUN npm run build \
+# .next/cache (webpack cache, .tsbuildinfo, eslint cache) is a BuildKit cache mount: never in a
+# layer, and CI carries it between runs (buildkit-cache-dance), so an app-code change recompiles
+# only what changed. fetch-cache and images are dropped first so build-time data and image
+# output are always fresh, exactly as in a cold build.
+RUN --mount=type=cache,id=next-cache,target=/app/.next/cache,sharing=locked \
+  rm -rf .next/cache/fetch-cache .next/cache/images \
+  && npm run build \
   && rm -f .next/standalone/.env .next/standalone/.env.* \
   && find .next/standalone -name '.env*' -type f -delete
 
 # -----------------------------------------------------------------------------
 # Runner (minimal standalone)
 # -----------------------------------------------------------------------------
-FROM node:${NODE_VERSION}-bookworm-slim AS runner
+FROM node:${NODE_VERSION}-bookworm-slim AS runtime-base
 WORKDIR /app
 
 # HOSTNAME=0.0.0.0: Next 13.5's standalone server is a single process that listens
@@ -112,6 +123,9 @@ RUN apt-get update \
   && groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs nextjs
 
+# runtime-base (above) is cached on its own in CI (target: runtime-base).
+FROM runtime-base AS runner
+
 # Standalone server + traced deps
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 # Next standalone tracing can omit Sharp native runtime packages.
@@ -125,7 +139,7 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # Belt-and-suspenders: never ship dotenv files into the final image
-	RUN rm -f .env .env.local .env.production .env.development \
+RUN rm -f .env .env.local .env.production .env.development \
   && find /app -name '.env*' -type f -delete \
   && chown -R nextjs:nodejs /app
 
