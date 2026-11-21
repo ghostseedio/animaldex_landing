@@ -124,7 +124,8 @@ export class SeatProbe {
                 }
                 const material = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as Material | undefined;
                 if (cls > 0 && material && (!(mesh as InstancedMesh).isInstancedMesh || (mesh as InstancedMesh).count > 0)) {
-                    targets.push({mesh, cls, kind: label, closed: material.side !== DoubleSide && cls !== SOFT && cls !== TREE});
+                    // (Closed: a rock, whatever its material's sides; a built thing drawn one-sided. Leaves, cards and sheets are thin.)
+                    targets.push({mesh, cls, kind: label, closed: cls === ROCK || (cls === HARD && material.side !== DoubleSide)});
                 }
             }
             for (const child of object.children) walk(child, visible);

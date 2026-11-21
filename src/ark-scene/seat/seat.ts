@@ -713,29 +713,47 @@ export class SeatPass {
         return true;
     }
 
-    /** A drawn surface beside a held animal within its reach, at about its feet's height: the nearest. */
+    /**
+     * The drawn surface nearest a held animal with nothing under its feet: straight over or under it, or beside it out
+     * to a metre and a half (a leaf, a twig, a rock's top, the ground), by how far it is from where its feet are. What
+     * it is moved onto before it is ever let down to the ground: an insect the schedule has 20 m up in a crown stays
+     * in the crown, on the leaf that is drawn.
+     */
     private beside(cx: number, y: number, cz: number, length: number, reach: number, mask: number, ground: (x: number, z: number, near?: number) => number): {x: number; z: number; gap: number; kind: string} | null {
+        const far = 1.6;
         near.length = 0;
         this.solids.release();
-        this.solids.collect(cx - 1.3, y - reach, cz - 1.3, cx + 1.3, y + reach, cz + 1.3, mask, near);
-        for (const r of [Math.min(Math.max(0.25 * length, 0.015), 0.2), Math.min(Math.max(0.5 * length, 0.03), 0.4), Math.min(Math.max(length, 0.06), 0.8), Math.min(Math.max(2 * length, 0.12), 1.2)]) {
-            let best: {x: number; z: number; gap: number; kind: string} | null = null;
-            for (let k = 0; k < 8; k++) {
+        this.solids.collect(cx - far - 0.1, y - far - 0.1, cz - far - 0.1, cx + far + 0.1, y + far + 0.1, cz + far + 0.1, mask, near);
+        let best: {x: number; z: number; gap: number; kind: string} | null = null;
+        let least = Infinity;
+        let last = -1;
+        for (const r of [0, Math.min(Math.max(0.25 * length, 0.015), 0.2), Math.min(Math.max(0.5 * length, 0.03), 0.4), Math.min(Math.max(length, 0.06), 0.8), Math.min(Math.max(2 * length, 0.12), 1.2), far]) {
+            if (r <= last) continue;
+            last = r;
+            // (Nothing further out can be nearer than what is found already.)
+            if (least <= r) break;
+            for (let k = 0; k < (r ? 8 : 1); k++) {
                 const dx = Math.cos((k * Math.PI) / 4) * r;
                 const dz = Math.sin((k * Math.PI) / 4) * r;
                 hits.length = 0;
-                this.solids.castIn(near, cx + dx, y + reach, cz + dz, 0, -2 * reach, 0, hits);
+                this.solids.castIn(near, cx + dx, y + far, cz + dz, 0, -2 * far, 0, hits);
                 for (const hit of hits) {
-                    if ((hit.double ? Math.abs(hit.ny) : hit.ny) < 0.25) continue;
-                    const gap = y - hit.y;
-                    if (!best || Math.abs(gap) < Math.abs(best.gap)) best = {x: dx, z: dz, gap, kind: hit.kind};
+                    if (hit.double ? Math.abs(hit.ny) < 0.25 : hit.ny <= 0) continue;
+                    const d = Math.hypot(r, y - hit.y);
+                    if (d < least) {
+                        least = d;
+                        best = {x: dx, z: dz, gap: y - hit.y, kind: hit.kind};
+                    }
                 }
                 const g = y - ground(cx + dx, cz + dz, y);
-                if (Math.abs(g) <= reach && (!best || Math.abs(g) < Math.abs(best.gap))) best = {x: dx, z: dz, gap: g, kind: "ground"};
+                if (Math.abs(g) <= far && Math.hypot(r, g) < least) {
+                    least = Math.hypot(r, g);
+                    best = {x: dx, z: dz, gap: g, kind: "ground"};
+                }
             }
-            if (best) return best;
         }
-        return null;
+        // (Within its own reach under it there was nothing: what is found is further, or it would not be asked.)
+        return best && (best.x || best.z || Math.abs(best.gap) > reach) ? best : null;
     }
 
     /** Whether a point is over or under the box of something closed near the body (most points are in none). */
