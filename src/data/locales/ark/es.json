@@ -1034,7 +1034,9 @@
             "age": "Edad",
             "left": "Le queda {time}",
             "ticker": "En auge y en declive esta semana",
-            "talk": "Habla"
+            "talk": "Habla",
+            "tier": "Nivel",
+            "tierHint": "Nivel {tier}: grado de poder de combate de la foto que lo trajo a bordo"
         },
         "how": {
             "lead": "Un mundo 3D vivo de animales reales, regido por las reglas de la naturaleza.",
@@ -1057,6 +1059,13 @@
             "wild": "Salvaje",
             "town": "Ciudad",
             "arkYear": "1 año del Arca"
+        },
+        "lifeHelp": {
+            "button": "Qué significa la barra de vida",
+            "bar": "Barra llena: la vida vivida hasta ahora, del color de cómo está (verde bien, ámbar viejo o en riesgo, rojo hambriento)",
+            "now": "Marca blanca: ahora",
+            "end": "Final rayado: cuándo es probable que muera de vejez, como un rango, no una promesa",
+            "heart": "Corazón %: su probabilidad de sobrevivir el próximo año del Arca (unas 2 semanas reales), contando depredadores cercanos, hambre, edad y liberación"
         }
     },
     "talkPage": {

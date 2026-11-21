@@ -5246,7 +5246,9 @@
       "age": "Age",
       "left": "{time} left",
       "ticker": "Thriving and declining this week",
-      "talk": "Talk"
+      "talk": "Talk",
+      "tier": "Tier",
+      "tierHint": "Tier {tier}: battle power grade of the photo that brought it aboard"
     },
     "how": {
       "lead": "A live 3D world of real animals, run by nature's rules.",
@@ -5269,6 +5271,13 @@
       "wild": "Wild",
       "town": "Town",
       "arkYear": "1 Ark year"
+    },
+    "lifeHelp": {
+      "button": "What the life bar means",
+      "bar": "Solid bar: life lived so far, coloured by how it's doing (green well, amber old or at risk, red hungry)",
+      "now": "White tick: now",
+      "end": "Striped end: when it's likely to die of old age, as a range, not a promise",
+      "heart": "Heart %: its chance of surviving the next Ark year (about 2 weeks real time), counting predators nearby, hunger, age and release"
     }
   },
   "seo": {

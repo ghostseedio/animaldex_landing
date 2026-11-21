@@ -1034,7 +1034,9 @@
             "age": "Kor",
             "left": "Még {time}",
             "ticker": "Gyarapodók és fogyók ezen a héten",
-            "talk": "Beszélgess"
+            "talk": "Beszélgess",
+            "tier": "Szint",
+            "tierHint": "{tier} szint: annak a fotónak a harci erő besorolása, amely a bárkára hozta"
         },
         "how": {
             "lead": "Igazi állatok élő 3D világa, a természet szabályai szerint.",
@@ -1057,6 +1059,13 @@
             "wild": "Vad",
             "town": "Város",
             "arkYear": "1 Bárka-év"
+        },
+        "lifeHelp": {
+            "button": "Mit jelent az életsáv",
+            "bar": "Teli sáv: az eddig leélt élet, az állapota szerint színezve (zöld jól van, borostyán idős vagy veszélyben, piros éhes)",
+            "now": "Fehér jel: most",
+            "end": "Csíkos vég: mikor hal meg valószínűleg végelgyengülésben, sávként, nem ígéretként",
+            "heart": "Szív %: az esélye, hogy túléli a következő bárkaévet (kb. 2 hét valós idő), a közeli ragadozókat, az éhséget, a kort és a szabadon engedést is számolva"
         }
     },
     "talkPage": {

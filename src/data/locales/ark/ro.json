@@ -1034,7 +1034,9 @@
             "age": "Vârstă",
             "left": "Mai are {time}",
             "ticker": "În creștere și în scădere săptămâna aceasta",
-            "talk": "Vorbește"
+            "talk": "Vorbește",
+            "tier": "Nivel",
+            "tierHint": "Nivel {tier}: nota de putere de luptă a fotografiei care l-a adus la bord"
         },
         "how": {
             "lead": "O lume 3D vie de animale reale, condusă de regulile naturii.",
@@ -1057,6 +1059,13 @@
             "wild": "Sălbatic",
             "town": "Oraș",
             "arkYear": "1 an pe Arcă"
+        },
+        "lifeHelp": {
+            "button": "Ce înseamnă bara vieții",
+            "bar": "Bara plină: viața trăită până acum, colorată după cum îi merge (verde bine, chihlimbar bătrân sau în pericol, roșu flămând)",
+            "now": "Linia albă: acum",
+            "end": "Capătul dungat: când e probabil să moară de bătrânețe, ca interval, nu ca promisiune",
+            "heart": "Inimă %: șansa de a supraviețui următorului an al Arcei (circa 2 săptămâni reale), socotind prădătorii din apropiere, foamea, vârsta și eliberarea"
         }
     },
     "talkPage": {

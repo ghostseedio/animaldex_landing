@@ -21,6 +21,7 @@ import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 import type {ArkCapturePhoto} from "@/lib/ark-capture-photo";
 import {arkPhotoShownOn} from "@/lib/ark-photo-label";
 import {ArkLivesRow} from "@/app/[locale]/(composited)/ark/ark-lives";
+import {ArkCaptureBadges} from "@/app/[locale]/(composited)/ark/ark-capture-badges";
 import {ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-card-focus";
 import type {ArkAnimalHearts, ArkHeartsWords} from "@/lib/ark-hearts";
 
@@ -352,6 +353,9 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
                                     <span className="sr-only">{simple?.number ?? "AnimalDex number"} </span>{arkIndexNumber(species.number)}
                                 </span>
                             ) : null}
+                            {/* Its capture's battle tier and hearts (owner 2026-11-21), from its life story: the server's
+                                `capture_tier_for_capture` and `challenge_health`, only for an animal that arrived with its own capture. */}
+                            <ArkCaptureBadges life={life} words={words} />
                             {activity ? (
                                 <span data-testid="ark-card-now" data-activity={activityKey ?? undefined} aria-live="polite" className={`hidden min-w-0 shrink items-center gap-1.5 truncate rounded-full px-2 py-[3px] text-[11.5px] font-semibold leading-none sm:inline-flex ${asleepNow ? "bg-[#7c8cff]/15 text-[#c9d6ff]" : "bg-primary-400/[0.12] text-primary-100"}`}>
                                     <span aria-hidden="true" className={`h-1.5 w-1.5 shrink-0 rounded-full ${asleepNow ? "bg-[#9fb0ff]" : "bg-primary-300 motion-safe:animate-pulse"}`} />

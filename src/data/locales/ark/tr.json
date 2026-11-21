@@ -1034,7 +1034,9 @@
             "age": "Yaş",
             "left": "{time} kaldı",
             "ticker": "Bu hafta artanlar ve azalanlar",
-            "talk": "Konuş"
+            "talk": "Konuş",
+            "tier": "Seviye",
+            "tierHint": "Seviye {tier}: onu gemiye getiren fotoğrafın savaş gücü notu"
         },
         "how": {
             "lead": "Gerçek hayvanlarla dolu, doğanın kurallarıyla işleyen canlı bir 3D dünya.",
@@ -1057,6 +1059,13 @@
             "wild": "Yaban",
             "town": "Kasaba",
             "arkYear": "1 Gemi yılı"
+        },
+        "lifeHelp": {
+            "button": "Yaşam çubuğu ne anlatır",
+            "bar": "Dolu çubuk: şimdiye dek yaşanan hayat, durumuna göre renkli (yeşil iyi, kehribar yaşlı ya da risk altında, kırmızı aç)",
+            "now": "Beyaz çizgi: şimdi",
+            "end": "Çizgili uç: yaşlılıktan ne zaman ölebileceği, söz değil bir aralık olarak",
+            "heart": "Kalp %: gelecek Gemi yılını (gerçek zamanla yaklaşık 2 hafta) atlatma şansı; yakındaki avcılar, açlık, yaş ve salıverme hesaba katılır"
         }
     },
     "talkPage": {

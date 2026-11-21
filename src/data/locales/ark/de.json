@@ -1034,7 +1034,9 @@
             "age": "Alter",
             "left": "Noch {time}",
             "ticker": "Diese Woche im Aufwind und im Rückgang",
-            "talk": "Sprechen"
+            "talk": "Sprechen",
+            "tier": "Stufe",
+            "tierHint": "Stufe {tier}: Kampfkraft-Note des Fotos, das es an Bord gebracht hat"
         },
         "how": {
             "lead": "Eine lebendige 3D-Welt echter Tiere, gelenkt von den Regeln der Natur.",
@@ -1057,6 +1059,13 @@
             "wild": "Wild",
             "town": "Stadt",
             "arkYear": "1 Arche-Jahr"
+        },
+        "lifeHelp": {
+            "button": "Was der Lebensbalken bedeutet",
+            "bar": "Voller Balken: bisher gelebtes Leben, gefärbt nach seinem Zustand (grün gut, bernstein alt oder gefährdet, rot hungrig)",
+            "now": "Weißer Strich: jetzt",
+            "end": "Gestreiftes Ende: wann es wahrscheinlich an Altersschwäche stirbt, als Spanne, kein Versprechen",
+            "heart": "Herz %: seine Chance, das nächste Arche-Jahr zu überleben (etwa 2 Wochen echte Zeit), mit Raubtieren in der Nähe, Hunger, Alter und Auswilderung"
         }
     },
     "talkPage": {

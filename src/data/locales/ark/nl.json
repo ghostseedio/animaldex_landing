@@ -1034,7 +1034,9 @@
             "age": "Leeftijd",
             "left": "Nog {time}",
             "ticker": "Deze week in opkomst en in verval",
-            "talk": "Praat"
+            "talk": "Praat",
+            "tier": "Niveau",
+            "tierHint": "Niveau {tier}: gevechtskrachtcijfer van de foto die hem aan boord bracht"
         },
         "how": {
             "lead": "Een levende 3D-wereld van echte dieren, gestuurd door de regels van de natuur.",
@@ -1057,6 +1059,13 @@
             "wild": "Wild",
             "town": "Stad",
             "arkYear": "1 Ark-jaar"
+        },
+        "lifeHelp": {
+            "button": "Wat de levensbalk betekent",
+            "bar": "Volle balk: het leven tot nu toe, gekleurd naar hoe het gaat (groen goed, amber oud of in gevaar, rood hongerig)",
+            "now": "Wit streepje: nu",
+            "end": "Gestreept einde: wanneer hij waarschijnlijk van ouderdom sterft, als bereik, geen belofte",
+            "heart": "Hart %: de kans dat hij het volgende Arkjaar overleeft (ongeveer 2 weken echte tijd), met roofdieren in de buurt, honger, leeftijd en vrijlating meegeteld"
         }
     },
     "talkPage": {

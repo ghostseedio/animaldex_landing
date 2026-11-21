@@ -1034,7 +1034,9 @@
             "age": "Alder",
             "left": "{time} tilbage",
             "ticker": "I vækst og i tilbagegang denne uge",
-            "talk": "Tal"
+            "talk": "Tal",
+            "tier": "Niveau",
+            "tierHint": "Niveau {tier}: kampkraftkarakter for det foto, der bragte den om bord"
         },
         "how": {
             "lead": "En levende 3D-verden af ægte dyr, styret af naturens regler.",
@@ -1057,6 +1059,13 @@
             "wild": "Vild",
             "town": "By",
             "arkYear": "1 Ark-år"
+        },
+        "lifeHelp": {
+            "button": "Hvad livsbjælken betyder",
+            "bar": "Fyldt bjælke: livet levet indtil nu, farvet efter hvordan den har det (grøn godt, rav gammel eller i fare, rød sulten)",
+            "now": "Hvidt mærke: nu",
+            "end": "Stribet ende: hvornår den sandsynligvis dør af alderdom, som et interval, ikke et løfte",
+            "heart": "Hjerte %: dens chance for at overleve det næste Arkår (ca. 2 uger i virkeligheden), med rovdyr i nærheden, sult, alder og udsætning medregnet"
         }
     },
     "talkPage": {

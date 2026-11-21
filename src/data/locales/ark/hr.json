@@ -1034,7 +1034,9 @@
             "age": "Dob",
             "left": "Preostalo {time}",
             "ticker": "U porastu i u padu ovaj tjedan",
-            "talk": "Razgovaraj"
+            "talk": "Razgovaraj",
+            "tier": "Razina",
+            "tierHint": "Razina {tier}: ocjena borbene snage fotografije koja ga je dovela na Arku"
         },
         "how": {
             "lead": "Živi 3D svijet pravih životinja, kojim vladaju pravila prirode.",
@@ -1057,6 +1059,13 @@
             "wild": "Divljina",
             "town": "Grad",
             "arkYear": "1 godina Arke"
+        },
+        "lifeHelp": {
+            "button": "Što znači traka života",
+            "bar": "Puna traka: dosad proživljeni život, obojen prema tome kako mu je (zelena dobro, jantarna staro ili u opasnosti, crvena gladno)",
+            "now": "Bijela crta: sada",
+            "end": "Prugasti kraj: kada će vjerojatno umrijeti od starosti, kao raspon, ne obećanje",
+            "heart": "Srce %: njegova šansa da preživi sljedeću godinu Arke (oko 2 tjedna stvarnog vremena), uz grabežljivce u blizini, glad, dob i puštanje"
         }
     },
     "talkPage": {

@@ -1034,7 +1034,9 @@
             "age": "Edat",
             "left": "Li queda {time}",
             "ticker": "En auge i en declivi aquesta setmana",
-            "talk": "Parla"
+            "talk": "Parla",
+            "tier": "Nivell",
+            "tierHint": "Nivell {tier}: grau de poder de combat de la foto que el va portar a bord"
         },
         "how": {
             "lead": "Un món 3D viu d'animals reals, regit per les regles de la natura.",
@@ -1057,6 +1059,13 @@
             "wild": "Salvatge",
             "town": "Ciutat",
             "arkYear": "1 any de l'Arca"
+        },
+        "lifeHelp": {
+            "button": "Què vol dir la barra de vida",
+            "bar": "Barra plena: la vida viscuda fins ara, del color de com està (verd bé, ambre vell o en risc, vermell famolenc)",
+            "now": "Marca blanca: ara",
+            "end": "Final ratllat: quan és probable que mori de vell, com a interval, no com a promesa",
+            "heart": "Cor %: la seva probabilitat de sobreviure el pròxim any de l'Arca (unes 2 setmanes reals), tenint en compte depredadors propers, gana, edat i alliberament"
         }
     },
     "talkPage": {

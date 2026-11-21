@@ -6,6 +6,7 @@ import type {ArkAnimal, ArkSnapshot} from "@/ark-scene/types";
 import type {ArkWords} from "@/lib/ark-words";
 import {arkIconUrl} from "@/ark-scene/placeholder-icon";
 import {arkDirection} from "@/lib/ark-languages";
+import {decodeArkLife} from "@/lib/ark-life";
 
 /** Fixture kinds (ids are made up; the slugs are real species). */
 const KIND = {
@@ -105,11 +106,11 @@ if (typeof window !== "undefined") {
 }
 
 export default function ArkTimeLeftGallery({words, talk, language}: {words: ArkWords; talk: {a: string; an: string}; language: string}) {
-    const [query, setQuery] = useState<{animal: string; view: string; grace: "over" | "ahead" | "none" | "live"} | null>(null);
+    const [query, setQuery] = useState<{animal: string; view: string; grace: "over" | "ahead" | "none" | "live"; tier: string | null; hearts: number | null} | null>(null);
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const grace = params.get("grace");
-        setQuery({animal: params.get("animal") ?? "old", view: params.get("view") ?? "card", grace: grace === "0" ? "none" : grace === "ahead" ? "ahead" : grace === "live" ? "live" : "over"});
+        setQuery({animal: params.get("animal") ?? "old", view: params.get("view") ?? "card", grace: grace === "0" ? "none" : grace === "ahead" ? "ahead" : grace === "live" ? "live" : "over", tier: params.get("tier"), hearts: params.has("hearts") ? Number(params.get("hearts")) : null});
     }, []);
     const selectedId = CASES[query?.animal ?? "old"] ?? "v1";
     const snapshot = useMemo<ArkSnapshot | null>(() => {
@@ -137,7 +138,9 @@ export default function ArkTimeLeftGallery({words, talk, language}: {words: ArkW
                 locale={language}
                 talk={talk.a.replace("{animal}", selected.name)}
                 arrived="12 Nov"
-                life={null}
+                // `&tier=A&hearts=2`: the life story's capture tier and hearts as /api/ark/life adds them (an animal born
+                // aboard drops both, as the decoder does for the real answer).
+                life={query.tier || query.hearts !== null ? {id: selected.id, loading: false, life: decodeArkLife({id: selected.id, origin: selected.origin === "born" ? {kind: "born", born_to: [{label: "Voyager 2"}]} : {kind: "arrived", source: "capture", brought_by: selected.brought_by.label}, generation: selected.origin === "born" ? 1 : 0, capture_tier: query.tier, capture_hearts: query.hearts})} : null}
                 founders={null}
                 arkDay={ARK_DAY}
                 voyageStart={snapshot.voyage.started_at}

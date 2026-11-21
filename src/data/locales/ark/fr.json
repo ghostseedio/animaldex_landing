@@ -1034,7 +1034,9 @@
             "age": "Âge",
             "left": "Encore {time}",
             "ticker": "En hausse et en baisse cette semaine",
-            "talk": "Parler"
+            "talk": "Parler",
+            "tier": "Rang",
+            "tierHint": "Rang {tier} : note de puissance de combat de la photo qui l'a amené à bord"
         },
         "how": {
             "lead": "Un monde 3D vivant d'animaux réels, régi par les règles de la nature.",
@@ -1057,6 +1059,13 @@
             "wild": "Sauvage",
             "town": "Ville",
             "arkYear": "1 an de l'Arche"
+        },
+        "lifeHelp": {
+            "button": "Ce que dit la barre de vie",
+            "bar": "Barre pleine : la vie vécue jusqu'ici, colorée selon son état (vert bien, ambre vieux ou en danger, rouge affamé)",
+            "now": "Trait blanc : maintenant",
+            "end": "Fin rayée : quand il risque de mourir de vieillesse, sous forme de fourchette, pas de promesse",
+            "heart": "Cœur % : sa chance de survivre à la prochaine année de l'Arche (environ 2 semaines réelles), en comptant les prédateurs proches, la faim, l'âge et la remise en liberté"
         }
     },
     "talkPage": {

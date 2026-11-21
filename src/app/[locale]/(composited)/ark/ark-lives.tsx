@@ -5,8 +5,11 @@ import Link from "@/app/[locale]/_components/link";
 import ArkSpeciesIcon from "@/app/[locale]/(composited)/ark/ark-species-icon";
 import {arkIconUrl} from "@/ark-scene/placeholder-icon";
 import {healHeart} from "@/components/debates/use-debates";
-import {ARK_HEARTS_MAX, arkCanRestoreHeart, arkLivesText, arkRecoveringText, clampArkHearts, type ArkAnimalHearts, type ArkHeartsWords} from "@/lib/ark-hearts";
+import {ARK_HEARTS_MAX, arkCanRestoreHeart, arkLivesText, arkRecoveringText, type ArkAnimalHearts, type ArkHeartsWords} from "@/lib/ark-hearts";
 import {fillArkWords} from "@/lib/ark-words";
+import {ArkHeartIcons} from "@/app/[locale]/(composited)/ark/ark-heart-icons";
+
+export {ArkHeartIcons};
 
 /**
  * Hearts are lives (AnimalDex docs/ark/HEARTS-LIVES-DESIGN.md, section 6, "Card UI"), on the owner's own card only:
@@ -14,19 +17,6 @@ import {fillArkWords} from "@/lib/ark-words";
  * whenever the card is below 3 (the existing path: `/api/app/hearts`, `heal_capture_heart_v1`), with "Each heart is one
  * more life for your animal in the Ark." under it. Out of Credits, a link to the site's Credits page.
  */
-
-export function ArkHeartIcons({hearts, size = 14}: {hearts: number; size?: number}) {
-    const n = clampArkHearts(hearts);
-    return (
-        <span className="inline-flex shrink-0 items-center gap-0.5 text-[#ff8f8f]" aria-hidden="true">
-            {Array.from({length: ARK_HEARTS_MAX}, (_, index) => (
-                <svg key={index} viewBox="0 0 24 24" style={{width: size, height: size}} fill={index < n ? "currentColor" : "none"} stroke="currentColor" strokeWidth={2.2} strokeLinejoin="round">
-                    <path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z" />
-                </svg>
-            ))}
-        </span>
-    );
-}
 
 type LivesProps = {
     entry: ArkAnimalHearts;

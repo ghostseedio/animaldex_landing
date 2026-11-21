@@ -1034,7 +1034,9 @@
             "age": "Wiek",
             "left": "Zostało {time}",
             "ticker": "W tym tygodniu rosną i maleją",
-            "talk": "Rozmawiaj"
+            "talk": "Rozmawiaj",
+            "tier": "Poziom",
+            "tierHint": "Poziom {tier}: ocena siły bojowej zdjęcia, które przyprowadziło go na Arkę"
         },
         "how": {
             "lead": "Żywy świat 3D prawdziwych zwierząt, rządzony prawami natury.",
@@ -1057,6 +1059,13 @@
             "wild": "Dzika",
             "town": "Miasto",
             "arkYear": "1 rok na Arce"
+        },
+        "lifeHelp": {
+            "button": "Co oznacza pasek życia",
+            "bar": "Pełny pasek: dotychczas przeżyte życie, w kolorze jego stanu (zielony dobrze, bursztynowy stary lub zagrożony, czerwony głodny)",
+            "now": "Biała kreska: teraz",
+            "end": "Kreskowany koniec: kiedy prawdopodobnie umrze ze starości, jako przedział, nie obietnica",
+            "heart": "Serce %: szansa, że przeżyje kolejny rok Arki (około 2 tygodni realnego czasu), z uwzględnieniem drapieżników w pobliżu, głodu, wieku i wypuszczenia"
         }
     },
     "talkPage": {

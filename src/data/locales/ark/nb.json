@@ -1034,7 +1034,9 @@
             "age": "Alder",
             "left": "{time} igjen",
             "ticker": "I vekst og i nedgang denne uken",
-            "talk": "Snakk"
+            "talk": "Snakk",
+            "tier": "Nivå",
+            "tierHint": "Nivå {tier}: kampkraftkarakter for bildet som brakte den om bord"
         },
         "how": {
             "lead": "En levende 3D-verden av ekte dyr, styrt av naturens regler.",
@@ -1057,6 +1059,13 @@
             "wild": "Vill",
             "town": "By",
             "arkYear": "1 Ark-år"
+        },
+        "lifeHelp": {
+            "button": "Hva livslinjen betyr",
+            "bar": "Fylt linje: livet levd så langt, farget etter hvordan den har det (grønn bra, rav gammel eller i fare, rød sulten)",
+            "now": "Hvitt merke: nå",
+            "end": "Stripete ende: når den sannsynligvis dør av alderdom, som et spenn, ikke et løfte",
+            "heart": "Hjerte %: sjansen for å overleve det neste Arkåret (omtrent 2 uker i virkeligheten), med rovdyr i nærheten, sult, alder og utsetting regnet med"
         }
     },
     "talkPage": {

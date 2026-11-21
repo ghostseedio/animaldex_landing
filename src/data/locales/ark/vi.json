@@ -1034,7 +1034,9 @@
             "age": "Tuổi",
             "left": "Còn {time}",
             "ticker": "Tăng và giảm trong tuần này",
-            "talk": "Trò chuyện"
+            "talk": "Trò chuyện",
+            "tier": "Hạng",
+            "tierHint": "Hạng {tier}: mức sức mạnh chiến đấu của bức ảnh đã đưa nó lên Tàu"
         },
         "how": {
             "lead": "Một thế giới 3D sống động gồm những loài vật thật, vận hành theo quy luật tự nhiên.",
@@ -1057,6 +1059,13 @@
             "wild": "Hoang dã",
             "town": "Thị trấn",
             "arkYear": "1 năm trên Con Tàu"
+        },
+        "lifeHelp": {
+            "button": "Thanh sự sống nghĩa là gì",
+            "bar": "Thanh đặc: quãng đời đã sống, tô màu theo tình trạng (xanh lá khỏe, hổ phách già hoặc gặp nguy, đỏ đói)",
+            "now": "Vạch trắng: bây giờ",
+            "end": "Đầu sọc: khi nào nó có thể chết vì già, là một khoảng, không phải lời hứa",
+            "heart": "Trái tim %: khả năng sống qua năm Tàu tới (khoảng 2 tuần thời gian thật), tính cả kẻ săn mồi gần đó, cơn đói, tuổi và việc thả về tự nhiên"
         }
     },
     "talkPage": {
