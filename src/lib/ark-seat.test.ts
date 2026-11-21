@@ -42,6 +42,10 @@ function world(): {scene: Scene; rocks: InstancedMesh} {
     leaf.userData.kind = "leaf";
     leaf.position.set(140, 1.5, 100);
     scene.add(leaf);
+    const low = new Mesh(new BoxGeometry(0.4, 0.001, 0.4), new MeshBasicMaterial({side: DoubleSide}));
+    low.userData.kind = "leaf";
+    low.position.set(150, 0.12, 100);
+    scene.add(low);
     scene.updateMatrixWorld(true);
     return {scene, rocks};
 }
@@ -186,18 +190,21 @@ test("seat: a body inside a rock is put out of it", () => {
 });
 
 test("seat: held on a leaf it rests on the leaf; held on nothing it comes down", () => {
-    const up = {nx: 0, ny: 1, nz: 0};
-    const onLeaf = seatBody("perch", new Vector3(140, 1.62, 100), {surface: up});
+    const top = {nx: 0, ny: 1, nz: 0};
+    const onLeaf = seatBody("perch", new Vector3(140, 1.62, 100), {surface: top});
     assert.ok(Math.abs(onLeaf.position.y - 1.5) < 0.014, `on the leaf: ${onLeaf.position.y}`);
     // A body's length to the side of the leaf: onto the leaf beside it, not left in the air.
-    const beside = seatBody("perch", new Vector3(140.5, 1.56, 100), {surface: up});
+    const beside = seatBody("perch", new Vector3(140.5, 1.56, 100), {surface: top});
     assert.ok(Math.abs(beside.position.y - 1.5) < 0.014 && Math.abs(beside.position.x - 140) < 0.45, `beside the leaf: ${beside.position.x}, ${beside.position.y}`);
     // Nothing anywhere near: down onto the ground.
-    const nothing = seatBody("perch", new Vector3(160, 3, 100), {surface: up});
+    const nothing = seatBody("perch", new Vector3(160, 3, 100), {surface: top});
     assert.ok(Math.abs(nothing.position.y) < 0.013, `in the air: ${nothing.position.y}`);
-    // A walker under the leaf is not lifted onto it.
-    const under = seatBody("stand", new Vector3(140, 1.45, 100));
+    // A walker on the ground under a low leaf (12 cm up, through its body) is not lifted onto it.
+    const under = seatBody("stand", new Vector3(150, 0.04, 100));
     assert.ok(Math.abs(under.position.y) < 0.013, `a walker on a leaf: ${under.position.y}`);
+    // One the scene only says stands, but plainly up in the air by a leaf (a bird between two of its tree's points): onto the leaf.
+    const up = seatBody("stand", new Vector3(140, 1.56, 100));
+    assert.ok(Math.abs(up.position.y - 1.5) < 0.014, `up by a leaf: ${up.position.y}`);
 });
 
 test("seat: on a wall's face it is brought to the face", () => {

@@ -67,6 +67,9 @@ export function hullOf(geometry: BufferGeometry): Hull {
     const dirs = DIRECTIONS.length / 3;
     const best = new Float32Array(dirs).fill(-Infinity);
     const at = new Int32Array(dirs).fill(-1);
+    // (And the next one out in each downward direction: a pose moves which of a foot's vertices is lowest.)
+    const next = new Float32Array(dirs).fill(-Infinity);
+    const nextAt = new Int32Array(dirs).fill(-1);
     for (let v = 0; v < n; v += stride) {
         const x = position.getX(v);
         const y = position.getY(v);
@@ -74,14 +77,20 @@ export function hullOf(geometry: BufferGeometry): Hull {
         for (let d = 0; d < dirs; d++) {
             const s = x * DIRECTIONS[d * 3] + y * DIRECTIONS[d * 3 + 1] + z * DIRECTIONS[d * 3 + 2];
             if (s > best[d]) {
+                next[d] = best[d];
+                nextAt[d] = at[d];
                 best[d] = s;
                 at[d] = v;
+            } else if (s > next[d]) {
+                next[d] = s;
+                nextAt[d] = v;
             }
         }
     }
     // Along its length and across it, the lowest vertex of each slice: its belly's line and each pair of feet (a long
     // body on uneven ground rests on more than its ends).
     const picked = new Set<number>(Array.from(at).filter((v) => v >= 0));
+    for (let d = 0; d < dirs; d++) if (DIRECTIONS[d * 3 + 1] < -0.3 && nextAt[d] >= 0) picked.add(nextAt[d]);
     let minX = Infinity;
     let maxX = -Infinity;
     let minZ = Infinity;
@@ -111,7 +120,7 @@ export function hullOf(geometry: BufferGeometry): Hull {
             lowAt[c] = v;
         }
     }
-    for (const v of lowAt) if (v >= 0) picked.add(v);
+    for (let k = 0; k < lowAt.length; k++) if (lowAt[k] >= 0) picked.add(lowAt[k]);
     const vertices = Uint32Array.from(picked);
     const rest = new Float32Array(vertices.length * 3);
     const j = geometry.getAttribute("arkJoints") as BufferAttribute | undefined;
