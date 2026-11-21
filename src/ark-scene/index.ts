@@ -394,6 +394,8 @@ const MICRO_DRAW_WITHIN = 42;
 const MICRO_CLOSE_WITHIN = 3.5;
 /** How close the camera may come to a small animal (m). */
 const MICRO_MIN_DISTANCE = CAMERA_RANGE.close;
+/** ARK-CONTACT (the owner's Cunner): development's before-and-after of the under-the-sea fixes (`__arkSwimFixOff`). */
+const swimFixOff = () => process.env.NODE_ENV !== "production" && (globalThis as {__arkSwimFixOff?: boolean}).__arkSwimFixOff === true;
 
 /** Birds that take to the air above their zone. */
 const FLYERS = ARK_FLYERS;
@@ -2786,7 +2788,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         const entry = selectedId ? findEntry(selectedId) : null;
         const middle = entry?.middle;
         if (!entry || !middle || entry.held || selectedStatus?.id !== entry.animal.id) return selectionBars.hide();
-        barsPoint.copy(middle).setY(middle.y + entry.drawnHeight * 0.55 + 0.1).project(camera);
+        // (Just over its back: 10 cm over a big animal, a fifth of its height over a small one. A cunner 8 cm tall,
+        // framed from a metre, had its bars 150 px over it: ARK-CONTACT, the owner's Cunner.)
+        barsPoint.copy(middle).setY(middle.y + entry.drawnHeight * 0.55 + (swimFixOff() ? 0.1 : Math.min(0.1, entry.drawnHeight * 0.2))).project(camera);
         const visible = barsPoint.z < 1 && Math.abs(barsPoint.x) < 1.02 && Math.abs(barsPoint.y) < 1.02;
         // (Kept above the page's card at the foot of the view, `setViewInset`: over it when the animal is behind the card.)
         selectionBars.place(((barsPoint.x + 1) / 2) * width, ((1 - barsPoint.y) / 2) * height, visible, {width, height: Math.max(height - Math.max(insetTarget, insetCovered > 0 ? insetBottom : 0), 60)});
@@ -6921,7 +6925,12 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             // (The duller sex a little greyer: `sexDim`, beside the per-instance variation `arkVary`.)
             entry.sexDim ??= sexDim(entry.animal.id, entry.animal.model_slug);
             // Its sleep for the shader in w (`packSleep`): eyes shut, the curl (near only), a tail flick, its breaths a second.
-            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZW(index, entry.phase, Math.min((act ? act.dim : dim) + entry.sexDim, 1), entry.rest, defended || (slept ? packSleep(eyesOpenForDev ? 0 : slept.eyes, level === "near" && !sleepsStanding ? slept.curl : 0, slept.flick, slept.breath) : packSleep(0, 0, 0, 0)));
+            // ARK-CONTACT (the owner's Cunner, 2026-11-21: chosen under the sea at night, 28 px and near black): the chosen
+            // animal under the sea's surface is lifted a little (a negative dim: its own colour lit and a soft rim, no
+            // outline), more at night.
+            const shownDim = Math.min((act ? act.dim : dim) + entry.sexDim, 1);
+            const lifted = selectedId === animal.id && shownDim <= 0.2 && where.water && entry.middle && entry.middle.y + modelHeight / 2 < waterSurfaceAt(entry.middle.x, entry.middle.z) - 0.05 && !swimFixOff();
+            (mesh.geometry.getAttribute("arkInstance") as InstancedBufferAttribute).setXYZW(index, entry.phase, lifted ? -(0.15 + 0.6 * lighting.daylight.night) : shownDim, entry.rest, defended || (slept ? packSleep(eyesOpenForDev ? 0 : slept.eyes, level === "near" && !sleepsStanding ? slept.curl : 0, slept.flick, slept.breath) : packSleep(0, 0, 0, 0)));
             setVary(mesh.geometry, index, animal.id);
             if (entry.power?.q) setVaryPower(mesh.geometry, mesh.material, index, entry.power.q, entry.power.look);
             // The head look (near only; it fades out as the animal falls asleep).
@@ -7291,7 +7300,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // of the water at its polar angle and the surface hid the fish; its food-chain lines started from empty water):
         // while a swimmer under the sea is chosen and looked at, the camera stays under the sea's surface as it backs
         // off, its polar angle opened (level with it, then up at it, as far as a dive allows) rather than rising out.
-        if (diving && looked && !followId && !golden?.free && !(process.env.NODE_ENV !== "production" && (globalThis as {__arkSwimFixOff?: boolean}).__arkSwimFixOff)) {
+        if (diving && looked && !followId && !golden?.free && !swimFixOff()) {
             const top = waterSurfaceAt(camera.position.x, camera.position.z) - 0.1;
             if (camera.position.y > top && looked.middle && Math.hypot(target.x - looked.middle.x, target.z - looked.middle.z) < looked.length + 2 && swimmerFrame(looked)) {
                 offset.copy(camera.position).sub(target);
@@ -8036,7 +8045,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // (The sea's only, its surface where the tide has it: a lake's, a river's and a pond's clear water shows a fish
         // under it from over it, in the day at least; the sea's hides one 2 m down even from 4 m away.)
         if (!(atSeaOf(entry) || entry.depth?.home === "coast" || entry.depth?.water === "salt") || entry.place.micro || entry.place.burrow) return null;
-        if (process.env.NODE_ENV !== "production" && (globalThis as {__arkSwimFixOff?: boolean}).__arkSwimFixOff) return null;
+        if (swimFixOff()) return null;
         const top = waterSurfaceAt(m.x, m.z);
         if (waterLevelAt(m.x, m.z, 0) > top + 0.05) return null;
         if (m.y + entry.drawnHeight / 2 > top - 0.05) return null;
@@ -11390,7 +11399,11 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             if (sea) return {x: sea.x, y: ARK_ENVIRONMENT.seaLevel.value - 4, z: sea.z, ground: 0, length: entry.length, height: entry.drawnHeight, awake: entry.awake, yaw: sea.yaw};
             // (Out of the picture, it is not drawn: where its act poses it, else where its day last had it, else its place.)
             const posed = entry.act && !entry.act.hidden ? {x: entry.act.x, y: entry.act.base, z: entry.act.z} : entry.sched?.pose ?? null;
-            const middle = entry.middle ?? (posed ? new Vector3(posed.x, posed.y + entry.drawnHeight * 0.5, posed.z) : new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z));
+            // ARK-CONTACT (the owner's Cunner, 2026-11-21): the chosen one not drawn this frame (a pilchard's school between
+            // its levels) is where its pose has it now, where the camera flies to and where it is drawn next: its lines
+            // started 19 m off, at its place at the surface.
+            const chosenNow = !entry.middle && id === selectedId && !swimFixOff() ? middleNow(entry) : null;
+            const middle = entry.middle ?? chosenNow ?? (posed ? new Vector3(posed.x, posed.y + entry.drawnHeight * 0.5, posed.z) : new Vector3(entry.place.x, ground + entry.drawnHeight * 0.5, entry.place.z));
             // (V2 replay: how far under the water its middle is, where it swims: a shot films it from under the surface.)
             const top = waterTopAt(middle.x, middle.z);
             const under = heightAt(middle.x, middle.z) < top - 0.15 ? Math.max(top - middle.y, 0) : 0;

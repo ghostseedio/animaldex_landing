@@ -585,6 +585,28 @@ if (want("fishways")) {
     }
     await page.evaluate(() => (window.__arkSwimFixOff = false));
 }
+if (want("anchovy")) {
+    for (const island of ["wild", "town"]) {
+        await crossTo(island);
+        await page.evaluate(() => window.__arkScene.setHours(11));
+        await wait(3000);
+        const ids = await page.evaluate(() => window.__arkDebug.entries().filter((e) => /anchovy|pilchard|chromis/.test(e.animal.model_slug)).map((e) => [e.animal.id, e.animal.model_slug, Boolean(e.leader && e.leader !== e), e.place?.rank ?? null, e.ocean ?? null]));
+        console.log("anchovy ids", island, JSON.stringify(ids));
+        for (const [id, slug] of ids.slice(0, 3)) {
+            await page.evaluate((id) => window.__arkScene.select(id, true), id);
+            await wait(9000);
+            const r = await page.evaluate((id) => {
+                const e = window.__arkDebug.entries().find((x) => x.animal.id === id);
+                const r = (v) => (v ? [+v.x.toFixed(1), +v.y.toFixed(1), +v.z.toFixed(1)] : null);
+                return {middle: r(e.middle), drawn: e.drawn ? [r(e.drawn), e.drawn.level] : null, level: e.level, locate: r(window.__arkScene.locate(id)), seen: window.__arkDebug.focusSeen(id), view: window.__arkScene.view(), ocean: e.ocean, leader: e.leader ? e.leader.animal.id : null};
+            }, id);
+            console.log("anchovy", island, slug, JSON.stringify(r));
+            await shot(`anchovy-${island}-${slug}-${id.slice(0, 4)}`);
+            await page.evaluate(() => window.__arkScene.select(null));
+            await wait(800);
+        }
+    }
+}
 if (want("fishview")) {
     const id = "2b54da38-5667-44ab-b688-b0d8fe17d0f8";
     await page.evaluate(() => window.__arkScene.setViewInset?.(300));
