@@ -17,6 +17,9 @@ import type {TownPlace} from "@/ark-scene/islands/town/placement";
 import type {CarerPost} from "@/ark-scene/humans/carers";
 import {ARK_ISLANDS, townWorldOrigin} from "@/ark-scene/islands";
 import {coopPose, coopTick} from "@/ark-scene/islands/town/rural";
+import {stockBed, stockTick} from "@/ark-scene/islands/town/stock-beds";
+import {behaviourProfile} from "@/ark-scene/behaviour-profile";
+import {sleepStyle} from "@/ark-scene/sleep";
 import {TOWN_CHUNK_COUNT, TOWN_GRID} from "@/ark-scene/islands/town/chunks";
 import type {ArkWorldSampler} from "@/ark-scene/world-sampler";
 import type {ScheduleAnimal} from "@/ark-scene/behaviour-schedule";
@@ -251,7 +254,7 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
     const {modelBase} = await import("@/ark-scene/grounding/base");
     const {sampleTownGround} = await import("@/ark-scene/islands/town/ground");
     const {CANAL_LEVEL, townPlan} = await import("@/ark-scene/islands/town/plan");
-    const [{zooSwingFrame}, {hallClimbs}] = await Promise.all([import("@/ark-scene/islands/town/zoo-swing"), import("@/ark-scene/islands/town/render/zoo-houses")]); // ARK-JUNGLE
+    const [{zooSleepFrame, zooSwingFrame}, {hallClimbs}] = await Promise.all([import("@/ark-scene/islands/town/zoo-swing"), import("@/ark-scene/islands/town/render/zoo-houses")]); // ARK-JUNGLE
     const origin = options.origin ?? townWorldOrigin();
     let eaveDraw: ((x: number, y: number, z: number) => {x: number; y: number; z: number} | null) | null = null;
     let eaveLoad: Promise<void> | null = null;
@@ -660,11 +663,13 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
             const info = towned.get(animal.id);
             const e = info?.enclosure;
             if (!info || !e || e.type !== "primate_house" || info.where !== "indoor") return null;
-            const f = zooSwingFrame(animal, length, {x: spot.x - origin.x, y: spot.y, z: spot.z - origin.z}, hallClimbs(e), epoch, awake);
+            // (Lane ark-sleep: asleep, a climber sleeps up on the frames' beams, `zooSleepFrame`.)
+            const f: ReturnType<typeof zooSwingFrame> = zooSleepFrame(animal, hallClimbs(e), awake, behaviourProfile(animal.model_slug).roost) ?? zooSwingFrame(animal, length, {x: spot.x - origin.x, y: spot.y, z: spot.z - origin.z}, hallClimbs(e), epoch, awake);
             if (!f) return null;
-            // (ARK-CANOPY: its hands' holds into the world's frame too.)
+            // (ARK-CANOPY: its hands' holds into the world's frame too; a sleeper on a beam holds none.)
+            const arms = f.arms;
             const out = (p: {x: number; y: number; z: number} | null) => (p ? {x: p.x + origin.x, y: p.y, z: p.z + origin.z} : null);
-            return {...f, x: f.x + origin.x, z: f.z + origin.z, ...(f.arms ? {arms: {...f.arms, hand: out(f.arms.hand), next: out(f.arms.next)}} : {})};
+            return {...f, x: f.x + origin.x, z: f.z + origin.z, ...(arms ? {arms: {...arms, hand: out(arms.hand), next: out(arms.next)}} : {})};
         },
         roomPose: (id, length, clock) => {
             const room = towned.get(id)?.room;
@@ -675,9 +680,16 @@ export async function loadTownScene(options: {tier: "high" | "medium" | "low"; a
         roostFigure: (id, x, z) => {
             const info = towned.get(id);
             const coop = info?.pen ? coopPose(info.place, id, hoursNow, x - origin.x, z - origin.z) : null;
-            return coop ? {x: coop.x + origin.x, z: coop.z + origin.z, ground: townHeight(coop.x, coop.z) + coop.floor} : null;
+            if (coop) return {x: coop.x + origin.x, z: coop.z + origin.z, ground: townHeight(coop.x, coop.z) + coop.floor};
+            // Lane ark-sleep: a kept mammal's figure sleeps by its pen's shelter (`stock-beds.ts`): the field shelter, the
+            // pig ark, the stable or barn, a garden pet by its home; by day at its own place.
+            const animal = info?.pen && !info.room && !info.display && !info.tank ? townAnimals.get(id) : undefined;
+            if (!animal || !info?.pen || !sleepStyle(animal.model_slug).mammal) return null;
+            const margin = info.penMargin ?? 0;
+            const bed = stockBed(info.pen, margin, id, Math.max((margin - 0.3) / 0.625, 0.3), behaviourProfile(animal.model_slug).activity, hoursNow);
+            return bed ? {x: bed.x + origin.x, z: bed.z + origin.z, ground: townHeight(bed.x, bed.z)} : null;
         },
-        roostTick: () => coopTick(hoursNow),
+        roostTick: () => coopTick(hoursNow) * 4 + stockTick(hoursNow),
         figureBase: (id, x, z, ground, tall) => {
             const info = towned.get(id);
             // p5 (rural): a hen shut in stands on her hen house's floor (`roostFigure`'s ground), not the grass under it.

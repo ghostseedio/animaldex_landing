@@ -106,6 +106,21 @@ for (const shot of plan) {
         shot.epoch = found.epoch + (shot.find.after ?? 1);
         shot.id = found.id;
     }
+    if (shot.pick) {
+        // (`pick`: the first of these kinds drawn one by one at that moment, `skip` of them passed over; lane ark-sleep.)
+        const found = await page.evaluate(async (s) => {
+            // (Entries are made near the camera: look at `nearTo` first.)
+            if (s.nearTo) await window.__canopy.look({x: s.nearTo.x, y: s.nearTo.y ?? 0, z: s.nearTo.z}, 20, 0.7, 1.0);
+            await window.__canopy.at(s.epoch, s.run ?? 2);
+            const found = window.__canopy.where(s.pick).filter((w) => w.at);
+            // (`nearTo`: the one nearest that point first.)
+            if (s.nearTo) found.sort((a, b) => Math.hypot(a.at.x - s.nearTo.x, a.at.z - s.nearTo.z) - Math.hypot(b.at.x - s.nearTo.x, b.at.z - s.nearTo.z));
+            return found.slice(s.skip ?? 0)[0] ?? null;
+        }, shot);
+        console.log(shot.name, "picked", JSON.stringify(found));
+        if (!found) continue;
+        shot.id = found.id;
+    }
     if (shot.young) {
         const at = await page.evaluate(async (s) => {
             await window.__canopy.at(s.epoch, s.run ?? 2);
@@ -198,6 +213,18 @@ for (const shot of plan) {
     const note = await page.evaluate(async (s) => {
         const c = window.__canopy;
         if (s.hours !== undefined) c.hours(s.hours);
+        // (`light`: the light alone pinned to that hour, lane ark-sleep; the schedule keeps the world's hour.)
+        c.light(s.light ?? null);
+        // (`near`: the camera there first, so a far animal's entry is made and drawn before it is framed; lane ark-sleep.)
+        if (s.near) {
+            await c.look(s.near, s.distance ?? 8, s.azimuth ?? 0.7, s.polar ?? 1.3);
+            await c.at(s.epoch, s.run ?? 2);
+        }
+        // (`pin`: followed, so the live budget draws it though it rests this turn; lane ark-sleep.)
+        if (s.pin && s.id) {
+            c.pin(s.id);
+            await c.at(s.epoch, 4);
+        }
         await c.at(s.epoch, s.run ?? 2);
         if (s.id && s.clear) return JSON.stringify({view: await c.clearFrame(s.id, s.distance, s.polar ?? 1.2, s.lift ?? 0), at: c.locate(s.id), cut: s.cut ? await c.cut(s.id) : 0});
         if (s.id) {
@@ -208,6 +235,7 @@ for (const shot of plan) {
         return "view";
     }, shot);
     await page.screenshot({path: path.join(out, `${shot.name}.jpg`), type: "jpeg", quality: 88});
+    if (shot.pin) await page.evaluate(() => window.__canopy.pin(null));
     const scan = await page.evaluate((id) => JSON.stringify({...window.__canopy.nanScan(), who: id ? window.__canopy.who(id) : null}), shot.id ?? null);
     notes.push(`${shot.name}: epoch ${shot.epoch} id ${shot.id ?? "-"} ${note} ${scan}`);
     console.log(shot.name, note, scan);

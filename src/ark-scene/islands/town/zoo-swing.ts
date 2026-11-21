@@ -165,3 +165,29 @@ export function zooSwingFrame(
 
 /** Each swinger's canopy phase when last drawn on the frame (for the canopy harness to find one; not read by the scene). */
 export const zooSeen = new Map<string, {epoch: number; phase: string}>();
+
+/**
+ * Lane ark-sleep (the coordinator, 2026-11-21: "zoo primates still sleep on the open enclosure floor ... use the climbing
+ * frame, platform, shelter or highest perch"): asleep, a primate house resident that climbs (a kind that travels through
+ * trees, or one whose own roost is a tree or a cliff: the macaques, the lemurs, the gibbons, the baboons) sleeps up on the
+ * hall's climbing frames, on a high beam's top, as zoo primates sleep on their frames and platforms. Its place on the
+ * beams is seeded by its id (the beams' holds, `beamHolds`, a log's width up), along the beam; the ground apes (the
+ * gorillas, nesting on the floor) stay down. Null: awake, no frames, or not a climber. Pure: the same for every viewer.
+ */
+export function zooSleepFrame(
+    animal: {id: string; model_slug: string; scientific_name?: string | null},
+    climbs: readonly ZooClimb[],
+    awake: boolean,
+    roost: string | null
+): (SurfaceFrame & {air: boolean; phase: string}) | null {
+    if (awake || !climbs.length) return null;
+    if (!canopyKindOf(animal.model_slug, animal.scientific_name) && roost !== "tree" && roost !== "cliff") return null;
+    const holds = beamHolds(climbs, false);
+    if (!holds.length) return null;
+    const seed = hashString(`${animal.id}#zoo-sleep`);
+    const h = holds[seed % holds.length];
+    const beam = climbs[Number(h.tree.slice(4))];
+    const along = norm({x: beam.b[0] - beam.a[0], y: 0, z: beam.b[2] - beam.a[2]});
+    const way = unit(seed, 3) < 0.5 ? 1 : -1;
+    return {x: h.x, y: h.y, z: h.z, nx: 0, ny: 1, nz: 0, tx: along.x * way, ty: 0, tz: along.z * way, air: false, phase: "sleep"};
+}

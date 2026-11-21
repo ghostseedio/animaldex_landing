@@ -76,6 +76,7 @@ import {clipBakeOf} from "@/ark-scene/locomotion/flight";
 import {LIE_FOLDS, LIE_FRAMES, LIE_SECONDS, LiePose} from "@/ark-scene/locomotion/lie-pose";
 import type {LocoRig} from "@/ark-scene/locomotion/types";
 import {armsFit, handsReady, type LocoCanopy} from "@/ark-scene/locomotion/brachiate";
+import {posedSitRows} from "@/ark-scene/locomotion/sit-sleep-pose";
 
 export type RigClipData = RigClip & {name: string; row: number; rows: number};
 
@@ -679,6 +680,21 @@ export class RigLibrary {
                 // (A pilot's own lying clips all go: its way up and onto a side start from its own lying pose, not this one.)
                 QUADRUPED_LYING_HELD.forEach((name) => delete clips[name]);
                 for (const clip of posed.rows.clips) clips[clip.name] = clip;
+                texture.image = {data: rowsData, width: boneCount * 3, height: rowsData.length / (boneCount * 12)} as unknown as typeof texture.image;
+                texture.needsUpdate = true;
+                loco.setBakedData(rowsData);
+            }
+        }
+        // Lane ark-sleep: a primate sleeps sitting hunched, posed from its skeleton (`locomotion/sit-sleep-pose.ts`), not
+        // the rig's own crouch on all fours. (`__arkPosedSit = false`: the rig's own, to compare.)
+        if (loco && entry.plan === "primate" && (globalThis as {__arkPosedSit?: boolean}).__arkPosedSit !== false) {
+            const position = geometry.getAttribute("position");
+            const joints = geometry.getAttribute("arkJoints");
+            const weights = geometry.getAttribute("arkWeights");
+            const posed = position && joints && weights ? posedSitRows(loco.rig, {positions: position.array, joints: joints.array, weights: weights.array}, data, boneCount, DataUtils.toHalfFloat) : null;
+            if (posed?.data) {
+                rowsData = posed.data;
+                for (const clip of posed.clips) clips[clip.name] = clip as RigClipData;
                 texture.image = {data: rowsData, width: boneCount * 3, height: rowsData.length / (boneCount * 12)} as unknown as typeof texture.image;
                 texture.needsUpdate = true;
                 loco.setBakedData(rowsData);
