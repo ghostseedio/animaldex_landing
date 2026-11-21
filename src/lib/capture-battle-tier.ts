@@ -42,13 +42,65 @@ export function captureBattlePower(stats: Partial<CaptureBattleStats>): number {
     return Math.min(100, rounded);
 }
 
-/** public.capture_tier_label */
+/**
+ * GRADING-3 (approved 2026-11-21): cut points of the active public.grading_tier_bands row (version 1, from
+ * base-power percentiles of real cards). The server's capture_tier_label reads that row; a card's letter should
+ * come from the server (`battle_tier` on discover_feed_v1 / owned_capture_manifest_v1). These constants are the
+ * fallback for rows without it and for species (no capture), and must change with the table.
+ */
+export const GRADING_TIER_CUTS = {S: 57, A: 45, B: 36, C: 27, D: 14} as const;
+const TIER_ORDER: CaptureBattleTier[] = ["E", "D", "C", "B", "A", "S"];
+
+/** public.capture_tier_label (active grading_tier_bands row) */
 export function captureBattleTierFromPower(power: number | null | undefined): CaptureBattleTier {
     const p = typeof power === "number" && Number.isFinite(power) ? power : 0;
-    if (p < 25) return "E";
-    if (p < 40) return "D";
-    if (p < 52) return "C";
-    if (p < 60) return "B";
-    if (p < 78) return "A";
-    return "S";
+    if (p >= GRADING_TIER_CUTS.S) return "S";
+    if (p >= GRADING_TIER_CUTS.A) return "A";
+    if (p >= GRADING_TIER_CUTS.B) return "B";
+    if (p >= GRADING_TIER_CUTS.C) return "C";
+    if (p >= GRADING_TIER_CUTS.D) return "D";
+    return "E";
+}
+
+/** public.capture_game_stats_is_placeholder: the unidentified-animal vector is unrated (E). */
+export function isPlaceholderBattleStats(stats: Partial<CaptureBattleStats> | null | undefined): boolean {
+    const d = stat(stats?.dominance), s = stat(stats?.speed), z = stat(stats?.size), i = stat(stats?.intelligence);
+    const r = stat(stats?.rarity);
+    return (d === 0 && s === 0 && z === 0 && i === 0 && r === 0) || (d === 50 && s === 50 && z === 50 && i === 50);
+}
+
+/**
+ * Decision 448: a placeholder card (unidentified animal, tier E in the data) shows "Unrated" instead of a tier letter,
+ * with no tier colour. The server tier cannot tell placeholder E from earned E, so this reads the base stats.
+ */
+export function isUnratedCard(params: {
+    tier: CaptureBattleTier | null | undefined;
+    baseStats: Partial<CaptureBattleStats> | null | undefined;
+}): boolean {
+    return params.tier === "E" && isPlaceholderBattleStats(params.baseStats);
+}
+
+export function parseCaptureBattleTier(value: unknown): CaptureBattleTier | null {
+    const v = typeof value === "string" ? value.trim().toUpperCase() : "";
+    return (TIER_ORDER as string[]).includes(v) ? v as CaptureBattleTier : null;
+}
+
+/**
+ * The card's tier: the server's `battle_tier` when the row has it; otherwise public.grading_tier_for_powers on the
+ * stats we have: placeholder -> E, else band(effective power) but at most one band above band(base power).
+ * Rarity is never boosted, so the effective rarity is the base rarity.
+ */
+export function captureBattleTier(params: {
+    serverTier?: unknown;
+    baseStats: Partial<CaptureBattleStats> | null | undefined;
+    effectiveStats?: Partial<CaptureBattleStats> | null;
+}): CaptureBattleTier {
+    const server = parseCaptureBattleTier(params.serverTier);
+    if (server) return server;
+    const base = params.baseStats ?? {};
+    if (isPlaceholderBattleStats(base)) return "E";
+    const effective = {...(params.effectiveStats ?? base), rarity: base.rarity};
+    const effectiveRank = TIER_ORDER.indexOf(captureBattleTierFromPower(captureBattlePower(effective)));
+    const baseRank = TIER_ORDER.indexOf(captureBattleTierFromPower(captureBattlePower(base)));
+    return TIER_ORDER[Math.min(effectiveRank, baseRank + 1)];
 }

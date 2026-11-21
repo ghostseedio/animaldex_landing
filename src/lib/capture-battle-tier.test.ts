@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import test from "node:test";
-import {captureBattlePower, captureBattleTierFromPower} from "@/lib/capture-battle-tier";
+import {captureBattlePower, captureBattleTier, captureBattleTierFromPower, isUnratedCard} from "@/lib/capture-battle-tier";
 
 // The same 501 vectors AnimalDex's supabase/functions/_shared/battle-tier.test.ts uses:
 // [dominance, speed, size, intelligence, rarity, power, tier], where power and tier were
@@ -23,9 +23,29 @@ test("capture-battle-tier matches capture_battle_power + capture_tier_label on e
 
 test("capture-battle-tier band edges", () => {
     assert.deepEqual(
-        [24, 25, 39, 40, 51, 52, 59, 60, 77, 78].map(captureBattleTierFromPower),
+        [13, 14, 26, 27, 35, 36, 44, 45, 56, 57].map(captureBattleTierFromPower),
         ["E", "D", "D", "C", "C", "B", "B", "A", "A", "S"]
     );
     assert.equal(captureBattlePower({dominance: 100, speed: 100, size: 100, intelligence: 100, rarity: 100}), 100);
     assert.equal(captureBattlePower({}), 0);
+});
+
+test("GRADING-3: server tier wins; else placeholder E and the one-band ceiling", () => {
+    assert.equal(captureBattleTier({serverTier: "b", baseStats: {}}), "B");
+    assert.equal(captureBattleTier({baseStats: {dominance: 50, speed: 50, size: 50, intelligence: 50, rarity: 90}}), "E");
+    const base = {dominance: 30, speed: 30, size: 30, intelligence: 30, rarity: 30}; // power 30 -> C
+    assert.equal(captureBattleTier({baseStats: base}), "C");
+    assert.equal(captureBattleTier({baseStats: base, effectiveStats: {dominance: 100, speed: 100, size: 100, intelligence: 100, rarity: 100}}), "B");
+    assert.equal(captureBattleTier({baseStats: base, effectiveStats: {...base, rarity: 100}}), "C");
+});
+
+test("decision 448: placeholder E is Unrated; earned E and other tiers are not", () => {
+    const placeholder = {dominance: 50, speed: 50, size: 50, intelligence: 50, rarity: 90};
+    const empty = {dominance: 0, speed: 0, size: 0, intelligence: 0, rarity: 0};
+    const weak = {dominance: 5, speed: 5, size: 5, intelligence: 5, rarity: 5};
+    assert.equal(isUnratedCard({tier: "E", baseStats: placeholder}), true);
+    assert.equal(isUnratedCard({tier: "E", baseStats: empty}), true);
+    assert.equal(isUnratedCard({tier: "E", baseStats: weak}), false);
+    assert.equal(isUnratedCard({tier: "C", baseStats: placeholder}), false);
+    assert.equal(isUnratedCard({tier: null, baseStats: placeholder}), false);
 });

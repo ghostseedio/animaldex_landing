@@ -4,12 +4,14 @@ import {
     getTrainAnimalPacks,
     getTrainPackEligibleCaptures
 } from "@/data/train-modules";
+import {getScopedTranslator} from "@/loaders/translation";
 import PacksClient from "./packs-client";
 
-export default async function PacksPage() {
-    const [packs, eligibleCaptures] = await Promise.all([
+export default async function PacksPage({params}: {params: {locale: string}}) {
+    const [packs, eligibleCaptures, t] = await Promise.all([
         getTrainAnimalPacks(),
-        getTrainPackEligibleCaptures()
+        getTrainPackEligibleCaptures(),
+        getScopedTranslator(params.locale, "battleTier")
     ]);
 
     return (
@@ -25,7 +27,7 @@ export default async function PacksPage() {
                 </div>
             </div>
 
-            <PacksClient initialPacks={packs} initialEligibleCaptures={eligibleCaptures} />
+            <PacksClient initialPacks={packs} initialEligibleCaptures={eligibleCaptures} unratedLabel={t("unrated")} />
         </div>
     );
 }

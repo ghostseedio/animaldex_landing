@@ -22,7 +22,8 @@ import {animalTrialEvidenceRoute} from "@/lib/discover-animal-trial";
 import {parseDiscoverPostId, type ParsedDiscoverPostId} from "@/lib/discover-post";
 import {identityKindShortLabel} from "@/lib/identity-kind";
 import {isPublishedAnimalSlug} from "@/lib/published-seo-slugs";
-import {getBattlePower, getBattleTier, toEffectiveStats} from "@/lib/matchup-stats";
+import {toEffectiveStats} from "@/lib/matchup-stats";
+import {captureBattleTier} from "@/lib/capture-battle-tier";
 import {resolveCanonicalSlugFromIdentity} from "@/lib/species-life-stage-policy";
 import {formatScenarioFamilyLabel, normalizeScenarioFamily} from "@/lib/matchup-result-copy";
 import {logDevPerfEvent, timeDevAsync, timeDevStep} from "@/lib/dev-request-timing";
@@ -1084,7 +1085,8 @@ function mapCaptureRow(
         identityKindLabel: isUncertain ? null : identityKindShortLabel(identityKind),
         identityExplanation: isUncertain ? null : readString(row, "identity_explanation"),
         identityEvidenceGuidance: isUncertain ? null : readString(row, "identity_evidence_guidance"),
-        battleTier: getBattleTier(getBattlePower(effectiveStats)),
+        // GRADING-3: the server's tier (discover_feed_v1.battle_tier); the local rule only when the row lacks it.
+        battleTier: captureBattleTier({serverTier: row.battle_tier, baseStats: stats, effectiveStats}),
         isEligibleCapture,
         hasUncertaintyFallback,
         isZooComparisonBanned,
@@ -1536,6 +1538,7 @@ const discoverChallengeSelect = [
 
 const richFeedSelect = [
     "capture_id",
+    "battle_tier",
     "user_id",
     "feed_activity_at",
     "capture_created_at",

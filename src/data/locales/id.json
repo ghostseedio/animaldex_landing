@@ -5459,5 +5459,8 @@
       "arkEatenBy": "Di Ark ia bisa dimangsa oleh",
       "foodChain": "Lihat siapa memangsa siapa di Ark"
     }
+  },
+  "battleTier": {
+    "unrated": "Belum dinilai"
   }
 }

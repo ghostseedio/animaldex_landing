@@ -1,3 +1,5 @@
+import {captureBattleTierFromPower} from "@/lib/capture-battle-tier";
+
 export type MatchupGameStats = Record<"dominance" | "speed" | "size" | "intelligence" | "rarity", number>;
 
 export type AnimalBattleTier = "E" | "D" | "C" | "B" | "A" | "S";
@@ -41,13 +43,9 @@ export function getBattlePower(stats: MatchupGameStats) {
     ));
 }
 
+/** public.capture_tier_label under the GRADING-3 bands (one source: capture-battle-tier.ts). */
 export function getBattleTier(power: number): AnimalBattleTier {
-    if (power < 25) return "E";
-    if (power < 40) return "D";
-    if (power < 52) return "C";
-    if (power < 60) return "B";
-    if (power < 78) return "A";
-    return "S";
+    return captureBattleTierFromPower(power);
 }
 
 export function tierRank(tier: AnimalBattleTier) {

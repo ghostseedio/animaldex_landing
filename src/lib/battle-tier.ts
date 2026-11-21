@@ -1,3 +1,5 @@
+import {captureBattleTier} from "@/lib/capture-battle-tier";
+
 const SPECIES_STATS_KEYS = ["dominance", "speed", "size", "intelligence", "rarity"] as const;
 
 export type SpeciesStats = Record<(typeof SPECIES_STATS_KEYS)[number], number>;
@@ -22,28 +24,7 @@ export function getBattlePower(stats: SpeciesStats) {
     ));
 }
 
+/** A species' tier (no capture, no boosts) under the GRADING-3 bands; unidentified-animal stats are E. */
 export function getBattleTier(stats: SpeciesStats): AnimalBattleTier {
-    const battlePower = getBattlePower(stats);
-
-    if (battlePower < 25) {
-        return "E";
-    }
-
-    if (battlePower < 40) {
-        return "D";
-    }
-
-    if (battlePower < 52) {
-        return "C";
-    }
-
-    if (battlePower < 60) {
-        return "B";
-    }
-
-    if (battlePower < 78) {
-        return "A";
-    }
-
-    return "S";
+    return captureBattleTier({baseStats: stats});
 }

@@ -15,7 +15,10 @@ function rgba(tint: {r: number; g: number; b: number; a: number}, alpha = tint.a
 }
 
 type BattleTierChipProps = {
-    tier: AnimalBattleTier;
+    /** "unrated" (decision 448): a placeholder card; the word only, with no tier colour. */
+    tier: AnimalBattleTier | "unrated";
+    /** The catalog's battleTier.unrated; required to show an unrated chip. */
+    unratedLabel?: string;
     compact?: boolean;
     className?: string;
     /** The word before the letter ("Tier"), translated where the caller has it. */
@@ -29,7 +32,28 @@ type BattleTierChipProps = {
     labelClassName?: string;
 };
 
-export default function BattleTierChip({tier, compact = false, className = "", label = "Tier", title, square = false, testId, labelClassName = ""}: BattleTierChipProps) {
+export default function BattleTierChip({tier, unratedLabel, compact = false, className = "", label = "Tier", title, square = false, testId, labelClassName = ""}: BattleTierChipProps) {
+    if (tier === "unrated") {
+        return (
+            <span
+                className={[
+                    `inline-flex shrink-0 items-center ${square ? "rounded-md" : "rounded-full"} font-black uppercase text-white/70`,
+                    compact ? "h-[22px] px-2 text-[0.55rem] tracking-[0.12em]" : "h-[26px] px-2.5 text-[0.62rem] tracking-[0.12em]",
+                    className
+                ].join(" ")}
+                style={{
+                    backgroundColor: "rgba(0,0,0,0.36)",
+                    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.16)"
+                }}
+                title={title}
+                data-testid={testId}
+                data-tier={testId ? tier : undefined}
+            >
+                {unratedLabel}
+            </span>
+        );
+    }
+
     const tint = TIER_TINT[tier];
 
     return (
