@@ -4683,7 +4683,10 @@
       "spawnPair": "{animal}: telur diletakkan, lalu dibuahi oleh jantan",
       "amplexus": "{animal}: sepasang dalam amplexus, dan telur diletakkan",
       "pouchFry": "{animal}: {count} anak dilepaskan dari kantong sang ayah",
-      "split": "{animal}: satu individu baru memisah dari induknya"
+      "split": "{animal}: satu individu baru memisah dari induknya",
+      "giftMeal": "{aAnimal} diberi makan oleh seorang pengunjung",
+      "giftShelter": "{aPrey} aman dari {aPredator} di tempat berlindung dari pengunjung",
+      "giftNest": "{aAnimal} kawin, dengan bantuan sarang dari pengunjung"
     },
     "card": {
       "now": "Sekarang: {activity}",
@@ -5257,6 +5260,35 @@
       "wild": "Liar",
       "town": "Kota",
       "arkYear": "1 tahun Bahtera"
+    },
+    "care": {
+      "title": "Perawatan dari pengunjung",
+      "meal": "Makanan",
+      "shelter": "Tempat berlindung",
+      "nest": "Bantuan sarang",
+      "fedBy": "Diberi makan oleh {who}",
+      "shelteredBy": "Dilindungi oleh {who}",
+      "nestBy": "Bantuan sarang dari {who}",
+      "you": "kamu",
+      "aVisitor": "seorang pengunjung",
+      "fuller": "kenyang selama {time}",
+      "safe": "aman selama {time}",
+      "helping": "membantu selama {time}",
+      "stoppedHunt": "menggagalkan satu perburuan",
+      "nestUsed": "membantu membesarkan anak",
+      "onItsWay": "sedang dikirim",
+      "mealDoes": "Kenyang selama {time}",
+      "shelterDoes": "Aman dari satu perburuan selama {time}",
+      "nestDoes": "Peluang lebih besar punya anak selama {time}",
+      "credits": "{n} Kredit",
+      "send": "Kirim seharga {n} Kredit",
+      "cancel": "Batal",
+      "sent": "Terkirim. Jika tidak membantu, Kredit kamu kembali.",
+      "noCredits": "Kamu perlu lebih banyak Kredit untuk ini.",
+      "notNow": "Belum bisa sekarang.",
+      "limit": "Kamu sudah memberi perawatan terbanyak untuk hari ini.",
+      "tooNew": "Perawatan terbuka setelah akunmu berumur seminggu dan punya kartu.",
+      "failed": "Gagal mengirim. Coba lagi."
     }
   },
   "seo": {

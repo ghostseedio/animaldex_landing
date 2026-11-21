@@ -75,6 +75,10 @@ export type ArkLiveWords = {
     matedFirst?: string;
     foundMate?: string;
     foundDung?: string;
+    /** Gifts as Ark care (GIFTS-CARE, decision 387, `src/ark-scene/live/care-lines.ts`): never who gave it. */
+    giftMeal?: string;
+    giftShelter?: string;
+    giftNest?: string;
     /**
      * REAL-REPRODUCTION (AnimalDex decision 440): a breeding said its kind's own way, each "{animal}: ..." with no verb that
      * agrees with a number. `spawnNight`: a mass spawning (corals, sea cucumbers); `spawnPair`: a pair of fish spawning,
@@ -142,6 +146,9 @@ export const ARK_LIVE_ENGLISH: ArkLiveWords = {
     matedFirst: "{aAnimal} mated for the first time",
     foundMate: "{aAnimal} found a mate after {days} days",
     foundDung: "{aAnimal} found fresh dung",
+    giftMeal: "{aAnimal} was given a meal by a visitor",
+    giftShelter: "{aPrey} was safe from {aPredator} in a visitor's shelter",
+    giftNest: "{aAnimal} mated, with a visitor's nesting help",
     spawnNight: "The reef spawned tonight: {animal}",
     spawnPair: "{animal}: eggs laid, and the male fertilised them",
     amplexus: "{animal}: a pair in amplexus, and spawn laid",

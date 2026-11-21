@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: uova deposte, e il maschio le ha fecondate",
             "amplexus": "{animal}: una coppia in amplesso, e uova deposte",
             "pouchFry": "{animal}: {count} piccoli usciti dalla tasca del padre",
-            "split": "{animal}: uno nuovo si è separato dal genitore"
+            "split": "{animal}: uno nuovo si è separato dal genitore",
+            "giftMeal": "{aAnimal}: nutrito da un visitatore",
+            "giftShelter": "{aPrey}: al sicuro da {aPredator} nel riparo di un visitatore",
+            "giftNest": "{aAnimal}: accoppiamento, con l'aiuto per il nido di un visitatore"
         },
         "card": {
             "now": "Ora: {activity}",
@@ -1060,6 +1063,35 @@
             "wild": "Selvatico",
             "town": "Città",
             "arkYear": "1 anno dell'Arca"
+        },
+        "care": {
+            "title": "Cure dei visitatori",
+            "meal": "Un pasto",
+            "shelter": "Riparo",
+            "nest": "Aiuto per il nido",
+            "fedBy": "Nutrito da {who}",
+            "shelteredBy": "Riparato da {who}",
+            "nestBy": "Aiuto per il nido da {who}",
+            "you": "te",
+            "aVisitor": "un visitatore",
+            "fuller": "sazio per {time}",
+            "safe": "al sicuro per {time}",
+            "helping": "aiuta per {time}",
+            "stoppedHunt": "ha sventato una caccia",
+            "nestUsed": "ha aiutato con i piccoli",
+            "onItsWay": "in arrivo",
+            "mealDoes": "Sazio per {time}",
+            "shelterDoes": "Al sicuro da una caccia per {time}",
+            "nestDoes": "Più probabilità di avere piccoli per {time}",
+            "credits": "{n} crediti",
+            "send": "Invia per {n} crediti",
+            "cancel": "Annulla",
+            "sent": "Inviato. Se non può aiutare, i crediti ti tornano indietro.",
+            "noCredits": "Ti servono più crediti per questo.",
+            "notNow": "Non è possibile ora.",
+            "limit": "Hai già dato il massimo delle cure per oggi.",
+            "tooNew": "Le cure si aprono quando il tuo account ha una settimana e una carta.",
+            "failed": "Invio non riuscito. Riprova."
         }
     },
     "talkPage": {

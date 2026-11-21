@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: Eier gelegt, und das Männchen hat sie befruchtet",
             "amplexus": "{animal}: ein Paar im Amplexus, und Laich abgelegt",
             "pouchFry": "{animal}: {count} Junge aus der Bruttasche des Vaters entlassen",
-            "split": "{animal}: ein neues Tier hat sich vom Elterntier abgeteilt"
+            "split": "{animal}: ein neues Tier hat sich vom Elterntier abgeteilt",
+            "giftMeal": "{aAnimal}: von einem Besucher gefüttert",
+            "giftShelter": "{aPrey}: im Unterschlupf eines Besuchers sicher vor {aPredator}",
+            "giftNest": "{aAnimal}: gepaart, mit der Nesthilfe eines Besuchers"
         },
         "card": {
             "now": "Jetzt: {activity}",
@@ -1060,6 +1063,35 @@
             "wild": "Wild",
             "town": "Stadt",
             "arkYear": "1 Arche-Jahr"
+        },
+        "care": {
+            "title": "Fürsorge von Besuchern",
+            "meal": "Eine Mahlzeit",
+            "shelter": "Unterschlupf",
+            "nest": "Nesthilfe",
+            "fedBy": "Gefüttert von {who}",
+            "shelteredBy": "Geschützt von {who}",
+            "nestBy": "Nesthilfe von {who}",
+            "you": "dir",
+            "aVisitor": "einem Besucher",
+            "fuller": "satt für {time}",
+            "safe": "sicher für {time}",
+            "helping": "hilft für {time}",
+            "stoppedHunt": "hat eine Jagd verhindert",
+            "nestUsed": "hat beim Nachwuchs geholfen",
+            "onItsWay": "unterwegs",
+            "mealDoes": "Satt für {time}",
+            "shelterDoes": "Sicher vor einer Jagd für {time}",
+            "nestDoes": "Bessere Chance auf Nachwuchs für {time}",
+            "credits": "{n} Credits",
+            "send": "Für {n} Credits senden",
+            "cancel": "Abbrechen",
+            "sent": "Gesendet. Wenn es nicht helfen kann, bekommst du deine Credits zurück.",
+            "noCredits": "Dafür brauchst du mehr Credits.",
+            "notNow": "Gerade nicht möglich.",
+            "limit": "Du hast heute schon die meiste Fürsorge gegeben.",
+            "tooNew": "Fürsorge ist möglich, sobald dein Konto eine Woche alt ist und eine Karte hat.",
+            "failed": "Senden fehlgeschlagen. Versuch es noch einmal."
         }
     },
     "talkPage": {

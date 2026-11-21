@@ -438,7 +438,10 @@
             "spawnPair": "{animal} : œufs pondus, et le mâle les a fécondés",
             "amplexus": "{animal} : un couple en amplexus, et une ponte",
             "pouchFry": "{animal} : {count} petits libérés de la poche du père",
-            "split": "{animal} : un nouvel individu s'est détaché de son parent"
+            "split": "{animal} : un nouvel individu s'est détaché de son parent",
+            "giftMeal": "{aAnimal} : nourri par un visiteur",
+            "giftShelter": "{aPrey} : à l'abri de {aPredator} grâce à un visiteur",
+            "giftNest": "{aAnimal} : accouplement, avec l'aide au nid d'un visiteur"
         },
         "card": {
             "now": "Maintenant : {activity}",
@@ -1060,6 +1063,35 @@
             "wild": "Sauvage",
             "town": "Ville",
             "arkYear": "1 an de l'Arche"
+        },
+        "care": {
+            "title": "Soins des visiteurs",
+            "meal": "Un repas",
+            "shelter": "Un abri",
+            "nest": "Aide au nid",
+            "fedBy": "Nourri par {who}",
+            "shelteredBy": "Abrité par {who}",
+            "nestBy": "Aide au nid de {who}",
+            "you": "toi",
+            "aVisitor": "un visiteur",
+            "fuller": "rassasié pour {time}",
+            "safe": "à l'abri pour {time}",
+            "helping": "aide pendant {time}",
+            "stoppedHunt": "a déjoué une chasse",
+            "nestUsed": "a aidé pour les petits",
+            "onItsWay": "en route",
+            "mealDoes": "Rassasié pour {time}",
+            "shelterDoes": "À l'abri d'une chasse pendant {time}",
+            "nestDoes": "Plus de chances d'avoir des petits pendant {time}",
+            "credits": "{n} crédits",
+            "send": "Envoyer pour {n} crédits",
+            "cancel": "Annuler",
+            "sent": "Envoyé. Si ça ne peut pas aider, tes crédits te sont rendus.",
+            "noCredits": "Il te faut plus de crédits pour cela.",
+            "notNow": "Pas possible pour l'instant.",
+            "limit": "Tu as donné le maximum de soins pour aujourd'hui.",
+            "tooNew": "Les soins s'ouvrent quand ton compte a une semaine et une carte.",
+            "failed": "Envoi impossible. Réessaie."
         }
     },
     "talkPage": {

@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: egg lagt, og hannen befruktet dem",
             "amplexus": "{animal}: et par i amplexus, og egg lagt",
             "pouchFry": "{animal}: {count} unger sluppet ut av farens pung",
-            "split": "{animal}: en ny delte seg fra forelderen"
+            "split": "{animal}: en ny delte seg fra forelderen",
+            "giftMeal": "{aAnimal}: matet av en besøkende",
+            "giftShelter": "{aPrey}: trygg for {aPredator} i en besøkendes ly",
+            "giftNest": "{aAnimal}: paret seg, med en besøkendes reirhjelp"
         },
         "card": {
             "now": "Nå: {activity}",
@@ -1060,6 +1063,35 @@
             "wild": "Vill",
             "town": "By",
             "arkYear": "1 Ark-år"
+        },
+        "care": {
+            "title": "Omsorg fra besøkende",
+            "meal": "Et måltid",
+            "shelter": "Ly",
+            "nest": "Reirhjelp",
+            "fedBy": "Matet av {who}",
+            "shelteredBy": "Gitt ly av {who}",
+            "nestBy": "Reirhjelp fra {who}",
+            "you": "deg",
+            "aVisitor": "en besøkende",
+            "fuller": "mett i {time}",
+            "safe": "trygg i {time}",
+            "helping": "hjelper i {time}",
+            "stoppedHunt": "den stoppet en jakt",
+            "nestUsed": "den hjalp med unger",
+            "onItsWay": "på vei",
+            "mealDoes": "Mett i {time}",
+            "shelterDoes": "Trygg mot én jakt i {time}",
+            "nestDoes": "Bedre sjanse for unger i {time}",
+            "credits": "{n} kreditter",
+            "send": "Send for {n} kreditter",
+            "cancel": "Avbryt",
+            "sent": "Sendt. Hvis det ikke kan hjelpe, får du kredittene tilbake.",
+            "noCredits": "Du trenger flere kreditter for dette.",
+            "notNow": "Ikke mulig akkurat nå.",
+            "limit": "Du har gitt mest omsorg for i dag.",
+            "tooNew": "Omsorg åpner når kontoen din er en uke gammel og har et kort.",
+            "failed": "Kunne ikke sende. Prøv igjen."
         }
     },
     "talkPage": {

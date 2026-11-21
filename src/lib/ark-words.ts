@@ -488,6 +488,8 @@ export type ArkWords = {
     photo: {alt: string; open: string; close: string; fromParent?: string; fromGrandparent?: string; fromGreatGrandparent?: string};
     /** Hearts are lives (behind the server's `ark_hearts`): the card's lives row, recovering, the restore. */
     hearts?: Partial<ArkHeartsWords>;
+    /** Care from visitors on the tap card (GIFTS-CARE, decision 387, `lib/ark-care-gifts.ts`). Optional: English fills. */
+    care?: Partial<import("@/lib/ark-care-gifts").ArkCareWords>;
     /**
      * V1 (`src/ark-scene/seen/hooks.ts`): what the public read says an animal is doing now, one short line in its
      * selection box and Ark Lite's list (E6's read, `animal.state`; said only when the read sends one). `{aPrey}` is filled as the live log's.

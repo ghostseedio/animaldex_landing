@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: ous posats, i el mascle els ha fecundat",
             "amplexus": "{animal}: una parella en amplexus, i posta feta",
             "pouchFry": "{animal}: {count} cries alliberades de la bossa del pare",
-            "split": "{animal}: un de nou s'ha separat del progenitor"
+            "split": "{animal}: un de nou s'ha separat del progenitor",
+            "giftMeal": "{aAnimal}: alimentat per un visitant",
+            "giftShelter": "{aPrey}: a recer de {aPredator} al refugi d'un visitant",
+            "giftNest": "{aAnimal}: aparellament, amb l'ajuda d'un visitant amb el niu"
         },
         "card": {
             "now": "Ara: {activity}",
@@ -1060,6 +1063,35 @@
             "wild": "Salvatge",
             "town": "Ciutat",
             "arkYear": "1 any de l'Arca"
+        },
+        "care": {
+            "title": "Cures dels visitants",
+            "meal": "Un àpat",
+            "shelter": "Refugi",
+            "nest": "Ajuda amb el niu",
+            "fedBy": "Alimentat per {who}",
+            "shelteredBy": "Refugiat per {who}",
+            "nestBy": "Ajuda amb el niu de {who}",
+            "you": "tu",
+            "aVisitor": "un visitant",
+            "fuller": "tip durant {time}",
+            "safe": "a recer durant {time}",
+            "helping": "ajudant durant {time}",
+            "stoppedHunt": "va frustrar una caça",
+            "nestUsed": "va ajudar amb les cries",
+            "onItsWay": "en camí",
+            "mealDoes": "Tip durant {time}",
+            "shelterDoes": "A recer d'una caça durant {time}",
+            "nestDoes": "Més possibilitats de tenir cries durant {time}",
+            "credits": "{n} crèdits",
+            "send": "Envia per {n} crèdits",
+            "cancel": "Cancel·la",
+            "sent": "Enviat. Si no pot ajudar, recuperes els crèdits.",
+            "noCredits": "Necessites més crèdits per a això.",
+            "notNow": "Ara no és possible.",
+            "limit": "Ja has donat el màxim de cures per avui.",
+            "tooNew": "Les cures s'obren quan el compte té una setmana i una carta.",
+            "failed": "No s'ha pogut enviar. Torna-ho a provar."
         }
     },
     "talkPage": {

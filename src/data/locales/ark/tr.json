@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: yumurtalar bırakıldı ve erkek onları döllüyor",
             "amplexus": "{animal}: amplekstaki bir çift, yumurta bırakıldı",
             "pouchFry": "{animal}: babanın kesesinden {count} yavru çıktı",
-            "split": "{animal}: ebeveyninden yeni bir birey ayrıldı"
+            "split": "{animal}: ebeveyninden yeni bir birey ayrıldı",
+            "giftMeal": "{aAnimal}: bir ziyaretçi besledi",
+            "giftShelter": "{aPrey}: bir ziyaretçinin barınağında {aPredator} karşısında güvende",
+            "giftNest": "{aAnimal}: bir ziyaretçinin yuva yardımıyla çiftleşti"
         },
         "card": {
             "now": "Şimdi: {activity}",
@@ -1060,6 +1063,35 @@
             "wild": "Yaban",
             "town": "Kasaba",
             "arkYear": "1 Gemi yılı"
+        },
+        "care": {
+            "title": "Ziyaretçilerden bakım",
+            "meal": "Bir öğün",
+            "shelter": "Barınak",
+            "nest": "Yuva yardımı",
+            "fedBy": "Besleyen: {who}",
+            "shelteredBy": "Barındıran: {who}",
+            "nestBy": "Yuva yardımı: {who}",
+            "you": "sen",
+            "aVisitor": "bir ziyaretçi",
+            "fuller": "{time} tok",
+            "safe": "{time} güvende",
+            "helping": "{time} yardım ediyor",
+            "stoppedHunt": "bir avı engelledi",
+            "nestUsed": "yavrulara yardım etti",
+            "onItsWay": "yolda",
+            "mealDoes": "{time} tok",
+            "shelterDoes": "{time} boyunca bir avdan güvende",
+            "nestDoes": "{time} boyunca daha iyi yavru şansı",
+            "credits": "{n} Kredi",
+            "send": "{n} Krediye gönder",
+            "cancel": "Vazgeç",
+            "sent": "Gönderildi. Yardım edemezse Kredilerin geri gelir.",
+            "noCredits": "Bunun için daha fazla Krediye ihtiyacın var.",
+            "notNow": "Şu anda mümkün değil.",
+            "limit": "Bugün için en çok bakımı verdin.",
+            "tooNew": "Bakım, hesabın bir haftalık olunca ve bir kartı olunca açılır.",
+            "failed": "Gönderilemedi. Tekrar dene."
         }
     },
     "talkPage": {

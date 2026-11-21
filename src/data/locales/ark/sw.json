@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: mayai yametagwa, na dume ameyarutubisha",
             "amplexus": "{animal}: jozi katika amplexus, na mayai yametagwa",
             "pouchFry": "{animal}: watoto {count} wametoka kwenye mfuko wa baba",
-            "split": "{animal}: mpya amejitenga na mzazi wake"
+            "split": "{animal}: mpya amejitenga na mzazi wake",
+            "giftMeal": "{aAnimal}: amelishwa na mgeni",
+            "giftShelter": "{aPrey}: salama dhidi ya {aPredator} katika makazi ya mgeni",
+            "giftNest": "{aAnimal}: amepanda, kwa msaada wa kiota wa mgeni"
         },
         "card": {
             "now": "Sasa: {activity}",
@@ -1060,6 +1063,35 @@
             "wild": "Porini",
             "town": "Mjini",
             "arkYear": "Mwaka 1 wa Safina"
+        },
+        "care": {
+            "title": "Utunzaji kutoka kwa wageni",
+            "meal": "Mlo",
+            "shelter": "Makazi",
+            "nest": "Msaada wa kiota",
+            "fedBy": "Amelishwa na {who}",
+            "shelteredBy": "Amehifadhiwa na {who}",
+            "nestBy": "Msaada wa kiota kutoka kwa {who}",
+            "you": "wewe",
+            "aVisitor": "mgeni",
+            "fuller": "ameshiba kwa {time}",
+            "safe": "salama kwa {time}",
+            "helping": "inasaidia kwa {time}",
+            "stoppedHunt": "ilizuia uwindaji mmoja",
+            "nestUsed": "ilisaidia na watoto",
+            "onItsWay": "iko njiani",
+            "mealDoes": "Ameshiba kwa {time}",
+            "shelterDoes": "Salama dhidi ya uwindaji mmoja kwa {time}",
+            "nestDoes": "Nafasi bora ya watoto kwa {time}",
+            "credits": "Credits {n}",
+            "send": "Tuma kwa Credits {n}",
+            "cancel": "Ghairi",
+            "sent": "Imetumwa. Ikishindwa kusaidia, Credits zako zitarudi.",
+            "noCredits": "Unahitaji Credits zaidi kwa hili.",
+            "notNow": "Haiwezekani sasa hivi.",
+            "limit": "Umetoa utunzaji mwingi zaidi kwa leo.",
+            "tooNew": "Utunzaji unafunguka akaunti yako ikifikisha wiki moja na kuwa na kadi.",
+            "failed": "Imeshindwa kutuma. Jaribu tena."
         }
     },
     "talkPage": {

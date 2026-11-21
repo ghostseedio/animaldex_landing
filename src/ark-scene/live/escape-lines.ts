@@ -15,7 +15,7 @@ import {arkActStart} from "@/lib/ark-act-hold";
 const ENGLISH = "{aPrey} got away from {aPredator}";
 
 type Animal = {id?: unknown; name?: unknown; species_profile_id?: unknown; model_slug?: unknown; zone?: unknown};
-type Row = {id?: unknown; kind?: unknown; at?: unknown; animal?: Animal | null; other?: Animal | null};
+type Row = {id?: unknown; kind?: unknown; at?: unknown; animal?: Animal | null; other?: Animal | null; reason?: unknown};
 
 const named = (a: Animal | null | undefined) => (a && typeof a.name === "string" && a.name ? a.name.slice(0, 120) : "");
 const speciesOf = (a: Animal) => (typeof a.species_profile_id === "string" && a.species_profile_id ? a.species_profile_id : `slug:${String(a.model_slug ?? "")}`);
@@ -26,6 +26,8 @@ export function escapeItems(raw: unknown, from: number, said: (key: string) => b
     const items: ArkLiveItem[] = [];
     for (const row of rows) {
         if (!row || typeof row !== "object" || row.kind !== "escaped") continue;
+        // (A visitor's shelter stopped this hunt: `care-lines.ts` says it, GIFTS-CARE.)
+        if (row.reason === "shelter") continue;
         const id = `event:${String(row.id)}`;
         const at = typeof row.at === "string" ? Date.parse(row.at) : NaN;
         const prey = named(row.animal);

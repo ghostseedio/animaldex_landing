@@ -438,7 +438,10 @@
             "spawnPair": "{animal}: ikry nakladené a samec ich oplodnil",
             "amplexus": "{animal}: pár v amplexe a nakladené vajíčka",
             "pouchFry": "{animal}: z otcovho vaku vyšlo mláďat: {count}",
-            "split": "{animal}: od rodiča sa oddelil nový jedinec"
+            "split": "{animal}: od rodiča sa oddelil nový jedinec",
+            "giftMeal": "{aAnimal}: nakŕmené návštevníkom",
+            "giftShelter": "{aPrey}: v bezpečí pred {aPredator} v úkryte od návštevníka",
+            "giftNest": "{aAnimal}: párenie, s pomocou návštevníka s hniezdom"
         },
         "card": {
             "now": "Teraz: {activity}",
@@ -1060,6 +1063,35 @@
             "wild": "Divočina",
             "town": "Mesto",
             "arkYear": "1 rok na Arche"
+        },
+        "care": {
+            "title": "Starostlivosť od návštevníkov",
+            "meal": "Jedlo",
+            "shelter": "Úkryt",
+            "nest": "Pomoc s hniezdom",
+            "fedBy": "Nakŕmil(a) {who}",
+            "shelteredBy": "Ukryl(a) {who}",
+            "nestBy": "Pomoc s hniezdom od {who}",
+            "you": "ty",
+            "aVisitor": "návštevník",
+            "fuller": "sýty na {time}",
+            "safe": "v bezpečí na {time}",
+            "helping": "pomáha na {time}",
+            "stoppedHunt": "zmaril jeden lov",
+            "nestUsed": "pomohol s mláďatami",
+            "onItsWay": "na ceste",
+            "mealDoes": "Sýty na {time}",
+            "shelterDoes": "V bezpečí pred jedným lovom na {time}",
+            "nestDoes": "Väčšia šanca na mláďatá na {time}",
+            "credits": "{n} kreditov",
+            "send": "Poslať za {n} kreditov",
+            "cancel": "Zrušiť",
+            "sent": "Odoslané. Ak nemôže pomôcť, kredity sa ti vrátia.",
+            "noCredits": "Na toto potrebuješ viac kreditov.",
+            "notNow": "Teraz to nie je možné.",
+            "limit": "Na dnes si už dal(a) najviac starostlivosti.",
+            "tooNew": "Starostlivosť sa otvorí, keď bude tvoj účet týždeň starý a bude mať kartu.",
+            "failed": "Nepodarilo sa odoslať. Skús to znova."
         }
     },
     "talkPage": {
