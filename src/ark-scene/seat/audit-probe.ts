@@ -79,6 +79,19 @@ function fullHull(geometry: BufferGeometry): Hull {
 
 type Target = {mesh: Mesh; cls: number; kind: string; closed: boolean};
 
+/**
+ * How high a point under a rock's own top must go to be out of it and of any rock piled on it: the closed faces over
+ * `from`, upward, while each is a rock's top seen from inside. -Infinity: in no rock.
+ */
+function rockExit(faces: Array<{y: number; ny: number; target: Target}>, from: number): number {
+    let exit = -Infinity;
+    for (const face of faces.filter((f) => f.target.closed && f.y > from).sort((a, b) => a.y - b.y)) {
+        if (face.target.cls !== ROCK || face.ny <= 0.2) break;
+        exit = face.y;
+    }
+    return exit;
+}
+
 /** A triangle near the animal being measured, in the world. */
 type Tri = {a: Vector3; b: Vector3; c: Vector3; nx: number; ny: number; nz: number; target: Target};
 
@@ -198,8 +211,11 @@ export class SeatProbe {
         return out;
     }
 
-    /** The row of a clip at which the whole posed mesh's lowest vertex is lowest (every row tried; kept per mesh and clip). */
-    private lowRow(hull: Hull, pose: RigPose): number {
+    /**
+     * The row of a clip a still animal is seated by: where the whole posed mesh's lowest vertex is at its usual height
+     * over the clip (the median of every row's; kept per mesh and clip).
+     */
+    private usualRow(hull: Hull, pose: RigPose): number {
         const clip = pose.clip!;
         let known = this.lows.get(hull);
         if (!known) this.lows.set(hull, (known = new Map()));
@@ -207,29 +223,27 @@ export class SeatProbe {
         if (kept !== undefined) return kept;
         const out = new Float32Array(hull.vertices.length * 3);
         const at: RigPose = {...pose, live: null, liveRow: -1, fromWeight: 0, weight: 1, t: 0, clip: null};
-        let best = clip.row;
-        let least = Infinity;
+        const lows: Array<[number, number]> = [];
         for (let r = 0; r < Math.max(clip.rows, 1); r++) {
             at.row0 = at.row1 = clip.row + r;
             const n = posedHull(hull, at, out);
             let low = Infinity;
             for (let i = 0; i < n; i++) low = Math.min(low, out[i * 3 + 1]);
-            if (low < least) {
-                least = low;
-                best = clip.row + r;
-            }
+            lows.push([low, clip.row + r]);
         }
-        known.set(clip.row, best);
-        return best;
+        lows.sort((a, b) => a[0] - b[0]);
+        const row = lows[Math.floor((lows.length - 1) / 2)][1];
+        known.set(clip.row, row);
+        return row;
     }
 
     measure(drawn: SeatDrawn): SeatMeasure {
         const hull = fullHull(drawn.geometry);
         const model = new Float32Array(hull.vertices.length * 3);
-        // (A still animal in a clip of its own is measured at the clip's lowest frame: its bob is its motion.)
+        // (A still animal in a clip of its own is measured at the clip's usual frame: its bob and its peck are its motion.)
         let pose = drawn.pose;
         if (pose && pose.clip && pose.baked) {
-            const low = this.lowRow(hull, pose);
+            const low = this.usualRow(hull, pose);
             pose = {...pose, live: null, liveRow: -1, row0: low, row1: low, t: 0, fromWeight: 0, weight: 1, clip: null};
         }
         const n = posedHull(hull, pose, model);
@@ -347,21 +361,21 @@ export class SeatProbe {
                     const hits = top > bottom ? this.cast(x, top, z, 0, -1, 0, top - bottom, mask) : [];
                     // The ground, and the top of anything closed within a step's reach over the point (any face met from above).
                     let floor = ground;
-                    let over: {y: number; ny: number; target: Target} | null = null;
                     for (const hit of hits) {
                         const hy = top - hit.d;
-                        if (!hit.target.closed) continue;
-                        if (hit.ny > 0 && hy <= y + up) {
-                            if (hy > floor) {
-                                floor = hy;
-                                on = hit.target.kind;
-                            }
-                        } else if (hy > y + up && (!over || hy < over.y)) over = {y: hy, ny: hit.ny, target: hit.target};
+                        if (!hit.target.closed || hit.ny <= 0 || hy > y + up) continue;
+                        if (hy > floor) {
+                            floor = hy;
+                            on = hit.target.kind;
+                        }
                     }
-                    // (Held, with a rock's top the first closed face over the point: the point is in the rock.)
-                    if (held && over && over.target.cls === ROCK && over.ny > 0.2 && over.y > floor) {
-                        floor = over.y;
-                        on = over.target.kind;
+                    // (Held, under a rock's own top: the point is in the rock, and in any rock piled on that one.)
+                    if (held) {
+                        const exit = rockExit(hits.map((hit) => ({y: top - hit.d, ny: hit.ny, target: hit.target})), y + up);
+                        if (exit > floor) {
+                            floor = exit;
+                            on = "rock";
+                        }
                     }
                     let best = floor;
                     if (y >= floor - 0.012) {
@@ -396,9 +410,11 @@ export class SeatProbe {
                     let top = -Infinity;
                     let kind = "";
                     let over: {y: number; ny: number; target: Target} | null = null;
+                    const all: Array<{y: number; ny: number; target: Target}> = [];
                     for (const hit of this.cast(x, y + 12, z, 0, -1, 0, 12 + below, ROCK | HARD)) {
                         if (!hit.target.closed) continue;
                         const hy = y + 12 - hit.d;
+                        all.push({y: hy, ny: hit.ny, target: hit.target});
                         if (hy <= y + up) {
                             if (hit.ny > 0 && hy > top) {
                                 top = hy;
@@ -408,16 +424,17 @@ export class SeatProbe {
                     }
                     let clear = top > -Infinity ? y - top : Infinity;
                     if (over && over.ny > 0.2) {
-                        let inIt = over.target.cls === ROCK;
-                        if (!inIt && over.y - y <= reach) {
+                        if (over.target.cls === ROCK) {
+                            clear = y - rockExit(all, y + up);
+                            kind = over.target.kind;
+                        } else if (over.y - y <= reach) {
                             // (Built: only with no floor or top it stands over under it.)
                             let first: {d: number; ny: number} | null = null;
                             for (const hit of this.cast(x, y, z, 0, -1, 0, reach, ROCK | HARD)) if (hit.target.closed && (!first || hit.d < first.d)) first = hit;
-                            inIt = !first || first.ny <= 0.2;
-                        }
-                        if (inIt) {
-                            clear = y - over.y;
-                            kind = over.target.kind;
+                            if (!first || first.ny <= 0.2) {
+                                clear = y - over.y;
+                                kind = over.target.kind;
+                            }
                         }
                     }
                     return {clear, kind};

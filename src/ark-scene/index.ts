@@ -6894,7 +6894,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 rotation.setFromEuler(euler.set(0, where.yaw, 0));
                 position.set(where.x, where.base - groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s, where.z);
             }
-            const seated = seat.offset(entry, seatAs, dt);
+            const seated = seat.offset(entry, seatAs, dt, Boolean(entry.sched?.pose?.moving));
             if (seated) {
                 position.x += seated.x;
                 position.y += seated.y;

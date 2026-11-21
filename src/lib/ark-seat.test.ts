@@ -157,7 +157,7 @@ function seatBody(kind: SeatKind, at: Vector3, options: {surface?: SeatInput["su
         matrix.compose(position, fell ? new Quaternion() : options.rotation ?? new Quaternion(), new Vector3(1, 1, 1));
         // (Its turn every frame here: the chosen animal's.)
         pass.settle({holder, kind: as, matrix, geometry, pose: null, height: 0.2, length: 0.6, surface: fell ? null : options.surface ?? null, moving: false, ground, focus: true});
-        if (as !== "fly" && as !== "swim" && pass.solids.stats().pending === 0 && holder.seat?.solved && holder.seat.x === holder.seat.tx && holder.seat.y === holder.seat.ty && holder.seat.z === holder.seat.tz && frames > 3) break;
+        if (as !== "fly" && as !== "swim" && pass.solids.stats().pending === 0 && holder.seat?.solved && holder.seat.x === holder.seat.tx && holder.seat.y === holder.seat.ty && holder.seat.z === holder.seat.tz && !(holder.seat.doubt > 0 && !holder.seat.fell && holder.seat.doubt < 0.8) && holder.seat.gap === holder.seat.gap && frames > 3) break;
     }
     return {seat: holder.seat!, position: position.clone(), frames, pass};
 }
