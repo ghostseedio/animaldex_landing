@@ -70,6 +70,8 @@ COURSE_CAST.forEach((c, i) => {
 if (typeof location !== "undefined" && new URLSearchParams(location.search).get("loco") === "0") (globalThis as {__arkLoco?: boolean}).__arkLoco = false;
 // `?posedlie=0`: no posed lie (ARK-ANIM round 3, `locomotion/lie-pose.ts`): the rigs as before it, for before/after recordings.
 if (typeof location !== "undefined" && new URLSearchParams(location.search).get("posedlie") === "0") (globalThis as {__arkPosedLie?: boolean}).__arkPosedLie = false;
+// `?posegate=0`: no lying gate, no neck caps, the sit's full bow (ARK-POSE, `rig-player.ts` prepareRigPoses), for before/after recordings.
+if (typeof location !== "undefined" && new URLSearchParams(location.search).get("posegate") === "0") (globalThis as {__arkPoseGate?: boolean}).__arkPoseGate = false;
 // `?skinfix=0`: no load-time skin and clip fixes (`rig-player.ts` skinAndClipFixes), for before/after recordings.
 if (typeof location !== "undefined" && new URLSearchParams(location.search).get("skinfix") === "0") (globalThis as {__arkSkinFix?: boolean}).__arkSkinFix = false;
 // `?flank=0`: the flank kept on the upper limbs (`skin-fixes.ts` flankOffLegs off), for the lying cervids' before.
@@ -109,6 +111,7 @@ type Debug = {
     pinShared: (id: string, fn: ((epoch: number) => Record<string, unknown>) | null) => void;
     setHome: (id: string, x: number, z: number) => boolean;
     controls: {minDistance: number};
+    forceLook: (id: string, look: [number, number, number] | null) => void;
 };
 
 const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve));
@@ -437,6 +440,7 @@ async function mountScenes(el: HTMLElement) {
                     });
                 };
                 posture(nowS() + 1e6);
+                let startedAt = Infinity;
                 // Close, from its side and a little in front (`?camd=` metres, default 1.6).
                 const distance = Number(new URLSearchParams(location.search).get("camd") ?? "1.6");
                 const token = ++tracking;
@@ -448,12 +452,73 @@ async function mountScenes(el: HTMLElement) {
                     const tx = a ? a.x : from.x, tz = a ? a.z : from.z;
                     // (`?camfit=k`: k times its own length off, for a small animal.)
                     const fit = Number(new URLSearchParams(location.search).get("camfit") ?? "0");
-                    handle.setView({target: {x: tx, y: (a ? a.y : ground(tx, tz)) + 0.1, z: tz}, distance: fit > 0 && a ? fit * Math.max(a.length ?? 0.5, 0.05) : distance, polar: 1.2, azimuth: yaw + Math.PI / 2 - 0.5});
+                    // (ARK-POSE: `?camaz=` degrees round from its side view, `?campolar=` radians from straight above, for several sides of one pose.)
+                    // (`?orbit=a,b`: the camera goes once round it between a and b seconds of the scene: one pose from every side.)
+                    const q = new URLSearchParams(location.search);
+                    const [o0, o1] = (q.get("orbit") ?? "").split(",").map(Number);
+                    const k = nowS() - startedAt;
+                    const round = Number.isFinite(o0) && Number.isFinite(o1) && o1 > o0 ? Math.min(Math.max((k - o0) / (o1 - o0), 0), 1) * Math.PI * 2 : 0;
+                    handle.setView({target: {x: tx, y: (a ? a.y : ground(tx, tz)) + 0.1, z: tz}, distance: fit > 0 && a ? fit * Math.max(a.length ?? 0.5, 0.05) : distance, polar: Number(q.get("campolar") ?? "1.2"), azimuth: yaw + Math.PI / 2 - 0.5 + (Number(q.get("camaz") ?? "0") * Math.PI) / 180 + round});
                     (window as unknown as {__arkCatLoc?: unknown}).__arkCatLoc = a;
                     requestAnimationFrame(step);
                 };
                 requestAnimationFrame(step);
-                return {note: `${c.slug}: stand and look, walk, rest, sleep, stand (30 s)`, watch: [id], go: () => posture(nowS())};
+                return {
+                    note: `${c.slug}: stand and look, walk, rest, sleep, stand (30 s)`,
+                    watch: [id],
+                    go: () => {
+                        startedAt = nowS();
+                        posture(startedAt);
+                    }
+                };
+            }
+        ])
+    );
+
+    /**
+     * ARK-POSE: one course animal's head turned as far as its look goes, standing (1-7 s: to its left, then its right,
+     * a little up), then asleep where it stands (8 s on; a primate sits) with the same look asked of it (11-17 s): what
+     * the rig's limits and the clip's share of the look leave of it. The camera in front of it and to its side.
+     */
+    const lookScenes: Record<string, () => {note: string; watch: string[]; go?: () => void}> = Object.fromEntries(
+        COURSE_CAST.map((c, i) => [
+            `look_${c.slug}`,
+            () => {
+                const id = ids[`c${i}`][0];
+                const q = new URLSearchParams(location.search);
+                const from = site("grassland", Number(q.get("posx") ?? "-6"), Number(q.get("posz") ?? "6"));
+                const yaw = Math.PI / 2;
+                let startedAt = Infinity;
+                debug().setHome(id, from.x, from.z);
+                const pin = (start: number) =>
+                    pinPose(id, (epoch: number) => {
+                        const k = epoch - start;
+                        const asleep = k >= 8;
+                        return {x: from.x, z: from.z, y: ground(from.x, from.z), yaw, moving: false, aloft: false, doing: asleep ? "sleep" : "watch", beat: asleep ? "sleep" : "rest", nx: 0, ny: 1, nz: 0};
+                    });
+                pin(nowS() + 1e6);
+                const token = ++tracking;
+                const step = () => {
+                    if (token !== tracking) return;
+                    debug().controls.minDistance = 0.1;
+                    const a = handle.locate(id);
+                    const k = nowS() - startedAt;
+                    // Its look: a slow swing either way to past any limit (the shader clamps it to the rig's own).
+                    const swing = k >= 1 && k < 7 ? Math.sin(((k - 1) / 6) * Math.PI * 2) : k >= 11 && k < 17 ? Math.sin(((k - 11) / 6) * Math.PI * 2) : 0;
+                    debug().forceLook(id, k > 0 && k < 18 ? [swing * 1.6, Math.abs(swing) * 0.5, swing ? 1 : 0] : null);
+                    const fit = Number(q.get("camfit") ?? "3");
+                    handle.setView({target: {x: a ? a.x : from.x, y: (a ? a.y : ground(from.x, from.z)) + 0.05, z: a ? a.z : from.z}, distance: fit * Math.max(a?.length ?? 0.5, 0.05), polar: Number(q.get("campolar") ?? "1.25"), azimuth: yaw + (Number(q.get("camaz") ?? "35") * Math.PI) / 180});
+                    requestAnimationFrame(step);
+                };
+                requestAnimationFrame(step);
+                return {
+                    note: `${c.slug}: its head turned as far as it goes, standing then asleep (18 s)`,
+                    watch: [id],
+                    go: () => {
+                        startedAt = nowS();
+                        pin(startedAt);
+                    }
+                };
             }
         ])
     );
@@ -574,6 +639,7 @@ async function mountScenes(el: HTMLElement) {
         ...courseScenes,
         ...clipScenes,
         ...postureScenes,
+        ...lookScenes,
         ...roostScenes,
         ...wallScenes,
         /** The same flight seen from 36 m (past the near level's 25 m): a flying rig is still drawn near, flapping. */

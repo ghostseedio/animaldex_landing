@@ -120,6 +120,46 @@ A rig whose entry has `pose` (54 species: meerkats, hares, kangaroos, squirrels,
 
 Fleeing, such a rig plays `drop`, `bound` (by distance) and `rise` when its file has them (v6). Without a walk, a sitting rig isn't rigged while it moves: the cheap gait carries it.
 
+## Lying and neck gates (lane ARK-POSE)
+
+Checked as each rig loads (`prepareRigPoses` in `rig-player.ts`), on the rest mesh and the rows that will be drawn. No rig file changes.
+
+### Lying (`locomotion/pose-gate.ts`)
+
+Every lying clip of a four-legged rig is measured, a pilot rig's own included (they were never measured before):
+
+- **Rump and shoulder:** each end's hip joints, lying over standing. A rump above 72% of its standing height fails, and so does one more than 22% higher than the shoulder came down to.
+- **Support:** the lowest point of the rear half and of the front half, each within 5% of the standing height of the ground.
+- **Hind paw:** no hind knee, ankle or sole more than 5% above its hip joint, and each hind leg's lowest point within 13% of the ground.
+
+What a rig lies in:
+
+1. Its own lying clip, when that passes and the posed lie is not at least 8% lower at the rump.
+2. Else the posed lie (`locomotion/lie-pose.ts`), when it passes its own check and the gate. Each pair of folded legs is turned out by the least that takes it out from under the belly (`solveSplay`), so the belly meets the ground. A rig the solved turn fails is tried at the one fixed turn (25°), then with the tucked fold.
+3. Else it stands (as the oryx): its lying clips are removed, and the scene sleeps it on its feet (`sleep.ts` `sleepsOnFeet`).
+
+A clip on a lying base that the posed lie replaces (the lion's lying `feed`, `groom`, `yawn`) is removed with it.
+
+### Neck (`locomotion/neck-gate.ts`)
+
+The measure is the 99th percentile of the neck's and the head's skin edges over their rest lengths. Edges under 3% of the mesh's size (a mane's strands) and edges a limb holds are left out. The limit is 1.6.
+
+- **The look's caps, per class:** primates 80° yaw, grazers and browsers (a rig with a `graze` or `browse` clip) 60°, the other four-legged rigs 70°. The neck's share of the turn is the one of 0.45, 0.6, 0.3, 0.75 (and the file's own) that stretches the rig least.
+- **A rig over the limit at its caps** gets them lowered by 0.85 a step, down to a quarter of the class's.
+- **A clip's share of the look** (`RigClipData.lookShare`): a clip that holds the head 25° or more from rest takes the largest of 1, 0.6, 0.3, 0 of the look that keeps the neck within the limit (or within 3% of what the clip alone does). `rigLookShare` applies it where the scene sets the look.
+- **The primates' posed sit** (`locomotion/sit-sleep-pose.ts` `SIT_SHAPES`): the first shape bends the neck's one joint 110° to 130°. A rig whose neck that tears takes the bend on the head's joint, then a smaller bend with the back hunched further forward.
+
+Not changed: the clips' own head turns (a groom back to the flank, a graze down to the ground). The scan reports them.
+
+### The scan
+
+```
+npx tsx --tsconfig scripts/tsconfig.scripts.json scripts/ark-pose-census.mts <dir of <slug>.glb> <out.jsonl> [--off] [--part k/n]
+npx tsx --tsconfig scripts/tsconfig.scripts.json scripts/ark-pose-sheet.mts <dir> <out.png> <slug,slug> <clip,clip> [--off]
+```
+
+`--off` (`globalThis.__arkPoseGate = false`, the harness's `?posegate=0`) is the load as it was before the lane. The sheet draws any clip from three sides without a browser.
+
 ## Recordings
 
 ```
@@ -129,3 +169,4 @@ node scripts/ark-rig-scenes.mjs --set <publish dir> --out <dir> [--scenes duck_f
 - The page script is `src/ark-scene/rig-scenes-entry.ts`. It uses a cast-only snapshot with pinned shared paths, a local rig set as v2, and the live v1 set as the fallback (read only). Nothing is uploaded.
 - It writes a video, stills a little after each clip change, and a per-frame trace of each watched animal's clip, head yaw and reactive action.
 - `--perf` measures a crowd of 24 grazers with rigs on and off, on the desktop and on the phone proxy.
+- With `--query cast=<slug>:<plan>`: `pose_<slug>` (stand, walk, rest, sleep; `orbit=19,27` takes the camera once round the sleeper) and `look_<slug>` (its head turned as far as its look goes, standing, then asleep).

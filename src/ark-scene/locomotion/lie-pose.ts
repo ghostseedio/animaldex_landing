@@ -38,6 +38,18 @@ export const LIE_FOLD_TUCKED: Record<"fore" | "hind", readonly [number, number, 
 export const LIE_FOLDS = [LIE_FOLD, LIE_FOLD_TUCKED] as const;
 /** The folded legs turned out from under the body (degrees, fore and hind), about the body's long axis at the hip. */
 export const LIE_SPLAY: [number, number] = [25, 25];
+/**
+ * ARK-POSE (the owner on batch 14: a lying lion's "rear end above the floor", its "hind legs folded high"): each folded
+ * leg's own turn out from under the body (`solveSplay`), from `SPLAY_MIN` to `SPLAY_MAX` degrees in `SPLAY_STEP`s: the
+ * least that takes it out from under the belly, so the body lies on its belly with the leg along the ground beside
+ * it. At the one fixed angle (`LIE_SPLAY`) a long folded leg stayed under the body and held it up (the bears' bellies 6%
+ * of their height off the ground, a rump at 58% of its standing height), and a short one hung in the air beside it.
+ */
+export const SPLAY_MIN = 0;
+export const SPLAY_MAX = 80;
+export const SPLAY_STEP = 10;
+/** A folded leg may sit this far lower than the belly (a share of the standing height) and still not hold it up. */
+export const LEG_UNDER = 0.004;
 /** The head's drop (degrees, nose down) when the ground allows it. */
 export const HEAD_DEG = 12;
 /** The most the belly may stay off the ground (a share of the standing height). */
@@ -79,9 +91,11 @@ export class LiePose {
     private readonly fwd: number;
     private readonly cx: number;
     private readonly skin: Matrix4[];
+    /** Each leg's turn out from under the body lying down (degrees; `solveSplay`). */
+    readonly splay: number[];
     readonly check: LieCheck;
 
-    constructor(readonly rig: LocoRig, private readonly mesh: LieMesh, readonly fold: Record<"fore" | "hind", readonly [number, number, number]> = LIE_FOLD) {
+    constructor(readonly rig: LocoRig, private readonly mesh: LieMesh, private readonly fold_: Record<"fore" | "hind", readonly [number, number, number]> = LIE_FOLD, solved = true) {
         const n = mesh.positions.length / 3;
         let minY = Infinity;
         let maxY = -Infinity;
@@ -123,16 +137,20 @@ export class LiePose {
             this.parts.push(owner.get(bone) ?? "torso");
         }
         this.skin = rig.bones.map(() => new Matrix4());
-        this.check = lieShaped(rig) ? this.measure() : {ok: false, reason: "not four standing legs", belly: 1, sink: 0};
+        this.splay = rig.legs.map((leg) => LIE_SPLAY[leg.end === "fore" ? 0 : 1]);
+        const shaped = lieShaped(rig);
+        // (`solved` false: every leg at `LIE_SPLAY`, as before ARK-POSE; a rig the solved turn fails may pass with it.)
+        if (shaped && solved && (globalThis as {__arkPoseGate?: boolean}).__arkPoseGate !== false) this.solveSplay();
+        this.check = shaped ? this.measure() : {ok: false, reason: "not four standing legs", belly: 1, sink: 0};
     }
 
-    /** The pose `t` (0 standing at rest … 1 lying), bone world matrices in mesh space, into `world`. */
-    pose(t: number, world: Matrix4[]): Matrix4[] {
+    /** The legs folded and turned out at `t`, the body where it stood (no drop yet), into `world`. */
+    private fold(t: number, world: Matrix4[]): Matrix4[] {
         const rig = this.rig;
         rig.bones.forEach((bone, i) => world[i].copy(bone.restWorld));
         if (t <= 0) return world;
-        for (const leg of rig.legs) {
-            const fold = this.fold[leg.end === "fore" ? "fore" : "hind"];
+        rig.legs.forEach((leg, li) => {
+            const fold = this.fold_[leg.end === "fore" ? "fore" : "hind"];
             // The upper limb, the lower and the foot each to its angle, in the leg's own plane along the body (its splay kept).
             at(world[leg.upper], A);
             at(world[leg.lower], B);
@@ -144,11 +162,20 @@ export class LiePose {
             bonePointNow(rig, world, leg.foot, leg.contact, A);
             if (A.distanceToSquared(C) > 1e-12) this.turn(world, leg.foot, C, DOWN.subVectors(A, C), this.sagittal(fold[2]), t * t);
             // Out to its side, so the folded leg lies along the flank and the belly comes down onto the ground.
-            if (LIE_SPLAY[leg.end === "fore" ? 0 : 1]) {
+            const splay = this.splay[li];
+            if (splay) {
                 at(world[leg.upper], A);
-                rotateSubtree(rig, world, leg.upper, Q.setFromAxisAngle(AXIS.set(0, 0, 1), leg.side * LIE_SPLAY[leg.end === "fore" ? 0 : 1] * t * (Math.PI / 180)), A.clone());
+                rotateSubtree(rig, world, leg.upper, Q.setFromAxisAngle(AXIS.set(0, 0, 1), leg.side * splay * t * (Math.PI / 180)), A.clone());
             }
-        }
+        });
+        return world;
+    }
+
+    /** The pose `t` (0 standing at rest … 1 lying), bone world matrices in mesh space, into `world`. */
+    pose(t: number, world: Matrix4[]): Matrix4[] {
+        const rig = this.rig;
+        this.fold(t, world);
+        if (t <= 0) return world;
         // Down until the torso or a folded leg meets the ground.
         // (On the way down never up first: a foot turning under lifts the body only as it settles, not in a hop.)
         const lift = this.lowest(world, false) - this.ground;
@@ -180,6 +207,50 @@ export class LiePose {
             }
         }
         return world;
+    }
+
+    /**
+     * Each pair of legs' turn out, lying: the least (from `SPLAY_MIN`) at which the folded legs' lowest point is no
+     * lower than the belly's (the lowest of the torso), so the belly meets the ground and the legs lie on it beside the
+     * body; where no turn takes them out from under it (a bear's thick thighs), the turn that leaves them highest, so
+     * the body rests as low as its legs let it. Read before the body's drop: the legs' and the belly's own heights.
+     */
+    private solveSplay(): void {
+        const rig = this.rig;
+        const world = rig.bones.map(() => new Matrix4());
+        const under = this.height * LEG_UNDER;
+        const belly = this.lowestOf(this.fold(1, world), "torso");
+        if (!Number.isFinite(belly)) return;
+        for (const end of ["fore", "hind"]) {
+            const pair = rig.legs.map((leg, li) => (leg.end === end ? li : -1)).filter((li) => li >= 0);
+            // (The one fixed turn first: what it keeps unless another leaves its legs higher.)
+            let pick = this.splay[pair[0]];
+            this.fold(1, world);
+            let highest = Math.min(...pair.map((li) => this.lowestOf(world, li)));
+            for (let deg = SPLAY_MIN; deg <= SPLAY_MAX; deg += SPLAY_STEP) {
+                for (const li of pair) this.splay[li] = deg;
+                this.fold(1, world);
+                // (Never a turn that lifts a knee, an ankle or a sole over its hip: the gate's own rule, `measure`.)
+                if (pair.some((li) => this.overHip(world, rig.legs[li]))) continue;
+                const low = Math.min(...pair.map((li) => this.lowestOf(world, li)));
+                if (low >= belly - under) {
+                    pick = deg;
+                    break;
+                }
+                if (low > highest + this.height * 0.002) {
+                    highest = low;
+                    pick = deg;
+                }
+            }
+            for (const li of pair) this.splay[li] = pick;
+        }
+    }
+
+    /** Whether a folded leg's knee, ankle or sole stands over its hip (by more than 5% of the height). */
+    private overHip(world: Matrix4[], leg: LocoRig["legs"][number]): boolean {
+        const hip = at(world[leg.upper], A).y + this.height * 0.05;
+        const sole = bonePointNow(this.rig, world, leg.foot, leg.contact, B).y;
+        return Math.max(at(world[leg.lower], C).y, at(world[leg.foot], C).y, sole) > hip;
     }
 
     /** The pose `t` as the bone texture's row (`skinRow`: per bone 3×4 of world · rest⁻¹). */
@@ -236,10 +307,17 @@ export class LiePose {
         return low;
     }
 
+    private readonly partList = new Map<Part, number[]>();
     private lowestOf(world: Matrix4[], part: Part): number {
         this.skinned(world);
+        let list = this.partList.get(part);
+        if (!list) {
+            list = [];
+            for (let i = 0; i < this.parts.length; i++) if (this.parts[i] === part) list.push(i);
+            this.partList.set(part, list);
+        }
         let low = Infinity;
-        for (let i = 0; i < this.parts.length; i++) if (this.parts[i] === part) low = Math.min(low, this.vertex(i, A).y);
+        for (const i of list) low = Math.min(low, this.vertex(i, A).y);
         return low;
     }
 

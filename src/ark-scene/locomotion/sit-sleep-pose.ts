@@ -23,6 +23,7 @@
 import {Matrix4, Quaternion, Vector3} from "three";
 import {bonePointNow, rotateSubtree, skinRow, restInverses} from "@/ark-scene/locomotion/skeleton";
 import type {LocoRig} from "@/ark-scene/locomotion/types";
+import {NECK_STRETCH_MAX, neckRegion, neckStretch} from "@/ark-scene/locomotion/neck-gate";
 
 /** The back's lean above level when it sits (degrees): a hunch, leaning forward over the knees. */
 export const BACK_DEG = 58;
@@ -41,7 +42,35 @@ export const SIT_SECONDS = 0.8;
 export const SIT_FRAMES = 8;
 
 export type SitMesh = {positions: ArrayLike<number>; joints: ArrayLike<number>; weights: ArrayLike<number>};
-export type SitCheck = {ok: boolean; reason: string | null; sink: number};
+/** A bow may stretch the neck this much more than the sit with no bow does (a factor), when that is past `NECK_STRETCH_MAX` already. */
+export const SIT_BOW_OVER = 1.15;
+/** How it sits: the back's lean above level (degrees), the neck's share of the way to `NECK_DEG`, and the face's heading below level (degrees; null: the head rides the neck, no turn of its own). */
+export type SitShape = {back: number; neck: number; face: number | null};
+export type SitCheck = {ok: boolean; reason: string | null; sink: number; /** The shoulders over the hips sitting, a share of the back's length (the sine of its lean). */ up?: number; /** ARK-POSE: the shape it keeps, the neck's stretch under it, and under the first (full) shape. */ shape?: SitShape; stretch?: number; stretchFull?: number};
+/**
+ * ARK-POSE (the owner on batch 14, a toque macaque asleep on a limb, its neck drawn out long and thin): the shapes a
+ * rig tries, in order. The first (ARK-SLEEP's) leans the back 58 degrees and drops the face 70 below level: 110 to 130
+ * degrees between the chest and the face, all on the neck's one joint. Across the 79 primate rigs the neck's skin
+ * stretched 2.3 times at the median, 6.7 at the worst tenth. It is the neck's joint that tears (the macaque: 2.15
+ * with the bend half on the neck, 1.4 with it all on the head, whose skin is its own), so the bend goes over to the
+ * head (the neck a quarter of its way, or none), then comes down a step at a time: the face less far down (55, 45, 30,
+ * 15 degrees below level; 70 on the head's joint alone folds the face into the chest), the back hunched further
+ * forward (48, 40 degrees) so the head still hangs. The first whose neck stretches no more than `NECK_STRETCH_MAX`
+ * (or `SIT_BOW_OVER` times what the sit does with no bow at all: the arms' swing pulls the neck's base too) is its sit;
+ * none: the one that stretches least (never the head left riding the back, its face to the sky).
+ */
+export const SIT_SHAPES: readonly SitShape[] = [
+    {back: BACK_DEG, neck: 1, face: FACE_DEG},
+    {back: BACK_DEG, neck: 0.25, face: 55},
+    {back: BACK_DEG, neck: 0, face: 55},
+    {back: 48, neck: 0.25, face: 45},
+    {back: 48, neck: 0, face: 45},
+    {back: 48, neck: 0, face: 30},
+    {back: 40, neck: 0, face: 30},
+    {back: 40, neck: 0, face: 15}
+];
+/** The sit with no bow: what the arms and the back alone do to the neck's skin. */
+const SIT_NO_BOW: SitShape = {back: BACK_DEG, neck: 0, face: null};
 
 const at = (m: Matrix4, out: Vector3) => out.set(m.elements[12], m.elements[13], m.elements[14]);
 const A = new Vector3();
@@ -69,7 +98,7 @@ export class SitSleepPose {
     private readonly owner: Int32Array;
     readonly check: SitCheck;
 
-    constructor(readonly rig: LocoRig, private readonly mesh: SitMesh) {
+    constructor(readonly rig: LocoRig, private readonly mesh: SitMesh, readonly shape: SitShape = SIT_SHAPES[0]) {
         const n = mesh.positions.length / 3;
         let minY = Infinity;
         let maxY = -Infinity;
@@ -118,7 +147,7 @@ export class SitSleepPose {
         shoulders.multiplyScalar(1 / fore.length);
         // The back up to its lean: everything but the hind legs turns about the hips' middle (an upright rig turns little).
         const lean = Math.atan2(shoulders.y - hips.y, (shoulders.z - hips.z) * this.fwd);
-        const turn = (BACK_DEG * (Math.PI / 180) - lean) * t;
+        const turn = (this.shape.back * (Math.PI / 180) - lean) * t;
         Q.setFromAxisAngle(AXIS.set(-this.fwd, 0, 0), turn);
         for (let b = 0; b < rig.bones.length; b++) if (!this.hindBones.has(b)) rotateAboutPivot(world[b], Q, hips);
         // The legs folded under: the thigh forward, the shin down, the foot forward.
@@ -131,7 +160,7 @@ export class SitSleepPose {
             const deg = Math.PI / 180;
             if (headRoot === rig.head) {
                 // (No neck: the head alone, the back's turn taken back and HEAD_DEG down.)
-                rotateSubtree(rig, world, rig.head, Q.setFromAxisAngle(AXIS.set(this.fwd, 0, 0), turn + HEAD_DEG * deg * t).clone(), at(world[rig.head], new Vector3()));
+                rotateSubtree(rig, world, rig.head, Q.setFromAxisAngle(AXIS.set(this.fwd, 0, 0), this.shape.face === null ? 0 : turn + HEAD_DEG * (this.shape.face / FACE_DEG) * deg * t).clone(), at(world[rig.head], new Vector3()));
             } else {
                 // The neck aimed forward and down (NECK_DEG), then the head turned back up so the face looks down at the
                 // chest (FACE_DEG below level), not back between its knees: by how far the neck turned from its rest.
@@ -139,11 +168,11 @@ export class SitSleepPose {
                 const theta = (v: Vector3) => Math.atan2(v.z * this.fwd, -v.y);
                 const pivot = at(world[headRoot], new Vector3());
                 at(world[rig.head], B);
-                this.aim(world, headRoot, pivot, DIR.subVectors(B, pivot), this.sagittal(NECK_DEG), t);
+                this.aim(world, headRoot, pivot, DIR.subVectors(B, pivot), this.sagittal(NECK_DEG), t * this.shape.neck);
                 const now = at(world[rig.head], new Vector3()).sub(at(world[headRoot], new Vector3()));
                 // (Its forward turn from rest, nose down +; the face was level at rest.)
                 const turned = theta(rest) - theta(now);
-                const back = (turned - FACE_DEG * deg * t) * (Math.abs(turned) > 1e-6 ? 1 : 0);
+                const back = this.shape.face === null ? 0 : turned - this.shape.face * deg * t;
                 rotateSubtree(rig, world, rig.head, Q.setFromAxisAngle(AXIS.set(-this.fwd, 0, 0), back).clone(), at(world[rig.head], new Vector3()));
             }
         }
@@ -223,7 +252,17 @@ export class SitSleepPose {
         // (After the drop the lowest point is on the ground: a pose is wrong only when it cannot be: NaN.)
         const ok = world.every((m) => m.elements.every(Number.isFinite));
         const sink = ok ? Math.max(this.ground - this.lowest(world), 0) / this.height : 1;
-        return {ok: ok && sink <= 0.02, reason: !ok ? "not finite" : sink > 0.02 ? `${(sink * 100).toFixed(1)}% under the ground` : null, sink};
+        // (ARK-POSE: how far up the back stands, the shoulders' joints over the hips'.)
+        const mid = (end: string) => {
+            const legs = this.rig.legs.filter((leg) => leg.end === end);
+            const sum = new Vector3();
+            for (const leg of legs) sum.add(at(world[leg.upper], A));
+            return sum.multiplyScalar(1 / Math.max(legs.length, 1));
+        };
+        const hips = mid("hind");
+        const shoulders = mid("fore");
+        const up = ok ? (shoulders.y - hips.y) / Math.max(shoulders.distanceTo(hips), 1e-6) : 0;
+        return {ok: ok && sink <= 0.02, reason: !ok ? "not finite" : sink > 0.02 ? `${(sink * 100).toFixed(1)}% under the ground` : null, sink, up};
     }
 }
 
@@ -245,10 +284,38 @@ function rotateAboutPivot(m: Matrix4, q: Quaternion, pivot: Vector3): void {
  * The posed sit's rows appended to a rig's bone rows (half floats, `skinRow`'s layout): the way down (`sit_down`), the
  * way up (`sit_up`) and the pose held, as `sleep` (it replaces the rig's own crouch). Null when the rig fails the check.
  */
-export function posedSitRows(rig: LocoRig, mesh: SitMesh, data: Uint16Array, bones: number, toHalf: (value: number) => number): {data: Uint16Array; clips: Array<{name: string; row: number; rows: number; frames: number; loop: boolean; seconds: number; pass: true}>; check: SitCheck} | {data: null; clips: []; check: SitCheck} {
-    const sit = new SitSleepPose(rig, mesh);
+export function posedSitRows(rig: LocoRig, mesh: SitMesh, data: Uint16Array, bones: number, toHalf: (value: number) => number, index: ArrayLike<number> | null = null): {data: Uint16Array; clips: Array<{name: string; row: number; rows: number; frames: number; loop: boolean; seconds: number; pass: true}>; check: SitCheck} | {data: null; clips: []; check: SitCheck} {
+    let sit = new SitSleepPose(rig, mesh);
     if (!sit.check.ok) return {data: null, clips: [], check: sit.check};
     const per = bones * 12;
+    // ARK-POSE: the shape its neck's skin can take (`SIT_SHAPES`), with the mesh's triangles to measure it by.
+    const region = index ? neckRegion(rig, mesh, index) : null;
+    if (region) {
+        const probe = new Float32Array(per);
+        const stretchOf = (pose: SitSleepPose) => neckStretch(region, mesh, pose.row(1, probe)).p99;
+        const full = stretchOf(sit);
+        const none = new SitSleepPose(rig, mesh, SIT_NO_BOW);
+        const limit = Math.max(NECK_STRETCH_MAX, (none.check.ok ? stretchOf(none) : 1) * SIT_BOW_OVER);
+        let best = {sit, stretch: full};
+        if (full > limit) {
+            let least: {sit: SitSleepPose; stretch: number} | null = null;
+            for (const shape of SIT_SHAPES.slice(1)) {
+                const next = new SitSleepPose(rig, mesh, shape);
+                if (!next.check.ok) continue;
+                const stretch = stretchOf(next);
+                if (!least || stretch < least.stretch - 1e-4) least = {sit: next, stretch};
+                if (stretch <= limit) {
+                    least = {sit: next, stretch};
+                    break;
+                }
+            }
+            if (least && least.stretch < full) best = least;
+        }
+        sit = best.sit;
+        sit.check.shape = sit.shape;
+        sit.check.stretch = best.stretch;
+        sit.check.stretchFull = full;
+    }
     const own = data.length / per;
     const ease = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2);
     const down = Array.from({length: SIT_FRAMES + 1}, (_, k) => ease(k / SIT_FRAMES));
