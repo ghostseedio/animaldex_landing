@@ -1100,6 +1100,10 @@
             "arrival": "Na Ark se ukrcala nova životinja: {species}",
             "arrivalAn": "Na Ark se ukrcala nova životinja: {species}",
             "arrivalSee": "Pogledaj u Arku",
+            "deathEnded": "Život tvoje životinje ({species}) na Arku je završio.",
+            "deathLivedOne": "Ondje je živjela 1 dan.",
+            "deathLivedMany": "Ondje je živjela {days} dana.",
+            "deathSee": "Pogledaj njezinu vrstu u Arku",
             "stats": {
                 "money": "Novac",
                 "relationships": "Odnosi",

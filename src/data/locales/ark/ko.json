@@ -1100,6 +1100,10 @@
             "arrival": "{species}이(가) Ark에 탑승했어요",
             "arrivalAn": "{species}이(가) Ark에 탑승했어요",
             "arrivalSee": "Ark에서 보기",
+            "deathEnded": "Ark에서 당신의 {species}의 삶이 끝났어요.",
+            "deathLivedOne": "그곳에서 1일 동안 살았어요.",
+            "deathLivedMany": "그곳에서 {days}일 동안 살았어요.",
+            "deathSee": "Ark에서 같은 종 보기",
             "stats": {
                 "money": "돈",
                 "relationships": "관계",

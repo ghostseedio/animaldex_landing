@@ -1100,6 +1100,10 @@
             "arrival": "{species}がArkに乗り込みました",
             "arrivalAn": "{species}がArkに乗り込みました",
             "arrivalSee": "Arkで見る",
+            "deathEnded": "あなたの{species}のArkでの一生が終わりました。",
+            "deathLivedOne": "そこで1日暮らしました。",
+            "deathLivedMany": "そこで{days}日暮らしました。",
+            "deathSee": "Arkで同じ種類を見る",
             "stats": {
                 "money": "お金",
                 "relationships": "人間関係",

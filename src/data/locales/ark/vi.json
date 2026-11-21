@@ -1100,6 +1100,10 @@
             "arrival": "Một con {species} đã lên Ark",
             "arrivalAn": "Một con {species} đã lên Ark",
             "arrivalSee": "Xem trên Ark",
+            "deathEnded": "Cuộc sống của {species} của bạn trên Ark đã kết thúc.",
+            "deathLivedOne": "Nó đã sống ở đó 1 ngày.",
+            "deathLivedMany": "Nó đã sống ở đó {days} ngày.",
+            "deathSee": "Xem đồng loại của nó trên Ark",
             "stats": {
                 "money": "Tiền bạc",
                 "relationships": "Các mối quan hệ",

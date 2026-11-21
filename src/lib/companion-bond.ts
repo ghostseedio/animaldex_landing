@@ -380,6 +380,15 @@ export const ARK_COPY = {
     arrival: "A {species} came aboard the Ark",
     arrivalAn: "An {species} came aboard the Ark",
     arrivalSee: "See it in the Ark",
+    /**
+     * Chat-is-Ark (decision 438): the quiet line in a card's own thread once the animal it brought aboard has died on
+     * the Ark for good (`voyage_capture_lives_v1` gone; the plan's words, never the animal's voice), and the link to its
+     * kind on the Ark.
+     */
+    deathEnded: "Your {species}'s life on the Ark has ended.",
+    deathLivedOne: "It lived there for 1 day.",
+    deathLivedMany: "It lived there for {days} days.",
+    deathSee: "See its kind in the Ark",
     stats: {
         money: "Money",
         relationships: "Relationships",

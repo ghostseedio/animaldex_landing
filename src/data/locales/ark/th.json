@@ -1100,6 +1100,10 @@
             "arrival": "{species} ขึ้นเรือ Ark แล้ว",
             "arrivalAn": "{species} ขึ้นเรือ Ark แล้ว",
             "arrivalSee": "ดูใน Ark",
+            "deathEnded": "ชีวิตของ{species}ของคุณใน Ark ได้สิ้นสุดลงแล้ว",
+            "deathLivedOne": "มันอยู่ที่นั่น 1 วัน",
+            "deathLivedMany": "มันอยู่ที่นั่น {days} วัน",
+            "deathSee": "ดูพวกเดียวกันใน Ark",
             "stats": {
                 "money": "เงิน",
                 "relationships": "ความสัมพันธ์",

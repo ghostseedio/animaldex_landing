@@ -1100,6 +1100,10 @@
             "arrival": "{species} is aan boord van de Ark gekomen",
             "arrivalAn": "{species} is aan boord van de Ark gekomen",
             "arrivalSee": "Bekijk het in de Ark",
+            "deathEnded": "Het leven van je {species} in de Ark is voorbij.",
+            "deathLivedOne": "Het leefde er 1 dag.",
+            "deathLivedMany": "Het leefde er {days} dagen.",
+            "deathSee": "Bekijk zijn soort in de Ark",
             "stats": {
                 "money": "Geld",
                 "relationships": "Relaties",

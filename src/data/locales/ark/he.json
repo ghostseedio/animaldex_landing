@@ -1100,6 +1100,10 @@
             "arrival": "{species} עלה לסיפון Ark",
             "arrivalAn": "{species} עלה לסיפון Ark",
             "arrivalSee": "ראה אותו ב-Ark",
+            "deathEnded": "החיים של ה-{species} שלך ב-Ark הסתיימו.",
+            "deathLivedOne": "הוא חי שם יום אחד.",
+            "deathLivedMany": "הוא חי שם {days} ימים.",
+            "deathSee": "ראה את בני מינו ב-Ark",
             "stats": {
                 "money": "כסף",
                 "relationships": "קשרים",
