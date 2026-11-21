@@ -145,11 +145,14 @@ function seatBody(kind: SeatKind, at: Vector3, options: {surface?: SeatInput["su
     for (; frames < (options.frames ?? 90); frames++) {
         pass.begin();
         position.copy(at);
-        const offset = pass.offset(holder, kind, 1 / 60);
+        // (As the scene does: held where nothing is drawn, it is drawn upright and comes down.)
+        const fell = Boolean(options.surface) && pass.fallen(holder, kind, at.x, at.z);
+        const as = fell ? "perch" : kind;
+        const offset = pass.offset(holder, as, 1 / 60);
         if (offset) position.add(new Vector3(offset.x, offset.y, offset.z));
-        matrix.compose(position, options.rotation ?? new Quaternion(), new Vector3(1, 1, 1));
+        matrix.compose(position, fell ? new Quaternion() : options.rotation ?? new Quaternion(), new Vector3(1, 1, 1));
         // (Its turn every frame here: the chosen animal's.)
-        pass.settle({holder, kind, matrix, geometry, pose: null, height: 0.2, length: 0.6, surface: options.surface ?? null, moving: false, ground, focus: true});
+        pass.settle({holder, kind: as, matrix, geometry, pose: null, height: 0.2, length: 0.6, surface: fell ? null : options.surface ?? null, moving: false, ground, focus: true});
         if (pass.solids.stats().pending === 0 && holder.seat?.solved && holder.seat.x === holder.seat.tx && holder.seat.y === holder.seat.ty && holder.seat.z === holder.seat.tz && frames > 3) break;
     }
     return {seat: holder.seat!, position: position.clone(), frames, pass};
@@ -202,6 +205,10 @@ test("seat: on a wall's face it is brought to the face", () => {
     const rotation = new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), new Vector3(1, 0, 0));
     const off = seatBody("cling", new Vector3(120.25, 1.5, 100), {surface: {nx: 1, ny: 0, nz: 0}, rotation});
     assert.ok(Math.abs(off.position.x - 120.15) < 0.014, `off the wall: ${off.position.x}`);
+    // A face that is not drawn (nothing within its reach): not left on the air, down onto the ground, upright.
+    const gone = seatBody("cling", new Vector3(300, 2, 300), {surface: {nx: 1, ny: 0, nz: 0}, rotation, frames: 200});
+    assert.ok(gone.seat.fell, "it knows nothing is drawn there");
+    assert.ok(Math.abs(gone.position.y) < 0.013, `left on the air: ${gone.position.y}`);
 });
 
 test("seat: a rig's hull points are posed by the rows its shader reads", () => {

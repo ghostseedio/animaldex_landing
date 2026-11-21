@@ -26,7 +26,7 @@ export const ALL = ROCK | HARD | TREE | SOFT;
 export type SolidHit = {t: number; x: number; y: number; z: number; nx: number; ny: number; nz: number; cls: number; kind: string; double: boolean};
 
 /** A drawn instance near a body: its solid, its triangles, and the world's way into its own space (a matrix's elements). */
-export type Near = {solid: {cls: number; kind: string; double: boolean}; grid: TriGrid; e: Float64Array};
+export type Near = {solid: {cls: number; kind: string; double: boolean; boxes: Float32Array}; grid: TriGrid; e: Float64Array; /** Where its box is in its solid's `boxes` (min x y z, max x y z). */ o: number};
 
 /** Never a surface: water, sky, weather, marks, glass, decals, grass blades, people, traffic, light. */
 const SKIP = /water|\bsea\b|:sea|ocean|sky|rain|fog|cloud|mist|glow|glass|decal|\bnet\b|shadow|web|wake|blows|light|panes|probe|bug-ground|bug-climb|human|vehicle|cars:|traffic:|recipes|trails|tracks|-runs|casts|:ants|vent|pools|:cover|washing|sawdust|slash|tvs|towels|parasol|christmas|clock-hands|effects|ark-ground|reef|fish-|kelp|seagrass|mud|puddle|snow|drift|icicle|tussock|:card|cave|lily|falls-pool|chunk-batches\|ground|^ground\||\|ground\|/i;
@@ -68,7 +68,16 @@ type Solid = {
     shown: boolean;
     /** Nothing to stand on (no triangles, or positions that are not numbers). */
     dead: boolean;
+    /** Many instances: their numbers by 16 m cell (an instance over many cells is in `wide`), and each one's last query. */
+    cells: Map<number, number[]> | null;
+    wide: number[];
+    asked: Uint32Array;
 };
+
+/** Instances a solid has before they are kept by cell, and the cell's side (m). */
+const CELLS_FROM = 48;
+const CELL = 16;
+const cellKey = (cx: number, cz: number) => (cx + 4096) * 8192 + (cz + 4096);
 
 type Held = {grid: TriGrid; used: number};
 
@@ -82,8 +91,12 @@ export class DrawnSolids {
     private readonly grids = new Map<BufferGeometry, Held>();
     private readonly pending: TriGrid[] = [];
     private readonly scratch: GridHit[] = [];
-    private readonly pool: Array<{solid: Solid; grid: TriGrid; e: Float64Array}> = [];
+    private readonly pool: Array<{solid: Solid; grid: TriGrid; e: Float64Array; o: number}> = [];
     private pooled = 0;
+    private query = 0;
+    private stamp = 0;
+    /** Goes up when what is drawn changes (a mesh shown, hidden, its instances moved): seats made before are made again. */
+    version = 0;
     private readonly hitPool: SolidHit[] = [];
     private hitsOut = 0;
     private readonly unknown = new Set<string>();
@@ -96,10 +109,10 @@ export class DrawnSolids {
 
     constructor(private readonly scene: Object3D) {}
 
-    /** The frame's start: the meshes read again every two seconds (sets load, levels swap), old grids let go. */
+    /** The frame's start: the meshes read again twice a second (sets load, levels swap), old grids let go. */
     begin(frame: number): void {
         this.frame = frame;
-        if (frame - this.gathered >= 120 || frame < this.gathered) this.gather();
+        if (frame - this.gathered >= 30 || frame < this.gathered) this.gather();
     }
 
     /** Read the scene's meshes again now. */
@@ -117,7 +130,7 @@ export class DrawnSolids {
                 if (cls > 0) {
                     const known = before.get(mesh);
                     const material = (Array.isArray(mesh.material) ? mesh.material[0] : mesh.material) as Material | undefined;
-                    const solid: Solid = known && known.geometry === mesh.geometry ? known : {mesh, instanced: (mesh as InstancedMesh).isInstancedMesh ? (mesh as InstancedMesh) : null, cls, kind: label, geometry: mesh.geometry, double: false, version: -1, count: -1, stamp: NaN, boxes: new Float32Array(0), box: new Float64Array(6), shown: visible, dead: false};
+                    const solid: Solid = known && known.geometry === mesh.geometry ? known : {mesh, instanced: (mesh as InstancedMesh).isInstancedMesh ? (mesh as InstancedMesh) : null, cls, kind: label, geometry: mesh.geometry, double: false, version: -1, count: -1, stamp: NaN, boxes: new Float32Array(0), box: new Float64Array(6), shown: visible, dead: false, cells: null, wide: [], asked: new Uint32Array(0)};
                     solid.shown = visible;
                     solid.double = (material?.side ?? 0) === 2 || cls === SOFT || cls === TREE;
                     next.push(solid);
@@ -127,6 +140,13 @@ export class DrawnSolids {
             for (const child of object.children) walk(child, visible);
         };
         walk(this.scene, true);
+        // (What is drawn changed: a mesh come or gone, shown or hidden. Every seat is worked out again.)
+        let stamp = next.length;
+        for (const solid of next) stamp = (stamp * 31 + solid.mesh.id * (solid.shown && solid.mesh.visible ? 2 : 1)) | 0;
+        if (stamp !== this.stamp) {
+            this.stamp = stamp;
+            this.version++;
+        }
         this.solids = next;
         // Grids nothing has asked for in ten seconds go (a rock field left behind).
         this.grids.forEach((held, geometry) => {
@@ -169,6 +189,8 @@ export class DrawnSolids {
         const w = mesh.matrixWorld.elements;
         const stamp = w[12] + w[13] * 3 + w[14] * 7 + w[0] * 11 + w[5] * 13 + w[10] * 17;
         if (solid.version === version && solid.count === count && solid.stamp === stamp) return;
+        // (Not its first reading: its instances changed, a tree's nearer level taking its place say.)
+        if (solid.version !== -1) this.version++;
         solid.version = version;
         solid.count = count;
         solid.stamp = stamp;
@@ -215,6 +237,30 @@ export class DrawnSolids {
             if (y + ry > box[4]) box[4] = y + ry;
             if (z + rz > box[5]) box[5] = z + rz;
         }
+        solid.cells = null;
+        solid.wide.length = 0;
+        if (count >= CELLS_FROM) {
+            const cells = (solid.cells = new Map<number, number[]>());
+            if (solid.asked.length < count) solid.asked = new Uint32Array(count);
+            for (let i = 0; i < count; i++) {
+                const o = i * 6;
+                const c0 = Math.floor(solid.boxes[o] / CELL);
+                const c1 = Math.floor(solid.boxes[o + 3] / CELL);
+                const r0 = Math.floor(solid.boxes[o + 2] / CELL);
+                const r1 = Math.floor(solid.boxes[o + 5] / CELL);
+                if (!Number.isFinite(c0 + c1 + r0 + r1) || (c1 - c0 + 1) * (r1 - r0 + 1) > 16) {
+                    solid.wide.push(i);
+                    continue;
+                }
+                for (let c = c0; c <= c1; c++)
+                    for (let r = r0; r <= r1; r++) {
+                        const key = cellKey(c, r);
+                        const list = cells.get(key);
+                        if (list) list.push(i);
+                        else cells.set(key, [i]);
+                    }
+            }
+        }
     }
 
     /**
@@ -229,29 +275,49 @@ export class DrawnSolids {
             this.refresh(solid);
             const box = solid.box;
             if (x1 < box[0] || x0 > box[3] || y1 < box[1] || y0 > box[4] || z1 < box[2] || z0 > box[5]) continue;
-            const boxes = solid.boxes;
-            for (let i = 0; i < solid.count; i++) {
-                const o = i * 6;
-                if (x1 < boxes[o] || x0 > boxes[o + 3] || y1 < boxes[o + 1] || y0 > boxes[o + 4] || z1 < boxes[o + 2] || z0 > boxes[o + 5]) continue;
-                const grid = this.gridOf(solid.geometry);
-                if (!grid) {
-                    whole = false;
-                    break;
-                }
-                if (solid.instanced) {
-                    solid.instanced.getMatrixAt(i, inst);
-                    m.multiplyMatrices(solid.mesh.matrixWorld, inst);
-                } else m.copy(solid.mesh.matrixWorld);
-                inv.copy(m).invert();
-                const near = this.pool[this.pooled] ?? (this.pool[this.pooled] = {solid, grid, e: new Float64Array(16)});
-                this.pooled++;
-                near.solid = solid;
-                near.grid = grid;
-                near.e.set(inv.elements);
-                out.push(near);
-            }
+            if (solid.cells) {
+                // (Many instances: only those in the cells the box is over.)
+                const stamp = ++this.query;
+                const c0 = Math.floor(x0 / CELL);
+                const c1 = Math.floor(x1 / CELL);
+                const r0 = Math.floor(z0 / CELL);
+                const r1 = Math.floor(z1 / CELL);
+                for (const i of solid.wide) if (!this.take(solid, i, x0, y0, z0, x1, y1, z1, out)) whole = false;
+                for (let c = c0; c <= c1; c++)
+                    for (let r = r0; r <= r1; r++) {
+                        const list = solid.cells.get(cellKey(c, r));
+                        if (!list) continue;
+                        for (const i of list) {
+                            if (solid.asked[i] === stamp) continue;
+                            solid.asked[i] = stamp;
+                            if (!this.take(solid, i, x0, y0, z0, x1, y1, z1, out)) whole = false;
+                        }
+                    }
+            } else for (let i = 0; i < solid.count; i++) if (!this.take(solid, i, x0, y0, z0, x1, y1, z1, out)) whole = false;
         }
         return whole;
+    }
+
+    /** One instance into the list if its box meets the box asked (false: its triangles are still being read). */
+    private take(solid: Solid, i: number, x0: number, y0: number, z0: number, x1: number, y1: number, z1: number, out: Near[]): boolean {
+        const boxes = solid.boxes;
+        const o = i * 6;
+        if (x1 < boxes[o] || x0 > boxes[o + 3] || y1 < boxes[o + 1] || y0 > boxes[o + 4] || z1 < boxes[o + 2] || z0 > boxes[o + 5]) return true;
+        const grid = this.gridOf(solid.geometry);
+        if (!grid) return false;
+        if (solid.instanced) {
+            solid.instanced.getMatrixAt(i, inst);
+            m.multiplyMatrices(solid.mesh.matrixWorld, inst);
+        } else m.copy(solid.mesh.matrixWorld);
+        inv.copy(m).invert();
+        const near = this.pool[this.pooled] ?? (this.pool[this.pooled] = {solid, grid, e: new Float64Array(16), o: 0});
+        this.pooled++;
+        near.solid = solid;
+        near.grid = grid;
+        near.o = o;
+        near.e.set(inv.elements);
+        out.push(near);
+        return true;
     }
 
     /** Hand the `collect` lists' entries back (once a body's casts are done). */

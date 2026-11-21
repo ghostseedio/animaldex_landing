@@ -6471,7 +6471,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         });
         perf.lap("herds");
 
-        seat.begin();
+        seat.begin(dt);
         for (const candidate of candidates) {
             const {entry, model, pose: where} = candidate;
             // A rider on its host: on the coat its host was drawn with this frame (hosts are drawn first: riders end the roster).
@@ -6886,7 +6886,14 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             facts.hopping = Boolean(entry.hop?.hopping);
             facts.surfaceNy = surface ? surface.ny : null;
             facts.lying = (Boolean(slept) && !sleepsStanding) || lyingOn !== null || Boolean(act?.lying);
-            const seatAs = seatKind(facts);
+            let seatAs = seatKind(facts);
+            // (Held where nothing is drawn, a trunk's side that is not there: upright, to come down onto what is under it.)
+            const seatFell = Boolean(surface) && seat.fallen(entry, seatAs, where.x, where.z);
+            if (seatFell) {
+                seatAs = "perch";
+                rotation.setFromEuler(euler.set(0, where.yaw, 0));
+                position.set(where.x, where.base - groundedLevelBase(animal.model_slug, rig ? "rig" : level, model.minY) * s, where.z);
+            }
             const seated = seat.offset(entry, seatAs, dt);
             if (seated) {
                 position.x += seated.x;
@@ -6929,6 +6936,8 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 entry.drawnFrame = rideFrame;
                 entry.drawnRig = rig && state && mesh ? {rig, mesh, index} : null;
             }
+            // (ARK-SEAT: whether a gait of the locomotion layer poses it this frame, not a clip of its own.)
+            let seatGait = false;
             if (rig && state && level === "near") {
                 // The locomotion layer (`locomotion/`, lane L1): gaits with planted feet, foot IK, the body's motion and
                 // the tail's, posed on the CPU into the species' live pose row (the baked rows when it is off).
@@ -6946,6 +6955,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const seatFloor = entry.seat && entry.seat.floor !== null && (entry.seat.x || entry.seat.y || entry.seat.z) ? entry.seat.floor : null;
                 const live = rigLivePose(rig, state, {instance: matrix, scale: s, yaw: where.yaw, dt: frameDt, clock: epochNow, seed: entry.phase, grounded, ...(seatFloor !== null ? {ground: () => ({height: seatFloor, nx: 0, ny: 1, nz: 0})} : {}), actState: act2?.state ?? recipeState ?? ((entry.sleepNow?.t ?? 0) > 0.3 ? "sleep" : null), actSpeed: act2?.speed ?? null, airStage: state.flying ? (entry.sched?.pose as TripPose | null | undefined)?.air?.stage ?? null : null, canopy: (surface as {arms?: LocoCanopy | null} | null | undefined)?.arms ?? (entry.hop && (entry.hop.hopping || state.pace > entry.length * 0.1) && !surface && !where.water && brachiates(animal.model_slug, animal.scientific_name) ? {phase: "walk", hand: null, next: null, lead: 1, u: (epochNow * 1.4 + entry.phase) % 1, brachiate: true} : null)}, index);
                 if (perf.on) perf.carve("locomotion", performance.now() - locoAt);
+                seatGait = Boolean(live?.gait);
                 if (live) {
                     (mesh.geometry.getAttribute("arkRigA") as InstancedBufferAttribute).setXYZW(index, live.code, live.code, 0, state.weight);
                     (mesh.geometry.getAttribute("arkRigB") as InstancedBufferAttribute).setXYZW(index, 0, 0, 0, 0);
@@ -6961,10 +6971,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                     kind: seatAs,
                     matrix,
                     geometry: rig ? rig.geometry : mesh.geometry,
-                    pose: rig && rigA && rigB ? {bones: rig.bones, live: liveRow >= 0 ? rig.loco?.live.data ?? null : null, liveRow, baked: rig.data, row0: Math.max(rigA.getX(index), 0), row1: Math.max(rigA.getY(index), 0), t: rigA.getZ(index), from0: Math.max(rigB.getX(index), 0), from1: Math.max(rigB.getY(index), 0), fromT: rigB.getZ(index), fromWeight: rigB.getW(index), weight: rigA.getW(index)} : null,
+                    pose: rig && rigA && rigB ? {bones: rig.bones, live: liveRow >= 0 ? rig.loco?.live.data ?? null : null, liveRow, baked: rig.data, row0: Math.max(rigA.getX(index), 0), row1: Math.max(rigA.getY(index), 0), t: rigA.getZ(index), from0: Math.max(rigB.getX(index), 0), from1: Math.max(rigB.getY(index), 0), fromT: rigB.getZ(index), fromWeight: rigB.getW(index), weight: rigA.getW(index), clip: !seatGait && !state!.from && state!.weight >= 0.99 && !entry.sched?.pose?.moving && rig.clips[state!.now.name] ? rig.clips[state!.now.name] : null} : null,
                     height: modelHeight,
                     length: entry.length * sizeUp,
-                    surface: surface ?? null,
+                    surface: seatFell ? null : surface ?? null,
                     moving: Boolean(entry.sched?.pose?.moving),
                     ground: (x, z, near) => standGround(x, z, near ?? poseBase),
                     focus: selectedId === animal.id,

@@ -10,7 +10,8 @@
  * It fails (exit 1, with `--gate`) when an animal that is not flying, swimming, hanging, carried or in its den is
  *   - more than 3 cm over the drawn surface it rests on (hovering),
  *   - more than 3 cm under it (sunk), or
- *   - inside a rock, a wall or any closed solid (its middle, or two or more of its body's inner points).
+ *   - inside a rock, a wall or any closed solid (its middle, or two or more of some forty points of its body, more
+ *     than 3 cm under the thing's own top; one on a trunk's or a wall's face is measured against that face instead).
  *
  *   node scripts/ark-seat-audit.mjs --public public --snapshot /ark-local/live.json --out <dir>
  *        [--snapshot-file <file>]    a snapshot file from anywhere (.json or .json.gz), served to the page; CI's is
@@ -140,8 +141,11 @@ const categoryOf = (row) => {
 const settle = async () => {
     let last = "";
     let same = 0;
-    for (let i = 0; i < 40; i++) {
-        await wait(200);
+    let frame = await page.evaluate(() => window.__arkSeat.frames);
+    for (let i = 0; i < 60; i++) {
+        // (By frames drawn, not by the clock: software WebGL draws a few a second.)
+        frame += 4;
+        await page.waitForFunction((f) => window.__arkSeat.frames >= f, frame, {timeout: 4000, polling: 50}).catch(() => undefined);
         const now = await page.evaluate(() => {
             const rows = window.__arkSeatProbe.drawn(3);
             const entries = new Map(window.__arkDebug.entries().map((e) => [e.animal.id, e]));
@@ -149,19 +153,34 @@ const settle = async () => {
             for (const row of rows) {
                 const s = entries.get(row.id)?.seat;
                 if (!s || !["stand", "lie", "perch", "cling"].includes(row.kind)) continue;
-                if (!s.solved || s.x !== s.tx || s.y !== s.ty || s.z !== s.tz) moving++;
+                if (!s.solved || s.x !== s.tx || s.y !== s.ty || s.z !== s.tz || s.seen !== window.__arkSeat.solids.version) moving++;
             }
-            return `${rows.length}|${rows.filter((r) => r.level !== "far").length}|${moving}|${window.__arkSeat.solids.stats().pending}`;
+            // (The models and the rigs on their way: an animal is its marker until its model is in.)
+            const loading = (window.__arkDebug.library?.busy ? 1 : 0) + (window.__arkDebug.rigs?.busy ? 1 : 0);
+            return {key: `${rows.length}|${rows.filter((r) => r.level !== "far").length}`, moving, loading, pending: window.__arkSeat.solids.stats().pending, frames: window.__arkSeat.frames};
         });
-        const [, , moving, pending] = now.split("|");
-        if (now === last && (seatOff || (moving === "0" && pending === "0"))) {
+        frame = now.frames;
+        if (now.key === last && !now.loading && (seatOff || (now.moving === 0 && now.pending === 0))) {
             if (++same >= 3) return;
         } else same = 0;
-        last = now;
+        last = now.key;
     }
 };
 
+const SEATED = new Set(["stand", "lie", "perch", "cling"]);
+const verdict = (row) => {
+    if (!SEATED.has(row.kind)) return "exempt";
+    if (row.middle || row.inside >= 2) return "inside";
+    if (row.gap === null) return "nothing";
+    if (row.gap > TOLERANCE) return "above";
+    if (row.gap < -TOLERANCE) return "below";
+    return "ok";
+};
+/** How far off its seat a measure has it (for the better of two looks): inside counts most. */
+const badness = (row) => (verdict(row) === "ok" || verdict(row) === "exempt" ? 0 : (row.middle || row.inside >= 2 ? 100 : 0) + (row.gap === null ? 50 : Math.abs(row.gap)));
+
 const rows = [];
+const notDrawn = [];
 const coverage = [];
 for (const island of islands) {
     if ((await page.evaluate(() => window.__arkScene.island?.())) !== island) {
@@ -213,11 +232,12 @@ for (const island of islands) {
                 await look(now);
                 await settle();
             }
-            const measured = await page.evaluate(({skip, target, island}) => {
+            const measure = (ids, skip) => page.evaluate(({ids, skip, target, island}) => {
                 const probe = window.__arkSeatProbe;
                 const seen = new Set(skip);
+                const only = ids && new Set(ids);
                 // (One drawn far is measured when its own turn brings the camera to it.)
-                const drawn = probe.drawn(3).filter((row) => (row.island ?? "wild") === island && !seen.has(row.id) && (row.level !== "far" || row.id === target));
+                const drawn = probe.drawn(3).filter((row) => (row.island ?? "wild") === island && (only ? only.has(row.id) : !seen.has(row.id) && (row.level !== "far" || row.id === target)));
                 probe.begin();
                 const out = [];
                 try {
@@ -229,7 +249,19 @@ for (const island of islands) {
                     probe.end();
                 }
                 return out;
-            }, {skip: Array.from(seen), target: next.id, island});
+            }, {ids, skip, target: next.id, island});
+            const measured = await measure(null, Array.from(seen));
+            // One caught off its seat is looked at twice more, a fifth of a second apart: a stride's or a landing's moment
+            // passes; one that is off all three times is off.
+            for (let again = 0; again < 2; again++) {
+                const off = measured.filter((row) => verdict(row) !== "ok" && verdict(row) !== "exempt");
+                if (!off.length) break;
+                await wait(220);
+                for (const row of await measure(off.map((r) => r.id), [])) {
+                    const at = measured.findIndex((r) => r.id === row.id);
+                    if (at >= 0 && badness(row) < badness(measured[at])) measured[at] = {...row, looks: again + 2};
+                }
+            }
             for (const row of measured) {
                 seen.add(row.id);
                 all.add(row.id);
@@ -237,7 +269,10 @@ for (const island of islands) {
             }
             const left = all.size - seen.size - gone.size - (seen.has(next.id) ? 0 : 1);
             // (Framed and still not drawn as a model: in its den, under the water out of sight, a marker only.)
-            if (!seen.has(next.id)) gone.add(next.id);
+            if (!seen.has(next.id)) {
+                gone.add(next.id);
+                notDrawn.push(await page.evaluate(({id, island, hour}) => { const e = window.__arkDebug.entries().find((x) => x.animal.id === id); return {island, hour, id, slug: e?.animal.model_slug ?? null, level: e?.level ?? null, kind: e?.seat?.kind ?? null, asleep: Boolean(e?.state?.asleep), den: Boolean(e?.denIn), water: Boolean(e?.place?.water), burrow: Boolean(e?.place?.burrow), length: e?.length ?? null}; }, {id: next.id, island, hour}));
+            }
             if (stops % 25 === 0) console.log(`${island} ${hour}h: stop ${stops}, ${seen.size} measured, ${gone.size} not drawn, ${left} left, ${Math.round((Date.now() - started) / 1000)} s`);
         }
         const left = Array.from(targets.keys()).filter((id) => !seen.has(id) && !gone.has(id)).length;
@@ -251,15 +286,6 @@ server.close();
 
 // MARK: The verdict
 
-const SEATED = new Set(["stand", "lie", "perch", "cling"]);
-const verdict = (row) => {
-    if (!SEATED.has(row.kind)) return "exempt";
-    if (row.middle || row.inside >= 2) return "inside";
-    if (row.gap === null) return "nothing";
-    if (row.gap > TOLERANCE) return "above";
-    if (row.gap < -TOLERANCE) return "below";
-    return "ok";
-};
 for (const row of rows) row.verdict = verdict(row);
 const gated = rows.filter((row) => row.level !== "far");
 const categories = ["insects", "reptiles", "birds", "mammals", "amphibians", "fish"];
@@ -284,7 +310,7 @@ for (const row of failures) {
 const exempt = {};
 for (const row of gated) if (row.verdict === "exempt") exempt[`${row.category}:${row.kind}`] = (exempt[`${row.category}:${row.kind}`] ?? 0) + 1;
 const summary = {label, seat: seatOff ? "off" : "on", quality: arg("quality", "high"), tolerance: TOLERANCE, hours, islands, coverage, table, failures: failures.length, exempt, seatStats, errors: errors.slice(0, 10)};
-writeFileSync(path.join(out, `${label}.json`), JSON.stringify({summary, rows}, null, 1));
+writeFileSync(path.join(out, `${label}.json`), JSON.stringify({summary, rows, notDrawn}, null, 1));
 const md = [
     `# Ark seat audit: ${label} (seat pass ${seatOff ? "off" : "on"})`,
     "",
