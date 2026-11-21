@@ -42,6 +42,11 @@ function world(): {scene: Scene; rocks: InstancedMesh} {
     leaf.userData.kind = "leaf";
     leaf.position.set(140, 1.5, 100);
     scene.add(leaf);
+    // A tree's crown, 4 m across, its top 5 m up.
+    const crown = new Mesh(new BoxGeometry(4, 0.001, 4), new MeshBasicMaterial({side: DoubleSide}));
+    crown.userData.kind = "asset-tree";
+    crown.position.set(170, 5, 100);
+    scene.add(crown);
     const low = new Mesh(new BoxGeometry(0.4, 0.001, 0.4), new MeshBasicMaterial({side: DoubleSide}));
     low.userData.kind = "leaf";
     low.position.set(150, 0.12, 100);
@@ -213,6 +218,10 @@ test("seat: held on a leaf it rests on the leaf; held on nothing it comes down",
     // A body's length to the side of the leaf: onto the leaf beside it, not left in the air.
     const beside = seatBody("perch", new Vector3(140.5, 1.56, 100), {surface: top});
     assert.ok(Math.abs(beside.position.y - 1.5) < 0.014 && Math.abs(beside.position.x - 140) < 0.45, `beside the leaf: ${beside.position.x}, ${beside.position.y}`);
+    // Held 3 m over a tree's crown and 2 m out from its edge (the schedule's limb, on a tree drawn smaller): onto the crown,
+    // not down to the ground.
+    const over = seatBody("perch", new Vector3(174, 8, 100), {surface: top, frames: 240});
+    assert.ok(Math.abs(over.position.y - 5) < 0.014 && over.position.x < 172.1, `beside a crown: ${over.position.x}, ${over.position.y}`);
     // Nothing anywhere near: down onto the ground.
     const nothing = seatBody("perch", new Vector3(160, 3, 100), {surface: top});
     assert.ok(Math.abs(nothing.position.y) < 0.013, `in the air: ${nothing.position.y}`);
