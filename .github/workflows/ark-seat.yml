@@ -72,3 +72,38 @@ jobs:
           path: .ark-golden/seat
           include-hidden-files: true
           retention-days: 14
+
+  # The same stops with the pass off: what the gate would say without it (never fails; by hand, or on the seat lane's own branches).
+  without:
+    name: The same audit with the pass off (for the record)
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.head_ref, 'ark-seat')
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22.13.0"
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+      - name: Chromium
+        run: npx playwright-core install --with-deps chromium
+      - name: The scene's development bundle
+        run: node scripts/build-ark-bundle.mjs --dev
+      - name: Seat audit, pass off
+        env:
+          STOPS: ${{ inputs.stops || '45' }}
+          HOURS: ${{ inputs.hours || '11,23' }}
+        run: node scripts/ark-seat-audit.mjs --public public --snapshot-file tests/ark-seat/snapshot.json.gz --gl swiftshader --quality medium --hours "$HOURS" --stops "$STOPS" --seat off --out .ark-golden/seat --label before
+      - name: Summary
+        if: always()
+        run: test -f .ark-golden/seat/before.md && cat .ark-golden/seat/before.md >> "$GITHUB_STEP_SUMMARY" || true
+      - name: Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ark-seat-before
+          path: .ark-golden/seat
+          include-hidden-files: true
+          retention-days: 14
