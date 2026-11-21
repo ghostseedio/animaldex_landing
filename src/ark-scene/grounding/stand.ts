@@ -107,12 +107,25 @@ export function standOnGround(x: number, z: number, yaw: number, scale: number, 
  * analytic ground, a share of its height whatever its belly: on drawn floors over that ground, on slopes and for bodies
  * with no legs to fold, that put the body into the ground.) Metres out.
  */
-export function lieOnGround(x: number, z: number, yaw: number, scale: number, torso: LyingTorso, extraPitch: number, extraRoll: number, ground: number, normal: {nx: number; ny: number; nz: number}): Stand {
+export function lieOnGround(x: number, z: number, yaw: number, scale: number, torso: LyingTorso, extraPitch: number, extraRoll: number, ground: number, normal: {nx: number; ny: number; nz: number}, sample?: (x: number, z: number) => number): Stand {
     const cy = Math.cos(yaw);
     const sy = Math.sin(yaw);
     const ny = Math.max(normal.ny, 0.2);
     // The plane's rise per metre along its heading (+z of the model) and across it (+x).
-    const along = -(normal.nx * sy + normal.nz * cy) / ny;
+    let along = -(normal.nx * sy + normal.nz * cy) / ny;
+    // ARK-CONTACT (decision 447, "saltwater crocodile sleeping with its head in the ground"): a long body's lean along its
+    // heading from the ground under its two ends, not the one triangle under its middle (a 5 m crocodile spans five of the
+    // drawn ground's 1.1 m triangles: on a bank's curve its head end was 20 cm under the middle's plane).
+    const ends = torso.ends;
+    if (sample && ends) {
+        const span = (ends.z1 - ends.z0) * scale * 0.9;
+        if (span > 0.6) {
+            const mid = ((ends.z0 + ends.z1) / 2) * scale;
+            const front = sample(x + sy * (mid + span / 2), z + cy * (mid + span / 2));
+            const back = sample(x + sy * (mid - span / 2), z + cy * (mid - span / 2));
+            along = (front - back) / span;
+        }
+    }
     const across = -(normal.nx * cy - normal.nz * sy) / ny;
     const pitch = Math.max(Math.min(Math.atan(-along), MAX_PITCH), -MAX_PITCH);
     const roll = Math.max(Math.min(Math.atan(across), MAX_ROLL), -MAX_ROLL);
@@ -139,11 +152,24 @@ export function lieOnGround(x: number, z: number, yaw: number, scale: number, to
                 const plane = ground + (dx * sy + dz * cy) * along + (dx * cy - dz * sy) * across;
                 rootY = Math.max(rootY, plane - y2);
             }
+    // ARK-CONTACT: its head and tail ends (past the torso, at its belly's height down the middle) on the ground under them
+    // as drawn: a sleeper nosed down, or lying across a hollow, keeps its chin and tail on the ground, not in it.
+    if (sample && ends) {
+        for (const lz of [ends.z0, ends.z1]) {
+            const ly = torso.bottom;
+            const x1 = (xc * cr - ly * sr) * scale;
+            const y1 = (xc * sr + ly * cr) * scale;
+            const z1 = lz * scale;
+            const y2 = y1 * cp - z1 * sp;
+            const z2 = y1 * sp + z1 * cp;
+            rootY = Math.max(rootY, sample(x + x1 * cy + z2 * sy, z - x1 * sy + z2 * cy) - y2);
+        }
+    }
     return {rootY, pitch, roll, ground};
 }
 
-/** A lying torso, model units (`sleep.ts` lyingTorso). */
-export type LyingTorso = {x0: number; x1: number; z0: number; z1: number; bottom: number; top: number};
+/** A lying torso, model units (`sleep.ts` lyingTorso); `ends`: the whole body's front and back along it (its head, its tail). */
+export type LyingTorso = {x0: number; x1: number; z0: number; z1: number; bottom: number; top: number; ends?: {z0: number; z1: number}};
 
 /** The world points of a lying torso as `lieOnGround` turned it (for the tests: each against the ground under it). */
 export function lyingPoints(stand: Stand, x: number, z: number, yaw: number, scale: number, torso: LyingTorso, extraPitch: number, extraRoll: number): Array<{x: number; y: number; z: number}> {

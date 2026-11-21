@@ -19,7 +19,7 @@
  */
 
 import {BufferAttribute, BufferGeometry, Group, Mesh, type Material} from "three";
-import {chunkCount, STATE_IN, STATE_MAP, STATE_OUT, tileRange, type ChunkGrid} from "@/ark-scene/streaming/chunks";
+import {chunkCount, chunkOf, STATE_IN, STATE_MAP, STATE_OUT, tileRange, type ChunkGrid} from "@/ark-scene/streaming/chunks";
 import type {GroundArrays} from "@/ark-scene/terrain";
 
 /** The map's level: every this many vertices. */
@@ -139,6 +139,7 @@ export class GroundTiles {
     spread = 0;
     /** Tiles to be drawn in full whose full geometry is not built yet (drawn as the map meanwhile). */
     private readonly waiting = new Set<Tile>();
+    private readonly byKey = new Map<number, Tile>();
 
     constructor(private readonly arrays: GroundArrays, private readonly grid: ChunkGrid, private readonly material: Material, groundSegments: number) {
         this.group.name = "ark-ground";
@@ -153,7 +154,21 @@ export class GroundTiles {
             mesh.userData.chunk = key;
             this.group.add(mesh);
             this.tiles.push({key, mesh, full, coarse: null, state: STATE_IN, changedAt: 0});
+            this.byKey.set(key, this.tiles[this.tiles.length - 1]);
         }
+    }
+
+    /**
+     * ARK-CONTACT (decision 447: safari animals sinking, giraffes jumping as the camera zoomed): the stride the ground is
+     * drawn at under a point now: `MAP_STRIDE` where its tile is drawn as the map (past the render distance, or waiting
+     * for its full geometry in a live view), else 1. A big animal is still drawn as a model over a map tile, and it
+     * stood on the full ground's triangles, not these: in a hollow the coarse ones bridged over its feet, on a ridge they
+     * cut under them, and as the tile came in full on zooming in the ground under it changed (`grounding/drawn-ground.ts`).
+     */
+    strideAt(x: number, z: number): number {
+        const key = chunkOf(this.grid, x, z);
+        const tile = key >= 0 ? this.byKey.get(key) : undefined;
+        return tile && tile.mesh.visible && tile.coarse && tile.mesh.geometry === tile.coarse ? MAP_STRIDE : 1;
     }
 
     /** The streamer's states: a tile drawn in full, as the map, or not; hidden ones let go after a while. */

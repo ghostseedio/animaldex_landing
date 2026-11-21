@@ -1008,6 +1008,12 @@ export type RigState = {
     /** Its base pose now (contract 8.3), and the transition playing toward another, if any. */
     base: RigBase;
     toward: {clip: string; ends: RigBase} | null;
+    /**
+     * ARK-CONTACT (the owner, 2026-11-21: "zooming in and out on a resting animal makes it get up and lie back down"):
+     * out of its rig (a far or near level) since it last played: its first clip back starts in that clip's own pose,
+     * never the way into it (a lie_down for a horse already lying, a get_up on the way out).
+     */
+    entering?: boolean;
     /** The locomotion layer's state on it (`locomotion/layer.ts`), and its gait this frame. */
     loco?: LocoAnimal;
 };
@@ -1015,7 +1021,7 @@ export type RigState = {
 export const RIG_FADE_SECONDS = 0.25;
 
 export function newRigState(): RigState {
-    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null, flying: false, climb: 0, turn: 0, yaw: null, landedAt: -1e9, pace: 0, ratio: 0, reverse: false, base: "stand", toward: null};
+    return {weight: 0, now: {name: "idle", phase: 0}, from: null, fade: 1, last: null, flying: false, climb: 0, turn: 0, yaw: null, landedAt: -1e9, pace: 0, ratio: 0, reverse: false, base: "stand", toward: null, entering: true};
 }
 
 /** Switch to a clip (a cross-fade from the one playing). */

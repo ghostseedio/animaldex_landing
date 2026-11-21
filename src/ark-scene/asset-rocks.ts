@@ -11,7 +11,7 @@
  * and a pale salt line above it.
  */
 
-import {BufferAttribute, BufferGeometry, Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, MeshStandardMaterial, Quaternion, Vector3, type Mesh} from "three";
+import {BufferAttribute, BufferGeometry, Color, DoubleSide, FrontSide, Group, InstancedMesh, Matrix4, Mesh, MeshStandardMaterial, Quaternion, Raycaster, Vector3} from "three";
 import type {RockMesh} from "@/ark-scene/rock-shapes";
 import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
 import {MeshoptDecoder} from "three/examples/jsm/libs/meshopt_decoder.module.js";
@@ -21,6 +21,7 @@ import {ARK_GROUND_TEXTURES} from "@/ark-scene/ground-textures";
 import {ASSET_BASE} from "@/ark-scene/tree-assets";
 import {generatedRockFile, generatedShape, rockAssetFor, rockAssetInfo, rockFoot, steepSink} from "@/ark-scene/rock-assets";
 import {cachedRock} from "@/ark-scene/rock-shapes";
+import {stretchedFace, type StretchedRock} from "@/ark-scene/grounding/contact";
 import {floorAssetInfo, floorPlacements} from "@/ark-scene/floor-assets";
 import {worldDecor} from "@/ark-scene/decor";
 import {arkWorld} from "@/ark-scene/world";
@@ -117,7 +118,7 @@ export function rockGeometry(mesh: RockMesh): BufferGeometry {
     return geometry;
 }
 
-type AssetInfo = {lod_distances: [number, number, number]; lods: Array<{level: string; file: string; doubleSided: boolean}>};
+type AssetInfo = {lod_distances: [number, number, number]; lods: Array<{level: string; file: string; doubleSided: boolean}>; /** A rock's (`rockAssetInfo`); a plant's may have none. */ bounds?: {min: number[]; max: number[]}};
 export type AssetPlacement = {id: string; x: number; y: number; z: number; yaw: number; scale: number; up?: [number, number, number]; shade?: number; /** Drawn reached down to its ground (`rock-assets.ts` rockFoot): the stretch k and the shape's top (its own units). */ foot?: {k: number; top: number}};
 
 /**
@@ -129,6 +130,186 @@ export class AssetInstances {
     /** Ready once every needed asset is loaded. */
     ready = false;
     /** Per asset: its instances, its meshes per level, and (mobile performance lane) each instance's level as last written. */
+    /** ARK-CONTACT: the rocks drawn reached down to their ground, by 8 m cell. */
+    private readonly stretched = new Map<number, Array<StretchedRock & {reach: number}>>();
+
+    /**
+     * ARK-CONTACT (decision 447, the mangrove crab over its rock): an attach point on a rock face as the rock is drawn
+     * (`grounding/contact.ts` stretchedFace) into `out`, or null where no rock there is drawn reached down.
+     */
+    drawnFace<T extends {x: number; y: number; z: number; nx: number; ny: number; nz: number; tx: number; ty: number; tz: number}>(point: T, out: T): T | null {
+        // (Round 3: the point the map made, on the rock as it is drawn: the attach rows and the server's positions were
+        // made with the rock seated on the terrain then, and the scene seats it on the drawn ground now; the mangrove
+        // crab's point was 9 cm over its rock's face. Cast once along the point's normal at the rock instance drawn
+        // there, kept by the point.)
+        const cast = this.castFace(point, out);
+        if (cast !== undefined) return cast;
+        if (!this.stretched.size) return null;
+        let best: (StretchedRock & {reach: number}) | null = null;
+        let least = Infinity;
+        const cx = Math.floor(point.x / 8);
+        const cz = Math.floor(point.z / 8);
+        for (let a = -1; a <= 1; a++)
+            for (let b = -1; b <= 1; b++)
+                for (const rock of this.stretched.get(stretchKey(cx + a, cz + b)) ?? []) {
+                    const d = Math.hypot(point.x - rock.x, point.y - rock.y, point.z - rock.z);
+                    if (d < rock.reach && d < least) {
+                        least = d;
+                        best = rock;
+                    }
+                }
+        return best ? (stretchedFace(point, best, out) as T) : null;
+    }
+
+    /** Round 3: every instance by 8 m cell, for `castFace`. */
+    private readonly cells = new Map<number, Array<{asset: string; index: number; reach: number}>>();
+    private readonly faceCache = new Map<string, {x: number; y: number; z: number; nx: number; ny: number; nz: number} | null>();
+    private readonly caster = new Raycaster();
+    private readonly castMesh = new Mesh();
+
+    /**
+     * The drawn surface of the rock instance nearest `point` along its normal (within 40 cm), into `out`; null when the
+     * rock there is drawn and that face is not within reach (kept as made); undefined when no rock there is drawn yet.
+     */
+    private castFace<T extends {x: number; y: number; z: number; nx: number; ny: number; nz: number; tx: number; ty: number; tz: number}>(point: T, out: T): T | null | undefined {
+        const key = `${Math.round(point.x * 1000)},${Math.round(point.y * 1000)},${Math.round(point.z * 1000)}`;
+        let found = this.faceCache.get(key);
+        if (found === undefined) {
+            let best: {asset: string; index: number; reach: number} | null = null;
+            let least = Infinity;
+            const cx = Math.floor(point.x / 8);
+            const cz = Math.floor(point.z / 8);
+            for (let a = -1; a <= 1; a++)
+                for (let b = -1; b <= 1; b++)
+                    for (const at of this.cells.get(stretchKey(cx + a, cz + b)) ?? []) {
+                        const it = this.byAsset.get(at.asset)!.instances[at.index];
+                        const d = Math.hypot(point.x - it.x, point.y - it.y, point.z - it.z);
+                        if (d < at.reach && d < least) {
+                            least = d;
+                            best = at;
+                        }
+                    }
+            if (!best) return undefined;
+            const entry = this.byAsset.get(best.asset)!;
+            const geometry = (entry.meshes.lod0 ?? entry.meshes.lod1)?.geometry;
+            if (!geometry) return undefined;
+            const mesh = this.castMesh;
+            mesh.geometry = geometry;
+            mesh.material = (entry.meshes.lod0 ?? entry.meshes.lod1)!.material;
+            mesh.matrixWorld.copy(entry.instances[best.index].matrix);
+            const n = castNormal.set(point.nx, point.ny, point.nz).normalize();
+            const REACH = 0.4;
+            this.caster.set(castFrom.set(point.x, point.y, point.z).addScaledVector(n, REACH), castDown.copy(n).negate());
+            this.caster.near = 0;
+            this.caster.far = REACH * 2;
+            const hits = this.caster.intersectObject(mesh, false);
+            // The drawn surface nearest the point made (it may be in front of it or behind it).
+            let hit = null;
+            for (const h of hits) if (!hit || Math.abs(h.distance - REACH) < Math.abs(hit.distance - REACH)) hit = h;
+            if (hit && hit.face) {
+                const normal = castNormal.copy(hit.face.normal).transformDirection(mesh.matrixWorld);
+                // (A face turned away from the point's own way is the rock's inside seen through a gap: kept as made.)
+                found = normal.dot(n) > 0.2 ? {x: hit.point.x, y: hit.point.y, z: hit.point.z, nx: normal.x, ny: normal.y, nz: normal.z} : null;
+            } else found = null;
+            if (this.faceCache.size > 4096) this.faceCache.clear();
+            this.faceCache.set(key, found);
+        }
+        if (!found) return null;
+        out.x = found.x;
+        out.y = found.y;
+        out.z = found.z;
+        out.nx = found.nx;
+        out.ny = found.ny;
+        out.nz = found.nz;
+        // Its way along the face: the made one, laid in the drawn face.
+        const t = castTangent.set(point.tx, point.ty, point.tz);
+        t.addScaledVector(castNormal.set(found.nx, found.ny, found.nz), -t.dot(castNormal));
+        if (t.lengthSq() > 1e-10) t.normalize();
+        else t.set(point.tx, point.ty, point.tz);
+        out.tx = t.x;
+        out.ty = t.y;
+        out.tz = t.z;
+        return out;
+    }
+
+    private readonly belowCache = new Map<string, number | null>();
+
+    /**
+     * ARK-CONTACT (the owner, 2026-11-21: "a golden tortoise beetle is hovering above a daisy"): the highest drawn surface
+     * of these instances straight under a point, from `up` over it to `down` under it (its world height), or null where
+     * none is drawn there. Each instance as placed (its own scale and turn). Kept by the point (5 mm).
+     */
+    surfaceBelow(x: number, y: number, z: number, up: number, down: number): number | null {
+        const key = `${Math.round(x * 200)},${Math.round(y * 200)},${Math.round(z * 200)},${up},${down}`;
+        const known = this.belowCache.get(key);
+        if (known !== undefined) return known;
+        let best: number | null = null;
+        const cx = Math.floor(x / 8);
+        const cz = Math.floor(z / 8);
+        for (let a = -1; a <= 1; a++)
+            for (let b = -1; b <= 1; b++)
+                for (const at of this.cells.get(stretchKey(cx + a, cz + b)) ?? []) {
+                    const entry = this.byAsset.get(at.asset)!;
+                    const it = entry.instances[at.index];
+                    if (Math.hypot(x - it.x, z - it.z) > at.reach) continue;
+                    const geometry = (entry.meshes.lod0 ?? entry.meshes.lod1)?.geometry;
+                    if (!geometry) continue;
+                    const mesh = this.castMesh;
+                    mesh.geometry = geometry;
+                    mesh.material = this.insideMaterial;
+                    mesh.matrixWorld.copy(it.matrix);
+                    this.caster.set(castFrom.set(x, y + up, z), castDown.set(0, -1, 0));
+                    this.caster.near = 0;
+                    this.caster.far = up + down;
+                    const hit = this.caster.intersectObject(mesh, false)[0];
+                    if (hit && (best === null || hit.point.y > best)) best = hit.point.y;
+                }
+        if (this.belowCache.size > 8192) this.belowCache.clear();
+        this.belowCache.set(key, best);
+        return best;
+    }
+
+    private readonly insideCache = new Map<string, number>();
+    private readonly insideMaterial = new MeshStandardMaterial({side: DoubleSide});
+
+    /**
+     * ARK-CONTACT (the owner, 2026-11-21: "shield bugs and stink bugs are inside a rock"): how far a point is inside a
+     * drawn rock (m, to the rock's surface straight above it), 0 outside every rock. A ray up from the point through
+     * the rock instances within reach: its first crossing leaving a rock (the face turned the ray's way) is the rock's
+     * top over the point. Kept by the point (2 cm).
+     */
+    insideRock(x: number, y: number, z: number): number {
+        const key = `${Math.round(x * 50)},${Math.round(y * 50)},${Math.round(z * 50)}`;
+        const known = this.insideCache.get(key);
+        if (known !== undefined) return known;
+        let depth = 0;
+        const cx = Math.floor(x / 8);
+        const cz = Math.floor(z / 8);
+        for (let a = -1; a <= 1; a++)
+            for (let b = -1; b <= 1; b++)
+                for (const at of this.cells.get(stretchKey(cx + a, cz + b)) ?? []) {
+                    const entry = this.byAsset.get(at.asset)!;
+                    const it = entry.instances[at.index];
+                    if (Math.hypot(x - it.x, z - it.z) > at.reach) continue;
+                    const geometry = (entry.meshes.lod0 ?? entry.meshes.lod1)?.geometry;
+                    if (!geometry) continue;
+                    const mesh = this.castMesh;
+                    mesh.geometry = geometry;
+                    mesh.material = this.insideMaterial;
+                    mesh.matrixWorld.copy(it.matrix);
+                    this.caster.set(castFrom.set(x, y, z), castDown.set(0, 1, 0));
+                    this.caster.near = 0;
+                    this.caster.far = at.reach * 2 + 1;
+                    const hit = this.caster.intersectObject(mesh, false)[0];
+                    if (!hit?.face) continue;
+                    const up = castNormal.copy(hit.face.normal).transformDirection(mesh.matrixWorld).y;
+                    if (up > 0.05) depth = Math.max(depth, hit.distance);
+                }
+        if (this.insideCache.size > 8192) this.insideCache.clear();
+        this.insideCache.set(key, depth);
+        return depth;
+    }
+
     private readonly byAsset = new Map<string, {instances: Instance[]; meshes: Partial<Record<Level, InstancedMesh>>; distances: [number, number, number]; info: AssetInfo; levels?: Int8Array}>();
     private reach = 1;
     private shadows = true;
@@ -156,7 +337,27 @@ export class AssetInstances {
             const foot = placed.foot && placed.foot.k > 1 ? placed.foot : null;
             at.set(0, foot ? foot.top * placed.scale * (1 - foot.k) : 0, 0).applyQuaternion(rotation).add(lift.set(placed.x, placed.y, placed.z));
             const matrix = new Matrix4().compose(at, rotation, size.set(placed.scale, placed.scale * (foot?.k ?? 1), placed.scale));
+            // ARK-CONTACT: kept, to put what sits on its faces on the rock as drawn (`drawnFace`).
+            if (foot) {
+                const up = upVector.set(0, 1, 0).applyQuaternion(rotation);
+                const b = infoFor(placed.id).bounds ?? {min: [0, 0, 0], max: [2, 2, 2]};
+                const reach = Math.hypot(b.max[0] - b.min[0], (b.max[1] - b.min[1]) * foot.k, b.max[2] - b.min[2]) * placed.scale;
+                const rock: StretchedRock & {reach: number} = {x: placed.x, y: placed.y, z: placed.z, ux: up.x, uy: up.y, uz: up.z, scale: placed.scale, top: foot.top, k: foot.k, reach};
+                const key = stretchCell(placed.x, placed.z);
+                const list = this.stretched.get(key);
+                if (list) list.push(rock);
+                else this.stretched.set(key, [rock]);
+            }
             const shade = placed.shade ?? 1;
+            {
+                const b = infoFor(placed.id).bounds;
+                const reach = b ? Math.hypot(b.max[0] - b.min[0], (b.max[1] - b.min[1]) * (foot?.k ?? 1), b.max[2] - b.min[2]) * placed.scale : 4 * placed.scale;
+                const key = stretchCell(placed.x, placed.z);
+                const at = {asset: placed.id, index: entry.instances.length, reach};
+                const list = this.cells.get(key);
+                if (list) list.push(at);
+                else this.cells.set(key, [at]);
+            }
             entry.instances.push({x: placed.x, y: placed.y, z: placed.z, matrix, tint: new Color(shade, shade, shade)});
         }
         void this.load(base.replace(/\/+$/, ""));
@@ -304,6 +505,13 @@ export class AssetInstances {
         if (this.materials.double !== this.materials.front) this.materials.double.dispose();
     }
 }
+
+const castNormal = new Vector3();
+const castFrom = new Vector3();
+const castDown = new Vector3();
+const castTangent = new Vector3();
+const stretchKey = (cx: number, cz: number) => (cx + 4096) * 8192 + (cz + 4096);
+const stretchCell = (x: number, z: number) => stretchKey(Math.floor(x / 8), Math.floor(z / 8));
 
 /** Every decor rock as its asset rock (batch 5). */
 export class AssetRocks extends AssetInstances {
