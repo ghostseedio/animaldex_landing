@@ -479,6 +479,25 @@
             "caredFarmer": "Hutunzwa na mkulima",
             "caredKeeper": "Hutunzwa na mlinzi wa wanyama"
         },
+        "grew": {
+            "line": "Amekuwa na nguvu zaidi: {stat} +{n} · {cause}",
+            "total": "+{n} kutoka Ark",
+            "note": "Imepatwa na mnyama wake ndani ya Ark",
+            "stats": {
+                "dominance": "utawala",
+                "speed": "kasi",
+                "size": "ukubwa",
+                "intelligence": "akili"
+            },
+            "from": {
+                "hunt": "uwindaji uliofanikiwa",
+                "escape": "kumtoroka mwindaji",
+                "defend": "kulinda mayai yake",
+                "young": "mtoto wake wa kwanza",
+                "raised": "kulea watoto wake",
+                "old": "maisha marefu"
+            }
+        },
         "activity": {
             "food": "anatafuta chakula",
             "grazing": "anakula majani",

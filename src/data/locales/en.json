@@ -4144,7 +4144,9 @@
       "speed": "Speed",
       "size": "Size",
       "intelligence": "Intelligence",
-      "rarity": "Rarity"
+      "rarity": "Rarity",
+      "fromArk": "+{n} from the Ark",
+      "fromArkDetail": "Earned by its animal on the Ark: {stats}"
     },
     "reveal": {
       "notSureYet": "Not sure yet",
@@ -4690,6 +4692,25 @@
       "caredOwner": "Cared for by its owner",
       "caredFarmer": "Cared for by the farmer",
       "caredKeeper": "Cared for by a keeper"
+    },
+    "grew": {
+      "line": "Grew stronger: +{n} {stat} from {cause}",
+      "total": "+{n} from the Ark",
+      "note": "Earned by its animal on the Ark",
+      "stats": {
+        "dominance": "dominance",
+        "speed": "speed",
+        "size": "size",
+        "intelligence": "intelligence"
+      },
+      "from": {
+        "hunt": "a hunt",
+        "escape": "an escape",
+        "defend": "defending its eggs",
+        "young": "its first young",
+        "raised": "raising its young",
+        "old": "a long life"
+      }
     },
     "activity": {
       "food": "looking for food",

@@ -479,6 +479,25 @@
             "caredFarmer": "由农场主照料",
             "caredKeeper": "由饲养员照料"
         },
+        "grew": {
+            "line": "变得更强：{stat} +{n} · {cause}",
+            "total": "来自 Ark 的 +{n}",
+            "note": "由它在 Ark 上的动物获得",
+            "stats": {
+                "dominance": "统治力",
+                "speed": "速度",
+                "size": "体型",
+                "intelligence": "智力"
+            },
+            "from": {
+                "hunt": "一次成功捕猎",
+                "escape": "躲过捕食者",
+                "defend": "守护它的蛋",
+                "young": "第一只幼崽",
+                "raised": "养育幼崽",
+                "old": "长寿"
+            }
+        },
         "activity": {
             "food": "觅食",
             "grazing": "吃草",

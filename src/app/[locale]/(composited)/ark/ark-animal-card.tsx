@@ -20,6 +20,7 @@ import {arkIndexNumber, decodeArkSpeciesCard, type ArkSpeciesCard} from "@/lib/a
 import {arkPerfCountRender} from "@/ark-scene/runtime/perf";
 import type {ArkCapturePhoto} from "@/lib/ark-capture-photo";
 import {arkPhotoShownOn} from "@/lib/ark-photo-label";
+import {arkGrewWords, arkStatGainNotes, decodeArkStatGains} from "@/lib/ark-stat-gains";
 import {ArkLivesRow} from "@/app/[locale]/(composited)/ark/ark-lives";
 import {ArkCaptureBadges} from "@/app/[locale]/(composited)/ark/ark-capture-badges";
 import {ArkFilled, useCardFocus} from "@/app/[locale]/(composited)/ark/ark-card-focus";
@@ -297,9 +298,11 @@ export function ArkAnimalCard({bandRef, animal, words, locale, talk, arrived, li
         const start = voyageStart ? Date.parse(voyageStart) : NaN;
         const meal = arkRecordNoteFromLife(animal.id, life, Number.isFinite(start) ? start : null);
         if (meal) notes.push(meal);
+        // Stats grow from Ark life (STATS-GROW): "Grew stronger: +1 dominance from a hunt", one line per point.
+        notes.push(...arkStatGainNotes(animal.id, decodeArkStatGains(life.stat_gains), arkGrewWords(words.grew), locale));
         if (life.origin.kind === "born" && life.origin.from_egg) notes.push({animalId: animal.id, id: `hatched:${animal.id}`, kind: "hatched", at: Date.parse(life.origin.at ?? animal.arrived_at), day: null});
         if (notes.length) scene()?.noteRecord?.(notes);
-    }, [life, animal.id, animal.arrived_at, voyageStart, scene]);
+    }, [life, animal.id, animal.arrived_at, voyageStart, scene, words.grew, locale]);
 
     const species = useSpeciesCard(animal, placeholder);
     // The others of its kind aboard (real animals only: the snapshot the scene draws), and ← → to page through them.

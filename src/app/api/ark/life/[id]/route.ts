@@ -32,14 +32,18 @@ export async function GET(_request: Request, {params}: {params: {id: string}}) {
     if (!isArkUuid(params.id)) return NextResponse.json({life: null}, {status: 400, headers: {"Cache-Control": "no-store"}});
     const supabase = createSupabasePublicClient();
     if (!supabase) return NextResponse.json({life: null}, {headers: {"Cache-Control": "no-store"}});
-    const [{data, error}, card] = await Promise.all([
+    // Stats grow from Ark life (STATS-GROW): what its card earned aboard, beside the life story. Any error (the function
+    // not applied yet, the switch off) is no gains, never a missing life story.
+    const [{data, error}, card, gains] = await Promise.all([
         supabase.rpc("voyage_animal_life_v1", {p_animal_id: params.id}),
-        readArkCaptureFacts(params.id)
+        readArkCaptureFacts(params.id),
+        supabase.rpc("voyage_animal_stat_gains_v1", {p_animal_id: params.id})
     ]);
     if (error) {
         if (!isMissingArkFunction(error)) console.warn("[ark] voyage_animal_life_v1 failed", error.message.slice(0, 200));
         return NextResponse.json({life: null}, {headers: {"Cache-Control": isMissingArkFunction(error) ? "public, s-maxage=60" : "no-store"}});
     }
-    const told = data && typeof data === "object" && !Array.isArray(data) ? {...(data as Record<string, unknown>), capture_tier: card.tier, capture_hearts: card.hearts} : data;
+    const statGains = gains.error ? null : gains.data ?? null;
+    const told = data && typeof data === "object" && !Array.isArray(data) ? {...(data as Record<string, unknown>), capture_tier: card.tier, capture_hearts: card.hearts, stat_gains: statGains} : data;
     return NextResponse.json({life: decodeArkLife(told)}, {headers: {"Cache-Control": CACHED}});
 }

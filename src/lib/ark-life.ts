@@ -525,6 +525,11 @@ export type ArkLife = {
      * for an animal born on the Ark, or when the server says nothing.
      */
     capture_hearts?: number | null;
+    /**
+     * Stats grow from Ark life (STATS-GROW): `voyage_animal_stat_gains_v1`'s answer as the server sent it (the route adds
+     * it), decoded by the card's own lazy chunk (`lib/ark-stat-gains.ts`). Null while the switch is off, or nothing earned.
+     */
+    stat_gains?: unknown;
 };
 
 export const ARK_CAPTURE_TIERS = ["S", "A", "B", "C", "D", "E"] as const;
@@ -598,7 +603,8 @@ export function decodeArkLife(raw: unknown): ArkLife | null {
         lineage: decodeArkLineage(row.lineage),
         // Its own capture's tier only: an animal born aboard never shows one (its parent's is not its own).
         capture_tier: origin.kind === "born" ? null : decodeArkCaptureTier(row.capture_tier),
-        capture_hearts: origin.kind !== "born" && typeof row.capture_hearts === "number" && Number.isInteger(row.capture_hearts) && row.capture_hearts >= 0 && row.capture_hearts <= 3 ? row.capture_hearts : null
+        capture_hearts: origin.kind !== "born" && typeof row.capture_hearts === "number" && Number.isInteger(row.capture_hearts) && row.capture_hearts >= 0 && row.capture_hearts <= 3 ? row.capture_hearts : null,
+        stat_gains: row.stat_gains ?? null
     };
 }
 

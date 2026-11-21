@@ -3,6 +3,7 @@ import {captureStarScore, captureStars} from "@/lib/capture-star-rating";
 import {missionIsLocked, missionUnlockCollectionPoints} from "@/lib/ark-world";
 
 import {decodeArkStats} from "@/lib/ark";
+import {decodeCardStatGains, type CardStatGains} from "@/lib/ark-stat-gains";
 import {emptyBehaviorPrincipleIndex, getCatalogBehaviorPrincipleIndex, getUnifiedSpeciesEntries, resolveCatalogBehaviorPrinciple} from "@/data/database-species-pages";
 import {getLegendaryEarthBeast} from "@/data/legendary-earth-beasts";
 import {fetchPowerSetCompletions} from "@/data/power-set-completions";
@@ -420,6 +421,8 @@ export type AppCaptureDetail = {
     baseGameStats: AppCaptureGameStats;
     effectiveGameStats: AppCaptureGameStats;
     statDeltas: AppCaptureGameStats;
+    /** STATS-GROW: the points its own Ark animal earned aboard (already in effectiveGameStats), or null. */
+    arkStatGains?: CardStatGains | null;
     trainingBoosts: AppCaptureTrainingBoosts;
     comparisonStatBoosts: AppCaptureGameStats;
     endorsementBonuses: AppCaptureGameStats;
@@ -1270,6 +1273,7 @@ export async function getPublicCaptureDetail(id: string): Promise<PublicCaptureD
             baseGameStats,
             effectiveGameStats,
             statDeltas,
+            arkStatGains: item.arkStatGains ?? null,
             trainingBoosts: {
                 dominance: finiteInteger(item.statBoosts.dominance),
                 speed: finiteInteger(item.statBoosts.speed),
@@ -1316,7 +1320,7 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
     if (!supabase) return null;
     const {data: {user}} = await supabase.auth.getUser();
     if (!user) return null;
-    const [captureResult, comparisonResult, progressionResult, starResult] = await Promise.all([
+    const [captureResult, comparisonResult, progressionResult, starResult, arkGainResult] = await Promise.all([
         supabase.from("captures")
             .select("id,status,title,created_at,location_display_label,location_lat,location_lng,challenge_health,challenge_stake,is_challenge_ready,is_discoverable,dominance_boost,speed_boost,intelligence_boost,dominance_endorsements,speed_endorsements,size_endorsements,intelligence_endorsements,rarity_endorsements,analysis_results(animal_name,scientific_name,normalized_identity_key,breed_guess,breed_confidence,human_context,zoo_or_wild,conservation_tier,confidence,type_tags,game_stats,premium_details,signals,observed_market_modifiers,raw_json,capture_grade,error_message,completed_at)")
             .eq("id", id)
@@ -1334,7 +1338,9 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
         supabase.from("capture_star_ratings")
             .select("stars,star_score")
             .eq("capture_id", id)
-            .maybeSingle()
+            .maybeSingle(),
+        // STATS-GROW: what its Ark animal earned (all 0 while the switch is off; an error, a server without it, is none).
+        supabase.rpc("ark_stat_gain_totals", {p_capture_id: id})
     ]);
     const data = captureResult.data;
     if (!data) return null;
@@ -1367,11 +1373,13 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
         intelligence: finiteInteger(row.intelligence_endorsements),
         rarity: finiteInteger(row.rarity_endorsements)
     };
+    const arkStatGains = arkGainResult.error ? null : decodeCardStatGains(arkGainResult.data);
+    const ark = arkStatGains ?? {dominance: 0, speed: 0, size: 0, intelligence: 0};
     const effectiveGameStats: AppCaptureGameStats = {
-        dominance: clampGameStat(baseGameStats.dominance + trainingBoosts.dominance + comparisonStatBoosts.dominance + endorsementBonuses.dominance),
-        speed: clampGameStat(baseGameStats.speed + trainingBoosts.speed + comparisonStatBoosts.speed + endorsementBonuses.speed),
-        size: clampGameStat(baseGameStats.size + comparisonStatBoosts.size + endorsementBonuses.size),
-        intelligence: clampGameStat(baseGameStats.intelligence + trainingBoosts.intelligence + comparisonStatBoosts.intelligence + endorsementBonuses.intelligence),
+        dominance: clampGameStat(baseGameStats.dominance + trainingBoosts.dominance + comparisonStatBoosts.dominance + endorsementBonuses.dominance + ark.dominance),
+        speed: clampGameStat(baseGameStats.speed + trainingBoosts.speed + comparisonStatBoosts.speed + endorsementBonuses.speed + ark.speed),
+        size: clampGameStat(baseGameStats.size + comparisonStatBoosts.size + endorsementBonuses.size + ark.size),
+        intelligence: clampGameStat(baseGameStats.intelligence + trainingBoosts.intelligence + comparisonStatBoosts.intelligence + endorsementBonuses.intelligence + ark.intelligence),
         rarity: clampGameStat(baseGameStats.rarity + comparisonStatBoosts.rarity + endorsementBonuses.rarity)
     };
     const statDeltas: AppCaptureGameStats = {
@@ -1452,6 +1460,7 @@ export async function getAppCaptureDetail(id: string): Promise<AppCaptureDetail 
         baseGameStats,
         effectiveGameStats,
         statDeltas,
+        arkStatGains,
         trainingBoosts,
         comparisonStatBoosts,
         endorsementBonuses,

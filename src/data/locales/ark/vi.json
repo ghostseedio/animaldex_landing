@@ -479,6 +479,25 @@
             "caredFarmer": "Được người nông dân chăm sóc",
             "caredKeeper": "Được một người giữ thú chăm sóc"
         },
+        "grew": {
+            "line": "Mạnh hơn: {stat} +{n} · {cause}",
+            "total": "+{n} từ Ark",
+            "note": "Do con vật của nó đạt được trên Ark",
+            "stats": {
+                "dominance": "thống trị",
+                "speed": "tốc độ",
+                "size": "kích thước",
+                "intelligence": "trí thông minh"
+            },
+            "from": {
+                "hunt": "một lần săn mồi",
+                "escape": "thoát khỏi kẻ săn mồi",
+                "defend": "bảo vệ trứng",
+                "young": "con non đầu tiên",
+                "raised": "nuôi con",
+                "old": "sống lâu"
+            }
+        },
         "activity": {
             "food": "tìm thức ăn",
             "grazing": "gặm cỏ",

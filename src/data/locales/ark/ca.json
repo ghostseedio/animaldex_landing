@@ -479,6 +479,25 @@
             "caredFarmer": "En té cura el pagès",
             "caredKeeper": "En té cura un cuidador"
         },
+        "grew": {
+            "line": "Més fort: {stat} +{n} · {cause}",
+            "total": "+{n} de l'Ark",
+            "note": "Guanyat pel seu animal a l'Ark",
+            "stats": {
+                "dominance": "dominància",
+                "speed": "velocitat",
+                "size": "mida",
+                "intelligence": "intel·ligència"
+            },
+            "from": {
+                "hunt": "una caça",
+                "escape": "una fugida",
+                "defend": "defensa dels ous",
+                "young": "la primera cria",
+                "raised": "criar les cries",
+                "old": "una vida llarga"
+            }
+        },
         "activity": {
             "food": "busca menjar",
             "grazing": "pastura",

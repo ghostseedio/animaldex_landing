@@ -479,6 +479,25 @@
             "caredFarmer": "A gazda gondozza",
             "caredKeeper": "Egy állatgondozó gondozza"
         },
+        "grew": {
+            "line": "Erősebb lett: {stat} +{n} · {cause}",
+            "total": "+{n} az Arkról",
+            "note": "Az állata szerezte az Arkon",
+            "stats": {
+                "dominance": "dominancia",
+                "speed": "gyorsaság",
+                "size": "méret",
+                "intelligence": "intelligencia"
+            },
+            "from": {
+                "hunt": "sikeres vadászat",
+                "escape": "menekülés a ragadozó elől",
+                "defend": "a tojások védelme",
+                "young": "az első utód",
+                "raised": "utódnevelés",
+                "old": "hosszú élet"
+            }
+        },
         "activity": {
             "food": "élelmet keres",
             "grazing": "legel",

@@ -479,6 +479,25 @@
             "caredFarmer": "Îngrijit de fermier",
             "caredKeeper": "Îngrijit de un îngrijitor"
         },
+        "grew": {
+            "line": "Mai puternic: {stat} +{n} · {cause}",
+            "total": "+{n} din Ark",
+            "note": "Câștigat de animalul său în Ark",
+            "stats": {
+                "dominance": "dominanță",
+                "speed": "viteză",
+                "size": "mărime",
+                "intelligence": "inteligență"
+            },
+            "from": {
+                "hunt": "o vânătoare",
+                "escape": "o scăpare",
+                "defend": "apărarea ouălor",
+                "young": "primul pui",
+                "raised": "creșterea puilor",
+                "old": "o viață lungă"
+            }
+        },
         "activity": {
             "food": "caută hrană",
             "grazing": "paște",

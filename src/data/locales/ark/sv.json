@@ -479,6 +479,25 @@
             "caredFarmer": "Sköts av bonden",
             "caredKeeper": "Sköts av en djurskötare"
         },
+        "grew": {
+            "line": "Blev starkare: {stat} +{n} · {cause}",
+            "total": "+{n} från Ark",
+            "note": "Intjänat av djuret i Ark",
+            "stats": {
+                "dominance": "dominans",
+                "speed": "fart",
+                "size": "storlek",
+                "intelligence": "intelligens"
+            },
+            "from": {
+                "hunt": "en jakt",
+                "escape": "en flykt",
+                "defend": "försvar av äggen",
+                "young": "den första ungen",
+                "raised": "uppfödning av ungarna",
+                "old": "ett långt liv"
+            }
+        },
         "activity": {
             "food": "letar efter föda",
             "grazing": "betar",

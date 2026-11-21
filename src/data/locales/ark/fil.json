@@ -479,6 +479,25 @@
             "caredFarmer": "Inaalagaan ng magsasaka",
             "caredKeeper": "Inaalagaan ng isang tagapag-alaga"
         },
+        "grew": {
+            "line": "Lumakas: {stat} +{n} · {cause}",
+            "total": "+{n} mula sa Ark",
+            "note": "Nakuha ng hayop nito sa Ark",
+            "stats": {
+                "dominance": "dominance",
+                "speed": "bilis",
+                "size": "laki",
+                "intelligence": "talino"
+            },
+            "from": {
+                "hunt": "isang pangangaso",
+                "escape": "isang pagtakas",
+                "defend": "pagtatanggol sa mga itlog",
+                "young": "unang anak",
+                "raised": "pagpapalaki sa mga anak",
+                "old": "mahabang buhay"
+            }
+        },
         "activity": {
             "food": "naghahanap ng pagkain",
             "grazing": "nanginginain",

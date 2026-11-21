@@ -770,6 +770,7 @@ export default function CaptureDetailClient({
                                 bondChip={bondChip}
                                 onBondLevel={viewer.isOwner ? () => setTab("bond") : null}
                                 words={captureWords.stats}
+                                arkGain={capture.arkStatGains ?? null}
                             />
                         ) : null}
                         {rankings ? <div className="mt-5">{rankings}</div> : null}

@@ -479,6 +479,25 @@
             "caredFarmer": "Cuidado pelo agricultor",
             "caredKeeper": "Cuidado por um tratador"
         },
+        "grew": {
+            "line": "Mais forte: {stat} +{n} · {cause}",
+            "total": "+{n} da Ark",
+            "note": "Ganho pelo seu animal na Ark",
+            "stats": {
+                "dominance": "dominância",
+                "speed": "velocidade",
+                "size": "tamanho",
+                "intelligence": "inteligência"
+            },
+            "from": {
+                "hunt": "uma caçada",
+                "escape": "uma fuga",
+                "defend": "defesa dos ovos",
+                "young": "o primeiro filhote",
+                "raised": "criar os filhotes",
+                "old": "uma vida longa"
+            }
+        },
         "activity": {
             "food": "procurando comida",
             "grazing": "pastando",

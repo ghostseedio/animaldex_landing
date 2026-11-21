@@ -479,6 +479,25 @@
             "caredFarmer": "Çiftçi bakıyor",
             "caredKeeper": "Bir bakıcı bakıyor"
         },
+        "grew": {
+            "line": "Güçlendi: {stat} +{n} · {cause}",
+            "total": "Ark'tan +{n}",
+            "note": "Hayvanı Ark'ta kazandı",
+            "stats": {
+                "dominance": "baskınlık",
+                "speed": "hız",
+                "size": "boyut",
+                "intelligence": "zekâ"
+            },
+            "from": {
+                "hunt": "başarılı av",
+                "escape": "avcıdan kaçış",
+                "defend": "yumurtaları koruma",
+                "young": "ilk yavru",
+                "raised": "yavru büyütme",
+                "old": "uzun bir ömür"
+            }
+        },
         "activity": {
             "food": "yiyecek arıyor",
             "grazing": "otluyor",

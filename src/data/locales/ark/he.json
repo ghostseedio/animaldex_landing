@@ -479,6 +479,25 @@
             "caredFarmer": "מטופל בידי החקלאי",
             "caredKeeper": "מטופל בידי מטפל בגן החיות"
         },
+        "grew": {
+            "line": "התחזק: {stat} +{n} · {cause}",
+            "total": "+{n} מה-Ark",
+            "note": "החיה שלו הרוויחה ב-Ark",
+            "stats": {
+                "dominance": "שליטה",
+                "speed": "מהירות",
+                "size": "גודל",
+                "intelligence": "תבונה"
+            },
+            "from": {
+                "hunt": "ציד מוצלח",
+                "escape": "בריחה מטורף",
+                "defend": "הגנה על הביצים",
+                "young": "הצאצא הראשון",
+                "raised": "גידול הצאצאים",
+                "old": "חיים ארוכים"
+            }
+        },
         "activity": {
             "food": "בחיפוש אחר מזון",
             "grazing": "במרעה",

@@ -4129,7 +4129,9 @@
       "speed": "Kecepatan",
       "size": "Ukuran",
       "intelligence": "Kecerdasan",
-      "rarity": "Kelangkaan"
+      "rarity": "Kelangkaan",
+      "fromArk": "+{n} dari Ark",
+      "fromArkDetail": "Didapat hewannya di Ark: {stats}"
     },
     "reveal": {
       "notSureYet": "Belum yakin",
@@ -4723,6 +4725,25 @@
       "caredOwner": "Dirawat oleh pemiliknya",
       "caredFarmer": "Dirawat oleh peternak",
       "caredKeeper": "Dirawat oleh seorang penjaga"
+    },
+    "grew": {
+      "line": "Makin kuat: {stat} +{n} · {cause}",
+      "total": "+{n} dari Ark",
+      "note": "Didapat hewannya di Ark",
+      "stats": {
+        "dominance": "dominasi",
+        "speed": "kecepatan",
+        "size": "ukuran",
+        "intelligence": "kecerdasan"
+      },
+      "from": {
+        "hunt": "berburu",
+        "escape": "lolos dari pemangsa",
+        "defend": "menjaga telurnya",
+        "young": "anak pertamanya",
+        "raised": "membesarkan anaknya",
+        "old": "umur panjang"
+      }
     },
     "activity": {
       "food": "mencari makanan",
