@@ -7,6 +7,7 @@ import {templateSafeTitle} from "@/lib/brand-title";
 import {checkJsonLd} from "@/lib/seo/structured-data-check";
 import {animalDexAppJsonLd, articleAuthorship, ogCardImageUrl} from "@/lib/seo/structured-data";
 import {nameLead} from "@/lib/species-name-lead";
+import {parseSpeciesImageFile, speciesImagePath, speciesImageUrl} from "@/lib/species-image-path";
 
 /**
  * SEO pass, 2026-11-21: a live audit of 1,053 sitemap URLs found the app's
@@ -56,7 +57,7 @@ test("JSON-LD share-card images are absolute and robots.txt lets Google fetch th
 
 test("the species page's Article and video fallback use the share card, not the artwork route", () => {
     const page = read(`${COMPOSITED}/animals/[slug]/page.tsx`);
-    assert.match(page, /image: ogCardImageUrl\("species", entry\.slug\)/);
+    assert.match(page, /image: \[ogCardImageUrl\("species", entry\.slug\), \.\.\.\(ownArtworkUrl \? \[ownArtworkUrl\] : \[\]\)\]/);
     assert.match(page, /fallbackThumbnailUrl: ogCardImageUrl\("species", entry\.slug\)/);
     assert.doesNotMatch(page, /image: getAbsoluteUrl\(locale, getSpeciesImageRoute/);
 });
@@ -88,4 +89,32 @@ test("long Power, Pokemon, hybrid, video and Help titles drop the brand instead 
 test("a one-word Help summary is not the whole result snippet", () => {
     const support = read(`${COMPOSITED}/support/[categorySlug]/[articleSlug]/page.tsx`);
     assert.match(support, /article\.summary\.trim\(\)\.length >= 70/);
+});
+
+test("the same-origin species image path: kebab-case slugs only, robots-allowed, and the route is no open proxy", () => {
+    assert.equal(speciesImagePath("Red-Fox"), "/img/species/red-fox.webp");
+    assert.match(speciesImageUrl("red-fox"), /^https?:\/\/[^/]+\/img\/species\/red-fox\.webp$/);
+    assert.equal(robotsBlocks(speciesImageUrl("red-fox")), false);
+    assert.equal(parseSpeciesImageFile("red-fox.webp"), "red-fox");
+    for (const bad of ["red-fox.png", "../red-fox.webp", "red fox.webp", "https:%2F%2Fevil.example%2Fx.webp", "Red-Fox.webp", "-fox.webp", ".webp", `${"a".repeat(121)}.webp`]) {
+        assert.equal(parseSpeciesImageFile(bad), null, bad);
+    }
+    const route = read("src/app/img/species/[file]/route.ts");
+    // One host and one bucket (getSpeciesArtworkUrl), only the slug's own file, raster types only, no robots header.
+    assert.match(route, /getExactSpeciesArtworkFile\(slug\)/);
+    assert.match(route, /getSpeciesArtworkUrl\(slug, file\)/);
+    assert.doesNotMatch(route, /searchParams|request\.url/);
+    assert.doesNotMatch(route, /image\/svg/);
+    assert.doesNotMatch(route, /"X-Robots-Tag":/i);
+    assert.match(route, /s-maxage=2592000/);
+    // The middleware skips paths with a dot, so no locale redirect lands on it.
+    assert.ok(read("src/middleware.ts").includes(String.raw`.*\\..*`));
+});
+
+test("/p and /guides structured data name crawlable images, not the capture renditions under /api/", () => {
+    const post = read("src/app/[locale]/p/[postId]/page.tsx");
+    assert.match(post, /discoverPostJsonLd\(seo, \{pageUrl, imageUrl: ldImages/);
+    assert.match(post, /ogCardImageUrl\("species", animal\.slug\)/);
+    const guide = read(`${COMPOSITED}/guides/[listing]/page.tsx`);
+    assert.match(guide, /guideStructuredData\(guide, canonicalUrl, guideStructuredDataImages\(guide\)\)/);
 });

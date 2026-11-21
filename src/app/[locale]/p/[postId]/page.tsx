@@ -9,6 +9,9 @@ import ShareReferralCapture from "@/components/store/share-referral-capture";
 import {getDiscoverPostById} from "@/data/discover-timeline";
 import {discoverPostJsonLd, discoverPostSeoFields} from "@/lib/discover-post-seo";
 import {getSpeciesImageRoute} from "@/data/species-images";
+import {getExactSpeciesArtworkFile} from "@/data/species-artwork-index";
+import {ogCardImageUrl} from "@/lib/seo/structured-data";
+import {speciesImageUrl} from "@/lib/species-image-path";
 import {
     discoverPostAnimal,
     discoverPostPath,
@@ -97,13 +100,16 @@ export default async function DiscoverPostPage({params}: DiscoverPostPageProps) 
 
     const seo = postSeoFields(post);
     const pageUrl = getAbsoluteUrl(params.locale, discoverPostPath(post.id));
-    const imageUrl = getAbsoluteAssetUrl(seo.imageSrc);
     const videoUrl = seo.video ? getAbsoluteAssetUrl(seo.video.url) : null;
-
-    const jsonLd = discoverPostJsonLd(seo, {pageUrl, imageUrl, videoUrl, siteUrl: getAbsoluteUrl(params.locale)});
 
     // Somebody who opened a shared link: the app, and the animal's own page and voice.
     const animal = discoverPostAnimal(post);
+    // Structured data names images Google can fetch: the animal's share card and its own artwork
+    // (/img/species), or the site card. The capture photo (og:image, for link previews) is under /api/.
+    const ldImages = animal
+        ? [ogCardImageUrl("species", animal.slug), ...((await getExactSpeciesArtworkFile(animal.slug).catch(() => null)) ? [speciesImageUrl(animal.slug)] : [])]
+        : [getAbsoluteAssetUrl("/images/og.png")];
+    const jsonLd = discoverPostJsonLd(seo, {pageUrl, imageUrl: ldImages, videoUrl, siteUrl: getAbsoluteUrl(params.locale)});
     const [t, askT, animalsT, messages] = await Promise.all([
         getScopedTranslator(params.locale, "post"),
         getScopedTranslator(params.locale, "askAnimalDex"),
