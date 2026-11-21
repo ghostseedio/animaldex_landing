@@ -7,7 +7,7 @@ import {getUnifiedSpeciesEntries} from "@/data/database-species-pages";
 import {createSupabaseServerClient} from "@/lib/supabase/server";
 import {getCaptureImageRoute} from "@/lib/capture-storage-image";
 import {comparePackBuilderCaptures} from "@/lib/pack-guarantee";
-import {captureBattlePower, captureBattleTierFromPower} from "@/lib/capture-battle-tier";
+import {captureBattlePower, captureBattleTier} from "@/lib/capture-battle-tier";
 import {APP_MODULE_THUMBNAILS, ARENA_MODULE_ACCENTS} from "@/lib/app-module-thumbnails";
 import type {SupabaseClient} from "@supabase/supabase-js";
 
@@ -324,6 +324,17 @@ function tradeValue(stats: Record<string, number>) {
     )));
 }
 
+function toBaseGameStats(row: QueryRow) {
+    const stored = row.game_stats && typeof row.game_stats === "object" ? row.game_stats as QueryRow : {};
+    return {
+        dominance: readNumber(stored, "dominance"),
+        speed: readNumber(stored, "speed"),
+        size: readNumber(stored, "size"),
+        intelligence: readNumber(stored, "intelligence"),
+        rarity: readNumber(stored, "rarity")
+    };
+}
+
 function toGameStats(row: QueryRow) {
     const stored = row.game_stats && typeof row.game_stats === "object" ? row.game_stats as QueryRow : {};
     const stats = {
@@ -360,7 +371,8 @@ function toTrainPackCapture(row: QueryRow): TrainPackCapture | null {
         contextLabel: readableContext(row),
         locationDisplayLabel: typeof row.location_display_label === "string" && row.location_display_label.trim() ? row.location_display_label.trim() : null,
         battlePower: power,
-        battleTier: captureBattleTierFromPower(power),
+        // GRADING-3: bands + one-band ceiling over the species stats; rarity never boosted.
+        battleTier: captureBattleTier({baseStats: toBaseGameStats(row), effectiveStats: stats}),
         tradeValue: tradeValue(stats),
         rarity: stats.rarity ?? 0,
         gameStats: stats
