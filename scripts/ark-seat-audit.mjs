@@ -199,7 +199,9 @@ for (const island of islands) {
     }
     for (const hour of hours) {
         await calm(hour);
-        await wait(2500);
+        // (The hour is a jump of the island's clock: its animals' days start again from where the new hour has them, a
+        // few seconds of poses that are no hour's.)
+        await wait(10000);
         // Every animal the scene draws one by one on this island: its roster from the island's whole view (zoomed in,
         // the scene lets go of the ones out of sight), each with where it is now.
         await page.evaluate((view) => window.__arkScene.setView(view), wide);
