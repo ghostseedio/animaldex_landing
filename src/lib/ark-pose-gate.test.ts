@@ -29,10 +29,10 @@ import {
     restRow,
     worstLook
 } from "@/ark-scene/locomotion/neck-gate";
-import {REST_HEAD_TURNS, SIT_FACE_DEG, SIT_FULL_BOW, SIT_HEAD_LEVEL_DEG, SIT_SHAPES, SitSleepPose, posedSitRows} from "@/ark-scene/locomotion/sit-sleep-pose";
+import {SIT_FACE_DEG, SIT_FULL_BOW, SIT_HEAD_LEVEL_DEG, SIT_SHAPES, SitSleepPose, posedSitRows} from "@/ark-scene/locomotion/sit-sleep-pose";
 import {capHeadYawRows, yawFromChest} from "@/ark-scene/locomotion/bird-neck";
 import {rowToWorld} from "@/ark-scene/locomotion/skeleton";
-import {rigLookShare} from "@/ark-scene/rig-player";
+import {POSED_LIE_HELD, POSED_SIT_HELD, rigLookShare} from "@/ark-scene/rig-player";
 
 const FIXTURES = path.join(process.cwd(), "src/ark-scene/locomotion/fixtures");
 const raws = readdirSync(FIXTURES)
@@ -238,7 +238,7 @@ test("a clip's own head turn: a row past the look's cap comes back to it, one wi
     assert.ok(Math.abs(Math.abs(yawOf(2, rig.neck)) - 24) < 0.5);
 });
 
-test("the posed sit: the head ends level, its turn split between the neck and the head; a model whose head was turned keeps the turn and is levelled about its own axis", () => {
+test("the posed sit: the head ends level and facing ahead, its turn split between the neck and the head", () => {
     for (const shape of SIT_SHAPES) assert.ok(shape.level! >= 0.85 && shape.level! <= 1 && shape.back === 58 && shape.face === SIT_FACE_DEG && shape.neck >= 0 && shape.neck <= 0.8, JSON.stringify(shape));
     assert.equal(SIT_SHAPES[0].level, 1);
     assert.deepEqual(SIT_FULL_BOW, {back: 58, neck: 1, face: 70});
@@ -259,10 +259,6 @@ test("the posed sit: the head ends level, its turn split between the neck and th
     const per = rig.bones.length * 12;
     const plain = posedSitRows(rig, raw, new Uint16Array(per * 2), rig.bones.length, DataUtils.toHalfFloat);
     assert.equal(plain.check.shape, undefined);
-    // A model whose head was turned 40 degrees to its right and 20 up at rest: sitting, it keeps the turn and its face is levelled.
-    const turned = new SitSleepPose(rig, raw, SIT_SHAPES[0], {yaw: -40, pitch: 20});
-    assert.ok(Math.abs(turned.check.headYaw! + 40) < 2, `yaw ${turned.check.headYaw}`);
-    assert.ok(Math.abs(turned.check.headPitch! + SIT_FACE_DEG) < 0.5, `pitch ${turned.check.headPitch}`);
     // With the mesh's triangles, on a made primate: the fit says which split it keeps, and its head is level.
     const made = tube(0.01, 0.1, "primate");
     const madePer = made.rig.bones.length * 12;
@@ -270,6 +266,19 @@ test("the posed sit: the head ends level, its turn split between the neck and th
     assert.ok(fitted.data && fitted.check.shape, JSON.stringify(fitted.check));
     assert.ok(SIT_SHAPES.some((shape) => shape === fitted.check.shape));
     assert.ok(Math.abs(fitted.check.headPitch!) <= SIT_HEAD_LEVEL_DEG);
-    // The models in the table are primates the scene has, their turns within what a neck can take back.
-    for (const [slug, turn] of Object.entries(REST_HEAD_TURNS)) assert.ok(/^[a-z0-9-]+$/.test(slug) && Math.abs(turn.yaw) <= 90 && Math.abs(turn.pitch) <= 30, slug);
+});
+
+test("the remake list: every model held for its own shape is on it, each with what was seen and where to look", () => {
+    const list = JSON.parse(readFileSync(path.join(process.cwd(), "docs/ark/remake-list.json"), "utf8")) as {models: Array<{slug: string; reason: string; seen: string; held: string | null}>};
+    const slugs = list.models.map((m) => m.slug);
+    assert.equal(new Set(slugs).size, slugs.length, "one row a model");
+    for (const model of list.models) {
+        assert.match(model.slug, /^[a-z0-9][a-z0-9-]*$/);
+        assert.ok(model.reason.length > 10 && model.seen.length > 10, model.slug);
+    }
+    // A primate whose sit is held is waiting for a model: on the list, and marked as held.
+    POSED_SIT_HELD.forEach((slug) => assert.equal(list.models.find((m) => m.slug === slug)?.held, "sit", slug));
+    for (const model of list.models) if (model.held === "sit") assert.ok(POSED_SIT_HELD.has(model.slug), model.slug);
+    // (The lying holds, `POSED_LIE_HELD`, are rigs to rig again, not models to make again: not on this list.)
+    POSED_LIE_HELD.forEach((slug) => assert.ok(!slugs.includes(slug), slug));
 });

@@ -823,7 +823,7 @@ export function prepareRigPoses(rig: LocoRig, slug: string, plan: string | null,
     }
     // Lane ark-sleep: a primate sleeps sitting hunched, posed from its skeleton (`locomotion/sit-sleep-pose.ts`), not
     // the rig's own crouch on all fours. (`__arkPosedSit = false`: the rig's own, to compare.)
-    if (plan === "primate" && (globalThis as {__arkPosedSit?: boolean}).__arkPosedSit !== false) {
+    if (plan === "primate" && (globalThis as {__arkPosedSit?: boolean}).__arkPosedSit !== false && !(gateOn && POSED_SIT_HELD.has(slug))) {
         const sitIndex = gateOn ? geometry.getIndex() : null;
         const posed = position && joints && weights ? posedSitRows(rig, {positions: position.array, joints: joints.array, weights: weights.array}, rowsData, bones, DataUtils.toHalfFloat, sitIndex ? sitIndex.array : null) : null;
         sit = posed?.check ?? null;
@@ -893,6 +893,14 @@ export const POSED_LIE_OVER_PILOT: ReadonlySet<string> = new Set(["domestic-dog"
  * standing until they are rigged again.
  */
 export const POSED_LIE_HELD: ReadonlySet<string> = new Set(["addax", "walia-ibex", "oribi", "american-pika", "ili-pika", "poodle", "arabian-oryx"]);
+/**
+ * ARK-POSE (coordinator, batch 14d): primates whose posed sit is held; they sleep in the rig's own crouch until the
+ * model is made again (`docs/ark/remake-list.json`). The toque macaque's model was made looking back over its right
+ * shoulder: its head is about 85 degrees round at rest, and its bones were set as for a head facing ahead, so its face
+ * is the neck bone's and the head bone holds the crown alone. Sitting, its head could be levelled but not brought to
+ * face ahead: turned back at the neck, the neck read 2.18 and its skin was a band round the throat.
+ */
+export const POSED_SIT_HELD: ReadonlySet<string> = new Set(["toque-macaque"]);
 
 /**
  * ARK-ANIM round 3 (decision 447): the posed lie's rows appended to a rig's bone rows (`locomotion/lie-pose.ts`): the

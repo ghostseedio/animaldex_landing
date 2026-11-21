@@ -57,11 +57,9 @@ export type SitCheck = {
     up?: number;
     /** The rump (the lowest skin the hips or a thigh holds) over the ground, a share of the standing height. */
     rump?: number;
-    /** ARK-POSE: the face's pitch (+ nose up) and yaw (+ to its left) in the world sitting, degrees: the face's own heading at rest (`REST_HEAD_TURNS`; else straight ahead) as the neck carries it. */
+    /** ARK-POSE: the head's pitch (+ nose up) and yaw (+ to its left) in the world sitting, degrees: the rest pose's forward as the head bone carries it. */
     headPitch?: number;
     headYaw?: number;
-    /** The model's own head turn at rest that the sit allows for (`REST_HEAD_TURNS`). */
-    headRest?: HeadTurn;
     /** ARK-POSE: the shape it keeps, the neck's stretch under it, and under ARK-SLEEP's first shape. */
     shape?: SitShape;
     stretch?: number;
@@ -98,31 +96,6 @@ export const SIT_BOW_OVER = 1.15;
 /** The sit with no bow: what the arms and the back alone do to the neck's skin. */
 const SIT_NO_BOW: SitShape = {back: BACK_DEG, neck: 0, face: null};
 
-/** A model's own head turn at rest (degrees): yaw + to its left, pitch + nose up; 0, 0 for a head facing straight ahead. */
-export type HeadTurn = {yaw: number; pitch: number};
-/**
- * ARK-POSE: models whose heads were turned at rest, each looked at (`scripts/ark-pose-heads.mts`, the rest pose from
- * its front and its side, and the neck turned through a strip of yaws until the face is square to the front). The
- * Ark's models are made from photographs, and the toque macaque's was looking back over its right shoulder: its head
- * is 85 degrees round and a little up, and its bones were set as for a head facing ahead, so its face is the neck
- * bone's (the head bone holds the crown alone). Every pose carries that turn.
- *
- * The sit keeps the turn and levels the head about the head's own side-to-side axis: on a head 85 degrees round, a
- * nod about the body's side-to-side axis is a roll onto one ear, which is what tipped the macaque's face to the sky.
- * (Taking the turn back at the neck was tried: the face came square to the front, and the harness's picture showed
- * the neck wrung, its skin a pink band round the throat; the neck read 2.18.) Such a model needs making again to
- * face ahead.
- *
- * Read by eye, not by rule: two rules were tried on the 78 primate rigs (the upright plane the head's skin mirrors best
- * across; the skull's base to the middle of the head's skin) and neither agreed with the pictures (they turned the
- * barbary macaque's and the mantled howler's heads, which face ahead, and gave the bald uakari's turn both ways).
- * Other models that look turned in the pictures and are not in the table yet: Gee's golden langur, the roloway
- * monkey, the white-faced capuchin.
- */
-export const REST_HEAD_TURNS: Readonly<Record<string, HeadTurn>> = {
-    "toque-macaque": {yaw: -85, pitch: 12}
-};
-
 const at = (m: Matrix4, out: Vector3) => out.set(m.elements[12], m.elements[13], m.elements[14]);
 const A = new Vector3();
 const B = new Vector3();
@@ -149,7 +122,7 @@ export class SitSleepPose {
     private readonly owner: Int32Array;
     readonly check: SitCheck;
 
-    constructor(readonly rig: LocoRig, private readonly mesh: SitMesh, readonly shape: SitShape = SIT_FULL_BOW, private readonly headRest: HeadTurn = {yaw: 0, pitch: 0}) {
+    constructor(readonly rig: LocoRig, private readonly mesh: SitMesh, readonly shape: SitShape = SIT_FULL_BOW) {
         const n = mesh.positions.length / 3;
         let minY = Infinity;
         let maxY = -Infinity;
@@ -209,24 +182,12 @@ export class SitSleepPose {
         const headRoot = rig.neck >= 0 ? rig.neck : rig.head;
         if (headRoot >= 0 && rig.head >= 0 && this.shape.level) {
             // ARK-POSE: level, facing ahead. The back's turn took the neck and the head up with it: they turn back down
-            // by that and `face` more, the neck's joint its share, the head's the rest. (An upright rig's back turns
-            // down: then up.)
-            const deg = Math.PI / 180;
-            // (A model whose head was turned: its face is the neck bone's, so the neck's joint takes all of it.)
-            const turned = this.headRest.yaw !== 0;
-            const share = headRoot === rig.head ? 0 : turned ? 1 : this.shape.neck;
-            const nod = ((this.shape.face ?? 0) + this.headRest.pitch) * t * deg;
-            // (A head facing ahead nods about the body's side-to-side axis, with the lean's undoing; a turned one about
-            // its own, `REST_HEAD_TURNS`: the lean undone first puts it back as it was at rest.)
-            const undo = turn * this.shape.level;
-            const down = turned ? undo : undo + nod;
+            // by that (`level` of it) and `face` more, the neck's joint its share, the head's the rest. (An upright rig's
+            // back turns down: then up.)
+            const share = headRoot === rig.head ? 0 : this.shape.neck;
+            const down = turn * this.shape.level + (this.shape.face ?? 0) * t * (Math.PI / 180);
             if (share) rotateSubtree(rig, world, headRoot, Q.setFromAxisAngle(AXIS.set(this.fwd, 0, 0), down * share).clone(), at(world[headRoot], new Vector3()));
             rotateSubtree(rig, world, rig.head, Q.setFromAxisAngle(AXIS.set(this.fwd, 0, 0), down * (1 - share)).clone(), at(world[rig.head], new Vector3()));
-            if (turned) {
-                const yaw = this.headRest.yaw * deg;
-                const carrier = share ? headRoot : rig.head;
-                rotateSubtree(rig, world, carrier, Q.setFromAxisAngle(AXIS.set(this.fwd * Math.cos(yaw), 0, -Math.sin(yaw)).normalize(), nod).clone(), at(world[carrier], new Vector3()));
-            }
         } else if (headRoot >= 0 && rig.head >= 0) {
             const deg = Math.PI / 180;
             if (headRoot === rig.head) {
@@ -350,22 +311,16 @@ export class SitSleepPose {
             low = Math.min(low, vy);
         }
         const rump = Number.isFinite(low) ? (low - this.ground) / this.height : 0;
-        // Its face's heading in the world: its own heading at rest (the model's turn, `headRest`) as the head bone carries it now.
+        // Its head's heading in the world: the rest pose's forward as the head bone carries it now.
         let headPitch = 0;
         let headYaw = 0;
         if (ok && this.rig.head >= 0) {
-            const deg = Math.PI / 180;
-            const y = this.headRest.yaw * deg, x = this.headRest.pitch * deg;
-            // (At rest: ahead, pitched up by its tilt, then turned by its yaw toward its left.)
-            const rest = B.set(Math.sin(y) * Math.cos(x), Math.sin(x), this.fwd * Math.cos(y) * Math.cos(x));
-            // (A turned model's face is the neck bone's: read there; else the head's.)
-            const carrier = this.headRest.yaw && this.rig.neck >= 0 ? this.rig.neck : this.rig.head;
-            const e = this.skin[carrier].elements;
-            const now = A.set(e[0] * rest.x + e[4] * rest.y + e[8] * rest.z, e[1] * rest.x + e[5] * rest.y + e[9] * rest.z, e[2] * rest.x + e[6] * rest.y + e[10] * rest.z).normalize();
-            headPitch = Math.asin(Math.min(Math.max(now.y, -1), 1)) / deg;
-            headYaw = Math.atan2(now.x, now.z * this.fwd) / deg;
+            const e = this.skin[this.rig.head].elements;
+            const now = A.set(e[8] * this.fwd, e[9] * this.fwd, e[10] * this.fwd).normalize();
+            headPitch = Math.asin(Math.min(Math.max(now.y, -1), 1)) * (180 / Math.PI);
+            headYaw = Math.atan2(now.x, now.z * this.fwd) * (180 / Math.PI);
         }
-        return {ok: ok && sink <= 0.02, reason: !ok ? "not finite" : sink > 0.02 ? `${(sink * 100).toFixed(1)}% under the ground` : null, sink, up, rump, headPitch, headYaw, headRest: this.headRest};
+        return {ok: ok && sink <= 0.02, reason: !ok ? "not finite" : sink > 0.02 ? `${(sink * 100).toFixed(1)}% under the ground` : null, sink, up, rump, headPitch, headYaw};
     }
 }
 
@@ -400,11 +355,9 @@ export function posedSitRows(rig: LocoRig, mesh: SitMesh, data: Uint16Array, bon
         const full = stretchOf(sit);
         const none = new SitSleepPose(rig, mesh, SIT_NO_BOW);
         const limit = Math.max(1, (none.check.ok ? overLimit(stretchOf(none)) : 1) * SIT_BOW_OVER);
-        // (A model's own head turn, `REST_HEAD_TURNS`: kept, and its head levelled about its own axis.)
-        const headRest = REST_HEAD_TURNS[rig.slug] ?? {yaw: 0, pitch: 0};
         let best: {sit: SitSleepPose; stretch: typeof full} | null = null;
         for (const shape of SIT_SHAPES) {
-            const next = new SitSleepPose(rig, mesh, shape, headRest);
+            const next = new SitSleepPose(rig, mesh, shape);
             if (!next.check.ok) continue;
             const stretch = stretchOf(next);
             if (!best || overLimit(stretch) < overLimit(best.stretch) - 1e-4) best = {sit: next, stretch};
