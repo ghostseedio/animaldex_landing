@@ -472,6 +472,9 @@
             "dayNone": "Bu hayvanın günü şu anda hesaplanamıyor.",
             "dayClose": "Gününü kapat",
             "dayHint": "Ne yaptığı, Ark'ın ortak programına göre: herkes için aynı. Noktalar Ark'ın kaydıdır.",
+            "cyclePrev": "Türünün öncekisi",
+            "cycleNext": "Türünün sonrakisi",
+            "cycleCount": "{n} / {total}",
             "caredOwner": "Sahibi bakıyor",
             "caredFarmer": "Çiftçi bakıyor",
             "caredKeeper": "Bir bakıcı bakıyor"

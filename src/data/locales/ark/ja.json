@@ -472,6 +472,9 @@
             "dayNone": "この動物の一日は今は計算できません。",
             "dayClose": "一日を閉じる",
             "dayHint": "Arkの共有スケジュールからみた行動です。誰が見ても同じです。点はArkの記録です。",
+            "cyclePrev": "同じ種の前の個体",
+            "cycleNext": "同じ種の次の個体",
+            "cycleCount": "{n} / {total}",
             "caredOwner": "飼い主が世話をしています",
             "caredFarmer": "農家が世話をしています",
             "caredKeeper": "飼育員が世話をしています"

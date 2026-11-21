@@ -472,6 +472,9 @@
             "dayNone": "Al momento non si può calcolare la giornata di questo animale.",
             "dayClose": "Chiudi la sua giornata",
             "dayHint": "Cosa ha fatto, secondo il programma condiviso dell’Ark: lo stesso per tutti. I punti sono il registro dell’Ark.",
+            "cyclePrev": "Precedente della sua specie",
+            "cycleNext": "Successivo della sua specie",
+            "cycleCount": "{n} di {total}",
             "caredOwner": "Accudito dal suo proprietario",
             "caredFarmer": "Accudito dal contadino",
             "caredKeeper": "Accudito da un guardiano"

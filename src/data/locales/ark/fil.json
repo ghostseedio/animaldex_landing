@@ -472,6 +472,9 @@
             "dayNone": "Hindi pa makuwenta ang araw ng hayop na ito ngayon.",
             "dayClose": "Isara ang araw nito",
             "dayHint": "Ang ginawa nito, mula sa pinagsasaluhang iskedyul ng Ark: pareho para sa lahat. Ang mga tuldok ay tala ng Ark.",
+            "cyclePrev": "Nakaraan sa uri nito",
+            "cycleNext": "Susunod sa uri nito",
+            "cycleCount": "{n} sa {total}",
             "caredOwner": "Inaalagaan ng may-ari nito",
             "caredFarmer": "Inaalagaan ng magsasaka",
             "caredKeeper": "Inaalagaan ng isang tagapag-alaga"

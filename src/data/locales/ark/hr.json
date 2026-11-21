@@ -472,6 +472,9 @@
             "dayNone": "Dan ove životinje sada se ne može izračunati.",
             "dayClose": "Zatvori njegov dan",
             "dayHint": "Što je radila, prema zajedničkom rasporedu broda Ark: isto za sve. Točke su zapis broda Ark.",
+            "cyclePrev": "Prethodna te vrste",
+            "cycleNext": "Sljedeća te vrste",
+            "cycleCount": "{n} od {total}",
             "caredOwner": "O njemu se brine vlasnik",
             "caredFarmer": "O njemu se brine farmer",
             "caredKeeper": "O njemu se brine čuvar"
