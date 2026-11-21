@@ -138,11 +138,12 @@ test("seat: the kinds left alone and the kinds seated", () => {
 });
 
 /** A body (a box 0.6 long, 0.2 high, 0.2 wide, its base at its origin) drawn at a place, and the pass stepped to rest. */
-function seatBody(kind: SeatKind, at: Vector3, options: {surface?: SeatInput["surface"]; rotation?: Quaternion; frames?: number} = {}) {
+function seatBody(kind: SeatKind, at: Vector3, options: {surface?: SeatInput["surface"]; rotation?: Quaternion; frames?: number; long?: boolean} = {}) {
     const {scene} = world();
     const pass = new SeatPass(scene);
-    const geometry = new BoxGeometry(0.2, 0.2, 0.6);
-    geometry.translate(0, 0.1, 0);
+    // (`long`: a body 3 m long, a vertex every 25 cm along it: a dragon's, to a rock 1.2 m across.)
+    const geometry = options.long ? new BoxGeometry(0.3, 0.3, 3, 1, 1, 12) : new BoxGeometry(0.2, 0.2, 0.6);
+    geometry.translate(0, options.long ? 0.15 : 0.1, 0);
     const holder: SeatHolder = {};
     const matrix = new Matrix4();
     const position = new Vector3();
@@ -158,7 +159,7 @@ function seatBody(kind: SeatKind, at: Vector3, options: {surface?: SeatInput["su
         if (offset) position.add(new Vector3(offset.x, offset.y, offset.z));
         matrix.compose(position, fell ? new Quaternion() : options.rotation ?? new Quaternion(), new Vector3(1, 1, 1));
         // (Its turn every frame here: the chosen animal's.)
-        pass.settle({holder, kind: as, matrix, geometry, pose: null, height: 0.2, length: 0.6, surface: fell ? null : options.surface ?? null, moving: false, ground, focus: true});
+        pass.settle({holder, kind: as, matrix, geometry, pose: null, height: options.long ? 0.3 : 0.2, length: options.long ? 3 : 0.6, surface: fell ? null : options.surface ?? null, moving: false, ground, focus: true});
         if (as !== "fly" && as !== "swim" && pass.solids.stats().pending === 0 && holder.seat?.solved && holder.seat.x === holder.seat.tx && holder.seat.y === holder.seat.ty && holder.seat.z === holder.seat.tz && !(holder.seat.doubt > 0 && !holder.seat.fell && holder.seat.doubt < 0.8) && holder.seat.gap === holder.seat.gap && frames > 3) break;
     }
     return {seat: holder.seat!, position: position.clone(), frames, pass};
@@ -194,6 +195,15 @@ test("seat: a body inside a rock is put out of it", () => {
     const out = Math.hypot(inside.position.x - 100, inside.position.z - 100);
     assert.ok(out > 0.6 || inside.position.y > 0.6, `still in the rock: ${inside.position.x}, ${inside.position.y}, ${inside.position.z}`);
     assert.equal(inside.seat.inside, 0, "none of its body in the rock at the end");
+});
+
+test("seat: a long body through a rock too small to carry it goes out sideways, not up onto it", () => {
+    // Lying through the lone rock (1.2 m across, 0.8 m high), its ends on the ground either side: up on the rock's top it
+    // would be balanced there with most of it in the air (the Komodo dragon asleep under its den's capstone).
+    const through = seatBody("lie", new Vector3(100, 0, 100), {frames: 300, long: true});
+    assert.ok(Math.abs(through.position.y) < 0.05, `lifted onto the rock: ${through.position.y}`);
+    assert.ok(Math.abs(through.position.x - 100) > 0.6, `still through the rock: ${through.position.x}, ${through.position.z}`);
+    assert.equal(through.seat.inside, 0, "none of it in the rock at the end");
 });
 
 test("seat: held on a leaf it rests on the leaf; held on nothing it comes down", () => {

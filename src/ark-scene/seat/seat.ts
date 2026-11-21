@@ -132,6 +132,8 @@ const near: Near[] = [];
 const order: number[] = [];
 const support: number[] = [];
 const gaps: number[] = [];
+const groundGaps: number[] = [];
+const wayPoints: number[] = [];
 
 const over: number[] = [];
 
@@ -489,6 +491,7 @@ export class SeatPass {
         this.solids.release();
         const whole = this.solids.collect(x0 - pad, under, z0 - pad, x1 + pad, y1 + (cling ? Math.max(up, reachUp) : ROCK_REACH), z1 + pad, mask, near);
         gaps.length = 0;
+        groundGaps.length = 0;
         let on = "ground";
         let chosen = Infinity;
         let chosenGap = 0;
@@ -518,6 +521,7 @@ export class SeatPass {
                 }
             } else {
                 const ground = input.ground(x, z, y);
+                groundGaps.push(y - ground);
                 // (Held on a rock, it may be in it: a rock's top is looked for as far over it as rocks are high.)
                 const top = y + (held ? ROCK_REACH : up);
                 const bottom = Math.min(y, ground) - 0.02;
@@ -630,10 +634,19 @@ export class SeatPass {
                 if (clear < -0.02) s.inside++;
                 if (clear < closed) closed = clear;
             }
-            if (closed < gap) {
-                // Up out of it when that is a step's height or it is held there; a body deep in a boulder goes out sideways.
-                if (held || closed >= -Math.max(up, 0.3 * height)) gap = closed;
-                else sideways = true;
+            if (closed < gap) gap = closed;
+            // Its seat is up on something closed (a rock under a foot, a slab through its flank). Held there, or with half
+            // its feet carried by it once up, it stands on it. Else the thing is in its way, not under it: a dragon is
+            // not balanced on its den's capstone with its body in the air either side; it stays at the ground's height
+            // and goes out sideways.
+            if (!held && groundGaps.length) {
+                groundGaps.sort((a, b) => a - b);
+                const onGround = Math.min(groundGaps[Math.floor(0.25 * (groundGaps.length - 1))], groundGaps[0] + sink);
+                if (gap < onGround - DEAD && this.carried(-gap, n, height, input.ground) < 0.5) {
+                    gap = onGround;
+                    on = "ground";
+                    sideways = true;
+                }
             }
             if (!s.inside && !sideways) s.pushes = 0;
         }
@@ -795,25 +808,40 @@ export class SeatPass {
     }
 
     /**
-     * How many of the body's inner points (its middle, and every point of its hull drawn in by a quarter: a foot on a
-     * rock or a flank against one is not in it) are inside a solid, the body moved by (dx, dy, dz).
+     * Of the points it rests on (its lowest, `support`), the share that have a closed thing's top or the ground under
+     * them within a fifth of its height once it is `rise` higher: whether what it would be lifted onto carries it.
      */
-    private insideCount(n: number, cx: number, cy: number, cz: number, dx: number, dy: number, dz: number, reach: number): number {
-        let count = this.depthAt(cx + dx, cy + dy, cz + dz, reach) > 0 ? 1 : 0;
-        for (let i = 0; i < n; i++) {
-            const x = cx + (world[i * 3] - cx) * 0.75;
-            const y = cy + (world[i * 3 + 1] - cy) * 0.75;
-            const z = cz + (world[i * 3 + 2] - cz) * 0.75;
-            if (this.depthAt(x + dx, y + dy, z + dz, reach) > 0) count++;
+    private carried(rise: number, n: number, height: number, ground: (x: number, z: number, near?: number) => number): number {
+        let all = 0;
+        let held = 0;
+        for (const i of support) {
+            if (i >= n) continue;
+            const x = world[i * 3];
+            const y = world[i * 3 + 1] + rise;
+            const z = world[i * 3 + 2];
+            const under = ground(x, z, y);
+            let top = under;
+            hits.length = 0;
+            if (y + 0.02 > under) this.solids.castIn(near, x, y + 0.02, z, 0, under - y - 0.04, 0, hits);
+            for (const hit of hits) if (!hit.double && hit.cls & (ROCK | HARD) && hit.ny > 0 && hit.y > top) top = hit.y;
+            all++;
+            if (y - top <= Math.max(0.03, 0.2 * height)) held++;
         }
-        return count;
+        return all ? held / all : 1;
     }
 
-    /** The nearest move that takes the body out of the solids it is in: sideways, a step at a time each way; else up onto the top. */
+    /**
+     * The nearest move sideways that takes the body out of the closed things it is in: a step at a time each way, to
+     * the first place where none of its points (its lowest, and a couple of dozen over its hull) is under a closed
+     * thing's own top. Null: none within two body lengths (it is left: the audit says so).
+     */
     private wayOut(n: number, cx: number, cy: number, cz: number, length: number, reach: number, ground: (x: number, z: number, near?: number) => number): {x: number; y: number; z: number} | null {
         const step = Math.max(0.25 * length, 0.04);
         const here = ground(cx, cz, cy);
         const far = step * 8 + length;
+        wayPoints.length = 0;
+        for (const i of support) if (i < n) wayPoints.push(i);
+        for (let i = 0; i < n; i += Math.max(1, Math.floor(n / 24))) wayPoints.push(i);
         near.length = 0;
         this.solids.release();
         this.solids.collect(cx - far, cy - reach - length, cz - far, cx + far, cy + ROCK_REACH, cz + far, ROCK | HARD, near);
@@ -822,18 +850,15 @@ export class SeatPass {
                 const dx = Math.cos((k * Math.PI) / 4) * step * j;
                 const dz = Math.sin((k * Math.PI) / 4) * step * j;
                 const dy = ground(cx + dx, cz + dz, cy) - here;
-                if (this.insideCount(n, cx, cy, cz, dx, dy, dz, reach) === 0) return {x: dx, y: dy, z: dz};
+                let free = this.depthAt(cx + dx, cy + dy, cz + dz, reach) <= 0.02;
+                for (let w = 0; free && w < wayPoints.length; w++) {
+                    const i = wayPoints[w];
+                    if (this.depthAt(world[i * 3] + dx, world[i * 3 + 1] + dy, world[i * 3 + 2] + dz, reach) > 0.02) free = false;
+                }
+                if (free) return {x: dx, y: dy, z: dz};
             }
         }
-        // Up onto it: the highest top over its middle.
-        hits.length = 0;
-        this.solids.cast(cx, cy + ROCK_REACH, cz, 0, -ROCK_REACH, 0, ROCK | HARD, hits);
-        let top = -Infinity;
-        for (const hit of hits) if (!hit.double && hit.ny > 0.25) top = Math.max(top, hit.y);
-        if (top === -Infinity) return null;
-        let low = Infinity;
-        for (let i = 0; i < n; i++) low = Math.min(low, world[i * 3 + 1]);
-        return {x: 0, y: top - low, z: 0};
+        return null;
     }
 }
 
