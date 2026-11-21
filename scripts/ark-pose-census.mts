@@ -53,7 +53,7 @@ for (let i = 0; i < files.length; i++) {
             neck.shares = r.prepared.neck?.shares ?? null;
             neck.clipYaw = r.prepared.neck?.clipYaw ?? null;
             const caps = look ? {yaw: look.yaw * DEG, up: look.up * DEG, down: look.down * DEG} : null;
-            if (look && caps) { const w = worstLook(region, r, restRow(r.rig), r.bones, look, look.neckShare, caps); neck.look = r3(w.p99); neck.lookMax = r3(w.max); }
+            if (look && caps) { const w = worstLook(region, r, restRow(r.rig), r.bones, look, look.neckShare, caps); neck.look = r3(w.p99); neck.lookMax = r3(w.max); neck.lookHead = r3(w.head); }
             neck.lookOff = r.lookOff;
             const clips: Record<string, {alone: number; p99: number; turn: number; look?: number}> = {};
             const row = new Float32Array(r.bones * 12);

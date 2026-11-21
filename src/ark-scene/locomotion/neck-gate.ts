@@ -9,8 +9,9 @@
  * 1. the look (`animal-material.ts` RIG_SKIN: yaw and pitch on the neck and the head bones, on top of the playing
  *    clip). Its limits were the plan's (70° four-legged, 80° primate) whatever the rig's skin could take. Now per class
  *    (`MAMMAL_LOOK`: primates 80°, grazers and browsers 60°, the other four-legged 70°), split between the neck and the
- *    head by whichever share stretches the rig least, and lowered, a step at a time, on a rig whose neck stretches more
- *    than `NECK_STRETCH_MAX` at its worst allowed turn (`fitMammalLook`);
+ *    head by whichever share stretches the rig least (the neck against `NECK_STRETCH_MAX`, the head's own skin, its
+ *    face, against `HEAD_STRETCH_MAX`), and lowered, a step at a time, on a rig still past either at its worst
+ *    allowed turn (`fitMammalLook`);
  * 2. the look on top of a posed clip. The look turns the bones in their rest frame; a primate's posed sit already bows
  *    the neck 55° and drops the face 70° (`sit-sleep-pose.ts`), and a look to the flank on top of that wrung the neck
  *    (the macaque). Each clip that holds the head away from rest gets its own share of the look
@@ -23,6 +24,15 @@ import type {LocoRig} from "@/ark-scene/locomotion/types";
 
 /** The most a neck edge may stretch in the rig's worst allowed turn. */
 export const NECK_STRETCH_MAX = 1.6;
+/**
+ * The most the head's own skin may stretch (edges both of whose ends the head, or what it carries, holds by half or
+ * more): the face. The harness's picture of the macaque looking back over its shoulder: with most of the turn on the
+ * head's joint the neck read 1.35 and passed, and the face, part held by the neck, was dragged sideways across it
+ * (1.38). With most of it on the neck the face reads 1.15.
+ */
+export const HEAD_STRETCH_MAX = 1.25;
+/** A stretch against the two limits: 1 or less passes. */
+export const overLimit = (s: {p99: number; head: number}) => Math.max(s.p99 / NECK_STRETCH_MAX, s.head / HEAD_STRETCH_MAX);
 /**
  * Edges shorter than this share of the mesh's size are left out of the measure (slivers), as the birds' are. (A first
  * cut left out everything under 3%, to keep a mane's strands from the measure: the pilot lion's read 5.5 at a 70 degree
@@ -57,7 +67,7 @@ export type NeckSkin = {positions: ArrayLike<number>; joints: ArrayLike<number>;
 export type NeckChain = {neck: number; head: number; neckPivot: readonly number[]; headPivot: readonly number[]; neckMask?: number; headMask?: number};
 
 /** The neck's and the head's skin: its vertices, and the edges that touch them (pairs). */
-export type NeckRegion = {vertices: number[]; edges: number[]; rest: Float32Array};
+export type NeckRegion = {vertices: number[]; edges: number[]; rest: Float32Array; /** Per edge: 1 when both its ends are the head's own skin. */ face: Uint8Array};
 
 /** The neck and head region of a rig's skin (every vertex the neck, the head or a bone they carry holds by 5% or more), and its edges. */
 export function neckRegion(rig: LocoRig, skin: NeckSkin, index: ArrayLike<number>): NeckRegion | null {
@@ -76,20 +86,26 @@ export function neckRegion(rig: LocoRig, skin: NeckSkin, index: ArrayLike<number
     for (const leg of rig.legs) for (const b of [leg.upper, ...rig.below[leg.upper]]) limbs.add(b);
     for (const b of [...rig.wings.left, ...rig.wings.right]) if (b >= 0) limbs.add(b);
     const limb = new Uint8Array(n);
+    const headBones = new Set(rig.head >= 0 ? [rig.head, ...rig.below[rig.head]] : []);
+    const headOwn = new Uint8Array(n);
     for (let v = 0; v < n; v++) {
         let held = 0;
+        let byHead = 0;
         for (let k = 0; k < 4; k++) {
             const w = skin.weights[v * 4 + k];
             if (w > 0.05 && region.has(skin.joints[v * 4 + k])) inR[v] = 1;
             if (w > 0 && limbs.has(skin.joints[v * 4 + k])) held += w;
+            if (w > 0 && headBones.has(skin.joints[v * 4 + k])) byHead += w;
         }
         if (held >= 0.5) limb[v] = 1;
+        if (byHead >= 0.5) headOwn[v] = 1;
         lo = Math.min(lo, P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
         hi = Math.max(hi, P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
     }
     const minLen = MIN_EDGE * (hi - lo);
     const edges: number[] = [];
     const rest: number[] = [];
+    const face: number[] = [];
     for (let t = 0; t + 2 < index.length; t += 3) {
         for (const [a, b] of [[index[t], index[t + 1]], [index[t + 1], index[t + 2]], [index[t + 2], index[t]]]) {
             if ((!inR[a] && !inR[b]) || limb[a] || limb[b]) continue;
@@ -97,10 +113,11 @@ export function neckRegion(rig: LocoRig, skin: NeckSkin, index: ArrayLike<number
             if (len < minLen) continue;
             edges.push(a, b);
             rest.push(len);
+            face.push(headOwn[a] && headOwn[b] ? 1 : 0);
         }
     }
     if (!edges.length) return null;
-    return {vertices: Array.from(new Set(edges)), edges, rest: Float32Array.from(rest)};
+    return {vertices: Array.from(new Set(edges)), edges, rest: Float32Array.from(rest), face: Uint8Array.from(face)};
 }
 
 /** T(pivot) · Ry(yaw) · Rx(pitch) · T(−pivot), as the shader's `arkTurn` (yaw + to its left, pitch + down; radians). */
@@ -154,7 +171,7 @@ const SCRATCH = new WeakMap<NeckRegion, Float32Array>();
  * whose two ends hang on different bones reads 5 to 20 times at any turn while the neck under it is whole; one edge in
  * a hundred is a band of skin.
  */
-export function neckStretch(region: NeckRegion, skin: NeckSkin, row: ArrayLike<number>): {max: number; p99: number} {
+export function neckStretch(region: NeckRegion, skin: NeckSkin, row: ArrayLike<number>): {max: number; p99: number; head: number} {
     const P = skin.positions;
     let out = SCRATCH.get(region);
     if (!out) SCRATCH.set(region, (out = new Float32Array(P.length)));
@@ -175,16 +192,21 @@ export function neckStretch(region: NeckRegion, skin: NeckSkin, row: ArrayLike<n
     }
     const n = region.rest.length;
     const ratios = new Float32Array(n);
+    const faces: number[] = [];
     let max = 1;
     for (let e = 0; e < n; e++) {
         const a = region.edges[e * 2] * 3;
         const b = region.edges[e * 2 + 1] * 3;
         const r = Math.hypot(out[a] - out[b], out[a + 1] - out[b + 1], out[a + 2] - out[b + 2]) / region.rest[e];
         ratios[e] = r;
+        if (region.face[e]) faces.push(r);
         if (r > max) max = r;
     }
     ratios.sort();
-    return {max, p99: Math.max(ratios[Math.min(Math.floor(n * 0.99), n - 1)], 1)};
+    faces.sort((x, y) => x - y);
+    // (The head's own skin: its 99th percentile too; a head with too few edges of its own to say, 1.)
+    const head = faces.length >= 20 ? Math.max(faces[Math.min(Math.floor(faces.length * 0.99), faces.length - 1)], 1) : 1;
+    return {max, p99: Math.max(ratios[Math.min(Math.floor(n * 0.99), n - 1)], 1), head};
 }
 
 const DEG = Math.PI / 180;
@@ -204,14 +226,15 @@ export function restRow(rig: LocoRig): Float32Array {
  * The worst stretch of the look's allowed turns (its yaw cap either way, level, up and down) on a bone row: the gate's
  * measure (`p99`), and the single longest edge (`max`).
  */
-export function worstLook(region: NeckRegion, skin: NeckSkin, row: ArrayLike<number>, bones: number, chain: NeckChain, neckShare: number, caps: LookCaps, scale = 1): {max: number; p99: number} {
+export function worstLook(region: NeckRegion, skin: NeckSkin, row: ArrayLike<number>, bones: number, chain: NeckChain, neckShare: number, caps: LookCaps, scale = 1): {max: number; p99: number; head: number} {
     const out = new Float32Array(bones * 12);
-    const worst = {max: 1, p99: 1};
+    const worst = {max: 1, p99: 1, head: 1};
     for (const sign of [1, -1]) {
         for (const pitch of [0, -caps.up, caps.down]) {
             const s = neckStretch(region, skin, lookOnRow(row, bones, chain, neckShare, sign * caps.yaw * scale * DEG, pitch * scale * DEG, out));
             worst.max = Math.max(worst.max, s.max);
             worst.p99 = Math.max(worst.p99, s.p99);
+            worst.head = Math.max(worst.head, s.head);
         }
     }
     return worst;
@@ -222,9 +245,11 @@ export type MammalLookFit = {
     /** The caps it keeps (degrees) and the neck's share. */
     caps: LookCaps;
     neckShare: number;
-    /** The neck's stretch at the class's caps with the rig's own share (before), and at what it keeps (after). */
+    /** The neck's stretch at the class's caps with the rig's own share (before), and at what it keeps (after); the head's own skin's likewise. */
     before: number;
     after: number;
+    headBefore: number;
+    headAfter: number;
     /** Its caps as a share of the class's (1: not lowered). */
     scale: number;
     ok: boolean;
@@ -239,21 +264,22 @@ export type MammalLookFit = {
 export function fitMammalLook(region: NeckRegion, skin: NeckSkin, rig: LocoRig, chain: NeckChain, cls: keyof typeof MAMMAL_LOOK, was: {caps: LookCaps; neckShare: number}): MammalLookFit {
     const bones = rig.bones.length;
     const rest = restRow(rig);
-    const before = worstLook(region, skin, rest, bones, chain, was.neckShare, was.caps).p99;
+    const before = worstLook(region, skin, rest, bones, chain, was.neckShare, was.caps);
     const classCaps = MAMMAL_LOOK[cls];
     const shares = chain.neck >= 0 ? [was.neckShare, ...NECK_SHARES.filter((s) => Math.abs(s - was.neckShare) > 0.01)] : [0];
-    let best = {share: shares[0], scale: LOOK_FLOOR, stretch: Infinity};
+    let best = {share: shares[0], scale: LOOK_FLOOR, stretch: before, over: Infinity};
     for (let scale = 1; scale >= LOOK_FLOOR - 1e-6; scale *= LOOK_STEP) {
-        let pick = {share: shares[0], stretch: Infinity};
+        let pick = {share: shares[0], stretch: before, over: Infinity};
         for (const share of shares) {
-            const stretch = worstLook(region, skin, rest, bones, chain, share, classCaps, scale).p99;
-            if (stretch < pick.stretch - 1e-4) pick = {share, stretch};
+            const stretch = worstLook(region, skin, rest, bones, chain, share, classCaps, scale);
+            const over = overLimit(stretch);
+            if (over < pick.over - 1e-4) pick = {share, stretch, over};
         }
-        best = {share: pick.share, scale, stretch: pick.stretch};
-        if (pick.stretch <= NECK_STRETCH_MAX) break;
+        best = {...pick, scale};
+        if (pick.over <= 1) break;
     }
     const round = (deg: number) => Math.round(deg * best.scale * 10) / 10;
-    return {cls, caps: {yaw: round(classCaps.yaw), up: round(classCaps.up), down: round(classCaps.down)}, neckShare: best.share, before, after: best.stretch, scale: best.scale, ok: best.stretch <= NECK_STRETCH_MAX};
+    return {cls, caps: {yaw: round(classCaps.yaw), up: round(classCaps.up), down: round(classCaps.down)}, neckShare: best.share, before: before.p99, after: best.stretch.p99, headBefore: before.head, headAfter: best.stretch.head, scale: best.scale, ok: best.over <= 1};
 }
 
 /** A clip whose head never turns this far from rest (degrees, against the chest) takes the whole look: not measured. */
@@ -275,13 +301,14 @@ export const CLIP_LOOK_SHARES: readonly number[] = [1, 0.6, 0.3, 0];
  * `CLIP_LOOK_OVER` (a pose that already bends the neck far takes less, or none). `alone`: the pose's own stretch.
  */
 export function clipLookShare(region: NeckRegion, skin: NeckSkin, row: ArrayLike<number>, bones: number, chain: NeckChain, neckShare: number, caps: LookCaps): {share: number; alone: number; withLook: number; full: number} {
-    const alone = neckStretch(region, skin, row).p99;
-    const limit = Math.max(NECK_STRETCH_MAX, alone * CLIP_LOOK_OVER);
+    const own = neckStretch(region, skin, row);
+    const alone = own.p99;
+    const limit = Math.max(1, overLimit(own) * CLIP_LOOK_OVER);
     let full = 1;
     for (const share of CLIP_LOOK_SHARES) {
-        const stretch = share > 0 ? worstLook(region, skin, row, bones, chain, neckShare, caps, share).p99 : alone;
-        if (share === 1) full = stretch;
-        if (stretch <= limit) return {share, alone, withLook: stretch, full};
+        const stretch = share > 0 ? worstLook(region, skin, row, bones, chain, neckShare, caps, share) : own;
+        if (share === 1) full = stretch.p99;
+        if (overLimit(stretch) <= limit) return {share, alone, withLook: stretch.p99, full};
     }
     return {share: 0, alone, withLook: alone, full};
 }

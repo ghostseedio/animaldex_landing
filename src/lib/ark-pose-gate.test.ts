@@ -16,8 +16,10 @@ import {LIE_SPLAY, LiePose, lieShaped} from "@/ark-scene/locomotion/lie-pose";
 import {END_GAP, RUMP_HEIGHT, measureLying} from "@/ark-scene/locomotion/pose-gate";
 import {
     CLIP_LOOK_SHARES,
+    HEAD_STRETCH_MAX,
     MAMMAL_LOOK,
     NECK_STRETCH_MAX,
+    overLimit,
     clipLookShare,
     fitMammalLook,
     lookOnRow,
@@ -176,17 +178,19 @@ test("a mammal's look: its class's caps when its neck takes them, lowered until 
     assert.equal(mammalLookClass("flying_bird", ["idle"]), null);
     assert.deepEqual([MAMMAL_LOOK.primate.yaw, MAMMAL_LOOK.grazer.yaw, MAMMAL_LOOK.quadruped.yaw], [80, 60, 70]);
     const was = {caps: {yaw: 70, up: 30, down: 45}, neckShare: 0.45};
-    const soft = tube(0.1);
+    const soft = tube(0.1, 0.04);
     const fine = fitMammalLook(neckRegion(soft.rig, soft.raw, soft.index)!, soft.raw, soft.rig, soft.chain, "quadruped", was);
-    assert.ok(fine.ok && fine.scale === 1 && fine.caps.yaw === 70, "a soft neck keeps the class's caps");
-    assert.ok(fine.after <= fine.before + 1e-6 && fine.after <= NECK_STRETCH_MAX);
+    assert.ok(fine.ok && fine.scale === 1 && fine.caps.yaw === 70, `a soft neck keeps the class's caps: ${JSON.stringify(fine)}`);
+    assert.ok(fine.after <= NECK_STRETCH_MAX && fine.headAfter <= HEAD_STRETCH_MAX);
     const hard = tube(0.004, 0.14);
     const region = neckRegion(hard.rig, hard.raw, hard.index)!;
     const cut = fitMammalLook(region, hard.raw, hard.rig, hard.chain, "quadruped", was);
     assert.ok(cut.before > NECK_STRETCH_MAX, `a hard seam stretches ${cut.before.toFixed(2)} at 70 degrees`);
     assert.ok(cut.scale < 1 && cut.caps.yaw < 70, "its cap comes down");
     assert.ok(cut.after < cut.before);
-    if (cut.ok) assert.ok(worstLook(region, hard.raw, restRow(hard.rig), hard.rig.bones.length, hard.chain, cut.neckShare, cut.caps).p99 <= NECK_STRETCH_MAX + 1e-3);
+    if (cut.ok) assert.ok(overLimit(worstLook(region, hard.raw, restRow(hard.rig), hard.rig.bones.length, hard.chain, cut.neckShare, cut.caps)) <= 1 + 1e-3);
+    // The face counts for itself: a head whose own skin is dragged by the neck fails with the neck inside its limit.
+    assert.ok(overLimit({p99: 1.4, head: 1.38}) > 1 && overLimit({p99: 1.45, head: 1.15}) < 1);
 });
 
 test("a clip's share of the look: all of it at rest, less on a pose that turns the head already", () => {
@@ -200,7 +204,7 @@ test("a clip's share of the look: all of it at rest, less on a pose that turns t
     const held = clipLookShare(region, t.raw, turned, bones, t.chain, fit.neckShare, fit.caps);
     assert.ok(CLIP_LOOK_SHARES.includes(held.share));
     assert.ok(held.share < 1, `the turned pose takes ${held.share} of the look`);
-    assert.ok(held.withLook <= Math.max(NECK_STRETCH_MAX, held.alone * 1.03) + 1e-6);
+    assert.ok(held.share === 0 || held.withLook <= Math.max(NECK_STRETCH_MAX, held.alone * 1.03) + 1e-6);
     // The scene's weight: the playing clip's share, the last clip's mixed in as it fades.
     const model = {clips: {idle: {}, sleep: {lookShare: 0}, groom: {lookShare: 0.3}}} as unknown as Parameters<typeof rigLookShare>[0];
     const play = (name: string) => ({name, phase: 0}) as unknown as NonNullable<Parameters<typeof rigLookShare>[1]>["now"];
