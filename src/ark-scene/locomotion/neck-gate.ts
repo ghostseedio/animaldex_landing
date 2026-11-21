@@ -3,8 +3,8 @@
  * out long and thin and twisted back): a mammal's head and neck turns measured and capped, as ARK-ANIM did the birds'
  * (`bird-neck.ts`).
  *
- * The measure is the birds', made robust to fur: the neck's and the head's skin edges over their rest lengths, the 99th
- * percentile (`neckStretch`; edges under 3% of the mesh's size left out: a mane's strands). Three things turn a mammal's head:
+ * The measure is the birds' edges (the neck's and the head's skin, edges under 1% of the mesh's size left out) over their
+ * rest lengths, read at the 99th percentile (`neckStretch`). Three things turn a mammal's head:
  *
  * 1. the look (`animal-material.ts` RIG_SKIN: yaw and pitch on the neck and the head bones, on top of the playing
  *    clip). Its limits were the plan's (70° four-legged, 80° primate) whatever the rig's skin could take. Now per class
@@ -24,14 +24,12 @@ import type {LocoRig} from "@/ark-scene/locomotion/types";
 /** The most a neck edge may stretch in the rig's worst allowed turn. */
 export const NECK_STRETCH_MAX = 1.6;
 /**
- * Edges shorter than this share of the mesh's size are left out of the measure: fur. The pilot lion's mane is 10,000
- * edges of strands 1 to 3% of its size, their ends on different bones: at a 70 degree look their 99th percentile reads
- * 5.5 while the 324 edges of the neck's own surface (3% and longer) read 1.34. A mesh too fine to have `MIN_EDGES` such
- * edges is measured from `MIN_EDGE_FINE` up, as the birds are.
+ * Edges shorter than this share of the mesh's size are left out of the measure (slivers), as the birds' are. (A first
+ * cut left out everything under 3%, to keep a mane's strands from the measure: the pilot lion's read 5.5 at a 70 degree
+ * look against 1.34 for its longer edges. The harness's picture showed why they must count: the short edges are where
+ * the mane's skin, the head's, meets the chest's, and at that look they were a brown band drawn across the chest.)
  */
-const MIN_EDGE = 0.03;
-const MIN_EDGE_FINE = 0.01;
-const MIN_EDGES = 150;
+const MIN_EDGE = 0.01;
 
 /** A class's look: yaw either way, pitch up, pitch down (degrees). */
 export type LookCaps = {yaw: number; up: number; down: number};
@@ -89,22 +87,17 @@ export function neckRegion(rig: LocoRig, skin: NeckSkin, index: ArrayLike<number
         lo = Math.min(lo, P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
         hi = Math.max(hi, P[v * 3], P[v * 3 + 1], P[v * 3 + 2]);
     }
-    let edges: number[] = [];
-    let rest: number[] = [];
-    for (const share of [MIN_EDGE, MIN_EDGE_FINE]) {
-        const minLen = share * (hi - lo);
-        edges = [];
-        rest = [];
-        for (let t = 0; t + 2 < index.length; t += 3) {
-            for (const [a, b] of [[index[t], index[t + 1]], [index[t + 1], index[t + 2]], [index[t + 2], index[t]]]) {
-                if ((!inR[a] && !inR[b]) || limb[a] || limb[b]) continue;
-                const len = Math.hypot(P[a * 3] - P[b * 3], P[a * 3 + 1] - P[b * 3 + 1], P[a * 3 + 2] - P[b * 3 + 2]);
-                if (len < minLen) continue;
-                edges.push(a, b);
-                rest.push(len);
-            }
+    const minLen = MIN_EDGE * (hi - lo);
+    const edges: number[] = [];
+    const rest: number[] = [];
+    for (let t = 0; t + 2 < index.length; t += 3) {
+        for (const [a, b] of [[index[t], index[t + 1]], [index[t + 1], index[t + 2]], [index[t + 2], index[t]]]) {
+            if ((!inR[a] && !inR[b]) || limb[a] || limb[b]) continue;
+            const len = Math.hypot(P[a * 3] - P[b * 3], P[a * 3 + 1] - P[b * 3 + 1], P[a * 3 + 2] - P[b * 3 + 2]);
+            if (len < minLen) continue;
+            edges.push(a, b);
+            rest.push(len);
         }
-        if (rest.length >= MIN_EDGES) break;
     }
     if (!edges.length) return null;
     return {vertices: Array.from(new Set(edges)), edges, rest: Float32Array.from(rest)};

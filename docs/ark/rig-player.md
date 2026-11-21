@@ -142,7 +142,7 @@ When the posed lie replaces a rig's own lying clip, the rig's other clips on tha
 
 ### Neck (`locomotion/neck-gate.ts`)
 
-The measure is the 99th percentile of the neck's and the head's skin edges over their rest lengths. Edges under 3% of the mesh's size (a mane's strands) and edges a limb holds are left out. The limit is 1.6.
+The measure is the 99th percentile of the neck's and the head's skin edges over their rest lengths. Edges under 1% of the mesh's size (slivers, as for the birds) and edges a limb holds are left out. The limit is 1.6.
 
 - **The look's caps, per class:** primates 80° yaw, grazers and browsers (a rig with a `graze` or `browse` clip) 60°, the other four-legged rigs 70°. The neck's share of the turn is the one of 0.45, 0.6, 0.3, 0.75 (and the file's own) that stretches the rig least.
 - **A rig over the limit at its caps** gets them lowered by 0.85 a step, down to a quarter of the class's.
