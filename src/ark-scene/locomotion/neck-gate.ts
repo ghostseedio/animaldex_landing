@@ -19,7 +19,6 @@
  *    the neck (`bird-neck.ts` spreadBirdRows, with the mammal's shares).
  */
 import {Matrix4, Vector3} from "three";
-import {restInverses, rowToWorld} from "@/ark-scene/locomotion/skeleton";
 import type {LocoRig} from "@/ark-scene/locomotion/types";
 
 /** The most a neck edge may stretch in the rig's worst allowed turn. */
@@ -295,14 +294,13 @@ export function clipLookShare(region: NeckRegion, skin: NeckSkin, row: ArrayLike
 }
 
 const W = new Vector3();
+const W2 = new Vector3();
 /** How far a bone row has turned the head from its rest heading against the chest's (degrees, any axis): 0 at rest. */
 export function headTurnDeg(rig: LocoRig, row: ArrayLike<number>): number {
     if (rig.head < 0 || rig.chest < 0) return 0;
-    const world = rig.bones.map(() => new Matrix4());
-    rowToWorld(rig, row, 0, world);
-    const inv = restInverses(rig);
-    const dir = (bone: number, out: Vector3) => out.set(0, 0, 1).transformDirection(M.multiplyMatrices(world[bone], inv[bone]));
-    const a = dir(rig.head, new Vector3());
-    const b = dir(rig.chest, W);
+    // (A bone's turn from rest is its row's own 3×3: the forward's image is its third column.)
+    const forward = (bone: number, out: Vector3) => out.set(row[bone * 12 + 2], row[bone * 12 + 6], row[bone * 12 + 10]).normalize();
+    const a = forward(rig.head, W2);
+    const b = forward(rig.chest, W);
     return Math.acos(Math.min(Math.max(a.dot(b), -1), 1)) / DEG;
 }

@@ -176,8 +176,8 @@ export function floatRow(data: Uint16Array, bones: number, row: number, out = ne
     return out;
 }
 
-/** The worst of a clip's rows against the gate (every `step`th row, and its last). */
-export function measureLyingClip(rig: LocoRig, skin: PoseSkin, data: Uint16Array, bones: number, clip: {row: number; rows: number}, ground: number, step = 4): LyingMeasure {
+/** The worst of a clip's rows against the gate (its first, its middle and its last by default: a held pose barely moves). */
+export function measureLyingClip(rig: LocoRig, skin: PoseSkin, data: Uint16Array, bones: number, clip: {row: number; rows: number}, ground: number, step = Math.max(Math.floor((clip.rows - 1) / 2), 1)): LyingMeasure {
     let worst: LyingMeasure | null = null;
     const row = new Float32Array(bones * 12);
     for (let f = 0; f < clip.rows; f += step) {
