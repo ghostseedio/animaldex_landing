@@ -644,7 +644,7 @@ export class SeatPass {
             if (!held && groundGaps.length) {
                 groundGaps.sort((a, b) => a - b);
                 const onGround = Math.min(groundGaps[Math.floor(0.25 * (groundGaps.length - 1))], groundGaps[0] + sink);
-                if (gap < onGround - DEAD && this.carried(-gap, n, height, input.ground) < 0.5) {
+                if (gap < onGround - DEAD && this.carried(-gap, n, e, height, input.ground) < 0.6) {
                     gap = onGround;
                     on = "ground";
                     sideways = true;
@@ -841,25 +841,42 @@ export class SeatPass {
     }
 
     /**
-     * Of the points it rests on (its lowest, `support`), the share that have a closed thing's top or the ground under
-     * them within a fifth of its height once it is `rise` higher: whether what it would be lifted onto carries it.
+     * The share of its footprint (fifteen places over its length and width, as it lies now) that has a closed thing's
+     * top or the ground under it within a third of its height once its lowest point is `rise` higher: whether what it
+     * would be lifted onto carries it. (Its lowest points alone can all be over one small rock under its belly.)
      */
-    private carried(rise: number, n: number, height: number, ground: (x: number, z: number, near?: number) => number): number {
+    private carried(rise: number, n: number, e: ArrayLike<number>, height: number, ground: (x: number, z: number, near?: number) => number): number {
+        // Its extent along its own length and width (model space), and its lowest point as drawn.
+        let mx0 = Infinity;
+        let mx1 = -Infinity;
+        let mz0 = Infinity;
+        let mz1 = -Infinity;
+        let low = Infinity;
+        for (let i = 0; i < n; i++) {
+            if (model[i * 3] < mx0) mx0 = model[i * 3];
+            if (model[i * 3] > mx1) mx1 = model[i * 3];
+            if (model[i * 3 + 2] < mz0) mz0 = model[i * 3 + 2];
+            if (model[i * 3 + 2] > mz1) mz1 = model[i * 3 + 2];
+            if (world[i * 3 + 1] < low) low = world[i * 3 + 1];
+        }
+        const y = low + rise;
         let all = 0;
         let held = 0;
-        for (const i of support) {
-            if (i >= n) continue;
-            const x = world[i * 3];
-            const y = world[i * 3 + 1] + rise;
-            const z = world[i * 3 + 2];
-            const under = ground(x, z, y);
-            let top = under;
-            hits.length = 0;
-            if (y + 0.02 > under) this.solids.castIn(near, x, y + 0.02, z, 0, under - y - 0.04, 0, hits);
-            for (const hit of hits) if (!hit.double && hit.cls & (ROCK | HARD) && hit.ny > 0 && hit.y > top) top = hit.y;
-            all++;
-            if (y - top <= Math.max(0.03, 0.2 * height)) held++;
-        }
+        for (const u of [0.15, 0.5, 0.85])
+            for (const v of [0.1, 0.3, 0.5, 0.7, 0.9]) {
+                const lx = mx0 + (mx1 - mx0) * u;
+                const lz = mz0 + (mz1 - mz0) * v;
+                // (That place under its body in the world: by its own axes across and along, at its origin's height.)
+                const x = e[0] * lx + e[8] * lz + e[12];
+                const z = e[2] * lx + e[10] * lz + e[14];
+                const under = ground(x, z, y);
+                let top = under;
+                hits.length = 0;
+                if (y + 0.02 > under) this.solids.castIn(near, x, y + 0.02, z, 0, under - y - 0.04, 0, hits);
+                for (const hit of hits) if (!hit.double && hit.cls & (ROCK | HARD) && hit.ny > 0 && hit.y > top) top = hit.y;
+                all++;
+                if (y - top <= Math.max(0.05, 0.33 * height)) held++;
+            }
         return all ? held / all : 1;
     }
 
