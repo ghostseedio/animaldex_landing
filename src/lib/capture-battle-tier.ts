@@ -69,6 +69,17 @@ export function isPlaceholderBattleStats(stats: Partial<CaptureBattleStats> | nu
     return (d === 0 && s === 0 && z === 0 && i === 0 && r === 0) || (d === 50 && s === 50 && z === 50 && i === 50);
 }
 
+/**
+ * Decision 448: a placeholder card (unidentified animal, tier E in the data) shows "Unrated" instead of a tier letter,
+ * with no tier colour. The server tier cannot tell placeholder E from earned E, so this reads the base stats.
+ */
+export function isUnratedCard(params: {
+    tier: CaptureBattleTier | null | undefined;
+    baseStats: Partial<CaptureBattleStats> | null | undefined;
+}): boolean {
+    return params.tier === "E" && isPlaceholderBattleStats(params.baseStats);
+}
+
 export function parseCaptureBattleTier(value: unknown): CaptureBattleTier | null {
     const v = typeof value === "string" ? value.trim().toUpperCase() : "";
     return (TIER_ORDER as string[]).includes(v) ? v as CaptureBattleTier : null;

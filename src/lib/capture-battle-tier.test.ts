@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
 import test from "node:test";
-import {captureBattlePower, captureBattleTier, captureBattleTierFromPower} from "@/lib/capture-battle-tier";
+import {captureBattlePower, captureBattleTier, captureBattleTierFromPower, isUnratedCard} from "@/lib/capture-battle-tier";
 
 // The same 501 vectors AnimalDex's supabase/functions/_shared/battle-tier.test.ts uses:
 // [dominance, speed, size, intelligence, rarity, power, tier], where power and tier were
@@ -37,4 +37,15 @@ test("GRADING-3: server tier wins; else placeholder E and the one-band ceiling",
     assert.equal(captureBattleTier({baseStats: base}), "C");
     assert.equal(captureBattleTier({baseStats: base, effectiveStats: {dominance: 100, speed: 100, size: 100, intelligence: 100, rarity: 100}}), "B");
     assert.equal(captureBattleTier({baseStats: base, effectiveStats: {...base, rarity: 100}}), "C");
+});
+
+test("decision 448: placeholder E is Unrated; earned E and other tiers are not", () => {
+    const placeholder = {dominance: 50, speed: 50, size: 50, intelligence: 50, rarity: 90};
+    const empty = {dominance: 0, speed: 0, size: 0, intelligence: 0, rarity: 0};
+    const weak = {dominance: 5, speed: 5, size: 5, intelligence: 5, rarity: 5};
+    assert.equal(isUnratedCard({tier: "E", baseStats: placeholder}), true);
+    assert.equal(isUnratedCard({tier: "E", baseStats: empty}), true);
+    assert.equal(isUnratedCard({tier: "E", baseStats: weak}), false);
+    assert.equal(isUnratedCard({tier: "C", baseStats: placeholder}), false);
+    assert.equal(isUnratedCard({tier: null, baseStats: placeholder}), false);
 });

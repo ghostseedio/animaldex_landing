@@ -5465,5 +5465,8 @@
       "arkEatenBy": "On the Ark it can be eaten by",
       "foodChain": "See who eats whom in the Ark"
     }
+  },
+  "battleTier": {
+    "unrated": "Unrated"
   }
 }

@@ -1,7 +1,7 @@
 "use client";
 
 import {packBuilderPill, packGuaranteeBadge, rarityTierLabel} from "@/lib/pack-guarantee";
-import {useEffect, useMemo, useState, useTransition} from "react";
+import {useEffect, useMemo, useState, useTransition, createContext, useContext} from "react";
 import {useRouter} from "next/navigation";
 import type {TrainAnimalPack, TrainPackCapture} from "@/data/train-modules";
 import {CloseIconButton} from "@/components/ui/icon-buttons";
@@ -103,12 +103,22 @@ function responseError(body: unknown, fallback: string) {
         : fallback;
 }
 
+/** Decision 448: the catalog word (battleTier.unrated) shown instead of a tier letter on placeholder cards. */
+const UnratedLabelContext = createContext("Unrated");
+
+function TierChip({capture, small = false}: {capture: TrainPackCapture; small?: boolean}) {
+    const unratedLabel = useContext(UnratedLabelContext);
+    return <Chip small={small}>{capture.unrated ? unratedLabel : `Tier ${capture.battleTier}`}</Chip>;
+}
+
 export default function PacksClient({
     initialPacks,
-    initialEligibleCaptures
+    initialEligibleCaptures,
+    unratedLabel
 }: {
     initialPacks: TrainAnimalPack[];
     initialEligibleCaptures: TrainPackCapture[];
+    unratedLabel: string;
 }) {
     const router = useRouter();
     const [packs, setPacks] = useState(initialPacks);
@@ -286,7 +296,11 @@ export default function PacksClient({
                 />
             ) : null}
 
-            {reveal ? <PackOpeningOverlay reveal={reveal} onClose={() => setReveal(null)} onCollection={() => router.push("/app/collection")} /> : null}
+            {reveal ? (
+                <UnratedLabelContext.Provider value={unratedLabel}>
+                    <PackOpeningOverlay reveal={reveal} onClose={() => setReveal(null)} onCollection={() => router.push("/app/collection")} />
+                </UnratedLabelContext.Provider>
+            ) : null}
 
             {error ? <ErrorDialog message={error} onClose={() => setError(null)} /> : null}
         </div>
@@ -707,7 +721,7 @@ function RevealHero({capture, final}: {capture: TrainPackCapture; final: boolean
             </div>
             <div className="mt-4 flex flex-wrap gap-2">
                 <Chip>Level 1</Chip>
-                {SHOWS_BATTLE_TIER_AND_POWER ? <Chip>Tier {capture.battleTier}</Chip> : null}
+                {SHOWS_BATTLE_TIER_AND_POWER ? <TierChip capture={capture} /> : null}
                 {SHOWS_BATTLE_TIER_AND_POWER ? <Chip>Power {capture.battlePower}</Chip> : null}
                 {capture.speciesSlug ? <Chip>#{capture.speciesSlug.slice(0, 6).toUpperCase()}</Chip> : null}
             </div>
@@ -726,7 +740,7 @@ function MiniRevealCard({capture, final}: {capture: TrainPackCapture; final: boo
             <img src={capture.imageSrc} alt="" className="aspect-square w-full object-cover" />
             <h4 className="mt-2 line-clamp-2 text-sm font-bold text-white">{capture.animalName}</h4>
             <div className="mt-2 flex flex-wrap gap-1">
-                {SHOWS_BATTLE_TIER_AND_POWER ? <Chip small>Tier {capture.battleTier}</Chip> : null}
+                {SHOWS_BATTLE_TIER_AND_POWER ? <TierChip capture={capture} small /> : null}
                 <Chip small>Rarity {capture.rarity}</Chip>
             </div>
         </article>
