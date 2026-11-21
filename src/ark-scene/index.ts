@@ -139,6 +139,7 @@ import {setNearCone} from "@/ark-scene/near-fade";
 import {BugGround, bugClearPoints, bugCoverAt, setBugGrazing} from "@/ark-scene/bug-ground";
 // p3 (trees): small ground insects climb a grass blade now and then.
 import {ClimbStems, climbAt, climbPoint, climbStem, climbsBlades, mixClimb, type ClimbPoint, type ClimbStem} from "@/ark-scene/bug-climb";
+import type {SpiderWebs} from "@/ark-scene/spider-webs-draw";
 import {AssetTrees} from "@/ark-scene/asset-trees";
 import {AssetFloor, AssetRocks} from "@/ark-scene/asset-rocks";
 import {ASSET_TREE_KINDS} from "@/ark-scene/tree-assets";
@@ -1098,6 +1099,34 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     scene.add(climbStems.mesh);
     const climbGround: ClimbPoint = {x: 0, y: 0, z: 0, nx: 0, ny: 1, nz: 0, tx: 0, ty: 0, tz: 1};
     const climbBlade: ClimbPoint = {x: 0, y: 0, z: 0, nx: 0, ny: 1, nz: 0, tx: 0, ty: 0, tz: 1};
+    // ARK-WEBS: the web spinners' webs at their homes, hung on what is drawn there, and the spider on its web
+    // (`spider-webs-draw.ts`, loaded with the first spider the scene draws); null until its web is fitted near the camera.
+    let spiderWebs: SpiderWebs | null = null;
+    let spiderWebsLoading = false;
+    const webNoted = new Map<string, boolean>();
+    const webPoseOf = (entry: Entry): SurfacePoint | null => {
+        if (!/spider|weaver|widow/.test(entry.animal.model_slug) || entry.visitor) return null;
+        if (!spiderWebs) {
+            if (!spiderWebsLoading) {
+                spiderWebsLoading = true;
+                void import("@/ark-scene/spider-webs-draw").then((m) => {
+                    spiderWebs = new m.SpiderWebs(scene, (x, z, near) => standGround(x, z, near));
+                    scene.add(spiderWebs.mesh);
+                    if (process.env.NODE_ENV !== "production") (window as unknown as {__arkWebs?: SpiderWebs}).__arkWebs = spiderWebs;
+                }).catch(() => undefined);
+            }
+            return null;
+        }
+        const id = entry.animal.id;
+        let noted = webNoted.get(id);
+        if (noted === undefined) {
+            const micro = entry.place.micro;
+            const home = micro ? surfacePoint(micro, entry.animal.zone, 0) : {x: entry.place.x, y: entry.place.ground, z: entry.place.z};
+            noted = spiderWebs.note(id, entry.animal.model_slug, entry.animal.scientific_name, {x: home.x, y: home.y, z: home.z});
+            webNoted.set(id, noted);
+        }
+        return noted ? spiderWebs.pose(id, hoursNow(), worldMs() / 1000) : null;
+    };
     // The asset library's trees (graphics pass, batch 3): they replace the decor's tree shapes once loaded.
     const assetTrees = new AssetTrees(options.assetBase);
     if (assetTrees) scene.add(assetTrees.group);
@@ -3767,6 +3796,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
     };
 
     const microPose = (entry: Entry, time: number): Pose => {
+        // ARK-WEBS: a web spinner on its web, once its web is hung.
+        const web = webPoseOf(entry);
+        if (web) return {x: web.x, z: web.z, base: web.y, yaw: Math.atan2(web.tx, web.tz), pitch: 0, roll: 0, afloat: true, surface: web};
         const place = entry.place;
         const micro = place.micro!;
         const surface = micro.surface;
@@ -4801,6 +4833,9 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
 
     /** Its schedule's pose as the scene draws it: banked into the turn when circling, the head a little down asleep. */
     const fromSchedule = (entry: Entry, modelHeight: number): Pose => {
+        // ARK-WEBS: a web spinner on its web, once its web is hung (drawn there; its schedule's shared pose is unchanged).
+        const web = webPoseOf(entry);
+        if (web) return {x: web.x, z: web.z, base: web.y, yaw: Math.atan2(web.tx, web.tz), pitch: 0, roll: 0, afloat: true, surface: web};
         const own = entry.sched!;
         const at = own.pose!;
         const ground = own.ground;
@@ -7355,6 +7390,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         // A scenery module's close-up (a nest, a web, the cave): the camera may come nearer than usual.
         let moduleWant = 4;
         if (!close) for (const sceneModule of modules) moduleWant = Math.min(moduleWant, sceneModule.closeUp?.(target.x, target.y, target.z) ?? 4);
+        if (!close && spiderWebs) moduleWant = Math.min(moduleWant, spiderWebs.closeUp(target.x, target.y, target.z)); // ARK-WEBS
         const want = Math.min(shotClosest ?? Infinity, castTiny ? Math.min(MICRO_MIN_DISTANCE, Math.max(castTiny.trueLength * 4, 0.008)) : close ? MICRO_MIN_DISTANCE : moduleWant);
         // Down at once; back up gently (the camera eases out rather than jumping).
         controls.minDistance = want < controls.minDistance ? want : controls.minDistance + (want - controls.minDistance) * 0.05;
@@ -10551,6 +10587,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
         nearDetail?.update(controls.target, viewDistance);
         bugGround.update(controls.target, viewDistance); // p2 (ground)
         climbStems.update(camera.position); // p3 (trees)
+        spiderWebs?.update(camera.position, hoursNow(), worldMs() / 1000, {width: renderer.domElement.width, height: renderer.domElement.height, pixelRatio: renderer.getPixelRatio()}, reducedMotion); // ARK-WEBS
         forest.step(arkDayNow(current, worldMs())); // p5 (humans): before the trees' re-sort
         forest.draw(camera.position, worldMs() / 1000); // p5 (humans): the crews
         assetTrees?.update(camera.position);
@@ -11567,6 +11604,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             bugGround.dispose(); // p2 (ground)
             reflections.dispose(); // p3 (reflect)
             climbStems.dispose(); // p3 (trees)
+            spiderWebs?.dispose(); // ARK-WEBS
             forest.dispose(); // p5 (humans)
             assetTrees?.dispose();
             assetRocks?.dispose();
