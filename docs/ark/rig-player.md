@@ -120,6 +120,49 @@ A rig whose entry has `pose` (54 species: meerkats, hares, kangaroos, squirrels,
 
 Fleeing, such a rig plays `drop`, `bound` (by distance) and `rise` when its file has them (v6). Without a walk, a sitting rig isn't rigged while it moves: the cheap gait carries it.
 
+## Lying and neck gates (lane ARK-POSE)
+
+Checked as each rig loads (`prepareRigPoses` in `rig-player.ts`), on the rest mesh and the rows that will be drawn. No rig file changes.
+
+### Lying (`locomotion/pose-gate.ts`)
+
+Every lying clip of a four-legged rig is measured, a pilot rig's own included (they were never measured before):
+
+- **Rump and shoulder:** each end's hip joints, lying over standing. A rump above 72% of its standing height fails, and so does one more than 22% higher than the shoulder came down to.
+- **Support:** the lowest point of the rear half and of the front half, each within 5% of the standing height of the ground.
+- **Hind paw:** no hind knee, ankle or sole more than 5% above its hip joint, and each hind leg's lowest point within 13% of the ground.
+
+What a rig lies in:
+
+1. Its own lying clip, when that passes and the posed lie is not at least 8% lower at the rump.
+2. Else the posed lie (`locomotion/lie-pose.ts`), when it passes its own check and the gate. Each pair of folded legs is turned out by the least that takes it out from under the belly (`solveSplay`), so the belly meets the ground. A rig the solved turn fails is tried at the one fixed turn (25°), then with the tucked fold.
+3. Else it stands (as the oryx): its lying clips are removed, and the scene sleeps it on its feet (`sleep.ts` `sleepsOnFeet`).
+
+When the posed lie replaces a rig's own lying clip, the rig's other clips on that lying pose (the lion's lying `feed`, `groom`, `yawn`) are removed with it. A rig with no lying clip of its own keeps its `wallow` and `roll`; the gate does not measure those.
+
+### Neck (`locomotion/neck-gate.ts`)
+
+The measure is the 99th percentile of the neck's and the head's skin edges over their rest lengths. Edges under 1% of the mesh's size (slivers, as for the birds) and edges a limb holds are left out. The limit is 1.6. The head's own skin (edges both of whose ends the head holds by half or more: the face) is read the same way against 1.25.
+
+- **The look's caps, per class:** primates 80° yaw, grazers and browsers (a rig with a `graze` or `browse` clip) 60°, the other four-legged rigs 70°. The neck's share of the turn is the one of 0.45, 0.6, 0.3, 0.75 (and the file's own) that keeps the rig furthest inside the two limits.
+- **A rig over the limit at its caps** gets them lowered by 0.85 a step, down to a quarter of the class's.
+- **A clip's share of the look** (`RigClipData.lookShare`): a clip that holds the head 25° or more from rest takes the largest of 1, 0.6, 0.3, 0 of the look that keeps the neck within the limit (or within 3% of what the clip alone does). A clip that holds the head 60° or more from rest (the posed sit, a graze, a drink) takes none: the look's axes are the rest pose's, and on a bowed head they are no longer its yaw and pitch. `rigLookShare` applies the share where the scene sets the look.
+- **The primates' posed sit** (`locomotion/sit-sleep-pose.ts` `SIT_SHAPES`): ARK-SLEEP's sit bends the neck's one joint 110° to 130° (the back leans 58° up, the face drops 70° below level). Now the head ends level and facing ahead, its face 6° below the horizon: the back's lean turns the neck and the head up with it, and they turn back down by exactly that, split between the neck's joint and the head's (half and half first; then 0.35, 0.65, 0.2, 0.8, 0 on the neck) by what the neck's skin and the face take. Where no split of the whole turn is within the limits, 0.85 of it: the chin at the horizon.
+  - **Gate:** the head's pitch in the world on every sit, within 15° of level (`SitCheck.headPitch`, `headYaw`).
+  - **A model whose head was turned at rest** cannot be brought to face ahead by a pose (the toque macaque's looks back over its right shoulder, 85° round, and its face is the neck bone's; turned back at the neck, the neck read 2.18 and its skin was a band round the throat). Its sit is held (`POSED_SIT_HELD` in `rig-player.ts`: it sleeps in the rig's own crouch) and it is on `docs/ark/remake-list.json` for the models lane, with the others seen turned.
+- **The clips' own head turns** (`bird-neck.ts` `capHeadYawRows`): a row whose head is turned further round from the chest than the rig's look goes (a groom back to the flank is 75° on most rigs) has its neck's and head's yaw scaled back to that cap. A row within the cap is left exactly as it is.
+
+Not changed: how far a clip takes the head down or up (a graze or a drink reaches the ground, 90° to 100° from rest). The scan reports each clip's stretch.
+
+### The scan
+
+```
+npx tsx --tsconfig scripts/tsconfig.scripts.json scripts/ark-pose-census.mts <dir of <slug>.glb> <out.jsonl> [--off] [--part k/n]
+npx tsx --tsconfig scripts/tsconfig.scripts.json scripts/ark-pose-sheet.mts <dir> <out.png> <slug,slug> <clip,clip> [--off]
+```
+
+`--off` (`globalThis.__arkPoseGate = false`, the harness's `?posegate=0`) is the load as it was before the lane. The sheet draws any clip from three sides without a browser.
+
 ## Recordings
 
 ```
@@ -129,3 +172,5 @@ node scripts/ark-rig-scenes.mjs --set <publish dir> --out <dir> [--scenes duck_f
 - The page script is `src/ark-scene/rig-scenes-entry.ts`. It uses a cast-only snapshot with pinned shared paths, a local rig set as v2, and the live v1 set as the fallback (read only). Nothing is uploaded.
 - It writes a video, stills a little after each clip change, and a per-frame trace of each watched animal's clip, head yaw and reactive action.
 - `--perf` measures a crowd of 24 grazers with rigs on and off, on the desktop and on the phone proxy.
+- With `--query cast=<slug>:<plan>`: `pose_<slug>` (stand, walk, rest, sleep; `orbit=19,27` takes the camera once round the sleeper) and `look_<slug>` (its head turned as far as its look goes, standing, then asleep).
+- `scripts/ark-pose-heads.mts` draws the primates' rest and sitting heads from the side and the front without a browser.

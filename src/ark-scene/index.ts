@@ -100,7 +100,7 @@ import {skipEmptyDraws} from "@/ark-scene/runtime/empty-draws";
 import {microSpecies, nightLight, surfacePoint, viewFrom, type MicroSpecies, type SurfacePoint} from "@/ark-scene/micro";
 import {buildMicroScene} from "@/ark-scene/micro-scene";
 import {climbClipName, rigBasesFrom, rigSetVersion} from "@/ark-scene/rig-clips";
-import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, halfToFloat, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
+import {ASLEEP_CLIPS, baseStep, beatClip, clipBase, clipRows, halfToFloat, cyclesFor, flightClip, gaitMoving, gaitPose, newRigState, OPEN_WINGS_HOLD, paceClip, PATH_CARRIED_CLIPS, reactiveClip, recipeClip, rigLivePose, rigLookShare, stepGait, stepReverses, turnSteps, type Gait, RIG_CAPS, RIG_CAPS_LITE, RIG_FADE_SECONDS, RigLibrary, rigFlies, rigSwitch, rootOffset, type RigClipData, type RigModel, type RigState} from "@/ark-scene/rig-player";
 import {canopyPoint, leapTarget, speciesLayer, tunnelPoint, type SpeciesLayer} from "@/ark-scene/layers";
 import {buildLayersScene, planktonClouds} from "@/ark-scene/layers-scene";
 import {waterLevelAt} from "@/ark-scene/water-level";
@@ -6928,7 +6928,7 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
             const lookAttr = mesh.geometry.getAttribute("arkLook") as InstancedBufferAttribute | undefined;
             const looked = level === "near" ? entry.reactive : null;
             const forcedLook = forcedLooks.size && level === "near" ? forcedLooks.get(entry.animal.id) : undefined;
-            if (lookAttr && forcedLook) lookAttr.setXYZ(index, forcedLook[0], forcedLook[1], forcedLook[2]);
+            if (lookAttr && forcedLook) lookAttr.setXYZ(index, forcedLook[0], forcedLook[1], forcedLook[2] * (rig ? rigLookShare(rig, entry.rig) : 1));
             else if (lookAttr && slept && slept.headWeight > 0.001 && level === "near") {
                 // Asleep: its posture's head (back to its flank, down, sunk), within its plan's limits, allowing for the
                 // material's own droop; a waking head goes over to the reactive layer's look.
@@ -6937,8 +6937,10 @@ export function mountArk(el: HTMLElement, options: ArkSceneOptions): ArkSceneHan
                 const awakeW = looked ? looked.headWeight * (1 - entry.rest) * (1 - hw) : 0;
                 const yaw = Math.min(Math.max(slept.headYaw, -limits.yaw), limits.yaw);
                 const pitch = Math.min(Math.max(slept.headPitch + droopOf(model.behaviour?.plan) * entry.rest, -limits.down), limits.up);
-                lookAttr.setXYZ(index, (looked?.headYaw ?? 0) * awakeW + yaw * hw, (looked?.headPitch ?? 0) * awakeW + pitch * hw, 1);
-            } else if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) : 0);
+                // (ARK-POSE: the waking look no further than the clip it plays over lets it: a monkey's posed sit bows its neck already.)
+                const lookShare = rig ? rigLookShare(rig, entry.rig) : 1;
+                lookAttr.setXYZ(index, (looked?.headYaw ?? 0) * awakeW * lookShare + yaw * hw, (looked?.headPitch ?? 0) * awakeW * lookShare + pitch * hw, 1);
+            } else if (lookAttr) lookAttr.setXYZ(index, looked?.headYaw ?? 0, looked?.headPitch ?? 0, looked ? looked.headWeight * (1 - entry.rest) * (rig ? rigLookShare(rig, entry.rig) : 1) : 0);
             // Powers you can see: head up in alarm, or a hunter's look at a prime one and away (`power-show.ts`).
             const powerHead = level === "near" && !slept && !forcedLook && !reducedMotion ? entry.power?.head : null;
             if (lookAttr && powerHead && powerHead[2] > 0.05) lookAttr.setXYZ(index, powerHead[0], powerHead[1], powerHead[2]);

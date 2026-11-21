@@ -137,6 +137,49 @@ export function spreadBirdRows(rig: LocoRig, data: Uint16Array, bones: number, c
     return {worstBefore, worstAfter};
 }
 
+/**
+ * ARK-POSE: a mammal's clips' own head turns (a groom back to the flank, 77 degrees on most rigs) capped at its look's
+ * yaw from the chest (`neck-gate.ts` fitMammalLook: its class's, or lower where its neck's skin takes less). Unlike a
+ * bird's (`spreadBirdYaw`) the turn is not dealt out again: a row within the cap is left exactly as it is, and one past
+ * it has its neck's and its head's own yaw scaled back alike, so a clip stays continuous through the cap. A head
+ * pointing steeply down (a graze, a drink) has no yaw to read and is left. Returns the largest yaw it found and left
+ * (degrees), and how many rows it changed.
+ */
+export function capHeadYawRows(rig: LocoRig, data: Uint16Array, bones: number, capDeg: number, rows = data.length / (bones * 12)): {worstBefore: number; worstAfter: number; changed: number} {
+    const chest = rig.bones.findIndex((b) => b.name === "chest");
+    const neck = rig.neck;
+    const head = rig.head;
+    const out = {worstBefore: 0, worstAfter: 0, changed: 0};
+    if (chest < 0 || head < 0) return out;
+    const per = bones * 12;
+    const row = new Float32Array(per);
+    const world = rig.bones.map(() => new Matrix4());
+    const cap = capDeg * DEG;
+    for (let r = 0; r < rows; r++) {
+        const o = r * per;
+        for (let i = 0; i < per; i++) row[i] = DataUtils.fromHalfFloat(data[o + i]);
+        rowToWorld(rig, row, 0, world);
+        const theta = yawFromChest(rig, world, chest, head);
+        if (theta === null) continue;
+        out.worstBefore = Math.max(out.worstBefore, Math.abs(theta) / DEG);
+        if (Math.abs(theta) <= cap) {
+            out.worstAfter = Math.max(out.worstAfter, Math.abs(theta) / DEG);
+            continue;
+        }
+        const a = neck >= 0 && neck !== head ? (yawFromChest(rig, world, chest, neck) ?? 0) : 0;
+        // (UP holds the chest's up from the last read.)
+        yawFromChest(rig, world, chest, head);
+        const back = 1 - cap / Math.abs(theta);
+        if (neck >= 0 && neck !== head) turnSubtree(rig, world, neck, -a * back);
+        turnSubtree(rig, world, head, -(theta - a) * back);
+        out.worstAfter = Math.max(out.worstAfter, capDeg);
+        out.changed++;
+        skinRow(rig, world, row, 0);
+        for (let i = 0; i < per; i++) data[o + i] = DataUtils.toHalfFloat(row[i]);
+    }
+    return out;
+}
+
 /** Distance from a point to a segment. */
 function toSegment(p: readonly number[], a: Vector3, b: Vector3): number {
     const abx = b.x - a.x, aby = b.y - a.y, abz = b.z - a.z;

@@ -66,7 +66,7 @@ import {
 import {gripBones} from "@/ark-scene/map/grip";
 import {finalStatus, ModelFileError, retrySeconds, worthAskingAgain} from "@/ark-scene/model-files";
 import {buildLocoRig, type RawSkeleton} from "@/ark-scene/locomotion/skeleton";
-import {birdYawLimits, isBirdRig, pickBirdShares, spreadBirdRows} from "@/ark-scene/locomotion/bird-neck";
+import {birdYawLimits, capHeadYawRows, isBirdRig, pickBirdShares, spreadBirdRows} from "@/ark-scene/locomotion/bird-neck";
 import {flankOffLegs, isEquid, rigidMuzzle, seatLyingRows, tailOffLegs} from "@/ark-scene/locomotion/skin-fixes";
 import {LocoLayer, newLocoAnimal, type ClipRows, type LocoAnimal} from "@/ark-scene/locomotion/layer";
 import {liveRowCode} from "@/ark-scene/locomotion/pose-texture";
@@ -76,9 +76,17 @@ import {clipBakeOf} from "@/ark-scene/locomotion/flight";
 import {LIE_FOLDS, LIE_FRAMES, LIE_SECONDS, LiePose} from "@/ark-scene/locomotion/lie-pose";
 import type {LocoRig} from "@/ark-scene/locomotion/types";
 import {armsFit, handsReady, type LocoCanopy} from "@/ark-scene/locomotion/brachiate";
-import {posedSitRows} from "@/ark-scene/locomotion/sit-sleep-pose";
+import {posedSitRows, type SitCheck} from "@/ark-scene/locomotion/sit-sleep-pose";
+import {clipLookShare, fitMammalLook, headTurnDeg, HELD_TURN_DEG, LOOK_OFF_TURN_DEG, mammalLookClass, neckRegion, type MammalLookFit} from "@/ark-scene/locomotion/neck-gate";
+import {floatRow, LOWER_BY, measureLying, measureLyingClip, SIDE_GAP, type LyingMeasure} from "@/ark-scene/locomotion/pose-gate";
 
-export type RigClipData = RigClip & {name: string; row: number; rows: number};
+export type RigClipData = RigClip & {
+    name: string;
+    row: number;
+    rows: number;
+    /** ARK-POSE: how much of the head look this clip takes on top of it (0…1; absent: all of it). `neck-gate.ts` clipLookShare. */
+    lookShare?: number;
+};
 
 export type RigModel = {
     slug: string;
@@ -621,7 +629,7 @@ export class RigLibrary {
             return up && (up as Bone).isBone ? up.name : null;
         };
         const sitting = sittingLook(rigLookChain(entry, slug, extras.bones, restPivot, parentOf), entry.pose ?? null, box.min.y, box.max.y);
-        const look = sitting.look;
+        let look = sitting.look;
         const material = Array.isArray(mesh.material) ? mesh.material : [mesh.material];
         material.forEach((m) => m.dispose());
         mesh.geometry.dispose();
@@ -658,47 +666,24 @@ export class RigLibrary {
         const centre = geometry.boundingBox!.getCenter(new Vector3());
         const flight = flightApproved(own, slug) && Object.keys(clips).some((name) => FLIGHT_CLIPS.has(name));
         let loco: LocoLayer | null = null;
+        let rowsData = data;
+        let posedLie: RigModel["posedLie"] = null;
         try {
             const locoRig = buildLocoRig(rawSkeletonOf(mesh, extras.bones, geometry, slug, entry));
-            // ARK-ANIM (owner, batch 13): the skin and the lying clips fixed as the rig loads (`skinAndClipFixes`).
-            if ((globalThis as {__arkSkinFix?: boolean}).__arkSkinFix !== false) skinAndClipFixes(locoRig, slug, entry.plan ?? null, geometry, data, boneCount, clips);
-            loco = new LocoLayer(locoRig, data);
+            // The skin and the clips fixed, and the posed lie and sit appended, as the rig loads (`prepareRigPoses`).
+            const prepared = prepareRigPoses(locoRig, slug, entry.plan ?? null, geometry, data, boneCount, clips, look);
+            rowsData = prepared.data;
+            posedLie = prepared.posedLie;
+            look = prepared.look;
+            loco = new LocoLayer(locoRig, rowsData);
+            if (rowsData !== data) {
+                texture.image = {data: rowsData, width: boneCount * 3, height: rowsData.length / (boneCount * 12)} as unknown as typeof texture.image;
+                texture.needsUpdate = true;
+            }
             // ARK-CANOPY: a rig whose arms can take a hold may hang under the limbs (`locomotion/brachiate.ts`).
             if (loco.rig.plan === "primate" && armsFit(loco.rig)) handsReady.add(slug);
         } catch (error) {
             console.warn(`[ark] loco ${slug}`, error instanceof Error ? error.message : error);
-        }
-        // ARK-ANIM round 3: a four-legged rig with no lying clip of its own lies down in a pose made from its skeleton.
-        let rowsData = data;
-        let posedLie: RigModel["posedLie"] = null;
-        const posedOn = (globalThis as {__arkPosedLie?: boolean}).__arkPosedLie !== false;
-        if (loco && posedOn && entry.plan === "quadruped" && !POSED_LIE_HELD.has(slug) && (POSED_LIE_OVER_PILOT.has(slug) || !(clips.sleep || clips.lie))) {
-            const posed = posedLieRows(loco.rig, geometry, data, boneCount);
-            posedLie = posed.check;
-            if (posed.rows) {
-                rowsData = posed.rows.data;
-                // (A pilot's own lying clips all go: its way up and onto a side start from its own lying pose, not this one.)
-                QUADRUPED_LYING_HELD.forEach((name) => delete clips[name]);
-                for (const clip of posed.rows.clips) clips[clip.name] = clip;
-                texture.image = {data: rowsData, width: boneCount * 3, height: rowsData.length / (boneCount * 12)} as unknown as typeof texture.image;
-                texture.needsUpdate = true;
-                loco.setBakedData(rowsData);
-            }
-        }
-        // Lane ark-sleep: a primate sleeps sitting hunched, posed from its skeleton (`locomotion/sit-sleep-pose.ts`), not
-        // the rig's own crouch on all fours. (`__arkPosedSit = false`: the rig's own, to compare.)
-        if (loco && entry.plan === "primate" && (globalThis as {__arkPosedSit?: boolean}).__arkPosedSit !== false) {
-            const position = geometry.getAttribute("position");
-            const joints = geometry.getAttribute("arkJoints");
-            const weights = geometry.getAttribute("arkWeights");
-            const posed = position && joints && weights ? posedSitRows(loco.rig, {positions: position.array, joints: joints.array, weights: weights.array}, data, boneCount, DataUtils.toHalfFloat) : null;
-            if (posed?.data) {
-                rowsData = posed.data;
-                for (const clip of posed.clips) clips[clip.name] = clip as RigClipData;
-                texture.image = {data: rowsData, width: boneCount * 3, height: rowsData.length / (boneCount * 12)} as unknown as typeof texture.image;
-                texture.needsUpdate = true;
-                loco.setBakedData(rowsData);
-            }
         }
         this.models.set(slug, {
             slug,
@@ -778,6 +763,125 @@ export class RigLibrary {
 }
 
 /**
+ * A rig's skin and bone rows made ready as it loads, in the order the page does it (the scans call this too, so a gate
+ * measures what is drawn): the skin and clip fixes (`skinAndClipFixes`), then a four-legged rig's posed lie
+ * (`posedLieRows`) and a primate's posed sit (`posedSitRows`), their rows appended and their clips put into `clips`.
+ * `data` is fixed in place; the rows returned are `data` itself, or a longer copy when a posed clip was appended.
+ */
+export function prepareRigPoses(rig: LocoRig, slug: string, plan: string | null, geometry: BufferGeometry, data: Uint16Array, bones: number, clips: Record<string, RigClipData>, look: RigLookChain | null = null): {data: Uint16Array; posedLie: RigModel["posedLie"]; fixes: SkinFixReport; look: RigLookChain | null; lying: LyingReport | null; neck: NeckReport | null; sit: SitCheck | null} {
+    // ARK-ANIM (owner, batch 13): the skin and the lying clips fixed as the rig loads (`skinAndClipFixes`).
+    const fixes = (globalThis as {__arkSkinFix?: boolean}).__arkSkinFix !== false ? skinAndClipFixes(rig, slug, plan, geometry, data, bones, clips) : {};
+    let rowsData = data;
+    let posedLie: RigModel["posedLie"] = null;
+    let lying: LyingReport | null = null;
+    let sit: SitCheck | null = null;
+    // ARK-ANIM round 3: a four-legged rig with no lying clip of its own lies down in a pose made from its skeleton.
+    // ARK-POSE: every lying clip measured as it is drawn (`locomotion/pose-gate.ts`), a rig's own (the pilots') too: it
+    // lies in whichever of its own clip and the posed lie passes and lies lower at the rump, and stands when neither does.
+    const posedOn = (globalThis as {__arkPosedLie?: boolean}).__arkPosedLie !== false;
+    const gateOn = (globalThis as {__arkPoseGate?: boolean}).__arkPoseGate !== false;
+    const position = geometry.getAttribute("position");
+    const joints = geometry.getAttribute("arkJoints");
+    const weights = geometry.getAttribute("arkWeights");
+    if (plan === "quadruped" && position && joints && weights) {
+        const skin = {positions: position.array, joints: joints.array, weights: weights.array};
+        geometry.computeBoundingBox();
+        const ground = geometry.boundingBox!.min.y;
+        const ownClip = [clips.lie, clips.sleep].find((clip) => clip && clipBase(clip) === "lying") ?? null;
+        const own = gateOn && ownClip ? measureLyingClip(rig, skin, rowsData, bones, ownClip, ground) : null;
+        let posedMeasure: LyingMeasure | null = null;
+        let chose: LyingReport["chose"] = ownClip ? "own" : "stand";
+        if (posedOn && !POSED_LIE_HELD.has(slug) && (POSED_LIE_OVER_PILOT.has(slug) || !(clips.sleep || clips.lie) || own)) {
+            const posed = posedLieRows(rig, geometry, rowsData, bones, gateOn);
+            posedLie = posed.check;
+            posedMeasure = posed.measure;
+            const passes = Boolean(posed.rows);
+            const better = !own || POSED_LIE_OVER_PILOT.has(slug) || !own.ok || (posedMeasure !== null && posedMeasure.rump < own.rump - LOWER_BY);
+            if (posed.rows && passes && better) {
+                rowsData = posed.rows.data;
+                // (A pilot's own lying clips all go: its way up and onto a side start from its own lying pose, not this one.)
+                QUADRUPED_LYING_HELD.forEach((name) => delete clips[name]);
+                // (And, under the gate, every other clip on its own lying pose: the lion's lying feed, groom and yawn would
+                // jump from the posed lie to the pilot's crouch. A rig with no lying clip of its own keeps its wallow and roll.)
+                if (gateOn && ownClip) for (const [name, clip] of Object.entries(clips)) if (clipBase(clip) === "lying" || clipBase(clip) === "side") delete clips[name];
+                for (const clip of posed.rows.clips) clips[clip.name] = clip;
+                chose = "posed";
+            }
+        }
+        // Neither lies: it sleeps and rests on its feet (as the oryx, `POSED_LIE_HELD`), its lying clips gone.
+        if (chose === "own" && own && !own.ok) {
+            QUADRUPED_LYING_HELD.forEach((name) => delete clips[name]);
+            for (const [name, clip] of Object.entries(clips)) if (clipBase(clip) === "lying" || clipBase(clip) === "side") delete clips[name];
+            chose = "stand";
+        }
+        // A side it lies over onto (`sleep_side`) that hangs in the air goes too: it sleeps on its chest.
+        if (gateOn && chose === "own" && clips.sleep_side && clipBase(clips.sleep_side) === "side") {
+            const side = measureLyingClip(rig, skin, rowsData, bones, clips.sleep_side, ground);
+            if (Math.max(side.frontGap, side.rearGap) > SIDE_GAP) for (const name of ["sleep_side", "side_down", "side_up"]) delete clips[name];
+        }
+        lying = {chose, own, posed: posedMeasure};
+    }
+    // Lane ark-sleep: a primate sleeps sitting hunched, posed from its skeleton (`locomotion/sit-sleep-pose.ts`), not
+    // the rig's own crouch on all fours. (`__arkPosedSit = false`: the rig's own, to compare.)
+    if (plan === "primate" && (globalThis as {__arkPosedSit?: boolean}).__arkPosedSit !== false && !(gateOn && POSED_SIT_HELD.has(slug))) {
+        const sitIndex = gateOn ? geometry.getIndex() : null;
+        const posed = position && joints && weights ? posedSitRows(rig, {positions: position.array, joints: joints.array, weights: weights.array}, rowsData, bones, DataUtils.toHalfFloat, sitIndex ? sitIndex.array : null) : null;
+        sit = posed?.check ?? null;
+        if (posed?.data) {
+            rowsData = posed.data;
+            for (const clip of posed.clips) clips[clip.name] = clip as RigClipData;
+        }
+    }
+    // ARK-POSE: a mammal's look fitted to its neck's skin, and each clip's share of it (`locomotion/neck-gate.ts`).
+    let neck: NeckReport | null = null;
+    const cls = mammalLookClass(plan, Object.keys(clips));
+    const index = geometry.getIndex();
+    if (gateOn && cls && look && index && position && joints && weights) {
+        const skin = {positions: position.array, joints: joints.array, weights: weights.array};
+        const region = neckRegion(rig, skin, index.array);
+        if (region) {
+            const DEG = Math.PI / 180;
+            const fit = fitMammalLook(region, skin, rig, look, cls, {caps: {yaw: look.yaw / DEG, up: look.up / DEG, down: look.down / DEG}, neckShare: look.neckShare});
+            look = {...look, yaw: fit.caps.yaw * DEG, up: fit.caps.up * DEG, down: fit.caps.down * DEG, neckShare: fit.neckShare};
+            // Its clips' own head turns no further round than its look goes (`bird-neck.ts` capHeadYawRows).
+            const clipYaw = capHeadYawRows(rig, rowsData, bones, fit.caps.yaw);
+            const shares: Record<string, number> = {};
+            const row = new Float32Array(bones * 12);
+            const seen = new Map<number, number>();
+            for (const clip of Object.values(clips)) {
+                let share = seen.get(clip.row);
+                if (share === undefined) {
+                    // (Its row with the head furthest from rest: the bones alone say which, no skin.)
+                    let worst = 0;
+                    let at = clip.row;
+                    for (let f = 0; f < clip.rows; f += 2) {
+                        const turn = headTurnDeg(rig, floatRow(rowsData, bones, clip.row + f, row));
+                        if (turn > worst) {
+                            worst = turn;
+                            at = clip.row + f;
+                        }
+                    }
+                    share = worst < HELD_TURN_DEG ? 1 : worst >= LOOK_OFF_TURN_DEG ? 0 : clipLookShare(region, skin, floatRow(rowsData, bones, at, row), bones, look, fit.neckShare, fit.caps).share;
+                    seen.set(clip.row, share);
+                }
+                if (share < 1) {
+                    clip.lookShare = share;
+                    shares[clip.name] = share;
+                }
+            }
+            neck = {fit, shares, clipYaw};
+        }
+    }
+    return {data: rowsData, posedLie, fixes, look, lying, neck, sit};
+}
+
+/** ARK-POSE: a mammal rig's look as fitted, and the clips that take less than all of it (`RigClipData.lookShare`). */
+export type NeckReport = {fit: MammalLookFit; shares: Record<string, number>; clipYaw: {worstBefore: number; worstAfter: number; changed: number}};
+
+/** ARK-POSE: what a four-legged rig lies in, and its own lying clip's and the posed lie's measures (`locomotion/pose-gate.ts`). */
+export type LyingReport = {chose: "own" | "posed" | "stand"; own: LyingMeasure | null; posed: LyingMeasure | null};
+
+/**
  * The pilot rigs whose own lying clips give way to the posed lie (coordinator, ARK-ANIM round 3: "bear, grizzly, pig,
  * dog, cat"; then the horse, whose pilot lie lay flat and turned over, the owner's "rotated"). Every other four-legged rig takes it only when it has no lying clip (`QUADRUPED_LYING_HELD`).
  */
@@ -789,25 +893,53 @@ export const POSED_LIE_OVER_PILOT: ReadonlySet<string> = new Set(["domestic-dog"
  * standing until they are rigged again.
  */
 export const POSED_LIE_HELD: ReadonlySet<string> = new Set(["addax", "walia-ibex", "oribi", "american-pika", "ili-pika", "poodle", "arabian-oryx"]);
+/**
+ * ARK-POSE (coordinator, batch 14d): primates whose posed sit is held; they sleep in the rig's own crouch until the
+ * model is made again (`docs/ark/remake-list.json`). The toque macaque's model was made looking back over its right
+ * shoulder: its head is about 85 degrees round at rest, and its bones were set as for a head facing ahead, so its face
+ * is the neck bone's and the head bone holds the crown alone. Sitting, its head could be levelled but not brought to
+ * face ahead: turned back at the neck, the neck read 2.18 and its skin was a band round the throat.
+ */
+export const POSED_SIT_HELD: ReadonlySet<string> = new Set(["toque-macaque"]);
 
 /**
  * ARK-ANIM round 3 (decision 447): the posed lie's rows appended to a rig's bone rows (`locomotion/lie-pose.ts`): the
  * way down (`lie_down`, eased over `LIE_SECONDS`), the way back up (`get_up`), and the pose held (`lie` and `sleep`,
  * base lying). Null rows when the rig fails the pose's check (it keeps the scene's own posture, `sleep.ts`).
  */
-export function posedLieRows(rig: LocoRig, geometry: BufferGeometry, data: Uint16Array, bones: number): {check: NonNullable<RigModel["posedLie"]>; rows: {data: Uint16Array; clips: RigClipData[]} | null} {
+export function posedLieRows(rig: LocoRig, geometry: BufferGeometry, data: Uint16Array, bones: number, gate = false): {check: NonNullable<RigModel["posedLie"]>; rows: {data: Uint16Array; clips: RigClipData[]} | null; measure: LyingMeasure | null} {
     const position = geometry.getAttribute("position");
     const joints = geometry.getAttribute("arkJoints");
     const weights = geometry.getAttribute("arkWeights");
-    if (!position || !joints || !weights) return {check: {ok: false, reason: "no skin", belly: 1, sink: 0}, rows: null};
+    if (!position || !joints || !weights) return {check: {ok: false, reason: "no skin", belly: 1, sink: 0}, rows: null, measure: null};
     const mesh = {positions: position.array, joints: joints.array, weights: weights.array};
-    let lie = new LiePose(rig, mesh);
-    for (const fold of LIE_FOLDS.slice(1)) {
-        if (lie.check.ok) break;
-        const next = new LiePose(rig, mesh, fold);
-        if (next.check.ok) lie = next;
+    geometry.computeBoundingBox();
+    const ground = geometry.boundingBox!.min.y;
+    // The poses it tries, in order: each fold with its legs' turn out solved (`lie-pose.ts` solveSplay), then, under the
+    // gate, each at the one fixed turn (the pose before ARK-POSE). The first that passes its own check and the lying
+    // gate (`pose-gate.ts`) is its lie; none: the first try's reason.
+    const tries: Array<[(typeof LIE_FOLDS)[number], boolean]> = LIE_FOLDS.map((fold) => [fold, true]);
+    if (gate) for (const fold of LIE_FOLDS) tries.push([fold, false]);
+    let lie: LiePose | null = null;
+    let measure: LyingMeasure | null = null;
+    let first: {check: LiePose["check"]; measure: LyingMeasure | null} | null = null;
+    const row1 = new Float32Array(bones * 12);
+    for (const [fold, solved] of tries) {
+        const next = new LiePose(rig, mesh, fold, solved);
+        // (Measured as stored: half floats.)
+        const m = gate && next.check.ok ? measureLying(rig, mesh, next.row(1, row1).map((v) => DataUtils.fromHalfFloat(DataUtils.toHalfFloat(v))), ground) : null;
+        first ??= {check: next.check, measure: m};
+        if (next.check.ok && (!m || m.ok)) {
+            lie = next;
+            measure = m;
+            break;
+        }
     }
-    if (!lie.check.ok) return {check: lie.check, rows: null};
+    if (!lie) {
+        const check = first!.check.ok && first!.measure ? {...first!.check, ok: false, reason: first!.measure.reason} : first!.check;
+        return {check, rows: null, measure: first!.measure};
+    }
+    const pose: LiePose = lie;
     const per = bones * 12;
     const own = data.length / per;
     const down = Array.from({length: LIE_FRAMES + 1}, (_, k) => easeInOutCubic(k / LIE_FRAMES));
@@ -816,11 +948,11 @@ export function posedLieRows(rig: LocoRig, geometry: BufferGeometry, data: Uint1
     out.set(data, 0);
     const row = new Float32Array(per);
     ts.forEach((t, k) => {
-        lie.row(t, row);
+        pose.row(t, row);
         const o = data.length + k * per;
         for (let i = 0; i < per; i++) out[o + i] = DataUtils.toHalfFloat(row[i]);
     });
-    return {check: lie.check, rows: {data: out, clips: posedLieClips(own)}};
+    return {check: pose.check, rows: {data: out, clips: posedLieClips(own)}, measure};
 }
 
 /** The posed lie's clips after a rig's own `own` rows: the way down, the way up, and the held lie (as `lie` and `sleep`). */
@@ -1395,6 +1527,20 @@ export function recipeClip(state: string | null | undefined, has: (name: string)
     if (!name) return null;
     const still = rule.still && has(rule.still) ? rule.still : undefined;
     return {name, play: rule.playFor?.[name] ?? rule.play, ...(still ? {still} : {})};
+}
+
+/**
+ * ARK-POSE: how much of the head look the rig takes this frame (0…1): its playing clip's share (`RigClipData.lookShare`),
+ * the clip it fades from mixed in while it fades. A clip that already holds the head far from rest (a primate's posed
+ * sit, a groom back to the flank) takes less, or none: the look turns the bones on top of the clip.
+ */
+export function rigLookShare(model: Pick<RigModel, "clips">, state: Pick<RigState, "now" | "from" | "fade"> | null | undefined): number {
+    if (!state) return 1;
+    const now = model.clips[state.now.name]?.lookShare ?? 1;
+    if (!state.from) return now;
+    const from = model.clips[state.from.name]?.lookShare ?? 1;
+    const k = Math.min(Math.max(state.fade, 0), 1);
+    return from + (now - from) * k;
 }
 
 /** A rig's base pose (contract 8.3): standing (the rest pose), lying, on its side, or a sitting rig leaning forward. */
